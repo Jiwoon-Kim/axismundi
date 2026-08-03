@@ -15,12 +15,18 @@ $ax_remote_uris    = array(
 	'https://remote.example/objects/phase-4a-note',
 	'https://remote.example/objects/phase-4a-tombstone',
 );
+$GLOBALS['ax_remote_orphans_purged'] = 0;
 
 /** @param array<bool> $results Results. @param string $label Label. @param bool $condition Condition. */
 function ax_remote_assert( array &$results, string $label, bool $condition ) : void {
 	$results[] = $condition;
 	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
 	printf( "[%s] %s\n", $condition ? 'PASS' : 'FAIL', $label );
+}
+
+/** Record the maintenance event without making the projection cleaner depend on logging. */
+function ax_remote_orphans_purged( int $count ) : void {
+	$GLOBALS['ax_remote_orphans_purged'] += $count;
 }
 
 try {
@@ -33,7 +39,7 @@ try {
 	ax_remote_assert( $ax_remote_results, 'the schema installs with a unique URI hash and records its verified set version', $installed && AXISMUNDI_OP_DB_VERSION === (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION ) && ! empty( $index ) && 0 === (int) $index[0]['Non_unique'] );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture verifies the projection schema.
 	$listing_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$index_table}" );
-	ax_remote_assert( $ax_remote_results, 'the listing projection has one URI identity and queryable public and Group-context state', in_array( 'object_uri_hash', $listing_columns, true ) && in_array( 'publicly_listable', $listing_columns, true ) && in_array( 'has_group_context', $listing_columns, true ) && in_array( 'primary_group_uri_hash', $listing_columns, true ) );
+	ax_remote_assert( $ax_remote_results, 'the listing projection has one URI identity and queryable public, lifecycle, source, and Group-context state', in_array( 'object_uri_hash', $listing_columns, true ) && in_array( 'publicly_listable', $listing_columns, true ) && in_array( 'object_status', $listing_columns, true ) && in_array( 'source', $listing_columns, true ) && in_array( 'has_group_context', $listing_columns, true ) && in_array( 'primary_group_uri_hash', $listing_columns, true ) );
 
 	ax_remote_assert(
 		$ax_remote_results,
@@ -102,6 +108,11 @@ try {
 	$backfilled = axismundi_op_install();
 	$projection = axismundi_op_get_object_listing_projection( $ax_remote_uris[0] );
 	ax_remote_assert( $ax_remote_results, 'the v8 upgrade backfills existing remote cache rows, not only future stores', $backfilled && AXISMUNDI_OP_DB_VERSION === (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION ) && is_array( $projection ) && 1 === (int) $projection['publicly_listable'] );
+	$wpdb->update( $index_table, array( 'source' => '' ), array( 'object_uri_hash' => hash( 'sha256', $ax_remote_uris[0] ) ), array( '%s' ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- simulate the short-lived v9 writer before source fallback was fixed.
+	update_option( AXISMUNDI_OP_DB_VERSION_OPTION, '9', false );
+	$normalized = axismundi_op_install();
+	$projection = axismundi_op_get_object_listing_projection( $ax_remote_uris[0] );
+	ax_remote_assert( $ax_remote_results, 'the v10 upgrade classifies v9 blank-source rows as remote before future sweeps', $normalized && is_array( $projection ) && 'remote' === (string) $projection['source'] );
 
 	$bad = axismundi_op_store_remote_object( array( 'id' => $ax_remote_uris[0] ) );
 	$after_bad = axismundi_op_get_remote_object( $ax_remote_uris[0] );
@@ -160,22 +171,37 @@ try {
 	$ax_remote_orphan_uri = 'https://remote.example/objects/phase-4a-orphan';
 	$ax_remote_uris[]     = $ax_remote_orphan_uri;
 	axismundi_op_store_remote_object( array( 'id' => $ax_remote_orphan_uri, 'type' => 'Note', 'content' => 'orphan', 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ) ) );
+	$wpdb->update( $index_table, array( 'source' => '' ), array( 'object_uri_hash' => hash( 'sha256', $ax_remote_orphan_uri ) ), array( '%s' ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- v9 blank-source orphan fixture.
 	$wpdb->delete( $table, array( 'object_uri_hash' => hash( 'sha256', $ax_remote_orphan_uri ) ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture removes a snapshot behind the projection's back.
 	$ax_remote_orphan_before = axismundi_op_get_object_listing_projection( $ax_remote_orphan_uri );
-	axismundi_op_backfill_object_listing_projection();
+	update_option( AXISMUNDI_OP_DB_VERSION_OPTION, '9', false );
+	axismundi_op_install();
 	ax_remote_assert(
 		$ax_remote_results,
-		'rebuilding the projection drops rows this store no longer answers for',
+		'the v10 upgrade normalizes and drops a blank-source row this store no longer answers for',
 		is_array( $ax_remote_orphan_before )
 			&& null === axismundi_op_get_object_listing_projection( $ax_remote_orphan_uri )
 			// And leaves the rows it does answer for, or the sweep would be emptying the table.
 			&& is_array( axismundi_op_get_object_listing_projection( $ax_remote_uris[0] ) )
 			&& is_array( axismundi_op_get_object_listing_projection( $ax_remote_uris[1] ) )
 	);
+	$ax_remote_daily_orphan_uri = 'https://remote.example/objects/phase-4a-daily-orphan';
+	$ax_remote_uris[]           = $ax_remote_daily_orphan_uri;
+	axismundi_op_store_remote_object( array( 'id' => $ax_remote_daily_orphan_uri, 'type' => 'Note', 'content' => 'daily orphan', 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ) ) );
+	$wpdb->delete( $table, array( 'object_uri_hash' => hash( 'sha256', $ax_remote_daily_orphan_uri ) ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture creates a post-upgrade orphan outside the normal delete path.
+	add_action( 'axismundi_op_remote_listing_projection_orphans_purged', 'ax_remote_orphans_purged' );
+	axismundi_op_remote_objects_daily_maintenance();
+	remove_action( 'axismundi_op_remote_listing_projection_orphans_purged', 'ax_remote_orphans_purged' );
+	ax_remote_assert(
+		$ax_remote_results,
+		'daily remote maintenance reconciles post-upgrade orphan rows and reports the count to observers',
+		null === axismundi_op_get_object_listing_projection( $ax_remote_daily_orphan_uri ) && $GLOBALS['ax_remote_orphans_purged'] >= 1
+	);
 
 	$deleted = axismundi_op_delete_remote_object( $ax_remote_uris[0] );
 	ax_remote_assert( $ax_remote_results, 'cache deletion removes only the addressed observation and its listing projection', $deleted && null === axismundi_op_get_remote_object( $ax_remote_uris[0] ) && null === axismundi_op_get_object_listing_projection( $ax_remote_uris[0] ) && null !== axismundi_op_get_remote_object( $ax_remote_uris[1] ) );
 } finally {
+	remove_action( 'axismundi_op_remote_listing_projection_orphans_purged', 'ax_remote_orphans_purged' );
 	foreach ( $ax_remote_uris as $ax_remote_uri ) {
 		axismundi_op_delete_remote_object( $ax_remote_uri );
 	}

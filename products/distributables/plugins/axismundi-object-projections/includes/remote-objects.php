@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_OP_DB_VERSION            = '9';
+const AXISMUNDI_OP_DB_VERSION            = '10';
 const AXISMUNDI_OP_DB_VERSION_OPTION     = 'ax_object_projections_db_version';
 const AXISMUNDI_OP_REMOTE_PAYLOAD_MAX    = 1048576;
 const AXISMUNDI_OP_REMOTE_RETENTION_DAYS = 30;
@@ -213,6 +213,30 @@ function axismundi_op_refresh_object_listing_projection( string $object_uri, ?ar
 		: axismundi_op_delete_object_listing_projection( $object_uri );
 }
 
+/** Normalize rows written by the short-lived v9 writer before it learned its source. */
+function axismundi_op_normalize_legacy_object_listing_projection_sources() : int {
+	global $wpdb;
+	$index = axismundi_op_object_index_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- v9 left source blank only for remote snapshots; local rows did not exist until v9's successor.
+	$result = $wpdb->query( "UPDATE {$index} SET source = 'remote' WHERE source = '' OR source IS NULL" );
+	return false === $result ? 0 : (int) $result;
+}
+
+/** Remove remote listing rows whose repository snapshot no longer exists. */
+function axismundi_op_purge_orphan_remote_object_listing_projections() : int {
+	global $wpdb;
+	$index   = axismundi_op_object_index_table();
+	$objects = axismundi_op_remote_objects_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- source-scoped reconciliation over OP's own cache and listing tables.
+	$result = $wpdb->query( "DELETE i FROM {$index} i LEFT JOIN {$objects} o ON o.object_uri_hash = i.object_uri_hash WHERE i.source = 'remote' AND o.id IS NULL" );
+	$purged = false === $result ? 0 : (int) $result;
+	if ( $purged > 0 ) {
+		/** @param int $purged Number of stale remote listing rows removed by maintenance. */
+		do_action( 'axismundi_op_remote_listing_projection_orphans_purged', $purged );
+	}
+	return $purged;
+}
+
 /** Rebuild the remote-cache share of the listing projection during an upgrade. */
 function axismundi_op_backfill_object_listing_projection() : bool {
 	global $wpdb;
@@ -238,9 +262,7 @@ function axismundi_op_backfill_object_listing_projection() : bool {
 	 * query then counts an Object that is not there. Scoped to `remote`, so the sweep stays
 	 * correct once local Objects have rows of their own.
 	 */
-	$index = axismundi_op_object_index_table();
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded upgrade sweep over this store's own projection rows.
-	$wpdb->query( "DELETE i FROM {$index} i LEFT JOIN {$objects} o ON o.object_uri_hash = i.object_uri_hash WHERE i.source = 'remote' AND o.id IS NULL" );
+	axismundi_op_purge_orphan_remote_object_listing_projections();
 	return $valid;
 }
 
@@ -331,7 +353,8 @@ function axismundi_op_install() : bool {
 		$rebuild = function_exists( 'axismundi_op_rebuild_quote_relations' ) ? axismundi_op_rebuild_quote_relations() : array( 'failed' => 1 );
 		$valid   = 0 === (int) ( $rebuild['failed'] ?? 1 );
 	}
-	if ( $valid && version_compare( $previous_version, '8', '<' ) ) {
+	if ( $valid && version_compare( $previous_version, '10', '<' ) ) {
+		axismundi_op_normalize_legacy_object_listing_projection_sources();
 		$valid = axismundi_op_backfill_object_listing_projection();
 	}
 	if ( $valid ) {
@@ -832,6 +855,7 @@ function axismundi_op_remote_objects_purge_expired( bool $dry_run = false ) : in
 		if ( function_exists( 'axismundi_op_purge_orphan_remote_object_hashtags' ) ) {
 			axismundi_op_purge_orphan_remote_object_hashtags();
 		}
+		axismundi_op_purge_orphan_remote_object_listing_projections();
 	}
 	return false === $result ? 0 : (int) $result;
 }

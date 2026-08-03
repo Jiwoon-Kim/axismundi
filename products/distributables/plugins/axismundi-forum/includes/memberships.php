@@ -473,6 +473,27 @@ function axismundi_forum_rebuild_memberships( int $group_identity_id ) {
 	$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- replacement complete.
 	return array( 'members' => $members, 'relations' => $relations );
 }
+
+/**
+ * Restore every public managed Group's membership projection after Forum recreates its tables.
+ *
+ * The Activity relation ledger remains authoritative across a Forum reset. This deliberately
+ * calls the read-only rebuild instead of replaying Follows, so an upgrade never re-delivers an
+ * Accept to remote members that already received one.
+ *
+ * @return void
+ */
+function axismundi_forum_rebuild_public_memberships_after_schema_install() : void {
+	if ( ! function_exists( 'axismundi_actors_list_all_managed_groups' ) ) {
+		return;
+	}
+	foreach ( axismundi_actors_list_all_managed_groups() as $group ) {
+		if ( $group instanceof Axismundi_Actor && axismundi_forum_public_community_group( $group ) ) {
+			axismundi_forum_rebuild_memberships( $group->get_identity_id() );
+		}
+	}
+}
+add_action( 'axismundi_forum_schema_installed', 'axismundi_forum_rebuild_public_memberships_after_schema_install', 20 );
 add_action( 'axismundi_act_relation_changed', 'axismundi_forum_sync_membership_from_follow', 20 );
 
 /** Accept or reject a pending Forum membership request as a manager of its Group. */

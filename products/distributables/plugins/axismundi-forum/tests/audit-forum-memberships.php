@@ -221,6 +221,21 @@ try {
 			&& 'undone' === (string) $rebuilt_undone['membership_state']
 	);
 
+	// A Forum schema reset drops only this projection. Its install hook must restore it without
+	// waiting for a remote member to Follow again or sending another Accept.
+	$wpdb->delete( axismundi_forum_memberships_table(), array( 'group_identity_id' => $community ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit simulates the Forum-owned table being recreated.
+	$schema_accepts_before = $group instanceof Axismundi_Actor ? ax_fm_accept_count( $group->get_uri() ) : -1;
+	do_action( 'axismundi_forum_schema_installed' );
+	$schema_open = $remote_open instanceof Axismundi_Actor ? axismundi_forum_get_membership( $community, $remote_open->get_identity_id() ) : null;
+	$schema_accepts_after = $group instanceof Axismundi_Actor ? ax_fm_accept_count( $group->get_uri() ) : -2;
+	ax_fm_assert(
+		$ax_fm_results,
+		'a Forum schema rebuild restores accepted memberships from Follow evidence without a duplicate Accept',
+		is_array( $schema_open )
+			&& 'accepted' === (string) $schema_open['membership_state']
+			&& $schema_accepts_before === $schema_accepts_after
+	);
+
 	// Rebuild replaces: a row the ledger no longer yields must not survive it.
 	$orphan_ok = false !== $wpdb->insert(
 		axismundi_forum_memberships_table(),

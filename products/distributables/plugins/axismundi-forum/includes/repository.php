@@ -21,7 +21,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_FORUM_DB_VERSION = '5.4';
+const AXISMUNDI_FORUM_DB_VERSION = '5.5';
 
 /** @return string Fully-qualified Forum-entry projection table name. */
 function axismundi_forum_entries_table() : string {
@@ -176,6 +176,13 @@ function axismundi_forum_install() : void {
 		&& in_array( 'announce_activity_uri', $distribution_columns, true )
 		&& 'InnoDB' === $engine ) {
 		update_option( 'ax_forum_db_version', AXISMUNDI_FORUM_DB_VERSION, false );
+		/**
+		 * Fires after Forum-owned projection tables are available again.
+		 *
+		 * Group Actors and Follow evidence belong to other products, so a Forum schema reset must
+		 * restore its derived rows from those sources rather than waiting for a new Follow.
+		 */
+		do_action( 'axismundi_forum_schema_installed' );
 	}
 }
 

@@ -51,7 +51,10 @@ try {
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture verifies the cursor access path.
 	$feed_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'feed_cursor'", ARRAY_A );
 	usort( $feed_index, static fn( array $left, array $right ) : int => (int) $left['Seq_in_index'] <=> (int) $right['Seq_in_index'] );
-	ax_act_assert( $ax_act_results, 'the Activity table retains verified URI identity and a materialized cursor key, without blog_id tenancy', $installed && AXISMUNDI_ACT_DB_VERSION === (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION ) && ! empty( $index ) && 0 === (int) $index[0]['Non_unique'] && in_array( 'feed_sort_at', $columns, true ) && array( 'actor_uri_hash', 'effective_status', 'feed_sort_at', 'id' ) === array_column( $feed_index, 'Column_name' ) && ! in_array( 'blog_id', $columns, true ) );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture verifies the public candidate access path.
+	$public_feed_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'feed_public_cursor'", ARRAY_A );
+	usort( $public_feed_index, static fn( array $left, array $right ) : int => (int) $left['Seq_in_index'] <=> (int) $right['Seq_in_index'] );
+	ax_act_assert( $ax_act_results, 'the Activity table retains verified URI identity plus materialized cursor and public-audience keys, without blog_id tenancy', $installed && AXISMUNDI_ACT_DB_VERSION === (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION ) && ! empty( $index ) && 0 === (int) $index[0]['Non_unique'] && in_array( 'feed_sort_at', $columns, true ) && in_array( 'has_public_audience', $columns, true ) && array( 'actor_uri_hash', 'effective_status', 'feed_sort_at', 'id' ) === array_column( $feed_index, 'Column_name' ) && array( 'actor_uri_hash', 'effective_status', 'has_public_audience', 'feed_sort_at', 'id' ) === array_column( $public_feed_index, 'Column_name' ) && ! in_array( 'blog_id', $columns, true ) );
 
 	$site_actor = axismundi_actors_get_site_actor();
 	$remote     = axismundi_actors_upsert_remote(
@@ -261,7 +264,7 @@ try {
 
 	// Take the shadow down to the v4 shape and seed a row that predates the column.
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- throwaway fixture table.
-	$wpdb->query( "ALTER TABLE {$ax_act_shadow} DROP INDEX instrument_uri_hash, DROP COLUMN instrument_uri, DROP COLUMN instrument_uri_hash, DROP INDEX feed_cursor, DROP COLUMN feed_sort_at" );
+	$wpdb->query( "ALTER TABLE {$ax_act_shadow} DROP INDEX instrument_uri_hash, DROP COLUMN instrument_uri, DROP COLUMN instrument_uri_hash, DROP INDEX feed_public_cursor, DROP COLUMN has_public_audience, DROP INDEX feed_cursor, DROP COLUMN feed_sort_at" );
 	$ax_act_seed_uri = 'https://remote.example/activities/v4-row-' . $ax_act_suffix;
 	$ax_act_seed_created_at = current_time( 'mysql', true );
 	$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- throwaway fixture table.
@@ -297,6 +300,9 @@ try {
 	$ax_act_v8_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$ax_act_shadow} WHERE Key_name = 'feed_cursor'", ARRAY_A );
 	usort( $ax_act_v8_index, static fn( array $left, array $right ) : int => (int) $left['Seq_in_index'] <=> (int) $right['Seq_in_index'] );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- throwaway fixture table.
+	$ax_act_v9_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$ax_act_shadow} WHERE Key_name = 'feed_public_cursor'", ARRAY_A );
+	usort( $ax_act_v9_index, static fn( array $left, array $right ) : int => (int) $left['Seq_in_index'] <=> (int) $right['Seq_in_index'] );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- throwaway fixture table.
 	$ax_act_seed_row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$ax_act_shadow} WHERE activity_uri_hash = %s", hash( 'sha256', $ax_act_seed_uri ) ), ARRAY_A );
 
 	// Restored here so the assertions below read the real site; `finally` repeats it because
@@ -306,7 +312,7 @@ try {
 
 	ax_act_assert(
 		$ax_act_results,
-		'a populated legacy ledger upgrades in place: both derived keys appear, a row keeps its null instrument and gains its immutable cursor time, and the version is recorded only afterwards',
+		'a populated legacy ledger upgrades in place: derived keys and the public-audience fact appear, a row keeps its null instrument and gains its immutable cursor time, and the version is recorded only afterwards',
 		$ax_act_shadow_built
 			&& ! in_array( 'instrument_uri', $ax_act_v4_columns, true )
 			&& $ax_act_migrated
@@ -314,11 +320,14 @@ try {
 			&& in_array( 'instrument_uri_hash', $ax_act_v5_columns, true )
 			&& ! empty( $ax_act_v5_index )
 			&& in_array( 'feed_sort_at', $ax_act_v5_columns, true )
+			&& in_array( 'has_public_audience', $ax_act_v5_columns, true )
 			&& array( 'actor_uri_hash', 'effective_status', 'feed_sort_at', 'id' ) === array_column( $ax_act_v8_index, 'Column_name' )
+			&& array( 'actor_uri_hash', 'effective_status', 'has_public_audience', 'feed_sort_at', 'id' ) === array_column( $ax_act_v9_index, 'Column_name' )
 			&& is_array( $ax_act_seed_row )
 			&& null === $ax_act_seed_row['instrument_uri']
 			&& null === $ax_act_seed_row['instrument_uri_hash']
 			&& $ax_act_seed_created_at === (string) $ax_act_seed_row['feed_sort_at']
+			&& 0 === (int) $ax_act_seed_row['has_public_audience']
 	);
 
 	$ax_act_real_table = axismundi_act_activities_table();
@@ -331,6 +340,7 @@ try {
 			&& AXISMUNDI_ACT_DB_VERSION === (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION )
 			&& in_array( 'instrument_uri', $ax_act_real_columns, true )
 			&& in_array( 'feed_sort_at', $ax_act_real_columns, true )
+			&& in_array( 'has_public_audience', $ax_act_real_columns, true )
 	);
 } finally {
 	remove_action( 'axismundi_act_activity_recorded', 'ax_act_observe_record' );

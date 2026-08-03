@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACT_DB_VERSION        = '8';
+const AXISMUNDI_ACT_DB_VERSION        = '9';
 const AXISMUNDI_ACT_DB_VERSION_OPTION = 'axismundi_activities_db_version';
 const AXISMUNDI_ACT_PAYLOAD_MAX       = 1048576;
 
@@ -44,6 +44,7 @@ function axismundi_act_install() : bool {
 			source_event_hash char(64) DEFAULT NULL,
 			direction varchar(8) NOT NULL,
 			effective_status varchar(8) NOT NULL DEFAULT 'active',
+			has_public_audience tinyint(1) NOT NULL DEFAULT 0,
 			reaction_key varchar(191) DEFAULT NULL,
 			reaction_key_hash char(64) DEFAULT NULL,
 			reaction_raw varchar(191) DEFAULT NULL,
@@ -64,6 +65,7 @@ function axismundi_act_install() : bool {
 			KEY target_uri_hash (target_uri_hash),
 			KEY instrument_uri_hash (instrument_uri_hash),
 			KEY feed_cursor (actor_uri_hash, effective_status, feed_sort_at, id),
+			KEY feed_public_cursor (actor_uri_hash, effective_status, has_public_audience, feed_sort_at, id),
 			KEY direction_status (direction, effective_status),
 			KEY reaction_chip (object_uri_hash, effective_status, reaction_key_hash, actor_uri_hash)
 		) ENGINE=InnoDB {$charset};"
@@ -84,6 +86,9 @@ function axismundi_act_install() : bool {
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed feed cursor index verification.
 	$feed_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'feed_cursor'", ARRAY_A );
 	usort( $feed_index, static fn( array $left, array $right ) : int => (int) $left['Seq_in_index'] <=> (int) $right['Seq_in_index'] );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed candidate index verification.
+	$public_feed_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'feed_public_cursor'", ARRAY_A );
+	usort( $public_feed_index, static fn( array $left, array $right ) : int => (int) $left['Seq_in_index'] <=> (int) $right['Seq_in_index'] );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed table engine verification.
 	$engine = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s', $table ) );
 	if ( 'InnoDB' !== $engine && ! empty( $columns ) ) {
@@ -111,11 +116,13 @@ function axismundi_act_install() : bool {
 		&& in_array( 'reaction_key_hash', $columns, true )
 		&& in_array( 'reaction_raw', $columns, true )
 		&& in_array( 'feed_sort_at', $columns, true )
+		&& in_array( 'has_public_audience', $columns, true )
 		// The chip aggregate's covering index, verified for a quieter reason: without it
 		// every chip query still returns the right answer, by scanning. Nothing looks broken
 		// until an object collects thousands of reactions, and by then the version is stored.
 		&& ! empty( $reaction_index )
 		&& array( 'actor_uri_hash', 'effective_status', 'feed_sort_at', 'id' ) === array_column( $feed_index, 'Column_name' )
+		&& array( 'actor_uri_hash', 'effective_status', 'has_public_audience', 'feed_sort_at', 'id' ) === array_column( $public_feed_index, 'Column_name' )
 		&& ! in_array( 'blog_id', $columns, true )
 		&& ! empty( $uri_index )
 		&& 0 === (int) $uri_index[0]['Non_unique']
@@ -129,6 +136,9 @@ function axismundi_act_install() : bool {
 	$valid           = $base_valid && $relations_valid && $quotes_valid;
 	if ( $valid && version_compare( $previous_version, '8', '<' ) ) {
 		$valid = axismundi_act_backfill_feed_sort_at();
+	}
+	if ( $valid && version_compare( $previous_version, '9', '<' ) ) {
+		$valid = axismundi_act_backfill_public_audience();
 	}
 	if ( $valid ) {
 		update_option( AXISMUNDI_ACT_DB_VERSION_OPTION, AXISMUNDI_ACT_DB_VERSION, false );
@@ -344,6 +354,33 @@ function axismundi_act_backfill_feed_sort_at() : bool {
 	return 0 === (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE feed_sort_at IS NULL" );
 }
 
+/** Whether one normalized audience contains the ActivityStreams Public recipient. */
+function axismundi_act_audience_is_public( array $audience ) : bool {
+	$public = array( 'https://www.w3.org/ns/activitystreams#Public', 'as:Public' );
+	return (bool) array_intersect( $public, (array) ( $audience['to'] ?? array() ) )
+		|| (bool) array_intersect( $public, (array) ( $audience['cc'] ?? array() ) );
+}
+
+/** Materialize public audience from immutable normalized audience snapshots for candidate queries. */
+function axismundi_act_backfill_public_audience() : bool {
+	global $wpdb;
+	$table = axismundi_act_activities_table();
+	$after = 0;
+	$batch = 200;
+	$valid = true;
+	do {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded upgrade derivation from Activity's immutable normalized audience snapshots.
+		$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, audience_json FROM {$table} WHERE id > %d ORDER BY id ASC LIMIT %d", $after, $batch ), ARRAY_A );
+		foreach ( $rows as $row ) {
+			$after    = (int) $row['id'];
+			$audience = json_decode( (string) $row['audience_json'], true );
+			$updated  = $wpdb->update( $table, array( 'has_public_audience' => axismundi_act_audience_is_public( is_array( $audience ) ? $audience : array() ) ? 1 : 0 ), array( 'id' => $after ), array( '%d' ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded materialized-fact upgrade.
+			$valid    = false !== $updated && $valid;
+		}
+	} while ( count( $rows ) === $batch );
+	return $valid;
+}
+
 /** Normalize to/cc/bto/bcc/audience into URI lists. */
 function axismundi_act_audience( array $payload ) : array {
 	$out = array();
@@ -449,10 +486,7 @@ function axismundi_act_get_effective_by_actor_and_type( string $actor_uri, array
 
 /** Whether an Activity declares the ActivityStreams Public audience. */
 function axismundi_act_has_public_audience( Axismundi_Activity $activity ) : bool {
-	$audience = $activity->get_audience();
-	$public   = array( 'https://www.w3.org/ns/activitystreams#Public', 'as:Public' );
-	return (bool) array_intersect( $public, (array) ( $audience['to'] ?? array() ) )
-		|| (bool) array_intersect( $public, (array) ( $audience['cc'] ?? array() ) );
+	return axismundi_act_audience_is_public( $activity->get_audience() );
 }
 
 /** Whether one effective outbound Activity is addressed to the public. */
@@ -841,7 +875,8 @@ function axismundi_act_normalize( array $payload, string $direction = 'local' ) 
 
 	$payload['id'] = $activity_uri;
 	$json          = wp_json_encode( $payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
-	$audience_json = wp_json_encode( axismundi_act_audience( $payload ), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+	$audience      = axismundi_act_audience( $payload );
+	$audience_json = wp_json_encode( $audience, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 	if ( ! is_string( $json ) || ! is_string( $audience_json ) || strlen( $json ) > AXISMUNDI_ACT_PAYLOAD_MAX ) {
 		return new WP_Error( 'ax_act_payload_size', __( 'The Activity payload exceeds one MiB.', 'axismundi-activities' ) );
 	}
@@ -860,6 +895,7 @@ function axismundi_act_normalize( array $payload, string $direction = 'local' ) 
 		'instrument_uri_hash' => '' !== $instrument_uri ? hash( 'sha256', $instrument_uri ) : null,
 		'direction'         => $direction,
 		'effective_status'  => 'active',
+		'has_public_audience' => axismundi_act_audience_is_public( $audience ) ? 1 : 0,
 		'reaction_key'      => null === $reaction ? null : $reaction['key'],
 		'reaction_key_hash' => null === $reaction ? null : hash( 'sha256', $reaction['key'] ),
 		// Stored verbatim so a chip can be labelled without re-parsing the payload; the

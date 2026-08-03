@@ -170,6 +170,15 @@ try {
 		in_array( $create_uri, $ids, true ) && array() === array_intersect( $hidden_run, $ids )
 	);
 	$feed_table = axismundi_act_activities_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture verifies write-time public audience projection.
+	$create_public_audience = $wpdb->get_var( $wpdb->prepare( "SELECT has_public_audience FROM {$feed_table} WHERE activity_uri_hash = %s", hash( 'sha256', $create_uri ) ) );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture verifies write-time public audience projection.
+	$private_public_audience = $wpdb->get_var( $wpdb->prepare( "SELECT has_public_audience FROM {$feed_table} WHERE activity_uri_hash = %s", hash( 'sha256', $private_uri ) ) );
+	ax_feed_assert(
+		$ax_feed_results,
+		'Activity recording materializes public addressing so a candidate query need not decode audience JSON',
+		1 === (int) $create_public_audience && 0 === (int) $private_public_audience
+	);
 	$feed_args  = array( hash( 'sha256', $actor_uri ), $actor_uri );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture verifies the production cursor query's access path.
 	$feed_head_plan = $wpdb->get_row( $wpdb->prepare( "EXPLAIN SELECT * FROM {$feed_table} WHERE actor_uri_hash = %s AND actor_uri = %s AND direction IN ('outbound','local') AND activity_type IN ('Create','Announce') AND effective_status = 'active' ORDER BY feed_sort_at DESC, id DESC LIMIT 20", $feed_args ), ARRAY_A );

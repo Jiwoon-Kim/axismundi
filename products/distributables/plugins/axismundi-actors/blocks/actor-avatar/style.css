@@ -55,3 +55,8 @@
 	font-size: calc(var(--axismundi-actor-avatar-size, 8rem) * 0.45);
 	line-height: 1;
 }
+
+/* The profile head overlaps its cover; this leaf is always present there. */
+.ax-actor-profile__head {
+	position: relative;
+}

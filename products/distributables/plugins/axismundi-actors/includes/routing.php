@@ -982,7 +982,6 @@ function axismundi_actors_group_directory_template_content() : string {
 /** @return void */
 function axismundi_actors_register_profile_block_and_template() : void {
 	register_block_type( __DIR__ . '/../blocks/actor-profile' );
-	register_block_type( __DIR__ . '/../blocks/account-header' );
 	register_block_type( __DIR__ . '/../blocks/actor-avatar' );
 	register_block_type( __DIR__ . '/../blocks/actor-identity' );
 	// Name and handle are separate blocks so each can carry its own typography.

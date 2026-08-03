@@ -1,11 +1,10 @@
 <?php
 /**
- * Account Header nested-block substrate regression (dev-only; dist-excluded).
+ * Actor profile header template regression (dev-only; dist-excluded).
  *
- * Covers the two-layer context resolution that `providesContext` alone
- * cannot express: the current profile route is authoritative whenever one
- * exists, and an explicit `actorId` block context is only a fallback for
- * editor previews or an Account Header embedded outside the profile route.
+ * The profile header is ordinary Core Group markup. Its nested Actor leaves
+ * resolve the current profile route themselves; no composite wrapper owns a
+ * second Actor context or a parallel editor-only rendering contract.
  *
  * @package AxismundiActors
  */
@@ -70,8 +69,8 @@ try {
 	$registry = WP_Block_Type_Registry::get_instance();
 	ax_ah_assert(
 		$ax_ah_results,
-		'the legacy composite block and the new nested substrate are both registered, and the Avatar leaf may repeat in each feed card',
-		$registry->is_registered( 'axismundi/actor-profile' ) && $registry->is_registered( 'axismundi/account-header' )
+		'the profile header uses Core Group and the retired composite wrapper is not registered',
+		$registry->is_registered( 'core/group' ) && ! $registry->is_registered( 'axismundi/account-header' )
 			&& $registry->is_registered( 'axismundi/actor-avatar' )
 			&& $registry->is_registered( 'axismundi/actor-identity' ) && $registry->is_registered( 'axismundi/actor-biography' )
 			&& false !== ( $registry->get_registered( 'axismundi/actor-avatar' )->supports['multiple'] ?? null )
@@ -80,42 +79,36 @@ try {
 	$alice = ax_ah_public_actor( $ax_ah_results, $ax_ah_ids, $ax_ah_users, 'ax_ah_alice', 'Alice Header', 'alice_header' );
 	$bob   = ax_ah_public_actor( $ax_ah_results, $ax_ah_ids, $ax_ah_users, 'ax_ah_bob', 'Bob Header', 'bob_header' );
 
-	$GLOBALS['axismundi_actors_current_actor'] = null;
-	$empty_markup = '<!-- wp:axismundi/account-header --><!-- wp:axismundi/object-featured-image {"showPlaceholder":true} /--><!-- wp:axismundi/actor-avatar /--><!-- wp:axismundi/actor-identity /--><!-- wp:axismundi/actor-biography /--><!-- /wp:axismundi/account-header -->';
-	ax_ah_assert( $ax_ah_results, 'no route actor and no actorId context renders nothing', '' === trim( do_blocks( $empty_markup ) ) );
-
 	$GLOBALS['axismundi_actors_current_actor'] = $alice;
-	$route_markup = '<!-- wp:axismundi/account-header --><!-- wp:axismundi/object-featured-image {"showPlaceholder":true} /--><!-- wp:axismundi/actor-avatar /--><!-- wp:axismundi/actor-identity /--><!-- wp:axismundi/actor-biography /--><!-- /wp:axismundi/account-header -->';
+	$route_markup = '<!-- wp:group {"className":"ax-actor-profile__header"} --><div class="wp-block-group ax-actor-profile__header"><!-- wp:axismundi/object-featured-image {"showPlaceholder":true} /--><!-- wp:group {"className":"ax-actor-profile__head"} --><div class="wp-block-group ax-actor-profile__head"><!-- wp:axismundi/actor-avatar /--><!-- wp:axismundi/actor-identity /--></div><!-- /wp:group --><!-- wp:axismundi/actor-biography /--></div><!-- /wp:group -->';
 	$route_rendered = do_blocks( $route_markup );
 	ax_ah_assert(
 		$ax_ah_results,
-		'route context alone renders the full nested tree with correct child markup and no email leak',
-		false !== strpos( $route_rendered, 'wp-block-axismundi-account-header' )
-			&& false !== strpos( $route_rendered, 'wp-block-axismundi-object-featured-image' )
+		'route context renders the Core Group header wrapper and head row',
+		false !== strpos( $route_rendered, 'ax-actor-profile__header' ) && false !== strpos( $route_rendered, 'ax-actor-profile__head' )
+	);
+	ax_ah_assert(
+		$ax_ah_results,
+		'route context renders the movable Avatar, Identity, and Biography leaves without the retired wrapper',
+		false === strpos( $route_rendered, 'wp-block-axismundi-account-header' )
 			&& false !== strpos( $route_rendered, 'wp-block-axismundi-actor-avatar' )
 			&& false !== strpos( $route_rendered, 'wp-block-axismundi-actor-identity' )
 			&& false !== strpos( $route_rendered, 'wp-block-axismundi-actor-biography' )
-			&& false !== strpos( $route_rendered, 'Alice Header' )
+	);
+	ax_ah_assert(
+		$ax_ah_results,
+		'route context renders the current Actor without publishing an email or website field',
+		false !== strpos( $route_rendered, 'Alice Header' )
 			&& false === strpos( $route_rendered, 'ax-actor-biography__website' )
 			&& false === strpos( $route_rendered, 'ax_ah_alice-private@example.test' )
 	);
 
-	$GLOBALS['axismundi_actors_current_actor'] = null;
-	$context_markup = '<!-- wp:axismundi/account-header {"actorId":"' . $alice->get_uuid() . '"} --><!-- wp:axismundi/actor-identity /--><!-- /wp:axismundi/account-header -->';
-	$context_rendered = do_blocks( $context_markup );
+	$GLOBALS['axismundi_actors_current_actor'] = $bob;
+	$second_route_rendered = do_blocks( '<!-- wp:group {"className":"ax-actor-profile__header"} --><!-- wp:axismundi/actor-identity /--><!-- /wp:group -->' );
 	ax_ah_assert(
 		$ax_ah_results,
-		'an explicit actorId block context resolves the Actor when there is no route actor (editor/embed case)',
-		false !== strpos( $context_rendered, 'Alice Header' )
-	);
-
-	$GLOBALS['axismundi_actors_current_actor'] = $alice;
-	$conflict_markup = '<!-- wp:axismundi/account-header {"actorId":"' . $bob->get_uuid() . '"} --><!-- wp:axismundi/actor-identity /--><!-- /wp:axismundi/account-header -->';
-	$conflict_rendered = do_blocks( $conflict_markup );
-	ax_ah_assert(
-		$ax_ah_results,
-		'route context wins over a conflicting actorId block context',
-		false !== strpos( $conflict_rendered, 'Alice Header' ) && false === strpos( $conflict_rendered, 'Bob Header' )
+		'Actor leaves resolve the current route directly rather than a saved wrapper actorId',
+		false !== strpos( $second_route_rendered, 'Bob Header' ) && false === strpos( $second_route_rendered, 'Alice Header' )
 	);
 
 	$GLOBALS['axismundi_actors_current_actor'] = $alice;

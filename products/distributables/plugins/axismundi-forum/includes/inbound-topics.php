@@ -89,6 +89,17 @@ function axismundi_forum_remote_actor_can_post( int $group_identity_id, Axismund
 	return is_array( $membership ) && 'accepted' === (string) $membership['membership_state'];
 }
 
+/** Whether one verified remote Person may submit a Comment under this Group's policy. */
+function axismundi_forum_remote_actor_can_submit_comment( int $group_identity_id, Axismundi_Actor $actor ) : bool {
+	if ( $actor->is_local() ) {
+		return false;
+	}
+	if ( 'open' === axismundi_forum_get_comment_posting_policy( $group_identity_id ) ) {
+		return true;
+	}
+	return axismundi_forum_remote_actor_can_post( $group_identity_id, $actor );
+}
+
 /**
  * Admit one already-cached remote Page as a top-level Topic entry.
  *
@@ -169,9 +180,8 @@ function axismundi_forum_admit_remote_root( array $stored, Axismundi_Activity $a
 /**
  * Accept and redistribute one public remote Note reply addressed to a local Group.
  *
- * Unlike a root Topic, a reply has no Forum entry of its own. Its acceptance is the
- * Group's immutable Announce of the verified incoming Create. Addressing alone is
- * not sufficient: the author must already be an accepted member of the Group.
+ * A reply is its own `reply` submission entry, never a fake Topic. The entry keeps the
+ * immutable incoming Create that approval will wrap in the Group Announce.
  *
  * @return true|WP_Error
  */
@@ -199,25 +209,43 @@ function axismundi_forum_admit_remote_reply( array $stored, Axismundi_Activity $
 		$group = function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $candidate_uri ) : null;
 		if ( ! $group instanceof Axismundi_Actor || ! $group->is_local() || ! $group->is_managed() || 'Group' !== $group->get_type()
 			|| ! axismundi_forum_is_community( $group->get_identity_id() ) || ! axismundi_forum_remote_root_addresses_group( $payload, $activity, $group )
-			|| ! axismundi_forum_remote_actor_can_post( $group->get_identity_id(), $author ) ) {
+			|| ! axismundi_forum_remote_actor_can_submit_comment( $group->get_identity_id(), $author ) ) {
 			continue;
 		}
-		$audience = function_exists( 'axismundi_forum_distribution_audience' ) ? axismundi_forum_distribution_audience( $group ) : new WP_Error( 'ax_forum_announce_group' );
-		if ( is_wp_error( $audience ) || ! function_exists( 'axismundi_act_record_source_activity' ) ) {
-			return is_wp_error( $audience ) ? $audience : new WP_Error( 'ax_forum_remote_reply_announce', __( 'The Group publication recorder is unavailable.', 'axismundi-forum' ) );
+		$existing = axismundi_forum_get_remote_entry( $group->get_identity_id(), $object_uri );
+		if ( is_array( $existing ) ) {
+			return ( 'reply' === (string) ( $existing['entry_type'] ?? '' ) && (int) $existing['submission_actor_identity_id'] === $author->get_identity_id() )
+				? true
+				: new WP_Error( 'ax_forum_remote_reply_conflict', __( 'That remote Comment already has a conflicting Forum entry.', 'axismundi-forum' ) );
 		}
-		$announce = axismundi_act_record_source_activity(
+		$now = current_time( 'mysql', true );
+		global $wpdb;
+		$inserted = $wpdb->insert(
+			axismundi_forum_entries_table(),
 			array(
-				'type'   => 'Announce',
-				'actor'  => $group->get_uri(),
-				'object' => $activity->get_payload(),
-				'to'     => $audience['to'],
-				'cc'     => $audience['cc'],
+				'group_identity_id'             => $group->get_identity_id(),
+				'object_uri'                    => $object_uri,
+				'object_uri_hash'               => hash( 'sha256', $object_uri ),
+				'entry_type'                    => 'reply',
+				'submission_actor_identity_id' => $author->get_identity_id(),
+				'admission_state'               => 'pending',
+				'moderation_state'              => 'visible',
+				'accepted_activity_uri'          => $activity->get_uri(),
+				'created_at'                    => $now,
+				'updated_at'                    => $now,
 			),
-			'outbound',
-			'forum-group-inbound-reply-announce:' . $group->get_identity_id() . ':' . $activity->get_uri()
-		);
-		return is_wp_error( $announce ) ? $announce : true;
+			array( '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' )
+		); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- contextual Comment submission projection; Object cache owns its source.
+		if ( false === $inserted ) {
+			return new WP_Error( 'ax_forum_remote_reply_write', __( 'The remote Comment could not enter this community review queue.', 'axismundi-forum' ) );
+		}
+		$entry = axismundi_forum_get_remote_entry( $group->get_identity_id(), $object_uri );
+		if ( 'open' !== axismundi_forum_get_comment_approval_policy( $group->get_identity_id() ) || ! is_array( $entry ) ) {
+			return true;
+		}
+		return function_exists( 'axismundi_forum_publish_validated_pending_entry' )
+			? axismundi_forum_publish_validated_pending_entry( $entry )
+			: new WP_Error( 'ax_forum_remote_reply_publish', __( 'The Group publication recorder is unavailable.', 'axismundi-forum' ) );
 	}
 	return new WP_Error( 'ax_forum_remote_reply_target', __( 'The remote Note does not target an eligible local Forum Group.', 'axismundi-forum' ) );
 }

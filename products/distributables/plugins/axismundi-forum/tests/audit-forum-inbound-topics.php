@@ -144,13 +144,33 @@ try {
 		}
 	}
 	$reply_comments = $group instanceof Axismundi_Actor ? axismundi_forum_group_comment_uris( $group ) : array( 'uris' => array() );
+	$reply_entry = axismundi_forum_get_remote_entry( $community, $reply_uri );
 	ax_fit_assert(
 		$ax_fit_results,
 		'an accepted remote member Note reply is preserved in the Group Announce ledger and appears in the community Comments collection',
-		$reply instanceof Axismundi_Activity && $reply_announce instanceof Axismundi_Activity
+		$reply instanceof Axismundi_Activity && is_array( $reply_entry ) && 'reply' === (string) $reply_entry['entry_type'] && 'visible' === (string) $reply_entry['admission_state'] && $reply_announce instanceof Axismundi_Activity
 			&& $reply->get_payload() === (array) ( $reply_announce->get_payload()['object'] ?? array() )
 			&& in_array( $reply_uri, (array) $reply_comments['uris'], true )
 	);
+
+	$comment_approval = axismundi_forum_set_comment_approval_policy( $community, $owner, 'approval' );
+	$pending_reply_uri = 'https://example.com/comments/pending-' . wp_generate_uuid4();
+	$pending_reply = $member instanceof Axismundi_Actor && $group instanceof Axismundi_Actor && true === $comment_approval
+		? ax_fit_create( $member, $pending_reply_uri, array( 'type' => 'Note', 'name' => '', 'inReplyTo' => $accepted_uri, 'audience' => $group->get_uri(), 'context' => $group->get_uri() ) )
+		: new WP_Error( 'fixture' );
+	$ax_fit_activity_uris[] = $pending_reply_uri . '/activity';
+	$ax_fit_object_uris[] = $pending_reply_uri;
+	$pending_reply_entry = axismundi_forum_get_remote_entry( $community, $pending_reply_uri );
+	$pending_comment_count = count( axismundi_forum_pending_comment_entries( $community ) );
+	$approved_reply = is_array( $pending_reply_entry ) ? axismundi_forum_approve_pending_entry( (int) $pending_reply_entry['id'], $owner ) : new WP_Error( 'fixture' );
+	$approved_reply_entry = axismundi_forum_get_remote_entry( $community, $pending_reply_uri );
+	ax_fit_assert(
+		$ax_fit_results,
+		'a Comment approval policy queues a reply separately, then moderator approval records its Group Announce',
+		$pending_reply instanceof Axismundi_Activity && is_array( $pending_reply_entry ) && 'reply' === (string) $pending_reply_entry['entry_type'] && 'pending' === (string) $pending_reply_entry['admission_state']
+			&& 1 === $pending_comment_count && true === $approved_reply && is_array( $approved_reply_entry ) && 'visible' === (string) $approved_reply_entry['admission_state'] && ! empty( $approved_reply_entry['announced_activity_uri'] )
+	);
+	axismundi_forum_set_comment_approval_policy( $community, $owner, 'open' );
 
 	remove_action( 'axismundi_op_remote_object_observed', 'axismundi_forum_observe_remote_root', 20 );
 	$cached_reply_uri = 'https://example.com/comments/cached-' . wp_generate_uuid4();
@@ -193,6 +213,7 @@ try {
 	);
 
 	$outsider_reply_uri = 'https://example.com/comments/outsider-' . wp_generate_uuid4();
+	$members_only_comments = axismundi_forum_set_comment_posting_policy( $community, $owner, 'members' );
 	$outsider_reply = $outsider instanceof Axismundi_Actor && $group instanceof Axismundi_Actor
 		? ax_fit_create( $outsider, $outsider_reply_uri, array( 'type' => 'Note', 'name' => '', 'inReplyTo' => $accepted_uri, 'audience' => $group->get_uri(), 'context' => $group->get_uri() ) )
 		: new WP_Error( 'fixture' );
@@ -202,7 +223,7 @@ try {
 	ax_fit_assert(
 		$ax_fit_results,
 		'a non-member remote Note reply is cached but never gains a local Group Announce',
-		$outsider_reply instanceof Axismundi_Activity && empty( $outsider_reply_announces )
+		true === $members_only_comments && $outsider_reply instanceof Axismundi_Activity && empty( $outsider_reply_announces ) && null === axismundi_forum_get_remote_entry( $community, $outsider_reply_uri )
 	);
 
 	$elsewhere_uri = 'https://example.com/pages/elsewhere-' . wp_generate_uuid4();

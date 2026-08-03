@@ -176,6 +176,22 @@ function axismundi_forum_topic_approval_policies() : array {
 	);
 }
 
+/** @return array<string,string> Remote reply submission eligibility choices. */
+function axismundi_forum_comment_posting_policies() : array {
+	return array(
+		'open'    => __( 'Anyone', 'axismundi-forum' ),
+		'members' => __( 'Accepted community members', 'axismundi-forum' ),
+	);
+}
+
+/** @return array<string,string> Group validation choices for remote replies. */
+function axismundi_forum_comment_approval_policies() : array {
+	return array(
+		'open'     => __( 'Announce accepted comments automatically', 'axismundi-forum' ),
+		'approval' => __( 'Require moderator approval before Announce', 'axismundi-forum' ),
+	);
+}
+
 /** Read one Forum's local Topic-admission policy, defaulting new Forums to F1 open posting. */
 function axismundi_forum_get_posting_policy( int $group_identity_id ) : string {
 	$community = axismundi_forum_get_community( $group_identity_id );
@@ -220,6 +236,42 @@ function axismundi_forum_set_topic_approval_policy( int $group_identity_id, int 
 		return true;
 	}
 	return axismundi_forum_update_community_policy( $group_identity_id, $user_id, 'topic_approval_policy', $policy );
+}
+
+/** Read one community's remote Comment submission eligibility policy. */
+function axismundi_forum_get_comment_posting_policy( int $group_identity_id ) : string {
+	$community = axismundi_forum_get_community( $group_identity_id );
+	$policy = is_array( $community ) ? (string) $community['comment_posting_policy'] : '';
+	return array_key_exists( $policy, axismundi_forum_comment_posting_policies() ) ? $policy : 'open';
+}
+
+/** Change who may submit an inbound reply addressed to the Group. */
+function axismundi_forum_set_comment_posting_policy( int $group_identity_id, int $user_id, string $policy ) {
+	if ( ! array_key_exists( $policy, axismundi_forum_comment_posting_policies() ) ) {
+		return new WP_Error( 'ax_forum_comment_posting_policy', __( 'The Forum comment submission policy is invalid.', 'axismundi-forum' ) );
+	}
+	if ( $policy === axismundi_forum_get_comment_posting_policy( $group_identity_id ) ) {
+		return true;
+	}
+	return axismundi_forum_update_community_policy( $group_identity_id, $user_id, 'comment_posting_policy', $policy );
+}
+
+/** Read one community's Comment Announce approval policy. */
+function axismundi_forum_get_comment_approval_policy( int $group_identity_id ) : string {
+	$community = axismundi_forum_get_community( $group_identity_id );
+	$policy = is_array( $community ) ? (string) $community['comment_approval_policy'] : '';
+	return array_key_exists( $policy, axismundi_forum_comment_approval_policies() ) ? $policy : 'open';
+}
+
+/** Change whether valid remote reply submissions await a moderator. */
+function axismundi_forum_set_comment_approval_policy( int $group_identity_id, int $user_id, string $policy ) {
+	if ( ! array_key_exists( $policy, axismundi_forum_comment_approval_policies() ) ) {
+		return new WP_Error( 'ax_forum_comment_approval_policy', __( 'The Forum comment approval policy is invalid.', 'axismundi-forum' ) );
+	}
+	if ( $policy === axismundi_forum_get_comment_approval_policy( $group_identity_id ) ) {
+		return true;
+	}
+	return axismundi_forum_update_community_policy( $group_identity_id, $user_id, 'comment_approval_policy', $policy );
 }
 
 /** Whether this local Person may submit any authored content to one community. */
@@ -317,6 +369,18 @@ function axismundi_forum_pending_topic_entries( int $group_identity_id, int $lim
 	$limit = max( 1, min( 100, $limit ) );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed Group-scoped pending Topic queue.
 	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE group_identity_id = %d AND entry_type = 'topic' AND admission_state = 'pending' ORDER BY created_at ASC, id ASC LIMIT %d", $group_identity_id, $limit ), ARRAY_A );
+}
+
+/** @return array<int,array<string,mixed>> Remote Comment submissions awaiting Group Announce approval. */
+function axismundi_forum_pending_comment_entries( int $group_identity_id, int $limit = 100 ) : array {
+	if ( $group_identity_id <= 0 ) {
+		return array();
+	}
+	global $wpdb;
+	$table = axismundi_forum_entries_table();
+	$limit = max( 1, min( 100, $limit ) );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed Group-scoped pending Comment queue.
+	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE group_identity_id = %d AND entry_type = 'reply' AND admission_state = 'pending' ORDER BY created_at ASC, id ASC LIMIT %d", $group_identity_id, $limit ), ARRAY_A );
 }
 
 /** Lock or reopen a Topic for replies; source object content remains unchanged. */

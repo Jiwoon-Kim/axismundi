@@ -125,6 +125,15 @@ function axismundi_forum_render_group_admin_section( Axismundi_Actor $group ) : 
 		printf( '<option value="%s" %s>%s</option>', esc_attr( $value ), selected( $community['topic_approval_policy'], $value, false ), esc_html( $label ) );
 	}
 	echo '</select><p class="description">' . esc_html__( 'When approval is required, valid Topic submissions wait here until a moderator approves the Group Announce.', 'axismundi-forum' ) . '</p></td></tr></table>';
+	echo '<table class="form-table" role="presentation"><tr><th><label for="ax-forum-comment-posting">' . esc_html__( 'Comment submissions', 'axismundi-forum' ) . '</label></th><td><select id="ax-forum-comment-posting" name="comment_posting_policy">';
+	foreach ( axismundi_forum_comment_posting_policies() as $value => $label ) {
+		printf( '<option value="%s" %s>%s</option>', esc_attr( $value ), selected( $community['comment_posting_policy'], $value, false ), esc_html( $label ) );
+	}
+	echo '</select><p class="description">' . esc_html__( 'Choose who may submit a remote reply addressed to this Group. Followers means accepted community members.', 'axismundi-forum' ) . '</p></td></tr><tr><th><label for="ax-forum-comment-approval">' . esc_html__( 'Comment approval', 'axismundi-forum' ) . '</label></th><td><select id="ax-forum-comment-approval" name="comment_approval_policy">';
+	foreach ( axismundi_forum_comment_approval_policies() as $value => $label ) {
+		printf( '<option value="%s" %s>%s</option>', esc_attr( $value ), selected( $community['comment_approval_policy'], $value, false ), esc_html( $label ) );
+	}
+	echo '</select><p class="description">' . esc_html__( 'When approval is required, valid Comment submissions wait until a moderator approves the Group Announce.', 'axismundi-forum' ) . '</p></td></tr></table>';
 	echo '<table class="form-table" role="presentation"><tr><th><label for="ax-forum-distribution">' . esc_html__( 'Topic distribution', 'axismundi-forum' ) . '</label></th><td><select id="ax-forum-distribution" name="distribution_scope">';
 	foreach ( axismundi_forum_distribution_scopes() as $value => $label ) {
 		$available = axismundi_forum_admin_distribution_scope_available( $value );
@@ -215,7 +224,6 @@ function axismundi_forum_render_group_admin_section( Axismundi_Actor $group ) : 
 		echo '<h3>' . esc_html__( 'Topic submissions', 'axismundi-forum' ) . ' <span class="count">(' . esc_html( number_format_i18n( count( $pending_topics ) ) ) . ')</span></h3>';
 		if ( empty( $pending_topics ) ) {
 			echo '<p class="description">' . esc_html__( 'No Topic submissions are awaiting review.', 'axismundi-forum' ) . '</p>';
-			return;
 		}
 		echo '<ul>';
 		foreach ( $pending_topics as $entry ) {
@@ -238,6 +246,25 @@ function axismundi_forum_render_group_admin_section( Axismundi_Actor $group ) : 
 			echo '<button class="button button-small" name="decision" value="approve">' . esc_html__( 'Approve and announce', 'axismundi-forum' ) . '</button> <button class="button button-small" name="decision" value="reject">' . esc_html__( 'Reject submission', 'axismundi-forum' ) . '</button></form></li>';
 		}
 		echo '</ul>';
+	}
+	$pending_comments = $can_moderate ? axismundi_forum_pending_comment_entries( $group_id ) : array();
+	if ( $can_moderate ) {
+		echo '<h3>' . esc_html__( 'Comment submissions', 'axismundi-forum' ) . ' <span class="count">(' . esc_html( number_format_i18n( count( $pending_comments ) ) ) . ')</span></h3>';
+		if ( empty( $pending_comments ) ) {
+			echo '<p class="description">' . esc_html__( 'No Comment submissions are awaiting review.', 'axismundi-forum' ) . '</p>';
+		} else {
+			echo '<ul>';
+			foreach ( $pending_comments as $entry ) {
+				$author = axismundi_actors_get_by_identity( (int) ( $entry['submission_actor_identity_id'] ?? 0 ) );
+				$label = $author instanceof Axismundi_Actor ? '@' . $author->get_preferred_username() : __( 'Unknown author', 'axismundi-forum' );
+				$preview = function_exists( 'axismundi_op_render_object_by_uri' ) ? axismundi_op_render_object_by_uri( (string) $entry['object_uri'], array( 'headingTag' => 'h4', 'interactions' => false, 'expected_author' => $author instanceof Axismundi_Actor ? $author->get_uri() : '' ) ) : '';
+				echo '<li>' . esc_html( $label ) . ' ' . ( '' !== $preview ? $preview : '<code>' . esc_html( (string) $entry['object_uri'] ) . '</code>' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Object Projections owns its escaped card renderer.
+				echo ' <form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline"><input type="hidden" name="action" value="axismundi_forum_comment_decision"><input type="hidden" name="group_identity_id" value="' . esc_attr( (string) $group_id ) . '"><input type="hidden" name="entry_id" value="' . esc_attr( (string) $entry['id'] ) . '">';
+				wp_nonce_field( 'axismundi_forum_comment_' . $group_id . '_' . $entry['id'] );
+				echo '<textarea name="reason" rows="2" placeholder="' . esc_attr__( 'Reason required when rejecting', 'axismundi-forum' ) . '"></textarea> <button class="button button-small" name="decision" value="approve">' . esc_html__( 'Approve and announce', 'axismundi-forum' ) . '</button> <button class="button button-small" name="decision" value="reject">' . esc_html__( 'Reject submission', 'axismundi-forum' ) . '</button></form></li>';
+			}
+			echo '</ul>';
+		}
 	}
 }
 add_action( 'axismundi_actors_managed_group_admin_sections', 'axismundi_forum_render_group_admin_section', 20 );
@@ -269,6 +296,12 @@ function axismundi_forum_handle_save_community() : void {
 	}
 	if ( ! is_wp_error( $result ) ) {
 		$result = axismundi_forum_set_topic_approval_policy( $group_id, get_current_user_id(), sanitize_key( (string) ( $_POST['topic_approval_policy'] ?? '' ) ) );
+	}
+	if ( ! is_wp_error( $result ) ) {
+		$result = axismundi_forum_set_comment_posting_policy( $group_id, get_current_user_id(), sanitize_key( (string) ( $_POST['comment_posting_policy'] ?? '' ) ) );
+	}
+	if ( ! is_wp_error( $result ) ) {
+		$result = axismundi_forum_set_comment_approval_policy( $group_id, get_current_user_id(), sanitize_key( (string) ( $_POST['comment_approval_policy'] ?? '' ) ) );
 	}
 	if ( ! is_wp_error( $result ) ) {
 		$scope = sanitize_key( (string) ( $_POST['distribution_scope'] ?? '' ) );
@@ -303,6 +336,24 @@ function axismundi_forum_handle_topic_decision() : void {
 	axismundi_forum_group_admin_redirect( $group_id, $result );
 }
 add_action( 'admin_post_axismundi_forum_topic_decision', 'axismundi_forum_handle_topic_decision' );
+
+/** Approve or reject a pending Comment through the same Group distribution command. */
+function axismundi_forum_handle_comment_decision() : void {
+	$group_id = isset( $_POST['group_identity_id'] ) ? absint( $_POST['group_identity_id'] ) : 0;
+	$entry_id = isset( $_POST['entry_id'] ) ? absint( $_POST['entry_id'] ) : 0;
+	check_admin_referer( 'axismundi_forum_comment_' . $group_id . '_' . $entry_id );
+	$entry = axismundi_forum_get_entry( $entry_id );
+	if ( ! is_array( $entry ) || $group_id !== (int) $entry['group_identity_id'] || 'reply' !== (string) $entry['entry_type'] ) {
+		axismundi_forum_group_admin_redirect( $group_id, new WP_Error( 'ax_forum_comment_decision', __( 'The Comment submission is invalid.', 'axismundi-forum' ) ) );
+	}
+	$decision = sanitize_key( (string) ( $_POST['decision'] ?? '' ) );
+	$reason = isset( $_POST['reason'] ) ? wp_kses_post( wp_unslash( $_POST['reason'] ) ) : '';
+	$result = 'approve' === $decision
+		? axismundi_forum_approve_pending_entry( $entry_id, get_current_user_id() )
+		: ( 'reject' === $decision ? axismundi_forum_reject_pending_entry( $entry_id, get_current_user_id(), $reason ) : new WP_Error( 'ax_forum_comment_decision', __( 'The Comment decision is invalid.', 'axismundi-forum' ) ) );
+	axismundi_forum_group_admin_redirect( $group_id, $result );
+}
+add_action( 'admin_post_axismundi_forum_comment_decision', 'axismundi_forum_handle_comment_decision' );
 
 /** Promote or demote an accepted member through the FEP-1b12 moderator activity path. */
 function axismundi_forum_handle_moderator_decision() : void {

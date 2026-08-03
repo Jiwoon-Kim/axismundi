@@ -104,7 +104,7 @@ try {
 	$community_admin = (string) ob_get_clean();
 	ax_fc_assert(
 		'the managed Group community screen exposes its member list, membership controls, and an empty Topic review queue',
-		$owner_actor instanceof Axismundi_Actor && str_contains( $community_admin, 'Members' ) && str_contains( $community_admin, 'Membership approval' ) && str_contains( $community_admin, 'Topic submissions' ) && str_contains( $community_admin, 'No Topic submissions are awaiting review.' ) && str_contains( $community_admin, function_exists( 'axismundi_actors_federated_mention_name' ) ? axismundi_actors_federated_mention_name( $owner_actor ) : '@' . $owner_actor->get_preferred_username() )
+		$owner_actor instanceof Axismundi_Actor && str_contains( $community_admin, 'Members' ) && str_contains( $community_admin, 'Membership approval' ) && str_contains( $community_admin, 'Topic submissions' ) && str_contains( $community_admin, 'Comment submissions' ) && str_contains( $community_admin, 'No Topic submissions are awaiting review.' ) && str_contains( $community_admin, 'No Comment submissions are awaiting review.' ) && 'open' === axismundi_forum_get_comment_posting_policy( $group_id ) && str_contains( $community_admin, function_exists( 'axismundi_actors_federated_mention_name' ) ? axismundi_actors_federated_mention_name( $owner_actor ) : '@' . $owner_actor->get_preferred_username() )
 	);
 	ax_fc_assert(
 		'the Group settings remember member-only Topic distribution without offering it before its reader surface exists',

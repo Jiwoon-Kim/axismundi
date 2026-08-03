@@ -95,6 +95,37 @@ function axismundi_note_emit_rest_lifecycle( WP_Post $post, WP_REST_Request $req
 }
 add_action( 'rest_after_insert_' . AXISMUNDI_NOTE_POST_TYPE, 'axismundi_note_emit_rest_lifecycle', 40, 3 );
 
+/** Refresh the OP listing row after the Note's current source state has settled. */
+function axismundi_note_refresh_listing_projection( WP_Post $post ) : void {
+	if ( AXISMUNDI_NOTE_POST_TYPE !== $post->post_type || ! function_exists( 'axismundi_op_refresh_object_listing_projection' ) ) {
+		return;
+	}
+	$envelope = axismundi_note_get( $post->ID );
+	$uri      = is_array( $envelope ) ? axismundi_note_object_uri( (string) ( $envelope['local_uuid'] ?? '' ) ) : '';
+	if ( '' !== $uri ) {
+		axismundi_op_refresh_object_listing_projection( $uri );
+	}
+}
+
+/** Refresh after complete non-REST saves; REST waits for its structured envelope field. */
+function axismundi_note_refresh_saved_listing_projection( int $post_id, WP_Post $post, bool $update, bool $rest_complete = false ) : void {
+	unset( $post_id, $update );
+	if ( wp_is_post_revision( $post->ID )
+		|| ( function_exists( 'axismundi_note_is_rest_write' ) && axismundi_note_is_rest_write() && ! $rest_complete )
+	) {
+		return;
+	}
+	axismundi_note_refresh_listing_projection( $post );
+}
+add_action( 'save_post_' . AXISMUNDI_NOTE_POST_TYPE, 'axismundi_note_refresh_saved_listing_projection', 50, 3 );
+
+/** Refresh after Gutenberg has saved the final envelope value. */
+function axismundi_note_refresh_rest_listing_projection( WP_Post $post, WP_REST_Request $request, bool $creating ) : void {
+	unset( $request, $creating );
+	axismundi_note_refresh_saved_listing_projection( $post->ID, $post, false, true );
+}
+add_action( 'rest_after_insert_' . AXISMUNDI_NOTE_POST_TYPE, 'axismundi_note_refresh_rest_listing_projection', 50, 3 );
+
 /** Withdraw a Note when it leaves the published state. */
 function axismundi_note_transition_lifecycle( string $new_status, string $old_status, WP_Post $post ) : void {
 	if ( AXISMUNDI_NOTE_POST_TYPE !== $post->post_type || 'publish' !== $old_status || 'publish' === $new_status ) {
@@ -106,6 +137,13 @@ function axismundi_note_transition_lifecycle( string $new_status, string $old_st
 	}
 }
 add_action( 'transition_post_status', 'axismundi_note_transition_lifecycle', 40, 3 );
+
+/** A status transition changes listability even when it does not emit a new Object. */
+function axismundi_note_refresh_transition_listing_projection( string $new_status, string $old_status, WP_Post $post ) : void {
+	unset( $new_status, $old_status );
+	axismundi_note_refresh_listing_projection( $post );
+}
+add_action( 'transition_post_status', 'axismundi_note_refresh_transition_listing_projection', 50, 3 );
 
 /**
  * Refuse permanent deletion until a previously federated Note has a durable Delete.
@@ -128,3 +166,12 @@ function axismundi_note_pre_delete_lifecycle( $delete, WP_Post $post ) {
 	return $delete;
 }
 add_filter( 'pre_delete_post', 'axismundi_note_pre_delete_lifecycle', 20, 2 );
+
+/** The envelope filter has tombstoned first; retain that state in the listing projection. */
+function axismundi_note_refresh_deleted_listing_projection( $delete, WP_Post $post ) {
+	if ( false !== $delete ) {
+		axismundi_note_refresh_listing_projection( $post );
+	}
+	return $delete;
+}
+add_filter( 'pre_delete_post', 'axismundi_note_refresh_deleted_listing_projection', 30, 2 );

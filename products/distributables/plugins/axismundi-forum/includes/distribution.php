@@ -35,7 +35,11 @@ function axismundi_forum_set_distribution_scope( int $group_identity_id, int $us
 	if ( $scope === axismundi_forum_get_distribution_scope( $group_identity_id ) ) {
 		return true;
 	}
-	return axismundi_forum_update_community_policy( $group_identity_id, $user_id, 'distribution_scope', $scope );
+	$result = axismundi_forum_update_community_policy( $group_identity_id, $user_id, 'distribution_scope', $scope );
+	if ( true === $result && function_exists( 'axismundi_forum_refresh_community_topic_listing_projections' ) ) {
+		axismundi_forum_refresh_community_topic_listing_projections( $group_identity_id );
+	}
+	return $result;
 }
 
 /** Return the exact Group Announce audience for one configured community. */
@@ -730,7 +734,14 @@ function axismundi_forum_publish_validated_pending_entry( array $entry ) {
 		array( '%s', '%s', '%s' ),
 		array( '%d' )
 	); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- ledger-first transition of one pending Group entry.
-	return false === $updated ? new WP_Error( 'ax_forum_announce_write', __( 'The approved Topic could not be made visible.', 'axismundi-forum' ) ) : true;
+	if ( false === $updated ) {
+		return new WP_Error( 'ax_forum_announce_write', __( 'The approved Topic could not be made visible.', 'axismundi-forum' ) );
+	}
+	$topic = get_post( (int) ( $entry['source_post_id'] ?? 0 ) );
+	if ( $topic instanceof WP_Post && function_exists( 'axismundi_forum_refresh_topic_listing_projection' ) ) {
+		axismundi_forum_refresh_topic_listing_projection( $topic );
+	}
+	return true;
 }
 
 /**

@@ -80,6 +80,7 @@ try {
 	$activities = axismundi_act_get_by_object( $object_uri );
 	$create     = $activities[0] ?? null;
 	$payload    = $create instanceof Axismundi_Activity ? $create->get_payload() : array();
+	$listing    = function_exists( 'axismundi_op_get_object_listing_projection' ) ? axismundi_op_get_object_listing_projection( $object_uri ) : null;
 	ax_nl_assert(
 		$ax_nl_results,
 		'first publication records one embedded-snapshot Create with matching Object and Activity audience',
@@ -91,6 +92,25 @@ try {
 		&& ( $payload['object']['to'] ?? null ) === ( $payload['to'] ?? null )
 		&& ( $payload['object']['cc'] ?? null ) === ( $payload['cc'] ?? null )
 	);
+ax_nl_assert(
+	$ax_nl_results,
+	'publishing a Note materializes one active, publicly listable local Object row',
+	is_array( $listing )
+		&& 'local' === (string) $listing['source']
+		&& 'active' === (string) $listing['object_status']
+		&& 1 === (int) $listing['publicly_listable']
+);
+	$rebuilt_listing = function_exists( 'axismundi_op_backfill_object_listing_projection' ) && axismundi_op_backfill_object_listing_projection()
+		&& function_exists( 'axismundi_op_get_object_listing_projection' )
+		? axismundi_op_get_object_listing_projection( $object_uri )
+		: null;
+	ax_nl_assert(
+	$ax_nl_results,
+	'a remote-cache rebuild leaves a local Note row alone instead of treating it as an orphan',
+	is_array( $rebuilt_listing)
+		&& 'local' === (string) $rebuilt_listing['source']
+		&& 1 === (int) $rebuilt_listing['publicly_listable']
+);
 
 	$replay = axismundi_note_record_commit( get_post( $post_id ) );
 	ax_nl_assert( $ax_nl_results, 'replaying the same committed snapshot returns the original Create', $replay instanceof Axismundi_Activity && $create instanceof Axismundi_Activity && $replay->get_id() === $create->get_id() && 1 === count( axismundi_act_get_by_object( $object_uri ) ) );
@@ -106,6 +126,7 @@ try {
 	$activities = axismundi_act_get_by_object( $object_uri );
 	$update     = $activities[0] ?? null;
 	$update_payload = $update instanceof Axismundi_Activity ? $update->get_payload() : array();
+	$followers_listing = function_exists( 'axismundi_op_get_object_listing_projection' ) ? axismundi_op_get_object_listing_projection( $object_uri ) : null;
 	ax_nl_assert(
 		$ax_nl_results,
 		'Gutenberg publication waits for the envelope field and records one followers-only Update',
@@ -117,6 +138,14 @@ try {
 		&& array() === ( $update_payload['cc'] ?? null )
 		&& ! empty( $update_payload['to'] )
 	);
+	ax_nl_assert(
+	$ax_nl_results,
+	'a non-public Note remains an active local row rather than being mistaken for a deletion',
+	is_array( $followers_listing )
+		&& 'local' === (string) $followers_listing['source']
+		&& 'active' === (string) $followers_listing['object_status']
+		&& 0 === (int) $followers_listing['publicly_listable']
+);
 
 	$update_replay = axismundi_note_record_commit( get_post( $post_id ) );
 	ax_nl_assert( $ax_nl_results, 'a duplicate callback after REST completion does not mint another Update', $update_replay instanceof Axismundi_Activity && $update instanceof Axismundi_Activity && $update_replay->get_id() === $update->get_id() && 2 === count( axismundi_act_get_by_object( $object_uri ) ) );
@@ -186,7 +215,16 @@ try {
 
 	$retried = wp_delete_post( $abort_id, true );
 	$ax_nl_post_ids = array_values( array_diff( $ax_nl_post_ids, array( $abort_id ) ) );
+	$abort_listing = function_exists( 'axismundi_op_get_object_listing_projection' ) ? axismundi_op_get_object_listing_projection( $abort_uri ) : null;
 	ax_nl_assert( $ax_nl_results, 'retrying the hard delete completes the one missing Delete before removing the Post', $retried instanceof WP_Post && ! get_post( $abort_id ) && ( axismundi_act_get_object_lifecycle( $abort_uri ) instanceof Axismundi_Activity ) && 'Delete' === axismundi_act_get_object_lifecycle( $abort_uri )->get_type() );
+	ax_nl_assert(
+	$ax_nl_results,
+	'a hard-deleted Note keeps a non-listable Tombstone row for thread history',
+	is_array( $abort_listing )
+		&& 'local' === (string) $abort_listing['source']
+		&& 'tombstone' === (string) $abort_listing['object_status']
+		&& 0 === (int) $abort_listing['publicly_listable']
+);
 
 	ax_nl_assert( $ax_nl_results, 'the complete Note lifecycle performs no HTTP request', 0 === $GLOBALS['ax_nl_http'] );
 } finally {
@@ -194,6 +232,9 @@ try {
 	remove_filter( 'pre_http_request', 'ax_nl_http' );
 	foreach ( array_unique( $ax_nl_object_uris ) as $uri ) {
 		$wpdb->delete( axismundi_act_activities_table(), array( 'object_uri_hash' => hash( 'sha256', $uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		if ( function_exists( 'axismundi_op_delete_object_listing_projection' ) ) {
+			axismundi_op_delete_object_listing_projection( $uri );
+		}
 	}
 	foreach ( array_unique( $ax_nl_post_ids ) as $post_id ) {
 		$question = axismundi_note_question_row( (int) $post_id );

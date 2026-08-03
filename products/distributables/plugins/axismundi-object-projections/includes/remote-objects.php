@@ -110,11 +110,18 @@ function axismundi_op_write_object_listing_projection( string $object_uri, array
 		$context = (array) axismundi_act_group_context( (array) ( $row['payload'] ?? array() ), $object_uri );
 	}
 	$primary = trim( (string) ( $context['primary_group_uri'] ?? '' ) );
+	$candidate_source = (string) ( $row['listing_source'] ?? 'remote' );
+	$source  = in_array( $candidate_source, array( 'remote', 'local' ), true )
+		? $candidate_source
+		: 'remote';
+	$listable = array_key_exists( 'listing_publicly_listable', $row )
+		? ! empty( $row['listing_publicly_listable'] )
+		: axismundi_op_remote_object_is_publicly_listable( $row );
 	return false !== $wpdb->replace(
 		axismundi_op_object_index_table(),
 		array(
 			'object_uri_hash'        => hash( 'sha256', $object_uri ),
-			'publicly_listable'      => (int) axismundi_op_remote_object_is_publicly_listable( $row ),
+			'publicly_listable'      => (int) $listable,
 			/*
 			 * Why an Object is unlistable, not only that it is.
 			 *
@@ -133,12 +140,49 @@ function axismundi_op_write_object_listing_projection( string $object_uri, array
 			 * a snapshot fixes that today and deletes every local Object's row tomorrow, so the
 			 * sweep has to know what it owns before there is anything else to own.
 			 */
-			'source'                 => 'remote',
+			'source'                 => $source,
 			'has_group_context'      => ! empty( $context['has_group_context'] ) ? 1 : 0,
 			'primary_group_uri_hash' => '' !== $primary ? hash( 'sha256', $primary ) : null,
 			'updated_at'             => current_time( 'mysql', true ),
 		),
 		array( '%s', '%d', '%s', '%s', '%d', '%s', '%s' )
+	);
+}
+
+/**
+ * Describe one local source through its registered transformer without making a public route.
+ *
+ * The transformer runs directly because a listing needs to remember why an Object is excluded:
+ * its public gate may be false while its current Object remains useful as addressing evidence.
+ * A transform failure is still an active, unlistable local row; deleting it would confuse an
+ * unpublished Object with an Object that no longer exists.
+ *
+ * @return array<string,mixed>|null
+ */
+function axismundi_op_local_object_listing_projection_row( $source ) : ?array {
+	$transformer = function_exists( 'axismundi_op_resolve_object_transformer' )
+		? axismundi_op_resolve_object_transformer( $source )
+		: null;
+	if ( ! is_array( $transformer ) ) {
+		return null;
+	}
+	try {
+		$object_uri = trim( (string) call_user_func( $transformer['uri'], $source ) );
+		$visible    = null !== $transformer['visible'] && true === call_user_func( $transformer['visible'], $source );
+		$object     = call_user_func( $transformer['transform'], $source );
+	} catch ( Throwable $error ) {
+		return null;
+	}
+	if ( '' === $object_uri ) {
+		return null;
+	}
+	$payload = is_array( $object ) ? $object : array();
+	$status  = 'Tombstone' === (string) ( $payload['type'] ?? '' ) ? 'tombstone' : 'active';
+	return array(
+		'payload'                    => $payload,
+		'object_status'              => $status,
+		'listing_source'             => 'local',
+		'listing_publicly_listable'  => 'tombstone' !== $status && $visible,
 	);
 }
 
@@ -157,10 +201,16 @@ function axismundi_op_refresh_object_listing_projection( string $object_uri, ?ar
 		return false;
 	}
 	$row = $source_row ?? axismundi_op_get_remote_object( $object_uri );
-	if ( ! is_array( $row ) ) {
-		return axismundi_op_delete_object_listing_projection( $object_uri );
+	if ( is_array( $row ) ) {
+		return axismundi_op_write_object_listing_projection( $object_uri, $row );
 	}
-	return axismundi_op_write_object_listing_projection( $object_uri, $row );
+	$local_source = function_exists( 'axismundi_op_resolve_source_by_uri' )
+		? axismundi_op_resolve_source_by_uri( $object_uri )
+		: null;
+	$row = null !== $local_source ? axismundi_op_local_object_listing_projection_row( $local_source ) : null;
+	return is_array( $row )
+		? axismundi_op_write_object_listing_projection( $object_uri, $row )
+		: axismundi_op_delete_object_listing_projection( $object_uri );
 }
 
 /** Rebuild the remote-cache share of the listing projection during an upgrade. */

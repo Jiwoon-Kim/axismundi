@@ -120,6 +120,8 @@ try {
 	$admit       = true === $open_policy ? axismundi_forum_admit_local_topic( $community, $topic, $owner ) : $open_policy;
 	$entry = axismundi_forum_get_topic_entry( $topic );
 	$announce = is_array( $entry ) ? axismundi_act_get( (string) ( $entry['announced_activity_uri'] ?? '' ) ) : null;
+	$topic_uri = axismundi_forum_topic_object_uri( get_post( $topic ) );
+	$listing = function_exists( 'axismundi_op_get_object_listing_projection' ) ? axismundi_op_get_object_listing_projection( $topic_uri ) : null;
 	ax_ft_assert(
 		$ax_ft_results,
 		'an open-policy admission records its Person Create and makes the entry visible only through Group Announce(Create)',
@@ -134,8 +136,34 @@ try {
 			&& 'visible' === (string) $entry['admission_state']
 			&& $announce instanceof Axismundi_Activity && $group instanceof Axismundi_Actor
 			&& $group->get_uri() === $announce->get_actor_uri()
-			&& 'Create' === (string) ( $announce->get_payload()['object']['type'] ?? '' )
+		&& 'Create' === (string) ( $announce->get_payload()['object']['type'] ?? '' )
 	);
+	ax_ft_assert(
+	$ax_ft_results,
+	'an admitted public Topic materializes one publicly listable local Object row with its Group context',
+	is_array( $listing)
+		&& 'local' === (string) $listing['source']
+		&& 'active' === (string) $listing['object_status']
+		&& 1 === (int) $listing['publicly_listable']
+		&& 1 === (int) $listing['has_group_context']
+		&& $group instanceof Axismundi_Actor
+		&& hash( 'sha256', $group->get_uri() ) === (string) $listing['primary_group_uri_hash']
+);
+	$members_scope = axismundi_forum_set_distribution_scope( $community, $owner, 'members' );
+	$members_listing = function_exists( 'axismundi_op_get_object_listing_projection' ) ? axismundi_op_get_object_listing_projection( $topic_uri ) : null;
+	$public_scope = true === $members_scope ? axismundi_forum_set_distribution_scope( $community, $owner, 'public' ) : $members_scope;
+	$public_listing = function_exists( 'axismundi_op_get_object_listing_projection' ) ? axismundi_op_get_object_listing_projection( $topic_uri ) : null;
+	ax_ft_assert(
+	$ax_ft_results,
+	'changing a community distribution scope re-materializes its Topic rows without changing their Group context',
+	true === $members_scope
+		&& is_array( $members_listing)
+		&& 0 === (int) $members_listing['publicly_listable']
+		&& true === $public_scope
+		&& is_array( $public_listing)
+		&& 1 === (int) $public_listing['publicly_listable']
+		&& (string) $members_listing['primary_group_uri_hash'] === (string) $public_listing['primary_group_uri_hash']
+);
 
 	ax_ft_assert(
 		$ax_ft_results,
@@ -206,10 +234,11 @@ try {
 	);
 
 	wp_delete_post( $topic, true );
+	$deleted_listing = function_exists( 'axismundi_op_get_object_listing_projection' ) ? axismundi_op_get_object_listing_projection( $topic_uri ) : null;
 	ax_ft_assert(
 		$ax_ft_results,
-		'deleting a Topic removes only its contextual entry and leaves the community intact',
-		null === axismundi_forum_get_topic_entry( $topic ) && axismundi_forum_is_community( $community )
+		'deleting a Topic removes its contextual entry and local listing row while leaving the community intact',
+		null === axismundi_forum_get_topic_entry( $topic ) && null === $deleted_listing && axismundi_forum_is_community( $community )
 	);
 
 	// Removing a community's entries is the closest thing left to deleting the old Forum post.

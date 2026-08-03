@@ -105,6 +105,38 @@ function axismundi_forum_delete_entries_for_topic( int $post_id ) : void {
 }
 add_action( 'before_delete_post', 'axismundi_forum_delete_entries_for_topic' );
 
+/** Refresh the OP-owned listing state for one Topic that Forum has contextualized. */
+function axismundi_forum_refresh_topic_listing_projection( WP_Post $topic ) : void {
+	if ( AXISMUNDI_FORUM_TOPIC_POST_TYPE !== $topic->post_type || ! function_exists( 'axismundi_op_refresh_object_listing_projection' ) ) {
+		return;
+	}
+	axismundi_op_refresh_object_listing_projection( axismundi_forum_topic_object_uri( $topic ) );
+}
+
+/** Save transitions cover published local and remote-Group Topics after their context exists. */
+function axismundi_forum_refresh_saved_topic_listing_projection( int $post_id, WP_Post $post, bool $update ) : void {
+	unset( $post_id, $update );
+	if ( ! wp_is_post_revision( $post->ID ) ) {
+		axismundi_forum_refresh_topic_listing_projection( $post );
+	}
+}
+add_action( 'save_post_' . AXISMUNDI_FORUM_TOPIC_POST_TYPE, 'axismundi_forum_refresh_saved_topic_listing_projection', 50, 3 );
+
+/** A Core status change alters a Topic's public projection independently of its entry row. */
+function axismundi_forum_refresh_topic_transition_listing_projection( string $new_status, string $old_status, WP_Post $post ) : void {
+	unset( $new_status, $old_status );
+	axismundi_forum_refresh_topic_listing_projection( $post );
+}
+add_action( 'transition_post_status', 'axismundi_forum_refresh_topic_transition_listing_projection', 50, 3 );
+
+/** Unlike a Note, permanent Topic deletion has no local Tombstone source to retain. */
+function axismundi_forum_delete_topic_listing_projection( int $post_id, WP_Post $post ) : void {
+	if ( AXISMUNDI_FORUM_TOPIC_POST_TYPE === $post->post_type && function_exists( 'axismundi_op_delete_object_listing_projection' ) ) {
+		axismundi_op_delete_object_listing_projection( axismundi_forum_topic_object_uri( $post ) );
+	}
+}
+add_action( 'before_delete_post', 'axismundi_forum_delete_topic_listing_projection', 20, 2 );
+
 /** @return array<string,string> Stable local Topic-admission policy labels. */
 function axismundi_forum_posting_policies() : array {
 	return array(
@@ -381,12 +413,30 @@ function axismundi_forum_admit_local_topic( int $group_identity_id, int $topic_p
 		return new WP_Error( 'ax_forum_topic_create_link', __( 'The Topic Create could not be linked to its community entry.', 'axismundi-forum' ) );
 	}
 	$entry = axismundi_forum_get_topic_entry( $topic_post_id );
+	axismundi_forum_refresh_topic_listing_projection( $topic );
 	if ( 'open' !== axismundi_forum_get_topic_approval_policy( $group_identity_id ) || ! is_array( $entry ) ) {
 		return true;
 	}
 	return function_exists( 'axismundi_forum_publish_validated_pending_entry' )
 		? axismundi_forum_publish_validated_pending_entry( $entry )
 		: new WP_Error( 'ax_forum_topic_publish', __( 'The Group publication recorder is unavailable.', 'axismundi-forum' ) );
+}
+
+/** Re-materialize one community's local Topic rows after a policy changes their visibility. */
+function axismundi_forum_refresh_community_topic_listing_projections( int $group_identity_id ) : void {
+	if ( $group_identity_id <= 0 || ! function_exists( 'axismundi_op_refresh_object_listing_projection' ) ) {
+		return;
+	}
+	global $wpdb;
+	$table = axismundi_forum_entries_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed Forum context lookup feeding OP's one writer.
+	$post_ids = (array) $wpdb->get_col( $wpdb->prepare( "SELECT source_post_id FROM {$table} WHERE group_identity_id = %d AND entry_type = 'topic' AND source_post_id > 0", $group_identity_id ) );
+	foreach ( $post_ids as $post_id ) {
+		$topic = get_post( (int) $post_id );
+		if ( $topic instanceof WP_Post ) {
+			axismundi_forum_refresh_topic_listing_projection( $topic );
+		}
+	}
 }
 
 /** Get public visible Topic post ids for the Forum Topic list. */

@@ -576,6 +576,10 @@ function axismundi_note_object_view_model( $source ) : ?array {
 		: null;
 	return array(
 		'id'              => $id,
+		// Notes deliberately have no Core permalink. Their canonical Object URI is
+		// also the local human document route, so do not let OP fall back to the
+		// private ax_note post type's non-public permalink.
+		'human_url'       => $id,
 		'type'            => is_array( $poll ) ? 'Question' : 'Note',
 		'status'          => 'active',
 		'object_uri'      => $id,

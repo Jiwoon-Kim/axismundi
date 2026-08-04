@@ -61,7 +61,11 @@ try {
 
 	// The Note adapter answers through the deterministic, exception-isolated OP registry.
 	$vm = axismundi_op_object_view_model( $active );
-	ax_vm_assert( $ax_vm_results, 'the OP registry resolves a Note source deterministically after an earlier adapter fails', is_array( $vm ) && 'Note' === $vm['type'] && 'active' === $vm['status'] && axismundi_note_object_uri( $uuid ) === $vm['id'] && false !== strpos( (string) $vm['content_html'], 'Hello from a note.' ) && '' !== (string) $vm['author']['name'] );
+	ax_vm_assert( $ax_vm_results, 'the OP registry resolves a Note source deterministically after an earlier adapter fails', is_array( $vm ) && 'Note' === $vm['type'] && 'active' === $vm['status'] && axismundi_note_object_uri( $uuid ) === $vm['id'] && axismundi_note_object_uri( $uuid ) === $vm['human_url'] && false !== strpos( (string) $vm['content_html'], 'Hello from a note.' ) && '' !== (string) $vm['author']['name'] );
+	axismundi_op_set_current_object_view_model( $vm );
+	$date_link = do_blocks( '<!-- wp:axismundi/object-date {"isLink":true} /-->' );
+	axismundi_op_set_current_object_view_model( null );
+	ax_vm_assert( $ax_vm_results, 'a Note date links to its canonical local Object document instead of the private post permalink', false !== strpos( $date_link, 'href="' . esc_url( axismundi_note_object_uri( $uuid ) ) . '"' ) && false === strpos( $date_link, 'post_type=ax_note' ) );
 	ax_vm_assert( $ax_vm_results, 'the local Object model exposes Actor identity fields used by the shared Object Card', $actor instanceof Axismundi_Actor && $actor->get_uri() === ( $vm['author']['id'] ?? '' ) && $login === ( $vm['author']['preferred_username'] ?? '' ) && axismundi_actors_federated_mention_name( $actor ) === ( $vm['author']['handle'] ?? '' ) && '' !== (string) ( $vm['author']['url'] ?? '' ) );
 
 	// A non-Note source is passed through, not claimed.

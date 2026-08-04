@@ -31,9 +31,17 @@ function axismundi_forum_card_group() : ?Axismundi_Actor {
 	if ( $group_identity_id > 0 ) {
 		return axismundi_forum_get_community_group( $group_identity_id );
 	}
-	/* A cached Object document has no queried Topic or current profile Actor. */
+	/*
+	 * An Object document has no queried Topic or current profile Actor. Local
+	 * Note routes and cached remote routes bind the same OP view model, so use
+	 * that shared request state rather than making the sidebar route-specific.
+	 */
 	$route = function_exists( 'axismundi_op_object_html_route' ) ? axismundi_op_object_html_route() : null;
 	$model = is_array( $route ) && is_array( $route['model'] ?? null ) ? $route['model'] : array();
+	if ( empty( $model ) && function_exists( 'axismundi_op_current_object_view_model' ) ) {
+		$current = axismundi_op_current_object_view_model();
+		$model   = is_array( $current ) ? $current : array();
+	}
 	$uri   = trim( (string) ( $model['id'] ?? '' ) );
 	if ( '' !== $uri && function_exists( 'axismundi_forum_object_community_group' ) ) {
 		return axismundi_forum_object_community_group( $uri );

@@ -100,6 +100,19 @@ try {
 			&& $group->get_uri() === $ax_ot_card_group->get_uri()
 	);
 
+	$ax_ot_previous_model = axismundi_op_current_object_view_model();
+	$GLOBALS['axismundi_op_object_html_route'] = $ax_ot_previous_route;
+	axismundi_op_set_current_object_view_model( array( 'id' => $reply_uri, 'status' => 'active' ) );
+	$ax_ot_note_card_group = axismundi_forum_card_group();
+	axismundi_op_set_current_object_view_model( $ax_ot_previous_model );
+	ax_ot_assert(
+		$ax_ot_results,
+		'a local Note Object route gives its sidebar the Group through the shared current Object model',
+		$group instanceof Axismundi_Actor
+			&& $ax_ot_note_card_group instanceof Axismundi_Actor
+			&& $group->get_uri() === $ax_ot_note_card_group->get_uri()
+	);
+
 	ax_ot_assert(
 		$ax_ot_results,
 		'a reply with no community keeps the plain reply template',

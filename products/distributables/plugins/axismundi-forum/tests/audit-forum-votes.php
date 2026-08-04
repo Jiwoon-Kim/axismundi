@@ -25,6 +25,7 @@ $ax_fv_results = array();
 $ax_fv_users   = array();
 $ax_fv_ids     = array();
 $ax_fv_posts   = array();
+$ax_fv_objects = array();
 
 /** @param bool[] $results Results. */
 function ax_fv_assert( array &$results, string $label, bool $condition ) : void {
@@ -43,7 +44,17 @@ try {
 		axismundi_actors_set_status( $actor->get_identity_id(), 'public' );
 		$actor = axismundi_actors_get_by_identity( $actor->get_identity_id() );
 	}
-	$object = home_url( '/?p=99999701' );
+	$group = axismundi_actors_create_managed_group( array( 'owner_user_id' => $user, 'preferred_username' => 'axfvg' . strtolower( wp_generate_password( 7, false, false ) ), 'status' => 'public' ) );
+	$ax_fv_ids[] = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
+	$object = 'https://example.com/notes/' . wp_generate_uuid4();
+	$ax_fv_objects[] = $object;
+	axismundi_op_store_remote_object(
+		array(
+			'id' => $object, 'type' => 'Note', 'attributedTo' => 'https://example.com/users/axfv',
+			'audience' => $group instanceof Axismundi_Actor ? $group->get_uri() : '',
+			'content' => '<p>Community vote fixture.</p>', 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+		)
+	);
 
 	$up = $actor instanceof Axismundi_Actor ? axismundi_forum_cast_vote( $actor, $object, 'up' ) : new WP_Error( 'fixture' );
 	ax_fv_assert(
@@ -100,7 +111,12 @@ try {
 	wp_set_current_user( $user );
 	$topic_id = (int) wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'publish', 'post_title' => 'ax vote fixture', 'post_author' => $user ) );
 	$ax_fv_posts[] = $topic_id;
-	$topic_uri = function_exists( 'axismundi_op_post_object_uri' ) ? axismundi_op_post_object_uri( get_post( $topic_id ) ) : '';
+	$loose_uri = function_exists( 'axismundi_op_post_object_uri' ) ? axismundi_op_post_object_uri( get_post( $topic_id ) ) : '';
+
+	// The ledger-state assertions above deliberately leave both verb rows behind; the endpoint
+	// starts from no selection so its first direction has one unambiguous expected result.
+	axismundi_forum_cast_vote( $actor, $object, 'none' );
+	$topic_uri = $object;
 
 	$request = new WP_REST_Request( 'POST', '/axismundi/v1/community-votes' );
 	$request->set_body_params( array( 'object_uri' => $topic_uri, 'direction' => 'down' ) );
@@ -128,11 +144,15 @@ try {
 	$unknown = new WP_REST_Request( 'POST', '/axismundi/v1/community-votes' );
 	$unknown->set_body_params( array( 'object_uri' => home_url( '/?p=99999999' ), 'direction' => 'up' ) );
 	$unknown_response = rest_do_request( $unknown );
+	$outside = new WP_REST_Request( 'POST', '/axismundi/v1/community-votes' );
+	$outside->set_body_params( array( 'object_uri' => $loose_uri, 'direction' => 'up' ) );
+	$outside_response = rest_do_request( $outside );
 	ax_fv_assert(
 		$ax_fv_results,
-		'the endpoint rejects an unsupported direction and a vote on an object it cannot resolve',
+		'the endpoint rejects an unsupported direction, an unknown object, and an object outside a community',
 		$bad_response instanceof WP_REST_Response && 400 === $bad_response->get_status()
 			&& $unknown_response instanceof WP_REST_Response && $unknown_response->get_status() >= 400
+			&& $outside_response instanceof WP_REST_Response && 409 === $outside_response->get_status()
 	);
 
 	/*
@@ -207,6 +227,54 @@ try {
 			&& 'true' === $down_rows[1]['pressed'] && true === $down_rows[1]['selected']
 	);
 
+	/*
+	 * The rule the control now keeps by itself.
+	 *
+	 * A vote counts toward a community, so an Object in none has nothing to count it. This used to
+	 * hold only because the block appeared on the two community templates and nowhere else, which
+	 * made a correctness property depend on template placement -- and this is the assertion that
+	 * fails if the gate is ever removed and the placement is trusted again.
+	 *
+	 * The subject is a plain published post: real, interactable, and in no community.
+	 */
+	/*
+	 * One authored control, two contexts.
+	 *
+	 * Templates place Like; a community Object turns it into the vote. Asserting the substitution
+	 * both ways is what keeps the rule from decaying into "vote everywhere" or back into a control
+	 * an author has to remember to swap per surface -- and an upvote records `Like`, so this
+	 * changes how the act is offered, not which act it is.
+	 */
+	$ax_fv_like = static function ( string $uri ) : string {
+		return do_blocks( '<!-- wp:axismundi/interaction {"type":"like","objectUri":"' . esc_url_raw( $uri ) . '"} /-->' );
+	};
+	$ax_fv_community_like = $ax_fv_like( $topic_uri );
+	$ax_fv_plain_like     = $ax_fv_like( $loose_uri );
+	ax_fv_assert(
+		$ax_fv_results,
+		'an authored Like renders as the vote on a community Object and stays a Like everywhere else',
+		// Rendered, not resolved: calling the mapper directly would still pass with nothing hooked
+		// to it, which is the difference between the rule existing and the rule being applied.
+		false !== strpos( $ax_fv_community_like, 'is-type-vote' )
+			&& false !== strpos( $ax_fv_community_like, 'thumb_down' )
+			&& false === strpos( $ax_fv_community_like, 'is-type-like' )
+			&& false !== strpos( $ax_fv_plain_like, 'is-type-like' )
+			&& false === strpos( $ax_fv_plain_like, 'is-type-vote' )
+			// A type that is not Like is never rewritten, whatever context it is read in.
+			&& false !== strpos( do_blocks( '<!-- wp:axismundi/interaction {"type":"reply","objectUri":"' . esc_url_raw( $topic_uri ) . '"} /-->' ), 'is-type-reply' )
+			&& 'Like' === axismundi_forum_vote_verb( 'up' )
+	);
+
+	$loose_rows = $ax_fv_read( do_blocks( '<!-- wp:axismundi/interaction {"type":"vote","objectUri":"' . esc_url_raw( $loose_uri ) . '"} /-->' ) );
+	ax_fv_assert(
+		$ax_fv_results,
+		'an Object belonging to no community is offered no vote, whatever template asks for one',
+		'' !== $loose_uri
+			&& null === axismundi_forum_object_community_group( $loose_uri )
+			&& array() === $loose_rows
+			&& array() !== $up_rows
+	);
+
 	// A visitor who may not vote is shown the control and told why, rather than shown a gap.
 	$anon_rows = $ax_fv_read( $anon_vote );
 	ax_fv_assert(
@@ -225,6 +293,9 @@ try {
 			$wpdb->delete( $actor_table, array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		}
 		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+	}
+	foreach ( array_filter( array_unique( $ax_fv_objects ) ) as $object_uri ) {
+		axismundi_op_delete_remote_object( (string) $object_uri );
 	}
 	foreach ( array_filter( array_unique( $ax_fv_posts ) ) as $post_id ) {
 		wp_delete_post( (int) $post_id, true );

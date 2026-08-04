@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.9.29
+Stable tag: 0.9.30
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: forum, community, activitypub, group, federation
@@ -33,6 +33,13 @@ Not in this plugin: identity, handles, Group lifecycle, or manager delegation
 object rendering (Axismundi Object Projections); Note replies (Axismundi Note).
 
 == Changelog ==
+
+= 0.9.30 =
+* Shows the Group Topic controls as one Interaction row and makes a Like render
+  as an up/down community vote only when its Object belongs to a Group.
+* Enforces the same community boundary in the vote service and REST endpoint.
+* Aligns the Topic and community Object frames while retaining their distinct
+  editable subject blocks.
 
 = 0.9.29 =
 * Recognizes this site's human Topic permalinks in a Note's reply target and

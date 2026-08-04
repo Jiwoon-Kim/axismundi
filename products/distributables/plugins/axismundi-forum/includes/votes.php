@@ -117,6 +117,9 @@ function axismundi_forum_cast_vote( Axismundi_Actor $actor, string $object_uri, 
 	if ( ! in_array( $direction, axismundi_forum_vote_directions(), true ) ) {
 		return new WP_Error( 'ax_forum_vote_direction', __( 'That is not a valid vote.', 'axismundi-forum' ) );
 	}
+	if ( ! axismundi_forum_object_community_group( $object_uri ) instanceof Axismundi_Actor ) {
+		return new WP_Error( 'ax_forum_vote_community', __( 'Votes are available only for community objects.', 'axismundi-forum' ), array( 'status' => 409 ) );
+	}
 	if ( ! function_exists( 'axismundi_act_vote_on_object' ) || ! function_exists( 'axismundi_act_undo_vote_on_object' ) ) {
 		return new WP_Error( 'ax_forum_vote_unavailable', __( 'The activity ledger is unavailable.', 'axismundi-forum' ) );
 	}

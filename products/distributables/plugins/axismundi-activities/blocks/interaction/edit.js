@@ -19,7 +19,23 @@
 		{ name: 'announce', title: __( 'Announce', 'axismundi-activities' ), icon: 'sync', label: __( 'Announce', 'axismundi-activities' ) },
 		{ name: 'quote', title: __( 'Quote', 'axismundi-activities' ), icon: 'format_quote', label: __( 'Quote', 'axismundi-activities' ) },
 		{ name: 'reaction', title: __( 'Reaction', 'axismundi-activities' ), icon: 'add_reaction', label: __( 'React', 'axismundi-activities' ) },
-		{ name: 'vote', title: __( 'Vote', 'axismundi-activities' ), icon: 'thumb_up', label: __( 'Vote', 'axismundi-activities' ) }
+		/*
+		 * The one type that is several controls rather than one.
+		 *
+		 * A vote is a like and a dislike either side of the score they produce, and the server
+		 * describes it that way. Drawing only the first of those here left an author placing the
+		 * block looking at a lone thumb-up and reasonably concluding the downvote was missing or
+		 * broken -- the preview disagreeing with the page it previews, which is the one thing it
+		 * exists not to do.
+		 */
+		{
+			name: 'vote',
+			title: __( 'Vote', 'axismundi-activities' ),
+			icon: 'thumb_up',
+			label: __( 'Vote', 'axismundi-activities' ),
+			groupLabel: __( 'Community vote', 'axismundi-activities' ),
+			controls: [ { icon: 'thumb_up' }, { value: '0' }, { icon: 'thumb_down' } ]
+		}
 	];
 
 	function typeFor( name ) {
@@ -102,15 +118,36 @@
 				el(
 					'div',
 					blockEditor.useBlockProps( { className: 'axismundi-interaction is-type-' + type.name } ),
-					el(
-						'button',
-						{
-							type: 'button',
-							className: 'wp-element-button axismundi-interaction__button is-size-' + size,
-							disabled: true
-						},
-						children
-					)
+					type.controls
+						? el(
+							'div',
+							{ className: 'axismundi-interaction__group', role: 'group', 'aria-label': type.groupLabel },
+							type.controls.map( function ( control, index ) {
+								// A value entry is the score between the two sides, not a control.
+								if ( undefined !== control.value ) {
+									return el( 'span', { className: 'axismundi-interaction__value', key: 'value-' + index }, control.value );
+								}
+								return el(
+									'button',
+									{
+										type: 'button',
+										className: 'wp-element-button axismundi-interaction__button is-size-' + size,
+										disabled: true,
+										key: 'control-' + index
+									},
+									el( 'span', { className: 'material-symbols-outlined', 'aria-hidden': 'true' }, control.icon )
+								);
+							} )
+						)
+						: el(
+							'button',
+							{
+								type: 'button',
+								className: 'wp-element-button axismundi-interaction__button is-size-' + size,
+								disabled: true
+							},
+							children
+						)
 				)
 			);
 		},

@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.45
+Stable tag: 0.0.46
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -33,6 +33,12 @@ authoritative payload remains lossless while blind recipients and non-public Act
 excluded from public projections.
 
 == Changelog ==
+
+= 0.0.46 =
+* Lets a context-owning product substitute an authored interaction type at render
+  time, so one saved card can show a community vote or an ordinary Like per Object.
+* Makes the Interaction block's editor preview render both directions and the score
+  for a community vote.
 
 = 0.0.45 =
 * Lets Group Activity profiles use the shared countable Activity ledger, including

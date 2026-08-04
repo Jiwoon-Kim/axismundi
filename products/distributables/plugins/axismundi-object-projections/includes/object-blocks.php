@@ -1623,8 +1623,25 @@ function axismundi_op_render_quote_context_block( array $attributes = array() ) 
 
 /** Render the Object-card action row; child blocks own their individual behavior. */
 function axismundi_op_render_object_interactions_block( array $attributes, string $content ) : string {
-	$model = axismundi_op_active_object_view_model();
-	if ( ! is_array( $model ) || ! (bool) axismundi_op_object_template_option( 'interactions', true ) ) {
+	if ( ! (bool) axismundi_op_object_template_option( 'interactions', true ) ) {
+		return '';
+	}
+	/*
+	 * A cached Object route binds a view model; a local Topic does not.
+	 *
+	 * A Topic is an ordinary singular WordPress post, so nothing binds a view model for it, and
+	 * requiring one meant this row silently swallowed its children on exactly the page a forum is
+	 * built around — the controls did not fail visibly, they rendered as nothing. That is why the
+	 * Topic template had to place a bare control outside any row.
+	 *
+	 * This is the same registry-backed fallback the replies block already uses, and it stays narrow
+	 * for the same reason: `request_object_uri()` answers only on a singular route whose post type
+	 * a transformer claims, so an archive or an unrelated post still gets no row, and no product
+	 * post type is named here.
+	 */
+	$subject = is_array( axismundi_op_active_object_view_model() )
+		|| ( function_exists( 'axismundi_op_request_object_uri' ) && '' !== axismundi_op_request_object_uri() );
+	if ( ! $subject ) {
 		return '';
 	}
 	return '' === trim( $content ) ? '' : '<div ' . get_block_wrapper_attributes( array( 'class' => 'axismundi-object__interactions' ) ) . '>' . $content . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Nested blocks render their own escaped output.

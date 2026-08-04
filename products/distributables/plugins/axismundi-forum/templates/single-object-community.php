@@ -23,8 +23,6 @@ defined( 'ABSPATH' ) || exit;
 		<!-- wp:column {"width":"66.66%"} -->
 		<div class="wp-block-column" style="flex-basis:66.66%">
 			<?php echo axismundi_op_object_card_pattern_content(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Trusted bundled block pattern from Object Projections. ?>
-			<!-- wp:axismundi/interaction {"type":"vote"} /-->
-
 			<!-- wp:axismundi/replies /-->
 		</div>
 		<!-- /wp:column -->

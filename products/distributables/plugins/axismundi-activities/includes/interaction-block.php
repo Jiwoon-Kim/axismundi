@@ -263,6 +263,24 @@ function axismundi_act_render_interaction_control( string $type, array $descript
 function axismundi_act_render_interaction_block( array $attributes, string $content, WP_Block $block ) : string {
 	unset( $content );
 	$type  = isset( $attributes['type'] ) ? sanitize_key( (string) $attributes['type'] ) : '';
+	/**
+	 * Substitute the interaction type this instance renders as.
+	 *
+	 * Some controls are the same act read in a wider context rather than a different act: a
+	 * community vote is a Like and a Dislike offered together, and `vote_verb('up')` is literally
+	 * `Like`. Which of the two an Object should offer follows from the Object, not from the author
+	 * who placed the block — and it cannot be a saved attribute, because one saved card renders
+	 * every row of a feed and a thread, where community and ordinary Objects sit side by side.
+	 *
+	 * So the choice is made here, once, on the way in. This plugin learns only that a type may
+	 * stand in for another; what a community is stays with the product that has the concept, which
+	 * is the same boundary `axismundi_act_register_interaction_type()` exists to hold.
+	 *
+	 * @param string   $type       Authored interaction type.
+	 * @param array    $attributes Block attributes.
+	 * @param WP_Block $block      Block instance.
+	 */
+	$type  = sanitize_key( (string) apply_filters( 'axismundi_act_interaction_type', $type, $attributes, $block ) );
 	$types = axismundi_act_interaction_types();
 	if ( ! isset( $types[ $type ] ) ) {
 		return '';

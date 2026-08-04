@@ -94,6 +94,21 @@ function axismundi_forum_describe_vote_interaction( array $attributes, WP_Block 
 	if ( '' === $object_uri ) {
 		return null;
 	}
+	/*
+	 * Asked of the Object, not inferred from the page that placed the control.
+	 *
+	 * "A vote is only meaningful inside a community" was already the rule stated above, but it was
+	 * being kept by placement alone: the block appeared on the two community templates and nowhere
+	 * else, so it never had to decide. That held only while the template list did, which made a
+	 * correctness property depend on an editorial one -- a single template edit, or a card rendered
+	 * on some other surface, and a reader would be offered a vote on something no community can
+	 * count.
+	 *
+	 * A local Topic answers here through its own object URI, so the Topic page keeps its vote.
+	 */
+	if ( ! axismundi_forum_object_community_group( $object_uri ) instanceof Axismundi_Actor ) {
+		return null;
+	}
 	if ( function_exists( 'axismundi_act_no_cache_like_state' ) ) {
 		axismundi_act_no_cache_like_state();
 	}
@@ -172,6 +187,36 @@ function axismundi_forum_describe_vote_interaction( array $attributes, WP_Block 
 		),
 	);
 }
+
+/**
+ * A Like offered on a community Object is a vote.
+ *
+ * The placement rule this implements has one clause, not five: community context votes, everything
+ * else likes. A Group's feed, a Person's community surface and a community Object document are all
+ * the first case; a Person's own timeline and an ordinary Object document are the second. None of
+ * that is an editorial choice an author should be making per template, and a saved attribute could
+ * not express it anyway — the hashtag archive and any thread render community and ordinary Objects
+ * from the same saved card.
+ *
+ * Nothing is taken away by the swap. An upvote records `Like`, so the verb an author asked for is
+ * exactly the verb the reader still sends; the community case only adds the opposite direction and
+ * the score the two produce.
+ *
+ * @param string   $type       Authored interaction type.
+ * @param array    $attributes Block attributes.
+ * @param WP_Block $block      Block instance.
+ */
+function axismundi_forum_community_interaction_type( string $type, array $attributes, WP_Block $block ) : string {
+	if ( 'like' !== $type ) {
+		return $type;
+	}
+	$object_uri = axismundi_forum_vote_block_object_uri( $attributes, $block );
+	if ( '' === $object_uri ) {
+		return $type;
+	}
+	return axismundi_forum_object_community_group( $object_uri ) instanceof Axismundi_Actor ? 'vote' : $type;
+}
+add_filter( 'axismundi_act_interaction_type', 'axismundi_forum_community_interaction_type', 10, 3 );
 
 /** Offer the community vote as an interaction type. */
 function axismundi_forum_register_vote_interaction_type() : void {

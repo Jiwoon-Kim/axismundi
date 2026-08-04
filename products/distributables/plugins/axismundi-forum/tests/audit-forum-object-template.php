@@ -155,7 +155,15 @@ try {
 			 */
 			&& ! $reply_template instanceof WP_Block_Template
 			&& false !== strpos( $community_template->content, 'wp:axismundi/community-card' )
-			&& false !== strpos( $community_template->content, 'wp:axismundi/interaction {"type":"vote"}' )
+			/*
+			 * The vote is no longer placed here, and that is the point.
+			 *
+			 * A community Object gets its vote because the shared card's Like resolves to one in
+			 * community context, not because this template hard-codes a second control beside the
+			 * card. Keeping the old block would now render both. What this template still owes the
+			 * page is the community frame — the card and the sidebar — so that is what is asserted.
+			 */
+			&& false === strpos( $community_template->content, 'wp:axismundi/interaction {"type":"vote"}' )
 			&& false !== strpos( $community_template->content, 'axismundi-object-thread-item' )
 			/*
 			 * One human-facing thread renderer, not two.

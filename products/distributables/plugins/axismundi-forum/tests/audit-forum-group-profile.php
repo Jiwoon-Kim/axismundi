@@ -108,6 +108,7 @@ try {
 	$ax_gp_posts[] = $topic;
 	$admitted = axismundi_forum_admit_local_topic( $community, $topic, $owner );
 	$topic_uri = axismundi_forum_topic_object_uri( get_post( $topic ) );
+	$topic_permalink = get_permalink( $topic );
 
 	/*
 	 * The Group admits a reply by announcing its Create, rather than the Note Object directly.
@@ -116,7 +117,7 @@ try {
 	 */
 	$reply = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_NOTE_POST_TYPE, 'post_status' => 'draft', 'post_author' => $owner, 'post_content' => '<p>Group Profile Reply Delta.</p>' ) );
 	$ax_gp_posts[] = $reply;
-	$reply_saved = axismundi_note_save( $reply, array( 'in_reply_to_uri' => $topic_uri, 'visibility' => 'public' ) );
+	$reply_saved = axismundi_note_save( $reply, array( 'in_reply_to_uri' => $topic_permalink, 'visibility' => 'public' ) );
 	if ( ! is_wp_error( $reply_saved ) ) {
 		wp_update_post( array( 'ID' => $reply, 'post_status' => 'publish' ) );
 	}
@@ -148,6 +149,7 @@ try {
 		'Forum Posts and Comments select different admitted Objects through the Activities-owned Group Activity page',
 		! is_wp_error( $reply_saved )
 			&& '' !== $reply_uri
+			&& $topic_uri === (string) ( $reply_envelope['in_reply_to_uri'] ?? '' )
 			&& false !== strpos( $group_posts_html, 'Group Profile Topic Alpha' )
 			&& false === strpos( $group_posts_html, 'Group Profile Reply Delta.' )
 			&& false === strpos( $group_comments_html, 'Group Profile Topic Alpha' )

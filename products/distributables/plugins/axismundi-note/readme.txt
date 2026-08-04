@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.38
+Stable tag: 0.0.39
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, note, fediverse
@@ -45,6 +45,10 @@ dropping it, so the canonical object UUID and author attribution survive for a
 later Delete Activity and Tombstone projection.
 
 == Changelog ==
+
+= 0.0.39 =
+* Lets integrations normalize a validated reply target before it is persisted,
+  while preserving Note's URI validation boundary.
 
 = 0.0.38 =
 * Ships the current staging integration alongside the Actor feed and Object

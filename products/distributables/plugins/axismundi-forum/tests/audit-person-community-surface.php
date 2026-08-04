@@ -61,6 +61,7 @@ try {
 	$ax_ps_posts[] = $topic;
 	$admitted      = axismundi_forum_admit_local_topic( $community, $topic, $owner );
 	$topic_uri     = function_exists( 'axismundi_op_post_object_uri' ) ? axismundi_op_post_object_uri( get_post( $topic ) ) : '';
+	$topic_permalink = get_permalink( $topic );
 
 	/*
 	 * The Notes are drafted, given their envelope, and only then published — which is the order
@@ -70,7 +71,7 @@ try {
 	 */
 	$reply_post    = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_NOTE_POST_TYPE, 'post_status' => 'draft', 'post_author' => $owner, 'post_title' => 'surface reply', 'post_content' => 'a community reply' ) );
 	$ax_ps_posts[] = $reply_post;
-	axismundi_note_save( $reply_post, array( 'visibility' => 'public', 'in_reply_to_uri' => $topic_uri ) );
+	$reply_saved = axismundi_note_save( $reply_post, array( 'visibility' => 'public', 'in_reply_to_uri' => $topic_permalink ) );
 	wp_update_post( array( 'ID' => $reply_post, 'post_status' => 'publish' ) );
 	$reply_commit = axismundi_note_record_commit( get_post( $reply_post ) );
 
@@ -81,8 +82,13 @@ try {
 	$personal_commit = axismundi_note_record_commit( get_post( $personal_post ) );
 	ax_ps_assert(
 		$ax_ps_results,
-		'both fixture Notes reached the ledger, so the surface assertions below are testing selection and not an empty store',
-		$reply_commit instanceof Axismundi_Activity && $personal_commit instanceof Axismundi_Activity
+		'a human local Topic permalink normalizes to its AS2 Object URI before the reply reaches the ledger',
+		$reply_commit instanceof Axismundi_Activity
+			&& $personal_commit instanceof Axismundi_Activity
+			&& is_array( $reply_saved )
+			&& '' !== $topic_permalink
+			&& $topic_permalink !== $topic_uri
+			&& $topic_uri === (string) $reply_saved['in_reply_to_uri']
 	);
 
 	$surfaces = $author instanceof Axismundi_Actor ? axismundi_act_actor_profile_surfaces( $author ) : array();

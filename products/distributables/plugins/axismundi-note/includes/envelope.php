@@ -388,6 +388,16 @@ function axismundi_note_save( int $post_id, array $fields ) {
 
 	$sensitive   = array_key_exists( 'sensitive', $fields ) ? ( empty( $fields['sensitive'] ) ? 0 : 1 ) : (int) ( $existing['is_sensitive'] ?? 0 );
 	$in_reply_to = axismundi_note_sanitize_uri( $fields['in_reply_to_uri'] ?? ( $existing['in_reply_to_uri'] ?? '' ) );
+	/*
+	 * A reader can paste a local human permalink where ActivityPub needs an Object URI.
+	 *
+	 * Note owns the envelope and its validation; a product that owns a local object type may
+	 * recognize one of its own permalinks and return that object's stable federation identifier.
+	 * Re-sanitize the result so an extension cannot widen this URI boundary.
+	 */
+	$in_reply_to = axismundi_note_sanitize_uri(
+		apply_filters( 'axismundi_note_normalize_in_reply_to_uri', $in_reply_to, $post_id, $existing )
+	);
 	$context     = axismundi_note_sanitize_uri( $fields['context_uri'] ?? ( $existing['context_uri'] ?? '' ) );
 	if ( '' === $context && '' !== $in_reply_to ) {
 		$context = axismundi_note_inherited_context_uri( $in_reply_to );

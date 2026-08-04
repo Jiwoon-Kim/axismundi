@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.9.28
+Stable tag: 0.9.29
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: forum, community, activitypub, group, federation
@@ -33,6 +33,10 @@ Not in this plugin: identity, handles, Group lifecycle, or manager delegation
 object rendering (Axismundi Object Projections); Note replies (Axismundi Note).
 
 == Changelog ==
+
+= 0.9.29 =
+* Recognizes this site's human Topic permalinks in a Note's reply target and
+  stores the Topic's canonical ActivityPub Object URI instead.
 
 = 0.9.28 =
 * Moves the Group profile's Activity collection onto the shared Activities ledger.

@@ -47,6 +47,36 @@ function axismundi_forum_topic_object_uri( WP_Post $topic ) : string {
 	return add_query_arg( 'p', $topic->ID, home_url( '/' ) );
 }
 
+/**
+ * Turn this site's human Topic permalink into the Topic's stable AS2 Object URI.
+ *
+ * Authors paste the URL they are reading. A local Topic's pretty permalink is a valid URL but is
+ * not its federation identifier, so leaving it in `inReplyTo` prevents the thread and Group
+ * audience rules from recognizing the reply. Remote addresses and every non-Topic local URL are
+ * deliberately left unchanged.
+ *
+ * @param string              $uri      Validated authored reply target.
+ * @param int                 $post_id  Note post being saved.
+ * @param array<string,mixed>|null $existing Existing Note envelope.
+ */
+function axismundi_forum_normalize_local_topic_reply_uri( string $uri, int $post_id, ?array $existing ) : string {
+	unset( $post_id, $existing );
+	$home  = wp_parse_url( home_url( '/' ) );
+	$parts = wp_parse_url( $uri );
+	if ( ! is_array( $home ) || ! is_array( $parts )
+		|| ! hash_equals( strtolower( (string) ( $home['scheme'] ?? '' ) ), strtolower( (string) ( $parts['scheme'] ?? '' ) ) )
+		|| ! hash_equals( strtolower( (string) ( $home['host'] ?? '' ) ), strtolower( (string) ( $parts['host'] ?? '' ) ) )
+		|| (int) ( $home['port'] ?? 0 ) !== (int) ( $parts['port'] ?? 0 )
+	) {
+		return $uri;
+	}
+	$topic = get_post( url_to_postid( $uri ) );
+	return $topic instanceof WP_Post && AXISMUNDI_FORUM_TOPIC_POST_TYPE === $topic->post_type
+		? axismundi_forum_topic_object_uri( $topic )
+		: $uri;
+}
+add_filter( 'axismundi_note_normalize_in_reply_to_uri', 'axismundi_forum_normalize_local_topic_reply_uri', 10, 3 );
+
 /** Resolve the cached remote Group selected as an outbound Topic's destination. */
 function axismundi_forum_get_remote_topic_group( WP_Post $topic ) : ?Axismundi_Actor {
 	if ( AXISMUNDI_FORUM_TOPIC_POST_TYPE !== $topic->post_type || null !== axismundi_forum_get_topic_entry( $topic->ID ) || ! function_exists( 'axismundi_actors_get_by_identity' ) ) {

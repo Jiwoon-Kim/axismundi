@@ -13,19 +13,7 @@ defined( 'ABSPATH' ) || exit;
  * @return array<int,array{id:int,label:string}>
  */
 function axismundi_media_modal_folder_options() : array {
-	$options = array();
-	foreach ( axismundi_media_user_folder_options( get_current_user_id() ) as $folder ) {
-		$options[] = array(
-			'id'              => (int) $folder['id'],
-			'name'            => (string) $folder['name'],
-			'label'           => (string) $folder['label'],
-			'parent'          => (int) $folder['parent'],
-			'count'           => (int) $folder['count'],
-			'recursive_count' => (int) $folder['recursive_count'],
-			'protected'       => ! empty( $folder['effective_gate'] ),
-		);
-	}
-	return $options;
+	return axismundi_media_user_folder_browser_tree( get_current_user_id() );
 }
 
 /**
@@ -78,10 +66,17 @@ function axismundi_media_enqueue_modal_folders() : void {
 		return;
 	}
 
-	$mode = $is_upload ? axismundi_media_upload_mode() : 'grid';
+	$mode   = $is_upload ? axismundi_media_upload_mode() : 'grid';
+	$counts = axismundi_media_user_folder_browser_counts( get_current_user_id() );
 	// List mode has no media picker, so jQuery is enough; grid/editor need
 	// media-views for the toolbar dropdown integration.
 	$deps = ( $is_upload && 'list' === $mode ) ? array( 'jquery' ) : array( 'media-views' );
+	if ( $is_upload ) {
+		// Core's attachment grid is a Backbone view. jQuery UI keeps its drag
+		// lifecycle intact while letting folder rows be drop targets.
+		$deps[] = 'jquery-ui-draggable';
+		$deps[] = 'jquery-ui-droppable';
+	}
 
 	$base = dirname( __DIR__ ) . '/axismundi-media-library.php';
 	$js   = dirname( __DIR__ ) . '/assets/media-folders.js';
@@ -99,11 +94,18 @@ function axismundi_media_enqueue_modal_folders() : void {
 		'axMediaFolders',
 		array(
 			'mode'        => $mode,
+			'userId'      => get_current_user_id(),
 			'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
+			'moveUrl'     => rest_url( AXISMUNDI_MEDIA_REST_NS . '/folders/move' ),
+			'folderRestUrl' => trailingslashit( rest_url( AXISMUNDI_MEDIA_REST_NS . '/folders' ) ),
+			'countsUrl'   => rest_url( AXISMUNDI_MEDIA_REST_NS . '/folders/counts' ),
+			'restNonce'   => wp_create_nonce( 'wp_rest' ),
 			'locationNonce' => wp_create_nonce( 'ax_media_attachment_location' ),
 			'listBaseUrl' => admin_url( 'upload.php' ),
 			'all'         => __( 'All media', 'axismundi-media-library' ),
+			'allCount'    => $counts['all'],
 			'unfiled'     => __( 'Unfiled', 'axismundi-media-library' ),
+			'unfiledCount' => $counts['unfiled'],
 			'label'       => __( 'Filter by media folder', 'axismundi-media-library' ),
 			'treeTitle'   => __( 'Media folders', 'axismundi-media-library' ),
 			'breadcrumbLabel' => __( 'Folder path', 'axismundi-media-library' ),
@@ -113,6 +115,25 @@ function axismundi_media_enqueue_modal_folders() : void {
 			'saving'      => __( 'Saving location…', 'axismundi-media-library' ),
 			'saved'       => __( 'Location saved.', 'axismundi-media-library' ),
 			'saveError'   => __( 'The location could not be saved.', 'axismundi-media-library' ),
+			'moving'      => __( 'Moving media…', 'axismundi-media-library' ),
+			'moved'       => __( 'Media successfully moved.', 'axismundi-media-library' ),
+			'partiallyMoved' => __( '%1$d media item(s) moved; %2$d could not be moved.', 'axismundi-media-library' ),
+			'moveError'   => __( 'The media could not be moved.', 'axismundi-media-library' ),
+			'movingFolder' => __( 'Moving folder…', 'axismundi-media-library' ),
+			'folderMoved' => __( 'Folder moved.', 'axismundi-media-library' ),
+			'folderMoveError' => __( 'The folder could not be moved.', 'axismundi-media-library' ),
+			'confirmPolicyLoosening' => __( 'Moving this folder will make it less protected. Continue?', 'axismundi-media-library' ),
+			'topLevel'    => __( 'Top level', 'axismundi-media-library' ),
+			'folderActions' => __( 'Folder actions', 'axismundi-media-library' ),
+			'moveTo'      => __( 'Move to', 'axismundi-media-library' ),
+			'newFolder'   => __( 'New folder', 'axismundi-media-library' ),
+			'renameFolder' => __( 'Rename', 'axismundi-media-library' ),
+			'folderName'  => __( 'Folder name', 'axismundi-media-library' ),
+			'cancel'      => __( 'Cancel', 'axismundi-media-library' ),
+			'save'        => __( 'Save', 'axismundi-media-library' ),
+			'folderSaved' => __( 'Folder saved.', 'axismundi-media-library' ),
+			'folderSaveError' => __( 'The folder could not be saved.', 'axismundi-media-library' ),
+			'noMedia'     => __( 'No media items found.', 'axismundi-media-library' ),
 			'folders'     => axismundi_media_modal_folder_options(),
 		)
 	);
@@ -234,7 +255,7 @@ function axismundi_media_list_folder_filter( WP_Query $query ) : void {
 	}
 	if ( $folder > 0 && ! axismundi_media_is_root_term( $folder ) && axismundi_media_can_manage_folder( $folder ) ) {
 		$query->set( 'author', axismundi_media_folder_owner( $folder ) );
-		$query->set( 'tax_query', array( array( 'taxonomy' => AXISMUNDI_MEDIA_FOLDER_TAX, 'field' => 'term_id', 'terms' => array( $folder ) ) ) ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+		$query->set( 'tax_query', array( array( 'taxonomy' => AXISMUNDI_MEDIA_FOLDER_TAX, 'field' => 'term_id', 'terms' => array( $folder ), 'include_children' => false ) ) ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
 	} else {
 		$query->set( 'post__in', array( 0 ) );
 	}
@@ -265,7 +286,11 @@ function axismundi_media_modal_folder_query( array $args ) : array {
 	if ( -1 === $folder ) {
 		return $args;
 	}
-	$args['author'] = 0 === $folder ? get_current_user_id() : axismundi_media_folder_owner( $folder );
+	if ( 0 === $folder ) {
+		$args['author'] = get_current_user_id();
+	} else {
+		$args['author'] = axismundi_media_folder_owner( $folder );
+	}
 	$clause = array(
 		'taxonomy' => AXISMUNDI_MEDIA_FOLDER_TAX,
 		'operator' => 'NOT EXISTS',
@@ -276,9 +301,10 @@ function axismundi_media_modal_folder_query( array $args ) : array {
 			return $args;
 		}
 		$clause = array(
-			'taxonomy' => AXISMUNDI_MEDIA_FOLDER_TAX,
-			'field'    => 'term_id',
-			'terms'    => array( $folder ),
+			'taxonomy'         => AXISMUNDI_MEDIA_FOLDER_TAX,
+			'field'            => 'term_id',
+			'terms'            => array( $folder ),
+			'include_children' => false,
 		);
 	}
 	$tax_query = isset( $args['tax_query'] ) && is_array( $args['tax_query'] ) ? $args['tax_query'] : array(); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- Explicit user-selected media folder.
@@ -354,10 +380,10 @@ function axismundi_media_assign_uploaded_folder( int $attachment_id ) : void {
 	) {
 		return;
 	}
-	update_post_meta( $attachment_id, '_ax_media_visibility', 'inherit' );
 	if ( ! axismundi_media_set_attachment_folder( $attachment_id, $folder ) ) {
 		return;
 	}
+	update_post_meta( $attachment_id, '_ax_media_visibility', 'inherit' );
 	update_user_meta( get_current_user_id(), '_ax_media_active_folder', $folder );
 	// Snapshot the folder default license onto the new upload (Phase 4b). Later
 	// moves never re-stamp, and an attachment-set license is never overwritten.

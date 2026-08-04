@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.40
+Stable tag: 0.0.41
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -40,6 +40,13 @@ dedicated attachment.html template.
    import a FileBird CSV export without overwriting existing Axismundi assignments.
 
 == Changelog ==
+
+= 0.0.41 =
+* Add nested media-folder management to the Media Library: direct counts,
+  drag-and-drop attachment moves, inline rename/create, folder reparenting,
+  keyboard-accessible folder actions, and selected-folder uploads.
+* Require explicit confirmation before moving a folder would weaken inherited
+  private or password protection, and report partial attachment moves honestly.
 
 = 0.0.39 =
 * Let an embedded-media policy select one bounded provider derivative up to 1024 pixels,

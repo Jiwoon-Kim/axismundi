@@ -494,6 +494,139 @@ function axismundi_media_rename_folder( int $term_id, string $name, ?int $user_i
 }
 
 /**
+ * Move a folder beneath another folder, or to its owner's top level (parent 0).
+ *
+ * Folder nesting is shared structure, not a device preference: the taxonomy
+ * parent is therefore the single persisted source of truth. A manager may
+ * administer another owner's tree, but may never merge two owners' trees.
+ *
+ * @param int      $term_id  Folder to move.
+ * @param int      $parent   New visible parent (0 = owner's top level).
+ * @param int|null $user_id  Acting user.
+ * @param bool     $confirm_policy_change Whether the caller confirmed a less
+ *                                        restrictive inherited policy.
+ * @return int|WP_Error Moved folder ID or error.
+ */
+function axismundi_media_move_folder( int $term_id, int $parent = 0, ?int $user_id = null, bool $confirm_policy_change = false ) {
+	$user_id = $user_id ?? get_current_user_id();
+	$term    = get_term( $term_id, AXISMUNDI_MEDIA_FOLDER_TAX );
+	if ( ! $term instanceof WP_Term ) {
+		return new WP_Error( 'ax_media_folder_notfound', __( 'Folder not found.', 'axismundi-media-library' ), array( 'status' => 404 ) );
+	}
+	if ( axismundi_media_is_root_term( $term_id ) || ! axismundi_media_can_manage_folder( $term_id, $user_id ) ) {
+		return new WP_Error( 'ax_media_forbidden', __( 'Not allowed.', 'axismundi-media-library' ), array( 'status' => 403 ) );
+	}
+
+	$owner = axismundi_media_folder_owner( $term_id );
+	if ( $parent > 0 ) {
+		$parent_term = get_term( $parent, AXISMUNDI_MEDIA_FOLDER_TAX );
+		if (
+			! $parent_term instanceof WP_Term
+			|| axismundi_media_is_root_term( $parent )
+			|| ! axismundi_media_can_manage_folder( $parent, $user_id )
+			|| $owner !== axismundi_media_folder_owner( $parent )
+		) {
+			return new WP_Error( 'ax_media_folder_parent', __( 'Invalid parent folder.', 'axismundi-media-library' ), array( 'status' => 400 ) );
+		}
+		$actual_parent = $parent;
+	} else {
+		$actual_parent = axismundi_media_user_root( $owner );
+	}
+
+	// Walking upward from the requested parent makes self-nesting and every
+	// descendant cycle invalid before WordPress writes the hierarchy.
+	$cursor = $actual_parent;
+	for ( $guard = 0; $cursor > 0 && $guard < 100; ++$guard ) {
+		if ( $cursor === $term_id ) {
+			return new WP_Error( 'ax_media_folder_cycle', __( 'A folder cannot contain itself.', 'axismundi-media-library' ), array( 'status' => 400 ) );
+		}
+		$cursor_term = get_term( $cursor, AXISMUNDI_MEDIA_FOLDER_TAX );
+		if ( ! $cursor_term instanceof WP_Term ) {
+			break;
+		}
+		$cursor = (int) $cursor_term->parent;
+	}
+	if ( $guard >= 100 ) {
+		return new WP_Error( 'ax_media_folder_cycle', __( 'Invalid folder hierarchy.', 'axismundi-media-library' ), array( 'status' => 400 ) );
+	}
+
+	if ( (int) $term->parent === $actual_parent ) {
+		return $term_id;
+	}
+	if ( ! $confirm_policy_change && axismundi_media_folder_move_loosens_policy( $term_id, $actual_parent ) ) {
+		return new WP_Error(
+			'ax_media_folder_policy_confirmation',
+			__( 'Moving this folder would make it less protected. Confirm to continue.', 'axismundi-media-library' ),
+			array( 'status' => 409 )
+		);
+	}
+	$res = wp_update_term( $term_id, AXISMUNDI_MEDIA_FOLDER_TAX, array( 'parent' => $actual_parent ) );
+	if ( is_wp_error( $res ) ) {
+		return $res;
+	}
+	axismundi_media_refresh_folder_effective_tier( $term_id );
+	return $term_id;
+}
+
+/**
+ * Whether moving a folder would weaken any policy inherited by it or a child.
+ *
+ * A folder's own policy is unchanged by a move, but its ancestors are not. Test
+ * the moved node and every descendant against the proposed parent chain before
+ * WordPress writes the new taxonomy parent.
+ *
+ * @param int $term_id       Folder being moved.
+ * @param int $actual_parent New taxonomy parent, including the hidden owner root.
+ * @return bool
+ */
+function axismundi_media_folder_move_loosens_policy( int $term_id, int $actual_parent ) : bool {
+	$subjects = array_merge( array( $term_id ), array_map( 'intval', (array) get_term_children( $term_id, AXISMUNDI_MEDIA_FOLDER_TAX ) ) );
+	foreach ( $subjects as $subject_id ) {
+		$before = axismundi_media_folder_policy_for_parent( $subject_id, $term_id, (int) get_term( $term_id, AXISMUNDI_MEDIA_FOLDER_TAX )->parent );
+		$after  = axismundi_media_folder_policy_for_parent( $subject_id, $term_id, $actual_parent );
+		if ( $before['rank'] > $after['rank'] || ( $before['gate'] && ! $after['gate'] ) ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Resolve an effective policy while treating one folder as having a supplied
+ * parent. This is deliberately read-only so reparenting can be checked before
+ * it changes the persisted hierarchy.
+ *
+ * @param int $subject_id Folder whose inherited policy is resolved.
+ * @param int $moved_id Folder being moved.
+ * @param int $parent Proposed parent for the moved folder.
+ * @return array{rank:int,gate:bool}
+ */
+function axismundi_media_folder_policy_for_parent( int $subject_id, int $moved_id, int $parent ) : array {
+	$rank    = 0;
+	$gate    = false;
+	$cursor  = $subject_id;
+	$visited = array();
+	while ( $cursor > 0 && ! isset( $visited[ $cursor ] ) ) {
+		$visited[ $cursor ] = true;
+		$tier = axismundi_media_folder_tier( $cursor );
+		if ( 'inherit' !== $tier ) {
+			$rank = max( $rank, axismundi_media_visibility_rank( $tier ) );
+		}
+		$gate = $gate || 'password' === axismundi_media_folder_access( $cursor );
+		if ( $cursor === $moved_id ) {
+			$cursor = $parent;
+			continue;
+		}
+		$term   = get_term( $cursor, AXISMUNDI_MEDIA_FOLDER_TAX );
+		$cursor = $term instanceof WP_Term ? (int) $term->parent : 0;
+	}
+	return array(
+		'rank' => $rank,
+		'gate' => $gate,
+	);
+}
+
+/**
  * Delete a folder: its attachments move to the root (unfiled) — never deleted —
  * and its direct child folders are reparented to the deleted folder's parent.
  *
@@ -797,6 +930,87 @@ function axismundi_media_user_folder_options( int $user_id ) : array {
 	$walk( 0, 0 );
 
 	return $options;
+}
+
+/**
+ * Folder data consumed by the media browser and its REST refreshes.
+ *
+ * @param int $user_id User ID.
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_media_user_folder_browser_tree( int $user_id ) : array {
+	$folders = array();
+	foreach ( axismundi_media_user_folder_options( $user_id ) as $folder ) {
+		$folders[] = array(
+			'id'              => (int) $folder['id'],
+			'name'            => (string) $folder['name'],
+			'label'           => (string) $folder['label'],
+			'parent'          => (int) $folder['parent'],
+			'count'           => (int) $folder['count'],
+			'recursive_count' => (int) $folder['recursive_count'],
+			'protected'       => ! empty( $folder['effective_gate'] ),
+		);
+	}
+
+	return $folders;
+}
+
+/**
+ * Author scope used by the Media Library's All Media and Unfiled views.
+ *
+ * @param int $user_id User ID.
+ * @return array<string,int>
+ */
+function axismundi_media_library_author_scope( int $user_id ) : array {
+	return user_can( $user_id, 'edit_others_posts' ) ? array() : array( 'author' => $user_id );
+}
+
+/**
+ * Counts rendered by a user's media-folder browser.
+ *
+ * All Media follows WordPress's Media Library scope: users who can edit others'
+ * media see the shared library; other users see only their own uploads. Unfiled
+ * stays owner-scoped because it is the absence of a relationship to a private,
+ * owner-scoped folder, not a shared folder.
+ *
+ * @param int $user_id User ID.
+ * @return array{all:int,unfiled:int,folders:array<int,int>}
+ */
+function axismundi_media_user_folder_browser_counts( int $user_id ) : array {
+	$scope = axismundi_media_library_author_scope( $user_id );
+	$base  = array_merge(
+		array(
+			'post_type'      => 'attachment',
+			'post_status'    => 'inherit',
+			'posts_per_page' => 1,
+			'fields'         => 'ids',
+		),
+		$scope
+	);
+	$all      = new WP_Query( $base );
+	$unfiled  = new WP_Query(
+		array_merge(
+			$base,
+			array(
+				'author'         => $user_id,
+				'tax_query'      => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- Explicit private-folder browser count.
+				array(
+					'taxonomy' => AXISMUNDI_MEDIA_FOLDER_TAX,
+					'operator' => 'NOT EXISTS',
+				),
+			),
+			)
+		)
+	);
+	$folders = array();
+	foreach ( axismundi_media_user_folder_options( $user_id ) as $folder ) {
+		$folders[ (int) $folder['id'] ] = (int) $folder['count'];
+	}
+	return array(
+		'all'     => (int) $all->found_posts,
+		'unfiled' => (int) $unfiled->found_posts,
+		'folders' => $folders,
+	);
 }
 
 /**

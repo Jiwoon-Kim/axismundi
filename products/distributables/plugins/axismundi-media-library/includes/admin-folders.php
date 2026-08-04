@@ -81,6 +81,9 @@ function axismundi_media_handle_folder_admin_action() : void {
 		if ( 'password' === $access && ( null === $password || '' === $password ) && '' === (string) get_term_meta( $term_id, AXISMUNDI_MEDIA_FOLDER_PASSWORD_META, true ) ) {
 			$result = new WP_Error( 'ax_media_folder_password', __( 'A password is required.', 'axismundi-media-library' ) );
 		} else {
+			$result = isset( $_POST['parent'] ) ? axismundi_media_move_folder( $term_id, absint( $_POST['parent'] ), null, ! empty( $_POST['confirm_policy_change'] ) ) : true;
+		}
+		if ( ! is_wp_error( $result ) ) {
 			$result = axismundi_media_rename_folder( $term_id, $name );
 		}
 		if ( ! is_wp_error( $result ) ) {
@@ -105,6 +108,10 @@ function axismundi_media_handle_folder_admin_action() : void {
 	$args = is_wp_error( $result )
 		? array( 'ax_media_error' => rawurlencode( $result->get_error_message() ) )
 		: array( 'ax_media_updated' => 1 );
+	if ( is_wp_error( $result ) && 'ax_media_folder_policy_confirmation' === $result->get_error_code() ) {
+		$args['ax_media_confirm_folder'] = $term_id;
+		$args['ax_media_confirm_parent'] = isset( $_POST['parent'] ) ? absint( $_POST['parent'] ) : 0;
+	}
 	wp_safe_redirect( axismundi_media_folders_admin_url( $args ) );
 	exit;
 }
@@ -116,10 +123,14 @@ add_action( 'admin_post_axismundi_media_folder_action', 'axismundi_media_handle_
  * @param array<string,mixed>              $folder   Folder data.
  * @param array<int,array<string,mixed>[]> $children Child index.
  * @param int                              $depth    Depth.
+ * @param int                              $confirm_folder Folder awaiting confirmation.
+ * @param int                              $confirm_parent Proposed parent awaiting confirmation.
  * @return void
  */
-function axismundi_media_render_folder_row( array $folder, array $children, int $depth = 0 ) : void {
+function axismundi_media_render_folder_row( array $folder, array $children, int $depth = 0, int $confirm_folder = 0, int $confirm_parent = 0 ) : void {
 	$term_id        = (int) $folder['id'];
+	$awaiting_confirmation = $term_id === $confirm_folder;
+	$selected_parent = $awaiting_confirmation ? $confirm_parent : (int) $folder['parent'];
 	$identity_uuid  = function_exists( 'axismundi_media_folder_identity_uuid' ) ? axismundi_media_folder_identity_uuid( $term_id ) : '';
 	$collection_uri = '' !== $identity_uuid && function_exists( 'axismundi_media_folder_uri' ) ? axismundi_media_folder_uri( $term_id, false ) : '';
 	$actor_uri      = function_exists( 'axismundi_media_folder_actor_uri' ) ? axismundi_media_folder_actor_uri( $term_id ) : '';
@@ -176,6 +187,18 @@ function axismundi_media_render_folder_row( array $folder, array $children, int 
 						<option value="<?php echo esc_attr( (string) $axismundi_license_code ); ?>" <?php selected( $axismundi_folder_license, (string) $axismundi_license_code ); ?>><?php echo esc_html( (string) $axismundi_license_label ); ?></option>
 					<?php endforeach; ?>
 				</select>
+				<label class="screen-reader-text" for="ax-folder-parent-<?php echo esc_attr( (string) $term_id ); ?>"><?php esc_html_e( 'Parent folder', 'axismundi-media-library' ); ?></label>
+				<select id="ax-folder-parent-<?php echo esc_attr( (string) $term_id ); ?>" name="parent">
+					<option value="0" <?php selected( $selected_parent, 0 ); ?>><?php esc_html_e( 'Top level', 'axismundi-media-library' ); ?></option>
+					<?php foreach ( axismundi_media_user_folders( get_current_user_id() ) as $candidate ) : ?>
+						<?php if ( $term_id !== (int) $candidate['id'] && ! in_array( $term_id, array_map( 'intval', get_ancestors( (int) $candidate['id'], AXISMUNDI_MEDIA_FOLDER_TAX ) ), true ) ) : ?>
+							<option value="<?php echo esc_attr( (string) $candidate['id'] ); ?>" <?php selected( $selected_parent, (int) $candidate['id'] ); ?>><?php echo esc_html( (string) $candidate['name'] ); ?></option>
+						<?php endif; ?>
+					<?php endforeach; ?>
+				</select>
+				<?php if ( $awaiting_confirmation ) : ?>
+					<label><input type="checkbox" name="confirm_policy_change" value="1" required> <?php esc_html_e( 'I understand this move will reduce inherited protection.', 'axismundi-media-library' ); ?></label>
+				<?php endif; ?>
 				<?php submit_button( __( 'Save', 'axismundi-media-library' ), 'secondary small', 'submit', false ); ?>
 			</form>
 		</td>
@@ -192,7 +215,7 @@ function axismundi_media_render_folder_row( array $folder, array $children, int 
 	</tr>
 	<?php
 	foreach ( $children[ $term_id ] ?? array() as $child ) {
-		axismundi_media_render_folder_row( $child, $children, $depth + 1 );
+		axismundi_media_render_folder_row( $child, $children, $depth + 1, $confirm_folder, $confirm_parent );
 	}
 }
 
@@ -203,6 +226,8 @@ function axismundi_media_render_folder_row( array $folder, array $children, int 
  */
 function axismundi_media_render_folders_page() : void {
 	$folders  = axismundi_media_user_folders( get_current_user_id() );
+	$confirm_folder = isset( $_GET['ax_media_confirm_folder'] ) ? absint( $_GET['ax_media_confirm_folder'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Status-only redirect argument.
+	$confirm_parent = isset( $_GET['ax_media_confirm_parent'] ) ? absint( $_GET['ax_media_confirm_parent'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Status-only redirect argument.
 	$children = array();
 	foreach ( $folders as $folder ) {
 		$children[ (int) $folder['parent'] ][] = $folder;
@@ -241,7 +266,7 @@ function axismundi_media_render_folders_page() : void {
 			<?php if ( empty( $folders ) ) : ?>
 				<tr><td colspan="7"><?php esc_html_e( 'No folders yet.', 'axismundi-media-library' ); ?></td></tr>
 			<?php else : ?>
-				<?php foreach ( $children[0] ?? array() as $folder ) { axismundi_media_render_folder_row( $folder, $children ); } ?>
+				<?php foreach ( $children[0] ?? array() as $folder ) { axismundi_media_render_folder_row( $folder, $children, 0, $confirm_folder, $confirm_parent ); } ?>
 			<?php endif; ?>
 			</tbody>
 		</table>

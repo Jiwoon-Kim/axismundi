@@ -94,6 +94,16 @@ function axismundi_media_register_folder_routes() : void {
 						'type'     => 'string',
 						'required' => false,
 					),
+					'parent' => array(
+						'type'              => 'integer',
+						'required'          => false,
+						'sanitize_callback' => 'absint',
+					),
+					'confirm_policy_change' => array(
+						'type'     => 'boolean',
+						'required' => false,
+						'default'  => false,
+					),
 				),
 			),
 			array(
@@ -101,6 +111,16 @@ function axismundi_media_register_folder_routes() : void {
 				'callback'            => 'axismundi_media_rest_delete_folder',
 				'permission_callback' => 'axismundi_media_rest_can_edit',
 			),
+		)
+	);
+
+	register_rest_route(
+		AXISMUNDI_MEDIA_REST_NS,
+		'/folders/counts',
+		array(
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => 'axismundi_media_rest_folder_counts',
+			'permission_callback' => 'axismundi_media_rest_can_edit',
 		)
 	);
 
@@ -144,6 +164,15 @@ function axismundi_media_rest_list_folders( WP_REST_Request $request ) : WP_REST
 }
 
 /**
+ * GET /folders/counts — the current user's media-browser counts.
+ *
+ * @return WP_REST_Response
+ */
+function axismundi_media_rest_folder_counts( WP_REST_Request $request ) : WP_REST_Response {
+	return new WP_REST_Response( axismundi_media_user_folder_browser_counts( get_current_user_id() ), 200 );
+}
+
+/**
  * POST /folders — create a folder owned by the current user.
  *
  * @param WP_REST_Request $request Request.
@@ -157,11 +186,18 @@ function axismundi_media_rest_create_folder( WP_REST_Request $request ) {
 	if ( is_wp_error( $term ) ) {
 		return $term;
 	}
-	return new WP_REST_Response( array( 'id' => $term ), 201 );
+	return new WP_REST_Response(
+		array(
+			'id'      => $term,
+			'folders' => axismundi_media_user_folder_browser_tree( get_current_user_id() ),
+			'counts'  => axismundi_media_user_folder_browser_counts( get_current_user_id() ),
+		),
+		201
+	);
 }
 
 /**
- * POST /folders/{id} — rename and/or change the folder's own visibility tier.
+ * POST /folders/{id} — rename, move, and/or change the folder's own policy.
  *
  * @param WP_REST_Request $request Request.
  * @return WP_REST_Response|WP_Error
@@ -172,8 +208,10 @@ function axismundi_media_rest_update_folder( WP_REST_Request $request ) {
 	$tier    = $request->get_param( 'tier' );
 	$access  = $request->get_param( 'access' );
 	$password = $request->get_param( 'password' );
-	if ( null === $name && null === $tier && null === $access ) {
-		return new WP_Error( 'ax_media_folder_update', __( 'A name or visibility tier is required.', 'axismundi-media-library' ), array( 'status' => 400 ) );
+	$parent  = $request->get_param( 'parent' );
+	$confirm_policy_change = (bool) $request->get_param( 'confirm_policy_change' );
+	if ( null === $name && null === $tier && null === $access && null === $parent ) {
+		return new WP_Error( 'ax_media_folder_update', __( 'A folder change is required.', 'axismundi-media-library' ), array( 'status' => 400 ) );
 	}
 	if ( 'password' === $access && ( null === $password || '' === $password ) && '' === (string) get_term_meta( $term_id, AXISMUNDI_MEDIA_FOLDER_PASSWORD_META, true ) ) {
 		return new WP_Error( 'ax_media_folder_password', __( 'A password is required.', 'axismundi-media-library' ), array( 'status' => 400 ) );
@@ -196,6 +234,12 @@ function axismundi_media_rest_update_folder( WP_REST_Request $request ) {
 			return $res;
 		}
 	}
+	if ( null !== $parent ) {
+		$res = axismundi_media_move_folder( $term_id, (int) $parent, null, $confirm_policy_change );
+		if ( is_wp_error( $res ) ) {
+			return $res;
+		}
+	}
 	return new WP_REST_Response(
 		array(
 			'id'             => $term_id,
@@ -203,6 +247,8 @@ function axismundi_media_rest_update_folder( WP_REST_Request $request ) {
 			'effective_tier' => axismundi_media_visibility_from_rank( axismundi_media_folder_effective_tier_rank( $term_id ) ),
 			'access'         => axismundi_media_folder_access( $term_id ),
 			'effective_gate' => axismundi_media_folder_effective_gate( $term_id ),
+			'folders'        => axismundi_media_user_folder_browser_tree( get_current_user_id() ),
+			'counts'         => axismundi_media_user_folder_browser_counts( get_current_user_id() ),
 		),
 		200
 	);
@@ -235,6 +281,7 @@ function axismundi_media_rest_move_attachments( WP_REST_Request $request ) {
 	if ( is_wp_error( $res ) ) {
 		return $res;
 	}
+	$res['counts'] = axismundi_media_user_folder_browser_counts( get_current_user_id() );
 	$status = empty( $res['moved'] ) && ! empty( $res['denied'] ) ? 403 : 200;
 	return new WP_REST_Response( $res, $status );
 }

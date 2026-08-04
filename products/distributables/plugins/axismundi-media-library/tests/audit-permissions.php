@@ -70,8 +70,9 @@ try {
 	$ax_created['users'] = array( $ax_alice, $ax_bob );
 
 	$ax_att_a = (int) wp_insert_attachment( array( 'post_title' => 'ax-test alice', 'post_status' => 'inherit', 'post_mime_type' => 'image/jpeg', 'post_author' => $ax_alice ) );
+	$ax_att_c = (int) wp_insert_attachment( array( 'post_title' => 'ax-test alice bulk', 'post_status' => 'inherit', 'post_mime_type' => 'image/jpeg', 'post_author' => $ax_alice ) );
 	$ax_att_b = (int) wp_insert_attachment( array( 'post_title' => 'ax-test bob', 'post_status' => 'inherit', 'post_mime_type' => 'image/jpeg', 'post_author' => $ax_bob ) );
-	$ax_created['atts'] = array( $ax_att_a, $ax_att_b );
+	$ax_created['atts'] = array( $ax_att_a, $ax_att_b, $ax_att_c );
 
 	wp_set_current_user( $ax_alice );
 	$ax_f_a = axismundi_media_create_folder( 'AX Test Alice' );
@@ -89,6 +90,72 @@ try {
 	if ( ! is_wp_error( $ax_f_a ) && ! is_wp_error( $ax_f_b ) ) {
 		$ax_f_a = (int) $ax_f_a;
 		$ax_f_b = (int) $ax_f_b;
+		$ax_f_protected = axismundi_media_create_folder( 'AX Test protected parent', 0, $ax_alice );
+		$ax_f_inherited = ! is_wp_error( $ax_f_protected ) ? axismundi_media_create_folder( 'AX Test inherited child', (int) $ax_f_protected, $ax_alice ) : $ax_f_protected;
+		if ( ! is_wp_error( $ax_f_protected ) ) {
+			$ax_f_protected = (int) $ax_f_protected;
+			$ax_created['folders'][] = $ax_f_protected;
+			axismundi_media_set_folder_tier( $ax_f_protected, 'private', $ax_alice );
+			axismundi_media_set_folder_access( $ax_f_protected, 'password', 'audit-parent-password', $ax_alice );
+		}
+		if ( ! is_wp_error( $ax_f_inherited ) ) {
+			$ax_f_inherited = (int) $ax_f_inherited;
+			$ax_created['folders'][] = $ax_f_inherited;
+		}
+		$ax_policy_block = ! is_wp_error( $ax_f_inherited ) ? axismundi_media_move_folder( $ax_f_inherited, 0, $ax_alice ) : new WP_Error();
+		$ax_policy_confirmed = ! is_wp_error( $ax_f_inherited ) ? axismundi_media_move_folder( $ax_f_inherited, 0, $ax_alice, true ) : new WP_Error();
+		ax_audit_assert( $ax_results, 'Moving an inherited password/private folder to top level requires explicit confirmation', is_wp_error( $ax_policy_block ) && 'ax_media_folder_policy_confirmation' === $ax_policy_block->get_error_code() && 409 === (int) $ax_policy_block->get_error_data()['status'] && ! is_wp_error( $ax_policy_confirmed ) && ! axismundi_media_folder_effective_gate( $ax_f_inherited ) && 0 === axismundi_media_folder_effective_tier_rank( $ax_f_inherited ) );
+		$ax_f_rest_protected = axismundi_media_create_folder( 'AX Test REST protected parent', 0, $ax_alice );
+		$ax_f_rest_inherited = ! is_wp_error( $ax_f_rest_protected ) ? axismundi_media_create_folder( 'AX Test REST inherited child', (int) $ax_f_rest_protected, $ax_alice ) : $ax_f_rest_protected;
+		if ( ! is_wp_error( $ax_f_rest_protected ) ) {
+			$ax_f_rest_protected = (int) $ax_f_rest_protected;
+			$ax_created['folders'][] = $ax_f_rest_protected;
+			axismundi_media_set_folder_access( $ax_f_rest_protected, 'password', 'audit-rest-parent-password', $ax_alice );
+		}
+		if ( ! is_wp_error( $ax_f_rest_inherited ) ) {
+			$ax_f_rest_inherited = (int) $ax_f_rest_inherited;
+			$ax_created['folders'][] = $ax_f_rest_inherited;
+			$ax_rest_policy_request = new WP_REST_Request( 'POST', '/' . AXISMUNDI_MEDIA_REST_NS . '/folders/' . $ax_f_rest_inherited );
+			$ax_rest_policy_request->set_param( 'parent', 0 );
+			$ax_rest_policy_response = rest_do_request( $ax_rest_policy_request );
+			$ax_rest_policy_confirm = new WP_REST_Request( 'POST', '/' . AXISMUNDI_MEDIA_REST_NS . '/folders/' . $ax_f_rest_inherited );
+			$ax_rest_policy_confirm->set_param( 'parent', 0 );
+			$ax_rest_policy_confirm->set_param( 'confirm_policy_change', true );
+			$ax_rest_policy_confirm_response = rest_do_request( $ax_rest_policy_confirm );
+			ax_audit_assert( $ax_results, 'Folder REST requires and honors explicit confirmation before weakening inherited protection', 409 === $ax_rest_policy_response->get_status() && 'ax_media_folder_policy_confirmation' === ( $ax_rest_policy_response->get_data()['code'] ?? '' ) && 200 === $ax_rest_policy_confirm_response->get_status() && ! axismundi_media_folder_effective_gate( $ax_f_rest_inherited ) );
+		}
+		$ax_request_folder_present = array_key_exists( 'ax_media_folder', $_REQUEST );
+		$ax_request_folder         = $ax_request_folder_present ? $_REQUEST['ax_media_folder'] : null;
+		$_REQUEST['ax_media_folder'] = (string) $ax_f_a;
+		$ax_att_upload = (int) wp_insert_attachment( array( 'post_title' => 'ax-test selected-folder upload', 'post_status' => 'inherit', 'post_mime_type' => 'image/jpeg', 'post_author' => $ax_alice ) );
+		$ax_created['atts'][] = $ax_att_upload;
+		if ( $ax_request_folder_present ) {
+			$_REQUEST['ax_media_folder'] = $ax_request_folder;
+		} else {
+			unset( $_REQUEST['ax_media_folder'] );
+		}
+		ax_audit_assert( $ax_results, 'An upload request with a selected folder is assigned to that folder', $ax_f_a === axismundi_media_attachment_folder( $ax_att_upload ) );
+		$folder_counts_request  = new WP_REST_Request( 'GET', '/' . AXISMUNDI_MEDIA_REST_NS . '/folders/counts' );
+		$folder_counts_response = rest_do_request( $folder_counts_request );
+		$folder_counts_data     = $folder_counts_response->get_data();
+		ax_audit_assert( $ax_results, 'Folder counts REST reports the selected-folder upload immediately', 200 === $folder_counts_response->get_status() && 1 === ( $folder_counts_data['folders'][ $ax_f_a ] ?? null ) );
+		$folder_create_request = new WP_REST_Request( 'POST', '/' . AXISMUNDI_MEDIA_REST_NS . '/folders' );
+		$folder_create_request->set_param( 'name', 'AX Test REST child' );
+		$folder_create_request->set_param( 'parent', $ax_f_a );
+		$folder_create_response = rest_do_request( $folder_create_request );
+		$folder_create_data     = $folder_create_response->get_data();
+		$ax_f_rest_child        = (int) ( $folder_create_data['id'] ?? 0 );
+		if ( $ax_f_rest_child > 0 ) {
+			$ax_created['folders'][] = $ax_f_rest_child;
+		}
+		$folder_create_tree = array_column( (array) ( $folder_create_data['folders'] ?? array() ), null, 'id' );
+		ax_audit_assert( $ax_results, 'Folder REST create returns the browser tree for a new nested folder', 201 === $folder_create_response->get_status() && $ax_f_a === (int) get_term( $ax_f_rest_child, AXISMUNDI_MEDIA_FOLDER_TAX )->parent && isset( $folder_create_tree[ $ax_f_rest_child ] ) && false === (bool) $folder_create_tree[ $ax_f_rest_child ]['protected'] );
+		$folder_rename_request = new WP_REST_Request( 'POST', '/' . AXISMUNDI_MEDIA_REST_NS . '/folders/' . $ax_f_rest_child );
+		$folder_rename_request->set_param( 'name', 'AX Test REST renamed' );
+		$folder_rename_response = rest_do_request( $folder_rename_request );
+		$folder_rename_data     = $folder_rename_response->get_data();
+		$folder_rename_tree     = array_column( (array) ( $folder_rename_data['folders'] ?? array() ), null, 'id' );
+		ax_audit_assert( $ax_results, 'Folder REST rename returns the renamed browser-tree row', 200 === $folder_rename_response->get_status() && 'AX Test REST renamed' === ( $folder_rename_tree[ $ax_f_rest_child ]['name'] ?? null ) );
 
 		$r = axismundi_media_move_attachments( array( $ax_att_a ), $ax_f_a, $ax_alice );
 		ax_audit_assert( $ax_results, 'Alice moves her own attachment', ! is_wp_error( $r ) && 1 === count( $r['moved'] ) );
@@ -100,6 +167,57 @@ try {
 		);
 		ax_audit_assert( $ax_results, 'Attachment Details saves Location changes', $ax_att_a === (int) $saved['ID'] && 0 === axismundi_media_attachment_folder( $ax_att_a ) );
 		ax_audit_assert( $ax_results, 'Grid Location service saves the selected folder', true === axismundi_media_save_attachment_location( $ax_att_a, $ax_f_a, $ax_alice ) && $ax_f_a === axismundi_media_attachment_folder( $ax_att_a ) );
+		axismundi_media_set_attachment_folder( $ax_att_a, 0 );
+		$drag_counts_before = axismundi_media_user_folder_browser_counts( $ax_alice );
+		$drag_request = new WP_REST_Request( 'POST', '/' . AXISMUNDI_MEDIA_REST_NS . '/folders/move' );
+		$drag_request->set_param( 'attachments', array( $ax_att_a, $ax_att_c ) );
+		$drag_request->set_param( 'folder', $ax_f_a );
+		$drag_response = rest_do_request( $drag_request );
+		$drag_data     = $drag_response->get_data();
+		$drag_moved    = array_map( 'intval', (array) ( $drag_data['moved'] ?? array() ) );
+		sort( $drag_moved );
+		$drag_expected = array( $ax_att_a, $ax_att_c );
+		sort( $drag_expected );
+		ax_audit_assert( $ax_results, 'Bulk drag-and-drop returns both moved attachments and refreshed source/target counts', 200 === $drag_response->get_status() && $drag_expected === $drag_moved && $ax_f_a === axismundi_media_attachment_folder( $ax_att_a ) && $ax_f_a === axismundi_media_attachment_folder( $ax_att_c ) && ( $drag_counts_before['unfiled'] - 2 ) === ( $drag_data['counts']['unfiled'] ?? null ) && ( $drag_counts_before['folders'][ $ax_f_a ] + 2 ) === ( $drag_data['counts']['folders'][ $ax_f_a ] ?? null ) );
+		$ax_f_child = axismundi_media_create_folder( 'AX Test Alice child', $ax_f_a, $ax_alice );
+		if ( ! is_wp_error( $ax_f_child ) ) {
+			$ax_f_child = (int) $ax_f_child;
+			$ax_created['folders'][] = $ax_f_child;
+			axismundi_media_set_folder_access( $ax_f_child, 'password', 'audit-password', $ax_alice );
+			axismundi_media_move_attachments( array( $ax_att_c ), $ax_f_child, $ax_alice );
+			$direct_counts = axismundi_media_user_folder_browser_counts( $ax_alice );
+			ax_audit_assert( $ax_results, 'Folder sidebar shows All Media and direct folder counts, not descendant totals', 3 === $direct_counts['all'] && 0 === $direct_counts['unfiled'] && 2 === ( $direct_counts['folders'][ $ax_f_a ] ?? null ) && 1 === ( $direct_counts['folders'][ $ax_f_child ] ?? null ) && 3 === axismundi_media_folder_recursive_count( $ax_f_a ) );
+			$ax_request_query_present = array_key_exists( 'query', $_REQUEST );
+			$ax_request_query         = $ax_request_query_present ? $_REQUEST['query'] : null;
+			$_REQUEST['query'] = array( 'ax_media_folder' => 'folder-' . $ax_f_a );
+			$direct_folder_ids = get_posts(
+				axismundi_media_modal_folder_query(
+					array(
+						'post_type'      => 'attachment',
+						'post_status'    => 'inherit',
+						'fields'         => 'ids',
+						'posts_per_page' => -1,
+					)
+				)
+			);
+			if ( $ax_request_query_present ) {
+				$_REQUEST['query'] = $ax_request_query;
+			} else {
+				unset( $_REQUEST['query'] );
+			}
+			ax_audit_assert( $ax_results, 'A parent folder query excludes attachments assigned only to its child folder', in_array( $ax_att_a, $direct_folder_ids, true ) && ! in_array( $ax_att_c, $direct_folder_ids, true ) );
+			$folder_move_request = new WP_REST_Request( 'POST', '/' . AXISMUNDI_MEDIA_REST_NS . '/folders/' . $ax_f_child );
+			$folder_move_request->set_param( 'parent', 0 );
+			$folder_move_response = rest_do_request( $folder_move_request );
+			$folder_move_data     = $folder_move_response->get_data();
+			$folder_move_tree     = array_column( (array) ( $folder_move_data['folders'] ?? array() ), null, 'id' );
+			$alice_root           = axismundi_media_user_root( $ax_alice, false );
+			ax_audit_assert( $ax_results, 'Folder REST move pulls a nested folder back to its owner top level, refreshes the tree, and keeps its password gate visible', 200 === $folder_move_response->get_status() && $alice_root === (int) get_term( $ax_f_child, AXISMUNDI_MEDIA_FOLDER_TAX )->parent && ! empty( $folder_move_tree[ $ax_f_child ]['protected'] ) && 'password' === axismundi_media_folder_access( $ax_f_child ) && axismundi_media_folder_effective_gate( $ax_f_child ) );
+			axismundi_media_move_folder( $ax_f_child, $ax_f_a, $ax_alice );
+			ax_audit_assert( $ax_results, 'Folder move rejects nesting a folder inside its own descendant', is_wp_error( axismundi_media_move_folder( $ax_f_a, $ax_f_child, $ax_alice ) ) );
+		} else {
+			ax_audit_assert( $ax_results, 'Folder sidebar shows All Media and direct folder counts, not descendant totals', false );
+		}
 		axismundi_media_move_attachments( array( $ax_att_a ), $ax_f_a, $ax_alice );
 
 		$r = axismundi_media_move_attachments( array( $ax_att_b ), $ax_f_a, $ax_alice );
@@ -110,6 +228,7 @@ try {
 
 		$r = axismundi_media_move_attachments( array( $ax_att_a ), $ax_f_b, $ax_alice );
 		ax_audit_assert( $ax_results, "Alice cannot move into Bob's folder (folder IDOR)", is_wp_error( $r ) );
+		ax_audit_assert( $ax_results, 'An administrator cannot merge different owners\' folder trees', is_wp_error( axismundi_media_move_folder( $ax_f_a, $ax_f_b, $ax_admin ) ) );
 
 		ax_audit_assert( $ax_results, "Alice cannot manage Bob's folder", ! axismundi_media_can_manage_folder( $ax_f_b, $ax_alice ) );
 

@@ -138,7 +138,16 @@ try {
 			&& false !== strpos( $community_template->content, 'wp:axismundi/community-card' )
 			&& false !== strpos( $community_template->content, 'wp:axismundi/interaction {"type":"vote"}' )
 			&& false !== strpos( $community_template->content, 'axismundi-object-thread-item' )
-			&& false !== strpos( $community_template->content, 'wp:axismundi/object-replies' )
+			/*
+			 * One human-facing thread renderer, not two.
+			 *
+			 * `axismundi/replies` draws the bounded nested tree this page shows. The direct-reply
+			 * collection stays an ActivityPub contract and keeps its renderer, but placing it here
+			 * too printed the same thread a second time in a flatter shape. Both were carried
+			 * together on purpose while they were being compared; this asserts the comparison ended.
+			 */
+			&& false !== strpos( $community_template->content, 'wp:axismundi/replies' )
+			&& false === strpos( $community_template->content, 'wp:axismundi/object-replies' )
 			// The Object card, not post blocks: an Object document has no post behind it.
 			&& false === strpos( $community_template->content, 'wp:post-content' )
 			&& false !== strpos( $reply_template->content, 'axismundi-object-thread-item' )

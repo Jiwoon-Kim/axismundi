@@ -26,8 +26,6 @@ defined( 'ABSPATH' ) || exit;
 			<!-- wp:axismundi/interaction {"type":"vote"} /-->
 
 			<!-- wp:axismundi/replies /-->
-
-			<!-- wp:axismundi/object-replies /-->
 		</div>
 		<!-- /wp:column -->
 

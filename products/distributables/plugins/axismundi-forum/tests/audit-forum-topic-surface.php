@@ -75,8 +75,10 @@ try {
 		$ax_ts_results,
 		'Forum registers its own single-Topic template instead of leaving Topics on the theme post template',
 		null !== $plugin_template
-			&& false !== strpos( (string) $plugin_template->content, 'axismundi/replies' )
-			&& false !== strpos( (string) $plugin_template->content, 'axismundi/object-replies' )
+			&& false !== strpos( (string) $plugin_template->content, 'wp:axismundi/replies' )
+			// The nested tree is the page's thread UI; the direct-reply collection stays an
+			// ActivityPub contract and is not drawn a second time here.
+			&& false === strpos( (string) $plugin_template->content, 'wp:axismundi/object-replies' )
 			&& false !== strpos( (string) $plugin_template->content, 'axismundi/community-card' )
 	);
 
@@ -198,7 +200,15 @@ try {
 	$replies_html      = axismundi_op_render_object_replies_block( array( 'perPage' => 20 ) );
 	ax_ts_assert(
 		$ax_ts_results,
-		'a reply received from another server is rendered by both the nested-tree and collection-list blocks on the Topic it answers',
+		/*
+		 * Both renderers still resolve the reply, though only one is on the page.
+		 *
+		 * Removing the collection list from the templates was a placement decision, not a
+		 * retirement: the direct-reply collection remains the ActivityPub contract and has to keep
+		 * answering. Asserting it here, off the template, is what keeps "we stopped drawing it"
+		 * from quietly becoming "it stopped working".
+		 */
+		'a reply received from another server resolves through the page thread tree and through the reply collection contract that is no longer drawn beside it',
 		! is_wp_error( $stored )
 			&& false !== strpos( $tree_replies_html, 'axismundi-thread--replies' )
 			&& false !== strpos( $tree_replies_html, 'Remote reply body.' )

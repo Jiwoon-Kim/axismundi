@@ -132,8 +132,9 @@ try {
 	ax_nh_assert( $ax_nh_results, 'the active human view renders title and content, while the editable Object pattern owns nested Reply, Like, and Repost controls', false !== strpos( $active_html, 'Optional Note title' ) && 'Optional Note title' === axismundi_note_object_document_title( 'fallback' ) && false !== strpos( $active_html, 'Human Note route.' ) && 3 === substr_count( $active_html, 'axismundi-interaction__button' ) && false !== strpos( $pattern_html, 'axismundi-object__interactions' ) && substr_count( $pattern_html, 'axismundi-interaction__button' ) >= 3 );
 
 	$like_target = axismundi_act_resolve_like_target( $public_id );
+	$dislike_target = axismundi_act_resolve_sentiment_target( $public_id );
 	$boost_target = axismundi_act_resolve_announce_target( $public_id );
-	ax_nh_assert( $ax_nh_results, 'Like and Announce resolve the same exact public Note and frozen recipient Actor without network access', is_array( $like_target ) && is_array( $boost_target ) && $public_id === $like_target['object_uri'] && $actor->get_uri() === $like_target['recipient_uri'] && $actor->get_uri() === $boost_target['recipient_uri'] );
+	ax_nh_assert( $ax_nh_results, 'Like, Dislike, and Announce resolve the same exact public Note and frozen recipient Actor without network access', is_array( $like_target ) && is_array( $dislike_target ) && is_array( $boost_target ) && $public_id === $like_target['object_uri'] && $public_id === $dislike_target['object_uri'] && $actor->get_uri() === $like_target['recipient_uri'] && $actor->get_uri() === $dislike_target['recipient_uri'] && $actor->get_uri() === $boost_target['recipient_uri'] );
 	wp_set_current_user( $author_id );
 	$reply_button = do_blocks( '<!-- wp:axismundi/interaction {"type":"reply","objectUri":"' . esc_url_raw( $public_id ) . '"} /-->' );
 	ax_nh_assert( $ax_nh_results, 'the authenticated Reply control opens the Note editor with the canonical parent URI prefilled', false !== strpos( $reply_button, 'axismundi-interaction__button' ) && false !== strpos( $reply_button, 'ax_reply_to=' ) && false !== strpos( $reply_button, $public_id ) && false !== strpos( $reply_button, '>reply<' ) );

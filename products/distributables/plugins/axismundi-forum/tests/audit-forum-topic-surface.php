@@ -156,6 +156,47 @@ try {
 			&& 1 === count( $undo_announces )
 			&& $vote_uri === (string) ( reset( $undo_announces )->get_payload()['object']['object'] ?? '' )
 	);
+	/*
+	 * Like and Dislike are separate Activities even though the community vote presents them as
+	 * one mutually exclusive choice. Keep both distribution cycles explicit: otherwise a new
+	 * generic interaction can appear in the vote UI while only the older verb reaches followers.
+	 */
+	$like_uri = 'https://example.com/activities/like/' . wp_generate_uuid4();
+	$like     = $remote instanceof Axismundi_Actor
+		? axismundi_act_record_activity( array( 'id' => $like_uri, 'type' => 'Like', 'actor' => $remote->get_uri(), 'object' => $topic_uri, 'audience' => $group instanceof Axismundi_Actor ? $group->get_uri() : '' ), 'inbound' )
+		: new WP_Error( 'fixture' );
+	$like_announces = $group instanceof Axismundi_Actor
+		? array_filter(
+			axismundi_act_get_by_actor( $group->get_uri(), 50 ),
+			static fn( $candidate ) => $candidate instanceof Axismundi_Activity
+				&& 'Announce' === $candidate->get_type()
+				&& $like_uri === (string) ( $candidate->get_payload()['object']['id'] ?? '' )
+		)
+		: array();
+	$like_undo_uri = 'https://example.com/activities/undo-like/' . wp_generate_uuid4();
+	$like_undo     = $remote instanceof Axismundi_Actor
+		? axismundi_act_record_activity( array( 'id' => $like_undo_uri, 'type' => 'Undo', 'actor' => $remote->get_uri(), 'object' => $like_uri ), 'inbound' )
+		: new WP_Error( 'fixture' );
+	$like_undo_announces = $group instanceof Axismundi_Actor
+		? array_filter(
+			axismundi_act_get_by_actor( $group->get_uri(), 50 ),
+			static fn( $candidate ) => $candidate instanceof Axismundi_Activity
+				&& 'Announce' === $candidate->get_type()
+				&& $like_undo_uri === (string) ( $candidate->get_payload()['object']['id'] ?? '' )
+		)
+		: array();
+	$undone_like = axismundi_act_get( $like_uri );
+	ax_ts_assert(
+		$ax_ts_results,
+		'a local community also redistributes Like and Undo(Like), carrying the withdrawal rather than retracting its earlier Announce',
+		$like instanceof Axismundi_Activity
+			&& $like_undo instanceof Axismundi_Activity
+			&& $undone_like instanceof Axismundi_Activity
+			&& ! $undone_like->is_effective()
+			&& 1 === count( $like_announces )
+			&& 1 === count( $like_undo_announces )
+			&& $like_uri === (string) ( reset( $like_undo_announces )->get_payload()['object']['object'] ?? '' )
+	);
 	$local_cast = $person instanceof Axismundi_Actor ? axismundi_forum_cast_vote( $person, $topic_uri, 'down' ) : new WP_Error( 'fixture' );
 	$local_vote = $person instanceof Axismundi_Actor ? axismundi_act_get_actor_vote( 'Dislike', $person->get_uri(), $topic_uri, true ) : null;
 	$local_announces = $group instanceof Axismundi_Actor && $local_vote instanceof Axismundi_Activity

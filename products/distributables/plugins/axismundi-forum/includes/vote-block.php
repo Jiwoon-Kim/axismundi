@@ -106,7 +106,7 @@ function axismundi_forum_describe_vote_interaction( array $attributes, WP_Block 
 	 *
 	 * A local Topic answers here through its own object URI, so the Topic page keeps its vote.
 	 */
-	if ( ! axismundi_forum_object_community_group( $object_uri ) instanceof Axismundi_Actor ) {
+	if ( ! ( axismundi_forum_object_community_group( $object_uri ) instanceof Axismundi_Actor ) ) {
 		return null;
 	}
 	if ( function_exists( 'axismundi_act_no_cache_like_state' ) ) {
@@ -207,14 +207,19 @@ function axismundi_forum_describe_vote_interaction( array $attributes, WP_Block 
  * @param WP_Block $block      Block instance.
  */
 function axismundi_forum_community_interaction_type( string $type, array $attributes, WP_Block $block ) : string {
-	if ( 'like' !== $type ) {
+	if ( ! in_array( $type, array( 'like', 'dislike' ), true ) ) {
 		return $type;
 	}
 	$object_uri = axismundi_forum_vote_block_object_uri( $attributes, $block );
 	if ( '' === $object_uri ) {
 		return $type;
 	}
-	return axismundi_forum_object_community_group( $object_uri ) instanceof Axismundi_Actor ? 'vote' : $type;
+	if ( ! axismundi_forum_object_community_group( $object_uri ) instanceof Axismundi_Actor ) {
+		return $type;
+	}
+	// The authored pair becomes the single community vote group. The Like supplies its up side;
+	// suppressing its Dislike sibling prevents the same downvote appearing twice.
+	return 'like' === $type ? 'vote' : ( 'dislike' === $type ? '' : $type );
 }
 add_filter( 'axismundi_act_interaction_type', 'axismundi_forum_community_interaction_type', 10, 3 );
 

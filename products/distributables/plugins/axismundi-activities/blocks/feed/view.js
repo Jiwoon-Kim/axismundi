@@ -40,6 +40,16 @@ const paintLike = ( button, result ) => {
 	}
 };
 
+/** Reflect a Dislike result back into the shared interaction control that was pressed. */
+const paintDislike = ( button, result ) => {
+	button.setAttribute( 'aria-pressed', result.is_disliked ? 'true' : 'false' );
+	button.classList.toggle( 'is-selected', !! result.is_disliked );
+	const count = button.querySelector( '.axismundi-interaction__count' );
+	if ( count ) {
+		count.textContent = Number( result.dislike_count || 0 ).toLocaleString();
+	}
+};
+
 /** Reflect a Repost result back into the shared interaction control that was pressed. */
 const paintAnnounce = ( button, result ) => {
 	button.setAttribute( 'aria-pressed', result.is_announced ? 'true' : 'false' );
@@ -89,6 +99,18 @@ const performAction = async ( button ) => {
 			paintLike( button, await send( button.dataset.axEndpoint, liked ? 'DELETE' : 'POST', { object_uri: button.dataset.axObjectUri }, button.dataset.axNonce ) );
 		} catch ( error ) {
 			paintLike( button, { is_liked: liked, like_count: previousCount } );
+			throw error;
+		}
+		return;
+	}
+	if ( 'dislike' === action ) {
+		const disliked = button.getAttribute( 'aria-pressed' ) === 'true';
+		const previousCount = Number( button.querySelector( '.axismundi-interaction__count' )?.textContent || 0 );
+		paintDislike( button, { is_disliked: ! disliked, dislike_count: Math.max( 0, previousCount + ( disliked ? -1 : 1 ) ) } );
+		try {
+			paintDislike( button, await send( button.dataset.axEndpoint, disliked ? 'DELETE' : 'POST', { object_uri: button.dataset.axObjectUri }, button.dataset.axNonce ) );
+		} catch ( error ) {
+			paintDislike( button, { is_disliked: disliked, dislike_count: previousCount } );
 			throw error;
 		}
 		return;

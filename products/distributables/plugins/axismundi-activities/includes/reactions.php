@@ -295,7 +295,7 @@ function axismundi_act_sync_reaction_lease( Axismundi_Activity $activity ) : voi
 	 * holding several reactions holds several leases and withdrawing one releases only that
 	 * one.
 	 */
-	if ( in_array( $activity->get_type(), array( 'Like', 'EmojiReact' ), true ) && $activity->is_effective() && null !== $activity->get_object_uri() && axismundi_op_get_remote_object( $activity->get_object_uri() ) ) {
+	if ( in_array( $activity->get_type(), array( 'Like', 'Dislike', 'EmojiReact' ), true ) && $activity->is_effective() && null !== $activity->get_object_uri() && axismundi_op_get_remote_object( $activity->get_object_uri() ) ) {
 		axismundi_op_add_lease( $activity->get_object_uri(), 'interaction', $activity->get_uri() );
 		return;
 	}
@@ -303,7 +303,7 @@ function axismundi_act_sync_reaction_lease( Axismundi_Activity $activity ) : voi
 		return;
 	}
 	$target = axismundi_act_get( $activity->get_object_uri() );
-	if ( $target instanceof Axismundi_Activity && in_array( $target->get_type(), array( 'Like', 'EmojiReact' ), true ) && null !== $target->get_object_uri() ) {
+	if ( $target instanceof Axismundi_Activity && in_array( $target->get_type(), array( 'Like', 'Dislike', 'EmojiReact' ), true ) && null !== $target->get_object_uri() ) {
 		axismundi_op_release_lease( $target->get_object_uri(), 'interaction', $target->get_uri() );
 	}
 }

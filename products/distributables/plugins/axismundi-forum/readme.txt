@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.9.30
+Stable tag: 0.9.31
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: forum, community, activitypub, group, federation
@@ -33,6 +33,12 @@ Not in this plugin: identity, handles, Group lifecycle, or manager delegation
 object rendering (Axismundi Object Projections); Note replies (Axismundi Note).
 
 == Changelog ==
+
+= 0.9.31 =
+* Treats the generic Like/Dislike pair as the source facts for a community vote,
+  while keeping one mutually exclusive up/down control on Group-context Objects.
+* Redistributes Like, Dislike, and both Undo forms through the local Group Actor
+  only after recorded submission evidence proves the Object belongs to that Group.
 
 = 0.9.30 =
 * Shows the Group Topic controls as one Interaction row and makes a Like render

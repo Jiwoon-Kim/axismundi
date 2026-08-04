@@ -54,9 +54,11 @@ try {
 
 	ax_ib_assert(
 		$ax_ib_results,
-		'Like is offered through the registry rather than being built into the block',
+		'Like and Dislike are offered through the registry rather than being built into the block',
 		array_key_exists( 'like', axismundi_act_interaction_types() )
 			&& is_callable( axismundi_act_interaction_types()['like']['describe'] )
+			&& array_key_exists( 'dislike', axismundi_act_interaction_types() )
+			&& is_callable( axismundi_act_interaction_types()['dislike']['describe'] )
 	);
 
 	// A type nobody registered is not a broken button, it is no button.
@@ -163,6 +165,16 @@ try {
 
 	ax_ib_assert(
 		$ax_ib_results,
+		'a community vote is one connected up-score-down control while its buttons retain the theme shape',
+		1 === preg_match(
+			'#\.axismundi-interaction\.is-type-vote \.axismundi-interaction__group\s*\{\s*display:\s*inline-flex;\s*align-items:\s*center;\s*gap:\s*2px;\s*padding:\s*2px;\s*border:#s',
+			$stylesheet
+		)
+			&& false !== strpos( $stylesheet, 'font-variant-numeric: tabular-nums' )
+	);
+
+	ax_ib_assert(
+		$ax_ib_results,
 		'the control carries the core button class so the theme reaches it',
 		false !== strpos( ax_ib_button_attr( $plain_html, 'class' ), 'wp-element-button' )
 	);
@@ -233,20 +245,25 @@ try {
 	 */
 	ax_ib_assert(
 		$ax_ib_results,
-		'a mutating control brings its store and keeps its count current without a reload',
+		'Like and Dislike each bring their own store and keep their own count current without a reload',
 		// Rendered here rather than reused, so the reader this markup describes is unambiguous.
 		( static function () use ( $object_uri ) : bool {
 			$like     = do_blocks( '<!-- wp:axismundi/interaction {"type":"like","objectUri":"' . esc_url_raw( $object_uri ) . '"} /-->' );
+			$dislike  = do_blocks( '<!-- wp:axismundi/interaction {"type":"dislike","objectUri":"' . esc_url_raw( $object_uri ) . '"} /-->' );
 			$announce = do_blocks( '<!-- wp:axismundi/interaction {"type":"announce","objectUri":"' . esc_url_raw( $object_uri ) . '"} /-->' );
 			return false !== strpos( $like, 'data-wp-interactive="axismundi/like-button"' )
 				&& false !== strpos( $like, 'data-wp-text="context.likes"' )
+				&& false !== strpos( $dislike, 'data-wp-interactive="axismundi/dislike-button"' )
+				&& false !== strpos( $dislike, 'data-wp-text="context.dislikes"' )
 				&& false !== strpos( $announce, 'data-wp-text="context.announces"' );
 		} )()
 			// The stores those directives are useless without. They moved out of block directories
 			// that were then deleted, so their absence is a thing that has already happened once.
 			&& is_readable( dirname( __DIR__ ) . '/assets/interactions/like.js' )
+			&& is_readable( dirname( __DIR__ ) . '/assets/interactions/dislike.js' )
 			&& is_readable( dirname( __DIR__ ) . '/assets/interactions/announce.js' )
 			&& false !== strpos( (string) file_get_contents( dirname( __DIR__ ) . '/assets/interactions/like.js' ), "store( 'axismundi/like-button'" )
+			&& false !== strpos( (string) file_get_contents( dirname( __DIR__ ) . '/assets/interactions/dislike.js' ), "store( 'axismundi/dislike-button'" )
 	);
 
 	/*

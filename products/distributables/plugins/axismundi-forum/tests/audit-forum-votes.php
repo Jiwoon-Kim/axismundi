@@ -240,27 +240,34 @@ try {
 	/*
 	 * One authored control, two contexts.
 	 *
-	 * Templates place Like; a community Object turns it into the vote. Asserting the substitution
-	 * both ways is what keeps the rule from decaying into "vote everywhere" or back into a control
-	 * an author has to remember to swap per surface -- and an upvote records `Like`, so this
-	 * changes how the act is offered, not which act it is.
+	 * Templates place the two independent Activity facts. A community Object turns that pair into
+	 * one vote group, which keeps the shared card usable in mixed feeds without duplicating the
+	 * down side next to the group.
 	 */
 	$ax_fv_like = static function ( string $uri ) : string {
 		return do_blocks( '<!-- wp:axismundi/interaction {"type":"like","objectUri":"' . esc_url_raw( $uri ) . '"} /-->' );
 	};
 	$ax_fv_community_like = $ax_fv_like( $topic_uri );
 	$ax_fv_plain_like     = $ax_fv_like( $loose_uri );
+	$ax_fv_dislike = static function ( string $uri ) : string {
+		return do_blocks( '<!-- wp:axismundi/interaction {"type":"dislike","objectUri":"' . esc_url_raw( $uri ) . '"} /-->' );
+	};
+	$ax_fv_community_dislike = $ax_fv_dislike( $topic_uri );
+	$ax_fv_plain_dislike     = $ax_fv_dislike( $loose_uri );
 	ax_fv_assert(
 		$ax_fv_results,
-		'an authored Like renders as the vote on a community Object and stays a Like everywhere else',
+		'an authored Like/Dislike pair renders as one vote on a community Object and as two facts everywhere else',
 		// Rendered, not resolved: calling the mapper directly would still pass with nothing hooked
 		// to it, which is the difference between the rule existing and the rule being applied.
 		false !== strpos( $ax_fv_community_like, 'is-type-vote' )
 			&& false !== strpos( $ax_fv_community_like, 'thumb_down' )
 			&& false === strpos( $ax_fv_community_like, 'is-type-like' )
+			&& '' === trim( $ax_fv_community_dislike )
 			&& false !== strpos( $ax_fv_plain_like, 'is-type-like' )
 			&& false === strpos( $ax_fv_plain_like, 'is-type-vote' )
-			// A type that is not Like is never rewritten, whatever context it is read in.
+			&& false !== strpos( $ax_fv_plain_dislike, 'is-type-dislike' )
+			&& false === strpos( $ax_fv_plain_dislike, 'is-type-vote' )
+			// Other controls are not part of the sentiment-pair composition.
 			&& false !== strpos( do_blocks( '<!-- wp:axismundi/interaction {"type":"reply","objectUri":"' . esc_url_raw( $topic_uri ) . '"} /-->' ), 'is-type-reply' )
 			&& 'Like' === axismundi_forum_vote_verb( 'up' )
 	);

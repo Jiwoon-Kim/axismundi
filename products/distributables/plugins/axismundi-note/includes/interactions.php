@@ -36,6 +36,7 @@ function axismundi_note_resolve_like_target( $target, string $object_uri ) {
 	return null === $resolved ? $target : $resolved;
 }
 add_filter( 'axismundi_act_resolve_like_target', 'axismundi_note_resolve_like_target', 10, 2 );
+add_filter( 'axismundi_act_resolve_sentiment_target', 'axismundi_note_resolve_like_target', 10, 2 );
 
 /** Supply a Note target to the Activities Announce resolver. */
 function axismundi_note_resolve_announce_target( $target, string $object_uri ) {

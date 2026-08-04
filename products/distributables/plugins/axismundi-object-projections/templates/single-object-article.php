@@ -39,6 +39,8 @@ defined( 'ABSPATH' ) || exit;
 			<!-- wp:axismundi/interactions -->
 				<!-- wp:axismundi/interaction {"type":"reply"} /-->
 				<!-- wp:axismundi/interaction {"type":"like"} /-->
+
+				<!-- wp:axismundi/interaction {"type":"dislike"} /-->
 				<!-- wp:axismundi/interaction {"type":"announce","announceMenu":true} /-->
 				<!-- wp:axismundi/interaction {"type":"reaction"} /-->
 			<!-- /wp:axismundi/interactions -->

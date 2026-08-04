@@ -1,6 +1,6 @@
 <?php
 /**
- * Like REST mutation and Interactivity API block.
+ * Like and Dislike REST mutations and Interactivity API controls.
  *
  * @package AxismundiActivities
  */
@@ -8,16 +8,16 @@
 defined( 'ABSPATH' ) || exit;
 
 /** Resolve one supported projected/cached object and its attributed Actor. */
-function axismundi_act_resolve_like_target( string $object_uri ) {
+function axismundi_act_resolve_sentiment_target( string $object_uri ) {
 	$uri = axismundi_act_uri( $object_uri );
 	if ( '' === $uri ) {
-		return new WP_Error( 'ax_act_like_target', __( 'The object URI is invalid.', 'axismundi-activities' ) );
+		return new WP_Error( 'ax_act_sentiment_target', __( 'The object URI is invalid.', 'axismundi-activities' ) );
 	}
 	if ( function_exists( 'axismundi_op_get_remote_object' ) ) {
 		$remote = axismundi_op_get_remote_object( $uri, false );
 		if ( is_array( $remote ) ) {
 			if ( 'active' !== (string) $remote['object_status'] || empty( $remote['attributed_to_uri'] ) ) {
-				return new WP_Error( 'ax_act_like_target_unavailable', __( 'The remote object cannot currently receive a Like.', 'axismundi-activities' ), array( 'status' => 409 ) );
+				return new WP_Error( 'ax_act_sentiment_target_unavailable', __( 'The remote object cannot currently receive this interaction.', 'axismundi-activities' ), array( 'status' => 409 ) );
 			}
 			return array( 'object_uri' => $uri, 'recipient_uri' => (string) $remote['attributed_to_uri'], 'source' => $remote );
 		}
@@ -52,12 +52,23 @@ function axismundi_act_resolve_like_target( string $object_uri ) {
 	}
 
 	/** @param array<string,mixed>|WP_Error $target Resolved target. @param string $uri Canonical object URI. */
-	return apply_filters( 'axismundi_act_resolve_like_target', new WP_Error( 'ax_act_like_target_missing', __( 'The object is not available in a local projection or remote cache.', 'axismundi-activities' ), array( 'status' => 404 ) ), $uri );
+	return apply_filters( 'axismundi_act_resolve_sentiment_target', new WP_Error( 'ax_act_sentiment_target_missing', __( 'The object is not available in a local projection or remote cache.', 'axismundi-activities' ), array( 'status' => 404 ) ), $uri );
+}
+
+/** @deprecated Use axismundi_act_resolve_sentiment_target(). */
+function axismundi_act_resolve_like_target( string $object_uri ) {
+	$uri = axismundi_act_uri( $object_uri );
+	return apply_filters( 'axismundi_act_resolve_like_target', axismundi_act_resolve_sentiment_target( $uri ), $uri );
 }
 
 /** REST permission gate: an activated public Actor is required. */
-function axismundi_act_like_rest_permission() : bool {
+function axismundi_act_sentiment_rest_permission() : bool {
 	return axismundi_act_current_local_actor() instanceof Axismundi_Actor;
+}
+
+/** @deprecated Use axismundi_act_sentiment_rest_permission(). */
+function axismundi_act_like_rest_permission() : bool {
+	return axismundi_act_sentiment_rest_permission();
 }
 
 /** Register the Like mutation endpoint. */
@@ -69,19 +80,42 @@ function axismundi_act_register_like_rest_route() : void {
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
 				'callback'            => 'axismundi_act_rest_like_object',
-				'permission_callback' => 'axismundi_act_like_rest_permission',
+			'permission_callback' => 'axismundi_act_sentiment_rest_permission',
 				'args'                => array( 'object_uri' => array( 'required' => true, 'type' => 'string', 'format' => 'uri' ) ),
 			),
 			array(
 				'methods'             => WP_REST_Server::DELETABLE,
 				'callback'            => 'axismundi_act_rest_unlike_object',
-				'permission_callback' => 'axismundi_act_like_rest_permission',
+			'permission_callback' => 'axismundi_act_sentiment_rest_permission',
 				'args'                => array( 'object_uri' => array( 'required' => true, 'type' => 'string', 'format' => 'uri' ) ),
 			),
 		)
 	);
 }
 add_action( 'rest_api_init', 'axismundi_act_register_like_rest_route' );
+
+/** Register the Dislike mutation endpoint. */
+function axismundi_act_register_dislike_rest_route() : void {
+	register_rest_route(
+		'axismundi/v1',
+		'/dislikes',
+		array(
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => 'axismundi_act_rest_dislike_object',
+				'permission_callback' => 'axismundi_act_sentiment_rest_permission',
+				'args'                => array( 'object_uri' => array( 'required' => true, 'type' => 'string', 'format' => 'uri' ) ),
+			),
+			array(
+				'methods'             => WP_REST_Server::DELETABLE,
+				'callback'            => 'axismundi_act_rest_undislike_object',
+				'permission_callback' => 'axismundi_act_sentiment_rest_permission',
+				'args'                => array( 'object_uri' => array( 'required' => true, 'type' => 'string', 'format' => 'uri' ) ),
+			),
+		)
+	);
+}
+add_action( 'rest_api_init', 'axismundi_act_register_dislike_rest_route' );
 
 /** Prevent shared caches from storing a logged-in visitor's Like state and REST nonce. */
 function axismundi_act_no_cache_like_state() : void {
@@ -130,6 +164,41 @@ function axismundi_act_rest_unlike_object( WP_REST_Request $request ) {
 	}
 	$activity = axismundi_act_unlike_object( $actor, (string) $target['object_uri'] );
 	return is_wp_error( $activity ) ? $activity : axismundi_act_like_rest_response( $actor, (string) $target['object_uri'], $activity );
+}
+
+/** Build the authoritative Dislike response. */
+function axismundi_act_dislike_rest_response( Axismundi_Actor $actor, string $object_uri, Axismundi_Activity $activity ) : WP_REST_Response {
+	return new WP_REST_Response(
+		array(
+			'object_uri'    => $object_uri,
+			'is_disliked'   => axismundi_act_get_dislike_state( $actor->get_uri(), $object_uri ),
+			'dislike_count' => axismundi_act_get_dislike_count( $object_uri ),
+			'activity_uri'  => $activity->get_uri(),
+		),
+		200
+	);
+}
+
+/** Handle Dislike. */
+function axismundi_act_rest_dislike_object( WP_REST_Request $request ) {
+	$actor  = axismundi_act_current_local_actor();
+	$target = axismundi_act_resolve_sentiment_target( (string) $request['object_uri'] );
+	if ( ! $actor instanceof Axismundi_Actor || is_wp_error( $target ) ) {
+		return is_wp_error( $target ) ? $target : new WP_Error( 'ax_act_dislike_actor', __( 'No active local Actor is available.', 'axismundi-activities' ), array( 'status' => 403 ) );
+	}
+	$activity = axismundi_act_dislike_object( $actor, (string) $target['object_uri'], (string) $target['recipient_uri'] );
+	return is_wp_error( $activity ) ? $activity : axismundi_act_dislike_rest_response( $actor, (string) $target['object_uri'], $activity );
+}
+
+/** Handle Undo(Dislike). */
+function axismundi_act_rest_undislike_object( WP_REST_Request $request ) {
+	$actor  = axismundi_act_current_local_actor();
+	$target = axismundi_act_resolve_sentiment_target( (string) $request['object_uri'] );
+	if ( ! $actor instanceof Axismundi_Actor || is_wp_error( $target ) ) {
+		return is_wp_error( $target ) ? $target : new WP_Error( 'ax_act_dislike_actor', __( 'No active local Actor is available.', 'axismundi-activities' ), array( 'status' => 403 ) );
+	}
+	$activity = axismundi_act_undislike_object( $actor, (string) $target['object_uri'] );
+	return is_wp_error( $activity ) ? $activity : axismundi_act_dislike_rest_response( $actor, (string) $target['object_uri'], $activity );
 }
 
 /** Resolve the object URI represented by one Like block instance. */
@@ -220,6 +289,58 @@ function axismundi_act_describe_like_interaction( array $attributes, WP_Block $b
 	);
 }
 
+/** Describe a Dislike for the unified interaction block. */
+function axismundi_act_describe_dislike_interaction( array $attributes, WP_Block $block ) : ?array {
+	$object_uri = axismundi_act_like_block_object_uri( $attributes, $block );
+	if ( '' === $object_uri ) {
+		return null;
+	}
+	axismundi_act_no_cache_like_state();
+	$actor       = axismundi_act_current_local_actor();
+	$can_dislike = $actor instanceof Axismundi_Actor && ! is_wp_error( axismundi_act_resolve_sentiment_target( $object_uri ) );
+	$is_disliked = $actor instanceof Axismundi_Actor ? axismundi_act_get_dislike_state( $actor->get_uri(), $object_uri ) : false;
+	$endpoint    = rest_url( 'axismundi/v1/dislikes' );
+	$context     = array(
+		'objectUri'     => $object_uri,
+		'dislikes'      => axismundi_act_get_dislike_count( $object_uri ),
+		'isDisliked'    => $is_disliked,
+		'isPending'     => false,
+		'canDislike'    => $can_dislike,
+		'isDisabled'    => ! $can_dislike,
+		'endpoint'      => $endpoint,
+		'nonce'         => $can_dislike ? wp_create_nonce( 'wp_rest' ) : '',
+		'error'         => '',
+		'errorFallback' => __( 'The Dislike could not be saved.', 'axismundi-activities' ),
+	);
+	return array(
+		'icon'       => 'thumb_down',
+		'label'      => __( 'Dislike', 'axismundi-activities' ),
+		'aria_label' => $can_dislike
+			? __( 'Dislike', 'axismundi-activities' )
+			: ( is_user_logged_in() ? __( 'Activate a public Actor profile to Dislike.', 'axismundi-activities' ) : __( 'Log in to Dislike.', 'axismundi-activities' ) ),
+		'count'      => (int) $context['dislikes'],
+		'count_bind' => 'context.dislikes',
+		'selected'   => $is_disliked,
+		'toggle'     => true,
+		'disabled'   => ! $can_dislike,
+		'namespace'  => 'axismundi/dislike-button',
+		'module'     => 'axismundi-interaction-dislike',
+		'context'    => $context,
+		'bindings'   => array(
+			'data-wp-on--click'          => 'actions.toggleDislike',
+			'data-wp-bind--disabled'     => 'context.isDisabled',
+			'data-wp-class--is-selected' => 'context.isDisliked',
+			'data-wp-bind--aria-pressed' => 'context.isDisliked',
+		),
+		'delegated'  => array(
+			'data-ax-action'     => 'dislike',
+			'data-ax-object-uri' => $object_uri,
+			'data-ax-endpoint'   => $endpoint,
+			'data-ax-nonce'      => $can_dislike ? (string) $context['nonce'] : '',
+		),
+	);
+}
+
 /** Offer Like as an interaction type. */
 function axismundi_act_register_like_interaction_type() : void {
 	if ( function_exists( 'axismundi_act_register_interaction_type' ) ) {
@@ -234,3 +355,18 @@ function axismundi_act_register_like_interaction_type() : void {
 	}
 }
 add_action( 'axismundi_act_register_interaction_types', 'axismundi_act_register_like_interaction_type' );
+
+/** Offer Dislike as an interaction type. */
+function axismundi_act_register_dislike_interaction_type() : void {
+	if ( function_exists( 'axismundi_act_register_interaction_type' ) ) {
+		axismundi_act_register_interaction_type(
+			'dislike',
+			array(
+				'describe' => 'axismundi_act_describe_dislike_interaction',
+				'label'    => __( 'Dislike', 'axismundi-activities' ),
+				'icon'     => 'thumb_down',
+			)
+		);
+	}
+}
+add_action( 'axismundi_act_register_interaction_types', 'axismundi_act_register_dislike_interaction_type' );

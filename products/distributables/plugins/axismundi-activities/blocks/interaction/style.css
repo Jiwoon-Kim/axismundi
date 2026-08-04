@@ -124,6 +124,18 @@
 	--md-icon-fill: 1;
 }
 
+.axismundi-interaction.is-type-dislike .axismundi-interaction__button:hover,
+.axismundi-interaction.is-type-dislike .axismundi-interaction__button:focus-visible,
+.axismundi-interaction.is-type-dislike .axismundi-interaction__button.is-selected {
+	color: var(--wp--preset--color--error, #b3261e);
+}
+
+.axismundi-interaction.is-type-dislike .axismundi-interaction__button:hover .material-symbols-outlined,
+.axismundi-interaction.is-type-dislike .axismundi-interaction__button:focus-visible .material-symbols-outlined,
+.axismundi-interaction.is-type-dislike .axismundi-interaction__button.is-selected .material-symbols-outlined {
+	--md-icon-fill: 1;
+}
+
 .axismundi-interaction.is-type-announce .axismundi-interaction__button:hover,
 .axismundi-interaction.is-type-announce .axismundi-interaction__button:focus-visible,
 .axismundi-interaction.is-type-announce .axismundi-interaction__button.is-selected,
@@ -140,6 +152,33 @@
 .axismundi-interaction.is-type-announce .axismundi-interaction__button:focus-visible .material-symbols-outlined,
 .axismundi-interaction.is-type-announce .axismundi-interaction__button.is-selected .material-symbols-outlined {
 	transform: rotate(-180deg);
+}
+
+/*
+ * A community vote is one policy control: up, net score, down.
+ *
+ * The group owns the outline and the 2px joins; individual buttons still inherit their shape
+ * from the theme's core-button bridge. That keeps this recognisably one choice without making
+ * a second button system that drifts from the rest of the interface.
+ */
+.axismundi-interaction.is-type-vote .axismundi-interaction__group {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	padding: 2px;
+	border: 1px solid var(--wp--preset--color--outline-variant, rgba(0, 0, 0, 0.16));
+	border-radius: 1.375rem;
+	background-color: var(--wp--preset--color--surface-container-lowest, transparent);
+}
+
+.axismundi-interaction.is-type-vote .axismundi-interaction__value {
+	min-inline-size: 2rem;
+	padding-inline: 0.25rem;
+	color: var(--wp--preset--color--on-surface-variant, currentColor);
+	font-variant-numeric: tabular-nums;
+	font-weight: 600;
+	line-height: 2rem;
+	text-align: center;
 }
 
 /* A vote colours the side the reader is on, and only that side. */

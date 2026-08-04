@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.73
+Stable tag: 0.0.74
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -43,6 +43,10 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.74 =
+* Adds the generic Dislike control to bundled Object card and Article templates.
+  Forum composes it with Like as a community vote when Group context applies.
 
 = 0.0.73 =
 * Lets an Object Interaction row resolve the current Object URI from a claimed

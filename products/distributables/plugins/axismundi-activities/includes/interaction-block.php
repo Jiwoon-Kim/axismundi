@@ -377,7 +377,7 @@ function axismundi_act_register_interaction_modules() : void {
 		return;
 	}
 	$base = dirname( __DIR__ ) . '/axismundi-activities.php';
-	foreach ( array( 'like', 'announce' ) as $type ) {
+	foreach ( array( 'like', 'dislike', 'announce' ) as $type ) {
 		$path = dirname( __DIR__ ) . '/assets/interactions/' . $type . '.js';
 		if ( is_readable( $path ) ) {
 			wp_register_script_module(

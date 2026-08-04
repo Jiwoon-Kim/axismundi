@@ -26,6 +26,7 @@ function axismundi_act_feed_card_patterns() : array {
 	$interactions = '<!-- wp:axismundi/interactions -->'
 		. '<!-- wp:axismundi/interaction {"type":"reply"} /-->'
 		. '<!-- wp:axismundi/interaction {"type":"like"} /-->'
+		. '<!-- wp:axismundi/interaction {"type":"dislike"} /-->'
 		. '<!-- wp:axismundi/interaction {"type":"announce","announceMenu":true} /-->'
 		. '<!-- wp:axismundi/interaction {"type":"reaction"} /-->'
 		. '<!-- /wp:axismundi/interactions -->';
@@ -53,6 +54,7 @@ function axismundi_act_feed_card_patterns() : array {
 				. '<!-- wp:axismundi/interactions -->'
 				. '<!-- wp:axismundi/interaction {"type":"reply","size":"xs"} /-->'
 				. '<!-- wp:axismundi/interaction {"type":"like","size":"xs"} /-->'
+				. '<!-- wp:axismundi/interaction {"type":"dislike","size":"xs"} /-->'
 				. '<!-- /wp:axismundi/interactions -->',
 		),
 	);

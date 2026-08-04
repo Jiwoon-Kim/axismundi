@@ -84,6 +84,17 @@ try {
 	}
 	ax_react_assert( $ax_react_results, 'a later Like starts a distinct Activity cycle and restores state and lease', $relike instanceof Axismundi_Activity && $like instanceof Axismundi_Activity && $relike->get_uri() !== $like->get_uri() && axismundi_act_get_like_state( $local->get_uri(), $ax_react_object_uri ) && 1 === axismundi_op_active_lease_count( $ax_react_object_uri ) );
 
+	$dislike = axismundi_act_dislike_object( $local, $ax_react_object_uri, $remote_uri );
+	if ( $dislike instanceof Axismundi_Activity ) {
+		$ax_react_activity_uris[] = $dislike->get_uri();
+	}
+	ax_react_assert( $ax_react_results, 'Like and Dislike are independent ledger facts, each with its own count and remote-object lease', $dislike instanceof Axismundi_Activity && axismundi_act_get_like_state( $local->get_uri(), $ax_react_object_uri ) && axismundi_act_get_dislike_state( $local->get_uri(), $ax_react_object_uri ) && 1 === axismundi_act_get_like_count( $ax_react_object_uri ) && 1 === axismundi_act_get_dislike_count( $ax_react_object_uri ) && 2 === axismundi_op_active_lease_count( $ax_react_object_uri ) );
+	$undislike = axismundi_act_undislike_object( $local, $ax_react_object_uri );
+	if ( $undislike instanceof Axismundi_Activity ) {
+		$ax_react_activity_uris[] = $undislike->get_uri();
+	}
+	ax_react_assert( $ax_react_results, 'Undo(Dislike) retracts only the Dislike and leaves the Like and its lease intact', $undislike instanceof Axismundi_Activity && $dislike instanceof Axismundi_Activity && $dislike->get_uri() === $undislike->get_object_uri() && axismundi_act_get_like_state( $local->get_uri(), $ax_react_object_uri ) && ! axismundi_act_get_dislike_state( $local->get_uri(), $ax_react_object_uri ) && 1 === axismundi_op_active_lease_count( $ax_react_object_uri ) );
+
 	$self_object = 'https://example.com/objects/self-' . $ax_react_suffix;
 	$self_like   = axismundi_act_like_object( $local, $self_object, $local instanceof Axismundi_Actor ? $local->get_uri() : '' );
 	if ( $self_like instanceof Axismundi_Activity ) {
@@ -116,9 +127,19 @@ try {
 	}
 	ax_react_assert( $ax_react_results, 'REST mutation returns authoritative server state and distinct count', $response instanceof WP_REST_Response && false === $data['is_liked'] && 1 === (int) $data['like_count'] );
 
+	$dislike_request = new WP_REST_Request( 'POST', '/axismundi/v1/dislikes' );
+	$dislike_request->set_param( 'object_uri', $ax_react_object_uri );
+	$dislike_response = axismundi_act_rest_dislike_object( $dislike_request );
+	$dislike_data     = $dislike_response instanceof WP_REST_Response ? $dislike_response->get_data() : array();
+	if ( ! empty( $dislike_data['activity_uri'] ) ) {
+		$ax_react_activity_uris[] = (string) $dislike_data['activity_uri'];
+	}
+	ax_react_assert( $ax_react_results, 'Dislike has the symmetric REST mutation and returns its own authoritative state and count', $dislike_response instanceof WP_REST_Response && true === $dislike_data['is_disliked'] && 1 === (int) $dislike_data['dislike_count'] );
+
 	axismundi_act_register_interaction_block();
 	$markup = do_blocks( '<!-- wp:axismundi/interaction {"type":"like","objectUri":"' . esc_url_raw( $ax_react_object_uri ) . '"} /-->' );
-	ax_react_assert( $ax_react_results, 'dynamic block emits Interactivity directives, canonical URI context, accessible state, and a logged-in cache bypass', str_contains( $markup, 'data-wp-interactive="axismundi/like-button"' ) && str_contains( $markup, 'data-wp-on--click="actions.toggleLike"' ) && str_contains( $markup, 'aria-pressed' ) && str_contains( str_replace( '\\/', '/', $markup ), esc_url_raw( $ax_react_object_uri ) ) && defined( 'DONOTCACHEPAGE' ) && true === DONOTCACHEPAGE );
+	$dislike_markup = do_blocks( '<!-- wp:axismundi/interaction {"type":"dislike","objectUri":"' . esc_url_raw( $ax_react_object_uri ) . '"} /-->' );
+	ax_react_assert( $ax_react_results, 'Like and Dislike each render their own Interactivity store, canonical state, and cache bypass', str_contains( $markup, 'data-wp-interactive="axismundi/like-button"' ) && str_contains( $markup, 'data-wp-on--click="actions.toggleLike"' ) && str_contains( $dislike_markup, 'data-wp-interactive="axismundi/dislike-button"' ) && str_contains( $dislike_markup, 'data-wp-on--click="actions.toggleDislike"' ) && str_contains( $dislike_markup, 'aria-pressed="true"' ) && str_contains( str_replace( '\\/', '/', $dislike_markup ), esc_url_raw( $ax_react_object_uri ) ) && defined( 'DONOTCACHEPAGE' ) && true === DONOTCACHEPAGE );
 
 	$post_id = wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'publish', 'post_author' => (int) $local->get_local_user_id(), 'post_title' => 'Likes collection fixture', 'post_content' => 'Public Article.' ) );
 	if ( is_int( $post_id ) && $post_id > 0 ) {

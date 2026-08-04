@@ -24,6 +24,7 @@
 		[ 'axismundi/interactions', {}, [
 			[ 'axismundi/interaction', { type: 'reply' } ],
 			[ 'axismundi/interaction', { type: 'like' } ],
+			[ 'axismundi/interaction', { type: 'dislike' } ],
 			[ 'axismundi/interaction', { type: 'announce', announceMenu: true } ],
 			[ 'axismundi/interaction', { type: 'reaction' } ]
 		] ]

@@ -2,11 +2,11 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "axismundi/interaction",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"title": "Interaction",
 	"category": "widgets",
 	"icon": "heart",
-	"description": "One control for acting on the current projected object: reply, like, announce, quote, react or vote.",
+	"description": "One control for acting on the current projected object: reply, like, dislike, announce, quote, react or vote.",
 	"textdomain": "axismundi-activities",
 	"attributes": {
 		"type": {

@@ -95,10 +95,14 @@ try {
 	$public_post = get_post( (int) $public['post_id'] );
 	$private_post = get_post( (int) $private['post_id'] );
 	$draft_post = get_post( (int) $draft['post_id'] );
+	$public_legacy_target = axismundi_note_legacy_post_permalink_target( (int) $public['post_id'], AXISMUNDI_NOTE_POST_TYPE );
+	$private_legacy_target = axismundi_note_legacy_post_permalink_target( (int) $private['post_id'], AXISMUNDI_NOTE_POST_TYPE );
+	$wrong_legacy_target = axismundi_note_legacy_post_permalink_target( (int) $public['post_id'], 'post' );
 	$public_actions = $public_post instanceof WP_Post ? axismundi_note_admin_view_row_action( array(), $public_post ) : array();
 	$private_actions = $private_post instanceof WP_Post ? axismundi_note_admin_view_row_action( array(), $private_post ) : array();
 	$draft_actions = $draft_post instanceof WP_Post ? axismundi_note_admin_view_row_action( array(), $draft_post ) : array();
 	ax_nh_assert( $ax_nh_results, 'the private Note list adds View only for canonical documents anonymous visitors may read', isset( $public_actions['view'] ) && false !== strpos( $public_actions['view'], esc_url( $public_id ) ) && ! isset( $private_actions['view'] ) && ! isset( $draft_actions['view'] ) );
+	ax_nh_assert( $ax_nh_results, 'a public legacy Note post URL has one canonical Object target while private Notes and other post types remain opaque', $public_id === $public_legacy_target && '' === $private_legacy_target && '' === $wrong_legacy_target );
 
 	$template = function_exists( 'get_block_template' ) ? get_block_template( 'axismundi-object-projections//single-object', 'wp_template' ) : null;
 	$content  = function_exists( 'axismundi_op_single_object_template_content' ) ? axismundi_op_single_object_template_content() : '';

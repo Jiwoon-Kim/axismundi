@@ -91,6 +91,39 @@ function axismundi_note_admin_view_row_action( array $actions, WP_Post $post ) :
 }
 add_filter( 'post_row_actions', 'axismundi_note_admin_view_row_action', 10, 2 );
 
+/**
+ * Canonical public document for Core's private-Note list URL, or an empty
+ * string when redirecting would disclose a non-public Note.
+ */
+function axismundi_note_legacy_post_permalink_target( int $post_id, string $post_type ) : string {
+	if ( AXISMUNDI_NOTE_POST_TYPE !== $post_type || $post_id <= 0 ) {
+		return '';
+	}
+	$envelope = axismundi_note_get( $post_id );
+	$post     = get_post( $post_id );
+	if ( ! is_array( $envelope ) || ! $post instanceof WP_Post ) {
+		return '';
+	}
+	$source = new Axismundi_Note_Source( $envelope, $post );
+	return axismundi_note_source_visible( $source ) ? $source->get_uri() : '';
+}
+
+/** Redirect Core's non-public CPT list URL to a public Note's canonical document. */
+function axismundi_note_redirect_legacy_post_permalink() : void {
+	if ( ! axismundi_note_is_html_document_request() ) {
+		return;
+	}
+	$post_id   = isset( $_GET['p'] ) ? absint( wp_unslash( $_GET['p'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only canonical redirect.
+	$post_type = isset( $_GET['post_type'] ) ? sanitize_key( wp_unslash( $_GET['post_type'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only canonical redirect.
+	$target    = axismundi_note_legacy_post_permalink_target( $post_id, $post_type );
+	if ( '' === $target ) {
+		return;
+	}
+	wp_safe_redirect( $target, 301 );
+	exit;
+}
+add_action( 'template_redirect', 'axismundi_note_redirect_legacy_post_permalink', 0 );
+
 /** Conceal a missing or non-public Note with a real empty 404 query. */
 function axismundi_note_set_html_not_found( WP_Query $query ) : void {
 	axismundi_note_clear_main_query( $query );

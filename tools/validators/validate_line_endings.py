@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail when a tracked text file has mixed line endings in the working tree.
+"""Fail when a tracked text file is not LF in the working tree.
 
 The repository already declares one policy: `.gitattributes` sets `* text=auto eol=lf`, and every
 tracked file is LF in the index. What that setting does is normalize on the way *in* — it says
@@ -11,11 +11,16 @@ part of the file fails to match another part for no visible reason, and the fail
 missing string rather than a line-ending difference. It cost real time here before it was named.
 
 So the policy gets a check. `git ls-files --eol` reports what is in the index (`i/`) and what is on
-disk (`w/`); this fails on `w/mixed`, which is the state no file should ever be in.
+disk (`w/`); this fails on `w/mixed` and on `w/crlf`.
 
-`w/crlf` is deliberately not failed. A tracked file that is wholly CRLF on disk still normalizes to
-LF on commit, and on Windows that is a legitimate checkout. It is the mixture that has no honest
-reading.
+`w/crlf` used to be tolerated here, on the reasoning that a wholly-CRLF file still normalizes to LF
+on commit and is a legitimate Windows checkout. That is true of the commit and false of the work:
+these files are read and edited on disk, not in the index, and a CRLF file is where a mixed file
+comes from — append one LF block to it and the state this check exists to catch has been created.
+Tolerating the whole-file case meant the check passed while twelve tracked files sat CRLF on disk,
+which is not the guarantee its name implies.
+
+No tracked text file is exempt: the repository policy is LF everywhere.
 
 Usage:
     python tools/validators/validate_line_endings.py [--fix]
@@ -32,7 +37,7 @@ from pathlib import Path
 
 
 def tracked_eol() -> list[tuple[str, str]]:
-    """Return (working-tree eol, path) for every tracked file git reports on."""
+    """Return (working-tree eol, path) for every tracked file."""
     out = subprocess.run(
         ["git", "ls-files", "--eol"],
         capture_output=True,
@@ -51,6 +56,15 @@ def tracked_eol() -> list[tuple[str, str]]:
     return rows
 
 
+def offenders() -> list[str]:
+    """Tracked paths whose working-tree endings disagree with the repository's policy."""
+    found: list[str] = []
+    for working, path in tracked_eol():
+        if working in ("mixed", "crlf"):
+            found.append(path)
+    return found
+
+
 def fix(path: str) -> None:
     """Rewrite one file to LF, leaving its bytes otherwise untouched."""
     data = Path(path).read_bytes()
@@ -59,32 +73,32 @@ def fix(path: str) -> None:
 
 def main() -> int:
     should_fix = "--fix" in sys.argv[1:]
-    mixed = [path for working, path in tracked_eol() if working == "mixed"]
+    found = offenders()
 
-    if not mixed:
-        print("line endings: no tracked file is mixed")
+    if not found:
+        print("line endings: every tracked file is LF in the working tree")
         return 0
 
     if should_fix:
-        for path in mixed:
+        for path in found:
             fix(path)
             print(f"normalized {path}")
-        remaining = [path for working, path in tracked_eol() if working == "mixed"]
+        remaining = offenders()
         if remaining:
-            print("still mixed after fixing:", ", ".join(remaining), file=sys.stderr)
+            print("still not LF after fixing:", ", ".join(remaining), file=sys.stderr)
             return 1
-        print(f"line endings: normalized {len(mixed)} file(s) to LF")
+        print(f"line endings: normalized {len(found)} file(s) to LF")
         return 0
 
     print(
-        f"line endings: {len(mixed)} tracked file(s) mix CRLF and LF in the working tree.",
+        f"line endings: {len(found)} tracked file(s) are CRLF or mixed in the working tree.",
         file=sys.stderr,
     )
-    for path in mixed:
+    for path in found:
         print(f"  {path}", file=sys.stderr)
     print(
-        "\nThese commit cleanly — the index is already LF — but they break exact-match editing,\n"
-        "where an anchor matches in one part of the file and not another.\n"
+        "\nThese commit cleanly — the index is already LF — but the working tree is what gets read\n"
+        "and edited, and a CRLF file breaks exact-match editing the moment anything appends LF to it.\n"
         "Repair with: python tools/validators/validate_line_endings.py --fix",
         file=sys.stderr,
     )

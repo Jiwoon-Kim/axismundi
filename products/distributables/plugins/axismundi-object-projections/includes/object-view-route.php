@@ -177,15 +177,23 @@ function axismundi_op_object_template_slug( array $model, int $status ) : string
 		// "this was deleted", and building one would leak what it used to be.
 		return 'object-tombstone';
 	}
-	// An Article's canonical page is its own template: the reader followed "Read more",
-	// so it shows the full text rather than the stream lead-in the default page carries.
-	if ( 'Article' === (string) ( $model['type'] ?? '' ) ) {
-		$slug = 'single-object-article';
-	} elseif ( '' !== trim( (string) ( $model['in_reply_to'] ?? '' ) ) ) {
-		$slug = 'single-object-reply';
-	} else {
-		$slug = 'single-object';
-	}
+	/*
+	 * An Article's canonical page is its own template: the reader followed "Read more", so it
+	 * shows the full text rather than the stream lead-in the default page carries. That is a
+	 * difference in how the body is presented, which is what a separate template is for.
+	 *
+	 * Being a reply is not. It once had its own slug on the reasoning that the two could then be
+	 * arranged independently, but the two saved templates stayed byte-identical apart from that
+	 * comment. The frame the comment promised — the ancestor stated above the post — is already
+	 * supplied by reply-context inside the shared Object card. So the fork bought a second
+	 * document to keep in step and nothing else.
+	 *
+	 * Whether an Object replies to something is a fact its model already carries, which the
+	 * reply-context block reads at render time. Keeping it out of template selection also keeps the
+	 * axes from multiplying: context (community) is contributed by another product through the
+	 * filter below, and a slug that already encoded "reply" would have to be crossed with it.
+	 */
+	$slug = 'Article' === (string) ( $model['type'] ?? '' ) ? 'single-object-article' : 'single-object';
 	/**
 	 * Let the product that owns an Object's context route it to its own template.
 	 *

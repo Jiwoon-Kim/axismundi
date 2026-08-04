@@ -72,9 +72,19 @@ try {
 
 	ax_ot_assert(
 		$ax_ot_results,
-		'a root Object and a reply Object route to separate templates instead of sharing one',
+		/*
+		 * Being a reply does not fork the template; being in a community still does.
+		 *
+		 * These are different kinds of fact. A reply is something the Object's own model already
+		 * states, so the page reads it and says so through reply-context. A community is a fact
+		 * another product supplies about the same Object, and it changes the frame the document is
+		 * read in. Asserting both here keeps the distinction from eroding in either direction --
+		 * re-forking on reply, or letting the community frame stop applying to one.
+		 */
+		'a reply routes to the same Object template as a root post, while a community still routes to its own frame',
 		'single-object' === axismundi_op_object_template_slug( array( 'id' => $loose_uri, 'type' => 'Note', 'in_reply_to' => '' ), 200 )
-			&& 'single-object-reply' === axismundi_op_object_template_slug( array( 'id' => $loose_uri, 'type' => 'Note', 'in_reply_to' => 'https://example.com/notes/unaffiliated' ), 200 )
+			&& 'single-object' === axismundi_op_object_template_slug( array( 'id' => $loose_uri, 'type' => 'Note', 'in_reply_to' => 'https://example.com/notes/unaffiliated' ), 200 )
+			&& 'single-object-article' === axismundi_op_object_template_slug( array( 'id' => $loose_uri, 'type' => 'Article', 'in_reply_to' => '' ), 200 )
 	);
 
 	ax_ot_assert(
@@ -115,10 +125,10 @@ try {
 
 	ax_ot_assert(
 		$ax_ot_results,
-		'a reply with no community keeps the plain reply template',
+		'a reply with no community keeps the ordinary Object template rather than borrowing a community frame',
 		'' !== $loose_uri
 			&& null === axismundi_forum_object_community_group( $loose_uri )
-			&& 'single-object-reply' === axismundi_op_object_template_slug( array( 'id' => $loose_uri, 'type' => 'Note', 'in_reply_to' => 'https://example.com/notes/unaffiliated' ), 200 )
+			&& 'single-object' === axismundi_op_object_template_slug( array( 'id' => $loose_uri, 'type' => 'Note', 'in_reply_to' => 'https://example.com/notes/unaffiliated' ), 200 )
 	);
 
 	// A deleted post must not gain a community sidebar it never had while alive.
@@ -130,11 +140,20 @@ try {
 
 	$community_template = get_block_template( 'axismundi-forum//single-object-community', 'wp_template' );
 	$reply_template     = get_block_template( 'axismundi-object-projections//single-object-reply', 'wp_template' );
+	$object_template    = get_block_template( 'axismundi-object-projections//single-object', 'wp_template' );
 	ax_ot_assert(
 		$ax_ot_results,
-		'both templates are registered and the community one actually carries the community blocks',
+		'the community template is registered with its community blocks, and the retired reply template is gone rather than left registered and unreachable',
 		$community_template instanceof WP_Block_Template
-			&& $reply_template instanceof WP_Block_Template
+			&& $object_template instanceof WP_Block_Template
+			/*
+			 * Unregistered, not merely unrouted.
+			 *
+			 * Dropping the reply branch from the slug decision alone would have left this template
+			 * registered and offered in the Site Editor, where an author could still customize a
+			 * document nothing routes to and reasonably conclude their edits were being ignored.
+			 */
+			&& ! $reply_template instanceof WP_Block_Template
 			&& false !== strpos( $community_template->content, 'wp:axismundi/community-card' )
 			&& false !== strpos( $community_template->content, 'wp:axismundi/interaction {"type":"vote"}' )
 			&& false !== strpos( $community_template->content, 'axismundi-object-thread-item' )
@@ -150,7 +169,8 @@ try {
 			&& false === strpos( $community_template->content, 'wp:axismundi/object-replies' )
 			// The Object card, not post blocks: an Object document has no post behind it.
 			&& false === strpos( $community_template->content, 'wp:post-content' )
-			&& false !== strpos( $reply_template->content, 'axismundi-object-thread-item' )
+			// The Object document a reply now renders through still carries the shared thread item.
+			&& false !== strpos( $object_template->content, 'axismundi-object-thread-item' )
 	);
 } finally {
 	wp_set_current_user( 0 );

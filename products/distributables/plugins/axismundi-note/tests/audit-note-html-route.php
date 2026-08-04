@@ -101,7 +101,20 @@ try {
 	$public_actions = $public_post instanceof WP_Post ? axismundi_note_admin_view_row_action( array(), $public_post ) : array();
 	$private_actions = $private_post instanceof WP_Post ? axismundi_note_admin_view_row_action( array(), $private_post ) : array();
 	$draft_actions = $draft_post instanceof WP_Post ? axismundi_note_admin_view_row_action( array(), $draft_post ) : array();
+	$ax_nh_previous_post = $GLOBALS['post'] ?? null;
+	$GLOBALS['post'] = $public_post;
+	ob_start();
+	axismundi_note_editor_view_link();
+	$public_editor_view = (string) ob_get_clean();
+	wp_set_current_user( $author_id );
+	$GLOBALS['post'] = $private_post;
+	ob_start();
+	axismundi_note_editor_view_link();
+	$private_editor_view = (string) ob_get_clean();
+	$GLOBALS['post'] = $ax_nh_previous_post;
+	wp_set_current_user( 0 );
 	ax_nh_assert( $ax_nh_results, 'the private Note list adds View only for canonical documents anonymous visitors may read', isset( $public_actions['view'] ) && false !== strpos( $public_actions['view'], esc_url( $public_id ) ) && ! isset( $private_actions['view'] ) && ! isset( $draft_actions['view'] ) );
+	ax_nh_assert( $ax_nh_results, 'the private Note editor exposes the same canonical View or owner Preview document link as its list row', false !== strpos( $public_editor_view, esc_url( $public_id ) ) && false !== strpos( $public_editor_view, 'View object' ) && false !== strpos( $private_editor_view, esc_url( $private_id ) ) && false !== strpos( $private_editor_view, 'Preview object' ) );
 	ax_nh_assert( $ax_nh_results, 'a public legacy Note post URL has one canonical Object target while private Notes and other post types remain opaque', $public_id === $public_legacy_target && '' === $private_legacy_target && '' === $wrong_legacy_target );
 
 	$template = function_exists( 'get_block_template' ) ? get_block_template( 'axismundi-object-projections//single-object', 'wp_template' ) : null;

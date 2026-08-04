@@ -91,6 +91,27 @@ function axismundi_note_admin_view_row_action( array $actions, WP_Post $post ) :
 }
 add_filter( 'post_row_actions', 'axismundi_note_admin_view_row_action', 10, 2 );
 
+/** Show the canonical Object document from the private Note editor's publish panel. */
+function axismundi_note_editor_view_link() : void {
+	global $post;
+	if ( ! $post instanceof WP_Post || AXISMUNDI_NOTE_POST_TYPE !== $post->post_type ) {
+		return;
+	}
+	$envelope = axismundi_note_get( $post->ID );
+	if ( ! is_array( $envelope ) ) {
+		return;
+	}
+	$source = new Axismundi_Note_Source( $envelope, $post );
+	if ( ! axismundi_note_can_view( $source ) || '' === $source->get_uri() ) {
+		return;
+	}
+	$label = axismundi_note_source_visible( $source )
+		? __( 'View object', 'axismundi-note' )
+		: __( 'Preview object', 'axismundi-note' );
+	echo '<div class="misc-pub-section axismundi-note-editor-view"><a href="' . esc_url( $source->get_uri() ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $label ) . '</a></div>';
+}
+add_action( 'post_submitbox_misc_actions', 'axismundi_note_editor_view_link' );
+
 /**
  * Canonical public document for Core's private-Note list URL, or an empty
  * string when redirecting would disclose a non-public Note.

@@ -19,6 +19,7 @@ if ( ! defined( 'AXISMUNDI_VERSION' ) ) {
 // outputs the attachment description, so this filter prepends the actual file
 // on attachment templates (image / audio / video + captions / download fallback).
 require_once get_template_directory() . '/inc/attachment-media.php';
+require_once get_template_directory() . '/inc/core-icon-overrides.php';
 
 /**
  * Resolve a theme-relative asset path only when the file is present.

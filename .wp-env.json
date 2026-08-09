@@ -25,7 +25,7 @@
     "./products/distributables/plugins/axismundi-emoji",
     "./products/distributables/plugins/axismundi-object-projections",
     "./products/distributables/plugins/axismundi-activities",
-    "C:/Users/thaum/dev/activitypub",
+    "https://downloads.wordpress.org/plugin/activitypub.zip",
     "./products/distributables/plugins/axismundi-activitypub-bridge"
   ],
   "port": 8884,

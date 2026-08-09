@@ -36,6 +36,11 @@ require_once __DIR__ . '/includes/view.php';
 require_once __DIR__ . '/includes/interactions.php';
 require_once __DIR__ . '/includes/rest.php';
 if ( is_admin() ) {
+	require_once __DIR__ . '/includes/admin-list.php';
+	require_once __DIR__ . '/includes/admin-views.php';
+	require_once __DIR__ . '/includes/admin-answers.php';
+}
+if ( is_admin() ) {
 	require_once __DIR__ . '/includes/editor.php';
 }
 

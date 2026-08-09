@@ -609,20 +609,66 @@ function axismundi_op_get_parent_view_model( string $child_uri ) : ?array {
 	return axismundi_op_object_view_model( $source );
 }
 
-/** Render one compact reply-list item, tombstone-aware. */
+/**
+ * Render one reply as a bubble that reads its Object, not a summary of it.
+ *
+ * The reply used to be an author line and thirty stripped words linking away. That is a table of
+ * contents for a conversation rather than the conversation: a reply whose whole point is the image
+ * it carries, the poll it answers or the post it quotes showed none of them, and a warned reply's
+ * text was excerpted straight past its own content warning.
+ *
+ * So the same blocks the canonical page uses render here against the reply's own model, bound for
+ * the length of this call and restored afterwards. Note, quote-post and Question need no branch:
+ * each block renders only when the Object carries that part.
+ *
+ * `object-content-warning` wraps the body, quote, poll and attachments for the reason it does
+ * everywhere else — it supplies the disclosure context they read, so one cover folds all of them.
+ * Excerpting used to defeat that, which is the defect this fixes rather than a detail of it.
+ *
+ * A bubble is deliberately not the document. There is no `replies` block inside it, so a thread
+ * cannot recurse into itself, and no title or featured image, which belong to a page rather than to
+ * a line in a conversation.
+ *
+ * @param array<string,mixed> $model Reply Object view model.
+ * @return string
+ */
+function axismundi_op_render_thread_bubble( array $model ) : string {
+	$previous_model   = axismundi_op_current_object_view_model();
+	$previous_options = $GLOBALS['axismundi_op_object_template_options'] ?? null;
+	axismundi_op_set_current_object_view_model( $model );
+	/*
+	 * `reply` is its own surface, not `feed` and not `single`.
+	 *
+	 * Naming it lets a block that must show less in a thread than on the Object's page say so
+	 * directly. Reusing `feed` would have been the shorter route and the wrong one: it already
+	 * carries the Article lead-in rule, so a quoted Article in a thread would have lost its body to
+	 * a rule about timelines.
+	 */
+	$GLOBALS['axismundi_op_object_template_options'] = array(
+		'headingTag'       => 'h4',
+		'interactions'     => true,
+		'surface'          => 'reply',
+		'interactionOwner' => 'block',
+	);
+	try {
+		return do_blocks( axismundi_op_object_reply_pattern_content() );
+	} finally {
+		axismundi_op_set_current_object_view_model( $previous_model );
+		if ( null === $previous_options ) {
+			unset( $GLOBALS['axismundi_op_object_template_options'] );
+		} else {
+			$GLOBALS['axismundi_op_object_template_options'] = $previous_options;
+		}
+	}
+}
+
+/** Render one reply-list item, tombstone-aware. */
 function axismundi_op_render_thread_item( array $model, string $children_html = '' ) : string {
 	$children = '' !== $children_html ? '<ol class="axismundi-thread__list axismundi-thread__list--nested">' . $children_html . '</ol>' : '';
 	if ( 'tombstone' === (string) ( $model['status'] ?? '' ) ) {
 		return '<li class="axismundi-thread__item axismundi-thread__item--tombstone">' . esc_html__( 'This reply has been deleted.', 'axismundi-object-projections' ) . $children . '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Nested items are escaped by this renderer.
 	}
-	$uri     = (string) ( $model['object_uri'] ?? '' );
-	$author  = axismundi_op_object_view_author( $model );
-	$excerpt = wp_trim_words( wp_strip_all_tags( (string) ( $model['content_html'] ?? '' ) ), 30 );
-	$body    = '<div class="axismundi-thread__excerpt">' . esc_html( $excerpt ) . '</div>';
-	if ( '' !== $uri ) {
-		$body = '<a class="axismundi-thread__link" href="' . esc_url( $uri ) . '">' . $body . '</a>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $body escaped above.
-	}
-	return '<li class="axismundi-thread__item">' . $author . $body . $children . '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Parts escaped above and nested output is recursively rendered here.
+	return '<li class="axismundi-thread__item">' . axismundi_op_render_thread_bubble( $model ) . $children . '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Parts escaped above and nested output is recursively rendered here.
 }
 
 /**

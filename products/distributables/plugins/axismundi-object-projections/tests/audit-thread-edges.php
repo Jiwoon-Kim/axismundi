@@ -216,6 +216,77 @@ try {
 	axismundi_op_set_current_object_view_model( null );
 	ax_te_assert( $ax_te_results, 'the replies block keeps a live descendant beneath its tombstoned parent and counts the complete visible tree', is_array( $stored_remote_grandchild ) && false !== strpos( $nested_replies_html, 'This reply has been deleted.' ) && false !== strpos( $nested_replies_html, 'Remote reply below a deleted parent.' ) && 3 === $reply_tree['count'] && $reply_tree['count'] === $reply_count['count'] && empty( $reply_count['truncated'] ) );
 
+	/*
+	 * A reply is rendered as its Object, not summarised into a link.
+	 *
+	 * The old item was an author line plus thirty stripped words, which is why this asserts the
+	 * content block is actually present rather than that some text appears: an excerpt of the same
+	 * reply would satisfy a text check and satisfy nothing a reader needs. The excerpt class is
+	 * asserted absent for the same reason -- it is what a silent revert would put back.
+	 *
+	 * The nested list is checked here too, because the bubble sits beside the avatar while children
+	 * indent below it: a structural change that drops the nesting would still render every reply.
+	 */
+	ax_te_assert(
+		$ax_te_results,
+		'a reply renders as a bubble carrying its own Object blocks, with children nested beneath it',
+		false !== strpos( $nested_replies_html, 'axismundi-thread__reply' )
+			&& false !== strpos( $nested_replies_html, 'axismundi-thread__bubble' )
+			&& false !== strpos( $nested_replies_html, 'axismundi-thread__identity' )
+			&& false !== strpos( $nested_replies_html, 'axismundi-thread__meta' )
+			&& false !== strpos( $nested_replies_html, 'wp-block-axismundi-object-content' )
+			&& false !== strpos( $nested_replies_html, 'axismundi-thread__list--nested' )
+			&& false === strpos( $nested_replies_html, 'axismundi-thread__excerpt' )
+	);
+
+	/*
+	 * A thread is not a document, and must not nest one.
+	 *
+	 * The bubble reuses the canonical page's blocks, so the mistake available here is reusing its
+	 * composition too. `axismundi/replies` inside a reply would recurse a thread into itself; the
+	 * title and featured image would turn every line of a conversation into a page.
+	 */
+	ax_te_assert(
+		$ax_te_results,
+		'a reply bubble carries no replies block, title, or featured image of its own',
+		false === strpos( $nested_replies_html, 'axismundi-thread--replies wp-block' )
+			&& 1 === substr_count( $nested_replies_html, 'axismundi-thread--replies' )
+			&& false === strpos( $nested_replies_html, 'wp-block-axismundi-object-title' )
+			&& false === strpos( $nested_replies_html, 'wp-block-axismundi-object-featured-image' )
+	);
+
+	/*
+	 * A warned reply stays covered inside the thread.
+	 *
+	 * This is the defect the excerpt had: stripping tags off `content_html` walked straight past the
+	 * content warning and printed the first thirty words of what the author asked to hide. The
+	 * disclosure wrapper is what prevents that, so the body is asserted to sit inside it rather than
+	 * merely to be absent.
+	 */
+	$ax_te_sensitive_reply = 'https://remote.example/notes/' . strtolower( wp_generate_password( 8, false, false ) );
+	axismundi_op_store_remote_object(
+		array(
+			'id' => $ax_te_sensitive_reply, 'type' => 'Note', 'attributedTo' => $remote_actor_uri,
+			'inReplyTo' => $root['uri'], 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'content' => 'AX-TE-SENSITIVE-BODY', 'summary' => 'AX-TE-WARNING', 'sensitive' => true,
+		)
+	);
+	$ax_te_remote_uris[] = $ax_te_sensitive_reply;
+	$ax_te_edge_uris[]   = $ax_te_sensitive_reply;
+	axismundi_op_set_current_object_view_model( $root_model );
+	$ax_te_sensitive_html = axismundi_op_render_replies_block();
+	axismundi_op_set_current_object_view_model( null );
+	$ax_te_warning_at = strpos( $ax_te_sensitive_html, 'axismundi-object__content-warning' );
+	$ax_te_body_at    = strpos( $ax_te_sensitive_html, 'AX-TE-SENSITIVE-BODY' );
+	ax_te_assert(
+		$ax_te_results,
+		'a sensitive reply keeps its body behind the disclosure inside the thread instead of being excerpted past it',
+		false !== $ax_te_warning_at
+			&& false !== $ax_te_body_at
+			&& $ax_te_warning_at < $ax_te_body_at
+			&& false !== strpos( $ax_te_sensitive_html, 'AX-TE-WARNING' )
+	);
+
 	// A local Note that stops being a reply (edited to clear in_reply_to, then
 	// republished) drops its edge -- the envelope write alone does not, since the
 	// index only reads the object actually committed to the ledger.

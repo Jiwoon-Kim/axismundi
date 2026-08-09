@@ -1192,3 +1192,116 @@ div.axismundi-object__featured-image-media.is-repeated {
 	display: flex;
 	min-inline-size: 0;
 }
+/* ---------------------------------------------------------------------------
+ * Reply thread — the bubble list `axismundi/replies` renders.
+ *
+ * Structure mirrors a comment thread: a small avatar column beside a bubble that
+ * holds the reply's own blocks, with the date and reply action below it. Nested
+ * children indent from the bubble, not from the avatar, so a deep branch stays
+ * readable instead of marching off the right edge.
+ *
+ * Every token carries a fallback: this plugin renders under themes that define
+ * none of them.
+ * ------------------------------------------------------------------------ */
+.axismundi-thread__list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.axismundi-thread__item {
+	margin-block: 0.75rem;
+}
+
+.axismundi-thread__reply {
+	display: flex;
+	gap: 0.625rem;
+	align-items: flex-start;
+}
+
+.axismundi-thread__avatar {
+	flex: 0 0 auto;
+	inline-size: 32px;
+	--axismundi-actor-avatar-size: 32px;
+}
+
+.axismundi-thread__avatar img {
+	border-radius: 50%;
+}
+
+.axismundi-thread__body {
+	flex: 1 1 auto;
+	min-inline-size: 0;
+}
+
+.axismundi-thread__bubble {
+	padding: 0.5rem 0.875rem;
+	border-radius: 12px;
+	background-color: var(--wp--preset--color--surface-container, color-mix(in srgb, currentColor 8%, transparent));
+	color: var(--wp--preset--color--on-surface, currentColor);
+	overflow-wrap: anywhere;
+}
+
+.axismundi-thread__identity {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.375rem;
+	align-items: baseline;
+	margin-block-end: 0.25rem;
+}
+
+.axismundi-thread__identity .wp-block-axismundi-actor-name {
+	font-weight: 500;
+}
+
+.axismundi-thread__identity .wp-block-axismundi-actor-handle {
+	font-size: 0.8125rem;
+	color: var(--wp--preset--color--on-surface-variant, currentColor);
+}
+
+.axismundi-thread__bubble > :first-child {
+	margin-block-start: 0;
+}
+
+.axismundi-thread__bubble > :last-child {
+	margin-block-end: 0;
+}
+
+.axismundi-thread__meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	align-items: center;
+	margin-block-start: 0.25rem;
+	padding-inline: 0.875rem;
+	font-size: 0.8125rem;
+	color: var(--wp--preset--color--on-surface-variant, currentColor);
+}
+
+.axismundi-thread__item--tombstone {
+	padding: 0.5rem 0.875rem;
+	color: var(--wp--preset--color--on-surface-variant, currentColor);
+	font-style: italic;
+}
+
+/* Indent under the bubble, not the avatar: nesting reads as a continuation of
+ * what was said, and the avatar column would double the step at every level. */
+.axismundi-thread__list--nested {
+	margin-inline-start: 2.625rem;
+}
+
+@media (max-width: 480px) {
+	.axismundi-thread__list--nested {
+		margin-inline-start: 1rem;
+	}
+}
+
+.axismundi-thread__heading {
+	margin-block: 1.5rem 0.75rem;
+}
+
+.axismundi-thread__notice,
+.axismundi-thread__context {
+	color: var(--wp--preset--color--on-surface-variant, currentColor);
+	font-size: 0.875rem;
+}

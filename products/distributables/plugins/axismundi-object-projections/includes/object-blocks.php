@@ -77,6 +77,30 @@ function axismundi_op_single_object_template_content( string $slug = 'single-obj
 	return (string) ob_get_clean();
 }
 
+/**
+ * Read the bundled reply composition the thread repeats.
+ *
+ * Cached for the same reason the card is: a fifty-reply thread would otherwise read and parse this
+ * file fifty times in one request. The cache holds the markup, not a rendered reply — every reply
+ * still renders against its own bound model.
+ *
+ * @return string
+ */
+function axismundi_op_object_reply_pattern_content() : string {
+	static $cache = null;
+	if ( null !== $cache ) {
+		return $cache;
+	}
+	$path = dirname( __DIR__ ) . '/templates/object-reply.php';
+	if ( ! is_readable( $path ) ) {
+		return '';
+	}
+	ob_start();
+	include $path;
+	$cache = (string) ob_get_clean();
+	return $cache;
+}
+
 /** Read the privacy-minimal Tombstone template bundled with OP. */
 function axismundi_op_tombstone_template_content() : string {
 	$path = dirname( __DIR__ ) . '/templates/object-tombstone.php';

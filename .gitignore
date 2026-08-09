@@ -19,3 +19,7 @@ Thumbs.db
 
 # Transient demo Site Logo staging dir (seed.ps1 -SetDemoLogo)
 .seed-tmp/
+
+# Python bytecode from the validator scripts.
+__pycache__/
+*.pyc

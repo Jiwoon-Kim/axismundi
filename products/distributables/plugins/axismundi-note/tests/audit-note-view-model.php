@@ -113,7 +113,16 @@ try {
 			&& str_contains( $pattern_html, 'Hello from a note.' )
 	);
 	$single_template = axismundi_op_single_object_template_content();
-	ax_vm_assert( $ax_vm_results, 'the OP-owned single template composes the shared pattern and its own replies region without becoming the Activities archive template', str_contains( $single_template, 'wp:axismundi/actor-avatar' ) && str_contains( $single_template, 'wp:axismundi/object-card-body' ) && str_contains( $single_template, 'wp:axismundi/replies' ) && ! str_contains( $single_template, 'wp:query' ) );
+	/*
+	 * The canonical page states the Object's parts; it stopped composing the card body.
+	 *
+	 * A card body is a lead-in built for a list — for an Article it is an image, a summary and a
+	 * Read More. This page is what that link points at, so it carries the parts themselves, and
+	 * Note, quote-post and Question come out of the one composition because each block renders only
+	 * when the Object has that part. `wp:query` stays excluded for the original reason: a document
+	 * is not the Activities archive.
+	 */
+	ax_vm_assert( $ax_vm_results, 'the OP-owned single template states the Object\'s own parts and its replies region without becoming the card or the Activities archive template', str_contains( $single_template, 'wp:axismundi/actor-avatar' ) && str_contains( $single_template, 'wp:axismundi/object-content-warning' ) && str_contains( $single_template, 'wp:axismundi/object-content' ) && str_contains( $single_template, 'wp:axismundi/question' ) && str_contains( $single_template, 'wp:axismundi/quote-context' ) && str_contains( $single_template, 'wp:axismundi/replies' ) && ! str_contains( $single_template, 'wp:axismundi/object-card-body' ) && ! str_contains( $single_template, 'wp:query' ) );
 
 	// An embedded object caller can choose a smaller heading and suppress the
 	// personalized interaction slot without changing the source view model.

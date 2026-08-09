@@ -177,8 +177,17 @@ try {
 			&& false === strpos( $community_template->content, 'wp:axismundi/object-replies' )
 			// The Object card, not post blocks: an Object document has no post behind it.
 			&& false === strpos( $community_template->content, 'wp:post-content' )
-			// The Object document a reply now renders through still carries the shared thread item.
-			&& false !== strpos( $object_template->content, 'axismundi-object-thread-item' )
+			/*
+			 * The community page is a card in its frame; the plain Object page is a document.
+			 *
+			 * `single-object-community` still composes the shared card, which is why it carries the
+			 * thread-item wrapper above. `single-object` stopped doing that — a canonical page is
+			 * the thing a card points at, not another instance of one — so it carries its own
+			 * document wrapper instead. Asserting the two differently is what keeps a later edit
+			 * from collapsing them back into one shape.
+			 */
+			&& false !== strpos( $object_template->content, 'axismundi-object-document' )
+			&& false === strpos( $object_template->content, 'axismundi-object-thread-item' )
 	);
 } finally {
 	wp_set_current_user( 0 );

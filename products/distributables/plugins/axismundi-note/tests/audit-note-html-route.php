@@ -119,7 +119,25 @@ try {
 
 	$template = function_exists( 'get_block_template' ) ? get_block_template( 'axismundi-object-projections//single-object', 'wp_template' ) : null;
 	$content  = function_exists( 'axismundi_op_single_object_template_content' ) ? axismundi_op_single_object_template_content() : '';
-	ax_nh_assert( $ax_nh_results, 'Object Projections registers the editable single-Object template that the Note route reuses', $template instanceof WP_Block_Template && 'plugin' === $template->source && false !== strpos( $content, 'wp:axismundi/object-card-body' ) && false !== strpos( $content, 'wp:axismundi/replies' ) && false === strpos( $content, 'wp:query' ) && false === strpos( $content, 'wp:post-content' ) );
+	/*
+	 * The canonical page states the Object's own parts; it no longer echoes the feed card.
+	 *
+	 * Note, Question and quote-post share this one template because each part renders only when the
+	 * active Object carries it, so the three types need no type switch and no three files. Asserting
+	 * all three together is what stops the page from quietly regressing into a card — which renders
+	 * an Article-shaped lead-in with a Read More — or from being split per type later.
+	 *
+	 * The disclosure is asserted with them: `object-content-warning` supplies the context those
+	 * blocks read, so a sensitive Object folds body, quote, poll and attachments under one cover.
+	 * Losing the wrapper would leave each of them visible with nothing over it.
+	 */
+	$ax_nh_disclosure = strpos( $content, 'wp:axismundi/object-content-warning' );
+	$ax_nh_folded     = $ax_nh_disclosure !== false
+		&& strpos( $content, 'wp:axismundi/object-content', (int) $ax_nh_disclosure ) !== false
+		&& strpos( $content, 'wp:axismundi/question', (int) $ax_nh_disclosure ) !== false
+		&& strpos( $content, 'wp:axismundi/quote-context', (int) $ax_nh_disclosure ) !== false
+		&& strpos( $content, 'wp:axismundi/object-attachments', (int) $ax_nh_disclosure ) !== false;
+	ax_nh_assert( $ax_nh_results, 'Object Projections registers the editable single-Object document the Note route reuses, rendering Note, Question and quote from one template', $template instanceof WP_Block_Template && 'plugin' === $template->source && $ax_nh_folded && false !== strpos( $content, 'wp:axismundi/replies' ) && false === strpos( $content, 'wp:axismundi/object-card-body' ) && false === strpos( $content, 'wp:query' ) && false === strpos( $content, 'wp:post-content' ) );
 	$tombstone_content = function_exists( 'axismundi_op_tombstone_template_content' ) ? axismundi_op_tombstone_template_content() : '';
 	ax_nh_assert( $ax_nh_results, 'Object Projections owns a separate privacy-minimal Tombstone template for local and cached remote 410 routes', false !== strpos( $tombstone_content, 'wp:axismundi/object-tombstone' ) && false === strpos( $tombstone_content, 'wp:axismundi/object-content' ) && false === strpos( $tombstone_content, 'wp:axismundi/replies' ) );
 

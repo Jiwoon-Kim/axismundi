@@ -113,6 +113,39 @@ function axismundi_note_editor_view_link() : void {
 add_action( 'post_submitbox_misc_actions', 'axismundi_note_editor_view_link' );
 
 /**
+ * Give the block editor the canonical Object document as its published link.
+ *
+ * The classic submit box receives the link above, but Gutenberg reads `link`
+ * from the REST post response. `ax_note` deliberately has no Core permalink,
+ * so without this adapter Gutenberg can only offer its private CPT query URL.
+ * Keep this narrow to REST output: changing get_permalink() globally would
+ * make private Object identifiers escape through unrelated Core callers.
+ *
+ * @param WP_REST_Response $response Prepared REST response.
+ * @param WP_Post          $post     Prepared Note post.
+ * @param WP_REST_Request  $request  REST request.
+ * @return WP_REST_Response
+ */
+function axismundi_note_rest_canonical_object_link( WP_REST_Response $response, WP_Post $post, WP_REST_Request $request ) : WP_REST_Response {
+	if ( AXISMUNDI_NOTE_POST_TYPE !== $post->post_type ) {
+		return $response;
+	}
+	$envelope = axismundi_note_get( $post->ID );
+	if ( ! is_array( $envelope ) ) {
+		return $response;
+	}
+	$source = new Axismundi_Note_Source( $envelope, $post );
+	if ( ! axismundi_note_can_view( $source ) || '' === $source->get_uri() ) {
+		return $response;
+	}
+	$data         = $response->get_data();
+	$data['link'] = $source->get_uri();
+	$response->set_data( $data );
+	return $response;
+}
+add_filter( 'rest_prepare_' . AXISMUNDI_NOTE_POST_TYPE, 'axismundi_note_rest_canonical_object_link', 10, 3 );
+
+/**
  * Canonical public document for Core's private-Note list URL, or an empty
  * string when redirecting would disclose a non-public Note.
  */

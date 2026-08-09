@@ -355,6 +355,18 @@ function axismundi_note_question_save( int $post_id, array $fields ) {
 	if ( ! $post instanceof WP_Post || AXISMUNDI_NOTE_POST_TYPE !== $post->post_type ) {
 		return new WP_Error( 'ax_note_post', __( 'A Note post is required.', 'axismundi-note' ) );
 	}
+	/*
+	 * The same exclusivity, enforced from the other side.
+	 *
+	 * `axismundi_note_save()` refuses a quote target on a Question; this refuses a poll on a Quote.
+	 * Both directions are needed because the two facts live in different tables and either writer
+	 * can be reached first — guarding only one would let the order of two valid calls decide whether
+	 * an impossible Object exists.
+	 */
+	$quote_envelope = axismundi_note_get( $post_id );
+	if ( is_array( $quote_envelope ) && '' !== trim( (string) ( $quote_envelope['quote_target_uri'] ?? '' ) ) ) {
+		return new WP_Error( 'ax_note_form_conflict', __( 'A Quote cannot also define a poll. Remove the quoted Object first.', 'axismundi-note' ), array( 'status' => 400 ) );
+	}
 	$existing = axismundi_note_question_row( $post_id );
 	// This non-transactional read only powers a fast-path rejection for the
 	// common case. It is not the enforcement boundary: a concurrent

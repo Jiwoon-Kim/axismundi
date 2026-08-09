@@ -76,11 +76,13 @@
 		var state = useSelect( function ( select ) {
 			var editor = select( 'core/editor' );
 			var envelope = editor.getEditedPostAttribute( 'axismundi_note_envelope' ) || {};
+			var question = editor.getEditedPostAttribute( 'axismundi_note_question' ) || {};
 			var ids = envelope.attachments || [];
 			return {
 				postType: editor.getCurrentPostType(),
 				postId: editor.getCurrentPostId(),
 				envelope: envelope,
+				question: question,
 				media: ids.map( function ( id ) { return select( 'core' ).getMedia( id ); } )
 			};
 		}, [] );
@@ -94,6 +96,7 @@
 		}
 
 		var envelope = state.envelope;
+		var isQuestion = !! state.question.enabled || !! state.question.mode;
 		var quoteStatus = envelope.quoteStatus || { state: 'none' };
 		var quoteStatusLabels = {
 			none: __( 'No quote target', 'axismundi-note' ),
@@ -226,6 +229,8 @@
 				label: __( 'Quote target (URI)', 'axismundi-note' ),
 				type: 'url',
 				value: envelope.quoteTarget || '',
+				disabled: isQuestion,
+				help: isQuestion ? __( 'Questions and Quotes are different Object forms. Turn this Question back into a Note before setting a quote target.', 'axismundi-note' ) : undefined,
 				__next40pxDefaultSize: true,
 				onChange: function ( value ) { update( { quoteTarget: value } ); }
 			} ),
@@ -292,7 +297,11 @@
 		var Panel = window.axismundiNote.documentPanel();
 		var state = useSelect( function ( select ) {
 			var editor = select( 'core/editor' );
-			return { postType: editor.getCurrentPostType(), question: editor.getEditedPostAttribute( 'axismundi_note_question' ) };
+			return {
+				postType: editor.getCurrentPostType(),
+				question: editor.getEditedPostAttribute( 'axismundi_note_question' ),
+				envelope: editor.getEditedPostAttribute( 'axismundi_note_envelope' ) || {}
+			};
 		}, [] );
 		var editPost = useDispatch( 'core/editor' ).editPost;
 		if ( ! Panel || POST_TYPE !== state.postType ) {
@@ -300,6 +309,7 @@
 		}
 		var question = state.question || {};
 		var enabled = !! question.enabled || !! question.mode;
+		var isQuote = !! ( state.envelope.quoteTarget || '' ).trim();
 		// The REST read shape includes stable option metadata ({uuid,name,position}),
 		// while the write contract intentionally accepts only authored string names.
 		// Normalize at this boundary so an unrelated edit never sends cached option
@@ -356,7 +366,9 @@
 		return el(
 			Panel,
 			{ name: 'axismundi-note-question', title: __( 'Question', 'axismundi-note' ) },
-			! enabled
+			isQuote
+				? el( C.Notice, { status: 'info', isDismissible: false }, __( 'This is a Quote Object. Remove its quote target before turning it into a Question.', 'axismundi-note' ) )
+				: ! enabled
 				? el( C.Button, { variant: 'secondary', onClick: function () { editPost( { axismundi_note_question: { enabled: true, mode: 'oneOf', options: [ '', '' ] } } ); } }, __( 'Turn this Note into a Question', 'axismundi-note' ) )
 				: el( 'div', {},
 					el( C.SelectControl, { label: __( 'Voting mode', 'axismundi-note' ), value: question.mode || 'oneOf', options: [ { label: __( 'Choose one', 'axismundi-note' ), value: 'oneOf' }, { label: __( 'Choose any', 'axismundi-note' ), value: 'anyOf' } ], disabled: locked, __next40pxDefaultSize: true, onChange: function ( value ) { update( { mode: value } ); } } ),

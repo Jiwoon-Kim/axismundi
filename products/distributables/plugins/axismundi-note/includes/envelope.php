@@ -291,6 +291,51 @@ function axismundi_note_author_actor_uri( WP_Post $post ) : string {
 }
 
 /**
+ * Which Object form a Note takes: `note`, `question`, or `quote`.
+ *
+ * One classification, read by the list, the editor, the single renderer and the projection, so none
+ * of them can decide this separately and disagree. The three are mutually exclusive by design.
+ *
+ * A quote of a Question is a Quote — the form belongs to this Object, and being a Question is a
+ * property of the thing it points at. There is no compound form, so nothing here has to describe
+ * one.
+ *
+ * This is the internal model, deliberately not the wire format. ActivityStreams has no widely
+ * interoperable `Quote` type, so a Quote still federates as `type: Note` carrying the FEP quote
+ * relation. Naming it internally is what lets the admin, the editor and the renderer agree on what
+ * the author made without asking peers to understand a type they would drop.
+ *
+ * @param int $post_id Note post ID.
+ * @return string note|question|quote
+ */
+function axismundi_note_object_form( int $post_id ) : string {
+	$envelope = axismundi_note_get( $post_id );
+	if ( is_array( $envelope ) && '' !== trim( (string) ( $envelope['quote_target_uri'] ?? '' ) ) ) {
+		return 'quote';
+	}
+	if ( function_exists( 'axismundi_note_is_question' ) && axismundi_note_is_question( $post_id ) ) {
+		return 'question';
+	}
+	return 'note';
+}
+
+/**
+ * The translated label for one Object form.
+ *
+ * @param string $form note|question|quote.
+ * @return string
+ */
+function axismundi_note_object_form_label( string $form ) : string {
+	if ( 'question' === $form ) {
+		return __( 'Question', 'axismundi-note' );
+	}
+	if ( 'quote' === $form ) {
+		return __( 'Quote', 'axismundi-note' );
+	}
+	return __( 'Note', 'axismundi-note' );
+}
+
+/**
  * Create or update one Note's federation envelope from authored fields.
  *
  * The local UUID is minted once and never changes. Attribution follows the
@@ -367,6 +412,17 @@ function axismundi_note_save( int $post_id, array $fields ) {
 		}
 	} else {
 		$quote_target = (string) ( $existing['quote_target_uri'] ?? '' );
+	}
+	/*
+	 * A Question and a Quote are different Object forms, not two flags one Object can carry.
+	 *
+	 * Enforced here because this is the single writer every path goes through — the editor, REST,
+	 * the importer and Quick Edit all land on it — so the invariant holds without four places
+	 * remembering it. Refused rather than silently resolved: dropping either the poll or the quote
+	 * target would discard something the author wrote.
+	 */
+	if ( '' !== $quote_target && function_exists( 'axismundi_note_is_question' ) && axismundi_note_is_question( $post_id ) ) {
+		return new WP_Error( 'ax_note_form_conflict', __( 'A Question cannot also quote another Object. Remove the poll first.', 'axismundi-note' ), array( 'status' => 400 ) );
 	}
 	$quote_generation = max( 1, (int) ( $existing['quote_generation'] ?? 1 ) );
 	if ( is_array( $existing )

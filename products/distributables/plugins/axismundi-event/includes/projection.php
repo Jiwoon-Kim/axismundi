@@ -164,6 +164,40 @@ function axismundi_event_iso8601( string $value, string $timezone ) : string {
 }
 
 /**
+ * Resolve an Event source from its canonical Object URI.
+ *
+ * The transformer says how to project a source; this says how to find one again from the URI alone,
+ * which is what everything holding only an identity needs — the thread graph resolving a parent, the
+ * listing projection deciding whether a row still has a source, the cached-object route.
+ *
+ * Fallback-only by contract: a product returns its own source when it recognizes the exact URI and
+ * returns `$source` untouched otherwise, so two products can never both claim one Object.
+ *
+ * The URI is compared to the one this plugin would mint rather than trusting the `p` argument,
+ * because any post can be addressed as `?p=<id>` and only ours should answer here.
+ *
+ * @param mixed  $source Existing resolution, or null.
+ * @param string $uri    Canonical object URI.
+ * @return mixed|null
+ */
+function axismundi_event_resolve_source_by_uri( $source, string $uri ) {
+	if ( null !== $source ) {
+		return $source;
+	}
+	$parts = wp_parse_url( $uri );
+	if ( ! is_array( $parts ) || empty( $parts['query'] ) ) {
+		return null;
+	}
+	parse_str( (string) $parts['query'], $args );
+	$post = isset( $args['p'] ) ? get_post( absint( $args['p'] ) ) : null;
+	if ( ! $post instanceof WP_Post || ! axismundi_event_transformer_supports( $post ) ) {
+		return null;
+	}
+	return hash_equals( $uri, axismundi_event_object_uri( $post ) ) ? $post : null;
+}
+add_filter( 'axismundi_op_resolve_source_by_uri', 'axismundi_event_resolve_source_by_uri', 9, 2 );
+
+/**
  * Register the Event transformer.
  *
  * @return void

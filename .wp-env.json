@@ -25,6 +25,7 @@
     "./products/distributables/plugins/axismundi-emoji",
     "./products/distributables/plugins/axismundi-object-projections",
     "./products/distributables/plugins/axismundi-activities",
+    "./products/distributables/plugins/axismundi-event",
     "https://downloads.wordpress.org/plugin/activitypub.zip",
     "./products/distributables/plugins/axismundi-activitypub-bridge"
   ],

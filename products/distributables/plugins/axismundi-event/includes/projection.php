@@ -1,0 +1,188 @@
+<?php
+/**
+ * The Event projection: an `ax_event` post as an ActivityStreams Event.
+ *
+ * Registered with Object Projections' transformer registry, which is what makes an Event an Object
+ * everywhere else — the thread graph, interactions, the listing index and the canonical document
+ * route all reach it through the same seam a Note or a Topic does, without any of them learning
+ * what an event is.
+ *
+ * The wire format follows FEP-8a8e. That is not a preference: `Event` alone tells a peer almost
+ * nothing, and the properties that make an event usable — when, where, whether you can join — are
+ * the FEP's. `event-bridge-for-activitypub` emits the same shape for eight other event plugins, so
+ * matching it is what lets a Mobilizon or Gancio instance read this site's events at all.
+ *
+ * @package AxismundiEvent
+ */
+
+defined( 'ABSPATH' ) || exit;
+
+/**
+ * Whether this source is an Event this plugin projects.
+ *
+ * An Event needs its envelope: a post of this type with no times is a draft of an Event rather than
+ * one, and projecting it would publish an Event with no `startTime`, which FEP-8a8e requires.
+ *
+ * @param mixed $source Candidate source.
+ * @return bool
+ */
+function axismundi_event_transformer_supports( $source ) : bool {
+	return $source instanceof WP_Post
+		&& AXISMUNDI_EVENT_POST_TYPE === $source->post_type
+		&& null !== axismundi_event_get( (int) $source->ID );
+}
+
+/**
+ * The canonical Object URI for one Event.
+ *
+ * The stable post URI rather than the permalink, for the reason every local Object here uses it: a
+ * permalink changes when a slug is edited, and an Object identity that changes is a different
+ * Object to every peer holding the old one. The readable page travels as `url`.
+ *
+ * @param mixed $source Event post.
+ * @return string
+ */
+function axismundi_event_object_uri( $source ) : string {
+	if ( ! $source instanceof WP_Post || ! function_exists( 'axismundi_op_post_object_uri' ) ) {
+		return '';
+	}
+	return axismundi_op_post_object_uri( $source );
+}
+
+/**
+ * Whether this Event may be represented publicly.
+ *
+ * @param mixed $source Event post.
+ * @return bool
+ */
+function axismundi_event_visible( $source ) : bool {
+	return $source instanceof WP_Post
+		&& 'publish' === $source->post_status
+		&& '' === (string) $source->post_password
+		&& is_post_publicly_viewable( $source );
+}
+
+/**
+ * Project one Event post into an ActivityStreams Event.
+ *
+ * @param mixed $source Event post.
+ * @return array<string,mixed>
+ */
+function axismundi_event_transform( $source ) : array {
+	if ( ! $source instanceof WP_Post ) {
+		return array();
+	}
+	$envelope = axismundi_event_get( (int) $source->ID );
+	if ( ! is_array( $envelope ) ) {
+		return array();
+	}
+	$uri      = axismundi_event_object_uri( $source );
+	$timezone = (string) $envelope['timezone'];
+
+	$event = array(
+		'id'           => $uri,
+		'type'         => 'Event',
+		/*
+		 * Plain text, per FEP-8a8e. A title carrying markup is a title every consumer renders
+		 * differently, and several render it as escaped source.
+		 */
+		'name'         => wp_strip_all_tags( get_the_title( $source ) ),
+		'startTime'    => axismundi_event_iso8601( (string) $envelope['starts_at'], $timezone ),
+		'endTime'      => axismundi_event_iso8601( (string) $envelope['ends_at'], $timezone ),
+		'timezone'     => $timezone,
+		'url'          => get_permalink( $source ),
+		'published'    => get_post_time( DATE_W3C, true, $source ),
+		'updated'      => get_post_modified_time( DATE_W3C, true, $source ),
+		'eventStatus'  => (string) $envelope['event_status'],
+		'joinMode'     => (string) $envelope['join_mode'],
+	);
+
+	$author = function_exists( 'axismundi_op_local_author_actor_uri' )
+		? axismundi_op_local_author_actor_uri( (int) $source->post_author )
+		: '';
+	if ( '' !== $author ) {
+		$event['attributedTo'] = $author;
+		/*
+		 * `organizers` is required by FEP-8a8e and is not the same claim as `attributedTo`: one
+		 * says who published the record, the other who is running the event. They are the same
+		 * Actor until this plugin can express otherwise, and stating both now means adding
+		 * co-organizers later does not change what the property means.
+		 */
+		$event['organizers'] = array( $author );
+	}
+
+	$content = apply_filters( 'the_content', $source->post_content );
+	if ( '' !== trim( wp_strip_all_tags( (string) $content ) ) ) {
+		$event['content']   = (string) $content;
+		$event['mediaType'] = 'text/html';
+	}
+
+	if ( empty( $envelope['display_end_time'] ) ) {
+		$event['displayEndTime'] = false;
+	}
+	if ( ! empty( $envelope['previous_starts_at_gmt'] ) ) {
+		$event['previousStartTime'] = axismundi_event_iso8601( (string) $envelope['previous_starts_at_gmt'], 'UTC' );
+	}
+	if ( 'external' === (string) $envelope['join_mode'] && '' !== (string) $envelope['external_participation_url'] ) {
+		$event['externalParticipationUrl'] = (string) $envelope['external_participation_url'];
+	}
+	if ( null !== $envelope['maximum_attendee_capacity'] ) {
+		$event['maximumAttendeeCapacity'] = (int) $envelope['maximum_attendee_capacity'];
+	}
+
+	/**
+	 * Filter the Event projection before the renderer validates it.
+	 *
+	 * Location and participation arrive through here rather than being wired in: `location` is
+	 * Geodata's to answer, and `attendees` is a projection of the Activity ledger. Neither belongs
+	 * to the post type.
+	 *
+	 * @param array<string,mixed> $event    Projected Event.
+	 * @param WP_Post             $source   Event post.
+	 * @param array<string,mixed> $envelope Event envelope.
+	 */
+	return (array) apply_filters( 'axismundi_event_object', $event, $source, $envelope );
+}
+
+/**
+ * Format one stored datetime as ISO 8601 with its offset.
+ *
+ * The offset is carried because a bare local time is ambiguous to every reader, and the IANA name
+ * travels separately in `timezone` so a consumer can still show the event's own wall time.
+ *
+ * @param string $value    Stored datetime.
+ * @param string $timezone IANA timezone name.
+ * @return string
+ */
+function axismundi_event_iso8601( string $value, string $timezone ) : string {
+	try {
+		$zone = new DateTimeZone( '' !== $timezone ? $timezone : 'UTC' );
+		return ( new DateTimeImmutable( $value, $zone ) )->format( DATE_W3C );
+	} catch ( Exception $error ) {
+		return '';
+	}
+}
+
+/**
+ * Register the Event transformer.
+ *
+ * @return void
+ */
+function axismundi_event_register_transformer() : void {
+	if ( ! function_exists( 'axismundi_op_register_object_transformer' ) ) {
+		return;
+	}
+	axismundi_op_register_object_transformer(
+		'axismundi-event',
+		array(
+			'supports'   => 'axismundi_event_transformer_supports',
+			'object_uri' => 'axismundi_event_object_uri',
+			'transform'  => 'axismundi_event_transform',
+			'visible'    => 'axismundi_event_visible',
+			// Ahead of the Core Post transformer, which would otherwise claim this post type and
+			// publish an Event as an ordinary Article.
+			'priority'   => 5,
+		)
+	);
+}
+add_action( 'axismundi_op_register_transformers', 'axismundi_event_register_transformer' );

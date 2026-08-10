@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '5';
+const AXISMUNDI_CAL_DB_VERSION        = '6';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 
 /** @return string Event envelope table name. */
@@ -42,6 +42,18 @@ function axismundi_cal_calendars_table() : string {
 function axismundi_cal_items_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_cal_calendar_items';
+}
+
+/** @return string Subscription source table name. */
+function axismundi_cal_sources_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_cal_sources';
+}
+
+/** @return string Subscribed entry cache table name. */
+function axismundi_cal_entries_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_cal_source_entries';
 }
 
 /** @return string Occurrence table name. */
@@ -227,6 +239,81 @@ function axismundi_cal_install_schema() : bool {
 			KEY calendar_id (calendar_id),
 			KEY event_post_id (event_post_id),
 			KEY object_uri_hash (object_uri_hash)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	$sources = axismundi_cal_sources_table();
+	/*
+	 * A subscription is a remote Calendar this site reads, never one it owns. `authority` says so in
+	 * the row rather than in a convention, because every rule that follows depends on it: entries
+	 * from here are read-only, are not re-published to other servers, and are absent from this
+	 * site's own iCalendar export.
+	 *
+	 * `content_hash` exists because many publishers send neither `ETag` nor `Last-Modified`. Without
+	 * it every poll would re-parse a document that had not changed.
+	 */
+	dbDelta(
+		"CREATE TABLE {$sources} (
+			id bigint(20) unsigned NOT NULL auto_increment,
+			calendar_id bigint(20) unsigned NOT NULL,
+			kind varchar(24) NOT NULL default 'ical',
+			authority varchar(16) NOT NULL default 'remote',
+			source_url text NOT NULL,
+			source_url_hash char(64) NOT NULL default '',
+			etag varchar(191) NOT NULL default '',
+			last_modified varchar(64) NOT NULL default '',
+			content_hash char(64) NOT NULL default '',
+			sync_status varchar(24) NOT NULL default 'pending',
+			sync_error text NOT NULL,
+			last_checked_at datetime NULL,
+			last_success_at datetime NULL,
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY calendar_source (calendar_id,source_url_hash),
+			KEY calendar_id (calendar_id),
+			KEY sync_status (sync_status)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	$entries = axismundi_cal_entries_table();
+	/*
+	 * An entry is identified by its source plus `UID` and `RECURRENCE-ID`, which is iCalendar's own
+	 * identity for a component -- not by a local id and not by an Object URI, because a subscribed
+	 * entry has neither and is not an Object this site can speak for.
+	 *
+	 * `last_seen_at` and `presence` are what stop a feed's retention window being read as deletion.
+	 * WordCamp Central's calendar carries upcoming events only, so an entry leaving it usually means
+	 * the event finished, not that it was cancelled. Absence is recorded as absence.
+	 */
+	dbDelta(
+		"CREATE TABLE {$entries} (
+			id bigint(20) unsigned NOT NULL auto_increment,
+			source_id bigint(20) unsigned NOT NULL,
+			ical_uid varchar(191) NOT NULL default '',
+			recurrence_id varchar(32) NOT NULL default '',
+			entry_hash char(64) NOT NULL default '',
+			summary text NOT NULL,
+			location text NOT NULL,
+			url text NOT NULL,
+			timezone varchar(64) NOT NULL default '',
+			all_day tinyint(1) unsigned NOT NULL default 0,
+			start_utc datetime NOT NULL default '0000-00-00 00:00:00',
+			end_utc datetime NOT NULL default '0000-00-00 00:00:00',
+			start_local datetime NOT NULL default '0000-00-00 00:00:00',
+			end_local datetime NOT NULL default '0000-00-00 00:00:00',
+			rrule varchar(255) NOT NULL default '',
+			expansion_supported tinyint(1) unsigned NOT NULL default 1,
+			status varchar(16) NOT NULL default 'confirmed',
+			presence varchar(16) NOT NULL default 'present',
+			last_seen_at datetime NOT NULL,
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY source_entry (source_id,entry_hash),
+			KEY source_id (source_id),
+			KEY start_utc (start_utc),
+			KEY presence (presence)
 		) ENGINE=InnoDB {$charset};"
 	);
 

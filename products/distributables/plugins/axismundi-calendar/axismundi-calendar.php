@@ -59,6 +59,8 @@ require_once __DIR__ . '/includes/calendar.php';
 require_once __DIR__ . '/includes/admin-calendars.php';
 require_once __DIR__ . '/includes/query.php';
 require_once __DIR__ . '/includes/ics.php';
+require_once __DIR__ . '/includes/ics-parse.php';
+require_once __DIR__ . '/includes/subscription.php';
 require_once __DIR__ . '/includes/ics-feed.php';
 require_once __DIR__ . '/includes/blocks.php';
 require_once __DIR__ . '/includes/envelope.php';

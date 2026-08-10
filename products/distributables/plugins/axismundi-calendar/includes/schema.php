@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '2';
+const AXISMUNDI_CAL_DB_VERSION        = '3';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 
 /** @return string Event envelope table name. */
@@ -106,6 +106,8 @@ function axismundi_cal_install_schema() : bool {
 			rrule varchar(255) NOT NULL default '',
 			ical_uid varchar(191) NOT NULL default '',
 			sequence int(10) unsigned NOT NULL default 0,
+			display_end_time tinyint(1) unsigned NOT NULL default 1,
+			previous_start_utc datetime NULL,
 			materialized_until_utc datetime NULL,
 			location_place_id bigint(20) unsigned NULL,
 			location_text text NOT NULL,
@@ -173,6 +175,12 @@ function axismundi_cal_install_schema() : bool {
 		}
 	}
 	update_option( AXISMUNDI_CAL_DB_VERSION_OPTION, AXISMUNDI_CAL_DB_VERSION, false );
+	/*
+	 * The one-time conversion out of the legacy envelope. Run here rather than from a version
+	 * guard because it is idempotent by existence: a schedule is created only for an Event that
+	 * has none, so a rerun cannot duplicate one or overwrite one that has since been edited.
+	 */
+	axismundi_cal_convert_legacy_envelopes();
 	return true;
 }
 

@@ -24,7 +24,33 @@ function axismundi_cal_event_get( int $post_id ) : ?array {
 	$table = axismundi_cal_events_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- primary-key lookup in this plugin's own table.
 	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE post_id = %d", $post_id ), ARRAY_A );
-	return is_array( $row ) ? $row : null;
+	if ( ! is_array( $row ) ) {
+		return null;
+	}
+	$schedule = axismundi_cal_schedule_for_event( $post_id );
+	if ( ! is_array( $schedule ) ) {
+		// An Event whose envelope predates conversion. Reported as having no times rather than
+		// falling back to the dead columns, so a failed conversion is visible instead of being
+		// papered over by stale values that no longer receive writes.
+		return null;
+	}
+	return array_merge(
+		$row,
+		array(
+			'timezone'               => (string) $schedule['timezone'],
+			'starts_at'              => (string) $schedule['dtstart_local'],
+			'ends_at'                => (string) $schedule['dtend_local'],
+			'starts_at_gmt'          => (string) ( axismundi_cal_to_utc( (string) $schedule['dtstart_local'], (string) $schedule['timezone'] ) ?? '' ),
+			'ends_at_gmt'            => (string) ( axismundi_cal_to_utc( (string) $schedule['dtend_local'], (string) $schedule['timezone'] ) ?? '' ),
+			'display_end_time'       => (int) $schedule['display_end_time'],
+			'previous_starts_at_gmt' => $schedule['previous_start_utc'],
+			'all_day'                => (int) $schedule['all_day'],
+			'rrule'                  => (string) $schedule['rrule'],
+			'ical_uid'               => (string) $schedule['ical_uid'],
+			'sequence'               => (int) $schedule['sequence'],
+			'schedule_id'            => (int) $schedule['id'],
+		)
+	);
 }
 
 /**
@@ -73,35 +99,26 @@ function axismundi_cal_event_save( int $post_id, array $fields ) {
 	$existing = axismundi_cal_event_get( $post_id );
 
 	/*
-	 * Chosen, never inherited. Falling back to the site timezone is right for a single-venue
-	 * site and wrong for a federated calendar, where the site's zone is nobody's in particular:
-	 * it would stamp a confident offset on an event whose author never said where it happens,
-	 * and `startTime` travels with that offset to every peer. An unanswered question is asked
-	 * rather than guessed.
+	 * Time is written through the Schedule and nowhere else. The legacy time columns on this table
+	 * are dead after conversion: two tables accepting writes for one fact drift, and the drift only
+	 * surfaces later as a calendar disagreeing with the Object it federated.
 	 */
-	$timezone = (string) ( $fields['timezone'] ?? ( $existing['timezone'] ?? '' ) );
-	if ( '' === $timezone ) {
-		return new WP_Error( 'ax_event_timezone', __( 'An Event needs a timezone. Choose the one the event happens in.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	$schedule_fields = array();
+	foreach ( array(
+		'starts_at'        => 'dtstart_local',
+		'ends_at'          => 'dtend_local',
+		'timezone'         => 'timezone',
+		'display_end_time' => 'display_end_time',
+		'all_day'          => 'all_day',
+		'rrule'            => 'rrule',
+	) as $from => $to ) {
+		if ( array_key_exists( $from, $fields ) ) {
+			$schedule_fields[ $to ] = $fields[ $from ];
+		}
 	}
-	if ( ! in_array( $timezone, timezone_identifiers_list(), true ) ) {
-		return new WP_Error( 'ax_event_timezone', __( 'The timezone must be an IANA identifier.', 'axismundi-calendar' ), array( 'status' => 400 ) );
-	}
-
-	$starts = axismundi_cal_normalize_datetime( (string) ( $fields['starts_at'] ?? ( $existing['starts_at'] ?? '' ) ), $timezone );
-	if ( is_wp_error( $starts ) ) {
-		return $starts;
-	}
-	$ends = axismundi_cal_normalize_datetime( (string) ( $fields['ends_at'] ?? ( $existing['ends_at'] ?? '' ) ), $timezone );
-	if ( is_wp_error( $ends ) ) {
-		return $ends;
-	}
-	/*
-	 * FEP-8a8e requires `endTime` to be later than `startTime`. Refused rather than repaired: an
-	 * event that ends before it starts is a mistake only its author can resolve, and silently
-	 * swapping or extending it would publish a time nobody chose.
-	 */
-	if ( strtotime( $ends['gmt'] ) <= strtotime( $starts['gmt'] ) ) {
-		return new WP_Error( 'ax_event_range', __( 'An Event must end after it starts.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	$schedule = axismundi_cal_schedule_save( $post_id, $schedule_fields );
+	if ( is_wp_error( $schedule ) ) {
+		return $schedule;
 	}
 
 	$status = (string) ( $fields['event_status'] ?? ( $existing['event_status'] ?? 'EventScheduled' ) );
@@ -117,28 +134,12 @@ function axismundi_cal_event_save( int $post_id, array $fields ) {
 		return new WP_Error( 'ax_event_external_url', __( 'External participation needs the URL people are sent to.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
 
-	/*
-	 * A rescheduled Event keeps the time it used to have, which is what tells a peer that already
-	 * holds it that this is a move rather than a new Event.
-	 */
-	$previous = $existing['previous_starts_at_gmt'] ?? null;
-	if ( is_array( $existing ) && $existing['starts_at_gmt'] !== $starts['gmt'] ) {
-		$previous = (string) $existing['starts_at_gmt'];
-	}
-
 	$capacity = $fields['maximum_attendee_capacity'] ?? ( $existing['maximum_attendee_capacity'] ?? null );
 	$capacity = ( null === $capacity || '' === $capacity ) ? null : max( 1, (int) $capacity );
 
 	$now  = current_time( 'mysql', true );
 	$data = array(
 		'post_id'                    => $post_id,
-		'starts_at'                  => $starts['local'],
-		'starts_at_gmt'              => $starts['gmt'],
-		'ends_at'                    => $ends['local'],
-		'ends_at_gmt'                => $ends['gmt'],
-		'timezone'                   => $timezone,
-		'display_end_time'           => array_key_exists( 'display_end_time', $fields ) ? (int) (bool) $fields['display_end_time'] : (int) ( $existing['display_end_time'] ?? 1 ),
-		'previous_starts_at_gmt'     => $previous,
 		'event_status'               => $status,
 		'join_mode'                  => $join_mode,
 		'external_participation_url' => $external,
@@ -146,9 +147,7 @@ function axismundi_cal_event_save( int $post_id, array $fields ) {
 		'created_at'                 => (string) ( $existing['created_at'] ?? $now ),
 		'updated_at'                 => $now,
 	);
-	// Column order above; `replace` takes positional formats, so a column added in the middle takes
-	// the next specifier and writes the wrong type silently.
-	$formats = array( '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%d', '%s', '%s' );
+	$formats = array( '%d', '%s', '%s', '%s', '%d', '%s', '%s' );
 	if ( false === $wpdb->replace( axismundi_cal_events_table(), $data, $formats ) ) {
 		return new WP_Error( 'ax_event_write', __( 'The event could not be saved.', 'axismundi-calendar' ) );
 	}

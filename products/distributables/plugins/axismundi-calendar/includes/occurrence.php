@@ -601,3 +601,122 @@ function axismundi_cal_in_range( array $occurrence, DateTimeImmutable $from, Dat
 	}
 	return $end > $from && $start < $to;
 }
+
+/**
+ * How far ahead rule-derived instances are kept in the table.
+ *
+ * The table is a cache for the range people actually look at. Materializing an unbounded weekly rule
+ * to the end of time would write hundreds of thousands of rows to answer questions nobody asked, and
+ * the correct answer for any range is computable anyway.
+ */
+const AXISMUNDI_CAL_MATERIALIZE_MONTHS = 18;
+
+/**
+ * Write the rule-derived instances for a schedule into the cache.
+ *
+ * Rebuild rather than merge, but only of `origin = 'rule'` rows. Those are a materialization of
+ * something recomputable, so discarding them loses nothing; `rdate`, `override` and cancelled rows
+ * are authored facts that exist in no other place and are never touched here. That distinction is
+ * what makes the cache safe to throw away, and it is the difference between a rebuild and losing
+ * every cancellation an editor ever made.
+ *
+ * Idempotent: the same schedule materialized twice produces the same rows, because each is keyed by
+ * `(schedule_id, recurrence_id)` and the recurrence id is derived from the rule rather than from
+ * when the rebuild ran.
+ *
+ * @param int $schedule_id Schedule id.
+ * @return int Number of rule-derived rows written.
+ */
+function axismundi_cal_materialize( int $schedule_id ) : int {
+	global $wpdb;
+	if ( $schedule_id <= 0 || ! axismundi_cal_ready() ) {
+		return 0;
+	}
+	$schedules = axismundi_cal_schedules_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- primary-key lookup in this plugin's own table.
+	$schedule = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$schedules} WHERE id = %d", $schedule_id ), ARRAY_A );
+	if ( ! is_array( $schedule ) ) {
+		return 0;
+	}
+
+	$table = axismundi_cal_occurrences_table();
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- discarding only the recomputable rows.
+	$wpdb->delete( $table, array( 'schedule_id' => $schedule_id, 'origin' => 'rule' ) );
+
+	// From the series start rather than from today, so a range query about the past is answered from
+	// the same rows as one about next week.
+	$from    = (string) ( axismundi_cal_to_utc( (string) $schedule['dtstart_local'], (string) $schedule['timezone'] ) ?? gmdate( 'Y-m-d H:i:s' ) );
+	$through = gmdate( 'Y-m-d H:i:s', strtotime( '+' . AXISMUNDI_CAL_MATERIALIZE_MONTHS . ' months' ) );
+	if ( strtotime( $through ) <= strtotime( $from ) ) {
+		$through = gmdate( 'Y-m-d H:i:s', strtotime( $from . ' +1 day' ) );
+	}
+
+	$written = 0;
+	$now     = current_time( 'mysql', true );
+	foreach ( axismundi_cal_expand( $schedule, $from, $through ) as $occurrence ) {
+		// An instance an editor has already acted on is represented by its authored row, which is
+		// still present; writing a rule row beside it would collide on the unique key and, worse,
+		// would be a second opinion about the same instance.
+		if ( 'rule' !== (string) $occurrence['origin'] ) {
+			continue;
+		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+		$inserted = $wpdb->insert(
+			$table,
+			array(
+				'schedule_id'       => $schedule_id,
+				'recurrence_id'     => (string) $occurrence['recurrence_id'],
+				'start_utc'         => (string) $occurrence['start_utc'],
+				'end_utc'           => (string) $occurrence['end_utc'],
+				'start_local'       => (string) $occurrence['start_local'],
+				'end_local'         => (string) $occurrence['end_local'],
+				'status'            => (string) $occurrence['status'],
+				'origin'            => 'rule',
+				'location_place_id' => $occurrence['location_place_id'],
+				'location_text'     => (string) $occurrence['location_text'],
+				'override_json'     => '',
+				'created_at'        => $now,
+				'updated_at'        => $now,
+			)
+		);
+		if ( false !== $inserted ) {
+			++$written;
+		}
+	}
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+	$wpdb->update( $schedules, array( 'materialized_until_utc' => $through ), array( 'id' => $schedule_id ) );
+	return $written;
+}
+
+/**
+ * Read cached occurrences for a schedule within a range.
+ *
+ * The cached counterpart of `axismundi_cal_expand()`, and required to agree with it inside the
+ * materialized horizon. Callers that may ask beyond the horizon should expand instead; a cache that
+ * silently answers "nothing" past its own edge is how a calendar loses next year.
+ *
+ * @param int    $schedule_id Schedule id.
+ * @param string $from_utc    Range start, UTC.
+ * @param string $to_utc      Range end, UTC.
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_cal_cached_range( int $schedule_id, string $from_utc, string $to_utc ) : array {
+	global $wpdb;
+	if ( $schedule_id <= 0 || ! axismundi_cal_ready() ) {
+		return array();
+	}
+	$table = axismundi_cal_occurrences_table();
+	// Overlap, not containment, so an instance already under way when the window opens is included,
+	// matching what the expander does.
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- range query over this plugin's own table.
+	return (array) $wpdb->get_results(
+		$wpdb->prepare(
+			"SELECT * FROM {$table} WHERE schedule_id = %d AND end_utc > %s AND start_utc < %s ORDER BY start_utc ASC",
+			$schedule_id,
+			$from_utc,
+			$to_utc
+		),
+		ARRAY_A
+	);
+}

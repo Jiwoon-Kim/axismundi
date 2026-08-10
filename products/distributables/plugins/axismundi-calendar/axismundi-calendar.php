@@ -54,6 +54,7 @@ require_once __DIR__ . '/includes/schema.php';
 require_once __DIR__ . '/includes/cpt.php';
 require_once __DIR__ . '/includes/rrule.php';
 require_once __DIR__ . '/includes/occurrence.php';
+require_once __DIR__ . '/includes/schedule.php';
 require_once __DIR__ . '/includes/envelope.php';
 require_once __DIR__ . '/includes/rest.php';
 require_once __DIR__ . '/includes/publish-guard.php';

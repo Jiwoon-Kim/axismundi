@@ -56,6 +56,8 @@ require_once __DIR__ . '/includes/rrule.php';
 require_once __DIR__ . '/includes/occurrence.php';
 require_once __DIR__ . '/includes/schedule.php';
 require_once __DIR__ . '/includes/query.php';
+require_once __DIR__ . '/includes/ics.php';
+require_once __DIR__ . '/includes/ics-feed.php';
 require_once __DIR__ . '/includes/blocks.php';
 require_once __DIR__ . '/includes/envelope.php';
 require_once __DIR__ . '/includes/rest.php';
@@ -79,7 +81,11 @@ require_once __DIR__ . '/includes/projection.php';
  */
 function axismundi_cal_activate() : void {
 	axismundi_cal_install_schema();
+	// Everything that contributes rewrite rules has to be registered before the flush. `init` has
+	// already run by the time an activation hook fires, so a rule added there was not present when
+	// the rules were last written -- which is how `/event/{slug}` shipped as a 404 once already.
 	axismundi_cal_register_event_post_type();
+	axismundi_cal_register_ics_routes();
 	flush_rewrite_rules( false );
 }
 register_activation_hook( __FILE__, 'axismundi_cal_activate' );

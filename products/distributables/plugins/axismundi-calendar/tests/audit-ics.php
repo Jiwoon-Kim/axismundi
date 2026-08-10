@@ -160,6 +160,44 @@ try {
 		'but its own .ics still serves it, because fetching one Event is a deliberate act rather than a subscription',
 		is_array( $ax_ics_single ) && str_contains( $ax_ics_single['body'], 'Long finished' )
 	);
+
+	// -- Conditional GET ---------------------------------------------------------------------------
+
+	$ax_ics_etag = '"abc"';
+	ax_ics_assert( $ax_ics_results, 'a matching entity tag is not modified', true === axismundi_cal_ics_not_modified( $ax_ics_etag, 1000, '"abc"', 2000 ) );
+	/*
+	 * The case that was wrong. The two validators answer different questions: the entity tag
+	 * describes this document, `Last-Modified` describes the rows it was built from, and the rolling
+	 * window moves them apart without any edit. Satisfying either one meant a client sending both
+	 * could be told nothing had changed on the strength of the weaker answer -- exactly when it had.
+	 */
+	ax_ics_assert(
+		$ax_ics_results,
+		'a stale entity tag is modified even when If-Modified-Since would have been satisfied',
+		false === axismundi_cal_ics_not_modified( $ax_ics_etag, 1000, '"stale"', 2000 )
+	);
+	ax_ics_assert( $ax_ics_results, 'with no entity tag, If-Modified-Since decides', true === axismundi_cal_ics_not_modified( $ax_ics_etag, 1000, '', 2000 ) );
+	ax_ics_assert( $ax_ics_results, 'and an older If-Modified-Since is modified', false === axismundi_cal_ics_not_modified( $ax_ics_etag, 1000, '', 500 ) );
+	ax_ics_assert( $ax_ics_results, 'a request with neither validator is always modified', false === axismundi_cal_ics_not_modified( $ax_ics_etag, 1000, '', false ) );
+
+	// The window moving is itself a change, so a client with only If-Modified-Since has to see it.
+	$ax_ics_dropped = ax_ics_event(
+		$ax_ics_posts,
+		'Just fell out of the window',
+		array(
+			'timezone'  => 'UTC',
+			'starts_at' => gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( AXISMUNDI_CAL_FEED_PAST_MONTHS * 31 + 2 ) . ' days' ) ),
+			'ends_at'   => gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( AXISMUNDI_CAL_FEED_PAST_MONTHS * 31 + 2 ) . ' days +2 hours' ) ),
+		)
+	);
+	$ax_ics_after_drop = axismundi_cal_site_feed();
+	ax_ics_assert( $ax_ics_results, 'an Event past the cutoff is out of the feed', ! str_contains( $ax_ics_after_drop['body'], 'Just fell out of the window' ) );
+	ax_ics_assert(
+		$ax_ics_results,
+		'and the feed reports a modification time that accounts for the window moving, not only for row edits',
+		$ax_ics_after_drop['modified'] >= strtotime( '-40 days' )
+	);
+	unset( $ax_ics_dropped );
 } finally {
 	foreach ( array_unique( $ax_ics_posts ) as $ax_ics_post_id ) {
 		$ax_ics_row = axismundi_cal_schedule_for_event( (int) $ax_ics_post_id );

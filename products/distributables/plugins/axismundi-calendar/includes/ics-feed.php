@@ -118,8 +118,9 @@ function axismundi_cal_feed_schedules( string $cutoff_utc ) : array {
  * @return array{body:string,modified:int}
  */
 function axismundi_cal_site_feed() : array {
-	$cutoff = gmdate( 'Y-m-d H:i:s', strtotime( '-' . AXISMUNDI_CAL_FEED_PAST_MONTHS . ' months' ) );
-	$rows   = axismundi_cal_feed_schedules( $cutoff );
+	$cutoff_ts = (int) strtotime( '-' . AXISMUNDI_CAL_FEED_PAST_MONTHS . ' months' );
+	$cutoff    = gmdate( 'Y-m-d H:i:s', $cutoff_ts );
+	$rows      = axismundi_cal_feed_schedules( $cutoff );
 
 	$components = array();
 	$tzids      = array();
@@ -130,16 +131,102 @@ function axismundi_cal_site_feed() : array {
 		$modified   = max( $modified, (int) strtotime( (string) $row['schedule']['updated_at'] . ' UTC' ) );
 	}
 
+	/*
+	 * The window moves on its own, so the body can change with no row edited: the day an Event
+	 * falls past the cutoff, this document loses a component while every `updated_at` stays where
+	 * it was. Reporting only row timestamps would leave a client that sends `If-Modified-Since`
+	 * holding a calendar that still lists something the feed no longer carries -- and, having been
+	 * told nothing changed, with no reason to ask again.
+	 */
+	$modified = max( $modified, axismundi_cal_feed_last_expiry( $cutoff_ts ) );
+
 	return array(
 		'body'     => axismundi_cal_ics_document(
 			$components,
 			$tzids,
-			(int) strtotime( $cutoff . ' UTC' ),
+			$cutoff_ts,
 			(int) strtotime( '+2 years' ),
 			(string) get_bloginfo( 'name' )
 		),
 		'modified' => $modified > 0 ? $modified : time(),
 	);
+}
+
+/**
+ * When the feed most recently lost an Event to the moving cutoff.
+ *
+ * An Event leaves the window `AXISMUNDI_CAL_FEED_PAST_MONTHS` after its last occurrence ends, so
+ * that instant is a moment the document changed. Only the most recent one matters, since earlier
+ * departures are already reflected in it.
+ *
+ * Under-reporting here is safe and over-reporting is not: too old an answer costs a subscriber one
+ * unnecessary full fetch, while too new an answer hands them a `304` for a document they do not
+ * have. Schedules whose departure is long past are therefore skipped rather than examined, and an
+ * unbounded rule never departs at all.
+ *
+ * @param int $cutoff_ts Current window cutoff, timestamp.
+ * @return int Timestamp, or 0.
+ */
+function axismundi_cal_feed_last_expiry( int $cutoff_ts ) : int {
+	global $wpdb;
+	if ( ! axismundi_cal_ready() ) {
+		return 0;
+	}
+	$window  = AXISMUNDI_CAL_FEED_PAST_MONTHS;
+	$table   = axismundi_cal_schedules_table();
+	$horizon = gmdate( 'Y-m-d H:i:s', $cutoff_ts + ( 5 * YEAR_IN_SECONDS ) );
+	// Only recent departures can be the most recent one, and only finite series depart at all.
+	$earliest = gmdate( 'Y-m-d H:i:s', $cutoff_ts - YEAR_IN_SECONDS );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- feed query over this plugin's own table.
+	$rows = (array) $wpdb->get_results(
+		$wpdb->prepare( "SELECT * FROM {$table} WHERE dtend_local >= %s ORDER BY dtend_local DESC", $earliest ),
+		ARRAY_A
+	);
+
+	$latest = 0;
+	$cutoff = gmdate( 'Y-m-d H:i:s', $cutoff_ts );
+	foreach ( $rows as $schedule ) {
+		$post = get_post( (int) $schedule['event_post_id'] );
+		if ( ! $post instanceof WP_Post || ! axismundi_cal_event_listable( $post ) ) {
+			continue;
+		}
+		if ( ! empty( axismundi_cal_range( $schedule, $cutoff, $horizon ) ) ) {
+			// Still running, so it has not departed.
+			continue;
+		}
+		$past = axismundi_cal_range( $schedule, $earliest, $cutoff );
+		if ( empty( $past ) ) {
+			continue;
+		}
+		$last = 0;
+		foreach ( $past as $occurrence ) {
+			$last = max( $last, (int) strtotime( (string) $occurrence['end_utc'] . ' UTC' ) );
+		}
+		$latest = max( $latest, (int) strtotime( '+' . $window . ' months', $last ) );
+	}
+	return $latest;
+}
+
+/**
+ * Whether a conditional request may be answered `304`.
+ *
+ * `ETag` wins whenever the client sent one. The two validators do not answer the same question: the
+ * entity tag describes this document, while `Last-Modified` describes the rows it was built from,
+ * and those diverge every time the rolling window moves without an edit. Treating them as
+ * interchangeable -- satisfying either one -- means a client that sends both can be told nothing
+ * changed on the strength of the weaker answer, which is precisely the case where it has changed.
+ *
+ * @param string   $etag      Current entity tag.
+ * @param int      $modified  Current modification time.
+ * @param string   $sent_etag `If-None-Match`, or ''.
+ * @param int|false $sent_time `If-Modified-Since` as a timestamp, or false.
+ * @return bool
+ */
+function axismundi_cal_ics_not_modified( string $etag, int $modified, string $sent_etag, $sent_time ) : bool {
+	if ( '' !== $sent_etag ) {
+		return $sent_etag === $etag;
+	}
+	return false !== $sent_time && $sent_time >= $modified;
 }
 
 /**
@@ -210,7 +297,7 @@ function axismundi_cal_serve_ics() : void {
 
 	$sent_etag = isset( $_SERVER['HTTP_IF_NONE_MATCH'] ) ? trim( sanitize_text_field( wp_unslash( (string) $_SERVER['HTTP_IF_NONE_MATCH'] ) ) ) : '';
 	$sent_time = isset( $_SERVER['HTTP_IF_MODIFIED_SINCE'] ) ? strtotime( sanitize_text_field( wp_unslash( (string) $_SERVER['HTTP_IF_MODIFIED_SINCE'] ) ) ) : false;
-	if ( $sent_etag === $etag || ( false !== $sent_time && $sent_time >= $feed['modified'] ) ) {
+	if ( axismundi_cal_ics_not_modified( $etag, (int) $feed['modified'], $sent_etag, $sent_time ) ) {
 		status_header( 304 );
 		exit;
 	}

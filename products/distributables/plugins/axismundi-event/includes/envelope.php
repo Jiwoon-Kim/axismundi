@@ -72,9 +72,16 @@ function axismundi_event_save( int $post_id, array $fields ) {
 	}
 	$existing = axismundi_event_get( $post_id );
 
+	/*
+	 * Chosen, never inherited. Falling back to the site timezone is right for a single-venue
+	 * site and wrong for a federated calendar, where the site's zone is nobody's in particular:
+	 * it would stamp a confident offset on an event whose author never said where it happens,
+	 * and `startTime` travels with that offset to every peer. An unanswered question is asked
+	 * rather than guessed.
+	 */
 	$timezone = (string) ( $fields['timezone'] ?? ( $existing['timezone'] ?? '' ) );
 	if ( '' === $timezone ) {
-		$timezone = wp_timezone_string();
+		return new WP_Error( 'ax_event_timezone', __( 'An Event needs a timezone. Choose the one the event happens in.', 'axismundi-event' ), array( 'status' => 400 ) );
 	}
 	if ( ! in_array( $timezone, timezone_identifiers_list(), true ) ) {
 		return new WP_Error( 'ax_event_timezone', __( 'The timezone must be an IANA identifier.', 'axismundi-event' ), array( 'status' => 400 ) );

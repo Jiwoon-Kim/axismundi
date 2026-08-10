@@ -32,6 +32,9 @@ const AXISMUNDI_EVENT_POST_TYPE = 'ax_event';
 require_once __DIR__ . '/includes/schema.php';
 require_once __DIR__ . '/includes/cpt.php';
 require_once __DIR__ . '/includes/envelope.php';
+require_once __DIR__ . '/includes/rest.php';
+require_once __DIR__ . '/includes/publish-guard.php';
+require_once __DIR__ . '/includes/editor.php';
 require_once __DIR__ . '/includes/projection.php';
 
 /**

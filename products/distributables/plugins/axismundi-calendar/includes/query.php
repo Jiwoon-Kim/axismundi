@@ -108,10 +108,12 @@ function axismundi_cal_occurrences_in_range( string $from_utc, string $to_utc, i
 /**
  * Group occurrences by the local date they fall on.
  *
- * The grid is laid out in the site's timezone while each Event stores its own, so an event at 08:00
- * in Seoul belongs to the previous day on a European site's calendar. Grouping therefore happens on
- * the display zone rather than on the event's, which is what makes a grid agree with the clock of
- * the person reading it.
+ * The grid is laid out in the reader's timezone while each Event stores the one it happens in, so an
+ * event at 08:00 in Seoul belongs to the previous day for a reader in Europe. Grouping therefore
+ * happens on the display zone rather than on the event's, which is what makes a grid agree with the
+ * clock of the person reading it.
+ *
+ * All-day entries are the exception and are not converted at all -- see below.
  *
  * @param array<int,array<string,mixed>> $occurrences Occurrences.
  * @param DateTimeZone                   $display     Display timezone.
@@ -121,6 +123,28 @@ function axismundi_cal_group_by_day( array $occurrences, DateTimeZone $display )
 	$utc  = new DateTimeZone( 'UTC' );
 	$days = array();
 	foreach ( $occurrences as $occurrence ) {
+		/*
+		 * An all-day entry is a civil date, not an instant, so it is never converted. Liberation Day
+		 * is the fifteenth of August in Seoul and in New York alike; converting it put a national
+		 * holiday on the previous day for every reader west of UTC. Its end is exclusive, as DTEND
+		 * is for dates, so a one-day event covers one day rather than two.
+		 */
+		if ( ! empty( $occurrence['all_day'] ) ) {
+			try {
+				$cursor = new DateTimeImmutable( substr( (string) $occurrence['start_local'], 0, 10 ), $utc );
+				$stop   = new DateTimeImmutable( substr( (string) $occurrence['end_local'], 0, 10 ), $utc );
+			} catch ( Exception $error ) {
+				continue;
+			}
+			if ( $stop <= $cursor ) {
+				$stop = $cursor->modify( '+1 day' );
+			}
+			while ( $cursor < $stop ) {
+				$days[ $cursor->format( 'Y-m-d' ) ][] = $occurrence;
+				$cursor = $cursor->modify( '+1 day' );
+			}
+			continue;
+		}
 		try {
 			$start = new DateTimeImmutable( (string) $occurrence['start_utc'], $utc );
 			$end   = new DateTimeImmutable( (string) $occurrence['end_utc'], $utc );

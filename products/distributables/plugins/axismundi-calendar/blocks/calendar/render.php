@@ -25,7 +25,12 @@ $ax_cal_view = isset( $_GET['ax_cal_view'] ) && in_array( $_GET['ax_cal_view'], 
 	? sanitize_key( wp_unslash( (string) $_GET['ax_cal_view'] ) )
 	: $ax_cal_view;
 
-$ax_cal_zone = wp_timezone();
+/*
+ * The reader's zone, not the calendar's. A London calendar read from Seoul shows Seoul times,
+ * because the event is the same instant either way and the reader's own clock is what they are
+ * comparing it against.
+ */
+$ax_cal_zone = axismundi_cal_viewer_timezone();
 $ax_cal_utc  = new DateTimeZone( 'UTC' );
 
 try {
@@ -46,8 +51,8 @@ if ( 'week' === $ax_cal_view ) {
 	$ax_cal_label = sprintf(
 		/* translators: 1: first day of the week, 2: last day. */
 		__( '%1$s – %2$s', 'axismundi-calendar' ),
-		wp_date( (string) get_option( 'date_format' ), $ax_cal_start->getTimestamp() ),
-		wp_date( (string) get_option( 'date_format' ), $ax_cal_end->modify( '-1 day' )->getTimestamp() )
+		wp_date( (string) get_option( 'date_format' ), $ax_cal_start->getTimestamp(), $ax_cal_zone ),
+		wp_date( (string) get_option( 'date_format' ), $ax_cal_end->modify( '-1 day' )->getTimestamp(), $ax_cal_zone )
 	);
 	$ax_cal_prev = $ax_cal_start->modify( '-7 days' )->format( 'Y-m-d' );
 	$ax_cal_next = $ax_cal_start->modify( '+7 days' )->format( 'Y-m-d' );
@@ -58,7 +63,7 @@ if ( 'week' === $ax_cal_view ) {
 	// styled as belonging to another month rather than silently looking like this one.
 	$ax_cal_first = $ax_cal_start->modify( 'monday this week' );
 	$ax_cal_last  = $ax_cal_end->modify( '-1 day' )->modify( 'monday this week' )->modify( '+7 days' );
-	$ax_cal_label = wp_date( 'F Y', $ax_cal_start->getTimestamp() );
+	$ax_cal_label = wp_date( 'F Y', $ax_cal_start->getTimestamp(), $ax_cal_zone );
 	$ax_cal_prev  = $ax_cal_start->modify( '-1 month' )->format( 'Y-m-d' );
 	$ax_cal_next  = $ax_cal_start->modify( '+1 month' )->format( 'Y-m-d' );
 }
@@ -88,11 +93,16 @@ $ax_cal_url = static function ( string $period, string $view ) : string {
 	return esc_url( add_query_arg( array( 'ax_cal' => $period, 'ax_cal_view' => $view ) ) );
 };
 
+/*
+ * Every displayed value is formatted in the zone the grid is laid out in. `wp_date()` uses the site
+ * timezone unless told otherwise, so without the third argument the cells would be computed in one
+ * zone and labelled in another -- a calendar whose numbers disagree with its own rows.
+ */
 $ax_cal_today   = ( new DateTimeImmutable( 'now', $ax_cal_zone ) )->format( 'Y-m-d' );
 $ax_cal_weekday = array();
 $ax_cal_probe   = $ax_cal_first;
 for ( $ax_cal_i = 0; $ax_cal_i < 7; $ax_cal_i++ ) {
-	$ax_cal_weekday[] = wp_date( 'D', $ax_cal_probe->getTimestamp() );
+	$ax_cal_weekday[] = wp_date( 'D', $ax_cal_probe->getTimestamp(), $ax_cal_zone );
 	$ax_cal_probe     = $ax_cal_probe->modify( '+1 day' );
 }
 
@@ -131,7 +141,7 @@ $ax_cal_wrapper = get_block_wrapper_attributes( array( 'class' => 'ax-cal ax-cal
 						. ( $ax_cal_key === $ax_cal_today ? ' ax-cal__day--today' : '' );
 					?>
 					<td class="<?php echo esc_attr( $ax_cal_classes ); ?>"<?php echo $ax_cal_key === $ax_cal_today ? ' aria-current="date"' : ''; ?>>
-						<span class="ax-cal__date"><?php echo esc_html( wp_date( 'j', $ax_cal_cursor->getTimestamp() ) ); ?></span>
+						<span class="ax-cal__date"><?php echo esc_html( wp_date( 'j', $ax_cal_cursor->getTimestamp(), $ax_cal_zone ) ); ?></span>
 						<?php if ( ! empty( $ax_cal_days[ $ax_cal_key ] ) ) : ?>
 							<ul class="ax-cal__events">
 								<?php foreach ( $ax_cal_days[ $ax_cal_key ] as $ax_cal_event ) : ?>
@@ -141,7 +151,8 @@ $ax_cal_wrapper = get_block_wrapper_attributes( array( 'class' => 'ax-cal ax-cal
 									if ( empty( $ax_cal_event['all_day'] ) ) {
 										$ax_cal_time = wp_date(
 											(string) get_option( 'time_format' ),
-											( new DateTimeImmutable( (string) $ax_cal_event['start_utc'], $ax_cal_utc ) )->getTimestamp()
+											( new DateTimeImmutable( (string) $ax_cal_event['start_utc'], $ax_cal_utc ) )->getTimestamp(),
+											$ax_cal_zone
 										);
 									}
 									?>

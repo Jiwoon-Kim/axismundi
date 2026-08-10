@@ -127,7 +127,7 @@ function axismundi_cal_feed_schedules( string $cutoff_utc, int $calendar_id = 0 
  *
  * @return array{body:string,modified:int}
  */
-function axismundi_cal_site_feed( int $calendar_id = 0, string $name = '' ) : array {
+function axismundi_cal_site_feed( int $calendar_id = 0, string $name = '', string $display_tz = '' ) : array {
 	$cutoff_ts = (int) strtotime( '-' . AXISMUNDI_CAL_FEED_PAST_MONTHS . ' months' );
 	$cutoff    = gmdate( 'Y-m-d H:i:s', $cutoff_ts );
 	$rows      = axismundi_cal_feed_schedules( $cutoff, $calendar_id );
@@ -156,7 +156,8 @@ function axismundi_cal_site_feed( int $calendar_id = 0, string $name = '' ) : ar
 			$tzids,
 			$cutoff_ts,
 			(int) strtotime( '+2 years' ),
-			'' !== $name ? $name : (string) get_bloginfo( 'name' )
+			'' !== $name ? $name : (string) get_bloginfo( 'name' ),
+			$display_tz
 		),
 		'modified' => $modified > 0 ? $modified : time(),
 	);
@@ -285,7 +286,11 @@ function axismundi_cal_serve_ics() : void {
 	} elseif ( 'calendar' === $which ) {
 		$calendar = axismundi_cal_calendar_by_slug( (string) get_query_var( 'ax_cal_slug' ) );
 		if ( is_array( $calendar ) && 'public' === (string) $calendar['visibility'] ) {
-			$feed = axismundi_cal_site_feed( (int) $calendar['id'], (string) $calendar['name'] );
+			$feed = axismundi_cal_site_feed(
+				(int) $calendar['id'],
+				(string) $calendar['name'],
+				axismundi_cal_calendar_timezone( $calendar )
+			);
 		}
 	} elseif ( 'event' === $which ) {
 		$slug = sanitize_title( (string) get_query_var( 'ax_cal_event' ) );

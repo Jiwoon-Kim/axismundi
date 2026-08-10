@@ -62,6 +62,42 @@ function axismundi_cal_calendar_get( int $calendar_id ) : ?array {
 }
 
 /**
+ * The timezone a calendar is displayed in.
+ *
+ * The reader's, not the calendar's. An Event happening at 09:00 in London is the same instant
+ * wherever it is read, and somebody in Seoul wants to see 17:00 -- so a London calendar viewed from
+ * Seoul shows Seoul times. Laying the grid out in the calendar's own zone would tell that reader an
+ * event is at nine in the morning when it is not.
+ *
+ * The site's zone stands in for the reader's until people have their own. That is the seam this
+ * function exists to be: a per-user preference replaces the body and nothing else changes.
+ *
+ * Two kinds of value are deliberately not converted, and the grouping handles them: an all-day date
+ * is the same civil date everywhere, and a floating time means the same wall clock everywhere.
+ *
+ * @return DateTimeZone
+ */
+function axismundi_cal_viewer_timezone() : DateTimeZone {
+	return wp_timezone();
+}
+
+/**
+ * The timezone a Calendar names as its own.
+ *
+ * Metadata about where the calendar belongs, not an instruction about how to display it: it is the
+ * sensible default when authoring a new Event on that calendar, and what a subscription feed
+ * declares as its home zone. It never overrides an Event's own zone and never decides what a reader
+ * sees.
+ *
+ * @param array<string,mixed>|null $calendar Calendar row, or null.
+ * @return string IANA identifier, or ''.
+ */
+function axismundi_cal_calendar_timezone( ?array $calendar ) : string {
+	$stored = is_array( $calendar ) ? trim( (string) ( $calendar['timezone'] ?? '' ) ) : '';
+	return in_array( $stored, timezone_identifiers_list(), true ) ? $stored : '';
+}
+
+/**
  * Create or update a Calendar.
  *
  * @param array<string,mixed> $fields     Calendar fields. `slug` identifies an existing Calendar.

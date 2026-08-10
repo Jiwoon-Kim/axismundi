@@ -184,6 +184,120 @@ try {
 		str_contains( $ax_cl_unknown, 'ax-cal__empty' ) && ! str_contains( $ax_cl_unknown, 'Belongs to both' )
 	);
 
+	// -- Three timezones, doing three different jobs ---------------------------------------------------
+
+	/*
+	 * The Event keeps where it happens, UTC is what gets sorted and queried, and the reader sees
+	 * their own clock. Confusing the first and the third is the tempting mistake: laying a London
+	 * calendar out in London time would tell a reader in Seoul that an event is at nine in the
+	 * morning when for them it is five in the afternoon.
+	 */
+	$ax_cl_tz_cal = axismundi_cal_calendar_save( array( 'name' => 'London calendar', 'slug' => 'cal-london', 'timezone' => 'Europe/London' ) );
+	$ax_cl_calendars[] = (int) $ax_cl_tz_cal;
+
+	ax_cl_assert(
+		$ax_cl_results,
+		'a calendar names its own home timezone, which is metadata about where it belongs',
+		'Europe/London' === axismundi_cal_calendar_timezone( axismundi_cal_calendar_get( (int) $ax_cl_tz_cal ) )
+	);
+	ax_cl_assert(
+		$ax_cl_results,
+		'but the display timezone is the readers, and does not follow the calendar',
+		wp_timezone()->getName() === axismundi_cal_viewer_timezone()->getName()
+	);
+	ax_cl_assert(
+		$ax_cl_results,
+		'a calendar with no home timezone reports none rather than borrowing the sites',
+		'' === axismundi_cal_calendar_timezone( axismundi_cal_calendar_get( (int) $ax_cl_second ) )
+	);
+	ax_cl_assert(
+		$ax_cl_results,
+		'a fixed offset is refused, because a calendar belongs to a place and an offset is not one',
+		is_wp_error( axismundi_cal_calendar_save( array( 'name' => 'Offset', 'slug' => 'cal-offset', 'timezone' => '+09:00' ) ) )
+	);
+
+	// A London morning event, which is a Seoul evening.
+	$ax_cl_london = ax_cl_event( $ax_cl_posts, 'London morning', array( 'timezone' => 'Europe/London', 'starts_at' => '2026-09-10 09:00:00', 'ends_at' => '2026-09-10 10:00:00' ) );
+	axismundi_cal_add_event( (int) $ax_cl_tz_cal, $ax_cl_london );
+	$ax_cl_london_rows = array_values( array_filter(
+		axismundi_cal_occurrences_in_range( '2026-09-09 00:00:00', '2026-09-12 00:00:00', AXISMUNDI_CAL_RANGE_MAX, (int) $ax_cl_tz_cal ),
+		static fn( array $o ) : bool => 'London morning' === $o['title']
+	) );
+	ax_cl_assert( $ax_cl_results, 'the event is stored as the instant it happens', 1 === count( $ax_cl_london_rows ) && '2026-09-10 08:00:00' === (string) $ax_cl_london_rows[0]['start_utc'] );
+	ax_cl_assert( $ax_cl_results, 'while keeping the wall time of the place it happens in', '2026-09-10 09:00:00' === (string) $ax_cl_london_rows[0]['start_local'] );
+
+	$ax_cl_seoul_view = axismundi_cal_group_by_day( $ax_cl_london_rows, new DateTimeZone( 'Asia/Seoul' ) );
+	ax_cl_assert( $ax_cl_results, 'and a reader in Seoul sees it on their own day', isset( $ax_cl_seoul_view['2026-09-10'] ) );
+
+	// -- An all-day entry is a civil date and is never converted -----------------------------------------
+
+	/*
+	 * The failure this pins: converting an all-day entry moved a national holiday to the previous
+	 * day for every reader west of UTC, and made a one-day holiday span two days everywhere, because
+	 * the exclusive end date was read as an inclusive instant.
+	 */
+	$ax_cl_holiday = array(
+		array(
+			'start_utc'   => '2026-08-15 00:00:00',
+			'end_utc'     => '2026-08-16 00:00:00',
+			'start_local' => '2026-08-15 00:00:00',
+			'end_local'   => '2026-08-16 00:00:00',
+			'all_day'     => 1,
+			'status'      => 'scheduled',
+			'title'       => 'Liberation Day',
+		),
+	);
+	foreach ( array( 'Asia/Seoul', 'Europe/London', 'America/New_York', 'Pacific/Kiritimati' ) as $ax_cl_zone_name ) {
+		$ax_cl_grouped = axismundi_cal_group_by_day( $ax_cl_holiday, new DateTimeZone( $ax_cl_zone_name ) );
+		ax_cl_assert(
+			$ax_cl_results,
+			sprintf( 'a holiday on the 15th is the 15th when read from %s, and lasts one day', $ax_cl_zone_name ),
+			array( '2026-08-15' ) === array_keys( $ax_cl_grouped )
+		);
+	}
+
+	$ax_cl_two_day = array(
+		array(
+			'start_utc'   => '2026-08-15 00:00:00',
+			'end_utc'     => '2026-08-17 00:00:00',
+			'start_local' => '2026-08-15 00:00:00',
+			'end_local'   => '2026-08-17 00:00:00',
+			'all_day'     => 1,
+			'status'      => 'scheduled',
+			'title'       => 'Long weekend',
+		),
+	);
+	ax_cl_assert(
+		$ax_cl_results,
+		'while a genuinely two-day entry covers both of its days and not a third',
+		array( '2026-08-15', '2026-08-16' ) === array_keys( axismundi_cal_group_by_day( $ax_cl_two_day, new DateTimeZone( 'America/New_York' ) ) )
+	);
+
+	// -- Through the rendered grid, not only through the grouping ----------------------------------------
+
+	/*
+	 * Calling the grouper proves the grouper works; it says nothing about whether the grid asks it
+	 * the right question. The block is what a reader actually sees.
+	 */
+	$_GET['ax_cal'] = '2026-09-01';
+	$ax_cl_tz_html  = do_blocks( '<!-- wp:axismundi-calendar/calendar {"calendar":"cal-london"} /-->' );
+	unset( $_GET['ax_cal'] );
+	ax_cl_assert( $ax_cl_results, 'the block renders that calendar', str_contains( $ax_cl_tz_html, 'ax-cal__grid' ) );
+
+	$ax_cl_cell = '';
+	foreach ( explode( '<td', $ax_cl_tz_html ) as $ax_cl_chunk ) {
+		if ( str_contains( $ax_cl_chunk, 'London morning' ) ) {
+			$ax_cl_cell = $ax_cl_chunk;
+			break;
+		}
+	}
+	$ax_cl_day = preg_match( '/ax-cal__date">(\d+)</', $ax_cl_cell, $ax_cl_m ) ? (int) $ax_cl_m[1] : 0;
+	ax_cl_assert(
+		$ax_cl_results,
+		'and places the event on the day the reader would call it, in a cell numbered for that same zone',
+		10 === $ax_cl_day
+	);
+
 	// -- Deleting a calendar --------------------------------------------------------------------------
 
 	axismundi_cal_calendar_delete( (int) $ax_cl_empty );

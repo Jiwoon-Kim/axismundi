@@ -165,7 +165,7 @@ function axismundi_cal_admin_error_message( string $code ) : string {
 		case 'ax_cal_slug':
 			return __( 'A calendar needs a slug that can appear in a URL.', 'axismundi-calendar' );
 		case 'ax_cal_timezone':
-			return __( 'That timezone is not an IANA identifier.', 'axismundi-calendar' );
+			return __( 'A calendar needs a named place rather than a fixed offset. Leave the timezone empty to follow the site.', 'axismundi-calendar' );
 		case 'missing':
 			return __( 'That calendar no longer exists.', 'axismundi-calendar' );
 		default:
@@ -269,15 +269,39 @@ function axismundi_cal_render_calendars_page() : void {
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><label for="ax-cal-timezone"><?php esc_html_e( 'Timezone', 'axismundi-calendar' ); ?></label></th>
+					<th scope="row"><label for="ax-cal-timezone"><?php esc_html_e( 'Home timezone', 'axismundi-calendar' ); ?></label></th>
 					<td>
 						<select name="timezone" id="ax-cal-timezone">
-							<option value=""><?php esc_html_e( 'Site default', 'axismundi-calendar' ); ?></option>
-							<?php foreach ( timezone_identifiers_list() as $zone ) : ?>
-								<option value="<?php echo esc_attr( $zone ); ?>" <?php selected( (string) ( $calendar['timezone'] ?? '' ), $zone ); ?>><?php echo esc_html( $zone ); ?></option>
-							<?php endforeach; ?>
+							<option value="">
+								<?php
+								/*
+								 * The resolved value, not the word "default". A site set to a manual UTC
+								 * offset has no identifier to show, so "Site default" alone leaves the
+								 * author guessing which zone their calendar will actually be read in.
+								 */
+								printf(
+									/* translators: %s: the timezone the site currently resolves to. */
+									esc_html__( 'Follow the site timezone (%s)', 'axismundi-calendar' ),
+									esc_html( wp_timezone()->getName() )
+								);
+								?>
+							</option>
+							<?php
+							/*
+							 * Core's picker rather than a list of our own: it localizes the city names,
+							 * groups them by region and stays current with the tz database. It also offers
+							 * manual offsets, which are refused on save -- a calendar stores a place, and
+							 * an offset is not one. Leaving the field empty is how you follow a site that
+							 * is configured that way.
+							 */
+							require_once ABSPATH . 'wp-admin/includes/template.php';
+							// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- core builds this option list.
+							echo wp_timezone_choice( (string) ( $calendar['timezone'] ?? '' ), get_user_locale() );
+							?>
 						</select>
-						<p class="description"><?php esc_html_e( 'A display default only. Each event keeps the timezone it happens in.', 'axismundi-calendar' ); ?></p>
+						<p class="description">
+							<?php esc_html_e( 'Where this calendar belongs. It is the suggested timezone for new events and what the subscription feed declares. It does not decide what readers see: an event is shown in the timezone of whoever is reading, and each event keeps the timezone it happens in.', 'axismundi-calendar' ); ?>
+						</p>
 					</td>
 				</tr>
 				<tr>

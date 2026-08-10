@@ -261,9 +261,10 @@ function axismundi_cal_ics_vevent( array $schedule, WP_Post $post ) : array {
  * @param int      $from       Range start, timestamp.
  * @param int      $to         Range end, timestamp.
  * @param string   $name       Calendar display name.
+ * @param string   $display_tz Zone the calendar is laid out in, or ''.
  * @return string
  */
-function axismundi_cal_ics_document( array $components, array $tzids, int $from, int $to, string $name ) : string {
+function axismundi_cal_ics_document( array $components, array $tzids, int $from, int $to, string $name, string $display_tz = '' ) : string {
 	$lines = array(
 		'BEGIN:VCALENDAR',
 		'VERSION:2.0',
@@ -272,6 +273,14 @@ function axismundi_cal_ics_document( array $components, array $tzids, int $from,
 		'METHOD:PUBLISH',
 		'X-WR-CALNAME:' . axismundi_cal_ics_escape( $name ),
 	);
+	/*
+	 * The calendar's own zone, which is what this property means: where the calendar belongs, not
+	 * how any reader should be shown it. Each event still carries the zone it happens in on its own
+	 * DTSTART, and a subscriber's client converts to whatever clock its user keeps.
+	 */
+	if ( '' !== $display_tz ) {
+		$lines[] = 'X-WR-TIMEZONE:' . axismundi_cal_ics_escape( $display_tz );
+	}
 	foreach ( array_unique( array_filter( $tzids ) ) as $tzid ) {
 		$lines = array_merge( $lines, axismundi_cal_ics_vtimezone( (string) $tzid, $from, $to ) );
 	}

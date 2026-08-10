@@ -2,16 +2,16 @@
 /**
  * The structured REST field the authoring panel reads and writes.
  *
- * One field, `axismundi_event_envelope`, over the same single writer the importer and any future
+ * One field, `axismundi_cal_envelope`, over the same single writer the importer and any future
  * caller use. The panel is an editing surface and nothing more: every rule that decides whether an
  * Event is well-formed -- the IANA timezone, `endTime` after `startTime`, the URL an `external`
- * join mode requires -- stays in `axismundi_event_save()`, so a client cannot author its way around
+ * join mode requires -- stays in `axismundi_cal_event_save()`, so a client cannot author its way around
  * one and a second authoring path cannot drift from the first.
  *
  * The envelope is a custom table rather than post meta, so this deliberately is not
  * `register_post_meta`: meta would give the editor a writer that bypasses the validating one.
  *
- * @package AxismundiEvent
+ * @package AxismundiCalendar
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -27,8 +27,8 @@ defined( 'ABSPATH' ) || exit;
  * @param int $post_id Event post ID.
  * @return array<string,mixed>
  */
-function axismundi_event_rest_envelope( int $post_id ) : array {
-	$envelope = axismundi_event_get( $post_id );
+function axismundi_cal_rest_envelope( int $post_id ) : array {
+	$envelope = axismundi_cal_event_get( $post_id );
 	if ( ! is_array( $envelope ) ) {
 		// An Event that has not been given its times yet. Reported as an empty envelope rather
 		// than null so the panel has one shape to render in both states.
@@ -67,12 +67,12 @@ function axismundi_event_rest_envelope( int $post_id ) : array {
  * would therefore fail on every keystroke-triggered autosave before the author reached the last
  * field, so an incomplete envelope for an Event that has none yet is left unwritten instead of
  * rejected. Publishing is where incompleteness becomes an error, because that is where it starts
- * to matter -- see `axismundi_event_guard_publish()`.
+ * to matter -- see `axismundi_cal_guard_publish()`.
  *
  * @param array<string,mixed> $value Incoming envelope.
  * @return bool
  */
-function axismundi_event_rest_envelope_is_writable( array $value ) : bool {
+function axismundi_cal_rest_envelope_is_writable( array $value ) : bool {
 	return '' !== trim( (string) ( $value['startsAt'] ?? '' ) )
 		&& '' !== trim( (string) ( $value['endsAt'] ?? '' ) )
 		&& '' !== trim( (string) ( $value['timezone'] ?? '' ) );
@@ -84,7 +84,7 @@ function axismundi_event_rest_envelope_is_writable( array $value ) : bool {
  * @param array<string,mixed> $value Incoming envelope.
  * @return array<string,mixed>
  */
-function axismundi_event_rest_to_fields( array $value ) : array {
+function axismundi_cal_rest_to_fields( array $value ) : array {
 	$map = array(
 		'startsAt'                 => 'starts_at',
 		'endsAt'                   => 'ends_at',
@@ -109,13 +109,13 @@ function axismundi_event_rest_to_fields( array $value ) : array {
  *
  * @return void
  */
-function axismundi_event_register_rest_field() : void {
+function axismundi_cal_register_rest_field() : void {
 	register_rest_field(
-		AXISMUNDI_EVENT_POST_TYPE,
-		'axismundi_event_envelope',
+		AXISMUNDI_CAL_EVENT_POST_TYPE,
+		'axismundi_cal_envelope',
 		array(
 			'get_callback'    => static function ( array $post ) : array {
-				return axismundi_event_rest_envelope( (int) $post['id'] );
+				return axismundi_cal_rest_envelope( (int) $post['id'] );
 			},
 			'update_callback' => static function ( $value, WP_Post $post ) {
 				// Dormant until the panel sends it, so any other write path is untouched.
@@ -123,12 +123,12 @@ function axismundi_event_register_rest_field() : void {
 					return true;
 				}
 				if ( ! current_user_can( 'edit_post', $post->ID ) ) {
-					return new WP_Error( 'ax_event_forbidden', __( 'You cannot edit this Event.', 'axismundi-event' ), array( 'status' => 403 ) );
+					return new WP_Error( 'ax_event_forbidden', __( 'You cannot edit this Event.', 'axismundi-calendar' ), array( 'status' => 403 ) );
 				}
-				if ( null === axismundi_event_get( (int) $post->ID ) && ! axismundi_event_rest_envelope_is_writable( $value ) ) {
+				if ( null === axismundi_cal_event_get( (int) $post->ID ) && ! axismundi_cal_rest_envelope_is_writable( $value ) ) {
 					return true;
 				}
-				$result = axismundi_event_save( (int) $post->ID, axismundi_event_rest_to_fields( $value ) );
+				$result = axismundi_cal_event_save( (int) $post->ID, axismundi_cal_rest_to_fields( $value ) );
 				return is_wp_error( $result ) ? $result : true;
 			},
 			'schema'          => array(
@@ -139,8 +139,8 @@ function axismundi_event_register_rest_field() : void {
 					'endsAt'                   => array( 'type' => 'string' ),
 					'timezone'                 => array( 'type' => 'string' ),
 					'displayEndTime'           => array( 'type' => 'boolean' ),
-					'eventStatus'              => array( 'type' => 'string', 'enum' => axismundi_event_statuses() ),
-					'joinMode'                 => array( 'type' => 'string', 'enum' => axismundi_event_join_modes() ),
+					'eventStatus'              => array( 'type' => 'string', 'enum' => axismundi_cal_event_statuses() ),
+					'joinMode'                 => array( 'type' => 'string', 'enum' => axismundi_cal_event_join_modes() ),
 					'externalParticipationUrl' => array( 'type' => 'string' ),
 					'maximumAttendeeCapacity'  => array( 'type' => array( 'integer', 'null' ), 'minimum' => 1 ),
 					'previousStartsAtGmt'      => array( 'type' => 'string', 'readonly' => true ),
@@ -150,4 +150,4 @@ function axismundi_event_register_rest_field() : void {
 		)
 	);
 }
-add_action( 'rest_api_init', 'axismundi_event_register_rest_field' );
+add_action( 'rest_api_init', 'axismundi_cal_register_rest_field' );

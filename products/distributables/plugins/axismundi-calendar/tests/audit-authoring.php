@@ -15,7 +15,7 @@
  * Written through the REST field rather than by calling the writer, so the seam the panel actually
  * uses is what is under test.
  *
- * @package AxismundiEvent
+ * @package AxismundiCalendar
  */
 
 defined( 'ABSPATH' ) || exit( 1 );
@@ -33,8 +33,8 @@ function ax_ev_assert( array &$results, string $label, bool $condition ) : void 
 
 /** Write the envelope the way the panel does: through the REST resource. */
 function ax_ev_rest_write( int $post_id, array $envelope, string $status = '' ) {
-	$request = new WP_REST_Request( 'POST', '/wp/v2/' . AXISMUNDI_EVENT_POST_TYPE . '/' . $post_id );
-	$body    = array( 'axismundi_event_envelope' => $envelope );
+	$request = new WP_REST_Request( 'POST', '/wp/v2/' . AXISMUNDI_CAL_EVENT_POST_TYPE . '/' . $post_id );
+	$body    = array( 'axismundi_cal_envelope' => $envelope );
 	if ( '' !== $status ) {
 		$body['status'] = $status;
 	}
@@ -62,7 +62,7 @@ try {
 
 	$ax_ev_post = (int) wp_insert_post(
 		array(
-			'post_type'    => AXISMUNDI_EVENT_POST_TYPE,
+			'post_type'    => AXISMUNDI_CAL_EVENT_POST_TYPE,
 			'post_status'  => 'draft',
 			'post_author'  => $ax_ev_editor,
 			'post_title'   => 'Authoring fixture Event',
@@ -73,23 +73,23 @@ try {
 
 	// -- The field exists and reports an empty envelope in one stable shape -----------------
 
-	$ax_ev_read = axismundi_event_rest_envelope( $ax_ev_post );
+	$ax_ev_read = axismundi_cal_rest_envelope( $ax_ev_post );
 	ax_ev_assert( $ax_ev_results, 'an Event with no envelope reads as an empty one rather than null, so the panel has one shape to render', is_array( $ax_ev_read ) && false === $ax_ev_read['complete'] && '' === $ax_ev_read['timezone'] );
 
 	// -- A partial draft is held, not rejected ---------------------------------------------
 
 	$ax_ev_partial = ax_ev_rest_write( $ax_ev_post, array( 'eventStatus' => 'EventScheduled' ) );
 	ax_ev_assert( $ax_ev_results, 'a partially filled draft does not error, so authoring one field at a time is possible', $ax_ev_partial instanceof WP_REST_Response && 200 === $ax_ev_partial->get_status() );
-	ax_ev_assert( $ax_ev_results, 'and nothing is stored from it, because the table cannot hold half an Event', null === axismundi_event_get( $ax_ev_post ) );
+	ax_ev_assert( $ax_ev_results, 'and nothing is stored from it, because the table cannot hold half an Event', null === axismundi_cal_event_get( $ax_ev_post ) );
 
 	// -- The timezone is chosen, never inherited -------------------------------------------
 
-	$ax_ev_no_zone = axismundi_event_save(
+	$ax_ev_no_zone = axismundi_cal_event_save(
 		$ax_ev_post,
 		array( 'starts_at' => '2026-09-01 19:00:00', 'ends_at' => '2026-09-01 21:00:00' )
 	);
 	ax_ev_assert( $ax_ev_results, 'the writer refuses an Event with no timezone instead of stamping the site\'s', is_wp_error( $ax_ev_no_zone ) && 'ax_event_timezone' === $ax_ev_no_zone->get_error_code() );
-	ax_ev_assert( $ax_ev_results, 'and the site timezone is not quietly substituted', null === axismundi_event_get( $ax_ev_post ) );
+	ax_ev_assert( $ax_ev_results, 'and the site timezone is not quietly substituted', null === axismundi_cal_event_get( $ax_ev_post ) );
 
 	// -- Publishing without an envelope is refused -----------------------------------------
 
@@ -115,10 +115,28 @@ try {
 	);
 	ax_ev_assert( $ax_ev_results, 'a complete envelope saves and publishes through the same field the panel writes', $ax_ev_full instanceof WP_REST_Response && 200 === $ax_ev_full->get_status() && 'publish' === get_post_status( $ax_ev_post ) );
 
-	$ax_ev_stored = axismundi_event_get( $ax_ev_post );
+	$ax_ev_stored = axismundi_cal_event_get( $ax_ev_post );
 	ax_ev_assert( $ax_ev_results, 'the local wall time is stored as given, with UTC derived from the chosen zone', is_array( $ax_ev_stored ) && '2026-09-01 19:00:00' === $ax_ev_stored['starts_at'] && '2026-09-01 10:00:00' === $ax_ev_stored['starts_at_gmt'] );
 
 	// -- The projection is an Event, not an Article ----------------------------------------
+
+	// -- The permalink, and the identity that is not the permalink ------------------------
+
+	ax_ev_assert( $ax_ev_results, 'an Event is readable at /event/{slug}', 1 === preg_match( '#/event/[^/]+/?$#', (string) get_permalink( $ax_ev_post ) ) );
+	// Registered rewrite rules rather than the permalink alone: `get_permalink()` composes a URL
+	// from the post type's settings and answers the same whether or not anything routes it, so it
+	// cannot tell a working permalink from a 404.
+	$ax_ev_rules = (array) get_option( 'rewrite_rules', array() );
+	$ax_ev_event_rules = array_filter( array_keys( $ax_ev_rules ), static fn( string $rule ) : bool => str_starts_with( $rule, 'event/' ) );
+	ax_ev_assert( $ax_ev_results, 'and the rewrite rules to route it exist, which activation is responsible for creating', count( $ax_ev_event_rules ) > 0 );
+
+	/*
+	 * Identity is the stable post URI, not the permalink. This is what lets the plugin be renamed,
+	 * the slug edited and the permalink base moved without every peer holding the old URI deciding
+	 * it is looking at a different Object.
+	 */
+	$ax_ev_uri = axismundi_cal_event_object_uri( get_post( $ax_ev_post ) );
+	ax_ev_assert( $ax_ev_results, 'the canonical Object URI is the stable post URI, not the permalink', str_contains( $ax_ev_uri, '?p=' . $ax_ev_post ) && $ax_ev_uri !== get_permalink( $ax_ev_post ) );
 
 	$ax_ev_object = axismundi_op_transform_object( get_post( $ax_ev_post ) );
 	ax_ev_assert( $ax_ev_results, 'a published Event projects as an Event', is_array( $ax_ev_object ) && 'Event' === ( $ax_ev_object['type'] ?? '' ) );
@@ -136,12 +154,12 @@ try {
 	// -- A move is remembered ---------------------------------------------------------------
 
 	ax_ev_rest_write( $ax_ev_post, array( 'startsAt' => '2026-09-02 19:00:00', 'endsAt' => '2026-09-02 21:00:00', 'timezone' => 'Asia/Seoul' ) );
-	$ax_ev_moved = axismundi_event_get( $ax_ev_post );
+	$ax_ev_moved = axismundi_cal_event_get( $ax_ev_post );
 	ax_ev_assert( $ax_ev_results, 'rescheduling records the previous start, which is what tells a peer this is a move', is_array( $ax_ev_moved ) && '2026-09-01 10:00:00' === (string) $ax_ev_moved['previous_starts_at_gmt'] );
 
 	// -- The panel offers every zone, with none preselected ----------------------------------
 
-	$ax_ev_zones = axismundi_event_timezone_options();
+	$ax_ev_zones = axismundi_cal_timezone_options();
 	$ax_ev_values = array_column( $ax_ev_zones, 'value' );
 	ax_ev_assert( $ax_ev_results, 'the panel offers the full IANA list, so an Event can say where it actually happens', count( $ax_ev_zones ) === count( timezone_identifiers_list() ) && in_array( 'Asia/Seoul', $ax_ev_values, true ) && in_array( 'America/Argentina/Buenos_Aires', $ax_ev_values, true ) );
 	ax_ev_assert( $ax_ev_results, 'and no option is empty, so the placeholder stays the only unchosen state', ! in_array( '', $ax_ev_values, true ) );

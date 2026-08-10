@@ -11,7 +11,7 @@
  * its start time, location and participation — the properties that make it an Event. This plugin
  * projects it as an Event through Object Projections instead, so there is exactly one projector.
  *
- * @package AxismundiEvent
+ * @package AxismundiCalendar
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -21,16 +21,16 @@ defined( 'ABSPATH' ) || exit;
  *
  * @return void
  */
-function axismundi_event_register_post_type() : void {
+function axismundi_cal_register_event_post_type() : void {
 	register_post_type(
-		AXISMUNDI_EVENT_POST_TYPE,
+		AXISMUNDI_CAL_EVENT_POST_TYPE,
 		array(
 			'labels'              => array(
-				'name'          => __( 'Events', 'axismundi-event' ),
-				'singular_name' => __( 'Event', 'axismundi-event' ),
-				'add_new_item'  => __( 'Add Event', 'axismundi-event' ),
-				'edit_item'     => __( 'Edit Event', 'axismundi-event' ),
-				'menu_name'     => __( 'Events', 'axismundi-event' ),
+				'name'          => __( 'Events', 'axismundi-calendar' ),
+				'singular_name' => __( 'Event', 'axismundi-calendar' ),
+				'add_new_item'  => __( 'Add Event', 'axismundi-calendar' ),
+				'edit_item'     => __( 'Edit Event', 'axismundi-calendar' ),
+				'menu_name'     => __( 'Events', 'axismundi-calendar' ),
 			),
 			'public'              => true,
 			'publicly_queryable'  => true,
@@ -48,4 +48,4 @@ function axismundi_event_register_post_type() : void {
 		)
 	);
 }
-add_action( 'init', 'axismundi_event_register_post_type', 8 );
+add_action( 'init', 'axismundi_cal_register_event_post_type', 8 );

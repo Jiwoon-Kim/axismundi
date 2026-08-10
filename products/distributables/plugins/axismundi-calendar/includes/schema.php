@@ -12,16 +12,16 @@
  * its UTC instant moves. Storing only UTC would silently reschedule such an event; storing only
  * local would make ordering wrong across zones.
  *
- * @package AxismundiEvent
+ * @package AxismundiCalendar
  */
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_EVENT_DB_VERSION        = '1';
-const AXISMUNDI_EVENT_DB_VERSION_OPTION = 'ax_event_db_version';
+const AXISMUNDI_CAL_DB_VERSION        = '1';
+const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 
 /** @return string Event envelope table name. */
-function axismundi_event_table() : string {
+function axismundi_cal_events_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_events';
 }
@@ -34,8 +34,8 @@ function axismundi_event_table() : string {
  *
  * @return bool
  */
-function axismundi_event_ready() : bool {
-	return AXISMUNDI_EVENT_DB_VERSION === (string) get_option( AXISMUNDI_EVENT_DB_VERSION_OPTION, '' );
+function axismundi_cal_ready() : bool {
+	return AXISMUNDI_CAL_DB_VERSION === (string) get_option( AXISMUNDI_CAL_DB_VERSION_OPTION, '' );
 }
 
 /**
@@ -43,11 +43,11 @@ function axismundi_event_ready() : bool {
  *
  * @return bool Whether the table verified.
  */
-function axismundi_event_install_schema() : bool {
+function axismundi_cal_install_schema() : bool {
 	global $wpdb;
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
-	$table   = axismundi_event_table();
+	$table   = axismundi_cal_events_table();
 	$charset = $wpdb->get_charset_collate();
 	dbDelta(
 		"CREATE TABLE {$table} (
@@ -80,7 +80,7 @@ function axismundi_event_install_schema() : bool {
 			return false;
 		}
 	}
-	update_option( AXISMUNDI_EVENT_DB_VERSION_OPTION, AXISMUNDI_EVENT_DB_VERSION, false );
+	update_option( AXISMUNDI_CAL_DB_VERSION_OPTION, AXISMUNDI_CAL_DB_VERSION, false );
 	return true;
 }
 
@@ -92,7 +92,7 @@ function axismundi_event_install_schema() : bool {
  *
  * @return string[]
  */
-function axismundi_event_statuses() : array {
+function axismundi_cal_event_statuses() : array {
 	return array(
 		'EventScheduled',
 		'EventCancelled',
@@ -108,6 +108,6 @@ function axismundi_event_statuses() : array {
  *
  * @return string[]
  */
-function axismundi_event_join_modes() : array {
+function axismundi_cal_event_join_modes() : array {
 	return array( 'free', 'restricted', 'external', 'none', 'invite' );
 }

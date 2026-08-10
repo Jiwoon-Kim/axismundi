@@ -2,8 +2,8 @@
  * Event envelope document panel.
  *
  * A PluginDocumentSettingPanel over the single structured REST field
- * `axismundi_event_envelope`. Editing surface only: every rule about what a
- * well-formed Event is lives in axismundi_event_save(), and its refusals
+ * `axismundi_cal_envelope`. Editing surface only: every rule about what a
+ * well-formed Event is lives in axismundi_cal_event_save(), and its refusals
  * surface natively as the block editor's REST error.
  *
  * No JSX, no build -- plain wp.element.createElement.
@@ -31,20 +31,20 @@
 	}
 
 	var STATUS = [
-		{ label: __( 'Scheduled', 'axismundi-event' ), value: 'EventScheduled' },
-		{ label: __( 'Cancelled', 'axismundi-event' ), value: 'EventCancelled' },
-		{ label: __( 'Postponed', 'axismundi-event' ), value: 'EventPostponed' },
-		{ label: __( 'Rescheduled', 'axismundi-event' ), value: 'EventRescheduled' },
-		{ label: __( 'Tentative', 'axismundi-event' ), value: 'EventTentative' },
-		{ label: __( 'Moved online', 'axismundi-event' ), value: 'EventMovedOnline' }
+		{ label: __( 'Scheduled', 'axismundi-calendar' ), value: 'EventScheduled' },
+		{ label: __( 'Cancelled', 'axismundi-calendar' ), value: 'EventCancelled' },
+		{ label: __( 'Postponed', 'axismundi-calendar' ), value: 'EventPostponed' },
+		{ label: __( 'Rescheduled', 'axismundi-calendar' ), value: 'EventRescheduled' },
+		{ label: __( 'Tentative', 'axismundi-calendar' ), value: 'EventTentative' },
+		{ label: __( 'Moved online', 'axismundi-calendar' ), value: 'EventMovedOnline' }
 	];
 
 	var JOIN_MODE = [
-		{ label: __( 'Anyone can join', 'axismundi-event' ), value: 'free' },
-		{ label: __( 'Approval required', 'axismundi-event' ), value: 'restricted' },
-		{ label: __( 'Join elsewhere', 'axismundi-event' ), value: 'external' },
-		{ label: __( 'Invitation only', 'axismundi-event' ), value: 'invite' },
-		{ label: __( 'No participation', 'axismundi-event' ), value: 'none' }
+		{ label: __( 'Anyone can join', 'axismundi-calendar' ), value: 'free' },
+		{ label: __( 'Approval required', 'axismundi-calendar' ), value: 'restricted' },
+		{ label: __( 'Join elsewhere', 'axismundi-calendar' ), value: 'external' },
+		{ label: __( 'Invitation only', 'axismundi-calendar' ), value: 'invite' },
+		{ label: __( 'No participation', 'axismundi-calendar' ), value: 'none' }
 	];
 
 	/**
@@ -56,7 +56,7 @@
 	 * this placeholder is a question the author has to answer rather than a silent choice.
 	 */
 	function timezoneOptions() {
-		var config = window.axismundiEventEditor || {};
+		var config = window.axismundiCalendarEditor || {};
 		var list = Array.isArray( config.timezones ) ? config.timezones : [];
 		var groups = [];
 		var byGroup = {};
@@ -96,7 +96,7 @@
 			var editor = select( 'core/editor' );
 			return {
 				postType: editor.getCurrentPostType(),
-				envelope: editor.getEditedPostAttribute( 'axismundi_event_envelope' ) || {}
+				envelope: editor.getEditedPostAttribute( 'axismundi_cal_envelope' ) || {}
 			};
 		}, [] );
 
@@ -110,18 +110,18 @@
 		var zones = timezoneOptions();
 
 		function update( changes ) {
-			editPost( { axismundi_event_envelope: Object.assign( {}, envelope, changes ) } );
+			editPost( { axismundi_cal_envelope: Object.assign( {}, envelope, changes ) } );
 		}
 
 		var missing = [];
 		if ( ! String( envelope.startsAt || '' ).trim() ) {
-			missing.push( __( 'a start', 'axismundi-event' ) );
+			missing.push( __( 'a start', 'axismundi-calendar' ) );
 		}
 		if ( ! String( envelope.endsAt || '' ).trim() ) {
-			missing.push( __( 'an end', 'axismundi-event' ) );
+			missing.push( __( 'an end', 'axismundi-calendar' ) );
 		}
 		if ( ! String( envelope.timezone || '' ).trim() ) {
-			missing.push( __( 'a timezone', 'axismundi-event' ) );
+			missing.push( __( 'a timezone', 'axismundi-calendar' ) );
 		}
 
 		var children = [];
@@ -133,7 +133,7 @@
 					{ key: 'incomplete', status: 'warning', isDismissible: false },
 					// Said before publishing is attempted, because an Event without these
 					// projects to nothing and the page would otherwise look finished.
-					__( 'This Event still needs ', 'axismundi-event' ) + missing.join( ', ' ) + __ ( '. It cannot be published until then.', 'axismundi-event' )
+					__( 'This Event still needs ', 'axismundi-calendar' ) + missing.join( ', ' ) + __ ( '. It cannot be published until then.', 'axismundi-calendar' )
 				)
 			);
 		}
@@ -142,8 +142,8 @@
 			el( C.TextControl, {
 				key: 'startsAt',
 				type: 'datetime-local',
-				label: __( 'Starts', 'axismundi-event' ),
-				help: __( 'The local time where the event happens.', 'axismundi-event' ),
+				label: __( 'Starts', 'axismundi-calendar' ),
+				help: __( 'The local time where the event happens.', 'axismundi-calendar' ),
 				value: toInput( envelope.startsAt ),
 				onChange: function ( value ) { update( { startsAt: toStored( value ) } ); }
 			} )
@@ -153,7 +153,7 @@
 			el( C.TextControl, {
 				key: 'endsAt',
 				type: 'datetime-local',
-				label: __( 'Ends', 'axismundi-event' ),
+				label: __( 'Ends', 'axismundi-calendar' ),
 				value: toInput( envelope.endsAt ),
 				onChange: function ( value ) { update( { endsAt: toStored( value ) } ); }
 			} )
@@ -162,7 +162,7 @@
 		children.push(
 			el(
 				C.BaseControl,
-				{ key: 'timezone', id: 'ax-event-timezone', label: __( 'Timezone', 'axismundi-event' ), help: __( 'Where the event happens, not where you are. This travels with the start time.', 'axismundi-event' ) },
+				{ key: 'timezone', id: 'ax-event-timezone', label: __( 'Timezone', 'axismundi-calendar' ), help: __( 'Where the event happens, not where you are. This travels with the start time.', 'axismundi-calendar' ) },
 				el(
 					'select',
 					{
@@ -172,7 +172,7 @@
 						value: envelope.timezone || '',
 						onChange: function ( event ) { update( { timezone: event.target.value } ); }
 					},
-					[ el( 'option', { key: '', value: '' }, __( 'Select a timezone', 'axismundi-event' ) ) ].concat(
+					[ el( 'option', { key: '', value: '' }, __( 'Select a timezone', 'axismundi-calendar' ) ) ].concat(
 						zones.groups.map( function ( group ) {
 							return el(
 								'optgroup',
@@ -190,8 +190,8 @@
 		children.push(
 			el( C.ToggleControl, {
 				key: 'displayEndTime',
-				label: __( 'Show the end time', 'axismundi-event' ),
-				help: __( 'Turn this off for an event with no meaningful finish.', 'axismundi-event' ),
+				label: __( 'Show the end time', 'axismundi-calendar' ),
+				help: __( 'Turn this off for an event with no meaningful finish.', 'axismundi-calendar' ),
 				checked: false !== envelope.displayEndTime,
 				onChange: function ( value ) { update( { displayEndTime: !! value } ); }
 			} )
@@ -200,7 +200,7 @@
 		children.push(
 			el( C.SelectControl, {
 				key: 'eventStatus',
-				label: __( 'Status', 'axismundi-event' ),
+				label: __( 'Status', 'axismundi-calendar' ),
 				value: envelope.eventStatus || 'EventScheduled',
 				options: STATUS,
 				onChange: function ( value ) { update( { eventStatus: value } ); }
@@ -210,7 +210,7 @@
 		children.push(
 			el( C.SelectControl, {
 				key: 'joinMode',
-				label: __( 'Participation', 'axismundi-event' ),
+				label: __( 'Participation', 'axismundi-calendar' ),
 				value: envelope.joinMode || 'free',
 				options: JOIN_MODE,
 				onChange: function ( value ) { update( { joinMode: value } ); }
@@ -222,8 +222,8 @@
 				el( C.TextControl, {
 					key: 'externalParticipationUrl',
 					type: 'url',
-					label: __( 'Where to join', 'axismundi-event' ),
-					help: __( 'Required while participation happens elsewhere.', 'axismundi-event' ),
+					label: __( 'Where to join', 'axismundi-calendar' ),
+					help: __( 'Required while participation happens elsewhere.', 'axismundi-calendar' ),
 					value: envelope.externalParticipationUrl || '',
 					onChange: function ( value ) { update( { externalParticipationUrl: value } ); }
 				} )
@@ -235,8 +235,8 @@
 				key: 'maximumAttendeeCapacity',
 				type: 'number',
 				min: 1,
-				label: __( 'Capacity', 'axismundi-event' ),
-				help: __( 'Leave empty for no limit.', 'axismundi-event' ),
+				label: __( 'Capacity', 'axismundi-calendar' ),
+				help: __( 'Leave empty for no limit.', 'axismundi-calendar' ),
 				value: null === envelope.maximumAttendeeCapacity || undefined === envelope.maximumAttendeeCapacity ? '' : String( envelope.maximumAttendeeCapacity ),
 				onChange: function ( value ) {
 					var trimmed = String( value || '' ).trim();
@@ -250,17 +250,17 @@
 				el(
 					C.Notice,
 					{ key: 'moved', status: 'info', isDismissible: false },
-					__( 'This Event was moved. Peers are told its previous start so they can tell a reschedule from a new Event.', 'axismundi-event' )
+					__( 'This Event was moved. Peers are told its previous start so they can tell a reschedule from a new Event.', 'axismundi-calendar' )
 				)
 			);
 		}
 
 		return el(
 			Panel,
-			{ name: 'axismundi-event-envelope', title: __( 'Event', 'axismundi-event' ), className: 'axismundi-event-envelope' },
+			{ name: 'axismundi-calendar-envelope', title: __( 'Event', 'axismundi-calendar' ), className: 'axismundi-calendar-envelope' },
 			children
 		);
 	}
 
-	registerPlugin( 'axismundi-event-envelope', { render: EventPanel } );
+	registerPlugin( 'axismundi-calendar-envelope', { render: EventPanel } );
 } )( window.wp );

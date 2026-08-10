@@ -6,7 +6,7 @@
  * Versioned by `filemtime` so an edited file is actually re-fetched -- a fixed version string
  * becomes the `ver=` query and serves stale JS from cache after every change.
  *
- * @package AxismundiEvent
+ * @package AxismundiCalendar
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -19,11 +19,11 @@ defined( 'ABSPATH' ) || exit;
  *
  * @return array<int,array<string,string>>
  */
-function axismundi_event_timezone_options() : array {
+function axismundi_cal_timezone_options() : array {
 	$options = array();
 	foreach ( timezone_identifiers_list() as $identifier ) {
 		$parts    = explode( '/', $identifier, 2 );
-		$group    = isset( $parts[1] ) ? $parts[0] : __( 'Other', 'axismundi-event' );
+		$group    = isset( $parts[1] ) ? $parts[0] : __( 'Other', 'axismundi-calendar' );
 		$label    = isset( $parts[1] ) ? str_replace( '_', ' ', $parts[1] ) : $identifier;
 		$options[] = array(
 			'value' => $identifier,
@@ -39,12 +39,12 @@ function axismundi_event_timezone_options() : array {
  *
  * @return void
  */
-function axismundi_event_enqueue_editor_assets() : void {
+function axismundi_cal_enqueue_editor_assets() : void {
 	$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-	if ( ! $screen instanceof WP_Screen || AXISMUNDI_EVENT_POST_TYPE !== $screen->post_type ) {
+	if ( ! $screen instanceof WP_Screen || AXISMUNDI_CAL_EVENT_POST_TYPE !== $screen->post_type ) {
 		return;
 	}
-	$plugin = dirname( __DIR__ ) . '/axismundi-event.php';
+	$plugin = dirname( __DIR__ ) . '/axismundi-calendar.php';
 	$asset  = dirname( __DIR__ ) . '/assets/editor/event-panel.js';
 	if ( ! file_exists( $asset ) ) {
 		return;
@@ -60,20 +60,20 @@ function axismundi_event_enqueue_editor_assets() : void {
 	}
 
 	wp_enqueue_script(
-		'axismundi-event-panel',
+		'axismundi-calendar-panel',
 		plugins_url( 'assets/editor/event-panel.js', $plugin ),
 		$deps,
-		AXISMUNDI_EVENT_VERSION . '-' . (string) filemtime( $asset ),
+		AXISMUNDI_CAL_VERSION . '-' . (string) filemtime( $asset ),
 		true
 	);
-	wp_set_script_translations( 'axismundi-event-panel', 'axismundi-event' );
+	wp_set_script_translations( 'axismundi-calendar-panel', 'axismundi-calendar' );
 	wp_localize_script(
-		'axismundi-event-panel',
-		'axismundiEventEditor',
+		'axismundi-calendar-panel',
+		'axismundiCalendarEditor',
 		array(
-			'timezones'   => axismundi_event_timezone_options(),
+			'timezones'   => axismundi_cal_timezone_options(),
 			'siteTimezone' => wp_timezone_string(),
 		)
 	);
 }
-add_action( 'enqueue_block_editor_assets', 'axismundi_event_enqueue_editor_assets' );
+add_action( 'enqueue_block_editor_assets', 'axismundi_cal_enqueue_editor_assets' );

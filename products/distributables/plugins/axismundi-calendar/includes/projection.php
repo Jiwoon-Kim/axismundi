@@ -12,7 +12,7 @@
  * the FEP's. `event-bridge-for-activitypub` emits the same shape for eight other event plugins, so
  * matching it is what lets a Mobilizon or Gancio instance read this site's events at all.
  *
- * @package AxismundiEvent
+ * @package AxismundiCalendar
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -26,10 +26,10 @@ defined( 'ABSPATH' ) || exit;
  * @param mixed $source Candidate source.
  * @return bool
  */
-function axismundi_event_transformer_supports( $source ) : bool {
+function axismundi_cal_event_transformer_supports( $source ) : bool {
 	return $source instanceof WP_Post
-		&& AXISMUNDI_EVENT_POST_TYPE === $source->post_type
-		&& null !== axismundi_event_get( (int) $source->ID );
+		&& AXISMUNDI_CAL_EVENT_POST_TYPE === $source->post_type
+		&& null !== axismundi_cal_event_get( (int) $source->ID );
 }
 
 /**
@@ -42,7 +42,7 @@ function axismundi_event_transformer_supports( $source ) : bool {
  * @param mixed $source Event post.
  * @return string
  */
-function axismundi_event_object_uri( $source ) : string {
+function axismundi_cal_event_object_uri( $source ) : string {
 	if ( ! $source instanceof WP_Post || ! function_exists( 'axismundi_op_post_object_uri' ) ) {
 		return '';
 	}
@@ -55,7 +55,7 @@ function axismundi_event_object_uri( $source ) : string {
  * @param mixed $source Event post.
  * @return bool
  */
-function axismundi_event_visible( $source ) : bool {
+function axismundi_cal_event_visible( $source ) : bool {
 	return $source instanceof WP_Post
 		&& 'publish' === $source->post_status
 		&& '' === (string) $source->post_password
@@ -68,15 +68,15 @@ function axismundi_event_visible( $source ) : bool {
  * @param mixed $source Event post.
  * @return array<string,mixed>
  */
-function axismundi_event_transform( $source ) : array {
+function axismundi_cal_event_transform( $source ) : array {
 	if ( ! $source instanceof WP_Post ) {
 		return array();
 	}
-	$envelope = axismundi_event_get( (int) $source->ID );
+	$envelope = axismundi_cal_event_get( (int) $source->ID );
 	if ( ! is_array( $envelope ) ) {
 		return array();
 	}
-	$uri      = axismundi_event_object_uri( $source );
+	$uri      = axismundi_cal_event_object_uri( $source );
 	$timezone = (string) $envelope['timezone'];
 
 	$event = array(
@@ -87,8 +87,8 @@ function axismundi_event_transform( $source ) : array {
 		 * differently, and several render it as escaped source.
 		 */
 		'name'         => wp_strip_all_tags( get_the_title( $source ) ),
-		'startTime'    => axismundi_event_iso8601( (string) $envelope['starts_at'], $timezone ),
-		'endTime'      => axismundi_event_iso8601( (string) $envelope['ends_at'], $timezone ),
+		'startTime'    => axismundi_cal_iso8601( (string) $envelope['starts_at'], $timezone ),
+		'endTime'      => axismundi_cal_iso8601( (string) $envelope['ends_at'], $timezone ),
 		'timezone'     => $timezone,
 		'url'          => get_permalink( $source ),
 		'published'    => get_post_time( DATE_W3C, true, $source ),
@@ -121,7 +121,7 @@ function axismundi_event_transform( $source ) : array {
 		$event['displayEndTime'] = false;
 	}
 	if ( ! empty( $envelope['previous_starts_at_gmt'] ) ) {
-		$event['previousStartTime'] = axismundi_event_iso8601( (string) $envelope['previous_starts_at_gmt'], 'UTC' );
+		$event['previousStartTime'] = axismundi_cal_iso8601( (string) $envelope['previous_starts_at_gmt'], 'UTC' );
 	}
 	if ( 'external' === (string) $envelope['join_mode'] && '' !== (string) $envelope['external_participation_url'] ) {
 		$event['externalParticipationUrl'] = (string) $envelope['external_participation_url'];
@@ -141,7 +141,7 @@ function axismundi_event_transform( $source ) : array {
 	 * @param WP_Post             $source   Event post.
 	 * @param array<string,mixed> $envelope Event envelope.
 	 */
-	return (array) apply_filters( 'axismundi_event_object', $event, $source, $envelope );
+	return (array) apply_filters( 'axismundi_cal_event_object', $event, $source, $envelope );
 }
 
 /**
@@ -154,7 +154,7 @@ function axismundi_event_transform( $source ) : array {
  * @param string $timezone IANA timezone name.
  * @return string
  */
-function axismundi_event_iso8601( string $value, string $timezone ) : string {
+function axismundi_cal_iso8601( string $value, string $timezone ) : string {
 	try {
 		$zone = new DateTimeZone( '' !== $timezone ? $timezone : 'UTC' );
 		return ( new DateTimeImmutable( $value, $zone ) )->format( DATE_W3C );
@@ -180,7 +180,7 @@ function axismundi_event_iso8601( string $value, string $timezone ) : string {
  * @param string $uri    Canonical object URI.
  * @return mixed|null
  */
-function axismundi_event_resolve_source_by_uri( $source, string $uri ) {
+function axismundi_cal_event_resolve_source_by_uri( $source, string $uri ) {
 	if ( null !== $source ) {
 		return $source;
 	}
@@ -190,33 +190,33 @@ function axismundi_event_resolve_source_by_uri( $source, string $uri ) {
 	}
 	parse_str( (string) $parts['query'], $args );
 	$post = isset( $args['p'] ) ? get_post( absint( $args['p'] ) ) : null;
-	if ( ! $post instanceof WP_Post || ! axismundi_event_transformer_supports( $post ) ) {
+	if ( ! $post instanceof WP_Post || ! axismundi_cal_event_transformer_supports( $post ) ) {
 		return null;
 	}
-	return hash_equals( $uri, axismundi_event_object_uri( $post ) ) ? $post : null;
+	return hash_equals( $uri, axismundi_cal_event_object_uri( $post ) ) ? $post : null;
 }
-add_filter( 'axismundi_op_resolve_source_by_uri', 'axismundi_event_resolve_source_by_uri', 9, 2 );
+add_filter( 'axismundi_op_resolve_source_by_uri', 'axismundi_cal_event_resolve_source_by_uri', 9, 2 );
 
 /**
  * Register the Event transformer.
  *
  * @return void
  */
-function axismundi_event_register_transformer() : void {
+function axismundi_cal_register_event_transformer() : void {
 	if ( ! function_exists( 'axismundi_op_register_object_transformer' ) ) {
 		return;
 	}
 	axismundi_op_register_object_transformer(
-		'axismundi-event',
+		'axismundi-calendar',
 		array(
-			'supports'   => 'axismundi_event_transformer_supports',
-			'object_uri' => 'axismundi_event_object_uri',
-			'transform'  => 'axismundi_event_transform',
-			'visible'    => 'axismundi_event_visible',
+			'supports'   => 'axismundi_cal_event_transformer_supports',
+			'object_uri' => 'axismundi_cal_event_object_uri',
+			'transform'  => 'axismundi_cal_event_transform',
+			'visible'    => 'axismundi_cal_event_visible',
 			// Ahead of the Core Post transformer, which would otherwise claim this post type and
 			// publish an Event as an ordinary Article.
 			'priority'   => 5,
 		)
 	);
 }
-add_action( 'axismundi_op_register_transformers', 'axismundi_event_register_transformer' );
+add_action( 'axismundi_op_register_transformers', 'axismundi_cal_register_event_transformer' );

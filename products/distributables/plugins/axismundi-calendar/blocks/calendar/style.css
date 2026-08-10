@@ -1,0 +1,100 @@
+/**
+ * Calendar grid.
+ *
+ * Table markup because a month grid is tabular data: weekday headers are column headers, and a
+ * screen reader announcing "Wednesday" before an event is the difference between a calendar and a
+ * list of links. Layout uses table-layout: fixed so one busy day cannot widen its column.
+ */
+
+.ax-cal__nav {
+	align-items: center;
+	display: flex;
+	gap: 1em;
+	justify-content: space-between;
+	margin-block-end: 0.75em;
+}
+
+.ax-cal__label {
+	margin: 0;
+	text-align: center;
+}
+
+.ax-cal__grid {
+	border-collapse: collapse;
+	table-layout: fixed;
+	width: 100%;
+}
+
+.ax-cal__grid th,
+.ax-cal__grid td {
+	border: 1px solid currentColor;
+	padding: 0.35em;
+	text-align: start;
+	vertical-align: top;
+}
+
+.ax-cal__grid th {
+	font-size: 0.8em;
+	text-transform: uppercase;
+}
+
+.ax-cal--month .ax-cal__day {
+	height: 6em;
+}
+
+.ax-cal--week .ax-cal__day {
+	height: 12em;
+}
+
+/* Dimmed rather than blank: the padding days are real dates, and hiding them makes the first row
+   look like it is missing days. */
+.ax-cal__day--outside {
+	opacity: 0.45;
+}
+
+.ax-cal__day--today .ax-cal__date {
+	font-weight: 700;
+	text-decoration: underline;
+}
+
+.ax-cal__date {
+	display: block;
+	font-size: 0.8em;
+}
+
+.ax-cal__events {
+	list-style: none;
+	margin: 0.25em 0 0;
+	padding: 0;
+}
+
+.ax-cal__event {
+	font-size: 0.8em;
+	margin-block-end: 0.25em;
+}
+
+.ax-cal__time {
+	opacity: 0.75;
+	margin-inline-end: 0.35em;
+}
+
+/* Struck through and labelled, not removed: a cancelled occurrence is information, and a reader
+   who remembers the event needs to be told rather than left wondering. */
+.ax-cal__event--cancelled .ax-cal__title {
+	text-decoration: line-through;
+}
+
+.ax-cal__badge {
+	font-size: 0.75em;
+	opacity: 0.8;
+}
+
+@media (max-width: 600px) {
+	.ax-cal--month .ax-cal__day {
+		height: 4em;
+	}
+
+	.ax-cal__event {
+		font-size: 0.7em;
+	}
+}

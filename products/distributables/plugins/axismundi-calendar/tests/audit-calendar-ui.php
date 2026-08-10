@@ -138,6 +138,24 @@ try {
 
 	// -- The block renders -----------------------------------------------------------------------
 
+	/*
+	 * The files `block.json` names must exist. Rendering does not prove they do: the grid comes from
+	 * `render.php`, so a missing editor script or stylesheet leaves the front end looking perfect
+	 * while the block cannot be inserted and has no styling. That is exactly how a block shipped
+	 * once with two of its files written outside the repository.
+	 */
+	$ax_ui_dir      = dirname( __DIR__ ) . '/blocks/calendar';
+	$ax_ui_manifest = json_decode( (string) file_get_contents( $ax_ui_dir . '/block.json' ), true );
+	$ax_ui_missing  = array();
+	foreach ( array( 'editorScript', 'script', 'viewScript', 'render' ) as $ax_ui_field ) {
+		$ax_ui_value = (string) ( $ax_ui_manifest[ $ax_ui_field ] ?? '' );
+		if ( str_starts_with( $ax_ui_value, 'file:' ) && ! file_exists( $ax_ui_dir . '/' . ltrim( substr( $ax_ui_value, 5 ), './' ) ) ) {
+			$ax_ui_missing[] = $ax_ui_field;
+		}
+	}
+	ax_ui_assert( $ax_ui_results, 'every file block.json names is actually present', array() === $ax_ui_missing );
+	ax_ui_assert( $ax_ui_results, 'and the stylesheet the block asks for is registered, so the grid is not unstyled', wp_style_is( 'axismundi-calendar-grid', 'registered' ) );
+
 	$ax_ui_html = do_blocks( '<!-- wp:axismundi-calendar/calendar {"view":"month"} /-->' );
 	ax_ui_assert( $ax_ui_results, 'the block renders a grid', str_contains( $ax_ui_html, 'ax-cal__grid' ) && str_contains( $ax_ui_html, '<table' ) );
 	ax_ui_assert( $ax_ui_results, 'with navigation that works without JavaScript, as ordinary links', str_contains( $ax_ui_html, 'ax_cal_view=month' ) && str_contains( $ax_ui_html, 'rel="prev"' ) );

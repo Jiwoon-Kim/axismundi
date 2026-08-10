@@ -42,6 +42,8 @@ function axismundi_cal_rest_envelope( int $post_id ) : array {
 			'externalParticipationUrl' => '',
 			'maximumAttendeeCapacity'  => null,
 			'previousStartsAtGmt'      => '',
+			'rrule'                    => '',
+			'recurring'                => false,
 			'complete'                 => false,
 		);
 	}
@@ -55,6 +57,10 @@ function axismundi_cal_rest_envelope( int $post_id ) : array {
 		'externalParticipationUrl' => (string) $envelope['external_participation_url'],
 		'maximumAttendeeCapacity'  => null === $envelope['maximum_attendee_capacity'] ? null : (int) $envelope['maximum_attendee_capacity'],
 		'previousStartsAtGmt'      => (string) ( $envelope['previous_starts_at_gmt'] ?? '' ),
+		'rrule'                    => (string) ( $envelope['rrule'] ?? '' ),
+		// Reported rather than left for the panel to infer from the rule, so the federation rule
+		// and the notice the author reads cannot disagree about what counts as recurring.
+		'recurring'                => '' !== trim( (string) ( $envelope['rrule'] ?? '' ) ),
 		'complete'                 => true,
 	);
 }
@@ -94,6 +100,7 @@ function axismundi_cal_rest_to_fields( array $value ) : array {
 		'joinMode'                 => 'join_mode',
 		'externalParticipationUrl' => 'external_participation_url',
 		'maximumAttendeeCapacity'  => 'maximum_attendee_capacity',
+		'rrule'                    => 'rrule',
 	);
 	$fields = array();
 	foreach ( $map as $from => $to ) {
@@ -143,6 +150,8 @@ function axismundi_cal_register_rest_field() : void {
 					'joinMode'                 => array( 'type' => 'string', 'enum' => axismundi_cal_event_join_modes() ),
 					'externalParticipationUrl' => array( 'type' => 'string' ),
 					'maximumAttendeeCapacity'  => array( 'type' => array( 'integer', 'null' ), 'minimum' => 1 ),
+					'rrule'                    => array( 'type' => 'string' ),
+					'recurring'                => array( 'type' => 'boolean', 'readonly' => true ),
 					'previousStartsAtGmt'      => array( 'type' => 'string', 'readonly' => true ),
 					'complete'                 => array( 'type' => 'boolean', 'readonly' => true ),
 				),

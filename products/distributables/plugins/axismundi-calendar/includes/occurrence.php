@@ -685,7 +685,10 @@ function axismundi_cal_materialize( int $schedule_id ) : int {
 	}
 
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	$wpdb->update( $schedules, array( 'materialized_until_utc' => $through ), array( 'id' => $schedule_id ) );
+	// Both edges are recorded, not just the far one. A window is only usable if the request lies
+	// inside it at both ends, and a range that reaches back before the cache begins is the case
+	// that silently returns too few rows rather than none.
+	$wpdb->update( $schedules, array( 'materialized_from_utc' => $from, 'materialized_until_utc' => $through ), array( 'id' => $schedule_id ) );
 	return $written;
 }
 
@@ -719,4 +722,86 @@ function axismundi_cal_cached_range( int $schedule_id, string $from_utc, string 
 		),
 		ARRAY_A
 	);
+}
+
+/**
+ * The occurrences of a schedule in a range, from the cache where it reaches and computed where it
+ * does not.
+ *
+ * The contract is that the answer does not depend on how much of the series happens to be
+ * materialized. A cache that silently answers "nothing" past its own edge is how a calendar loses
+ * next year, and one that answers "nothing" before its edge loses the archive -- so coverage is
+ * judged at both ends, and any part of the request the cache does not reach is expanded live.
+ *
+ * Merged by `recurrence_id`, which is why that identity has to be stable: it is what lets a cached
+ * row and a computed row be recognised as the same instance rather than appearing twice.
+ *
+ * @param array<string,mixed> $schedule Schedule row.
+ * @param string              $from_utc Range start, UTC.
+ * @param string              $to_utc   Range end, UTC.
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_cal_range( array $schedule, string $from_utc, string $to_utc ) : array {
+	$schedule_id = (int) ( $schedule['id'] ?? 0 );
+	$covered_from = (string) ( $schedule['materialized_from_utc'] ?? '' );
+	$covered_to   = (string) ( $schedule['materialized_until_utc'] ?? '' );
+
+	// Nothing materialized, or no identity to look rows up by: compute the whole answer.
+	if ( $schedule_id <= 0 || '' === $covered_from || '' === $covered_to ) {
+		return axismundi_cal_expand( $schedule, $from_utc, $to_utc );
+	}
+
+	$from = strtotime( $from_utc );
+	$to   = strtotime( $to_utc );
+	if ( false === $from || false === $to || $to <= $from ) {
+		return array();
+	}
+	$cov_from = strtotime( $covered_from );
+	$cov_to   = strtotime( $covered_to );
+
+	$merged = array();
+
+	// The part the cache reaches.
+	$overlap_from = max( $from, $cov_from );
+	$overlap_to   = min( $to, $cov_to );
+	if ( $overlap_to > $overlap_from ) {
+		foreach ( axismundi_cal_cached_range( $schedule_id, gmdate( 'Y-m-d H:i:s', $overlap_from ), gmdate( 'Y-m-d H:i:s', $overlap_to ) ) as $row ) {
+			$merged[ (string) $row['recurrence_id'] ] = $row;
+		}
+	}
+
+	// The parts it does not, at either end.
+	$gaps = array();
+	if ( $from < $cov_from ) {
+		$gaps[] = array( $from, min( $to, $cov_from ) );
+	}
+	if ( $to > $cov_to ) {
+		$gaps[] = array( max( $from, $cov_to ), $to );
+	}
+	foreach ( $gaps as $gap ) {
+		if ( $gap[1] <= $gap[0] ) {
+			continue;
+		}
+		foreach ( axismundi_cal_expand( $schedule, gmdate( 'Y-m-d H:i:s', $gap[0] ), gmdate( 'Y-m-d H:i:s', $gap[1] ) ) as $occurrence ) {
+			// The cached row wins where both exist: it is the one carrying any stored override, and
+			// keeping one of the two makes the merge order irrelevant.
+			if ( ! isset( $merged[ (string) $occurrence['recurrence_id'] ] ) ) {
+				$merged[ (string) $occurrence['recurrence_id'] ] = $occurrence;
+			}
+		}
+	}
+
+	$out = array_values( $merged );
+	usort( $out, static fn( array $a, array $b ) : int => strcmp( (string) $a['start_utc'], (string) $b['start_utc'] ) );
+	return $out;
+}
+
+/**
+ * Whether a schedule repeats.
+ *
+ * @param array<string,mixed>|null $schedule Schedule row.
+ * @return bool
+ */
+function axismundi_cal_schedule_is_recurring( ?array $schedule ) : bool {
+	return is_array( $schedule ) && '' !== trim( (string) ( $schedule['rrule'] ?? '' ) );
 }

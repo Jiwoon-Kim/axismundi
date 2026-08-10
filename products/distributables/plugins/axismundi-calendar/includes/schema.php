@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '3';
+const AXISMUNDI_CAL_DB_VERSION        = '4';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 
 /** @return string Event envelope table name. */
@@ -108,6 +108,7 @@ function axismundi_cal_install_schema() : bool {
 			sequence int(10) unsigned NOT NULL default 0,
 			display_end_time tinyint(1) unsigned NOT NULL default 1,
 			previous_start_utc datetime NULL,
+			materialized_from_utc datetime NULL,
 			materialized_until_utc datetime NULL,
 			location_place_id bigint(20) unsigned NULL,
 			location_text text NOT NULL,

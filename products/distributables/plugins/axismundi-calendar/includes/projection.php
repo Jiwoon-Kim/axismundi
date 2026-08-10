@@ -56,10 +56,25 @@ function axismundi_cal_event_object_uri( $source ) : string {
  * @return bool
  */
 function axismundi_cal_event_visible( $source ) : bool {
-	return $source instanceof WP_Post
-		&& 'publish' === $source->post_status
-		&& '' === (string) $source->post_password
-		&& is_post_publicly_viewable( $source );
+	if ( ! $source instanceof WP_Post
+		|| 'publish' !== $source->post_status
+		|| '' !== (string) $source->post_password
+		|| ! is_post_publicly_viewable( $source ) ) {
+		return false;
+	}
+	/*
+	 * A recurring Event is held back from federation until occurrences are projected individually.
+	 *
+	 * FEP-8a8e has no recurrence: an `Event` carries one `startTime`. Publishing a weekly series as
+	 * a single Event would tell every peer it happens once, on the first date -- and it would look
+	 * entirely correct on the receiving end, which is what makes it worse than publishing nothing.
+	 * Peers would then hold a wrong record that no later correction reaches, because they have no
+	 * reason to re-fetch something they believe they already have.
+	 *
+	 * Withheld rather than approximated. The panel says so where the rule is authored, so this is a
+	 * stated limitation rather than a silent omission.
+	 */
+	return ! axismundi_cal_schedule_is_recurring( axismundi_cal_schedule_for_event( (int) $source->ID ) );
 }
 
 /**

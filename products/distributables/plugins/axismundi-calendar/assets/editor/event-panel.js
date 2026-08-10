@@ -89,6 +89,108 @@
 		return 10 === value.length ? value + ' 00:00:00' : ( 16 === value.length ? value + ':00' : value );
 	}
 
+	var FREQ = [
+		{ label: __( 'Does not repeat', 'axismundi-calendar' ), value: '' },
+		{ label: __( 'Daily', 'axismundi-calendar' ), value: 'DAILY' },
+		{ label: __( 'Weekly', 'axismundi-calendar' ), value: 'WEEKLY' },
+		{ label: __( 'Monthly', 'axismundi-calendar' ), value: 'MONTHLY' },
+		{ label: __( 'Yearly', 'axismundi-calendar' ), value: 'YEARLY' }
+	];
+
+	var INTERVAL_HELP = {
+		DAILY: __( 'days between repeats', 'axismundi-calendar' ),
+		WEEKLY: __( 'weeks between repeats', 'axismundi-calendar' ),
+		MONTHLY: __( 'months between repeats', 'axismundi-calendar' ),
+		YEARLY: __( 'years between repeats', 'axismundi-calendar' )
+	};
+
+	var WEEKDAYS = [
+		{ label: __( 'Mon', 'axismundi-calendar' ), value: 'MO' },
+		{ label: __( 'Tue', 'axismundi-calendar' ), value: 'TU' },
+		{ label: __( 'Wed', 'axismundi-calendar' ), value: 'WE' },
+		{ label: __( 'Thu', 'axismundi-calendar' ), value: 'TH' },
+		{ label: __( 'Fri', 'axismundi-calendar' ), value: 'FR' },
+		{ label: __( 'Sat', 'axismundi-calendar' ), value: 'SA' },
+		{ label: __( 'Sun', 'axismundi-calendar' ), value: 'SU' }
+	];
+
+	var ORDINALS = [
+		{ label: __( 'First', 'axismundi-calendar' ), value: '1' },
+		{ label: __( 'Second', 'axismundi-calendar' ), value: '2' },
+		{ label: __( 'Third', 'axismundi-calendar' ), value: '3' },
+		{ label: __( 'Fourth', 'axismundi-calendar' ), value: '4' },
+		{ label: __( 'Last', 'axismundi-calendar' ), value: '-1' }
+	];
+
+	/**
+	 * Read a stored rule back into the controls.
+	 *
+	 * Only the parts these controls can express are read. Anything else leaves the fields as they
+	 * are rather than being rewritten, because the server stores a normalized rule and the panel
+	 * must not be the thing that quietly changes it.
+	 */
+	function parseRule( rrule ) {
+		var out = { freq: '', interval: 1, byday: [], ordinal: '', bymonthday: '', endMode: '', count: '', until: '' };
+		if ( ! rrule ) {
+			return out;
+		}
+		String( rrule ).split( ';' ).forEach( function ( part ) {
+			var pair = part.split( '=' );
+			var key = String( pair[0] || '' ).toUpperCase();
+			var value = String( pair[1] || '' ).toUpperCase();
+			if ( 'FREQ' === key ) {
+				out.freq = value;
+			} else if ( 'INTERVAL' === key ) {
+				out.interval = parseInt( value, 10 ) || 1;
+			} else if ( 'BYDAY' === key ) {
+				value.split( ',' ).forEach( function ( token ) {
+					var match = /^([+-]?\d{1,2})?(MO|TU|WE|TH|FR|SA|SU)$/.exec( token );
+					if ( match ) {
+						if ( match[1] ) {
+							out.ordinal = match[1];
+						}
+						out.byday.push( match[2] );
+					}
+				} );
+			} else if ( 'BYMONTHDAY' === key ) {
+				out.bymonthday = value;
+			} else if ( 'COUNT' === key ) {
+				out.endMode = 'count';
+				out.count = value;
+			} else if ( 'UNTIL' === key ) {
+				out.endMode = 'until';
+				out.until = value.length >= 8 ? value.slice( 0, 4 ) + '-' + value.slice( 4, 6 ) + '-' + value.slice( 6, 8 ) : '';
+			}
+		} );
+		return out;
+	}
+
+	/** Assemble the controls back into a rule for the server to validate and normalize. */
+	function buildRule( rule ) {
+		if ( ! rule.freq ) {
+			return '';
+		}
+		var parts = [ 'FREQ=' + rule.freq ];
+		if ( rule.interval > 1 ) {
+			parts.push( 'INTERVAL=' + rule.interval );
+		}
+		if ( 'MONTHLY' === rule.freq || 'YEARLY' === rule.freq ) {
+			if ( rule.ordinal && rule.byday.length ) {
+				parts.push( 'BYDAY=' + rule.ordinal + rule.byday[0] );
+			} else if ( String( rule.bymonthday ).trim() ) {
+				parts.push( 'BYMONTHDAY=' + String( rule.bymonthday ).trim() );
+			}
+		} else if ( 'WEEKLY' === rule.freq && rule.byday.length ) {
+			parts.push( 'BYDAY=' + rule.byday.join( ',' ) );
+		}
+		if ( 'count' === rule.endMode && String( rule.count ).trim() ) {
+			parts.push( 'COUNT=' + String( rule.count ).trim() );
+		} else if ( 'until' === rule.endMode && rule.until ) {
+			parts.push( 'UNTIL=' + String( rule.until ).replace( /-/g, '' ) );
+		}
+		return parts.join( ';' );
+	}
+
 	function EventPanel() {
 		var Panel = documentPanel();
 
@@ -186,6 +288,177 @@
 				)
 			)
 		);
+
+		// -- Recurrence ------------------------------------------------------------------
+		//
+		// Assembled controls rather than a rule field. The supported set is narrow and specific, and
+		// a free-text RRULE invites exactly the rules the writer refuses -- turning a rule the author
+		// cannot express into a save error they cannot act on.
+
+		var rule = parseRule( envelope.rrule || '' );
+
+		function writeRule( changes ) {
+			update( { rrule: buildRule( Object.assign( {}, rule, changes ) ) } );
+		}
+
+		children.push(
+			el( C.SelectControl, {
+				key: 'freq',
+				label: __( 'Repeats', 'axismundi-calendar' ),
+				value: rule.freq,
+				options: FREQ,
+				onChange: function ( value ) {
+					// Switching frequency drops the parts that do not apply to it, so a monthly
+					// ordinal cannot survive into a weekly rule the writer would then reject.
+					writeRule( { freq: value, byday: [], ordinal: '', bymonthday: '' } );
+				}
+			} )
+		);
+
+		if ( rule.freq ) {
+			children.push(
+				el( C.TextControl, {
+					key: 'interval',
+					type: 'number',
+					min: 1,
+					label: __( 'Every', 'axismundi-calendar' ),
+					help: INTERVAL_HELP[ rule.freq ],
+					value: String( rule.interval || 1 ),
+					onChange: function ( value ) { writeRule( { interval: Math.max( 1, parseInt( value, 10 ) || 1 ) } ); }
+				} )
+			);
+		}
+
+		if ( 'WEEKLY' === rule.freq ) {
+			children.push(
+				el(
+					C.BaseControl,
+					{ key: 'byday', id: 'ax-event-byday', label: __( 'On these days', 'axismundi-calendar' ) },
+					el(
+						'div',
+						{ style: { display: 'flex', flexWrap: 'wrap', gap: '8px' } },
+						WEEKDAYS.map( function ( day ) {
+							return el( C.CheckboxControl, {
+								key: day.value,
+								label: day.label,
+								checked: -1 !== rule.byday.indexOf( day.value ),
+								onChange: function ( checked ) {
+									var next = checked
+										? rule.byday.concat( [ day.value ] )
+										: rule.byday.filter( function ( d ) { return d !== day.value; } );
+									writeRule( { byday: next } );
+								}
+							} );
+						} )
+					)
+				)
+			);
+		}
+
+		if ( 'MONTHLY' === rule.freq || 'YEARLY' === rule.freq ) {
+			children.push(
+				el( C.SelectControl, {
+					key: 'monthlyMode',
+					label: __( 'Each time, on', 'axismundi-calendar' ),
+					value: rule.ordinal ? 'weekday' : 'day',
+					options: [
+						{ label: __( 'A day of the month', 'axismundi-calendar' ), value: 'day' },
+						{ label: __( 'A weekday of the month', 'axismundi-calendar' ), value: 'weekday' }
+					],
+					onChange: function ( value ) {
+						// The two are alternatives, so choosing one clears the other rather than
+						// leaving a rule that tries to say both.
+						writeRule( 'weekday' === value
+							? { ordinal: '1', byday: [ 'MO' ], bymonthday: '' }
+							: { ordinal: '', byday: [], bymonthday: '' } );
+					}
+				} )
+			);
+			if ( rule.ordinal ) {
+				children.push(
+					el( C.SelectControl, {
+						key: 'ordinal',
+						label: __( 'Which one', 'axismundi-calendar' ),
+						value: rule.ordinal,
+						options: ORDINALS,
+						onChange: function ( value ) { writeRule( { ordinal: value } ); }
+					} )
+				);
+				children.push(
+					el( C.SelectControl, {
+						key: 'ordinalDay',
+						label: __( 'Weekday', 'axismundi-calendar' ),
+						value: rule.byday[0] || 'MO',
+						options: WEEKDAYS,
+						onChange: function ( value ) { writeRule( { byday: [ value ] } ); }
+					} )
+				);
+			} else {
+				children.push(
+					el( C.TextControl, {
+						key: 'bymonthday',
+						type: 'number',
+						label: __( 'Day of the month', 'axismundi-calendar' ),
+						help: __( 'Use -1 for the last day. Leave empty to follow the start date.', 'axismundi-calendar' ),
+						value: String( rule.bymonthday || '' ),
+						onChange: function ( value ) { writeRule( { bymonthday: value } ); }
+					} )
+				);
+			}
+		}
+
+		if ( rule.freq ) {
+			children.push(
+				el( C.SelectControl, {
+					key: 'endMode',
+					label: __( 'Ends', 'axismundi-calendar' ),
+					value: rule.endMode,
+					options: [
+						{ label: __( 'Never', 'axismundi-calendar' ), value: '' },
+						{ label: __( 'After a number of times', 'axismundi-calendar' ), value: 'count' },
+						{ label: __( 'On a date', 'axismundi-calendar' ), value: 'until' }
+					],
+					// Mutually exclusive here because they are mutually exclusive in the rule: one
+					// carrying both is refused, and that refusal would be puzzling from this panel.
+					onChange: function ( value ) { writeRule( { endMode: value, count: '', until: '' } ); }
+				} )
+			);
+			if ( 'count' === rule.endMode ) {
+				children.push(
+					el( C.TextControl, {
+						key: 'count',
+						type: 'number',
+						min: 1,
+						label: __( 'Number of times', 'axismundi-calendar' ),
+						value: String( rule.count || '' ),
+						onChange: function ( value ) { writeRule( { count: value } ); }
+					} )
+				);
+			}
+			if ( 'until' === rule.endMode ) {
+				children.push(
+					el( C.TextControl, {
+						key: 'until',
+						type: 'date',
+						label: __( 'Last date', 'axismundi-calendar' ),
+						// Sent as a plain date. Turning it into the UTC instant the rule requires is
+						// the writer's job, since the event's zone is authoritative on the server.
+						value: rule.until || '',
+						onChange: function ( value ) { writeRule( { until: value } ); }
+					} )
+				);
+			}
+		}
+
+		if ( envelope.recurring ) {
+			children.push(
+				el(
+					C.Notice,
+					{ key: 'recurring-local', status: 'warning', isDismissible: false },
+					__( 'Repeating events appear on this site only. They are not sent to other servers yet: the federation format describes a single occurrence, so sending one would tell other servers this happens once.', 'axismundi-calendar' )
+				)
+			);
+		}
 
 		children.push(
 			el( C.ToggleControl, {

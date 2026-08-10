@@ -63,9 +63,23 @@ if ( 'week' === $ax_cal_view ) {
 	$ax_cal_next  = $ax_cal_start->modify( '+1 month' )->format( 'Y-m-d' );
 }
 
-$ax_cal_occurrences = axismundi_cal_occurrences_in_range(
+/*
+ * An unknown slug shows an empty calendar rather than the whole site. Falling back to everything
+ * would turn a typo into a page quietly displaying events that were never meant to be on it.
+ */
+$ax_cal_collection = '' !== (string) ( $attributes['calendar'] ?? '' )
+	? axismundi_cal_calendar_by_slug( (string) $attributes['calendar'] )
+	: null;
+$ax_cal_filter = null;
+if ( '' !== (string) ( $attributes['calendar'] ?? '' ) ) {
+	$ax_cal_filter = is_array( $ax_cal_collection ) ? (int) $ax_cal_collection['id'] : -1;
+}
+
+$ax_cal_occurrences = -1 === $ax_cal_filter ? array() : axismundi_cal_occurrences_in_range(
 	$ax_cal_first->setTimezone( $ax_cal_utc )->format( 'Y-m-d H:i:s' ),
-	$ax_cal_last->setTimezone( $ax_cal_utc )->format( 'Y-m-d H:i:s' )
+	$ax_cal_last->setTimezone( $ax_cal_utc )->format( 'Y-m-d H:i:s' ),
+	AXISMUNDI_CAL_RANGE_MAX,
+	null === $ax_cal_filter ? 0 : $ax_cal_filter
 );
 $ax_cal_days = axismundi_cal_group_by_day( $ax_cal_occurrences, $ax_cal_zone );
 

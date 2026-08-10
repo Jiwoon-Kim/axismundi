@@ -44,6 +44,11 @@ function axismundi_cal_register_ics_routes() : void {
 		'index.php?ax_cal_ics=event&ax_cal_event=$matches[1]',
 		'top'
 	);
+	add_rewrite_rule(
+		'^calendar/([^/]+)\.ics$',
+		'index.php?ax_cal_ics=calendar&ax_cal_slug=$matches[1]',
+		'top'
+	);
 }
 add_action( 'init', 'axismundi_cal_register_ics_routes', 9 );
 
@@ -56,6 +61,7 @@ add_action( 'init', 'axismundi_cal_register_ics_routes', 9 );
 function axismundi_cal_ics_query_vars( array $vars ) : array {
 	$vars[] = 'ax_cal_ics';
 	$vars[] = 'ax_cal_event';
+	$vars[] = 'ax_cal_slug';
 	return $vars;
 }
 add_filter( 'query_vars', 'axismundi_cal_ics_query_vars' );
@@ -86,7 +92,7 @@ add_filter( 'redirect_canonical', 'axismundi_cal_ics_no_canonical' );
  * @param string $cutoff_utc Earliest instant of interest, UTC.
  * @return array<int,array<string,mixed>>
  */
-function axismundi_cal_feed_schedules( string $cutoff_utc ) : array {
+function axismundi_cal_feed_schedules( string $cutoff_utc, int $calendar_id = 0 ) : array {
 	global $wpdb;
 	if ( ! axismundi_cal_ready() ) {
 		return array();
@@ -96,8 +102,12 @@ function axismundi_cal_feed_schedules( string $cutoff_utc ) : array {
 	$rows = (array) $wpdb->get_results( "SELECT * FROM {$table} ORDER BY dtstart_local ASC", ARRAY_A );
 
 	$horizon = gmdate( 'Y-m-d H:i:s', strtotime( $cutoff_utc . ' +5 years' ) );
+	$members = $calendar_id > 0 ? array_flip( axismundi_cal_calendar_event_ids( $calendar_id ) ) : null;
 	$out     = array();
 	foreach ( $rows as $schedule ) {
+		if ( null !== $members && ! isset( $members[ (int) $schedule['event_post_id'] ] ) ) {
+			continue;
+		}
 		$post = get_post( (int) $schedule['event_post_id'] );
 		if ( ! $post instanceof WP_Post || ! axismundi_cal_event_listable( $post ) ) {
 			continue;
@@ -117,10 +127,10 @@ function axismundi_cal_feed_schedules( string $cutoff_utc ) : array {
  *
  * @return array{body:string,modified:int}
  */
-function axismundi_cal_site_feed() : array {
+function axismundi_cal_site_feed( int $calendar_id = 0, string $name = '' ) : array {
 	$cutoff_ts = (int) strtotime( '-' . AXISMUNDI_CAL_FEED_PAST_MONTHS . ' months' );
 	$cutoff    = gmdate( 'Y-m-d H:i:s', $cutoff_ts );
-	$rows      = axismundi_cal_feed_schedules( $cutoff );
+	$rows      = axismundi_cal_feed_schedules( $cutoff, $calendar_id );
 
 	$components = array();
 	$tzids      = array();
@@ -146,7 +156,7 @@ function axismundi_cal_site_feed() : array {
 			$tzids,
 			$cutoff_ts,
 			(int) strtotime( '+2 years' ),
-			(string) get_bloginfo( 'name' )
+			'' !== $name ? $name : (string) get_bloginfo( 'name' )
 		),
 		'modified' => $modified > 0 ? $modified : time(),
 	);
@@ -272,6 +282,11 @@ function axismundi_cal_serve_ics() : void {
 	$feed = null;
 	if ( 'site' === $which ) {
 		$feed = axismundi_cal_site_feed();
+	} elseif ( 'calendar' === $which ) {
+		$calendar = axismundi_cal_calendar_by_slug( (string) get_query_var( 'ax_cal_slug' ) );
+		if ( is_array( $calendar ) && 'public' === (string) $calendar['visibility'] ) {
+			$feed = axismundi_cal_site_feed( (int) $calendar['id'], (string) $calendar['name'] );
+		}
 	} elseif ( 'event' === $which ) {
 		$slug = sanitize_title( (string) get_query_var( 'ax_cal_event' ) );
 		$post = $slug ? get_page_by_path( $slug, OBJECT, AXISMUNDI_CAL_EVENT_POST_TYPE ) : null;

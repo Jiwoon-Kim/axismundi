@@ -12,6 +12,10 @@
 			"type": "string",
 			"default": "month",
 			"enum": [ "month", "week" ]
+		},
+		"calendar": {
+			"type": "string",
+			"default": ""
 		}
 	},
 	"supports": {

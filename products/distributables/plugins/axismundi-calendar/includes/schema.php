@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '4';
+const AXISMUNDI_CAL_DB_VERSION        = '5';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 
 /** @return string Event envelope table name. */
@@ -30,6 +30,18 @@ function axismundi_cal_events_table() : string {
 function axismundi_cal_schedules_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_cal_schedules';
+}
+
+/** @return string Calendar collection table name. */
+function axismundi_cal_calendars_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_cal_calendars';
+}
+
+/** @return string Calendar membership table name. */
+function axismundi_cal_items_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_cal_calendar_items';
 }
 
 /** @return string Occurrence table name. */
@@ -157,6 +169,64 @@ function axismundi_cal_install_schema() : bool {
 			KEY start_utc (start_utc),
 			KEY schedule_start (schedule_id,start_utc),
 			KEY status (status)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	$calendars = axismundi_cal_calendars_table();
+	/*
+	 * A Calendar is its own resource, not a taxonomy term. A term is a classification -- what an
+	 * Event is about -- while a Calendar is a collection someone owns, publishes and may one day
+	 * share or subscribe to, with a timezone, a revision and its own subscription URL. The two axes
+	 * are independent: one Event belongs to several Calendars and carries its own categories, and
+	 * collapsing them would make either impossible to express.
+	 */
+	dbDelta(
+		"CREATE TABLE {$calendars} (
+			id bigint(20) unsigned NOT NULL auto_increment,
+			slug varchar(191) NOT NULL default '',
+			name text NOT NULL,
+			description longtext NOT NULL,
+			timezone varchar(64) NOT NULL default '',
+			visibility varchar(16) NOT NULL default 'public',
+			revision bigint(20) unsigned NOT NULL default 1,
+			owner_actor_uri text NOT NULL,
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY slug (slug),
+			KEY visibility (visibility)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	$items = axismundi_cal_items_table();
+	/*
+	 * Membership names what a member is rather than carrying one ambiguous reference column. A local
+	 * Event is identified by the canonical Object URI and its hash; a subscribed iCalendar entry
+	 * will be identified by its source and UID, which is a different kind of identity entirely and
+	 * must not be squeezed into the same column.
+	 *
+	 * `member_type` is also what decides federation. A member is publishable because this site is
+	 * the authority for it, never because it appears in a local Calendar -- otherwise subscribing to
+	 * someone else's feed would quietly turn their events into ours.
+	 *
+	 * `member_hash` keys the uniqueness, since the identifying tuple differs per member type and no
+	 * single column can be unique across all of them.
+	 */
+	dbDelta(
+		"CREATE TABLE {$items} (
+			id bigint(20) unsigned NOT NULL auto_increment,
+			calendar_id bigint(20) unsigned NOT NULL,
+			member_type varchar(24) NOT NULL default 'local_event',
+			member_hash char(64) NOT NULL default '',
+			object_uri text NOT NULL,
+			object_uri_hash char(64) NULL,
+			event_post_id bigint(20) unsigned NULL,
+			created_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY calendar_member (calendar_id,member_hash),
+			KEY calendar_id (calendar_id),
+			KEY event_post_id (event_post_id),
+			KEY object_uri_hash (object_uri_hash)
 		) ENGINE=InnoDB {$charset};"
 	);
 

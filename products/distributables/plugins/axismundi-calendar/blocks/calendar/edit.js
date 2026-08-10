@@ -32,6 +32,12 @@
 							{ label: __( 'Week', 'axismundi-calendar' ), value: 'week' }
 						],
 						onChange: function ( view ) { props.setAttributes( { view: view } ); }
+					} ),
+					el( C.TextControl, {
+						label: __( 'Calendar slug', 'axismundi-calendar' ),
+						help: __( 'Leave empty to show every event on the site.', 'axismundi-calendar' ),
+						value: props.attributes.calendar,
+						onChange: function ( slug ) { props.setAttributes( { calendar: slug } ); }
 					} )
 				)
 			);

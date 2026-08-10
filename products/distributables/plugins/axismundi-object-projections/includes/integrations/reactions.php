@@ -215,6 +215,21 @@ function axismundi_op_register_reaction_transformer() : void {
 			)
 		);
 	}
+}
+add_action( 'axismundi_op_register_transformers', 'axismundi_op_register_reaction_transformer' );
+
+/**
+ * Register the public Object interaction-collection routes.
+ *
+ * All three live here rather than beside their transformers because a REST route only exists if it
+ * is registered on `rest_api_init`. The transformer action is fired lazily and memoized on first
+ * projection use, which in a REST request is after routing has already been decided — a route
+ * registered from there is never dispatchable, and WordPress says so through `_doing_it_wrong`
+ * only when `WP_DEBUG` is on.
+ *
+ * @return void
+ */
+function axismundi_op_register_object_collection_routes() : void {
 	if ( function_exists( 'axismundi_act_get_effective_reactions' ) ) {
 		register_rest_route(
 			'axismundi/v1',
@@ -227,11 +242,6 @@ function axismundi_op_register_reaction_transformer() : void {
 			)
 		);
 	}
-}
-add_action( 'axismundi_op_register_transformers', 'axismundi_op_register_reaction_transformer' );
-
-/** Register the public Object likes route. */
-function axismundi_op_register_object_likes_route() : void {
 	if ( function_exists( 'axismundi_act_get_like_count' ) ) {
 		register_rest_route(
 			'axismundi/v1',
@@ -257,7 +267,7 @@ function axismundi_op_register_object_likes_route() : void {
 		);
 	}
 }
-add_action( 'rest_api_init', 'axismundi_op_register_object_likes_route' );
+add_action( 'rest_api_init', 'axismundi_op_register_object_collection_routes' );
 
 /** Serve one public local Object likes collection. */
 function axismundi_op_get_object_likes( WP_REST_Request $request ) {

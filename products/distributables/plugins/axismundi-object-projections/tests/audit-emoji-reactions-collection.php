@@ -192,6 +192,22 @@ try {
 	$ax_rx_note_shares_data = $ax_rx_note_shares_response instanceof WP_REST_Response ? $ax_rx_note_shares_response->get_data() : array();
 	ax_rx_assert( $ax_rx_results, 'each Note collection reports the ledger count for its own interaction kind', 1 === (int) ( $ax_rx_note_likes_data['totalItems'] ?? -1 ) && 1 === (int) ( $ax_rx_note_reactions_data['totalItems'] ?? -1 ) && 0 === (int) ( $ax_rx_note_shares_data['totalItems'] ?? -1 ) );
 
+	/*
+	 * The assertions above prove the collection is built correctly. They cannot see whether it is
+	 * reachable, and `emojiReactions` shipped unreachable -- advertised on every Object, answering
+	 * `rest_no_route` -- while every one of them passed.
+	 *
+	 * The registered-route table cannot see it either, not from here: the first
+	 * `register_rest_route()` call instantiates the server and fires `rest_api_init` itself, so
+	 * under WP-CLI a route registered from any earlier action still lands in the table. In a real
+	 * REST request the server already exists by then and the route is simply lost. What separates
+	 * the two is which action the registration hangs on, so that is what is asserted.
+	 */
+	ax_rx_assert( $ax_rx_results, 'the interaction-collection routes register on rest_api_init, not on the lazily-fired transformer action', false !== has_action( 'rest_api_init', 'axismundi_op_register_object_collection_routes' ) && false === has_action( 'axismundi_op_register_transformers', 'axismundi_op_register_object_collection_routes' ) );
+
+	$ax_rx_dispatched = rest_get_server()->dispatch( $ax_rx_note_reactions_request );
+	ax_rx_assert( $ax_rx_results, 'a dispatched emojiReactions request reaches its callback instead of rest_no_route', $ax_rx_dispatched instanceof WP_REST_Response && 200 === $ax_rx_dispatched->get_status() && 1 === (int) ( (array) $ax_rx_dispatched->get_data() )['totalItems'] );
+
 	$ax_rx_source = new Axismundi_OP_Object_Emoji_Reactions( $ax_rx_uri, get_post( $ax_rx_post ) );
 	$ax_rx_coll   = axismundi_op_object_emoji_reactions_transform( $ax_rx_source );
 	$ax_rx_items  = (array) ( $ax_rx_coll['orderedItems'] ?? array() );

@@ -3,6 +3,22 @@
 A transformer is a **pure projection** of one WordPress source into an ActivityStreams
 object (or collection). It performs no DB write, no network call, and owns no route.
 
+## Lifecycle ownership
+
+`axismundi_op_register_transformers` is intentionally lazy: it runs only when a
+projection is first needed. It may register Object Projections transformers and
+projection-time filters, but it must not register WordPress lifecycle resources.
+
+- REST endpoints belong on `rest_api_init`.
+- Rewrite rules, post types, taxonomies, blocks, and meta belong on their required
+  `init`-time hooks.
+- A route callback may load and use a transformer lazily; the route itself must be
+  registered before REST dispatch begins.
+
+This separation keeps protocol endpoints discoverable even when no Object has yet
+been transformed during the request, and avoids late-registration notices and
+missing routes on real HTTP requests.
+
 ## Registration
 
 ```php

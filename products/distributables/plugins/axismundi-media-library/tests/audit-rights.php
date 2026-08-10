@@ -31,6 +31,15 @@ $ax_created = array( 'atts' => array() );
 try {
 	$att = (int) wp_insert_attachment( array( 'post_title' => 'Photo', 'post_status' => 'inherit', 'post_mime_type' => 'image/jpeg' ) );
 	$ax_created['atts'] = array( $att );
+	wp_update_attachment_metadata(
+		$att,
+		array(
+			'file'   => '2026/07/photo.jpg',
+			'width'  => 640,
+			'height' => 480,
+			'sizes'  => array(),
+		)
+	);
 
 	// Condition matrix: [attribution, commercial, derivatives, share_alike, known]
 	$matrix = array(
@@ -87,11 +96,23 @@ try {
 	ax_rights_assert( $ax_results, 'generated Markdown and HTML attribution link work, creator, and license', false !== strpos( $formats['markdown'], '[Photo](https://example.com/photo)' ) && false !== strpos( $formats['markdown'], '[Alice](https://example.com/alice)' ) && false !== strpos( $formats['markdown'], '[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)' ) && false !== strpos( $formats['html'], '<a rel="noopener noreferrer" href="https://example.com/photo">Photo</a>' ) );
 
 	// Dynamic block: plugin-owned rights output + copyable attribution, once per page.
-	$_GET['post_id'] = $att; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Dev-only read fixture.
-	$rights_html = do_blocks( '<!-- wp:axismundi/media-rights /-->' );
+	$rights_block = parse_blocks( '<!-- wp:axismundi/media-rights /-->' );
+	$rights_html  = ( new WP_Block( $rights_block[0], array( 'postId' => $att, 'postType' => 'attachment' ) ) )->render();
 	ax_rights_assert( $ax_results, 'Media Rights block renders rich and Markdown attribution copy controls', false !== strpos( $rights_html, 'creativecommons.org/licenses/by/4.0' ) && false !== strpos( $rights_html, 'Alice' ) && false !== strpos( $rights_html, 'data-copy-html' ) && false !== strpos( $rights_html, 'data-copy-format="markdown"' ) );
-	ax_rights_assert( $ax_results, 'Media Rights block renders only once per page', '' === do_blocks( '<!-- wp:axismundi/media-rights /-->' ) );
-	unset( $_GET['post_id'], $GLOBALS['axismundi_media_rights_rendered'] );
+	ax_rights_assert( $ax_results, 'Media Rights block renders only once per page', '' === ( new WP_Block( $rights_block[0], array( 'postId' => $att, 'postType' => 'attachment' ) ) )->render() );
+	unset( $GLOBALS['axismundi_media_rights_rendered'] );
+
+	update_post_meta( $att, '_ax_media_visibility', 'private' );
+	$previous_user  = get_current_user_id();
+	wp_set_current_user( 0 );
+	$private_rights = ( new WP_Block( $rights_block[0], array( 'postId' => $att, 'postType' => 'attachment' ) ) )->render();
+	ax_rights_assert( $ax_results, 'Media Rights remains hidden when a private Attachment reaches the block context', '' === $private_rights );
+	unset( $GLOBALS['axismundi_media_rights_rendered'] );
+
+	$preview_block = parse_blocks( '<!-- wp:axismundi/media-preview /-->' );
+	$private_preview = ( new WP_Block( $preview_block[0], array( 'postId' => $att, 'postType' => 'attachment' ) ) )->render();
+	ax_rights_assert( $ax_results, 'Media Preview remains hidden when a private Attachment reaches the block context', '' === $private_preview );
+	wp_set_current_user( $previous_user );
 
 } finally {
 	foreach ( $ax_created['atts'] as $ax_a ) {

@@ -426,6 +426,23 @@ function axismundi_media_federation_rendition_diagnostics( int $attachment_id ) 
 	);
 }
 
+/**
+ * Restrict federation diagnostics to users who may edit the attachment.
+ *
+ * Public renditions do not make the source metadata and policy decisions used
+ * to produce them public diagnostic information.
+ *
+ * @param WP_REST_Request $request REST request.
+ * @return bool Whether the current user may inspect the attachment.
+ */
+function axismundi_media_federation_can_view_diagnostics( WP_REST_Request $request ) : bool {
+	$attachment_id = (int) $request['id'];
+
+	return $attachment_id > 0
+		&& 'attachment' === get_post_type( $attachment_id )
+		&& current_user_can( 'edit_post', $attachment_id );
+}
+
 /** Register the authenticated federation-rendition diagnostic endpoint. */
 function axismundi_media_register_federation_diagnostic_route() : void {
 	register_rest_route(
@@ -438,12 +455,9 @@ function axismundi_media_register_federation_diagnostic_route() : void {
 				if ( 'attachment' !== get_post_type( $attachment_id ) ) {
 					return new WP_Error( 'ax_media_diagnostic_not_found', __( 'The attachment was not found.', 'axismundi-media-library' ), array( 'status' => 404 ) );
 				}
-				if ( ! current_user_can( 'upload_files' ) && ! axismundi_media_federation_renditions_allowed( $attachment_id ) ) {
-					return new WP_Error( 'ax_media_diagnostic_not_found', __( 'The attachment was not found.', 'axismundi-media-library' ), array( 'status' => 404 ) );
-				}
 				return rest_ensure_response( axismundi_media_federation_rendition_diagnostics( $attachment_id ) );
 			},
-			'permission_callback' => '__return_true',
+			'permission_callback' => 'axismundi_media_federation_can_view_diagnostics',
 			'args'                => array( 'id' => array( 'required' => true, 'type' => 'integer', 'minimum' => 1 ) ),
 		)
 	);

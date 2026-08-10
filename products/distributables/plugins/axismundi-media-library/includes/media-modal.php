@@ -117,6 +117,7 @@ function axismundi_media_enqueue_modal_folders() : void {
 			'saveError'   => __( 'The location could not be saved.', 'axismundi-media-library' ),
 			'moving'      => __( 'Moving media…', 'axismundi-media-library' ),
 			'moved'       => __( 'Media successfully moved.', 'axismundi-media-library' ),
+			/* translators: 1: Number of media items moved. 2: Number of media items not moved. */
 			'partiallyMoved' => __( '%1$d media item(s) moved; %2$d could not be moved.', 'axismundi-media-library' ),
 			'moveError'   => __( 'The media could not be moved.', 'axismundi-media-library' ),
 			'movingFolder' => __( 'Moving folder…', 'axismundi-media-library' ),

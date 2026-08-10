@@ -7,10 +7,13 @@
  */
 
 defined( 'ABSPATH' ) || exit( 1 );
+require_once ABSPATH . 'wp-admin/includes/user.php'; // wp_delete_user
 
 global $wpdb;
 $ax_fed_results = array();
 $ax_fed_ids     = array();
+$ax_fed_users   = array();
+$ax_fed_user    = get_current_user_id();
 
 /**
  * @param array  $results Accumulator.
@@ -31,9 +34,14 @@ function ax_fed_assert( array &$results, string $label, bool $cond ) : void {
  * @param array<string,array>       $sizes `sizes` metadata.
  * @return int Attachment ID.
  */
-function ax_fed_attachment( string $mime, array $sizes ) : int {
+function ax_fed_attachment( string $mime, array $sizes, int $author = 0 ) : int {
 	$id = (int) wp_insert_attachment(
-		array( 'post_title' => 'ax fed probe', 'post_mime_type' => $mime, 'post_status' => 'inherit' ),
+		array(
+			'post_title'     => 'ax fed probe',
+			'post_mime_type' => $mime,
+			'post_status'    => 'inherit',
+			'post_author'    => $author,
+		),
 		'2026/07/ax-fed-probe.jpg'
 	);
 	wp_update_attachment_metadata( $id, array( 'file' => '2026/07/ax-fed-probe.jpg', 'width' => 4000, 'height' => 3000, 'sizes' => $sizes ) );
@@ -203,8 +211,43 @@ try {
 	wp_set_current_user( $previous_user );
 	ax_fed_assert(
 		$ax_fed_results,
-		'anonymous diagnostics are limited to media already eligible for public federation',
-		200 === $public_diagnostic->get_status() && 404 === $private_diagnostic->get_status()
+		'anonymous requests cannot inspect diagnostics, including for publicly federated media',
+		in_array( $public_diagnostic->get_status(), array( 401, 403 ), true ) && in_array( $private_diagnostic->get_status(), array( 401, 403 ), true )
+	);
+
+	$ax_fed_owner = (int) wp_insert_user(
+		array(
+			'user_login' => 'ax-fed-owner-' . wp_generate_password( 12, false, false ),
+			'user_pass'  => wp_generate_password(),
+			'role'        => 'author',
+		)
+	);
+	$ax_fed_other = (int) wp_insert_user(
+		array(
+			'user_login' => 'ax-fed-other-' . wp_generate_password( 12, false, false ),
+			'user_pass'  => wp_generate_password(),
+			'role'        => 'author',
+		)
+	);
+	$ax_fed_users = array_filter( array( $ax_fed_owner, $ax_fed_other ) );
+	$diagnostic_attachment = ax_fed_attachment( 'image/jpeg', array(), $ax_fed_owner );
+	$ax_fed_ids[]          = $diagnostic_attachment;
+	$ax_fed_admins         = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ids' ) );
+	$ax_fed_admin          = $ax_fed_admins ? (int) $ax_fed_admins[0] : 0;
+
+	wp_set_current_user( $ax_fed_other );
+	$foreign_diagnostic = rest_do_request( '/axismundi/v1/media/' . $diagnostic_attachment . '/federation-diagnostics' );
+	wp_set_current_user( $ax_fed_owner );
+	$owner_diagnostic = rest_do_request( '/axismundi/v1/media/' . $diagnostic_attachment . '/federation-diagnostics' );
+	wp_set_current_user( $ax_fed_admin );
+	$admin_diagnostic = rest_do_request( '/axismundi/v1/media/' . $diagnostic_attachment . '/federation-diagnostics' );
+	wp_set_current_user( $previous_user );
+	ax_fed_assert(
+		$ax_fed_results,
+		'diagnostics enforce attachment ownership while allowing the owner and an administrator',
+		in_array( $foreign_diagnostic->get_status(), array( 401, 403 ), true )
+			&& 200 === $owner_diagnostic->get_status()
+			&& 200 === $admin_diagnostic->get_status()
 	);
 
 	// Duplicate dimensions collapse.
@@ -241,8 +284,12 @@ try {
 	ax_fed_assert( $ax_fed_results, 'a missing or non-attachment id returns nothing', array() === axismundi_media_federation_renditions( 0 ) && array() === axismundi_media_federation_renditions( 999999999 ) );
 
 } finally {
+	wp_set_current_user( $ax_fed_user );
 	foreach ( array_unique( $ax_fed_ids ) as $id ) {
 		wp_delete_attachment( (int) $id, true );
+	}
+	foreach ( $ax_fed_users as $user_id ) {
+		wp_delete_user( (int) $user_id );
 	}
 }
 

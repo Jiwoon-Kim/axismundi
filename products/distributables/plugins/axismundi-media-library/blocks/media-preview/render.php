@@ -9,10 +9,17 @@ defined( 'ABSPATH' ) || exit;
 
 $axismundi_media_preview_id = (int) ( $block->context['postId'] ?? 0 );
 if ( ! $axismundi_media_preview_id && isset( $_GET['post_id'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only editor preview context.
-	$axismundi_media_preview_id = absint( $_GET['post_id'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	$axismundi_media_preview_candidate = absint( wp_unslash( $_GET['post_id'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only preview candidate is authorized below.
+	if ( $axismundi_media_preview_candidate && current_user_can( 'edit_post', $axismundi_media_preview_candidate ) ) {
+		$axismundi_media_preview_id = $axismundi_media_preview_candidate;
+	}
 }
 
-if ( ! $axismundi_media_preview_id || 'attachment' !== get_post_type( $axismundi_media_preview_id ) ) {
+if (
+	! $axismundi_media_preview_id
+	|| 'attachment' !== get_post_type( $axismundi_media_preview_id )
+	|| ! axismundi_media_can_view_single( $axismundi_media_preview_id )
+) {
 	return;
 }
 

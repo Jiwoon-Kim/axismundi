@@ -20,6 +20,7 @@ defined( 'ABSPATH' ) || exit( 1 );
 global $wpdb;
 $ax_rg_results = array();
 $ax_rg_posts   = array();
+$ax_rg_calendars = array();
 
 /** @param bool[] $results Results. */
 function ax_rg_assert( array &$results, string $label, bool $condition ) : void {
@@ -34,6 +35,8 @@ function ax_rg_starts( array $occurrences ) : array {
 }
 
 try {
+	$ax_rg_calendar = axismundi_cal_calendar_save( array( 'name' => 'Range calendar', 'slug' => 'audit-range', 'timezone' => 'Asia/Seoul' ) );
+	$ax_rg_calendars[] = (int) $ax_rg_calendar;
 	$ax_rg_post = (int) wp_insert_post(
 		array( 'post_type' => AXISMUNDI_CAL_EVENT_POST_TYPE, 'post_status' => 'draft', 'post_author' => 1, 'post_title' => 'Range fixture' )
 	);
@@ -46,7 +49,7 @@ try {
 	 */
 	$ax_rg_saved = axismundi_cal_event_save(
 		$ax_rg_post,
-		array( 'timezone' => 'Asia/Seoul', 'starts_at' => '2026-08-01 19:00:00', 'ends_at' => '2026-08-01 21:00:00', 'rrule' => 'FREQ=WEEKLY;BYDAY=SA' )
+		array( 'calendar_id' => (int) $ax_rg_calendar, 'timezone' => 'Asia/Seoul', 'starts_at' => '2026-08-01 19:00:00', 'ends_at' => '2026-08-01 21:00:00', 'rrule' => 'FREQ=WEEKLY;BYDAY=SA' )
 	);
 	$ax_rg_id = (int) ( axismundi_cal_schedule_for_event( $ax_rg_post )['id'] ?? 0 );
 	ax_rg_assert( $ax_rg_results, 'an unbounded weekly Schedule saves', true === $ax_rg_saved && $ax_rg_id > 0 );
@@ -170,7 +173,7 @@ try {
 	$ax_rg_posts[] = $ax_rg_single;
 	axismundi_cal_event_save(
 		$ax_rg_single,
-		array( 'timezone' => 'Asia/Seoul', 'starts_at' => '2026-08-01 19:00:00', 'ends_at' => '2026-08-01 21:00:00' )
+		array( 'calendar_id' => (int) $ax_rg_calendar, 'timezone' => 'Asia/Seoul', 'starts_at' => '2026-08-01 19:00:00', 'ends_at' => '2026-08-01 21:00:00' )
 	);
 	$GLOBALS['axismundi_cal_rest_write'] = true;
 	wp_update_post( array( 'ID' => $ax_rg_single, 'post_status' => 'publish' ) );
@@ -195,6 +198,9 @@ try {
 		}
 		$wpdb->delete( axismundi_cal_events_table(), array( 'post_id' => (int) $ax_rg_post_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		wp_delete_post( (int) $ax_rg_post_id, true );
+	}
+	foreach ( array_unique( $ax_rg_calendars ) as $ax_rg_calendar_id ) {
+		axismundi_cal_calendar_delete( (int) $ax_rg_calendar_id );
 	}
 }
 

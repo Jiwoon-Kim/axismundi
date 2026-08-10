@@ -62,7 +62,7 @@ try {
 	ax_ca_assert( $ax_ca_results, 'the current user resolves to an Actor URI when this site has Actors', '' !== $ax_ca_uri );
 
 	$ax_ca_mine = axismundi_cal_calendar_save(
-		array( 'name' => 'Mine', 'slug' => 'ax-ca-mine', 'owner_actor_uri' => $ax_ca_uri )
+		array( 'name' => 'Mine', 'slug' => 'ax-ca-mine', 'timezone' => 'Asia/Seoul', 'owner_actor_uri' => $ax_ca_uri )
 	);
 	ax_ca_assert( $ax_ca_results, 'a calendar is created with an owner', is_int( $ax_ca_mine ) && $ax_ca_mine > 0 );
 	$ax_ca_calendars[] = (int) $ax_ca_mine;
@@ -88,7 +88,7 @@ try {
 
 	// -- An unowned calendar is moderator-only ------------------------------------------------------
 
-	$ax_ca_orphan = axismundi_cal_calendar_save( array( 'name' => 'Orphan', 'slug' => 'ax-ca-orphan', 'owner_actor_uri' => '' ) );
+	$ax_ca_orphan = axismundi_cal_calendar_save( array( 'name' => 'Orphan', 'slug' => 'ax-ca-orphan', 'timezone' => 'Asia/Seoul', 'owner_actor_uri' => '' ) );
 	$ax_ca_calendars[] = (int) $ax_ca_orphan;
 	$ax_ca_orphan_row  = axismundi_cal_calendar_get( (int) $ax_ca_orphan );
 
@@ -133,6 +133,12 @@ try {
 		'showing each calendar\'s subscription address, which is the thing people came for',
 		str_contains( $ax_ca_html, '/calendar/ax-ca-mine.ics' )
 	);
+	ax_ca_assert( $ax_ca_results, 'it offers a public ICS URL subscription flow alongside local Calendar creation', str_contains( $ax_ca_html, 'name="action" value="ax_cal_subscribe_calendar"' ) && str_contains( $ax_ca_html, 'name="source_url"' ) );
+	ax_ca_assert( $ax_ca_results, 'each Calendar has a human View link as well as its file address', str_contains( $ax_ca_html, '/calendar/ax-ca-mine/' ) && axismundi_cal_calendar_url( $ax_ca_row ) === home_url( '/calendar/ax-ca-mine/' ) );
+	axismundi_cal_register_ics_routes();
+	flush_rewrite_rules( false );
+	$ax_ca_rules = (array) get_option( 'rewrite_rules', array() );
+	ax_ca_assert( $ax_ca_results, 'the View link is backed by a calendar page rewrite rule, rather than a URL that only looks real', in_array( 'index.php?ax_cal_page=1&ax_cal_slug=$matches[1]', $ax_ca_rules, true ) );
 
 	/*
 	 * The owner field is editable only by a moderator. An author editing their own calendar must not

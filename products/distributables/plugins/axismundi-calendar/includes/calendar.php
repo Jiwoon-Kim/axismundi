@@ -2,18 +2,16 @@
 /**
  * The Calendar collection.
  *
- * A Calendar is a set of Events someone publishes, and a resource in its own right: it has a name,
- * a timezone, a subscription URL and a revision. It is not a taxonomy term and not a post type. A
- * term classifies what an Event is about; a Calendar is a collection an Event belongs to, and the
- * two axes are independent -- one Event sits in several Calendars while carrying its own
- * categories, and neither can express the other.
+ * A Calendar is the one home of an Event and a resource in its own right: it has a name, a
+ * timezone, a subscription URL and a revision. It is not a taxonomy term and not a post type. A
+ * term classifies what an Event is about; a Calendar establishes where it is scheduled.
  *
  * Membership is by series, not by occurrence. A weekly meeting is one member however many times it
  * meets, and an annual birthday is one member forever. Storing occurrences as members would make a
  * Calendar grow without bound for a rule that never ends, which is the same reason iCalendar export
  * writes rules rather than expansions.
  *
- * `revision` moves whenever the membership or the Calendar's own fields change. It is not a
+ * `revision` moves whenever the Calendar's own fields or its Event assignment changes. It is not a
  * substitute for the feed's entity tag -- that is a hash of the document, which also moves when an
  * Event inside changes or the rolling window turns over -- but it gives the collection something
  * cheap to compare without serializing it.
@@ -22,9 +20,6 @@
  */
 
 defined( 'ABSPATH' ) || exit;
-
-/** Member kinds. Only local Events can be authored today; the rest arrive with the providers. */
-const AXISMUNDI_CAL_MEMBER_LOCAL_EVENT = 'local_event';
 
 /**
  * A Calendar by slug.
@@ -42,6 +37,32 @@ function axismundi_cal_calendar_by_slug( string $slug ) : ?array {
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
 	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE slug = %s", $slug ), ARRAY_A );
 	return is_array( $row ) ? $row : null;
+}
+
+/**
+ * The human-readable address of a Calendar.
+ *
+ * @param array<string,mixed> $calendar Calendar row.
+ * @return string
+ */
+function axismundi_cal_calendar_url( array $calendar ) : string {
+	return home_url( '/calendar/' . rawurlencode( (string) $calendar['slug'] ) . '/' );
+}
+
+/**
+ * The local iCalendar subscription address of a Calendar.
+ *
+ * Remote Calendars intentionally have no re-export URL: this instance is a cache, not their
+ * authority. Callers receive an empty string for that case.
+ *
+ * @param array<string,mixed> $calendar Calendar row.
+ * @return string
+ */
+function axismundi_cal_calendar_ics_url( array $calendar ) : string {
+	if ( 'local' !== (string) $calendar['kind'] ) {
+		return '';
+	}
+	return home_url( '/calendar/' . rawurlencode( (string) $calendar['slug'] ) . '.ics' );
 }
 
 /**
@@ -84,10 +105,10 @@ function axismundi_cal_viewer_timezone() : DateTimeZone {
 /**
  * The timezone a Calendar names as its own.
  *
- * Metadata about where the calendar belongs, not an instruction about how to display it: it is the
- * sensible default when authoring a new Event on that calendar, and what a subscription feed
- * declares as its home zone. It never overrides an Event's own zone and never decides what a reader
- * sees.
+ * This is the default timezone for an Event authored on this Calendar and what a subscription feed
+ * declares as its home zone. It never decides what a reader sees. An Event may retain an explicit
+ * timezone override for a genuine cross-region event or for legacy data, but a new Event starts
+ * from this named place rather than an arbitrary site offset.
  *
  * @param array<string,mixed>|null $calendar Calendar row, or null.
  * @return string IANA identifier, or ''.
@@ -127,22 +148,17 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 		return new WP_Error( 'ax_cal_slug_taken', __( 'Another calendar already uses that slug.', 'axismundi-calendar' ), array( 'status' => 409 ) );
 	}
 
-	/*
-	 * A Calendar's timezone is a display default, not a fact about any Event -- each Event carries
-	 * its own -- so it is optional and an unusable one is dropped rather than fatal.
-	 *
-	 * The default cannot simply be `wp_timezone_string()`: a site configured with a manual UTC
-	 * offset returns `+09:00`, which is not an IANA identifier and fails this very check. Refusing
-	 * there would make creating a calendar impossible on such a site, with an error blaming a
-	 * timezone the author never typed.
-	 */
-	$given    = array_key_exists( 'timezone', $fields );
-	$timezone = (string) ( $fields['timezone'] ?? ( $existing['timezone'] ?? wp_timezone_string() ) );
-	if ( '' !== $timezone && ! in_array( $timezone, timezone_identifiers_list(), true ) ) {
-		if ( $given ) {
-			return new WP_Error( 'ax_cal_timezone', __( 'The timezone must be an IANA identifier.', 'axismundi-calendar' ), array( 'status' => 400 ) );
-		}
-		$timezone = '';
+	$kind = (string) ( $fields['kind'] ?? ( $existing['kind'] ?? 'local' ) );
+	if ( ! in_array( $kind, array( 'local', 'remote' ), true ) ) {
+		return new WP_Error( 'ax_cal_kind', __( 'A calendar must be local or remote.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+	if ( is_array( $existing ) && $kind !== (string) $existing['kind'] ) {
+		return new WP_Error( 'ax_cal_kind', __( 'A calendar cannot change between local and remote.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+
+	$timezone = trim( (string) ( $fields['timezone'] ?? ( $existing['timezone'] ?? '' ) ) );
+	if ( '' === $timezone || ! in_array( $timezone, timezone_identifiers_list(), true ) ) {
+		return new WP_Error( 'ax_cal_timezone', __( 'A calendar needs an IANA timezone such as Asia/Seoul.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
 
 	/*
@@ -158,6 +174,7 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 		'name'           => $name,
 		'description'    => (string) ( $fields['description'] ?? ( $existing['description'] ?? '' ) ),
 		'timezone'       => $timezone,
+		'kind'           => $kind,
 		'visibility'     => $visibility,
 		'owner_actor_uri' => (string) ( $fields['owner_actor_uri'] ?? ( $existing['owner_actor_uri'] ?? '' ) ),
 		'updated_at'     => $now,
@@ -183,10 +200,11 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 }
 
 /**
- * Delete a Calendar and its membership.
+ * Delete a local Calendar and the Events it owns.
  *
- * The Events themselves are untouched. A Calendar is a collection, so removing it removes a way of
- * grouping Events and nothing else -- deleting the contents would make the two concepts one again.
+ * A Calendar is the home of its Events. Deleting it therefore deletes that local content rather
+ * than leaving unfiled schedules that can appear on some later page by accident. A remote Calendar
+ * is removed together with its source by `axismundi_cal_remove_source()`.
  *
  * @param int $calendar_id Calendar id.
  * @return bool
@@ -196,95 +214,26 @@ function axismundi_cal_calendar_delete( int $calendar_id ) : bool {
 	if ( $calendar_id <= 0 || ! axismundi_cal_ready() ) {
 		return false;
 	}
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	$wpdb->delete( axismundi_cal_items_table(), array( 'calendar_id' => $calendar_id ) );
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	return false !== $wpdb->delete( axismundi_cal_calendars_table(), array( 'id' => $calendar_id ) );
-}
-
-/**
- * The stable key for one membership.
- *
- * Derived from what identifies the member, which differs by kind: a local Event is its Object URI,
- * while a subscribed entry will be its source and UID. Hashing the pair keeps one unique key over
- * identities that have nothing structurally in common.
- *
- * @param string $member_type Member kind.
- * @param string $identity    Identifying string for that kind.
- * @return string
- */
-function axismundi_cal_member_hash( string $member_type, string $identity ) : string {
-	return hash( 'sha256', $member_type . "\n" . $identity );
-}
-
-/**
- * Add a local Event to a Calendar.
- *
- * Idempotent: adding the same Event twice leaves one membership, so a repeated request or a retried
- * import cannot produce a Calendar that lists an Event several times.
- *
- * @param int $calendar_id Calendar id.
- * @param int $post_id     Event post id.
- * @return true|WP_Error
- */
-function axismundi_cal_add_event( int $calendar_id, int $post_id ) {
-	global $wpdb;
-	if ( ! axismundi_cal_ready() ) {
-		return new WP_Error( 'ax_cal_store', __( 'The calendar store is unavailable.', 'axismundi-calendar' ) );
-	}
-	if ( null === axismundi_cal_calendar_get( $calendar_id ) ) {
-		return new WP_Error( 'ax_cal_missing', __( 'That calendar does not exist.', 'axismundi-calendar' ), array( 'status' => 404 ) );
-	}
-	$post = get_post( $post_id );
-	if ( ! $post instanceof WP_Post || AXISMUNDI_CAL_EVENT_POST_TYPE !== $post->post_type ) {
-		return new WP_Error( 'ax_event_post', __( 'An Event post is required.', 'axismundi-calendar' ), array( 'status' => 400 ) );
-	}
-
-	$uri = function_exists( 'axismundi_cal_event_object_uri' ) ? axismundi_cal_event_object_uri( $post ) : '';
-	if ( '' === $uri ) {
-		// The Object URI is the member's identity. Falling back to the post id would make membership
-		// meaningless the moment a member is something other than a local post.
-		return new WP_Error( 'ax_cal_identity', __( 'That Event has no canonical address yet.', 'axismundi-calendar' ), array( 'status' => 400 ) );
-	}
-
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	$wpdb->replace(
-		axismundi_cal_items_table(),
-		array(
-			'calendar_id'     => $calendar_id,
-			'member_type'     => AXISMUNDI_CAL_MEMBER_LOCAL_EVENT,
-			'member_hash'     => axismundi_cal_member_hash( AXISMUNDI_CAL_MEMBER_LOCAL_EVENT, $uri ),
-			'object_uri'      => $uri,
-			'object_uri_hash' => hash( 'sha256', $uri ),
-			'event_post_id'   => (int) $post->ID,
-			'created_at'      => current_time( 'mysql', true ),
-		)
-	);
-	axismundi_cal_bump_revision( $calendar_id );
-	return true;
-}
-
-/**
- * Remove a local Event from a Calendar.
- *
- * @param int $calendar_id Calendar id.
- * @param int $post_id     Event post id.
- * @return bool
- */
-function axismundi_cal_remove_event( int $calendar_id, int $post_id ) : bool {
-	global $wpdb;
-	if ( ! axismundi_cal_ready() ) {
+	$calendar = axismundi_cal_calendar_get( $calendar_id );
+	// A remote Calendar is the representation of one source. Deleting it independently would leave
+	// the source and its cache pointing at a Calendar that no longer exists.
+	if ( ! is_array( $calendar ) || 'remote' === (string) $calendar['kind'] ) {
 		return false;
 	}
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	$removed = $wpdb->delete(
-		axismundi_cal_items_table(),
-		array( 'calendar_id' => $calendar_id, 'event_post_id' => $post_id, 'member_type' => AXISMUNDI_CAL_MEMBER_LOCAL_EVENT )
-	);
-	if ( $removed ) {
-		axismundi_cal_bump_revision( $calendar_id );
+	foreach ( axismundi_cal_calendar_event_ids( $calendar_id ) as $event_id ) {
+		$post = get_post( $event_id );
+		if ( $post instanceof WP_Post ) {
+			if ( ! wp_delete_post( $event_id, true ) ) {
+				return false;
+			}
+		} else {
+			// A missing post is stale local projection data, not a reason to preserve an otherwise
+			// undeletable Calendar.
+			axismundi_cal_forget_deleted_event( $event_id );
+		}
 	}
-	return (bool) $removed;
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+	return false !== $wpdb->delete( axismundi_cal_calendars_table(), array( 'id' => $calendar_id ) );
 }
 
 /**
@@ -301,11 +250,7 @@ function axismundi_cal_bump_revision( int $calendar_id ) : void {
 }
 
 /**
- * The Event post ids a Calendar contains.
- *
- * Only members this site is the authority for. A subscribed entry appearing in a local Calendar is
- * a thing to display, never a thing to publish, and keeping that decision here means no caller has
- * to remember it.
+ * The Event post ids a local Calendar owns.
  *
  * @param int $calendar_id Calendar id.
  * @return int[]
@@ -315,48 +260,32 @@ function axismundi_cal_calendar_event_ids( int $calendar_id ) : array {
 	if ( $calendar_id <= 0 || ! axismundi_cal_ready() ) {
 		return array();
 	}
-	$table = axismundi_cal_items_table();
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- membership lookup in this plugin's own table.
+	$table = axismundi_cal_schedules_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- ownership lookup in this plugin's own table.
 	return array_map(
 		'intval',
 		(array) $wpdb->get_col(
 			$wpdb->prepare(
-				"SELECT event_post_id FROM {$table} WHERE calendar_id = %d AND member_type = %s AND event_post_id IS NOT NULL",
-				$calendar_id,
-				AXISMUNDI_CAL_MEMBER_LOCAL_EVENT
+				"SELECT event_post_id FROM {$table} WHERE calendar_id = %d",
+				$calendar_id
 			)
 		)
 	);
 }
 
 /**
- * The Calendars one Event belongs to.
+ * The Calendar one Event belongs to.
  *
  * @param int $post_id Event post id.
  * @return array<int,array<string,mixed>>
  */
-function axismundi_cal_event_calendars( int $post_id ) : array {
-	global $wpdb;
-	if ( $post_id <= 0 || ! axismundi_cal_ready() ) {
-		return array();
-	}
-	$calendars = axismundi_cal_calendars_table();
-	$items     = axismundi_cal_items_table();
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- membership lookup in this plugin's own tables.
-	return (array) $wpdb->get_results(
-		$wpdb->prepare(
-			"SELECT c.* FROM {$calendars} c INNER JOIN {$items} i ON i.calendar_id = c.id WHERE i.event_post_id = %d ORDER BY c.name ASC",
-			$post_id
-		),
-		ARRAY_A
-	);
+function axismundi_cal_calendar_for_event( int $post_id ) : ?array {
+	$schedule = axismundi_cal_schedule_for_event( $post_id );
+	return is_array( $schedule ) ? axismundi_cal_calendar_get( (int) $schedule['calendar_id'] ) : null;
 }
 
 /**
- * Drop memberships when the Event they point at is deleted.
- *
- * Otherwise a Calendar keeps counting a member that no longer exists, and the count is the one thing
- * a collection is expected to be right about.
+ * Drop the Schedule when its Event is deleted.
  *
  * @param int $post_id Post id.
  * @return void
@@ -366,11 +295,14 @@ function axismundi_cal_forget_deleted_event( int $post_id ) : void {
 	if ( ! axismundi_cal_ready() ) {
 		return;
 	}
-	$affected = axismundi_cal_event_calendars( $post_id );
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	$wpdb->delete( axismundi_cal_items_table(), array( 'event_post_id' => $post_id ) );
-	foreach ( $affected as $calendar ) {
-		axismundi_cal_bump_revision( (int) $calendar['id'] );
+	$schedule = axismundi_cal_schedule_for_event( $post_id );
+	if ( ! is_array( $schedule ) ) {
+		return;
 	}
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own tables.
+	$wpdb->delete( axismundi_cal_occurrences_table(), array( 'schedule_id' => (int) $schedule['id'] ) );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+	$wpdb->delete( axismundi_cal_schedules_table(), array( 'id' => (int) $schedule['id'] ) );
+	axismundi_cal_bump_revision( (int) $schedule['calendar_id'] );
 }
 add_action( 'deleted_post', 'axismundi_cal_forget_deleted_event', 10, 1 );

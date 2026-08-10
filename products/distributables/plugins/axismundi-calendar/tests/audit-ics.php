@@ -18,6 +18,7 @@ defined( 'ABSPATH' ) || exit( 1 );
 global $wpdb;
 $ax_ics_results = array();
 $ax_ics_posts   = array();
+$ax_ics_calendars = array();
 
 /** @param bool[] $results Results. */
 function ax_ics_assert( array &$results, string $label, bool $condition ) : void {
@@ -30,7 +31,7 @@ function ax_ics_assert( array &$results, string $label, bool $condition ) : void
 function ax_ics_event( array &$posts, string $title, array $fields ) : int {
 	$id      = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_CAL_EVENT_POST_TYPE, 'post_status' => 'draft', 'post_author' => 1, 'post_title' => $title ) );
 	$posts[] = $id;
-	axismundi_cal_event_save( $id, $fields );
+	axismundi_cal_event_save( $id, array_merge( array( 'calendar_id' => (int) $GLOBALS['ax_ics_calendar'] ), $fields ) );
 	$GLOBALS['axismundi_cal_rest_write'] = true;
 	wp_update_post( array( 'ID' => $id, 'post_status' => 'publish' ) );
 	$GLOBALS['axismundi_cal_rest_write'] = false;
@@ -38,6 +39,9 @@ function ax_ics_event( array &$posts, string $title, array $fields ) : int {
 }
 
 try {
+	$ax_ics_calendar = axismundi_cal_calendar_save( array( 'name' => 'ICS calendar', 'slug' => 'audit-ics', 'timezone' => 'America/New_York' ) );
+	$GLOBALS['ax_ics_calendar'] = (int) $ax_ics_calendar;
+	$ax_ics_calendars[] = (int) $ax_ics_calendar;
 	// -- Escaping and folding, which fail only for particular text ---------------------------
 
 	ax_ics_assert( $ax_ics_results, 'commas and semicolons are escaped, since both separate values in iCalendar', 'a\\, b\\; c' === axismundi_cal_ics_escape( 'a, b; c' ) );
@@ -207,6 +211,9 @@ try {
 		}
 		$wpdb->delete( axismundi_cal_events_table(), array( 'post_id' => (int) $ax_ics_post_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		wp_delete_post( (int) $ax_ics_post_id, true );
+	}
+	foreach ( array_unique( $ax_ics_calendars ) as $ax_ics_calendar_id ) {
+		axismundi_cal_calendar_delete( (int) $ax_ics_calendar_id );
 	}
 }
 

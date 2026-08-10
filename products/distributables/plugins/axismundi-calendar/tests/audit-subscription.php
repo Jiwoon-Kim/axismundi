@@ -141,17 +141,14 @@ try {
 
 	// -- The URL guard -----------------------------------------------------------------------------
 
-	$ax_sb_cal = axismundi_cal_calendar_save( array( 'name' => 'Subscribed', 'slug' => 'ax-sb-cal' ) );
-	$ax_sb_calendars[] = (int) $ax_sb_cal;
-
 	foreach ( array( 'http://127.0.0.1/cal.ics', 'http://localhost/cal.ics', 'http://169.254.169.254/latest/meta-data/', 'http://10.0.0.5/cal.ics' ) as $ax_sb_bad ) {
 		ax_sb_assert(
 			$ax_sb_results,
 			sprintf( 'a subscription to %s is refused, since this server would be the one fetching it', $ax_sb_bad ),
-			is_wp_error( axismundi_cal_add_source( (int) $ax_sb_cal, $ax_sb_bad ) )
+			is_wp_error( axismundi_cal_subscribe_url( $ax_sb_bad ) )
 		);
 	}
-	ax_sb_assert( $ax_sb_results, 'and so is a non-HTTP scheme', is_wp_error( axismundi_cal_add_source( (int) $ax_sb_cal, 'file:///etc/passwd' ) ) );
+	ax_sb_assert( $ax_sb_results, 'and so is a non-HTTP scheme', is_wp_error( axismundi_cal_subscribe_url( 'file:///etc/passwd' ) ) );
 	ax_sb_assert(
 		$ax_sb_results,
 		'a name that does not resolve is refused rather than allowed through unchecked',
@@ -163,11 +160,14 @@ try {
 	 * is not evidence about the code.
 	 */
 	$ax_sb_public = 'https://93.184.216.34/calendar.ics';
-	ax_sb_assert( $ax_sb_results, 'while an ordinary public address is accepted', is_int( axismundi_cal_add_source( (int) $ax_sb_cal, $ax_sb_public ) ) );
+	$ax_sb_cal = (int) axismundi_cal_subscribe_url( $ax_sb_public );
+	$ax_sb_calendars[] = $ax_sb_cal;
+	ax_sb_assert( $ax_sb_results, 'while an ordinary public address becomes a remote Calendar', $ax_sb_cal > 0 && 'remote' === (string) axismundi_cal_calendar_get( $ax_sb_cal )['kind'] );
 
-	$ax_sb_source = (int) axismundi_cal_add_source( (int) $ax_sb_cal, $ax_sb_public );
-	ax_sb_assert( $ax_sb_results, 'adding the same address twice is one subscription, not two', 1 === count( axismundi_cal_sources_for_calendar( (int) $ax_sb_cal ) ) );
+	ax_sb_assert( $ax_sb_results, 'adding the same address twice resolves to one instance-wide Calendar cache', $ax_sb_cal === (int) axismundi_cal_subscribe_url( $ax_sb_public ) );
+	$ax_sb_source = (int) axismundi_cal_source_for_calendar( $ax_sb_cal )['id'];
 	ax_sb_assert( $ax_sb_results, 'a subscription records that this site is not its authority', 'remote' === (string) axismundi_cal_source_get( $ax_sb_source )['authority'] );
+	ax_sb_assert( $ax_sb_results, 'a remote Calendar cannot be deleted independently of its source', ! axismundi_cal_calendar_delete( $ax_sb_cal ) && null !== axismundi_cal_source_get( $ax_sb_source ) );
 
 	// -- Storing a snapshot, and what happens when an entry leaves it ---------------------------------
 
@@ -205,6 +205,10 @@ try {
 	$ax_sb_uids    = array_map( static fn( array $r ) : string => (string) $r['ical_uid'], $ax_sb_visible );
 	ax_sb_assert( $ax_sb_results, 'a missing entry is not shown', ! in_array( 'finished-event@example.org', $ax_sb_uids, true ) );
 	ax_sb_assert( $ax_sb_results, 'while a present one is', in_array( 'holiday-liberation@example.org', $ax_sb_uids, true ) );
+	$_GET['ax_cal'] = '2026-09-01';
+	$ax_sb_grid     = do_blocks( '<!-- wp:axismundi-calendar/calendar {"calendar":"' . esc_attr( (string) axismundi_cal_calendar_get( $ax_sb_cal )['slug'] ) . '"} /-->' );
+	unset( $_GET['ax_cal'] );
+	ax_sb_assert( $ax_sb_results, 'the read-only Calendar page renders its cached entries rather than an empty local Event query', str_contains( $ax_sb_grid, 'Weekly meetup' ) && ! str_contains( $ax_sb_grid, 'Already finished' ) );
 
 	// -- Subscribed entries are not ours to publish ------------------------------------------------
 
@@ -224,10 +228,34 @@ try {
 
 	axismundi_cal_remove_source( $ax_sb_source );
 	ax_sb_assert( $ax_sb_results, 'removing a subscription drops its cache', 0 === (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$ax_sb_table} WHERE source_id = %d", $ax_sb_source ) ) );
-	ax_sb_assert( $ax_sb_results, 'and the calendar itself survives', null !== axismundi_cal_calendar_get( (int) $ax_sb_cal ) );
+	ax_sb_assert( $ax_sb_results, 'and its read-only Calendar disappears with the source rather than becoming an empty local Calendar', null === axismundi_cal_calendar_get( (int) $ax_sb_cal ) );
+
+	// A process can stop after the Calendar insert and before its source insert. The deterministic
+	// subscription slug makes the retry recover that partial write instead of treating it as a name
+	// collision that a user cannot resolve.
+	$ax_sb_recover_url  = 'https://93.184.216.35/calendar.ics';
+	$ax_sb_recover_hash = hash( 'sha256', $ax_sb_recover_url );
+	$ax_sb_orphan       = axismundi_cal_calendar_save(
+		array(
+			'name'        => 'Interrupted subscription',
+			'slug'        => 'subscription-' . substr( $ax_sb_recover_hash, 0, 12 ),
+			'description' => $ax_sb_recover_url,
+			'timezone'    => 'UTC',
+			'kind'        => 'remote',
+		)
+	);
+	$ax_sb_calendars[] = (int) $ax_sb_orphan;
+	$ax_sb_recovered   = axismundi_cal_subscribe_url( $ax_sb_recover_url );
+	ax_sb_assert( $ax_sb_results, 'retrying an interrupted subscription reuses its remote Calendar rather than failing on the deterministic slug', (int) $ax_sb_orphan === (int) $ax_sb_recovered );
+	$ax_sb_recovery_source = axismundi_cal_source_for_calendar( (int) $ax_sb_recovered );
+	ax_sb_assert( $ax_sb_results, 'and completes the missing source relationship', is_array( $ax_sb_recovery_source ) );
+	if ( is_array( $ax_sb_recovery_source ) ) {
+		axismundi_cal_remove_source( (int) $ax_sb_recovery_source['id'] );
+	}
 } finally {
 	foreach ( array_unique( $ax_sb_calendars ) as $ax_sb_calendar_id ) {
-		foreach ( axismundi_cal_sources_for_calendar( (int) $ax_sb_calendar_id ) as $ax_sb_row ) {
+		$ax_sb_row = axismundi_cal_source_for_calendar( (int) $ax_sb_calendar_id );
+		if ( is_array( $ax_sb_row ) ) {
 			axismundi_cal_remove_source( (int) $ax_sb_row['id'] );
 		}
 		axismundi_cal_calendar_delete( (int) $ax_sb_calendar_id );

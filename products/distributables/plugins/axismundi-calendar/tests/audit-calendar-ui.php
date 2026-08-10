@@ -19,6 +19,7 @@ defined( 'ABSPATH' ) || exit( 1 );
 global $wpdb;
 $ax_ui_results = array();
 $ax_ui_posts   = array();
+$ax_ui_calendars = array();
 
 /** @param bool[] $results Results. */
 function ax_ui_assert( array &$results, string $label, bool $condition ) : void {
@@ -31,7 +32,7 @@ function ax_ui_assert( array &$results, string $label, bool $condition ) : void 
 function ax_ui_event( array &$posts, string $title, array $fields, string $status = 'publish' ) : int {
 	$id      = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_CAL_EVENT_POST_TYPE, 'post_status' => 'draft', 'post_author' => 1, 'post_title' => $title ) );
 	$posts[] = $id;
-	axismundi_cal_event_save( $id, $fields );
+	axismundi_cal_event_save( $id, array_merge( array( 'calendar_id' => (int) $GLOBALS['ax_ui_calendar'] ), $fields ) );
 	if ( 'draft' !== $status ) {
 		$GLOBALS['axismundi_cal_rest_write'] = true;
 		wp_update_post( array( 'ID' => $id, 'post_status' => $status ) );
@@ -46,6 +47,9 @@ function ax_ui_titles( array $occurrences ) : array {
 }
 
 try {
+	$ax_ui_calendar = axismundi_cal_calendar_save( array( 'name' => 'Grid calendar', 'slug' => 'audit-grid', 'timezone' => 'Asia/Seoul' ) );
+	$GLOBALS['ax_ui_calendar'] = (int) $ax_ui_calendar;
+	$ax_ui_calendars[] = (int) $ax_ui_calendar;
 	$ax_ui_single = ax_ui_event(
 		$ax_ui_posts,
 		'Grid single',
@@ -178,6 +182,9 @@ try {
 		}
 		$wpdb->delete( axismundi_cal_events_table(), array( 'post_id' => (int) $ax_ui_post_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		wp_delete_post( (int) $ax_ui_post_id, true );
+	}
+	foreach ( array_unique( $ax_ui_calendars ) as $ax_ui_calendar_id ) {
+		axismundi_cal_calendar_delete( (int) $ax_ui_calendar_id );
 	}
 }
 

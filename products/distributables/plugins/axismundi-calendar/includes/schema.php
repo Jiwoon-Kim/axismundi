@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '6';
+const AXISMUNDI_CAL_DB_VERSION        = '7';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 
 /** @return string Event envelope table name. */
@@ -36,12 +36,6 @@ function axismundi_cal_schedules_table() : string {
 function axismundi_cal_calendars_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_cal_calendars';
-}
-
-/** @return string Calendar membership table name. */
-function axismundi_cal_items_table() : string {
-	global $wpdb;
-	return $wpdb->prefix . 'ax_cal_calendar_items';
 }
 
 /** @return string Subscription source table name. */
@@ -123,6 +117,7 @@ function axismundi_cal_install_schema() : bool {
 		"CREATE TABLE {$schedules} (
 			id bigint(20) unsigned NOT NULL auto_increment,
 			event_post_id bigint(20) unsigned NOT NULL,
+			calendar_id bigint(20) unsigned NOT NULL default 0,
 			timezone varchar(64) NOT NULL default '',
 			all_day tinyint(1) unsigned NOT NULL default 0,
 			dtstart_local datetime NOT NULL default '0000-00-00 00:00:00',
@@ -140,7 +135,8 @@ function axismundi_cal_install_schema() : bool {
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY ical_uid (ical_uid),
-			KEY event_post_id (event_post_id)
+			KEY event_post_id (event_post_id),
+			KEY calendar_id (calendar_id)
 		) ENGINE=InnoDB {$charset};"
 	);
 
@@ -188,9 +184,8 @@ function axismundi_cal_install_schema() : bool {
 	/*
 	 * A Calendar is its own resource, not a taxonomy term. A term is a classification -- what an
 	 * Event is about -- while a Calendar is a collection someone owns, publishes and may one day
-	 * share or subscribe to, with a timezone, a revision and its own subscription URL. The two axes
-	 * are independent: one Event belongs to several Calendars and carries its own categories, and
-	 * collapsing them would make either impossible to express.
+	 * share or subscribe to, with a timezone, a revision and its own subscription URL. An Event has
+	 * one owning Calendar; categories remain the independent classification axis.
 	 */
 	dbDelta(
 		"CREATE TABLE {$calendars} (
@@ -199,6 +194,7 @@ function axismundi_cal_install_schema() : bool {
 			name text NOT NULL,
 			description longtext NOT NULL,
 			timezone varchar(64) NOT NULL default '',
+			kind varchar(16) NOT NULL default 'local',
 			visibility varchar(16) NOT NULL default 'public',
 			revision bigint(20) unsigned NOT NULL default 1,
 			owner_actor_uri text NOT NULL,
@@ -206,41 +202,19 @@ function axismundi_cal_install_schema() : bool {
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY slug (slug),
-			KEY visibility (visibility)
+			KEY visibility (visibility),
+			KEY kind (kind)
 		) ENGINE=InnoDB {$charset};"
 	);
 
-	$items = axismundi_cal_items_table();
 	/*
-	 * Membership names what a member is rather than carrying one ambiguous reference column. A local
-	 * Event is identified by the canonical Object URI and its hash; a subscribed iCalendar entry
-	 * will be identified by its source and UID, which is a different kind of identity entirely and
-	 * must not be squeezed into the same column.
-	 *
-	 * `member_type` is also what decides federation. A member is publishable because this site is
-	 * the authority for it, never because it appears in a local Calendar -- otherwise subscribing to
-	 * someone else's feed would quietly turn their events into ours.
-	 *
-	 * `member_hash` keys the uniqueness, since the identifying tuple differs per member type and no
-	 * single column can be unique across all of them.
+	 * There is no membership table. An Event belongs to exactly one Calendar, which is what
+	 * `schedules.calendar_id` says, and that is the model every calendar application people already
+	 * use has: a calendar collects events, an event does not accumulate calendars. The many-to-many
+	 * it replaces made the Calendar's timezone unusable as an authoring default -- an Event in three
+	 * calendars would have had three defaults -- and made "which calendar is this event on?" a
+	 * question with no answer.
 	 */
-	dbDelta(
-		"CREATE TABLE {$items} (
-			id bigint(20) unsigned NOT NULL auto_increment,
-			calendar_id bigint(20) unsigned NOT NULL,
-			member_type varchar(24) NOT NULL default 'local_event',
-			member_hash char(64) NOT NULL default '',
-			object_uri text NOT NULL,
-			object_uri_hash char(64) NULL,
-			event_post_id bigint(20) unsigned NULL,
-			created_at datetime NOT NULL,
-			PRIMARY KEY  (id),
-			UNIQUE KEY calendar_member (calendar_id,member_hash),
-			KEY calendar_id (calendar_id),
-			KEY event_post_id (event_post_id),
-			KEY object_uri_hash (object_uri_hash)
-		) ENGINE=InnoDB {$charset};"
-	);
 
 	$sources = axismundi_cal_sources_table();
 	/*
@@ -251,6 +225,10 @@ function axismundi_cal_install_schema() : bool {
 	 *
 	 * `content_hash` exists because many publishers send neither `ETag` nor `Last-Modified`. Without
 	 * it every poll would re-parse a document that had not changed.
+	 *
+	 * One source per instance, not per Calendar. Three people wanting the national holiday feed is
+	 * one document to fetch, one cache to keep and one publisher to be polite to -- and `calendar_id`
+	 * here is the read-only Calendar this source *is*, not a local calendar it was mixed into.
 	 */
 	dbDelta(
 		"CREATE TABLE {$sources} (
@@ -270,8 +248,8 @@ function axismundi_cal_install_schema() : bool {
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),
-			UNIQUE KEY calendar_source (calendar_id,source_url_hash),
-			KEY calendar_id (calendar_id),
+			UNIQUE KEY source_url_hash (source_url_hash),
+			UNIQUE KEY calendar_id (calendar_id),
 			KEY sync_status (sync_status)
 		) ENGINE=InnoDB {$charset};"
 	);
@@ -339,6 +317,22 @@ function axismundi_cal_install_schema() : bool {
 	 * has none, so a rerun cannot duplicate one or overwrite one that has since been edited.
 	 */
 	axismundi_cal_convert_legacy_envelopes();
+	/*
+	 * The old membership table is read exactly once before being dropped. Where a legacy Event was
+	 * put in several Calendars, the oldest membership wins deterministically. Its schedule retains
+	 * its explicit timezone as an override, so the migration never changes the instant of a live
+	 * Event merely because the old model permitted an ambiguous grouping.
+	 */
+	axismundi_cal_assign_orphan_schedules();
+
+	/*
+	 * Dropped rather than left behind. It is not read anywhere after this version, and leaving a
+	 * table that once answered "which calendars is this event on?" invites someone to answer that
+	 * question from it again.
+	 */
+	$legacy = $wpdb->prefix . 'ax_cal_calendar_items';
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time removal of this plugin's own table.
+	$wpdb->query( "DROP TABLE IF EXISTS {$legacy}" );
 	return true;
 }
 

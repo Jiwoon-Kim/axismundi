@@ -80,12 +80,33 @@ if ( '' !== (string) ( $attributes['calendar'] ?? '' ) ) {
 	$ax_cal_filter = is_array( $ax_cal_collection ) ? (int) $ax_cal_collection['id'] : -1;
 }
 
-$ax_cal_occurrences = -1 === $ax_cal_filter ? array() : axismundi_cal_occurrences_in_range(
-	$ax_cal_first->setTimezone( $ax_cal_utc )->format( 'Y-m-d H:i:s' ),
-	$ax_cal_last->setTimezone( $ax_cal_utc )->format( 'Y-m-d H:i:s' ),
-	AXISMUNDI_CAL_RANGE_MAX,
-	null === $ax_cal_filter ? 0 : $ax_cal_filter
-);
+$ax_cal_from = $ax_cal_first->setTimezone( $ax_cal_utc )->format( 'Y-m-d H:i:s' );
+$ax_cal_to   = $ax_cal_last->setTimezone( $ax_cal_utc )->format( 'Y-m-d H:i:s' );
+if ( -1 === $ax_cal_filter ) {
+	$ax_cal_occurrences = array();
+} elseif ( is_array( $ax_cal_collection ) && 'remote' === (string) $ax_cal_collection['kind'] ) {
+	$ax_cal_occurrences = array_map(
+		static function ( array $entry ) : array {
+			return array_merge(
+				$entry,
+				array(
+					'post_id'   => 0,
+					'title'     => (string) $entry['summary'],
+					'permalink' => (string) ( $entry['source_url'] ?? '' ),
+					'recurring' => '' !== (string) $entry['rrule'],
+				)
+			);
+		},
+		axismundi_cal_subscribed_entries( (int) $ax_cal_collection['id'], $ax_cal_from, $ax_cal_to )
+	);
+} else {
+	$ax_cal_occurrences = axismundi_cal_occurrences_in_range(
+		$ax_cal_from,
+		$ax_cal_to,
+		AXISMUNDI_CAL_RANGE_MAX,
+		null === $ax_cal_filter ? 0 : $ax_cal_filter
+	);
+}
 $ax_cal_days = axismundi_cal_group_by_day( $ax_cal_occurrences, $ax_cal_zone );
 
 /** Build a navigation URL that keeps the reader where they are. */
@@ -157,12 +178,19 @@ $ax_cal_wrapper = get_block_wrapper_attributes( array( 'class' => 'ax-cal ax-cal
 									}
 									?>
 									<li class="ax-cal__event<?php echo $ax_cal_cancelled ? ' ax-cal__event--cancelled' : ''; ?>">
+										<?php if ( '' !== (string) $ax_cal_event['permalink'] ) : ?>
 										<a href="<?php echo esc_url( (string) $ax_cal_event['permalink'] ); ?>">
 											<?php if ( '' !== $ax_cal_time ) : ?>
 												<time class="ax-cal__time" datetime="<?php echo esc_attr( gmdate( 'c', strtotime( (string) $ax_cal_event['start_utc'] . ' UTC' ) ) ); ?>"><?php echo esc_html( $ax_cal_time ); ?></time>
 											<?php endif; ?>
 											<span class="ax-cal__title"><?php echo esc_html( (string) $ax_cal_event['title'] ); ?></span>
 										</a>
+										<?php else : ?>
+											<?php if ( '' !== $ax_cal_time ) : ?>
+												<time class="ax-cal__time" datetime="<?php echo esc_attr( gmdate( 'c', strtotime( (string) $ax_cal_event['start_utc'] . ' UTC' ) ) ); ?>"><?php echo esc_html( $ax_cal_time ); ?></time>
+											<?php endif; ?>
+											<span class="ax-cal__title"><?php echo esc_html( (string) $ax_cal_event['title'] ); ?></span>
+										<?php endif; ?>
 										<?php if ( $ax_cal_cancelled ) : ?>
 											<span class="ax-cal__badge"><?php esc_html_e( 'Cancelled', 'axismundi-calendar' ); ?></span>
 										<?php endif; ?>

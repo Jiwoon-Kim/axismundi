@@ -33,6 +33,7 @@ function axismundi_cal_rest_envelope( int $post_id ) : array {
 		// An Event that has not been given its times yet. Reported as an empty envelope rather
 		// than null so the panel has one shape to render in both states.
 		return array(
+			'calendarId'               => 0,
 			'startsAt'                 => '',
 			'endsAt'                   => '',
 			'timezone'                 => '',
@@ -48,6 +49,7 @@ function axismundi_cal_rest_envelope( int $post_id ) : array {
 		);
 	}
 	return array(
+		'calendarId'               => (int) $envelope['calendar_id'],
 		'startsAt'                 => (string) $envelope['starts_at'],
 		'endsAt'                   => (string) $envelope['ends_at'],
 		'timezone'                 => (string) $envelope['timezone'],
@@ -81,7 +83,7 @@ function axismundi_cal_rest_envelope( int $post_id ) : array {
 function axismundi_cal_rest_envelope_is_writable( array $value ) : bool {
 	return '' !== trim( (string) ( $value['startsAt'] ?? '' ) )
 		&& '' !== trim( (string) ( $value['endsAt'] ?? '' ) )
-		&& '' !== trim( (string) ( $value['timezone'] ?? '' ) );
+		&& (int) ( $value['calendarId'] ?? 0 ) > 0;
 }
 
 /**
@@ -92,6 +94,7 @@ function axismundi_cal_rest_envelope_is_writable( array $value ) : bool {
  */
 function axismundi_cal_rest_to_fields( array $value ) : array {
 	$map = array(
+		'calendarId'               => 'calendar_id',
 		'startsAt'                 => 'starts_at',
 		'endsAt'                   => 'ends_at',
 		'timezone'                 => 'timezone',
@@ -132,6 +135,12 @@ function axismundi_cal_register_rest_field() : void {
 				if ( ! current_user_can( 'edit_post', $post->ID ) ) {
 					return new WP_Error( 'ax_event_forbidden', __( 'You cannot edit this Event.', 'axismundi-calendar' ), array( 'status' => 403 ) );
 				}
+				if ( isset( $value['calendarId'] ) && (int) $value['calendarId'] > 0 ) {
+					$calendar = axismundi_cal_calendar_get( (int) $value['calendarId'] );
+					if ( ! is_array( $calendar ) || ! axismundi_cal_can_manage_calendar( $calendar ) ) {
+						return new WP_Error( 'ax_event_calendar_forbidden', __( 'You cannot add Events to that calendar.', 'axismundi-calendar' ), array( 'status' => 403 ) );
+					}
+				}
 				if ( null === axismundi_cal_event_get( (int) $post->ID ) && ! axismundi_cal_rest_envelope_is_writable( $value ) ) {
 					return true;
 				}
@@ -141,7 +150,8 @@ function axismundi_cal_register_rest_field() : void {
 			'schema'          => array(
 				'type'       => 'object',
 				'context'    => array( 'edit' ),
-				'properties' => array(
+					'properties' => array(
+						'calendarId'               => array( 'type' => 'integer', 'minimum' => 1 ),
 					'startsAt'                 => array( 'type' => 'string' ),
 					'endsAt'                   => array( 'type' => 'string' ),
 					'timezone'                 => array( 'type' => 'string' ),

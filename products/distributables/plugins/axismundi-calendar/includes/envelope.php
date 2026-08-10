@@ -37,6 +37,7 @@ function axismundi_cal_event_get( int $post_id ) : ?array {
 	return array_merge(
 		$row,
 		array(
+			'calendar_id'            => (int) $schedule['calendar_id'],
 			'timezone'               => (string) $schedule['timezone'],
 			'starts_at'              => (string) $schedule['dtstart_local'],
 			'ends_at'                => (string) $schedule['dtend_local'],
@@ -105,6 +106,7 @@ function axismundi_cal_event_save( int $post_id, array $fields ) {
 	 */
 	$schedule_fields = array();
 	foreach ( array(
+		'calendar_id'      => 'calendar_id',
 		'starts_at'        => 'dtstart_local',
 		'ends_at'          => 'dtend_local',
 		'timezone'         => 'timezone',

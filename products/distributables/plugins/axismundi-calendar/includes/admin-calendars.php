@@ -116,8 +116,19 @@ function axismundi_cal_handle_calendar_form() : void {
 
 	$action = isset( $_POST['ax_cal_action'] ) ? sanitize_key( wp_unslash( (string) $_POST['ax_cal_action'] ) ) : 'save';
 	if ( 'delete' === $action && $id > 0 ) {
-		axismundi_cal_calendar_delete( $id );
+		if ( 'remote' === (string) $existing['kind'] ) {
+			$source = axismundi_cal_source_for_calendar( $id );
+			if ( is_array( $source ) ) {
+				axismundi_cal_remove_source( (int) $source['id'] );
+			}
+		} else {
+			axismundi_cal_calendar_delete( $id );
+		}
 		wp_safe_redirect( add_query_arg( 'ax_cal_notice', 'deleted', $base ) );
+		exit;
+	}
+	if ( is_array( $existing ) && 'remote' === (string) $existing['kind'] ) {
+		wp_safe_redirect( add_query_arg( array( 'ax_cal_error' => 'readonly', 'ax_cal_edit' => $id ), $base ) );
 		exit;
 	}
 
@@ -126,9 +137,7 @@ function axismundi_cal_handle_calendar_form() : void {
 		'slug'        => isset( $_POST['slug'] ) ? sanitize_title( wp_unslash( (string) $_POST['slug'] ) ) : '',
 		'description' => isset( $_POST['description'] ) ? sanitize_textarea_field( wp_unslash( (string) $_POST['description'] ) ) : '',
 	);
-	if ( isset( $_POST['timezone'] ) && '' !== $_POST['timezone'] ) {
-		$fields['timezone'] = sanitize_text_field( wp_unslash( (string) $_POST['timezone'] ) );
-	}
+	$fields['timezone'] = isset( $_POST['timezone'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['timezone'] ) ) : '';
 	if ( null === $existing ) {
 		// Recorded at creation, from the Actor of whoever is making it. Asking later, or inferring it
 		// from whoever edited most recently, is how ownership becomes a guess.
@@ -148,6 +157,28 @@ function axismundi_cal_handle_calendar_form() : void {
 add_action( 'admin_post_ax_cal_save_calendar', 'axismundi_cal_handle_calendar_form' );
 
 /**
+ * Subscribe this instance to one public ICS Calendar.
+ *
+ * @return void
+ */
+function axismundi_cal_handle_calendar_subscription() : void {
+	$base = admin_url( 'edit.php?post_type=' . AXISMUNDI_CAL_EVENT_POST_TYPE . '&page=ax-calendars' );
+	if ( ! axismundi_cal_can_manage_calendars() ) {
+		wp_die( esc_html__( 'You are not allowed to manage calendars.', 'axismundi-calendar' ), 403 );
+	}
+	check_admin_referer( 'ax_cal_subscribe' );
+	$url    = isset( $_POST['source_url'] ) ? esc_url_raw( wp_unslash( (string) $_POST['source_url'] ) ) : '';
+	$source = axismundi_cal_subscribe_url( $url );
+	if ( is_wp_error( $source ) ) {
+		wp_safe_redirect( add_query_arg( 'ax_cal_error', rawurlencode( $source->get_error_code() ), $base ) );
+		exit;
+	}
+	wp_safe_redirect( add_query_arg( array( 'ax_cal_notice' => 'subscribed', 'ax_cal_edit' => (int) $source ), $base ) );
+	exit;
+}
+add_action( 'admin_post_ax_cal_subscribe_calendar', 'axismundi_cal_handle_calendar_subscription' );
+
+/**
  * The message for one error code.
  *
  * The writer's refusals are already author-facing sentences, so this only maps the codes the screen
@@ -165,7 +196,13 @@ function axismundi_cal_admin_error_message( string $code ) : string {
 		case 'ax_cal_slug':
 			return __( 'A calendar needs a slug that can appear in a URL.', 'axismundi-calendar' );
 		case 'ax_cal_timezone':
-			return __( 'A calendar needs a named place rather than a fixed offset. Leave the timezone empty to follow the site.', 'axismundi-calendar' );
+			return __( 'A calendar needs a named IANA timezone such as Asia/Seoul. Fixed offsets cannot follow daylight-saving rules.', 'axismundi-calendar' );
+		case 'readonly':
+			return __( 'A subscribed calendar is read-only. Change it at its source.', 'axismundi-calendar' );
+		case 'ax_cal_source_url':
+		case 'ax_cal_source_private':
+		case 'ax_cal_source_write':
+			return __( 'That public iCalendar address could not be added.', 'axismundi-calendar' );
 		case 'missing':
 			return __( 'That calendar no longer exists.', 'axismundi-calendar' );
 		default:
@@ -204,7 +241,7 @@ function axismundi_cal_render_calendars_page() : void {
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Calendars', 'axismundi-calendar' ); ?></h1>
 		<p class="description">
-			<?php esc_html_e( 'A calendar is a collection of events with its own subscription address. An event can belong to several calendars.', 'axismundi-calendar' ); ?>
+			<?php esc_html_e( 'Create a Calendar for local Events, or subscribe this site to a public iCalendar address.', 'axismundi-calendar' ); ?>
 		</p>
 
 		<?php if ( '' !== $notice ) : ?>
@@ -214,20 +251,33 @@ function axismundi_cal_render_calendars_page() : void {
 			<div class="notice notice-error"><p><?php echo esc_html( axismundi_cal_admin_error_message( $error ) ); ?></p></div>
 		<?php endif; ?>
 
+		<h2><?php esc_html_e( 'Subscribe to a calendar', 'axismundi-calendar' ); ?></h2>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="ax_cal_subscribe_calendar">
+			<?php wp_nonce_field( 'ax_cal_subscribe' ); ?>
+			<label class="screen-reader-text" for="ax-cal-source-url"><?php esc_html_e( 'Public iCalendar address', 'axismundi-calendar' ); ?></label>
+			<input name="source_url" id="ax-cal-source-url" type="url" class="regular-text" required placeholder="https://example.com/calendar.ics">
+			<button type="submit" class="button button-secondary"><?php esc_html_e( 'Subscribe', 'axismundi-calendar' ); ?></button>
+			<p class="description"><?php esc_html_e( 'Use a public .ics address. Private subscription addresses are credentials and need a separate secure-storage flow.', 'axismundi-calendar' ); ?></p>
+		</form>
+
+		<h2><?php esc_html_e( 'Calendars', 'axismundi-calendar' ); ?></h2>
 		<table class="wp-list-table widefat fixed striped">
 			<thead>
 				<tr>
 					<th scope="col"><?php esc_html_e( 'Name', 'axismundi-calendar' ); ?></th>
 					<th scope="col"><?php esc_html_e( 'Slug', 'axismundi-calendar' ); ?></th>
 					<th scope="col"><?php esc_html_e( 'Timezone', 'axismundi-calendar' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Type', 'axismundi-calendar' ); ?></th>
 					<th scope="col"><?php esc_html_e( 'Owner', 'axismundi-calendar' ); ?></th>
 					<th scope="col"><?php esc_html_e( 'Events', 'axismundi-calendar' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Subscribe', 'axismundi-calendar' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'View', 'axismundi-calendar' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'iCalendar', 'axismundi-calendar' ); ?></th>
 				</tr>
 			</thead>
 			<tbody>
 				<?php if ( empty( $rows ) ) : ?>
-					<tr><td colspan="6"><?php esc_html_e( 'No calendars yet.', 'axismundi-calendar' ); ?></td></tr>
+					<tr><td colspan="8"><?php esc_html_e( 'No calendars yet.', 'axismundi-calendar' ); ?></td></tr>
 				<?php endif; ?>
 				<?php foreach ( $rows as $row ) : ?>
 					<?php $can_edit = axismundi_cal_can_manage_calendar( $row ); ?>
@@ -242,16 +292,44 @@ function axismundi_cal_render_calendars_page() : void {
 							</strong>
 						</td>
 						<td><code><?php echo esc_html( $row['slug'] ); ?></code></td>
-						<td><?php echo esc_html( '' !== $row['timezone'] ? $row['timezone'] : __( 'Site default', 'axismundi-calendar' ) ); ?></td>
+						<td><?php echo esc_html( (string) $row['timezone'] ); ?></td>
+						<td><?php echo esc_html( 'remote' === (string) $row['kind'] ? __( 'Subscribed', 'axismundi-calendar' ) : __( 'Local', 'axismundi-calendar' ) ); ?></td>
 						<td><?php echo esc_html( '' !== $row['owner_actor_uri'] ? $row['owner_actor_uri'] : __( 'Unassigned', 'axismundi-calendar' ) ); ?></td>
 						<td><?php echo esc_html( number_format_i18n( count( axismundi_cal_calendar_event_ids( (int) $row['id'] ) ) ) ); ?></td>
-						<td><a href="<?php echo esc_url( home_url( '/calendar/' . $row['slug'] . '.ics' ) ); ?>"><code>.ics</code></a></td>
+						<td><a href="<?php echo esc_url( axismundi_cal_calendar_url( $row ) ); ?>"><?php esc_html_e( 'View', 'axismundi-calendar' ); ?></a></td>
+						<td>
+							<?php if ( '' !== axismundi_cal_calendar_ics_url( $row ) ) : ?>
+								<a href="<?php echo esc_url( axismundi_cal_calendar_ics_url( $row ) ); ?>"><code>.ics</code></a>
+							<?php else : ?>
+								<?php $source = axismundi_cal_source_for_calendar( (int) $row['id'] ); ?>
+								<?php if ( is_array( $source ) ) : ?>
+									<a href="<?php echo esc_url( (string) $source['source_url'] ); ?>"><?php esc_html_e( 'Source', 'axismundi-calendar' ); ?></a>
+								<?php endif; ?>
+							<?php endif; ?>
+						</td>
 					</tr>
 				<?php endforeach; ?>
 			</tbody>
 		</table>
 
-		<h2><?php echo esc_html( is_array( $calendar ) ? __( 'Edit calendar', 'axismundi-calendar' ) : __( 'Add calendar', 'axismundi-calendar' ) ); ?></h2>
+		<?php if ( is_array( $calendar ) && 'remote' === (string) $calendar['kind'] ) : ?>
+			<?php $source = axismundi_cal_source_for_calendar( (int) $calendar['id'] ); ?>
+			<h2><?php esc_html_e( 'Subscribed calendar', 'axismundi-calendar' ); ?></h2>
+			<p><a href="<?php echo esc_url( axismundi_cal_calendar_url( $calendar ) ); ?>"><?php esc_html_e( 'View calendar', 'axismundi-calendar' ); ?></a></p>
+			<?php if ( is_array( $source ) ) : ?>
+				<p><code><?php echo esc_html( (string) $source['source_url'] ); ?></code></p>
+			<?php endif; ?>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="ax_cal_save_calendar">
+				<input type="hidden" name="calendar_id" value="<?php echo esc_attr( (string) $calendar['id'] ); ?>">
+				<?php wp_nonce_field( 'ax_cal_save_' . (int) $calendar['id'] ); ?>
+				<button type="submit" class="button button-link-delete" name="ax_cal_action" value="delete" onclick="return confirm( '<?php echo esc_js( __( 'Unsubscribe from this calendar and remove its cached events?', 'axismundi-calendar' ) ); ?>' );"><?php esc_html_e( 'Unsubscribe', 'axismundi-calendar' ); ?></button>
+				<a class="button button-secondary" href="<?php echo esc_url( $base ); ?>"><?php esc_html_e( 'Back', 'axismundi-calendar' ); ?></a>
+			</form>
+	</div>
+		<?php return; endif; ?>
+
+		<h2><?php echo esc_html( is_array( $calendar ) ? __( 'Edit calendar', 'axismundi-calendar' ) : __( 'New calendar', 'axismundi-calendar' ) ); ?></h2>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="ax_cal_save_calendar">
 			<input type="hidden" name="calendar_id" value="<?php echo esc_attr( (string) ( $calendar['id'] ?? 0 ) ); ?>">
@@ -269,30 +347,15 @@ function axismundi_cal_render_calendars_page() : void {
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><label for="ax-cal-timezone"><?php esc_html_e( 'Home timezone', 'axismundi-calendar' ); ?></label></th>
+					<th scope="row"><label for="ax-cal-timezone"><?php esc_html_e( 'Timezone', 'axismundi-calendar' ); ?></label></th>
 					<td>
 						<select name="timezone" id="ax-cal-timezone">
-							<option value="">
-								<?php
-								/*
-								 * The resolved value, not the word "default". A site set to a manual UTC
-								 * offset has no identifier to show, so "Site default" alone leaves the
-								 * author guessing which zone their calendar will actually be read in.
-								 */
-								printf(
-									/* translators: %s: the timezone the site currently resolves to. */
-									esc_html__( 'Follow the site timezone (%s)', 'axismundi-calendar' ),
-									esc_html( wp_timezone()->getName() )
-								);
-								?>
-							</option>
 							<?php
 							/*
 							 * Core's picker rather than a list of our own: it localizes the city names,
 							 * groups them by region and stays current with the tz database. It also offers
 							 * manual offsets, which are refused on save -- a calendar stores a place, and
-							 * an offset is not one. Leaving the field empty is how you follow a site that
-							 * is configured that way.
+							 * an offset is not one.
 							 */
 							require_once ABSPATH . 'wp-admin/includes/template.php';
 							// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- core builds this option list.
@@ -300,7 +363,7 @@ function axismundi_cal_render_calendars_page() : void {
 							?>
 						</select>
 						<p class="description">
-							<?php esc_html_e( 'Where this calendar belongs. It is the suggested timezone for new events and what the subscription feed declares. It does not decide what readers see: an event is shown in the timezone of whoever is reading, and each event keeps the timezone it happens in.', 'axismundi-calendar' ); ?>
+							<?php esc_html_e( 'New Events begin in this timezone. Readers still see timed Events in their own timezone; all-day Events remain dates.', 'axismundi-calendar' ); ?>
 						</p>
 					</td>
 				</tr>
@@ -327,7 +390,7 @@ function axismundi_cal_render_calendars_page() : void {
 				</button>
 				<?php if ( is_array( $calendar ) ) : ?>
 					<button type="submit" class="button button-link-delete" name="ax_cal_action" value="delete"
-						onclick="return confirm( '<?php echo esc_js( __( 'Delete this calendar? The events in it are not deleted.', 'axismundi-calendar' ) ); ?>' );">
+						onclick="return confirm( '<?php echo esc_js( __( 'Delete this calendar and permanently delete every Event it owns?', 'axismundi-calendar' ) ); ?>' );">
 						<?php esc_html_e( 'Delete calendar', 'axismundi-calendar' ); ?>
 					</button>
 					<a class="button button-secondary" href="<?php echo esc_url( $base ); ?>"><?php esc_html_e( 'Cancel', 'axismundi-calendar' ); ?></a>

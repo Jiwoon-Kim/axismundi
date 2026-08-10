@@ -122,19 +122,20 @@ function axismundi_cal_resolve_host( string $host ) : array {
 }
 
 /**
- * The subscription sources of a Calendar.
+ * The source whose read-only Calendar this is.
  *
  * @param int $calendar_id Calendar id.
- * @return array<int,array<string,mixed>>
+ * @return array<string,mixed>|null
  */
-function axismundi_cal_sources_for_calendar( int $calendar_id ) : array {
+function axismundi_cal_source_for_calendar( int $calendar_id ) : ?array {
 	global $wpdb;
 	if ( $calendar_id <= 0 || ! axismundi_cal_ready() ) {
-		return array();
+		return null;
 	}
 	$table = axismundi_cal_sources_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
-	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE calendar_id = %d ORDER BY id ASC", $calendar_id ), ARRAY_A );
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE calendar_id = %d", $calendar_id ), ARRAY_A );
+	return is_array( $row ) ? $row : null;
 }
 
 /**
@@ -155,19 +156,15 @@ function axismundi_cal_source_get( int $source_id ) : ?array {
 }
 
 /**
- * Attach a subscription source to a Calendar.
+ * Subscribe this instance to a remote Calendar.
  *
- * @param int    $calendar_id Calendar id.
- * @param string $url         Feed URL.
- * @return int|WP_Error Source id.
+	* @param string $url         Feed URL.
+ * @return int|WP_Error Remote Calendar id.
  */
-function axismundi_cal_add_source( int $calendar_id, string $url ) {
+function axismundi_cal_subscribe_url( string $url ) {
 	global $wpdb;
 	if ( ! axismundi_cal_ready() ) {
 		return new WP_Error( 'ax_cal_store', __( 'The calendar store is unavailable.', 'axismundi-calendar' ) );
-	}
-	if ( null === axismundi_cal_calendar_get( $calendar_id ) ) {
-		return new WP_Error( 'ax_cal_missing', __( 'That calendar does not exist.', 'axismundi-calendar' ), array( 'status' => 404 ) );
 	}
 	$valid = axismundi_cal_validate_source_url( $url );
 	if ( is_wp_error( $valid ) ) {
@@ -177,16 +174,43 @@ function axismundi_cal_add_source( int $calendar_id, string $url ) {
 	$hash = hash( 'sha256', $url );
 	$now  = current_time( 'mysql', true );
 
-	$existing = axismundi_cal_source_by_hash( $calendar_id, $hash );
+	$existing = axismundi_cal_source_by_hash( $hash );
 	if ( is_array( $existing ) ) {
-		return (int) $existing['id'];
+		$calendar = axismundi_cal_calendar_get( (int) $existing['calendar_id'] );
+		if ( is_array( $calendar ) && 'remote' === (string) $calendar['kind'] ) {
+			return (int) $existing['calendar_id'];
+		}
+		return new WP_Error( 'ax_cal_source_corrupt', __( 'This subscription needs repair before it can be used.', 'axismundi-calendar' ) );
+	}
+	$host     = (string) wp_parse_url( $url, PHP_URL_HOST );
+	$slug     = 'subscription-' . substr( $hash, 0, 12 );
+	$orphan   = axismundi_cal_calendar_by_slug( $slug );
+	$created  = false;
+	if ( is_array( $orphan ) && 'remote' === (string) $orphan['kind'] && $url === (string) $orphan['description'] && null === axismundi_cal_source_for_calendar( (int) $orphan['id'] ) ) {
+		// A request can stop between creating the remote Calendar and its source row. Its deterministic
+		// slug makes that partial write safely recoverable instead of turning a retry into a conflict.
+		$calendar = (int) $orphan['id'];
+	} else {
+		$calendar = axismundi_cal_calendar_save(
+			array(
+				'name'        => '' !== $host ? $host : __( 'Subscribed calendar', 'axismundi-calendar' ),
+				'slug'        => $slug,
+				'description' => $url,
+				'timezone'    => 'UTC',
+				'kind'        => 'remote',
+			)
+		);
+		if ( is_wp_error( $calendar ) ) {
+			return $calendar;
+		}
+		$created = true;
 	}
 
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 	$inserted = $wpdb->insert(
 		axismundi_cal_sources_table(),
 		array(
-			'calendar_id'     => $calendar_id,
+			'calendar_id'     => (int) $calendar,
 			'kind'            => 'ical',
 			// Stated in the row, because everything downstream -- no re-publishing, no export, no
 			// editing -- is decided by it rather than by remembering where a row came from.
@@ -199,24 +223,27 @@ function axismundi_cal_add_source( int $calendar_id, string $url ) {
 		)
 	);
 	if ( false === $inserted ) {
+		if ( $created ) {
+			// The source row never existed, so this is the same safe recovery path as the orphan above.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- cleanup of this just-created remote Calendar.
+			$wpdb->delete( axismundi_cal_calendars_table(), array( 'id' => (int) $calendar, 'kind' => 'remote' ) );
+		}
 		return new WP_Error( 'ax_cal_source_write', __( 'The subscription could not be saved.', 'axismundi-calendar' ) );
 	}
-	axismundi_cal_bump_revision( $calendar_id );
-	return (int) $wpdb->insert_id;
+	return (int) $calendar;
 }
 
 /**
- * A source by calendar and URL hash.
+ * A source by URL hash.
  *
- * @param int    $calendar_id Calendar id.
- * @param string $hash        URL hash.
+	* @param string $hash        URL hash.
  * @return array<string,mixed>|null
  */
-function axismundi_cal_source_by_hash( int $calendar_id, string $hash ) : ?array {
+function axismundi_cal_source_by_hash( string $hash ) : ?array {
 	global $wpdb;
 	$table = axismundi_cal_sources_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
-	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE calendar_id = %d AND source_url_hash = %s", $calendar_id, $hash ), ARRAY_A );
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE source_url_hash = %s", $hash ), ARRAY_A );
 	return is_array( $row ) ? $row : null;
 }
 
@@ -240,7 +267,11 @@ function axismundi_cal_remove_source( int $source_id ) : bool {
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 	$removed = $wpdb->delete( axismundi_cal_sources_table(), array( 'id' => $source_id ) );
 	if ( $removed ) {
-		axismundi_cal_bump_revision( (int) $source['calendar_id'] );
+		// `calendar_delete()` deliberately refuses remote Calendars: deleting one independently would
+		// orphan its source. The source is gone here, so this is the single path that removes its
+		// read-only Calendar representation too.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- paired deletion of this plugin's source representation.
+		$wpdb->delete( axismundi_cal_calendars_table(), array( 'id' => (int) $source['calendar_id'], 'kind' => 'remote' ) );
 	}
 	return (bool) $removed;
 }
@@ -430,7 +461,7 @@ function axismundi_cal_subscribed_entries( int $calendar_id, string $from_utc, s
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- range query over this plugin's own tables.
 	return (array) $wpdb->get_results(
 		$wpdb->prepare(
-			"SELECT e.* FROM {$entries} e INNER JOIN {$sources} s ON s.id = e.source_id
+			"SELECT e.*, s.source_url FROM {$entries} e INNER JOIN {$sources} s ON s.id = e.source_id
 			 WHERE s.calendar_id = %d AND e.presence = 'present' AND e.end_utc > %s AND e.start_utc < %s
 			 ORDER BY e.start_utc ASC",
 			$calendar_id,

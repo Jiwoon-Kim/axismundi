@@ -48,7 +48,7 @@ function axismundi_cal_event_listable( WP_Post $post ) : bool {
  * @param string $from_utc    Range start, `Y-m-d H:i:s` UTC.
  * @param string $to_utc      Range end, `Y-m-d H:i:s` UTC.
  * @param int    $limit       Maximum occurrences.
- * @param int    $calendar_id Restrict to one Calendar's membership, or 0 for the whole site.
+ * @param int    $calendar_id Restrict to one owning Calendar, or 0 for the whole site.
  * @return array<int,array<string,mixed>> Occurrences with their Event, ordered by start.
  */
 function axismundi_cal_occurrences_in_range( string $from_utc, string $to_utc, int $limit = AXISMUNDI_CAL_RANGE_MAX, int $calendar_id = 0 ) : array {
@@ -63,23 +63,18 @@ function axismundi_cal_occurrences_in_range( string $from_utc, string $to_utc, i
 	 * this table -- only the expansion knows where it stops, and it is cheap for it to say so.
 	 */
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- range query over this plugin's own table.
-	$rows = (array) $wpdb->get_results(
-		$wpdb->prepare( "SELECT * FROM {$schedules} WHERE dtstart_local <= %s ORDER BY dtstart_local ASC", $to_utc ),
-		ARRAY_A
-	);
-
-	/*
-	 * Membership is resolved once rather than per schedule. An empty Calendar has to return nothing
-	 * rather than everything, so the distinction between "no filter" and "filter matching nothing"
-	 * is kept explicit -- that confusion is how a filtered view silently becomes the whole site.
-	 */
-	$members = $calendar_id > 0 ? array_flip( axismundi_cal_calendar_event_ids( $calendar_id ) ) : null;
+	$sql    = "SELECT * FROM {$schedules} WHERE dtstart_local <= %s";
+	$params = array( $to_utc );
+	if ( $calendar_id > 0 ) {
+		$sql     .= ' AND calendar_id = %d';
+		$params[] = $calendar_id;
+	}
+	$sql .= ' ORDER BY dtstart_local ASC';
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- range query over this plugin's own table.
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( $sql, $params ), ARRAY_A );
 
 	$out = array();
 	foreach ( $rows as $schedule ) {
-		if ( null !== $members && ! isset( $members[ (int) $schedule['event_post_id'] ] ) ) {
-			continue;
-		}
 		$post = get_post( (int) $schedule['event_post_id'] );
 		if ( ! $post instanceof WP_Post || ! axismundi_cal_event_listable( $post ) ) {
 			continue;

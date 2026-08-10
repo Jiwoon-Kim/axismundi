@@ -61,11 +61,13 @@ try {
 	);
 
 	$ax_sc_created = axismundi_cal_convert_legacy_envelopes();
+	axismundi_cal_assign_orphan_schedules();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit fixture.
 	$ax_sc_count = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . axismundi_cal_schedules_table() . ' WHERE event_post_id = %d', $ax_sc_legacy ) );
 	ax_sc_assert( $ax_sc_results, 'a legacy envelope converts to exactly one Schedule', $ax_sc_created >= 1 && 1 === $ax_sc_count );
 
 	$ax_sc_schedule = axismundi_cal_schedule_for_event( $ax_sc_legacy );
+	$ax_sc_calendar = (int) ( $ax_sc_schedule['calendar_id'] ?? 0 );
 	ax_sc_assert(
 		$ax_sc_results,
 		'and it carries the times and zone it had, not the site zone',
@@ -118,7 +120,7 @@ try {
 	$ax_sc_posts[] = $ax_sc_rec;
 	$ax_sc_id = axismundi_cal_schedule_save(
 		$ax_sc_rec,
-		array( 'timezone' => 'Asia/Seoul', 'dtstart_local' => '2026-08-01 19:00:00', 'dtend_local' => '2026-08-01 21:00:00', 'rrule' => 'FREQ=WEEKLY;BYDAY=SA;COUNT=6' )
+		array( 'calendar_id' => $ax_sc_calendar, 'timezone' => 'Asia/Seoul', 'dtstart_local' => '2026-08-01 19:00:00', 'dtend_local' => '2026-08-01 21:00:00', 'rrule' => 'FREQ=WEEKLY;BYDAY=SA;COUNT=6' )
 	);
 	ax_sc_assert( $ax_sc_results, 'a recurring Schedule saves and materializes', is_int( $ax_sc_id ) && $ax_sc_id > 0 );
 

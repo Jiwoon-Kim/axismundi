@@ -1,44 +1,36 @@
 <?php
 /**
- * Calendar collections and their membership (dev-only; dist-excluded).
+ * Calendar ownership and timezone inheritance (dev-only; dist-excluded).
  *
- * The property that matters most is that a filter which matches nothing returns nothing. A filtered
- * view that quietly falls back to the whole site is the failure that looks like a working page: an
- * empty or mistyped Calendar would show every Event on the site, on a page built to show a few.
- *
- * The second is that membership is by series. A weekly meeting is one member however often it meets
- * and an annual birthday is one member forever, so a Calendar's size follows how many things are in
- * it rather than how long they run.
+ * An Event has one Calendar. Its Schedule records that ownership, and the Calendar's IANA zone is
+ * the default used to turn the author's local start/end values into UTC. The reader's timezone is
+ * deliberately a separate display concern.
  *
  * @package AxismundiCalendar
  */
 
 defined( 'ABSPATH' ) || exit( 1 );
 
-global $wpdb;
 $ax_cl_results   = array();
 $ax_cl_posts     = array();
 $ax_cl_calendars = array();
 
-/** @param bool[] $results Results. */
 function ax_cl_assert( array &$results, string $label, bool $condition ) : void {
 	$results[] = $condition;
-	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI fixture output.
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI audit output.
 	printf( "[%s] %s\n", $condition ? 'PASS' : 'FAIL', $label );
 }
 
-/** Publish an Event through the real writers. */
-function ax_cl_event( array &$posts, string $title, array $fields ) : int {
+function ax_cl_event( array &$posts, int $calendar_id, string $title, array $fields ) : int {
 	$id      = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_CAL_EVENT_POST_TYPE, 'post_status' => 'draft', 'post_author' => 1, 'post_title' => $title ) );
 	$posts[] = $id;
-	axismundi_cal_event_save( $id, $fields );
+	axismundi_cal_event_save( $id, array_merge( $fields, array( 'calendar_id' => $calendar_id ) ) );
 	$GLOBALS['axismundi_cal_rest_write'] = true;
 	wp_update_post( array( 'ID' => $id, 'post_status' => 'publish' ) );
 	$GLOBALS['axismundi_cal_rest_write'] = false;
 	return $id;
 }
 
-/** Titles in a range, for one Calendar or the whole site. */
 function ax_cl_titles( string $from, string $to, int $calendar_id ) : array {
 	return array_values( array_unique( array_map(
 		static fn( array $o ) : string => (string) $o['title'],
@@ -47,280 +39,55 @@ function ax_cl_titles( string $from, string $to, int $calendar_id ) : array {
 }
 
 try {
-	$ax_cl_a = ax_cl_event( $ax_cl_posts, 'Belongs to A', array( 'timezone' => 'UTC', 'starts_at' => '2026-09-05 10:00:00', 'ends_at' => '2026-09-05 12:00:00' ) );
-	$ax_cl_b = ax_cl_event( $ax_cl_posts, 'Belongs to B', array( 'timezone' => 'UTC', 'starts_at' => '2026-09-06 10:00:00', 'ends_at' => '2026-09-06 12:00:00' ) );
-	$ax_cl_both = ax_cl_event( $ax_cl_posts, 'Belongs to both', array( 'timezone' => 'UTC', 'starts_at' => '2026-09-07 10:00:00', 'ends_at' => '2026-09-07 12:00:00' ) );
+	$ax_cl_first = axismundi_cal_calendar_save( array( 'name' => 'Calendar A', 'slug' => 'ownership-a', 'timezone' => 'Asia/Seoul' ) );
+	$ax_cl_second = axismundi_cal_calendar_save( array( 'name' => 'Calendar B', 'slug' => 'ownership-b', 'timezone' => 'Europe/London' ) );
+	$ax_cl_empty = axismundi_cal_calendar_save( array( 'name' => 'Empty', 'slug' => 'ownership-empty', 'timezone' => 'UTC' ) );
+	$ax_cl_calendars = array( (int) $ax_cl_first, (int) $ax_cl_second, (int) $ax_cl_empty );
 
-	// -- Creating -----------------------------------------------------------------------------
+	ax_cl_assert( $ax_cl_results, 'a local Calendar requires a named IANA timezone', is_wp_error( axismundi_cal_calendar_save( array( 'name' => 'No zone', 'slug' => 'ownership-no-zone' ) ) ) );
+	ax_cl_assert( $ax_cl_results, 'a fixed UTC offset is refused because a Calendar needs DST rules, not a snapshot', is_wp_error( axismundi_cal_calendar_save( array( 'name' => 'Offset', 'slug' => 'ownership-offset', 'timezone' => '+09:00' ) ) ) );
 
-	$ax_cl_first = axismundi_cal_calendar_save( array( 'name' => 'Calendar A', 'slug' => 'cal-a', 'timezone' => 'Asia/Seoul' ) );
-	ax_cl_assert( $ax_cl_results, 'a calendar is created', is_int( $ax_cl_first ) && $ax_cl_first > 0 );
-	$ax_cl_calendars[] = (int) $ax_cl_first;
+	$ax_cl_unfiled = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_CAL_EVENT_POST_TYPE, 'post_status' => 'draft', 'post_author' => 1, 'post_title' => 'No calendar' ) );
+	$ax_cl_posts[] = $ax_cl_unfiled;
+	$ax_cl_missing = axismundi_cal_event_save( $ax_cl_unfiled, array( 'starts_at' => '2026-09-01 19:00:00', 'ends_at' => '2026-09-01 20:00:00' ) );
+	ax_cl_assert( $ax_cl_results, 'an Event without a Calendar is refused instead of becoming unowned', is_wp_error( $ax_cl_missing ) && 'ax_event_calendar' === $ax_cl_missing->get_error_code() );
 
-	$ax_cl_second = axismundi_cal_calendar_save( array( 'name' => 'Calendar B', 'slug' => 'cal-b' ) );
-	$ax_cl_calendars[] = (int) $ax_cl_second;
-
-	$ax_cl_dupe = axismundi_cal_calendar_save( array( 'name' => 'Another', 'slug' => 'cal-a' ) );
-	ax_cl_assert(
-		$ax_cl_results,
-		'a duplicate slug is refused rather than silently suffixed, because the slug is a subscription URL people already hold',
-		is_wp_error( $ax_cl_dupe ) && 'ax_cal_slug_taken' === $ax_cl_dupe->get_error_code()
-	);
-	ax_cl_assert( $ax_cl_results, 'a calendar with no name is refused', is_wp_error( axismundi_cal_calendar_save( array( 'name' => '  ' ) ) ) );
-	ax_cl_assert( $ax_cl_results, 'and an invented timezone is refused', is_wp_error( axismundi_cal_calendar_save( array( 'name' => 'Bad zone', 'slug' => 'bad-zone', 'timezone' => 'Not/AZone' ) ) ) );
-
-	/*
-	 * A site set to a manual UTC offset reports `+09:00` from `wp_timezone_string()`, which is not an
-	 * IANA identifier. Taking it as the default made creating any calendar impossible on such a site,
-	 * with an error naming a timezone the author never typed. An unusable default is dropped; an
-	 * unusable value the author actually supplied is still refused, which the assertion above pins.
-	 */
-	$ax_cl_default = axismundi_cal_calendar_save( array( 'name' => 'Default zone', 'slug' => 'cal-default-zone' ) );
-	ax_cl_assert( $ax_cl_results, 'a calendar can be created without naming a timezone, whatever the site is set to', is_int( $ax_cl_default ) && $ax_cl_default > 0 );
-	if ( is_int( $ax_cl_default ) ) {
-		$ax_cl_calendars[] = $ax_cl_default;
-		$ax_cl_zone        = (string) axismundi_cal_calendar_get( $ax_cl_default )['timezone'];
-		ax_cl_assert(
-			$ax_cl_results,
-			'and it stores a real zone or none, never a bare offset that later reads as invalid',
-			'' === $ax_cl_zone || in_array( $ax_cl_zone, timezone_identifiers_list(), true )
-		);
-	}
-
-	// -- Membership ----------------------------------------------------------------------------
-
-	ax_cl_assert( $ax_cl_results, 'an Event joins a calendar', true === axismundi_cal_add_event( (int) $ax_cl_first, $ax_cl_a ) );
-	axismundi_cal_add_event( (int) $ax_cl_first, $ax_cl_both );
-	axismundi_cal_add_event( (int) $ax_cl_second, $ax_cl_b );
-	axismundi_cal_add_event( (int) $ax_cl_second, $ax_cl_both );
-
-	ax_cl_assert(
-		$ax_cl_results,
-		'one Event belongs to several calendars at once, which is why membership is not a category',
-		2 === count( axismundi_cal_event_calendars( $ax_cl_both ) )
-	);
-
-	$ax_cl_before = count( axismundi_cal_calendar_event_ids( (int) $ax_cl_first ) );
-	axismundi_cal_add_event( (int) $ax_cl_first, $ax_cl_a );
-	ax_cl_assert( $ax_cl_results, 'adding the same Event twice leaves one membership, so a retry cannot double it', $ax_cl_before === count( axismundi_cal_calendar_event_ids( (int) $ax_cl_first ) ) );
-
-	ax_cl_assert( $ax_cl_results, 'a non-Event cannot be added', is_wp_error( axismundi_cal_add_event( (int) $ax_cl_first, 1 ) ) );
-	ax_cl_assert( $ax_cl_results, 'and a calendar that does not exist cannot be added to', is_wp_error( axismundi_cal_add_event( 999999, $ax_cl_a ) ) );
-
-	// -- Filtering ------------------------------------------------------------------------------
+	$ax_cl_a = ax_cl_event( $ax_cl_posts, (int) $ax_cl_first, 'Seoul event', array( 'starts_at' => '2026-09-05 19:00:00', 'ends_at' => '2026-09-05 21:00:00' ) );
+	$ax_cl_b = ax_cl_event( $ax_cl_posts, (int) $ax_cl_second, 'London event', array( 'starts_at' => '2026-09-06 09:00:00', 'ends_at' => '2026-09-06 10:00:00' ) );
+	$ax_cl_a_schedule = axismundi_cal_schedule_for_event( $ax_cl_a );
+	ax_cl_assert( $ax_cl_results, 'a new Event inherits its Calendar timezone when no override is supplied', is_array( $ax_cl_a_schedule ) && 'Asia/Seoul' === (string) $ax_cl_a_schedule['timezone'] && (int) $ax_cl_first === (int) $ax_cl_a_schedule['calendar_id'] );
+	ax_cl_assert( $ax_cl_results, 'the inherited wall time becomes the correct UTC instant', is_array( $ax_cl_a_schedule ) && '2026-09-05 10:00:00' === axismundi_cal_to_utc( (string) $ax_cl_a_schedule['dtstart_local'], (string) $ax_cl_a_schedule['timezone'] ) );
+	ax_cl_assert( $ax_cl_results, 'an Event resolves to one Calendar, never an array of memberships', (int) $ax_cl_first === (int) axismundi_cal_calendar_for_event( $ax_cl_a )['id'] );
 
 	$ax_cl_from = '2026-09-01 00:00:00';
 	$ax_cl_to   = '2026-09-30 00:00:00';
+	ax_cl_assert( $ax_cl_results, 'a Calendar range contains its own Event', in_array( 'Seoul event', ax_cl_titles( $ax_cl_from, $ax_cl_to, (int) $ax_cl_first ), true ) );
+	ax_cl_assert( $ax_cl_results, 'and never another Calendar event', ! in_array( 'London event', ax_cl_titles( $ax_cl_from, $ax_cl_to, (int) $ax_cl_first ), true ) );
+	ax_cl_assert( $ax_cl_results, 'an empty Calendar returns nothing rather than the whole site', array() === ax_cl_titles( $ax_cl_from, $ax_cl_to, (int) $ax_cl_empty ) );
 
-	$ax_cl_in_a = ax_cl_titles( $ax_cl_from, $ax_cl_to, (int) $ax_cl_first );
-	ax_cl_assert( $ax_cl_results, 'a calendar shows its own members', in_array( 'Belongs to A', $ax_cl_in_a, true ) && in_array( 'Belongs to both', $ax_cl_in_a, true ) );
-	ax_cl_assert( $ax_cl_results, 'and not another calendar\'s', ! in_array( 'Belongs to B', $ax_cl_in_a, true ) );
-
-	$ax_cl_site = ax_cl_titles( $ax_cl_from, $ax_cl_to, 0 );
-	ax_cl_assert( $ax_cl_results, 'the unfiltered site view still shows everything', in_array( 'Belongs to A', $ax_cl_site, true ) && in_array( 'Belongs to B', $ax_cl_site, true ) );
-
-	$ax_cl_empty = axismundi_cal_calendar_save( array( 'name' => 'Empty', 'slug' => 'cal-empty' ) );
-	$ax_cl_calendars[] = (int) $ax_cl_empty;
-	ax_cl_assert(
-		$ax_cl_results,
-		'an empty calendar shows nothing rather than falling back to the whole site',
-		array() === ax_cl_titles( $ax_cl_from, $ax_cl_to, (int) $ax_cl_empty )
-	);
-
-	// -- Removal and lifecycle --------------------------------------------------------------------
-
-	$ax_cl_rev = (int) axismundi_cal_calendar_get( (int) $ax_cl_first )['revision'];
-	axismundi_cal_remove_event( (int) $ax_cl_first, $ax_cl_a );
-	ax_cl_assert( $ax_cl_results, 'removing a member takes it out of the calendar', ! in_array( 'Belongs to A', ax_cl_titles( $ax_cl_from, $ax_cl_to, (int) $ax_cl_first ), true ) );
-	ax_cl_assert( $ax_cl_results, 'and the Event itself survives, because a collection is not its contents', 'publish' === get_post_status( $ax_cl_a ) );
-	ax_cl_assert( $ax_cl_results, 'the revision moves when membership changes', (int) axismundi_cal_calendar_get( (int) $ax_cl_first )['revision'] > $ax_cl_rev );
-
-	wp_delete_post( $ax_cl_b, true );
-	ax_cl_assert(
-		$ax_cl_results,
-		'deleting an Event drops its memberships, so a calendar cannot count something that no longer exists',
-		! in_array( $ax_cl_b, axismundi_cal_calendar_event_ids( (int) $ax_cl_second ), true )
-	);
-
-	// -- Series membership ------------------------------------------------------------------------
-
-	$ax_cl_series = ax_cl_event(
-		$ax_cl_posts,
-		'Weekly member',
-		array( 'timezone' => 'UTC', 'starts_at' => '2026-09-05 10:00:00', 'ends_at' => '2026-09-05 12:00:00', 'rrule' => 'FREQ=WEEKLY;BYDAY=SA' )
-	);
-	axismundi_cal_add_event( (int) $ax_cl_second, $ax_cl_series );
-	ax_cl_assert(
-		$ax_cl_results,
-		'a recurring Event is one member however many times it meets, so a calendar does not grow with time',
-		1 === count( array_filter( axismundi_cal_calendar_event_ids( (int) $ax_cl_second ), static fn( int $id ) : bool => $id === $ax_cl_series ) )
-	);
-	$ax_cl_series_rows = array_filter(
-		axismundi_cal_occurrences_in_range( $ax_cl_from, $ax_cl_to, AXISMUNDI_CAL_RANGE_MAX, (int) $ax_cl_second ),
-		static fn( array $o ) : bool => 'Weekly member' === $o['title']
-	);
-	ax_cl_assert( $ax_cl_results, 'while the range view still shows each of its occurrences', count( $ax_cl_series_rows ) >= 3 );
-
-	// -- The subscription feed ---------------------------------------------------------------------
-
+	$ax_cl_move = axismundi_cal_event_save( $ax_cl_a, array( 'calendar_id' => (int) $ax_cl_second ) );
+	$ax_cl_moved = axismundi_cal_schedule_for_event( $ax_cl_a );
+	ax_cl_assert( $ax_cl_results, 'moving an Event replaces its owner rather than adding a second Calendar', true === $ax_cl_move && is_array( $ax_cl_moved ) && (int) $ax_cl_second === (int) $ax_cl_moved['calendar_id'] && 1 === count( array_filter( axismundi_cal_calendar_event_ids( (int) $ax_cl_second ), static fn( int $id ) : bool => $id === $ax_cl_a ) ) );
+	ax_cl_assert( $ax_cl_results, 'the former Calendar no longer lists the moved Event', ! in_array( $ax_cl_a, axismundi_cal_calendar_event_ids( (int) $ax_cl_first ), true ) );
 	$ax_cl_feed = axismundi_cal_site_feed( (int) $ax_cl_second, 'Calendar B' );
-	ax_cl_assert( $ax_cl_results, 'a calendar feed carries its own members', str_contains( $ax_cl_feed['body'], 'Weekly member' ) );
-	ax_cl_assert( $ax_cl_results, 'and not another calendar\'s', ! str_contains( $ax_cl_feed['body'], 'Belongs to A' ) );
-	ax_cl_assert( $ax_cl_results, 'and names itself rather than the site', str_contains( $ax_cl_feed['body'], 'X-WR-CALNAME:Calendar B' ) );
-	ax_cl_assert(
-		$ax_cl_results,
-		'a recurring member is exported as a rule, not as one component per occurrence',
-		1 === substr_count( $ax_cl_feed['body'], 'RRULE:' )
-	);
+	ax_cl_assert( $ax_cl_results, 'the Calendar ICS feed filters by Schedule ownership', str_contains( $ax_cl_feed['body'], 'Seoul event' ) && str_contains( $ax_cl_feed['body'], 'London event' ) );
 
-	// -- Block rendering ----------------------------------------------------------------------------
+	$ax_cl_london_rows = array_values( array_filter( axismundi_cal_occurrences_in_range( '2026-09-05 00:00:00', '2026-09-08 00:00:00', AXISMUNDI_CAL_RANGE_MAX, (int) $ax_cl_second ), static fn( array $o ) : bool => 'London event' === $o['title'] ) );
+	$ax_cl_view = axismundi_cal_group_by_day( $ax_cl_london_rows, new DateTimeZone( 'Asia/Seoul' ) );
+	ax_cl_assert( $ax_cl_results, 'the reader timezone remains independent of the Calendar timezone', isset( $ax_cl_view['2026-09-06'] ) );
 
-	$ax_cl_html = do_blocks( '<!-- wp:axismundi-calendar/calendar {"calendar":"cal-a","view":"month"} /-->' );
-	ax_cl_assert( $ax_cl_results, 'the block accepts a calendar slug', str_contains( $ax_cl_html, 'ax-cal__grid' ) );
-	$ax_cl_unknown = do_blocks( '<!-- wp:axismundi-calendar/calendar {"calendar":"no-such-calendar"} /-->' );
-	ax_cl_assert(
-		$ax_cl_results,
-		'and an unknown slug renders an empty calendar rather than the whole site, so a typo does not publish everything',
-		str_contains( $ax_cl_unknown, 'ax-cal__empty' ) && ! str_contains( $ax_cl_unknown, 'Belongs to both' )
-	);
-
-	// -- Three timezones, doing three different jobs ---------------------------------------------------
-
-	/*
-	 * The Event keeps where it happens, UTC is what gets sorted and queried, and the reader sees
-	 * their own clock. Confusing the first and the third is the tempting mistake: laying a London
-	 * calendar out in London time would tell a reader in Seoul that an event is at nine in the
-	 * morning when for them it is five in the afternoon.
-	 */
-	$ax_cl_tz_cal = axismundi_cal_calendar_save( array( 'name' => 'London calendar', 'slug' => 'cal-london', 'timezone' => 'Europe/London' ) );
-	$ax_cl_calendars[] = (int) $ax_cl_tz_cal;
-
-	ax_cl_assert(
-		$ax_cl_results,
-		'a calendar names its own home timezone, which is metadata about where it belongs',
-		'Europe/London' === axismundi_cal_calendar_timezone( axismundi_cal_calendar_get( (int) $ax_cl_tz_cal ) )
-	);
-	ax_cl_assert(
-		$ax_cl_results,
-		'but the display timezone is the readers, and does not follow the calendar',
-		wp_timezone()->getName() === axismundi_cal_viewer_timezone()->getName()
-	);
-	ax_cl_assert(
-		$ax_cl_results,
-		'a calendar with no home timezone reports none rather than borrowing the sites',
-		'' === axismundi_cal_calendar_timezone( axismundi_cal_calendar_get( (int) $ax_cl_second ) )
-	);
-	ax_cl_assert(
-		$ax_cl_results,
-		'a fixed offset is refused, because a calendar belongs to a place and an offset is not one',
-		is_wp_error( axismundi_cal_calendar_save( array( 'name' => 'Offset', 'slug' => 'cal-offset', 'timezone' => '+09:00' ) ) )
-	);
-
-	// A London morning event, which is a Seoul evening.
-	$ax_cl_london = ax_cl_event( $ax_cl_posts, 'London morning', array( 'timezone' => 'Europe/London', 'starts_at' => '2026-09-10 09:00:00', 'ends_at' => '2026-09-10 10:00:00' ) );
-	axismundi_cal_add_event( (int) $ax_cl_tz_cal, $ax_cl_london );
-	$ax_cl_london_rows = array_values( array_filter(
-		axismundi_cal_occurrences_in_range( '2026-09-09 00:00:00', '2026-09-12 00:00:00', AXISMUNDI_CAL_RANGE_MAX, (int) $ax_cl_tz_cal ),
-		static fn( array $o ) : bool => 'London morning' === $o['title']
-	) );
-	ax_cl_assert( $ax_cl_results, 'the event is stored as the instant it happens', 1 === count( $ax_cl_london_rows ) && '2026-09-10 08:00:00' === (string) $ax_cl_london_rows[0]['start_utc'] );
-	ax_cl_assert( $ax_cl_results, 'while keeping the wall time of the place it happens in', '2026-09-10 09:00:00' === (string) $ax_cl_london_rows[0]['start_local'] );
-
-	$ax_cl_seoul_view = axismundi_cal_group_by_day( $ax_cl_london_rows, new DateTimeZone( 'Asia/Seoul' ) );
-	ax_cl_assert( $ax_cl_results, 'and a reader in Seoul sees it on their own day', isset( $ax_cl_seoul_view['2026-09-10'] ) );
-
-	// -- An all-day entry is a civil date and is never converted -----------------------------------------
-
-	/*
-	 * The failure this pins: converting an all-day entry moved a national holiday to the previous
-	 * day for every reader west of UTC, and made a one-day holiday span two days everywhere, because
-	 * the exclusive end date was read as an inclusive instant.
-	 */
-	$ax_cl_holiday = array(
-		array(
-			'start_utc'   => '2026-08-15 00:00:00',
-			'end_utc'     => '2026-08-16 00:00:00',
-			'start_local' => '2026-08-15 00:00:00',
-			'end_local'   => '2026-08-16 00:00:00',
-			'all_day'     => 1,
-			'status'      => 'scheduled',
-			'title'       => 'Liberation Day',
-		),
-	);
-	foreach ( array( 'Asia/Seoul', 'Europe/London', 'America/New_York', 'Pacific/Kiritimati' ) as $ax_cl_zone_name ) {
-		$ax_cl_grouped = axismundi_cal_group_by_day( $ax_cl_holiday, new DateTimeZone( $ax_cl_zone_name ) );
-		ax_cl_assert(
-			$ax_cl_results,
-			sprintf( 'a holiday on the 15th is the 15th when read from %s, and lasts one day', $ax_cl_zone_name ),
-			array( '2026-08-15' ) === array_keys( $ax_cl_grouped )
-		);
-	}
-
-	$ax_cl_two_day = array(
-		array(
-			'start_utc'   => '2026-08-15 00:00:00',
-			'end_utc'     => '2026-08-17 00:00:00',
-			'start_local' => '2026-08-15 00:00:00',
-			'end_local'   => '2026-08-17 00:00:00',
-			'all_day'     => 1,
-			'status'      => 'scheduled',
-			'title'       => 'Long weekend',
-		),
-	);
-	ax_cl_assert(
-		$ax_cl_results,
-		'while a genuinely two-day entry covers both of its days and not a third',
-		array( '2026-08-15', '2026-08-16' ) === array_keys( axismundi_cal_group_by_day( $ax_cl_two_day, new DateTimeZone( 'America/New_York' ) ) )
-	);
-
-	// -- Through the rendered grid, not only through the grouping ----------------------------------------
-
-	/*
-	 * Calling the grouper proves the grouper works; it says nothing about whether the grid asks it
-	 * the right question. The block is what a reader actually sees.
-	 */
-	$_GET['ax_cal'] = '2026-09-01';
-	$ax_cl_tz_html  = do_blocks( '<!-- wp:axismundi-calendar/calendar {"calendar":"cal-london"} /-->' );
-	unset( $_GET['ax_cal'] );
-	ax_cl_assert( $ax_cl_results, 'the block renders that calendar', str_contains( $ax_cl_tz_html, 'ax-cal__grid' ) );
-
-	$ax_cl_cell = '';
-	foreach ( explode( '<td', $ax_cl_tz_html ) as $ax_cl_chunk ) {
-		if ( str_contains( $ax_cl_chunk, 'London morning' ) ) {
-			$ax_cl_cell = $ax_cl_chunk;
-			break;
-		}
-	}
-	$ax_cl_day = preg_match( '/ax-cal__date">(\d+)</', $ax_cl_cell, $ax_cl_m ) ? (int) $ax_cl_m[1] : 0;
-	ax_cl_assert(
-		$ax_cl_results,
-		'and places the event on the day the reader would call it, in a cell numbered for that same zone',
-		10 === $ax_cl_day
-	);
-
-	// -- Deleting a calendar --------------------------------------------------------------------------
-
-	axismundi_cal_calendar_delete( (int) $ax_cl_empty );
-	ax_cl_assert( $ax_cl_results, 'a deleted calendar is gone', null === axismundi_cal_calendar_by_slug( 'cal-empty' ) );
-	ax_cl_assert( $ax_cl_results, 'and its slug is free again', ! is_wp_error( axismundi_cal_calendar_save( array( 'name' => 'Reused', 'slug' => 'cal-empty' ) ) ) );
-	$ax_cl_calendars[] = (int) axismundi_cal_calendar_by_slug( 'cal-empty' )['id'];
+	ax_cl_assert( $ax_cl_results, 'deleting a Calendar deletes the Events it owns rather than leaving unfiled schedules behind', true === axismundi_cal_calendar_delete( (int) $ax_cl_second ) && null === get_post( $ax_cl_a ) && null === get_post( $ax_cl_b ) && null === axismundi_cal_calendar_get( (int) $ax_cl_second ) );
 } finally {
-	foreach ( array_unique( $ax_cl_calendars ) as $ax_cl_calendar_id ) {
-		axismundi_cal_calendar_delete( (int) $ax_cl_calendar_id );
+	foreach ( array_unique( $ax_cl_posts ) as $post_id ) {
+		wp_delete_post( (int) $post_id, true );
 	}
-	foreach ( array_unique( $ax_cl_posts ) as $ax_cl_post_id ) {
-		$ax_cl_row = axismundi_cal_schedule_for_event( (int) $ax_cl_post_id );
-		if ( is_array( $ax_cl_row ) ) {
-			$wpdb->delete( axismundi_cal_occurrences_table(), array( 'schedule_id' => (int) $ax_cl_row['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$wpdb->delete( axismundi_cal_schedules_table(), array( 'id' => (int) $ax_cl_row['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		}
-		$wpdb->delete( axismundi_cal_events_table(), array( 'post_id' => (int) $ax_cl_post_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		wp_delete_post( (int) $ax_cl_post_id, true );
+	foreach ( array_unique( $ax_cl_calendars ) as $calendar_id ) {
+		axismundi_cal_calendar_delete( (int) $calendar_id );
 	}
 }
 
 $ax_cl_failures = count( array_filter( $ax_cl_results, static fn( bool $result ) : bool => ! $result ) );
-// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI fixture output.
+// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI audit output.
 printf( "\n== %d checks, %d failed ==\n", count( $ax_cl_results ), $ax_cl_failures );
 if ( class_exists( 'WP_CLI' ) ) {
 	WP_CLI::halt( $ax_cl_failures > 0 ? 1 : 0 );

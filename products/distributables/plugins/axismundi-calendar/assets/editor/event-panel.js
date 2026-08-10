@@ -47,29 +47,6 @@
 		{ label: __( 'No participation', 'axismundi-calendar' ), value: 'none' }
 	];
 
-	/**
-	 * Timezone choices, with no preselected value.
-	 *
-	 * The empty first entry is deliberate and is not a default: an Event happens in a
-	 * particular place, and inheriting the site's zone would stamp a confident offset on
-	 * an event whose author never said where it is. The server refuses an empty zone, so
-	 * this placeholder is a question the author has to answer rather than a silent choice.
-	 */
-	function timezoneOptions() {
-		var config = window.axismundiCalendarEditor || {};
-		var list = Array.isArray( config.timezones ) ? config.timezones : [];
-		var groups = [];
-		var byGroup = {};
-		list.forEach( function ( zone ) {
-			if ( ! byGroup[ zone.group ] ) {
-				byGroup[ zone.group ] = [];
-				groups.push( zone.group );
-			}
-			byGroup[ zone.group ].push( zone );
-		} );
-		return { groups: groups, byGroup: byGroup };
-	}
-
 	/** 'Y-m-d H:i:s' as the value a datetime-local control wants. */
 	function toInput( stored ) {
 		var value = String( stored || '' ).trim();
@@ -209,7 +186,8 @@
 		}
 
 		var envelope = state.envelope;
-		var zones = timezoneOptions();
+		var config = window.axismundiCalendarEditor || {};
+		var calendars = Array.isArray( config.calendars ) ? config.calendars : [];
 
 		function update( changes ) {
 			editPost( { axismundi_cal_envelope: Object.assign( {}, envelope, changes ) } );
@@ -222,8 +200,8 @@
 		if ( ! String( envelope.endsAt || '' ).trim() ) {
 			missing.push( __( 'an end', 'axismundi-calendar' ) );
 		}
-		if ( ! String( envelope.timezone || '' ).trim() ) {
-			missing.push( __( 'a timezone', 'axismundi-calendar' ) );
+		if ( ! Number( envelope.calendarId || 0 ) ) {
+			missing.push( __( 'a calendar', 'axismundi-calendar' ) );
 		}
 
 		var children = [];
@@ -239,6 +217,24 @@
 				)
 			);
 		}
+
+		children.push(
+			el( C.SelectControl, {
+				key: 'calendar',
+				label: __( 'Calendar', 'axismundi-calendar' ),
+				help: __( 'Its timezone is used for the times below.', 'axismundi-calendar' ),
+				value: String( envelope.calendarId || '' ),
+				options: [ { label: __( 'Select a calendar', 'axismundi-calendar' ), value: '' } ].concat(
+					calendars.map( function ( calendar ) {
+						return { label: calendar.name + ' (' + calendar.timezone + ')', value: String( calendar.id ) };
+					} )
+				),
+				onChange: function ( value ) {
+					var selected = calendars.filter( function ( calendar ) { return String( calendar.id ) === String( value ); } )[0];
+					update( selected ? { calendarId: selected.id, timezone: selected.timezone } : { calendarId: 0, timezone: '' } );
+				}
+			} )
+		);
 
 		children.push(
 			el( C.TextControl, {
@@ -259,34 +255,6 @@
 				value: toInput( envelope.endsAt ),
 				onChange: function ( value ) { update( { endsAt: toStored( value ) } ); }
 			} )
-		);
-
-		children.push(
-			el(
-				C.BaseControl,
-				{ key: 'timezone', id: 'ax-event-timezone', label: __( 'Timezone', 'axismundi-calendar' ), help: __( 'Where the event happens, not where you are. This travels with the start time.', 'axismundi-calendar' ) },
-				el(
-					'select',
-					{
-						id: 'ax-event-timezone',
-						className: 'components-select-control__input',
-						style: { width: '100%' },
-						value: envelope.timezone || '',
-						onChange: function ( event ) { update( { timezone: event.target.value } ); }
-					},
-					[ el( 'option', { key: '', value: '' }, __( 'Select a timezone', 'axismundi-calendar' ) ) ].concat(
-						zones.groups.map( function ( group ) {
-							return el(
-								'optgroup',
-								{ key: group, label: group },
-								zones.byGroup[ group ].map( function ( zone ) {
-									return el( 'option', { key: zone.value, value: zone.value }, zone.label );
-								} )
-							);
-						} )
-					)
-				)
-			)
 		);
 
 		// -- Recurrence ------------------------------------------------------------------

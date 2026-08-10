@@ -35,6 +35,32 @@ function axismundi_cal_timezone_options() : array {
 }
 
 /**
+ * Local Calendars the current author may choose as an Event home.
+ *
+ * Remote calendars are caches we cannot write into. Keeping that distinction in the REST-backed
+ * panel prevents an author from turning a subscribed public holiday feed into local content.
+ *
+ * @return array<int,array{id:int,name:string,timezone:string}>
+ */
+function axismundi_cal_editor_calendars() : array {
+	global $wpdb;
+	$calendars = axismundi_cal_calendars_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- editor choices from this plugin's own table.
+	$rows = (array) $wpdb->get_results( "SELECT * FROM {$calendars} WHERE kind = 'local' ORDER BY name ASC", ARRAY_A );
+	$out  = array();
+	foreach ( $rows as $calendar ) {
+		if ( axismundi_cal_can_manage_calendar( $calendar ) ) {
+			$out[] = array(
+				'id'       => (int) $calendar['id'],
+				'name'     => (string) $calendar['name'],
+				'timezone' => axismundi_cal_calendar_timezone( $calendar ),
+			);
+		}
+	}
+	return $out;
+}
+
+/**
  * Enqueue the Event document panel on the Event editor only.
  *
  * @return void
@@ -71,8 +97,7 @@ function axismundi_cal_enqueue_editor_assets() : void {
 		'axismundi-calendar-panel',
 		'axismundiCalendarEditor',
 		array(
-			'timezones'   => axismundi_cal_timezone_options(),
-			'siteTimezone' => wp_timezone_string(),
+			'calendars' => axismundi_cal_editor_calendars(),
 		)
 	);
 }

@@ -7,8 +7,8 @@
  * 1. A published Event projects as an `Event`. Nothing else claims `ax_event` -- the Core Post
  *    transformer gates on `post` -- so a regression does not turn Events into Articles, it turns
  *    them into nothing at all, and the page keeps rendering.
- * 2. The timezone is chosen, never inherited. A silent fallback to the site zone publishes a
- *    confident offset the author never gave.
+ * 2. A Calendar is chosen, and its named timezone becomes the Event default rather than the site
+ *    zone being silently stamped on it.
  * 3. An Event cannot reach `publish` without its envelope, because that state is invisible: a
  *    public page, no Object, and no error anywhere.
  *
@@ -23,6 +23,7 @@ defined( 'ABSPATH' ) || exit( 1 );
 $ax_ev_results = array();
 $ax_ev_posts   = array();
 $ax_ev_users   = array();
+$ax_ev_calendars = array();
 
 /** @param bool[] $results Results. */
 function ax_ev_assert( array &$results, string $label, bool $condition ) : void {
@@ -70,6 +71,8 @@ try {
 		)
 	);
 	$ax_ev_posts[] = $ax_ev_post;
+	$ax_ev_calendar = axismundi_cal_calendar_save( array( 'name' => 'Authoring calendar', 'slug' => 'audit-authoring-' . $ax_ev_post, 'timezone' => 'Asia/Seoul' ) );
+	$ax_ev_calendars[] = (int) $ax_ev_calendar;
 
 	// -- The field exists and reports an empty envelope in one stable shape -----------------
 
@@ -82,14 +85,14 @@ try {
 	ax_ev_assert( $ax_ev_results, 'a partially filled draft does not error, so authoring one field at a time is possible', $ax_ev_partial instanceof WP_REST_Response && 200 === $ax_ev_partial->get_status() );
 	ax_ev_assert( $ax_ev_results, 'and nothing is stored from it, because the table cannot hold half an Event', null === axismundi_cal_event_get( $ax_ev_post ) );
 
-	// -- The timezone is chosen, never inherited -------------------------------------------
+	// -- The Calendar is chosen; timezone inherits from it ----------------------------------
 
-	$ax_ev_no_zone = axismundi_cal_event_save(
+	$ax_ev_no_calendar = axismundi_cal_event_save(
 		$ax_ev_post,
 		array( 'starts_at' => '2026-09-01 19:00:00', 'ends_at' => '2026-09-01 21:00:00' )
 	);
-	ax_ev_assert( $ax_ev_results, 'the writer refuses an Event with no timezone instead of stamping the site\'s', is_wp_error( $ax_ev_no_zone ) && 'ax_event_timezone' === $ax_ev_no_zone->get_error_code() );
-	ax_ev_assert( $ax_ev_results, 'and the site timezone is not quietly substituted', null === axismundi_cal_event_get( $ax_ev_post ) );
+	ax_ev_assert( $ax_ev_results, 'the writer refuses an Event with no Calendar instead of stamping the site\'s timezone', is_wp_error( $ax_ev_no_calendar ) && 'ax_event_calendar' === $ax_ev_no_calendar->get_error_code() );
+	ax_ev_assert( $ax_ev_results, 'and nothing is stored until an owning Calendar is chosen', null === axismundi_cal_event_get( $ax_ev_post ) );
 
 	// -- Publishing without an envelope is refused -----------------------------------------
 
@@ -105,9 +108,9 @@ try {
 	$ax_ev_full = ax_ev_rest_write(
 		$ax_ev_post,
 		array(
+			'calendarId'     => (int) $ax_ev_calendar,
 			'startsAt'       => '2026-09-01 19:00:00',
 			'endsAt'         => '2026-09-01 21:00:00',
-			'timezone'       => 'Asia/Seoul',
 			'joinMode'       => 'free',
 			'displayEndTime' => true,
 		),
@@ -116,7 +119,7 @@ try {
 	ax_ev_assert( $ax_ev_results, 'a complete envelope saves and publishes through the same field the panel writes', $ax_ev_full instanceof WP_REST_Response && 200 === $ax_ev_full->get_status() && 'publish' === get_post_status( $ax_ev_post ) );
 
 	$ax_ev_stored = axismundi_cal_event_get( $ax_ev_post );
-	ax_ev_assert( $ax_ev_results, 'the local wall time is stored as given, with UTC derived from the chosen zone', is_array( $ax_ev_stored ) && '2026-09-01 19:00:00' === $ax_ev_stored['starts_at'] && '2026-09-01 10:00:00' === $ax_ev_stored['starts_at_gmt'] );
+	ax_ev_assert( $ax_ev_results, 'the local wall time is stored as given, with UTC derived from the Calendar timezone', is_array( $ax_ev_stored ) && '2026-09-01 19:00:00' === $ax_ev_stored['starts_at'] && '2026-09-01 10:00:00' === $ax_ev_stored['starts_at_gmt'] && (int) $ax_ev_calendar === (int) $ax_ev_stored['calendar_id'] );
 
 	// -- The projection is an Event, not an Article ----------------------------------------
 
@@ -145,7 +148,7 @@ try {
 
 	// -- Refusals the panel surfaces --------------------------------------------------------
 
-	$ax_ev_backwards = ax_ev_rest_write( $ax_ev_post, array( 'startsAt' => '2026-09-01 19:00:00', 'endsAt' => '2026-09-01 18:00:00', 'timezone' => 'Asia/Seoul' ) );
+	$ax_ev_backwards = ax_ev_rest_write( $ax_ev_post, array( 'startsAt' => '2026-09-01 19:00:00', 'endsAt' => '2026-09-01 18:00:00' ) );
 	ax_ev_assert( $ax_ev_results, 'an Event that ends before it starts is refused through the field, so the panel can show why', $ax_ev_backwards instanceof WP_Error || ( $ax_ev_backwards instanceof WP_REST_Response && 200 !== $ax_ev_backwards->get_status() ) );
 
 	$ax_ev_external = ax_ev_rest_write( $ax_ev_post, array( 'joinMode' => 'external', 'externalParticipationUrl' => '' ) );
@@ -153,20 +156,21 @@ try {
 
 	// -- A move is remembered ---------------------------------------------------------------
 
-	ax_ev_rest_write( $ax_ev_post, array( 'startsAt' => '2026-09-02 19:00:00', 'endsAt' => '2026-09-02 21:00:00', 'timezone' => 'Asia/Seoul' ) );
+	ax_ev_rest_write( $ax_ev_post, array( 'startsAt' => '2026-09-02 19:00:00', 'endsAt' => '2026-09-02 21:00:00' ) );
 	$ax_ev_moved = axismundi_cal_event_get( $ax_ev_post );
 	ax_ev_assert( $ax_ev_results, 'rescheduling records the previous start, which is what tells a peer this is a move', is_array( $ax_ev_moved ) && '2026-09-01 10:00:00' === (string) $ax_ev_moved['previous_starts_at_gmt'] );
 
-	// -- The panel offers every zone, with none preselected ----------------------------------
+	// -- The panel offers owned local Calendars, never remote caches ---------------------------
 
-	$ax_ev_zones = axismundi_cal_timezone_options();
-	$ax_ev_values = array_column( $ax_ev_zones, 'value' );
-	ax_ev_assert( $ax_ev_results, 'the panel offers the full IANA list, so an Event can say where it actually happens', count( $ax_ev_zones ) === count( timezone_identifiers_list() ) && in_array( 'Asia/Seoul', $ax_ev_values, true ) && in_array( 'America/Argentina/Buenos_Aires', $ax_ev_values, true ) );
-	ax_ev_assert( $ax_ev_results, 'and no option is empty, so the placeholder stays the only unchosen state', ! in_array( '', $ax_ev_values, true ) );
+	$ax_ev_calendars_for_panel = axismundi_cal_editor_calendars();
+	ax_ev_assert( $ax_ev_results, 'the panel offers the local Calendar that owns new Events', in_array( (int) $ax_ev_calendar, array_column( $ax_ev_calendars_for_panel, 'id' ), true ) );
 } finally {
 	wp_set_current_user( 0 );
 	foreach ( array_unique( $ax_ev_posts ) as $ax_ev_post_id ) {
 		wp_delete_post( (int) $ax_ev_post_id, true );
+	}
+	foreach ( array_unique( $ax_ev_calendars ) as $ax_ev_calendar_id ) {
+		axismundi_cal_calendar_delete( (int) $ax_ev_calendar_id );
 	}
 	foreach ( array_unique( $ax_ev_users ) as $ax_ev_user_id ) {
 		wp_delete_user( (int) $ax_ev_user_id );

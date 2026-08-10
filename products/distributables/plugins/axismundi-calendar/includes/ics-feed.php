@@ -49,6 +49,11 @@ function axismundi_cal_register_ics_routes() : void {
 		'index.php?ax_cal_ics=calendar&ax_cal_slug=$matches[1]',
 		'top'
 	);
+	add_rewrite_rule(
+		'^calendar/([^/]+)/?$',
+		'index.php?ax_cal_page=1&ax_cal_slug=$matches[1]',
+		'top'
+	);
 }
 add_action( 'init', 'axismundi_cal_register_ics_routes', 9 );
 
@@ -62,6 +67,7 @@ function axismundi_cal_ics_query_vars( array $vars ) : array {
 	$vars[] = 'ax_cal_ics';
 	$vars[] = 'ax_cal_event';
 	$vars[] = 'ax_cal_slug';
+	$vars[] = 'ax_cal_page';
 	return $vars;
 }
 add_filter( 'query_vars', 'axismundi_cal_ics_query_vars' );
@@ -102,10 +108,9 @@ function axismundi_cal_feed_schedules( string $cutoff_utc, int $calendar_id = 0 
 	$rows = (array) $wpdb->get_results( "SELECT * FROM {$table} ORDER BY dtstart_local ASC", ARRAY_A );
 
 	$horizon = gmdate( 'Y-m-d H:i:s', strtotime( $cutoff_utc . ' +5 years' ) );
-	$members = $calendar_id > 0 ? array_flip( axismundi_cal_calendar_event_ids( $calendar_id ) ) : null;
 	$out     = array();
 	foreach ( $rows as $schedule ) {
-		if ( null !== $members && ! isset( $members[ (int) $schedule['event_post_id'] ] ) ) {
+		if ( $calendar_id > 0 && $calendar_id !== (int) $schedule['calendar_id'] ) {
 			continue;
 		}
 		$post = get_post( (int) $schedule['event_post_id'] );
@@ -285,7 +290,7 @@ function axismundi_cal_serve_ics() : void {
 		$feed = axismundi_cal_site_feed();
 	} elseif ( 'calendar' === $which ) {
 		$calendar = axismundi_cal_calendar_by_slug( (string) get_query_var( 'ax_cal_slug' ) );
-		if ( is_array( $calendar ) && 'public' === (string) $calendar['visibility'] ) {
+		if ( is_array( $calendar ) && 'local' === (string) $calendar['kind'] && 'public' === (string) $calendar['visibility'] ) {
 			$feed = axismundi_cal_site_feed(
 				(int) $calendar['id'],
 				(string) $calendar['name'],

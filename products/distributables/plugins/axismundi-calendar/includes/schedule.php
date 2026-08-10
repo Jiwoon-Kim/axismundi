@@ -74,16 +74,24 @@ function axismundi_cal_schedule_save( int $post_id, array $fields ) {
 	}
 	$existing = axismundi_cal_schedule_for_event( $post_id );
 
-	/*
-	 * Chosen, never inherited. Falling back to the site timezone is right for a single-venue site
-	 * and wrong for a federated calendar, where the site's zone is nobody's in particular: it would
-	 * stamp a confident offset on an event whose author never said where it happens, and that offset
-	 * travels to every peer.
-	 */
-	$timezone = (string) ( $fields['timezone'] ?? ( $existing['timezone'] ?? '' ) );
-	if ( '' === $timezone ) {
-		return new WP_Error( 'ax_event_timezone', __( 'An Event needs a timezone. Choose the one the event happens in.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	$calendar_id = array_key_exists( 'calendar_id', $fields )
+		? (int) $fields['calendar_id']
+		: (int) ( $existing['calendar_id'] ?? 0 );
+	$calendar = axismundi_cal_calendar_get( $calendar_id );
+	if ( ! is_array( $calendar ) || 'local' !== (string) $calendar['kind'] ) {
+		return new WP_Error( 'ax_event_calendar', __( 'Choose a local calendar for this Event.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
+	$calendar_timezone = axismundi_cal_calendar_timezone( $calendar );
+	if ( '' === $calendar_timezone ) {
+		return new WP_Error( 'ax_event_calendar_timezone', __( 'The selected calendar needs an IANA timezone before it can hold Events.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+
+	/*
+	 * Calendar time is the authoring default. A schedule keeps an explicit zone once written so an
+	 * existing cross-region Event and a legacy import retain their actual instant; a new Event with
+	 * no override inherits the selected Calendar's named place.
+	 */
+	$timezone = (string) ( $fields['timezone'] ?? ( $existing['timezone'] ?? $calendar_timezone ) );
 	if ( ! in_array( $timezone, timezone_identifiers_list(), true ) ) {
 		return new WP_Error( 'ax_event_timezone', __( 'The timezone must be an IANA identifier.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
@@ -119,6 +127,7 @@ function axismundi_cal_schedule_save( int $post_id, array $fields ) {
 	}
 
 	$next = array(
+		'calendar_id'       => $calendar_id,
 		'timezone'          => $timezone,
 		'all_day'           => $all_day,
 		'dtstart_local'     => $start['local'],
@@ -184,6 +193,12 @@ function axismundi_cal_schedule_save( int $post_id, array $fields ) {
 		}
 		$schedule_id = (int) $wpdb->insert_id;
 	}
+	if ( ! is_array( $existing ) || (int) $existing['calendar_id'] !== $calendar_id ) {
+		if ( is_array( $existing ) && (int) $existing['calendar_id'] > 0 ) {
+			axismundi_cal_bump_revision( (int) $existing['calendar_id'] );
+		}
+		axismundi_cal_bump_revision( $calendar_id );
+	}
 
 	axismundi_cal_materialize( $schedule_id );
 	return $schedule_id;
@@ -232,6 +247,7 @@ function axismundi_cal_convert_legacy_envelopes() : int {
 		$now  = current_time( 'mysql', true );
 		$data = array(
 			'event_post_id'          => (int) $row['post_id'],
+			'calendar_id'            => 0,
 			'timezone'               => (string) $row['timezone'],
 			'all_day'                => 0,
 			'dtstart_local'          => (string) $row['starts_at'],
@@ -256,4 +272,88 @@ function axismundi_cal_convert_legacy_envelopes() : int {
 		}
 	}
 	return $created;
+}
+
+/**
+ * Assign every legacy Schedule to exactly one Calendar before the membership table disappears.
+ *
+ * The oldest recorded membership wins. An Event that had none is placed in a single local
+ * "Unfiled events" Calendar instead of being left with no owner; no Event is discarded and no
+ * schedule timezone is rewritten during this structural migration.
+ *
+ * @return void
+ */
+function axismundi_cal_assign_orphan_schedules() : void {
+	global $wpdb;
+	$schedules = axismundi_cal_schedules_table();
+	$legacy    = $wpdb->prefix . 'ax_cal_calendar_items';
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema migration over this plugin's own table.
+	$has_legacy = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $legacy ) );
+	if ( $legacy !== $has_legacy ) {
+		$unfiled_id = axismundi_cal_ensure_unfiled_calendar();
+		if ( $unfiled_id > 0 ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- final migration fallback for schedules created after the legacy table disappeared.
+			$wpdb->update( $schedules, array( 'calendar_id' => $unfiled_id ), array( 'calendar_id' => 0 ), array( '%d' ), array( '%d' ) );
+		}
+		return;
+	}
+
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema migration over this plugin's own tables.
+	$orphans = (array) $wpdb->get_results( "SELECT id, event_post_id FROM {$schedules} WHERE calendar_id = 0", ARRAY_A );
+	if ( empty( $orphans ) ) {
+		return;
+	}
+	$unfiled_id = 0;
+	foreach ( $orphans as $schedule ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- deterministic legacy membership lookup.
+		$calendar_id = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT calendar_id FROM {$legacy} WHERE event_post_id = %d ORDER BY created_at ASC, id ASC LIMIT 1",
+				(int) $schedule['event_post_id']
+			)
+		);
+		if ( $calendar_id <= 0 ) {
+			if ( $unfiled_id <= 0 ) {
+				$unfiled_id = axismundi_cal_ensure_unfiled_calendar();
+			}
+			$calendar_id = $unfiled_id;
+		}
+		if ( $calendar_id > 0 ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema migration over this plugin's own table.
+			$wpdb->update( $schedules, array( 'calendar_id' => $calendar_id ), array( 'id' => (int) $schedule['id'] ), array( '%d' ), array( '%d' ) );
+		}
+	}
+}
+
+/**
+ * The one migration-only Calendar for legacy Events that had no membership at all.
+ *
+ * @return int
+ */
+function axismundi_cal_ensure_unfiled_calendar() : int {
+	global $wpdb;
+	$calendars = axismundi_cal_calendars_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- stable migration lookup.
+	$existing = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$calendars} WHERE slug = %s", 'unfiled-events' ) );
+	if ( $existing > 0 ) {
+		return $existing;
+	}
+	$now = current_time( 'mysql', true );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- migration creates one row in this plugin's own table.
+	$wpdb->insert(
+		$calendars,
+		array(
+			'slug'            => 'unfiled-events',
+			'name'            => __( 'Unfiled events', 'axismundi-calendar' ),
+			'description'     => __( 'Events preserved while Calendar ownership was introduced.', 'axismundi-calendar' ),
+			'timezone'        => 'UTC',
+			'kind'            => 'local',
+			'visibility'      => 'public',
+			'revision'        => 1,
+			'owner_actor_uri' => '',
+			'created_at'      => $now,
+			'updated_at'      => $now,
+		)
+	);
+	return (int) $wpdb->insert_id;
 }

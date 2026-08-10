@@ -1,0 +1,603 @@
+<?php
+/**
+ * Expanding a Schedule into the instances it actually produces.
+ *
+ * Expansion happens in the event's own timezone, on wall time, and converts to UTC only at the end.
+ * That order is the whole point: a weekly 19:00 is 19:00 on both sides of a DST change even though
+ * the instant beneath it moves by an hour. Expanding in UTC and converting back would keep the
+ * instant and move the wall time, which is the opposite of what a calendar promises -- and it would
+ * look correct for the two-thirds of the year with no transition in it.
+ *
+ * The rule is the source of truth for rule-derived instances; the occurrence table is a cache of
+ * them, plus a permanent home for the facts that exist nowhere else -- a cancelled instance, a moved
+ * one, an extra date. So a rebuild may discard `origin = 'rule'` rows freely and must never touch
+ * the others.
+ *
+ * @package AxismundiCalendar
+ */
+
+defined( 'ABSPATH' ) || exit;
+
+/**
+ * How far past the requested range expansion will run before giving up.
+ *
+ * An unbounded rule intersected with a narrow far-future window can otherwise walk millions of
+ * candidates. The bound is on iterations rather than time so that a pathological rule fails as an
+ * empty answer instead of a timeout.
+ */
+const AXISMUNDI_CAL_EXPAND_MAX_STEPS = 10000;
+
+/**
+ * The instances a schedule produces within a range.
+ *
+ * Computed rather than read, so the answer does not depend on how much of the series happens to
+ * have been materialized. Overrides stored against the schedule are applied on top, which is what
+ * makes a cancelled or moved instance survive a rebuild.
+ *
+ * @param array<string,mixed> $schedule Schedule row.
+ * @param string              $from_utc Range start, `Y-m-d H:i:s` UTC, inclusive.
+ * @param string              $to_utc   Range end, `Y-m-d H:i:s` UTC, exclusive.
+ * @return array<int,array<string,mixed>> Occurrences ordered by start.
+ */
+function axismundi_cal_expand( array $schedule, string $from_utc, string $to_utc ) : array {
+	$zone = axismundi_cal_schedule_zone( $schedule );
+	if ( ! $zone instanceof DateTimeZone ) {
+		return array();
+	}
+	$all_day  = ! empty( $schedule['all_day'] );
+	$utc      = new DateTimeZone( 'UTC' );
+
+	try {
+		$from = new DateTimeImmutable( $from_utc, $utc );
+		$to   = new DateTimeImmutable( $to_utc, $utc );
+		$dtstart = new DateTimeImmutable( (string) $schedule['dtstart_local'], $zone );
+		$dtend   = new DateTimeImmutable( (string) $schedule['dtend_local'], $zone );
+	} catch ( Exception $error ) {
+		return array();
+	}
+	if ( $to <= $from ) {
+		return array();
+	}
+
+	/*
+	 * The duration is carried rather than the end time. An event that runs 19:00-21:00 runs two
+	 * hours on every occurrence, including the one where the clocks change; recomputing the end from
+	 * a stored offset would make that occurrence an hour longer or shorter than it is.
+	 */
+	$duration = $dtstart->diff( $dtend );
+
+	$rrule = trim( (string) ( $schedule['rrule'] ?? '' ) );
+	if ( '' === $rrule ) {
+		$starts = array( $dtstart );
+	} else {
+		$parts = axismundi_cal_rrule_parse( $rrule );
+		if ( is_wp_error( $parts ) ) {
+			return array();
+		}
+		$checked = axismundi_cal_rrule_check( $parts, false );
+		if ( is_wp_error( $checked ) ) {
+			return array();
+		}
+		$starts = axismundi_cal_expand_starts( $checked, $dtstart, $zone, $from, $to, $duration );
+	}
+
+	$overrides  = axismundi_cal_overrides( (int) ( $schedule['id'] ?? 0 ) );
+	$occurrences = array();
+
+	foreach ( $starts as $start ) {
+		$recurrence_id = axismundi_cal_recurrence_id( $start, $all_day );
+		$occurrence    = axismundi_cal_build_occurrence( $schedule, $start, $duration, $all_day );
+		if ( isset( $overrides[ $recurrence_id ] ) ) {
+			$occurrence = axismundi_cal_apply_override( $occurrence, $overrides[ $recurrence_id ], $zone, $all_day );
+		}
+		// Applied after the override, since moving an instance can move it out of the window and
+		// an instance moved into the window has to appear.
+		if ( axismundi_cal_in_range( $occurrence, $from, $to ) ) {
+			$occurrences[ $recurrence_id ] = $occurrence;
+		}
+	}
+
+	// RDATE instances are authored, not derived, so they are added rather than matched.
+	foreach ( $overrides as $recurrence_id => $override ) {
+		if ( 'rdate' !== (string) $override['origin'] || isset( $occurrences[ $recurrence_id ] ) ) {
+			continue;
+		}
+		$occurrence = axismundi_cal_override_occurrence( $schedule, $override, $all_day );
+		if ( null !== $occurrence && axismundi_cal_in_range( $occurrence, $from, $to ) ) {
+			$occurrences[ $recurrence_id ] = $occurrence;
+		}
+	}
+
+	usort(
+		$occurrences,
+		static fn( array $a, array $b ) : int => strcmp( (string) $a['start_utc'], (string) $b['start_utc'] )
+	);
+	return array_values( $occurrences );
+}
+
+/**
+ * Walk the rule, producing local start times.
+ *
+ * `COUNT` counts the instances the rule produces from the beginning, not the ones inside the
+ * requested window, so the walk always starts at DTSTART. `UNTIL` and `COUNT` therefore both mean
+ * the same thing whichever month is being looked at.
+ *
+ * @param array<string,mixed> $rule     Checked rule parts.
+ * @param DateTimeImmutable   $dtstart  Series start, local.
+ * @param DateTimeZone        $zone     Event zone.
+ * @param DateTimeImmutable   $from     Window start, UTC.
+ * @param DateTimeImmutable   $to       Window end, UTC.
+ * @param DateInterval        $duration Instance duration.
+ * @return DateTimeImmutable[]
+ */
+function axismundi_cal_expand_starts( array $rule, DateTimeImmutable $dtstart, DateTimeZone $zone, DateTimeImmutable $from, DateTimeImmutable $to, DateInterval $duration ) : array {
+	$freq     = (string) $rule['FREQ'];
+	$interval = (int) ( $rule['INTERVAL'] ?? 1 );
+	$count    = isset( $rule['COUNT'] ) ? (int) $rule['COUNT'] : null;
+	$until    = axismundi_cal_rule_until( $rule, $zone );
+
+	$starts    = array();
+	$produced  = 0;
+	$steps     = 0;
+	$cursor    = $dtstart;
+	$utc       = new DateTimeZone( 'UTC' );
+
+	while ( $steps < AXISMUNDI_CAL_EXPAND_MAX_STEPS ) {
+		++$steps;
+		$candidates = axismundi_cal_period_candidates( $rule, $freq, $cursor, $dtstart, $zone );
+
+		foreach ( $candidates as $candidate ) {
+			if ( $candidate < $dtstart ) {
+				continue;
+			}
+			if ( null !== $until && $candidate > $until ) {
+				return $starts;
+			}
+			++$produced;
+			if ( null !== $count && $produced > $count ) {
+				return $starts;
+			}
+			// Collected even when it precedes the window, because COUNT is measured from the start
+			// of the series; only the returned set is filtered by range.
+			$candidate_end = $candidate->add( $duration );
+			if ( $candidate_end->setTimezone( $utc ) > $from ) {
+				$starts[] = $candidate;
+			}
+		}
+
+		$cursor = axismundi_cal_advance( $cursor, $freq, $interval );
+		// The window is closed once the period being generated starts after it, but only when the
+		// series is not otherwise bounded -- a COUNT rule has to keep counting to know where it ends.
+		if ( $cursor->setTimezone( $utc ) >= $to && null === $count ) {
+			break;
+		}
+		if ( null !== $until && $cursor > $until ) {
+			break;
+		}
+		if ( null === $count && $cursor->setTimezone( $utc ) >= $to ) {
+			break;
+		}
+	}
+
+	return $starts;
+}
+
+/**
+ * The local start times one period of the rule produces.
+ *
+ * @param array<string,mixed> $rule    Checked rule parts.
+ * @param string              $freq    Frequency.
+ * @param DateTimeImmutable   $cursor  Period anchor, local.
+ * @param DateTimeImmutable   $dtstart Series start, local.
+ * @param DateTimeZone        $zone    Event zone.
+ * @return DateTimeImmutable[]
+ */
+function axismundi_cal_period_candidates( array $rule, string $freq, DateTimeImmutable $cursor, DateTimeImmutable $dtstart, DateTimeZone $zone ) : array {
+	$time   = $dtstart->format( 'H:i:s' );
+	$byday  = $rule['BYDAY'] ?? array();
+	$bymday = $rule['BYMONTHDAY'] ?? array();
+	$bymon  = $rule['BYMONTH'] ?? array();
+
+	if ( 'DAILY' === $freq ) {
+		$candidates = array( $cursor );
+	} elseif ( 'WEEKLY' === $freq ) {
+		$candidates = axismundi_cal_week_candidates( $cursor, $byday, $rule, $time, $zone );
+	} else {
+		// MONTHLY and YEARLY differ only in which months they consider.
+		$months = array();
+		if ( 'YEARLY' === $freq ) {
+			$months = empty( $bymon ) ? array( (int) $dtstart->format( 'n' ) ) : $bymon;
+		} else {
+			$months = array( (int) $cursor->format( 'n' ) );
+			if ( ! empty( $bymon ) && ! in_array( (int) $cursor->format( 'n' ), $bymon, true ) ) {
+				return array();
+			}
+		}
+		$candidates = array();
+		foreach ( $months as $month ) {
+			$candidates = array_merge(
+				$candidates,
+				axismundi_cal_month_candidates( (int) $cursor->format( 'Y' ), (int) $month, $byday, $bymday, $time, $zone, $dtstart )
+			);
+		}
+	}
+
+	usort( $candidates, static fn( DateTimeImmutable $a, DateTimeImmutable $b ) : int => $a <=> $b );
+	return $candidates;
+}
+
+/**
+ * Start times within one week.
+ *
+ * @param DateTimeImmutable                            $cursor Week anchor.
+ * @param array<int,array{ordinal:int|null,day:string}> $byday  Weekday selection.
+ * @param array<string,mixed>                          $rule   Checked rule.
+ * @param string                                       $time   Wall time to apply.
+ * @param DateTimeZone                                 $zone   Event zone.
+ * @return DateTimeImmutable[]
+ */
+function axismundi_cal_week_candidates( DateTimeImmutable $cursor, array $byday, array $rule, string $time, DateTimeZone $zone ) : array {
+	if ( empty( $byday ) ) {
+		return array( $cursor );
+	}
+	$wkst  = (string) ( $rule['WKST'] ?? 'MO' );
+	$order = AXISMUNDI_CAL_RRULE_WEEKDAYS;
+	$pivot = array_search( $wkst, $order, true );
+	if ( false !== $pivot && $pivot > 0 ) {
+		$order = array_merge( array_slice( $order, (int) $pivot ), array_slice( $order, 0, (int) $pivot ) );
+	}
+	// The week containing the cursor, measured from the configured week start. This is why WKST
+	// matters: with INTERVAL >= 2 it decides which days fall in the same week as the anchor.
+	$cursor_index = (int) array_search( strtoupper( $cursor->format( 'D' ) ) === 'THU' ? 'TH' : substr( strtoupper( $cursor->format( 'D' ) ), 0, 2 ), $order, true );
+	$week_start   = $cursor->modify( '-' . $cursor_index . ' days' );
+
+	$out = array();
+	foreach ( $byday as $entry ) {
+		$index = array_search( $entry['day'], $order, true );
+		if ( false === $index ) {
+			continue;
+		}
+		$day = $week_start->modify( '+' . (int) $index . ' days' );
+		$out[] = axismundi_cal_at_time( $day, $time, $zone );
+	}
+	return $out;
+}
+
+/**
+ * Start times within one month.
+ *
+ * @param int                                          $year    Year.
+ * @param int                                          $month   Month.
+ * @param array<int,array{ordinal:int|null,day:string}> $byday   Weekday selection.
+ * @param int[]                                        $bymday  Month-day selection.
+ * @param string                                       $time    Wall time to apply.
+ * @param DateTimeZone                                 $zone    Event zone.
+ * @param DateTimeImmutable                            $dtstart Series start.
+ * @return DateTimeImmutable[]
+ */
+function axismundi_cal_month_candidates( int $year, int $month, array $byday, array $bymday, string $time, DateTimeZone $zone, DateTimeImmutable $dtstart ) : array {
+	$days_in_month = (int) gmdate( 't', (int) gmmktime( 0, 0, 0, $month, 1, $year ) );
+	$selected      = array();
+
+	foreach ( $bymday as $day ) {
+		$resolved = $day > 0 ? $day : $days_in_month + $day + 1;
+		if ( $resolved >= 1 && $resolved <= $days_in_month ) {
+			$selected[] = $resolved;
+		}
+	}
+
+	foreach ( $byday as $entry ) {
+		$matching = array();
+		for ( $day = 1; $day <= $days_in_month; $day++ ) {
+			$probe = axismundi_cal_local_date( $year, $month, $day, $time, $zone );
+			if ( null === $probe ) {
+				continue;
+			}
+			$token = strtoupper( substr( $probe->format( 'D' ), 0, 2 ) );
+			$token = 'TH' === $token && 'Thu' !== $probe->format( 'D' ) ? $token : $token;
+			if ( axismundi_cal_weekday_token( $probe ) === $entry['day'] ) {
+				$matching[] = $day;
+			}
+		}
+		if ( null === $entry['ordinal'] ) {
+			$selected = array_merge( $selected, $matching );
+			continue;
+		}
+		// `1SA` is the first Saturday, `-1FR` the last Friday. An ordinal past the end of the month
+		// selects nothing rather than clamping, since "the fifth Monday" of a month without one did
+		// not happen.
+		$index = $entry['ordinal'] > 0 ? $entry['ordinal'] - 1 : count( $matching ) + $entry['ordinal'];
+		if ( isset( $matching[ $index ] ) ) {
+			$selected[] = $matching[ $index ];
+		}
+	}
+
+	if ( empty( $byday ) && empty( $bymday ) ) {
+		$selected[] = (int) $dtstart->format( 'j' );
+	}
+
+	$out = array();
+	foreach ( array_unique( $selected ) as $day ) {
+		$date = axismundi_cal_local_date( $year, $month, (int) $day, $time, $zone );
+		if ( null !== $date ) {
+			$out[] = $date;
+		}
+	}
+	return $out;
+}
+
+/**
+ * The RFC 5545 weekday token for a date.
+ *
+ * @param DateTimeImmutable $date Date.
+ * @return string
+ */
+function axismundi_cal_weekday_token( DateTimeImmutable $date ) : string {
+	return AXISMUNDI_CAL_RRULE_WEEKDAYS[ (int) $date->format( 'N' ) - 1 ];
+}
+
+/**
+ * Build a local date at a wall time, or null when the date does not exist.
+ *
+ * @param int          $year  Year.
+ * @param int          $month Month.
+ * @param int          $day   Day.
+ * @param string       $time  Wall time.
+ * @param DateTimeZone $zone  Zone.
+ * @return DateTimeImmutable|null
+ */
+function axismundi_cal_local_date( int $year, int $month, int $day, string $time, DateTimeZone $zone ) : ?DateTimeImmutable {
+	try {
+		$date = new DateTimeImmutable( sprintf( '%04d-%02d-%02d %s', $year, $month, $day, $time ), $zone );
+	} catch ( Exception $error ) {
+		return null;
+	}
+	// PHP rolls 31 February forward into March rather than refusing it, so a rolled date is
+	// discarded: a rule asking for a day the month does not have selects nothing that month.
+	if ( (int) $date->format( 'j' ) !== $day || (int) $date->format( 'n' ) !== $month ) {
+		return null;
+	}
+	return $date;
+}
+
+/**
+ * Apply a wall time to a date in a zone.
+ *
+ * @param DateTimeImmutable $date Date.
+ * @param string            $time Wall time.
+ * @param DateTimeZone      $zone Zone.
+ * @return DateTimeImmutable
+ */
+function axismundi_cal_at_time( DateTimeImmutable $date, string $time, DateTimeZone $zone ) : DateTimeImmutable {
+	$built = axismundi_cal_local_date( (int) $date->format( 'Y' ), (int) $date->format( 'n' ), (int) $date->format( 'j' ), $time, $zone );
+	return $built ?? $date;
+}
+
+/**
+ * Move the period anchor on by one interval.
+ *
+ * @param DateTimeImmutable $cursor   Anchor.
+ * @param string            $freq     Frequency.
+ * @param int               $interval Interval.
+ * @return DateTimeImmutable
+ */
+function axismundi_cal_advance( DateTimeImmutable $cursor, string $freq, int $interval ) : DateTimeImmutable {
+	switch ( $freq ) {
+		case 'DAILY':
+			return $cursor->modify( '+' . $interval . ' days' );
+		case 'WEEKLY':
+			return $cursor->modify( '+' . ( $interval * 7 ) . ' days' );
+		case 'YEARLY':
+			return $cursor->modify( '+' . $interval . ' years' );
+		default:
+			// Anchored to the first of the month so that stepping from the 31st does not skip the
+			// months that have no 31st.
+			return $cursor->modify( 'first day of this month' )->modify( '+' . $interval . ' months' )
+				->setDate(
+					(int) $cursor->modify( 'first day of this month' )->modify( '+' . $interval . ' months' )->format( 'Y' ),
+					(int) $cursor->modify( 'first day of this month' )->modify( '+' . $interval . ' months' )->format( 'n' ),
+					1
+				);
+	}
+}
+
+/**
+ * The rule's UNTIL as a local instant, or null.
+ *
+ * @param array<string,mixed> $rule Checked rule.
+ * @param DateTimeZone        $zone Event zone.
+ * @return DateTimeImmutable|null
+ */
+function axismundi_cal_rule_until( array $rule, DateTimeZone $zone ) : ?DateTimeImmutable {
+	if ( ! isset( $rule['UNTIL'] ) ) {
+		return null;
+	}
+	$value = (string) $rule['UNTIL'];
+	try {
+		if ( preg_match( '/^[0-9]{8}$/', $value ) ) {
+			return new DateTimeImmutable( substr( $value, 0, 4 ) . '-' . substr( $value, 4, 2 ) . '-' . substr( $value, 6, 2 ) . ' 23:59:59', $zone );
+		}
+		$utc = new DateTimeImmutable(
+			substr( $value, 0, 4 ) . '-' . substr( $value, 4, 2 ) . '-' . substr( $value, 6, 2 ) . ' ' .
+			substr( $value, 9, 2 ) . ':' . substr( $value, 11, 2 ) . ':' . substr( $value, 13, 2 ),
+			new DateTimeZone( str_ends_with( $value, 'Z' ) ? 'UTC' : $zone->getName() )
+		);
+		return $utc->setTimezone( $zone );
+	} catch ( Exception $error ) {
+		return null;
+	}
+}
+
+/**
+ * The stable local identity of one instance.
+ *
+ * @param DateTimeImmutable $start   Local start.
+ * @param bool              $all_day Whether the schedule is all-day.
+ * @return string
+ */
+function axismundi_cal_recurrence_id( DateTimeImmutable $start, bool $all_day ) : string {
+	return $all_day ? $start->format( 'Ymd' ) : $start->format( 'Ymd\THis' );
+}
+
+/**
+ * The schedule's timezone.
+ *
+ * @param array<string,mixed> $schedule Schedule row.
+ * @return DateTimeZone|null
+ */
+function axismundi_cal_schedule_zone( array $schedule ) : ?DateTimeZone {
+	try {
+		return new DateTimeZone( (string) ( $schedule['timezone'] ?? '' ) );
+	} catch ( Exception $error ) {
+		return null;
+	}
+}
+
+/**
+ * Build one occurrence from a local start.
+ *
+ * @param array<string,mixed> $schedule Schedule row.
+ * @param DateTimeImmutable   $start    Local start.
+ * @param DateInterval        $duration Duration.
+ * @param bool                $all_day  All-day flag.
+ * @return array<string,mixed>
+ */
+function axismundi_cal_build_occurrence( array $schedule, DateTimeImmutable $start, DateInterval $duration, bool $all_day ) : array {
+	$utc = new DateTimeZone( 'UTC' );
+	$end = $start->add( $duration );
+	return array(
+		'schedule_id'       => (int) ( $schedule['id'] ?? 0 ),
+		'recurrence_id'     => axismundi_cal_recurrence_id( $start, $all_day ),
+		'start_local'       => $start->format( 'Y-m-d H:i:s' ),
+		'end_local'         => $end->format( 'Y-m-d H:i:s' ),
+		'start_utc'         => $start->setTimezone( $utc )->format( 'Y-m-d H:i:s' ),
+		'end_utc'           => $end->setTimezone( $utc )->format( 'Y-m-d H:i:s' ),
+		'status'            => 'scheduled',
+		'origin'            => 'rule',
+		'location_place_id' => $schedule['location_place_id'] ?? null,
+		'location_text'     => (string) ( $schedule['location_text'] ?? '' ),
+	);
+}
+
+/**
+ * Overrides stored against a schedule, keyed by recurrence id.
+ *
+ * @param int $schedule_id Schedule id.
+ * @return array<string,array<string,mixed>>
+ */
+function axismundi_cal_overrides( int $schedule_id ) : array {
+	global $wpdb;
+	if ( $schedule_id <= 0 || ! axismundi_cal_ready() ) {
+		return array();
+	}
+	$table = axismundi_cal_occurrences_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- authored exceptions for one schedule.
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE schedule_id = %d AND origin <> 'rule'", $schedule_id ), ARRAY_A );
+	$out  = array();
+	foreach ( $rows as $row ) {
+		$out[ (string) $row['recurrence_id'] ] = $row;
+	}
+	return $out;
+}
+
+/**
+ * Apply an authored exception to a rule-derived occurrence.
+ *
+ * @param array<string,mixed> $occurrence Occurrence.
+ * @param array<string,mixed> $override   Stored exception.
+ * @param DateTimeZone        $zone       Event zone.
+ * @param bool                $all_day    All-day flag.
+ * @return array<string,mixed>
+ */
+function axismundi_cal_apply_override( array $occurrence, array $override, DateTimeZone $zone, bool $all_day ) : array {
+	$occurrence['status'] = (string) $override['status'];
+	$occurrence['origin'] = (string) $override['origin'];
+	if ( '0000-00-00 00:00:00' !== (string) $override['start_local'] && '' !== (string) $override['start_local'] ) {
+		$moved = axismundi_cal_override_times( $override, $zone );
+		if ( null !== $moved ) {
+			$occurrence = array_merge( $occurrence, $moved );
+		}
+	}
+	if ( null !== $override['location_place_id'] || '' !== (string) $override['location_text'] ) {
+		$occurrence['location_place_id'] = $override['location_place_id'];
+		$occurrence['location_text']     = (string) $override['location_text'];
+	}
+	// The identity stays the rule's, not the moved time's: this is still the answer to "which
+	// Saturday?", which is what RECURRENCE-ID means and what a reply to an invitation refers to.
+	return $occurrence;
+}
+
+/**
+ * Recompute UTC from an override's local times.
+ *
+ * @param array<string,mixed> $override Stored exception.
+ * @param DateTimeZone        $zone     Event zone.
+ * @return array<string,string>|null
+ */
+function axismundi_cal_override_times( array $override, DateTimeZone $zone ) : ?array {
+	try {
+		$utc   = new DateTimeZone( 'UTC' );
+		$start = new DateTimeImmutable( (string) $override['start_local'], $zone );
+		$end   = new DateTimeImmutable( (string) $override['end_local'], $zone );
+	} catch ( Exception $error ) {
+		return null;
+	}
+	return array(
+		'start_local' => $start->format( 'Y-m-d H:i:s' ),
+		'end_local'   => $end->format( 'Y-m-d H:i:s' ),
+		'start_utc'   => $start->setTimezone( $utc )->format( 'Y-m-d H:i:s' ),
+		'end_utc'     => $end->setTimezone( $utc )->format( 'Y-m-d H:i:s' ),
+	);
+}
+
+/**
+ * Build an occurrence that exists only as an authored date.
+ *
+ * @param array<string,mixed> $schedule Schedule row.
+ * @param array<string,mixed> $override Stored exception.
+ * @param bool                $all_day  All-day flag.
+ * @return array<string,mixed>|null
+ */
+function axismundi_cal_override_occurrence( array $schedule, array $override, bool $all_day ) : ?array {
+	$zone = axismundi_cal_schedule_zone( $schedule );
+	if ( ! $zone instanceof DateTimeZone ) {
+		return null;
+	}
+	$times = axismundi_cal_override_times( $override, $zone );
+	if ( null === $times ) {
+		return null;
+	}
+	return array_merge(
+		array(
+			'schedule_id'       => (int) $override['schedule_id'],
+			'recurrence_id'     => (string) $override['recurrence_id'],
+			'status'            => (string) $override['status'],
+			'origin'            => (string) $override['origin'],
+			'location_place_id' => $override['location_place_id'] ?? ( $schedule['location_place_id'] ?? null ),
+			'location_text'     => '' !== (string) $override['location_text'] ? (string) $override['location_text'] : (string) ( $schedule['location_text'] ?? '' ),
+		),
+		$times
+	);
+}
+
+/**
+ * Whether an occurrence overlaps the requested window.
+ *
+ * Overlap rather than containment, so an event already under way when the window opens is still
+ * part of that day or month.
+ *
+ * @param array<string,mixed> $occurrence Occurrence.
+ * @param DateTimeImmutable   $from       Window start, UTC.
+ * @param DateTimeImmutable   $to         Window end, UTC.
+ * @return bool
+ */
+function axismundi_cal_in_range( array $occurrence, DateTimeImmutable $from, DateTimeImmutable $to ) : bool {
+	try {
+		$utc   = new DateTimeZone( 'UTC' );
+		$start = new DateTimeImmutable( (string) $occurrence['start_utc'], $utc );
+		$end   = new DateTimeImmutable( (string) $occurrence['end_utc'], $utc );
+	} catch ( Exception $error ) {
+		return false;
+	}
+	return $end > $from && $start < $to;
+}

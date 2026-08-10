@@ -17,13 +17,25 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '1';
+const AXISMUNDI_CAL_DB_VERSION        = '2';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 
 /** @return string Event envelope table name. */
 function axismundi_cal_events_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_events';
+}
+
+/** @return string Schedule table name. */
+function axismundi_cal_schedules_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_cal_schedules';
+}
+
+/** @return string Occurrence table name. */
+function axismundi_cal_occurrences_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_cal_occurrences';
 }
 
 /**
@@ -72,11 +84,91 @@ function axismundi_cal_install_schema() : bool {
 		) ENGINE=InnoDB {$charset};"
 	);
 
+	$schedules = axismundi_cal_schedules_table();
+	/*
+	 * No UTC columns here, deliberately. A start time plus a rule does not have one UTC instant: a
+	 * weekly 19:00 keeps its wall time across a DST change while the instant beneath it moves, so a
+	 * UTC pair stored beside the rule would be correct only for the first occurrence and quietly
+	 * wrong for the rest of the year. UTC belongs to the Occurrence, which is the thing that has one.
+	 *
+	 * `all_day` is a flag rather than a convention, because a date is not midnight in a timezone.
+	 * An all-day event is the same day everywhere; midnight-with-a-zone is a different instant for
+	 * every reader and shifts across DST.
+	 */
+	dbDelta(
+		"CREATE TABLE {$schedules} (
+			id bigint(20) unsigned NOT NULL auto_increment,
+			event_post_id bigint(20) unsigned NOT NULL,
+			timezone varchar(64) NOT NULL default '',
+			all_day tinyint(1) unsigned NOT NULL default 0,
+			dtstart_local datetime NOT NULL default '0000-00-00 00:00:00',
+			dtend_local datetime NOT NULL default '0000-00-00 00:00:00',
+			rrule varchar(255) NOT NULL default '',
+			ical_uid varchar(191) NOT NULL default '',
+			sequence int(10) unsigned NOT NULL default 0,
+			materialized_until_utc datetime NULL,
+			location_place_id bigint(20) unsigned NULL,
+			location_text text NOT NULL,
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY ical_uid (ical_uid),
+			KEY event_post_id (event_post_id)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	$occurrences = axismundi_cal_occurrences_table();
+	/*
+	 * `recurrence_id` is the local wall time the rule produced, and is the stable identity of one
+	 * instance -- the same thing iCalendar's RECURRENCE-ID is. It is not derived from `start_utc`,
+	 * because moving an occurrence or crossing a DST boundary changes the instant while leaving the
+	 * question "which Saturday is this?" unchanged. Cancelling the 22nd has to keep pointing at the
+	 * 22nd afterwards.
+	 *
+	 * `origin` is what makes the cache safe to discard. Rule-derived rows are a materialization of
+	 * something recomputable; `rdate` and `override` rows are authored facts that exist nowhere else
+	 * and must survive any rebuild.
+	 *
+	 * EXDATE has no column: a cancelled occurrence is a row with `status = 'cancelled'`, and the
+	 * EXDATE lines in exported ICS are generated from those rows. Storing both would be two
+	 * spellings of one fact, free to disagree.
+	 */
+	dbDelta(
+		"CREATE TABLE {$occurrences} (
+			id bigint(20) unsigned NOT NULL auto_increment,
+			schedule_id bigint(20) unsigned NOT NULL,
+			recurrence_id varchar(20) NOT NULL default '',
+			start_utc datetime NOT NULL default '0000-00-00 00:00:00',
+			end_utc datetime NOT NULL default '0000-00-00 00:00:00',
+			start_local datetime NOT NULL default '0000-00-00 00:00:00',
+			end_local datetime NOT NULL default '0000-00-00 00:00:00',
+			status varchar(16) NOT NULL default 'scheduled',
+			origin varchar(16) NOT NULL default 'rule',
+			location_place_id bigint(20) unsigned NULL,
+			location_text text NOT NULL,
+			override_json longtext NOT NULL,
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY schedule_recurrence (schedule_id,recurrence_id),
+			KEY start_utc (start_utc),
+			KEY schedule_start (schedule_id,start_utc),
+			KEY status (status)
+		) ENGINE=InnoDB {$charset};"
+	);
+
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table verification.
 	$columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
 	$required = array( 'post_id', 'starts_at_gmt', 'ends_at_gmt', 'timezone', 'event_status', 'join_mode' );
 	foreach ( $required as $column ) {
 		if ( ! in_array( $column, $columns, true ) ) {
+			return false;
+		}
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table verification.
+	$occurrence_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$occurrences}" );
+	foreach ( array( 'schedule_id', 'recurrence_id', 'start_utc', 'status', 'origin' ) as $column ) {
+		if ( ! in_array( $column, $occurrence_columns, true ) ) {
 			return false;
 		}
 	}

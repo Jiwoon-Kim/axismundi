@@ -273,6 +273,7 @@ function axismundi_cal_remove_source( int $source_id ) : bool {
 		// Whoever subscribed has an entry pointing at that Calendar, and this path does not go through
 		// `calendar_delete()`, so the relations are dropped here rather than left naming nothing.
 		axismundi_cal_list_forget_calendar( (int) $source['calendar_id'] );
+		axismundi_cal_acl_forget_calendar( (int) $source['calendar_id'] );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- paired deletion of this plugin's source representation.
 		$wpdb->delete( axismundi_cal_calendars_table(), array( 'id' => (int) $source['calendar_id'], 'kind' => 'remote' ) );
 	}

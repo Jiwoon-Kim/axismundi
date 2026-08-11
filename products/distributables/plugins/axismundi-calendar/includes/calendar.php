@@ -255,9 +255,23 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
  * @return void
  */
 function axismundi_cal_record_owner( int $calendar_id, string $actor_uri, string $kind ) : void {
-	if ( 'local' !== $kind || '' === trim( $actor_uri ) ) {
+	global $wpdb;
+	$actor_uri = trim( $actor_uri );
+	if ( 'local' !== $kind || '' === $actor_uri ) {
 		return;
 	}
+	/*
+	 * Three writes, because they are three different facts. The authority is the Actor this Calendar
+	 * belongs to and is what a transfer would move. The ACL rule is what that Actor may do, which
+	 * others can also be granted. The list entry is only how it appears in their own sidebar.
+	 */
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+	$wpdb->update(
+		axismundi_cal_calendars_table(),
+		array( 'authority_actor_uri' => $actor_uri, 'authority_actor_uri_hash' => hash( 'sha256', $actor_uri ) ),
+		array( 'id' => $calendar_id )
+	);
+	axismundi_cal_acl_grant( $calendar_id, $actor_uri, 'owner' );
 	axismundi_cal_list_set( $calendar_id, $actor_uri, 'owner' );
 }
 
@@ -297,6 +311,7 @@ function axismundi_cal_calendar_delete( int $calendar_id ) : bool {
 	// The relations go with it. An entry naming a Calendar that no longer exists would show up in
 	// somebody's list as a calendar they cannot open.
 	axismundi_cal_list_forget_calendar( $calendar_id );
+	axismundi_cal_acl_forget_calendar( $calendar_id );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 	return false !== $wpdb->delete( axismundi_cal_calendars_table(), array( 'id' => $calendar_id ) );
 }

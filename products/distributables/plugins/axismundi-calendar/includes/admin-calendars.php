@@ -47,8 +47,12 @@ function axismundi_cal_can_manage_calendar( ?array $calendar ) : bool {
 		return true;
 	}
 	$calendar_id = (int) ( $calendar['id'] ?? 0 );
-	// Owner or writer, which is the same question the REST API and any sharing UI will ask.
-	if ( axismundi_cal_actor_may_write( $calendar_id, axismundi_cal_current_actor_uri() ) ) {
+	/*
+	 * The ACL is the source, so the admin screen, the REST API and any sharing UI answer the same
+	 * question the same way. It also covers the case a per-Calendar column never could: a Calendar
+	 * belonging to a managed Group, administered by that Group's managers.
+	 */
+	if ( axismundi_cal_can_write( $calendar_id, axismundi_cal_current_actor_uri(), get_current_user_id() ) ) {
 		return true;
 	}
 	$owner = axismundi_cal_calendar_owner( $calendar_id );

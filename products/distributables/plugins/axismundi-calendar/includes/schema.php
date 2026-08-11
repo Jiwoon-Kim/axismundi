@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '9';
+const AXISMUNDI_CAL_DB_VERSION        = '10';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 
 /** @return string Event envelope table name. */
@@ -36,6 +36,12 @@ function axismundi_cal_schedules_table() : string {
 function axismundi_cal_calendars_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_cal_calendars';
+}
+
+/** @return string Calendar access control table name. */
+function axismundi_cal_acl_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_cal_acl';
 }
 
 /** @return string Calendar list entry table name. */
@@ -202,6 +208,8 @@ function axismundi_cal_install_schema() : bool {
 			description longtext NOT NULL,
 			timezone varchar(64) NOT NULL default '',
 			kind varchar(16) NOT NULL default 'local',
+			authority_actor_uri text NOT NULL,
+			authority_actor_uri_hash char(64) NOT NULL default '',
 			visibility varchar(16) NOT NULL default 'public',
 			revision bigint(20) unsigned NOT NULL default 1,
 			owner_actor_uri text NOT NULL,
@@ -211,7 +219,8 @@ function axismundi_cal_install_schema() : bool {
 			UNIQUE KEY slug (slug),
 			UNIQUE KEY uuid (uuid),
 			KEY visibility (visibility),
-			KEY kind (kind)
+			KEY kind (kind),
+			KEY authority_actor_uri_hash (authority_actor_uri_hash)
 		) ENGINE=InnoDB {$charset};"
 	);
 
@@ -223,6 +232,36 @@ function axismundi_cal_install_schema() : bool {
 	 * calendars would have had three defaults -- and made "which calendar is this event on?" a
 	 * question with no answer.
 	 */
+
+	$acl = axismundi_cal_acl_table();
+	/*
+	 * Access control, which is not the same thing as authority. A Calendar has exactly one authority
+	 * -- the Actor it belongs to, and the thing a transfer moves -- while `owner` here is a role
+	 * several Actors can hold at once. Google keeps the same two apart, and collapsing them would
+	 * make "hand this calendar to the group" unexpressible, because there would be no single thing
+	 * to hand over.
+	 *
+	 * `principal_type` distinguishes an Actor from the public at large. Anonymous readers are not an
+	 * Actor with an empty URI: that would be one row every unauthenticated request matches by
+	 * accident, so being public is stated rather than being the absence of a principal.
+	 */
+	dbDelta(
+		"CREATE TABLE {$acl} (
+			id bigint(20) unsigned NOT NULL auto_increment,
+			calendar_id bigint(20) unsigned NOT NULL,
+			principal_type varchar(16) NOT NULL default 'actor',
+			principal_uri text NOT NULL,
+			principal_uri_hash char(64) NOT NULL default '',
+			role varchar(24) NOT NULL default 'reader',
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY calendar_principal (calendar_id,principal_type,principal_uri_hash),
+			KEY calendar_id (calendar_id),
+			KEY principal_uri_hash (principal_uri_hash),
+			KEY role (role)
+		) ENGINE=InnoDB {$charset};"
+	);
 
 	$list = axismundi_cal_entries_list_table();
 	/*
@@ -370,6 +409,8 @@ function axismundi_cal_install_schema() : bool {
 	axismundi_cal_backfill_calendar_uuids();
 	axismundi_cal_copy_legacy_access_roles();
 	axismundi_cal_seed_owner_entries();
+	axismundi_cal_backfill_authority();
+	axismundi_cal_seed_authority_acl();
 
 	/*
 	 * Dropped rather than left behind. It is not read anywhere after this version, and leaving a

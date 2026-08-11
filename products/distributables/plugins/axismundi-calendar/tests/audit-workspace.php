@@ -117,6 +117,15 @@ function ax_ws_view( array $uuids, string $start = '2026-09-01T00:00:00Z', strin
 	return array( (int) $response->get_status(), (array) $response->get_data() );
 }
 
+/** Ask the bootstrap endpoint. */
+function ax_ws_bootstrap( string $start = '2026-09-01T00:00:00Z', string $end = '2026-10-01T00:00:00Z' ) : array {
+	$request = new WP_REST_Request( 'GET', '/axismundi/v1/actors/me/calendarWorkspace' );
+	$request->set_param( 'start', $start );
+	$request->set_param( 'end', $end );
+	$response = rest_do_request( $request );
+	return array( (int) $response->get_status(), (array) $response->get_data() );
+}
+
 /** The summaries in one answer. */
 function ax_ws_summaries( array $body ) : array {
 	return array_map( static fn( array $item ) : string => (string) $item['summary'], (array) ( $body['items'] ?? array() ) );
@@ -284,6 +293,71 @@ try {
 
 	ax_ws_assert( $ax_ws_results, 'a backwards range is refused', 400 === ax_ws_view( array( $ax_ws_mine_id ), '2026-10-01T00:00:00Z', '2026-09-01T00:00:00Z' )[0] );
 	ax_ws_assert( $ax_ws_results, 'and a decade is refused rather than truncated', 400 === ax_ws_view( array( $ax_ws_mine_id ), '2026-01-01T00:00:00Z', '2036-01-01T00:00:00Z' )[0] );
+
+	// -- The first request answers both halves ---------------------------------------------------------
+
+	/*
+	 * The waterfall this removes: asked separately, the grid cannot start until the list has come back
+	 * and said which Calendars are ticked, so it arrives visibly later than the sidebar even when both
+	 * are quick.
+	 */
+	wp_set_current_user( $ax_ws_viewer['user_id'] );
+	list( $ax_ws_status, $ax_ws_boot ) = ax_ws_bootstrap();
+	ax_ws_assert( $ax_ws_results, 'one request returns the sidebar and the grid together', 200 === $ax_ws_status && isset( $ax_ws_boot['calendars'], $ax_ws_boot['view'] ) );
+
+	/*
+	 * And returns exactly what the separate endpoints would have. This is the property that keeps the
+	 * bootstrap from becoming a second implementation that drifts: a client fetching the two halves
+	 * individually must see the same thing as one fetching them together.
+	 */
+	$ax_ws_list_request = new WP_REST_Request( 'GET', '/axismundi/v1/actors/me/calendarList' );
+	$ax_ws_list = (array) rest_do_request( $ax_ws_list_request )->get_data();
+	ax_ws_assert( $ax_ws_results, 'with a sidebar identical to the calendarList endpoint', $ax_ws_list['items'] === $ax_ws_boot['calendars'] );
+
+	$ax_ws_ticked = array_map( static fn( array $c ) : string => (string) $c['id'], (array) $ax_ws_boot['calendars'] );
+	list( , $ax_ws_separate ) = ax_ws_view( $ax_ws_ticked );
+	ax_ws_assert( $ax_ws_results, 'and a range identical to asking calendarView for the same Calendars', $ax_ws_separate['items'] === $ax_ws_boot['view']['items'] );
+
+	/*
+	 * `selected` and `hidden` are the caller's own view state, and the bootstrap applies them rather
+	 * than asking the client which Calendars it wants -- that round trip would be the waterfall again.
+	 */
+	axismundi_cal_list_set( $ax_ws_mine, $ax_ws_viewer['actor_uri'], 'reader', array( 'hidden' => true ) );
+	list( , $ax_ws_boot ) = ax_ws_bootstrap();
+	ax_ws_assert(
+		$ax_ws_results,
+		'a Calendar hidden in somebody&rsquo;s own list is left out of the range',
+		! in_array( 'Mine event', ax_ws_summaries( $ax_ws_boot['view'] ), true )
+	);
+	ax_ws_assert(
+		$ax_ws_results,
+		'while staying in the sidebar, because hiding it is not leaving it',
+		in_array( $ax_ws_mine_id, array_map( static fn( array $c ) : string => (string) $c['id'], (array) $ax_ws_boot['calendars'] ), true )
+	);
+	axismundi_cal_list_set( $ax_ws_mine, $ax_ws_viewer['actor_uri'], 'reader', array( 'hidden' => false, 'selected' => false ) );
+	list( , $ax_ws_boot ) = ax_ws_bootstrap();
+	ax_ws_assert( $ax_ws_results, 'and an unticked Calendar is left out too', ! in_array( 'Mine event', ax_ws_summaries( $ax_ws_boot['view'] ), true ) );
+	axismundi_cal_list_set( $ax_ws_mine, $ax_ws_viewer['actor_uri'], 'reader', array( 'selected' => true ) );
+	list( , $ax_ws_boot ) = ax_ws_bootstrap();
+	ax_ws_assert( $ax_ws_results, 'ticking it again brings it back', in_array( 'Mine event', ax_ws_summaries( $ax_ws_boot['view'] ), true ) );
+
+	/*
+	 * A Calendar somebody has access to but has never opened has no entry at all. It counts as shown:
+	 * the alternative is access that is invisible until the person guesses they should go looking.
+	 */
+	axismundi_cal_list_remove( $ax_ws_shared, $ax_ws_viewer['actor_uri'] );
+	list( , $ax_ws_boot ) = ax_ws_bootstrap();
+	ax_ws_assert(
+		$ax_ws_results,
+		'a Calendar with no view state yet is shown rather than silently off',
+		in_array( 'Shared event', ax_ws_summaries( $ax_ws_boot['view'] ), true )
+	);
+
+	ax_ws_assert( $ax_ws_results, 'a backwards range is refused here as well', 400 === ax_ws_bootstrap( '2026-10-01T00:00:00Z', '2026-09-01T00:00:00Z' )[0] );
+
+	wp_set_current_user( 0 );
+	ax_ws_assert( $ax_ws_results, 'and `me` with nobody signed in is unauthenticated', 401 === ax_ws_bootstrap()[0] );
+	wp_set_current_user( $ax_ws_viewer['user_id'] );
 
 	// -- Naming one Calendar twice ---------------------------------------------------------------------------------
 

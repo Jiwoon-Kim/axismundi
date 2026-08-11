@@ -325,16 +325,41 @@
 		var truncated = truncatedState[ 0 ];
 		var setTruncated = truncatedState[ 1 ];
 
+		// Whether the one bootstrap request has answered. Without it the range effect fires on the
+		// first render as well, and the screen makes the two requests the bootstrap exists to avoid.
+		var loadedState = useState( false );
+		var loaded = loadedState[ 0 ];
+		var setLoaded = loadedState[ 1 ];
+
 		function report( failure ) {
 			setError( ( failure && failure.message ) || __( 'The calendar could not be loaded.', 'axismundi-calendar' ) );
 		}
 
+		// The first paint is one request. Asking for the list and then the month is a waterfall: the
+		// grid cannot start until the sidebar has come back and said which calendars are ticked, so it
+		// arrives visibly later even when both are quick.
 		useEffect( function () {
-			apiFetch( { path: '/' + config.namespace + '/actors/me/calendarList' } )
-				.then( function ( response ) {
-					setCalendars( response.items || [] );
+			var days = gridDays( cursor.year, cursor.month, startOfWeek );
+			setBusy( true );
+			apiFetch( {
+				path: wp.url.addQueryArgs( '/' + config.namespace + '/actors/me/calendarWorkspace', {
+					start: days[ 0 ].toISOString(),
+					end: new Date( days[ 41 ].getTime() + DAY_MS ).toISOString()
 				} )
-				.catch( report );
+			} )
+				.then( function ( response ) {
+					setCalendars( response.calendars || [] );
+					setItems( ( response.view && response.view.items ) || [] );
+					setTruncated( !! ( response.view && response.view.truncated ) );
+					setLoaded( true );
+				} )
+				.catch( function ( failure ) {
+					report( failure );
+					setLoaded( true );
+				} )
+				.finally( function () {
+					setBusy( false );
+				} );
 		}, [] );
 
 		var ticked = ( calendars || [] )
@@ -346,8 +371,10 @@
 			} );
 		var tickedKey = ticked.join( ',' );
 
+		// Afterwards only the range changes, so only the range is fetched. Skipped on the first pass,
+		// which the request above has already answered.
 		useEffect( function () {
-			if ( null === calendars ) {
+			if ( null === calendars || ! loaded ) {
 				return;
 			}
 			if ( ! ticked.length ) {
@@ -377,7 +404,7 @@
 				.finally( function () {
 					setBusy( false );
 				} );
-		}, [ tickedKey, cursor.year, cursor.month, null === calendars ] );
+		}, [ tickedKey, cursor.year, cursor.month, loaded ] );
 
 		function toggle( calendar, next ) {
 			// Optimistic, because the answer is already known and a checkbox that waits for a round

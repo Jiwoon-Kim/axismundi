@@ -179,6 +179,19 @@ function axismundi_cal_rest_occurrence( array $occurrence ) : array {
  * @return WP_REST_Response
  */
 function axismundi_cal_rest_calendar_list( WP_REST_Request $request ) : WP_REST_Response {
+	return new WP_REST_Response( array( 'items' => axismundi_cal_calendar_list_items() ), 200 );
+}
+
+/**
+ * The calendar list itself, without a response around it.
+ *
+ * Its own function because two endpoints answer with it, and a second copy assembled slightly
+ * differently is how a sidebar and the screen beside it start disagreeing about which Calendars
+ * somebody has.
+ *
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_cal_calendar_list_items() : array {
 	$actor_uri = axismundi_cal_current_actor_uri();
 	$items     = array();
 	if ( '' !== $actor_uri ) {
@@ -204,7 +217,7 @@ function axismundi_cal_rest_calendar_list( WP_REST_Request $request ) : WP_REST_
 			$items[] = axismundi_cal_rest_calendar( $calendar, is_array( $entry ) ? $entry : array() );
 		}
 	}
-	return new WP_REST_Response( array( 'items' => $items ), 200 );
+	return $items;
 }
 
 /**
@@ -292,8 +305,26 @@ function axismundi_cal_rest_calendar_events( WP_REST_Request $request ) {
  * @return WP_REST_Response|WP_Error
  */
 function axismundi_cal_rest_calendar_view( WP_REST_Request $request ) {
-	$start = (int) strtotime( (string) $request['start'] );
-	$end   = (int) strtotime( (string) $request['end'] );
+	return axismundi_cal_view_payload(
+		(array) $request['calendars'],
+		(string) $request['start'],
+		(string) $request['end'],
+		(int) $request['limit']
+	);
+}
+
+/**
+ * The merged range, or the refusal, without a route around it.
+ *
+ * @param array<int,string> $uuids  Calendar uuids.
+ * @param string            $start  Range start.
+ * @param string            $end    Range end.
+ * @param int               $limit  Maximum occurrences.
+ * @return WP_REST_Response|WP_Error
+ */
+function axismundi_cal_view_payload( array $uuids, string $start_arg, string $end_arg, int $limit ) {
+	$start = (int) strtotime( $start_arg );
+	$end   = (int) strtotime( $end_arg );
 	if ( $start <= 0 || $end <= 0 || $end <= $start ) {
 		return new WP_Error( 'ax_cal_range', __( 'A range needs a start and a later end.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
@@ -310,7 +341,7 @@ function axismundi_cal_rest_calendar_view( WP_REST_Request $request ) {
 	$seen = array();
 	$out  = array();
 
-	foreach ( array_slice( (array) $request['calendars'], 0, 50 ) as $uuid ) {
+	foreach ( array_slice( $uuids, 0, 50 ) as $uuid ) {
 		$calendar = axismundi_cal_calendar_by_uuid( (string) $uuid );
 		if ( ! is_array( $calendar ) || isset( $seen[ (int) $calendar['id'] ] ) ) {
 			continue;
@@ -353,7 +384,6 @@ function axismundi_cal_rest_calendar_view( WP_REST_Request $request ) {
 	 * Truncated after the merge, never per Calendar. A cap applied to each one separately would
 	 * silently drop the end of every busy calendar and call the result a month.
 	 */
-	$limit     = (int) $request['limit'];
 	$truncated = count( $out ) > $limit;
 
 	return new WP_REST_Response(
@@ -362,6 +392,53 @@ function axismundi_cal_rest_calendar_view( WP_REST_Request $request ) {
 			'end'       => gmdate( 'c', $end ),
 			'truncated' => $truncated,
 			'items'     => array_slice( $out, 0, $limit ),
+		),
+		200
+	);
+}
+
+/**
+ * `GET /axismundi/v1/actors/me/calendarWorkspace`.
+ *
+ * The first request the calendar screen makes, answering both halves of it at once.
+ *
+ * Asked separately, the two are a waterfall: the screen cannot know which Calendars to fetch a month
+ * for until the list has come back and told it which ones are ticked. Two round trips is two
+ * WordPress bootstraps, and the second cannot start until the first has finished -- so the grid
+ * appears distinctly after the sidebar even when both are fast.
+ *
+ * Neither half is reimplemented here. This calls the same two functions the separate endpoints call,
+ * so a client that fetches them individually gets the same answer, and the sidebar cannot start
+ * disagreeing with the screen beside it.
+ *
+ * Which Calendars are in the range is decided here rather than by the client: `selected` and
+ * `hidden` are the caller's own view state, already known while assembling the list, and a round
+ * trip to ask them back would be the waterfall again in miniature.
+ *
+ * @param WP_REST_Request $request Request.
+ * @return WP_REST_Response|WP_Error
+ */
+function axismundi_cal_rest_calendar_workspace( WP_REST_Request $request ) {
+	$calendars = axismundi_cal_calendar_list_items();
+	$ticked    = array();
+	foreach ( $calendars as $calendar ) {
+		// An entry-less Calendar has no view state yet; it counts as shown, since somebody with access
+		// to a Calendar they have never opened should still find it on their screen.
+		$selected = ! array_key_exists( 'selected', $calendar ) || $calendar['selected'];
+		$hidden   = array_key_exists( 'hidden', $calendar ) && $calendar['hidden'];
+		if ( $selected && ! $hidden ) {
+			$ticked[] = (string) $calendar['id'];
+		}
+	}
+
+	$view = axismundi_cal_view_payload( $ticked, (string) $request['start'], (string) $request['end'], (int) $request['limit'] );
+	if ( is_wp_error( $view ) ) {
+		return $view;
+	}
+	return new WP_REST_Response(
+		array(
+			'calendars' => $calendars,
+			'view'      => $view->get_data(),
 		),
 		200
 	);
@@ -390,6 +467,28 @@ function axismundi_cal_register_read_routes() : void {
 				// `me` with nobody signed in is not a forbidden calendar, it is no principal at all.
 				return new WP_Error( 'ax_cal_unauthenticated', __( 'You must be signed in.', 'axismundi-calendar' ), array( 'status' => 401 ) );
 			},
+		)
+	);
+
+	$range_args = array(
+		'start' => array( 'type' => 'string', 'default' => gmdate( 'Y-m-d\TH:i:s\Z' ) ),
+		'end'   => array( 'type' => 'string', 'default' => gmdate( 'Y-m-d\TH:i:s\Z', time() + ( 90 * DAY_IN_SECONDS ) ) ),
+		'limit' => array( 'type' => 'integer', 'default' => AXISMUNDI_CAL_RANGE_MAX, 'minimum' => 1, 'maximum' => AXISMUNDI_CAL_RANGE_MAX ),
+	);
+
+	register_rest_route(
+		'axismundi/v1',
+		'/actors/me/calendarWorkspace',
+		array(
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => 'axismundi_cal_rest_calendar_workspace',
+			'permission_callback' => static function () {
+				if ( is_user_logged_in() ) {
+					return true;
+				}
+				return new WP_Error( 'ax_cal_unauthenticated', __( 'You must be signed in.', 'axismundi-calendar' ), array( 'status' => 401 ) );
+			},
+			'args'                => $range_args,
 		)
 	);
 

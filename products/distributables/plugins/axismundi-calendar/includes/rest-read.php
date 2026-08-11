@@ -182,7 +182,20 @@ function axismundi_cal_rest_calendar_list( WP_REST_Request $request ) : WP_REST_
 	$actor_uri = axismundi_cal_current_actor_uri();
 	$items     = array();
 	if ( '' !== $actor_uri ) {
-		foreach ( axismundi_cal_actor_calendar_ids( $actor_uri ) as $calendar_id ) {
+		/*
+		 * Their own relations, plus the Calendars of any Group they manage. The second is why this is
+		 * a union and not one query: a Group's calendar belongs to the Group, and its managers reach
+		 * it through the Group rather than through a rule naming them personally.
+		 */
+		$ids = array_values(
+			array_unique(
+				array_merge(
+					axismundi_cal_actor_calendar_ids( $actor_uri ),
+					axismundi_cal_user_authority_calendar_ids( get_current_user_id() )
+				)
+			)
+		);
+		foreach ( $ids as $calendar_id ) {
 			$calendar = axismundi_cal_calendar_get( $calendar_id );
 			if ( ! is_array( $calendar ) || ! axismundi_cal_request_can_read( $calendar_id ) ) {
 				continue;

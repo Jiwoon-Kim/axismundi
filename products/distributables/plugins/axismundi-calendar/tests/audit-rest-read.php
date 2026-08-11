@@ -227,10 +227,19 @@ try {
 	 * Nothing here writes. Asserted through the route table rather than by trying a write, because a
 	 * `POST` that fails could be failing for any reason -- this says the method was never offered.
 	 */
-	$ax_rr_routes = rest_get_server()->get_routes();
+	$ax_rr_routes  = rest_get_server()->get_routes();
 	$ax_rr_methods = array();
 	foreach ( $ax_rr_routes as $ax_rr_route => $ax_rr_handlers ) {
-		if ( ! str_starts_with( $ax_rr_route, '/axismundi/v1/calendars' ) && ! str_starts_with( $ax_rr_route, '/axismundi/v1/actors/me/calendarList' ) ) {
+		/*
+		 * The three read routes by name. Deliberately not every route under `/calendars`: the ACL and
+		 * calendar-list routes live beneath the same prefix and are supposed to accept writes, so a
+		 * prefix match here would either fail or, worse, start passing again if a write were added to
+		 * one of these three.
+		 */
+		$ax_rr_read_route = '/axismundi/v1/actors/me/calendarList' === $ax_rr_route
+			|| '/axismundi/v1/calendars/(?P<uuid>[0-9a-fA-F-]{36})' === $ax_rr_route
+			|| '/axismundi/v1/calendars/(?P<uuid>[0-9a-fA-F-]{36})/events' === $ax_rr_route;
+		if ( ! $ax_rr_read_route ) {
 			continue;
 		}
 		foreach ( $ax_rr_handlers as $ax_rr_handler ) {
@@ -238,6 +247,8 @@ try {
 		}
 	}
 	ax_rr_assert( $ax_rr_results, 'the read API offers GET and nothing else', array( 'GET' ) === array_values( array_unique( $ax_rr_methods ) ) );
+	// And all three were found, so the check above is not passing because it matched nothing.
+	ax_rr_assert( $ax_rr_results, 'on all three routes', 3 === count( $ax_rr_methods ) );
 } finally {
 	wp_set_current_user( 0 );
 	foreach ( $ax_rr_posts as $ax_rr_post ) {

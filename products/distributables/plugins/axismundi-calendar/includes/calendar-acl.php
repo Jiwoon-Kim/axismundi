@@ -177,6 +177,26 @@ function axismundi_cal_acl_rules( int $calendar_id ) : array {
 }
 
 /**
+ * How many principals hold `owner` on a Calendar.
+ *
+ * Asked before a revoke, so the last one can be refused. Counted rather than inferred from the
+ * authority column: authority is the Actor a Calendar belongs to, which is a different fact and can
+ * be empty on a Calendar created on nobody's behalf.
+ *
+ * @param int $calendar_id Calendar id.
+ * @return int
+ */
+function axismundi_cal_acl_owner_count( int $calendar_id ) : int {
+	global $wpdb;
+	if ( $calendar_id <= 0 || ! axismundi_cal_ready() ) {
+		return 0;
+	}
+	$table = axismundi_cal_acl_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE calendar_id = %d AND role = 'owner'", $calendar_id ) );
+}
+
+/**
  * Drop a Calendar's rules with the Calendar.
  *
  * @param int $calendar_id Calendar id.

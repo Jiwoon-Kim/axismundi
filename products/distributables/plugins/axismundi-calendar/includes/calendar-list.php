@@ -213,6 +213,75 @@ function axismundi_cal_actor_calendar_list( string $actor_uri, string $access_ro
 }
 
 /**
+ * Keep an existing entry's role from outliving the rule that granted it.
+ *
+ * The ACL is the source, and the read API computes from it -- but `axismundi_cal_calendar_owner()`
+ * and the admin screen still read this column, so a revoked owner left sitting here would go on
+ * being reported as the owner. Only an entry that already exists is touched: being granted access is
+ * not the same as choosing to put a Calendar in your sidebar, and creating the entry here would make
+ * every grant do both.
+ *
+ * @param int    $calendar_id Calendar id.
+ * @param string $actor_uri   Actor URI. '' (the public) has no entry and is ignored.
+ * @param string $access_role Role to record.
+ * @return bool Whether an entry was updated.
+ */
+function axismundi_cal_sync_entry_role( int $calendar_id, string $actor_uri, string $access_role ) : bool {
+	global $wpdb;
+	$actor_uri = trim( $actor_uri );
+	if ( '' === $actor_uri || ! in_array( $access_role, AXISMUNDI_CAL_ACCESS_ROLES, true ) ) {
+		return false;
+	}
+	$entry = axismundi_cal_list_entry( $calendar_id, $actor_uri );
+	if ( ! is_array( $entry ) ) {
+		return false;
+	}
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+	$wpdb->update(
+		axismundi_cal_entries_list_table(),
+		array( 'access_role' => $access_role, 'updated_at' => current_time( 'mysql', true ) ),
+		array( 'id' => (int) $entry['id'] )
+	);
+	return true;
+}
+
+/**
+ * Calendars belonging to a managed Group this user administers.
+ *
+ * The reverse of `axismundi_cal_manages_authority()`, which can only answer for a Calendar already
+ * in hand. Without this, a Group's calendar is invisible in its own managers' lists until somebody
+ * happens to know its uuid -- they can open it, but they cannot find it.
+ *
+ * Resolved through Actors' own manager index rather than a second copy of it here, and at `manager`
+ * for the same reason the per-Calendar check uses that role: administering a calendar is
+ * administering the identity it belongs to, not authoring content under it.
+ *
+ * @param int $user_id WP user.
+ * @return int[] Calendar ids.
+ */
+function axismundi_cal_user_authority_calendar_ids( int $user_id ) : array {
+	global $wpdb;
+	if ( $user_id <= 0 || ! axismundi_cal_ready() || ! function_exists( 'axismundi_actors_list_manageable_groups' ) ) {
+		return array();
+	}
+	$hashes = array();
+	foreach ( axismundi_actors_list_manageable_groups( $user_id, 'manager' ) as $actor ) {
+		$uri = (string) $actor->get_uri();
+		if ( '' !== $uri ) {
+			$hashes[] = hash( 'sha256', $uri );
+		}
+	}
+	if ( array() === $hashes ) {
+		return array();
+	}
+	$table        = axismundi_cal_calendars_table();
+	$placeholders = implode( ',', array_fill( 0, count( $hashes ), '%s' ) );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+	$ids = (array) $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$table} WHERE authority_actor_uri_hash IN ({$placeholders})", $hashes ) );
+	return array_map( 'intval', $ids );
+}
+
+/**
  * Every Calendar one Actor has any relation to, by id.
  *
  * The union of two tables, because they answer different halves of the question. A list entry is how

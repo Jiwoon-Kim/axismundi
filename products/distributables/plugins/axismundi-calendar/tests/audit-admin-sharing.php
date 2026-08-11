@@ -77,6 +77,7 @@ try {
 	ax_sh_assert( $ax_sh_results, 'and neither may somebody with no relation', false === axismundi_cal_can_share_calendar( $ax_sh_row ) );
 	wp_set_current_user( 0 );
 	ax_sh_assert( $ax_sh_results, 'nor anybody signed out', false === axismundi_cal_can_share_calendar( $ax_sh_row ) );
+	ax_sh_assert( $ax_sh_results, 'a partial calendar row is refused without emitting a notice', false === axismundi_cal_can_share_calendar( array( 'id' => $ax_sh_cal ) ) );
 
 	// -- What the screen renders -------------------------------------------------------------------
 

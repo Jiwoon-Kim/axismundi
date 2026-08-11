@@ -30,12 +30,30 @@ $ax_ws_posts     = array();
 $ax_ws_users     = array();
 $ax_ws_sources   = array();
 
+$ax_ws_workspace_script = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/workspace.js' );
+$ax_ws_workspace_admin  = (string) file_get_contents( dirname( __DIR__ ) . '/includes/admin-workspace.php' );
+
 /** @param bool[] $results Results. */
 function ax_ws_assert( array &$results, string $label, bool $condition ) : void {
 	$results[] = $condition;
 	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI fixture output.
 	printf( "[%s] %s\n", $condition ? 'PASS' : 'FAIL', $label );
 }
+
+// -- Client configuration -------------------------------------------------------------------------
+
+ax_ws_assert(
+	$ax_ws_results,
+	'the workspace normalizes WordPress&rsquo;s string-localized week start before using it for weekday names',
+	str_contains( $ax_ws_workspace_script, 'var startOfWeek = Number( config.startOfWeek );' )
+		&& str_contains( $ax_ws_workspace_script, 'weekdayNames( startOfWeek )' )
+);
+ax_ws_assert(
+	$ax_ws_results,
+	'the workspace supplies the current WordPress admin locale to Intl instead of adopting the browser locale',
+	str_contains( $ax_ws_workspace_admin, "'locale'    => str_replace( '_', '-', determine_locale() )" )
+		&& str_contains( $ax_ws_workspace_script, 'toLocaleDateString( locale,' )
+);
 
 /** A user with a public Person Actor. */
 function ax_ws_user( array &$users ) : array {

@@ -25,7 +25,7 @@ defined( 'ABSPATH' ) || exit;
  * @return bool
  */
 function axismundi_cal_can_share_calendar( ?array $calendar ) : bool {
-	if ( ! is_array( $calendar ) || 'local' !== (string) $calendar['kind'] ) {
+	if ( ! is_array( $calendar ) || 'local' !== (string) ( $calendar['kind'] ?? '' ) ) {
 		// A subscribed Calendar is somebody else's to share. This site holds a cached copy of it and
 		// has nothing to grant anyone.
 		return false;

@@ -31,6 +31,13 @@
 	var apiFetch = wp.apiFetch;
 
 	var DAY_MS = 86400000;
+	// wp_localize_script() serializes scalars as strings. Normalize once so the weekday
+	// header cannot concatenate ("1" + 0) while date arithmetic coerces it to a number.
+	var startOfWeek = Number( config.startOfWeek );
+	if ( ! Number.isInteger( startOfWeek ) || startOfWeek < 0 || startOfWeek > 6 ) {
+		startOfWeek = 0;
+	}
+	var locale = config.locale || undefined;
 
 	/* -- Dates ------------------------------------------------------------------------------- */
 
@@ -73,26 +80,25 @@
 		return days;
 	}
 
-	/** Weekday names in the site's week order, from the browser's own locale data. */
+	/** Weekday names in the site's week order, formatted in the current admin locale. */
 	function weekdayNames( startOfWeek ) {
 		var names = [];
-		var reference = new Date( 2024, 0, 7 ); // A Sunday.
 		for ( var i = 0; i < 7; i++ ) {
 			var day = new Date( 2024, 0, 7 + ( ( startOfWeek + i ) % 7 ) );
-			names.push( day.toLocaleDateString( undefined, { weekday: 'short' } ) );
+			names.push( day.toLocaleDateString( locale, { weekday: 'short' } ) );
 		}
 		return names;
 	}
 
 	function monthTitle( year, month ) {
-		return new Date( year, month, 1 ).toLocaleDateString( undefined, { year: 'numeric', month: 'long' } );
+		return new Date( year, month, 1 ).toLocaleDateString( locale, { year: 'numeric', month: 'long' } );
 	}
 
 	function timeLabel( item ) {
 		if ( item.allDay ) {
 			return '';
 		}
-		return parseUtc( item.startUtc ).toLocaleTimeString( undefined, { hour: 'numeric', minute: '2-digit' } );
+		return parseUtc( item.startUtc ).toLocaleTimeString( locale, { hour: 'numeric', minute: '2-digit' } );
 	}
 
 	/* -- Placing occurrences on days ----------------------------------------------------------- */
@@ -261,7 +267,7 @@
 		var end = parseUtc( item.endUtc );
 		var when = item.allDay
 			? civilDate( item.startLocal || item.startUtc )
-			: start.toLocaleString() + ' – ' + end.toLocaleTimeString( undefined, { hour: 'numeric', minute: '2-digit' } );
+			: start.toLocaleString( locale ) + ' – ' + end.toLocaleTimeString( locale, { hour: 'numeric', minute: '2-digit' } );
 
 		return el(
 			C.Modal,
@@ -353,7 +359,7 @@
 			}
 			// A whole grid, not a whole month: the six weeks drawn include days either side, and asking
 			// only for the month would leave those cells empty while looking complete.
-			var days = gridDays( cursor.year, cursor.month, config.startOfWeek );
+			var days = gridDays( cursor.year, cursor.month, startOfWeek );
 			setBusy( true );
 			apiFetch( {
 				path: wp.url.addQueryArgs( '/' + config.namespace + '/actors/me/calendarView', {
@@ -438,7 +444,7 @@
 					items: items,
 					year: cursor.year,
 					month: cursor.month,
-					startOfWeek: config.startOfWeek,
+					startOfWeek: startOfWeek,
 					onSelect: setSelected
 				} )
 			),

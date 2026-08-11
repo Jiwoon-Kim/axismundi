@@ -103,6 +103,9 @@ function axismundi_cal_enqueue_workspace( string $hook ) : void {
 			'namespace' => 'axismundi/v1',
 			'newEvent'  => admin_url( 'post-new.php?post_type=' . AXISMUNDI_CAL_EVENT_POST_TYPE ),
 			'settings'  => admin_url( 'edit.php?post_type=' . AXISMUNDI_CAL_EVENT_POST_TYPE . '&page=ax-calendars' ),
+			// JavaScript Intl expects BCP 47 (en-US), while WordPress locale identifiers use
+			// underscores (en_US). Respect the current admin locale, not the browser locale.
+			'locale'    => str_replace( '_', '-', determine_locale() ),
 			/*
 			 * The viewer's zone, which is what the grid is drawn in. Not the Calendar's: a person in
 			 * Seoul looking at a London calendar wants to know when it happens for them, and an

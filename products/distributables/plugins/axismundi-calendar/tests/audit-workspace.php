@@ -42,18 +42,36 @@ function ax_ws_assert( array &$results, string $label, bool $condition ) : void 
 
 // -- Client configuration -------------------------------------------------------------------------
 
+/*
+ * Two settings the workspace must not decide for itself, asserted through the values it is handed
+ * rather than by reading its source. A screen that respects General Settings and one whose source
+ * happens to contain the right words are different claims, and only the first is worth asserting.
+ */
+$ax_ws_config = axismundi_cal_workspace_config();
+
+update_option( 'start_of_week', '3' );
 ax_ws_assert(
 	$ax_ws_results,
-	'the workspace normalizes WordPress&rsquo;s string-localized week start before using it for weekday names',
-	str_contains( $ax_ws_workspace_script, 'var startOfWeek = Number( config.startOfWeek );' )
-		&& str_contains( $ax_ws_workspace_script, 'weekdayNames( startOfWeek )' )
+	'the week starts where General Settings says',
+	3 === axismundi_cal_workspace_config()['startOfWeek']
 );
+update_option( 'start_of_week', (string) $ax_ws_config['startOfWeek'] );
+ax_ws_assert( $ax_ws_results, 'and follows that setting rather than one of its own', (int) get_option( 'start_of_week' ) === axismundi_cal_workspace_config()['startOfWeek'] );
+
+/*
+ * The type is the point. `wp_localize_script()` casts every value to a string, which is how the week
+ * start reached the browser as "1" and started the weekday header on Wednesday -- "1" + 0
+ * concatenates where 1 + 0 adds. The payload is JSON-encoded now, so the number survives the trip.
+ */
+$ax_ws_payload = json_decode( (string) wp_json_encode( axismundi_cal_workspace_config() ), true );
+ax_ws_assert( $ax_ws_results, 'and reaches the browser as a number rather than as a string', is_int( $ax_ws_payload['startOfWeek'] ) );
+
 ax_ws_assert(
 	$ax_ws_results,
-	'the workspace supplies the current WordPress admin locale to Intl instead of adopting the browser locale',
-	str_contains( $ax_ws_workspace_admin, "'locale'    => str_replace( '_', '-', determine_locale() )" )
-		&& str_contains( $ax_ws_workspace_script, 'toLocaleDateString( locale,' )
+	'month and weekday names are formatted in the admin locale, not whichever one the browser prefers',
+	str_replace( '_', '-', determine_locale() ) === $ax_ws_config['locale']
 );
+ax_ws_assert( $ax_ws_results, 'in the form Intl accepts, which is not the form WordPress stores', ! str_contains( (string) $ax_ws_config['locale'], '_' ) );
 
 /** A user with a public Person Actor. */
 function ax_ws_user( array &$users ) : array {

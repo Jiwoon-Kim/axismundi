@@ -64,6 +64,34 @@ function axismundi_cal_render_workspace_page() : void {
 }
 
 /**
+ * What the screen is told about this site before it asks anything.
+ *
+ * Its own function so the values can be asserted. Two of them are settings the workspace must not
+ * decide for itself: which day the week starts on is General Settings' answer, and the locale that
+ * formats month and weekday names is the admin's, not whichever language the reader's browser
+ * happens to prefer.
+ *
+ * @return array<string,mixed>
+ */
+function axismundi_cal_workspace_config() : array {
+	return array(
+		'namespace'   => 'axismundi/v1',
+		'newEvent'    => admin_url( 'post-new.php?post_type=' . AXISMUNDI_CAL_EVENT_POST_TYPE ),
+		'settings'    => admin_url( 'edit.php?post_type=' . AXISMUNDI_CAL_EVENT_POST_TYPE . '&page=ax-calendars' ),
+		// JavaScript `Intl` expects BCP 47 (en-US); WordPress locale identifiers use underscores.
+		'locale'      => str_replace( '_', '-', determine_locale() ),
+		/*
+		 * The viewer's zone, which is what the grid is drawn in. Not the Calendar's: a person in
+		 * Seoul looking at a London calendar wants to know when it happens for them, and an all-day
+		 * entry is a civil date that must not be shifted by either.
+		 */
+		'timezone'    => axismundi_cal_default_calendar_timezone(),
+		// An integer, because the client does arithmetic with it.
+		'startOfWeek' => (int) get_option( 'start_of_week', 0 ),
+	);
+}
+
+/**
  * Load the workspace assets on its own screen only.
  *
  * @param string $hook Current admin page.
@@ -96,24 +124,17 @@ function axismundi_cal_enqueue_workspace( string $hook ) : void {
 		true
 	);
 	wp_set_script_translations( 'axismundi-calendar-workspace', 'axismundi-calendar' );
-	wp_localize_script(
+	/*
+	 * `wp_add_inline_script()` rather than `wp_localize_script()`, which is documented to cast every
+	 * value to a string. That is how `start_of_week` reached the browser as "1" and made a weekday
+	 * header start on Wednesday: "1" + 0 concatenates where 1 + 0 adds. Encoding the payload as JSON
+	 * keeps an integer an integer, so the bug class is gone at the source rather than corrected in
+	 * every consumer that remembers to.
+	 */
+	wp_add_inline_script(
 		'axismundi-calendar-workspace',
-		'axismundiCalendarWorkspace',
-		array(
-			'namespace' => 'axismundi/v1',
-			'newEvent'  => admin_url( 'post-new.php?post_type=' . AXISMUNDI_CAL_EVENT_POST_TYPE ),
-			'settings'  => admin_url( 'edit.php?post_type=' . AXISMUNDI_CAL_EVENT_POST_TYPE . '&page=ax-calendars' ),
-			// JavaScript Intl expects BCP 47 (en-US), while WordPress locale identifiers use
-			// underscores (en_US). Respect the current admin locale, not the browser locale.
-			'locale'    => str_replace( '_', '-', determine_locale() ),
-			/*
-			 * The viewer's zone, which is what the grid is drawn in. Not the Calendar's: a person in
-			 * Seoul looking at a London calendar wants to know when it happens for them, and an
-			 * all-day entry is a civil date that must not be shifted by either.
-			 */
-			'timezone'  => axismundi_cal_default_calendar_timezone(),
-			'startOfWeek' => (int) get_option( 'start_of_week', 0 ),
-		)
+		'var axismundiCalendarWorkspace = ' . wp_json_encode( axismundi_cal_workspace_config() ) . ';',
+		'before'
 	);
 }
 add_action( 'admin_enqueue_scripts', 'axismundi_cal_enqueue_workspace' );

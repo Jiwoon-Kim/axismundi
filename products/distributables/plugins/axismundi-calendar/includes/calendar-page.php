@@ -21,7 +21,9 @@ function axismundi_cal_serve_calendar_page() : void {
 		return;
 	}
 	$calendar = axismundi_cal_calendar_by_slug( (string) get_query_var( 'ax_cal_slug' ) );
-	if ( ! is_array( $calendar ) || 'public' !== (string) $calendar['visibility'] ) {
+	// A private Calendar answers exactly as a missing one does. Distinguishing them would confirm
+	// that a particular slug exists, which is the one thing an anonymous request must not learn.
+	if ( ! is_array( $calendar ) || ! axismundi_cal_is_publicly_readable( (int) $calendar['id'] ) ) {
 		global $wp_query;
 		$wp_query->set_404();
 		status_header( 404 );
@@ -46,3 +48,45 @@ function axismundi_cal_serve_calendar_page() : void {
 	exit;
 }
 add_action( 'template_redirect', 'axismundi_cal_serve_calendar_page', 9 );
+
+/**
+ * Withhold the readable page of an Event whose Calendar is not public.
+ *
+ * Without this the gate is defeated by guessing one URL. The Object route, the grid and the feeds
+ * would all withhold a private Calendar's Event while its own permalink served the title, the time
+ * and the description to anyone -- and a published post is exactly what an Event on a private
+ * Calendar is, so post status cannot be what decides this.
+ *
+ * People who may read the Calendar still get the page, so an author is not locked out of their own
+ * draft-in-public. `404` rather than `403` for everyone else, for the reason the Calendar page uses
+ * it: a refusal confirms there is something there to refuse.
+ *
+ * @return void
+ */
+function axismundi_cal_guard_event_page() : void {
+	if ( ! is_singular( AXISMUNDI_CAL_EVENT_POST_TYPE ) ) {
+		return;
+	}
+	$post = get_queried_object();
+	if ( ! $post instanceof WP_Post ) {
+		return;
+	}
+	$schedule = axismundi_cal_schedule_for_event( (int) $post->ID );
+	// An Event with no schedule yet is not a Calendar's to withhold; the envelope adapter owns that.
+	if ( ! is_array( $schedule ) ) {
+		return;
+	}
+	$calendar_id = (int) $schedule['calendar_id'];
+	if ( axismundi_cal_is_publicly_readable( $calendar_id )
+		|| axismundi_cal_can_read( $calendar_id, axismundi_cal_current_actor_uri(), get_current_user_id() ) ) {
+		return;
+	}
+
+	global $wp_query;
+	$wp_query->set_404();
+	status_header( 404 );
+	nocache_headers();
+	get_template_part( '404' );
+	exit;
+}
+add_action( 'template_redirect', 'axismundi_cal_guard_event_page', 9 );

@@ -28,14 +28,25 @@ const AXISMUNDI_CAL_RANGE_MAX = 500;
  * withholds recurring Events. Password-protected and privately-viewable Events are excluded because
  * the grid is a public surface and a title is enough to disclose one.
  *
+ * The owning Calendar is asked too. Post status alone says whether the Event was published, not
+ * whether the collection it lives in is public -- and without this check a Calendar shared with
+ * three people would have every one of its Events on the site's public grid and in its public feed.
+ *
  * @param WP_Post $post Event post.
  * @return bool
  */
 function axismundi_cal_event_listable( WP_Post $post ) : bool {
-	return AXISMUNDI_CAL_EVENT_POST_TYPE === $post->post_type
-		&& 'publish' === $post->post_status
-		&& '' === (string) $post->post_password
-		&& is_post_publicly_viewable( $post );
+	if ( AXISMUNDI_CAL_EVENT_POST_TYPE !== $post->post_type
+		|| 'publish' !== $post->post_status
+		|| '' !== (string) $post->post_password
+		|| ! is_post_publicly_viewable( $post ) ) {
+		return false;
+	}
+	$schedule = axismundi_cal_schedule_for_event( (int) $post->ID );
+	if ( ! is_array( $schedule ) ) {
+		return false;
+	}
+	return axismundi_cal_calendar_is_listable( (int) $schedule['calendar_id'] );
 }
 
 /**

@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '10';
+const AXISMUNDI_CAL_DB_VERSION        = '11';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 
 /** @return string Event envelope table name. */
@@ -88,6 +88,10 @@ function axismundi_cal_ready() : bool {
 function axismundi_cal_install_schema() : bool {
 	global $wpdb;
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+
+	// Captured before anything writes it, because one migration below needs to know whether this is
+	// an upgrade or a first install -- they call for opposite defaults.
+	$previous_version = (string) get_option( AXISMUNDI_CAL_DB_VERSION_OPTION, '' );
 
 	$table   = axismundi_cal_events_table();
 	$charset = $wpdb->get_charset_collate();
@@ -411,6 +415,7 @@ function axismundi_cal_install_schema() : bool {
 	axismundi_cal_seed_owner_entries();
 	axismundi_cal_backfill_authority();
 	axismundi_cal_seed_authority_acl();
+	axismundi_cal_grandfather_public_calendars( $previous_version );
 
 	/*
 	 * Dropped rather than left behind. It is not read anywhere after this version, and leaving a

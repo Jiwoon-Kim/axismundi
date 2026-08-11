@@ -63,6 +63,15 @@ function axismundi_cal_event_visible( $source ) : bool {
 		return false;
 	}
 	/*
+	 * An Event on a Calendar nobody may read is not this site's to publish. Federation is the widest
+	 * surface there is, so it asks the same question the grid does rather than trusting post status.
+	 */
+	$schedule = axismundi_cal_schedule_for_event( (int) $source->ID );
+	if ( ! is_array( $schedule ) || ! axismundi_cal_is_publicly_readable( (int) $schedule['calendar_id'] ) ) {
+		return false;
+	}
+
+	/*
 	 * A recurring Event is held back from federation until occurrences are projected individually.
 	 *
 	 * FEP-8a8e has no recurrence: an `Event` carries one `startTime`. Publishing a weekly series as
@@ -74,7 +83,7 @@ function axismundi_cal_event_visible( $source ) : bool {
 	 * Withheld rather than approximated. The panel says so where the rule is authored, so this is a
 	 * stated limitation rather than a silent omission.
 	 */
-	return ! axismundi_cal_schedule_is_recurring( axismundi_cal_schedule_for_event( (int) $source->ID ) );
+	return ! axismundi_cal_schedule_is_recurring( $schedule );
 }
 
 /**

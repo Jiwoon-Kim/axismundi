@@ -95,6 +95,7 @@ function axismundi_cal_acl_grant( int $calendar_id, string $principal_uri, strin
 	if ( is_array( $existing ) ) {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 		$wpdb->update( $table, $data, array( 'id' => (int) $existing['id'] ) );
+		axismundi_cal_acl_flush_cache();
 		return (int) $existing['id'];
 	}
 	$data['created_at'] = $now;
@@ -102,6 +103,7 @@ function axismundi_cal_acl_grant( int $calendar_id, string $principal_uri, strin
 	if ( false === $wpdb->insert( $table, $data ) ) {
 		return new WP_Error( 'ax_cal_acl_write', __( 'The access rule could not be saved.', 'axismundi-calendar' ) );
 	}
+	axismundi_cal_acl_flush_cache();
 	return (int) $wpdb->insert_id;
 }
 
@@ -146,7 +148,7 @@ function axismundi_cal_acl_revoke( int $calendar_id, string $principal_uri, stri
 		return false;
 	}
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	return (bool) $wpdb->delete(
+	$deleted = (bool) $wpdb->delete(
 		axismundi_cal_acl_table(),
 		array(
 			'calendar_id'        => $calendar_id,
@@ -154,6 +156,8 @@ function axismundi_cal_acl_revoke( int $calendar_id, string $principal_uri, stri
 			'principal_uri_hash' => hash( 'sha256', 'public' === $principal_type ? '' : trim( $principal_uri ) ),
 		)
 	);
+	axismundi_cal_acl_flush_cache();
+	return $deleted;
 }
 
 /**
@@ -185,6 +189,7 @@ function axismundi_cal_acl_forget_calendar( int $calendar_id ) : void {
 	}
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 	$wpdb->delete( axismundi_cal_acl_table(), array( 'calendar_id' => $calendar_id ) );
+	axismundi_cal_acl_flush_cache();
 }
 
 /**
@@ -285,18 +290,106 @@ function axismundi_cal_can_write( int $calendar_id, string $actor_uri, int $user
 }
 
 /**
- * Whether a Calendar is readable by anyone at all.
+ * Whether anyone at all may read a Calendar in full.
  *
- * What decides whether its page, its feed and its Object route answer an anonymous request. A
+ * What decides whether its page, its feeds and its Object route answer an anonymous request. A
  * Calendar is private unless somebody said otherwise, so this asks for a rule rather than assuming
  * one.
+ *
+ * Deliberately not satisfied by a free/busy rule. That rule exists precisely to disclose occupied
+ * time *without* disclosing what the time is for, so treating it as public readability would publish
+ * every title, description and location to people the owner meant to show only a busy block.
  *
  * @param int $calendar_id Calendar id.
  * @return bool
  */
-function axismundi_cal_is_public( int $calendar_id ) : bool {
+function axismundi_cal_is_publicly_readable( int $calendar_id ) : bool {
 	$public = axismundi_cal_acl_rule( $calendar_id, '', 'public' );
-	return is_array( $public ) && 'reader' === (string) $public['role'];
+	return is_array( $public ) && axismundi_cal_acl_rank( (string) $public['role'] ) >= axismundi_cal_acl_rank( 'reader' );
+}
+
+/**
+ * Whether anyone at all may see when a Calendar is busy.
+ *
+ * True for a full public reader as well, since reading everything includes reading when it happens.
+ * Nothing consumes this yet -- it is what a free/busy endpoint will ask, and it is defined here so
+ * that endpoint cannot later be built on the readability check by mistake.
+ *
+ * @param int $calendar_id Calendar id.
+ * @return bool
+ */
+function axismundi_cal_is_publicly_freebusy( int $calendar_id ) : bool {
+	$public = axismundi_cal_acl_rule( $calendar_id, '', 'public' );
+	return is_array( $public ) && axismundi_cal_acl_rank( (string) $public['role'] ) >= axismundi_cal_acl_rank( 'freeBusyReader' );
+}
+
+/**
+ * Whether a Calendar may appear on this site's public surfaces, memoized per request.
+ *
+ * The grid asks this once per Calendar rather than once per Event, since a month of a busy calendar
+ * is one answer repeated fifty times.
+ *
+ * @param int $calendar_id Calendar id.
+ * @return bool
+ */
+function axismundi_cal_calendar_is_listable( int $calendar_id, bool $flush = false ) : bool {
+	static $cache = array();
+	if ( $flush ) {
+		$cache = array();
+		return false;
+	}
+	if ( ! isset( $cache[ $calendar_id ] ) ) {
+		$cache[ $calendar_id ] = axismundi_cal_is_publicly_readable( $calendar_id );
+	}
+	return $cache[ $calendar_id ];
+}
+
+/**
+ * Forget memoized public answers after a rule changes.
+ *
+ * Called by every write below rather than left to expire with the request, because a rule is most
+ * often changed by a request that then renders the thing it governs -- somebody makes a Calendar
+ * public and looks at it -- and answering that render from an answer computed before the change is
+ * the one case the cache exists to make faster and gets wrong.
+ *
+ * @return void
+ */
+function axismundi_cal_acl_flush_cache() : void {
+	axismundi_cal_calendar_is_listable( 0, true );
+}
+
+/**
+ * Give Calendars that predate access control the public rule they were behaving as if they had.
+ *
+ * Every Calendar was public before this existed: its page, its feed and its Events were served to
+ * anyone. Closing the gate without this would silently unpublish them all -- subscription URLs
+ * already in people's calendar apps would start answering 404, which is a worse outcome than the
+ * over-sharing being fixed, and one nobody asked for.
+ *
+ * Only on upgrade, and only once. A Calendar created after this point starts owner-only, because
+ * from here on being public is something somebody chose.
+ *
+ * @param string $previous_version Stored schema version before this upgrade, or '' on a fresh install.
+ * @return int Number of Calendars grandfathered.
+ */
+function axismundi_cal_grandfather_public_calendars( string $previous_version ) : int {
+	global $wpdb;
+	// A fresh install has nothing to preserve: there are no existing URLs and no existing
+	// expectations, so its Calendars begin private like every one created from now on.
+	if ( '' === $previous_version || (int) $previous_version >= 11 ) {
+		return 0;
+	}
+	$table = axismundi_cal_calendars_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration over this plugin's own table.
+	$ids = array_map( 'intval', (array) $wpdb->get_col( "SELECT id FROM {$table}" ) );
+
+	$granted = 0;
+	foreach ( $ids as $id ) {
+		if ( ! is_wp_error( axismundi_cal_acl_grant( $id, '', 'reader', 'public' ) ) ) {
+			++$granted;
+		}
+	}
+	return $granted;
 }
 
 /**

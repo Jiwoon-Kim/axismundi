@@ -86,12 +86,12 @@ try {
 
 	ax_ac_assert( $ax_ac_results, 'an Actor with no rule has no access', '' === axismundi_cal_effective_role( (int) $ax_ac_cal, $ax_ac_stranger['actor_uri'] ) );
 	ax_ac_assert( $ax_ac_results, 'and neither does an anonymous reader, because a calendar is private unless somebody said otherwise', false === axismundi_cal_can_read( (int) $ax_ac_cal, '' ) );
-	ax_ac_assert( $ax_ac_results, 'so it is not public', false === axismundi_cal_is_public( (int) $ax_ac_cal ) );
+	ax_ac_assert( $ax_ac_results, 'so it is not public', false === axismundi_cal_is_publicly_readable( (int) $ax_ac_cal ) );
 
 	// -- Public is stated, never inferred --------------------------------------------------------
 
 	axismundi_cal_acl_grant( (int) $ax_ac_cal, '', 'reader', 'public' );
-	ax_ac_assert( $ax_ac_results, 'a public rule makes it readable by anyone', true === axismundi_cal_can_read( (int) $ax_ac_cal, '' ) && true === axismundi_cal_is_public( (int) $ax_ac_cal ) );
+	ax_ac_assert( $ax_ac_results, 'a public rule makes it readable by anyone', true === axismundi_cal_can_read( (int) $ax_ac_cal, '' ) && true === axismundi_cal_is_publicly_readable( (int) $ax_ac_cal ) );
 	ax_ac_assert( $ax_ac_results, 'without letting anyone write to it', false === axismundi_cal_can_write( (int) $ax_ac_cal, '' ) );
 	ax_ac_assert(
 		$ax_ac_results,
@@ -99,7 +99,14 @@ try {
 		is_wp_error( axismundi_cal_acl_grant( (int) $ax_ac_cal, '', 'writer', 'public' ) )
 	);
 	ax_ac_assert( $ax_ac_results, 'a free/busy rule discloses time without disclosing what the time is for', ! is_wp_error( axismundi_cal_acl_grant( (int) $ax_ac_cal, '', 'freeBusyReader', 'public' ) ) );
-	ax_ac_assert( $ax_ac_results, 'which is less than reading, so the calendar is no longer public', false === axismundi_cal_is_public( (int) $ax_ac_cal ) );
+	ax_ac_assert( $ax_ac_results, 'which is less than reading, so the calendar is no longer publicly readable', false === axismundi_cal_is_publicly_readable( (int) $ax_ac_cal ) );
+	/*
+	 * The distinction the two helpers exist for. One rule answers yes to being busy and no to what
+	 * the busy time is, and a single `is_public()` could not have said both.
+	 */
+	ax_ac_assert( $ax_ac_results, 'though it is still publicly free/busy, which is the whole point of the role', true === axismundi_cal_is_publicly_freebusy( (int) $ax_ac_cal ) );
+	axismundi_cal_acl_grant( (int) $ax_ac_cal, '', 'reader', 'public' );
+	ax_ac_assert( $ax_ac_results, 'and a full public reader is free/busy too, since reading everything includes reading when', true === axismundi_cal_is_publicly_freebusy( (int) $ax_ac_cal ) );
 	axismundi_cal_acl_revoke( (int) $ax_ac_cal, '', 'public' );
 	ax_ac_assert( $ax_ac_results, 'revoking the public rule closes it again', false === axismundi_cal_can_read( (int) $ax_ac_cal, '' ) );
 

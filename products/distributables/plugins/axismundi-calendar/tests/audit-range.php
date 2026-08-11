@@ -36,6 +36,9 @@ function ax_rg_starts( array $occurrences ) : array {
 
 try {
 	$ax_rg_calendar = axismundi_cal_calendar_save( array( 'name' => 'Range calendar', 'slug' => 'audit-range', 'timezone' => 'Asia/Seoul' ) );
+	// Published on purpose. Every surface these fixtures exercise is a public one, and a Calendar is
+	// private until somebody says otherwise, so the fixture has to say so.
+	axismundi_cal_acl_grant( (int) $ax_rg_calendar, '', 'reader', 'public' );
 	$ax_rg_calendars[] = (int) $ax_rg_calendar;
 	$ax_rg_post = (int) wp_insert_post(
 		array( 'post_type' => AXISMUNDI_CAL_EVENT_POST_TYPE, 'post_status' => 'draft', 'post_author' => 1, 'post_title' => 'Range fixture' )

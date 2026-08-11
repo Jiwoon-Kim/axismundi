@@ -290,7 +290,7 @@ function axismundi_cal_serve_ics() : void {
 		$feed = axismundi_cal_site_feed();
 	} elseif ( 'calendar' === $which ) {
 		$calendar = axismundi_cal_calendar_by_slug( (string) get_query_var( 'ax_cal_slug' ) );
-		if ( is_array( $calendar ) && 'local' === (string) $calendar['kind'] && 'public' === (string) $calendar['visibility'] ) {
+		if ( is_array( $calendar ) && 'local' === (string) $calendar['kind'] && axismundi_cal_is_publicly_readable( (int) $calendar['id'] ) ) {
 			$feed = axismundi_cal_site_feed(
 				(int) $calendar['id'],
 				(string) $calendar['name'],

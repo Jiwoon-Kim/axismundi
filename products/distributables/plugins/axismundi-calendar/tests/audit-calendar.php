@@ -42,6 +42,10 @@ try {
 	$ax_cl_first = axismundi_cal_calendar_save( array( 'name' => 'Calendar A', 'slug' => 'ownership-a', 'timezone' => 'Asia/Seoul' ) );
 	$ax_cl_second = axismundi_cal_calendar_save( array( 'name' => 'Calendar B', 'slug' => 'ownership-b', 'timezone' => 'Europe/London' ) );
 	$ax_cl_empty = axismundi_cal_calendar_save( array( 'name' => 'Empty', 'slug' => 'ownership-empty', 'timezone' => 'UTC' ) );
+	// Published on purpose. Every surface these fixtures exercise is a public one, and a Calendar is
+	// private until somebody says otherwise, so the fixture has to say so.
+	axismundi_cal_acl_grant( (int) $ax_cl_first, '', 'reader', 'public' );
+	axismundi_cal_acl_grant( (int) $ax_cl_second, '', 'reader', 'public' );
 	$ax_cl_calendars = array( (int) $ax_cl_first, (int) $ax_cl_second, (int) $ax_cl_empty );
 
 	ax_cl_assert( $ax_cl_results, 'a local Calendar requires a named IANA timezone', is_wp_error( axismundi_cal_calendar_save( array( 'name' => 'No zone', 'slug' => 'ownership-no-zone' ) ) ) );

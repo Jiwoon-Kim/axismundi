@@ -48,6 +48,9 @@ function ax_ui_titles( array $occurrences ) : array {
 
 try {
 	$ax_ui_calendar = axismundi_cal_calendar_save( array( 'name' => 'Grid calendar', 'slug' => 'audit-grid', 'timezone' => 'Asia/Seoul' ) );
+	// Published on purpose. Every surface these fixtures exercise is a public one, and a Calendar is
+	// private until somebody says otherwise, so the fixture has to say so.
+	axismundi_cal_acl_grant( (int) $ax_ui_calendar, '', 'reader', 'public' );
 	$GLOBALS['ax_ui_calendar'] = (int) $ax_ui_calendar;
 	$ax_ui_calendars[] = (int) $ax_ui_calendar;
 	$ax_ui_single = ax_ui_event(

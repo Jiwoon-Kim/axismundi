@@ -72,6 +72,9 @@ try {
 	);
 	$ax_ev_posts[] = $ax_ev_post;
 	$ax_ev_calendar = axismundi_cal_calendar_save( array( 'name' => 'Authoring calendar', 'slug' => 'audit-authoring-' . $ax_ev_post, 'timezone' => 'Asia/Seoul' ) );
+	// Published on purpose. Every surface these fixtures exercise is a public one, and a Calendar is
+	// private until somebody says otherwise, so the fixture has to say so.
+	axismundi_cal_acl_grant( (int) $ax_ev_calendar, '', 'reader', 'public' );
 	$ax_ev_calendars[] = (int) $ax_ev_calendar;
 
 	// -- The field exists and reports an empty envelope in one stable shape -----------------

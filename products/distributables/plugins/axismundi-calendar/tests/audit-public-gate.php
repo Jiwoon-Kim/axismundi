@@ -62,11 +62,12 @@ function ax_pg_event( array &$posts, int $calendar_id, string $title ) : int {
 }
 
 try {
+	$ax_pg_authority = axismundi_cal_default_local_authority();
 	$ax_pg_private = (int) axismundi_cal_calendar_save(
-		array( 'name' => 'Gate private', 'slug' => 'ax-pg-private', 'timezone' => 'Asia/Seoul' )
+		array( 'name' => 'Gate private', 'slug' => 'ax-pg-private', 'timezone' => 'Asia/Seoul', 'owner_actor_uri' => $ax_pg_authority )
 	);
 	$ax_pg_public = (int) axismundi_cal_calendar_save(
-		array( 'name' => 'Gate public', 'slug' => 'ax-pg-public', 'timezone' => 'Asia/Seoul' )
+		array( 'name' => 'Gate public', 'slug' => 'ax-pg-public', 'timezone' => 'Asia/Seoul', 'owner_actor_uri' => $ax_pg_authority )
 	);
 	$ax_pg_calendars[] = $ax_pg_private;
 	$ax_pg_calendars[] = $ax_pg_public;
@@ -156,7 +157,7 @@ try {
 	// -- free/busy is not readable ---------------------------------------------------------------------
 
 	$ax_pg_busy = (int) axismundi_cal_calendar_save(
-		array( 'name' => 'Gate busy', 'slug' => 'ax-pg-busy', 'timezone' => 'Asia/Seoul' )
+		array( 'name' => 'Gate busy', 'slug' => 'ax-pg-busy', 'timezone' => 'Asia/Seoul', 'owner_actor_uri' => $ax_pg_authority )
 	);
 	$ax_pg_calendars[] = $ax_pg_busy;
 	axismundi_cal_acl_grant( $ax_pg_busy, '', 'freeBusyReader', 'public' );
@@ -174,7 +175,7 @@ try {
 	 * already true rather than changing it.
 	 */
 	$ax_pg_legacy = (int) axismundi_cal_calendar_save(
-		array( 'name' => 'Gate legacy', 'slug' => 'ax-pg-legacy', 'timezone' => 'Asia/Seoul' )
+		array( 'name' => 'Gate legacy', 'slug' => 'ax-pg-legacy', 'timezone' => 'Asia/Seoul', 'owner_actor_uri' => $ax_pg_authority )
 	);
 	$ax_pg_calendars[] = $ax_pg_legacy;
 	ax_pg_assert( $ax_pg_results, 'before the migration a pre-ACL Calendar reads as private', false === axismundi_cal_is_publicly_readable( $ax_pg_legacy ) );

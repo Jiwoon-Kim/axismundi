@@ -67,6 +67,7 @@ try {
 	ax_ca_assert( $ax_ca_results, 'a calendar is created with an owner', is_int( $ax_ca_mine ) && $ax_ca_mine > 0 );
 	$ax_ca_calendars[] = (int) $ax_ca_mine;
 	$ax_ca_row = axismundi_cal_calendar_get( (int) $ax_ca_mine );
+	axismundi_cal_acl_grant( (int) $ax_ca_mine, '', 'reader', 'public' );
 	// Read as a relation, not a column: ownership is one of several things an Actor can be to a
 	// Calendar, and asking the Calendar who owns it could only ever return the first of them.
 	ax_ca_assert( $ax_ca_results, 'and the owner is stored rather than left to be worked out later', $ax_ca_uri === axismundi_cal_calendar_owner( (int) $ax_ca_mine ) );
@@ -110,6 +111,12 @@ try {
 	wp_set_current_user( $ax_ca_reader );
 	ax_ca_assert( $ax_ca_results, 'and not by anyone who is not', false === axismundi_cal_can_manage_calendar( null ) );
 
+	wp_set_current_user( $ax_ca_author );
+	ob_start();
+	axismundi_cal_render_calendars_page();
+	$ax_ca_new_html = (string) ob_get_clean();
+	ax_ca_assert( $ax_ca_results, 'a new Calendar chooses an Actor by name and handle rather than accepting a raw URI', str_contains( $ax_ca_new_html, 'name="owner_actor_uri"' ) && str_contains( axismundi_cal_admin_actor_label( $ax_ca_uri ), '(@' ) && str_contains( $ax_ca_new_html, axismundi_cal_admin_actor_label( $ax_ca_uri ) ) );
+
 	// -- The screen is registered where it can be found -------------------------------------------------
 
 	wp_set_current_user( $ax_ca_editor );
@@ -137,6 +144,14 @@ try {
 	);
 	ax_ca_assert( $ax_ca_results, 'it offers a public ICS URL subscription flow alongside local Calendar creation', str_contains( $ax_ca_html, 'name="action" value="ax_cal_subscribe_calendar"' ) && str_contains( $ax_ca_html, 'name="source_url"' ) );
 	ax_ca_assert( $ax_ca_results, 'each Calendar has a human View link as well as its file address', str_contains( $ax_ca_html, '/calendar/ax-ca-mine/' ) && axismundi_cal_calendar_url( $ax_ca_row ) === home_url( '/calendar/ax-ca-mine/' ) );
+
+	$_GET['ax_cal_edit'] = (int) $ax_ca_mine;
+	ob_start();
+	axismundi_cal_render_calendars_page();
+	$ax_ca_integration_html = (string) ob_get_clean();
+	unset( $_GET['ax_cal_edit'] );
+	ax_ca_assert( $ax_ca_results, 'the saved Calendar shows its stable ID and API address', str_contains( $ax_ca_integration_html, (string) $ax_ca_row['uuid'] ) && str_contains( $ax_ca_integration_html, '/wp-json/axismundi/v1/calendars/' . $ax_ca_row['uuid'] ) );
+	ax_ca_assert( $ax_ca_results, 'and, when public, its human and iCalendar subscription addresses', str_contains( $ax_ca_integration_html, '/calendar/ax-ca-mine/' ) && str_contains( $ax_ca_integration_html, '/calendar/ax-ca-mine.ics' ) );
 	axismundi_cal_register_ics_routes();
 	flush_rewrite_rules( false );
 	$ax_ca_rules = (array) get_option( 'rewrite_rules', array() );

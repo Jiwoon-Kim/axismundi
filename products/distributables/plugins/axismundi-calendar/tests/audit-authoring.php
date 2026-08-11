@@ -158,6 +158,26 @@ try {
 	ax_ev_assert( $ax_ev_results, 'the Calendar authority is both publisher attribution and the first organizer', is_array( $ax_ev_object ) && (string) ( $ax_ev_object['attributedTo'] ?? '' ) === (string) axismundi_cal_calendar_authority( (int) $ax_ev_calendar ) && 'Collection' === ( $ax_ev_object['organizers']['type'] ?? '' ) && array( (string) axismundi_cal_calendar_authority( (int) $ax_ev_calendar ) ) === ( $ax_ev_object['organizers']['items'] ?? array() ) );
 	ax_ev_assert( $ax_ev_results, 'an Event without RSVP handling explicitly declines federated joins', is_array( $ax_ev_object ) && 'none' === ( $ax_ev_object['joinMode'] ?? '' ) );
 
+	// -- An authority-less Calendar never reaches the renderer ---------------------------------
+
+	$ax_ev_orphan_calendar = axismundi_cal_calendar_save(
+		array( 'name' => 'Authority-less fixture', 'slug' => 'audit-authoring-orphan-' . $ax_ev_post, 'timezone' => 'Asia/Seoul', 'owner_actor_uri' => '' )
+	);
+	$ax_ev_calendars[] = (int) $ax_ev_orphan_calendar;
+	axismundi_cal_acl_grant( (int) $ax_ev_orphan_calendar, '', 'reader', 'public' );
+	$ax_ev_orphan_post = (int) wp_insert_post(
+		array( 'post_type' => AXISMUNDI_CAL_EVENT_POST_TYPE, 'post_status' => 'draft', 'post_author' => $ax_ev_editor, 'post_title' => 'Authority-less Event' )
+	);
+	$ax_ev_posts[] = $ax_ev_orphan_post;
+	axismundi_cal_event_save(
+		$ax_ev_orphan_post,
+		array( 'calendar_id' => (int) $ax_ev_orphan_calendar, 'starts_at' => '2026-09-03 19:00:00', 'ends_at' => '2026-09-03 20:00:00' )
+	);
+	wp_update_post( array( 'ID' => $ax_ev_orphan_post, 'post_status' => 'publish' ) );
+	ax_ev_assert( $ax_ev_results, 'an Event with no Calendar authority is withheld before the renderer sees an invalid object', false === axismundi_cal_event_visible( get_post( $ax_ev_orphan_post ) ) );
+	$ax_ev_orphan_object = axismundi_op_transform_object( get_post( $ax_ev_orphan_post ) );
+	ax_ev_assert( $ax_ev_results, 'and the canonical Object route reports it as non-public rather than an invalid projection', is_wp_error( $ax_ev_orphan_object ) && 'ax_op_not_public' === $ax_ev_orphan_object->get_error_code() );
+
 	// -- Refusals the panel surfaces --------------------------------------------------------
 
 	$ax_ev_backwards = ax_ev_rest_write( $ax_ev_post, array( 'startsAt' => '2026-09-01 19:00:00', 'endsAt' => '2026-09-01 18:00:00' ) );

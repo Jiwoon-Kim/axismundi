@@ -67,7 +67,7 @@ function axismundi_cal_event_visible( $source ) : bool {
 	 * surface there is, so it asks the same question the grid does rather than trusting post status.
 	 */
 	$schedule = axismundi_cal_schedule_for_event( (int) $source->ID );
-	if ( ! is_array( $schedule ) || ! axismundi_cal_is_publicly_readable( (int) $schedule['calendar_id'] ) ) {
+	if ( ! is_array( $schedule ) || '' === axismundi_cal_calendar_authority( (int) $schedule['calendar_id'] ) || ! axismundi_cal_is_publicly_readable( (int) $schedule['calendar_id'] ) ) {
 		return false;
 	}
 
@@ -140,10 +140,6 @@ function axismundi_cal_event_transform( $source ) : array {
 			'totalItems' => 1,
 			'items'      => array( $authority ),
 		);
-	} else {
-		// `null` explicitly says organizer disclosure is withheld or unavailable; consumers must not
-		// guess from the post author, which may only be the editor who entered the Event.
-		$event['organizers'] = null;
 	}
 
 	$content = apply_filters( 'the_content', $source->post_content );

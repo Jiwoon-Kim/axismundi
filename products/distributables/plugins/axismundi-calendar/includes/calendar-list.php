@@ -236,21 +236,6 @@ function axismundi_cal_actor_calendar_list( string $actor_uri ) : array {
 }
 
 /**
- * Deprecated compatibility helper for the transitional access_role column.
- *
- * CalendarList entries intentionally outlive ACL changes as personal UI preferences. Access is
- * always recomputed from the ACL, so no runtime caller may synchronize this cached legacy value.
- *
- * @param int    $calendar_id Calendar id.
- * @param string $actor_uri   Actor URI. '' (the public) has no entry and is ignored.
- * @param string $access_role Role to record.
- * @return bool Whether an entry was updated.
- */
-function axismundi_cal_sync_entry_role( int $calendar_id, string $actor_uri, string $access_role ) : bool {
-	return false;
-}
-
-/**
  * Calendars belonging to a managed Group this user administers.
  *
  * The reverse of `axismundi_cal_manages_authority()`, which can only answer for a Calendar already

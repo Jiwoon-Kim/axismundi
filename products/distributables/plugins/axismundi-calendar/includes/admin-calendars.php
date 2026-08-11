@@ -8,9 +8,9 @@
  * reconstructing ownership after the fact means guessing from post authorship or from who happened
  * to edit last.
  *
- * Ownership is a relation between an Actor and a Calendar rather than a column on the Calendar, so
- * that owner, writer and reader access are answers to one question kept in one place. It is recorded
- * at creation and is what per-calendar permission is judged against.
+ * Authority is recorded on the Calendar itself; ACL and CalendarList entries are separate relations
+ * for access and personal UI state. It is chosen at creation because ownership transfer needs an
+ * explicit federation policy that does not exist yet.
  *
  * @package AxismundiCalendar
  */
@@ -84,6 +84,56 @@ function axismundi_cal_current_actor_uri() : string {
 }
 
 /**
+ * Human-friendly identity for a stored Actor URI.
+ *
+ * @param string $actor_uri Actor URI.
+ * @return string
+ */
+function axismundi_cal_admin_actor_label( string $actor_uri ) : string {
+	$actor_uri = trim( $actor_uri );
+	if ( '' === $actor_uri || ! function_exists( 'axismundi_actors_get_by_uri' ) ) {
+		return '';
+	}
+	$actor = axismundi_actors_get_by_uri( $actor_uri );
+	if ( ! $actor instanceof Axismundi_Actor ) {
+		return $actor_uri;
+	}
+	$handle = trim( (string) $actor->get_preferred_username() );
+	return trim( (string) $actor->get_display_name() . ( '' !== $handle ? ' (@' . $handle . ')' : '' ) );
+}
+
+/**
+ * Local Actors the current user may choose while creating a Calendar.
+ *
+ * A Person may create a Calendar for themselves. A managed Group is offered only to its managers,
+ * which reuses Actors' own authority rule rather than making Calendar infer Group membership. An
+ * existing Calendar never accepts this input: ownership transfer remains deliberately unavailable.
+ *
+ * @return array<string,string> Actor URI => label.
+ */
+function axismundi_cal_admin_creatable_authorities() : array {
+	if ( ! axismundi_cal_has_actors() ) {
+		return array();
+	}
+	$choices = array();
+	$user_id = get_current_user_id();
+	if ( $user_id > 0 && function_exists( 'axismundi_actors_get_for_user' ) ) {
+		$actor = axismundi_actors_get_for_user( $user_id );
+		if ( $actor instanceof Axismundi_Actor && $actor->is_local() ) {
+			$choices[ $actor->get_uri() ] = axismundi_cal_admin_actor_label( $actor->get_uri() );
+		}
+	}
+	if ( $user_id > 0 && function_exists( 'axismundi_actors_list_manageable_groups' ) ) {
+		foreach ( axismundi_actors_list_manageable_groups( $user_id, 'manager' ) as $actor ) {
+			if ( $actor instanceof Axismundi_Actor && $actor->is_local() ) {
+				$choices[ $actor->get_uri() ] = axismundi_cal_admin_actor_label( $actor->get_uri() );
+			}
+		}
+	}
+	return $choices;
+}
+
+/**
  * Register the Calendars screen beneath Events.
  *
  * @return void
@@ -151,11 +201,11 @@ function axismundi_cal_handle_calendar_form() : void {
 	);
 	$fields['timezone'] = isset( $_POST['timezone'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['timezone'] ) ) : '';
 	if ( null === $existing ) {
-		// Recorded at creation, from the Actor of whoever is making it. Asking later, or inferring it
-		// from whoever edited most recently, is how ownership becomes a guess.
-		$fields['owner_actor_uri'] = axismundi_cal_current_actor_uri();
-	} elseif ( current_user_can( 'edit_others_posts' ) && isset( $_POST['owner_actor_uri'] ) ) {
-		$fields['owner_actor_uri'] = esc_url_raw( wp_unslash( (string) $_POST['owner_actor_uri'] ) );
+		$choices = axismundi_cal_admin_creatable_authorities();
+		$chosen  = isset( $_POST['owner_actor_uri'] ) ? esc_url_raw( wp_unslash( (string) $_POST['owner_actor_uri'] ) ) : '';
+		// Never trust a submitted URI as an ownership grant. It must be the current Person Actor or a
+		// managed Group the current user may operate.
+		$fields['owner_actor_uri'] = isset( $choices[ $chosen ] ) ? $chosen : axismundi_cal_current_actor_uri();
 	}
 
 	$saved = axismundi_cal_calendar_save( $fields, $id );
@@ -306,8 +356,8 @@ function axismundi_cal_render_calendars_page() : void {
 						<td><code><?php echo esc_html( $row['slug'] ); ?></code></td>
 						<td><?php echo esc_html( (string) $row['timezone'] ); ?></td>
 						<td><?php echo esc_html( 'remote' === (string) $row['kind'] ? __( 'Subscribed', 'axismundi-calendar' ) : __( 'Local', 'axismundi-calendar' ) ); ?></td>
-						<?php $row_owner = axismundi_cal_calendar_owner( (int) $row['id'] ); ?>
-						<td><?php echo esc_html( '' !== $row_owner ? $row_owner : __( 'Unassigned', 'axismundi-calendar' ) ); ?></td>
+						<?php $row_owner = axismundi_cal_calendar_authority( (int) $row['id'] ); ?>
+						<td><?php echo esc_html( '' !== $row_owner ? axismundi_cal_admin_actor_label( $row_owner ) : __( 'Unassigned', 'axismundi-calendar' ) ); ?></td>
 						<td><?php echo esc_html( number_format_i18n( count( axismundi_cal_calendar_event_ids( (int) $row['id'] ) ) ) ); ?></td>
 						<td><a href="<?php echo esc_url( axismundi_cal_calendar_url( $row ) ); ?>"><?php esc_html_e( 'View', 'axismundi-calendar' ); ?></a></td>
 						<td>
@@ -341,6 +391,20 @@ function axismundi_cal_render_calendars_page() : void {
 			</form>
 	</div>
 		<?php return; endif; ?>
+
+		<?php if ( is_array( $calendar ) ) : ?>
+			<h2><?php esc_html_e( 'Calendar integration', 'axismundi-calendar' ); ?></h2>
+			<table class="form-table" role="presentation">
+				<tr><th scope="row"><?php esc_html_e( 'Calendar ID', 'axismundi-calendar' ); ?></th><td><code><?php echo esc_html( (string) $calendar['uuid'] ); ?></code></td></tr>
+				<tr><th scope="row"><?php esc_html_e( 'Calendar API', 'axismundi-calendar' ); ?></th><td><a href="<?php echo esc_url( rest_url( 'axismundi/v1/calendars/' . $calendar['uuid'] ) ); ?>"><code><?php echo esc_html( rest_url( 'axismundi/v1/calendars/' . $calendar['uuid'] ) ); ?></code></a></td></tr>
+				<?php if ( axismundi_cal_is_publicly_readable( (int) $calendar['id'] ) ) : ?>
+					<tr><th scope="row"><?php esc_html_e( 'Public calendar address', 'axismundi-calendar' ); ?></th><td><a href="<?php echo esc_url( axismundi_cal_calendar_url( $calendar ) ); ?>"><code><?php echo esc_html( axismundi_cal_calendar_url( $calendar ) ); ?></code></a></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Public iCalendar address', 'axismundi-calendar' ); ?></th><td><a href="<?php echo esc_url( axismundi_cal_calendar_ics_url( $calendar ) ); ?>"><code><?php echo esc_html( axismundi_cal_calendar_ics_url( $calendar ) ); ?></code></a></td></tr>
+				<?php else : ?>
+					<tr><th scope="row"><?php esc_html_e( 'Public addresses', 'axismundi-calendar' ); ?></th><td><?php esc_html_e( 'Unavailable until this calendar is shared publicly.', 'axismundi-calendar' ); ?></td></tr>
+				<?php endif; ?>
+			</table>
+		<?php endif; ?>
 
 		<h2><?php echo esc_html( is_array( $calendar ) ? __( 'Edit calendar', 'axismundi-calendar' ) : __( 'New calendar', 'axismundi-calendar' ) ); ?></h2>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -387,12 +451,19 @@ function axismundi_cal_render_calendars_page() : void {
 				<tr>
 					<th scope="row"><label for="ax-cal-owner"><?php esc_html_e( 'Owner', 'axismundi-calendar' ); ?></label></th>
 					<td>
-						<?php if ( current_user_can( 'edit_others_posts' ) ) : ?>
-							<input name="owner_actor_uri" id="ax-cal-owner" type="url" class="regular-text"
-								value="<?php echo esc_attr( is_array( $calendar ) ? axismundi_cal_calendar_owner( (int) $calendar['id'] ) : axismundi_cal_current_actor_uri() ); ?>">
-							<p class="description"><?php esc_html_e( 'The Actor this calendar belongs to. Recorded now so private calendars and sharing have something to check later.', 'axismundi-calendar' ); ?></p>
+						<?php if ( ! is_array( $calendar ) ) : ?>
+							<?php $authorities = axismundi_cal_admin_creatable_authorities(); $current_authority = axismundi_cal_current_actor_uri(); ?>
+							<select name="owner_actor_uri" id="ax-cal-owner">
+								<?php foreach ( $authorities as $uri => $label ) : ?>
+									<option value="<?php echo esc_attr( $uri ); ?>" <?php selected( $uri, $current_authority ); ?>><?php echo esc_html( $label ); ?></option>
+								<?php endforeach; ?>
+							</select>
+							<p class="description"><?php esc_html_e( 'Choose your Person Actor or a Group you manage. Ownership transfer is not available yet.', 'axismundi-calendar' ); ?></p>
 						<?php else : ?>
-							<code><?php echo esc_html( is_array( $calendar ) ? axismundi_cal_calendar_owner( (int) $calendar['id'] ) : axismundi_cal_current_actor_uri() ); ?></code>
+							<?php $authority = axismundi_cal_calendar_authority( (int) $calendar['id'] ); ?>
+							<strong><?php echo esc_html( '' !== $authority ? axismundi_cal_admin_actor_label( $authority ) : __( 'Unassigned', 'axismundi-calendar' ) ); ?></strong>
+							<?php if ( '' !== $authority ) : ?><p><code><?php echo esc_html( $authority ); ?></code></p><?php endif; ?>
+							<p class="description"><?php esc_html_e( 'Ownership transfer is not available yet.', 'axismundi-calendar' ); ?></p>
 						<?php endif; ?>
 					</td>
 				</tr>

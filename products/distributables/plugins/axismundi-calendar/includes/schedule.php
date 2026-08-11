@@ -338,7 +338,8 @@ function axismundi_cal_ensure_unfiled_calendar() : int {
 	if ( $existing > 0 ) {
 		return $existing;
 	}
-	$now = current_time( 'mysql', true );
+	$now       = current_time( 'mysql', true );
+	$authority = function_exists( 'axismundi_cal_default_local_authority' ) ? axismundi_cal_default_local_authority() : '';
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- migration creates one row in this plugin's own table.
 	$wpdb->insert(
 		$calendars,
@@ -351,6 +352,8 @@ function axismundi_cal_ensure_unfiled_calendar() : int {
 			'visibility'      => 'public',
 			'revision'        => 1,
 			'owner_actor_uri' => '',
+			'authority_actor_uri'      => $authority,
+			'authority_actor_uri_hash' => '' !== $authority ? hash( 'sha256', $authority ) : '',
 			'created_at'      => $now,
 			'updated_at'      => $now,
 		)

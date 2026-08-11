@@ -447,6 +447,14 @@ function axismundi_cal_backfill_authority() : int {
 			$owner = axismundi_cal_legacy_entry_owner( (int) $row['id'] );
 		}
 		if ( '' === $owner ) {
+			/*
+			 * The default Calendar predates Actor ownership and was created on nobody's behalf. Once
+			 * this site has an Actor, make that Actor its authority instead of emitting an Event that
+			 * cannot satisfy Object Projections' required `attributedTo` member.
+			 */
+			$owner = axismundi_cal_default_local_authority();
+		}
+		if ( '' === $owner ) {
 			continue;
 		}
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
@@ -458,6 +466,19 @@ function axismundi_cal_backfill_authority() : int {
 		++$written;
 	}
 	return $written;
+}
+
+/**
+ * The site Actor used to recover local Calendars that were created before authority existed.
+ *
+ * @return string
+ */
+function axismundi_cal_default_local_authority() : string {
+	if ( ! axismundi_cal_has_actors() || ! function_exists( 'axismundi_actors_get_site_actor' ) ) {
+		return '';
+	}
+	$actor = axismundi_actors_get_site_actor();
+	return $actor instanceof Axismundi_Actor ? (string) $actor->get_uri() : '';
 }
 
 /**

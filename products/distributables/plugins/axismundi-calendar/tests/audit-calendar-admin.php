@@ -121,6 +121,7 @@ try {
 
 	// -- The screen actually renders -----------------------------------------------------------------
 
+	wp_set_current_user( $ax_ca_author );
 	ob_start();
 	axismundi_cal_render_calendars_page();
 	$ax_ca_html = (string) ob_get_clean();

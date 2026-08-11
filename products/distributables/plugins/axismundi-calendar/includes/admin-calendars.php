@@ -47,6 +47,11 @@ function axismundi_cal_can_manage_calendar( ?array $calendar ) : bool {
 		return true;
 	}
 	$calendar_id = (int) ( $calendar['id'] ?? 0 );
+	if ( 'remote' === (string) ( $calendar['kind'] ?? '' ) && is_array( axismundi_cal_list_entry( $calendar_id, axismundi_cal_current_actor_uri() ) ) ) {
+		// This only permits removing the caller's personal CalendarList entry. The source remains
+		// read-only and no local authority or write rule is inferred from subscribing to it.
+		return true;
+	}
 	/*
 	 * The ACL is the source, so the admin screen, the REST API and any sharing UI answer the same
 	 * question the same way. It also covers the case a per-Calendar column never could: a Calendar
@@ -134,6 +139,40 @@ function axismundi_cal_admin_creatable_authorities() : array {
 }
 
 /**
+ * Calendars this Actor can operate from the management screen.
+ *
+ * Sources are cached once per instance, while CalendarList membership is personal. A remote
+ * Calendar therefore appears only when this Actor added it; local Calendars appear through a write
+ * rule or an authority the user manages. This is intentionally narrower than moderator lookup.
+ *
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_cal_admin_calendar_rows() : array {
+	$actor_uri = axismundi_cal_current_actor_uri();
+	if ( '' === $actor_uri ) {
+		return array();
+	}
+	$ids  = array_values( array_unique( array_merge( axismundi_cal_actor_calendar_ids( $actor_uri ), axismundi_cal_user_authority_calendar_ids( get_current_user_id() ) ) ) );
+	$rows = array();
+	foreach ( $ids as $calendar_id ) {
+		$calendar = axismundi_cal_calendar_get( $calendar_id );
+		if ( ! is_array( $calendar ) ) {
+			continue;
+		}
+		if ( 'remote' === (string) $calendar['kind'] ) {
+			if ( ! is_array( axismundi_cal_list_entry( $calendar_id, $actor_uri ) ) ) {
+				continue;
+			}
+		} elseif ( ! axismundi_cal_can_write( $calendar_id, $actor_uri, get_current_user_id() ) ) {
+			continue;
+		}
+		$rows[] = $calendar;
+	}
+	usort( $rows, static fn( array $left, array $right ) : int => strcasecmp( (string) $left['name'], (string) $right['name'] ) );
+	return $rows;
+}
+
+/**
  * Register the Calendars screen beneath Events.
  *
  * @return void
@@ -179,8 +218,9 @@ function axismundi_cal_handle_calendar_form() : void {
 	$action = isset( $_POST['ax_cal_action'] ) ? sanitize_key( wp_unslash( (string) $_POST['ax_cal_action'] ) ) : 'save';
 	if ( 'delete' === $action && $id > 0 ) {
 		if ( 'remote' === (string) $existing['kind'] ) {
+			axismundi_cal_list_remove( $id, axismundi_cal_current_actor_uri() );
 			$source = axismundi_cal_source_for_calendar( $id );
-			if ( is_array( $source ) ) {
+			if ( is_array( $source ) && array() === axismundi_cal_calendar_list_entries( $id ) ) {
 				axismundi_cal_remove_source( (int) $source['id'] );
 			}
 		} else {
@@ -233,6 +273,11 @@ function axismundi_cal_handle_calendar_subscription() : void {
 	$source = axismundi_cal_subscribe_url( $url );
 	if ( is_wp_error( $source ) ) {
 		wp_safe_redirect( add_query_arg( 'ax_cal_error', rawurlencode( $source->get_error_code() ), $base ) );
+		exit;
+	}
+	$actor_uri = axismundi_cal_current_actor_uri();
+	if ( '' === $actor_uri || is_wp_error( axismundi_cal_list_set( (int) $source, $actor_uri ) ) ) {
+		wp_safe_redirect( add_query_arg( 'ax_cal_error', 'ax_cal_authority', $base ) );
 		exit;
 	}
 	wp_safe_redirect( add_query_arg( array( 'ax_cal_notice' => 'subscribed', 'ax_cal_edit' => (int) $source ), $base ) );
@@ -291,9 +336,7 @@ function axismundi_cal_render_calendars_page() : void {
 		wp_die( esc_html__( 'You are not allowed to manage that calendar.', 'axismundi-calendar' ), 403 );
 	}
 
-	$table = axismundi_cal_calendars_table();
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- admin screen over this plugin's own table.
-	$rows = (array) $wpdb->get_results( "SELECT * FROM {$table} ORDER BY name ASC", ARRAY_A );
+	$rows = axismundi_cal_admin_calendar_rows();
 
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only notice.
 	$notice = isset( $_GET['ax_cal_notice'] ) ? sanitize_key( wp_unslash( (string) $_GET['ax_cal_notice'] ) ) : '';
@@ -323,7 +366,7 @@ function axismundi_cal_render_calendars_page() : void {
 			<p class="description"><?php esc_html_e( 'Use a public .ics address. Private subscription addresses are credentials and need a separate secure-storage flow.', 'axismundi-calendar' ); ?></p>
 		</form>
 
-		<h2><?php esc_html_e( 'Calendars', 'axismundi-calendar' ); ?></h2>
+		<h2><?php esc_html_e( 'My calendars and subscriptions', 'axismundi-calendar' ); ?></h2>
 		<table class="wp-list-table widefat fixed striped">
 			<thead>
 				<tr>

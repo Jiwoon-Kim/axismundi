@@ -248,10 +248,13 @@ function axismundi_cal_handle_calendar_form() : void {
 	$action = isset( $_POST['ax_cal_action'] ) ? sanitize_key( wp_unslash( (string) $_POST['ax_cal_action'] ) ) : 'save';
 	if ( 'delete' === $action && $id > 0 ) {
 		if ( 'remote' === (string) $existing['kind'] ) {
-			axismundi_cal_list_remove( $id, axismundi_cal_current_actor_uri() );
+			// Through the same decision the subscriptions screen makes, so "unsubscribe" cannot mean
+			// two different things depending on which screen it was pressed from.
 			$source = axismundi_cal_source_for_calendar( $id );
-			if ( is_array( $source ) && array() === axismundi_cal_calendar_list_entries( $id ) ) {
-				axismundi_cal_remove_source( (int) $source['id'] );
+			if ( is_array( $source ) ) {
+				axismundi_cal_release_subscription( (int) $source['id'], axismundi_cal_current_actor_uri() );
+			} else {
+				axismundi_cal_list_remove( $id, axismundi_cal_current_actor_uri() );
 			}
 		} else {
 			axismundi_cal_calendar_delete( $id );
@@ -347,7 +350,25 @@ function axismundi_cal_admin_error_message( string $code ) : string {
 		case 'ax_cal_source_write':
 			return __( 'That public iCalendar address could not be added.', 'axismundi-calendar' );
 		case 'missing':
+		case 'ax_cal_missing':
 			return __( 'That calendar no longer exists.', 'axismundi-calendar' );
+		case 'ax_cal_last_owner':
+			return __( 'A calendar cannot be left without an owner. Give somebody else full access first.', 'axismundi-calendar' );
+		case 'ax_cal_acl_role':
+			return __( 'That is not a level of access this calendar can grant.', 'axismundi-calendar' );
+		case 'ax_cal_acl_principal':
+			return __( 'Sharing with a person or group needs their Actor address.', 'axismundi-calendar' );
+		case 'ax_cal_acl_public_role':
+			return __( 'Anyone can be allowed to read or to see free/busy time, but not to write.', 'axismundi-calendar' );
+		case 'ax_cal_authority':
+			return __( 'A local calendar needs an Actor to belong to.', 'axismundi-calendar' );
+		case 'ax_cal_authority_locked':
+			return __( 'Ownership transfer is not available yet.', 'axismundi-calendar' );
+		case 'ax_cal_source_missing':
+			return __( 'That subscription no longer exists.', 'axismundi-calendar' );
+		case 'ax_cal_source_fetch':
+		case 'ax_cal_source_parse':
+			return __( 'The calendar could not be fetched from that address.', 'axismundi-calendar' );
 		default:
 			return __( 'The calendar could not be saved.', 'axismundi-calendar' );
 	}
@@ -659,6 +680,15 @@ function axismundi_cal_render_calendars_page() : void {
 				<?php endif; ?>
 			</p>
 		</form>
+
+		<?php
+		if ( is_array( $calendar ) ) {
+			// Its own forms, below the one that edits the Calendar. Sharing is a different act from
+			// renaming, and one save button for both would make "I fixed a typo" and "I gave three
+			// people access" the same click.
+			axismundi_cal_render_sharing( $calendar );
+		}
+		?>
 	</div>
 	<?php
 }

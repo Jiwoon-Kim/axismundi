@@ -213,6 +213,46 @@ function axismundi_cal_actor_calendar_list( string $actor_uri, string $access_ro
 }
 
 /**
+ * Every Calendar one Actor has any relation to, by id.
+ *
+ * The union of two tables, because they answer different halves of the question. A list entry is how
+ * an Actor displays a Calendar; an ACL rule is what they may do with it. Being granted access does
+ * not create an entry, so an Actor shared into a Calendar has a rule and no entry -- reading only the
+ * entry table would leave that Calendar out of their own list, which is the case sharing exists for.
+ *
+ * The reverse also happens: an entry whose rule was revoked. That one is left here and dropped by
+ * the caller, which is where the effective role is computed anyway.
+ *
+ * Calendars belonging to a managed Group this user administers are not included. That relation is
+ * resolved per Calendar through Actors, and there is no reverse index to enumerate it from; those
+ * Calendars are reachable by uuid and will join this list when they gain an entry.
+ *
+ * @param string $actor_uri Actor URI.
+ * @return int[] Calendar ids.
+ */
+function axismundi_cal_actor_calendar_ids( string $actor_uri ) : array {
+	global $wpdb;
+	$actor_uri = trim( $actor_uri );
+	if ( '' === $actor_uri || ! axismundi_cal_ready() ) {
+		return array();
+	}
+	$hash    = hash( 'sha256', $actor_uri );
+	$entries = axismundi_cal_entries_list_table();
+	$acl     = axismundi_cal_acl_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own tables.
+	$ids = (array) $wpdb->get_col(
+		$wpdb->prepare(
+			"SELECT calendar_id FROM {$entries} WHERE actor_uri_hash = %s
+			 UNION
+			 SELECT calendar_id FROM {$acl} WHERE principal_type = 'actor' AND principal_uri_hash = %s",
+			$hash,
+			$hash
+		)
+	);
+	return array_values( array_unique( array_map( 'intval', $ids ) ) );
+}
+
+/**
  * Carry a renamed column's values across, without rebuilding the table.
  *
  * `dbDelta` adds `access_role` but cannot rename `role` into it, and the table must not be recreated

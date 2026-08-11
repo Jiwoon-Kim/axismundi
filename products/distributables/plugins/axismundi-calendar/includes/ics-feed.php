@@ -128,8 +128,21 @@ function axismundi_cal_feed_schedules( string $cutoff_utc, int $calendar_id = 0 
 }
 
 /**
- * Build the feed body for the whole site.
+ * Build the feed body for the whole site, or for one Calendar.
  *
+ * A serializer, not an access check. It will build a document for any Calendar id it is handed, and
+ * answers nothing about who may ask -- `axismundi_cal_serve_ics()` establishes that with
+ * `axismundi_cal_is_publicly_readable()` before calling, and any future caller states its own check
+ * beside the call.
+ *
+ * What it does today is narrower than what a reader is entitled to, not wider: the rows come through
+ * the public listable gate, so this cannot currently serve a private Calendar to an authorized reader
+ * either. That is a limitation of this function rather than a permission check performed on the
+ * caller's behalf, and the day it is lifted the callers must already be deciding.
+ *
+ * @param int    $calendar_id Restrict to one Calendar, or 0 for the whole site.
+ * @param string $name        Calendar name for `X-WR-CALNAME`.
+ * @param string $display_tz  Timezone the document is presented in.
  * @return array{body:string,modified:int}
  */
 function axismundi_cal_site_feed( int $calendar_id = 0, string $name = '', string $display_tz = '' ) : array {

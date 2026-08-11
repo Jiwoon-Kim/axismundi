@@ -36,10 +36,7 @@ const AXISMUNDI_CAL_RANGE_MAX = 500;
  * @return bool
  */
 function axismundi_cal_event_listable( WP_Post $post ) : bool {
-	if ( AXISMUNDI_CAL_EVENT_POST_TYPE !== $post->post_type
-		|| 'publish' !== $post->post_status
-		|| '' !== (string) $post->post_password
-		|| ! is_post_publicly_viewable( $post ) ) {
+	if ( ! axismundi_cal_event_post_viewable( $post ) ) {
 		return false;
 	}
 	$schedule = axismundi_cal_schedule_for_event( (int) $post->ID );
@@ -47,6 +44,24 @@ function axismundi_cal_event_listable( WP_Post $post ) : bool {
 		return false;
 	}
 	return axismundi_cal_calendar_is_listable( (int) $schedule['calendar_id'] );
+}
+
+/**
+ * Whether the Event post itself is showable, leaving the Calendar out of it.
+ *
+ * The half of the question that is about this post: published, not password-protected, not on a
+ * privately-viewable status. Separated from the Calendar half so an authorized reader of a private
+ * Calendar can be served without anything having to bypass the public gate to do it -- a caller that
+ * has already established permission asks this, and a caller that has not asks `event_listable()`.
+ *
+ * @param WP_Post $post Event post.
+ * @return bool
+ */
+function axismundi_cal_event_post_viewable( WP_Post $post ) : bool {
+	return AXISMUNDI_CAL_EVENT_POST_TYPE === $post->post_type
+		&& 'publish' === $post->post_status
+		&& '' === (string) $post->post_password
+		&& is_post_publicly_viewable( $post );
 }
 
 /**
@@ -63,6 +78,49 @@ function axismundi_cal_event_listable( WP_Post $post ) : bool {
  * @return array<int,array<string,mixed>> Occurrences with their Event, ordered by start.
  */
 function axismundi_cal_occurrences_in_range( string $from_utc, string $to_utc, int $limit = AXISMUNDI_CAL_RANGE_MAX, int $calendar_id = 0 ) : array {
+	return axismundi_cal_collect_occurrences( $from_utc, $to_utc, $limit, $calendar_id, 'axismundi_cal_event_listable' );
+}
+
+/**
+ * Every occurrence on one Calendar, with no permission check of its own.
+ *
+ * A serializer, in the same sense as `axismundi_cal_site_feed()`: it answers what is on a Calendar,
+ * not who may ask. Only for callers that have already established a `reader` role -- which is the
+ * whole reason it exists, since an authorized reader of a private Calendar must be served without
+ * anything having to defeat the public gate to do it.
+ *
+ * Never reachable from an unauthenticated route. The REST API decides access first and calls this
+ * second; anything that calls it without deciding is a bug in that caller, not here.
+ *
+ * @param int    $calendar_id Calendar id. Required -- there is no site-wide form, because a site-wide
+ *                            question has no single Calendar to have authorized.
+ * @param string $from_utc    Range start, `Y-m-d H:i:s` UTC.
+ * @param string $to_utc      Range end, `Y-m-d H:i:s` UTC.
+ * @param int    $limit       Maximum occurrences.
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_cal_calendar_occurrences( int $calendar_id, string $from_utc, string $to_utc, int $limit = AXISMUNDI_CAL_RANGE_MAX ) : array {
+	if ( $calendar_id <= 0 ) {
+		return array();
+	}
+	return axismundi_cal_collect_occurrences( $from_utc, $to_utc, $limit, $calendar_id, 'axismundi_cal_event_post_viewable' );
+}
+
+/**
+ * The shared range walk, told which Events it may include.
+ *
+ * The gate is a parameter rather than a flag, so the two callers above read as two different
+ * questions instead of one question with a bypass. A boolean `$include_private` here would sooner or
+ * later be passed `true` by something that had not checked anything.
+ *
+ * @param string   $from_utc    Range start, `Y-m-d H:i:s` UTC.
+ * @param string   $to_utc      Range end, `Y-m-d H:i:s` UTC.
+ * @param int      $limit       Maximum occurrences.
+ * @param int      $calendar_id Restrict to one owning Calendar, or 0 for the whole site.
+ * @param callable $gate        Predicate over the Event post.
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_cal_collect_occurrences( string $from_utc, string $to_utc, int $limit, int $calendar_id, callable $gate ) : array {
 	global $wpdb;
 	if ( ! axismundi_cal_ready() ) {
 		return array();
@@ -87,7 +145,7 @@ function axismundi_cal_occurrences_in_range( string $from_utc, string $to_utc, i
 	$out = array();
 	foreach ( $rows as $schedule ) {
 		$post = get_post( (int) $schedule['event_post_id'] );
-		if ( ! $post instanceof WP_Post || ! axismundi_cal_event_listable( $post ) ) {
+		if ( ! $post instanceof WP_Post || ! $gate( $post ) ) {
 			continue;
 		}
 		foreach ( axismundi_cal_range( $schedule, $from_utc, $to_utc ) as $occurrence ) {

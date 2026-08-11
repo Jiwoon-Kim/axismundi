@@ -98,12 +98,30 @@ try {
 
 	// -- The Calendar is chosen; timezone inherits from it ----------------------------------
 
-	$ax_ev_no_calendar = axismundi_cal_event_save(
-		$ax_ev_post,
-		array( 'starts_at' => '2026-09-01 19:00:00', 'ends_at' => '2026-09-01 21:00:00' )
+	/*
+	 * An Event that names no Calendar goes to its author's own, made on the spot if this is their
+	 * first. Written on a throwaway post, so the fixture Event stays envelope-less for the
+	 * publishing rules asserted below.
+	 *
+	 * This replaces an outright refusal. The property that refusal protected -- that an Event never
+	 * silently acquires a timezone nobody chose -- still holds, but differently: the zone now comes
+	 * from a real Calendar its owner can see and change, rather than from site settings by way of a
+	 * writer with nowhere else to look.
+	 */
+	$ax_ev_unnamed = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_CAL_EVENT_POST_TYPE, 'post_status' => 'draft', 'post_author' => $ax_ev_editor, 'post_title' => 'No calendar named' ) );
+	$ax_ev_posts[] = $ax_ev_unnamed;
+	$ax_ev_no_calendar = axismundi_cal_event_save( $ax_ev_unnamed, array( 'starts_at' => '2026-09-01 19:00:00', 'ends_at' => '2026-09-01 21:00:00' ) );
+	ax_ev_assert( $ax_ev_results, 'an Event that names no Calendar is filed on the Calendar belonging to its author', ! is_wp_error( $ax_ev_no_calendar ) );
+	$ax_ev_primary = $ax_ev_actor instanceof Axismundi_Actor ? axismundi_cal_primary_calendar( (string) $ax_ev_actor->get_uri() ) : null;
+	if ( is_array( $ax_ev_primary ) ) {
+		$ax_ev_calendars[] = (int) $ax_ev_primary['id'];
+	}
+	ax_ev_assert(
+		$ax_ev_results,
+		'which belongs to that author rather than to nobody',
+		is_array( $ax_ev_primary ) && (int) $ax_ev_primary['id'] === (int) axismundi_cal_schedule_for_event( $ax_ev_unnamed )['calendar_id']
 	);
-	ax_ev_assert( $ax_ev_results, 'the writer refuses an Event with no Calendar instead of stamping the site\'s timezone', is_wp_error( $ax_ev_no_calendar ) && 'ax_event_calendar' === $ax_ev_no_calendar->get_error_code() );
-	ax_ev_assert( $ax_ev_results, 'and nothing is stored until an owning Calendar is chosen', null === axismundi_cal_event_get( $ax_ev_post ) );
+	ax_ev_assert( $ax_ev_results, 'while the fixture Event still has none, so what follows is about publishing', null === axismundi_cal_event_get( $ax_ev_post ) );
 
 	// -- Publishing without an envelope is refused -----------------------------------------
 

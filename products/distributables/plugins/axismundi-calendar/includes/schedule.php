@@ -77,6 +77,23 @@ function axismundi_cal_schedule_save( int $post_id, array $fields ) {
 	$calendar_id = array_key_exists( 'calendar_id', $fields )
 		? (int) $fields['calendar_id']
 		: (int) ( $existing['calendar_id'] ?? 0 );
+	if ( $calendar_id <= 0 ) {
+		/*
+		 * No Calendar named, so the Event goes to the author's own -- created here if this is their
+		 * first. Deliberately not a site-wide fallback Calendar: that one belongs to nobody, so
+		 * nothing on it can be federated, shared or administered, and everyone's Events would be
+		 * attributed to the same anonymous collection.
+		 *
+		 * A writer with no Actor is refused rather than given somewhere to put it. There is no
+		 * correct answer to "whose Event is this?" in that case, and inventing one is what the
+		 * unfiled Calendar did.
+		 */
+		$primary = axismundi_cal_ensure_primary_calendar( axismundi_cal_current_actor_uri() );
+		if ( is_wp_error( $primary ) ) {
+			return $primary;
+		}
+		$calendar_id = (int) $primary;
+	}
 	$calendar = axismundi_cal_calendar_get( $calendar_id );
 	if ( ! is_array( $calendar ) || 'local' !== (string) $calendar['kind'] ) {
 		return new WP_Error( 'ax_event_calendar', __( 'Choose a local calendar for this Event.', 'axismundi-calendar' ), array( 'status' => 400 ) );
@@ -327,6 +344,11 @@ function axismundi_cal_assign_orphan_schedules() : void {
 
 /**
  * The one migration-only Calendar for legacy Events that had no membership at all.
+ *
+ * Only ever reached from `axismundi_cal_assign_orphan_schedules()`, and never from a writer. It has
+ * no authority by design -- an upgrade cannot know whose those Events were -- which is exactly why
+ * nothing on it federates and why the Calendars screen asks an administrator to assign one or delete
+ * it. A new Event goes to its author's own Calendar; see `axismundi_cal_ensure_primary_calendar()`.
  *
  * @return int
  */

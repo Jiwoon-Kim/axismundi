@@ -139,6 +139,36 @@ function axismundi_cal_admin_creatable_authorities() : array {
 }
 
 /**
+ * Whether this user may see every Calendar on the instance, not only their own.
+ *
+ * A separate question from managing one Calendar. The per-Actor list is what somebody works in; this
+ * is the inventory a site administrator needs to find a Calendar nobody is looking after -- an
+ * orphan from an upgrade, a subscription whose source is failing, a Calendar whose owner has left.
+ * Without it those are unreachable, because scoping the list to the caller's own Actor is exactly
+ * what hides them.
+ *
+ * @return bool
+ */
+function axismundi_cal_can_manage_all_calendars() : bool {
+	return current_user_can( 'edit_others_posts' );
+}
+
+/**
+ * Every Calendar on the instance, for the administrator inventory.
+ *
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_cal_all_calendar_rows() : array {
+	global $wpdb;
+	if ( ! axismundi_cal_can_manage_all_calendars() || ! axismundi_cal_ready() ) {
+		return array();
+	}
+	$table = axismundi_cal_calendars_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- administrator inventory over this plugin's own table.
+	return (array) $wpdb->get_results( "SELECT * FROM {$table} ORDER BY kind ASC, name ASC", ARRAY_A );
+}
+
+/**
  * Calendars this Actor can operate from the management screen.
  *
  * Sources are cached once per instance, while CalendarList membership is personal. A remote
@@ -240,7 +270,13 @@ function axismundi_cal_handle_calendar_form() : void {
 		'description' => isset( $_POST['description'] ) ? sanitize_textarea_field( wp_unslash( (string) $_POST['description'] ) ) : '',
 	);
 	$fields['timezone'] = isset( $_POST['timezone'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['timezone'] ) ) : '';
-	if ( null === $existing ) {
+	/*
+	 * An authority is settable while creating, and on a Calendar an upgrade left without one. The
+	 * second is not a transfer -- there is nothing to move -- and `record_owner()` still refuses to
+	 * change an authority that is already set, so this cannot become one.
+	 */
+	$unassigned = is_array( $existing ) && 'local' === (string) $existing['kind'] && '' === (string) $existing['authority_actor_uri'];
+	if ( null === $existing || $unassigned ) {
 		$choices = axismundi_cal_admin_creatable_authorities();
 		$chosen  = isset( $_POST['owner_actor_uri'] ) ? esc_url_raw( wp_unslash( (string) $_POST['owner_actor_uri'] ) ) : '';
 		// Never trust a submitted URI as an ownership grant. It must be the current Person Actor or a
@@ -354,6 +390,95 @@ function axismundi_cal_render_calendars_page() : void {
 		<?php endif; ?>
 		<?php if ( '' !== $error ) : ?>
 			<div class="notice notice-error"><p><?php echo esc_html( axismundi_cal_admin_error_message( $error ) ); ?></p></div>
+		<?php endif; ?>
+
+		<?php
+		/*
+		 * Calendars an upgrade could not attribute to anybody. Shown only to people who can act on
+		 * them, and worded as what it costs rather than as a warning with no consequence: these
+		 * Calendars keep working locally, and only their federation is stopped, which is not
+		 * something an administrator would otherwise notice.
+		 */
+		$orphans = axismundi_cal_can_manage_all_calendars() ? axismundi_cal_orphan_calendars() : array();
+		?>
+		<?php if ( array() !== $orphans ) : ?>
+			<div class="notice notice-warning">
+				<p>
+					<?php
+					echo esc_html(
+						sprintf(
+							/* translators: %d: number of calendars. */
+							_n(
+								'%d calendar has no Actor, so its Events are withheld from other servers.',
+								'%d calendars have no Actor, so their Events are withheld from other servers.',
+								count( $orphans ),
+								'axismundi-calendar'
+							),
+							count( $orphans )
+						)
+					);
+					?>
+					<?php esc_html_e( 'They remain readable on this site. Assign an Actor to each, or delete it along with the Events it holds.', 'axismundi-calendar' ); ?>
+				</p>
+				<ul>
+					<?php foreach ( $orphans as $orphan ) : ?>
+						<li>
+							<a href="<?php echo esc_url( add_query_arg( 'ax_cal_edit', (int) $orphan['id'], $base ) ); ?>"><?php echo esc_html( (string) $orphan['name'] ); ?></a>
+							<?php echo esc_html( sprintf( /* translators: %d: number of events. */ _n( '%d event', '%d events', count( axismundi_cal_calendar_event_ids( (int) $orphan['id'] ) ), 'axismundi-calendar' ), count( axismundi_cal_calendar_event_ids( (int) $orphan['id'] ) ) ) ); ?>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+			</div>
+		<?php endif; ?>
+
+		<?php
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only screen selection.
+		$show_all = isset( $_GET['ax_cal_scope'] ) && 'all' === sanitize_key( wp_unslash( (string) $_GET['ax_cal_scope'] ) );
+		?>
+		<?php if ( axismundi_cal_can_manage_all_calendars() ) : ?>
+			<p>
+				<?php if ( $show_all ) : ?>
+					<a href="<?php echo esc_url( $base ); ?>"><?php esc_html_e( '&larr; Back to my calendars', 'axismundi-calendar' ); ?></a>
+				<?php else : ?>
+					<a href="<?php echo esc_url( add_query_arg( 'ax_cal_scope', 'all', $base ) ); ?>"><?php esc_html_e( 'View every calendar on this site', 'axismundi-calendar' ); ?></a>
+				<?php endif; ?>
+			</p>
+		<?php endif; ?>
+
+		<?php if ( $show_all && axismundi_cal_can_manage_all_calendars() ) : ?>
+			<h2><?php esc_html_e( 'Every calendar on this site', 'axismundi-calendar' ); ?></h2>
+			<p class="description"><?php esc_html_e( 'The administrator inventory. This is not a calendar list: appearing here is not a relation to any of these calendars, and nothing here is added to your own.', 'axismundi-calendar' ); ?></p>
+			<table class="wp-list-table widefat fixed striped">
+				<thead>
+					<tr>
+						<th scope="col"><?php esc_html_e( 'Name', 'axismundi-calendar' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Slug', 'axismundi-calendar' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Type', 'axismundi-calendar' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Owner', 'axismundi-calendar' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Events', 'axismundi-calendar' ); ?></th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ( axismundi_cal_all_calendar_rows() as $row ) : ?>
+						<?php $row_authority = (string) $row['authority_actor_uri']; ?>
+						<tr>
+							<td><strong><a href="<?php echo esc_url( add_query_arg( 'ax_cal_edit', (int) $row['id'], $base ) ); ?>"><?php echo esc_html( (string) $row['name'] ); ?></a></strong></td>
+							<td><code><?php echo esc_html( (string) $row['slug'] ); ?></code></td>
+							<td><?php echo esc_html( 'remote' === (string) $row['kind'] ? __( 'Subscribed', 'axismundi-calendar' ) : __( 'Local', 'axismundi-calendar' ) ); ?></td>
+							<td>
+								<?php if ( '' !== $row_authority ) : ?>
+									<?php echo esc_html( axismundi_cal_admin_actor_label( $row_authority ) ); ?>
+								<?php elseif ( 'remote' === (string) $row['kind'] ) : ?>
+									<?php esc_html_e( 'Published elsewhere', 'axismundi-calendar' ); ?>
+								<?php else : ?>
+									<strong><?php esc_html_e( 'No Actor &mdash; not federated', 'axismundi-calendar' ); ?></strong>
+								<?php endif; ?>
+							</td>
+							<td><?php echo esc_html( number_format_i18n( count( axismundi_cal_calendar_event_ids( (int) $row['id'] ) ) ) ); ?></td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
 		<?php endif; ?>
 
 		<h2><?php esc_html_e( 'Subscribe to a calendar', 'axismundi-calendar' ); ?></h2>
@@ -504,9 +629,19 @@ function axismundi_cal_render_calendars_page() : void {
 							<p class="description"><?php esc_html_e( 'Choose your Person Actor or a Group you manage. Ownership transfer is not available yet.', 'axismundi-calendar' ); ?></p>
 						<?php else : ?>
 							<?php $authority = axismundi_cal_calendar_authority( (int) $calendar['id'] ); ?>
-							<strong><?php echo esc_html( '' !== $authority ? axismundi_cal_admin_actor_label( $authority ) : __( 'Unassigned', 'axismundi-calendar' ) ); ?></strong>
-							<?php if ( '' !== $authority ) : ?><p><code><?php echo esc_html( $authority ); ?></code></p><?php endif; ?>
-							<p class="description"><?php esc_html_e( 'Ownership transfer is not available yet.', 'axismundi-calendar' ); ?></p>
+							<?php if ( '' === $authority && 'local' === (string) $calendar['kind'] ) : ?>
+								<?php $authorities = axismundi_cal_admin_creatable_authorities(); ?>
+								<select name="owner_actor_uri" id="ax-cal-owner">
+									<?php foreach ( $authorities as $uri => $label ) : ?>
+										<option value="<?php echo esc_attr( $uri ); ?>" <?php selected( $uri, axismundi_cal_current_actor_uri() ); ?>><?php echo esc_html( $label ); ?></option>
+									<?php endforeach; ?>
+								</select>
+								<p class="description"><?php esc_html_e( 'This calendar was left without an Actor by an upgrade. Assigning one is not a transfer, and can only be done once.', 'axismundi-calendar' ); ?></p>
+							<?php else : ?>
+								<strong><?php echo esc_html( '' !== $authority ? axismundi_cal_admin_actor_label( $authority ) : __( 'Unassigned', 'axismundi-calendar' ) ); ?></strong>
+								<?php if ( '' !== $authority ) : ?><p><code><?php echo esc_html( $authority ); ?></code></p><?php endif; ?>
+								<p class="description"><?php esc_html_e( 'Ownership transfer is not available yet.', 'axismundi-calendar' ); ?></p>
+							<?php endif; ?>
 						<?php endif; ?>
 					</td>
 				</tr>

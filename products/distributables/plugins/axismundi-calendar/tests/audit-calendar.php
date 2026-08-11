@@ -53,10 +53,19 @@ try {
 	ax_cl_assert( $ax_cl_results, 'a local Calendar requires a named IANA timezone', is_wp_error( axismundi_cal_calendar_save( array( 'name' => 'No zone', 'slug' => 'ownership-no-zone' ) ) ) );
 	ax_cl_assert( $ax_cl_results, 'a fixed UTC offset is refused because a Calendar needs DST rules, not a snapshot', is_wp_error( axismundi_cal_calendar_save( array( 'name' => 'Offset', 'slug' => 'ownership-offset', 'timezone' => '+09:00' ) ) ) );
 
+	/*
+	 * An Event still never becomes unowned. It is filed on its author's own Calendar now rather than
+	 * refused -- but written by nobody, with no Actor to file it under, it is still refused, because
+	 * that is the case where "whose Event is this?" has no answer.
+	 */
 	$ax_cl_unfiled = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_CAL_EVENT_POST_TYPE, 'post_status' => 'draft', 'post_author' => 1, 'post_title' => 'No calendar' ) );
 	$ax_cl_posts[] = $ax_cl_unfiled;
+	$ax_cl_viewer = get_current_user_id();
+	wp_set_current_user( 0 );
 	$ax_cl_missing = axismundi_cal_event_save( $ax_cl_unfiled, array( 'starts_at' => '2026-09-01 19:00:00', 'ends_at' => '2026-09-01 20:00:00' ) );
-	ax_cl_assert( $ax_cl_results, 'an Event without a Calendar is refused instead of becoming unowned', is_wp_error( $ax_cl_missing ) && 'ax_event_calendar' === $ax_cl_missing->get_error_code() );
+	wp_set_current_user( $ax_cl_viewer );
+	ax_cl_assert( $ax_cl_results, 'an Event with no Calendar and no Actor is refused instead of becoming unowned', is_wp_error( $ax_cl_missing ) && 'ax_cal_no_actor' === $ax_cl_missing->get_error_code() );
+	ax_cl_assert( $ax_cl_results, 'and nothing was stored for it', null === axismundi_cal_event_get( $ax_cl_unfiled ) );
 
 	$ax_cl_a = ax_cl_event( $ax_cl_posts, (int) $ax_cl_first, 'Seoul event', array( 'starts_at' => '2026-09-05 19:00:00', 'ends_at' => '2026-09-05 21:00:00' ) );
 	$ax_cl_b = ax_cl_event( $ax_cl_posts, (int) $ax_cl_second, 'London event', array( 'starts_at' => '2026-09-06 09:00:00', 'ends_at' => '2026-09-06 10:00:00' ) );

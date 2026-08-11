@@ -89,20 +89,10 @@ try {
 	wp_set_current_user( $ax_ca_reader );
 	ax_ca_assert( $ax_ca_results, 'and a subscriber may not, whoever owns it', false === axismundi_cal_can_manage_calendar( $ax_ca_row ) );
 
-	// -- An unowned calendar is moderator-only ------------------------------------------------------
+	// -- A new local Calendar must name its authority -----------------------------------------------
 
 	$ax_ca_orphan = axismundi_cal_calendar_save( array( 'name' => 'Orphan', 'slug' => 'ax-ca-orphan', 'timezone' => 'Asia/Seoul', 'owner_actor_uri' => '' ) );
-	$ax_ca_calendars[] = (int) $ax_ca_orphan;
-	$ax_ca_orphan_row  = axismundi_cal_calendar_get( (int) $ax_ca_orphan );
-
-	wp_set_current_user( $ax_ca_author );
-	ax_ca_assert(
-		$ax_ca_results,
-		'a calendar with no owner is not therefore everyone\'s, since the safe reading of "no owner" is not "any owner"',
-		false === axismundi_cal_can_manage_calendar( $ax_ca_orphan_row )
-	);
-	wp_set_current_user( $ax_ca_editor );
-	ax_ca_assert( $ax_ca_results, 'but a moderator can still repair it', true === axismundi_cal_can_manage_calendar( $ax_ca_orphan_row ) );
+	ax_ca_assert( $ax_ca_results, 'a local calendar without an authority is refused at the writer', is_wp_error( $ax_ca_orphan ) && 'ax_cal_authority' === $ax_ca_orphan->get_error_code() );
 
 	// -- A new calendar is manageable by anyone allowed to make one -----------------------------------
 

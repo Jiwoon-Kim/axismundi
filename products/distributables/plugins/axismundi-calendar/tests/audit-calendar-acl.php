@@ -201,8 +201,16 @@ try {
 
 	// -- A subscribed Calendar has no local authority ---------------------------------------------
 
-	$ax_ac_remote = axismundi_cal_calendar_save(
+	$ax_ac_rejected_remote = axismundi_cal_calendar_save(
 		array( 'name' => 'Remote ACL fixture', 'slug' => 'ax-ac-remote', 'kind' => 'remote', 'timezone' => 'Asia/Seoul', 'owner_actor_uri' => $ax_ac_alice['actor_uri'] )
+	);
+	ax_ac_assert(
+		$ax_ac_results,
+		'a subscribed calendar refuses a local authority at the writer',
+		is_wp_error( $ax_ac_rejected_remote ) && 'ax_cal_authority_remote' === $ax_ac_rejected_remote->get_error_code()
+	);
+	$ax_ac_remote = axismundi_cal_calendar_save(
+		array( 'name' => 'Remote ACL fixture', 'slug' => 'ax-ac-remote', 'kind' => 'remote', 'timezone' => 'Asia/Seoul' )
 	);
 	$ax_ac_calendars[] = (int) $ax_ac_remote;
 	ax_ac_assert(

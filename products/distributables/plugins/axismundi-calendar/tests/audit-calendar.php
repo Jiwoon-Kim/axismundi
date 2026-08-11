@@ -39,9 +39,11 @@ function ax_cl_titles( string $from, string $to, int $calendar_id ) : array {
 }
 
 try {
-	$ax_cl_first = axismundi_cal_calendar_save( array( 'name' => 'Calendar A', 'slug' => 'ownership-a', 'timezone' => 'Asia/Seoul' ) );
-	$ax_cl_second = axismundi_cal_calendar_save( array( 'name' => 'Calendar B', 'slug' => 'ownership-b', 'timezone' => 'Europe/London' ) );
-	$ax_cl_empty = axismundi_cal_calendar_save( array( 'name' => 'Empty', 'slug' => 'ownership-empty', 'timezone' => 'UTC' ) );
+	$ax_cl_site      = axismundi_actors_get_site_actor();
+	$ax_cl_authority = $ax_cl_site instanceof Axismundi_Actor ? $ax_cl_site->get_uri() : '';
+	$ax_cl_first = axismundi_cal_calendar_save( array( 'name' => 'Calendar A', 'slug' => 'ownership-a', 'timezone' => 'Asia/Seoul', 'owner_actor_uri' => $ax_cl_authority ) );
+	$ax_cl_second = axismundi_cal_calendar_save( array( 'name' => 'Calendar B', 'slug' => 'ownership-b', 'timezone' => 'Europe/London', 'owner_actor_uri' => $ax_cl_authority ) );
+	$ax_cl_empty = axismundi_cal_calendar_save( array( 'name' => 'Empty', 'slug' => 'ownership-empty', 'timezone' => 'UTC', 'owner_actor_uri' => $ax_cl_authority ) );
 	// Published on purpose. Every surface these fixtures exercise is a public one, and a Calendar is
 	// private until somebody says otherwise, so the fixture has to say so.
 	axismundi_cal_acl_grant( (int) $ax_cl_first, '', 'reader', 'public' );

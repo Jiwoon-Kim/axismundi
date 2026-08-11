@@ -216,17 +216,34 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 
 	$table = axismundi_cal_calendars_table();
 	if ( is_array( $existing ) ) {
+		if ( array_key_exists( 'owner_actor_uri', $fields ) ) {
+			$current_authority = axismundi_cal_calendar_authority( (int) $existing['id'] );
+			$requested_authority = trim( (string) $fields['owner_actor_uri'] );
+			if ( '' !== $current_authority && $requested_authority !== $current_authority ) {
+				return new WP_Error( 'ax_cal_authority_locked', __( 'Calendar authority cannot be transferred yet.', 'axismundi-calendar' ), array( 'status' => 409 ) );
+			}
+		}
 		$data['revision'] = (int) $existing['revision'] + 1;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 		if ( false === $wpdb->update( $table, $data, array( 'id' => (int) $existing['id'] ) ) ) {
 			return new WP_Error( 'ax_cal_write', __( 'The calendar could not be saved.', 'axismundi-calendar' ) );
 		}
 		if ( array_key_exists( 'owner_actor_uri', $fields ) ) {
-			axismundi_cal_record_owner( (int) $existing['id'], (string) $fields['owner_actor_uri'], $kind );
+			$recorded = axismundi_cal_record_owner( (int) $existing['id'], (string) $fields['owner_actor_uri'], $kind );
+			if ( is_wp_error( $recorded ) ) {
+				return $recorded;
+			}
 		}
 		return (int) $existing['id'];
 	}
 
+	$authority = trim( (string) ( $fields['owner_actor_uri'] ?? '' ) );
+	if ( 'local' === $kind && '' === $authority ) {
+		return new WP_Error( 'ax_cal_authority', __( 'A local calendar needs an Actor authority.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+	if ( 'remote' === $kind && '' !== $authority ) {
+		return new WP_Error( 'ax_cal_authority_remote', __( 'A subscribed calendar cannot claim a local authority.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
 	$data['revision']   = 1;
 	// A stable public identifier. The slug is editable and appears in subscription URLs, so it cannot
 	// also be the key an API or a stored reference uses -- renaming a calendar would silently break
@@ -238,7 +255,10 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 		return new WP_Error( 'ax_cal_write', __( 'The calendar could not be saved.', 'axismundi-calendar' ) );
 	}
 	$created_id = (int) $wpdb->insert_id;
-	axismundi_cal_record_owner( $created_id, (string) ( $fields['owner_actor_uri'] ?? '' ), $kind );
+	$recorded = axismundi_cal_record_owner( $created_id, $authority, $kind );
+	if ( is_wp_error( $recorded ) ) {
+		return $recorded;
+	}
 	return $created_id;
 }
 
@@ -252,13 +272,24 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
  * @param int    $calendar_id Calendar id.
  * @param string $actor_uri   Owning Actor URI, or '' to leave ownership unset.
  * @param string $kind        local|remote.
- * @return void
+ * @return true|WP_Error
  */
-function axismundi_cal_record_owner( int $calendar_id, string $actor_uri, string $kind ) : void {
+function axismundi_cal_record_owner( int $calendar_id, string $actor_uri, string $kind ) {
 	global $wpdb;
 	$actor_uri = trim( $actor_uri );
-	if ( 'local' !== $kind || '' === $actor_uri ) {
-		return;
+	if ( 'remote' === $kind ) {
+		return '' === $actor_uri ? true : new WP_Error( 'ax_cal_authority_remote', __( 'A subscribed calendar cannot claim a local authority.', 'axismundi-calendar' ) );
+	}
+	if ( '' === $actor_uri ) {
+		return new WP_Error( 'ax_cal_authority', __( 'A local calendar needs an Actor authority.', 'axismundi-calendar' ) );
+	}
+	$calendar = axismundi_cal_calendar_get( $calendar_id );
+	if ( ! is_array( $calendar ) ) {
+		return new WP_Error( 'ax_cal_missing', __( 'That calendar no longer exists.', 'axismundi-calendar' ) );
+	}
+	$current_authority = (string) $calendar['authority_actor_uri'];
+	if ( '' !== $current_authority && $current_authority !== $actor_uri ) {
+		return new WP_Error( 'ax_cal_authority_locked', __( 'Calendar authority cannot be transferred yet.', 'axismundi-calendar' ) );
 	}
 	/*
 	 * Three writes, because they are three different facts. The authority is the Actor this Calendar
@@ -275,6 +306,7 @@ function axismundi_cal_record_owner( int $calendar_id, string $actor_uri, string
 	// Creating a Calendar also puts it in the creator's sidebar, but this row grants nothing and may
 	// later be removed without affecting either the authority or the ACL.
 	axismundi_cal_list_set( $calendar_id, $actor_uri );
+	return true;
 }
 
 /**

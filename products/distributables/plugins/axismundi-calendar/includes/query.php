@@ -43,7 +43,8 @@ function axismundi_cal_event_listable( WP_Post $post ) : bool {
 	if ( ! is_array( $schedule ) ) {
 		return false;
 	}
-	return axismundi_cal_calendar_is_listable( (int) $schedule['calendar_id'] );
+	return '' !== axismundi_cal_calendar_authority( (int) $schedule['calendar_id'] )
+		&& axismundi_cal_calendar_is_listable( (int) $schedule['calendar_id'] );
 }
 
 /**

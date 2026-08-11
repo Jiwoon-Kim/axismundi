@@ -62,7 +62,8 @@ function ax_pg_event( array &$posts, int $calendar_id, string $title ) : int {
 }
 
 try {
-	$ax_pg_authority = axismundi_cal_default_local_authority();
+	$ax_pg_site      = axismundi_actors_get_site_actor();
+	$ax_pg_authority = $ax_pg_site instanceof Axismundi_Actor ? $ax_pg_site->get_uri() : '';
 	$ax_pg_private = (int) axismundi_cal_calendar_save(
 		array( 'name' => 'Gate private', 'slug' => 'ax-pg-private', 'timezone' => 'Asia/Seoul', 'owner_actor_uri' => $ax_pg_authority )
 	);

@@ -35,7 +35,8 @@ function ax_rg_starts( array $occurrences ) : array {
 }
 
 try {
-	$ax_rg_calendar = axismundi_cal_calendar_save( array( 'name' => 'Range calendar', 'slug' => 'audit-range', 'timezone' => 'Asia/Seoul', 'owner_actor_uri' => axismundi_cal_default_local_authority() ) );
+	$ax_rg_site = axismundi_actors_get_site_actor();
+	$ax_rg_calendar = axismundi_cal_calendar_save( array( 'name' => 'Range calendar', 'slug' => 'audit-range', 'timezone' => 'Asia/Seoul', 'owner_actor_uri' => $ax_rg_site instanceof Axismundi_Actor ? $ax_rg_site->get_uri() : '' ) );
 	// Published on purpose. Every surface these fixtures exercise is a public one, and a Calendar is
 	// private until somebody says otherwise, so the fixture has to say so.
 	axismundi_cal_acl_grant( (int) $ax_rg_calendar, '', 'reader', 'public' );

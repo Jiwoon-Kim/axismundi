@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '12';
+const AXISMUNDI_CAL_DB_VERSION        = '13';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 
 /** @return string Event envelope table name. */
@@ -54,6 +54,59 @@ function axismundi_cal_entries_list_table() : string {
 function axismundi_cal_sources_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_cal_sources';
+}
+
+/**
+ * Bring the source table's one-source-per-Calendar index to its final shape.
+ *
+ * Early builds used a non-unique `calendar_id` key alongside a composite unique key. The composite
+ * key never enforced the relationship the model promises, and its name prevented dbDelta from
+ * replacing the ordinary key with the required unique one. Do this explicitly before dbDelta sees
+ * the declaration, preserving rows rather than asking schema reconciliation to guess at indexes.
+ *
+ * @return bool Whether the existing table is compatible or was upgraded.
+ */
+function axismundi_cal_upgrade_sources_index() : bool {
+	global $wpdb;
+	$table = axismundi_cal_sources_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema migration over this plugin's own table.
+	$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
+	if ( $table !== $exists ) {
+		return true;
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- index inspection for this plugin's own table.
+	$indexes = (array) $wpdb->get_results( "SHOW INDEX FROM {$table}", ARRAY_A );
+	$has_unique_calendar = false;
+	$has_old_calendar    = false;
+	$has_old_composite   = false;
+	foreach ( $indexes as $index ) {
+		if ( 'calendar_id' === (string) $index['Key_name'] ) {
+			$has_unique_calendar = 0 === (int) $index['Non_unique'];
+			$has_old_calendar    = ! $has_unique_calendar;
+		}
+		if ( 'calendar_source' === (string) $index['Key_name'] ) {
+			$has_old_composite = true;
+		}
+	}
+	if ( $has_unique_calendar ) {
+		return true;
+	}
+	// Do not discard a source silently just to make a new uniqueness promise true.
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- migration precondition over this plugin's own table.
+	$duplicate = $wpdb->get_var( "SELECT calendar_id FROM {$table} GROUP BY calendar_id HAVING COUNT(*) > 1 LIMIT 1" );
+	if ( null !== $duplicate ) {
+		return false;
+	}
+	if ( $has_old_calendar ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- replacing an obsolete index on this plugin's own table.
+		$wpdb->query( "ALTER TABLE {$table} DROP INDEX calendar_id" );
+	}
+	if ( $has_old_composite ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- replacing an obsolete index on this plugin's own table.
+		$wpdb->query( "ALTER TABLE {$table} DROP INDEX calendar_source" );
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- adding the declared invariant to this plugin's own table.
+	return false !== $wpdb->query( "ALTER TABLE {$table} ADD UNIQUE KEY calendar_id (calendar_id)" );
 }
 
 /** @return string Subscribed entry cache table name. */
@@ -316,6 +369,9 @@ function axismundi_cal_install_schema() : bool {
 	 * one document to fetch, one cache to keep and one publisher to be polite to -- and `calendar_id`
 	 * here is the read-only Calendar this source *is*, not a local calendar it was mixed into.
 	 */
+	if ( ! axismundi_cal_upgrade_sources_index() ) {
+		return false;
+	}
 	dbDelta(
 		"CREATE TABLE {$sources} (
 			id bigint(20) unsigned NOT NULL auto_increment,
@@ -414,6 +470,7 @@ function axismundi_cal_install_schema() : bool {
 	axismundi_cal_copy_legacy_access_roles();
 	axismundi_cal_seed_owner_entries();
 	axismundi_cal_backfill_authority();
+	axismundi_cal_clear_v12_unfiled_authority( $previous_version );
 	axismundi_cal_seed_authority_acl();
 	axismundi_cal_grandfather_public_calendars( $previous_version );
 

@@ -20,6 +20,7 @@
 
 defined( 'ABSPATH' ) || exit( 1 );
 
+global $wpdb;
 $ax_ev_results = array();
 $ax_ev_posts   = array();
 $ax_ev_users   = array();
@@ -161,9 +162,12 @@ try {
 	// -- An authority-less Calendar never reaches the renderer ---------------------------------
 
 	$ax_ev_orphan_calendar = axismundi_cal_calendar_save(
-		array( 'name' => 'Authority-less fixture', 'slug' => 'audit-authoring-orphan-' . $ax_ev_post, 'timezone' => 'Asia/Seoul', 'owner_actor_uri' => '' )
+		array( 'name' => 'Authority-less fixture', 'slug' => 'audit-authoring-orphan-' . $ax_ev_post, 'timezone' => 'Asia/Seoul', 'owner_actor_uri' => $ax_ev_actor instanceof Axismundi_Actor ? (string) $ax_ev_actor->get_uri() : '' )
 	);
 	$ax_ev_calendars[] = (int) $ax_ev_orphan_calendar;
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture reproducing a legacy row created before authority was required.
+$wpdb->update( axismundi_cal_calendars_table(), array( 'authority_actor_uri' => '', 'authority_actor_uri_hash' => '' ), array( 'id' => (int) $ax_ev_orphan_calendar ) );
+	axismundi_cal_acl_revoke( (int) $ax_ev_orphan_calendar, (string) $ax_ev_actor->get_uri(), 'actor' );
 	axismundi_cal_acl_grant( (int) $ax_ev_orphan_calendar, '', 'reader', 'public' );
 	$ax_ev_orphan_post = (int) wp_insert_post(
 		array( 'post_type' => AXISMUNDI_CAL_EVENT_POST_TYPE, 'post_status' => 'draft', 'post_author' => $ax_ev_editor, 'post_title' => 'Authority-less Event' )

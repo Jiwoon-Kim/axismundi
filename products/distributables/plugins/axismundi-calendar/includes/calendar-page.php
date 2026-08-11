@@ -23,7 +23,7 @@ function axismundi_cal_serve_calendar_page() : void {
 	$calendar = axismundi_cal_calendar_by_slug( (string) get_query_var( 'ax_cal_slug' ) );
 	// A private Calendar answers exactly as a missing one does. Distinguishing them would confirm
 	// that a particular slug exists, which is the one thing an anonymous request must not learn.
-	if ( ! is_array( $calendar ) || ! axismundi_cal_is_publicly_readable( (int) $calendar['id'] ) ) {
+	if ( ! is_array( $calendar ) || '' === axismundi_cal_calendar_authority( (int) $calendar['id'] ) || ! axismundi_cal_is_publicly_readable( (int) $calendar['id'] ) ) {
 		global $wp_query;
 		$wp_query->set_404();
 		status_header( 404 );
@@ -77,8 +77,8 @@ function axismundi_cal_guard_event_page() : void {
 		return;
 	}
 	$calendar_id = (int) $schedule['calendar_id'];
-	if ( axismundi_cal_is_publicly_readable( $calendar_id )
-		|| axismundi_cal_can_read( $calendar_id, axismundi_cal_current_actor_uri(), get_current_user_id() ) ) {
+	if ( '' !== axismundi_cal_calendar_authority( $calendar_id ) && ( axismundi_cal_is_publicly_readable( $calendar_id )
+		|| axismundi_cal_can_read( $calendar_id, axismundi_cal_current_actor_uri(), get_current_user_id() ) ) ) {
 		return;
 	}
 

@@ -89,8 +89,8 @@ try {
 	ax_rr_assert( $ax_rr_results, "the request's principal is the signed-in user's Actor", $ax_rr_reader['actor_uri'] === axismundi_cal_current_actor_uri() );
 	wp_set_current_user( 0 );
 
-	$ax_rr_public = (int) axismundi_cal_calendar_save( array( 'name' => 'Read public', 'slug' => 'ax-rr-public', 'timezone' => 'Asia/Seoul' ) );
-	$ax_rr_private = (int) axismundi_cal_calendar_save( array( 'name' => 'Read private', 'slug' => 'ax-rr-private', 'timezone' => 'Asia/Seoul' ) );
+	$ax_rr_public = (int) axismundi_cal_calendar_save( array( 'name' => 'Read public', 'slug' => 'ax-rr-public', 'timezone' => 'Asia/Seoul', 'owner_actor_uri' => $ax_rr_reader['actor_uri'] ) );
+	$ax_rr_private = (int) axismundi_cal_calendar_save( array( 'name' => 'Read private', 'slug' => 'ax-rr-private', 'timezone' => 'Asia/Seoul', 'owner_actor_uri' => $ax_rr_reader['actor_uri'] ) );
 	$ax_rr_calendars[] = $ax_rr_public;
 	$ax_rr_calendars[] = $ax_rr_private;
 	axismundi_cal_acl_grant( $ax_rr_public, '', 'reader', 'public' );

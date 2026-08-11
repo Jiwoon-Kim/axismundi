@@ -134,6 +134,17 @@ try {
 		'the legacy column is no longer consulted: corrupting it does not change who owns the calendar',
 		$ax_ls_alice === axismundi_cal_calendar_owner( (int) $ax_ls_cal )
 	);
+	$ax_ls_transfer = axismundi_cal_calendar_save( array( 'owner_actor_uri' => $ax_ls_bob ), (int) $ax_ls_cal );
+	ax_ls_assert(
+		$ax_ls_results,
+		'the writer refuses authority transfer until there is a federation policy for it',
+		is_wp_error( $ax_ls_transfer ) && 'ax_cal_authority_locked' === $ax_ls_transfer->get_error_code()
+	);
+	ax_ls_assert(
+		$ax_ls_results,
+		'and a refused transfer leaves the Calendar authority and ACL unchanged',
+		$ax_ls_alice === axismundi_cal_calendar_authority( (int) $ax_ls_cal ) && 'reader' === (string) axismundi_cal_acl_rule( (int) $ax_ls_cal, $ax_ls_bob )['role']
+	);
 	/*
 	 * Put it back before going on. The migration below reads this column by design, so leaving it
 	 * corrupted would seed a second owner from a value written here to prove a different point --
@@ -145,8 +156,16 @@ try {
 
 	// -- A subscribed Calendar has no local owner ---------------------------------------------------
 
-	$ax_ls_remote = axismundi_cal_calendar_save(
+	$ax_ls_rejected_remote = axismundi_cal_calendar_save(
 		array( 'name' => 'Remote fixture', 'slug' => 'ax-ls-remote', 'kind' => 'remote', 'timezone' => 'Asia/Seoul', 'owner_actor_uri' => $ax_ls_alice )
+	);
+	ax_ls_assert(
+		$ax_ls_results,
+		'a remote Calendar cannot be assigned a local authority through the writer',
+		is_wp_error( $ax_ls_rejected_remote ) && 'ax_cal_authority_remote' === $ax_ls_rejected_remote->get_error_code()
+	);
+	$ax_ls_remote = axismundi_cal_calendar_save(
+		array( 'name' => 'Remote fixture', 'slug' => 'ax-ls-remote', 'kind' => 'remote', 'timezone' => 'Asia/Seoul' )
 	);
 	$ax_ls_calendars[] = (int) $ax_ls_remote;
 	ax_ls_assert(
@@ -159,11 +178,24 @@ try {
 
 	// -- The migration, and what gates dropping the column --------------------------------------------
 
-	$ax_ls_legacy = axismundi_cal_calendar_save( array( 'name' => 'Legacy fixture', 'slug' => 'ax-ls-legacy', 'timezone' => 'Asia/Seoul' ) );
+	$ax_ls_unassigned_slug = 'ax-ls-unassigned';
+	$ax_ls_unassigned = axismundi_cal_calendar_save( array( 'name' => 'Unassigned fixture', 'slug' => $ax_ls_unassigned_slug, 'timezone' => 'Asia/Seoul' ) );
+	ax_ls_assert(
+		$ax_ls_results,
+		'a local Calendar without an explicit Actor authority is refused before any row is written',
+		is_wp_error( $ax_ls_unassigned ) && 'ax_cal_authority' === $ax_ls_unassigned->get_error_code() && ! is_array( axismundi_cal_calendar_by_slug( $ax_ls_unassigned_slug ) )
+	);
+	$ax_ls_legacy = axismundi_cal_calendar_save( array( 'name' => 'Legacy fixture', 'slug' => 'ax-ls-legacy', 'timezone' => 'Asia/Seoul', 'owner_actor_uri' => $ax_ls_alice ) );
 	$ax_ls_calendars[] = (int) $ax_ls_legacy;
 	// A row as it existed before the relation table: a column value and no entry.
+	axismundi_cal_acl_revoke( (int) $ax_ls_legacy, $ax_ls_alice );
+	axismundi_cal_list_remove( (int) $ax_ls_legacy, $ax_ls_alice );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit fixture standing in for a pre-migration row.
-	$wpdb->update( axismundi_cal_calendars_table(), array( 'owner_actor_uri' => $ax_ls_bob ), array( 'id' => (int) $ax_ls_legacy ) );
+	$wpdb->update(
+		axismundi_cal_calendars_table(),
+		array( 'owner_actor_uri' => $ax_ls_bob, 'authority_actor_uri' => '', 'authority_actor_uri_hash' => '' ),
+		array( 'id' => (int) $ax_ls_legacy )
+	);
 	axismundi_cal_list_remove( (int) $ax_ls_legacy, $ax_ls_bob );
 
 	ax_ls_assert( $ax_ls_results, 'a pre-migration calendar starts with no owner relation', '' === axismundi_cal_calendar_owner( (int) $ax_ls_legacy ) );

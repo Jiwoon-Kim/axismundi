@@ -447,14 +447,6 @@ function axismundi_cal_backfill_authority() : int {
 			$owner = axismundi_cal_legacy_entry_owner( (int) $row['id'] );
 		}
 		if ( '' === $owner ) {
-			/*
-			 * The default Calendar predates Actor ownership and was created on nobody's behalf. Once
-			 * this site has an Actor, make that Actor its authority instead of emitting an Event that
-			 * cannot satisfy Object Projections' required `attributedTo` member.
-			 */
-			$owner = axismundi_cal_default_local_authority();
-		}
-		if ( '' === $owner ) {
 			continue;
 		}
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
@@ -469,16 +461,30 @@ function axismundi_cal_backfill_authority() : int {
 }
 
 /**
- * The site Actor used to recover local Calendars that were created before authority existed.
+ * Remove the synthetic site authority assigned to the legacy unfiled Calendar in v12.
  *
- * @return string
+ * That row was created by an Event migration, not by the site Actor, so assigning that Actor
+ * invented provenance. It remains a blocked legacy Calendar until an administrator explicitly
+ * assigns an authority for the first time.
+ *
+ * @param string $previous_version Stored schema version before this upgrade.
+ * @return bool Whether the synthetic authority was removed.
  */
-function axismundi_cal_default_local_authority() : string {
-	if ( ! axismundi_cal_has_actors() || ! function_exists( 'axismundi_actors_get_site_actor' ) ) {
-		return '';
+function axismundi_cal_clear_v12_unfiled_authority( string $previous_version ) : bool {
+	if ( '12' !== $previous_version ) {
+		return false;
 	}
-	$actor = axismundi_actors_get_site_actor();
-	return $actor instanceof Axismundi_Actor ? (string) $actor->get_uri() : '';
+	global $wpdb;
+	$calendars = axismundi_cal_calendars_table();
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT id, authority_actor_uri, authority_actor_uri_hash FROM {$calendars} WHERE slug = %s AND kind = 'local' AND owner_actor_uri = ''", 'unfiled-events' ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one named migration row.
+	if ( ! is_array( $row ) || '' === (string) $row['authority_actor_uri'] ) {
+		return false;
+	}
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time correction of this plugin's own migration.
+	$wpdb->update( $calendars, array( 'authority_actor_uri' => '', 'authority_actor_uri_hash' => '' ), array( 'id' => (int) $row['id'] ) );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- removes only the matching synthetic owner rule.
+	$wpdb->delete( axismundi_cal_acl_table(), array( 'calendar_id' => (int) $row['id'], 'principal_uri_hash' => (string) $row['authority_actor_uri_hash'], 'role' => 'owner' ) );
+	return true;
 }
 
 /**

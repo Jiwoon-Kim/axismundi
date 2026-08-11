@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '7';
+const AXISMUNDI_CAL_DB_VERSION        = '9';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 
 /** @return string Event envelope table name. */
@@ -36,6 +36,12 @@ function axismundi_cal_schedules_table() : string {
 function axismundi_cal_calendars_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_cal_calendars';
+}
+
+/** @return string Calendar list entry table name. */
+function axismundi_cal_entries_list_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_cal_calendar_list_entries';
 }
 
 /** @return string Subscription source table name. */
@@ -190,6 +196,7 @@ function axismundi_cal_install_schema() : bool {
 	dbDelta(
 		"CREATE TABLE {$calendars} (
 			id bigint(20) unsigned NOT NULL auto_increment,
+			uuid char(36) NOT NULL default '',
 			slug varchar(191) NOT NULL default '',
 			name text NOT NULL,
 			description longtext NOT NULL,
@@ -202,6 +209,7 @@ function axismundi_cal_install_schema() : bool {
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY slug (slug),
+			UNIQUE KEY uuid (uuid),
 			KEY visibility (visibility),
 			KEY kind (kind)
 		) ENGINE=InnoDB {$charset};"
@@ -215,6 +223,41 @@ function axismundi_cal_install_schema() : bool {
 	 * calendars would have had three defaults -- and made "which calendar is this event on?" a
 	 * question with no answer.
 	 */
+
+	$list = axismundi_cal_entries_list_table();
+	/*
+	 * Ownership is a relation between an Actor and a Calendar, not a property of the Calendar. A
+	 * Calendar is an independent resource; who owns it, who may write to it and who merely watches it
+	 * are three answers to the same question and belong in one place. Keeping it as a column on the
+	 * Calendar could only ever express the first, and only ever for one Actor.
+	 *
+	 * This is also what a subscribed feed needs. A remote Calendar has no local owner -- its authority
+	 * is the source URL and whoever publishes it -- so the Actor who subscribed gets `reader`, and
+	 * nothing pretends the subscription made them its owner.
+	 *
+	 * `actor_uri_hash` carries the uniqueness because an Actor URI is longer than an index key may be,
+	 * which is the same reason every other Actor reference here is stored hashed beside its text.
+	 */
+	dbDelta(
+		"CREATE TABLE {$list} (
+			id bigint(20) unsigned NOT NULL auto_increment,
+			calendar_id bigint(20) unsigned NOT NULL,
+			actor_uri text NOT NULL,
+			actor_uri_hash char(64) NOT NULL default '',
+			access_role varchar(16) NOT NULL default 'reader',
+			selected tinyint(1) unsigned NOT NULL default 1,
+			hidden tinyint(1) unsigned NOT NULL default 0,
+			summary_override text NOT NULL,
+			color varchar(32) NOT NULL default '',
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY calendar_actor (calendar_id,actor_uri_hash),
+			KEY calendar_id (calendar_id),
+			KEY actor_uri_hash (actor_uri_hash),
+			KEY access_role (access_role)
+		) ENGINE=InnoDB {$charset};"
+	);
 
 	$sources = axismundi_cal_sources_table();
 	/*
@@ -324,6 +367,9 @@ function axismundi_cal_install_schema() : bool {
 	 * Event merely because the old model permitted an ambiguous grouping.
 	 */
 	axismundi_cal_assign_orphan_schedules();
+	axismundi_cal_backfill_calendar_uuids();
+	axismundi_cal_copy_legacy_access_roles();
+	axismundi_cal_seed_owner_entries();
 
 	/*
 	 * Dropped rather than left behind. It is not read anywhere after this version, and leaving a

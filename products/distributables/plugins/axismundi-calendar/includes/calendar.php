@@ -119,6 +119,41 @@ function axismundi_cal_calendar_timezone( ?array $calendar ) : string {
 }
 
 /**
+ * A Calendar by its public identifier.
+ *
+ * @param string $uuid Calendar UUID.
+ * @return array<string,mixed>|null
+ */
+function axismundi_cal_calendar_by_uuid( string $uuid ) : ?array {
+	global $wpdb;
+	$uuid = trim( $uuid );
+	if ( '' === $uuid || ! axismundi_cal_ready() ) {
+		return null;
+	}
+	$table = axismundi_cal_calendars_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE uuid = %s", $uuid ), ARRAY_A );
+	return is_array( $row ) ? $row : null;
+}
+
+/**
+ * Give a public identifier to Calendars created before there was one.
+ *
+ * @return int Number of Calendars given a UUID.
+ */
+function axismundi_cal_backfill_calendar_uuids() : int {
+	global $wpdb;
+	$table = axismundi_cal_calendars_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration over this plugin's own table.
+	$ids = array_map( 'intval', (array) $wpdb->get_col( "SELECT id FROM {$table} WHERE uuid = ''" ) );
+	foreach ( $ids as $id ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
+		$wpdb->update( $table, array( 'uuid' => wp_generate_uuid4() ), array( 'id' => $id ) );
+	}
+	return count( $ids );
+}
+
+/**
  * Create or update a Calendar.
  *
  * @param array<string,mixed> $fields     Calendar fields. `slug` identifies an existing Calendar.
@@ -176,7 +211,6 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 		'timezone'       => $timezone,
 		'kind'           => $kind,
 		'visibility'     => $visibility,
-		'owner_actor_uri' => (string) ( $fields['owner_actor_uri'] ?? ( $existing['owner_actor_uri'] ?? '' ) ),
 		'updated_at'     => $now,
 	);
 
@@ -187,16 +221,44 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 		if ( false === $wpdb->update( $table, $data, array( 'id' => (int) $existing['id'] ) ) ) {
 			return new WP_Error( 'ax_cal_write', __( 'The calendar could not be saved.', 'axismundi-calendar' ) );
 		}
+		if ( array_key_exists( 'owner_actor_uri', $fields ) ) {
+			axismundi_cal_record_owner( (int) $existing['id'], (string) $fields['owner_actor_uri'], $kind );
+		}
 		return (int) $existing['id'];
 	}
 
 	$data['revision']   = 1;
+	// A stable public identifier. The slug is editable and appears in subscription URLs, so it cannot
+	// also be the key an API or a stored reference uses -- renaming a calendar would silently break
+	// every one of them.
+	$data['uuid']       = wp_generate_uuid4();
 	$data['created_at'] = $now;
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 	if ( false === $wpdb->insert( $table, $data ) ) {
 		return new WP_Error( 'ax_cal_write', __( 'The calendar could not be saved.', 'axismundi-calendar' ) );
 	}
-	return (int) $wpdb->insert_id;
+	$created_id = (int) $wpdb->insert_id;
+	axismundi_cal_record_owner( $created_id, (string) ( $fields['owner_actor_uri'] ?? '' ), $kind );
+	return $created_id;
+}
+
+/**
+ * Record who owns a Calendar, as a relation.
+ *
+ * Nothing is written for a remote Calendar. Its authority is the feed it projects and whoever
+ * publishes that, so making the subscriber its owner would be this site claiming it can speak for
+ * somebody else's calendar -- and the claim would outlive the reason it was made.
+ *
+ * @param int    $calendar_id Calendar id.
+ * @param string $actor_uri   Owning Actor URI, or '' to leave ownership unset.
+ * @param string $kind        local|remote.
+ * @return void
+ */
+function axismundi_cal_record_owner( int $calendar_id, string $actor_uri, string $kind ) : void {
+	if ( 'local' !== $kind || '' === trim( $actor_uri ) ) {
+		return;
+	}
+	axismundi_cal_list_set( $calendar_id, $actor_uri, 'owner' );
 }
 
 /**
@@ -232,6 +294,9 @@ function axismundi_cal_calendar_delete( int $calendar_id ) : bool {
 			axismundi_cal_forget_deleted_event( $event_id );
 		}
 	}
+	// The relations go with it. An entry naming a Calendar that no longer exists would show up in
+	// somebody's list as a calendar they cannot open.
+	axismundi_cal_list_forget_calendar( $calendar_id );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 	return false !== $wpdb->delete( axismundi_cal_calendars_table(), array( 'id' => $calendar_id ) );
 }

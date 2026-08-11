@@ -8,8 +8,9 @@
  * reconstructing ownership after the fact means guessing from post authorship or from who happened
  * to edit last.
  *
- * So `owner_actor_uri` is filled at creation and is what per-calendar permission is judged against,
- * even though nothing today refuses a manager on the strength of it.
+ * Ownership is a relation between an Actor and a Calendar rather than a column on the Calendar, so
+ * that owner, writer and reader access are answers to one question kept in one place. It is recorded
+ * at creation and is what per-calendar permission is judged against.
  *
  * @package AxismundiCalendar
  */
@@ -45,7 +46,12 @@ function axismundi_cal_can_manage_calendar( ?array $calendar ) : bool {
 	if ( null === $calendar || current_user_can( 'edit_others_posts' ) ) {
 		return true;
 	}
-	$owner = trim( (string) ( $calendar['owner_actor_uri'] ?? '' ) );
+	$calendar_id = (int) ( $calendar['id'] ?? 0 );
+	// Owner or writer, which is the same question the REST API and any sharing UI will ask.
+	if ( axismundi_cal_actor_may_write( $calendar_id, axismundi_cal_current_actor_uri() ) ) {
+		return true;
+	}
+	$owner = axismundi_cal_calendar_owner( $calendar_id );
 	if ( '' === $owner ) {
 		// An unowned calendar predates ownership being recorded, or was made by a route that did not
 		// set it. Treated as moderator-only rather than as everyone's, since the safe reading of "no
@@ -294,7 +300,8 @@ function axismundi_cal_render_calendars_page() : void {
 						<td><code><?php echo esc_html( $row['slug'] ); ?></code></td>
 						<td><?php echo esc_html( (string) $row['timezone'] ); ?></td>
 						<td><?php echo esc_html( 'remote' === (string) $row['kind'] ? __( 'Subscribed', 'axismundi-calendar' ) : __( 'Local', 'axismundi-calendar' ) ); ?></td>
-						<td><?php echo esc_html( '' !== $row['owner_actor_uri'] ? $row['owner_actor_uri'] : __( 'Unassigned', 'axismundi-calendar' ) ); ?></td>
+						<?php $row_owner = axismundi_cal_calendar_owner( (int) $row['id'] ); ?>
+						<td><?php echo esc_html( '' !== $row_owner ? $row_owner : __( 'Unassigned', 'axismundi-calendar' ) ); ?></td>
 						<td><?php echo esc_html( number_format_i18n( count( axismundi_cal_calendar_event_ids( (int) $row['id'] ) ) ) ); ?></td>
 						<td><a href="<?php echo esc_url( axismundi_cal_calendar_url( $row ) ); ?>"><?php esc_html_e( 'View', 'axismundi-calendar' ); ?></a></td>
 						<td>
@@ -376,10 +383,10 @@ function axismundi_cal_render_calendars_page() : void {
 					<td>
 						<?php if ( current_user_can( 'edit_others_posts' ) ) : ?>
 							<input name="owner_actor_uri" id="ax-cal-owner" type="url" class="regular-text"
-								value="<?php echo esc_attr( (string) ( $calendar['owner_actor_uri'] ?? axismundi_cal_current_actor_uri() ) ); ?>">
+								value="<?php echo esc_attr( is_array( $calendar ) ? axismundi_cal_calendar_owner( (int) $calendar['id'] ) : axismundi_cal_current_actor_uri() ); ?>">
 							<p class="description"><?php esc_html_e( 'The Actor this calendar belongs to. Recorded now so private calendars and sharing have something to check later.', 'axismundi-calendar' ); ?></p>
 						<?php else : ?>
-							<code><?php echo esc_html( (string) ( $calendar['owner_actor_uri'] ?? axismundi_cal_current_actor_uri() ) ); ?></code>
+							<code><?php echo esc_html( is_array( $calendar ) ? axismundi_cal_calendar_owner( (int) $calendar['id'] ) : axismundi_cal_current_actor_uri() ); ?></code>
 						<?php endif; ?>
 					</td>
 				</tr>

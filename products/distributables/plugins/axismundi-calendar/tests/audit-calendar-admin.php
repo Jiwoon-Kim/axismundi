@@ -67,7 +67,9 @@ try {
 	ax_ca_assert( $ax_ca_results, 'a calendar is created with an owner', is_int( $ax_ca_mine ) && $ax_ca_mine > 0 );
 	$ax_ca_calendars[] = (int) $ax_ca_mine;
 	$ax_ca_row = axismundi_cal_calendar_get( (int) $ax_ca_mine );
-	ax_ca_assert( $ax_ca_results, 'and the owner is stored rather than left to be worked out later', $ax_ca_uri === (string) $ax_ca_row['owner_actor_uri'] );
+	// Read as a relation, not a column: ownership is one of several things an Actor can be to a
+	// Calendar, and asking the Calendar who owns it could only ever return the first of them.
+	ax_ca_assert( $ax_ca_results, 'and the owner is stored rather than left to be worked out later', $ax_ca_uri === axismundi_cal_calendar_owner( (int) $ax_ca_mine ) );
 
 	// -- The permission rule, in both directions ---------------------------------------------------
 

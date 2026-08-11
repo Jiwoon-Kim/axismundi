@@ -218,7 +218,12 @@ add_filter( 'axismundi_op_resolve_source_by_uri', 'axismundi_cal_event_resolve_s
  * @return void
  */
 function axismundi_cal_register_event_transformer() : void {
-	if ( ! function_exists( 'axismundi_op_register_object_transformer' ) ) {
+	/*
+	 * One gate for every Actor-dependent surface. Registering a transformer without Actors would
+	 * publish Events attributed to nobody, which the renderer refuses anyway -- but it would fail
+	 * per Event at render time rather than saying plainly that a plugin is missing.
+	 */
+	if ( ! axismundi_cal_federation_ready() ) {
 		return;
 	}
 	axismundi_op_register_object_transformer(

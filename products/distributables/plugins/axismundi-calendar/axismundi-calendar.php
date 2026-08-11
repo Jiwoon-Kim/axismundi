@@ -50,6 +50,7 @@ const AXISMUNDI_CAL_VERSION = '0.0.1';
  */
 const AXISMUNDI_CAL_EVENT_POST_TYPE = 'ax_event';
 
+require_once __DIR__ . '/includes/dependencies.php';
 require_once __DIR__ . '/includes/schema.php';
 require_once __DIR__ . '/includes/cpt.php';
 require_once __DIR__ . '/includes/rrule.php';

@@ -71,7 +71,9 @@ function axismundi_cal_can_manage_calendar( ?array $calendar ) : bool {
  */
 function axismundi_cal_current_actor_uri() : string {
 	$user_id = get_current_user_id();
-	if ( $user_id <= 0 || ! function_exists( 'axismundi_op_local_author_actor_uri' ) ) {
+	// Through the shared gate rather than its own `function_exists`, so ownership and the projection
+	// cannot disagree about whether this site has identity at all.
+	if ( $user_id <= 0 || ! axismundi_cal_federation_ready() ) {
 		return '';
 	}
 	return (string) axismundi_op_local_author_actor_uri( $user_id );

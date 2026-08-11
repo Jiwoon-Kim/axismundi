@@ -272,6 +272,102 @@ function axismundi_cal_rest_calendar_events( WP_REST_Request $request ) {
 }
 
 /**
+ * `GET /axismundi/v1/actors/me/calendarView`.
+ *
+ * One range across several Calendars at once, which is what a calendar screen actually asks. Doing
+ * it per Calendar would mean a month of eight calendars is eight round trips whose results the
+ * client then has to merge, sort and truncate consistently -- and a client that truncates
+ * per-calendar shows eight partial months rather than one complete one.
+ *
+ * Every named Calendar is checked separately, and one the caller may not read is dropped rather than
+ * refused. A view is a set of things somebody ticked, and a single stale tick would otherwise empty
+ * the whole screen; that a Calendar is missing from the answer is the honest report of what they may
+ * see. Asking for none is not an error either, since unticking everything is a thing people do.
+ *
+ * Subscribed Calendars contribute their cached entries. They are read-only and marked as such, so
+ * the screen can show a public-holiday feed beside somebody's own Events without offering to edit
+ * one of them.
+ *
+ * @param WP_REST_Request $request Request.
+ * @return WP_REST_Response|WP_Error
+ */
+function axismundi_cal_rest_calendar_view( WP_REST_Request $request ) {
+	$start = (int) strtotime( (string) $request['start'] );
+	$end   = (int) strtotime( (string) $request['end'] );
+	if ( $start <= 0 || $end <= 0 || $end <= $start ) {
+		return new WP_Error( 'ax_cal_range', __( 'A range needs a start and a later end.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+	if ( $end - $start > AXISMUNDI_CAL_REST_MAX_WINDOW ) {
+		return new WP_Error(
+			'ax_cal_range_too_wide',
+			__( 'That range is wider than this API will expand at once.', 'axismundi-calendar' ),
+			array( 'status' => 400 )
+		);
+	}
+
+	$from = gmdate( 'Y-m-d H:i:s', $start );
+	$to   = gmdate( 'Y-m-d H:i:s', $end );
+	$seen = array();
+	$out  = array();
+
+	foreach ( array_slice( (array) $request['calendars'], 0, 50 ) as $uuid ) {
+		$calendar = axismundi_cal_calendar_by_uuid( (string) $uuid );
+		if ( ! is_array( $calendar ) || isset( $seen[ (int) $calendar['id'] ] ) ) {
+			continue;
+		}
+		$seen[ (int) $calendar['id'] ] = true;
+		if ( ! axismundi_cal_request_can_read( (int) $calendar['id'] ) ) {
+			continue;
+		}
+		$calendar_uuid = (string) $calendar['uuid'];
+
+		if ( 'remote' === (string) $calendar['kind'] ) {
+			foreach ( axismundi_cal_subscribed_entries( (int) $calendar['id'], $from, $to ) as $entry ) {
+				$out[] = array(
+					'calendar'   => $calendar_uuid,
+					'eventId'    => 0,
+					'summary'    => (string) $entry['summary'],
+					'url'        => (string) $entry['url'],
+					'startUtc'   => (string) $entry['start_utc'],
+					'endUtc'     => (string) $entry['end_utc'],
+					'startLocal' => (string) $entry['start_local'],
+					'endLocal'   => (string) $entry['end_local'],
+					'allDay'     => (bool) $entry['all_day'],
+					'recurring'  => '' !== (string) $entry['rrule'],
+					'readOnly'   => true,
+				);
+			}
+			continue;
+		}
+
+		foreach ( axismundi_cal_calendar_occurrences( (int) $calendar['id'], $from, $to ) as $occurrence ) {
+			$out[] = array_merge(
+				axismundi_cal_rest_occurrence( $occurrence ),
+				array( 'calendar' => $calendar_uuid, 'readOnly' => false )
+			);
+		}
+	}
+
+	usort( $out, static fn( array $left, array $right ) : int => strcmp( (string) $left['startUtc'], (string) $right['startUtc'] ) );
+	/*
+	 * Truncated after the merge, never per Calendar. A cap applied to each one separately would
+	 * silently drop the end of every busy calendar and call the result a month.
+	 */
+	$limit     = (int) $request['limit'];
+	$truncated = count( $out ) > $limit;
+
+	return new WP_REST_Response(
+		array(
+			'start'     => gmdate( 'c', $start ),
+			'end'       => gmdate( 'c', $end ),
+			'truncated' => $truncated,
+			'items'     => array_slice( $out, 0, $limit ),
+		),
+		200
+	);
+}
+
+/**
  * Register the read routes.
  *
  * Read-only by design: `WP_REST_Server::READABLE` and nothing else. Writing a calendar list entry,
@@ -294,6 +390,34 @@ function axismundi_cal_register_read_routes() : void {
 				// `me` with nobody signed in is not a forbidden calendar, it is no principal at all.
 				return new WP_Error( 'ax_cal_unauthenticated', __( 'You must be signed in.', 'axismundi-calendar' ), array( 'status' => 401 ) );
 			},
+		)
+	);
+
+	register_rest_route(
+		'axismundi/v1',
+		'/actors/me/calendarView',
+		array(
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => 'axismundi_cal_rest_calendar_view',
+			// No capability of its own: the range is assembled from Calendars this principal may read,
+			// and an anonymous caller may read the public ones exactly as they can elsewhere.
+			'permission_callback' => '__return_true',
+			'args'                => array(
+				'calendars' => array(
+					'type'              => 'array',
+					'required'          => true,
+					'items'             => array( 'type' => 'string' ),
+					'sanitize_callback' => static function ( $value ) : array {
+						// Accepts a comma-separated list as well, because that is what a URL built by
+						// hand looks like and refusing it teaches nothing.
+						$list = is_array( $value ) ? $value : explode( ',', (string) $value );
+						return array_values( array_filter( array_map( 'sanitize_text_field', $list ) ) );
+					},
+				),
+				'start'     => array( 'type' => 'string', 'default' => gmdate( 'Y-m-d\TH:i:s\Z' ) ),
+				'end'       => array( 'type' => 'string', 'default' => gmdate( 'Y-m-d\TH:i:s\Z', time() + ( 90 * DAY_IN_SECONDS ) ) ),
+				'limit'     => array( 'type' => 'integer', 'default' => AXISMUNDI_CAL_RANGE_MAX, 'minimum' => 1, 'maximum' => AXISMUNDI_CAL_RANGE_MAX ),
+			),
 		)
 	);
 

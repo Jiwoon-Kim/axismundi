@@ -1,0 +1,174 @@
+/**
+ * Calendar workspace layout.
+ *
+ * Grid rather than flex for the month: the seven columns have to line up with the weekday header
+ * regardless of how much is in any cell, which is exactly what a grid track guarantees and what a
+ * row of flex items does not.
+ */
+
+.ax-cal-workspace__bar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 16px 0;
+	flex-wrap: wrap;
+}
+
+.ax-cal-workspace__title {
+	margin: 0;
+	font-size: 1.4em;
+	flex: 1 1 auto;
+}
+
+.ax-cal-workspace__body {
+	display: grid;
+	grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+	gap: 16px;
+	align-items: start;
+}
+
+/* One column below the width where a sidebar beside a seven-column grid stops fitting. */
+@media (max-width: 782px) {
+	.ax-cal-workspace__body {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+.ax-cal-workspace__sidebar {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	padding: 12px;
+}
+
+.ax-cal-workspace__section + .ax-cal-workspace__section {
+	margin-top: 16px;
+}
+
+.ax-cal-workspace__section h2 {
+	font-size: 0.9em;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: #50575e;
+	margin: 0 0 8px;
+}
+
+.ax-cal-workspace__list {
+	margin: 0;
+	list-style: none;
+}
+
+.ax-cal-workspace__list li {
+	margin: 0 0 4px;
+}
+
+.ax-cal-workspace__role {
+	color: #646970;
+	font-size: 0.85em;
+	margin-inline-start: 26px;
+}
+
+.ax-cal-workspace__empty {
+	color: #646970;
+	margin: 0;
+}
+
+.ax-cal-workspace__grid {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.ax-cal-workspace__weekdays,
+.ax-cal-workspace__weeks {
+	display: grid;
+	grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.ax-cal-workspace__weekdays > div {
+	padding: 8px;
+	font-weight: 600;
+	text-align: center;
+	border-bottom: 1px solid #dcdcde;
+	background: #f6f7f7;
+}
+
+.ax-cal-workspace__day {
+	min-height: 96px;
+	border-inline-start: 1px solid #f0f0f1;
+	border-block-start: 1px solid #f0f0f1;
+	padding: 4px;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.ax-cal-workspace__day:nth-child(7n + 1) {
+	border-inline-start: 0;
+}
+
+.ax-cal-workspace__day.is-outside {
+	background: #fbfbfc;
+}
+
+.ax-cal-workspace__day.is-outside .ax-cal-workspace__daynum {
+	color: #a7aaad;
+}
+
+.ax-cal-workspace__day.is-today .ax-cal-workspace__daynum {
+	background: #2271b1;
+	color: #fff;
+	border-radius: 50%;
+	width: 1.8em;
+	height: 1.8em;
+	display: grid;
+	place-items: center;
+}
+
+.ax-cal-workspace__daynum {
+	font-size: 0.9em;
+	color: #50575e;
+}
+
+.ax-cal-workspace__event {
+	display: block;
+	width: 100%;
+	text-align: start;
+	background: #e7f0f7;
+	border: 0;
+	border-radius: 3px;
+	padding: 2px 4px;
+	cursor: pointer;
+	font-size: 0.85em;
+	line-height: 1.4;
+	/* Titles are arbitrary length and a cell is not: one line each, or a busy day pushes the grid
+	   into a scroll nobody asked for. */
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.ax-cal-workspace__event.is-readonly {
+	background: #f0f0f1;
+	color: #50575e;
+}
+
+.ax-cal-workspace__event:hover,
+.ax-cal-workspace__event:focus {
+	background: #c8ddec;
+}
+
+.ax-cal-workspace__time {
+	color: #50575e;
+	margin-inline-end: 4px;
+}
+
+@media (prefers-color-scheme: dark) {
+	/* The admin has no dark mode of its own, so this only follows the browser where a user has
+	   forced one on. Kept minimal rather than restyling the whole screen around it. */
+	.ax-cal-workspace__event {
+		background: #2c3338;
+		color: #f0f0f1;
+	}
+}

@@ -267,8 +267,14 @@ try {
 	 * so every verifier answers yes about nothing. The legacy shape is recreated deliberately here.
 	 */
 	$ax_ls_table = axismundi_cal_entries_list_table();
+	/*
+	 * `ALGORITHM=COPY` rebuilds the table instead of adding the column instantly. Instant ADD leaves a
+	 * row-version record behind, and this fixture adds and drops the same column on every run -- after
+	 * enough of them InnoDB refuses with "row size too large" on a table of eleven columns, and the
+	 * fixture silently stops recreating the shape it is supposed to be testing.
+	 */
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit fixture recreating the pre-rename shape.
-	$wpdb->query( "ALTER TABLE {$ax_ls_table} ADD COLUMN role varchar(16) NOT NULL default ''" );
+	$wpdb->query( "ALTER TABLE {$ax_ls_table} ADD COLUMN role varchar(16) NOT NULL default '', ALGORITHM=COPY" );
 	// A row as it existed before the rename: the old column set, the new one empty.
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit fixture.
 	$wpdb->update( $ax_ls_table, array( 'role' => 'writer', 'access_role' => '' ), array( 'calendar_id' => (int) $ax_ls_second, 'actor_uri_hash' => hash( 'sha256', $ax_ls_alice ) ) );

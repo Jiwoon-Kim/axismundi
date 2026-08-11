@@ -63,6 +63,11 @@
 		return date.getFullYear() + '-' + ( month.length < 2 ? '0' + month : month ) + '-' + ( day.length < 2 ? '0' + day : day );
 	}
 
+	/** A day-precision cursor in the local wall-time form core's DatePicker expects. */
+	function datePickerValue( date ) {
+		return localKey( date ) + 'T00:00:00';
+	}
+
 	/** First day of the grid: the start of the week containing the 1st. */
 	function gridStart( year, month, startOfWeek ) {
 		var first = new Date( year, month, 1 );
@@ -106,10 +111,23 @@
 		return date.getFullYear() + '-' + date.getMonth();
 	}
 
-	/** A Date from what `DatePicker` reports, which is a local wall-clock string. */
+	/**
+	 * A day-precision Date from DatePicker's local wall-clock string.
+	 *
+	 * Do not pass this through `new Date( string )`: an ISO date is liable to be interpreted as UTC,
+	 * making 12 August appear as 11 August in a browser east of Greenwich when the site runs in UTC.
+	 */
 	function pickedDate( value ) {
-		var parsed = value instanceof Date ? value : new Date( String( value ) );
-		return isNaN( parsed.getTime() ) ? null : startOfDay( parsed );
+		var match = String( value ).match( /^(\d{4})-(\d{2})-(\d{2})(?:T\d{2}:\d{2}:\d{2})?$/ );
+		if ( ! match ) {
+			return null;
+		}
+
+		var year = Number( match[ 1 ] );
+		var month = Number( match[ 2 ] ) - 1;
+		var day = Number( match[ 3 ] );
+		var parsed = new Date( year, month, day );
+		return parsed.getFullYear() === year && parsed.getMonth() === month && parsed.getDate() === day ? parsed : null;
 	}
 
 	function monthTitle( year, month ) {
@@ -190,7 +208,7 @@
 			'div',
 			{ className: 'ax-cal-workspace__mini' },
 			el( C.DatePicker, {
-				currentDate: props.cursor,
+				currentDate: datePickerValue( props.cursor ),
 				startOfWeek: startOfWeek,
 				onChange: function ( value ) {
 					var picked = pickedDate( value );

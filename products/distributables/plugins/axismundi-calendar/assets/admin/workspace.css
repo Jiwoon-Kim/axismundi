@@ -22,13 +22,13 @@
 
 .ax-cal-workspace__body {
 	display: grid;
-	grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+	grid-template-columns: minmax(304px, 336px) minmax(0, 1fr);
 	gap: 16px;
 	align-items: start;
 }
 
 /* One column below the width where a sidebar beside a seven-column grid stops fitting. */
-@media (max-width: 782px) {
+@media (max-width: 1080px) {
 	.ax-cal-workspace__body {
 		grid-template-columns: minmax(0, 1fr);
 	}
@@ -47,12 +47,7 @@
 	padding: 8px;
 }
 
-/*
- * Core's picker sizes itself for a settings panel, which is wider than this sidebar. Constrained
- * from the outside rather than by reaching into its internals: `components-datetime__date` no longer
- * exists in current builds, and a rule written against a class core has stopped emitting is a rule
- * that silently does nothing.
- */
+/* Core's picker needs a settings-panel-width column; do not style undocumented internals. */
 .ax-cal-workspace__mini > * {
 	max-width: 100%;
 }

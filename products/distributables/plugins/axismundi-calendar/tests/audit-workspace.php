@@ -73,6 +73,22 @@ ax_ws_assert(
 );
 ax_ws_assert( $ax_ws_results, 'in the form Intl accepts, which is not the form WordPress stores', ! str_contains( (string) $ax_ws_config['locale'], '_' ) );
 
+/*
+ * Core DatePicker returns a local `Y-m-d\\TH:i:s` string. Passing a Date through its formatter then
+ * parsing the response as ISO crosses the browser/site timezone boundary and selects the previous
+ * day on UTC sites east of Greenwich. Keep the boundary explicitly civil instead.
+ */
+ax_ws_assert(
+	$ax_ws_results,
+	'the mini picker receives a local wall-time cursor rather than a timezone-bearing Date',
+	str_contains( $ax_ws_workspace_script, 'currentDate: datePickerValue( props.cursor )' )
+);
+ax_ws_assert(
+	$ax_ws_results,
+	'and reads its selected year, month and day without ISO timezone parsing',
+	str_contains( $ax_ws_workspace_script, 'var parsed = new Date( year, month, day );' ) && ! str_contains( $ax_ws_workspace_script, 'new Date( String( value ) )' )
+);
+
 /** A user with a public Person Actor. */
 function ax_ws_user( array &$users ) : array {
 	$login   = 'ax_ws_' . strtolower( wp_generate_password( 8, false, false ) );

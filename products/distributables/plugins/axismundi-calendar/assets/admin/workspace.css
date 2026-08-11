@@ -34,6 +34,29 @@
 	}
 }
 
+.ax-cal-workspace__aside {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.ax-cal-workspace__mini {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	padding: 8px;
+}
+
+/*
+ * Core's picker sizes itself for a settings panel, which is wider than this sidebar. Constrained
+ * from the outside rather than by reaching into its internals: `components-datetime__date` no longer
+ * exists in current builds, and a rule written against a class core has stopped emitting is a rule
+ * that silently does nothing.
+ */
+.ax-cal-workspace__mini > * {
+	max-width: 100%;
+}
+
 .ax-cal-workspace__sidebar {
 	background: #fff;
 	border: 1px solid #dcdcde;
@@ -114,6 +137,19 @@
 
 .ax-cal-workspace__day.is-outside .ax-cal-workspace__daynum {
 	color: #a7aaad;
+}
+
+.ax-cal-workspace__day {
+	cursor: pointer;
+}
+
+.ax-cal-workspace__day.is-selected {
+	box-shadow: inset 0 0 0 2px #2271b1;
+}
+
+.ax-cal-workspace__day:focus-visible {
+	outline: 2px solid #2271b1;
+	outline-offset: -2px;
 }
 
 .ax-cal-workspace__day.is-today .ax-cal-workspace__daynum {

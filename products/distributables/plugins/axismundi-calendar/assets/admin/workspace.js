@@ -90,6 +90,28 @@
 		return names;
 	}
 
+	/** Local midnight of a date, which is what a day-precision cursor is. */
+	function startOfDay( date ) {
+		return new Date( date.getFullYear(), date.getMonth(), date.getDate() );
+	}
+
+	/**
+	 * The month a cursor falls in, as a key.
+	 *
+	 * What the range fetch depends on, rather than the cursor itself: moving between days of the same
+	 * month redraws nothing new, and refetching on every click in the mini calendar would make it feel
+	 * slower the more it is used.
+	 */
+	function monthKey( date ) {
+		return date.getFullYear() + '-' + date.getMonth();
+	}
+
+	/** A Date from what `DatePicker` reports, which is a local wall-clock string. */
+	function pickedDate( value ) {
+		var parsed = value instanceof Date ? value : new Date( String( value ) );
+		return isNaN( parsed.getTime() ) ? null : startOfDay( parsed );
+	}
+
 	function monthTitle( year, month ) {
 		return new Date( year, month, 1 ).toLocaleDateString( locale, { year: 'numeric', month: 'long' } );
 	}
@@ -147,6 +169,38 @@
 	}
 
 	/* -- The sidebar ---------------------------------------------------------------------------- */
+
+	/**
+	 * The sidebar mini calendar.
+	 *
+	 * Core's `DatePicker` rather than a second grid of our own: it already answers month navigation,
+	 * roving tabindex, keyboard movement and the week start, and a hand-written copy would answer
+	 * some of them worse. It is a date picker and nothing more -- the main grid is not one of these,
+	 * because it lays occurrences from several calendars over the same days.
+	 *
+	 * Absent on a WordPress too old to export it, in which case the sidebar simply has no mini
+	 * calendar: the toolbar already moves the cursor, so this is a convenience rather than the only
+	 * way to navigate.
+	 */
+	function MiniCalendar( props ) {
+		if ( ! C.DatePicker ) {
+			return null;
+		}
+		return el(
+			'div',
+			{ className: 'ax-cal-workspace__mini' },
+			el( C.DatePicker, {
+				currentDate: props.cursor,
+				startOfWeek: startOfWeek,
+				onChange: function ( value ) {
+					var picked = pickedDate( value );
+					if ( picked ) {
+						props.onPick( picked );
+					}
+				}
+			} )
+		);
+	}
 
 	function CalendarList( props ) {
 		var owned = props.calendars.filter( function ( calendar ) {
@@ -207,6 +261,7 @@
 		var placed = byDay( props.items );
 		var days = gridDays( props.year, props.month, props.startOfWeek );
 		var today = localKey( new Date() );
+		var cursorKey = localKey( props.cursor );
 
 		return el(
 			'div',
@@ -225,14 +280,44 @@
 					var key = localKey( day );
 					var entries = placed[ key ] || [];
 					var outside = day.getMonth() !== props.month;
+					var pick = function ( offset ) {
+						return new Date( day.getFullYear(), day.getMonth(), day.getDate() + offset );
+					};
 					return el(
 						'div',
 						{
 							key: key,
 							role: 'gridcell',
+							/*
+							 * Reachable by keyboard, because a cell that only answers a mouse is a cell
+							 * half the people using this screen cannot select. Roving tabindex: the
+							 * selected day is the one tab stop, and arrow keys move within the grid the
+							 * way the mini calendar does.
+							 */
+							tabIndex: key === cursorKey ? 0 : -1,
+							'aria-selected': key === cursorKey,
 							className: 'ax-cal-workspace__day'
 								+ ( outside ? ' is-outside' : '' )
 								+ ( key === today ? ' is-today' : '' )
+								+ ( key === cursorKey ? ' is-selected' : '' ),
+							// Selecting the day, which is all a click does for now. What goes here next
+							// is the quick-create draft, and putting the selection in first is what
+							// proves the mini calendar and the grid share one cursor.
+							onClick: function () {
+								props.onPickDay( pick( 0 ) );
+							},
+							onKeyDown: function ( event ) {
+								var moves = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
+								if ( 'Enter' === event.key || ' ' === event.key ) {
+									event.preventDefault();
+									props.onPickDay( pick( 0 ) );
+									return;
+								}
+								if ( Object.prototype.hasOwnProperty.call( moves, event.key ) ) {
+									event.preventDefault();
+									props.onPickDay( pick( moves[ event.key ] ) );
+								}
+							}
 						},
 						el( 'div', { className: 'ax-cal-workspace__daynum' }, day.getDate() ),
 						entries.map( function ( item, index ) {
@@ -242,7 +327,10 @@
 									type: 'button',
 									key: key + '-' + index,
 									className: 'ax-cal-workspace__event' + ( item.readOnly ? ' is-readonly' : '' ),
-									onClick: function () {
+									onClick: function ( event ) {
+										// Otherwise the cell beneath also handles it and the day moves
+										// while a dialog about one of its events opens.
+										event.stopPropagation();
 										props.onSelect( item );
 									}
 								},
@@ -297,9 +385,16 @@
 
 	function Workspace() {
 		var now = new Date();
-		var monthState = useState( { year: now.getFullYear(), month: now.getMonth() } );
-		var cursor = monthState[ 0 ];
-		var setCursor = monthState[ 1 ];
+		/*
+		 * One date, not a month. Every view this screen will grow -- day, four-day, week, year --
+		 * computes its own period from the same cursor, and a month-shaped state would have to be
+		 * widened or duplicated for each of them.
+		 */
+		var cursorState = useState( startOfDay( now ) );
+		var cursor = cursorState[ 0 ];
+		var setCursor = cursorState[ 1 ];
+		var year = cursor.getFullYear();
+		var month = cursor.getMonth();
 
 		var calendarState = useState( null );
 		var calendars = calendarState[ 0 ];
@@ -339,7 +434,7 @@
 		// grid cannot start until the sidebar has come back and said which calendars are ticked, so it
 		// arrives visibly later even when both are quick.
 		useEffect( function () {
-			var days = gridDays( cursor.year, cursor.month, startOfWeek );
+			var days = gridDays( year, month, startOfWeek );
 			setBusy( true );
 			apiFetch( {
 				path: wp.url.addQueryArgs( '/' + config.namespace + '/actors/me/calendarWorkspace', {
@@ -386,7 +481,7 @@
 			}
 			// A whole grid, not a whole month: the six weeks drawn include days either side, and asking
 			// only for the month would leave those cells empty while looking complete.
-			var days = gridDays( cursor.year, cursor.month, startOfWeek );
+			var days = gridDays( year, month, startOfWeek );
 			setBusy( true );
 			apiFetch( {
 				path: wp.url.addQueryArgs( '/' + config.namespace + '/actors/me/calendarView', {
@@ -404,7 +499,7 @@
 				.finally( function () {
 					setBusy( false );
 				} );
-		}, [ tickedKey, cursor.year, cursor.month, loaded ] );
+		}, [ tickedKey, monthKey( cursor ), loaded ] );
 
 		function toggle( calendar, next ) {
 			// Optimistic, because the answer is already known and a checkbox that waits for a round
@@ -424,9 +519,15 @@
 			} );
 		}
 
+		/*
+		 * Moving a month keeps the day of the month where the target has one, so the mini calendar's
+		 * selection follows the toolbar instead of jumping to the 1st. Clamped for the months that are
+		 * shorter: the 31st of a 30-day month is the 30th, not the 1st of the month after.
+		 */
 		function move( delta ) {
-			var next = new Date( cursor.year, cursor.month + delta, 1 );
-			setCursor( { year: next.getFullYear(), month: next.getMonth() } );
+			var target = new Date( year, month + delta, 1 );
+			var lastDay = new Date( target.getFullYear(), target.getMonth() + 1, 0 ).getDate();
+			setCursor( new Date( target.getFullYear(), target.getMonth(), Math.min( cursor.getDate(), lastDay ) ) );
 		}
 
 		if ( null === calendars ) {
@@ -440,8 +541,7 @@
 				'div',
 				{ className: 'ax-cal-workspace__bar' },
 				el( C.Button, { variant: 'secondary', onClick: function () {
-					var today = new Date();
-					setCursor( { year: today.getFullYear(), month: today.getMonth() } );
+					setCursor( startOfDay( new Date() ) );
 				} }, __( 'Today', 'axismundi-calendar' ) ),
 				el( C.Button, { icon: 'arrow-left-alt2', label: __( 'Previous month', 'axismundi-calendar' ), onClick: function () {
 					move( -1 );
@@ -449,7 +549,7 @@
 				el( C.Button, { icon: 'arrow-right-alt2', label: __( 'Next month', 'axismundi-calendar' ), onClick: function () {
 					move( 1 );
 				} } ),
-				el( 'h1', { className: 'ax-cal-workspace__title' }, monthTitle( cursor.year, cursor.month ) ),
+				el( 'h1', { className: 'ax-cal-workspace__title' }, monthTitle( year, month ) ),
 				busy ? el( C.Spinner, null ) : null,
 				el( C.Button, { variant: 'primary', href: config.newEvent }, __( 'Add event', 'axismundi-calendar' ) )
 			),
@@ -466,12 +566,19 @@
 			el(
 				'div',
 				{ className: 'ax-cal-workspace__body' },
-				el( CalendarList, { calendars: calendars, busy: busy, onToggle: toggle } ),
+				el(
+					'div',
+					{ className: 'ax-cal-workspace__aside' },
+					el( MiniCalendar, { cursor: cursor, onPick: setCursor } ),
+					el( CalendarList, { calendars: calendars, busy: busy, onToggle: toggle } )
+				),
 				el( MonthGrid, {
 					items: items,
-					year: cursor.year,
-					month: cursor.month,
+					year: year,
+					month: month,
+					cursor: cursor,
 					startOfWeek: startOfWeek,
+					onPickDay: setCursor,
 					onSelect: setSelected
 				} )
 			),

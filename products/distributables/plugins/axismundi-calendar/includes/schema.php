@@ -106,7 +106,7 @@ function axismundi_cal_install_schema() : bool {
 			display_end_time tinyint(1) unsigned NOT NULL default 1,
 			previous_starts_at_gmt datetime NULL,
 			event_status varchar(24) NOT NULL default 'EventScheduled',
-			join_mode varchar(16) NOT NULL default 'free',
+			join_mode varchar(16) NOT NULL default 'none',
 			external_participation_url text NOT NULL,
 			maximum_attendee_capacity int(10) unsigned NULL,
 			created_at datetime NOT NULL,

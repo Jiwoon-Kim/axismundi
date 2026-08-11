@@ -71,7 +71,14 @@ try {
 		)
 	);
 	$ax_ev_posts[] = $ax_ev_post;
-	$ax_ev_calendar = axismundi_cal_calendar_save( array( 'name' => 'Authoring calendar', 'slug' => 'audit-authoring-' . $ax_ev_post, 'timezone' => 'Asia/Seoul' ) );
+	$ax_ev_calendar = axismundi_cal_calendar_save(
+		array(
+			'name'            => 'Authoring calendar',
+			'slug'            => 'audit-authoring-' . $ax_ev_post,
+			'timezone'        => 'Asia/Seoul',
+			'owner_actor_uri' => $ax_ev_actor instanceof Axismundi_Actor ? (string) $ax_ev_actor->get_uri() : '',
+		)
+	);
 	// Published on purpose. Every surface these fixtures exercise is a public one, and a Calendar is
 	// private until somebody says otherwise, so the fixture has to say so.
 	axismundi_cal_acl_grant( (int) $ax_ev_calendar, '', 'reader', 'public' );
@@ -114,7 +121,7 @@ try {
 			'calendarId'     => (int) $ax_ev_calendar,
 			'startsAt'       => '2026-09-01 19:00:00',
 			'endsAt'         => '2026-09-01 21:00:00',
-			'joinMode'       => 'free',
+			'joinMode'       => 'none',
 			'displayEndTime' => true,
 		),
 		'publish'
@@ -148,6 +155,8 @@ try {
 	ax_ev_assert( $ax_ev_results, 'a published Event projects as an Event', is_array( $ax_ev_object ) && 'Event' === ( $ax_ev_object['type'] ?? '' ) );
 	ax_ev_assert( $ax_ev_results, 'and not as an Article, which is what a lost transformer would leave behind', is_array( $ax_ev_object ) && 'Article' !== ( $ax_ev_object['type'] ?? '' ) );
 	ax_ev_assert( $ax_ev_results, 'the wire carries the offset of the chosen zone, and the IANA name separately', is_array( $ax_ev_object ) && str_contains( (string) ( $ax_ev_object['startTime'] ?? '' ), '+09:00' ) && 'Asia/Seoul' === ( $ax_ev_object['timezone'] ?? '' ) );
+	ax_ev_assert( $ax_ev_results, 'the Calendar authority is both publisher attribution and the first organizer', is_array( $ax_ev_object ) && (string) ( $ax_ev_object['attributedTo'] ?? '' ) === (string) axismundi_cal_calendar_authority( (int) $ax_ev_calendar ) && 'Collection' === ( $ax_ev_object['organizers']['type'] ?? '' ) && array( (string) axismundi_cal_calendar_authority( (int) $ax_ev_calendar ) ) === ( $ax_ev_object['organizers']['items'] ?? array() ) );
+	ax_ev_assert( $ax_ev_results, 'an Event without RSVP handling explicitly declines federated joins', is_array( $ax_ev_object ) && 'none' === ( $ax_ev_object['joinMode'] ?? '' ) );
 
 	// -- Refusals the panel surfaces --------------------------------------------------------
 

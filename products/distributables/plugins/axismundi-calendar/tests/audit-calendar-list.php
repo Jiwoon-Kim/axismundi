@@ -41,27 +41,27 @@ try {
 
 	ax_ls_assert(
 		$ax_ls_results,
-		'creating one records its owner as a relation rather than a column on the calendar',
-		$ax_ls_alice === axismundi_cal_calendar_owner( (int) $ax_ls_cal )
+		'creating one records its authority on the Calendar itself',
+		$ax_ls_alice === axismundi_cal_calendar_authority( (int) $ax_ls_cal )
 	);
 
 	$ax_ls_entry = axismundi_cal_list_entry( (int) $ax_ls_cal, $ax_ls_alice );
 	ax_ls_assert(
 		$ax_ls_results,
-		'the entry carries the role and a hash of the Actor URI',
-		is_array( $ax_ls_entry ) && 'owner' === $ax_ls_entry['access_role'] && hash( 'sha256', $ax_ls_alice ) === $ax_ls_entry['actor_uri_hash']
+		'the default sidebar entry carries a hash of the Actor URI but not authority',
+		is_array( $ax_ls_entry ) && 'reader' === $ax_ls_entry['access_role'] && hash( 'sha256', $ax_ls_alice ) === $ax_ls_entry['actor_uri_hash']
 	);
 
 	axismundi_cal_list_set( (int) $ax_ls_cal, $ax_ls_bob, 'reader' );
 	ax_ls_assert( $ax_ls_results, 'a second Actor can stand in a different relation to the same calendar', 2 === count( axismundi_cal_calendar_list_entries( (int) $ax_ls_cal ) ) );
 	ax_ls_assert( $ax_ls_results, 'and the owner is still the owner', $ax_ls_alice === axismundi_cal_calendar_owner( (int) $ax_ls_cal ) );
 
-	axismundi_cal_list_set( (int) $ax_ls_cal, $ax_ls_bob, 'writer' );
+	axismundi_cal_list_set( (int) $ax_ls_cal, $ax_ls_bob, 'writer', array( 'selected' => false ) );
 	ax_ls_assert(
 		$ax_ls_results,
-		'setting an Actor again updates their relation instead of adding a second one',
+		'setting an Actor again updates their view state instead of adding a second entry',
 		2 === count( axismundi_cal_calendar_list_entries( (int) $ax_ls_cal ) )
-			&& 'writer' === (string) axismundi_cal_list_entry( (int) $ax_ls_cal, $ax_ls_bob )['access_role']
+			&& 0 === (int) axismundi_cal_list_entry( (int) $ax_ls_cal, $ax_ls_bob )['selected']
 	);
 
 	ax_ls_assert( $ax_ls_results, 'an entry with no Actor is refused, since it would name no relation', is_wp_error( axismundi_cal_list_set( (int) $ax_ls_cal, '  ', 'reader' ) ) );
@@ -89,8 +89,9 @@ try {
 	// -- Writing is owner or writer, not owner alone -------------------------------------------------
 
 	ax_ls_assert( $ax_ls_results, 'an owner may write', true === axismundi_cal_actor_may_write( (int) $ax_ls_cal, $ax_ls_alice ) );
+	axismundi_cal_acl_grant( (int) $ax_ls_cal, $ax_ls_bob, 'writer' );
 	ax_ls_assert( $ax_ls_results, 'a writer may too', true === axismundi_cal_actor_may_write( (int) $ax_ls_cal, $ax_ls_bob ) );
-	axismundi_cal_list_set( (int) $ax_ls_cal, $ax_ls_bob, 'reader' );
+	axismundi_cal_acl_grant( (int) $ax_ls_cal, $ax_ls_bob, 'reader' );
 	ax_ls_assert( $ax_ls_results, 'and a reader may not, which is what makes the role mean anything', false === axismundi_cal_actor_may_write( (int) $ax_ls_cal, $ax_ls_bob ) );
 	ax_ls_assert( $ax_ls_results, 'nor may an Actor with no relation at all', false === axismundi_cal_actor_may_write( (int) $ax_ls_cal, 'https://example.test/@stranger' ) );
 
@@ -118,8 +119,8 @@ try {
 	);
 	$ax_ls_calendars[] = (int) $ax_ls_second;
 
-	$ax_ls_owned = axismundi_cal_actor_calendar_list( $ax_ls_alice, 'owner' );
-	ax_ls_assert( $ax_ls_results, 'an Actor can be asked which calendars they own', 2 === count( $ax_ls_owned ) );
+	$ax_ls_owned = axismundi_cal_actor_calendar_list( $ax_ls_alice );
+	ax_ls_assert( $ax_ls_results, 'an Actor can be asked which calendars they added to their list', 2 === count( $ax_ls_owned ) );
 	ax_ls_assert( $ax_ls_results, 'and the rows carry the calendar itself, not only the relation', isset( $ax_ls_owned[0]['name'], $ax_ls_owned[0]['access_role'] ) );
 	ax_ls_assert( $ax_ls_results, 'while another Actor sees only what they are related to', 1 === count( axismundi_cal_actor_calendar_list( $ax_ls_bob ) ) );
 
@@ -167,43 +168,30 @@ try {
 
 	ax_ls_assert( $ax_ls_results, 'a pre-migration calendar starts with no owner relation', '' === axismundi_cal_calendar_owner( (int) $ax_ls_legacy ) );
 	$ax_ls_seeded = axismundi_cal_seed_owner_entries();
-	ax_ls_assert( $ax_ls_results, 'the migration creates the owner entry the column implied', $ax_ls_seeded >= 1 && $ax_ls_bob === axismundi_cal_calendar_owner( (int) $ax_ls_legacy ) );
+	$ax_ls_backfilled = axismundi_cal_backfill_authority();
+	axismundi_cal_seed_authority_acl();
+	ax_ls_assert( $ax_ls_results, 'the migration carries the legacy owner to Calendar authority', $ax_ls_seeded >= 1 && $ax_ls_backfilled >= 1 && $ax_ls_bob === axismundi_cal_calendar_authority( (int) $ax_ls_legacy ) );
 
 	$ax_ls_before = count( axismundi_cal_calendar_list_entries( (int) $ax_ls_legacy ) );
 	axismundi_cal_seed_owner_entries();
 	ax_ls_assert(
 		$ax_ls_results,
-		'running it twice does not produce a second owner, which is the ambiguity this table exists to remove',
+		'running it twice does not produce a second sidebar entry',
 		$ax_ls_before === count( axismundi_cal_calendar_list_entries( (int) $ax_ls_legacy ) )
 	);
 
-	$ax_ls_verify = axismundi_cal_verify_owner_migration();
+	$ax_ls_verify = axismundi_cal_verify_authority_migration();
 	ax_ls_assert( $ax_ls_results, 'the transition verifies, which is what the column drop is gated on', true === $ax_ls_verify['ok'] );
-	ax_ls_assert( $ax_ls_results, 'with no calendar left owning nothing', array() === $ax_ls_verify['missing'] );
-	ax_ls_assert( $ax_ls_results, 'no calendar whose entry disagrees with its column', array() === $ax_ls_verify['mismatched'] );
-	ax_ls_assert( $ax_ls_results, 'no calendar with two owners', array() === $ax_ls_verify['multiple'] );
-	ax_ls_assert( $ax_ls_results, 'no entry whose hash does not match its URI', array() === $ax_ls_verify['bad_hash'] );
-	ax_ls_assert( $ax_ls_results, 'and no subscribed calendar that acquired an owner', array() === $ax_ls_verify['remote_owned'] );
+	ax_ls_assert( $ax_ls_results, 'with no legacy owner missing authority', array() === $ax_ls_verify['missing_authority'] );
+	ax_ls_assert( $ax_ls_results, 'and no legacy owner mismatched to authority', array() === $ax_ls_verify['mismatched_authority'] );
 
 	// The verifier has to be able to say no, or a green result before the drop means nothing.
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit fixture forcing a bad state.
-	$wpdb->insert(
-		axismundi_cal_entries_list_table(),
-		array(
-			'calendar_id'    => (int) $ax_ls_cal,
-			'actor_uri'      => $ax_ls_bob,
-			'actor_uri_hash' => hash( 'sha256', 'not-the-right-uri' ),
-			'access_role'    => 'owner',
-			'created_at'     => current_time( 'mysql', true ),
-			'updated_at'     => current_time( 'mysql', true ),
-		)
-	);
-	$ax_ls_bad = axismundi_cal_verify_owner_migration();
-	ax_ls_assert( $ax_ls_results, 'a second owner is reported rather than passing quietly', in_array( (int) $ax_ls_cal, $ax_ls_bad['multiple'], true ) );
-	ax_ls_assert( $ax_ls_results, 'a hash that does not match its URI is reported too', ! empty( $ax_ls_bad['bad_hash'] ) );
+	$wpdb->update( axismundi_cal_calendars_table(), array( 'authority_actor_uri_hash' => hash( 'sha256', 'not-the-right-uri' ) ), array( 'id' => (int) $ax_ls_cal ) );
+	$ax_ls_bad = axismundi_cal_verify_authority_migration();
+	ax_ls_assert( $ax_ls_results, 'a bad authority hash is reported rather than passing quietly', in_array( (int) $ax_ls_cal, $ax_ls_bad['bad_hash'], true ) );
 	ax_ls_assert( $ax_ls_results, 'and the verification says no overall', false === $ax_ls_bad['ok'] );
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit fixture cleanup.
-	$wpdb->delete( axismundi_cal_entries_list_table(), array( 'calendar_id' => (int) $ax_ls_cal, 'actor_uri_hash' => hash( 'sha256', 'not-the-right-uri' ) ) );
+	$wpdb->update( axismundi_cal_calendars_table(), array( 'authority_actor_uri_hash' => hash( 'sha256', $ax_ls_alice ) ), array( 'id' => (int) $ax_ls_cal ) );
 
 	// -- An upgrade must not cost anything the table alone knows ------------------------------------
 

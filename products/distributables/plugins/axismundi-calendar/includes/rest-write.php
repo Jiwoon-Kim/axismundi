@@ -9,9 +9,8 @@
  * reason, and folding them together would let "hide this from my sidebar" and "remove their access"
  * arrive through one request.
  *
- * The roles a client may state are also different. A list entry never carries an authorization: its
- * `access_role` is written from the ACL, never from the request, so adding a Calendar to your list
- * cannot be a way of claiming a role in it.
+ * A list entry never carries an authorization. Its transitional `access_role` value is never read
+ * for permission, so adding a Calendar to your list cannot be a way of claiming a role in it.
  *
  * @package AxismundiCalendar
  */
@@ -43,8 +42,8 @@ function axismundi_cal_rest_writer_actor() {
  * "add a shared calendar to my sidebar" is: the grant already happened, and this is the Actor
  * choosing to look at it.
  *
- * The stored `access_role` comes from the ACL. A client that sent `owner` here would otherwise be
- * writing its own permissions into the table two other functions still read.
+ * The transitional `access_role` column is not a permission input. The API response computes access
+ * from the ACL, and this write only records the caller's personal view state.
  *
  * @param WP_REST_Request $request Request.
  * @return WP_REST_Response|WP_Error
@@ -67,9 +66,7 @@ function axismundi_cal_rest_list_write( WP_REST_Request $request ) {
 		}
 	}
 
-	$role   = axismundi_cal_request_role( $calendar_id );
-	$stored = in_array( $role, AXISMUNDI_CAL_ACCESS_ROLES, true ) ? $role : 'reader';
-	$result = axismundi_cal_list_set( $calendar_id, $actor_uri, $stored, $state );
+	$result = axismundi_cal_list_set( $calendar_id, $actor_uri, 'reader', $state );
 	if ( is_wp_error( $result ) ) {
 		return $result;
 	}
@@ -82,10 +79,6 @@ function axismundi_cal_rest_list_write( WP_REST_Request $request ) {
  *
  * Removes the Calendar from the caller's list. Their access is untouched: this is the sidebar, not
  * the ACL, and somebody hiding a calendar has not resigned from it.
- *
- * Refused for an owner entry. `axismundi_cal_calendar_owner()` reads that row, so removing it would
- * not unsubscribe the owner -- it would leave the Calendar with nobody recorded as owning it, which
- * the admin screen and the authority backfill both read as ownerless.
  *
  * @param WP_REST_Request $request Request.
  * @return WP_REST_Response|WP_Error
@@ -104,13 +97,6 @@ function axismundi_cal_rest_list_remove( WP_REST_Request $request ) {
 	$entry       = axismundi_cal_list_entry( $calendar_id, $actor_uri );
 	if ( ! is_array( $entry ) ) {
 		return new WP_Error( 'ax_cal_no_entry', __( 'That calendar is not in your list.', 'axismundi-calendar' ), array( 'status' => 404 ) );
-	}
-	if ( 'owner' === (string) $entry['access_role'] ) {
-		return new WP_Error(
-			'ax_cal_owner_entry',
-			__( 'You own this calendar, so it cannot be removed from your list. Transfer or delete it instead.', 'axismundi-calendar' ),
-			array( 'status' => 409 )
-		);
 	}
 	axismundi_cal_list_remove( $calendar_id, $actor_uri );
 	return new WP_REST_Response( array( 'removed' => true, 'calendar' => (string) $calendar['uuid'] ), 200 );
@@ -191,7 +177,6 @@ function axismundi_cal_rest_acl_grant( WP_REST_Request $request ) {
 	if ( is_wp_error( $result ) ) {
 		return $result;
 	}
-	axismundi_cal_sync_entry_role( $calendar_id, $principal, $role );
 	$rule = axismundi_cal_acl_rule( $calendar_id, $principal, $type );
 	return new WP_REST_Response( axismundi_cal_rest_acl_rule( (array) $rule ), 200 );
 }
@@ -228,8 +213,6 @@ function axismundi_cal_rest_acl_revoke( WP_REST_Request $request ) {
 	}
 
 	axismundi_cal_acl_revoke( $calendar_id, $principal, $type );
-	// The entry keeps its own view state but must not keep a role the rule no longer grants.
-	axismundi_cal_sync_entry_role( $calendar_id, $principal, 'reader' );
 	return new WP_REST_Response( array( 'revoked' => true ), 200 );
 }
 

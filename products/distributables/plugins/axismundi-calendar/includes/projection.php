@@ -118,21 +118,32 @@ function axismundi_cal_event_transform( $source ) : array {
 		'published'    => get_post_time( DATE_W3C, true, $source ),
 		'updated'      => get_post_modified_time( DATE_W3C, true, $source ),
 		'eventStatus'  => (string) $envelope['event_status'],
-		'joinMode'     => (string) $envelope['join_mode'],
+		/*
+		 * Local Join and Invite handling does not exist yet. Advertising `free`, `restricted` or
+		 * `invite` would invite a remote actor to send an Activity this instance cannot honour.
+		 * `external` remains meaningful because it names a working off-site participation URL.
+		 */
+		'joinMode'     => 'external' === (string) $envelope['join_mode'] ? 'external' : 'none',
 	);
 
-	$author = function_exists( 'axismundi_op_local_author_actor_uri' )
-		? axismundi_op_local_author_actor_uri( (int) $source->post_author )
-		: '';
-	if ( '' !== $author ) {
-		$event['attributedTo'] = $author;
+	$schedule  = axismundi_cal_schedule_for_event( (int) $source->ID );
+	$authority = is_array( $schedule ) ? axismundi_cal_calendar_authority( (int) $schedule['calendar_id'] ) : '';
+	if ( '' !== $authority ) {
+		$event['attributedTo'] = $authority;
 		/*
 		 * `organizers` is required by FEP-8a8e and is not the same claim as `attributedTo`: one
-		 * says who published the record, the other who is running the event. They are the same
-		 * Actor until this plugin can express otherwise, and stating both now means adding
-		 * co-organizers later does not change what the property means.
+		 * says who published the record, the other who is running the event. The FEP requires a
+		 * Collection, not an array; an inline Collection is honest until organizer paging exists.
 		 */
-		$event['organizers'] = array( $author );
+		$event['organizers'] = array(
+			'type'       => 'Collection',
+			'totalItems' => 1,
+			'items'      => array( $authority ),
+		);
+	} else {
+		// `null` explicitly says organizer disclosure is withheld or unavailable; consumers must not
+		// guess from the post author, which may only be the editor who entered the Event.
+		$event['organizers'] = null;
 	}
 
 	$content = apply_filters( 'the_content', $source->post_content );
@@ -147,7 +158,7 @@ function axismundi_cal_event_transform( $source ) : array {
 	if ( ! empty( $envelope['previous_starts_at_gmt'] ) ) {
 		$event['previousStartTime'] = axismundi_cal_iso8601( (string) $envelope['previous_starts_at_gmt'], 'UTC' );
 	}
-	if ( 'external' === (string) $envelope['join_mode'] && '' !== (string) $envelope['external_participation_url'] ) {
+	if ( 'external' === (string) $event['joinMode'] && '' !== (string) $envelope['external_participation_url'] ) {
 		$event['externalParticipationUrl'] = (string) $envelope['external_participation_url'];
 	}
 	if ( null !== $envelope['maximum_attendee_capacity'] ) {

@@ -39,7 +39,7 @@ function axismundi_cal_rest_envelope( int $post_id ) : array {
 			'timezone'                 => '',
 			'displayEndTime'           => true,
 			'eventStatus'              => 'EventScheduled',
-			'joinMode'                 => 'free',
+		'joinMode'                 => 'none',
 			'externalParticipationUrl' => '',
 			'maximumAttendeeCapacity'  => null,
 			'previousStartsAtGmt'      => '',

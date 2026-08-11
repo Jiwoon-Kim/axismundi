@@ -7,10 +7,8 @@
  * A list write that could carry a role would be a way of granting yourself one, and that is the case
  * asserted first.
  *
- * The invariants worth stating are the ones with no way back once broken: a Calendar with no owner
- * cannot be shared, renamed or deleted by anybody, and an owner entry removed from a list leaves the
- * admin screen reading the Calendar as ownerless. Both are refused at the request rather than
- * repaired afterwards.
+ * Authority and ACL are ownership facts; a CalendarList entry is not. Even an owner may remove
+ * their own sidebar entry without changing either authority or access.
  *
  * @package AxismundiCalendar
  */
@@ -147,7 +145,7 @@ try {
 	ax_rw_assert( $ax_rw_results, 'and the role reported is the one the ACL grants', 'reader' === ( $ax_rw_body['accessRole'] ?? '' ) );
 	ax_rw_assert(
 		$ax_rw_results,
-		'as is the role actually stored, so the list cannot be used to claim one',
+		'and the legacy entry column cannot alter the role the API computes',
 		'reader' === (string) axismundi_cal_list_entry( $ax_rw_cal, $ax_rw_reader['actor_uri'] )['access_role']
 	);
 	ax_rw_assert( $ax_rw_results, 'while their own view state is kept', 'Shared with me' === ( $ax_rw_body['summaryOverride'] ?? '' ) );
@@ -164,12 +162,13 @@ try {
 		true === axismundi_cal_can_read( $ax_rw_cal, $ax_rw_reader['actor_uri'] )
 	);
 
-	// -- What cannot be undone --------------------------------------------------------------------------
+	// -- Authority and ACL survive sidebar changes -------------------------------------------------------
 
 	wp_set_current_user( $ax_rw_owner['user_id'] );
 	list( $ax_rw_status ) = ax_rw_call( 'DELETE', '/axismundi/v1/actors/me/calendarList/' . $ax_rw_uuid );
-	ax_rw_assert( $ax_rw_results, 'an owner cannot remove their own entry, which is what records the ownership', 409 === $ax_rw_status );
-	ax_rw_assert( $ax_rw_results, 'so the Calendar still has an owner on record', $ax_rw_owner['actor_uri'] === axismundi_cal_calendar_owner( $ax_rw_cal ) );
+	ax_rw_assert( $ax_rw_results, 'an owner may remove their own sidebar entry', 200 === $ax_rw_status );
+	ax_rw_assert( $ax_rw_results, 'while Calendar authority remains on the Calendar itself', $ax_rw_owner['actor_uri'] === axismundi_cal_calendar_authority( $ax_rw_cal ) );
+	ax_rw_assert( $ax_rw_results, 'and the ACL still lets the owner administer it', true === axismundi_cal_can_write( $ax_rw_cal, $ax_rw_owner['actor_uri'] ) );
 
 	list( $ax_rw_status ) = ax_rw_call(
 		'DELETE',
@@ -192,12 +191,8 @@ try {
 	ax_rw_assert( $ax_rw_results, 'once a second owner exists the first may step down', 200 === $ax_rw_status );
 	ax_rw_assert( $ax_rw_results, 'and loses the access with it', false === axismundi_cal_can_read( $ax_rw_cal, $ax_rw_owner['actor_uri'], $ax_rw_owner['user_id'] ) );
 
-	/*
-	 * The entry the departed owner still has must not go on claiming the role. Two functions and the
-	 * admin screen read that column, and a revoked owner sitting in it is what they would report.
-	 */
 	$ax_rw_stale = axismundi_cal_list_entry( $ax_rw_cal, $ax_rw_owner['actor_uri'] );
-	ax_rw_assert( $ax_rw_results, 'their entry no longer claims the role the rule took away', is_array( $ax_rw_stale ) && 'owner' !== (string) $ax_rw_stale['access_role'] );
+	ax_rw_assert( $ax_rw_results, 'their removed entry is not recreated when the ACL changes', null === $ax_rw_stale );
 
 	// -- A Group's calendar, and the people who manage the Group -------------------------------------------
 

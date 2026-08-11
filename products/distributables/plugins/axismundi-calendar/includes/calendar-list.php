@@ -19,7 +19,12 @@
 
 defined( 'ABSPATH' ) || exit;
 
-/** The relations an Actor can stand in to a Calendar. */
+/**
+ * Legacy values retained while the access_role column remains on existing installations.
+ *
+ * CalendarList entries are view state, not authorization. New code must use Calendar ACL helpers
+ * for access decisions; this constant only keeps the transitional column well-formed.
+ */
 const AXISMUNDI_CAL_ACCESS_ROLES = array( 'owner', 'writer', 'reader' );
 
 /**
@@ -30,7 +35,7 @@ const AXISMUNDI_CAL_ACCESS_ROLES = array( 'owner', 'writer', 'reader' );
  *
  * @param int                 $calendar_id Calendar id.
  * @param string              $actor_uri   Actor URI.
- * @param string              $access_role One of owner|writer|reader.
+ * @param string              $access_role Legacy compatibility value. Never an authorization input.
  * @param array<string,mixed> $state       Optional `selected`, `hidden`, `summary_override`, `color`.
  * @return int|WP_Error Entry id.
  */
@@ -126,18 +131,50 @@ function axismundi_cal_list_remove( int $calendar_id, string $actor_uri ) : bool
 }
 
 /**
- * The Actor a Calendar belongs to, or '' when nobody owns it.
+ * The Actor a Calendar belongs to, or '' when it has no local authority.
+ *
+ * This is deliberately read from the Calendar, not a CalendarListEntry. Removing a personal
+ * sidebar entry must never change the Calendar's authority.
+ *
+ * @param int $calendar_id Calendar id.
+ * @return string
+ */
+function axismundi_cal_calendar_authority( int $calendar_id ) : string {
+	global $wpdb;
+	if ( $calendar_id <= 0 || ! axismundi_cal_ready() ) {
+		return '';
+	}
+	$table = axismundi_cal_calendars_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+	return (string) $wpdb->get_var( $wpdb->prepare( "SELECT authority_actor_uri FROM {$table} WHERE id = %d", $calendar_id ) );
+}
+
+/**
+ * Compatibility alias for callers written before authority received its own Calendar field.
  *
  * @param int $calendar_id Calendar id.
  * @return string
  */
 function axismundi_cal_calendar_owner( int $calendar_id ) : string {
+	return axismundi_cal_calendar_authority( $calendar_id );
+}
+
+/**
+ * Read the v9 transitional owner marker from a CalendarList entry.
+ *
+ * This exists only for one-time upgrades that predate authority_actor_uri. Never use it for a
+ * current authorization or ownership decision.
+ *
+ * @param int $calendar_id Calendar id.
+ * @return string
+ */
+function axismundi_cal_legacy_entry_owner( int $calendar_id ) : string {
 	global $wpdb;
 	if ( $calendar_id <= 0 || ! axismundi_cal_ready() ) {
 		return '';
 	}
 	$table = axismundi_cal_entries_list_table();
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- legacy migration fallback.
 	return (string) $wpdb->get_var( $wpdb->prepare( "SELECT actor_uri FROM {$table} WHERE calendar_id = %d AND access_role = 'owner' ORDER BY id ASC LIMIT 1", $calendar_id ) );
 }
 
@@ -152,8 +189,7 @@ function axismundi_cal_calendar_owner( int $calendar_id ) : string {
  * @return bool
  */
 function axismundi_cal_actor_may_write( int $calendar_id, string $actor_uri ) : bool {
-	$entry = axismundi_cal_list_entry( $calendar_id, $actor_uri );
-	return is_array( $entry ) && in_array( (string) $entry['access_role'], array( 'owner', 'writer' ), true );
+	return axismundi_cal_can_write( $calendar_id, $actor_uri );
 }
 
 /**
@@ -176,10 +212,9 @@ function axismundi_cal_calendar_list_entries( int $calendar_id ) : array {
  * The Calendars one Actor stands in some relation to.
  *
  * @param string $actor_uri Actor URI.
- * @param string $access_role Restrict to one access role, or '' for all.
- * @return array<int,array<string,mixed>> Calendar rows with the entry's role and view state.
+ * @return array<int,array<string,mixed>> Calendar rows with transitional entry data and view state.
  */
-function axismundi_cal_actor_calendar_list( string $actor_uri, string $access_role = '' ) : array {
+function axismundi_cal_actor_calendar_list( string $actor_uri ) : array {
 	global $wpdb;
 	$actor_uri = trim( $actor_uri );
 	if ( '' === $actor_uri || ! axismundi_cal_ready() ) {
@@ -189,18 +224,6 @@ function axismundi_cal_actor_calendar_list( string $actor_uri, string $access_ro
 	$calendars = axismundi_cal_calendars_table();
 	$hash      = hash( 'sha256', $actor_uri );
 
-	if ( '' !== $access_role ) {
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own tables.
-		return (array) $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT c.*, e.access_role, e.selected, e.hidden, e.summary_override, e.color FROM {$entries} e INNER JOIN {$calendars} c ON c.id = e.calendar_id
-				 WHERE e.actor_uri_hash = %s AND e.access_role = %s ORDER BY c.name ASC",
-				$hash,
-				$access_role
-			),
-			ARRAY_A
-		);
-	}
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own tables.
 	return (array) $wpdb->get_results(
 		$wpdb->prepare(
@@ -213,13 +236,10 @@ function axismundi_cal_actor_calendar_list( string $actor_uri, string $access_ro
 }
 
 /**
- * Keep an existing entry's role from outliving the rule that granted it.
+ * Deprecated compatibility helper for the transitional access_role column.
  *
- * The ACL is the source, and the read API computes from it -- but `axismundi_cal_calendar_owner()`
- * and the admin screen still read this column, so a revoked owner left sitting here would go on
- * being reported as the owner. Only an entry that already exists is touched: being granted access is
- * not the same as choosing to put a Calendar in your sidebar, and creating the entry here would make
- * every grant do both.
+ * CalendarList entries intentionally outlive ACL changes as personal UI preferences. Access is
+ * always recomputed from the ACL, so no runtime caller may synchronize this cached legacy value.
  *
  * @param int    $calendar_id Calendar id.
  * @param string $actor_uri   Actor URI. '' (the public) has no entry and is ignored.
@@ -227,22 +247,7 @@ function axismundi_cal_actor_calendar_list( string $actor_uri, string $access_ro
  * @return bool Whether an entry was updated.
  */
 function axismundi_cal_sync_entry_role( int $calendar_id, string $actor_uri, string $access_role ) : bool {
-	global $wpdb;
-	$actor_uri = trim( $actor_uri );
-	if ( '' === $actor_uri || ! in_array( $access_role, AXISMUNDI_CAL_ACCESS_ROLES, true ) ) {
-		return false;
-	}
-	$entry = axismundi_cal_list_entry( $calendar_id, $actor_uri );
-	if ( ! is_array( $entry ) ) {
-		return false;
-	}
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	$wpdb->update(
-		axismundi_cal_entries_list_table(),
-		array( 'access_role' => $access_role, 'updated_at' => current_time( 'mysql', true ) ),
-		array( 'id' => (int) $entry['id'] )
-	);
-	return true;
+	return false;
 }
 
 /**
@@ -369,7 +374,7 @@ function axismundi_cal_verify_access_role_migration() : array {
 }
 
 /**
- * Create the owner entry each local Calendar's column implies.
+ * Create the default sidebar entry each local Calendar's legacy owner implies.
  *
  * The migration out of `owner_actor_uri`. Idempotent by the entry's own uniqueness, so a rerun
  * updates the row it already made rather than adding a second owner -- which is the failure that
@@ -397,7 +402,7 @@ function axismundi_cal_seed_owner_entries() : int {
 		if ( 'local' !== (string) $row['kind'] ) {
 			continue;
 		}
-		$result = axismundi_cal_list_set( (int) $row['id'], (string) $row['owner_actor_uri'], 'owner' );
+		$result = axismundi_cal_list_set( (int) $row['id'], (string) $row['owner_actor_uri'] );
 		if ( ! is_wp_error( $result ) ) {
 			++$written;
 		}
@@ -406,7 +411,7 @@ function axismundi_cal_seed_owner_entries() : int {
 }
 
 /**
- * Whether the CalendarList is a faithful replacement for the column it came from.
+ * Whether Calendar authority is a faithful replacement for the column it came from.
  *
  * Run before the column is dropped, because after that there is nothing left to compare against.
  * Reports what is wrong rather than a bare boolean, so a failed migration says which Calendar.
@@ -416,7 +421,6 @@ function axismundi_cal_seed_owner_entries() : int {
 function axismundi_cal_verify_owner_migration() : array {
 	global $wpdb;
 	$calendars = axismundi_cal_calendars_table();
-	$entries   = axismundi_cal_entries_list_table();
 
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- migration verification over this plugin's own tables.
 	$columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$calendars}" );
@@ -428,7 +432,7 @@ function axismundi_cal_verify_owner_migration() : array {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- migration verification.
 		$rows = (array) $wpdb->get_results( "SELECT id, owner_actor_uri FROM {$calendars} WHERE kind = 'local' AND owner_actor_uri <> ''", ARRAY_A );
 		foreach ( $rows as $row ) {
-			$owner = axismundi_cal_calendar_owner( (int) $row['id'] );
+			$owner = axismundi_cal_calendar_authority( (int) $row['id'] );
 			if ( '' === $owner ) {
 				$missing[] = (int) $row['id'];
 			} elseif ( $owner !== (string) $row['owner_actor_uri'] ) {
@@ -437,20 +441,11 @@ function axismundi_cal_verify_owner_migration() : array {
 		}
 	}
 
-	// More than one owner is the ambiguity this table exists to remove, so it is checked directly
-	// rather than assumed from the uniqueness key -- which constrains one Actor per Calendar, not one
-	// owner per Calendar.
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- migration verification.
-	$multiple = array_map( 'intval', (array) $wpdb->get_col( "SELECT calendar_id FROM {$entries} WHERE access_role = 'owner' GROUP BY calendar_id HAVING COUNT(*) > 1" ) );
-
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- migration verification.
-	$bad_hash = array_map( 'intval', (array) $wpdb->get_col( "SELECT id FROM {$entries} WHERE actor_uri_hash <> SHA2(actor_uri, 256)" ) );
-
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- migration verification.
-	$remote_owned = array_map(
-		'intval',
-		(array) $wpdb->get_col( "SELECT e.calendar_id FROM {$entries} e INNER JOIN {$calendars} c ON c.id = e.calendar_id WHERE e.access_role = 'owner' AND c.kind <> 'local'" )
-	);
+	// CalendarList entries no longer participate in ownership verification. Their URI hashes and
+	// cached role are independently harmless UI data.
+	$multiple     = array();
+	$bad_hash     = array();
+	$remote_owned = array();
 
 	return array(
 		'ok'           => empty( $missing ) && empty( $mismatched ) && empty( $multiple ) && empty( $bad_hash ) && empty( $remote_owned ),

@@ -427,8 +427,8 @@ function axismundi_cal_backfill_authority() : int {
 	}
 
 	$written = 0;
-	// The relation written in v9 is the better source, since it is what the code has been reading;
-	// the legacy column is the fallback for a row that predates even that.
+	// The legacy Calendar column is authoritative for this one-time migration. CalendarList entries
+	// are sidebar state and may already have been removed by their owner.
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
 	$rows = (array) $wpdb->get_results( "SELECT id, kind FROM {$table} WHERE authority_actor_uri = ''", ARRAY_A );
 	foreach ( $rows as $row ) {
@@ -436,10 +436,15 @@ function axismundi_cal_backfill_authority() : int {
 			// A subscribed Calendar has no local authority: the feed it projects does.
 			continue;
 		}
-		$owner = axismundi_cal_calendar_owner( (int) $row['id'] );
-		if ( '' === $owner && in_array( 'owner_actor_uri', $columns, true ) ) {
+		$owner = '';
+		if ( in_array( 'owner_actor_uri', $columns, true ) ) {
 			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
 			$owner = (string) $wpdb->get_var( $wpdb->prepare( "SELECT owner_actor_uri FROM {$table} WHERE id = %d", (int) $row['id'] ) );
+		}
+		if ( '' === $owner ) {
+			// A very early transitional install may only have the legacy entry. This is migration-only;
+			// normal reads never infer authority from a CalendarList row.
+			$owner = axismundi_cal_legacy_entry_owner( (int) $row['id'] );
 		}
 		if ( '' === $owner ) {
 			continue;
@@ -499,14 +504,23 @@ function axismundi_cal_verify_authority_migration() : array {
 	 * makes. What would be a failure is a Calendar that recorded an owner and did not get an
 	 * authority from it, which is the loss this check exists to catch.
 	 */
-	$entries = axismundi_cal_entries_list_table();
+	$columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$calendars}" );
+	$legacy_owner = in_array( 'owner_actor_uri', $columns, true );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- migration verification.
 	$missing_authority = array_map(
 		'intval',
 		(array) $wpdb->get_col(
-			"SELECT DISTINCT c.id FROM {$calendars} c INNER JOIN {$entries} e
-			 ON e.calendar_id = c.id AND e.access_role = 'owner'
-			 WHERE c.kind = 'local' AND c.authority_actor_uri = ''"
+			$legacy_owner
+				? "SELECT id FROM {$calendars} WHERE kind = 'local' AND owner_actor_uri <> '' AND authority_actor_uri = ''"
+				: "SELECT id FROM {$calendars} WHERE 1 = 0"
+		)
+	);
+	$mismatched_authority = array_map(
+		'intval',
+		(array) $wpdb->get_col(
+			$legacy_owner
+				? "SELECT id FROM {$calendars} WHERE kind = 'local' AND owner_actor_uri <> '' AND authority_actor_uri <> owner_actor_uri"
+				: "SELECT id FROM {$calendars} WHERE 1 = 0"
 		)
 	);
 
@@ -531,8 +545,9 @@ function axismundi_cal_verify_authority_migration() : array {
 	$public_write = array_map( 'intval', (array) $wpdb->get_col( "SELECT id FROM {$acl} WHERE principal_type = 'public' AND role NOT IN ('reader','freeBusyReader')" ) );
 
 	return array(
-		'ok'                => empty( $missing_authority ) && empty( $missing_rule ) && empty( $bad_hash ) && empty( $remote_authority ) && empty( $public_write ),
+		'ok'                => empty( $missing_authority ) && empty( $mismatched_authority ) && empty( $missing_rule ) && empty( $bad_hash ) && empty( $remote_authority ) && empty( $public_write ),
 		'missing_authority' => $missing_authority,
+		'mismatched_authority' => $mismatched_authority,
 		'missing_rule'      => $missing_rule,
 		'bad_hash'          => $bad_hash,
 		'remote_authority'  => $remote_authority,

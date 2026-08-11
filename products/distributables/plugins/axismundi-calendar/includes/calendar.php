@@ -272,7 +272,9 @@ function axismundi_cal_record_owner( int $calendar_id, string $actor_uri, string
 		array( 'id' => $calendar_id )
 	);
 	axismundi_cal_acl_grant( $calendar_id, $actor_uri, 'owner' );
-	axismundi_cal_list_set( $calendar_id, $actor_uri, 'owner' );
+	// Creating a Calendar also puts it in the creator's sidebar, but this row grants nothing and may
+	// later be removed without affecting either the authority or the ACL.
+	axismundi_cal_list_set( $calendar_id, $actor_uri );
 }
 
 /**

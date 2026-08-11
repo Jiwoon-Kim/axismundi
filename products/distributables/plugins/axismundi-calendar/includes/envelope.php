@@ -127,7 +127,7 @@ function axismundi_cal_event_save( int $post_id, array $fields ) {
 	if ( ! in_array( $status, axismundi_cal_event_statuses(), true ) ) {
 		return new WP_Error( 'ax_event_status', __( 'That event status is not one FEP-8a8e defines.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
-	$join_mode = (string) ( $fields['join_mode'] ?? ( $existing['join_mode'] ?? 'free' ) );
+	$join_mode = (string) ( $fields['join_mode'] ?? ( $existing['join_mode'] ?? 'none' ) );
 	if ( ! in_array( $join_mode, axismundi_cal_event_join_modes(), true ) ) {
 		return new WP_Error( 'ax_event_join_mode', __( 'That participation mode is not one FEP-8a8e defines.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}

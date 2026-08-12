@@ -181,6 +181,19 @@ function axismundi_cal_system_item_message( string $code ) : string {
 			return __( 'A calendar needs a name.', 'axismundi-calendar' );
 		case 'ax_cal_timezone':
 			return __( 'A calendar needs a named IANA timezone such as Asia/Seoul.', 'axismundi-calendar' );
+		case 'imported':
+			return __( 'Imported as drafts. Classify them and mark the year reviewed to publish it.', 'axismundi-calendar' );
+		case 'ax_cal_import_fetch':
+			return __( 'That address could not be read.', 'axismundi-calendar' );
+		case 'ax_cal_import_parse':
+			return __( 'That address returned something that is not an iCalendar document.', 'axismundi-calendar' );
+		case 'ax_cal_import_expired':
+			return __( 'That import waited too long. Read the address again.', 'axismundi-calendar' );
+		case 'ax_cal_import_no_years':
+			return __( 'Choose at least one year to import.', 'axismundi-calendar' );
+		case 'ax_cal_source_url':
+		case 'ax_cal_source_private':
+			return __( 'That address cannot be read from this server.', 'axismundi-calendar' );
 		case 'item_added':
 			return __( 'Entry added.', 'axismundi-calendar' );
 		case 'item_updated':
@@ -315,9 +328,27 @@ function axismundi_cal_render_system_calendar_form() : void {
 						<label for="ax-cal-config-<?php echo esc_attr( $config_key ); ?>"><?php echo esc_html( $config_field['label'] ); ?></label>
 					</th>
 					<td>
-						<input name="provider_config[<?php echo esc_attr( $config_key ); ?>]" id="ax-cal-config-<?php echo esc_attr( $config_key ); ?>"
-							type="text" class="regular-text"
-							placeholder="<?php echo esc_attr( 'region' === $config_key ? 'KR' : 'ko-KR' ); ?>">
+						<?php if ( 'source_locale' === $config_key ) : ?>
+							<?php
+							/*
+							 * Core's own list, so the language of a dataset is one of the languages this
+							 * site actually has. Typed by hand it is a spelling test whose wrong answers
+							 * are stored and only noticed when a translation link fails to match.
+							 */
+							wp_dropdown_languages(
+								array(
+									'id'                          => 'ax-cal-config-source_locale',
+									'name'                        => 'provider_config[source_locale]',
+									'selected'                    => get_locale(),
+									'languages'                   => get_available_languages(),
+									'show_available_translations' => false,
+								)
+							);
+							?>
+						<?php else : ?>
+							<input name="provider_config[<?php echo esc_attr( $config_key ); ?>]" id="ax-cal-config-<?php echo esc_attr( $config_key ); ?>"
+								type="text" class="regular-text" placeholder="KR">
+						<?php endif; ?>
 						<p class="description"><?php echo esc_html( $config_field['description'] ); ?></p>
 					</td>
 				</tr>
@@ -374,6 +405,42 @@ function axismundi_cal_render_system_item_editor( array $calendar, string $base 
 
 	<p>
 		<?php esc_html_e( 'Year:', 'axismundi-calendar' ); ?>
+		<?php if ( count( $years ) > 8 ) : ?>
+			<?php
+			/*
+			 * A holiday feed carries a decade or more, and twelve year links wrap into a paragraph
+			 * nobody reads. Said as a span, with the year in view and its neighbours reachable.
+			 */
+			$first = (int) $years[0]['year'];
+			$last  = (int) $years[ count( $years ) - 1 ]['year'];
+			?>
+			<?php echo esc_html( sprintf( /* translators: 1: first year, 2: last year. */ __( '%1$d to %2$d', 'axismundi-calendar' ), $first, $last ) ); ?>
+			&mdash;
+			<?php foreach ( array( $year - 1, $year, $year + 1 ) as $near ) : ?>
+				<?php if ( $near >= $first && $near <= $last ) : ?>
+					<a href="<?php echo esc_url( add_query_arg( array( 'calendar' => $calendar_id, 'year' => $near ), $base ) ); ?>"
+						<?php echo $near === $year ? 'class="current"' : ''; ?>><?php echo esc_html( (string) $near ); ?></a>
+				<?php endif; ?>
+			<?php endforeach; ?>
+			<label class="screen-reader-text" for="ax-cal-year-jump"><?php esc_html_e( 'Go to year', 'axismundi-calendar' ); ?></label>
+			<select id="ax-cal-year-jump" onchange="if(this.value){window.location=this.value;}">
+				<?php foreach ( $years as $summary ) : ?>
+					<option value="<?php echo esc_url( add_query_arg( array( 'calendar' => $calendar_id, 'year' => $summary['year'] ), $base ) ); ?>" <?php selected( (int) $summary['year'], $year ); ?>>
+						<?php
+						echo esc_html(
+							sprintf(
+								/* translators: 1: year, 2: published entries, 3: total entries. */
+								__( '%1$d (%2$d of %3$d reviewed)', 'axismundi-calendar' ),
+								$summary['year'],
+								$summary['published'],
+								$summary['total']
+							)
+						);
+						?>
+					</option>
+				<?php endforeach; ?>
+			</select>
+		<?php else : ?>
 		<?php foreach ( $years as $summary ) : ?>
 			<a href="<?php echo esc_url( add_query_arg( array( 'calendar' => $calendar_id, 'year' => $summary['year'] ), $base ) ); ?>">
 				<?php
@@ -389,6 +456,7 @@ function axismundi_cal_render_system_item_editor( array $calendar, string $base 
 				?>
 			</a>
 		<?php endforeach; ?>
+		<?php endif; ?>
 		<?php if ( array() === $years ) : ?>
 			<?php echo esc_html( (string) $year ); ?>
 		<?php endif; ?>
@@ -444,6 +512,8 @@ function axismundi_cal_render_system_item_editor( array $calendar, string $base 
 			<?php endforeach; ?>
 		</tbody>
 	</table>
+
+	<?php axismundi_cal_render_system_import( $calendar ); ?>
 
 	<h3><?php echo esc_html( is_array( $current ) ? __( 'Edit entry', 'axismundi-calendar' ) : __( 'Add entry', 'axismundi-calendar' ) ); ?></h3>
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">

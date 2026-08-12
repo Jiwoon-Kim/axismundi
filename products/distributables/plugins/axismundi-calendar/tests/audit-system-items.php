@@ -496,6 +496,104 @@ try {
 	ax_si_assert( $ax_si_results, 'somebody who may only read it is offered nothing to maintain', array() === axismundi_cal_manageable_datasets() );
 	wp_set_current_user( $ax_si_keeper['user_id'] );
 
+	// -- Reading a published feed into a dataset -----------------------------------------------------
+
+	/*
+	 * A holiday feed, as Google publishes one: whole days, one VEVENT per date rather than a yearly
+	 * rule, and a classification written in prose that no importer can read back. Parsed from a
+	 * literal document, because this environment has no network and the property under test is what
+	 * the importer does with what it read.
+	 */
+	$ax_si_feed = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\n"
+		. "BEGIN:VEVENT\r\nUID:20270101_a@example.org\r\nDTSTART;VALUE=DATE:20270101\r\nDTEND;VALUE=DATE:20270102\r\nSUMMARY:New Year\r\nDESCRIPTION:Public holiday\r\nEND:VEVENT\r\n"
+		. "BEGIN:VEVENT\r\nUID:20270301_b@example.org\r\nDTSTART;VALUE=DATE:20270301\r\nDTEND;VALUE=DATE:20270302\r\nSUMMARY:March First\r\nEND:VEVENT\r\n"
+		. "BEGIN:VEVENT\r\nUID:20280101_c@example.org\r\nDTSTART;VALUE=DATE:20280101\r\nDTEND;VALUE=DATE:20280102\r\nSUMMARY:New Year 2028\r\nEND:VEVENT\r\n"
+		. "BEGIN:VEVENT\r\nUID:20270501_d@example.org\r\nDTSTART:20270501T090000Z\r\nDTEND:20270501T100000Z\r\nSUMMARY:A timed thing\r\nEND:VEVENT\r\n"
+		. "BEGIN:VEVENT\r\nUID:yearly_e@example.org\r\nDTSTART;VALUE=DATE:20270601\r\nDTEND;VALUE=DATE:20270602\r\nRRULE:FREQ=YEARLY\r\nSUMMARY:Every year\r\nEND:VEVENT\r\n"
+		. "END:VCALENDAR\r\n";
+	$ax_si_parsed = axismundi_cal_ics_parse( $ax_si_feed );
+	ax_si_assert( $ax_si_results, 'a published feed parses', 5 === count( $ax_si_parsed ) );
+
+	$ax_si_years = axismundi_cal_import_years( $ax_si_parsed );
+	ax_si_assert( $ax_si_results, 'and reports how much of each year it carries, so nobody imports a decade unseen', array( 2027 => 4, 2028 => 1 ) === $ax_si_years );
+
+	/*
+	 * A dataset entry is a whole day. An entry with a time is something else, and one carrying a
+	 * recurrence rule is a claim about every future year that a curated dataset should not accept
+	 * unseen -- so both are counted and reported rather than silently dropped.
+	 */
+	$ax_si_part = axismundi_cal_import_partition( $ax_si_parsed, array( 2027 ) );
+	ax_si_assert( $ax_si_results, 'only the chosen year is taken', 2 === count( $ax_si_part['keep'] ) );
+	ax_si_assert( $ax_si_results, 'an entry with a time is set aside and counted', 1 === $ax_si_part['timed'] );
+	ax_si_assert( $ax_si_results, 'and so is one that claims to repeat forever', 1 === $ax_si_part['recurring'] );
+
+	$ax_si_import_cal = axismundi_cal_calendar_save(
+		array(
+			'kind'            => 'system',
+			'system_provider' => 'holiday',
+			'provider_config' => array( 'region' => 'KR', 'source_locale' => 'ko-KR' ),
+			'name'            => 'Imported holidays',
+			'slug'            => 'ax-si-imported-' . $ax_si_suffix,
+			'timezone'        => 'Asia/Seoul',
+		)
+	);
+	ax_si_assert( $ax_si_results, 'a calendar to import into can be made', is_int( $ax_si_import_cal ) );
+	$ax_si_import_cal = (int) $ax_si_import_cal;
+	$ax_si_calendars[] = $ax_si_import_cal;
+
+	// Through the importer's own writer, not a copy of it: a fixture reproducing the loop would be
+	// asserting against its own idea of the rules rather than against the ones that run.
+	ax_si_assert(
+		$ax_si_results,
+		'the import writes what it kept',
+		2 === axismundi_cal_import_write( $ax_si_import_cal, $ax_si_part['keep'], 'https://example.org/holidays.ics' )
+	);
+
+	/*
+	 * Nothing arrives published. Holiday dates move, and a feed is one publisher answer about them
+	 * rather than the law -- so a year is somebody judgement before it is anybody information.
+	 */
+	ax_si_assert( $ax_si_results, 'nothing imported is visible to readers yet', array() === axismundi_cal_system_items_in_range( $ax_si_import_cal, '2027-01-01', '2028-01-01' ) );
+	$ax_si_drafts = axismundi_cal_system_items_in_range( $ax_si_import_cal, '2027-01-01', '2028-01-01', array(), true );
+	ax_si_assert( $ax_si_results, 'while whoever reviews it sees both entries', array( 'New Year', 'March First' ) === ax_si_titles( $ax_si_drafts ) );
+	ax_si_assert( $ax_si_results, 'as whole days ending the following day', '2027-01-01' === (string) $ax_si_drafts[0]['start_date'] && '2027-01-02' === (string) $ax_si_drafts[0]['end_date'] );
+
+	/*
+	 * No categories are guessed. The feed classification is prose in whatever language it was
+	 * published in -- Google writes it into `DESCRIPTION` -- and reading it back breaks on the first
+	 * translation or rewording. Classifying is the review this import exists to feed.
+	 */
+	ax_si_assert( $ax_si_results, 'and with no categories invented from the publisher prose', '' === (string) $ax_si_drafts[0]['categories'] );
+	ax_si_assert( $ax_si_results, 'while the publisher is recorded', 'https://example.org/holidays.ics' === (string) $ax_si_drafts[0]['source_url'] );
+
+	/*
+	 * Re-reading the same feed updates what it wrote before. Without the uid this would double a year
+	 * of holidays, which is the difference between a repeatable import and a destructive one.
+	 */
+	$ax_si_renamed = array_map(
+		static function ( array $entry ) : array {
+			$entry['summary'] .= ' (again)';
+			return $entry;
+		},
+		$ax_si_part['keep']
+	);
+	axismundi_cal_import_write( $ax_si_import_cal, $ax_si_renamed, 'https://example.org/holidays.ics' );
+	$ax_si_again = axismundi_cal_system_items_in_range( $ax_si_import_cal, '2027-01-01', '2028-01-01', array(), true );
+	ax_si_assert( $ax_si_results, 'reading the same feed again updates rather than doubling it', 2 === count( $ax_si_again ) );
+	ax_si_assert( $ax_si_results, 'with what it says now', 'New Year (again)' === (string) $ax_si_again[0]['title'] );
+
+	/*
+	 * A correction made by hand survives the next read, because it carries no source identity for the
+	 * import to recognise. That is what makes this an import rather than a subscription.
+	 */
+	axismundi_cal_system_item_save( $ax_si_import_cal, array( 'title' => 'Temporary holiday', 'start_date' => '2027-07-17', 'status' => 'published' ) );
+	axismundi_cal_import_write( $ax_si_import_cal, $ax_si_part['keep'], 'https://example.org/holidays.ics' );
+	ax_si_assert(
+		$ax_si_results,
+		'an entry added by hand is untouched by a later read of the feed',
+		1 === count( axismundi_cal_system_items_in_range( $ax_si_import_cal, '2027-07-01', '2027-08-01' ) )
+	);
+
 	// -- The entries go with the calendar ----------------------------------------------------------------------------
 
 	wp_set_current_user( $ax_si_keeper['user_id'] );

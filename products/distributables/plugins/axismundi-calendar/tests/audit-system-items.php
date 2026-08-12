@@ -239,6 +239,103 @@ try {
 	wp_set_current_user( $ax_si_reader['user_id'] );
 	ax_si_assert( $ax_si_results, 'somebody who may only read it may not maintain it', false === axismundi_cal_calendar_can( $ax_si_dataset_row, 'manage_items' ) );
 
+	// -- A calendar the site publishes, belonging to nobody ---------------------------------------------
+
+	/*
+	 * The kind an ordinary Calendar cannot be. Nobody owns a public holiday: the site maintains it,
+	 * whoever does that answers to a capability rather than to ownership, and the ACL screen it would
+	 * otherwise get offers grants that mean nothing.
+	 */
+	$ax_si_system = axismundi_cal_calendar_save(
+		array(
+			'kind'       => 'system',
+			'name'       => 'Site holidays',
+			'slug'       => 'ax-si-system-' . $ax_si_suffix,
+			'system_key' => 'ax.si.holidays.' . $ax_si_suffix,
+			'timezone'   => 'Asia/Seoul',
+		)
+	);
+	ax_si_assert( $ax_si_results, 'a maintained calendar needs no Actor to exist', is_int( $ax_si_system ) );
+	$ax_si_system = (int) $ax_si_system;
+	$ax_si_calendars[] = $ax_si_system;
+	$ax_si_system_row = (array) axismundi_cal_calendar_get( $ax_si_system );
+
+	ax_si_assert( $ax_si_results, 'and has none, which is what it is rather than a state it is waiting to leave', '' === (string) $ax_si_system_row['authority_actor_uri'] );
+	ax_si_assert( $ax_si_results, 'while an ordinary local calendar still cannot be made without one', is_wp_error( axismundi_cal_calendar_save( array( 'name' => 'No actor', 'slug' => 'ax-si-noactor-' . $ax_si_suffix, 'timezone' => 'UTC' ) ) ) );
+	ax_si_assert(
+		$ax_si_results,
+		'and giving one an Actor is refused rather than quietly accepted',
+		is_wp_error( axismundi_cal_record_owner( $ax_si_system, $ax_si_keeper['actor_uri'], 'system' ) )
+	);
+
+	/*
+	 * Public because of what it is, not because a rule says so. Reading it from the ACL would make it
+	 * depend on a row nothing writes, which anybody could remove -- silently unpublishing every
+	 * subscription to it.
+	 */
+	ax_si_assert( $ax_si_results, 'it is readable by everyone as a matter of policy', true === axismundi_cal_is_publicly_readable( $ax_si_system ) );
+	ax_si_assert( $ax_si_results, 'without a public rule having been written for it', null === axismundi_cal_acl_rule( $ax_si_system, '', 'public' ) );
+
+	ax_si_assert( $ax_si_results, 'its entries are a dataset', true === axismundi_cal_calendar_is_dataset( $ax_si_system_row ) );
+	ax_si_assert(
+		$ax_si_results,
+		'and it is published at an address of its own, which the slug is not',
+		$ax_si_system === (int) axismundi_cal_calendar_by_system_key( 'ax.si.holidays.' . $ax_si_suffix )['id']
+	);
+	ax_si_assert(
+		$ax_si_results,
+		'an address another maintained calendar already uses is refused',
+		is_wp_error(
+			axismundi_cal_calendar_save(
+				array( 'kind' => 'system', 'name' => 'Clash', 'slug' => 'ax-si-clash-' . $ax_si_suffix, 'system_key' => 'ax.si.holidays.' . $ax_si_suffix, 'timezone' => 'UTC' )
+			)
+		)
+	);
+	/*
+	 * The address is fixed once set, unlike the name and the slug. It is what a subscription in
+	 * somebody calendar app points at, and renaming it breaks every one of them silently.
+	 */
+	axismundi_cal_calendar_save( array( 'name' => 'Renamed holidays', 'system_key' => 'ax.si.something.else' ), $ax_si_system );
+	$ax_si_system_row = (array) axismundi_cal_calendar_get( $ax_si_system );
+	ax_si_assert( $ax_si_results, 'renaming it does not move the address it is published at', ( 'ax.si.holidays.' . $ax_si_suffix ) === (string) $ax_si_system_row['system_key'] );
+	ax_si_assert( $ax_si_results, 'though the name itself changes freely, since it is a translation', 'Renamed holidays' === (string) $ax_si_system_row['name'] );
+
+	ax_si_assert(
+		$ax_si_results,
+		'and what kind of calendar it is cannot be changed afterwards',
+		is_wp_error( axismundi_cal_calendar_save( array( 'kind' => 'local' ), $ax_si_system ) )
+	);
+
+	// -- What can be done with it ----------------------------------------------------------------------
+
+	/*
+	 * Sharing and publishing are not refusals of a role somebody lacks -- they are operations with no
+	 * meaning on a Calendar that belongs to nobody and is already public.
+	 */
+	$ax_si_admin = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ID' ) );
+	if ( ! empty( $ax_si_admin ) ) {
+		wp_set_current_user( (int) $ax_si_admin[0] );
+		$ax_si_caps = axismundi_cal_calendar_capabilities( $ax_si_system_row );
+		ax_si_assert( $ax_si_results, 'whoever maintains the site maintains its entries', true === $ax_si_caps['manage_items'] );
+		ax_si_assert( $ax_si_results, 'and may correct its details', true === $ax_si_caps['edit_details'] );
+		ax_si_assert( $ax_si_results, 'while sharing it is not an operation that exists here', false === $ax_si_caps['share'] && false === $ax_si_caps['publish'] );
+		ax_si_assert( $ax_si_results, 'nor is writing an Event onto it', false === $ax_si_caps['write_events'] );
+		ax_si_assert( $ax_si_results, 'and it appears on the screen that maintains datasets', in_array( $ax_si_system, array_map( static fn( array $c ) : int => (int) $c['id'], axismundi_cal_manageable_datasets() ), true ) );
+	}
+
+	wp_set_current_user( $ax_si_keeper['user_id'] );
+	$ax_si_caps = axismundi_cal_calendar_capabilities( $ax_si_system_row );
+	ax_si_assert( $ax_si_results, 'somebody who is not maintaining the site cannot maintain it', false === $ax_si_caps['manage_items'] && false === $ax_si_caps['edit_details'] );
+	ax_si_assert( $ax_si_results, 'but can still read it, which is the point of it', true === $ax_si_caps['export'] );
+
+	// -- Its entries behave like any other dataset -------------------------------------------------------
+
+	$ax_si_site_item = axismundi_cal_system_item_save(
+		$ax_si_system,
+		array( 'title' => 'Site holiday', 'start_date' => '2027-10-03', 'categories' => array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ), 'status' => 'published' )
+	);
+	ax_si_assert( $ax_si_results, 'a maintained calendar holds entries like any other dataset', is_int( $ax_si_site_item ) );
+
 	// -- The screen that maintains them --------------------------------------------------------------
 
 	wp_set_current_user( $ax_si_keeper['user_id'] );

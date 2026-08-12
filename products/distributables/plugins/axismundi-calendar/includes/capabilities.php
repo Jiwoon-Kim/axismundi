@@ -120,6 +120,32 @@ function axismundi_cal_calendar_capabilities( ?array $calendar, string $actor_ur
 	$owner       = $rank >= axismundi_cal_acl_rank( 'owner' );
 	$subscribed  = '' !== $actor_uri && is_array( axismundi_cal_list_entry( $calendar_id, $actor_uri ) );
 
+	if ( 'system' === (string) ( $calendar['kind'] ?? '' ) ) {
+		/*
+		 * A dataset this site publishes. It answers to a capability rather than to an owner, which is
+		 * the whole reason it has no authority Actor -- so `share` and `publish` are not refusals of
+		 * a role somebody lacks, they are operations that mean nothing here. It is public by policy,
+		 * and there is nobody to grant that or take it away.
+		 *
+		 * Whoever may maintain the site's data maintains these. Deliberately `edit_others_posts`
+		 * rather than an ACL role: an ACL would imply the Calendar could be shared, which is exactly
+		 * what it cannot be.
+		 */
+		$manager = axismundi_cal_can_manage_all_calendars();
+		return array_merge(
+			$none,
+			array(
+				'edit_details'    => $manager,
+				'change_timezone' => $manager,
+				'rename_locally'  => $subscribed,
+				'delete'          => $manager,
+				'manage_items'    => $manager,
+				// Readable by everyone, which is what it is for.
+				'export'          => true,
+			)
+		);
+	}
+
 	if ( 'subscription' === axismundi_cal_calendar_source_type( $calendar ) ) {
 		/*
 		 * A mirror of somebody else's Calendar. Its name, description and timezone are its

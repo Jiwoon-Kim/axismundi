@@ -22,6 +22,15 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
+ * What a Calendar is, which is settled when it is made.
+ *
+ *   local   an Actor's own, shared by that Actor's decision
+ *   remote  a read-only mirror of a feed published elsewhere
+ *   system  a dataset this instance publishes and maintains, belonging to nobody
+ */
+const AXISMUNDI_CAL_KINDS = array( 'local', 'remote', 'system' );
+
+/**
  * A Calendar by slug.
  *
  * @param string $slug Calendar slug.
@@ -183,12 +192,26 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 		return new WP_Error( 'ax_cal_slug_taken', __( 'Another calendar already uses that slug.', 'axismundi-calendar' ), array( 'status' => 409 ) );
 	}
 
+	/*
+	 * Three kinds, and they are not three flavours of one thing:
+	 *
+	 *   local   belongs to an Actor, who decides who else may see it
+	 *   remote  a read-only mirror of a feed somebody else publishes
+	 *   system  a dataset this instance publishes -- holidays, observances, moon phases
+	 *
+	 * A system Calendar has no authority Actor on purpose. Nobody's holidays are these; the site
+	 * maintains them, and the people who do that are answering to a capability rather than owning an
+	 * identity. That is why it cannot be created through the ordinary path, which requires an Actor
+	 * and offers sharing that would mean nothing here.
+	 */
 	$kind = (string) ( $fields['kind'] ?? ( $existing['kind'] ?? 'local' ) );
-	if ( ! in_array( $kind, array( 'local', 'remote' ), true ) ) {
-		return new WP_Error( 'ax_cal_kind', __( 'A calendar must be local or remote.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	if ( ! in_array( $kind, AXISMUNDI_CAL_KINDS, true ) ) {
+		return new WP_Error( 'ax_cal_kind', __( 'A calendar is local, subscribed or maintained by this site.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
 	if ( is_array( $existing ) && $kind !== (string) $existing['kind'] ) {
-		return new WP_Error( 'ax_cal_kind', __( 'A calendar cannot change between local and remote.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+		// What a Calendar is was settled when it was made. Changing it would move the answer to who
+		// owns it, who may share it and whether its contents are Events, all at once and silently.
+		return new WP_Error( 'ax_cal_kind', __( 'A calendar cannot change what kind of calendar it is.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
 
 	$timezone = trim( (string) ( $fields['timezone'] ?? ( $existing['timezone'] ?? '' ) ) );
@@ -212,12 +235,39 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 	if ( ! in_array( $source, AXISMUNDI_CAL_SOURCE_TYPES, true ) ) {
 		$source = 'remote' === $kind ? 'subscription' : 'native';
 	}
+	if ( 'system' === $kind && ! in_array( $source, array( 'manual', 'import' ), true ) ) {
+		// A dataset this site publishes was either typed in or read from a file. There is no third way
+		// for one to exist, and `native` would claim its entries are authored Events.
+		$source = 'manual';
+	}
 	if ( 'remote' === $kind && 'subscription' !== $source ) {
 		// A remote Calendar is a mirror by definition. Any other origin describes something local.
 		return new WP_Error( 'ax_cal_source', __( 'A subscribed calendar is a mirror of its source.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
 	if ( 'remote' !== $kind && 'subscription' === $source ) {
 		return new WP_Error( 'ax_cal_source', __( 'Only a subscribed calendar mirrors a source.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+
+	/*
+	 * The address a system Calendar is published at. Unlike the slug it is fixed once written: the
+	 * slug is a readable alias somebody may rename, while this is what an `.ics` subscription in
+	 * somebody's calendar app is pointed at, and renaming that silently breaks every one of them.
+	 */
+	$system_key = (string) ( $existing['system_key'] ?? '' );
+	if ( 'system' === $kind && '' === $system_key ) {
+		/*
+		 * Not `sanitize_key()`, which strips the dots -- `holidays.kr` would become `holidayskr`, and
+		 * the addresses of every regional dataset would collapse towards each other. Dotted segments
+		 * are the point of this format.
+		 */
+		$system_key = strtolower( preg_replace( '/[^a-zA-Z0-9._-]/', '', str_replace( array( ' ', '/' ), '.', (string) ( $fields['system_key'] ?? $slug ) ) ) );
+		$system_key = trim( (string) $system_key, '.' );
+		if ( '' === $system_key ) {
+			return new WP_Error( 'ax_cal_system_key', __( 'A maintained calendar needs a stable address.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+		}
+		if ( null !== axismundi_cal_calendar_by_system_key( $system_key ) ) {
+			return new WP_Error( 'ax_cal_system_key_taken', __( 'Another maintained calendar already uses that address.', 'axismundi-calendar' ), array( 'status' => 409 ) );
+		}
 	}
 
 	$now  = current_time( 'mysql', true );
@@ -228,6 +278,7 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 		'timezone'       => $timezone,
 		'kind'           => $kind,
 		'source'         => $source,
+		'system_key'     => $system_key,
 		'visibility'     => $visibility,
 		'updated_at'     => $now,
 	);
@@ -281,6 +332,24 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 }
 
 /**
+ * One maintained Calendar by the address it is published at.
+ *
+ * @param string $system_key Stable address.
+ * @return array<string,mixed>|null
+ */
+function axismundi_cal_calendar_by_system_key( string $system_key ) : ?array {
+	global $wpdb;
+	$system_key = trim( $system_key );
+	if ( '' === $system_key || ! axismundi_cal_ready() ) {
+		return null;
+	}
+	$table = axismundi_cal_calendars_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE system_key = %s", $system_key ), ARRAY_A );
+	return is_array( $row ) ? $row : null;
+}
+
+/**
  * Record who owns a Calendar, as a relation.
  *
  * Nothing is written for a remote Calendar. Its authority is the feed it projects and whoever
@@ -297,6 +366,14 @@ function axismundi_cal_record_owner( int $calendar_id, string $actor_uri, string
 	$actor_uri = trim( $actor_uri );
 	if ( 'remote' === $kind ) {
 		return '' === $actor_uri ? true : new WP_Error( 'ax_cal_authority_remote', __( 'A subscribed calendar cannot claim a local authority.', 'axismundi-calendar' ) );
+	}
+	if ( 'system' === $kind ) {
+		/*
+		 * Having no authority is what a system Calendar is, not a state it is waiting to leave.
+		 * Nobody's holidays are these: the site maintains them, and giving one an Actor would make
+		 * whoever happened to create it the person they are published by.
+		 */
+		return '' === $actor_uri ? true : new WP_Error( 'ax_cal_authority_system', __( 'A maintained calendar belongs to the site rather than to an Actor.', 'axismundi-calendar' ) );
 	}
 	if ( '' === $actor_uri ) {
 		return new WP_Error( 'ax_cal_authority', __( 'A local calendar needs an Actor authority.', 'axismundi-calendar' ) );

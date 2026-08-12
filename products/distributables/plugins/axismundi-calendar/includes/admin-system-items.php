@@ -38,7 +38,7 @@ function axismundi_cal_manageable_datasets() : array {
 	 * belt-and-braces and are not: only the second one is a rule.
 	 */
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- inventory over this plugin's own table.
-	$rows = (array) $wpdb->get_results( "SELECT * FROM {$table} WHERE source IN ('manual','import') ORDER BY name ASC", ARRAY_A );
+	$rows = (array) $wpdb->get_results( "SELECT * FROM {$table} WHERE kind = 'system' OR source IN ('manual','import') ORDER BY name ASC", ARRAY_A );
 	return array_values( array_filter( $rows, static fn( array $row ) : bool => axismundi_cal_calendar_can( $row, 'manage_items' ) ) );
 }
 
@@ -58,6 +58,45 @@ function axismundi_cal_system_items_menu() : void {
 	);
 }
 add_action( 'admin_menu', 'axismundi_cal_system_items_menu', 11 );
+
+/**
+ * Create a maintained calendar.
+ *
+ * Its own path rather than the ordinary Calendar form, because almost nothing that form asks applies
+ * here: there is no Actor to own this, no sharing to decide, and its contents are not Events.
+ * Sending somebody to that screen and asking them to pick a content type afterwards would be
+ * offering a set of choices where most are wrong.
+ *
+ * @return void
+ */
+function axismundi_cal_handle_system_calendar_form() : void {
+	check_admin_referer( 'ax_cal_create_system' );
+	if ( ! axismundi_cal_can_manage_all_calendars() ) {
+		wp_die( esc_html__( 'You are not allowed to maintain this site calendars.', 'axismundi-calendar' ), 403 );
+	}
+	$base = admin_url( 'edit.php?post_type=' . AXISMUNDI_CAL_EVENT_POST_TYPE . '&page=ax-calendar-system' );
+
+	$name    = isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['name'] ) ) : '';
+	$created = axismundi_cal_calendar_save(
+		array(
+			'kind'        => 'system',
+			'source'      => 'manual',
+			'name'        => $name,
+			'slug'        => isset( $_POST['slug'] ) ? sanitize_title( wp_unslash( (string) $_POST['slug'] ) ) : sanitize_title( $name ),
+			'system_key'  => isset( $_POST['system_key'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['system_key'] ) ) : '',
+			'description' => isset( $_POST['description'] ) ? sanitize_textarea_field( wp_unslash( (string) $_POST['description'] ) ) : '',
+			'timezone'    => isset( $_POST['timezone'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['timezone'] ) ) : axismundi_cal_default_calendar_timezone(),
+		)
+	);
+	if ( is_wp_error( $created ) ) {
+		wp_safe_redirect( add_query_arg( 'ax_cal_error', rawurlencode( $created->get_error_code() ), $base ) );
+		exit;
+	}
+	// Straight into the entries, since a maintained calendar with none is not yet anything.
+	wp_safe_redirect( add_query_arg( array( 'calendar' => (int) $created, 'ax_cal_notice' => 'calendar_created' ), $base ) );
+	exit;
+}
+add_action( 'admin_post_ax_cal_create_system_calendar', 'axismundi_cal_handle_system_calendar_form' );
 
 /**
  * Write or remove one entry.
@@ -125,6 +164,18 @@ add_action( 'admin_post_ax_cal_save_system_item', 'axismundi_cal_handle_system_i
  */
 function axismundi_cal_system_item_message( string $code ) : string {
 	switch ( $code ) {
+		case 'calendar_created':
+			return __( 'Calendar created. Add its entries below.', 'axismundi-calendar' );
+		case 'ax_cal_system_key':
+			return __( 'A maintained calendar needs a stable address, such as holidays.kr.', 'axismundi-calendar' );
+		case 'ax_cal_system_key_taken':
+			return __( 'Another maintained calendar already uses that address.', 'axismundi-calendar' );
+		case 'ax_cal_slug_taken':
+			return __( 'Another calendar already uses that slug.', 'axismundi-calendar' );
+		case 'ax_cal_name':
+			return __( 'A calendar needs a name.', 'axismundi-calendar' );
+		case 'ax_cal_timezone':
+			return __( 'A calendar needs a named IANA timezone such as Asia/Seoul.', 'axismundi-calendar' );
 		case 'item_added':
 			return __( 'Entry added.', 'axismundi-calendar' );
 		case 'item_updated':
@@ -184,13 +235,7 @@ function axismundi_cal_render_system_items_page() : void {
 			<div class="notice notice-error"><p><?php echo esc_html( axismundi_cal_system_item_message( $error ) ); ?></p></div>
 		<?php endif; ?>
 
-		<?php if ( empty( $datasets ) ) : ?>
-			<p>
-				<?php esc_html_e( 'No maintained calendars yet. Create one on the Calendars screen and set where its contents come from.', 'axismundi-calendar' ); ?>
-			</p>
-			<?php return; ?>
-		<?php endif; ?>
-
+		<?php if ( ! empty( $datasets ) ) : ?>
 		<h2><?php esc_html_e( 'Maintained calendars', 'axismundi-calendar' ); ?></h2>
 		<ul class="subsubsub" style="float:none;">
 			<?php foreach ( $datasets as $dataset ) : ?>
@@ -203,14 +248,68 @@ function axismundi_cal_render_system_items_page() : void {
 			<?php endforeach; ?>
 		</ul>
 
-		<?php
-		if ( ! is_array( $chosen ) ) {
-			echo '<p>' . esc_html__( 'Choose a calendar to see the entries on it.', 'axismundi-calendar' ) . '</p></div>';
-			return;
-		}
-		axismundi_cal_render_system_item_editor( $chosen, $base );
-		?>
+		<?php endif; ?>
+
+		<?php if ( is_array( $chosen ) ) : ?>
+			<?php axismundi_cal_render_system_item_editor( $chosen, $base ); ?>
+		<?php elseif ( ! empty( $datasets ) ) : ?>
+			<p><?php esc_html_e( 'Choose a calendar to see the entries on it.', 'axismundi-calendar' ); ?></p>
+		<?php endif; ?>
+
+		<?php if ( axismundi_cal_can_manage_all_calendars() ) : ?>
+			<?php axismundi_cal_render_system_calendar_form(); ?>
+		<?php endif; ?>
 	</div>
+	<?php
+}
+
+/**
+ * The form that makes one.
+ *
+ * @return void
+ */
+function axismundi_cal_render_system_calendar_form() : void {
+	?>
+	<h2><?php esc_html_e( 'New maintained calendar', 'axismundi-calendar' ); ?></h2>
+	<p class="description">
+		<?php esc_html_e( 'Made here rather than on the Calendars screen: this one belongs to the site rather than to an Actor, it is readable by everyone, and there is no sharing to decide.', 'axismundi-calendar' ); ?>
+	</p>
+	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+		<input type="hidden" name="action" value="ax_cal_create_system_calendar">
+		<?php wp_nonce_field( 'ax_cal_create_system' ); ?>
+		<table class="form-table" role="presentation">
+			<tr>
+				<th scope="row"><label for="ax-cal-system-name"><?php esc_html_e( 'Name', 'axismundi-calendar' ); ?></label></th>
+				<td>
+					<input name="name" id="ax-cal-system-name" type="text" class="regular-text" required placeholder="<?php esc_attr_e( 'Public holidays in South Korea', 'axismundi-calendar' ); ?>">
+					<p class="description"><?php esc_html_e( 'In the language this site is read in. It can be changed later without breaking anything.', 'axismundi-calendar' ); ?></p>
+				</td>
+			</tr>
+			<tr>
+				<th scope="row"><label for="ax-cal-system-key"><?php esc_html_e( 'Address', 'axismundi-calendar' ); ?></label></th>
+				<td>
+					<input name="system_key" id="ax-cal-system-key" type="text" class="regular-text" required placeholder="holidays.kr">
+					<p class="description">
+						<?php esc_html_e( 'Where it is published, and fixed once set. Unlike the name and the slug, this is what a subscription in a calendar app points at, so renaming it would break every one of them.', 'axismundi-calendar' ); ?>
+					</p>
+				</td>
+			</tr>
+			<tr>
+				<th scope="row"><label for="ax-cal-system-timezone"><?php esc_html_e( 'Timezone', 'axismundi-calendar' ); ?></label></th>
+				<td>
+					<input name="timezone" id="ax-cal-system-timezone" type="text" class="regular-text" value="<?php echo esc_attr( axismundi_cal_default_calendar_timezone() ); ?>">
+					<p class="description"><?php esc_html_e( 'Barely used here, since entries are whole days that fall on the same date everywhere. It is what the feed declares itself in.', 'axismundi-calendar' ); ?></p>
+				</td>
+			</tr>
+			<tr>
+				<th scope="row"><label for="ax-cal-system-description"><?php esc_html_e( 'Description', 'axismundi-calendar' ); ?></label></th>
+				<td><textarea name="description" id="ax-cal-system-description" rows="2" class="large-text"></textarea></td>
+			</tr>
+		</table>
+		<p class="submit">
+			<button type="submit" class="button button-primary"><?php esc_html_e( 'Create calendar', 'axismundi-calendar' ); ?></button>
+		</p>
+	</form>
 	<?php
 }
 

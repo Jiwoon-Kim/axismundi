@@ -324,6 +324,16 @@ function axismundi_cal_can_write( int $calendar_id, string $actor_uri, int $user
  * @return bool
  */
 function axismundi_cal_is_publicly_readable( int $calendar_id ) : bool {
+	$calendar = axismundi_cal_calendar_get( $calendar_id );
+	if ( is_array( $calendar ) && 'system' === (string) $calendar['kind'] ) {
+		/*
+		 * Public by policy rather than by a rule somebody granted. A dataset the site publishes has
+		 * nobody to make it private and no reason to be: it exists to be read. Answering from the ACL
+		 * would make it depend on a rule that nothing writes and anybody with database access could
+		 * remove, silently unpublishing every subscription to it.
+		 */
+		return true;
+	}
 	$public = axismundi_cal_acl_rule( $calendar_id, '', 'public' );
 	return is_array( $public ) && axismundi_cal_acl_rank( (string) $public['role'] ) >= axismundi_cal_acl_rank( 'reader' );
 }

@@ -110,10 +110,63 @@ ax_cs_assert( $ax_cs_results, 'a day inside the provider range is covered', axis
 ax_cs_assert( $ax_cs_results, 'a day after it is not, which is a fact about the provider and not an error', ! axismundi_cal_system_covers( 'korean-lunisolar', $ax_cs_out ) );
 ax_cs_assert( $ax_cs_results, 'and neither is a day before it begins', ! axismundi_cal_system_covers( 'korean-lunisolar', $ax_cs_bc ) );
 
-// -- The store -----------------------------------------------------------------------------------
-
 global $wpdb;
 $ax_cs_table = axismundi_cal_lunar_months_table();
+
+// -- The calendars ICU answers for -----------------------------------------------------------------
+
+/*
+ * No key, no store, no network. These prove the registry was worth building: one provider needs a
+ * service key and a materialised store and these need nothing, and neither the screen nor the grid
+ * has to know which is which.
+ */
+if ( class_exists( 'IntlCalendar' ) ) {
+	$ax_cs_newyear = (int) axismundi_cal_iso_to_absolute_day( '2026-02-17' );
+	$ax_cs_chinese = axismundi_cal_system_date( 'chinese', $ax_cs_newyear );
+	ax_cs_assert(
+		$ax_cs_results,
+		'the Chinese calendar answers without anything having been fetched, and puts 춘절 on the first of its first month',
+		is_array( $ax_cs_chinese ) && 1 === $ax_cs_chinese['month'] && 1 === $ax_cs_chinese['day']
+	);
+	ax_cs_assert(
+		$ax_cs_results,
+		'and reports a year that counts straight through rather than a place in the 60-year cycle',
+		is_array( $ax_cs_chinese ) && $ax_cs_chinese['year'] > 1000
+	);
+	ax_cs_assert(
+		$ax_cs_results,
+		'the Hebrew calendar answers too, in its own era',
+		( axismundi_cal_system_date( 'hebrew', $ax_cs_newyear )['year'] ?? 0 ) > 5000
+	);
+	ax_cs_assert(
+		$ax_cs_results,
+		'the Islamic calendar is registered as lunar, not lunisolar, because it intercalates nothing',
+		'lunar' === ( axismundi_cal_calendar_system( 'islamic-umalqura' )['type'] ?? '' )
+	);
+	ax_cs_assert(
+		$ax_cs_results,
+		'and its year advances faster than the Gregorian one, which is the whole difference',
+		( static function () : bool {
+			$a = axismundi_cal_system_date( 'islamic-umalqura', (int) axismundi_cal_iso_to_absolute_day( '1990-01-01' ) );
+			$b = axismundi_cal_system_date( 'islamic-umalqura', (int) axismundi_cal_iso_to_absolute_day( '2023-01-01' ) );
+			// 33 Gregorian years are about 34 Islamic ones.
+			return is_array( $a ) && is_array( $b ) && ( $b['year'] - $a['year'] ) === 34;
+		} )()
+	);
+	ax_cs_assert(
+		$ax_cs_results,
+		'a calendar ICU does not have is not registered as one that quietly answers in Gregorian',
+		null === axismundi_cal_calendar_system( 'vietnamese' ) && null === axismundi_cal_icu_date( 'nonesuch', 739000 )
+	);
+	ax_cs_assert(
+		$ax_cs_results,
+		'and none of them stores anything, so they are the same before and after a day is asked for',
+		0 === (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$ax_cs_table} WHERE system IN ( %s, %s, %s )", 'hebrew', 'chinese', 'islamic-umalqura' ) )
+	);
+}
+
+// -- The store -----------------------------------------------------------------------------------
+
 // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 $wpdb->query( $wpdb->prepare( "DELETE FROM {$ax_cs_table} WHERE system = %s", $ax_cs_system ) );
 
@@ -231,7 +284,7 @@ axismundi_cal_register_calendar_system(
 	array(
 		'label'         => 'Audit lunisolar',
 		'coverage_from' => '2026-06-15',
-		'coverage_to'   => '2026-09-11',
+		'coverage_to'   => '2026-12-31',
 		'resolve'       => static fn( int $day ) : ?array => axismundi_cal_lunar_date( $ax_cs_system, $day ),
 	)
 );
@@ -240,17 +293,21 @@ ax_cs_assert(
 	'a system resolves a day inside its coverage',
 	is_array( axismundi_cal_system_date( $ax_cs_system, (int) axismundi_cal_iso_to_absolute_day( '2026-07-15' ) ) )
 );
+/*
+ * Registered and covering a day is a different fact from having that day's month. Asserted on this
+ * fixture rather than the Korean system, whose store holds whatever this site has actually fetched
+ * -- an assertion that only passes while nobody has used the feature is not an assertion.
+ */
+ax_cs_assert(
+	$ax_cs_results,
+	'a system can cover a day whose month it does not have, and says nothing rather than not existing',
+	axismundi_cal_system_covers( $ax_cs_system, (int) axismundi_cal_iso_to_absolute_day( '2026-11-01' ) )
+		&& null === axismundi_cal_system_date( $ax_cs_system, (int) axismundi_cal_iso_to_absolute_day( '2026-11-01' ) )
+);
 ax_cs_assert(
 	$ax_cs_results,
 	'and says nothing outside it without asking the store',
 	null === axismundi_cal_system_date( $ax_cs_system, (int) axismundi_cal_iso_to_absolute_day( '2026-06-14' ) )
-);
-ax_cs_assert(
-	$ax_cs_results,
-	'while the Korean system covering a day it has not fetched still says nothing, rather than not existing',
-	null !== axismundi_cal_calendar_system( 'korean-lunisolar' )
-		&& axismundi_cal_system_covers( 'korean-lunisolar', $ax_cs_in )
-		&& null === axismundi_cal_system_date( 'korean-lunisolar', $ax_cs_in )
 );
 
 // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.

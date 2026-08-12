@@ -63,6 +63,7 @@ require_once __DIR__ . '/includes/primary-calendar.php';
 require_once __DIR__ . '/includes/capabilities.php';
 require_once __DIR__ . '/includes/calendar-systems.php';
 require_once __DIR__ . '/includes/lunar-store.php';
+require_once __DIR__ . '/includes/icu-calendars.php';
 require_once __DIR__ . '/includes/kasi.php';
 require_once __DIR__ . '/includes/system-providers.php';
 require_once __DIR__ . '/includes/system-items.php';

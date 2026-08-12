@@ -228,11 +228,10 @@ function axismundi_cal_register_calendar_system( string $id, array $args ) : voi
 				 * BCP 47 interoperability and for nothing else. It is deliberately not the id and never
 				 * the source.
 				 *
-				 * Measured rather than assumed: ICU 78.1's `dangi` matches KASI exactly across 1999-2000,
-				 * 2026-2027, 2033-2034 and the years Korea changed its standard meridian, and disagrees
-				 * for 30 days of 1896 and 59 days of 1650-1651 -- including which Gregorian day is 설날
-				 * in 1896. Safe for formatting a date already resolved through the authority above.
-				 * Never safe for resolving one.
+				 * Measured rather than assumed: ICU 78.1's `dangi` matches KASI for all 33,237 days of
+				 * 1900-1990, and disagrees for 30 days of 1896 and 59 of 1650-1651 -- including which
+				 * Gregorian day is 설날 in 1896. 1991-2050 is expected to match and has not been
+				 * verified. See docs/AXISMUNDI-CALENDAR-SYSTEMS.md before relying on either half.
 				 */
 				'icu_calendar'  => (string) ( $args['icu_calendar'] ?? '' ),
 				// `fn() : void`, rendering this provider's own section of the settings screen.

@@ -177,35 +177,54 @@ type          lunisolar            not the same class as Islamic, which is lunar
 Korean calendar. It is recorded for formatting and interoperability and is **not** the id, not the
 provider, and not the source.
 
-### They are not the same calendar — measured, 2026-08-13
+### Measured against KASI, ICU 78.1, 2026-08-13
 
-ICU 78.1's `dangi` was compared against KASI day by day over 4,667 days. Modern years agree
-exactly; historical ones do not.
+**Verified so far.** Only these ranges have actually been compared; nothing here should be read as a
+claim about a year not in the table.
 
 | Years | Days compared | Days differing |
 | --- | --- | --- |
-| 1999–2000, 2026–2027, 2033–2034 | 2,274 | **0** |
-| 1908, 1912, 1954, 1961 (standard-meridian changes) | ~1,460 | **0** |
+| 1900–1990 (continuous) | 33,237 | **0** |
+| 1999–2000, 2026–2027, 2033–2034 (samples) | 2,274 | **0** |
 | 1896 | 366 | **30** |
 | 1650–1651 | ~590 | **59** |
 
+**1991–2050 is not verified.** Three runs stopped in 1991 on a network timeout, not on a
+disagreement. Until one completes, 1991–1998 and 2001–2025 and 2028–2032 and 2035–2050 are simply
+untested — which includes 1996, so a lunar birthday in that year has no evidence behind it yet.
+
+### Where they diverge, and the likeliest reason
+
 ```
-1896-02-13   KASI 1.1     ICU 12.30     ← 설날 itself, a day apart
-1650-11-23   KASI 10.30   ICU 11.1
+1896-02-13   KASI 1.1     ICU 12.30    ← ICU's month starts a day LATER
+1650-11-23   KASI 10.30   ICU 11.1     ← ICU's month starts a day EARLIER
 ```
 
-The 1896 case is the sharp one: the two disagree about which Gregorian day is 음력 1월 1일. A
-lunar-birthday feature reading ICU for a 19th-century date would return the wrong day and look
-right.
+The direction reverses. That rules out a constant epoch offset and is what a **new moon falling near
+local midnight** looks like: both are computing the same conjunction and rounding it to a different
+civil day, because they do not agree on which meridian's midnight to round at.
 
-2033 — the famously contested leap month — turned out to agree, so it is not the boundary to watch.
-The boundary is somewhere between 1896 and 1908, and nothing before 1650 has been tested at all,
-though KASI's range runs to 59 BC.
+Which fits the history. Korea's standard meridian moved more than once (1908, 1912, 1954, 1961), and
+1896 is the year the Gregorian calendar was adopted, so the civil framing around the conversion is
+itself in question there. KASI answers for the Korean civil calendar as Korea keeps it; ICU applies
+its own historical projection. 1650 is far enough back that the astronomical model differs too.
 
-So: `dangi` is fine for *formatting* a date this plugin has already resolved through KASI. It must
-never be used to *resolve* one. The two are interchangeable in living memory and provably not
-interchangeable before it, which is the worst possible shape for an assumption — it holds for every
-date anybody tests casually.
+Note that the meridian-change years themselves (1908, 1912, 1954, 1961) came back identical — a
+conjunction has to land near midnight *as well* for the difference to surface, so the divergence is
+sporadic rather than a clean before/after boundary. This is a hypothesis consistent with the
+measurements, not something this plugin has proved.
+
+### The policy that follows
+
+```
+1900–1990          ICU dangi is measurably the same calendar. Use it.
+1991–2050          expected to hold, not yet verified.
+before 1900        do not trust ICU. KASI, or no second date at all.
+```
+
+`dangi` resolves modern dates for display. KASI stays the authority for anything where one day is
+the point — an archival date, or a feature that reads 간지/절기, which ICU does not carry at all and
+KASI already returns in `lunSecha`/`lunWolgeon`/`lunIljin`.
 
 The wider taxonomy matters for the same reason. Chinese, Korean, Vietnamese and Hebrew are
 lunisolar; Islamic is **lunar** and does not intercalate, which is why Ramadan walks through the

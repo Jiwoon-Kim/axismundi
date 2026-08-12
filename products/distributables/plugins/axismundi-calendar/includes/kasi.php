@@ -169,7 +169,7 @@ function axismundi_cal_kasi_fetch_month( int $year, int $month ) {
 	$response = wp_safe_remote_get(
 		$url,
 		array(
-			'timeout'     => 15,
+			'timeout'     => 30,
 			'redirection' => 0,
 			'headers'     => array( 'Accept' => 'application/xml' ),
 		)

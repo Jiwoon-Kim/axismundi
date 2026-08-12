@@ -248,11 +248,43 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 		return new WP_Error( 'ax_cal_source', __( 'Only a subscribed calendar mirrors a source.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
 
+	/*
+	 * What kind of dataset this is, which is a choice rather than a set of labels: it decides which
+	 * writer fills the calendar and what its entries mean in time. Fixed once set, because changing
+	 * it would change the meaning of every entry already on it, and no reading turns a moon phase
+	 * into a public holiday.
+	 */
+	$system_provider = 'system' === $kind
+		? (string) ( $existing['system_provider'] ?? '' )
+		: '';
+	if ( 'system' === $kind && '' === $system_provider ) {
+		$system_provider = (string) ( $fields['system_provider'] ?? '' );
+		if ( ! in_array( $system_provider, AXISMUNDI_CAL_SYSTEM_PROVIDERS, true ) ) {
+			return new WP_Error( 'ax_cal_system_provider', __( 'A system calendar has to say what kind of dataset it holds.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+		}
+	}
+
+	$provider_config = array();
+	if ( 'system' === $kind ) {
+		$submitted = array_key_exists( 'provider_config', $fields )
+			? (array) $fields['provider_config']
+			: axismundi_cal_provider_config( $existing );
+		$provider_config = axismundi_cal_normalize_provider_config( $system_provider, $submitted );
+		if ( is_wp_error( $provider_config ) ) {
+			return $provider_config;
+		}
+	}
+
 	$system_categories = 'system' === $kind
 		? axismundi_cal_normalize_system_calendar_categories( $fields['system_categories'] ?? ( $existing['system_categories'] ?? '' ) )
 		: array();
-	if ( 'system' === $kind && ! is_array( $existing ) && array() === $system_categories ) {
-		return new WP_Error( 'ax_cal_system_categories', __( 'A system calendar needs at least one top-level category.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	if ( 'system' === $kind && array() === $system_categories && '' !== $system_provider ) {
+		/*
+		 * The browsing classification follows from the provider rather than being asked for twice.
+		 * They were two answers to one question, and a calendar whose label disagreed with its own
+		 * writer would appear in the catalog under something it is not.
+		 */
+		$system_categories = axismundi_cal_normalize_system_calendar_categories( array( strtoupper( $system_provider ) ) );
 	}
 
 	$now  = current_time( 'mysql', true );
@@ -264,6 +296,8 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 		'kind'           => $kind,
 		'source'         => $source,
 		'system_categories' => implode( ',', $system_categories ),
+		'system_provider'   => $system_provider,
+		'provider_config'   => (string) wp_json_encode( $provider_config ),
 		'visibility'     => $visibility,
 		'updated_at'     => $now,
 	);

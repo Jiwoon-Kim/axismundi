@@ -61,6 +61,7 @@ require_once __DIR__ . '/includes/calendar-list.php';
 require_once __DIR__ . '/includes/calendar-acl.php';
 require_once __DIR__ . '/includes/primary-calendar.php';
 require_once __DIR__ . '/includes/capabilities.php';
+require_once __DIR__ . '/includes/system-providers.php';
 require_once __DIR__ . '/includes/system-items.php';
 require_once __DIR__ . '/includes/admin-calendars.php';
 require_once __DIR__ . '/includes/admin-workspace.php';

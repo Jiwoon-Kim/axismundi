@@ -296,6 +296,8 @@ function axismundi_cal_install_schema() : bool {
 			kind varchar(16) NOT NULL default 'local',
 			source varchar(24) NOT NULL default 'native',
 			system_categories varchar(191) NOT NULL default '',
+			system_provider varchar(32) NOT NULL default '',
+			provider_config longtext NOT NULL,
 			authority_actor_uri text NOT NULL,
 			authority_actor_uri_hash char(64) NOT NULL default '',
 			visibility varchar(16) NOT NULL default 'public',
@@ -557,6 +559,7 @@ function axismundi_cal_install_schema() : bool {
 	axismundi_cal_copy_legacy_access_roles();
 	axismundi_cal_seed_owner_entries();
 	axismundi_cal_backfill_source();
+	axismundi_cal_backfill_system_provider();
 	axismundi_cal_backfill_authority();
 	axismundi_cal_clear_v12_unfiled_authority( $previous_version );
 	axismundi_cal_seed_authority_acl();

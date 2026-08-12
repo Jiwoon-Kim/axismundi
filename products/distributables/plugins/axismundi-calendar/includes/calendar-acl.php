@@ -448,6 +448,40 @@ function axismundi_cal_backfill_source() : int {
 }
 
 /**
+ * Read the provider of system Calendars made before providers existed.
+ *
+ * Their top-level category said what they were, so it is what the provider is taken from: a calendar
+ * classified `HOLIDAY` was a holiday dataset, and calling it anything else now would be inventing a
+ * fact rather than recovering one. Anything unrecognisable is left blank rather than guessed at.
+ *
+ * @return int Number of Calendars given a provider.
+ */
+function axismundi_cal_backfill_system_provider() : int {
+	global $wpdb;
+	$table = axismundi_cal_calendars_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration over this plugin's own table.
+	$columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
+	if ( ! in_array( 'system_provider', $columns, true ) || ! in_array( 'system_categories', $columns, true ) ) {
+		return 0;
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
+	$rows = (array) $wpdb->get_results( "SELECT id, system_categories FROM {$table} WHERE kind = 'system' AND system_provider = ''", ARRAY_A );
+
+	$written = 0;
+	foreach ( $rows as $row ) {
+		$first    = strtolower( (string) strtok( (string) $row['system_categories'], ',' ) );
+		$provider = in_array( $first, AXISMUNDI_CAL_SYSTEM_PROVIDERS, true ) ? $first : '';
+		if ( '' === $provider ) {
+			continue;
+		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+		$wpdb->update( $table, array( 'system_provider' => $provider ), array( 'id' => (int) $row['id'] ) );
+		++$written;
+	}
+	return $written;
+}
+
+/**
  * Give every Calendar an authority, from the owner it already recorded.
  *
  * @return int Number of Calendars given one.

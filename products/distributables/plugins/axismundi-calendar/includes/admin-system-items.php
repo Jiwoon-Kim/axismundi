@@ -83,7 +83,8 @@ function axismundi_cal_handle_system_calendar_form() : void {
 			'source'      => 'manual',
 			'name'        => $name,
 			'slug'        => isset( $_POST['slug'] ) ? sanitize_title( wp_unslash( (string) $_POST['slug'] ) ) : sanitize_title( $name ),
-			'system_categories' => isset( $_POST['system_categories'] ) ? array_map( 'sanitize_text_field', (array) wp_unslash( $_POST['system_categories'] ) ) : array(),
+			'system_provider' => isset( $_POST['system_provider'] ) ? sanitize_key( wp_unslash( (string) $_POST['system_provider'] ) ) : '',
+			'provider_config' => isset( $_POST['provider_config'] ) ? array_map( 'sanitize_text_field', (array) wp_unslash( $_POST['provider_config'] ) ) : array(),
 			'description' => isset( $_POST['description'] ) ? sanitize_textarea_field( wp_unslash( (string) $_POST['description'] ) ) : '',
 			'timezone'    => isset( $_POST['timezone'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['timezone'] ) ) : axismundi_cal_default_calendar_timezone(),
 		)
@@ -166,6 +167,12 @@ function axismundi_cal_system_item_message( string $code ) : string {
 	switch ( $code ) {
 		case 'calendar_created':
 			return __( 'Calendar created. Add its entries below.', 'axismundi-calendar' );
+		case 'ax_cal_system_provider':
+			return __( 'Choose what kind of dataset this calendar holds.', 'axismundi-calendar' );
+		case 'ax_cal_provider_region':
+			return __( 'A holiday calendar needs a two-letter country or region code, such as KR.', 'axismundi-calendar' );
+		case 'ax_cal_provider_locale':
+			return __( 'A holiday calendar needs the language its names are written in, such as ko-KR.', 'axismundi-calendar' );
 		case 'ax_cal_system_categories':
 			return __( 'Choose at least one category for this system calendar.', 'axismundi-calendar' );
 		case 'ax_cal_slug_taken':
@@ -284,19 +291,37 @@ function axismundi_cal_render_system_calendar_form() : void {
 				</td>
 			</tr>
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Categories', 'axismundi-calendar' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'What it holds', 'axismundi-calendar' ); ?></th>
 				<td>
-					<?php foreach ( AXISMUNDI_CAL_SYSTEM_CALENDAR_CATEGORIES as $category ) : ?>
-						<label style="display:inline-block;min-width:14em;">
-							<input type="checkbox" name="system_categories[]" value="<?php echo esc_attr( $category ); ?>">
-							<?php echo esc_html( axismundi_cal_system_calendar_category_label( $category ) ); ?>
-						</label>
+					<?php foreach ( AXISMUNDI_CAL_SYSTEM_PROVIDERS as $provider_key ) : ?>
+						<?php $provider_labels = axismundi_cal_system_provider_labels( $provider_key ); ?>
+						<p>
+							<label>
+								<input type="radio" name="system_provider" value="<?php echo esc_attr( $provider_key ); ?>" <?php checked( 'holiday', $provider_key ); ?>>
+								<strong><?php echo esc_html( $provider_labels['label'] ); ?></strong>
+							</label>
+							<br>
+							<span class="description" style="margin-inline-start:1.8em;"><?php echo esc_html( $provider_labels['description'] ); ?></span>
+						</p>
 					<?php endforeach; ?>
 					<p class="description">
-						<?php esc_html_e( 'Classifies this dataset in the catalog. Individual entries receive more specific categories, such as PUBLIC-HOLIDAY or MOON-PHASE.', 'axismundi-calendar' ); ?>
+						<?php esc_html_e( 'One choice, and fixed afterwards. It decides how entries get here and what they mean, not just where the calendar is listed.', 'axismundi-calendar' ); ?>
 					</p>
 				</td>
 			</tr>
+			<?php foreach ( axismundi_cal_system_provider_config_fields( 'holiday' ) as $config_key => $config_field ) : ?>
+				<tr>
+					<th scope="row">
+						<label for="ax-cal-config-<?php echo esc_attr( $config_key ); ?>"><?php echo esc_html( $config_field['label'] ); ?></label>
+					</th>
+					<td>
+						<input name="provider_config[<?php echo esc_attr( $config_key ); ?>]" id="ax-cal-config-<?php echo esc_attr( $config_key ); ?>"
+							type="text" class="regular-text"
+							placeholder="<?php echo esc_attr( 'region' === $config_key ? 'KR' : 'ko-KR' ); ?>">
+						<p class="description"><?php echo esc_html( $config_field['description'] ); ?></p>
+					</td>
+				</tr>
+			<?php endforeach; ?>
 			<tr>
 				<th scope="row"><label for="ax-cal-system-timezone"><?php esc_html_e( 'Timezone', 'axismundi-calendar' ); ?></label></th>
 				<td>

@@ -248,7 +248,9 @@ try {
 	 */
 	$ax_si_system = axismundi_cal_calendar_save(
 		array(
-			'kind'       => 'system',
+			'kind'            => 'system',
+			'system_provider' => 'holiday',
+			'provider_config' => array( 'region' => 'KR', 'source_locale' => 'ko-KR' ),
 			'name'       => 'Site holidays',
 			'slug'       => 'ax-si-system-' . $ax_si_suffix,
 			'system_categories' => array( 'HOLIDAY' ),
@@ -290,6 +292,118 @@ try {
 		$ax_si_results,
 		'and what kind of calendar it is cannot be changed afterwards',
 		is_wp_error( axismundi_cal_calendar_save( array( 'kind' => 'local' ), $ax_si_system ) )
+	);
+
+	// -- What kind of dataset it holds ------------------------------------------------------------------
+
+	/*
+	 * One choice rather than a set of labels, because it decides which writer fills the calendar and
+	 * what its entries mean in time. A holiday is a civil date; a moon phase is an instant in UTC that
+	 * falls on different days for different readers. Those cannot be the same calendar.
+	 */
+	ax_si_assert( $ax_si_results, 'a system calendar says what kind of dataset it holds', 'holiday' === axismundi_cal_system_provider( $ax_si_system_row ) );
+	ax_si_assert(
+		$ax_si_results,
+		'and cannot be made without saying so',
+		is_wp_error( axismundi_cal_calendar_save( array( 'kind' => 'system', 'name' => 'Unclassified', 'slug' => 'ax-si-unclassified-' . $ax_si_suffix, 'timezone' => 'UTC' ) ) )
+	);
+	ax_si_assert(
+		$ax_si_results,
+		'nor with a kind that does not exist',
+		is_wp_error( axismundi_cal_calendar_save( array( 'kind' => 'system', 'system_provider' => 'sports', 'name' => 'Sports', 'slug' => 'ax-si-sports-' . $ax_si_suffix, 'timezone' => 'UTC' ) ) )
+	);
+
+	/*
+	 * Fixed afterwards. Changing it would change what every entry already on the calendar means, and
+	 * there is no reading under which a moon phase was ever a public holiday.
+	 */
+	axismundi_cal_calendar_save( array( 'system_provider' => 'astronomy' ), $ax_si_system );
+	ax_si_assert( $ax_si_results, 'and what it holds does not change once entries exist', 'holiday' === axismundi_cal_system_provider( (array) axismundi_cal_calendar_get( $ax_si_system ) ) );
+
+	// -- What that kind needs to know ---------------------------------------------------------------------
+
+	/*
+	 * Region and language are separate answers. `KR` says whose dates these are; `ko-KR` says what
+	 * language they are written in -- and Japanese holidays read in Korean is a real combination.
+	 */
+	$ax_si_config = axismundi_cal_provider_config( (array) axismundi_cal_calendar_get( $ax_si_system ) );
+	ax_si_assert( $ax_si_results, 'a holiday calendar records whose dates it holds', 'KR' === ( $ax_si_config['region'] ?? '' ) );
+	ax_si_assert( $ax_si_results, 'and separately what language they are written in', 'ko-KR' === ( $ax_si_config['source_locale'] ?? '' ) );
+
+	ax_si_assert(
+		$ax_si_results,
+		'a holiday calendar for nowhere is refused',
+		is_wp_error(
+			axismundi_cal_calendar_save(
+				array( 'kind' => 'system', 'system_provider' => 'holiday', 'provider_config' => array( 'source_locale' => 'ko-KR' ), 'name' => 'Nowhere', 'slug' => 'ax-si-nowhere-' . $ax_si_suffix, 'timezone' => 'UTC' )
+			)
+		)
+	);
+	ax_si_assert(
+		$ax_si_results,
+		'and one in no language is refused too',
+		is_wp_error(
+			axismundi_cal_calendar_save(
+				array( 'kind' => 'system', 'system_provider' => 'holiday', 'provider_config' => array( 'region' => 'KR' ), 'name' => 'No language', 'slug' => 'ax-si-nolang-' . $ax_si_suffix, 'timezone' => 'UTC' )
+			)
+		)
+	);
+	ax_si_assert(
+		$ax_si_results,
+		'a region that is not a region code is refused rather than stored',
+		is_wp_error(
+			axismundi_cal_calendar_save(
+				array( 'kind' => 'system', 'system_provider' => 'holiday', 'provider_config' => array( 'region' => 'South Korea', 'source_locale' => 'ko' ), 'name' => 'Bad region', 'slug' => 'ax-si-badregion-' . $ax_si_suffix, 'timezone' => 'UTC' )
+			)
+		)
+	);
+
+	/*
+	 * A WordPress locale arrives with an underscore and a language tag uses a hyphen. Accepted and
+	 * normalized rather than refused, since both forms name the same language and a later translation
+	 * link is keyed on one of them.
+	 */
+	$ax_si_underscore = axismundi_cal_calendar_save(
+		array( 'kind' => 'system', 'system_provider' => 'holiday', 'provider_config' => array( 'region' => 'jp', 'source_locale' => 'ja_JP' ), 'name' => 'Japan holidays', 'slug' => 'ax-si-jp-' . $ax_si_suffix, 'timezone' => 'Asia/Tokyo' )
+	);
+	// Asserted rather than guarded on: wrapped in a bare `if`, a refusal here would skip the three
+	// checks below and report a shorter, greener run instead of a failure.
+	ax_si_assert( $ax_si_results, 'a region and locale given in other forms are accepted', is_int( $ax_si_underscore ) );
+	if ( is_int( $ax_si_underscore ) ) {
+		$ax_si_calendars[] = $ax_si_underscore;
+		$ax_si_jp = axismundi_cal_provider_config( (array) axismundi_cal_calendar_get( $ax_si_underscore ) );
+		ax_si_assert( $ax_si_results, 'a region given in lower case is stored as a code', 'JP' === ( $ax_si_jp['region'] ?? '' ) );
+		ax_si_assert( $ax_si_results, 'and a WordPress locale is stored as a language tag', 'ja-JP' === ( $ax_si_jp['source_locale'] ?? '' ) );
+		/*
+		 * Japanese holidays in Japanese and the same dates in Korean are two calendars, not one with
+		 * two names: the feeds they come from share no identity, so nothing could merge them.
+		 */
+		ax_si_assert( $ax_si_results, 'and it is a different calendar from the Korean one', $ax_si_underscore !== $ax_si_system );
+	}
+
+	/*
+	 * The browsing classification follows from the kind rather than being asked for twice. Two answers
+	 * to one question is how a calendar ends up listed under something its own writer is not.
+	 */
+	ax_si_assert(
+		$ax_si_results,
+		'the catalog classification follows from what the calendar holds',
+		'HOLIDAY' === (string) axismundi_cal_calendar_get( $ax_si_system )['system_categories']
+	);
+	ax_si_assert(
+		$ax_si_results,
+		'and the entry categories a holiday calendar expects are offered first',
+		array( 'HOLIDAY', 'PUBLIC-HOLIDAY', 'OBSERVANCE', 'SUBSTITUTE-HOLIDAY' ) === axismundi_cal_system_provider_categories( 'holiday' )
+	);
+	ax_si_assert(
+		$ax_si_results,
+		'without the vocabulary being narrowed to them, since an election can also be a holiday',
+		in_array( 'ELECTION', AXISMUNDI_CAL_ITEM_CATEGORIES, true )
+	);
+	ax_si_assert(
+		$ax_si_results,
+		'a kind with no writer yet asks for no settings, rather than settings guessed ahead of it',
+		array() === axismundi_cal_system_provider_config_fields( 'astronomy' )
 	);
 
 	// -- What can be done with it ----------------------------------------------------------------------
@@ -364,7 +478,18 @@ try {
 	ob_start();
 	axismundi_cal_render_system_calendar_form();
 	$ax_si_create_html = (string) ob_get_clean();
-	ax_si_assert( $ax_si_results, 'the creation form classifies the system calendar itself', str_contains( $ax_si_create_html, 'name="system_categories[]"' ) && str_contains( $ax_si_create_html, 'Astronomy' ) );
+	/*
+	 * One choice rather than several, because it dispatches. Checkboxes invited a calendar to be a bit
+	 * of a holiday feed and a bit of an astronomical one, which no writer could then fill.
+	 */
+	ax_si_assert( $ax_si_results, 'the creation form asks what kind of dataset this is, as one choice', str_contains( $ax_si_create_html, 'type="radio" name="system_provider"' ) );
+	ax_si_assert( $ax_si_results, 'offering every kind that can be declared', str_contains( $ax_si_create_html, 'value="astronomy"' ) && str_contains( $ax_si_create_html, 'value="holiday"' ) );
+	ax_si_assert( $ax_si_results, 'and no longer as a set of labels to tick', ! str_contains( $ax_si_create_html, 'name="system_categories[]"' ) );
+	ax_si_assert(
+		$ax_si_results,
+		'with the settings a holiday dataset needs asked for on the same form',
+		str_contains( $ax_si_create_html, 'provider_config[region]' ) && str_contains( $ax_si_create_html, 'provider_config[source_locale]' )
+	);
 	ax_si_assert( $ax_si_results, 'and offers the core timezone selector rather than a free-text IANA field', str_contains( $ax_si_create_html, '<select name="timezone"' ) && ! str_contains( $ax_si_create_html, 'name="system_key"' ) );
 
 	wp_set_current_user( $ax_si_reader['user_id'] );

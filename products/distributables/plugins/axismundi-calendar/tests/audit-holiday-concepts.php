@@ -150,6 +150,11 @@ try {
 	 */
 	ax_hc_assert( $ax_hc_results, 'and names the day it stands in for', $ax_hc_first === (int) axismundi_cal_holiday_occurrence_get( $ax_hc_second )['substitute_for'] );
 	ax_hc_assert( $ax_hc_results, 'while an ordinary day stands in for nothing', 0 === (int) axismundi_cal_holiday_occurrence_get( $ax_hc_first )['substitute_for'] );
+	ax_hc_assert(
+	$ax_hc_results,
+	'a substitute day cannot point at a day of another holiday',
+	is_wp_error( axismundi_cal_holiday_occurrence_save( $ax_hc_march, array( 'role' => 'substitute', 'substitute_for' => $ax_hc_day ), $ax_hc_second ) )
+);
 
 	// -- The rows in each language hang off the day -------------------------------------------------------
 
@@ -343,6 +348,7 @@ try {
 		$ax_hc_linked_html = (string) ob_get_clean();
 		ax_hc_assert( $ax_hc_results, 'a linked entry shows the holiday it is a day of', str_contains( $ax_hc_linked_html, '설날' ) );
 		ax_hc_assert( $ax_hc_results, 'and can be detached again', str_contains( $ax_hc_linked_html, 'Unlink' ) );
+		ax_hc_assert( $ax_hc_results, 'and lets a maintainer change the day role after linking it', str_contains( $ax_hc_linked_html, 'name="role"' ) && str_contains( $ax_hc_linked_html, 'holiday-period' ) && str_contains( $ax_hc_linked_html, 'Save role' ) );
 
 		$ax_hc_orphan = (int) axismundi_cal_system_item_save( $ax_hc_ko, array( 'title' => '제헌절', 'start_date' => '2026-07-17', 'categories' => array( 'HOLIDAY', 'OBSERVANCE' ), 'status' => 'published' ) );
 		ob_start();

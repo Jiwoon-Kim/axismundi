@@ -86,6 +86,28 @@ function axismundi_cal_handle_item_link() : void {
 	}
 	$catalog_id = (int) $calendar['holiday_catalog_id'];
 	$action     = isset( $_POST['ax_cal_link_action'] ) ? sanitize_key( wp_unslash( (string) $_POST['ax_cal_link_action'] ) ) : 'link';
+	if ( 'update-role' === $action ) {
+		$occurrence = axismundi_cal_holiday_occurrence_get( (int) $item['holiday_occurrence_id'] );
+		$concept    = is_array( $occurrence ) ? axismundi_cal_holiday_concept_get( (int) $occurrence['concept_id'] ) : null;
+		if ( ! is_array( $occurrence ) || ! is_array( $concept ) || $catalog_id !== (int) $concept['catalog_id'] ) {
+			wp_safe_redirect( add_query_arg( 'ax_cal_error', 'ax_cal_occurrence_missing', $base ) );
+			exit;
+		}
+		$updated = axismundi_cal_holiday_occurrence_save(
+			(int) $concept['id'],
+			array(
+				'role'           => isset( $_POST['role'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['role'] ) ) : (string) $occurrence['role'],
+				'substitute_for' => isset( $_POST['substitute_for'] ) ? absint( wp_unslash( $_POST['substitute_for'] ) ) : (int) $occurrence['substitute_for'],
+			),
+			(int) $occurrence['id']
+		);
+		if ( is_wp_error( $updated ) ) {
+			wp_safe_redirect( add_query_arg( 'ax_cal_error', rawurlencode( $updated->get_error_code() ), $base ) );
+			exit;
+		}
+		wp_safe_redirect( add_query_arg( 'ax_cal_notice', 'occurrence_updated', $base ) );
+		exit;
+	}
 
 	if ( 'promote' === $action ) {
 		/*
@@ -285,9 +307,22 @@ function axismundi_cal_render_item_links( array $calendar, array $items, int $ye
 							<?php wp_nonce_field( 'ax_cal_link_' . $calendar_id ); ?>
 							<?php if ( is_array( $concept ) ) : ?>
 								<strong><?php echo esc_html( (string) $concept['label'] ); ?></strong>
-								<?php if ( is_array( $occurrence ) && 'principal' !== (string) $occurrence['role'] ) : ?>
-									<em><?php echo esc_html( (string) $occurrence['role'] ); ?></em>
-								<?php endif; ?>
+								<select name="role" aria-label="<?php esc_attr_e( 'Day role', 'axismundi-calendar' ); ?>">
+									<?php foreach ( AXISMUNDI_CAL_OCCURRENCE_ROLES as $role ) : ?>
+										<option value="<?php echo esc_attr( $role ); ?>" <?php selected( $role, (string) $occurrence['role'] ); ?>><?php echo esc_html( $role ); ?></option>
+									<?php endforeach; ?>
+								</select>
+								<select name="substitute_for" aria-label="<?php esc_attr_e( 'Stands in for', 'axismundi-calendar' ); ?>">
+									<option value="0"><?php esc_html_e( 'No substitute day', 'axismundi-calendar' ); ?></option>
+									<?php foreach ( axismundi_cal_holiday_occurrences( (int) $concept['id'], (int) $occurrence['batch_year'] ) as $principal ) : ?>
+										<?php if ( (int) $principal['id'] !== (int) $occurrence['id'] && 'principal' === (string) $principal['role'] ) : ?>
+											<option value="<?php echo esc_attr( (string) $principal['id'] ); ?>" <?php selected( (int) $principal['id'], (int) $occurrence['substitute_for'] ); ?>><?php echo esc_html( (string) $principal['start_date'] ); ?></option>
+										<?php endif; ?>
+									<?php endforeach; ?>
+								</select>
+								<button type="submit" class="button button-small" name="ax_cal_link_action" value="update-role">
+									<?php esc_html_e( 'Save role', 'axismundi-calendar' ); ?>
+								</button>
 								<input type="hidden" name="occurrence_id" value="0">
 								<button type="submit" class="button-link" name="ax_cal_link_action" value="link">
 									<?php esc_html_e( 'Unlink', 'axismundi-calendar' ); ?>

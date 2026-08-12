@@ -452,6 +452,11 @@ function axismundi_cal_holiday_occurrence_save( int $concept_id, array $fields, 
 	$substitute_for = (int) ( $fields['substitute_for'] ?? ( $existing['substitute_for'] ?? 0 ) );
 	if ( 'substitute' !== $role ) {
 		$substitute_for = 0;
+	} else {
+		$principal = axismundi_cal_holiday_occurrence_get( $substitute_for );
+		if ( ! is_array( $principal ) || (int) $principal['concept_id'] !== $concept_id || $substitute_for === $occurrence_id ) {
+			return new WP_Error( 'ax_cal_substitute_for', __( 'A substitute day must name another day of the same holiday.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+		}
 	}
 	$batch_year = (int) ( $fields['batch_year'] ?? ( $existing['batch_year'] ?? 0 ) );
 	if ( $batch_year <= 0 ) {

@@ -235,6 +235,74 @@ function axismundi_cal_calendar_list_items() : array {
 }
 
 /**
+ * Calendars this principal could add to their list but has not.
+ *
+ * The counterpart of the list, and the reason nothing has to be seeded by hand: a calendar being
+ * readable by everybody is not the same as being on anybody's screen, and until there is a screen
+ * that shows the difference the readable ones are invisible.
+ *
+ * A calendar already listed is absent even when hidden -- hiding is a decision about a calendar you
+ * have, and offering it back as a discovery would undo it every time the screen opened. Remote rows
+ * are absent too: a subscription is added by its address, not found by browsing.
+ *
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_cal_discoverable_calendars() : array {
+	global $wpdb;
+	$actor_uri = axismundi_cal_current_actor_uri();
+	if ( '' === $actor_uri || ! axismundi_cal_ready() ) {
+		return array();
+	}
+	$calendars = axismundi_cal_calendars_table();
+	$acl       = axismundi_cal_acl_table();
+	$hash      = hash( 'sha256', $actor_uri );
+	/*
+	 * Everything published, everything shared with this principal by name, and nothing else. Reading
+	 * the whole table and filtering would answer the same today and stop being answerable on a site
+	 * with a calendar per member.
+	 */
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own tables.
+	$ids = (array) $wpdb->get_col(
+		$wpdb->prepare(
+			"SELECT id FROM {$calendars} WHERE kind = 'system'
+			 UNION
+			 SELECT calendar_id FROM {$acl} WHERE principal_type = 'public'
+			 UNION
+			 SELECT calendar_id FROM {$acl} WHERE principal_type = 'actor' AND principal_uri_hash = %s",
+			$hash
+		)
+	);
+	$ids = array_values( array_unique( array_map( 'intval', $ids ) ) );
+
+	$out = array();
+	foreach ( $ids as $calendar_id ) {
+		$calendar = axismundi_cal_calendar_get( $calendar_id );
+		if ( ! is_array( $calendar ) || 'remote' === (string) $calendar['kind'] ) {
+			continue;
+		}
+		// The gate is asked, not assumed. These ids came from rules that grant access, but a row can
+		// be reachable by one rule and refused by another, and only one of those answers is the ACL.
+		if ( ! axismundi_cal_request_can_read( $calendar_id ) ) {
+			continue;
+		}
+		if ( is_array( axismundi_cal_list_entry( $calendar_id, $actor_uri ) ) ) {
+			continue;
+		}
+		$out[] = axismundi_cal_rest_calendar( $calendar, array() );
+	}
+	return $out;
+}
+
+/**
+ * `GET /axismundi/v1/actors/me/calendarDiscovery`.
+ *
+ * @return WP_REST_Response
+ */
+function axismundi_cal_rest_calendar_discovery() : WP_REST_Response {
+	return new WP_REST_Response( array( 'items' => axismundi_cal_discoverable_calendars() ), 200 );
+}
+
+/**
  * `GET /axismundi/v1/calendars/{uuid}`.
  *
  * @param WP_REST_Request $request Request.
@@ -528,6 +596,21 @@ function axismundi_cal_register_read_routes() : void {
 					return true;
 				}
 				// `me` with nobody signed in is not a forbidden calendar, it is no principal at all.
+				return new WP_Error( 'ax_cal_unauthenticated', __( 'You must be signed in.', 'axismundi-calendar' ), array( 'status' => 401 ) );
+			},
+		)
+	);
+
+	register_rest_route(
+		'axismundi/v1',
+		'/actors/me/calendarDiscovery',
+		array(
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => 'axismundi_cal_rest_calendar_discovery',
+			'permission_callback' => static function () {
+				if ( is_user_logged_in() ) {
+					return true;
+				}
 				return new WP_Error( 'ax_cal_unauthenticated', __( 'You must be signed in.', 'axismundi-calendar' ), array( 'status' => 401 ) );
 			},
 		)

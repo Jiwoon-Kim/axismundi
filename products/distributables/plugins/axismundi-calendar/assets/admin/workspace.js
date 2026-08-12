@@ -245,6 +245,49 @@
 		return groups;
 	}
 
+	/**
+	 * The calendars a person could have and does not, which is where a list starts.
+	 *
+	 * Grouped the same way the sidebar is, and added the same way: one dataset is one thing to add,
+	 * and adding it takes every language it has, because the grid draws the day once and chooses the
+	 * label. Adding half a dataset would be choosing a language in a control that means content.
+	 */
+	function BrowseCalendars( props ) {
+		return el(
+			C.Modal,
+			{ title: __( 'Browse calendars', 'axismundi-calendar' ), onRequestClose: props.onClose, className: 'ax-cal-browse' },
+			props.loading ? el( C.Spinner, null ) : null,
+			! props.loading && 0 === props.calendars.length
+				? el( 'p', null, __( 'There is nothing else published here yet.', 'axismundi-calendar' ) )
+				: null,
+			el(
+				'ul',
+				{ className: 'ax-cal-browse__list' },
+				groupByCatalog( props.calendars ).map( function ( group ) {
+					return el(
+						'li',
+						{ key: group.key, className: 'ax-cal-browse__item' },
+						el(
+							'div',
+							null,
+							el( 'strong', null, group.label ),
+							group.locales.length > 1
+								? el( 'span', { className: 'ax-cal-workspace__role' }, group.locales.join( ' · ' ) )
+								: null
+						),
+						el( C.Button, {
+							variant: 'secondary',
+							disabled: props.busy,
+							onClick: function () {
+								props.onAdd( group.members );
+							}
+						}, __( 'Add', 'axismundi-calendar' ) )
+					);
+				} )
+			)
+		);
+	}
+
 	function CalendarList( props ) {
 		var owned = props.calendars.filter( function ( calendar ) {
 			return 'remote' !== calendar.kind;
@@ -482,6 +525,16 @@
 		var loaded = loadedState[ 0 ];
 		var setLoaded = loadedState[ 1 ];
 
+		var browsingState = useState( false );
+		var browsing = browsingState[ 0 ];
+		var setBrowsing = browsingState[ 1 ];
+
+		// null until asked. The discovery list is not part of the first paint: it answers a question
+		// nobody has asked yet, and fetching it with the month would slow down the screen that has.
+		var discoveryState = useState( null );
+		var discovery = discoveryState[ 0 ];
+		var setDiscovery = discoveryState[ 1 ];
+
 		function report( failure ) {
 			setError( ( failure && failure.message ) || __( 'The calendar could not be loaded.', 'axismundi-calendar' ) );
 		}
@@ -560,6 +613,48 @@
 				} );
 		}, [ tickedKey, monthKey( cursor ), loaded ] );
 
+		function openBrowse() {
+			setBrowsing( true );
+			setDiscovery( null );
+			apiFetch( { path: '/' + config.namespace + '/actors/me/calendarDiscovery' } )
+				.then( function ( response ) {
+					setDiscovery( response.items || [] );
+				} )
+				.catch( function ( failure ) {
+					setDiscovery( [] );
+					report( failure );
+				} );
+		}
+
+		/*
+		 * Adding is one request per language of the dataset, and the screen only changes once they
+		 * have all answered. A half-added dataset drawn as if it were whole would be a lie the next
+		 * reload corrects, and this is not the optimistic case a checkbox is: nobody is waiting on a
+		 * control they just clicked, they are waiting to see a calendar appear.
+		 */
+		function add( members ) {
+			setBusy( true );
+			Promise.all( members.map( function ( member ) {
+				return apiFetch( {
+					path: '/' + config.namespace + '/actors/me/calendarList/' + member.id,
+					method: 'PUT',
+					data: { selected: true }
+				} );
+			} ) )
+				.then( function ( added ) {
+					setCalendars( ( calendars || [] ).concat( added ) );
+					setDiscovery( ( discovery || [] ).filter( function ( entry ) {
+						return ! members.some( function ( member ) {
+							return member.id === entry.id;
+						} );
+					} ) );
+				} )
+				.catch( report )
+				.finally( function () {
+					setBusy( false );
+				} );
+		}
+
 		function toggle( calendar, next ) {
 			// Optimistic, because the answer is already known and a checkbox that waits for a round
 			// trip feels broken. A failure puts it back and says so.
@@ -629,7 +724,8 @@
 					'div',
 					{ className: 'ax-cal-workspace__aside' },
 					el( MiniCalendar, { cursor: cursor, onPick: setCursor } ),
-					el( CalendarList, { calendars: calendars, busy: busy, onToggle: toggle } )
+					el( CalendarList, { calendars: calendars, busy: busy, onToggle: toggle } ),
+					el( C.Button, { variant: 'link', onClick: openBrowse }, __( 'Browse calendars', 'axismundi-calendar' ) )
 				),
 				el( MonthGrid, {
 					items: items,
@@ -643,7 +739,18 @@
 			),
 			el( EventPanel, { item: selected, onClose: function () {
 				setSelected( null );
-			} } )
+			} } ),
+			browsing
+				? el( BrowseCalendars, {
+					calendars: discovery,
+					loading: null === discovery,
+					busy: busy,
+					onAdd: add,
+					onClose: function () {
+						setBrowsing( false );
+					}
+				} )
+				: null
 		);
 	}
 

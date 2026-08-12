@@ -441,6 +441,58 @@ try {
 		'' === (string) axismundi_cal_rest_calendar( (array) axismundi_cal_calendar_get( $ax_ws_mine ) )['catalog']
 	);
 
+	/*
+	 * Discovery, which is the counterpart of the list and the reason nothing has to be seeded by
+	 * hand: a published calendar nobody has added is readable and invisible, and this is the screen
+	 * where that difference is visible.
+	 */
+	$ax_ws_discover = static fn() : array => array_map(
+		static fn( array $c ) : string => (string) $c['id'],
+		axismundi_cal_discoverable_calendars()
+	);
+	ax_ws_assert(
+		$ax_ws_results,
+		'a published Calendar nobody has added is offered',
+		in_array( $ax_ws_ko_uuid, $ax_ws_discover(), true )
+	);
+	axismundi_cal_list_set( $ax_ws_ko, $ax_ws_viewer['actor_uri'], 'reader', array( 'selected' => true ) );
+	ax_ws_assert(
+		$ax_ws_results,
+		'and stops being offered once it is theirs',
+		! in_array( $ax_ws_ko_uuid, $ax_ws_discover(), true )
+	);
+	axismundi_cal_list_set( $ax_ws_ko, $ax_ws_viewer['actor_uri'], 'reader', array( 'hidden' => true ) );
+	ax_ws_assert(
+		$ax_ws_results,
+		'including when hidden, because offering it back would undo the hiding every time',
+		! in_array( $ax_ws_ko_uuid, $ax_ws_discover(), true )
+	);
+	axismundi_cal_list_remove( $ax_ws_ko, $ax_ws_viewer['actor_uri'] );
+	ax_ws_assert(
+		$ax_ws_results,
+		'and is offered again once removed from the list',
+		in_array( $ax_ws_ko_uuid, $ax_ws_discover(), true )
+	);
+	/*
+	 * Free/busy is the case the read gate exists for. The grant makes the Calendar a candidate --
+	 * there is a rule naming this principal on it -- and it must still not be offered: somebody who
+	 * may see that a slot is taken has not been given a calendar to read, and adding it to their list
+	 * would put a screen in front of them that cannot be filled.
+	 */
+	axismundi_cal_list_remove( $ax_ws_closed, $ax_ws_viewer['actor_uri'] );
+	axismundi_cal_acl_grant( $ax_ws_closed, $ax_ws_viewer['actor_uri'], 'freeBusyReader' );
+	ax_ws_assert(
+		$ax_ws_results,
+		'while a Calendar the caller may only see the busy hours of is never offered',
+		! in_array( (string) axismundi_cal_calendar_get( $ax_ws_closed )['uuid'], $ax_ws_discover(), true )
+	);
+	axismundi_cal_acl_grant( $ax_ws_closed, $ax_ws_viewer['actor_uri'], 'reader' );
+	ax_ws_assert(
+		$ax_ws_results,
+		'and is offered as soon as the same principal may actually read it',
+		in_array( (string) axismundi_cal_calendar_get( $ax_ws_closed )['uuid'], $ax_ws_discover(), true )
+	);
+
 	// -- Naming one Calendar twice ---------------------------------------------------------------------------------
 
 	list( , $ax_ws_body ) = ax_ws_view( array( $ax_ws_mine_id, $ax_ws_mine_id ) );

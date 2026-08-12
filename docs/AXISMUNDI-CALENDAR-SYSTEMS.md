@@ -10,13 +10,18 @@ none of those: it is a *second way of naming the same day*. 2026-08-12 is not tw
 day with two names.
 
 That distinction decides almost everything below. A system calendar goes in the sidebar and can be
-ticked off. A calendar system is a lens over every day the grid already draws, and ticking it off
-would be like ticking off the weekday column.
+ticked off. A calendar system is a lens over every day the grid already draws.
+
+Precisely: it is not a **`CalendarList` selection**. The annotation itself must still be switchable
+in settings — grid composition, like the weekday column, which is also configurable and also not a
+dataset you join. Turning off the lunar row is a display preference; turning off 대한민국의 휴일 is
+leaving a dataset. Same verb, different object, and conflating them puts a display preference in the
+sharing model.
 
 ## The layers
 
 ```
-                        Absolute day  (JDN)
+                          AbsoluteDay
                               │
        ┌──────────────────────┼──────────────────────┐
        ▼                      ▼                      ▼
@@ -29,10 +34,14 @@ change and do not grow a `calendar` column that could make them mean something e
 `WP_Query`, REST, ActivityPub, iCalendar and schema.org all read ISO dates, and a stored date that
 means a different day depending on a sibling column is a date nobody outside this plugin can read.
 
-JDN is an **internal conversion coordinate**, not storage and not UI. It exists so that N calendar
-systems need `toAbsolute()`/`fromAbsolute()` rather than N×N converters between each other. Note
-that astronomical JD rolls at noon UT; use the integer Julian **Day Number**, or a plain
-`AbsoluteDay` integer, and keep the `.5` out of the model entirely.
+The internal type is **`AbsoluteDay`**, not `JDN`. It is an integer identifying one civil Gregorian
+day, and `LunarMonth.startAbsoluteDay` means exactly that. The name matters more than it looks:
+"Julian Day" drags the noon-UT convention along with it, and a provider that needs an astronomical
+instant should reach for a separate `JulianDate`/UTC instant rather than reinterpreting the day
+number it was already handed. Two things that differ by half a day must not share a type.
+
+`AbsoluteDay` exists so that N calendar systems need `toAbsolute()`/`fromAbsolute()` rather than N×N
+converters between each other.
 
 ## Two things that look alike and are not
 
@@ -100,7 +109,7 @@ Operations that matter:
 | `getLunCalInfo` | `solYear`, `solMonth`, optional `solDay` | month overlay (Gregorian → lunar) |
 | `getSolCalInfo` | `lunYear`, `lunMonth`, `lunDay` | lunar → Gregorian |
 | `getSpcifyLunCalInfo` | `fromSolYear`, `toSolYear`, `lunMonth`, `lunDay`, `leapMonth` | recurrence lookup over a year range |
-| `getJulDayInfo` | `solJd` | JDN → everything |
+| `getJulDayInfo` | `solJd` | Julian day → everything (convert at the boundary) |
 
 ### Rules
 
@@ -122,10 +131,10 @@ grid. This split (primary range ≠ provider range) is the second good reason fo
 A month response is 28–31 rows, but the *facts* in it are three:
 
 ```php
-[ 'startJdn' => 2461230, 'year' => 2026, 'month' => 7, 'leapMonth' => false, 'days' => 29 ]
+[ 'startAbsoluteDay' => 739475, 'year' => 2026, 'month' => 7, 'leapMonth' => false, 'days' => 29 ]
 ```
 
-~13 rows per year, and every date in the month follows from `jdn - startJdn`. That is exact
+~13 rows per year, and every date in the month follows from `absoluteDay - startAbsoluteDay`. That is exact
 arithmetic, not interpolation.
 
 **Do not sparsely sample and interpolate between anchors.** Between two anchors 94 days apart,
@@ -178,6 +187,17 @@ astronomy. Google's "Phases of the Moon" ICS is worth having as a *validator* fo
 engine, never as the source — an ICS is an output format here, not an input.
 
 ## Order of work
+
+This is the order *within* the lunar work. Globally it comes after the workspace and event slices:
+
+```
+Browse calendars / workspace catalog UX
+→ 일반 Event 작성 모델
+→ provider registry + LunarMonth store
+→ KASI client + secondary annotation
+→ lunar recurrence / birthday
+→ astronomy providers
+```
 
 1. Provider registry + `toAbsolute`/`fromAbsolute` + coverage range. No provider yet.
 2. `LunarMonth` store and the JDN arithmetic over it. Unit-testable with fixtures, no network.

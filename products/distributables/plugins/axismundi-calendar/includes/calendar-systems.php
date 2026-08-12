@@ -195,7 +195,8 @@ function axismundi_cal_calendar_system_registry( ?array $write = null ) : array 
  * provider has nothing to say about, and a provider replaced later may cover it.
  *
  * @param string              $id   System id, e.g. `korean-lunisolar`.
- * @param array<string,mixed> $args label, resolve (callable|null), coverage_from, coverage_to (ISO).
+ * @param array<string,mixed> $args label, type, authority, icu_calendar, resolve (callable|null),
+ *                                  coverage_from, coverage_to (ISO), settings (callable|null).
  * @return void
  */
 function axismundi_cal_register_calendar_system( string $id, array $args ) : void {
@@ -214,6 +215,24 @@ function axismundi_cal_register_calendar_system( string $id, array $args ) : voi
 				'resolve'       => isset( $args['resolve'] ) && is_callable( $args['resolve'] ) ? $args['resolve'] : null,
 				'coverage_from' => $from,
 				'coverage_to'   => $to,
+				/*
+				 * Lunisolar, lunar or solar. Not decoration: Islamic is lunar and does not intercalate,
+				 * which is why Ramadan walks through the seasons, and a taxonomy that called it the same
+				 * thing as the Korean calendar would have to be unlearned by whoever added it.
+				 */
+				'type'          => (string) ( $args['type'] ?? 'other' ),
+				// Who decides what a date is. Not the same question as which identifier formats it.
+				'authority'     => (string) ( $args['authority'] ?? '' ),
+				/*
+				 * The Unicode/CLDR calendar this corresponds to, recorded for `Intl` formatting and
+				 * BCP 47 interoperability and for nothing else. It is deliberately not the id and never
+				 * the source: `dangi` is ICU's own implementation with its own astronomical rules, and
+				 * assuming it agrees with the authority above -- year by year, leap month by leap month
+				 * -- is exactly the assumption that has never been checked here.
+				 */
+				'icu_calendar'  => (string) ( $args['icu_calendar'] ?? '' ),
+				// `fn() : void`, rendering this provider's own section of the settings screen.
+				'settings'      => isset( $args['settings'] ) && is_callable( $args['settings'] ) ? $args['settings'] : null,
 			),
 		)
 	);

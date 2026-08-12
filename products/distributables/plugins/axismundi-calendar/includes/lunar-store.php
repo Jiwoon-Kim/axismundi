@@ -225,7 +225,13 @@ function axismundi_cal_register_korean_lunisolar() : void {
 	axismundi_cal_register_calendar_system(
 		AXISMUNDI_CAL_KOREAN_LUNISOLAR,
 		array(
+			// Shown as 음력 / Korean lunar calendar, which is what people call it. The id stays
+			// `korean-lunisolar`, which is what it is: it intercalates a leap month to keep the seasons.
 			'label'         => __( 'Korean lunar calendar', 'axismundi-calendar' ),
+			'type'          => 'lunisolar',
+			'authority'     => __( 'Korea Astronomy and Space Science Institute (KASI)', 'axismundi-calendar' ),
+			'icu_calendar'  => 'dangi',
+			'settings'      => 'axismundi_cal_render_kasi_settings',
 			'coverage_from' => AXISMUNDI_CAL_KOREAN_LUNISOLAR_FROM,
 			'coverage_to'   => AXISMUNDI_CAL_KOREAN_LUNISOLAR_TO,
 			'resolve'       => static fn( int $absolute_day ) : ?array => axismundi_cal_lunar_date( AXISMUNDI_CAL_KOREAN_LUNISOLAR, $absolute_day ),

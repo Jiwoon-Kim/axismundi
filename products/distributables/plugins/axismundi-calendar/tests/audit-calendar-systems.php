@@ -85,6 +85,24 @@ ax_cs_assert(
 );
 ax_cs_assert( $ax_cs_results, 'and a system nobody registered is not invented', null === axismundi_cal_calendar_system( 'martian' ) );
 
+/*
+ * What a system is, kept apart from what formats it. Islamic is lunar and Korean is lunisolar, and a
+ * screen grouping them under one word would have to unlearn the difference when the second arrives.
+ */
+$ax_cs_korean = (array) axismundi_cal_calendar_system( 'korean-lunisolar' );
+ax_cs_assert( $ax_cs_results, 'a system says which kind of calendar it is', 'lunisolar' === ( $ax_cs_korean['type'] ?? '' ) );
+ax_cs_assert( $ax_cs_results, 'and who its dates come from', false !== strpos( (string) ( $ax_cs_korean['authority'] ?? '' ), 'KASI' ) );
+ax_cs_assert(
+	$ax_cs_results,
+	'while the Unicode calendar is recorded beside it and is not the identifier',
+	'dangi' === ( $ax_cs_korean['icu_calendar'] ?? '' ) && 'korean-lunisolar' === ( $ax_cs_korean['id'] ?? '' )
+);
+ax_cs_assert(
+	$ax_cs_results,
+	'and a system may render its own settings, because what one provider needs configured is its own business',
+	is_callable( $ax_cs_korean['settings'] ?? null )
+);
+
 $ax_cs_in  = (int) axismundi_cal_iso_to_absolute_day( '2026-08-12' );
 $ax_cs_out = (int) axismundi_cal_iso_to_absolute_day( '2051-01-01' );
 $ax_cs_bc  = (int) axismundi_cal_iso_to_absolute_day( '-0060-01-01' );

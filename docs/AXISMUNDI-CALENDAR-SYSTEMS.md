@@ -163,6 +163,31 @@ Annotation inside the day cell, not an event in the list:
 
 Leap months read `윤 7.1`.
 
+## Naming, and what `dangi` is not
+
+```
+id            korean-lunisolar     what it is: it intercalates a leap month to keep the seasons
+label         음력 / Korean lunar calendar   what people call it
+authority     KASI                 who decides what a date is
+icu_calendar  dangi                how to format it elsewhere
+type          lunisolar            not the same class as Islamic, which is lunar
+```
+
+`dangi` is Unicode/CLDR's calendar identifier (`ko-KR-u-ca-dangi`) and ICU's own implementation of a
+Korean calendar. It is recorded for formatting and interoperability and is **not** the id, not the
+provider, and not the source. Whether ICU's astronomical rules and standard meridian agree with
+KASI's, year by year and leap month by leap month, has never been checked here — 1900, 1950, 2000,
+2033 and 2050 are where to look, 2033 especially, since the leap-month rule is famously contested
+there. Until somebody does that comparison, treating the two as one calendar is an assumption, not a
+fact.
+
+The wider taxonomy matters for the same reason. Chinese, Korean, Vietnamese and Hebrew are
+lunisolar; Islamic is **lunar** and does not intercalate, which is why Ramadan walks through the
+seasons; Persian, Coptic and Ethiopic are solar; Japanese, Buddhist and ROC are era systems over a
+solar calendar. CLDR has no `vietnamese` identifier at all, though the Vietnamese calendar can
+diverge from the Chinese one by a day on a different meridian — so this registry has to be able to
+say things CLDR cannot.
+
 ## Astronomy is a different problem
 
 Not this slice, recorded so the shape is not lost.

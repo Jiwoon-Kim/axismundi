@@ -73,7 +73,7 @@ require_once __DIR__ . '/includes/admin-sharing.php';
 require_once __DIR__ . '/includes/admin-system-items.php';
 require_once __DIR__ . '/includes/admin-system-import.php';
 require_once __DIR__ . '/includes/admin-holiday-links.php';
-require_once __DIR__ . '/includes/admin-lunar.php';
+require_once __DIR__ . '/includes/admin-secondary-calendars.php';
 require_once __DIR__ . '/includes/admin-sources.php';
 require_once __DIR__ . '/includes/query.php';
 require_once __DIR__ . '/includes/ics.php';

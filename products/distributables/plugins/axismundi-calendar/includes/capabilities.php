@@ -140,8 +140,9 @@ function axismundi_cal_calendar_capabilities( ?array $calendar, string $actor_ur
 				'rename_locally'  => $subscribed,
 				'delete'          => $manager,
 				'manage_items'    => $manager,
-				// Readable by everyone, which is what it is for.
-				'export'          => true,
+				// A system feed is not implemented yet. Calling this true would advertise an endpoint that
+				// does not serialize system items.
+				'export'          => false,
 			)
 		);
 	}

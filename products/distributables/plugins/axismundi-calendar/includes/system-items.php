@@ -62,6 +62,21 @@ const AXISMUNDI_CAL_ITEM_CATEGORIES = array(
 	'EXAM-PERIOD',
 );
 
+/**
+ * The top-level categories a system Calendar declares for itself.
+ *
+ * These describe the dataset a person is adding from the catalog. Item categories describe the
+ * individual dates inside it, so `MOON-PHASE` belongs on an item while `ASTRONOMY` belongs on the
+ * Moon phases Calendar that contains it.
+ */
+const AXISMUNDI_CAL_SYSTEM_CALENDAR_CATEGORIES = array(
+	'HOLIDAY',
+	'ASTRONOMY',
+	'RELIGIOUS',
+	'CIVIC',
+	'ACADEMIC',
+);
+
 /** Entries not yet reviewed are visible only to the people maintaining them. */
 const AXISMUNDI_CAL_ITEM_STATUSES = array( 'draft', 'published' );
 
@@ -87,6 +102,38 @@ function axismundi_cal_normalize_categories( $categories ) : array {
 	 * whoever wrote it happened to type the list.
 	 */
 	return array_values( array_filter( AXISMUNDI_CAL_ITEM_CATEGORIES, static fn( string $key ) : bool => isset( $seen[ $key ] ) ) );
+}
+
+/**
+ * Normalize the top-level classification of a system Calendar.
+ *
+ * @param mixed $categories List, or a comma-separated string.
+ * @return string[] Known category keys, deduplicated, in vocabulary order.
+ */
+function axismundi_cal_normalize_system_calendar_categories( $categories ) : array {
+	$list = is_array( $categories ) ? $categories : explode( ',', (string) $categories );
+	$seen = array();
+	foreach ( $list as $category ) {
+		$seen[ strtoupper( trim( (string) $category ) ) ] = true;
+	}
+	return array_values( array_filter( AXISMUNDI_CAL_SYSTEM_CALENDAR_CATEGORIES, static fn( string $key ) : bool => isset( $seen[ $key ] ) ) );
+}
+
+/**
+ * A translated label for one top-level system Calendar category.
+ *
+ * @param string $category Stable category key.
+ * @return string
+ */
+function axismundi_cal_system_calendar_category_label( string $category ) : string {
+	$labels = array(
+		'HOLIDAY'   => __( 'Holidays', 'axismundi-calendar' ),
+		'ASTRONOMY' => __( 'Astronomy', 'axismundi-calendar' ),
+		'RELIGIOUS' => __( 'Religious observances', 'axismundi-calendar' ),
+		'CIVIC'     => __( 'Civic dates', 'axismundi-calendar' ),
+		'ACADEMIC'  => __( 'Academic calendar', 'axismundi-calendar' ),
+	);
+	return $labels[ $category ] ?? $category;
 }
 
 /**

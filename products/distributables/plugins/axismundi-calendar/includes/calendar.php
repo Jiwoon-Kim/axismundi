@@ -249,25 +249,24 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 	}
 
 	/*
-	 * The address a system Calendar is published at. Unlike the slug it is fixed once written: the
-	 * slug is a readable alias somebody may rename, while this is what an `.ics` subscription in
-	 * somebody's calendar app is pointed at, and renaming that silently breaks every one of them.
+	 * An internal stable identifier for a system Calendar. Unlike the slug it never changes, so a
+	 * future catalog, translation or import mapping has something to point at while its human name
+	 * remains freely localizable. It is not an address and is deliberately not shown in the form.
 	 */
 	$system_key = (string) ( $existing['system_key'] ?? '' );
 	if ( 'system' === $kind && '' === $system_key ) {
-		/*
-		 * Not `sanitize_key()`, which strips the dots -- `holidays.kr` would become `holidayskr`, and
-		 * the addresses of every regional dataset would collapse towards each other. Dotted segments
-		 * are the point of this format.
-		 */
-		$system_key = strtolower( preg_replace( '/[^a-zA-Z0-9._-]/', '', str_replace( array( ' ', '/' ), '.', (string) ( $fields['system_key'] ?? $slug ) ) ) );
-		$system_key = trim( (string) $system_key, '.' );
-		if ( '' === $system_key ) {
-			return new WP_Error( 'ax_cal_system_key', __( 'A maintained calendar needs a stable address.', 'axismundi-calendar' ), array( 'status' => 400 ) );
-		}
+		$requested_key = strtolower( preg_replace( '/[^a-zA-Z0-9._-]/', '', (string) ( $fields['system_key'] ?? '' ) ) );
+		$system_key    = '' !== trim( (string) $requested_key, '.' ) ? trim( (string) $requested_key, '.' ) : 'system.' . wp_generate_uuid4();
 		if ( null !== axismundi_cal_calendar_by_system_key( $system_key ) ) {
-			return new WP_Error( 'ax_cal_system_key_taken', __( 'Another maintained calendar already uses that address.', 'axismundi-calendar' ), array( 'status' => 409 ) );
+			return new WP_Error( 'ax_cal_system_key_taken', __( 'Another system calendar already uses that catalog key.', 'axismundi-calendar' ), array( 'status' => 409 ) );
 		}
+	}
+
+	$system_categories = 'system' === $kind
+		? axismundi_cal_normalize_system_calendar_categories( $fields['system_categories'] ?? ( $existing['system_categories'] ?? '' ) )
+		: array();
+	if ( 'system' === $kind && ! is_array( $existing ) && array() === $system_categories ) {
+		return new WP_Error( 'ax_cal_system_categories', __( 'A system calendar needs at least one top-level category.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
 
 	$now  = current_time( 'mysql', true );
@@ -279,6 +278,7 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 		'kind'           => $kind,
 		'source'         => $source,
 		'system_key'     => $system_key,
+		'system_categories' => implode( ',', $system_categories ),
 		'visibility'     => $visibility,
 		'updated_at'     => $now,
 	);

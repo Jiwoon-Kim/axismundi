@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '17';
+const AXISMUNDI_CAL_DB_VERSION        = '18';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 
 /** @return string Event envelope table name. */
@@ -296,6 +296,7 @@ function axismundi_cal_install_schema() : bool {
 			kind varchar(16) NOT NULL default 'local',
 			source varchar(24) NOT NULL default 'native',
 			system_key varchar(64) NOT NULL default '',
+			system_categories varchar(191) NOT NULL default '',
 			authority_actor_uri text NOT NULL,
 			authority_actor_uri_hash char(64) NOT NULL default '',
 			visibility varchar(16) NOT NULL default 'public',

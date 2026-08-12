@@ -83,7 +83,7 @@ function axismundi_cal_handle_system_calendar_form() : void {
 			'source'      => 'manual',
 			'name'        => $name,
 			'slug'        => isset( $_POST['slug'] ) ? sanitize_title( wp_unslash( (string) $_POST['slug'] ) ) : sanitize_title( $name ),
-			'system_key'  => isset( $_POST['system_key'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['system_key'] ) ) : '',
+			'system_categories' => isset( $_POST['system_categories'] ) ? array_map( 'sanitize_text_field', (array) wp_unslash( $_POST['system_categories'] ) ) : array(),
 			'description' => isset( $_POST['description'] ) ? sanitize_textarea_field( wp_unslash( (string) $_POST['description'] ) ) : '',
 			'timezone'    => isset( $_POST['timezone'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['timezone'] ) ) : axismundi_cal_default_calendar_timezone(),
 		)
@@ -166,10 +166,10 @@ function axismundi_cal_system_item_message( string $code ) : string {
 	switch ( $code ) {
 		case 'calendar_created':
 			return __( 'Calendar created. Add its entries below.', 'axismundi-calendar' );
-		case 'ax_cal_system_key':
-			return __( 'A maintained calendar needs a stable address, such as holidays.kr.', 'axismundi-calendar' );
+		case 'ax_cal_system_categories':
+			return __( 'Choose at least one category for this system calendar.', 'axismundi-calendar' );
 		case 'ax_cal_system_key_taken':
-			return __( 'Another maintained calendar already uses that address.', 'axismundi-calendar' );
+			return __( 'Another system calendar already uses that catalog key.', 'axismundi-calendar' );
 		case 'ax_cal_slug_taken':
 			return __( 'Another calendar already uses that slug.', 'axismundi-calendar' );
 		case 'ax_cal_name':
@@ -286,18 +286,25 @@ function axismundi_cal_render_system_calendar_form() : void {
 				</td>
 			</tr>
 			<tr>
-				<th scope="row"><label for="ax-cal-system-key"><?php esc_html_e( 'Address', 'axismundi-calendar' ); ?></label></th>
+				<th scope="row"><?php esc_html_e( 'Categories', 'axismundi-calendar' ); ?></th>
 				<td>
-					<input name="system_key" id="ax-cal-system-key" type="text" class="regular-text" required placeholder="holidays.kr">
+					<?php foreach ( AXISMUNDI_CAL_SYSTEM_CALENDAR_CATEGORIES as $category ) : ?>
+						<label style="display:inline-block;min-width:14em;">
+							<input type="checkbox" name="system_categories[]" value="<?php echo esc_attr( $category ); ?>">
+							<?php echo esc_html( axismundi_cal_system_calendar_category_label( $category ) ); ?>
+						</label>
+					<?php endforeach; ?>
 					<p class="description">
-						<?php esc_html_e( 'Where it is published, and fixed once set. Unlike the name and the slug, this is what a subscription in a calendar app points at, so renaming it would break every one of them.', 'axismundi-calendar' ); ?>
+						<?php esc_html_e( 'Classifies this dataset in the catalog. Individual entries receive more specific categories, such as PUBLIC-HOLIDAY or MOON-PHASE.', 'axismundi-calendar' ); ?>
 					</p>
 				</td>
 			</tr>
 			<tr>
 				<th scope="row"><label for="ax-cal-system-timezone"><?php esc_html_e( 'Timezone', 'axismundi-calendar' ); ?></label></th>
 				<td>
-					<input name="timezone" id="ax-cal-system-timezone" type="text" class="regular-text" value="<?php echo esc_attr( axismundi_cal_default_calendar_timezone() ); ?>">
+					<select name="timezone" id="ax-cal-system-timezone">
+						<?php echo wp_timezone_choice( axismundi_cal_default_calendar_timezone(), get_user_locale() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- core option markup. ?>
+					</select>
 					<p class="description"><?php esc_html_e( 'Barely used here, since entries are whole days that fall on the same date everywhere. It is what the feed declares itself in.', 'axismundi-calendar' ); ?></p>
 				</td>
 			</tr>

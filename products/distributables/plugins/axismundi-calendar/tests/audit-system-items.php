@@ -252,6 +252,7 @@ try {
 			'name'       => 'Site holidays',
 			'slug'       => 'ax-si-system-' . $ax_si_suffix,
 			'system_key' => 'ax.si.holidays.' . $ax_si_suffix,
+			'system_categories' => array( 'HOLIDAY' ),
 			'timezone'   => 'Asia/Seoul',
 		)
 	);
@@ -261,6 +262,9 @@ try {
 	$ax_si_system_row = (array) axismundi_cal_calendar_get( $ax_si_system );
 
 	ax_si_assert( $ax_si_results, 'and has none, which is what it is rather than a state it is waiting to leave', '' === (string) $ax_si_system_row['authority_actor_uri'] );
+	ax_si_assert( $ax_si_results, 'it declares the top-level category of its dataset', 'HOLIDAY' === (string) $ax_si_system_row['system_categories'] );
+	ax_si_assert( $ax_si_results, 'calendar categories keep only the top-level vocabulary', array( 'ASTRONOMY' ) === axismundi_cal_normalize_system_calendar_categories( array( 'ASTRONOMY', 'MOON-PHASE' ) ) );
+	ax_si_assert( $ax_si_results, 'a new system calendar cannot omit its catalog category', is_wp_error( axismundi_cal_calendar_save( array( 'kind' => 'system', 'name' => 'Unclassified', 'slug' => 'ax-si-unclassified-' . $ax_si_suffix, 'timezone' => 'UTC' ) ) ) );
 	ax_si_assert( $ax_si_results, 'while an ordinary local calendar still cannot be made without one', is_wp_error( axismundi_cal_calendar_save( array( 'name' => 'No actor', 'slug' => 'ax-si-noactor-' . $ax_si_suffix, 'timezone' => 'UTC' ) ) ) );
 	ax_si_assert(
 		$ax_si_results,
@@ -279,25 +283,36 @@ try {
 	ax_si_assert( $ax_si_results, 'its entries are a dataset', true === axismundi_cal_calendar_is_dataset( $ax_si_system_row ) );
 	ax_si_assert(
 		$ax_si_results,
-		'and it is published at an address of its own, which the slug is not',
+		'and it holds a stable catalog identity separate from its slug',
 		$ax_si_system === (int) axismundi_cal_calendar_by_system_key( 'ax.si.holidays.' . $ax_si_suffix )['id']
 	);
+	$ax_si_auto_key = axismundi_cal_calendar_save(
+		array(
+			'kind'              => 'system',
+			'name'              => 'Automatic catalog key',
+			'slug'              => 'ax-si-auto-key-' . $ax_si_suffix,
+			'system_categories' => array( 'ASTRONOMY' ),
+			'timezone'          => 'UTC',
+		)
+	);
+	ax_si_assert( $ax_si_results, 'a system calendar receives its catalog identity without asking an administrator to invent an address', is_int( $ax_si_auto_key ) && str_starts_with( (string) axismundi_cal_calendar_get( (int) $ax_si_auto_key )['system_key'], 'system.' ) );
+	$ax_si_calendars[] = (int) $ax_si_auto_key;
 	ax_si_assert(
 		$ax_si_results,
-		'an address another maintained calendar already uses is refused',
+		'a catalog identity another system calendar already uses is refused',
 		is_wp_error(
 			axismundi_cal_calendar_save(
-				array( 'kind' => 'system', 'name' => 'Clash', 'slug' => 'ax-si-clash-' . $ax_si_suffix, 'system_key' => 'ax.si.holidays.' . $ax_si_suffix, 'timezone' => 'UTC' )
+				array( 'kind' => 'system', 'name' => 'Clash', 'slug' => 'ax-si-clash-' . $ax_si_suffix, 'system_key' => 'ax.si.holidays.' . $ax_si_suffix, 'system_categories' => array( 'HOLIDAY' ), 'timezone' => 'UTC' )
 			)
 		)
 	);
 	/*
-	 * The address is fixed once set, unlike the name and the slug. It is what a subscription in
-	 * somebody calendar app points at, and renaming it breaks every one of them silently.
+	 * The catalog identity is fixed once set, unlike the name and the slug. It is an internal stable
+	 * reference for future catalog and translation data, not a public subscription address.
 	 */
 	axismundi_cal_calendar_save( array( 'name' => 'Renamed holidays', 'system_key' => 'ax.si.something.else' ), $ax_si_system );
 	$ax_si_system_row = (array) axismundi_cal_calendar_get( $ax_si_system );
-	ax_si_assert( $ax_si_results, 'renaming it does not move the address it is published at', ( 'ax.si.holidays.' . $ax_si_suffix ) === (string) $ax_si_system_row['system_key'] );
+	ax_si_assert( $ax_si_results, 'renaming it does not change its catalog identity', ( 'ax.si.holidays.' . $ax_si_suffix ) === (string) $ax_si_system_row['system_key'] );
 	ax_si_assert( $ax_si_results, 'though the name itself changes freely, since it is a translation', 'Renamed holidays' === (string) $ax_si_system_row['name'] );
 
 	ax_si_assert(
@@ -326,7 +341,7 @@ try {
 	wp_set_current_user( $ax_si_keeper['user_id'] );
 	$ax_si_caps = axismundi_cal_calendar_capabilities( $ax_si_system_row );
 	ax_si_assert( $ax_si_results, 'somebody who is not maintaining the site cannot maintain it', false === $ax_si_caps['manage_items'] && false === $ax_si_caps['edit_details'] );
-	ax_si_assert( $ax_si_results, 'but can still read it, which is the point of it', true === $ax_si_caps['export'] );
+	ax_si_assert( $ax_si_results, 'but cannot yet be offered an ICS export that has not been implemented', false === $ax_si_caps['export'] );
 
 	// -- Its entries behave like any other dataset -------------------------------------------------------
 
@@ -374,6 +389,12 @@ try {
 	 * identical and behave differently the next time the import runs.
 	 */
 	ax_si_assert( $ax_si_results, 'and saying which entries came from an import', str_contains( $ax_si_html, 'Entered here' ) );
+
+	ob_start();
+	axismundi_cal_render_system_calendar_form();
+	$ax_si_create_html = (string) ob_get_clean();
+	ax_si_assert( $ax_si_results, 'the creation form classifies the system calendar itself', str_contains( $ax_si_create_html, 'name="system_categories[]"' ) && str_contains( $ax_si_create_html, 'Astronomy' ) );
+	ax_si_assert( $ax_si_results, 'and offers the core timezone selector rather than a free-text IANA field', str_contains( $ax_si_create_html, '<select name="timezone"' ) && ! str_contains( $ax_si_create_html, 'name="system_key"' ) );
 
 	wp_set_current_user( $ax_si_reader['user_id'] );
 	ax_si_assert( $ax_si_results, 'somebody who may only read it is offered nothing to maintain', array() === axismundi_cal_manageable_datasets() );

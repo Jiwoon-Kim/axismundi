@@ -239,6 +239,49 @@ try {
 	wp_set_current_user( $ax_si_reader['user_id'] );
 	ax_si_assert( $ax_si_results, 'somebody who may only read it may not maintain it', false === axismundi_cal_calendar_can( $ax_si_dataset_row, 'manage_items' ) );
 
+	// -- The screen that maintains them --------------------------------------------------------------
+
+	wp_set_current_user( $ax_si_keeper['user_id'] );
+	ax_si_assert(
+		$ax_si_results,
+		'a maintained calendar appears on the screen that maintains it',
+		in_array( $ax_si_holidays, array_map( static fn( array $c ) : int => (int) $c['id'], axismundi_cal_manageable_datasets() ), true )
+	);
+	ax_si_assert(
+		$ax_si_results,
+		'while an ordinary calendar does not, because it holds Events rather than entries',
+		! in_array( $ax_si_ordinary, array_map( static fn( array $c ) : int => (int) $c['id'], axismundi_cal_manageable_datasets() ), true )
+	);
+
+	// An entry still waiting to be checked, since everything written above has since been published.
+	axismundi_cal_system_item_save( $ax_si_holidays, array( 'title' => 'Still to check', 'start_date' => '2028-03-01', 'categories' => array( 'HOLIDAY' ) ) );
+
+	ob_start();
+	axismundi_cal_render_system_item_editor( (array) axismundi_cal_calendar_get( $ax_si_holidays ), 'https://example.test/admin' );
+	$ax_si_html = (string) ob_get_clean();
+	/*
+	 * The year defaults to the latest one with entries rather than to now, so somebody opening this in
+	 * December is looking at next year's draft, which is the year that needs reviewing.
+	 */
+	ax_si_assert( $ax_si_results, 'the editor opens on the most recent year it holds', str_contains( $ax_si_html, 'Unreviewed 2028' ) );
+	ax_si_assert(
+		$ax_si_results,
+		'and shows drafts, since a review screen that hides what needs reviewing is useless',
+		str_contains( $ax_si_html, 'Draft' )
+	);
+	ax_si_assert( $ax_si_results, 'reporting how much of each year has been checked', str_contains( $ax_si_html, 'reviewed' ) );
+	ax_si_assert( $ax_si_results, 'and offering the vocabulary as checkboxes rather than a free-text field', str_contains( $ax_si_html, 'name="categories[]"' ) && str_contains( $ax_si_html, 'SUBSTITUTE-HOLIDAY' ) );
+	ax_si_assert( $ax_si_results, 'with a nonce bound to this calendar', str_contains( $ax_si_html, 'ax_cal_system_item_' ) || str_contains( $ax_si_html, '_wpnonce' ) );
+	/*
+	 * Where an entry came from is shown, because a hand-corrected entry and an imported one look
+	 * identical and behave differently the next time the import runs.
+	 */
+	ax_si_assert( $ax_si_results, 'and saying which entries came from an import', str_contains( $ax_si_html, 'Entered here' ) );
+
+	wp_set_current_user( $ax_si_reader['user_id'] );
+	ax_si_assert( $ax_si_results, 'somebody who may only read it is offered nothing to maintain', array() === axismundi_cal_manageable_datasets() );
+	wp_set_current_user( $ax_si_keeper['user_id'] );
+
 	// -- The entries go with the calendar ----------------------------------------------------------------------------
 
 	wp_set_current_user( $ax_si_keeper['user_id'] );

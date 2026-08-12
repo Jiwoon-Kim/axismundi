@@ -103,6 +103,7 @@ function axismundi_cal_calendar_capabilities( ?array $calendar, string $actor_ur
 		'unsubscribe'     => false,
 		// What goes on it, and what comes off it.
 		'write_events'    => false,
+		'manage_items'    => false,
 		'export'          => false,
 	);
 	if ( ! is_array( $calendar ) || empty( $calendar['id'] ) ) {
@@ -155,6 +156,12 @@ function axismundi_cal_calendar_capabilities( ?array $calendar, string $actor_ur
 		 * it somewhere to file an Event. Its contents are edited on the screen that owns the dataset.
 		 */
 		'write_events'    => $writer && ! axismundi_cal_calendar_is_dataset( $calendar ),
+		/*
+		 * The other half of that answer. A maintained Calendar refuses Events and would otherwise have
+		 * no way to be maintained at all -- its entries are added, classified and reviewed on the
+		 * screen that owns the dataset, by whoever may write to it.
+		 */
+		'manage_items'    => $writer && axismundi_cal_calendar_is_dataset( $calendar ),
 		'export'          => $reader,
 	);
 }

@@ -408,6 +408,8 @@ function axismundi_cal_calendar_delete( int $calendar_id ) : bool {
 	// somebody's list as a calendar they cannot open.
 	axismundi_cal_list_forget_calendar( $calendar_id );
 	axismundi_cal_acl_forget_calendar( $calendar_id );
+	// A maintained Calendar's entries are part of it, and outlive nothing.
+	axismundi_cal_system_items_forget_calendar( $calendar_id );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 	return false !== $wpdb->delete( axismundi_cal_calendars_table(), array( 'id' => $calendar_id ) );
 }

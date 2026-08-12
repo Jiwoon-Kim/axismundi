@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '15';
+const AXISMUNDI_CAL_DB_VERSION        = '16';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 
 /** @return string Event envelope table name. */
@@ -36,6 +36,35 @@ function axismundi_cal_schedules_table() : string {
 function axismundi_cal_calendars_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_cal_calendars';
+}
+
+/**
+ * Let an entry have no source uid at all.
+ *
+ * @return void
+ */
+function axismundi_cal_upgrade_system_item_uid() : void {
+	global $wpdb;
+	$table = axismundi_cal_system_items_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema migration over this plugin's own table.
+	if ( $table !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) ) {
+		return;
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
+	$column = $wpdb->get_row( "SHOW COLUMNS FROM {$table} LIKE 'source_uid'", ARRAY_A );
+	if ( ! is_array( $column ) || 'NO' !== (string) ( $column['Null'] ?? '' ) ) {
+		return;
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
+	$wpdb->query( "ALTER TABLE {$table} MODIFY source_uid varchar(191) NULL DEFAULT NULL" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
+	$wpdb->query( "UPDATE {$table} SET source_uid = NULL WHERE source_uid = ''" );
+}
+
+/** @return string System calendar item table name. */
+function axismundi_cal_system_items_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_cal_system_items';
 }
 
 /** @return string Calendar access control table name. */
@@ -321,6 +350,59 @@ function axismundi_cal_install_schema() : bool {
 			KEY calendar_id (calendar_id),
 			KEY principal_uri_hash (principal_uri_hash),
 			KEY role (role)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	$system = axismundi_cal_system_items_table();
+	/*
+	 * `dbDelta` does not relax NOT NULL on a column that already exists, so the nullability is stated
+	 * explicitly. It is load-bearing rather than cosmetic: uniqueness on (calendar, source_uid) is
+	 * what stops an import writing the same entry twice, and in SQL every NULL is distinct while
+	 * every '' is the same value -- stored as '' it would allow exactly one hand-typed entry per
+	 * Calendar, forever, and the second would fail with a duplicate key.
+	 */
+	axismundi_cal_upgrade_system_item_uid();
+	/*
+	 * Entries of a maintained dataset -- holidays, observances, moon phases. Deliberately not
+	 * `ax_event` posts: nobody authored these, nobody is their organizer, they federate as nothing,
+	 * and giving each one a post would put a country's public holidays into the same list a person
+	 * writes their own Events in.
+	 *
+	 * Dates are civil, stored as DATE. A holiday on the 15th is the 15th in every timezone, and the
+	 * moment anything here becomes an instant it starts moving a day for somebody. `end_date` is
+	 * exclusive, as `DTEND` is for an all-day VEVENT, so a one-day entry ends on the following day.
+	 *
+	 * `categories` is a comma-separated list of vocabulary keys, queried with FIND_IN_SET. A join
+	 * table would be the normal answer, and is the right one at a volume this will not reach: a
+	 * country's holidays are tens of rows a year, and the second table costs more in write paths than
+	 * it saves in reads.
+	 *
+	 * `batch_year` and `status` are what make a year of data reviewable before anyone sees it. Which
+	 * year an entry belongs to is stored rather than read off its date, because a substitute holiday
+	 * for the 31st of December falls in January and still belongs to the year being reviewed.
+	 */
+	dbDelta(
+		"CREATE TABLE {$system} (
+			id bigint(20) unsigned NOT NULL auto_increment,
+			calendar_id bigint(20) unsigned NOT NULL,
+			start_date date NOT NULL,
+			end_date date NOT NULL,
+			title text NOT NULL,
+			description longtext NOT NULL,
+			categories varchar(191) NOT NULL default '',
+			transparency varchar(16) NOT NULL default 'TRANSPARENT',
+			batch_year smallint(5) unsigned NOT NULL default 0,
+			status varchar(16) NOT NULL default 'draft',
+			source_uid varchar(191) NULL default NULL,
+			source_url text NOT NULL,
+			imported_at datetime NULL,
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY calendar_source_uid (calendar_id,source_uid),
+			KEY calendar_range (calendar_id,start_date),
+			KEY calendar_batch (calendar_id,batch_year,status),
+			KEY status (status)
 		) ENGINE=InnoDB {$charset};"
 	);
 

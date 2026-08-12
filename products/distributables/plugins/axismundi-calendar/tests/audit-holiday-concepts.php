@@ -178,6 +178,11 @@ try {
 	ax_hc_assert( $ax_hc_results, 'a row can be said to be about one day of a holiday', true === axismundi_cal_link_item_to_occurrence( $ax_hc_ko_item, $ax_hc_day ) );
 	axismundi_cal_link_item_to_occurrence( $ax_hc_en_item, $ax_hc_day );
 	ax_hc_assert( $ax_hc_results, 'and both languages then hang off the same day', 2 === count( axismundi_cal_occurrence_items( $ax_hc_day ) ) );
+	$ax_hc_attached = (int) axismundi_cal_system_item_save( $ax_hc_ko, array( 'title' => '설날 연휴', 'start_date' => '2026-02-16', 'categories' => array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ), 'status' => 'published' ) );
+	$ax_hc_attached_day = axismundi_cal_attach_item_to_holiday_concept( $ax_hc_attached, $ax_hc_seollal, 'holiday-period' );
+	ax_hc_assert( $ax_hc_results, 'an adjacent entry can join an existing holiday rather than only a same-date candidate', is_int( $ax_hc_attached_day ) && 'holiday-period' === (string) axismundi_cal_holiday_occurrence_get( $ax_hc_attached_day )['role'] );
+	$ax_hc_unprincipled = (int) axismundi_cal_system_item_save( $ax_hc_ko, array( 'title' => 'Unprincipled substitute', 'start_date' => '2026-09-01', 'categories' => array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ), 'status' => 'draft' ) );
+	ax_hc_assert( $ax_hc_results, 'a substitute cannot be the first day recorded for a holiday', is_wp_error( axismundi_cal_attach_item_to_holiday_concept( $ax_hc_unprincipled, $ax_hc_plain, 'substitute' ) ) );
 	ax_hc_assert( $ax_hc_results, 'without either becoming the other', '설날' === (string) axismundi_cal_system_item_get( $ax_hc_ko_item )['title'] && 'Lunar New Year' === (string) axismundi_cal_system_item_get( $ax_hc_en_item )['title'] );
 	ax_hc_assert( $ax_hc_results, 'a link to a day that does not exist is refused', is_wp_error( axismundi_cal_link_item_to_occurrence( $ax_hc_ko_item, 999999 ) ) );
 	axismundi_cal_link_item_to_occurrence( $ax_hc_en_item, 0 );
@@ -368,8 +373,8 @@ try {
 		ob_start();
 		axismundi_cal_render_item_links( (array) axismundi_cal_calendar_get( $ax_hc_ko ), array( (array) axismundi_cal_system_item_get( $ax_hc_orphan ) ), 2026 );
 		$ax_hc_orphan_html = (string) ob_get_clean();
-		ax_hc_assert( $ax_hc_results, 'an entry about nothing yet is offered as a new holiday', str_contains( $ax_hc_orphan_html, 'New holiday from this' ) );
-		ax_hc_assert( $ax_hc_results, 'with the roles a day of one can have', str_contains( $ax_hc_orphan_html, 'holiday-period' ) && str_contains( $ax_hc_orphan_html, 'substitute' ) );
+		ax_hc_assert( $ax_hc_results, 'an entry about nothing yet can name a new holiday', str_contains( $ax_hc_orphan_html, 'New holiday name' ) && str_contains( $ax_hc_orphan_html, 'Save holiday link' ) );
+		ax_hc_assert( $ax_hc_results, 'or join an existing holiday with the roles a day can have', str_contains( $ax_hc_orphan_html, 'name="concept_id"' ) && str_contains( $ax_hc_orphan_html, 'holiday-period' ) && str_contains( $ax_hc_orphan_html, 'substitute' ) );
 
 		/*
 		 * Promotion carries the classification up, which is what stops it being done once per language

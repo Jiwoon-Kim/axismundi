@@ -596,6 +596,50 @@ function axismundi_cal_link_item_to_occurrence( int $item_id, int $occurrence_id
 }
 
 /**
+ * Put a localized item on a holiday, creating that holiday day when this is its first language.
+ *
+ * @param int    $item_id    System item id.
+ * @param int    $concept_id Holiday concept id.
+ * @param string $role       Day role.
+ * @return int|WP_Error Occurrence id.
+ */
+function axismundi_cal_attach_item_to_holiday_concept( int $item_id, int $concept_id, string $role ) {
+	$item    = axismundi_cal_system_item_get( $item_id );
+	$concept = axismundi_cal_holiday_concept_get( $concept_id );
+	$calendar = is_array( $item ) ? axismundi_cal_calendar_get( (int) $item['calendar_id'] ) : null;
+	if ( ! is_array( $item ) || ! is_array( $concept ) || ! is_array( $calendar ) ) {
+		return new WP_Error( 'ax_cal_holiday_link_missing', __( 'The entry or holiday no longer exists.', 'axismundi-calendar' ), array( 'status' => 404 ) );
+	}
+	if ( (int) $calendar['holiday_catalog_id'] !== (int) $concept['catalog_id'] ) {
+		return new WP_Error( 'ax_cal_holiday_link_catalog', __( 'That holiday belongs to another dataset.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+	$occurrence = null;
+	foreach ( axismundi_cal_holiday_occurrences( $concept_id, (int) $item['batch_year'] ) as $candidate ) {
+		if ( (string) $candidate['start_date'] === (string) $item['start_date'] && (string) $candidate['end_date'] === (string) $item['end_date'] ) {
+			$occurrence = $candidate;
+			break;
+		}
+	}
+	$occurrence_id = is_array( $occurrence ) ? (int) $occurrence['id'] : 0;
+	$saved = axismundi_cal_holiday_occurrence_save(
+		$concept_id,
+		array(
+			'start_date' => (string) $item['start_date'],
+			'end_date'   => (string) $item['end_date'],
+			'batch_year' => (int) $item['batch_year'],
+			'role'       => $role,
+			'status'     => (string) $item['status'],
+		),
+		$occurrence_id
+	);
+	if ( is_wp_error( $saved ) ) {
+		return $saved;
+	}
+	$linked = axismundi_cal_link_item_to_occurrence( $item_id, (int) $saved );
+	return is_wp_error( $linked ) ? $linked : (int) $saved;
+}
+
+/**
  * The rows in every language that are about one day of a holiday.
  *
  * @param int $occurrence_id Occurrence id.

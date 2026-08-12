@@ -219,6 +219,98 @@ function axismundi_cal_catalog_calendars( int $catalog_id ) : array {
 }
 
 /**
+ * The languages somebody would rather read, most wanted first.
+ *
+ * The profile language comes first because it is the only one the person actually chose: a browser
+ * carrying a Korean pack is not a request for Korean holiday names from somebody who set their
+ * account to English. The site language follows, so a shared screen reads consistently, and what the
+ * browser asks for is a hint after both.
+ *
+ * @param string[] $accepted Languages the client asked for, most wanted first.
+ * @return string[]
+ */
+function axismundi_cal_preferred_locales( array $accepted = array() ) : array {
+	$order = array();
+	$user  = get_current_user_id();
+	if ( $user > 0 ) {
+		$order[] = (string) get_user_locale( $user );
+	}
+	$order[] = (string) get_locale();
+	foreach ( $accepted as $tag ) {
+		$order[] = (string) $tag;
+	}
+	return array_values( array_unique( array_filter( array_map( static fn( string $tag ) : string => str_replace( '_', '-', trim( $tag ) ), $order ) ) ) );
+}
+
+/**
+ * The part of a language tag another tag has to share to be a near enough match.
+ *
+ * Language, plus script when one is stated. `ko-KR` and `ko` are the same language written the same
+ * way; `zh-Hans` and `zh-Hant` are not, and a language-only rule would hand Traditional to somebody
+ * reading Simplified while reporting a match.
+ *
+ * @param string $tag Language tag.
+ * @return string
+ */
+function axismundi_cal_language_key( string $tag ) : string {
+	$parts = explode( '-', str_replace( '_', '-', trim( $tag ) ) );
+	$key   = strtolower( (string) array_shift( $parts ) );
+	foreach ( $parts as $part ) {
+		// A script subtag is four letters; a region is two letters or three digits.
+		if ( 4 === strlen( $part ) && 1 === preg_match( '/^[A-Za-z]{4}$/', $part ) ) {
+			return $key . '-' . ucfirst( strtolower( $part ) );
+		}
+	}
+	return $key;
+}
+
+/**
+ * Which of a day's labels to show, and which language it turned out to be.
+ *
+ * A day is shown once whatever languages it has. Japan's holidays existing only in English is not a
+ * reason to hide them from a Korean reader -- it is the ordinary case of a catalog nobody has
+ * translated yet, and the fallback is what makes it readable rather than absent.
+ *
+ * The last resort is ordered rather than whatever the query returned first. An unordered tail would
+ * let the same day read differently between two requests, which is not a fallback, it is a coin
+ * toss.
+ *
+ * The chosen language is returned with the label so a screen can say that it is showing English
+ * because there is no Korean -- which turns a missing translation into something a maintainer can
+ * see, rather than something that silently looks finished.
+ *
+ * @param int      $occurrence_id Occurrence id.
+ * @param string[] $accepted      Languages the client asked for, most wanted first.
+ * @return array{locale:string,title:string,item_id:int}|null
+ */
+function axismundi_cal_resolve_occurrence_label( int $occurrence_id, array $accepted = array() ) : ?array {
+	$languages = axismundi_cal_occurrence_languages( $occurrence_id );
+	if ( array() === $languages ) {
+		return null;
+	}
+	// Deterministic, so the same day reads the same way on every request.
+	ksort( $languages );
+
+	foreach ( axismundi_cal_preferred_locales( $accepted ) as $wanted ) {
+		foreach ( $languages as $locale => $item ) {
+			if ( strcasecmp( $locale, $wanted ) === 0 ) {
+				return array( 'locale' => (string) $locale, 'title' => (string) $item['title'], 'item_id' => (int) $item['id'] );
+			}
+		}
+		// Only after every exact match has been tried, so `ko-KR` never loses to `ko` on a later pass.
+		$key = axismundi_cal_language_key( $wanted );
+		foreach ( $languages as $locale => $item ) {
+			if ( axismundi_cal_language_key( (string) $locale ) === $key ) {
+				return array( 'locale' => (string) $locale, 'title' => (string) $item['title'], 'item_id' => (int) $item['id'] );
+			}
+		}
+	}
+
+	$locale = (string) array_key_first( $languages );
+	return array( 'locale' => $locale, 'title' => (string) $languages[ $locale ]['title'], 'item_id' => (int) $languages[ $locale ]['id'] );
+}
+
+/**
  * The languages one day of a holiday actually has.
  *
  * Wikipedia's language menu, and its rule: only editions that exist are listed. A catalog with three

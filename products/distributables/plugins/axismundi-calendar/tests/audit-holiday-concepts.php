@@ -408,6 +408,56 @@ try {
 	axismundi_cal_link_item_to_occurrence( $ax_hc_published_label, $ax_hc_draft_day );
 	ax_hc_assert( $ax_hc_results, 'a published localized row cannot publish the draft occurrence it joins', 'draft' === (string) axismundi_cal_holiday_occurrence_get( $ax_hc_draft_day )['status'] && 'draft' === (string) axismundi_cal_system_item_get( $ax_hc_published_label )['status'] );
 
+	// -- Which label a day is shown with ---------------------------------------------------------------
+
+	/*
+	 * A day is shown once whatever languages it has, and the fallback is what makes a catalog nobody
+	 * has translated readable rather than absent.
+	 */
+	/*
+	 * The site reads in English here, and that beats what the client asked for: a browser carrying a
+	 * Korean pack is not a request for Korean names from an account and a site set to English.
+	 */
+	$ax_hc_label = axismundi_cal_resolve_occurrence_label( $ax_hc_day, array( 'ko-KR' ) );
+	ax_hc_assert( $ax_hc_results, 'a day is shown in the language this site reads in, over the one asked for', 'en-US' === $ax_hc_label['locale'] );
+	ax_hc_assert( $ax_hc_results, 'and says which language that turned out to be', isset( $ax_hc_label['locale'], $ax_hc_label['item_id'] ) );
+
+	$ax_hc_english = axismundi_cal_resolve_occurrence_label( $ax_hc_day, array( 'en-GB' ) );
+	ax_hc_assert( $ax_hc_results, 'a region nobody has is answered by the same language', 'en-US' === $ax_hc_english['locale'] );
+
+	/*
+	 * The Japanese case: a catalog with one language only. A Korean reader sees it in English rather
+	 * than not at all, which is the ordinary state of a catalog nobody has translated.
+	 */
+	ax_hc_assert( $ax_hc_results, 'a day with no label in the language asked for is still shown', null !== axismundi_cal_resolve_occurrence_label( $ax_hc_alone, array( 'ja-JP' ) ) );
+	ax_hc_assert( $ax_hc_results, 'in whichever language it does have', 'ko-KR' === axismundi_cal_resolve_occurrence_label( $ax_hc_alone, array( 'ja-JP' ) )['locale'] );
+	/*
+	 * Ordered rather than whatever the query returned first: an unordered tail is a coin toss, not a
+	 * fallback, and the same day would read differently between two requests.
+	 */
+	ax_hc_assert(
+		$ax_hc_results,
+		'and the same way every time it is asked',
+		axismundi_cal_resolve_occurrence_label( $ax_hc_day, array( 'ja-JP' ) ) === axismundi_cal_resolve_occurrence_label( $ax_hc_day, array( 'ja-JP' ) )
+	);
+	ax_hc_assert( $ax_hc_results, 'while a day with no labels at all is nothing to show', null === axismundi_cal_resolve_occurrence_label( $ax_hc_lonely_2027 ?? 999999, array( 'ko-KR' ) ) );
+
+	/*
+	 * Script matters where region does not. `ko-KR` and `ko` are one language written one way; Hans
+	 * and Hant are not, and a language-only rule would hand Traditional to a Simplified reader while
+	 * reporting a match.
+	 */
+	ax_hc_assert( $ax_hc_results, 'a region is not part of what makes two tags the same language', axismundi_cal_language_key( 'ko-KR' ) === axismundi_cal_language_key( 'ko' ) );
+	ax_hc_assert( $ax_hc_results, 'while a script is', axismundi_cal_language_key( 'zh-Hans' ) !== axismundi_cal_language_key( 'zh-Hant' ) );
+	ax_hc_assert( $ax_hc_results, 'and a script survives a region beside it', axismundi_cal_language_key( 'zh-Hant-TW' ) === axismundi_cal_language_key( 'zh-Hant' ) );
+
+	/*
+	 * What somebody chose beats what their browser carries: a Korean language pack is not a request
+	 * for Korean names from an account set to English.
+	 */
+	$ax_hc_order = axismundi_cal_preferred_locales( array( 'ja-JP' ) );
+	ax_hc_assert( $ax_hc_results, 'the language somebody chose is asked for before the one their browser carries', array_search( 'ja-JP', $ax_hc_order, true ) === count( $ax_hc_order ) - 1 );
+
 	// -- The screens that record it -----------------------------------------------------------------------
 
 	$ax_hc_admin = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ID' ) );

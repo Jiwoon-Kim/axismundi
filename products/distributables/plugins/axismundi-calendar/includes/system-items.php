@@ -206,9 +206,8 @@ function axismundi_cal_system_item_save( int $calendar_id, array $fields, int $i
 	$occurrence_id = (int) ( $fields['holiday_occurrence_id'] ?? ( $existing['holiday_occurrence_id'] ?? 0 ) );
 	$occurrence    = axismundi_cal_holiday_occurrence_get( $occurrence_id );
 	if ( is_array( $occurrence ) ) {
-		// This row is a localized label now. The linked occurrence and concept own review state.
-		$status     = (string) $occurrence['status'];
-		$categories = array();
+		// The occurrence owns effective review state; preserve the label's prior review for an unlink.
+		$status = (string) $occurrence['status'];
 	}
 	$now        = current_time( 'mysql', true );
 	$data       = array(

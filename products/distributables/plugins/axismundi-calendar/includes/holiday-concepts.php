@@ -131,7 +131,7 @@ function axismundi_cal_sync_occurrence_items( int $occurrence_id, string $status
 		return;
 	}
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- mirror of a canonical occurrence state in this plugin's own table.
-	$wpdb->update( axismundi_cal_system_items_table(), array( 'status' => $status, 'categories' => '' ), array( 'holiday_occurrence_id' => $occurrence_id ) );
+	$wpdb->update( axismundi_cal_system_items_table(), array( 'status' => $status ), array( 'holiday_occurrence_id' => $occurrence_id ) );
 }
 
 /**
@@ -572,24 +572,21 @@ function axismundi_cal_link_item_to_occurrence( int $item_id, int $occurrence_id
 	if ( $occurrence_id > 0 && ! is_array( $occurrence ) ) {
 		return new WP_Error( 'ax_cal_occurrence_missing', __( 'That day of a holiday does not exist.', 'axismundi-calendar' ), array( 'status' => 404 ) );
 	}
-	if ( is_array( $occurrence ) && 'published' === (string) $item['status'] && 'published' !== (string) $occurrence['status'] ) {
-		$updated = axismundi_cal_holiday_occurrence_save( (int) $occurrence['concept_id'], array( 'status' => 'published' ), $occurrence_id );
-		if ( is_wp_error( $updated ) ) {
-			return $updated;
+	if ( is_array( $occurrence ) ) {
+		foreach ( axismundi_cal_occurrence_items( $occurrence_id ) as $occupied ) {
+			if ( (int) $occupied['id'] !== $item_id && (int) $occupied['calendar_id'] === (int) $item['calendar_id'] ) {
+				return new WP_Error( 'ax_cal_occurrence_locale', __( 'That calendar already has a label for this holiday day.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+			}
 		}
-		$occurrence = axismundi_cal_holiday_occurrence_get( $occurrence_id );
 	}
 	$data = array(
 		'holiday_occurrence_id' => $occurrence_id,
-		'categories'             => '',
 		'status'                 => is_array( $occurrence ) ? (string) $occurrence['status'] : 'draft',
 	);
 	if ( 0 === $occurrence_id ) {
 		$previous = axismundi_cal_holiday_occurrence_get( (int) $item['holiday_occurrence_id'] );
-		$concept  = is_array( $previous ) ? axismundi_cal_holiday_concept_get( (int) $previous['concept_id'] ) : null;
 		/* Removing one localized label keeps a reviewed standalone entry; it does not delete the holiday. */
-		if ( is_array( $previous ) && is_array( $concept ) ) {
-			$data['categories'] = (string) $concept['categories'];
+		if ( is_array( $previous ) ) {
 			$data['status']     = (string) $previous['status'];
 		}
 	}
@@ -673,48 +670,12 @@ function axismundi_cal_create_principal_holiday_from_item( int $item_id ) {
 }
 
 /**
- * A prior-year, same-language decision that can safely be reused for an unlinked item.
- *
- * @param array<string,mixed> $item System item row.
- * @return array{concept_id:int,role:string}|null
- */
-function axismundi_cal_prior_holiday_link_suggestion( array $item ) : ?array {
-	global $wpdb;
-	$calendar_id = (int) ( $item['calendar_id'] ?? 0 );
-	$title       = (string) ( $item['title'] ?? '' );
-	$year        = (int) ( $item['batch_year'] ?? 0 );
-	if ( $calendar_id <= 0 || '' === $title || $year <= 0 || ! axismundi_cal_ready() ) {
-		return null;
-	}
-	$items       = axismundi_cal_system_items_table();
-	$occurrences = axismundi_cal_holiday_occurrences_table();
-	$concepts    = axismundi_cal_holiday_concepts_table();
-	// The title is only evidence within this calendar's locale. A distinct concept-role pair is a
-	// real ambiguity, not something a bulk action may decide from spelling alone.
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- exact lookup across this plugin's own tables.
-	$matches = (array) $wpdb->get_results(
-		$wpdb->prepare(
-			"SELECT DISTINCT o.concept_id, o.role FROM {$items} i INNER JOIN {$occurrences} o ON o.id = i.holiday_occurrence_id INNER JOIN {$concepts} c ON c.id = o.concept_id WHERE i.calendar_id = %d AND i.title = %s AND i.batch_year <> %d AND c.catalog_id = %d ORDER BY o.concept_id ASC, o.role ASC",
-			$calendar_id,
-			$title,
-			$year,
-			(int) ( axismundi_cal_calendar_get( $calendar_id )['holiday_catalog_id'] ?? 0 )
-		),
-		ARRAY_A
-	);
-	if ( 1 !== count( $matches ) ) {
-		return null;
-	}
-	return array( 'concept_id' => (int) $matches[0]['concept_id'], 'role' => (string) $matches[0]['role'] );
-}
-
-/**
  * Apply holiday decisions the catalog has already established for a year.
  *
  * A reviewed sibling's same-date occurrence is the strongest evidence: the English label for
- * 2027-03-01 does not need a second review after the Korean label is already attached there.
- * Same-language prior-year labels remain useful when this year has not been linked by any sibling
- * yet. Several same-date occurrences remain deliberately unresolved.
+ * 2027-03-01 does not need a second review after the Korean label is already attached there. A
+ * prior title can be useful to a human reviewer, but it cannot manufacture a neutral occurrence.
+ * Several same-date occurrences remain deliberately unresolved.
  *
  * @param int $calendar_id Calendar id.
  * @param int $year        Year to link.
@@ -731,28 +692,6 @@ function axismundi_cal_apply_prior_holiday_links( int $calendar_id, int $year ) 
 		if ( axismundi_cal_auto_link_imported_holiday_item( (int) $item['id'] ) ) {
 			++$linked;
 			continue;
-		}
-		$suggestion = axismundi_cal_prior_holiday_link_suggestion( $item );
-		if ( ! is_array( $suggestion ) ) {
-			continue;
-		}
-		$existing = null;
-		foreach ( axismundi_cal_holiday_occurrences( $suggestion['concept_id'], $year ) as $occurrence ) {
-			if ( (string) $occurrence['start_date'] === (string) $item['start_date'] && (string) $occurrence['end_date'] === (string) $item['end_date'] ) {
-				$existing = $occurrence;
-				break;
-			}
-		}
-		if ( is_array( $existing ) && (string) $existing['role'] !== $suggestion['role'] ) {
-			continue;
-		}
-		if ( is_array( $existing ) ) {
-			$attached = axismundi_cal_link_item_to_occurrence( (int) $item['id'], (int) $existing['id'] );
-		} else {
-			$attached = axismundi_cal_attach_item_to_holiday_concept( (int) $item['id'], $suggestion['concept_id'], $suggestion['role'] );
-		}
-		if ( ! is_wp_error( $attached ) ) {
-			++$linked;
 		}
 	}
 	return $linked;

@@ -119,9 +119,9 @@ try {
 	ax_hc_assert( $ax_hc_results, 'and nothing is found by an identifier nobody claimed', null === axismundi_cal_concept_by_qid( $ax_hc_catalog, 'Q196627' ) );
 	ax_hc_assert( $ax_hc_results, 'an identifier that is not one is refused rather than stored', is_wp_error( axismundi_cal_holiday_concept_save( array( 'wikidata_qid' => 'Seollal' ), $ax_hc_seollal ) ) );
 
-	$ax_hc_eve   = (int) axismundi_cal_holiday_occurrence_save( $ax_hc_seollal, array( 'start_date' => '2026-02-16', 'role' => 'holiday-period' ) );
-	$ax_hc_day   = (int) axismundi_cal_holiday_occurrence_save( $ax_hc_seollal, array( 'start_date' => '2026-02-17', 'role' => 'principal' ) );
-	$ax_hc_after = (int) axismundi_cal_holiday_occurrence_save( $ax_hc_seollal, array( 'start_date' => '2026-02-18', 'role' => 'holiday-period' ) );
+	$ax_hc_eve   = (int) axismundi_cal_holiday_occurrence_save( $ax_hc_seollal, array( 'start_date' => '2026-02-16', 'role' => 'holiday-period', 'status' => 'published' ) );
+	$ax_hc_day   = (int) axismundi_cal_holiday_occurrence_save( $ax_hc_seollal, array( 'start_date' => '2026-02-17', 'role' => 'principal', 'status' => 'published' ) );
+	$ax_hc_after = (int) axismundi_cal_holiday_occurrence_save( $ax_hc_seollal, array( 'start_date' => '2026-02-18', 'role' => 'holiday-period', 'status' => 'published' ) );
 	ax_hc_assert( $ax_hc_results, 'its three days in one year are three occurrences of it', 3 === count( axismundi_cal_holiday_occurrences( $ax_hc_seollal, 2026 ) ) );
 	ax_hc_assert( $ax_hc_results, 'one of which is the day the holiday is', 'principal' === (string) axismundi_cal_holiday_occurrence_get( $ax_hc_day )['role'] );
 	ax_hc_assert( $ax_hc_results, 'and the others days off around it', 'holiday-period' === (string) axismundi_cal_holiday_occurrence_get( $ax_hc_eve )['role'] );
@@ -141,8 +141,8 @@ try {
 		array( 'catalog_id' => $ax_hc_catalog, 'label' => '삼일절', 'categories' => array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ) )
 	);
 	$ax_hc_concepts[] = $ax_hc_march;
-	$ax_hc_first  = (int) axismundi_cal_holiday_occurrence_save( $ax_hc_march, array( 'start_date' => '2026-03-01', 'role' => 'principal' ) );
-	$ax_hc_second = (int) axismundi_cal_holiday_occurrence_save( $ax_hc_march, array( 'start_date' => '2026-03-02', 'role' => 'substitute' ) );
+	$ax_hc_first  = (int) axismundi_cal_holiday_occurrence_save( $ax_hc_march, array( 'start_date' => '2026-03-01', 'role' => 'principal', 'status' => 'published' ) );
+	$ax_hc_second = (int) axismundi_cal_holiday_occurrence_save( $ax_hc_march, array( 'start_date' => '2026-03-02', 'role' => 'substitute', 'status' => 'published' ) );
 	ax_hc_assert( $ax_hc_results, 'a substitute day belongs to the same holiday as its principal', $ax_hc_march === (int) axismundi_cal_holiday_occurrence_get( $ax_hc_second )['concept_id'] );
 	/*
 	 * The relation remains useful to readers, but it is derived from the role rather than supplied
@@ -183,8 +183,8 @@ try {
 	ax_hc_assert( $ax_hc_results, 'an adjacent entry can join an existing holiday rather than only a same-date candidate', is_int( $ax_hc_attached_day ) && 'holiday-period' === (string) axismundi_cal_holiday_occurrence_get( $ax_hc_attached_day )['role'] );
 	$ax_hc_next_period = (int) axismundi_cal_system_item_save( $ax_hc_ko, array( 'title' => '설날 연휴', 'start_date' => '2027-02-05', 'categories' => array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ), 'status' => 'published' ) );
 	$ax_hc_next_principal = (int) axismundi_cal_system_item_save( $ax_hc_ko, array( 'title' => '설날', 'start_date' => '2027-02-07', 'categories' => array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ), 'status' => 'published' ) );
-	ax_hc_assert( $ax_hc_results, 'a prior local label suggests the holiday and role it already identified', array( 'concept_id' => $ax_hc_seollal, 'role' => 'holiday-period' ) === axismundi_cal_prior_holiday_link_suggestion( (array) axismundi_cal_system_item_get( $ax_hc_next_period ) ) );
-	ax_hc_assert( $ax_hc_results, 'and applies those unambiguous prior-year links together', 2 === axismundi_cal_apply_prior_holiday_links( $ax_hc_ko, 2027 ) && 'holiday-period' === (string) axismundi_cal_holiday_occurrence_get( (int) axismundi_cal_system_item_get( $ax_hc_next_period )['holiday_occurrence_id'] )['role'] && 'principal' === (string) axismundi_cal_holiday_occurrence_get( (int) axismundi_cal_system_item_get( $ax_hc_next_principal )['holiday_occurrence_id'] )['role'] );
+	ax_hc_assert( $ax_hc_results, 'a prior local title cannot manufacture this year\'s neutral days', 0 === axismundi_cal_apply_prior_holiday_links( $ax_hc_ko, 2027 ) && 0 === (int) axismundi_cal_system_item_get( $ax_hc_next_period )['holiday_occurrence_id'] && 0 === (int) axismundi_cal_system_item_get( $ax_hc_next_principal )['holiday_occurrence_id'] );
+	ax_hc_assert( $ax_hc_results, 'a maintainer can establish those days explicitly', is_int( axismundi_cal_attach_item_to_holiday_concept( $ax_hc_next_period, $ax_hc_seollal, 'holiday-period' ) ) && is_int( axismundi_cal_attach_item_to_holiday_concept( $ax_hc_next_principal, $ax_hc_seollal, 'principal' ) ) );
 	$ax_hc_sibling_2027 = (int) axismundi_cal_system_item_save( $ax_hc_en, array( 'title' => 'Seollal', 'start_date' => '2027-02-07', 'status' => 'draft' ) );
 	ax_hc_assert(
 		$ax_hc_results,
@@ -206,7 +206,7 @@ try {
 	ax_hc_assert(
 	$ax_hc_results,
 	'removing a localized label keeps a reviewed standalone entry',
-	'published' === (string) axismundi_cal_system_item_get( $ax_hc_en_item )['status'] && array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ) === axismundi_cal_normalize_categories( (string) axismundi_cal_system_item_get( $ax_hc_en_item )['categories'] )
+	'published' === (string) axismundi_cal_system_item_get( $ax_hc_en_item )['status'] && array() === axismundi_cal_normalize_categories( (string) axismundi_cal_system_item_get( $ax_hc_en_item )['categories'] )
 );
 	axismundi_cal_link_item_to_occurrence( $ax_hc_en_item, $ax_hc_day );
 
@@ -238,9 +238,15 @@ try {
 	);
 	ax_hc_assert(
 	$ax_hc_results,
-	'and its stored category is cleared rather than becoming a second source of truth',
-	'' === (string) axismundi_cal_system_item_get( $ax_hc_en_item )['categories']
+	'and its stored category survives linking, so removing the label later restores what was reviewed',
+	array( 'HOLIDAY', 'OBSERVANCE' ) === axismundi_cal_normalize_categories( (string) axismundi_cal_system_item_get( $ax_hc_en_item )['categories'] )
 );
+	axismundi_cal_holiday_occurrence_save( $ax_hc_seollal, array( 'status' => 'draft' ), $ax_hc_day );
+	ax_hc_assert( $ax_hc_results, 'changing an occurrence status does not erase localized review categories', array( 'HOLIDAY', 'OBSERVANCE' ) === axismundi_cal_normalize_categories( (string) axismundi_cal_system_item_get( $ax_hc_en_item )['categories'] ) );
+	axismundi_cal_holiday_occurrence_save( $ax_hc_seollal, array( 'status' => 'published' ), $ax_hc_day );
+	axismundi_cal_link_item_to_occurrence( $ax_hc_en_item, 0 );
+	ax_hc_assert( $ax_hc_results, 'and unlinking returns that preserved category rather than the concept\'s', array( 'HOLIDAY', 'OBSERVANCE' ) === axismundi_cal_normalize_categories( (string) axismundi_cal_system_item_get( $ax_hc_en_item )['categories'] ) );
+	axismundi_cal_link_item_to_occurrence( $ax_hc_en_item, $ax_hc_day );
 
 	// -- A re-import leaves the judgement alone ----------------------------------------------------------------
 
@@ -366,6 +372,7 @@ try {
 	$ax_hc_second_en = (int) axismundi_cal_system_item_save( $ax_hc_en, array( 'title' => 'Something else that day', 'start_date' => '2026-06-06' ) );
 	ax_hc_assert( $ax_hc_results, 'a second entry from the same language is not offered the day it already holds', array() === axismundi_cal_auto_link_candidates( (array) axismundi_cal_system_item_get( $ax_hc_second_en ), $ax_hc_catalog ) );
 	ax_hc_assert( $ax_hc_results, 'and does not attach itself over the first', false === axismundi_cal_auto_link_imported_holiday_item( $ax_hc_second_en ) );
+	ax_hc_assert( $ax_hc_results, 'nor can a direct write put two labels from one calendar on that day', is_wp_error( axismundi_cal_link_item_to_occurrence( $ax_hc_second_en, $ax_hc_lonely ) ) );
 	ax_hc_assert( $ax_hc_results, 'so the day keeps one label per language', 2 === count( axismundi_cal_occurrence_languages( $ax_hc_lonely ) ) );
 
 	/*
@@ -392,6 +399,14 @@ try {
 		'and reading the feed again leaves a row somebody unlinked alone',
 		0 === (int) axismundi_cal_system_item_by_uid( $ax_hc_en, 'en-2026-memorial@example.org' )['holiday_occurrence_id']
 	);
+
+	/* A localized row never promotes the occurrence it joins; review flows from the neutral day down. */
+	$ax_hc_draft_concept = (int) axismundi_cal_holiday_concept_save( array( 'catalog_id' => $ax_hc_catalog, 'label' => 'Draft-only holiday', 'categories' => array( 'HOLIDAY', 'OBSERVANCE' ) ) );
+	$ax_hc_concepts[]    = $ax_hc_draft_concept;
+	$ax_hc_draft_day     = (int) axismundi_cal_holiday_occurrence_save( $ax_hc_draft_concept, array( 'start_date' => '2026-06-07', 'role' => 'principal', 'status' => 'draft' ) );
+	$ax_hc_published_label = (int) axismundi_cal_system_item_save( $ax_hc_en, array( 'title' => 'A reviewed label', 'start_date' => '2026-06-07', 'status' => 'published' ) );
+	axismundi_cal_link_item_to_occurrence( $ax_hc_published_label, $ax_hc_draft_day );
+	ax_hc_assert( $ax_hc_results, 'a published localized row cannot publish the draft occurrence it joins', 'draft' === (string) axismundi_cal_holiday_occurrence_get( $ax_hc_draft_day )['status'] && 'draft' === (string) axismundi_cal_system_item_get( $ax_hc_published_label )['status'] );
 
 	// -- The screens that record it -----------------------------------------------------------------------
 

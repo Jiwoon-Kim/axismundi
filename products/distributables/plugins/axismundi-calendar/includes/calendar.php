@@ -203,6 +203,23 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 	 */
 	$visibility = 'public';
 
+	/*
+	 * Origin is settled when the Calendar is made and never afterwards: an imported dataset does not
+	 * become authored because somebody edited an entry, and a mirror does not become ours because we
+	 * kept it a while. Existing rows keep what they were given.
+	 */
+	$source = (string) ( $fields['source'] ?? ( $existing['source'] ?? '' ) );
+	if ( ! in_array( $source, AXISMUNDI_CAL_SOURCE_TYPES, true ) ) {
+		$source = 'remote' === $kind ? 'subscription' : 'native';
+	}
+	if ( 'remote' === $kind && 'subscription' !== $source ) {
+		// A remote Calendar is a mirror by definition. Any other origin describes something local.
+		return new WP_Error( 'ax_cal_source', __( 'A subscribed calendar is a mirror of its source.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+	if ( 'remote' !== $kind && 'subscription' === $source ) {
+		return new WP_Error( 'ax_cal_source', __( 'Only a subscribed calendar mirrors a source.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+
 	$now  = current_time( 'mysql', true );
 	$data = array(
 		'slug'           => $slug,
@@ -210,6 +227,7 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 		'description'    => (string) ( $fields['description'] ?? ( $existing['description'] ?? '' ) ),
 		'timezone'       => $timezone,
 		'kind'           => $kind,
+		'source'         => $source,
 		'visibility'     => $visibility,
 		'updated_at'     => $now,
 	);

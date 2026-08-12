@@ -115,7 +115,10 @@ try {
 	 * A subscribed Calendar is somebody else's to share. This site holds a cached copy and has
 	 * nothing to grant anyone, so the section is absent rather than present and refusing.
 	 */
-	$ax_sh_remote = (array) array_merge( $ax_sh_row, array( 'kind' => 'remote' ) );
+	// Both fields, because a row carrying `kind => remote` with a `native` origin is one the writer
+	// refuses to create. `source_type()` believes the recorded origin over `kind`, correctly -- so a
+	// fixture that sets only one is asserting about a Calendar that cannot exist.
+	$ax_sh_remote = (array) array_merge( $ax_sh_row, array( 'kind' => 'remote', 'source' => 'subscription' ) );
 	wp_set_current_user( $ax_sh_owner['user_id'] );
 	ax_sh_assert( $ax_sh_results, 'and a subscribed calendar cannot be shared by its subscriber', false === axismundi_cal_can_share_calendar( $ax_sh_remote ) );
 

@@ -29,19 +29,55 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
+ * Where a Calendar's contents can come from.
+ *
+ * Recorded on the Calendar because origin is decided once and cannot be reconstructed afterwards.
+ */
+const AXISMUNDI_CAL_SOURCE_TYPES = array( 'native', 'subscription', 'import', 'manual' );
+
+/**
  * Where a Calendar's contents come from.
  *
- * Derived rather than stored, because every fact it is derived from is already recorded and a column
- * would be a second copy able to disagree with them. That changes when contents can arrive by a
- * route that leaves no other trace -- an imported file, an operator typing holidays in by hand --
- * since "was imported once" is not visible anywhere else. This returns `native` or `ics` today and
- * is the seam those will be added to.
+ *   native        authored here, one Event at a time
+ *   subscription  a read-only mirror of a feed somebody else publishes
+ *   import        read from a file once, and this site's from then on
+ *   manual        a dataset this site maintains by hand -- holidays, observances
+ *
+ * Stored rather than derived. It was derivable while there were two of these, because a mirror is
+ * exactly a Calendar with a source row -- but "was read from a file once, and is now ours" leaves no
+ * trace anywhere else, and neither does "an operator maintains this by hand". A Calendar's origin has
+ * to be recorded at the moment it is decided or it cannot be recovered later.
+ *
+ * The distinction that matters most is `import` against `subscription`. Both begin as somebody
+ * else's iCalendar, and they diverge immediately: an import is ours to edit and to delete, a
+ * subscription is neither, and its publisher goes on being the authority. Sharing one field between
+ * them would give an imported holiday calendar the refusals meant for a mirror.
  *
  * @param array<string,mixed> $calendar Calendar row.
- * @return string `native` for a Calendar authored here, `ics` for one mirrored from a feed.
+ * @return string
  */
 function axismundi_cal_calendar_source_type( array $calendar ) : string {
-	return 'remote' === (string) ( $calendar['kind'] ?? '' ) ? 'ics' : 'native';
+	$source = (string) ( $calendar['source'] ?? '' );
+	if ( in_array( $source, AXISMUNDI_CAL_SOURCE_TYPES, true ) ) {
+		return $source;
+	}
+	// A row written before the column existed. `kind` is what the answer was derived from then.
+	return 'remote' === (string) ( $calendar['kind'] ?? '' ) ? 'subscription' : 'native';
+}
+
+/**
+ * Whether a Calendar's contents are a dataset rather than authored Events.
+ *
+ * Holidays, observances, moon phases. Nobody writes an Event onto one of these, whatever role they
+ * hold: the entries are maintained as data, so the Event editor has no business offering to file
+ * something there. That is a property of the Calendar, not of the person looking at it, which is why
+ * it is not expressible as an ACL role.
+ *
+ * @param array<string,mixed> $calendar Calendar row.
+ * @return bool
+ */
+function axismundi_cal_calendar_is_dataset( array $calendar ) : bool {
+	return in_array( axismundi_cal_calendar_source_type( $calendar ), array( 'manual', 'import' ), true );
 }
 
 /**
@@ -83,7 +119,7 @@ function axismundi_cal_calendar_capabilities( ?array $calendar, string $actor_ur
 	$owner       = $rank >= axismundi_cal_acl_rank( 'owner' );
 	$subscribed  = '' !== $actor_uri && is_array( axismundi_cal_list_entry( $calendar_id, $actor_uri ) );
 
-	if ( 'ics' === axismundi_cal_calendar_source_type( $calendar ) ) {
+	if ( 'subscription' === axismundi_cal_calendar_source_type( $calendar ) ) {
 		/*
 		 * A mirror of somebody else's Calendar. Its name, description and timezone are its
 		 * publisher's, and no role granted here can change that -- which is why `owner` on a
@@ -114,7 +150,11 @@ function axismundi_cal_calendar_capabilities( ?array $calendar, string $actor_ur
 		'delete'          => $owner && empty( $calendar['is_primary'] ),
 		// There is no subscription to leave; a local Calendar is left by giving up the role.
 		'unsubscribe'     => false,
-		'write_events'    => $writer,
+		/*
+		 * A dataset Calendar holds entries that are maintained rather than authored, so no role makes
+		 * it somewhere to file an Event. Its contents are edited on the screen that owns the dataset.
+		 */
+		'write_events'    => $writer && ! axismundi_cal_calendar_is_dataset( $calendar ),
 		'export'          => $reader,
 	);
 }

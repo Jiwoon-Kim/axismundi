@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '14';
+const AXISMUNDI_CAL_DB_VERSION        = '15';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 
 /** @return string Event envelope table name. */
@@ -265,6 +265,7 @@ function axismundi_cal_install_schema() : bool {
 			description longtext NOT NULL,
 			timezone varchar(64) NOT NULL default '',
 			kind varchar(16) NOT NULL default 'local',
+			source varchar(24) NOT NULL default 'native',
 			authority_actor_uri text NOT NULL,
 			authority_actor_uri_hash char(64) NOT NULL default '',
 			visibility varchar(16) NOT NULL default 'public',
@@ -278,6 +279,7 @@ function axismundi_cal_install_schema() : bool {
 			UNIQUE KEY uuid (uuid),
 			KEY visibility (visibility),
 			KEY kind (kind),
+			KEY source (source),
 			KEY authority_actor_uri_hash (authority_actor_uri_hash),
 			KEY authority_primary (authority_actor_uri_hash,is_primary)
 		) ENGINE=InnoDB {$charset};"
@@ -471,6 +473,7 @@ function axismundi_cal_install_schema() : bool {
 	axismundi_cal_backfill_calendar_uuids();
 	axismundi_cal_copy_legacy_access_roles();
 	axismundi_cal_seed_owner_entries();
+	axismundi_cal_backfill_source();
 	axismundi_cal_backfill_authority();
 	axismundi_cal_clear_v12_unfiled_authority( $previous_version );
 	axismundi_cal_seed_authority_acl();

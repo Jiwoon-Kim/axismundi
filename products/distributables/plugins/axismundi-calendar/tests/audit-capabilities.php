@@ -144,7 +144,75 @@ try {
 	$ax_cp_calendars[] = $ax_cp_remote;
 
 	ax_cp_assert( $ax_cp_results, 'a local calendar reports where its contents come from', 'native' === axismundi_cal_calendar_source_type( (array) axismundi_cal_calendar_get( $ax_cp_local ) ) );
-	ax_cp_assert( $ax_cp_results, 'and a subscribed one reports the feed it mirrors', 'ics' === axismundi_cal_calendar_source_type( (array) axismundi_cal_calendar_get( $ax_cp_remote ) ) );
+	ax_cp_assert( $ax_cp_results, 'and a subscribed one reports the feed it mirrors', 'subscription' === axismundi_cal_calendar_source_type( (array) axismundi_cal_calendar_get( $ax_cp_remote ) ) );
+
+	/*
+	 * A row from before the column existed. Its origin has to be recoverable, because otherwise the
+	 * upgrade turns every existing subscription into something the capability table treats as ours.
+	 */
+	ax_cp_assert(
+		$ax_cp_results,
+		'a row written before origin was recorded still reports what it always was',
+		'subscription' === axismundi_cal_calendar_source_type( array( 'id' => 1, 'kind' => 'remote' ) )
+			&& 'native' === axismundi_cal_calendar_source_type( array( 'id' => 1, 'kind' => 'local' ) )
+	);
+
+	// -- A dataset calendar is not somewhere to file an Event -------------------------------------------
+
+	/*
+	 * Holidays and moon phases are maintained, not authored. Nobody writes an Event onto one whatever
+	 * role they hold, which is a property of the Calendar rather than of the person -- and therefore
+	 * not something an ACL role could express.
+	 */
+	$ax_cp_dataset_saved = axismundi_cal_calendar_save(
+		array( 'name' => 'Capability dataset', 'slug' => 'ax-cp-dataset-' . $ax_cp_suffix, 'timezone' => 'Asia/Seoul', 'source' => 'manual', 'owner_actor_uri' => $ax_cp_owner['actor_uri'] )
+	);
+	ax_cp_assert( $ax_cp_results, 'a site-maintained dataset calendar can be created', is_int( $ax_cp_dataset_saved ) );
+	$ax_cp_dataset = (int) $ax_cp_dataset_saved;
+	$ax_cp_calendars[] = $ax_cp_dataset;
+
+	wp_set_current_user( $ax_cp_owner['user_id'] );
+	ax_cp_row(
+		$ax_cp_results,
+		'the owner of a dataset calendar',
+		axismundi_cal_calendar_get( $ax_cp_dataset ),
+		array( 'edit_details' => true, 'share' => true, 'publish' => true, 'delete' => true, 'export' => true, 'unsubscribe' => false, 'write_events' => false )
+	);
+	ax_cp_assert( $ax_cp_results, 'and it says its contents are maintained rather than authored', true === axismundi_cal_calendar_is_dataset( (array) axismundi_cal_calendar_get( $ax_cp_dataset ) ) );
+	ax_cp_assert( $ax_cp_results, 'while an ordinary local calendar does not', false === axismundi_cal_calendar_is_dataset( (array) axismundi_cal_calendar_get( $ax_cp_local ) ) );
+
+	/*
+	 * An imported dataset is ours: deletable and shareable, unlike the mirror it was read from. That
+	 * is the distinction the stored origin exists to keep -- both begin as somebody else's file.
+	 */
+	$ax_cp_imported_saved = axismundi_cal_calendar_save(
+		array( 'name' => 'Capability imported', 'slug' => 'ax-cp-imported-' . $ax_cp_suffix, 'timezone' => 'Asia/Seoul', 'source' => 'import', 'owner_actor_uri' => $ax_cp_owner['actor_uri'] )
+	);
+	ax_cp_assert( $ax_cp_results, 'an imported calendar can be created', is_int( $ax_cp_imported_saved ) );
+	if ( is_int( $ax_cp_imported_saved ) ) {
+		$ax_cp_calendars[] = $ax_cp_imported_saved;
+		ax_cp_row(
+			$ax_cp_results,
+			'an imported calendar',
+			axismundi_cal_calendar_get( $ax_cp_imported_saved ),
+			array( 'delete' => true, 'share' => true, 'unsubscribe' => false, 'write_events' => false )
+		);
+	}
+
+	/*
+	 * The two halves of the field cannot disagree. A mirror that claims to be authored, or a local
+	 * Calendar claiming to mirror something, are both refused rather than stored.
+	 */
+	ax_cp_assert(
+		$ax_cp_results,
+		'a subscribed calendar cannot claim another origin',
+		is_wp_error( axismundi_cal_calendar_save( array( 'name' => 'Bad', 'slug' => 'ax-cp-bad-' . $ax_cp_suffix, 'timezone' => 'UTC', 'kind' => 'remote', 'source' => 'manual' ) ) )
+	);
+	ax_cp_assert(
+		$ax_cp_results,
+		'and a local one cannot claim to mirror a source',
+		is_wp_error( axismundi_cal_calendar_save( array( 'name' => 'Bad', 'slug' => 'ax-cp-bad2-' . $ax_cp_suffix, 'timezone' => 'UTC', 'source' => 'subscription', 'owner_actor_uri' => $ax_cp_owner['actor_uri'] ) ) )
+	);
 
 	/*
 	 * The case worth stating: `owner` on a subscribed Calendar still cannot edit or share it. The role

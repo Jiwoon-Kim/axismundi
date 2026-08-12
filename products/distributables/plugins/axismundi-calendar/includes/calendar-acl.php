@@ -413,6 +413,31 @@ function axismundi_cal_grandfather_public_calendars( string $previous_version ) 
 }
 
 /**
+ * Record the origin of Calendars that predate the column.
+ *
+ * A statement of what they already were rather than a change: a remote Calendar was a mirror, and
+ * everything else was authored here. Both facts were previously read from `kind`, which is why this
+ * cannot get them wrong -- but it must be written down before a third and fourth origin exist, since
+ * from then on `kind` no longer distinguishes them.
+ *
+ * @return int Number of rows given an origin.
+ */
+function axismundi_cal_backfill_source() : int {
+	global $wpdb;
+	$table = axismundi_cal_calendars_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration over this plugin's own table.
+	$columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
+	if ( ! in_array( 'source', $columns, true ) ) {
+		return 0;
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
+	$remote = (int) $wpdb->query( "UPDATE {$table} SET source = 'subscription' WHERE kind = 'remote' AND source NOT IN ('subscription')" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
+	$local = (int) $wpdb->query( "UPDATE {$table} SET source = 'native' WHERE kind <> 'remote' AND source = ''" );
+	return $remote + $local;
+}
+
+/**
  * Give every Calendar an authority, from the owner it already recorded.
  *
  * @return int Number of Calendars given one.

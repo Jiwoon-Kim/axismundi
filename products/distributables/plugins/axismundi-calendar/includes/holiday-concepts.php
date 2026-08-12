@@ -579,17 +579,24 @@ function axismundi_cal_link_item_to_occurrence( int $item_id, int $occurrence_id
 		}
 		$occurrence = axismundi_cal_holiday_occurrence_get( $occurrence_id );
 	}
+	$data = array(
+		'holiday_occurrence_id' => $occurrence_id,
+		'categories'             => '',
+		'status'                 => is_array( $occurrence ) ? (string) $occurrence['status'] : 'draft',
+	);
+	if ( 0 === $occurrence_id ) {
+		$previous = axismundi_cal_holiday_occurrence_get( (int) $item['holiday_occurrence_id'] );
+		$concept  = is_array( $previous ) ? axismundi_cal_holiday_concept_get( (int) $previous['concept_id'] ) : null;
+		/* Removing one localized label keeps a reviewed standalone entry; it does not delete the holiday. */
+		if ( is_array( $previous ) && is_array( $concept ) ) {
+			$data['categories'] = (string) $concept['categories'];
+			$data['status']     = (string) $previous['status'];
+		}
+	}
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 	$wpdb->update(
 		axismundi_cal_system_items_table(),
-		array(
-			'holiday_occurrence_id' => $occurrence_id,
-			// Classification and publication belong to the occurrence and concept once it is linked.
-			'categories'             => '',
-			// Detaching also returns this label to review. Otherwise it would remain published while no
-			// longer having a holiday to classify or an occurrence to publish.
-			'status'                 => is_array( $occurrence ) ? (string) $occurrence['status'] : 'draft',
-		),
+		$data,
 		array( 'id' => $item_id )
 	);
 	return true;
@@ -637,6 +644,32 @@ function axismundi_cal_attach_item_to_holiday_concept( int $item_id, int $concep
 	}
 	$linked = axismundi_cal_link_item_to_occurrence( $item_id, (int) $saved );
 	return is_wp_error( $linked ) ? $linked : (int) $saved;
+}
+
+/**
+ * Make an unlinked, reviewed item its own holiday's principal day.
+ *
+ * @param int $item_id System item id.
+ * @return int|WP_Error Concept id.
+ */
+function axismundi_cal_create_principal_holiday_from_item( int $item_id ) {
+	$item     = axismundi_cal_system_item_get( $item_id );
+	$calendar = is_array( $item ) ? axismundi_cal_calendar_get( (int) $item['calendar_id'] ) : null;
+	if ( ! is_array( $item ) || ! is_array( $calendar ) || (int) $item['holiday_occurrence_id'] > 0 ) {
+		return new WP_Error( 'ax_cal_principal_item', __( 'That entry is already linked or unavailable.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+	$concept = axismundi_cal_holiday_concept_save(
+		array(
+			'catalog_id' => (int) $calendar['holiday_catalog_id'],
+			'label'      => (string) $item['title'],
+			'categories' => (string) $item['categories'],
+		)
+	);
+	if ( is_wp_error( $concept ) ) {
+		return $concept;
+	}
+	$occurrence = axismundi_cal_attach_item_to_holiday_concept( $item_id, (int) $concept, 'principal' );
+	return is_wp_error( $occurrence ) ? $occurrence : (int) $concept;
 }
 
 /**

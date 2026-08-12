@@ -93,6 +93,12 @@ function axismundi_cal_handle_item_link() : void {
 			wp_safe_redirect( add_query_arg( 'ax_cal_error', 'ax_cal_occurrence_missing', $base ) );
 			exit;
 		}
+		$label = isset( $_POST['concept_label'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['concept_label'] ) ) : (string) $concept['label'];
+		$renamed = axismundi_cal_holiday_concept_save( array( 'label' => $label ), (int) $concept['id'] );
+		if ( is_wp_error( $renamed ) ) {
+			wp_safe_redirect( add_query_arg( 'ax_cal_error', rawurlencode( $renamed->get_error_code() ), $base ) );
+			exit;
+		}
 		$updated = axismundi_cal_holiday_occurrence_save(
 			(int) $concept['id'],
 			array(
@@ -337,7 +343,10 @@ function axismundi_cal_render_item_links( array $calendar, array $items, int $ye
 							<input type="hidden" name="year" value="<?php echo esc_attr( (string) $year ); ?>">
 							<?php wp_nonce_field( 'ax_cal_link_' . $calendar_id ); ?>
 							<?php if ( is_array( $concept ) ) : ?>
-								<strong><?php echo esc_html( (string) $concept['label'] ); ?></strong>
+								<label>
+									<span class="screen-reader-text"><?php esc_html_e( 'Holiday name', 'axismundi-calendar' ); ?></span>
+									<input type="text" name="concept_label" value="<?php echo esc_attr( (string) $concept['label'] ); ?>">
+								</label>
 								<fieldset class="ax-cal-occurrence-role">
 									<legend class="screen-reader-text"><?php esc_html_e( 'Day role', 'axismundi-calendar' ); ?></legend>
 									<?php foreach ( AXISMUNDI_CAL_OCCURRENCE_ROLES as $role ) : ?>
@@ -352,7 +361,7 @@ function axismundi_cal_render_item_links( array $calendar, array $items, int $ye
 								</button>
 								<input type="hidden" name="occurrence_id" value="0">
 								<button type="submit" class="button-link" name="ax_cal_link_action" value="link">
-									<?php esc_html_e( 'Unlink', 'axismundi-calendar' ); ?>
+									<?php esc_html_e( 'Remove from holiday', 'axismundi-calendar' ); ?>
 								</button>
 							<?php else : ?>
 								<p><em><?php esc_html_e( 'Not linked yet', 'axismundi-calendar' ); ?></em></p>

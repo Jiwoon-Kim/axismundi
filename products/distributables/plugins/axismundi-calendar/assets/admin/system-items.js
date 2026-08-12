@@ -36,6 +36,12 @@
 			} );
 			syncAll( form );
 		},
+		selectUnlinked: function ( form ) {
+			selections( form ).forEach( function ( input ) {
+				input.checked = '1' === input.getAttribute( 'data-unlinked' );
+			} );
+			syncAll( form );
+		},
 		invert: function ( form ) {
 			selections( form ).forEach( function ( input ) {
 				input.checked = ! input.checked;

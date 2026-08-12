@@ -181,6 +181,9 @@ try {
 	$ax_hc_attached = (int) axismundi_cal_system_item_save( $ax_hc_ko, array( 'title' => '설날 연휴', 'start_date' => '2026-02-16', 'categories' => array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ), 'status' => 'published' ) );
 	$ax_hc_attached_day = axismundi_cal_attach_item_to_holiday_concept( $ax_hc_attached, $ax_hc_seollal, 'holiday-period' );
 	ax_hc_assert( $ax_hc_results, 'an adjacent entry can join an existing holiday rather than only a same-date candidate', is_int( $ax_hc_attached_day ) && 'holiday-period' === (string) axismundi_cal_holiday_occurrence_get( $ax_hc_attached_day )['role'] );
+	$ax_hc_principal_item = (int) axismundi_cal_system_item_save( $ax_hc_ko, array( 'title' => 'A day of its own', 'start_date' => '2026-08-01', 'categories' => array( 'HOLIDAY', 'OBSERVANCE' ), 'status' => 'published' ) );
+	$ax_hc_principal_concept = axismundi_cal_create_principal_holiday_from_item( $ax_hc_principal_item );
+	ax_hc_assert( $ax_hc_results, 'an unlinked reviewed entry can become its own principal holiday in one operation', is_int( $ax_hc_principal_concept ) && 'principal' === (string) axismundi_cal_holiday_occurrence_get( (int) axismundi_cal_system_item_get( $ax_hc_principal_item )['holiday_occurrence_id'] )['role'] );
 	$ax_hc_unprincipled = (int) axismundi_cal_system_item_save( $ax_hc_ko, array( 'title' => 'Unprincipled substitute', 'start_date' => '2026-09-01', 'categories' => array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ), 'status' => 'draft' ) );
 	ax_hc_assert( $ax_hc_results, 'a substitute cannot be the first day recorded for a holiday', is_wp_error( axismundi_cal_attach_item_to_holiday_concept( $ax_hc_unprincipled, $ax_hc_plain, 'substitute' ) ) );
 	ax_hc_assert( $ax_hc_results, 'without either becoming the other', '설날' === (string) axismundi_cal_system_item_get( $ax_hc_ko_item )['title'] && 'Lunar New Year' === (string) axismundi_cal_system_item_get( $ax_hc_en_item )['title'] );
@@ -188,8 +191,8 @@ try {
 	axismundi_cal_link_item_to_occurrence( $ax_hc_en_item, 0 );
 	ax_hc_assert(
 	$ax_hc_results,
-	'detaching a localized label returns it to an unreviewed state',
-	'draft' === (string) axismundi_cal_system_item_get( $ax_hc_en_item )['status'] && '' === (string) axismundi_cal_system_item_get( $ax_hc_en_item )['categories']
+	'removing a localized label keeps a reviewed standalone entry',
+	'published' === (string) axismundi_cal_system_item_get( $ax_hc_en_item )['status'] && array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ) === axismundi_cal_normalize_categories( (string) axismundi_cal_system_item_get( $ax_hc_en_item )['categories'] )
 );
 	axismundi_cal_link_item_to_occurrence( $ax_hc_en_item, $ax_hc_day );
 
@@ -282,7 +285,7 @@ try {
 	axismundi_cal_holiday_occurrence_save( $ax_hc_newyear, array( 'start_date' => '2026-01-01', 'role' => 'principal' ) );
 	ax_hc_assert( $ax_hc_results, 'a different holiday is a different concept', $ax_hc_newyear !== $ax_hc_seollal );
 	ax_hc_assert( $ax_hc_results, 'with its own days', 1 === count( axismundi_cal_holiday_occurrences( $ax_hc_newyear ) ) );
-	ax_hc_assert( $ax_hc_results, 'and both are found under the dataset they belong to', 4 === count( axismundi_cal_holiday_concepts( $ax_hc_catalog ) ) );
+	ax_hc_assert( $ax_hc_results, 'and both are found under the dataset they belong to', in_array( $ax_hc_seollal, array_map( static fn( array $concept ) : int => (int) $concept['id'], axismundi_cal_holiday_concepts( $ax_hc_catalog ) ), true ) && in_array( $ax_hc_newyear, array_map( static fn( array $concept ) : int => (int) $concept['id'], axismundi_cal_holiday_concepts( $ax_hc_catalog ) ), true ) );
 	ax_hc_assert( $ax_hc_results, 'while another dataset has none of them', array() === axismundi_cal_holiday_concepts( 999999 ) );
 
 	// -- Only the languages that exist -----------------------------------------------------------------------
@@ -361,8 +364,8 @@ try {
 		);
 		$ax_hc_linked_html = (string) ob_get_clean();
 		ax_hc_assert( $ax_hc_results, 'a linked entry shows the holiday it is a day of', str_contains( $ax_hc_linked_html, '설날' ) );
-		ax_hc_assert( $ax_hc_results, 'and can be detached again', str_contains( $ax_hc_linked_html, 'Unlink' ) );
-		ax_hc_assert( $ax_hc_results, 'and lets a maintainer choose one day role after linking it', str_contains( $ax_hc_linked_html, 'type="radio" name="role"' ) && str_contains( $ax_hc_linked_html, 'Holiday period' ) && str_contains( $ax_hc_linked_html, 'Save role' ) );
+		ax_hc_assert( $ax_hc_results, 'and can be removed from the holiday without deleting it', str_contains( $ax_hc_linked_html, 'Remove from holiday' ) );
+		ax_hc_assert( $ax_hc_results, 'and lets a maintainer edit its holiday name and day role', str_contains( $ax_hc_linked_html, 'name="concept_label"' ) && str_contains( $ax_hc_linked_html, 'type="radio" name="role"' ) && str_contains( $ax_hc_linked_html, 'Holiday period' ) && str_contains( $ax_hc_linked_html, 'Save role' ) );
 		ax_hc_assert( $ax_hc_results, 'without asking which principal a substitute stands in for', ! str_contains( $ax_hc_linked_html, 'Stands in for' ) && ! str_contains( $ax_hc_linked_html, 'substitute_for' ) );
 		ob_start();
 		axismundi_cal_render_system_item_editor( (array) axismundi_cal_calendar_get( $ax_hc_ko ), 'https://example.test/admin' );

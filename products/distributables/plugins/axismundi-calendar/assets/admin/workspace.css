@@ -220,3 +220,10 @@
 .ax-cal-browse__item:last-child {
 	border-bottom: 0;
 }
+
+.ax-cal-workspace__secondary {
+	margin-inline-start: 6px;
+	font-size: 11px;
+	color: #757575;
+	font-variant-numeric: tabular-nums;
+}

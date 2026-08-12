@@ -288,6 +288,43 @@
 		);
 	}
 
+	/**
+	 * How days are written, which is not which calendars you are a member of.
+	 *
+	 * Deliberately its own section rather than another group in the list above. Ticking a dataset
+	 * says what you subscribe to and travels with permissions; ticking 음력 says how you would like
+	 * dates spelled, and nobody can grant or revoke it.
+	 */
+	function SecondaryCalendars( props ) {
+		if ( ! props.available.length ) {
+			return null;
+		}
+		return el(
+			'div',
+			{ className: 'ax-cal-workspace__section' },
+			el( 'h2', null, __( 'Second date', 'axismundi-calendar' ) ),
+			el(
+				'ul',
+				{ className: 'ax-cal-workspace__list' },
+				props.available.map( function ( system ) {
+					return el(
+						'li',
+						{ key: system.id },
+						el( C.CheckboxControl, {
+							label: system.label,
+							checked: props.selected.indexOf( system.id ) !== -1,
+							disabled: props.busy,
+							__nextHasNoMarginBottom: true,
+							onChange: function ( next ) {
+								props.onToggle( system.id, next );
+							}
+						} )
+					);
+				} )
+			)
+		);
+	}
+
 	function CalendarList( props ) {
 		var owned = props.calendars.filter( function ( calendar ) {
 			return 'remote' !== calendar.kind;
@@ -418,7 +455,31 @@
 								}
 							}
 						},
-						el( 'div', { className: 'ax-cal-workspace__daynum' }, day.getDate() ),
+						el(
+						'div',
+						{ className: 'ax-cal-workspace__daynum' },
+						day.getDate(),
+						/*
+						 * The same day said another way, not another day. It sits with the number rather
+						 * than with the events because it is part of what this cell *is*, and an entry in
+						 * the list would read as something happening.
+						 *
+						 * A system with nothing to say about this day contributes nothing. An empty slot
+						 * under every number would be the provider promising an answer it does not have.
+						 */
+						( props.secondary || [] ).map( function ( system ) {
+							var label = system.dates[ key ];
+							return label
+								? el( 'span', {
+									key: system.id,
+									className: 'ax-cal-workspace__secondary',
+									// Not read out with every date. A screen reader moving through a month
+									// would hear two numbers per cell with nothing saying why.
+									'aria-hidden': true
+								}, label )
+								: null;
+						} )
+					),
 						entries.map( function ( item, index ) {
 							return el(
 								'button',
@@ -525,6 +586,10 @@
 		var loaded = loadedState[ 0 ];
 		var setLoaded = loadedState[ 1 ];
 
+		var secondaryState = useState( { available: [], selected: [], dates: {} } );
+		var secondary = secondaryState[ 0 ];
+		var setSecondary = secondaryState[ 1 ];
+
 		var browsingState = useState( false );
 		var browsing = browsingState[ 0 ];
 		var setBrowsing = browsingState[ 1 ];
@@ -612,6 +677,57 @@
 					setBusy( false );
 				} );
 		}, [ tickedKey, monthKey( cursor ), loaded ] );
+
+		/*
+		 * Its own request, not part of the bootstrap. Most people have no second date turned on, and
+		 * the month grid should not wait on an answer that is usually "none" -- when it does arrive
+		 * it adds a line to cells that are already drawn rather than holding them back.
+		 */
+		useEffect( function () {
+			var days = gridDays( year, month, startOfWeek );
+			apiFetch( {
+				path: wp.url.addQueryArgs( '/' + config.namespace + '/actors/me/secondaryCalendars', {
+					start: localKey( days[ 0 ] ),
+					end: localKey( days[ 41 ] )
+				} )
+			} )
+				.then( setSecondary )
+				.catch( function () {
+					// Silent. A second date failing to arrive is not a reason to put an error over a
+					// calendar that is otherwise complete and correct.
+				} );
+		}, [ monthKey( cursor ) ] );
+
+		// In the order they were chosen, so two systems do not swap places between renders.
+		var secondaryShown = ( secondary.selected || [] )
+			.filter( function ( id ) {
+				return secondary.dates && secondary.dates[ id ];
+			} )
+			.map( function ( id ) {
+				return { id: id, dates: secondary.dates[ id ] };
+			} );
+
+		function toggleSecondary( id, next ) {
+			var chosen = ( secondary.selected || [] ).filter( function ( entry ) {
+				return entry !== id;
+			} );
+			if ( next ) {
+				chosen.push( id );
+			}
+			var days = gridDays( year, month, startOfWeek );
+			// The server answers with the dates for the current month in the same round trip, so the
+			// grid fills in at the moment the box is ticked rather than a request later.
+			apiFetch( {
+				path: wp.url.addQueryArgs( '/' + config.namespace + '/actors/me/secondaryCalendars', {
+					start: localKey( days[ 0 ] ),
+					end: localKey( days[ 41 ] )
+				} ),
+				method: 'PUT',
+				data: { systems: chosen }
+			} )
+				.then( setSecondary )
+				.catch( report );
+		}
 
 		function openBrowse() {
 			setBrowsing( true );
@@ -725,10 +841,17 @@
 					{ className: 'ax-cal-workspace__aside' },
 					el( MiniCalendar, { cursor: cursor, onPick: setCursor } ),
 					el( CalendarList, { calendars: calendars, busy: busy, onToggle: toggle } ),
-					el( C.Button, { variant: 'link', onClick: openBrowse }, __( 'Browse calendars', 'axismundi-calendar' ) )
+					el( C.Button, { variant: 'link', onClick: openBrowse }, __( 'Browse calendars', 'axismundi-calendar' ) ),
+					el( SecondaryCalendars, {
+						available: secondary.available || [],
+						selected: secondary.selected || [],
+						busy: busy,
+						onToggle: toggleSecondary
+					} )
 				),
 				el( MonthGrid, {
 					items: items,
+					secondary: secondaryShown,
 					year: year,
 					month: month,
 					cursor: cursor,

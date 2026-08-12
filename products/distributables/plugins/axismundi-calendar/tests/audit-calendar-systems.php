@@ -313,5 +313,80 @@ ax_cs_assert(
 // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 $wpdb->query( $wpdb->prepare( "DELETE FROM {$ax_cs_table} WHERE system = %s", $ax_cs_system ) );
 
+// -- Showing a second date -------------------------------------------------------------------------
+
+/*
+ * A display preference, kept out of the membership model. Nobody grants it and nobody revokes it,
+ * which is the whole reason it is not a CalendarList entry.
+ */
+$ax_cs_user = (int) ( get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ID' ) )[0] ?? 0 );
+$ax_cs_kept = get_user_meta( $ax_cs_user, AXISMUNDI_CAL_SECONDARY_META, true );
+wp_set_current_user( $ax_cs_user );
+
+ax_cs_assert(
+	$ax_cs_results,
+	'a system nobody registered cannot be stored as a preference',
+	array( 'chinese' ) === axismundi_cal_secondary_systems_set( array( 'chinese', 'martian', 'chinese' ) )
+);
+ax_cs_assert(
+	$ax_cs_results,
+	'and a preference naming a system that has gone away reads as off rather than as an error',
+	( static function () use ( $ax_cs_user ) : bool {
+		update_user_meta( $ax_cs_user, AXISMUNDI_CAL_SECONDARY_META, array( 'chinese', 'was-registered-once' ) );
+		return array( 'chinese' ) === axismundi_cal_secondary_systems();
+	} )()
+);
+
+// The month on the first of the month, and only there. Every other day is its number alone.
+ax_cs_assert(
+	$ax_cs_results,
+	'the first of a month says which month it is',
+	'7.1' === axismundi_cal_secondary_label( array( 'year' => 2026, 'month' => 7, 'day' => 1, 'leapMonth' => false ) )
+);
+ax_cs_assert(
+	$ax_cs_results,
+	'a leap month says so, because otherwise two different months read identically',
+	axismundi_cal_secondary_label( array( 'year' => 2026, 'month' => 7, 'day' => 1, 'leapMonth' => true ) )
+		!== axismundi_cal_secondary_label( array( 'year' => 2026, 'month' => 7, 'day' => 1, 'leapMonth' => false ) )
+);
+ax_cs_assert(
+	$ax_cs_results,
+	'and every other day is just a number, so the month stands out on the day it changes',
+	'2' === axismundi_cal_secondary_label( array( 'year' => 2026, 'month' => 7, 'day' => 2, 'leapMonth' => false ) )
+);
+
+$ax_cs_req = new WP_REST_Request( 'PUT', '/axismundi/v1/actors/me/secondaryCalendars' );
+$ax_cs_req->set_param( 'systems', array( 'chinese' ) );
+$ax_cs_req->set_param( 'start', '2026-08-01' );
+$ax_cs_req->set_param( 'end', '2026-08-05' );
+$ax_cs_body = (array) rest_do_request( $ax_cs_req )->get_data();
+ax_cs_assert(
+	$ax_cs_results,
+	'setting the preference answers with the dates for the month in the same round trip',
+	isset( $ax_cs_body['dates']['chinese']['2026-08-01'] ) && 5 === count( $ax_cs_body['dates']['chinese'] )
+);
+ax_cs_assert(
+	$ax_cs_results,
+	'and offers every registered system, not only the ones turned on',
+	count( (array) $ax_cs_body['available'] ) >= 3
+);
+ax_cs_assert(
+	$ax_cs_results,
+	'a system with nothing to say about a range is absent rather than present and empty',
+	! isset( $ax_cs_body['dates']['hebrew'] )
+);
+
+wp_set_current_user( 0 );
+ax_cs_assert(
+	$ax_cs_results,
+	'and there is no anonymous answer, because a preference belongs to somebody',
+	401 === rest_do_request( new WP_REST_Request( 'GET', '/axismundi/v1/actors/me/secondaryCalendars' ) )->get_status()
+);
+if ( is_array( $ax_cs_kept ) ) {
+	update_user_meta( $ax_cs_user, AXISMUNDI_CAL_SECONDARY_META, $ax_cs_kept );
+} else {
+	delete_user_meta( $ax_cs_user, AXISMUNDI_CAL_SECONDARY_META );
+}
+
 $ax_cs_failed = count( array_filter( $ax_cs_results, static fn( array $r ) : bool => ! $r[0] ) );
 printf( "== %d checks, %d failed ==\n", count( $ax_cs_results ), $ax_cs_failed );

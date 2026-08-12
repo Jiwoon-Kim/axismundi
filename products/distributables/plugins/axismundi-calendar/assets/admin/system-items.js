@@ -36,12 +36,6 @@
 			} );
 			syncAll( form );
 		},
-		selectUnlinked: function ( form ) {
-			selections( form ).forEach( function ( input ) {
-				input.checked = '1' === input.getAttribute( 'data-unlinked' );
-			} );
-			syncAll( form );
-		},
 		invert: function ( form ) {
 			selections( form ).forEach( function ( input ) {
 				input.checked = ! input.checked;
@@ -49,6 +43,14 @@
 			syncAll( form );
 		},
 		syncAll: syncAll,
+	};
+
+	window.axismundiCalendarHolidayLinks = {
+		togglePrincipals: function ( all, formId ) {
+			Array.prototype.forEach.call( document.querySelectorAll( 'input[form="' + formId + '"][name="item_ids[]"]' ), function ( input ) {
+				input.checked = all.checked;
+			} );
+		},
 	};
 
 }() );

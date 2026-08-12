@@ -190,6 +190,42 @@ function axismundi_cal_handle_item_link() : void {
 add_action( 'admin_post_ax_cal_link_item', 'axismundi_cal_handle_item_link' );
 
 /**
+ * Turn selected unlinked rows into the principal days of new holidays.
+ *
+ * @return void
+ */
+function axismundi_cal_handle_bulk_principal_links() : void {
+	$calendar_id = isset( $_POST['calendar_id'] ) ? absint( wp_unslash( $_POST['calendar_id'] ) ) : 0;
+	check_admin_referer( 'ax_cal_bulk_principals_' . $calendar_id );
+	$calendar = $calendar_id > 0 ? axismundi_cal_calendar_get( $calendar_id ) : null;
+	if ( ! axismundi_cal_calendar_can( $calendar, 'manage_items' ) ) {
+		wp_die( esc_html__( 'You are not allowed to maintain that calendar.', 'axismundi-calendar' ), 403 );
+	}
+	$year = isset( $_POST['year'] ) ? absint( wp_unslash( $_POST['year'] ) ) : 0;
+	$base = add_query_arg( array( 'calendar' => $calendar_id, 'year' => $year ), admin_url( 'edit.php?post_type=' . AXISMUNDI_CAL_EVENT_POST_TYPE . '&page=ax-calendar-system' ) );
+	$item_ids = isset( $_POST['item_ids'] ) ? array_values( array_unique( array_filter( array_map( 'absint', (array) wp_unslash( $_POST['item_ids'] ) ) ) ) ) : array();
+	if ( array() === $item_ids ) {
+		wp_safe_redirect( add_query_arg( 'ax_cal_error', 'ax_cal_principal_selection', $base ) );
+		exit;
+	}
+	foreach ( $item_ids as $item_id ) {
+		$item = axismundi_cal_system_item_get( $item_id );
+		if ( ! is_array( $item ) || $calendar_id !== (int) $item['calendar_id'] || $year !== (int) $item['batch_year'] || (int) $item['holiday_occurrence_id'] > 0 ) {
+			wp_safe_redirect( add_query_arg( 'ax_cal_error', 'ax_cal_principal_selection', $base ) );
+			exit;
+		}
+		$created = axismundi_cal_create_principal_holiday_from_item( $item_id );
+		if ( is_wp_error( $created ) ) {
+			wp_safe_redirect( add_query_arg( 'ax_cal_error', rawurlencode( $created->get_error_code() ), $base ) );
+			exit;
+		}
+	}
+	wp_safe_redirect( add_query_arg( 'ax_cal_notice', 'principal_days_saved', $base ) );
+	exit;
+}
+add_action( 'admin_post_ax_cal_bulk_principal_links', 'axismundi_cal_handle_bulk_principal_links' );
+
+/**
  * Which dataset this calendar is, and the chance to say.
  *
  * @param array<string,mixed> $calendar Calendar row.
@@ -303,6 +339,8 @@ function axismundi_cal_render_item_links( array $calendar, array $items, int $ye
 	$calendar_id = (int) $calendar['id'];
 	$catalog_id  = (int) $calendar['holiday_catalog_id'];
 	$concepts    = $catalog_id > 0 ? axismundi_cal_holiday_concepts( $catalog_id ) : array();
+	$bulk_form_id = 'ax-cal-bulk-principals-' . $calendar_id;
+	$unlinked     = array_values( array_filter( $items, static fn( array $item ) : bool => (int) $item['holiday_occurrence_id'] <= 0 ) );
 	?>
 	<h3><?php esc_html_e( 'Link each date to a holiday', 'axismundi-calendar' ); ?></h3>
 	<?php if ( $catalog_id <= 0 ) : ?>
@@ -313,10 +351,22 @@ function axismundi_cal_render_item_links( array $calendar, array $items, int $ye
 	<p class="description">
 		<?php esc_html_e( 'Classification is already shown above. Here, link each date to the holiday it belongs to. Choose an existing holiday for an adjacent or substitute day; otherwise name a new holiday here. The role belongs to the date.', 'axismundi-calendar' ); ?>
 	</p>
+	<?php if ( array() !== $unlinked ) : ?>
+		<form id="<?php echo esc_attr( $bulk_form_id ); ?>" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="ax_cal_bulk_principal_links">
+			<input type="hidden" name="calendar_id" value="<?php echo esc_attr( (string) $calendar_id ); ?>">
+			<input type="hidden" name="year" value="<?php echo esc_attr( (string) $year ); ?>">
+			<?php wp_nonce_field( 'ax_cal_bulk_principals_' . $calendar_id ); ?>
+			<p class="submit"><button type="submit" class="button button-primary"><?php esc_html_e( 'Save selected as principal days', 'axismundi-calendar' ); ?></button></p>
+		</form>
+	<?php endif; ?>
 
 	<table class="wp-list-table widefat fixed striped">
 		<thead>
 			<tr>
+				<?php if ( array() !== $unlinked ) : ?>
+					<th scope="col"><label class="screen-reader-text" for="ax-cal-select-all-principals"><?php esc_html_e( 'Select principal days', 'axismundi-calendar' ); ?></label><input id="ax-cal-select-all-principals" type="checkbox" onchange="window.axismundiCalendarHolidayLinks.togglePrincipals(this, '<?php echo esc_attr( $bulk_form_id ); ?>')"></th>
+				<?php endif; ?>
 				<th scope="col"><?php esc_html_e( 'Date', 'axismundi-calendar' ); ?></th>
 				<th scope="col"><?php esc_html_e( 'Entry', 'axismundi-calendar' ); ?></th>
 				<th scope="col"><?php esc_html_e( 'Classification', 'axismundi-calendar' ); ?></th>
@@ -332,6 +382,9 @@ function axismundi_cal_render_item_links( array $calendar, array $items, int $ye
 				$classification = in_array( 'PUBLIC-HOLIDAY', $categories, true ) ? __( 'Public holiday', 'axismundi-calendar' ) : ( in_array( 'OBSERVANCE', $categories, true ) ? __( 'Observance', 'axismundi-calendar' ) : __( 'Unclassified', 'axismundi-calendar' ) );
 				?>
 				<tr>
+					<?php if ( array() !== $unlinked ) : ?>
+						<td><?php if ( ! is_array( $occurrence ) ) : ?><input type="checkbox" name="item_ids[]" value="<?php echo esc_attr( (string) $item['id'] ); ?>" form="<?php echo esc_attr( $bulk_form_id ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Save %s as a principal day', 'axismundi-calendar' ), (string) $item['title'] ) ); ?>"><?php endif; ?></td>
+					<?php endif; ?>
 					<td><code><?php echo esc_html( (string) $item['start_date'] ); ?></code></td>
 					<td><?php echo esc_html( (string) $item['title'] ); ?></td>
 					<td><?php echo esc_html( $classification ); ?></td>

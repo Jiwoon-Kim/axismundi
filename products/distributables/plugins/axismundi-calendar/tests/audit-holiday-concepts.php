@@ -377,6 +377,7 @@ try {
 		axismundi_cal_render_item_links( (array) axismundi_cal_calendar_get( $ax_hc_ko ), array( (array) axismundi_cal_system_item_get( $ax_hc_orphan ) ), 2026 );
 		$ax_hc_orphan_html = (string) ob_get_clean();
 		ax_hc_assert( $ax_hc_results, 'an entry about nothing yet shows its classification separately from its missing link', str_contains( $ax_hc_orphan_html, 'Observance' ) && str_contains( $ax_hc_orphan_html, 'Not linked yet' ) );
+		ax_hc_assert( $ax_hc_results, 'and offers principal-day bulk saving where the holiday links are edited', str_contains( $ax_hc_orphan_html, 'Save selected as principal days' ) && str_contains( $ax_hc_orphan_html, 'name="item_ids[]"' ) && str_contains( $ax_hc_orphan_html, 'togglePrincipals' ) );
 		ax_hc_assert( $ax_hc_results, 'and can name a new holiday', str_contains( $ax_hc_orphan_html, 'New holiday name' ) && str_contains( $ax_hc_orphan_html, 'Save holiday link' ) );
 		ax_hc_assert( $ax_hc_results, 'or join an existing holiday with the roles a day can have', str_contains( $ax_hc_orphan_html, 'name="concept_id"' ) && str_contains( $ax_hc_orphan_html, 'holiday-period' ) && str_contains( $ax_hc_orphan_html, 'substitute' ) );
 

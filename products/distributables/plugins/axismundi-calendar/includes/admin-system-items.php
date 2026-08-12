@@ -226,23 +226,6 @@ function axismundi_cal_handle_holiday_review() : void {
 		$result = axismundi_cal_bulk_classify_holiday_items( $calendar_id, $selected, 'OBSERVANCE', true );
 	} elseif ( 'public_holiday' === $action ) {
 		$result = axismundi_cal_bulk_classify_holiday_items( $calendar_id, $selected, 'PUBLIC-HOLIDAY', true );
-	} elseif ( 'principal_days' === $action ) {
-		$result = 0;
-		foreach ( $selected as $item_id ) {
-			$item = axismundi_cal_system_item_get( $item_id );
-			if ( ! is_array( $item ) || $calendar_id !== (int) $item['calendar_id'] || (int) $item['holiday_occurrence_id'] > 0 ) {
-				continue;
-			}
-			$created = axismundi_cal_create_principal_holiday_from_item( $item_id );
-			if ( is_wp_error( $created ) ) {
-				$result = $created;
-				break;
-			}
-			++$result;
-		}
-		if ( 0 === $result ) {
-			$result = new WP_Error( 'ax_cal_principal_selection', __( 'Select at least one entry not yet linked to a holiday.', 'axismundi-calendar' ), array( 'status' => 400 ) );
-		}
 	} elseif ( 'publish' === $action ) {
 		$result = axismundi_cal_review_holiday_items( $calendar_id, array_intersect_key( $reviews, array_fill_keys( $selected, true ) ), $selected );
 	} else {
@@ -616,7 +599,7 @@ function axismundi_cal_render_system_item_editor( array $calendar, string $base 
 				?>
 				<tr>
 					<?php if ( $holiday_review ) : ?>
-						<td><input class="ax-cal-holiday-selection" data-draft="<?php echo esc_attr( 'published' === (string) $item['status'] ? '0' : '1' ); ?>" data-unlinked="<?php echo esc_attr( (int) $item['holiday_occurrence_id'] > 0 ? '0' : '1' ); ?>" type="checkbox" name="selected_items[]" value="<?php echo esc_attr( (string) $item['id'] ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Select %s', 'axismundi-calendar' ), (string) $item['title'] ) ); ?>" onchange="window.axismundiCalendarSystemItems.syncAll(this.form)"></td>
+						<td><input class="ax-cal-holiday-selection" data-draft="<?php echo esc_attr( 'published' === (string) $item['status'] ? '0' : '1' ); ?>" type="checkbox" name="selected_items[]" value="<?php echo esc_attr( (string) $item['id'] ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Select %s', 'axismundi-calendar' ), (string) $item['title'] ) ); ?>" onchange="window.axismundiCalendarSystemItems.syncAll(this.form)"></td>
 					<?php endif; ?>
 					<td><code><?php echo esc_html( (string) $item['start_date'] ); ?></code></td>
 					<td>
@@ -677,14 +660,12 @@ function axismundi_cal_render_system_item_editor( array $calendar, string $base 
 		<p class="description"><?php esc_html_e( 'The bulk actions classify and publish the selected entries together. Use the individual choices below only when a date needs an exception.', 'axismundi-calendar' ); ?></p>
 		<p>
 			<button type="button" class="button" id="ax-cal-select-drafts" onclick="window.axismundiCalendarSystemItems.selectDrafts(this.form)"><?php esc_html_e( 'Select drafts', 'axismundi-calendar' ); ?></button>
-			<button type="button" class="button" id="ax-cal-select-unlinked-holidays" onclick="window.axismundiCalendarSystemItems.selectUnlinked(this.form)"><?php esc_html_e( 'Select unlinked', 'axismundi-calendar' ); ?></button>
 			<button type="button" class="button" id="ax-cal-invert-holiday-selection" onclick="window.axismundiCalendarSystemItems.invert(this.form)"><?php esc_html_e( 'Invert selection', 'axismundi-calendar' ); ?></button>
 		</p>
 		<p class="submit">
 			<button type="submit" class="button button-secondary" name="holiday_action" value="observance"><?php esc_html_e( 'Set and publish selected as observances', 'axismundi-calendar' ); ?></button>
 			<button type="submit" class="button button-primary" name="holiday_action" value="public_holiday"><?php esc_html_e( 'Set and publish selected as public holidays', 'axismundi-calendar' ); ?></button>
 			<button type="submit" class="button button-primary" name="holiday_action" value="publish"><?php esc_html_e( 'Publish selected', 'axismundi-calendar' ); ?></button>
-			<button type="submit" class="button" name="holiday_action" value="principal_days"><?php esc_html_e( 'Save selected as principal holidays', 'axismundi-calendar' ); ?></button>
 			<button type="submit" class="button-link" name="holiday_action" value="save"><?php esc_html_e( 'Save individual changes', 'axismundi-calendar' ); ?></button>
 		</p>
 	</form>

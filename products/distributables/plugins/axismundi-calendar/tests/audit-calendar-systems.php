@@ -102,6 +102,14 @@ ax_cs_assert(
 	'and a system may render its own settings, because what one provider needs configured is its own business',
 	is_callable( $ax_cs_korean['settings'] ?? null )
 );
+ax_cs_assert(
+	$ax_cs_results,
+	'the Korean workspace annotation answers without a KASI month having been materialised',
+	( static function () : bool {
+		$date = axismundi_cal_system_date( 'korean-lunisolar', (int) axismundi_cal_iso_to_absolute_day( '2026-08-13' ) );
+		return is_array( $date ) && 7 === $date['month'] && 1 === $date['day'];
+	} )()
+);
 
 $ax_cs_in  = (int) axismundi_cal_iso_to_absolute_day( '2026-08-12' );
 $ax_cs_out = (int) axismundi_cal_iso_to_absolute_day( '2051-01-01' );

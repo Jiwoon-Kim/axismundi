@@ -215,9 +215,10 @@ function axismundi_cal_lunar_dates( string $system, string $from, string $to ) :
 /**
  * Register the Korean lunisolar system.
  *
- * Registered whether or not a single month has been materialised. The system existing and the store
- * being filled are different facts, and a screen has to be able to say "this provider covers 2026
- * and has not been fetched yet" rather than "there is no such calendar".
+ * The workspace annotation uses ICU's `dangi` implementation directly. Its modern display range
+ * is independent of the KASI month store, so turning on a second date cannot quietly depend on an
+ * administrator having already fetched the month somebody is looking at. The store remains KASI's
+ * authority data for the features where an exact Korean civil-calendar answer matters.
  *
  * @return void
  */
@@ -229,12 +230,14 @@ function axismundi_cal_register_korean_lunisolar() : void {
 			// `korean-lunisolar`, which is what it is: it intercalates a leap month to keep the seasons.
 			'label'         => __( 'Korean lunar calendar', 'axismundi-calendar' ),
 			'type'          => 'lunisolar',
-			'authority'     => __( 'Korea Astronomy and Space Science Institute (KASI)', 'axismundi-calendar' ),
+			'authority'     => __( 'Unicode ICU for display; KASI for authoritative Korean calendar data', 'axismundi-calendar' ),
 			'icu_calendar'  => 'dangi',
 			'settings'      => 'axismundi_cal_render_kasi_settings',
-			'coverage_from' => AXISMUNDI_CAL_KOREAN_LUNISOLAR_FROM,
+			// ICU and KASI agree throughout the measured modern range. Do not fall back from a missing
+			// KASI row here: the same system must not say a different date because a cache was populated.
+			'coverage_from' => '1900-01-01',
 			'coverage_to'   => AXISMUNDI_CAL_KOREAN_LUNISOLAR_TO,
-			'resolve'       => static fn( int $absolute_day ) : ?array => axismundi_cal_lunar_date( AXISMUNDI_CAL_KOREAN_LUNISOLAR, $absolute_day ),
+			'resolve'       => static fn( int $absolute_day ) : ?array => axismundi_cal_icu_date( 'dangi', $absolute_day ),
 		)
 	);
 }

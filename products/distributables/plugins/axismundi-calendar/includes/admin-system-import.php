@@ -236,7 +236,16 @@ function axismundi_cal_import_write( int $calendar_id, array $entries, string $s
 			(int) ( $existing['id'] ?? 0 )
 		);
 		if ( ! is_wp_error( $saved ) ) {
-			axismundi_cal_auto_link_imported_holiday_item( (int) $saved );
+			/*
+			 * Only a row this read brought into existence. A row that was already here has been past a
+			 * reviewer, and unlinking is one of the things they can decide -- an import that reattaches
+			 * it every time turns a decision into a thing they have to keep making. Nothing records
+			 * "deliberately unlinked", so the honest reading of an existing row is that its link is
+			 * already whatever somebody wanted it to be.
+			 */
+			if ( ! is_array( $existing ) ) {
+				axismundi_cal_auto_link_imported_holiday_item( (int) $saved );
+			}
 			++$written;
 		}
 	}

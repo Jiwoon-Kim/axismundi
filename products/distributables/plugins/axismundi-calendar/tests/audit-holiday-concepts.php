@@ -335,6 +335,64 @@ try {
 	'a linked substitute exposes its derived category to the calendar reader',
 	1 === count( $ax_hc_substitute_range ) && array( 'HOLIDAY', 'PUBLIC-HOLIDAY', 'SUBSTITUTE-HOLIDAY' ) === axismundi_cal_normalize_categories( (string) $ax_hc_substitute_range[0]['categories'] )
 );
+	// -- What an automatic link will and will not do ------------------------------------------------
+
+	/*
+	 * An occurrence nobody has confirmed in any language is not evidence. It is often one this very
+	 * import created a moment ago through the prior-year path, and following it would be the machine
+	 * agreeing with itself -- what makes a date safe to follow is that another language committed to
+	 * it first.
+	 */
+	$ax_hc_lonely_concept = (int) axismundi_cal_holiday_concept_save( array( 'catalog_id' => $ax_hc_catalog, 'label' => 'Unconfirmed day', 'categories' => array( 'HOLIDAY' ) ) );
+	$ax_hc_concepts[]     = $ax_hc_lonely_concept;
+	$ax_hc_lonely         = (int) axismundi_cal_holiday_occurrence_save( $ax_hc_lonely_concept, array( 'start_date' => '2026-06-06', 'role' => 'principal' ) );
+	$ax_hc_lonely_item    = (int) axismundi_cal_system_item_save( $ax_hc_en, array( 'title' => 'Memorial Day', 'start_date' => '2026-06-06' ) );
+	ax_hc_assert( $ax_hc_results, 'an occurrence no language has confirmed is not offered automatically', array() === axismundi_cal_auto_link_candidates( (array) axismundi_cal_system_item_get( $ax_hc_lonely_item ), $ax_hc_catalog ) );
+	ax_hc_assert( $ax_hc_results, 'so nothing attaches itself to it', false === axismundi_cal_auto_link_imported_holiday_item( $ax_hc_lonely_item ) );
+	ax_hc_assert( $ax_hc_results, 'while a person is still offered it, since they can judge what a count cannot', 1 === count( axismundi_cal_occurrence_candidates( (array) axismundi_cal_system_item_get( $ax_hc_lonely_item ), $ax_hc_catalog ) ) );
+
+	/*
+	 * Once another language commits to the day it becomes evidence, and the same row links.
+	 */
+	$ax_hc_lonely_ko = (int) axismundi_cal_system_item_save( $ax_hc_ko, array( 'title' => '현충일', 'start_date' => '2026-06-06' ) );
+	axismundi_cal_link_item_to_occurrence( $ax_hc_lonely_ko, $ax_hc_lonely );
+	ax_hc_assert( $ax_hc_results, 'a day another language has confirmed is followed', true === axismundi_cal_auto_link_imported_holiday_item( $ax_hc_lonely_item ) );
+
+	/*
+	 * And a locale never lands twice on one day. Two entries on one date with a single occurrence
+	 * would both pass a count-of-one test, after which `occurrence_languages()` keys by locale and one
+	 * of the two labels simply disappears.
+	 */
+	$ax_hc_second_en = (int) axismundi_cal_system_item_save( $ax_hc_en, array( 'title' => 'Something else that day', 'start_date' => '2026-06-06' ) );
+	ax_hc_assert( $ax_hc_results, 'a second entry from the same language is not offered the day it already holds', array() === axismundi_cal_auto_link_candidates( (array) axismundi_cal_system_item_get( $ax_hc_second_en ), $ax_hc_catalog ) );
+	ax_hc_assert( $ax_hc_results, 'and does not attach itself over the first', false === axismundi_cal_auto_link_imported_holiday_item( $ax_hc_second_en ) );
+	ax_hc_assert( $ax_hc_results, 'so the day keeps one label per language', 2 === count( axismundi_cal_occurrence_languages( $ax_hc_lonely ) ) );
+
+	/*
+	 * Unlinking is a decision. Nothing records that it was deliberate, so an import that reattached
+	 * every existing row would turn it into something the reviewer has to keep deciding -- the honest
+	 * reading of a row that was already here is that its link is whatever somebody wanted.
+	 */
+	axismundi_cal_link_item_to_occurrence( $ax_hc_lonely_item, 0 );
+	$ax_hc_reimport = array(
+		array(
+			'ical_uid'    => 'en-2026-memorial@example.org',
+			'summary'     => 'Memorial Day',
+			'start_local' => '2026-06-06 00:00:00',
+			'end_local'   => '2026-06-07 00:00:00',
+		),
+	);
+	axismundi_cal_import_write( $ax_hc_en, $ax_hc_reimport, 'https://example.org/en.ics' );
+	$ax_hc_fresh = axismundi_cal_system_item_by_uid( $ax_hc_en, 'en-2026-memorial@example.org' );
+	ax_hc_assert( $ax_hc_results, 'a row an import creates is linked where the day is established', is_array( $ax_hc_fresh ) && 0 < (int) $ax_hc_fresh['holiday_occurrence_id'] );
+	axismundi_cal_link_item_to_occurrence( (int) $ax_hc_fresh['id'], 0 );
+	axismundi_cal_import_write( $ax_hc_en, $ax_hc_reimport, 'https://example.org/en.ics' );
+	ax_hc_assert(
+		$ax_hc_results,
+		'and reading the feed again leaves a row somebody unlinked alone',
+		0 === (int) axismundi_cal_system_item_by_uid( $ax_hc_en, 'en-2026-memorial@example.org' )['holiday_occurrence_id']
+	);
+
 	// -- The screens that record it -----------------------------------------------------------------------
 
 	$ax_hc_admin = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ID' ) );

@@ -807,11 +807,49 @@ function axismundi_cal_auto_link_imported_holiday_item( int $item_id ) : bool {
 	if ( ! is_array( $item ) || ! is_array( $calendar ) || 'holiday' !== axismundi_cal_system_provider( $calendar ) || (int) $item['holiday_occurrence_id'] > 0 ) {
 		return false;
 	}
-	$candidates = axismundi_cal_occurrence_candidates( $item, (int) $calendar['holiday_catalog_id'] );
+	$candidates = axismundi_cal_auto_link_candidates( $item, (int) $calendar['holiday_catalog_id'] );
 	if ( 1 !== count( $candidates ) ) {
 		return false;
 	}
 	return ! is_wp_error( axismundi_cal_link_item_to_occurrence( $item_id, (int) $candidates[0]['id'] ) );
+}
+
+/**
+ * Occurrences an automatic link may attach an entry to.
+ *
+ * Narrower than what a person is offered, and deliberately so. Two conditions the offered list does
+ * not impose:
+ *
+ * The day has to have been established by somebody else already. An occurrence with no localized row
+ * on it is one nobody has confirmed in any language -- often one this very import created a moment
+ * ago through the prior-year path -- and attaching to it would be the machine agreeing with itself.
+ * What makes a date safe to follow is that another language already committed to it.
+ *
+ * And it must not already hold a row from the calendar asking. A locale can legitimately have two
+ * entries on one date, and with a single occurrence there both would pass a count-of-one test and
+ * both would attach -- after which `occurrence_languages()` keys by locale and one of the two labels
+ * simply disappears, with nothing raised and nothing to notice.
+ *
+ * @param array<string,mixed> $item       System item row.
+ * @param int                 $catalog_id Catalog the calendar belongs to.
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_cal_auto_link_candidates( array $item, int $catalog_id ) : array {
+	$calendar_id = (int) ( $item['calendar_id'] ?? 0 );
+	$eligible    = array();
+	foreach ( axismundi_cal_occurrence_candidates( $item, $catalog_id ) as $candidate ) {
+		$items = axismundi_cal_occurrence_items( (int) $candidate['id'] );
+		if ( array() === $items ) {
+			continue;
+		}
+		foreach ( $items as $existing ) {
+			if ( (int) $existing['calendar_id'] === $calendar_id ) {
+				continue 2;
+			}
+		}
+		$eligible[] = $candidate;
+	}
+	return $eligible;
 }
 
 /**

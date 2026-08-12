@@ -248,20 +248,6 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 		return new WP_Error( 'ax_cal_source', __( 'Only a subscribed calendar mirrors a source.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
 
-	/*
-	 * An internal stable identifier for a system Calendar. Unlike the slug it never changes, so a
-	 * future catalog, translation or import mapping has something to point at while its human name
-	 * remains freely localizable. It is not an address and is deliberately not shown in the form.
-	 */
-	$system_key = (string) ( $existing['system_key'] ?? '' );
-	if ( 'system' === $kind && '' === $system_key ) {
-		$requested_key = strtolower( preg_replace( '/[^a-zA-Z0-9._-]/', '', (string) ( $fields['system_key'] ?? '' ) ) );
-		$system_key    = '' !== trim( (string) $requested_key, '.' ) ? trim( (string) $requested_key, '.' ) : 'system.' . wp_generate_uuid4();
-		if ( null !== axismundi_cal_calendar_by_system_key( $system_key ) ) {
-			return new WP_Error( 'ax_cal_system_key_taken', __( 'Another system calendar already uses that catalog key.', 'axismundi-calendar' ), array( 'status' => 409 ) );
-		}
-	}
-
 	$system_categories = 'system' === $kind
 		? axismundi_cal_normalize_system_calendar_categories( $fields['system_categories'] ?? ( $existing['system_categories'] ?? '' ) )
 		: array();
@@ -277,7 +263,6 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 		'timezone'       => $timezone,
 		'kind'           => $kind,
 		'source'         => $source,
-		'system_key'     => $system_key,
 		'system_categories' => implode( ',', $system_categories ),
 		'visibility'     => $visibility,
 		'updated_at'     => $now,
@@ -329,24 +314,6 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 		return $recorded;
 	}
 	return $created_id;
-}
-
-/**
- * One maintained Calendar by the address it is published at.
- *
- * @param string $system_key Stable address.
- * @return array<string,mixed>|null
- */
-function axismundi_cal_calendar_by_system_key( string $system_key ) : ?array {
-	global $wpdb;
-	$system_key = trim( $system_key );
-	if ( '' === $system_key || ! axismundi_cal_ready() ) {
-		return null;
-	}
-	$table = axismundi_cal_calendars_table();
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
-	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE system_key = %s", $system_key ), ARRAY_A );
-	return is_array( $row ) ? $row : null;
 }
 
 /**

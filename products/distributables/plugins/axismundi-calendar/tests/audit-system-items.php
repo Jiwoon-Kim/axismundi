@@ -251,7 +251,6 @@ try {
 			'kind'       => 'system',
 			'name'       => 'Site holidays',
 			'slug'       => 'ax-si-system-' . $ax_si_suffix,
-			'system_key' => 'ax.si.holidays.' . $ax_si_suffix,
 			'system_categories' => array( 'HOLIDAY' ),
 			'timezone'   => 'Asia/Seoul',
 		)
@@ -281,38 +280,10 @@ try {
 	ax_si_assert( $ax_si_results, 'without a public rule having been written for it', null === axismundi_cal_acl_rule( $ax_si_system, '', 'public' ) );
 
 	ax_si_assert( $ax_si_results, 'its entries are a dataset', true === axismundi_cal_calendar_is_dataset( $ax_si_system_row ) );
-	ax_si_assert(
-		$ax_si_results,
-		'and it holds a stable catalog identity separate from its slug',
-		$ax_si_system === (int) axismundi_cal_calendar_by_system_key( 'ax.si.holidays.' . $ax_si_suffix )['id']
-	);
-	$ax_si_auto_key = axismundi_cal_calendar_save(
-		array(
-			'kind'              => 'system',
-			'name'              => 'Automatic catalog key',
-			'slug'              => 'ax-si-auto-key-' . $ax_si_suffix,
-			'system_categories' => array( 'ASTRONOMY' ),
-			'timezone'          => 'UTC',
-		)
-	);
-	ax_si_assert( $ax_si_results, 'a system calendar receives its catalog identity without asking an administrator to invent an address', is_int( $ax_si_auto_key ) && str_starts_with( (string) axismundi_cal_calendar_get( (int) $ax_si_auto_key )['system_key'], 'system.' ) );
-	$ax_si_calendars[] = (int) $ax_si_auto_key;
-	ax_si_assert(
-		$ax_si_results,
-		'a catalog identity another system calendar already uses is refused',
-		is_wp_error(
-			axismundi_cal_calendar_save(
-				array( 'kind' => 'system', 'name' => 'Clash', 'slug' => 'ax-si-clash-' . $ax_si_suffix, 'system_key' => 'ax.si.holidays.' . $ax_si_suffix, 'system_categories' => array( 'HOLIDAY' ), 'timezone' => 'UTC' )
-			)
-		)
-	);
-	/*
-	 * The catalog identity is fixed once set, unlike the name and the slug. It is an internal stable
-	 * reference for future catalog and translation data, not a public subscription address.
-	 */
-	axismundi_cal_calendar_save( array( 'name' => 'Renamed holidays', 'system_key' => 'ax.si.something.else' ), $ax_si_system );
+	/* The Calendar UUID already is its stable identity; a second random system-only key adds nothing. */
+	axismundi_cal_calendar_save( array( 'name' => 'Renamed holidays' ), $ax_si_system );
 	$ax_si_system_row = (array) axismundi_cal_calendar_get( $ax_si_system );
-	ax_si_assert( $ax_si_results, 'renaming it does not change its catalog identity', ( 'ax.si.holidays.' . $ax_si_suffix ) === (string) $ax_si_system_row['system_key'] );
+	ax_si_assert( $ax_si_results, 'it uses the Calendar UUID as the one stable identity it needs', '' !== (string) $ax_si_system_row['uuid'] && empty( $ax_si_system_row['system_key'] ) );
 	ax_si_assert( $ax_si_results, 'though the name itself changes freely, since it is a translation', 'Renamed holidays' === (string) $ax_si_system_row['name'] );
 
 	ax_si_assert(

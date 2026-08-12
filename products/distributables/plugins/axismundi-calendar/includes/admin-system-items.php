@@ -168,8 +168,6 @@ function axismundi_cal_system_item_message( string $code ) : string {
 			return __( 'Calendar created. Add its entries below.', 'axismundi-calendar' );
 		case 'ax_cal_system_categories':
 			return __( 'Choose at least one category for this system calendar.', 'axismundi-calendar' );
-		case 'ax_cal_system_key_taken':
-			return __( 'Another system calendar already uses that catalog key.', 'axismundi-calendar' );
 		case 'ax_cal_slug_taken':
 			return __( 'Another calendar already uses that slug.', 'axismundi-calendar' );
 		case 'ax_cal_name':

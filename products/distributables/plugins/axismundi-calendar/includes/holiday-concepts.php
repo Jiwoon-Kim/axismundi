@@ -290,9 +290,26 @@ function axismundi_cal_holiday_concept_save( array $fields, int $concept_id = 0 
 	}
 	$categories = axismundi_cal_normalize_categories( $fields['categories'] ?? ( $existing['categories'] ?? array() ) );
 
+	/*
+	 * An external identifier, and only that. `Q8249787` names the same subject in Wikidata and is
+	 * worth recording -- it lets somebody say "this concept is 설날" before any English row exists, and
+	 * lets a later import propose links from catalog and date rather than from how alike two titles
+	 * look.
+	 *
+	 * It does not replace the internal uuid and is never the identity here. Wikidata is authority for
+	 * what 설날 is; it is not authority for which days Korea took off in 2026, whether a substitute
+	 * was granted, or what this site decided to publish -- and a record that borrowed its identity
+	 * would inherit its answers to questions it is not answering.
+	 */
+	$qid = strtoupper( trim( (string) ( $fields['wikidata_qid'] ?? ( $existing['wikidata_qid'] ?? '' ) ) ) );
+	if ( '' !== $qid && 1 !== preg_match( '/^Q[1-9][0-9]*$/', $qid ) ) {
+		return new WP_Error( 'ax_cal_concept_qid', __( 'A Wikidata identifier looks like Q8249787.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+
 	$now  = current_time( 'mysql', true );
 	$data = array(
 		'catalog_id'   => $catalog_id,
+		'wikidata_qid' => $qid,
 		// Kept alongside so a concept can be read without its catalog, and written only from it.
 		'jurisdiction' => $jurisdiction,
 		'label'        => $label,
@@ -312,6 +329,39 @@ function axismundi_cal_holiday_concept_save( array $fields, int $concept_id = 0 
 		return new WP_Error( 'ax_cal_concept_write', __( 'The holiday could not be saved.', 'axismundi-calendar' ) );
 	}
 	return (int) $wpdb->insert_id;
+}
+
+/**
+ * The concept that names the same subject as one Wikidata item.
+ *
+ * Looked up rather than joined on: two catalogs can both point at `Q8249787`, because Korean and
+ * Japanese observances of the lunar new year are the same subject and different datasets.
+ *
+ * @param int    $catalog_id Catalog id.
+ * @param string $qid        Wikidata item id.
+ * @return array<string,mixed>|null
+ */
+function axismundi_cal_concept_by_qid( int $catalog_id, string $qid ) : ?array {
+	global $wpdb;
+	$qid = strtoupper( trim( $qid ) );
+	if ( $catalog_id <= 0 || '' === $qid || ! axismundi_cal_ready() ) {
+		return null;
+	}
+	$table = axismundi_cal_holiday_concepts_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE catalog_id = %d AND wikidata_qid = %s", $catalog_id, $qid ), ARRAY_A );
+	return is_array( $row ) ? $row : null;
+}
+
+/**
+ * Where one concept can be read about, when it says.
+ *
+ * @param array<string,mixed> $concept Concept row.
+ * @return string
+ */
+function axismundi_cal_concept_wikidata_url( array $concept ) : string {
+	$qid = (string) ( $concept['wikidata_qid'] ?? '' );
+	return '' !== $qid ? 'https://www.wikidata.org/wiki/' . $qid : '';
 }
 
 /**

@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '20';
+const AXISMUNDI_CAL_DB_VERSION        = '21';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 const AXISMUNDI_CAL_SCHEMA_BAIL_OPTION = 'ax_cal_schema_bail';
 
@@ -443,6 +443,7 @@ function axismundi_cal_install_schema() : bool {
 			id bigint(20) unsigned NOT NULL auto_increment,
 			uuid char(36) NOT NULL default '',
 			catalog_id bigint(20) unsigned NOT NULL default 0,
+			wikidata_qid varchar(24) NOT NULL default '',
 			jurisdiction char(2) NOT NULL default '',
 			label text NOT NULL,
 			categories varchar(191) NOT NULL default '',
@@ -451,6 +452,7 @@ function axismundi_cal_install_schema() : bool {
 			PRIMARY KEY  (id),
 			UNIQUE KEY uuid (uuid),
 			KEY catalog_id (catalog_id),
+			KEY wikidata_qid (wikidata_qid),
 			KEY jurisdiction (jurisdiction)
 		) ENGINE=InnoDB {$charset};"
 	);

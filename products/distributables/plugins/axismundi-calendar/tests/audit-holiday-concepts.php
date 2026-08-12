@@ -96,6 +96,29 @@ try {
 	ax_hc_assert( $ax_hc_results, 'and one with no name to recognise it by', is_wp_error( axismundi_cal_holiday_concept_save( array( 'catalog_id' => $ax_hc_catalog ) ) ) );
 	ax_hc_assert( $ax_hc_results, 'where it applies is the catalog answer rather than its own', 'KR' === (string) axismundi_cal_holiday_concept_get( $ax_hc_seollal )['jurisdiction'] );
 
+	// -- What it is, elsewhere -------------------------------------------------------------------------
+
+	/*
+	 * Wikidata names the same subject, and saying so is worth recording: it lets somebody state that a
+	 * concept is 설날 before any English row exists, and lets a later import propose links from
+	 * catalog and date rather than from how alike two titles look.
+	 */
+	axismundi_cal_holiday_concept_save( array( 'wikidata_qid' => 'Q8249787' ), $ax_hc_seollal );
+	ax_hc_assert( $ax_hc_results, 'a holiday can say which Wikidata item is the same subject', 'Q8249787' === (string) axismundi_cal_holiday_concept_get( $ax_hc_seollal )['wikidata_qid'] );
+	ax_hc_assert( $ax_hc_results, 'and be found by it within its catalog', $ax_hc_seollal === (int) axismundi_cal_concept_by_qid( $ax_hc_catalog, 'Q8249787' )['id'] );
+	ax_hc_assert( $ax_hc_results, 'with somewhere to go and read about it', 'https://www.wikidata.org/wiki/Q8249787' === axismundi_cal_concept_wikidata_url( (array) axismundi_cal_holiday_concept_get( $ax_hc_seollal ) ) );
+	/*
+	 * An identifier, never the identity. Wikidata is authority for what 설날 is; it is not authority
+	 * for which days Korea took off in 2026 or what this site decided to publish.
+	 */
+	ax_hc_assert( $ax_hc_results, 'while the identity stays this site own', '' !== (string) axismundi_cal_holiday_concept_get( $ax_hc_seollal )['uuid'] );
+	// A concept of its own, because the ones below this point do not exist yet.
+	$ax_hc_plain = (int) axismundi_cal_holiday_concept_save( array( 'catalog_id' => $ax_hc_catalog, 'label' => 'Unclaimed', 'categories' => array( 'HOLIDAY' ) ) );
+	$ax_hc_concepts[] = $ax_hc_plain;
+	ax_hc_assert( $ax_hc_results, 'a holiday that names no external item is still a holiday', '' === (string) axismundi_cal_holiday_concept_get( $ax_hc_plain )['wikidata_qid'] );
+	ax_hc_assert( $ax_hc_results, 'and nothing is found by an identifier nobody claimed', null === axismundi_cal_concept_by_qid( $ax_hc_catalog, 'Q196627' ) );
+	ax_hc_assert( $ax_hc_results, 'an identifier that is not one is refused rather than stored', is_wp_error( axismundi_cal_holiday_concept_save( array( 'wikidata_qid' => 'Seollal' ), $ax_hc_seollal ) ) );
+
 	$ax_hc_eve   = (int) axismundi_cal_holiday_occurrence_save( $ax_hc_seollal, array( 'start_date' => '2026-02-16', 'role' => 'holiday-period' ) );
 	$ax_hc_day   = (int) axismundi_cal_holiday_occurrence_save( $ax_hc_seollal, array( 'start_date' => '2026-02-17', 'role' => 'principal' ) );
 	$ax_hc_after = (int) axismundi_cal_holiday_occurrence_save( $ax_hc_seollal, array( 'start_date' => '2026-02-18', 'role' => 'holiday-period' ) );
@@ -205,7 +228,7 @@ try {
 	axismundi_cal_holiday_occurrence_save( $ax_hc_newyear, array( 'start_date' => '2026-01-01', 'role' => 'principal' ) );
 	ax_hc_assert( $ax_hc_results, 'a different holiday is a different concept', $ax_hc_newyear !== $ax_hc_seollal );
 	ax_hc_assert( $ax_hc_results, 'with its own days', 1 === count( axismundi_cal_holiday_occurrences( $ax_hc_newyear ) ) );
-	ax_hc_assert( $ax_hc_results, 'and both are found under the dataset they belong to', 3 === count( axismundi_cal_holiday_concepts( $ax_hc_catalog ) ) );
+	ax_hc_assert( $ax_hc_results, 'and both are found under the dataset they belong to', 4 === count( axismundi_cal_holiday_concepts( $ax_hc_catalog ) ) );
 	ax_hc_assert( $ax_hc_results, 'while another dataset has none of them', array() === axismundi_cal_holiday_concepts( 999999 ) );
 
 	// -- Only the languages that exist -----------------------------------------------------------------------

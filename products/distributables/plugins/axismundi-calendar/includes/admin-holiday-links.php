@@ -298,14 +298,14 @@ function axismundi_cal_render_item_links( array $calendar, array $items, int $ye
 	$catalog_id  = (int) $calendar['holiday_catalog_id'];
 	$concepts    = $catalog_id > 0 ? axismundi_cal_holiday_concepts( $catalog_id ) : array();
 	?>
-	<h3><?php esc_html_e( 'Which holiday each entry is', 'axismundi-calendar' ); ?></h3>
+	<h3><?php esc_html_e( 'Link each date to a holiday', 'axismundi-calendar' ); ?></h3>
 	<?php if ( $catalog_id <= 0 ) : ?>
 		<p class="description"><?php esc_html_e( 'Join this calendar to a dataset first. Until then there are no holidays for its entries to be about.', 'axismundi-calendar' ); ?></p>
 		<?php return; ?>
 	<?php endif; ?>
 
 	<p class="description">
-		<?php esc_html_e( 'Link every date to the holiday it belongs to. Choose an existing holiday for an adjacent or substitute day; otherwise name a new holiday here. The role belongs to the date, while public holiday or observance belongs to the holiday itself.', 'axismundi-calendar' ); ?>
+		<?php esc_html_e( 'Classification is already shown above. Here, link each date to the holiday it belongs to. Choose an existing holiday for an adjacent or substitute day; otherwise name a new holiday here. The role belongs to the date.', 'axismundi-calendar' ); ?>
 	</p>
 
 	<table class="wp-list-table widefat fixed striped">
@@ -313,7 +313,8 @@ function axismundi_cal_render_item_links( array $calendar, array $items, int $ye
 			<tr>
 				<th scope="col"><?php esc_html_e( 'Date', 'axismundi-calendar' ); ?></th>
 				<th scope="col"><?php esc_html_e( 'Entry', 'axismundi-calendar' ); ?></th>
-				<th scope="col"><?php esc_html_e( 'Holiday', 'axismundi-calendar' ); ?></th>
+				<th scope="col"><?php esc_html_e( 'Classification', 'axismundi-calendar' ); ?></th>
+				<th scope="col"><?php esc_html_e( 'Holiday link', 'axismundi-calendar' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>
@@ -321,10 +322,13 @@ function axismundi_cal_render_item_links( array $calendar, array $items, int $ye
 				<?php
 				$occurrence = axismundi_cal_holiday_occurrence_get( (int) $item['holiday_occurrence_id'] );
 				$concept    = is_array( $occurrence ) ? axismundi_cal_holiday_concept_get( (int) $occurrence['concept_id'] ) : null;
+				$categories = axismundi_cal_item_effective_categories( $item );
+				$classification = in_array( 'PUBLIC-HOLIDAY', $categories, true ) ? __( 'Public holiday', 'axismundi-calendar' ) : ( in_array( 'OBSERVANCE', $categories, true ) ? __( 'Observance', 'axismundi-calendar' ) : __( 'Unclassified', 'axismundi-calendar' ) );
 				?>
 				<tr>
 					<td><code><?php echo esc_html( (string) $item['start_date'] ); ?></code></td>
 					<td><?php echo esc_html( (string) $item['title'] ); ?></td>
+					<td><?php echo esc_html( $classification ); ?></td>
 					<td>
 						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 							<input type="hidden" name="action" value="ax_cal_link_item">
@@ -351,6 +355,7 @@ function axismundi_cal_render_item_links( array $calendar, array $items, int $ye
 									<?php esc_html_e( 'Unlink', 'axismundi-calendar' ); ?>
 								</button>
 							<?php else : ?>
+								<p><em><?php esc_html_e( 'Not linked yet', 'axismundi-calendar' ); ?></em></p>
 								<label>
 									<span><?php esc_html_e( 'Holiday', 'axismundi-calendar' ); ?></span>
 									<select name="concept_id">

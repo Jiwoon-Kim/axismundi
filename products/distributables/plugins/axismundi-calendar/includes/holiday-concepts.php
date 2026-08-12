@@ -103,6 +103,23 @@ function axismundi_cal_holiday_catalog_save( array $fields, int $catalog_id = 0 
 }
 
 /**
+ * Keep cached label rows legible in admin tables. Read-side authorization still takes the occurrence
+ * status, so this mirror is convenience rather than a second source of truth.
+ *
+ * @param int    $occurrence_id Occurrence id.
+ * @param string $status        Canonical review state.
+ * @return void
+ */
+function axismundi_cal_sync_occurrence_items( int $occurrence_id, string $status ) : void {
+	global $wpdb;
+	if ( $occurrence_id <= 0 || ! in_array( $status, AXISMUNDI_CAL_ITEM_STATUSES, true ) ) {
+		return;
+	}
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- mirror of a canonical occurrence state in this plugin's own table.
+	$wpdb->update( axismundi_cal_system_items_table(), array( 'status' => $status, 'categories' => '' ), array( 'holiday_occurrence_id' => $occurrence_id ) );
+}
+
+/**
  * One catalog.
  *
  * @param int $catalog_id Catalog id.
@@ -401,7 +418,7 @@ function axismundi_cal_holiday_concepts( int $catalog_id ) : array {
  * Record one day of a holiday in one year.
  *
  * @param int                 $concept_id    Concept id.
- * @param array<string,mixed> $fields        start_date, end_date, batch_year, role, substitute_for.
+ * @param array<string,mixed> $fields        start_date, end_date, batch_year, role, substitute_for, status.
  * @param int                 $occurrence_id Existing occurrence, or 0.
  * @return int|WP_Error
  */
@@ -440,6 +457,10 @@ function axismundi_cal_holiday_occurrence_save( int $concept_id, array $fields, 
 	if ( $batch_year <= 0 ) {
 		$batch_year = (int) substr( $start, 0, 4 );
 	}
+	$status = (string) ( $fields['status'] ?? ( $existing['status'] ?? 'draft' ) );
+	if ( ! in_array( $status, AXISMUNDI_CAL_ITEM_STATUSES, true ) ) {
+		return new WP_Error( 'ax_cal_occurrence_status', __( 'A holiday day is either a draft or published.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
 
 	$now  = current_time( 'mysql', true );
 	$data = array(
@@ -449,12 +470,14 @@ function axismundi_cal_holiday_occurrence_save( int $concept_id, array $fields, 
 		'batch_year'     => $batch_year,
 		'role'           => $role,
 		'substitute_for' => $substitute_for,
+		'status'         => $status,
 		'updated_at'     => $now,
 	);
 	$table = axismundi_cal_holiday_occurrences_table();
 	if ( is_array( $existing ) ) {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 		$wpdb->update( $table, $data, array( 'id' => (int) $existing['id'] ) );
+		axismundi_cal_sync_occurrence_items( (int) $existing['id'], $status );
 		return (int) $existing['id'];
 	}
 	$data['uuid']       = wp_generate_uuid4();
@@ -521,11 +544,30 @@ function axismundi_cal_link_item_to_occurrence( int $item_id, int $occurrence_id
 	if ( ! is_array( $item ) ) {
 		return new WP_Error( 'ax_cal_item_missing', __( 'That entry does not exist.', 'axismundi-calendar' ), array( 'status' => 404 ) );
 	}
-	if ( $occurrence_id > 0 && null === axismundi_cal_holiday_occurrence_get( $occurrence_id ) ) {
+	$occurrence = $occurrence_id > 0 ? axismundi_cal_holiday_occurrence_get( $occurrence_id ) : null;
+	if ( $occurrence_id > 0 && ! is_array( $occurrence ) ) {
 		return new WP_Error( 'ax_cal_occurrence_missing', __( 'That day of a holiday does not exist.', 'axismundi-calendar' ), array( 'status' => 404 ) );
 	}
+	if ( is_array( $occurrence ) && 'published' === (string) $item['status'] && 'published' !== (string) $occurrence['status'] ) {
+		$updated = axismundi_cal_holiday_occurrence_save( (int) $occurrence['concept_id'], array( 'status' => 'published' ), $occurrence_id );
+		if ( is_wp_error( $updated ) ) {
+			return $updated;
+		}
+		$occurrence = axismundi_cal_holiday_occurrence_get( $occurrence_id );
+	}
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	$wpdb->update( axismundi_cal_system_items_table(), array( 'holiday_occurrence_id' => $occurrence_id ), array( 'id' => $item_id ) );
+	$wpdb->update(
+		axismundi_cal_system_items_table(),
+		array(
+			'holiday_occurrence_id' => $occurrence_id,
+			// Classification and publication belong to the occurrence and concept once it is linked.
+			'categories'             => '',
+			// Detaching also returns this label to review. Otherwise it would remain published while no
+			// longer having a holiday to classify or an occurrence to publish.
+			'status'                 => is_array( $occurrence ) ? (string) $occurrence['status'] : 'draft',
+		),
+		array( 'id' => $item_id )
+	);
 	return true;
 }
 
@@ -548,25 +590,41 @@ function axismundi_cal_occurrence_items( int $occurrence_id ) : array {
 /**
  * The categories an entry actually has.
  *
- * Its own, or its holiday's when it has none. This is what the linking is for: 설날 is a public
- * holiday once, rather than once per language and again every year. An entry that carries its own
- * keys keeps them, so a single day of a holiday can be classified differently -- an election day
- * that is also a holiday, a period day that is not.
+ * Its holiday's when it is linked, or its own while it is awaiting review. This is what the linking
+ * is for: 설날 is a public holiday once, rather than once per language and again every year.
  *
  * @param array<string,mixed> $item System item row.
  * @return string[]
  */
 function axismundi_cal_item_effective_categories( array $item ) : array {
-	$own = axismundi_cal_normalize_categories( (string) ( $item['categories'] ?? '' ) );
-	if ( array() !== $own ) {
-		return $own;
-	}
 	$occurrence = axismundi_cal_holiday_occurrence_get( (int) ( $item['holiday_occurrence_id'] ?? 0 ) );
-	if ( ! is_array( $occurrence ) ) {
-		return array();
+	if ( is_array( $occurrence ) ) {
+		$concept = axismundi_cal_holiday_concept_get( (int) $occurrence['concept_id'] );
+		return is_array( $concept ) ? axismundi_cal_normalize_categories( (string) $concept['categories'] ) : array();
 	}
-	$concept = axismundi_cal_holiday_concept_get( (int) $occurrence['concept_id'] );
-	return is_array( $concept ) ? axismundi_cal_normalize_categories( (string) $concept['categories'] ) : array();
+	return axismundi_cal_normalize_categories( (string) ( $item['categories'] ?? '' ) );
+}
+
+/**
+ * Attach an imported locale label when the catalog has exactly one day at that date.
+ *
+ * A single candidate is no longer a judgement about a foreign title: it is an already-reviewed
+ * occurrence in the same dataset. None or several candidates stay for the reviewer.
+ *
+ * @param int $item_id Imported system item id.
+ * @return bool True when linked automatically.
+ */
+function axismundi_cal_auto_link_imported_holiday_item( int $item_id ) : bool {
+	$item     = axismundi_cal_system_item_get( $item_id );
+	$calendar = is_array( $item ) ? axismundi_cal_calendar_get( (int) $item['calendar_id'] ) : null;
+	if ( ! is_array( $item ) || ! is_array( $calendar ) || 'holiday' !== axismundi_cal_system_provider( $calendar ) || (int) $item['holiday_occurrence_id'] > 0 ) {
+		return false;
+	}
+	$candidates = axismundi_cal_occurrence_candidates( $item, (int) $calendar['holiday_catalog_id'] );
+	if ( 1 !== count( $candidates ) ) {
+		return false;
+	}
+	return ! is_wp_error( axismundi_cal_link_item_to_occurrence( $item_id, (int) $candidates[0]['id'] ) );
 }
 
 /**

@@ -236,6 +236,7 @@ function axismundi_cal_import_write( int $calendar_id, array $entries, string $s
 			(int) ( $existing['id'] ?? 0 )
 		);
 		if ( ! is_wp_error( $saved ) ) {
+			axismundi_cal_auto_link_imported_holiday_item( (int) $saved );
 			++$written;
 		}
 	}

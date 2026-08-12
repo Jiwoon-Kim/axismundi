@@ -175,6 +175,13 @@ try {
 	ax_hc_assert( $ax_hc_results, 'and both languages then hang off the same day', 2 === count( axismundi_cal_occurrence_items( $ax_hc_day ) ) );
 	ax_hc_assert( $ax_hc_results, 'without either becoming the other', '설날' === (string) axismundi_cal_system_item_get( $ax_hc_ko_item )['title'] && 'Lunar New Year' === (string) axismundi_cal_system_item_get( $ax_hc_en_item )['title'] );
 	ax_hc_assert( $ax_hc_results, 'a link to a day that does not exist is refused', is_wp_error( axismundi_cal_link_item_to_occurrence( $ax_hc_ko_item, 999999 ) ) );
+	axismundi_cal_link_item_to_occurrence( $ax_hc_en_item, 0 );
+	ax_hc_assert(
+	$ax_hc_results,
+	'detaching a localized label returns it to an unreviewed state',
+	'draft' === (string) axismundi_cal_system_item_get( $ax_hc_en_item )['status'] && '' === (string) axismundi_cal_system_item_get( $ax_hc_en_item )['categories']
+);
+	axismundi_cal_link_item_to_occurrence( $ax_hc_en_item, $ax_hc_day );
 
 	// -- Classified once ------------------------------------------------------------------------------------
 
@@ -193,15 +200,20 @@ try {
 		array() === axismundi_cal_item_effective_categories( array( 'categories' => '', 'holiday_occurrence_id' => 0 ) )
 	);
 	/*
-	 * A row that says something of its own keeps it. One day of a holiday can be classified apart from
-	 * the rest: an election day that is also a holiday, a period day that is not.
+	 * A localized label cannot overrule the holiday it represents. Any exceptional classification needs
+	 * an occurrence-level rule, not an English row disagreeing with its Korean sibling.
 	 */
 	axismundi_cal_system_item_save( $ax_hc_en, array( 'categories' => array( 'HOLIDAY', 'OBSERVANCE' ) ), $ax_hc_en_item );
 	ax_hc_assert(
 		$ax_hc_results,
-		'while a row that says otherwise is not overruled by its holiday',
-		array( 'HOLIDAY', 'OBSERVANCE' ) === axismundi_cal_item_effective_categories( (array) axismundi_cal_system_item_get( $ax_hc_en_item ) )
+		'a localized label cannot overrule its holiday classification',
+		array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ) === axismundi_cal_item_effective_categories( (array) axismundi_cal_system_item_get( $ax_hc_en_item ) )
 	);
+	ax_hc_assert(
+	$ax_hc_results,
+	'and its stored category is cleared rather than becoming a second source of truth',
+	'' === (string) axismundi_cal_system_item_get( $ax_hc_en_item )['categories']
+);
 
 	// -- A re-import leaves the judgement alone ----------------------------------------------------------------
 
@@ -216,6 +228,38 @@ try {
 		$ax_hc_day === (int) axismundi_cal_system_item_get( $ax_hc_ko_item )['holiday_occurrence_id']
 	);
 	ax_hc_assert( $ax_hc_results, 'while taking the newer title', '설날 (updated)' === (string) axismundi_cal_system_item_get( $ax_hc_ko_item )['title'] );
+
+	// -- An imported sibling label attaches itself only when the reviewed day is unambiguous -----------
+
+	$ax_hc_march_ko = (int) axismundi_cal_system_item_save( $ax_hc_ko, array( 'title' => '삼일절', 'start_date' => '2026-03-01', 'status' => 'published' ) );
+	axismundi_cal_link_item_to_occurrence( $ax_hc_march_ko, $ax_hc_first );
+	$ax_hc_imported = array(
+		array(
+			'ical_uid'    => 'en-2026-march-first@example.org',
+			'summary'     => 'Independence Movement Day',
+			'start_local' => '2026-03-01 00:00:00',
+			'end_local'   => '2026-03-02 00:00:00',
+		),
+	);
+	ax_hc_assert( $ax_hc_results, 'an imported locale label is written', 1 === axismundi_cal_import_write( $ax_hc_en, $ax_hc_imported, 'https://example.org/en-holidays.ics' ) );
+	$ax_hc_march_en = axismundi_cal_system_item_by_uid( $ax_hc_en, 'en-2026-march-first@example.org' );
+	ax_hc_assert(
+		$ax_hc_results,
+		'a uniquely matching imported date attaches to the existing occurrence',
+		is_array( $ax_hc_march_en ) && $ax_hc_first === (int) $ax_hc_march_en['holiday_occurrence_id']
+	);
+	ax_hc_assert(
+		$ax_hc_results,
+		'and inherits its approved state and classification without reading the foreign label',
+		is_array( $ax_hc_march_en ) && 'published' === (string) $ax_hc_march_en['status'] && '' === (string) $ax_hc_march_en['categories'] && array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ) === axismundi_cal_item_effective_categories( $ax_hc_march_en )
+	);
+	axismundi_cal_holiday_occurrence_save( $ax_hc_march, array( 'status' => 'draft' ), $ax_hc_first );
+	ax_hc_assert(
+	$ax_hc_results,
+	'changing the occurrence review state updates every localized label',
+	'draft' === (string) axismundi_cal_system_item_get( (int) $ax_hc_march_en['id'] )['status'] && 'draft' === (string) axismundi_cal_system_item_get( $ax_hc_march_ko )['status']
+);
+	axismundi_cal_holiday_occurrence_save( $ax_hc_march, array( 'status' => 'published' ), $ax_hc_first );
 
 	// -- Different holidays stay different -----------------------------------------------------------------------
 

@@ -601,7 +601,8 @@ try {
 	);
 	ax_si_assert( $ax_si_results, 'a holiday review classifies each imported entry without guessing from source prose', 2 === $ax_si_reviewed && 'HOLIDAY,PUBLIC-HOLIDAY' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[0] )['categories'] && 'HOLIDAY,OBSERVANCE' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['categories'] );
 	ax_si_assert( $ax_si_results, 'and publishes only the checked, classified entry', 'published' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[0] )['status'] && 'draft' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['status'] );
-	ax_si_assert( $ax_si_results, 'a holiday cannot be published before it has a classification', is_wp_error( axismundi_cal_review_holiday_items( $ax_si_import_cal, array( $ax_si_import_ids[1] => array( 'classification' => '' ) ), array( $ax_si_import_ids[1] ) ) ) );
+	ax_si_assert( $ax_si_results, 'an already classified holiday can be published without classifying it a second time', ! is_wp_error( axismundi_cal_review_holiday_items( $ax_si_import_cal, array( $ax_si_import_ids[1] => array( 'classification' => '' ) ), array( $ax_si_import_ids[1] ) ) ) && 'published' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['status'] );
+	axismundi_cal_system_item_save( $ax_si_import_cal, array( 'status' => 'draft' ), $ax_si_import_ids[1] );
 	$ax_si_bulk = axismundi_cal_bulk_classify_holiday_items( $ax_si_import_cal, array( $ax_si_import_ids[1] ), 'PUBLIC-HOLIDAY' );
 	ax_si_assert( $ax_si_results, 'a selected group can be classified together while remaining draft', 1 === $ax_si_bulk && 'HOLIDAY,PUBLIC-HOLIDAY' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['categories'] && 'draft' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['status'] );
 	$ax_si_bulk_publish = axismundi_cal_bulk_classify_holiday_items( $ax_si_import_cal, array( $ax_si_import_ids[1] ), 'OBSERVANCE', true );

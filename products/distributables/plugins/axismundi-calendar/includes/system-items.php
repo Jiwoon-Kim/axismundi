@@ -203,6 +203,13 @@ function axismundi_cal_system_item_save( int $calendar_id, array $fields, int $i
 	}
 
 	$source_uid = trim( (string) ( $fields['source_uid'] ?? ( $existing['source_uid'] ?? '' ) ) );
+	$occurrence_id = (int) ( $fields['holiday_occurrence_id'] ?? ( $existing['holiday_occurrence_id'] ?? 0 ) );
+	$occurrence    = axismundi_cal_holiday_occurrence_get( $occurrence_id );
+	if ( is_array( $occurrence ) ) {
+		// This row is a localized label now. The linked occurrence and concept own review state.
+		$status     = (string) $occurrence['status'];
+		$categories = array();
+	}
 	$now        = current_time( 'mysql', true );
 	$data       = array(
 		'calendar_id'  => $calendar_id,
@@ -210,7 +217,7 @@ function axismundi_cal_system_item_save( int $calendar_id, array $fields, int $i
 		'end_date'     => $end,
 		'title'        => $title,
 		'description'  => (string) ( $fields['description'] ?? ( $existing['description'] ?? '' ) ),
-		'categories'   => implode( ',', axismundi_cal_normalize_categories( $fields['categories'] ?? ( $existing['categories'] ?? array() ) ) ),
+		'categories'   => implode( ',', axismundi_cal_normalize_categories( $categories ?? ( $fields['categories'] ?? ( $existing['categories'] ?? array() ) ) ) ),
 		'transparency' => $transparency,
 		'batch_year'   => $batch_year,
 		'status'       => $status,
@@ -224,7 +231,7 @@ function axismundi_cal_system_item_save( int $calendar_id, array $fields, int $i
 		 * Preserved across a re-import. The link is a judgement somebody made while reviewing, and a
 		 * second read of the feed has nothing to say about it.
 		 */
-		'holiday_occurrence_id' => (int) ( $fields['holiday_occurrence_id'] ?? ( $existing['holiday_occurrence_id'] ?? 0 ) ),
+		'holiday_occurrence_id' => $occurrence_id,
 		'source_url'   => (string) ( $fields['source_url'] ?? ( $existing['source_url'] ?? '' ) ),
 		'updated_at'   => $now,
 	);
@@ -315,7 +322,8 @@ function axismundi_cal_review_holiday_items( int $calendar_id, array $reviews, a
 		if ( '' !== $classification && ! in_array( $classification, array( 'PUBLIC-HOLIDAY', 'OBSERVANCE' ), true ) ) {
 			return new WP_Error( 'ax_cal_holiday_category', __( 'A holiday entry is either a public holiday or an observance.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 		}
-		if ( isset( $publish[ $item_id ] ) && '' === $classification ) {
+		$effective_categories = axismundi_cal_item_effective_categories( $item );
+		if ( isset( $publish[ $item_id ] ) && '' === $classification && ! in_array( 'PUBLIC-HOLIDAY', $effective_categories, true ) && ! in_array( 'OBSERVANCE', $effective_categories, true ) ) {
 			return new WP_Error( 'ax_cal_holiday_category', __( 'Classify every entry before publishing it.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 		}
 		$prepared[ $item_id ] = array( 'item' => $item, 'classification' => $classification, 'substitute' => ! empty( $review['substitute'] ) );
@@ -328,6 +336,36 @@ function axismundi_cal_review_holiday_items( int $calendar_id, array $reviews, a
 
 	$saved = 0;
 	foreach ( $prepared as $item_id => $review ) {
+		$occurrence = axismundi_cal_holiday_occurrence_get( (int) $review['item']['holiday_occurrence_id'] );
+		if ( is_array( $occurrence ) ) {
+			/*
+			 * Once an item names an occurrence, its review belongs there. A Korean reviewer publishing
+			 * March First must make the English label public too; otherwise the two language editions
+			 * disagree about whether the same day exists.
+			 */
+			$concept = axismundi_cal_holiday_concept_get( (int) $occurrence['concept_id'] );
+			if ( ! is_array( $concept ) ) {
+				return new WP_Error( 'ax_cal_concept_missing', __( 'That holiday does not exist.', 'axismundi-calendar' ), array( 'status' => 404 ) );
+			}
+			if ( '' !== $review['classification'] ) {
+				$categories = axismundi_cal_normalize_categories( (string) $concept['categories'] );
+				$categories = array_values( array_diff( $categories, array( 'HOLIDAY', 'PUBLIC-HOLIDAY', 'OBSERVANCE', 'SUBSTITUTE-HOLIDAY' ) ) );
+				$categories[] = 'HOLIDAY';
+				$categories[] = $review['classification'];
+				$concept_save = axismundi_cal_holiday_concept_save( array( 'categories' => $categories ), (int) $concept['id'] );
+				if ( is_wp_error( $concept_save ) ) {
+					return $concept_save;
+				}
+			}
+			if ( isset( $publish[ $item_id ] ) ) {
+				$occurrence_save = axismundi_cal_holiday_occurrence_save( (int) $occurrence['concept_id'], array( 'status' => 'published' ), (int) $occurrence['id'] );
+				if ( is_wp_error( $occurrence_save ) ) {
+					return $occurrence_save;
+				}
+			}
+			++$saved;
+			continue;
+		}
 		$categories = axismundi_cal_normalize_categories( (string) $review['item']['categories'] );
 		$categories = array_values( array_diff( $categories, array( 'HOLIDAY', 'PUBLIC-HOLIDAY', 'OBSERVANCE', 'SUBSTITUTE-HOLIDAY' ) ) );
 		if ( '' !== $review['classification'] ) {
@@ -434,23 +472,34 @@ function axismundi_cal_system_items_in_range( int $calendar_id, string $from, st
 	if ( $calendar_id <= 0 || '' === $from || '' === $to || ! axismundi_cal_ready() ) {
 		return array();
 	}
-	$table = axismundi_cal_system_items_table();
+	$table       = axismundi_cal_system_items_table();
+	$occurrences = axismundi_cal_holiday_occurrences_table();
+	$concepts    = axismundi_cal_holiday_concepts_table();
 	// Overlap, not containment: an entry spanning the whole window belongs in it.
-	$sql    = "SELECT * FROM {$table} WHERE calendar_id = %d AND end_date > %s AND start_date < %s";
+	$sql    = "SELECT i.* FROM {$table} i LEFT JOIN {$occurrences} o ON o.id = i.holiday_occurrence_id LEFT JOIN {$concepts} c ON c.id = o.concept_id WHERE i.calendar_id = %d AND i.end_date > %s AND i.start_date < %s";
 	$params = array( $calendar_id, $from, $to );
 	if ( ! $include_drafts ) {
-		$sql .= " AND status = 'published'";
+		$sql .= " AND (CASE WHEN i.holiday_occurrence_id > 0 THEN o.status ELSE i.status END) = 'published'";
 	}
 
 	$wanted = axismundi_cal_normalize_categories( $categories );
 	if ( array() !== $wanted ) {
-		$sql .= ' AND (' . implode( ' OR ', array_fill( 0, count( $wanted ), 'FIND_IN_SET(%s, categories)' ) ) . ')';
+		$sql .= ' AND (' . implode( ' OR ', array_fill( 0, count( $wanted ), 'FIND_IN_SET(%s, CASE WHEN i.holiday_occurrence_id > 0 THEN c.categories ELSE i.categories END)' ) ) . ')';
 		$params = array_merge( $params, $wanted );
 	}
-	$sql .= ' ORDER BY start_date ASC, id ASC';
+	$sql .= ' ORDER BY i.start_date ASC, i.id ASC';
 
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- range query over this plugin's own table.
-	return (array) $wpdb->get_results( $wpdb->prepare( $sql, $params ), ARRAY_A );
+	$items = (array) $wpdb->get_results( $wpdb->prepare( $sql, $params ), ARRAY_A );
+	foreach ( $items as &$item ) {
+		if ( (int) $item['holiday_occurrence_id'] > 0 ) {
+			$occurrence = axismundi_cal_holiday_occurrence_get( (int) $item['holiday_occurrence_id'] );
+			$item['status']     = is_array( $occurrence ) ? (string) $occurrence['status'] : (string) $item['status'];
+			$item['categories'] = implode( ',', axismundi_cal_item_effective_categories( $item ) );
+		}
+	}
+	unset( $item );
+	return $items;
 }
 
 /**
@@ -464,12 +513,15 @@ function axismundi_cal_system_item_years( int $calendar_id ) : array {
 	if ( $calendar_id <= 0 || ! axismundi_cal_ready() ) {
 		return array();
 	}
-	$table = axismundi_cal_system_items_table();
+	$table       = axismundi_cal_system_items_table();
+	$occurrences = axismundi_cal_holiday_occurrences_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- summary over this plugin's own table.
 	$rows = (array) $wpdb->get_results(
 		$wpdb->prepare(
-			"SELECT batch_year, COUNT(*) AS total, SUM(status = 'published') AS published
-			 FROM {$table} WHERE calendar_id = %d GROUP BY batch_year ORDER BY batch_year ASC",
+			"SELECT i.batch_year, COUNT(*) AS total,
+			 SUM((CASE WHEN i.holiday_occurrence_id > 0 THEN o.status ELSE i.status END) = 'published') AS published
+			 FROM {$table} i LEFT JOIN {$occurrences} o ON o.id = i.holiday_occurrence_id
+			 WHERE i.calendar_id = %d GROUP BY i.batch_year ORDER BY i.batch_year ASC",
 			$calendar_id
 		),
 		ARRAY_A

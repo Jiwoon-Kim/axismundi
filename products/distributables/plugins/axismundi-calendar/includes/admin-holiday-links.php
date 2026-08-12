@@ -111,6 +111,7 @@ function axismundi_cal_handle_item_link() : void {
 				'end_date'   => (string) $item['end_date'],
 				'batch_year' => (int) $item['batch_year'],
 				'role'       => isset( $_POST['role'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['role'] ) ) : 'principal',
+				'status'     => (string) $item['status'],
 			)
 		);
 		if ( is_wp_error( $occurrence ) ) {

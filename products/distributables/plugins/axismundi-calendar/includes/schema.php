@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '21';
+const AXISMUNDI_CAL_DB_VERSION        = '22';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 const AXISMUNDI_CAL_SCHEMA_BAIL_OPTION = 'ax_cal_schema_bail';
 
@@ -474,6 +474,7 @@ function axismundi_cal_install_schema() : bool {
 			batch_year smallint(5) unsigned NOT NULL default 0,
 			role varchar(24) NOT NULL default 'principal',
 			substitute_for bigint(20) unsigned NOT NULL default 0,
+			status varchar(16) NOT NULL default 'draft',
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),
@@ -482,7 +483,6 @@ function axismundi_cal_install_schema() : bool {
 			KEY start_date (start_date)
 		) ENGINE=InnoDB {$charset};"
 	);
-
 	$system = axismundi_cal_system_items_table();
 	/*
 	 * `dbDelta` does not relax NOT NULL on a column that already exists, so the nullability is stated
@@ -536,6 +536,24 @@ function axismundi_cal_install_schema() : bool {
 			KEY calendar_batch (calendar_id,batch_year,status),
 			KEY status (status)
 		) ENGINE=InnoDB {$charset};"
+	);
+	/*
+	 * A localized item is a label for an occurrence, not a second publication decision. Existing
+	 * reviewed rows predate this column, so lift their decision once when the schema grows.
+	 */
+	$wpdb->query(
+		"UPDATE {$holiday_occurrences} o
+		 INNER JOIN {$system} i ON i.holiday_occurrence_id = o.id
+		 SET o.status = 'published'
+		 WHERE i.status = 'published'"
+	);
+	// Linked rows are localized labels. Remove historic per-language classifications and mirror the
+	// occurrence status so old admin tables and the new read path agree immediately after upgrade.
+	$wpdb->query(
+		"UPDATE {$system} i
+		 INNER JOIN {$holiday_occurrences} o ON o.id = i.holiday_occurrence_id
+		 SET i.categories = '', i.status = o.status
+		 WHERE i.holiday_occurrence_id > 0"
 	);
 
 	$list = axismundi_cal_entries_list_table();
@@ -669,6 +687,12 @@ function axismundi_cal_install_schema() : bool {
 		if ( ! in_array( $column, $occurrence_columns, true ) ) {
 			return axismundi_cal_schema_bail( 'occurrences-column:' . $column );
 		}
+	}
+	// The holiday occurrence is a separate table; do not let a successful Event-table check mask a
+	// partial v22 upgrade, which would make localized items disagree about publication.
+	$holiday_occurrence_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$holiday_occurrences}" );
+	if ( ! in_array( 'status', $holiday_occurrence_columns, true ) ) {
+		return axismundi_cal_schema_bail( 'holiday-occurrences-column:status' );
 	}
 	// Reached the end, so whatever refused last time no longer does.
 	delete_option( AXISMUNDI_CAL_SCHEMA_BAIL_OPTION );

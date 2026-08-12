@@ -226,7 +226,7 @@ function axismundi_cal_handle_bulk_principal_links() : void {
 add_action( 'admin_post_ax_cal_bulk_principal_links', 'axismundi_cal_handle_bulk_principal_links' );
 
 /**
- * Reapply unambiguous same-language holiday links from earlier years.
+ * Apply unambiguous holiday links already established by a sibling or an earlier local year.
  *
  * @return void
  */
@@ -377,7 +377,7 @@ function axismundi_cal_render_item_links( array $calendar, array $items, int $ye
 			<input type="hidden" name="calendar_id" value="<?php echo esc_attr( (string) $calendar_id ); ?>">
 			<input type="hidden" name="year" value="<?php echo esc_attr( (string) $year ); ?>">
 			<?php wp_nonce_field( 'ax_cal_prior_links_' . $calendar_id ); ?>
-			<p class="submit"><button type="submit" class="button"><?php esc_html_e( 'Apply matching links from previous years', 'axismundi-calendar' ); ?></button></p>
+			<p class="submit"><button type="submit" class="button"><?php esc_html_e( 'Apply established holiday links', 'axismundi-calendar' ); ?></button></p>
 		</form>
 		<form id="<?php echo esc_attr( $bulk_form_id ); ?>" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="ax_cal_bulk_principal_links">

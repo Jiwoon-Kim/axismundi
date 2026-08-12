@@ -185,6 +185,16 @@ try {
 	$ax_hc_next_principal = (int) axismundi_cal_system_item_save( $ax_hc_ko, array( 'title' => '설날', 'start_date' => '2027-02-07', 'categories' => array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ), 'status' => 'published' ) );
 	ax_hc_assert( $ax_hc_results, 'a prior local label suggests the holiday and role it already identified', array( 'concept_id' => $ax_hc_seollal, 'role' => 'holiday-period' ) === axismundi_cal_prior_holiday_link_suggestion( (array) axismundi_cal_system_item_get( $ax_hc_next_period ) ) );
 	ax_hc_assert( $ax_hc_results, 'and applies those unambiguous prior-year links together', 2 === axismundi_cal_apply_prior_holiday_links( $ax_hc_ko, 2027 ) && 'holiday-period' === (string) axismundi_cal_holiday_occurrence_get( (int) axismundi_cal_system_item_get( $ax_hc_next_period )['holiday_occurrence_id'] )['role'] && 'principal' === (string) axismundi_cal_holiday_occurrence_get( (int) axismundi_cal_system_item_get( $ax_hc_next_principal )['holiday_occurrence_id'] )['role'] );
+	$ax_hc_sibling_2027 = (int) axismundi_cal_system_item_save( $ax_hc_en, array( 'title' => 'Seollal', 'start_date' => '2027-02-07', 'status' => 'draft' ) );
+	ax_hc_assert(
+		$ax_hc_results,
+		'a sibling language inherits an already reviewed current-year day without a second review',
+		1 === axismundi_cal_apply_prior_holiday_links( $ax_hc_en, 2027 )
+		&& $ax_hc_seollal === (int) axismundi_cal_holiday_occurrence_get( (int) axismundi_cal_system_item_get( $ax_hc_sibling_2027 )['holiday_occurrence_id'] )['concept_id']
+		&& 'principal' === (string) axismundi_cal_holiday_occurrence_get( (int) axismundi_cal_system_item_get( $ax_hc_sibling_2027 )['holiday_occurrence_id'] )['role']
+		&& 'published' === (string) axismundi_cal_system_item_get( $ax_hc_sibling_2027 )['status']
+		&& array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ) === axismundi_cal_item_effective_categories( (array) axismundi_cal_system_item_get( $ax_hc_sibling_2027 ) )
+	);
 	$ax_hc_principal_item = (int) axismundi_cal_system_item_save( $ax_hc_ko, array( 'title' => 'A day of its own', 'start_date' => '2026-08-01', 'categories' => array( 'HOLIDAY', 'OBSERVANCE' ), 'status' => 'published' ) );
 	$ax_hc_principal_concept = axismundi_cal_create_principal_holiday_from_item( $ax_hc_principal_item );
 	ax_hc_assert( $ax_hc_results, 'an unlinked reviewed entry can become its own principal holiday in one operation', is_int( $ax_hc_principal_concept ) && 'principal' === (string) axismundi_cal_holiday_occurrence_get( (int) axismundi_cal_system_item_get( $ax_hc_principal_item )['holiday_occurrence_id'] )['role'] );
@@ -384,7 +394,7 @@ try {
 		$ax_hc_orphan_html = (string) ob_get_clean();
 		ax_hc_assert( $ax_hc_results, 'an entry about nothing yet shows its classification separately from its missing link', str_contains( $ax_hc_orphan_html, 'Observance' ) && str_contains( $ax_hc_orphan_html, 'Not linked yet' ) );
 		ax_hc_assert( $ax_hc_results, 'and offers principal-day bulk saving where the holiday links are edited', str_contains( $ax_hc_orphan_html, 'Save selected as principal days' ) && str_contains( $ax_hc_orphan_html, 'name="item_ids[]"' ) && str_contains( $ax_hc_orphan_html, 'togglePrincipals' ) );
-		ax_hc_assert( $ax_hc_results, 'and can reuse unambiguous links from prior years there', str_contains( $ax_hc_orphan_html, 'Apply matching links from previous years' ) && str_contains( $ax_hc_orphan_html, 'ax_cal_apply_prior_holiday_links' ) );
+		ax_hc_assert( $ax_hc_results, 'and can apply established links there', str_contains( $ax_hc_orphan_html, 'Apply established holiday links' ) && str_contains( $ax_hc_orphan_html, 'ax_cal_apply_prior_holiday_links' ) );
 		ax_hc_assert( $ax_hc_results, 'and can name a new holiday', str_contains( $ax_hc_orphan_html, 'New holiday name' ) && str_contains( $ax_hc_orphan_html, 'Save holiday link' ) );
 		ax_hc_assert( $ax_hc_results, 'or join an existing holiday with the roles a day can have', str_contains( $ax_hc_orphan_html, 'name="concept_id"' ) && str_contains( $ax_hc_orphan_html, 'holiday-period' ) && str_contains( $ax_hc_orphan_html, 'substitute' ) );
 

@@ -709,7 +709,12 @@ function axismundi_cal_prior_holiday_link_suggestion( array $item ) : ?array {
 }
 
 /**
- * Reuse unambiguous prior-year local labels for a year of a holiday calendar.
+ * Apply holiday decisions the catalog has already established for a year.
+ *
+ * A reviewed sibling's same-date occurrence is the strongest evidence: the English label for
+ * 2027-03-01 does not need a second review after the Korean label is already attached there.
+ * Same-language prior-year labels remain useful when this year has not been linked by any sibling
+ * yet. Several same-date occurrences remain deliberately unresolved.
  *
  * @param int $calendar_id Calendar id.
  * @param int $year        Year to link.
@@ -720,6 +725,11 @@ function axismundi_cal_apply_prior_holiday_links( int $calendar_id, int $year ) 
 	$items  = axismundi_cal_system_items_in_range( $calendar_id, sprintf( '%04d-01-01', $year ), sprintf( '%04d-01-01', $year + 1 ), array(), true );
 	foreach ( $items as $item ) {
 		if ( (int) $item['holiday_occurrence_id'] > 0 ) {
+			continue;
+		}
+		/* A sibling calendar has already established this exact day and its review state. */
+		if ( axismundi_cal_auto_link_imported_holiday_item( (int) $item['id'] ) ) {
+			++$linked;
 			continue;
 		}
 		$suggestion = axismundi_cal_prior_holiday_link_suggestion( $item );

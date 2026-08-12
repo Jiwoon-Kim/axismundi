@@ -86,12 +86,18 @@ function axismundi_cal_import_partition( array $entries, array $years ) : array 
  * @return array{body:string,hash:string}|WP_Error
  */
 function axismundi_cal_import_fetch( string $url ) {
+	/*
+	 * The guard answers whether this address may be fetched; it does not hand back an address to
+	 * fetch. Passing its `true` to the request was asking for the URL `1`, which fails as "a valid URL
+	 * was not provided" -- reported here as an address that could not be read, which is exactly the
+	 * wrong thing to tell somebody whose address was fine.
+	 */
 	$valid = axismundi_cal_validate_source_url( $url );
 	if ( is_wp_error( $valid ) ) {
 		return $valid;
 	}
 	$response = wp_safe_remote_get(
-		$valid,
+		$url,
 		array(
 			'timeout'     => 20,
 			'redirection' => 3,

@@ -605,9 +605,27 @@ try {
 	ax_si_assert( $ax_si_results, 'deleting a maintained calendar takes its entries with it', array() === axismundi_cal_system_items_in_range( $ax_si_doomed, '2027-01-01', '2028-01-01', array(), true ) );
 } finally {
 	wp_set_current_user( 0 );
+	/*
+	 * Everything this file named, not only what it expected to be created. Several fixtures exist to
+	 * be refused, and each of them was a real row until the guard refusing it was written -- so the
+	 * runs before that guard left calendars behind in somebody's admin screen. Sweeping by slug
+	 * catches the ones a future guard has not been written for yet.
+	 */
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+	$ax_si_strays = (array) $wpdb->get_col( $wpdb->prepare( "SELECT id FROM " . axismundi_cal_calendars_table() . " WHERE slug LIKE %s", 'ax-si-%' ) );
+	foreach ( array_map( 'intval', $ax_si_strays ) as $ax_si_stray ) {
+		$ax_si_calendars[] = $ax_si_stray;
+	}
 	foreach ( array_unique( $ax_si_calendars ) as $ax_si_calendar ) {
 		axismundi_cal_set_primary( (int) $ax_si_calendar, false );
-		axismundi_cal_calendar_delete( (int) $ax_si_calendar );
+		if ( ! axismundi_cal_calendar_delete( (int) $ax_si_calendar ) ) {
+			// A system calendar refuses the ordinary delete, since it belongs to the site.
+			axismundi_cal_system_items_forget_calendar( (int) $ax_si_calendar );
+			axismundi_cal_list_forget_calendar( (int) $ax_si_calendar );
+			axismundi_cal_acl_forget_calendar( (int) $ax_si_calendar );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+			$wpdb->delete( axismundi_cal_calendars_table(), array( 'id' => (int) $ax_si_calendar ) );
+		}
 	}
 	foreach ( $ax_si_users as $ax_si_user_id ) {
 		wp_delete_user( (int) $ax_si_user_id );

@@ -433,7 +433,7 @@ function axismundi_cal_holiday_concepts( int $catalog_id ) : array {
  * Record one day of a holiday in one year.
  *
  * @param int                 $concept_id    Concept id.
- * @param array<string,mixed> $fields        start_date, end_date, batch_year, role, substitute_for, status.
+ * @param array<string,mixed> $fields        start_date, end_date, batch_year, role, status.
  * @param int                 $occurrence_id Existing occurrence, or 0.
  * @return int|WP_Error
  */
@@ -459,23 +459,27 @@ function axismundi_cal_holiday_occurrence_save( int $concept_id, array $fields, 
 	if ( ! in_array( $role, AXISMUNDI_CAL_OCCURRENCE_ROLES, true ) ) {
 		return new WP_Error( 'ax_cal_occurrence_role', __( 'That is not something a day of a holiday can be.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
-	/*
-	 * A substitute stands in for a particular day, so it says which. Recorded as a relation between
-	 * occurrences rather than as a flag, because "observed instead of the 1st" and "observed instead
-	 * of something" are different amounts of information, and a screen showing the first needs it.
-	 */
-	$substitute_for = (int) ( $fields['substitute_for'] ?? ( $existing['substitute_for'] ?? 0 ) );
-	if ( 'substitute' !== $role ) {
-		$substitute_for = 0;
-	} else {
-		$principal = axismundi_cal_holiday_occurrence_get( $substitute_for );
-		if ( ! is_array( $principal ) || (int) $principal['concept_id'] !== $concept_id || $substitute_for === $occurrence_id ) {
-			return new WP_Error( 'ax_cal_substitute_for', __( 'A substitute day must name another day of the same holiday.', 'axismundi-calendar' ), array( 'status' => 400 ) );
-		}
-	}
 	$batch_year = (int) ( $fields['batch_year'] ?? ( $existing['batch_year'] ?? 0 ) );
 	if ( $batch_year <= 0 ) {
 		$batch_year = (int) substr( $start, 0, 4 );
+	}
+	/*
+	 * A holiday has one principal day in a year. Its substitute therefore needs no second UI choice:
+	 * it is always derived from that principal. The stored relation remains useful for old rows and SQL
+	 * readers, but a maintainer never chooses it.
+	 */
+	$substitute_for = 0;
+	if ( 'substitute' === $role ) {
+		$principals = array_values(
+			array_filter(
+				axismundi_cal_holiday_occurrences( $concept_id, $batch_year ),
+				static fn( array $candidate ) : bool => 'principal' === (string) $candidate['role'] && (int) $candidate['id'] !== $occurrence_id
+			)
+		);
+		if ( 1 !== count( $principals ) ) {
+			return new WP_Error( 'ax_cal_substitute_principal', __( 'A substitute day needs one principal day in the same holiday year.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+		}
+		$substitute_for = (int) $principals[0]['id'];
 	}
 	$status = (string) ( $fields['status'] ?? ( $existing['status'] ?? 'draft' ) );
 	if ( ! in_array( $status, AXISMUNDI_CAL_ITEM_STATUSES, true ) ) {

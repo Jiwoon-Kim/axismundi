@@ -97,7 +97,6 @@ function axismundi_cal_handle_item_link() : void {
 			(int) $concept['id'],
 			array(
 				'role'           => isset( $_POST['role'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['role'] ) ) : (string) $occurrence['role'],
-				'substitute_for' => isset( $_POST['substitute_for'] ) ? absint( wp_unslash( $_POST['substitute_for'] ) ) : (int) $occurrence['substitute_for'],
 			),
 			(int) $occurrence['id']
 		);
@@ -316,17 +315,6 @@ function axismundi_cal_render_item_links( array $calendar, array $items, int $ye
 										</label>
 									<?php endforeach; ?>
 								</fieldset>
-								<label class="ax-cal-substitute-for" <?php if ( 'substitute' !== (string) $occurrence['role'] ) : ?>hidden<?php endif; ?>>
-									<span><?php esc_html_e( 'Stands in for', 'axismundi-calendar' ); ?></span>
-									<select name="substitute_for" <?php disabled( 'substitute' !== (string) $occurrence['role'] ); ?> <?php if ( 'substitute' === (string) $occurrence['role'] ) : ?>required<?php endif; ?>>
-										<option value="0"><?php esc_html_e( 'Choose a principal day', 'axismundi-calendar' ); ?></option>
-									<?php foreach ( axismundi_cal_holiday_occurrences( (int) $concept['id'], (int) $occurrence['batch_year'] ) as $principal ) : ?>
-										<?php if ( (int) $principal['id'] !== (int) $occurrence['id'] && 'principal' === (string) $principal['role'] ) : ?>
-											<option value="<?php echo esc_attr( (string) $principal['id'] ); ?>" <?php selected( (int) $principal['id'], (int) $occurrence['substitute_for'] ); ?>><?php echo esc_html( (string) $principal['start_date'] ); ?></option>
-										<?php endif; ?>
-									<?php endforeach; ?>
-									</select>
-								</label>
 								<button type="submit" class="button button-small" name="ax_cal_link_action" value="update-role">
 									<?php esc_html_e( 'Save role', 'axismundi-calendar' ); ?>
 								</button>

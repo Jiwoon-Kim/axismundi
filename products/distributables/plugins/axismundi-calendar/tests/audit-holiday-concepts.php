@@ -10,7 +10,7 @@
  * The properties under test:
  *
  *   three days of one holiday are one concept with three occurrences, not three concepts
- *   a substitute names the day it stands in for, rather than merely being flagged as one
+ *   a substitute derives its principal day from the holiday and year, rather than asking a person
  *   classification lives on the concept, so a holiday is a public holiday once
  *   a link is recorded, never derived -- candidates are proposed and a person decides
  *   re-importing a feed cannot disturb a link somebody made while reviewing
@@ -135,26 +135,26 @@ try {
 	ax_hc_assert( $ax_hc_results, 'next year is the same holiday on another date', 1 === count( axismundi_cal_holiday_occurrences( $ax_hc_seollal, 2027 ) ) );
 	ax_hc_assert( $ax_hc_results, 'and both years belong to it', 4 === count( axismundi_cal_holiday_occurrences( $ax_hc_seollal ) ) );
 
-	// -- A substitute names what it stands in for -------------------------------------------------------
+	// -- A substitute derives its principal day ----------------------------------------------------------
 
 	$ax_hc_march = (int) axismundi_cal_holiday_concept_save(
 		array( 'catalog_id' => $ax_hc_catalog, 'label' => '삼일절', 'categories' => array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ) )
 	);
 	$ax_hc_concepts[] = $ax_hc_march;
 	$ax_hc_first  = (int) axismundi_cal_holiday_occurrence_save( $ax_hc_march, array( 'start_date' => '2026-03-01', 'role' => 'principal' ) );
-	$ax_hc_second = (int) axismundi_cal_holiday_occurrence_save( $ax_hc_march, array( 'start_date' => '2026-03-02', 'role' => 'substitute', 'substitute_for' => $ax_hc_first ) );
-	ax_hc_assert( $ax_hc_results, 'a substitute day belongs to the holiday it stands in for', $ax_hc_march === (int) axismundi_cal_holiday_occurrence_get( $ax_hc_second )['concept_id'] );
+	$ax_hc_second = (int) axismundi_cal_holiday_occurrence_save( $ax_hc_march, array( 'start_date' => '2026-03-02', 'role' => 'substitute' ) );
+	ax_hc_assert( $ax_hc_results, 'a substitute day belongs to the same holiday as its principal', $ax_hc_march === (int) axismundi_cal_holiday_occurrence_get( $ax_hc_second )['concept_id'] );
 	/*
-	 * Which day, not merely that it is one. A screen explaining why the 2nd is a holiday needs the
-	 * 1st, and a flag cannot say it.
+	 * The relation remains useful to readers, but it is derived from the role rather than supplied
+	 * by the editor.
 	 */
-	ax_hc_assert( $ax_hc_results, 'and names the day it stands in for', $ax_hc_first === (int) axismundi_cal_holiday_occurrence_get( $ax_hc_second )['substitute_for'] );
-	ax_hc_assert( $ax_hc_results, 'while an ordinary day stands in for nothing', 0 === (int) axismundi_cal_holiday_occurrence_get( $ax_hc_first )['substitute_for'] );
+	ax_hc_assert( $ax_hc_results, 'and records that principal automatically', $ax_hc_first === (int) axismundi_cal_holiday_occurrence_get( $ax_hc_second )['substitute_for'] );
+	ax_hc_assert( $ax_hc_results, 'while an ordinary day has no derived principal', 0 === (int) axismundi_cal_holiday_occurrence_get( $ax_hc_first )['substitute_for'] );
 	ax_hc_assert(
-	$ax_hc_results,
-	'a substitute day cannot point at a day of another holiday',
-	is_wp_error( axismundi_cal_holiday_occurrence_save( $ax_hc_march, array( 'role' => 'substitute', 'substitute_for' => $ax_hc_day ), $ax_hc_second ) )
-);
+		$ax_hc_results,
+		'a substitute without one principal in its holiday year is refused',
+		is_wp_error( axismundi_cal_holiday_occurrence_save( $ax_hc_march, array( 'start_date' => '2027-03-02', 'role' => 'substitute' ) ) )
+	);
 
 	// -- The rows in each language hang off the day -------------------------------------------------------
 
@@ -358,7 +358,7 @@ try {
 		ax_hc_assert( $ax_hc_results, 'a linked entry shows the holiday it is a day of', str_contains( $ax_hc_linked_html, '설날' ) );
 		ax_hc_assert( $ax_hc_results, 'and can be detached again', str_contains( $ax_hc_linked_html, 'Unlink' ) );
 		ax_hc_assert( $ax_hc_results, 'and lets a maintainer choose one day role after linking it', str_contains( $ax_hc_linked_html, 'type="radio" name="role"' ) && str_contains( $ax_hc_linked_html, 'Holiday period' ) && str_contains( $ax_hc_linked_html, 'Save role' ) );
-		ax_hc_assert( $ax_hc_results, 'showing a principal-day choice only when substitute is chosen', str_contains( $ax_hc_linked_html, 'class="ax-cal-substitute-for" hidden' ) && str_contains( $ax_hc_linked_html, 'Choose a principal day' ) );
+		ax_hc_assert( $ax_hc_results, 'without asking which principal a substitute stands in for', ! str_contains( $ax_hc_linked_html, 'Stands in for' ) && ! str_contains( $ax_hc_linked_html, 'substitute_for' ) );
 		ob_start();
 		axismundi_cal_render_system_item_editor( (array) axismundi_cal_calendar_get( $ax_hc_ko ), 'https://example.test/admin' );
 		$ax_hc_review_html = (string) ob_get_clean();

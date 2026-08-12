@@ -712,9 +712,12 @@ function axismundi_cal_render_calendars_page() : void {
 
 		<?php if ( is_array( $calendar ) ) : ?>
 			<?php
-			$event_count = count( axismundi_cal_calendar_event_ids( (int) $calendar['id'] ) );
-			$is_remote   = 'remote' === (string) $calendar['kind'];
-			$is_primary  = ! empty( $calendar['is_primary'] );
+			$event_count  = count( axismundi_cal_calendar_event_ids( (int) $calendar['id'] ) );
+			$capabilities = axismundi_cal_calendar_capabilities( $calendar );
+			$is_remote    = 'ics' === axismundi_cal_calendar_source_type( $calendar );
+			// Undeletable for two unrelated reasons -- being somebody's default, or not being ours to
+			// delete at all -- which is exactly why the screen asks the capability and not the type.
+			$is_primary   = ! $is_remote && ! $capabilities['delete'];
 			/*
 			 * Stated in numbers rather than as "every Event it owns". A person deciding whether to
 			 * delete a calendar is deciding about a specific quantity of their own work, and a
@@ -738,7 +741,7 @@ function axismundi_cal_render_calendars_page() : void {
 				<p class="description">
 					<?php esc_html_e( 'This is the default calendar for its Actor. Events written without naming a calendar are filed here, so it cannot be deleted; empty it instead.', 'axismundi-calendar' ); ?>
 				</p>
-			<?php else : ?>
+			<?php elseif ( $capabilities['delete'] || $capabilities['unsubscribe'] ) : ?>
 				<p class="description">
 					<?php
 					echo esc_html(

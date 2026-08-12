@@ -25,12 +25,9 @@ defined( 'ABSPATH' ) || exit;
  * @return bool
  */
 function axismundi_cal_can_share_calendar( ?array $calendar ) : bool {
-	if ( ! is_array( $calendar ) || 'local' !== (string) ( $calendar['kind'] ?? '' ) ) {
-		// A subscribed Calendar is somebody else's to share. This site holds a cached copy of it and
-		// has nothing to grant anyone.
-		return false;
-	}
-	return axismundi_cal_acl_rank( axismundi_cal_request_role( (int) $calendar['id'] ) ) >= axismundi_cal_acl_rank( 'owner' );
+	// Through the capability table, so "who may share this" is answered in one place rather than
+	// restated by every screen that offers the form.
+	return axismundi_cal_calendar_can( $calendar, 'share' );
 }
 
 /**

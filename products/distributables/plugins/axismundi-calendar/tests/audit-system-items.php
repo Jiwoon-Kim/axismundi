@@ -369,6 +369,30 @@ try {
 	// Asserted rather than guarded on: wrapped in a bare `if`, a refusal here would skip the three
 	// checks below and report a shorter, greener run instead of a failure.
 	ax_si_assert( $ax_si_results, 'a region and locale given in other forms are accepted', is_int( $ax_si_underscore ) );
+
+	/*
+	 * The one choice on core's language list that submits nothing. `wp_dropdown_languages()` uses ''
+	 * for English (United States), because core has no translation file for the language it is written
+	 * in -- so choosing English was the only option that could not be saved.
+	 */
+	$_POST['provider_config'] = array( 'region' => 'US', 'source_locale' => '' );
+	$ax_si_english = axismundi_cal_read_provider_config_post();
+	unset( $_POST['provider_config'] );
+	ax_si_assert( $ax_si_results, 'choosing English on the language list means English, not nothing', 'en_US' === ( $ax_si_english['source_locale'] ?? '' ) );
+	ax_si_assert(
+		$ax_si_results,
+		'and a calendar in it can actually be created',
+		is_int( axismundi_cal_calendar_save( array( 'kind' => 'system', 'system_provider' => 'holiday', 'provider_config' => $ax_si_english, 'name' => 'Holidays in English', 'slug' => 'ax-si-english-' . $ax_si_suffix, 'timezone' => 'UTC' ) ) )
+	);
+	/*
+	 * While a caller that genuinely sends no language is still refused. The empty string means English
+	 * on one control, and nothing at all everywhere else.
+	 */
+	ax_si_assert(
+		$ax_si_results,
+		'though a request with no language at all is still refused',
+		is_wp_error( axismundi_cal_calendar_save( array( 'kind' => 'system', 'system_provider' => 'holiday', 'provider_config' => array( 'region' => 'US', 'source_locale' => '' ), 'name' => 'No language at all', 'slug' => 'ax-si-nolang2-' . $ax_si_suffix, 'timezone' => 'UTC' ) ) )
+	);
 	if ( is_int( $ax_si_underscore ) ) {
 		$ax_si_calendars[] = $ax_si_underscore;
 		$ax_si_jp = axismundi_cal_provider_config( (array) axismundi_cal_calendar_get( $ax_si_underscore ) );

@@ -109,7 +109,7 @@ function axismundi_cal_handle_system_calendar_form() : void {
 			'name'        => $name,
 			'slug'        => isset( $_POST['slug'] ) ? sanitize_title( wp_unslash( (string) $_POST['slug'] ) ) : sanitize_title( $name ),
 			'system_provider' => isset( $_POST['system_provider'] ) ? sanitize_key( wp_unslash( (string) $_POST['system_provider'] ) ) : '',
-			'provider_config' => isset( $_POST['provider_config'] ) ? array_map( 'sanitize_text_field', (array) wp_unslash( $_POST['provider_config'] ) ) : array(),
+			'provider_config' => axismundi_cal_read_provider_config_post(),
 			'description' => isset( $_POST['description'] ) ? sanitize_textarea_field( wp_unslash( (string) $_POST['description'] ) ) : '',
 			'timezone'    => isset( $_POST['timezone'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['timezone'] ) ) : axismundi_cal_default_calendar_timezone(),
 		)
@@ -123,6 +123,28 @@ function axismundi_cal_handle_system_calendar_form() : void {
 	exit;
 }
 add_action( 'admin_post_ax_cal_create_system_calendar', 'axismundi_cal_handle_system_calendar_form' );
+
+/**
+ * Read the provider settings a form submitted.
+ *
+ * `wp_dropdown_languages()` submits an empty string for English (United States), because core has no
+ * translation file for the language it is written in and uses '' to mean exactly that. Passed
+ * straight through, the writer sees a holiday calendar with no language and refuses it -- so
+ * choosing English was the one choice on the list that could not be made.
+ *
+ * Named here rather than in the writer: '' meaning en_US is a convention of core's control, and an
+ * API caller sending no language is still sending no language.
+ *
+ * @return array<string,string>
+ */
+function axismundi_cal_read_provider_config_post() : array {
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- callers verify before reading.
+	$config = isset( $_POST['provider_config'] ) ? array_map( 'sanitize_text_field', (array) wp_unslash( $_POST['provider_config'] ) ) : array();
+	if ( array_key_exists( 'source_locale', $config ) && '' === trim( (string) $config['source_locale'] ) ) {
+		$config['source_locale'] = 'en_US';
+	}
+	return $config;
+}
 
 /**
  * Write or remove one entry.

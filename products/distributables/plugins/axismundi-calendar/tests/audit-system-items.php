@@ -566,6 +566,24 @@ try {
 	ax_si_assert( $ax_si_results, 'and with no categories invented from the publisher prose', '' === (string) $ax_si_drafts[0]['categories'] );
 	ax_si_assert( $ax_si_results, 'while the publisher is recorded', 'https://example.org/holidays.ics' === (string) $ax_si_drafts[0]['source_url'] );
 
+	$ax_si_import_ids = array_map( static fn( array $item ) : int => (int) $item['id'], $ax_si_drafts );
+	$ax_si_reviewed = axismundi_cal_review_holiday_items(
+		$ax_si_import_cal,
+		array(
+			$ax_si_import_ids[0] => array( 'classification' => 'PUBLIC-HOLIDAY' ),
+			$ax_si_import_ids[1] => array( 'classification' => 'OBSERVANCE' ),
+		),
+		array( $ax_si_import_ids[0] )
+	);
+	ax_si_assert( $ax_si_results, 'a holiday review classifies each imported entry without guessing from source prose', 2 === $ax_si_reviewed && 'HOLIDAY,PUBLIC-HOLIDAY' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[0] )['categories'] && 'HOLIDAY,OBSERVANCE' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['categories'] );
+	ax_si_assert( $ax_si_results, 'and publishes only the checked, classified entry', 'published' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[0] )['status'] && 'draft' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['status'] );
+	ax_si_assert( $ax_si_results, 'a holiday cannot be published before it has a classification', is_wp_error( axismundi_cal_review_holiday_items( $ax_si_import_cal, array( $ax_si_import_ids[1] => array( 'classification' => '' ) ), array( $ax_si_import_ids[1] ) ) ) );
+	ob_start();
+	axismundi_cal_render_system_item_editor( (array) axismundi_cal_calendar_get( $ax_si_import_cal ), 'https://example.test/admin' );
+	$ax_si_holiday_editor = (string) ob_get_clean();
+	ax_si_assert( $ax_si_results, 'the holiday review presents public holiday and observance as a mutually exclusive choice', str_contains( $ax_si_holiday_editor, 'type="radio" name="review[' ) && str_contains( $ax_si_holiday_editor, 'Public holiday' ) && str_contains( $ax_si_holiday_editor, 'Observance' ) );
+	ax_si_assert( $ax_si_results, 'and makes publication an explicit per-entry approval', str_contains( $ax_si_holiday_editor, 'name="publish[]"' ) && str_contains( $ax_si_holiday_editor, 'Save classifications and publish checked' ) );
+
 	/*
 	 * Re-reading the same feed updates what it wrote before. Without the uid this would double a year
 	 * of holidays, which is the difference between a repeatable import and a destructive one.
@@ -581,6 +599,7 @@ try {
 	$ax_si_again = axismundi_cal_system_items_in_range( $ax_si_import_cal, '2027-01-01', '2028-01-01', array(), true );
 	ax_si_assert( $ax_si_results, 'reading the same feed again updates rather than doubling it', 2 === count( $ax_si_again ) );
 	ax_si_assert( $ax_si_results, 'with what it says now', 'New Year (again)' === (string) $ax_si_again[0]['title'] );
+	ax_si_assert( $ax_si_results, 'without overwriting the site review that classified and published it', 'HOLIDAY,PUBLIC-HOLIDAY' === (string) $ax_si_again[0]['categories'] && 'published' === (string) $ax_si_again[0]['status'] );
 
 	/*
 	 * A correction made by hand survives the next read, because it carries no source identity for the

@@ -279,6 +279,65 @@ function axismundi_cal_system_item_get( int $item_id ) : ?array {
 }
 
 /**
+ * Apply a holiday review to a set of entries.
+ *
+ * Import deliberately leaves Google's localized prose uninterpreted. This is the explicit human
+ * step that turns a source row into either a public holiday or an observance, and only a row marked
+ * ready becomes visible to readers. Other item categories survive, so a reviewer can add RELIGIOUS
+ * in the individual editor without a later yearly review erasing it.
+ *
+ * @param int                               $calendar_id Calendar id.
+ * @param array<int,array<string,mixed>>    $reviews     Item id => submitted review values.
+ * @param int[]                             $publish_ids Item ids to publish.
+ * @return int|WP_Error Number of rows saved.
+ */
+function axismundi_cal_review_holiday_items( int $calendar_id, array $reviews, array $publish_ids ) {
+	$calendar = axismundi_cal_calendar_get( $calendar_id );
+	if ( 'holiday' !== axismundi_cal_system_provider( $calendar ) ) {
+		return new WP_Error( 'ax_cal_review_provider', __( 'Only a holiday calendar has this review workflow.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+
+	$publish = array_fill_keys( array_map( 'intval', $publish_ids ), true );
+	$prepared = array();
+	foreach ( $reviews as $item_id => $review ) {
+		$item_id = (int) $item_id;
+		$item    = axismundi_cal_system_item_get( $item_id );
+		if ( ! is_array( $item ) || (int) $item['calendar_id'] !== $calendar_id ) {
+			return new WP_Error( 'ax_cal_item_missing', __( 'That entry is not on this calendar.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+		}
+		$classification = strtoupper( sanitize_key( (string) ( $review['classification'] ?? '' ) ) );
+		$classification = str_replace( '_', '-', $classification );
+		if ( '' !== $classification && ! in_array( $classification, array( 'PUBLIC-HOLIDAY', 'OBSERVANCE' ), true ) ) {
+			return new WP_Error( 'ax_cal_holiday_category', __( 'A holiday entry is either a public holiday or an observance.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+		}
+		if ( isset( $publish[ $item_id ] ) && '' === $classification ) {
+			return new WP_Error( 'ax_cal_holiday_category', __( 'Classify every entry before publishing it.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+		}
+		$prepared[ $item_id ] = array( 'item' => $item, 'classification' => $classification, 'substitute' => ! empty( $review['substitute'] ) );
+	}
+
+	$saved = 0;
+	foreach ( $prepared as $item_id => $review ) {
+		$categories = axismundi_cal_normalize_categories( (string) $review['item']['categories'] );
+		$categories = array_values( array_diff( $categories, array( 'HOLIDAY', 'PUBLIC-HOLIDAY', 'OBSERVANCE', 'SUBSTITUTE-HOLIDAY' ) ) );
+		if ( '' !== $review['classification'] ) {
+			$categories[] = 'HOLIDAY';
+			$categories[] = $review['classification'];
+			if ( $review['substitute'] ) {
+				$categories[] = 'SUBSTITUTE-HOLIDAY';
+			}
+		}
+		$status = isset( $publish[ $item_id ] ) ? 'published' : (string) $review['item']['status'];
+		$result = axismundi_cal_system_item_save( $calendar_id, array( 'categories' => $categories, 'status' => $status ), $item_id );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		++$saved;
+	}
+	return $saved;
+}
+
+/**
  * One entry by the uid its source gave it.
  *
  * @param int    $calendar_id Calendar id.

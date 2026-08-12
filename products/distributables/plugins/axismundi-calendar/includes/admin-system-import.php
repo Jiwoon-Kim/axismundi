@@ -211,26 +211,29 @@ function axismundi_cal_import_write( int $calendar_id, array $entries, string $s
 	$now     = current_time( 'mysql', true );
 	$written = 0;
 	foreach ( $entries as $entry ) {
+		$source_uid = (string) $entry['ical_uid'];
+		$existing   = '' !== $source_uid ? axismundi_cal_system_item_by_uid( $calendar_id, $source_uid ) : null;
+		$fields     = array(
+			'title'       => (string) $entry['summary'],
+			'start_date'  => substr( (string) $entry['start_local'], 0, 10 ),
+			'end_date'    => substr( (string) $entry['end_local'], 0, 10 ),
+			'source_uid'  => $source_uid,
+			'source_url'  => $source_url,
+			'imported_at' => $now,
+		);
+		if ( ! is_array( $existing ) ) {
+			/*
+			 * A first import deliberately makes no classification or publication claim. On later reads,
+			 * omit both fields so `system_item_save()` preserves the site's review rather than restoring
+			 * the foreign feed as its authority.
+			 */
+			$fields['categories'] = array();
+			$fields['status']     = 'draft';
+		}
 		$saved = axismundi_cal_system_item_save(
 			$calendar_id,
-			array(
-				'title'      => (string) $entry['summary'],
-				'start_date' => substr( (string) $entry['start_local'], 0, 10 ),
-				'end_date'   => substr( (string) $entry['end_local'], 0, 10 ),
-				/*
-				 * No categories. The feed's own classification is prose in whatever language it was
-				 * published in -- Google puts it in `DESCRIPTION` -- and reading it back would break on
-				 * the first translation or rewording. Somebody classifies these, which is the review
-				 * this import exists to feed.
-				 */
-				'categories'  => array(),
-				// A draft, always. A feed is one publisher's answer about dates that move, not the law.
-				'status'      => 'draft',
-				// What makes a second read update rather than double a year of holidays.
-				'source_uid'  => (string) $entry['ical_uid'],
-				'source_url'  => $source_url,
-				'imported_at' => $now,
-			)
+			$fields,
+			(int) ( $existing['id'] ?? 0 )
 		);
 		if ( ! is_wp_error( $saved ) ) {
 			++$written;

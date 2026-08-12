@@ -220,6 +220,11 @@ function axismundi_cal_system_item_save( int $calendar_id, array $fields, int $i
 		 * the same value. Stored as '' it would mean one hand-typed entry per Calendar, ever.
 		 */
 		'source_uid'   => '' !== $source_uid ? $source_uid : null,
+		/*
+		 * Preserved across a re-import. The link is a judgement somebody made while reviewing, and a
+		 * second read of the feed has nothing to say about it.
+		 */
+		'holiday_occurrence_id' => (int) ( $fields['holiday_occurrence_id'] ?? ( $existing['holiday_occurrence_id'] ?? 0 ) ),
 		'source_url'   => (string) ( $fields['source_url'] ?? ( $existing['source_url'] ?? '' ) ),
 		'updated_at'   => $now,
 	);

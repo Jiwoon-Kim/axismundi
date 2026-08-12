@@ -61,6 +61,18 @@ function axismundi_cal_upgrade_system_item_uid() : void {
 	$wpdb->query( "UPDATE {$table} SET source_uid = NULL WHERE source_uid = ''" );
 }
 
+/** @return string Holiday concept table name. */
+function axismundi_cal_holiday_concepts_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_cal_holiday_concepts';
+}
+
+/** @return string Holiday occurrence table name. */
+function axismundi_cal_holiday_occurrences_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_cal_holiday_occurrences';
+}
+
 /** @return string System calendar item table name. */
 function axismundi_cal_system_items_table() : string {
 	global $wpdb;
@@ -356,6 +368,60 @@ function axismundi_cal_install_schema() : bool {
 		) ENGINE=InnoDB {$charset};"
 	);
 
+	$concepts    = axismundi_cal_holiday_concepts_table();
+	$occurrences = axismundi_cal_holiday_occurrences_table();
+	/*
+	 * The holiday itself, and its days. Two feeds hold 설날 and Lunar New Year, and nothing in either
+	 * relates them: the identities they carry are their publisher's, and dates move between years. So
+	 * the relation is a third thing neither contains, recorded when somebody makes it.
+	 *
+	 * Wikipedia's arrangement and its reason: a sitelink says two pages are about one subject, not
+	 * that they say the same thing, and both stay editable by whoever maintains them.
+	 *
+	 * Categories sit on the concept. That is what the linking buys -- 설날 is a public holiday once
+	 * rather than once per language and again every year.
+	 */
+	dbDelta(
+		"CREATE TABLE {$concepts} (
+			id bigint(20) unsigned NOT NULL auto_increment,
+			uuid char(36) NOT NULL default '',
+			jurisdiction char(2) NOT NULL default '',
+			label text NOT NULL,
+			categories varchar(191) NOT NULL default '',
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY uuid (uuid),
+			KEY jurisdiction (jurisdiction)
+		) ENGINE=InnoDB {$charset};"
+	);
+	/*
+	 * The three days of 설날 are three occurrences of one concept rather than three concepts. They are
+	 * one holiday lasting three days, and splitting them would make "when is 설날" unanswerable and
+	 * leave the substitute relation pointing at whichever fragment held the name.
+	 *
+	 * `substitute_for` names the day being stood in for, rather than a flag saying that one is. A
+	 * screen explaining why the 3rd is a holiday needs the 1st, and a flag cannot say it.
+	 */
+	dbDelta(
+		"CREATE TABLE {$occurrences} (
+			id bigint(20) unsigned NOT NULL auto_increment,
+			uuid char(36) NOT NULL default '',
+			concept_id bigint(20) unsigned NOT NULL,
+			start_date date NOT NULL,
+			end_date date NOT NULL,
+			batch_year smallint(5) unsigned NOT NULL default 0,
+			role varchar(24) NOT NULL default 'principal',
+			substitute_for bigint(20) unsigned NOT NULL default 0,
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY uuid (uuid),
+			KEY concept_year (concept_id,batch_year),
+			KEY start_date (start_date)
+		) ENGINE=InnoDB {$charset};"
+	);
+
 	$system = axismundi_cal_system_items_table();
 	/*
 	 * `dbDelta` does not relax NOT NULL on a column that already exists, so the nullability is stated
@@ -396,6 +462,7 @@ function axismundi_cal_install_schema() : bool {
 			transparency varchar(16) NOT NULL default 'TRANSPARENT',
 			batch_year smallint(5) unsigned NOT NULL default 0,
 			status varchar(16) NOT NULL default 'draft',
+			holiday_occurrence_id bigint(20) unsigned NOT NULL default 0,
 			source_uid varchar(191) NULL default NULL,
 			source_url text NOT NULL,
 			imported_at datetime NULL,
@@ -404,6 +471,7 @@ function axismundi_cal_install_schema() : bool {
 			PRIMARY KEY  (id),
 			UNIQUE KEY calendar_source_uid (calendar_id,source_uid),
 			KEY calendar_range (calendar_id,start_date),
+			KEY holiday_occurrence_id (holiday_occurrence_id),
 			KEY calendar_batch (calendar_id,batch_year,status),
 			KEY status (status)
 		) ENGINE=InnoDB {$charset};"

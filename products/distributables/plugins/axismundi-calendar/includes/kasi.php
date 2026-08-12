@@ -169,6 +169,11 @@ function axismundi_cal_kasi_fetch_month( int $year, int $month ) {
 	$response = wp_safe_remote_get(
 		$url,
 		array(
+			/*
+			 * Read timeout. Not the one bulk runs fail on: those fail with cURL 28 at ~10s, which is
+			 * the separate connect timeout, so the connection is never being established rather than
+			 * the service being slow. Raising this would have fixed nothing and looked like it might.
+			 */
 			'timeout'     => 30,
 			'redirection' => 0,
 			'headers'     => array( 'Accept' => 'application/xml' ),

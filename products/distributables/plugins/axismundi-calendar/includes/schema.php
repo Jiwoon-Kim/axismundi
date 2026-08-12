@@ -17,8 +17,29 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '19';
+const AXISMUNDI_CAL_DB_VERSION        = '20';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
+const AXISMUNDI_CAL_SCHEMA_BAIL_OPTION = 'ax_cal_schema_bail';
+
+/**
+ * Record why an upgrade stopped, and stop.
+ *
+ * A failed migration does not degrade this plugin, it switches it off: `axismundi_cal_ready()`
+ * compares the stored version against the constant, so a bail leaves every calendar surface dead
+ * with nothing anywhere saying which step refused. The reason is worth a row in the options table.
+ *
+ * @param string $reason What refused.
+ * @return false
+ */
+function axismundi_cal_schema_bail( string $reason ) : bool {
+	update_option( AXISMUNDI_CAL_SCHEMA_BAIL_OPTION, $reason, false );
+	return false;
+}
+
+/** @return string Why the last upgrade stopped, or '' if it did not. */
+function axismundi_cal_schema_bail_reason() : string {
+	return (string) get_option( AXISMUNDI_CAL_SCHEMA_BAIL_OPTION, '' );
+}
 
 /** @return string Event envelope table name. */
 function axismundi_cal_events_table() : string {
@@ -59,6 +80,12 @@ function axismundi_cal_upgrade_system_item_uid() : void {
 	$wpdb->query( "ALTER TABLE {$table} MODIFY source_uid varchar(191) NULL DEFAULT NULL" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
 	$wpdb->query( "UPDATE {$table} SET source_uid = NULL WHERE source_uid = ''" );
+}
+
+/** @return string Holiday catalog table name. */
+function axismundi_cal_holiday_catalogs_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_cal_holiday_catalogs';
 }
 
 /** @return string Holiday concept table name. */
@@ -309,6 +336,7 @@ function axismundi_cal_install_schema() : bool {
 			source varchar(24) NOT NULL default 'native',
 			system_categories varchar(191) NOT NULL default '',
 			system_provider varchar(32) NOT NULL default '',
+			holiday_catalog_id bigint(20) unsigned NOT NULL default 0,
 			provider_config longtext NOT NULL,
 			authority_actor_uri text NOT NULL,
 			authority_actor_uri_hash char(64) NOT NULL default '',
@@ -368,8 +396,37 @@ function axismundi_cal_install_schema() : bool {
 		) ENGINE=InnoDB {$charset};"
 	);
 
-	$concepts    = axismundi_cal_holiday_concepts_table();
-	$occurrences = axismundi_cal_holiday_occurrences_table();
+	$catalogs = axismundi_cal_holiday_catalogs_table();
+	/*
+	 * The dataset itself, apart from any language. Wikidata's arrangement one level up: an item is
+	 * language-neutral and each Wikipedia is a sitelink onto it, so no edition is the original. Here
+	 * the catalog is what "Korean public holidays" means, and 대한민국의 휴일 and Holidays in South
+	 * Korea are two sitelinks onto it rather than an original and a translation.
+	 *
+	 * `scope` is what stops one catalog quietly meaning two things. A site covering public holidays
+	 * and a site covering every commemoration are describing different datasets, and joining them
+	 * would give a reader the second while they asked for the first.
+	 */
+	dbDelta(
+		"CREATE TABLE {$catalogs} (
+			id bigint(20) unsigned NOT NULL auto_increment,
+			uuid char(36) NOT NULL default '',
+			provider varchar(32) NOT NULL default 'holiday',
+			jurisdiction char(2) NOT NULL default '',
+			scope varchar(48) NOT NULL default 'public-holidays-and-observances',
+			label text NOT NULL,
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY uuid (uuid),
+			KEY provider_jurisdiction (provider,jurisdiction,scope)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	$concepts            = axismundi_cal_holiday_concepts_table();
+	// Not `$occurrences`: that name already holds the Event occurrence table in this function, and
+	// taking it made the verification below check the wrong table for a column it never had.
+	$holiday_occurrences = axismundi_cal_holiday_occurrences_table();
 	/*
 	 * The holiday itself, and its days. Two feeds hold 설날 and Lunar New Year, and nothing in either
 	 * relates them: the identities they carry are their publisher's, and dates move between years. So
@@ -385,6 +442,7 @@ function axismundi_cal_install_schema() : bool {
 		"CREATE TABLE {$concepts} (
 			id bigint(20) unsigned NOT NULL auto_increment,
 			uuid char(36) NOT NULL default '',
+			catalog_id bigint(20) unsigned NOT NULL default 0,
 			jurisdiction char(2) NOT NULL default '',
 			label text NOT NULL,
 			categories varchar(191) NOT NULL default '',
@@ -392,6 +450,7 @@ function axismundi_cal_install_schema() : bool {
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY uuid (uuid),
+			KEY catalog_id (catalog_id),
 			KEY jurisdiction (jurisdiction)
 		) ENGINE=InnoDB {$charset};"
 	);
@@ -404,7 +463,7 @@ function axismundi_cal_install_schema() : bool {
 	 * screen explaining why the 3rd is a holiday needs the 1st, and a flag cannot say it.
 	 */
 	dbDelta(
-		"CREATE TABLE {$occurrences} (
+		"CREATE TABLE {$holiday_occurrences} (
 			id bigint(20) unsigned NOT NULL auto_increment,
 			uuid char(36) NOT NULL default '',
 			concept_id bigint(20) unsigned NOT NULL,
@@ -527,7 +586,7 @@ function axismundi_cal_install_schema() : bool {
 	 * here is the read-only Calendar this source *is*, not a local calendar it was mixed into.
 	 */
 	if ( ! axismundi_cal_upgrade_sources_index() ) {
-		return false;
+		return axismundi_cal_schema_bail( 'sources-index' );
 	}
 	dbDelta(
 		"CREATE TABLE {$sources} (
@@ -599,16 +658,18 @@ function axismundi_cal_install_schema() : bool {
 	$required = array( 'post_id', 'starts_at_gmt', 'ends_at_gmt', 'timezone', 'event_status', 'join_mode' );
 	foreach ( $required as $column ) {
 		if ( ! in_array( $column, $columns, true ) ) {
-			return false;
+			return axismundi_cal_schema_bail( 'events-column:' . $column );
 		}
 	}
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table verification.
 	$occurrence_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$occurrences}" );
 	foreach ( array( 'schedule_id', 'recurrence_id', 'start_utc', 'status', 'origin' ) as $column ) {
 		if ( ! in_array( $column, $occurrence_columns, true ) ) {
-			return false;
+			return axismundi_cal_schema_bail( 'occurrences-column:' . $column );
 		}
 	}
+	// Reached the end, so whatever refused last time no longer does.
+	delete_option( AXISMUNDI_CAL_SCHEMA_BAIL_OPTION );
 	update_option( AXISMUNDI_CAL_DB_VERSION_OPTION, AXISMUNDI_CAL_DB_VERSION, false );
 	/*
 	 * The one-time conversion out of the legacy envelope. Run here rather than from a version
@@ -628,6 +689,7 @@ function axismundi_cal_install_schema() : bool {
 	axismundi_cal_seed_owner_entries();
 	axismundi_cal_backfill_source();
 	axismundi_cal_backfill_system_provider();
+	axismundi_cal_backfill_holiday_catalogs();
 	axismundi_cal_backfill_authority();
 	axismundi_cal_clear_v12_unfiled_authority( $previous_version );
 	axismundi_cal_seed_authority_acl();

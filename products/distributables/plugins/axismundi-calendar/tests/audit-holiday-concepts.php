@@ -24,6 +24,7 @@ global $wpdb;
 $ax_hc_results   = array();
 $ax_hc_calendars = array();
 $ax_hc_concepts  = array();
+$ax_hc_catalogs  = array();
 
 /** @param bool[] $results Results. */
 function ax_hc_assert( array &$results, string $label, bool $condition ) : void {
@@ -48,6 +49,35 @@ try {
 	$ax_hc_calendars = array( $ax_hc_ko, $ax_hc_en );
 	ax_hc_assert( $ax_hc_results, 'one country in two languages is two datasets', $ax_hc_ko !== $ax_hc_en && $ax_hc_ko > 0 && $ax_hc_en > 0 );
 
+	// -- The dataset the two of them are ---------------------------------------------------------------
+
+	/*
+	 * Wikidata's arrangement one level up. The catalog is what "Korean public holidays" means; the two
+	 * calendars are sitelinks onto it, so neither is the original and neither is a translation.
+	 */
+	$ax_hc_catalog = (int) axismundi_cal_holiday_catalog_save(
+		array( 'provider' => 'holiday', 'jurisdiction' => 'KR', 'scope' => 'public-holidays-and-observances', 'label' => 'KR holidays' )
+	);
+	$ax_hc_catalogs[] = $ax_hc_catalog;
+	ax_hc_assert( $ax_hc_results, 'the dataset exists apart from any language', $ax_hc_catalog > 0 );
+	ax_hc_assert( $ax_hc_results, 'identified opaquely rather than by what it covers', '' !== (string) axismundi_cal_holiday_catalog_get( $ax_hc_catalog )['uuid'] );
+	ax_hc_assert( $ax_hc_results, 'and saying what it covers, so two datasets about one country stay two', 'public-holidays-and-observances' === (string) axismundi_cal_holiday_catalog_get( $ax_hc_catalog )['scope'] );
+	ax_hc_assert( $ax_hc_results, 'a scope it cannot cover is refused', is_wp_error( axismundi_cal_holiday_catalog_save( array( 'jurisdiction' => 'KR', 'scope' => 'everything' ) ) ) );
+	ax_hc_assert( $ax_hc_results, 'and a catalog covering nowhere', is_wp_error( axismundi_cal_holiday_catalog_save( array( 'jurisdiction' => 'Korea' ) ) ) );
+
+	/*
+	 * Offered, never applied. `holiday + KR` describes a great many datasets somebody might mean, and
+	 * inferring identity from a description is how two unrelated collections silently become one.
+	 */
+	$ax_hc_offered = axismundi_cal_holiday_catalog_candidates( 'holiday', 'KR' );
+	ax_hc_assert( $ax_hc_results, 'a calendar being made for the same country is offered it', 1 <= count( $ax_hc_offered ) );
+	ax_hc_assert( $ax_hc_results, 'while matching settings join nothing on their own', 0 === (int) axismundi_cal_calendar_get( $ax_hc_en )['holiday_catalog_id'] );
+
+	ax_hc_assert( $ax_hc_results, 'joining is something somebody does', true === axismundi_cal_join_holiday_catalog( $ax_hc_ko, $ax_hc_catalog ) );
+	axismundi_cal_join_holiday_catalog( $ax_hc_en, $ax_hc_catalog );
+	ax_hc_assert( $ax_hc_results, 'and both languages are then the same dataset', 2 === count( axismundi_cal_catalog_calendars( $ax_hc_catalog ) ) );
+	ax_hc_assert( $ax_hc_results, 'a catalog that does not exist cannot be joined', is_wp_error( axismundi_cal_join_holiday_catalog( $ax_hc_ko, 999999 ) ) );
+
 	// -- One holiday, three days ---------------------------------------------------------------------
 
 	/*
@@ -56,14 +86,15 @@ try {
 	 * to hold the name.
 	 */
 	$ax_hc_seollal = (int) axismundi_cal_holiday_concept_save(
-		array( 'jurisdiction' => 'KR', 'label' => '설날', 'categories' => array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ) )
+		array( 'catalog_id' => $ax_hc_catalog, 'label' => '설날', 'categories' => array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ) )
 	);
 	$ax_hc_concepts[] = $ax_hc_seollal;
 	ax_hc_assert( $ax_hc_results, 'a holiday exists apart from any year or language', $ax_hc_seollal > 0 );
 	ax_hc_assert( $ax_hc_results, 'identified opaquely rather than by a name in one language', '' !== (string) axismundi_cal_holiday_concept_get( $ax_hc_seollal )['uuid'] );
 	ax_hc_assert( $ax_hc_results, 'and belonging to a country', 'KR' === (string) axismundi_cal_holiday_concept_get( $ax_hc_seollal )['jurisdiction'] );
-	ax_hc_assert( $ax_hc_results, 'a holiday belonging nowhere is refused', is_wp_error( axismundi_cal_holiday_concept_save( array( 'label' => 'Nowhere' ) ) ) );
-	ax_hc_assert( $ax_hc_results, 'and one with no name to recognise it by', is_wp_error( axismundi_cal_holiday_concept_save( array( 'jurisdiction' => 'KR' ) ) ) );
+	ax_hc_assert( $ax_hc_results, 'a holiday belonging to no catalog is refused', is_wp_error( axismundi_cal_holiday_concept_save( array( 'label' => 'Nowhere' ) ) ) );
+	ax_hc_assert( $ax_hc_results, 'and one with no name to recognise it by', is_wp_error( axismundi_cal_holiday_concept_save( array( 'catalog_id' => $ax_hc_catalog ) ) ) );
+	ax_hc_assert( $ax_hc_results, 'where it applies is the catalog answer rather than its own', 'KR' === (string) axismundi_cal_holiday_concept_get( $ax_hc_seollal )['jurisdiction'] );
 
 	$ax_hc_eve   = (int) axismundi_cal_holiday_occurrence_save( $ax_hc_seollal, array( 'start_date' => '2026-02-16', 'role' => 'holiday-period' ) );
 	$ax_hc_day   = (int) axismundi_cal_holiday_occurrence_save( $ax_hc_seollal, array( 'start_date' => '2026-02-17', 'role' => 'principal' ) );
@@ -84,7 +115,7 @@ try {
 	// -- A substitute names what it stands in for -------------------------------------------------------
 
 	$ax_hc_march = (int) axismundi_cal_holiday_concept_save(
-		array( 'jurisdiction' => 'KR', 'label' => '삼일절', 'categories' => array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ) )
+		array( 'catalog_id' => $ax_hc_catalog, 'label' => '삼일절', 'categories' => array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ) )
 	);
 	$ax_hc_concepts[] = $ax_hc_march;
 	$ax_hc_first  = (int) axismundi_cal_holiday_occurrence_save( $ax_hc_march, array( 'start_date' => '2026-03-01', 'role' => 'principal' ) );
@@ -107,13 +138,13 @@ try {
 	 * Proposed, never merged. Same country and same date is usually one answer and sometimes several,
 	 * which is exactly the case a person has to settle -- and the reason nothing here decides it.
 	 */
-	$ax_hc_candidates = axismundi_cal_occurrence_candidates( (array) axismundi_cal_system_item_get( $ax_hc_en_item ), 'KR' );
+	$ax_hc_candidates = axismundi_cal_occurrence_candidates( (array) axismundi_cal_system_item_get( $ax_hc_en_item ), $ax_hc_catalog );
 	ax_hc_assert( $ax_hc_results, 'the day it might be about is proposed by date', 1 === count( $ax_hc_candidates ) && $ax_hc_day === (int) $ax_hc_candidates[0]['id'] );
 	ax_hc_assert( $ax_hc_results, 'with the holiday named, so somebody can tell whether it is right', '설날' === (string) $ax_hc_candidates[0]['label'] );
 	ax_hc_assert(
 		$ax_hc_results,
 		'and a date belonging to nothing proposes nothing rather than the nearest thing',
-		array() === axismundi_cal_occurrence_candidates( array( 'start_date' => '2026-07-04' ), 'KR' )
+		array() === axismundi_cal_occurrence_candidates( array( 'start_date' => '2026-07-04' ), $ax_hc_catalog )
 	);
 
 	ax_hc_assert( $ax_hc_results, 'a row can be said to be about one day of a holiday', true === axismundi_cal_link_item_to_occurrence( $ax_hc_ko_item, $ax_hc_day ) );
@@ -169,13 +200,38 @@ try {
 	 * New Year's Day shares the catalog with 설날 and nothing else. Both are Korean public holidays in
 	 * the same dataset, and a model that grouped them by that would group everything.
 	 */
-	$ax_hc_newyear = (int) axismundi_cal_holiday_concept_save( array( 'jurisdiction' => 'KR', 'label' => '새해 첫날', 'categories' => array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ) ) );
+	$ax_hc_newyear = (int) axismundi_cal_holiday_concept_save( array( 'catalog_id' => $ax_hc_catalog, 'label' => '새해 첫날', 'categories' => array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ) ) );
 	$ax_hc_concepts[] = $ax_hc_newyear;
 	axismundi_cal_holiday_occurrence_save( $ax_hc_newyear, array( 'start_date' => '2026-01-01', 'role' => 'principal' ) );
 	ax_hc_assert( $ax_hc_results, 'a different holiday is a different concept', $ax_hc_newyear !== $ax_hc_seollal );
 	ax_hc_assert( $ax_hc_results, 'with its own days', 1 === count( axismundi_cal_holiday_occurrences( $ax_hc_newyear ) ) );
-	ax_hc_assert( $ax_hc_results, 'and both are found under the country they belong to', 3 <= count( axismundi_cal_holiday_concepts( 'KR' ) ) );
-	ax_hc_assert( $ax_hc_results, 'while another country has none of them', array() === axismundi_cal_holiday_concepts( 'ZZ' ) );
+	ax_hc_assert( $ax_hc_results, 'and both are found under the dataset they belong to', 3 === count( axismundi_cal_holiday_concepts( $ax_hc_catalog ) ) );
+	ax_hc_assert( $ax_hc_results, 'while another dataset has none of them', array() === axismundi_cal_holiday_concepts( 999999 ) );
+
+	// -- Only the languages that exist -----------------------------------------------------------------------
+
+	/*
+	 * Wikipedia's language menu lists the editions that exist, not the ones that could. This is the
+	 * state both of your calendars are in: an English calendar joined to the catalog, holding nothing
+	 * -- which must look empty rather than translated.
+	 */
+	$ax_hc_langs = axismundi_cal_occurrence_languages( $ax_hc_day );
+	ax_hc_assert( $ax_hc_results, 'a day offers the languages it actually has', array( 'ko-KR', 'en-US' ) === array_keys( $ax_hc_langs ) );
+	ax_hc_assert( $ax_hc_results, 'each being that language own row', '설날 (updated)' === (string) $ax_hc_langs['ko-KR']['title'] );
+
+	$ax_hc_alone = (int) axismundi_cal_holiday_occurrence_save( $ax_hc_newyear, array( 'start_date' => '2026-01-01', 'role' => 'principal' ), 0 );
+	$ax_hc_ko_only = (int) axismundi_cal_system_item_save( $ax_hc_ko, array( 'title' => '새해 첫날', 'start_date' => '2026-01-01', 'status' => 'published' ) );
+	axismundi_cal_link_item_to_occurrence( $ax_hc_ko_only, $ax_hc_alone );
+	ax_hc_assert(
+		$ax_hc_results,
+		'a day with one language offers one, though the catalog has two calendars',
+		array( 'ko-KR' ) === array_keys( axismundi_cal_occurrence_languages( $ax_hc_alone ) )
+	);
+	ax_hc_assert(
+		$ax_hc_results,
+		'so joining an English calendar changes nothing a reader sees until something is linked',
+		2 === count( axismundi_cal_catalog_calendars( $ax_hc_catalog ) )
+	);
 } finally {
 	foreach ( $ax_hc_calendars as $ax_hc_calendar ) {
 		axismundi_cal_system_items_forget_calendar( (int) $ax_hc_calendar );
@@ -183,6 +239,10 @@ try {
 		axismundi_cal_acl_forget_calendar( (int) $ax_hc_calendar );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( axismundi_cal_calendars_table(), array( 'id' => (int) $ax_hc_calendar ) );
+	}
+	foreach ( $ax_hc_catalogs as $ax_hc_catalog_id ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+		$wpdb->delete( axismundi_cal_holiday_catalogs_table(), array( 'id' => (int) $ax_hc_catalog_id ) );
 	}
 	foreach ( $ax_hc_concepts as $ax_hc_concept ) {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.

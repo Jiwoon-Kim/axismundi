@@ -43,6 +43,216 @@ defined( 'ABSPATH' ) || exit;
 const AXISMUNDI_CAL_OCCURRENCE_ROLES = array( 'principal', 'holiday-period', 'substitute' );
 
 /**
+ * What a catalog can claim to cover.
+ *
+ * A site publishing public holidays and a site publishing every commemoration are describing
+ * different datasets. Without this they would join each other, and a reader who asked for the first
+ * would be given the second.
+ */
+const AXISMUNDI_CAL_CATALOG_SCOPES = array( 'public-holidays', 'observances', 'public-holidays-and-observances' );
+
+/**
+ * Create or find the catalog a dataset belongs to.
+ *
+ * Identified opaquely and described by what it covers. Two calendars are siblings because they were
+ * joined to one catalog, never because their settings happen to match -- `holiday + KR` describes a
+ * great many datasets somebody might mean, and inferring identity from a description is how two
+ * unrelated collections silently become one.
+ *
+ * @param array<string,mixed> $fields provider, jurisdiction, scope, label.
+ * @return int|WP_Error
+ */
+function axismundi_cal_holiday_catalog_save( array $fields, int $catalog_id = 0 ) {
+	global $wpdb;
+	if ( ! axismundi_cal_ready() ) {
+		return new WP_Error( 'ax_cal_store', __( 'The calendar store is unavailable.', 'axismundi-calendar' ) );
+	}
+	$existing     = $catalog_id > 0 ? axismundi_cal_holiday_catalog_get( $catalog_id ) : null;
+	$jurisdiction = strtoupper( trim( (string) ( $fields['jurisdiction'] ?? ( $existing['jurisdiction'] ?? '' ) ) ) );
+	if ( 1 !== preg_match( '/^[A-Z]{2}$/', $jurisdiction ) ) {
+		return new WP_Error( 'ax_cal_catalog_jurisdiction', __( 'A holiday catalog covers a country or region.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+	$scope = (string) ( $fields['scope'] ?? ( $existing['scope'] ?? 'public-holidays-and-observances' ) );
+	if ( ! in_array( $scope, AXISMUNDI_CAL_CATALOG_SCOPES, true ) ) {
+		return new WP_Error( 'ax_cal_catalog_scope', __( 'That is not something a catalog can cover.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+
+	$now  = current_time( 'mysql', true );
+	$data = array(
+		'provider'     => (string) ( $fields['provider'] ?? ( $existing['provider'] ?? 'holiday' ) ),
+		'jurisdiction' => $jurisdiction,
+		'scope'        => $scope,
+		// A label for the people maintaining it, in whatever language they read. Not a name in any
+		// particular one, and not what any calendar is called.
+		'label'        => trim( (string) ( $fields['label'] ?? ( $existing['label'] ?? '' ) ) ),
+		'updated_at'   => $now,
+	);
+	$table = axismundi_cal_holiday_catalogs_table();
+	if ( is_array( $existing ) ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+		$wpdb->update( $table, $data, array( 'id' => (int) $existing['id'] ) );
+		return (int) $existing['id'];
+	}
+	$data['uuid']       = wp_generate_uuid4();
+	$data['created_at'] = $now;
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+	if ( false === $wpdb->insert( $table, $data ) ) {
+		return new WP_Error( 'ax_cal_catalog_write', __( 'The catalog could not be saved.', 'axismundi-calendar' ) );
+	}
+	return (int) $wpdb->insert_id;
+}
+
+/**
+ * One catalog.
+ *
+ * @param int $catalog_id Catalog id.
+ * @return array<string,mixed>|null
+ */
+function axismundi_cal_holiday_catalog_get( int $catalog_id ) : ?array {
+	global $wpdb;
+	if ( $catalog_id <= 0 || ! axismundi_cal_ready() ) {
+		return null;
+	}
+	$table = axismundi_cal_holiday_catalogs_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d", $catalog_id ), ARRAY_A );
+	return is_array( $row ) ? $row : null;
+}
+
+/**
+ * Catalogs that describe the same thing a calendar is being made for.
+ *
+ * Offered to a person, never applied. A match here means "somebody may have meant this one", which is
+ * a question, and the answer is theirs -- the alternative is two collections of Korean holidays
+ * merging because they were both about Korea.
+ *
+ * @param string $provider     Provider key.
+ * @param string $jurisdiction Two-letter code.
+ * @param string $scope        Scope, or '' for any.
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_cal_holiday_catalog_candidates( string $provider, string $jurisdiction, string $scope = '' ) : array {
+	global $wpdb;
+	if ( ! axismundi_cal_ready() ) {
+		return array();
+	}
+	$table = axismundi_cal_holiday_catalogs_table();
+	if ( '' !== $scope ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+		return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE provider = %s AND jurisdiction = %s AND scope = %s ORDER BY id ASC", $provider, strtoupper( $jurisdiction ), $scope ), ARRAY_A );
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE provider = %s AND jurisdiction = %s ORDER BY id ASC", $provider, strtoupper( $jurisdiction ) ), ARRAY_A );
+}
+
+/**
+ * Say that one calendar is this catalog in one language.
+ *
+ * The catalog-level sitelink, and it is independent of the item-level ones. A calendar can be joined
+ * and hold nothing -- which is the normal state of a language edition somebody has created and not
+ * yet written, and must stay visibly empty rather than appearing translated.
+ *
+ * @param int $calendar_id Calendar id.
+ * @param int $catalog_id  Catalog id, or 0 to detach.
+ * @return bool|WP_Error
+ */
+function axismundi_cal_join_holiday_catalog( int $calendar_id, int $catalog_id ) {
+	global $wpdb;
+	$calendar = axismundi_cal_calendar_get( $calendar_id );
+	if ( ! is_array( $calendar ) || 'holiday' !== axismundi_cal_system_provider( $calendar ) ) {
+		return new WP_Error( 'ax_cal_not_holiday', __( 'Only a holiday calendar belongs to a holiday catalog.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+	if ( $catalog_id > 0 && null === axismundi_cal_holiday_catalog_get( $catalog_id ) ) {
+		return new WP_Error( 'ax_cal_catalog_missing', __( 'That catalog does not exist.', 'axismundi-calendar' ), array( 'status' => 404 ) );
+	}
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+	$wpdb->update( axismundi_cal_calendars_table(), array( 'holiday_catalog_id' => $catalog_id ), array( 'id' => $calendar_id ) );
+	return true;
+}
+
+/**
+ * The calendars that are one catalog, in each language it has.
+ *
+ * @param int $catalog_id Catalog id.
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_cal_catalog_calendars( int $catalog_id ) : array {
+	global $wpdb;
+	if ( $catalog_id <= 0 || ! axismundi_cal_ready() ) {
+		return array();
+	}
+	$table = axismundi_cal_calendars_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE holiday_catalog_id = %d ORDER BY id ASC", $catalog_id ), ARRAY_A );
+}
+
+/**
+ * The languages one day of a holiday actually has.
+ *
+ * Wikipedia's language menu, and its rule: only editions that exist are listed. A catalog with three
+ * calendars and one linked item offers one language, because the other two have nothing to show and
+ * saying otherwise would present a Korean name as an English one.
+ *
+ * @param int $occurrence_id Occurrence id.
+ * @return array<string,array<string,mixed>> Language tag => item row.
+ */
+function axismundi_cal_occurrence_languages( int $occurrence_id ) : array {
+	$languages = array();
+	foreach ( axismundi_cal_occurrence_items( $occurrence_id ) as $item ) {
+		$calendar = axismundi_cal_calendar_get( (int) $item['calendar_id'] );
+		$config   = axismundi_cal_provider_config( $calendar );
+		$locale   = (string) ( $config['source_locale'] ?? '' );
+		if ( '' !== $locale ) {
+			$languages[ $locale ] = $item;
+		}
+	}
+	return $languages;
+}
+
+/**
+ * Group holiday calendars that predate catalogs.
+ *
+ * One catalog per provider and jurisdiction, which is what those calendars already were: a site with
+ * Korean holidays in two languages had one dataset and two representations, and the only thing
+ * missing was somewhere to say so. Concepts follow their jurisdiction into it.
+ *
+ * @return int Number of calendars joined.
+ */
+function axismundi_cal_backfill_holiday_catalogs() : int {
+	global $wpdb;
+	$calendars = axismundi_cal_calendars_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration over this plugin's own table.
+	$columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$calendars}" );
+	if ( ! in_array( 'holiday_catalog_id', $columns, true ) ) {
+		return 0;
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
+	$rows = (array) $wpdb->get_results( "SELECT id, provider_config FROM {$calendars} WHERE kind = 'system' AND system_provider = 'holiday' AND holiday_catalog_id = 0", ARRAY_A );
+
+	$joined = 0;
+	foreach ( $rows as $row ) {
+		$config       = axismundi_cal_provider_config( $row );
+		$jurisdiction = strtoupper( (string) ( $config['region'] ?? '' ) );
+		if ( 1 !== preg_match( '/^[A-Z]{2}$/', $jurisdiction ) ) {
+			continue;
+		}
+		$existing = axismundi_cal_holiday_catalog_candidates( 'holiday', $jurisdiction );
+		$catalog  = array() !== $existing
+			? (int) $existing[0]['id']
+			: axismundi_cal_holiday_catalog_save( array( 'provider' => 'holiday', 'jurisdiction' => $jurisdiction, 'label' => $jurisdiction . ' holidays' ) );
+		if ( is_wp_error( $catalog ) ) {
+			continue;
+		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+		$wpdb->update( $calendars, array( 'holiday_catalog_id' => (int) $catalog ), array( 'id' => (int) $row['id'] ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- concepts follow their jurisdiction into it.
+		$wpdb->update( axismundi_cal_holiday_concepts_table(), array( 'catalog_id' => (int) $catalog ), array( 'jurisdiction' => $jurisdiction, 'catalog_id' => 0 ) );
+		++$joined;
+	}
+	return $joined;
+}
+
+/**
  * Create or update a holiday concept.
  *
  * The key is opaque and generated. A readable one is a name, and a name in one language is the thing
@@ -60,10 +270,16 @@ function axismundi_cal_holiday_concept_save( array $fields, int $concept_id = 0 
 	}
 	$existing = $concept_id > 0 ? axismundi_cal_holiday_concept_get( $concept_id ) : null;
 
-	$jurisdiction = strtoupper( trim( (string) ( $fields['jurisdiction'] ?? ( $existing['jurisdiction'] ?? '' ) ) ) );
-	if ( 1 !== preg_match( '/^[A-Z]{2}$/', $jurisdiction ) ) {
-		return new WP_Error( 'ax_cal_concept_jurisdiction', __( 'A holiday belongs to a country or region.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	/*
+	 * The catalog answers where this holiday applies. Asked once there rather than repeated on every
+	 * concept, which would be two places to disagree about the same fact.
+	 */
+	$catalog_id = (int) ( $fields['catalog_id'] ?? ( $existing['catalog_id'] ?? 0 ) );
+	$catalog    = axismundi_cal_holiday_catalog_get( $catalog_id );
+	if ( ! is_array( $catalog ) ) {
+		return new WP_Error( 'ax_cal_concept_catalog', __( 'A holiday belongs to a catalog.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
+	$jurisdiction = (string) $catalog['jurisdiction'];
 	/*
 	 * A label for the people maintaining this, not an identity. It is whatever the reviewer finds
 	 * legible -- often the name in the site's own language -- and changing it moves nothing.
@@ -76,6 +292,8 @@ function axismundi_cal_holiday_concept_save( array $fields, int $concept_id = 0 
 
 	$now  = current_time( 'mysql', true );
 	$data = array(
+		'catalog_id'   => $catalog_id,
+		// Kept alongside so a concept can be read without its catalog, and written only from it.
 		'jurisdiction' => $jurisdiction,
 		'label'        => $label,
 		'categories'   => implode( ',', $categories ),
@@ -116,17 +334,17 @@ function axismundi_cal_holiday_concept_get( int $concept_id ) : ?array {
 /**
  * Every concept for one jurisdiction.
  *
- * @param string $jurisdiction Two-letter code.
+ * @param int $catalog_id Catalog id.
  * @return array<int,array<string,mixed>>
  */
-function axismundi_cal_holiday_concepts( string $jurisdiction ) : array {
+function axismundi_cal_holiday_concepts( int $catalog_id ) : array {
 	global $wpdb;
 	if ( ! axismundi_cal_ready() ) {
 		return array();
 	}
 	$table = axismundi_cal_holiday_concepts_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
-	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE jurisdiction = %s ORDER BY label ASC", strtoupper( $jurisdiction ) ), ARRAY_A );
+	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE catalog_id = %d ORDER BY label ASC", $catalog_id ), ARRAY_A );
 }
 
 /**
@@ -308,10 +526,10 @@ function axismundi_cal_item_effective_categories( array $item ) : array {
  * sometimes several, and is exactly the case a person has to settle.
  *
  * @param array<string,mixed> $item         System item row.
- * @param string              $jurisdiction Two-letter code.
+ * @param int                 $catalog_id   Catalog the calendar belongs to.
  * @return array<int,array<string,mixed>>
  */
-function axismundi_cal_occurrence_candidates( array $item, string $jurisdiction ) : array {
+function axismundi_cal_occurrence_candidates( array $item, int $catalog_id ) : array {
 	global $wpdb;
 	if ( ! axismundi_cal_ready() ) {
 		return array();
@@ -322,8 +540,8 @@ function axismundi_cal_occurrence_candidates( array $item, string $jurisdiction 
 	return (array) $wpdb->get_results(
 		$wpdb->prepare(
 			"SELECT o.*, c.label, c.categories FROM {$occurrences} o INNER JOIN {$concepts} c ON c.id = o.concept_id
-			 WHERE c.jurisdiction = %s AND o.start_date = %s ORDER BY o.id ASC",
-			strtoupper( $jurisdiction ),
+			 WHERE c.catalog_id = %d AND o.start_date = %s ORDER BY o.id ASC",
+			$catalog_id,
 			(string) $item['start_date']
 		),
 		ARRAY_A

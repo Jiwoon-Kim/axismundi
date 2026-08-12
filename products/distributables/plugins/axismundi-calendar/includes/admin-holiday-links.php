@@ -226,6 +226,26 @@ function axismundi_cal_handle_bulk_principal_links() : void {
 add_action( 'admin_post_ax_cal_bulk_principal_links', 'axismundi_cal_handle_bulk_principal_links' );
 
 /**
+ * Reapply unambiguous same-language holiday links from earlier years.
+ *
+ * @return void
+ */
+function axismundi_cal_handle_prior_holiday_links() : void {
+	$calendar_id = isset( $_POST['calendar_id'] ) ? absint( wp_unslash( $_POST['calendar_id'] ) ) : 0;
+	check_admin_referer( 'ax_cal_prior_links_' . $calendar_id );
+	$calendar = $calendar_id > 0 ? axismundi_cal_calendar_get( $calendar_id ) : null;
+	if ( ! axismundi_cal_calendar_can( $calendar, 'manage_items' ) ) {
+		wp_die( esc_html__( 'You are not allowed to maintain that calendar.', 'axismundi-calendar' ), 403 );
+	}
+	$year = isset( $_POST['year'] ) ? absint( wp_unslash( $_POST['year'] ) ) : 0;
+	$base = add_query_arg( array( 'calendar' => $calendar_id, 'year' => $year ), admin_url( 'edit.php?post_type=' . AXISMUNDI_CAL_EVENT_POST_TYPE . '&page=ax-calendar-system' ) );
+	$count = axismundi_cal_apply_prior_holiday_links( $calendar_id, $year );
+	wp_safe_redirect( add_query_arg( array( 'ax_cal_notice' => 'prior_holiday_links_applied', 'ax_cal_linked' => $count ), $base ) );
+	exit;
+}
+add_action( 'admin_post_ax_cal_apply_prior_holiday_links', 'axismundi_cal_handle_prior_holiday_links' );
+
+/**
  * Which dataset this calendar is, and the chance to say.
  *
  * @param array<string,mixed> $calendar Calendar row.
@@ -352,6 +372,13 @@ function axismundi_cal_render_item_links( array $calendar, array $items, int $ye
 		<?php esc_html_e( 'Classification is already shown above. Here, link each date to the holiday it belongs to. Choose an existing holiday for an adjacent or substitute day; otherwise name a new holiday here. The role belongs to the date.', 'axismundi-calendar' ); ?>
 	</p>
 	<?php if ( array() !== $unlinked ) : ?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="ax_cal_apply_prior_holiday_links">
+			<input type="hidden" name="calendar_id" value="<?php echo esc_attr( (string) $calendar_id ); ?>">
+			<input type="hidden" name="year" value="<?php echo esc_attr( (string) $year ); ?>">
+			<?php wp_nonce_field( 'ax_cal_prior_links_' . $calendar_id ); ?>
+			<p class="submit"><button type="submit" class="button"><?php esc_html_e( 'Apply matching links from previous years', 'axismundi-calendar' ); ?></button></p>
+		</form>
 		<form id="<?php echo esc_attr( $bulk_form_id ); ?>" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="ax_cal_bulk_principal_links">
 			<input type="hidden" name="calendar_id" value="<?php echo esc_attr( (string) $calendar_id ); ?>">

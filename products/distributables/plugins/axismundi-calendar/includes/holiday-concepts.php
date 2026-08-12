@@ -673,6 +673,82 @@ function axismundi_cal_create_principal_holiday_from_item( int $item_id ) {
 }
 
 /**
+ * A prior-year, same-language decision that can safely be reused for an unlinked item.
+ *
+ * @param array<string,mixed> $item System item row.
+ * @return array{concept_id:int,role:string}|null
+ */
+function axismundi_cal_prior_holiday_link_suggestion( array $item ) : ?array {
+	global $wpdb;
+	$calendar_id = (int) ( $item['calendar_id'] ?? 0 );
+	$title       = (string) ( $item['title'] ?? '' );
+	$year        = (int) ( $item['batch_year'] ?? 0 );
+	if ( $calendar_id <= 0 || '' === $title || $year <= 0 || ! axismundi_cal_ready() ) {
+		return null;
+	}
+	$items       = axismundi_cal_system_items_table();
+	$occurrences = axismundi_cal_holiday_occurrences_table();
+	$concepts    = axismundi_cal_holiday_concepts_table();
+	// The title is only evidence within this calendar's locale. A distinct concept-role pair is a
+	// real ambiguity, not something a bulk action may decide from spelling alone.
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- exact lookup across this plugin's own tables.
+	$matches = (array) $wpdb->get_results(
+		$wpdb->prepare(
+			"SELECT DISTINCT o.concept_id, o.role FROM {$items} i INNER JOIN {$occurrences} o ON o.id = i.holiday_occurrence_id INNER JOIN {$concepts} c ON c.id = o.concept_id WHERE i.calendar_id = %d AND i.title = %s AND i.batch_year <> %d AND c.catalog_id = %d ORDER BY o.concept_id ASC, o.role ASC",
+			$calendar_id,
+			$title,
+			$year,
+			(int) ( axismundi_cal_calendar_get( $calendar_id )['holiday_catalog_id'] ?? 0 )
+		),
+		ARRAY_A
+	);
+	if ( 1 !== count( $matches ) ) {
+		return null;
+	}
+	return array( 'concept_id' => (int) $matches[0]['concept_id'], 'role' => (string) $matches[0]['role'] );
+}
+
+/**
+ * Reuse unambiguous prior-year local labels for a year of a holiday calendar.
+ *
+ * @param int $calendar_id Calendar id.
+ * @param int $year        Year to link.
+ * @return int Number of newly linked entries.
+ */
+function axismundi_cal_apply_prior_holiday_links( int $calendar_id, int $year ) : int {
+	$linked = 0;
+	$items  = axismundi_cal_system_items_in_range( $calendar_id, sprintf( '%04d-01-01', $year ), sprintf( '%04d-01-01', $year + 1 ), array(), true );
+	foreach ( $items as $item ) {
+		if ( (int) $item['holiday_occurrence_id'] > 0 ) {
+			continue;
+		}
+		$suggestion = axismundi_cal_prior_holiday_link_suggestion( $item );
+		if ( ! is_array( $suggestion ) ) {
+			continue;
+		}
+		$existing = null;
+		foreach ( axismundi_cal_holiday_occurrences( $suggestion['concept_id'], $year ) as $occurrence ) {
+			if ( (string) $occurrence['start_date'] === (string) $item['start_date'] && (string) $occurrence['end_date'] === (string) $item['end_date'] ) {
+				$existing = $occurrence;
+				break;
+			}
+		}
+		if ( is_array( $existing ) && (string) $existing['role'] !== $suggestion['role'] ) {
+			continue;
+		}
+		if ( is_array( $existing ) ) {
+			$attached = axismundi_cal_link_item_to_occurrence( (int) $item['id'], (int) $existing['id'] );
+		} else {
+			$attached = axismundi_cal_attach_item_to_holiday_concept( (int) $item['id'], $suggestion['concept_id'], $suggestion['role'] );
+		}
+		if ( ! is_wp_error( $attached ) ) {
+			++$linked;
+		}
+	}
+	return $linked;
+}
+
+/**
  * The rows in every language that are about one day of a holiday.
  *
  * @param int $occurrence_id Occurrence id.

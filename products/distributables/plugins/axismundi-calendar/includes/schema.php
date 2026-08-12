@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '22';
+const AXISMUNDI_CAL_DB_VERSION        = '23';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 const AXISMUNDI_CAL_SCHEMA_BAIL_OPTION = 'ax_cal_schema_bail';
 
@@ -104,6 +104,12 @@ function axismundi_cal_holiday_occurrences_table() : string {
 function axismundi_cal_system_items_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_cal_system_items';
+}
+
+/** @return string Lunar month table name. */
+function axismundi_cal_lunar_months_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_cal_lunar_months';
 }
 
 /** @return string Calendar access control table name. */
@@ -420,6 +426,35 @@ function axismundi_cal_install_schema() : bool {
 			PRIMARY KEY  (id),
 			UNIQUE KEY uuid (uuid),
 			KEY provider_jurisdiction (provider,jurisdiction,scope)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	$lunar_months = axismundi_cal_lunar_months_table();
+	/*
+	 * A lunisolar calendar in its compressed form: which civil day each lunar month began on, and how
+	 * long it ran. Every date inside the month is the difference, so this holds ~13 rows a year where
+	 * the converted dates would be 365.
+	 *
+	 * `start_absolute_day` is signed on purpose. KASI's range reaches back to 59 BC, and an unsigned
+	 * column would take that half of the range and store it as an enormous positive number.
+	 *
+	 * The unique key is (system, year, month, leap): a leap 4th month is a different month from the
+	 * 4th, not a variant of it, and merging them would lose the year's extra lunation.
+	 */
+	dbDelta(
+		"CREATE TABLE {$lunar_months} (
+			id bigint(20) unsigned NOT NULL auto_increment,
+			system varchar(32) NOT NULL default '',
+			start_absolute_day bigint(20) NOT NULL default 0,
+			lunar_year smallint(6) NOT NULL default 0,
+			lunar_month tinyint(3) unsigned NOT NULL default 0,
+			leap_month tinyint(1) NOT NULL default 0,
+			days tinyint(3) unsigned NOT NULL default 0,
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY system_month (system,lunar_year,lunar_month,leap_month),
+			KEY system_start (system,start_absolute_day)
 		) ENGINE=InnoDB {$charset};"
 	);
 

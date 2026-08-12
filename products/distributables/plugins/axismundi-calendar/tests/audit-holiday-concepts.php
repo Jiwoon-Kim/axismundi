@@ -255,6 +255,74 @@ try {
 		'so joining an English calendar changes nothing a reader sees until something is linked',
 		2 === count( axismundi_cal_catalog_calendars( $ax_hc_catalog ) )
 	);
+	// -- The screens that record it -----------------------------------------------------------------------
+
+	$ax_hc_admin = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ID' ) );
+	if ( ! empty( $ax_hc_admin ) ) {
+		wp_set_current_user( (int) $ax_hc_admin[0] );
+
+		ob_start();
+		axismundi_cal_render_catalog_join( (array) axismundi_cal_calendar_get( $ax_hc_ko ) );
+		$ax_hc_join_html = (string) ob_get_clean();
+		/*
+		 * Already joined, so it says which dataset and who its siblings are rather than offering to
+		 * join again -- and names both languages, since neither is the original.
+		 */
+		ax_hc_assert( $ax_hc_results, 'a joined calendar says which dataset it is', str_contains( $ax_hc_join_html, 'KR holidays' ) );
+		ax_hc_assert( $ax_hc_results, 'and lists the languages it exists in', str_contains( $ax_hc_join_html, 'ko-KR' ) && str_contains( $ax_hc_join_html, 'en-US' ) );
+
+		/*
+		 * An unjoined one offers the match and the alternative together. Being about the same country
+		 * is a reason to ask, never a reason to join.
+		 */
+		$ax_hc_loose = (int) axismundi_cal_calendar_save(
+			array( 'kind' => 'system', 'system_provider' => 'holiday', 'provider_config' => array( 'region' => 'KR', 'source_locale' => 'ja-JP' ), 'name' => 'KR holidays ja', 'slug' => 'ax-hc-ja-' . $ax_hc_suffix, 'timezone' => 'Asia/Seoul' )
+		);
+		$ax_hc_calendars[] = $ax_hc_loose;
+		ob_start();
+		axismundi_cal_render_catalog_join( (array) axismundi_cal_calendar_get( $ax_hc_loose ) );
+		$ax_hc_offer_html = (string) ob_get_clean();
+		ax_hc_assert( $ax_hc_results, 'an unjoined calendar is offered the dataset about the same country', str_contains( $ax_hc_offer_html, 'name="catalog_id"' ) && str_contains( $ax_hc_offer_html, 'KR holidays' ) );
+		ax_hc_assert( $ax_hc_results, 'and the alternative of staying separate', str_contains( $ax_hc_offer_html, 'Start a separate dataset' ) );
+		ax_hc_assert( $ax_hc_results, 'while rendering the offer joins nothing', 0 === (int) axismundi_cal_calendar_get( $ax_hc_loose )['holiday_catalog_id'] );
+
+		/*
+		 * A row already linked shows what it is. One with a candidate is offered it. One with neither
+		 * is a holiday nobody has recorded, and the reviewer looking at it is who knows.
+		 */
+		ob_start();
+		axismundi_cal_render_item_links(
+			(array) axismundi_cal_calendar_get( $ax_hc_ko ),
+			array( (array) axismundi_cal_system_item_get( $ax_hc_ko_item ) ),
+			2026
+		);
+		$ax_hc_linked_html = (string) ob_get_clean();
+		ax_hc_assert( $ax_hc_results, 'a linked entry shows the holiday it is a day of', str_contains( $ax_hc_linked_html, '설날' ) );
+		ax_hc_assert( $ax_hc_results, 'and can be detached again', str_contains( $ax_hc_linked_html, 'Unlink' ) );
+
+		$ax_hc_orphan = (int) axismundi_cal_system_item_save( $ax_hc_ko, array( 'title' => '제헌절', 'start_date' => '2026-07-17', 'categories' => array( 'HOLIDAY', 'OBSERVANCE' ), 'status' => 'published' ) );
+		ob_start();
+		axismundi_cal_render_item_links( (array) axismundi_cal_calendar_get( $ax_hc_ko ), array( (array) axismundi_cal_system_item_get( $ax_hc_orphan ) ), 2026 );
+		$ax_hc_orphan_html = (string) ob_get_clean();
+		ax_hc_assert( $ax_hc_results, 'an entry about nothing yet is offered as a new holiday', str_contains( $ax_hc_orphan_html, 'New holiday from this' ) );
+		ax_hc_assert( $ax_hc_results, 'with the roles a day of one can have', str_contains( $ax_hc_orphan_html, 'holiday-period' ) && str_contains( $ax_hc_orphan_html, 'substitute' ) );
+
+		/*
+		 * Promotion carries the classification up, which is what stops it being done once per language
+		 * and again every year.
+		 */
+		$ax_hc_promoted = (int) axismundi_cal_holiday_concept_save(
+			array( 'catalog_id' => $ax_hc_catalog, 'label' => '제헌절', 'categories' => (string) axismundi_cal_system_item_get( $ax_hc_orphan )['categories'] )
+		);
+		$ax_hc_concepts[] = $ax_hc_promoted;
+		ax_hc_assert(
+			$ax_hc_results,
+			'a holiday made from an entry keeps how that entry was classified',
+			'HOLIDAY,OBSERVANCE' === (string) axismundi_cal_holiday_concept_get( $ax_hc_promoted )['categories']
+		);
+
+		wp_set_current_user( 0 );
+	}
 } finally {
 	foreach ( $ax_hc_calendars as $ax_hc_calendar ) {
 		axismundi_cal_system_items_forget_calendar( (int) $ax_hc_calendar );

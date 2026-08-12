@@ -264,6 +264,18 @@ function axismundi_cal_system_item_message( string $code ) : string {
 			return __( 'A calendar needs a name.', 'axismundi-calendar' );
 		case 'ax_cal_timezone':
 			return __( 'A calendar needs a named IANA timezone such as Asia/Seoul.', 'axismundi-calendar' );
+		case 'catalog_joined':
+			return __( 'Dataset saved. Entries can now be linked to the holidays in it.', 'axismundi-calendar' );
+		case 'item_linked':
+			return __( 'Linked.', 'axismundi-calendar' );
+		case 'item_unlinked':
+			return __( 'Unlinked.', 'axismundi-calendar' );
+		case 'holiday_created':
+			return __( 'Holiday created from that entry, with its classification.', 'axismundi-calendar' );
+		case 'ax_cal_concept_catalog':
+			return __( 'Join this calendar to a dataset before creating holidays in it.', 'axismundi-calendar' );
+		case 'ax_cal_catalog_jurisdiction':
+			return __( 'A dataset covers a country or region, which this calendar has not been given.', 'axismundi-calendar' );
 		case 'imported':
 			return __( 'Imported as drafts. Classify them and mark the year reviewed to publish it.', 'axismundi-calendar' );
 		case 'holiday_reviewed':
@@ -655,6 +667,10 @@ function axismundi_cal_render_system_item_editor( array $calendar, string $base 
 		</p>
 	</form>
 	<?php endif; ?>
+
+	<?php axismundi_cal_render_catalog_join( $calendar ); ?>
+
+	<?php axismundi_cal_render_item_links( $calendar, $items, $year ); ?>
 
 	<?php axismundi_cal_render_system_import( $calendar ); ?>
 

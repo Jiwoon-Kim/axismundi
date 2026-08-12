@@ -60,6 +60,31 @@ function axismundi_cal_system_items_menu() : void {
 add_action( 'admin_menu', 'axismundi_cal_system_items_menu', 11 );
 
 /**
+ * Load review controls only where they are used.
+ *
+ * @param string $hook Current admin page.
+ * @return void
+ */
+function axismundi_cal_enqueue_system_item_controls( string $hook ) : void {
+	if ( ! str_contains( $hook, 'ax-calendar-system' ) ) {
+		return;
+	}
+	$plugin = dirname( __DIR__ ) . '/axismundi-calendar.php';
+	$script = dirname( __DIR__ ) . '/assets/admin/system-items.js';
+	if ( ! file_exists( $script ) ) {
+		return;
+	}
+	wp_enqueue_script(
+		'axismundi-calendar-system-items',
+		plugins_url( 'assets/admin/system-items.js', $plugin ),
+		array(),
+		AXISMUNDI_CAL_VERSION . '-' . (string) filemtime( $script ),
+		true
+	);
+}
+add_action( 'admin_enqueue_scripts', 'axismundi_cal_enqueue_system_item_controls' );
+
+/**
  * Create a maintained calendar.
  *
  * Its own path rather than the ordinary Calendar form, because almost nothing that form asks applies
@@ -172,8 +197,18 @@ function axismundi_cal_handle_holiday_review() : void {
 	$year = isset( $_POST['year'] ) ? absint( wp_unslash( $_POST['year'] ) ) : 0;
 	$base = add_query_arg( array( 'calendar' => $calendar_id, 'year' => $year ), admin_url( 'edit.php?post_type=' . AXISMUNDI_CAL_EVENT_POST_TYPE . '&page=ax-calendar-system' ) );
 	$reviews = isset( $_POST['review'] ) && is_array( $_POST['review'] ) ? wp_unslash( $_POST['review'] ) : array();
-	$publish = isset( $_POST['publish'] ) ? array_map( 'absint', (array) wp_unslash( $_POST['publish'] ) ) : array();
-	$result  = axismundi_cal_review_holiday_items( $calendar_id, $reviews, $publish );
+	$selected = isset( $_POST['selected_items'] ) ? array_map( 'absint', (array) wp_unslash( $_POST['selected_items'] ) ) : array();
+	$selected = array_values( array_unique( array_filter( $selected ) ) );
+	$action   = isset( $_POST['holiday_action'] ) ? sanitize_key( wp_unslash( (string) $_POST['holiday_action'] ) ) : 'save';
+	if ( 'observance' === $action ) {
+		$result = axismundi_cal_bulk_classify_holiday_items( $calendar_id, $selected, 'OBSERVANCE', true );
+	} elseif ( 'public_holiday' === $action ) {
+		$result = axismundi_cal_bulk_classify_holiday_items( $calendar_id, $selected, 'PUBLIC-HOLIDAY', true );
+	} elseif ( 'publish' === $action ) {
+		$result = axismundi_cal_review_holiday_items( $calendar_id, array_intersect_key( $reviews, array_fill_keys( $selected, true ) ), $selected );
+	} else {
+		$result = axismundi_cal_review_holiday_items( $calendar_id, $reviews, array() );
+	}
 	if ( is_wp_error( $result ) ) {
 		wp_safe_redirect( add_query_arg( 'ax_cal_error', rawurlencode( $result->get_error_code() ), $base ) );
 		exit;
@@ -210,7 +245,9 @@ function axismundi_cal_system_item_message( string $code ) : string {
 		case 'imported':
 			return __( 'Imported as drafts. Classify them and mark the year reviewed to publish it.', 'axismundi-calendar' );
 		case 'holiday_reviewed':
-			return __( 'Classifications saved. Checked entries are now published.', 'axismundi-calendar' );
+			return __( 'Holiday review saved.', 'axismundi-calendar' );
+		case 'ax_cal_holiday_selection':
+			return __( 'Choose at least one entry first.', 'axismundi-calendar' );
 		case 'ax_cal_holiday_category':
 			return __( 'Classify every entry before publishing it.', 'axismundi-calendar' );
 		case 'ax_cal_import_fetch':
@@ -322,7 +359,7 @@ function axismundi_cal_render_system_calendar_form() : void {
 	<p class="description">
 		<?php esc_html_e( 'Made here rather than on the Calendars screen: this one belongs to the site rather than to an Actor, it is readable by everyone, and there is no sharing to decide.', 'axismundi-calendar' ); ?>
 	</p>
-	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+	<form id="ax-cal-holiday-review" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<input type="hidden" name="action" value="ax_cal_create_system_calendar">
 		<?php wp_nonce_field( 'ax_cal_create_system' ); ?>
 		<table class="form-table" role="presentation">
@@ -503,6 +540,9 @@ function axismundi_cal_render_system_item_editor( array $calendar, string $base 
 	<table class="wp-list-table widefat fixed striped">
 		<thead>
 			<tr>
+				<?php if ( $holiday_review ) : ?>
+					<th scope="col"><label class="screen-reader-text" for="ax-cal-select-all-holidays"><?php esc_html_e( 'Select all entries', 'axismundi-calendar' ); ?></label><input id="ax-cal-select-all-holidays" type="checkbox" onchange="window.axismundiCalendarSystemItems.toggleAll(this, this.form)"></th>
+				<?php endif; ?>
 				<th scope="col"><?php esc_html_e( 'Date', 'axismundi-calendar' ); ?></th>
 				<th scope="col"><?php esc_html_e( 'Name', 'axismundi-calendar' ); ?></th>
 				<th scope="col"><?php esc_html_e( 'Categories', 'axismundi-calendar' ); ?></th>
@@ -515,7 +555,7 @@ function axismundi_cal_render_system_item_editor( array $calendar, string $base 
 		</thead>
 		<tbody>
 			<?php if ( empty( $items ) ) : ?>
-				<tr><td colspan="<?php echo esc_attr( $holiday_review ? '5' : '6' ); ?>"><?php esc_html_e( 'Nothing for this year yet.', 'axismundi-calendar' ); ?></td></tr>
+				<tr><td colspan="6"><?php esc_html_e( 'Nothing for this year yet.', 'axismundi-calendar' ); ?></td></tr>
 			<?php endif; ?>
 			<?php foreach ( $items as $item ) : ?>
 				<?php
@@ -523,6 +563,9 @@ function axismundi_cal_render_system_item_editor( array $calendar, string $base 
 				$class_value     = in_array( 'PUBLIC-HOLIDAY', $item_categories, true ) ? 'PUBLIC-HOLIDAY' : ( in_array( 'OBSERVANCE', $item_categories, true ) ? 'OBSERVANCE' : '' );
 				?>
 				<tr>
+					<?php if ( $holiday_review ) : ?>
+						<td><input class="ax-cal-holiday-selection" data-draft="<?php echo esc_attr( 'published' === (string) $item['status'] ? '0' : '1' ); ?>" type="checkbox" name="selected_items[]" value="<?php echo esc_attr( (string) $item['id'] ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Select %s', 'axismundi-calendar' ), (string) $item['title'] ) ); ?>" onchange="window.axismundiCalendarSystemItems.syncAll(this.form)"></td>
+					<?php endif; ?>
 					<td><code><?php echo esc_html( (string) $item['start_date'] ); ?></code></td>
 					<td>
 						<strong>
@@ -546,16 +589,11 @@ function axismundi_cal_render_system_item_editor( array $calendar, string $base 
 					</td>
 					<td>
 						<?php if ( $holiday_review ) : ?>
-							<?php if ( 'published' === (string) $item['status'] ) : ?>
-								<?php esc_html_e( 'Published', 'axismundi-calendar' ); ?>
-							<?php else : ?>
-								<label><input type="checkbox" name="publish[]" value="<?php echo esc_attr( (string) $item['id'] ); ?>"> <?php esc_html_e( 'Publish', 'axismundi-calendar' ); ?></label>
-							<?php endif; ?>
+							<?php echo esc_html( 'published' === (string) $item['status'] ? __( 'Published', 'axismundi-calendar' ) : __( 'Draft', 'axismundi-calendar' ) ); ?>
 						<?php else : ?>
 							<?php echo esc_html( 'published' === (string) $item['status'] ? __( 'Yes', 'axismundi-calendar' ) : __( 'Draft', 'axismundi-calendar' ) ); ?>
 						<?php endif; ?>
 					</td>
-					<?php if ( ! $holiday_review ) : ?>
 					<td>
 						<?php
 						// Where it came from, because a corrected entry and an imported one look identical
@@ -563,6 +601,7 @@ function axismundi_cal_render_system_item_editor( array $calendar, string $base 
 						echo esc_html( '' !== (string) ( $item['source_uid'] ?? '' ) ? __( 'Imported', 'axismundi-calendar' ) : __( 'Entered here', 'axismundi-calendar' ) );
 						?>
 					</td>
+					<?php if ( ! $holiday_review ) : ?>
 					<td>
 						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 							<input type="hidden" name="action" value="ax_cal_save_system_item">
@@ -581,8 +620,17 @@ function axismundi_cal_render_system_item_editor( array $calendar, string $base 
 		</tbody>
 	</table>
 	<?php if ( $holiday_review ) : ?>
-		<p class="description"><?php esc_html_e( 'Choose public holiday or observance for each imported date. Publishing is explicit: unclassified or unchecked drafts remain private for review.', 'axismundi-calendar' ); ?></p>
-		<p class="submit"><button type="submit" class="button button-primary"><?php esc_html_e( 'Save classifications and publish checked', 'axismundi-calendar' ); ?></button></p>
+		<p class="description"><?php esc_html_e( 'The bulk actions classify and publish the selected entries together. Use the individual choices below only when a date needs an exception.', 'axismundi-calendar' ); ?></p>
+		<p>
+			<button type="button" class="button" id="ax-cal-select-drafts" onclick="window.axismundiCalendarSystemItems.selectDrafts(this.form)"><?php esc_html_e( 'Select drafts', 'axismundi-calendar' ); ?></button>
+			<button type="button" class="button" id="ax-cal-invert-holiday-selection" onclick="window.axismundiCalendarSystemItems.invert(this.form)"><?php esc_html_e( 'Invert selection', 'axismundi-calendar' ); ?></button>
+		</p>
+		<p class="submit">
+			<button type="submit" class="button button-secondary" name="holiday_action" value="observance"><?php esc_html_e( 'Set and publish selected as observances', 'axismundi-calendar' ); ?></button>
+			<button type="submit" class="button button-primary" name="holiday_action" value="public_holiday"><?php esc_html_e( 'Set and publish selected as public holidays', 'axismundi-calendar' ); ?></button>
+			<button type="submit" class="button button-primary" name="holiday_action" value="publish"><?php esc_html_e( 'Publish selected', 'axismundi-calendar' ); ?></button>
+			<button type="submit" class="button-link" name="holiday_action" value="save"><?php esc_html_e( 'Save individual changes', 'axismundi-calendar' ); ?></button>
+		</p>
 	</form>
 	<?php endif; ?>
 

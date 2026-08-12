@@ -315,6 +315,11 @@ function axismundi_cal_review_holiday_items( int $calendar_id, array $reviews, a
 		}
 		$prepared[ $item_id ] = array( 'item' => $item, 'classification' => $classification, 'substitute' => ! empty( $review['substitute'] ) );
 	}
+	foreach ( array_keys( $publish ) as $item_id ) {
+		if ( ! isset( $prepared[ $item_id ] ) ) {
+			return new WP_Error( 'ax_cal_item_missing', __( 'That entry is not on this calendar.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+		}
+	}
 
 	$saved = 0;
 	foreach ( $prepared as $item_id => $review ) {
@@ -335,6 +340,35 @@ function axismundi_cal_review_holiday_items( int $calendar_id, array $reviews, a
 		++$saved;
 	}
 	return $saved;
+}
+
+/**
+ * Apply one holiday classification to selected entries.
+ *
+ * @param int    $calendar_id Calendar id.
+ * @param int[]  $item_ids    Selected item ids.
+ * @param string $category    PUBLIC-HOLIDAY or OBSERVANCE.
+ * @param bool   $publish     Whether the selected entries are ready to publish.
+ * @return int|WP_Error Number of rows saved.
+ */
+function axismundi_cal_bulk_classify_holiday_items( int $calendar_id, array $item_ids, string $category, bool $publish = false ) {
+	$item_ids = array_values( array_unique( array_filter( array_map( 'intval', $item_ids ) ) ) );
+	if ( array() === $item_ids ) {
+		return new WP_Error( 'ax_cal_holiday_selection', __( 'Choose at least one entry first.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+	$reviews = array();
+	foreach ( $item_ids as $item_id ) {
+		$item = axismundi_cal_system_item_get( $item_id );
+		if ( ! is_array( $item ) || (int) $item['calendar_id'] !== $calendar_id ) {
+			return new WP_Error( 'ax_cal_item_missing', __( 'That entry is not on this calendar.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+		}
+		$categories = axismundi_cal_normalize_categories( (string) $item['categories'] );
+		$reviews[ $item_id ] = array(
+			'classification' => $category,
+			'substitute'     => in_array( 'SUBSTITUTE-HOLIDAY', $categories, true ),
+		);
+	}
+	return axismundi_cal_review_holiday_items( $calendar_id, $reviews, $publish ? $item_ids : array() );
 }
 
 /**

@@ -578,11 +578,19 @@ try {
 	ax_si_assert( $ax_si_results, 'a holiday review classifies each imported entry without guessing from source prose', 2 === $ax_si_reviewed && 'HOLIDAY,PUBLIC-HOLIDAY' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[0] )['categories'] && 'HOLIDAY,OBSERVANCE' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['categories'] );
 	ax_si_assert( $ax_si_results, 'and publishes only the checked, classified entry', 'published' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[0] )['status'] && 'draft' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['status'] );
 	ax_si_assert( $ax_si_results, 'a holiday cannot be published before it has a classification', is_wp_error( axismundi_cal_review_holiday_items( $ax_si_import_cal, array( $ax_si_import_ids[1] => array( 'classification' => '' ) ), array( $ax_si_import_ids[1] ) ) ) );
+	$ax_si_bulk = axismundi_cal_bulk_classify_holiday_items( $ax_si_import_cal, array( $ax_si_import_ids[1] ), 'PUBLIC-HOLIDAY' );
+	ax_si_assert( $ax_si_results, 'a selected group can be classified together while remaining draft', 1 === $ax_si_bulk && 'HOLIDAY,PUBLIC-HOLIDAY' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['categories'] && 'draft' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['status'] );
+	$ax_si_bulk_publish = axismundi_cal_bulk_classify_holiday_items( $ax_si_import_cal, array( $ax_si_import_ids[1] ), 'OBSERVANCE', true );
+	ax_si_assert( $ax_si_results, 'a bulk classification can publish the same selected entries in one action', 1 === $ax_si_bulk_publish && 'HOLIDAY,OBSERVANCE' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['categories'] && 'published' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['status'] );
+	ax_si_assert( $ax_si_results, 'a bulk classification needs a real selection', is_wp_error( axismundi_cal_bulk_classify_holiday_items( $ax_si_import_cal, array(), 'OBSERVANCE' ) ) );
+	ax_si_assert( $ax_si_results, 'a publish selection cannot name an entry without its review data', is_wp_error( axismundi_cal_review_holiday_items( $ax_si_import_cal, array(), array( $ax_si_import_ids[1] ) ) ) );
 	ob_start();
 	axismundi_cal_render_system_item_editor( (array) axismundi_cal_calendar_get( $ax_si_import_cal ), 'https://example.test/admin' );
-	$ax_si_holiday_editor = (string) ob_get_clean();
+$ax_si_holiday_editor = (string) ob_get_clean();
+$ax_si_holiday_controls = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/system-items.js' );
 	ax_si_assert( $ax_si_results, 'the holiday review presents public holiday and observance as a mutually exclusive choice', str_contains( $ax_si_holiday_editor, 'type="radio" name="review[' ) && str_contains( $ax_si_holiday_editor, 'Public holiday' ) && str_contains( $ax_si_holiday_editor, 'Observance' ) );
-	ax_si_assert( $ax_si_results, 'and makes publication an explicit per-entry approval', str_contains( $ax_si_holiday_editor, 'name="publish[]"' ) && str_contains( $ax_si_holiday_editor, 'Save classifications and publish checked' ) );
+	ax_si_assert( $ax_si_results, 'and offers bulk classification with publication in the same selected-entry action', str_contains( $ax_si_holiday_editor, 'name="selected_items[]"' ) && str_contains( $ax_si_holiday_editor, 'Set and publish selected as observances' ) && str_contains( $ax_si_holiday_editor, 'Set and publish selected as public holidays' ) && str_contains( $ax_si_holiday_editor, 'Publish selected' ) );
+ax_si_assert( $ax_si_results, 'with controls to select only drafts or invert the visible selection', str_contains( $ax_si_holiday_editor, 'Select drafts' ) && str_contains( $ax_si_holiday_editor, 'Invert selection' ) && str_contains( $ax_si_holiday_editor, 'data-draft=' ) && str_contains( $ax_si_holiday_controls, 'selectDrafts: function' ) && str_contains( $ax_si_holiday_controls, 'invert: function' ) );
 
 	/*
 	 * Re-reading the same feed updates what it wrote before. Without the uid this would double a year

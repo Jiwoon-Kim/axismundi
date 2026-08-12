@@ -304,6 +304,15 @@ try {
 		'so joining an English calendar changes nothing a reader sees until something is linked',
 		2 === count( axismundi_cal_catalog_calendars( $ax_hc_catalog ) )
 	);
+
+	$ax_hc_substitute_item = (int) axismundi_cal_system_item_save( $ax_hc_ko, array( 'title' => '쉬는 날 삼일절', 'start_date' => '2026-03-02', 'status' => 'published' ) );
+	axismundi_cal_link_item_to_occurrence( $ax_hc_substitute_item, $ax_hc_second );
+	$ax_hc_substitute_range = axismundi_cal_system_items_in_range( $ax_hc_ko, '2026-03-02', '2026-03-03', array(), true );
+	ax_hc_assert(
+	$ax_hc_results,
+	'a linked substitute exposes its derived category to the calendar reader',
+	1 === count( $ax_hc_substitute_range ) && array( 'HOLIDAY', 'PUBLIC-HOLIDAY', 'SUBSTITUTE-HOLIDAY' ) === axismundi_cal_normalize_categories( (string) $ax_hc_substitute_range[0]['categories'] )
+);
 	// -- The screens that record it -----------------------------------------------------------------------
 
 	$ax_hc_admin = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ID' ) );
@@ -350,6 +359,10 @@ try {
 		ax_hc_assert( $ax_hc_results, 'and can be detached again', str_contains( $ax_hc_linked_html, 'Unlink' ) );
 		ax_hc_assert( $ax_hc_results, 'and lets a maintainer choose one day role after linking it', str_contains( $ax_hc_linked_html, 'type="radio" name="role"' ) && str_contains( $ax_hc_linked_html, 'Holiday period' ) && str_contains( $ax_hc_linked_html, 'Save role' ) );
 		ax_hc_assert( $ax_hc_results, 'showing a principal-day choice only when substitute is chosen', str_contains( $ax_hc_linked_html, 'class="ax-cal-substitute-for" hidden' ) && str_contains( $ax_hc_linked_html, 'Choose a principal day' ) );
+		ob_start();
+		axismundi_cal_render_system_item_editor( (array) axismundi_cal_calendar_get( $ax_hc_ko ), 'https://example.test/admin' );
+		$ax_hc_review_html = (string) ob_get_clean();
+		ax_hc_assert( $ax_hc_results, 'the review table shows a substitute role as checked but does not offer it as an item edit', str_contains( $ax_hc_review_html, '<input type="checkbox" checked disabled> Substitute day' ) && ! str_contains( $ax_hc_review_html, '[substitute]' ) );
 
 		$ax_hc_orphan = (int) axismundi_cal_system_item_save( $ax_hc_ko, array( 'title' => '제헌절', 'start_date' => '2026-07-17', 'categories' => array( 'HOLIDAY', 'OBSERVANCE' ), 'status' => 'published' ) );
 		ob_start();

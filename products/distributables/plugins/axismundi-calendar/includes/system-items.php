@@ -495,7 +495,11 @@ function axismundi_cal_system_items_in_range( int $calendar_id, string $from, st
 		if ( (int) $item['holiday_occurrence_id'] > 0 ) {
 			$occurrence = axismundi_cal_holiday_occurrence_get( (int) $item['holiday_occurrence_id'] );
 			$item['status']     = is_array( $occurrence ) ? (string) $occurrence['status'] : (string) $item['status'];
-			$item['categories'] = implode( ',', axismundi_cal_item_effective_categories( $item ) );
+			$categories = axismundi_cal_item_effective_categories( $item );
+			if ( is_array( $occurrence ) && 'substitute' === (string) $occurrence['role'] ) {
+				$categories[] = 'SUBSTITUTE-HOLIDAY';
+			}
+			$item['categories'] = implode( ',', axismundi_cal_normalize_categories( $categories ) );
 		}
 	}
 	unset( $item );

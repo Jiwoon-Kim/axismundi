@@ -595,6 +595,7 @@ function axismundi_cal_render_system_item_editor( array $calendar, string $base 
 				<?php
 				$item_categories = axismundi_cal_normalize_categories( (string) $item['categories'] );
 				$class_value     = in_array( 'PUBLIC-HOLIDAY', $item_categories, true ) ? 'PUBLIC-HOLIDAY' : ( in_array( 'OBSERVANCE', $item_categories, true ) ? 'OBSERVANCE' : '' );
+				$occurrence      = axismundi_cal_holiday_occurrence_get( (int) $item['holiday_occurrence_id'] );
 				?>
 				<tr>
 					<?php if ( $holiday_review ) : ?>
@@ -615,7 +616,9 @@ function axismundi_cal_render_system_item_editor( array $calendar, string $base 
 								<label><input type="radio" name="review[<?php echo esc_attr( (string) $item['id'] ); ?>][classification]" value="PUBLIC-HOLIDAY" <?php checked( 'PUBLIC-HOLIDAY', $class_value ); ?>> <?php esc_html_e( 'Public holiday', 'axismundi-calendar' ); ?></label><br>
 								<label><input type="radio" name="review[<?php echo esc_attr( (string) $item['id'] ); ?>][classification]" value="OBSERVANCE" <?php checked( 'OBSERVANCE', $class_value ); ?>> <?php esc_html_e( 'Observance', 'axismundi-calendar' ); ?></label><br>
 								<label><input type="radio" name="review[<?php echo esc_attr( (string) $item['id'] ); ?>][classification]" value="" <?php checked( '', $class_value ); ?>> <?php esc_html_e( 'Unclassified', 'axismundi-calendar' ); ?></label>
-								<label style="margin-left:1em;"><input type="checkbox" name="review[<?php echo esc_attr( (string) $item['id'] ); ?>][substitute]" value="1" <?php checked( in_array( 'SUBSTITUTE-HOLIDAY', $item_categories, true ) ); ?>> <?php esc_html_e( 'Substitute day', 'axismundi-calendar' ); ?></label>
+								<?php if ( is_array( $occurrence ) && 'substitute' === (string) $occurrence['role'] ) : ?>
+									<label style="margin-left:1em;"><input type="checkbox" checked disabled> <?php esc_html_e( 'Substitute day', 'axismundi-calendar' ); ?></label>
+								<?php endif; ?>
 							</fieldset>
 						<?php else : ?>
 							<code><?php echo esc_html( (string) $item['categories'] ); ?></code>

@@ -201,16 +201,21 @@ $wpdb->query( $wpdb->prepare( "DELETE FROM {$ax_kasi_table} WHERE system = %s", 
 foreach ( $ax_kasi_months as $ax_kasi_month ) {
 	axismundi_cal_lunar_month_save( AXISMUNDI_CAL_KOREAN_LUNISOLAR, $ax_kasi_month );
 }
+/*
+ * Asserted against the store rather than through the registered system. The workspace annotation now
+ * resolves `korean-lunisolar` through ICU, so asking the system would answer whether ICU works and
+ * say nothing about whether the response was parsed -- which is the only thing this file is for.
+ */
 ax_kasi_assert(
 	$ax_kasi_results,
-	'a parsed month becomes a day the Korean system can name',
+	'a parsed month becomes a day the store can name',
 	array( 'year' => 2026, 'month' => 4, 'day' => 1, 'leapMonth' => true )
-		=== axismundi_cal_system_date( AXISMUNDI_CAL_KOREAN_LUNISOLAR, (int) axismundi_cal_iso_to_absolute_day( '2026-07-15' ) )
+		=== axismundi_cal_lunar_date( AXISMUNDI_CAL_KOREAN_LUNISOLAR, (int) axismundi_cal_iso_to_absolute_day( '2026-07-15' ) )
 );
 ax_kasi_assert(
 	$ax_kasi_results,
-	'while a day nothing was fetched for still has none',
-	null === axismundi_cal_system_date( AXISMUNDI_CAL_KOREAN_LUNISOLAR, (int) axismundi_cal_iso_to_absolute_day( '2026-12-25' ) )
+	'while a day nothing was fetched for is absent from it',
+	null === axismundi_cal_lunar_date( AXISMUNDI_CAL_KOREAN_LUNISOLAR, (int) axismundi_cal_iso_to_absolute_day( '2026-12-25' ) )
 );
 
 // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.

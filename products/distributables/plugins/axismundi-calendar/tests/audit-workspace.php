@@ -423,6 +423,24 @@ try {
 	list( , $ax_ws_draft_body ) = ax_ws_view( array( $ax_ws_ko_uuid ), '2026-09-01T00:00:00Z', '2026-10-01T00:00:00Z' );
 	ax_ws_assert( $ax_ws_results, 'while an unreviewed one is not', 1 === count( (array) $ax_ws_draft_body['items'] ) );
 
+	/*
+	 * The sidebar groups on this. Two calendars of one dataset carry the same catalog, and a calendar
+	 * that is nobody's sibling carries none -- which is nearly all of them, and grouping those would
+	 * be inventing a relation.
+	 */
+	$ax_ws_ko_row = axismundi_cal_rest_calendar( (array) axismundi_cal_calendar_get( $ax_ws_ko ) );
+	$ax_ws_en_row = axismundi_cal_rest_calendar( (array) axismundi_cal_calendar_get( $ax_ws_en2 ) );
+	ax_ws_assert(
+		$ax_ws_results,
+		'two languages of one dataset report the same dataset, so a sidebar can gather them',
+		'' !== (string) $ax_ws_ko_row['catalog'] && $ax_ws_ko_row['catalog'] === $ax_ws_en_row['catalog']
+	);
+	ax_ws_assert(
+		$ax_ws_results,
+		'while an ordinary calendar reports none, being nobody sibling',
+		'' === (string) axismundi_cal_rest_calendar( (array) axismundi_cal_calendar_get( $ax_ws_mine ) )['catalog']
+	);
+
 	// -- Naming one Calendar twice ---------------------------------------------------------------------------------
 
 	list( , $ax_ws_body ) = ax_ws_view( array( $ax_ws_mine_id, $ax_ws_mine_id ) );

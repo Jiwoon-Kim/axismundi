@@ -130,6 +130,12 @@ function axismundi_cal_rest_calendar( array $calendar, array $entry = array() ) 
 		'timezone'    => axismundi_cal_calendar_timezone( $calendar ),
 		'kind'        => (string) $calendar['kind'],
 		'accessRole'  => axismundi_cal_request_role( $calendar_id ),
+		/*
+		 * The dataset this calendar is, when it is one of several languages of the same thing. The
+		 * sidebar groups on it: 대한민국의 휴일 and Holidays in South Korea are one entry to tick,
+		 * because choosing between them would be choosing a language in a control that means content.
+		 */
+		'catalog'     => axismundi_cal_calendar_catalog_uuid( $calendar ),
 		'public'      => $public,
 		'revision'    => (int) $calendar['revision'],
 	);

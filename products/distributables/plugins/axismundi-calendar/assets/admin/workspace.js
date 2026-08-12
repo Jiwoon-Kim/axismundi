@@ -220,6 +220,31 @@
 		);
 	}
 
+	/**
+	 * Calendars that are one dataset in several languages, gathered into one thing to tick.
+	 *
+	 * 대한민국의 휴일 and Holidays in South Korea are the same holidays written twice. Offering both
+	 * asks the reader a question with no good answer: tick both and the grid would be choosing for
+	 * them, tick one and they have made a language decision in a control that means content. A
+	 * calendar with no catalog is its own group, which is nearly all of them.
+	 */
+	function groupByCatalog( calendars ) {
+		var groups = [];
+		var byKey = {};
+		calendars.forEach( function ( calendar ) {
+			var key = calendar.catalog || ( 'calendar:' + calendar.id );
+			if ( ! byKey[ key ] ) {
+				byKey[ key ] = { key: key, members: [], label: calendar.summaryOverride || calendar.summary, locales: [] };
+				groups.push( byKey[ key ] );
+			}
+			byKey[ key ].members.push( calendar );
+			if ( calendar.locale ) {
+				byKey[ key ].locales.push( calendar.locale );
+			}
+		} );
+		return groups;
+	}
+
 	function CalendarList( props ) {
 		var owned = props.calendars.filter( function ( calendar ) {
 			return 'remote' !== calendar.kind;
@@ -229,29 +254,42 @@
 		} );
 
 		function section( title, list, emptyText ) {
+			var groups = groupByCatalog( list );
 			return el(
 				'div',
 				{ className: 'ax-cal-workspace__section' },
 				el( 'h2', null, title ),
-				list.length
+				groups.length
 					? el(
 						'ul',
 						{ className: 'ax-cal-workspace__list' },
-						list.map( function ( calendar ) {
+						groups.map( function ( group ) {
+							// Any language of a dataset being on means the dataset is on. The state cannot
+							// diverge through this control, so it cannot accumulate a difference either.
+							var on = group.members.some( function ( member ) {
+								return !! member.selected;
+							} );
 							return el(
 								'li',
-								{ key: calendar.id },
+								{ key: group.key },
 								el( C.CheckboxControl, {
-									label: calendar.summaryOverride || calendar.summary,
-									checked: !! calendar.selected,
+									label: group.label,
+									checked: on,
 									disabled: props.busy,
 									__nextHasNoMarginBottom: true,
 									onChange: function ( next ) {
-										props.onToggle( calendar, next );
+										group.members.forEach( function ( member ) {
+											props.onToggle( member, next );
+										} );
 									}
 								} ),
-								calendar.accessRole && 'owner' !== calendar.accessRole
-									? el( 'span', { className: 'ax-cal-workspace__role' }, calendar.accessRole )
+								group.members.length > 1
+									// What it exists in, which is not a choice: the grid shows each day once
+									// and picks the label, so this says why two calendars became one row.
+									? el( 'span', { className: 'ax-cal-workspace__role' }, group.locales.join( ' · ' ) )
+									: null,
+								1 === group.members.length && group.members[ 0 ].accessRole && 'owner' !== group.members[ 0 ].accessRole
+									? el( 'span', { className: 'ax-cal-workspace__role' }, group.members[ 0 ].accessRole )
 									: null
 							);
 						} )
@@ -504,6 +542,9 @@
 			apiFetch( {
 				path: wp.url.addQueryArgs( '/' + config.namespace + '/actors/me/calendarView', {
 					calendars: tickedKey,
+					// A hint, not a decision. The server picks the label so this grid, the feed and the
+					// calendar page cannot disagree about the same day.
+					languages: ( navigator.languages || [] ).slice( 0, 10 ).join( ',' ),
 					start: days[ 0 ].toISOString(),
 					end: new Date( days[ 41 ].getTime() + DAY_MS ).toISOString()
 				} )

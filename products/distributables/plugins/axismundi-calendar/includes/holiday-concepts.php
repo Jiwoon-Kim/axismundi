@@ -203,6 +203,23 @@ function axismundi_cal_join_holiday_catalog( int $calendar_id, int $catalog_id )
 }
 
 /**
+ * The dataset a calendar belongs to, named the way a client can group on.
+ *
+ * '' for a calendar that is nobody's sibling, which is most of them: a person's own calendar is not
+ * one language of a shared thing, and grouping it with anything would be inventing a relation.
+ *
+ * @param array<string,mixed>|null $calendar Calendar row.
+ * @return string
+ */
+function axismundi_cal_calendar_catalog_uuid( ?array $calendar ) : string {
+	if ( ! is_array( $calendar ) ) {
+		return '';
+	}
+	$catalog = axismundi_cal_holiday_catalog_get( (int) ( $calendar['holiday_catalog_id'] ?? 0 ) );
+	return is_array( $catalog ) ? (string) $catalog['uuid'] : '';
+}
+
+/**
  * The calendars that are one catalog, in each language it has.
  *
  * @param int $catalog_id Catalog id.

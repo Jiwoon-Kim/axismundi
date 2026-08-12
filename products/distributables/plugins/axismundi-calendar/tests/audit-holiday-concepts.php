@@ -348,7 +348,8 @@ try {
 		$ax_hc_linked_html = (string) ob_get_clean();
 		ax_hc_assert( $ax_hc_results, 'a linked entry shows the holiday it is a day of', str_contains( $ax_hc_linked_html, '설날' ) );
 		ax_hc_assert( $ax_hc_results, 'and can be detached again', str_contains( $ax_hc_linked_html, 'Unlink' ) );
-		ax_hc_assert( $ax_hc_results, 'and lets a maintainer change the day role after linking it', str_contains( $ax_hc_linked_html, 'name="role"' ) && str_contains( $ax_hc_linked_html, 'holiday-period' ) && str_contains( $ax_hc_linked_html, 'Save role' ) );
+		ax_hc_assert( $ax_hc_results, 'and lets a maintainer choose one day role after linking it', str_contains( $ax_hc_linked_html, 'type="radio" name="role"' ) && str_contains( $ax_hc_linked_html, 'Holiday period' ) && str_contains( $ax_hc_linked_html, 'Save role' ) );
+		ax_hc_assert( $ax_hc_results, 'showing a principal-day choice only when substitute is chosen', str_contains( $ax_hc_linked_html, 'class="ax-cal-substitute-for" hidden' ) && str_contains( $ax_hc_linked_html, 'Choose a principal day' ) );
 
 		$ax_hc_orphan = (int) axismundi_cal_system_item_save( $ax_hc_ko, array( 'title' => '제헌절', 'start_date' => '2026-07-17', 'categories' => array( 'HOLIDAY', 'OBSERVANCE' ), 'status' => 'published' ) );
 		ob_start();

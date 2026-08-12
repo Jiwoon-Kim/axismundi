@@ -43,6 +43,21 @@ defined( 'ABSPATH' ) || exit;
 const AXISMUNDI_CAL_OCCURRENCE_ROLES = array( 'principal', 'holiday-period', 'substitute' );
 
 /**
+ * A translated label for a day&rsquo;s mutually exclusive role in a holiday.
+ *
+ * @param string $role Stable role key.
+ * @return string
+ */
+function axismundi_cal_occurrence_role_label( string $role ) : string {
+	$labels = array(
+		'principal'      => __( 'Principal day', 'axismundi-calendar' ),
+		'holiday-period' => __( 'Holiday period', 'axismundi-calendar' ),
+		'substitute'     => __( 'Substitute day', 'axismundi-calendar' ),
+	);
+	return $labels[ $role ] ?? $role;
+}
+
+/**
  * What a catalog can claim to cover.
  *
  * A site publishing public holidays and a site publishing every commemoration are describing

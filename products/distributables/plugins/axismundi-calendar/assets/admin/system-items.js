@@ -24,6 +24,27 @@
 		all.indeterminate = checked > 0 && checked < inputs.length;
 	}
 
+	function syncSubstituteControl( form ) {
+		var substitute = form.querySelector( 'input[name="role"][value="substitute"]' );
+		var wrapper = form.querySelector( '.ax-cal-substitute-for' );
+		var select;
+
+		if ( ! substitute || ! wrapper ) {
+			return;
+		}
+
+		select = wrapper.querySelector( 'select[name="substitute_for"]' );
+		wrapper.hidden = ! substitute.checked;
+		if ( select ) {
+			select.disabled = ! substitute.checked;
+			select.required = substitute.checked;
+		}
+	}
+
+	function syncSubstituteControls() {
+		Array.prototype.forEach.call( document.querySelectorAll( 'form' ), syncSubstituteControl );
+	}
+
 	window.axismundiCalendarSystemItems = {
 		toggleAll: function ( all, form ) {
 			selections( form ).forEach( function ( input ) {
@@ -44,4 +65,11 @@
 		},
 		syncAll: syncAll,
 	};
+
+	document.addEventListener( 'change', function ( event ) {
+		if ( event.target.matches( 'input[name="role"]' ) ) {
+			syncSubstituteControl( event.target.closest( 'form' ) );
+		}
+	} );
+	syncSubstituteControls();
 }() );

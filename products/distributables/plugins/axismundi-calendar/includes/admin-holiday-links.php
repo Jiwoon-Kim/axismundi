@@ -307,19 +307,26 @@ function axismundi_cal_render_item_links( array $calendar, array $items, int $ye
 							<?php wp_nonce_field( 'ax_cal_link_' . $calendar_id ); ?>
 							<?php if ( is_array( $concept ) ) : ?>
 								<strong><?php echo esc_html( (string) $concept['label'] ); ?></strong>
-								<select name="role" aria-label="<?php esc_attr_e( 'Day role', 'axismundi-calendar' ); ?>">
+								<fieldset class="ax-cal-occurrence-role">
+									<legend class="screen-reader-text"><?php esc_html_e( 'Day role', 'axismundi-calendar' ); ?></legend>
 									<?php foreach ( AXISMUNDI_CAL_OCCURRENCE_ROLES as $role ) : ?>
-										<option value="<?php echo esc_attr( $role ); ?>" <?php selected( $role, (string) $occurrence['role'] ); ?>><?php echo esc_html( $role ); ?></option>
+										<label>
+											<input type="radio" name="role" value="<?php echo esc_attr( $role ); ?>" <?php checked( $role, (string) $occurrence['role'] ); ?>>
+											<?php echo esc_html( axismundi_cal_occurrence_role_label( $role ) ); ?>
+										</label>
 									<?php endforeach; ?>
-								</select>
-								<select name="substitute_for" aria-label="<?php esc_attr_e( 'Stands in for', 'axismundi-calendar' ); ?>">
-									<option value="0"><?php esc_html_e( 'No substitute day', 'axismundi-calendar' ); ?></option>
+								</fieldset>
+								<label class="ax-cal-substitute-for" <?php if ( 'substitute' !== (string) $occurrence['role'] ) : ?>hidden<?php endif; ?>>
+									<span><?php esc_html_e( 'Stands in for', 'axismundi-calendar' ); ?></span>
+									<select name="substitute_for" <?php disabled( 'substitute' !== (string) $occurrence['role'] ); ?> <?php if ( 'substitute' === (string) $occurrence['role'] ) : ?>required<?php endif; ?>>
+										<option value="0"><?php esc_html_e( 'Choose a principal day', 'axismundi-calendar' ); ?></option>
 									<?php foreach ( axismundi_cal_holiday_occurrences( (int) $concept['id'], (int) $occurrence['batch_year'] ) as $principal ) : ?>
 										<?php if ( (int) $principal['id'] !== (int) $occurrence['id'] && 'principal' === (string) $principal['role'] ) : ?>
 											<option value="<?php echo esc_attr( (string) $principal['id'] ); ?>" <?php selected( (int) $principal['id'], (int) $occurrence['substitute_for'] ); ?>><?php echo esc_html( (string) $principal['start_date'] ); ?></option>
 										<?php endif; ?>
 									<?php endforeach; ?>
-								</select>
+									</select>
+								</label>
 								<button type="submit" class="button button-small" name="ax_cal_link_action" value="update-role">
 									<?php esc_html_e( 'Save role', 'axismundi-calendar' ); ?>
 								</button>
@@ -339,11 +346,15 @@ function axismundi_cal_render_item_links( array $calendar, array $items, int $ye
 									<?php esc_html_e( 'This one', 'axismundi-calendar' ); ?>
 								</button>
 							<?php else : ?>
-								<select name="role">
+								<fieldset class="ax-cal-occurrence-role">
+									<legend class="screen-reader-text"><?php esc_html_e( 'Day role', 'axismundi-calendar' ); ?></legend>
 									<?php foreach ( AXISMUNDI_CAL_OCCURRENCE_ROLES as $role ) : ?>
-										<option value="<?php echo esc_attr( $role ); ?>"><?php echo esc_html( $role ); ?></option>
+										<label>
+											<input type="radio" name="role" value="<?php echo esc_attr( $role ); ?>" <?php checked( 'principal', $role ); ?>>
+											<?php echo esc_html( axismundi_cal_occurrence_role_label( $role ) ); ?>
+										</label>
 									<?php endforeach; ?>
-								</select>
+								</fieldset>
 								<button type="submit" class="button button-small" name="ax_cal_link_action" value="promote">
 									<?php esc_html_e( 'New holiday from this', 'axismundi-calendar' ); ?>
 								</button>

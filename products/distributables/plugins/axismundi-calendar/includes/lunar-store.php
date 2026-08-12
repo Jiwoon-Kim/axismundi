@@ -20,10 +20,22 @@ defined( 'ABSPATH' ) || exit;
 const AXISMUNDI_CAL_KOREAN_LUNISOLAR = 'korean-lunisolar';
 
 /**
- * KASI's stated range for 음양력변환. Outside it the Gregorian grid is unchanged and the annotation
- * is absent -- never an error, and never a blank cell where a number was.
+ * What the KASI OpenAPI actually answers for, measured 2026-08-13.
+ *
+ * Not `-0059-02-13`. That figure is the range KASI's own web 음양력변환 page states, and it was
+ * copied in here on the assumption that the OpenAPI serves the same data. It does not: 1391-01,
+ * 1000-01, 0001-01 and -0059-02 all come back with no items, while 1391-12 onward answer normally.
+ * The true floor is somewhere inside 1391; this is the earliest month confirmed to work, so it is
+ * the one claimed.
+ *
+ * The cost of the wrong figure was not cosmetic. The coverage guard exists to avoid spending quota
+ * on a question already answered locally, and a floor 1,450 years too low meant every request for a
+ * medieval month passed the guard and spent a request to be told nothing.
+ *
+ * Outside the range the Gregorian grid is unchanged and the annotation is absent -- never an error,
+ * and never a blank cell where a number was.
  */
-const AXISMUNDI_CAL_KOREAN_LUNISOLAR_FROM = '-0059-02-13';
+const AXISMUNDI_CAL_KOREAN_LUNISOLAR_FROM = '1391-12-01';
 const AXISMUNDI_CAL_KOREAN_LUNISOLAR_TO   = '2050-12-31';
 
 /**

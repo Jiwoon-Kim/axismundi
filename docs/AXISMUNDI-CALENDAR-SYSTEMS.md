@@ -121,8 +121,12 @@ registers its own.
 an implementation detail; a local ephemeris library replacing KASI later must not change the
 contract.
 
-**Coverage is a provider property, not an error.** KASI's stated range is `-59-02-13 ~ 2050-12-31`;
-the OpenAPI guide does not restate it, so probe the boundaries. Outside the range the Gregorian
+**Coverage is a provider property, not an error.** KASI's *website* states `-59-02-13 ~ 2050-12-31`,
+and that was copied into the code on the assumption the OpenAPI serves the same data. Measured
+2026-08-13, it does not: `-0059-02`, `0001-01`, `1000-01` and `1391-01` all return no items, while
+`1391-12` onward answer normally, and `2050-12` is the last month that does. The real range is
+**1391 to 2050**, so there is no `-59` end to compare `dangi` against — the question of whether they
+agree in antiquity cannot be asked of this API at all. Outside the range the Gregorian
 calendar renders exactly as before and the overlay is simply absent — never an error, never a blank
 grid. This split (primary range ≠ provider range) is the second good reason for the abstraction.
 

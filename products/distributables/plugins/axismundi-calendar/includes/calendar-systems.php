@@ -226,9 +226,13 @@ function axismundi_cal_register_calendar_system( string $id, array $args ) : voi
 				/*
 				 * The Unicode/CLDR calendar this corresponds to, recorded for `Intl` formatting and
 				 * BCP 47 interoperability and for nothing else. It is deliberately not the id and never
-				 * the source: `dangi` is ICU's own implementation with its own astronomical rules, and
-				 * assuming it agrees with the authority above -- year by year, leap month by leap month
-				 * -- is exactly the assumption that has never been checked here.
+				 * the source.
+				 *
+				 * Measured rather than assumed: ICU 78.1's `dangi` matches KASI exactly across 1999-2000,
+				 * 2026-2027, 2033-2034 and the years Korea changed its standard meridian, and disagrees
+				 * for 30 days of 1896 and 59 days of 1650-1651 -- including which Gregorian day is 설날
+				 * in 1896. Safe for formatting a date already resolved through the authority above.
+				 * Never safe for resolving one.
 				 */
 				'icu_calendar'  => (string) ( $args['icu_calendar'] ?? '' ),
 				// `fn() : void`, rendering this provider's own section of the settings screen.

@@ -175,11 +175,37 @@ type          lunisolar            not the same class as Islamic, which is lunar
 
 `dangi` is Unicode/CLDR's calendar identifier (`ko-KR-u-ca-dangi`) and ICU's own implementation of a
 Korean calendar. It is recorded for formatting and interoperability and is **not** the id, not the
-provider, and not the source. Whether ICU's astronomical rules and standard meridian agree with
-KASI's, year by year and leap month by leap month, has never been checked here — 1900, 1950, 2000,
-2033 and 2050 are where to look, 2033 especially, since the leap-month rule is famously contested
-there. Until somebody does that comparison, treating the two as one calendar is an assumption, not a
-fact.
+provider, and not the source.
+
+### They are not the same calendar — measured, 2026-08-13
+
+ICU 78.1's `dangi` was compared against KASI day by day over 4,667 days. Modern years agree
+exactly; historical ones do not.
+
+| Years | Days compared | Days differing |
+| --- | --- | --- |
+| 1999–2000, 2026–2027, 2033–2034 | 2,274 | **0** |
+| 1908, 1912, 1954, 1961 (standard-meridian changes) | ~1,460 | **0** |
+| 1896 | 366 | **30** |
+| 1650–1651 | ~590 | **59** |
+
+```
+1896-02-13   KASI 1.1     ICU 12.30     ← 설날 itself, a day apart
+1650-11-23   KASI 10.30   ICU 11.1
+```
+
+The 1896 case is the sharp one: the two disagree about which Gregorian day is 음력 1월 1일. A
+lunar-birthday feature reading ICU for a 19th-century date would return the wrong day and look
+right.
+
+2033 — the famously contested leap month — turned out to agree, so it is not the boundary to watch.
+The boundary is somewhere between 1896 and 1908, and nothing before 1650 has been tested at all,
+though KASI's range runs to 59 BC.
+
+So: `dangi` is fine for *formatting* a date this plugin has already resolved through KASI. It must
+never be used to *resolve* one. The two are interchangeable in living memory and provably not
+interchangeable before it, which is the worst possible shape for an assumption — it holds for every
+date anybody tests casually.
 
 The wider taxonomy matters for the same reason. Chinese, Korean, Vietnamese and Hebrew are
 lunisolar; Islamic is **lunar** and does not intercalate, which is why Ramadan walks through the

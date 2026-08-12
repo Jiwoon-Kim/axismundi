@@ -92,7 +92,6 @@ function axismundi_cal_free_calendar_slug( string $base ) : string {
  * @return int|WP_Error Calendar id.
  */
 function axismundi_cal_ensure_primary_calendar( string $actor_uri ) {
-	global $wpdb;
 	$actor_uri = trim( $actor_uri );
 	if ( '' === $actor_uri ) {
 		return new WP_Error(
@@ -131,8 +130,7 @@ function axismundi_cal_ensure_primary_calendar( string $actor_uri ) {
 	if ( is_wp_error( $created ) ) {
 		return $created;
 	}
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	$wpdb->update( axismundi_cal_calendars_table(), array( 'is_primary' => 1 ), array( 'id' => (int) $created ) );
+	axismundi_cal_set_primary( (int) $created, true );
 	return (int) $created;
 }
 

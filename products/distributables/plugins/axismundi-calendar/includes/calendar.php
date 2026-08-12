@@ -310,6 +310,38 @@ function axismundi_cal_record_owner( int $calendar_id, string $actor_uri, string
 }
 
 /**
+ * Make a Calendar its authority's default, or stop it being one.
+ *
+ * One primary per authority, so promoting demotes whatever held it. Separate from creation because
+ * this is also the only way to make a primary Calendar deletable: `calendar_delete()` refuses one
+ * outright, and demoting is the caller stating that it means to remove somebody's default rather
+ * than passing a flag that says so in passing.
+ *
+ * @param int  $calendar_id Calendar id.
+ * @param bool $primary     Whether this Calendar is the default.
+ * @return bool
+ */
+function axismundi_cal_set_primary( int $calendar_id, bool $primary ) : bool {
+	global $wpdb;
+	$calendar = axismundi_cal_calendar_get( $calendar_id );
+	if ( ! is_array( $calendar ) || 'local' !== (string) $calendar['kind'] ) {
+		return false;
+	}
+	$table = axismundi_cal_calendars_table();
+	if ( $primary ) {
+		$authority = (string) $calendar['authority_actor_uri'];
+		if ( '' === $authority ) {
+			// Nobody's default. A Calendar with no authority has no Actor to be the default for.
+			return false;
+		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+		$wpdb->update( $table, array( 'is_primary' => 0 ), array( 'authority_actor_uri_hash' => hash( 'sha256', $authority ) ) );
+	}
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+	return false !== $wpdb->update( $table, array( 'is_primary' => $primary ? 1 : 0 ), array( 'id' => $calendar_id ) );
+}
+
+/**
  * Delete a local Calendar and the Events it owns.
  *
  * A Calendar is the home of its Events. Deleting it therefore deletes that local content rather
@@ -328,6 +360,18 @@ function axismundi_cal_calendar_delete( int $calendar_id ) : bool {
 	// A remote Calendar is the representation of one source. Deleting it independently would leave
 	// the source and its cache pointing at a Calendar that no longer exists.
 	if ( ! is_array( $calendar ) || 'remote' === (string) $calendar['kind'] ) {
+		return false;
+	}
+	/*
+	 * An Actor's own Calendar is where their Events go when they name none, so deleting it leaves the
+	 * next Event with nowhere to be filed -- and the writer would simply make another, which is not
+	 * what anyone pressing delete meant. Refused here rather than in the screen that offers the
+	 * button, so no other caller can route around it.
+	 *
+	 * `axismundi_cal_set_primary()` is how a caller says it really means to remove one: demote first,
+	 * which is a deliberate second act rather than a flag passed to a delete.
+	 */
+	if ( ! empty( $calendar['is_primary'] ) ) {
 		return false;
 	}
 	foreach ( axismundi_cal_calendar_event_ids( $calendar_id ) as $event_id ) {

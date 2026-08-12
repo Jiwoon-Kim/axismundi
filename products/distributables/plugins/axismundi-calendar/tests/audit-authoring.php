@@ -224,6 +224,9 @@ $wpdb->update( axismundi_cal_calendars_table(), array( 'authority_actor_uri' => 
 		wp_delete_post( (int) $ax_ev_post_id, true );
 	}
 	foreach ( array_unique( $ax_ev_calendars ) as $ax_ev_calendar_id ) {
+		// Demoted first: a primary Calendar refuses to be deleted, and a fixture that wants one gone
+		// has to say so rather than leaving a row behind on every run.
+		axismundi_cal_set_primary( (int) $ax_ev_calendar_id, false );
 		axismundi_cal_calendar_delete( (int) $ax_ev_calendar_id );
 	}
 	foreach ( array_unique( $ax_ev_users ) as $ax_ev_user_id ) {

@@ -256,14 +256,38 @@ function axismundi_cal_handle_calendar_form() : void {
 			} else {
 				axismundi_cal_list_remove( $id, axismundi_cal_current_actor_uri() );
 			}
-		} else {
-			axismundi_cal_calendar_delete( $id );
+		} elseif ( ! empty( $existing['is_primary'] ) ) {
+			/*
+			 * Somebody's default Calendar. Deleting it would leave their next Event with nowhere to be
+			 * filed, and the writer would simply make another -- so the refusal is the honest answer
+			 * rather than a delete that quietly undoes itself.
+			 */
+			wp_safe_redirect( add_query_arg( array( 'ax_cal_error' => 'ax_cal_primary', 'ax_cal_edit' => $id ), $base ) );
+			exit;
+		} elseif ( ! axismundi_cal_calendar_delete( $id ) ) {
+			wp_safe_redirect( add_query_arg( array( 'ax_cal_error' => 'ax_cal_delete', 'ax_cal_edit' => $id ), $base ) );
+			exit;
 		}
 		wp_safe_redirect( add_query_arg( 'ax_cal_notice', 'deleted', $base ) );
 		exit;
 	}
 	if ( is_array( $existing ) && 'remote' === (string) $existing['kind'] ) {
-		wp_safe_redirect( add_query_arg( array( 'ax_cal_error' => 'readonly', 'ax_cal_edit' => $id ), $base ) );
+		/*
+		 * A subscribed Calendar is published elsewhere, so its name, description and timezone are its
+		 * publisher's to change. What is editable here is what somebody calls it in their own list --
+		 * which is a `CalendarListEntry` alias and changes nothing for anyone else following the same
+		 * feed. Google draws the line in the same place, and for the same reason.
+		 */
+		$alias   = isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['name'] ) ) : '';
+		$actor   = axismundi_cal_current_actor_uri();
+		$renamed = '' !== $actor
+			? axismundi_cal_list_set( $id, $actor, 'reader', array( 'summary_override' => $alias === (string) $existing['name'] ? '' : $alias ) )
+			: new WP_Error( 'ax_cal_no_actor', '' );
+		if ( is_wp_error( $renamed ) ) {
+			wp_safe_redirect( add_query_arg( array( 'ax_cal_error' => 'readonly', 'ax_cal_edit' => $id ), $base ) );
+			exit;
+		}
+		wp_safe_redirect( add_query_arg( array( 'ax_cal_notice' => 'renamed', 'ax_cal_edit' => $id ), $base ) );
 		exit;
 	}
 
@@ -364,6 +388,10 @@ function axismundi_cal_admin_error_message( string $code ) : string {
 			return __( 'A local calendar needs an Actor to belong to.', 'axismundi-calendar' );
 		case 'ax_cal_authority_locked':
 			return __( 'Ownership transfer is not available yet.', 'axismundi-calendar' );
+		case 'ax_cal_primary':
+			return __( 'This is the default calendar for its Actor, so it cannot be deleted. Make another calendar the default first, or empty this one.', 'axismundi-calendar' );
+		case 'ax_cal_delete':
+			return __( 'The calendar could not be deleted.', 'axismundi-calendar' );
 		case 'ax_cal_source_missing':
 			return __( 'That subscription no longer exists.', 'axismundi-calendar' );
 		case 'ax_cal_source_fetch':
@@ -582,7 +610,7 @@ function axismundi_cal_render_calendars_page() : void {
 		<?php return; endif; ?>
 
 		<?php if ( is_array( $calendar ) ) : ?>
-			<h2><?php esc_html_e( 'Calendar integration', 'axismundi-calendar' ); ?></h2>
+			<h2><?php esc_html_e( 'Integration', 'axismundi-calendar' ); ?></h2>
 			<table class="form-table" role="presentation">
 				<tr><th scope="row"><?php esc_html_e( 'Calendar ID', 'axismundi-calendar' ); ?></th><td><code><?php echo esc_html( (string) $calendar['uuid'] ); ?></code></td></tr>
 				<tr><th scope="row"><?php esc_html_e( 'Calendar API', 'axismundi-calendar' ); ?></th><td><a href="<?php echo esc_url( rest_url( 'axismundi/v1/calendars/' . $calendar['uuid'] ) ); ?>"><code><?php echo esc_html( rest_url( 'axismundi/v1/calendars/' . $calendar['uuid'] ) ); ?></code></a></td></tr>
@@ -595,7 +623,12 @@ function axismundi_cal_render_calendars_page() : void {
 			</table>
 		<?php endif; ?>
 
-		<h2><?php echo esc_html( is_array( $calendar ) ? __( 'Edit calendar', 'axismundi-calendar' ) : __( 'New calendar', 'axismundi-calendar' ) ); ?></h2>
+		<h2><?php echo esc_html( is_array( $calendar ) ? __( 'Details', 'axismundi-calendar' ) : __( 'New calendar', 'axismundi-calendar' ) ); ?></h2>
+		<?php if ( is_array( $calendar ) && 'remote' === (string) $calendar['kind'] ) : ?>
+			<p class="description">
+				<?php esc_html_e( 'This calendar is published elsewhere. Its description and timezone belong to whoever publishes it; the name here is what it is called in your own list, and changes nothing for anyone else following the same feed.', 'axismundi-calendar' ); ?>
+			</p>
+		<?php endif; ?>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="ax_cal_save_calendar">
 			<input type="hidden" name="calendar_id" value="<?php echo esc_attr( (string) ( $calendar['id'] ?? 0 ) ); ?>">
@@ -672,14 +705,66 @@ function axismundi_cal_render_calendars_page() : void {
 					<?php echo esc_html( is_array( $calendar ) ? __( 'Save calendar', 'axismundi-calendar' ) : __( 'Add calendar', 'axismundi-calendar' ) ); ?>
 				</button>
 				<?php if ( is_array( $calendar ) ) : ?>
-					<button type="submit" class="button button-link-delete" name="ax_cal_action" value="delete"
-						onclick="return confirm( '<?php echo esc_js( __( 'Delete this calendar and permanently delete every Event it owns?', 'axismundi-calendar' ) ); ?>' );">
-						<?php esc_html_e( 'Delete calendar', 'axismundi-calendar' ); ?>
-					</button>
 					<a class="button button-secondary" href="<?php echo esc_url( $base ); ?>"><?php esc_html_e( 'Cancel', 'axismundi-calendar' ); ?></a>
 				<?php endif; ?>
 			</p>
 		</form>
+
+		<?php if ( is_array( $calendar ) ) : ?>
+			<?php
+			$event_count = count( axismundi_cal_calendar_event_ids( (int) $calendar['id'] ) );
+			$is_remote   = 'remote' === (string) $calendar['kind'];
+			$is_primary  = ! empty( $calendar['is_primary'] );
+			/*
+			 * Stated in numbers rather than as "every Event it owns". A person deciding whether to
+			 * delete a calendar is deciding about a specific quantity of their own work, and a
+			 * confirmation that does not say how much is a confirmation they cannot answer.
+			 */
+			$confirm = $is_remote
+				? __( 'Remove this subscription from your calendars?', 'axismundi-calendar' )
+				: sprintf(
+					/* translators: %d: number of events. */
+					_n(
+						'Delete this calendar and permanently delete the %d event on it?',
+						'Delete this calendar and permanently delete the %d events on it?',
+						$event_count,
+						'axismundi-calendar'
+					),
+					$event_count
+				);
+			?>
+			<h2><?php echo esc_html( $is_remote ? __( 'Subscription', 'axismundi-calendar' ) : __( 'Delete', 'axismundi-calendar' ) ); ?></h2>
+			<?php if ( $is_primary ) : ?>
+				<p class="description">
+					<?php esc_html_e( 'This is the default calendar for its Actor. Events written without naming a calendar are filed here, so it cannot be deleted; empty it instead.', 'axismundi-calendar' ); ?>
+				</p>
+			<?php else : ?>
+				<p class="description">
+					<?php
+					echo esc_html(
+						$is_remote
+							? __( 'Removing this takes it out of your own list. The cached copy is kept while anyone else here still follows it.', 'axismundi-calendar' )
+							: sprintf(
+								/* translators: %d: number of events. */
+								_n( 'This calendar holds %d event, which is deleted with it.', 'This calendar holds %d events, which are deleted with it.', $event_count, 'axismundi-calendar' ),
+								$event_count
+							)
+					);
+					?>
+				</p>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="ax_cal_save_calendar">
+					<input type="hidden" name="calendar_id" value="<?php echo esc_attr( (string) $calendar['id'] ); ?>">
+					<?php wp_nonce_field( 'ax_cal_save_' . (int) $calendar['id'] ); ?>
+					<p>
+						<button type="submit" class="button button-link-delete" name="ax_cal_action" value="delete"
+							onclick="return confirm( '<?php echo esc_js( $confirm ); ?>' );">
+							<?php echo esc_html( $is_remote ? __( 'Unsubscribe', 'axismundi-calendar' ) : __( 'Delete calendar', 'axismundi-calendar' ) ); ?>
+						</button>
+					</p>
+				</form>
+			<?php endif; ?>
+		<?php endif; ?>
 
 		<?php
 		if ( is_array( $calendar ) ) {

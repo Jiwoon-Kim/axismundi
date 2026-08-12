@@ -159,6 +159,85 @@ try {
 		ax_pc_assert( $ax_pc_results, 'while assigning a different one afterwards is still a transfer, and still refused', is_wp_error( $ax_pc_again ) && 'ax_cal_authority_locked' === $ax_pc_again->get_error_code() );
 	}
 
+	// -- A default Calendar cannot be deleted out from under its Actor ---------------------------------
+
+	/*
+	 * Deleting somebody's default would leave their next Event with nowhere to be filed, and the
+	 * writer would immediately make another -- so a delete that appears to work and quietly undoes
+	 * itself is the outcome being refused here.
+	 */
+	$ax_pc_default = axismundi_cal_primary_calendar( $ax_pc_author['actor_uri'] );
+	if ( is_array( $ax_pc_default ) ) {
+		$ax_pc_default_id = (int) $ax_pc_default['id'];
+		ax_pc_assert( $ax_pc_results, 'a default Calendar refuses to be deleted', false === axismundi_cal_calendar_delete( $ax_pc_default_id ) );
+		ax_pc_assert( $ax_pc_results, 'and is still there afterwards', is_array( axismundi_cal_calendar_get( $ax_pc_default_id ) ) );
+		ax_pc_assert(
+			$ax_pc_results,
+			'with the Events on it untouched, so a refused delete is not a partial one',
+			2 === count( axismundi_cal_calendar_event_ids( $ax_pc_default_id ) )
+		);
+
+		/*
+		 * Demoting is how a caller says it means it. A flag on the delete would be the same decision
+		 * made in passing, and passed `true` by the next caller that had not thought about it.
+		 */
+		ax_pc_assert( $ax_pc_results, 'an ordinary Calendar can be made the default instead', true === axismundi_cal_set_primary( $ax_pc_named, true ) );
+		ax_pc_assert( $ax_pc_results, 'which moves the default rather than creating a second one', 0 === (int) axismundi_cal_calendar_get( $ax_pc_default_id )['is_primary'] );
+		ax_pc_assert( $ax_pc_results, 'and the Actor now has exactly that one', $ax_pc_named === (int) axismundi_cal_primary_calendar( $ax_pc_author['actor_uri'] )['id'] );
+		ax_pc_assert( $ax_pc_results, 'so the old one can be deleted once it is nobody&rsquo;s default', true === axismundi_cal_calendar_delete( $ax_pc_default_id ) );
+		ax_pc_assert( $ax_pc_results, 'and the Events on it went with it, which is what the screen warns about', array() === axismundi_cal_calendar_event_ids( $ax_pc_default_id ) );
+
+		// Put the fixture back the way the cleanup expects to find it.
+		axismundi_cal_set_primary( $ax_pc_named, false );
+	}
+
+	// -- A subscribed Calendar is not deletable this way either ------------------------------------------
+
+	/*
+	 * A slug unique to this run. A fixed one collides with a row a crashed run left behind, and
+	 * `calendar_save()` then returns a WP_Error whose int cast is 1 -- so every assertion below would
+	 * quietly be made about calendar #1 and pass for reasons that have nothing to do with the claim.
+	 */
+	$ax_pc_remote_saved = axismundi_cal_calendar_save(
+		array( 'name' => 'Primary remote', 'slug' => 'ax-pc-remote-' . strtolower( wp_generate_password( 6, false, false ) ), 'timezone' => 'Asia/Seoul', 'kind' => 'remote' )
+	);
+	ax_pc_assert( $ax_pc_results, 'the subscribed fixture really was created, so what follows is about it', is_int( $ax_pc_remote_saved ) );
+	$ax_pc_remote = (int) $ax_pc_remote_saved;
+	$ax_pc_calendars[] = $ax_pc_remote;
+	ax_pc_assert( $ax_pc_results, 'a subscribed Calendar is not deleted as though it were ours', false === axismundi_cal_calendar_delete( $ax_pc_remote ) );
+	/*
+	 * Refused on being subscribed, not merely on having no authority. Written straight into the row
+	 * because the writer refuses to give a remote Calendar a local authority -- which is the state a
+	 * legacy install could still be carrying, and the one the `kind` check exists for.
+	 */
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture recreating a legacy row.
+	$wpdb->update(
+		axismundi_cal_calendars_table(),
+		array( 'authority_actor_uri' => $ax_pc_author['actor_uri'], 'authority_actor_uri_hash' => hash( 'sha256', $ax_pc_author['actor_uri'] ) ),
+		array( 'id' => $ax_pc_remote )
+	);
+	ax_pc_assert( $ax_pc_results, 'nor made anybody&rsquo;s default, even carrying an authority it should never have had', false === axismundi_cal_set_primary( $ax_pc_remote, true ) );
+	/*
+	 * Put the invalid state back immediately. `verify_authority_migration()` reports a subscribed
+	 * Calendar claiming a local authority, correctly -- and a fixture that leaves one behind makes
+	 * another suite fail for a reason that has nothing to do with what it is testing.
+	 */
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- undoing the fixture above.
+	$wpdb->update( axismundi_cal_calendars_table(), array( 'authority_actor_uri' => '', 'authority_actor_uri_hash' => '' ), array( 'id' => $ax_pc_remote ) );
+
+	/*
+	 * And a local Calendar an upgrade left without an Actor cannot be one either: a default belongs to
+	 * somebody, and there is nobody here for it to be the default of.
+	 */
+	$ax_pc_orphaned = axismundi_cal_orphan_calendars();
+	if ( array() !== $ax_pc_orphaned ) {
+		ax_pc_assert(
+			$ax_pc_results,
+			'a Calendar with no Actor cannot be made a default, because a default belongs to somebody',
+			false === axismundi_cal_set_primary( (int) $ax_pc_orphaned[0]['id'], true )
+		);
+	}
+
 	// -- Who sees what ---------------------------------------------------------------------------------------
 
 	/*
@@ -189,7 +268,17 @@ try {
 		wp_delete_post( (int) $ax_pc_post, true );
 	}
 	foreach ( array_unique( $ax_pc_calendars ) as $ax_pc_calendar ) {
-		axismundi_cal_calendar_delete( (int) $ax_pc_calendar );
+		// Demoted first: a primary Calendar refuses to be deleted, and a fixture that wants one
+		// gone has to say so rather than leaving a row behind on every run.
+		axismundi_cal_set_primary( (int) $ax_pc_calendar, false );
+		if ( ! axismundi_cal_calendar_delete( (int) $ax_pc_calendar ) ) {
+			// A subscribed Calendar is refused too, since deleting one belongs to unsubscribing. This
+			// fixture has no source behind it, so the row is removed directly.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+			$wpdb->delete( axismundi_cal_calendars_table(), array( 'id' => (int) $ax_pc_calendar ) );
+			axismundi_cal_list_forget_calendar( (int) $ax_pc_calendar );
+			axismundi_cal_acl_forget_calendar( (int) $ax_pc_calendar );
+		}
 	}
 	foreach ( $ax_pc_users as $ax_pc_user_id ) {
 		wp_delete_user( (int) $ax_pc_user_id );

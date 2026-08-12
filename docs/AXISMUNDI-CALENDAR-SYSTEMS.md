@@ -188,16 +188,23 @@ engine, never as the source — an ICS is an output format here, not an input.
 
 ## Order of work
 
-This is the order *within* the lunar work. Globally it comes after the workspace and event slices:
+The secondary annotation does not wait on event authoring. It is a label under a number in a grid
+that already draws: no Event row, no `calendarId`, no event timezone, no recurrence. Sequencing it
+behind the authoring model would be inventing a dependency out of the fact that both say "calendar".
 
 ```
 Browse calendars / workspace catalog UX
+→ provider registry + AbsoluteDay + coverage
+→ LunarMonth store + fixture arithmetic
+→ KASI client + month materialisation
+→ workspace secondary-date annotation + the setting that turns it off
 → 일반 Event 작성 모델
-→ provider registry + LunarMonth store
-→ KASI client + secondary annotation
-→ lunar recurrence / birthday
+→ lunar birthday / CalendarRecurrence
 → astronomy providers
 ```
+
+Event authoring **is** a blocker for the lunar birthday — a recurrence has to hang on something —
+and on nothing before it.
 
 1. Provider registry + `toAbsolute`/`fromAbsolute` + coverage range. No provider yet.
 2. `LunarMonth` store and the JDN arithmetic over it. Unit-testable with fixtures, no network.

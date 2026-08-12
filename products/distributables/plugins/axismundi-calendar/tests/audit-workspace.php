@@ -375,6 +375,54 @@ try {
 	ax_ws_assert( $ax_ws_results, 'and `me` with nobody signed in is unauthenticated', 401 === ax_ws_bootstrap()[0] );
 	wp_set_current_user( $ax_ws_viewer['user_id'] );
 
+	// -- A maintained dataset, once however many of its languages are ticked -----------------------------
+
+	/*
+	 * 대한민국의 휴일 and Holidays in South Korea are one dataset in two languages. Ticking both must
+	 * not put every holiday on the grid twice: the day is the thing, and the language is how it is
+	 * written.
+	 */
+	$ax_ws_ko = (int) axismundi_cal_calendar_save(
+		array( 'kind' => 'system', 'system_provider' => 'holiday', 'provider_config' => array( 'region' => 'KR', 'source_locale' => 'ko-KR' ), 'name' => 'WS ko', 'slug' => 'ax-ws-ko-' . wp_generate_password( 5, false, false ), 'timezone' => 'Asia/Seoul' )
+	);
+	$ax_ws_en2 = (int) axismundi_cal_calendar_save(
+		array( 'kind' => 'system', 'system_provider' => 'holiday', 'provider_config' => array( 'region' => 'KR', 'source_locale' => 'en-US' ), 'name' => 'WS en', 'slug' => 'ax-ws-en-' . wp_generate_password( 5, false, false ), 'timezone' => 'Asia/Seoul' )
+	);
+	$ax_ws_calendars[] = $ax_ws_ko;
+	$ax_ws_calendars[] = $ax_ws_en2;
+	$ax_ws_cat = (int) axismundi_cal_holiday_catalog_save( array( 'provider' => 'holiday', 'jurisdiction' => 'KR', 'label' => 'WS catalog' ) );
+	axismundi_cal_join_holiday_catalog( $ax_ws_ko, $ax_ws_cat );
+	axismundi_cal_join_holiday_catalog( $ax_ws_en2, $ax_ws_cat );
+	$ax_ws_concept = (int) axismundi_cal_holiday_concept_save( array( 'catalog_id' => $ax_ws_cat, 'label' => 'WS holiday', 'categories' => array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ) ) );
+	$ax_ws_occ = (int) axismundi_cal_holiday_occurrence_save( $ax_ws_concept, array( 'start_date' => '2026-09-20', 'role' => 'principal', 'status' => 'published' ) );
+	$ax_ws_ko_item = (int) axismundi_cal_system_item_save( $ax_ws_ko, array( 'title' => '한국어 이름', 'start_date' => '2026-09-20', 'status' => 'published' ) );
+	$ax_ws_en_item = (int) axismundi_cal_system_item_save( $ax_ws_en2, array( 'title' => 'English name', 'start_date' => '2026-09-20', 'status' => 'published' ) );
+	axismundi_cal_link_item_to_occurrence( $ax_ws_ko_item, $ax_ws_occ );
+	axismundi_cal_link_item_to_occurrence( $ax_ws_en_item, $ax_ws_occ );
+
+	$ax_ws_ko_uuid  = (string) axismundi_cal_calendar_get( $ax_ws_ko )['uuid'];
+	$ax_ws_en_uuid  = (string) axismundi_cal_calendar_get( $ax_ws_en2 )['uuid'];
+	list( , $ax_ws_both ) = ax_ws_view( array( $ax_ws_ko_uuid, $ax_ws_en_uuid ), '2026-09-01T00:00:00Z', '2026-10-01T00:00:00Z' );
+	ax_ws_assert( $ax_ws_results, 'a day of a holiday appears once however many of its languages are ticked', 1 === count( (array) $ax_ws_both['items'] ) );
+	ax_ws_assert( $ax_ws_results, 'as a whole day, which it is everywhere', true === $ax_ws_both['items'][0]['allDay'] );
+	ax_ws_assert( $ax_ws_results, 'and read-only, since nobody authored it', true === $ax_ws_both['items'][0]['readOnly'] );
+	ax_ws_assert( $ax_ws_results, 'saying which language it is shown in', '' !== (string) $ax_ws_both['items'][0]['locale'] );
+
+	/*
+	 * A day nobody has related to anything is still a day. Hiding unlinked rows would make a dataset
+	 * look thinner than it is while somebody is still reviewing it.
+	 */
+	$ax_ws_loose = (int) axismundi_cal_system_item_save( $ax_ws_ko, array( 'title' => '연결 안 된 날', 'start_date' => '2026-09-25', 'status' => 'published' ) );
+	list( , $ax_ws_loose_body ) = ax_ws_view( array( $ax_ws_ko_uuid ), '2026-09-01T00:00:00Z', '2026-10-01T00:00:00Z' );
+	ax_ws_assert( $ax_ws_results, 'a row linked to no holiday is shown on its own', 2 === count( (array) $ax_ws_loose_body['items'] ) );
+
+	/*
+	 * And a draft year is not on anybody's calendar. Review is what publishing means here.
+	 */
+	axismundi_cal_system_item_save( $ax_ws_ko, array( 'status' => 'draft' ), $ax_ws_loose );
+	list( , $ax_ws_draft_body ) = ax_ws_view( array( $ax_ws_ko_uuid ), '2026-09-01T00:00:00Z', '2026-10-01T00:00:00Z' );
+	ax_ws_assert( $ax_ws_results, 'while an unreviewed one is not', 1 === count( (array) $ax_ws_draft_body['items'] ) );
+
 	// -- Naming one Calendar twice ---------------------------------------------------------------------------------
 
 	list( , $ax_ws_body ) = ax_ws_view( array( $ax_ws_mine_id, $ax_ws_mine_id ) );

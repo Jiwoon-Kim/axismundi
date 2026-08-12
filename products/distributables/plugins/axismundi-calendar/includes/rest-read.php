@@ -52,6 +52,14 @@ function axismundi_cal_request_role( int $calendar_id ) : string {
  * @return bool
  */
 function axismundi_cal_request_can_read( int $calendar_id ) : bool {
+	/*
+	 * Readable by everyone means everyone, including through this API. A calendar the site publishes
+	 * is public by policy rather than by a granted rule, so asking the ACL alone answered no for the
+	 * one kind of calendar that exists to be read -- and refused it from every REST surface at once.
+	 */
+	if ( axismundi_cal_is_publicly_readable( $calendar_id ) ) {
+		return true;
+	}
 	return axismundi_cal_acl_rank( axismundi_cal_request_role( $calendar_id ) ) >= axismundi_cal_acl_rank( 'reader' );
 }
 
@@ -309,7 +317,13 @@ function axismundi_cal_rest_calendar_view( WP_REST_Request $request ) {
 		(array) $request['calendars'],
 		(string) $request['start'],
 		(string) $request['end'],
-		(int) $request['limit']
+		(int) $request['limit'],
+		/*
+		 * What the client would rather read, resolved here rather than there. A browser choosing its
+		 * own label would give a different answer from the ICS feed and the calendar page for the same
+		 * day, and the point of one dataset is that it reads the same everywhere.
+		 */
+		(array) $request['languages']
 	);
 }
 
@@ -322,7 +336,7 @@ function axismundi_cal_rest_calendar_view( WP_REST_Request $request ) {
  * @param int               $limit  Maximum occurrences.
  * @return WP_REST_Response|WP_Error
  */
-function axismundi_cal_view_payload( array $uuids, string $start_arg, string $end_arg, int $limit ) {
+function axismundi_cal_view_payload( array $uuids, string $start_arg, string $end_arg, int $limit, array $accepted = array() ) {
 	$start = (int) strtotime( $start_arg );
 	$end   = (int) strtotime( $end_arg );
 	if ( $start <= 0 || $end <= 0 || $end <= $start ) {
@@ -340,6 +354,8 @@ function axismundi_cal_view_payload( array $uuids, string $start_arg, string $en
 	$to   = gmdate( 'Y-m-d H:i:s', $end );
 	$seen = array();
 	$out  = array();
+	// Days already answered by a sibling calendar of the same dataset.
+	$linked = array();
 
 	foreach ( array_slice( $uuids, 0, 50 ) as $uuid ) {
 		$calendar = axismundi_cal_calendar_by_uuid( (string) $uuid );
@@ -351,6 +367,47 @@ function axismundi_cal_view_payload( array $uuids, string $start_arg, string $en
 			continue;
 		}
 		$calendar_uuid = (string) $calendar['uuid'];
+
+		if ( 'system' === (string) $calendar['kind'] ) {
+			/*
+			 * A maintained dataset, and the one source where two selected calendars can be the same
+			 * thing. 대한민국의 휴일 and Holidays in South Korea are one dataset in two languages, so a
+			 * day appears once however many of its siblings are ticked -- `$linked` is what remembers a
+			 * day already answered, and it is keyed on the occurrence rather than the row.
+			 *
+			 * A row not yet linked to a day is its own entry. It is a holiday nobody has related to
+			 * anything, which is a state to show rather than one to hide.
+			 */
+			foreach ( axismundi_cal_system_items_in_range( (int) $calendar['id'], substr( $from, 0, 10 ), substr( $to, 0, 10 ) ) as $entry ) {
+				$occurrence_id = (int) $entry['holiday_occurrence_id'];
+				if ( $occurrence_id > 0 ) {
+					if ( isset( $linked[ $occurrence_id ] ) ) {
+						continue;
+					}
+					$linked[ $occurrence_id ] = true;
+				}
+				$label = $occurrence_id > 0 ? axismundi_cal_resolve_occurrence_label( $occurrence_id, $accepted ) : null;
+				$out[] = array(
+					'calendar'   => $calendar_uuid,
+					'eventId'    => 0,
+					'summary'    => is_array( $label ) ? $label['title'] : (string) $entry['title'],
+					// Which language this turned out to be, so a screen can say it is showing English
+					// because there is no Korean rather than looking finished.
+					'locale'     => is_array( $label ) ? $label['locale'] : '',
+					'url'        => '',
+					'startUtc'   => (string) $entry['start_date'] . ' 00:00:00',
+					'endUtc'     => (string) $entry['end_date'] . ' 00:00:00',
+					'startLocal' => (string) $entry['start_date'] . ' 00:00:00',
+					'endLocal'   => (string) $entry['end_date'] . ' 00:00:00',
+					// Always. A holiday is a whole day everywhere, and the moment one becomes an
+					// instant it moves a day for somebody.
+					'allDay'     => true,
+					'recurring'  => false,
+					'readOnly'   => true,
+				);
+			}
+			continue;
+		}
 
 		if ( 'remote' === (string) $calendar['kind'] ) {
 			foreach ( axismundi_cal_subscribed_entries( (int) $calendar['id'], $from, $to ) as $entry ) {
@@ -516,6 +573,15 @@ function axismundi_cal_register_read_routes() : void {
 				'start'     => array( 'type' => 'string', 'default' => gmdate( 'Y-m-d\TH:i:s\Z' ) ),
 				'end'       => array( 'type' => 'string', 'default' => gmdate( 'Y-m-d\TH:i:s\Z', time() + ( 90 * DAY_IN_SECONDS ) ) ),
 				'limit'     => array( 'type' => 'integer', 'default' => AXISMUNDI_CAL_RANGE_MAX, 'minimum' => 1, 'maximum' => AXISMUNDI_CAL_RANGE_MAX ),
+				'languages' => array(
+					'type'              => 'array',
+					'default'           => array(),
+					'items'             => array( 'type' => 'string' ),
+					'sanitize_callback' => static function ( $value ) : array {
+						$list = is_array( $value ) ? $value : explode( ',', (string) $value );
+						return array_slice( array_values( array_filter( array_map( 'sanitize_text_field', $list ) ) ), 0, 10 );
+					},
+				),
 			),
 		)
 	);

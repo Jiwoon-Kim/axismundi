@@ -532,6 +532,44 @@ try {
 	);
 	axismundi_cal_system_item_delete( $ax_ws_phase );
 
+	// -- A dataset somebody maintains themselves -------------------------------------------------------------------
+
+	/*
+	 * `local` and `manual` at once, which is a real combination rather than a contrived one: a person
+	 * keeping their own list of dates owns it, so it has an Actor and is not public by policy, and its
+	 * contents are still maintained entries rather than authored Events.
+	 *
+	 * Read by `kind` this Calendar had entries on its public page and in its .ics and none here, so
+	 * the workspace disagreed with the two surfaces it is a view of. `kind` answers who owns it and
+	 * who may see it; `source` answers what is in it, and that is the question this branch asks.
+	 */
+	$ax_ws_own = (int) axismundi_cal_calendar_save(
+		array(
+			'name'            => 'Workspace own dataset',
+			'slug'            => 'ax-ws-own',
+			'timezone'        => 'Asia/Seoul',
+			'source'          => 'manual',
+			'owner_actor_uri' => $ax_ws_viewer['actor_uri'],
+		)
+	);
+	$ax_ws_calendars[] = $ax_ws_own;
+	ax_ws_assert(
+		$ax_ws_results,
+		'a self-maintained dataset is local and manual at once',
+		$ax_ws_own > 0
+			&& 'system' !== (string) axismundi_cal_calendar_get( $ax_ws_own )['kind']
+			&& axismundi_cal_calendar_is_dataset( (array) axismundi_cal_calendar_get( $ax_ws_own ) )
+	);
+	axismundi_cal_system_item_save(
+		$ax_ws_own,
+		array( 'title' => 'Own dataset day', 'start_date' => '2026-09-14', 'status' => 'published' )
+	);
+	ax_ws_assert(
+		$ax_ws_results,
+		'and its entries reach the workspace, which reads what a calendar holds rather than who owns it',
+		in_array( 'Own dataset day', ax_ws_summaries( (array) axismundi_cal_view_payload( array( $ax_ws_uuid( $ax_ws_own ) ), '2026-09-01T00:00:00Z', '2026-10-01T00:00:00Z', 200 )->get_data() ), true )
+	);
+
 	// -- Naming one Calendar twice ---------------------------------------------------------------------------------
 
 	list( , $ax_ws_body ) = ax_ws_view( array( $ax_ws_mine_id, $ax_ws_mine_id ) );

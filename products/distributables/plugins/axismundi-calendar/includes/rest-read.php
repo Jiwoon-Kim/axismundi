@@ -486,12 +486,23 @@ function axismundi_cal_view_payload( array $uuids, string $start_arg, string $en
 		}
 		$calendar_uuid = (string) $calendar['uuid'];
 
-		if ( 'system' === (string) $calendar['kind'] ) {
+		if ( axismundi_cal_calendar_is_dataset( $calendar ) ) {
 			/*
-			 * A maintained dataset, and the one source where two selected calendars can be the same
-			 * thing. 대한민국의 휴일 and Holidays in South Korea are one dataset in two languages, so a
-			 * day appears once however many of its siblings are ticked -- `$linked` is what remembers a
-			 * day already answered, and it is keyed on the occurrence rather than the row.
+			 * Asked of the source rather than of the kind, because the two answer different questions
+			 * and only one of them is about what the rows are. `kind` is the ownership and visibility
+			 * model -- whether the site publishes this or a person does, and therefore whether it has
+			 * an Actor and is public by policy. `source` is whether the contents are authored Events or
+			 * maintained entries, which is what decides where to read them from.
+			 *
+			 * They come apart for a dataset somebody maintains themselves: `local` and `manual` at
+			 * once. Read by kind, such a Calendar showed its entries on its public page and in its .ics
+			 * and had none here, so the workspace disagreed with the two surfaces it is supposed to be
+			 * a view of.
+			 *
+			 * This is also the one source where two selected calendars can be the same thing.
+			 * 대한민국의 휴일 and Holidays in South Korea are one dataset in two languages, so a day
+			 * appears once however many of its siblings are ticked -- `$linked` is what remembers a day
+			 * already answered, and it is keyed on the occurrence rather than the row.
 			 *
 			 * A row not yet linked to a day is its own entry. It is a holiday nobody has related to
 			 * anything, which is a state to show rather than one to hide.

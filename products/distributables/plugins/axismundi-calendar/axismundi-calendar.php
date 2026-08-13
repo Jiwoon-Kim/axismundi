@@ -81,6 +81,7 @@ require_once __DIR__ . '/includes/ics-parse.php';
 require_once __DIR__ . '/includes/subscription.php';
 require_once __DIR__ . '/includes/ics-feed.php';
 require_once __DIR__ . '/includes/ics-dataset.php';
+require_once __DIR__ . '/includes/moon-phases.php';
 require_once __DIR__ . '/includes/calendar-page.php';
 require_once __DIR__ . '/includes/blocks.php';
 require_once __DIR__ . '/includes/envelope.php';

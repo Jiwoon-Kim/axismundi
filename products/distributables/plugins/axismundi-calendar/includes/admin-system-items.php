@@ -101,14 +101,24 @@ function axismundi_cal_handle_system_calendar_form() : void {
 	}
 	$base = admin_url( 'edit.php?post_type=' . AXISMUNDI_CAL_EVENT_POST_TYPE . '&page=ax-calendar-system' );
 
-	$name    = isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['name'] ) ) : '';
+	$name     = isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['name'] ) ) : '';
+	$provider = isset( $_POST['system_provider'] ) ? sanitize_key( wp_unslash( (string) $_POST['system_provider'] ) ) : '';
+	/*
+	 * Checked here as well as disabled on the form, because a disabled radio is a hint to a person and
+	 * nothing to a request. Re-enabling one in a browser console is the ordinary way somebody ends up
+	 * with a second, empty Moon phases calendar that nothing fills.
+	 */
+	if ( '' !== axismundi_cal_system_provider_unavailable_reason( $provider ) ) {
+		wp_safe_redirect( add_query_arg( 'ax_cal_error', 'ax_cal_provider_unavailable', $base ) );
+		exit;
+	}
 	$created = axismundi_cal_calendar_save(
 		array(
 			'kind'        => 'system',
 			'source'      => 'manual',
 			'name'        => $name,
 			'slug'        => isset( $_POST['slug'] ) ? sanitize_title( wp_unslash( (string) $_POST['slug'] ) ) : sanitize_title( $name ),
-			'system_provider' => isset( $_POST['system_provider'] ) ? sanitize_key( wp_unslash( (string) $_POST['system_provider'] ) ) : '',
+			'system_provider' => $provider,
 			'provider_config' => axismundi_cal_read_provider_config_post(),
 			'description' => isset( $_POST['description'] ) ? sanitize_textarea_field( wp_unslash( (string) $_POST['description'] ) ) : '',
 			'timezone'    => isset( $_POST['timezone'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['timezone'] ) ) : axismundi_cal_default_calendar_timezone(),
@@ -252,6 +262,10 @@ function axismundi_cal_system_item_message( string $code ) : string {
 			return __( 'Calendar created. Add its entries below.', 'axismundi-calendar' );
 		case 'ax_cal_system_provider':
 			return __( 'Choose what kind of dataset this calendar holds.', 'axismundi-calendar' );
+		case 'ax_cal_provider_unavailable':
+			return __( 'That kind of calendar cannot be created by hand yet.', 'axismundi-calendar' );
+		case 'managed_added':
+			return __( 'Calendar added, and filled.', 'axismundi-calendar' );
 		case 'ax_cal_provider_region':
 			return __( 'A holiday calendar needs a two-letter country or region code, such as KR.', 'axismundi-calendar' );
 		case 'ax_cal_provider_locale':
@@ -361,7 +375,7 @@ function axismundi_cal_render_system_items_page() : void {
 				<li>
 					<a href="<?php echo esc_url( add_query_arg( 'calendar', (int) $dataset['id'], $base ) ); ?>"
 						<?php echo (int) $dataset['id'] === $chosen_id ? 'class="current"' : ''; ?>>
-						<?php echo esc_html( (string) $dataset['name'] ); ?>
+						<?php echo esc_html( axismundi_cal_calendar_display_name( $dataset ) ); ?>
 					</a>
 				</li>
 			<?php endforeach; ?>
@@ -376,6 +390,7 @@ function axismundi_cal_render_system_items_page() : void {
 		<?php endif; ?>
 
 		<?php if ( axismundi_cal_can_manage_all_calendars() ) : ?>
+			<?php axismundi_cal_render_managed_calendar_offer( $base ); ?>
 			<?php axismundi_cal_render_system_calendar_form(); ?>
 		<?php endif; ?>
 	</div>
@@ -408,14 +423,29 @@ function axismundi_cal_render_system_calendar_form() : void {
 				<th scope="row"><?php esc_html_e( 'What it holds', 'axismundi-calendar' ); ?></th>
 				<td>
 					<?php foreach ( AXISMUNDI_CAL_SYSTEM_PROVIDERS as $provider_key ) : ?>
-						<?php $provider_labels = axismundi_cal_system_provider_labels( $provider_key ); ?>
+						<?php
+						$provider_labels = axismundi_cal_system_provider_labels( $provider_key );
+						/*
+						 * Shown rather than hidden, including the ones that cannot be picked. The list is what
+						 * tells somebody what a system calendar can be, and a kind that silently does not
+						 * appear reads as one that does not exist -- which would make the astronomy calendars
+						 * already on the site look like they came from somewhere else.
+						 */
+						$provider_blocked = axismundi_cal_system_provider_unavailable_reason( $provider_key );
+						?>
 						<p>
 							<label>
-								<input type="radio" name="system_provider" value="<?php echo esc_attr( $provider_key ); ?>" <?php checked( 'holiday', $provider_key ); ?>>
+								<input type="radio" name="system_provider" value="<?php echo esc_attr( $provider_key ); ?>"
+									<?php checked( 'holiday', $provider_key ); ?>
+									<?php disabled( '' !== $provider_blocked ); ?>>
 								<strong><?php echo esc_html( $provider_labels['label'] ); ?></strong>
 							</label>
 							<br>
 							<span class="description" style="margin-inline-start:1.8em;"><?php echo esc_html( $provider_labels['description'] ); ?></span>
+							<?php if ( '' !== $provider_blocked ) : ?>
+								<br>
+								<em class="description" style="margin-inline-start:1.8em;"><?php echo esc_html( $provider_blocked ); ?></em>
+							<?php endif; ?>
 						</p>
 					<?php endforeach; ?>
 					<p class="description">
@@ -502,7 +532,7 @@ function axismundi_cal_render_system_item_editor( array $calendar, string $base 
 	}
 	$selected = axismundi_cal_normalize_categories( is_array( $current ) ? (string) $current['categories'] : '' );
 	?>
-	<h2><?php echo esc_html( (string) $calendar['name'] ); ?></h2>
+	<h2><?php echo esc_html( axismundi_cal_calendar_display_name( $calendar ) ); ?></h2>
 
 	<p>
 		<?php esc_html_e( 'Year:', 'axismundi-calendar' ); ?>
@@ -790,3 +820,60 @@ function axismundi_cal_render_system_item_editor( array $calendar, string $base 
 	</form>
 	<?php
 }
+
+/**
+ * Offer to add back a maintained calendar that is not here.
+ *
+ * These are provisioned once and never re-provisioned, so deleting one sticks -- which is right, and
+ * leaves this as the only way back. Shown only when something is actually missing, because a button
+ * offering to add what is already there reads as an invitation to make a second one.
+ *
+ * @param string $base Screen URL.
+ * @return void
+ */
+function axismundi_cal_render_managed_calendar_offer( string $base ) : void {
+	$missing = axismundi_cal_managed_calendars_missing();
+	if ( array() === $missing ) {
+		return;
+	}
+	?>
+	<h2><?php esc_html_e( 'Calendars this plugin maintains', 'axismundi-calendar' ); ?></h2>
+	<p class="description">
+		<?php esc_html_e( 'Computed rather than curated, so there is nothing to configure and nothing to review. These are added when the plugin is installed; one that has been deleted stays deleted until it is added back here.', 'axismundi-calendar' ); ?>
+	</p>
+	<?php foreach ( $missing as $key ) : ?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-block-end:1em;">
+			<input type="hidden" name="action" value="ax_cal_add_managed_calendar">
+			<input type="hidden" name="managed_key" value="<?php echo esc_attr( $key ); ?>">
+			<?php wp_nonce_field( 'ax_cal_add_managed' ); ?>
+			<p>
+				<strong><?php echo esc_html( axismundi_cal_managed_calendar_name( $key ) ); ?></strong><br>
+				<span class="description"><?php echo esc_html( axismundi_cal_managed_calendar_description( $key ) ); ?></span>
+			</p>
+			<?php submit_button( __( 'Add it back', 'axismundi-calendar' ), 'secondary', 'submit', false ); ?>
+		</form>
+	<?php endforeach; ?>
+	<?php
+}
+
+/**
+ * Add back one maintained calendar.
+ *
+ * @return void
+ */
+function axismundi_cal_handle_add_managed_calendar() : void {
+	check_admin_referer( 'ax_cal_add_managed' );
+	if ( ! axismundi_cal_can_manage_all_calendars() ) {
+		wp_die( esc_html__( 'You are not allowed to maintain this site calendars.', 'axismundi-calendar' ), 403 );
+	}
+	$base = admin_url( 'edit.php?post_type=' . AXISMUNDI_CAL_EVENT_POST_TYPE . '&page=ax-calendar-system' );
+	$key  = isset( $_POST['managed_key'] ) ? sanitize_key( wp_unslash( (string) $_POST['managed_key'] ) ) : '';
+	$added = axismundi_cal_provision_managed_calendar( $key );
+	if ( is_wp_error( $added ) ) {
+		wp_safe_redirect( add_query_arg( 'ax_cal_error', rawurlencode( $added->get_error_code() ), $base ) );
+		exit;
+	}
+	wp_safe_redirect( add_query_arg( array( 'calendar' => (int) $added, 'ax_cal_notice' => 'managed_added' ), $base ) );
+	exit;
+}
+add_action( 'admin_post_ax_cal_add_managed_calendar', 'axismundi_cal_handle_add_managed_calendar' );

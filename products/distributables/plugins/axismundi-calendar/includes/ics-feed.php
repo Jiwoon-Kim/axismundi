@@ -316,7 +316,7 @@ function axismundi_cal_serve_ics() : void {
 			} elseif ( 'local' === (string) $calendar['kind'] ) {
 				$feed = axismundi_cal_site_feed(
 					(int) $calendar['id'],
-					(string) $calendar['name'],
+					axismundi_cal_calendar_display_name( $calendar ),
 					axismundi_cal_calendar_timezone( $calendar )
 				);
 			}

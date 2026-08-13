@@ -242,7 +242,7 @@ function axismundi_cal_render_sources_page() : void {
 				<?php foreach ( $rows as $row ) : ?>
 					<tr>
 						<td>
-							<strong><?php echo esc_html( is_array( $row['calendar'] ) ? (string) $row['calendar']['name'] : __( 'Unknown calendar', 'axismundi-calendar' ) ); ?></strong>
+							<strong><?php echo esc_html( is_array( $row['calendar'] ) ? axismundi_cal_calendar_display_name( $row['calendar'] ) : __( 'Unknown calendar', 'axismundi-calendar' ) ); ?></strong>
 							<?php if ( ! $row['subscribed'] ) : ?>
 								<br><em><?php esc_html_e( 'You do not follow this one', 'axismundi-calendar' ); ?></em>
 							<?php endif; ?>

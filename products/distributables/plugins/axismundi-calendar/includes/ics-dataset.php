@@ -161,7 +161,7 @@ function axismundi_cal_dataset_feed( array $calendar ) : ?array {
 		array(),
 		(int) strtotime( $from ),
 		(int) strtotime( $to ),
-		(string) $calendar['name']
+		axismundi_cal_calendar_display_name( $calendar )
 	);
 
 	if ( $switched ) {

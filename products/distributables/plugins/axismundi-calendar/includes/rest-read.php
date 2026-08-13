@@ -125,7 +125,7 @@ function axismundi_cal_rest_calendar( array $calendar, array $entry = array() ) 
 
 	$out = array(
 		'id'          => (string) $calendar['uuid'],
-		'summary'     => (string) $calendar['name'],
+		'summary'     => axismundi_cal_calendar_display_name( $calendar ),
 		'description' => (string) $calendar['description'],
 		'timezone'    => axismundi_cal_calendar_timezone( $calendar ),
 		'kind'        => (string) $calendar['kind'],

@@ -51,6 +51,9 @@ function axismundi_cal_render_workspace_page() : void {
 	if ( ! axismundi_cal_can_manage_calendars() ) {
 		wp_die( esc_html__( 'You are not allowed to manage calendars.', 'axismundi-calendar' ), 403 );
 	}
+	// Managed Calendars have no owner to add them to somebody's list. The workspace is their first
+	// useful surface, so make them visible to this Actor before its REST bootstrap reads CalendarList.
+	axismundi_cal_add_managed_calendars_to_list( axismundi_cal_current_actor_uri() );
 	?>
 	<div class="wrap">
 		<div id="ax-cal-workspace" class="ax-cal-workspace">

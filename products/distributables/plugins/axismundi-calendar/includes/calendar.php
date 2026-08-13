@@ -176,12 +176,29 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 	}
 	$existing = $calendar_id > 0 ? axismundi_cal_calendar_get( $calendar_id ) : null;
 
+	/*
+	 * Which managed calendar this is, if it is one. Settled once: a key cannot be attached to an
+	 * existing Calendar or taken off one, because it decides what names the row and what fills it,
+	 * and moving it would leave entries behind under a Calendar that no longer claims them.
+	 */
+	$managed_key = is_array( $existing )
+		? (string) ( $existing['managed_key'] ?? '' )
+		: trim( (string) ( $fields['managed_key'] ?? '' ) );
+	if ( '' !== $managed_key && ! isset( AXISMUNDI_CAL_MANAGED_CALENDARS[ $managed_key ] ) ) {
+		return new WP_Error( 'ax_cal_managed_unknown', __( 'That is not a calendar this plugin maintains.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+
+	/*
+	 * A name is required of everything except a calendar this plugin maintains, which is named by its
+	 * key in the language of whoever is reading it -- the same rule an entry follows when its category
+	 * names it. An administrator may still type one, and then that is what the site calls it.
+	 */
 	$name = trim( (string) ( $fields['name'] ?? ( $existing['name'] ?? '' ) ) );
-	if ( '' === $name ) {
+	if ( '' === $name && '' === $managed_key ) {
 		return new WP_Error( 'ax_cal_name', __( 'A calendar needs a name.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
 
-	$slug = sanitize_title( (string) ( $fields['slug'] ?? ( $existing['slug'] ?? $name ) ) );
+	$slug = sanitize_title( (string) ( $fields['slug'] ?? ( $existing['slug'] ?? ( '' !== $name ? $name : $managed_key ) ) ) );
 	if ( '' === $slug ) {
 		return new WP_Error( 'ax_cal_slug', __( 'A calendar needs a slug that can appear in a URL.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
@@ -290,7 +307,12 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 	$now  = current_time( 'mysql', true );
 	$data = array(
 		'slug'           => $slug,
-		'name'           => $name,
+		/*
+		 * NULL rather than '' for a calendar named by its key, so the two states stay distinguishable:
+		 * NULL says the key names it, '' would say somebody cleared the name.
+		 */
+		'name'           => '' !== $name ? $name : null,
+		'managed_key'    => $managed_key,
 		'description'    => (string) ( $fields['description'] ?? ( $existing['description'] ?? '' ) ),
 		'timezone'       => $timezone,
 		'kind'           => $kind,

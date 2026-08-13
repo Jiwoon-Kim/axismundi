@@ -52,7 +52,7 @@ function axismundi_cal_editor_calendars() : array {
 		if ( axismundi_cal_can_manage_calendar( $calendar ) ) {
 			$out[] = array(
 				'id'       => (int) $calendar['id'],
-				'name'     => (string) $calendar['name'],
+				'name'     => axismundi_cal_calendar_display_name( $calendar ),
 				'timezone' => axismundi_cal_calendar_timezone( $calendar ),
 			);
 		}

@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '26';
+const AXISMUNDI_CAL_DB_VERSION        = '27';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 const AXISMUNDI_CAL_SCHEMA_BAIL_OPTION = 'ax_cal_schema_bail';
 
@@ -329,7 +329,8 @@ function axismundi_cal_install_schema() : bool {
 			id bigint(20) unsigned NOT NULL auto_increment,
 			uuid char(36) NOT NULL default '',
 			slug varchar(191) NOT NULL default '',
-			name text NOT NULL,
+			name text NULL,
+			managed_key varchar(64) NOT NULL default '',
 			description longtext NOT NULL,
 			timezone varchar(64) NOT NULL default '',
 			kind varchar(16) NOT NULL default 'local',
@@ -761,6 +762,12 @@ function axismundi_cal_install_schema() : bool {
 	 */
 	axismundi_cal_relax_system_item_title();
 
+	/*
+	 * The same relaxation one level up: a calendar this plugin maintains is named by its key, in the
+	 * language of whoever is reading, so there is no string for the column to hold.
+	 */
+	axismundi_cal_relax_calendar_name();
+
 	$lunar_cache = $wpdb->prefix . 'ax_cal_lunar_months';
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- this plugin's own table.
 	$wpdb->query( "DROP TABLE IF EXISTS {$lunar_cache}" );
@@ -817,6 +824,26 @@ function axismundi_cal_relax_system_item_dates() : void {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- this plugin's own table.
 		$wpdb->query( "ALTER TABLE {$table} MODIFY {$column} date NULL DEFAULT NULL" );
 	}
+}
+
+/**
+ * Let a maintained calendar have no name, for the ones their key names.
+ *
+ * `dbDelta` will not take NOT NULL off a column that already has it, the same reason the item title
+ * and the item dates needed freeing.
+ *
+ * @return void
+ */
+function axismundi_cal_relax_calendar_name() : void {
+	global $wpdb;
+	$table = axismundi_cal_calendars_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+	$definition = $wpdb->get_row( $wpdb->prepare( "SHOW COLUMNS FROM {$table} LIKE %s", 'name' ), ARRAY_A );
+	if ( ! is_array( $definition ) || 'NO' !== ( $definition['Null'] ?? '' ) ) {
+		return;
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- this plugin's own table.
+	$wpdb->query( "ALTER TABLE {$table} MODIFY name text NULL DEFAULT NULL" );
 }
 
 /**

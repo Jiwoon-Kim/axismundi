@@ -198,7 +198,7 @@ function axismundi_cal_admin_calendar_rows() : array {
 		}
 		$rows[] = $calendar;
 	}
-	usort( $rows, static fn( array $left, array $right ) : int => strcasecmp( (string) $left['name'], (string) $right['name'] ) );
+	usort( $rows, static fn( array $left, array $right ) : int => strcasecmp( axismundi_cal_calendar_display_name( $left ), axismundi_cal_calendar_display_name( $right ) ) );
 	return $rows;
 }
 
@@ -472,7 +472,7 @@ function axismundi_cal_render_calendars_page() : void {
 				<ul>
 					<?php foreach ( $orphans as $orphan ) : ?>
 						<li>
-							<a href="<?php echo esc_url( add_query_arg( 'ax_cal_edit', (int) $orphan['id'], $base ) ); ?>"><?php echo esc_html( (string) $orphan['name'] ); ?></a>
+							<a href="<?php echo esc_url( add_query_arg( 'ax_cal_edit', (int) $orphan['id'], $base ) ); ?>"><?php echo esc_html( axismundi_cal_calendar_display_name( $orphan ) ); ?></a>
 							<?php echo esc_html( sprintf( /* translators: %d: number of events. */ _n( '%d event', '%d events', count( axismundi_cal_calendar_event_ids( (int) $orphan['id'] ) ), 'axismundi-calendar' ), count( axismundi_cal_calendar_event_ids( (int) $orphan['id'] ) ) ) ); ?>
 						</li>
 					<?php endforeach; ?>
@@ -511,7 +511,7 @@ function axismundi_cal_render_calendars_page() : void {
 					<?php foreach ( axismundi_cal_all_calendar_rows() as $row ) : ?>
 						<?php $row_authority = (string) $row['authority_actor_uri']; ?>
 						<tr>
-							<td><strong><a href="<?php echo esc_url( add_query_arg( 'ax_cal_edit', (int) $row['id'], $base ) ); ?>"><?php echo esc_html( (string) $row['name'] ); ?></a></strong></td>
+							<td><strong><a href="<?php echo esc_url( add_query_arg( 'ax_cal_edit', (int) $row['id'], $base ) ); ?>"><?php echo esc_html( axismundi_cal_calendar_display_name( $row ) ); ?></a></strong></td>
 							<td><code><?php echo esc_html( (string) $row['slug'] ); ?></code></td>
 							<td><?php echo esc_html( 'remote' === (string) $row['kind'] ? __( 'Subscribed', 'axismundi-calendar' ) : __( 'Local', 'axismundi-calendar' ) ); ?></td>
 							<td>
@@ -564,9 +564,9 @@ function axismundi_cal_render_calendars_page() : void {
 						<td>
 							<strong>
 								<?php if ( $can_edit ) : ?>
-									<a href="<?php echo esc_url( add_query_arg( 'ax_cal_edit', (int) $row['id'], $base ) ); ?>"><?php echo esc_html( $row['name'] ); ?></a>
+									<a href="<?php echo esc_url( add_query_arg( 'ax_cal_edit', (int) $row['id'], $base ) ); ?>"><?php echo esc_html( axismundi_cal_calendar_display_name( $row ) ); ?></a>
 								<?php else : ?>
-									<?php echo esc_html( $row['name'] ); ?>
+									<?php echo esc_html( axismundi_cal_calendar_display_name( $row ) ); ?>
 								<?php endif; ?>
 							</strong>
 						</td>
@@ -636,7 +636,7 @@ function axismundi_cal_render_calendars_page() : void {
 			<table class="form-table" role="presentation">
 				<tr>
 					<th scope="row"><label for="ax-cal-name"><?php esc_html_e( 'Name', 'axismundi-calendar' ); ?></label></th>
-					<td><input name="name" id="ax-cal-name" type="text" class="regular-text" required value="<?php echo esc_attr( (string) ( $calendar['name'] ?? '' ) ); ?>"></td>
+					<td><input name="name" id="ax-cal-name" type="text" class="regular-text" <?php echo '' === (string) ( $calendar['managed_key'] ?? '' ) ? 'required' : 'placeholder="' . esc_attr( axismundi_cal_calendar_display_name( (array) $calendar ) ) . '"'; ?> value="<?php echo esc_attr( (string) ( $calendar['name'] ?? '' ) ); ?>"></td>
 				</tr>
 				<tr>
 					<th scope="row"><label for="ax-cal-slug"><?php esc_html_e( 'Slug', 'axismundi-calendar' ); ?></label></th>

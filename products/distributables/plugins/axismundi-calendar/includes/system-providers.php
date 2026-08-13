@@ -74,6 +74,33 @@ function axismundi_cal_system_provider_labels( string $provider ) : array {
 }
 
 /**
+ * Why a provider cannot be chosen on the creation form, or '' when it can.
+ *
+ * Two different reasons, and they are worth telling apart on screen rather than greying four rows
+ * out identically. `astronomy` is refused because this plugin already maintains those calendars:
+ * choosing it would produce a second, empty Moon phases beside the real one. The rest are refused
+ * because nothing fills them yet, and a calendar that can be created but never populated is a
+ * feature that looks finished and is not.
+ *
+ * Solar eclipses are the case that will reopen `astronomy` to a person. "There is an eclipse" is a
+ * global instant like any other, but what somebody actually wants to know is whether it is visible
+ * where they are -- so it needs the geodata plugin, and until that exists an astronomy calendar
+ * remains something the site maintains rather than something anybody configures.
+ *
+ * @param string $provider Provider key.
+ * @return string
+ */
+function axismundi_cal_system_provider_unavailable_reason( string $provider ) : string {
+	if ( 'astronomy' === $provider ) {
+		return __( 'Maintained by this plugin, and added for you. Creating one by hand would leave a second, empty copy beside it.', 'axismundi-calendar' );
+	}
+	if ( 'holiday' === $provider ) {
+		return '';
+	}
+	return __( 'Not yet. There is no writer that fills this kind, so a calendar made now would stay empty.', 'axismundi-calendar' );
+}
+
+/**
  * The item categories a provider's entries are expected to carry.
  *
  * Offered rather than enforced: a holiday calendar mostly holds `PUBLIC-HOLIDAY` and `OBSERVANCE`,

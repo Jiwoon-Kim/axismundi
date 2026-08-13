@@ -44,7 +44,7 @@ function axismundi_cal_serve_calendar_page() : void {
 	?>
 	<main id="primary" class="site-main ax-cal-page">
 		<header class="ax-cal-page__header">
-			<h1><?php echo esc_html( (string) $calendar['name'] ); ?></h1>
+			<h1><?php echo esc_html( axismundi_cal_calendar_display_name( $calendar ) ); ?></h1>
 			<?php if ( '' !== (string) $calendar['description'] ) : ?>
 				<p><?php echo esc_html( (string) $calendar['description'] ); ?></p>
 			<?php endif; ?>

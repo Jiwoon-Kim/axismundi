@@ -44,7 +44,7 @@ function axismundi_cal_handle_catalog_join() : void {
 				'provider'     => 'holiday',
 				'jurisdiction' => (string) ( $config['region'] ?? '' ),
 				'scope'        => isset( $_POST['scope'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['scope'] ) ) : 'public-holidays-and-observances',
-				'label'        => (string) $calendar['name'],
+				'label'        => axismundi_cal_calendar_display_name( $calendar ),
 			)
 		);
 		if ( is_wp_error( $chosen ) ) {
@@ -289,10 +289,10 @@ function axismundi_cal_render_catalog_join( array $calendar ) : void {
 				<li>
 					<code><?php echo esc_html( (string) ( $sibling_config['source_locale'] ?? '?' ) ); ?></code>
 					<?php if ( (int) $sibling['id'] === $calendar_id ) : ?>
-						<strong><?php echo esc_html( (string) $sibling['name'] ); ?></strong>
+						<strong><?php echo esc_html( axismundi_cal_calendar_display_name( $sibling ) ); ?></strong>
 					<?php else : ?>
 						<a href="<?php echo esc_url( add_query_arg( 'calendar', (int) $sibling['id'], admin_url( 'edit.php?post_type=' . AXISMUNDI_CAL_EVENT_POST_TYPE . '&page=ax-calendar-system' ) ) ); ?>">
-							<?php echo esc_html( (string) $sibling['name'] ); ?>
+							<?php echo esc_html( axismundi_cal_calendar_display_name( $sibling ) ); ?>
 						</a>
 					<?php endif; ?>
 				</li>

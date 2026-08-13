@@ -147,19 +147,32 @@
 	outline-offset: -2px;
 }
 
-.ax-cal-workspace__day.is-today .ax-cal-workspace__daynum {
+/* The circle marks the number, not the row the number sits in. */
+.ax-cal-workspace__day.is-today .ax-cal-workspace__daynum-value {
 	background: #2271b1;
 	color: #fff;
 	border-radius: 50%;
-	width: 1.8em;
+	min-width: 1.8em;
 	height: 1.8em;
 	display: grid;
 	place-items: center;
 }
 
+/*
+ * Beside the number, not under it. Stacked, every cell spent a second line on something that is one
+ * short string, and the month's events started a row lower for no gain.
+ */
 .ax-cal-workspace__daynum {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
 	font-size: 0.9em;
 	color: #50575e;
+}
+
+.ax-cal-workspace__daynum-value {
+	flex: 0 0 auto;
 }
 
 .ax-cal-workspace__event {
@@ -222,8 +235,8 @@
 }
 
 .ax-cal-workspace__secondary {
-	display: block;
-	margin-top: 1px;
+	/* Shrinks and truncates rather than pushing the number out of the cell. */
+	min-width: 0;
 	font-size: 11px;
 	color: #757575;
 	font-variant-numeric: tabular-nums;

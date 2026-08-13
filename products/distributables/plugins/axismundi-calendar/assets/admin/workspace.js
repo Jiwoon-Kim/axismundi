@@ -533,7 +533,12 @@
 						el(
 						'div',
 						{ className: 'ax-cal-workspace__daynum' },
-						day.getDate(),
+						/*
+						 * The number is its own element. Today's marker is a circle sized to a digit, and
+						 * while the number and the second date shared one box the circle was drawn around
+						 * both and the second date ended up inside it.
+						 */
+						el( 'span', { className: 'ax-cal-workspace__daynum-value' }, day.getDate() ),
 						/*
 						 * The same day said another way, not another day. It sits with the number rather
 						 * than with the events because it is part of what this cell *is*, and an entry in

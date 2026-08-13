@@ -84,6 +84,40 @@ $ax_cal_from = $ax_cal_first->setTimezone( $ax_cal_utc )->format( 'Y-m-d H:i:s' 
 $ax_cal_to   = $ax_cal_last->setTimezone( $ax_cal_utc )->format( 'Y-m-d H:i:s' );
 if ( -1 === $ax_cal_filter ) {
 	$ax_cal_occurrences = array();
+} elseif ( is_array( $ax_cal_collection ) && axismundi_cal_calendar_is_dataset( $ax_cal_collection ) ) {
+	/*
+	 * A maintained dataset renders its own entries and nobody else's. This Calendar is one language's
+	 * edition of the data -- 대한민국의 휴일 shows 설날 and Holidays in South Korea shows Lunar New Year
+	 * -- so nothing here merges the siblings or picks between their labels. That belongs to the
+	 * workspace, where somebody has chosen which editions to look at; a public page is one edition.
+	 *
+	 * Projected into the shape the grid already reads rather than given a second rendering path. The
+	 * grid's rule that an all-day row is never converted is the rule these rows most need, and a
+	 * separate path would be a second place to get it wrong.
+	 */
+	$ax_cal_occurrences = array_map(
+		static function ( array $entry ) : array {
+			$times = axismundi_cal_system_item_times( $entry );
+			return array(
+				'post_id'     => 0,
+				'permalink'   => '',
+				'recurring'   => false,
+				// Review state is the dataset's own; nothing here is ever cancelled, which is an Event word.
+				'status'      => 'confirmed',
+				'title'       => axismundi_cal_item_display_name( $entry ),
+				'all_day'     => (bool) $times['allDay'],
+				'start_utc'   => (string) $times['startUtc'],
+				'end_utc'     => (string) $times['endUtc'],
+				'start_local' => (string) $times['startLocal'],
+				'end_local'   => (string) $times['endLocal'],
+			);
+		},
+		axismundi_cal_system_items_in_range(
+			(int) $ax_cal_collection['id'],
+			substr( $ax_cal_from, 0, 10 ),
+			substr( $ax_cal_to, 0, 10 )
+		)
+	);
 } elseif ( is_array( $ax_cal_collection ) && 'remote' === (string) $ax_cal_collection['kind'] ) {
 	$ax_cal_occurrences = array_map(
 		static function ( array $entry ) : array {

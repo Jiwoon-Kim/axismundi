@@ -21,9 +21,17 @@ function axismundi_cal_serve_calendar_page() : void {
 		return;
 	}
 	$calendar = axismundi_cal_calendar_by_slug( (string) get_query_var( 'ax_cal_slug' ) );
+	/*
+	 * An authority is required of everything except a maintained dataset, for which having none is
+	 * what it is rather than something missing: `record_owner()` refuses to give a system Calendar an
+	 * Actor, so asking for one here would withhold every dataset this site publishes, permanently and
+	 * for a reason that reads like a privacy rule.
+	 */
+	$authorized = is_array( $calendar )
+		&& ( 'system' === (string) $calendar['kind'] || '' !== axismundi_cal_calendar_authority( (int) $calendar['id'] ) );
 	// A private Calendar answers exactly as a missing one does. Distinguishing them would confirm
 	// that a particular slug exists, which is the one thing an anonymous request must not learn.
-	if ( ! is_array( $calendar ) || '' === axismundi_cal_calendar_authority( (int) $calendar['id'] ) || ! axismundi_cal_is_publicly_readable( (int) $calendar['id'] ) ) {
+	if ( ! $authorized || ! axismundi_cal_is_publicly_readable( (int) $calendar['id'] ) ) {
 		global $wp_query;
 		$wp_query->set_404();
 		status_header( 404 );

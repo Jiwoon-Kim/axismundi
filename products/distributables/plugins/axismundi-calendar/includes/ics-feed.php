@@ -303,12 +303,23 @@ function axismundi_cal_serve_ics() : void {
 		$feed = axismundi_cal_site_feed();
 	} elseif ( 'calendar' === $which ) {
 		$calendar = axismundi_cal_calendar_by_slug( (string) get_query_var( 'ax_cal_slug' ) );
-		if ( is_array( $calendar ) && 'local' === (string) $calendar['kind'] && axismundi_cal_is_publicly_readable( (int) $calendar['id'] ) ) {
-			$feed = axismundi_cal_site_feed(
-				(int) $calendar['id'],
-				(string) $calendar['name'],
-				axismundi_cal_calendar_timezone( $calendar )
-			);
+		if ( is_array( $calendar ) && axismundi_cal_is_publicly_readable( (int) $calendar['id'] ) ) {
+			/*
+			 * One URL shape, two writers. A maintained dataset is a Calendar people subscribe to exactly
+			 * as they subscribe to any other, so it keeps the slug it is already published under -- a
+			 * second URL prefix would give one Calendar two names, since the readable page at
+			 * `/calendar/{slug}/` has never distinguished them either. What is separate is the document
+			 * writer, which is where the difference actually lives.
+			 */
+			if ( axismundi_cal_calendar_is_dataset( $calendar ) ) {
+				$feed = axismundi_cal_dataset_feed( $calendar );
+			} elseif ( 'local' === (string) $calendar['kind'] ) {
+				$feed = axismundi_cal_site_feed(
+					(int) $calendar['id'],
+					(string) $calendar['name'],
+					axismundi_cal_calendar_timezone( $calendar )
+				);
+			}
 		}
 	} elseif ( 'event' === $which ) {
 		$slug = sanitize_title( (string) get_query_var( 'ax_cal_event' ) );

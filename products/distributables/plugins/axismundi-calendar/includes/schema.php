@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '23';
+const AXISMUNDI_CAL_DB_VERSION        = '24';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 const AXISMUNDI_CAL_SCHEMA_BAIL_OPTION = 'ax_cal_schema_bail';
 
@@ -104,12 +104,6 @@ function axismundi_cal_holiday_occurrences_table() : string {
 function axismundi_cal_system_items_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_cal_system_items';
-}
-
-/** @return string Lunar month table name. */
-function axismundi_cal_lunar_months_table() : string {
-	global $wpdb;
-	return $wpdb->prefix . 'ax_cal_lunar_months';
 }
 
 /** @return string Calendar access control table name. */
@@ -429,35 +423,6 @@ function axismundi_cal_install_schema() : bool {
 		) ENGINE=InnoDB {$charset};"
 	);
 
-	$lunar_months = axismundi_cal_lunar_months_table();
-	/*
-	 * A lunisolar calendar in its compressed form: which civil day each lunar month began on, and how
-	 * long it ran. Every date inside the month is the difference, so this holds ~13 rows a year where
-	 * the converted dates would be 365.
-	 *
-	 * `start_absolute_day` is signed on purpose. KASI's range reaches back to 59 BC, and an unsigned
-	 * column would take that half of the range and store it as an enormous positive number.
-	 *
-	 * The unique key is (system, year, month, leap): a leap 4th month is a different month from the
-	 * 4th, not a variant of it, and merging them would lose the year's extra lunation.
-	 */
-	dbDelta(
-		"CREATE TABLE {$lunar_months} (
-			id bigint(20) unsigned NOT NULL auto_increment,
-			system varchar(32) NOT NULL default '',
-			start_absolute_day bigint(20) NOT NULL default 0,
-			lunar_year smallint(6) NOT NULL default 0,
-			lunar_month tinyint(3) unsigned NOT NULL default 0,
-			leap_month tinyint(1) NOT NULL default 0,
-			days tinyint(3) unsigned NOT NULL default 0,
-			created_at datetime NOT NULL,
-			updated_at datetime NOT NULL,
-			PRIMARY KEY  (id),
-			UNIQUE KEY system_month (system,lunar_year,lunar_month,leap_month),
-			KEY system_start (system,start_absolute_day)
-		) ENGINE=InnoDB {$charset};"
-	);
-
 	$concepts            = axismundi_cal_holiday_concepts_table();
 	// Not `$occurrences`: that name already holds the Event occurrence table in this function, and
 	// taking it made the verification below check the wrong table for a column it never had.
@@ -761,6 +726,16 @@ function axismundi_cal_install_schema() : bool {
 	 * table that once answered "which calendars is this event on?" invites someone to answer that
 	 * question from it again.
 	 */
+	/*
+	 * The lunar month cache, dropped with the provider that filled it. Korean lunisolar dates are
+	 * computed now, so these rows answer nothing: keeping a table that once held the authoritative
+	 * months invites somebody to answer from it again and get a different date than the grid shows.
+	 */
+	$lunar_cache = $wpdb->prefix . 'ax_cal_lunar_months';
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- this plugin's own table.
+	$wpdb->query( "DROP TABLE IF EXISTS {$lunar_cache}" );
+	delete_option( 'ax_cal_kasi_service_key' );
+
 	$legacy = $wpdb->prefix . 'ax_cal_calendar_items';
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time removal of this plugin's own table.
 	$wpdb->query( "DROP TABLE IF EXISTS {$legacy}" );

@@ -2,9 +2,7 @@
 /**
  * Audit: AbsoluteDay arithmetic, the calendar-system registry, and the lunar month store.
  *
- * No network. Every month here is a fixture, and that is the point of this slice: the arithmetic
- * over a materialised store is provable without an authority, so when KASI arrives the only new
- * question is whether the fetch was parsed correctly.
+ * No network, and none needed: every calendar system here is computed on this server.
  *
  * @package AxismundiCalendar
  */
@@ -91,35 +89,52 @@ ax_cs_assert( $ax_cs_results, 'and a system nobody registered is not invented', 
  */
 $ax_cs_korean = (array) axismundi_cal_calendar_system( 'korean-lunisolar' );
 ax_cs_assert( $ax_cs_results, 'a system says which kind of calendar it is', 'lunisolar' === ( $ax_cs_korean['type'] ?? '' ) );
-ax_cs_assert( $ax_cs_results, 'and who its dates come from', false !== strpos( (string) ( $ax_cs_korean['authority'] ?? '' ), 'KASI' ) );
+ax_cs_assert( $ax_cs_results, 'and who its dates come from', false !== strpos( (string) ( $ax_cs_korean['authority'] ?? '' ), 'ICU' ) );
 ax_cs_assert(
 	$ax_cs_results,
 	'while the Unicode calendar is recorded beside it and is not the identifier',
 	'dangi' === ( $ax_cs_korean['icu_calendar'] ?? '' ) && 'korean-lunisolar' === ( $ax_cs_korean['id'] ?? '' )
 );
+/*
+ * Nothing registered today needs configuring, and the seam that lets one say so is asserted where it
+ * can be asserted honestly -- on a fixture. Checking the Korean system for a settings callback would
+ * only record that it currently has none.
+ */
 ax_cs_assert(
 	$ax_cs_results,
-	'and a system may render its own settings, because what one provider needs configured is its own business',
-	is_callable( $ax_cs_korean['settings'] ?? null )
+	'a system may render its own settings, for the day one needs a key',
+	( static function () : bool {
+		axismundi_cal_register_calendar_system( 'audit-configurable', array( 'label' => 'x', 'settings' => '__return_true' ) );
+		return is_callable( axismundi_cal_calendar_system( 'audit-configurable' )['settings'] ?? null );
+	} )()
 );
 ax_cs_assert(
 	$ax_cs_results,
-	'the Korean workspace annotation answers without a KASI month having been materialised',
+	'while a system that needs nothing configured says so by having none',
+	// `??` treats a stored null as absent, so the key is asked for by name.
+	null === axismundi_cal_calendar_system( 'korean-lunisolar' )['settings']
+);
+ax_cs_assert(
+	$ax_cs_results,
+	'the Korean calendar answers with nothing fetched, stored or configured',
 	( static function () : bool {
 		$date = axismundi_cal_system_date( 'korean-lunisolar', (int) axismundi_cal_iso_to_absolute_day( '2026-08-13' ) );
 		return is_array( $date ) && 7 === $date['month'] && 1 === $date['day'];
 	} )()
 );
 
-$ax_cs_in  = (int) axismundi_cal_iso_to_absolute_day( '2026-08-12' );
-$ax_cs_out = (int) axismundi_cal_iso_to_absolute_day( '2051-01-01' );
-$ax_cs_bc  = (int) axismundi_cal_iso_to_absolute_day( '-0060-01-01' );
-ax_cs_assert( $ax_cs_results, 'a day inside the provider range is covered', axismundi_cal_system_covers( 'korean-lunisolar', $ax_cs_in ) );
-ax_cs_assert( $ax_cs_results, 'a day after it is not, which is a fact about the provider and not an error', ! axismundi_cal_system_covers( 'korean-lunisolar', $ax_cs_out ) );
-ax_cs_assert( $ax_cs_results, 'and neither is a day before it begins', ! axismundi_cal_system_covers( 'korean-lunisolar', $ax_cs_bc ) );
-
-global $wpdb;
-$ax_cs_table = axismundi_cal_lunar_months_table();
+/*
+ * A system with no stated bounds covers every date. That is a claim about the provider -- ICU will
+ * answer for any day it is handed -- and not an absence of one, so it is asserted rather than left
+ * to be inferred from a missing check.
+ */
+ax_cs_assert(
+	$ax_cs_results,
+	'a system that states no bounds covers any day, including ones nobody has a calendar for',
+	axismundi_cal_system_covers( 'korean-lunisolar', (int) axismundi_cal_iso_to_absolute_day( '2026-08-12' ) )
+		&& axismundi_cal_system_covers( 'korean-lunisolar', (int) axismundi_cal_iso_to_absolute_day( '2051-01-01' ) )
+		&& axismundi_cal_system_covers( 'korean-lunisolar', (int) axismundi_cal_iso_to_absolute_day( '-0060-01-01' ) )
+);
 
 // -- The calendars ICU answers for -----------------------------------------------------------------
 
@@ -166,160 +181,46 @@ if ( class_exists( 'IntlCalendar' ) ) {
 		'a calendar ICU does not have is not registered as one that quietly answers in Gregorian',
 		null === axismundi_cal_calendar_system( 'vietnamese' ) && null === axismundi_cal_icu_date( 'nonesuch', 739000 )
 	);
-	ax_cs_assert(
-		$ax_cs_results,
-		'and none of them stores anything, so they are the same before and after a day is asked for',
-		0 === (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$ax_cs_table} WHERE system IN ( %s, %s, %s )", 'hebrew', 'chinese', 'islamic-umalqura' ) )
-	);
 }
 
-// -- The store -----------------------------------------------------------------------------------
-
-// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
-$wpdb->query( $wpdb->prepare( "DELETE FROM {$ax_cs_table} WHERE system = %s", $ax_cs_system ) );
+// -- A system that answers for part of a range ----------------------------------------------------
 
 /*
- * Three consecutive months, one of them a leap month, with lengths that differ. Invented rather than
- * fetched: what is being proved is that a month row plus subtraction reproduces every date in it,
- * and a real month would prove exactly the same thing while also needing an API key.
+ * A registered system whose resolver declines is the ordinary case, not a broken one: a provider can
+ * cover a span and still have nothing to say about a day in it. Asserted with a closure rather than
+ * a real provider, so the claim is about the seam and not about anybody's data.
  */
-$ax_cs_months = array(
-	array( 'start_date' => '2026-06-15', 'lunar_year' => 2026, 'lunar_month' => 4, 'leap_month' => false, 'days' => 30 ),
-	array( 'start_date' => '2026-07-15', 'lunar_year' => 2026, 'lunar_month' => 4, 'leap_month' => true, 'days' => 29 ),
-	array( 'start_date' => '2026-08-13', 'lunar_year' => 2026, 'lunar_month' => 5, 'leap_month' => false, 'days' => 30 ),
-);
-$ax_cs_saved = true;
-foreach ( $ax_cs_months as $ax_cs_month ) {
-	if ( ! is_int( axismundi_cal_lunar_month_save( $ax_cs_system, $ax_cs_month ) ) ) {
-		$ax_cs_saved = false;
-	}
-}
-ax_cs_assert( $ax_cs_results, 'three lunar months store', $ax_cs_saved );
-
-$ax_cs_at = static fn( string $iso ) : ?array => axismundi_cal_lunar_date( $ax_cs_system, (int) axismundi_cal_iso_to_absolute_day( $iso ) );
-
-ax_cs_assert(
-	$ax_cs_results,
-	'the first day of a stored month is day one of it',
-	array( 'year' => 2026, 'month' => 4, 'day' => 1, 'leapMonth' => false ) === $ax_cs_at( '2026-06-15' )
-);
-ax_cs_assert(
-	$ax_cs_results,
-	'and the last day of a 30-day month is its 30th, not the 1st of the next',
-	array( 'year' => 2026, 'month' => 4, 'day' => 30, 'leapMonth' => false ) === $ax_cs_at( '2026-07-14' )
-);
-ax_cs_assert(
-	$ax_cs_results,
-	'the day after it belongs to the next month, which is the leap 4th and not the 5th',
-	array( 'year' => 2026, 'month' => 4, 'day' => 1, 'leapMonth' => true ) === $ax_cs_at( '2026-07-15' )
-);
-ax_cs_assert(
-	$ax_cs_results,
-	'a 29-day month ends on its 29th',
-	array( 'year' => 2026, 'month' => 4, 'day' => 29, 'leapMonth' => true ) === $ax_cs_at( '2026-08-12' )
-);
-ax_cs_assert(
-	$ax_cs_results,
-	'and the month after a leap month is the next number',
-	array( 'year' => 2026, 'month' => 5, 'day' => 1, 'leapMonth' => false ) === $ax_cs_at( '2026-08-13' )
-);
-ax_cs_assert(
-	$ax_cs_results,
-	'the leap month is a month of its own, not a variant of the one it repeats',
-	is_array( axismundi_cal_lunar_month_get( $ax_cs_system, 2026, 4, false ) )
-		&& is_array( axismundi_cal_lunar_month_get( $ax_cs_system, 2026, 4, true ) )
-		&& axismundi_cal_lunar_month_get( $ax_cs_system, 2026, 4, false )['start_absolute_day']
-			!== axismundi_cal_lunar_month_get( $ax_cs_system, 2026, 4, true )['start_absolute_day']
-);
-
-/*
- * The gap is the assertion that matters most. Nothing is stored before 2026-06-15, and the honest
- * answer for a day there is that this store has no name for it -- not the last month it does have,
- * counted forward until the number is absurd.
- */
-ax_cs_assert( $ax_cs_results, 'a day before anything stored has no lunar date', null === $ax_cs_at( '2026-06-14' ) );
-ax_cs_assert( $ax_cs_results, 'and a day after the last stored month has none either', null === $ax_cs_at( '2026-09-12' ) );
-
-$ax_cs_range = axismundi_cal_lunar_dates( $ax_cs_system, '2026-07-10', '2026-07-20' );
-ax_cs_assert( $ax_cs_results, 'a range answers one entry per day', 11 === count( $ax_cs_range ) );
-ax_cs_assert(
-	$ax_cs_results,
-	'keyed by the Gregorian date the grid already knows',
-	isset( $ax_cs_range['2026-07-15'] ) && 1 === $ax_cs_range['2026-07-15']['day'] && true === $ax_cs_range['2026-07-15']['leapMonth']
-);
-ax_cs_assert(
-	$ax_cs_results,
-	'and a range crossing a month boundary crosses it in the right place',
-	30 === $ax_cs_range['2026-07-14']['day'] && 4 === $ax_cs_range['2026-07-14']['month'] && false === $ax_cs_range['2026-07-14']['leapMonth']
-);
-ax_cs_assert(
-	$ax_cs_results,
-	'a range reaching past the store returns the days it has and no others',
-	array_keys( axismundi_cal_lunar_dates( $ax_cs_system, '2026-06-13', '2026-06-16' ) ) === array( '2026-06-15', '2026-06-16' )
-);
-ax_cs_assert( $ax_cs_results, 'and a range asked for backwards is empty rather than reversed', array() === axismundi_cal_lunar_dates( $ax_cs_system, '2026-07-20', '2026-07-10' ) );
-ax_cs_assert( $ax_cs_results, 'a range nobody would draw is refused rather than walked', array() === axismundi_cal_lunar_dates( $ax_cs_system, '2026-01-01', '2030-01-01' ) );
-
-// -- What a month may be -------------------------------------------------------------------------
-
-ax_cs_assert(
-	$ax_cs_results,
-	'a month of 31 days is not a lunation and is refused',
-	is_wp_error( axismundi_cal_lunar_month_save( $ax_cs_system, array( 'start_date' => '2026-09-12', 'lunar_year' => 2026, 'lunar_month' => 6, 'days' => 31 ) ) )
-);
-ax_cs_assert(
-	$ax_cs_results,
-	'a month with no day to start on is refused',
-	is_wp_error( axismundi_cal_lunar_month_save( $ax_cs_system, array( 'lunar_year' => 2026, 'lunar_month' => 6, 'days' => 30 ) ) )
-);
-ax_cs_assert(
-	$ax_cs_results,
-	'and a 13th month is refused, because a leap month is the 4th again rather than a number past 12',
-	is_wp_error( axismundi_cal_lunar_month_save( $ax_cs_system, array( 'start_date' => '2026-09-12', 'lunar_year' => 2026, 'lunar_month' => 13, 'days' => 30 ) ) )
-);
-
-$ax_cs_first = axismundi_cal_lunar_month_save( $ax_cs_system, array( 'start_date' => '2026-06-15', 'lunar_year' => 2026, 'lunar_month' => 4, 'days' => 29 ) );
-ax_cs_assert(
-	$ax_cs_results,
-	're-materialising a month it already has corrects that month instead of storing it twice',
-	is_int( $ax_cs_first ) && 29 === (int) axismundi_cal_lunar_month_get( $ax_cs_system, 2026, 4, false )['days']
-);
-
-// -- Through the system seam ---------------------------------------------------------------------
-
 axismundi_cal_register_calendar_system(
 	$ax_cs_system,
 	array(
-		'label'         => 'Audit lunisolar',
+		'label'         => 'Audit calendar',
+		'type'          => 'lunisolar',
 		'coverage_from' => '2026-06-15',
 		'coverage_to'   => '2026-12-31',
-		'resolve'       => static fn( int $day ) : ?array => axismundi_cal_lunar_date( $ax_cs_system, $day ),
+		'resolve'       => static function ( int $day ) : ?array {
+			return $day === (int) axismundi_cal_iso_to_absolute_day( '2026-07-15' )
+				? array( 'year' => 2026, 'month' => 4, 'day' => 1, 'leapMonth' => true )
+				: null;
+		},
 	)
 );
 ax_cs_assert(
 	$ax_cs_results,
 	'a system resolves a day inside its coverage',
-	is_array( axismundi_cal_system_date( $ax_cs_system, (int) axismundi_cal_iso_to_absolute_day( '2026-07-15' ) ) )
+	array( 'year' => 2026, 'month' => 4, 'day' => 1, 'leapMonth' => true )
+		=== axismundi_cal_system_date( $ax_cs_system, (int) axismundi_cal_iso_to_absolute_day( '2026-07-15' ) )
 );
-/*
- * Registered and covering a day is a different fact from having that day's month. Asserted on this
- * fixture rather than the Korean system, whose store holds whatever this site has actually fetched
- * -- an assertion that only passes while nobody has used the feature is not an assertion.
- */
 ax_cs_assert(
 	$ax_cs_results,
-	'a system can cover a day whose month it does not have, and says nothing rather than not existing',
+	'a system can cover a day it has no answer for, and says nothing rather than not existing',
 	axismundi_cal_system_covers( $ax_cs_system, (int) axismundi_cal_iso_to_absolute_day( '2026-11-01' ) )
 		&& null === axismundi_cal_system_date( $ax_cs_system, (int) axismundi_cal_iso_to_absolute_day( '2026-11-01' ) )
 );
 ax_cs_assert(
 	$ax_cs_results,
-	'and says nothing outside it without asking the store',
+	'and outside its coverage the resolver is not asked at all',
 	null === axismundi_cal_system_date( $ax_cs_system, (int) axismundi_cal_iso_to_absolute_day( '2026-06-14' ) )
 );
-
-// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
-$wpdb->query( $wpdb->prepare( "DELETE FROM {$ax_cs_table} WHERE system = %s", $ax_cs_system ) );
 
 // -- Showing a second date -------------------------------------------------------------------------
 

@@ -97,145 +97,35 @@ Hebrew at every user is a worse default than not shipping the feature.
 The plugin's identity here is **"Calendar semantics are extensible"**, not "we support the lunar
 calendar." Korean lunisolar is the first reference implementation of the provider API.
 
-## The KASI provider
+## Providers
 
-Source: 한국천문연구원 음양력 정보, via 공공데이터포털 (data.go.kr), endpoint
-`https://apis.data.go.kr/B090041/openapi/service/LrsrCldInfoService`.
+Every calendar system is computed by ICU on the server: `korean-lunisolar` (`dangi`), `chinese`,
+`hebrew`, `islamic-umalqura`. No key, no quota, no network, no store, no setup — and no one of them
+privileged over the others, which was the argument for removing KASI rather than keeping one
+provider that worked differently from its peers.
 
-Operations that matter:
+The id stays `korean-lunisolar` while the ICU keyword is `dangi`, so a Korean authority provider
+added later can take the name without inheriting the implementation.
 
-| Operation | Takes | Used for |
-| --- | --- | --- |
-| `getLunCalInfo` | `solYear`, `solMonth`, optional `solDay` | month overlay (Gregorian → lunar) |
-| `getSolCalInfo` | `lunYear`, `lunMonth`, `lunDay` | lunar → Gregorian |
-| `getSpcifyLunCalInfo` | `fromSolYear`, `toSolYear`, `lunMonth`, `lunDay`, `leapMonth` | recurrence lookup over a year range |
-| `getJulDayInfo` | `solJd` | Julian day → everything (convert at the boundary) |
+### What removing KASI gave up
 
-### Rules
+Measured before it went, and worth knowing if it comes back:
 
-**The service key never reaches the browser.** WordPress proxies; the key lives in a constant or an
-option and is write-only in the UI. A key in a JS bundle is a published key. Ship no key: each site
-registers its own.
+- **1391–1900.** KASI's real range was 1391 to 2050, not the `-59` its website advertises. Below
+  1900 it and ICU genuinely disagree — 30 days of 1896, 59 of 1650–1651 — and KASI is the authority
+  there. Above 1900 they were identical for all 33,237 days of 1900–1990.
+- **간지, 절기, 율리우스적일.** KASI returns `lunSecha`/`lunWolgeon`/`lunIljin`/`solJd`; ICU carries
+  none of it. Any 사주 or 절기 feature needs an authority provider again.
 
-**The client asks for `/calendar/korean-lunisolar/{year}/{month}`, not `/kasi/…`.** The provider is
-an implementation detail; a local ephemeris library replacing KASI later must not change the
-contract.
+Neither is needed to write a second date under a day in a modern grid, which is the only thing this
+plugin does with a calendar system today.
 
-**Coverage is a provider property, not an error.** KASI's *website* states `-59-02-13 ~ 2050-12-31`,
-and that was copied into the code on the assumption the OpenAPI serves the same data. Measured
-2026-08-13, it does not: `-0059-02`, `0001-01`, `1000-01` and `1391-01` all return no items, while
-`1391-12` onward answer normally, and `2050-12` is the last month that does. The real range is
-**1391 to 2050**, so there is no `-59` end to compare `dangi` against — the question of whether they
-agree in antiquity cannot be asked of this API at all. Outside the range the Gregorian
-calendar renders exactly as before and the overlay is simply absent — never an error, never a blank
-grid. This split (primary range ≠ provider range) is the second good reason for the abstraction.
+### If an authority provider returns
 
-### Cache: store the compressed model, not the responses
-
-A month response is 28–31 rows, but the *facts* in it are three:
-
-```php
-[ 'startAbsoluteDay' => 739475, 'year' => 2026, 'month' => 7, 'leapMonth' => false, 'days' => 29 ]
-```
-
-~13 rows per year, and every date in the month follows from `absoluteDay - startAbsoluteDay`. That is exact
-arithmetic, not interpolation.
-
-**Do not sparsely sample and interpolate between anchors.** Between two anchors 94 days apart,
-`29+30+29` and `30+29+30` are indistinguishable by total, and leap months make it worse. Month
-boundaries are the irreducible input. Fetch monthly, extract the boundaries, discard the response.
-
-Bootstrap cost is trivial: 1950–2050 is `101 × 12 = 1,212` requests against a 10,000/day dev quota,
-producing ~1,250 stored rows. This is durable derived data, not a transient — an expiring cache
-would re-spend a quota on facts that changed a millennium ago. Invalidate on a provider version
-bump; extend by appending months when KASI's range grows.
-
-For a lunar birthday, `getSpcifyLunCalInfo` answers ten years of occurrences in one request. That is
-what it is for.
-
-### Display
-
-Annotation inside the day cell, not an event in the list:
-
-```
-┌─────────┐   ┌─────────┐   ┌─────────┐
-│   12    │   │   13    │   │   14    │
-│  6.30   │   │   7.1   │   │    2    │
-└─────────┘   └─────────┘   └─────────┘
-                 ↑ month shown on the first of the month, and only there
-```
-
-Leap months read `윤 7.1`.
-
-## Naming, and what `dangi` is not
-
-```
-id            korean-lunisolar     what it is: it intercalates a leap month to keep the seasons
-label         음력 / Korean lunar calendar   what people call it
-authority     KASI                 who decides what a date is
-icu_calendar  dangi                how to format it elsewhere
-type          lunisolar            not the same class as Islamic, which is lunar
-```
-
-`dangi` is Unicode/CLDR's calendar identifier (`ko-KR-u-ca-dangi`) and ICU's own implementation of a
-Korean calendar. It is recorded for formatting and interoperability and is **not** the id, not the
-provider, and not the source.
-
-### Measured against KASI, ICU 78.1, 2026-08-13
-
-**Verified so far.** Only these ranges have actually been compared; nothing here should be read as a
-claim about a year not in the table.
-
-| Years | Days compared | Days differing |
-| --- | --- | --- |
-| 1900–1990 (continuous) | 33,237 | **0** |
-| 1999–2000, 2026–2027, 2033–2034 (samples) | 2,274 | **0** |
-| 1896 | 366 | **30** |
-| 1650–1651 | ~590 | **59** |
-
-**1991–2050 is not verified.** Three runs stopped in 1991 on a network timeout, not on a
-disagreement. Until one completes, 1991–1998 and 2001–2025 and 2028–2032 and 2035–2050 are simply
-untested — which includes 1996, so a lunar birthday in that year has no evidence behind it yet.
-
-### Where they diverge, and the likeliest reason
-
-```
-1896-02-13   KASI 1.1     ICU 12.30    ← ICU's month starts a day LATER
-1650-11-23   KASI 10.30   ICU 11.1     ← ICU's month starts a day EARLIER
-```
-
-The direction reverses. That rules out a constant epoch offset and is what a **new moon falling near
-local midnight** looks like: both are computing the same conjunction and rounding it to a different
-civil day, because they do not agree on which meridian's midnight to round at.
-
-Which fits the history. Korea's standard meridian moved more than once (1908, 1912, 1954, 1961), and
-1896 is the year the Gregorian calendar was adopted, so the civil framing around the conversion is
-itself in question there. KASI answers for the Korean civil calendar as Korea keeps it; ICU applies
-its own historical projection. 1650 is far enough back that the astronomical model differs too.
-
-Note that the meridian-change years themselves (1908, 1912, 1954, 1961) came back identical — a
-conjunction has to land near midnight *as well* for the difference to surface, so the divergence is
-sporadic rather than a clean before/after boundary. This is a hypothesis consistent with the
-measurements, not something this plugin has proved.
-
-### The policy that follows
-
-```
-1900–1990          ICU dangi is measurably the same calendar. Use it.
-1991–2050          expected to hold, not yet verified.
-before 1900        do not trust ICU. KASI, or no second date at all.
-```
-
-`dangi` resolves modern dates for display. KASI stays the authority for anything where one day is
-the point — an archival date, or a feature that reads 간지/절기, which ICU does not carry at all and
-KASI already returns in `lunSecha`/`lunWolgeon`/`lunIljin`.
-
-The wider taxonomy matters for the same reason. Chinese, Korean, Vietnamese and Hebrew are
-lunisolar; Islamic is **lunar** and does not intercalate, which is why Ramadan walks through the
-seasons; Persian, Coptic and Ethiopic are solar; Japanese, Buddhist and ROC are era systems over a
-solar calendar. CLDR has no `vietnamese` identifier at all, though the Vietnamese calendar can
-diverge from the Chinese one by a day on a different meridian — so this registry has to be able to
-say things CLDR cannot.
+The registry is unchanged and still carries `authority` and `settings`, so a provider that needs a
+key has somewhere to say so and somewhere to render its field. What it must not do is resolve the
+same system id as a computed provider: a date that changes depending on whether somebody prefetched
+a month is worse than a date that is merely approximate.
 
 ## Astronomy is a different problem
 

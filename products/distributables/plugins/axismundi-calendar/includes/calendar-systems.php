@@ -13,7 +13,7 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * The day 0001-01-01 (proleptic Gregorian) is given, so an `AbsoluteDay` is a positive integer for
- * every date anyone will type and a negative one for the BC end of KASI's range.
+ * every date anyone will type and a negative one for antiquity.
  */
 const AXISMUNDI_CAL_ABSOLUTE_DAY_EPOCH = '0001-01-01';
 
@@ -41,8 +41,8 @@ function axismundi_cal_absolute_day( int $year, int $month, int $day ) : int {
 		$correction = 1;
 	}
 	// Floored, not truncated. `intdiv` rounds towards zero, which is the same thing for the years
-	// anybody types and one day out for every year before the epoch -- the half of KASI's range that
-	// reaches 59 BC.
+	// anybody types and one day out for every year before the epoch, which ICU will happily answer
+	// for.
 	return ( 365 * $prior )
 		+ axismundi_cal_floor_div( $prior, 4 )
 		- axismundi_cal_floor_div( $prior, 100 )
@@ -77,7 +77,7 @@ function axismundi_cal_is_leap_year( int $year ) : bool {
 function axismundi_cal_absolute_day_to_date( int $absolute_day ) : array {
 	// Which year, found by counting whole Gregorian cycles rather than by searching. `intdiv` floors
 	// towards zero in PHP, so the negative side is taken to a floor explicitly -- without it every
-	// date before 0001-01-01 lands a year out, which is the half of KASI's range nobody tests.
+	// date before 0001-01-01 lands a year out, which is the half of the range nobody tests.
 	$d400 = axismundi_cal_floor_div( $absolute_day - 1, 146097 );
 	$rem  = $absolute_day - 1 - ( $d400 * 146097 );
 	$d100 = min( intdiv( $rem, 36524 ), 3 );
@@ -224,14 +224,10 @@ function axismundi_cal_register_calendar_system( string $id, array $args ) : voi
 				// Who decides what a date is. Not the same question as which identifier formats it.
 				'authority'     => (string) ( $args['authority'] ?? '' ),
 				/*
-				 * The Unicode/CLDR calendar this corresponds to, recorded for `Intl` formatting and
-				 * BCP 47 interoperability and for nothing else. It is deliberately not the id and never
-				 * the source.
-				 *
-				 * Measured rather than assumed: ICU 78.1's `dangi` matches KASI for all 33,237 days of
-				 * 1900-1990, and disagrees for 30 days of 1896 and 59 of 1650-1651 -- including which
-				 * Gregorian day is 설날 in 1896. 1991-2050 is expected to match and has not been
-				 * verified. See docs/AXISMUNDI-CALENDAR-SYSTEMS.md before relying on either half.
+				 * The Unicode/CLDR calendar this corresponds to, and today also the thing that computes
+				 * it. Kept separate from the id anyway: `dangi` is ICU's implementation of a Korean
+				 * calendar and `korean-lunisolar` is the calendar, and a Korean authority provider added
+				 * later must be able to take the second name without inheriting the first.
 				 */
 				'icu_calendar'  => (string) ( $args['icu_calendar'] ?? '' ),
 				// `fn() : void`, rendering this provider's own section of the settings screen.

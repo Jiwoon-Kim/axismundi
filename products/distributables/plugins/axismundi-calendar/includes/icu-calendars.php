@@ -83,6 +83,17 @@ function axismundi_cal_register_icu_calendars() : void {
 	}
 	$systems = array(
 		array(
+			/*
+			 * `dangi` is ICU's identifier; `korean-lunisolar` is what the calendar is. Kept as the id
+			 * so the two never get confused, and so a Korean authority provider can be registered
+			 * beside this one later without either of them owning the name.
+			 */
+			'id'    => 'korean-lunisolar',
+			'icu'   => 'dangi',
+			'label' => __( 'Korean lunar calendar', 'axismundi-calendar' ),
+			'type'  => 'lunisolar',
+		),
+		array(
 			'id'    => 'hebrew',
 			'icu'   => 'hebrew',
 			'label' => __( 'Hebrew calendar', 'axismundi-calendar' ),

@@ -261,22 +261,22 @@ ax_cs_assert(
 	} )()
 );
 
-// The month on the first of the month, and only there. Every other day is its number alone.
+// Density is a site policy; language belongs to the viewer's ICU formatter and is never stored here.
+$ax_cs_format_kept = get_option( AXISMUNDI_CAL_SECONDARY_FORMAT_OPTION, null );
 ax_cs_assert(
 	$ax_cs_results,
-	'the first of a month says which month it is',
-	'7.1' === axismundi_cal_secondary_label( array( 'year' => 2026, 'month' => 7, 'day' => 1, 'leapMonth' => false ) )
+	'the site may choose a compact grid without choosing a language for anybody',
+	'compact' === axismundi_cal_secondary_format_set( 'compact' ) && 'compact' === axismundi_cal_secondary_format()
 );
 ax_cs_assert(
 	$ax_cs_results,
-	'a leap month says so, because otherwise two different months read identically',
-	axismundi_cal_secondary_label( array( 'year' => 2026, 'month' => 7, 'day' => 1, 'leapMonth' => true ) )
-		!== axismundi_cal_secondary_label( array( 'year' => 2026, 'month' => 7, 'day' => 1, 'leapMonth' => false ) )
+	'and may choose the full localized form instead',
+	'full' === axismundi_cal_secondary_format_set( 'full' ) && 'full' === axismundi_cal_secondary_format()
 );
 ax_cs_assert(
 	$ax_cs_results,
-	'and every other day is just a number, so the month stands out on the day it changes',
-	'2' === axismundi_cal_secondary_label( array( 'year' => 2026, 'month' => 7, 'day' => 2, 'leapMonth' => false ) )
+	'an invented format falls back to compact rather than becoming an unchecked presentation state',
+	'compact' === axismundi_cal_secondary_format_set( 'wide' ) && 'compact' === axismundi_cal_secondary_format()
 );
 
 $ax_cs_req = new WP_REST_Request( 'PUT', '/axismundi/v1/actors/me/secondaryCalendars' );
@@ -286,13 +286,17 @@ $ax_cs_req->set_param( 'end', '2026-08-05' );
 $ax_cs_body = (array) rest_do_request( $ax_cs_req )->get_data();
 ax_cs_assert(
 	$ax_cs_results,
-	'setting the preference answers with the dates for the month in the same round trip',
-	isset( $ax_cs_body['dates']['chinese']['2026-08-01'] ) && 5 === count( $ax_cs_body['dates']['chinese'] )
+	'setting the preference answers with structured calendar dates for the month in the same round trip',
+	isset( $ax_cs_body['dates']['chinese']['2026-08-01'] )
+		&& 5 === count( $ax_cs_body['dates']['chinese'] )
+		&& is_array( $ax_cs_body['dates']['chinese']['2026-08-01'] )
+		&& isset( $ax_cs_body['dates']['chinese']['2026-08-01']['year'], $ax_cs_body['dates']['chinese']['2026-08-01']['month'], $ax_cs_body['dates']['chinese']['2026-08-01']['day'] )
 );
 ax_cs_assert(
 	$ax_cs_results,
-	'and offers every registered system, not only the ones turned on',
+	'and offers every registered system with the ICU calendar needed for the viewer to format it',
 	count( (array) $ax_cs_body['available'] ) >= 3
+		&& 'chinese' === ( $ax_cs_body['available'][2]['icuCalendar'] ?? '' )
 );
 ax_cs_assert(
 	$ax_cs_results,
@@ -310,6 +314,11 @@ if ( is_array( $ax_cs_kept ) ) {
 	update_user_meta( $ax_cs_user, AXISMUNDI_CAL_SECONDARY_META, $ax_cs_kept );
 } else {
 	delete_user_meta( $ax_cs_user, AXISMUNDI_CAL_SECONDARY_META );
+}
+if ( null === $ax_cs_format_kept ) {
+	delete_option( AXISMUNDI_CAL_SECONDARY_FORMAT_OPTION );
+} else {
+	update_option( AXISMUNDI_CAL_SECONDARY_FORMAT_OPTION, $ax_cs_format_kept, false );
 }
 
 $ax_cs_failed = count( array_filter( $ax_cs_results, static fn( array $r ) : bool => ! $r[0] ) );

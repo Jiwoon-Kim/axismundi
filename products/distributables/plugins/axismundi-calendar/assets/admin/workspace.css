@@ -222,8 +222,12 @@
 }
 
 .ax-cal-workspace__secondary {
-	margin-inline-start: 6px;
+	display: block;
+	margin-top: 1px;
 	font-size: 11px;
 	color: #757575;
 	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }

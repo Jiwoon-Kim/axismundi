@@ -141,6 +141,44 @@
 		return parseUtc( item.startUtc ).toLocaleTimeString( locale, { hour: 'numeric', minute: '2-digit' } );
 	}
 
+	/**
+	 * Say the Gregorian day with one of ICU's other calendars.
+	 *
+	 * The API says whether a system can name the day and returns its structured answer. It does not
+	 * ship an English string for the browser to translate: `Intl` already knows that dangi is
+	 * `2026년(병오년) 7월 1일` in Korean and a different, equally valid expression elsewhere.
+	 */
+	function secondaryLabel( system, day, format ) {
+		var date = system.dates[ localKey( day ) ];
+		if ( ! date || ! system.icuCalendar || ! window.Intl || ! Intl.DateTimeFormat ) {
+			return '';
+		}
+		var options;
+		if ( 'full' === format ) {
+			options = { calendar: system.icuCalendar, year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' };
+		} else if ( 1 === Number( date.day ) ) {
+			// The calendar's own locale rules decide whether this is `7.1`, `七月初一` or `1 Elul`.
+			options = { calendar: system.icuCalendar, month: 'numeric', day: 'numeric', timeZone: 'UTC' };
+		} else {
+			options = { calendar: system.icuCalendar, day: 'numeric', timeZone: 'UTC' };
+		}
+		try {
+			// The server resolves secondary calendars at UTC noon. Recreate that civil day rather than
+			// passing a local midnight through the viewer's zone and risking yesterday in the formatter.
+			return new Intl.DateTimeFormat( locale, options ).format( new Date( Date.UTC(
+				day.getFullYear(), day.getMonth(), day.getDate(), 12
+			) ) );
+		} catch ( error ) {
+			// An older browser without a provider is allowed to omit the annotation; a guessed Gregorian
+			// label wearing another calendar's name would be worse than no second date.
+			return '';
+		}
+	}
+
+	function fullSecondaryLabel( system, day ) {
+		return secondaryLabel( system, day, 'full' );
+	}
+
 	/* -- Placing occurrences on days ----------------------------------------------------------- */
 
 	/**
@@ -467,11 +505,12 @@
 						 * under every number would be the provider promising an answer it does not have.
 						 */
 						( props.secondary || [] ).map( function ( system ) {
-							var label = system.dates[ key ];
+							var label = secondaryLabel( system, day, props.secondaryFormat );
 							return label
 								? el( 'span', {
 									key: system.id,
 									className: 'ax-cal-workspace__secondary',
+									title: fullSecondaryLabel( system, day ),
 									// Not read out with every date. A screen reader moving through a month
 									// would hear two numbers per cell with nothing saying why.
 									'aria-hidden': true
@@ -698,12 +737,20 @@
 		}, [ monthKey( cursor ) ] );
 
 		// In the order they were chosen, so two systems do not swap places between renders.
+		var secondaryAvailable = {};
+		( secondary.available || [] ).forEach( function ( system ) {
+			secondaryAvailable[ system.id ] = system;
+		} );
 		var secondaryShown = ( secondary.selected || [] )
 			.filter( function ( id ) {
-				return secondary.dates && secondary.dates[ id ];
+				return secondary.dates && secondary.dates[ id ] && secondaryAvailable[ id ];
 			} )
 			.map( function ( id ) {
-				return { id: id, dates: secondary.dates[ id ] };
+				return {
+					id: id,
+					dates: secondary.dates[ id ],
+					icuCalendar: secondaryAvailable[ id ].icuCalendar
+				};
 			} );
 
 		function chooseSecondary( id ) {
@@ -848,6 +895,7 @@
 				el( MonthGrid, {
 					items: items,
 					secondary: secondaryShown,
+					secondaryFormat: secondary.format || 'compact',
 					year: year,
 					month: month,
 					cursor: cursor,

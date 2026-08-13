@@ -16,6 +16,31 @@ defined( 'ABSPATH' ) || exit;
 /** Where each person's choice lives. Theirs, not the site's. */
 const AXISMUNDI_CAL_SECONDARY_META = 'ax_cal_secondary_calendars';
 
+/** How densely a site wants the secondary date drawn in its month grid. */
+const AXISMUNDI_CAL_SECONDARY_FORMAT_OPTION = 'ax_cal_secondary_format';
+
+/** @return string `compact` or `full`. */
+function axismundi_cal_secondary_format() : string {
+	$format = (string) get_option( AXISMUNDI_CAL_SECONDARY_FORMAT_OPTION, 'compact' );
+	return in_array( $format, array( 'compact', 'full' ), true ) ? $format : 'compact';
+}
+
+/**
+ * Set the site's grid-density policy.
+ *
+ * Language is deliberately absent: it belongs to the viewer, and ICU/CLDR already knows how each
+ * calendar calls its months in that language. This option only decides how much of that answer a
+ * narrow month cell receives.
+ *
+ * @param string $format `compact` or `full`.
+ * @return string Stored format.
+ */
+function axismundi_cal_secondary_format_set( string $format ) : string {
+	$format = in_array( $format, array( 'compact', 'full' ), true ) ? $format : 'compact';
+	update_option( AXISMUNDI_CAL_SECONDARY_FORMAT_OPTION, $format, false );
+	return $format;
+}
+
 /**
  * The calendar systems somebody has turned on, in the order they will be shown.
  *
@@ -74,44 +99,28 @@ function axismundi_cal_secondary_choices() : array {
 	$out = array();
 	foreach ( axismundi_cal_calendar_systems() as $system ) {
 		$out[] = array(
-			'id'    => (string) $system['id'],
-			'label' => (string) $system['label'],
-			'type'  => (string) $system['type'],
+			'id'          => (string) $system['id'],
+			'label'       => (string) $system['label'],
+			'type'        => (string) $system['type'],
+			'icuCalendar' => (string) $system['icu_calendar'],
 		);
 	}
 	return $out;
 }
 
 /**
- * How a second date reads in a day cell.
- *
- * The month is shown on the first of the month and nowhere else. A grid repeating `6.19 6.20 6.21`
- * down every row says the month thirty times to answer a question asked once, and the day it
- * actually changes stops standing out. On the first it reads `7.1`, or `윤 7.1` in a leap month;
- * every other day is its number alone.
- *
- * @param array{year:int,month:int,day:int,leapMonth:bool} $date Resolved date.
- * @return string
- */
-function axismundi_cal_secondary_label( array $date ) : string {
-	if ( 1 !== (int) $date['day'] ) {
-		return (string) (int) $date['day'];
-	}
-	$prefix = ! empty( $date['leapMonth'] ) ? _x( 'L', 'leap month marker', 'axismundi-calendar' ) . ' ' : '';
-	return $prefix . (int) $date['month'] . '.' . (int) $date['day'];
-}
-
 /**
- * Second dates for a range, keyed by system and then by ISO date.
+ * Second calendar dates for a range, keyed by system and then by ISO date.
  *
- * A day a system cannot name is absent rather than empty. Outside its coverage, and inside it for a
- * month nobody has materialised, the grid should look exactly as it did before the system was turned
- * on -- an empty slot under every number would be a promise the provider is not keeping.
+ * These are facts, not display strings. The browser formats them through its own ICU/CLDR data in
+ * the viewer's locale -- `dangi` can therefore say `2026년(병오년) 7월 1일` to one person and its
+ * equivalent to another without this site maintaining translation tables or treating English as the
+ * canonical name. A day a system cannot name is absent rather than empty.
  *
  * @param string[] $systems System ids.
  * @param string   $from    ISO date, inclusive.
  * @param string   $to      ISO date, inclusive.
- * @return array<string,array<string,string>>
+ * @return array<string,array<string,array{year:int,month:int,day:int,leapMonth:bool}>>
  */
 function axismundi_cal_secondary_dates( array $systems, string $from, string $to ) : array {
 	$start = axismundi_cal_iso_to_absolute_day( $from );
@@ -121,16 +130,16 @@ function axismundi_cal_secondary_dates( array $systems, string $from, string $to
 	}
 	$out = array();
 	foreach ( $systems as $id ) {
-		$labels = array();
+		$dates = array();
 		for ( $day = $start; $day <= $end; $day++ ) {
 			$date = axismundi_cal_system_date( $id, $day );
 			if ( null === $date ) {
 				continue;
 			}
-			$labels[ axismundi_cal_absolute_day_to_iso( $day ) ] = axismundi_cal_secondary_label( $date );
+			$dates[ axismundi_cal_absolute_day_to_iso( $day ) ] = $date;
 		}
-		if ( array() !== $labels ) {
-			$out[ $id ] = $labels;
+		if ( array() !== $dates ) {
+			$out[ $id ] = $dates;
 		}
 	}
 	return $out;
@@ -158,6 +167,7 @@ function axismundi_cal_rest_secondary( WP_REST_Request $request ) : WP_REST_Resp
 			'available' => axismundi_cal_secondary_choices(),
 			'selected'  => $systems,
 			'dates'     => $dates,
+			'format'    => axismundi_cal_secondary_format(),
 		),
 		200
 	);

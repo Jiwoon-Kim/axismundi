@@ -72,6 +72,27 @@ function axismundi_cal_render_secondary_page() : void {
 			<div class="notice notice-error"><p><?php echo esc_html( $error ); ?></p></div>
 		<?php endif; ?>
 
+		<h2><?php esc_html_e( 'Grid format', 'axismundi-calendar' ); ?></h2>
+		<form method="post" action="">
+			<?php wp_nonce_field( 'ax_cal_secondary' ); ?>
+			<input type="hidden" name="ax_cal_secondary_action" value="format" />
+			<fieldset>
+				<legend class="screen-reader-text"><?php esc_html_e( 'Secondary date format', 'axismundi-calendar' ); ?></legend>
+				<label>
+					<input type="radio" name="ax_cal_secondary_format" value="compact" <?php checked( 'compact', axismundi_cal_secondary_format() ); ?> />
+					<?php esc_html_e( 'Compact', 'axismundi-calendar' ); ?>
+					<span class="description"><?php esc_html_e( 'Short month-and-day labels for narrow cells.', 'axismundi-calendar' ); ?></span>
+				</label><br />
+				<label>
+					<input type="radio" name="ax_cal_secondary_format" value="full" <?php checked( 'full', axismundi_cal_secondary_format() ); ?> />
+					<?php esc_html_e( 'Full', 'axismundi-calendar' ); ?>
+					<span class="description"><?php esc_html_e( 'The complete localized calendar date, including information such as the Dangi year name where the viewer locale supplies it.', 'axismundi-calendar' ); ?></span>
+				</label>
+			</fieldset>
+			<p class="description"><?php esc_html_e( 'This controls density, not language. Each viewer sees ICU’s calendar names in their own locale.', 'axismundi-calendar' ); ?></p>
+			<?php submit_button( __( 'Save format', 'axismundi-calendar' ), 'secondary', 'submit', false ); ?>
+		</form>
+
 		<?php foreach ( axismundi_cal_calendar_systems() as $system ) : ?>
 			<h2><?php echo esc_html( (string) $system['label'] ); ?></h2>
 			<table class="widefat striped" style="max-width:52em;margin-bottom:1em;">
@@ -143,12 +164,20 @@ function axismundi_cal_secondary_handle_post() : void {
 	if ( ! is_admin() || ! current_user_can( 'manage_options' ) ) {
 		return;
 	}
-	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nothing is read before the check.
-	if ( ! isset( $_POST['ax_cal_secondary_action'] ) ) {
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified immediately below.
+	$action = isset( $_POST['ax_cal_secondary_action'] ) ? sanitize_key( wp_unslash( (string) $_POST['ax_cal_secondary_action'] ) ) : '';
+	if ( '' === $action ) {
 		return;
 	}
 	check_admin_referer( 'ax_cal_secondary' );
-	wp_safe_redirect( axismundi_cal_secondary_page_url() );
+	$notice = '';
+	if ( 'format' === $action ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified above.
+		$format = isset( $_POST['ax_cal_secondary_format'] ) ? sanitize_key( wp_unslash( (string) $_POST['ax_cal_secondary_format'] ) ) : '';
+		axismundi_cal_secondary_format_set( $format );
+		$notice = __( 'Secondary date format saved.', 'axismundi-calendar' );
+	}
+	wp_safe_redirect( add_query_arg( 'ax_cal_notice', rawurlencode( $notice ), axismundi_cal_secondary_page_url() ) );
 	exit;
 }
 add_action( 'admin_init', 'axismundi_cal_secondary_handle_post' );

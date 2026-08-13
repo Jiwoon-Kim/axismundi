@@ -299,29 +299,28 @@
 		if ( ! props.available.length ) {
 			return null;
 		}
+		/*
+		 * One at a time. Two second dates under a number is three numbers in a cell, and by the third
+		 * the reader is decoding rather than reading -- the annotation stops being an aid and becomes
+		 * something else to parse. Nothing about the model forbids more; this is a judgement about how
+		 * much a day cell can carry, made where it is visible rather than enforced in storage.
+		 *
+		 * `None` is an option rather than an unchecked box, so turning it off is a choice on the same
+		 * list as turning it on instead of the absence of one.
+		 */
 		return el(
 			'div',
 			{ className: 'ax-cal-workspace__section' },
-			el( 'h2', null, __( 'Second date', 'axismundi-calendar' ) ),
-			el(
-				'ul',
-				{ className: 'ax-cal-workspace__list' },
-				props.available.map( function ( system ) {
-					return el(
-						'li',
-						{ key: system.id },
-						el( C.CheckboxControl, {
-							label: system.label,
-							checked: props.selected.indexOf( system.id ) !== -1,
-							disabled: props.busy,
-							__nextHasNoMarginBottom: true,
-							onChange: function ( next ) {
-								props.onToggle( system.id, next );
-							}
-						} )
-					);
-				} )
-			)
+			el( C.RadioControl, {
+				label: __( 'Second date', 'axismundi-calendar' ),
+				selected: props.selected.length ? props.selected[ 0 ] : '',
+				options: [ { label: __( 'None', 'axismundi-calendar' ), value: '' } ].concat(
+					props.available.map( function ( system ) {
+						return { label: system.label, value: system.id };
+					} )
+				),
+				onChange: props.onChoose
+			} )
 		);
 	}
 
@@ -707,13 +706,11 @@
 				return { id: id, dates: secondary.dates[ id ] };
 			} );
 
-		function toggleSecondary( id, next ) {
-			var chosen = ( secondary.selected || [] ).filter( function ( entry ) {
-				return entry !== id;
-			} );
-			if ( next ) {
-				chosen.push( id );
-			}
+		function chooseSecondary( id ) {
+			// '' is None. The preference stays a list because the server and the grid both handle one,
+			// and narrowing the stored shape to match a control would be letting the sidebar decide
+			// what the model is allowed to say.
+			var chosen = id ? [ id ] : [];
 			var days = gridDays( year, month, startOfWeek );
 			// The server answers with the dates for the current month in the same round trip, so the
 			// grid fills in at the moment the box is ticked rather than a request later.
@@ -845,8 +842,7 @@
 					el( SecondaryCalendars, {
 						available: secondary.available || [],
 						selected: secondary.selected || [],
-						busy: busy,
-						onToggle: toggleSecondary
+						onChoose: chooseSecondary
 					} )
 				),
 				el( MonthGrid, {

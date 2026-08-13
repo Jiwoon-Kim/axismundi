@@ -237,6 +237,21 @@ ax_cs_assert(
 	'a system nobody registered cannot be stored as a preference',
 	array( 'chinese' ) === axismundi_cal_secondary_systems_set( array( 'chinese', 'martian', 'chinese' ) )
 );
+/*
+ * The sidebar offers one at a time -- two second dates under a number is three numbers in a cell --
+ * but the preference is still a list. A control deciding what the model may say would mean widening
+ * storage again the first time a year view has room for two.
+ */
+ax_cs_assert(
+	$ax_cs_results,
+	'choosing none stores none, rather than leaving the last choice behind',
+	array() === axismundi_cal_secondary_systems_set( array() ) && array() === axismundi_cal_secondary_systems()
+);
+ax_cs_assert(
+	$ax_cs_results,
+	'and the store still holds more than one, because the limit is the cell and not the model',
+	array( 'chinese', 'hebrew' ) === axismundi_cal_secondary_systems_set( array( 'chinese', 'hebrew' ) )
+);
 ax_cs_assert(
 	$ax_cs_results,
 	'and a preference naming a system that has gone away reads as off rather than as an error',

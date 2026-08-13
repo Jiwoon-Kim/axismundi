@@ -145,6 +145,9 @@
 	/**
 	 * Say the Gregorian day with one of ICU's other calendars.
 	 *
+	 * Always month and day, because this is only asked for on the days that anchor a run -- a bare
+	 * day number on a week's first cell would be a count with nothing to count from.
+	 *
 	 * The API says whether a system can name the day and returns its structured answer. It does not
 	 * ship an English string for the browser to translate: `Intl` already knows that dangi is
 	 * `2026년(병오년) 7월 1일` in Korean and a different, equally valid expression elsewhere.
@@ -167,17 +170,10 @@
 		 * for which it is the better answer.
 		 */
 		if ( 'named' !== system.notation ) {
-			if ( 1 !== Number( date.day ) ) {
-				return String( date.day );
-			}
 			return ( date.leapMonth ? LEAP_MARK + ' ' : '' ) + date.month + '.' + date.day;
 		}
 
-		// The month is named on the first of the month and nowhere else, whatever the notation. A name
-		// under every number is the same crowding as a number under every number, only wider.
-		var options = 1 === Number( date.day )
-			? { calendar: system.icuCalendar, month: 'long', day: 'numeric', timeZone: 'UTC' }
-			: { calendar: system.icuCalendar, day: 'numeric', timeZone: 'UTC' };
+		var options = { calendar: system.icuCalendar, month: 'long', day: 'numeric', timeZone: 'UTC' };
 		try {
 			// The server resolves secondary calendars at UTC noon. Recreate that civil day rather than
 			// passing a local midnight through the viewer's zone and risking yesterday in the formatter.
@@ -487,7 +483,7 @@
 			el(
 				'div',
 				{ className: 'ax-cal-workspace__weeks' },
-				days.map( function ( day ) {
+				days.map( function ( day, dayIndex ) {
 					var key = localKey( day );
 					var entries = placed[ key ] || [];
 					var outside = day.getMonth() !== props.month;
@@ -548,7 +544,18 @@
 						 * under every number would be the provider promising an answer it does not have.
 						 */
 						( props.secondary || [] ).map( function ( system ) {
-							var label = secondaryLabel( system, day );
+							/*
+							 * Not every day. A number under all 42 cells says the same thing 42 times and
+							 * leaves the grid looking half-filled before a single event is on it; what a
+							 * reader actually needs is a fix often enough to count from.
+							 *
+							 * So: the start of each week, and the first of the second calendar's month --
+							 * which is the day worth noticing anyway, and the one that carries the month.
+							 * This is the convention printed Korean calendars and Samsung's use.
+							 */
+							var date = system.dates[ localKey( day ) ];
+							var anchor = 0 === dayIndex % 7 || ( date && 1 === Number( date.day ) );
+							var label = anchor ? secondaryLabel( system, day ) : '';
 							return label
 								? el( 'span', {
 									key: system.id,

@@ -72,27 +72,6 @@ function axismundi_cal_render_secondary_page() : void {
 			<div class="notice notice-error"><p><?php echo esc_html( $error ); ?></p></div>
 		<?php endif; ?>
 
-		<h2><?php esc_html_e( 'How the second date is written', 'axismundi-calendar' ); ?></h2>
-		<form method="post" action="">
-			<?php wp_nonce_field( 'ax_cal_secondary' ); ?>
-			<input type="hidden" name="ax_cal_secondary_action" value="format" />
-			<fieldset>
-				<legend class="screen-reader-text"><?php esc_html_e( 'Second date notation', 'axismundi-calendar' ); ?></legend>
-				<label>
-					<input type="radio" name="ax_cal_secondary_format" value="numeric" <?php checked( 'numeric', axismundi_cal_secondary_format() ); ?> />
-					<?php esc_html_e( 'Numbers', 'axismundi-calendar' ); ?>
-					<span class="description"><?php esc_html_e( '7.1 — how Korean and Chinese lunar dates are usually written.', 'axismundi-calendar' ); ?></span>
-				</label><br />
-				<label>
-					<input type="radio" name="ax_cal_secondary_format" value="locale" <?php checked( 'locale', axismundi_cal_secondary_format() ); ?> />
-					<?php esc_html_e( 'Calendar names', 'axismundi-calendar' ); ?>
-					<span class="description"><?php esc_html_e( 'The month as that calendar names it, in each viewer’s own language. Hebrew and Islamic months have names rather than numbers.', 'axismundi-calendar' ); ?></span>
-				</label>
-			</fieldset>
-			<p class="description"><?php esc_html_e( 'This is notation, not language. Every viewer sees their own locale either way, and the full date is always in the day’s tooltip.', 'axismundi-calendar' ); ?></p>
-			<?php submit_button( __( 'Save format', 'axismundi-calendar' ), 'secondary', 'submit', false ); ?>
-		</form>
-
 		<?php foreach ( axismundi_cal_calendar_systems() as $system ) : ?>
 			<h2><?php echo esc_html( (string) $system['label'] ); ?></h2>
 			<table class="widefat striped" style="max-width:52em;margin-bottom:1em;">
@@ -104,6 +83,18 @@ function axismundi_cal_render_secondary_page() : void {
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Kind', 'axismundi-calendar' ); ?></th>
 						<td><?php echo esc_html( $types[ (string) $system['type'] ] ?? (string) $system['type'] ); ?></td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Months are written', 'axismundi-calendar' ); ?></th>
+						<td>
+							<?php
+							echo esc_html(
+								'named' === (string) $system['month_notation']
+									? __( 'By name, in each viewer’s own language', 'axismundi-calendar' )
+									: __( 'As numbers', 'axismundi-calendar' )
+							);
+							?>
+						</td>
 					</tr>
 					<?php if ( '' !== (string) $system['authority'] ) : ?>
 						<tr>
@@ -171,12 +162,6 @@ function axismundi_cal_secondary_handle_post() : void {
 	}
 	check_admin_referer( 'ax_cal_secondary' );
 	$notice = '';
-	if ( 'format' === $action ) {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified above.
-		$format = isset( $_POST['ax_cal_secondary_format'] ) ? sanitize_key( wp_unslash( (string) $_POST['ax_cal_secondary_format'] ) ) : '';
-		axismundi_cal_secondary_format_set( $format );
-		$notice = __( 'Secondary date format saved.', 'axismundi-calendar' );
-	}
 	wp_safe_redirect( add_query_arg( 'ax_cal_notice', rawurlencode( $notice ), axismundi_cal_secondary_page_url() ) );
 	exit;
 }

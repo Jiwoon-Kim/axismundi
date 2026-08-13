@@ -261,22 +261,31 @@ ax_cs_assert(
 	} )()
 );
 
-// Density is a site policy; language belongs to the viewer's ICU formatter and is never stored here.
-$ax_cs_format_kept = get_option( AXISMUNDI_CAL_SECONDARY_FORMAT_OPTION, null );
+/*
+ * Notation is registered, not configured. There is no site for which `Seventh Month` is the right
+ * way to write 7월, and none for which `13` is the right way to write Elul.
+ */
 ax_cs_assert(
 	$ax_cs_results,
-	'the site may choose a compact grid without choosing a language for anybody',
-	'numeric' === axismundi_cal_secondary_format_set( 'numeric' ) && 'numeric' === axismundi_cal_secondary_format()
+	'the calendars whose months are numbers say so',
+	'numeric' === axismundi_cal_calendar_system( 'korean-lunisolar' )['month_notation']
+		&& 'numeric' === axismundi_cal_calendar_system( 'chinese' )['month_notation']
 );
 ax_cs_assert(
 	$ax_cs_results,
-	'and may choose the full localized form instead',
-	'locale' === axismundi_cal_secondary_format_set( 'locale' ) && 'locale' === axismundi_cal_secondary_format()
+	'and the ones whose months have names say that instead',
+	'named' === axismundi_cal_calendar_system( 'hebrew' )['month_notation']
+		&& 'named' === axismundi_cal_calendar_system( 'islamic-umalqura' )['month_notation']
 );
 ax_cs_assert(
 	$ax_cs_results,
-	'an invented format falls back to compact rather than becoming an unchecked presentation state',
-	'numeric' === axismundi_cal_secondary_format_set( 'wide' ) && 'numeric' === axismundi_cal_secondary_format()
+	'a system that says nothing is numbers, the safe half: a number read as a name is merely terse, a name that is an internal index is wrong',
+	'numeric' === ( axismundi_cal_calendar_system( 'audit-configurable' )['month_notation'] ?? '' )
+);
+ax_cs_assert(
+	$ax_cs_results,
+	'and the client is told, because the client is what formats',
+	'named' === ( array_column( axismundi_cal_secondary_choices(), 'notation', 'id' )['hebrew'] ?? '' )
 );
 
 $ax_cs_req = new WP_REST_Request( 'PUT', '/axismundi/v1/actors/me/secondaryCalendars' );
@@ -314,11 +323,6 @@ if ( is_array( $ax_cs_kept ) ) {
 	update_user_meta( $ax_cs_user, AXISMUNDI_CAL_SECONDARY_META, $ax_cs_kept );
 } else {
 	delete_user_meta( $ax_cs_user, AXISMUNDI_CAL_SECONDARY_META );
-}
-if ( null === $ax_cs_format_kept ) {
-	delete_option( AXISMUNDI_CAL_SECONDARY_FORMAT_OPTION );
-} else {
-	update_option( AXISMUNDI_CAL_SECONDARY_FORMAT_OPTION, $ax_cs_format_kept, false );
 }
 
 $ax_cs_failed = count( array_filter( $ax_cs_results, static fn( array $r ) : bool => ! $r[0] ) );

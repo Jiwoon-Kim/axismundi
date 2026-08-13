@@ -90,18 +90,21 @@ function axismundi_cal_register_icu_calendars() : void {
 			 */
 			'id'    => 'korean-lunisolar',
 			'icu'   => 'dangi',
+			'notation' => 'numeric',
 			'label' => __( 'Korean lunar calendar', 'axismundi-calendar' ),
 			'type'  => 'lunisolar',
 		),
 		array(
 			'id'    => 'hebrew',
 			'icu'   => 'hebrew',
+			'notation' => 'named',
 			'label' => __( 'Hebrew calendar', 'axismundi-calendar' ),
 			'type'  => 'lunisolar',
 		),
 		array(
 			'id'    => 'chinese',
 			'icu'   => 'chinese',
+			'notation' => 'numeric',
 			'label' => __( 'Chinese calendar', 'axismundi-calendar' ),
 			'type'  => 'lunisolar',
 		),
@@ -111,6 +114,7 @@ function axismundi_cal_register_icu_calendars() : void {
 			// approximation that drifts a day from it.
 			'id'    => 'islamic-umalqura',
 			'icu'   => 'islamic-umalqura',
+			'notation' => 'named',
 			'label' => __( 'Islamic calendar (Umm al-Qura)', 'axismundi-calendar' ),
 			// Lunar, not lunisolar. No month is intercalated to hold the seasons in place, which is
 			// why Ramadan moves through them.
@@ -137,6 +141,7 @@ function axismundi_cal_register_icu_calendars() : void {
 					defined( 'INTL_ICU_VERSION' ) ? INTL_ICU_VERSION : '?'
 				),
 				'icu_calendar' => $icu,
+				'month_notation' => (string) $system['notation'],
 				/*
 				 * No coverage bounds. ICU answers for any date it is given, and inventing a range here
 				 * would be claiming knowledge of where its rules stop being historically accurate --

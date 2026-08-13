@@ -152,18 +152,21 @@
 	// A leap month is the same number twice, so the mark is the only thing telling them apart.
 	var LEAP_MARK = _x( 'L', 'leap month marker', 'axismundi-calendar' );
 
-	function secondaryLabel( system, day, format ) {
+	function secondaryLabel( system, day ) {
 		var date = system.dates[ localKey( day ) ];
 		if ( ! date || ! system.icuCalendar || ! window.Intl || ! Intl.DateTimeFormat ) {
 			return '';
 		}
 		/*
-		 * Digits, from the numbers the server sent. Not `Intl` with numeric options: for Hebrew that
-		 * would print ICU's internal month index, which counts a leap month that most years do not
-		 * have and calls Elul the thirteenth. `7.1` is a Korean and Chinese notation and this is the
-		 * only place it is claimed to be one.
+		 * Digits, from the numbers the server sent, for the calendars whose months are numbers. Not
+		 * `Intl` with numeric options: for Hebrew that would print ICU's internal month index, which
+		 * counts a leap month most years do not have and calls Elul the thirteenth.
+		 *
+		 * Which calendar gets which is registered rather than configured. 7월 and 七月 are how those
+		 * dates are written; `Seventh Month` is a translation nobody asked for, and there is no site
+		 * for which it is the better answer.
 		 */
-		if ( 'locale' !== format ) {
+		if ( 'named' !== system.notation ) {
 			if ( 1 !== Number( date.day ) ) {
 				return String( date.day );
 			}
@@ -540,7 +543,7 @@
 						 * under every number would be the provider promising an answer it does not have.
 						 */
 						( props.secondary || [] ).map( function ( system ) {
-							var label = secondaryLabel( system, day, props.secondaryFormat );
+							var label = secondaryLabel( system, day );
 							return label
 								? el( 'span', {
 									key: system.id,
@@ -784,7 +787,8 @@
 				return {
 					id: id,
 					dates: secondary.dates[ id ],
-					icuCalendar: secondaryAvailable[ id ].icuCalendar
+					icuCalendar: secondaryAvailable[ id ].icuCalendar,
+					notation: secondaryAvailable[ id ].notation
 				};
 			} );
 
@@ -930,7 +934,6 @@
 				el( MonthGrid, {
 					items: items,
 					secondary: secondaryShown,
-					secondaryFormat: secondary.format || 'compact',
 					year: year,
 					month: month,
 					cursor: cursor,

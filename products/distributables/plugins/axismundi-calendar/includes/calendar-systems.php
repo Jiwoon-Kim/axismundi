@@ -221,6 +221,14 @@ function axismundi_cal_register_calendar_system( string $id, array $args ) : voi
 				 * thing as the Korean calendar would have to be unlearned by whoever added it.
 				 */
 				'type'          => (string) ( $args['type'] ?? 'other' ),
+				/*
+				 * How this calendar writes a month: `numeric` or `named`. A fact about the calendar, not
+				 * a taste -- Korean and Chinese lunar months are written 7월 / 七月 and nobody calls that
+				 * the Seventh Month, while Elul and Ramadan are names and their numbers are an ICU
+				 * implementation detail. There is no site for which the other choice is right, which is
+				 * why this is registered rather than configured.
+				 */
+				'month_notation' => 'named' === ( $args['month_notation'] ?? '' ) ? 'named' : 'numeric',
 				// Who decides what a date is. Not the same question as which identifier formats it.
 				'authority'     => (string) ( $args['authority'] ?? '' ),
 				/*

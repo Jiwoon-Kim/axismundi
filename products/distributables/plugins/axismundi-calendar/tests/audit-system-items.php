@@ -127,6 +127,13 @@ try {
 	ax_si_assert( $ax_si_results, 'a key outside the vocabulary is dropped rather than stored', array( 'HOLIDAY' ) === axismundi_cal_normalize_categories( array( 'HOLIDAY', 'BANK-HOLIDAY-KR' ) ) );
 	ax_si_assert( $ax_si_results, 'a category is matched by key rather than by the name a reader sees', array( 'PUBLIC-HOLIDAY' ) === axismundi_cal_normalize_categories( 'public-holiday' ) );
 	ax_si_assert( $ax_si_results, 'and the same key twice is one category', array( 'HOLIDAY' ) === axismundi_cal_normalize_categories( array( 'HOLIDAY', 'HOLIDAY' ) ) );
+	ax_si_assert( $ax_si_results, 'a moon phase retains the one stable key a renderer translates', array( 'ASTRONOMY', 'MOON-PHASE', 'FULL-MOON' ) === axismundi_cal_normalize_categories( array( 'FULL-MOON', 'ASTRONOMY', 'MOON-PHASE' ) ) );
+	$ax_si_conflicting_phase = axismundi_cal_system_item_save( $ax_si_holidays, array( 'title' => 'Impossible phase', 'temporal_kind' => 'instant', 'start_utc' => '2027-05-01T00:00:00Z', 'categories' => array( 'ASTRONOMY', 'MOON-PHASE', 'NEW-MOON', 'FULL-MOON' ) ) );
+	ax_si_assert( $ax_si_results, 'two phase names on one row are refused rather than leaving a renderer to choose', is_wp_error( $ax_si_conflicting_phase ) && 'ax_cal_category_conflict' === $ax_si_conflicting_phase->get_error_code() );
+	$ax_si_missing_phase = axismundi_cal_system_item_save( $ax_si_holidays, array( 'title' => 'Unnamed phase', 'temporal_kind' => 'instant', 'start_utc' => '2027-05-01T00:00:00Z', 'categories' => array( 'ASTRONOMY', 'MOON-PHASE' ) ) );
+	ax_si_assert( $ax_si_results, 'a moon-phase category without its phase is refused too', is_wp_error( $ax_si_missing_phase ) && 'ax_cal_category_required' === $ax_si_missing_phase->get_error_code() );
+	$ax_si_orphan_phase = axismundi_cal_system_item_save( $ax_si_holidays, array( 'title' => 'Orphan phase', 'temporal_kind' => 'instant', 'start_utc' => '2027-05-01T00:00:00Z', 'categories' => array( 'ASTRONOMY', 'FULL-MOON' ) ) );
+	ax_si_assert( $ax_si_results, 'and a phase key cannot lose the category that says what it is', is_wp_error( $ax_si_orphan_phase ) && 'ax_cal_category_parent' === $ax_si_orphan_phase->get_error_code() );
 
 	$ax_si_parents = (int) axismundi_cal_system_item_save(
 		$ax_si_holidays,
@@ -675,6 +682,7 @@ ax_si_assert( $ax_si_results, 'with controls to select drafts or invert the visi
 			&& null === $ax_si_moment_row['start_date']
 			&& null === $ax_si_moment_row['end_date']
 	);
+	ax_si_assert( $ax_si_results, 'a moment belongs to its UTC year by default, without reading a missing civil date', 2026 === (int) $ax_si_moment_row['batch_year'] );
 	ax_si_assert(
 		$ax_si_results,
 		'while a whole-day entry keeps its civil date and stores no moment',

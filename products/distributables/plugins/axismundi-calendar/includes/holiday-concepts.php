@@ -430,6 +430,10 @@ function axismundi_cal_holiday_concept_save( array $fields, int $concept_id = 0 
 		return new WP_Error( 'ax_cal_concept_label', __( 'A holiday needs a name to be recognised by.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
 	$categories = axismundi_cal_normalize_categories( $fields['categories'] ?? ( $existing['categories'] ?? array() ) );
+	$category_validation = axismundi_cal_validate_categories( $categories );
+	if ( is_wp_error( $category_validation ) ) {
+		return $category_validation;
+	}
 
 	/*
 	 * An external identifier, and only that. `Q8249787` names the same subject in Wikidata and is

@@ -54,6 +54,10 @@ const AXISMUNDI_CAL_ITEM_CATEGORIES = array(
 	'COMMEMORATION',
 	'ASTRONOMY',
 	'MOON-PHASE',
+	'NEW-MOON',
+	'FIRST-QUARTER',
+	'FULL-MOON',
+	'LAST-QUARTER',
 	'EQUINOX',
 	'SOLSTICE',
 	'ACADEMIC',
@@ -81,6 +85,22 @@ const AXISMUNDI_CAL_SYSTEM_CALENDAR_CATEGORIES = array(
 const AXISMUNDI_CAL_TEMPORAL_ALL_DAY = 'all_day';
 const AXISMUNDI_CAL_TEMPORAL_INSTANT = 'instant';
 const AXISMUNDI_CAL_TEMPORAL_KINDS   = array( AXISMUNDI_CAL_TEMPORAL_ALL_DAY, AXISMUNDI_CAL_TEMPORAL_INSTANT );
+
+/**
+ * Category keys that describe one dimension and therefore cannot coexist.
+ *
+ * Categories normally compose: a Buddhist public holiday is both `BUDDHIST` and
+ * `PUBLIC-HOLIDAY`. A moon phase is different. It has exactly one position in its cycle, so
+ * storing both `NEW-MOON` and `FULL-MOON` would make the row name itself differently at different
+ * read surfaces. Keep the rule next to the vocabulary instead of teaching each renderer which key
+ * happens to win.
+ */
+const AXISMUNDI_CAL_CATEGORY_EXCLUSIVE_GROUPS = array(
+	'moon_phase' => array(
+		'members'  => array( 'NEW-MOON', 'FIRST-QUARTER', 'FULL-MOON', 'LAST-QUARTER' ),
+		'requires' => 'MOON-PHASE',
+	),
+);
 
 /**
  * A UTC moment, or null when the string is not one.
@@ -130,6 +150,33 @@ function axismundi_cal_normalize_categories( $categories ) : array {
 	 * whoever wrote it happened to type the list.
 	 */
 	return array_values( array_filter( AXISMUNDI_CAL_ITEM_CATEGORIES, static fn( string $key ) : bool => isset( $seen[ $key ] ) ) );
+}
+
+/**
+ * Reject category combinations that would make one entry say two incompatible things.
+ *
+ * @param mixed $categories List, or a comma-separated string.
+ * @return true|WP_Error
+ */
+function axismundi_cal_validate_categories( $categories ) {
+	$normalized = axismundi_cal_normalize_categories( $categories );
+	foreach ( AXISMUNDI_CAL_CATEGORY_EXCLUSIVE_GROUPS as $group => $definition ) {
+		$members  = $definition['members'];
+		$requires = (string) ( $definition['requires'] ?? '' );
+		$chosen   = array_values( array_intersect( $normalized, $members ) );
+		if ( count( $chosen ) > 1 ) {
+			return new WP_Error( 'ax_cal_category_conflict', __( 'An entry can have only one value in each exclusive category group.', 'axismundi-calendar' ), array( 'group' => $group, 'categories' => $chosen, 'status' => 400 ) );
+		}
+		if ( '' !== $requires ) {
+			if ( in_array( $requires, $normalized, true ) && 1 !== count( $chosen ) ) {
+				return new WP_Error( 'ax_cal_category_required', __( 'A moon phase needs one phase.', 'axismundi-calendar' ), array( 'group' => $group, 'status' => 400 ) );
+			}
+			if ( array() !== $chosen && ! in_array( $requires, $normalized, true ) ) {
+				return new WP_Error( 'ax_cal_category_parent', __( 'A phase belongs to the moon-phase category.', 'axismundi-calendar' ), array( 'group' => $group, 'status' => 400 ) );
+			}
+		}
+	}
+	return true;
 }
 
 /**
@@ -258,7 +305,13 @@ function axismundi_cal_system_item_save( int $calendar_id, array $fields, int $i
 	 */
 	$batch_year = (int) ( $fields['batch_year'] ?? ( $existing['batch_year'] ?? 0 ) );
 	if ( $batch_year <= 0 ) {
-		$batch_year = (int) substr( $start, 0, 4 );
+		$batch_year = (int) substr( (string) ( $start ?? $start_utc ), 0, 4 );
+	}
+
+	$categories = $fields['categories'] ?? ( $existing['categories'] ?? array() );
+	$category_validation = axismundi_cal_validate_categories( $categories );
+	if ( is_wp_error( $category_validation ) ) {
+		return $category_validation;
 	}
 
 	$source_uid = trim( (string) ( $fields['source_uid'] ?? ( $existing['source_uid'] ?? '' ) ) );
@@ -278,7 +331,7 @@ function axismundi_cal_system_item_save( int $calendar_id, array $fields, int $i
 		'end_date'     => $end,
 		'title'        => $title,
 		'description'  => (string) ( $fields['description'] ?? ( $existing['description'] ?? '' ) ),
-		'categories'   => implode( ',', axismundi_cal_normalize_categories( $categories ?? ( $fields['categories'] ?? ( $existing['categories'] ?? array() ) ) ) ),
+		'categories'   => implode( ',', axismundi_cal_normalize_categories( $categories ) ),
 		'transparency' => $transparency,
 		'batch_year'   => $batch_year,
 		'status'       => $status,

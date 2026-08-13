@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '25';
+const AXISMUNDI_CAL_DB_VERSION        = '26';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 const AXISMUNDI_CAL_SCHEMA_BAIL_OPTION = 'ax_cal_schema_bail';
 
@@ -535,7 +535,7 @@ function axismundi_cal_install_schema() : bool {
 			end_date date NULL,
 			start_utc datetime NULL,
 			end_utc datetime NULL,
-			title text NOT NULL,
+			title text NULL,
 			description longtext NOT NULL,
 			categories varchar(191) NOT NULL default '',
 			transparency varchar(16) NOT NULL default 'TRANSPARENT',
@@ -756,6 +756,11 @@ function axismundi_cal_install_schema() : bool {
 	 */
 	axismundi_cal_relax_system_item_dates();
 
+	/*
+	 * Same reason, one column over: a row whose categories name it stores no title.
+	 */
+	axismundi_cal_relax_system_item_title();
+
 	$lunar_cache = $wpdb->prefix . 'ax_cal_lunar_months';
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- this plugin's own table.
 	$wpdb->query( "DROP TABLE IF EXISTS {$lunar_cache}" );
@@ -812,4 +817,25 @@ function axismundi_cal_relax_system_item_dates() : void {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- this plugin's own table.
 		$wpdb->query( "ALTER TABLE {$table} MODIFY {$column} date NULL DEFAULT NULL" );
 	}
+}
+
+/**
+ * Let a system item have no title, for the rows their categories name.
+ *
+ * `dbDelta` will not take NOT NULL off a column that already has it, the same reason the dates
+ * needed freeing. A moon phase carries `FULL-MOON` and is named from it at read time, so there is no
+ * string for this column to hold and '' would claim somebody had cleared the name.
+ *
+ * @return void
+ */
+function axismundi_cal_relax_system_item_title() : void {
+	global $wpdb;
+	$table = axismundi_cal_system_items_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+	$definition = $wpdb->get_row( $wpdb->prepare( "SHOW COLUMNS FROM {$table} LIKE %s", 'title' ), ARRAY_A );
+	if ( ! is_array( $definition ) || 'NO' !== ( $definition['Null'] ?? '' ) ) {
+		return;
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- this plugin's own table.
+	$wpdb->query( "ALTER TABLE {$table} MODIFY title text NULL DEFAULT NULL" );
 }

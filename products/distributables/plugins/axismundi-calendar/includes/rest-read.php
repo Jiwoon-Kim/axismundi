@@ -508,7 +508,7 @@ function axismundi_cal_view_payload( array $uuids, string $start_arg, string $en
 				$out[] = array(
 					'calendar'   => $calendar_uuid,
 					'eventId'    => 0,
-					'summary'    => is_array( $label ) ? $label['title'] : (string) $entry['title'],
+					'summary'    => is_array( $label ) ? $label['title'] : axismundi_cal_item_display_name( $entry ),
 					// Which language this turned out to be, so a screen can say it is showing English
 					// because there is no Korean rather than looking finished.
 					'locale'     => is_array( $label ) ? $label['locale'] : '',

@@ -739,6 +739,78 @@ ax_si_assert( $ax_si_results, 'with controls to select drafts or invert the visi
 		$ax_si_late_in( '2026-08-25', '2026-09-01' )
 	);
 
+	// -- Names --------------------------------------------------------------------------------------
+
+	/*
+	 * A generator writes tens of thousands of phases and should not be made to write a word for each
+	 * one. `FULL-MOON` already says what the row is, in whichever language the reader happens to use,
+	 * so the row stores the key and the name is produced at read time -- the same rule the secondary
+	 * calendars follow, and the reason no phase name is ever stored.
+	 */
+	$ax_si_unnamed = axismundi_cal_system_item_save(
+		$ax_si_holidays,
+		array( 'temporal_kind' => 'instant', 'start_utc' => '2026-11-24T05:00:00Z', 'categories' => array( 'ASTRONOMY', 'MOON-PHASE', 'LAST-QUARTER' ), 'status' => 'published' )
+	);
+	ax_si_assert( $ax_si_results, 'an entry its categories can name stores without a name', is_int( $ax_si_unnamed ) && $ax_si_unnamed > 0 );
+
+	$ax_si_unnamed_row = (array) axismundi_cal_system_item_get( (int) $ax_si_unnamed );
+	ax_si_assert(
+		$ax_si_results,
+		'and stores NULL rather than an empty string, so nobody can read it as a name somebody cleared',
+		null === $ax_si_unnamed_row['title']
+	);
+	ax_si_assert(
+		$ax_si_results,
+		'while still reading as a name on every surface',
+		'' !== axismundi_cal_item_display_name( $ax_si_unnamed_row )
+			&& axismundi_cal_item_display_name( $ax_si_unnamed_row ) === axismundi_cal_item_generated_name( array( 'ASTRONOMY', 'MOON-PHASE', 'LAST-QUARTER' ) )
+	);
+
+	/*
+	 * The half that keeps the ICS surface safe. Nothing that cannot name itself may be stored, because
+	 * a nameless VEVENT is kept by the subscriber's client rather than corrected on the next request.
+	 */
+	ax_si_assert(
+		$ax_si_results,
+		'an entry that can neither be named nor name itself is refused',
+		is_wp_error( axismundi_cal_system_item_save( $ax_si_holidays, array( 'start_date' => '2027-04-01', 'categories' => array( 'HOLIDAY' ) ) ) )
+	);
+	ax_si_assert(
+		$ax_si_results,
+		'and a category that is not a name does not stand in for one',
+		is_wp_error( axismundi_cal_system_item_save( $ax_si_holidays, array( 'start_date' => '2027-04-02', 'categories' => array( 'ASTRONOMY', 'MOON-PHASE' ) ) ) )
+	);
+
+	/*
+	 * A written name outranks the generated one. Somebody typed it on purpose, and 정월대보름 is not
+	 * something `FULL-MOON` was ever going to produce.
+	 */
+	$ax_si_named_phase = (int) axismundi_cal_system_item_save(
+		$ax_si_holidays,
+		array( 'title' => '정월대보름', 'temporal_kind' => 'instant', 'start_utc' => '2027-02-20T12:00:00Z', 'categories' => array( 'ASTRONOMY', 'MOON-PHASE', 'FULL-MOON' ), 'status' => 'published' )
+	);
+	ax_si_assert(
+		$ax_si_results,
+		'a written name outranks the one its category would generate',
+		'정월대보름' === axismundi_cal_item_display_name( (array) axismundi_cal_system_item_get( $ax_si_named_phase ) )
+	);
+
+	/*
+	 * The fallback is a read, never a write. Promoting a self-named row to a holiday would put one
+	 * language into the catalog permanently, so it is refused rather than resolved.
+	 */
+	/*
+	 * Asserted on the code rather than on failing at all. `concept_save()` refuses an empty label too,
+	 * so a promotion would be rejected either way -- and a check that cannot tell the two apart would
+	 * pass just as happily if this guard were deleted, which is the only thing it exists to prove.
+	 */
+	$ax_si_promoted = axismundi_cal_create_principal_holiday_from_item( (int) $ax_si_unnamed );
+	ax_si_assert(
+		$ax_si_results,
+		'and an entry named by its category cannot be promoted to a holiday, which would store that translation',
+		is_wp_error( $ax_si_promoted ) && 'ax_cal_principal_unnamed' === $ax_si_promoted->get_error_code()
+	);
+
 	ax_si_assert( $ax_si_results, 'deleting a maintained calendar takes its entries with it', array() === axismundi_cal_system_items_in_range( $ax_si_doomed, '2027-01-01', '2028-01-01', array(), true ) );
 } finally {
 	wp_set_current_user( 0 );

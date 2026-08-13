@@ -8,9 +8,14 @@
  * would put a country's public holidays into the same list a person writes their own Events in, and
  * would hand every one of them an author, a permalink and an ActivityPub identity that mean nothing.
  *
- * Everything here is a civil date. A holiday on the 15th is the 15th in Seoul and in New York, and
- * the moment one of these becomes an instant it starts moving a day for somebody -- which is exactly
- * the bug the all-day handling elsewhere in this plugin exists to prevent.
+ * An entry is one of two shapes in time, and `temporal_kind` is which. An `all_day` entry is a civil
+ * date: a holiday on the 15th is the 15th in Seoul and in New York, and converting it would move it a
+ * day for somebody, which is exactly the bug the all-day handling elsewhere in this plugin exists to
+ * prevent. An `instant` is a moment in UTC and has no civil date at all -- a full moon at 00:30Z is
+ * the 28th in Seoul and the 27th in Los Angeles, so the date is the viewer's to produce.
+ *
+ * "Civil" here is only ever the time model. The `CIVIC` category below is unrelated: it classifies
+ * what a date is about, not how it sits in time.
  *
  * Categories are the stable half of the vocabulary. `SUMMARY` is a translation and changes with the
  * locale; `PUBLIC-HOLIDAY` is what a filter can be built on. Google's own holiday feed puts its
@@ -180,6 +185,60 @@ function axismundi_cal_validate_categories( $categories ) {
 }
 
 /**
+ * The name a row's own categories give it, or '' when they give it none.
+ *
+ * A moon phase is not named, it is identified. `FULL-MOON` already says everything the name would,
+ * and storing "보름" next to it would be storing a translation: the row would then read as Korean to
+ * an English reader, and a site that changed its language would keep the old word forever. The key
+ * is the fact and the name is produced from it at read time, which is the same rule the secondary
+ * calendars follow.
+ *
+ * Only the exclusive groups can do this, and that is not a coincidence -- a name has to be one name,
+ * so only a dimension that already permits exactly one value can supply it.
+ *
+ * @param mixed $categories List, or a comma-separated string.
+ * @return string
+ */
+function axismundi_cal_item_generated_name( $categories ) : string {
+	$names = array(
+		'NEW-MOON'      => __( 'New moon', 'axismundi-calendar' ),
+		'FIRST-QUARTER' => __( 'First quarter', 'axismundi-calendar' ),
+		'FULL-MOON'     => __( 'Full moon', 'axismundi-calendar' ),
+		'LAST-QUARTER'  => __( 'Last quarter', 'axismundi-calendar' ),
+	);
+	foreach ( axismundi_cal_normalize_categories( $categories ) as $key ) {
+		if ( isset( $names[ $key ] ) ) {
+			return $names[ $key ];
+		}
+	}
+	return '';
+}
+
+/**
+ * What one entry is called.
+ *
+ * The single answer to "what does this row say its name is", so a surface cannot accidentally
+ * disagree with another one. A stored title wins because somebody wrote it on purpose -- a
+ * translated holiday label is not something a category could reproduce.
+ *
+ * Never '' for a row this plugin wrote: `system_item_save()` refuses a row that neither carries a
+ * title nor can generate one, so the two halves are one rule seen from either end. It is still
+ * written defensively, because a row that predates that rule would otherwise reach a subscriber's
+ * client as a VEVENT with no SUMMARY, and an .ics is kept by the client rather than re-fetched.
+ *
+ * @param array<string,mixed> $item Entry row.
+ * @return string
+ */
+function axismundi_cal_item_display_name( array $item ) : string {
+	$title = trim( (string) ( $item['title'] ?? '' ) );
+	if ( '' !== $title ) {
+		return $title;
+	}
+	$generated = axismundi_cal_item_generated_name( $item['categories'] ?? array() );
+	return '' !== $generated ? $generated : __( 'Untitled entry', 'axismundi-calendar' );
+}
+
+/**
  * Normalize the top-level classification of a system Calendar.
  *
  * @param mixed $categories List, or a comma-separated string.
@@ -239,9 +298,31 @@ function axismundi_cal_system_item_save( int $calendar_id, array $fields, int $i
 	}
 
 	$existing = $item_id > 0 ? axismundi_cal_system_item_get( $item_id ) : null;
-	$title    = trim( (string) ( $fields['title'] ?? ( $existing['title'] ?? '' ) ) );
-	if ( '' === $title ) {
-		return new WP_Error( 'ax_cal_item_title', __( 'An entry needs a name.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+
+	/*
+	 * Before the title, because whether a title is required is a question the categories answer.
+	 */
+	$categories = $fields['categories'] ?? ( $existing['categories'] ?? array() );
+	$category_validation = axismundi_cal_validate_categories( $categories );
+	if ( is_wp_error( $category_validation ) ) {
+		return $category_validation;
+	}
+
+	/*
+	 * A row must be able to say what it is called, by one of two routes. A holiday is named because
+	 * somebody wrote the name: `설날` cannot be derived from `PUBLIC-HOLIDAY`, and no fallback is going
+	 * to invent it. A moon phase is named because `FULL-MOON` already says it, in whatever language
+	 * the reader is using -- a generator producing tens of thousands of these should not be made to
+	 * write a word it would have to translate.
+	 *
+	 * The condition is nameability rather than which provider or which screen is writing. A caller
+	 * cannot be trusted to declare that it is the generator, and the invariant that actually matters
+	 * downstream is that no row reaches a reader without a name. Stated this way the two ends agree by
+	 * construction: NULL is allowed here exactly when `item_display_name()` has an answer.
+	 */
+	$title = trim( (string) ( $fields['title'] ?? ( $existing['title'] ?? '' ) ) );
+	if ( '' === $title && '' === axismundi_cal_item_generated_name( $categories ) ) {
+		return new WP_Error( 'ax_cal_item_title', __( 'An entry needs a name, or a category that supplies one.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
 
 	/*
@@ -308,12 +389,6 @@ function axismundi_cal_system_item_save( int $calendar_id, array $fields, int $i
 		$batch_year = (int) substr( (string) ( $start ?? $start_utc ), 0, 4 );
 	}
 
-	$categories = $fields['categories'] ?? ( $existing['categories'] ?? array() );
-	$category_validation = axismundi_cal_validate_categories( $categories );
-	if ( is_wp_error( $category_validation ) ) {
-		return $category_validation;
-	}
-
 	$source_uid = trim( (string) ( $fields['source_uid'] ?? ( $existing['source_uid'] ?? '' ) ) );
 	$occurrence_id = (int) ( $fields['holiday_occurrence_id'] ?? ( $existing['holiday_occurrence_id'] ?? 0 ) );
 	$occurrence    = axismundi_cal_holiday_occurrence_get( $occurrence_id );
@@ -329,7 +404,13 @@ function axismundi_cal_system_item_save( int $calendar_id, array $fields, int $i
 		'end_utc'      => $end_utc,
 		'start_date'   => $start,
 		'end_date'     => $end,
-		'title'        => $title,
+		/*
+		 * NULL rather than '' for a row that names itself, because the two are different facts and only
+		 * one of them is recoverable. NULL says the categories are the name; '' would say somebody set
+		 * the name to nothing, and a later reviewer looking at a blank field could not tell which had
+		 * happened. It also keeps "which rows did the generator write" answerable in SQL.
+		 */
+		'title'        => '' !== $title ? $title : null,
 		'description'  => (string) ( $fields['description'] ?? ( $existing['description'] ?? '' ) ),
 		'categories'   => implode( ',', axismundi_cal_normalize_categories( $categories ) ),
 		'transparency' => $transparency,

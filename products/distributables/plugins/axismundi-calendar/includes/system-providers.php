@@ -9,15 +9,21 @@
  *
  * The four differ far more than a category would suggest:
  *
- *   holiday    civil dates, curated per region and per source language, reviewed a year at a time
+ *   holiday    whole days, curated per region and per source language, reviewed a year at a time
  *   astronomy  computed from an instant in UTC, named by a translation rather than by stored text
- *   religious  civil dates whose dates come from a tradition's own reckoning
- *   civic      civil dates a site records itself: elections, commemorations
+ *   religious  whole days whose reckoning comes from a tradition rather than from the Gregorian year
+ *   civic      dates a site records itself: elections, commemorations
  *   academic   periods rather than days, set per term by an institution
  *
- * Only `holiday` has a contract here. The rest are declarable so a calendar can say what it is
- * before there is a writer for it, which is what stops the first of them from arriving as a special
- * case bolted onto this one.
+ * `civic` and `CIVIC` have nothing to do with a civil date. A civil date is the time model -- the
+ * 15th is the 15th in Seoul and in New York, which is what `all_day` means and what an instant is
+ * not. `CIVIC` classifies what a date is *about*: public and civic occasions. The words collide in
+ * English and nowhere else, so they are kept apart here rather than left to be read in context.
+ *
+ * Only `holiday` has a contract today and `astronomy` is the one being built. The rest are
+ * declarable so a calendar can say what it is before there is a writer for it, which is what stops
+ * the first of them from arriving as a special case bolted onto this one. Declaring one is not a
+ * commitment to a writer, a screen or an endpoint for it.
  *
  * Nothing about a provider changes who may read a system calendar or who maintains it. That is the
  * part all of them share, and it is why they are one kind rather than five.

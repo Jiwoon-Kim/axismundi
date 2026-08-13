@@ -599,13 +599,13 @@ function axismundi_cal_render_system_item_editor( array $calendar, string $base 
 				?>
 				<tr>
 					<?php if ( $holiday_review ) : ?>
-						<td><input class="ax-cal-holiday-selection" data-draft="<?php echo esc_attr( 'published' === (string) $item['status'] ? '0' : '1' ); ?>" type="checkbox" name="selected_items[]" value="<?php echo esc_attr( (string) $item['id'] ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Select %s', 'axismundi-calendar' ), (string) $item['title'] ) ); ?>" onchange="window.axismundiCalendarSystemItems.syncAll(this.form)"></td>
+						<td><input class="ax-cal-holiday-selection" data-draft="<?php echo esc_attr( 'published' === (string) $item['status'] ? '0' : '1' ); ?>" type="checkbox" name="selected_items[]" value="<?php echo esc_attr( (string) $item['id'] ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Select %s', 'axismundi-calendar' ), axismundi_cal_item_display_name( $item ) ) ); ?>" onchange="window.axismundiCalendarSystemItems.syncAll(this.form)"></td>
 					<?php endif; ?>
 					<td><code><?php echo esc_html( (string) $item['start_date'] ); ?></code></td>
 					<td>
 						<strong>
 							<a href="<?php echo esc_url( add_query_arg( array( 'calendar' => $calendar_id, 'year' => $year, 'item' => (int) $item['id'] ), $base ) ); ?>">
-								<?php echo esc_html( (string) $item['title'] ); ?>
+								<?php echo esc_html( axismundi_cal_item_display_name( $item ) ); ?>
 							</a>
 						</strong>
 					</td>
@@ -687,9 +687,22 @@ function axismundi_cal_render_system_item_editor( array $calendar, string $base 
 			<tr>
 				<th scope="row"><label for="ax-cal-item-title"><?php esc_html_e( 'Name', 'axismundi-calendar' ); ?></label></th>
 				<td>
-					<input name="title" id="ax-cal-item-title" type="text" class="regular-text" required
+					<?php
+					/*
+					 * Not `required`, because a row whose categories name it has no title to show and forcing
+					 * one here would write a translated phase name into a row that had been keeping the key
+					 * instead. The placeholder is what the row currently reads as, so the field looks
+					 * answered rather than empty, and the writer decides whether blank is allowed.
+					 */
+					$ax_cal_item_generated = is_array( $current ) ? axismundi_cal_item_generated_name( $current['categories'] ?? array() ) : '';
+					?>
+					<input name="title" id="ax-cal-item-title" type="text" class="regular-text"
+						<?php echo '' !== $ax_cal_item_generated ? 'placeholder="' . esc_attr( $ax_cal_item_generated ) . '"' : ''; ?>
 						value="<?php echo esc_attr( (string) ( $current['title'] ?? '' ) ); ?>">
 					<p class="description"><?php esc_html_e( 'As people here should read it. This is a translation, not an identity, so it can be corrected without breaking anything.', 'axismundi-calendar' ); ?></p>
+					<?php if ( '' !== $ax_cal_item_generated ) : ?>
+						<p class="description"><?php esc_html_e( 'Left blank, this entry is named by its category in whatever language each reader uses.', 'axismundi-calendar' ); ?></p>
+					<?php endif; ?>
 				</td>
 			</tr>
 			<tr>

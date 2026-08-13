@@ -123,7 +123,7 @@ function axismundi_cal_handle_item_link() : void {
 		$concept = axismundi_cal_holiday_concept_save(
 			array(
 				'catalog_id' => $catalog_id,
-				'label'      => (string) $item['title'],
+				'label'      => axismundi_cal_item_display_name( $item ),
 				'categories' => (string) $item['categories'],
 			)
 		);
@@ -160,7 +160,12 @@ function axismundi_cal_handle_item_link() : void {
 			$concept_id = axismundi_cal_holiday_concept_save(
 				array(
 					'catalog_id' => $catalog_id,
-					'label'      => isset( $_POST['concept_label'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['concept_label'] ) ) : (string) $item['title'],
+					/*
+					 * '' when the entry names itself from its categories, which `concept_save()` refuses. The
+					 * generated name is deliberately not offered here: `label` is stored, and a stored phase
+					 * name is a stored translation.
+					 */
+					'label'      => isset( $_POST['concept_label'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['concept_label'] ) ) : (string) ( $item['title'] ?? '' ),
 					'categories' => (string) $item['categories'],
 				)
 			);
@@ -410,10 +415,10 @@ function axismundi_cal_render_item_links( array $calendar, array $items, int $ye
 				?>
 				<tr>
 					<?php if ( array() !== $unlinked ) : ?>
-						<td><?php if ( ! is_array( $occurrence ) ) : ?><input type="checkbox" name="item_ids[]" value="<?php echo esc_attr( (string) $item['id'] ); ?>" form="<?php echo esc_attr( $bulk_form_id ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Save %s as a principal day', 'axismundi-calendar' ), (string) $item['title'] ) ); ?>"><?php endif; ?></td>
+						<td><?php if ( ! is_array( $occurrence ) ) : ?><input type="checkbox" name="item_ids[]" value="<?php echo esc_attr( (string) $item['id'] ); ?>" form="<?php echo esc_attr( $bulk_form_id ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Save %s as a principal day', 'axismundi-calendar' ), axismundi_cal_item_display_name( $item ) ) ); ?>"><?php endif; ?></td>
 					<?php endif; ?>
 					<td><code><?php echo esc_html( (string) $item['start_date'] ); ?></code></td>
-					<td><?php echo esc_html( (string) $item['title'] ); ?></td>
+					<td><?php echo esc_html( axismundi_cal_item_display_name( $item ) ); ?></td>
 					<td><?php echo esc_html( $classification ); ?></td>
 					<td>
 						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -456,7 +461,7 @@ function axismundi_cal_render_item_links( array $calendar, array $items, int $ye
 								</label>
 								<label>
 									<span><?php esc_html_e( 'New holiday name', 'axismundi-calendar' ); ?></span>
-									<input type="text" name="concept_label" value="<?php echo esc_attr( (string) $item['title'] ); ?>">
+									<input type="text" name="concept_label" value="<?php echo esc_attr( (string) ( $item['title'] ?? '' ) ); ?>">
 								</label>
 								<fieldset class="ax-cal-occurrence-role">
 									<legend class="screen-reader-text"><?php esc_html_e( 'Day role', 'axismundi-calendar' ); ?></legend>

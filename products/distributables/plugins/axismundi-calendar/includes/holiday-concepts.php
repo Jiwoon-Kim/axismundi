@@ -311,20 +311,20 @@ function axismundi_cal_resolve_occurrence_label( int $occurrence_id, array $acce
 	foreach ( axismundi_cal_preferred_locales( $accepted ) as $wanted ) {
 		foreach ( $languages as $locale => $item ) {
 			if ( strcasecmp( $locale, $wanted ) === 0 ) {
-				return array( 'locale' => (string) $locale, 'title' => (string) $item['title'], 'item_id' => (int) $item['id'] );
+				return array( 'locale' => (string) $locale, 'title' => axismundi_cal_item_display_name( $item ), 'item_id' => (int) $item['id'] );
 			}
 		}
 		// Only after every exact match has been tried, so `ko-KR` never loses to `ko` on a later pass.
 		$key = axismundi_cal_language_key( $wanted );
 		foreach ( $languages as $locale => $item ) {
 			if ( axismundi_cal_language_key( (string) $locale ) === $key ) {
-				return array( 'locale' => (string) $locale, 'title' => (string) $item['title'], 'item_id' => (int) $item['id'] );
+				return array( 'locale' => (string) $locale, 'title' => axismundi_cal_item_display_name( $item ), 'item_id' => (int) $item['id'] );
 			}
 		}
 	}
 
 	$locale = (string) array_key_first( $languages );
-	return array( 'locale' => $locale, 'title' => (string) $languages[ $locale ]['title'], 'item_id' => (int) $languages[ $locale ]['id'] );
+	return array( 'locale' => $locale, 'title' => axismundi_cal_item_display_name( $languages[ $locale ] ), 'item_id' => (int) $languages[ $locale ]['id'] );
 }
 
 /**
@@ -767,6 +767,16 @@ function axismundi_cal_create_principal_holiday_from_item( int $item_id ) {
 	$calendar = is_array( $item ) ? axismundi_cal_calendar_get( (int) $item['calendar_id'] ) : null;
 	if ( ! is_array( $item ) || ! is_array( $calendar ) || (int) $item['holiday_occurrence_id'] > 0 ) {
 		return new WP_Error( 'ax_cal_principal_item', __( 'That entry is already linked or unavailable.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+	/*
+	 * A row that names itself from its categories cannot become a holiday here. The read-time fallback
+	 * is deliberately not used: `label` is stored, and storing a translated phase name would put one
+	 * language into the catalog permanently -- the concept would keep saying "Full moon" to a Korean
+	 * reader, and to everybody after the site changed its language. Refusing is also the honest answer
+	 * about what is happening: a moon phase is not a holiday somebody forgot to name.
+	 */
+	if ( '' === trim( (string) ( $item['title'] ?? '' ) ) ) {
+		return new WP_Error( 'ax_cal_principal_unnamed', __( 'An entry named by its category cannot become a holiday. Give it a name first.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
 	$concept = axismundi_cal_holiday_concept_save(
 		array(

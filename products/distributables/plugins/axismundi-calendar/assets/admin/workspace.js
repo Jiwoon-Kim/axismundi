@@ -247,9 +247,20 @@
 				}
 				return;
 			}
+			/*
+			 * Projected here, from the instant, in the reader's own timezone. Not from `startLocal`,
+			 * which is the site's reading: a full moon at 00:30Z is the 28th in Seoul and the 27th in
+			 * Los Angeles, and the cell it belongs in is the one the person looking at it is in.
+			 */
 			var start = parseUtc( item.startUtc );
 			var end = parseUtc( item.endUtc );
 			var day = new Date( start.getFullYear(), start.getMonth(), start.getDate() );
+			// A moment has no duration, so the span loop below would place it nowhere. It happens on
+			// the day it happens on.
+			if ( end <= start ) {
+				push( localKey( day ), item );
+				return;
+			}
 			while ( day < end ) {
 				push( localKey( day ), item );
 				day = new Date( day.getFullYear(), day.getMonth(), day.getDate() + 1 );

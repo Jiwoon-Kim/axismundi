@@ -266,17 +266,17 @@ $ax_cs_format_kept = get_option( AXISMUNDI_CAL_SECONDARY_FORMAT_OPTION, null );
 ax_cs_assert(
 	$ax_cs_results,
 	'the site may choose a compact grid without choosing a language for anybody',
-	'compact' === axismundi_cal_secondary_format_set( 'compact' ) && 'compact' === axismundi_cal_secondary_format()
+	'numeric' === axismundi_cal_secondary_format_set( 'numeric' ) && 'numeric' === axismundi_cal_secondary_format()
 );
 ax_cs_assert(
 	$ax_cs_results,
 	'and may choose the full localized form instead',
-	'full' === axismundi_cal_secondary_format_set( 'full' ) && 'full' === axismundi_cal_secondary_format()
+	'locale' === axismundi_cal_secondary_format_set( 'locale' ) && 'locale' === axismundi_cal_secondary_format()
 );
 ax_cs_assert(
 	$ax_cs_results,
 	'an invented format falls back to compact rather than becoming an unchecked presentation state',
-	'compact' === axismundi_cal_secondary_format_set( 'wide' ) && 'compact' === axismundi_cal_secondary_format()
+	'numeric' === axismundi_cal_secondary_format_set( 'wide' ) && 'numeric' === axismundi_cal_secondary_format()
 );
 
 $ax_cs_req = new WP_REST_Request( 'PUT', '/axismundi/v1/actors/me/secondaryCalendars' );

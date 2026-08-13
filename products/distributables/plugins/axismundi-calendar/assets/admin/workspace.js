@@ -26,6 +26,7 @@
 	var useState = wp.element.useState;
 	var useEffect = wp.element.useEffect;
 	var __ = wp.i18n.__;
+	var _x = wp.i18n._x;
 	var sprintf = wp.i18n.sprintf;
 	var C = wp.components;
 	var apiFetch = wp.apiFetch;
@@ -148,20 +149,32 @@
 	 * ship an English string for the browser to translate: `Intl` already knows that dangi is
 	 * `2026년(병오년) 7월 1일` in Korean and a different, equally valid expression elsewhere.
 	 */
+	// A leap month is the same number twice, so the mark is the only thing telling them apart.
+	var LEAP_MARK = _x( 'L', 'leap month marker', 'axismundi-calendar' );
+
 	function secondaryLabel( system, day, format ) {
 		var date = system.dates[ localKey( day ) ];
 		if ( ! date || ! system.icuCalendar || ! window.Intl || ! Intl.DateTimeFormat ) {
 			return '';
 		}
-		var options;
-		if ( 'full' === format ) {
-			options = { calendar: system.icuCalendar, year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' };
-		} else if ( 1 === Number( date.day ) ) {
-			// The calendar's own locale rules decide whether this is `7.1`, `七月初一` or `1 Elul`.
-			options = { calendar: system.icuCalendar, month: 'numeric', day: 'numeric', timeZone: 'UTC' };
-		} else {
-			options = { calendar: system.icuCalendar, day: 'numeric', timeZone: 'UTC' };
+		/*
+		 * Digits, from the numbers the server sent. Not `Intl` with numeric options: for Hebrew that
+		 * would print ICU's internal month index, which counts a leap month that most years do not
+		 * have and calls Elul the thirteenth. `7.1` is a Korean and Chinese notation and this is the
+		 * only place it is claimed to be one.
+		 */
+		if ( 'locale' !== format ) {
+			if ( 1 !== Number( date.day ) ) {
+				return String( date.day );
+			}
+			return ( date.leapMonth ? LEAP_MARK + ' ' : '' ) + date.month + '.' + date.day;
 		}
+
+		// The month is named on the first of the month and nowhere else, whatever the notation. A name
+		// under every number is the same crowding as a number under every number, only wider.
+		var options = 1 === Number( date.day )
+			? { calendar: system.icuCalendar, month: 'long', day: 'numeric', timeZone: 'UTC' }
+			: { calendar: system.icuCalendar, day: 'numeric', timeZone: 'UTC' };
 		try {
 			// The server resolves secondary calendars at UTC noon. Recreate that civil day rather than
 			// passing a local midnight through the viewer's zone and risking yesterday in the formatter.
@@ -175,8 +188,30 @@
 		}
 	}
 
+	/**
+	 * The whole date, for the tooltip and nowhere else.
+	 *
+	 * This is where the year lives -- including whatever the viewer's locale adds to it, so Korean
+	 * gets `2026년(병오년) 7월 1일`. It is deliberately not an option for the cell: a year under every
+	 * number is what broke the grid, and the one place a full date is actually wanted is the one
+	 * place there is room for it.
+	 */
 	function fullSecondaryLabel( system, day ) {
-		return secondaryLabel( system, day, 'full' );
+		var date = system.dates[ localKey( day ) ];
+		if ( ! date || ! system.icuCalendar || ! window.Intl || ! Intl.DateTimeFormat ) {
+			return '';
+		}
+		try {
+			return new Intl.DateTimeFormat( locale, {
+				calendar: system.icuCalendar,
+				year: 'numeric',
+				month: 'long',
+				day: 'numeric',
+				timeZone: 'UTC'
+			} ).format( new Date( Date.UTC( day.getFullYear(), day.getMonth(), day.getDate(), 12 ) ) );
+		} catch ( error ) {
+			return '';
+		}
 	}
 
 	/* -- Placing occurrences on days ----------------------------------------------------------- */

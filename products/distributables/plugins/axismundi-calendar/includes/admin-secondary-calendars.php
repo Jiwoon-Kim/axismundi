@@ -72,24 +72,24 @@ function axismundi_cal_render_secondary_page() : void {
 			<div class="notice notice-error"><p><?php echo esc_html( $error ); ?></p></div>
 		<?php endif; ?>
 
-		<h2><?php esc_html_e( 'Grid format', 'axismundi-calendar' ); ?></h2>
+		<h2><?php esc_html_e( 'How the second date is written', 'axismundi-calendar' ); ?></h2>
 		<form method="post" action="">
 			<?php wp_nonce_field( 'ax_cal_secondary' ); ?>
 			<input type="hidden" name="ax_cal_secondary_action" value="format" />
 			<fieldset>
-				<legend class="screen-reader-text"><?php esc_html_e( 'Secondary date format', 'axismundi-calendar' ); ?></legend>
+				<legend class="screen-reader-text"><?php esc_html_e( 'Second date notation', 'axismundi-calendar' ); ?></legend>
 				<label>
-					<input type="radio" name="ax_cal_secondary_format" value="compact" <?php checked( 'compact', axismundi_cal_secondary_format() ); ?> />
-					<?php esc_html_e( 'Compact', 'axismundi-calendar' ); ?>
-					<span class="description"><?php esc_html_e( 'Short month-and-day labels for narrow cells.', 'axismundi-calendar' ); ?></span>
+					<input type="radio" name="ax_cal_secondary_format" value="numeric" <?php checked( 'numeric', axismundi_cal_secondary_format() ); ?> />
+					<?php esc_html_e( 'Numbers', 'axismundi-calendar' ); ?>
+					<span class="description"><?php esc_html_e( '7.1 — how Korean and Chinese lunar dates are usually written.', 'axismundi-calendar' ); ?></span>
 				</label><br />
 				<label>
-					<input type="radio" name="ax_cal_secondary_format" value="full" <?php checked( 'full', axismundi_cal_secondary_format() ); ?> />
-					<?php esc_html_e( 'Full', 'axismundi-calendar' ); ?>
-					<span class="description"><?php esc_html_e( 'The complete localized calendar date, including information such as the Dangi year name where the viewer locale supplies it.', 'axismundi-calendar' ); ?></span>
+					<input type="radio" name="ax_cal_secondary_format" value="locale" <?php checked( 'locale', axismundi_cal_secondary_format() ); ?> />
+					<?php esc_html_e( 'Calendar names', 'axismundi-calendar' ); ?>
+					<span class="description"><?php esc_html_e( 'The month as that calendar names it, in each viewer’s own language. Hebrew and Islamic months have names rather than numbers.', 'axismundi-calendar' ); ?></span>
 				</label>
 			</fieldset>
-			<p class="description"><?php esc_html_e( 'This controls density, not language. Each viewer sees ICU’s calendar names in their own locale.', 'axismundi-calendar' ); ?></p>
+			<p class="description"><?php esc_html_e( 'This is notation, not language. Every viewer sees their own locale either way, and the full date is always in the day’s tooltip.', 'axismundi-calendar' ); ?></p>
 			<?php submit_button( __( 'Save format', 'axismundi-calendar' ), 'secondary', 'submit', false ); ?>
 		</form>
 

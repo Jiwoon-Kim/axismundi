@@ -16,27 +16,31 @@ defined( 'ABSPATH' ) || exit;
 /** Where each person's choice lives. Theirs, not the site's. */
 const AXISMUNDI_CAL_SECONDARY_META = 'ax_cal_secondary_calendars';
 
-/** How densely a site wants the secondary date drawn in its month grid. */
+/** Whether a site wants the second date written in digits or in the viewer's own calendar words. */
 const AXISMUNDI_CAL_SECONDARY_FORMAT_OPTION = 'ax_cal_secondary_format';
 
-/** @return string `compact` or `full`. */
+/** @return string `numeric` or `locale`. */
 function axismundi_cal_secondary_format() : string {
-	$format = (string) get_option( AXISMUNDI_CAL_SECONDARY_FORMAT_OPTION, 'compact' );
-	return in_array( $format, array( 'compact', 'full' ), true ) ? $format : 'compact';
+	$format = (string) get_option( AXISMUNDI_CAL_SECONDARY_FORMAT_OPTION, 'numeric' );
+	return in_array( $format, array( 'numeric', 'locale' ), true ) ? $format : 'numeric';
 }
 
 /**
- * Set the site's grid-density policy.
+ * Set how the second date is written.
  *
- * Language is deliberately absent: it belongs to the viewer, and ICU/CLDR already knows how each
- * calendar calls its months in that language. This option only decides how much of that answer a
- * narrow month cell receives.
+ * `numeric` is `7.1`, the notation Korean and Chinese lunar dates are actually written in. `locale`
+ * asks ICU for the calendar's own words, which is what Hebrew and Islamic months need -- they have
+ * names, not numbers, and their numbers are an ICU implementation detail.
  *
- * @param string $format `compact` or `full`.
+ * Language is deliberately absent from this choice: it belongs to the viewer, and ICU already knows
+ * how each calendar names its months in that language. A site picking the language would show one
+ * reader another reader's.
+ *
+ * @param string $format `numeric` or `locale`.
  * @return string Stored format.
  */
 function axismundi_cal_secondary_format_set( string $format ) : string {
-	$format = in_array( $format, array( 'compact', 'full' ), true ) ? $format : 'compact';
+	$format = in_array( $format, array( 'numeric', 'locale' ), true ) ? $format : 'numeric';
 	update_option( AXISMUNDI_CAL_SECONDARY_FORMAT_OPTION, $format, false );
 	return $format;
 }
@@ -108,7 +112,6 @@ function axismundi_cal_secondary_choices() : array {
 	return $out;
 }
 
-/**
 /**
  * Second calendar dates for a range, keyed by system and then by ISO date.
  *

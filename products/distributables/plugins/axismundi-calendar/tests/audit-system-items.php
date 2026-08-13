@@ -654,6 +654,83 @@ ax_si_assert( $ax_si_results, 'with controls to select drafts or invert the visi
 	);
 	axismundi_cal_system_item_save( $ax_si_doomed, array( 'title' => 'Goes with it', 'start_date' => '2027-03-01', 'status' => 'published' ) );
 	axismundi_cal_calendar_delete( $ax_si_doomed );
+	// -- Moments -------------------------------------------------------------------------------------
+
+	/*
+	 * The second shape. A holiday is a civil date and a moon phase is a moment, and the two live in
+	 * separate columns so that no code can read one as the other -- a holiday read as a UTC midnight
+	 * instant is 광복절 a day early for everyone west of Greenwich.
+	 */
+	$ax_si_moment = axismundi_cal_system_item_save(
+		$ax_si_holidays,
+		array( 'title' => 'Full Moon', 'temporal_kind' => 'instant', 'start_utc' => '2026-08-28T00:30:00Z', 'status' => 'published' )
+	);
+	ax_si_assert( $ax_si_results, 'a moment stores', is_int( $ax_si_moment ) && $ax_si_moment > 0 );
+
+	$ax_si_moment_row = (array) axismundi_cal_system_item_get( (int) $ax_si_moment );
+	ax_si_assert(
+		$ax_si_results,
+		'as a UTC time, with no civil date invented for it',
+		'2026-08-28 00:30:00' === (string) $ax_si_moment_row['start_utc']
+			&& null === $ax_si_moment_row['start_date']
+			&& null === $ax_si_moment_row['end_date']
+	);
+	ax_si_assert(
+		$ax_si_results,
+		'while a whole-day entry keeps its civil date and stores no moment',
+		'all_day' === (string) $ax_si_row['temporal_kind'] && null === $ax_si_row['start_utc']
+	);
+	ax_si_assert(
+		$ax_si_results,
+		'a moment with no time is refused rather than defaulted to midnight, which would be an invented answer',
+		is_wp_error( axismundi_cal_system_item_save( $ax_si_holidays, array( 'title' => 'x', 'temporal_kind' => 'instant' ) ) )
+	);
+	ax_si_assert(
+		$ax_si_results,
+		'and a shape nobody defined is refused',
+		is_wp_error( axismundi_cal_system_item_save( $ax_si_holidays, array( 'title' => 'x', 'temporal_kind' => 'sometimes', 'start_date' => '2026-08-28' ) ) )
+	);
+
+	/*
+	 * A moment near midnight UTC is two civil days depending on where it is read, so the range query
+	 * returns both readings and lets the viewer's timezone choose. Narrowing here would drop the first
+	 * or last day of every month for somebody.
+	 */
+	$ax_si_moment_in = static function ( string $from, string $to ) use ( $ax_si_holidays ) : bool {
+		foreach ( axismundi_cal_system_items_in_range( $ax_si_holidays, $from, $to ) as $ax_si_found ) {
+			if ( 'Full Moon' === (string) $ax_si_found['title'] ) {
+				return true;
+			}
+		}
+		return false;
+	};
+	ax_si_assert( $ax_si_results, 'a moment is found on the UTC day it falls on', $ax_si_moment_in( '2026-08-28', '2026-08-29' ) );
+	ax_si_assert( $ax_si_results, 'and on the day before it, which is the day it is for anyone far enough west', $ax_si_moment_in( '2026-08-25', '2026-08-28' ) );
+	ax_si_assert( $ax_si_results, 'but not in a month it has nothing to do with', ! $ax_si_moment_in( '2026-10-01', '2026-11-01' ) );
+
+	/*
+	 * The case the slack at the lower end exists for. 2026-08-24T23:00Z is already the 25th in Seoul,
+	 * so somebody asking for a window starting on the 25th has to be given it -- a query bounded at
+	 * 00:00 UTC would drop the first day of every month for everyone east of Greenwich.
+	 */
+	axismundi_cal_system_item_save(
+		$ax_si_holidays,
+		array( 'title' => 'Late Moon', 'temporal_kind' => 'instant', 'start_utc' => '2026-08-24T23:00:00Z', 'status' => 'published' )
+	);
+	$ax_si_late_in = static function ( string $from, string $to ) use ( $ax_si_holidays ) : bool {
+		foreach ( axismundi_cal_system_items_in_range( $ax_si_holidays, $from, $to ) as $ax_si_found ) {
+			if ( 'Late Moon' === (string) $ax_si_found['title'] ) {
+				return true;
+			}
+		}
+		return false;
+	};
+	ax_si_assert(
+		$ax_si_results,
+		'a moment late on the day before the window is in it, because east of Greenwich it is already inside',
+		$ax_si_late_in( '2026-08-25', '2026-09-01' )
+	);
+
 	ax_si_assert( $ax_si_results, 'deleting a maintained calendar takes its entries with it', array() === axismundi_cal_system_items_in_range( $ax_si_doomed, '2027-01-01', '2028-01-01', array(), true ) );
 } finally {
 	wp_set_current_user( 0 );

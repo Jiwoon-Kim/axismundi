@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '24';
+const AXISMUNDI_CAL_DB_VERSION        = '25';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 const AXISMUNDI_CAL_SCHEMA_BAIL_OPTION = 'ax_cal_schema_bail';
 
@@ -498,9 +498,24 @@ function axismundi_cal_install_schema() : bool {
 	 * and giving each one a post would put a country's public holidays into the same list a person
 	 * writes their own Events in.
 	 *
-	 * Dates are civil, stored as DATE. A holiday on the 15th is the 15th in every timezone, and the
-	 * moment anything here becomes an instant it starts moving a day for somebody. `end_date` is
-	 * exclusive, as `DTEND` is for an all-day VEVENT, so a one-day entry ends on the following day.
+	 * A row is one of two shapes, and `temporal_kind` says which.
+	 *
+	 * `all_day` is civil, in `start_date`/`end_date`. A holiday on the 15th is the 15th in every
+	 * timezone, and the moment one becomes an instant it starts moving a day for somebody. `end_date`
+	 * is exclusive, as `DTEND` is for an all-day VEVENT, so a one-day entry ends on the following day.
+	 *
+	 * `instant` is a moment, in `start_utc`. A full moon at 2026-08-28T00:30Z is the 28th in Seoul and
+	 * the 27th in Los Angeles, and there is no civil date that is true for both -- the date is
+	 * something a viewer's timezone produces, not something this table can hold.
+	 *
+	 * The two live in separate columns on purpose. One DATETIME with `00:00:00` meaning all-day would
+	 * work until the first piece of code forgot the convention and read a holiday as a UTC midnight
+	 * instant, which is 광복절 a day early for anyone west of Greenwich. Separate columns cannot be
+	 * misread that way: the wrong one is NULL.
+	 *
+	 * Julian dates are deliberately absent. They are the coordinate the astronomy calculations work
+	 * in, they roll at noon, and they are floats -- none of which belongs in a stored value that has
+	 * to answer "which day is this" the same way twice.
 	 *
 	 * `categories` is a comma-separated list of vocabulary keys, queried with FIND_IN_SET. A join
 	 * table would be the normal answer, and is the right one at a volume this will not reach: a
@@ -515,8 +530,11 @@ function axismundi_cal_install_schema() : bool {
 		"CREATE TABLE {$system} (
 			id bigint(20) unsigned NOT NULL auto_increment,
 			calendar_id bigint(20) unsigned NOT NULL,
-			start_date date NOT NULL,
-			end_date date NOT NULL,
+			temporal_kind varchar(16) NOT NULL default 'all_day',
+			start_date date NULL,
+			end_date date NULL,
+			start_utc datetime NULL,
+			end_utc datetime NULL,
 			title text NOT NULL,
 			description longtext NOT NULL,
 			categories varchar(191) NOT NULL default '',
@@ -532,6 +550,7 @@ function axismundi_cal_install_schema() : bool {
 			PRIMARY KEY  (id),
 			UNIQUE KEY calendar_source_uid (calendar_id,source_uid),
 			KEY calendar_range (calendar_id,start_date),
+			KEY calendar_instant (calendar_id,start_utc),
 			KEY holiday_occurrence_id (holiday_occurrence_id),
 			KEY calendar_batch (calendar_id,batch_year,status),
 			KEY status (status)
@@ -731,6 +750,12 @@ function axismundi_cal_install_schema() : bool {
 	 * computed now, so these rows answer nothing: keeping a table that once held the authoritative
 	 * months invites somebody to answer from it again and get a different date than the grid shows.
 	 */
+	/*
+	 * `dbDelta` adds `start_date`/`end_date` where they are missing but will not take NOT NULL off
+	 * columns that already have it, and an instant row has no civil date to put there. Freed here.
+	 */
+	axismundi_cal_relax_system_item_dates();
+
 	$lunar_cache = $wpdb->prefix . 'ax_cal_lunar_months';
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- this plugin's own table.
 	$wpdb->query( "DROP TABLE IF EXISTS {$lunar_cache}" );
@@ -768,4 +793,23 @@ function axismundi_cal_event_statuses() : array {
  */
 function axismundi_cal_event_join_modes() : array {
 	return array( 'free', 'restricted', 'external', 'none', 'invite' );
+}
+
+/**
+ * Let a system item have no civil date, for the rows that are instants.
+ *
+ * @return void
+ */
+function axismundi_cal_relax_system_item_dates() : void {
+	global $wpdb;
+	$table = axismundi_cal_system_items_table();
+	foreach ( array( 'start_date', 'end_date' ) as $column ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+		$definition = $wpdb->get_row( $wpdb->prepare( "SHOW COLUMNS FROM {$table} LIKE %s", $column ), ARRAY_A );
+		if ( ! is_array( $definition ) || 'NO' !== ( $definition['Null'] ?? '' ) ) {
+			continue;
+		}
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- this plugin's own table.
+		$wpdb->query( "ALTER TABLE {$table} MODIFY {$column} date NULL DEFAULT NULL" );
+	}
 }

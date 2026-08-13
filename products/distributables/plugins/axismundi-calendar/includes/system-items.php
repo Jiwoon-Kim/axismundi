@@ -77,6 +77,34 @@ const AXISMUNDI_CAL_SYSTEM_CALENDAR_CATEGORIES = array(
 	'ACADEMIC',
 );
 
+/** The two shapes a dataset entry can have. */
+const AXISMUNDI_CAL_TEMPORAL_ALL_DAY = 'all_day';
+const AXISMUNDI_CAL_TEMPORAL_INSTANT = 'instant';
+const AXISMUNDI_CAL_TEMPORAL_KINDS   = array( AXISMUNDI_CAL_TEMPORAL_ALL_DAY, AXISMUNDI_CAL_TEMPORAL_INSTANT );
+
+/**
+ * A UTC moment, or null when the string is not one.
+ *
+ * UTC and nothing else. A stored moment carrying an offset would be two facts where one is wanted,
+ * and the second goes stale the next time a zone changes its rules.
+ *
+ * @param string $value `YYYY-MM-DD HH:MM:SS`, or ISO 8601 with `T` and an optional trailing `Z`.
+ * @return string|null
+ */
+function axismundi_cal_utc_instant( string $value ) : ?string {
+	$value = trim( str_replace( array( 'T', 'Z' ), array( ' ', '' ), $value ) );
+	if ( 1 !== preg_match( '/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})(?::(\d{2}))?$/', $value, $parts ) ) {
+		return null;
+	}
+	if ( ! checkdate( (int) $parts[2], (int) $parts[3], (int) $parts[1] ) ) {
+		return null;
+	}
+	if ( (int) $parts[4] > 23 || (int) $parts[5] > 59 || (int) ( $parts[6] ?? 0 ) > 59 ) {
+		return null;
+	}
+	return sprintf( '%s-%s-%s %s:%s:%02d', $parts[1], $parts[2], $parts[3], $parts[4], $parts[5], (int) ( $parts[6] ?? 0 ) );
+}
+
 /** Entries not yet reviewed are visible only to the people maintaining them. */
 const AXISMUNDI_CAL_ITEM_STATUSES = array( 'draft', 'published' );
 
@@ -169,21 +197,52 @@ function axismundi_cal_system_item_save( int $calendar_id, array $fields, int $i
 		return new WP_Error( 'ax_cal_item_title', __( 'An entry needs a name.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
 
-	$start = axismundi_cal_civil_date( (string) ( $fields['start_date'] ?? ( $existing['start_date'] ?? '' ) ) );
-	if ( '' === $start ) {
-		return new WP_Error( 'ax_cal_item_date', __( 'An entry needs a date, as YYYY-MM-DD.', 'axismundi-calendar' ), array( 'status' => 400 ) );
-	}
 	/*
-	 * The end is exclusive, as `DTEND` is for an all-day VEVENT: a one-day entry ends the following
-	 * day. Defaulted rather than required, because almost every one of these is a single day and
-	 * asking for both dates would invite the off-by-one this convention exists to settle.
+	 * Which shape this row is. Defaulted to `all_day`, which every row was before instants existed
+	 * and which a caller that says nothing means.
 	 */
-	$end = axismundi_cal_civil_date( (string) ( $fields['end_date'] ?? ( $existing['end_date'] ?? '' ) ) );
-	if ( '' === $end ) {
-		$end = gmdate( 'Y-m-d', (int) strtotime( $start . ' +1 day' ) );
+	$kind = (string) ( $fields['temporal_kind'] ?? ( $existing['temporal_kind'] ?? AXISMUNDI_CAL_TEMPORAL_ALL_DAY ) );
+	if ( ! in_array( $kind, AXISMUNDI_CAL_TEMPORAL_KINDS, true ) ) {
+		return new WP_Error( 'ax_cal_item_kind', __( 'An entry is either a whole day or a moment.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
-	if ( $end <= $start ) {
-		return new WP_Error( 'ax_cal_item_range', __( 'An entry ends the day after it starts, at the earliest.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+
+	$start     = null;
+	$end       = null;
+	$start_utc = null;
+	$end_utc   = null;
+
+	if ( AXISMUNDI_CAL_TEMPORAL_INSTANT === $kind ) {
+		/*
+		 * A moment, and only a moment. The civil columns stay NULL rather than being filled with the
+		 * UTC date, because that date is true for only half the world: a full moon at 00:30Z is the
+		 * 28th in Seoul and the 27th in Los Angeles. The date is something a viewer's timezone
+		 * produces, not something this row can hold.
+		 */
+		$start_utc = axismundi_cal_utc_instant( (string) ( $fields['start_utc'] ?? ( $existing['start_utc'] ?? '' ) ) );
+		if ( null === $start_utc ) {
+			return new WP_Error( 'ax_cal_item_instant', __( 'A moment needs a UTC time, as YYYY-MM-DD HH:MM:SS.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+		}
+		$end_utc = axismundi_cal_utc_instant( (string) ( $fields['end_utc'] ?? ( $existing['end_utc'] ?? '' ) ) );
+		if ( null !== $end_utc && $end_utc < $start_utc ) {
+			return new WP_Error( 'ax_cal_item_range', __( 'A moment cannot end before it begins.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+		}
+	} else {
+		$start = axismundi_cal_civil_date( (string) ( $fields['start_date'] ?? ( $existing['start_date'] ?? '' ) ) );
+		if ( '' === $start ) {
+			return new WP_Error( 'ax_cal_item_date', __( 'An entry needs a date, as YYYY-MM-DD.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+		}
+		/*
+		 * The end is exclusive, as `DTEND` is for an all-day VEVENT: a one-day entry ends the following
+		 * day. Defaulted rather than required, because almost every one of these is a single day and
+		 * asking for both dates would invite the off-by-one this convention exists to settle.
+		 */
+		$end = axismundi_cal_civil_date( (string) ( $fields['end_date'] ?? ( $existing['end_date'] ?? '' ) ) );
+		if ( '' === $end ) {
+			$end = gmdate( 'Y-m-d', (int) strtotime( $start . ' +1 day' ) );
+		}
+		if ( $end <= $start ) {
+			return new WP_Error( 'ax_cal_item_range', __( 'An entry ends the day after it starts, at the earliest.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+		}
 	}
 
 	$status = (string) ( $fields['status'] ?? ( $existing['status'] ?? 'draft' ) );
@@ -212,6 +271,9 @@ function axismundi_cal_system_item_save( int $calendar_id, array $fields, int $i
 	$now        = current_time( 'mysql', true );
 	$data       = array(
 		'calendar_id'  => $calendar_id,
+		'temporal_kind' => $kind,
+		'start_utc'    => $start_utc,
+		'end_utc'      => $end_utc,
 		'start_date'   => $start,
 		'end_date'     => $end,
 		'title'        => $title,
@@ -474,9 +536,25 @@ function axismundi_cal_system_items_in_range( int $calendar_id, string $from, st
 	$table       = axismundi_cal_system_items_table();
 	$occurrences = axismundi_cal_holiday_occurrences_table();
 	$concepts    = axismundi_cal_holiday_concepts_table();
-	// Overlap, not containment: an entry spanning the whole window belongs in it.
-	$sql    = "SELECT i.* FROM {$table} i LEFT JOIN {$occurrences} o ON o.id = i.holiday_occurrence_id LEFT JOIN {$concepts} c ON c.id = o.concept_id WHERE i.calendar_id = %d AND i.end_date > %s AND i.start_date < %s";
-	$params = array( $calendar_id, $from, $to );
+	/*
+	 * Overlap, not containment: an entry spanning the whole window belongs in it.
+	 *
+	 * Instants are matched on their own column and with a day of slack at each end. The caller asks in
+	 * civil dates, but a moment's civil date is the viewer's to decide -- 2026-08-28T00:30Z is the
+	 * 28th in Seoul and the 27th in Los Angeles -- so the window is widened to cover both readings and
+	 * the projection is left to whoever knows the timezone. Narrowing here would drop the first or
+	 * last day of every month for somebody.
+	 */
+	$sql    = "SELECT i.* FROM {$table} i LEFT JOIN {$occurrences} o ON o.id = i.holiday_occurrence_id LEFT JOIN {$concepts} c ON c.id = o.concept_id"
+		. " WHERE i.calendar_id = %d AND ( ( i.temporal_kind = 'all_day' AND i.end_date > %s AND i.start_date < %s )"
+		. " OR ( i.temporal_kind = 'instant' AND i.start_utc >= %s AND i.start_utc < %s ) )";
+	$params = array(
+		$calendar_id,
+		$from,
+		$to,
+		gmdate( 'Y-m-d 00:00:00', (int) strtotime( $from . ' -1 day' ) ),
+		gmdate( 'Y-m-d 00:00:00', (int) strtotime( $to . ' +1 day' ) ),
+	);
 	if ( ! $include_drafts ) {
 		$sql .= " AND (CASE WHEN i.holiday_occurrence_id > 0 THEN o.status ELSE i.status END) = 'published'";
 	}
@@ -486,7 +564,8 @@ function axismundi_cal_system_items_in_range( int $calendar_id, string $from, st
 		$sql .= ' AND (' . implode( ' OR ', array_fill( 0, count( $wanted ), 'FIND_IN_SET(%s, CASE WHEN i.holiday_occurrence_id > 0 THEN c.categories ELSE i.categories END)' ) ) . ')';
 		$params = array_merge( $params, $wanted );
 	}
-	$sql .= ' ORDER BY i.start_date ASC, i.id ASC';
+	// One order for both shapes: whichever column a row uses, the other is NULL.
+	$sql .= ' ORDER BY COALESCE(i.start_date, DATE(i.start_utc)) ASC, i.id ASC';
 
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- range query over this plugin's own table.
 	$items = (array) $wpdb->get_results( $wpdb->prepare( $sql, $params ), ARRAY_A );

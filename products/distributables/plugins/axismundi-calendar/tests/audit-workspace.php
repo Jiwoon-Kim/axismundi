@@ -493,6 +493,45 @@ try {
 		in_array( (string) axismundi_cal_calendar_get( $ax_ws_closed )['uuid'], $ax_ws_discover(), true )
 	);
 
+	/*
+	 * A moment keeps its time all the way to the payload. A moon phase flattened to an all-day entry
+	 * would be the 28th for everybody, which is only true east of Greenwich.
+	 */
+	$ax_ws_phase = (int) axismundi_cal_system_item_save(
+		$ax_ws_ko,
+		array( 'title' => 'Full Moon', 'temporal_kind' => 'instant', 'start_utc' => '2026-09-20T00:30:00Z', 'status' => 'published' )
+	);
+	$ax_ws_phase_row = null;
+	foreach ( (array) axismundi_cal_view_payload( array( $ax_ws_ko_uuid ), '2026-09-01T00:00:00Z', '2026-10-01T00:00:00Z', 200 )->get_data()['items'] as $ax_ws_candidate ) {
+		if ( 'Full Moon' === (string) $ax_ws_candidate['summary'] ) {
+			$ax_ws_phase_row = $ax_ws_candidate;
+		}
+	}
+	ax_ws_assert( $ax_ws_results, 'a moment reaches the payload', is_array( $ax_ws_phase_row ) );
+	ax_ws_assert(
+		$ax_ws_results,
+		'as a moment rather than a whole day, with the time it actually happens',
+		is_array( $ax_ws_phase_row ) && false === $ax_ws_phase_row['allDay'] && '2026-09-20 00:30:00' === (string) $ax_ws_phase_row['startUtc']
+	);
+	ax_ws_assert(
+		$ax_ws_results,
+		'and with a local reading beside it, so a client can disagree from its own timezone',
+		is_array( $ax_ws_phase_row ) && '' !== (string) $ax_ws_phase_row['startLocal']
+	);
+	ax_ws_assert(
+		$ax_ws_results,
+		'while a whole-day entry is still a whole day',
+		( static function () use ( $ax_ws_ko_uuid ) : bool {
+			foreach ( (array) axismundi_cal_view_payload( array( $ax_ws_ko_uuid ), '2026-09-01T00:00:00Z', '2026-10-01T00:00:00Z', 200 )->get_data()['items'] as $row ) {
+				if ( 'Full Moon' !== (string) $row['summary'] ) {
+					return true === $row['allDay'];
+				}
+			}
+			return false;
+		} )()
+	);
+	axismundi_cal_system_item_delete( $ax_ws_phase );
+
 	// -- Naming one Calendar twice ---------------------------------------------------------------------------------
 
 	list( , $ax_ws_body ) = ax_ws_view( array( $ax_ws_mine_id, $ax_ws_mine_id ) );

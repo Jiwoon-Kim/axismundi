@@ -235,6 +235,50 @@ function axismundi_cal_calendar_list_items() : array {
 }
 
 /**
+ * When a dataset entry happens, in the two shapes it can have.
+ *
+ * A holiday is a whole day: it is the 15th in every timezone, and giving it a time would start it
+ * moving a day for somebody. A moon phase is a moment: 2026-08-28T00:30Z is the 28th in Seoul and
+ * the 27th in Los Angeles, and flattening it to a date would pick one of them.
+ *
+ * The local pair is the site's reading, which is what a server can honestly produce -- the browser
+ * has `startUtc` and its own zone and can disagree, which is the point of sending both.
+ *
+ * @param array<string,mixed> $entry System item row.
+ * @return array<string,mixed>
+ */
+function axismundi_cal_system_item_times( array $entry ) : array {
+	if ( AXISMUNDI_CAL_TEMPORAL_INSTANT !== (string) ( $entry['temporal_kind'] ?? AXISMUNDI_CAL_TEMPORAL_ALL_DAY ) ) {
+		$start = (string) $entry['start_date'] . ' 00:00:00';
+		$end   = (string) $entry['end_date'] . ' 00:00:00';
+		return array(
+			'startUtc'   => $start,
+			'endUtc'     => $end,
+			'startLocal' => $start,
+			'endLocal'   => $end,
+			'allDay'     => true,
+		);
+	}
+
+	$start_utc = (string) $entry['start_utc'];
+	// An instant with no end is a point, so it ends where it starts rather than running for an hour
+	// nobody claimed.
+	$end_utc = '' !== (string) ( $entry['end_utc'] ?? '' ) ? (string) $entry['end_utc'] : $start_utc;
+	$zone    = wp_timezone();
+	$local   = static function ( string $utc ) use ( $zone ) : string {
+		$moment = date_create_immutable( $utc, new DateTimeZone( 'UTC' ) );
+		return false === $moment ? $utc : $moment->setTimezone( $zone )->format( 'Y-m-d H:i:s' );
+	};
+	return array(
+		'startUtc'   => $start_utc,
+		'endUtc'     => $end_utc,
+		'startLocal' => $local( $start_utc ),
+		'endLocal'   => $local( $end_utc ),
+		'allDay'     => false,
+	);
+}
+
+/**
  * Calendars this principal could add to their list but has not.
  *
  * The counterpart of the list, and the reason nothing has to be seeded by hand: a calendar being
@@ -469,16 +513,10 @@ function axismundi_cal_view_payload( array $uuids, string $start_arg, string $en
 					// because there is no Korean rather than looking finished.
 					'locale'     => is_array( $label ) ? $label['locale'] : '',
 					'url'        => '',
-					'startUtc'   => (string) $entry['start_date'] . ' 00:00:00',
-					'endUtc'     => (string) $entry['end_date'] . ' 00:00:00',
-					'startLocal' => (string) $entry['start_date'] . ' 00:00:00',
-					'endLocal'   => (string) $entry['end_date'] . ' 00:00:00',
-					// Always. A holiday is a whole day everywhere, and the moment one becomes an
-					// instant it moves a day for somebody.
-					'allDay'     => true,
 					'recurring'  => false,
 					'readOnly'   => true,
 				);
+				$out[ count( $out ) - 1 ] += axismundi_cal_system_item_times( $entry );
 			}
 			continue;
 		}

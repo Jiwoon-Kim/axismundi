@@ -45,15 +45,39 @@ const AXISMUNDI_CAL_DATASET_FEED_YEARS = 2;
  * would make a client that holds both feeds collapse them into one entry and pick a language by
  * accident. Subscribing to both is a choice somebody made, and it should give them both.
  *
+ * A calendar this plugin computes is the exception, and for the opposite reason: there is only ever
+ * one of it, and it can be removed and rebuilt by a switch. See below.
+ *
  * @param array<string,mixed> $item     System item row.
  * @param array<string,mixed> $calendar Calendar row.
  * @return string
  */
 function axismundi_cal_dataset_ics_uid( array $item, array $calendar ) : string {
-	$host       = (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST );
+	$host = (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST );
+	$host = '' !== $host ? $host : 'localhost';
+
+	/*
+	 * A computed dataset identifies the phenomenon, not the row that happens to hold it. Switching Moon
+	 * phases off deletes its calendar and its entries; switching it back on writes new rows with new
+	 * ids under a new calendar uuid -- and the full moon of 2027 March is the same full moon it always
+	 * was. A UID built from the row would hand every remaining subscriber a second copy of every date
+	 * they already had, which is the one mistake an .ics cannot be talked out of afterwards.
+	 *
+	 * Google identifies its own moon phases the same way, from the instant rather than from any
+	 * calendar: `moonphase+1748922060000@google.com`. The lunation index is used here instead of a
+	 * timestamp because it survives the answer being corrected -- a revised ΔT moves the instant by
+	 * seconds, and a client should update the event it holds rather than gain a new one.
+	 *
+	 * `managed_key` namespaces it, so a later equinox generator cannot collide with a phase index.
+	 */
+	$managed = (string) ( $calendar['managed_key'] ?? '' );
+	if ( '' !== $managed ) {
+		return sprintf( 'ax-%s+%s@%s', $managed, (string) ( $item['source_uid'] ?? $item['id'] ), $host );
+	}
+
 	$occurrence = (int) ( $item['holiday_occurrence_id'] ?? 0 );
 	$local      = $occurrence > 0 ? 'day-' . $occurrence : 'entry-' . (int) $item['id'];
-	return sprintf( 'ax-dataset-%s.%s@%s', $local, (string) $calendar['uuid'], '' !== $host ? $host : 'localhost' );
+	return sprintf( 'ax-dataset-%s.%s@%s', $local, (string) $calendar['uuid'], $host );
 }
 
 /**
@@ -101,7 +125,7 @@ function axismundi_cal_dataset_ics_vevent( array $item, array $calendar ) : arra
 	 * `PUBLIC-HOLIDAY` can keep doing so after the site changes language, and that is exactly what
 	 * Google's own holiday feed makes impossible by putting its classification in localized prose.
 	 */
-	$categories = axismundi_cal_normalize_categories( (string) ( $item['categories'] ?? '' ) );
+	$categories = axismundi_cal_item_effective_categories( $item, $calendar );
 	if ( array() !== $categories ) {
 		$lines[] = 'CATEGORIES:' . axismundi_cal_ics_escape( implode( ',', $categories ) );
 	}

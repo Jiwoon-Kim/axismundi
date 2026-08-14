@@ -112,12 +112,18 @@ function axismundi_cal_system_provider_unavailable_reason( string $provider ) : 
  * @return string[]
  */
 function axismundi_cal_system_provider_categories( string $provider ) : array {
+	/*
+	 * Item keys only. Each provider's own top-level key is what its Calendar carries -- `RELIGIOUS` is
+	 * what a Religious observances calendar is, not something an entry on it declares again -- so
+	 * listing it here would offer somebody a box whose answer was settled when the Calendar was made.
+	 */
 	$map = array(
-		'holiday'   => array( 'HOLIDAY', 'PUBLIC-HOLIDAY', 'OBSERVANCE', 'SUBSTITUTE-HOLIDAY' ),
-		'astronomy' => array( 'ASTRONOMY', 'MOON-PHASE', 'EQUINOX', 'SOLSTICE' ),
-		'religious' => array( 'RELIGIOUS', 'BUDDHIST', 'CHRISTIAN', 'ISLAMIC', 'JEWISH', 'OBSERVANCE' ),
-		'civic'     => array( 'CIVIC', 'ELECTION', 'COMMEMORATION' ),
-		'academic'  => array( 'ACADEMIC', 'TERM', 'VACATION', 'EXAM-PERIOD' ),
+		'holiday'   => array( 'PUBLIC-HOLIDAY', 'OBSERVANCE', 'SUBSTITUTE-HOLIDAY' ),
+		'astronomy' => array( 'MOON-PHASE', 'EQUINOX', 'NORTHWARD-EQUINOX', 'SOUTHWARD-EQUINOX', 'SOLSTICE', 'NORTHERN-SOLSTICE', 'SOUTHERN-SOLSTICE' ),
+		// The tradition is the Calendar's, so what is left for an entry is what kind of day it is.
+		'religious' => array( 'OBSERVANCE', 'PUBLIC-HOLIDAY' ),
+		'civic'     => array( 'ELECTION', 'COMMEMORATION' ),
+		'academic'  => array( 'TERM', 'VACATION', 'EXAM-PERIOD' ),
 	);
 	return $map[ $provider ] ?? array();
 }

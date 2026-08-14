@@ -14,9 +14,8 @@
  * `SUMMARY` string -- "Full moon 10:27pm" -- which fixes the day to one timezone and puts the only
  * accurate part of the answer somewhere no program can read it.
  *
- * Julian Day does not leave this file. It counts from noon, it is a float, and both of those are
- * ways for a date to move half a day at the far end of an unrelated function. What crosses the
- * boundary is a UTC timestamp string.
+ * The time scale, the ΔT estimate and the Julian Day conversion live in `astronomy.php`, because
+ * none of them is about the moon. What crosses the boundary out of here is a UTC timestamp string.
  *
  * @package AxismundiCalendar
  */
@@ -38,46 +37,6 @@ const AXISMUNDI_CAL_MOON_PHASES = array(
 
 /** Mean length of a lunation in days, which is what sets how many phases a year holds. */
 const AXISMUNDI_CAL_SYNODIC_MONTH = 29.530588861;
-
-/**
- * Sine of an angle given in degrees.
- *
- * @param float $degrees Angle.
- * @return float
- */
-function axismundi_cal_sin_deg( float $degrees ) : float {
-	return sin( deg2rad( $degrees ) );
-}
-
-/**
- * Cosine of an angle given in degrees.
- *
- * @param float $degrees Angle.
- * @return float
- */
-function axismundi_cal_cos_deg( float $degrees ) : float {
-	return cos( deg2rad( $degrees ) );
-}
-
-/**
- * The difference between Terrestrial Time and UT, in seconds.
- *
- * Meeus computes phases in Dynamical Time, which is uniform. Civil time is not: the Earth's rotation
- * is irregular, so the gap between them is measured rather than derived and can only be predicted
- * forward. This is the Espenak-Meeus polynomial for 2005-2050, and it is a prediction -- around 74
- * seconds for 2025 against an observed value nearer 69, because the Earth did not slow as the fit
- * expected.
- *
- * Kept anyway, and kept visible. Five seconds is far below anything a phase is displayed to, and the
- * alternative is a table that would need updating from IERS bulletins forever to buy nothing.
- *
- * @param float $year Decimal year.
- * @return float Seconds.
- */
-function axismundi_cal_delta_t( float $year ) : float {
-	$t = $year - 2000.0;
-	return 62.92 + ( 0.32217 * $t ) + ( 0.005589 * $t * $t );
-}
 
 /**
  * The Julian Ephemeris Day of one phase, in Dynamical Time.
@@ -214,51 +173,6 @@ function axismundi_cal_moon_phase_jde( float $k ) : float {
 }
 
 /**
- * A Julian Day as a UTC timestamp string.
- *
- * The boundary. Everything above counts days from noon in Dynamical Time; everything below is a
- * civil timestamp, and nothing between the two is exposed.
- *
- * @param float $jde Julian Ephemeris Day, Dynamical Time.
- * @return string `Y-m-d H:i:s` UTC.
- */
-function axismundi_cal_jde_to_utc( float $jde ) : string {
-	/*
-	 * The year is needed before the conversion in order to know how far Dynamical Time has drifted
-	 * from civil time, and it is only wanted to a fraction of a year, so it is taken from the Julian
-	 * Day directly rather than by converting twice.
-	 */
-	$approx_year = 2000.0 + ( ( $jde - 2451545.0 ) / 365.25 );
-	$jd          = $jde - ( axismundi_cal_delta_t( $approx_year ) / 86400.0 );
-
-	// Meeus chapter 7, inverted. The half-day is the noon epoch leaving.
-	$z = (int) floor( $jd + 0.5 );
-	$f = ( $jd + 0.5 ) - $z;
-
-	$a = $z;
-	if ( $z >= 2299161 ) {
-		$alpha = (int) floor( ( $z - 1867216.25 ) / 36524.25 );
-		$a     = $z + 1 + $alpha - (int) floor( $alpha / 4 );
-	}
-	$b = $a + 1524;
-	$c = (int) floor( ( $b - 122.1 ) / 365.25 );
-	$d = (int) floor( 365.25 * $c );
-	$e = (int) floor( ( $b - $d ) / 30.6001 );
-
-	$day_fraction = $b - $d - (int) floor( 30.6001 * $e ) + $f;
-	$day          = (int) floor( $day_fraction );
-	$month        = $e < 14 ? $e - 1 : $e - 13;
-	$year         = $month > 2 ? $c - 4716 : $c - 4715;
-
-	$seconds = (int) round( ( $day_fraction - $day ) * 86400 );
-	/*
-	 * Rounding can land exactly on the next midnight, and a timestamp of 24:00:00 is not one. Handed
-	 * to `gmmktime` as an overflow rather than clamped, so the date rolls with it.
-	 */
-	return gmdate( 'Y-m-d H:i:s', (int) gmmktime( 0, 0, $seconds, $month, $day, $year ) );
-}
-
-/**
  * The lunation index of the phase nearest a moment.
  *
  * @param float $year Decimal year.
@@ -310,23 +224,165 @@ function axismundi_cal_moon_phases_in_year( int $year ) : array {
 }
 
 /**
- * The span worth keeping on disk by default.
+ * The window these rows are kept for.
  *
- * Sized to the subscription window rather than to an idea of how far ahead a calendar should reach.
- * The feed carries three months back and two years on, so last year covers the trailing edge and the
- * two years ahead keep a subscriber's calendar from emptying out. Google's published moon-phase feed
- * settles on much the same: about three years, currently 2025-01-06 to 2027-12-27.
+ * The same window the subscription feed serves, and deliberately the same expression of it rather
+ * than a second one that happens to agree today. A stored span shorter than the feed's would empty a
+ * subscriber's calendar at its far edge, and a span longer than it would accumulate rows nothing
+ * reads -- both are invisible from the site itself, which shows whatever is there.
  *
- * Four calendar years is roughly 198 entries, which is nothing to store and nothing to serialize.
- * The limit on what can be shown is not this: any year computes on demand, and a year nobody has
- * materialized has phases all the same.
+ * Rolling, in days from today, rather than a set of calendar years. A year-based span only moves on
+ * the 1st of January, so through December it would be reaching two months past what the feed serves
+ * at one end while carrying fifteen months nobody asks for at the other.
  *
- * @param int $now_year Year to centre on, or 0 for the current one.
- * @return array{0:int,1:int} First and last year, inclusive.
+ * @return array{0:string,1:string} First and last civil date, as `Y-m-d`.
  */
-function axismundi_cal_moon_phase_default_span( int $now_year = 0 ) : array {
-	$now_year = $now_year > 0 ? $now_year : (int) gmdate( 'Y' );
-	return array( $now_year - 1, $now_year + 2 );
+function axismundi_cal_moon_phase_window() : array {
+	return array(
+		gmdate( 'Y-m-d', (int) strtotime( '-' . AXISMUNDI_CAL_FEED_PAST_MONTHS . ' months' ) ),
+		gmdate( 'Y-m-d', (int) strtotime( '+' . AXISMUNDI_CAL_DATASET_FEED_YEARS . ' years' ) ),
+	);
+}
+
+/**
+ * Bring one calendar's phases into line with the window.
+ *
+ * The rows are a materialized view of an arithmetic result, not an archive of it. Phases outside the
+ * window are not kept and are not recomputed on demand: nothing asks for them. A reader who navigates
+ * to 2031 sees no phases, and that is the honest state of a calendar whose purpose is the current
+ * grid and the current subscription -- not a claim that the moon did nothing that year. If browsing
+ * arbitrary years ever becomes a feature it wants its own surface, where the answer is computed for
+ * the range asked about rather than mistaken for stored data.
+ *
+ * Both halves have to run together. Creating without pruning grows the table forever; pruning without
+ * creating empties the far edge of every subscriber's calendar as the window advances past what was
+ * materialized at installation.
+ *
+ * @param int $calendar_id Calendar id.
+ * @return array{created:int,deleted:int}|WP_Error
+ */
+function axismundi_cal_maintain_moon_phases( int $calendar_id ) {
+	global $wpdb;
+	$calendar = axismundi_cal_calendar_get( $calendar_id );
+	if ( ! is_array( $calendar ) || 'astronomy' !== axismundi_cal_system_provider( $calendar ) ) {
+		return new WP_Error( 'ax_cal_phase_provider', __( 'Moon phases belong to an astronomy calendar.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+	list( $from, $to ) = axismundi_cal_moon_phase_window();
+
+	$created = 0;
+	for ( $year = (int) substr( $from, 0, 4 ); $year <= (int) substr( $to, 0, 4 ); $year++ ) {
+		foreach ( axismundi_cal_moon_phases_in_year( $year ) as $phase ) {
+			$date = substr( (string) $phase['start_utc'], 0, 10 );
+			if ( $date < $from || $date > $to ) {
+				// The edge years are only partly inside, which is what makes this a window rather than
+				// a set of years.
+				continue;
+			}
+			$saved = axismundi_cal_system_item_save(
+				$calendar_id,
+				array(
+					'temporal_kind' => AXISMUNDI_CAL_TEMPORAL_INSTANT,
+					'start_utc'     => $phase['start_utc'],
+					// No `ASTRONOMY`: the Calendar carries it, and repeating it here would store one fact per row.
+					'categories'    => array( 'MOON-PHASE', $phase['phase'] ),
+					'batch_year'    => $year,
+					'source_uid'    => 'moon-phase-' . $phase['index'],
+					'status'        => 'published',
+				)
+			);
+			if ( is_wp_error( $saved ) ) {
+				return $saved;
+			}
+			++$created;
+		}
+	}
+
+	/*
+	 * Scoped by `source_uid` rather than by the calendar alone. This calendar is where the equinoxes
+	 * and the lunar eclipses are going to live too, and each of those will have its own window and its
+	 * own reason to keep a row -- so a prune that deleted "everything outside the window on this
+	 * calendar" would start throwing away another generator's rows the moment one is added.
+	 */
+	$table = axismundi_cal_system_items_table();
+	$like  = $wpdb->esc_like( 'moon-phase-' ) . '%';
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- window maintenance over this plugin's own table.
+	$deleted = (int) $wpdb->query(
+		$wpdb->prepare(
+			"DELETE FROM {$table}
+			 WHERE calendar_id = %d AND source_uid LIKE %s
+			   AND ( start_utc < %s OR start_utc >= %s )",
+			$calendar_id,
+			$like,
+			$from . ' 00:00:00',
+			gmdate( 'Y-m-d 00:00:00', (int) strtotime( $to . ' +1 day' ) )
+		)
+	);
+
+	return array( 'created' => $created, 'deleted' => $deleted );
+}
+
+/**
+ * When this calendar next needs attention.
+ *
+ * Nothing about a moon phase changes daily, so nothing about this needs doing daily. Two events can
+ * make the stored set wrong and they are both predictable: a phase beyond the far edge becomes due as
+ * the window advances onto it, and the oldest stored phase becomes stale as the trailing edge passes
+ * it. Everything between those two moments is a job that would recompute a few hundred rows to
+ * discover that nothing had changed.
+ *
+ * The earlier of the two, because either one alone leaves the set wrong. In practice that is roughly
+ * once a week -- the interval between phases -- rather than once a day.
+ *
+ * Returns 0 when there is nothing stored to reason about, which means "do it now": an empty calendar
+ * has no oldest row and no far edge, and the answer is to fill it rather than to wait.
+ *
+ * @param int $calendar_id Calendar id.
+ * @return int Timestamp, or 0 for immediately.
+ */
+function axismundi_cal_moon_phase_next_maintenance( int $calendar_id ) : int {
+	global $wpdb;
+	list( $from, $to ) = axismundi_cal_moon_phase_window();
+
+	$table = axismundi_cal_system_items_table();
+	$like  = $wpdb->esc_like( 'moon-phase-' ) . '%';
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- scheduling lookup over this plugin's own table.
+	$oldest = (string) $wpdb->get_var(
+		$wpdb->prepare( "SELECT MIN(start_utc) FROM {$table} WHERE calendar_id = %d AND source_uid LIKE %s", $calendar_id, $like )
+	);
+	if ( '' === $oldest ) {
+		return 0;
+	}
+
+	/*
+	 * The trailing edge is a date comparison, so the oldest row survives all of its own day and leaves
+	 * at the first instant the window starts after it. Computed from the row rather than from a fixed
+	 * interval, because the gap between the oldest two rows is not constant.
+	 */
+	$leaves = (int) strtotime(
+		substr( $oldest, 0, 10 ) . ' +1 day +' . AXISMUNDI_CAL_FEED_PAST_MONTHS . ' months UTC'
+	);
+
+	/*
+	 * The first phase past the far edge, which is the next one that will need writing. Found by walking
+	 * the edge year and the one after it, since a window ending in late December has its next phase in
+	 * the following year.
+	 */
+	$arrives = 0;
+	for ( $year = (int) substr( $to, 0, 4 ); $year <= (int) substr( $to, 0, 4 ) + 1; $year++ ) {
+		foreach ( axismundi_cal_moon_phases_in_year( $year ) as $phase ) {
+			$date = substr( (string) $phase['start_utc'], 0, 10 );
+			if ( $date <= $to ) {
+				continue;
+			}
+			$arrives = (int) strtotime( $date . ' -' . AXISMUNDI_CAL_DATASET_FEED_YEARS . ' years UTC' );
+			break 2;
+		}
+	}
+
+	if ( 0 === $arrives ) {
+		return $leaves;
+	}
+	return min( $leaves, $arrives );
 }
 
 /**
@@ -363,7 +419,8 @@ function axismundi_cal_generate_moon_phases( int $calendar_id, int $from_year, i
 					 */
 					'temporal_kind' => AXISMUNDI_CAL_TEMPORAL_INSTANT,
 					'start_utc'     => $phase['start_utc'],
-					'categories'    => array( 'ASTRONOMY', 'MOON-PHASE', $phase['phase'] ),
+					// No `ASTRONOMY`: the Calendar carries it, and repeating it here would store one fact per row.
+					'categories'    => array( 'MOON-PHASE', $phase['phase'] ),
 					'batch_year'    => $year,
 					'source_uid'    => 'moon-phase-' . $phase['index'],
 					'status'        => 'published',

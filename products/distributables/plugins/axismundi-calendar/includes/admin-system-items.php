@@ -264,8 +264,8 @@ function axismundi_cal_system_item_message( string $code ) : string {
 			return __( 'Choose what kind of dataset this calendar holds.', 'axismundi-calendar' );
 		case 'ax_cal_provider_unavailable':
 			return __( 'That kind of calendar cannot be created by hand yet.', 'axismundi-calendar' );
-		case 'managed_added':
-			return __( 'Calendar added, and filled.', 'axismundi-calendar' );
+		case 'managed_saved':
+			return __( 'Computed calendars saved.', 'axismundi-calendar' );
 		case 'ax_cal_provider_region':
 			return __( 'A holiday calendar needs a two-letter country or region code, such as KR.', 'axismundi-calendar' );
 		case 'ax_cal_provider_locale':
@@ -390,7 +390,7 @@ function axismundi_cal_render_system_items_page() : void {
 		<?php endif; ?>
 
 		<?php if ( axismundi_cal_can_manage_all_calendars() ) : ?>
-			<?php axismundi_cal_render_managed_calendar_offer( $base ); ?>
+			<?php axismundi_cal_render_managed_calendar_settings( $base ); ?>
 			<?php axismundi_cal_render_system_calendar_form(); ?>
 		<?php endif; ?>
 	</div>
@@ -631,7 +631,27 @@ function axismundi_cal_render_system_item_editor( array $calendar, string $base 
 					<?php if ( $holiday_review ) : ?>
 						<td><input class="ax-cal-holiday-selection" data-draft="<?php echo esc_attr( 'published' === (string) $item['status'] ? '0' : '1' ); ?>" type="checkbox" name="selected_items[]" value="<?php echo esc_attr( (string) $item['id'] ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Select %s', 'axismundi-calendar' ), axismundi_cal_item_display_name( $item ) ) ); ?>" onchange="window.axismundiCalendarSystemItems.syncAll(this.form)"></td>
 					<?php endif; ?>
-					<td><code><?php echo esc_html( (string) $item['start_date'] ); ?></code></td>
+					<td>
+						<?php
+						/*
+						 * A whole day has a date and a moment does not, so the moment is shown as what it
+						 * actually is. Printing `start_date` for both left this column empty for every
+						 * computed row -- the column was reading a field that is NULL by design, which looks
+						 * like missing data rather than a different shape of entry.
+						 *
+						 * UTC, and labelled. A moon phase at 00:30Z is the 28th in Seoul and the 27th in Los
+						 * Angeles, so rendering it in the site's zone would print one reading of it as though
+						 * it were the fact. The grid is where a reader's own day is worked out; this table is
+						 * the stored row.
+						 */
+						if ( AXISMUNDI_CAL_TEMPORAL_INSTANT === (string) $item['temporal_kind'] ) :
+							?>
+							<code><?php echo esc_html( substr( (string) $item['start_utc'], 0, 16 ) ); ?></code>
+							<span class="description">UTC</span>
+						<?php else : ?>
+							<code><?php echo esc_html( (string) $item['start_date'] ); ?></code>
+						<?php endif; ?>
+					</td>
 					<td>
 						<strong>
 							<a href="<?php echo esc_url( add_query_arg( array( 'calendar' => $calendar_id, 'year' => $year, 'item' => (int) $item['id'] ), $base ) ); ?>">
@@ -663,9 +683,23 @@ function axismundi_cal_render_system_item_editor( array $calendar, string $base 
 					</td>
 					<td>
 						<?php
-						// Where it came from, because a corrected entry and an imported one look identical
-						// on screen and behave differently the next time the import runs.
-						echo esc_html( '' !== (string) ( $item['source_uid'] ?? '' ) ? __( 'Imported', 'axismundi-calendar' ) : __( 'Entered here', 'axismundi-calendar' ) );
+						/*
+						 * Where it came from, because these behave differently and look identical on screen.
+						 * An import re-runs and overwrites; a computed row is regenerated from arithmetic and
+						 * pruned when it leaves the window; a typed one is only ever changed by a person.
+						 *
+						 * Three states rather than two. Both an import and a generator write `source_uid` --
+						 * it is what makes a second pass update rather than duplicate -- so reading only that
+						 * labelled every moon phase "Imported", which named a feed that does not exist and
+						 * implied somebody could stop it by removing a source.
+						 */
+						if ( '' === (string) ( $item['source_uid'] ?? '' ) ) {
+							echo esc_html__( 'Entered here', 'axismundi-calendar' );
+						} elseif ( '' !== (string) ( $item['source_url'] ?? '' ) ) {
+							echo esc_html__( 'Imported', 'axismundi-calendar' );
+						} else {
+							echo esc_html__( 'Computed', 'axismundi-calendar' );
+						}
 						?>
 					</td>
 					<?php if ( ! $holiday_review ) : ?>
@@ -754,7 +788,31 @@ function axismundi_cal_render_system_item_editor( array $calendar, string $base 
 			<tr>
 				<th scope="row"><?php esc_html_e( 'Categories', 'axismundi-calendar' ); ?></th>
 				<td>
-					<?php foreach ( AXISMUNDI_CAL_ITEM_CATEGORIES as $category ) : ?>
+					<?php
+					/*
+					 * None of the top-level keys are offered here, not merely the ones this Calendar has.
+					 * `HOLIDAY`, `ASTRONOMY`, `RELIGIOUS`, `CIVIC` and `ACADEMIC` are the Calendar layer of
+					 * the vocabulary: `RELIGIOUS` is what a Religious observances calendar is, not a tag an
+					 * entry on some other calendar wears. A Buddhist public holiday says so with `BUDDHIST`
+					 * beside `PUBLIC-HOLIDAY`, which is the tradition rather than the classification and is
+					 * the part that actually varies between entries.
+					 *
+					 * The Calendar's own keys are shown above as inherited, so the full set stays legible
+					 * without a ticked box that cannot be unticked without lying.
+					 */
+					$inherited_categories = axismundi_cal_normalize_system_calendar_categories( (string) ( $calendar['system_categories'] ?? '' ) );
+					?>
+					<?php if ( array() !== $inherited_categories ) : ?>
+						<p>
+							<?php foreach ( $inherited_categories as $inherited_category ) : ?>
+								<code><?php echo esc_html( $inherited_category ); ?></code>
+							<?php endforeach; ?>
+							<span class="description">
+								<?php esc_html_e( 'From this calendar. Every entry on it has this, so it is not stored on each one.', 'axismundi-calendar' ); ?>
+							</span>
+						</p>
+					<?php endif; ?>
+					<?php foreach ( array_diff( AXISMUNDI_CAL_ITEM_CATEGORIES, AXISMUNDI_CAL_SYSTEM_CALENDAR_CATEGORIES ) as $category ) : ?>
 						<label style="display:inline-block;min-width:14em;">
 							<input type="checkbox" name="categories[]" value="<?php echo esc_attr( $category ); ?>"
 								<?php checked( in_array( $category, $selected, true ) ); ?>>
@@ -822,58 +880,104 @@ function axismundi_cal_render_system_item_editor( array $calendar, string $base 
 }
 
 /**
- * Offer to add back a maintained calendar that is not here.
+ * The datasets this plugin can produce, and whether this site produces them.
  *
- * These are provisioned once and never re-provisioned, so deleting one sticks -- which is right, and
- * leaves this as the only way back. Shown only when something is actually missing, because a button
- * offering to add what is already there reads as an invitation to make a second one.
+ * Two switches govern a computed calendar and they answer different questions. This one is the
+ * site's: whether the server runs the generator at all, keeps its rolling window current, and offers
+ * the calendar to anybody. The other is each person's, in the workspace, and decides only whether it
+ * is drawn on their own grid.
+ *
+ * The ones nothing can compute yet are listed rather than hidden. A dataset that is simply absent
+ * reads as one this plugin has no opinion about, which leaves somebody looking for equinoxes with
+ * nothing to conclude; shown and unavailable says what is coming and why it is not here.
  *
  * @param string $base Screen URL.
  * @return void
  */
-function axismundi_cal_render_managed_calendar_offer( string $base ) : void {
-	$missing = axismundi_cal_managed_calendars_missing();
-	if ( array() === $missing ) {
-		return;
-	}
+function axismundi_cal_render_managed_calendar_settings( string $base ) : void {
 	?>
-	<h2><?php esc_html_e( 'Calendars this plugin maintains', 'axismundi-calendar' ); ?></h2>
+	<h2><?php esc_html_e( 'Computed calendars', 'axismundi-calendar' ); ?></h2>
 	<p class="description">
-		<?php esc_html_e( 'Computed rather than curated, so there is nothing to configure and nothing to review. These are added when the plugin is installed; one that has been deleted stays deleted until it is added back here.', 'axismundi-calendar' ); ?>
+		<?php esc_html_e( 'Datasets this plugin works out for itself. Nothing is fetched and nothing is reviewed, so the only decision is whether this site produces them at all. Each person still chooses separately whether to show one on their own calendar.', 'axismundi-calendar' ); ?>
 	</p>
-	<?php foreach ( $missing as $key ) : ?>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-block-end:1em;">
-			<input type="hidden" name="action" value="ax_cal_add_managed_calendar">
-			<input type="hidden" name="managed_key" value="<?php echo esc_attr( $key ); ?>">
-			<?php wp_nonce_field( 'ax_cal_add_managed' ); ?>
-			<p>
-				<strong><?php echo esc_html( axismundi_cal_managed_calendar_name( $key ) ); ?></strong><br>
-				<span class="description"><?php echo esc_html( axismundi_cal_managed_calendar_description( $key ) ); ?></span>
-			</p>
-			<?php submit_button( __( 'Add it back', 'axismundi-calendar' ), 'secondary', 'submit', false ); ?>
-		</form>
-	<?php endforeach; ?>
+	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+		<input type="hidden" name="action" value="ax_cal_save_managed_calendars">
+		<?php wp_nonce_field( 'ax_cal_managed_settings' ); ?>
+		<table class="form-table" role="presentation">
+			<?php foreach ( array_keys( AXISMUNDI_CAL_MANAGED_CALENDARS ) as $key ) : ?>
+				<?php
+				$key       = (string) $key;
+				$available = axismundi_cal_managed_calendar_available( $key );
+				$calendar  = axismundi_cal_managed_calendar_get( $key );
+				?>
+				<tr>
+					<th scope="row"><?php echo esc_html( axismundi_cal_managed_calendar_name( $key ) ); ?></th>
+					<td>
+						<label>
+							<input type="checkbox" name="managed[]" value="<?php echo esc_attr( $key ); ?>"
+								<?php checked( axismundi_cal_managed_calendar_enabled( $key ) ); ?>
+								<?php disabled( ! $available ); ?>>
+							<?php esc_html_e( 'Produce this calendar on this site', 'axismundi-calendar' ); ?>
+						</label>
+						<p class="description"><?php echo esc_html( axismundi_cal_managed_calendar_description( $key ) ); ?></p>
+						<?php if ( ! $available ) : ?>
+							<p class="description">
+								<em><?php esc_html_e( 'Not yet: nothing computes this one so far. Switching it on would leave an empty calendar that looks broken.', 'axismundi-calendar' ); ?></em>
+							</p>
+						<?php elseif ( is_array( $calendar ) ) : ?>
+							<p class="description">
+								<a href="<?php echo esc_url( add_query_arg( 'calendar', (int) $calendar['id'], $base ) ); ?>"><?php esc_html_e( 'See its entries', 'axismundi-calendar' ); ?></a>
+							</p>
+						<?php endif; ?>
+					</td>
+				</tr>
+			<?php endforeach; ?>
+		</table>
+		<?php submit_button( __( 'Save computed calendars', 'axismundi-calendar' ) ); ?>
+	</form>
+	<p class="description">
+		<?php esc_html_e( 'Switching one off removes its calendar and its entries, and its subscription address stops answering. Nothing is lost that cannot be worked out again: switching it back on recomputes the same dates at the same address.', 'axismundi-calendar' ); ?>
+	</p>
+	<p class="description">
+		<?php
+		/*
+		 * Said plainly, because the opposite is what somebody would assume. Nothing here reaches into a
+		 * subscriber's calendar: no ICS client is obliged to remove what it already holds when a feed
+		 * stops answering, and most treat it as the subscription having ended rather than as the dates
+		 * having been withdrawn.
+		 */
+		esc_html_e( 'This only stops the site publishing. People who already subscribe may keep the dates they have and need to remove the subscription themselves.', 'axismundi-calendar' );
+		?>
+	</p>
 	<?php
 }
 
 /**
- * Add back one maintained calendar.
+ * Save which computed calendars this site produces.
  *
  * @return void
  */
-function axismundi_cal_handle_add_managed_calendar() : void {
-	check_admin_referer( 'ax_cal_add_managed' );
+function axismundi_cal_handle_managed_calendar_settings() : void {
+	check_admin_referer( 'ax_cal_managed_settings' );
 	if ( ! axismundi_cal_can_manage_all_calendars() ) {
 		wp_die( esc_html__( 'You are not allowed to maintain this site calendars.', 'axismundi-calendar' ), 403 );
 	}
 	$base = admin_url( 'edit.php?post_type=' . AXISMUNDI_CAL_EVENT_POST_TYPE . '&page=ax-calendar-system' );
-	$key  = isset( $_POST['managed_key'] ) ? sanitize_key( wp_unslash( (string) $_POST['managed_key'] ) ) : '';
-	$added = axismundi_cal_provision_managed_calendar( $key );
-	if ( is_wp_error( $added ) ) {
-		wp_safe_redirect( add_query_arg( 'ax_cal_error', rawurlencode( $added->get_error_code() ), $base ) );
-		exit;
+
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified above.
+	$chosen = isset( $_POST['managed'] ) ? array_map( 'sanitize_key', (array) wp_unslash( $_POST['managed'] ) ) : array();
+	foreach ( array_keys( AXISMUNDI_CAL_MANAGED_CALENDARS ) as $key ) {
+		$key = (string) $key;
+		/*
+		 * An unavailable dataset is skipped rather than switched off, so a disabled checkbox -- which a
+		 * browser does not submit -- cannot be read as somebody having unticked it.
+		 */
+		if ( ! axismundi_cal_managed_calendar_available( $key ) ) {
+			continue;
+		}
+		axismundi_cal_set_managed_calendar_enabled( $key, in_array( $key, $chosen, true ) );
 	}
-	wp_safe_redirect( add_query_arg( array( 'calendar' => (int) $added, 'ax_cal_notice' => 'managed_added' ), $base ) );
+	wp_safe_redirect( add_query_arg( 'ax_cal_notice', 'managed_saved', $base ) );
 	exit;
 }
-add_action( 'admin_post_ax_cal_add_managed_calendar', 'axismundi_cal_handle_add_managed_calendar' );
+add_action( 'admin_post_ax_cal_save_managed_calendars', 'axismundi_cal_handle_managed_calendar_settings' );

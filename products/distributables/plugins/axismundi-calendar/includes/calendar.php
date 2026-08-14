@@ -292,10 +292,18 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 		}
 	}
 
-	$system_categories = 'system' === $kind
+	/*
+	 * Asked of the source rather than of the kind, for the reason the workspace reader was: `kind` is
+	 * ownership and visibility, `source` is whether the contents are maintained entries. A dataset
+	 * somebody keeps themselves is `local` and `manual` at once, and gating on `system` left it with no
+	 * classification at all -- which stopped mattering the moment entries began inheriting theirs from
+	 * the Calendar, because there was then nowhere for `HOLIDAY` to come back from.
+	 */
+	$holds_dataset     = in_array( $source, array( 'manual', 'import' ), true );
+	$system_categories = $holds_dataset
 		? axismundi_cal_normalize_system_calendar_categories( $fields['system_categories'] ?? ( $existing['system_categories'] ?? '' ) )
 		: array();
-	if ( 'system' === $kind && array() === $system_categories && '' !== $system_provider ) {
+	if ( $holds_dataset && array() === $system_categories && '' !== $system_provider ) {
 		/*
 		 * The browsing classification follows from the provider rather than being asked for twice.
 		 * They were two answers to one question, and a calendar whose label disagreed with its own

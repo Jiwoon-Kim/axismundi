@@ -298,7 +298,8 @@ function axismundi_cal_serve_ics() : void {
 		return;
 	}
 
-	$feed = null;
+	$feed     = null;
+	$calendar = null;
 	if ( 'site' === $which ) {
 		$feed = axismundi_cal_site_feed();
 	} elseif ( 'calendar' === $which ) {
@@ -311,7 +312,18 @@ function axismundi_cal_serve_ics() : void {
 			 * `/calendar/{slug}/` has never distinguished them either. What is separate is the document
 			 * writer, which is where the difference actually lives.
 			 */
-			if ( axismundi_cal_calendar_is_dataset( $calendar ) ) {
+			if ( '' !== (string) ( $calendar['managed_key'] ?? '' ) ) {
+				/*
+				 * Served from the document maintenance already rendered. What this feed says changes only
+				 * when the window advances, at a moment the scheduler computes -- so building it per
+				 * request means booting WordPress, querying a few hundred rows and re-serializing a
+				 * document identical to the one served a second earlier. The conditional GET saves the
+				 * bytes and none of that work, and a public subscription is polled forever by everyone
+				 * who has it.
+				 */
+				$feed = axismundi_cal_managed_ics( $calendar );
+			} elseif ( axismundi_cal_calendar_is_dataset( $calendar ) ) {
+				// Edited by people at unpredictable moments, so it is rendered when it is asked for.
 				$feed = axismundi_cal_dataset_feed( $calendar );
 			} elseif ( 'local' === (string) $calendar['kind'] ) {
 				$feed = axismundi_cal_site_feed(
@@ -330,19 +342,42 @@ function axismundi_cal_serve_ics() : void {
 	}
 
 	if ( null === $feed ) {
-		status_header( 404 );
+		/*
+		 * A managed dataset has a fixed address, so this one can say which of two things happened. `404`
+		 * means there is nothing here and there never was; `410` means this site published it and has
+		 * stopped -- which is the honest answer after an administrator switched Moon phases off, and is
+		 * different from a typo in the slug.
+		 *
+		 * It is not a request to delete anything. No ICS client is obliged to remove what it already
+		 * holds on a `410`, and most will treat it as the subscription having ended, so switching a
+		 * dataset off must never be described as clearing it from anybody's calendar. Withdrawing the
+		 * dates a subscriber already has would take a feed that publishes them again as
+		 * `STATUS:CANCELLED`, which is a separate thing to build and a separate promise to make.
+		 */
+		$withdrawn = 'calendar' === $which
+			&& '' !== axismundi_cal_managed_key_for_slug( sanitize_title( (string) get_query_var( 'ax_cal_slug' ) ) );
+		status_header( $withdrawn ? 410 : 404 );
 		nocache_headers();
 		exit;
 	}
 
-	$etag     = '"' . md5( $feed['body'] ) . '"';
+	// Already computed for a stored document, which is the point of storing it.
+	$etag     = (string) ( $feed['etag'] ?? '"' . md5( $feed['body'] ) . '"' );
 	$modified = gmdate( 'D, d M Y H:i:s', $feed['modified'] ) . ' GMT';
 
 	header( 'Content-Type: text/calendar; charset=utf-8' );
 	header( 'Content-Disposition: inline; filename="calendar.ics"' );
 	header( 'ETag: ' . $etag );
 	header( 'Last-Modified: ' . $modified );
-	header( 'Cache-Control: public, max-age=3600' );
+	/*
+	 * A shared cache is allowed to hold a computed feed longer, but not as long as its contents stay
+	 * still. What the document says changes about weekly; whether this site publishes it at all can
+	 * change the moment an administrator saves the settings screen, and a proxy holding a withdrawn
+	 * feed would go on serving `200` after the site had stopped. Six hours bounds how long that can
+	 * lag, which is the shorter of the two questions rather than the more comfortable one.
+	 */
+	$shared = is_array( $calendar ) && '' !== (string) ( $calendar['managed_key'] ?? '' ) ? ', s-maxage=21600' : '';
+	header( 'Cache-Control: public, max-age=3600' . $shared );
 
 	$sent_etag = isset( $_SERVER['HTTP_IF_NONE_MATCH'] ) ? trim( sanitize_text_field( wp_unslash( (string) $_SERVER['HTTP_IF_NONE_MATCH'] ) ) ) : '';
 	$sent_time = isset( $_SERVER['HTTP_IF_MODIFIED_SINCE'] ) ? strtotime( sanitize_text_field( wp_unslash( (string) $_SERVER['HTTP_IF_MODIFIED_SINCE'] ) ) ) : false;

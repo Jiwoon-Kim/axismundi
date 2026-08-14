@@ -81,7 +81,9 @@ require_once __DIR__ . '/includes/ics-parse.php';
 require_once __DIR__ . '/includes/subscription.php';
 require_once __DIR__ . '/includes/ics-feed.php';
 require_once __DIR__ . '/includes/ics-dataset.php';
+require_once __DIR__ . '/includes/astronomy.php';
 require_once __DIR__ . '/includes/moon-phases.php';
+require_once __DIR__ . '/includes/seasons.php';
 require_once __DIR__ . '/includes/managed-calendars.php';
 require_once __DIR__ . '/includes/calendar-page.php';
 require_once __DIR__ . '/includes/blocks.php';
@@ -117,7 +119,7 @@ function axismundi_cal_activate() : void {
 	flush_rewrite_rules( false );
 	// The calendars this plugin maintains, so moon phases are on the grid from the first page load
 	// rather than after somebody discovers they have to create them.
-	axismundi_cal_provision_managed_calendars();
+	axismundi_cal_sync_managed_calendars();
 }
 register_activation_hook( __FILE__, 'axismundi_cal_activate' );
 
@@ -130,6 +132,9 @@ register_activation_hook( __FILE__, 'axismundi_cal_activate' );
  */
 function axismundi_cal_deactivate() : void {
 	flush_rewrite_rules( false );
+	// A scheduled event outlives the plugin that registered it, so an orphaned hook would go on firing
+	// against nothing until somebody cleaned the cron table by hand.
+	wp_clear_scheduled_hook( AXISMUNDI_CAL_MAINTENANCE_HOOK );
 }
 register_deactivation_hook( __FILE__, 'axismundi_cal_deactivate' );
 
@@ -143,11 +148,9 @@ function axismundi_cal_maybe_upgrade() : void {
 		axismundi_cal_install_schema();
 	}
 	/*
-	 * Only ever creates what has never been created. A plugin updated in place never ran the
-	 * activation hook, so without this the maintained calendars would arrive for new installations
-	 * only -- and a key already recorded is skipped whether its calendar still exists or not, which is
-	 * what keeps a deleted one deleted.
+	 * Squares the site with what is switched on. A plugin updated in place never ran the activation
+	 * hook, so without this a newly available dataset would arrive for new installations only.
 	 */
-	axismundi_cal_provision_managed_calendars();
+	axismundi_cal_sync_managed_calendars();
 }
 add_action( 'init', 'axismundi_cal_maybe_upgrade', 5 );

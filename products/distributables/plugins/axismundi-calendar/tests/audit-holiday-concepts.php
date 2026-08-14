@@ -239,13 +239,16 @@ try {
 	ax_hc_assert(
 	$ax_hc_results,
 	'and its stored category survives linking, so removing the label later restores what was reviewed',
-	array( 'HOLIDAY', 'OBSERVANCE' ) === axismundi_cal_normalize_categories( (string) axismundi_cal_system_item_get( $ax_hc_en_item )['categories'] )
+	// The row's own half only: `HOLIDAY` is the Calendar's now, and is added back by the effective read.
+	array( 'OBSERVANCE' ) === axismundi_cal_normalize_categories( (string) axismundi_cal_system_item_get( $ax_hc_en_item )['categories'] )
 );
 	axismundi_cal_holiday_occurrence_save( $ax_hc_seollal, array( 'status' => 'draft' ), $ax_hc_day );
-	ax_hc_assert( $ax_hc_results, 'changing an occurrence status does not erase localized review categories', array( 'HOLIDAY', 'OBSERVANCE' ) === axismundi_cal_normalize_categories( (string) axismundi_cal_system_item_get( $ax_hc_en_item )['categories'] ) );
+	ax_hc_assert( $ax_hc_results, 'changing an occurrence status does not erase localized review categories', array( 'OBSERVANCE' ) === axismundi_cal_normalize_categories( (string) axismundi_cal_system_item_get( $ax_hc_en_item )['categories'] ) );
 	axismundi_cal_holiday_occurrence_save( $ax_hc_seollal, array( 'status' => 'published' ), $ax_hc_day );
 	axismundi_cal_link_item_to_occurrence( $ax_hc_en_item, 0 );
-	ax_hc_assert( $ax_hc_results, 'and unlinking returns that preserved category rather than the concept\'s', array( 'HOLIDAY', 'OBSERVANCE' ) === axismundi_cal_normalize_categories( (string) axismundi_cal_system_item_get( $ax_hc_en_item )['categories'] ) );
+	// Read effectively, which is what a reader sees: the row's own preserved review, plus the key its
+	// Calendar supplies. The row itself keeps only `OBSERVANCE`, which is the half somebody reviewed.
+	ax_hc_assert( $ax_hc_results, 'and unlinking returns that preserved category rather than the concept\'s', array( 'HOLIDAY', 'OBSERVANCE' ) === axismundi_cal_item_effective_categories( (array) axismundi_cal_system_item_get( $ax_hc_en_item ) ) );
 	axismundi_cal_link_item_to_occurrence( $ax_hc_en_item, $ax_hc_day );
 
 	// -- A re-import leaves the judgement alone ----------------------------------------------------------------
@@ -526,7 +529,7 @@ try {
 		 * and again every year.
 		 */
 		$ax_hc_promoted = (int) axismundi_cal_holiday_concept_save(
-			array( 'catalog_id' => $ax_hc_catalog, 'label' => '제헌절', 'categories' => (string) axismundi_cal_system_item_get( $ax_hc_orphan )['categories'] )
+			array( 'catalog_id' => $ax_hc_catalog, 'label' => '제헌절', 'categories' => implode( ',', axismundi_cal_item_effective_categories( (array) axismundi_cal_system_item_get( $ax_hc_orphan ) ) ) )
 		);
 		$ax_hc_concepts[] = $ax_hc_promoted;
 		ax_hc_assert(

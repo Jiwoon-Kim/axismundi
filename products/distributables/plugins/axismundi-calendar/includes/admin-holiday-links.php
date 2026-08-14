@@ -124,7 +124,8 @@ function axismundi_cal_handle_item_link() : void {
 			array(
 				'catalog_id' => $catalog_id,
 				'label'      => axismundi_cal_item_display_name( $item ),
-				'categories' => (string) $item['categories'],
+				// The effective set: a concept is read without a Calendar to inherit from.
+					'categories' => implode( ',', axismundi_cal_item_effective_categories( $item ) ),
 			)
 		);
 		if ( is_wp_error( $concept ) ) {
@@ -166,7 +167,8 @@ function axismundi_cal_handle_item_link() : void {
 					 * name is a stored translation.
 					 */
 					'label'      => isset( $_POST['concept_label'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['concept_label'] ) ) : (string) ( $item['title'] ?? '' ),
-					'categories' => (string) $item['categories'],
+					// The effective set: a concept is read without a Calendar to inherit from.
+					'categories' => implode( ',', axismundi_cal_item_effective_categories( $item ) ),
 				)
 			);
 			if ( is_wp_error( $concept_id ) ) {

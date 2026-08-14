@@ -100,23 +100,27 @@ try {
 	// -- Categories are a closed vocabulary -------------------------------------------------------------
 
 	/*
-	 * Several at once is the point rather than an allowance: Buddha's Birthday in Korea is a public
-	 * holiday and a religious observance at the same time, and a taxonomy forcing a choice records
-	 * something false.
+	 * Several at once is the point rather than an allowance: a day moved because the real one fell on a
+	 * weekend is a public holiday and a substitute at the same time, and a taxonomy forcing a choice
+	 * records something false.
+	 *
+	 * Not a religion, though. Buddha's Birthday is on the Korean holiday calendar because Korea takes
+	 * the day off, and `BUDDHIST` would say it belongs to a Buddhist observances dataset instead --
+	 * see the calendar-layer rule further down.
 	 */
 	$ax_si_buddha = (int) axismundi_cal_system_item_save(
 		$ax_si_holidays,
-		array( 'title' => "Buddha's Birthday", 'start_date' => '2027-05-13', 'categories' => array( 'PUBLIC-HOLIDAY', 'RELIGIOUS', 'BUDDHIST', 'HOLIDAY' ), 'status' => 'published' )
+		array( 'title' => "Buddha's Birthday", 'start_date' => '2027-05-13', 'categories' => array( 'PUBLIC-HOLIDAY', 'SUBSTITUTE-HOLIDAY', 'HOLIDAY' ), 'status' => 'published' )
 	);
 	ax_si_assert(
 		$ax_si_results,
-		'an entry can be a public holiday and a religious observance at once',
-		'HOLIDAY,PUBLIC-HOLIDAY,RELIGIOUS,BUDDHIST' === (string) axismundi_cal_system_item_get( $ax_si_buddha )['categories']
+		'an entry can be a public holiday and a substitute day at once',
+		'PUBLIC-HOLIDAY,SUBSTITUTE-HOLIDAY' === (string) axismundi_cal_system_item_get( $ax_si_buddha )['categories']
 	);
 	ax_si_assert(
 		$ax_si_results,
 		'stored in vocabulary order, so the value does not depend on how somebody typed the list',
-		axismundi_cal_normalize_categories( array( 'BUDDHIST', 'HOLIDAY' ) ) === axismundi_cal_normalize_categories( array( 'HOLIDAY', 'BUDDHIST' ) )
+		axismundi_cal_normalize_categories( array( 'OBSERVANCE', 'PUBLIC-HOLIDAY' ) ) === axismundi_cal_normalize_categories( array( 'PUBLIC-HOLIDAY', 'OBSERVANCE' ) )
 	);
 
 	/*
@@ -160,8 +164,8 @@ try {
 	);
 	ax_si_assert(
 		$ax_si_results,
-		'a category matched by prefix is not a match, so BUDDHIST does not answer for HOLIDAY',
-		array( "Buddha's Birthday" ) === ax_si_titles( axismundi_cal_system_items_in_range( $ax_si_holidays, '2027-01-01', '2028-01-01', array( 'BUDDHIST' ) ) )
+		'a category matched by prefix is not a match, so SUBSTITUTE-HOLIDAY does not answer for HOLIDAY',
+		array( "Buddha's Birthday" ) === ax_si_titles( axismundi_cal_system_items_in_range( $ax_si_holidays, '2027-01-01', '2028-01-01', array( 'SUBSTITUTE-HOLIDAY' ) ) )
 	);
 
 	$ax_si_january = axismundi_cal_system_items_in_range( $ax_si_holidays, '2027-01-01', '2027-02-01' );
@@ -424,7 +428,8 @@ try {
 	ax_si_assert(
 		$ax_si_results,
 		'and the entry categories a holiday calendar expects are offered first',
-		array( 'HOLIDAY', 'PUBLIC-HOLIDAY', 'OBSERVANCE', 'SUBSTITUTE-HOLIDAY' ) === axismundi_cal_system_provider_categories( 'holiday' )
+		// Without `HOLIDAY`: that is what the Calendar is, and the row inherits it rather than repeating it.
+		array( 'PUBLIC-HOLIDAY', 'OBSERVANCE', 'SUBSTITUTE-HOLIDAY' ) === axismundi_cal_system_provider_categories( 'holiday' )
 	);
 	ax_si_assert(
 		$ax_si_results,
@@ -594,7 +599,9 @@ try {
 	 * published in -- Google writes it into `DESCRIPTION` -- and reading it back breaks on the first
 	 * translation or rewording. Classifying is the review this import exists to feed.
 	 */
-	ax_si_assert( $ax_si_results, 'and with no categories invented from the publisher prose', '' === (string) $ax_si_drafts[0]['categories'] );
+	// Asked of the row rather than of the read: a range read now adds the Calendar's own key, and what
+	// is being checked is that the importer wrote no classification of its own.
+	ax_si_assert( $ax_si_results, 'and with no categories invented from the publisher prose', '' === (string) axismundi_cal_system_item_get( (int) $ax_si_drafts[0]['id'] )['categories'] );
 	ax_si_assert( $ax_si_results, 'while the publisher is recorded', 'https://example.org/holidays.ics' === (string) $ax_si_drafts[0]['source_url'] );
 
 	$ax_si_import_ids = array_map( static fn( array $item ) : int => (int) $item['id'], $ax_si_drafts );
@@ -606,14 +613,93 @@ try {
 		),
 		array( $ax_si_import_ids[0] )
 	);
-	ax_si_assert( $ax_si_results, 'a holiday review classifies each imported entry without guessing from source prose', 2 === $ax_si_reviewed && 'HOLIDAY,PUBLIC-HOLIDAY' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[0] )['categories'] && 'HOLIDAY,OBSERVANCE' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['categories'] );
+	ax_si_assert( $ax_si_results, 'a holiday review classifies each imported entry without guessing from source prose', 2 === $ax_si_reviewed && array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ) === axismundi_cal_item_effective_categories( (array) axismundi_cal_system_item_get( $ax_si_import_ids[0] ) ) && array( 'HOLIDAY', 'OBSERVANCE' ) === axismundi_cal_item_effective_categories( (array) axismundi_cal_system_item_get( $ax_si_import_ids[1] ) ) );
 	ax_si_assert( $ax_si_results, 'and publishes only the checked, classified entry', 'published' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[0] )['status'] && 'draft' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['status'] );
 	ax_si_assert( $ax_si_results, 'an already classified holiday can be published without classifying it a second time', ! is_wp_error( axismundi_cal_review_holiday_items( $ax_si_import_cal, array( $ax_si_import_ids[1] => array( 'classification' => '' ) ), array( $ax_si_import_ids[1] ) ) ) && 'published' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['status'] );
 	axismundi_cal_system_item_save( $ax_si_import_cal, array( 'status' => 'draft' ), $ax_si_import_ids[1] );
 	$ax_si_bulk = axismundi_cal_bulk_classify_holiday_items( $ax_si_import_cal, array( $ax_si_import_ids[1] ), 'PUBLIC-HOLIDAY' );
-	ax_si_assert( $ax_si_results, 'a selected group can be classified together while remaining draft', 1 === $ax_si_bulk && 'HOLIDAY,PUBLIC-HOLIDAY' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['categories'] && 'draft' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['status'] );
+	ax_si_assert( $ax_si_results, 'a selected group can be classified together while remaining draft', 1 === $ax_si_bulk && array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ) === axismundi_cal_item_effective_categories( (array) axismundi_cal_system_item_get( $ax_si_import_ids[1] ) ) && 'draft' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['status'] );
 	$ax_si_bulk_publish = axismundi_cal_bulk_classify_holiday_items( $ax_si_import_cal, array( $ax_si_import_ids[1] ), 'OBSERVANCE', true );
-	ax_si_assert( $ax_si_results, 'a bulk classification can publish the same selected entries in one action', 1 === $ax_si_bulk_publish && 'HOLIDAY,OBSERVANCE' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['categories'] && 'published' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['status'] );
+	ax_si_assert( $ax_si_results, 'a bulk classification can publish the same selected entries in one action', 1 === $ax_si_bulk_publish && array( 'HOLIDAY', 'OBSERVANCE' ) === axismundi_cal_item_effective_categories( (array) axismundi_cal_system_item_get( $ax_si_import_ids[1] ) ) && 'published' === (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['status'] );
+	/*
+	 * The Calendar's own classification is not written onto its entries. It is true of every row and
+	 * cannot vary, so a stored copy is the same fact several hundred times -- and a copy that can
+	 * disagree with the Calendar, which is a state nothing checks and nothing would report.
+	 */
+	ax_si_assert(
+		$ax_si_results,
+		'a review does not write the calendar own classification onto the row',
+		! in_array( 'HOLIDAY', axismundi_cal_normalize_categories( (string) axismundi_cal_system_item_get( $ax_si_import_ids[1] )['categories'] ), true )
+	);
+	ax_si_assert(
+		$ax_si_results,
+		'though a reader still gets it back, so nothing downstream has to know where it came from',
+		in_array( 'HOLIDAY', axismundi_cal_item_effective_categories( (array) axismundi_cal_system_item_get( $ax_si_import_ids[1] ) ), true )
+	);
+	/*
+	 * The filter has to answer for the inherited key too. Asking a holiday calendar for `HOLIDAY` once
+	 * matched a stored column; now nothing stores it, and a range query that still looked there would
+	 * hide exactly the rows it was asked for.
+	 */
+	ax_si_assert(
+		$ax_si_results,
+		'and filtering by what the whole calendar is still returns its entries rather than none of them',
+		array() !== axismundi_cal_system_items_in_range( $ax_si_import_cal, '2027-01-01', '2028-01-01', array( 'HOLIDAY' ), true )
+	);
+	/*
+	 * The vocabulary has two layers and they are not interchangeable. `RELIGIOUS` says what a whole
+	 * Calendar is -- a Religious observances calendar -- so it is never something an entry declares;
+	 * a Buddhist public holiday says `BUDDHIST` beside `PUBLIC-HOLIDAY`, which is the part that varies
+	 * from entry to entry. Offering the top-level keys per row would invite the same fact to be stored
+	 * in two places and then disagree.
+	 */
+	ax_si_assert(
+		$ax_si_results,
+		'no provider offers its own top-level key as something an entry chooses',
+		( static function () : bool {
+			foreach ( AXISMUNDI_CAL_SYSTEM_PROVIDERS as $provider ) {
+				if ( array() !== array_intersect( axismundi_cal_system_provider_categories( $provider ), AXISMUNDI_CAL_SYSTEM_CALENDAR_CATEGORIES ) ) {
+					return false;
+				}
+			}
+			return true;
+		} )()
+	);
+	/*
+	 * A religion is a dataset, not a cross-tag. 부처님오신날 inside 대한민국의 휴일 is a public holiday
+	 * of Korea and nothing else this records; Buddhist observances would be their own Calendar. Google's
+	 * catalog is arranged the same way -- its Christian and Jewish calendars sit under religious
+	 * observances rather than being labels sprinkled across national holiday feeds -- and tagging a
+	 * Korean holiday `BUDDHIST` would enrol it in a set nobody asked it to join.
+	 */
+	ax_si_assert(
+		$ax_si_results,
+		'a tradition classifies a whole dataset rather than one day inside another one',
+		array() === array_intersect( array( 'BUDDHIST', 'CHRISTIAN', 'ISLAMIC', 'JEWISH' ), axismundi_cal_system_provider_categories( 'religious' ) )
+			&& array() === array_diff( array( 'BUDDHIST', 'CHRISTIAN', 'ISLAMIC', 'JEWISH' ), AXISMUNDI_CAL_SYSTEM_CALENDAR_CATEGORIES )
+	);
+	ax_si_assert(
+		$ax_si_results,
+		'so what a religious calendar leaves to its entries is what kind of day each one is',
+		in_array( 'OBSERVANCE', axismundi_cal_system_provider_categories( 'religious' ), true )
+			&& in_array( 'OBSERVANCE', axismundi_cal_system_provider_categories( 'holiday' ), true )
+	);
+	/*
+	 * And a tradition written onto an entry does not survive the writer, since the Calendar is where it
+	 * would have to be true.
+	 */
+	$ax_si_tagged = axismundi_cal_system_item_save(
+		$ax_si_holidays,
+		// A date of its own, so this fixture cannot change what the range and filter checks above see.
+		array( 'title' => '부처님오신날', 'start_date' => '2027-11-11', 'categories' => array( 'PUBLIC-HOLIDAY', 'BUDDHIST' ), 'status' => 'published' )
+	);
+	ax_si_assert(
+		$ax_si_results,
+		'and one written onto a day is dropped rather than stored, since it says what a calendar is',
+		! is_wp_error( $ax_si_tagged )
+			&& ! in_array( 'BUDDHIST', axismundi_cal_normalize_categories( (string) axismundi_cal_system_item_get( (int) $ax_si_tagged )['categories'] ), true )
+	);
+
 	ax_si_assert( $ax_si_results, 'a bulk classification needs a real selection', is_wp_error( axismundi_cal_bulk_classify_holiday_items( $ax_si_import_cal, array(), 'OBSERVANCE' ) ) );
 	ax_si_assert( $ax_si_results, 'a publish selection cannot name an entry without its review data', is_wp_error( axismundi_cal_review_holiday_items( $ax_si_import_cal, array(), array( $ax_si_import_ids[1] ) ) ) );
 	ob_start();
@@ -737,6 +823,56 @@ ax_si_assert( $ax_si_results, 'with controls to select drafts or invert the visi
 		$ax_si_results,
 		'a moment late on the day before the window is in it, because east of Greenwich it is already inside',
 		$ax_si_late_in( '2026-08-25', '2026-09-01' )
+	);
+
+	// -- Equinoxes and solstices ------------------------------------------------------------------------
+
+	/*
+	 * The same two-level shape the phases use, and for the same reason: `EQUINOX` is what a reader
+	 * filters on and cannot name the entry, so a second key carries which one it is.
+	 *
+	 * Named by what the sun does rather than by the season it starts. A season is false for half the
+	 * world -- the March equinox begins spring north of the equator and autumn south of it -- and a
+	 * month would be a fact about the Gregorian calendar rather than about the sun. The idiomatic name
+	 * is settled per language instead, which is where the hemisphere flavour belongs.
+	 */
+	foreach ( array(
+		array( 'EQUINOX', 'NORTHWARD-EQUINOX' ),
+		array( 'EQUINOX', 'SOUTHWARD-EQUINOX' ),
+		array( 'SOLSTICE', 'NORTHERN-SOLSTICE' ),
+		array( 'SOLSTICE', 'SOUTHERN-SOLSTICE' ),
+	) as $ax_si_seasonal ) {
+		ax_si_assert(
+			$ax_si_results,
+			sprintf( '%s names itself, so a generator writes no word it would have to translate', $ax_si_seasonal[1] ),
+			'' !== axismundi_cal_item_generated_name( $ax_si_seasonal )
+		);
+		ax_si_assert(
+			$ax_si_results,
+			sprintf( 'and %s alone is refused, since a filter key cannot name an entry', $ax_si_seasonal[1] ),
+			is_wp_error( axismundi_cal_validate_categories( array( $ax_si_seasonal[0] ) ) )
+				&& is_wp_error( axismundi_cal_validate_categories( array( $ax_si_seasonal[1] ) ) )
+		);
+	}
+	ax_si_assert(
+		$ax_si_results,
+		'no season key exists to be wrong for half the world',
+		array() === array_intersect( array( 'SPRING', 'SUMMER', 'AUTUMN', 'WINTER' ), AXISMUNDI_CAL_ITEM_CATEGORIES )
+	);
+	ax_si_assert(
+		$ax_si_results,
+		'the two equinoxes cannot both be one entry',
+		is_wp_error( axismundi_cal_validate_categories( array( 'EQUINOX', 'NORTHWARD-EQUINOX', 'SOUTHWARD-EQUINOX' ) ) )
+	);
+	/*
+	 * And the kinds themselves, which nothing was stopping from combining. An entry that is both a moon
+	 * phase and an equinox describes nothing, and the name generator would return whichever key it
+	 * reached first -- so the row would read differently depending on the order of a constant.
+	 */
+	ax_si_assert(
+		$ax_si_results,
+		'nor can one entry be a moon phase and an equinox at the same time',
+		is_wp_error( axismundi_cal_validate_categories( array( 'MOON-PHASE', 'FULL-MOON', 'EQUINOX', 'NORTHWARD-EQUINOX' ) ) )
 	);
 
 	// -- Names --------------------------------------------------------------------------------------

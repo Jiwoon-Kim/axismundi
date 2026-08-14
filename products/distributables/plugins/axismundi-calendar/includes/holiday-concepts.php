@@ -782,7 +782,13 @@ function axismundi_cal_create_principal_holiday_from_item( int $item_id ) {
 		array(
 			'catalog_id' => (int) $calendar['holiday_catalog_id'],
 			'label'      => (string) $item['title'],
-			'categories' => (string) $item['categories'],
+			/*
+			 * The effective set, not the stored subset. A concept belongs to a catalog and is read
+			 * without reference to any one Calendar -- it is the thing several language editions point
+			 * at -- so it has to carry its whole classification. The entry can leave `HOLIDAY` to the
+			 * Calendar it sits on; the concept has no Calendar to leave it to.
+			 */
+			'categories' => implode( ',', axismundi_cal_item_effective_categories( $item, $calendar ) ),
 		)
 	);
 	if ( is_wp_error( $concept ) ) {
@@ -839,19 +845,46 @@ function axismundi_cal_occurrence_items( int $occurrence_id ) : array {
 /**
  * The categories an entry actually has.
  *
- * Its holiday's when it is linked, or its own while it is awaiting review. This is what the linking
- * is for: 설날 is a public holiday once, rather than once per language and again every year.
+ * Three sources, each answering something the others cannot, and none of them repeating the others
+ * on disk:
  *
- * @param array<string,mixed> $item System item row.
+ *   the Calendar   what this dataset is       `ASTRONOMY`, `HOLIDAY`
+ *   the concept    what this holiday is       `PUBLIC-HOLIDAY`, `BUDDHIST`
+ *   the row        what this entry is         `MOON-PHASE`, `FULL-MOON`
+ *
+ * The top level belongs to the Calendar because it is true of every row on it and cannot vary: a
+ * moon phase calendar holds nothing that is not astronomy. Copying it onto each entry stored the
+ * same fact several hundred times and, worse, made it possible for the copies to disagree -- an
+ * entry carrying `HOLIDAY` on an astronomy calendar was a state nothing prevented and nothing would
+ * have reported.
+ *
+ * A linked holiday takes its middle level from the concept rather than the row, which is what the
+ * linking is for: 설날 is a public holiday once, rather than once per language and again every year.
+ *
+ * @param array<string,mixed>      $item     System item row.
+ * @param array<string,mixed>|null $calendar Its Calendar, when the caller already has it. Looked up
+ *                                           otherwise, which a loop over a range should avoid.
  * @return string[]
  */
-function axismundi_cal_item_effective_categories( array $item ) : array {
+function axismundi_cal_item_effective_categories( array $item, ?array $calendar = null ) : array {
 	$occurrence = axismundi_cal_holiday_occurrence_get( (int) ( $item['holiday_occurrence_id'] ?? 0 ) );
 	if ( is_array( $occurrence ) ) {
 		$concept = axismundi_cal_holiday_concept_get( (int) $occurrence['concept_id'] );
-		return is_array( $concept ) ? axismundi_cal_normalize_categories( (string) $concept['categories'] ) : array();
+		$own     = is_array( $concept ) ? (string) $concept['categories'] : '';
+	} else {
+		$own = (string) ( $item['categories'] ?? '' );
 	}
-	return axismundi_cal_normalize_categories( (string) ( $item['categories'] ?? '' ) );
+
+	if ( null === $calendar && (int) ( $item['calendar_id'] ?? 0 ) > 0 ) {
+		$calendar = axismundi_cal_calendar_get( (int) $item['calendar_id'] );
+	}
+	$inherited = is_array( $calendar )
+		? axismundi_cal_normalize_system_calendar_categories( (string) ( $calendar['system_categories'] ?? '' ) )
+		: array();
+
+	// Normalized once over the union, so the result is deduplicated and in vocabulary order however
+	// the three sources happened to be written.
+	return axismundi_cal_normalize_categories( array_merge( $inherited, axismundi_cal_normalize_categories( $own ) ) );
 }
 
 /**

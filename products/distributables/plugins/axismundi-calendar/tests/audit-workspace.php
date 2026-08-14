@@ -560,9 +560,27 @@ try {
 			&& 'system' !== (string) axismundi_cal_calendar_get( $ax_ws_own )['kind']
 			&& axismundi_cal_calendar_is_dataset( (array) axismundi_cal_calendar_get( $ax_ws_own ) )
 	);
-	axismundi_cal_system_item_save(
+	/*
+	 * A self-maintained dataset can classify itself too. Gating `system_categories` on `kind` left this
+	 * shape with none, which stopped being cosmetic once entries began inheriting their top-level keys
+	 * from the Calendar: there was nowhere for `HOLIDAY` to come back from after the writer took it off
+	 * the row, so the classification simply vanished.
+	 */
+	axismundi_cal_calendar_save( array( 'system_categories' => array( 'HOLIDAY' ) ), $ax_ws_own );
+	ax_ws_assert(
+		$ax_ws_results,
+		'a self-maintained dataset can carry a classification, though its kind is local',
+		array( 'HOLIDAY' ) === axismundi_cal_normalize_system_calendar_categories( (string) axismundi_cal_calendar_get( $ax_ws_own )['system_categories'] )
+	);
+	$ax_ws_own_item = (int) axismundi_cal_system_item_save(
 		$ax_ws_own,
-		array( 'title' => 'Own dataset day', 'start_date' => '2026-09-14', 'status' => 'published' )
+		array( 'title' => 'Own dataset day', 'start_date' => '2026-09-14', 'categories' => array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ), 'status' => 'published' )
+	);
+	ax_ws_assert(
+		$ax_ws_results,
+		'and its entries inherit that key rather than losing it when the writer takes it off the row',
+		'PUBLIC-HOLIDAY' === (string) axismundi_cal_system_item_get( $ax_ws_own_item )['categories']
+			&& array( 'HOLIDAY', 'PUBLIC-HOLIDAY' ) === axismundi_cal_item_effective_categories( (array) axismundi_cal_system_item_get( $ax_ws_own_item ) )
 	);
 	ax_ws_assert(
 		$ax_ws_results,

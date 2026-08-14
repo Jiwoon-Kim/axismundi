@@ -40,9 +40,20 @@ defined( 'ABSPATH' ) || exit;
  * key invented by a typo during an import is a category nobody can ever filter by, and it would look
  * exactly like a real one.
  *
- * Multiple keys per entry is the point rather than an allowance. Buddha's Birthday in Korea is a
- * public holiday and a religious observance at once, and a taxonomy that forces a choice between
- * those records something false.
+ * Two layers in one list. The Calendar layer says what a dataset is -- `HOLIDAY`, `ASTRONOMY`,
+ * `RELIGIOUS` and the tradition under it -- and is stored on the Calendar; the rest describe one
+ * entry and are stored on the row. They share a vocabulary because a reader filters across both
+ * without caring which layer answered.
+ *
+ * A religion is a dataset, not a tag. 부처님오신날 inside 대한민국의 휴일 is a public holiday of
+ * Korea and nothing else this records: it is on the Korean holiday calendar because Korea takes the
+ * day off, and cross-tagging it `BUDDHIST` would put it in a set it does not belong to -- Google's
+ * own catalog has no Buddhist holidays calendar, and its Christian and Jewish ones sit under
+ * religious observances rather than under any country. Buddhist observances would be their own
+ * dataset, carrying `RELIGIOUS` and `BUDDHIST` on the Calendar, holding its own entries.
+ *
+ * Multiple keys per entry is still the point rather than an allowance: a day can be a public holiday
+ * and a substitute day at once, and a taxonomy that forced a choice would record something false.
  */
 const AXISMUNDI_CAL_ITEM_CATEGORIES = array(
 	'HOLIDAY',
@@ -64,7 +75,24 @@ const AXISMUNDI_CAL_ITEM_CATEGORIES = array(
 	'FULL-MOON',
 	'LAST-QUARTER',
 	'EQUINOX',
+	/*
+	 * Named by what the sun does, not by the month it does it in and not by the season it starts.
+	 *
+	 * A season is the wrong axis outright: the March equinox begins spring north of the equator and
+	 * autumn south of it, so `SPRING` would be false for half the readers of any feed carrying it. A
+	 * month is nearly right and quietly calendrical -- the Gregorian year tracks the tropical year, so
+	 * these stay in March, June, September and December for many centuries, but the key would then be a
+	 * fact about our calendar rather than about the sun.
+	 *
+	 * Crossing northward and standing furthest north are what actually happen. The human names stay
+	 * idiomatic per language -- 춘분 in Korean, "March equinox" in English -- which is the same split
+	 * the phase keys already use.
+	 */
+	'NORTHWARD-EQUINOX',
+	'SOUTHWARD-EQUINOX',
 	'SOLSTICE',
+	'NORTHERN-SOLSTICE',
+	'SOUTHERN-SOLSTICE',
 	'ACADEMIC',
 	'TERM',
 	'VACATION',
@@ -80,8 +108,18 @@ const AXISMUNDI_CAL_ITEM_CATEGORIES = array(
  */
 const AXISMUNDI_CAL_SYSTEM_CALENDAR_CATEGORIES = array(
 	'HOLIDAY',
-	'ASTRONOMY',
 	'RELIGIOUS',
+	/*
+	 * The traditions sit here rather than among the item keys, because which religion a dataset is
+	 * about is a fact about the whole dataset. `Christian observances` is a Calendar somebody adds; it
+	 * is not a label applied to individual days scattered across other calendars, and treating it as
+	 * one would make a Korean public holiday a member of a set nobody asked it to join.
+	 */
+	'BUDDHIST',
+	'CHRISTIAN',
+	'ISLAMIC',
+	'JEWISH',
+	'ASTRONOMY',
 	'CIVIC',
 	'ACADEMIC',
 );
@@ -94,16 +132,35 @@ const AXISMUNDI_CAL_TEMPORAL_KINDS   = array( AXISMUNDI_CAL_TEMPORAL_ALL_DAY, AX
 /**
  * Category keys that describe one dimension and therefore cannot coexist.
  *
- * Categories normally compose: a Buddhist public holiday is both `BUDDHIST` and
- * `PUBLIC-HOLIDAY`. A moon phase is different. It has exactly one position in its cycle, so
- * storing both `NEW-MOON` and `FULL-MOON` would make the row name itself differently at different
- * read surfaces. Keep the rule next to the vocabulary instead of teaching each renderer which key
+ * Categories normally compose: a day can be `PUBLIC-HOLIDAY` and `SUBSTITUTE-HOLIDAY` at once, and
+ * an entry inherits its Calendar's keys on top of its own. A moon phase is different. It has exactly
+ * one position in its cycle, so storing both `NEW-MOON` and `FULL-MOON` would make the row name
+ * itself differently at different read surfaces. Keep the rule next to the vocabulary instead of teaching each renderer which key
  * happens to win.
  */
 const AXISMUNDI_CAL_CATEGORY_EXCLUSIVE_GROUPS = array(
-	'moon_phase' => array(
+	'moon_phase'         => array(
 		'members'  => array( 'NEW-MOON', 'FIRST-QUARTER', 'FULL-MOON', 'LAST-QUARTER' ),
 		'requires' => 'MOON-PHASE',
+	),
+	'equinox'            => array(
+		'members'  => array( 'NORTHWARD-EQUINOX', 'SOUTHWARD-EQUINOX' ),
+		'requires' => 'EQUINOX',
+	),
+	'solstice'           => array(
+		'members'  => array( 'NORTHERN-SOLSTICE', 'SOUTHERN-SOLSTICE' ),
+		'requires' => 'SOLSTICE',
+	),
+	/*
+	 * The kinds themselves, which nothing was stopping from combining. An entry that is both a moon
+	 * phase and an equinox describes nothing, and the name generator would pick whichever key it
+	 * reached first -- so the row would read differently depending on the order of a constant.
+	 *
+	 * No `requires`: these are the top of their own hierarchy, and a dataset entry is entitled to be
+	 * none of them.
+	 */
+	'astronomical_event' => array(
+		'members' => array( 'MOON-PHASE', 'EQUINOX', 'SOLSTICE' ),
 	),
 );
 
@@ -201,10 +258,20 @@ function axismundi_cal_validate_categories( $categories ) {
  */
 function axismundi_cal_item_generated_name( $categories ) : string {
 	$names = array(
-		'NEW-MOON'      => __( 'New moon', 'axismundi-calendar' ),
-		'FIRST-QUARTER' => __( 'First quarter', 'axismundi-calendar' ),
-		'FULL-MOON'     => __( 'Full moon', 'axismundi-calendar' ),
-		'LAST-QUARTER'  => __( 'Last quarter', 'axismundi-calendar' ),
+		'NEW-MOON'          => __( 'New moon', 'axismundi-calendar' ),
+		'FIRST-QUARTER'     => __( 'First quarter', 'axismundi-calendar' ),
+		'FULL-MOON'         => __( 'Full moon', 'axismundi-calendar' ),
+		'LAST-QUARTER'      => __( 'Last quarter', 'axismundi-calendar' ),
+		/*
+		 * Idiomatic in each language rather than a translation of the key. English says which month,
+		 * because "northward equinox" is accurate and nobody calls it that; Korean says 춘분. Both are
+		 * hemisphere-flavoured in their own way, and that is a property of the words people use --
+		 * which is exactly why it is settled per locale instead of being frozen into the key.
+		 */
+		'NORTHWARD-EQUINOX' => __( 'March equinox', 'axismundi-calendar' ),
+		'SOUTHWARD-EQUINOX' => __( 'September equinox', 'axismundi-calendar' ),
+		'NORTHERN-SOLSTICE' => __( 'June solstice', 'axismundi-calendar' ),
+		'SOUTHERN-SOLSTICE' => __( 'December solstice', 'axismundi-calendar' ),
 	);
 	foreach ( axismundi_cal_normalize_categories( $categories ) as $key ) {
 		if ( isset( $names[ $key ] ) ) {
@@ -307,6 +374,24 @@ function axismundi_cal_system_item_save( int $calendar_id, array $fields, int $i
 	if ( is_wp_error( $category_validation ) ) {
 		return $category_validation;
 	}
+	/*
+	 * The whole Calendar layer comes off, not merely the keys this Calendar happens to carry.
+	 *
+	 * Its own are redundant: `ASTRONOMY` is true of every row on a moon phase calendar and cannot vary,
+	 * so storing it per row wrote one fact several hundred times and let the copies disagree with the
+	 * Calendar -- a state nothing checks and nothing would report. Readers get them back from
+	 * `item_effective_categories()`.
+	 *
+	 * The others are worse than redundant, they are false. `BUDDHIST` says which dataset a Calendar is:
+	 * Buddhist observances would be its own Calendar, the way Google keeps its Christian and Jewish
+	 * calendars under religious observances rather than sprinkling labels across national holiday
+	 * feeds. Written onto 부처님오신날 inside 대한민국의 휴일 it would enrol a Korean public holiday in a
+	 * set nobody asked it to join, and every filter for that set would then return it.
+	 *
+	 * Dropped rather than refused. A caller passing the full set is describing the entry as it reads,
+	 * and an error here would make every obvious call wrong.
+	 */
+	$categories = array_values( array_diff( axismundi_cal_normalize_categories( $categories ), AXISMUNDI_CAL_SYSTEM_CALENDAR_CATEGORIES ) );
 
 	/*
 	 * A row must be able to say what it is called, by one of two routes. A holiday is named because
@@ -694,6 +779,19 @@ function axismundi_cal_system_items_in_range( int $calendar_id, string $from, st
 	}
 
 	$wanted = axismundi_cal_normalize_categories( $categories );
+	/*
+	 * A request naming what this whole Calendar is has already been answered by choosing it. Since the
+	 * top-level keys are no longer stored per row, a `FIND_IN_SET` for `ASTRONOMY` would match nothing
+	 * on the astronomy calendar -- the filter would hide precisely the rows it was asked for. The
+	 * filter is "any of these", so one satisfied key means every row qualifies.
+	 */
+	$calendar_row = axismundi_cal_calendar_get( $calendar_id );
+	$inherited    = is_array( $calendar_row )
+		? axismundi_cal_normalize_system_calendar_categories( (string) ( $calendar_row['system_categories'] ?? '' ) )
+		: array();
+	if ( array() !== array_intersect( $wanted, $inherited ) ) {
+		$wanted = array();
+	}
 	if ( array() !== $wanted ) {
 		$sql .= ' AND (' . implode( ' OR ', array_fill( 0, count( $wanted ), 'FIND_IN_SET(%s, CASE WHEN i.holiday_occurrence_id > 0 THEN c.categories ELSE i.categories END)' ) ) . ')';
 		$params = array_merge( $params, $wanted );
@@ -703,16 +801,26 @@ function axismundi_cal_system_items_in_range( int $calendar_id, string $from, st
 
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- range query over this plugin's own table.
 	$items = (array) $wpdb->get_results( $wpdb->prepare( $sql, $params ), ARRAY_A );
+	/*
+	 * Rows come out of here carrying their effective categories, not the subset the table stores. The
+	 * table no longer holds the Calendar's own classification, so a reader taking `categories` straight
+	 * from a row would see `MOON-PHASE,FULL-MOON` and conclude the entry is not astronomy. Resolved
+	 * once here rather than in each of the feed, the grid and the admin table, which is where the three
+	 * of them would start to disagree.
+	 *
+	 * `system_item_get()` deliberately still returns the row as stored: it is the editor's view of what
+	 * was written, and the edit form has to show what somebody typed rather than what is inherited.
+	 */
 	foreach ( $items as &$item ) {
+		$categories = axismundi_cal_item_effective_categories( $item, is_array( $calendar_row ) ? $calendar_row : null );
 		if ( (int) $item['holiday_occurrence_id'] > 0 ) {
-			$occurrence = axismundi_cal_holiday_occurrence_get( (int) $item['holiday_occurrence_id'] );
-			$item['status']     = is_array( $occurrence ) ? (string) $occurrence['status'] : (string) $item['status'];
-			$categories = axismundi_cal_item_effective_categories( $item );
+			$occurrence     = axismundi_cal_holiday_occurrence_get( (int) $item['holiday_occurrence_id'] );
+			$item['status'] = is_array( $occurrence ) ? (string) $occurrence['status'] : (string) $item['status'];
 			if ( is_array( $occurrence ) && 'substitute' === (string) $occurrence['role'] ) {
 				$categories[] = 'SUBSTITUTE-HOLIDAY';
 			}
-			$item['categories'] = implode( ',', axismundi_cal_normalize_categories( $categories ) );
 		}
+		$item['categories'] = implode( ',', axismundi_cal_normalize_categories( $categories ) );
 	}
 	unset( $item );
 	return $items;

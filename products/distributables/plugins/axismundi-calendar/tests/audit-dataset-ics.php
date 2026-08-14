@@ -263,6 +263,65 @@ try {
 		$ax_di_before_uid === $ax_di_after_uid
 	);
 
+	// -- A computed calendar identifies the phenomenon ---------------------------------------------------
+
+	/*
+	 * The rule that makes an administrator's switch safe. Turning Moon phases off deletes its calendar
+	 * and its rows; turning it back on writes new rows with new ids under a new calendar uuid -- and the
+	 * full moon of 2027 March is the same full moon it always was. A UID built from the row would hand
+	 * every remaining subscriber a second copy of every date they already had, which is the one mistake
+	 * an .ics cannot be talked out of afterwards.
+	 */
+	$ax_di_managed = axismundi_cal_managed_calendar_get( 'moon-phases' );
+	if ( is_array( $ax_di_managed ) ) {
+		$ax_di_phases = axismundi_cal_system_items_in_range( (int) $ax_di_managed['id'], gmdate( 'Y-m-d' ), gmdate( 'Y-m-d', (int) strtotime( '+60 days' ) ) );
+		if ( array() !== $ax_di_phases ) {
+			$ax_di_uid_before = axismundi_cal_dataset_ics_uid( $ax_di_phases[0], $ax_di_managed );
+			ax_di_assert(
+				$ax_di_results,
+				'a computed entry is identified by the phenomenon rather than by the row holding it',
+				str_contains( $ax_di_uid_before, 'moon-phases' )
+					&& str_contains( $ax_di_uid_before, (string) $ax_di_phases[0]['source_uid'] )
+					&& ! str_contains( $ax_di_uid_before, (string) $ax_di_managed['uuid'] )
+					&& ! str_contains( $ax_di_uid_before, 'entry-' . (int) $ax_di_phases[0]['id'] )
+			);
+			/*
+			 * Asserted across an actual off/on cycle, which is the operation the rule exists for. Comparing
+			 * two calls with the same arguments would prove only that the function is deterministic.
+			 */
+			$ax_di_phase_uid = (string) $ax_di_phases[0]['source_uid'];
+			axismundi_cal_set_managed_calendar_enabled( 'moon-phases', false );
+			axismundi_cal_set_managed_calendar_enabled( 'moon-phases', true );
+			$ax_di_rebuilt = axismundi_cal_managed_calendar_get( 'moon-phases' );
+			$ax_di_after   = '';
+			foreach ( axismundi_cal_system_items_in_range( (int) $ax_di_rebuilt['id'], gmdate( 'Y-m-d' ), gmdate( 'Y-m-d', (int) strtotime( '+60 days' ) ) ) as $ax_di_row ) {
+				if ( (string) $ax_di_row['source_uid'] === $ax_di_phase_uid ) {
+					$ax_di_after = axismundi_cal_dataset_ics_uid( $ax_di_row, $ax_di_rebuilt );
+				}
+			}
+			ax_di_assert(
+				$ax_di_results,
+				'so removing the calendar and rebuilding it gives the same phase the same UID',
+				'' !== $ax_di_after && $ax_di_after === $ax_di_uid_before
+			);
+			ax_di_assert(
+				$ax_di_results,
+				'even though the calendar itself is a different row than it was',
+				(int) $ax_di_rebuilt['id'] !== (int) $ax_di_managed['id']
+			);
+		}
+	}
+
+	/*
+	 * A holiday keeps the calendar-qualified UID, and for the opposite reason: its language editions are
+	 * separately subscribable, so two feeds naming one day must not collapse into one entry.
+	 */
+	ax_di_assert(
+		$ax_di_results,
+		'while a language edition still qualifies its UID by calendar, since both of them can be subscribed at once',
+		str_contains( ax_di_values( (string) axismundi_cal_dataset_feed( (array) axismundi_cal_calendar_get( $ax_di_ko ) )['body'], 'UID' )[0], (string) axismundi_cal_calendar_get( $ax_di_ko )['uuid'] )
+	);
+
 	// -- Conditional GET -----------------------------------------------------------------------------
 
 	$ax_di_one = (string) axismundi_cal_dataset_feed( (array) axismundi_cal_calendar_get( $ax_di_ko ) )['body'];

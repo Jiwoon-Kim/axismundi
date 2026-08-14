@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '27';
+const AXISMUNDI_CAL_DB_VERSION        = '28';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 const AXISMUNDI_CAL_SCHEMA_BAIL_OPTION = 'ax_cal_schema_bail';
 
@@ -768,6 +768,12 @@ function axismundi_cal_install_schema() : bool {
 	 */
 	axismundi_cal_relax_calendar_name();
 
+	/*
+	 * The top-level classification moved to the Calendar, where it was always true. Rows written before
+	 * that still carry their copy, and a stale copy is worse than a missing one -- it can disagree.
+	 */
+	axismundi_cal_drop_inherited_item_categories();
+
 	$lunar_cache = $wpdb->prefix . 'ax_cal_lunar_months';
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- this plugin's own table.
 	$wpdb->query( "DROP TABLE IF EXISTS {$lunar_cache}" );
@@ -823,6 +829,42 @@ function axismundi_cal_relax_system_item_dates() : void {
 		}
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- this plugin's own table.
 		$wpdb->query( "ALTER TABLE {$table} MODIFY {$column} date NULL DEFAULT NULL" );
+	}
+}
+
+/**
+ * Take the Calendar's own classification back off its entries.
+ *
+ * `ASTRONOMY` on every row of the moon phase calendar was the same fact several hundred times, and
+ * `item_effective_categories()` now supplies it from the Calendar. Removed rather than left to rot:
+ * a row that kept `HOLIDAY` after being moved would contradict the Calendar it is on, and nothing
+ * reads the stored copy any more to notice.
+ *
+ * Done in PHP rather than in SQL string surgery, because `categories` is a comma-separated set and
+ * `REPLACE()` on it would turn `PUBLIC-HOLIDAY` into `PUBLIC-` given the wrong key.
+ *
+ * @return void
+ */
+function axismundi_cal_drop_inherited_item_categories() : void {
+	global $wpdb;
+	$items     = axismundi_cal_system_items_table();
+	$calendars = axismundi_cal_calendars_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration over this plugin's own tables.
+	$rows = (array) $wpdb->get_results(
+		"SELECT i.id, i.categories, c.system_categories
+		 FROM {$items} i INNER JOIN {$calendars} c ON c.id = i.calendar_id
+		 WHERE i.categories <> '' AND c.system_categories <> ''",
+		ARRAY_A
+	);
+	foreach ( $rows as $row ) {
+		$inherited = axismundi_cal_normalize_system_calendar_categories( (string) $row['system_categories'] );
+		$own       = axismundi_cal_normalize_categories( (string) $row['categories'] );
+		$kept      = array_values( array_diff( $own, $inherited ) );
+		if ( $kept === $own ) {
+			continue;
+		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
+		$wpdb->update( $items, array( 'categories' => implode( ',', $kept ) ), array( 'id' => (int) $row['id'] ) );
 	}
 }
 

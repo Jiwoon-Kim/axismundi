@@ -42,12 +42,27 @@
 	];
 
 	var JOIN_MODE = [
-		{ label: __( 'Anyone can join', 'axismundi-calendar' ), value: 'free' },
-		{ label: __( 'Approval required', 'axismundi-calendar' ), value: 'restricted' },
+		{ label: __( 'Admitted immediately', 'axismundi-calendar' ), value: 'free' },
+		{ label: __( 'Admitted after approval', 'axismundi-calendar' ), value: 'restricted' },
 		{ label: __( 'Join elsewhere', 'axismundi-calendar' ), value: 'external' },
 		{ label: __( 'Invitation only', 'axismundi-calendar' ), value: 'invite' },
 		{ label: __( 'No participation', 'axismundi-calendar' ), value: 'none' }
 	];
+
+	/*
+	 * Who may ask, which the mode above does not answer. The two were one control while the only
+	 * choices were everyone and nobody; a host wanting their followers admitted immediately needs one
+	 * value from each list.
+	 */
+	var JOIN_ELIGIBILITY = [
+		{ label: __( 'Anyone', 'axismundi-calendar' ), value: 'public' },
+		{ label: __( 'People who follow me', 'axismundi-calendar' ), value: 'followers' }
+	];
+
+	/** The modes under which asking is possible at all, and therefore eligibility means something. */
+	function admitsRequests( mode ) {
+		return 'free' === mode || 'restricted' === mode;
+	}
 
 	/** 'Y-m-d H:i:s' as the value a datetime-local control wants. */
 	function toInput( stored ) {
@@ -769,6 +784,24 @@
 				onChange: function ( value ) { update( { joinMode: value } ); }
 			} )
 		);
+
+		/*
+		 * Hidden rather than disabled when nothing can be asked. An invitation-only Event admits no
+		 * requests for this to restrict, so a visible control would be offering a choice with no effect.
+		 * The stored value survives being out of sight, so closing an Event and reopening it does not
+		 * quietly widen it back to everyone.
+		 */
+		if ( admitsRequests( envelope.joinMode || 'free' ) ) {
+			children.push(
+				el( C.SelectControl, {
+					key: 'joinEligibility',
+					label: __( 'Who can ask', 'axismundi-calendar' ),
+					value: envelope.joinEligibility || 'public',
+					options: JOIN_ELIGIBILITY,
+					onChange: function ( value ) { update( { joinEligibility: value } ); }
+				} )
+			);
+		}
 
 		if ( 'external' === ( envelope.joinMode || 'free' ) ) {
 			children.push(

@@ -161,7 +161,7 @@ function axismundi_cal_event_transform( $source ) : array {
 		$event['maximumAttendeeCapacity'] = (int) $envelope['maximum_attendee_capacity'];
 		// Worked out from the accepted replies rather than counted separately. A peer reads this to
 		// decide whether to offer joining at all, so a stale number is an invitation to be turned away.
-		$event['remainingAttendeeCapacity'] = (int) axismundi_cal_event_remaining_capacity( $post_id );
+		$event['remainingAttendeeCapacity'] = (int) axismundi_cal_event_remaining_capacity( (int) $source->ID );
 	}
 
 	/**

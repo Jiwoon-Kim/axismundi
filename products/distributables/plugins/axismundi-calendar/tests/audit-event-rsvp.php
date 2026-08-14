@@ -644,6 +644,27 @@ try {
 		(int) axismundi_cal_schedule_for_event( $ax_rs_moved )['sequence'] > 0
 	);
 
+	// -- What a peer is told ----------------------------------------------------------------------------
+
+	/*
+	 * `remainingAttendeeCapacity` is what another server reads to decide whether offering a Join is
+	 * worth the round trip, so a wrong number here is not cosmetic: too low turns people away from an
+	 * event with room, and too high invites them to be refused on arrival.
+	 */
+	$ax_rs_seats = $ax_rs_make( $ax_rs_posts, $ax_rs_calendar, 'Three seats', array( 'join_mode' => 'free', 'maximum_attendee_capacity' => 3 ) );
+	$ax_rs_projected = axismundi_cal_event_transform( get_post( $ax_rs_seats ) );
+	ax_rs_assert(
+		$ax_rs_results,
+		'an event with room says so, rather than reporting itself full to every peer',
+		3 === (int) $ax_rs_projected['maximumAttendeeCapacity'] && 3 === (int) $ax_rs_projected['remainingAttendeeCapacity']
+	);
+	axismundi_cal_event_join( $ax_rs_seats, $ax_rs_guest['actor_uri'] );
+	ax_rs_assert(
+		$ax_rs_results,
+		'and the number falls as people are accepted, being the replies counted rather than a stored total',
+		2 === (int) axismundi_cal_event_transform( get_post( $ax_rs_seats ) )['remainingAttendeeCapacity']
+	);
+
 	// -- Only for yourself ------------------------------------------------------------------------------
 
 	ax_rs_assert(

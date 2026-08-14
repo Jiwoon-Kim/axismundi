@@ -102,6 +102,22 @@ const AXISMUNDI_CAL_PARTICIPATION_SOURCES = array( 'join', 'invite' );
 /** The join modes under which an Actor may ask to come at all. */
 const AXISMUNDI_CAL_JOINABLE_MODES = array( 'free', 'restricted', 'invite' );
 
+/**
+ * Who is allowed to ask, which is a different question from how the asking is answered.
+ *
+ * Two values and not four, because the other two are already said elsewhere. `nobody` is what
+ * `join_mode` of `none` or `invite` means -- an Event admitting no requests, or only ones it started
+ * -- and a second way to say it would be a pair of settings that can contradict each other. An
+ * allowlist waits for delegation to exist: a list of Actors nobody can yet be added to is a policy
+ * with no way to satisfy it.
+ *
+ * Measured against the Event's owning Actor alone. Several people can hold `manage_items` on the
+ * Calendar, and "followers" resolved across all of them would be a different set depending on who
+ * last edited the post -- the one thing an eligibility rule must not be. When co-hosting needs its
+ * own answer, it arrives as an explicit eligibility principal rather than by widening this.
+ */
+const AXISMUNDI_CAL_JOIN_ELIGIBILITIES = array( 'public', 'followers' );
+
 /** @return string Participation table name. */
 function axismundi_cal_participation_table() : string {
 	global $wpdb;
@@ -204,6 +220,82 @@ function axismundi_cal_event_participation( int $post_id, string $actor_uri ) : 
 }
 
 /**
+ * The Actor an Event belongs to, for the purposes of asking who follows it.
+ *
+ * The post author's Actor, deliberately -- not whoever can edit the Calendar. Editors come and go and
+ * there can be several, and an eligibility rule that resolved to a different set of followers
+ * depending on which of them touched the post last would be unanswerable to the person it turns away.
+ *
+ * Empty when the author has no Actor, and callers must read that as a closed door rather than an
+ * open one: an Event whose owner cannot be named has no followers to check against, and treating
+ * "unknown" as "everyone" is the failure that lets exactly the wrong person in.
+ *
+ * @param int $post_id Event post ID.
+ * @return string
+ */
+function axismundi_cal_event_owner_actor_uri( int $post_id ) : string {
+	$author = (int) get_post_field( 'post_author', $post_id );
+	if ( $author <= 0 || ! function_exists( 'axismundi_actors_get_for_user' ) ) {
+		return '';
+	}
+	$actor = axismundi_actors_get_for_user( $author );
+	return $actor instanceof Axismundi_Actor ? (string) $actor->get_uri() : '';
+}
+
+/**
+ * Whether one Actor is allowed to ask to come at all.
+ *
+ * The entrance, which is a separate question from what happens to a request once it is made. An
+ * Event that accepts on arrival has no later step at which somebody could be turned away, so this is
+ * the only place an uninvited guest is stopped -- and it therefore has to answer before the reply is
+ * recorded, not after.
+ *
+ * Fails closed in every direction it cannot answer. A missing Event, an unknown eligibility value, an
+ * owner with no Actor, and a site without the Activities plugin all return false, because each of
+ * them is a question about who follows whom that nothing here can answer -- and the safe reading of
+ * an unanswerable restriction is that it restricts.
+ *
+ * The owner is eligible for their own Event. They are not among their own followers, and a rule that
+ * kept the host out of the guest list would be arithmetic rather than policy.
+ *
+ * `pending` follows do not count. Somebody who has asked to follow and not been accepted is not a
+ * follower yet, and reading the request as the relationship would let the follow approval an Actor
+ * deliberately withheld be bypassed by a Join.
+ *
+ * @param int    $post_id   Event post ID.
+ * @param string $actor_uri Asking Actor.
+ * @return bool
+ */
+function axismundi_cal_event_join_eligible( int $post_id, string $actor_uri ) : bool {
+	$actor_uri = trim( $actor_uri );
+	$envelope  = axismundi_cal_event_get( $post_id );
+	if ( '' === $actor_uri || ! is_array( $envelope ) ) {
+		return false;
+	}
+	$eligibility = (string) ( $envelope['join_eligibility'] ?? 'public' );
+	if ( 'public' === $eligibility ) {
+		return true;
+	}
+	if ( 'followers' !== $eligibility ) {
+		return false;
+	}
+	$owner = axismundi_cal_event_owner_actor_uri( $post_id );
+	if ( '' === $owner ) {
+		return false;
+	}
+	if ( $owner === $actor_uri ) {
+		return true;
+	}
+	if ( ! function_exists( 'axismundi_act_get_relation' ) ) {
+		return false;
+	}
+	// The asking Actor is the subject of a Follow whose object is the owner: they follow, not the
+	// reverse. An Event's host following somebody is not that person's invitation to attend.
+	$relation = axismundi_act_get_relation( 'follow', $actor_uri, $owner );
+	return is_array( $relation ) && 'accepted' === (string) $relation['state'];
+}
+
+/**
  * Ask to come.
  *
  * The answer depends on what the Event asked for, and both answers are the same activity: `free`
@@ -229,16 +321,62 @@ function axismundi_cal_event_join( int $post_id, string $actor_uri ) {
 		return new WP_Error( 'ax_event_join_closed', __( 'This event is not taking replies.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
 	/*
+	 * The host counting themselves in.
+	 *
+	 * An `Invite` to oneself would be theatre -- a request and an answer between the same Actor,
+	 * establishing nothing that was not already true -- so this is a `Join`, and the point of it is the
+	 * list and the count rather than access. Somebody who runs an event and does not attend it is
+	 * ordinary, which is why being the organizer does not put them among the attendees by itself.
+	 *
+	 * The eligibility question does not apply to them. `followers` measures against this Actor, and
+	 * nobody follows themselves, so the host would be turned away from their own event by arithmetic.
+	 * `invite` is the same shape of answer: an Event admitting only people it invited is not a rule
+	 * about whether its organizer may attend.
+	 */
+	$owner = axismundi_cal_event_owner_actor_uri( $post_id );
+	/*
+	 * Participation is a relationship between Actors, on both ends. `Join`, `Invite`, `Accept` and
+	 * `Reject` all have an Actor as their subject, so an Event whose host is not one has nobody to
+	 * answer a request -- and admitting people to it would leave rows attributed to a party that
+	 * cannot be addressed, which is not something a later Actor could be retrofitted into.
+	 *
+	 * The writer refuses this combination, so reaching it means the host's Actor went away after the
+	 * fact. Closed rather than left open, because the alternative is an Event still taking replies on
+	 * behalf of somebody who can no longer receive them.
+	 */
+	if ( '' === $owner ) {
+		return new WP_Error( 'ax_event_join_no_host', __( 'This event has no host Actor to reply to.', 'axismundi-calendar' ), array( 'status' => 403 ) );
+	}
+	$is_self = $owner === $actor_uri;
+	/*
 	 * Somewhere it can be found. An Event nobody outside can read has no way for an Actor to discover
 	 * it or to be told their reply was taken, so a policy inviting replies to one is a promise with
 	 * nothing behind it.
+	 *
+	 * The host is asking about their own Event, which is a different question. Public listing is what
+	 * makes an Event reachable by a stranger; it is not what makes it the host's to act on. Reading
+	 * the listing gate as an authority gate would keep somebody off the guest list of an event they
+	 * run, because the calendar it is on is for members -- a confusion between who can find a thing
+	 * and who owns it.
 	 */
-	if ( ! axismundi_cal_event_listable( get_post( $post_id ) ) ) {
+	$reachable = $is_self
+		? axismundi_cal_event_post_viewable( get_post( $post_id ) )
+		: axismundi_cal_event_listable( get_post( $post_id ) );
+	if ( ! $reachable ) {
 		return new WP_Error( 'ax_event_join_unreachable', __( 'An event nobody can see cannot be replied to.', 'axismundi-calendar' ), array( 'status' => 403 ) );
 	}
 	// `invite` waits for the invitation to exist. Offering it now would be a policy nobody could satisfy.
-	if ( 'invite' === $mode ) {
+	if ( 'invite' === $mode && ! $is_self ) {
 		return new WP_Error( 'ax_event_join_invite', __( 'This event is invitation only, and invitations are not available yet.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+	/*
+	 * Before the row, and before the state is chosen. An Event that accepts on arrival turns the next
+	 * few lines into an attendee, so an eligibility check placed after them would be reading a door
+	 * somebody had already walked through. It also runs ahead of the existing-row branch, so an Event
+	 * narrowed to followers stops somebody who joined while it was open from renewing that.
+	 */
+	if ( ! $is_self && ! axismundi_cal_event_join_eligible( $post_id, $actor_uri ) ) {
+		return new WP_Error( 'ax_event_join_ineligible', __( 'This event is only open to people who follow the host.', 'axismundi-calendar' ), array( 'status' => 403 ) );
 	}
 
 	/*
@@ -246,11 +384,16 @@ function axismundi_cal_event_join( int $post_id, string $actor_uri ) {
 	 * puts an Event's attendees behind an `Accept(Join)` either way, so an open Event accepts on
 	 * arrival rather than skipping the step.
 	 */
-	$state = 'free' === $mode ? 'accepted' : 'pending';
+	$state = ( 'free' === $mode || $is_self ) ? 'accepted' : 'pending';
 	/*
 	 * Only the acceptance is capped. A moderated Event that is full may still take requests -- that is
 	 * a waiting list, and refusing to record one would lose the fact that somebody asked -- but an open
 	 * Event accepts on arrival, so this is where it has to say no.
+	 *
+	 * The host is capped with everybody else. Letting them past a limit they set would make the number
+	 * a decoration: a capacity of twenty that seats twenty-one is not a capacity, and every peer
+	 * reading `remainingAttendeeCapacity` would be told something untrue. A full event is theirs to
+	 * resize or to thin out, which are both decisions rather than an exception.
 	 */
 	$remaining = axismundi_cal_event_remaining_capacity( $post_id );
 	if ( 'accepted' === $state && null !== $remaining && $remaining < 1 ) {

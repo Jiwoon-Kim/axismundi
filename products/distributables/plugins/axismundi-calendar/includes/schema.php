@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '36';
+const AXISMUNDI_CAL_DB_VERSION        = '37';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 const AXISMUNDI_CAL_SCHEMA_BAIL_OPTION = 'ax_cal_schema_bail';
 
@@ -230,6 +230,15 @@ function axismundi_cal_install_schema() : bool {
 	 * Documented here rather than inside the statement: `dbDelta` parses the declaration line by line
 	 * and a block comment within it truncates the `ALTER` it generates, which fails silently as a
 	 * column that never arrives.
+	 *
+	 * `join_mode` and `join_eligibility` are likewise two questions one column was answering. The mode
+	 * is how a request is admitted -- immediately, by somebody deciding, elsewhere, or not at all --
+	 * and the eligibility is who is allowed to make one. A single field could offer "open to anyone"
+	 * and "invitation only" but never "followers, admitted automatically", because that is one value
+	 * from each question.
+	 *
+	 * `public` is the default and the upgrade value both, because it is what every Event written
+	 * before this column meant: nothing was restricting who could ask.
 	 */
 	dbDelta(
 		"CREATE TABLE {$table} (
@@ -245,6 +254,7 @@ function axismundi_cal_install_schema() : bool {
 			visibility varchar(16) NOT NULL default 'default',
 			transparency varchar(16) NOT NULL default 'OPAQUE',
 			join_mode varchar(16) NOT NULL default 'none',
+			join_eligibility varchar(16) NOT NULL default 'public',
 			external_participation_url text NOT NULL,
 			maximum_attendee_capacity int(10) unsigned NULL,
 			created_at datetime NOT NULL,
@@ -798,7 +808,7 @@ function axismundi_cal_install_schema() : bool {
 
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table verification.
 	$columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
-	$required = array( 'post_id', 'starts_at_gmt', 'ends_at_gmt', 'timezone', 'event_status', 'join_mode' );
+	$required = array( 'post_id', 'starts_at_gmt', 'ends_at_gmt', 'timezone', 'event_status', 'join_mode', 'join_eligibility' );
 	foreach ( $required as $column ) {
 		if ( ! in_array( $column, $columns, true ) ) {
 			return axismundi_cal_schema_bail( 'events-column:' . $column );

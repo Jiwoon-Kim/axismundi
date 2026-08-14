@@ -144,6 +144,16 @@ function axismundi_cal_event_save( int $post_id, array $fields ) {
 		return new WP_Error( 'ax_event_join_mode', __( 'That participation mode is not one FEP-8a8e defines.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
 	/*
+	 * Kept whatever the mode is. `followers` on an Event currently admitting nobody is inert rather
+	 * than wrong, and refusing to store it would silently reset the host's choice every time they
+	 * closed an Event and reopened it -- losing a restriction on the way back in, which is the
+	 * direction that matters.
+	 */
+	$eligibility = (string) ( $fields['join_eligibility'] ?? ( $existing['join_eligibility'] ?? 'public' ) );
+	if ( ! in_array( $eligibility, AXISMUNDI_CAL_JOIN_ELIGIBILITIES, true ) ) {
+		return new WP_Error( 'ax_event_join_eligibility', __( 'An event is open either to anyone or to the people following its host.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+	/*
 	 * `default` means "whatever the Calendar allows", which is the only honest default: an Event that
 	 * declared itself public would be making a promise the two-axis rule refuses to keep.
 	 */
@@ -154,6 +164,23 @@ function axismundi_cal_event_save( int $post_id, array $fields ) {
 	$transparency = strtoupper( (string) ( $fields['transparency'] ?? ( $existing['transparency'] ?? 'OPAQUE' ) ) );
 	if ( ! in_array( $transparency, array( 'OPAQUE', 'TRANSPARENT' ), true ) ) {
 		return new WP_Error( 'ax_event_transparency', __( 'An event either takes up the time or leaves it free.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+
+	/*
+	 * Participation is Actor to Actor, and the host is one end of it.
+	 *
+	 * `Join`, `Invite`, `Accept` and `Reject` all take an Actor as their subject, so an Event whose
+	 * host has none cannot answer a request that arrives -- and turning participation on for one would
+	 * be offering a handshake with nobody on the other side of it. Refused at the point the setting is
+	 * made rather than when somebody tries to use it, so the host learns why while they can still fix
+	 * it, instead of a guest discovering it on their behalf.
+	 *
+	 * This is also what keeps the replies ActivityPub-native from end to end. Admitting a host without
+	 * one would mean a participant identity that is a local user id, and every screen reading the
+	 * table would have to carry both models from its first line.
+	 */
+	if ( in_array( $join_mode, AXISMUNDI_CAL_JOINABLE_MODES, true ) && '' === axismundi_cal_event_owner_actor_uri( $post_id ) ) {
+		return new WP_Error( 'ax_event_join_host_actor', __( 'Taking replies needs an actor profile to receive them, which this event\'s author does not have.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
 
 	/*
@@ -181,12 +208,13 @@ function axismundi_cal_event_save( int $post_id, array $fields ) {
 		'visibility'                 => $visibility,
 		'transparency'               => $transparency,
 		'join_mode'                  => $join_mode,
+		'join_eligibility'           => $eligibility,
 		'external_participation_url' => $external,
 		'maximum_attendee_capacity'  => $capacity,
 		'created_at'                 => (string) ( $existing['created_at'] ?? $now ),
 		'updated_at'                 => $now,
 	);
-	$formats = array( '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s' );
+	$formats = array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s' );
 	if ( false === $wpdb->replace( axismundi_cal_events_table(), $data, $formats ) ) {
 		return new WP_Error( 'ax_event_write', __( 'The event could not be saved.', 'axismundi-calendar' ) );
 	}

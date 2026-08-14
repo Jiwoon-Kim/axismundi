@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '28';
+const AXISMUNDI_CAL_DB_VERSION        = '36';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 const AXISMUNDI_CAL_SCHEMA_BAIL_OPTION = 'ax_cal_schema_bail';
 
@@ -216,6 +216,21 @@ function axismundi_cal_install_schema() : bool {
 
 	$table   = axismundi_cal_events_table();
 	$charset = $wpdb->get_charset_collate();
+	/*
+	 * `visibility` and `transparency` are two questions a single "private" flag would merge.
+	 *
+	 * The first is how much of one Event is shown to somebody who may already see its Calendar. The
+	 * Calendar stays the outer gate, which is why there is no `public` value here: an Event cannot open
+	 * a container that is closed, and a word promising it could would be a setting that does nothing in
+	 * exactly the case somebody relied on it.
+	 *
+	 * The second is whether being able to see it should make that person look occupied. An open house
+	 * is fully visible and blocks nobody's afternoon.
+	 *
+	 * Documented here rather than inside the statement: `dbDelta` parses the declaration line by line
+	 * and a block comment within it truncates the `ALTER` it generates, which fails silently as a
+	 * column that never arrives.
+	 */
 	dbDelta(
 		"CREATE TABLE {$table} (
 			post_id bigint(20) unsigned NOT NULL,
@@ -227,6 +242,8 @@ function axismundi_cal_install_schema() : bool {
 			display_end_time tinyint(1) unsigned NOT NULL default 1,
 			previous_starts_at_gmt datetime NULL,
 			event_status varchar(24) NOT NULL default 'EventScheduled',
+			visibility varchar(16) NOT NULL default 'default',
+			transparency varchar(16) NOT NULL default 'OPAQUE',
 			join_mode varchar(16) NOT NULL default 'none',
 			external_participation_url text NOT NULL,
 			maximum_attendee_capacity int(10) unsigned NULL,
@@ -236,6 +253,92 @@ function axismundi_cal_install_schema() : bool {
 			KEY starts_at_gmt (starts_at_gmt),
 			KEY ends_at_gmt (ends_at_gmt),
 			KEY event_status (event_status)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	/*
+	 * An Event happens in a list of places, because FEP-8a8e takes `location` as one and a hybrid Event
+	 * is the ordinary reason: a room, a meeting link, and often a stream of the same thing.
+	 *
+	 * `position` is a fact rather than a detail. iCalendar's `LOCATION` is a single property, so the
+	 * first physical row is the one a document can name and the order is what decides which that is.
+	 *
+	 * `place_id` is a reference the geodata plugin will own. It is unvalidated here on purpose -- taking
+	 * a bare id as proof of a Place would leave this plugin half-owning a model it cannot check.
+	 *
+	 * `access` is per location rather than inherited from the Event. A public event with a private
+	 * joining link is the ordinary case: the address is announced and the meeting URL is for the people
+	 * coming, and publishing it in the open feed hands it to everybody who has the calendar.
+	 */
+	$locations = axismundi_cal_event_locations_table();
+	dbDelta(
+		"CREATE TABLE {$locations} (
+			id bigint(20) unsigned NOT NULL auto_increment,
+			event_post_id bigint(20) unsigned NOT NULL,
+			position smallint(5) unsigned NOT NULL default 0,
+			kind varchar(16) NOT NULL default 'physical',
+			features varchar(64) NOT NULL default '',
+			access varchar(16) NOT NULL default 'public',
+			label text NOT NULL,
+			url text NOT NULL,
+			address_text text NOT NULL,
+			place_id bigint(20) unsigned NULL,
+			PRIMARY KEY  (id),
+			KEY event_post_id (event_post_id)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	/*
+	 * Who said they are coming. FEP-8a8e puts this on `Join`, answered with `Accept` or `Reject`, so the
+	 * row is one Actor's standing answer rather than a log -- asking twice changes an answer instead of
+	 * adding one, which is why the pair is unique.
+	 *
+	 * Keyed on the Event's Object URI rather than on a post id, because half of what belongs here has
+	 * no post. A reply I sent to somebody else's Event is mine to remember and their Event to own, and
+	 * a local id could not name it -- so the post id stays as a shortcut for the local case and the URI
+	 * is the identity. Whether the Event is cached locally is a display question, not a storage one.
+	 *
+	 * Two activities, because the pair does not move together. `initiating_activity_uri` is what began
+	 * the relationship -- an `Invite` or a `Join` -- and never changes; `current_response_activity_uri`
+	 * is the answer the state is currently reading, and is replaced each time somebody answers again.
+	 * Somebody who accepts an invitation and later declines it has one `Invite` and a second answer,
+	 * and a single column would have to forget one of them.
+	 *
+	 * The response is NULL while nothing has answered, and stays NULL for a reply that arrived from
+	 * outside ActivityPub -- an iTIP `PARTSTAT` has no activity URI to point at, and inventing one
+	 * would put a local fiction in a column whose whole job is provenance.
+	 *
+	 * `source` is who started it, and it is not decoration. `Join` is sent by the person coming and
+	 * answered by the organizer; `Invite` is sent by the organizer and answered by the person. The two
+	 * produce the same states and mirror who they belong to -- `rejected` is the responder declining
+	 * and `withdrawn` is the initiator taking it back, so which role each names depends on this.
+	 *
+	 * Both URIs are indexed by hash: a URI is a URL and too long to key on directly.
+	 *
+	 * `withdrawn` is a state rather than a deleted row. Somebody who came and then could not is a
+	 * different fact from somebody who never answered, and an organizer counting heads is entitled to
+	 * the difference.
+	 */
+	$participation = axismundi_cal_participation_table();
+	axismundi_cal_upgrade_participation_identity();
+	dbDelta(
+		"CREATE TABLE {$participation} (
+			id bigint(20) unsigned NOT NULL auto_increment,
+			event_uri text NOT NULL,
+			event_uri_hash char(64) NOT NULL default '',
+			event_post_id bigint(20) unsigned NULL,
+			actor_uri text NOT NULL,
+			actor_uri_hash char(64) NOT NULL default '',
+			initiating_activity_uri text NOT NULL,
+			current_response_activity_uri text NULL,
+			source varchar(16) NOT NULL default 'join',
+			state varchar(16) NOT NULL default 'pending',
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY event_actor (event_uri_hash, actor_uri_hash),
+			KEY event_post_id (event_post_id),
+			KEY state (state)
 		) ENGINE=InnoDB {$charset};"
 	);
 
@@ -886,6 +989,78 @@ function axismundi_cal_relax_calendar_name() : void {
 	}
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- this plugin's own table.
 	$wpdb->query( "ALTER TABLE {$table} MODIFY name text NULL DEFAULT NULL" );
+}
+
+/**
+ * Move participation identity from the local post to the Event URI.
+ *
+ * `dbDelta` adds columns and creates indexes but never drops one, so the old unique key on
+ * `(event_post_id, actor_uri_hash)` would survive beside the new one -- and go on refusing a second
+ * row for the same local Event even after the URI became the identity.
+ *
+ * @return void
+ */
+function axismundi_cal_upgrade_participation_identity() : void {
+	global $wpdb;
+	$table = axismundi_cal_participation_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+	if ( $table !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) ) {
+		return;
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
+	$columns = array_column( (array) $wpdb->get_results( "SHOW COLUMNS FROM {$table}", ARRAY_A ), 'Field' );
+
+	/*
+	 * Renamed rather than added beside. `dbDelta` would create the new column and leave the old one
+	 * full of the same URIs, and the pair would be two answers to where a row came from.
+	 */
+	/*
+	 * The tentative pair, folded. `PARTSTAT=TENTATIVE` and `TentativeAccept` lean the same way, so
+	 * storing "tentative from ActivityPub" apart from "tentative from iCalendar" was recording where an
+	 * answer came from in the state -- which is what the response activity column now answers.
+	 */
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
+	$wpdb->query( "UPDATE {$table} SET state = 'tentative' WHERE state = 'tentative_accept'" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
+	$wpdb->query( "UPDATE {$table} SET state = 'tentative_rejected' WHERE state = 'tentative_reject'" );
+
+	if ( in_array( 'join_activity_uri', $columns, true ) && ! in_array( 'initiating_activity_uri', $columns, true ) ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- as above.
+		$wpdb->query( "ALTER TABLE {$table} CHANGE COLUMN `join_activity_uri` `initiating_activity_uri` text NOT NULL" );
+	}
+
+	if ( ! in_array( 'event_uri_hash', $columns, true ) ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- as above.
+		$wpdb->query( "ALTER TABLE {$table} DROP INDEX event_actor" );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- as above.
+		$wpdb->query( "ALTER TABLE {$table} MODIFY event_post_id bigint(20) unsigned NULL" );
+		return;
+	}
+
+	/*
+	 * The rows that were written before the column existed. Every one of them has an empty hash, so
+	 * they collide with each other the moment the new unique key is attempted -- and `dbDelta` reports
+	 * that as a database error and carries on, leaving the identity unenforced.
+	 *
+	 * Filled in from the post they named, which is the identity they always had; a row whose post has
+	 * since gone names nothing that can be recovered and is dropped rather than left to block the key.
+	 */
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
+	$orphans = (array) $wpdb->get_results( "SELECT id, event_post_id FROM {$table} WHERE event_uri_hash = ''", ARRAY_A );
+	foreach ( $orphans as $orphan ) {
+		$uri = axismundi_cal_event_uri( (int) $orphan['event_post_id'] );
+		if ( '' === $uri ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
+			$wpdb->delete( $table, array( 'id' => (int) $orphan['id'] ) );
+			continue;
+		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
+		$wpdb->update(
+			$table,
+			array( 'event_uri' => $uri, 'event_uri_hash' => hash( 'sha256', $uri ) ),
+			array( 'id' => (int) $orphan['id'] )
+		);
+	}
 }
 
 /**

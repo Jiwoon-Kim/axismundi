@@ -43,6 +43,19 @@ function axismundi_cal_event_listable( WP_Post $post ) : bool {
 	if ( ! is_array( $schedule ) ) {
 		return false;
 	}
+	/*
+	 * The Event's own half of the two-axis rule. A private Event inside a public Calendar is withheld
+	 * here, which is the one place that answers for the feed, the range query the block and the
+	 * readable page both read, and the permalink guard -- so the five surfaces cannot disagree by one
+	 * of them forgetting to ask.
+	 *
+	 * The more restrictive of the two always wins, and this is only ever the restrictive direction: an
+	 * Event cannot open a Calendar that is closed, which is why there is no `public` value for it.
+	 */
+	$envelope = axismundi_cal_event_get( (int) $post->ID );
+	if ( is_array( $envelope ) && 'private' === (string) ( $envelope['visibility'] ?? 'default' ) ) {
+		return false;
+	}
 	return '' !== axismundi_cal_calendar_authority( (int) $schedule['calendar_id'] )
 		&& axismundi_cal_calendar_is_listable( (int) $schedule['calendar_id'] );
 }

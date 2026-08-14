@@ -13,10 +13,12 @@
 
 	var el = wp.element.createElement;
 	var __ = wp.i18n.__;
+	var sprintf = wp.i18n.sprintf;
 	var C = wp.components;
 	var registerPlugin = wp.plugins.registerPlugin;
 	var useSelect = wp.data.useSelect;
 	var useDispatch = wp.data.useDispatch;
+	var useEffect = wp.element.useEffect;
 	var POST_TYPE = 'ax_event';
 
 	/** Resolve PluginDocumentSettingPanel across WordPress versions. */
@@ -70,8 +72,9 @@
 		{ label: __( 'Does not repeat', 'axismundi-calendar' ), value: '' },
 		{ label: __( 'Daily', 'axismundi-calendar' ), value: 'DAILY' },
 		{ label: __( 'Weekly', 'axismundi-calendar' ), value: 'WEEKLY' },
+		{ label: __( 'Every weekday', 'axismundi-calendar' ), value: 'WEEKDAYS' },
 		{ label: __( 'Monthly', 'axismundi-calendar' ), value: 'MONTHLY' },
-		{ label: __( 'Yearly', 'axismundi-calendar' ), value: 'YEARLY' }
+		{ label: __( 'Yearly', 'axismundi-calendar' ), value: 'YEARLY' },
 	];
 
 	var INTERVAL_HELP = {
@@ -142,6 +145,58 @@
 		return out;
 	}
 
+	/**
+	 * A sensible pair of times for an Event nobody has given any.
+	 *
+	 * The next whole hour, running an hour. Chosen over "now" because a start of 14:37 is a time
+	 * somebody has to correct rather than accept, and over a fixed 09:00 because an Event being written
+	 * this afternoon is rarely tomorrow morning's.
+	 *
+	 * Produced in the browser's own clock, which is the one the author is reading. It is written as a
+	 * wall time and stored against the Event's zone, so the two agree for the ordinary case of somebody
+	 * scheduling something where they are.
+	 */
+	function suggestedTimes() {
+		var start = new Date();
+		start.setMinutes( 0, 0, 0 );
+		start.setHours( start.getHours() + 1 );
+		var end = new Date( start.getTime() + 3600000 );
+		var stamp = function ( date ) {
+			var pad = function ( n ) { return String( n ).padStart( 2, '0' ); };
+			return date.getFullYear() + '-' + pad( date.getMonth() + 1 ) + '-' + pad( date.getDate() )
+				+ ' ' + pad( date.getHours() ) + ':' + pad( date.getMinutes() ) + ':00';
+		};
+		return { startsAt: stamp( start ), endsAt: stamp( end ) };
+	}
+
+	/** The five weekdays, which is the one BYDAY set common enough to be worth a preset. */
+	var WEEKDAY_SET = [ 'MO', 'TU', 'WE', 'TH', 'FR' ];
+
+	/** What a joining link offers, in RFC 7986's own vocabulary. */
+	var FEATURES = [
+		{ label: __( 'Video', 'axismundi-calendar' ), value: 'VIDEO' },
+		{ label: __( 'Audio', 'axismundi-calendar' ), value: 'AUDIO' },
+		{ label: __( 'Phone', 'axismundi-calendar' ), value: 'PHONE' },
+		{ label: __( 'Chat', 'axismundi-calendar' ), value: 'CHAT' },
+		{ label: __( 'Screen', 'axismundi-calendar' ), value: 'SCREEN' },
+		{ label: __( 'Broadcast', 'axismundi-calendar' ), value: 'FEED' },
+		{ label: __( 'Moderator', 'axismundi-calendar' ), value: 'MODERATOR' }
+	];
+
+	/**
+	 * Whether a rule is exactly "every weekday".
+	 *
+	 * `WEEKDAYS` is not a frequency -- iCalendar has no such FREQ -- so it is offered as a preset and
+	 * recognised on the way back in. Reading it as a distinct kind would mean storing something the
+	 * writer would reject.
+	 */
+	function isWeekdayRule( rule ) {
+		return 'WEEKLY' === rule.freq
+			&& 1 === ( rule.interval || 1 )
+			&& rule.byday.length === WEEKDAY_SET.length
+			&& WEEKDAY_SET.every( function ( day ) { return -1 !== rule.byday.indexOf( day ); } );
+	}
+
 	/** Assemble the controls back into a rule for the server to validate and normalize. */
 	function buildRule( rule ) {
 		if ( ! rule.freq ) {
@@ -193,6 +248,22 @@
 			editPost( { axismundi_cal_envelope: Object.assign( {}, envelope, changes ) } );
 		}
 
+		/*
+		 * An Event with no times at all is one nobody has started filling in, so it is given a plausible
+		 * pair rather than two empty fields and a warning about them. Only ever when both are empty:
+		 * an Event halfway through being written must not have the other half decided for it.
+		 *
+		 * In an effect rather than during render, because writing to the store while rendering is how a
+		 * panel ends up re-entering its own update. The post becomes dirty, which is the honest state --
+		 * the times are real and will be saved.
+		 */
+		var hasTimes = !! String( envelope.startsAt || '' ).trim() || !! String( envelope.endsAt || '' ).trim();
+		useEffect( function () {
+			if ( ! hasTimes ) {
+				update( suggestedTimes() );
+			}
+		}, [ hasTimes ] );
+
 		var missing = [];
 		if ( ! String( envelope.startsAt || '' ).trim() ) {
 			missing.push( __( 'a start', 'axismundi-calendar' ) );
@@ -236,24 +307,259 @@
 			} )
 		);
 
+		/*
+		 * The zone the Event happens in, which is the Event's and not the Calendar's. Choosing a
+		 * Calendar suggests its zone for a new Event; it does not own the answer afterwards, so a Seoul
+		 * calendar can hold a New York meeting and changing what the Calendar suggests never moves one
+		 * that is already written.
+		 *
+		 * Hidden for a whole day, because a civil date has no zone to be in. Offering one there would
+		 * invite the conversion that all-day exists to prevent.
+		 */
+		if ( ! envelope.allDay ) {
+			var calendarZone = ( calendars.filter( function ( c ) {
+				return String( c.id ) === String( envelope.calendarId );
+			} )[0] || {} ).timezone || '';
+			children.push(
+				el( C.SelectControl, {
+					key: 'timezone',
+					label: __( 'Time zone', 'axismundi-calendar' ),
+					help: calendarZone
+						? sprintf( __( 'The calendar suggests %s. The event keeps whatever is chosen here.', 'axismundi-calendar' ), calendarZone )
+						: null,
+					value: envelope.timezone || calendarZone,
+					options: ( config.timezones || [] ).map( function ( zone ) {
+						return { label: zone, value: zone };
+					} ),
+					onChange: function ( value ) { update( { timezone: String( value ) } ); }
+				} )
+			);
+		}
+
+		// A whole day is a different kind of fact, not a time of 00:00. It is a civil date -- the 15th is
+		// the 15th wherever it is read -- so it is offered before the fields it changes the meaning of.
+		children.push(
+			el( C.ToggleControl, {
+				key: 'allDay',
+				label: __( 'All day', 'axismundi-calendar' ),
+				help: __( 'A date rather than a time. It stays on the same day for every reader, wherever they are.', 'axismundi-calendar' ),
+				checked: !! envelope.allDay,
+				onChange: function ( value ) { update( { allDay: !! value } ); }
+			} )
+		);
+
+		/*
+		 * Two datetimes, always, even when the end is on the same day. The pair is the model -- iCalendar
+		 * has `DTSTART` and `DTEND` and nothing that means "and it runs until this time" -- so an event
+		 * crossing midnight needs no special case and cannot be entered wrongly.
+		 *
+		 * Whole days keep both fields and lose only their times. The dates are what the author chose and
+		 * are not re-derived from anything.
+		 */
 		children.push(
 			el( C.TextControl, {
 				key: 'startsAt',
-				type: 'datetime-local',
+				type: envelope.allDay ? 'date' : 'datetime-local',
 				label: __( 'Starts', 'axismundi-calendar' ),
-				help: __( 'The local time where the event happens.', 'axismundi-calendar' ),
-				value: toInput( envelope.startsAt ),
-				onChange: function ( value ) { update( { startsAt: toStored( value ) } ); }
+				help: envelope.allDay
+					? __( 'The first day it covers.', 'axismundi-calendar' )
+					: __( 'The local time where the event happens.', 'axismundi-calendar' ),
+				value: envelope.allDay ? String( envelope.startsAt || '' ).slice( 0, 10 ) : toInput( envelope.startsAt ),
+				onChange: function ( value ) {
+					update( { startsAt: envelope.allDay ? String( value ) + ' 00:00:00' : toStored( value ) } );
+				}
 			} )
 		);
 
 		children.push(
 			el( C.TextControl, {
 				key: 'endsAt',
-				type: 'datetime-local',
+				type: envelope.allDay ? 'date' : 'datetime-local',
 				label: __( 'Ends', 'axismundi-calendar' ),
-				value: toInput( envelope.endsAt ),
-				onChange: function ( value ) { update( { endsAt: toStored( value ) } ); }
+				/*
+				 * Shown as the day after the last one covered, which is what is stored and what iCalendar
+				 * means by `DTEND`. Presenting an inclusive date here would need a conversion in both
+				 * directions, and the two would be where the off-by-one lives.
+				 */
+				help: envelope.allDay
+					? __( 'The day after the last one it covers, as calendars count whole days.', 'axismundi-calendar' )
+					: null,
+				value: envelope.allDay ? String( envelope.endsAt || '' ).slice( 0, 10 ) : toInput( envelope.endsAt ),
+				onChange: function ( value ) {
+					update( { endsAt: envelope.allDay ? String( value ) + ' 00:00:00' : toStored( value ) } );
+				}
+			} )
+		);
+
+		/*
+		 * A list, because an Event can be in more than one place at once: a room, a meeting link, and
+		 * often a stream of the same thing. Whether it is hybrid follows from what is in here rather
+		 * than from a separate "online" checkbox, which would be a second answer to the same question.
+		 */
+		var locations = Array.isArray( envelope.locations ) ? envelope.locations : [];
+		function writeLocations( next ) {
+			update( { locations: next } );
+		}
+
+		children.push(
+			el(
+				C.BaseControl,
+				{ key: 'locations', id: 'ax-event-locations', label: __( 'Where it happens', 'axismundi-calendar' ) },
+				el(
+					'div',
+					{ style: { display: 'flex', flexDirection: 'column', gap: '12px' } },
+					locations.map( function ( location, index ) {
+						var isVirtual = 'virtual' === location.kind;
+						return el(
+							'div',
+							{ key: 'loc-' + index, style: { border: '1px solid #ddd', borderRadius: '2px', padding: '8px' } },
+							el( C.SelectControl, {
+								label: __( 'Kind', 'axismundi-calendar' ),
+								value: location.kind || 'physical',
+								options: [
+									{ label: __( 'A place to go', 'axismundi-calendar' ), value: 'physical' },
+									{ label: __( 'A link to join', 'axismundi-calendar' ), value: 'virtual' }
+								],
+								onChange: function ( value ) {
+									var next = locations.slice();
+									next[ index ] = Object.assign( {}, location, { kind: String( value ) } );
+									writeLocations( next );
+								}
+							} ),
+							el( C.TextControl, {
+								label: __( 'Name', 'axismundi-calendar' ),
+								value: String( location.label || '' ),
+								onChange: function ( value ) {
+									var next = locations.slice();
+									next[ index ] = Object.assign( {}, location, { label: String( value ) } );
+									writeLocations( next );
+								}
+							} ),
+							isVirtual ? el( C.TextControl, {
+								label: __( 'Link', 'axismundi-calendar' ),
+								type: 'url',
+								value: String( location.url || '' ),
+								onChange: function ( value ) {
+									var next = locations.slice();
+									next[ index ] = Object.assign( {}, location, { url: String( value ) } );
+									writeLocations( next );
+								}
+							} ) : el( C.TextareaControl, {
+								label: __( 'Address', 'axismundi-calendar' ),
+								value: String( location.address_text || '' ),
+								onChange: function ( value ) {
+									var next = locations.slice();
+									next[ index ] = Object.assign( {}, location, { address_text: String( value ) } );
+									writeLocations( next );
+								}
+							} ),
+							isVirtual ? el(
+								C.BaseControl,
+								{ id: 'ax-loc-features-' + index, label: __( 'What it offers', 'axismundi-calendar' ) },
+								el(
+									'div',
+									{ style: { display: 'flex', flexWrap: 'wrap', gap: '8px' } },
+									// RFC 7986's own vocabulary rather than kinds of our own. A stream is a
+									// conference offering FEED, which is why there is no separate livestream type.
+									FEATURES.map( function ( feature ) {
+										var have = Array.isArray( location.features ) ? location.features : [];
+										return el( C.CheckboxControl, {
+											key: feature.value,
+											label: feature.label,
+											checked: -1 !== have.indexOf( feature.value ),
+											onChange: function ( checked ) {
+												var next = locations.slice();
+												next[ index ] = Object.assign( {}, location, {
+													features: checked
+														? have.concat( [ feature.value ] )
+														: have.filter( function ( f ) { return f !== feature.value; } )
+												} );
+												writeLocations( next );
+											}
+										} );
+									} )
+								)
+							) : null,
+							el( C.SelectControl, {
+								label: __( 'Who is told', 'axismundi-calendar' ),
+								// A public event with a private joining link is ordinary, not an edge case.
+								help: __( 'A joining link kept for attendees stays out of the public page and the subscription feed.', 'axismundi-calendar' ),
+								value: location.access || 'public',
+								options: [
+									{ label: __( 'Anyone', 'axismundi-calendar' ), value: 'public' },
+									{ label: __( 'People attending', 'axismundi-calendar' ), value: 'attendees' }
+								],
+								onChange: function ( value ) {
+									var next = locations.slice();
+									next[ index ] = Object.assign( {}, location, { access: String( value ) } );
+									writeLocations( next );
+								}
+							} ),
+							el(
+								C.Button,
+								{
+									isDestructive: true,
+									variant: 'link',
+									onClick: function () {
+										writeLocations( locations.filter( function ( _, at ) { return at !== index; } ) );
+									}
+								},
+								__( 'Remove', 'axismundi-calendar' )
+							)
+						);
+					} ).concat( [
+						el(
+							C.Button,
+							{
+								key: 'add-location',
+								variant: 'secondary',
+								onClick: function () {
+									writeLocations( locations.concat( [ { kind: 'physical', label: '', address_text: '', url: '', features: [], access: 'public' } ] ) );
+								}
+							},
+							__( 'Add location', 'axismundi-calendar' )
+						)
+					] )
+				)
+			)
+		);
+
+		/*
+		 * Two axes, and the words are worth keeping apart. This one is how much of the Event somebody
+		 * who may already see its Calendar is shown; whether they may see the Calendar at all is the
+		 * Calendar's own setting, and the stricter of the two wins.
+		 *
+		 * There is no "public" here on purpose: an Event cannot open a Calendar that is closed, so a
+		 * choice saying it could would do nothing in exactly the case somebody would rely on it.
+		 */
+		children.push(
+			el( C.SelectControl, {
+				key: 'visibility',
+				label: __( 'Who can see it', 'axismundi-calendar' ),
+				value: envelope.visibility || 'default',
+				options: [
+					{ label: __( 'As the calendar allows', 'axismundi-calendar' ), value: 'default' },
+					// Described by what it does rather than by who it names. What is enforced is that the
+					// public surfaces withhold it; people who already have a role on the calendar keep
+					// seeing it, and a label promising otherwise would be claiming a rule that is not there.
+					{ label: __( 'Hidden from the public page and feed', 'axismundi-calendar' ), value: 'private' }
+				],
+				help: __( 'A private event stays off the public page, out of the subscription feed and off its own web address, whatever the calendar allows. People who can already see this calendar still see it.', 'axismundi-calendar' ),
+				onChange: function ( value ) { update( { visibility: String( value ) } ); }
+			} )
+		);
+
+		// A different question: not who may look, but whether looking should make them appear occupied.
+		children.push(
+			el( C.SelectControl, {
+				key: 'transparency',
+				label: __( 'Show me as', 'axismundi-calendar' ),
+				value: envelope.transparency || 'OPAQUE',
+				options: [
+					{ label: __( 'Busy', 'axismundi-calendar' ), value: 'OPAQUE' },
+					{ label: __( 'Free', 'axismundi-calendar' ), value: 'TRANSPARENT' }
+				],
+				onChange: function ( value ) { update( { transparency: String( value ) } ); }
 			} )
 		);
 
@@ -273,9 +579,15 @@
 			el( C.SelectControl, {
 				key: 'freq',
 				label: __( 'Repeats', 'axismundi-calendar' ),
-				value: rule.freq,
+				value: isWeekdayRule( rule ) ? 'WEEKDAYS' : rule.freq,
 				options: FREQ,
 				onChange: function ( value ) {
+					if ( 'WEEKDAYS' === value ) {
+						// A preset, expanded here into the rule it stands for. Nothing downstream ever
+						// sees `WEEKDAYS`, so the writer has one vocabulary rather than two.
+						writeRule( { freq: 'WEEKLY', interval: 1, byday: WEEKDAY_SET.slice(), ordinal: '', bymonthday: '' } );
+						return;
+					}
 					// Switching frequency drops the parts that do not apply to it, so a monthly
 					// ordinal cannot survive into a weekly rule the writer would then reject.
 					writeRule( { freq: value, byday: [], ordinal: '', bymonthday: '' } );
@@ -283,7 +595,7 @@
 			} )
 		);
 
-		if ( rule.freq ) {
+		if ( rule.freq && ! isWeekdayRule( rule ) ) {
 			children.push(
 				el( C.TextControl, {
 					key: 'interval',
@@ -297,7 +609,7 @@
 			);
 		}
 
-		if ( 'WEEKLY' === rule.freq ) {
+		if ( 'WEEKLY' === rule.freq && ! isWeekdayRule( rule ) ) {
 			children.push(
 				el(
 					C.BaseControl,

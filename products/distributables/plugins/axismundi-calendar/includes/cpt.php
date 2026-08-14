@@ -44,7 +44,10 @@ function axismundi_cal_register_event_post_type() : void {
 			'exclude_from_search' => false,
 			// An Event carries a title, a body, an author and a lead image, and nothing here needs
 			// comments: replies arrive as Objects in the thread graph, not as `wp_comments` rows.
-			'supports'            => array( 'title', 'editor', 'author', 'thumbnail', 'revisions', 'custom-fields' ),
+			// `excerpt` is what iCalendar's DESCRIPTION is written from. It is plain text there, so the
+			// body is the wrong source: without a field of its own every Event described itself with a
+			// trimmed copy of its own page.
+			'supports'            => array( 'title', 'editor', 'excerpt', 'author', 'thumbnail', 'revisions', 'custom-fields' ),
 		)
 	);
 }

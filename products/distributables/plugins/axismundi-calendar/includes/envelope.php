@@ -11,6 +11,14 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
+ * How much of one Event is shown to somebody who may see its Calendar.
+ *
+ * No `public`. The Calendar is the outer gate and an Event cannot open it, so a value saying
+ * otherwise would be a setting that does nothing in exactly the case somebody would rely on it.
+ */
+const AXISMUNDI_CAL_EVENT_VISIBILITIES = array( 'default', 'private' );
+
+/**
  * The envelope for one event post, or null when it has none.
  *
  * @param int $post_id Event post ID.
@@ -46,6 +54,9 @@ function axismundi_cal_event_get( int $post_id ) : ?array {
 			'display_end_time'       => (int) $schedule['display_end_time'],
 			'previous_starts_at_gmt' => $schedule['previous_start_utc'],
 			'all_day'                => (int) $schedule['all_day'],
+			// Where it happens, as text. The `location_place_id` beside it in the schedule stays out of
+			// the envelope until the geodata plugin owns a Place contract to validate one against.
+			'location_text'          => (string) $schedule['location_text'],
 			'rrule'                  => (string) $schedule['rrule'],
 			'ical_uid'               => (string) $schedule['ical_uid'],
 			'sequence'               => (int) $schedule['sequence'],
@@ -112,6 +123,7 @@ function axismundi_cal_event_save( int $post_id, array $fields ) {
 		'timezone'         => 'timezone',
 		'display_end_time' => 'display_end_time',
 		'all_day'          => 'all_day',
+		'location_text'    => 'location_text',
 		'rrule'            => 'rrule',
 	) as $from => $to ) {
 		if ( array_key_exists( $from, $fields ) ) {
@@ -131,6 +143,29 @@ function axismundi_cal_event_save( int $post_id, array $fields ) {
 	if ( ! in_array( $join_mode, axismundi_cal_event_join_modes(), true ) ) {
 		return new WP_Error( 'ax_event_join_mode', __( 'That participation mode is not one FEP-8a8e defines.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
+	/*
+	 * `default` means "whatever the Calendar allows", which is the only honest default: an Event that
+	 * declared itself public would be making a promise the two-axis rule refuses to keep.
+	 */
+	$visibility = (string) ( $fields['visibility'] ?? ( $existing['visibility'] ?? 'default' ) );
+	if ( ! in_array( $visibility, AXISMUNDI_CAL_EVENT_VISIBILITIES, true ) ) {
+		return new WP_Error( 'ax_event_visibility', __( 'An event is either shown as its calendar allows or kept private.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+	$transparency = strtoupper( (string) ( $fields['transparency'] ?? ( $existing['transparency'] ?? 'OPAQUE' ) ) );
+	if ( ! in_array( $transparency, array( 'OPAQUE', 'TRANSPARENT' ), true ) ) {
+		return new WP_Error( 'ax_event_transparency', __( 'An event either takes up the time or leaves it free.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+
+	/*
+	 * A policy inviting replies needs somewhere those replies can come from. A private Event cannot be
+	 * discovered or read by an ordinary Actor, so `free` or `restricted` on one is a promise with
+	 * nothing behind it -- and it would read on screen as an event accepting people that nobody can
+	 * find. Sending them elsewhere stays allowed, because that URL is the whole mechanism.
+	 */
+	if ( 'private' === $visibility && in_array( $join_mode, AXISMUNDI_CAL_JOINABLE_MODES, true ) ) {
+		return new WP_Error( 'ax_event_join_private', __( 'A private event cannot take replies, because nobody outside can find it.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+
 	$external = esc_url_raw( (string) ( $fields['external_participation_url'] ?? ( $existing['external_participation_url'] ?? '' ) ) );
 	if ( 'external' === $join_mode && '' === $external ) {
 		return new WP_Error( 'ax_event_external_url', __( 'External participation needs the URL people are sent to.', 'axismundi-calendar' ), array( 'status' => 400 ) );
@@ -143,15 +178,39 @@ function axismundi_cal_event_save( int $post_id, array $fields ) {
 	$data = array(
 		'post_id'                    => $post_id,
 		'event_status'               => $status,
+		'visibility'                 => $visibility,
+		'transparency'               => $transparency,
 		'join_mode'                  => $join_mode,
 		'external_participation_url' => $external,
 		'maximum_attendee_capacity'  => $capacity,
 		'created_at'                 => (string) ( $existing['created_at'] ?? $now ),
 		'updated_at'                 => $now,
 	);
-	$formats = array( '%d', '%s', '%s', '%s', '%d', '%s', '%s' );
+	$formats = array( '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s' );
 	if ( false === $wpdb->replace( axismundi_cal_events_table(), $data, $formats ) ) {
 		return new WP_Error( 'ax_event_write', __( 'The event could not be saved.', 'axismundi-calendar' ) );
+	}
+
+	/*
+	 * Where it happens, if the caller said. Written after the envelope so a rejected location cannot
+	 * leave the row half-updated, and the primary physical place is copied onto the schedule from here
+	 * -- the per-occurrence override needs a baseline to differ from, and one writer deriving it is why
+	 * the two cannot disagree.
+	 */
+	if ( array_key_exists( 'locations', $fields ) ) {
+		$located = axismundi_cal_event_locations_save( $post_id, (array) $fields['locations'] );
+		if ( is_wp_error( $located ) ) {
+			return $located;
+		}
+		/*
+		 * Nothing is copied onto the schedule. `location_text` there is the per-occurrence override --
+		 * "this week we are in room B" -- and writing the list's first entry into it would make the same
+		 * fact true in two places, which is how a later edit to one leaves the other stale. Readers
+		 * resolve it instead: the override if there is one, otherwise the first visible physical place.
+		 *
+		 * The list is part of when-and-where, so a changed venue is a changed Event to a subscriber.
+		 */
+		axismundi_cal_schedule_bump_sequence( $post_id );
 	}
 
 	axismundi_cal_event_refresh_projection( $post_id );

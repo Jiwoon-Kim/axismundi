@@ -30,6 +30,30 @@ defined( 'ABSPATH' ) || exit;
 const AXISMUNDI_CAL_SEQUENCE_FIELDS = array( 'timezone', 'all_day', 'dtstart_local', 'dtend_local', 'rrule', 'location_place_id', 'location_text' );
 
 /**
+ * Record that when-or-where changed, without a field of its own to compare.
+ *
+ * `SEQUENCE` tells a subscriber that what they hold is out of date, and the schedule compares its own
+ * columns to decide. An Event's locations live in their own table now, so a changed venue is invisible
+ * to that comparison -- and a venue change is exactly the kind a client should re-prompt about.
+ *
+ * @param int $post_id Event post ID.
+ * @return void
+ */
+function axismundi_cal_schedule_bump_sequence( int $post_id ) : void {
+	global $wpdb;
+	$schedule = axismundi_cal_schedule_for_event( $post_id );
+	if ( ! is_array( $schedule ) ) {
+		return;
+	}
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+	$wpdb->update(
+		axismundi_cal_schedules_table(),
+		array( 'sequence' => (int) $schedule['sequence'] + 1, 'updated_at' => current_time( 'mysql', true ) ),
+		array( 'id' => (int) $schedule['id'] )
+	);
+}
+
+/**
  * The schedule for one Event, or null.
  *
  * @param int $post_id Event post ID.

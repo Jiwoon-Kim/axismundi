@@ -98,6 +98,14 @@ function axismundi_cal_enqueue_editor_assets() : void {
 		'axismundiCalendarEditor',
 		array(
 			'calendars' => axismundi_cal_editor_calendars(),
+			/*
+			 * The zones the writer will accept, sent once rather than typed. An Event keeps the zone it
+			 * was written in -- a Seoul calendar can hold a New York meeting -- so this is a real choice
+			 * and not a display preference, and a free-text field would turn a typo into a save error
+			 * about an identifier the author never meant to write.
+			 */
+			'timezones' => timezone_identifiers_list(),
+			'siteTimezone' => (string) wp_timezone_string(),
 		)
 	);
 }

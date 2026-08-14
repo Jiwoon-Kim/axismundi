@@ -195,14 +195,98 @@ function axismundi_cal_ics_vevent( array $schedule, WP_Post $post ) : array {
 	$lines[] = 'DTSTART' . $suffix . ':' . axismundi_cal_ics_local( (string) $schedule['dtstart_local'], $all_day );
 	$lines[] = 'DTEND' . $suffix . ':' . axismundi_cal_ics_local( (string) $schedule['dtend_local'], $all_day );
 	$lines[] = 'URL:' . axismundi_cal_ics_escape( (string) get_permalink( $post ) );
+	/*
+	 * Whether holding this should make somebody look occupied. A calendar entry ordinarily does, so
+	 * `OPAQUE` is the default and an open house says otherwise explicitly.
+	 */
+	$lines[] = 'TRANSP:' . ( 'TRANSPARENT' === strtoupper( (string) ( $envelope['transparency'] ?? '' ) ) ? 'TRANSPARENT' : 'OPAQUE' );
 
-	$description = wp_strip_all_tags( (string) get_the_excerpt( $post ) );
-	if ( '' !== trim( $description ) ) {
+	/*
+	 * The written excerpt, or a plain-text projection of the body. Stated here rather than taken from
+	 * `get_the_excerpt()`, which runs filters and manufactures a summary of its own: what reached
+	 * subscribers would then depend on which plugins were installed and on whether the body happened
+	 * to contain a `<!--more-->`, and a subscription document is kept rather than re-read.
+	 *
+	 * `DESCRIPTION` is `TEXT` in RFC 5545, so markup does not belong in it whichever source it came
+	 * from. The body's own images are page content and are not smuggled in here either; the lead image
+	 * has its own property below.
+	 */
+	$description = trim( (string) $post->post_excerpt );
+	if ( '' === $description ) {
+		$description = trim( preg_replace( '/\s+/u', ' ', (string) wp_strip_all_tags( strip_shortcodes( (string) $post->post_content ) ) ) );
+	}
+	if ( '' !== $description ) {
 		$lines[] = 'DESCRIPTION:' . axismundi_cal_ics_escape( $description );
 	}
+
+	/*
+	 * The lead image, as RFC 7986 defines it. A client that does not know `IMAGE` ignores the line,
+	 * which is the right outcome -- unlike a URL pasted into the description, which every client shows
+	 * to everybody forever.
+	 */
+	$thumbnail = (string) wp_get_attachment_url( (int) get_post_thumbnail_id( $post ) );
+	if ( '' !== $thumbnail ) {
+		$lines[] = 'IMAGE;VALUE=URI:' . axismundi_cal_ics_escape( $thumbnail );
+	}
+	/*
+	 * One place, because `LOCATION` is a single TEXT property. Several physical locations are reduced
+	 * to the first rather than repeated: a VEVENT with two `LOCATION` lines is malformed, and clients
+	 * split between rejecting it and silently keeping whichever came last.
+	 *
+	 * Read from the schedule, which the writer keeps as a copy of the first physical location -- so a
+	 * per-occurrence override, which replaces exactly this line for one instance, goes on working.
+	 */
+	/*
+	 * Resolved rather than stored: the per-occurrence override if this instance has one, otherwise the
+	 * first physical place this document may name. Nothing copies the list onto the schedule, so the
+	 * two cannot drift apart -- `location_text` on a schedule row means "this instance differs", and
+	 * an empty one means it does not.
+	 */
+	$primary  = axismundi_cal_event_primary_place( (int) $post->ID );
 	$location = trim( (string) $schedule['location_text'] );
+	if ( '' === $location && is_array( $primary ) ) {
+		$location = axismundi_cal_event_place_text( $primary );
+	}
 	if ( '' !== $location ) {
 		$lines[] = 'LOCATION:' . axismundi_cal_ics_escape( $location );
+	}
+
+	/*
+	 * The opposite shape: `CONFERENCE` exists to carry remote participation and takes as many URIs as
+	 * there are. Only the ways of taking part go here -- a livestream is watched rather than joined,
+	 * and publishing one as `CONFERENCE` would tell a client that opening it puts somebody in the room.
+	 */
+	foreach ( axismundi_cal_event_locations( (int) $post->ID ) as $virtual ) {
+		if ( 'virtual' !== (string) $virtual['kind'] ) {
+			continue;
+		}
+		/*
+		 * Only what was meant to be announced. A public Event with a private joining link is ordinary --
+		 * the address is for everybody and the meeting URL is for the people coming -- and this document
+		 * is handed to anybody who has the calendar. An invited attendee's copy is a different document
+		 * with a different writer, the way the dataset feed already is.
+		 */
+		if ( 'public' !== (string) $virtual['access'] ) {
+			continue;
+		}
+		/*
+		 * A parameter value carrying a space, a colon or a comma has to be quoted, which "Google Meet"
+		 * does. Unquoted it ends the parameter at the space and the rest of the line becomes something
+		 * no parser agrees about. Quotes cannot themselves appear inside, so they are dropped rather
+		 * than escaped -- RFC 5545 gives them no escape.
+		 */
+		/*
+		 * Quoted, and the quotes taken out of the value first. RFC 5545 gives DQUOTE no escape inside a
+		 * quoted parameter, so a link somebody called `"Main"; Hall` cannot be represented with them --
+		 * and left in, it closes the quote early and the semicolon then reads as the start of another
+		 * parameter. Everything else a name might contain is safe once the whole value is quoted.
+		 */
+		$label    = trim( str_replace( '"', '', (string) $virtual['label'] ) );
+		$features = trim( (string) $virtual['features'] );
+		$lines[]  = 'CONFERENCE;VALUE=URI'
+			. ( '' !== $features ? ';FEATURE=' . $features : '' )
+			. ( '' !== $label ? ';LABEL="' . $label . '"' : '' )
+			. ':' . axismundi_cal_ics_escape( (string) $virtual['url'] );
 	}
 	if ( '' !== trim( (string) $schedule['rrule'] ) ) {
 		$lines[] = 'RRULE:' . (string) $schedule['rrule'];

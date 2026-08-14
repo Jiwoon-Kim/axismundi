@@ -37,11 +37,17 @@ function axismundi_cal_rest_envelope( int $post_id ) : array {
 			'startsAt'                 => '',
 			'endsAt'                   => '',
 			'timezone'                 => '',
+			'allDay'                   => false,
+			'locations'                => array(),
+			'visibility'               => 'default',
+			'transparency'             => 'OPAQUE',
 			'displayEndTime'           => true,
 			'eventStatus'              => 'EventScheduled',
 		'joinMode'                 => 'none',
 			'externalParticipationUrl' => '',
 			'maximumAttendeeCapacity'  => null,
+			'remainingAttendeeCapacity' => null,
+			'attendeeCount'            => 0,
 			'previousStartsAtGmt'      => '',
 			'rrule'                    => '',
 			'recurring'                => false,
@@ -53,11 +59,38 @@ function axismundi_cal_rest_envelope( int $post_id ) : array {
 		'startsAt'                 => (string) $envelope['starts_at'],
 		'endsAt'                   => (string) $envelope['ends_at'],
 		'timezone'                 => (string) $envelope['timezone'],
+		'allDay'                   => (bool) $envelope['all_day'],
+		/*
+		 * Plain text, and only plain text. A `Place` is the geodata plugin's object with its own
+		 * identity and its own validity rules; taking a bare id here would leave this plugin half-owning
+		 * a model it cannot check, and would stop an Event being written until somebody had registered
+		 * the venue. The `location_place_id` column stays unexposed until that contract exists.
+		 */
+		/*
+		 * Only what this reader may be shown. This field travels with the post through the REST API, so
+		 * anybody who can read a published Event can read it -- and a joining link kept for attendees
+		 * would reach every logged-in account through the editor's own payload.
+		 */
+		'locations'                => axismundi_cal_event_visible_locations( $post_id ),
+		/*
+		 * Two axes. `visibility` is how much of this Event somebody who may see its Calendar is shown;
+		 * whether they may see the Calendar at all is the Calendar's own setting, and the more
+		 * restrictive of the two wins. `transparency` is a different question again -- not who may look,
+		 * but whether looking should make them appear occupied.
+		 */
+		'visibility'               => (string) ( $envelope['visibility'] ?? 'default' ),
+		'transparency'             => (string) ( $envelope['transparency'] ?? 'OPAQUE' ),
 		'displayEndTime'           => (bool) $envelope['display_end_time'],
 		'eventStatus'              => (string) $envelope['event_status'],
 		'joinMode'                 => (string) $envelope['join_mode'],
 		'externalParticipationUrl' => (string) $envelope['external_participation_url'],
 		'maximumAttendeeCapacity'  => null === $envelope['maximum_attendee_capacity'] ? null : (int) $envelope['maximum_attendee_capacity'],
+		/*
+		 * Both derived, and neither writable. They are the accepted replies counted, so a panel field
+		 * that could set them would be offering to edit an answer that is computed from somewhere else.
+		 */
+		'remainingAttendeeCapacity' => axismundi_cal_event_remaining_capacity( $post_id ),
+		'attendeeCount'            => count( axismundi_cal_event_attendees( $post_id ) ),
 		'previousStartsAtGmt'      => (string) ( $envelope['previous_starts_at_gmt'] ?? '' ),
 		'rrule'                    => (string) ( $envelope['rrule'] ?? '' ),
 		// Reported rather than left for the panel to infer from the rule, so the federation rule
@@ -98,6 +131,10 @@ function axismundi_cal_rest_to_fields( array $value ) : array {
 		'startsAt'                 => 'starts_at',
 		'endsAt'                   => 'ends_at',
 		'timezone'                 => 'timezone',
+		'allDay'                   => 'all_day',
+		'locations'                => 'locations',
+		'visibility'               => 'visibility',
+		'transparency'             => 'transparency',
 		'displayEndTime'           => 'display_end_time',
 		'eventStatus'              => 'event_status',
 		'joinMode'                 => 'join_mode',
@@ -153,6 +190,10 @@ function axismundi_cal_register_rest_field() : void {
 					'properties' => array(
 						'calendarId'               => array( 'type' => 'integer', 'minimum' => 1 ),
 					'startsAt'                 => array( 'type' => 'string' ),
+					'allDay'                   => array( 'type' => 'boolean' ),
+					'locations'                => array( 'type' => 'array' ),
+					'visibility'               => array( 'type' => 'string' ),
+					'transparency'             => array( 'type' => 'string' ),
 					'endsAt'                   => array( 'type' => 'string' ),
 					'timezone'                 => array( 'type' => 'string' ),
 					'displayEndTime'           => array( 'type' => 'boolean' ),

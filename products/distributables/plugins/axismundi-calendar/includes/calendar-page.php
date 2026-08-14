@@ -85,8 +85,18 @@ function axismundi_cal_guard_event_page() : void {
 		return;
 	}
 	$calendar_id = (int) $schedule['calendar_id'];
-	if ( '' !== axismundi_cal_calendar_authority( $calendar_id ) && ( axismundi_cal_is_publicly_readable( $calendar_id )
-		|| axismundi_cal_can_read( $calendar_id, axismundi_cal_current_actor_uri(), get_current_user_id() ) ) ) {
+	/*
+	 * Two ways in, and the public one is the shared gate rather than a second reading of it. This
+	 * route once asked only about the Calendar, which meant an Event marked private was withheld from
+	 * the feed, the grid and the range query and served in full at its own URL -- every surface closed
+	 * except the one somebody reaches by guessing a link.
+	 *
+	 * `event_listable()` answers the whole public question: the post's own state, the Calendar's
+	 * authority and listability, and the Event's own visibility. The second branch is the authorized
+	 * reader, who is entitled to what the public is not.
+	 */
+	if ( axismundi_cal_event_listable( $post )
+		|| axismundi_cal_can_read( $calendar_id, axismundi_cal_current_actor_uri(), get_current_user_id() ) ) {
 		return;
 	}
 

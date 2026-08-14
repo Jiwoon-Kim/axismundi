@@ -93,6 +93,7 @@ require_once __DIR__ . '/includes/envelope.php';
 require_once __DIR__ . '/includes/rest.php';
 require_once __DIR__ . '/includes/rest-read.php';
 require_once __DIR__ . '/includes/rest-write.php';
+require_once __DIR__ . '/includes/rest-participation.php';
 require_once __DIR__ . '/includes/publish-guard.php';
 require_once __DIR__ . '/includes/editor.php';
 require_once __DIR__ . '/includes/projection.php';

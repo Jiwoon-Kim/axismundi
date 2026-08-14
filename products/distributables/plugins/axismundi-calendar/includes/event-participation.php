@@ -296,6 +296,40 @@ function axismundi_cal_event_join_eligible( int $post_id, string $actor_uri ) : 
 }
 
 /**
+ * Record one participation Activity and hand back the URI it is known by.
+ *
+ * Every state below moves by writing one of these first. The row is a projection kept so a screen
+ * does not have to replay the ledger to draw a list; the Activity is what happened, and a state
+ * changed without one would be a fact with no author, no time and nothing for a later `Undo` to
+ * address.
+ *
+ * Written before the row on purpose. A failure here must leave nothing behind, and the opposite
+ * order fails the other way: a row saying somebody is coming with no record of them saying so. An
+ * Activity whose row then fails to write is a request that was made and not projected, which is
+ * recoverable and visible; the reverse is neither.
+ *
+ * `$source_event_key` makes a repeated submission return the Activity the first one recorded rather
+ * than minting a second. Local Activity URIs are freshly generated per call, so without it a double
+ * click is two `Join`s in the ledger for one intention.
+ *
+ * @param array<string,mixed> $payload          ActivityStreams payload.
+ * @param string              $source_event_key Stable identity for the thing that caused it.
+ * @return string|WP_Error Activity URI.
+ */
+function axismundi_cal_participation_activity( array $payload, string $source_event_key = '' ) {
+	if ( ! axismundi_cal_has_activities() ) {
+		return new WP_Error( 'ax_event_ledger', __( 'Replies need the Activities plugin, which records what was said.', 'axismundi-calendar' ), array( 'status' => 503 ) );
+	}
+	$activity = '' !== $source_event_key
+		? axismundi_act_record_source_activity( $payload, 'local', $source_event_key )
+		: axismundi_act_record_activity( $payload, 'local' );
+	if ( is_wp_error( $activity ) ) {
+		return $activity;
+	}
+	return (string) $activity->get_uri();
+}
+
+/**
  * Ask to come.
  *
  * The answer depends on what the Event asked for, and both answers are the same activity: `free`
@@ -386,108 +420,422 @@ function axismundi_cal_event_join( int $post_id, string $actor_uri ) {
 	 */
 	$state = ( 'free' === $mode || $is_self ) ? 'accepted' : 'pending';
 	/*
-	 * Only the acceptance is capped. A moderated Event that is full may still take requests -- that is
-	 * a waiting list, and refusing to record one would lose the fact that somebody asked -- but an open
-	 * Event accepts on arrival, so this is where it has to say no.
-	 *
-	 * The host is capped with everybody else. Letting them past a limit they set would make the number
-	 * a decoration: a capacity of twenty that seats twenty-one is not a capacity, and every peer
-	 * reading `remainingAttendeeCapacity` would be told something untrue. A full event is theirs to
-	 * resize or to thin out, which are both decisions rather than an exception.
+	 * Capacity is not consulted here. Deciding there is room and then writing the row are two steps
+	 * with a gap between them, and two people arriving at an Event with one place left would both
+	 * read the count before either wrote -- so the count is taken under a lock, in the same section
+	 * that seats them. A moderated request takes no place at all: it is a waiting list, and letting
+	 * requests hold seats would let a few dozen of them close an Event nobody had been admitted to.
 	 */
-	$remaining = axismundi_cal_event_remaining_capacity( $post_id );
-	if ( 'accepted' === $state && null !== $remaining && $remaining < 1 ) {
-		return new WP_Error( 'ax_event_join_full', __( 'This event is full.', 'axismundi-calendar' ), array( 'status' => 409 ) );
-	}
-	$existing = axismundi_cal_event_participation( $post_id, $actor_uri );
-	$now      = current_time( 'mysql', true );
-	$table    = axismundi_cal_participation_table();
+	$existing  = axismundi_cal_event_participation( $post_id, $actor_uri );
+	$event_uri = axismundi_cal_event_uri( $post_id );
 
-	if ( is_array( $existing ) ) {
+	if ( is_array( $existing ) && 'rejected' === (string) $existing['state'] ) {
 		/*
 		 * Asking again after being turned down does not undo the answer. Somebody who withdrew may
 		 * change their mind, which is the one transition a second `Join` legitimately makes.
 		 */
-		if ( 'rejected' === (string) $existing['state'] ) {
-			return new WP_Error( 'ax_event_join_rejected', __( 'That reply was already answered.', 'axismundi-calendar' ), array( 'status' => 403 ) );
-		}
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-		$wpdb->update( $table, array( 'state' => $state, 'updated_at' => $now ), array( 'id' => (int) $existing['id'] ) );
-		return $state;
+		return new WP_Error( 'ax_event_join_rejected', __( 'That reply was already answered.', 'axismundi-calendar' ), array( 'status' => 403 ) );
 	}
 
-	$event_uri = axismundi_cal_event_uri( $post_id );
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	$wpdb->insert(
-		$table,
-		array(
-			'event_uri'      => $event_uri,
-			'event_uri_hash' => hash( 'sha256', $event_uri ),
-			// The shortcut, not the identity. A row for somebody else's Event has none.
-			'event_post_id'  => $post_id,
-			'actor_uri'      => $actor_uri,
-			'actor_uri_hash' => hash( 'sha256', $actor_uri ),
-			'initiating_activity_uri' => '',
-			/*
-			 * An open Event answers on arrival, so the row has a response from the start; a moderated one
-			 * is waiting for somebody, and `NULL` is what "nothing has answered yet" looks like.
-			 */
-			'current_response_activity_uri' => null,
-			// Asked for by the person coming, which is what makes the organizer the one who answers.
-			'source'         => 'join',
-			'state'          => $state,
-			'created_at'     => $now,
-			'updated_at'     => $now,
-		)
+	/*
+	 * A fresh `Join`, keyed so that submitting twice is one request.
+	 *
+	 * Somebody who withdrew and came back is making a new request, not reviving the old one -- their
+	 * first `Join` has an `Undo` addressed to it, and reusing it would contradict that. Keying the
+	 * second on the first gives it its own identity while keeping the double-click idempotent, which
+	 * a bare event-and-actor key could not do without handing back the undone one.
+	 *
+	 * Only a retracted request earns a new one. Somebody whose request still stands and who asks
+	 * again has not made a second request -- a reloaded page usually -- and minting a `Join` for that
+	 * would put one Activity in the ledger per attempt rather than per intention.
+	 */
+	$previous = is_array( $existing ) && 'withdrawn' === (string) $existing['state']
+		? (string) $existing['initiating_activity_uri']
+		: '';
+	$key      = '' !== $previous
+		? 'ax-cal-rejoin:' . $previous
+		: 'ax-cal-join:' . $event_uri . ':' . $actor_uri;
+	$join_uri = axismundi_cal_participation_activity(
+		array( 'type' => 'Join', 'actor' => $actor_uri, 'object' => $event_uri ),
+		$key
 	);
+	if ( is_wp_error( $join_uri ) ) {
+		return $join_uri;
+	}
+
+	$seated = axismundi_cal_participation_seat( $post_id, $actor_uri, $state, $join_uri );
+	if ( is_wp_error( $seated ) ) {
+		return $seated;
+	}
+
+	/*
+	 * The server answering on arrival. `free` and a host counting themselves in are both an immediate
+	 * `Accept`, recorded rather than implied: FEP-8a8e defines the `attendees` collection as the Joins
+	 * that were answered with one, so a state of `accepted` with no `Accept` anywhere would be a
+	 * conclusion with no premise and nothing for a peer to read. What separates it from a moderated
+	 * Event is not whether the Accept exists but whether a person made it, which is why a screen says
+	 * "accepted automatically" rather than naming somebody.
+	 *
+	 * After the seat, because an `Accept` published for a place that turned out not to exist is the
+	 * one order of events with nothing to undo it.
+	 */
+	if ( 'accepted' === $state ) {
+		$accepted = axismundi_cal_participation_activity(
+			array( 'type' => 'Accept', 'actor' => $owner, 'object' => $join_uri ),
+			'ax-cal-accept:' . $join_uri
+		);
+		if ( is_wp_error( $accepted ) ) {
+			return $accepted;
+		}
+		axismundi_cal_participation_note_response( $post_id, $actor_uri, $accepted );
+	}
 	return $state;
 }
 
 /**
- * Answer somebody's request, or take one's own back.
+ * Write one participation row, taking a seat atomically if the state needs one.
  *
- * @param int    $post_id   Event post ID.
- * @param string $actor_uri Whose participation.
- * @param string $state     New state.
- * @return true|WP_Error
+ * The seat and the state have to be decided together. Counting the accepted replies, deciding there
+ * is room, and then writing a row is three steps with two gaps in them -- and two people arriving at
+ * an Event with one place left will both read the count before either writes, so both are seated and
+ * the capacity has been exceeded by exactly the number of people who asked at once. The count is
+ * therefore taken under a lock held until the row is written.
+ *
+ * `pending` takes no seat. A moderated Event is a waiting list, and letting requests hold places
+ * would let a few dozen of them close an Event nobody has been admitted to -- so capacity is checked
+ * where somebody is actually seated, which is the acceptance rather than the asking.
+ *
+ * Somebody already accepted is not counted against themselves. Re-accepting them would otherwise be
+ * refused by a capacity they are part of.
+ *
+ * No Activity is recorded in here. The ledger runs its own transaction, and a nested `COMMIT` would
+ * end this one early -- which is the sort of bug that only appears under the concurrency this
+ * function exists to survive.
+ *
+ * @param int         $post_id   Event post ID.
+ * @param string      $actor_uri Whose participation.
+ * @param string      $state     State to write.
+ * @param string|null $join_uri  Initiating Activity URI, or null to keep what is there.
+ * @return string|WP_Error State written.
  */
-function axismundi_cal_event_participation_set( int $post_id, string $actor_uri, string $state, string $response_activity_uri = '' ) {
+function axismundi_cal_participation_seat( int $post_id, string $actor_uri, string $state, ?string $join_uri = null ) {
 	global $wpdb;
-	if ( ! in_array( $state, AXISMUNDI_CAL_PARTICIPATION_STATES, true ) ) {
-		return new WP_Error( 'ax_event_state', __( 'That is not something a reply can be.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	$envelope = axismundi_cal_event_get( $post_id );
+	if ( ! is_array( $envelope ) ) {
+		return new WP_Error( 'ax_event_seat_missing', __( 'That event does not exist.', 'axismundi-calendar' ), array( 'status' => 404 ) );
 	}
-	$existing = axismundi_cal_event_participation( $post_id, $actor_uri );
-	if ( ! is_array( $existing ) ) {
-		return new WP_Error( 'ax_event_participation_missing', __( 'That person has not replied.', 'axismundi-calendar' ), array( 'status' => 404 ) );
-	}
-	/*
-	 * The other way somebody becomes an attendee, and therefore the other place the count has to hold.
-	 * Checked only when this is a change into `accepted`: re-accepting somebody already accepted must
-	 * not be refused by a capacity they are themselves part of.
-	 */
-	if ( 'accepted' === $state && 'accepted' !== (string) $existing['state'] ) {
-		$remaining = axismundi_cal_event_remaining_capacity( $post_id );
-		if ( null !== $remaining && $remaining < 1 ) {
-			return new WP_Error( 'ax_event_accept_full', __( 'This event is full, so nobody else can be accepted.', 'axismundi-calendar' ), array( 'status' => 409 ) );
+	$table     = axismundi_cal_participation_table();
+	$event_uri = axismundi_cal_event_uri( $post_id );
+	$event_key = hash( 'sha256', $event_uri );
+	$actor_key = hash( 'sha256', $actor_uri );
+	$capacity  = null === $envelope['maximum_attendee_capacity'] ? null : (int) $envelope['maximum_attendee_capacity'];
+	$now       = current_time( 'mysql', true );
+
+	$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- the seat and the row are one decision.
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
+	$existing = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE event_uri_hash = %s AND actor_uri_hash = %s FOR UPDATE", $event_key, $actor_key ), ARRAY_A );
+	if ( 'accepted' === $state && null !== $capacity && ( ! is_array( $existing ) || 'accepted' !== (string) $existing['state'] ) ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
+		$taken = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE event_uri_hash = %s AND state = 'accepted' FOR UPDATE", $event_key ) );
+		if ( $taken >= $capacity ) {
+			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			return new WP_Error( 'ax_event_join_full', __( 'This event is full.', 'axismundi-calendar' ), array( 'status' => 409 ) );
 		}
 	}
 	/*
-	 * Back to nothing when the answer is withdrawn to `pending`: the activity that produced the old
-	 * state is no longer what the row is reading, and leaving it there would have the projection
-	 * explaining itself with an answer it is not showing.
+	 * The response is cleared, not carried. Whatever answered the previous state is not what answers
+	 * this one, and the Activity that does is recorded once the seat is real -- an `Accept` published
+	 * for a place that turned out not to exist is the one order of events with nothing to undo it.
 	 */
-	$response = 'pending' === $state ? null : ( '' !== $response_activity_uri ? $response_activity_uri : ( $existing['current_response_activity_uri'] ?? null ) );
+	$row = array(
+		'state'                         => $state,
+		'current_response_activity_uri' => null,
+		'updated_at'                    => $now,
+	);
+	if ( null !== $join_uri ) {
+		$row['initiating_activity_uri'] = $join_uri;
+	}
+	if ( is_array( $existing ) ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+		$wpdb->update( $table, $row, array( 'id' => (int) $existing['id'] ) );
+	} else {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+		$wpdb->insert(
+			$table,
+			array_merge(
+				$row,
+				array(
+					'event_uri'      => $event_uri,
+					'event_uri_hash' => $event_key,
+					// The shortcut, not the identity. A row for somebody else's Event has none.
+					'event_post_id'  => $post_id,
+					'actor_uri'      => $actor_uri,
+					'actor_uri_hash' => $actor_key,
+					'initiating_activity_uri' => (string) $join_uri,
+					// Asked for by the person coming, which is what makes the organizer the one who answers.
+					'source'         => 'join',
+					'created_at'     => $now,
+				)
+			)
+		);
+	}
+	$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	return $state;
+}
+
+/**
+ * Note the Activity that produced the state a row is currently in.
+ *
+ * Separate from seating because the two cannot share a transaction: the ledger opens its own, and an
+ * `Accept` can only honestly be written once the place it acknowledges has been secured.
+ *
+ * @param int    $post_id      Event post ID.
+ * @param string $actor_uri    Whose participation.
+ * @param string $activity_uri Response Activity URI.
+ * @return void
+ */
+function axismundi_cal_participation_note_response( int $post_id, string $actor_uri, string $activity_uri ) : void {
+	global $wpdb;
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 	$wpdb->update(
 		axismundi_cal_participation_table(),
+		array( 'current_response_activity_uri' => $activity_uri ),
 		array(
-			'state' => $state,
-			'current_response_activity_uri' => $response,
-			'updated_at' => current_time( 'mysql', true ),
-		),
-		array( 'id' => (int) $existing['id'] )
+			'event_uri_hash' => hash( 'sha256', axismundi_cal_event_uri( $post_id ) ),
+			'actor_uri_hash' => hash( 'sha256', $actor_uri ),
+		)
 	);
+}
+
+/**
+ * Move one existing participation to another state.
+ *
+ * The general setter the specific transitions are built from. It does not decide whether the move is
+ * allowed -- who may reject, what may be withdrawn and when are questions the callers above answer,
+ * because each has a different one.
+ *
+ * Capacity is not re-checked here. Seating is atomic and lives in one place, and a second check
+ * beside it would be a second authority on the same number -- the kind that goes wrong in the
+ * direction nobody notices.
+ *
+ * @param int    $post_id               Event post ID.
+ * @param string $actor_uri             Whose participation.
+ * @param string $state                 New state.
+ * @param string $response_activity_uri Activity that produced it, if there is one.
+ * @return true|WP_Error
+ */
+function axismundi_cal_event_participation_set( int $post_id, string $actor_uri, string $state, string $response_activity_uri = '' ) {
+	if ( ! in_array( $state, AXISMUNDI_CAL_PARTICIPATION_STATES, true ) ) {
+		return new WP_Error( 'ax_event_state', __( 'That is not something a reply can be.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+	if ( ! is_array( axismundi_cal_event_participation( $post_id, $actor_uri ) ) ) {
+		return new WP_Error( 'ax_event_participation_missing', __( 'That person has not replied.', 'axismundi-calendar' ), array( 'status' => 404 ) );
+	}
+	$seated = axismundi_cal_participation_seat( $post_id, $actor_uri, $state );
+	if ( is_wp_error( $seated ) ) {
+		return $seated;
+	}
+	/*
+	 * Back to nothing when there is no answer to name. `pending` is the state of having been asked
+	 * and not replied to, so pointing it at the Activity that produced the previous one would have
+	 * the row explaining itself with an answer it is no longer showing.
+	 */
+	if ( '' !== $response_activity_uri ) {
+		axismundi_cal_participation_note_response( $post_id, $actor_uri, $response_activity_uri );
+	}
 	return true;
+}
+
+/**
+ * Take back a request nobody has answered yet.
+ *
+ * `Undo(Join)`, and only while the request is still pending. Cancelling an acceptance is a different
+ * act -- ActivityStreams has `Leave` for stopping attending something you were admitted to, and
+ * whether an accepted `Join` is undone or left is not settled here. Offering one button for both
+ * would decide it by accident, and the wrong choice federates.
+ *
+ * The ledger enforces the rest: an `Undo` must be authored by whoever authored the Activity it
+ * addresses, so this cannot become a way for anybody else to retract somebody's request.
+ *
+ * @param int    $post_id   Event post ID.
+ * @param string $actor_uri Whose request.
+ * @return true|WP_Error
+ */
+function axismundi_cal_event_withdraw_join( int $post_id, string $actor_uri ) {
+	$actor_uri     = trim( $actor_uri );
+	$participation = axismundi_cal_event_participation( $post_id, $actor_uri );
+	if ( ! is_array( $participation ) ) {
+		return new WP_Error( 'ax_event_withdraw_missing', __( 'There is no request to take back.', 'axismundi-calendar' ), array( 'status' => 404 ) );
+	}
+	// An invitation is not withdrawn by the person who received it: they answer it again.
+	if ( 'join' !== (string) $participation['source'] ) {
+		return new WP_Error( 'ax_event_withdraw_source', __( 'An invitation is answered rather than taken back.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+	if ( 'pending' !== (string) $participation['state'] ) {
+		return new WP_Error( 'ax_event_withdraw_answered', __( 'Only a request nobody has answered yet can be taken back.', 'axismundi-calendar' ), array( 'status' => 409 ) );
+	}
+	$join_uri = (string) $participation['initiating_activity_uri'];
+	if ( '' === $join_uri ) {
+		return new WP_Error( 'ax_event_withdraw_unaddressable', __( 'That request predates the record of it and cannot be taken back.', 'axismundi-calendar' ), array( 'status' => 409 ) );
+	}
+	$undo = axismundi_cal_participation_activity(
+		array( 'type' => 'Undo', 'actor' => $actor_uri, 'object' => $join_uri ),
+		'ax-cal-undo-join:' . $join_uri
+	);
+	if ( is_wp_error( $undo ) ) {
+		return $undo;
+	}
+	/*
+	 * Stored as the response the state is reading, which is what the column means, even though the
+	 * person who wrote it is the one who asked rather than the one who answers. The alternative --
+	 * leaving it empty because a withdrawal is not an answer -- would leave `withdrawn` as the one
+	 * state whose cause cannot be looked up.
+	 */
+	return axismundi_cal_event_participation_set( $post_id, $actor_uri, 'withdrawn', $undo );
+}
+
+/**
+ * Answer somebody's request.
+ *
+ * The organizer's half of the handshake, for `restricted` Events. `Accept` and `Reject` are the two
+ * activities FEP-8a8e names, and both address the `Join` rather than the Event -- which is what
+ * makes a later answer replaceable without the Event having to change.
+ *
+ * Only a pending request. Re-answering a settled one is a different question with a different set of
+ * rules -- disinviting somebody already accepted, or reversing a refusal -- and none of them are
+ * this slice.
+ *
+ * @param int    $post_id   Event post ID.
+ * @param string $actor_uri Whose request.
+ * @param string $decision  accept|reject.
+ * @return string|WP_Error Resulting state.
+ */
+function axismundi_cal_event_respond_to_join( int $post_id, string $actor_uri, string $decision ) {
+	$actor_uri = trim( $actor_uri );
+	if ( ! in_array( $decision, array( 'accept', 'reject' ), true ) ) {
+		return new WP_Error( 'ax_event_respond_decision', __( 'A request is either accepted or rejected.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+	$participation = axismundi_cal_event_participation( $post_id, $actor_uri );
+	if ( ! is_array( $participation ) ) {
+		return new WP_Error( 'ax_event_respond_missing', __( 'That person has not asked to come.', 'axismundi-calendar' ), array( 'status' => 404 ) );
+	}
+	if ( 'pending' !== (string) $participation['state'] ) {
+		return new WP_Error( 'ax_event_respond_answered', __( 'That request has already been answered.', 'axismundi-calendar' ), array( 'status' => 409 ) );
+	}
+	$owner = axismundi_cal_event_owner_actor_uri( $post_id );
+	if ( '' === $owner ) {
+		return new WP_Error( 'ax_event_respond_no_host', __( 'This event has no host Actor to answer with.', 'axismundi-calendar' ), array( 'status' => 403 ) );
+	}
+	$join_uri = (string) $participation['initiating_activity_uri'];
+	if ( '' === $join_uri ) {
+		return new WP_Error( 'ax_event_respond_unaddressable', __( 'That request predates the record of it and cannot be answered.', 'axismundi-calendar' ), array( 'status' => 409 ) );
+	}
+	/*
+	 * The seat first, and the `Accept` once it is real. An acceptance recorded for a place that turned
+	 * out not to exist is a published promise with nothing to retract it, so the order is the same one
+	 * an immediate acceptance uses -- and the capacity is read inside the lock rather than before it,
+	 * because two organizers approving the last place at once would otherwise both be told there was
+	 * one.
+	 */
+	$state  = 'accept' === $decision ? 'accepted' : 'rejected';
+	$seated = axismundi_cal_participation_seat( $post_id, $actor_uri, $state );
+	if ( is_wp_error( $seated ) ) {
+		return $seated;
+	}
+	$response = axismundi_cal_participation_activity(
+		array( 'type' => 'accept' === $decision ? 'Accept' : 'Reject', 'actor' => $owner, 'object' => $join_uri ),
+		'ax-cal-' . $decision . ':' . $join_uri
+	);
+	if ( is_wp_error( $response ) ) {
+		return $response;
+	}
+	axismundi_cal_participation_note_response( $post_id, $actor_uri, $response );
+	return $state;
+}
+
+/**
+ * Whether the signed-in user may answer requests for one Event.
+ *
+ * Named once because two surfaces ask it and a screen deciding for itself would be the wrong
+ * authority: what a panel renders is a courtesy, and the endpoint has to reach the same answer
+ * without having seen it.
+ *
+ * Not tied to being accepted. Attending an Event and running one are different things, and an
+ * attendee who could approve the next person would be a permission granted by an RSVP.
+ *
+ * @param int $post_id Event post ID.
+ * @return bool
+ */
+function axismundi_cal_can_manage_participation( int $post_id ) : bool {
+	$schedule = axismundi_cal_schedule_for_event( $post_id );
+	if ( is_array( $schedule ) && axismundi_cal_calendar_can( axismundi_cal_calendar_get( (int) $schedule['calendar_id'] ), 'manage_items' ) ) {
+		return true;
+	}
+	$author = (int) get_post_field( 'post_author', $post_id );
+	return $author > 0 && get_current_user_id() === $author;
+}
+
+/**
+ * One participation row of one Event, by its own id.
+ *
+ * Scoped to the Event rather than looked up by id alone, so a request naming somebody else's row
+ * cannot be answered by whoever manages this Event.
+ *
+ * @param int $post_id Event post ID.
+ * @param int $id      Participation row ID.
+ * @return array<string,mixed>|null
+ */
+function axismundi_cal_participation_by_id( int $post_id, int $id ) : ?array {
+	global $wpdb;
+	if ( $id <= 0 || ! axismundi_cal_ready() ) {
+		return null;
+	}
+	$table = axismundi_cal_participation_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+	$row = $wpdb->get_row(
+		$wpdb->prepare(
+			"SELECT * FROM {$table} WHERE id = %d AND event_uri_hash = %s",
+			$id,
+			hash( 'sha256', axismundi_cal_event_uri( $post_id ) )
+		),
+		ARRAY_A
+	);
+	return is_array( $row ) ? $row : null;
+}
+
+/**
+ * Everything said about one Event, whatever it was.
+ *
+ * The list a management screen draws its tabs from. The tabs are a projection of these states and
+ * not a set of their own -- a filter that invented one would be a status the ledger cannot produce.
+ *
+ * @param int      $post_id Event post ID.
+ * @param string[] $states  States to keep, or empty for all.
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_cal_event_participations( int $post_id, array $states = array() ) : array {
+	global $wpdb;
+	if ( $post_id <= 0 || ! axismundi_cal_ready() ) {
+		return array();
+	}
+	$table = axismundi_cal_participation_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+	$rows = (array) $wpdb->get_results(
+		$wpdb->prepare(
+			"SELECT * FROM {$table} WHERE event_uri_hash = %s ORDER BY updated_at DESC, id DESC",
+			hash( 'sha256', axismundi_cal_event_uri( $post_id ) )
+		),
+		ARRAY_A
+	);
+	if ( array() === $states ) {
+		return $rows;
+	}
+	return array_values(
+		array_filter(
+			$rows,
+			static fn( array $row ) : bool => in_array( (string) $row['state'], $states, true )
+		)
+	);
 }
 
 /**

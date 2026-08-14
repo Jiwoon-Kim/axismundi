@@ -45,6 +45,21 @@ function axismundi_cal_has_object_projections() : bool {
 }
 
 /**
+ * Whether the Activity ledger is present.
+ *
+ * Participation needs it and time does not, which is why this is its own question rather than part
+ * of `federation_ready()`. A `Join` is an Activity before it is a row: the row is a projection kept
+ * so screens do not have to replay the ledger, and recording the state without the Activity would
+ * make the projection the original -- leaving nothing to federate, nothing to `Undo`, and no answer
+ * to who said what when.
+ *
+ * @return bool
+ */
+function axismundi_cal_has_activities() : bool {
+	return defined( 'AXISMUNDI_ACTIVITIES_VERSION' ) && function_exists( 'axismundi_act_record_source_activity' );
+}
+
+/**
  * Whether the Actor-dependent surfaces may be registered.
  *
  * One question with one answer, so the projection, the REST API and the ActivityPub collection

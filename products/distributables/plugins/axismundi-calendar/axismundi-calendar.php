@@ -69,6 +69,7 @@ require_once __DIR__ . '/includes/system-items.php';
 require_once __DIR__ . '/includes/holiday-concepts.php';
 require_once __DIR__ . '/includes/admin-calendars.php';
 require_once __DIR__ . '/includes/admin-workspace.php';
+require_once __DIR__ . '/includes/admin-participation.php';
 require_once __DIR__ . '/includes/admin-sharing.php';
 require_once __DIR__ . '/includes/admin-system-items.php';
 require_once __DIR__ . '/includes/admin-system-import.php';

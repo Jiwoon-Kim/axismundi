@@ -120,9 +120,14 @@ function axismundi_cal_rest_join( WP_REST_Request $request ) {
 /**
  * Take back a request nobody has answered.
  *
- * `DELETE` on the request rather than a `leave` route. Whether cancelling an acceptance is
- * `Leave(Event)` or `Undo(Join)` is not settled, and a route named for one of them would decide it --
- * so this addresses the request, which is the only thing this slice can honestly retract.
+ * Withdrawing a request, and nothing wider. The HTTP verb is a command shape and says nothing about
+ * ActivityStreams: what this records is `Undo(Join)`, never AS2 `Delete`, which means destroying an
+ * Object and would be a different claim entirely.
+ *
+ * It refuses once there is an answer. Whether cancelling an acceptance is `Undo(Join)` or
+ * `Leave(Event)` is undecided, so accepting one here would settle it by accident and federate the
+ * guess. Anybody naming this in a screen or a document should call it taking a request back rather
+ * than leaving or cancelling attendance, so the verb does not quietly claim the meaning either.
  *
  * @param WP_REST_Request $request Request.
  * @return WP_REST_Response|WP_Error

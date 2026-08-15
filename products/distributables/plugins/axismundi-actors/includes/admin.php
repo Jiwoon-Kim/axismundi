@@ -243,7 +243,7 @@ function axismundi_actors_render_managed_actors_page() : void {
 	$moderated_groups = function_exists( 'axismundi_forum_moderated_communities' )
 		? axismundi_forum_moderated_communities( $user_id )
 		: axismundi_actors_list_manageable_groups( $user_id );
-	$all_groups       = $is_site_admin ? axismundi_actors_list_all_managed_groups() : array();
+	$all_groups       = $is_site_admin ? axismundi_actors_list_all_managed_actors() : array();
 	$selected_id = isset( $_GET['group_id'] ) ? absint( $_GET['group_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only selection.
 	$selected = $selected_id > 0 ? axismundi_actors_get_by_identity( $selected_id ) : null;
 	$selected_is_manager = $selected instanceof Axismundi_Actor && axismundi_actors_can_manage( $selected, $user_id );
@@ -292,7 +292,7 @@ function axismundi_actors_render_managed_actors_page() : void {
 			<?php if ( current_user_can( 'edit_posts' ) ) : ?>
 			<h2><?php esc_html_e( 'Create a managed actor', 'axismundi-actors' ); ?></h2>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-				<input type="hidden" name="action" value="axismundi_actors_create_managed_group">
+				<input type="hidden" name="action" value="axismundi_actors_create_managed_actor">
 				<?php wp_nonce_field( 'ax_actors_create_managed_group' ); ?>
 				<table class="form-table" role="presentation">
 					<tr>
@@ -1185,9 +1185,9 @@ function axismundi_actors_handle_set_visibility() : void {
 add_action( 'admin_post_axismundi_actors_set_visibility', 'axismundi_actors_handle_set_visibility' );
 
 /** Create a managed Group owned by the current user. */
-function axismundi_actors_handle_create_managed_group() : void {
+function axismundi_actors_handle_create_managed_actor() : void {
 	if ( ! current_user_can( 'edit_posts' ) ) {
-		wp_die( esc_html__( 'You cannot create Groups.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
+		wp_die( esc_html__( 'You cannot create managed actors.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
 	}
 	check_admin_referer( 'ax_actors_create_managed_group' );
 	$handle = isset( $_POST['handle'] ) ? sanitize_text_field( wp_unslash( $_POST['handle'] ) ) : '';
@@ -1200,7 +1200,7 @@ function axismundi_actors_handle_create_managed_group() : void {
 	 * not silently start producing a different kind of actor.
 	 */
 	$type = isset( $_POST['actor_type'] ) ? sanitize_text_field( wp_unslash( $_POST['actor_type'] ) ) : 'Group';
-	$actor = axismundi_actors_create_managed_group(
+	$actor = axismundi_actors_create_managed_actor(
 		array(
 			'owner_user_id'      => get_current_user_id(),
 			'preferred_username' => $handle,
@@ -1226,7 +1226,7 @@ function axismundi_actors_handle_create_managed_group() : void {
 	axismundi_actors_profile_updated( $actor->get_identity_id() );
 	axismundi_actors_redirect_result( axismundi_actors_managed_actors_admin_url( $actor->get_identity_id() ), true );
 }
-add_action( 'admin_post_axismundi_actors_create_managed_group', 'axismundi_actors_handle_create_managed_group' );
+add_action( 'admin_post_axismundi_actors_create_managed_actor', 'axismundi_actors_handle_create_managed_actor' );
 
 /** Change a managed Group's public lifecycle state through its manager relation. */
 function axismundi_actors_handle_set_managed_group_visibility() : void {

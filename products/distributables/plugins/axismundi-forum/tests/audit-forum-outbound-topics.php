@@ -72,7 +72,7 @@ try {
 		$author = axismundi_actors_get_by_identity( $author->get_identity_id() );
 	}
 	$group = ax_fot_remote_group( $ax_fot_identity_ids, 'community_' . strtolower( wp_generate_password( 7, false, false ) ) );
-	$local_group = axismundi_actors_create_managed_group(
+	$local_group = axismundi_actors_create_managed_actor(
 		array(
 			'owner_user_id'      => $author_user,
 			'preferred_username' => 'local_' . strtolower( wp_generate_password( 7, false, false ) ),
@@ -83,7 +83,7 @@ try {
 		$ax_fot_identity_ids[] = $local_group->get_identity_id();
 	}
 	$joined_owner = ax_fot_user( $ax_fot_user_ids );
-	$joined_group = axismundi_actors_create_managed_group(
+	$joined_group = axismundi_actors_create_managed_actor(
 		array(
 			'owner_user_id'      => $joined_owner,
 			'preferred_username' => 'joined_' . strtolower( wp_generate_password( 7, false, false ) ),

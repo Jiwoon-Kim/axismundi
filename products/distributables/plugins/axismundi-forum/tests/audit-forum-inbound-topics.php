@@ -84,7 +84,7 @@ function ax_fit_create( Axismundi_Actor $author, string $object_uri, array $obje
 
 try {
 	$owner = ax_fit_user( $ax_fit_user_ids );
-	$group = axismundi_actors_create_managed_group( array( 'owner_user_id' => $owner, 'preferred_username' => 'axfit' . strtolower( wp_generate_password( 7, false, false ) ), 'status' => 'public' ) );
+	$group = axismundi_actors_create_managed_actor( array( 'owner_user_id' => $owner, 'preferred_username' => 'axfit' . strtolower( wp_generate_password( 7, false, false ) ), 'status' => 'public' ) );
 	if ( $group instanceof Axismundi_Actor ) {
 		$ax_fit_identity_ids[] = $group->get_identity_id();
 	}

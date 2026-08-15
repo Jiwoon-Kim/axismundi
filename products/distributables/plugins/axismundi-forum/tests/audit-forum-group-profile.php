@@ -73,7 +73,7 @@ function ax_gp_profile_feed_with_args( Axismundi_Actor $actor, array $args ) : s
 
 /** @return Axismundi_Actor|WP_Error Throwaway public managed Group. */
 function ax_gp_group( int $owner, array &$identity_ids ) {
-	$group = axismundi_actors_create_managed_group(
+	$group = axismundi_actors_create_managed_actor(
 		array(
 			'owner_user_id'      => $owner,
 			'preferred_username' => 'axgp' . strtolower( wp_generate_password( 7, false, false ) ),

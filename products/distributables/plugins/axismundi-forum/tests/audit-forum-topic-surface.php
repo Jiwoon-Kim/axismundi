@@ -53,7 +53,7 @@ try {
 		axismundi_actors_set_status( $person->get_identity_id(), 'public' );
 		$person = axismundi_actors_get_by_identity( $person->get_identity_id() );
 	}
-	$group       = axismundi_actors_create_managed_group( array( 'owner_user_id' => $owner, 'preferred_username' => 'axtsg' . strtolower( wp_generate_password( 7, false, false ) ), 'status' => 'public' ) );
+	$group       = axismundi_actors_create_managed_actor( array( 'owner_user_id' => $owner, 'preferred_username' => 'axtsg' . strtolower( wp_generate_password( 7, false, false ) ), 'status' => 'public' ) );
 	$ax_ts_ids[] = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
 	$community   = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
 

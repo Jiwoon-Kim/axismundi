@@ -54,7 +54,7 @@ try {
 	list( $editor_user, $editor ) = ax_fmod_person( $ax_fmod_users, $ax_fmod_identities );
 	list( $site_editor_user, $site_editor ) = ax_fmod_person( $ax_fmod_users, $ax_fmod_identities );
 	list( $contributor_user, $contributor ) = ax_fmod_person( $ax_fmod_users, $ax_fmod_identities, 'contributor' );
-	$group = axismundi_actors_create_managed_group( array( 'owner_user_id' => $owner_user, 'preferred_username' => 'axfmodg' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'public' ) );
+	$group = axismundi_actors_create_managed_actor( array( 'owner_user_id' => $owner_user, 'preferred_username' => 'axfmodg' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'public' ) );
 	if ( $group instanceof Axismundi_Actor ) { $ax_fmod_identities[] = $group->get_identity_id(); }
 	$group_id = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
 	if ( $owner instanceof Axismundi_Actor && $group instanceof Axismundi_Actor ) { axismundi_act_follow_actor( $owner, $group ); }
@@ -488,7 +488,7 @@ try {
 	 * reader was looking for. This checks the case that motivated the separation, which is why
 	 * the fixture Group below is deliberately one nobody follows.
 	 */
-	$roster_group = axismundi_actors_create_managed_group( array( 'owner_user_id' => $owner_user, 'preferred_username' => 'axfmodr' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'public' ) );
+	$roster_group = axismundi_actors_create_managed_actor( array( 'owner_user_id' => $owner_user, 'preferred_username' => 'axfmodr' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'public' ) );
 	if ( $roster_group instanceof Axismundi_Actor ) {
 		$ax_fmod_identities[] = $roster_group->get_identity_id();
 		$previous_actor = $GLOBALS['axismundi_actors_profile_actor'] ?? null;

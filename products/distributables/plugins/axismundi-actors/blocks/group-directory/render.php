@@ -6,7 +6,7 @@ defined( 'ABSPATH' ) || exit;
 $ax_group_page  = max( 1, absint( get_query_var( 'page' ) ) );
 $ax_group_limit = 30;
 $ax_group_total = function_exists( 'axismundi_actors_count_public_groups' ) ? axismundi_actors_count_public_groups() : 0;
-$ax_group_items = function_exists( 'axismundi_actors_get_public_groups' ) ? axismundi_actors_get_public_groups( $ax_group_limit, ( $ax_group_page - 1 ) * $ax_group_limit ) : array();
+$ax_group_items = function_exists( 'axismundi_actors_get_public_managed_actors' ) ? axismundi_actors_get_public_managed_actors( $ax_group_limit, ( $ax_group_page - 1 ) * $ax_group_limit ) : array();
 // The Core-generated `wp-block-axismundi-*` wrapper is the stable hook; a hand-written alias
 // beside it named the same element twice and was styled by nothing.
 $ax_group_wrap  = get_block_wrapper_attributes();

@@ -115,8 +115,8 @@ try {
 
 	// -- A Calendar belonging to a managed Group -------------------------------------------------
 
-	if ( function_exists( 'axismundi_actors_create_managed_group' ) ) {
-		$ax_ac_group = axismundi_actors_create_managed_group(
+	if ( function_exists( 'axismundi_actors_create_managed_actor' ) ) {
+		$ax_ac_group = axismundi_actors_create_managed_actor(
 			array(
 				'preferred_username' => 'axacgrp' . strtolower( wp_generate_password( 6, false, false ) ),
 				'display_name'       => 'ACL fixture group',

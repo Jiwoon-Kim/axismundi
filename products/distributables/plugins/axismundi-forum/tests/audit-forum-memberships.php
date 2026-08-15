@@ -101,7 +101,7 @@ function ax_fm_remote_person( array &$identity_ids, string $suffix ) {
 try {
 	$owner    = ax_fm_user( $ax_fm_user_ids );
 	$stranger = ax_fm_user( $ax_fm_user_ids );
-	$group = axismundi_actors_create_managed_group(
+	$group = axismundi_actors_create_managed_actor(
 		array(
 			'owner_user_id'      => $owner,
 			'preferred_username' => 'axfm' . strtolower( wp_generate_password( 7, false, false ) ),

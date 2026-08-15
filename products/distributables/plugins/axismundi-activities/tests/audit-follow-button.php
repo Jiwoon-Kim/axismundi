@@ -62,7 +62,7 @@ try {
 	if ( ! $follower instanceof Axismundi_Actor || ! $target instanceof Axismundi_Actor ) {
 		throw new RuntimeException( 'Fixture Actors could not be created.' );
 	}
-	$group = axismundi_actors_create_managed_group(
+	$group = axismundi_actors_create_managed_actor(
 		array(
 			'owner_user_id'      => (int) $follower->get_local_user_id(),
 			'preferred_username' => 'axgroup_' . $ax_follow_button_suffix,

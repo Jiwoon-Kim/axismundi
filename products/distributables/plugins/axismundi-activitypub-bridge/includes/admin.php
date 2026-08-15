@@ -185,8 +185,8 @@ function axismundi_activitypub_bridge_public_actors() : array {
 	}
 	// Managed Groups sign and deliver their own Activities. They are not WP users,
 	// so the user loop above cannot represent their transport endpoints.
-	if ( function_exists( 'axismundi_actors_list_all_managed_groups' ) ) {
-		foreach ( axismundi_actors_list_all_managed_groups() as $group ) {
+	if ( function_exists( 'axismundi_actors_list_all_managed_actors' ) ) {
+		foreach ( axismundi_actors_list_all_managed_actors() as $group ) {
 			if ( $group instanceof Axismundi_Actor && 'public' === $group->get_status() ) {
 				$actors[ $group->get_uri() ] = $group;
 			}

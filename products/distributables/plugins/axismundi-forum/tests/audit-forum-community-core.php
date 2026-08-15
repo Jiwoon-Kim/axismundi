@@ -62,7 +62,7 @@ try {
 		axismundi_actors_set_status( $owner_actor->get_identity_id(), 'public' );
 		$owner_actor = axismundi_actors_get_by_identity( $owner_actor->get_identity_id() );
 	}
-	$group    = axismundi_actors_create_managed_group(
+	$group    = axismundi_actors_create_managed_actor(
 		array(
 			'owner_user_id'     => $owner,
 			'preferred_username' => 'axfc' . strtolower( wp_generate_password( 8, false, false ) ),

@@ -484,10 +484,10 @@ function axismundi_forum_rebuild_memberships( int $group_identity_id ) {
  * @return void
  */
 function axismundi_forum_rebuild_public_memberships_after_schema_install() : void {
-	if ( ! function_exists( 'axismundi_actors_list_all_managed_groups' ) ) {
+	if ( ! function_exists( 'axismundi_actors_list_all_managed_actors' ) ) {
 		return;
 	}
-	foreach ( axismundi_actors_list_all_managed_groups() as $group ) {
+	foreach ( axismundi_actors_list_all_managed_actors() as $group ) {
 		if ( $group instanceof Axismundi_Actor && axismundi_forum_public_community_group( $group ) ) {
 			axismundi_forum_rebuild_memberships( $group->get_identity_id() );
 		}

@@ -52,7 +52,7 @@ try {
 
 	// -- the kind travels ------------------------------------------------------------------------------
 
-	$ax_ms_org = axismundi_actors_create_managed_group(
+	$ax_ms_org = axismundi_actors_create_managed_actor(
 		array( 'owner_user_id' => $ax_ms_owner, 'preferred_username' => 'axms' . strtolower( wp_generate_password( 8, false, false ) ), 'actor_type' => 'Organization', 'status' => 'internal' )
 	);
 	ax_ms_assert(
@@ -64,7 +64,7 @@ try {
 	 * The default survives. Anything still posting the older form has no kind to send, and a missing
 	 * field must not quietly start producing a different sort of actor than it always did.
 	 */
-	$ax_ms_group = axismundi_actors_create_managed_group(
+	$ax_ms_group = axismundi_actors_create_managed_actor(
 		array( 'owner_user_id' => $ax_ms_owner, 'preferred_username' => 'axms' . strtolower( wp_generate_password( 8, false, false ) ), 'status' => 'internal' )
 	);
 	ax_ms_assert(
@@ -75,7 +75,7 @@ try {
 	ax_ms_assert(
 		$ax_ms_results,
 		'a kind nothing defines is refused rather than stored',
-		is_wp_error( axismundi_actors_create_managed_group( array( 'owner_user_id' => $ax_ms_owner, 'preferred_username' => 'axmsbad', 'actor_type' => 'Person' ) ) )
+		is_wp_error( axismundi_actors_create_managed_actor( array( 'owner_user_id' => $ax_ms_owner, 'preferred_username' => 'axmsbad', 'actor_type' => 'Person' ) ) )
 	);
 
 	$ax_ms_id = $ax_ms_org->get_identity_id();

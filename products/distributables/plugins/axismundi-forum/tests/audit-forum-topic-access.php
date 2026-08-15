@@ -54,7 +54,7 @@ try {
 	}
 	$member_actor = axismundi_actors_get_for_user( $member );
 
-	$group       = axismundi_actors_create_managed_group( array( 'owner_user_id' => $owner, 'preferred_username' => 'axtag' . strtolower( wp_generate_password( 7, false, false ) ), 'status' => 'public' ) );
+	$group       = axismundi_actors_create_managed_actor( array( 'owner_user_id' => $owner, 'preferred_username' => 'axtag' . strtolower( wp_generate_password( 7, false, false ) ), 'status' => 'public' ) );
 	$ax_ta_ids[] = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
 	$gid         = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
 	axismundi_forum_set_distribution_scope( $gid, $owner, 'members' );
@@ -112,7 +112,7 @@ try {
 	);
 
 	// A public community must not be caught by any of this.
-	$open_group  = axismundi_actors_create_managed_group( array( 'owner_user_id' => $owner, 'preferred_username' => 'axtao' . strtolower( wp_generate_password( 7, false, false ) ), 'status' => 'public' ) );
+	$open_group  = axismundi_actors_create_managed_actor( array( 'owner_user_id' => $owner, 'preferred_username' => 'axtao' . strtolower( wp_generate_password( 7, false, false ) ), 'status' => 'public' ) );
 	$ax_ta_ids[] = $open_group instanceof Axismundi_Actor ? $open_group->get_identity_id() : 0;
 	$open_topic  = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_FORUM_TOPIC_POST_TYPE, 'post_status' => 'publish', 'post_author' => $author, 'post_title' => 'Open Topic', 'post_content' => 'body' ) );
 	$ax_ta_posts[] = $open_topic;

@@ -157,14 +157,14 @@ try {
 	// A managed Group needs a real owner, and this audit runs with no current user.
 	$ax_aud_owner   = (int) wp_insert_user( array( 'user_login' => 'axaud_' . strtolower( wp_generate_password( 8, false, false ) ), 'user_pass' => wp_generate_password(), 'role' => 'administrator' ) );
 	$ax_aud_users[] = $ax_aud_owner;
-	$ax_aud_group = axismundi_actors_create_managed_group(
+	$ax_aud_group = axismundi_actors_create_managed_actor(
 		array( 'owner_user_id' => $ax_aud_owner, 'preferred_username' => 'axaud' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'internal' )
 	);
 	if ( $ax_aud_group instanceof Axismundi_Actor ) {
 		$ax_aud_identity_ids[] = $ax_aud_group->get_identity_id();
 	}
 	$ax_aud_group_uri  = $ax_aud_group instanceof Axismundi_Actor ? $ax_aud_group->get_uri() : '';
-	$ax_aud_second     = axismundi_actors_create_managed_group(
+	$ax_aud_second     = axismundi_actors_create_managed_actor(
 		array( 'owner_user_id' => $ax_aud_owner, 'preferred_username' => 'axaud' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'internal' )
 	);
 	if ( $ax_aud_second instanceof Axismundi_Actor ) {

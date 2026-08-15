@@ -196,8 +196,8 @@ try {
 
 	// -- A Group's calendar, and the people who manage the Group -------------------------------------------
 
-	if ( function_exists( 'axismundi_actors_create_managed_group' ) ) {
-		$ax_rw_group = axismundi_actors_create_managed_group(
+	if ( function_exists( 'axismundi_actors_create_managed_actor' ) ) {
+		$ax_rw_group = axismundi_actors_create_managed_actor(
 			array(
 				'preferred_username' => 'axrwgrp' . strtolower( wp_generate_password( 6, false, false ) ),
 				'display_name'       => 'Write fixture group',

@@ -55,7 +55,7 @@ try {
 
 	// A managed Group is a first-class actor: managed scope, Group type, no WP user,
 	// and it resolves through the same handle/uuid routes a Person does.
-	$group = axismundi_actors_create_managed_group(
+	$group = axismundi_actors_create_managed_actor(
 		array( 'owner_user_id' => $owner, 'preferred_username' => 'axmg' . strtolower( wp_generate_password( 6, false, false ) ) )
 	);
 	if ( $group instanceof Axismundi_Actor ) {
@@ -74,7 +74,7 @@ try {
 			&& axismundi_actors_get_by_uuid( $group->get_uuid() ) instanceof Axismundi_Actor
 	);
 
-	$public_group = axismundi_actors_create_managed_group(
+	$public_group = axismundi_actors_create_managed_actor(
 		array( 'owner_user_id' => $owner, 'preferred_username' => 'axmgpub' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'public' )
 	);
 	if ( $public_group instanceof Axismundi_Actor ) {
@@ -84,8 +84,8 @@ try {
 		$ax_mg_results,
 		'the public Group directory includes published managed Groups and excludes internal ones',
 		$public_group instanceof Axismundi_Actor
-			&& in_array( $public_group->get_identity_id(), array_map( static fn( Axismundi_Actor $actor ) : int => $actor->get_identity_id(), axismundi_actors_get_public_groups( 100 ) ), true )
-			&& ! in_array( $identity_id, array_map( static fn( Axismundi_Actor $actor ) : int => $actor->get_identity_id(), axismundi_actors_get_public_groups( 100 ) ), true )
+			&& in_array( $public_group->get_identity_id(), array_map( static fn( Axismundi_Actor $actor ) : int => $actor->get_identity_id(), axismundi_actors_get_public_managed_actors( 100 ) ), true )
+			&& ! in_array( $identity_id, array_map( static fn( Axismundi_Actor $actor ) : int => $actor->get_identity_id(), axismundi_actors_get_public_managed_actors( 100 ) ), true )
 	);
 
 	// Creation seeds exactly one owner -- there is never an observable ownerless
@@ -98,7 +98,7 @@ try {
 	);
 
 	// A missing/invalid owner is refused before any actor is created.
-	$no_owner = axismundi_actors_create_managed_group( array( 'preferred_username' => 'axmgno' ) );
+	$no_owner = axismundi_actors_create_managed_actor( array( 'preferred_username' => 'axmgno' ) );
 	ax_mg_assert(
 		$ax_mg_results,
 		'creating a managed Group without a valid owner fails closed',
@@ -138,7 +138,7 @@ try {
 	);
 
 	$claimed = axismundi_actors_claim_managed_group( $identity_id, $admin );
-	$all_groups = axismundi_actors_list_all_managed_groups();
+	$all_groups = axismundi_actors_list_all_managed_actors();
 	ax_mg_assert(
 		$ax_mg_results,
 		'a site administrator explicitly claims any local managed Group as a manager without changing ordinary can_manage rules',

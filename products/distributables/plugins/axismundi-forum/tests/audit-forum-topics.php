@@ -73,7 +73,7 @@ function ax_ft_topic( array &$post_ids, int $author, string $title ) : int {
 try {
 	$owner    = ax_ft_user( $ax_ft_user_ids );
 	$stranger = ax_ft_user( $ax_ft_user_ids );
-	$group = axismundi_actors_create_managed_group(
+	$group = axismundi_actors_create_managed_actor(
 		array(
 			'owner_user_id'      => $owner,
 			'preferred_username' => 'axft' . strtolower( wp_generate_password( 6, false, false ) ),

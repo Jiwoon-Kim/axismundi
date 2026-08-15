@@ -55,7 +55,7 @@ try {
 		axismundi_actors_set_status( $local->get_identity_id(), 'public' );
 		$local = axismundi_actors_get_for_user( $ax_bridge_delivery_user );
 	}
-	$managed_group = axismundi_actors_create_managed_group(
+	$managed_group = axismundi_actors_create_managed_actor(
 		array(
 			'owner_user_id'      => $ax_bridge_delivery_user,
 			'preferred_username' => 'bridge_group_' . strtolower( wp_generate_password( 8, false, false ) ),

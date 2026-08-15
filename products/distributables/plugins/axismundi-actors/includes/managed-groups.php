@@ -40,7 +40,11 @@ function axismundi_actors_manager_role_rank( string $role ) : int {
 }
 
 /**
- * Create a managed Group actor and seed its creator as the first `owner`.
+ * Create a managed actor and seed its creator as the first `owner`.
+ *
+ * `Group`, `Service` and `Organization` are the same kind of thing to administer -- an identity
+ * nobody logs in as, run through the manager relation, publishing under a handle of its own. They
+ * differ in what they mean to a peer, which is why the type is a parameter and not three functions.
  *
  * The actor is created through the same local-actor path Person/Site actors use
  * (`actor_scope='managed'`, `actor_type='Group'`, `local_user_id=NULL`), then the
@@ -51,7 +55,7 @@ function axismundi_actors_manager_role_rank( string $role ) : int {
  * @param array<string,mixed> $args owner_user_id (required), preferred_username, actor_type (default Group), status.
  * @return Axismundi_Actor|WP_Error
  */
-function axismundi_actors_create_managed_group( array $args ) {
+function axismundi_actors_create_managed_actor( array $args ) {
 	global $wpdb;
 	$owner_user_id = (int) ( $args['owner_user_id'] ?? 0 );
 	if ( $owner_user_id <= 0 || ! get_userdata( $owner_user_id ) ) {
@@ -172,7 +176,7 @@ function axismundi_actors_list_manageable_groups( int $user_id, ?string $min_rol
 }
 
 /** @return Axismundi_Actor[] Every local managed Group, for site-administrator recovery only. */
-function axismundi_actors_list_all_managed_groups() : array {
+function axismundi_actors_list_all_managed_actors() : array {
 	global $wpdb;
 	$table = axismundi_actors_actors_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- site-admin recovery list of local managed identities.
@@ -198,7 +202,7 @@ function axismundi_actors_list_all_managed_groups() : array {
  * @param int $offset Result offset.
  * @return Axismundi_Actor[]
  */
-function axismundi_actors_get_public_groups( int $limit = 50, int $offset = 0 ) : array {
+function axismundi_actors_get_public_managed_actors( int $limit = 50, int $offset = 0 ) : array {
 	global $wpdb;
 	$limit      = max( 1, min( 100, $limit ) );
 	$offset     = max( 0, $offset );

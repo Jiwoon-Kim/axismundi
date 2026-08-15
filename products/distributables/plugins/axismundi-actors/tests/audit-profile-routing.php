@@ -146,7 +146,7 @@ try {
 	 * path because the query var that carries it is set by the rewrite rule this function
 	 * stands in for, so on an install missing those rules the var is never there to read.
 	 */
-	$ax_profile_group = axismundi_actors_create_managed_group(
+	$ax_profile_group = axismundi_actors_create_managed_actor(
 		array(
 			'owner_user_id'      => $admin_id,
 			'preferred_username' => 'ax_profile_forum',

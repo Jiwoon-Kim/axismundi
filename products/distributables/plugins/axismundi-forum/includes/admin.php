@@ -183,7 +183,7 @@ function axismundi_forum_render_group_admin_section( Axismundi_Actor $group ) : 
 		echo '</ul>';
 		$pages = max( 1, (int) ceil( (int) $members['total'] / 50 ) );
 		if ( $pages > 1 ) {
-			echo '<div class="tablenav"><div class="tablenav-pages">' . wp_kses_post( paginate_links( array( 'base' => add_query_arg( 'ax_forum_member_page', '%#%', axismundi_actors_managed_groups_admin_url( $group_id ) ), 'format' => '', 'current' => $member_page, 'total' => $pages ) ) ) . '</div></div>';
+			echo '<div class="tablenav"><div class="tablenav-pages">' . wp_kses_post( paginate_links( array( 'base' => add_query_arg( 'ax_forum_member_page', '%#%', axismundi_actors_managed_actors_admin_url( $group_id ) ), 'format' => '', 'current' => $member_page, 'total' => $pages ) ) ) . '</div></div>';
 		}
 	}
 	if ( $can_delegate ) {
@@ -283,7 +283,7 @@ function axismundi_forum_group_admin_redirect( int $group_id, $result ) : void {
 	if ( is_wp_error( $result ) ) {
 		set_transient( 'axismundi_forum_group_notice_' . $group_id, $result->get_error_message(), 60 );
 	}
-	wp_safe_redirect( axismundi_actors_managed_groups_admin_url( $group_id ) );
+	wp_safe_redirect( axismundi_actors_managed_actors_admin_url( $group_id ) );
 	exit;
 }
 

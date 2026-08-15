@@ -54,9 +54,15 @@ function axismundi_actors_remote_admin_url() : string {
 	return add_query_arg( 'page', 'axismundi-remote-actors', admin_url( 'users.php' ) );
 }
 
-/** @return string Managed Group administration URL, optionally selecting one Group. */
-function axismundi_actors_managed_groups_admin_url( int $identity_id = 0 ) : string {
-	$args = array( 'page' => 'axismundi-managed-groups' );
+/**
+ * @return string Managed actor administration URL, optionally selecting one actor.
+ *
+ * One screen for every managed actor. A Group and an Organization differ in what they mean on the
+ * wire, not in how they are administered: both are actors nobody logs in as, both are run through
+ * the manager relation, and both publish under a handle of their own.
+ */
+function axismundi_actors_managed_actors_admin_url( int $identity_id = 0 ) : string {
+	$args = array( 'page' => 'axismundi-managed-actors' );
 	if ( $identity_id > 0 ) {
 		$args['group_id'] = $identity_id;
 	}
@@ -67,7 +73,7 @@ function axismundi_actors_managed_groups_admin_url( int $identity_id = 0 ) : str
 /** @return string The appropriate editor return URL for any local Actor scope. */
 function axismundi_actors_management_back_url( Axismundi_Actor $actor ) : string {
 	if ( $actor->is_managed() ) {
-		return axismundi_actors_managed_groups_admin_url( $actor->get_identity_id() );
+		return axismundi_actors_managed_actors_admin_url( $actor->get_identity_id() );
 	}
 	if ( 'site' === $actor->get_scope() ) {
 		return admin_url( 'options-general.php?page=axismundi-actor-site' );
@@ -208,14 +214,14 @@ function axismundi_actors_register_admin_pages() : void {
 		'axismundi-remote-actors',
 		'axismundi_actors_render_remote_admin_page'
 	);
-	$managed_groups_parent = current_user_can( 'list_users' ) ? 'users.php' : 'profile.php';
+	$managed_actors_parent = current_user_can( 'list_users' ) ? 'users.php' : 'profile.php';
 	add_submenu_page(
-		$managed_groups_parent,
-		__( 'Managed Groups', 'axismundi-actors' ),
-		__( 'Managed Groups', 'axismundi-actors' ),
+		$managed_actors_parent,
+		__( 'Managed actors', 'axismundi-actors' ),
+		__( 'Managed actors', 'axismundi-actors' ),
 		'read',
-		'axismundi-managed-groups',
-		'axismundi_actors_render_managed_groups_page'
+		'axismundi-managed-actors',
+		'axismundi_actors_render_managed_actors_page'
 	);
 	add_options_page(
 		__( 'Actor Profile', 'axismundi-actors' ),
@@ -227,10 +233,10 @@ function axismundi_actors_register_admin_pages() : void {
 }
 add_action( 'admin_menu', 'axismundi_actors_register_admin_pages' );
 
-/** Render the managed Group creation and profile-management surface. */
-function axismundi_actors_render_managed_groups_page() : void {
+/** Render the managed actor creation and profile-management surface. */
+function axismundi_actors_render_managed_actors_page() : void {
 	if ( ! current_user_can( 'read' ) ) {
-		wp_die( esc_html__( 'You cannot manage Groups.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
+		wp_die( esc_html__( 'You cannot manage actors.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
 	}
 	$user_id = get_current_user_id();
 	$is_site_admin = current_user_can( 'manage_options' );
@@ -250,10 +256,10 @@ function axismundi_actors_render_managed_groups_page() : void {
 	$is_selected_public = $selected instanceof Axismundi_Actor && axismundi_actors_is_public_profile( $selected );
 	?>
 	<div class="wrap">
-		<h1><?php esc_html_e( 'Managed Groups', 'axismundi-actors' ); ?></h1>
+		<h1><?php esc_html_e( 'Managed actors', 'axismundi-actors' ); ?></h1>
 		<?php axismundi_actors_admin_notice(); ?>
 		<?php if ( $selected instanceof Axismundi_Actor ) : ?>
-			<p><a href="<?php echo esc_url( axismundi_actors_managed_groups_admin_url() ); ?>">&larr; <?php esc_html_e( 'All managed Groups', 'axismundi-actors' ); ?></a></p>
+			<p><a href="<?php echo esc_url( axismundi_actors_managed_actors_admin_url() ); ?>">&larr; <?php esc_html_e( 'All managed actors', 'axismundi-actors' ); ?></a></p>
 			<h2><?php echo esc_html( $selected->get_display_name() ?: '@' . $selected->get_preferred_username() ); ?></h2>
 			<table class="form-table" role="presentation">
 				<tr><th scope="row"><?php esc_html_e( 'Handle', 'axismundi-actors' ); ?></th><td><code>@<?php echo esc_html( $selected->get_preferred_username() ); ?></code></td></tr>
@@ -277,23 +283,50 @@ function axismundi_actors_render_managed_groups_page() : void {
 			<?php axismundi_actors_media_form( $selected ); ?>
 			<?php axismundi_actors_text_form( $selected ); ?>
 			<?php axismundi_actors_profile_fields_form( $selected ); ?>
+			<?php axismundi_actors_managers_form( $selected ); ?>
 			<?php do_action( 'axismundi_actors_managed_group_admin_sections', $selected ); ?>
 			<?php elseif ( $selected_is_moderator ) : ?>
 			<?php do_action( 'axismundi_actors_managed_group_admin_sections', $selected ); ?>
 			<?php endif; ?>
 		<?php else : ?>
 			<?php if ( current_user_can( 'edit_posts' ) ) : ?>
-			<h2><?php esc_html_e( 'Create Group', 'axismundi-actors' ); ?></h2>
+			<h2><?php esc_html_e( 'Create a managed actor', 'axismundi-actors' ); ?></h2>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="axismundi_actors_create_managed_group">
 				<?php wp_nonce_field( 'ax_actors_create_managed_group' ); ?>
 				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Kind', 'axismundi-actors' ); ?></th>
+						<td>
+							<?php
+							/*
+							 * Permanent, because the handle and the identity are. What a peer has cached as an
+							 * Organization does not quietly become a Group, and the three mean different things
+							 * on the wire: a Group has members and carries their posts, an Organization is a
+							 * single entity that is not a person, and a Service publishes on a system's behalf.
+							 */
+							foreach (
+								array(
+									'Organization' => __( 'Organization — a company, institution, department, or association', 'axismundi-actors' ),
+									'Group'        => __( 'Group — a community whose members post to it', 'axismundi-actors' ),
+									'Service'      => __( 'Service — an automated publisher, such as a data feed', 'axismundi-actors' ),
+								) as $ax_kind => $ax_kind_label
+							) :
+								?>
+								<label style="display:block;margin-bottom:.35em">
+									<input type="radio" name="actor_type" value="<?php echo esc_attr( $ax_kind ); ?>"<?php checked( 'Organization', $ax_kind ); ?>>
+									<?php echo esc_html( $ax_kind_label ); ?>
+								</label>
+							<?php endforeach; ?>
+							<p class="description"><?php esc_html_e( 'Cannot be changed later, because peers cache what this actor is.', 'axismundi-actors' ); ?></p>
+						</td>
+					</tr>
 					<tr><th scope="row"><label for="ax-managed-group-handle"><?php esc_html_e( 'Handle', 'axismundi-actors' ); ?></label></th><td><span>@</span><input id="ax-managed-group-handle" name="handle" type="text" class="regular-text" required><p class="description"><?php esc_html_e( 'Permanent federated address. Lowercase letters, numbers, and underscores only.', 'axismundi-actors' ); ?></p></td></tr>
 					<tr><th scope="row"><label for="ax-managed-group-name"><?php esc_html_e( 'Name', 'axismundi-actors' ); ?></label></th><td><input id="ax-managed-group-name" name="name" type="text" class="regular-text" required></td></tr>
 					<tr><th scope="row"><label for="ax-managed-group-summary"><?php esc_html_e( 'Summary', 'axismundi-actors' ); ?></label></th><td><textarea id="ax-managed-group-summary" name="summary" rows="4" class="large-text"></textarea></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Visibility', 'axismundi-actors' ); ?></th><td><label><input type="radio" name="visibility" value="public" checked> <?php esc_html_e( 'Public', 'axismundi-actors' ); ?></label><br><label><input type="radio" name="visibility" value="internal"> <?php esc_html_e( 'Internal', 'axismundi-actors' ); ?></label></td></tr>
 				</table>
-				<?php submit_button( __( 'Create Group', 'axismundi-actors' ) ); ?>
+				<?php submit_button( __( 'Create actor', 'axismundi-actors' ) ); ?>
 			</form>
 			<?php endif; ?>
 			<h2><?php esc_html_e( 'Groups I moderate', 'axismundi-actors' ); ?></h2>
@@ -301,14 +334,14 @@ function axismundi_actors_render_managed_groups_page() : void {
 				<p class="description"><?php esc_html_e( 'You do not moderate any communities yet.', 'axismundi-actors' ); ?></p>
 			<?php else : ?>
 				<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Name', 'axismundi-actors' ); ?></th><th><?php esc_html_e( 'Handle', 'axismundi-actors' ); ?></th><th><?php esc_html_e( 'Status', 'axismundi-actors' ); ?></th></tr></thead><tbody>
-				<?php foreach ( $moderated_groups as $group ) : ?><tr><td><a href="<?php echo esc_url( axismundi_actors_managed_groups_admin_url( $group->get_identity_id() ) ); ?>"><?php echo esc_html( $group->get_display_name() ?: __( 'Untitled Group', 'axismundi-actors' ) ); ?></a></td><td><code>@<?php echo esc_html( $group->get_preferred_username() ); ?></code></td><td><?php echo esc_html( axismundi_actors_status_label( $group ) ); ?></td></tr><?php endforeach; ?>
+				<?php foreach ( $moderated_groups as $group ) : ?><tr><td><a href="<?php echo esc_url( axismundi_actors_managed_actors_admin_url( $group->get_identity_id() ) ); ?>"><?php echo esc_html( $group->get_display_name() ?: __( 'Untitled Group', 'axismundi-actors' ) ); ?></a></td><td><code>@<?php echo esc_html( $group->get_preferred_username() ); ?></code></td><td><?php echo esc_html( axismundi_actors_status_label( $group ) ); ?></td></tr><?php endforeach; ?>
 				</tbody></table>
 			<?php endif; ?>
 			<?php if ( $is_site_admin && ! empty( $all_groups ) ) : ?>
-				<h2><?php esc_html_e( 'All local managed Groups', 'axismundi-actors' ); ?></h2>
+				<h2><?php esc_html_e( 'All local managed actors', 'axismundi-actors' ); ?></h2>
 				<p class="description"><?php esc_html_e( 'Site-administrator recovery list. Register yourself as manager from a Group record before changing it.', 'axismundi-actors' ); ?></p>
 				<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Name', 'axismundi-actors' ); ?></th><th><?php esc_html_e( 'Handle', 'axismundi-actors' ); ?></th><th><?php esc_html_e( 'Status', 'axismundi-actors' ); ?></th></tr></thead><tbody>
-				<?php foreach ( $all_groups as $group ) : ?><tr><td><a href="<?php echo esc_url( axismundi_actors_managed_groups_admin_url( $group->get_identity_id() ) ); ?>"><?php echo esc_html( $group->get_display_name() ?: __( 'Untitled Group', 'axismundi-actors' ) ); ?></a></td><td><code>@<?php echo esc_html( $group->get_preferred_username() ); ?></code></td><td><?php echo esc_html( axismundi_actors_status_label( $group ) ); ?></td></tr><?php endforeach; ?>
+				<?php foreach ( $all_groups as $group ) : ?><tr><td><a href="<?php echo esc_url( axismundi_actors_managed_actors_admin_url( $group->get_identity_id() ) ); ?>"><?php echo esc_html( $group->get_display_name() ?: __( 'Untitled Group', 'axismundi-actors' ) ); ?></a></td><td><code>@<?php echo esc_html( $group->get_preferred_username() ); ?></code></td><td><?php echo esc_html( axismundi_actors_status_label( $group ) ); ?></td></tr><?php endforeach; ?>
 				</tbody></table>
 			<?php endif; ?>
 		<?php endif; ?>
@@ -1183,14 +1216,21 @@ function axismundi_actors_handle_create_managed_group() : void {
 	$name = isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '';
 	$summary = isset( $_POST['summary'] ) ? wp_kses_post( wp_unslash( $_POST['summary'] ) ) : '';
 	$status = isset( $_POST['visibility'] ) && 'internal' === $_POST['visibility'] ? 'internal' : 'public';
+	/*
+	 * Validated by the model rather than trusted from the form, and defaulting to `Group` so that
+	 * anything still posting the older shape keeps creating what it always did -- a missing field must
+	 * not silently start producing a different kind of actor.
+	 */
+	$type = isset( $_POST['actor_type'] ) ? sanitize_text_field( wp_unslash( $_POST['actor_type'] ) ) : 'Group';
 	$actor = axismundi_actors_create_managed_group(
 		array(
 			'owner_user_id'      => get_current_user_id(),
 			'preferred_username' => $handle,
+			'actor_type'         => $type,
 			'status'             => $status,
 		)
 	);
-	$back = axismundi_actors_managed_groups_admin_url();
+	$back = axismundi_actors_managed_actors_admin_url();
 	if ( is_wp_error( $actor ) ) {
 		axismundi_actors_redirect_result( $back, $actor );
 	}
@@ -1206,7 +1246,7 @@ function axismundi_actors_handle_create_managed_group() : void {
 		}
 	}
 	axismundi_actors_profile_updated( $actor->get_identity_id() );
-	axismundi_actors_redirect_result( axismundi_actors_managed_groups_admin_url( $actor->get_identity_id() ), true );
+	axismundi_actors_redirect_result( axismundi_actors_managed_actors_admin_url( $actor->get_identity_id() ), true );
 }
 add_action( 'admin_post_axismundi_actors_create_managed_group', 'axismundi_actors_handle_create_managed_group' );
 
@@ -1223,7 +1263,7 @@ function axismundi_actors_handle_set_managed_group_visibility() : void {
 	if ( $ok ) {
 		axismundi_actors_profile_updated( $identity_id );
 	}
-	axismundi_actors_redirect_result( axismundi_actors_managed_groups_admin_url( $identity_id ), $ok ? true : new WP_Error( 'ax_actors_status', __( 'Could not update visibility.', 'axismundi-actors' ) ) );
+	axismundi_actors_redirect_result( axismundi_actors_managed_actors_admin_url( $identity_id ), $ok ? true : new WP_Error( 'ax_actors_status', __( 'Could not update visibility.', 'axismundi-actors' ) ) );
 }
 add_action( 'admin_post_axismundi_actors_set_managed_group_visibility', 'axismundi_actors_handle_set_managed_group_visibility' );
 
@@ -1234,7 +1274,7 @@ function axismundi_actors_handle_claim_managed_group() : void {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		wp_die( esc_html__( 'You cannot claim this Group.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
 	}
-	axismundi_actors_redirect_result( axismundi_actors_managed_groups_admin_url( $identity_id ), axismundi_actors_claim_managed_group( $identity_id, get_current_user_id() ) );
+	axismundi_actors_redirect_result( axismundi_actors_managed_actors_admin_url( $identity_id ), axismundi_actors_claim_managed_group( $identity_id, get_current_user_id() ) );
 }
 add_action( 'admin_post_axismundi_actors_claim_managed_group', 'axismundi_actors_handle_claim_managed_group' );
 
@@ -1363,3 +1403,164 @@ function axismundi_actors_handle_set_follow_collections_visibility() : void {
 	axismundi_actors_redirect_result( $back, $result );
 }
 add_action( 'admin_post_axismundi_actors_set_follow_collections_visibility', 'axismundi_actors_handle_set_follow_collections_visibility' );
+
+/**
+ * Who runs one managed actor.
+ *
+ * Nobody logs in as an Organization. Everyone who publishes as it signs in with their own account
+ * and holds a role here, which is what keeps an action attributable to a person afterwards -- a
+ * shared password would make "who posted this" unanswerable, and revoking one person's access would
+ * mean changing everybody's.
+ *
+ * Delegating needs `manager`. An `editor` may publish as the actor but not decide who else can,
+ * because the authority to add people is what turns a role into a way of keeping it.
+ *
+ * @param Axismundi_Actor $actor Managed actor.
+ * @return void
+ */
+function axismundi_actors_managers_form( Axismundi_Actor $actor ) : void {
+	if ( ! $actor->is_managed() ) {
+		return;
+	}
+	$identity_id  = $actor->get_identity_id();
+	$can_delegate = axismundi_actors_managed_actor_can_manage( $identity_id, get_current_user_id(), 'manager' );
+	$managers     = axismundi_actors_group_managers( $identity_id );
+	$roles        = array_keys( axismundi_actors_manager_roles() );
+	$owner_count  = axismundi_actors_managed_owner_count( $identity_id );
+	?>
+	<h2><?php esc_html_e( 'Managers', 'axismundi-actors' ); ?></h2>
+	<p class="description"><?php esc_html_e( 'Everyone here signs in with their own account and publishes as this actor. Nobody shares a password.', 'axismundi-actors' ); ?></p>
+	<table class="widefat striped">
+		<thead>
+			<tr>
+				<th scope="col"><?php esc_html_e( 'Who', 'axismundi-actors' ); ?></th>
+				<th scope="col"><?php esc_html_e( 'Role', 'axismundi-actors' ); ?></th>
+				<?php if ( $can_delegate ) : ?><th scope="col"><?php esc_html_e( 'Change', 'axismundi-actors' ); ?></th><?php endif; ?>
+			</tr>
+		</thead>
+		<tbody>
+		<?php foreach ( $managers as $ax_manager ) : ?>
+			<?php
+			$ax_user = get_userdata( (int) $ax_manager['user_id'] );
+			$ax_role = (string) $ax_manager['role'];
+			// The one row the form does not offer to change: an actor with no owner has nobody left who
+			// could appoint one, so the model refuses it and the screen does not pretend otherwise.
+			$ax_last_owner = 'owner' === $ax_role && 1 === $owner_count;
+			?>
+			<tr>
+				<td>
+					<?php
+					echo esc_html(
+						$ax_user instanceof WP_User
+							? $ax_user->display_name . ' (' . $ax_user->user_login . ')'
+							/* translators: %d: user ID of an account that no longer exists. */
+							: sprintf( __( 'Deleted account #%d', 'axismundi-actors' ), (int) $ax_manager['user_id'] )
+					);
+					?>
+				</td>
+				<td><?php echo esc_html( $ax_role ); ?></td>
+				<?php if ( $can_delegate ) : ?>
+				<td>
+					<?php if ( $ax_last_owner ) : ?>
+						<span class="description"><?php esc_html_e( 'The last owner stays.', 'axismundi-actors' ); ?></span>
+					<?php else : ?>
+						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline">
+							<?php wp_nonce_field( 'ax_actors_managers_' . $identity_id ); ?>
+							<input type="hidden" name="action" value="axismundi_actors_save_manager">
+							<input type="hidden" name="identity_id" value="<?php echo esc_attr( (string) $identity_id ); ?>">
+							<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) (int) $ax_manager['user_id'] ); ?>">
+							<select name="role">
+								<?php foreach ( $roles as $ax_role_option ) : ?>
+									<option value="<?php echo esc_attr( $ax_role_option ); ?>"<?php selected( $ax_role_option, $ax_role ); ?>><?php echo esc_html( $ax_role_option ); ?></option>
+								<?php endforeach; ?>
+							</select>
+							<button type="submit" class="button"><?php esc_html_e( 'Save', 'axismundi-actors' ); ?></button>
+						</form>
+						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline">
+							<?php wp_nonce_field( 'ax_actors_managers_' . $identity_id ); ?>
+							<input type="hidden" name="action" value="axismundi_actors_remove_manager">
+							<input type="hidden" name="identity_id" value="<?php echo esc_attr( (string) $identity_id ); ?>">
+							<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) (int) $ax_manager['user_id'] ); ?>">
+							<button type="submit" class="button button-link-delete"><?php esc_html_e( 'Remove', 'axismundi-actors' ); ?></button>
+						</form>
+					<?php endif; ?>
+				</td>
+				<?php endif; ?>
+			</tr>
+		<?php endforeach; ?>
+		</tbody>
+	</table>
+	<?php if ( $can_delegate ) : ?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<?php wp_nonce_field( 'ax_actors_managers_' . $identity_id ); ?>
+			<input type="hidden" name="action" value="axismundi_actors_save_manager">
+			<input type="hidden" name="identity_id" value="<?php echo esc_attr( (string) $identity_id ); ?>">
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row"><label for="ax-manager-login-<?php echo esc_attr( (string) $identity_id ); ?>"><?php esc_html_e( 'Add a manager', 'axismundi-actors' ); ?></label></th>
+					<td>
+						<input id="ax-manager-login-<?php echo esc_attr( (string) $identity_id ); ?>" name="user_login" type="text" class="regular-text" required>
+						<select name="role">
+							<?php foreach ( $roles as $ax_role_option ) : ?>
+								<option value="<?php echo esc_attr( $ax_role_option ); ?>"<?php selected( 'editor', $ax_role_option ); ?>><?php echo esc_html( $ax_role_option ); ?></option>
+							<?php endforeach; ?>
+						</select>
+						<p class="description"><?php esc_html_e( 'Username or email address of an existing account on this site.', 'axismundi-actors' ); ?></p>
+					</td>
+				</tr>
+			</table>
+			<?php submit_button( __( 'Add manager', 'axismundi-actors' ), 'secondary' ); ?>
+		</form>
+	<?php endif; ?>
+	<?php
+}
+
+/**
+ * Grant one manager role, or change one.
+ *
+ * The authority is re-established from the relation and not taken from the form that drew the
+ * button. The screen only renders these controls for a manager, but a POST can arrive from anywhere,
+ * and this is the door rather than the decoration on it.
+ *
+ * @return void
+ */
+function axismundi_actors_handle_save_manager() : void {
+	$identity_id = isset( $_POST['identity_id'] ) ? absint( $_POST['identity_id'] ) : 0;
+	check_admin_referer( 'ax_actors_managers_' . $identity_id );
+	if ( ! axismundi_actors_managed_actor_can_manage( $identity_id, get_current_user_id(), 'manager' ) ) {
+		wp_die( esc_html__( 'You cannot change who manages this actor.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
+	}
+	$back    = axismundi_actors_managed_actors_admin_url( $identity_id );
+	$role    = isset( $_POST['role'] ) ? sanitize_key( wp_unslash( $_POST['role'] ) ) : '';
+	$login   = isset( $_POST['user_login'] ) ? sanitize_text_field( wp_unslash( $_POST['user_login'] ) ) : '';
+	$user_id = isset( $_POST['user_id'] ) ? absint( $_POST['user_id'] ) : 0;
+	if ( $user_id <= 0 && '' !== $login ) {
+		$found = get_user_by( 'login', $login );
+		if ( ! $found instanceof WP_User ) {
+			$found = get_user_by( 'email', $login );
+		}
+		$user_id = $found instanceof WP_User ? (int) $found->ID : 0;
+	}
+	if ( $user_id <= 0 ) {
+		axismundi_actors_redirect_result( $back, new WP_Error( 'ax_actors_manager_user', __( 'No account on this site matches that name.', 'axismundi-actors' ) ) );
+	}
+	axismundi_actors_redirect_result( $back, axismundi_actors_add_manager( $identity_id, $user_id, $role ) );
+}
+add_action( 'admin_post_axismundi_actors_save_manager', 'axismundi_actors_handle_save_manager' );
+
+/**
+ * Revoke one manager.
+ *
+ * @return void
+ */
+function axismundi_actors_handle_remove_manager() : void {
+	$identity_id = isset( $_POST['identity_id'] ) ? absint( $_POST['identity_id'] ) : 0;
+	check_admin_referer( 'ax_actors_managers_' . $identity_id );
+	if ( ! axismundi_actors_managed_actor_can_manage( $identity_id, get_current_user_id(), 'manager' ) ) {
+		wp_die( esc_html__( 'You cannot change who manages this actor.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
+	}
+	$back    = axismundi_actors_managed_actors_admin_url( $identity_id );
+	$user_id = isset( $_POST['user_id'] ) ? absint( $_POST['user_id'] ) : 0;
+	axismundi_actors_redirect_result( $back, axismundi_actors_remove_manager( $identity_id, $user_id ) );
+}
+add_action( 'admin_post_axismundi_actors_remove_manager', 'axismundi_actors_handle_remove_manager' );

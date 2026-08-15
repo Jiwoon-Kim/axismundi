@@ -47,6 +47,7 @@ function axismundi_cal_event_get( int $post_id ) : ?array {
 		array(
 			'calendar_id'            => (int) $schedule['calendar_id'],
 			'timezone'               => (string) $schedule['timezone'],
+			'end_timezone'           => (string) $schedule['end_timezone'],
 			'starts_at'              => (string) $schedule['dtstart_local'],
 			'ends_at'                => (string) $schedule['dtend_local'],
 			'starts_at_gmt'          => (string) ( axismundi_cal_to_utc( (string) $schedule['dtstart_local'], (string) $schedule['timezone'] ) ?? '' ),
@@ -131,6 +132,7 @@ function axismundi_cal_event_save( int $post_id, array $fields ) {
 		'starts_at'        => 'dtstart_local',
 		'ends_at'          => 'dtend_local',
 		'timezone'         => 'timezone',
+		'end_timezone'     => 'end_timezone',
 		'display_end_time' => 'display_end_time',
 		'all_day'          => 'all_day',
 		'location_text'    => 'location_text',

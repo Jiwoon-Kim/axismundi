@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '40';
+const AXISMUNDI_CAL_DB_VERSION        = '41';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 const AXISMUNDI_CAL_SCHEMA_BAIL_OPTION = 'ax_cal_schema_bail';
 
@@ -371,6 +371,7 @@ function axismundi_cal_install_schema() : bool {
 			event_post_id bigint(20) unsigned NOT NULL,
 			calendar_id bigint(20) unsigned NOT NULL default 0,
 			timezone varchar(64) NOT NULL default '',
+			end_timezone varchar(64) NOT NULL default '',
 			all_day tinyint(1) unsigned NOT NULL default 0,
 			dtstart_local datetime NOT NULL default '0000-00-00 00:00:00',
 			dtend_local datetime NOT NULL default '0000-00-00 00:00:00',

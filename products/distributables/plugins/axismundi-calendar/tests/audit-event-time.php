@@ -470,6 +470,55 @@ try {
 		array( '2026-03-06 02:30:00', '2026-03-07 02:30:00', '2026-03-08 03:30:00', '2026-03-09 02:30:00' )
 			=== array_map( static fn( array $o ) : string => (string) $o['start_local'], $ax_et_ghost )
 	);
+	// -- an Event that ends somewhere else -----------------------------------------------------------------
+
+	/*
+	 * A flight leaves Seoul at 10:00 and lands in New York at 11:00 the same morning. Written in one
+	 * zone that is an event running backwards; stretched into the departure zone it is an arrival time
+	 * nobody would recognise. The second zone is stated by the author and never inferred, and the
+	 * ordinary case -- both ends in one zone -- stores nothing, so one fact stays in one column.
+	 */
+	$ax_et_flight = $ax_et_make(
+		$ax_et_posts,
+		'Seoul to New York',
+		array( 'timezone' => 'Asia/Seoul', 'endTimezone' => 'America/New_York', 'startsAt' => '2027-01-10 10:00:00', 'endsAt' => '2027-01-10 11:00:00' )
+	);
+	$ax_et_flight_schedule = axismundi_cal_schedule_for_event( $ax_et_flight );
+	$ax_et_flight_occ      = axismundi_cal_expand( $ax_et_flight_schedule, '2027-01-09 00:00:00', '2027-01-12 00:00:00' );
+	ax_et_assert(
+		$ax_et_results,
+		'an Event may land in another zone, and the arrival keeps the clock it arrives on',
+		'America/New_York' === (string) $ax_et_flight_schedule['end_timezone']
+			&& 1 === count( $ax_et_flight_occ )
+			&& '2027-01-10 11:00:00' === (string) $ax_et_flight_occ[0]['end_local']
+			&& 15 === (int) ( ( strtotime( $ax_et_flight_occ[0]['end_utc'] ) - strtotime( $ax_et_flight_occ[0]['start_utc'] ) ) / HOUR_IN_SECONDS )
+	);
+	// iCalendar states the two ends independently, so this needs no extension to travel.
+	$ax_et_flight_ics = implode( "
+", axismundi_cal_ics_vevent( $ax_et_flight_schedule, get_post( $ax_et_flight ) ) );
+	ax_et_assert(
+		$ax_et_results,
+		'and each end carries its own zone in the document',
+		str_contains( $ax_et_flight_ics, 'DTSTART;TZID=Asia/Seoul:20270110T100000' )
+			&& str_contains( $ax_et_flight_ics, 'DTEND;TZID=America/New_York:20270110T110000' )
+	);
+	/*
+	 * Refused rather than guessed at. A series ending in another zone has to answer what a recurrence
+	 * carries -- the civil arrival time, or the elapsed flight -- and those differ every time either
+	 * zone changes its clocks. Nobody has been asked, so nothing answers on their behalf.
+	 */
+	ax_et_assert(
+		$ax_et_results,
+		'a cross-zone Event cannot repeat until somebody says what a repeat would mean',
+		is_wp_error( axismundi_cal_event_save( $ax_et_flight, array( 'rrule' => 'FREQ=WEEKLY;COUNT=2' ) ) )
+	);
+	// Same zone at both ends stores nothing, so the ordinary Event keeps one fact in one place.
+	ax_et_assert(
+		$ax_et_results,
+		'an Event that ends where it started records no second zone at all',
+		'' === (string) axismundi_cal_schedule_for_event( $ax_et_abroad )['end_timezone']
+	);
+
 } finally {
 	wp_set_current_user( 0 );
 	foreach ( $ax_et_posts as $ax_et_post ) {

@@ -37,6 +37,7 @@ function axismundi_cal_rest_envelope( int $post_id ) : array {
 			'startsAt'                 => '',
 			'endsAt'                   => '',
 			'timezone'                 => '',
+			'endTimezone'              => '',
 			'allDay'                   => false,
 			'locations'                => array(),
 			'visibility'               => 'default',
@@ -60,6 +61,8 @@ function axismundi_cal_rest_envelope( int $post_id ) : array {
 		'startsAt'                 => (string) $envelope['starts_at'],
 		'endsAt'                   => (string) $envelope['ends_at'],
 		'timezone'                 => (string) $envelope['timezone'],
+		// Empty unless the author said the Event ends somewhere else; the ordinary case has one zone.
+		'endTimezone'              => (string) ( $envelope['end_timezone'] ?? '' ),
 		'allDay'                   => (bool) $envelope['all_day'],
 		/*
 		 * Plain text, and only plain text. A `Place` is the geodata plugin's object with its own
@@ -133,6 +136,7 @@ function axismundi_cal_rest_to_fields( array $value ) : array {
 		'startsAt'                 => 'starts_at',
 		'endsAt'                   => 'ends_at',
 		'timezone'                 => 'timezone',
+		'endTimezone'              => 'end_timezone',
 		'allDay'                   => 'all_day',
 		'locations'                => 'locations',
 		'visibility'               => 'visibility',
@@ -199,6 +203,7 @@ function axismundi_cal_register_rest_field() : void {
 					'transparency'             => array( 'type' => 'string' ),
 					'endsAt'                   => array( 'type' => 'string' ),
 					'timezone'                 => array( 'type' => 'string' ),
+					'endTimezone'              => array( 'type' => 'string' ),
 					'displayEndTime'           => array( 'type' => 'boolean' ),
 					'eventStatus'              => array( 'type' => 'string', 'enum' => axismundi_cal_event_statuses() ),
 					'joinMode'                 => array( 'type' => 'string', 'enum' => axismundi_cal_event_join_modes() ),

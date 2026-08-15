@@ -27,7 +27,7 @@ defined( 'ABSPATH' ) || exit;
  * or where it happens, and iCalendar clients treat a SEQUENCE bump as grounds to re-prompt every
  * attendee.
  */
-const AXISMUNDI_CAL_SEQUENCE_FIELDS = array( 'timezone', 'all_day', 'dtstart_local', 'dtend_local', 'rrule', 'location_place_id', 'location_text' );
+const AXISMUNDI_CAL_SEQUENCE_FIELDS = array( 'timezone', 'end_timezone', 'all_day', 'dtstart_local', 'dtend_local', 'rrule', 'location_place_id', 'location_text' );
 
 /**
  * Record that when-or-where changed, without a field of its own to compare.
@@ -143,9 +143,45 @@ function axismundi_cal_schedule_save( int $post_id, array $fields ) {
 	if ( is_wp_error( $start ) ) {
 		return $start;
 	}
-	$end = axismundi_cal_normalize_datetime( (string) ( $fields['dtend_local'] ?? ( $existing['dtend_local'] ?? '' ) ), $timezone );
+	/*
+	 * A second zone for the end, and only when somebody says so. A flight leaves Seoul at 10:00 and
+	 * lands in New York at 11:00 the same morning; written in one zone that is an event running
+	 * backwards, and stretched into the departure zone it is an arrival time nobody would recognise.
+	 *
+	 * Empty means "the same zone", which is the ordinary case and the only default. Storing the start
+	 * zone again when they match would make one fact true in two columns, and the day somebody edits
+	 * the zone of an Event is the day those two disagree.
+	 */
+	$end_timezone = trim( (string) ( $fields['end_timezone'] ?? ( $existing['end_timezone'] ?? '' ) ) );
+	if ( '' !== $end_timezone && ! in_array( $end_timezone, timezone_identifiers_list(), true ) ) {
+		return new WP_Error( 'ax_event_end_timezone', __( 'The end timezone must be an IANA identifier.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+	if ( $end_timezone === $timezone ) {
+		$end_timezone = '';
+	}
+	$end = axismundi_cal_normalize_datetime(
+		(string) ( $fields['dtend_local'] ?? ( $existing['dtend_local'] ?? '' ) ),
+		'' !== $end_timezone ? $end_timezone : $timezone
+	);
 	if ( is_wp_error( $end ) ) {
 		return $end;
+	}
+	/*
+	 * Refused with a rule rather than guessed at. A series ending in another zone has to answer what a
+	 * recurrence carries -- the civil end in the arrival zone, or the elapsed flight time -- and those
+	 * differ every time either zone changes its clocks. Nothing here has been asked that question, so
+	 * it is not answered on the author's behalf.
+	 */
+	if ( '' !== $end_timezone && '' !== trim( (string) ( $fields['rrule'] ?? ( $existing['rrule'] ?? '' ) ) ) ) {
+		return new WP_Error(
+			'ax_event_end_timezone_recurring',
+			__( 'An Event that ends in another timezone cannot repeat yet.', 'axismundi-calendar' ),
+			array( 'status' => 400 )
+		);
+	}
+	if ( '' !== $end_timezone && ! empty( $all_day ) ) {
+		// An all-day Event has no zone at all; a second one is a contradiction rather than a detail.
+		return new WP_Error( 'ax_event_end_timezone_all_day', __( 'An all-day Event has no timezone to end in.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
 	/*
 	 * FEP-8a8e requires `endTime` to be later than `startTime`. Refused rather than repaired: an
@@ -170,6 +206,7 @@ function axismundi_cal_schedule_save( int $post_id, array $fields ) {
 	$next = array(
 		'calendar_id'       => $calendar_id,
 		'timezone'          => $timezone,
+		'end_timezone'      => $end_timezone,
 		'all_day'           => $all_day,
 		'dtstart_local'     => $start['local'],
 		'dtend_local'       => $end['local'],

@@ -193,7 +193,14 @@ function axismundi_cal_ics_vevent( array $schedule, WP_Post $post ) : array {
 	$lines[] = 'LAST-MODIFIED:' . $stamp;
 	$lines[] = 'SUMMARY:' . axismundi_cal_ics_escape( wp_strip_all_tags( get_the_title( $post ) ) );
 	$lines[] = 'DTSTART' . $suffix . ':' . axismundi_cal_ics_local( (string) $schedule['dtstart_local'], $all_day );
-	$lines[] = 'DTEND' . $suffix . ':' . axismundi_cal_ics_local( (string) $schedule['dtend_local'], $all_day );
+	/*
+	 * The end carries its own zone when it has one. iCalendar states DTSTART and DTEND independently,
+	 * so an arrival in another zone is expressible here without any extension -- and writing it in the
+	 * departure zone would move the landing time by the offset between them.
+	 */
+	$end_zone   = trim( (string) ( $schedule['end_timezone'] ?? '' ) );
+	$end_suffix = $all_day || '' === $end_zone ? $suffix : ';TZID=' . $end_zone;
+	$lines[] = 'DTEND' . $end_suffix . ':' . axismundi_cal_ics_local( (string) $schedule['dtend_local'], $all_day );
 	$lines[] = 'URL:' . axismundi_cal_ics_escape( (string) get_permalink( $post ) );
 	/*
 	 * Whether holding this should make somebody look occupied. A calendar entry ordinarily does, so

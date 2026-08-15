@@ -276,9 +276,7 @@ function axismundi_cal_jscalendar_event( WP_Post $post ) {
 	 * in New York is one hour on the page and fifteen in the air, and publishing the first would put
 	 * the landing before the take-off.
 	 */
-	$duration = '' !== $end_zone
-		? axismundi_cal_elapsed_interval( $schedule )
-		: axismundi_cal_civil_interval( (string) $schedule['dtstart_local'], (string) $schedule['dtend_local'] );
+	$duration = axismundi_cal_schedule_duration( $schedule );
 
 	$event = array(
 		'@type'   => 'Event',

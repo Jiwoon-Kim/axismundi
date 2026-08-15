@@ -200,7 +200,20 @@ function axismundi_cal_ics_vevent( array $schedule, WP_Post $post ) : array {
 	 */
 	$end_zone   = trim( (string) ( $schedule['end_timezone'] ?? '' ) );
 	$end_suffix = $all_day || '' === $end_zone ? $suffix : ';TZID=' . $end_zone;
-	$lines[] = 'DTEND' . $end_suffix . ':' . axismundi_cal_ics_local( (string) $schedule['dtend_local'], $all_day );
+	/*
+	 * Derived from the start and the stored length rather than read from a second column, so the
+	 * document cannot disagree with the occurrences the same schedule expands to.
+	 */
+	$end_local = (string) $schedule['dtend_local'];
+	try {
+		$end_local = axismundi_cal_occurrence_end(
+			$schedule,
+			new DateTimeImmutable( (string) $schedule['dtstart_local'], new DateTimeZone( '' !== $tzid ? $tzid : 'UTC' ) )
+		)->format( 'Y-m-d H:i:s' );
+	} catch ( Exception $error ) {
+		$end_local = (string) $schedule['dtend_local'];
+	}
+	$lines[] = 'DTEND' . $end_suffix . ':' . axismundi_cal_ics_local( $end_local, $all_day );
 	$lines[] = 'URL:' . axismundi_cal_ics_escape( (string) get_permalink( $post ) );
 	/*
 	 * Whether holding this should make somebody look occupied. A calendar entry ordinarily does, so

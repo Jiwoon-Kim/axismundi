@@ -71,7 +71,7 @@ function axismundi_cal_expand( array $schedule, string $from_utc, string $to_utc
 	 * to be the two civil hours between them; where that lands in real time is the zone's business,
 	 * and it answers once.
 	 */
-	$duration = axismundi_cal_civil_interval( (string) $schedule['dtstart_local'], (string) $schedule['dtend_local'] );
+	$duration = axismundi_cal_schedule_duration( $schedule );
 
 	$rrule = trim( (string) ( $schedule['rrule'] ?? '' ) );
 	if ( '' === $rrule ) {
@@ -477,23 +477,11 @@ function axismundi_cal_schedule_zone( array $schedule ) : ?DateTimeZone {
  */
 function axismundi_cal_build_occurrence( array $schedule, DateTimeImmutable $start, DateInterval $duration, bool $all_day ) : array {
 	$utc = new DateTimeZone( 'UTC' );
-	$end = axismundi_cal_add_civil( $start, $duration );
 	/*
-	 * An Event that ends somewhere else. The stored civil end belongs to the arrival zone, so it is
-	 * placed there rather than carried forward from the departure zone -- a flight landing at 11:00 in
-	 * New York lands at 11:00 in New York, and adding its length to a Seoul clock says otherwise.
-	 *
-	 * Only a single occurrence can reach this: the writer refuses a second zone on a repeating Event
-	 * rather than deciding what a recurrence carries across two sets of clock changes.
+	 * Derived from the start and the stored length, in whichever zone the Event ends in. Reading the
+	 * stored end instead would make one occurrence authoritative over the rule that produced the rest.
 	 */
-	$end_zone = trim( (string) ( $schedule['end_timezone'] ?? '' ) );
-	if ( '' !== $end_zone && ! $all_day ) {
-		try {
-			$end = new DateTimeImmutable( (string) $schedule['dtend_local'], new DateTimeZone( $end_zone ) );
-		} catch ( Exception $error ) {
-			$end = axismundi_cal_add_civil( $start, $duration );
-		}
-	}
+	$end = axismundi_cal_occurrence_end( $schedule, $start );
 	return array(
 		'schedule_id'       => (int) ( $schedule['id'] ?? 0 ),
 		'recurrence_id'     => axismundi_cal_recurrence_id( $start, $all_day ),

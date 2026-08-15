@@ -519,6 +519,48 @@ try {
 		'' === (string) axismundi_cal_schedule_for_event( $ax_et_abroad )['end_timezone']
 	);
 
+	// -- the length is the stored fact ---------------------------------------------------------------------
+
+	/*
+	 * The canonical move. Every reader used to recover the length from a stored end time, and recovering
+	 * it is exactly where the two possible answers -- the civil length between clock faces, and the
+	 * elapsed time between instants -- drifted apart. It is written down now, and the end is derived.
+	 *
+	 * Checked by corrupting the column readers must no longer trust: an end time that disagrees with the
+	 * stored length changes nothing, because nothing asks it any more.
+	 */
+	$ax_et_stored = $ax_et_make(
+		$ax_et_posts,
+		'Two hours',
+		array( 'timezone' => 'Asia/Seoul', 'startsAt' => '2027-04-01 09:00:00', 'endsAt' => '2027-04-01 11:00:00' )
+	);
+	$ax_et_stored_schedule = axismundi_cal_schedule_for_event( $ax_et_stored );
+	ax_et_assert(
+		$ax_et_results,
+		'an Event records how long it runs rather than only when it ends',
+		'PT2H0M0S' === (string) $ax_et_stored_schedule['duration']
+	);
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture reaching a state the writer will not produce.
+	$wpdb->update(
+		axismundi_cal_schedules_table(),
+		array( 'dtend_local' => '2027-04-01 23:00:00' ),
+		array( 'id' => (int) $ax_et_stored_schedule['id'] ),
+		array( '%s' ),
+		array( '%d' )
+	);
+	$ax_et_corrupt = axismundi_cal_schedule_for_event( $ax_et_stored );
+	$ax_et_occ     = axismundi_cal_expand( $ax_et_corrupt, '2027-03-31 00:00:00', '2027-04-03 00:00:00' );
+	$ax_et_ics_end = implode( "
+", axismundi_cal_ics_vevent( $ax_et_corrupt, get_post( $ax_et_stored ) ) );
+	ax_et_assert(
+		$ax_et_results,
+		'and every surface reads that length, so a stale end column can no longer move anything',
+		1 === count( $ax_et_occ )
+			&& '2027-04-01 11:00:00' === (string) $ax_et_occ[0]['end_local']
+			&& str_contains( $ax_et_ics_end, 'DTEND;TZID=Asia/Seoul:20270401T110000' )
+			&& 'PT2H' === (string) axismundi_cal_jscalendar_event( get_post( $ax_et_stored ) )['duration']
+	);
+
 } finally {
 	wp_set_current_user( 0 );
 	foreach ( $ax_et_posts as $ax_et_post ) {

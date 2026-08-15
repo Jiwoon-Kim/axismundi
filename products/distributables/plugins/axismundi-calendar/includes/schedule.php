@@ -27,7 +27,7 @@ defined( 'ABSPATH' ) || exit;
  * or where it happens, and iCalendar clients treat a SEQUENCE bump as grounds to re-prompt every
  * attendee.
  */
-const AXISMUNDI_CAL_SEQUENCE_FIELDS = array( 'timezone', 'end_timezone', 'all_day', 'dtstart_local', 'dtend_local', 'rrule', 'location_place_id', 'location_text' );
+const AXISMUNDI_CAL_SEQUENCE_FIELDS = array( 'timezone', 'end_timezone', 'all_day', 'dtstart_local', 'duration', 'rrule', 'location_place_id', 'location_text' );
 
 /**
  * Record that when-or-where changed, without a field of its own to compare.
@@ -207,6 +207,12 @@ function axismundi_cal_schedule_save( int $post_id, array $fields ) {
 		'calendar_id'       => $calendar_id,
 		'timezone'          => $timezone,
 		'end_timezone'      => $end_timezone,
+		/*
+		 * How long it runs, stored rather than left for each reader to recover from the end time.
+		 * Recovering it is where the civil length and the elapsed time drifted apart, and every reader
+		 * doing the arithmetic was another place that could happen.
+		 */
+		'duration'          => axismundi_cal_compute_duration( $start['local'], $end['local'], $timezone, $end_timezone ),
 		'all_day'           => $all_day,
 		'dtstart_local'     => $start['local'],
 		'dtend_local'       => $end['local'],

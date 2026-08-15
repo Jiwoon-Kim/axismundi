@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '41';
+const AXISMUNDI_CAL_DB_VERSION        = '42';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 const AXISMUNDI_CAL_SCHEMA_BAIL_OPTION = 'ax_cal_schema_bail';
 
@@ -372,6 +372,7 @@ function axismundi_cal_install_schema() : bool {
 			calendar_id bigint(20) unsigned NOT NULL default 0,
 			timezone varchar(64) NOT NULL default '',
 			end_timezone varchar(64) NOT NULL default '',
+			duration varchar(32) NOT NULL default '',
 			all_day tinyint(1) unsigned NOT NULL default 0,
 			dtstart_local datetime NOT NULL default '0000-00-00 00:00:00',
 			dtend_local datetime NOT NULL default '0000-00-00 00:00:00',
@@ -894,6 +895,12 @@ function axismundi_cal_install_schema() : bool {
 	 * stops being consulted, rather than a different answer being computed for old rows.
 	 */
 	axismundi_cal_backfill_event_acting_actors();
+	/*
+	 * How long each Event runs, written down. The model has meant start-plus-length since the DST work;
+	 * this makes it the stored fact rather than something every reader re-derives from an end time --
+	 * and re-derivation is where the two answers (civil length, elapsed time) drifted apart before.
+	 */
+	axismundi_cal_backfill_durations();
 
 	/*
 	 * Dropped rather than left behind. It is not read anywhere after this version, and leaving a

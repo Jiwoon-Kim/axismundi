@@ -17,6 +17,11 @@
  * The gate is `event_listable()`, as everywhere else, and the items are the Events *filed* here --
  * the same narrowing the ActivityStreams collection makes, for the same reason.
  *
+ * The window is part of the contract rather than a judgement about each series: this document is the
+ * next 400 days, and an Event outside it is absent because the window ends, not because the Event
+ * did. Every response carries a link to the iCalendar feed, which is the one that answers for the
+ * whole calendar.
+ *
  * @package AxismundiCalendar
  */
 
@@ -26,16 +31,21 @@ defined( 'ABSPATH' ) || exit;
 const AXISMUNDI_CAL_JSCALENDAR_GROUP_MEDIA_TYPE = 'application/jscalendar+json;type=group';
 
 /**
- * How far ahead a recurring series is looked at when deciding whether it is still running.
+ * How far ahead this document reaches.
  *
- * A rule with no end never stops producing occurrences, so the question "does this series have a
- * future" has to be asked over a window rather than over eternity. A year and a bit answers it for
- * anything a person would recognise as current.
+ * This is the window the document *is*, not a guess at when a series ends. A rule with no end never
+ * stops producing occurrences, so "does this series have a future" cannot be asked over eternity --
+ * and asking it over a window and then reading silence as "finished" would drop a biennial meeting
+ * whose next date is fourteen months away. Finding an occurrence inside the window includes the
+ * Event; finding none means only that nothing falls inside the window.
+ *
+ * So the contract is stated rather than inferred: `.json` is the next 400 days. Anything wanting the
+ * whole calendar takes the iCalendar feed, which is why every response points at it.
  */
 const AXISMUNDI_CAL_AGENDA_HORIZON_DAYS = 400;
 
 /**
- * Whether an Event is happening now or still to come.
+ * Whether an Event falls inside the agenda window.
  *
  * In progress counts: something that started an hour ago and runs until tonight is on today's
  * agenda, and dropping it the moment it begins would be the one time a calendar is most looked at.
@@ -44,7 +54,7 @@ const AXISMUNDI_CAL_AGENDA_HORIZON_DAYS = 400;
  * @param string              $now_utc  Reference instant, `Y-m-d H:i:s` UTC.
  * @return bool
  */
-function axismundi_cal_schedule_is_current( array $schedule, string $now_utc ) : bool {
+function axismundi_cal_schedule_within_agenda( array $schedule, string $now_utc ) : bool {
 	$until = gmdate( 'Y-m-d H:i:s', strtotime( $now_utc . ' +' . AXISMUNDI_CAL_AGENDA_HORIZON_DAYS . ' days' ) );
 	foreach ( axismundi_cal_expand( $schedule, $now_utc, $until ) as $occurrence ) {
 		// `expand()` already drops what ended before the window opened, so anything it returns either
@@ -79,7 +89,7 @@ function axismundi_cal_jscalendar_group( array $calendar ) {
 		if ( ! $post instanceof WP_Post || ! axismundi_cal_event_listable( $post ) ) {
 			continue;
 		}
-		if ( ! axismundi_cal_schedule_is_current( $schedule, $now ) ) {
+		if ( ! axismundi_cal_schedule_within_agenda( $schedule, $now ) ) {
 			continue;
 		}
 		$event = axismundi_cal_jscalendar_event( $post );
@@ -164,6 +174,15 @@ function axismundi_cal_serve_jscalendar_group() : void {
 		exit;
 	}
 	status_header( 200 );
+	/*
+	 * Where the rest of it is. A reader who needs more than the window -- past events, a series whose
+	 * next date is further out than this document reaches -- should not have to guess that another
+	 * representation exists.
+	 */
+	$ics = axismundi_cal_calendar_ics_url( $calendar );
+	if ( '' !== $ics ) {
+		header( 'Link: <' . esc_url_raw( $ics ) . '>; rel="alternate"; type="text/calendar"', false );
+	}
 	header( 'Content-Type: ' . AXISMUNDI_CAL_JSCALENDAR_GROUP_MEDIA_TYPE . '; charset=' . get_option( 'blog_charset' ) );
 	header( 'X-Content-Type-Options: nosniff' );
 	header( 'Access-Control-Allow-Origin: *' );

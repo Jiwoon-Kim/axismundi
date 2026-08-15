@@ -131,6 +131,35 @@ try {
 			&& '' !== (string) $ax_gr_group['entries'][0]['uid']
 	);
 
+	/*
+	 * The window is the contract, and absence inside it is not a claim that a series ended. A biennial
+	 * meeting whose next date is fourteen months out simply falls outside a 400-day document -- so this
+	 * pins that the omission is the window ending rather than a judgement about the Event, and that the
+	 * response says where the whole calendar is instead of leaving a reader to assume there is nothing.
+	 */
+	$ax_gr_biennial = ax_gr_event(
+		$ax_gr_posts,
+		$ax_gr_user,
+		$ax_gr_id,
+		'Every other year',
+		gmdate( 'Y-m-d H:i:s', strtotime( '-10 months' ) ),
+		gmdate( 'Y-m-d H:i:s', strtotime( '-10 months +1 hour' ) ),
+		array( 'rrule' => 'FREQ=YEARLY;INTERVAL=2' )
+	);
+	$ax_gr_far = axismundi_cal_jscalendar_group( axismundi_cal_calendar_get( $ax_gr_id ) );
+	$ax_gr_schedule = axismundi_cal_schedule_for_event( $ax_gr_biennial );
+	ax_gr_assert(
+		$ax_gr_results,
+		'a series whose next date is past the window is outside this document, and the window is what says so',
+		! in_array( 'Every other year', ax_gr_titles( $ax_gr_far ), true )
+			&& ! axismundi_cal_schedule_within_agenda( $ax_gr_schedule, current_time( 'mysql', true ) )
+			&& array() !== axismundi_cal_expand(
+				$ax_gr_schedule,
+				current_time( 'mysql', true ),
+				gmdate( 'Y-m-d H:i:s', strtotime( '+3 years' ) )
+			)
+	);
+
 	// -- the link on the contact card ---------------------------------------------------------------------
 
 	/*

@@ -149,8 +149,19 @@ function axismundi_cal_collect_occurrences( string $from_utc, string $to_utc, in
 	$sql    = "SELECT * FROM {$schedules} WHERE dtstart_local <= %s";
 	$params = array( $to_utc );
 	if ( $calendar_id > 0 ) {
-		$sql     .= ' AND calendar_id = %d';
-		$params[] = $calendar_id;
+		/*
+		 * Filed here, or reaching this calendar because its Actor was invited or asked to come. The
+		 * second set is not filed anywhere near here -- it stays on the calendar it was written on, and
+		 * appears on this one as well, which is why this is an OR and not a moved row.
+		 */
+		$placed = axismundi_cal_placed_event_ids( $calendar_id );
+		if ( array() === $placed ) {
+			$sql     .= ' AND calendar_id = %d';
+			$params[] = $calendar_id;
+		} else {
+			$sql     .= ' AND ( calendar_id = %d OR event_post_id IN ( ' . implode( ', ', array_fill( 0, count( $placed ), '%d' ) ) . ' ) )';
+			$params   = array_merge( array( $to_utc, $calendar_id ), $placed );
+		}
 	}
 	$sql .= ' ORDER BY dtstart_local ASC';
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- range query over this plugin's own table.

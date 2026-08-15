@@ -145,7 +145,11 @@ function axismundi_cal_render_sharing( array $calendar ) : void {
 	?>
 	<h2><?php esc_html_e( 'Sharing', 'axismundi-calendar' ); ?></h2>
 
-	<h3><?php esc_html_e( 'Anyone', 'axismundi-calendar' ); ?></h3>
+	<?php
+	// "Public access" rather than "Anyone", and never "event access": this is the most any anonymous
+	// reader may be shown, and a private Event stays hidden inside a public calendar regardless.
+	?>
+	<h3><?php esc_html_e( 'Public access', 'axismundi-calendar' ); ?></h3>
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<input type="hidden" name="action" value="ax_cal_share_calendar">
 		<input type="hidden" name="calendar_id" value="<?php echo esc_attr( (string) $calendar_id ); ?>">
@@ -175,7 +179,11 @@ function axismundi_cal_render_sharing( array $calendar ) : void {
 		</p>
 	</form>
 
-	<h3><?php esc_html_e( 'People and groups', 'axismundi-calendar' ); ?></h3>
+	<?php
+	// Not "people and groups": an Organization or a Service Actor holds access on exactly the same
+	// terms, and naming two of the four kinds reads as a rule about which kinds may be given it.
+	?>
+	<h3><?php esc_html_e( 'Shared with', 'axismundi-calendar' ); ?></h3>
 	<table class="wp-list-table widefat fixed striped">
 		<thead>
 			<tr>

@@ -69,6 +69,9 @@ function axismundi_cal_list_set( int $calendar_id, string $actor_uri, string $ac
 		'access_role'    => $access_role,
 		'selected'       => array_key_exists( 'selected', $state ) ? (int) (bool) $state['selected'] : (int) ( $existing['selected'] ?? 1 ),
 		'hidden'         => array_key_exists( 'hidden', $state ) ? (int) (bool) $state['hidden'] : (int) ( $existing['hidden'] ?? 0 ),
+		// Whether invitations this Actor turned down still appear on their own calendar. View state for
+		// the same reason `hidden` is: declining is an answer to the host, not a change to the Event.
+		'show_declined_events' => array_key_exists( 'show_declined_events', $state ) ? (int) (bool) $state['show_declined_events'] : (int) ( $existing['show_declined_events'] ?? 1 ),
 		// The name and colour one Actor gives a Calendar, which is theirs and not the Calendar's:
 		// renaming a shared calendar in your own list must not rename it for everyone in it.
 		'summary_override' => (string) ( $state['summary_override'] ?? ( $existing['summary_override'] ?? '' ) ),
@@ -224,11 +227,20 @@ function axismundi_cal_actor_calendar_list( string $actor_uri ) : array {
 	$calendars = axismundi_cal_calendars_table();
 	$hash      = hash( 'sha256', $actor_uri );
 
+	/*
+	 * The Actor's own calendar first and always, before anything a name or a colour could reorder it
+	 * behind. It is the one every unfiled Event goes to and the one their invitations appear on, so it
+	 * is the anchor of the list rather than a row in it -- and by the activation contract there is
+	 * exactly one, so "first" is never ambiguous.
+	 */
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own tables.
 	return (array) $wpdb->get_results(
 		$wpdb->prepare(
-			"SELECT c.*, e.access_role, e.selected, e.hidden, e.summary_override, e.color FROM {$entries} e INNER JOIN {$calendars} c ON c.id = e.calendar_id
-			 WHERE e.actor_uri_hash = %s ORDER BY c.name ASC",
+			"SELECT c.*, e.access_role, e.selected, e.hidden, e.summary_override, e.color, e.show_declined_events
+			 FROM {$entries} e INNER JOIN {$calendars} c ON c.id = e.calendar_id
+			 WHERE e.actor_uri_hash = %s
+			 ORDER BY ( c.is_primary = 1 AND c.authority_actor_uri_hash = %s ) DESC, c.name ASC",
+			$hash,
 			$hash
 		),
 		ARRAY_A

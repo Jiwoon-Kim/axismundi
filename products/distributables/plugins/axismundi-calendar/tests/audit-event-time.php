@@ -398,6 +398,43 @@ try {
 		'America/New_York' === (string) axismundi_cal_schedule_for_event( $ax_et_abroad )['timezone']
 			&& $ax_et_before === (string) axismundi_cal_schedule_for_event( $ax_et_abroad )['dtstart_local']
 	);
+
+	// -- The night the clocks change --------------------------------------------------------------------
+
+	/*
+	 * The two answers a duration can have, and the model owes a different one to each. A series keeps
+	 * its wall-clock length: 19:00-21:00 is two hours on the evening the clocks go back, not three. A
+	 * single Event written across the transition keeps the end somebody wrote: 01:00-03:00 ends at
+	 * 03:00, which happens to be three real hours later, and nothing may quietly move it to 04:00.
+	 *
+	 * The second used to fail. Measuring the gap between the two zoned instants gives the real elapsed
+	 * time, and adding that back onto a zoned start applies the offset change a second time -- so the
+	 * interval is measured between the civil values instead, and the zone places the result once.
+	 */
+	$ax_et_fallback = axismundi_cal_expand(
+		array( 'id' => 0, 'timezone' => 'America/New_York', 'all_day' => 0, 'dtstart_local' => '2026-11-01 01:00:00', 'dtend_local' => '2026-11-01 03:00:00', 'rrule' => '' ),
+		'2026-10-30 00:00:00',
+		'2026-11-03 00:00:00'
+	);
+	ax_et_assert(
+		$ax_et_results,
+		'an Event written across a fall-back ends when it says it ends, not an hour later',
+		1 === count( $ax_et_fallback )
+			&& '2026-11-01 03:00:00' === (string) $ax_et_fallback[0]['end_local']
+			&& '2026-11-01 08:00:00' === (string) $ax_et_fallback[0]['end_utc']
+	);
+	$ax_et_series = axismundi_cal_expand(
+		array( 'id' => 0, 'timezone' => 'America/New_York', 'all_day' => 0, 'dtstart_local' => '2026-10-31 19:00:00', 'dtend_local' => '2026-10-31 21:00:00', 'rrule' => 'FREQ=DAILY;COUNT=3' ),
+		'2026-10-30 00:00:00',
+		'2026-11-05 00:00:00'
+	);
+	ax_et_assert(
+		$ax_et_results,
+		'and a series keeps its wall-clock length across the same night',
+		3 === count( $ax_et_series )
+			&& array( '2026-10-31 21:00:00', '2026-11-01 21:00:00', '2026-11-02 21:00:00' )
+				=== array_map( static fn( array $o ) : string => (string) $o['end_local'], $ax_et_series )
+	);
 } finally {
 	wp_set_current_user( 0 );
 	foreach ( $ax_et_posts as $ax_et_post ) {

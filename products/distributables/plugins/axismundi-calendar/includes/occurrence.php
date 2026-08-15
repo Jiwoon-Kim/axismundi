@@ -63,8 +63,15 @@ function axismundi_cal_expand( array $schedule, string $from_utc, string $to_utc
 	 * The duration is carried rather than the end time. An event that runs 19:00-21:00 runs two
 	 * hours on every occurrence, including the one where the clocks change; recomputing the end from
 	 * a stored offset would make that occurrence an hour longer or shorter than it is.
+	 *
+	 * Measured between the civil values rather than between the two instants they resolve to. On a
+	 * night the clocks go back, 01:00 and 03:00 are three real hours apart, and `diff()` on the zoned
+	 * pair says so -- but adding three hours back onto a zoned start applies the same offset change a
+	 * second time, and the event ends at 04:00. The stored end says 03:00, so the interval carried has
+	 * to be the two civil hours between them; where that lands in real time is the zone's business,
+	 * and it answers once.
 	 */
-	$duration = $dtstart->diff( $dtend );
+	$duration = axismundi_cal_civil_interval( (string) $schedule['dtstart_local'], (string) $schedule['dtend_local'] );
 
 	$rrule = trim( (string) ( $schedule['rrule'] ?? '' ) );
 	if ( '' === $rrule ) {
@@ -464,7 +471,7 @@ function axismundi_cal_schedule_zone( array $schedule ) : ?DateTimeZone {
  */
 function axismundi_cal_build_occurrence( array $schedule, DateTimeImmutable $start, DateInterval $duration, bool $all_day ) : array {
 	$utc = new DateTimeZone( 'UTC' );
-	$end = $start->add( $duration );
+	$end = axismundi_cal_add_civil( $start, $duration );
 	return array(
 		'schedule_id'       => (int) ( $schedule['id'] ?? 0 ),
 		'recurrence_id'     => axismundi_cal_recurrence_id( $start, $all_day ),
@@ -477,6 +484,49 @@ function axismundi_cal_build_occurrence( array $schedule, DateTimeImmutable $sta
 		'location_place_id' => $schedule['location_place_id'] ?? null,
 		'location_text'     => (string) ( $schedule['location_text'] ?? '' ),
 	);
+}
+
+/**
+ * How far apart two civil times are, measured on a clock that never changes.
+ *
+ * UTC is used as a calendar with no transitions in it, not as a time. An event written as
+ * 01:00-03:00 is two hours on the wall whatever the zone does that night, and that is the quantity a
+ * recurrence carries from one occurrence to the next.
+ *
+ * @param string $start_local Civil start, `Y-m-d H:i:s`.
+ * @param string $end_local   Civil end, `Y-m-d H:i:s`.
+ * @return DateInterval
+ */
+function axismundi_cal_civil_interval( string $start_local, string $end_local ) : DateInterval {
+	$fixed = new DateTimeZone( 'UTC' );
+	try {
+		$from = new DateTimeImmutable( $start_local, $fixed );
+		$to   = new DateTimeImmutable( $end_local, $fixed );
+	} catch ( Exception $error ) {
+		return new DateInterval( 'PT0S' );
+	}
+	return $from->diff( $to );
+}
+
+/**
+ * Move a zoned time forward by a civil interval, keeping the answer on the wall clock.
+ *
+ * Adding to a zoned instant moves real time, so an interval spanning a transition lands an hour out.
+ * The arithmetic is done on the civil value and the result is handed back to the zone to place --
+ * which is the one thing a zone is for, and it should do it once.
+ *
+ * @param DateTimeImmutable $start    Zoned start.
+ * @param DateInterval      $duration Civil interval.
+ * @return DateTimeImmutable
+ */
+function axismundi_cal_add_civil( DateTimeImmutable $start, DateInterval $duration ) : DateTimeImmutable {
+	$fixed = new DateTimeZone( 'UTC' );
+	$civil = ( new DateTimeImmutable( $start->format( 'Y-m-d H:i:s' ), $fixed ) )->add( $duration );
+	try {
+		return new DateTimeImmutable( $civil->format( 'Y-m-d H:i:s' ), $start->getTimezone() );
+	} catch ( Exception $error ) {
+		return $start->add( $duration );
+	}
 }
 
 /**

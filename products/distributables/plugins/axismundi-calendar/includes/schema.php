@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '39';
+const AXISMUNDI_CAL_DB_VERSION        = '40';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 const AXISMUNDI_CAL_SCHEMA_BAIL_OPTION = 'ax_cal_schema_bail';
 
@@ -724,6 +724,31 @@ function axismundi_cal_install_schema() : bool {
 			KEY calendar_id (calendar_id),
 			KEY actor_uri_hash (actor_uri_hash),
 			KEY access_role (access_role)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	/*
+	 * Being asked, which is not the same as being allowed. The ACL says what somebody may do and is
+	 * granted at once; this says they were asked to take the calendar into their own list, and their
+	 * answer. Declining leaves the ACL alone -- who may read a calendar is the owner's decision, not
+	 * something a recipient withdraws by saying no.
+	 */
+	$invitations = axismundi_cal_share_invitations_table();
+	dbDelta(
+		"CREATE TABLE {$invitations} (
+			id bigint(20) unsigned NOT NULL auto_increment,
+			calendar_id bigint(20) unsigned NOT NULL,
+			recipient_actor_uri text NOT NULL,
+			recipient_uri_hash char(64) NOT NULL default '',
+			invited_by_actor_uri text NOT NULL,
+			role_at_sent varchar(16) NOT NULL default 'reader',
+			state varchar(16) NOT NULL default 'pending',
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			responded_at datetime NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY calendar_recipient (calendar_id,recipient_uri_hash),
+			KEY recipient_state (recipient_uri_hash,state)
 		) ENGINE=InnoDB {$charset};"
 	);
 

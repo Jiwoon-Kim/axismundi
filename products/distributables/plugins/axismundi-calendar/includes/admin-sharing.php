@@ -183,7 +183,19 @@ function axismundi_cal_handle_share_form() : void {
 		wp_safe_redirect( add_query_arg( 'ax_cal_error', rawurlencode( $result->get_error_code() ), $base ) );
 		exit;
 	}
-	wp_safe_redirect( add_query_arg( 'ax_cal_notice', 'shared', $base ) );
+	/*
+	 * Access now, the calendar on their screen only if they want it. Recorded even when it cannot be
+	 * delivered, so the rule and the asking stay one story -- and the person sharing is told which of
+	 * the two actually happened rather than being left to assume both did.
+	 */
+	axismundi_cal_share_invite( $calendar_id, $resolved, $role, axismundi_cal_authoring_actor_uri() );
+	wp_safe_redirect(
+		add_query_arg(
+			'ax_cal_notice',
+			axismundi_cal_invitation_deliverable( $resolved ) ? 'shared' : 'shared_undeliverable',
+			$base
+		)
+	);
 	exit;
 }
 add_action( 'admin_post_ax_cal_share_calendar', 'axismundi_cal_handle_share_form' );

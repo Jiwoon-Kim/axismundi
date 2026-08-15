@@ -161,16 +161,71 @@ function axismundi_cal_source_get( int $source_id ) : ?array {
 	* @param string $url         Feed URL.
  * @return int|WP_Error Remote Calendar id.
  */
+/**
+ * The Calendar on this site that an address names, if it names one.
+ *
+ * Both forms it can be given in: the page and the feed. Matched on this site's own host so that a
+ * calendar somewhere else with a similar path is still a subscription.
+ *
+ * @param string $url Address somebody typed.
+ * @return array<string,mixed>|null Calendar row.
+ */
+function axismundi_cal_local_calendar_for_url( string $url ) : ?array {
+	$url  = trim( $url );
+	$host = (string) wp_parse_url( $url, PHP_URL_HOST );
+	if ( '' === $host || $host !== (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) ) {
+		return null;
+	}
+	$path = (string) wp_parse_url( $url, PHP_URL_PATH );
+	if ( 1 !== preg_match( '#/calendar/([^/]+?)(?:\.ics)?/?$#', $path, $matches ) ) {
+		return null;
+	}
+	return axismundi_cal_calendar_by_slug( rawurldecode( (string) $matches[1] ) );
+}
+
 function axismundi_cal_subscribe_url( string $url ) {
 	global $wpdb;
 	if ( ! axismundi_cal_ready() ) {
 		return new WP_Error( 'ax_cal_store', __( 'The calendar store is unavailable.', 'axismundi-calendar' ) );
 	}
+	$url = trim( $url );
+
+	/*
+	 * An address on this site is not a feed to mirror. Mirroring our own calendar would make a second
+	 * copy that goes stale, publishes under a different id, and answers to nobody -- so the address is
+	 * resolved to the Calendar it names and taken into the reader's list instead.
+	 *
+	 * And it is taken only if they may read it. A private calendar cannot be subscribed to by knowing
+	 * its address: that is what an invitation is for, and letting the address stand in for one would
+	 * make sharing decorative.
+	 */
+	$local = axismundi_cal_local_calendar_for_url( $url );
+	if ( is_array( $local ) ) {
+		$actor_uri = axismundi_cal_authoring_actor_uri();
+		if ( ! axismundi_cal_can_read( (int) $local['id'], $actor_uri, get_current_user_id() ) ) {
+			return new WP_Error(
+				'ax_cal_subscribe_private',
+				__( 'That calendar is not public. Ask its owner to share it with you; an invitation is what adds it to your list.', 'axismundi-calendar' ),
+				array( 'status' => 403 )
+			);
+		}
+		if ( '' === $actor_uri ) {
+			return new WP_Error( 'ax_cal_subscribe_actor', __( 'Adding a calendar to your list needs an Actor profile.', 'axismundi-calendar' ), array( 'status' => 409 ) );
+		}
+		$entry = axismundi_cal_list_set( (int) $local['id'], $actor_uri );
+		return is_wp_error( $entry ) ? $entry : (int) $local['id'];
+	}
+
+	/*
+	 * Only now, because this validates an address this site is about to *fetch*: it refuses private and
+	 * loopback hosts, which is exactly right for a foreign feed and exactly wrong for our own calendar,
+	 * whose address is resolved above without any request being made at all.
+	 */
 	$valid = axismundi_cal_validate_source_url( $url );
 	if ( is_wp_error( $valid ) ) {
 		return $valid;
 	}
-	$url  = trim( $url );
+
 	$hash = hash( 'sha256', $url );
 	$now  = current_time( 'mysql', true );
 

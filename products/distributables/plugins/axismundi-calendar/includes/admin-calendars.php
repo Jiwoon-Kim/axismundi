@@ -434,7 +434,18 @@ function axismundi_cal_render_calendars_page() : void {
 			<?php esc_html_e( 'Create a Calendar for local Events, or subscribe this site to a public iCalendar address.', 'axismundi-calendar' ); ?>
 		</p>
 
-		<?php if ( '' !== $notice ) : ?>
+		<?php if ( 'shared_undeliverable' === $notice ) : ?>
+			<?php
+			/*
+			 * Said plainly, because the alternative is somebody believing a calendar is shared while the
+			 * other side has no way to hear about it. The rule is real and will take effect the moment
+			 * delivery exists; what has not happened is the asking.
+			 */
+			?>
+			<div class="notice notice-warning is-dismissible">
+				<p><?php esc_html_e( 'Access was granted, but the invitation could not be sent: this site cannot yet deliver invitations to another server, and a private calendar cannot yet be read from one.', 'axismundi-calendar' ); ?></p>
+			</div>
+		<?php elseif ( '' !== $notice ) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php echo esc_html__( 'Calendar saved.', 'axismundi-calendar' ); ?></p></div>
 		<?php endif; ?>
 		<?php if ( '' !== $error ) : ?>
@@ -539,6 +550,8 @@ function axismundi_cal_render_calendars_page() : void {
 			<button type="submit" class="button button-secondary"><?php esc_html_e( 'Subscribe', 'axismundi-calendar' ); ?></button>
 			<p class="description"><?php esc_html_e( 'Use a public .ics address. Private subscription addresses are credentials and need a separate secure-storage flow.', 'axismundi-calendar' ); ?></p>
 		</form>
+
+		<?php axismundi_cal_render_share_invitations(); ?>
 
 		<h2><?php esc_html_e( 'My calendars and subscriptions', 'axismundi-calendar' ); ?></h2>
 		<table class="wp-list-table widefat fixed striped">

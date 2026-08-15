@@ -173,6 +173,19 @@ function axismundi_cal_serve_jscalendar_group() : void {
 		echo wp_json_encode( array( 'error' => 'not_found' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON response.
 		exit;
 	}
+	/*
+	 * One entry that cannot be said in the requested vocabulary refuses the whole document. Omitting it
+	 * instead would hand a client a calendar quietly missing an Event, which is the failure this policy
+	 * exists to prevent -- and a shorter list looks exactly like a calendar with less on it.
+	 */
+	$version = axismundi_cal_requested_jscalendar_version();
+	foreach ( (array) $group['entries'] as $entry ) {
+		$missing = axismundi_cal_jscalendar_unrepresentable( (array) $entry, $version );
+		if ( array() !== $missing ) {
+			axismundi_cal_emit_jscalendar_version_refusal( $missing );
+		}
+	}
+
 	status_header( 200 );
 	/*
 	 * Where the rest of it is. A reader who needs more than the window -- past events, a series whose
@@ -183,7 +196,8 @@ function axismundi_cal_serve_jscalendar_group() : void {
 	if ( '' !== $ics ) {
 		header( 'Link: <' . esc_url_raw( $ics ) . '>; rel="alternate"; type="text/calendar"', false );
 	}
-	header( 'Content-Type: ' . AXISMUNDI_CAL_JSCALENDAR_GROUP_MEDIA_TYPE . '; charset=' . get_option( 'blog_charset' ) );
+	header( 'Content-Type: ' . AXISMUNDI_CAL_JSCALENDAR_GROUP_MEDIA_TYPE . '; version=2.0; charset=' . get_option( 'blog_charset' ) );
+	header( 'Vary: Accept', false );
 	header( 'X-Content-Type-Options: nosniff' );
 	header( 'Access-Control-Allow-Origin: *' );
 	echo wp_json_encode( $group ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON response.

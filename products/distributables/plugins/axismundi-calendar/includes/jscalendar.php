@@ -357,6 +357,94 @@ function axismundi_cal_jscalendar_event( WP_Post $post ) {
 	return $event;
 }
 
+/**
+ * The JSCalendar version a request is asking for, or '' when it did not say.
+ *
+ * Read from the `version` parameter on an `application/jscalendar+json` Accept, which is how a
+ * client says which vocabulary it can actually read. Saying nothing means "whatever you speak", and
+ * that is the common case -- a browser, a curl, anything that has not thought about it.
+ *
+ * @return string
+ */
+function axismundi_cal_requested_jscalendar_version() : string {
+	$accept = sanitize_text_field( wp_unslash( $_SERVER['HTTP_ACCEPT'] ?? '' ) );
+	if ( '' === $accept || false === stripos( $accept, 'application/jscalendar+json' ) ) {
+		return '';
+	}
+	foreach ( explode( ',', $accept ) as $candidate ) {
+		if ( false === stripos( $candidate, 'application/jscalendar+json' ) ) {
+			continue;
+		}
+		if ( 1 === preg_match( '/version\s*=\s*"?([0-9.]+)"?/i', $candidate, $matches ) ) {
+			return (string) $matches[1];
+		}
+	}
+	return '';
+}
+
+/**
+ * The 2.0-only properties one document uses.
+ *
+ * Named rather than counted, so a refusal can say which fact it could not express instead of leaving
+ * somebody to guess what about their Event was too new.
+ *
+ * @param array<string,mixed> $event JSCalendar Event.
+ * @return string[]
+ */
+function axismundi_cal_jscalendar_v2_properties( array $event ) : array {
+	$found = array();
+	foreach ( array( 'endTimeZone' ) as $property ) {
+		if ( isset( $event[ $property ] ) ) {
+			$found[] = $property;
+		}
+	}
+	return $found;
+}
+
+/**
+ * Refuse, rather than quietly hand back less than was asked about.
+ *
+ * A client that names `version=1.0` has said which vocabulary it can read, and an Event carrying
+ * `endTimeZone` cannot be said in it. Dropping the property would not move the instant -- the
+ * duration is the real elapsed time, so 1.0 arithmetic still lands on the right moment -- but the
+ * arrival would be shown on the departure clock, and anything that read the document and wrote it
+ * back would erase the arrival zone entirely. A 406 says that plainly; a downgraded document says
+ * nothing at all.
+ *
+ * Events with nothing 2.0-only in them are served to a 1.0 client unchanged, because they are
+ * already valid 1.0.
+ *
+ * @param array<string,mixed> $event   JSCalendar Event.
+ * @param string              $version Requested version, or ''.
+ * @return string[] The properties that cannot be expressed, empty when the request can be answered.
+ */
+function axismundi_cal_jscalendar_unrepresentable( array $event, string $version ) : array {
+	if ( '' === $version || version_compare( $version, '2.0', '>=' ) ) {
+		return array();
+	}
+	return axismundi_cal_jscalendar_v2_properties( $event );
+}
+
+/**
+ * Say we could not answer in the vocabulary that was asked for.
+ *
+ * @param string[] $properties Properties that could not be expressed.
+ * @return void
+ */
+function axismundi_cal_emit_jscalendar_version_refusal( array $properties ) : void {
+	status_header( 406 );
+	header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );
+	header( 'Vary: Accept', false );
+	echo wp_json_encode( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON response.
+		array(
+			'error'      => 'jscalendar_version',
+			'available'  => '2.0',
+			'properties' => array_values( $properties ),
+		)
+	);
+	exit;
+}
+
 /** @return array<string,string> */
 function axismundi_cal_jscalendar_rewrite_rules() : array {
 	return array( '^event/([^/]+)\.jscalendar$' => 'index.php?ax_cal_jscalendar=$matches[1]' );
@@ -402,7 +490,14 @@ function axismundi_cal_serve_jscalendar() : void {
 		echo wp_json_encode( array( 'error' => 'not_found' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON response.
 		exit;
 	}
-	$event = axismundi_cal_jscalendar_event( $post );
+	$event   = axismundi_cal_jscalendar_event( $post );
+	$version = axismundi_cal_requested_jscalendar_version();
+	if ( is_array( $event ) ) {
+		$missing = axismundi_cal_jscalendar_unrepresentable( $event, $version );
+		if ( array() !== $missing ) {
+			axismundi_cal_emit_jscalendar_version_refusal( $missing );
+		}
+	}
 	if ( is_wp_error( $event ) ) {
 		status_header( 404 );
 		header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );
@@ -410,7 +505,9 @@ function axismundi_cal_serve_jscalendar() : void {
 		exit;
 	}
 	status_header( 200 );
-	header( 'Content-Type: ' . AXISMUNDI_CAL_JSCALENDAR_MEDIA_TYPE . '; charset=' . get_option( 'blog_charset' ) );
+	// The version is stated rather than assumed, so a reader knows which vocabulary it just received.
+	header( 'Content-Type: ' . AXISMUNDI_CAL_JSCALENDAR_MEDIA_TYPE . '; version=2.0; charset=' . get_option( 'blog_charset' ) );
+	header( 'Vary: Accept', false );
 	header( 'X-Content-Type-Options: nosniff' );
 	header( 'Access-Control-Allow-Origin: *' );
 	echo wp_json_encode( $event ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON response.

@@ -265,6 +265,33 @@ try {
 			&& isset( $ax_js_added['recurrenceOverrides']['2027-07-10T09:00:00'] )
 	);
 
+	// -- what a 1.0 reader is told ---------------------------------------------------------------------
+
+	/*
+	 * The canonical target is 2.0, so a client that says it reads 1.0 has to be answered honestly.
+	 * Dropping `endTimeZone` would not move the instant -- the duration is the real elapsed time, so
+	 * 1.0 arithmetic still lands on the right moment -- but the arrival would be shown on the departure
+	 * clock, and anything that read the document and wrote it back would erase the arrival zone. A
+	 * refusal says that; a quietly downgraded document says nothing.
+	 */
+	ax_js_assert(
+		$ax_js_results,
+		'an Event with nothing 2.0-only in it is answerable in 1.0, because it already is 1.0',
+		array() === axismundi_cal_jscalendar_unrepresentable( (array) $ax_js_doc, '1.0' )
+	);
+	ax_js_assert(
+		$ax_js_results,
+		'and one that ends in another zone names the property that cannot be said, rather than losing it',
+		array( 'endTimeZone' ) === axismundi_cal_jscalendar_unrepresentable( (array) $ax_js_flight_doc, '1.0' )
+	);
+	// Saying nothing about a version means "whatever you speak", which is what most callers do.
+	ax_js_assert(
+		$ax_js_results,
+		'a request that names no version is answered rather than interrogated',
+		array() === axismundi_cal_jscalendar_unrepresentable( (array) $ax_js_flight_doc, '' )
+			&& array() === axismundi_cal_jscalendar_unrepresentable( (array) $ax_js_flight_doc, '2.0' )
+	);
+
 } finally {
 	wp_set_current_user( 0 );
 	foreach ( array_unique( $ax_js_posts ) as $ax_js_post_id ) {

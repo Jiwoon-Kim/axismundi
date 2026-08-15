@@ -23,6 +23,22 @@ $ax_je_posts     = array();
 $ax_je_calendars = array();
 $ax_je_users     = array();
 
+/**
+ * Forget which Actor published an Event, which no ordinary path does.
+ *
+ * The fixtures need an Event nothing can answer for, and an Event that has been saved always records
+ * a publisher. Written directly rather than through the writer, because refusing to produce this
+ * state is exactly what the writer is for.
+ *
+ * @param int $post_id Event post ID.
+ * @return void
+ */
+function ax_je_clear_acting_actor( int $post_id ) : void {
+	global $wpdb;
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture reaching a state the writer will not produce.
+	$wpdb->update( axismundi_cal_events_table(), array( 'acting_actor_identity_id' => 0 ), array( 'post_id' => $post_id ), array( '%d' ), array( '%d' ) );
+}
+
 /** @param bool[] $results Results. */
 function ax_je_assert( array &$results, string $label, bool $condition ) : void {
 	$results[] = $condition;
@@ -359,7 +375,14 @@ try {
 	 * event somebody deliberately narrowed.
 	 */
 	$ax_je_orphan = $ax_je_make( $ax_je_posts, $ax_je_calendar, 'Ownerless', array( 'join_mode' => 'free', 'join_eligibility' => 'followers' ) );
+	/*
+	 * Orphaned through both answers, because there are two now. An Event records the Actor it was
+	 * published by, so clearing `post_author` alone no longer leaves the host unanswerable -- the
+	 * recorded Actor would still be there, which is the point of recording it. This reaches the state
+	 * the check is about: nothing published it and nobody wrote it.
+	 */
 	wp_update_post( array( 'ID' => $ax_je_orphan, 'post_author' => 0 ) );
+	ax_je_clear_acting_actor( $ax_je_orphan );
 	ax_je_assert(
 		$ax_je_results,
 		'an event whose owner has no Actor admits nobody rather than everybody',
@@ -375,6 +398,7 @@ try {
 	 */
 	$ax_je_stranded = $ax_je_make( $ax_je_posts, $ax_je_calendar, 'Orphaned but open', array( 'join_mode' => 'free', 'join_eligibility' => 'public' ) );
 	wp_update_post( array( 'ID' => $ax_je_stranded, 'post_author' => $ax_je_plain ) );
+	ax_je_clear_acting_actor( $ax_je_stranded );
 	$ax_je_stranded_error = axismundi_cal_event_join( $ax_je_stranded, $ax_je_follower['actor_uri'] );
 	ax_je_assert(
 		$ax_je_results,

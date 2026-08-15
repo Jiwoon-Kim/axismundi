@@ -126,10 +126,20 @@ function axismundi_cal_event_transform( $source ) : array {
 		'joinMode'     => 'external' === (string) $envelope['join_mode'] ? 'external' : 'none',
 	);
 
-	$schedule  = axismundi_cal_schedule_for_event( (int) $source->ID );
-	$authority = is_array( $schedule ) ? axismundi_cal_calendar_authority( (int) $schedule['calendar_id'] ) : '';
-	if ( '' !== $authority ) {
-		$event['attributedTo'] = $authority;
+	/*
+	 * Published by the Actor it was published by, which is not the same as the Actor whose Calendar it
+	 * sits on. Somebody with write access to a shared Calendar adds an Event to it and remains its
+	 * author; attributing it to the Calendar's owner would hand their work to somebody else and, on
+	 * the wire, make the owner the party a reply is addressed to.
+	 *
+	 * The Calendar's authority is still the answer to a different question -- who owns the collection
+	 * this is filed in -- and appears as FEP-400e `target.attributedTo` when the Calendar is projected
+	 * as a Collection. It is deliberately not asserted here, because nothing yet publishes that
+	 * Collection and naming a target no consumer can fetch would be an invitation to fetch it.
+	 */
+	$acting = axismundi_cal_event_acting_actor_uri( (int) $source->ID );
+	if ( '' !== $acting ) {
+		$event['attributedTo'] = $acting;
 		/*
 		 * `organizers` is required by FEP-8a8e and is not the same claim as `attributedTo`: one
 		 * says who published the record, the other who is running the event. The FEP requires a
@@ -138,7 +148,7 @@ function axismundi_cal_event_transform( $source ) : array {
 		$event['organizers'] = array(
 			'type'       => 'Collection',
 			'totalItems' => 1,
-			'items'      => array( $authority ),
+			'items'      => array( $acting ),
 		);
 	}
 

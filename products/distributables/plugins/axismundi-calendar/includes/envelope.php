@@ -115,6 +115,16 @@ function axismundi_cal_event_save( int $post_id, array $fields ) {
 	 * are dead after conversion: two tables accepting writes for one fact drift, and the drift only
 	 * surfaces later as a calendar disagreeing with the Object it federated.
 	 */
+	/*
+	 * Settled before anything is written. An unfiled Event goes to the acting Actor's own Calendar, so
+	 * the question "published by whom" has to be answered before the schedule picks one -- not after,
+	 * when the Event would already be filed under whoever happened to be typing.
+	 */
+	$acting = axismundi_cal_resolve_event_acting_actor( $post_id, $fields, $existing );
+	if ( is_wp_error( $acting ) ) {
+		return $acting;
+	}
+
 	$schedule_fields = array();
 	foreach ( array(
 		'calendar_id'      => 'calendar_id',
@@ -130,6 +140,22 @@ function axismundi_cal_event_save( int $post_id, array $fields ) {
 			$schedule_fields[ $to ] = $fields[ $from ];
 		}
 	}
+	/*
+	 * Whose Calendar an unfiled Event lands in. Named here rather than left to the schedule's own
+	 * fallback so that it follows the Actor being published as: somebody posting as an Organization
+	 * files it on the Organization's calendar, not on their personal one.
+	 */
+	if ( empty( $schedule_fields['calendar_id'] ) && ! is_array( axismundi_cal_schedule_for_event( $post_id ) ) && $acting > 0 && function_exists( 'axismundi_actors_get_by_identity' ) ) {
+		$acting_actor = axismundi_actors_get_by_identity( (int) $acting );
+		if ( $acting_actor instanceof Axismundi_Actor ) {
+			$primary = axismundi_cal_ensure_primary_calendar( (string) $acting_actor->get_uri() );
+			if ( is_wp_error( $primary ) ) {
+				return $primary;
+			}
+			$schedule_fields['calendar_id'] = (int) $primary;
+		}
+	}
+
 	$schedule = axismundi_cal_schedule_save( $post_id, $schedule_fields );
 	if ( is_wp_error( $schedule ) ) {
 		return $schedule;
@@ -211,10 +237,11 @@ function axismundi_cal_event_save( int $post_id, array $fields ) {
 		'join_eligibility'           => $eligibility,
 		'external_participation_url' => $external,
 		'maximum_attendee_capacity'  => $capacity,
+		'acting_actor_identity_id'   => (int) $acting,
 		'created_at'                 => (string) ( $existing['created_at'] ?? $now ),
 		'updated_at'                 => $now,
 	);
-	$formats = array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s' );
+	$formats = array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s' );
 	if ( false === $wpdb->replace( axismundi_cal_events_table(), $data, $formats ) ) {
 		return new WP_Error( 'ax_event_write', __( 'The event could not be saved.', 'axismundi-calendar' ) );
 	}

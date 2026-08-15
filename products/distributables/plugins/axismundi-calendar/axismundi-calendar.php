@@ -90,6 +90,7 @@ require_once __DIR__ . '/includes/calendar-page.php';
 require_once __DIR__ . '/includes/blocks.php';
 require_once __DIR__ . '/includes/event-locations.php';
 require_once __DIR__ . '/includes/event-participation.php';
+require_once __DIR__ . '/includes/event-actor.php';
 require_once __DIR__ . '/includes/envelope.php';
 require_once __DIR__ . '/includes/rest.php';
 require_once __DIR__ . '/includes/rest-read.php';

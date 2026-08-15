@@ -38,7 +38,9 @@ const AXISMUNDI_CAL_KINDS = array( 'local', 'remote', 'system' );
  */
 function axismundi_cal_calendar_by_slug( string $slug ) : ?array {
 	global $wpdb;
-	$slug = sanitize_title( $slug );
+	// Through the shared sanitizer, which keeps the `@` an Actor's own calendar is addressed by.
+	// `sanitize_title()` alone would strip it, and `/calendar/@jiwoon` would then look up `jiwoon`.
+	$slug = axismundi_cal_sanitize_calendar_slug( $slug );
 	if ( '' === $slug || ! axismundi_cal_ready() ) {
 		return null;
 	}

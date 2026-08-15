@@ -234,12 +234,15 @@ function axismundi_cal_event_participation( int $post_id, string $actor_uri ) : 
  * @return string
  */
 function axismundi_cal_event_owner_actor_uri( int $post_id ) : string {
-	$author = (int) get_post_field( 'post_author', $post_id );
-	if ( $author <= 0 || ! function_exists( 'axismundi_actors_get_for_user' ) ) {
-		return '';
-	}
-	$actor = axismundi_actors_get_for_user( $author );
-	return $actor instanceof Axismundi_Actor ? (string) $actor->get_uri() : '';
+	/*
+	 * The Actor the Event was published by, which is who a Join is addressed to and who an Invite
+	 * comes from. It used to be derived from the WordPress account that wrote it -- correct only while
+	 * everybody published as themselves, and wrong the moment somebody posts on an Organization's
+	 * behalf: the guest would be asking a person to admit them to an event the organisation is
+	 * running. The derivation survives inside the resolver as the answer for Events written before
+	 * there was anywhere to record the choice.
+	 */
+	return axismundi_cal_event_acting_actor_uri( $post_id );
 }
 
 /**

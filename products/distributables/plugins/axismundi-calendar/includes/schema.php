@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '37';
+const AXISMUNDI_CAL_DB_VERSION        = '38';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 const AXISMUNDI_CAL_SCHEMA_BAIL_OPTION = 'ax_cal_schema_bail';
 
@@ -257,12 +257,14 @@ function axismundi_cal_install_schema() : bool {
 			join_eligibility varchar(16) NOT NULL default 'public',
 			external_participation_url text NOT NULL,
 			maximum_attendee_capacity int(10) unsigned NULL,
+			acting_actor_identity_id bigint(20) unsigned NOT NULL default 0,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (post_id),
 			KEY starts_at_gmt (starts_at_gmt),
 			KEY ends_at_gmt (ends_at_gmt),
-			KEY event_status (event_status)
+			KEY event_status (event_status),
+			KEY acting_actor_identity_id (acting_actor_identity_id)
 		) ENGINE=InnoDB {$charset};"
 	);
 
@@ -859,6 +861,12 @@ function axismundi_cal_install_schema() : bool {
 	 * and a collision is reported by leaving it alone rather than resolved by inventing a third one.
 	 */
 	axismundi_cal_backfill_actor_calendars();
+	/*
+	 * Events written before there was a column for it, filled with the Actor this plugin was already
+	 * deriving from the author. Nothing observable changes: the derivation is written down so that it
+	 * stops being consulted, rather than a different answer being computed for old rows.
+	 */
+	axismundi_cal_backfill_event_acting_actors();
 
 	/*
 	 * Dropped rather than left behind. It is not read anywhere after this version, and leaving a

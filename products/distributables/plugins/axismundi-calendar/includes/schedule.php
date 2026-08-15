@@ -112,7 +112,7 @@ function axismundi_cal_schedule_save( int $post_id, array $fields ) {
 		 * correct answer to "whose Event is this?" in that case, and inventing one is what the
 		 * unfiled Calendar did.
 		 */
-		$primary = axismundi_cal_ensure_primary_calendar( axismundi_cal_current_actor_uri() );
+		$primary = axismundi_cal_ensure_primary_calendar( axismundi_cal_authoring_actor_uri( $post_id ) );
 		if ( is_wp_error( $primary ) ) {
 			return $primary;
 		}

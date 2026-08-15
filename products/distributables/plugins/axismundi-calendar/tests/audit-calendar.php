@@ -14,6 +14,7 @@ defined( 'ABSPATH' ) || exit( 1 );
 $ax_cl_results   = array();
 $ax_cl_posts     = array();
 $ax_cl_calendars = array();
+$ax_cl_users     = array();
 
 function ax_cl_assert( array &$results, string $label, bool $condition ) : void {
 	$results[] = $condition;
@@ -57,8 +58,18 @@ try {
 	 * An Event still never becomes unowned. It is filed on its author's own Calendar now rather than
 	 * refused -- but written by nobody, with no Actor to file it under, it is still refused, because
 	 * that is the case where "whose Event is this?" has no answer.
+	 *
+	 * That case is now reached through the author rather than through who is signed in. An Event is
+	 * published by the Actor of the account that wrote it, so a save made with nobody logged in -- an
+	 * import, a cron job -- files it under its author rather than refusing, and only an author with no
+	 * Actor leaves the question unanswerable. Using user 1 here stopped testing anything the moment
+	 * that account had an Actor of its own.
 	 */
-	$ax_cl_unfiled = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_CAL_EVENT_POST_TYPE, 'post_status' => 'draft', 'post_author' => 1, 'post_title' => 'No calendar' ) );
+	$ax_cl_actorless = (int) wp_insert_user(
+		array( 'user_login' => 'axcl' . strtolower( wp_generate_password( 8, false, false ) ), 'user_pass' => wp_generate_password(), 'role' => 'author' )
+	);
+	$ax_cl_users[]   = $ax_cl_actorless;
+	$ax_cl_unfiled   = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_CAL_EVENT_POST_TYPE, 'post_status' => 'draft', 'post_author' => $ax_cl_actorless, 'post_title' => 'No calendar' ) );
 	$ax_cl_posts[] = $ax_cl_unfiled;
 	$ax_cl_viewer = get_current_user_id();
 	wp_set_current_user( 0 );
@@ -98,6 +109,9 @@ try {
 	}
 	foreach ( array_unique( $ax_cl_calendars ) as $calendar_id ) {
 		axismundi_cal_calendar_delete( (int) $calendar_id );
+	}
+	foreach ( array_unique( $ax_cl_users ) as $user_id ) {
+		wp_delete_user( (int) $user_id );
 	}
 }
 

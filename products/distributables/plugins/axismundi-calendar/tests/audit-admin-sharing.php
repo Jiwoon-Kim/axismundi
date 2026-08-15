@@ -88,6 +88,34 @@ try {
 	ax_sh_assert( $ax_sh_results, 'the owner is shown the sharing form', str_contains( $ax_sh_html, 'ax_cal_share_calendar' ) );
 	ax_sh_assert( $ax_sh_results, 'with the people who already have access', str_contains( $ax_sh_html, $ax_sh_writer['actor_uri'] ) );
 	ax_sh_assert( $ax_sh_results, 'and a nonce, so a link cannot share somebody else&rsquo;s calendar', str_contains( $ax_sh_html, '_wpnonce' ) );
+
+	/*
+	 * Shared with an Actor, named the way people name each other. A handle resolves to whatever URI
+	 * that Actor's own server calls canonical, which is not something a form should ask somebody to
+	 * type -- and an email address is refused outright rather than guessed at, because it names a
+	 * mailbox rather than the identity being given access, and one person may run several Actors.
+	 */
+	ax_sh_assert(
+		$ax_sh_results,
+		'a local handle resolves to the Actor it names',
+		$ax_sh_writer['actor_uri'] === axismundi_cal_resolve_share_principal( '@' . axismundi_actors_get_by_uri( $ax_sh_writer['actor_uri'] )->get_preferred_username() )
+	);
+	ax_sh_assert(
+		$ax_sh_results,
+		'an Actor URI in hand is still accepted',
+		$ax_sh_writer['actor_uri'] === axismundi_cal_resolve_share_principal( $ax_sh_writer['actor_uri'] )
+	);
+	$ax_sh_email = axismundi_cal_resolve_share_principal( 'somebody@example.org' );
+	ax_sh_assert(
+		$ax_sh_results,
+		'an email address is refused rather than treated as an identity',
+		is_wp_error( $ax_sh_email ) && 'ax_cal_share_email' === $ax_sh_email->get_error_code()
+	);
+	ax_sh_assert(
+		$ax_sh_results,
+		'and a handle nobody here has is refused rather than stored as a rule matching nothing',
+		is_wp_error( axismundi_cal_resolve_share_principal( '@axshnobody' ) )
+	);
 	/*
 	 * Free/busy is a level of access in its own right, in both controls. Matched on the wording each
 	 * one uses rather than on the role name, which appears in the markup of the other control too and

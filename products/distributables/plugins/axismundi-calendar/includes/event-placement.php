@@ -116,17 +116,18 @@ function axismundi_cal_placed_event_ids( int $calendar_id ) : array {
 }
 
 /**
- * Why one Event is on one Calendar, for a screen that wants to say so.
+ * Why participation put one Event on one Calendar.
+ *
+ * Only the participation answer. Being filed on a calendar is an independent fact -- an Event with no
+ * participation at all has it, and it comes from the schedule -- so returning it from here would make
+ * one function the authority on two unrelated things and invite callers to ask this before checking
+ * the home calendar. The two are joined in the query and nowhere else.
  *
  * @param int $calendar_id Calendar id.
  * @param int $post_id     Event post ID.
- * @return string `filed` | `invited` | `joined` | '' when it is not on this Calendar at all.
+ * @return string `invited` | `joined` | '' when participation is not why it is here.
  */
 function axismundi_cal_event_placement_reason( int $calendar_id, int $post_id ) : string {
-	$schedule = axismundi_cal_schedule_for_event( $post_id );
-	if ( is_array( $schedule ) && $calendar_id === (int) $schedule['calendar_id'] ) {
-		return 'filed';
-	}
 	$actor_uri = axismundi_cal_calendar_owner_of_record( $calendar_id );
 	if ( '' === $actor_uri ) {
 		return '';

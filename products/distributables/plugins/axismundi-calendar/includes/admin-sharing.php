@@ -60,6 +60,57 @@ function axismundi_cal_share_role_labels() : array {
 }
 
 /**
+ * Turn what somebody typed into the Actor it names.
+ *
+ * Handles first, because that is what people know each other by and what an address book takes:
+ * `@name` here, `@name@example.org` anywhere. A remote handle is resolved through Actors' own
+ * discovery -- WebFinger, then the Actor document -- so the URI stored is the one that server says is
+ * canonical rather than one guessed from the address.
+ *
+ * An Actor URI is still accepted, because somebody who has one in hand should not have to work
+ * backwards to a handle. An email address is deliberately not: it names a person's mailbox, not the
+ * identity access is granted to, and one person may run several Actors.
+ *
+ * @param string $input Typed value.
+ * @return string|WP_Error Canonical Actor URI.
+ */
+function axismundi_cal_resolve_share_principal( string $input ) {
+	$input = trim( $input );
+	if ( '' === $input ) {
+		return new WP_Error( 'ax_cal_share_principal', __( 'Enter a handle to share with.', 'axismundi-calendar' ) );
+	}
+	if ( str_starts_with( $input, 'http://' ) || str_starts_with( $input, 'https://' ) ) {
+		return esc_url_raw( $input );
+	}
+	if ( is_email( ltrim( $input, '@' ) ) && ! str_starts_with( $input, '@' ) ) {
+		return new WP_Error(
+			'ax_cal_share_email',
+			__( 'That looks like an email address. Calendars are shared with an Actor handle, such as @name or @name@example.org.', 'axismundi-calendar' )
+		);
+	}
+
+	$handle = ltrim( $input, '@' );
+	if ( ! str_contains( $handle, '@' ) ) {
+		$actor = function_exists( 'axismundi_actors_get_by_handle' ) ? axismundi_actors_get_by_handle( $handle ) : null;
+		if ( ! $actor instanceof Axismundi_Actor ) {
+			return new WP_Error( 'ax_cal_share_unknown', __( 'No Actor on this site has that handle.', 'axismundi-calendar' ) );
+		}
+		return (string) $actor->get_uri();
+	}
+
+	if ( ! function_exists( 'axismundi_actors_discover_remote_actor' ) ) {
+		return new WP_Error( 'ax_cal_share_remote', __( 'Remote Actors cannot be looked up on this site yet.', 'axismundi-calendar' ) );
+	}
+	$remote = axismundi_actors_discover_remote_actor( '@' . $handle );
+	if ( is_wp_error( $remote ) ) {
+		return $remote;
+	}
+	return $remote instanceof Axismundi_Actor
+		? (string) $remote->get_uri()
+		: new WP_Error( 'ax_cal_share_unknown', __( 'That handle could not be resolved to an Actor.', 'axismundi-calendar' ) );
+}
+
+/**
  * Apply one sharing change.
  *
  * @return void
@@ -79,7 +130,9 @@ function axismundi_cal_handle_share_form() : void {
 
 	$action    = isset( $_POST['ax_cal_share_action'] ) ? sanitize_key( wp_unslash( (string) $_POST['ax_cal_share_action'] ) ) : '';
 	$type      = isset( $_POST['principal_type'] ) && 'public' === $_POST['principal_type'] ? 'public' : 'actor';
-	$principal = 'public' === $type ? '' : esc_url_raw( wp_unslash( (string) ( $_POST['principal'] ?? '' ) ) );
+	// Text rather than a URL, because this field now takes a handle. `esc_url_raw()` would turn
+	// `@name@example.org` into something with a scheme bolted onto the front of it.
+	$principal = 'public' === $type ? '' : sanitize_text_field( wp_unslash( (string) ( $_POST['principal'] ?? '' ) ) );
 
 	if ( 'revoke' === $action ) {
 		$rule = axismundi_cal_acl_rule( $calendar_id, $principal, $type );
@@ -116,8 +169,16 @@ function axismundi_cal_handle_share_form() : void {
 		exit;
 	}
 
+	// Resolved only for a new grant. A revoke names a rule that already exists by the URI it was stored
+	// under, and re-resolving there would fail for an Actor whose server has since gone away -- leaving
+	// somebody unable to withdraw access precisely when they most want to.
+	$resolved = axismundi_cal_resolve_share_principal( $principal );
+	if ( is_wp_error( $resolved ) ) {
+		wp_safe_redirect( add_query_arg( 'ax_cal_error', rawurlencode( $resolved->get_error_code() ), $base ) );
+		exit;
+	}
 	$role   = sanitize_text_field( wp_unslash( (string) ( $_POST['role'] ?? '' ) ) );
-	$result = axismundi_cal_acl_grant( $calendar_id, $principal, $role, $type );
+	$result = axismundi_cal_acl_grant( $calendar_id, $resolved, $role, $type );
 	if ( is_wp_error( $result ) ) {
 		wp_safe_redirect( add_query_arg( 'ax_cal_error', rawurlencode( $result->get_error_code() ), $base ) );
 		exit;
@@ -180,10 +241,14 @@ function axismundi_cal_render_sharing( array $calendar ) : void {
 	</form>
 
 	<?php
-	// Not "people and groups": an Organization or a Service Actor holds access on exactly the same
-	// terms, and naming two of the four kinds reads as a rule about which kinds may be given it.
+	/*
+	 * Google says "Share with specific people or groups"; this says accounts, because an Organization
+	 * or a Service Actor holds access on exactly the same terms and naming two of the four kinds reads
+	 * as a rule about which kinds may be given it. Not "Shared with" either -- that names the list
+	 * below rather than the thing this section does, and the section is where sharing happens.
+	 */
 	?>
-	<h3><?php esc_html_e( 'Shared with', 'axismundi-calendar' ); ?></h3>
+	<h3><?php esc_html_e( 'Share with specific accounts', 'axismundi-calendar' ); ?></h3>
 	<table class="wp-list-table widefat fixed striped">
 		<thead>
 			<tr>
@@ -228,11 +293,19 @@ function axismundi_cal_render_sharing( array $calendar ) : void {
 		<?php wp_nonce_field( 'ax_cal_share' ); ?>
 		<table class="form-table" role="presentation">
 			<tr>
-				<th scope="row"><label for="ax-cal-principal"><?php esc_html_e( 'Actor address', 'axismundi-calendar' ); ?></label></th>
+				<th scope="row"><label for="ax-cal-principal"><?php esc_html_e( 'Add account', 'axismundi-calendar' ); ?></label></th>
 				<td>
-					<input name="principal" id="ax-cal-principal" type="url" class="regular-text" placeholder="https://example.com/actors/…">
+					<?php
+					/*
+					 * A handle, the way an address book takes one. Never an email address: email is a way to
+					 * reach somebody, not an identity here, and one person may run several Actors -- so the
+					 * field that decides who gets access has to name the Actor rather than the human behind
+					 * it. An Actor URI is still accepted for the case where somebody has one in hand.
+					 */
+					?>
+					<input name="principal" id="ax-cal-principal" type="text" class="regular-text" placeholder="@handle or @handle@example.org">
 					<p class="description">
-						<?php esc_html_e( 'The Actor URI of a person or group, on this site or another. Granting access does not add the calendar to their list; they choose that themselves.', 'axismundi-calendar' ); ?>
+						<?php esc_html_e( 'A handle on this site (@name) or on another server (@name@example.org). Granting access does not add the calendar to their list; they choose that themselves.', 'axismundi-calendar' ); ?>
 					</p>
 				</td>
 			</tr>

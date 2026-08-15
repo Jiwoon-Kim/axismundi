@@ -113,11 +113,17 @@ try {
 			&& in_array( 'Housewarming', ax_ep_titles( $ax_ep_host_cal ), true )
 			&& (int) $ax_ep_host_cal === (int) axismundi_cal_schedule_for_event( $ax_ep_party )['calendar_id']
 	);
+	/*
+	 * Participation is the only thing this answers. Where an Event is filed is a fact it has whether or
+	 * not anybody ever joined it -- the schedule says so -- and asking one function for both would let a
+	 * caller take "not participation" as "not on this calendar".
+	 */
 	ax_ep_assert(
 		$ax_ep_results,
-		'and the calendar can say why it is there rather than implying it was filed there',
-		'filed' === axismundi_cal_event_placement_reason( $ax_ep_host_cal, $ax_ep_party )
-			&& in_array( axismundi_cal_event_placement_reason( $ax_ep_guest_cal, $ax_ep_party ), array( 'joined', 'invited' ), true )
+		'a calendar can say why participation put an Event on it, and says nothing about where it is filed',
+		in_array( axismundi_cal_event_placement_reason( $ax_ep_guest_cal, $ax_ep_party ), array( 'joined', 'invited' ), true )
+			&& '' === axismundi_cal_event_placement_reason( $ax_ep_guest_cal, $ax_ep_party + 100000 )
+			&& (int) $ax_ep_host_cal === (int) axismundi_cal_schedule_for_event( $ax_ep_party )['calendar_id']
 	);
 
 	// -- 3. declining is an answer, not a removal ---------------------------------------------------------

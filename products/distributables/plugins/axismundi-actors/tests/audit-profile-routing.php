@@ -212,9 +212,9 @@ try {
 		'the Person namespace does not claim a kind, leaving the default in one place',
 		! isset( $ax_profile_slashed['ax_actor_kind'] )
 	);
-	$ax_previous_current_actor = $GLOBALS['axismundi_actors_current_actor'];
+	$ax_previous_current_actor = $GLOBALS['axismundi_actors_profile_actor'];
 	$ax_previous_query         = $GLOBALS['wp_query'] ?? null;
-	$GLOBALS['axismundi_actors_current_actor'] = null;
+	$GLOBALS['axismundi_actors_profile_actor'] = null;
 	$GLOBALS['wp_query'] = new WP_Query();
 	$GLOBALS['wp_query']->set( 'ax_actor_handle', 'alice_profile' );
 	ax_profile_assert(
@@ -222,7 +222,7 @@ try {
 		'the canonical guard resolves a fallback-routed alias before pre_handle_404 sets the current Actor',
 		false === axismundi_actors_handle_alias_canonical_redirect( 'https://example.test/@alice_profile/' )
 	);
-	$GLOBALS['axismundi_actors_current_actor'] = $ax_previous_current_actor;
+	$GLOBALS['axismundi_actors_profile_actor'] = $ax_previous_current_actor;
 	$GLOBALS['wp_query'] = $ax_previous_query;
 
 	// A public status without a registered handle stays hidden from the public.
@@ -234,7 +234,7 @@ try {
 	}
 	ax_profile_assert( $ax_profile_results, 'public status without a registered handle is not publicly viewable', $nohandle instanceof Axismundi_Actor && ! axismundi_actors_is_public_profile( $nohandle ) && ! axismundi_actors_can_view( $nohandle, 0 ) );
 
-	$GLOBALS['axismundi_actors_current_actor'] = $public_actor;
+	$GLOBALS['axismundi_actors_profile_actor'] = $public_actor;
 	$rendered = render_block( array( 'blockName' => 'axismundi/actor-profile', 'attrs' => array(), 'innerBlocks' => array(), 'innerHTML' => '', 'innerContent' => array() ) );
 	ax_profile_assert( $ax_profile_results, 'profile block renders a banner, overlapping profile head, and identity data without exposing email', false !== strpos( $rendered, 'ax-actor-profile__cover' ) && false !== strpos( $rendered, 'ax-actor-profile__head' ) && false !== strpos( $rendered, 'ax-actor-profile__avatar-frame' ) && false !== strpos( $rendered, 'Alice Profile' ) && false !== strpos( $rendered, 'A live profile summary.' ) && false === strpos( $rendered, 'alice-private@example.test' ) );
 	$title_parts = axismundi_actors_document_title_parts( array( 'title' => 'Fallback' ) );
@@ -247,16 +247,16 @@ try {
 
 	$rules = axismundi_actors_rewrite_rules();
 	ax_profile_assert( $ax_profile_results, 'canonical, follow-collection, and both slash forms of the human alias rewrite rules are all registered', isset( $rules['^actors/([0-9a-fA-F-]{36})/?$'], $rules['^actors/([0-9a-fA-F-]{36})/(followers|following)/?$'], $rules['^@([^/]+)$'], $rules['^@([^/]+)/$'], $rules['^@([^/]+)/(followers|following)/?$'] ) );
-	$ax_previous_current_actor = $GLOBALS['axismundi_actors_current_actor'];
+	$ax_previous_current_actor = $GLOBALS['axismundi_actors_profile_actor'];
 	$ax_previous_query        = $GLOBALS['wp_query'] ?? null;
-	$GLOBALS['axismundi_actors_current_actor'] = $public_actor;
+	$GLOBALS['axismundi_actors_profile_actor'] = $public_actor;
 	$GLOBALS['wp_query'] = new WP_Query();
 	$GLOBALS['wp_query']->set( 'ax_actor_handle', $public_actor instanceof Axismundi_Actor ? $public_actor->get_preferred_username() : '' );
 	ax_profile_assert( $ax_profile_results, 'the local handle alias opts out of Core trailing-slash canonicalization', false === axismundi_actors_handle_alias_canonical_redirect( 'https://example.test/@alice_profile/' ) );
-	$GLOBALS['axismundi_actors_current_actor'] = $ax_previous_current_actor;
+	$GLOBALS['axismundi_actors_profile_actor'] = $ax_previous_current_actor;
 	$GLOBALS['wp_query'] = $ax_previous_query;
 } finally {
-	$GLOBALS['axismundi_actors_current_actor'] = null;
+	$GLOBALS['axismundi_actors_profile_actor'] = null;
 	update_option( 'permalink_structure', $ax_old_permalink );
 	foreach ( array_unique( $ax_profile_ids ) as $identity_id ) {
 		$wpdb->delete( axismundi_actors_addresses_table(), array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
@@ -291,9 +291,9 @@ $ax_profile_results[] = ( static function () : bool {
 
 	// Both opt-outs read the routed request, so the route has to be simulated the way
 	// the handle-alias check above does; without it they simply see no Actor.
-	$previous_actor = $GLOBALS['axismundi_actors_current_actor'] ?? null;
+	$previous_actor = $GLOBALS['axismundi_actors_profile_actor'] ?? null;
 	$previous_query = $GLOBALS['wp_query'] ?? null;
-	$GLOBALS['axismundi_actors_current_actor'] = $actor;
+	$GLOBALS['axismundi_actors_profile_actor'] = $actor;
 
 	$GLOBALS['wp_query'] = new WP_Query();
 	$GLOBALS['wp_query']->set( 'ax_actor', $actor->get_uuid() );
@@ -303,7 +303,7 @@ $ax_profile_results[] = ( static function () : bool {
 	$GLOBALS['wp_query']->set( 'ax_actor_handle', $actor->get_preferred_username() );
 	$hub_opts_out = false === axismundi_actors_handle_alias_canonical_redirect( $hub . '/' );
 
-	$GLOBALS['axismundi_actors_current_actor'] = $previous_actor;
+	$GLOBALS['axismundi_actors_profile_actor'] = $previous_actor;
 	$GLOBALS['wp_query'] = $previous_query;
 
 	$pass = $identity === untrailingslashit( $identity )

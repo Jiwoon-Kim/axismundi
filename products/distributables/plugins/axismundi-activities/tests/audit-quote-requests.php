@@ -193,7 +193,7 @@ try {
 		add_action( 'axismundi_act_activity_recorded', 'axismundi_activitypub_bridge_queue_outbound', (int) $ax_qr_bridge_hook );
 	}
 	wp_set_current_user( $ax_qr_old_user );
-	$GLOBALS['axismundi_actors_current_actor'] = null;
+	$GLOBALS['axismundi_actors_profile_actor'] = null;
 	foreach ( $ax_qr_posts as $post_id ) {
 		wp_delete_post( $post_id, true );
 	}

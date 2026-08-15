@@ -8,7 +8,7 @@
 defined( 'ABSPATH' ) || exit;
 
 /** @var Axismundi_Actor|null Actor resolved for the current front-end request. */
-$GLOBALS['axismundi_actors_current_actor'] = null;
+$GLOBALS['axismundi_actors_profile_actor'] = null;
 
 /**
  * Rewrite expressions owned by this plugin.
@@ -227,12 +227,21 @@ function axismundi_actors_resolve_request_actor( string $uuid, string $handle, s
 }
 
 /**
- * Current request actor after the route visibility gate.
+ * The Actor this request is *about*, after the route visibility gate.
+ *
+ * Whose profile is being served -- set by routing, read by anything rendering that page. On a request
+ * to an Organization's profile it is that Organization, whoever is signed in and whoever they are
+ * publishing as.
+ *
+ * Named `profile_actor` and not `current_actor` on purpose. "Current" reads as "the one I am acting
+ * as", and an account switcher is coming: an acting-Actor resolver that fell back to this would let
+ * visiting an Organization's page publish under its name. The two never converge, so they never share
+ * a word. See ROUTING.md for the three-name contract.
  *
  * @return Axismundi_Actor|null
  */
-function axismundi_actors_current_actor() : ?Axismundi_Actor {
-	$actor = $GLOBALS['axismundi_actors_current_actor'] ?? null;
+function axismundi_actors_profile_actor() : ?Axismundi_Actor {
+	$actor = $GLOBALS['axismundi_actors_profile_actor'] ?? null;
 	return $actor instanceof Axismundi_Actor ? $actor : null;
 }
 
@@ -360,7 +369,7 @@ function axismundi_actors_follow_collection_page_is_available( Axismundi_Actor $
  * @return Axismundi_Actor|null Actor addressed through a local or cached remote alias.
  */
 function axismundi_actors_current_handle_alias_actor() : ?Axismundi_Actor {
-	$actor = axismundi_actors_current_actor();
+	$actor = axismundi_actors_profile_actor();
 	return '' !== (string) get_query_var( 'ax_actor_handle' ) && $actor instanceof Axismundi_Actor
 		? $actor
 		: null;
@@ -370,7 +379,7 @@ function axismundi_actors_current_handle_alias_actor() : ?Axismundi_Actor {
  * Resolve the routed handle alias before the front-end request handler has set globals.
  *
  * `redirect_canonical` runs before `pre_handle_404`, where the normal request path sets
- * `axismundi_actors_current_actor`. A parse-request fallback can therefore have the
+ * `axismundi_actors_profile_actor`. A parse-request fallback can therefore have the
  * correct query var while the global is still null. Core must see the routed alias at
  * this earlier point or it appends a slash, which then bounces off our slashless
  * normaliser.
@@ -403,7 +412,7 @@ add_filter( 'redirect_canonical', 'axismundi_actors_handle_alias_canonical_redir
  * @return Axismundi_Actor|null Local Actor addressed by its own `/actors/{uuid}`.
  */
 function axismundi_actors_current_identity_route_actor() : ?Axismundi_Actor {
-	$actor = axismundi_actors_current_actor();
+	$actor = axismundi_actors_profile_actor();
 	return '' !== (string) get_query_var( 'ax_actor' ) && $actor instanceof Axismundi_Actor && $actor->is_local()
 		? $actor
 		: null;
@@ -624,7 +633,7 @@ add_action( 'template_redirect', 'axismundi_actors_redirect_follow_collection_tr
 
 /** Redirect cached remote UUID profile hubs to their verified local acct alias. */
 function axismundi_actors_redirect_remote_uuid_profile_alias() : void {
-	$actor = axismundi_actors_current_actor();
+	$actor = axismundi_actors_profile_actor();
 	if ( ! $actor instanceof Axismundi_Actor || $actor->is_local() || '' === (string) get_query_var( 'ax_actor' ) ) {
 		return;
 	}
@@ -674,7 +683,7 @@ function axismundi_actors_avatar_url( Axismundi_Actor $actor, int $size = 96 ) :
  * @return Axismundi_Actor|null
  */
 function axismundi_actors_resolve_block_actor( string $context_actor_id ) : ?Axismundi_Actor {
-	$route_actor = axismundi_actors_current_actor();
+	$route_actor = axismundi_actors_profile_actor();
 	if ( $route_actor instanceof Axismundi_Actor ) {
 		return $route_actor;
 	}
@@ -763,14 +772,14 @@ function axismundi_actors_handle_profile_request( bool $preempt, WP_Query $query
 	$actor = axismundi_actors_resolve_request_actor( $uuid, $handle, (string) $query->get( 'ax_actor_kind' ) );
 	$collection = (string) $query->get( 'ax_actor_collection' );
 	if ( ! $actor || ! axismundi_actors_can_view( $actor ) || ( '' !== $collection && ! axismundi_actors_follow_collection_page_is_available( $actor ) ) ) {
-		$GLOBALS['axismundi_actors_current_actor'] = null;
+		$GLOBALS['axismundi_actors_profile_actor'] = null;
 		$query->set_404();
 		status_header( 404 );
 		nocache_headers();
 		return true;
 	}
 
-	$GLOBALS['axismundi_actors_current_actor'] = $actor;
+	$GLOBALS['axismundi_actors_profile_actor'] = $actor;
 	$query->is_404     = false;
 	$query->is_home    = false;
 	$query->is_archive = false;
@@ -1058,11 +1067,11 @@ function axismundi_actors_profile_template_include( string $template ) : string 
 		$templates = array( 'group-directory.php', 'index.php' );
 		return locate_block_template( locate_template( $templates ), 'group-directory', $templates );
 	}
-	if ( ! axismundi_actors_current_actor() ) {
+	if ( ! axismundi_actors_profile_actor() ) {
 		return $template;
 	}
 	$is_collection = '' !== (string) get_query_var( 'ax_actor_collection' );
-	$actor = axismundi_actors_current_actor();
+	$actor = axismundi_actors_profile_actor();
 	$slug = $actor instanceof Axismundi_Actor
 		? axismundi_actors_profile_template_slug( $actor, $is_collection )
 		: 'actor-person-profile';
@@ -1073,7 +1082,7 @@ add_filter( 'template_include', 'axismundi_actors_profile_template_include', 99 
 
 /** Keep private local Actor previews out of search indexes. */
 function axismundi_actors_remote_preview_robots( array $robots ) : array {
-	$actor = axismundi_actors_current_actor();
+	$actor = axismundi_actors_profile_actor();
 	if ( $actor && ! axismundi_actors_is_public_profile( $actor ) ) {
 		$robots['noindex']   = true;
 		$robots['nofollow']  = true;
@@ -1085,7 +1094,7 @@ add_filter( 'wp_robots', 'axismundi_actors_remote_preview_robots' );
 
 /** @return void */
 function axismundi_actors_print_canonical() : void {
-	$actor = axismundi_actors_current_actor();
+	$actor = axismundi_actors_profile_actor();
 	if ( $actor ) {
 		$collection = (string) get_query_var( 'ax_actor_collection' );
 		$url = '' !== $collection ? axismundi_actors_follow_collection_url( $actor, $collection, max( 1, absint( get_query_var( 'page' ) ) ) ) : $actor->get_uri();
@@ -1105,7 +1114,7 @@ function axismundi_actors_document_title_parts( array $parts ) : array {
 		$parts['title'] = __( 'Groups', 'axismundi-actors' );
 		return $parts;
 	}
-	$actor = axismundi_actors_current_actor();
+	$actor = axismundi_actors_profile_actor();
 	if ( $actor ) {
 		$collection = (string) get_query_var( 'ax_actor_collection' );
 		$parts['title'] = '' !== $collection ? sprintf( '%s - %s', $actor->get_display_name(), ucfirst( $collection ) ) : $actor->get_display_name();

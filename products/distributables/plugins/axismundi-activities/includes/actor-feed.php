@@ -738,10 +738,10 @@ function axismundi_act_feed_filters_are_client_owned( array $surface, array $tab
 
 /** Render the current Actor's public Activity feed. */
 function axismundi_act_render_actor_activity_feed( array $attributes = array() ) : string {
-	if ( ! function_exists( 'axismundi_actors_current_actor' ) ) {
+	if ( ! function_exists( 'axismundi_actors_profile_actor' ) ) {
 		return '';
 	}
-	$actor = axismundi_actors_current_actor();
+	$actor = axismundi_actors_profile_actor();
 	if ( ! $actor instanceof Axismundi_Actor ) {
 		return '';
 	}

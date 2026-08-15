@@ -116,7 +116,7 @@ try {
 	wp_set_current_user( (int) $follower->get_local_user_id() );
 	$follows_url = axismundi_act_follows_admin_url();
 	ax_local_assert( $ax_local_results, 'Contributor Follows uses the transport-neutral Profile submenu slug', str_contains( $follows_url, 'profile.php?page=axismundi-follows' ) );
-	$GLOBALS['axismundi_actors_current_actor'] = $target;
+	$GLOBALS['axismundi_actors_profile_actor'] = $target;
 	$profile_html = axismundi_act_render_profile_follow_control( '<article>profile</article>' );
 	ax_local_assert( $ax_local_results, 'the public Actor profile control reflects accepted state as Unfollow', str_contains( $profile_html, 'Unfollow' ) && str_contains( $profile_html, 'target_uri' ) );
 	$columns = axismundi_act_users_follow_column( array( 'username' => 'Username' ) );
@@ -145,7 +145,7 @@ try {
 	$remote_follow  = is_array( $remote_attempt ) ? axismundi_act_get( (string) $remote_attempt['initiating_activity_uri'] ) : null;
 	ax_local_assert( $ax_local_results, 'remote Follow records an outbound Activity with an explicit remote audience and no HTTP', is_array( $remote_attempt ) && 'pending' === $remote_attempt['state'] && $remote_follow instanceof Axismundi_Activity && 'outbound' === $remote_follow->get_direction() && in_array( $remote->get_uri(), (array) $remote_follow->get_audience()['to'], true ) && 0 === $GLOBALS['ax_local_http_count'] );
 
-	$GLOBALS['axismundi_actors_current_actor'] = $remote;
+	$GLOBALS['axismundi_actors_profile_actor'] = $remote;
 	$remote_profile_html = axismundi_act_render_profile_follow_control( '<article>remote profile</article>' );
 	ob_start();
 	do_action( 'axismundi_actors_remote_actor_actions', $remote );
@@ -246,7 +246,7 @@ try {
 	}
 	wp_set_current_user( $ax_local_old_user );
 	$_GET = $ax_local_old_get;
-	$GLOBALS['axismundi_actors_current_actor'] = null;
+	$GLOBALS['axismundi_actors_profile_actor'] = null;
 	if ( null === $ax_local_old_auto ) {
 		delete_option( 'axismundi_activities_auto_accept_local_follows' );
 	} else {

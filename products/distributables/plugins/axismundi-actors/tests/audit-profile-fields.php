@@ -99,8 +99,8 @@ try {
 		$after_reordered = axismundi_actors_get_profile_fields( $actor->get_identity_id() );
 		ax_profile_field_assert( $ax_profile_field_results, 'reordering or relabeling preserves a verified URL while a changed URL would reset it', true === $reordered && 'verified' === $after_reordered[1]['verification_status'] );
 
-		$previous_route_actor = $GLOBALS['axismundi_actors_current_actor'] ?? null;
-		$GLOBALS['axismundi_actors_current_actor'] = $actor;
+		$previous_route_actor = $GLOBALS['axismundi_actors_profile_actor'] ?? null;
+		$GLOBALS['axismundi_actors_profile_actor'] = $actor;
 		$profile_block_markup = render_block(
 			array(
 				'blockName'    => 'axismundi/actor-profile-fields',
@@ -119,7 +119,7 @@ try {
 				'innerContent' => array(),
 			)
 		);
-		$GLOBALS['axismundi_actors_current_actor'] = $previous_route_actor;
+		$GLOBALS['axismundi_actors_profile_actor'] = $previous_route_actor;
 		ax_profile_field_assert( $ax_profile_field_results, 'the profile-fields block renders saved links, a verified-link indicator, and its list layout', false !== strpos( $profile_block_markup, 'Renamed Website' ) && false !== strpos( $profile_block_markup, 'ax-actor-profile-fields-block__verified' ) && false !== strpos( $profile_block_markup, 'is-display-list' ) );
 		ax_profile_field_assert( $ax_profile_field_results, 'the profile-fields block renders its grid layout when selected', false !== strpos( $profile_fields_grid_markup, 'is-display-grid' ) );
 

@@ -128,7 +128,7 @@ function axismundi_act_follow_control_html( Axismundi_Actor $subject, Axismundi_
 
 /** Append Follow state/action to a local or cached remote Actor profile block. */
 function axismundi_act_render_profile_follow_control( string $content ) : string {
-	$target  = function_exists( 'axismundi_actors_current_actor' ) ? axismundi_actors_current_actor() : null;
+	$target  = function_exists( 'axismundi_actors_profile_actor' ) ? axismundi_actors_profile_actor() : null;
 	$subject = axismundi_act_current_local_actor();
 	if ( ! $target instanceof Axismundi_Actor || ! $subject instanceof Axismundi_Actor || ! axismundi_act_follow_target_available( $subject, $target ) ) {
 		return $content;

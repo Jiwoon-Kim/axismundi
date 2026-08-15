@@ -724,7 +724,7 @@ function axismundi_forum_restricted_topic_ids( int $user_id ) : array {
  * @return int Group identity, or 0 when this page is about no community.
  */
 function axismundi_forum_context_group_id() : int {
-	$actor = function_exists( 'axismundi_actors_current_actor' ) ? axismundi_actors_current_actor() : null;
+	$actor = function_exists( 'axismundi_actors_profile_actor' ) ? axismundi_actors_profile_actor() : null;
 	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || ! $actor->is_managed() || 'Group' !== $actor->get_type() ) {
 		return 0;
 	}

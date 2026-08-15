@@ -491,14 +491,14 @@ try {
 	$roster_group = axismundi_actors_create_managed_group( array( 'owner_user_id' => $owner_user, 'preferred_username' => 'axfmodr' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'public' ) );
 	if ( $roster_group instanceof Axismundi_Actor ) {
 		$ax_fmod_identities[] = $roster_group->get_identity_id();
-		$previous_actor = $GLOBALS['axismundi_actors_current_actor'] ?? null;
-		$GLOBALS['axismundi_actors_current_actor'] = $roster_group;
+		$previous_actor = $GLOBALS['axismundi_actors_profile_actor'] ?? null;
+		$GLOBALS['axismundi_actors_profile_actor'] = $roster_group;
 		$roster = axismundi_forum_render_group_moderators(
 			array(),
 			'',
 			new WP_Block( array( 'blockName' => 'axismundi/group-moderators', 'attrs' => array() ), array( 'axismundi/actorId' => $roster_group->get_uuid() ) )
 		);
-		$GLOBALS['axismundi_actors_current_actor'] = $previous_actor;
+		$GLOBALS['axismundi_actors_profile_actor'] = $previous_actor;
 		$roster_follow = $owner instanceof Axismundi_Actor ? axismundi_act_get_relation( 'follow', $owner->get_uri(), $roster_group->get_uri() ) : null;
 
 		ax_fmod_assert(
@@ -509,12 +509,12 @@ try {
 				&& false !== strpos( $roster, 'axismundi-group-moderators__heading' )
 		);
 
-		$previous_actor = $GLOBALS['axismundi_actors_current_actor'] ?? null;
-		$GLOBALS['axismundi_actors_current_actor'] = $owner;
+		$previous_actor = $GLOBALS['axismundi_actors_profile_actor'] ?? null;
+		$GLOBALS['axismundi_actors_profile_actor'] = $owner;
 		$person_roster = $owner instanceof Axismundi_Actor
 			? axismundi_forum_render_group_moderators( array(), '', new WP_Block( array( 'blockName' => 'axismundi/group-moderators', 'attrs' => array() ), array( 'axismundi/actorId' => $owner->get_uuid() ) ) )
 			: 'not-empty';
-		$GLOBALS['axismundi_actors_current_actor'] = $previous_actor;
+		$GLOBALS['axismundi_actors_profile_actor'] = $previous_actor;
 		$group_tpl  = get_block_template( 'axismundi-actors//actor-group-profile', 'wp_template' );
 		$person_tpl = get_block_template( 'axismundi-actors//actor-person-profile', 'wp_template' );
 		ax_fmod_assert(

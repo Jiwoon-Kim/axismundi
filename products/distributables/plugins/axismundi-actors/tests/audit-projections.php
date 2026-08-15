@@ -148,7 +148,7 @@ try {
 	// editor preview misleadingly showed a feed. A feed-loop owns that presentation instead.
 	ax_projection_assert( $ax_projection_results, 'Actors keeps projection registration without registering the removed profile-links block', null === WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/actor-projections' ) );
 } finally {
-	$GLOBALS['axismundi_actors_current_actor'] = null;
+	$GLOBALS['axismundi_actors_profile_actor'] = null;
 	wp_set_current_user( 0 );
 	remove_all_actions( 'axismundi_actors_register_projections' );
 	foreach ( $ax_projection_posts as $post_id ) {

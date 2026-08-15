@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-$axismundi_actor_profile_actor = axismundi_actors_current_actor();
+$axismundi_actor_profile_actor = axismundi_actors_profile_actor();
 if ( ! $axismundi_actor_profile_actor ) {
 	return;
 }

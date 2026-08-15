@@ -119,7 +119,7 @@ try {
 	$alice = axismundi_actors_get_by_uuid( $alice->get_uuid() );
 	ax_ah_assert( $ax_ah_results, 'fixture gives the current Actor a real local header image', true === $header_set && $alice instanceof Axismundi_Actor && $header_id === $alice->get_header_attachment_id() );
 
-	$GLOBALS['axismundi_actors_current_actor'] = $alice;
+	$GLOBALS['axismundi_actors_profile_actor'] = $alice;
 	$route_markup = '<!-- wp:group {"className":"ax-actor-profile__header"} --><div class="wp-block-group ax-actor-profile__header"><!-- wp:axismundi/object-featured-image {"showPlaceholder":true} /--><!-- wp:group {"className":"ax-actor-profile__head"} --><div class="wp-block-group ax-actor-profile__head"><!-- wp:axismundi/actor-avatar /--><!-- wp:axismundi/actor-identity /--></div><!-- /wp:group --><!-- wp:axismundi/actor-biography /--></div><!-- /wp:group -->';
 	$route_rendered = do_blocks( $route_markup );
 	ax_ah_assert(
@@ -149,7 +149,7 @@ try {
 		false !== strpos( $header_cover, wp_get_attachment_url( $header_id ) ) && false === strpos( $header_cover, 'is-empty' )
 	);
 
-	$GLOBALS['axismundi_actors_current_actor'] = $bob;
+	$GLOBALS['axismundi_actors_profile_actor'] = $bob;
 	$second_route_rendered = do_blocks( '<!-- wp:group {"className":"ax-actor-profile__header"} --><!-- wp:axismundi/actor-identity /--><!-- /wp:group -->' );
 	ax_ah_assert(
 		$ax_ah_results,
@@ -157,7 +157,7 @@ try {
 		false !== strpos( $second_route_rendered, 'Bob Header' ) && false === strpos( $second_route_rendered, 'Alice Header' )
 	);
 
-	$GLOBALS['axismundi_actors_current_actor'] = $alice;
+	$GLOBALS['axismundi_actors_profile_actor'] = $alice;
 	$no_handle_rendered = do_blocks( '<!-- wp:axismundi/actor-identity {"showHandle":false} /-->' );
 	ax_ah_assert( $ax_ah_results, 'actor-identity showHandle:false hides the federated handle', false === strpos( $no_handle_rendered, 'ax-actor-identity__handle' ) );
 
@@ -178,11 +178,11 @@ try {
 		$ax_ah_ids[] = $carol->get_identity_id();
 	}
 
-	$GLOBALS['axismundi_actors_current_actor'] = $carol;
+	$GLOBALS['axismundi_actors_profile_actor'] = $carol;
 	$preview_rendered = do_blocks( '<!-- wp:axismundi/actor-biography /-->' );
 	ax_ah_assert( $ax_ah_results, 'a non-public route actor renders the biography private-preview notice', false !== strpos( $preview_rendered, 'Private preview' ) );
 } finally {
-	$GLOBALS['axismundi_actors_current_actor'] = null;
+	$GLOBALS['axismundi_actors_profile_actor'] = null;
 	foreach ( array_unique( $ax_ah_ids ) as $identity_id ) {
 		$wpdb->delete( axismundi_actors_addresses_table(), array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.

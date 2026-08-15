@@ -17,6 +17,56 @@ canonical identity; canonical links (and any future JSON-LD `id`) use `/actors/{
 never the alias. The DB `id` is **never** in a URL (`/actors/42` is forbidden) — only
 the `uuid`, which survives re-import and domain moves.
 
+## 0.05. Three Actors, three names
+
+Any request can have up to three different Actors in play, and confusing two of them
+is a privilege bug rather than a naming untidiness. The names are fixed; nothing may
+resolve one from another.
+
+```
+profile_actor       the Actor this request is ABOUT
+                    → set by routing after the visibility gate
+                    → axismundi_actors_profile_actor()
+                    → implemented
+
+acting_actor        the local Actor a signed-in user has CHOSEN to publish as
+                    → attributedTo, Create.actor, Event organizer, Invite.actor
+                    → session-scoped, switched from the admin bar
+                    → NOT IMPLEMENTED
+
+user_default_actor  the Actor a user falls back to before choosing one
+                    → no shared resolver yet; see below
+```
+
+**`profile_actor` must never stand in for `acting_actor`.** Visiting an
+Organization's profile page would then publish under that Organization's name — and
+the code would look correct, because on that page the value really is that
+Organization. This is why the routing function is called `profile_actor()` and not
+`current_actor()`: "current" invites exactly that substitution. The switcher, when it
+arrives, adds its own resolver and does not touch this one.
+
+Membership is re-checked on every mutation, not at switch time. Being able to select
+an Actor is not authority to act as it later — manager roles are revocable, and the
+selection is a stored preference, not a capability.
+
+Switching the acting Actor is **not** switching WordPress user. Capabilities, the
+session, and the editor recorded in `post_author` all stay with the logged-in user;
+only the published identity changes.
+
+### `user_default_actor` is deliberately not unified yet
+
+Three resolvers exist today, and they disagree on purpose:
+
+| resolver | requires |
+|---|---|
+| `axismundi_act_current_local_actor()` | Person, `public`, handle locked |
+| `axismundi_cal_signed_in_actor_uri()` | nothing — whether a profile is published has no bearing on who runs an Event |
+| `axismundi_cal_current_actor_uri()` | `federation_ready`, via `axismundi_op_local_author_actor_uri()` |
+
+Each was right for its own question, and collapsing them now would have to pick one
+publicness rule for all three. The switcher slice defines a "default acting Actor"
+contract and converges them there. Until then: do not add a fourth.
+
 ## 0.1. The Actor handle is NOT the WordPress profile name
 
 The Actor handle and the WordPress author/media archive slugs are **independent** —

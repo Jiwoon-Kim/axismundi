@@ -74,10 +74,10 @@ try {
 	ax_remote_admin_assert( $ax_remote_admin_results, 'selected Actor exposes the administrator action seam to companion plugins', str_contains( $html, 'ax-remote-action-fixture' ) && $actor instanceof Axismundi_Actor && str_contains( $html, $actor->get_uri() ) );
 	ax_remote_admin_assert( $ax_remote_admin_results, 'remote cache controls, optional WebP setting, and public cached profile are linked', str_contains( $html, 'Remote image cache' ) && str_contains( $html, 'axismundi_actors_asset_cache' ) && str_contains( $html, 'axismundi_actors_asset_settings' ) && str_contains( $html, 'View cached profile' ) && $actor instanceof Axismundi_Actor && axismundi_actors_can_view( $actor, get_current_user_id() ) && axismundi_actors_can_view( $actor, 0 ) && str_contains( $html, axismundi_actors_profile_hub_url( $actor ) ) );
 	if ( $actor instanceof Axismundi_Actor ) {
-		$GLOBALS['axismundi_actors_current_actor'] = $actor;
+		$GLOBALS['axismundi_actors_profile_actor'] = $actor;
 		$profile_data = axismundi_actors_profile_data( $actor );
 		$robots       = axismundi_actors_remote_preview_robots( array() );
-		$GLOBALS['axismundi_actors_current_actor'] = null;
+		$GLOBALS['axismundi_actors_profile_actor'] = null;
 		ax_remote_admin_assert( $ax_remote_admin_results, 'public remote profile reads cached payload text without a forced noindex directive', 'Admin Fixture' === $profile_data['name'] && ! isset( $robots['noindex'] ) && ! isset( $robots['nofollow'] ) );
 	}
 } finally {

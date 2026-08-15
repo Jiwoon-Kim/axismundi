@@ -273,19 +273,19 @@ try {
 	ax_feed_assert( $ax_feed_results, 'a public cache-only Object such as a fetched remote inReplyTo parent appears as one observed row without manufacturing a Create Activity', 1 === count( $observed_items ) && $unanchored_note_uri === (string) ( $observed_item['object_uri'] ?? '' ) && false !== strpos( (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $observed_item ), 'Still cache-only parent body.' ) && ! in_array( 'observed:' . hash( 'sha256', $private_note_uri ), $remote_ids, true ) );
 	$announced_object_rows = array_values( array_filter( $remote_items, static fn( array $item ) : bool => $observed_note_uri === (string) ( $item['object_uri'] ?? '' ) ) );
 	ax_feed_assert( $ax_feed_results, 'an Object already framed by an Announce is not also added as an observed fallback card', 1 === count( $announced_object_rows ) && $remote_announce_uri === (string) ( $announced_object_rows[0]['id'] ?? '' ) && 'activity' === (string) ( $announced_object_rows[0]['kind'] ?? '' ) );
-	$previous_current_actor = $GLOBALS['axismundi_actors_current_actor'] ?? null;
-	$GLOBALS['axismundi_actors_current_actor'] = $remote_actor;
+	$previous_current_actor = $GLOBALS['axismundi_actors_profile_actor'] ?? null;
+	$GLOBALS['axismundi_actors_profile_actor'] = $remote_actor;
 	// A boost is not in the default filter, so this also proves the renderer honours `?filter=`
 	// rather than always rendering one fixed slice.
 	$_GET['filter'] = 'posts-and-boosts';
 	$remote_feed_markup = axismundi_act_render_actor_activity_feed();
 	unset( $_GET['filter'] );
-	$GLOBALS['axismundi_actors_current_actor'] = $previous_current_actor;
+	$GLOBALS['axismundi_actors_profile_actor'] = $previous_current_actor;
 	ax_feed_assert( $ax_feed_results, 'a public remote Actor profile renders an uncached Announce as a Boosted external-object row when boosts are selected', false !== strpos( $remote_feed_markup, 'axismundi-object-card__status--announce' ) && false !== strpos( $remote_feed_markup, 'axismundi-object-card--external-reference' ) && false !== strpos( $remote_feed_markup, 'unresolved.example' ) );
-	$previous_current_actor = $GLOBALS['axismundi_actors_current_actor'] ?? null;
-	$GLOBALS['axismundi_actors_current_actor'] = $actor;
+	$previous_current_actor = $GLOBALS['axismundi_actors_profile_actor'] ?? null;
+	$GLOBALS['axismundi_actors_profile_actor'] = $actor;
 	$local_feed_markup = axismundi_act_render_actor_activity_feed();
-	$GLOBALS['axismundi_actors_current_actor'] = $previous_current_actor;
+	$GLOBALS['axismundi_actors_profile_actor'] = $previous_current_actor;
 	ax_feed_assert( $ax_feed_results, 'an Actor timeline exposes Reply, Like, and Repost controls while archive renderers remain independently configurable', false !== strpos( $local_feed_markup, 'axismundi-interaction__button' ) && false !== strpos( $local_feed_markup, 'axismundi-interaction__button' ) && false !== strpos( $local_feed_markup, 'axismundi-interaction__button' ) );
 
 	/*
@@ -294,10 +294,10 @@ try {
 	 * picker per card. Its document handler can receive every card's delegated reaction control.
 	 */
 	wp_set_current_user( $ax_feed_user_id );
-	$previous_current_actor = $GLOBALS['axismundi_actors_current_actor'] ?? null;
-	$GLOBALS['axismundi_actors_current_actor'] = $actor;
+	$previous_current_actor = $GLOBALS['axismundi_actors_profile_actor'] ?? null;
+	$GLOBALS['axismundi_actors_profile_actor'] = $actor;
 	$authenticated_feed_markup = axismundi_act_render_actor_activity_feed();
-	$GLOBALS['axismundi_actors_current_actor'] = $previous_current_actor;
+	$GLOBALS['axismundi_actors_profile_actor'] = $previous_current_actor;
 	wp_set_current_user( 0 );
 	ax_feed_assert(
 		$ax_feed_results,
@@ -529,10 +529,10 @@ try {
 		);
 	}
 	$paginated_markup = ( static function () use ( $remote_actor ) {
-		$previous = $GLOBALS['axismundi_actors_current_actor'] ?? null;
-		$GLOBALS['axismundi_actors_current_actor'] = $remote_actor;
+		$previous = $GLOBALS['axismundi_actors_profile_actor'] ?? null;
+		$GLOBALS['axismundi_actors_profile_actor'] = $remote_actor;
 		$markup = axismundi_act_render_actor_activity_feed();
-		$GLOBALS['axismundi_actors_current_actor'] = $previous;
+		$GLOBALS['axismundi_actors_profile_actor'] = $previous;
 		return $markup;
 	} )();
 	remove_filter( 'axismundi_act_actor_feed_per_page', $ax_feed_small_page );
@@ -569,10 +569,10 @@ try {
 	// collections, not preferences, and stay addressable.
 	$_GET['filter'] = 'all';
 	$url_filtered   = ( static function () use ( $remote_actor ) {
-		$previous = $GLOBALS['axismundi_actors_current_actor'] ?? null;
-		$GLOBALS['axismundi_actors_current_actor'] = $remote_actor;
+		$previous = $GLOBALS['axismundi_actors_profile_actor'] ?? null;
+		$GLOBALS['axismundi_actors_profile_actor'] = $remote_actor;
 		$markup = axismundi_act_render_actor_activity_feed();
-		$GLOBALS['axismundi_actors_current_actor'] = $previous;
+		$GLOBALS['axismundi_actors_profile_actor'] = $previous;
 		return $markup;
 	} )();
 	unset( $_GET['filter'] );
@@ -1139,12 +1139,12 @@ try {
 	 * The renderer reads the Actor being viewed from the request, so the fixture has to be the one
 	 * on screen — the same way every other feed assertion in this file renders.
 	 */
-	$ax_feed_loop_previous_actor               = $GLOBALS['axismundi_actors_current_actor'] ?? null;
-	$GLOBALS['axismundi_actors_current_actor'] = $ax_feed_live_actor;
+	$ax_feed_loop_previous_actor               = $GLOBALS['axismundi_actors_profile_actor'] ?? null;
+	$GLOBALS['axismundi_actors_profile_actor'] = $ax_feed_live_actor;
 	$ax_feed_loop_ssr                          = $ax_feed_live_actor instanceof Axismundi_Actor
 		? axismundi_act_render_actor_activity_feed( array() )
 		: '';
-	$GLOBALS['axismundi_actors_current_actor'] = $ax_feed_loop_previous_actor;
+	$GLOBALS['axismundi_actors_profile_actor'] = $ax_feed_loop_previous_actor;
 	$ax_feed_loop_ssr_calls = $ax_feed_loop_calls;
 
 	$ax_feed_loop_type->render_callback = $ax_feed_loop_real;
@@ -1202,13 +1202,13 @@ try {
 		return $candidate->get_uri() === $actor->get_uri() ? 1 : $per_page;
 	};
 	add_filter( 'axismundi_act_actor_feed_per_page', $ax_feed_nav_size, 10, 2 );
-	$ax_feed_nav_previous                      = $GLOBALS['axismundi_actors_current_actor'] ?? null;
-	$GLOBALS['axismundi_actors_current_actor'] = $actor;
+	$ax_feed_nav_previous                      = $GLOBALS['axismundi_actors_profile_actor'] ?? null;
+	$GLOBALS['axismundi_actors_profile_actor'] = $actor;
 	$_GET['view']                              = 'community';
 	$ax_feed_nav_rendered                      = axismundi_act_render_actor_activity_feed( array() );
 	$ax_feed_nav_page                          = axismundi_act_actor_community_surface_page( $actor, 1, '1', 'all' );
 	unset( $_GET['view'] );
-	$GLOBALS['axismundi_actors_current_actor'] = $ax_feed_nav_previous;
+	$GLOBALS['axismundi_actors_profile_actor'] = $ax_feed_nav_previous;
 	remove_filter( 'axismundi_act_actor_feed_per_page', $ax_feed_nav_size, 10 );
 	$ax_feed_surfaces = axismundi_act_actor_profile_surfaces( $actor );
 	ax_feed_assert(
@@ -1577,12 +1577,12 @@ add_filter( 'axismundi_act_actor_profile_surfaces', $ax_feed_nav_both, 20 );
  * `is-navigation-infinite` is the discriminator rather than the numbered pager, because a
  * numbered pager renders nothing below two pages while the cursor control is always emitted.
  */
-$ax_feed_nav_previous                      = $GLOBALS['axismundi_actors_current_actor'] ?? null;
-$GLOBALS['axismundi_actors_current_actor'] = $ax_feed_live_actor;
+$ax_feed_nav_previous                      = $GLOBALS['axismundi_actors_profile_actor'] ?? null;
+$GLOBALS['axismundi_actors_profile_actor'] = $ax_feed_live_actor;
 $_GET['view']                              = 'community';
 $ax_feed_nav_declared_html                 = axismundi_act_render_actor_activity_feed( array() );
 unset( $_GET['view'] );
-$GLOBALS['axismundi_actors_current_actor'] = $ax_feed_nav_previous;
+$GLOBALS['axismundi_actors_profile_actor'] = $ax_feed_nav_previous;
 remove_filter( 'axismundi_act_actor_profile_surfaces', $ax_feed_nav_both, 20 );
 ax_feed_assert(
 	$ax_feed_results,

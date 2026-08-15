@@ -17,8 +17,8 @@ function axismundi_act_follow_button_target( array $attributes, WP_Block $block 
 		$actor = axismundi_actors_get_by_uri( $uri );
 		return $actor instanceof Axismundi_Actor ? $actor : null;
 	}
-	if ( function_exists( 'axismundi_actors_current_actor' ) ) {
-		$actor = axismundi_actors_current_actor();
+	if ( function_exists( 'axismundi_actors_profile_actor' ) ) {
+		$actor = axismundi_actors_profile_actor();
 		if ( $actor instanceof Axismundi_Actor ) {
 			return $actor;
 		}
@@ -309,9 +309,21 @@ function axismundi_act_register_follow_rest_route() : void {
 }
 add_action( 'rest_api_init', 'axismundi_act_register_follow_rest_route' );
 
-/** Follow state and a REST nonce are personal; never serve them from shared cache. */
+/**
+ * Follow state and a REST nonce are personal; never serve them from shared cache.
+ *
+ * Two different people in one condition, which is why they are named apart. The profile actor is
+ * whoever this page is *about* -- it decides that a follow button renders at all -- and the viewer is
+ * who is looking, which is what makes the rendered state personal. Neither is the Actor anybody is
+ * acting as; this asks nothing about that.
+ */
 function axismundi_act_prepare_follow_button_cache_policy() : void {
-	if ( is_user_logged_in() && function_exists( 'axismundi_actors_current_actor' ) && axismundi_actors_current_actor() instanceof Axismundi_Actor ) {
+	if ( ! function_exists( 'axismundi_actors_profile_actor' ) ) {
+		return;
+	}
+	$profile_actor  = axismundi_actors_profile_actor();
+	$viewer_present = is_user_logged_in();
+	if ( $viewer_present && $profile_actor instanceof Axismundi_Actor ) {
 		axismundi_act_no_cache_like_state();
 	}
 }

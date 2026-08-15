@@ -47,18 +47,18 @@ function ax_gp_assert( array &$results, string $label, bool $condition ) : void 
 function ax_gp_navigation_html( Axismundi_Actor $actor, string $navigation ) : string {
 	$one = static fn() : int => 1;
 	add_filter( 'axismundi_act_actor_feed_per_page', $one, 99 );
-	$GLOBALS['axismundi_actors_current_actor'] = $actor;
+	$GLOBALS['axismundi_actors_profile_actor'] = $actor;
 	$html = axismundi_act_render_actor_activity_feed( array( 'navigation' => $navigation ) );
-	unset( $GLOBALS['axismundi_actors_current_actor'] );
+	unset( $GLOBALS['axismundi_actors_profile_actor'] );
 	remove_filter( 'axismundi_act_actor_feed_per_page', $one, 99 );
 	return $html;
 }
 
 /** @return string The profile feed as the Actor profile template renders it. */
 function ax_gp_profile_feed( Axismundi_Actor $actor ) : string {
-	$GLOBALS['axismundi_actors_current_actor'] = $actor;
+	$GLOBALS['axismundi_actors_profile_actor'] = $actor;
 	$html = axismundi_act_render_actor_activity_feed();
-	unset( $GLOBALS['axismundi_actors_current_actor'] );
+	unset( $GLOBALS['axismundi_actors_profile_actor'] );
 	return $html;
 }
 
@@ -198,9 +198,9 @@ try {
 	$ax_gp_paged_html = static function ( array $args ) use ( $group ) : string {
 		$restore = $_GET;
 		$_GET    = $args;
-		$GLOBALS['axismundi_actors_current_actor'] = $group;
+		$GLOBALS['axismundi_actors_profile_actor'] = $group;
 		$html = axismundi_forum_render_topic_list_block( array( 'perPage' => 1 ) );
-		unset( $GLOBALS['axismundi_actors_current_actor'] );
+		unset( $GLOBALS['axismundi_actors_profile_actor'] );
 		$_GET = $restore;
 		return $html;
 	};

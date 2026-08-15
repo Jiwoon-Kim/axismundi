@@ -92,8 +92,8 @@ function axismundi_op_is_negotiated_request() : bool {
  */
 function axismundi_op_current_source() {
 	$source = null;
-	if ( function_exists( 'axismundi_actors_current_actor' ) ) {
-		$actor = axismundi_actors_current_actor();
+	if ( function_exists( 'axismundi_actors_profile_actor' ) ) {
+		$actor = axismundi_actors_profile_actor();
 		if ( $actor instanceof Axismundi_Actor ) {
 			$source = $actor;
 		}

@@ -128,8 +128,8 @@ function axismundi_cal_admin_creatable_authorities() : array {
 			$choices[ $actor->get_uri() ] = axismundi_cal_admin_actor_label( $actor->get_uri() );
 		}
 	}
-	if ( $user_id > 0 && function_exists( 'axismundi_actors_list_manageable_groups' ) ) {
-		foreach ( axismundi_actors_list_manageable_groups( $user_id, 'manager' ) as $actor ) {
+	if ( $user_id > 0 && function_exists( 'axismundi_actors_list_manageable_actors' ) ) {
+		foreach ( axismundi_actors_list_manageable_actors( $user_id, 'manager' ) as $actor ) {
 			if ( $actor instanceof Axismundi_Actor && $actor->is_local() ) {
 				$choices[ $actor->get_uri() ] = axismundi_cal_admin_actor_label( $actor->get_uri() );
 			}

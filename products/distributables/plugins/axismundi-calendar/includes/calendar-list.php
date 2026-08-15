@@ -251,11 +251,11 @@ function axismundi_cal_actor_calendar_list( string $actor_uri ) : array {
  */
 function axismundi_cal_user_authority_calendar_ids( int $user_id ) : array {
 	global $wpdb;
-	if ( $user_id <= 0 || ! axismundi_cal_ready() || ! function_exists( 'axismundi_actors_list_manageable_groups' ) ) {
+	if ( $user_id <= 0 || ! axismundi_cal_ready() || ! function_exists( 'axismundi_actors_list_manageable_actors' ) ) {
 		return array();
 	}
 	$hashes = array();
-	foreach ( axismundi_actors_list_manageable_groups( $user_id, 'manager' ) as $actor ) {
+	foreach ( axismundi_actors_list_manageable_actors( $user_id, 'manager' ) as $actor ) {
 		$uri = (string) $actor->get_uri();
 		if ( '' !== $uri ) {
 			$hashes[] = hash( 'sha256', $uri );

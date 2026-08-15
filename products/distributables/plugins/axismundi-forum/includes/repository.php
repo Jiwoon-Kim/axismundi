@@ -370,11 +370,11 @@ function axismundi_forum_get_community_group( int $group_identity_id ) : ?Axismu
  * @return array<int,Axismundi_Actor> Group Actors with discussion enabled, keyed by identity.
  */
 function axismundi_forum_manageable_communities( int $user_id ) : array {
-	if ( ! function_exists( 'axismundi_actors_list_manageable_groups' ) ) {
+	if ( ! function_exists( 'axismundi_actors_list_manageable_actors' ) ) {
 		return array();
 	}
 	$communities = array();
-	foreach ( (array) axismundi_actors_list_manageable_groups( $user_id ) as $actor ) {
+	foreach ( (array) axismundi_actors_list_manageable_actors( $user_id ) as $actor ) {
 		if ( $actor instanceof Axismundi_Actor && axismundi_forum_is_community( $actor->get_identity_id() ) ) {
 			$communities[ $actor->get_identity_id() ] = $actor;
 		}

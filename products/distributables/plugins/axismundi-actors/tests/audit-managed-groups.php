@@ -181,15 +181,15 @@ try {
 			&& ! axismundi_actors_can_preview( $group, $stranger )
 	);
 
-	// list_manageable_groups is the join a Forum uses to offer bindable Groups; a
+	// list_manageable_actors is the join a Forum uses to offer bindable Groups; a
 	// minimum role narrows it.
 	ax_mg_assert(
 		$ax_mg_results,
-		'list_manageable_groups returns the Group for its managers and honors a minimum role',
-		1 === count( axismundi_actors_list_manageable_groups( $editor ) )
-			&& 1 === count( axismundi_actors_list_manageable_groups( $manager, 'owner' ) )
-			&& 0 === count( axismundi_actors_list_manageable_groups( $editor, 'owner' ) )
-			&& 0 === count( axismundi_actors_list_manageable_groups( $stranger ) )
+		'list_manageable_actors returns the Group for its managers and honors a minimum role',
+		1 === count( axismundi_actors_list_manageable_actors( $editor ) )
+			&& 1 === count( axismundi_actors_list_manageable_actors( $manager, 'owner' ) )
+			&& 0 === count( axismundi_actors_list_manageable_actors( $editor, 'owner' ) )
+			&& 0 === count( axismundi_actors_list_manageable_actors( $stranger ) )
 	);
 
 	// Managers attach ONLY to a managed actor: the site actor (or a user Person)

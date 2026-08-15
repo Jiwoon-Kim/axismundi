@@ -242,7 +242,7 @@ function axismundi_actors_render_managed_actors_page() : void {
 	$is_site_admin = current_user_can( 'manage_options' );
 	$moderated_groups = function_exists( 'axismundi_forum_moderated_communities' )
 		? axismundi_forum_moderated_communities( $user_id )
-		: axismundi_actors_list_manageable_groups( $user_id );
+		: axismundi_actors_list_manageable_actors( $user_id );
 	$all_groups       = $is_site_admin ? axismundi_actors_list_all_managed_actors() : array();
 	$selected_id = isset( $_GET['group_id'] ) ? absint( $_GET['group_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only selection.
 	$selected = $selected_id > 0 ? axismundi_actors_get_by_identity( $selected_id ) : null;

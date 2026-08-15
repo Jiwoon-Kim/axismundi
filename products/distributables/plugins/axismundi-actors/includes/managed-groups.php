@@ -149,11 +149,15 @@ function axismundi_actors_group_managers( int $identity_id ) : array {
 /**
  * Managed actors one WP user may operate, at or above an optional minimum role.
  *
+ * Named for what the relation holds rather than for the first caller's use of it: a
+ * Forum asks this for bindable Groups, but an Organization and a Service are in the
+ * same list, and the acting-Actor switcher offers all three.
+ *
  * @param int         $user_id  Viewer WP user.
  * @param string|null $min_role Minimum role, or null for any.
  * @return Axismundi_Actor[]
  */
-function axismundi_actors_list_manageable_groups( int $user_id, ?string $min_role = null ) : array {
+function axismundi_actors_list_manageable_actors( int $user_id, ?string $min_role = null ) : array {
 	if ( $user_id <= 0 ) {
 		return array();
 	}

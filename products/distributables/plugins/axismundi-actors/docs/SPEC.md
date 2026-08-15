@@ -95,8 +95,8 @@ Seeding is `internal` and must **never** depend on a specific admin account
 existing — WordPress has no single `site_owner` (`user_id=1`, "first admin", and the
 `admin_email` user are all unreliable). So:
 
-- **Site actor — always created** on activation. `actor_scope=site`, default
-  `actor_type=Application` (configurable to `Organization`),
+- **Site actor — retained but disabled** on activation. `actor_scope=site`, fixed
+  `actor_type=Application`,
   `preferred_username` = `blog` or the site slug, no `local_user_id`. Activation
   success never depends on any user existing.
 - **Site-owner Person actor — created only when the activating current user is a
@@ -124,7 +124,8 @@ per-actor decision, not one giant site actor:
 | Forum / Lemmy community / subreddit-like space | `Group` | **managed** (reserved) |
 | Automated geodata / feed publisher | `Service` (or `Application`) | **managed** (reserved) |
 
-- The **default site actor stays `Application`** (configurable to `Organization`).
+- The Site Actor stays a disabled `Application` until a real Instance Actor is
+  designed. A real company, brand, or team uses a managed `Organization` Actor.
 - **Forums and services are their own `managed` actors**, not tabs on the site
   actor — they Follow, receive, post, and Announce, so they need their own identity,
   inbox, and outbox. `managed` scope + the `wp_ax_actor_managers` table are reserved

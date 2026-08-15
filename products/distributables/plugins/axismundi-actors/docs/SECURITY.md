@@ -25,7 +25,7 @@ Creating an actor record and exposing its public profile are **separate** (SPEC
   WordPress *"Membership: Anyone can register"* setting only governs WP accounts;
   creating a WP account never mints a public actor. A user's actor stays handle-less
   and `internal` until they explicitly activate it (register a handle, then publish).
-- Activation always seeds the site actor as `internal`, and the site-owner Person
+- Activation always seeds the Site Actor as `disabled`, and the site-owner Person
   actor as `internal` **only when the activating user is a valid admin** (skipped on
   CLI). Nothing is world-visible until it is published.
 - Existing users are **never bulk-published**. A user's actor is created lazily and

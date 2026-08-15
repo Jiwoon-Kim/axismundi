@@ -224,15 +224,16 @@ columns and is never serialized (SECURITY §2).
 ```
 ax_actors_db_version              schema version for dbDelta upgrades
 ax_actors_site_owner_user_id      the WP user linked to the site-owner Person actor
-ax_actors_site_actor_type         Application (default) | Organization
+ax_actors_site_actor_disabled     one-time retirement marker for the reserved Site Actor
 ```
 
 ## 6. Seeding & lifecycle
 
-- **Activation:** always create the **site** actor (idempotent — keyed on
+- **Activation:** always create the disabled **site** actor (idempotent — keyed on
   `actor_scope='site'`, re-activation never duplicates). Create the **site-owner
   Person** actor **only if the current user is a valid administrator**; on CLI / no
-  current user, skip it (activation still succeeds). Both `internal`. Never depend on
+  current user, skip it (activation still succeeds). The Site Actor is `disabled`; the
+  Person is `internal`. Never depend on
   a specific account (`user_id=1` / first admin / `admin_email`).
 - **`ensure_for_user( user_id )`:** return the user's Person actor, creating a
   **handle-less** internal pair if absent (no `preferred_username`). Never registers

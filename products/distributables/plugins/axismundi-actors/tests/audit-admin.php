@@ -20,7 +20,7 @@ global $wpdb;
 $ax_admin_results = array();
 $ax_admin_ids     = array();
 $ax_admin_users   = array();
-$ax_prev_type     = (string) get_option( 'ax_actors_site_actor_type', 'Application' );
+$ax_prev_site_disabled = get_option( 'ax_actors_site_actor_disabled', false );
 
 /**
  * @param array  $results Accumulator.
@@ -75,13 +75,16 @@ try {
 	$actor = axismundi_actors_get_by_uuid( $actor->get_uuid() );
 	ax_admin_assert( $ax_admin_results, 'publishing yields Public and a public profile', 'Public' === axismundi_actors_status_label( $actor ) && axismundi_actors_is_public_profile( $actor ) );
 
-	// Site actor type change (Application <-> Organization); invalid rejected.
+	// The Site Actor is retained but unavailable until Instance Actor support exists.
 	$site = axismundi_actors_get_site_actor();
-	$type_ok  = $site instanceof Axismundi_Actor && axismundi_actors_set_actor_type( $site->get_identity_id(), 'Organization' );
-	$site2    = axismundi_actors_get_site_actor();
-	$type_bad = axismundi_actors_set_actor_type( $site->get_identity_id(), 'Nonsense' );
-	ax_admin_assert( $ax_admin_results, 'site actor type changes to Organization and rejects an invalid type', $type_ok && 'Organization' === $site2->get_type() && false === $type_bad );
-	axismundi_actors_set_actor_type( $site->get_identity_id(), 'Application' );
+	if ( $site instanceof Axismundi_Actor ) {
+		axismundi_actors_set_actor_type( $site->get_identity_id(), 'Organization' );
+		axismundi_actors_set_status( $site->get_identity_id(), 'public' );
+		delete_option( 'ax_actors_site_actor_disabled' );
+		axismundi_actors_disable_site_actor();
+		$site = axismundi_actors_get_site_actor();
+	}
+	ax_admin_assert( $ax_admin_results, 'site actor is retained but fixed to a disabled Application', $site instanceof Axismundi_Actor && 'Application' === $site->get_type() && 'disabled' === $site->get_status() && ! axismundi_actors_is_public_profile( $site ) );
 
 } finally {
 	foreach ( array_unique( $ax_admin_ids ) as $iid ) {
@@ -94,7 +97,11 @@ try {
 			wp_delete_user( $u );
 		}
 	}
-	update_option( 'ax_actors_site_actor_type', $ax_prev_type );
+	if ( false === $ax_prev_site_disabled ) {
+		delete_option( 'ax_actors_site_actor_disabled' );
+	} else {
+		update_option( 'ax_actors_site_actor_disabled', $ax_prev_site_disabled, false );
+	}
 }
 
 $ax_admin_failures = count( array_filter( $ax_admin_results, static fn( bool $r ) : bool => ! $r ) );

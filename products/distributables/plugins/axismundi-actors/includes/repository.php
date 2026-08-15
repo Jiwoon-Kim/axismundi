@@ -2208,8 +2208,7 @@ function axismundi_actors_set_status( int $identity_id, string $status ) : bool 
 }
 
 /**
- * Set a local actor's ActivityStreams type (e.g. the site actor Application ↔
- * Organization). Person/user actors keep `Person`.
+ * Set a local actor's ActivityStreams type. Person/user actors keep `Person`.
  *
  * @param int    $identity_id Identity key.
  * @param string $type        Person | Organization | Application | Service | Group.
@@ -2336,7 +2335,7 @@ function axismundi_actors_set_remote_follow_totals( int $identity_id, ?int $foll
 }
 
 /**
- * Idempotently seed the always-present site actor, and — only when the activating
+ * Idempotently seed the disabled site actor, and — only when the activating
  * user is a valid administrator — the site-owner Person actor. Never depends on a
  * specific account existing (docs/SPEC.md §4).
  *
@@ -2344,13 +2343,12 @@ function axismundi_actors_set_remote_follow_totals( int $identity_id, ?int $foll
  */
 function axismundi_actors_seed() : void {
 	if ( ! axismundi_actors_get_site_actor() ) {
-		$type = (string) get_option( 'ax_actors_site_actor_type', 'Application' );
 		axismundi_actors_create_local(
 			array(
-				'actor_type'         => in_array( $type, array( 'Application', 'Organization' ), true ) ? $type : 'Application',
+				'actor_type'         => 'Application',
 				'actor_scope'        => 'site',
 				'preferred_username' => 'blog',
-				'status'             => 'internal',
+				'status'             => 'disabled',
 			)
 		);
 	}
@@ -2361,6 +2359,27 @@ function axismundi_actors_seed() : void {
 			update_option( 'ax_actors_site_owner_user_id', $uid, false );
 		}
 	}
+}
+
+/**
+ * Retire the experimental site actor until a real Instance Actor is designed.
+ *
+ * Keep its identity row and settings screen so a future implementation can reuse
+ * the stable record, but do not let an old public site profile keep publishing.
+ *
+ * @return void
+ */
+function axismundi_actors_disable_site_actor() : void {
+	if ( '1' === get_option( 'ax_actors_site_actor_disabled', '' ) ) {
+		return;
+	}
+	$actor = axismundi_actors_get_site_actor();
+	if ( $actor instanceof Axismundi_Actor ) {
+		axismundi_actors_set_actor_type( $actor->get_identity_id(), 'Application' );
+		axismundi_actors_set_status( $actor->get_identity_id(), 'disabled' );
+	}
+	delete_option( 'ax_actors_site_actor_type' );
+	update_option( 'ax_actors_site_actor_disabled', '1', false );
 }
 
 /**

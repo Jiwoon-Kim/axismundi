@@ -81,4 +81,7 @@ function axismundi_actors_maybe_upgrade() : void {
 }
 add_action( 'plugins_loaded', 'axismundi_actors_maybe_upgrade' );
 
+// The Site Actor remains reserved for a future Instance Actor implementation.
+add_action( 'plugins_loaded', 'axismundi_actors_disable_site_actor', 20 );
+
 // Phase 4+ admin integration is wired here.

@@ -797,35 +797,13 @@ function axismundi_actors_render_site_page() : void {
 		echo '<p>' . esc_html__( 'The site actor has not been seeded yet.', 'axismundi-actors' ) . '</p></div>';
 		return;
 	}
-	$is_public = axismundi_actors_is_public_profile( $actor );
 	?>
-	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-		<input type="hidden" name="action" value="axismundi_actors_site_settings">
-		<?php wp_nonce_field( 'ax_actors_site_settings' ); ?>
-		<table class="form-table" role="presentation">
-			<tr><th scope="row"><?php esc_html_e( 'Handle', 'axismundi-actors' ); ?></th><td><code>@<?php echo esc_html( $actor->get_preferred_username() ); ?></code></td></tr>
-			<tr>
-				<th scope="row"><label for="ax-site-type"><?php esc_html_e( 'Actor type', 'axismundi-actors' ); ?></label></th>
-				<td>
-					<select name="actor_type" id="ax-site-type">
-						<option value="Application" <?php selected( 'Application', $actor->get_type() ); ?>><?php esc_html_e( 'Application (the site as a system)', 'axismundi-actors' ); ?></option>
-						<option value="Organization" <?php selected( 'Organization', $actor->get_type() ); ?>><?php esc_html_e( 'Organization (a real org or brand)', 'axismundi-actors' ); ?></option>
-					</select>
-				</td>
-			</tr>
-			<tr>
-				<th scope="row"><?php esc_html_e( 'Visibility', 'axismundi-actors' ); ?></th>
-				<td>
-					<label><input type="radio" name="status" value="internal" <?php checked( ! $is_public ); ?>> <?php esc_html_e( 'Internal', 'axismundi-actors' ); ?></label><br>
-					<label><input type="radio" name="status" value="public" <?php checked( $is_public ); ?>> <?php esc_html_e( 'Public', 'axismundi-actors' ); ?></label>
-				</td>
-			</tr>
-		</table>
-		<?php submit_button( __( 'Save site actor', 'axismundi-actors' ) ); ?>
-	</form>
-	<?php axismundi_actors_media_form( $actor ); ?>
-	<?php axismundi_actors_text_form( $actor ); ?>
-	<?php axismundi_actors_profile_fields_form( $actor ); ?>
+	<table class="form-table" role="presentation">
+		<tr><th scope="row"><?php esc_html_e( 'Handle', 'axismundi-actors' ); ?></th><td><code>@<?php echo esc_html( $actor->get_preferred_username() ); ?></code></td></tr>
+		<tr><th scope="row"><?php esc_html_e( 'Actor type', 'axismundi-actors' ); ?></th><td><?php esc_html_e( 'Application', 'axismundi-actors' ); ?></td></tr>
+		<tr><th scope="row"><?php esc_html_e( 'Status', 'axismundi-actors' ); ?></th><td><strong><?php esc_html_e( 'Disabled', 'axismundi-actors' ); ?></strong></td></tr>
+	</table>
+	<p class="description"><?php esc_html_e( 'The Site Actor is reserved for a future Instance Actor implementation and cannot publish or be configured yet.', 'axismundi-actors' ); ?></p>
 	</div>
 	<?php
 }
@@ -1277,29 +1255,6 @@ function axismundi_actors_handle_claim_managed_group() : void {
 	axismundi_actors_redirect_result( axismundi_actors_managed_actors_admin_url( $identity_id ), axismundi_actors_claim_managed_group( $identity_id, get_current_user_id() ) );
 }
 add_action( 'admin_post_axismundi_actors_claim_managed_group', 'axismundi_actors_handle_claim_managed_group' );
-
-/** @return void */
-function axismundi_actors_handle_site_settings() : void {
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_die( esc_html__( 'You cannot manage the site actor.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
-	}
-	check_admin_referer( 'ax_actors_site_settings' );
-	$actor = axismundi_actors_get_site_actor();
-	$back  = admin_url( 'options-general.php?page=axismundi-actor-site' );
-	if ( ! $actor instanceof Axismundi_Actor ) {
-		axismundi_actors_redirect_result( $back, new WP_Error( 'ax_actors_no_site', __( 'No site actor.', 'axismundi-actors' ) ) );
-	}
-	$type = isset( $_POST['actor_type'] ) && 'Organization' === $_POST['actor_type'] ? 'Organization' : 'Application';
-	update_option( 'ax_actors_site_actor_type', $type );
-	$ok = axismundi_actors_set_actor_type( $actor->get_identity_id(), $type );
-	$status = isset( $_POST['status'] ) && 'public' === $_POST['status'] ? 'public' : 'internal';
-	$ok = axismundi_actors_set_status( $actor->get_identity_id(), $status ) && $ok;
-	if ( $ok ) {
-		axismundi_actors_profile_updated( $actor->get_identity_id() );
-	}
-	axismundi_actors_redirect_result( $back, $ok ? true : new WP_Error( 'ax_actors_site_settings', __( 'Could not update the site actor.', 'axismundi-actors' ) ) );
-}
-add_action( 'admin_post_axismundi_actors_site_settings', 'axismundi_actors_handle_site_settings' );
 
 /** @return void */
 function axismundi_actors_handle_set_media() : void {

@@ -31,8 +31,10 @@ profile_actor       the Actor this request is ABOUT
 
 acting_actor        the local Actor a signed-in user has CHOSEN to publish as
                     → attributedTo, Create.actor, Event organizer, Invite.actor
-                    → session-scoped, switched from the admin bar
-                    → NOT IMPLEMENTED
+                    → stored per user, switched from the admin bar account menu
+                    → axismundi_actors_acting_actor()
+                    → implemented (includes/acting-actor.php); no domain plugin
+                      records it yet — Event storage is the next slice
 
 user_default_actor  the Actor a user falls back to before choosing one
                     → no shared resolver yet; see below
@@ -42,8 +44,9 @@ user_default_actor  the Actor a user falls back to before choosing one
 Organization's profile page would then publish under that Organization's name — and
 the code would look correct, because on that page the value really is that
 Organization. This is why the routing function is called `profile_actor()` and not
-`current_actor()`: "current" invites exactly that substitution. The switcher, when it
-arrives, adds its own resolver and does not touch this one.
+`current_actor()`: "current" invites exactly that substitution. The switcher has its
+own resolver in `includes/acting-actor.php` and does not touch this one; neither
+falls back to the other.
 
 Membership is re-checked on every mutation, not at switch time. Being able to select
 an Actor is not authority to act as it later — manager roles are revocable, and the
@@ -64,8 +67,15 @@ Three resolvers exist today, and they disagree on purpose:
 | `axismundi_cal_current_actor_uri()` | `federation_ready`, via `axismundi_op_local_author_actor_uri()` |
 
 Each was right for its own question, and collapsing them now would have to pick one
-publicness rule for all three. The switcher slice defines a "default acting Actor"
-contract and converges them there. Until then: do not add a fourth.
+publicness rule for all three.
+
+The contract they converge on now exists — `axismundi_actors_can_act_as()` and
+`axismundi_actors_default_acting_actor()`, which require a local, handle-locked,
+non-disabled Actor and deliberately do **not** require it to be public. The three
+above still answer their own questions and have not been moved onto it: each move
+changes who may author in a shipped surface, so they convert one at a time with their
+own audit, starting with the Calendar pair when Event storage lands. Until then: do
+not add a fourth resolver — call `axismundi_actors_acting_actor()`.
 
 ## 0.1. The Actor handle is NOT the WordPress profile name
 

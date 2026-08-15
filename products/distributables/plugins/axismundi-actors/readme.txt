@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.67
+Stable tag: 0.0.68
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,13 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.68 =
+* Lets a user choose which Actor their new work is published as, from the admin
+  bar's account menu, without sharing a password or switching account. The choice is a stored
+  preference and never a permission: eligibility is checked again on every read,
+  so a revoked manager stops publishing as that Organization immediately and
+  falls back to their own profile rather than being locked out.
 
 = 0.0.67 =
 * Adds the generic Dislike control to bundled Person and Group profile card

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.69
+Stable tag: 0.0.70
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,16 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.70 =
+* Publishes a local public Actor as a JSContact Card at `/@handle.jscontact`
+  (database version 16). A person's name can now be stored in parts, per
+  language, with the order it is read in -- so the same facts answer for a
+  Korean name and a romanized one without either being derived from the other.
+  Names with no parts are left alone: nothing is split into a surname and a
+  given name on somebody's behalf. A cached remote Actor is given no `uid`,
+  because the identifier we generated while caching them names our snapshot
+  rather than their portable identity.
 
 = 0.0.69 =
 * `axismundi_actors_handle_registered` now fires for every Actor that locks a

@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '15.0';
+const AXISMUNDI_ACTORS_DB_VERSION = '16.0';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -124,6 +124,7 @@ function axismundi_actors_install() : void {
 	$actors     = axismundi_actors_actors_table();
 	$texts      = axismundi_actors_texts_table();
 	$profile_fields = axismundi_actors_profile_fields_table();
+	$person_names   = axismundi_actors_person_names_table();
 
 	dbDelta(
 		"CREATE TABLE {$identities} (
@@ -189,6 +190,29 @@ function axismundi_actors_install() : void {
 			PRIMARY KEY  (id),
 			UNIQUE KEY identity_field_language (identity_id, field_name, language_tag),
 			KEY identity_language (identity_id, language_tag)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	/*
+	 * A person's name in parts, per language. Stored beside the display name rather than replacing it:
+	 * a mononym or an organisation has no parts, and the order the parts read in belongs to the person
+	 * rather than to the language tag.
+	 */
+	dbDelta(
+		"CREATE TABLE {$person_names} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			identity_id bigint(20) unsigned NOT NULL,
+			language_tag varchar(35) NOT NULL,
+			family_name varchar(191) NOT NULL default '',
+			given_name varchar(191) NOT NULL default '',
+			additional_name varchar(191) NOT NULL default '',
+			honorific_prefix varchar(64) NOT NULL default '',
+			honorific_suffix varchar(64) NOT NULL default '',
+			display_order varchar(16) NOT NULL default 'given-family',
+			display_name varchar(191) NOT NULL default '',
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY identity_language (identity_id, language_tag)
 		) ENGINE=InnoDB {$charset};"
 	);
 

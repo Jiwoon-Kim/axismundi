@@ -270,10 +270,16 @@ function axismundi_cal_jscalendar_event( WP_Post $post ) {
 	$rule = axismundi_cal_jscalendar_recurrence_rule( (string) $schedule['rrule'] );
 	if ( null !== $rule ) {
 		$event['recurrenceRules'] = array( $rule );
-		$overrides                = axismundi_cal_jscalendar_overrides( (int) $schedule['id'], $timezone );
-		if ( array() !== $overrides ) {
-			$event['recurrenceOverrides'] = $overrides;
-		}
+	}
+	/*
+	 * Asked whether or not there is a rule. An added date needs no rule to exist -- JSCalendar states
+	 * one as an override at a key the rule never produced -- and gating this on `recurrenceRules`
+	 * meant an Event whose only recurrence was a hand-added date published none of it, while every
+	 * local surface went on showing it.
+	 */
+	$overrides = axismundi_cal_jscalendar_overrides( (int) $schedule['id'], $timezone );
+	if ( array() !== $overrides ) {
+		$event['recurrenceOverrides'] = $overrides;
 	}
 
 	$places = axismundi_cal_jscalendar_locations( (int) $post->ID );

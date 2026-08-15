@@ -300,10 +300,20 @@ function axismundi_cal_ics_vevent( array $schedule, WP_Post $post ) : array {
 	// EXDATE from the cancelled instances, which is where cancellation actually lives; there is no
 	// second column recording the same fact and free to disagree with it.
 	$exdates = array();
+	$rdates  = array();
 	$changed = array();
 	foreach ( axismundi_cal_overrides( (int) $schedule['id'] ) as $recurrence_id => $override ) {
 		if ( 'cancelled' === (string) $override['status'] ) {
 			$exdates[] = (string) $recurrence_id;
+			continue;
+		}
+		if ( 'rdate' === (string) $override['origin'] ) {
+			/*
+			 * A date somebody added by hand, which no rule produces. It was expanded on every local
+			 * surface and published on none: without this line a subscriber's calendar is missing an
+			 * occurrence this one shows, and nothing anywhere says so.
+			 */
+			$rdates[] = (string) $recurrence_id;
 			continue;
 		}
 		if ( 'override' === (string) $override['origin'] ) {
@@ -313,6 +323,10 @@ function axismundi_cal_ics_vevent( array $schedule, WP_Post $post ) : array {
 	if ( ! empty( $exdates ) ) {
 		sort( $exdates );
 		$lines[] = 'EXDATE' . $suffix . ':' . implode( ',', $exdates );
+	}
+	if ( ! empty( $rdates ) ) {
+		sort( $rdates );
+		$lines[] = 'RDATE' . $suffix . ':' . implode( ',', $rdates );
 	}
 	$lines[] = 'END:VEVENT';
 

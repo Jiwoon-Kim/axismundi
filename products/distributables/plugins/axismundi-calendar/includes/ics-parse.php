@@ -265,6 +265,16 @@ function axismundi_cal_ics_build_entry( array $component, string $calscale ) {
 	if ( '' !== $calscale && 'GREGORIAN' !== $calscale ) {
 		$supported = false;
 	}
+	/*
+	 * Dates the rule does not produce, and dates it produces that were taken back. This importer keeps
+	 * neither, and until it does, a series carrying them cannot be expanded from its rule alone: doing
+	 * so shows an occurrence the publisher cancelled, or misses one they added by hand. Marked rather
+	 * than dropped, for the same reason an unexpandable rule is -- the entry is somebody's event on a
+	 * feed they chose to watch, and it stays visible without dates being invented for it.
+	 */
+	if ( isset( $component['RDATE'] ) || isset( $component['EXDATE'] ) ) {
+		$supported = false;
+	}
 
 	$recurrence_id = '';
 	if ( isset( $component['RECURRENCE-ID'] ) ) {

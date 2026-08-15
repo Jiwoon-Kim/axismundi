@@ -108,6 +108,25 @@ try {
 	ax_ics_assert( $ax_ics_results, 'the series is one component carrying its rule, not one per occurrence', 1 === substr_count( $ax_ics_body, 'RRULE:' ) );
 	ax_ics_assert( $ax_ics_results, 'and the rule is the normalized one that was stored', str_contains( $ax_ics_body, 'RRULE:FREQ=WEEKLY;BYDAY=SA' ) );
 	ax_ics_assert( $ax_ics_results, 'a cancelled instance becomes EXDATE, generated from the cancellation rather than stored twice', str_contains( $ax_ics_body, 'EXDATE;TZID=America/New_York:20261031T190000' ) );
+	/*
+	 * A date somebody added by hand. It was expanded on every local surface and published on none, so a
+	 * subscriber's calendar was missing an occurrence this one shows -- with nothing anywhere saying so.
+	 */
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture standing in for the editor.
+	$wpdb->insert(
+		axismundi_cal_occurrences_table(),
+		array(
+			'schedule_id' => (int) $ax_ics_schedule['id'], 'recurrence_id' => '20261103T190000',
+			'start_utc' => '2026-11-03 23:00:00', 'end_utc' => '2026-11-04 01:00:00',
+			'start_local' => '2026-11-03 19:00:00', 'end_local' => '2026-11-03 21:00:00',
+			'status' => 'scheduled', 'origin' => 'rdate', 'location_place_id' => null,
+			'location_text' => '', 'override_json' => '', 'created_at' => $ax_ics_now, 'updated_at' => $ax_ics_now,
+		)
+	);
+	$ax_ics_with_rdate = implode( "
+", axismundi_cal_ics_vevent( $ax_ics_schedule, get_post( $ax_ics_series ) ) );
+	ax_ics_assert( $ax_ics_results, 'a hand-added date is published as RDATE rather than shown here and nowhere else', str_contains( $ax_ics_with_rdate, 'RDATE;TZID=America/New_York:20261103T190000' ) );
+
 	ax_ics_assert( $ax_ics_results, 'a moved instance is its own component identified by RECURRENCE-ID', str_contains( $ax_ics_body, 'RECURRENCE-ID;TZID=America/New_York:20261107T190000' ) );
 	ax_ics_assert( $ax_ics_results, 'and that component keeps the series UID, so clients update the instance instead of adding an event', 2 === substr_count( $ax_ics_body, 'UID:' . $ax_ics_schedule['ical_uid'] ) );
 	ax_ics_assert( $ax_ics_results, 'the moved instance carries its own venue', str_contains( $ax_ics_body, 'LOCATION:The annexe' ) );

@@ -63,6 +63,16 @@ function ax_sb_feed( bool $second_pass = false ) : string {
 		'SUMMARY:Last weekday of the month',
 		'RRULE:FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1',
 		'END:VEVENT',
+		'BEGIN:VEVENT',
+		'UID:exception-dates@example.org',
+		'DTSTAMP:20260101T000000Z',
+		'DTSTART;TZID=Asia/Seoul:20260903T100000',
+		'DTEND;TZID=Asia/Seoul:20260903T110000',
+		'SUMMARY:Weekly, with a skipped week and an extra day',
+		'RRULE:FREQ=WEEKLY;COUNT=4',
+		'EXDATE;TZID=Asia/Seoul:20260910T100000',
+		'RDATE;TZID=Asia/Seoul:20260906T100000',
+		'END:VEVENT',
 	);
 	if ( ! $second_pass ) {
 		// Present on the first fetch and gone on the second, as a rolling feed does once an event
@@ -88,7 +98,7 @@ try {
 	// -- Parsing ------------------------------------------------------------------------------
 
 	$ax_sb_entries = axismundi_cal_ics_parse( ax_sb_feed() );
-	ax_sb_assert( $ax_sb_results, 'every component in the feed is read', 4 === count( $ax_sb_entries ) );
+	ax_sb_assert( $ax_sb_results, 'every component in the feed is read', 5 === count( $ax_sb_entries ) );
 
 	$ax_sb_by_uid = array();
 	foreach ( $ax_sb_entries as $entry ) {
@@ -116,6 +126,19 @@ try {
 		$ax_sb_results,
 		'a rule this engine cannot expand keeps its text rather than being dropped, since a subscribed feed is not ours to refuse',
 		'' !== $ax_sb_complex['rrule'] && 0 === (int) $ax_sb_complex['expansion_supported']
+	);
+
+	/*
+	 * Dates the rule does not produce, and dates it produces that the publisher took back. This importer
+	 * keeps neither yet, so expanding the rule on its own would show a week they cancelled and miss a day
+	 * they added. Marked rather than dropped: the entry is somebody's event on a feed they chose to
+	 * watch, and it stays visible without dates being invented for it.
+	 */
+	$ax_sb_dated = $ax_sb_by_uid['exception-dates@example.org'] ?? array();
+	ax_sb_assert(
+		$ax_sb_results,
+		'a series carrying EXDATE or RDATE is kept but not expanded from its rule alone',
+		array() !== $ax_sb_dated && '' !== (string) $ax_sb_dated['rrule'] && 0 === (int) $ax_sb_dated['expansion_supported']
 	);
 
 	// Folding is the publisher's choice and has to survive the round trip.
@@ -180,7 +203,7 @@ try {
 	}
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit fixture.
 	$ax_sb_stored = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$ax_sb_table} WHERE source_id = %d", $ax_sb_source ) );
-	ax_sb_assert( $ax_sb_results, 'the snapshot is cached', 4 === $ax_sb_stored );
+	ax_sb_assert( $ax_sb_results, 'the snapshot is cached', 5 === $ax_sb_stored );
 
 	// The second fetch, which no longer carries the finished event.
 	$ax_sb_seen = array();
@@ -199,7 +222,7 @@ try {
 		'and recorded as missing rather than cancelled, because a retention window is not a cancellation',
 		'missing' === (string) $ax_sb_gone['presence'] && 'confirmed' === (string) $ax_sb_gone['status']
 	);
-	ax_sb_assert( $ax_sb_results, 'while the entries still in the feed stay present', 3 === (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$ax_sb_table} WHERE source_id = %d AND presence = 'present'", $ax_sb_source ) ) );
+	ax_sb_assert( $ax_sb_results, 'while the entries still in the feed stay present', 4 === (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$ax_sb_table} WHERE source_id = %d AND presence = 'present'", $ax_sb_source ) ) );
 
 	$ax_sb_visible = axismundi_cal_subscribed_entries( (int) $ax_sb_cal, '2026-08-01 00:00:00', '2026-09-30 00:00:00' );
 	$ax_sb_uids    = array_map( static fn( array $r ) : string => (string) $r['ical_uid'], $ax_sb_visible );

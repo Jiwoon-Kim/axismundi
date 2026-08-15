@@ -199,6 +199,40 @@ try {
 		isset( $ax_js_over['recurrenceOverrides']['2027-02-01T09:00:00'] )
 			&& true === ( $ax_js_over['recurrenceOverrides']['2027-02-01T09:00:00']['excluded'] ?? false )
 	);
+	// -- a date the rule never produces ------------------------------------------------------------------
+
+	/*
+	 * An added date needs no rule to exist. JSCalendar states one as an override at a key no rule
+	 * produced, and this used to be gated on there being a recurrence rule at all -- so an Event whose
+	 * only extra date was hand-added published none of it while every local surface went on showing it.
+	 */
+	$ax_js_single = ax_js_event(
+		$ax_js_posts,
+		$ax_js_user_id,
+		$ax_js_id,
+		'One-off with an added date',
+		array( 'starts_at' => '2027-07-07 09:00:00', 'ends_at' => '2027-07-07 10:00:00', 'timezone' => 'Asia/Seoul' )
+	);
+	$ax_js_single_schedule = axismundi_cal_schedule_for_event( $ax_js_single );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture standing in for the editor.
+	$wpdb->insert(
+		axismundi_cal_occurrences_table(),
+		array(
+			'schedule_id' => (int) $ax_js_single_schedule['id'], 'recurrence_id' => '20270710T090000',
+			'start_utc' => '2027-07-10 00:00:00', 'end_utc' => '2027-07-10 01:00:00',
+			'start_local' => '2027-07-10 09:00:00', 'end_local' => '2027-07-10 10:00:00',
+			'status' => 'scheduled', 'origin' => 'rdate', 'location_place_id' => null,
+			'location_text' => '', 'override_json' => '', 'created_at' => $ax_js_now, 'updated_at' => $ax_js_now,
+		)
+	);
+	$ax_js_added = axismundi_cal_jscalendar_event( get_post( $ax_js_single ) );
+	ax_js_assert(
+		$ax_js_results,
+		'a hand-added date is published even when the Event has no recurrence rule at all',
+		! isset( $ax_js_added['recurrenceRules'] )
+			&& isset( $ax_js_added['recurrenceOverrides']['2027-07-10T09:00:00'] )
+	);
+
 } finally {
 	wp_set_current_user( 0 );
 	foreach ( array_unique( $ax_js_posts ) as $ax_js_post_id ) {

@@ -229,8 +229,13 @@ function axismundi_cal_render_share_invitations() : void {
 		return;
 	}
 	$roles = axismundi_cal_share_role_labels();
+	/*
+	 * "Calendar invitations", not "Shared with you". This table holds only what has not been answered,
+	 * and an accepted calendar leaves it for the list below -- so a heading naming the relationship
+	 * would keep claiming to show everything shared with you while showing the opposite.
+	 */
 	?>
-	<h2><?php esc_html_e( 'Shared with you', 'axismundi-calendar' ); ?></h2>
+	<h2><?php esc_html_e( 'Calendar invitations', 'axismundi-calendar' ); ?></h2>
 	<p class="description">
 		<?php esc_html_e( 'You already have access to these. Accepting adds one to your list; you can hide or remove it afterwards without losing access, and declining leaves the access in place.', 'axismundi-calendar' ); ?>
 	</p>

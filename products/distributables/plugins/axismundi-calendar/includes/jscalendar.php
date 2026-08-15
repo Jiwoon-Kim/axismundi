@@ -1,11 +1,16 @@
 <?php
 /**
- * One Event as JSCalendar (RFC 8984).
+ * One Event as JSCalendar.
  *
- * A read projection, not a second home for the data. The domain model already stores what JSCalendar
- * names -- a civil start, a zone, a wall-clock length, a recurrence and its exceptions -- and this
- * says the same things in that vocabulary. Writing it is also how we find out whether the model
- * really is JSCalendar-shaped, which is the point of doing it before deciding to migrate anything.
+ * The canonical target is **JSCalendar 2.0** (draft-ietf-calext-jscalendarbis), not RFC 8984. That is
+ * a deliberate choice made while this is pre-release: 2.0 is where `endTimeZone` lives, and an Event
+ * that ends in another zone is a fact the model now holds -- so pinning the wire to 1.0 would mean
+ * either dropping it or lying about it, and both are worse than tracking a draft. Revision drift is
+ * absorbed here, by an adapter with audits, which is what an adapter is for.
+ *
+ * A read projection, not a second home for the data. The domain model stores what JSCalendar names --
+ * a civil start, a zone, a length, an arrival zone, a recurrence and its exceptions -- and this says
+ * the same things in that vocabulary.
  *
  * Two contracts carry over unchanged and must not be quietly restated here:
  *
@@ -26,7 +31,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-/** The media type RFC 8984 registers, with the object type it carries. */
+/** The registered media type, with the object type it carries. */
 const AXISMUNDI_CAL_JSCALENDAR_MEDIA_TYPE = 'application/jscalendar+json; type=Event';
 
 /**
@@ -54,10 +59,10 @@ function axismundi_cal_jscalendar_status( string $status ) : string {
  * A wall-clock length as an ISO 8601 duration.
  *
  * Days are kept as days rather than folded into hours: `P1D` is one calendar day, which on the night
- * the clocks change is not 24 hours, and that difference is the whole reason the model carries a
- * civil length instead of an elapsed one.
+ * the clocks change is not 24 hours, and that difference is the whole reason a same-zone Event
+ * carries a civil length instead of an elapsed one.
  *
- * @param DateInterval $interval Civil interval.
+ * @param DateInterval $interval Interval.
  * @return string
  */
 function axismundi_cal_jscalendar_duration( DateInterval $interval ) : string {
@@ -72,6 +77,32 @@ function axismundi_cal_jscalendar_duration( DateInterval $interval ) : string {
 		return 'PT0S';
 	}
 	return 'P' . ( $days > 0 ? $days . 'D' : '' ) . ( '' !== $time ? 'T' . $time : '' );
+}
+
+/**
+ * How long an Event really runs, for one that ends in another zone.
+ *
+ * The two civil values are read in their own zones and the difference between the instants is the
+ * answer -- there is no civil length across a zone boundary to carry instead.
+ *
+ * @param array<string,mixed> $schedule Schedule row.
+ * @return DateInterval
+ */
+function axismundi_cal_elapsed_interval( array $schedule ) : DateInterval {
+	try {
+		$start = new DateTimeImmutable( (string) $schedule['dtstart_local'], new DateTimeZone( (string) $schedule['timezone'] ) );
+		$end   = new DateTimeImmutable( (string) $schedule['dtend_local'], new DateTimeZone( (string) $schedule['end_timezone'] ) );
+	} catch ( Exception $error ) {
+		return new DateInterval( 'PT0S' );
+	}
+	$seconds = max( 0, $end->getTimestamp() - $start->getTimestamp() );
+	// Stated in the units a person reads. `PT54000S` is the same fifteen hours and nobody recognises it.
+	$spec = 'PT' . intdiv( $seconds, 3600 ) . 'H' . intdiv( $seconds % 3600, 60 ) . 'M' . ( $seconds % 60 ) . 'S';
+	try {
+		return new DateInterval( $spec );
+	} catch ( Exception $error ) {
+		return new DateInterval( 'PT0S' );
+	}
 }
 
 /**
@@ -237,7 +268,17 @@ function axismundi_cal_jscalendar_event( WP_Post $post ) {
 	}
 	$timezone = (string) $schedule['timezone'];
 	$all_day  = ! empty( $schedule['all_day'] );
-	$duration = axismundi_cal_civil_interval( (string) $schedule['dtstart_local'], (string) $schedule['dtend_local'] );
+	$end_zone = trim( (string) ( $schedule['end_timezone'] ?? '' ) );
+	/*
+	 * `duration` is what decides the end instant, so it has to be measured the way the Event actually
+	 * runs. Within one zone that is the civil length -- 19:00-21:00 is two hours on the night the
+	 * clocks change -- but an Event ending in another zone has no civil length: 10:00 in Seoul to 11:00
+	 * in New York is one hour on the page and fifteen in the air, and publishing the first would put
+	 * the landing before the take-off.
+	 */
+	$duration = '' !== $end_zone
+		? axismundi_cal_elapsed_interval( $schedule )
+		: axismundi_cal_civil_interval( (string) $schedule['dtstart_local'], (string) $schedule['dtend_local'] );
 
 	$event = array(
 		'@type'   => 'Event',
@@ -259,6 +300,11 @@ function axismundi_cal_jscalendar_event( WP_Post $post ) {
 		$event['showWithoutTime'] = true;
 	} else {
 		$event['timeZone'] = $timezone;
+		if ( '' !== $end_zone ) {
+			// JSCalendar 2.0 states the arrival zone beside the departure one, so the end can be shown on
+			// the clock it happens on without the duration having to lie about how long it took.
+			$event['endTimeZone'] = $end_zone;
+		}
 	}
 
 	$content = (string) apply_filters( 'the_content', $post->post_content );

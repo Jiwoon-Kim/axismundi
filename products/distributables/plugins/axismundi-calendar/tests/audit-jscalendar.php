@@ -199,6 +199,38 @@ try {
 		isset( $ax_js_over['recurrenceOverrides']['2027-02-01T09:00:00'] )
 			&& true === ( $ax_js_over['recurrenceOverrides']['2027-02-01T09:00:00']['excluded'] ?? false )
 	);
+	// -- an Event that ends in another zone ---------------------------------------------------------------
+
+	/*
+	 * The property that decided the canonical target. `endTimeZone` is JSCalendar 2.0, and an Event
+	 * ending elsewhere is a fact the model holds -- so pinning the wire to 1.0 would mean dropping it
+	 * or lying about it. What matters most here is `duration`: within one zone it is the civil length,
+	 * but across a boundary there is no civil length to carry, and publishing the one-hour difference
+	 * between two clock faces would put the landing before the take-off.
+	 */
+	$ax_js_flight = ax_js_event(
+		$ax_js_posts,
+		$ax_js_user_id,
+		$ax_js_id,
+		'Seoul to New York',
+		array( 'starts_at' => '2027-01-10 10:00:00', 'ends_at' => '2027-01-10 11:00:00', 'timezone' => 'Asia/Seoul', 'end_timezone' => 'America/New_York' )
+	);
+	$ax_js_flight_doc = 0 !== $ax_js_flight ? axismundi_cal_jscalendar_event( get_post( $ax_js_flight ) ) : null;
+	ax_js_assert(
+		$ax_js_results,
+		'an Event that lands elsewhere carries both zones and the time it really took',
+		is_array( $ax_js_flight_doc )
+			&& 'Asia/Seoul' === (string) $ax_js_flight_doc['timeZone']
+			&& 'America/New_York' === (string) $ax_js_flight_doc['endTimeZone']
+			&& 'PT15H' === (string) $ax_js_flight_doc['duration']
+	);
+	// And the ordinary Event is untouched: one zone, and the civil length it was written with.
+	ax_js_assert(
+		$ax_js_results,
+		'while an Event that ends where it started names one zone and keeps its wall-clock length',
+		! isset( $ax_js_doc['endTimeZone'] ) && 'PT2H30M' === (string) $ax_js_doc['duration']
+	);
+
 	// -- a date the rule never produces ------------------------------------------------------------------
 
 	/*

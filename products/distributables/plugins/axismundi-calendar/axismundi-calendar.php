@@ -95,6 +95,7 @@ require_once __DIR__ . '/includes/event-placement.php';
 require_once __DIR__ . '/includes/share-invitation.php';
 require_once __DIR__ . '/includes/collection-projection.php';
 require_once __DIR__ . '/includes/jscalendar.php';
+require_once __DIR__ . '/includes/jscalendar-group.php';
 require_once __DIR__ . '/includes/envelope.php';
 require_once __DIR__ . '/includes/rest.php';
 require_once __DIR__ . '/includes/rest-read.php';

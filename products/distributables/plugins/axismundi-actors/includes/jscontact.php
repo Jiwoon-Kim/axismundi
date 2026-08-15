@@ -176,7 +176,20 @@ function axismundi_actors_jscontact_card( Axismundi_Actor $actor ) {
 	if ( array() !== $localizations ) {
 		$card['localizations'] = $localizations;
 	}
-	return $card;
+	/**
+	 * Let a domain add what it owns.
+	 *
+	 * Calendars, and later places and typed contact facts, are other plugins' knowledge. An identity
+	 * registry that assembled them would be holding a second copy of facts it does not own -- so it
+	 * builds the identity half and asks.
+	 *
+	 * Anything added here is going into a public document: contributors must add only what the Actor
+	 * has published.
+	 *
+	 * @param array<string,mixed> $card  Card so far.
+	 * @param Axismundi_Actor     $actor Actor being described.
+	 */
+	return (array) apply_filters( 'axismundi_actors_jscontact_card', $card, $actor );
 }
 
 /** @return array<string,string> */

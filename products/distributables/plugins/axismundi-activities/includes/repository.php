@@ -257,7 +257,14 @@ function axismundi_act_types() : array {
 	 * and Dislike cancel each other; "one vote per person" is a community rule, so the mutual
 	 * exclusion and the tally belong to whichever product owns that community.
 	 */
-	$types = array( 'Follow', 'Accept', 'Reject', 'Undo', 'Like', 'Dislike', 'EmojiReact', 'Announce', 'QuoteRequest', 'Create', 'Update', 'Delete', 'Add', 'Remove', 'Move', 'Join', 'Leave', 'Block', 'Flag' );
+	/*
+	 * `Invite` and the tentative answers are here for the same reason, and are not a calendar feature.
+	 * They are core ActivityStreams: an `Invite` arriving from a peer is a thing that happened whether
+	 * or not this site has an events product installed, and dropping it would make the record depend on
+	 * the plugin list rather than on what was said. A tentative answer is likewise a distinct reply --
+	 * folding it into `Accept` or `Reject` would record a decision nobody made.
+	 */
+	$types = array( 'Follow', 'Accept', 'Reject', 'TentativeAccept', 'TentativeReject', 'Undo', 'Like', 'Dislike', 'EmojiReact', 'Announce', 'QuoteRequest', 'Create', 'Update', 'Delete', 'Add', 'Remove', 'Move', 'Join', 'Leave', 'Invite', 'Block', 'Flag' );
 	/** @param string[] $types Supported ActivityStreams activity types. */
 	return array_values( array_unique( array_filter( array_map( 'sanitize_text_field', (array) apply_filters( 'axismundi_act_types', $types ) ) ) ) );
 }

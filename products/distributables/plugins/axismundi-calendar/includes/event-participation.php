@@ -521,7 +521,7 @@ function axismundi_cal_event_join( int $post_id, string $actor_uri ) {
  * @param string|null $join_uri  Initiating Activity URI, or null to keep what is there.
  * @return string|WP_Error State written.
  */
-function axismundi_cal_participation_seat( int $post_id, string $actor_uri, string $state, ?string $join_uri = null ) {
+function axismundi_cal_participation_seat( int $post_id, string $actor_uri, string $state, ?string $join_uri = null, string $source = 'join' ) {
 	global $wpdb;
 	$envelope = axismundi_cal_event_get( $post_id );
 	if ( ! is_array( $envelope ) ) {
@@ -575,8 +575,12 @@ function axismundi_cal_participation_seat( int $post_id, string $actor_uri, stri
 					'actor_uri'      => $actor_uri,
 					'actor_uri_hash' => $actor_key,
 					'initiating_activity_uri' => (string) $join_uri,
-					// Asked for by the person coming, which is what makes the organizer the one who answers.
-					'source'         => 'join',
+					/*
+					 * Which end this started from, and therefore who answers: a request the guest made is the
+					 * organizer's to decide, an invitation the host made is the guest's. Written once, on the
+					 * row that begins the relation, because the direction cannot change afterwards.
+					 */
+					'source'         => 'invite' === $source ? 'invite' : 'join',
 					'created_at'     => $now,
 				)
 			)
@@ -721,6 +725,14 @@ function axismundi_cal_event_respond_to_join( int $post_id, string $actor_uri, s
 	$participation = axismundi_cal_event_participation( $post_id, $actor_uri );
 	if ( ! is_array( $participation ) ) {
 		return new WP_Error( 'ax_event_respond_missing', __( 'That person has not asked to come.', 'axismundi-calendar' ), array( 'status' => 404 ) );
+	}
+	if ( 'invite' === (string) $participation['source'] ) {
+		/*
+		 * The row is an invitation this Event sent, and the answer to one belongs to the person invited.
+		 * Without this guard the two paths meet on the same pending row and a host could accept on
+		 * somebody's behalf -- an attendance nobody agreed to, recorded as though they had.
+		 */
+		return new WP_Error( 'ax_event_respond_invite', __( 'That is an invitation, and only the person invited can answer it.', 'axismundi-calendar' ), array( 'status' => 409 ) );
 	}
 	if ( 'pending' !== (string) $participation['state'] ) {
 		return new WP_Error( 'ax_event_respond_answered', __( 'That request has already been answered.', 'axismundi-calendar' ), array( 'status' => 409 ) );

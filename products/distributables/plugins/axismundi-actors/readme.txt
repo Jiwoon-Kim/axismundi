@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.68
+Stable tag: 0.0.69
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,12 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.69 =
+* `axismundi_actors_handle_registered` now fires for every Actor that locks a
+  handle, including a managed Group or Organization created with one already
+  set. Anything that reserves an address from a handle heard about people and
+  silently not about organizations.
 
 = 0.0.68 =
 * Lets a user choose which Actor their new work is published as, from the admin

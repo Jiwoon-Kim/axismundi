@@ -123,7 +123,25 @@ function axismundi_cal_calendar_display_name( array $calendar ) : string {
 		return $name;
 	}
 	$generated = axismundi_cal_managed_calendar_name( (string) ( $calendar['managed_key'] ?? '' ) );
-	return '' !== $generated ? $generated : __( 'Untitled calendar', 'axismundi-calendar' );
+	if ( '' !== $generated ) {
+		return $generated;
+	}
+	/*
+	 * An Actor's own calendar is called what the Actor is called, resolved here rather than copied at
+	 * creation: somebody who renames themselves has renamed their calendar, and a stored copy would
+	 * only be the name they used to have. The handle is the fallback because it is the one name the
+	 * calendar's own address already promises.
+	 */
+	$handle = axismundi_cal_calendar_slug_handle( (string) ( $calendar['slug'] ?? '' ) );
+	if ( '' !== $handle && function_exists( 'axismundi_actors_get_by_uri' ) ) {
+		$actor = axismundi_actors_get_by_uri( (string) ( $calendar['authority_actor_uri'] ?? '' ) );
+		if ( $actor instanceof Axismundi_Actor ) {
+			$display = trim( (string) $actor->get_display_name() );
+			return '' !== $display ? $display : '@' . $handle;
+		}
+		return '@' . $handle;
+	}
+	return __( 'Untitled calendar', 'axismundi-calendar' );
 }
 
 /**

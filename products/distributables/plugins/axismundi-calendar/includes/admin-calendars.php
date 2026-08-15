@@ -636,13 +636,25 @@ function axismundi_cal_render_calendars_page() : void {
 			<table class="form-table" role="presentation">
 				<tr>
 					<th scope="row"><label for="ax-cal-name"><?php esc_html_e( 'Name', 'axismundi-calendar' ); ?></label></th>
-					<td><input name="name" id="ax-cal-name" type="text" class="regular-text" <?php echo '' === (string) ( $calendar['managed_key'] ?? '' ) ? 'required' : 'placeholder="' . esc_attr( axismundi_cal_calendar_display_name( (array) $calendar ) ) . '"'; ?> value="<?php echo esc_attr( (string) ( $calendar['name'] ?? '' ) ); ?>"></td>
+					<?php
+					// A calendar named by something else -- this plugin's key, or the Actor whose calendar it
+					// is -- shows that name as a placeholder rather than demanding one: typing here overrides
+					// the projection, and leaving it empty is a valid answer.
+					$ax_cal_named_elsewhere = '' !== (string) ( $calendar['managed_key'] ?? '' ) || axismundi_cal_is_actor_calendar( (array) $calendar );
+					?>
+					<td><input name="name" id="ax-cal-name" type="text" class="regular-text" <?php echo $ax_cal_named_elsewhere ? 'placeholder="' . esc_attr( axismundi_cal_calendar_display_name( (array) $calendar ) ) . '"' : 'required'; ?> value="<?php echo esc_attr( (string) ( $calendar['name'] ?? '' ) ); ?>"></td>
 				</tr>
 				<tr>
 					<th scope="row"><label for="ax-cal-slug"><?php esc_html_e( 'Slug', 'axismundi-calendar' ); ?></label></th>
 					<td>
+						<?php if ( axismundi_cal_is_actor_calendar( (array) $calendar ) ) : ?>
+							<code><?php echo esc_html( (string) $calendar['slug'] ); ?></code>
+							<input name="slug" type="hidden" value="<?php echo esc_attr( (string) $calendar['slug'] ); ?>">
+							<p class="description"><?php esc_html_e( 'This calendar is addressed by its Actor handle, which does not change.', 'axismundi-calendar' ); ?></p>
+						<?php else : ?>
 						<input name="slug" id="ax-cal-slug" type="text" class="regular-text" value="<?php echo esc_attr( (string) ( $calendar['slug'] ?? '' ) ); ?>">
 						<p class="description"><?php esc_html_e( 'Used in the subscription address. Changing it breaks calendars people have already subscribed to.', 'axismundi-calendar' ); ?></p>
+						<?php endif; ?>
 					</td>
 				</tr>
 				<tr>

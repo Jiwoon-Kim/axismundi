@@ -853,6 +853,12 @@ function axismundi_cal_install_schema() : bool {
 	axismundi_cal_clear_v12_unfiled_authority( $previous_version );
 	axismundi_cal_seed_authority_acl();
 	axismundi_cal_grandfather_public_calendars( $previous_version );
+	/*
+	 * Actors that locked a handle before their calendar was made with them, and lazily-made calendars
+	 * still sitting at a generated slug. Moved only into a free address: a slug is a subscription URL,
+	 * and a collision is reported by leaving it alone rather than resolved by inventing a third one.
+	 */
+	axismundi_cal_backfill_actor_calendars();
 
 	/*
 	 * Dropped rather than left behind. It is not read anywhere after this version, and leaving a

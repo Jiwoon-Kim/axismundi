@@ -937,7 +937,17 @@ function axismundi_actors_create_local( array $args ) {
 	}
 
 	$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-	return axismundi_actors_get_by_uuid( $uuid );
+	$actor = axismundi_actors_get_by_uuid( $uuid );
+	/*
+	 * A handle locked here is as registered as one locked by `register_handle()`, and anything that
+	 * reserves an address from a handle -- a Calendar, a feed -- has to hear about both. A managed
+	 * Group is created with its handle already set, so listening only to the other path would have
+	 * meant Person actors got those addresses and Organizations silently did not.
+	 */
+	if ( '' !== (string) $handle_key && $actor instanceof Axismundi_Actor ) {
+		do_action( 'axismundi_actors_handle_registered', $actor->get_identity_id(), (string) $handle_key );
+	}
+	return $actor;
 }
 
 /**

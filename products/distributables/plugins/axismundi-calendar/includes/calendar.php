@@ -194,13 +194,38 @@ function axismundi_cal_calendar_save( array $fields, int $calendar_id = 0 ) {
 	 * names it. An administrator may still type one, and then that is what the site calls it.
 	 */
 	$name = trim( (string) ( $fields['name'] ?? ( $existing['name'] ?? '' ) ) );
-	if ( '' === $name && '' === $managed_key ) {
-		return new WP_Error( 'ax_cal_name', __( 'A calendar needs a name.', 'axismundi-calendar' ), array( 'status' => 400 ) );
-	}
 
-	$slug = sanitize_title( (string) ( $fields['slug'] ?? ( $existing['slug'] ?? ( '' !== $name ? $name : $managed_key ) ) ) );
+	$slug = axismundi_cal_sanitize_calendar_slug( (string) ( $fields['slug'] ?? ( $existing['slug'] ?? ( '' !== $name ? $name : $managed_key ) ) ) );
 	if ( '' === $slug ) {
 		return new WP_Error( 'ax_cal_slug', __( 'A calendar needs a slug that can appear in a URL.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+
+	/*
+	 * `@handle` is an Actor's own address, and only that Actor's own Calendar may answer at it.
+	 * Nothing a person types can reach this namespace -- `sanitize_title()` removes the `@` -- so the
+	 * check is here for callers, not for forms, and it is what lets the address be promised as
+	 * permanent: it can never be taken by whoever asked for it first.
+	 */
+	$authority_uri = array_key_exists( 'owner_actor_uri', $fields )
+		? trim( (string) $fields['owner_actor_uri'] )
+		: (string) ( $existing['authority_actor_uri'] ?? '' );
+	$actor_calendar = '' !== axismundi_cal_calendar_slug_handle( $slug );
+	if ( $actor_calendar && ! axismundi_cal_slug_belongs_to_actor( $slug, $authority_uri ) ) {
+		return new WP_Error( 'ax_cal_slug_reserved', __( 'That address belongs to an Actor, and only that Actor\'s own calendar can use it.', 'axismundi-calendar' ), array( 'status' => 409 ) );
+	}
+	// An Actor's own Calendar is addressed by its handle, and the handle does not change. Renaming
+	// what it is called is a different act and stays open.
+	if ( is_array( $existing ) && (string) $existing['slug'] !== $slug && axismundi_cal_is_actor_calendar( $existing ) ) {
+		return new WP_Error( 'ax_cal_slug_locked', __( 'An Actor\'s own calendar keeps the address its handle reserves.', 'axismundi-calendar' ), array( 'status' => 409 ) );
+	}
+
+	/*
+	 * A name is required of everything except a calendar this plugin maintains, which is named by its
+	 * key, and an Actor's own calendar, which is named by the Actor -- both resolved when read, so
+	 * neither carries a copy that can drift from what it projects.
+	 */
+	if ( '' === $name && '' === $managed_key && ! $actor_calendar ) {
+		return new WP_Error( 'ax_cal_name', __( 'A calendar needs a name.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
 	$clash = axismundi_cal_calendar_by_slug( $slug );
 	if ( is_array( $clash ) && (int) $clash['id'] !== (int) ( $existing['id'] ?? 0 ) ) {
@@ -451,6 +476,15 @@ function axismundi_cal_set_primary( int $calendar_id, bool $primary ) : bool {
 	global $wpdb;
 	$calendar = axismundi_cal_calendar_get( $calendar_id );
 	if ( ! is_array( $calendar ) || 'local' !== (string) $calendar['kind'] ) {
+		return false;
+	}
+	/*
+	 * An Actor's own Calendar cannot be demoted. Anything else may be somebody's default today and
+	 * not tomorrow, but this one is the Actor's calendar at the address its handle reserves: demoting
+	 * it would leave that address answering for a calendar the Actor's Events no longer go to, which
+	 * is worse than either state on its own. Ordinary Calendars keep the escape hatch.
+	 */
+	if ( ! $primary && axismundi_cal_is_actor_calendar( $calendar ) ) {
 		return false;
 	}
 	$table = axismundi_cal_calendars_table();

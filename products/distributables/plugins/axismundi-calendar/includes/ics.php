@@ -309,7 +309,8 @@ function axismundi_cal_ics_vevent( array $schedule, WP_Post $post ) : array {
 			. ':' . axismundi_cal_ics_escape( (string) $virtual['url'] );
 	}
 	if ( '' !== trim( (string) $schedule['rrule'] ) ) {
-		$lines[] = 'RRULE:' . (string) $schedule['rrule'];
+		// Written from the structure, so the document cannot describe a series the calendar does not show.
+		$lines[] = 'RRULE:' . axismundi_cal_recurrence_to_rrule( axismundi_cal_schedule_recurrence( $schedule ) );
 	}
 	if ( is_array( $envelope ) && 'EventCancelled' === (string) ( $envelope['event_status'] ?? '' ) ) {
 		// The whole series is off. A cancelled Event stays in the feed rather than disappearing, so

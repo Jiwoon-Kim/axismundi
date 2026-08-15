@@ -55,6 +55,7 @@ require_once __DIR__ . '/includes/schema.php';
 require_once __DIR__ . '/includes/cpt.php';
 require_once __DIR__ . '/includes/rrule.php';
 require_once __DIR__ . '/includes/duration.php';
+require_once __DIR__ . '/includes/recurrence.php';
 require_once __DIR__ . '/includes/occurrence.php';
 require_once __DIR__ . '/includes/schedule.php';
 require_once __DIR__ . '/includes/calendar.php';

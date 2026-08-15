@@ -311,9 +311,10 @@ function axismundi_cal_jscalendar_event( WP_Post $post ) {
 		$event['descriptionContentType'] = 'text/html';
 	}
 
-	$rule = axismundi_cal_jscalendar_recurrence_rule( (string) $schedule['rrule'] );
-	if ( null !== $rule ) {
-		$event['recurrenceRules'] = array( $rule );
+	// Already in this vocabulary: the stored structure is the JSCalendar rule, so nothing is converted.
+	$rules = axismundi_cal_schedule_recurrence( $schedule );
+	if ( array() !== $rules ) {
+		$event['recurrenceRules'] = $rules;
 	}
 	/*
 	 * Asked whether or not there is a rule. An added date needs no rule to exist -- JSCalendar states

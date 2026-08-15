@@ -73,14 +73,15 @@ function axismundi_cal_expand( array $schedule, string $from_utc, string $to_utc
 	 */
 	$duration = axismundi_cal_schedule_duration( $schedule );
 
-	$rrule = trim( (string) ( $schedule['rrule'] ?? '' ) );
-	if ( '' === $rrule ) {
+	/*
+	 * The stored structure, not the sentence beside it. Parsing here is what let a comma list be read
+	 * as one value and an unsupported rule reach a projection -- the translation into the expander's
+	 * own vocabulary now happens in exactly one place.
+	 */
+	$parts = axismundi_cal_recurrence_to_parts( axismundi_cal_schedule_recurrence( $schedule ) );
+	if ( array() === $parts ) {
 		$starts = array( $dtstart );
 	} else {
-		$parts = axismundi_cal_rrule_parse( $rrule );
-		if ( is_wp_error( $parts ) ) {
-			return array();
-		}
 		$checked = axismundi_cal_rrule_check( $parts, false );
 		if ( is_wp_error( $checked ) ) {
 			return array();

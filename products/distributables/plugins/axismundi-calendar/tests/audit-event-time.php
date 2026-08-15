@@ -561,6 +561,50 @@ try {
 			&& 'PT2H' === (string) axismundi_cal_jscalendar_event( get_post( $ax_et_stored ) )['duration']
 	);
 
+	// -- the rule is a structure, and the sentence is generated ---------------------------------------------
+
+	/*
+	 * The second canonical column. A rule used to be a string every reader parsed, and parsing it is
+	 * where two readers disagreed about what it meant -- a comma list read as one value, and a rule
+	 * this site cannot expand reaching a projection as though it could.
+	 *
+	 * Same proof as the duration: corrupt the sentence nothing may trust any more, and check that the
+	 * occurrences, the document and the JSCalendar object are all unmoved.
+	 */
+	$ax_et_rule = $ax_et_make(
+		$ax_et_posts,
+		'Twice a week',
+		array( 'timezone' => 'Asia/Seoul', 'startsAt' => '2027-05-03 09:00:00', 'endsAt' => '2027-05-03 10:00:00', 'rrule' => 'FREQ=WEEKLY;BYDAY=MO,WE;COUNT=4' )
+	);
+	$ax_et_rule_schedule = axismundi_cal_schedule_for_event( $ax_et_rule );
+	$ax_et_structured    = axismundi_cal_schedule_recurrence( $ax_et_rule_schedule );
+	ax_et_assert(
+		$ax_et_results,
+		'a repeating Event stores its rule as a structure rather than only as a sentence',
+		isset( $ax_et_structured[0]['frequency'] )
+			&& 'weekly' === (string) $ax_et_structured[0]['frequency']
+			&& 2 === count( (array) $ax_et_structured[0]['byDay'] )
+	);
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture reaching a state the writer will not produce.
+	$wpdb->update(
+		axismundi_cal_schedules_table(),
+		array( 'rrule' => 'FREQ=DAILY;COUNT=99' ),
+		array( 'id' => (int) $ax_et_rule_schedule['id'] ),
+		array( '%s' ),
+		array( '%d' )
+	);
+	$ax_et_rule_corrupt = axismundi_cal_schedule_for_event( $ax_et_rule );
+	$ax_et_rule_occ     = axismundi_cal_expand( $ax_et_rule_corrupt, '2027-05-01 00:00:00', '2027-06-01 00:00:00' );
+	$ax_et_rule_ics     = implode( "
+", axismundi_cal_ics_vevent( $ax_et_rule_corrupt, get_post( $ax_et_rule ) ) );
+	ax_et_assert(
+		$ax_et_results,
+		'and every surface reads that structure, so a stale sentence can no longer change the series',
+		4 === count( $ax_et_rule_occ )
+			&& str_contains( $ax_et_rule_ics, 'RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=4' )
+			&& 'weekly' === (string) axismundi_cal_jscalendar_event( get_post( $ax_et_rule ) )['recurrenceRules'][0]['frequency']
+	);
+
 } finally {
 	wp_set_current_user( 0 );
 	foreach ( $ax_et_posts as $ax_et_post ) {

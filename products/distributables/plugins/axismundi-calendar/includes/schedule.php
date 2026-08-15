@@ -27,7 +27,7 @@ defined( 'ABSPATH' ) || exit;
  * or where it happens, and iCalendar clients treat a SEQUENCE bump as grounds to re-prompt every
  * attendee.
  */
-const AXISMUNDI_CAL_SEQUENCE_FIELDS = array( 'timezone', 'end_timezone', 'all_day', 'dtstart_local', 'duration', 'rrule', 'location_place_id', 'location_text' );
+const AXISMUNDI_CAL_SEQUENCE_FIELDS = array( 'timezone', 'end_timezone', 'all_day', 'dtstart_local', 'duration', 'recurrence_json', 'location_place_id', 'location_text' );
 
 /**
  * Record that when-or-where changed, without a field of its own to compare.
@@ -213,6 +213,12 @@ function axismundi_cal_schedule_save( int $post_id, array $fields ) {
 		 * doing the arithmetic was another place that could happen.
 		 */
 		'duration'          => axismundi_cal_compute_duration( $start['local'], $end['local'], $timezone, $end_timezone ),
+		/*
+		 * The rule as a structure, which is what every reader now asks. The sentence beside it is kept as
+		 * provenance and read by nothing -- a rule the expander refuses gains no structure, so it cannot
+		 * become canonical by being written down.
+		 */
+		'recurrence_json'   => '' === $rrule ? '' : (string) wp_json_encode( axismundi_cal_recurrence_from_rrule( $rrule ) ),
 		'all_day'           => $all_day,
 		'dtstart_local'     => $start['local'],
 		'dtend_local'       => $end['local'],

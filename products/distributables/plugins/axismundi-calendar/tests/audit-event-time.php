@@ -435,6 +435,41 @@ try {
 			&& array( '2026-10-31 21:00:00', '2026-11-01 21:00:00', '2026-11-02 21:00:00' )
 				=== array_map( static fn( array $o ) : string => (string) $o['end_local'], $ax_et_series )
 	);
+
+	/*
+	 * The other direction, which breaks differently. Going forward the clock skips an hour, so the same
+	 * civil range is shorter in real time -- and an occurrence can land on a time of day that does not
+	 * exist at all.
+	 */
+	$ax_et_forward = axismundi_cal_expand(
+		array( 'id' => 0, 'timezone' => 'America/New_York', 'all_day' => 0, 'dtstart_local' => '2026-03-08 01:00:00', 'dtend_local' => '2026-03-08 03:00:00', 'rrule' => '' ),
+		'2026-03-06 00:00:00',
+		'2026-03-10 00:00:00'
+	);
+	ax_et_assert(
+		$ax_et_results,
+		'an Event written across a spring-forward also ends when it says, and is simply shorter',
+		1 === count( $ax_et_forward )
+			&& '2026-03-08 03:00:00' === (string) $ax_et_forward[0]['end_local']
+			&& '2026-03-08 07:00:00' === (string) $ax_et_forward[0]['end_utc']
+	);
+	/*
+	 * A series at a time of day the transition deletes. The zone places that morning's occurrence at
+	 * 03:30 and every later one goes back to 02:30 -- carrying the placement forward would turn a 02:30
+	 * series into a 03:30 series permanently, which is the reverse-direction failure the fall-back
+	 * cases could not have caught.
+	 */
+	$ax_et_ghost = axismundi_cal_expand(
+		array( 'id' => 0, 'timezone' => 'America/New_York', 'all_day' => 0, 'dtstart_local' => '2026-03-06 02:30:00', 'dtend_local' => '2026-03-06 03:30:00', 'rrule' => 'FREQ=DAILY;COUNT=4' ),
+		'2026-03-05 00:00:00',
+		'2026-03-12 00:00:00'
+	);
+	ax_et_assert(
+		$ax_et_results,
+		'an occurrence on a clock time that does not exist moves that morning only, and the series returns',
+		array( '2026-03-06 02:30:00', '2026-03-07 02:30:00', '2026-03-08 03:30:00', '2026-03-09 02:30:00' )
+			=== array_map( static fn( array $o ) : string => (string) $o['start_local'], $ax_et_ghost )
+	);
 } finally {
 	wp_set_current_user( 0 );
 	foreach ( $ax_et_posts as $ax_et_post ) {

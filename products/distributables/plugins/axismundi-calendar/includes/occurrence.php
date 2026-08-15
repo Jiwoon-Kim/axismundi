@@ -206,7 +206,13 @@ function axismundi_cal_period_candidates( array $rule, string $freq, DateTimeImm
 	$bymon  = $rule['BYMONTH'] ?? array();
 
 	if ( 'DAILY' === $freq ) {
-		$candidates = array( $cursor );
+		/*
+		 * Rebuilt at the series' own time of day rather than taken from the cursor. On the morning the
+		 * clocks go forward, an occurrence at 02:30 has no such moment and the zone places it at 03:30 --
+		 * correct for that day, and carried by the cursor into every day after it, so a 02:30 series
+		 * would quietly become a 03:30 series for good. The date advances; the clock does not.
+		 */
+		$candidates = array( axismundi_cal_at_civil_time( $cursor, $time, $zone ) );
 	} elseif ( 'WEEKLY' === $freq ) {
 		$candidates = axismundi_cal_week_candidates( $cursor, $byday, $rule, $time, $zone );
 	} else {
@@ -484,6 +490,25 @@ function axismundi_cal_build_occurrence( array $schedule, DateTimeImmutable $sta
 		'location_place_id' => $schedule['location_place_id'] ?? null,
 		'location_text'     => (string) ( $schedule['location_text'] ?? '' ),
 	);
+}
+
+/**
+ * One date at a stated time of day, in a stated zone.
+ *
+ * Where the zone has no such moment, it places it -- and that placement stays local to the day it
+ * happened on, because the next candidate is built from the date again rather than from this answer.
+ *
+ * @param DateTimeImmutable $day  Any moment on the wanted date.
+ * @param string            $time `H:i:s`.
+ * @param DateTimeZone      $zone Zone.
+ * @return DateTimeImmutable
+ */
+function axismundi_cal_at_civil_time( DateTimeImmutable $day, string $time, DateTimeZone $zone ) : DateTimeImmutable {
+	try {
+		return new DateTimeImmutable( $day->format( 'Y-m-d' ) . ' ' . $time, $zone );
+	} catch ( Exception $error ) {
+		return $day;
+	}
 }
 
 /**

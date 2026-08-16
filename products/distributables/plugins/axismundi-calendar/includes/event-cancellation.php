@@ -61,32 +61,82 @@ function axismundi_cal_event_cancel( int $post_id ) {
 }
 
 /**
+ * Put a called-off Event back on.
+ *
+ * The status it returns to is stated rather than remembered. Nothing stores what an Event was before
+ * it was cancelled, and a column that did would exist to answer one question on one path; naming the
+ * status here is the same answer without the second copy -- and an Event that was tentative before
+ * and comes back tentative is something its organizer knows and can say.
+ *
+ * The replies are exactly as they were. Everybody who had said they were coming still has, because
+ * their answer was never touched -- and resetting them to `pending` would erase what people said in
+ * the name of asking them again. Whether reinstating should re-ask is a product question about
+ * notifications, not a reason to destroy answers.
+ *
+ * @param int    $post_id Event post ID.
+ * @param string $status  Status to return to; anything but cancelled.
+ * @return true|WP_Error
+ */
+function axismundi_cal_event_reinstate( int $post_id, string $status = 'EventScheduled' ) {
+	if ( ! axismundi_cal_can_manage_participation( $post_id ) ) {
+		return new WP_Error( 'ax_event_reinstate_denied', __( 'This event is not yours to put back on.', 'axismundi-calendar' ), array( 'status' => 403 ) );
+	}
+	if ( ! is_array( axismundi_cal_event_get( $post_id ) ) ) {
+		return new WP_Error( 'ax_event_reinstate_missing', __( 'That event does not exist.', 'axismundi-calendar' ), array( 'status' => 404 ) );
+	}
+	if ( ! axismundi_cal_event_is_cancelled( $post_id ) ) {
+		return new WP_Error( 'ax_event_reinstate_not_cancelled', __( 'That event has not been called off.', 'axismundi-calendar' ), array( 'status' => 409 ) );
+	}
+	if ( 'EventCancelled' === $status || ! in_array( $status, axismundi_cal_event_statuses(), true ) ) {
+		return new WP_Error( 'ax_event_reinstate_status', __( 'An event is put back on as something other than cancelled.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+	return axismundi_cal_event_save( $post_id, array( 'event_status' => $status ) );
+}
+
+/**
  * Tell the ledger, and through it everybody holding the Event.
  *
- * `Update`, not `Delete`. A cancelled Event has not gone away -- it is still there, still at the time
- * it was going to be, and now saying it is off. `Delete` would tell every peer to tombstone it, and a
- * guest whose calendar it disappeared from would have no way to learn why. That is a different act
- * with a different meaning, and this one is not it.
+ * `Update` in both directions, and `Delete` in neither. A cancelled Event has not gone away -- it is
+ * still there, still at the time it was going to be, and now saying it is off. `Delete` would tell
+ * every peer to tombstone it, and a guest whose calendar it disappeared from would have no way to
+ * learn why.
+ *
+ * Putting it back on is an `Update` too, rather than an `Undo` of the cancellation. The two are not
+ * the same shape: an `Undo` retracts a relationship its author established -- a `Follow`, a `Join`, an
+ * `Accept` -- and says it never stood. The cancellation is not a relationship and it did stand:
+ * people were told, and some of them made other plans on the strength of it. What happened is that
+ * the Event changed again, and that is what `Update` says.
  *
  * @param int $post_id Event post ID.
  * @return void
  */
-function axismundi_cal_record_event_cancellation( int $post_id ) : void {
+function axismundi_cal_record_event_status_change( int $post_id ) : void {
 	$host = axismundi_cal_event_owner_actor_uri( $post_id );
 	if ( '' === $host ) {
 		// Nothing to say it in the name of. The status is still stored; the Event simply has no Actor
 		// to publish the change as, which is the same silence every other participation act keeps.
 		return;
 	}
+	$schedule = axismundi_cal_schedule_for_event( $post_id );
+	$envelope = axismundi_cal_event_get( $post_id );
+	if ( ! is_array( $schedule ) || ! is_array( $envelope ) ) {
+		return;
+	}
 	$event_uri = axismundi_cal_event_uri( $post_id );
 	axismundi_cal_participation_activity(
 		array( 'type' => 'Update', 'actor' => $host, 'object' => $event_uri ),
-		// One act per cancellation of this Event. Cancelling, reinstating and cancelling again is a
-		// question nothing here answers yet, and a key that collided would answer it by accident.
-		'ax-cal-cancel:' . $event_uri
+		/*
+		 * One act per version of the Event. Keyed on the sequence rather than on the word `cancel`,
+		 * because an Event can be called off, put back on and called off again -- and a key naming only
+		 * the act would hand back the first cancellation, announcing a version of the Event that two
+		 * changes have since replaced. The sequence is already the answer to "which version is this",
+		 * so nothing here counts anything a second time.
+		 */
+		'ax-cal-status:' . $event_uri . ':' . (string) $envelope['event_status'] . ':' . (int) $schedule['sequence']
 	);
 }
-add_action( 'axismundi_cal_event_cancelled', 'axismundi_cal_record_event_cancellation' );
+add_action( 'axismundi_cal_event_cancelled', 'axismundi_cal_record_event_status_change' );
+add_action( 'axismundi_cal_event_reinstated', 'axismundi_cal_record_event_status_change' );
 
 /**
  * Refuse what a called-off Event can no longer take.

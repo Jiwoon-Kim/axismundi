@@ -81,6 +81,7 @@ try {
 
 	$ax_cx_event = ax_cx_event( $ax_cx_posts, $ax_cx_host_user, $ax_cx_cal, '+40 days', array( 'maximum_attendee_capacity' => 50, 'participant_visibility' => 'public' ) );
 	axismundi_cal_event_join( $ax_cx_event, (string) $ax_cx_guest->get_uri() );
+	$ax_cx_sequence_before = (int) axismundi_cal_schedule_for_event( $ax_cx_event )['sequence'];
 	ax_cx_assert(
 		$ax_cx_results,
 		'an event can be called off by whoever runs it',
@@ -258,6 +259,86 @@ try {
 		$ax_cx_results,
 		'and calling off something already called off is refused rather than repeated',
 		is_wp_error( $ax_cx_again ) && 'ax_event_cancel_already' === $ax_cx_again->get_error_code()
+	);
+	/*
+	 * A subscriber is entitled to treat an entry carrying no higher sequence as a stale copy of what
+	 * they already hold. iTIP says so of `CANCEL` in as many words -- so a cancellation that did not
+	 * advance it would be a message clients may ignore, which is the worst possible failure for this
+	 * particular message.
+	 */
+	ax_cx_assert(
+		$ax_cx_results,
+		'and the cancellation is a newer version of the event, not a copy a client may ignore',
+		(int) axismundi_cal_schedule_for_event( $ax_cx_event )['sequence'] > $ax_cx_sequence_before
+	);
+
+	// -- putting it back on ---------------------------------------------------------------------------------------
+
+	$ax_cx_reinstated = axismundi_cal_event_reinstate( $ax_cx_event );
+	ax_cx_assert(
+		$ax_cx_results,
+		'an event that was called off can be put back on',
+		true === $ax_cx_reinstated && ! axismundi_cal_event_is_cancelled( $ax_cx_event )
+	);
+	/*
+	 * The answers were never touched, so they are still there. Resetting everybody to `pending` would
+	 * erase what people said in the name of asking them again -- and whether reinstating should re-ask
+	 * is a question about notifications, not a reason to destroy answers.
+	 */
+	ax_cx_assert(
+		$ax_cx_results,
+		'and the people who had said they were coming still have',
+		'accepted' === (string) axismundi_cal_event_participation( $ax_cx_event, (string) $ax_cx_guest->get_uri() )['state']
+			&& 1 === count( axismundi_cal_event_attendees( $ax_cx_event ) )
+	);
+	ax_cx_assert(
+		$ax_cx_results,
+		'the guest list is published again, and the event takes replies again',
+		1 === count( (array) axismundi_cal_event_transform( get_post( $ax_cx_event ) )['attendees']['items'] )
+			&& 'pending' === axismundi_cal_event_invite( $ax_cx_event, (string) $ax_cx_late->get_uri() )
+	);
+	/*
+	 * `Update` again rather than `Undo` of the cancellation. An `Undo` retracts a relationship its
+	 * author established and says it never stood; the cancellation did stand, and people made other
+	 * plans on the strength of it. What happened is that the Event changed a second time.
+	 */
+	$ax_cx_after = axismundi_act_get_by_object( axismundi_cal_event_uri( $ax_cx_event ) );
+	ax_cx_assert(
+		$ax_cx_results,
+		'said as another change to the event rather than as undoing the cancellation',
+		2 === count( array_filter( $ax_cx_after, static fn( Axismundi_Activity $a ) : bool => 'Update' === $a->get_type() ) )
+			&& 0 === count( array_filter( $ax_cx_after, static fn( Axismundi_Activity $a ) : bool => 'Undo' === $a->get_type() ) )
+	);
+	// And a third act when it is called off again -- not the first cancellation handed back, which
+	// would announce a version of the Event two changes have since replaced.
+	axismundi_cal_event_cancel( $ax_cx_event );
+	ax_cx_assert(
+		$ax_cx_results,
+		'and calling it off again is a third act, since two changes have happened since the first',
+		3 === count(
+			array_filter(
+				axismundi_act_get_by_object( axismundi_cal_event_uri( $ax_cx_event ) ),
+				static fn( Axismundi_Activity $a ) : bool => 'Update' === $a->get_type()
+			)
+		)
+	);
+	ax_cx_assert(
+		$ax_cx_results,
+		'but not back to being called off, which would be no change at all',
+		'ax_event_reinstate_status' === axismundi_cal_event_reinstate( $ax_cx_event, 'EventCancelled' )->get_error_code()
+	);
+	// It comes back as what its organizer says it is, since nothing recorded what it used to be.
+	ax_cx_assert(
+		$ax_cx_results,
+		'and it can come back as tentative rather than only as scheduled',
+		true === axismundi_cal_event_reinstate( $ax_cx_event, 'EventTentative' )
+			&& 'EventTentative' === (string) axismundi_cal_event_get( $ax_cx_event )['event_status']
+	);
+	$ax_cx_going = ax_cx_event( $ax_cx_posts, $ax_cx_host_user, $ax_cx_cal, '+60 days' );
+	ax_cx_assert(
+		$ax_cx_results,
+		'while an event that is going ahead has nothing to put back on',
+		'ax_event_reinstate_not_cancelled' === axismundi_cal_event_reinstate( $ax_cx_going )->get_error_code()
 	);
 } finally {
 	wp_set_current_user( 0 );

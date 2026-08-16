@@ -281,18 +281,34 @@ function axismundi_cal_event_save( int $post_id, array $fields ) {
 	}
 
 	/*
-	 * Cancellation is an act, not just a column. It reaches this writer from the editor as readily as
-	 * from anywhere else, so the transition is noticed here rather than in a function somebody has to
-	 * remember to call -- the alternative is an Event that says `cancelled` on the site while every
-	 * peer holding it still shows it as going ahead.
+	 * Calling an Event off and putting it back on are acts, not just a column. Either reaches this
+	 * writer from the editor as readily as from anywhere else, so the transitions are noticed here
+	 * rather than in functions somebody has to remember to call -- the alternative is an Event that
+	 * says `cancelled` on the site while every peer holding it still shows it as going ahead.
+	 *
+	 * Both bump the sequence, which is what tells a subscriber this is a newer version of the Event
+	 * than the one they hold. Without it a client is entitled to treat the cancellation as a stale
+	 * copy of something it already has, and iTIP says so explicitly: a `CANCEL` carrying no higher
+	 * `SEQUENCE` is one an implementation may ignore.
 	 */
-	if ( 'EventCancelled' === $status && 'EventCancelled' !== (string) ( $existing['event_status'] ?? '' ) ) {
+	$was_cancelled = 'EventCancelled' === (string) ( $existing['event_status'] ?? '' );
+	if ( 'EventCancelled' === $status && ! $was_cancelled ) {
+		axismundi_cal_schedule_bump_sequence( $post_id );
 		/**
 		 * Fires when an Event becomes cancelled, once per transition.
 		 *
 		 * @param int $post_id Event post ID.
 		 */
 		do_action( 'axismundi_cal_event_cancelled', $post_id );
+	} elseif ( $was_cancelled && 'EventCancelled' !== $status ) {
+		axismundi_cal_schedule_bump_sequence( $post_id );
+		/**
+		 * Fires when a called-off Event is put back on, once per transition.
+		 *
+		 * @param int    $post_id Event post ID.
+		 * @param string $status  The status it returns to.
+		 */
+		do_action( 'axismundi_cal_event_reinstated', $post_id, $status );
 	}
 
 	axismundi_cal_event_refresh_projection( $post_id );

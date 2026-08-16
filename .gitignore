@@ -23,3 +23,8 @@ Thumbs.db
 # Python bytecode from the validator scripts.
 __pycache__/
 *.pyc
+
+# Local wp-env overrides. This is where a developer's own secrets go -- push signing keys, anything
+# else a deployment would hold -- so it must never be committed. The tracked .wp-env.json stays free
+# of them, which is the whole point of the split.
+.wp-env.override.json

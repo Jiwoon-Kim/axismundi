@@ -26,6 +26,7 @@
     "./products/distributables/plugins/axismundi-object-projections",
     "./products/distributables/plugins/axismundi-activities",
     "./products/distributables/plugins/axismundi-calendar",
+    "./products/distributables/plugins/axismundi-notifications",
     "https://downloads.wordpress.org/plugin/activitypub.zip",
     "./products/distributables/plugins/axismundi-activitypub-bridge"
   ],

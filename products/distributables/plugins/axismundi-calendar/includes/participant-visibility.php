@@ -116,6 +116,27 @@ function axismundi_cal_visible_participants( int $post_id, ?string $viewer ) : a
 }
 
 /**
+ * The people coming, as one viewer may see them.
+ *
+ * The published collection is the accepted replies. Somebody answering tentatively is visible to the
+ * other guests at the levels that show them -- they said they are leaning yes -- but they are not yet
+ * one of the attendees, and a collection that counted them would answer "who is coming" with people
+ * who have not said they are.
+ *
+ * @param int         $post_id Event post ID.
+ * @param string|null $viewer  Viewing Actor URI, or null for an anonymous reader.
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_cal_visible_attendees( int $post_id, ?string $viewer ) : array {
+	return array_values(
+		array_filter(
+			axismundi_cal_visible_participants( $post_id, $viewer ),
+			static fn( array $row ) : bool => 'accepted' === (string) $row['state']
+		)
+	);
+}
+
+/**
  * How many people are coming, for a viewer who may not see who they are.
  *
  * A count discloses less than a list and answers the question most readers actually have. It is

@@ -92,7 +92,9 @@ function axismundi_cal_jscalendar_group( array $calendar ) {
 		if ( ! axismundi_cal_schedule_within_agenda( $schedule, $now ) ) {
 			continue;
 		}
-		$event = axismundi_cal_jscalendar_event( $post );
+		// Anonymous, like the single-Event document this is made of: a public calendar address is read
+		// by whoever holds it, so no entry may be built for a reader this route cannot identify.
+		$event = axismundi_cal_jscalendar_event( $post, null );
 		if ( ! is_wp_error( $event ) ) {
 			$entries[] = $event;
 		}

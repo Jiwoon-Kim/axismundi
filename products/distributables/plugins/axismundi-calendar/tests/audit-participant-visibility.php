@@ -208,6 +208,91 @@ try {
 		1 === axismundi_cal_visible_participant_count( $ax_pv_post, null )
 	);
 
+	// -- the two projections ask the evaluator rather than deciding again --------------------------------------
+
+	/*
+	 * Both documents are fetched by whoever holds the URL and cached by whatever sits in between, so
+	 * both are built for a reader with no relation to the Event. The point of the checks is that they
+	 * agree: two projections of one Event that each decided for themselves would eventually disagree,
+	 * and the disagreement would be one of them publishing something the other withholds.
+	 */
+	axismundi_cal_event_save( $ax_pv_post, array( 'participant_visibility' => 'organizers' ) );
+	$ax_pv_closed_js = axismundi_cal_jscalendar_event( get_post( $ax_pv_post ), null );
+	$ax_pv_closed_as = axismundi_cal_event_transform( get_post( $ax_pv_post ) );
+	ax_pv_assert(
+		$ax_pv_results,
+		'a closed guest list publishes the organizer and no guests at all',
+		array( 'organizer' ) === array_keys( (array) $ax_pv_closed_js['participants'] )
+			&& ! isset( $ax_pv_closed_as['attendees'] )
+	);
+	// Not an empty collection: `totalItems: 0` is the claim that nobody is coming, which is a different
+	// statement from declining to say.
+	ax_pv_assert(
+		$ax_pv_results,
+		'and says so by leaving the collection out rather than by publishing an empty one',
+		! array_key_exists( 'attendees', $ax_pv_closed_as )
+	);
+
+	axismundi_cal_event_save( $ax_pv_post, array( 'participant_visibility' => 'public' ) );
+	$ax_pv_open_js = axismundi_cal_jscalendar_event( get_post( $ax_pv_post ), null );
+	$ax_pv_open_as = axismundi_cal_event_transform( get_post( $ax_pv_post ) );
+	$ax_pv_open_js_addresses = array_map(
+		static fn( array $p ) : string => (string) $p['calendarAddress'],
+		array_values( (array) $ax_pv_open_js['participants'] )
+	);
+	ax_pv_assert(
+		$ax_pv_results,
+		'a published guest list names the people coming, and states what each of them said',
+		in_array( (string) $ax_pv_going->get_uri(), $ax_pv_open_js_addresses, true )
+			&& in_array( (string) $ax_pv_maybe->get_uri(), $ax_pv_open_js_addresses, true )
+			&& 'tentative' === (string) array_values(
+				array_filter(
+					(array) $ax_pv_open_js['participants'],
+					static fn( array $p ) : bool => (string) $ax_pv_maybe->get_uri() === (string) $p['calendarAddress']
+				)
+			)[0]['participationStatus']
+	);
+	ax_pv_assert(
+		$ax_pv_results,
+		'and neither document publishes a refusal or an unanswered invitation',
+		! in_array( (string) $ax_pv_declined->get_uri(), $ax_pv_open_js_addresses, true )
+			&& ! in_array( (string) $ax_pv_waiting->get_uri(), $ax_pv_open_js_addresses, true )
+			&& ! in_array( (string) $ax_pv_declined->get_uri(), (array) $ax_pv_open_as['attendees']['items'], true )
+	);
+	/*
+	 * `attendees` is the accepted replies. Somebody leaning yes is visible at the levels that show
+	 * them and is still not one of the attendees, so the two documents differ here on purpose.
+	 */
+	ax_pv_assert(
+		$ax_pv_results,
+		'the collection is who is coming, so a maybe appears in the Event and not among the attendees',
+		array( (string) $ax_pv_going->get_uri() ) === (array) $ax_pv_open_as['attendees']['items']
+			&& 1 === (int) $ax_pv_open_as['attendees']['totalItems']
+	);
+
+	// -- capacity is not a way around it -----------------------------------------------------------------------
+
+	/*
+	 * A published maximum minus a published remainder is the accepted count exactly, and a peer
+	 * watching the remainder drop would learn each acceptance as it happened.
+	 */
+	axismundi_cal_event_save( $ax_pv_post, array( 'maximum_attendee_capacity' => 10 ) );
+	$ax_pv_open_capacity = axismundi_cal_event_transform( get_post( $ax_pv_post ) );
+	axismundi_cal_event_save( $ax_pv_post, array( 'participant_visibility' => 'organizers' ) );
+	$ax_pv_closed_capacity = axismundi_cal_event_transform( get_post( $ax_pv_post ) );
+	ax_pv_assert(
+		$ax_pv_results,
+		'how many the Event holds is published either way, since its organizer stated it',
+		10 === (int) $ax_pv_open_capacity['maximumAttendeeCapacity'] && 10 === (int) $ax_pv_closed_capacity['maximumAttendeeCapacity']
+	);
+	ax_pv_assert(
+		$ax_pv_results,
+		'but how many seats are left travels only where the count itself may',
+		9 === (int) $ax_pv_open_capacity['remainingAttendeeCapacity']
+			&& ! isset( $ax_pv_closed_capacity['remainingAttendeeCapacity'] )
+	);
+	axismundi_cal_event_save( $ax_pv_post, array( 'participant_visibility' => 'public' ) );
+
 	// -- reachable from the editor's own envelope -------------------------------------------------------------
 
 	/*

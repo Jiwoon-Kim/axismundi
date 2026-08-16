@@ -650,8 +650,13 @@ try {
 	 * `remainingAttendeeCapacity` is what another server reads to decide whether offering a Join is
 	 * worth the round trip, so a wrong number here is not cosmetic: too low turns people away from an
 	 * event with room, and too high invites them to be refused on arrival.
+	 *
+	 * It travels only on an Event whose guest list is published, because a maximum minus a remainder
+	 * is the accepted count exactly -- an Event that withholds who is coming cannot publish the
+	 * subtraction that says how many. So the guest list is opened here deliberately; the withheld case
+	 * is pinned in `audit-participant-visibility.php`.
 	 */
-	$ax_rs_seats = $ax_rs_make( $ax_rs_posts, $ax_rs_calendar, 'Three seats', array( 'join_mode' => 'free', 'maximum_attendee_capacity' => 3 ) );
+	$ax_rs_seats = $ax_rs_make( $ax_rs_posts, $ax_rs_calendar, 'Three seats', array( 'join_mode' => 'free', 'maximum_attendee_capacity' => 3, 'participant_visibility' => 'public' ) );
 	$ax_rs_projected = axismundi_cal_event_transform( get_post( $ax_rs_seats ) );
 	ax_rs_assert(
 		$ax_rs_results,

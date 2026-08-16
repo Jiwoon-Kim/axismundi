@@ -558,7 +558,7 @@ try {
 		1 === count( $ax_et_occ )
 			&& '2027-04-01 11:00:00' === (string) $ax_et_occ[0]['end_local']
 			&& str_contains( $ax_et_ics_end, 'DTEND;TZID=Asia/Seoul:20270401T110000' )
-			&& 'PT2H' === (string) axismundi_cal_jscalendar_event( get_post( $ax_et_stored ) )['duration']
+			&& 'PT2H' === (string) axismundi_cal_jscalendar_event( get_post( $ax_et_stored ), null )['duration']
 	);
 
 	// -- the rule is a structure, and the sentence is generated ---------------------------------------------
@@ -602,7 +602,7 @@ try {
 		'and every surface reads that structure, so a stale sentence can no longer change the series',
 		4 === count( $ax_et_rule_occ )
 			&& str_contains( $ax_et_rule_ics, 'RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=4' )
-			&& 'weekly' === (string) axismundi_cal_jscalendar_event( get_post( $ax_et_rule ) )['recurrenceRules'][0]['frequency']
+			&& 'weekly' === (string) axismundi_cal_jscalendar_event( get_post( $ax_et_rule ), null )['recurrenceRules'][0]['frequency']
 	);
 
 } finally {

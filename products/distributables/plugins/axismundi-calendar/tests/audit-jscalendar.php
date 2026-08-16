@@ -72,7 +72,7 @@ try {
 		'Rehearsal',
 		array( 'starts_at' => '2027-01-15 19:00:00', 'ends_at' => '2027-01-15 21:30:00', 'timezone' => 'Asia/Seoul' )
 	);
-	$ax_js_doc = axismundi_cal_jscalendar_event( get_post( $ax_js_timed ) );
+	$ax_js_doc = axismundi_cal_jscalendar_event( get_post( $ax_js_timed ), null );
 	/*
 	 * The model already meant start-plus-length; this says so out loud. A stored end would have to be
 	 * reinterpreted by every reader, and the night the clocks change is where they would disagree.
@@ -101,7 +101,7 @@ try {
 		'Holiday',
 		array( 'starts_at' => '2027-01-20 00:00:00', 'ends_at' => '2027-01-21 00:00:00', 'timezone' => 'Asia/Seoul', 'all_day' => 1 )
 	);
-	$ax_js_all = 0 !== $ax_js_allday ? axismundi_cal_jscalendar_event( get_post( $ax_js_allday ) ) : null;
+	$ax_js_all = 0 !== $ax_js_allday ? axismundi_cal_jscalendar_event( get_post( $ax_js_allday ), null ) : null;
 	ax_js_assert(
 		$ax_js_results,
 		'an all-day Event says so and carries no zone to be converted by',
@@ -120,7 +120,7 @@ try {
 		'Weekly standup',
 		array( 'starts_at' => '2027-02-01 09:00:00', 'ends_at' => '2027-02-01 09:30:00', 'timezone' => 'Asia/Seoul', 'rrule' => 'FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE;COUNT=6' )
 	);
-	$ax_js_rec = axismundi_cal_jscalendar_event( get_post( $ax_js_weekly ) );
+	$ax_js_rec = axismundi_cal_jscalendar_event( get_post( $ax_js_weekly ), null );
 	ax_js_assert(
 		$ax_js_results,
 		'a recurrence is published as a structure rather than as the iCalendar string it is stored in',
@@ -192,7 +192,7 @@ try {
 			'location_text' => '', 'override_json' => '', 'created_at' => $ax_js_now, 'updated_at' => $ax_js_now,
 		)
 	);
-	$ax_js_over = axismundi_cal_jscalendar_event( get_post( $ax_js_weekly ) );
+	$ax_js_over = axismundi_cal_jscalendar_event( get_post( $ax_js_weekly ), null );
 	ax_js_assert(
 		$ax_js_results,
 		'a cancelled instance is published as a date the series is excluded from',
@@ -215,7 +215,7 @@ try {
 		'Seoul to New York',
 		array( 'starts_at' => '2027-01-10 10:00:00', 'ends_at' => '2027-01-10 11:00:00', 'timezone' => 'Asia/Seoul', 'end_timezone' => 'America/New_York' )
 	);
-	$ax_js_flight_doc = 0 !== $ax_js_flight ? axismundi_cal_jscalendar_event( get_post( $ax_js_flight ) ) : null;
+	$ax_js_flight_doc = 0 !== $ax_js_flight ? axismundi_cal_jscalendar_event( get_post( $ax_js_flight ), null ) : null;
 	ax_js_assert(
 		$ax_js_results,
 		'an Event that lands elsewhere carries both zones and the time it really took',
@@ -257,7 +257,7 @@ try {
 			'location_text' => '', 'override_json' => '', 'created_at' => $ax_js_now, 'updated_at' => $ax_js_now,
 		)
 	);
-	$ax_js_added = axismundi_cal_jscalendar_event( get_post( $ax_js_single ) );
+	$ax_js_added = axismundi_cal_jscalendar_event( get_post( $ax_js_single ), null );
 	ax_js_assert(
 		$ax_js_results,
 		'a hand-added date is published even when the Event has no recurrence rule at all',

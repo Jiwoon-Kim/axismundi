@@ -152,6 +152,27 @@ function axismundi_cal_event_transform( $source ) : array {
 		);
 	}
 
+	/*
+	 * FEP-8a8e's `attendees`, and the same evaluator the JSCalendar document asks -- deliberately, so
+	 * two projections of one Event cannot answer differently for the same reader.
+	 *
+	 * Anonymous, because this document is fetched by any instance that has the URI and cached by the
+	 * ones in between. So it appears only on an Event whose guest list its organizer published, and it
+	 * is left out entirely otherwise: an empty collection is not the absence of an answer, it is the
+	 * claim that nobody is coming.
+	 */
+	$attendee_count = axismundi_cal_visible_participant_count( (int) $source->ID, null );
+	if ( null !== $attendee_count ) {
+		$event['attendees'] = array(
+			'type'       => 'Collection',
+			'totalItems' => $attendee_count,
+			'items'      => array_map(
+				static fn( array $row ) : string => (string) $row['actor_uri'],
+				axismundi_cal_visible_attendees( (int) $source->ID, null )
+			),
+		);
+	}
+
 	$content = apply_filters( 'the_content', $source->post_content );
 	if ( '' !== trim( wp_strip_all_tags( (string) $content ) ) ) {
 		$event['content']   = (string) $content;
@@ -168,18 +189,29 @@ function axismundi_cal_event_transform( $source ) : array {
 		$event['externalParticipationUrl'] = (string) $envelope['external_participation_url'];
 	}
 	if ( null !== $envelope['maximum_attendee_capacity'] ) {
+		// How many the Event holds is a fact about the Event, and its organizer stated it.
 		$event['maximumAttendeeCapacity'] = (int) $envelope['maximum_attendee_capacity'];
-		// Worked out from the accepted replies rather than counted separately. A peer reads this to
-		// decide whether to offer joining at all, so a stale number is an invitation to be turned away.
-		$event['remainingAttendeeCapacity'] = (int) axismundi_cal_event_remaining_capacity( (int) $source->ID );
+		/*
+		 * How many are left is a fact about who replied, and subtracting it from a published maximum
+		 * gives the accepted count exactly. So it travels only where the count itself may: publishing
+		 * it beside a withheld guest list would be the arithmetic route around the withholding, and a
+		 * peer watching it drop would learn each acceptance as it happened.
+		 *
+		 * Worked out from the accepted replies rather than counted separately. A peer reads this to
+		 * decide whether to offer joining at all, so a stale number is an invitation to be turned away.
+		 */
+		if ( null !== axismundi_cal_visible_participant_count( (int) $source->ID, null ) ) {
+			$event['remainingAttendeeCapacity'] = (int) axismundi_cal_event_remaining_capacity( (int) $source->ID );
+		}
 	}
 
 	/**
 	 * Filter the Event projection before the renderer validates it.
 	 *
-	 * Location and participation arrive through here rather than being wired in: `location` is
-	 * Geodata's to answer, and `attendees` is a projection of the Activity ledger. Neither belongs
-	 * to the post type.
+	 * `location` arrives through here rather than being wired in, because it is Geodata's to answer
+	 * and does not belong to the post type. `attendees` is wired in: the participation ledger is this
+	 * plugin's own, and routing it through a filter would put the guest list behind an extension point
+	 * anything could rewrite.
 	 *
 	 * @param array<string,mixed> $event    Projected Event.
 	 * @param WP_Post             $source   Event post.

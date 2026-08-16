@@ -255,12 +255,84 @@ function axismundi_cal_jscalendar_locations( int $post_id ) : array {
 }
 
 /**
+ * A stored RSVP state as JSCalendar says it.
+ *
+ * `pending` is `needs-action` rather than absent: JSCalendar distinguishes somebody who was asked and
+ * has not replied from somebody who is not on the list, and only the organizer and the person
+ * themselves ever see that row anyway.
+ *
+ * @param string $state Stored participation state.
+ * @return string
+ */
+function axismundi_cal_jscalendar_participation_status( string $state ) : string {
+	switch ( $state ) {
+		case 'accepted':
+			return 'accepted';
+		case 'tentative':
+			return 'tentative';
+		case 'rejected':
+			return 'declined';
+		default:
+			return 'needs-action';
+	}
+}
+
+/**
+ * The people on an Event, as one viewer may see them.
+ *
+ * The organizer is always here -- the Event says who is running it, which is not a fact about who
+ * replied. Everybody else arrives through `visible_participants()` and nothing decides anything a
+ * second time: this surface must not grow its own opinion about who may be seen, or the answer will
+ * eventually differ from the collection's for the same reader.
+ *
+ * @param int         $post_id Event post ID.
+ * @param string|null $viewer  Viewing Actor URI, or null for an anonymous reader.
+ * @return array<string,array<string,mixed>>
+ */
+function axismundi_cal_jscalendar_participants( int $post_id, ?string $viewer ) : array {
+	$participants = array();
+	$organizer    = axismundi_cal_event_acting_actor_uri( $post_id );
+	if ( '' !== $organizer ) {
+		/*
+		 * The Actor it was published as, in the role JSCalendar has for it. Not a new `author` field: the
+		 * standard has no such property, `Create(Event)` already carries provenance, and a second way to
+		 * say the same thing is a second thing to keep in agreement.
+		 */
+		$participants['organizer'] = array(
+			'@type'               => 'Participant',
+			'calendarAddress'     => $organizer,
+			'roles'               => array( 'owner' => true ),
+			'participationStatus' => 'accepted',
+			'expectReply'         => false,
+		);
+	}
+	foreach ( axismundi_cal_visible_participants( $post_id, $viewer ) as $participation ) {
+		$address = (string) $participation['actor_uri'];
+		if ( '' === $address || $address === $organizer ) {
+			continue;
+		}
+		// Keyed by a hash of the address rather than by position, so a participant keeps their key
+		// across fetches even as other replies arrive and the ledger reorders.
+		$participants[ substr( hash( 'sha256', $address ), 0, 16 ) ] = array(
+			'@type'               => 'Participant',
+			'calendarAddress'     => $address,
+			'roles'               => array( 'attendee' => true ),
+			'participationStatus' => axismundi_cal_jscalendar_participation_status( (string) $participation['state'] ),
+		);
+	}
+	return $participants;
+}
+
+/**
  * One Event as a JSCalendar object.
  *
- * @param WP_Post $post Event post.
+ * @param WP_Post     $post   Event post.
+ * @param string|null $viewer Viewing Actor URI, or null for an anonymous reader. Required rather
+ *                            than defaulted: a document that decided for itself who was reading it
+ *                            would be cached and served to somebody else.
  * @return array<string,mixed>|WP_Error
  */
-function axismundi_cal_jscalendar_event( WP_Post $post ) {
+function axismundi_cal_jscalendar_event( WP_Post $post, ?string $viewer ) {
 	$schedule = axismundi_cal_schedule_for_event( (int) $post->ID );
 	$envelope = axismundi_cal_event_get( (int) $post->ID );
 	if ( ! is_array( $schedule ) || ! is_array( $envelope ) ) {
@@ -334,22 +406,9 @@ function axismundi_cal_jscalendar_event( WP_Post $post ) {
 		}
 	}
 
-	/*
-	 * The Actor it was published as, in the role JSCalendar has for it. Not a new `author` field: the
-	 * standard has no such property, `Create(Event)` already carries provenance, and a second way to
-	 * say the same thing is a second thing to keep in agreement.
-	 */
-	$organizer = axismundi_cal_event_acting_actor_uri( (int) $post->ID );
-	if ( '' !== $organizer ) {
-		$event['participants'] = array(
-			'organizer' => array(
-				'@type'               => 'Participant',
-				'calendarAddress'     => $organizer,
-				'roles'               => array( 'owner' => true ),
-				'participationStatus' => 'accepted',
-				'expectReply'         => false,
-			),
-		);
+	$participants = axismundi_cal_jscalendar_participants( (int) $post->ID, $viewer );
+	if ( array() !== $participants ) {
+		$event['participants'] = $participants;
 	}
 	$event['links'] = array(
 		'html' => array( '@type' => 'Link', 'href' => (string) get_permalink( $post ), 'contentType' => 'text/html' ),
@@ -490,7 +549,13 @@ function axismundi_cal_serve_jscalendar() : void {
 		echo wp_json_encode( array( 'error' => 'not_found' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON response.
 		exit;
 	}
-	$event   = axismundi_cal_jscalendar_event( $post );
+	/*
+	 * Anonymous, by contract. This document is served to whoever fetches the URL and is cacheable by
+	 * anything in between, so it is built for a reader with no relation to the Event -- a signed-in
+	 * organizer looking at their own Event through this route sees what a stranger sees, and the
+	 * surfaces that do know who is asking are the ones that answer for them.
+	 */
+	$event   = axismundi_cal_jscalendar_event( $post, null );
 	$version = axismundi_cal_requested_jscalendar_version();
 	if ( is_array( $event ) ) {
 		$missing = axismundi_cal_jscalendar_unrepresentable( $event, $version );

@@ -72,8 +72,14 @@ try {
 		printf( "[FAIL] could not make a key pair: %s\n", $ax_sn_keys->get_error_message() );
 		exit( 1 );
 	}
-	define( 'AXISMUNDI_PWA_VAPID_PUBLIC_KEY', $ax_sn_keys['public'] );
-	define( 'AXISMUNDI_PWA_VAPID_PRIVATE_KEY', $ax_sn_keys['private'] );
+	if ( ! defined( 'AXISMUNDI_PWA_VAPID_PUBLIC_KEY' ) ) {
+		// Already configured on this site, which is the ordinary case once somebody has set up push.
+		define( 'AXISMUNDI_PWA_VAPID_PUBLIC_KEY', $ax_sn_keys['public'] );
+	}
+	if ( ! defined( 'AXISMUNDI_PWA_VAPID_PRIVATE_KEY' ) ) {
+		// Already configured on this site, which is the ordinary case once somebody has set up push.
+		define( 'AXISMUNDI_PWA_VAPID_PRIVATE_KEY', $ax_sn_keys['private'] );
+	}
 
 	ax_sn_assert(
 		$ax_sn_results,

@@ -145,8 +145,14 @@ try {
 		printf( "[FAIL] no key pair: %s\n", $ax_ph_keys->get_error_message() );
 		exit( 1 );
 	}
-	define( 'AXISMUNDI_PWA_VAPID_PUBLIC_KEY', $ax_ph_keys['public'] );
-	define( 'AXISMUNDI_PWA_VAPID_PRIVATE_KEY', $ax_ph_keys['private'] );
+	if ( ! defined( 'AXISMUNDI_PWA_VAPID_PUBLIC_KEY' ) ) {
+		// Already configured on this site, which is the ordinary case once somebody has set up push.
+		define( 'AXISMUNDI_PWA_VAPID_PUBLIC_KEY', $ax_ph_keys['public'] );
+	}
+	if ( ! defined( 'AXISMUNDI_PWA_VAPID_PRIVATE_KEY' ) ) {
+		// Already configured on this site, which is the ordinary case once somebody has set up push.
+		define( 'AXISMUNDI_PWA_VAPID_PRIVATE_KEY', $ax_ph_keys['private'] );
+	}
 
 	ax_ph_assert(
 		$ax_ph_results,
@@ -185,6 +191,35 @@ try {
 		$ax_ph_results,
 		'a notification for somebody who is away reaches the browsers they registered',
 		$ax_ph_event > 0 && 2 === (int) $ax_ph_tally['sent']
+	);
+
+	// -- and only while they are away --------------------------------------------------------------------------
+
+	/*
+	 * The same quiet window email waits for, and for the same reason: a phone buzzing while its owner
+	 * is reading the very page the notification is about is the interruption that teaches people to
+	 * turn notifications off entirely. This branch sat above the check once, so the screen promising
+	 * "only while you are away" was telling the truth about email and a lie about push.
+	 */
+	$ax_ph_here = ax_ph_deliver( $ax_ph_org_uri, (string) $ax_ph_sender->get_uri(), 'here' );
+	update_user_meta( $ax_ph_owner, AXISMUNDI_NTF_LAST_ACTIVE_META, time() );
+	update_user_meta( $ax_ph_second, AXISMUNDI_NTF_LAST_ACTIVE_META, time() );
+	ax_ph_time_passes();
+	$ax_ph_while_here = axismundi_ntf_process_transport_queue();
+	ax_ph_assert(
+		$ax_ph_results,
+		'somebody reading right now is not pushed at, the same window email waits for',
+		$ax_ph_here > 0 && 2 === (int) $ax_ph_while_here['waiting'] && 0 === (int) $ax_ph_while_here['sent']
+	);
+	// And the wait ends when they do: the attempt is still there, and goes out once they are away.
+	update_user_meta( $ax_ph_owner, AXISMUNDI_NTF_LAST_ACTIVE_META, time() - HOUR_IN_SECONDS );
+	update_user_meta( $ax_ph_second, AXISMUNDI_NTF_LAST_ACTIVE_META, time() - HOUR_IN_SECONDS );
+	ax_ph_time_passes();
+	$ax_ph_once_away = axismundi_ntf_process_transport_queue();
+	ax_ph_assert(
+		$ax_ph_results,
+		'and the same notification goes out once they have gone, rather than being dropped',
+		2 === (int) $ax_ph_once_away['sent']
 	);
 
 	// -- and the four questions asked first -------------------------------------------------------------------

@@ -56,19 +56,29 @@ try {
 	 * setting are fixed by different people.
 	 */
 	$ax_du_unavailable = ax_du_render();
+	$ax_du_can         = axismundi_pwa_capability()['subscribe'];
 	ax_du_assert(
 		$ax_du_results,
 		'it says what is missing rather than drawing a button that cannot work',
-		'no_keys' === (string) axismundi_pwa_capability()['reason']
-			&& str_contains( $ax_du_unavailable, 'no push keys configured' )
-			&& ! str_contains( $ax_du_unavailable, 'axismundi-pwa-push-toggle' )
+		$ax_du_can
+			// Configured here, so the button is the honest thing to draw -- the sentence is what a site
+			// without keys gets, and the reason is named so whoever has to fix it knows which fix.
+			? str_contains( $ax_du_unavailable, 'axismundi-pwa-push-toggle' )
+			: ( str_contains( $ax_du_unavailable, 'no push keys configured' )
+				&& ! str_contains( $ax_du_unavailable, 'axismundi-pwa-push-toggle' ) )
 	);
 
 	// -- when it can ---------------------------------------------------------------------------------------
 
 	$ax_du_keys = axismundi_pwa_generate_keys();
-	define( 'AXISMUNDI_PWA_VAPID_PUBLIC_KEY', is_wp_error( $ax_du_keys ) ? '' : $ax_du_keys['public'] );
-	define( 'AXISMUNDI_PWA_VAPID_PRIVATE_KEY', is_wp_error( $ax_du_keys ) ? '' : $ax_du_keys['private'] );
+	if ( ! defined( 'AXISMUNDI_PWA_VAPID_PUBLIC_KEY' ) ) {
+		// Already configured on this site, which is the ordinary case once somebody has set up push.
+		define( 'AXISMUNDI_PWA_VAPID_PUBLIC_KEY', is_wp_error( $ax_du_keys ) ? '' : $ax_du_keys['public'] );
+	}
+	if ( ! defined( 'AXISMUNDI_PWA_VAPID_PRIVATE_KEY' ) ) {
+		// Already configured on this site, which is the ordinary case once somebody has set up push.
+		define( 'AXISMUNDI_PWA_VAPID_PRIVATE_KEY', is_wp_error( $ax_du_keys ) ? '' : $ax_du_keys['private'] );
+	}
 	set_current_screen( 'dashboard' );
 	$ax_du_offered = ax_du_render();
 	ax_du_assert(

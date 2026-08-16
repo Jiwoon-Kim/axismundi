@@ -19,8 +19,18 @@
 
 defined( 'ABSPATH' ) || exit;
 
-/** What somebody subscribes to. */
-const AXISMUNDI_NTF_CATEGORIES = array( 'conversation', 'social', 'calendar', 'moderation', 'security', 'low' );
+/**
+ * What somebody subscribes to.
+ *
+ * Subjects, all of them: the kind of thing a notification is about. `low` was here once and was a
+ * mistake -- it is not a subject anybody has an opinion about, it is how loudly something asks for
+ * attention, and that is what `urgency` says. Left in, it produced a settings screen offering
+ * "calendar, social, low", which is a list with one item that does not belong to the same question.
+ *
+ * A reaction is `social` with an urgency of `quiet`, and somebody who wants fewer of those is
+ * answering a different question than somebody who wants no calendar notices at all.
+ */
+const AXISMUNDI_NTF_CATEGORIES = array( 'conversation', 'social', 'calendar', 'moderation', 'security' );
 
 /**
  * How much attention a kind asks for, before any preference is applied.

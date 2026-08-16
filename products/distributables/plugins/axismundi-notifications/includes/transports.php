@@ -346,12 +346,7 @@ function axismundi_ntf_process_transport_queue( int $limit = 25 ) : array {
 			continue;
 		}
 
-		if ( 'push' === (string) $attempt['transport'] ) {
-			$pushed = axismundi_ntf_attempt_push( $attempt );
-			++$tally[ $pushed ];
-			continue;
-		}
-
+		// Email from here down.
 		$mailbox = axismundi_ntf_mailbox( $user_id );
 		if ( ! is_array( $mailbox ) ) {
 			// An account with no usable address at all. Nothing to retry either: an address is not
@@ -382,6 +377,18 @@ function axismundi_ntf_process_transport_queue( int $limit = 25 ) : array {
 				array( '%d' )
 			);
 			++$tally['waiting'];
+			continue;
+		}
+
+		/*
+		 * Only now, and this is where the push branch belongs. It used to sit above the quiet window,
+		 * so a phone buzzed while its owner was reading the very page the notification was about --
+		 * and the screen promising "only while you are away" was telling the truth about email and a
+		 * lie about push. Both transports interrupt somebody, so both wait for the same answer.
+		 */
+		if ( 'push' === (string) $attempt['transport'] ) {
+			$pushed = axismundi_ntf_attempt_push( $attempt );
+			++$tally[ $pushed ];
 			continue;
 		}
 

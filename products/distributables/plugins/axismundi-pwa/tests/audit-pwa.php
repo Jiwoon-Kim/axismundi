@@ -49,19 +49,19 @@ try {
 	// -- the site says what it can do, and what it cannot ------------------------------------------------
 
 	/*
-	 * No keys configured here, which is the state a site is in until somebody puts them in the
-	 * deployment's secrets. It says so rather than generating a pair to make the message go away --
-	 * the signing key does not belong in a database that gets restored into staging and dumped into
-	 * tickets.
+	 * Keys live in the deployment's secrets, so whether this site has any depends on the deployment --
+	 * and the audit asks about the relationship between what it has and what it says, which is true
+	 * either way. A site with none must say `no_keys` rather than generate a pair to look ready; a
+	 * site with them must offer both.
 	 */
 	$ax_pw_capability = axismundi_pwa_capability();
+	$ax_pw_configured = axismundi_pwa_has_keys();
 	ax_pw_assert(
 		$ax_pw_results,
-		'a site with no keys configured says so instead of making some to look ready',
-		false === $ax_pw_capability['subscribe']
-			&& false === $ax_pw_capability['deliver']
-			&& 'no_keys' === (string) $ax_pw_capability['reason']
-			&& ! axismundi_pwa_can_deliver_push()
+		'what the site says it can do matches what it has been given, in either direction',
+		$ax_pw_configured
+			? ( true === $ax_pw_capability['subscribe'] && true === $ax_pw_capability['deliver'] )
+			: ( false === $ax_pw_capability['subscribe'] && 'no_keys' === (string) $ax_pw_capability['reason'] && ! axismundi_pwa_can_deliver_push() )
 	);
 	// The key an operator would configure is the uncompressed P-256 point the Push API expects: a
 	// leading 0x04 and two 32-byte coordinates.
@@ -75,13 +75,16 @@ try {
 			&& "" === substr( (string) $ax_pw_key, 0, 1 )
 			&& '' !== (string) $ax_pw_keys['private']
 	);
-	// Handed back rather than saved. A site that stored the private half here would have put it in
-	// the one place this design is trying to keep it out of.
+	/*
+	 * Handed back and nowhere else. Generating a pair changes nothing about the site: it does not
+	 * write an option, and it does not become the key this site signs with -- which is what keeps the
+	 * signing half in a deployment's secrets rather than in a database somebody restores into staging.
+	 */
 	ax_pw_assert(
 		$ax_pw_results,
 		'which it hands back rather than storing, the signing half being no database to hold',
-		'' === axismundi_pwa_signing_key()
-			&& array() === (array) get_option( 'ax_pwa_vapid_keys', array() )
+		array() === (array) get_option( 'ax_pwa_vapid_keys', array() )
+			&& ( is_wp_error( $ax_pw_keys ) || (string) $ax_pw_keys['private'] !== axismundi_pwa_signing_key() )
 	);
 
 	// -- a device, remembered ------------------------------------------------------------------------------

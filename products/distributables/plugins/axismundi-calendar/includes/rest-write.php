@@ -60,7 +60,14 @@ function axismundi_cal_rest_list_write( WP_REST_Request $request ) {
 
 	$calendar_id = (int) $calendar['id'];
 	$state       = array();
-	foreach ( array( 'selected' => 'selected', 'hidden' => 'hidden', 'summaryOverride' => 'summary_override', 'color' => 'color' ) as $from => $to ) {
+	foreach ( array(
+		'selected'            => 'selected',
+		'hidden'              => 'hidden',
+		'summaryOverride'     => 'summary_override',
+		'color'               => 'color',
+		'showDeclinedEvents'  => 'show_declined_events',
+		'showCancelledEvents' => 'show_cancelled_events',
+	) as $from => $to ) {
 		if ( null !== $request->get_param( $from ) ) {
 			$state[ $to ] = $request->get_param( $from );
 		}
@@ -239,10 +246,12 @@ function axismundi_cal_register_write_routes() : void {
 				'callback'            => 'axismundi_cal_rest_list_write',
 				'permission_callback' => $signed_in,
 				'args'                => array(
-					'selected'        => array( 'type' => 'boolean' ),
-					'hidden'          => array( 'type' => 'boolean' ),
-					'summaryOverride' => array( 'type' => 'string' ),
-					'color'           => array( 'type' => 'string' ),
+					'selected'            => array( 'type' => 'boolean' ),
+					'hidden'              => array( 'type' => 'boolean' ),
+					'summaryOverride'     => array( 'type' => 'string' ),
+					'color'               => array( 'type' => 'string' ),
+					'showDeclinedEvents'  => array( 'type' => 'boolean' ),
+					'showCancelledEvents' => array( 'type' => 'boolean' ),
 				),
 			),
 			array(

@@ -152,6 +152,13 @@ function axismundi_cal_rest_calendar( array $calendar, array $entry = array() ) 
 		$out['hidden']          = (bool) $entry['hidden'];
 		$out['summaryOverride'] = (string) $entry['summary_override'];
 		$out['color']           = (string) $entry['color'];
+		/*
+		 * What this person has asked their calendar to show them. Both default to showing, and both had
+		 * been stored and read without ever being reported -- a setting nothing can display is one
+		 * nothing can offer to change.
+		 */
+		$out['showDeclinedEvents']  = 1 === (int) ( $entry['show_declined_events'] ?? 1 );
+		$out['showCancelledEvents'] = 1 === (int) ( $entry['show_cancelled_events'] ?? 1 );
 	}
 	return $out;
 }
@@ -551,7 +558,21 @@ function axismundi_cal_view_payload( array $uuids, string $start_arg, string $en
 			continue;
 		}
 
+		/*
+		 * The one place the reader is known by name, which is why the "show cancelled events" setting is
+		 * applied here rather than in the query. The query answers what is on a Calendar; this answers
+		 * what one person asked to look at, and the two must not be the same function -- a public page
+		 * has no viewer to have a preference.
+		 *
+		 * Hidden, never dropped from anything. The Event, its placement and every reply are still
+		 * exactly where they were, and turning the setting back on shows them again.
+		 */
+		$viewer         = axismundi_cal_signed_in_actor_uri();
+		$hide_cancelled = '' !== $viewer && ! axismundi_cal_shows_cancelled_events( (int) $calendar['id'], $viewer );
 		foreach ( axismundi_cal_calendar_occurrences( (int) $calendar['id'], $from, $to ) as $occurrence ) {
+			if ( $hide_cancelled && axismundi_cal_event_is_cancelled( (int) $occurrence['post_id'] ) ) {
+				continue;
+			}
 			$out[] = array_merge(
 				axismundi_cal_rest_occurrence( $occurrence ),
 				array( 'calendar' => $calendar_uuid, 'readOnly' => false )

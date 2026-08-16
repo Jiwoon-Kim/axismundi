@@ -72,6 +72,9 @@ function axismundi_cal_list_set( int $calendar_id, string $actor_uri, string $ac
 		// Whether invitations this Actor turned down still appear on their own calendar. View state for
 		// the same reason `hidden` is: declining is an answer to the host, not a change to the Event.
 		'show_declined_events' => array_key_exists( 'show_declined_events', $state ) ? (int) (bool) $state['show_declined_events'] : (int) ( $existing['show_declined_events'] ?? 1 ),
+		// And whether Events that were called off still appear. View state for the same reason: a
+		// cancellation is a fact about the Event, and how much of it somebody wants to look at is not.
+		'show_cancelled_events' => array_key_exists( 'show_cancelled_events', $state ) ? (int) (bool) $state['show_cancelled_events'] : (int) ( $existing['show_cancelled_events'] ?? 1 ),
 		// The name and colour one Actor gives a Calendar, which is theirs and not the Calendar's:
 		// renaming a shared calendar in your own list must not rename it for everyone in it.
 		'summary_override' => (string) ( $state['summary_override'] ?? ( $existing['summary_override'] ?? '' ) ),
@@ -236,7 +239,7 @@ function axismundi_cal_actor_calendar_list( string $actor_uri ) : array {
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own tables.
 	return (array) $wpdb->get_results(
 		$wpdb->prepare(
-			"SELECT c.*, e.access_role, e.selected, e.hidden, e.summary_override, e.color, e.show_declined_events
+			"SELECT c.*, e.access_role, e.selected, e.hidden, e.summary_override, e.color, e.show_declined_events, e.show_cancelled_events
 			 FROM {$entries} e INNER JOIN {$calendars} c ON c.id = e.calendar_id
 			 WHERE e.actor_uri_hash = %s
 			 ORDER BY ( c.is_primary = 1 AND c.authority_actor_uri_hash = %s ) DESC, c.name ASC",

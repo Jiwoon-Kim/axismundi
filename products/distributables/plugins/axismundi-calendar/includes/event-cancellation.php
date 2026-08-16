@@ -29,6 +29,38 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
+ * Whether one Actor wants Events that were called off shown on one of their calendars.
+ *
+ * The sibling of "show declined events", and kept for the same reason in the same place: it is one
+ * person's view of one calendar, so hiding cancellations must not hide anybody else's.
+ *
+ * It shows them by default, and that default is the important half. Somebody who kept an evening
+ * free is exactly who needs to see that it is off; an Event that quietly vanished would leave them
+ * holding the evening and no reason. Turning it off is for afterwards -- a calendar somebody would
+ * rather see clean -- and even then the Event is only hidden, never removed.
+ *
+ * @param int    $calendar_id Calendar id.
+ * @param string $actor_uri   Viewing Actor.
+ * @return bool
+ */
+function axismundi_cal_shows_cancelled_events( int $calendar_id, string $actor_uri ) : bool {
+	$entry = axismundi_cal_list_entry( $calendar_id, $actor_uri );
+	return ! is_array( $entry ) || 1 === (int) ( $entry['show_cancelled_events'] ?? 1 );
+}
+
+/**
+ * Say whether called-off Events are shown on one Actor's view of one Calendar.
+ *
+ * @param int    $calendar_id Calendar id.
+ * @param string $actor_uri   Viewing Actor.
+ * @param bool   $show        Whether to show them.
+ * @return int|WP_Error Entry id.
+ */
+function axismundi_cal_set_shows_cancelled_events( int $calendar_id, string $actor_uri, bool $show ) {
+	return axismundi_cal_list_set( $calendar_id, $actor_uri, 'reader', array( 'show_cancelled_events' => $show ) );
+}
+
+/**
  * Whether an Event has been called off.
  *
  * @param int $post_id Event post ID.

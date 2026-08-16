@@ -132,6 +132,69 @@ try {
 		in_array( $ax_cx_event, axismundi_cal_placed_event_ids( $ax_cx_guest_cal ), true )
 	);
 
+	/*
+	 * There is a setting for afterwards, and its default is the important half. Somebody who kept the
+	 * evening free is exactly who needs to see it is off, so cancellations show unless asked otherwise
+	 * -- and asking otherwise hides them from that person's view without touching anything.
+	 */
+	ax_cx_assert(
+		$ax_cx_results,
+		'a calendar shows called-off events unless its reader has said otherwise',
+		axismundi_cal_shows_cancelled_events( $ax_cx_guest_cal, (string) $ax_cx_guest->get_uri() )
+	);
+	axismundi_cal_set_shows_cancelled_events( $ax_cx_guest_cal, (string) $ax_cx_guest->get_uri(), false );
+	ax_cx_assert(
+		$ax_cx_results,
+		'and hides them once they have, which is one person\'s view and nobody else\'s',
+		! axismundi_cal_shows_cancelled_events( $ax_cx_guest_cal, (string) $ax_cx_guest->get_uri() )
+			&& axismundi_cal_shows_cancelled_events( $ax_cx_cal, (string) $ax_cx_host->get_uri() )
+	);
+	// Hidden is not gone: the placement, the reply and the Event are all still exactly where they were.
+	ax_cx_assert(
+		$ax_cx_results,
+		'hiding it changes what they are shown and nothing about what is recorded',
+		in_array( $ax_cx_event, axismundi_cal_placed_event_ids( $ax_cx_guest_cal ), true )
+			&& 'accepted' === (string) axismundi_cal_event_participation( $ax_cx_event, (string) $ax_cx_guest->get_uri() )['state']
+	);
+	/*
+	 * And the view actually obeys it. The trap this suite keeps catching is a setting that is stored,
+	 * read by a predicate, and consulted by nothing -- so the check goes through the same route the
+	 * workspace draws itself from, as the person whose setting it is.
+	 */
+	wp_set_current_user( $ax_cx_guest_user );
+	axismundi_cal_set_shows_cancelled_events( $ax_cx_guest_cal, (string) $ax_cx_guest->get_uri(), true );
+	$ax_cx_view = static function () use ( $ax_cx_guest_cal ) : array {
+		$request = new WP_REST_Request( 'GET', '/axismundi/v1/actors/me/calendarView' );
+		$request->set_param( 'calendars', (string) axismundi_cal_calendar_get( $ax_cx_guest_cal )['uuid'] );
+		$request->set_param( 'start', gmdate( 'c', strtotime( '-1 day' ) ) );
+		$request->set_param( 'end', gmdate( 'c', strtotime( '+90 days' ) ) );
+		return (array) rest_do_request( $request )->get_data();
+	};
+	$ax_cx_shown = $ax_cx_view();
+	axismundi_cal_set_shows_cancelled_events( $ax_cx_guest_cal, (string) $ax_cx_guest->get_uri(), false );
+	$ax_cx_hidden = $ax_cx_view();
+	ax_cx_assert(
+		$ax_cx_results,
+		'and the view they are shown obeys the setting rather than merely storing it',
+		count( (array) ( $ax_cx_shown['items'] ?? array() ) ) > count( (array) ( $ax_cx_hidden['items'] ?? array() ) )
+	);
+	/*
+	 * Both settings travel through the list entry, which is where somebody would change them -- and
+	 * they are two settings rather than one. This reader turned declined Events off earlier and is
+	 * turning cancelled ones back on here, and the entry reports each as it stands.
+	 */
+	$ax_cx_write = new WP_REST_Request( 'PATCH', '/axismundi/v1/actors/me/calendarList/' . (string) axismundi_cal_calendar_get( $ax_cx_guest_cal )['uuid'] );
+	$ax_cx_write->set_param( 'showCancelledEvents', true );
+	$ax_cx_entry = (array) rest_do_request( $ax_cx_write )->get_data();
+	ax_cx_assert(
+		$ax_cx_results,
+		'and can be read back and changed through the list entry, which had reported neither of them',
+		true === ( $ax_cx_entry['showCancelledEvents'] ?? null )
+			&& false === ( $ax_cx_entry['showDeclinedEvents'] ?? null )
+			&& axismundi_cal_shows_cancelled_events( $ax_cx_guest_cal, (string) $ax_cx_guest->get_uri() )
+	);
+	wp_set_current_user( $ax_cx_host_user );
+
 	// -- the agenda window, which is about time and not about status ---------------------------------------
 
 	/*

@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '44';
+const AXISMUNDI_CAL_DB_VERSION        = '45';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 const AXISMUNDI_CAL_SCHEMA_BAIL_OPTION = 'ax_cal_schema_bail';
 
@@ -719,6 +719,7 @@ function axismundi_cal_install_schema() : bool {
 			selected tinyint(1) unsigned NOT NULL default 1,
 			hidden tinyint(1) unsigned NOT NULL default 0,
 			show_declined_events tinyint(1) unsigned NOT NULL default 1,
+			show_cancelled_events tinyint(1) unsigned NOT NULL default 1,
 			summary_override text NOT NULL,
 			color varchar(32) NOT NULL default '',
 			created_at datetime NOT NULL,

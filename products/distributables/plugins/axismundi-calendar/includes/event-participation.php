@@ -516,6 +516,18 @@ function axismundi_cal_event_join( int $post_id, string $actor_uri ) {
 		}
 		axismundi_cal_participation_note_response( $post_id, $actor_uri, $accepted );
 	}
+	/*
+	 * The organizer, either way, and the two are different news. A request is something they have to
+	 * answer; an arrival on an open Event is something they only need to know about -- and a host
+	 * counting themselves in is neither, which the emitter drops because it is their own act.
+	 */
+	axismundi_cal_notify(
+		'accepted' === $state ? 'event_joined' : 'event_join_requested',
+		$post_id,
+		array( $owner ),
+		$actor_uri,
+		$join_uri
+	);
 	return $state;
 }
 
@@ -731,7 +743,14 @@ function axismundi_cal_event_withdraw_join( int $post_id, string $actor_uri ) {
 	 * leaving it empty because a withdrawal is not an answer -- would leave `withdrawn` as the one
 	 * state whose cause cannot be looked up.
 	 */
-	return axismundi_cal_event_participation_set( $post_id, $actor_uri, 'withdrawn', $undo );
+	$set = axismundi_cal_event_participation_set( $post_id, $actor_uri, 'withdrawn', $undo );
+	if ( is_wp_error( $set ) ) {
+		return $set;
+	}
+	// Somebody leaving is the organizer's business: a place opened up, and on a moderated Event a
+	// request they were about to answer is no longer there to answer.
+	axismundi_cal_notify( 'event_join_withdrawn', $post_id, array( axismundi_cal_event_owner_actor_uri( $post_id ) ), $actor_uri, $undo );
+	return true;
 }
 
 /**
@@ -803,6 +822,8 @@ function axismundi_cal_event_respond_to_join( int $post_id, string $actor_uri, s
 		return $response;
 	}
 	axismundi_cal_participation_note_response( $post_id, $actor_uri, $response );
+	// The answer belongs to the person who asked, and it is the one thing they have been waiting for.
+	axismundi_cal_notify( 'event_join_answered', $post_id, array( $actor_uri ), $owner, $response );
 	return $state;
 }
 

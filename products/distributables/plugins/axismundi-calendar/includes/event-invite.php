@@ -103,7 +103,12 @@ function axismundi_cal_event_invite( int $post_id, string $actor_uri ) {
 	 * or an Event could be full of people who never replied.
 	 */
 	$seated = axismundi_cal_participation_seat( $post_id, $actor_uri, 'pending', $invite, 'invite' );
-	return is_wp_error( $seated ) ? $seated : 'pending';
+	if ( is_wp_error( $seated ) ) {
+		return $seated;
+	}
+	// Being asked is the whole point of an invitation reaching somebody.
+	axismundi_cal_notify( 'event_invited', $post_id, array( $actor_uri ), $host, $invite );
+	return 'pending';
 }
 
 /**
@@ -209,6 +214,9 @@ function axismundi_cal_event_respond_to_invite( int $post_id, string $actor_uri,
 		return $response;
 	}
 	axismundi_cal_participation_note_response( $post_id, $actor_uri, $response );
+	// The organizer is the one waiting on this, and a changed answer matters to them as much as a
+	// first one -- somebody who accepted and later declined has changed what the room needs to hold.
+	axismundi_cal_notify( 'event_invite_answered', $post_id, array( axismundi_cal_event_owner_actor_uri( $post_id ) ), $actor_uri, $response );
 	return $state;
 }
 
@@ -281,7 +289,13 @@ function axismundi_cal_event_undo_invite_response( int $post_id, string $actor_u
 	 * emptied it -- the ledger holds that history, and this column holds the current answer.
 	 */
 	$set = axismundi_cal_event_participation_set( $post_id, $actor_uri, 'pending' );
-	return is_wp_error( $set ) ? $set : 'pending';
+	if ( is_wp_error( $set ) ) {
+		return $set;
+	}
+	// An organizer who had counted them in needs to know they no longer have an answer at all, which
+	// is a different thing from being told they now say no.
+	axismundi_cal_notify( 'event_invite_answer_undone', $post_id, array( axismundi_cal_event_owner_actor_uri( $post_id ) ), $actor_uri, $undone );
+	return 'pending';
 }
 
 /**
@@ -310,10 +324,16 @@ function axismundi_cal_event_withdraw_invite( int $post_id, string $actor_uri ) 
 	}
 	$host = axismundi_cal_event_owner_actor_uri( $post_id );
 	if ( '' !== $host ) {
-		axismundi_cal_participation_activity(
+		$undone = axismundi_cal_participation_activity(
 			array( 'type' => 'Undo', 'actor' => $host, 'object' => (string) $participation['initiating_activity_uri'] ),
 			'ax-cal-invite-undo:' . (string) $participation['initiating_activity_uri']
 		);
+		/*
+		 * Told before the row goes, because afterwards there is nothing to say it about. Somebody who
+		 * saw an invitation appear and then saw it disappear with no word would reasonably think the
+		 * Event had been deleted.
+		 */
+		axismundi_cal_notify( 'event_invite_withdrawn', $post_id, array( $actor_uri ), $host, is_wp_error( $undone ) ? '' : $undone );
 	}
 	/*
 	 * The row goes rather than becoming `withdrawn`. Nobody replied, so there is no answer to preserve

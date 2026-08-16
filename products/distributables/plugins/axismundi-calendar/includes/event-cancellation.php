@@ -155,7 +155,7 @@ function axismundi_cal_record_event_status_change( int $post_id ) : void {
 		return;
 	}
 	$event_uri = axismundi_cal_event_uri( $post_id );
-	axismundi_cal_participation_activity(
+	$update    = axismundi_cal_participation_activity(
 		array( 'type' => 'Update', 'actor' => $host, 'object' => $event_uri ),
 		/*
 		 * One act per version of the Event. Keyed on the sequence rather than on the word `cancel`,
@@ -165,6 +165,18 @@ function axismundi_cal_record_event_status_change( int $post_id ) : void {
 		 * so nothing here counts anything a second time.
 		 */
 		'ax-cal-status:' . $event_uri . ':' . (string) $envelope['event_status'] . ':' . (int) $schedule['sequence']
+	);
+	/*
+	 * Everybody still holding it, which is the one notice here that is not addressed to a single
+	 * person. An Event being called off is the piece of news somebody would otherwise get by turning
+	 * up, and putting it back on is the one they would otherwise get by not turning up.
+	 */
+	axismundi_cal_notify(
+		axismundi_cal_event_is_cancelled( $post_id ) ? 'event_cancelled' : 'event_reinstated',
+		$post_id,
+		axismundi_cal_event_lifecycle_audience( $post_id ),
+		$host,
+		is_wp_error( $update ) ? '' : $update
 	);
 }
 add_action( 'axismundi_cal_event_cancelled', 'axismundi_cal_record_event_status_change' );

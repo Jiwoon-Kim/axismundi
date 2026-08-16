@@ -106,5 +106,15 @@ function axismundi_cal_event_remove_attendee( int $post_id, string $actor_uri ) 
 	 * here the risk runs the other way -- a row saying somebody was removed with nothing anywhere
 	 * saying who removed them, or when, leaves the guest an Event that vanished for no stated reason.
 	 */
-	return axismundi_cal_event_participation_set( $post_id, $actor_uri, 'removed', $removal );
+	$set = axismundi_cal_event_participation_set( $post_id, $actor_uri, 'removed', $removal );
+	if ( is_wp_error( $set ) ) {
+		return $set;
+	}
+	/*
+	 * The person it happened to, and the reason this act needs a notice more than any other here: the
+	 * Event leaves their calendar. Without being told, what they experience is an evening they had
+	 * planned around silently disappearing.
+	 */
+	axismundi_cal_notify( 'event_removed', $post_id, array( $actor_uri ), $host, $removal );
+	return true;
 }

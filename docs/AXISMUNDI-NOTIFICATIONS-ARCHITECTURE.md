@@ -12,20 +12,76 @@ product keeping its own list would hand out one badge per plugin — which is ho
 learn to ignore badges.
 
 ```
-Actors          identity, manager delegation, acting Actor
-Activities      federated Activity ledger and inbox (the record)
-Calendar/Note/… domain acts; each declares who needs to know
-Notifications   normalises those into "what this Actor must look at" + delivery
+Actors          identity, manager delegation, acting Actor      required
+Activities      the immutable ledger: what actually happened    required
+Calendar/Note/… domain transitions, and who they concern        resolvers
+Notifications   projects those into an Actor inbox + delivery
 ```
 
-Notifications owns no source of truth. Every entry points back at an Activity, a
-comment, a participation row or a moderation record, and holds a snapshot of how that
-read at the time. Because it is derived, it can carry as much personal state as it
-likes — read, dismissed, bundled, muted — without touching any origin.
+Notifications owns no source of truth. Every entry points back at an Activity and holds
+a snapshot of how it read at the time. Because it is derived, it can carry as much
+personal state as it likes — read, dismissed, bundled, muted — without touching any
+origin.
 
-**Not a copy of the Activity ledger.** An Activity is what happened on the network. A
+**Activities is a dependency, not an option.** Every social act in Axismundi is already
+an Activity: `Invite`, `Accept`, `Undo`, `Remove`, `Update`. A notification that existed
+without one would be a fact with no history, no provenance and no federated counterpart
+— and the interactions worth notifying about are exactly the ones the ledger records.
+
+**Not a copy of the ledger either.** An Activity is what happened on the network. A
 notification is a change one Actor has to act on or know about. Most Activities are
-neither.
+neither, and only the domain that owns the transition can tell which is which.
+
+## The seam: ledger hook, domain resolvers
+
+```
+Activities commits an Activity
+  -> axismundi_act_activity_recorded( $activity )        (exists today)
+
+Notifications enqueues it, and resolves after the transition
+  -> apply_filters( 'axismundi_notification_intents', array(), $activity )
+
+Calendar / Forum / Note answer for the Activities they recognise
+  -> "this Invite means event_invited for the invited Actor"
+
+Notifications stores the events and the per-user deliveries
+```
+
+Why the ledger and not each product calling an inbox:
+
+- every notification necessarily has an Activity URI as its source; none can be minted
+  without one
+- inbound, outbound and local Activities take the same path, so a remote `Invite`
+  notifies exactly like a local one and Notifications never learns federation
+- Notifications does not read Calendar's or Forum's tables, and neither calls
+  Notifications
+- the dedupe key falls out: **`activity URI + recipient Actor + kind`**, which survives
+  retries, a redelivered inbox POST and a double-clicked button
+
+### Resolution runs after the transition, not at record time
+
+The one trap in this design, and it is not hypothetical: `axismundi_act_activity_recorded`
+fires the moment the Activity commits, and the domain transition has usually **not
+happened yet**. Calendar records the `Invite` and *then* writes the participation row —
+that order is deliberate, because a row with no Activity behind it is worse than an
+Activity with no row yet. A resolver run at record time would compute its audience from
+the state before the act it is describing.
+
+So Notifications **enqueues on the ledger hook and resolves later in the same request**:
+
+```
+axismundi_act_activity_recorded   enqueue the Activity URI
+domain finishes its transition    calls axismundi_notification_flush() if it has one
+end of request                    flush anything nobody flushed (shutdown)
+```
+
+Resolution is synchronous within the request and never deferred to cron, because the
+audience is a snapshot: "the Actors who still had this Event on their calendar when it
+was called off". Recomputing that tomorrow would send a past cancellation to somebody
+removed since, and would silently drop somebody who left after being told.
+
+For the same reason a domain that performs two transitions in one request should flush
+between them. The end-of-request flush is the safety net, not the contract.
 
 ## The unit is the Actor
 
@@ -52,11 +108,12 @@ notification_events        the fact, addressed to an Actor
   recipient_actor_id
   actor_uri                who did it
   object_uri               what it was about
-  source_uri               the Activity/comment/participation it derives from
+  source_activity_uri      required; the ledger entry this projects
   snapshot                 how it read at the time
   occurred_at
   grouping_key             what may be collapsed with what
   state                    accepted | filtered
+  UNIQUE ( source_activity_uri, recipient_actor_id, kind )
 
 notification_deliveries    one person's copy
   notification_id
@@ -212,14 +269,23 @@ preference          user × Actor context × category × transport
 ## Slice order
 
 ```
-1. contract + registry     kinds, categories, the events table, the emitter contract
+1. contract + registry     kinds, categories, the events table, the resolver filter,
+                           the enqueue/flush cycle on the ledger hook
 2. Actor inbox             deliveries, read state, admin bar badge, manager gate
-3. consume                 Calendar's eleven, then mentions/replies/follows
+3. resolvers               Calendar's eleven, then mentions/replies/follows
 4. acceptance policy       accept | filter | drop, quarantine, mute/block
 5. preferences             per Actor context, category, transport
 6. transports              email (inactive-only first), then Web Push
 ```
 
-Products keep declaring through `axismundi_notify` and never learn what an inbox is. A
-site with Notifications absent loses nothing: the acts still happened, the ledgers still
-hold them, and the screens that show them are unchanged.
+Slice 3 replaces what Calendar does today. Its acts currently call
+`axismundi_cal_notify()`, which fires `axismundi_notify` and stores nothing — the right
+answer to "who needs to know", declared from the wrong end. Migrating it means the same
+eleven decisions, moved into one resolver that answers for an Activity instead of eleven
+call sites that announce on their own account. The migration waits for slice 1, because
+the resolver's signature and the flush point are that slice's to define and fixing them
+from Calendar's side would settle the contract from the wrong end.
+
+A site with Notifications absent loses nothing: the acts still happened, the ledger
+still holds them, the resolvers are simply never asked, and the screens that show all of
+it are unchanged.

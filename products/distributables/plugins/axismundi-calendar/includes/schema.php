@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_DB_VERSION        = '43';
+const AXISMUNDI_CAL_DB_VERSION        = '44';
 const AXISMUNDI_CAL_DB_VERSION_OPTION = 'ax_event_db_version';
 const AXISMUNDI_CAL_SCHEMA_BAIL_OPTION = 'ax_cal_schema_bail';
 
@@ -258,6 +258,7 @@ function axismundi_cal_install_schema() : bool {
 			external_participation_url text NOT NULL,
 			maximum_attendee_capacity int(10) unsigned NULL,
 			acting_actor_identity_id bigint(20) unsigned NOT NULL default 0,
+			participant_visibility varchar(16) NOT NULL default 'organizers',
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (post_id),
@@ -907,6 +908,12 @@ function axismundi_cal_install_schema() : bool {
 	 * reader that parsed it was one that could disagree about what it meant -- which happened twice.
 	 */
 	axismundi_cal_backfill_recurrence();
+	/*
+	 * Existing Events get the closed answer. A new public surface must not begin publishing RSVPs
+	 * nobody chose to publish -- the column's default covers rows written from now on, and this covers
+	 * the ones that already existed when it appeared.
+	 */
+	axismundi_cal_backfill_participant_visibility();
 
 	/*
 	 * Dropped rather than left behind. It is not read anywhere after this version, and leaving a

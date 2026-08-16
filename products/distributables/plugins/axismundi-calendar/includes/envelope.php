@@ -189,6 +189,15 @@ function axismundi_cal_event_save( int $post_id, array $fields ) {
 	if ( ! in_array( $visibility, AXISMUNDI_CAL_EVENT_VISIBILITIES, true ) ) {
 		return new WP_Error( 'ax_event_visibility', __( 'An event is either shown as its calendar allows or kept private.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
+	/*
+	 * Who may see the guest list, which is a different question from who may see the Event. Closed by
+	 * default and refused rather than coerced when unknown: a value nothing understands must not be
+	 * stored as though it had been chosen.
+	 */
+	$participant_visibility = (string) ( $fields['participant_visibility'] ?? ( $existing['participant_visibility'] ?? 'organizers' ) );
+	if ( ! in_array( $participant_visibility, AXISMUNDI_CAL_PARTICIPANT_VISIBILITIES, true ) ) {
+		return new WP_Error( 'ax_event_participant_visibility', __( 'That is not a way of deciding who can see the guest list.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
 	$transparency = strtoupper( (string) ( $fields['transparency'] ?? ( $existing['transparency'] ?? 'OPAQUE' ) ) );
 	if ( ! in_array( $transparency, array( 'OPAQUE', 'TRANSPARENT' ), true ) ) {
 		return new WP_Error( 'ax_event_transparency', __( 'An event either takes up the time or leaves it free.', 'axismundi-calendar' ), array( 'status' => 400 ) );
@@ -240,10 +249,11 @@ function axismundi_cal_event_save( int $post_id, array $fields ) {
 		'external_participation_url' => $external,
 		'maximum_attendee_capacity'  => $capacity,
 		'acting_actor_identity_id'   => (int) $acting,
+		'participant_visibility'     => $participant_visibility,
 		'created_at'                 => (string) ( $existing['created_at'] ?? $now ),
 		'updated_at'                 => $now,
 	);
-	$formats = array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s' );
+	$formats = array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%s' );
 	if ( false === $wpdb->replace( axismundi_cal_events_table(), $data, $formats ) ) {
 		return new WP_Error( 'ax_event_write', __( 'The event could not be saved.', 'axismundi-calendar' ) );
 	}

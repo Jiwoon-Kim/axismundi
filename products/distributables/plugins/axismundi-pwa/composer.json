@@ -1,0 +1,19 @@
+{
+  "name": "axismundi/axismundi-pwa",
+  "description": "Push subscriptions and service worker handlers for Axismundi.",
+  "type": "wordpress-plugin",
+  "license": "GPL-3.0-or-later",
+  "require": {
+    "php": ">=8.2",
+    "minishlink/web-push": "^11.0",
+    "nyholm/psr7": "^1.8",
+    "php-http/curl-client": "^2.4"
+  },
+  "config": {
+    "platform": {
+      "php": "8.3.31"
+    },
+    "optimize-autoloader": true,
+    "sort-packages": true
+  }
+}

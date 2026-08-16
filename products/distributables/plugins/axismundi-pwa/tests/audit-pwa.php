@@ -48,40 +48,40 @@ try {
 
 	// -- the site says what it can do, and what it cannot ------------------------------------------------
 
-	axismundi_pwa_ensure_keys();
-	$ax_pw_capability = axismundi_pwa_capability();
 	/*
-	 * The check this file exists for. Registering a device works; sending to one does not, because
-	 * nothing here signs and encrypts a Web Push message yet -- and a switch offered before that is
-	 * the failure this codebase has already written two audits against.
+	 * No keys configured here, which is the state a site is in until somebody puts them in the
+	 * deployment's secrets. It says so rather than generating a pair to make the message go away --
+	 * the signing key does not belong in a database that gets restored into staging and dumped into
+	 * tickets.
 	 */
+	$ax_pw_capability = axismundi_pwa_capability();
 	ax_pw_assert(
 		$ax_pw_results,
-		'a browser can be registered, and the site says plainly that it cannot yet send',
-		true === $ax_pw_capability['subscribe']
+		'a site with no keys configured says so instead of making some to look ready',
+		false === $ax_pw_capability['subscribe']
 			&& false === $ax_pw_capability['deliver']
-			&& 'no_sender' === (string) $ax_pw_capability['reason']
+			&& 'no_keys' === (string) $ax_pw_capability['reason']
 			&& ! axismundi_pwa_can_deliver_push()
 	);
-	/*
-	 * The application server key is the uncompressed P-256 point the Push API expects: a leading
-	 * 0x04 and two 32-byte coordinates. OpenSSL returns the shortest form, so a coordinate with a
-	 * leading zero arrives short -- and a subscription taken out against a key that lost a byte
-	 * fails in the browser with nothing useful said about why.
-	 */
-	$ax_pw_key = base64_decode( strtr( axismundi_pwa_application_server_key(), '-_', '+/' ) );
+	// The key an operator would configure is the uncompressed P-256 point the Push API expects: a
+	// leading 0x04 and two 32-byte coordinates.
+	$ax_pw_keys = axismundi_pwa_generate_keys();
+	$ax_pw_key  = is_wp_error( $ax_pw_keys ) ? '' : base64_decode( strtr( $ax_pw_keys['public'], '-_', '+/' ) );
 	ax_pw_assert(
 		$ax_pw_results,
-		'and hands out an application server key of the exact shape a browser will accept',
-		65 === strlen( (string) $ax_pw_key ) && "\x04" === substr( (string) $ax_pw_key, 0, 1 )
+		'and the pair it offers an operator is of the exact shape a browser will accept',
+		! is_wp_error( $ax_pw_keys )
+			&& 65 === strlen( (string) $ax_pw_key )
+			&& "" === substr( (string) $ax_pw_key, 0, 1 )
+			&& '' !== (string) $ax_pw_keys['private']
 	);
-	// Made once and kept: rotating it would invalidate every subscription taken out against it.
-	$ax_pw_again = axismundi_pwa_application_server_key();
-	axismundi_pwa_ensure_keys();
+	// Handed back rather than saved. A site that stored the private half here would have put it in
+	// the one place this design is trying to keep it out of.
 	ax_pw_assert(
 		$ax_pw_results,
-		'which is made once and kept, since rotating it would revoke every device at a stroke',
-		$ax_pw_again === axismundi_pwa_application_server_key()
+		'which it hands back rather than storing, the signing half being no database to hold',
+		'' === axismundi_pwa_signing_key()
+			&& array() === (array) get_option( 'ax_pwa_vapid_keys', array() )
 	);
 
 	// -- a device, remembered ------------------------------------------------------------------------------

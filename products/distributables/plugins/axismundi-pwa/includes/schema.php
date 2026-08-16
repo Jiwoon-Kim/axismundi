@@ -68,6 +68,15 @@ function axismundi_pwa_install_schema() : bool {
 		) ENGINE=InnoDB {$charset};"
 	);
 
+	/*
+	 * An earlier build of this plugin generated its VAPID pair into an option, private half and all.
+	 * That is precisely what the current design refuses -- a database is restored into staging,
+	 * dumped into tickets and copied to laptops -- so the row is removed here rather than left for
+	 * whoever installed the version that made it. Keys now come from the deployment's secrets, and a
+	 * site that has none says so.
+	 */
+	delete_option( 'ax_pwa_vapid_keys' );
+
 	update_option( AXISMUNDI_PWA_DB_VERSION_OPTION, AXISMUNDI_PWA_DB_VERSION, false );
 	return true;
 }

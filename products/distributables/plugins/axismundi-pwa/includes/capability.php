@@ -8,10 +8,10 @@
  *   subscribe  a browser can register a device here, and the site can hold it
  *   deliver    something on this site can encrypt and post a message to a push service
  *
- * The second is not built. Web Push delivery needs VAPID signing and payload encryption, and until
- * that exists and is proven to reach a device, `deliver` reports false -- so no settings screen
- * anywhere offers a switch that would silently do nothing. That failure has a name in this
- * codebase: a preference that exists is not a delivery that happens.
+ * They fail for different reasons and are worth different sentences. A site with no keys configured
+ * cannot do either; a site with keys but no library can take subscriptions and reach none of them.
+ * Reporting one boolean would leave a settings screen offering a switch that silently does nothing,
+ * which has a name in this codebase: a preference that exists is not a delivery that happens.
  *
  * `pwa` is a hard dependency, declared in the plugin header and checked again at runtime. A site
  * may have exactly one service worker, and that plugin exists to let several products compose one
@@ -65,19 +65,29 @@ function axismundi_pwa_capability() : array {
 		);
 	}
 	if ( ! axismundi_pwa_has_keys() ) {
-		// A browser will not subscribe without an application server key to bind the subscription to.
+		/*
+		 * A browser will not subscribe without an application server key to bind the subscription to,
+		 * and the signing half lives in the deployment's secrets rather than here -- so a site that has
+		 * not configured them says so instead of generating a pair to make the message go away.
+		 */
 		return array(
 			'subscribe' => false,
 			'deliver'   => false,
 			'reason'    => 'no_keys',
 		);
 	}
+	if ( ! axismundi_pwa_has_library() ) {
+		// Subscriptions can still be taken; nothing can be sent to them until the cryptography is here.
+		return array(
+			'subscribe' => true,
+			'deliver'   => false,
+			'reason'    => 'no_sender',
+		);
+	}
 	return array(
 		'subscribe' => true,
-		// Deliberately false, and the whole point of reporting it. Nothing here encrypts and posts a
-		// Web Push message yet, so nothing should be advertising push as a way of being reached.
-		'deliver'   => false,
-		'reason'    => 'no_sender',
+		'deliver'   => true,
+		'reason'    => '',
 	);
 }
 

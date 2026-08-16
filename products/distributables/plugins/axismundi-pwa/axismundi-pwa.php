@@ -31,10 +31,21 @@ defined( 'ABSPATH' ) || exit;
 
 const AXISMUNDI_PWA_VERSION = '0.1.0';
 
+/*
+ * The Web Push library, loaded once here rather than by whichever function happens to be called
+ * first. Doing it lazily made the answer to "is the library present" depend on what had run before
+ * it, which is the sort of ordering bug that passes every audit that happens to ask in the right
+ * order.
+ */
+if ( is_readable( __DIR__ . '/vendor/autoload.php' ) ) {
+	require_once __DIR__ . '/vendor/autoload.php';
+}
+
 require_once __DIR__ . '/includes/capability.php';
 require_once __DIR__ . '/includes/schema.php';
 require_once __DIR__ . '/includes/subscriptions.php';
 require_once __DIR__ . '/includes/keys.php';
+require_once __DIR__ . '/includes/sender.php';
 require_once __DIR__ . '/includes/service-worker.php';
 require_once __DIR__ . '/includes/rest.php';
 

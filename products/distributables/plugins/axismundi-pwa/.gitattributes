@@ -1,0 +1,6 @@
+# The vendored library is a build output, committed because a WordPress plugin is copied into place
+# rather than installed with a build step. Marked as generated so it stays out of diffs and reviews:
+# what is worth reading here is the code that calls it, not eighteen megabytes of dependency.
+vendor/** linguist-generated=true
+vendor/** -diff
+composer.lock -diff

@@ -237,9 +237,140 @@ function axismundi_ntf_render_inbox() : void {
 			</p>
 			<?php submit_button( __( 'Save', 'axismundi-notifications' ) ); ?>
 		</form>
+
+		<h2><?php esc_html_e( 'Email', 'axismundi-notifications' ); ?></h2>
+		<?php
+		$mailbox   = axismundi_ntf_mailbox( $user_id );
+		$alternate = axismundi_ntf_alternate_mailbox( $user_id, false );
+		?>
+		<?php if ( is_array( $mailbox ) ) : ?>
+			<p>
+				<?php
+				printf(
+					'account' === $mailbox['source']
+						/* translators: %s: the account's email address. */
+						? esc_html__( 'Email would go to %s, the address on your account.', 'axismundi-notifications' )
+						/* translators: %s: a confirmed alternate address. */
+						: esc_html__( 'Email would go to %s.', 'axismundi-notifications' ),
+					'<code>' . esc_html( (string) $mailbox['address'] ) . '</code>'
+				);
+				?>
+			</p>
+			<p class="description">
+				<?php
+				/*
+				 * Said, because the distinction is the point: this address is where the site writes to
+				 * this account, and it is not published anywhere. An Actor's public contact is a
+				 * separate thing somebody opts into on their profile.
+				 */
+				esc_html_e( 'This is private. It is not the public contact address on your Actor, and is never published.', 'axismundi-notifications' );
+				?>
+			</p>
+		<?php endif; ?>
+
+		<h3><?php esc_html_e( 'What to email', 'axismundi-notifications' ); ?></h3>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<?php wp_nonce_field( 'ax_ntf_email_preferences' ); ?>
+			<input type="hidden" name="action" value="ax_ntf_email_preferences">
+			<?php foreach ( AXISMUNDI_NTF_CATEGORIES as $category ) : ?>
+				<p>
+					<label>
+						<input type="checkbox" name="categories[]" value="<?php echo esc_attr( $category ); ?>"
+							<?php checked( axismundi_ntf_wants( $user_id, 0, '', $category, 'email' ) ); ?>>
+						<?php echo esc_html( $category ); ?>
+					</label>
+				</p>
+			<?php endforeach; ?>
+			<p class="description">
+				<?php esc_html_e( 'Nothing is emailed until you tick something here. Then only when you have been away for a few minutes, and never for something you have already read.', 'axismundi-notifications' ); ?>
+			</p>
+			<?php submit_button( __( 'Save', 'axismundi-notifications' ) ); ?>
+		</form>
+
+		<h3><?php esc_html_e( 'Send it somewhere else', 'axismundi-notifications' ); ?></h3>
+		<?php if ( is_array( $alternate ) && null === $alternate['confirmed_at'] ) : ?>
+			<p>
+				<?php
+				printf(
+					/* translators: %s: the address awaiting confirmation. */
+					esc_html__( 'Waiting for %s to be confirmed. Check that mailbox.', 'axismundi-notifications' ),
+					'<code>' . esc_html( (string) $alternate['address'] ) . '</code>'
+				);
+				?>
+			</p>
+		<?php endif; ?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<?php wp_nonce_field( 'ax_ntf_mailbox' ); ?>
+			<input type="hidden" name="action" value="ax_ntf_mailbox">
+			<input type="email" name="address" class="regular-text" placeholder="<?php esc_attr_e( 'you@example.com', 'axismundi-notifications' ); ?>" required>
+			<?php submit_button( __( 'Send confirmation', 'axismundi-notifications' ), 'secondary', 'submit', false ); ?>
+		</form>
+		<?php if ( is_array( $alternate ) ) : ?>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<?php wp_nonce_field( 'ax_ntf_mailbox' ); ?>
+				<input type="hidden" name="action" value="ax_ntf_mailbox">
+				<input type="hidden" name="forget" value="1">
+				<?php submit_button( __( 'Go back to my account address', 'axismundi-notifications' ), 'secondary', 'submit', false ); ?>
+			</form>
+		<?php endif; ?>
 	</div>
 	<?php
 }
+
+/**
+ * Ask for, confirm, or give up an address.
+ *
+ * @return void
+ */
+function axismundi_ntf_handle_mailbox() : void {
+	check_admin_referer( 'ax_ntf_mailbox' );
+	$user_id = get_current_user_id();
+	if ( isset( $_POST['forget'] ) ) {
+		axismundi_ntf_forget_mailbox( $user_id );
+		wp_safe_redirect( axismundi_ntf_admin_url() );
+		exit;
+	}
+	$address = isset( $_POST['address'] ) ? sanitize_email( wp_unslash( (string) $_POST['address'] ) ) : '';
+	$asked   = axismundi_ntf_request_mailbox( $user_id, $address );
+	if ( is_wp_error( $asked ) ) {
+		wp_die( esc_html( $asked->get_error_message() ), 400 );
+	}
+	wp_safe_redirect( axismundi_ntf_admin_url() );
+	exit;
+}
+add_action( 'admin_post_ax_ntf_mailbox', 'axismundi_ntf_handle_mailbox' );
+
+/**
+ * Save which categories are worth an email.
+ *
+ * @return void
+ */
+function axismundi_ntf_handle_email_preferences() : void {
+	check_admin_referer( 'ax_ntf_email_preferences' );
+	$user_id = get_current_user_id();
+	$wanted  = isset( $_POST['categories'] ) ? array_map( 'sanitize_key', (array) wp_unslash( $_POST['categories'] ) ) : array();
+	foreach ( AXISMUNDI_NTF_CATEGORIES as $category ) {
+		axismundi_ntf_set_preference( $user_id, 0, 'category', $category, 'email', in_array( $category, $wanted, true ) );
+	}
+	wp_safe_redirect( axismundi_ntf_admin_url() );
+	exit;
+}
+add_action( 'admin_post_ax_ntf_email_preferences', 'axismundi_ntf_handle_email_preferences' );
+
+/**
+ * Take a confirmation link.
+ *
+ * @return void
+ */
+function axismundi_ntf_maybe_confirm_mailbox() : void {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- the token in the link is the credential, and it was mailed to the address being confirmed.
+	$token = isset( $_GET['ax_ntf_confirm'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['ax_ntf_confirm'] ) ) : '';
+	if ( '' === $token ) {
+		return;
+	}
+	axismundi_ntf_confirm_mailbox( get_current_user_id(), $token );
+}
+add_action( 'load-dashboard_page_axismundi-notifications', 'axismundi_ntf_maybe_confirm_mailbox' );
 
 /**
  * Save what somebody wants.

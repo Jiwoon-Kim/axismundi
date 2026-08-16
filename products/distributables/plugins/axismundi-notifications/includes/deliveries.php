@@ -127,7 +127,17 @@ function axismundi_ntf_fan_out( int $notification_id ) : int {
 				$now
 			)
 		);
-		$written += (int) $result;
+		if ( 1 !== (int) $result ) {
+			continue;
+		}
+		++$written;
+		/*
+		 * Lined up rather than sent. Whether this becomes an email is a question about where they are
+		 * when it would go out, and the only place that can be answered is the worker.
+		 */
+		if ( axismundi_ntf_wants( $user_id, (int) $event['recipient_actor_id'], (string) $event['kind'], (string) $event['category'], 'email' ) ) {
+			axismundi_ntf_queue_transport( (int) $wpdb->insert_id, 'email' );
+		}
 	}
 	return $written;
 }

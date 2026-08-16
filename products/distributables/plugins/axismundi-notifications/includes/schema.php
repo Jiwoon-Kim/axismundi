@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_NTF_DB_VERSION        = '5';
+const AXISMUNDI_NTF_DB_VERSION        = '6';
 const AXISMUNDI_NTF_DB_VERSION_OPTION = 'ax_ntf_db_version';
 
 /** @return string Events table name. */
@@ -39,6 +39,18 @@ function axismundi_ntf_preferences_table() : string {
 	return $wpdb->prefix . 'ax_ntf_preferences';
 }
 
+/** @return string Transport attempt table name. */
+function axismundi_ntf_attempts_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_ntf_transport_attempts';
+}
+
+/** @return string Consented mailbox table name. */
+function axismundi_ntf_mailboxes_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_ntf_mailboxes';
+}
+
 /** @return string Deliveries table name. */
 function axismundi_ntf_deliveries_table() : string {
 	global $wpdb;
@@ -59,6 +71,8 @@ function axismundi_ntf_install_schema() : bool {
 	$policies    = axismundi_ntf_policies_table();
 	$mutes       = axismundi_ntf_mutes_table();
 	$preferences = axismundi_ntf_preferences_table();
+	$attempts    = axismundi_ntf_attempts_table();
+	$mailboxes   = axismundi_ntf_mailboxes_table();
 
 	/*
 	 * The dedupe rule is a constraint and not a convention, because everything that produces one of
@@ -201,6 +215,49 @@ function axismundi_ntf_install_schema() : bool {
 			PRIMARY KEY  (id),
 			UNIQUE KEY one_each (local_user_id,actor_id,scope_type,scope_key,transport),
 			KEY reader (local_user_id,transport)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	/*
+	 * Sending is not delivering, and the two must not share a row. A delivery is the fact that this
+	 * notification is one of yours; an attempt is one try at carrying it somewhere -- and a try can be
+	 * queued, sent, refused, worth repeating, or overtaken by somebody reading it in the app first.
+	 * Folding them together would make "you have this" and "the mail server accepted it" one column
+	 * that cannot be both.
+	 *
+	 * One row per delivery per transport, so email and push are the same shape and push arrives later
+	 * as a value rather than a schema.
+	 */
+	dbDelta(
+		"CREATE TABLE {$attempts} (
+			id bigint(20) unsigned NOT NULL auto_increment,
+			delivery_id bigint(20) unsigned NOT NULL,
+			transport varchar(16) NOT NULL default 'email',
+			state varchar(16) NOT NULL default 'queued',
+			attempts smallint(5) unsigned NOT NULL default 0,
+			last_error text NOT NULL,
+			scheduled_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY one_each (delivery_id,transport),
+			KEY due (state,scheduled_at)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	/*
+	 * An address somebody typed in here and confirmed, and nothing else. Not the Actor's public
+	 * contact, which is a fact about an identity rather than a consent to be written to; and never
+	 * the signup address promoted quietly, because agreeing to have an account is not agreeing to be
+	 * mailed about it. `confirmed_at` is the whole of the permission: unconfirmed rows are requests.
+	 */
+	dbDelta(
+		"CREATE TABLE {$mailboxes} (
+			local_user_id bigint(20) unsigned NOT NULL,
+			address varchar(191) NOT NULL default '',
+			token_hash char(64) NOT NULL default '',
+			requested_at datetime NOT NULL,
+			confirmed_at datetime NULL,
+			PRIMARY KEY  (local_user_id)
 		) ENGINE=InnoDB {$charset};"
 	);
 

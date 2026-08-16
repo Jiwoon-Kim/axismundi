@@ -48,6 +48,12 @@ defined( 'ABSPATH' ) || exit;
  * does not withdraw, they answer again -- a later `Reject(Invite)` replaces an earlier `Accept`, and
  * the activities stay in the ledger as the history of that.
  *
+ * `removed` is the organizer ending somebody's attendance, and it is nobody's answer. `rejected` is
+ * the organizer refusing a request that was never granted and `withdrawn` is the guest taking their
+ * own back; this is the one that ends something that was already agreed, against the wish of the
+ * person it belongs to. Writing it as any of the other three would put words in somebody's mouth --
+ * a guest shown as having declined an Event they were thrown out of.
+ *
  * Only `accepted` counts. Attendees, capacity and the locations kept for the people coming all read
  * that one word, because a maybe is not a place taken.
  */
@@ -58,6 +64,7 @@ const AXISMUNDI_CAL_PARTICIPATION_STATES = array(
 	'tentative_rejected',
 	'rejected',
 	'withdrawn',
+	'removed',
 );
 
 /**
@@ -82,6 +89,9 @@ function axismundi_cal_participation_partstat( string $state ) : string {
 		'tentative_rejected' => 'DECLINED',
 		'rejected'           => 'DECLINED',
 		'withdrawn'          => 'DECLINED',
+		// Lossy in the same direction and for the same reason: iCalendar has no word for having been
+		// taken off the list, and `DECLINED` at least does not claim they are coming.
+		'removed'            => 'DECLINED',
 	);
 	return $map[ $state ] ?? 'NEEDS-ACTION';
 }
@@ -438,6 +448,15 @@ function axismundi_cal_event_join( int $post_id, string $actor_uri ) {
 		 * change their mind, which is the one transition a second `Join` legitimately makes.
 		 */
 		return new WP_Error( 'ax_event_join_rejected', __( 'That reply was already answered.', 'axismundi-calendar' ), array( 'status' => 403 ) );
+	}
+	if ( is_array( $existing ) && 'removed' === (string) $existing['state'] ) {
+		/*
+		 * And somebody the organizer took off the list cannot put themselves back on it. On an Event
+		 * that admits people on arrival a second `Join` would otherwise reverse the removal within
+		 * seconds, which would make removing anybody impossible rather than merely temporary. The way
+		 * back is another invitation, which is the organizer's to send.
+		 */
+		return new WP_Error( 'ax_event_join_removed', __( 'You were taken off this event\'s list.', 'axismundi-calendar' ), array( 'status' => 403 ) );
 	}
 
 	/*

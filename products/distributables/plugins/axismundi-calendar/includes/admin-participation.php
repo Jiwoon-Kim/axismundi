@@ -105,6 +105,9 @@ function axismundi_cal_participation_state_label( array $row, string $mode ) : s
 		'tentative_rejected' => __( 'Probably not coming', 'axismundi-calendar' ),
 		'rejected'           => __( 'Turned down', 'axismundi-calendar' ),
 		'withdrawn'          => __( 'Request taken back', 'axismundi-calendar' ),
+		// Said in the organizer's own voice, because they did it. "Not coming" would read as the
+		// person's answer, and it was not.
+		'removed'            => __( 'Removed from the list', 'axismundi-calendar' ),
 	);
 	return $labels[ $state ] ?? $state;
 }
@@ -140,9 +143,10 @@ function axismundi_cal_participation_actor_label( array $row ) : string {
  * @param int                            $post_id Event post ID.
  * @param bool                           $answerable Whether to offer the two answers.
  * @param string                         $empty   What to say when there are none.
+ * @param bool                           $removable Whether to offer taking somebody off the list.
  * @return void
  */
-function axismundi_cal_render_participation_table( array $rows, string $mode, int $post_id, bool $answerable, string $empty ) : void {
+function axismundi_cal_render_participation_table( array $rows, string $mode, int $post_id, bool $answerable, string $empty, bool $removable = false ) : void {
 	if ( array() === $rows ) {
 		echo '<p>' . esc_html( $empty ) . '</p>';
 		return;
@@ -156,6 +160,9 @@ function axismundi_cal_render_participation_table( array $rows, string $mode, in
 				<th scope="col"><?php esc_html_e( 'Asked', 'axismundi-calendar' ); ?></th>
 				<?php if ( $answerable ) : ?>
 					<th scope="col"><?php esc_html_e( 'Answer', 'axismundi-calendar' ); ?></th>
+				<?php endif; ?>
+				<?php if ( $removable ) : ?>
+					<th scope="col"><?php esc_html_e( 'Remove', 'axismundi-calendar' ); ?></th>
 				<?php endif; ?>
 			</tr>
 		</thead>
@@ -177,6 +184,23 @@ function axismundi_cal_render_participation_table( array $rows, string $mode, in
 								<button type="submit" class="button<?php echo 'accept' === $decision ? ' button-primary' : ''; ?>"><?php echo esc_html( $label ); ?></button>
 							</form>
 						<?php endforeach; ?>
+					</td>
+				<?php endif; ?>
+				<?php if ( $removable ) : ?>
+					<td>
+						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+							<?php wp_nonce_field( 'ax_cal_participation_' . (int) $row['id'] ); ?>
+							<input type="hidden" name="action" value="ax_cal_remove_attendee">
+							<input type="hidden" name="event" value="<?php echo esc_attr( (string) $post_id ); ?>">
+							<input type="hidden" name="participation" value="<?php echo esc_attr( (string) $row['id'] ); ?>">
+							<?php
+							/*
+							 * Said plainly on the button, because it is not the guest changing their mind: the
+							 * Event leaves their calendar and they are told an act was taken.
+							 */
+							?>
+							<button type="submit" class="button button-link-delete"><?php esc_html_e( 'Remove from event', 'axismundi-calendar' ); ?></button>
+						</form>
 					</td>
 				<?php endif; ?>
 			</tr>
@@ -270,7 +294,8 @@ function axismundi_cal_render_participation_page() : void {
 			$mode,
 			$post_id,
 			false,
-			__( 'Nobody is coming yet.', 'axismundi-calendar' )
+			__( 'Nobody is coming yet.', 'axismundi-calendar' ),
+			true
 		);
 		?>
 
@@ -402,6 +427,38 @@ function axismundi_cal_handle_participation_answer() : void {
 add_action( 'admin_post_ax_cal_answer_request', 'axismundi_cal_handle_participation_answer' );
 
 /**
+ * Take one person off the list.
+ *
+ * Like the answer handler, everything is established here rather than read from the form: the screen
+ * only draws this button beside somebody who is coming, and a form can be submitted by anything.
+ *
+ * @return void
+ */
+function axismundi_cal_handle_attendee_removal() : void {
+	$post_id = isset( $_POST['event'] ) ? (int) $_POST['event'] : 0;
+	$row_id  = isset( $_POST['participation'] ) ? (int) $_POST['participation'] : 0;
+	check_admin_referer( 'ax_cal_participation_' . $row_id );
+	$base = add_query_arg( 'event', $post_id, axismundi_cal_participation_admin_url() );
+
+	if ( ! axismundi_cal_can_manage_participation( $post_id ) ) {
+		wp_die( esc_html__( 'Managing who comes to this event is not yours to do.', 'axismundi-calendar' ), 403 );
+	}
+	$participation = axismundi_cal_participation_by_id( $post_id, $row_id );
+	if ( ! is_array( $participation ) ) {
+		wp_safe_redirect( add_query_arg( 'ax_cal_error', 'ax_cal_participation_missing', $base ) );
+		exit;
+	}
+	$removed = axismundi_cal_event_remove_attendee( $post_id, (string) $participation['actor_uri'] );
+	if ( is_wp_error( $removed ) ) {
+		wp_safe_redirect( add_query_arg( 'ax_cal_error', rawurlencode( $removed->get_error_code() ), $base ) );
+		exit;
+	}
+	wp_safe_redirect( add_query_arg( 'ax_cal_notice', 'removed', $base ) );
+	exit;
+}
+add_action( 'admin_post_ax_cal_remove_attendee', 'axismundi_cal_handle_attendee_removal' );
+
+/**
  * Say how the last answer went.
  *
  * @return void
@@ -414,6 +471,9 @@ function axismundi_cal_participation_notice() : void {
 	$notices = array(
 		'accepted' => __( 'They are coming.', 'axismundi-calendar' ),
 		'rejected' => __( 'That request was turned down.', 'axismundi-calendar' ),
+		// Both halves, because the second is the part an organizer would otherwise discover from a
+		// confused guest: the Event leaves their calendar too.
+		'removed'  => __( 'They have been removed, and the event is no longer on their calendar.', 'axismundi-calendar' ),
 	);
 	$errors  = array(
 		'ax_event_accept_full'          => __( 'This event is full, so nobody else can be accepted. Raise the capacity or make room first.', 'axismundi-calendar' ),
@@ -421,6 +481,10 @@ function axismundi_cal_participation_notice() : void {
 		'ax_event_respond_no_host'      => __( 'This event has no host actor to answer with.', 'axismundi-calendar' ),
 		'ax_cal_not_moderated'          => __( 'This event does not hold requests for approval.', 'axismundi-calendar' ),
 		'ax_cal_participation_missing'  => __( 'That request is not one of this event\'s.', 'axismundi-calendar' ),
+		'ax_event_remove_host'          => __( 'The host is not removed from their own event.', 'axismundi-calendar' ),
+		'ax_event_remove_pending_join'  => __( 'That request has not been answered yet; reject it instead.', 'axismundi-calendar' ),
+		'ax_event_remove_pending_invite' => __( 'That invitation has not been answered yet; withdraw it instead.', 'axismundi-calendar' ),
+		'ax_event_remove_state'         => __( 'That person is already off this event\'s list.', 'axismundi-calendar' ),
 	);
 	if ( isset( $notices[ $notice ] ) ) {
 		printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>', esc_html( $notices[ $notice ] ) );

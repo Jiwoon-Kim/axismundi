@@ -261,6 +261,11 @@ function axismundi_cal_jscalendar_locations( int $post_id ) : array {
  * has not replied from somebody who is not on the list, and only the organizer and the person
  * themselves ever see that row anyway.
  *
+ * Empty for the states that are not a standing relation at all. A withdrawn request and a removal are
+ * both the end of one, and JSCalendar has no status for that -- writing either as `declined` would
+ * publish a refusal nobody made, which is exactly the thing an RSVP document must never do. The
+ * participant is left out instead, which is what "no longer on the list" looks like.
+ *
  * @param string $state Stored participation state.
  * @return string
  */
@@ -271,9 +276,12 @@ function axismundi_cal_jscalendar_participation_status( string $state ) : string
 		case 'tentative':
 			return 'tentative';
 		case 'rejected':
+		case 'tentative_rejected':
 			return 'declined';
-		default:
+		case 'pending':
 			return 'needs-action';
+		default:
+			return '';
 	}
 }
 
@@ -308,7 +316,8 @@ function axismundi_cal_jscalendar_participants( int $post_id, ?string $viewer ) 
 	}
 	foreach ( axismundi_cal_visible_participants( $post_id, $viewer ) as $participation ) {
 		$address = (string) $participation['actor_uri'];
-		if ( '' === $address || $address === $organizer ) {
+		$status  = axismundi_cal_jscalendar_participation_status( (string) $participation['state'] );
+		if ( '' === $address || '' === $status || $address === $organizer ) {
 			continue;
 		}
 		// Keyed by a hash of the address rather than by position, so a participant keeps their key
@@ -317,7 +326,7 @@ function axismundi_cal_jscalendar_participants( int $post_id, ?string $viewer ) 
 			'@type'               => 'Participant',
 			'calendarAddress'     => $address,
 			'roles'               => array( 'attendee' => true ),
-			'participationStatus' => axismundi_cal_jscalendar_participation_status( (string) $participation['state'] ),
+			'participationStatus' => $status,
 		);
 	}
 	return $participants;

@@ -30,6 +30,15 @@ defined( 'ABSPATH' ) || exit;
 const AXISMUNDI_CAL_DECLINED_STATES = array( 'rejected', 'declined', 'withdrawn' );
 
 /**
+ * States that keep an Event off a calendar whatever the viewer has asked for.
+ *
+ * "Show declined events" is a setting about your own answers -- it lets you keep an eye on what you
+ * turned down. Being removed is not one of your answers, and an Event you have been taken off the
+ * list of is not yours to keep showing: turning that setting on must not put it back.
+ */
+const AXISMUNDI_CAL_UNPLACED_STATES = array( 'removed' );
+
+/**
  * Whether one Actor wants Events they declined shown on their calendar.
  *
  * Kept on that Actor's own list entry for that calendar, because that is where every other "how this
@@ -98,18 +107,19 @@ function axismundi_cal_placed_event_ids( int $calendar_id ) : array {
 	}
 	$participation = axismundi_cal_participation_table();
 	$schedules     = axismundi_cal_schedules_table();
-	$declined      = axismundi_cal_shows_declined_events( $calendar_id, $actor_uri )
-		? array()
-		: AXISMUNDI_CAL_DECLINED_STATES;
+	$hidden = AXISMUNDI_CAL_UNPLACED_STATES;
+	if ( ! axismundi_cal_shows_declined_events( $calendar_id, $actor_uri ) ) {
+		$hidden = array_merge( $hidden, AXISMUNDI_CAL_DECLINED_STATES );
+	}
 
 	$sql    = "SELECT p.event_post_id FROM {$participation} p
 		 LEFT JOIN {$schedules} s ON s.event_post_id = p.event_post_id
 		 WHERE p.actor_uri_hash = %s AND p.event_post_id IS NOT NULL
 		   AND ( s.calendar_id IS NULL OR s.calendar_id <> %d )";
 	$params = array( hash( 'sha256', $actor_uri ), $calendar_id );
-	if ( array() !== $declined ) {
-		$sql   .= ' AND p.state NOT IN ( ' . implode( ', ', array_fill( 0, count( $declined ), '%s' ) ) . ' )';
-		$params = array_merge( $params, $declined );
+	if ( array() !== $hidden ) {
+		$sql   .= ' AND p.state NOT IN ( ' . implode( ', ', array_fill( 0, count( $hidden ), '%s' ) ) . ' )';
+		$params = array_merge( $params, $hidden );
 	}
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed lookup across this plugin's own tables.
 	return array_values( array_unique( array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( $sql, $params ) ) ) ) );

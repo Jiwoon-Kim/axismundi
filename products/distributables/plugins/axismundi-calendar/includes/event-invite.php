@@ -54,7 +54,13 @@ function axismundi_cal_event_invite( int $post_id, string $actor_uri ) {
 		return new WP_Error( 'ax_event_invite_host', __( 'The host does not need an invitation.', 'axismundi-calendar' ), array( 'status' => 409 ) );
 	}
 	$existing = axismundi_cal_event_participation( $post_id, $actor_uri );
-	if ( is_array( $existing ) && 'pending' !== (string) $existing['state'] ) {
+	/*
+	 * Somebody the organizer removed may be asked back. The removal already ended what they had said,
+	 * so there is no reply here to erase -- and without this an organizer who removed the wrong person
+	 * would have no way to correct it, while the person themselves is barred from asking.
+	 */
+	$readmitting = is_array( $existing ) && 'removed' === (string) $existing['state'];
+	if ( is_array( $existing ) && ! $readmitting && 'pending' !== (string) $existing['state'] ) {
 		/*
 		 * Somebody who already answered -- or already asked and was answered -- is not re-invited into a
 		 * pending state. That would erase their reply and ask them again as though they had never said
@@ -66,10 +72,26 @@ function axismundi_cal_event_invite( int $post_id, string $actor_uri ) {
 	$event_uri = axismundi_cal_event_uri( $post_id );
 	$invite    = axismundi_cal_participation_activity(
 		array( 'type' => 'Invite', 'actor' => $host, 'object' => $event_uri, 'target' => $actor_uri ),
-		'ax-cal-invite:' . $event_uri . ':' . $actor_uri
+		// A second invitation after a removal is a second act, keyed on the removal it follows so it
+		// does not collide with the invitation that came before it.
+		$readmitting
+			? 'ax-cal-reinvite:' . (string) $existing['current_response_activity_uri']
+			: 'ax-cal-invite:' . $event_uri . ':' . $actor_uri
 	);
 	if ( is_wp_error( $invite ) ) {
 		return $invite;
+	}
+	if ( $readmitting && 'invite' !== (string) $existing['source'] ) {
+		global $wpdb;
+		/*
+		 * The one place a relation changes direction, and only because the previous one is over. The
+		 * rule that `source` is written once protects the answer: it is what stops a host replying on a
+		 * guest's behalf. Nobody is waiting on an answer in a removed row, and what follows genuinely
+		 * did start from the other end -- the guest asked once, was removed, and is now being asked.
+		 * Leaving it as `join` would leave them an invitation they have no way to answer.
+		 */
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+		$wpdb->update( axismundi_cal_participation_table(), array( 'source' => 'invite' ), array( 'id' => (int) $existing['id'] ), array( '%s' ), array( '%d' ) );
 	}
 	/*
 	 * Pending, and no seat taken. An invitation is an offer; the place is claimed when it is accepted,

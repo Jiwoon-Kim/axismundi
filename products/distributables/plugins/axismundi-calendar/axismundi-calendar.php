@@ -94,6 +94,7 @@ require_once __DIR__ . '/includes/event-locations.php';
 require_once __DIR__ . '/includes/event-participation.php';
 require_once __DIR__ . '/includes/participant-visibility.php';
 require_once __DIR__ . '/includes/event-invite.php';
+require_once __DIR__ . '/includes/event-removal.php';
 require_once __DIR__ . '/includes/event-actor.php';
 require_once __DIR__ . '/includes/event-placement.php';
 require_once __DIR__ . '/includes/share-invitation.php';

@@ -123,8 +123,14 @@ function axismundi_cal_event_transform( $source ) : array {
 		 * `invite` would invite a remote actor to send an Activity this instance cannot honour.
 		 * `external` remains meaningful because it names a working off-site participation URL.
 		 */
-		'joinMode'     => 'external' === (string) $envelope['join_mode'] ? 'external' : 'none',
+		/*
+		 * And a called-off Event takes no replies through any door, so it advertises none -- an
+		 * `external` participation URL on something that is not happening would send people to sign up
+		 * for it elsewhere.
+		 */
+		'joinMode'     => 'external' === (string) $envelope['join_mode'] && 'EventCancelled' !== (string) $envelope['event_status'] ? 'external' : 'none',
 	);
+	$cancelled = 'EventCancelled' === (string) $envelope['event_status'];
 
 	/*
 	 * Published by the Actor it was published by, which is not the same as the Actor whose Calendar it
@@ -160,8 +166,11 @@ function axismundi_cal_event_transform( $source ) : array {
 	 * ones in between. So it appears only on an Event whose guest list its organizer published, and it
 	 * is left out entirely otherwise: an empty collection is not the absence of an answer, it is the
 	 * claim that nobody is coming.
+	 *
+	 * A called-off Event publishes none of it, ahead of the policy rather than through it. Who may see
+	 * who is coming is a question about an Event that is still going ahead.
 	 */
-	$attendee_count = axismundi_cal_visible_participant_count( (int) $source->ID, null );
+	$attendee_count = $cancelled ? null : axismundi_cal_visible_participant_count( (int) $source->ID, null );
 	if ( null !== $attendee_count ) {
 		$event['attendees'] = array(
 			'type'       => 'Collection',
@@ -200,7 +209,9 @@ function axismundi_cal_event_transform( $source ) : array {
 		 * Worked out from the accepted replies rather than counted separately. A peer reads this to
 		 * decide whether to offer joining at all, so a stale number is an invitation to be turned away.
 		 */
-		if ( null !== axismundi_cal_visible_participant_count( (int) $source->ID, null ) ) {
+		if ( ! $cancelled && null !== axismundi_cal_visible_participant_count( (int) $source->ID, null ) ) {
+			// Nothing is left to have room in. Publishing places on a called-off Event would read as an
+			// invitation to take one.
 			$event['remainingAttendeeCapacity'] = (int) axismundi_cal_event_remaining_capacity( (int) $source->ID );
 		}
 	}

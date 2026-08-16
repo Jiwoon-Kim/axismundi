@@ -300,6 +300,13 @@ function axismundi_cal_jscalendar_participation_status( string $state ) : string
 function axismundi_cal_jscalendar_participants( int $post_id, ?string $viewer ) : array {
 	$participants = array();
 	$organizer    = axismundi_cal_event_acting_actor_uri( $post_id );
+	/*
+	 * A called-off Event publishes no guest list, whatever its visibility policy says. The policy
+	 * answers who may see who is coming, and nobody is coming -- so the lifecycle closes this ahead of
+	 * it rather than through it. The organizer stays: a cancellation is still announced by somebody,
+	 * and iTIP's `CANCEL` needs to say who called it off.
+	 */
+	$cancelled = axismundi_cal_event_is_cancelled( $post_id );
 	if ( '' !== $organizer ) {
 		/*
 		 * The Actor it was published as, in the role JSCalendar has for it. Not a new `author` field: the
@@ -313,6 +320,9 @@ function axismundi_cal_jscalendar_participants( int $post_id, ?string $viewer ) 
 			'participationStatus' => 'accepted',
 			'expectReply'         => false,
 		);
+	}
+	if ( $cancelled ) {
+		return $participants;
 	}
 	foreach ( axismundi_cal_visible_participants( $post_id, $viewer ) as $participation ) {
 		$address = (string) $participation['actor_uri'];

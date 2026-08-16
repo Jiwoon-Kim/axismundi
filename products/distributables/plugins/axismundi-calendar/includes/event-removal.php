@@ -42,6 +42,14 @@ function axismundi_cal_event_remove_attendee( int $post_id, string $actor_uri ) 
 	if ( ! axismundi_cal_can_manage_participation( $post_id ) ) {
 		return new WP_Error( 'ax_event_remove_denied', __( 'You cannot manage who is coming to this event.', 'axismundi-calendar' ), array( 'status' => 403 ) );
 	}
+	/*
+	 * A called-off Event has no list to take anybody off. Its replies are the record of what people
+	 * said while it was on, and editing them afterwards would rewrite that.
+	 */
+	$cancelled = axismundi_cal_event_cancellation_block( $post_id );
+	if ( null !== $cancelled ) {
+		return $cancelled;
+	}
 	$host = axismundi_cal_event_owner_actor_uri( $post_id );
 	if ( '' === $host ) {
 		return new WP_Error( 'ax_event_remove_no_host', __( 'This event has no host Actor to remove anybody on behalf of.', 'axismundi-calendar' ), array( 'status' => 403 ) );

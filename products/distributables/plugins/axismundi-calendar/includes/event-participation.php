@@ -363,6 +363,11 @@ function axismundi_cal_event_join( int $post_id, string $actor_uri ) {
 	if ( ! is_array( $envelope ) ) {
 		return new WP_Error( 'ax_event_join_missing', __( 'That event does not exist.', 'axismundi-calendar' ), array( 'status' => 404 ) );
 	}
+	// An Event that has been called off makes no arrangements, whatever its mode still says.
+	$cancelled = axismundi_cal_event_cancellation_block( $post_id );
+	if ( null !== $cancelled ) {
+		return $cancelled;
+	}
 	$mode = (string) $envelope['join_mode'];
 	if ( ! in_array( $mode, AXISMUNDI_CAL_JOINABLE_MODES, true ) ) {
 		return new WP_Error( 'ax_event_join_closed', __( 'This event is not taking replies.', 'axismundi-calendar' ), array( 'status' => 400 ) );
@@ -740,6 +745,11 @@ function axismundi_cal_event_respond_to_join( int $post_id, string $actor_uri, s
 	$actor_uri = trim( $actor_uri );
 	if ( ! in_array( $decision, array( 'accept', 'reject' ), true ) ) {
 		return new WP_Error( 'ax_event_respond_decision', __( 'A request is either accepted or rejected.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+	// Admitting somebody to an Event that is off would be a place at something that is not happening.
+	$cancelled = axismundi_cal_event_cancellation_block( $post_id );
+	if ( null !== $cancelled ) {
+		return $cancelled;
 	}
 	$participation = axismundi_cal_event_participation( $post_id, $actor_uri );
 	if ( ! is_array( $participation ) ) {

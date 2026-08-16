@@ -45,6 +45,11 @@ function axismundi_cal_event_invite( int $post_id, string $actor_uri ) {
 	if ( ! axismundi_cal_can_manage_participation( $post_id ) ) {
 		return new WP_Error( 'ax_event_invite_denied', __( 'You cannot invite people to this event.', 'axismundi-calendar' ), array( 'status' => 403 ) );
 	}
+	// Nobody is asked to something that is off.
+	$cancelled = axismundi_cal_event_cancellation_block( $post_id );
+	if ( null !== $cancelled ) {
+		return $cancelled;
+	}
 	$host = axismundi_cal_event_owner_actor_uri( $post_id );
 	if ( '' === $host ) {
 		return new WP_Error( 'ax_event_invite_no_host', __( 'This event has no host Actor to invite on behalf of.', 'axismundi-calendar' ), array( 'status' => 403 ) );
@@ -117,6 +122,15 @@ function axismundi_cal_event_respond_to_invite( int $post_id, string $actor_uri,
 	$actor_uri = trim( $actor_uri );
 	if ( ! isset( AXISMUNDI_CAL_INVITE_ANSWERS[ $decision ] ) ) {
 		return new WP_Error( 'ax_event_invite_answer', __( 'An invitation is accepted, declined, or answered tentatively.', 'axismundi-calendar' ), array( 'status' => 400 ) );
+	}
+	/*
+	 * Answering an invitation to something that has been called off changes nothing about whether it
+	 * happens, and would record an arrangement for an evening that is not going ahead. The reply they
+	 * already gave stays as it was: it is what they said while it was still on.
+	 */
+	$cancelled = axismundi_cal_event_cancellation_block( $post_id );
+	if ( null !== $cancelled ) {
+		return $cancelled;
 	}
 	$participation = axismundi_cal_event_participation( $post_id, $actor_uri );
 	if ( ! is_array( $participation ) || 'invite' !== (string) $participation['source'] ) {

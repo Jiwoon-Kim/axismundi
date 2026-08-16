@@ -280,6 +280,21 @@ function axismundi_cal_event_save( int $post_id, array $fields ) {
 		axismundi_cal_schedule_bump_sequence( $post_id );
 	}
 
+	/*
+	 * Cancellation is an act, not just a column. It reaches this writer from the editor as readily as
+	 * from anywhere else, so the transition is noticed here rather than in a function somebody has to
+	 * remember to call -- the alternative is an Event that says `cancelled` on the site while every
+	 * peer holding it still shows it as going ahead.
+	 */
+	if ( 'EventCancelled' === $status && 'EventCancelled' !== (string) ( $existing['event_status'] ?? '' ) ) {
+		/**
+		 * Fires when an Event becomes cancelled, once per transition.
+		 *
+		 * @param int $post_id Event post ID.
+		 */
+		do_action( 'axismundi_cal_event_cancelled', $post_id );
+	}
+
 	axismundi_cal_event_refresh_projection( $post_id );
 	return true;
 }

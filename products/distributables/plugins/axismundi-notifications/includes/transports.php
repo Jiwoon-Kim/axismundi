@@ -304,8 +304,10 @@ function axismundi_ntf_process_transport_queue( int $limit = 25 ) : array {
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup across this plugin's own tables.
 	$due = (array) $wpdb->get_results(
 		$wpdb->prepare(
-			'SELECT a.*, d.local_user_id, d.read_at, d.notification_id FROM ' . axismundi_ntf_attempts_table() . ' a'
+			'SELECT a.*, d.local_user_id, d.read_at, d.notification_id, e.recipient_actor_id, e.kind, e.category'
+			. ' FROM ' . axismundi_ntf_attempts_table() . ' a'
 			. ' INNER JOIN ' . axismundi_ntf_deliveries_table() . ' d ON d.id = a.delivery_id'
+			. ' INNER JOIN ' . axismundi_ntf_events_table() . ' e ON e.id = d.notification_id'
 			. ' WHERE a.state IN ( %s, %s ) AND a.scheduled_at <= %s ORDER BY a.scheduled_at ASC LIMIT %d',
 			'queued',
 			'retryable',
@@ -326,6 +328,30 @@ function axismundi_ntf_process_transport_queue( int $limit = 25 ) : array {
 			++$tally['skipped'];
 			continue;
 		}
+		/*
+		 * Everything else is re-asked here rather than trusted from when the attempt was queued,
+		 * because all of it can have changed in the meantime and the consequences differ. Somebody
+		 * removed as a manager since must not be told what that Group was told; somebody who turned
+		 * the transport off since asked not to be interrupted. Neither is the device's fault, so
+		 * neither touches the subscription -- this ends as `skipped` and nothing else moves.
+		 */
+		if ( ! axismundi_ntf_can_read_inbox( (int) $attempt['recipient_actor_id'], $user_id ) ) {
+			axismundi_ntf_settle_attempt( (int) $attempt['id'], 'skipped', 'no longer reads for that Actor' );
+			++$tally['skipped'];
+			continue;
+		}
+		if ( ! axismundi_ntf_wants( $user_id, (int) $attempt['recipient_actor_id'], (string) $attempt['kind'], (string) $attempt['category'], (string) $attempt['transport'] ) ) {
+			axismundi_ntf_settle_attempt( (int) $attempt['id'], 'skipped', 'no longer wanted' );
+			++$tally['skipped'];
+			continue;
+		}
+
+		if ( 'push' === (string) $attempt['transport'] ) {
+			$pushed = axismundi_ntf_attempt_push( $attempt );
+			++$tally[ $pushed ];
+			continue;
+		}
+
 		$mailbox = axismundi_ntf_mailbox( $user_id );
 		if ( ! is_array( $mailbox ) ) {
 			// An account with no usable address at all. Nothing to retry either: an address is not
@@ -378,6 +404,71 @@ function axismundi_ntf_process_transport_queue( int $limit = 25 ) : array {
 		++$tally[ $final ? 'failed' : 'retryable' ];
 	}
 	return $tally;
+}
+
+/**
+ * Whether push is a thing this site can do to somebody.
+ *
+ * Asked of the PWA plugin rather than answered here. Whether a browser can be reached is about
+ * devices, keys and a service worker, none of which is this plugin's business -- and asking means a
+ * push preference cannot be offered on a site that has no way to honour it.
+ *
+ * @return bool
+ */
+function axismundi_ntf_push_available() : bool {
+	return function_exists( 'axismundi_pwa_can_deliver_push' ) && axismundi_pwa_can_deliver_push();
+}
+
+/**
+ * Wake somebody's devices about one delivery.
+ *
+ * The last two of the four things re-asked before a push goes out: the delivery is still unread and
+ * the person still reads for that Actor were settled by the caller; here it is whether this site can
+ * still send at all, and whether they have a device left to send to.
+ *
+ * A device that is gone is the PWA plugin's to forget, and it does -- a push service answering `410`
+ * revokes it there. Nothing about that is a failure of this attempt: the notification is still
+ * theirs, and it is still in their inbox.
+ *
+ * @param array<string,mixed> $attempt Attempt row joined to its delivery and event.
+ * @return string Tally key: sent, skipped, failed or retryable.
+ */
+function axismundi_ntf_attempt_push( array $attempt ) : string {
+	if ( ! axismundi_ntf_push_available() ) {
+		axismundi_ntf_settle_attempt( (int) $attempt['id'], 'failed', 'push unavailable' );
+		return 'failed';
+	}
+	$devices = axismundi_pwa_subscriptions_for( (int) $attempt['local_user_id'] );
+	if ( array() === $devices ) {
+		// Every device unsubscribed or expired. Not a retry: a device is not something a repeat makes.
+		axismundi_ntf_settle_attempt( (int) $attempt['id'], 'skipped', 'no device' );
+		return 'skipped';
+	}
+	/*
+	 * The id and the category, which is all a push message may carry. What it was about stays behind
+	 * the authenticated fetch the app makes when somebody opens it -- and that fetch asks the manager
+	 * question again, because a notification opened on a phone is read by whoever is holding it.
+	 */
+	$payload   = array( 'delivery' => (int) $attempt['notification_id'], 'category' => (string) $attempt['category'] );
+	$reached   = false;
+	$retryable = false;
+	foreach ( $devices as $device ) {
+		$result = axismundi_pwa_push( (int) $device['id'], $payload );
+		if ( $result['sent'] ) {
+			$reached = true;
+			continue;
+		}
+		// A push service having a bad minute is worth repeating; a device that is finished is not, and
+		// has already been forgotten by the plugin that owns devices.
+		$retryable = $retryable || ( ! $result['expired'] && (int) $result['status'] >= 500 );
+	}
+	if ( $reached ) {
+		axismundi_ntf_settle_attempt( (int) $attempt['id'], 'sent' );
+		return 'sent';
+	}
+	$final = ! $retryable || ( (int) $attempt['attempts'] + 1 ) >= AXISMUNDI_NTF_ATTEMPT_MAX_TRIES;
+	axismundi_ntf_settle_attempt( (int) $attempt['id'], $final ? 'failed' : 'retryable', 'no device accepted it' );
+	return $final ? 'failed' : 'retryable';
 }
 
 /**

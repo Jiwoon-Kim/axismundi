@@ -53,6 +53,17 @@ function axismundi_pwa_push( int $subscription_id, array $payload, $client = nul
 		return $failure;
 	}
 
+	/**
+	 * Filter the HTTP client used to reach a push service.
+	 *
+	 * Injected rather than only constructed, because the interesting answers -- a `410`, a service
+	 * having a bad minute -- are the ones that cannot be arranged against a real push service on
+	 * purpose. A site behind a proxy has the same need for a different reason.
+	 *
+	 * @param \Psr\Http\Client\ClientInterface|null $client Client, or null to let the library find one.
+	 */
+	$client = apply_filters( 'axismundi_pwa_http_client', $client );
+
 	try {
 		$push = new \Minishlink\WebPush\WebPush(
 			array(

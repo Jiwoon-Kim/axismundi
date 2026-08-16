@@ -287,6 +287,37 @@ function axismundi_ntf_render_inbox() : void {
 			<?php submit_button( __( 'Save', 'axismundi-notifications' ) ); ?>
 		</form>
 
+		<h2><?php esc_html_e( 'Push', 'axismundi-notifications' ); ?></h2>
+		<?php if ( ! axismundi_ntf_push_available() ) : ?>
+			<p>
+				<?php
+				/*
+				 * Said rather than drawn as a switch that would do nothing. Whether a browser can be
+				 * reached is the PWA plugin's answer, and when it says no there is nothing here to offer.
+				 */
+				esc_html_e( 'This site cannot send push notifications yet, so there is nothing to turn on.', 'axismundi-notifications' );
+				?>
+			</p>
+		<?php else : ?>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<?php wp_nonce_field( 'ax_ntf_push_preferences' ); ?>
+				<input type="hidden" name="action" value="ax_ntf_push_preferences">
+				<?php foreach ( AXISMUNDI_NTF_CATEGORIES as $category ) : ?>
+					<p>
+						<label>
+							<input type="checkbox" name="categories[]" value="<?php echo esc_attr( $category ); ?>"
+								<?php checked( axismundi_ntf_wants( $user_id, 0, '', $category, 'push' ) ); ?>>
+							<?php echo esc_html( $category ); ?>
+						</label>
+					</p>
+				<?php endforeach; ?>
+				<p class="description">
+					<?php esc_html_e( 'Sent to the browsers you have registered, and only while you are away. The message itself says nothing but that something arrived.', 'axismundi-notifications' ); ?>
+				</p>
+				<?php submit_button( __( 'Save', 'axismundi-notifications' ) ); ?>
+			</form>
+		<?php endif; ?>
+
 		<h3><?php esc_html_e( 'Send it somewhere else', 'axismundi-notifications' ); ?></h3>
 		<?php if ( is_array( $alternate ) && null === $alternate['confirmed_at'] ) : ?>
 			<p>
@@ -356,6 +387,23 @@ function axismundi_ntf_handle_email_preferences() : void {
 	exit;
 }
 add_action( 'admin_post_ax_ntf_email_preferences', 'axismundi_ntf_handle_email_preferences' );
+
+/**
+ * Save which categories are worth waking a device for.
+ *
+ * @return void
+ */
+function axismundi_ntf_handle_push_preferences() : void {
+	check_admin_referer( 'ax_ntf_push_preferences' );
+	$user_id = get_current_user_id();
+	$wanted  = isset( $_POST['categories'] ) ? array_map( 'sanitize_key', (array) wp_unslash( $_POST['categories'] ) ) : array();
+	foreach ( AXISMUNDI_NTF_CATEGORIES as $category ) {
+		axismundi_ntf_set_preference( $user_id, 0, 'category', $category, 'push', in_array( $category, $wanted, true ) );
+	}
+	wp_safe_redirect( axismundi_ntf_admin_url() );
+	exit;
+}
+add_action( 'admin_post_ax_ntf_push_preferences', 'axismundi_ntf_handle_push_preferences' );
 
 /**
  * Take a confirmation link.

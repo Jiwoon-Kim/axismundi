@@ -135,8 +135,14 @@ function axismundi_ntf_fan_out( int $notification_id ) : int {
 		 * Lined up rather than sent. Whether this becomes an email is a question about where they are
 		 * when it would go out, and the only place that can be answered is the worker.
 		 */
+		$delivery_id = (int) $wpdb->insert_id;
 		if ( axismundi_ntf_wants( $user_id, (int) $event['recipient_actor_id'], (string) $event['kind'], (string) $event['category'], 'email' ) ) {
-			axismundi_ntf_queue_transport( (int) $wpdb->insert_id, 'email' );
+			axismundi_ntf_queue_transport( $delivery_id, 'email' );
+		}
+		// Only where the site can actually send one. A queue of pushes nobody can deliver is a queue
+		// that fails once per run forever.
+		if ( axismundi_ntf_push_available() && axismundi_ntf_wants( $user_id, (int) $event['recipient_actor_id'], (string) $event['kind'], (string) $event['category'], 'push' ) ) {
+			axismundi_ntf_queue_transport( $delivery_id, 'push' );
 		}
 	}
 	return $written;

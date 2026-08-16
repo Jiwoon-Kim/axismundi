@@ -33,6 +33,7 @@ require_once __DIR__ . '/includes/events.php';
 require_once __DIR__ . '/includes/deliveries.php';
 require_once __DIR__ . '/includes/transports.php';
 require_once __DIR__ . '/includes/queue.php';
+require_once __DIR__ . '/includes/rest.php';
 // The toolbar count is shown on the front end too, so this one is not admin-only.
 require_once __DIR__ . '/includes/admin.php';
 

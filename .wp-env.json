@@ -27,6 +27,7 @@
     "./products/distributables/plugins/axismundi-activities",
     "./products/distributables/plugins/axismundi-calendar",
     "./products/distributables/plugins/axismundi-notifications",
+    "C:/Users/thaum/dev/pwa/pwa.0.8.2/pwa",
     "https://downloads.wordpress.org/plugin/activitypub.zip",
     "./products/distributables/plugins/axismundi-activitypub-bridge"
   ],

@@ -83,6 +83,31 @@ removed since, and would silently drop somebody who left after being told.
 For the same reason a domain that performs two transitions in one request should flush
 between them. The end-of-request flush is the safety net, not the contract.
 
+### Inbound Activities: verification is upstream of all of this
+
+A resolver answers "who does this concern" and nothing else. It reads a ledger entry that is
+already true, and it must never become the place where an Activity is judged.
+
+```
+inbound delivery   signature, key, actor identity          Activities / the bridge
+                   is this instance even a recipient
+                   may this Actor act on that Event
+                   is this a duplicate of one already held
+       ↓
+ledger entry       recorded, and now a fact
+       ↓
+resolver           who needs to know, and what kind of thing it was
+```
+
+The reason to write this down is that the resolver already works for a remote `Invite` naming a
+local Event — that fell out of keying everything to Activities — and "it already resolves" reads
+like "it is already safe". It is not the same statement. An unverified `Invite` resolving correctly
+would deliver a notification for an act nobody authorised, and the inbox would be a way to reach
+somebody the Event's own permissions would have turned away.
+
+So when S2S Join and Invite receipt lands, none of that verification belongs here or in Calendar's
+resolver. The order is: verify, record, then ask what it meant.
+
 ### Where this goes at scale
 
 The ledger hook survives; what must not survive is doing the whole job inside it. Three

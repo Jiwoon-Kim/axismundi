@@ -31,6 +31,16 @@
  * and an Organization is acted for by whichever manager is at the keyboard; the suppression happens
  * where people are known. What this passes along is who performed it.
  *
+ * And nothing here judges an Activity. These answers are computed from a ledger entry that is
+ * already a fact -- signature, key, whether this instance was even a recipient, whether that Actor
+ * may act on that Event, and whether the same Activity has been seen before are all settled before
+ * it is recorded. That matters most for the case this reads as ready for: an `Invite` arriving from
+ * another server and naming a local Event resolves here exactly like a local one, which is the point
+ * -- but "it already resolves" is not "it is already safe", and adding a check here would put the
+ * permission question in the one place that runs after the record was made.
+ *
+ * @see docs/AXISMUNDI-NOTIFICATIONS-ARCHITECTURE.md
+ *
  * @package AxismundiCalendar
  */
 

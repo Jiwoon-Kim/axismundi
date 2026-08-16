@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_NTF_DB_VERSION        = '4';
+const AXISMUNDI_NTF_DB_VERSION        = '5';
 const AXISMUNDI_NTF_DB_VERSION_OPTION = 'ax_ntf_db_version';
 
 /** @return string Events table name. */
@@ -33,6 +33,12 @@ function axismundi_ntf_mutes_table() : string {
 	return $wpdb->prefix . 'ax_ntf_mutes';
 }
 
+/** @return string Per-person preference table name. */
+function axismundi_ntf_preferences_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_ntf_preferences';
+}
+
 /** @return string Deliveries table name. */
 function axismundi_ntf_deliveries_table() : string {
 	global $wpdb;
@@ -50,8 +56,9 @@ function axismundi_ntf_install_schema() : bool {
 	$charset    = $wpdb->get_charset_collate();
 	$events     = axismundi_ntf_events_table();
 	$deliveries = axismundi_ntf_deliveries_table();
-	$policies   = axismundi_ntf_policies_table();
-	$mutes      = axismundi_ntf_mutes_table();
+	$policies    = axismundi_ntf_policies_table();
+	$mutes       = axismundi_ntf_mutes_table();
+	$preferences = axismundi_ntf_preferences_table();
 
 	/*
 	 * The dedupe rule is a constraint and not a convention, because everything that produces one of
@@ -168,6 +175,32 @@ function axismundi_ntf_install_schema() : bool {
 			created_at datetime NOT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY one_each (recipient_actor_id,muted_actor_uri_hash)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	/*
+	 * What one person wants, which is a different question from what an Actor accepts. Acceptance is
+	 * about the sender and belongs to the Actor that was written to; this is about attention and
+	 * belongs to the people who read for that Actor -- two managers of one Group may want entirely
+	 * different things from the same inbox.
+	 *
+	 * `actor_id` of 0 means "all the Actors I read for", which is what most people will ever set.
+	 * `scope_type` says how specific the row is, and the resolver reads the most specific first.
+	 * `transport` is in_app here; email and push are the same rows with a different value in it.
+	 */
+	dbDelta(
+		"CREATE TABLE {$preferences} (
+			id bigint(20) unsigned NOT NULL auto_increment,
+			local_user_id bigint(20) unsigned NOT NULL,
+			actor_id bigint(20) unsigned NOT NULL default 0,
+			scope_type varchar(16) NOT NULL default 'all',
+			scope_key varchar(96) NOT NULL default '',
+			transport varchar(16) NOT NULL default 'in_app',
+			enabled tinyint(1) unsigned NOT NULL default 1,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY one_each (local_user_id,actor_id,scope_type,scope_key,transport),
+			KEY reader (local_user_id,transport)
 		) ENGINE=InnoDB {$charset};"
 	);
 

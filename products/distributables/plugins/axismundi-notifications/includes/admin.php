@@ -190,9 +190,76 @@ function axismundi_ntf_render_inbox() : void {
 				</tbody>
 			</table>
 		<?php endif; ?>
+
+		<h2><?php esc_html_e( 'What you want to be told about', 'axismundi-notifications' ); ?></h2>
+		<?php
+		/*
+		 * Categories rather than kinds, because that is the choice most people actually have: nobody
+		 * wants to answer eleven questions about calendars. The model underneath answers per kind and
+		 * per Actor as well, and a screen that needs that granularity can ask for it without this one
+		 * having to grow.
+		 */
+		?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<?php wp_nonce_field( 'ax_ntf_preferences' ); ?>
+			<input type="hidden" name="action" value="ax_ntf_preferences">
+			<table class="form-table" role="presentation">
+				<tbody>
+				<?php foreach ( AXISMUNDI_NTF_CATEGORIES as $category ) : ?>
+					<?php if ( in_array( $category, AXISMUNDI_NTF_UNFILTERABLE, true ) ) : ?>
+						<tr>
+							<th scope="row"><?php echo esc_html( $category ); ?></th>
+							<td>
+								<?php
+								// Said rather than hidden. Somebody looking for the switch should find out that
+								// there isn't one and why, instead of concluding the screen is incomplete.
+								esc_html_e( 'Always shown. Security and moderation notices cannot be turned off.', 'axismundi-notifications' );
+								?>
+							</td>
+						</tr>
+						<?php continue; ?>
+					<?php endif; ?>
+					<tr>
+						<th scope="row"><?php echo esc_html( $category ); ?></th>
+						<td>
+							<label>
+								<input type="checkbox" name="categories[]" value="<?php echo esc_attr( $category ); ?>"
+									<?php checked( axismundi_ntf_wants( $user_id, 0, '', $category, 'in_app' ) ); ?>>
+								<?php esc_html_e( 'Show these in my notifications', 'axismundi-notifications' ); ?>
+							</label>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+			<p class="description">
+				<?php esc_html_e( 'This changes what reaches you from now on. Nothing already sent to you is removed.', 'axismundi-notifications' ); ?>
+			</p>
+			<?php submit_button( __( 'Save', 'axismundi-notifications' ) ); ?>
+		</form>
 	</div>
 	<?php
 }
+
+/**
+ * Save what somebody wants.
+ *
+ * @return void
+ */
+function axismundi_ntf_handle_preferences() : void {
+	check_admin_referer( 'ax_ntf_preferences' );
+	$user_id = get_current_user_id();
+	$wanted  = isset( $_POST['categories'] ) ? array_map( 'sanitize_key', (array) wp_unslash( $_POST['categories'] ) ) : array();
+	foreach ( AXISMUNDI_NTF_CATEGORIES as $category ) {
+		if ( in_array( $category, AXISMUNDI_NTF_UNFILTERABLE, true ) ) {
+			continue;
+		}
+		axismundi_ntf_set_preference( $user_id, 0, 'category', $category, 'in_app', in_array( $category, $wanted, true ) );
+	}
+	wp_safe_redirect( axismundi_ntf_admin_url() );
+	exit;
+}
+add_action( 'admin_post_ax_ntf_preferences', 'axismundi_ntf_handle_preferences' );
 
 /**
  * Let a held notice through.

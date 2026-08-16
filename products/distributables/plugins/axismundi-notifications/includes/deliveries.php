@@ -109,6 +109,14 @@ function axismundi_ntf_fan_out( int $notification_id ) : int {
 			// The person who did it. Telling them what they just did is how a badge becomes noise.
 			continue;
 		}
+		/*
+		 * Asked of each person separately, which is the point of deliveries existing: two managers of
+		 * one Group can want different things from the same inbox, and the event stays the Actor's fact
+		 * either way. Somebody who turned this kind off simply has no copy of it.
+		 */
+		if ( ! axismundi_ntf_wants( $user_id, (int) $event['recipient_actor_id'], (string) $event['kind'], (string) $event['category'], 'in_app' ) ) {
+			continue;
+		}
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 		$result = $wpdb->query(
 			$wpdb->prepare(
@@ -163,7 +171,21 @@ function axismundi_ntf_inbox( int $user_id, int $limit = 50, bool $unread_only =
 	$sql     .= ' ORDER BY e.occurred_at DESC, e.id DESC LIMIT %d';
 	$params[] = max( 1, $limit );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup across this plugin's own tables.
-	return (array) $wpdb->get_results( $wpdb->prepare( $sql, $params ), ARRAY_A );
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( $sql, $params ), ARRAY_A );
+
+	/*
+	 * A delivered notice stays delivered whatever was turned off afterwards -- settings apply to what
+	 * happens next and never rewrite what happened. What preference does decide here is the other
+	 * kind of row: an Actor's history from before this person could read it, or from while they had
+	 * this kind switched off. Neither was ever delivered to them, so neither is theirs to be shown.
+	 */
+	return array_values(
+		array_filter(
+			$rows,
+			static fn( array $row ) : bool => null !== $row['delivery_id']
+				|| axismundi_ntf_wants( $user_id, (int) $row['recipient_actor_id'], (string) $row['kind'], (string) $row['category'], 'in_app' )
+		)
+	);
 }
 
 /**

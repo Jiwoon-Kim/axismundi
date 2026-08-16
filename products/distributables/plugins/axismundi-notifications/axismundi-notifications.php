@@ -28,6 +28,7 @@ require_once __DIR__ . '/includes/dependencies.php';
 require_once __DIR__ . '/includes/schema.php';
 require_once __DIR__ . '/includes/registry.php';
 require_once __DIR__ . '/includes/acceptance.php';
+require_once __DIR__ . '/includes/preferences.php';
 require_once __DIR__ . '/includes/events.php';
 require_once __DIR__ . '/includes/deliveries.php';
 require_once __DIR__ . '/includes/queue.php';

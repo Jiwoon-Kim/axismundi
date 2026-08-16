@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_NTF_DB_VERSION        = '1';
+const AXISMUNDI_NTF_DB_VERSION        = '2';
 const AXISMUNDI_NTF_DB_VERSION_OPTION = 'ax_ntf_db_version';
 
 /** @return string Events table name. */
@@ -45,6 +45,18 @@ function axismundi_ntf_install_schema() : bool {
 	 * since have been renamed, moved or deleted, and the entry still has to read sensibly. It is also
 	 * what closes the door on recomputing a past audience -- there is no path here that re-runs a
 	 * resolver over history, because the answer would be today's and the notice was yesterday's.
+	 *
+	 * `initiating_local_user_id` is which local person performed the act, when one did, and it is
+	 * what "not your own act" actually means. It cannot be derived from the Actor URIs: an act by one
+	 * manager of an Organization is addressed to that Organization, so comparing Actor to recipient
+	 * would suppress the entry for every manager -- including the ones who most need it. Null for
+	 * anything with no local author (a remote Activity, cron, a system act) and null suppresses
+	 * nothing. Passed as provenance by whoever ran the command and never read from the session, which
+	 * by flush time is only a guess about who caused an act that may have come from another server.
+	 *
+	 * No block comments inside the CREATE TABLE below. dbDelta parses that string itself, and a
+	 * comment in it truncates the ALTER it generates -- the column silently never arrives while the
+	 * version option still advances and every readiness check goes on saying yes.
 	 */
 	dbDelta(
 		"CREATE TABLE {$events} (
@@ -54,6 +66,7 @@ function axismundi_ntf_install_schema() : bool {
 			recipient_actor_id bigint(20) unsigned NOT NULL default 0,
 			recipient_actor_uri text NOT NULL,
 			actor_uri text NOT NULL,
+			initiating_local_user_id bigint(20) unsigned NULL,
 			object_uri text NOT NULL,
 			source_activity_uri text NOT NULL,
 			source_activity_hash char(64) NOT NULL default '',

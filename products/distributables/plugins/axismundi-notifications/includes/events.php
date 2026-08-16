@@ -7,6 +7,11 @@
  * reconstruct the audience later -- the audience was a fact about a moment, and a second computation
  * would answer for a different one.
  *
+ * Two rules are enforced here so no resolver has to remember them: a kind nobody registered is
+ * refused, and a recipient who is not a local Actor is refused. A third is deliberately *not* here:
+ * whether somebody is being told about their own act is a question about a person, and this stage
+ * only knows Actors. It belongs to deliveries.
+ *
  * @package AxismundiNotifications
  */
 
@@ -68,16 +73,19 @@ function axismundi_ntf_record_event( array $intent, Axismundi_Activity $activity
 		return new WP_Error( 'ax_ntf_source', __( 'A notification needs the Activity it projects.', 'axismundi-notifications' ) );
 	}
 	$actor_uri = trim( (string) ( $intent['actor_uri'] ?? $activity->get_actor_uri() ) );
-	if ( $actor_uri === $recipient_uri ) {
-		/*
-		 * Nobody hears about their own act. Told once here rather than in every resolver, because a
-		 * product that forgot would teach people to ignore the badge and nothing would catch it.
-		 *
-		 * Note what this is not: an act by another manager of an Actor you also manage is not your own
-		 * act. The Actor was told, and you are one of the people who reads what that Actor is told.
-		 */
-		return new WP_Error( 'ax_ntf_self', __( 'An Actor is not notified of their own act.', 'axismundi-notifications' ) );
-	}
+	/*
+	 * "Not your own act" is a fact about a person, not about an Actor, and this is the stage that
+	 * cannot decide it. An Organization is acted for by whichever manager is at the keyboard: the
+	 * Activity's actor is the Organization and so is the recipient, so dropping on `actor === recipient`
+	 * here would delete the entry for every manager, including the several who were not at the
+	 * keyboard and are exactly who the notice is for.
+	 *
+	 * So the event is recorded either way, carrying who performed it, and the suppression happens
+	 * where the person is known -- when deliveries are written, one per manager, skipping the one who
+	 * did it. Null means nobody local did it (a remote Activity, cron, a system act) and suppresses
+	 * nobody.
+	 */
+	$initiator = isset( $intent['initiating_local_user_id'] ) ? (int) $intent['initiating_local_user_id'] : 0;
 
 	$dedupe = hash( 'sha256', $source . "\n" . $recipient_id . "\n" . $kind );
 	$now    = current_time( 'mysql', true );
@@ -90,6 +98,7 @@ function axismundi_ntf_record_event( array $intent, Axismundi_Activity $activity
 		'object_uri'          => trim( (string) ( $intent['object_uri'] ?? (string) $activity->get_object_uri() ) ),
 		'source_activity_uri' => $source,
 		'source_activity_hash' => hash( 'sha256', $source ),
+		'initiating_local_user_id' => $initiator > 0 ? $initiator : null,
 		'dedupe_hash'         => $dedupe,
 		'grouping_key'        => substr( (string) ( $intent['grouping_key'] ?? '' ), 0, 191 ),
 		'snapshot'            => (string) wp_json_encode( (array) ( $intent['snapshot'] ?? array() ) ),
@@ -103,8 +112,15 @@ function axismundi_ntf_record_event( array $intent, Axismundi_Activity $activity
 	$inserted = $wpdb->query(
 		$wpdb->prepare(
 			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name from this plugin.
-			'INSERT IGNORE INTO ' . axismundi_ntf_events_table() . ' ( kind, category, recipient_actor_id, recipient_actor_uri, actor_uri, object_uri, source_activity_uri, source_activity_hash, dedupe_hash, grouping_key, snapshot, state, occurred_at, created_at )'
-			. ' VALUES ( %s, %s, %d, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s )',
+			/*
+			 * The initiator is written as a literal rather than a placeholder. `prepare()` has no null:
+			 * a null bound to `%s` arrives as an empty string, which this column stores as 0 -- naming
+			 * user 0 as the person who performed the act, and suppressing that phantom's delivery while
+			 * every real manager still gets one. Cast to int first, so the literal is a number or the
+			 * word NULL and nothing else.
+			 */
+			'INSERT IGNORE INTO ' . axismundi_ntf_events_table() . ' ( kind, category, recipient_actor_id, recipient_actor_uri, actor_uri, initiating_local_user_id, object_uri, source_activity_uri, source_activity_hash, dedupe_hash, grouping_key, snapshot, state, occurred_at, created_at )'
+			. ' VALUES ( %s, %s, %d, %s, %s, ' . ( null === $row['initiating_local_user_id'] ? 'NULL' : (int) $row['initiating_local_user_id'] ) . ', %s, %s, %s, %s, %s, %s, %s, %s, %s )',
 			$row['kind'],
 			$row['category'],
 			$row['recipient_actor_id'],

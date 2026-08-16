@@ -83,6 +83,36 @@ removed since, and would silently drop somebody who left after being told.
 For the same reason a domain that performs two transitions in one request should flush
 between them. The end-of-request flush is the safety net, not the contract.
 
+### Where this goes at scale
+
+The ledger hook survives; what must not survive is doing the whole job inside it. Three
+responsibilities, and only the middle one is time-critical:
+
+```
+Activity hook       notices that something may need telling
+notification event  fixes who the audience was at that moment      synchronous
+worker              decides when and by which transport            asynchronous
+```
+
+The audience is the part that cannot be deferred, and calendar cancellation is the
+proof: "every Actor who had this Event on their calendar" is true of one instant. A
+worker re-reading placement an hour later would mix in people who joined since and drop
+people who left after being told. So the domain command writes the audience down while
+it still holds it — an outbox row in the same transaction as the transition — and
+everything after that is fan-out over a fixed list.
+
+```
+small     events written in-request by the explicit flush; transports async
+medium    event writing moves to a worker, audience still fixed in-request
+large     Actor-level events stay; per-manager deliveries fan out on read or async;
+          email and push always a separate worker with a retry queue
+```
+
+`shutdown` is a development net and never a correctness path at any size. At scale the
+final shape is a transactional outbox plus workers, and the audit that pins the explicit
+flush today is what keeps that migration honest: whatever writes the outbox row still has
+to do it before the request ends.
+
 ## The unit is the Actor
 
 ```
@@ -109,6 +139,7 @@ notification_events        the fact, addressed to an Actor
   actor_uri                who did it
   object_uri               what it was about
   source_activity_uri      required; the ledger entry this projects
+  initiating_local_user_id nullable; which person performed it
   snapshot                 how it read at the time
   occurred_at
   grouping_key             what may be collapsed with what
@@ -216,10 +247,19 @@ in-app only, collapsed, no email
 The test is whether it needs an answer or changes a plan somebody made. An invitation
 and a cancellation both do. A like does not.
 
-**2. Self-notification: always dropped.** Already the rule in Calendar's emitter, and it
-should be the contract, not each product's habit. The one case worth naming: an act by
-*another manager* of an Actor you also manage is **not** self-notification — the Group
-was told, and you are one of the people who reads what the Group is told.
+**2. Self-notification: dropped, but at the delivery stage.** It cannot be decided from
+the Actor URIs. An Organization is acted for by whichever manager is at the keyboard, so
+the Activity's actor is the Organization and so is the recipient — a rule of `actor ===
+recipient` at the event stage would delete the entry for *every* manager, including the
+several who were not at the keyboard and are exactly who the notice is for.
+
+So the event is recorded either way and carries `initiating_local_user_id`. Deliveries
+are written one per manager, skipping that person and nobody else. Null means nobody
+local performed it — a remote Activity, cron, a system act — and null suppresses nobody.
+
+It is passed as provenance by whoever ran the command and **never read from the session**
+at flush time, when the session says who is logged in rather than who caused an act that
+may have arrived from another server an hour ago.
 
 **3. A new manager sees the Actor's history.** The inbox belongs to the Actor. Somebody
 made a manager of an Organization today can read what the Organization was told last

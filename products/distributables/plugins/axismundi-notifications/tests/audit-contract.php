@@ -174,15 +174,53 @@ try {
 
 	// -- who may be addressed ----------------------------------------------------------------------------------
 
-	// Nobody hears about their own act, said once here rather than in every resolver.
-	$ax_ct_self = axismundi_ntf_record_event(
-		array( 'kind' => 'axismundi-calendar/event-invited', 'recipient_actor_uri' => (string) $ax_ct_host->get_uri() ),
+	/*
+	 * An Actor may be told about an act performed as that same Actor, and this is the case that makes
+	 * it necessary. An Organization is acted for by whichever manager is at the keyboard: the
+	 * Activity's actor is the Organization and so is the recipient, so dropping on `actor === recipient`
+	 * here would delete the entry for every manager -- including the several who were not at the
+	 * keyboard and are exactly who the notice is for.
+	 *
+	 * What is carried instead is who did it. "Not your own act" is a fact about a person, and the
+	 * suppression happens where people are known, when deliveries are written.
+	 */
+	$ax_ct_own = axismundi_ntf_record_event(
+		array(
+			'kind'                     => 'axismundi-calendar/event-invited',
+			'recipient_actor_uri'      => (string) $ax_ct_host->get_uri(),
+			'initiating_local_user_id' => $ax_ct_users[0],
+		),
 		$ax_ct_invite
 	);
 	ax_ct_assert(
 		$ax_ct_results,
-		'an Actor is not told about something they did themselves',
-		is_wp_error( $ax_ct_self ) && 'ax_ntf_self' === $ax_ct_self->get_error_code()
+		'an act performed as an Actor still reaches that Actor, since its other managers need it',
+		! is_wp_error( $ax_ct_own ) && $ax_ct_own > 0
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'carrying which person performed it, which is what the delivery stage suppresses on',
+		$ax_ct_users[0] === (int) axismundi_ntf_events_for_actor( (int) $ax_ct_host->get_identity_id() )[0]['initiating_local_user_id']
+	);
+	/*
+	 * And nothing is inferred. By flush time the session says who is logged in, not who caused an act
+	 * that may have arrived from another server an hour ago -- so an intent that names nobody stores
+	 * nobody, and suppresses nobody.
+	 */
+	wp_set_current_user( $ax_ct_users[0] );
+	$ax_ct_remote_origin = axismundi_ntf_record_event(
+		array(
+			'kind'                => 'axismundi-calendar/event-cancelled',
+			'recipient_actor_uri' => (string) $ax_ct_host->get_uri(),
+		),
+		$ax_ct_late ?? $ax_ct_invite
+	);
+	wp_set_current_user( 0 );
+	ax_ct_assert(
+		$ax_ct_results,
+		'while an act nobody local performed names nobody, rather than the person who happened to be signed in',
+		! is_wp_error( $ax_ct_remote_origin )
+			&& null === axismundi_ntf_events_for_actor( (int) $ax_ct_host->get_identity_id() )[0]['initiating_local_user_id']
 	);
 	/*
 	 * And a remote Actor has no inbox here. Their half of the same act is the Activity delivered to

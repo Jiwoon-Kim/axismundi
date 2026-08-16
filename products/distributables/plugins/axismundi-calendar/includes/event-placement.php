@@ -27,16 +27,23 @@
 defined( 'ABSPATH' ) || exit;
 
 /** Participation states that mean somebody said no. */
-const AXISMUNDI_CAL_DECLINED_STATES = array( 'rejected', 'declined', 'withdrawn' );
+const AXISMUNDI_CAL_DECLINED_STATES = array( 'rejected', 'declined', 'tentative_rejected' );
 
 /**
  * States that keep an Event off a calendar whatever the viewer has asked for.
  *
  * "Show declined events" is a setting about your own answers -- it lets you keep an eye on what you
- * turned down. Being removed is not one of your answers, and an Event you have been taken off the
- * list of is not yours to keep showing: turning that setting on must not put it back.
+ * turned down, because declining is a reply to something that still concerns you. These two are not
+ * replies of that kind and are not affected by it.
+ *
+ * Being removed is somebody else's act, and an Event you have been taken off the list of is not
+ * yours to keep showing.
+ *
+ * Having withdrawn is your own act, and a stronger one than declining: you did not answer no, you
+ * took yourself out of it entirely. Somebody who left an Event has ended their relationship to it,
+ * and a calendar still showing it would be showing a plan they cancelled.
  */
-const AXISMUNDI_CAL_UNPLACED_STATES = array( 'removed' );
+const AXISMUNDI_CAL_UNPLACED_STATES = array( 'removed', 'withdrawn' );
 
 /**
  * Whether one Actor wants Events they declined shown on their calendar.

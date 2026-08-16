@@ -678,12 +678,16 @@ function axismundi_cal_event_participation_set( int $post_id, string $actor_uri,
 }
 
 /**
- * Take back a request nobody has answered yet.
+ * Take back your own request, whether or not it was granted.
  *
- * `Undo(Join)`, and only while the request is still pending. Cancelling an acceptance is a different
- * act -- ActivityStreams has `Leave` for stopping attending something you were admitted to, and
- * whether an accepted `Join` is undone or left is not settled here. Offering one button for both
- * would decide it by accident, and the wrong choice federates.
+ * `Undo(Join)` in both cases, and the reason it is the same act either way is who wrote what. The
+ * handshake is Follow's: the guest sends `Join`, the host answers `Accept(Join)`, and leaving is the
+ * guest undoing *their own* `Join` -- never the host's `Accept`, which is not theirs to retract. An
+ * `Undo` addressed at somebody else's Activity is a ledger that lies about who changed their mind.
+ *
+ * That also settles `Leave`. It was held open while it was unclear whether an accepted `Join` is
+ * undone or left, and reading the exchange as a handshake answers it: there is nothing here `Leave`
+ * would say that `Undo(Join)` does not, and one verb is one meaning to keep true.
  *
  * The ledger enforces the rest: an `Undo` must be authored by whoever authored the Activity it
  * addresses, so this cannot become a way for anybody else to retract somebody's request.
@@ -698,12 +702,17 @@ function axismundi_cal_event_withdraw_join( int $post_id, string $actor_uri ) {
 	if ( ! is_array( $participation ) ) {
 		return new WP_Error( 'ax_event_withdraw_missing', __( 'There is no request to take back.', 'axismundi-calendar' ), array( 'status' => 404 ) );
 	}
-	// An invitation is not withdrawn by the person who received it: they answer it again.
+	// An invitation is not withdrawn by the person who received it: they undo their own answer to it.
 	if ( 'join' !== (string) $participation['source'] ) {
 		return new WP_Error( 'ax_event_withdraw_source', __( 'An invitation is answered rather than taken back.', 'axismundi-calendar' ), array( 'status' => 400 ) );
 	}
-	if ( 'pending' !== (string) $participation['state'] ) {
-		return new WP_Error( 'ax_event_withdraw_answered', __( 'Only a request nobody has answered yet can be taken back.', 'axismundi-calendar' ), array( 'status' => 409 ) );
+	/*
+	 * A request that is waiting, and one that was granted. What cannot be taken back is one that was
+	 * refused or a place somebody was removed from -- there the `Join` is already spent, and undoing it
+	 * would be retracting a request that is no longer what stands between them and the Event.
+	 */
+	if ( ! in_array( (string) $participation['state'], array( 'pending', 'accepted' ), true ) ) {
+		return new WP_Error( 'ax_event_withdraw_answered', __( 'There is no standing request to take back.', 'axismundi-calendar' ), array( 'status' => 409 ) );
 	}
 	$join_uri = (string) $participation['initiating_activity_uri'];
 	if ( '' === $join_uri ) {

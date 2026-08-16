@@ -200,13 +200,14 @@ try {
 		'withdrawn' === (string) ax_pr_call( $ax_pr_bob['user_id'], 'DELETE', '/axismundi/v1/events/' . $ax_pr_undo_ev . '/join' )->get_data()['state']
 	);
 	/*
-	 * Whether cancelling an acceptance is `Leave(Event)` or `Undo(Join)` is not settled, so the route
-	 * addresses the request rather than the attendance -- and refuses once there is an answer to it.
+	 * The same route leaves as well, those having turned out to be one act: the guest undoes their own
+	 * `Join`, whether or not it was granted. What it still refuses is a request that was turned down,
+	 * where the `Join` is spent and the refusal is what stands.
 	 */
 	ax_pr_assert(
 		$ax_pr_results,
-		'an accepted reply is not retracted by the same route, that question being open',
-		409 === ax_pr_call( $ax_pr_alice['user_id'], 'DELETE', '/axismundi/v1/events/' . $ax_pr_mod . '/join' )->get_status()
+		'and an accepted reply is retracted by the same route, leaving being undoing your own request',
+		'withdrawn' === (string) ax_pr_call( $ax_pr_alice['user_id'], 'DELETE', '/axismundi/v1/events/' . $ax_pr_mod . '/join' )->get_data()['state']
 	);
 	ax_pr_assert(
 		$ax_pr_results,

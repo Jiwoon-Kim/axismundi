@@ -118,16 +118,16 @@ function axismundi_cal_rest_join( WP_REST_Request $request ) {
 }
 
 /**
- * Take back a request nobody has answered.
+ * Take back your own request, granted or not.
  *
- * Withdrawing a request, and nothing wider. The HTTP verb is a command shape and says nothing about
- * ActivityStreams: what this records is `Undo(Join)`, never AS2 `Delete`, which means destroying an
- * Object and would be a different claim entirely.
+ * The HTTP verb is a command shape and says nothing about ActivityStreams: what this records is
+ * `Undo(Join)`, never AS2 `Delete`, which means destroying an Object and would be a different claim
+ * entirely.
  *
- * It refuses once there is an answer. Whether cancelling an acceptance is `Undo(Join)` or
- * `Leave(Event)` is undecided, so accepting one here would settle it by accident and federate the
- * guess. Anybody naming this in a screen or a document should call it taking a request back rather
- * than leaving or cancelling attendance, so the verb does not quietly claim the meaning either.
+ * It now covers leaving as well as taking a request back, because those turned out to be one act. The
+ * guest undoes their own `Join`; the host's `Accept` is not theirs to retract, and `Leave` would be a
+ * second verb for what `Undo(Join)` already says. What it still refuses is a request that was turned
+ * down or a place somebody was removed from, where the `Join` is spent.
  *
  * @param WP_REST_Request $request Request.
  * @return WP_REST_Response|WP_Error

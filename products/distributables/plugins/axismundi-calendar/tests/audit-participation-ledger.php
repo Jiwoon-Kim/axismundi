@@ -198,14 +198,16 @@ try {
 			&& 'pending' === ax_pl_state( $ax_pl_undo_ev, $ax_pl_alice['actor_uri'] )
 	);
 	/*
-	 * Cancelling an acceptance is a different act. ActivityStreams has `Leave` for stopping attending
-	 * something you were admitted to, and whether an accepted `Join` is undone or left is not settled
-	 * -- so one button for both would decide it by accident, and the wrong choice federates.
+	 * Leaving an Event you were admitted to is the same act as taking the request back, settled by
+	 * reading the exchange as the handshake it is: the guest undoes the `Join` they wrote. `Leave` was
+	 * the other candidate and says nothing this does not; what the guest must never undo is the host's
+	 * `Accept`, which is not theirs to retract.
 	 */
 	ax_pl_assert(
 		$ax_pl_results,
-		'an accepted reply is not withdrawn, that question being one nobody has answered yet',
-		is_wp_error( axismundi_cal_event_withdraw_join( $ax_pl_open, $ax_pl_alice['actor_uri'] ) )
+		'an accepted reply is withdrawn by undoing the request, never the host\'s acceptance of it',
+		true === axismundi_cal_event_withdraw_join( $ax_pl_open, $ax_pl_alice['actor_uri'] )
+			&& 'withdrawn' === ax_pl_state( $ax_pl_open, $ax_pl_alice['actor_uri'] )
 	);
 
 	// -- a place is taken by an acceptance, not by asking ---------------------------------------------

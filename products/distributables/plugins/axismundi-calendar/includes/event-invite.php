@@ -141,29 +141,147 @@ function axismundi_cal_event_respond_to_invite( int $post_id, string $actor_uri,
 		return new WP_Error( 'ax_event_invite_unaddressable', __( 'That invitation predates the record of it and cannot be answered.', 'axismundi-calendar' ), array( 'status' => 409 ) );
 	}
 
+	$state = AXISMUNDI_CAL_INVITE_ANSWERS[ $decision ];
+	if ( $state === (string) $participation['state'] ) {
+		// Saying the same thing again is not a second answer, and a ledger with one act per click would
+		// be a record of a page being reloaded.
+		return $state;
+	}
+
 	/*
-	 * The seat first, then the answer, in the order an acceptance already uses: publishing an `Accept`
-	 * for a place that turned out not to exist leaves a promise with nothing to retract it. Eligibility
-	 * is deliberately not consulted -- being invited is the permission, and an invitation that cannot
-	 * be accepted would be a message with no meaning.
+	 * Changing an answer is two events in the ledger and one command here. RSVP answers are mutually
+	 * exclusive the way a Like and a Dislike are: what happened is that the previous answer was undone
+	 * and another was given, and both belong in the record -- but a screen that made somebody undo
+	 * first and answer second would leave them stranded in `pending` whenever the second half failed.
+	 *
+	 * Order matters, and it is not the same in both directions. Going towards acceptance the capacity
+	 * is read before anything is retracted: if the Event is full the previous answer has to stand,
+	 * because a refusal quietly turned into "no answer" is a state nobody asked for. Going the other
+	 * way there is nothing to run out of.
 	 */
-	$state  = AXISMUNDI_CAL_INVITE_ANSWERS[ $decision ];
+	$previous = (string) $participation['current_response_activity_uri'];
+	if ( 'pending' !== (string) $participation['state'] ) {
+		if ( 'accepted' === $state ) {
+			$remaining = axismundi_cal_event_remaining_capacity( $post_id );
+			if ( null !== $remaining && $remaining < 1 ) {
+				return new WP_Error( 'ax_event_join_full', __( 'This event is full.', 'axismundi-calendar' ), array( 'status' => 409 ) );
+			}
+		}
+		if ( '' !== $previous ) {
+			$undone = axismundi_cal_participation_activity(
+				array( 'type' => 'Undo', 'actor' => $actor_uri, 'object' => $previous ),
+				'ax-cal-undo-response:' . $previous
+			);
+			if ( is_wp_error( $undone ) ) {
+				return $undone;
+			}
+		}
+	}
+
+	/*
+	 * The seat, then the answer, in the order an acceptance already uses: publishing an `Accept` for a
+	 * place that turned out not to exist leaves a promise with nothing to retract it. Eligibility is
+	 * deliberately not consulted -- being invited is the permission, and an invitation that cannot be
+	 * accepted would be a message with no meaning.
+	 *
+	 * The capacity read above is a courtesy and this is the decision: two people taking the last place
+	 * at once are separated here, under the lock, and the loser is left in `pending` -- which their own
+	 * `Undo` has already made true.
+	 */
 	$seated = axismundi_cal_participation_seat( $post_id, $actor_uri, $state, null, 'invite' );
 	if ( is_wp_error( $seated ) ) {
+		axismundi_cal_event_participation_set( $post_id, $actor_uri, 'pending' );
 		return $seated;
 	}
 	$types    = array( 'accept' => 'Accept', 'reject' => 'Reject', 'tentative' => 'TentativeAccept' );
 	$response = axismundi_cal_participation_activity(
 		array( 'type' => $types[ $decision ], 'actor' => $actor_uri, 'object' => $invite_uri ),
-		// Keyed by the answer as well as the invitation, so changing your mind records a new act rather
-		// than colliding with the one you are replacing.
-		'ax-cal-invite-' . $decision . ':' . $invite_uri . ':' . $state
+		/*
+		 * Keyed by how many answers this invitation has already had. The answer alone was enough while a
+		 * reply was given once and never taken back; now somebody can accept, undo, and accept again --
+		 * and a key naming only the answer would hand back the first `Accept`, an Activity their own
+		 * `Undo` has already retracted. Counted from the ledger rather than kept in a column, because
+		 * the ledger is where the answers are and a second tally would be a second thing to keep true.
+		 */
+		'ax-cal-invite-' . $decision . ':' . $invite_uri . ':' . $state . ':' . axismundi_cal_invite_answer_count( $invite_uri, $actor_uri )
 	);
 	if ( is_wp_error( $response ) ) {
 		return $response;
 	}
 	axismundi_cal_participation_note_response( $post_id, $actor_uri, $response );
 	return $state;
+}
+
+/**
+ * How many times one Actor has answered one invitation.
+ *
+ * Read from the ledger, which is the record of the answers themselves. It is what makes a second
+ * `Accept` after an `Undo` a second act rather than the first one handed back.
+ *
+ * @param string $invite_uri Invitation Activity URI.
+ * @param string $actor_uri  The invited Actor.
+ * @return int
+ */
+function axismundi_cal_invite_answer_count( string $invite_uri, string $actor_uri ) : int {
+	if ( ! function_exists( 'axismundi_act_get_by_object' ) ) {
+		return 0;
+	}
+	$answers = array( 'Accept', 'Reject', 'TentativeAccept' );
+	$count   = 0;
+	foreach ( axismundi_act_get_by_object( $invite_uri ) as $activity ) {
+		if ( $actor_uri === $activity->get_actor_uri() && in_array( $activity->get_type(), $answers, true ) ) {
+			++$count;
+		}
+	}
+	return $count;
+}
+
+/**
+ * Take back your own answer to an invitation.
+ *
+ * `Undo` of the response the guest wrote, which is exactly Follow's shape: you undo your own
+ * `Accept`, `Reject` or `TentativeAccept`, and what is left is the invitation, unanswered again. Not
+ * `Undo(Invite)` -- the invitation is the host's and still stands -- and not `Leave`, which would be
+ * a second word for the same thing.
+ *
+ * The invitation stays on the guest's calendar. Being asked is still true, and it is a thing they
+ * have to deal with; it is only their answer that has gone.
+ *
+ * @param int    $post_id   Event post ID.
+ * @param string $actor_uri The invited Actor, taking back their own answer.
+ * @return string|WP_Error Resulting state.
+ */
+function axismundi_cal_event_undo_invite_response( int $post_id, string $actor_uri ) {
+	$actor_uri     = trim( $actor_uri );
+	$participation = axismundi_cal_event_participation( $post_id, $actor_uri );
+	if ( ! is_array( $participation ) || 'invite' !== (string) $participation['source'] ) {
+		return new WP_Error( 'ax_event_invite_missing', __( 'You have not been invited to this event.', 'axismundi-calendar' ), array( 'status' => 404 ) );
+	}
+	if ( 'pending' === (string) $participation['state'] ) {
+		return new WP_Error( 'ax_event_invite_unanswered', __( 'You have not answered that invitation yet.', 'axismundi-calendar' ), array( 'status' => 409 ) );
+	}
+	if ( ! in_array( (string) $participation['state'], AXISMUNDI_CAL_INVITE_ANSWERS, true ) ) {
+		// `removed` is the host's act and not an answer, so there is nothing here of the guest's to undo.
+		return new WP_Error( 'ax_event_invite_unanswerable', __( 'There is no answer of yours to take back.', 'axismundi-calendar' ), array( 'status' => 409 ) );
+	}
+	$previous = (string) $participation['current_response_activity_uri'];
+	if ( '' === $previous ) {
+		return new WP_Error( 'ax_event_invite_unaddressable', __( 'That answer predates the record of it and cannot be taken back.', 'axismundi-calendar' ), array( 'status' => 409 ) );
+	}
+	$undone = axismundi_cal_participation_activity(
+		array( 'type' => 'Undo', 'actor' => $actor_uri, 'object' => $previous ),
+		'ax-cal-undo-response:' . $previous
+	);
+	if ( is_wp_error( $undone ) ) {
+		return $undone;
+	}
+	/*
+	 * Back to pending, with no response recorded. `pending` is the state of having been asked and not
+	 * replied, so pointing it at the `Undo` would leave the row explaining itself with the act that
+	 * emptied it -- the ledger holds that history, and this column holds the current answer.
+	 */
+	$set = axismundi_cal_event_participation_set( $post_id, $actor_uri, 'pending' );
+	return is_wp_error( $set ) ? $set : 'pending';
 }
 
 /**

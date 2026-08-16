@@ -65,18 +65,24 @@ function ax_pc_event( array &$posts, array $fields ) {
 try {
 	$ax_pc_author = ax_pc_user( $ax_pc_users );
 
-	// -- Nothing is made before it is needed -------------------------------------------------------
+	// -- It arrives with the handle ----------------------------------------------------------------
 
-	ax_pc_assert( $ax_pc_results, 'a new Actor has no Calendar yet', null === axismundi_cal_primary_calendar( $ax_pc_author['actor_uri'] ) );
+	/*
+	 * It used to be made by the first Event, back when a Calendar was a container an author happened
+	 * to need. Once its address became `@handle`, the Calendar could no longer be later than the
+	 * handle: locking the handle is what reserves the address, so the Calendar exists from that
+	 * moment and an Actor is never briefly a person you cannot subscribe to.
+	 */
+	ax_pc_assert( $ax_pc_results, 'locking a handle is what gives an Actor its Calendar', is_array( axismundi_cal_primary_calendar( $ax_pc_author['actor_uri'] ) ) );
 
-	// -- The first Event makes one -----------------------------------------------------------------
+	// -- And the first Event lands on it -----------------------------------------------------------
 
 	wp_set_current_user( $ax_pc_author['user_id'] );
 	$ax_pc_first = ax_pc_event( $ax_pc_posts, array( 'timezone' => 'Asia/Seoul', 'starts_at' => '2026-09-10 19:00:00', 'ends_at' => '2026-09-10 21:00:00' ) );
 	ax_pc_assert( $ax_pc_results, 'an Event saved without naming a Calendar succeeds', ! is_wp_error( $ax_pc_first ) );
 
 	$ax_pc_primary = axismundi_cal_primary_calendar( $ax_pc_author['actor_uri'] );
-	ax_pc_assert( $ax_pc_results, 'and that is what makes the author their Calendar', is_array( $ax_pc_primary ) );
+	ax_pc_assert( $ax_pc_results, 'and it goes to the Calendar the author already has', is_array( $ax_pc_primary ) );
 	if ( is_array( $ax_pc_primary ) ) {
 		$ax_pc_calendars[] = (int) $ax_pc_primary['id'];
 		ax_pc_assert( $ax_pc_results, 'which belongs to them', $ax_pc_author['actor_uri'] === axismundi_cal_calendar_authority( (int) $ax_pc_primary['id'] ) );

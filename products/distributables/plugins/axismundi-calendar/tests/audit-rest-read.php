@@ -209,7 +209,16 @@ try {
 	list( $ax_rr_status, $ax_rr_body ) = ax_rr_get( '/axismundi/v1/calendars/' . $ax_rr_public_uuid );
 	ax_rr_assert( $ax_rr_results, 'and the public Calendar is theirs to read like anyone else', 200 === $ax_rr_status );
 	list( , $ax_rr_body ) = ax_rr_get( '/axismundi/v1/actors/me/calendarList' );
-	ax_rr_assert( $ax_rr_results, 'their own list is empty, not everything they can see', array() === (array) $ax_rr_body['items'] );
+	/*
+	 * The list is what somebody keeps, not what they may look at. Reading a public Calendar is not
+	 * subscribing to it, so theirs holds their own Calendar and nothing they merely have access to.
+	 */
+	ax_rr_assert(
+		$ax_rr_results,
+		'their own list holds their own Calendar, not everything they can see',
+		0 === count( array_filter( (array) $ax_rr_body['items'], static fn( array $i ) : bool => $ax_rr_public_uuid === $i['id'] ) )
+			&& 1 === count( (array) $ax_rr_body['items'] )
+	);
 
 	// -- Range arguments ----------------------------------------------------------------------------------
 

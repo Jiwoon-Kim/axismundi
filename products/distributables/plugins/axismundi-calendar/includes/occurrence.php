@@ -80,6 +80,16 @@ function axismundi_cal_expand( array $schedule, string $from_utc, string $to_utc
 	 */
 	$parts = axismundi_cal_recurrence_to_parts( axismundi_cal_schedule_recurrence( $schedule ) );
 	if ( array() === $parts ) {
+		/*
+		 * Two different things produce no structure, and they must not expand alike. An Event that
+		 * simply does not repeat happens once. An Event carrying a rule this site cannot represent --
+		 * `BYSETPOS` and the rest, which normalise to nothing -- is a series, and drawing it as a
+		 * single instance would answer a monthly meeting with its first date and report no loss.
+		 * Refused instead, the way the subscribed-feed importer refuses the same rules.
+		 */
+		if ( '' !== trim( (string) ( $schedule['rrule'] ?? '' ) ) ) {
+			return array();
+		}
 		$starts = array( $dtstart );
 	} else {
 		$checked = axismundi_cal_rrule_check( $parts, false );

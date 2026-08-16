@@ -147,7 +147,7 @@ function axismundi_ntf_render_inbox() : void {
 								 * counted, because arriving as a hundred unread notices about months somebody
 								 * was not there for is how an inbox becomes something to clear rather than read.
 								 */
-								esc_html_e( 'Before you', 'axismundi-notifications' );
+								esc_html_e( 'Before you had access', 'axismundi-notifications' );
 								?>
 							<?php else : ?>
 								<?php esc_html_e( 'Read', 'axismundi-notifications' ); ?>

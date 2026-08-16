@@ -111,10 +111,10 @@ function axismundi_cal_event_remove_attendee( int $post_id, string $actor_uri ) 
 		return $set;
 	}
 	/*
-	 * The person it happened to, and the reason this act needs a notice more than any other here: the
-	 * Event leaves their calendar. Without being told, what they experience is an evening they had
-	 * planned around silently disappearing.
+	 * The reason this act needs a notice more than any other here: the Event leaves their calendar.
+	 * Without being told, what they experience is an evening they had planned around silently
+	 * disappearing.
 	 */
-	axismundi_cal_notify( 'event_removed', $post_id, array( $actor_uri ), $host, $removal );
+	axismundi_cal_notify_flush();
 	return true;
 }

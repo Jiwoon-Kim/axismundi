@@ -167,17 +167,14 @@ function axismundi_cal_record_event_status_change( int $post_id ) : void {
 		'ax-cal-status:' . $event_uri . ':' . (string) $envelope['event_status'] . ':' . (int) $schedule['sequence']
 	);
 	/*
-	 * Everybody still holding it, which is the one notice here that is not addressed to a single
-	 * person. An Event being called off is the piece of news somebody would otherwise get by turning
-	 * up, and putting it back on is the one they would otherwise get by not turning up.
+	 * Resolved here, where the status is already written and the audience is everybody still holding
+	 * it. That audience is the reason this cannot wait: it is true of one instant, and asking again
+	 * later would tell somebody removed since about a cancellation that no longer concerns them while
+	 * missing whoever left after being told.
 	 */
-	axismundi_cal_notify(
-		axismundi_cal_event_is_cancelled( $post_id ) ? 'event_cancelled' : 'event_reinstated',
-		$post_id,
-		axismundi_cal_event_lifecycle_audience( $post_id ),
-		$host,
-		is_wp_error( $update ) ? '' : $update
-	);
+	if ( ! is_wp_error( $update ) ) {
+		axismundi_cal_notify_flush();
+	}
 }
 add_action( 'axismundi_cal_event_cancelled', 'axismundi_cal_record_event_status_change' );
 add_action( 'axismundi_cal_event_reinstated', 'axismundi_cal_record_event_status_change' );

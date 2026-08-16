@@ -106,8 +106,8 @@ function axismundi_cal_event_invite( int $post_id, string $actor_uri ) {
 	if ( is_wp_error( $seated ) ) {
 		return $seated;
 	}
-	// Being asked is the whole point of an invitation reaching somebody.
-	axismundi_cal_notify( 'event_invited', $post_id, array( $actor_uri ), $host, $invite );
+	// The row is written; what the `Invite` meant can be resolved now and not before.
+	axismundi_cal_notify_flush();
 	return 'pending';
 }
 
@@ -180,6 +180,14 @@ function axismundi_cal_event_respond_to_invite( int $post_id, string $actor_uri,
 			if ( is_wp_error( $undone ) ) {
 				return $undone;
 			}
+			/*
+			 * Resolved here rather than at the end, which is the reason a command recording two
+			 * Activities flushes between them. The retraction is a fact about the answer being taken
+			 * back; leaving it in the queue until the new answer had been written would resolve it
+			 * against the answer that replaced it, and the audience snapshots of two acts would be
+			 * the state of one.
+			 */
+			axismundi_cal_notify_flush();
 		}
 	}
 
@@ -214,9 +222,9 @@ function axismundi_cal_event_respond_to_invite( int $post_id, string $actor_uri,
 		return $response;
 	}
 	axismundi_cal_participation_note_response( $post_id, $actor_uri, $response );
-	// The organizer is the one waiting on this, and a changed answer matters to them as much as a
-	// first one -- somebody who accepted and later declined has changed what the room needs to hold.
-	axismundi_cal_notify( 'event_invite_answered', $post_id, array( axismundi_cal_event_owner_actor_uri( $post_id ) ), $actor_uri, $response );
+	// The answer is recorded and the row says it, so the second half of a changed answer resolves
+	// here -- the retraction having already been resolved against the answer it retracted.
+	axismundi_cal_notify_flush();
 	return $state;
 }
 
@@ -294,7 +302,7 @@ function axismundi_cal_event_undo_invite_response( int $post_id, string $actor_u
 	}
 	// An organizer who had counted them in needs to know they no longer have an answer at all, which
 	// is a different thing from being told they now say no.
-	axismundi_cal_notify( 'event_invite_answer_undone', $post_id, array( axismundi_cal_event_owner_actor_uri( $post_id ) ), $actor_uri, $undone );
+	axismundi_cal_notify_flush();
 	return 'pending';
 }
 
@@ -329,11 +337,10 @@ function axismundi_cal_event_withdraw_invite( int $post_id, string $actor_uri ) 
 			'ax-cal-invite-undo:' . (string) $participation['initiating_activity_uri']
 		);
 		/*
-		 * Told before the row goes, because afterwards there is nothing to say it about. Somebody who
-		 * saw an invitation appear and then saw it disappear with no word would reasonably think the
-		 * Event had been deleted.
+		 * Resolved before the row goes, because the resolver reads the invitation being withdrawn to
+		 * know who was invited -- and afterwards there is nothing left to read.
 		 */
-		axismundi_cal_notify( 'event_invite_withdrawn', $post_id, array( $actor_uri ), $host, is_wp_error( $undone ) ? '' : $undone );
+		axismundi_cal_notify_flush();
 	}
 	/*
 	 * The row goes rather than becoming `withdrawn`. Nobody replied, so there is no answer to preserve

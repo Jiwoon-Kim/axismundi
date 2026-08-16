@@ -1,16 +1,14 @@
 <?php
 /**
- * Who needs to be told (dev-only; dist-excluded).
+ * What each Activity meant, and to whom (dev-only; dist-excluded).
  *
- * This plugin has no inbox and must not grow one -- a mention, a follow, a reply and a calendar
- * notice are the same kind of thing to the person receiving them, and one badge per plugin is how
- * people learn to ignore badges. What is pinned here is the declaration: each act says who it
- * concerns and what it was, and `Axismundi Notifications` turns those into an inbox.
+ * This plugin has no inbox and does not call one. It answers, for the Activities it wrote, who needs
+ * to know and what kind of thing happened -- and every answer is keyed to a committed Activity, so a
+ * remote `Invite` resolves exactly like a local one and nothing here learns federation.
  *
- * So the checks are about the addressing, which is the part only this plugin can know. The recipient
- * is an Actor and never a WordPress user; nobody is told about their own act; and something that
- * happens to the Event reaches everybody still holding it, which is the placement rule and not a
- * second list beside it.
+ * The checks read the resolver directly rather than through Notifications, which may not be
+ * installed. What is being pinned is the mapping and the addressing: those are the parts only this
+ * plugin can know.
  *
  * @package AxismundiCalendar
  */
@@ -20,9 +18,6 @@ defined( 'ABSPATH' ) || exit( 1 );
 $ax_nt_results = array();
 $ax_nt_users   = array();
 $ax_nt_posts   = array();
-// Collected through the globals array rather than a local: this file is executed inside a function
-// by `wp eval-file`, so a plain assignment here is not the variable the listener would reach.
-$GLOBALS['ax_nt_seen'] = array();
 
 /** @param bool[] $results Results. */
 function ax_nt_assert( array &$results, string $label, bool $condition ) : void {
@@ -73,32 +68,30 @@ function ax_nt_event( array &$posts, int $author, int $calendar_id, array $extra
 	return $post_id;
 }
 
-// Everything declared, in order, exactly as a listening plugin would receive it.
-add_action(
-	'axismundi_notify',
-	static function ( array $notice ) : void {
-		$GLOBALS['ax_nt_seen'][] = $notice;
+/** What the resolver says one Actor's most recent Activity of a type meant. */
+function ax_nt_intents( string $actor_uri, string $type, ?string $object_uri = null ) : array {
+	foreach ( axismundi_act_get_by_actor( $actor_uri, 50 ) as $activity ) {
+		if ( $type !== $activity->get_type() ) {
+			continue;
+		}
+		if ( null !== $object_uri && $object_uri !== (string) $activity->get_object_uri() ) {
+			continue;
+		}
+		return (array) apply_filters( 'axismundi_notification_intents', array(), $activity );
 	}
-);
+	return array();
+}
 
-/** Recipients of the notices of one kind since a mark. */
-function ax_nt_recipients( int $since, string $kind ) : array {
+/** Recipients named by a set of intents, of one kind. */
+function ax_nt_recipients( array $intents, string $kind ) : array {
 	$out = array();
-	foreach ( array_slice( (array) $GLOBALS['ax_nt_seen'], $since ) as $notice ) {
-		if ( $kind === (string) $notice['kind'] ) {
-			$out[] = (string) $notice['recipient_actor_uri'];
+	foreach ( $intents as $intent ) {
+		if ( $kind === (string) $intent['kind'] ) {
+			$out[] = (string) $intent['recipient_actor_uri'];
 		}
 	}
 	sort( $out );
 	return $out;
-}
-
-/** Every kind declared since a mark. */
-function ax_nt_kinds( int $since ) : array {
-	return array_map(
-		static fn( array $notice ) : string => (string) $notice['kind'],
-		array_slice( (array) $GLOBALS['ax_nt_seen'], $since )
-	);
 }
 
 try {
@@ -113,90 +106,101 @@ try {
 	// -- being asked, and answering ---------------------------------------------------------------------
 
 	$ax_nt_event = ax_nt_event( $ax_nt_posts, $ax_nt_host_user, $ax_nt_cal, array( 'join_mode' => 'restricted' ) );
-	$ax_nt_mark  = count( $GLOBALS['ax_nt_seen'] );
+	$ax_nt_uri   = axismundi_cal_event_uri( $ax_nt_event );
 	axismundi_cal_event_invite( $ax_nt_event, (string) $ax_nt_guest->get_uri() );
+	$ax_nt_invited = ax_nt_intents( (string) $ax_nt_host->get_uri(), 'Invite', $ax_nt_uri );
 	ax_nt_assert(
 		$ax_nt_results,
-		'an invitation is declared to the person invited, by Actor and not by account',
-		array( (string) $ax_nt_guest->get_uri() ) === ax_nt_recipients( $ax_nt_mark, 'event_invited' )
+		'an Invite means the invited Actor was asked, addressed by Actor and not by account',
+		array( (string) $ax_nt_guest->get_uri() ) === ax_nt_recipients( $ax_nt_invited, 'axismundi-calendar/event-invited' )
 	);
 	/*
-	 * The unit that makes an Organization possible. A notice addressed to a WordPress user could not
-	 * be delivered to a Group, and an account managing three Actors is looking at three sets of news.
+	 * The snapshot travels with it, because a notification outlives what it is about: an Event since
+	 * renamed, moved or deleted still produced a notice that has to read sensibly.
 	 */
-	$ax_nt_notice = end( $GLOBALS['ax_nt_seen'] );
 	ax_nt_assert(
 		$ax_nt_results,
-		'carrying what it was about, so a notice still reads after the Event has moved on',
-		(string) $ax_nt_host->get_uri() === (string) $ax_nt_notice['actor_uri']
-			&& 'Reading' === (string) $ax_nt_notice['payload']['title']
-			&& '' !== (string) $ax_nt_notice['source_activity_uri']
-			&& '' !== (string) $ax_nt_notice['object_uri']
+		'carrying what it was about, and who performed it, for the stage that knows people',
+		'Reading' === (string) $ax_nt_invited[0]['snapshot']['title']
+			&& $ax_nt_uri === (string) $ax_nt_invited[0]['object_uri']
+			&& $ax_nt_host_user === (int) $ax_nt_invited[0]['initiating_local_user_id']
 	);
 
-	$ax_nt_mark = count( $GLOBALS['ax_nt_seen'] );
 	wp_set_current_user( $ax_nt_guest_user );
 	axismundi_cal_event_respond_to_invite( $ax_nt_event, (string) $ax_nt_guest->get_uri(), 'accept' );
 	ax_nt_assert(
 		$ax_nt_results,
-		'and the answer goes back the other way, to the organizer who was waiting on it',
-		array( (string) $ax_nt_host->get_uri() ) === ax_nt_recipients( $ax_nt_mark, 'event_invite_answered' )
+		'and the answer to one goes back to the organizer who was waiting on it',
+		array( (string) $ax_nt_host->get_uri() ) === ax_nt_recipients(
+			ax_nt_intents( (string) $ax_nt_guest->get_uri(), 'Accept' ),
+			'axismundi-calendar/event-invite-answered'
+		)
 	);
 	// Taking an answer back is its own news: "they have not answered" is not "they said no".
-	$ax_nt_mark = count( $GLOBALS['ax_nt_seen'] );
 	axismundi_cal_event_undo_invite_response( $ax_nt_event, (string) $ax_nt_guest->get_uri() );
 	ax_nt_assert(
 		$ax_nt_results,
-		'as is taking one back, which is a different thing from answering no',
-		array( (string) $ax_nt_host->get_uri() ) === ax_nt_recipients( $ax_nt_mark, 'event_invite_answer_undone' )
+		'as is taking one back, which the resolver tells apart by what was undone',
+		array( (string) $ax_nt_host->get_uri() ) === ax_nt_recipients(
+			ax_nt_intents( (string) $ax_nt_guest->get_uri(), 'Undo' ),
+			'axismundi-calendar/event-invite-answer-undone'
+		)
 	);
 
 	// -- asking, and being answered ---------------------------------------------------------------------
 
 	wp_set_current_user( $ax_nt_host_user );
-	$ax_nt_open   = ax_nt_event( $ax_nt_posts, $ax_nt_host_user, $ax_nt_cal );
-	$ax_nt_asker  = axismundi_actors_get_for_user( ax_nt_user( $ax_nt_users ) );
-	$ax_nt_mark   = count( $GLOBALS['ax_nt_seen'] );
+	$ax_nt_open  = ax_nt_event( $ax_nt_posts, $ax_nt_host_user, $ax_nt_cal );
+	$ax_nt_asker = axismundi_actors_get_for_user( ax_nt_user( $ax_nt_users ) );
 	axismundi_cal_event_join( $ax_nt_open, (string) $ax_nt_asker->get_uri() );
-	// An Event that admits people on arrival produces an arrival, not a request to answer.
+	/*
+	 * One Activity, two different pieces of news, told apart by what the Event did with it -- which is
+	 * why resolution waits for the transition. At record time the row does not exist yet.
+	 */
+	$ax_nt_arrival = ax_nt_intents( (string) $ax_nt_asker->get_uri(), 'Join', axismundi_cal_event_uri( $ax_nt_open ) );
 	ax_nt_assert(
 		$ax_nt_results,
 		'somebody arriving at an open event is news, and not a request the organizer must answer',
-		array( (string) $ax_nt_host->get_uri() ) === ax_nt_recipients( $ax_nt_mark, 'event_joined' )
-			&& array() === ax_nt_recipients( $ax_nt_mark, 'event_join_requested' )
+		array( (string) $ax_nt_host->get_uri() ) === ax_nt_recipients( $ax_nt_arrival, 'axismundi-calendar/event-joined' )
+			&& array() === ax_nt_recipients( $ax_nt_arrival, 'axismundi-calendar/event-join-requested' )
 	);
 	$ax_nt_moderated = ax_nt_event( $ax_nt_posts, $ax_nt_host_user, $ax_nt_cal, array( 'join_mode' => 'restricted' ) );
-	$ax_nt_mark      = count( $GLOBALS['ax_nt_seen'] );
 	axismundi_cal_event_join( $ax_nt_moderated, (string) $ax_nt_asker->get_uri() );
+	ax_nt_assert(
+		$ax_nt_results,
+		'while a request on a moderated one is something the organizer has to answer',
+		array( (string) $ax_nt_host->get_uri() ) === ax_nt_recipients(
+			ax_nt_intents( (string) $ax_nt_asker->get_uri(), 'Join', axismundi_cal_event_uri( $ax_nt_moderated ) ),
+			'axismundi-calendar/event-join-requested'
+		)
+	);
 	axismundi_cal_event_respond_to_join( $ax_nt_moderated, (string) $ax_nt_asker->get_uri(), 'accept' );
 	ax_nt_assert(
 		$ax_nt_results,
-		'while a request reaches the organizer, and their decision reaches the person who asked',
-		array( (string) $ax_nt_host->get_uri() ) === ax_nt_recipients( $ax_nt_mark, 'event_join_requested' )
-			&& array( (string) $ax_nt_asker->get_uri() ) === ax_nt_recipients( $ax_nt_mark, 'event_join_answered' )
+		'and their decision belongs to the person who asked, not to the person who made it',
+		array( (string) $ax_nt_asker->get_uri() ) === ax_nt_recipients(
+			ax_nt_intents( (string) $ax_nt_host->get_uri(), 'Accept' ),
+			'axismundi-calendar/event-join-answered'
+		)
 	);
-
-	// -- nobody hears about their own act -----------------------------------------------------------------
-
-	/*
-	 * A host counting themselves in is the case that catches this. The recipient of a join notice is
-	 * the organizer, and here the organizer and the joiner are the same Actor.
-	 */
-	$ax_nt_mark = count( $GLOBALS['ax_nt_seen'] );
-	axismundi_cal_event_join( $ax_nt_open, (string) $ax_nt_host->get_uri() );
+	// Leaving is the organizer's business: a place opened up.
+	axismundi_cal_event_withdraw_join( $ax_nt_open, (string) $ax_nt_asker->get_uri() );
 	ax_nt_assert(
 		$ax_nt_results,
-		'a host counting themselves in is not told that somebody joined',
-		array() === ax_nt_kinds( $ax_nt_mark )
+		'somebody leaving is told to the organizer, an Undo of a Join being a different thing again',
+		array( (string) $ax_nt_host->get_uri() ) === ax_nt_recipients(
+			ax_nt_intents( (string) $ax_nt_asker->get_uri(), 'Undo' ),
+			'axismundi-calendar/event-join-withdrawn'
+		)
 	);
 
 	// -- what happens to the Event reaches everybody holding it ---------------------------------------------
 
-	$ax_nt_going   = axismundi_actors_get_for_user( ax_nt_user( $ax_nt_users ) );
-	$ax_nt_saidno  = axismundi_actors_get_for_user( ax_nt_user( $ax_nt_users ) );
-	$ax_nt_left    = axismundi_actors_get_for_user( ax_nt_user( $ax_nt_users ) );
-	$ax_nt_ousted  = axismundi_actors_get_for_user( ax_nt_user( $ax_nt_users ) );
-	$ax_nt_party   = ax_nt_event( $ax_nt_posts, $ax_nt_host_user, $ax_nt_cal, array( 'join_mode' => 'restricted' ) );
+	$ax_nt_going  = axismundi_actors_get_for_user( ax_nt_user( $ax_nt_users ) );
+	$ax_nt_saidno = axismundi_actors_get_for_user( ax_nt_user( $ax_nt_users ) );
+	$ax_nt_left   = axismundi_actors_get_for_user( ax_nt_user( $ax_nt_users ) );
+	$ax_nt_ousted = axismundi_actors_get_for_user( ax_nt_user( $ax_nt_users ) );
+	$ax_nt_party  = ax_nt_event( $ax_nt_posts, $ax_nt_host_user, $ax_nt_cal, array( 'join_mode' => 'restricted' ) );
 	foreach ( array( $ax_nt_going, $ax_nt_saidno, $ax_nt_ousted ) as $ax_nt_person ) {
 		axismundi_cal_event_invite( $ax_nt_party, (string) $ax_nt_person->get_uri() );
 	}
@@ -204,26 +208,27 @@ try {
 	axismundi_cal_event_respond_to_invite( $ax_nt_party, (string) $ax_nt_saidno->get_uri(), 'reject' );
 	axismundi_cal_event_respond_to_invite( $ax_nt_party, (string) $ax_nt_ousted->get_uri(), 'accept' );
 	axismundi_cal_event_remove_attendee( $ax_nt_party, (string) $ax_nt_ousted->get_uri() );
-	// This one asked rather than being asked, because leaving is undoing your own request -- an
-	// invitation is answered instead, and a fixture that invited them could not have them leave.
+	// This one asked rather than being asked, because leaving is undoing your own request.
 	axismundi_cal_event_join( $ax_nt_party, (string) $ax_nt_left->get_uri() );
+	axismundi_cal_event_withdraw_join( $ax_nt_party, (string) $ax_nt_left->get_uri() );
 
-	// The removal itself, told to the person it happened to -- the notice that matters most here,
-	// because the Event leaves their calendar and silence would look like a deletion.
 	ax_nt_assert(
 		$ax_nt_results,
-		'being taken off the list is told to the person it happened to',
-		in_array( (string) $ax_nt_ousted->get_uri(), ax_nt_recipients( 0, 'event_removed' ), true )
+		'being taken off the list is told to the person it happened to, the Remove naming them',
+		array( (string) $ax_nt_ousted->get_uri() ) === ax_nt_recipients(
+			ax_nt_intents( (string) $ax_nt_host->get_uri(), 'Remove' ),
+			'axismundi-calendar/event-removed'
+		)
 	);
 
-	axismundi_cal_event_withdraw_join( $ax_nt_party, (string) $ax_nt_left->get_uri() );
-	$ax_nt_mark = count( $GLOBALS['ax_nt_seen'] );
 	axismundi_cal_event_cancel( $ax_nt_party );
-	$ax_nt_told = ax_nt_recipients( $ax_nt_mark, 'event_cancelled' );
+	$ax_nt_told = ax_nt_recipients(
+		ax_nt_intents( (string) $ax_nt_host->get_uri(), 'Update', axismundi_cal_event_uri( $ax_nt_party ) ),
+		'axismundi-calendar/event-cancelled'
+	);
 	/*
 	 * Somebody who declined is still told. They set that evening aside as dealt with, and an Event
-	 * they turned down being called off is precisely the kind of thing they would otherwise discover
-	 * by hearing about it from somebody else.
+	 * they turned down being called off is precisely what they would otherwise hear from somebody else.
 	 */
 	ax_nt_assert(
 		$ax_nt_results,
@@ -232,9 +237,9 @@ try {
 			&& in_array( (string) $ax_nt_saidno->get_uri(), $ax_nt_told, true )
 	);
 	/*
-	 * And nobody whose relationship to the Event is over. Being removed or having left is exactly the
-	 * state that took it off their calendar, so news about it is no longer theirs -- the same rule,
-	 * asked once.
+	 * And nobody whose relationship to it is over. Being removed or having left is exactly the state
+	 * that took it off their calendar, so news about it is no longer theirs -- the same rule, asked
+	 * once, rather than a second list that could disagree with the first.
 	 */
 	ax_nt_assert(
 		$ax_nt_results,
@@ -242,36 +247,36 @@ try {
 		! in_array( (string) $ax_nt_left->get_uri(), $ax_nt_told, true )
 			&& ! in_array( (string) $ax_nt_ousted->get_uri(), $ax_nt_told, true )
 	);
-	ax_nt_assert(
-		$ax_nt_results,
-		'and not the organizer, who is the one who called it off',
-		! in_array( (string) $ax_nt_host->get_uri(), $ax_nt_told, true )
-	);
-	// Putting it back on is news for the same people, and its own kind: they have to know which it is.
-	$ax_nt_mark = count( $GLOBALS['ax_nt_seen'] );
-	axismundi_cal_event_reinstate( $ax_nt_party );
-	ax_nt_assert(
-		$ax_nt_results,
-		'putting it back on reaches the same people, said as its own thing',
-		ax_nt_recipients( $ax_nt_mark, 'event_reinstated' ) === $ax_nt_told
-	);
 
-	// -- and nothing is kept here ---------------------------------------------------------------------------
+	// -- and this plugin keeps none of it ---------------------------------------------------------------------
 
 	/*
-	 * The boundary. A plugin that stored these would own read state, bundling and badges -- and would
-	 * be a second inbox beside the one that is supposed to collect mentions, follows and replies too.
+	 * The boundary. Calendar answers what an Activity meant; where that ends up, who has read it and
+	 * whether it becomes an email are questions for the plugin that owns inboxes -- and a calendar
+	 * notice belongs in the same list as a mention because that is how it looks to the reader.
 	 */
 	ax_nt_assert(
 		$ax_nt_results,
-		'this plugin declares who needs to know and keeps no inbox of its own',
+		'this plugin answers what an Activity meant and keeps no inbox of its own',
 		! function_exists( 'axismundi_cal_notifications_table' )
 			&& ! function_exists( 'axismundi_cal_unread_notices' )
+			&& has_filter( 'axismundi_notification_intents', 'axismundi_cal_resolve_notification_intents' )
 	);
-	// A site with nothing listening still works: the acts happened and the ledger holds them.
+	// Every kind it can answer with is registered, so nothing arrives in an inbox under a name no
+	// settings screen can describe.
 	ax_nt_assert(
 		$ax_nt_results,
-		'and an act still happens when nothing is listening for the notice',
+		'and every kind it can produce is one it declared',
+		11 === count( AXISMUNDI_CAL_NOTICE_KINDS )
+			&& array() === array_diff(
+				array( 'axismundi-calendar/event-invited', 'axismundi-calendar/event-cancelled', 'axismundi-calendar/event-removed' ),
+				array_keys( AXISMUNDI_CAL_NOTICE_KINDS )
+			)
+	);
+	// An act still happens when nothing is listening, which is what makes the dependency one-way.
+	ax_nt_assert(
+		$ax_nt_results,
+		'and an act still happens when nothing is listening for what it meant',
 		'pending' === axismundi_cal_event_invite( $ax_nt_moderated, (string) $ax_nt_going->get_uri() )
 	);
 } finally {

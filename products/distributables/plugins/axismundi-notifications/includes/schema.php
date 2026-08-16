@@ -12,13 +12,19 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_NTF_DB_VERSION        = '2';
+const AXISMUNDI_NTF_DB_VERSION        = '3';
 const AXISMUNDI_NTF_DB_VERSION_OPTION = 'ax_ntf_db_version';
 
 /** @return string Events table name. */
 function axismundi_ntf_events_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_ntf_events';
+}
+
+/** @return string Deliveries table name. */
+function axismundi_ntf_deliveries_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_ntf_deliveries';
 }
 
 /**
@@ -29,8 +35,9 @@ function axismundi_ntf_events_table() : string {
 function axismundi_ntf_install_schema() : bool {
 	global $wpdb;
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-	$charset = $wpdb->get_charset_collate();
-	$events  = axismundi_ntf_events_table();
+	$charset    = $wpdb->get_charset_collate();
+	$events     = axismundi_ntf_events_table();
+	$deliveries = axismundi_ntf_deliveries_table();
 
 	/*
 	 * The dedupe rule is a constraint and not a convention, because everything that produces one of
@@ -81,6 +88,33 @@ function axismundi_ntf_install_schema() : bool {
 			KEY recipient (recipient_actor_id,occurred_at),
 			KEY source_activity_hash (source_activity_hash),
 			KEY grouping_key (grouping_key)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	/*
+	 * One row per person per notification, which is the whole reason read state is not on the event.
+	 * Two people manage a Group; one of them reading must not clear the other's badge.
+	 *
+	 * Written when the event is, for the managers as they stood at that moment. Somebody made a
+	 * manager afterwards gets no rows for what came before, which is deliberate: they can read the
+	 * Actor's history, and they do not inherit a hundred unread notices about months they were not
+	 * there for.
+	 *
+	 * Never the authority on access. A manager who has since been removed may still have rows here,
+	 * and every read re-asks whether they may still see that Actor's inbox -- the rows say what was
+	 * delivered, not what may now be read.
+	 */
+	dbDelta(
+		"CREATE TABLE {$deliveries} (
+			id bigint(20) unsigned NOT NULL auto_increment,
+			notification_id bigint(20) unsigned NOT NULL,
+			local_user_id bigint(20) unsigned NOT NULL,
+			delivered_at datetime NOT NULL,
+			read_at datetime NULL,
+			dismissed_at datetime NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY one_each (notification_id,local_user_id),
+			KEY unread (local_user_id,read_at)
 		) ENGINE=InnoDB {$charset};"
 	);
 

@@ -103,6 +103,12 @@ function axismundi_notification_flush() : int {
 			}
 			$event = axismundi_ntf_record_event( $intent, $activity );
 			if ( ! is_wp_error( $event ) && $event > 0 ) {
+				/*
+				 * Handed out in the same breath, to the managers as they stand now. This is the snapshot:
+				 * somebody made a manager tomorrow will be able to read this, and will not be handed it
+				 * as something unread from before they arrived.
+				 */
+				axismundi_ntf_fan_out( (int) $event );
 				++$recorded;
 			}
 		}

@@ -28,7 +28,10 @@ require_once __DIR__ . '/includes/dependencies.php';
 require_once __DIR__ . '/includes/schema.php';
 require_once __DIR__ . '/includes/registry.php';
 require_once __DIR__ . '/includes/events.php';
+require_once __DIR__ . '/includes/deliveries.php';
 require_once __DIR__ . '/includes/queue.php';
+// The toolbar count is shown on the front end too, so this one is not admin-only.
+require_once __DIR__ . '/includes/admin.php';
 
 /**
  * Activation installs the events table.

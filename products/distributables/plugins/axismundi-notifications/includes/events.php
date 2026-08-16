@@ -87,6 +87,20 @@ function axismundi_ntf_record_event( array $intent, Axismundi_Activity $activity
 	 */
 	$initiator = isset( $intent['initiating_local_user_id'] ) ? (int) $intent['initiating_local_user_id'] : 0;
 
+	/*
+	 * Decided once, here, where the fact is written -- not at read time. A policy that was evaluated
+	 * on every view would answer today's question about yesterday's message, so somebody turning a
+	 * filter on would find their existing inbox rearranging itself behind them.
+	 *
+	 * `drop` writes nothing at all. `filter` writes the same row with the same snapshot and differs
+	 * only in where it is listed, which is what makes a quarantine reviewable rather than a polite
+	 * name for deleting.
+	 */
+	$outcome = axismundi_ntf_acceptance( $recipient_id, $recipient_uri, $actor_uri, (string) $registered['category'] );
+	if ( 'drop' === $outcome ) {
+		return new WP_Error( 'ax_ntf_dropped', __( 'That notification was not wanted.', 'axismundi-notifications' ) );
+	}
+
 	$dedupe = hash( 'sha256', $source . "\n" . $recipient_id . "\n" . $kind );
 	$now    = current_time( 'mysql', true );
 	$row    = array(
@@ -102,7 +116,7 @@ function axismundi_ntf_record_event( array $intent, Axismundi_Activity $activity
 		'dedupe_hash'         => $dedupe,
 		'grouping_key'        => substr( (string) ( $intent['grouping_key'] ?? '' ), 0, 191 ),
 		'snapshot'            => (string) wp_json_encode( (array) ( $intent['snapshot'] ?? array() ) ),
-		'state'               => 'accepted',
+		'state'               => 'filter' === $outcome ? 'filtered' : 'accepted',
 		// The Activity's own time, not this moment. A notification is dated by what happened, so a
 		// redelivered inbox POST an hour later does not move an act into the present.
 		'occurred_at'         => (string) ( $intent['occurred_at'] ?? $now ),

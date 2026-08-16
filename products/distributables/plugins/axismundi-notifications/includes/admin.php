@@ -158,9 +158,58 @@ function axismundi_ntf_render_inbox() : void {
 				</tbody>
 			</table>
 		<?php endif; ?>
+
+		<?php
+		/*
+		 * The half that makes filtering safe to turn on. Somebody with a policy against messages from
+		 * strangers has to be able to find the one legitimate stranger who wrote to them, and a
+		 * quarantine nobody can look through is a polite name for deleting.
+		 */
+		$requests = axismundi_ntf_requests( $user_id, 50 );
+		?>
+		<?php if ( array() !== $requests ) : ?>
+			<h2><?php esc_html_e( 'Held for review', 'axismundi-notifications' ); ?></h2>
+			<p><?php esc_html_e( 'These matched a filter you turned on. Nothing has been deleted.', 'axismundi-notifications' ); ?></p>
+			<table class="widefat striped">
+				<tbody>
+				<?php foreach ( $requests as $request ) : ?>
+					<tr>
+						<td><?php echo esc_html( axismundi_ntf_actor_label( (int) $request['recipient_actor_id'] ) ); ?></td>
+						<td><?php echo esc_html( (string) $request['kind'] ); ?></td>
+						<td><?php echo esc_html( (string) $request['actor_uri'] ); ?></td>
+						<td>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+								<?php wp_nonce_field( 'ax_ntf_accept_' . (int) $request['id'] ); ?>
+								<input type="hidden" name="action" value="ax_ntf_accept">
+								<input type="hidden" name="notification" value="<?php echo esc_attr( (string) $request['id'] ); ?>">
+								<button type="submit" class="button button-small"><?php esc_html_e( 'Accept', 'axismundi-notifications' ); ?></button>
+							</form>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+		<?php endif; ?>
 	</div>
 	<?php
 }
+
+/**
+ * Let a held notice through.
+ *
+ * @return void
+ */
+function axismundi_ntf_handle_accept() : void {
+	$id = isset( $_POST['notification'] ) ? (int) $_POST['notification'] : 0;
+	check_admin_referer( 'ax_ntf_accept_' . $id );
+	$done = axismundi_ntf_accept_request( $id, get_current_user_id() );
+	if ( is_wp_error( $done ) ) {
+		wp_die( esc_html( $done->get_error_message() ), 403 );
+	}
+	wp_safe_redirect( axismundi_ntf_admin_url() );
+	exit;
+}
+add_action( 'admin_post_ax_ntf_accept', 'axismundi_ntf_handle_accept' );
 
 /**
  * Mark one read.

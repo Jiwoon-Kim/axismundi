@@ -107,6 +107,9 @@ function axismundi_notification_flush() : int {
 				 * Handed out in the same breath, to the managers as they stand now. This is the snapshot:
 				 * somebody made a manager tomorrow will be able to read this, and will not be handed it
 				 * as something unread from before they arrived.
+				 *
+				 * Held-for-review notices are not handed out. They exist, they can be looked through, and
+				 * nobody's badge counts them until somebody says they were wanted.
 				 */
 				axismundi_ntf_fan_out( (int) $event );
 				++$recorded;

@@ -12,13 +12,25 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_NTF_DB_VERSION        = '3';
+const AXISMUNDI_NTF_DB_VERSION        = '4';
 const AXISMUNDI_NTF_DB_VERSION_OPTION = 'ax_ntf_db_version';
 
 /** @return string Events table name. */
 function axismundi_ntf_events_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_ntf_events';
+}
+
+/** @return string Acceptance policy table name. */
+function axismundi_ntf_policies_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_ntf_policies';
+}
+
+/** @return string Notification-only mutes table name. */
+function axismundi_ntf_mutes_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_ntf_mutes';
 }
 
 /** @return string Deliveries table name. */
@@ -38,6 +50,8 @@ function axismundi_ntf_install_schema() : bool {
 	$charset    = $wpdb->get_charset_collate();
 	$events     = axismundi_ntf_events_table();
 	$deliveries = axismundi_ntf_deliveries_table();
+	$policies   = axismundi_ntf_policies_table();
+	$mutes      = axismundi_ntf_mutes_table();
 
 	/*
 	 * The dedupe rule is a constraint and not a convention, because everything that produces one of
@@ -115,6 +129,45 @@ function axismundi_ntf_install_schema() : bool {
 			PRIMARY KEY  (id),
 			UNIQUE KEY one_each (notification_id,local_user_id),
 			KEY unread (local_user_id,read_at)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	/*
+	 * What one Actor wants held back for review rather than delivered. Conditions about the sender,
+	 * not about the subject: whether the settings screen offers them per category is a preference
+	 * question and lives in the next slice.
+	 *
+	 * Absent means the defaults, and the defaults are off. Quarantining somebody's first message from
+	 * a stranger by default would make an empty inbox and a full requests list, which is a worse
+	 * failure than the one it prevents on a site nobody is harassing.
+	 */
+	dbDelta(
+		"CREATE TABLE {$policies} (
+			recipient_actor_id bigint(20) unsigned NOT NULL,
+			filter_not_following tinyint(1) unsigned NOT NULL default 0,
+			filter_new_actors tinyint(1) unsigned NOT NULL default 0,
+			filter_automated tinyint(1) unsigned NOT NULL default 0,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (recipient_actor_id)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	/*
+	 * Notification-only mutes, and named that way on purpose. This says "do not notify me about that
+	 * Actor" and nothing else: their posts still appear in a timeline, their replies still exist, a
+	 * search still finds them. A mute that reached those surfaces would be a different relation
+	 * altogether -- a private one between two Actors -- and it would belong to a model that owns it
+	 * rather than to whichever product happened to need it first.
+	 */
+	dbDelta(
+		"CREATE TABLE {$mutes} (
+			id bigint(20) unsigned NOT NULL auto_increment,
+			recipient_actor_id bigint(20) unsigned NOT NULL,
+			muted_actor_uri text NOT NULL,
+			muted_actor_uri_hash char(64) NOT NULL default '',
+			created_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY one_each (recipient_actor_id,muted_actor_uri_hash)
 		) ENGINE=InnoDB {$charset};"
 	);
 

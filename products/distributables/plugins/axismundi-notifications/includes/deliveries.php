@@ -96,6 +96,11 @@ function axismundi_ntf_fan_out( int $notification_id ) : int {
 	if ( ! is_array( $event ) ) {
 		return 0;
 	}
+	if ( 'accepted' !== (string) $event['state'] ) {
+		// Held for review reaches nobody's badge. It is listed among requests, and becomes a delivery
+		// if somebody says it was wanted.
+		return 0;
+	}
 	$initiator = null === $event['initiating_local_user_id'] ? 0 : (int) $event['initiating_local_user_id'];
 	$now       = current_time( 'mysql', true );
 	$written   = 0;
@@ -144,10 +149,12 @@ function axismundi_ntf_inbox( int $user_id, int $limit = 50, bool $unread_only =
 	$events     = axismundi_ntf_events_table();
 	$deliveries = axismundi_ntf_deliveries_table();
 	$in         = implode( ', ', array_fill( 0, count( $identities ), '%d' ) );
+	// Only what was accepted. Held-for-review notices are the same rows, listed by
+	// `axismundi_ntf_requests()` instead -- one table, two questions.
 	$sql        = "SELECT e.*, d.id AS delivery_id, d.read_at, d.dismissed_at
 		 FROM {$events} e
 		 LEFT JOIN {$deliveries} d ON d.notification_id = e.id AND d.local_user_id = %d
-		 WHERE e.recipient_actor_id IN ( {$in} )";
+		 WHERE e.recipient_actor_id IN ( {$in} ) AND e.state = 'accepted'";
 	$params     = array_merge( array( $user_id ), $identities );
 	if ( $unread_only ) {
 		// A row somebody never had delivered is not unread for them; it is history they may read.
@@ -181,6 +188,71 @@ function axismundi_ntf_readable_identities( int $user_id ) : array {
 		$identities[] = (int) $actor->get_identity_id();
 	}
 	return array_values( array_unique( array_filter( $identities ) ) );
+}
+
+/**
+ * What is being held for review.
+ *
+ * The same rows the inbox reads, asked the other question. Somebody with a policy against messages
+ * from strangers has to be able to find the one legitimate stranger who wrote to them, and this is
+ * where they look -- which is the whole difference between filtering and discarding.
+ *
+ * @param int $user_id Reader.
+ * @param int $limit   Maximum rows.
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_ntf_requests( int $user_id, int $limit = 50 ) : array {
+	global $wpdb;
+	if ( $user_id <= 0 || ! axismundi_ntf_ready() ) {
+		return array();
+	}
+	$identities = axismundi_ntf_readable_identities( $user_id );
+	if ( array() === $identities ) {
+		return array();
+	}
+	$in = implode( ', ', array_fill( 0, count( $identities ), '%d' ) );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+	return (array) $wpdb->get_results(
+		$wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name and id list built above.
+			'SELECT * FROM ' . axismundi_ntf_events_table() . " WHERE recipient_actor_id IN ( {$in} ) AND state = 'filtered' ORDER BY occurred_at DESC, id DESC LIMIT %d",
+			array_merge( $identities, array( max( 1, $limit ) ) )
+		),
+		ARRAY_A
+	);
+}
+
+/**
+ * Say a held notice was wanted after all.
+ *
+ * It becomes an ordinary notification from this moment: delivered to whoever runs that Actor now,
+ * and unread for them. Not to whoever ran it when it arrived -- that fan-out never happened, and
+ * inventing it retrospectively would hand somebody a delivery for a period they were not there for.
+ *
+ * @param int $notification_id Event id.
+ * @param int $user_id         The person accepting it.
+ * @return true|WP_Error
+ */
+function axismundi_ntf_accept_request( int $notification_id, int $user_id ) {
+	global $wpdb;
+	if ( ! axismundi_ntf_ready() ) {
+		return new WP_Error( 'ax_ntf_unavailable', __( 'Notifications is not available.', 'axismundi-notifications' ) );
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- primary-key lookup in this plugin's own table.
+	$event = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . axismundi_ntf_events_table() . ' WHERE id = %d', $notification_id ), ARRAY_A );
+	if ( ! is_array( $event ) ) {
+		return new WP_Error( 'ax_ntf_missing', __( 'There is no such notification.', 'axismundi-notifications' ), array( 'status' => 404 ) );
+	}
+	if ( ! axismundi_ntf_can_read_inbox( (int) $event['recipient_actor_id'], $user_id ) ) {
+		return new WP_Error( 'ax_ntf_forbidden', __( 'That inbox is not yours to read.', 'axismundi-notifications' ), array( 'status' => 403 ) );
+	}
+	if ( 'filtered' !== (string) $event['state'] ) {
+		return new WP_Error( 'ax_ntf_not_filtered', __( 'That notification is not being held.', 'axismundi-notifications' ), array( 'status' => 409 ) );
+	}
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+	$wpdb->update( axismundi_ntf_events_table(), array( 'state' => 'accepted' ), array( 'id' => $notification_id ), array( '%s' ), array( '%d' ) );
+	axismundi_ntf_fan_out( $notification_id );
+	return true;
 }
 
 /**

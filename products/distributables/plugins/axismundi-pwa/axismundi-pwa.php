@@ -48,6 +48,10 @@ require_once __DIR__ . '/includes/keys.php';
 require_once __DIR__ . '/includes/sender.php';
 require_once __DIR__ . '/includes/service-worker.php';
 require_once __DIR__ . '/includes/rest.php';
+// Not admin-only. It registers an action another plugin's screen fires and an `admin-post` handler,
+// and gating it on `is_admin()` made both invisible to anything asking outside a browser request --
+// including the audits, which is how this was noticed.
+require_once __DIR__ . '/includes/admin-devices.php';
 
 /** @return void */
 function axismundi_pwa_activate() : void {

@@ -288,6 +288,15 @@ function axismundi_ntf_render_inbox() : void {
 		</form>
 
 		<h2><?php esc_html_e( 'Push', 'axismundi-notifications' ); ?></h2>
+		<?php
+		/*
+		 * Where the browser half goes, rendered by the plugin that owns devices. It belongs on this
+		 * page because a subscription is between one person and one browser -- their own settings, not
+		 * a site-wide screen -- and it is not drawn here because service workers and permissions are
+		 * nothing this plugin should know about.
+		 */
+		do_action( 'axismundi_notification_device_settings' );
+		?>
 		<?php if ( ! axismundi_ntf_push_available() ) : ?>
 			<p>
 				<?php

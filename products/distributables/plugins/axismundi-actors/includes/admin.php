@@ -1021,7 +1021,6 @@ function axismundi_actors_follow_collections_form( Axismundi_Actor $actor ) : vo
 	if ( ! $actor->is_local() ) {
 		return;
 	}
-	?>
 	$current = axismundi_actors_follow_collections_policy( $actor );
 	$choices = array(
 		'public'     => __( 'Show counts and lists', 'axismundi-actors' ),

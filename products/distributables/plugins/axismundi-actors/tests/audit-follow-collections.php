@@ -22,6 +22,7 @@ defined( 'ABSPATH' ) || exit( 1 );
 require_once dirname( __DIR__ ) . '/includes/repository.php';
 require_once dirname( __DIR__ ) . '/includes/routing.php';
 require_once dirname( __DIR__ ) . '/includes/follow-counts.php';
+require_once dirname( __DIR__ ) . '/includes/admin.php';
 
 global $wpdb;
 $ax_fc_results  = array();
@@ -93,6 +94,17 @@ try {
 		throw new RuntimeException( 'fixtures unavailable' );
 	}
 	$ax_fc_previous = $ax_fc_actor->get_follow_collections_visibility();
+
+	ob_start();
+	axismundi_actors_follow_collections_form( $ax_fc_actor );
+	$ax_fc_form = (string) ob_get_clean();
+	ax_fc_assert(
+		$ax_fc_results,
+		'the follow collection form renders all three choices without leaking PHP source',
+		3 === substr_count( $ax_fc_form, 'name="visibility"' )
+			&& ! str_contains( $ax_fc_form, '$choices' )
+			&& ! str_contains( $ax_fc_form, '$current' )
+	);
 
 	// Routability gates the policy: an Actor nobody may view discloses nothing, whatever
 	// its own setting says. The site Actor is `internal`, which makes it the fixture.

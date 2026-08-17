@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.41
+Stable tag: 0.1.0
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, note, fediverse
@@ -46,7 +46,7 @@ later Delete Activity and Tombstone projection.
 
 == Changelog ==
 
-= 0.0.41 =
+= 0.1.0 =
 * Lets the generic sentiment resolver bind local Notes for Dislike as well as
   Like, without changing Note's canonical-object boundary.
 

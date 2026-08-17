@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Notifications
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-notifications
  * Description:       One inbox for everything an Actor has to look at, projected from the Activity ledger by the domains that own each transition.
- * Version:           0.1.0
+ * Version:           0.1.0-beta.1
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -22,7 +22,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_NTF_VERSION = '0.1.0';
+const AXISMUNDI_NTF_VERSION = '0.1.0-beta.1';
 
 require_once __DIR__ . '/includes/dependencies.php';
 require_once __DIR__ . '/includes/schema.php';

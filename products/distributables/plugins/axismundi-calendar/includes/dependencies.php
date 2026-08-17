@@ -21,25 +21,40 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/*
+ * The release this plugin was built against. Two plugins can each be installed and still not be the
+ * same deployment: a site that updates Calendar and not Actors gets a plugin calling seams that were
+ * added after the Actors it has. `function_exists` catches the seams this file names and nothing
+ * else, so the version is the guard against the half-updated site as a whole -- checked once, here,
+ * rather than discovered later as a missing function somewhere in the middle of an Invite.
+ */
+const AXISMUNDI_CAL_ACTORS_MINIMUM     = '0.1.0';
+const AXISMUNDI_CAL_OP_MINIMUM         = '0.1.0';
+const AXISMUNDI_CAL_ACTIVITIES_MINIMUM = '0.1.0';
+
 /**
- * Whether the Actors identity service is present.
+ * Whether the Actors identity service is present and new enough.
  *
- * Detected by the function that is actually called rather than only by the version constant: a
- * constant proves a file loaded, while the function proves the seam this plugin uses exists.
+ * Detected by the function that is actually called as well as by the version: a constant proves a
+ * file loaded, the function proves the seam this plugin uses exists, and the version proves the two
+ * plugins came from the same release.
  *
  * @return bool
  */
 function axismundi_cal_has_actors() : bool {
-	return defined( 'AXISMUNDI_ACTORS_VERSION' ) && function_exists( 'axismundi_actors_get_for_user' );
+	return defined( 'AXISMUNDI_ACTORS_VERSION' )
+		&& version_compare( (string) AXISMUNDI_ACTORS_VERSION, AXISMUNDI_CAL_ACTORS_MINIMUM, '>=' )
+		&& function_exists( 'axismundi_actors_get_for_user' );
 }
 
 /**
- * Whether Object Projections is present.
+ * Whether Object Projections is present and new enough.
  *
  * @return bool
  */
 function axismundi_cal_has_object_projections() : bool {
 	return defined( 'AXISMUNDI_OP_VERSION' )
+		&& version_compare( (string) AXISMUNDI_OP_VERSION, AXISMUNDI_CAL_OP_MINIMUM, '>=' )
 		&& function_exists( 'axismundi_op_register_object_transformer' )
 		&& function_exists( 'axismundi_op_local_author_actor_uri' );
 }
@@ -56,7 +71,9 @@ function axismundi_cal_has_object_projections() : bool {
  * @return bool
  */
 function axismundi_cal_has_activities() : bool {
-	return defined( 'AXISMUNDI_ACTIVITIES_VERSION' ) && function_exists( 'axismundi_act_record_source_activity' );
+	return defined( 'AXISMUNDI_ACTIVITIES_VERSION' )
+		&& version_compare( (string) AXISMUNDI_ACTIVITIES_VERSION, AXISMUNDI_CAL_ACTIVITIES_MINIMUM, '>=' )
+		&& function_exists( 'axismundi_act_record_source_activity' );
 }
 
 /**
@@ -79,12 +96,36 @@ function axismundi_cal_federation_ready() : bool {
 function axismundi_cal_missing_dependencies() : array {
 	$missing = array();
 	if ( ! axismundi_cal_has_actors() ) {
-		$missing[] = __( 'Axismundi Actors', 'axismundi-calendar' );
+		$missing[] = axismundi_cal_dependency_label( __( 'Axismundi Actors', 'axismundi-calendar' ), 'AXISMUNDI_ACTORS_VERSION', AXISMUNDI_CAL_ACTORS_MINIMUM );
 	}
 	if ( ! axismundi_cal_has_object_projections() ) {
-		$missing[] = __( 'Axismundi Object Projections', 'axismundi-calendar' );
+		$missing[] = axismundi_cal_dependency_label( __( 'Axismundi Object Projections', 'axismundi-calendar' ), 'AXISMUNDI_OP_VERSION', AXISMUNDI_CAL_OP_MINIMUM );
 	}
 	return $missing;
+}
+
+/**
+ * Name one unmet dependency the way the person reading it needs to hear it.
+ *
+ * Being told to install a plugin that is sitting right there on the plugins screen, already active,
+ * is worse than being told nothing: it reads as a bug in the notice rather than as a half-updated
+ * site. So a plugin that is present but behind says so, and says which version would do.
+ *
+ * @param string $name     Display name.
+ * @param string $constant Version constant the dependency defines.
+ * @param string $minimum  Version this plugin needs.
+ * @return string
+ */
+function axismundi_cal_dependency_label( string $name, string $constant, string $minimum ) : string {
+	if ( ! defined( $constant ) ) {
+		return $name;
+	}
+	return sprintf(
+		/* translators: 1: plugin name, 2: required version. */
+		__( '%1$s %2$s or newer', 'axismundi-calendar' ),
+		$name,
+		$minimum
+	);
 }
 
 /**

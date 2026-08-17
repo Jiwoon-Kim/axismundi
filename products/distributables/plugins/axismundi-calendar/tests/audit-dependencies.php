@@ -116,6 +116,37 @@ ax_dp_assert(
 ax_dp_assert( $ax_dp_results, 'both can be named at once', str_contains( axismundi_cal_dependency_notice_html( array( 'Axismundi Actors', 'Axismundi Object Projections' ) ), 'Axismundi Object Projections' ) );
 ax_dp_assert( $ax_dp_results, 'and nothing is rendered when nothing is missing', '' === axismundi_cal_dependency_notice_html( array() ) );
 
+/*
+ * The half-updated site. Both plugins installed is not the same as both from the same deployment,
+ * and this is the check that the declared minimums are real -- that they are met here, and that
+ * something older would actually be refused rather than the comparison being decorative.
+ */
+ax_dp_assert(
+	$ax_dp_results,
+	'this deployment meets the minimums it declares for the plugins it depends on',
+	version_compare( (string) AXISMUNDI_ACTORS_VERSION, AXISMUNDI_CAL_ACTORS_MINIMUM, '>=' )
+		&& version_compare( (string) AXISMUNDI_OP_VERSION, AXISMUNDI_CAL_OP_MINIMUM, '>=' )
+		&& version_compare( (string) AXISMUNDI_ACTIVITIES_VERSION, AXISMUNDI_CAL_ACTIVITIES_MINIMUM, '>=' )
+		&& axismundi_cal_has_actors() && axismundi_cal_has_object_projections() && axismundi_cal_has_activities()
+);
+ax_dp_assert(
+	$ax_dp_results,
+	'and a dependency from the release before this one does not satisfy them',
+	version_compare( '0.0.74', AXISMUNDI_CAL_OP_MINIMUM, '<' )
+		&& version_compare( '0.0.47', AXISMUNDI_CAL_ACTIVITIES_MINIMUM, '<' )
+		&& version_compare( '0.0.71', AXISMUNDI_CAL_ACTORS_MINIMUM, '<' )
+);
+/*
+ * And it is named as a version rather than as an absence. Being told to install a plugin that is
+ * active on the same screen reads as a broken notice instead of as a half-updated site.
+ */
+ax_dp_assert(
+	$ax_dp_results,
+	'an installed but outdated dependency is named by the version needed, not as something to go and install',
+	str_contains( axismundi_cal_dependency_label( 'Axismundi Actors', 'AXISMUNDI_ACTORS_VERSION', AXISMUNDI_CAL_ACTORS_MINIMUM ), AXISMUNDI_CAL_ACTORS_MINIMUM )
+		&& 'Axismundi Actors' === axismundi_cal_dependency_label( 'Axismundi Actors', 'AX_NOT_INSTALLED_ANYWHERE', AXISMUNDI_CAL_ACTORS_MINIMUM )
+);
+
 $ax_dp_failures = count( array_filter( $ax_dp_results, static fn( bool $result ) : bool => ! $result ) );
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI fixture output.
 printf( "\n== %d checks, %d failed ==\n", count( $ax_dp_results ), $ax_dp_failures );

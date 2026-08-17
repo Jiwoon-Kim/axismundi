@@ -89,8 +89,17 @@ function axismundi_ntf_actor_label( int $identity_id ) : string {
 function axismundi_ntf_render_inbox() : void {
 	$user_id = get_current_user_id();
 	if ( ! axismundi_ntf_ready() ) {
+		$unmet = axismundi_ntf_unmet_dependencies();
 		echo '<div class="wrap"><h1>' . esc_html__( 'Notifications', 'axismundi-notifications' ) . '</h1><p>'
-			. esc_html__( 'Notifications needs Axismundi Actors and Axismundi Activities.', 'axismundi-notifications' )
+			. esc_html(
+				array() === $unmet
+					? __( 'Notifications is still setting up its storage.', 'axismundi-notifications' )
+					: sprintf(
+						/* translators: %s: comma-separated plugin names. */
+						__( 'Notifications needs %s.', 'axismundi-notifications' ),
+						implode( ', ', $unmet )
+					)
+			)
 			. '</p></div>';
 		return;
 	}

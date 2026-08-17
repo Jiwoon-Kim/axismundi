@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.47
+Stable tag: 0.1.0
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -34,7 +34,7 @@ excluded from public projections.
 
 == Changelog ==
 
-= 0.0.47 =
+= 0.1.0 =
 * Adds Dislike as a first-class ActivityStreams interaction with its own state,
   REST mutation, count, cache lease, and editor/feed controls.
 * Keeps Like and Dislike independent outside communities while letting Forum

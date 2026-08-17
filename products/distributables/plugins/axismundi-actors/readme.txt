@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.70
+Stable tag: 0.1.0
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,11 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.1.0 =
+* Fixes the local Actor Profile form for follower/following disclosure so its
+  choices render normally instead of exposing PHP source and failing to list
+  the available policies.
 
 = 0.0.70 =
 * Publishes a local public Actor as a JSContact Card at `/@handle.jscontact`

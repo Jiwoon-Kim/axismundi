@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.74
+Stable tag: 0.1.0
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -44,7 +44,7 @@ page without persisting the Collection, fetching its item URLs, or downloading b
 
 == Changelog ==
 
-= 0.0.74 =
+= 0.1.0 =
 * Adds the generic Dislike control to bundled Object card and Article templates.
   Forum composes it with Like as a community vote when Group context applies.
 

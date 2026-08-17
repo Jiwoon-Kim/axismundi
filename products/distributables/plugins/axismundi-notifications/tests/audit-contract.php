@@ -275,6 +275,26 @@ try {
 		axismundi_ntf_has_activities() && axismundi_ntf_has_actors()
 			&& ! function_exists( 'axismundi_ntf_record_activity' )
 	);
+	/*
+	 * And needs them from the same deployment. Both being installed is not the same as both being
+	 * current: a site that updates this plugin and not the ledger would resolve notifications against
+	 * seams that do not exist yet, and would find out somewhere in the middle rather than here.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'this deployment meets the minimums it declares, and the release before it would not',
+		version_compare( (string) AXISMUNDI_ACTORS_VERSION, AXISMUNDI_NTF_ACTORS_MINIMUM, '>=' )
+			&& version_compare( (string) AXISMUNDI_ACTIVITIES_VERSION, AXISMUNDI_NTF_ACTIVITIES_MINIMUM, '>=' )
+			&& version_compare( '0.0.71', AXISMUNDI_NTF_ACTORS_MINIMUM, '<' )
+			&& version_compare( '0.0.47', AXISMUNDI_NTF_ACTIVITIES_MINIMUM, '<' )
+	);
+	// Nothing is unmet here, and what is unmet elsewhere is said out loud rather than left as silence.
+	ax_ct_assert(
+		$ax_ct_results,
+		'nothing is unmet on this site, and the plugins screen is told when something is',
+		array() === axismundi_ntf_unmet_dependencies()
+			&& has_action( 'admin_notices', 'axismundi_ntf_dependency_notice' )
+	);
 } finally {
 	global $wpdb;
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.

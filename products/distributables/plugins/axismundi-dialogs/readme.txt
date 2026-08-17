@@ -4,7 +4,7 @@ Tags: sheet, drawer, dialog, offcanvas, block
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.2.4
+Stable tag: 0.3.0
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -63,7 +63,7 @@ part from the Site Editor's Uncategorized area.
 
 == Changelog ==
 
-= 0.2.4 =
+= 0.3.0 =
 * Adds the Object Media Dialog block: one reusable per-page native dialog for
   viewing an object's attached media at full size.
 * Removes reference-implementation class names from the markup this plugin

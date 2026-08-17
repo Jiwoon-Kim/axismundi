@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Calendar
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi
  * Description:       Calendar and event infrastructure: schedules, occurrences, iCalendar subscriptions, and FEP-8a8e federation.
- * Version:           0.0.1
+ * Version:           0.1.0-beta.1
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            Ji-woon Kim
@@ -40,7 +40,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CAL_VERSION = '0.0.1';
+const AXISMUNDI_CAL_VERSION = '0.1.0-beta.1';
 
 /*
  * The Event post type keeps its `ax_event` key and its `/event/{slug}` permalink through the move to

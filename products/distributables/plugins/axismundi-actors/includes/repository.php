@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '19.0';
+const AXISMUNDI_ACTORS_DB_VERSION = '20.0';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -211,14 +211,14 @@ function axismundi_actors_install() : void {
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			identity_id bigint(20) unsigned NOT NULL,
 			language_tag varchar(35) NOT NULL,
-			family_name varchar(191) NOT NULL default '',
-			given_name varchar(191) NOT NULL default '',
-			additional_name varchar(191) NOT NULL default '',
+			first_name varchar(191) NOT NULL default '',
+			middle_name varchar(191) NOT NULL default '',
+			last_name varchar(191) NOT NULL default '',
 			honorific_prefix varchar(64) NOT NULL default '',
 			honorific_suffix varchar(64) NOT NULL default '',
-			phonetic_family varchar(191) NOT NULL default '',
-			phonetic_given varchar(191) NOT NULL default '',
-			phonetic_additional varchar(191) NOT NULL default '',
+			phonetic_first varchar(191) NOT NULL default '',
+			phonetic_middle varchar(191) NOT NULL default '',
+			phonetic_last varchar(191) NOT NULL default '',
 			phonetic_system varchar(16) NOT NULL default '',
 			phonetic_script varchar(8) NOT NULL default '',
 			display_order varchar(16) NOT NULL default 'given-family',
@@ -228,6 +228,31 @@ function axismundi_actors_install() : void {
 			UNIQUE KEY identity_language (identity_id, language_tag)
 		) ENGINE=InnoDB {$charset};"
 	);
+
+	/*
+	 * DB v20 uses WordPress-shaped first/last names plus the Actor-only middle name. dbDelta adds the
+	 * new columns but deliberately does not remove old ones, so copy each value before dropping the
+	 * obsolete vocabulary. A half-complete migration keeps the version unstamped and is retried.
+	 */
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time custom-table migration.
+	$person_name_columns_before = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$person_names}" );
+	$person_name_renames        = array(
+		'given_name'          => 'first_name',
+		'additional_name'     => 'middle_name',
+		'family_name'         => 'last_name',
+		'phonetic_given'      => 'phonetic_first',
+		'phonetic_additional' => 'phonetic_middle',
+		'phonetic_family'     => 'phonetic_last',
+	);
+	foreach ( $person_name_renames as $old_column => $new_column ) {
+		if ( ! in_array( $old_column, $person_name_columns_before, true ) || ! in_array( $new_column, $person_name_columns_before, true ) ) {
+			continue;
+		}
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed internal identifiers only.
+		$wpdb->query( "UPDATE {$person_names} SET {$new_column} = {$old_column} WHERE {$new_column} = ''" );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed internal identifiers only.
+		$wpdb->query( "ALTER TABLE {$person_names} DROP COLUMN {$old_column}" );
+	}
 
 	/*
 	 * The other names a person goes by, which are not the same question as the same name written in
@@ -643,7 +668,7 @@ function axismundi_actors_install() : void {
 	$alternate_name_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$alternate_names} WHERE Key_name = 'identity_kind_position'" );
 	/*
 	 * The old Profile languages screen stored one Person name as localized text. Promote that historical
-	 * value once into `given_name`: rendering must not write data, and repeating this migration would
+	 * value once into `first_name`: rendering must not write data, and repeating this migration would
 	 * resurrect a structured name a person deliberately removed later.
 	 */
 	if ( '1' !== (string) get_option( 'ax_actors_person_name_text_migrated', '' ) && function_exists( 'axismundi_actors_migrate_person_name_texts' ) ) {
@@ -687,15 +712,19 @@ function axismundi_actors_install() : void {
 		&& $transactional_engines
 		&& $migrated
 		&& $relations_migrated
-		&& in_array( 'phonetic_family', $person_name_columns, true )
-		&& in_array( 'phonetic_given', $person_name_columns, true )
-		&& in_array( 'phonetic_additional', $person_name_columns, true )
+		&& in_array( 'first_name', $person_name_columns, true )
+		&& in_array( 'middle_name', $person_name_columns, true )
+		&& in_array( 'last_name', $person_name_columns, true )
+		&& in_array( 'phonetic_first', $person_name_columns, true )
+		&& in_array( 'phonetic_middle', $person_name_columns, true )
+		&& in_array( 'phonetic_last', $person_name_columns, true )
 		&& in_array( 'phonetic_system', $person_name_columns, true )
 		&& in_array( 'phonetic_script', $person_name_columns, true )
 		&& in_array( 'person_name_edited_at', $final_actor_columns, true )
 		&& in_array( 'name_kind', $alternate_name_columns, true )
 		&& in_array( 'value', $alternate_name_columns, true )
 		&& ! empty( $alternate_name_indexes )
+		&& array() === array_intersect( array_keys( $person_name_renames ), $person_name_columns )
 	) {
 		update_option( 'ax_actors_db_version', AXISMUNDI_ACTORS_DB_VERSION, false );
 	}

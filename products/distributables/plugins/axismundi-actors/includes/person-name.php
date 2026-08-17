@@ -66,13 +66,13 @@ function axismundi_actors_nickname_display_allowed() : bool {
 }
 
 /** The parts, in the order vCard's `N` lists them. */
-const AXISMUNDI_ACTORS_NAME_PARTS = array( 'family_name', 'given_name', 'additional_name', 'honorific_prefix', 'honorific_suffix' );
+const AXISMUNDI_ACTORS_NAME_PARTS = array( 'last_name', 'first_name', 'middle_name', 'honorific_prefix', 'honorific_suffix' );
 
 /** The parts a pronunciation can be given for, keyed by the part they are said for. */
 const AXISMUNDI_ACTORS_NAME_PHONETIC_PARTS = array(
-	'phonetic_family'     => 'family_name',
-	'phonetic_given'      => 'given_name',
-	'phonetic_additional' => 'additional_name',
+	'phonetic_last'     => 'last_name',
+	'phonetic_first'      => 'first_name',
+	'phonetic_middle' => 'middle_name',
 );
 
 /**
@@ -183,7 +183,7 @@ function axismundi_actors_set_person_name( int $identity_id, string $language, a
 }
 
 /**
- * Promote the legacy localized Person `name` text into `given_name` once.
+ * Promote the legacy localized Person `name` text into `first_name` once.
  *
  * The old editor had only one name box. It is more honest to retain that exact value as a given name
  * than to guess a surname split. This runs once during the DB v19 upgrade; later edits and deletions
@@ -211,7 +211,7 @@ function axismundi_actors_migrate_person_name_texts() : void {
 		if ( isset( $existing[ $language ] ) ) {
 			continue;
 		}
-		$result = axismundi_actors_set_person_name( $identity_id, $language, array( 'given_name' => (string) $row['value'] ) );
+		$result = axismundi_actors_set_person_name( $identity_id, $language, array( 'first_name' => (string) $row['value'] ) );
 		if ( is_wp_error( $result ) ) {
 			return;
 		}
@@ -397,9 +397,9 @@ function axismundi_actors_assemble_person_name( array $row ) : string {
 	if ( '' !== $written || 'custom' === $order ) {
 		return $written;
 	}
-	$family = trim( (string) ( $row['family_name'] ?? '' ) );
-	$given  = trim( (string) ( $row['given_name'] ?? '' ) );
-	$middle = trim( (string) ( $row['additional_name'] ?? '' ) );
+	$family = trim( (string) ( $row['last_name'] ?? '' ) );
+	$given  = trim( (string) ( $row['first_name'] ?? '' ) );
+	$middle = trim( (string) ( $row['middle_name'] ?? '' ) );
 	$parts  = 'family-given' === $order
 		? array( $family, $given, $middle )
 		: array( $given, $middle, $family );
@@ -516,7 +516,7 @@ function axismundi_actors_seed_person_name_from_user( int $identity_id, string $
 	return axismundi_actors_set_person_name(
 		$identity_id,
 		'' !== $language ? $language : (string) $actor->get_default_language(),
-		array( 'given_name' => $given, 'family_name' => $family, 'display_order' => 'given-family' )
+		array( 'first_name' => $given, 'last_name' => $family, 'display_order' => 'given-family' )
 	);
 }
 

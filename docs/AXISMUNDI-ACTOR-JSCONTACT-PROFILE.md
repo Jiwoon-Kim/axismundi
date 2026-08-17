@@ -74,9 +74,9 @@ Rules:
 ```
 Person Actor
 ├─ name parts (per language)
-│  ├─ family_name
-│  ├─ given_name
-│  ├─ additional_name
+│  ├─ last_name
+│  ├─ first_name
+│  ├─ middle_name
 │  ├─ honorific_prefix
 │  └─ honorific_suffix
 │

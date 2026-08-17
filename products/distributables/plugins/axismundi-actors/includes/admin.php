@@ -958,9 +958,9 @@ function axismundi_actors_text_form( Axismundi_Actor $actor ) : void {
 				<td>
 					<?php if ( 'Person' === $actor->get_type() ) : ?>
 						<div style="max-width:26em">
-							<p><label for="ax-actor-given" style="display:block"><?php esc_html_e( 'Given name', 'axismundi-actors' ); ?></label><input id="ax-actor-given" name="given_name" value="<?php echo esc_attr( (string) ( $person_name['given_name'] ?? '' ) ); ?>" class="regular-text"></p>
-							<p><label for="ax-actor-additional" style="display:block"><?php esc_html_e( 'Middle name', 'axismundi-actors' ); ?></label><input id="ax-actor-additional" name="additional_name" value="<?php echo esc_attr( (string) ( $person_name['additional_name'] ?? '' ) ); ?>" class="regular-text"></p>
-							<p><label for="ax-actor-family" style="display:block"><?php esc_html_e( 'Family name', 'axismundi-actors' ); ?></label><input id="ax-actor-family" name="family_name" value="<?php echo esc_attr( (string) ( $person_name['family_name'] ?? '' ) ); ?>" class="regular-text"></p>
+							<p><label for="ax-actor-given" style="display:block"><?php esc_html_e( 'Given name', 'axismundi-actors' ); ?></label><input id="ax-actor-given" name="first_name" value="<?php echo esc_attr( (string) ( $person_name['first_name'] ?? '' ) ); ?>" class="regular-text"></p>
+							<p><label for="ax-actor-additional" style="display:block"><?php esc_html_e( 'Middle name', 'axismundi-actors' ); ?></label><input id="ax-actor-additional" name="middle_name" value="<?php echo esc_attr( (string) ( $person_name['middle_name'] ?? '' ) ); ?>" class="regular-text"></p>
+							<p><label for="ax-actor-family" style="display:block"><?php esc_html_e( 'Family name', 'axismundi-actors' ); ?></label><input id="ax-actor-family" name="last_name" value="<?php echo esc_attr( (string) ( $person_name['last_name'] ?? '' ) ); ?>" class="regular-text"></p>
 						</div>
 					<?php else : ?>
 						<input id="ax-actor-name" name="name" value="<?php echo esc_attr( $map[ $language ]['name'] ?? '' ); ?>" class="regular-text">
@@ -1305,7 +1305,7 @@ function axismundi_actors_handle_set_texts() : void {
 	$values   = array( 'summary' => isset( $_POST['summary'] ) ? wp_kses_post( wp_unslash( $_POST['summary'] ) ) : '' );
 	if ( 'Person' === $actor->get_type() ) {
 		$parts = array();
-		foreach ( array( 'given_name', 'additional_name', 'family_name' ) as $field ) {
+		foreach ( array( 'first_name', 'middle_name', 'last_name' ) as $field ) {
 			if ( isset( $_POST[ $field ] ) ) {
 				$parts[ $field ] = sanitize_text_field( wp_unslash( $_POST[ $field ] ) );
 			}

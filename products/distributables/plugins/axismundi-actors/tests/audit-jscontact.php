@@ -68,8 +68,8 @@ try {
 
 	// -- a name in parts, in the order it is read -------------------------------------------------------
 
-	axismundi_actors_set_person_name( $ax_jc_id, 'ko-KR', array( 'family_name' => '김', 'given_name' => '지운', 'display_order' => 'family-given' ) );
-	axismundi_actors_set_person_name( $ax_jc_id, 'en', array( 'family_name' => 'Kim', 'given_name' => 'Jiwoon', 'display_order' => 'given-family' ) );
+	axismundi_actors_set_person_name( $ax_jc_id, 'ko-KR', array( 'last_name' => '김', 'first_name' => '지운', 'display_order' => 'family-given' ) );
+	axismundi_actors_set_person_name( $ax_jc_id, 'en', array( 'last_name' => 'Kim', 'first_name' => 'Jiwoon', 'display_order' => 'given-family' ) );
 	$ax_jc_card = axismundi_actors_jscontact_card( axismundi_actors_get_by_identity( $ax_jc_id ) );
 	/*
 	 * Order belongs to the person, not to the language: the same components read one way in Korean and
@@ -117,7 +117,7 @@ try {
 	ax_jc_assert(
 		$ax_jc_results,
 		'a Group cannot be given a given name',
-		is_wp_error( axismundi_actors_set_person_name( $ax_jc_id + 100000, 'en', array( 'given_name' => 'Nope' ) ) )
+		is_wp_error( axismundi_actors_set_person_name( $ax_jc_id + 100000, 'en', array( 'first_name' => 'Nope' ) ) )
 	);
 
 	// -- what is not ours to mint ---------------------------------------------------------------------------

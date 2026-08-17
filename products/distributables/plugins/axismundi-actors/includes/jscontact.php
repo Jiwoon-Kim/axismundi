@@ -86,14 +86,14 @@ function axismundi_actors_jscontact_uid( Axismundi_Actor $actor ) : string {
 function axismundi_actors_jscontact_name( array $row ) : ?array {
 	$map = array(
 		'honorific_prefix' => 'title',
-		'given_name'       => 'given',
-		'additional_name'  => 'given2',
-		'family_name'      => 'surname',
+		'first_name'       => 'given',
+		'middle_name'  => 'given2',
+		'last_name'      => 'surname',
 		'honorific_suffix' => 'credential',
 	);
 	$order = 'family-given' === (string) ( $row['display_order'] ?? '' )
-		? array( 'honorific_prefix', 'family_name', 'given_name', 'additional_name', 'honorific_suffix' )
-		: array( 'honorific_prefix', 'given_name', 'additional_name', 'family_name', 'honorific_suffix' );
+		? array( 'honorific_prefix', 'last_name', 'first_name', 'middle_name', 'honorific_suffix' )
+		: array( 'honorific_prefix', 'first_name', 'middle_name', 'last_name', 'honorific_suffix' );
 
 	$components = array();
 	foreach ( $order as $part ) {

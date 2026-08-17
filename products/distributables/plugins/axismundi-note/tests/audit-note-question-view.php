@@ -78,7 +78,12 @@ try {
 			&& '2030-06-01T00:00:00+00:00' === ( $q_object['endTime'] ?? '' )
 			&& ! isset( $q_object['closed'], $q_object['anyOf'] )
 	);
-	ax_nqv_assert( $ax_nqv_results, 'the ordinary Note transform members (contentMap, attributedTo, audience) are unaffected by the Question branch', 'Pick one.' === trim( wp_strip_all_tags( (string) ( array_values( (array) ( $q_object['contentMap'] ?? array() ) )[0] ?? '' ) ) ) && ! isset( $q_object['content'] ) && '' !== $q_object['attributedTo'] && in_array( 'https://www.w3.org/ns/activitystreams#Public', (array) $q_object['to'], true ) );
+	/*
+	 * `content` beside `contentMap` is the interoperable baseline, not a leak: peers including Misskey
+	 * do not read a contentMap-only Note, and the map adds language precision next to it. What this
+	 * pins is that the Question branch changes none of it, and that the two say the same thing.
+	 */
+	ax_nqv_assert( $ax_nqv_results, 'the ordinary Note transform members (content, contentMap, attributedTo, audience) are unaffected by the Question branch', 'Pick one.' === trim( wp_strip_all_tags( (string) ( array_values( (array) ( $q_object['contentMap'] ?? array() ) )[0] ?? '' ) ) ) && (string) $q_object['content'] === (string) array_values( (array) $q_object['contentMap'] )[0] && '' !== $q_object['attributedTo'] && in_array( 'https://www.w3.org/ns/activitystreams#Public', (array) $q_object['to'], true ) );
 
 	$q_model = axismundi_note_object_view_model( $q_source );
 	ax_nqv_assert( $ax_nqv_results, 'the HTML view model carries the same poll shape (mode, options, zero tallies, ISO closes_at)', is_array( $q_model ) && 'Question' === $q_model['type'] && is_array( $q_model['poll'] ) && 'oneOf' === $q_model['poll']['mode'] && array( 'Cats', 'Dogs' ) === array_column( $q_model['poll']['options'], 'name' ) && 0 === $q_model['poll']['voters_count'] && '2030-06-01T00:00:00+00:00' === $q_model['poll']['closes_at'] && '' === $q_model['poll']['closed_at'] );

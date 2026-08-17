@@ -25,8 +25,17 @@ function ax_na_assert( array &$results, string $label, bool $condition ) : void 
 
 try {
 	update_option( AXISMUNDI_MEDIA_MODE_OPTION, 'independent' );
-	$uid = (int) wp_insert_user( array( 'user_login' => 'ax_na_' . strtolower( wp_generate_password( 8, false, false ) ), 'user_pass' => wp_generate_password(), 'role' => 'administrator' ) );
+	/*
+	 * A federated author, not merely an administrator. Editing a Note is authored by an Actor rather
+	 * than granted by a site role, so a fixture user without a published Actor is refused at the REST
+	 * boundary -- correctly, and with a 403 that looks nothing like an attachment problem.
+	 */
+	$ax_na_login = 'axna' . strtolower( wp_generate_password( 8, false, false ) );
+	$uid = (int) wp_insert_user( array( 'user_login' => $ax_na_login, 'user_email' => $ax_na_login . '@example.test', 'user_pass' => wp_generate_password(), 'role' => 'administrator' ) );
 	$ax_na_user_ids[] = $uid;
+	$ax_na_actor = axismundi_actors_ensure_for_user( $uid );
+	axismundi_actors_register_handle( $ax_na_actor->get_identity_id(), $ax_na_login );
+	axismundi_actors_set_status( $ax_na_actor->get_identity_id(), 'public' );
 	wp_set_current_user( $uid );
 	add_filter( 'axismundi_op_media_attachment_actor_uri', $ax_na_actor_filter );
 	$post_id = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_NOTE_POST_TYPE, 'post_status' => 'draft', 'post_author' => $uid, 'post_content' => '<p>Attachment fixture.</p>' ) );

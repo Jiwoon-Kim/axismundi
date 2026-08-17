@@ -130,9 +130,9 @@ function axismundi_actors_set_person_name( int $identity_id, string $language, a
 	$row['phonetic_system'] = strtolower( sanitize_text_field( (string) ( $parts['phonetic_system'] ?? $existing['phonetic_system'] ?? '' ) ) );
 	// Titlecased on the way in, so `hira` and `Hira` are the same subtag rather than two.
 	$row['phonetic_script'] = ucfirst( strtolower( sanitize_text_field( (string) ( $parts['phonetic_script'] ?? $existing['phonetic_script'] ?? '' ) ) ) );
-	$phonetics = axismundi_actors_validate_name_phonetics( $row );
-	if ( is_wp_error( $phonetics ) ) {
-		return $phonetics;
+	$row = axismundi_actors_normalize_name_phonetics( $row );
+	if ( is_wp_error( $row ) ) {
+		return $row;
 	}
 	// Nothing written is not a name in one language; it is the absence of one, and an empty row would
 	// otherwise sit in the way of the fallback.
@@ -146,20 +146,34 @@ function axismundi_actors_set_person_name( int $identity_id, string $language, a
 }
 
 /**
- * Refuse a pronunciation nobody can read.
+ * Settle the pronunciation of a row that is about to be written.
+ *
+ * Judged on the merged row rather than on what the caller sent, because a partial update is the
+ * normal case: one screen sends the components, another sends the notation, and neither can see
+ * what the other left behind. Asking the question of the row that will actually exist is the only
+ * way the answer stays true.
+ *
+ * Three outcomes, and only one of them is a refusal:
+ *
+ *   values, with a notation or script      kept
+ *   values, with neither                   refused -- unreadable
+ *   no values, notation or script left     cleared, not refused
+ *
+ * The last is why this normalizes rather than only validating. Somebody removing the final phonetic
+ * component has removed the pronunciation; leaving `phoneticSystem: ipa` behind would be a setting
+ * describing nothing, and the kind that survives long enough to be attached to the next value
+ * somebody types.
  *
  * A phonetic value is a claim about sound, and `jee-WOON` is not IPA. Without a notation it cannot
- * be said correctly by anybody who did not write it, and serving it in a contact document beside a
- * field named `phoneticSystem` that is absent is worse than not serving it at all -- a reader
- * assumes a default and pronounces somebody's name wrongly on the strength of it.
- *
- * A script alone is accepted: saying the value is written in Hiragana is a real answer even when
- * the notation has no registered name. What is refused is neither.
+ * be said correctly by anybody who did not write it, and serving it beside an absent
+ * `phoneticSystem` is worse than not serving it -- a reader assumes a default and pronounces
+ * somebody's name wrongly on the strength of it. A script alone is accepted: saying the value is
+ * written in Hiragana is a real answer even when the notation has no registered name.
  *
  * @param array<string,string> $row Row about to be written.
- * @return true|WP_Error
+ * @return array<string,string>|WP_Error The row, with the pronunciation made coherent.
  */
-function axismundi_actors_validate_name_phonetics( array $row ) {
+function axismundi_actors_normalize_name_phonetics( array $row ) {
 	$written = '';
 	foreach ( array_keys( AXISMUNDI_ACTORS_NAME_PHONETIC_PARTS ) as $phonetic ) {
 		$written .= trim( (string) ( $row[ $phonetic ] ?? '' ) );
@@ -193,7 +207,12 @@ function axismundi_actors_validate_name_phonetics( array $row ) {
 			array( 'status' => 400 )
 		);
 	}
-	return true;
+	if ( '' === $written ) {
+		// Nothing left to pronounce, so nothing left to say how it is pronounced.
+		$row['phonetic_system'] = '';
+		$row['phonetic_script'] = '';
+	}
+	return $row;
 }
 
 /**

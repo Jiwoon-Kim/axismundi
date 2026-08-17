@@ -121,6 +121,8 @@ from all three documents forever.
 | other-name kinds | — | **nothing in v1** | **nothing in v1** |
 | profile fields | `attachment[]` PropertyValue + `rel=me` | `links` (label + URI only) | `URL` |
 | canonical Actor URI | `id` | `onlineServices` | `SOCIALPROFILE` (RFC 9554) |
+| profile summary | `summary` (safe HTML) | `notes` (plain text) | `NOTE` (plain text) |
+| preferred contact languages *(step 3)* | — | `preferredLanguages` | `LANG` |
 
 ### Language is `ALTID` plus `LANGUAGE`, not four names
 
@@ -142,6 +144,33 @@ Note the component order in `N` is fixed by the format (family; given; additiona
 suffix) regardless of how the name is *read*. Reading order lives in `FN` and, for JSContact, in
 `isOrdered`. So `display_order` must never be allowed to permute the `N` value — that is a way
 to produce a vCard that every address book will read backwards.
+
+### The profile summary is a note; a note about somebody is not
+
+The Actor's summary is a public self-description, and that is what JSContact `notes` and vCard
+`NOTE` are for. One source — the localized Actor summary — and three renderings: safe HTML in
+ActivityStreams, normalized plain text in both contact formats, with paragraph structure kept and
+markup dropped. Per language it is `NOTE;ALTID=…;LANGUAGE=…` in vCard and `localizations` in
+JSContact, exactly as the name is.
+
+**The boundary to hold:** if an Address Book is ever built, "what I wrote about this contact" is a
+viewer-private fact. It must not share this store and must not share this note's id. Two different
+people's writing under one identifier, one of them published, is a leak that looks like a merge.
+
+### Three meanings of "language", kept apart
+
+| Question | Field | JSContact | vCard |
+|---|---|---|---|
+| What language is this profile written in? | Actor default language | `language` | `LANGUAGE=` on the properties |
+| How is this same fact written in Korean? | localized name / summary | `localizations` | `ALTID` + `LANGUAGE` |
+| What language should somebody contact them in? | preferred languages | `preferredLanguages` | `LANG` |
+
+The first two are about the document. The third is a contact policy and belongs with the typed
+contact facts in step 3, not with the name.
+
+**Consequence for serializers:** choosing which translation to put in `NOTE` or `FN` reads the
+Actor's default language and `localizations` — never `preferredLanguages`. Someone who prefers
+being *contacted* in English has not asked for their Korean name to be replaced.
 
 ### `UID` — one identifier, both documents
 
@@ -211,7 +240,15 @@ Person Actors resolve their name through an empty table.
 - Korean and English forms of one name come out as one Card with `localizations`, not two Cards.
 - `isOrdered` is true and the components are in the stored order — a consumer must not reassemble
   a Korean name as though it were English.
-- A phonetic value without a system or script is refused at write time.
+- A phonetic value without a system or script is refused at write time, judged on the merged row
+  rather than on what one screen happened to send.
+- Removing the last phonetic value removes its notation with it; a notation with nothing to
+  pronounce is never stored. Clearing the notation out from under a stored pronunciation is
+  refused rather than normalized away, since normalizing there would delete what somebody wrote.
+- A translation is chosen by the Actor's default language and `localizations`, never by
+  `preferredLanguages`.
+- The published profile summary and any future private note about a contact share neither a store
+  nor a note id.
 - `nicknames` carries nicknames only; former, birth and maiden names appear nowhere in the Card.
 - A `rel=me` link appears in `links` with no verification claim attached.
 - The ActivityStreams `name` and the JSContact `name.full` agree, for every language, for the

@@ -128,6 +128,43 @@ try {
 			&& '김지운' === axismundi_actors_assemble_person_name( axismundi_actors_person_names( $ax_pn_id )['ko-KR'] )
 	);
 
+	/*
+	 * And the pronunciation is judged on the row that will exist, not on what the caller sent. A
+	 * partial update is the normal case -- one screen sends the components, another the notation -- so
+	 * removing the last value must take the notation with it rather than leaving a setting that
+	 * describes nothing and waits to be attached to whatever somebody types next.
+	 */
+	axismundi_actors_set_person_name( $ax_pn_id, 'en', array( 'phonetic_family' => '' ) );
+	$ax_pn_orphan = axismundi_actors_person_names( $ax_pn_id )['en'];
+	ax_pn_assert(
+		$ax_pn_results,
+		'removing the last pronunciation takes its notation with it, leaving no setting describing nothing',
+		'' === (string) $ax_pn_orphan['phonetic_family']
+			&& '' === (string) $ax_pn_orphan['phonetic_system']
+			&& '' === (string) $ax_pn_orphan['phonetic_script']
+	);
+	// A notation with nothing to pronounce is the same emptiness arriving from the other direction.
+	axismundi_actors_set_person_name( $ax_pn_id, 'en', array( 'phonetic_system' => 'ipa' ) );
+	ax_pn_assert(
+		$ax_pn_results,
+		'and a notation offered with no pronunciation to go with it is not stored either',
+		'' === (string) axismundi_actors_person_names( $ax_pn_id )['en']['phonetic_system']
+	);
+	/*
+	 * The refusal is judged the same way. The values are already stored; clearing only the notation
+	 * would leave a pronunciation nobody can read, so it is refused rather than normalized away --
+	 * normalizing here would silently delete what somebody wrote.
+	 */
+	axismundi_actors_set_person_name( $ax_pn_id, 'en', array( 'phonetic_given' => 'ˈdʒiːwuːn', 'phonetic_system' => 'ipa' ) );
+	$ax_pn_stranded = axismundi_actors_set_person_name( $ax_pn_id, 'en', array( 'phonetic_system' => '', 'phonetic_script' => '' ) );
+	ax_pn_assert(
+		$ax_pn_results,
+		'while clearing the notation out from under a stored pronunciation is refused, not quietly obeyed',
+		is_wp_error( $ax_pn_stranded )
+			&& 'ax_actors_name_phonetic_unreadable' === $ax_pn_stranded->get_error_code()
+			&& 'ipa' === (string) axismundi_actors_person_names( $ax_pn_id )['en']['phonetic_system']
+	);
+
 	// -- a script is a subtag, not a word ---------------------------------------------------------------------
 
 	ax_pn_assert(
@@ -180,7 +217,9 @@ try {
 	ax_pn_assert(
 		$ax_pn_results,
 		'running the migration again leaves the stored name exactly as it was',
-		'KIM' === (string) ( axismundi_actors_person_names( $ax_pn_id )['en']['phonetic_family'] ?? '' )
+		'ˈdʒiːwuːn' === (string) ( axismundi_actors_person_names( $ax_pn_id )['en']['phonetic_given'] ?? '' )
+			&& 'ipa' === (string) ( axismundi_actors_person_names( $ax_pn_id )['en']['phonetic_system'] ?? '' )
+			&& 'Jiwoon Kim' === axismundi_actors_assemble_person_name( axismundi_actors_person_names( $ax_pn_id )['en'] )
 			&& AXISMUNDI_ACTORS_DB_VERSION === (string) get_option( 'ax_actors_db_version', '' )
 	);
 

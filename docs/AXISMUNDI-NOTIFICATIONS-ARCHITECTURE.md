@@ -331,16 +331,65 @@ preference          user × Actor context × category × transport
   notifications for a named Actor — "get calendar invitations and mentions for
   @busan-wordpress" — which is also the moment the preference row is created.
 
+## Mentions and direct notes: one Activity, two surfaces
+
+Settled before writing the resolver, because the resolver is the easy half and getting this wrong
+makes a mess that is expensive to undo.
+
+A mention and a direct note are **not one kind**. Mastodon and Misskey both split them, and their
+reasons are the same one: a mention is a social interaction that belongs in a notification list,
+while a direct note is a *message* whose home is a conversation. Mastodon serves direct-visibility
+posts as threads through its Conversations API and *also* notifies the people mentioned — the same
+Activity appearing on two surfaces, each answering a different question.
+
+```
+Create(Note)
+  ├─ public / unlisted / followers, mentioning somebody
+  │    └─ notification: axismundi-note/mentioned
+  │
+  └─ visibility `mentioned` (a direct note)
+       ├─ Conversation: the message and whether it has been read   ← the record
+       └─ notification: axismundi-note/direct-note-received        ← the nudge
+```
+
+The vocabulary needed already exists and is not being invented here: `axismundi_act_canonical_visibility()`
+maps Mastodon's `direct` and Misskey's `specified` onto `mentioned`, and Object Projections already
+indexes who a Note mentions. What is new is a Conversation, and the rule about who owns what.
+
+**Notifications does not own whether a message has been read.** That is the conversation's fact, and
+it has to be, because the two are genuinely different: dismissing a badge is not reading a message,
+and reading a message in the conversation should not require also dismissing something elsewhere.
+An inbox that owned it would make "unread messages" mean "notifications not yet clicked", which is
+wrong in both directions the moment somebody reads on another device or clears their badges.
+
+What that needs is one seam pointing the other way: a domain that knows somebody has dealt with
+something says so, and Notifications decides what that means for its own row —
+`axismundi_ntf_mark_read_by_source( $activity_uri, $user_id )`. Opening a conversation marks the
+message read in the conversation and tells Notifications; Notifications marks its delivery read
+because a notice about something already dealt with is noise. Neither plugin reaches into the
+other's table.
+
+The order, then, is: the Conversation boundary first (visibility, recipients, the thread
+projection), then `mentioned` as a resolver, then `direct-note-received` on top of it. Doing the
+resolver first would work, and would leave direct notes as notifications with no conversation to
+belong to -- which is the state both Mastodon and Misskey grew out of rather than into.
+
 ## Slice order
 
 ```
-1. contract + registry     kinds, categories, the events table, the resolver filter,
+1. contract + registry     kinds, categories, the events table, the resolver filter,      done
                            the enqueue/flush cycle on the ledger hook
-2. Actor inbox             deliveries, read state, admin bar badge, manager gate
-3. resolvers               Calendar's eleven, then mentions/replies/follows
-4. acceptance policy       accept | filter | drop, quarantine, mute/block
-5. preferences             per Actor context, category, transport
-6. transports              email (inactive-only first), then Web Push
+2. Actor inbox             deliveries, read state, admin bar badge, manager gate          done
+3. resolvers               Calendar's eleven                                              done
+4. acceptance policy       accept | filter | drop, quarantine, mute/block                 done
+5. preferences             per Actor context, category, transport                         done
+6. transports              email, then Web Push through Axismundi PWA                     done
+
+next
+7. conversations           direct-note visibility, recipients, thread projection, read state
+8. social resolvers        mentioned, direct-note-received, follow requested/accepted,
+                           replies, then reactions and quotes as quiet kinds
+9. bundling                grouping_key into collapsed entries and one push per bundle
 ```
 
 Slice 3 replaces what Calendar does today. Its acts currently call

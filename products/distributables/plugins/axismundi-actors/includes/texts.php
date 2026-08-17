@@ -220,7 +220,16 @@ function axismundi_actors_resolve_text( Axismundi_Actor $actor, string $field, s
 	if ( ! in_array( $field, array( 'name', 'summary', 'content' ), true ) ) {
 		return '';
 	}
-	$map = axismundi_actors_get_text_map( $actor->get_identity_id() );
+	/*
+	 * A Person's name comes from the structured name when there is one, in the same language the
+	 * fallback chain would have chosen. Two stores held a name per language before this, and the
+	 * contact card read one while the Actor document read the other -- one person with two names,
+	 * from one site, the moment anybody filled the structured one in.
+	 *
+	 * Overlaid rather than substituted: an Actor with no structured name in this language, or none at
+	 * all, keeps the text store and the live fallback exactly as before.
+	 */
+	$map = axismundi_actors_name_map( $actor );
 	foreach ( axismundi_actors_language_fallbacks( $actor, $requested ) as $language ) {
 		if ( isset( $map[ $language ][ $field ] ) && '' !== trim( $map[ $language ][ $field ] ) ) {
 			return $map[ $language ][ $field ];
@@ -232,6 +241,31 @@ function axismundi_actors_resolve_text( Axismundi_Actor $actor, string $field, s
 		}
 	}
 	return axismundi_actors_live_text_fallback( $actor, $field );
+}
+
+/**
+ * The Actor's texts per language, with a Person's structured name filled in over the top.
+ *
+ * The one place the two stores meet, so that everything downstream -- the scalar `name`, `nameMap`,
+ * the JSContact Card, and whatever serializes next -- is reading the same answer. A structured name
+ * wins for its language because it is the more specific statement: somebody who wrote their name in
+ * parts and stated its order has said more than somebody who typed a string.
+ *
+ * @param Axismundi_Actor $actor Actor.
+ * @return array<string,array<string,string>>
+ */
+function axismundi_actors_name_map( Axismundi_Actor $actor ) : array {
+	$map = axismundi_actors_get_text_map( $actor->get_identity_id() );
+	if ( 'Person' !== $actor->get_type() || ! function_exists( 'axismundi_actors_person_names' ) ) {
+		return $map;
+	}
+	foreach ( axismundi_actors_person_names( $actor->get_identity_id() ) as $language => $row ) {
+		$assembled = axismundi_actors_assemble_person_name( $row );
+		if ( '' !== $assembled ) {
+			$map[ (string) $language ]['name'] = $assembled;
+		}
+	}
+	return $map;
 }
 
 /** Remove child text rows when an Actor identity is explicitly deleted. */

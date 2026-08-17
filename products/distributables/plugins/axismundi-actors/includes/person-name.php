@@ -66,8 +66,14 @@ const AXISMUNDI_ACTORS_PHONETIC_SYSTEMS = array( 'ipa', 'jyut', 'piny' );
  *
  * Not localizations. `김지운` and `Jiwoon Kim` are one name written twice and belong in the table
  * above; these are different names for the same person.
+ *
+ * No "name before marriage". It is a category one social network offers rather than one either
+ * standard has -- JSContact models names as components and nicknames, with no field for it, and
+ * vCard never had `MAIDENNAME` -- and it says nothing `birth` and `former` do not already say.
+ * Offering a field that can never be projected anywhere invites somebody to record something
+ * sensitive for no reason at all.
  */
-const AXISMUNDI_ACTORS_ALTERNATE_NAME_KINDS = array( 'nickname', 'former', 'birth', 'maiden', 'alternate_spelling', 'other' );
+const AXISMUNDI_ACTORS_ALTERNATE_NAME_KINDS = array( 'nickname', 'former', 'birth', 'alternate_spelling', 'other' );
 
 /**
  * The kinds that may leave this site in a contact document.

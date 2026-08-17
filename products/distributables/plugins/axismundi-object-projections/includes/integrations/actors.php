@@ -86,9 +86,14 @@ function axismundi_op_actor_transform( Axismundi_Actor $actor ) : array {
 	 * `und` never enters a map. "Undetermined" is not a language to tag text with; a value
 	 * whose language nobody established belongs in the scalar, where it makes no claim.
 	 */
-	if ( function_exists( 'axismundi_actors_get_text_map' ) ) {
+	/*
+	 * Read through the name map rather than the raw text store, so `nameMap` says what the scalar
+	 * says: a Person's structured name is overlaid there, and reading the store directly would put a
+	 * different Korean name in the map than the one resolved into `name`.
+	 */
+	if ( function_exists( 'axismundi_actors_name_map' ) ) {
 		$maps = array( 'name' => array(), 'summary' => array() );
-		foreach ( axismundi_actors_get_text_map( $actor->get_identity_id() ) as $language => $by_field ) {
+		foreach ( axismundi_actors_name_map( $actor ) as $language => $by_field ) {
 			$language = (string) $language;
 			if ( '' === $language || 'und' === strtolower( $language ) ) {
 				continue;

@@ -89,12 +89,17 @@ Person Actor
 │  └─ phonetic_system / phonetic_script  (required when any phonetic value is set)
 │
 └─ other names                            ← new table
-   └─ kind: nickname | former | birth | maiden | alternate_spelling | other
+   └─ kind: nickname | former | birth | alternate_spelling | other
 ```
 
 Order is a property of the person, not of the language — `김지운`, `Jiwoon Kim` and `Kim Jiwoon`
 are all legitimate for the same person — so it is stored, never inferred from the tag. A name
 with no parts is a name; `custom` says so, and nothing splits a display name back into pieces.
+
+**No "name before marriage".** It is a category one social network offers rather than one either
+standard has: JSContact models names as components and nicknames with no field for it, and vCard
+never had `MAIDENNAME`. It also says nothing `birth` and `former` do not. A field that can never be
+projected anywhere only invites somebody to record something sensitive for no reason.
 
 **Localization vs. other names.** The same name written in another script is a `localizations`
 entry, not another name. A nickname is another name. Conflating them is how a directory ends up
@@ -195,7 +200,7 @@ Two deliberate omissions:
 - **`rel=me` verification does not travel.** It is an HTML link relation this site verified; it is
   not a JSContact concept. The Card carries the label and the URI. Publishing our verification
   state in a standard-looking field would claim an interoperable meaning that does not exist.
-- **Former, birth and maiden names project nowhere.** They are stored because people want them
+- **Former and birth names project nowhere.** They are stored because people want them
   recorded and searchable locally; JSContact has no unambiguous home for them, and inventing one
   puts a previous name of a real person into a public document. Only `nickname` has a standard
   landing place, so only `nickname` goes out.
@@ -249,7 +254,7 @@ Person Actors resolve their name through an empty table.
   `preferredLanguages`.
 - The published profile summary and any future private note about a contact share neither a store
   nor a note id.
-- `nicknames` carries nicknames only; former, birth and maiden names appear nowhere in the Card.
+- `nicknames` carries nicknames only; former and birth names appear nowhere in the Card.
 - A `rel=me` link appears in `links` with no verification claim attached.
 - The ActivityStreams `name` and the JSContact `name.full` agree, for every language, for the
   same Actor.

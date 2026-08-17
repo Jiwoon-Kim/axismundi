@@ -5,7 +5,10 @@ beyond what the survey below records as already present.
 
 - **Owner**: Axismundi Actors
 - **Standards**: [RFC 9553](https://www.rfc-editor.org/rfc/rfc9553.html) (JSContact),
-  [RFC 9982](https://www.rfc-editor.org/rfc/rfc9982.html) (vCard/JSContact conversion)
+  [RFC 9555](https://www.rfc-editor.org/rfc/rfc9555.html) (JSContact ↔ vCard),
+  [RFC 6350](https://www.rfc-editor.org/rfc/rfc6350.html) (vCard 4.0),
+  [RFC 9554](https://www.rfc-editor.org/rfc/rfc9554.html) (vCard extensions: phonetics, social profiles),
+  [RFC 9982](https://www.rfc-editor.org/rfc/rfc9982.html)
 - **Precedes**: GeoData Place, which contributes `kind: location` Cards through the same filter
 
 ---
@@ -103,17 +106,60 @@ served as though it were. Storing a phonetic without a system is refused.
 
 ## 4. Serialization
 
-One source, two documents, no third copy.
+One source, three vocabularies, no third copy. vCard is not built in v1, but its column is
+here because it is the reason the model has to be right now rather than later — vCard can carry
+every one of these facts, so anything the model cannot express is a fact that will be missing
+from all three documents forever.
 
-| Source | ActivityStreams | JSContact |
-|---|---|---|
-| assembled name, requested language | `name` | `name.full` |
-| assembled name, other languages | `nameMap` | `localizations[tag].name.full` |
-| components + order | — | `name.components`, `name.isOrdered: true` |
-| phonetic values | — | component `phonetic`, `name.phoneticSystem`/`phoneticScript` |
-| `kind: nickname` rows | — | `nicknames` |
-| other-name kinds | — | **nothing in v1** |
-| profile fields | `attachment[]` PropertyValue + `rel=me` | `links` (label + URI only) |
+| Source | ActivityStreams | JSContact | vCard 4.0 |
+|---|---|---|---|
+| assembled name, requested language | `name` | `name.full` | `FN;ALTID=n;LANGUAGE=…` |
+| assembled name, other languages | `nameMap` | `localizations[tag].name.full` | further `FN`/`N` with the **same `ALTID`**, different `LANGUAGE` |
+| components + order | — | `name.components`, `name.isOrdered: true` | `N;ALTID=n;LANGUAGE=…` |
+| phonetic values | — | component `phonetic`, `name.phoneticSystem`/`phoneticScript` | `PHONETIC` / `SCRIPT` parameters (RFC 9554) |
+| `kind: nickname` rows | — | `nicknames` | `NICKNAME` |
+| other-name kinds | — | **nothing in v1** | **nothing in v1** |
+| profile fields | `attachment[]` PropertyValue + `rel=me` | `links` (label + URI only) | `URL` |
+| canonical Actor URI | `id` | `onlineServices` | `SOCIALPROFILE` (RFC 9554) |
+
+### Language is `ALTID` plus `LANGUAGE`, not four names
+
+vCard 4.0 is UTF-8 throughout, and says that several representations of the same logical
+property are grouped by a shared `ALTID` and distinguished by `LANGUAGE`:
+
+```
+FN;ALTID=1;LANGUAGE=ko-KR:김지운
+N;ALTID=1;LANGUAGE=ko-KR:김;지운;;;
+FN;ALTID=2;LANGUAGE=en:Jiwoon Kim
+N;ALTID=2;LANGUAGE=en:Kim;Jiwoon;;;
+```
+
+with one `ALTID` per name *form* — the Korean `FN` and the Korean `N` are the same form and
+share an id, so a reader knows these are two writings of one person and not four names. This is
+the direct counterpart of JSContact `localizations`, and RFC 9555 maps the two.
+
+Note the component order in `N` is fixed by the format (family; given; additional; prefix;
+suffix) regardless of how the name is *read*. Reading order lives in `FN` and, for JSContact, in
+`isOrdered`. So `display_order` must never be allowed to permute the `N` value — that is a way
+to produce a vCard that every address book will read backwards.
+
+### `UID` — one identifier, both documents
+
+**Decision: JSContact `uid` and vCard `UID` carry the same value, `urn:uuid:<local uuid>`.**
+
+RFC 9555 maps the two directly. Giving vCard the canonical Actor URI instead would mean a
+vCard → JSContact → vCard round trip does not return the same identifier, and an address book
+holding both representations of one person would see two identities where there is one. The
+identifier's job is to be stable and to be the same everywhere; the Actor URI's job is to be
+resolvable, which is a different job.
+
+The Actor URI is not lost — it travels as `SOCIALPROFILE` (vCard) and `onlineServices`
+(JSContact), which is where a fediverse address belongs and where a client can act on it.
+
+The existing rule survives unchanged: a `uid` is minted only for identities this site owns. A
+remote Actor carries whatever it published, or no `UID` at all, in both formats. The exact
+property and parameter names in the RFC 9554/9555 columns are to be confirmed against the RFC
+text at implementation time; the decision recorded here is the mapping, not the spelling.
 
 Two deliberate omissions:
 
@@ -154,6 +200,8 @@ hold a second copy of one, and deciding that before Place exists would build the
    Representations   ActivityPub Actor · JSContact · vCard (later)
    ```
 6. **Audits** — extend `audit-jscontact.php`, add one for the name model.
+7. **vCard** — a second serializer beside JSContact, off the same facts, once they are settled.
+   Not in v1. Its decisions are locked above so that v1 cannot make it impossible.
 
 Steps 1–3 are the slice; 4–5 are what makes it visible; step 3 must not ship before step 2, or
 Person Actors resolve their name through an empty table.
@@ -173,3 +221,12 @@ Person Actors resolve their name through an empty table.
   WordPress user profile.
 - Place can contribute a `kind: location` Card through the same filter without Actors knowing
   what a Place is.
+
+And, when vCard lands:
+
+- Every name form's `FN` and `N` share one `ALTID` and differ only by `LANGUAGE` — two writings
+  of one person, never four names.
+- `N` keeps the format's fixed component order whatever `display_order` says, so no address book
+  reads a Korean name backwards.
+- `UID` in the vCard equals `uid` in the Card, byte for byte, and a round trip through either
+  format returns the same identifier.

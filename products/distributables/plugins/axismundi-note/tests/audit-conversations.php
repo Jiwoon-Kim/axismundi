@@ -127,6 +127,39 @@ try {
 			&& 1 === count( axismundi_note_conversations_for( (string) $ax_cv_bob->get_uri() ) )
 	);
 
+	// -- a shared topic is not a shared conversation --------------------------------------------------------------
+
+	/*
+	 * The trap this rule exists for. `context_uri` is inherited from whatever a note answers, and that
+	 * can be a Forum topic or an Article -- so two people replying privately to the same announcement
+	 * carry the same context. Grouping by it would put them in a conversation with each other, and
+	 * they would find out by reading each other's messages.
+	 */
+	$ax_cv_topic = home_url( '/?ax_topic=' . wp_generate_uuid4() );
+	$ax_cv_carol_user = ax_cv_user( $ax_cv_users );
+	$ax_cv_carol      = axismundi_actors_get_for_user( $ax_cv_carol_user );
+	wp_set_current_user( $ax_cv_alice_user );
+	$ax_cv_under_topic_one = ax_cv_note( $ax_cv_posts, $ax_cv_alice_user, (string) $ax_cv_carol->get_uri(), 'mentioned', 'A quiet word about the announcement.' );
+	axismundi_note_save( $ax_cv_under_topic_one['post_id'], array( 'context_uri' => $ax_cv_topic ) );
+	$ax_cv_under_topic_one = axismundi_note_get( (int) $ax_cv_under_topic_one['post_id'] );
+	wp_set_current_user( $ax_cv_bob_user );
+	$ax_cv_under_topic_two = ax_cv_note( $ax_cv_posts, $ax_cv_bob_user, (string) $ax_cv_carol->get_uri(), 'mentioned', 'Also about the announcement.' );
+	axismundi_note_save( $ax_cv_under_topic_two['post_id'], array( 'context_uri' => $ax_cv_topic ) );
+	$ax_cv_under_topic_two = axismundi_note_get( (int) $ax_cv_under_topic_two['post_id'] );
+	ax_cv_assert(
+		$ax_cv_results,
+		'two people writing privately under one topic are not put in a conversation together',
+		axismundi_note_conversation_uri( $ax_cv_under_topic_one ) !== axismundi_note_conversation_uri( $ax_cv_under_topic_two )
+			&& 2 === count( axismundi_note_conversations_for( (string) $ax_cv_carol->get_uri() ) )
+	);
+	// A context that does name a private exchange is still honoured, which is what it is for.
+	ax_cv_assert(
+		$ax_cv_results,
+		'while a context naming a message of its own is honoured, that being somebody saying "this exchange"',
+		axismundi_note_context_is_private_exchange( axismundi_note_object_uri( (string) $ax_cv_message['local_uuid'] ) )
+			&& ! axismundi_note_context_is_private_exchange( $ax_cv_topic )
+	);
+
 	// -- who has read it ---------------------------------------------------------------------------------------
 
 	$ax_cv_for_alice = axismundi_note_conversations_for( (string) $ax_cv_alice->get_uri() );

@@ -98,21 +98,43 @@ function axismundi_note_conversation_uri( array $envelope ) : string {
 	if ( ! axismundi_note_is_direct( $envelope ) ) {
 		return '';
 	}
+	/*
+	 * A context is honoured only when it names a private exchange, and this is the whole of the
+	 * reason. `context_uri` is inherited from whatever a note replies to, and that can be a Forum
+	 * topic or an Article -- so a direct reply under a public topic carries the topic's context, and
+	 * grouping by it would put every person's private reply to that topic into one conversation with
+	 * each other. Two people answering the same announcement privately are not in a conversation
+	 * together, and finding out otherwise by reading each other's messages is the worst way to learn
+	 * it.
+	 *
+	 * So a context counts when it is itself a direct note -- somebody saying "this exchange" -- and
+	 * anything else falls back to the thread root, which is always right and never merges strangers.
+	 */
 	$context = trim( (string) ( $envelope['context_uri'] ?? '' ) );
-	if ( '' !== $context ) {
+	if ( '' !== $context && axismundi_note_context_is_private_exchange( $context ) ) {
 		return $context;
 	}
 	/*
-	 * No context to inherit, which is the ordinary case rather than an edge one: a note that starts an
-	 * exchange has none, so its replies inherit nothing and every message would otherwise be a
-	 * conversation of its own. What identifies the exchange is where it began, so the reply chain is
-	 * walked back to the note nothing came before.
-	 *
-	 * Read-side only. Nothing is written onto the notes, because what was published is what was
-	 * published -- and a context invented afterwards would be a claim about an object other servers
-	 * already hold.
+	 * Otherwise the exchange is identified by where it began, walked back through what each message
+	 * answers. Read-side only: nothing is written onto the notes, because a context invented
+	 * afterwards would be a claim about an object other servers already hold.
 	 */
 	return axismundi_note_thread_root_uri( $envelope );
+}
+
+/**
+ * Whether a context URI names a private exchange rather than something public it hangs under.
+ *
+ * Answered from the note the context points at, and false for anything this site cannot read. A
+ * remote context is most often a topic or an article -- and being wrong in that direction merely
+ * splits a conversation, while being wrong in the other merges two.
+ *
+ * @param string $context_uri Context.
+ * @return bool
+ */
+function axismundi_note_context_is_private_exchange( string $context_uri ) : bool {
+	$note = axismundi_note_get_by_uri( trim( $context_uri ) );
+	return is_array( $note ) && axismundi_note_is_direct( $note );
 }
 
 /**

@@ -345,6 +345,46 @@ function axismundi_ntf_mark_read( int $notification_id, int $user_id ) {
 }
 
 /**
+ * Mark whatever one Activity produced as read for one person.
+ *
+ * The seam that points inward. A domain that knows somebody has dealt with something -- opened the
+ * conversation the message is in, answered the invitation -- says so, and this decides what that
+ * means here: a notice about something already handled is noise, so it stops being new.
+ *
+ * Deliberately not the reverse. Nothing in this plugin marks a message read in a conversation,
+ * because dismissing a badge is not reading a message; and nothing outside it writes to these rows,
+ * because what a notification is for is this plugin's question. One call, one direction, each side
+ * keeping its own facts.
+ *
+ * Silent about Activities it has no notification for. A domain saying "this was dealt with" should
+ * not have to know whether anybody was ever told.
+ *
+ * @param string $activity_uri The Activity the notice projected.
+ * @param int    $user_id      Reader.
+ * @return int Rows marked.
+ */
+function axismundi_ntf_mark_read_by_source( string $activity_uri, int $user_id ) : int {
+	global $wpdb;
+	$activity_uri = trim( $activity_uri );
+	if ( '' === $activity_uri || $user_id <= 0 || ! axismundi_ntf_ready() ) {
+		return 0;
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+	$ids = (array) $wpdb->get_col(
+		$wpdb->prepare( 'SELECT id FROM ' . axismundi_ntf_events_table() . ' WHERE source_activity_hash = %s', hash( 'sha256', $activity_uri ) )
+	);
+	$marked = 0;
+	foreach ( $ids as $id ) {
+		// Through the ordinary path, so the same permission question is asked: somebody who no longer
+		// reads for that Actor does not get to mark its notices read by having been in a conversation.
+		if ( true === axismundi_ntf_mark_read( (int) $id, $user_id ) ) {
+			++$marked;
+		}
+	}
+	return $marked;
+}
+
+/**
  * Mark everything one person can currently see as read.
  *
  * @param int $user_id Reader.

@@ -95,7 +95,11 @@ function axismundi_note_install_table() : bool {
 		&& ! empty( $uuid_key ) && 0 === (int) $uuid_key[0]['Non_unique']
 		&& 'InnoDB' === (string) ( $status['Engine'] ?? '' )
 		&& function_exists( 'axismundi_note_install_question_schema' )
-		&& axismundi_note_install_question_schema();
+		&& axismundi_note_install_question_schema()
+		// The per-person conversation view state, which rides the same version so a site with notes
+		// gets it the moment anything is ready to read them as messages.
+		&& function_exists( 'axismundi_note_install_conversation_state' )
+		&& axismundi_note_install_conversation_state();
 	if ( $valid ) {
 		update_option( AXISMUNDI_NOTE_DB_VERSION_OPTION, AXISMUNDI_NOTE_DB_VERSION, false );
 	}

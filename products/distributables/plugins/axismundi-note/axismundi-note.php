@@ -34,6 +34,7 @@ require_once __DIR__ . '/includes/federation.php';
 require_once __DIR__ . '/includes/lifecycle.php';
 require_once __DIR__ . '/includes/view.php';
 require_once __DIR__ . '/includes/interactions.php';
+require_once __DIR__ . '/includes/conversations.php';
 require_once __DIR__ . '/includes/rest.php';
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/admin-list.php';

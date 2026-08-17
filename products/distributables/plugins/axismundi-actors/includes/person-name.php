@@ -39,8 +39,31 @@ function axismundi_actors_alternate_names_table() : string {
 	return $wpdb->prefix . 'ax_actor_alternate_names';
 }
 
-/** The orders a name can be assembled in. `custom` means the stored display value is the answer. */
-const AXISMUNDI_ACTORS_NAME_ORDERS = array( 'family-given', 'given-family', 'custom' );
+/**
+ * How a person's name is shown, which is a choice and not a storage detail.
+ *
+ * `custom` means the written-out value is the answer, and `nickname` means what somebody is
+ * actually called is a nickname -- normal on a social network, and the reason the option exists
+ * rather than making people type their nickname into the written-out box and lose the fact that it
+ * is one.
+ */
+const AXISMUNDI_ACTORS_NAME_ORDERS = array( 'family-given', 'given-family', 'custom', 'nickname' );
+
+/**
+ * Whether this site lets a nickname be somebody's public name.
+ *
+ * An operational policy about what a profile must carry, and deliberately not called "real names":
+ * nothing here verifies a legal name, and a site claiming to require one would be promising
+ * something it cannot check. What it can require is a structured name -- given, family, the parts a
+ * contact document is made of -- and that is what this says.
+ *
+ * Allowed by default. Requiring structured names is the deliberate act, not the other way round.
+ *
+ * @return bool
+ */
+function axismundi_actors_nickname_display_allowed() : bool {
+	return 'structured-only' !== (string) get_option( 'axismundi_actors_display_name_policy', 'allow-nickname' );
+}
 
 /** The parts, in the order vCard's `N` lists them. */
 const AXISMUNDI_ACTORS_NAME_PARTS = array( 'family_name', 'given_name', 'additional_name', 'honorific_prefix', 'honorific_suffix' );
@@ -140,9 +163,15 @@ function axismundi_actors_set_person_name( int $identity_id, string $language, a
 	if ( is_wp_error( $row ) ) {
 		return $row;
 	}
-	// Nothing written is not a name in one language; it is the absence of one, and an empty row would
-	// otherwise sit in the way of the fallback.
-	if ( '' === implode( '', array_map( static fn( string $part ) : string => (string) $row[ $part ], AXISMUNDI_ACTORS_NAME_PARTS ) ) && '' === $row['display_name'] ) {
+	/*
+	 * Nothing written is not a name in one language; it is the absence of one, and an empty row would
+	 * otherwise sit in the way of the fallback. Choosing to be shown by nickname is not nothing,
+	 * though -- the row carries that decision and no parts, and deleting it would throw the decision
+	 * away every time somebody saved it.
+	 */
+	if ( 'nickname' !== $order
+		&& '' === implode( '', array_map( static fn( string $part ) : string => (string) $row[ $part ], AXISMUNDI_ACTORS_NAME_PARTS ) )
+		&& '' === $row['display_name'] ) {
 		return axismundi_actors_delete_person_name( $identity_id, $language );
 	}
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
@@ -151,6 +180,43 @@ function axismundi_actors_set_person_name( int $identity_id, string $language, a
 	}
 	axismundi_actors_mark_person_name_edited( $identity_id );
 	return true;
+}
+
+/**
+ * Promote the legacy localized Person `name` text into `given_name` once.
+ *
+ * The old editor had only one name box. It is more honest to retain that exact value as a given name
+ * than to guess a surname split. This runs once during the DB v19 upgrade; later edits and deletions
+ * are authoritative and must never be reinterpreted from the legacy text store.
+ *
+ * @return void
+ */
+function axismundi_actors_migrate_person_name_texts() : void {
+	global $wpdb;
+	$texts  = axismundi_actors_texts_table();
+	$actors = axismundi_actors_actors_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration over this plugin's own tables.
+	$rows = (array) $wpdb->get_results(
+		$wpdb->prepare(
+			"SELECT t.identity_id, t.language_tag, t.value FROM {$texts} t INNER JOIN {$actors} a ON a.identity_id = t.identity_id WHERE t.field_name = %s AND a.actor_type = %s AND t.value <> '' ORDER BY t.identity_id ASC, t.language_tag ASC",
+			'name',
+			'Person'
+		),
+		ARRAY_A
+	);
+	foreach ( $rows as $row ) {
+		$identity_id = (int) $row['identity_id'];
+		$language    = (string) $row['language_tag'];
+		$existing    = axismundi_actors_person_names( $identity_id );
+		if ( isset( $existing[ $language ] ) ) {
+			continue;
+		}
+		$result = axismundi_actors_set_person_name( $identity_id, $language, array( 'given_name' => (string) $row['value'] ) );
+		if ( is_wp_error( $result ) ) {
+			return;
+		}
+	}
+	update_option( 'ax_actors_person_name_text_migrated', '1', false );
 }
 
 /**
@@ -313,14 +379,28 @@ function axismundi_actors_person_names( int $identity_id ) : array {
  * @return string
  */
 function axismundi_actors_assemble_person_name( array $row ) : string {
+	$order = (string) ( $row['display_order'] ?? '' );
+	/*
+	 * A nickname as the shown name, when this site allows it and there is one. Both conditions fail
+	 * closed to the structured name rather than to nothing: a site that turns the policy off should
+	 * start showing people's structured names, not blank out every profile that had chosen otherwise,
+	 * and the stored choice survives so turning it back on restores what people picked.
+	 */
+	if ( 'nickname' === $order ) {
+		$nickname = axismundi_actors_display_nickname( (int) ( $row['identity_id'] ?? 0 ), (string) ( $row['language_tag'] ?? '' ) );
+		if ( '' !== $nickname ) {
+			return $nickname;
+		}
+		$order = 'given-family';
+	}
 	$written = trim( (string) ( $row['display_name'] ?? '' ) );
-	if ( '' !== $written || 'custom' === (string) ( $row['display_order'] ?? '' ) ) {
+	if ( '' !== $written || 'custom' === $order ) {
 		return $written;
 	}
 	$family = trim( (string) ( $row['family_name'] ?? '' ) );
 	$given  = trim( (string) ( $row['given_name'] ?? '' ) );
 	$middle = trim( (string) ( $row['additional_name'] ?? '' ) );
-	$parts  = 'family-given' === (string) ( $row['display_order'] ?? '' )
+	$parts  = 'family-given' === $order
 		? array( $family, $given, $middle )
 		: array( $given, $middle, $family );
 	$parts  = array_values( array_filter( $parts, static fn( string $part ) : bool => '' !== $part ) );
@@ -332,8 +412,33 @@ function axismundi_actors_assemble_person_name( array $row ) : string {
 	 * word to a reader of it, and the separator is a property of the writing system rather than of the
 	 * order the parts are in.
 	 */
-	$separator = 'family-given' === (string) ( $row['display_order'] ?? '' ) && ! preg_match( '/[A-Za-z]/', $family . $given ) ? '' : ' ';
+	$separator = 'family-given' === $order && ! preg_match( '/[A-Za-z]/', $family . $given ) ? '' : ' ';
 	return implode( $separator, $parts );
+}
+
+/**
+ * The nickname to show for one Actor in one language, if this site allows one to be shown.
+ *
+ * Prefers a nickname written in the same language and falls back to any, because a nickname often
+ * belongs to no language at all -- "Jay" is not English, it is just what somebody is called.
+ *
+ * @param int    $identity_id Actor identity.
+ * @param string $language    Language of the name form asking.
+ * @return string
+ */
+function axismundi_actors_display_nickname( int $identity_id, string $language = '' ) : string {
+	if ( $identity_id <= 0 || ! axismundi_actors_nickname_display_allowed() ) {
+		return '';
+	}
+	$rows = axismundi_actors_alternate_names( $identity_id, 'nickname' );
+	foreach ( array( $language, '' ) as $wanted ) {
+		foreach ( $rows as $row ) {
+			if ( (string) $row['language_tag'] === (string) $wanted && '' !== trim( (string) $row['value'] ) ) {
+				return trim( (string) $row['value'] );
+			}
+		}
+	}
+	return array() !== $rows ? trim( (string) $rows[0]['value'] ) : '';
 }
 
 /**
@@ -446,12 +551,18 @@ function axismundi_actors_alternate_names( int $identity_id, string $kind = '' )
  * a list is the thing a person edits. Replacing one kind never touches another: clearing the
  * nicknames must not be a way to lose a former name, and each kind is answered for separately.
  *
- * @param int                           $identity_id Actor identity.
- * @param string                        $kind        One of AXISMUNDI_ACTORS_ALTERNATE_NAME_KINDS.
- * @param array<int,array<string,mixed>> $names      Rows of `value` and optional `language_tag`.
+ * Scoped to one language when the caller names one, because a screen edits the language it is
+ * showing: replacing every language from a form that could only see Korean would delete the English
+ * nicknames somebody added on another visit, and they would not find out until a card went out
+ * without them.
+ *
+ * @param int                            $identity_id Actor identity.
+ * @param string                         $kind        One of AXISMUNDI_ACTORS_ALTERNATE_NAME_KINDS.
+ * @param array<int,array<string,mixed>> $names       Rows of `value` and optional `language_tag`.
+ * @param string|null                    $language    Replace only this language's rows, or null for all.
  * @return true|WP_Error
  */
-function axismundi_actors_set_alternate_names( int $identity_id, string $kind, array $names ) {
+function axismundi_actors_set_alternate_names( int $identity_id, string $kind, array $names, ?string $language = null ) {
 	global $wpdb;
 	$actor = axismundi_actors_get_by_identity( $identity_id );
 	if ( ! $actor instanceof Axismundi_Actor || 'Person' !== $actor->get_type() ) {
@@ -466,12 +577,14 @@ function axismundi_actors_set_alternate_names( int $identity_id, string $kind, a
 		if ( '' === trim( $value ) ) {
 			continue;
 		}
-		$language = is_array( $name ) ? axismundi_actors_normalize_language_tag( (string) ( $name['language_tag'] ?? '' ) ) : '';
-		$rows[]   = array(
+		$row_language = is_array( $name ) && isset( $name['language_tag'] )
+			? axismundi_actors_normalize_language_tag( (string) $name['language_tag'] )
+			: (string) ( null !== $language ? axismundi_actors_normalize_language_tag( $language ) : '' );
+		$rows[]       = array(
 			'identity_id'  => $identity_id,
 			// Empty is an answer: "Jay" belongs to no language in particular, and guessing one would
 			// hide it from every reader who asked for a different tag.
-			'language_tag' => $language,
+			'language_tag' => $row_language,
 			'name_kind'    => $kind,
 			'value'        => $value,
 			'position'     => $position,
@@ -479,8 +592,14 @@ function axismundi_actors_set_alternate_names( int $identity_id, string $kind, a
 			'updated_at'   => current_time( 'mysql', true ),
 		);
 	}
+	$where        = array( 'identity_id' => $identity_id, 'name_kind' => $kind );
+	$where_format = array( '%d', '%s' );
+	if ( null !== $language ) {
+		$where['language_tag'] = axismundi_actors_normalize_language_tag( $language );
+		$where_format[]        = '%s';
+	}
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	$wpdb->delete( axismundi_actors_alternate_names_table(), array( 'identity_id' => $identity_id, 'name_kind' => $kind ), array( '%d', '%s' ) );
+	$wpdb->delete( axismundi_actors_alternate_names_table(), $where, $where_format );
 	foreach ( $rows as $row ) {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 		if ( false === $wpdb->insert( axismundi_actors_alternate_names_table(), $row ) ) {

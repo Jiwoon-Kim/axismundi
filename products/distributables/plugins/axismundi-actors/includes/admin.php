@@ -281,7 +281,6 @@ function axismundi_actors_render_managed_actors_page() : void {
 				<?php submit_button( $is_selected_public ? __( 'Make internal (unpublish)', 'axismundi-actors' ) : __( 'Publish (make public)', 'axismundi-actors' ), 'secondary' ); ?>
 			</form>
 			<?php axismundi_actors_media_form( $selected ); ?>
-			<?php axismundi_actors_person_name_form( $selected ); ?>
 			<?php axismundi_actors_text_form( $selected ); ?>
 			<?php axismundi_actors_profile_fields_form( $selected ); ?>
 			<?php axismundi_actors_managers_form( $selected ); ?>
@@ -780,7 +779,6 @@ function axismundi_actors_render_management( Axismundi_Actor $actor, int $user_i
 		<?php endif; ?>
 	</form>
 	<?php axismundi_actors_media_form( $actor ); ?>
-	<?php axismundi_actors_person_name_form( $actor ); ?>
 	<?php axismundi_actors_text_form( $actor ); ?>
 	<?php axismundi_actors_profile_fields_form( $actor ); ?>
 	<?php axismundi_actors_follow_collections_form( $actor ); ?>
@@ -935,6 +933,9 @@ function axismundi_actors_text_form( Axismundi_Actor $actor ) : void {
 	}
 	$languages = array_values( array_unique( array_filter( $languages ) ) );
 	$back      = axismundi_actors_management_back_url( $actor );
+	$person_name = 'Person' === $actor->get_type()
+		? ( axismundi_actors_person_names( $actor->get_identity_id() )[ $language ] ?? array() )
+		: array();
 	?>
 	<h2><?php esc_html_e( 'Profile languages', 'axismundi-actors' ); ?></h2>
 	<p class="description"><?php esc_html_e( 'Translations are optional. Empty fields continue to use the live WordPress profile or site value.', 'axismundi-actors' ); ?></p>
@@ -954,7 +955,17 @@ function axismundi_actors_text_form( Axismundi_Actor $actor ) : void {
 			</tr>
 			<tr>
 				<th scope="row"><label for="ax-actor-name"><?php esc_html_e( 'Name', 'axismundi-actors' ); ?></label></th>
-				<td><input id="ax-actor-name" name="name" value="<?php echo esc_attr( $map[ $language ]['name'] ?? '' ); ?>" class="regular-text"></td>
+				<td>
+					<?php if ( 'Person' === $actor->get_type() ) : ?>
+						<div style="max-width:26em">
+							<p><label for="ax-actor-given" style="display:block"><?php esc_html_e( 'Given name', 'axismundi-actors' ); ?></label><input id="ax-actor-given" name="given_name" value="<?php echo esc_attr( (string) ( $person_name['given_name'] ?? '' ) ); ?>" class="regular-text"></p>
+							<p><label for="ax-actor-additional" style="display:block"><?php esc_html_e( 'Middle name', 'axismundi-actors' ); ?></label><input id="ax-actor-additional" name="additional_name" value="<?php echo esc_attr( (string) ( $person_name['additional_name'] ?? '' ) ); ?>" class="regular-text"></p>
+							<p><label for="ax-actor-family" style="display:block"><?php esc_html_e( 'Family name', 'axismundi-actors' ); ?></label><input id="ax-actor-family" name="family_name" value="<?php echo esc_attr( (string) ( $person_name['family_name'] ?? '' ) ); ?>" class="regular-text"></p>
+						</div>
+					<?php else : ?>
+						<input id="ax-actor-name" name="name" value="<?php echo esc_attr( $map[ $language ]['name'] ?? '' ); ?>" class="regular-text">
+					<?php endif; ?>
+				</td>
 			</tr>
 			<tr>
 				<th scope="row"><label for="ax-actor-summary"><?php esc_html_e( 'Summary', 'axismundi-actors' ); ?></label></th>
@@ -966,227 +977,6 @@ function axismundi_actors_text_form( Axismundi_Actor $actor ) : void {
 			</tr>
 		</table>
 		<?php submit_button( __( 'Save profile language', 'axismundi-actors' ) ); ?>
-	</form>
-	<?php
-}
-
-/**
- * Edit a Person Actor's name in parts, for one language.
- *
- * Person Actors only. An Organization has a name and not a given name, and a form inviting somebody
- * to give a Group a surname is a form somebody eventually fills in.
- *
- * Shown beside the handle rather than instead of it, because the two answer different questions and
- * this screen is where somebody learns that: the handle is part of a permanent address, and the name
- * is how a person is known and may be rewritten as often as they like.
- *
- * @param Axismundi_Actor $actor Actor.
- * @return void
- */
-function axismundi_actors_person_name_form( Axismundi_Actor $actor ) : void {
-	if ( 'Person' !== $actor->get_type() || ! $actor->is_local() ) {
-		return;
-	}
-	$identity_id = (int) $actor->get_identity_id();
-	$language    = axismundi_actors_admin_text_language( $actor );
-	$rows        = axismundi_actors_person_names( $identity_id );
-	$row         = $rows[ $language ] ?? array();
-	$assembled   = array() !== $row ? axismundi_actors_assemble_person_name( $row ) : '';
-	$can_seed    = ! axismundi_actors_person_name_was_edited( $identity_id );
-	$orders      = array(
-		'given-family' => __( 'Given name first (Jiwoon Kim)', 'axismundi-actors' ),
-		'family-given' => __( 'Family name first (김지운)', 'axismundi-actors' ),
-		'custom'       => __( 'Neither, write it out below', 'axismundi-actors' ),
-	);
-	?>
-	<h2><?php esc_html_e( 'Name', 'axismundi-actors' ); ?></h2>
-	<p class="description">
-		<?php esc_html_e( 'The parts of this person&#8217;s name and the order they read in. Each language here is a way of writing the same name, not a different name.', 'axismundi-actors' ); ?>
-	</p>
-	<?php
-	/*
-	 * The language switcher belongs here as well as under Profile languages: somebody adding a Korean
-	 * writing of their name should not have to work out that a control in the next section down is
-	 * what decides which language this form is editing.
-	 */
-	$ax_pn_languages = array_values(
-		array_unique(
-			array_filter(
-				array_merge(
-					array_keys( $rows ),
-					array_keys( axismundi_actors_get_text_map( $identity_id ) ),
-					array( $actor->get_default_language() ?: axismundi_actors_site_language(), axismundi_actors_site_language(), $language )
-				)
-			)
-		)
-	);
-	$ax_pn_back = axismundi_actors_management_back_url( $actor );
-	?>
-	<p>
-		<?php foreach ( $ax_pn_languages as $ax_pn_candidate ) : ?>
-			<a class="button <?php echo $ax_pn_candidate === $language ? 'button-primary' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'ax_actor_lang', $ax_pn_candidate, $ax_pn_back ) ); ?>"><?php echo esc_html( $ax_pn_candidate ); ?></a>
-		<?php endforeach; ?>
-	</p>
-	<table class="widefat striped" role="presentation" style="max-width:40em;margin-bottom:1em">
-		<tbody>
-			<tr>
-				<th style="width:12em"><?php esc_html_e( 'Handle', 'axismundi-actors' ); ?></th>
-				<td>
-					<code>@<?php echo esc_html( $actor->get_preferred_username() ); ?></code>
-					<p class="description"><?php esc_html_e( 'Part of this Actor&#8217;s permanent address. Changing a name never changes it.', 'axismundi-actors' ); ?></p>
-				</td>
-			</tr>
-			<tr>
-				<th><?php esc_html_e( 'Reads as', 'axismundi-actors' ); ?></th>
-				<td><strong><?php echo esc_html( '' !== $assembled ? $assembled : $actor->get_display_name() ); ?></strong></td>
-			</tr>
-		</tbody>
-	</table>
-	<?php if ( $can_seed ) : ?>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-bottom:1em">
-			<input type="hidden" name="action" value="axismundi_actors_seed_person_name">
-			<input type="hidden" name="identity_id" value="<?php echo esc_attr( (string) $identity_id ); ?>">
-			<input type="hidden" name="language_tag" value="<?php echo esc_attr( $language ); ?>">
-			<?php wp_nonce_field( 'ax_actors_seed_name_' . $identity_id ); ?>
-			<?php submit_button( __( 'Copy the name from this WordPress account', 'axismundi-actors' ), 'secondary', 'submit', false ); ?>
-			<p class="description"><?php esc_html_e( 'Offered until this name has been edited. After that the two are unrelated: changing one never changes the other.', 'axismundi-actors' ); ?></p>
-		</form>
-	<?php endif; ?>
-	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-		<input type="hidden" name="action" value="axismundi_actors_set_person_name">
-		<input type="hidden" name="identity_id" value="<?php echo esc_attr( (string) $identity_id ); ?>">
-		<?php wp_nonce_field( 'ax_actors_person_name_' . $identity_id ); ?>
-		<table class="form-table" role="presentation">
-			<tr>
-				<th scope="row"><label for="ax-pn-language"><?php esc_html_e( 'Language', 'axismundi-actors' ); ?></label></th>
-				<td><input id="ax-pn-language" name="language_tag" value="<?php echo esc_attr( $language ); ?>" class="regular-text" required>
-					<p class="description"><?php esc_html_e( 'BCP 47 language tag, for example ko-KR or en. The buttons under Profile languages switch which one is being edited.', 'axismundi-actors' ); ?></p></td>
-			</tr>
-			<tr>
-				<th scope="row"><?php esc_html_e( 'Name parts', 'axismundi-actors' ); ?></th>
-				<td>
-					<p style="display:flex;flex-wrap:wrap;gap:.75em;align-items:flex-end;margin:0">
-						<span><label for="ax-pn-given" style="display:block"><?php esc_html_e( 'Given', 'axismundi-actors' ); ?></label>
-							<input id="ax-pn-given" name="given_name" value="<?php echo esc_attr( (string) ( $row['given_name'] ?? '' ) ); ?>" class="regular-text"></span>
-						<span><label for="ax-pn-additional" style="display:block"><?php esc_html_e( 'Middle', 'axismundi-actors' ); ?></label>
-							<input id="ax-pn-additional" name="additional_name" value="<?php echo esc_attr( (string) ( $row['additional_name'] ?? '' ) ); ?>" class="regular-text"></span>
-						<span><label for="ax-pn-family" style="display:block"><?php esc_html_e( 'Family', 'axismundi-actors' ); ?></label>
-							<input id="ax-pn-family" name="family_name" value="<?php echo esc_attr( (string) ( $row['family_name'] ?? '' ) ); ?>" class="regular-text"></span>
-						<span><label for="ax-pn-prefix" style="display:block"><?php esc_html_e( 'Prefix', 'axismundi-actors' ); ?></label>
-							<input id="ax-pn-prefix" name="honorific_prefix" value="<?php echo esc_attr( (string) ( $row['honorific_prefix'] ?? '' ) ); ?>" class="small-text"></span>
-						<span><label for="ax-pn-suffix" style="display:block"><?php esc_html_e( 'Suffix', 'axismundi-actors' ); ?></label>
-							<input id="ax-pn-suffix" name="honorific_suffix" value="<?php echo esc_attr( (string) ( $row['honorific_suffix'] ?? '' ) ); ?>" class="small-text"></span>
-					</p>
-					<p class="description"><?php esc_html_e( 'Leave any of them empty. A name with no parts at all is written out below instead.', 'axismundi-actors' ); ?></p>
-				</td>
-			</tr>
-			<tr>
-				<th scope="row"><label for="ax-pn-order"><?php esc_html_e( 'Reading order', 'axismundi-actors' ); ?></label></th>
-				<td>
-					<select id="ax-pn-order" name="display_order">
-						<?php foreach ( $orders as $ax_value => $ax_label ) : ?>
-							<option value="<?php echo esc_attr( $ax_value ); ?>" <?php selected( (string) ( $row['display_order'] ?? 'given-family' ), $ax_value ); ?>><?php echo esc_html( $ax_label ); ?></option>
-						<?php endforeach; ?>
-					</select>
-					<p class="description"><?php esc_html_e( 'The order belongs to the person rather than to the language, so it is stored here and never guessed from the language tag.', 'axismundi-actors' ); ?></p>
-				</td>
-			</tr>
-			<tr>
-				<th scope="row"><label for="ax-pn-display"><?php esc_html_e( 'Written out', 'axismundi-actors' ); ?></label></th>
-				<td><input id="ax-pn-display" name="display_name" value="<?php echo esc_attr( (string) ( $row['display_name'] ?? '' ) ); ?>" class="regular-text">
-					<p class="description"><?php esc_html_e( 'For a mononym, a stage name, or any name the parts above cannot be assembled into. When this is set it is what gets shown.', 'axismundi-actors' ); ?></p></td>
-			</tr>
-		</table>
-
-		<h3><?php esc_html_e( 'Pronunciation', 'axismundi-actors' ); ?></h3>
-		<p class="description"><?php esc_html_e( 'Optional, and it has to say what it is written in: a pronunciation with no notation cannot be read by anybody who did not write it.', 'axismundi-actors' ); ?></p>
-		<table class="form-table" role="presentation">
-			<tr>
-				<th scope="row"><label for="ax-pn-ph-system"><?php esc_html_e( 'Notation or script', 'axismundi-actors' ); ?></label></th>
-				<td>
-					<select id="ax-pn-ph-system" name="phonetic_system">
-						<option value=""><?php esc_html_e( 'None', 'axismundi-actors' ); ?></option>
-						<?php foreach ( AXISMUNDI_ACTORS_PHONETIC_SYSTEMS as $ax_system ) : ?>
-							<option value="<?php echo esc_attr( $ax_system ); ?>" <?php selected( (string) ( $row['phonetic_system'] ?? '' ), $ax_system ); ?>><?php echo esc_html( $ax_system ); ?></option>
-						<?php endforeach; ?>
-					</select>
-					<input id="ax-pn-ph-script" name="phonetic_script" value="<?php echo esc_attr( (string) ( $row['phonetic_script'] ?? '' ) ); ?>" class="small-text" placeholder="Hira" aria-label="<?php esc_attr_e( 'Script subtag', 'axismundi-actors' ); ?>">
-					<p class="description"><?php esc_html_e( 'A four-letter script subtag such as Hira or Latn. One of these is required once any pronunciation is written, and clearing every pronunciation clears it too.', 'axismundi-actors' ); ?></p>
-				</td>
-			</tr>
-			<?php foreach ( AXISMUNDI_ACTORS_NAME_PHONETIC_PARTS as $ax_phonetic => $ax_part ) : ?>
-				<tr>
-					<th scope="row"><label for="ax-<?php echo esc_attr( $ax_phonetic ); ?>">
-						<?php
-						$ax_said = trim( (string) ( $row[ $ax_part ] ?? '' ) );
-						printf(
-							/* translators: %s: the part of the name being pronounced. */
-							esc_html__( 'Say %s', 'axismundi-actors' ),
-							esc_html( '' !== $ax_said ? $ax_said : str_replace( '_', ' ', $ax_part ) )
-						);
-						?>
-					</label></th>
-					<td><input id="ax-<?php echo esc_attr( $ax_phonetic ); ?>" name="<?php echo esc_attr( $ax_phonetic ); ?>" value="<?php echo esc_attr( (string) ( $row[ $ax_phonetic ] ?? '' ) ); ?>" class="regular-text"></td>
-				</tr>
-			<?php endforeach; ?>
-		</table>
-		<?php submit_button( __( 'Save name', 'axismundi-actors' ) ); ?>
-	</form>
-	<?php
-	axismundi_actors_alternate_names_form( $actor );
-}
-
-/**
- * Edit the other names a person goes by.
- *
- * One list per kind, and the kinds are not decoration: only a nickname is ever published, and the
- * screen says which is which beside each list rather than leaving somebody to find out from a
- * contact card that their former name travelled.
- *
- * @param Axismundi_Actor $actor Actor.
- * @return void
- */
-function axismundi_actors_alternate_names_form( Axismundi_Actor $actor ) : void {
-	$identity_id = (int) $actor->get_identity_id();
-	$labels      = array(
-		'nickname'           => __( 'Nicknames', 'axismundi-actors' ),
-		'former'             => __( 'Former names', 'axismundi-actors' ),
-		'birth'              => __( 'Birth name', 'axismundi-actors' ),
-		'alternate_spelling' => __( 'Other spellings', 'axismundi-actors' ),
-		'other'              => __( 'Other names', 'axismundi-actors' ),
-	);
-	?>
-	<h3><?php esc_html_e( 'Other names', 'axismundi-actors' ); ?></h3>
-	<p class="description">
-		<?php esc_html_e( 'Different names for the same person. The same name written in another script is not one of these, and belongs above as another language.', 'axismundi-actors' ); ?>
-	</p>
-	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-		<input type="hidden" name="action" value="axismundi_actors_set_alternate_names">
-		<input type="hidden" name="identity_id" value="<?php echo esc_attr( (string) $identity_id ); ?>">
-		<?php wp_nonce_field( 'ax_actors_alt_names_' . $identity_id ); ?>
-		<table class="form-table" role="presentation">
-			<?php foreach ( AXISMUNDI_ACTORS_ALTERNATE_NAME_KINDS as $ax_kind ) : ?>
-				<?php
-				$ax_rows   = axismundi_actors_alternate_names( $identity_id, $ax_kind );
-				$ax_values = implode( ', ', array_column( $ax_rows, 'value' ) );
-				$ax_public = in_array( $ax_kind, AXISMUNDI_ACTORS_PUBLISHED_ALTERNATE_NAME_KINDS, true );
-				?>
-				<tr>
-					<th scope="row"><label for="ax-alt-<?php echo esc_attr( $ax_kind ); ?>"><?php echo esc_html( $labels[ $ax_kind ] ?? $ax_kind ); ?></label></th>
-					<td>
-						<input id="ax-alt-<?php echo esc_attr( $ax_kind ); ?>" name="alt_<?php echo esc_attr( $ax_kind ); ?>" value="<?php echo esc_attr( $ax_values ); ?>" class="large-text">
-						<p class="description">
-							<?php
-							echo $ax_public
-								? esc_html__( 'Separated by commas. Published in this Actor&#8217;s contact card.', 'axismundi-actors' )
-								: esc_html__( 'Separated by commas. Kept on this site only, and never published or federated.', 'axismundi-actors' );
-							?>
-						</p>
-					</td>
-				</tr>
-			<?php endforeach; ?>
-		</table>
-		<?php submit_button( __( 'Save other names', 'axismundi-actors' ) ); ?>
 	</form>
 	<?php
 }
@@ -1512,10 +1302,21 @@ function axismundi_actors_handle_set_texts() : void {
 	}
 	$language = isset( $_POST['language_tag'] ) ? sanitize_text_field( wp_unslash( $_POST['language_tag'] ) ) : '';
 	$result   = true;
-	$values   = array(
-		'name'    => isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '',
-		'summary' => isset( $_POST['summary'] ) ? wp_kses_post( wp_unslash( $_POST['summary'] ) ) : '',
-	);
+	$values   = array( 'summary' => isset( $_POST['summary'] ) ? wp_kses_post( wp_unslash( $_POST['summary'] ) ) : '' );
+	if ( 'Person' === $actor->get_type() ) {
+		$parts = array();
+		foreach ( array( 'given_name', 'additional_name', 'family_name' ) as $field ) {
+			if ( isset( $_POST[ $field ] ) ) {
+				$parts[ $field ] = sanitize_text_field( wp_unslash( $_POST[ $field ] ) );
+			}
+		}
+		$outcome = axismundi_actors_set_person_name( $identity_id, $language, $parts );
+		if ( is_wp_error( $outcome ) ) {
+			$result = $outcome;
+		}
+	} else {
+		$values['name'] = isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '';
+	}
 	foreach ( $values as $field => $value ) {
 		$outcome = axismundi_actors_set_text( $identity_id, $field, $language, $value );
 		if ( is_wp_error( $outcome ) && ! is_wp_error( $result ) ) {
@@ -1536,109 +1337,6 @@ function axismundi_actors_handle_set_texts() : void {
 	axismundi_actors_redirect_result( $back, $result );
 }
 add_action( 'admin_post_axismundi_actors_set_texts', 'axismundi_actors_handle_set_texts' );
-
-/**
- * Save one language's parts of a Person Actor's name.
- *
- * Every field this form owns is sent every time, including the empty ones, which is what makes the
- * writer's three states usable from a screen: a box somebody cleared arrives as an empty value and
- * clears the stored one, while a field this form does not own is simply absent and left alone.
- *
- * @return void
- */
-function axismundi_actors_handle_set_person_name() : void {
-	$identity_id = isset( $_POST['identity_id'] ) ? absint( $_POST['identity_id'] ) : 0;
-	check_admin_referer( 'ax_actors_person_name_' . $identity_id );
-	$actor = axismundi_actors_get_by_identity( $identity_id );
-	if ( ! $actor instanceof Axismundi_Actor || ! axismundi_actors_can_manage( $actor ) ) {
-		wp_die( esc_html__( 'You cannot manage this actor profile.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
-	}
-	$language = isset( $_POST['language_tag'] ) ? sanitize_text_field( wp_unslash( $_POST['language_tag'] ) ) : '';
-	$parts    = array();
-	$fields   = array_merge(
-		AXISMUNDI_ACTORS_NAME_PARTS,
-		array_keys( AXISMUNDI_ACTORS_NAME_PHONETIC_PARTS ),
-		array( 'display_order', 'display_name', 'phonetic_system', 'phonetic_script' )
-	);
-	foreach ( $fields as $field ) {
-		// Present-and-empty is a deletion, so the key is set whenever the form sent the field at all.
-		if ( isset( $_POST[ $field ] ) ) {
-			$parts[ $field ] = sanitize_text_field( wp_unslash( $_POST[ $field ] ) );
-		}
-	}
-	$result = axismundi_actors_set_person_name( $identity_id, $language, $parts );
-	if ( ! is_wp_error( $result ) ) {
-		axismundi_actors_profile_updated( $identity_id );
-	}
-	$back       = axismundi_actors_management_back_url( $actor );
-	$normalized = axismundi_actors_normalize_language_tag( $language );
-	if ( '' !== $normalized ) {
-		$back = add_query_arg( 'ax_actor_lang', $normalized, $back );
-	}
-	axismundi_actors_redirect_result( $back, $result );
-}
-add_action( 'admin_post_axismundi_actors_set_person_name', 'axismundi_actors_handle_set_person_name' );
-
-/**
- * Copy the WordPress account's name into an Actor that has never had one.
- *
- * @return void
- */
-function axismundi_actors_handle_seed_person_name() : void {
-	$identity_id = isset( $_POST['identity_id'] ) ? absint( $_POST['identity_id'] ) : 0;
-	check_admin_referer( 'ax_actors_seed_name_' . $identity_id );
-	$actor = axismundi_actors_get_by_identity( $identity_id );
-	if ( ! $actor instanceof Axismundi_Actor || ! axismundi_actors_can_manage( $actor ) ) {
-		wp_die( esc_html__( 'You cannot manage this actor profile.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
-	}
-	$language = isset( $_POST['language_tag'] ) ? sanitize_text_field( wp_unslash( $_POST['language_tag'] ) ) : '';
-	$result   = axismundi_actors_seed_person_name_from_user( $identity_id, $language );
-	if ( ! is_wp_error( $result ) ) {
-		axismundi_actors_profile_updated( $identity_id );
-	}
-	axismundi_actors_redirect_result( axismundi_actors_management_back_url( $actor ), $result );
-}
-add_action( 'admin_post_axismundi_actors_seed_person_name', 'axismundi_actors_handle_seed_person_name' );
-
-/**
- * Save the other names, one list per kind.
- *
- * Each kind is written separately even though one form sends them all, because the writer answers
- * for one kind at a time and clearing the nicknames must never be a way to lose a former name.
- *
- * @return void
- */
-function axismundi_actors_handle_set_alternate_names() : void {
-	$identity_id = isset( $_POST['identity_id'] ) ? absint( $_POST['identity_id'] ) : 0;
-	check_admin_referer( 'ax_actors_alt_names_' . $identity_id );
-	$actor = axismundi_actors_get_by_identity( $identity_id );
-	if ( ! $actor instanceof Axismundi_Actor || ! axismundi_actors_can_manage( $actor ) ) {
-		wp_die( esc_html__( 'You cannot manage this actor profile.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
-	}
-	$result = true;
-	foreach ( AXISMUNDI_ACTORS_ALTERNATE_NAME_KINDS as $kind ) {
-		$field = 'alt_' . $kind;
-		if ( ! isset( $_POST[ $field ] ) ) {
-			continue;
-		}
-		$raw   = sanitize_text_field( wp_unslash( $_POST[ $field ] ) );
-		$names = array_values(
-			array_filter(
-				array_map( 'trim', explode( ',', $raw ) ),
-				static fn( string $value ) : bool => '' !== $value
-			)
-		);
-		$outcome = axismundi_actors_set_alternate_names( $identity_id, $kind, array_map( static fn( string $value ) : array => array( 'value' => $value ), $names ) );
-		if ( is_wp_error( $outcome ) && ! is_wp_error( $result ) ) {
-			$result = $outcome;
-		}
-	}
-	if ( ! is_wp_error( $result ) ) {
-		axismundi_actors_profile_updated( $identity_id );
-	}
-	axismundi_actors_redirect_result( axismundi_actors_management_back_url( $actor ), $result );
-}
-add_action( 'admin_post_axismundi_actors_set_alternate_names', 'axismundi_actors_handle_set_alternate_names' );
 
 /** @return void */
 function axismundi_actors_handle_set_profile_fields() : void {

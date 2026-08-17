@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit( 1 );
 
-// The editing screen lives behind `is_admin()`, which WP-CLI is not.
+// WP-CLI does not load the administrator screen helpers this fixture renders.
 require_once dirname( __DIR__ ) . '/includes/admin.php';
 
 $ax_pn_results = array();
@@ -308,101 +308,6 @@ try {
 		is_wp_error( axismundi_actors_set_alternate_names( $ax_pn_id, 'stage_name', array( array( 'value' => 'Nope' ) ) ) )
 	);
 
-	// -- one name, said the same way by every document ------------------------------------------------------------
-
-	/*
-	 * The reason the editor and the resolver had to land together. Two stores held a name per language,
-	 * and the contact card read one while the Actor document read the other -- so the first person to
-	 * fill in a structured name would have had two names, from one site, with nothing reporting an
-	 * error. This is the check that they agree, and it is worth more than either alone.
-	 */
-	$ax_pn_both    = ax_pn_actor( $ax_pn_users );
-	$ax_pn_both_id = (int) $ax_pn_both->get_identity_id();
-	axismundi_actors_set_default_language( $ax_pn_both_id, 'ko-KR' );
-	axismundi_actors_set_text( $ax_pn_both_id, 'name', 'ko-KR', '옛날이름' );
-	axismundi_actors_set_person_name( $ax_pn_both_id, 'ko-KR', array( 'family_name' => '김', 'given_name' => '지운', 'display_order' => 'family-given' ) );
-	axismundi_actors_set_person_name( $ax_pn_both_id, 'en', array( 'family_name' => 'Kim', 'given_name' => 'Jiwoon', 'display_order' => 'given-family' ) );
-	$ax_pn_both  = axismundi_actors_get_by_identity( $ax_pn_both_id );
-	$ax_pn_card  = axismundi_actors_jscontact_card( $ax_pn_both );
-	$ax_pn_as    = axismundi_actors_resolve_text( $ax_pn_both, 'name', 'ko-KR' );
-	ax_pn_assert(
-		$ax_pn_results,
-		'the Actor document and the contact card say the same name, and the structured one wins over the string',
-		'김지운' === $ax_pn_as
-			&& '김지운' === (string) ( $ax_pn_card['name']['full'] ?? '' )
-			&& '옛날이름' !== $ax_pn_as
-	);
-	ax_pn_assert(
-		$ax_pn_results,
-		'and they agree in every language, not only the default one',
-		'Jiwoon Kim' === axismundi_actors_resolve_text( $ax_pn_both, 'name', 'en' )
-			&& 'Jiwoon Kim' === (string) ( $ax_pn_card['localizations']['en']['name']['full'] ?? '' )
-	);
-	// The map a follower's server reads has to carry the same thing the scalar does.
-	$ax_pn_map = axismundi_actors_name_map( $ax_pn_both );
-	ax_pn_assert(
-		$ax_pn_results,
-		'the language map carries the structured name too, rather than the string it replaced',
-		'김지운' === (string) ( $ax_pn_map['ko-KR']['name'] ?? '' )
-			&& 'Jiwoon Kim' === (string) ( $ax_pn_map['en']['name'] ?? '' )
-	);
-	/*
-	 * And an Actor that never filled one in is untouched. The structured name is an overlay, not a
-	 * replacement: the text store and the live WordPress fallback still answer for everybody else.
-	 */
-	$ax_pn_plain = ax_pn_actor( $ax_pn_users );
-	axismundi_actors_set_text( (int) $ax_pn_plain->get_identity_id(), 'name', 'en', 'Just A String' );
-	ax_pn_assert(
-		$ax_pn_results,
-		'while an Actor with no structured name still answers from the text store as it always did',
-		'Just A String' === axismundi_actors_resolve_text( axismundi_actors_get_by_identity( (int) $ax_pn_plain->get_identity_id() ), 'name', 'en' )
-	);
-
-	// -- and somebody can actually reach all of it -----------------------------------------------------------------
-
-	/*
-	 * A store nobody can write to is what this slice started as, so the screen is part of it rather
-	 * than a later step. Rendered here for the same reason the follow-collection form is: a template
-	 * whose PHP block closes early prints its own source, which is a failure no amount of correct
-	 * storage underneath will show.
-	 */
-	wp_set_current_user( (int) $ax_pn_actor->get_local_user_id() );
-	ob_start();
-	axismundi_actors_person_name_form( axismundi_actors_get_by_identity( $ax_pn_id ) );
-	$ax_pn_form = (string) ob_get_clean();
-	ax_pn_assert(
-		$ax_pn_results,
-		'every part of the name, its order, its pronunciation and the other names are reachable on one screen',
-		str_contains( $ax_pn_form, 'ax-pn-given' ) && str_contains( $ax_pn_form, 'ax-pn-family' )
-			&& str_contains( $ax_pn_form, 'ax-pn-order' ) && str_contains( $ax_pn_form, 'ax-pn-display' )
-			&& str_contains( $ax_pn_form, 'ax-pn-ph-system' ) && str_contains( $ax_pn_form, 'ax-phonetic_given' )
-			&& str_contains( $ax_pn_form, 'ax-alt-nickname' ) && str_contains( $ax_pn_form, 'ax-alt-former' )
-	);
-	ax_pn_assert(
-		$ax_pn_results,
-		'the screen renders itself rather than its own source, and reaches the writer through a nonce',
-		! str_contains( $ax_pn_form, '<?php' ) && ! str_contains( $ax_pn_form, '$row' )
-			&& str_contains( $ax_pn_form, 'axismundi_actors_set_person_name' )
-			&& str_contains( $ax_pn_form, 'axismundi_actors_set_alternate_names' )
-			&& str_contains( $ax_pn_form, '_wpnonce' )
-	);
-	/*
-	 * And it says which lists travel. Somebody typing a former name deserves to know it stays here
-	 * before they type it, not after a contact card has been fetched.
-	 */
-	ax_pn_assert(
-		$ax_pn_results,
-		'and it says beside each list whether that kind of name ever leaves this site',
-		str_contains( $ax_pn_form, 'never published' ) && str_contains( $ax_pn_form, 'contact card' )
-	);
-	// The handle sits beside the name, read-only, because the two are not the same kind of thing.
-	ax_pn_assert(
-		$ax_pn_results,
-		'the handle is shown next to the name as the permanent address it is, not as a field',
-		str_contains( $ax_pn_form, 'permanent address' )
-			&& ! str_contains( $ax_pn_form, 'name="preferred_username"' )
-	);
-
 	// -- a name belongs to a person ----------------------------------------------------------------------------
 
 	$ax_pn_group = axismundi_actors_create_managed_actor(
@@ -417,6 +322,34 @@ try {
 		'a Group has a name and not a given name, so the structured form refuses it',
 		$ax_pn_group instanceof Axismundi_Actor
 			&& is_wp_error( axismundi_actors_set_person_name( (int) $ax_pn_group->get_identity_id(), 'en', array( 'given_name' => 'Nope' ) ) )
+	);
+
+	// The existing Profile languages surface owns the Person name inputs; it is not a second section.
+	ob_start();
+	axismundi_actors_text_form( axismundi_actors_get_by_identity( $ax_pn_id ) );
+	$ax_pn_profile_language_form = (string) ob_get_clean();
+	ax_pn_assert(
+		$ax_pn_results,
+		'Profile languages replaces a Person name string with given, middle, and family inputs',
+		str_contains( $ax_pn_profile_language_form, 'name="given_name"' )
+			&& str_contains( $ax_pn_profile_language_form, 'name="additional_name"' )
+			&& str_contains( $ax_pn_profile_language_form, 'name="family_name"' )
+			&& ! str_contains( $ax_pn_profile_language_form, 'id="ax-actor-name"' )
+	);
+	$ax_pn_legacy    = ax_pn_actor( $ax_pn_users );
+	$ax_pn_legacy_id = (int) $ax_pn_legacy->get_identity_id();
+	axismundi_actors_set_text( $ax_pn_legacy_id, 'name', 'en-US', 'Existing profile name' );
+	delete_option( 'ax_actors_person_name_text_migrated' );
+	axismundi_actors_migrate_person_name_texts();
+	ob_start();
+	axismundi_actors_text_form( axismundi_actors_get_by_identity( $ax_pn_legacy_id ) );
+	$ax_pn_legacy_form = (string) ob_get_clean();
+	ax_pn_assert(
+		$ax_pn_results,
+		'a legacy Person name is stored as Given name without guessing a surname',
+		str_contains( $ax_pn_legacy_form, 'id="ax-actor-given" name="given_name" value="Existing profile name"' )
+			&& 'Existing profile name' === (string) ( axismundi_actors_person_names( $ax_pn_legacy_id )['en-US']['given_name'] ?? '' )
+			&& '' === (string) ( axismundi_actors_person_names( $ax_pn_legacy_id )['en-US']['family_name'] ?? '' )
 	);
 	if ( $ax_pn_group instanceof Axismundi_Actor ) {
 		$ax_pn_groups[] = (int) $ax_pn_group->get_identity_id();

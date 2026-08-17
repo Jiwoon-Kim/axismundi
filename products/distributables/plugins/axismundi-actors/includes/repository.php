@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '18.0';
+const AXISMUNDI_ACTORS_DB_VERSION = '19.0';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -641,6 +641,14 @@ function axismundi_actors_install() : void {
 	$alternate_name_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$alternate_names}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$alternate_name_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$alternate_names} WHERE Key_name = 'identity_kind_position'" );
+	/*
+	 * The old Profile languages screen stored one Person name as localized text. Promote that historical
+	 * value once into `given_name`: rendering must not write data, and repeating this migration would
+	 * resurrect a structured name a person deliberately removed later.
+	 */
+	if ( '1' !== (string) get_option( 'ax_actors_person_name_text_migrated', '' ) && function_exists( 'axismundi_actors_migrate_person_name_texts' ) ) {
+		axismundi_actors_migrate_person_name_texts();
+	}
 	if (
 		in_array( 'avatar_attachment_id', $columns, true )
 		&& in_array( 'header_attachment_id', $columns, true )

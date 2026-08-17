@@ -28,6 +28,10 @@ remains the authoritative ledger.
 == Changelog ==
 
 = 0.1.0 =
+* Moves onto the canonical repository names, so the bridge and the ledger call
+  the same things by the same words.
+
+= 0.0.29 =
 * Retire the unused remote-only direct-Group predicate. The shared Group
   predicate remains the transport contract for both local and remote public
   community submissions.

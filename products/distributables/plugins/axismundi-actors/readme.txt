@@ -37,6 +37,7 @@ delivery. Those belong to Axismundi Activities and Axismundi Federation.
 * Fixes the local Actor Profile form for follower/following disclosure so its
   choices render normally instead of exposing PHP source and failing to list
   the available policies.
+* Completes the JSContact Card for a local public Actor.
 
 = 0.0.70 =
 * Publishes a local public Actor as a JSContact Card at `/@handle.jscontact`

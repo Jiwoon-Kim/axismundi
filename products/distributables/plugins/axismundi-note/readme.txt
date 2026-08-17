@@ -47,6 +47,19 @@ later Delete Activity and Tombstone projection.
 == Changelog ==
 
 = 0.1.0 =
+* Direct notes are read as conversations, owned by Note. Per-person read state
+  lives with the conversation rather than with any notification about it, so
+  reading a message on one device is reading it everywhere.
+* A shared topic no longer becomes a shared conversation: an inherited context
+  is honoured only when it names a direct Note, never when it is a forum topic.
+* Tells the people a note named. A public note that names somebody is a mention;
+  a note only its recipients can read is a message. Neither notification carries
+  what was said, and who was named is read from the note rather than re-parsed
+  out of its text.
+* Shapes the Notes list like Comments and splits the answer ledger out; points
+  the editor at the canonical Object document.
+
+= 0.0.41 =
 * Lets the generic sentiment resolver bind local Notes for Dislike as well as
   Like, without changing Note's canonical-object boundary.
 

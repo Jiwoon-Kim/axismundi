@@ -4,7 +4,7 @@ Tags: table of contents, toc, headings, navigation, block
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.2.0
+Stable tag: 0.1.2
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -62,7 +62,7 @@ matches them literally.
 
 == Changelog ==
 
-= 0.2.0 =
+= 0.1.2 =
 
 * Let the host theme or template control disclosure placement and sticky
   behavior so the block remains layout-neutral in the editor.

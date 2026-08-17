@@ -45,6 +45,12 @@ page without persisting the Collection, fetching its item URLs, or downloading b
 == Changelog ==
 
 = 0.1.0 =
+* A single Object page is now a document rather than a card, and each reply
+  renders as its own Object instead of an excerpt.
+* Registers the emoji reactions route where REST can actually reach it.
+* Makes a request say which Actor it is about rather than calling it "current".
+
+= 0.0.74 =
 * Adds the generic Dislike control to bundled Object card and Article templates.
   Forum composes it with Like as a community vote when Group context applies.
 

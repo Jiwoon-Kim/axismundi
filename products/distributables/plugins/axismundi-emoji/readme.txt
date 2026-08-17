@@ -32,6 +32,9 @@ render approved reaction chips.
 == Changelog ==
 
 = 0.2.0 =
+* Moves onto the canonical repository names.
+
+= 0.1.6 =
 * Keep an inbound reaction's retention reference on the reacted Object while deriving
   FEP-9098 first-party provenance from the remote Actor that declared its emoji.
 

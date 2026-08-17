@@ -5,7 +5,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-geodata
-Stable tag: 0.3.0
+Stable tag: 0.2.2
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -75,7 +75,7 @@ terms and privacy policies.
 
 == Changelog ==
 
-= 0.3.0 =
+= 0.2.2 =
 * Document the Protomaps Basemaps Assets external service used by the PMTiles
   provider.
 * Escape the map Interactivity context through the block wrapper at output.

@@ -35,6 +35,11 @@ object rendering (Axismundi Object Projections); Note replies (Axismundi Note).
 == Changelog ==
 
 = 0.10.0 =
+* A user may now run an Organization, not only a Group.
+* Calls the manager list what it lists, renames the managed-actor functions for
+  what they make, and makes a request say which Actor it is about.
+
+= 0.9.31 =
 * Treats the generic Like/Dislike pair as the source facts for a community vote,
   while keeping one mutually exclusive up/down control on Group-context Objects.
 * Redistributes Like, Dislike, and both Undo forms through the local Group Actor

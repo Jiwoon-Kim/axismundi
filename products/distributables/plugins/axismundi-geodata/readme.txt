@@ -4,7 +4,7 @@ Tags: geo, geotag, location, taxonomy, rest-api
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.3.0
+Stable tag: 0.2.3
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -151,7 +151,7 @@ docs/map-strategy.md for the boundary.
 
 == Changelog ==
 
-= 0.3.0 =
+= 0.2.3 =
 * Use unique `axismundi_geo_area` and `axismundi_geotag` taxonomy identifiers while preserving the established public archive URLs.
 * Migrate pre-release term assignments to the prefixed identifiers on upgrade.
 * Prefix the place-lookup transient key with the full plugin namespace.

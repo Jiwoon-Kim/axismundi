@@ -35,6 +35,13 @@ excluded from public projections.
 == Changelog ==
 
 = 0.1.0 =
+* Adds Invite: a host may now ask somebody to come, as an Activity with its own
+  withdrawal rather than as a row somewhere.
+* Renames the managed-actor functions for what they make, and makes a request
+  say which Actor it is about instead of calling it "current" -- the acting
+  Actor and the Actor being acted on are different questions.
+
+= 0.0.47 =
 * Adds Dislike as a first-class ActivityStreams interaction with its own state,
   REST mutation, count, cache lease, and editor/feed controls.
 * Keeps Like and Dislike independent outside communities while letting Forum

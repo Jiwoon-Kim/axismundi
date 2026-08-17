@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '16.0';
+const AXISMUNDI_ACTORS_DB_VERSION = '17.0';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -125,6 +125,7 @@ function axismundi_actors_install() : void {
 	$texts      = axismundi_actors_texts_table();
 	$profile_fields = axismundi_actors_profile_fields_table();
 	$person_names   = axismundi_actors_person_names_table();
+	$alternate_names = axismundi_actors_alternate_names_table();
 
 	dbDelta(
 		"CREATE TABLE {$identities} (
@@ -197,6 +198,12 @@ function axismundi_actors_install() : void {
 	 * A person's name in parts, per language. Stored beside the display name rather than replacing it:
 	 * a mononym or an organisation has no parts, and the order the parts read in belongs to the person
 	 * rather than to the language tag.
+	 *
+	 * The phonetic columns say how the parts are said, per part, because that is how both standards
+	 * model it -- JSContact hangs `phonetic` off each name component and vCard puts PHONETIC on the
+	 * property. The system and script are stored once for the whole name and are what make the values
+	 * readable: `jee-WOON` is not IPA, and a phonetic value with nothing saying which notation it is
+	 * written in cannot be pronounced correctly by anybody who did not write it.
 	 */
 	dbDelta(
 		"CREATE TABLE {$person_names} (
@@ -208,11 +215,42 @@ function axismundi_actors_install() : void {
 			additional_name varchar(191) NOT NULL default '',
 			honorific_prefix varchar(64) NOT NULL default '',
 			honorific_suffix varchar(64) NOT NULL default '',
+			phonetic_family varchar(191) NOT NULL default '',
+			phonetic_given varchar(191) NOT NULL default '',
+			phonetic_additional varchar(191) NOT NULL default '',
+			phonetic_system varchar(16) NOT NULL default '',
+			phonetic_script varchar(8) NOT NULL default '',
 			display_order varchar(16) NOT NULL default 'given-family',
 			display_name varchar(191) NOT NULL default '',
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY identity_language (identity_id, language_tag)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	/*
+	 * The other names a person goes by, which are not the same question as the same name written in
+	 * another script -- that is a localization of one name and lives in the table above. A nickname, a
+	 * former name, a birth name are each a different name, and telling them apart is what decides
+	 * whether one may be published: only a nickname has a standard home in a contact document, and a
+	 * previous name of a real person is not something to discover in a public file afterwards.
+	 *
+	 * The language is optional. "Jay" belongs to no language in particular, while a nickname written in
+	 * Hangul does, and an empty tag says the former rather than guessing.
+	 */
+	dbDelta(
+		"CREATE TABLE {$alternate_names} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			identity_id bigint(20) unsigned NOT NULL,
+			language_tag varchar(35) NOT NULL default '',
+			name_kind varchar(32) NOT NULL,
+			value varchar(191) NOT NULL,
+			position smallint(5) unsigned NOT NULL default 0,
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY identity_kind_position (identity_id, name_kind, position),
+			KEY identity_id (identity_id)
 		) ENGINE=InnoDB {$charset};"
 	);
 
@@ -591,6 +629,17 @@ function axismundi_actors_install() : void {
 	$final_actor_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$actors}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$manager_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$managers}" );
+	/*
+	 * The name columns and the other-names table are checked like every other addition here: a
+	 * migration that half-applied and still stamped the version is a site that reports itself current
+	 * while the editor writing to those columns fails on every save.
+	 */
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$person_name_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$person_names}" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$alternate_name_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$alternate_names}" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$alternate_name_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$alternate_names} WHERE Key_name = 'identity_kind_position'" );
 	if (
 		in_array( 'avatar_attachment_id', $columns, true )
 		&& in_array( 'header_attachment_id', $columns, true )
@@ -629,6 +678,14 @@ function axismundi_actors_install() : void {
 		&& $transactional_engines
 		&& $migrated
 		&& $relations_migrated
+		&& in_array( 'phonetic_family', $person_name_columns, true )
+		&& in_array( 'phonetic_given', $person_name_columns, true )
+		&& in_array( 'phonetic_additional', $person_name_columns, true )
+		&& in_array( 'phonetic_system', $person_name_columns, true )
+		&& in_array( 'phonetic_script', $person_name_columns, true )
+		&& in_array( 'name_kind', $alternate_name_columns, true )
+		&& in_array( 'value', $alternate_name_columns, true )
+		&& ! empty( $alternate_name_indexes )
 	) {
 		update_option( 'ax_actors_db_version', AXISMUNDI_ACTORS_DB_VERSION, false );
 	}

@@ -33,11 +33,50 @@ function axismundi_actors_person_names_table() : string {
 	return $wpdb->prefix . 'ax_actor_person_names';
 }
 
+/** @return string The other names a person goes by. */
+function axismundi_actors_alternate_names_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_actor_alternate_names';
+}
+
 /** The orders a name can be assembled in. `custom` means the stored display value is the answer. */
 const AXISMUNDI_ACTORS_NAME_ORDERS = array( 'family-given', 'given-family', 'custom' );
 
 /** The parts, in the order vCard's `N` lists them. */
 const AXISMUNDI_ACTORS_NAME_PARTS = array( 'family_name', 'given_name', 'additional_name', 'honorific_prefix', 'honorific_suffix' );
+
+/** The parts a pronunciation can be given for, keyed by the part they are said for. */
+const AXISMUNDI_ACTORS_NAME_PHONETIC_PARTS = array(
+	'phonetic_family'     => 'family_name',
+	'phonetic_given'      => 'given_name',
+	'phonetic_additional' => 'additional_name',
+);
+
+/**
+ * The notations a pronunciation may be written in.
+ *
+ * The three JSContact registers, and nothing invented. A value with no notation cannot be read by
+ * anybody who did not write it, which is why one of these is required the moment a phonetic value
+ * exists rather than being an optional refinement.
+ */
+const AXISMUNDI_ACTORS_PHONETIC_SYSTEMS = array( 'ipa', 'jyut', 'piny' );
+
+/**
+ * The kinds of other name, and what each one means.
+ *
+ * Not localizations. `김지운` and `Jiwoon Kim` are one name written twice and belong in the table
+ * above; these are different names for the same person.
+ */
+const AXISMUNDI_ACTORS_ALTERNATE_NAME_KINDS = array( 'nickname', 'former', 'birth', 'maiden', 'alternate_spelling', 'other' );
+
+/**
+ * The kinds that may leave this site in a contact document.
+ *
+ * Only a nickname, because only a nickname has an unambiguous home in one -- and because a former
+ * or birth name of a real person appearing in a public file is not a mistake that can be taken back
+ * afterwards. The rest are stored because people want them recorded, and stop here.
+ */
+const AXISMUNDI_ACTORS_PUBLISHED_ALTERNATE_NAME_KINDS = array( 'nickname' );
 
 /**
  * Store one language's parts of a Person's name.
@@ -57,20 +96,43 @@ function axismundi_actors_set_person_name( int $identity_id, string $language, a
 	if ( '' === $language ) {
 		return new WP_Error( 'ax_actors_name_language', __( 'A name needs the language it is written in.', 'axismundi-actors' ), array( 'status' => 400 ) );
 	}
-	$order = (string) ( $parts['display_order'] ?? 'given-family' );
+	/*
+	 * What is already stored, because this writes with REPLACE: the row is deleted and written again.
+	 * Three states, and the middle one is the reason this is not simply a merge:
+	 *
+	 *   key absent          leave what is there
+	 *   key present, empty  clear that value, deliberately
+	 *   key present, value  change it
+	 *
+	 * A merge without the middle state is a store nobody can erase anything from: an editor that sends
+	 * the fields it owns would preserve a pronunciation forever, and clearing one would need a second
+	 * verb. `??` gives exactly this, since it falls through on absence and not on emptiness -- which is
+	 * worth saying out loud, because the obvious `?:` here would silently make empty mean absent.
+	 */
+	$existing = axismundi_actors_person_names( $identity_id )[ $language ] ?? array();
+	$order    = (string) ( $parts['display_order'] ?? $existing['display_order'] ?? 'given-family' );
 	if ( ! in_array( $order, AXISMUNDI_ACTORS_NAME_ORDERS, true ) ) {
 		return new WP_Error( 'ax_actors_name_order', __( 'That is not a way of ordering a name.', 'axismundi-actors' ), array( 'status' => 400 ) );
 	}
-
 	$row = array(
 		'identity_id'   => $identity_id,
 		'language_tag'  => $language,
 		'display_order' => $order,
-		'display_name'  => sanitize_text_field( (string) ( $parts['display_name'] ?? '' ) ),
+		'display_name'  => sanitize_text_field( (string) ( $parts['display_name'] ?? $existing['display_name'] ?? '' ) ),
 		'updated_at'    => current_time( 'mysql', true ),
 	);
 	foreach ( AXISMUNDI_ACTORS_NAME_PARTS as $part ) {
-		$row[ $part ] = sanitize_text_field( (string) ( $parts[ $part ] ?? '' ) );
+		$row[ $part ] = sanitize_text_field( (string) ( $parts[ $part ] ?? $existing[ $part ] ?? '' ) );
+	}
+	foreach ( array_keys( AXISMUNDI_ACTORS_NAME_PHONETIC_PARTS ) as $phonetic ) {
+		$row[ $phonetic ] = sanitize_text_field( (string) ( $parts[ $phonetic ] ?? $existing[ $phonetic ] ?? '' ) );
+	}
+	$row['phonetic_system'] = strtolower( sanitize_text_field( (string) ( $parts['phonetic_system'] ?? $existing['phonetic_system'] ?? '' ) ) );
+	// Titlecased on the way in, so `hira` and `Hira` are the same subtag rather than two.
+	$row['phonetic_script'] = ucfirst( strtolower( sanitize_text_field( (string) ( $parts['phonetic_script'] ?? $existing['phonetic_script'] ?? '' ) ) ) );
+	$phonetics = axismundi_actors_validate_name_phonetics( $row );
+	if ( is_wp_error( $phonetics ) ) {
+		return $phonetics;
 	}
 	// Nothing written is not a name in one language; it is the absence of one, and an empty row would
 	// otherwise sit in the way of the fallback.
@@ -81,6 +143,57 @@ function axismundi_actors_set_person_name( int $identity_id, string $language, a
 	return false === $wpdb->replace( axismundi_actors_person_names_table(), $row )
 		? new WP_Error( 'ax_actors_name_write', __( 'The name could not be saved.', 'axismundi-actors' ) )
 		: true;
+}
+
+/**
+ * Refuse a pronunciation nobody can read.
+ *
+ * A phonetic value is a claim about sound, and `jee-WOON` is not IPA. Without a notation it cannot
+ * be said correctly by anybody who did not write it, and serving it in a contact document beside a
+ * field named `phoneticSystem` that is absent is worse than not serving it at all -- a reader
+ * assumes a default and pronounces somebody's name wrongly on the strength of it.
+ *
+ * A script alone is accepted: saying the value is written in Hiragana is a real answer even when
+ * the notation has no registered name. What is refused is neither.
+ *
+ * @param array<string,string> $row Row about to be written.
+ * @return true|WP_Error
+ */
+function axismundi_actors_validate_name_phonetics( array $row ) {
+	$written = '';
+	foreach ( array_keys( AXISMUNDI_ACTORS_NAME_PHONETIC_PARTS ) as $phonetic ) {
+		$written .= trim( (string) ( $row[ $phonetic ] ?? '' ) );
+	}
+	$system = trim( (string) ( $row['phonetic_system'] ?? '' ) );
+	$script = trim( (string) ( $row['phonetic_script'] ?? '' ) );
+	if ( '' !== $system && ! in_array( $system, AXISMUNDI_ACTORS_PHONETIC_SYSTEMS, true ) ) {
+		return new WP_Error(
+			'ax_actors_name_phonetic_system',
+			__( 'That is not a phonetic notation this site can name.', 'axismundi-actors' ),
+			array( 'status' => 400 )
+		);
+	}
+	/*
+	 * A script subtag is four letters, ISO 15924, and shape is all this checks. Holding a copy of the
+	 * registry would go stale, and refusing a script because our list predates it would be worse than
+	 * accepting one nobody uses -- but `Hiragana` and `hira-ish` are not subtags at all, and letting
+	 * them through would put a value in `phoneticScript` that no consumer can resolve.
+	 */
+	if ( '' !== $script && 1 !== preg_match( '/^[A-Z][a-z]{3}$/', $script ) ) {
+		return new WP_Error(
+			'ax_actors_name_phonetic_script',
+			__( 'A script is a four-letter ISO 15924 subtag, like Hira or Latn.', 'axismundi-actors' ),
+			array( 'status' => 400 )
+		);
+	}
+	if ( '' !== $written && '' === $system && '' === $script ) {
+		return new WP_Error(
+			'ax_actors_name_phonetic_unreadable',
+			__( 'A pronunciation needs to say which notation or script it is written in.', 'axismundi-actors' ),
+			array( 'status' => 400 )
+		);
+	}
+	return true;
 }
 
 /**

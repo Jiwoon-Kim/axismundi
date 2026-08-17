@@ -223,6 +223,88 @@ try {
 			&& AXISMUNDI_ACTORS_DB_VERSION === (string) get_option( 'ax_actors_db_version', '' )
 	);
 
+	// -- the account name is a starting point, offered once ------------------------------------------------------
+
+	/*
+	 * Eligibility is a history, not an emptiness. Reading "the table has no rows" would let the
+	 * WordPress account name walk back in after somebody deliberately removed their structured name --
+	 * once, quietly, looking exactly like the software remembering something helpful.
+	 */
+	$ax_pn_fresh    = ax_pn_actor( $ax_pn_users );
+	$ax_pn_fresh_id = (int) $ax_pn_fresh->get_identity_id();
+	wp_update_user( array( 'ID' => (int) $ax_pn_fresh->get_local_user_id(), 'first_name' => 'Ji-woon', 'last_name' => 'Kim' ) );
+	ax_pn_assert(
+		$ax_pn_results,
+		'an Actor whose name nobody has decided can start from the account name',
+		! axismundi_actors_person_name_was_edited( $ax_pn_fresh_id )
+			&& true === axismundi_actors_seed_person_name_from_user( $ax_pn_fresh_id )
+			&& 'Ji-woon Kim' === axismundi_actors_assemble_person_name( axismundi_actors_person_names( $ax_pn_fresh_id )[ axismundi_actors_normalize_language_tag( (string) $ax_pn_fresh->get_default_language() ) ] )
+	);
+	ax_pn_assert(
+		$ax_pn_results,
+		'and once it has one, copying the account name again is refused rather than overwriting it',
+		axismundi_actors_person_name_was_edited( $ax_pn_fresh_id )
+			&& is_wp_error( axismundi_actors_seed_person_name_from_user( $ax_pn_fresh_id ) )
+	);
+	/*
+	 * The case the flag exists for. Somebody removes their structured name; the table is empty again,
+	 * exactly as it was before they ever touched it, and the account name must still stay out.
+	 */
+	$ax_pn_emptied    = ax_pn_actor( $ax_pn_users );
+	$ax_pn_emptied_id = (int) $ax_pn_emptied->get_identity_id();
+	wp_update_user( array( 'ID' => (int) $ax_pn_emptied->get_local_user_id(), 'first_name' => 'Ji-woon', 'last_name' => 'Kim' ) );
+	axismundi_actors_set_person_name( $ax_pn_emptied_id, 'en', array( 'given_name' => 'Someone' ) );
+	axismundi_actors_delete_person_name( $ax_pn_emptied_id, 'en' );
+	$ax_pn_reseed = axismundi_actors_seed_person_name_from_user( $ax_pn_emptied_id );
+	ax_pn_assert(
+		$ax_pn_results,
+		'a name somebody deliberately emptied stays empty; the account name does not come back into it',
+		array() === axismundi_actors_person_names( $ax_pn_emptied_id )
+			&& is_wp_error( $ax_pn_reseed )
+			&& 'ax_actors_name_seed_decided' === $ax_pn_reseed->get_error_code()
+	);
+
+	// -- the other names, per kind -------------------------------------------------------------------------------
+
+	axismundi_actors_set_alternate_names( $ax_pn_id, 'nickname', array( array( 'value' => 'Jay' ), array( 'value' => '지운이', 'language_tag' => 'ko-KR' ) ) );
+	axismundi_actors_set_alternate_names( $ax_pn_id, 'former', array( array( 'value' => 'A Previous Name' ) ) );
+	$ax_pn_nicknames = axismundi_actors_alternate_names( $ax_pn_id, 'nickname' );
+	ax_pn_assert(
+		$ax_pn_results,
+		'other names keep the order they were given in, and a name of no particular language says so',
+		2 === count( $ax_pn_nicknames )
+			&& 'Jay' === (string) $ax_pn_nicknames[0]['value']
+			&& '' === (string) $ax_pn_nicknames[0]['language_tag']
+			&& 'ko-KR' === (string) $ax_pn_nicknames[1]['language_tag']
+	);
+	/*
+	 * Each kind is answered for separately. Clearing the nicknames must not be a way to lose a former
+	 * name -- a whole-table replace would make one list's edit into another list's deletion.
+	 */
+	axismundi_actors_set_alternate_names( $ax_pn_id, 'nickname', array() );
+	ax_pn_assert(
+		$ax_pn_results,
+		'clearing one kind leaves the others exactly where they were',
+		array() === axismundi_actors_alternate_names( $ax_pn_id, 'nickname' )
+			&& 1 === count( axismundi_actors_alternate_names( $ax_pn_id, 'former' ) )
+	);
+	// The reader a serializer uses, so nothing has to remember which kinds are publishable.
+	axismundi_actors_set_alternate_names( $ax_pn_id, 'nickname', array( array( 'value' => 'Jay' ) ) );
+	$ax_pn_publishable = axismundi_actors_published_alternate_names( $ax_pn_id );
+	ax_pn_assert(
+		$ax_pn_results,
+		'and the publishable reader hands over the nickname while the former name never leaves the store',
+		1 === count( $ax_pn_publishable )
+			&& 'Jay' === (string) $ax_pn_publishable[0]['value']
+			&& 'nickname' === (string) $ax_pn_publishable[0]['name_kind']
+			&& 1 === count( axismundi_actors_alternate_names( $ax_pn_id, 'former' ) )
+	);
+	ax_pn_assert(
+		$ax_pn_results,
+		'a kind this site does not know is refused rather than stored as a word nobody reads',
+		is_wp_error( axismundi_actors_set_alternate_names( $ax_pn_id, 'stage_name', array( array( 'value' => 'Nope' ) ) ) )
+	);
+
 	// -- a name belongs to a person ----------------------------------------------------------------------------
 
 	$ax_pn_group = axismundi_actors_create_managed_actor(

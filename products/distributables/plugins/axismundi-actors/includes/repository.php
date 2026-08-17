@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '17.0';
+const AXISMUNDI_ACTORS_DB_VERSION = '18.0';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -169,6 +169,7 @@ function axismundi_actors_install() : void {
 			followers_total bigint(20) unsigned DEFAULT NULL,
 			following_total bigint(20) unsigned DEFAULT NULL,
 			follow_counts_fetched_at datetime DEFAULT NULL,
+			person_name_edited_at datetime DEFAULT NULL,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (identity_id),
@@ -683,6 +684,7 @@ function axismundi_actors_install() : void {
 		&& in_array( 'phonetic_additional', $person_name_columns, true )
 		&& in_array( 'phonetic_system', $person_name_columns, true )
 		&& in_array( 'phonetic_script', $person_name_columns, true )
+		&& in_array( 'person_name_edited_at', $final_actor_columns, true )
 		&& in_array( 'name_kind', $alternate_name_columns, true )
 		&& in_array( 'value', $alternate_name_columns, true )
 		&& ! empty( $alternate_name_indexes )

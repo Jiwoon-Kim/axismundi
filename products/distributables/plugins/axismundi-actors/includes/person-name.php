@@ -140,9 +140,11 @@ function axismundi_actors_set_person_name( int $identity_id, string $language, a
 		return axismundi_actors_delete_person_name( $identity_id, $language );
 	}
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	return false === $wpdb->replace( axismundi_actors_person_names_table(), $row )
-		? new WP_Error( 'ax_actors_name_write', __( 'The name could not be saved.', 'axismundi-actors' ) )
-		: true;
+	if ( false === $wpdb->replace( axismundi_actors_person_names_table(), $row ) ) {
+		return new WP_Error( 'ax_actors_name_write', __( 'The name could not be saved.', 'axismundi-actors' ) );
+	}
+	axismundi_actors_mark_person_name_edited( $identity_id );
+	return true;
 }
 
 /**
@@ -216,6 +218,46 @@ function axismundi_actors_normalize_name_phonetics( array $row ) {
 }
 
 /**
+ * Record that somebody has decided this Actor's name.
+ *
+ * Kept as a fact of its own rather than inferred from the rows, because the interesting state is
+ * "nobody has ever said" and an empty table is two different things: an Actor whose name has never
+ * been touched, and one whose name was deliberately emptied. Reading emptiness would let the
+ * WordPress account name walk back in after somebody removed it -- once, quietly, and looking for
+ * all the world like the software had simply remembered.
+ *
+ * Set by every write and every deletion, and never cleared.
+ *
+ * @param int $identity_id Actor identity.
+ * @return void
+ */
+function axismundi_actors_mark_person_name_edited( int $identity_id ) : void {
+	global $wpdb;
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+	$wpdb->update(
+		axismundi_actors_actors_table(),
+		array( 'person_name_edited_at' => current_time( 'mysql', true ) ),
+		array( 'identity_id' => $identity_id ),
+		array( '%s' ),
+		array( '%d' )
+	);
+}
+
+/**
+ * Whether this Actor's name has ever been decided by a person.
+ *
+ * @param int $identity_id Actor identity.
+ * @return bool
+ */
+function axismundi_actors_person_name_was_edited( int $identity_id ) : bool {
+	global $wpdb;
+	$table = axismundi_actors_actors_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+	$edited = $wpdb->get_var( $wpdb->prepare( "SELECT person_name_edited_at FROM {$table} WHERE identity_id = %d", $identity_id ) );
+	return null !== $edited && '' !== (string) $edited;
+}
+
+/**
  * @param int    $identity_id Actor identity.
  * @param string $language    BCP-47 tag.
  * @return true
@@ -228,6 +270,8 @@ function axismundi_actors_delete_person_name( int $identity_id, string $language
 		array( 'identity_id' => $identity_id, 'language_tag' => axismundi_actors_normalize_language_tag( $language ) ),
 		array( '%d', '%s' )
 	);
+	// Emptying a name is deciding it, which is exactly what stops the account name coming back.
+	axismundi_actors_mark_person_name_edited( $identity_id );
 	return true;
 }
 
@@ -313,4 +357,146 @@ function axismundi_actors_person_display_name( Axismundi_Actor $actor, string $l
 		}
 	}
 	return $actor->get_display_name();
+}
+
+/**
+ * Offer the WordPress account's name as a starting point, once.
+ *
+ * A convenience and not a link. Somebody creating their first Actor has usually already typed their
+ * name into the account screen, and asking again is a small rudeness; but the two are different
+ * facts about different things -- one is how WordPress bylines a post author, the other is how a
+ * person is known on the network -- so this copies and then lets go.
+ *
+ * Only when nobody has ever decided the Actor's name. Not "when the table is empty": somebody who
+ * removed their structured name meant to remove it, and letting the account name reappear
+ * afterwards would undo a decision without being asked, in the one direction nobody would think to
+ * check.
+ *
+ * @param int    $identity_id Actor identity.
+ * @param string $language    Language to write it in, or '' for the Actor's default.
+ * @return true|WP_Error
+ */
+function axismundi_actors_seed_person_name_from_user( int $identity_id, string $language = '' ) {
+	$actor = axismundi_actors_get_by_identity( $identity_id );
+	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || 'Person' !== $actor->get_type() ) {
+		return new WP_Error( 'ax_actors_name_seed_kind', __( 'Only a local person has an account name to copy.', 'axismundi-actors' ), array( 'status' => 400 ) );
+	}
+	if ( axismundi_actors_person_name_was_edited( $identity_id ) ) {
+		return new WP_Error(
+			'ax_actors_name_seed_decided',
+			__( 'This Actor already has a name somebody decided. Copying the account name now would overwrite it.', 'axismundi-actors' ),
+			array( 'status' => 409 )
+		);
+	}
+	$user = get_userdata( (int) $actor->get_local_user_id() );
+	if ( ! $user instanceof WP_User ) {
+		return new WP_Error( 'ax_actors_name_seed_user', __( 'There is no account to copy a name from.', 'axismundi-actors' ), array( 'status' => 404 ) );
+	}
+	$given  = trim( (string) $user->first_name );
+	$family = trim( (string) $user->last_name );
+	if ( '' === $given && '' === $family ) {
+		return new WP_Error( 'ax_actors_name_seed_empty', __( 'The account has no first or last name to copy.', 'axismundi-actors' ), array( 'status' => 404 ) );
+	}
+	/*
+	 * Given-family, because that is the order the two WordPress fields are named in and the only order
+	 * they can honestly be read in. Someone whose name reads the other way changes it once, and that
+	 * edit is what stops this ever running again.
+	 */
+	return axismundi_actors_set_person_name(
+		$identity_id,
+		'' !== $language ? $language : (string) $actor->get_default_language(),
+		array( 'given_name' => $given, 'family_name' => $family, 'display_order' => 'given-family' )
+	);
+}
+
+/**
+ * The other names one Actor goes by, in the order they were put in.
+ *
+ * @param int    $identity_id Actor identity.
+ * @param string $kind        Restrict to one kind, or '' for all.
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_actors_alternate_names( int $identity_id, string $kind = '' ) : array {
+	global $wpdb;
+	if ( $identity_id <= 0 ) {
+		return array();
+	}
+	$table = axismundi_actors_alternate_names_table();
+	$sql   = "SELECT * FROM {$table} WHERE identity_id = %d";
+	$args  = array( $identity_id );
+	if ( '' !== $kind ) {
+		$sql   .= ' AND name_kind = %s';
+		$args[] = $kind;
+	}
+	$sql .= ' ORDER BY name_kind ASC, position ASC, id ASC';
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+	return (array) $wpdb->get_results( $wpdb->prepare( $sql, $args ), ARRAY_A );
+}
+
+/**
+ * Replace every other name of one kind.
+ *
+ * Whole-kind rather than row-by-row, because the order within a kind is part of what is stored and
+ * a list is the thing a person edits. Replacing one kind never touches another: clearing the
+ * nicknames must not be a way to lose a former name, and each kind is answered for separately.
+ *
+ * @param int                           $identity_id Actor identity.
+ * @param string                        $kind        One of AXISMUNDI_ACTORS_ALTERNATE_NAME_KINDS.
+ * @param array<int,array<string,mixed>> $names      Rows of `value` and optional `language_tag`.
+ * @return true|WP_Error
+ */
+function axismundi_actors_set_alternate_names( int $identity_id, string $kind, array $names ) {
+	global $wpdb;
+	$actor = axismundi_actors_get_by_identity( $identity_id );
+	if ( ! $actor instanceof Axismundi_Actor || 'Person' !== $actor->get_type() ) {
+		return new WP_Error( 'ax_actors_alt_name_kind_actor', __( 'Only a person goes by another name.', 'axismundi-actors' ), array( 'status' => 400 ) );
+	}
+	if ( ! in_array( $kind, AXISMUNDI_ACTORS_ALTERNATE_NAME_KINDS, true ) ) {
+		return new WP_Error( 'ax_actors_alt_name_kind', __( 'That is not a kind of name this site knows.', 'axismundi-actors' ), array( 'status' => 400 ) );
+	}
+	$rows = array();
+	foreach ( array_values( $names ) as $position => $name ) {
+		$value = sanitize_text_field( (string) ( is_array( $name ) ? ( $name['value'] ?? '' ) : $name ) );
+		if ( '' === trim( $value ) ) {
+			continue;
+		}
+		$language = is_array( $name ) ? axismundi_actors_normalize_language_tag( (string) ( $name['language_tag'] ?? '' ) ) : '';
+		$rows[]   = array(
+			'identity_id'  => $identity_id,
+			// Empty is an answer: "Jay" belongs to no language in particular, and guessing one would
+			// hide it from every reader who asked for a different tag.
+			'language_tag' => $language,
+			'name_kind'    => $kind,
+			'value'        => $value,
+			'position'     => $position,
+			'created_at'   => current_time( 'mysql', true ),
+			'updated_at'   => current_time( 'mysql', true ),
+		);
+	}
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+	$wpdb->delete( axismundi_actors_alternate_names_table(), array( 'identity_id' => $identity_id, 'name_kind' => $kind ), array( '%d', '%s' ) );
+	foreach ( $rows as $row ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+		if ( false === $wpdb->insert( axismundi_actors_alternate_names_table(), $row ) ) {
+			return new WP_Error( 'ax_actors_alt_name_write', __( 'That name could not be saved.', 'axismundi-actors' ) );
+		}
+	}
+	return true;
+}
+
+/**
+ * The other names that may appear in a public document.
+ *
+ * The only reader a serializer should use. Asking for `nickname` directly would work today and be
+ * the line somebody copies the day a second kind becomes publishable -- or the day one stops being.
+ *
+ * @param int $identity_id Actor identity.
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_actors_published_alternate_names( int $identity_id ) : array {
+	$out = array();
+	foreach ( AXISMUNDI_ACTORS_PUBLISHED_ALTERNATE_NAME_KINDS as $kind ) {
+		$out = array_merge( $out, axismundi_actors_alternate_names( $identity_id, $kind ) );
+	}
+	return $out;
 }

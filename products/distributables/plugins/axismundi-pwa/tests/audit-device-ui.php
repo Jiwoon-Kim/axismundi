@@ -100,6 +100,18 @@ try {
 			&& str_contains( $ax_du_data, 'wp.serviceworker' )
 			&& ! str_contains( $ax_du_data, 'wp_service_worker=admin' )
 	);
+	/*
+	 * On an admin page `navigator.serviceWorker.ready` can resolve the `/wp-admin/` worker even
+	 * after the root worker has been registered. The subscription must be created through the root
+	 * registration returned by `register()`, or it has no handler for incoming pushes.
+	 */
+	$ax_du_push_script = (string) file_get_contents( dirname( __DIR__ ) . '/assets/push.js' );
+	ax_du_assert(
+		$ax_du_results,
+		'the browser subscribes through the explicitly registered root worker, never the admin page worker',
+		str_contains( $ax_du_push_script, 'return registration;' )
+			&& ! str_contains( $ax_du_push_script, 'return navigator.serviceWorker.ready;' )
+	);
 	// The public key travels; nothing else about keys does.
 	ax_du_assert(
 		$ax_du_results,

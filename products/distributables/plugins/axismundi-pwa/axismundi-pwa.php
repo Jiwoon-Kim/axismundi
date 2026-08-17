@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi PWA
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-pwa
  * Description:       Owns this site's installable-app surface: push subscriptions per device, the service worker handlers that receive them, and the capability other products ask before offering push.
- * Version:           0.1.0
+ * Version:           0.1.1
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Requires Plugins:  pwa
@@ -29,7 +29,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_PWA_VERSION = '0.1.0';
+const AXISMUNDI_PWA_VERSION = '0.1.1';
 
 /*
  * The Web Push library, loaded once here rather than by whichever function happens to be called

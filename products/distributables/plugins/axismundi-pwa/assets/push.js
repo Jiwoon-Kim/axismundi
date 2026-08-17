@@ -68,8 +68,14 @@
 	 * and the subscription would be perfectly valid and never show anybody anything.
 	 */
 	function worker() {
-		return navigator.serviceWorker.register( config.serviceWorkerUrl, { scope: '/' } ).then( function () {
-			return navigator.serviceWorker.ready;
+		return navigator.serviceWorker.register( config.serviceWorkerUrl, { scope: '/' } ).then( function ( registration ) {
+			/*
+			 * `ready` means the worker controlling this admin page. That can be the provider's
+			 * `/wp-admin/` worker, which is a valid PushSubscription host but does not carry
+			 * our front-worker push handler. Subscribe through the registration we explicitly
+			 * created for `/` instead.
+			 */
+			return registration;
 		} );
 	}
 

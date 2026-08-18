@@ -84,22 +84,15 @@ function axismundi_actors_jscontact_uid( Axismundi_Actor $actor ) : string {
  * @return array<string,mixed>|null
  */
 function axismundi_actors_jscontact_name( array $row ) : ?array {
-	$map = array(
-		'honorific_prefix' => 'title',
-		'first_name'       => 'given',
-		'middle_name'  => 'given2',
-		'last_name'      => 'surname',
-		'honorific_suffix' => 'credential',
-	);
-	$order = 'family-given' === (string) ( $row['display_order'] ?? '' )
-		? array( 'honorific_prefix', 'last_name', 'first_name', 'middle_name', 'honorific_suffix' )
-		: array( 'honorific_prefix', 'first_name', 'middle_name', 'last_name', 'honorific_suffix' );
+	$order = in_array( (string) ( $row['display_order'] ?? '' ), array( 'family-given', 'family-given-compact' ), true )
+		? array( 'title', 'surname', 'surname2', 'given', 'given2', 'credential' )
+		: array( 'title', 'given', 'given2', 'surname', 'surname2', 'credential' );
 
 	$components = array();
 	foreach ( $order as $part ) {
 		$value = trim( (string) ( $row[ $part ] ?? '' ) );
 		if ( '' !== $value ) {
-			$components[] = array( '@type' => 'NameComponent', 'kind' => $map[ $part ], 'value' => $value );
+			$components[] = array( '@type' => 'NameComponent', 'kind' => $part, 'value' => $value );
 		}
 	}
 	$full = axismundi_actors_assemble_person_name( $row );
@@ -113,6 +106,9 @@ function axismundi_actors_jscontact_name( array $row ) : ?array {
 	if ( array() !== $components ) {
 		$name['components'] = $components;
 		$name['isOrdered']  = true;
+		if ( in_array( (string) ( $row['display_order'] ?? '' ), array( 'family-given-compact', 'given-family-compact' ), true ) ) {
+			$name['defaultSeparator'] = '';
+		}
 	}
 	return $name;
 }
@@ -147,12 +143,28 @@ function axismundi_actors_jscontact_card( Axismundi_Actor $actor ) {
 		$card['language'] = $language;
 	}
 
-	$names = 'Person' === $actor->get_type() ? axismundi_actors_person_names( $actor->get_identity_id() ) : array();
-	$name  = isset( $names[ $language ] ) ? axismundi_actors_jscontact_name( $names[ $language ] ) : null;
+	/*
+	 * Components come from the one base profile, and only for the language they were written in. A
+	 * Card's `name` is the Actor's primary language; if the parts belong to a different language, they
+	 * describe that language's name and travel with it rather than with this one.
+	 */
+	$profile   = 'Person' === $actor->get_type() && $actor->is_local()
+		? axismundi_actors_person_profile( $actor->get_identity_id() )
+		: array();
+	$structured = axismundi_actors_normalize_language_tag( (string) ( $profile['structured_name_language'] ?? '' ) );
+	$map        = axismundi_actors_get_text_map( $actor->get_identity_id() );
+
+	$name = $structured === $language && array() !== $profile
+		? axismundi_actors_jscontact_name( $profile )
+		: null;
 	if ( null === $name ) {
-		// Whatever this Actor is already called. An Organization has a name and no components, and so
-		// does a person who never filled any in.
-		$display = trim( $actor->get_display_name() );
+		/*
+		 * Whatever this Actor is called in its own language. An Organization has a name and no
+		 * components, so does a person who never wrote any, and so does every remote Actor -- whose
+		 * name is a string another server sent and is never taken apart here.
+		 */
+		$written = trim( (string) ( $map[ $language ]['name'] ?? '' ) );
+		$display = '' !== $written ? $written : trim( $actor->get_display_name() );
 		$name    = '' !== $display ? array( '@type' => 'Name', 'full' => $display ) : null;
 	}
 	if ( null !== $name ) {
@@ -160,15 +172,21 @@ function axismundi_actors_jscontact_card( Axismundi_Actor $actor ) {
 	}
 
 	/*
-	 * The other languages, as JSContact keeps them: a patch per tag rather than a second Card. Only
-	 * the name is localized here, because it is the only thing this slice stores per language.
+	 * The other languages, as JSContact keeps them: a patch per tag rather than a second Card. Each
+	 * carries `full`, and components only where the parts actually belong -- claiming them anywhere
+	 * else would be this site deciding which half of `Jiwoon Kim` is a surname, which nobody asked it
+	 * to decide.
 	 */
 	$localizations = array();
-	foreach ( $names as $tag => $row ) {
-		if ( $tag === $language ) {
+	foreach ( $map as $tag => $fields ) {
+		$tag     = (string) $tag;
+		$written = trim( (string) ( $fields['name'] ?? '' ) );
+		if ( $tag === $language || '' === $written ) {
 			continue;
 		}
-		$localized = axismundi_actors_jscontact_name( $row );
+		$localized = $tag === $structured && array() !== $profile
+			? axismundi_actors_jscontact_name( $profile )
+			: array( '@type' => 'Name', 'full' => $written );
 		if ( null !== $localized ) {
 			$localizations[ $tag ] = array( 'name' => $localized );
 		}
@@ -176,6 +194,36 @@ function axismundi_actors_jscontact_card( Axismundi_Actor $actor ) {
 	if ( array() !== $localizations ) {
 		$card['localizations'] = $localizations;
 	}
+	/*
+	 * A birthday, as JSContact states one: an entry in `anniversaries` with `kind: "birth"`, not a
+	 * field of its own. The vocabulary is general on purpose -- a death or a wedding is the same shape
+	 * with a different kind -- and using it means no reader needs a Misskey-specific vCard extension
+	 * to learn when somebody was born.
+	 *
+	 * `PartialDate` is what lets the year be withheld: a month and a day with no year is a complete,
+	 * valid statement, which is exactly "you may wish me happy birthday, you may not have my birth
+	 * year".
+	 *
+	 * Actor anniversaries are Gregorian date facts. A future Contacts calendar can decide whether and how
+	 * to derive reminders or secondary-calendar recurrences from them.
+	 */
+	$anniversary_rows = $actor->is_local()
+		? axismundi_actors_public_anniversaries( $actor->get_identity_id() )
+		: array();
+	$anniversaries = array();
+	foreach ( $anniversary_rows as $id => $anniversary ) {
+		$date = array( '@type' => 'PartialDate' );
+		if ( isset( $anniversary['date']['year'] ) ) {
+			$date['year'] = (int) $anniversary['date']['year'];
+		}
+		$date['month'] = (int) $anniversary['date']['month'];
+		$date['day']   = (int) $anniversary['date']['day'];
+		$anniversaries[ (string) $id ] = array( '@type' => 'Anniversary', 'kind' => (string) $anniversary['kind'], 'date' => $date );
+	}
+	if ( array() !== $anniversaries ) {
+		$card['anniversaries'] = $anniversaries;
+	}
+
 	/**
 	 * Let a domain add what it owns.
 	 *

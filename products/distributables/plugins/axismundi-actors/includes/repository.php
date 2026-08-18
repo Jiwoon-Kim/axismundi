@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '20.0';
+const AXISMUNDI_ACTORS_DB_VERSION = '26.0';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -29,6 +29,12 @@ function axismundi_actors_actors_table() : string {
 function axismundi_actors_texts_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_actor_texts';
+}
+
+/** @return string Local Actor anniversaries. */
+function axismundi_actors_anniversaries_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_actor_anniversaries';
 }
 
 /** @return string Local Actor PropertyValue profile fields. */
@@ -126,6 +132,8 @@ function axismundi_actors_install() : void {
 	$profile_fields = axismundi_actors_profile_fields_table();
 	$person_names   = axismundi_actors_person_names_table();
 	$alternate_names = axismundi_actors_alternate_names_table();
+	$profile         = axismundi_actors_profile_table();
+	$anniversaries   = axismundi_actors_anniversaries_table();
 
 	dbDelta(
 		"CREATE TABLE {$identities} (
@@ -214,11 +222,13 @@ function axismundi_actors_install() : void {
 			first_name varchar(191) NOT NULL default '',
 			middle_name varchar(191) NOT NULL default '',
 			last_name varchar(191) NOT NULL default '',
+			second_surname varchar(191) NOT NULL default '',
 			honorific_prefix varchar(64) NOT NULL default '',
 			honorific_suffix varchar(64) NOT NULL default '',
 			phonetic_first varchar(191) NOT NULL default '',
 			phonetic_middle varchar(191) NOT NULL default '',
 			phonetic_last varchar(191) NOT NULL default '',
+			phonetic_second_surname varchar(191) NOT NULL default '',
 			phonetic_system varchar(16) NOT NULL default '',
 			phonetic_script varchar(8) NOT NULL default '',
 			display_order varchar(16) NOT NULL default 'given-family',
@@ -252,6 +262,115 @@ function axismundi_actors_install() : void {
 		$wpdb->query( "UPDATE {$person_names} SET {$new_column} = {$old_column} WHERE {$new_column} = ''" );
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed internal identifiers only.
 		$wpdb->query( "ALTER TABLE {$person_names} DROP COLUMN {$old_column}" );
+	}
+
+	/*
+	 * One base profile per local Actor, with no language axis at all.
+	 *
+	 * The parts of a name are a fact about the person, not about a translation of them. Storing them
+	 * per language asked somebody to re-enter `Jiwoon` and `Kim` as components for every language they
+	 * write their profile in, when what they actually have in English is one string. So the components
+	 * live here once, and the other languages keep a plain name in the text store.
+	 *
+	 * Local only. A remote Actor's name arrives as a string from another server, and deciding which
+	 * half of it is a surname would be inventing a fact about somebody and re-inventing it on every
+	 * fetch. Their name is cached whole, in `ax_actors.display_name` and `payload_json`.
+	 *
+	 * Not Person-only either. An Organization or a Place fills in nothing here and is named by
+	 * `ax_actors.display_name` like everybody else; a few empty columns cost less than a second table.
+	 */
+	dbDelta(
+		"CREATE TABLE {$profile} (
+			identity_id bigint(20) unsigned NOT NULL,
+			structured_name_language varchar(35) NOT NULL default '',
+			given varchar(191) NOT NULL default '',
+			given2 varchar(191) NOT NULL default '',
+			surname varchar(191) NOT NULL default '',
+			surname2 varchar(191) NOT NULL default '',
+			title varchar(64) NOT NULL default '',
+			credential varchar(64) NOT NULL default '',
+			phonetic_given varchar(191) NOT NULL default '',
+			phonetic_given2 varchar(191) NOT NULL default '',
+			phonetic_surname varchar(191) NOT NULL default '',
+			phonetic_surname2 varchar(191) NOT NULL default '',
+			phonetic_system varchar(16) NOT NULL default '',
+			phonetic_script varchar(8) NOT NULL default '',
+			display_order varchar(16) NOT NULL default 'given-family',
+			display_name varchar(191) NOT NULL default '',
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (identity_id)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	/* A date is an Actor fact, not a column reserved for one kind of anniversary. */
+	dbDelta(
+		"CREATE TABLE {$anniversaries} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			identity_id bigint(20) unsigned NOT NULL,
+			anniversary_kind varchar(32) NOT NULL,
+			year smallint(5) unsigned NOT NULL default 0,
+			month tinyint(3) unsigned NOT NULL,
+			day tinyint(3) unsigned NOT NULL,
+			visibility varchar(16) NOT NULL default 'none',
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			KEY identity_id (identity_id)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	/* Development builds briefly stored two birthday columns. Preserve them as ordinary rows. */
+	$profile_columns_before_anniversaries = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profile}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema migration.
+	if ( in_array( 'birth_month', $profile_columns_before_anniversaries, true ) ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration from this plugin's development columns.
+		$legacy_birthdays = (array) $wpdb->get_results( "SELECT identity_id, birth_year, birth_month, birth_day, birth_visibility FROM {$profile} WHERE birth_month > 0 AND birth_day > 0", ARRAY_A );
+		foreach ( $legacy_birthdays as $legacy_birthday ) {
+			$now = current_time( 'mysql', true );
+			$existing = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$anniversaries} WHERE identity_id = %d", (int) $legacy_birthday['identity_id'] ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- migration idempotency check.
+			if ( 0 === $existing ) {
+				$wpdb->insert( $anniversaries, array( 'identity_id' => (int) $legacy_birthday['identity_id'], 'anniversary_kind' => 'birth', 'year' => (int) $legacy_birthday['birth_year'], 'month' => (int) $legacy_birthday['birth_month'], 'day' => (int) $legacy_birthday['birth_day'], 'visibility' => (string) $legacy_birthday['birth_visibility'], 'created_at' => $now, 'updated_at' => $now ), array( '%d', '%s', '%d', '%d', '%d', '%s', '%s', '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- migration insert.
+			}
+		}
+		// Experimental lunisolar fields deliberately do not migrate: Calendar/Contacts owns recurrence.
+		foreach ( array( 'birth_year', 'birth_month', 'birth_day', 'lunar_birth_year', 'lunar_birth_month', 'lunar_birth_day', 'lunar_birth_leap', 'birth_visibility' ) as $legacy_column ) {
+			if ( in_array( $legacy_column, $profile_columns_before_anniversaries, true ) ) {
+				$wpdb->query( "ALTER TABLE {$profile} DROP COLUMN {$legacy_column}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- obsolete development columns after preserved migration.
+			}
+		}
+	}
+	$anniversary_columns_before = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$anniversaries}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema migration.
+	foreach ( array( 'calendar_scale', 'leap_month' ) as $obsolete_anniversary_column ) {
+		if ( in_array( $obsolete_anniversary_column, $anniversary_columns_before, true ) ) {
+			$wpdb->query( "ALTER TABLE {$anniversaries} DROP COLUMN {$obsolete_anniversary_column}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- calendar recurrence does not belong to Actor facts.
+		}
+	}
+	/*
+	 * The base profile is the JSContact-shaped canonical store. Earlier development builds used
+	 * WordPress's first/last vocabulary there; copy it forward before removing it so a pre-release
+	 * site never has two column names for the same fact.
+	 */
+	$profile_renames = array(
+		'first_name'              => 'given',
+		'middle_name'             => 'given2',
+		'last_name'               => 'surname',
+		'second_surname'          => 'surname2',
+		'honorific_prefix'        => 'title',
+		'honorific_suffix'        => 'credential',
+		'phonetic_first'          => 'phonetic_given',
+		'phonetic_middle'         => 'phonetic_given2',
+		'phonetic_last'           => 'phonetic_surname',
+		'phonetic_second_surname' => 'phonetic_surname2',
+	);
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time custom-table migration.
+	$profile_columns_before = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profile}" );
+	foreach ( $profile_renames as $old_column => $new_column ) {
+		if ( ! in_array( $old_column, $profile_columns_before, true ) || ! in_array( $new_column, $profile_columns_before, true ) ) {
+			continue;
+		}
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed internal identifiers only.
+		$wpdb->query( "UPDATE {$profile} SET {$new_column} = {$old_column} WHERE {$new_column} = ''" );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed internal identifiers only.
+		$wpdb->query( "ALTER TABLE {$profile} DROP COLUMN {$old_column}" );
 	}
 
 	/*
@@ -665,6 +784,14 @@ function axismundi_actors_install() : void {
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$alternate_name_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$alternate_names}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$profile_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profile}" );
+	$anniversary_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$anniversaries}" );
+	/*
+	 * Folded in here rather than as a separate step, so a site cannot come up on the new schema with
+	 * its names still only in the per-language table. That table is not dropped.
+	 */
+	$profile_migrated = axismundi_actors_migrate_person_profile();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$alternate_name_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$alternate_names} WHERE Key_name = 'identity_kind_position'" );
 	/*
 	 * The old Profile languages screen stored one Person name as localized text. Promote that historical
@@ -721,10 +848,17 @@ function axismundi_actors_install() : void {
 		&& in_array( 'phonetic_system', $person_name_columns, true )
 		&& in_array( 'phonetic_script', $person_name_columns, true )
 		&& in_array( 'person_name_edited_at', $final_actor_columns, true )
+		&& array() === array_diff( AXISMUNDI_ACTORS_PROFILE_COLUMNS, $profile_columns )
+		&& in_array( 'structured_name_language', $profile_columns, true )
+		&& in_array( 'display_order', $profile_columns, true )
+		&& $profile_migrated
+		&& in_array( 'anniversary_kind', $anniversary_columns, true )
+		&& in_array( 'visibility', $anniversary_columns, true )
 		&& in_array( 'name_kind', $alternate_name_columns, true )
 		&& in_array( 'value', $alternate_name_columns, true )
 		&& ! empty( $alternate_name_indexes )
 		&& array() === array_intersect( array_keys( $person_name_renames ), $person_name_columns )
+		&& array() === array_intersect( array_keys( $profile_renames ), $profile_columns )
 	) {
 		update_option( 'ax_actors_db_version', AXISMUNDI_ACTORS_DB_VERSION, false );
 	}
@@ -899,12 +1033,26 @@ final class Axismundi_Actor {
 		if ( $this->is_local() && 'site' === $this->get_scope() ) {
 			return (string) get_bloginfo( 'name' );
 		}
+		/*
+		 * What this Actor is called, when it has been given a name of its own.
+		 *
+		 * The column is written by exactly two things: a local Actor's profile being saved, and a remote
+		 * Actor being fetched. So a stored value is always somebody's decision about this Actor, and it
+		 * has to win over the WordPress account underneath -- reading the account live would mean
+		 * editing a byline silently renames a federated identity, which is the boundary this whole
+		 * model exists to draw.
+		 */
+		$stored = trim( (string) ( $this->row['display_name'] ?? '' ) );
+		if ( '' !== $stored ) {
+			return $stored;
+		}
+		// Nobody has named it yet, so the account still answers -- as a fallback, not as a source.
 		$uid = $this->get_local_user_id();
 		if ( $this->is_local() && $uid ) {
 			$name = (string) get_the_author_meta( 'display_name', $uid );
 			return '' !== $name ? $name : (string) get_the_author_meta( 'user_login', $uid );
 		}
-		return (string) ( $this->row['display_name'] ?? $this->get_preferred_username() );
+		return $this->get_preferred_username();
 	}
 }
 
@@ -994,9 +1142,16 @@ function axismundi_actors_create_local( array $args ) {
 	$uri    = home_url( '/actors/' . $uuid );
 	$hash   = hash( 'sha256', $uri );
 	$now    = current_time( 'mysql', true );
+	/*
+	 * A user-scoped Person starts in the language the person selected for WordPress. This is a seed,
+	 * not a live binding: changing the dashboard language later does not rewrite an Actor's published
+	 * primary profile language. Site and managed Actors have no such person, so they start at the site
+	 * locale instead.
+	 */
+	$locale = $uid > 0 ? get_user_locale( $uid ) : get_locale();
 	$language = function_exists( 'axismundi_actors_normalize_language_tag' )
-		? axismundi_actors_normalize_language_tag( get_locale() )
-		: str_replace( '_', '-', (string) get_locale() );
+		? axismundi_actors_normalize_language_tag( $locale )
+		: str_replace( '_', '-', (string) $locale );
 
 	// A handle is OPTIONAL at creation. When one is given (e.g. the site actor
 	// seed) it is uniquified, stored as the alias == routing key, and locked. A

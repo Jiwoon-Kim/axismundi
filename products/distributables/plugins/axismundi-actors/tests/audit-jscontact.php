@@ -68,8 +68,14 @@ try {
 
 	// -- a name in parts, in the order it is read -------------------------------------------------------
 
-	axismundi_actors_set_person_name( $ax_jc_id, 'ko-KR', array( 'last_name' => '김', 'first_name' => '지운', 'display_order' => 'family-given' ) );
-	axismundi_actors_set_person_name( $ax_jc_id, 'en', array( 'last_name' => 'Kim', 'first_name' => 'Jiwoon', 'display_order' => 'given-family' ) );
+	/*
+	 * The parts are stored once, in this Actor's own language. Another language is a written-out name
+	 * and nothing more: nobody is asked to re-enter `Jiwoon` and `Kim` as components to say their
+	 * profile in English as well.
+	 */
+	axismundi_actors_set_default_language( $ax_jc_id, 'ko-KR' );
+	axismundi_actors_set_person_name( $ax_jc_id, array( 'structured_name_language' => 'ko-KR', 'surname' => '김', 'given' => '지운', 'display_order' => 'family-given' ) );
+	axismundi_actors_set_text( $ax_jc_id, 'name', 'en', 'Jiwoon Kim' );
 	$ax_jc_card = axismundi_actors_jscontact_card( axismundi_actors_get_by_identity( $ax_jc_id ) );
 	/*
 	 * Order belongs to the person, not to the language: the same components read one way in Korean and
@@ -83,12 +89,36 @@ try {
 			&& 'surname' === (string) $ax_jc_card['name']['components'][0]['kind']
 			&& 'given' === (string) $ax_jc_card['name']['components'][1]['kind']
 	);
+	axismundi_actors_set_person_name( $ax_jc_id, array( 'display_order' => 'family-given-compact' ) );
+	$ax_jc_compact_card = axismundi_actors_jscontact_card( axismundi_actors_get_by_identity( $ax_jc_id ) );
 	ax_jc_assert(
 		$ax_jc_results,
-		'another language is a localization of the same Card rather than a second Card',
+		'a compact family-first name keeps its component order while its full form omits the space',
+		'김지운' === (string) $ax_jc_compact_card['name']['full']
+			&& 'surname' === (string) $ax_jc_compact_card['name']['components'][0]['kind']
+			&& 'given' === (string) $ax_jc_compact_card['name']['components'][1]['kind']
+	);
+	axismundi_actors_set_person_name( $ax_jc_id, array( 'surname' => 'Garcia', 'surname2' => 'Marquez', 'given' => 'Gabriel', 'display_order' => 'given-family' ) );
+	$ax_jc_surname2_card = axismundi_actors_jscontact_card( axismundi_actors_get_by_identity( $ax_jc_id ) );
+	ax_jc_assert(
+		$ax_jc_results,
+		'a second family name becomes the standard surname2 component',
+		'Gabriel Garcia Marquez' === (string) $ax_jc_surname2_card['name']['full']
+			&& 'surname' === (string) $ax_jc_surname2_card['name']['components'][1]['kind']
+			&& 'surname2' === (string) $ax_jc_surname2_card['name']['components'][2]['kind']
+	);
+	axismundi_actors_set_person_name( $ax_jc_id, array( 'surname' => '김', 'surname2' => '', 'given' => '지운', 'display_order' => 'family-given' ) );
+	/*
+	 * And another language is a localization of the same Card rather than a second Card -- carrying
+	 * `full` alone, because that is all that language stores. Claiming components for it would be this
+	 * site deciding which half of `Jiwoon Kim` is a surname, which nobody asked it to decide.
+	 */
+	ax_jc_assert(
+		$ax_jc_results,
+		'another language is a localization carrying a written-out name and no invented components',
 		isset( $ax_jc_card['localizations']['en']['name'] )
 			&& 'Jiwoon Kim' === (string) $ax_jc_card['localizations']['en']['name']['full']
-			&& 'given' === (string) $ax_jc_card['localizations']['en']['name']['components'][0]['kind']
+			&& ! isset( $ax_jc_card['localizations']['en']['name']['components'] )
 	);
 	// The display name follows the parts without either being derived from the other in storage.
 	ax_jc_assert(
@@ -117,7 +147,7 @@ try {
 	ax_jc_assert(
 		$ax_jc_results,
 		'a Group cannot be given a given name',
-		is_wp_error( axismundi_actors_set_person_name( $ax_jc_id + 100000, 'en', array( 'first_name' => 'Nope' ) ) )
+		is_wp_error( axismundi_actors_set_person_name( $ax_jc_id + 100000, array( 'given' => 'Nope' ) ) )
 	);
 
 	// -- what is not ours to mint ---------------------------------------------------------------------------
@@ -144,6 +174,12 @@ try {
 		$ax_jc_results,
 		'a cached remote Actor gets no uid invented from our own snapshot id',
 		is_array( $ax_jc_rcard ) && ! isset( $ax_jc_rcard['uid'] )
+	);
+	ax_jc_assert(
+		$ax_jc_results,
+		'a remote name remains the received document rather than becoming locally authored components',
+		$ax_jc_remote instanceof Axismundi_Actor
+			&& is_wp_error( axismundi_actors_set_person_name( (int) $ax_jc_remote->get_identity_id(), array( 'given' => 'Invented' ) ) )
 	);
 } finally {
 	foreach ( $ax_jc_users as $ax_jc_user_id ) {

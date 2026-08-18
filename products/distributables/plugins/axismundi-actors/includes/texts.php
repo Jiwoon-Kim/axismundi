@@ -43,6 +43,35 @@ function axismundi_actors_site_language() : string {
 }
 
 /**
+ * Profile-language choices for Actor authoring surfaces.
+ *
+ * The post editor's list is BCP 47, not WordPress's installed-locale list. Reusing it keeps the
+ * two authoring surfaces familiar while the input remains open to a profile language WordPress has
+ * no translation pack for. Existing profile languages are always retained as candidates.
+ *
+ * @param string[] $included Tags that must be selectable even when outside the shared list.
+ * @return array<string,string> BCP 47 tag => display label.
+ */
+function axismundi_actors_profile_language_options( array $included = array() ) : array {
+	$options = array();
+	if ( function_exists( 'axismundi_op_language_options' ) ) {
+		foreach ( axismundi_op_language_options() as $option ) {
+			$tag = axismundi_actors_normalize_language_tag( (string) ( $option['value'] ?? '' ) );
+			if ( '' !== $tag ) {
+				$options[ $tag ] = (string) ( $option['label'] ?? $tag );
+			}
+		}
+	}
+	foreach ( array_merge( get_available_languages(), array( get_locale() ), $included ) as $locale ) {
+		$tag = axismundi_actors_normalize_language_tag( (string) $locale );
+		if ( '' !== $tag && ! isset( $options[ $tag ] ) ) {
+			$options[ $tag ] = $tag;
+		}
+	}
+	return $options;
+}
+
+/**
  * Preferred language for the human-facing HTML profile. A local Person uses their
  * WordPress profile language when an authored translation exists; this does not
  * change the Actor's serialization default_language.
@@ -135,6 +164,44 @@ function axismundi_actors_set_text( int $identity_id, string $field, string $lan
 }
 
 /**
+ * Move every authored field in one localized profile to another BCP 47 tag.
+ *
+ * A profile is a name/summary/content bundle. Moving fields independently would leave a name in one
+ * language and its summary in another, so a target profile must be empty before the bundle moves.
+ *
+ * @param int    $identity_id Actor identity id.
+ * @param string $from        Existing BCP 47 language tag.
+ * @param string $to          Replacement BCP 47 language tag.
+ * @return true|WP_Error
+ */
+function axismundi_actors_rename_text_language( int $identity_id, string $from, string $to ) {
+	global $wpdb;
+	$from = axismundi_actors_normalize_language_tag( $from );
+	$to   = axismundi_actors_normalize_language_tag( $to );
+	if ( $identity_id <= 0 || '' === $from || '' === $to ) {
+		return new WP_Error( 'ax_actors_text_language', __( 'Enter a valid profile language.', 'axismundi-actors' ) );
+	}
+	if ( $from === $to ) {
+		return true;
+	}
+	$table = axismundi_actors_texts_table();
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- conflict check for this plugin's own table.
+	$exists = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE identity_id = %d AND language_tag = %s", $identity_id, $to ) );
+	if ( $exists > 0 ) {
+		return new WP_Error( 'ax_actors_text_language_exists', __( 'A profile already uses that language.', 'axismundi-actors' ) );
+	}
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- moving one logical profile bundle in this plugin's own table.
+	$updated = $wpdb->update(
+		$table,
+		array( 'language_tag' => $to, 'updated_at' => current_time( 'mysql', true ) ),
+		array( 'identity_id' => $identity_id, 'language_tag' => $from ),
+		array( '%s', '%s' ),
+		array( '%d', '%s' )
+	);
+	return false === $updated ? new WP_Error( 'ax_actors_text_language_save', __( 'Could not change the profile language.', 'axismundi-actors' ) ) : true;
+}
+
+/**
  * Return explicitly authored translations, grouped by language.
  *
  * @param int $identity_id Actor identity id.
@@ -220,16 +287,7 @@ function axismundi_actors_resolve_text( Axismundi_Actor $actor, string $field, s
 	if ( ! in_array( $field, array( 'name', 'summary', 'content' ), true ) ) {
 		return '';
 	}
-	/*
-	 * A Person's name comes from the structured name when there is one, in the same language the
-	 * fallback chain would have chosen. Two stores held a name per language before this, and the
-	 * contact card read one while the Actor document read the other -- one person with two names,
-	 * from one site, the moment anybody filled the structured one in.
-	 *
-	 * Overlaid rather than substituted: an Actor with no structured name in this language, or none at
-	 * all, keeps the text store and the live fallback exactly as before.
-	 */
-	$map = axismundi_actors_name_map( $actor );
+	$map = axismundi_actors_get_text_map( $actor->get_identity_id() );
 	foreach ( axismundi_actors_language_fallbacks( $actor, $requested ) as $language ) {
 		if ( isset( $map[ $language ][ $field ] ) && '' !== trim( $map[ $language ][ $field ] ) ) {
 			return $map[ $language ][ $field ];
@@ -255,18 +313,14 @@ function axismundi_actors_resolve_text( Axismundi_Actor $actor, string $field, s
  * @return array<string,array<string,string>>
  */
 function axismundi_actors_name_map( Axismundi_Actor $actor ) : array {
-	$map = axismundi_actors_get_text_map( $actor->get_identity_id() );
-	if ( 'Person' !== $actor->get_type() || ! function_exists( 'axismundi_actors_person_names' ) ) {
-		return $map;
-	}
-	foreach ( axismundi_actors_person_names( $actor->get_identity_id() ) as $language => $row ) {
-		$assembled = axismundi_actors_assemble_person_name( $row );
-		if ( '' !== $assembled ) {
-			$map[ (string) $language ]['name'] = $assembled;
-		}
-	}
-	return $map;
+	/*
+	 * Nothing to overlay any more. A Person's components are written out into their own language's
+	 * `name` as they are saved, so the map is already the whole answer -- and the scalar and the map
+	 * cannot disagree, because there is only one place either could come from.
+	 */
+	return axismundi_actors_get_text_map( $actor->get_identity_id() );
 }
+
 
 /** Remove child text rows when an Actor identity is explicitly deleted. */
 function axismundi_actors_delete_texts( int $identity_id ) : void {

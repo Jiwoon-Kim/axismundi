@@ -258,5 +258,10 @@ function axismundi_contacts_create_profile_card( int $actor_id ) {
 		axismundi_contacts_save_card_for_owner( $actor_id, $seeded, (int) $card );
 	}
 	$bound = axismundi_contacts_set_profile_card( $actor_id, (int) $card );
-	return is_wp_error( $bound ) ? $bound : (int) $card;
+	if ( is_wp_error( $bound ) ) {
+		return $bound;
+	}
+	// Bound first, then filled: the sync only writes to a Card it can see is this Actor's profile.
+	axismundi_contacts_sync_name_from_actor( $actor_id );
+	return (int) $card;
 }

@@ -140,6 +140,17 @@ function axismundi_actors_write_person_profile( int $identity_id, array $changes
 	axismundi_actors_mark_person_name_edited( $identity_id );
 	axismundi_actors_publish_structured_name( $identity_id );
 	axismundi_actors_refresh_display_name( $identity_id );
+
+	/**
+	 * Fires after one Actor's stored name is written.
+	 *
+	 * Announced rather than pushed anywhere: Actors owns these components and does not know who else
+	 * keeps a copy. Contacts does, on the Card an Actor publishes about itself, and listens here so
+	 * that a name edited on the Actor screen does not leave a contact card saying the old one.
+	 *
+	 * @param int $identity_id Actor identity whose name was written.
+	 */
+	do_action( 'axismundi_actors_person_name_written', $identity_id );
 	return true;
 }
 

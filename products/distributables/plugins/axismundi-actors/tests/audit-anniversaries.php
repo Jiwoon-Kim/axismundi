@@ -26,6 +26,11 @@ try {
 	$items = axismundi_actors_get_anniversaries( $identity_id );
 	ax_an_assert( $ax_an_results, 'one Actor owns many typed anniversaries in a child collection', true === $result && 3 === count( $items ) && 'birth' === $items[0]['kind'] && 'wedding' === $items[2]['kind'] );
 	ax_an_assert( $ax_an_results, 'an anniversary requires a known kind and valid Gregorian month and day', is_wp_error( axismundi_actors_replace_anniversaries( $identity_id, array( array( 'kind' => 'nameday', 'month' => 10, 'day' => 10 ) ) ) ) && is_wp_error( axismundi_actors_replace_anniversaries( $identity_id, array( array( 'kind' => 'birth', 'month' => 2, 'day' => 31 ) ) ) ) );
+	/*
+	 * Contacts holds the Card now; Actors contributes the anniversaries to it. So there has to be a
+	 * card to contribute to, which is what opening the Actor's address book makes.
+	 */
+	axismundi_contacts_book_for_actor( $identity_id );
 	$card = axismundi_actors_jscontact_card( axismundi_actors_get_by_identity( $identity_id ) );
 	$public = $card['anniversaries'] ?? array();
 	ax_an_assert( $ax_an_results, 'only explicitly public rows project into JSContact', 2 === count( $public ) && ! in_array( 'wedding', array_column( $public, 'kind' ), true ) );

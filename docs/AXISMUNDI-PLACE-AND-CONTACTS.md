@@ -613,6 +613,29 @@ Default policy is manual purge for everything except the account path. A delayed
 after tombstone is a later option, not built: it needs a scheduler and a grace period, and personal
 servers and cautious installations want different answers.
 
+**Contacts owns the JSContact document; every other domain contributes to it.** Actors used to build
+a Card of its own and mint a `uid` from the Actor's UUID, so two plugins published a Card for one
+Actor under different identifiers. Now Contacts holds the Card, serves it at the unchanged
+`/@handle.jscontact`, and opens a filter; Actors adds the names in the Actor's other languages and
+its anniversaries, Calendar adds calendars. `uid` and `kind` are restored after the filter runs — a
+contributor may add what it owns and may not change which card this is.
+
+**The name is written down twice, deliberately, and only for a profile card.** The Card stores the
+whole JSContact name because a Card holding only the parts Actors owns would lose a title on the
+first round trip, and a Card that rebuilt its name on render would not be a store. Actors keeps
+`full, given, given2, surname, surname2` and the reading order; Contacts keeps what a contact card
+adds — title, credential, separator, phonetics. A save on either side carries the shared parts over
+and leaves the other side's alone. Neither side ever splits a `full` into components: deciding which
+half of `Kim Jiwoon` is the surname is a guess, and a guess written into an authority field stops
+looking like one. An ordinary card obeys none of this — it is entirely its owner's, and saving
+`앨리스 - 디자인팀` for someone whose Actor says otherwise is right, not out of step.
+
+**Serving is gated on the audience, not just on the profile being public.** The route this replaced
+published a name and a kind; this document carries whatever is on somebody's card, which is
+telephone numbers and home addresses. Sharing defaults to `off`, so a card is served only once its
+Actor has said `public`. Every refusal is the same 404 — answering differently would turn the route
+into a way to ask who somebody keeps in their address book.
+
 **Per-property visibility will live outside the Card.** JSContact has nowhere inside an entry to
 record who may read it, and sync bookkeeping must never ship to whoever asked for a vCard. When it
 comes, it is a table keyed by the same JSON pointers as provenance — `emails/work` answering both

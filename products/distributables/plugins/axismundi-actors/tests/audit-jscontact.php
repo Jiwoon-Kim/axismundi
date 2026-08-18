@@ -2,11 +2,13 @@
 /**
  * An Actor as a contact card (dev-only; dist-excluded).
  *
- * The second representation of the same Actor, and the first that is not ActivityStreams -- which is
- * the point: if the projection layer only ever spoke one vocabulary, the separation between owning a
- * fact and rendering it was theoretical. What is checked here is that the vocabulary is used
- * correctly rather than approximately, and that nothing is minted for identities this site does not
- * own.
+ * The Card belongs to Contacts. What is checked here is the half Actors still owns -- which JSContact
+ * kind an Actor type suggests, how a stored name is read in parts, and the names and dates it
+ * contributes to somebody else's document -- and, just as importantly, what it no longer does.
+ *
+ * Actors used to build a Card of its own and mint a `uid` from the Actor's UUID. Two plugins each
+ * publishing a Card for one Actor under different identifiers meant anybody who saved both kept the
+ * same person twice, so that is gone and nothing here may bring it back.
  *
  * @package AxismundiActors
  */
@@ -43,6 +45,18 @@ try {
 
 	// -- what a Card is ---------------------------------------------------------------------------------
 
+	/*
+	 * An Actor publishes a Card once Contacts holds one for it. Until then there is none, and Actors
+	 * does not derive a stand-in: a derived Card would need an identifier, this site would mint one,
+	 * and the day a real Card appeared the published identity would change under everybody who had
+	 * saved it.
+	 */
+	ax_jc_assert(
+		$ax_jc_results,
+		'an Actor with no contact card publishes none, rather than having one derived from the registry',
+		is_wp_error( axismundi_actors_jscontact_card( $ax_jc_person ) )
+	);
+	axismundi_contacts_book_for_actor( (int) $ax_jc_id );
 	$ax_jc_card = axismundi_actors_jscontact_card( $ax_jc_person );
 	/*
 	 * `@type` is always Card; the sort of thing it describes is `kind`. `{"@type":"Person"}` would be
@@ -53,10 +67,16 @@ try {
 		'a Card says it is a Card, and what it describes is its kind',
 		is_array( $ax_jc_card ) && 'Card' === $ax_jc_card['@type'] && 'individual' === $ax_jc_card['kind']
 	);
+	/*
+	 * The identifier is the Card's, not the Actor's. An Actor UUID names an agent in the identity
+	 * registry; a `uid` names a contact card in an address book, and deriving one from the other is
+	 * how two identities for one person came to exist.
+	 */
 	ax_jc_assert(
 		$ax_jc_results,
-		'and a local identity carries the uuid this site actually owns',
-		'urn:uuid:' . $ax_jc_person->get_uuid() === (string) $ax_jc_card['uid']
+		'the identifier belongs to the card and is never derived from the Actor uuid',
+		'' !== (string) ( $ax_jc_card['uid'] ?? '' )
+			&& 'urn:uuid:' . $ax_jc_person->get_uuid() !== (string) $ax_jc_card['uid']
 	);
 	ax_jc_assert(
 		$ax_jc_results,
@@ -136,6 +156,7 @@ try {
 	 * was already written stands.
 	 */
 	$ax_jc_plain = ax_jc_person( $ax_jc_users );
+	axismundi_contacts_book_for_actor( (int) $ax_jc_plain->get_identity_id() );
 	$ax_jc_pcard = axismundi_actors_jscontact_card( $ax_jc_plain );
 	ax_jc_assert(
 		$ax_jc_results,
@@ -172,8 +193,8 @@ try {
 	// Asserted rather than skipped: a fixture that quietly fails takes its check with it.
 	ax_jc_assert(
 		$ax_jc_results,
-		'a cached remote Actor gets no uid invented from our own snapshot id',
-		is_array( $ax_jc_rcard ) && ! isset( $ax_jc_rcard['uid'] )
+		'a cached remote Actor publishes nothing of ours: no card, and so no invented uid either',
+		$ax_jc_remote instanceof Axismundi_Actor && is_wp_error( $ax_jc_rcard )
 	);
 	ax_jc_assert(
 		$ax_jc_results,
@@ -181,6 +202,21 @@ try {
 		$ax_jc_remote instanceof Axismundi_Actor
 			&& is_wp_error( axismundi_actors_set_person_name( (int) $ax_jc_remote->get_identity_id(), array( 'given' => 'Invented' ) ) )
 	);
+	// -- contributed, not owned -----------------------------------------------------------------------------
+
+	/*
+	 * Actors adds what it is the authority on to somebody else's document, through the filter Contacts
+	 * opens. It is registered on the Contacts hook and on no hook of its own: a card built here again,
+	 * for any reason, would be the second card this inversion removed.
+	 */
+	ax_jc_assert(
+		$ax_jc_results,
+		'Actors contributes to the card Contacts renders rather than rendering one of its own',
+		false !== has_filter( 'axismundi_contacts_jscontact_card', 'axismundi_actors_jscontact_contribute' )
+			&& ! function_exists( 'axismundi_actors_jscontact_uid' )
+			&& ! has_action( 'template_redirect', 'axismundi_actors_serve_jscontact' )
+	);
+
 } finally {
 	foreach ( $ax_jc_users as $ax_jc_user_id ) {
 		wp_delete_user( (int) $ax_jc_user_id );

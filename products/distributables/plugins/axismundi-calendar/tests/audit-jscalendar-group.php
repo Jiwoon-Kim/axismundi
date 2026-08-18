@@ -163,10 +163,13 @@ try {
 	// -- the link on the contact card ---------------------------------------------------------------------
 
 	/*
-	 * Contributed by this plugin rather than assembled in Actors, because the calendar is this plugin's
-	 * fact. And only a published one: a card naming a private address is directions around the sharing
-	 * rules.
+	 * Contributed by this plugin rather than assembled by whoever renders the card, because the calendar
+	 * is this plugin's fact. And only a published one: a card naming a private address is directions
+	 * around the sharing rules.
+	 *
+	 * Contacts owns the card, so there has to be one to contribute to.
 	 */
+	axismundi_contacts_book_for_actor( (int) $ax_gr_actor->get_identity_id() );
 	$ax_gr_card = axismundi_actors_jscontact_card( axismundi_actors_get_by_identity( $ax_gr_actor->get_identity_id() ) );
 	ax_gr_assert(
 		$ax_gr_results,

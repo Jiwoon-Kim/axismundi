@@ -239,6 +239,24 @@ function axismundi_contacts_save_card_for_owner( int $owner_actor_id, array $car
 	foreach ( axismundi_contacts_card_books( $card_id ) as $filed ) {
 		axismundi_contacts_touch_book( $filed );
 	}
+
+	/**
+	 * A Card was written.
+	 *
+	 * Guarded against re-entry because a listener may write back to a place that writes here again:
+	 * the profile Card and its Actor keep the same name components, and each side saving carries them
+	 * to the other. Without this the first edit would bounce between them.
+	 *
+	 * @param int                 $card_id        Card id.
+	 * @param int                 $owner_actor_id Actor that owns it.
+	 * @param array<string,mixed> $card           Card document as stored.
+	 */
+	static $announcing = false;
+	if ( ! $announcing ) {
+		$announcing = true;
+		do_action( 'axismundi_contacts_card_saved', $card_id, $owner_actor_id, $card );
+		$announcing = false;
+	}
 	return $card_id;
 }
 

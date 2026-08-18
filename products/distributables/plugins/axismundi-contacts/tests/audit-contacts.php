@@ -835,6 +835,176 @@ try {
 		array( 'cards' => 0, 'books' => 0, 'profile' => 0 ) === axismundi_contacts_actor_footprint( $ax_ct_leaver_id )
 	);
 
+	// -- who owns the published document ------------------------------------------------------------------------
+
+	/*
+	 * Contacts holds the Card and renders it. Actors used to build one of its own from the identity
+	 * registry, which meant two plugins publishing a Card for the same Actor under different
+	 * identifiers -- anybody saving both kept the same person twice. The old entry point still works
+	 * and now hands back exactly this one.
+	 */
+	$ax_ct_pub     = axismundi_contacts_jscontact_card( $ax_ct_fresh );
+	$ax_ct_pub_uid = is_wp_error( $ax_ct_pub ) ? '' : (string) ( $ax_ct_pub['uid'] ?? '' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'the published card is the stored profile card, and the Actors entry point returns that same one',
+		! is_wp_error( $ax_ct_pub )
+			&& $ax_ct_seed_uid === $ax_ct_pub_uid
+			&& $ax_ct_pub === axismundi_actors_jscontact_card( $ax_ct_fresh )
+	);
+	/*
+	 * No fallback. A Card derived from the identity registry would need an identifier, this site
+	 * would mint one, and the day a real profile Card appeared the published identity would change
+	 * underneath everybody who had already saved it. That is the duplicate this inversion removed.
+	 */
+	$ax_ct_cardless = ax_ct_actor( $ax_ct_users );
+	ax_ct_assert(
+		$ax_ct_results,
+		'an Actor with no profile card publishes nothing, rather than having one derived for it',
+		is_wp_error( axismundi_contacts_jscontact_card( $ax_ct_cardless ) )
+			&& is_wp_error( axismundi_actors_jscontact_card( $ax_ct_cardless ) )
+	);
+	/*
+	 * The uid comes from the Card and from nowhere else. An Actor's UUID is the identity registry's
+	 * identifier for an agent, not an address book's identifier for a contact card, and deriving one
+	 * from the other is exactly how two of them came to exist.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'no published card carries an identifier derived from the Actor UUID',
+		'' !== $ax_ct_pub_uid
+			&& 'urn:uuid:' . (string) $ax_ct_fresh->get_uuid() !== $ax_ct_pub_uid
+	);
+	$ax_ct_src = '';
+	foreach ( array( 'axismundi-contacts', 'axismundi-actors' ) as $ax_ct_plugin ) {
+		foreach ( (array) glob( WP_PLUGIN_DIR . '/' . $ax_ct_plugin . '/includes/*.php' ) as $ax_ct_file ) {
+			$ax_ct_src .= (string) file_get_contents( $ax_ct_file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this project's own source.
+		}
+	}
+	// The runtime answer above proves this Actor; the source says no path can do it for any Actor.
+	ax_ct_assert(
+		$ax_ct_results,
+		'and no code path can build one: nothing joins urn:uuid: to an Actor uuid',
+		1 !== preg_match( '/urn:uuid:\s*.\s*[^;]*get_uuid/', $ax_ct_src )
+			&& 1 !== preg_match( '/get_uuid\s*\(\s*\)[^;]*urn:uuid:/', $ax_ct_src )
+	);
+	/*
+	 * Contributors add what they own and may not change what the Card is. A calendar arriving with a
+	 * different uid would be published as a different contact rather than as a broken field.
+	 */
+	add_filter(
+		'axismundi_contacts_jscontact_card',
+		static function ( array $card ) : array {
+			$card['uid']       = 'urn:uuid:00000000-0000-4000-8000-00000000dead';
+			$card['kind']      = 'device';
+			$card['calendars'] = array( 'primary' => array( '@type' => 'Calendar' ) );
+			return $card;
+		},
+		99
+	);
+	$ax_ct_enriched = axismundi_contacts_jscontact_card( $ax_ct_fresh );
+	remove_all_filters( 'axismundi_contacts_jscontact_card', 99 );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a contributor may add what it owns and may not change which card this is',
+		! is_wp_error( $ax_ct_enriched )
+			&& $ax_ct_seed_uid === (string) ( $ax_ct_enriched['uid'] ?? '' )
+			&& 'individual' === (string) ( $ax_ct_enriched['kind'] ?? '' )
+			&& isset( $ax_ct_enriched['calendars'] )
+	);
+	/*
+	 * Serving is gated on the audience as well as on the profile being published. The route this
+	 * replaced handed out a name and a kind; this document carries whatever is on somebody's card,
+	 * which is telephone numbers and home addresses.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a card is served only when its Actor shares it publicly, not merely because the profile is public',
+		! axismundi_contacts_jscontact_is_public( $ax_ct_fresh )
+			&& 'off' === axismundi_contacts_profile_sharing( (int) $ax_ct_fresh->get_identity_id() )
+	);
+
+	// -- one name, kept by two owners ---------------------------------------------------------------------------
+
+	/*
+	 * The Card stores the whole JSContact name because it has to: a Card holding only the parts an
+	 * Actor owns would lose a title on the first round trip. So the shared parts are written down
+	 * twice and each side keeps what it is the authority on.
+	 */
+	axismundi_actors_write_person_profile(
+		(int) $ax_ct_fresh->get_identity_id(),
+		array( 'structured_name_language' => 'ko', 'given' => "\xec\xa7\x80\xec\x9a\xb4", 'surname' => "\xea\xb9\x80", 'display_order' => 'family-given-compact' )
+	);
+	$ax_ct_named = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_kinds = array();
+	foreach ( (array) ( $ax_ct_named['name']['components'] ?? array() ) as $ax_ct_c ) {
+		$ax_ct_kinds[ (string) $ax_ct_c['kind'] ] = (string) $ax_ct_c['value'];
+	}
+	ax_ct_assert(
+		$ax_ct_results,
+		'a name written on the Actor screen reaches the card it publishes',
+		array( 'surname' => "\xea\xb9\x80", 'given' => "\xec\xa7\x80\xec\x9a\xb4" ) === $ax_ct_kinds
+	);
+	/*
+	 * And what a contact card adds to a name stays put. Actors has nowhere to keep a credential, so a
+	 * sync that rebuilt the component list from the Actor's parts alone would delete it.
+	 */
+	$ax_ct_named['name']['components'][] = array( '@type' => 'NameComponent', 'kind' => 'credential', 'value' => 'Ph.D.' );
+	axismundi_contacts_save_card_for_owner( (int) $ax_ct_fresh->get_identity_id(), $ax_ct_named, $ax_ct_seeded );
+	axismundi_actors_write_person_profile(
+		(int) $ax_ct_fresh->get_identity_id(),
+		array( 'structured_name_language' => 'ko', 'given' => "\xec\xa7\x80\xec\x9a\xb4", 'surname' => "\xeb\xa6\xac", 'display_order' => 'family-given-compact' )
+	);
+	$ax_ct_after = array();
+	foreach ( (array) ( axismundi_contacts_card_document( $ax_ct_seeded )['name']['components'] ?? array() ) as $ax_ct_c ) {
+		$ax_ct_after[ (string) $ax_ct_c['kind'] ] = (string) $ax_ct_c['value'];
+	}
+	ax_ct_assert(
+		$ax_ct_results,
+		'a later Actor edit updates the parts it owns and leaves the credential the card added',
+		"\xeb\xa6\xac" === ( $ax_ct_after['surname'] ?? '' ) && 'Ph.D.' === ( $ax_ct_after['credential'] ?? '' )
+	);
+	/*
+	 * And the other direction, without a loop: editing the card writes the Actor's parts back. The
+	 * two sides each save on the other's write, so this only terminates because the announcement is
+	 * guarded against re-entry.
+	 */
+	$ax_ct_edit = axismundi_contacts_card_document( $ax_ct_seeded );
+	foreach ( $ax_ct_edit['name']['components'] as $ax_ct_i => $ax_ct_c ) {
+		if ( 'surname' === $ax_ct_c['kind'] ) {
+			$ax_ct_edit['name']['components'][ $ax_ct_i ]['value'] = "\xeb\xb0\x95";
+		}
+	}
+	axismundi_contacts_save_card_for_owner( (int) $ax_ct_fresh->get_identity_id(), $ax_ct_edit, $ax_ct_seeded );
+	ax_ct_assert(
+		$ax_ct_results,
+		'editing the profile card writes the Actor own parts back to it',
+		"\xeb\xb0\x95" === (string) ( axismundi_actors_person_profile( (int) $ax_ct_fresh->get_identity_id() )['surname'] ?? '' )
+	);
+	/*
+	 * An ordinary card obeys none of this. Somebody saving a name of their own choosing for a person
+	 * whose Actor says otherwise is right, not out of step -- the card is theirs.
+	 */
+	$ax_ct_theirs = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array(
+			'@type' => 'Card',
+			'name'  => array(
+				'@type'      => 'Name',
+				'full'       => 'Alice from the design team',
+				'components' => array( array( '@type' => 'NameComponent', 'kind' => 'surname', 'value' => 'Smith' ) ),
+			),
+		)
+	);
+	$ax_ct_loose[] = is_wp_error( $ax_ct_theirs ) ? 0 : (int) $ax_ct_theirs;
+	ax_ct_assert(
+		$ax_ct_results,
+		'a card about somebody else is its owner to write, and reaches no Actor',
+		! is_wp_error( $ax_ct_theirs )
+			&& 'Alice from the design team' === (string) axismundi_contacts_get_card( (int) $ax_ct_theirs )['display_name']
+			&& "\xeb\xb0\x95" === (string) ( axismundi_actors_person_profile( (int) $ax_ct_fresh->get_identity_id() )['surname'] ?? '' )
+	);
+
 	// -- what this plugin is not -------------------------------------------------------------------------------
 
 	/*

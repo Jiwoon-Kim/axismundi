@@ -1005,6 +1005,23 @@ try {
 			&& "\xeb\xb0\x95" === (string) ( axismundi_actors_person_profile( (int) $ax_ct_fresh->get_identity_id() )['surname'] ?? '' )
 	);
 
+	/*
+	 * A title and a credential belong to the card, not to the Actor. Both tables had a column for the
+	 * same component, which is how one card came to carry it twice; Actors now emits neither.
+	 */
+	$ax_ct_parts = axismundi_actors_jscontact_name(
+		array( 'given' => 'Ada', 'surname' => 'Lovelace', 'title' => 'Dr.', 'credential' => 'PhD', 'display_order' => 'given-family' )
+	);
+	$ax_ct_emitted = array();
+	foreach ( (array) ( $ax_ct_parts['components'] ?? array() ) as $ax_ct_c ) {
+		$ax_ct_emitted[] = (string) $ax_ct_c['kind'];
+	}
+	ax_ct_assert(
+		$ax_ct_results,
+		'a title and a credential belong to the card, and Actors emits neither even when it still has a column for one',
+		array( 'given', 'surname' ) === $ax_ct_emitted
+	);
+
 	// -- what this plugin is not -------------------------------------------------------------------------------
 
 	/*

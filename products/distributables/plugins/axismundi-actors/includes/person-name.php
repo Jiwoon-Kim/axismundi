@@ -51,7 +51,7 @@ function axismundi_actors_alternate_names_table() : string {
 const AXISMUNDI_ACTORS_NAME_ORDERS = array( 'family-given', 'family-given-compact', 'given-family', 'given-family-compact', 'custom' );
 
 /** The parts, in the order vCard's `N` lists them. */
-const AXISMUNDI_ACTORS_NAME_PARTS = array( 'surname', 'surname2', 'given', 'given2', 'title', 'credential' );
+const AXISMUNDI_ACTORS_NAME_PARTS = array( 'surname', 'surname2', 'given', 'given2' );
 
 /** The parts a pronunciation can be given for, keyed by the part they are said for. */
 const AXISMUNDI_ACTORS_NAME_PHONETIC_PARTS = array(

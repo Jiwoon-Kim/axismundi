@@ -63,9 +63,15 @@ function axismundi_actors_jscontact_kind( string $actor_type ) : string {
  * @return array<string,mixed>|null
  */
 function axismundi_actors_jscontact_name( array $row ) : ?array {
+	/*
+	 * The Actor's own parts, and only those. A title and a credential -- `Dr.`, `PhD` -- are what a
+	 * contact card adds to a name rather than what an identity registry knows about an agent, and
+	 * Contacts is where they are kept. Emitting them from here as well would put the same component
+	 * on one card from two tables.
+	 */
 	$order = in_array( (string) ( $row['display_order'] ?? '' ), array( 'family-given', 'family-given-compact' ), true )
-		? array( 'title', 'surname', 'surname2', 'given', 'given2', 'credential' )
-		: array( 'title', 'given', 'given2', 'surname', 'surname2', 'credential' );
+		? array( 'surname', 'surname2', 'given', 'given2' )
+		: array( 'given', 'given2', 'surname', 'surname2' );
 
 	$components = array();
 	foreach ( $order as $part ) {

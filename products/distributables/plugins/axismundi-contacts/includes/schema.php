@@ -34,7 +34,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CONTACTS_DB_VERSION        = '3';
+const AXISMUNDI_CONTACTS_DB_VERSION        = '4';
 const AXISMUNDI_CONTACTS_DB_VERSION_OPTION = 'ax_contacts_db_version';
 
 /**
@@ -266,6 +266,14 @@ function axismundi_contacts_install_schema() : bool {
 	);
 
 	axismundi_contacts_migrate_books_to_memberships();
+	/*
+	 * Carried out of Actors, where a title and a credential only lived because Actors used to
+	 * assemble the whole JSContact document. Done here so the copy runs while the old columns still
+	 * hold the values, whichever plugin upgrades first.
+	 */
+	if ( function_exists( 'axismundi_contacts_adopt_actor_name_extras' ) ) {
+		axismundi_contacts_adopt_actor_name_extras();
+	}
 
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.
 	$card_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$cards}" );

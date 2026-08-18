@@ -225,3 +225,71 @@ function axismundi_contacts_on_actor_profile_updated( $actor ) : void {
 }
 add_action( 'axismundi_actors_local_actor_profile_updated', 'axismundi_contacts_on_actor_profile_updated' );
 add_action( 'axismundi_actors_person_name_written', 'axismundi_contacts_sync_name_from_actor' );
+
+/**
+ * Move a title and a credential off the Actor and onto the Card that publishes them.
+ *
+ * `Dr.` and `PhD` are what a contact card adds to a name, not what an identity registry knows about
+ * an agent, and they were only in the Actors profile because Actors used to assemble the whole
+ * JSContact document. Both tables having a column for the same component is how one card comes to
+ * carry it twice.
+ *
+ * Run from the Contacts upgrade rather than the Actors one, and written to read the old columns
+ * only if they are still there. That way the copy happens while the values still exist, whichever
+ * plugin upgrades first, and running it again finds nothing to do.
+ *
+ * @return void
+ */
+function axismundi_contacts_adopt_actor_name_extras() : void {
+	global $wpdb;
+	if ( ! function_exists( 'axismundi_actors_profile_table' ) ) {
+		return;
+	}
+	$profiles = axismundi_actors_profile_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.
+	$columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profiles}" );
+	if ( ! in_array( 'title', $columns, true ) && ! in_array( 'credential', $columns, true ) ) {
+		return;
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration.
+	$rows = (array) $wpdb->get_results( "SELECT identity_id, title, credential FROM {$profiles} WHERE title <> '' OR credential <> ''", ARRAY_A );
+	foreach ( $rows as $row ) {
+		$actor_id = (int) $row['identity_id'];
+		$card_id  = axismundi_contacts_profile_card( $actor_id );
+		if ( $card_id <= 0 ) {
+			// Nothing published about this Actor yet. The value stays where it is rather than being
+			// written into a Card that does not exist.
+			continue;
+		}
+		$document   = axismundi_contacts_card_document( $card_id );
+		$components = (array) ( $document['name']['components'] ?? array() );
+		$present    = array();
+		foreach ( $components as $component ) {
+			if ( is_array( $component ) ) {
+				$present[ (string) ( $component['kind'] ?? '' ) ] = true;
+			}
+		}
+		$changed = false;
+		foreach ( array( 'title', 'credential' ) as $kind ) {
+			$value = trim( (string) ( $row[ $kind ] ?? '' ) );
+			// A component already on the Card is the Card's answer and is not overwritten by an older
+			// copy of the same fact.
+			if ( '' === $value || isset( $present[ $kind ] ) ) {
+				continue;
+			}
+			// A title leads the name and a credential trails it, which is the order they were read in.
+			if ( 'title' === $kind ) {
+				array_unshift( $components, array( '@type' => 'NameComponent', 'kind' => 'title', 'value' => $value ) );
+			} else {
+				$components[] = array( '@type' => 'NameComponent', 'kind' => 'credential', 'value' => $value );
+			}
+			$changed = true;
+		}
+		if ( ! $changed ) {
+			continue;
+		}
+		$document['name']               = is_array( $document['name'] ?? null ) ? $document['name'] : array( '@type' => 'Name' );
+		$document['name']['components'] = $components;
+		axismundi_contacts_save_card_for_owner( $actor_id, $document, $card_id );
+	}
+}

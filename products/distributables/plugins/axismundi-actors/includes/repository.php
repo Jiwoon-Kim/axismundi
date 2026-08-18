@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '26.0';
+const AXISMUNDI_ACTORS_DB_VERSION = '27.0';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -231,7 +231,7 @@ function axismundi_actors_install() : void {
 			phonetic_second_surname varchar(191) NOT NULL default '',
 			phonetic_system varchar(16) NOT NULL default '',
 			phonetic_script varchar(8) NOT NULL default '',
-			display_order varchar(16) NOT NULL default 'given-family',
+			display_order varchar(32) NOT NULL default 'given-family',
 			display_name varchar(191) NOT NULL default '',
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),
@@ -295,7 +295,7 @@ function axismundi_actors_install() : void {
 			phonetic_surname2 varchar(191) NOT NULL default '',
 			phonetic_system varchar(16) NOT NULL default '',
 			phonetic_script varchar(8) NOT NULL default '',
-			display_order varchar(16) NOT NULL default 'given-family',
+			display_order varchar(32) NOT NULL default 'given-family',
 			display_name varchar(191) NOT NULL default '',
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (identity_id)

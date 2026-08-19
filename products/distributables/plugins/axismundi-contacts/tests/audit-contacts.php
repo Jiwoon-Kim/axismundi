@@ -1258,6 +1258,59 @@ try {
 		null === axismundi_contacts_public_profile_link( (int) $ax_ct_cardless->get_identity_id() )
 	);
 
+	// -- how the network finds it ---------------------------------------------------------------------------------
+
+	/*
+	 * AS2 already says this. `attachment` is what is associated with an Object by inclusion, which is a
+	 * contact document hanging off a profile; `tag` is association by reference, for entities an object
+	 * mentions, and would be the wrong word. The media type is what makes it discoverable as a contact
+	 * card rather than as one more link.
+	 */
+	axismundi_contacts_set_profile_audience( $ax_ct_sid, 'public' );
+	axismundi_contacts_set_profile_sharing_enabled( $ax_ct_sid, true );
+	$ax_ct_actor_doc = axismundi_contacts_actor_attachment( array( 'type' => 'Person' ), axismundi_actors_get_by_identity( $ax_ct_sid ) );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a public card appears on the Actor document as one attached link with its media type',
+		1 === count( (array) ( $ax_ct_actor_doc['attachment'] ?? array() ) )
+			&& 'Link' === (string) ( $ax_ct_actor_doc['attachment'][0]['type'] ?? '' )
+			&& str_starts_with( (string) ( $ax_ct_actor_doc['attachment'][0]['mediaType'] ?? '' ), 'application/jscontact+json' )
+			&& ! isset( $ax_ct_actor_doc['tag'] )
+	);
+	/*
+	 * Appended, never assigned. What is already there is what somebody put on their profile, and an
+	 * attachment list replaced wholesale would drop their website to make room for this.
+	 */
+	$ax_ct_had = array( 'type' => 'Person', 'attachment' => array( array( 'type' => 'PropertyValue', 'name' => 'Website', 'value' => 'https://example.test' ) ) );
+	$ax_ct_now = axismundi_contacts_actor_attachment( $ax_ct_had, axismundi_actors_get_by_identity( $ax_ct_sid ) );
+	ax_ct_assert(
+		$ax_ct_results,
+		'an attachment somebody already had survives, and the card is added beside it',
+		2 === count( $ax_ct_now['attachment'] )
+			&& 'PropertyValue' === (string) $ax_ct_now['attachment'][0]['type']
+			&& 'Link' === (string) $ax_ct_now['attachment'][1]['type']
+	);
+	// Added once. A projection may be built twice in a request, and two copies would say two cards.
+	ax_ct_assert(
+		$ax_ct_results,
+		'running again adds nothing, because a second copy would claim a second card',
+		2 === count( axismundi_contacts_actor_attachment( $ax_ct_now, axismundi_actors_get_by_identity( $ax_ct_sid ) )['attachment'] )
+	);
+	/*
+	 * And nothing is advertised that a stranger cannot fetch. `contacts` is decided from this address
+	 * book, which no other server can answer, so a link to it would point at a route that refuses them.
+	 */
+	axismundi_contacts_set_profile_audience( $ax_ct_sid, 'contacts' );
+	$ax_ct_private_doc = axismundi_contacts_actor_attachment( array( 'type' => 'Person' ), axismundi_actors_get_by_identity( $ax_ct_sid ) );
+	axismundi_contacts_set_profile_sharing_enabled( $ax_ct_sid, false );
+	$ax_ct_off_doc = axismundi_contacts_actor_attachment( array( 'type' => 'Person' ), axismundi_actors_get_by_identity( $ax_ct_sid ) );
+	$ax_ct_none_doc = axismundi_contacts_actor_attachment( array( 'type' => 'Person' ), $ax_ct_cardless );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a card shared with saved people, an unshared one, and an Actor with none are all not advertised',
+		! isset( $ax_ct_private_doc['attachment'] ) && ! isset( $ax_ct_off_doc['attachment'] ) && ! isset( $ax_ct_none_doc['attachment'] )
+	);
+
 	// -- what this plugin is not -------------------------------------------------------------------------------
 
 	/*

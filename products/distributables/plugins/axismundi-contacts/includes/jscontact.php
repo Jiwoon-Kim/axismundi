@@ -158,3 +158,43 @@ function axismundi_contacts_serve_jscontact() : void {
 	exit;
 }
 add_action( 'template_redirect', 'axismundi_contacts_serve_jscontact', 4 );
+
+/**
+ * Put the public Card on the Actor document, when there is one anybody may fetch.
+ *
+ * AS2 says this with what it already has: `attachment` is what is associated with an Object by
+ * inclusion, which is exactly a contact document hanging off a profile. `tag` would be wrong -- that
+ * is association by reference, for the entities an object mentions. The `mediaType` is what makes it
+ * discoverable as a contact card rather than as one more link.
+ *
+ * Contributed from here rather than from the identity registry, so nothing else has to know what
+ * `public` means in these tables. This adds a link or does nothing.
+ *
+ * @param array<string,mixed> $object Actor document so far.
+ * @param Axismundi_Actor     $actor  Actor being described.
+ * @return array<string,mixed>
+ */
+function axismundi_contacts_actor_attachment( array $object, Axismundi_Actor $actor ) : array {
+	$link = axismundi_contacts_public_profile_link( (int) $actor->get_identity_id() );
+	if ( null === $link ) {
+		return $object;
+	}
+	$attachments = isset( $object['attachment'] ) && is_array( $object['attachment'] ) ? $object['attachment'] : array();
+	foreach ( $attachments as $existing ) {
+		/*
+		 * Added once. A projection may be built more than once in a request, and another contributor
+		 * may name the same document; a second copy would tell a reader there are two cards.
+		 */
+		if ( is_array( $existing ) && ( $existing['href'] ?? '' ) === $link['href'] ) {
+			return $object;
+		}
+	}
+	/*
+	 * Appended, never assigned. What is already there is somebody's profile fields, and an attachment
+	 * list replaced wholesale would drop the website they put on their profile to make room for this.
+	 */
+	$attachments[]        = $link;
+	$object['attachment'] = $attachments;
+	return $object;
+}
+add_filter( 'axismundi_op_actor_projection_fields', 'axismundi_contacts_actor_attachment', 10, 2 );

@@ -1022,6 +1022,115 @@ try {
 		array( 'given', 'surname' ) === $ax_ct_emitted
 	);
 
+	// -- the same name written another way ----------------------------------------------------------------------
+
+	/*
+	 * A romanisation and a foreign name are different facts. `ko-Latn` is how the Korean name is
+	 * written in Latin script; `en` is the name this person uses in English, which may be unrelated to
+	 * it. Collapsing them loses which is which, so each is its own localization with its own
+	 * components and its own reading order.
+	 */
+	$ax_ct_loc = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_loc = axismundi_contacts_set_localized_name(
+		$ax_ct_loc,
+		'ko-Latn',
+		array(
+			'full'       => 'Jiwoon Kim',
+			'components' => array(
+				array( '@type' => 'NameComponent', 'kind' => 'given', 'value' => 'Jiwoon' ),
+				array( '@type' => 'NameComponent', 'kind' => 'surname', 'value' => 'Kim' ),
+			),
+			'isOrdered'  => true,
+		)
+	);
+	$ax_ct_loc = axismundi_contacts_set_localized_name( $ax_ct_loc, 'en', array( 'full' => 'Trump' ) );
+	axismundi_contacts_save_card_for_owner( (int) $ax_ct_fresh->get_identity_id(), $ax_ct_loc, $ax_ct_seeded );
+	$ax_ct_back  = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_latin = axismundi_contacts_localized_name( $ax_ct_back, 'ko-Latn' );
+	$ax_ct_en    = axismundi_contacts_localized_name( $ax_ct_back, 'en' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a romanisation and a foreign name are kept apart, each surviving a round trip on its own',
+		'Jiwoon Kim' === (string) ( $ax_ct_latin['full'] ?? '' )
+			&& 'Trump' === (string) ( $ax_ct_en['full'] ?? '' )
+	);
+	/*
+	 * And each keeps its own reading order. The primary name is read family first and the romanisation
+	 * is not; an order shared between them would publish one of the two wrong.
+	 */
+	$ax_ct_primary_kinds = array();
+	foreach ( (array) ( $ax_ct_back['name']['components'] ?? array() ) as $ax_ct_c ) {
+		$ax_ct_primary_kinds[] = (string) $ax_ct_c['kind'];
+	}
+	$ax_ct_latin_kinds = array();
+	foreach ( (array) ( $ax_ct_latin['components'] ?? array() ) as $ax_ct_c ) {
+		$ax_ct_latin_kinds[] = (string) $ax_ct_c['kind'];
+	}
+	ax_ct_assert(
+		$ax_ct_results,
+		'each writing of a name keeps its own component order',
+		array( 'surname', 'given' ) === array_slice( $ax_ct_primary_kinds, 0, 2 )
+			&& array( 'given', 'surname' ) === $ax_ct_latin_kinds
+	);
+	// A name given as a written-out string stays one. Nothing guesses which half is the surname.
+	ax_ct_assert(
+		$ax_ct_results,
+		'a localized name written out in full is not taken apart into components',
+		! isset( $ax_ct_en['components'] )
+	);
+	/*
+	 * JSContact says localizations as patches, and an import may address one value inside a name
+	 * rather than replacing the whole thing -- `name/components/0/phonetic` is the shape RFC 9553's
+	 * own example uses. Reading only the coarse form would show such a Card as having no localized
+	 * name at all.
+	 */
+	$ax_ct_deep = $ax_ct_back;
+	$ax_ct_deep['localizations']['ja'] = array( 'name/full' => "\xe3\x82\xad\xe3\x83\xa0", 'nicknames/n1/name' => 'Kimu' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a localization addressed one value at a time is read as a name, and paths for other fields are left alone',
+		"\xe3\x82\xad\xe3\x83\xa0" === (string) ( axismundi_contacts_localized_name( $ax_ct_deep, 'ja' )['full'] ?? '' )
+			&& 'Kimu' === (string) ( axismundi_contacts_set_localized_name( $ax_ct_deep, 'ja', array( 'full' => 'Kim' ) )['localizations']['ja']['nicknames/n1/name'] ?? '' )
+	);
+	/*
+	 * Contacts holds the Card, so the Card's localization is the answer. What Actors has for the same
+	 * tag is a display name it happens to keep, and letting it win would mean an edit made in Contacts
+	 * vanished on the next render.
+	 */
+	axismundi_actors_set_text( (int) $ax_ct_fresh->get_identity_id(), 'name', 'en', 'Jiwoon from Actors' );
+	$ax_ct_rendered = axismundi_contacts_jscontact_card( axismundi_actors_get_by_identity( (int) $ax_ct_fresh->get_identity_id() ) );
+	ax_ct_assert(
+		$ax_ct_results,
+		'where the card has a name for a language, that is the one published',
+		! is_wp_error( $ax_ct_rendered )
+			&& 'Trump' === (string) ( axismundi_contacts_localized_name( $ax_ct_rendered, 'en' )['full'] ?? '' )
+	);
+	/*
+	 * And where it does not, another domain may still contribute one. Precedence is per tag: holding a
+	 * romanisation says nothing about what to publish in Japanese.
+	 */
+	axismundi_actors_set_text( (int) $ax_ct_fresh->get_identity_id(), 'name', 'de', 'Jiwoon Kim' );
+	$ax_ct_rendered = axismundi_contacts_jscontact_card( axismundi_actors_get_by_identity( (int) $ax_ct_fresh->get_identity_id() ) );
+	ax_ct_assert(
+		$ax_ct_results,
+		'and where it has none, a contributor may still supply one, tag by tag',
+		! is_wp_error( $ax_ct_rendered )
+			&& 'Jiwoon Kim' === (string) ( axismundi_contacts_localized_name( $ax_ct_rendered, 'de' )['full'] ?? '' )
+			&& 'Trump' === (string) ( axismundi_contacts_localized_name( $ax_ct_rendered, 'en' )['full'] ?? '' )
+	);
+	/*
+	 * Absence is what lets a contributor fill a gap, so removing a localization removes the tag rather
+	 * than leaving an empty one behind. An empty patch would answer `this Card has a name here` and
+	 * block the fallback it was meant to restore.
+	 */
+	$ax_ct_cleared = axismundi_contacts_set_localized_name( $ax_ct_back, 'en', array() );
+	ax_ct_assert(
+		$ax_ct_results,
+		'removing a localized name removes the tag, because absence is what allows a fallback',
+		! isset( $ax_ct_cleared['localizations']['en'] )
+			&& ! in_array( 'en', axismundi_contacts_localized_name_tags( $ax_ct_cleared ), true )
+	);
+
 	// -- what this plugin is not -------------------------------------------------------------------------------
 
 	/*

@@ -40,6 +40,7 @@ require_once __DIR__ . '/includes/schema.php';
 require_once __DIR__ . '/includes/address-books.php';
 require_once __DIR__ . '/includes/vocabulary.php';
 require_once __DIR__ . '/includes/cards.php';
+require_once __DIR__ . '/includes/localizations.php';
 require_once __DIR__ . '/includes/profile.php';
 require_once __DIR__ . '/includes/lifecycle.php';
 require_once __DIR__ . '/includes/provenance.php';

@@ -138,9 +138,23 @@ function axismundi_actors_jscontact_contribute( array $card, Axismundi_Actor $ac
 		}
 	}
 	if ( array() !== $localizations ) {
-		// Merged rather than assigned: a Card may carry localizations of its own for fields Actors
-		// knows nothing about, and replacing the map would drop them.
-		$card['localizations'] = array_merge( (array) ( $card['localizations'] ?? array() ), $localizations );
+		/*
+		 * Only where the Card is silent. A localization on the Card is the contact data somebody
+		 * authored; what Actors has for the same tag is a display name it happens to hold, and letting
+		 * the second overwrite the first would mean an edit in Contacts vanished on the next render.
+		 * So this fills gaps and never replaces -- the same rule that keeps an imported value from
+		 * being clobbered by an older copy of the same fact.
+		 */
+		$existing = (array) ( $card['localizations'] ?? array() );
+		$owned    = function_exists( 'axismundi_contacts_localized_name_tags' )
+			? axismundi_contacts_localized_name_tags( $card )
+			: array_keys( $existing );
+		foreach ( $localizations as $tag => $patch ) {
+			if ( ! in_array( (string) $tag, $owned, true ) ) {
+				$existing[ $tag ] = array_merge( (array) ( $existing[ $tag ] ?? array() ), $patch );
+			}
+		}
+		$card['localizations'] = $existing;
 	}
 
 	/*

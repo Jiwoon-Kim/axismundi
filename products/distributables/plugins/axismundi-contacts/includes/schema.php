@@ -34,7 +34,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CONTACTS_DB_VERSION        = '4';
+const AXISMUNDI_CONTACTS_DB_VERSION        = '5';
 const AXISMUNDI_CONTACTS_DB_VERSION_OPTION = 'ax_contacts_db_version';
 
 /**
@@ -47,6 +47,16 @@ const AXISMUNDI_CONTACTS_DB_VERSION_OPTION = 'ax_contacts_db_version';
  * is a policy this code can actually keep.
  */
 const AXISMUNDI_CONTACTS_SHARING = array( 'off', 'contacts', 'public' );
+
+/**
+ * Who a shared profile Card is shared with.
+ *
+ * Kept apart from whether it is shared at all, because those are different actions. Turning sharing
+ * off for a while is not the same as deciding to share with fewer people, and a single three-way
+ * setting makes it so: switching off forgets which audience had been chosen and the way back is a
+ * second decision somebody has to make again.
+ */
+const AXISMUNDI_CONTACTS_AUDIENCES = array( 'contacts', 'public' );
 
 /** @return string Address books. */
 function axismundi_contacts_books_table() : string {
@@ -202,7 +212,8 @@ function axismundi_contacts_install_schema() : bool {
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			actor_id bigint(20) unsigned NOT NULL,
 			card_id bigint(20) unsigned NOT NULL,
-			sharing varchar(16) NOT NULL default 'off',
+			sharing_enabled tinyint(1) unsigned NOT NULL default 0,
+			audience varchar(16) NOT NULL default 'contacts',
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),
@@ -281,6 +292,8 @@ function axismundi_contacts_install_schema() : bool {
 	$book_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$books}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.
 	$provenance_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$provenance}" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.
+	$profile_share_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profiles}" );
 	$valid = in_array( 'card_json', $card_columns, true )
 		&& in_array( 'revision', $card_columns, true )
 		&& in_array( 'owner_actor_id', $card_columns, true )
@@ -290,6 +303,8 @@ function axismundi_contacts_install_schema() : bool {
 		&& ! in_array( 'self_card_sharing', $book_columns, true )
 		&& axismundi_contacts_has_index( axismundi_contacts_profiles_table(), 'actor_id' )
 		&& axismundi_contacts_has_index( $cards, 'owner_uid' )
+		&& in_array( 'sharing_enabled', $profile_share_columns, true )
+		&& ! in_array( 'sharing', $profile_share_columns, true )
 		&& in_array( 'pointer', $provenance_columns, true )
 		&& in_array( 'source', $provenance_columns, true );
 	if ( $valid ) {
@@ -312,6 +327,22 @@ function axismundi_contacts_migrate_books_to_memberships() : void {
 	$books       = axismundi_contacts_books_table();
 	$cards       = axismundi_contacts_cards_table();
 	$memberships = axismundi_contacts_memberships_table();
+
+	/*
+	 * Sharing splits into whether and to whom. An `off` row has no record of which audience it had, so
+	 * it takes the narrower one: a setting nobody chose should not be the more revealing of the two.
+	 */
+	$profiles = axismundi_contacts_profiles_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.
+	$profile_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profiles}" );
+	if ( in_array( 'sharing', $profile_columns, true ) && in_array( 'sharing_enabled', $profile_columns, true ) ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
+		$wpdb->query( "UPDATE {$profiles} SET sharing_enabled = 1, audience = 'contacts' WHERE sharing = 'contacts'" );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
+		$wpdb->query( "UPDATE {$profiles} SET sharing_enabled = 1, audience = 'public' WHERE sharing = 'public'" );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
+		$wpdb->query( "ALTER TABLE {$profiles} DROP COLUMN sharing" );
+	}
 
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.
 	$card_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$cards}" );

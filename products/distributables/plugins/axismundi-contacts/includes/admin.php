@@ -118,6 +118,17 @@ function axismundi_contacts_render_screen() : void {
 	$book_id = (int) $book['id'];
 	$self_id = axismundi_contacts_profile_card( (int) $book['owner_actor_id'] );
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing what to show, not writing.
+	if ( isset( $_GET['profile'] ) ) {
+		/*
+		 * Its own screen. The card an Actor publishes about itself has an audience, is what a stranger
+		 * fetching it receives, and keeps its name in step with the Actor; a card about a friend has
+		 * none of that. One form for both meant every such control was shown to both or to neither.
+		 */
+		axismundi_contacts_profile_editor( $book_id, $actor );
+		echo '</div>';
+		return;
+	}
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing what to show, not writing.
 	$editing = isset( $_GET['card'] ) ? absint( $_GET['card'] ) : -1;
 
 	if ( $editing >= 0 ) {
@@ -139,6 +150,7 @@ function axismundi_contacts_render_screen() : void {
 		?>
 	</p>
 	<?php
+	axismundi_contacts_profile_band( $actor, $self_id );
 	axismundi_contacts_card_list( $book_id, $self_id, axismundi_contacts_cards_in_book( $book_id ) );
 	echo '</div>';
 }
@@ -232,8 +244,18 @@ function axismundi_contacts_card_editor( int $book_id, int $card_id, int $self_i
 		<table class="form-table" role="presentation">
 			<tr>
 				<th scope="row"><label for="ax-contacts-name"><?php esc_html_e( 'Name', 'axismundi-contacts' ); ?></label></th>
-				<td><input id="ax-contacts-name" name="full_name" value="<?php echo esc_attr( (string) ( $card['name']['full'] ?? '' ) ); ?>" class="regular-text"></td>
+				<td>
+					<input id="ax-contacts-name" name="primary_name[full]" value="<?php echo esc_attr( (string) ( $card['name']['full'] ?? '' ) ); ?>" class="regular-text">
+					<?php axismundi_contacts_name_details( 'primary_name', (array) ( $card['name'] ?? array() ) ); ?>
+				</td>
 			</tr>
+			<?php
+			/*
+			 * No row for the Card's own language here. The primary name above is that language's name,
+			 * and offering a localization for it as well would put one fact in two editable places.
+			 */
+			axismundi_contacts_localized_name_rows( $card );
+			?>
 			<?php
 			axismundi_contacts_entry_rows( 'emails', __( 'Email', 'axismundi-contacts' ), $card, $prov );
 			axismundi_contacts_entry_rows( 'phones', __( 'Phone', 'axismundi-contacts' ), $card, $prov );
@@ -403,12 +425,13 @@ function axismundi_contacts_handle_save_card() : void {
 	// Everything the form did not show is carried through untouched, including fields it cannot edit.
 	$card          = $before;
 	$card['@type'] = 'Card';
-	$name          = isset( $_POST['full_name'] ) ? sanitize_text_field( wp_unslash( $_POST['full_name'] ) ) : '';
-	if ( '' !== $name ) {
-		$card['name'] = array_merge( (array) ( $card['name'] ?? array() ), array( '@type' => 'Name', 'full' => $name ) );
+	$name = axismundi_contacts_name_from_request( 'primary_name', (array) ( $card['name'] ?? array() ) );
+	if ( array() !== $name ) {
+		$card['name'] = $name;
 	} else {
 		unset( $card['name'] );
 	}
+	$card = axismundi_contacts_localized_names_from_request( $card );
 	/*
 	 * One note, written as JSContact writes them: a keyed entry rather than a bare string, so a Card
 	 * that arrives with several keeps them all and this form edits the one it owns.
@@ -574,7 +597,9 @@ add_action( 'admin_post_axismundi_contacts_delete_card', 'axismundi_contacts_han
  * @return void
  */
 function axismundi_contacts_redirect_result( $result, int $card_id = -1 ) : void {
-	$url = axismundi_contacts_screen_url( $card_id );
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- the handler verified the nonce.
+	$profile = isset( $_POST['return'] ) && 'profile' === sanitize_key( wp_unslash( $_POST['return'] ) );
+	$url     = $profile ? axismundi_contacts_profile_url() : axismundi_contacts_screen_url( $card_id );
 	if ( is_wp_error( $result ) ) {
 		$url = add_query_arg( 'ax_contacts_error', rawurlencode( $result->get_error_message() ), $url );
 	}

@@ -14,6 +14,7 @@
 defined( 'ABSPATH' ) || exit( 1 );
 
 // WP-CLI does not load the administrator screen this fixture renders.
+require_once dirname( __DIR__ ) . '/includes/name-editor.php';
 require_once dirname( __DIR__ ) . '/includes/admin.php';
 
 $ax_ct_results = array();
@@ -253,7 +254,7 @@ try {
 	ax_ct_assert(
 		$ax_ct_results,
 		'the card is editable on a screen that renders itself rather than its own source',
-		str_contains( $ax_ct_form, 'name="full_name"' )
+		str_contains( $ax_ct_form, 'name="primary_name[full]"' )
 			&& str_contains( $ax_ct_form, 'name="emails_value[]"' )
 			&& str_contains( $ax_ct_form, 'name="phones_value[]"' )
 			&& str_contains( $ax_ct_form, '_wpnonce' )
@@ -280,7 +281,7 @@ try {
 	ax_ct_assert(
 		$ax_ct_results,
 		'a card about somebody else uses the same form as the owner card',
-		str_contains( $ax_ct_other_form, 'name="full_name"' )
+		str_contains( $ax_ct_other_form, 'name="primary_name[full]"' )
 			&& str_contains( $ax_ct_other_form, 'name="phones_value[]"' )
 			&& str_contains( $ax_ct_other_form, 'axismundi_contacts_save_card' )
 	);
@@ -312,7 +313,7 @@ try {
 		$ax_ct_results,
 		'a card belonging to another book cannot be opened by asking for its id',
 		str_contains( $ax_ct_wrong_book, 'not in this address book' )
-			&& ! str_contains( $ax_ct_wrong_book, 'name="full_name"' )
+			&& ! str_contains( $ax_ct_wrong_book, 'name="primary_name[full]"' )
 	);
 	// And an imported value says so, beside the field, before somebody wonders why it changed back.
 	ax_ct_assert(
@@ -1129,6 +1130,132 @@ try {
 		'removing a localized name removes the tag, because absence is what allows a fallback',
 		! isset( $ax_ct_cleared['localizations']['en'] )
 			&& ! in_array( 'en', axismundi_contacts_localized_name_tags( $ax_ct_cleared ), true )
+	);
+
+	// -- editing those writings -----------------------------------------------------------------------------------
+
+	/*
+	 * A save from the form replaces the name and nothing else. A localization may carry paths for
+	 * fields this screen knows nothing about, and rewriting the whole patch would throw them away --
+	 * the value below is a nickname somebody localized, which no name editor should be able to delete.
+	 */
+	$ax_ct_form_card = axismundi_contacts_set_localized_name( array( '@type' => 'Card' ), 'en', array( 'full' => 'Trump' ) );
+	$ax_ct_form_card['localizations']['en']['nicknames/n1/name'] = 'Don';
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- fixture standing in for a verified post.
+	$_POST = array(
+		'localized'             => array( array( 'tag' => 'en', 'full' => 'Donald' ) ),
+		'localized_detail_0'    => array( 'order' => 'given-family' ),
+	);
+	$ax_ct_saved_form = axismundi_contacts_localized_names_from_request( $ax_ct_form_card );
+	ax_ct_assert(
+		$ax_ct_results,
+		'editing a localized name changes the name and leaves that language\u0027s other localizations alone',
+		'Donald' === (string) ( axismundi_contacts_localized_name( $ax_ct_saved_form, 'en' )['full'] ?? '' )
+			&& 'Don' === (string) ( $ax_ct_saved_form['localizations']['en']['nicknames/n1/name'] ?? '' )
+	);
+	/*
+	 * And a name written out in full gains no components from being edited. The screen may not decide
+	 * which half of a name is the surname either -- that is the same rule the store keeps.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a name typed as one string gains no components from passing through the form',
+		! isset( axismundi_contacts_localized_name( $ax_ct_saved_form, 'en' )['components'] )
+	);
+	/*
+	 * Removing the name leaves the tag, because something else is still localized under it. The tag
+	 * only goes when nothing is left, which is what lets a contributor fill the gap again.
+	 */
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- fixture standing in for a verified post.
+	$_POST = array( 'localized' => array( array( 'tag' => 'en', 'full' => 'Donald', 'remove' => '1' ) ) );
+	$ax_ct_removed = axismundi_contacts_localized_names_from_request( $ax_ct_saved_form );
+	ax_ct_assert(
+		$ax_ct_results,
+		'removing a writing removes the name and keeps a tag that still localizes something else',
+		array() === axismundi_contacts_localized_name( $ax_ct_removed, 'en' )
+			&& 'Don' === (string) ( $ax_ct_removed['localizations']['en']['nicknames/n1/name'] ?? '' )
+	);
+	/*
+	 * Typing components is how components appear, and the layout chosen is the order they are stored
+	 * in -- said to be ordered, because the sequence is one somebody picked rather than one a reader
+	 * should reassemble its own way.
+	 */
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- fixture standing in for a verified post.
+	$_POST = array( 'primary_name' => array( 'full' => 'Kim Jiwoon', 'order' => 'family-given', 'surname' => 'Kim', 'given' => 'Jiwoon' ) );
+	$ax_ct_typed = axismundi_contacts_name_from_request( 'primary_name' );
+	$ax_ct_typed_kinds = array();
+	foreach ( (array) ( $ax_ct_typed['components'] ?? array() ) as $ax_ct_c ) {
+		$ax_ct_typed_kinds[] = (string) $ax_ct_c['kind'];
+	}
+	ax_ct_assert(
+		$ax_ct_results,
+		'components appear where somebody typed them, in the layout they chose',
+		array( 'surname', 'given' ) === $ax_ct_typed_kinds && true === ( $ax_ct_typed['isOrdered'] ?? false )
+	);
+	$_POST = array();
+
+	// -- sharing is two decisions ---------------------------------------------------------------------------------
+
+	/*
+	 * Whether to share and who with are different actions. Turning sharing off for a while is not a
+	 * decision to share with fewer people, and one three-way setting made it one: switching off forgot
+	 * the audience, so switching back on was a choice somebody had to make again.
+	 */
+	$ax_ct_sid = (int) $ax_ct_fresh->get_identity_id();
+	axismundi_contacts_set_profile_audience( $ax_ct_sid, 'public' );
+	axismundi_contacts_set_profile_sharing_enabled( $ax_ct_sid, true );
+	axismundi_contacts_set_profile_sharing_enabled( $ax_ct_sid, false );
+	ax_ct_assert(
+		$ax_ct_results,
+		'turning sharing off keeps the audience, so turning it back on restores what was chosen',
+		'public' === axismundi_contacts_profile_audience( $ax_ct_sid )
+			&& ! axismundi_contacts_profile_sharing_enabled( $ax_ct_sid )
+			&& 'off' === axismundi_contacts_profile_sharing( $ax_ct_sid )
+	);
+	axismundi_contacts_set_profile_sharing_enabled( $ax_ct_sid, true );
+	ax_ct_assert(
+		$ax_ct_results,
+		'and it comes back as it was rather than as the narrower default',
+		'public' === axismundi_contacts_profile_sharing( $ax_ct_sid )
+	);
+
+	// -- what another domain has to ask -----------------------------------------------------------------------
+
+	/*
+	 * One question, answered by whoever owns the policy. Actors puts this on the Actor document and
+	 * needs to know nothing about profile bindings or what `public` is called in these tables.
+	 *
+	 * The link says where the Card is, not what it is. Repeating the Card's `uid` here would make two
+	 * places authoritative about one identity, and an address that later moves would take the identity
+	 * with it.
+	 */
+	$ax_ct_link = axismundi_contacts_public_profile_link( $ax_ct_sid );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a public card is offered as a link that says where it is and not which card it is',
+		is_array( $ax_ct_link )
+			&& 'Link' === $ax_ct_link['type']
+			&& str_ends_with( (string) $ax_ct_link['href'], '.jscontact' )
+			&& str_starts_with( (string) $ax_ct_link['mediaType'], 'application/jscontact+json' )
+			&& ! isset( $ax_ct_link['uid'] )
+	);
+	/*
+	 * And nothing is offered in any other case. `contacts` is decided from this address book, which no
+	 * other server can answer, so advertising it would point at a route that refuses them.
+	 */
+	axismundi_contacts_set_profile_audience( $ax_ct_sid, 'contacts' );
+	$ax_ct_contacts_link = axismundi_contacts_public_profile_link( $ax_ct_sid );
+	axismundi_contacts_set_profile_sharing_enabled( $ax_ct_sid, false );
+	$ax_ct_off_link = axismundi_contacts_public_profile_link( $ax_ct_sid );
+	ax_ct_assert(
+		$ax_ct_results,
+		'sharing with saved people only, or not sharing, offers no link at all',
+		null === $ax_ct_contacts_link && null === $ax_ct_off_link
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'and an Actor with no card of its own offers none either',
+		null === axismundi_contacts_public_profile_link( (int) $ax_ct_cardless->get_identity_id() )
 	);
 
 	// -- what this plugin is not -------------------------------------------------------------------------------

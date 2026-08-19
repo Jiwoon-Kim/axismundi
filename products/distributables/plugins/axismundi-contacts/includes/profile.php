@@ -40,15 +40,84 @@ function axismundi_contacts_profile_card( int $actor_id ) : int {
  * @return string One of AXISMUNDI_CONTACTS_SHARING.
  */
 function axismundi_contacts_profile_sharing( int $actor_id ) : string {
+	if ( ! axismundi_contacts_profile_sharing_enabled( $actor_id ) ) {
+		return 'off';
+	}
+	return axismundi_contacts_profile_audience( $actor_id );
+}
+
+/**
+ * Whether this Actor is sharing the Card it publishes about itself at all.
+ *
+ * @param int $actor_id Actor identity.
+ * @return bool
+ */
+function axismundi_contacts_profile_sharing_enabled( int $actor_id ) : bool {
 	global $wpdb;
 	if ( $actor_id <= 0 ) {
-		return 'off';
+		return false;
 	}
 	$table = axismundi_contacts_profiles_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
-	$sharing = (string) $wpdb->get_var( $wpdb->prepare( "SELECT sharing FROM {$table} WHERE actor_id = %d", $actor_id ) );
+	$row = $wpdb->get_var( $wpdb->prepare( "SELECT sharing_enabled FROM {$table} WHERE actor_id = %d", $actor_id ) );
 	// Nothing recorded is not permission. An Actor with no binding shares nothing.
-	return in_array( $sharing, AXISMUNDI_CONTACTS_SHARING, true ) ? $sharing : 'off';
+	return null !== $row && 1 === (int) $row;
+}
+
+/**
+ * Who it is shared with, whether or not it is being shared right now.
+ *
+ * Answered even while sharing is off, which is the point of keeping the two apart: turning sharing
+ * back on restores the audience somebody chose rather than asking them to choose again.
+ *
+ * @param int $actor_id Actor identity.
+ * @return string One of AXISMUNDI_CONTACTS_AUDIENCES.
+ */
+function axismundi_contacts_profile_audience( int $actor_id ) : string {
+	global $wpdb;
+	if ( $actor_id <= 0 ) {
+		return 'contacts';
+	}
+	$table = axismundi_contacts_profiles_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+	$audience = (string) $wpdb->get_var( $wpdb->prepare( "SELECT audience FROM {$table} WHERE actor_id = %d", $actor_id ) );
+	// The narrower of the two when nothing has been chosen.
+	return in_array( $audience, AXISMUNDI_CONTACTS_AUDIENCES, true ) ? $audience : 'contacts';
+}
+
+/**
+ * The link to this Actor's Card, when there is one anybody may fetch.
+ *
+ * The whole question another domain has to ask. Actors puts this on the Actor document and needs to
+ * know nothing about profile bindings, audiences, or what `public` is called in this plugin's
+ * tables -- it asks whether there is a public contact card and gets a link or nothing.
+ *
+ * @param int $actor_id Actor identity.
+ * @return array<string,string>|null AS2 Link properties, or null.
+ */
+function axismundi_contacts_public_profile_link( int $actor_id ) {
+	if ( ! function_exists( 'axismundi_actors_get_by_identity' ) ) {
+		return null;
+	}
+	$actor = axismundi_actors_get_by_identity( $actor_id );
+	if ( ! $actor instanceof Axismundi_Actor || ! axismundi_contacts_jscontact_is_public( $actor ) ) {
+		return null;
+	}
+	$handle = trim( $actor->get_preferred_username() );
+	if ( '' === $handle ) {
+		return null;
+	}
+	/*
+	 * Where the Card is, and not what it is. The Card's own `uid` says which Card this is, and
+	 * repeating it here would make two places authoritative about one identity -- so an address that
+	 * later moves does not take the identity with it.
+	 */
+	return array(
+		'type'      => 'Link',
+		'href'      => home_url( '/@' . rawurlencode( $handle ) . '.jscontact' ),
+		'mediaType' => AXISMUNDI_CONTACTS_JSCONTACT_MEDIA_TYPE,
+		'name'      => 'JSContact',
+	);
 }
 
 /**
@@ -93,8 +162,8 @@ function axismundi_contacts_set_profile_card( int $actor_id, int $card_id ) {
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 	$created = $wpdb->insert(
 		$table,
-		array( 'actor_id' => $actor_id, 'card_id' => $card_id, 'sharing' => 'off', 'created_at' => $now, 'updated_at' => $now ),
-		array( '%d', '%d', '%s', '%s', '%s' )
+		array( 'actor_id' => $actor_id, 'card_id' => $card_id, 'sharing_enabled' => 0, 'audience' => 'contacts', 'created_at' => $now, 'updated_at' => $now ),
+		array( '%d', '%d', '%d', '%s', '%s', '%s' )
 	);
 	if ( false === $created ) {
 		// The unique key on card_id: one Card cannot be two Actors' profile.
@@ -117,18 +186,63 @@ function axismundi_contacts_set_profile_card( int $actor_id, int $card_id ) {
  * @return true|WP_Error
  */
 function axismundi_contacts_set_profile_sharing( int $actor_id, string $sharing ) {
-	global $wpdb;
 	if ( ! in_array( $sharing, AXISMUNDI_CONTACTS_SHARING, true ) ) {
 		return new WP_Error( 'ax_contacts_sharing', __( 'That is not an audience this site can decide.', 'axismundi-contacts' ), array( 'status' => 400 ) );
 	}
+	/*
+	 * The old three-way setting, kept for callers that think in it. Turning it off leaves the audience
+	 * where it was, so this no longer destroys the choice it used to overwrite.
+	 */
+	if ( 'off' === $sharing ) {
+		return axismundi_contacts_set_profile_sharing_enabled( $actor_id, false );
+	}
+	$enabled = axismundi_contacts_set_profile_audience( $actor_id, $sharing );
+	return is_wp_error( $enabled ) ? $enabled : axismundi_contacts_set_profile_sharing_enabled( $actor_id, true );
+}
+
+/**
+ * Start or stop sharing, without touching who it is shared with.
+ *
+ * @param int  $actor_id Actor identity.
+ * @param bool $enabled  Whether to share.
+ * @return true|WP_Error
+ */
+function axismundi_contacts_set_profile_sharing_enabled( int $actor_id, bool $enabled ) {
+	global $wpdb;
 	if ( axismundi_contacts_profile_card( $actor_id ) <= 0 ) {
-		// Publishing nothing is not an audience. There has to be a Card before there is a policy.
+		// Publishing nothing is not a policy. There has to be a Card before there is one.
 		return new WP_Error( 'ax_contacts_profile_missing', __( 'That Actor has no profile card yet.', 'axismundi-contacts' ), array( 'status' => 404 ) );
 	}
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 	$wpdb->update(
 		axismundi_contacts_profiles_table(),
-		array( 'sharing' => $sharing, 'updated_at' => current_time( 'mysql', true ) ),
+		array( 'sharing_enabled' => $enabled ? 1 : 0, 'updated_at' => current_time( 'mysql', true ) ),
+		array( 'actor_id' => $actor_id ),
+		array( '%d', '%s' ),
+		array( '%d' )
+	);
+	return true;
+}
+
+/**
+ * Choose who it is shared with, whether or not it is being shared right now.
+ *
+ * @param int    $actor_id Actor identity.
+ * @param string $audience One of AXISMUNDI_CONTACTS_AUDIENCES.
+ * @return true|WP_Error
+ */
+function axismundi_contacts_set_profile_audience( int $actor_id, string $audience ) {
+	global $wpdb;
+	if ( ! in_array( $audience, AXISMUNDI_CONTACTS_AUDIENCES, true ) ) {
+		return new WP_Error( 'ax_contacts_sharing', __( 'That is not an audience this site can decide.', 'axismundi-contacts' ), array( 'status' => 400 ) );
+	}
+	if ( axismundi_contacts_profile_card( $actor_id ) <= 0 ) {
+		return new WP_Error( 'ax_contacts_profile_missing', __( 'That Actor has no profile card yet.', 'axismundi-contacts' ), array( 'status' => 404 ) );
+	}
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+	$wpdb->update(
+		axismundi_contacts_profiles_table(),
+		array( 'audience' => $audience, 'updated_at' => current_time( 'mysql', true ) ),
 		array( 'actor_id' => $actor_id ),
 		array( '%s', '%s' ),
 		array( '%d' )

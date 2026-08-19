@@ -1311,6 +1311,84 @@ try {
 		! isset( $ax_ct_private_doc['attachment'] ) && ! isset( $ax_ct_off_doc['attachment'] ) && ! isset( $ax_ct_none_doc['attachment'] )
 	);
 
+	// -- what an Actor shows, and what it follows -------------------------------------------------------------
+
+	/*
+	 * The card offers names; the Actor chooses one per locale. `ko-Latn` is how a Korean name is
+	 * written in Latin script and `en` may be a different name entirely, so which an English reader
+	 * should see is a choice somebody makes -- never a mapping derived from the tags.
+	 */
+	$ax_ct_offered = axismundi_contacts_name_representations( $ax_ct_sid );
+	ax_ct_assert(
+		$ax_ct_results,
+		'the card offers each of its names as something an Actor locale can be pointed at',
+		array_key_exists( '', $ax_ct_offered )
+			&& 'Trump' === (string) ( $ax_ct_offered['en'] ?? '' )
+			&& 'Jiwoon Kim' === (string) ( $ax_ct_offered['ko-Latn'] ?? '' )
+	);
+	/*
+	 * One representation may serve several locales, which is most of why this is a binding rather than
+	 * a copy: correcting the romanisation once reaches all of them.
+	 */
+	axismundi_contacts_bind_actor_name( $ax_ct_sid, 'en-US', 'ko-Latn' );
+	axismundi_contacts_bind_actor_name( $ax_ct_sid, 'de-DE', 'ko-Latn' );
+	axismundi_contacts_bind_actor_name( $ax_ct_sid, 'fr-FR', 'en' );
+	$ax_ct_texts = axismundi_actors_get_text_map( $ax_ct_sid );
+	ax_ct_assert(
+		$ax_ct_results,
+		'one writing can be shown in several locales, and a different one in another',
+		'Jiwoon Kim' === (string) ( $ax_ct_texts['en-US']['name'] ?? '' )
+			&& 'Jiwoon Kim' === (string) ( $ax_ct_texts['de-DE']['name'] ?? '' )
+			&& 'Trump' === (string) ( $ax_ct_texts['fr-FR']['name'] ?? '' )
+	);
+	// Correcting the card reaches every locale that follows it, and no others.
+	$ax_ct_fixdoc = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_fixdoc = axismundi_contacts_set_localized_name( $ax_ct_fixdoc, 'ko-Latn', array( 'full' => 'Ji-woon Kim' ) );
+	axismundi_contacts_save_card_for_owner( $ax_ct_sid, $ax_ct_fixdoc, $ax_ct_seeded );
+	$ax_ct_texts = axismundi_actors_get_text_map( $ax_ct_sid );
+	ax_ct_assert(
+		$ax_ct_results,
+		'correcting a writing reaches every locale bound to it and leaves the rest alone',
+		'Ji-woon Kim' === (string) ( $ax_ct_texts['en-US']['name'] ?? '' )
+			&& 'Ji-woon Kim' === (string) ( $ax_ct_texts['de-DE']['name'] ?? '' )
+			&& 'Trump' === (string) ( $ax_ct_texts['fr-FR']['name'] ?? '' )
+	);
+	/*
+	 * A name typed on the Actor follows nothing. Somebody who wrote it chose it, and a later change to
+	 * whatever it once resembled is not a reason to overwrite what they wrote.
+	 */
+	axismundi_actors_set_text( $ax_ct_sid, 'name', 'de-DE', 'Herr Kim' );
+	$ax_ct_fixdoc = axismundi_contacts_set_localized_name( $ax_ct_fixdoc, 'ko-Latn', array( 'full' => 'Jiwoon KIM' ) );
+	axismundi_contacts_save_card_for_owner( $ax_ct_sid, $ax_ct_fixdoc, $ax_ct_seeded );
+	$ax_ct_texts = axismundi_actors_get_text_map( $ax_ct_sid );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a name typed on the Actor follows nothing and survives the next card edit',
+		'Herr Kim' === (string) ( $ax_ct_texts['de-DE']['name'] ?? '' )
+			&& 'custom' === axismundi_actors_text_binding( $ax_ct_sid, 'name', 'de-DE' )['source']
+			&& 'Jiwoon KIM' === (string) ( $ax_ct_texts['en-US']['name'] ?? '' )
+	);
+	/*
+	 * And a writing that is deleted leaves the published name standing. What strangers and remote
+	 * servers hold should not empty itself because somebody tidied an address book; the binding stays,
+	 * so a screen can say it needs choosing again.
+	 */
+	$ax_ct_fixdoc = axismundi_contacts_set_localized_name( $ax_ct_fixdoc, 'ko-Latn', array() );
+	axismundi_contacts_save_card_for_owner( $ax_ct_sid, $ax_ct_fixdoc, $ax_ct_seeded );
+	$ax_ct_texts = axismundi_actors_get_text_map( $ax_ct_sid );
+	ax_ct_assert(
+		$ax_ct_results,
+		'deleting a writing leaves the name it was shown as, rather than emptying what was published',
+		'Jiwoon KIM' === (string) ( $ax_ct_texts['en-US']['name'] ?? '' )
+			&& 'ko-Latn' === axismundi_actors_text_binding( $ax_ct_sid, 'name', 'en-US' )['source_tag']
+	);
+	// A locale can only be pointed at a name the card actually has.
+	ax_ct_assert(
+		$ax_ct_results,
+		'and a locale cannot be pointed at a writing the card does not have',
+		is_wp_error( axismundi_contacts_bind_actor_name( $ax_ct_sid, 'en-US', 'ko-Hani' ) )
+	);
+
 	// -- what this plugin is not -------------------------------------------------------------------------------
 
 	/*

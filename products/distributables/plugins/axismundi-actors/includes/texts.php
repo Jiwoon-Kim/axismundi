@@ -156,11 +156,104 @@ function axismundi_actors_set_text( int $identity_id, string $field, string $lan
 			'language_tag' => $language,
 			'value'        => $value,
 			'media_type'   => 'name' === $field ? null : 'text/html',
+			/*
+			 * Typed here, so it follows nothing. Somebody who wrote this value chose it, and a later
+			 * change to whatever it once resembled is not a reason to overwrite what they wrote.
+			 * `axismundi_actors_bind_text()` is how a value that does follow something is written.
+			 */
+			'source'       => 'custom',
+			'source_tag'   => '',
 			'updated_at'   => current_time( 'mysql', true ),
 		),
-		array( '%d', '%s', '%s', '%s', '%s', '%s' )
+		array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 	);
 	return false === $result ? new WP_Error( 'ax_actors_text_save', __( 'Could not save the profile translation.', 'axismundi-actors' ) ) : true;
+}
+
+/**
+ * Write a text and record what it follows.
+ *
+ * The difference between this and `axismundi_actors_set_text()` is the whole point of the binding:
+ * one records a value somebody typed, the other records a value taken from somewhere that may change
+ * again. Keeping both in one function would mean guessing which had happened.
+ *
+ * What is published stays a plain string -- ActivityStreams receives `nameMap` and nothing about
+ * where each entry came from. The binding is local editing metadata.
+ *
+ * @param int    $identity_id Actor identity.
+ * @param string $field       name | summary | content.
+ * @param string $language    BCP-47 language tag this is shown for.
+ * @param string $value       Resolved value.
+ * @param string $source      What kind of thing it follows.
+ * @param string $source_tag  Which one, in that source's own vocabulary.
+ * @return true|WP_Error
+ */
+function axismundi_actors_bind_text( int $identity_id, string $field, string $language, string $value, string $source, string $source_tag = '' ) {
+	global $wpdb;
+	$written = axismundi_actors_set_text( $identity_id, $field, $language, $value );
+	if ( is_wp_error( $written ) ) {
+		return $written;
+	}
+	$language = axismundi_actors_normalize_language_tag( $language );
+	if ( '' === trim( $value ) ) {
+		// The row was deleted rather than written, so there is nothing left to explain.
+		return true;
+	}
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- actor text custom table.
+	$wpdb->update(
+		axismundi_actors_texts_table(),
+		array( 'source' => sanitize_key( $source ), 'source_tag' => sanitize_text_field( $source_tag ) ),
+		array( 'identity_id' => $identity_id, 'field_name' => $field, 'language_tag' => $language ),
+		array( '%s', '%s' ),
+		array( '%d', '%s', '%s' )
+	);
+	return true;
+}
+
+/**
+ * What one text follows, if anything.
+ *
+ * @param int    $identity_id Actor identity.
+ * @param string $field       name | summary | content.
+ * @param string $language    BCP-47 language tag.
+ * @return array{source:string,source_tag:string}
+ */
+function axismundi_actors_text_binding( int $identity_id, string $field, string $language ) : array {
+	global $wpdb;
+	$language = axismundi_actors_normalize_language_tag( $language );
+	$table    = axismundi_actors_texts_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+	$row = $wpdb->get_row(
+		$wpdb->prepare( "SELECT source, source_tag FROM {$table} WHERE identity_id = %d AND field_name = %s AND language_tag = %s", $identity_id, $field, $language ),
+		ARRAY_A
+	);
+	return array(
+		'source'     => (string) ( $row['source'] ?? '' ),
+		'source_tag' => (string) ( $row['source_tag'] ?? '' ),
+	);
+}
+
+/**
+ * Every language this Actor's texts are bound for, with what each follows.
+ *
+ * @param int    $identity_id Actor identity.
+ * @param string $source      Only bindings of this kind.
+ * @param string $field       name | summary | content.
+ * @return array<string,string> Language tag => source tag.
+ */
+function axismundi_actors_bound_texts( int $identity_id, string $source, string $field = 'name' ) : array {
+	global $wpdb;
+	$table = axismundi_actors_texts_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+	$rows = (array) $wpdb->get_results(
+		$wpdb->prepare( "SELECT language_tag, source_tag FROM {$table} WHERE identity_id = %d AND field_name = %s AND source = %s", $identity_id, $field, $source ),
+		ARRAY_A
+	);
+	$bound = array();
+	foreach ( $rows as $row ) {
+		$bound[ (string) $row['language_tag'] ] = (string) $row['source_tag'];
+	}
+	return $bound;
 }
 
 /**

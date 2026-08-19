@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '27.0';
+const AXISMUNDI_ACTORS_DB_VERSION = '28.0';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -196,6 +196,8 @@ function axismundi_actors_install() : void {
 			language_tag varchar(35) NOT NULL,
 			value longtext NOT NULL,
 			media_type varchar(64) DEFAULT NULL,
+			source varchar(32) NOT NULL default '',
+			source_tag varchar(35) NOT NULL default '',
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY identity_field_language (identity_id, field_name, language_tag),

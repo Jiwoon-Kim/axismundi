@@ -209,6 +209,8 @@ function axismundi_contacts_sync_name_to_actor( int $card_id, int $actor_id, arr
  */
 function axismundi_contacts_on_card_saved( int $card_id, int $actor_id, array $document ) : void {
 	axismundi_contacts_sync_name_to_actor( $card_id, $actor_id, $document );
+	// And every Actor locale pointed at one of this card's names follows it.
+	axismundi_contacts_refresh_bound_names( $actor_id );
 }
 add_action( 'axismundi_contacts_card_saved', 'axismundi_contacts_on_card_saved', 10, 3 );
 
@@ -292,4 +294,84 @@ function axismundi_contacts_adopt_actor_name_extras() : void {
 		$document['name']['components'] = $components;
 		axismundi_contacts_save_card_for_owner( $actor_id, $document, $card_id );
 	}
+}
+
+/** What an Actor text bound to a contact card records as its source. */
+const AXISMUNDI_CONTACTS_NAME_SOURCE = 'contact-card';
+
+/**
+ * The names this Actor's own card offers, as things an Actor locale can be pointed at.
+ *
+ * Candidates, not assignments. `ko-Latn` is how a Korean name is written in Latin script and `en`
+ * may be a different name entirely, so which of them an English-speaking reader should see is a
+ * choice somebody makes once -- never a mapping this code derives.
+ *
+ * @param int $actor_id Actor identity.
+ * @return array<string,string> Source tag => name, with '' for the card's primary name.
+ */
+function axismundi_contacts_name_representations( int $actor_id ) : array {
+	$card_id = axismundi_contacts_profile_card( $actor_id );
+	if ( $card_id <= 0 ) {
+		return array();
+	}
+	$card    = axismundi_contacts_card_document( $card_id );
+	$offered = array();
+	$primary = trim( (string) ( $card['name']['full'] ?? '' ) );
+	if ( '' !== $primary ) {
+		// The card's own name, whose tag is empty because it is not one of the localizations.
+		$offered[''] = $primary;
+	}
+	foreach ( axismundi_contacts_localized_name_tags( $card ) as $tag ) {
+		$full = trim( (string) ( axismundi_contacts_localized_name( $card, $tag )['full'] ?? '' ) );
+		if ( '' !== $full ) {
+			$offered[ $tag ] = $full;
+		}
+	}
+	return $offered;
+}
+
+/**
+ * Carry a changed card into every Actor locale that follows one of its names.
+ *
+ * A binding is what makes correcting `Jiwoon Kim` to `Ji-woon Kim` reach the four locales that were
+ * pointed at it. A locale somebody typed into follows nothing and is left alone.
+ *
+ * A source that has gone leaves the value standing. The published name is what strangers and remote
+ * servers have; deleting a writing in an address book should not empty it, so the binding stays and
+ * the screen can say it needs choosing again.
+ *
+ * @param int $actor_id Actor identity.
+ * @return void
+ */
+function axismundi_contacts_refresh_bound_names( int $actor_id ) : void {
+	if ( ! function_exists( 'axismundi_actors_bound_texts' ) ) {
+		return;
+	}
+	$offered = axismundi_contacts_name_representations( $actor_id );
+	foreach ( axismundi_actors_bound_texts( $actor_id, AXISMUNDI_CONTACTS_NAME_SOURCE ) as $language => $source_tag ) {
+		if ( ! array_key_exists( $source_tag, $offered ) ) {
+			// Broken rather than emptied. What was published stays published until somebody chooses.
+			continue;
+		}
+		axismundi_actors_bind_text( $actor_id, 'name', $language, $offered[ $source_tag ], AXISMUNDI_CONTACTS_NAME_SOURCE, $source_tag );
+	}
+}
+
+/**
+ * Point one Actor locale at one of the names on its card.
+ *
+ * @param int    $actor_id   Actor identity.
+ * @param string $language   Actor locale to show it for.
+ * @param string $source_tag Which name on the card, '' for its primary one.
+ * @return true|WP_Error
+ */
+function axismundi_contacts_bind_actor_name( int $actor_id, string $language, string $source_tag ) {
+	$offered = axismundi_contacts_name_representations( $actor_id );
+	if ( ! array_key_exists( $source_tag, $offered ) ) {
+		return new WP_Error( 'ax_contacts_name_source', __( 'That card has no name written that way.', 'axismundi-contacts' ), array( 'status' => 400 ) );
+	}
+	if ( ! function_exists( 'axismundi_actors_bind_text' ) ) {
+		return new WP_Error( 'ax_contacts_actors', __( 'Profile names need Axismundi Actors.', 'axismundi-contacts' ) );
+	}
+	return axismundi_actors_bind_text( $actor_id, 'name', $language, $offered[ $source_tag ], AXISMUNDI_CONTACTS_NAME_SOURCE, $source_tag );
 }

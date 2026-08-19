@@ -137,6 +137,8 @@ function axismundi_contacts_profile_editor( int $book_id, Axismundi_Actor $actor
 		<?php submit_button( __( 'Save profile', 'axismundi-contacts' ) ); ?>
 	</form>
 
+	<?php axismundi_contacts_binding_rows( $actor_id ); ?>
+
 	<h2><?php esc_html_e( 'Who may read it', 'axismundi-contacts' ); ?></h2>
 	<?php
 	/*

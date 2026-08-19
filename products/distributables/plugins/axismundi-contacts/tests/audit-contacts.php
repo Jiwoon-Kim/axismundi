@@ -16,6 +16,8 @@ defined( 'ABSPATH' ) || exit( 1 );
 // WP-CLI does not load the administrator screen this fixture renders.
 require_once dirname( __DIR__ ) . '/includes/name-editor.php';
 require_once dirname( __DIR__ ) . '/includes/admin.php';
+require_once dirname( __DIR__ ) . '/includes/profile-screen.php';
+require_once dirname( __DIR__ ) . '/includes/name-bindings.php';
 
 $ax_ct_results = array();
 $ax_ct_users   = array();
@@ -1387,6 +1389,77 @@ try {
 		$ax_ct_results,
 		'and a locale cannot be pointed at a writing the card does not have',
 		is_wp_error( axismundi_contacts_bind_actor_name( $ax_ct_sid, 'en-US', 'ko-Hani' ) )
+	);
+
+	// -- choosing what each language shows ------------------------------------------------------------------------
+
+	/*
+	 * The control is keyed on the source, not on the string it currently produces. `Jiwoon Kim` can sit
+	 * under two tags at once, and a control keyed on the text could not say which was picked -- so a
+	 * later correction would follow the wrong one.
+	 */
+	$ax_ct_bind_doc = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_bind_doc = axismundi_contacts_set_localized_name( $ax_ct_bind_doc, 'ko-Latn', array( 'full' => 'Same Text' ) );
+	$ax_ct_bind_doc = axismundi_contacts_set_localized_name( $ax_ct_bind_doc, 'en', array( 'full' => 'Same Text' ) );
+	axismundi_contacts_save_card_for_owner( $ax_ct_sid, $ax_ct_bind_doc, $ax_ct_seeded );
+	axismundi_contacts_apply_binding_row( $ax_ct_sid, array( 'locale' => 'en-US', 'source' => 'tag:ko-Latn' ) );
+	ax_ct_assert(
+		$ax_ct_results,
+		'two writings that read the same are still told apart, because the choice names the source',
+		'ko-Latn' === axismundi_actors_text_binding( $ax_ct_sid, 'name', 'en-US' )['source_tag']
+	);
+	/*
+	 * Choosing a source binds; choosing `custom` and typing does not. Those are the two write paths,
+	 * and the screen keeps them apart so nothing has to guess afterwards which happened.
+	 */
+	axismundi_contacts_apply_binding_row( $ax_ct_sid, array( 'locale' => 'en-US', 'source' => 'custom', 'custom' => 'Donald' ) );
+	$ax_ct_after_custom = axismundi_actors_text_binding( $ax_ct_sid, 'name', 'en-US' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'typing a name makes it follow nothing, and choosing a writing makes it follow that one',
+		'custom' === $ax_ct_after_custom['source']
+			&& '' === $ax_ct_after_custom['source_tag']
+			&& 'Donald' === (string) ( axismundi_actors_get_text_map( $ax_ct_sid )['en-US']['name'] ?? '' )
+	);
+	/*
+	 * A row whose source has gone is left exactly as it was. Somebody saving this form without touching
+	 * it has decided nothing about it, and rewriting it as typed here would throw away the binding they
+	 * still have to fix.
+	 */
+	axismundi_contacts_apply_binding_row( $ax_ct_sid, array( 'locale' => 'en-US', 'source' => 'tag:ko-Latn' ) );
+	$ax_ct_bind_doc = axismundi_contacts_set_localized_name( $ax_ct_bind_doc, 'ko-Latn', array() );
+	axismundi_contacts_save_card_for_owner( $ax_ct_sid, $ax_ct_bind_doc, $ax_ct_seeded );
+	$ax_ct_before_save = axismundi_actors_get_text_map( $ax_ct_sid )['en-US']['name'] ?? '';
+	axismundi_contacts_apply_binding_row( $ax_ct_sid, array( 'locale' => 'en-US', 'source' => 'broken' ) );
+	$ax_ct_after_save = axismundi_actors_text_binding( $ax_ct_sid, 'name', 'en-US' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'saving the form without touching a broken row keeps its value and its binding',
+		'ko-Latn' === $ax_ct_after_save['source_tag']
+			&& AXISMUNDI_CONTACTS_NAME_SOURCE === $ax_ct_after_save['source']
+			&& $ax_ct_before_save === ( axismundi_actors_get_text_map( $ax_ct_sid )['en-US']['name'] ?? '' )
+	);
+	// Removing a language takes the name and the binding; there is no longer one to explain.
+	axismundi_contacts_apply_binding_row( $ax_ct_sid, array( 'locale' => 'en-US', 'remove' => '1' ) );
+	ax_ct_assert(
+		$ax_ct_results,
+		'removing a language takes its name and its binding together',
+		! isset( axismundi_actors_get_text_map( $ax_ct_sid )['en-US']['name'] )
+			&& '' === axismundi_actors_text_binding( $ax_ct_sid, 'name', 'en-US' )['source']
+	);
+	/*
+	 * And the two axes stay apart. Pointing a locale at a writing says who sees it; it does not create
+	 * a slot named after the writing.
+	 */
+	$ax_ct_en_before = axismundi_actors_get_text_map( $ax_ct_sid )['en']['name'] ?? null;
+	axismundi_contacts_apply_binding_row( $ax_ct_sid, array( 'locale' => 'fr-FR', 'source' => 'tag:en' ) );
+	$ax_ct_map_after = axismundi_actors_get_text_map( $ax_ct_sid );
+	ax_ct_assert(
+		$ax_ct_results,
+		'choosing a writing for a language does not touch a language named after that writing',
+		isset( $ax_ct_map_after['fr-FR']['name'] )
+			&& $ax_ct_en_before === ( $ax_ct_map_after['en']['name'] ?? null )
+			&& '' === axismundi_actors_text_binding( $ax_ct_sid, 'name', 'en' )['source_tag']
 	);
 
 	// -- what this plugin is not -------------------------------------------------------------------------------

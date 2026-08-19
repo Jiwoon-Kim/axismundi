@@ -636,6 +636,24 @@ telephone numbers and home addresses. Sharing defaults to `off`, so a card is se
 Actor has said `public`. Every refusal is the same 404 — answering differently would turn the route
 into a way to ask who somebody keeps in their address book.
 
+**A romanisation and a foreign name are different facts.** `ko-Latn` is how `김지운` is written in
+Latin script; `en` is the name somebody uses in English, which may be `Trump` and have nothing to do
+with the Korean one. Collapsing them loses which is which, so Contacts keeps both as separate
+localizations, each with its own components and its own reading order. Nothing ever derives one from
+the other, and nothing splits a localized `full` into components — that would be this site deciding
+which half of `Jiwoon Kim` is the surname.
+
+**Contacts keeps name representations; Actors keeps what to show per locale.** They answer different
+questions — *what writing of this name is this* versus *what does a viewer in this locale see* — so
+an Actor's `nameMap["en-US"]` is a choice among the available representations, not a copy of one.
+The same person may show `Trump` in `en-US` and `Jiwoon Kim` in `en-GB`, and one romanisation may
+serve four locales.
+
+Each `nameMap` slot is therefore a binding or a custom string. A bound slot names the representation
+it follows, so correcting `Jiwoon Kim` to `Ji-woon Kim` reaches every locale that follows it; a
+custom slot is typed once and no upstream edit touches it. The binding is local editing metadata and
+never ships — ActivityStreams receives resolved strings only.
+
 **Per-property visibility will live outside the Card.** JSContact has nowhere inside an entry to
 record who may read it, and sync bookkeeping must never ship to whoever asked for a vCard. When it
 comes, it is a table keyed by the same JSON pointers as provenance — `emails/work` answering both

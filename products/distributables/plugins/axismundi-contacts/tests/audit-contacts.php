@@ -927,66 +927,47 @@ try {
 			&& 'off' === axismundi_contacts_profile_sharing( (int) $ax_ct_fresh->get_identity_id() )
 	);
 
-	// -- one name, kept by two owners ---------------------------------------------------------------------------
+	// -- the card owns the structured name ------------------------------------------------------------------------
 
 	/*
-	 * The Card stores the whole JSContact name because it has to: a Card holding only the parts an
-	 * Actor owns would lose a title on the first round trip. So the shared parts are written down
-	 * twice and each side keeps what it is the authority on.
+	 * It used to be written down twice and carried across on every save. Two tables holding the same
+	 * components is how they come to disagree, so the card keeps them and the identity registry is no
+	 * longer asked -- which also ends the question of which side wins when they differ.
 	 */
-	axismundi_actors_write_person_profile(
-		(int) $ax_ct_fresh->get_identity_id(),
-		array( 'structured_name_language' => 'ko', 'given' => "\xec\xa7\x80\xec\x9a\xb4", 'surname' => "\xea\xb9\x80", 'display_order' => 'family-given-compact' )
+	$ax_ct_owned = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_owned['name'] = array(
+		'@type'      => 'Name',
+		'full'       => "\xea\xb9\x80\xec\xa7\x80\xec\x9a\xb4",
+		'components' => array(
+			array( '@type' => 'NameComponent', 'kind' => 'surname', 'value' => "\xea\xb9\x80" ),
+			array( '@type' => 'NameComponent', 'kind' => 'given', 'value' => "\xec\xa7\x80\xec\x9a\xb4" ),
+			array( '@type' => 'NameComponent', 'kind' => 'credential', 'value' => 'Ph.D.' ),
+		),
+		'isOrdered'  => true,
 	);
-	$ax_ct_named = axismundi_contacts_card_document( $ax_ct_seeded );
-	$ax_ct_kinds = array();
-	foreach ( (array) ( $ax_ct_named['name']['components'] ?? array() ) as $ax_ct_c ) {
-		$ax_ct_kinds[ (string) $ax_ct_c['kind'] ] = (string) $ax_ct_c['value'];
-	}
-	ax_ct_assert(
-		$ax_ct_results,
-		'a name written on the Actor screen reaches the card it publishes',
-		array( 'surname' => "\xea\xb9\x80", 'given' => "\xec\xa7\x80\xec\x9a\xb4" ) === $ax_ct_kinds
-	);
+	axismundi_contacts_save_card_for_owner( (int) $ax_ct_fresh->get_identity_id(), $ax_ct_owned, $ax_ct_seeded );
 	/*
-	 * And what a contact card adds to a name stays put. Actors has nowhere to keep a credential, so a
-	 * sync that rebuilt the component list from the Actor's parts alone would delete it.
+	 * And an Actor write no longer reaches it. The columns are still there until they are dropped, so
+	 * this is what says the write path is closed rather than merely unused.
 	 */
-	$ax_ct_named['name']['components'][] = array( '@type' => 'NameComponent', 'kind' => 'credential', 'value' => 'Ph.D.' );
-	axismundi_contacts_save_card_for_owner( (int) $ax_ct_fresh->get_identity_id(), $ax_ct_named, $ax_ct_seeded );
 	axismundi_actors_write_person_profile(
 		(int) $ax_ct_fresh->get_identity_id(),
-		array( 'structured_name_language' => 'ko', 'given' => "\xec\xa7\x80\xec\x9a\xb4", 'surname' => "\xeb\xa6\xac", 'display_order' => 'family-given-compact' )
+		array( 'structured_name_language' => 'ko', 'given' => 'Nope', 'surname' => 'Nope', 'display_order' => 'given-family' )
 	);
-	$ax_ct_after = array();
+	$ax_ct_kept = array();
 	foreach ( (array) ( axismundi_contacts_card_document( $ax_ct_seeded )['name']['components'] ?? array() ) as $ax_ct_c ) {
-		$ax_ct_after[ (string) $ax_ct_c['kind'] ] = (string) $ax_ct_c['value'];
+		$ax_ct_kept[ (string) $ax_ct_c['kind'] ] = (string) $ax_ct_c['value'];
 	}
 	ax_ct_assert(
 		$ax_ct_results,
-		'a later Actor edit updates the parts it owns and leaves the credential the card added',
-		"\xeb\xa6\xac" === ( $ax_ct_after['surname'] ?? '' ) && 'Ph.D.' === ( $ax_ct_after['credential'] ?? '' )
+		'the card keeps the structured name, and writing one on the Actor no longer reaches it',
+		"\xea\xb9\x80" === ( $ax_ct_kept['surname'] ?? '' )
+			&& "\xec\xa7\x80\xec\x9a\xb4" === ( $ax_ct_kept['given'] ?? '' )
+			&& 'Ph.D.' === ( $ax_ct_kept['credential'] ?? '' )
 	);
 	/*
-	 * And the other direction, without a loop: editing the card writes the Actor's parts back. The
-	 * two sides each save on the other's write, so this only terminates because the announcement is
-	 * guarded against re-entry.
-	 */
-	$ax_ct_edit = axismundi_contacts_card_document( $ax_ct_seeded );
-	foreach ( $ax_ct_edit['name']['components'] as $ax_ct_i => $ax_ct_c ) {
-		if ( 'surname' === $ax_ct_c['kind'] ) {
-			$ax_ct_edit['name']['components'][ $ax_ct_i ]['value'] = "\xeb\xb0\x95";
-		}
-	}
-	axismundi_contacts_save_card_for_owner( (int) $ax_ct_fresh->get_identity_id(), $ax_ct_edit, $ax_ct_seeded );
-	ax_ct_assert(
-		$ax_ct_results,
-		'editing the profile card writes the Actor own parts back to it',
-		"\xeb\xb0\x95" === (string) ( axismundi_actors_person_profile( (int) $ax_ct_fresh->get_identity_id() )['surname'] ?? '' )
-	);
-	/*
-	 * An ordinary card obeys none of this. Somebody saving a name of their own choosing for a person
-	 * whose Actor says otherwise is right, not out of step -- the card is theirs.
+	 * An ordinary card obeys none of this either. Somebody saving a name of their own choosing for a
+	 * person whose Actor says otherwise is right, not out of step -- the card is theirs.
 	 */
 	$ax_ct_theirs = axismundi_contacts_save_card(
 		$ax_ct_book_id,
@@ -1005,24 +986,6 @@ try {
 		'a card about somebody else is its owner to write, and reaches no Actor',
 		! is_wp_error( $ax_ct_theirs )
 			&& 'Alice from the design team' === (string) axismundi_contacts_get_card( (int) $ax_ct_theirs )['display_name']
-			&& "\xeb\xb0\x95" === (string) ( axismundi_actors_person_profile( (int) $ax_ct_fresh->get_identity_id() )['surname'] ?? '' )
-	);
-
-	/*
-	 * A title and a credential belong to the card, not to the Actor. Both tables had a column for the
-	 * same component, which is how one card came to carry it twice; Actors now emits neither.
-	 */
-	$ax_ct_parts = axismundi_actors_jscontact_name(
-		array( 'given' => 'Ada', 'surname' => 'Lovelace', 'title' => 'Dr.', 'credential' => 'PhD', 'display_order' => 'given-family' )
-	);
-	$ax_ct_emitted = array();
-	foreach ( (array) ( $ax_ct_parts['components'] ?? array() ) as $ax_ct_c ) {
-		$ax_ct_emitted[] = (string) $ax_ct_c['kind'];
-	}
-	ax_ct_assert(
-		$ax_ct_results,
-		'a title and a credential belong to the card, and Actors emits neither even when it still has a column for one',
-		array( 'given', 'surname' ) === $ax_ct_emitted
 	);
 
 	// -- the same name written another way ----------------------------------------------------------------------

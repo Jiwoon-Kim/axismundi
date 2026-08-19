@@ -208,8 +208,7 @@ function axismundi_contacts_sync_name_to_actor( int $card_id, int $actor_id, arr
  * @return void
  */
 function axismundi_contacts_on_card_saved( int $card_id, int $actor_id, array $document ) : void {
-	axismundi_contacts_sync_name_to_actor( $card_id, $actor_id, $document );
-	// And every Actor locale pointed at one of this card's names follows it.
+	// Every Actor locale pointed at one of this card's names follows it.
 	axismundi_contacts_refresh_bound_names( $actor_id );
 }
 add_action( 'axismundi_contacts_card_saved', 'axismundi_contacts_on_card_saved', 10, 3 );
@@ -225,8 +224,11 @@ function axismundi_contacts_on_actor_profile_updated( $actor ) : void {
 		axismundi_contacts_sync_name_from_actor( (int) $actor->get_identity_id() );
 	}
 }
-add_action( 'axismundi_actors_local_actor_profile_updated', 'axismundi_contacts_on_actor_profile_updated' );
-add_action( 'axismundi_actors_person_name_written', 'axismundi_contacts_sync_name_from_actor' );
+/*
+ * Deliberately not hooked any more. The card is where a structured name lives, so there is nothing
+ * for an Actor write to carry over and nothing to carry back: `axismundi_contacts_sync_name_from_actor()`
+ * survives only as what the migration below uses once.
+ */
 
 /**
  * Move a title and a credential off the Actor and onto the Card that publishes them.
@@ -374,4 +376,53 @@ function axismundi_contacts_bind_actor_name( int $actor_id, string $language, st
 		return new WP_Error( 'ax_contacts_actors', __( 'Profile names need Axismundi Actors.', 'axismundi-contacts' ) );
 	}
 	return axismundi_actors_bind_text( $actor_id, 'name', $language, $offered[ $source_tag ], AXISMUNDI_CONTACTS_NAME_SOURCE, $source_tag );
+}
+
+/**
+ * Move the structured name out of the identity registry and onto the card.
+ *
+ * Actors kept `given`, `surname` and the order they are read in because it used to assemble the
+ * JSContact document. It does not any more, and two tables holding the same components is how they
+ * come to disagree -- so the card takes them and Actors stops being asked.
+ *
+ * Nothing is guessed. A card that already carries these components keeps them; a `nameMap` entry is
+ * left exactly as it is, because the fact that `en-US` reads `Jiwoon Kim` does not say it was
+ * derived from anything, and a migration that inferred a source would invent a binding somebody
+ * never made. Recovering provenance is not what this is for.
+ *
+ * Run from the Contacts upgrade and written against the columns, so it happens while the values are
+ * still there whichever plugin upgrades first, does nothing on a second run, and leaves an
+ * Actors-only install untouched until Contacts arrives.
+ *
+ * @return void
+ */
+function axismundi_contacts_adopt_structured_names() : void {
+	global $wpdb;
+	if ( ! function_exists( 'axismundi_actors_profile_table' ) || ! function_exists( 'axismundi_actors_person_profile' ) ) {
+		return;
+	}
+	$profiles = axismundi_actors_profile_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.
+	$columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profiles}" );
+	if ( ! in_array( 'surname', $columns, true ) ) {
+		return;
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration.
+	$rows = (array) $wpdb->get_col( "SELECT identity_id FROM {$profiles}" );
+	foreach ( $rows as $identity_id ) {
+		$actor_id = (int) $identity_id;
+		if ( axismundi_contacts_profile_card( $actor_id ) <= 0 ) {
+			// Nothing published about this Actor. The values stay where they are rather than being
+			// written into a card that does not exist.
+			continue;
+		}
+		$card = axismundi_contacts_card_document( axismundi_contacts_profile_card( $actor_id ) );
+		foreach ( (array) ( $card['name']['components'] ?? array() ) as $component ) {
+			if ( is_array( $component ) && in_array( (string) ( $component['kind'] ?? '' ), AXISMUNDI_CONTACTS_ACTOR_NAME_PARTS, true ) ) {
+				// The card already answers this. An older copy of the same fact does not overwrite it.
+				continue 2;
+			}
+		}
+		axismundi_contacts_sync_name_from_actor( $actor_id );
+	}
 }

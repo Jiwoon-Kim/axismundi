@@ -98,19 +98,24 @@ try {
 	axismundi_actors_set_text( $ax_jc_id, 'name', 'en', 'Jiwoon Kim' );
 	$ax_jc_card = axismundi_actors_jscontact_card( axismundi_actors_get_by_identity( $ax_jc_id ) );
 	/*
+	 * Read from the assembler rather than from the published card. The card owns its own components
+	 * now; what is checked here is the part Actors still answers -- how a stored name reads in parts.
+	 */
+	$ax_jc_name = axismundi_actors_jscontact_name( axismundi_actors_person_profile( $ax_jc_id ) );
+	/*
 	 * Order belongs to the person, not to the language: the same components read one way in Korean and
 	 * the other in English, and a consumer told `isOrdered` must not reassemble them its own way.
 	 */
 	ax_jc_assert(
 		$ax_jc_results,
 		'the components are given in the order they are read, and said to be ordered',
-		'김지운' === (string) $ax_jc_card['name']['full']
-			&& true === $ax_jc_card['name']['isOrdered']
-			&& 'surname' === (string) $ax_jc_card['name']['components'][0]['kind']
-			&& 'given' === (string) $ax_jc_card['name']['components'][1]['kind']
+		'김지운' === (string) $ax_jc_name['full']
+			&& true === $ax_jc_name['isOrdered']
+			&& 'surname' === (string) $ax_jc_name['components'][0]['kind']
+			&& 'given' === (string) $ax_jc_name['components'][1]['kind']
 	);
 	axismundi_actors_set_person_name( $ax_jc_id, array( 'display_order' => 'family-given-compact' ) );
-	$ax_jc_compact_card = axismundi_actors_jscontact_card( axismundi_actors_get_by_identity( $ax_jc_id ) );
+	$ax_jc_compact_card = array( 'name' => axismundi_actors_jscontact_name( axismundi_actors_person_profile( $ax_jc_id ) ) );
 	ax_jc_assert(
 		$ax_jc_results,
 		'a compact family-first name keeps its component order while its full form omits the space',
@@ -119,7 +124,7 @@ try {
 			&& 'given' === (string) $ax_jc_compact_card['name']['components'][1]['kind']
 	);
 	axismundi_actors_set_person_name( $ax_jc_id, array( 'surname' => 'Garcia', 'surname2' => 'Marquez', 'given' => 'Gabriel', 'display_order' => 'given-family' ) );
-	$ax_jc_surname2_card = axismundi_actors_jscontact_card( axismundi_actors_get_by_identity( $ax_jc_id ) );
+	$ax_jc_surname2_card = array( 'name' => axismundi_actors_jscontact_name( axismundi_actors_person_profile( $ax_jc_id ) ) );
 	ax_jc_assert(
 		$ax_jc_results,
 		'a second family name becomes the standard surname2 component',

@@ -1927,12 +1927,19 @@ try {
 	$ax_ct_split_card = is_wp_error( $ax_ct_split_made ) ? 0 : (int) $ax_ct_split_made;
 	$ax_ct_loose[]    = $ax_ct_split_card;
 
+	/*
+	 * One Card has one name in the address whatever is being done to it. Two names would mean two ways
+	 * to build a link, two things to check a permission against, and a back button that returned
+	 * somewhere other than where somebody had been.
+	 */
 	ax_ct_assert(
 		$ax_ct_results,
-		'a contact in the list is a record to open, and changing one says so in the address',
+		'a Card is called the same thing whether it is being read or changed, and the action says which',
 		false === strpos( axismundi_contacts_screen_url( $ax_ct_split_card ), 'action=edit' )
 			&& false !== strpos( axismundi_contacts_screen_url( $ax_ct_split_card ), 'item=' . $ax_ct_split_card )
+			&& false !== strpos( axismundi_contacts_edit_url( $ax_ct_split_card ), 'item=' . $ax_ct_split_card )
 			&& false !== strpos( axismundi_contacts_edit_url( $ax_ct_split_card ), 'action=edit' )
+			&& false === strpos( axismundi_contacts_edit_url( $ax_ct_split_card ), 'card=' )
 	);
 
 	wp_set_current_user( (int) $ax_ct_users[ count( $ax_ct_users ) - 1 ] );
@@ -2002,6 +2009,30 @@ try {
 			&& str_contains( $ax_ct_fields, 'name="published[]" value="emails/e2"' )
 			&& str_contains( $ax_ct_fields, 'name="published[]" value="name"' )
 			&& ! str_contains( $ax_ct_detail, 'name="published[]"' )
+	);
+	/*
+	 * A tick is attached to the entry's own id, never to the text beside it or the row it was on.
+	 * Somebody correcting a typo, reordering their links or translating a label has not changed which
+	 * value they publish -- and consent that travelled with a display string would land on a different
+	 * value the first time either of those happened.
+	 */
+	$ax_ct_moved = axismundi_contacts_card_document( $ax_ct_profile_card );
+	$ax_ct_moved['emails'] = array(
+		// Reordered, and the published one's text corrected. Neither is a change of mind.
+		'e2' => array( 'address' => 'secret@example.test' ),
+		'e1' => array( 'address' => 'hello.corrected@example.test' ),
+	);
+	axismundi_contacts_save_card_for_owner( $ax_ct_split_sid, $ax_ct_moved, $ax_ct_profile_card );
+	$ax_ct_after_move = axismundi_contacts_public_projection(
+		axismundi_contacts_card_document( $ax_ct_profile_card ),
+		axismundi_contacts_published_pointers( $ax_ct_split_sid )
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'correcting a published value or reordering its siblings leaves the consent on the same entry',
+		array( 'name', 'emails/e1' ) === axismundi_contacts_published_pointers( $ax_ct_split_sid )
+			&& 'hello.corrected@example.test' === (string) ( $ax_ct_after_move['emails']['e1']['address'] ?? '' )
+			&& ! isset( $ax_ct_after_move['emails']['e2'] )
 	);
 	wp_set_current_user( 0 );
 

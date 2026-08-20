@@ -263,6 +263,16 @@ function axismundi_contacts_project_localizations( array $card, array $out ) : a
  * than one anybody may have. Reading either as an answer would be this screen deciding on somebody's
  * behalf and then showing them a page that looked like they had decided.
  *
+ * A tick stores the entry's own id -- `emails/e1`, `media/avatar` -- and never the text beside it or
+ * the row it was on. Somebody correcting a typo in an address, reordering their links or translating
+ * a label has not changed which value they published, and consent that travelled with a display
+ * string would move to a different value the first time either changed.
+ *
+ * This form is the transitional one. The editor that replaces it reads and writes the same
+ * `published_json` through the same two functions above: a second writer of the public policy would
+ * be two answers to one question, which is the shape of the bug this whole boundary exists to
+ * prevent.
+ *
  * @param int                 $actor_id Acting Actor.
  * @param array<string,mixed> $card     Stored Card.
  * @return void

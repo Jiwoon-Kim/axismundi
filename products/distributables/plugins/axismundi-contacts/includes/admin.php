@@ -127,16 +127,21 @@ function axismundi_contacts_screen_url( int $card_id = -1, int $group_id = 0 ) :
 /**
  * Where a card is changed, which is not where it is read.
  *
- * Editing says so in the address. A screen that looks like a form is a screen where somebody may
- * already have typed into a field they only meant to read, and `action=edit` is the difference
- * between opening a record and opening it for changes.
+ * The same `item` as the record, plus `action=edit`. One Card has one name in the address whatever
+ * is being done to it: two names would mean two ways to build a link, two things to check a
+ * permission against, and a back button that returned to a different screen than the one somebody
+ * left.
+ *
+ * Editing says so. A screen that looks like a form is a screen where somebody may already have
+ * typed into a field they only meant to read, and the action is the difference between opening a
+ * record and opening it for changes.
  *
  * @param int $card_id  Card, or 0 for a new one.
  * @param int $group_id Group to file a new card into, and to return to.
  * @return string
  */
 function axismundi_contacts_edit_url( int $card_id = 0, int $group_id = 0 ) : string {
-	$args = array( 'card' => $card_id, 'action' => 'edit' );
+	$args = array( 'item' => $card_id, 'action' => 'edit' );
 	if ( $group_id > 0 ) {
 		$args['group'] = $group_id;
 	}
@@ -174,16 +179,16 @@ function axismundi_contacts_render_screen() : void {
 		return;
 	}
 	/*
-	 * Three screens, told apart by the address. Reading a contact is the common case and gets the bare
-	 * id; changing one says `action=edit`, so nobody arrives at a form they meant to arrive at a
+	 * One Card, one name for it, and the action says what is being done. Reading is the common case
+	 * and gets the bare id; changing says so, so nobody arrives at a form they meant to arrive at a
 	 * record.
 	 */
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing what to show, not writing.
 	$action = isset( $_GET['action'] ) ? sanitize_key( wp_unslash( $_GET['action'] ) ) : '';
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing what to show, not writing.
-	$editing = 'edit' === $action && isset( $_GET['card'] ) ? absint( $_GET['card'] ) : -1;
-	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing what to show, not writing.
-	$reading = isset( $_GET['item'] ) ? absint( $_GET['item'] ) : -1;
+	$item = isset( $_GET['item'] ) ? absint( $_GET['item'] ) : -1;
+	$editing = 'edit' === $action && $item >= 0 ? $item : -1;
+	$reading = 'edit' === $action ? -1 : $item;
 
 	if ( $editing >= 0 ) {
 		axismundi_contacts_card_editor( $book_id, $editing, $self_id, $all, $all ? 0 : $book_id );

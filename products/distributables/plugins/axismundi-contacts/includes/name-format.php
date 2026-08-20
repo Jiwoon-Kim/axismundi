@@ -13,10 +13,13 @@
  * written is a derivation and not a guess: the components are already in the order somebody chose,
  * and joining them says nothing that was not said.
  *
- * The other direction stays forbidden. A `full` is never taken apart into components -- deciding
- * which half of `Kim Jiwoon` is the surname is a guess, and a guess written into an authority field
- * stops being visibly a guess. A name given as one written-out string keeps no components, and this
- * leaves it exactly as it is.
+ * Nothing here writes. Names are read this way and stored as authored: the one place a `full` is
+ * written down is the editor, when somebody has actually typed a name and left the written-out form
+ * blank, and that is them asking for it rather than the system deciding.
+ *
+ * The other direction stays forbidden everywhere. A `full` is never taken apart into components --
+ * deciding which half of `Kim Jiwoon` is the surname is a guess, and a guess written into an
+ * authority field stops being visibly a guess.
  *
  * @package AxismundiContacts
  */
@@ -80,67 +83,22 @@ function axismundi_contacts_assemble_name( array $name ) : string {
 }
 
 /**
- * Give a name a `full` when it has components and no written-out form.
+ * The string one name reads as.
  *
- * Only when it is missing. A `full` somebody typed is what they want read, even where it differs
- * from what the components join to -- somebody who writes `Dr. Kim` and keeps `given` and `surname`
- * beside it has said both things on purpose.
+ * `full` when the Card carries one, and the components joined when it does not. RFC 9553 leaves that
+ * to whoever displays the name, which is exactly where it belongs: a Card written in components and
+ * no written-out form is complete, and answering on its behalf at the point it is shown costs
+ * nothing and changes nothing.
+ *
+ * Not written back. This used to run as Cards were stored, so an import of a components-only Card
+ * came out of the database with a `full` its author never wrote -- a document rewritten by the
+ * system that was asked to keep it, and an import whose output could no longer be compared with its
+ * input.
  *
  * @param array<string,mixed> $name JSContact Name object.
- * @return array<string,mixed>
+ * @return string
  */
-function axismundi_contacts_complete_name( array $name ) : array {
-	if ( '' !== trim( (string) ( $name['full'] ?? '' ) ) ) {
-		return $name;
-	}
-	$assembled = axismundi_contacts_assemble_name( $name );
-	if ( '' !== $assembled ) {
-		$name['full'] = $assembled;
-	}
-	return $name;
-}
-
-/**
- * Complete every name a Card states: its own, and each localization's.
- *
- * A localized name is a name. The reason `full` has to be there is the same for `ko-KR` as for the
- * Card's own -- the bindings offer one writing per tag, from `full` -- so the rule cannot apply to
- * only one of them.
- *
- * A localization may be written whole (`name`) or addressed finely (`name/components/0/value`), and
- * a Card that came from an import commonly uses the second. So the effective name is resolved the
- * way every other reader resolves it, and the `full` is written back in whichever form that
- * localization is already using. Converting one form into the other would rewrite somebody's
- * document to suit this function.
- *
- * @param array<string,mixed> $card Card document.
- * @return array<string,mixed>
- */
-function axismundi_contacts_complete_card_names( array $card ) : array {
-	if ( is_array( $card['name'] ?? null ) ) {
-		$card['name'] = axismundi_contacts_complete_name( $card['name'] );
-	}
-	$localizations = (array) ( $card['localizations'] ?? array() );
-	foreach ( $localizations as $tag => $patch ) {
-		if ( ! is_array( $patch ) ) {
-			continue;
-		}
-		$name = axismundi_contacts_localized_name( $card, (string) $tag );
-		if ( array() === $name || '' !== trim( (string) ( $name['full'] ?? '' ) ) ) {
-			continue;
-		}
-		$assembled = axismundi_contacts_assemble_name( $name );
-		if ( '' === $assembled ) {
-			continue;
-		}
-		if ( is_array( $patch['name'] ?? null ) ) {
-			$localizations[ $tag ]['name']['full'] = $assembled;
-		} else {
-			$localizations[ $tag ]['name/full'] = $assembled;
-		}
-	}
-	if ( array() !== $localizations ) {
-		$card['localizations'] = $localizations;
-	}
-	return $card;
+function axismundi_contacts_name_text( array $name ) : string {
+	$written = trim( (string) ( $name['full'] ?? '' ) );
+	return '' !== $written ? $written : axismundi_contacts_assemble_name( $name );
 }

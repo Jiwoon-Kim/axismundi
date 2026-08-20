@@ -54,13 +54,15 @@ function axismundi_contacts_name_representations( int $actor_id ) : array {
 	}
 	$card    = axismundi_contacts_card_document( $card_id );
 	$offered = array();
-	$primary = trim( (string) ( $card['name']['full'] ?? '' ) );
+	// Read rather than looked up: a name given in components and no written-out form still offers the
+	// string it reads as, and the Card is not rewritten so that this function can find one.
+	$primary = trim( axismundi_contacts_name_text( is_array( $card['name'] ?? null ) ? $card['name'] : array() ) );
 	if ( '' !== $primary ) {
 		// The card's own name, whose tag is empty because it is not one of the localizations.
 		$offered[''] = $primary;
 	}
 	foreach ( axismundi_contacts_localized_name_tags( $card ) as $tag ) {
-		$full = trim( (string) ( axismundi_contacts_localized_name( $card, $tag )['full'] ?? '' ) );
+		$full = trim( axismundi_contacts_name_text( axismundi_contacts_localized_name( $card, $tag ) ) );
 		if ( '' !== $full ) {
 			$offered[ $tag ] = $full;
 		}

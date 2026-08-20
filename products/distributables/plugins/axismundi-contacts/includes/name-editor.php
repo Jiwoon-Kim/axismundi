@@ -192,6 +192,18 @@ function axismundi_contacts_name_from_request( string $prefix, array $existing =
 	} else {
 		unset( $name['full'] );
 	}
+	/*
+	 * Somebody filled the parts in and left the written-out form blank, so it is written for them --
+	 * here, where a person is editing a name, and nowhere else. Storing a Card does not do this: a
+	 * document that arrived without one is kept without one, and the difference between the two is
+	 * the difference between answering for somebody and rewriting what they gave you.
+	 */
+	if ( '' === $full && array() !== $components ) {
+		$assembled = axismundi_contacts_assemble_name( array_merge( $name, array( 'components' => $components ) ) );
+		if ( '' !== $assembled ) {
+			$name['full'] = $assembled;
+		}
+	}
 	if ( array() !== $components ) {
 		$name['components'] = $components;
 		// Said to be ordered because they are: the sequence above is the one somebody chose.

@@ -7,17 +7,16 @@
  * by somebody, and a Card whose properties land in whatever order they were last edited is one
  * nobody can scan or review.
  *
- * The order is Axismundi's rather than the RFC's table of contents, because the reading order here
- * is different. An Actor is the identity this site is built on, so a Card answers who somebody is,
- * then where they are on the network, then how to reach them directly:
+ * The order is the standard's own: the groups RFC 9553 documents, alphabetically within each. A
+ * stored Card is read beside the specification -- when checking an import, when comparing two
+ * exports, when working out what a field is called -- and an order somebody has to learn first is an
+ * order that makes all three harder.
  *
- *   name, media          who this is
- *   onlineServices       where they are -- the Actor URI and the handles live here
- *   emails, phones       how to reach them
- *
- * `onlineServices` above `emails` is the whole point of that choice. Elsewhere it would be a
- * resource among others; here it carries the federated identity, and a reader scanning a Card is
- * looking for the handle before the phone number.
+ * Deliberately not the order the editor uses. There, an Actor is the identity this site is built on
+ * and a profile reads media, name, `onlineServices`, then how to reach somebody directly; a Card in
+ * an address book may be a shop with a phone number and nothing else. Presentation is where a
+ * reading order belongs, and a serializer that followed one would bend every ordinary Card to suit
+ * a model most of them are not in.
  *
  * Nothing about entry ids or array order is touched. A key in a map is an address -- `emails/e1` is
  * what a published-pointer and a provenance row name -- and tidying `e1` into `e0` would sever
@@ -40,53 +39,51 @@ defined( 'ABSPATH' ) || exit;
  */
 function axismundi_contacts_canonical_order() : array {
 	return array(
-		// Metadata: what this document is and which record it is.
+		// What this document is, and which record it is.
 		'@type',
 		'version',
 		'uid',
-		'kind',
 		'created',
-		'updated',
+		'kind',
 		'language',
+		'members',
 		'prodId',
 		'relatedTo',
-		'members',
+		'updated',
 
-		// Who this is.
+		// Name and organization.
 		'name',
 		'nicknames',
-		'speakToAs',
-		'media',
-
-		// Where they are on the network.
-		'onlineServices',
-
-		// Who they are part of.
 		'organizations',
+		'speakToAs',
 		'titles',
 
-		// How to reach them directly.
+		// Contact.
 		'emails',
+		'onlineServices',
 		'phones',
 		'preferredLanguages',
 
-		// When and where.
+		// Calendaring.
 		'calendars',
 		'schedulingAddresses',
+
+		// Address.
 		'addresses',
 
-		// What else is attached.
-		'links',
-		'directories',
+		// Resources.
 		'cryptoKeys',
+		'directories',
+		'links',
+		'media',
 
-		// Facts about the person.
+		// Additional facts.
 		'anniversaries',
-		'personalInfo',
 		'keywords',
 		'notes',
+		'personalInfo',
 
-		// Applied over everything above, so it is read after all of it.
+		// Applied over everything above, so it is written after all of it.
 		'localizations',
 	);
 }

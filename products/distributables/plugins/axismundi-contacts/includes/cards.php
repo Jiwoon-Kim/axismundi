@@ -164,19 +164,15 @@ function axismundi_contacts_save_card_for_owner( int $owner_actor_id, array $car
 		return $valid;
 	}
 	/*
-	 * Made complete on the way in, so that a name with components and no written-out form gets one.
-	 * Here rather than in the editor because an import arrives the same way and needs the same thing,
-	 * and because the Actor name bindings read `full` alone -- a Card stored without one offers that
-	 * language no name to bind, and the Actor stops answering in it.
+	 * Written down in a stable order, and otherwise stored as authored. Nothing about the Card changes
+	 * -- JSON says nothing about the order of an object's keys -- but the stored document, its diff
+	 * and the Advanced JSON box are all read by somebody, and a Card whose properties land wherever
+	 * the last edit put them is one nobody can scan.
 	 *
-	 * Only that direction. Nothing is taken apart, and a `full` somebody wrote is never replaced.
-	 */
-	$card = axismundi_contacts_complete_card_names( $card );
-	/*
-	 * And written down in a stable order. Nothing about the Card changes -- JSON says nothing about
-	 * the order of an object's keys -- but the stored document, its diff and the Advanced JSON box
-	 * are all read by somebody, and a Card whose properties land wherever the last edit put them is
-	 * one nobody can scan.
+	 * Nothing is added here, either. A Card that arrived with components and no written-out name is
+	 * stored that way: filling it in would be this code answering a question the standard leaves to
+	 * whoever displays the name, and an import that rewrote the document it was given is an import
+	 * whose output nobody can compare with its input.
 	 */
 	$card = axismundi_contacts_canonical_card( $card );
 	$existing = $card_id > 0 ? axismundi_contacts_get_card( $card_id ) : array();

@@ -116,12 +116,31 @@ function axismundi_contacts_screen_url( int $card_id = -1, int $group_id = 0 ) :
 	$url = admin_url( 'users.php?page=axismundi-contacts' );
 	$args = array();
 	if ( $card_id >= 0 ) {
-		$args['card'] = $card_id;
+		$args['item'] = $card_id;
 	}
 	if ( $group_id > 0 ) {
 		$args['group'] = $group_id;
 	}
 	return array() === $args ? $url : add_query_arg( $args, $url );
+}
+
+/**
+ * Where a card is changed, which is not where it is read.
+ *
+ * Editing says so in the address. A screen that looks like a form is a screen where somebody may
+ * already have typed into a field they only meant to read, and `action=edit` is the difference
+ * between opening a record and opening it for changes.
+ *
+ * @param int $card_id  Card, or 0 for a new one.
+ * @param int $group_id Group to file a new card into, and to return to.
+ * @return string
+ */
+function axismundi_contacts_edit_url( int $card_id = 0, int $group_id = 0 ) : string {
+	$args = array( 'card' => $card_id, 'action' => 'edit' );
+	if ( $group_id > 0 ) {
+		$args['group'] = $group_id;
+	}
+	return add_query_arg( $args, admin_url( 'users.php?page=axismundi-contacts' ) );
 }
 
 /**
@@ -154,17 +173,31 @@ function axismundi_contacts_render_screen() : void {
 		echo '</div>';
 		return;
 	}
+	/*
+	 * Three screens, told apart by the address. Reading a contact is the common case and gets the bare
+	 * id; changing one says `action=edit`, so nobody arrives at a form they meant to arrive at a
+	 * record.
+	 */
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing what to show, not writing.
-	$editing = isset( $_GET['card'] ) ? absint( $_GET['card'] ) : -1;
+	$action = isset( $_GET['action'] ) ? sanitize_key( wp_unslash( $_GET['action'] ) ) : '';
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing what to show, not writing.
+	$editing = 'edit' === $action && isset( $_GET['card'] ) ? absint( $_GET['card'] ) : -1;
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing what to show, not writing.
+	$reading = isset( $_GET['item'] ) ? absint( $_GET['item'] ) : -1;
 
 	if ( $editing >= 0 ) {
 		axismundi_contacts_card_editor( $book_id, $editing, $self_id, $all, $all ? 0 : $book_id );
 		echo '</div>';
 		return;
 	}
+	if ( $reading > 0 ) {
+		axismundi_contacts_card_detail( $reading, $all ? 0 : $book_id, $self_id, (int) $actor->get_identity_id() );
+		echo '</div>';
+		return;
+	}
 	?>
 	<h1 class="wp-heading-inline"><?php esc_html_e( 'Contacts', 'axismundi-contacts' ); ?></h1>
-	<a href="<?php echo esc_url( axismundi_contacts_screen_url( 0, $all ? 0 : $book_id ) ); ?>" class="page-title-action"><?php esc_html_e( 'Add contact', 'axismundi-contacts' ); ?></a>
+	<a href="<?php echo esc_url( axismundi_contacts_edit_url( 0, $all ? 0 : $book_id ) ); ?>" class="page-title-action"><?php esc_html_e( 'Add contact', 'axismundi-contacts' ); ?></a>
 	<hr class="wp-header-end">
 	<div class="ax-contacts-browser">
 		<?php axismundi_contacts_groups_sidebar( $actor, $default, $all ? 0 : $book_id ); ?>
@@ -542,7 +575,20 @@ function axismundi_contacts_handle_save_card() : void {
 	$saved = axismundi_contacts_save_card( $book_id, $card, $card_id, $card_id > 0 ? $revision : null );
 	if ( ! is_wp_error( $saved ) ) {
 		axismundi_contacts_record_local_edits( (int) $saved, $before, $card );
-		axismundi_contacts_redirect_result( $saved, (int) $saved );
+		/*
+	 * What may be published, from the screen that showed the values it names. Only the profile screen
+	 * draws these, and only that screen sends them: a form that did not is not saying "publish
+	 * nothing", it is saying nothing, and clearing the selection because a different form was
+	 * submitted would unpublish somebody's card as a side effect of editing a friend's phone number.
+	 */
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- the nonce was verified above.
+	if ( isset( $_POST['return'] ) && 'profile' === sanitize_key( wp_unslash( $_POST['return'] ) ) ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- the nonce was verified above.
+		$sent = isset( $_POST['published'] ) && is_array( $_POST['published'] ) ? wp_unslash( $_POST['published'] ) : array();
+		axismundi_contacts_set_published_pointers( (int) $book['owner_actor_id'], array_map( 'sanitize_text_field', $sent ) );
+	}
+
+	axismundi_contacts_redirect_result( $saved, (int) $saved );
 	}
 	axismundi_contacts_redirect_result( $saved, $card_id );
 }

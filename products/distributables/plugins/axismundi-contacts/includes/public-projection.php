@@ -250,3 +250,95 @@ function axismundi_contacts_project_localizations( array $card, array $out ) : a
 	}
 	return $out;
 }
+
+/**
+ * Which parts of this Card a stranger may have.
+ *
+ * One tick per value, because that is the granularity the question actually has. Somebody with four
+ * email addresses has one they hand out and three they do not, and a switch that said "publish my
+ * email addresses" would make publishing the first mean publishing the other three.
+ *
+ * Not derived from anything on the values themselves. A `private` context says where a value is
+ * meant to be used, not who may see it, and a value with no context is one nobody classified rather
+ * than one anybody may have. Reading either as an answer would be this screen deciding on somebody's
+ * behalf and then showing them a page that looked like they had decided.
+ *
+ * @param int                 $actor_id Acting Actor.
+ * @param array<string,mixed> $card     Stored Card.
+ * @return void
+ */
+function axismundi_contacts_publish_fields( int $actor_id, array $card ) : void {
+	$published = axismundi_contacts_published_pointers( $actor_id );
+	?>
+	<h2><?php esc_html_e( 'Published', 'axismundi-contacts' ); ?></h2>
+	<p class="description">
+		<?php esc_html_e( 'Sharing decides whether this card is published at all. This decides what of it. Nothing here is published because it is written above.', 'axismundi-contacts' ); ?>
+	</p>
+	<table class="form-table" role="presentation">
+		<tr>
+			<th scope="row"><?php esc_html_e( 'Always asked', 'axismundi-contacts' ); ?></th>
+			<td>
+				<?php foreach ( AXISMUNDI_CONTACTS_PUBLISHABLE_SINGULAR as $ax_ct_property ) : ?>
+					<p>
+						<label>
+							<input type="checkbox" name="published[]" value="<?php echo esc_attr( $ax_ct_property ); ?>" <?php checked( in_array( $ax_ct_property, $published, true ) ); ?>>
+							<?php echo esc_html( axismundi_contacts_publish_label( $ax_ct_property ) ); ?>
+						</label>
+					</p>
+				<?php endforeach; ?>
+			</td>
+		</tr>
+		<?php foreach ( axismundi_contacts_detail_sections() as $ax_ct_property => $ax_ct_label ) : ?>
+			<?php
+			$ax_ct_entries = (array) ( $card[ $ax_ct_property ] ?? array() );
+			if ( array() === $ax_ct_entries || ! in_array( $ax_ct_property, AXISMUNDI_CONTACTS_PUBLISHABLE_ENTRIES, true ) ) {
+				continue;
+			}
+			?>
+			<tr>
+				<th scope="row"><?php echo esc_html( $ax_ct_label ); ?></th>
+				<td>
+					<?php foreach ( $ax_ct_entries as $ax_ct_key => $ax_ct_entry ) : ?>
+						<?php
+						if ( ! is_array( $ax_ct_entry ) ) {
+							continue;
+						}
+						$ax_ct_pointer = $ax_ct_property . '/' . $ax_ct_key;
+						$ax_ct_text    = axismundi_contacts_entry_text( $ax_ct_entry, $ax_ct_property );
+						?>
+						<p>
+							<label>
+								<input type="checkbox" name="published[]" value="<?php echo esc_attr( $ax_ct_pointer ); ?>" <?php checked( in_array( $ax_ct_pointer, $published, true ) ); ?>>
+								<?php echo esc_html( '' !== trim( $ax_ct_text ) ? $ax_ct_text : $ax_ct_key ); ?>
+							</label>
+						</p>
+					<?php endforeach; ?>
+				</td>
+			</tr>
+		<?php endforeach; ?>
+	</table>
+	<?php
+}
+
+/**
+ * What a whole-property tick is called on screen.
+ *
+ * @param string $property Property.
+ * @return string
+ */
+function axismundi_contacts_publish_label( string $property ) : string {
+	switch ( $property ) {
+		case 'name':
+			return __( 'Name', 'axismundi-contacts' );
+		case 'kind':
+			return __( 'What kind of entity this is', 'axismundi-contacts' );
+		case 'language':
+			return __( 'Preferred language of this card', 'axismundi-contacts' );
+		case 'speakToAs':
+			return __( 'Pronouns and how to address me', 'axismundi-contacts' );
+		case 'preferredLanguages':
+			return __( 'Languages I prefer to be written to in', 'axismundi-contacts' );
+		default:
+			return $property;
+	}
+}

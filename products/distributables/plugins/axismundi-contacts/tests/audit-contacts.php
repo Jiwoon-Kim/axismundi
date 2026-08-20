@@ -14,6 +14,7 @@
 defined( 'ABSPATH' ) || exit( 1 );
 
 // WP-CLI does not load the administrator screen this fixture renders.
+require_once dirname( __DIR__ ) . '/includes/card-detail.php';
 require_once dirname( __DIR__ ) . '/includes/name-editor.php';
 require_once dirname( __DIR__ ) . '/includes/admin.php';
 require_once dirname( __DIR__ ) . '/includes/profile-screen.php';
@@ -1900,6 +1901,109 @@ try {
 			&& 'A' === (string) ( $ax_ct_pub_future['name']['full'] ?? '' )
 			&& 'urn:uuid:x' === (string) ( $ax_ct_pub_future['uid'] ?? '' )
 	);
+
+	// -- reading a contact is not editing one ------------------------------------------------------------------
+
+	/*
+	 * The list used to open the edit form. Somebody clicking a name usually wants to read it, and an
+	 * edit form answers that while putting every value one keystroke from being changed. So the two are
+	 * different screens with different addresses, the way the media library separates looking at an
+	 * attachment from editing one.
+	 */
+	$ax_ct_split_actor = ax_ct_actor( $ax_ct_users );
+	$ax_ct_split_sid   = (int) $ax_ct_split_actor->get_identity_id();
+	$ax_ct_split_book  = axismundi_contacts_book_for_actor( $ax_ct_split_sid );
+	$ax_ct_books[]     = (int) ( $ax_ct_split_book['id'] ?? 0 );
+	$ax_ct_split_made  = axismundi_contacts_save_card(
+		(int) $ax_ct_split_book['id'],
+		array(
+			'@type'  => 'Card',
+			'kind'   => 'individual',
+			'name'   => array( '@type' => 'Name', 'full' => 'Someone To Read' ),
+			'phones' => array( 'tel0' => array( 'number' => 'tel:+821011112222', 'contexts' => array( 'private' => true ) ) ),
+			'notes'  => array( 'n1' => array( 'note' => 'A note about somebody else.' ) ),
+		)
+	);
+	$ax_ct_split_card = is_wp_error( $ax_ct_split_made ) ? 0 : (int) $ax_ct_split_made;
+	$ax_ct_loose[]    = $ax_ct_split_card;
+
+	ax_ct_assert(
+		$ax_ct_results,
+		'a contact in the list is a record to open, and changing one says so in the address',
+		false === strpos( axismundi_contacts_screen_url( $ax_ct_split_card ), 'action=edit' )
+			&& false !== strpos( axismundi_contacts_screen_url( $ax_ct_split_card ), 'item=' . $ax_ct_split_card )
+			&& false !== strpos( axismundi_contacts_edit_url( $ax_ct_split_card ), 'action=edit' )
+	);
+
+	wp_set_current_user( (int) $ax_ct_users[ count( $ax_ct_users ) - 1 ] );
+	ob_start();
+	axismundi_contacts_card_detail( $ax_ct_split_card, 0, 0, $ax_ct_split_sid );
+	$ax_ct_detail = (string) ob_get_clean();
+	ax_ct_assert(
+		$ax_ct_results,
+		'the record reads the contact out and offers no field to type into',
+		str_contains( $ax_ct_detail, 'Someone To Read' )
+			&& str_contains( $ax_ct_detail, 'tel:+821011112222' )
+			&& str_contains( $ax_ct_detail, 'A note about somebody else.' )
+			&& ! str_contains( $ax_ct_detail, '<input' )
+			&& ! str_contains( $ax_ct_detail, '<form' )
+			&& str_contains( $ax_ct_detail, 'action=edit' )
+	);
+
+	/*
+	 * And a contact that is not the Actor's own card is not published by anybody, so the screen does not
+	 * raise the question. Somebody's address book is theirs; the public projection belongs only to the
+	 * one Card an Actor publishes about itself.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a contact about somebody else says nothing about being published, because it is not',
+		! str_contains( $ax_ct_detail, 'What strangers receive' )
+	);
+
+	// -- and the profile card says what a stranger gets ---------------------------------------------------------
+
+	$ax_ct_split_profile = axismundi_contacts_create_profile_card( $ax_ct_split_sid );
+	$ax_ct_profile_card  = is_wp_error( $ax_ct_split_profile ) ? 0 : (int) $ax_ct_split_profile;
+	$ax_ct_loose[]       = $ax_ct_profile_card;
+	$ax_ct_profile_doc   = axismundi_contacts_card_document( $ax_ct_profile_card );
+	$ax_ct_profile_doc['emails'] = array(
+		'e1' => array( 'address' => 'hello@example.test' ),
+		'e2' => array( 'address' => 'secret@example.test' ),
+	);
+	axismundi_contacts_save_card_for_owner( $ax_ct_split_sid, $ax_ct_profile_doc, $ax_ct_profile_card );
+	axismundi_contacts_set_published_pointers( $ax_ct_split_sid, array( 'name', 'emails/e1' ) );
+
+	ob_start();
+	axismundi_contacts_card_detail( $ax_ct_profile_card, 0, $ax_ct_profile_card, $ax_ct_split_sid );
+	$ax_ct_own = (string) ob_get_clean();
+	ax_ct_assert(
+		$ax_ct_results,
+		'the Actor’s own card shows what a stranger receives, which is not what is stored',
+		str_contains( $ax_ct_own, 'What strangers receive' )
+			&& str_contains( $ax_ct_own, 'hello@example.test' )
+			&& str_contains( $ax_ct_own, 'secret@example.test' )
+			&& 1 === substr_count( $ax_ct_own, 'secret@example.test' )
+			&& 2 === substr_count( $ax_ct_own, 'hello@example.test' )
+	);
+
+	/*
+	 * The checkboxes are on the edit screen and only there. A record somebody opened to read is not a
+	 * place to change who may see it, and a tick that published a phone number from a page labelled as
+	 * a view would be the same mistake as the one the projection fixed.
+	 */
+	ob_start();
+	axismundi_contacts_publish_fields( $ax_ct_split_sid, axismundi_contacts_card_document( $ax_ct_profile_card ) );
+	$ax_ct_fields = (string) ob_get_clean();
+	ax_ct_assert(
+		$ax_ct_results,
+		'choosing what is published is a tick per value, on the screen that changes things',
+		str_contains( $ax_ct_fields, 'name="published[]" value="emails/e1"' )
+			&& str_contains( $ax_ct_fields, 'name="published[]" value="emails/e2"' )
+			&& str_contains( $ax_ct_fields, 'name="published[]" value="name"' )
+			&& ! str_contains( $ax_ct_detail, 'name="published[]"' )
+	);
+	wp_set_current_user( 0 );
 
 	ax_ct_assert(
 		$ax_ct_results,

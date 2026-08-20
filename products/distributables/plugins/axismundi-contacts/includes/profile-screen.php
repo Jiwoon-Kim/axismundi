@@ -134,6 +134,8 @@ function axismundi_contacts_profile_editor( int $book_id, Axismundi_Actor $actor
 			axismundi_contacts_entry_rows( 'addresses', __( 'Address', 'axismundi-contacts' ), $card, $prov );
 			?>
 		</table>
+
+		<?php axismundi_contacts_publish_fields( (int) $actor->get_identity_id(), $card ); ?>
 		<?php submit_button( __( 'Save profile', 'axismundi-contacts' ) ); ?>
 	</form>
 

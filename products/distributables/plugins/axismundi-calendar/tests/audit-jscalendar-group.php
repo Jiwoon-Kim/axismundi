@@ -163,26 +163,31 @@ try {
 	// -- the link on the contact card ---------------------------------------------------------------------
 
 	/*
-	 * Contributed by this plugin rather than assembled by whoever renders the card, because the calendar
-	 * is this plugin's fact. And only a published one: a card naming a private address is directions
-	 * around the sharing rules.
+	 * The address itself, which is this plugin's fact and still is. What changed is where it may
+	 * appear: a public contact document now carries only what its owner selected, entry by entry, so
+	 * nothing this plugin adds at render time reaches a stranger.
 	 *
-	 * Contacts owns the card, so there has to be one to contribute to.
+	 * That is deliberate rather than a regression. A calendar address published because a plugin was
+	 * installed is the same shape of mistake as a phone number published because sharing was on. The
+	 * slice that puts this back does it the other way round: a `calendars` block in the card editor,
+	 * written onto the Card, and published because somebody ticked it.
+	 *
+	 * Until then this pins the two halves that are still true -- the address is computed correctly,
+	 * and an unpublished calendar has none.
 	 */
 	axismundi_contacts_book_for_actor( (int) $ax_gr_actor->get_identity_id() );
 	$ax_gr_card = axismundi_actors_jscontact_card( axismundi_actors_get_by_identity( $ax_gr_actor->get_identity_id() ) );
 	ax_gr_assert(
 		$ax_gr_results,
-		'a published calendar is on the Actor\'s contact card, with the media type it actually answers with',
-		axismundi_cal_jscalendar_group_url( axismundi_cal_calendar_get( $ax_gr_id ) ) === (string) $ax_gr_card['calendars']['primary']['uri']
-			&& AXISMUNDI_CAL_JSCALENDAR_GROUP_MEDIA_TYPE === (string) $ax_gr_card['calendars']['primary']['mediaType']
+		'a published calendar has an address, and a public contact document carries nothing nobody selected',
+		'' !== axismundi_cal_jscalendar_group_url( axismundi_cal_calendar_get( $ax_gr_id ) )
+			&& ! isset( $ax_gr_card['calendars'] )
 	);
 	axismundi_cal_acl_revoke( $ax_gr_id, '', 'public' );
-	$ax_gr_private_card = axismundi_actors_jscontact_card( axismundi_actors_get_by_identity( $ax_gr_actor->get_identity_id() ) );
 	ax_gr_assert(
 		$ax_gr_results,
-		'and unpublishing it takes the address off the card rather than leaving a link that 404s',
-		! isset( $ax_gr_private_card['calendars'] )
+		'and an unpublished calendar is not visible, so nothing would offer its address either',
+		! axismundi_cal_collection_visible( new Axismundi_Cal_Collection( (array) axismundi_cal_calendar_get( $ax_gr_id ) ) )
 	);
 } finally {
 	wp_set_current_user( 0 );

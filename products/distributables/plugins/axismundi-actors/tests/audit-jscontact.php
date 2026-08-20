@@ -86,13 +86,16 @@ try {
 			&& '' === axismundi_actors_jscontact_kind( 'Service' )
 	);
 
-	// -- what Actors contributes, and what it no longer claims ---------------------------------------------
+	// -- what Actors no longer puts on somebody's card ------------------------------------------------------
 
 	/*
-	 * The parts of a name are the card's. What Actors contributes to a Card is what it is the
-	 * authority on -- the primary language, the other languages it is written in, and the
-	 * anniversaries it publishes -- and every one of those other languages is a written-out string
-	 * rather than a second set of components.
+	 * It used to add the Actor's other languages and the anniversaries it kept. That meant a public
+	 * contact document carrying facts assembled from the identity registry -- published because the
+	 * plugin was installed rather than because the person said they could be.
+	 *
+	 * The Card is the ledger and Contacts serves the part of it its owner selected. So Actors
+	 * contributes nothing to that document, and the Actor's own texts stay what they always were:
+	 * what `name` and `nameMap` publish.
 	 */
 	axismundi_actors_set_default_language( $ax_jc_id, 'ko-KR' );
 	axismundi_actors_set_text( $ax_jc_id, 'name', 'ko-KR', '김지운' );
@@ -100,24 +103,18 @@ try {
 	$ax_jc_card = axismundi_actors_jscontact_card( axismundi_actors_get_by_identity( $ax_jc_id ) );
 	ax_jc_assert(
 		$ax_jc_results,
-		'a localization carries a written-out name and never components this site would have to invent',
-		isset( $ax_jc_card['localizations']['en']['name'] )
-			&& 'Jiwoon Kim' === (string) $ax_jc_card['localizations']['en']['name']['full']
-			&& ! isset( $ax_jc_card['localizations']['en']['name']['components'] )
-			&& ! isset( $ax_jc_card['localizations']['en']['name']['isOrdered'] )
+		'nothing here writes into the card that somebody else authored and publishes',
+		! function_exists( 'axismundi_actors_jscontact_contribute' )
+			&& false === has_filter( 'axismundi_contacts_jscontact_card', 'axismundi_actors_jscontact_contribute' )
+			&& ! isset( $ax_jc_card['anniversaries'] )
+			&& ! isset( $ax_jc_card['localizations'] )
 	);
 	ax_jc_assert(
 		$ax_jc_results,
-		'the Actor says which language it answers in, and nothing here builds a name out of parts',
-		'ko-KR' === (string) ( $ax_jc_card['language'] ?? '' )
-			&& ! function_exists( 'axismundi_actors_jscontact_name' )
-	);
-	// The name each language answers with is the string stored for it, and nothing else.
-	ax_jc_assert(
-		$ax_jc_results,
-		'and the same facts answer for the display name in each language',
+		'and the Actor still answers in each language from its own store, which no card decides',
 		'김지운' === axismundi_actors_person_display_name( axismundi_actors_get_by_identity( $ax_jc_id ), 'ko-KR' )
 			&& 'Jiwoon Kim' === axismundi_actors_person_display_name( axismundi_actors_get_by_identity( $ax_jc_id ), 'en' )
+			&& ! function_exists( 'axismundi_actors_jscontact_name' )
 	);
 
 	// -- names that have no parts -------------------------------------------------------------------------
@@ -174,19 +171,19 @@ try {
 		$ax_jc_remote instanceof Axismundi_Actor
 			&& is_wp_error( axismundi_actors_write_person_profile( (int) $ax_jc_remote->get_identity_id(), array( 'display_name' => 'Invented' ) ) )
 	);
-	// -- contributed, not owned -----------------------------------------------------------------------------
+	// -- neither owned nor contributed ----------------------------------------------------------------------
 
 	/*
-	 * Actors adds what it is the authority on to somebody else's document, through the filter Contacts
-	 * opens. It is registered on the Contacts hook and on no hook of its own: a card built here again,
-	 * for any reason, would be the second card this inversion removed.
+	 * Actors serves no contact document and adds nothing to the one Contacts serves. What is left is a
+	 * caller-facing name that hands the question over, so that a card built here again -- for any
+	 * reason -- would be the second card this inversion removed.
 	 */
 	ax_jc_assert(
 		$ax_jc_results,
-		'Actors contributes to the card Contacts renders rather than rendering one of its own',
-		false !== has_filter( 'axismundi_contacts_jscontact_card', 'axismundi_actors_jscontact_contribute' )
-			&& ! function_exists( 'axismundi_actors_jscontact_uid' )
+		'Actors renders no card of its own and writes into nobody else’s',
+		! function_exists( 'axismundi_actors_jscontact_uid' )
 			&& ! has_action( 'template_redirect', 'axismundi_actors_serve_jscontact' )
+			&& function_exists( 'axismundi_actors_jscontact_card' )
 	);
 
 } finally {

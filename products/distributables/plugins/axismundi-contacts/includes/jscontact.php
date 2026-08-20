@@ -2,10 +2,14 @@
 /**
  * The JSContact document an Actor publishes, and the route that serves it.
  *
- * Contacts owns this. The Card is stored here as a document somebody authored, so rendering it is
- * mostly handing back what is already written down rather than assembling facts from elsewhere --
- * which is the point: a representation built fresh from other people's tables each time is a second
- * record of the same facts, and the two eventually disagree.
+ * Contacts owns this. The Card is stored here as a document somebody authored, and what is served is
+ * the part of it they said could be published -- entry by entry, never the document itself. A Card
+ * holds a mobile number, a home address and notes about other people, and "share my profile" is not
+ * somebody saying yes to all of that.
+ *
+ * What is published is taken rather than filtered. A rule of "everything except" hands out every
+ * property added later and every property a future revision invents; a rule of "only these" fails by
+ * publishing too little, which is the direction to fail in.
  *
  * What other domains own, they contribute. Actors adds the names in the Actor's other languages and
  * the anniversaries it keeps; Calendar adds calendars. Each writes only what it is the authority on,
@@ -39,13 +43,17 @@ function axismundi_contacts_jscontact_card( Axismundi_Actor $actor ) {
 			array( 'status' => 404 )
 		);
 	}
-	$card = axismundi_contacts_card_document( $card_id );
-	if ( array() === $card ) {
+	$stored = axismundi_contacts_card_document( $card_id );
+	if ( array() === $stored ) {
 		return new WP_Error( 'ax_contacts_jscontact_none', __( 'That contact card could not be read.', 'axismundi-contacts' ), array( 'status' => 404 ) );
 	}
-	// Stated on the way out rather than stored: the document is what was authored, not what it is
-	// currently serialised as, and a version pinned into every stored row is a migration waiting.
-	$card = array_merge( array( '@type' => 'Card', 'version' => '2.0' ), $card );
+	/*
+	 * The projection, not the document. What is stored is everything somebody wrote down -- a mobile
+	 * number, a home address, notes about other people -- and this is the part they said could be
+	 * published, entry by entry. `version` is stated on the way out rather than stored, because the
+	 * document is what was authored rather than what it is currently serialised as.
+	 */
+	$card = axismundi_contacts_public_projection( $stored, axismundi_contacts_published_pointers( (int) $actor->get_identity_id() ) );
 
 	/**
 	 * Let a domain add what it owns.
@@ -73,6 +81,16 @@ function axismundi_contacts_jscontact_card( Axismundi_Actor $actor ) {
 			$enriched[ $fixed ] = $card[ $fixed ];
 		} else {
 			unset( $enriched[ $fixed ] );
+		}
+	}
+	/*
+	 * And a contributor may not put back what the projection left out. Everything here is reachable
+	 * by anybody, a contributor adding a property is adding it to a public document, and the list of
+	 * what this Actor publishes was answered once by the person it describes.
+	 */
+	foreach ( array_keys( $enriched ) as $property ) {
+		if ( ! array_key_exists( $property, $card ) ) {
+			unset( $enriched[ $property ] );
 		}
 	}
 	return $enriched;

@@ -34,7 +34,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CONTACTS_DB_VERSION        = '6';
+const AXISMUNDI_CONTACTS_DB_VERSION        = '7';
 const AXISMUNDI_CONTACTS_DB_VERSION_OPTION = 'ax_contacts_db_version';
 
 /**
@@ -214,6 +214,7 @@ function axismundi_contacts_install_schema() : bool {
 			card_id bigint(20) unsigned NOT NULL,
 			sharing_enabled tinyint(1) unsigned NOT NULL default 0,
 			audience varchar(16) NOT NULL default 'contacts',
+			published_json longtext NULL,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),
@@ -285,7 +286,8 @@ function axismundi_contacts_install_schema() : bool {
 	$provenance_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$provenance}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.
 	$profile_share_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profiles}" );
-	$valid = in_array( 'card_json', $card_columns, true )
+	$valid = in_array( 'published_json', $profile_share_columns, true )
+		&& in_array( 'card_json', $card_columns, true )
 		&& in_array( 'revision', $card_columns, true )
 		&& in_array( 'owner_actor_id', $card_columns, true )
 		&& ! in_array( 'address_book_id', $card_columns, true )

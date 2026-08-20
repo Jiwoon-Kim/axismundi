@@ -918,8 +918,14 @@ try {
 			&& 1 !== preg_match( '/get_uuid\s*\(\s*\)[^;]*urn:uuid:/', $ax_ct_src )
 	);
 	/*
-	 * Contributors add what they own and may not change what the Card is. A calendar arriving with a
-	 * different uid would be published as a different contact rather than as a broken field.
+	 * A contributor may not change what the Card is, and may not add to it either. Both used to be
+	 * one rule about identity; the second is now the same rule as everything else on this route --
+	 * what a stranger receives is what the person published, and a plugin is not the person.
+	 *
+	 * This is a real change for the plugins that contributed. Calendar added calendar URLs and Actors
+	 * added names and anniversaries, and neither reaches a public document any more. Those are facts
+	 * that belong on the Card, which is the ledger; published from there, they are published because
+	 * somebody said so rather than because a plugin was installed.
 	 */
 	add_filter(
 		'axismundi_contacts_jscontact_card',
@@ -935,11 +941,11 @@ try {
 	remove_all_filters( 'axismundi_contacts_jscontact_card', 99 );
 	ax_ct_assert(
 		$ax_ct_results,
-		'a contributor may add what it owns and may not change which card this is',
-		! is_wp_error( $ax_ct_enriched )
-			&& $ax_ct_seed_uid === (string) ( $ax_ct_enriched['uid'] ?? '' )
-			&& 'individual' === (string) ( $ax_ct_enriched['kind'] ?? '' )
-			&& isset( $ax_ct_enriched['calendars'] )
+		'a contributor changes neither which card this is nor what it publishes',
+		is_array( $ax_ct_enriched )
+			&& 'urn:uuid:00000000-0000-4000-8000-00000000dead' !== (string) ( $ax_ct_enriched['uid'] ?? '' )
+			&& 'device' !== (string) ( $ax_ct_enriched['kind'] ?? '' )
+			&& ! isset( $ax_ct_enriched['calendars'] )
 	);
 	/*
 	 * Serving is gated on the audience as well as on the profile being published. The route this
@@ -1085,30 +1091,24 @@ try {
 			&& 'Kimu' === (string) ( axismundi_contacts_set_localized_name( $ax_ct_deep, 'ja', array( 'full' => 'Kim' ) )['localizations']['ja']['nicknames/n1/name'] ?? '' )
 	);
 	/*
-	 * Contacts holds the Card, so the Card's localization is the answer. What Actors has for the same
-	 * tag is a display name it happens to keep, and letting it win would mean an edit made in Contacts
-	 * vanished on the next render.
+	 * The Card is the ledger, so what is published in a language is what the Card says in it. A name
+	 * the Actor happens to keep for the same tag is not an answer to the question `what does this
+	 * person publish`, and a language the Card is silent in is one this document is silent in too.
+	 *
+	 * That silence used to be filled by whoever contributed. It is not any more, for the same reason
+	 * an email address is not: a public document says what its owner wrote and selected, and `de`
+	 * being absent from their card is them not having written it.
 	 */
 	axismundi_actors_set_text( (int) $ax_ct_fresh->get_identity_id(), 'name', 'en', 'Jiwoon from Actors' );
-	$ax_ct_rendered = axismundi_contacts_jscontact_card( axismundi_actors_get_by_identity( (int) $ax_ct_fresh->get_identity_id() ) );
-	ax_ct_assert(
-		$ax_ct_results,
-		'where the card has a name for a language, that is the one published',
-		! is_wp_error( $ax_ct_rendered )
-			&& 'Trump' === (string) ( axismundi_contacts_localized_name( $ax_ct_rendered, 'en' )['full'] ?? '' )
-	);
-	/*
-	 * And where it does not, another domain may still contribute one. Precedence is per tag: holding a
-	 * romanisation says nothing about what to publish in Japanese.
-	 */
 	axismundi_actors_set_text( (int) $ax_ct_fresh->get_identity_id(), 'name', 'de', 'Jiwoon Kim' );
 	$ax_ct_rendered = axismundi_contacts_jscontact_card( axismundi_actors_get_by_identity( (int) $ax_ct_fresh->get_identity_id() ) );
 	ax_ct_assert(
 		$ax_ct_results,
-		'and where it has none, a contributor may still supply one, tag by tag',
+		'a language the card writes in is published, and one only the Actor holds is not',
 		! is_wp_error( $ax_ct_rendered )
-			&& 'Jiwoon Kim' === (string) ( axismundi_contacts_localized_name( $ax_ct_rendered, 'de' )['full'] ?? '' )
 			&& 'Trump' === (string) ( axismundi_contacts_localized_name( $ax_ct_rendered, 'en' )['full'] ?? '' )
+			&& array() === axismundi_contacts_localized_name( $ax_ct_rendered, 'de' )
+			&& 'Jiwoon Kim' === (string) ( axismundi_actors_get_text_map( (int) $ax_ct_fresh->get_identity_id() )['de']['name'] ?? '' )
 	);
 	/*
 	 * Absence is what lets a contributor fill a gap, so removing a localization removes the tag rather
@@ -1729,6 +1729,176 @@ try {
 			&& 'Eigener Name' === axismundi_actors_person_display_name( $ax_ct_nm_actor, 'de-DE' )
 			&& ! function_exists( 'axismundi_contacts_sync_name_to_actor' )
 			&& ! function_exists( 'axismundi_contacts_legacy_name_state' )
+	);
+
+	// -- what a Card says to strangers ------------------------------------------------------------------------
+
+	/*
+	 * The Card below is the shape a real one takes: a private email, a mobile number, a home address,
+	 * and two notes of which one is about somebody else. Turning sharing on is somebody saying their
+	 * profile may be looked at. It is not somebody handing over their phone number.
+	 */
+	$ax_ct_pub_actor = ax_ct_actor( $ax_ct_users );
+	$ax_ct_pub_sid   = (int) $ax_ct_pub_actor->get_identity_id();
+	$ax_ct_pub_made  = axismundi_contacts_create_profile_card( $ax_ct_pub_sid );
+	$ax_ct_pub_card  = is_wp_error( $ax_ct_pub_made ) ? 0 : (int) $ax_ct_pub_made;
+	$ax_ct_loose[]   = $ax_ct_pub_card;
+
+	$ax_ct_pub_doc = axismundi_contacts_card_document( $ax_ct_pub_card );
+	$ax_ct_pub_doc = array_merge(
+		$ax_ct_pub_doc,
+		array(
+			'kind'     => 'individual',
+			'language' => 'ko-KR',
+			'name'     => array( '@type' => 'Name', 'full' => '김지운', 'defaultSeparator' => '' ),
+			'emails'   => array(
+				'e1' => array( 'address' => 'private@example.test', 'contexts' => array( 'private' => true ) ),
+				'e2' => array( 'address' => 'hello@example.test' ),
+			),
+			'phones'   => array(
+				'tel0' => array( 'number' => 'tel:+821000000000', 'contexts' => array( 'private' => true ) ),
+			),
+			'addresses' => array(
+				'home' => array(
+					'contexts'   => array( 'private' => true ),
+					'components' => array( array( 'kind' => 'locality', 'value' => '남구' ) ),
+					'countryCode' => 'KR',
+				),
+			),
+			'onlineServices' => array(
+				'x2' => array( 'service' => 'Mastodon', 'uri' => 'https://mastodon.example/users/someone' ),
+			),
+			'notes' => array(
+				'profile' => array( 'note' => 'Site owner.' ),
+				'n1'      => array( 'note' => 'University classmate. Lives in Busan.' ),
+			),
+			'anniversaries' => array(
+				'birth' => array( 'kind' => 'birth', 'date' => array( 'year' => 1996, 'month' => 11, 'day' => 20 ) ),
+			),
+		)
+	);
+	$ax_ct_pub_doc = axismundi_contacts_set_localized_name( $ax_ct_pub_doc, 'en', array( '@type' => 'Name', 'full' => 'Jiwoon Kim' ) );
+	// A localization of a withheld value, in the patch form an import uses. It does not look like an
+	// address until it is applied to one, which is exactly what makes it easy to publish by accident.
+	$ax_ct_pub_doc['localizations']['en']['addresses/home/components'] = array( array( 'kind' => 'locality', 'value' => 'Nam-gu' ) );
+	axismundi_contacts_save_card_for_owner( $ax_ct_pub_sid, $ax_ct_pub_doc, $ax_ct_pub_card );
+
+	axismundi_contacts_set_profile_audience( $ax_ct_pub_sid, 'public' );
+	axismundi_contacts_set_profile_sharing_enabled( $ax_ct_pub_sid, true );
+	$ax_ct_pub_out = axismundi_contacts_jscontact_card( axismundi_actors_get_by_identity( $ax_ct_pub_sid ) );
+
+	ax_ct_assert(
+		$ax_ct_results,
+		'a shared Card publishes no email, phone, address, note or anniversary that nobody named',
+		is_array( $ax_ct_pub_out )
+			&& ! isset( $ax_ct_pub_out['emails'] )
+			&& ! isset( $ax_ct_pub_out['phones'] )
+			&& ! isset( $ax_ct_pub_out['addresses'] )
+			&& ! isset( $ax_ct_pub_out['notes'] )
+			&& ! isset( $ax_ct_pub_out['anniversaries'] )
+			&& ! isset( $ax_ct_pub_out['onlineServices'] )
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'and what it does publish is a name, a kind and a language, which is a contact card and nothing about a person',
+		is_array( $ax_ct_pub_out )
+			&& '김지운' === (string) ( $ax_ct_pub_out['name']['full'] ?? '' )
+			&& 'individual' === (string) ( $ax_ct_pub_out['kind'] ?? '' )
+			&& 'ko-KR' === (string) ( $ax_ct_pub_out['language'] ?? '' )
+			&& '' !== (string) ( $ax_ct_pub_out['uid'] ?? '' )
+	);
+
+	/*
+	 * A localization is exactly as public as the value it translates. The English rendering of a
+	 * withheld home address would have withheld nothing.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a localization of a withheld value is withheld, and one of a published value comes with it',
+		is_array( $ax_ct_pub_out )
+			&& 'Jiwoon Kim' === (string) ( axismundi_contacts_localized_name( $ax_ct_pub_out, 'en' )['full'] ?? '' )
+			&& ! isset( $ax_ct_pub_out['localizations']['en']['addresses/home/components'] )
+	);
+
+	// -- named, one entry at a time ---------------------------------------------------------------------------
+
+	/*
+	 * And a context is not permission. `e1` is marked private and is published here because somebody
+	 * said so; `e2` carries no context at all and is withheld because nobody did. Reading either way
+	 * round would be inferring consent from a filing decision.
+	 */
+	axismundi_contacts_set_published_pointers(
+		$ax_ct_pub_sid,
+		array( 'name', 'kind', 'emails/e1', 'onlineServices/x2', 'notes/profile' )
+	);
+	$ax_ct_pub_out = axismundi_contacts_jscontact_card( axismundi_actors_get_by_identity( $ax_ct_pub_sid ) );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a named entry is published and its siblings are not, whatever context either of them carries',
+		is_array( $ax_ct_pub_out )
+			&& 'private@example.test' === (string) ( $ax_ct_pub_out['emails']['e1']['address'] ?? '' )
+			&& ! isset( $ax_ct_pub_out['emails']['e2'] )
+			&& isset( $ax_ct_pub_out['onlineServices']['x2'] )
+			&& isset( $ax_ct_pub_out['notes']['profile'] )
+			&& ! isset( $ax_ct_pub_out['notes']['n1'] )
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'and dropping a language from the list stops publishing it',
+		is_array( $ax_ct_pub_out ) && ! isset( $ax_ct_pub_out['language'] )
+	);
+
+	/*
+	 * A pointer nobody can act on is refused rather than stored. Somebody who is shown a stored
+	 * `phones` believes they published their number; if nothing serves it they are wrong in the safe
+	 * direction, and if something later does they are wrong in the other one.
+	 */
+	axismundi_contacts_set_published_pointers( $ax_ct_pub_sid, array( 'name', 'phones', 'vCards/v1', 'notes/n1/note', 'emails/e1' ) );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a pointer this cannot act on is not stored, so nobody is told they published something that never went out',
+		array( 'name', 'emails/e1' ) === axismundi_contacts_published_pointers( $ax_ct_pub_sid )
+			&& ! axismundi_contacts_is_publishable_pointer( 'phones' )
+			&& ! axismundi_contacts_is_publishable_pointer( 'notes/n1/note' )
+			&& axismundi_contacts_is_publishable_pointer( 'phones/tel0' )
+	);
+
+	/*
+	 * And a contributor may not put back what was left out. Everything reaching this filter is going
+	 * into a document anybody may fetch, and the question of what this Actor publishes was answered
+	 * once, by the person it describes.
+	 */
+	$ax_ct_pub_smuggle = static function ( array $card ) : array {
+		$card['phones'] = array( 'tel0' => array( 'number' => 'tel:+821000000000' ) );
+		$card['notes']  = array( 'n1' => array( 'note' => 'University classmate.' ) );
+		return $card;
+	};
+	add_filter( 'axismundi_contacts_jscontact_card', $ax_ct_pub_smuggle, 99 );
+	$ax_ct_pub_out = axismundi_contacts_jscontact_card( axismundi_actors_get_by_identity( $ax_ct_pub_sid ) );
+	remove_filter( 'axismundi_contacts_jscontact_card', $ax_ct_pub_smuggle, 99 );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a contributor cannot add a property the projection left out',
+		is_array( $ax_ct_pub_out )
+			&& ! isset( $ax_ct_pub_out['phones'] )
+			&& ! isset( $ax_ct_pub_out['notes'] )
+			&& isset( $ax_ct_pub_out['emails']['e1'] )
+	);
+
+	/*
+	 * The projection is built by taking rather than by removing, so a property invented after this was
+	 * written is unpublished without anybody having to remember to add it to a list.
+	 */
+	$ax_ct_pub_future = axismundi_contacts_public_projection(
+		array( 'uid' => 'urn:uuid:x', 'name' => array( 'full' => 'A' ), 'cryptoKeys' => array( 'k1' => array( 'uri' => 'data:x' ) ) ),
+		array( 'name', 'cryptoKeys/k1' )
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'a property this code has never heard of is not published, even when it is named',
+		! isset( $ax_ct_pub_future['cryptoKeys'] )
+			&& 'A' === (string) ( $ax_ct_pub_future['name']['full'] ?? '' )
+			&& 'urn:uuid:x' === (string) ( $ax_ct_pub_future['uid'] ?? '' )
 	);
 
 	ax_ct_assert(

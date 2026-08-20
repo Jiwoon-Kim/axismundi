@@ -2527,6 +2527,50 @@ try {
 		AXISMUNDI_CONTACTS_SOURCE_ACTOR === (string) ( axismundi_contacts_card_provenance( $ax_ct_pv_id )['emails/e1']['source'] ?? '' )
 	);
 
+	/*
+	 * And the promotion is part of the save rather than an afterthought to it. A Card that stored
+	 * somebody's edit while provenance still said an Actor owned the value is the exact state a later
+	 * refresh silently undoes -- so if that write cannot be made, none of the save is.
+	 *
+	 * Forced here by taking the table away, which is the only way to make the write fail on demand.
+	 */
+	$ax_ct_rb_draft = (array) rest_do_request( new WP_REST_Request( 'GET', '/axismundi-contacts/v1/cards/' . $ax_ct_pv_id . '/draft' ) )->get_data();
+	$ax_ct_rb_card  = (array) ( $ax_ct_rb_draft['card'] ?? array() );
+	$ax_ct_rb_card['name'] = array( '@type' => 'Name', 'full' => 'Never Stored' );
+	$ax_ct_rb_before = axismundi_contacts_card_document( $ax_ct_pv_id );
+
+	global $wpdb;
+	$ax_ct_prov_table = axismundi_contacts_provenance_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture keeps the rows and puts the table back below.
+	$wpdb->query( "CREATE TABLE {$ax_ct_prov_table}_axct LIKE {$ax_ct_prov_table}" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture.
+	$wpdb->query( "INSERT INTO {$ax_ct_prov_table}_axct SELECT * FROM {$ax_ct_prov_table}" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture.
+	$wpdb->query( "DROP TABLE {$ax_ct_prov_table}" );
+	$ax_ct_rb_hide = $wpdb->suppress_errors( true );
+
+	$ax_ct_rb_put = new WP_REST_Request( 'PUT', '/axismundi-contacts/v1/cards/' . $ax_ct_pv_id . '/draft' );
+	$ax_ct_rb_put->set_body_params( array( 'revision' => (int) ( $ax_ct_rb_draft['revision'] ?? 0 ), 'card' => $ax_ct_rb_card ) );
+	$ax_ct_rb_res = rest_do_request( $ax_ct_rb_put );
+
+	$wpdb->suppress_errors( $ax_ct_rb_hide );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture restore.
+	$wpdb->query( "CREATE TABLE {$ax_ct_prov_table} LIKE {$ax_ct_prov_table}_axct" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture restore.
+	$wpdb->query( "INSERT INTO {$ax_ct_prov_table} SELECT * FROM {$ax_ct_prov_table}_axct" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+	$wpdb->query( "DROP TABLE {$ax_ct_prov_table}_axct" );
+
+	ax_ct_assert(
+		$ax_ct_results,
+		'a save that cannot record whose the edit is does not store the edit either',
+		200 !== $ax_ct_rb_res->get_status()
+			// Named, so this cannot pass because the request was refused for some other reason.
+			&& 'ax_contacts_provenance_save' === (string) ( ( (array) $ax_ct_rb_res->get_data() )['code'] ?? '' )
+			&& $ax_ct_rb_before === axismundi_contacts_card_document( $ax_ct_pv_id )
+			&& 'Never Stored' !== (string) ( axismundi_contacts_card_document( $ax_ct_pv_id )['name']['full'] ?? '' )
+	);
+
 	// -- the same person, two address books ----------------------------------------------------------------------
 
 	/*

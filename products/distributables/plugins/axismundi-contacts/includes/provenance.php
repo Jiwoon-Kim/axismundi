@@ -107,18 +107,26 @@ function axismundi_contacts_card_provenance( int $card_id ) : array {
  * the next refresh took their edit away. The same applies to an entry: changing a label, or which
  * address is preferred, is editing it.
  *
+ * Says whether it managed it. A caller saving inside a transaction has to know: a write that failed
+ * here leaves the Card holding somebody's edit while provenance still says an Actor owns the value,
+ * which is the exact state a later refresh silently undoes. Swallowing the error would make
+ * "atomic" true of every step but the one that decides whose the value is.
+ *
  * @param int                 $card_id Card.
  * @param array<string,mixed> $before  Card as stored.
  * @param array<string,mixed> $after   Card as submitted.
- * @return void
+ * @return true|WP_Error
  */
-function axismundi_contacts_record_local_edits( int $card_id, array $before, array $after ) : void {
+function axismundi_contacts_record_local_edits( int $card_id, array $before, array $after ) {
 	foreach ( array_keys( AXISMUNDI_CONTACTS_INDEXED_FIELDS ) as $field ) {
 		foreach ( (array) ( $after[ $field ] ?? array() ) as $entry_id => $entry ) {
 			if ( ( $before[ $field ][ $entry_id ] ?? null ) === $entry ) {
 				continue;
 			}
-			axismundi_contacts_set_provenance( $card_id, $field . '/' . (string) $entry_id, AXISMUNDI_CONTACTS_SOURCE_LOCAL );
+			$written = axismundi_contacts_set_provenance( $card_id, $field . '/' . (string) $entry_id, AXISMUNDI_CONTACTS_SOURCE_LOCAL );
+			if ( is_wp_error( $written ) ) {
+				return $written;
+			}
 		}
 	}
 	/*
@@ -128,8 +136,9 @@ function axismundi_contacts_record_local_edits( int $card_id, array $before, arr
 	 */
 	$after_name = $after['name'] ?? null;
 	if ( ( $before['name'] ?? null ) !== $after_name && is_array( $after_name ) && array() !== $after_name ) {
-		axismundi_contacts_set_provenance( $card_id, 'name', AXISMUNDI_CONTACTS_SOURCE_LOCAL );
+		return axismundi_contacts_set_provenance( $card_id, 'name', AXISMUNDI_CONTACTS_SOURCE_LOCAL );
 	}
+	return true;
 }
 
 /**

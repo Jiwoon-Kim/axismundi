@@ -579,21 +579,27 @@ function axismundi_contacts_handle_save_card() : void {
 
 	$saved = axismundi_contacts_save_card( $book_id, $card, $card_id, $card_id > 0 ? $revision : null );
 	if ( ! is_wp_error( $saved ) ) {
-		axismundi_contacts_record_local_edits( (int) $saved, $before, $card );
 		/*
-	 * What may be published, from the screen that showed the values it names. Only the profile screen
-	 * draws these, and only that screen sends them: a form that did not is not saying "publish
-	 * nothing", it is saying nothing, and clearing the selection because a different form was
-	 * submitted would unpublish somebody's card as a side effect of editing a friend's phone number.
-	 */
-	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- the nonce was verified above.
-	if ( isset( $_POST['return'] ) && 'profile' === sanitize_key( wp_unslash( $_POST['return'] ) ) ) {
+		 * Reported rather than swallowed. A Card holding somebody's edit while provenance still says an
+		 * Actor owns the value is the exact state the next refresh silently undoes, so it is better to
+		 * be told the save did not finish than to find the edit gone next week.
+		 */
+		$outcome = axismundi_contacts_record_local_edits( (int) $saved, $before, $card );
+		/*
+		 * What may be published, from the screen that showed the values it names. Only the profile
+		 * screen draws these, and only that screen sends them: a form that did not is not saying
+		 * "publish nothing", it is saying nothing, and clearing the selection because a different form
+		 * was submitted would unpublish somebody's card as a side effect of editing a friend's phone
+		 * number.
+		 */
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- the nonce was verified above.
-		$sent = isset( $_POST['published'] ) && is_array( $_POST['published'] ) ? wp_unslash( $_POST['published'] ) : array();
-		axismundi_contacts_set_published_pointers( (int) $book['owner_actor_id'], array_map( 'sanitize_text_field', $sent ) );
-	}
+		if ( isset( $_POST['return'] ) && 'profile' === sanitize_key( wp_unslash( $_POST['return'] ) ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- the nonce was verified above.
+			$sent = isset( $_POST['published'] ) && is_array( $_POST['published'] ) ? wp_unslash( $_POST['published'] ) : array();
+			axismundi_contacts_set_published_pointers( (int) $book['owner_actor_id'], array_map( 'sanitize_text_field', $sent ) );
+		}
 
-	axismundi_contacts_redirect_result( $saved, (int) $saved );
+		axismundi_contacts_redirect_result( is_wp_error( $outcome ) ? $outcome : $saved, (int) $saved );
 	}
 	axismundi_contacts_redirect_result( $saved, $card_id );
 }

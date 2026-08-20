@@ -223,7 +223,17 @@ function axismundi_contacts_rest_put_draft( WP_REST_Request $request ) {
 	 * The screen form has always done this. Doing it only there would have meant the editor this
 	 * route exists for was the one place where editing a linked value did not make it yours.
 	 */
-	axismundi_contacts_record_local_edits( $card_id, $before, axismundi_contacts_card_document( $card_id ) );
+	$promoted = axismundi_contacts_record_local_edits( $card_id, $before, axismundi_contacts_card_document( $card_id ) );
+	if ( is_wp_error( $promoted ) ) {
+		/*
+		 * The one step that could not be left out. Committing here would store somebody's edit while
+		 * provenance still said an Actor owned the value -- and the next refresh would put the Actor's
+		 * answer back, which is the failure this whole promotion exists to prevent.
+		 */
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->query( 'ROLLBACK' );
+		return $promoted;
+	}
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	$wpdb->query( 'COMMIT' );
 	// Read back rather than echoed: what the editor gets is what is stored, in the order it is stored.

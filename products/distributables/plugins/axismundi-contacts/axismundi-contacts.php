@@ -39,6 +39,7 @@ require_once __DIR__ . '/includes/dependencies.php';
 require_once __DIR__ . '/includes/schema.php';
 require_once __DIR__ . '/includes/address-books.php';
 require_once __DIR__ . '/includes/vocabulary.php';
+require_once __DIR__ . '/includes/canonical.php';
 require_once __DIR__ . '/includes/name-format.php';
 require_once __DIR__ . '/includes/cards.php';
 require_once __DIR__ . '/includes/localizations.php';

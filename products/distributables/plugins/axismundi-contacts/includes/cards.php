@@ -172,6 +172,13 @@ function axismundi_contacts_save_card_for_owner( int $owner_actor_id, array $car
 	 * Only that direction. Nothing is taken apart, and a `full` somebody wrote is never replaced.
 	 */
 	$card = axismundi_contacts_complete_card_names( $card );
+	/*
+	 * And written down in a stable order. Nothing about the Card changes -- JSON says nothing about
+	 * the order of an object's keys -- but the stored document, its diff and the Advanced JSON box
+	 * are all read by somebody, and a Card whose properties land wherever the last edit put them is
+	 * one nobody can scan.
+	 */
+	$card = axismundi_contacts_canonical_card( $card );
 	$existing = $card_id > 0 ? axismundi_contacts_get_card( $card_id ) : array();
 	if ( $card_id > 0 && array() === $existing ) {
 		return new WP_Error( 'ax_contacts_card_missing', __( 'That card does not exist.', 'axismundi-contacts' ), array( 'status' => 404 ) );

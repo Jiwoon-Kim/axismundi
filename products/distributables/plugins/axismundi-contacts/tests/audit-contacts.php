@@ -43,6 +43,74 @@ function ax_ct_assert( array &$results, string $label, bool $condition ) : void 
  */
 $GLOBALS['ax_ct_made_actors'] = array();
 
+/**
+ * Whether everything in one document survived into the other, unchanged.
+ *
+ * Containment rather than equality, because storing a Card may add to it: a name with components and
+ * no written-out form is given one, so that a locale pointed at it has something to bind to. What
+ * must never happen is a value going missing or coming back different, and that is what this asks.
+ *
+ * Structural rather than textual. The order of an object's keys carries no meaning in JSON and this
+ * codebase deliberately changes it; the order of an array's items is data and must not move. Types
+ * are compared strictly, so a number that came back as a string is a difference.
+ *
+ * @param mixed    $before Document as authored.
+ * @param mixed    $after  Document as stored.
+ * @param string[] $lost   Collects the paths that did not survive.
+ * @param string   $path   Path so far.
+ * @return bool
+ */
+function ax_ct_preserves( $before, $after, array &$lost, string $path = '' ) : bool {
+	if ( is_array( $before ) !== is_array( $after ) ) {
+		$lost[] = $path;
+		return false;
+	}
+	if ( ! is_array( $before ) ) {
+		if ( $before !== $after ) {
+			$lost[] = $path;
+		}
+		return $before === $after;
+	}
+	$list = array() === $before || array_keys( $before ) === range( 0, count( $before ) - 1 );
+	if ( $list && count( $before ) !== count( $after ) ) {
+		// An array is ordered data; losing or gaining an item changes what it says.
+		$lost[] = $path;
+		return false;
+	}
+	$intact = true;
+	foreach ( $before as $key => $value ) {
+		if ( ! array_key_exists( $key, $after ) ) {
+			$lost[] = $path . '/' . $key;
+			$intact = false;
+			continue;
+		}
+		$intact = ax_ct_preserves( $value, $after[ $key ], $lost, $path . '/' . $key ) && $intact;
+	}
+	return $intact;
+}
+
+/**
+ * Every path present after storing that was not there before.
+ *
+ * @param mixed    $before Document as authored.
+ * @param mixed    $after  Document as stored.
+ * @param string[] $added  Collects the paths.
+ * @param string   $path   Path so far.
+ * @return void
+ */
+function ax_ct_collect_additions( $before, $after, array &$added, string $path = '' ) : void {
+	if ( ! is_array( $before ) || ! is_array( $after ) ) {
+		return;
+	}
+	foreach ( $after as $key => $value ) {
+		if ( ! array_key_exists( $key, $before ) ) {
+			$added[] = $path . '/' . $key;
+			continue;
+		}
+		ax_ct_collect_additions( $before[ $key ], $value, $added, $path . '/' . $key );
+	}
+}
+
 /** An account with a published Person Actor. */
 function ax_ct_actor( array &$users ) : Axismundi_Actor {
 	$login = 'axct' . strtolower( wp_generate_password( 8, false, false ) );
@@ -2035,6 +2103,144 @@ try {
 			&& ! isset( $ax_ct_after_move['emails']['e2'] )
 	);
 	wp_set_current_user( 0 );
+
+	// -- a Card survives being stored ---------------------------------------------------------------------------
+
+	/*
+	 * The whole document goes in and the whole document comes back. Lossless means structurally, not
+	 * byte for byte: whitespace and the order of an object's keys carry no meaning in JSON, and this
+	 * deliberately changes both. Everything that does carry meaning has to survive --
+	 *
+	 *   every property, standard or invented       every entry id
+	 *   the JSON type of every value               array order
+	 *   localization patch paths, in both forms    contexts, personalInfo, extensions
+	 *
+	 * The fixture mirrors a real Card's structure with placeholder values. A test fixture holding
+	 * somebody's actual telephone number would publish it to everybody who ever clones this.
+	 */
+	$ax_ct_fixture = json_decode( (string) file_get_contents( __DIR__ . '/fixtures/card-full.json' ), true ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own fixture.
+	$ax_ct_rt_actor = ax_ct_actor( $ax_ct_users );
+	$ax_ct_rt_book  = axismundi_contacts_book_for_actor( (int) $ax_ct_rt_actor->get_identity_id() );
+	$ax_ct_books[]  = (int) ( $ax_ct_rt_book['id'] ?? 0 );
+	$ax_ct_rt_saved = axismundi_contacts_save_card( (int) $ax_ct_rt_book['id'], (array) $ax_ct_fixture );
+	$ax_ct_rt_id    = is_wp_error( $ax_ct_rt_saved ) ? 0 : (int) $ax_ct_rt_saved;
+	$ax_ct_loose[]  = $ax_ct_rt_id;
+	$ax_ct_rt_back  = $ax_ct_rt_id > 0 ? axismundi_contacts_card_document( $ax_ct_rt_id ) : array();
+
+	$ax_ct_rt_lost = array();
+	$ax_ct_rt_kept = is_array( $ax_ct_fixture ) && ax_ct_preserves( $ax_ct_fixture, $ax_ct_rt_back, $ax_ct_rt_lost );
+	if ( array() !== $ax_ct_rt_lost ) {
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI fixture output.
+		printf( "       lost or changed: %s\n", implode( ', ', $ax_ct_rt_lost ) );
+	}
+	ax_ct_assert(
+		$ax_ct_results,
+		'a whole Card is stored and read back with nothing lost and nothing changed',
+		$ax_ct_rt_kept
+	);
+	/*
+	 * Storing may add, and exactly one thing does: a name written only in components is given the
+	 * string it reads as, so that an Actor locale pointed at it has something to bind to. Named here
+	 * so that anything else appearing later is a surprise somebody has to explain rather than a
+	 * difference nobody noticed.
+	 */
+	$ax_ct_rt_added = array();
+	ax_ct_collect_additions( $ax_ct_fixture, $ax_ct_rt_back, $ax_ct_rt_added );
+	sort( $ax_ct_rt_added );
+	ax_ct_assert(
+		$ax_ct_results,
+		'and the only thing storing adds is the written-out form of a name given in parts',
+		array(
+			'/localizations/en/name/full',
+			'/localizations/ja-Kana/name/full',
+			'/localizations/ko-Hani/name/full',
+			'/localizations/zh-Hant-TW/name/full',
+		) === $ax_ct_rt_added
+	);
+
+	/*
+	 * Named separately because these are the ones a canonicalizer is most likely to quietly tidy away.
+	 * An entry id is an address -- what a published pointer and a provenance row name -- so renaming
+	 * `e1` would sever somebody's publishing consent from the value they gave it to.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'entry ids are addresses and are never reissued, however the map is written',
+		array( 'e1', 'e2' ) === array_keys( (array) ( $ax_ct_rt_back['emails'] ?? array() ) )
+			&& array( 'x1', 'x2' ) === array_keys( (array) ( $ax_ct_rt_back['onlineServices'] ?? array() ) )
+			&& isset( $ax_ct_rt_back['personalInfo']['wordpress'], $ax_ct_rt_back['notes']['n1'], $ax_ct_rt_back['media']['icon'] )
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'a property nobody here has heard of survives being stored, with its values and their types',
+		array( 'a', 'b' ) === (array) ( $ax_ct_rt_back['example.com:favouriteColour']['flags'] ?? array() )
+			&& 3 === ( $ax_ct_rt_back['example.com:favouriteColour']['rank'] ?? null )
+			&& true === ( $ax_ct_rt_back['keywords']['ActivityPub'] ?? null )
+	);
+	/*
+	 * A localization is a patch, and its keys are paths into the Card rather than an object to tidy.
+	 * Both forms are in the fixture because an import brings the fine-grained one and this screen
+	 * writes the whole-property one.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'localization patches keep their paths, in whichever form they arrived',
+		"\xe9\x87\x91" === (string) ( $ax_ct_rt_back['localizations']['ko-Hani']['name/components/0/value'] ?? '' )
+			&& 'Latn' === (string) ( $ax_ct_rt_back['localizations']['zh-Hant-TW']['name/phoneticScript'] ?? '' )
+			&& 'Jiwoon' === (string) ( $ax_ct_rt_back['localizations']['en']['name']['components'][0]['value'] ?? '' )
+			&& 'Site Owner' === (string) ( $ax_ct_rt_back['localizations']['en']['titles/siteOwner']['name'] ?? '' )
+	);
+	/*
+	 * And an array is ordered data. The components of a name are a reading order and the separator
+	 * between them is one of them; sorting either would rewrite somebody's name.
+	 */
+	$ax_ct_rt_ja = (array) ( $ax_ct_rt_back['localizations']['ja-Kana']['name']['components'] ?? array() );
+	ax_ct_assert(
+		$ax_ct_results,
+		'array order is data and is left exactly as it was',
+		array( 'surname', 'separator', 'given' ) === array_column( $ax_ct_rt_ja, 'kind' )
+			&& array( 'country', 'region', 'locality' ) === array_column( (array) ( $ax_ct_rt_back['addresses']['home']['components'] ?? array() ), 'kind' )
+	);
+
+	// -- and is written down in an order somebody can read ------------------------------------------------------
+
+	/*
+	 * None of this changes what the Card means. It changes whether the stored document, its diff and
+	 * the Advanced JSON box can be scanned -- and the order is this project's rather than the RFC's
+	 * table of contents, because an Actor is the identity here: who somebody is, then where they are
+	 * on the network, then how to reach them directly.
+	 */
+	$ax_ct_rt_keys = array_keys( $ax_ct_rt_back );
+	$ax_ct_at = static function ( string $key ) use ( $ax_ct_rt_keys ) : int {
+		$found = array_search( $key, $ax_ct_rt_keys, true );
+		return false === $found ? PHP_INT_MAX : (int) $found;
+	};
+	ax_ct_assert(
+		$ax_ct_results,
+		'a Card reads who this is, then where they are on the network, then how to reach them',
+		$ax_ct_at( 'uid' ) < $ax_ct_at( 'name' )
+			&& $ax_ct_at( 'name' ) < $ax_ct_at( 'onlineServices' )
+			&& $ax_ct_at( 'media' ) < $ax_ct_at( 'onlineServices' )
+			&& $ax_ct_at( 'onlineServices' ) < $ax_ct_at( 'emails' )
+			&& $ax_ct_at( 'emails' ) < $ax_ct_at( 'addresses' )
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'the patches that apply over all of it are written after all of it, and inventions after those',
+		$ax_ct_at( 'notes' ) < $ax_ct_at( 'localizations' )
+			&& $ax_ct_at( 'localizations' ) < $ax_ct_at( 'example.com:favouriteColour' )
+	);
+	// An empty object says nothing an absent property does not say, so it is not written down.
+	$ax_ct_empty = axismundi_contacts_canonical_card(
+		array( '@type' => 'Card', 'name' => array( 'full' => 'A' ), 'emails' => array(), 'phones' => array() )
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'an empty map is not stored, so a screen may offer a blank row without the document recording it',
+		! array_key_exists( 'emails', $ax_ct_empty )
+			&& ! array_key_exists( 'phones', $ax_ct_empty )
+			&& 'A' === (string) ( $ax_ct_empty['name']['full'] ?? '' )
+	);
 
 	ax_ct_assert(
 		$ax_ct_results,

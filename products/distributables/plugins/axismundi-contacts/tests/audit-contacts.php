@@ -31,6 +31,17 @@ function ax_ct_assert( array &$results, string $label, bool $condition ) : void 
 	printf( "[%s] %s\n", $condition ? 'PASS' : 'FAIL', $label );
 }
 
+/**
+ * Every Actor this file creates, so the registry ends the run holding what it started with.
+ *
+ * Deleting the account is not enough: an ended identity leaves its Actor row standing, which is
+ * correct for a site and wrong for a fixture. A test that leaves rows behind is one that cannot say
+ * whether the thing it is testing leaves rows behind.
+ *
+ * @var int[]
+ */
+$GLOBALS['ax_ct_made_actors'] = array();
+
 /** An account with a published Person Actor. */
 function ax_ct_actor( array &$users ) : Axismundi_Actor {
 	$login = 'axct' . strtolower( wp_generate_password( 8, false, false ) );
@@ -41,6 +52,7 @@ function ax_ct_actor( array &$users ) : Axismundi_Actor {
 	$actor   = axismundi_actors_ensure_for_user( $id );
 	axismundi_actors_register_handle( $actor->get_identity_id(), $login );
 	axismundi_actors_set_status( $actor->get_identity_id(), 'public' );
+	$GLOBALS['ax_ct_made_actors'][] = (int) $actor->get_identity_id();
 	return axismundi_actors_get_for_user( $id );
 }
 
@@ -1726,6 +1738,19 @@ try {
 	}
 	foreach ( array_unique( $ax_ct_users ) as $ax_ct_user_id ) {
 		wp_delete_user( (int) $ax_ct_user_id );
+	}
+	/*
+	 * And the Actor rows themselves. `wp_delete_user()` tombstones them, which is what a site wants
+	 * and not what a fixture wants: left standing they accumulate one run at a time, and every one of
+	 * them is a Person whose account is gone -- which is exactly what the orphan sweep is for, so this
+	 * file would be manufacturing the thing that audit has to find.
+	 */
+	foreach ( array_unique( array_filter( (array) ( $GLOBALS['ax_ct_made_actors'] ?? array() ) ) ) as $ax_ct_made ) {
+		axismundi_contacts_purge_actor( (int) $ax_ct_made );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => (int) $ax_ct_made ), array( '%d' ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => (int) $ax_ct_made ), array( '%d' ) );
 	}
 }
 

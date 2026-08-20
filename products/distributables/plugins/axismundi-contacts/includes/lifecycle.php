@@ -131,6 +131,160 @@ function axismundi_contacts_purge_policy( string $actor_type ) : string {
 }
 
 /**
+ * Contacts data whose owner is no longer anybody.
+ *
+ * Two different things go wrong, and telling them apart is most of the work:
+ *
+ *   referential   `owner_actor_id` names an Actor that is not in the registry at all. Whatever
+ *                 removed it did not come through here, so nothing was cleaned up on the way.
+ *
+ *   lifecycle     the Actor is still in the registry, as it should be -- an ended identity leaves a
+ *                 row standing -- but it is a Person whose WordPress account is gone, and a Person's
+ *                 Contacts data ends with that account. The purge that should have run when the
+ *                 account was deleted did not, or ran before this data existed.
+ *
+ * A tombstone is not either of them. Every Actor reaches one eventually and it says an identity
+ * ended, not that this data may be destroyed: an Organization keeps its lists after the
+ * administrator who happened to be deleted, a Group keeps no books to begin with, and a remote
+ * Actor's Cards were never ours. Only the kind whose policy is `account` is looked at, and only
+ * where the account really is gone.
+ *
+ * Nothing here decides that a name or a note is stale. It answers one question -- is there still
+ * somebody this belongs to -- and where the answer is no, `axismundi_contacts_purge_actor()` does
+ * the removing, on exactly the terms it always has: what that Actor owned, and nothing anybody else
+ * keeps about them.
+ *
+ * @param bool $with_footprint Include what each one is still holding.
+ * @return array<int,array<string,mixed>> Actor id => reason, and optionally its footprint.
+ */
+function axismundi_contacts_orphaned_contact_owners( bool $with_footprint = true ) : array {
+	global $wpdb;
+	$books  = axismundi_contacts_books_table();
+	$cards  = axismundi_contacts_cards_table();
+	$found  = array();
+
+	if ( ! function_exists( 'axismundi_actors_actors_table' ) ) {
+		// Without the registry there is no way to ask whether an owner exists, and guessing that none
+		// of them do would delete every address book on the site.
+		return array();
+	}
+	$actors     = axismundi_actors_actors_table();
+	$identities = axismundi_actors_identities_table();
+
+	/*
+	 * Owners the registry has never heard of. Asked of both tables because a Card unfiled from every
+	 * book is still owned by somebody, and looking only at books would miss it.
+	 */
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- maintenance sweep over this plugin's own tables.
+	$dangling = (array) $wpdb->get_col(
+		"SELECT DISTINCT owner FROM (
+			SELECT owner_actor_id AS owner FROM {$books}
+			UNION SELECT owner_actor_id AS owner FROM {$cards}
+		) owners
+		LEFT JOIN {$actors} a ON a.identity_id = owners.owner
+		WHERE a.identity_id IS NULL AND owners.owner > 0"
+	);
+	foreach ( $dangling as $actor_id ) {
+		$found[ (int) $actor_id ] = array( 'reason' => 'referential' );
+	}
+
+	/*
+	 * And local Person Actors whose account is gone. `local_user_id` is kept when an identity is
+	 * tombstoned -- which is what makes this answerable at all -- so the account it names is looked
+	 * up rather than assumed.
+	 */
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- maintenance sweep over the Actors registry.
+	$people = (array) $wpdb->get_results(
+		"SELECT a.identity_id, a.local_user_id, a.actor_type FROM {$actors} a
+			INNER JOIN {$identities} i ON i.id = a.identity_id
+			WHERE i.origin = 'local' AND a.local_user_id > 0",
+		ARRAY_A
+	);
+	foreach ( $people as $person ) {
+		$actor_id = (int) $person['identity_id'];
+		if ( isset( $found[ $actor_id ] ) ) {
+			continue;
+		}
+		if ( 'account' !== axismundi_contacts_purge_policy( (string) $person['actor_type'] ) ) {
+			continue;
+		}
+		if ( get_userdata( (int) $person['local_user_id'] ) ) {
+			// The account is still there, so this Actor's data has an owner whatever its status says.
+			continue;
+		}
+		if ( 0 === array_sum( axismundi_contacts_actor_footprint( $actor_id ) ) ) {
+			continue;
+		}
+		$found[ $actor_id ] = array( 'reason' => 'lifecycle' );
+	}
+
+	if ( $with_footprint ) {
+		foreach ( $found as $actor_id => $entry ) {
+			$found[ $actor_id ]['footprint'] = axismundi_contacts_actor_footprint( (int) $actor_id );
+		}
+	}
+	ksort( $found );
+	return $found;
+}
+
+/**
+ * Profile bindings pointing at a Card that is not there.
+ *
+ * Its own question, and not an ownership one: the Actor may be perfectly current and the Card simply
+ * deleted out from under the binding. Nothing is destroyed by answering it -- the Card is already
+ * gone -- so this is the one part of the sweep that cannot cost anybody anything.
+ *
+ * @return int[] Actor ids.
+ */
+function axismundi_contacts_dangling_profile_bindings() : array {
+	global $wpdb;
+	$profiles = axismundi_contacts_profiles_table();
+	$cards    = axismundi_contacts_cards_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- maintenance sweep over this plugin's own tables.
+	return array_map(
+		'intval',
+		(array) $wpdb->get_col(
+			"SELECT p.actor_id FROM {$profiles} p
+				LEFT JOIN {$cards} c ON c.id = p.card_id
+				WHERE p.card_id > 0 AND c.id IS NULL"
+		)
+	);
+}
+
+/**
+ * Remove what no longer belongs to anybody.
+ *
+ * Every removal goes through `axismundi_contacts_purge_actor()`, so the boundary is the one that has
+ * always applied: what that Actor owned, never a Card somebody else keeps about them. Running it
+ * again finds nothing, because the second run asks the same question of a database where the answer
+ * has changed.
+ *
+ * @return array<string,mixed> What was found and what was removed.
+ */
+function axismundi_contacts_purge_orphaned_contact_owners() : array {
+	$orphans = axismundi_contacts_orphaned_contact_owners( false );
+	$report  = array( 'actors' => array(), 'removed' => array( 'cards' => 0, 'books' => 0, 'profile' => 0 ), 'bindings' => 0 );
+	foreach ( $orphans as $actor_id => $entry ) {
+		$removed = axismundi_contacts_purge_actor( (int) $actor_id );
+		$report['actors'][ (int) $actor_id ] = array( 'reason' => $entry['reason'], 'removed' => $removed );
+		foreach ( $removed as $key => $count ) {
+			$report['removed'][ $key ] += (int) $count;
+		}
+	}
+	/*
+	 * Then the bindings that point at nothing, which the purge above will have cleared for anybody it
+	 * touched and which may exist for an Actor it had no business touching.
+	 */
+	global $wpdb;
+	foreach ( axismundi_contacts_dangling_profile_bindings() as $actor_id ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+		$wpdb->delete( axismundi_contacts_profiles_table(), array( 'actor_id' => $actor_id ), array( '%d' ) );
+		++$report['bindings'];
+	}
+	return $report;
+}
+
+/**
  * A deleted account takes its own address book with it.
  *
  * Only the Person Actor bound to that account, and only what that Actor owned. An Organization this

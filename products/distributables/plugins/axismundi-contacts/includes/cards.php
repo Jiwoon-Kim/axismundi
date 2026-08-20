@@ -558,6 +558,16 @@ function axismundi_contacts_delete_card( int $card_id ) : bool {
 	$wpdb->delete( axismundi_contacts_values_table(), array( 'card_id' => $card_id ), array( '%d' ) );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 	$wpdb->delete( axismundi_contacts_provenance_table(), array( 'card_id' => $card_id ), array( '%d' ) );
+	/*
+	 * And any Actor that pointed at this Card as the one describing it. A binding left behind answers
+	 * `which Card describes this Actor` with an id that resolves to nothing -- and every reader has to
+	 * handle that, or quietly show an Actor as having a profile card it does not have.
+	 *
+	 * Addressed by card rather than by Actor, because that is what is known here: the Card is going,
+	 * and whoever was pointing at it stops pointing at it, whether or not they own it.
+	 */
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+	$wpdb->delete( axismundi_contacts_profiles_table(), array( 'card_id' => $card_id ), array( '%d' ) );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 	$wpdb->delete( axismundi_contacts_cards_table(), array( 'id' => $card_id ), array( '%d' ) );
 	foreach ( $books as $book_id ) {

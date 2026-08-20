@@ -53,52 +53,6 @@ function axismundi_actors_jscontact_kind( string $actor_type ) : string {
 }
 
 /**
- * One language's name, as JSContact states it.
- *
- * `isOrdered` is the claim that the components are already in the order they are read in, which is
- * the whole reason the order is stored: a consumer must not reassemble a Korean name the way it
- * would an English one.
- *
- * @param array<string,mixed> $row Stored name row.
- * @return array<string,mixed>|null
- */
-function axismundi_actors_jscontact_name( array $row ) : ?array {
-	/*
-	 * The Actor's own parts, and only those. A title and a credential -- `Dr.`, `PhD` -- are what a
-	 * contact card adds to a name rather than what an identity registry knows about an agent, and
-	 * Contacts is where they are kept. Emitting them from here as well would put the same component
-	 * on one card from two tables.
-	 */
-	$order = in_array( (string) ( $row['display_order'] ?? '' ), array( 'family-given', 'family-given-compact' ), true )
-		? array( 'surname', 'surname2', 'given', 'given2' )
-		: array( 'given', 'given2', 'surname', 'surname2' );
-
-	$components = array();
-	foreach ( $order as $part ) {
-		$value = trim( (string) ( $row[ $part ] ?? '' ) );
-		if ( '' !== $value ) {
-			$components[] = array( '@type' => 'NameComponent', 'kind' => $part, 'value' => $value );
-		}
-	}
-	$full = axismundi_actors_assemble_person_name( $row );
-	if ( array() === $components && '' === $full ) {
-		return null;
-	}
-	$name = array( '@type' => 'Name' );
-	if ( '' !== $full ) {
-		$name['full'] = $full;
-	}
-	if ( array() !== $components ) {
-		$name['components'] = $components;
-		$name['isOrdered']  = true;
-		if ( in_array( (string) ( $row['display_order'] ?? '' ), array( 'family-given-compact', 'given-family-compact' ), true ) ) {
-			$name['defaultSeparator'] = '';
-		}
-	}
-	return $name;
-}
-
-/**
  * Add what Actors owns to the Card Contacts is publishing.
  *
  * @param array<string,mixed> $card  Card so far.
@@ -113,15 +67,10 @@ function axismundi_actors_jscontact_contribute( array $card, Axismundi_Actor $ac
 
 	/*
 	 * The other languages, as JSContact keeps them: a patch per tag rather than a second Card. Each
-	 * carries `full`, and components only where the parts actually belong -- claiming them anywhere
-	 * else would be this site deciding which half of `Jiwoon Kim` is a surname, which nobody asked it
-	 * to decide.
+	 * carries `full` and nothing else: the parts of a name are the card's, and an Actor's other
+	 * languages are written-out names rather than sets of components.
 	 */
-	$profile    = 'Person' === $actor->get_type() && $actor->is_local()
-		? axismundi_actors_person_profile( $actor->get_identity_id() )
-		: array();
-	$structured = axismundi_actors_normalize_language_tag( (string) ( $profile['structured_name_language'] ?? '' ) );
-	$map        = axismundi_actors_get_text_map( $actor->get_identity_id() );
+	$map = axismundi_actors_get_text_map( $actor->get_identity_id() );
 
 	$localizations = array();
 	foreach ( $map as $tag => $fields ) {
@@ -130,12 +79,10 @@ function axismundi_actors_jscontact_contribute( array $card, Axismundi_Actor $ac
 		if ( $tag === $language || '' === $written ) {
 			continue;
 		}
-		$localized = $tag === $structured && array() !== $profile
-			? axismundi_actors_jscontact_name( $profile )
-			: array( '@type' => 'Name', 'full' => $written );
-		if ( null !== $localized ) {
-			$localizations[ $tag ] = array( 'name' => $localized );
-		}
+		// The written-out name and nothing else. What an Actor holds for a language is a string
+		// somebody typed or bound; claiming components under it would be this site deciding which
+		// half of `Jiwoon Kim` is a surname, which nobody asked it to decide.
+		$localizations[ $tag ] = array( 'name' => array( '@type' => 'Name', 'full' => $written ) );
 	}
 	if ( array() !== $localizations ) {
 		/*

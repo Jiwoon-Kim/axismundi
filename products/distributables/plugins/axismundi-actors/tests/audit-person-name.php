@@ -43,55 +43,31 @@ try {
 	$ax_pn_actor = ax_pn_actor( $ax_pn_users );
 	$ax_pn_id    = (int) $ax_pn_actor->get_identity_id();
 
-	// -- one name, in the order its owner reads it ---------------------------------------------------------
+	// -- the parts of a name are not kept here ------------------------------------------------------------
 
 	/*
-	 * The parts are stored once. Order is still a property of the person rather than of the language --
-	 * the same components read `김지운` one way and `Kim Jiwoon` the other -- so it is chosen here and
-	 * never guessed from a language tag.
+	 * What this file used to open with was a name stored in components and assembled in the order its
+	 * owner chose. The components are the contact card's now, and nothing here assembles anything: an
+	 * Actor holds one written-out string per language, which is what `name` and `nameMap` publish.
 	 */
-	axismundi_actors_set_person_name( $ax_pn_id, array( 'structured_name_language' => 'ko-KR', 'surname' => '김', 'given' => '지운', 'display_order' => 'family-given' ) );
 	ax_pn_assert(
 		$ax_pn_results,
-		'a name is stored in parts once and assembled in the order its owner chose',
-		'김지운' === axismundi_actors_assemble_person_name( axismundi_actors_person_profile( $ax_pn_id ) )
-			&& '지운 김' === axismundi_actors_assemble_person_name(
-				array_merge( axismundi_actors_person_profile( $ax_pn_id ), array( 'display_order' => 'given-family' ) )
-			)
+		'nothing here builds a name out of parts any more',
+		! function_exists( 'axismundi_actors_assemble_person_name' )
+			&& ! function_exists( 'axismundi_actors_publish_structured_name' )
+			&& ! function_exists( 'axismundi_actors_jscontact_name' )
+			&& ! function_exists( 'axismundi_actors_set_person_name' )
 	);
-	ax_pn_assert(
-		$ax_pn_results,
-		'the compact orders omit spaces without changing the order of the name parts',
-		'JiwoonKim' === axismundi_actors_assemble_person_name(
-			array( 'given' => 'Jiwoon', 'surname' => 'Kim', 'display_order' => 'given-family-compact' )
-		)
-			&& 'KimJiwoon' === axismundi_actors_assemble_person_name(
-				array( 'given' => 'Jiwoon', 'surname' => 'Kim', 'display_order' => 'family-given-compact' )
-			)
-	);
-	ax_pn_assert(
-		$ax_pn_results,
-		'a second family name is stored separately and follows the primary family name in either display order',
-		'Gabriel Garcia Marquez' === axismundi_actors_assemble_person_name(
-			array( 'given' => 'Gabriel', 'surname' => 'Garcia', 'surname2' => 'Marquez', 'display_order' => 'given-family' )
-		)
-			&& 'Garcia Marquez Gabriel' === axismundi_actors_assemble_person_name(
-				array( 'given' => 'Gabriel', 'surname' => 'Garcia', 'surname2' => 'Marquez', 'display_order' => 'family-given' )
-			)
-	);
-	/*
-	 * And another language is a written-out name, not a second set of components. Asking somebody to
-	 * re-enter their given and family names to say their profile in English too is work with nothing
-	 * at the end of it, and it invites this site to decide which half of `Jiwoon Kim` is a surname.
-	 */
+
+	axismundi_actors_set_default_language( $ax_pn_id, 'ko-KR' );
+	axismundi_actors_set_text( $ax_pn_id, 'name', 'ko-KR', '김지운' );
 	axismundi_actors_set_text( $ax_pn_id, 'name', 'en', 'Jiwoon Kim' );
 	ax_pn_assert(
 		$ax_pn_results,
-		'another language holds a written-out name, with no components invented for it',
-		'Jiwoon Kim' === axismundi_actors_person_display_name( axismundi_actors_get_by_identity( $ax_pn_id ), 'en' )
-			&& '' === (string) ( axismundi_actors_person_profile( $ax_pn_id )['language_tag'] ?? '' )
+		'each language holds a written-out name, with no components invented for it',
+		'김지운' === axismundi_actors_person_display_name( axismundi_actors_get_by_identity( $ax_pn_id ) )
+			&& 'Jiwoon Kim' === axismundi_actors_person_display_name( axismundi_actors_get_by_identity( $ax_pn_id ), 'en' )
 	);
-	axismundi_actors_set_person_name( $ax_pn_id, array( 'structured_name_language' => 'ko-KR', 'surname' => 'Kim', 'given' => 'Jiwoon', 'display_order' => 'given-family' ) );
 
 	// -- a pronunciation says how it is written ----------------------------------------------------------
 
@@ -100,19 +76,19 @@ try {
 	 * with no notation beside it is read by whatever the consumer assumes -- which is how somebody's
 	 * name gets said wrongly on the authority of a file we published.
 	 */
-	$ax_pn_unreadable = axismundi_actors_set_person_name( $ax_pn_id, array( 'phonetic_given' => 'jee-WOON' ) );
+	$ax_pn_unreadable = axismundi_actors_write_person_profile( $ax_pn_id, array( 'phonetic_given' => 'jee-WOON' ) );
 	ax_pn_assert(
 		$ax_pn_results,
 		'a pronunciation with no notation or script is refused rather than stored',
 		is_wp_error( $ax_pn_unreadable ) && 'ax_actors_name_phonetic_unreadable' === $ax_pn_unreadable->get_error_code()
 	);
-	$ax_pn_invented = axismundi_actors_set_person_name( $ax_pn_id, array( 'phonetic_given' => 'jee-WOON', 'phonetic_system' => 'shouty-caps' ) );
+	$ax_pn_invented = axismundi_actors_write_person_profile( $ax_pn_id, array( 'phonetic_given' => 'jee-WOON', 'phonetic_system' => 'shouty-caps' ) );
 	ax_pn_assert(
 		$ax_pn_results,
 		'and a notation this site cannot name is refused too, rather than invented into the document',
 		is_wp_error( $ax_pn_invented ) && 'ax_actors_name_phonetic_system' === $ax_pn_invented->get_error_code()
 	);
-	$ax_pn_stored = axismundi_actors_set_person_name(
+	$ax_pn_stored = axismundi_actors_write_person_profile(
 		$ax_pn_id,
 		array( 'phonetic_surname' => 'KIM', 'phonetic_given' => 'ˈdʒiːwuːn', 'phonetic_system' => 'ipa' )
 	);
@@ -127,7 +103,7 @@ try {
 	ax_pn_assert(
 		$ax_pn_results,
 		'a script alone is enough to say how a value is written',
-		true === axismundi_actors_set_person_name( $ax_pn_id, array( 'given' => 'ジウン', 'phonetic_given' => 'じうん', 'phonetic_script' => 'Hira' ) )
+		true === axismundi_actors_write_person_profile( $ax_pn_id, array( 'given' => 'ジウン', 'phonetic_given' => 'じうん', 'phonetic_script' => 'Hira' ) )
 	);
 
 	// -- saving a name does not erase what sits beside it -------------------------------------------------
@@ -137,7 +113,7 @@ try {
 	 * rest", not "empty it". Without this, editing a name on one screen drops the pronunciation
 	 * entered on another, and nobody finds out until a card goes out without it.
 	 */
-	axismundi_actors_set_person_name( $ax_pn_id, array( 'structured_name_language' => 'ko-KR', 'surname' => 'Kim', 'given' => 'Jiwoon', 'display_order' => 'given-family' ) );
+	axismundi_actors_write_person_profile( $ax_pn_id, array( 'structured_name_language' => 'ko-KR', 'surname' => 'Kim', 'given' => 'Jiwoon', 'display_order' => 'given-family' ) );
 	$ax_pn_after = axismundi_actors_person_profile( $ax_pn_id );
 	ax_pn_assert(
 		$ax_pn_results,
@@ -150,7 +126,7 @@ try {
 	 * store nobody can erase anything from -- an editor sending the fields it owns would preserve a
 	 * pronunciation forever, and removing one would need a verb of its own.
 	 */
-	axismundi_actors_set_person_name( $ax_pn_id, array( 'phonetic_given' => '' ) );
+	axismundi_actors_write_person_profile( $ax_pn_id, array( 'phonetic_given' => '' ) );
 	$ax_pn_cleared = axismundi_actors_person_profile( $ax_pn_id );
 	ax_pn_assert(
 		$ax_pn_results,
@@ -159,14 +135,18 @@ try {
 			&& 'KIM' === (string) $ax_pn_cleared['phonetic_surname']
 			&& 'ipa' === (string) $ax_pn_cleared['phonetic_system']
 	);
-	// The order is a stored fact too, so a save that says nothing about it must not reset it.
-	axismundi_actors_set_person_name( $ax_pn_id, array( 'structured_name_language' => 'ko-KR', 'surname' => '김', 'given' => '지운', 'display_order' => 'family-given' ) );
-	axismundi_actors_set_person_name( $ax_pn_id, array( 'given' => '지운' ) );
+	/*
+	 * A field the form did not send is left alone, which is what lets one screen write the label and
+	 * another the pronunciation without either erasing the other's work.
+	 */
+	axismundi_actors_write_person_profile( $ax_pn_id, array( 'structured_name_language' => 'ko-KR', 'display_name' => 'Shown as this' ) );
+	axismundi_actors_write_person_profile( $ax_pn_id, array( 'phonetic_surname' => 'KIM' ) );
 	ax_pn_assert(
 		$ax_pn_results,
-		'and editing a name without mentioning its order keeps the order it was written in',
-		'family-given' === (string) axismundi_actors_person_profile( $ax_pn_id )['display_order']
-			&& '김지운' === axismundi_actors_assemble_person_name( axismundi_actors_person_profile( $ax_pn_id ) )
+		'a save that says nothing about a stored value keeps it',
+		'Shown as this' === (string) axismundi_actors_person_profile( $ax_pn_id )['display_name']
+			&& 'ko-KR' === (string) axismundi_actors_person_profile( $ax_pn_id )['structured_name_language']
+			&& 'KIM' === (string) axismundi_actors_person_profile( $ax_pn_id )['phonetic_surname']
 	);
 
 	/*
@@ -175,7 +155,7 @@ try {
 	 * removing the last value must take the notation with it rather than leaving a setting that
 	 * describes nothing and waits to be attached to whatever somebody types next.
 	 */
-	axismundi_actors_set_person_name( $ax_pn_id, array( 'phonetic_surname' => '' ) );
+	axismundi_actors_write_person_profile( $ax_pn_id, array( 'phonetic_surname' => '' ) );
 	$ax_pn_orphan = axismundi_actors_person_profile( $ax_pn_id );
 	ax_pn_assert(
 		$ax_pn_results,
@@ -185,7 +165,7 @@ try {
 			&& '' === (string) $ax_pn_orphan['phonetic_script']
 	);
 	// A notation with nothing to pronounce is the same emptiness arriving from the other direction.
-	axismundi_actors_set_person_name( $ax_pn_id, array( 'phonetic_system' => 'ipa' ) );
+	axismundi_actors_write_person_profile( $ax_pn_id, array( 'phonetic_system' => 'ipa' ) );
 	ax_pn_assert(
 		$ax_pn_results,
 		'and a notation offered with no pronunciation to go with it is not stored either',
@@ -196,8 +176,8 @@ try {
 	 * would leave a pronunciation nobody can read, so it is refused rather than normalized away --
 	 * normalizing here would silently delete what somebody wrote.
 	 */
-	axismundi_actors_set_person_name( $ax_pn_id, array( 'phonetic_given' => 'ˈdʒiːwuːn', 'phonetic_system' => 'ipa' ) );
-	$ax_pn_stranded = axismundi_actors_set_person_name( $ax_pn_id, array( 'phonetic_system' => '', 'phonetic_script' => '' ) );
+	axismundi_actors_write_person_profile( $ax_pn_id, array( 'phonetic_given' => 'ˈdʒiːwuːn', 'phonetic_system' => 'ipa' ) );
+	$ax_pn_stranded = axismundi_actors_write_person_profile( $ax_pn_id, array( 'phonetic_system' => '', 'phonetic_script' => '' ) );
 	ax_pn_assert(
 		$ax_pn_results,
 		'while clearing the notation out from under a stored pronunciation is refused, not quietly obeyed',
@@ -211,9 +191,9 @@ try {
 	ax_pn_assert(
 		$ax_pn_results,
 		'a script that is not a four-letter subtag is refused, since no consumer could resolve it',
-		is_wp_error( axismundi_actors_set_person_name( $ax_pn_id, array( 'phonetic_given' => 'じうん', 'phonetic_script' => 'Hiragana' ) ) )
+		is_wp_error( axismundi_actors_write_person_profile( $ax_pn_id, array( 'phonetic_given' => 'じうん', 'phonetic_script' => 'Hiragana' ) ) )
 	);
-	axismundi_actors_set_person_name( $ax_pn_id, array( 'phonetic_given' => 'じうん', 'phonetic_script' => 'hira' ) );
+	axismundi_actors_write_person_profile( $ax_pn_id, array( 'phonetic_given' => 'じうん', 'phonetic_script' => 'hira' ) );
 	ax_pn_assert(
 		$ax_pn_results,
 		'while one written in any case is stored as the subtag it is',
@@ -247,7 +227,7 @@ try {
 	$ax_pn_alt     = (array) $wpdb->get_col( 'SHOW COLUMNS FROM ' . axismundi_actors_alternate_names_table() ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema check.
 	ax_pn_assert(
 		$ax_pn_results,
-		'the canonical profile carries the JSContact name components, and the recorded version says the migration ran',
+		'the profile store is there and the recorded version says the migration ran',
 		array() === array_diff( AXISMUNDI_ACTORS_PROFILE_COLUMNS, $ax_pn_columns )
 			&& in_array( 'name_kind', $ax_pn_alt, true )
 			&& AXISMUNDI_ACTORS_DB_VERSION === (string) get_option( 'ax_actors_db_version', '' )
@@ -257,7 +237,7 @@ try {
 	 * known profile, because there is one of them now: earlier checks in this file write over each
 	 * other where they used to sit in separate language rows.
 	 */
-	axismundi_actors_set_person_name(
+	axismundi_actors_write_person_profile(
 		$ax_pn_id,
 		array( 'given' => 'Jiwoon', 'surname' => 'Kim', 'display_order' => 'given-family', 'phonetic_given' => 'ˈdʒiːwuːn', 'phonetic_system' => 'ipa', 'phonetic_script' => '' )
 	);
@@ -267,90 +247,7 @@ try {
 		'running the migration again leaves the stored name exactly as it was',
 		'ˈdʒiːwuːn' === (string) ( axismundi_actors_person_profile( $ax_pn_id )['phonetic_given'] ?? '' )
 			&& 'ipa' === (string) ( axismundi_actors_person_profile( $ax_pn_id )['phonetic_system'] ?? '' )
-			&& 'Jiwoon Kim' === axismundi_actors_assemble_person_name( axismundi_actors_person_profile( $ax_pn_id ) )
 			&& AXISMUNDI_ACTORS_DB_VERSION === (string) get_option( 'ax_actors_db_version', '' )
-	);
-
-	// -- the account name is a starting point, offered once ------------------------------------------------------
-
-	/*
-	 * Eligibility is a history, not an emptiness. Reading "the table has no rows" would let the
-	 * WordPress account name walk back in after somebody deliberately removed their structured name --
-	 * once, quietly, looking exactly like the software remembering something helpful.
-	 */
-	$ax_pn_fresh    = ax_pn_actor( $ax_pn_users );
-	$ax_pn_fresh_id = (int) $ax_pn_fresh->get_identity_id();
-	wp_update_user( array( 'ID' => (int) $ax_pn_fresh->get_local_user_id(), 'first_name' => 'Ji-woon', 'last_name' => 'Kim' ) );
-	ax_pn_assert(
-		$ax_pn_results,
-		'an Actor whose name nobody has decided can start from the account name',
-		! axismundi_actors_person_name_was_edited( $ax_pn_fresh_id )
-			&& true === axismundi_actors_seed_person_name_from_user( $ax_pn_fresh_id )
-			&& 'Ji-woon Kim' === axismundi_actors_assemble_person_name( axismundi_actors_person_profile( $ax_pn_fresh_id ) )
-	);
-	ax_pn_assert(
-		$ax_pn_results,
-		'and once it has one, copying the account name again is refused rather than overwriting it',
-		axismundi_actors_person_name_was_edited( $ax_pn_fresh_id )
-			&& is_wp_error( axismundi_actors_seed_person_name_from_user( $ax_pn_fresh_id ) )
-	);
-	/*
-	 * The case the flag exists for. Somebody removes their structured name; the table is empty again,
-	 * exactly as it was before they ever touched it, and the account name must still stay out.
-	 */
-	$ax_pn_emptied    = ax_pn_actor( $ax_pn_users );
-	$ax_pn_emptied_id = (int) $ax_pn_emptied->get_identity_id();
-	wp_update_user( array( 'ID' => (int) $ax_pn_emptied->get_local_user_id(), 'first_name' => 'Ji-woon', 'last_name' => 'Kim' ) );
-	axismundi_actors_set_person_name( $ax_pn_emptied_id, array( 'given' => 'Someone' ) );
-	axismundi_actors_clear_person_name( $ax_pn_emptied_id );
-	$ax_pn_reseed = axismundi_actors_seed_person_name_from_user( $ax_pn_emptied_id );
-	ax_pn_assert(
-		$ax_pn_results,
-		'a name somebody deliberately emptied stays empty; the account name does not come back into it',
-		array() === axismundi_actors_person_profile( $ax_pn_emptied_id )
-			&& is_wp_error( $ax_pn_reseed )
-			&& 'ax_actors_name_seed_decided' === $ax_pn_reseed->get_error_code()
-	);
-
-	// -- the other names, per kind -------------------------------------------------------------------------------
-
-	axismundi_actors_set_alternate_names( $ax_pn_id, 'nickname', array( array( 'value' => 'Jay' ), array( 'value' => '지운이', 'language_tag' => 'ko-KR' ) ) );
-	axismundi_actors_set_alternate_names( $ax_pn_id, 'former', array( array( 'value' => 'A Previous Name' ) ) );
-	$ax_pn_nicknames = axismundi_actors_alternate_names( $ax_pn_id, 'nickname' );
-	ax_pn_assert(
-		$ax_pn_results,
-		'other names keep the order they were given in, and a name of no particular language says so',
-		2 === count( $ax_pn_nicknames )
-			&& 'Jay' === (string) $ax_pn_nicknames[0]['value']
-			&& '' === (string) $ax_pn_nicknames[0]['language_tag']
-			&& 'ko-KR' === (string) $ax_pn_nicknames[1]['language_tag']
-	);
-	/*
-	 * Each kind is answered for separately. Clearing the nicknames must not be a way to lose a former
-	 * name -- a whole-table replace would make one list's edit into another list's deletion.
-	 */
-	axismundi_actors_set_alternate_names( $ax_pn_id, 'nickname', array() );
-	ax_pn_assert(
-		$ax_pn_results,
-		'clearing one kind leaves the others exactly where they were',
-		array() === axismundi_actors_alternate_names( $ax_pn_id, 'nickname' )
-			&& 1 === count( axismundi_actors_alternate_names( $ax_pn_id, 'former' ) )
-	);
-	// The reader a serializer uses, so nothing has to remember which kinds are publishable.
-	axismundi_actors_set_alternate_names( $ax_pn_id, 'nickname', array( array( 'value' => 'Jay' ) ) );
-	$ax_pn_publishable = axismundi_actors_published_alternate_names( $ax_pn_id );
-	ax_pn_assert(
-		$ax_pn_results,
-		'and the publishable reader hands over the nickname while the former name never leaves the store',
-		1 === count( $ax_pn_publishable )
-			&& 'Jay' === (string) $ax_pn_publishable[0]['value']
-			&& 'nickname' === (string) $ax_pn_publishable[0]['name_kind']
-			&& 1 === count( axismundi_actors_alternate_names( $ax_pn_id, 'former' ) )
-	);
-	ax_pn_assert(
-		$ax_pn_results,
-		'a kind this site does not know is refused rather than stored as a word nobody reads',
-		is_wp_error( axismundi_actors_set_alternate_names( $ax_pn_id, 'stage_name', array( array( 'value' => 'Nope' ) ) ) )
 	);
 
 	// -- a name belongs to a person ----------------------------------------------------------------------------
@@ -364,9 +261,9 @@ try {
 	);
 	ax_pn_assert(
 		$ax_pn_results,
-		'a Group has a name and not a given name, so the structured form refuses it',
+		'a profile is authored here for a local Actor, and never for one another server sent',
 		$ax_pn_group instanceof Axismundi_Actor
-			&& is_wp_error( axismundi_actors_set_person_name( (int) $ax_pn_group->get_identity_id(), array( 'given' => 'Nope' ) ) )
+			&& is_wp_error( axismundi_actors_write_person_profile( 0, array( 'display_name' => 'Nope' ) ) )
 	);
 
 	/*
@@ -380,12 +277,15 @@ try {
 	$ax_pn_profile_language_form = (string) ob_get_clean();
 	ax_pn_assert(
 		$ax_pn_results,
-		'the primary profile carries the name details, and no language is asked which parts it holds',
-		str_contains( $ax_pn_profile_language_form, 'name="given"' )
-			&& str_contains( $ax_pn_profile_language_form, 'name="given2"' )
-			&& str_contains( $ax_pn_profile_language_form, 'name="surname"' )
-			&& str_contains( $ax_pn_profile_language_form, 'name="surname2"' )
-			&& ! str_contains( $ax_pn_profile_language_form, 'name="name_format"' )
+		'the primary profile offers a name, a label and a pronunciation, and asks for no parts at all',
+		str_contains( $ax_pn_profile_language_form, 'name="name"' )
+			&& str_contains( $ax_pn_profile_language_form, 'name="display_name"' )
+			&& str_contains( $ax_pn_profile_language_form, 'name="phonetic_given"' )
+			&& ! str_contains( $ax_pn_profile_language_form, 'name="given"' )
+			&& ! str_contains( $ax_pn_profile_language_form, 'name="given2"' )
+			&& ! str_contains( $ax_pn_profile_language_form, 'name="surname"' )
+			&& ! str_contains( $ax_pn_profile_language_form, 'name="surname2"' )
+			&& ! str_contains( $ax_pn_profile_language_form, 'name="display_order"' )
 	);
 	ax_pn_assert(
 		$ax_pn_results,
@@ -409,10 +309,9 @@ try {
 	);
 	ax_pn_assert(
 		$ax_pn_results,
-		'Profile languages keeps the public display choice directly below a Person name',
-		str_contains( $ax_pn_profile_language_form, 'id="ax-actor-display-order" name="display_order"' )
-			&& str_contains( $ax_pn_profile_language_form, 'name="display_name"' )
-			&& str_contains( $ax_pn_profile_language_form, 'data-empty-label="Given name Family name"' )
+		'the name box is a name box, editable rather than assembled from something else on the page',
+		str_contains( $ax_pn_profile_language_form, 'id="ax-actor-name" name="name"' )
+			&& ! str_contains( $ax_pn_profile_language_form, 'readonly' )
 	);
 	/*
 	 * A secondary language is the same profile written out again. Offering it name parts would ask
@@ -435,51 +334,35 @@ try {
 			&& ! str_contains( $ax_pn_secondary_form, 'name="display_order"' )
 			&& ! str_contains( $ax_pn_secondary_form, 'name="phonetic_given"' )
 	);
-	$ax_pn_profile_before_custom = axismundi_actors_person_profile( $ax_pn_id );
-	$ax_pn_ko_written = axismundi_actors_assemble_person_name( array_merge( $ax_pn_profile_before_custom, array( 'display_name' => '' ) ) );
-	axismundi_actors_set_person_name( $ax_pn_id, array( 'display_name' => 'Korean custom name' ) );
-	$ax_pn_before_promotion = axismundi_actors_get_by_identity( $ax_pn_id );
+	axismundi_actors_write_person_profile( $ax_pn_id, array( 'display_name' => 'Korean custom name' ) );
+	$ax_pn_before_promotion     = axismundi_actors_get_by_identity( $ax_pn_id );
 	$ax_pn_map_before_promotion = axismundi_actors_get_text_map( $ax_pn_id );
 	ax_pn_assert(
 		$ax_pn_results,
 		'a custom primary display name does not replace that language’s nameMap spelling',
 		$ax_pn_before_promotion instanceof Axismundi_Actor
 			&& 'Korean custom name' === $ax_pn_before_promotion->get_display_name()
-			&& $ax_pn_ko_written === (string) ( $ax_pn_map_before_promotion['ko-KR']['name'] ?? '' )
+			&& '김지운' === (string) ( $ax_pn_map_before_promotion['ko-KR']['name'] ?? '' )
 	);
+	/*
+	 * Promotion says which language a reader that asked for none in particular gets, and does nothing
+	 * else. It used to shuffle name components between languages as well; there are none to shuffle,
+	 * so every language keeps exactly the name written for it.
+	 */
 	$ax_pn_promoted = axismundi_actors_make_profile_primary( $ax_pn_id, 'en' );
-	$ax_pn_profile  = axismundi_actors_person_profile( $ax_pn_id );
 	$ax_pn_map      = axismundi_actors_get_text_map( $ax_pn_id );
 	$ax_pn_actor    = axismundi_actors_get_by_identity( $ax_pn_id );
 	ax_pn_assert(
 		$ax_pn_results,
-		'making a written-out profile primary keeps its name by using it as the given-name fallback',
+		'making another profile primary changes which name is answered with and rewrites none of them',
 		true === $ax_pn_promoted
 			&& $ax_pn_actor instanceof Axismundi_Actor
 			&& 'en' === $ax_pn_actor->get_default_language()
-			&& 'en' === (string) ( $ax_pn_profile['structured_name_language'] ?? '' )
-			&& 'Jiwoon Kim' === (string) ( $ax_pn_profile['given'] ?? '' )
-			&& '' === (string) ( $ax_pn_profile['surname'] ?? '' )
 			&& 'Jiwoon Kim' === (string) ( $ax_pn_map['en']['name'] ?? '' )
-			&& $ax_pn_ko_written === (string) ( $ax_pn_map['ko-KR']['name'] ?? '' )
+			&& '김지운' === (string) ( $ax_pn_map['ko-KR']['name'] ?? '' )
+			&& 'Jiwoon Kim' === $ax_pn_actor->get_display_name()
 	);
 
-	$ax_pn_legacy    = ax_pn_actor( $ax_pn_users );
-	$ax_pn_legacy_id = (int) $ax_pn_legacy->get_identity_id();
-	axismundi_actors_set_default_language( $ax_pn_legacy_id, 'en-US' );
-	axismundi_actors_set_text( $ax_pn_legacy_id, 'name', 'en-US', 'Existing profile name' );
-	delete_option( 'ax_actors_person_name_text_migrated' );
-	axismundi_actors_migrate_person_name_texts();
-	ob_start();
-	axismundi_actors_text_form( axismundi_actors_get_by_identity( $ax_pn_legacy_id ) );
-	$ax_pn_legacy_form = (string) ob_get_clean();
-	ax_pn_assert(
-		$ax_pn_results,
-		'a legacy Person name is stored as Given name without guessing a surname',
-		str_contains( $ax_pn_legacy_form, 'id="ax-actor-given" name="given" value="Existing profile name"' )
-			&& 'Existing profile name' === (string) ( axismundi_actors_person_profile( $ax_pn_legacy_id )['given'] ?? '' )
-			&& '' === (string) ( axismundi_actors_person_profile( $ax_pn_legacy_id )['surname'] ?? '' )
-	);
 	if ( $ax_pn_group instanceof Axismundi_Actor ) {
 		$ax_pn_groups[] = (int) $ax_pn_group->get_identity_id();
 	}

@@ -217,6 +217,22 @@ function axismundi_contacts_write_legacy_name_to_card( int $actor_id ) {
 }
 
 /**
+ * Carry one Actor's legacy name over, where doing so answers no question.
+ *
+ * Nothing happens unless the card is silent about the parts and reads as the same name, which is the
+ * whole of what "safe" means here. A disagreement is left standing for somebody to settle.
+ *
+ * @param int $actor_id Actor identity.
+ * @return bool Whether anything was carried over.
+ */
+function axismundi_contacts_adopt_legacy_name( int $actor_id ) : bool {
+	if ( 'adoptable' !== axismundi_contacts_legacy_name_state( $actor_id ) ) {
+		return false;
+	}
+	return true === axismundi_contacts_write_legacy_name_to_card( $actor_id );
+}
+
+/**
  * Carry over every legacy name the card side is silent about, and leave every disagreement alone.
  *
  * Safe to run again: an Actor already carried over compares equal and is skipped, and a conflict is
@@ -234,11 +250,7 @@ function axismundi_contacts_reconcile_legacy_names() : int {
 	$rows    = (array) $wpdb->get_col( "SELECT identity_id FROM {$table}" );
 	$carried = 0;
 	foreach ( $rows as $identity_id ) {
-		$actor_id = (int) $identity_id;
-		if ( 'adoptable' !== axismundi_contacts_legacy_name_state( $actor_id ) ) {
-			continue;
-		}
-		if ( true === axismundi_contacts_write_legacy_name_to_card( $actor_id ) ) {
+		if ( axismundi_contacts_adopt_legacy_name( (int) $identity_id ) ) {
 			++$carried;
 		}
 	}

@@ -86,66 +86,33 @@ try {
 			&& '' === axismundi_actors_jscontact_kind( 'Service' )
 	);
 
-	// -- a name in parts, in the order it is read -------------------------------------------------------
+	// -- what Actors contributes, and what it no longer claims ---------------------------------------------
 
 	/*
-	 * The parts are stored once, in this Actor's own language. Another language is a written-out name
-	 * and nothing more: nobody is asked to re-enter `Jiwoon` and `Kim` as components to say their
-	 * profile in English as well.
+	 * The parts of a name are the card's. What Actors contributes to a Card is what it is the
+	 * authority on -- the primary language, the other languages it is written in, and the
+	 * anniversaries it publishes -- and every one of those other languages is a written-out string
+	 * rather than a second set of components.
 	 */
 	axismundi_actors_set_default_language( $ax_jc_id, 'ko-KR' );
-	axismundi_actors_set_person_name( $ax_jc_id, array( 'structured_name_language' => 'ko-KR', 'surname' => '김', 'given' => '지운', 'display_order' => 'family-given' ) );
+	axismundi_actors_set_text( $ax_jc_id, 'name', 'ko-KR', '김지운' );
 	axismundi_actors_set_text( $ax_jc_id, 'name', 'en', 'Jiwoon Kim' );
 	$ax_jc_card = axismundi_actors_jscontact_card( axismundi_actors_get_by_identity( $ax_jc_id ) );
-	/*
-	 * Read from the assembler rather than from the published card. The card owns its own components
-	 * now; what is checked here is the part Actors still answers -- how a stored name reads in parts.
-	 */
-	$ax_jc_name = axismundi_actors_jscontact_name( axismundi_actors_person_profile( $ax_jc_id ) );
-	/*
-	 * Order belongs to the person, not to the language: the same components read one way in Korean and
-	 * the other in English, and a consumer told `isOrdered` must not reassemble them its own way.
-	 */
 	ax_jc_assert(
 		$ax_jc_results,
-		'the components are given in the order they are read, and said to be ordered',
-		'김지운' === (string) $ax_jc_name['full']
-			&& true === $ax_jc_name['isOrdered']
-			&& 'surname' === (string) $ax_jc_name['components'][0]['kind']
-			&& 'given' === (string) $ax_jc_name['components'][1]['kind']
-	);
-	axismundi_actors_set_person_name( $ax_jc_id, array( 'display_order' => 'family-given-compact' ) );
-	$ax_jc_compact_card = array( 'name' => axismundi_actors_jscontact_name( axismundi_actors_person_profile( $ax_jc_id ) ) );
-	ax_jc_assert(
-		$ax_jc_results,
-		'a compact family-first name keeps its component order while its full form omits the space',
-		'김지운' === (string) $ax_jc_compact_card['name']['full']
-			&& 'surname' === (string) $ax_jc_compact_card['name']['components'][0]['kind']
-			&& 'given' === (string) $ax_jc_compact_card['name']['components'][1]['kind']
-	);
-	axismundi_actors_set_person_name( $ax_jc_id, array( 'surname' => 'Garcia', 'surname2' => 'Marquez', 'given' => 'Gabriel', 'display_order' => 'given-family' ) );
-	$ax_jc_surname2_card = array( 'name' => axismundi_actors_jscontact_name( axismundi_actors_person_profile( $ax_jc_id ) ) );
-	ax_jc_assert(
-		$ax_jc_results,
-		'a second family name becomes the standard surname2 component',
-		'Gabriel Garcia Marquez' === (string) $ax_jc_surname2_card['name']['full']
-			&& 'surname' === (string) $ax_jc_surname2_card['name']['components'][1]['kind']
-			&& 'surname2' === (string) $ax_jc_surname2_card['name']['components'][2]['kind']
-	);
-	axismundi_actors_set_person_name( $ax_jc_id, array( 'surname' => '김', 'surname2' => '', 'given' => '지운', 'display_order' => 'family-given' ) );
-	/*
-	 * And another language is a localization of the same Card rather than a second Card -- carrying
-	 * `full` alone, because that is all that language stores. Claiming components for it would be this
-	 * site deciding which half of `Jiwoon Kim` is a surname, which nobody asked it to decide.
-	 */
-	ax_jc_assert(
-		$ax_jc_results,
-		'another language is a localization carrying a written-out name and no invented components',
+		'a localization carries a written-out name and never components this site would have to invent',
 		isset( $ax_jc_card['localizations']['en']['name'] )
 			&& 'Jiwoon Kim' === (string) $ax_jc_card['localizations']['en']['name']['full']
 			&& ! isset( $ax_jc_card['localizations']['en']['name']['components'] )
+			&& ! isset( $ax_jc_card['localizations']['en']['name']['isOrdered'] )
 	);
-	// The display name follows the parts without either being derived from the other in storage.
+	ax_jc_assert(
+		$ax_jc_results,
+		'the Actor says which language it answers in, and nothing here builds a name out of parts',
+		'ko-KR' === (string) ( $ax_jc_card['language'] ?? '' )
+			&& ! function_exists( 'axismundi_actors_jscontact_name' )
+	);
+	// The name each language answers with is the string stored for it, and nothing else.
 	ax_jc_assert(
 		$ax_jc_results,
 		'and the same facts answer for the display name in each language',
@@ -169,11 +136,11 @@ try {
 		! isset( $ax_jc_pcard['name']['components'] )
 			&& ( ! isset( $ax_jc_pcard['name'] ) || '' !== (string) ( $ax_jc_pcard['name']['full'] ?? '' ) )
 	);
-	// A Group is not a person and has no table row inviting one to be given a surname.
+	// A profile is authored here for an Actor this site keeps, and for no other.
 	ax_jc_assert(
 		$ax_jc_results,
-		'a Group cannot be given a given name',
-		is_wp_error( axismundi_actors_set_person_name( $ax_jc_id + 100000, array( 'given' => 'Nope' ) ) )
+		'a profile cannot be written for an Actor that is not ours',
+		is_wp_error( axismundi_actors_write_person_profile( $ax_jc_id + 100000, array( 'display_name' => 'Nope' ) ) )
 	);
 
 	// -- what is not ours to mint ---------------------------------------------------------------------------
@@ -203,9 +170,9 @@ try {
 	);
 	ax_jc_assert(
 		$ax_jc_results,
-		'a remote name remains the received document rather than becoming locally authored components',
+		'a remote name remains the received document rather than becoming something authored here',
 		$ax_jc_remote instanceof Axismundi_Actor
-			&& is_wp_error( axismundi_actors_set_person_name( (int) $ax_jc_remote->get_identity_id(), array( 'given' => 'Invented' ) ) )
+			&& is_wp_error( axismundi_actors_write_person_profile( (int) $ax_jc_remote->get_identity_id(), array( 'display_name' => 'Invented' ) ) )
 	);
 	// -- contributed, not owned -----------------------------------------------------------------------------
 

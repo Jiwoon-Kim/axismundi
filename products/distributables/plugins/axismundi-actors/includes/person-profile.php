@@ -138,7 +138,6 @@ function axismundi_actors_write_person_profile( int $identity_id, array $changes
 		}
 	}
 	axismundi_actors_mark_person_name_edited( $identity_id );
-	axismundi_actors_publish_structured_name( $identity_id );
 	axismundi_actors_refresh_display_name( $identity_id );
 
 	/**
@@ -152,31 +151,6 @@ function axismundi_actors_write_person_profile( int $identity_id, array $changes
 	 */
 	do_action( 'axismundi_actors_person_name_written', $identity_id );
 	return true;
-}
-
-/**
- * Write what the components assemble to into that language's name.
- *
- * The map is the published truth: `name` and `nameMap` are plain strings for every language, and a
- * consumer never has to know that one of them happens to have parts behind it. So the components do
- * not compete with the map -- they feed it, in the one language they belong to, and every other
- * language keeps whatever was written out for it.
- *
- * @param int $identity_id Actor identity.
- * @return void
- */
-function axismundi_actors_publish_structured_name( int $identity_id ) : void {
-	$profile  = axismundi_actors_person_profile( $identity_id );
-	$language = axismundi_actors_normalize_language_tag( (string) ( $profile['structured_name_language'] ?? '' ) );
-	if ( array() === $profile || '' === $language ) {
-		return;
-	}
-	// A custom display name is the scalar public label, not a replacement for this language's nameMap
-	// spelling. Otherwise demoting Korean after choosing an English primary would overwrite ko-KR.
-	$assembled = axismundi_actors_assemble_person_name( array_merge( $profile, array( 'display_name' => '' ) ) );
-	if ( '' !== $assembled ) {
-		axismundi_actors_set_text( $identity_id, 'name', $language, $assembled );
-	}
 }
 
 /**
@@ -224,9 +198,10 @@ function axismundi_actors_refresh_display_name( int $identity_id ) : void {
 /**
  * Make one authored profile language the scalar Actor profile.
  *
- * A Person has one structured-name set. When it moves to a different written profile, the existing
- * full name becomes the given-name fallback rather than being split or replaced by components from
- * the old language. The old language remains intact as a plain nameMap entry.
+ * Nothing moves. Every language keeps the name written for it, and this says which of them a reader
+ * that asked for no language in particular gets. It used to have to shuffle name components between
+ * languages as well; they live on the contact card now, which has no primary language to be
+ * promoted into.
  *
  * @param int    $identity_id Actor identity.
  * @param string $language    Authored profile language to promote.
@@ -243,39 +218,6 @@ function axismundi_actors_make_profile_primary( int $identity_id, string $langua
 	if ( '' === $name ) {
 		return new WP_Error( 'ax_actors_primary_name', __( 'Write a name for this profile before making it primary.', 'axismundi-actors' ) );
 	}
-	if ( 'Person' === $actor->get_type() ) {
-		$profile    = axismundi_actors_person_profile( $identity_id );
-		$structured = axismundi_actors_normalize_language_tag( (string) ( $profile['structured_name_language'] ?? '' ) );
-		if ( $structured !== $language ) {
-			$old_name = axismundi_actors_assemble_person_name( array_merge( $profile, array( 'display_name' => '' ) ) );
-			if ( '' !== $structured && '' !== $old_name ) {
-				axismundi_actors_set_text( $identity_id, 'name', $structured, $old_name );
-			}
-			$result = axismundi_actors_set_person_name(
-				$identity_id,
-				array(
-					'structured_name_language' => $language,
-					'given'                    => $name,
-					'given2'                   => '',
-					'surname'                  => '',
-					'surname2'                 => '',
-					'title'                    => '',
-					'credential'               => '',
-					'display_order'            => 'given-family',
-					'display_name'             => '',
-					'phonetic_given'           => '',
-					'phonetic_given2'          => '',
-					'phonetic_surname'         => '',
-					'phonetic_surname2'        => '',
-					'phonetic_system'          => '',
-					'phonetic_script'          => '',
-				)
-			);
-			if ( is_wp_error( $result ) ) {
-				return $result;
-			}
-		}
-	}
 	$result = axismundi_actors_set_default_language( $identity_id, $language );
 	if ( ! is_wp_error( $result ) ) {
 		axismundi_actors_refresh_display_name( $identity_id );
@@ -290,9 +232,9 @@ function axismundi_actors_make_profile_primary( int $identity_id, string $langua
  * disagreeing copies of a name somebody chose: picking the card means the values here are no longer
  * anybody's answer, and the only way to say that without inventing a flag is to stop holding them.
  *
- * Not `axismundi_actors_clear_person_name()`, which clears the whole profile. A pronunciation is
- * still Actors' own -- no card carries one yet -- and taking it away because somebody settled a
- * question about surnames would remove a fact nobody asked about.
+ * Narrow on purpose: it clears the components and the reading order, and leaves the rest of the
+ * profile where it is. A pronunciation is still Actors' own -- no card carries one yet -- and taking
+ * it away because somebody settled a question about surnames would remove a fact nobody asked about.
  *
  * Goes when the columns do.
  *
@@ -328,6 +270,44 @@ function axismundi_actors_delete_person_profile( int $identity_id ) : void {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- logical child cleanup.
 		$wpdb->delete( axismundi_actors_profile_table(), array( 'identity_id' => $identity_id ), array( '%d' ) );
 	}
+}
+
+/**
+ * Join one old name row into the string it read as.
+ *
+ * Migration baggage. Actors used to assemble names for everybody and does not any more -- the parts
+ * are the card's -- but the fold below reads rows written before any of that and has to turn each
+ * one into the plain string its language always amounted to. Keeping its own copy is what lets the
+ * public assembler go now rather than at the end.
+ *
+ * Goes when the columns do.
+ *
+ * @param array<string,mixed> $row Old per-language name row.
+ * @return string
+ */
+function axismundi_actors_migration_join_name( array $row ) : string {
+	$order   = (string) ( $row['display_order'] ?? '' );
+	$written = trim( (string) ( $row['display_name'] ?? '' ) );
+	if ( '' !== $written || 'custom' === $order ) {
+		return $written;
+	}
+	$family        = trim( (string) ( $row['last_name'] ?? $row['surname'] ?? '' ) );
+	$second_family = trim( (string) ( $row['second_surname'] ?? $row['surname2'] ?? '' ) );
+	$given         = trim( (string) ( $row['first_name'] ?? $row['given'] ?? '' ) );
+	$middle        = trim( (string) ( $row['middle_name'] ?? $row['given2'] ?? '' ) );
+	$family_first  = in_array( $order, array( 'family-given', 'family-given-compact' ), true );
+	$compact       = in_array( $order, array( 'family-given-compact', 'given-family-compact' ), true );
+	$parts         = $family_first
+		? array( $family, $second_family, $given, $middle )
+		: array( $given, $middle, $family, $second_family );
+	$parts = array_values( array_filter( $parts, static fn( string $part ) : bool => '' !== $part ) );
+	if ( array() === $parts ) {
+		return '';
+	}
+	// A Korean name written 김 지운 is one word to a reader of it, so the separator follows the script
+	// rather than the order.
+	$separator = $compact || ( $family_first && ! preg_match( '/[A-Za-z]/', $family . $given ) ) ? '' : ' ';
+	return implode( $separator, $parts );
 }
 
 /**
@@ -400,7 +380,7 @@ function axismundi_actors_migrate_person_profile() : bool {
 			if ( $row === $base ) {
 				continue;
 			}
-			$assembled = axismundi_actors_assemble_person_name( $row );
+			$assembled = axismundi_actors_migration_join_name( $row );
 			if ( '' !== $assembled && '' === (string) ( axismundi_actors_get_text_map( $identity_id )[ $language ]['name'] ?? '' ) ) {
 				axismundi_actors_set_text( $identity_id, 'name', (string) $language, $assembled );
 			}

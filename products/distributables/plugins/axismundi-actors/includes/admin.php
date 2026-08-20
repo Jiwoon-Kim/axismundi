@@ -849,14 +849,6 @@ function axismundi_actors_enqueue_media_picker( string $hook ) : void {
 		array(),
 		file_exists( $fields_css ) ? (string) filemtime( $fields_css ) : false
 	);
-	$name_js = dirname( __DIR__ ) . '/assets/actor-profile-name.js';
-	wp_enqueue_script(
-		'axismundi-actors-profile-name',
-		plugins_url( 'assets/actor-profile-name.js', $base ),
-		array(),
-		file_exists( $name_js ) ? (string) filemtime( $name_js ) : false,
-		true
-	);
 }
 add_action( 'admin_enqueue_scripts', 'axismundi_actors_enqueue_media_picker' );
 
@@ -964,17 +956,12 @@ function axismundi_actors_text_form( Axismundi_Actor $actor ) : void {
 	$person_name = 'Person' === $actor->get_type() && $actor->is_local()
 		? axismundi_actors_person_profile( $actor->get_identity_id() )
 		: array();
-	// Name parts are edited on the primary profile. Saving them is the explicit act that says which
-	// language those components describe; a secondary translation never gets component inputs.
-	$structured  = 'Person' === $actor->get_type() && $actor->is_local() && $language === $primary;
-	// With parts written, the published name is what they assemble to, so it has one author.
-	$assembled   = $structured ? axismundi_actors_assemble_person_name( array_merge( $person_name, array( 'display_name' => '' ) ) ) : '';
-	$display_name_orders = array(
-		'given-family'         => axismundi_actors_assemble_person_name( array_merge( $person_name, array( 'display_order' => 'given-family', 'display_name' => '' ) ) ),
-		'given-family-compact' => axismundi_actors_assemble_person_name( array_merge( $person_name, array( 'display_order' => 'given-family-compact', 'display_name' => '' ) ) ),
-		'family-given'         => axismundi_actors_assemble_person_name( array_merge( $person_name, array( 'display_order' => 'family-given', 'display_name' => '' ) ) ),
-		'family-given-compact' => axismundi_actors_assemble_person_name( array_merge( $person_name, array( 'display_order' => 'family-given-compact', 'display_name' => '' ) ) ),
-	);
+	/*
+	 * The label and the pronunciation are edited on the primary profile, and nothing else about a name
+	 * is edited here at all. The parts of a name live on the contact card now, and the box below is a
+	 * plain string: typed here, or followed from a card by a binding, or left as it was.
+	 */
+	$structured = 'Person' === $actor->get_type() && $actor->is_local() && $language === $primary;
 	?>
 	<h2><?php esc_html_e( 'Profile languages', 'axismundi-actors' ); ?></h2>
 	<p class="description"><?php esc_html_e( 'Translations are optional. Empty fields continue to use the live WordPress profile or site value.', 'axismundi-actors' ); ?></p>
@@ -1035,10 +1022,7 @@ function axismundi_actors_text_form( Axismundi_Actor $actor ) : void {
 			<tr>
 				<th scope="row"><label for="ax-actor-name"><?php esc_html_e( 'Name', 'axismundi-actors' ); ?></label></th>
 				<td>
-					<input id="ax-actor-name" name="name" value="<?php echo esc_attr( '' !== $assembled ? $assembled : ( $map[ $language ]['name'] ?? '' ) ); ?>" class="regular-text" <?php echo '' !== $assembled ? 'readonly' : ''; ?>>
-					<?php if ( '' !== $assembled ) : ?>
-						<p class="description"><?php esc_html_e( 'Assembled from the name details below, so it has one author rather than two.', 'axismundi-actors' ); ?></p>
-					<?php endif; ?>
+					<input id="ax-actor-name" name="name" value="<?php echo esc_attr( (string) ( $map[ $language ]['name'] ?? '' ) ); ?>" class="regular-text">
 				</td>
 			</tr>
 			<tr>
@@ -1047,25 +1031,18 @@ function axismundi_actors_text_form( Axismundi_Actor $actor ) : void {
 			</tr>
 			<?php if ( $structured ) : ?>
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Person name details', 'axismundi-actors' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'How this name is shown and said', 'axismundi-actors' ); ?></th>
 					<td>
-						<div style="max-width:26em">
-							<p><label for="ax-actor-given" style="display:block"><?php esc_html_e( 'Given name', 'axismundi-actors' ); ?></label><input id="ax-actor-given" name="given" value="<?php echo esc_attr( (string) ( $person_name['given'] ?? '' ) ); ?>" class="regular-text"></p>
-							<p><label for="ax-actor-given2" style="display:block"><?php esc_html_e( 'Second given name', 'axismundi-actors' ); ?></label><input id="ax-actor-given2" name="given2" value="<?php echo esc_attr( (string) ( $person_name['given2'] ?? '' ) ); ?>" class="regular-text"></p>
-							<p><label for="ax-actor-surname" style="display:block"><?php esc_html_e( 'Family name', 'axismundi-actors' ); ?></label><input id="ax-actor-surname" name="surname" value="<?php echo esc_attr( (string) ( $person_name['surname'] ?? '' ) ); ?>" class="regular-text"></p>
-							<p><label for="ax-actor-surname2" style="display:block"><?php esc_html_e( 'Second family name', 'axismundi-actors' ); ?></label><input id="ax-actor-surname2" name="surname2" value="<?php echo esc_attr( (string) ( $person_name['surname2'] ?? '' ) ); ?>" class="regular-text"></p>
-						</div>
-						<p>
-							<label for="ax-actor-display-order" style="display:block"><?php esc_html_e( 'Display name publicly as', 'axismundi-actors' ); ?></label>
-							<select id="ax-actor-display-order" name="display_order">
-								<option value="given-family" data-empty-label="<?php echo esc_attr__( 'Given name Family name', 'axismundi-actors' ); ?>" <?php selected( (string) ( $person_name['display_order'] ?? 'given-family' ), 'given-family' ); ?>><?php echo esc_html( $display_name_orders['given-family'] ?: __( 'Given name Family name', 'axismundi-actors' ) ); ?></option>
-								<option value="given-family-compact" data-empty-label="<?php echo esc_attr__( 'Given nameFamily name', 'axismundi-actors' ); ?>" <?php selected( (string) ( $person_name['display_order'] ?? '' ), 'given-family-compact' ); ?>><?php echo esc_html( $display_name_orders['given-family-compact'] ?: __( 'Given nameFamily name', 'axismundi-actors' ) ); ?></option>
-								<option value="family-given" data-empty-label="<?php echo esc_attr__( 'Family name Given name', 'axismundi-actors' ); ?>" <?php selected( (string) ( $person_name['display_order'] ?? 'given-family' ), 'family-given' ); ?>><?php echo esc_html( $display_name_orders['family-given'] ?: __( 'Family name Given name', 'axismundi-actors' ) ); ?></option>
-								<option value="family-given-compact" data-empty-label="<?php echo esc_attr__( 'Family nameGiven name', 'axismundi-actors' ); ?>" <?php selected( (string) ( $person_name['display_order'] ?? '' ), 'family-given-compact' ); ?>><?php echo esc_html( $display_name_orders['family-given-compact'] ?: __( 'Family nameGiven name', 'axismundi-actors' ) ); ?></option>
-								<option value="custom" <?php selected( (string) ( $person_name['display_order'] ?? '' ), 'custom' ); ?>><?php esc_html_e( 'Custom name', 'axismundi-actors' ); ?></option>
-							</select>
-						</p>
-						<p><label for="ax-actor-custom-display-name" style="display:block"><?php esc_html_e( 'Custom display name', 'axismundi-actors' ); ?></label><input id="ax-actor-custom-display-name" name="display_name" value="<?php echo esc_attr( (string) ( $person_name['display_name'] ?? '' ) ); ?>" class="regular-text"></p>
+						<?php
+						/*
+						 * A label somebody chose for this Actor, and how the name is pronounced. The parts it
+						 * is made of are not here: they belong to the contact card, which is where a title and
+						 * a credential already lived, and holding a second copy of them is what let the two
+						 * disagree.
+						 */
+						?>
+						<p><label for="ax-actor-custom-display-name" style="display:block"><?php esc_html_e( 'Shown as', 'axismundi-actors' ); ?></label><input id="ax-actor-custom-display-name" name="display_name" value="<?php echo esc_attr( (string) ( $person_name['display_name'] ?? '' ) ); ?>" class="regular-text"></p>
+						<p class="description"><?php esc_html_e( 'Left empty, this Actor is shown as the name written above for its primary language.', 'axismundi-actors' ); ?></p>
 						<?php /* One name, said one way: a pronunciation belongs to the parts and not to each translation. */ ?>
 						<p>
 							<label for="ax-actor-ph-system" style="display:block"><?php esc_html_e( 'Pronunciation notation or script', 'axismundi-actors' ); ?></label>
@@ -1499,7 +1476,7 @@ function axismundi_actors_handle_set_texts() : void {
 			if ( ! is_wp_error( $result ) && 'Person' === $actor->get_type() && $actor->is_local() ) {
 				$profile = axismundi_actors_person_profile( $identity_id );
 				if ( $language === axismundi_actors_normalize_language_tag( (string) ( $profile['structured_name_language'] ?? '' ) ) ) {
-					$result = axismundi_actors_set_person_name( $identity_id, array( 'structured_name_language' => $target_language ) );
+					$result = axismundi_actors_write_person_profile( $identity_id, array( 'structured_name_language' => $target_language ) );
 				}
 			}
 		}
@@ -1507,36 +1484,29 @@ function axismundi_actors_handle_set_texts() : void {
 			$language = $target_language;
 		}
 	}
-	$values   = array( 'summary' => isset( $_POST['summary'] ) ? wp_kses_post( wp_unslash( $_POST['summary'] ) ) : '' );
+	$values = array(
+		'summary' => isset( $_POST['summary'] ) ? wp_kses_post( wp_unslash( $_POST['summary'] ) ) : '',
+		// Always what was typed. Nothing assembles this string any more, so nothing can be overwritten
+		// by a set of parts that published themselves a moment ago.
+		'name'    => isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '',
+	);
 	/*
-	 * Name details arrive only from the primary profile, because that is the only screen that offers
-	 * them. A secondary language sends a name and a summary and nothing else, and no submission ever
-	 * moves the parts between languages: where they live follows the primary language, and changing
-	 * that is its own decision rather than a side effect of typing here.
+	 * The label and the pronunciation arrive only from the primary profile, because that is the only
+	 * screen offering them. A secondary language sends a name and a summary and nothing else.
 	 */
 	if ( ! is_wp_error( $result ) && 'Person' === $actor->get_type() && $actor->is_local()
 		&& $source_language === $current_primary ) {
 		$parts = array( 'structured_name_language' => $language );
-		foreach ( array( 'given', 'given2', 'surname', 'surname2', 'display_order', 'display_name', 'phonetic_given', 'phonetic_given2', 'phonetic_surname', 'phonetic_surname2', 'phonetic_system', 'phonetic_script' ) as $field ) {
+		foreach ( array( 'display_name', 'phonetic_given', 'phonetic_given2', 'phonetic_surname', 'phonetic_surname2', 'phonetic_system', 'phonetic_script' ) as $field ) {
 			// Present-and-empty clears the stored value; a field this form did not send is left alone.
 			if ( isset( $_POST[ $field ] ) ) {
 				$parts[ $field ] = sanitize_text_field( wp_unslash( $_POST[ $field ] ) );
 			}
 		}
-		$outcome = axismundi_actors_set_person_name( $identity_id, $parts );
+		$outcome = axismundi_actors_write_person_profile( $identity_id, $parts );
 		if ( is_wp_error( $outcome ) ) {
 			$result = $outcome;
 		}
-		/*
-		 * The name box is read-only once there are parts, so a submission that carries them is not also
-		 * an edit of the string they assemble to. Writing it here would let a stale field overwrite what
-		 * the parts just published.
-		 */
-		if ( '' === axismundi_actors_assemble_person_name( axismundi_actors_person_profile( $identity_id ) ) ) {
-			$values['name'] = isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '';
-		}
-	} elseif ( ! is_wp_error( $result ) ) {
-		$values['name'] = isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '';
 	}
 	if ( ! is_wp_error( $result ) ) {
 		foreach ( $values as $field => $value ) {

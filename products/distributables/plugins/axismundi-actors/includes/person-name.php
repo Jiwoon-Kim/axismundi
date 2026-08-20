@@ -50,9 +50,6 @@ function axismundi_actors_alternate_names_table() : string {
  */
 const AXISMUNDI_ACTORS_NAME_ORDERS = array( 'family-given', 'family-given-compact', 'given-family', 'given-family-compact', 'custom' );
 
-/** The parts, in the order vCard's `N` lists them. */
-const AXISMUNDI_ACTORS_NAME_PARTS = array( 'surname', 'surname2', 'given', 'given2' );
-
 /** The parts a pronunciation can be given for, keyed by the part they are said for. */
 const AXISMUNDI_ACTORS_NAME_PHONETIC_PARTS = array(
 	'phonetic_surname'  => 'surname',
@@ -92,40 +89,6 @@ const AXISMUNDI_ACTORS_ALTERNATE_NAME_KINDS = array( 'nickname', 'former', 'birt
  * afterwards. The rest are stored because people want them recorded, and stop here.
  */
 const AXISMUNDI_ACTORS_PUBLISHED_ALTERNATE_NAME_KINDS = array( 'nickname' );
-
-/**
- * Store a local Person's name in parts.
- *
- * No language argument. The parts of a name are a fact about the person rather than about a
- * translation of them, so they are stored once; the other languages a profile is written in keep a
- * plain name in the text store, which is all somebody has to say in them.
- *
- * @param int                 $identity_id Actor identity.
- * @param array<string,mixed> $parts       Any of AXISMUNDI_ACTORS_PROFILE_COLUMNS.
- * @return true|WP_Error
- */
-function axismundi_actors_set_person_name( int $identity_id, array $parts ) {
-	$actor = axismundi_actors_get_by_identity( $identity_id );
-	/*
-	 * Local Persons only. A remote Actor's name is a string somebody else's server sent, and deciding
-	 * which half of it is a surname would be us inventing a fact about them and then re-inventing it
-	 * on the next fetch. What they sent stays what they sent.
-	 */
-	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || 'Person' !== $actor->get_type() ) {
-		return new WP_Error( 'ax_actors_name_kind', __( 'Only a local person has a given name here.', 'axismundi-actors' ), array( 'status' => 400 ) );
-	}
-	return axismundi_actors_write_person_profile( $identity_id, $parts );
-}
-
-/**
- * Remove a local Person's structured name, keeping the decision that it was removed.
- *
- * @param int $identity_id Actor identity.
- * @return true|WP_Error
- */
-function axismundi_actors_clear_person_name( int $identity_id ) {
-	return axismundi_actors_write_person_profile( $identity_id, array_fill_keys( AXISMUNDI_ACTORS_PROFILE_COLUMNS, '' ) );
-}
 
 /**
  * Settle the pronunciation of a row that is about to be written.
@@ -238,44 +201,6 @@ function axismundi_actors_person_name_was_edited( int $identity_id ) : bool {
 }
 
 /**
- * Assemble one stored row into the name to show.
- *
- * A stored display value wins outright -- somebody wrote it on purpose, and `custom` exists to say
- * exactly that. Otherwise the parts are joined in the stated order, and a row with no parts produces
- * nothing rather than an empty string pretending to be a name.
- *
- * @param array<string,mixed> $row Stored row.
- * @return string
- */
-function axismundi_actors_assemble_person_name( array $row ) : string {
-	$order   = (string) ( $row['display_order'] ?? '' );
-	$written = trim( (string) ( $row['display_name'] ?? '' ) );
-	if ( '' !== $written || 'custom' === $order ) {
-		return $written;
-	}
-	$family = trim( (string) ( $row['surname'] ?? '' ) );
-	$second_family = trim( (string) ( $row['surname2'] ?? '' ) );
-	$given  = trim( (string) ( $row['given'] ?? '' ) );
-	$middle = trim( (string) ( $row['given2'] ?? '' ) );
-	$family_first = in_array( $order, array( 'family-given', 'family-given-compact' ), true );
-	$compact      = in_array( $order, array( 'family-given-compact', 'given-family-compact' ), true );
-	$parts        = $family_first
-		? array( $family, $second_family, $given, $middle )
-		: array( $given, $middle, $family, $second_family );
-	$parts  = array_values( array_filter( $parts, static fn( string $part ) : bool => '' !== $part ) );
-	if ( array() === $parts ) {
-		return '';
-	}
-	/*
-	 * Joined without a space where the script does not use one. A Korean name written 김 지운 is one
-	 * word to a reader of it, and the separator is a property of the writing system rather than of the
-	 * order the parts are in.
-	 */
-	$separator = $compact || ( $family_first && ! preg_match( '/[A-Za-z]/', $family . $given ) ) ? '' : ' ';
-	return implode( $separator, $parts );
-}
-
-/**
  * The display name for one Actor in one language, from the parts if they are there.
  *
  * Falls through to the text store and then to whatever the Actor already answers with, so an Actor
@@ -292,54 +217,6 @@ function axismundi_actors_person_display_name( Axismundi_Actor $actor, string $l
 }
 
 
-
-/**
- * Offer the WordPress account's name as a starting point, once.
- *
- * A convenience and not a link. Somebody creating their first Actor has usually already typed their
- * name into the account screen, and asking again is a small rudeness; but the two are different
- * facts about different things -- one is how WordPress bylines a post author, the other is how a
- * person is known on the network -- so this copies and then lets go.
- *
- * Only when nobody has ever decided the Actor's name. Not "when the table is empty": somebody who
- * removed their structured name meant to remove it, and letting the account name reappear
- * afterwards would undo a decision without being asked, in the one direction nobody would think to
- * check.
- *
- * @param int $identity_id Actor identity.
- * @return true|WP_Error
- */
-function axismundi_actors_seed_person_name_from_user( int $identity_id ) {
-	$actor = axismundi_actors_get_by_identity( $identity_id );
-	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || 'Person' !== $actor->get_type() ) {
-		return new WP_Error( 'ax_actors_name_seed_kind', __( 'Only a local person has an account name to copy.', 'axismundi-actors' ), array( 'status' => 400 ) );
-	}
-	if ( axismundi_actors_person_name_was_edited( $identity_id ) ) {
-		return new WP_Error(
-			'ax_actors_name_seed_decided',
-			__( 'This Actor already has a name somebody decided. Copying the account name now would overwrite it.', 'axismundi-actors' ),
-			array( 'status' => 409 )
-		);
-	}
-	$user = get_userdata( (int) $actor->get_local_user_id() );
-	if ( ! $user instanceof WP_User ) {
-		return new WP_Error( 'ax_actors_name_seed_user', __( 'There is no account to copy a name from.', 'axismundi-actors' ), array( 'status' => 404 ) );
-	}
-	$given  = trim( (string) $user->first_name );
-	$family = trim( (string) $user->last_name );
-	if ( '' === $given && '' === $family ) {
-		return new WP_Error( 'ax_actors_name_seed_empty', __( 'The account has no first or last name to copy.', 'axismundi-actors' ), array( 'status' => 404 ) );
-	}
-	/*
-	 * Given-family, because that is the order the two WordPress fields are named in and the only order
-	 * they can honestly be read in. Someone whose name reads the other way changes it once, and that
-	 * edit is what stops this ever running again.
-	 */
-	return axismundi_actors_set_person_name(
-		$identity_id,
-		array( 'given' => $given, 'surname' => $family, 'display_order' => 'given-family' )
-	);
-}
 
 /**
  * The other names one Actor goes by, in the order they were put in.
@@ -445,54 +322,4 @@ function axismundi_actors_published_alternate_names( int $identity_id ) : array 
 		$out = array_merge( $out, axismundi_actors_alternate_names( $identity_id, $kind ) );
 	}
 	return $out;
-}
-
-/**
- * Move a Person's old free-text name into their given name, once.
- *
- * The name people typed years ago was a single string, and the base profile wants parts. Only the
- * given name is filled: splitting on a space would decide that somebody's surname is whatever came
- * last, which is wrong for most of the world and unrecoverable once written.
- *
- * Runs only where no base profile exists, so anybody who has since written their name in parts is
- * never overwritten by their own history. Remote Actors are excluded outright.
- *
- * @return void
- */
-function axismundi_actors_migrate_person_name_texts() : void {
-	global $wpdb;
-	$texts      = axismundi_actors_texts_table();
-	$actors     = axismundi_actors_actors_table();
-	$identities = axismundi_actors_identities_table();
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration over this plugin's own tables.
-	$rows = (array) $wpdb->get_results(
-		$wpdb->prepare(
-			"SELECT t.identity_id, t.value, t.language_tag, a.default_language FROM {$texts} t
-				INNER JOIN {$actors} a ON a.identity_id = t.identity_id
-				INNER JOIN {$identities} i ON i.id = t.identity_id
-				WHERE i.origin = 'local' AND a.actor_type = %s AND t.field_name = %s AND t.value <> ''
-				ORDER BY t.identity_id ASC, t.language_tag ASC",
-			'Person',
-			'name'
-		),
-		ARRAY_A
-	);
-	foreach ( $rows as $row ) {
-		$identity_id = (int) $row['identity_id'];
-		if ( array() !== axismundi_actors_person_profile( $identity_id ) ) {
-			continue;
-		}
-		$result = axismundi_actors_set_person_name(
-			$identity_id,
-			array(
-				// The parts belong to the language that string was written in, which is where they came from.
-				'structured_name_language' => (string) $row['language_tag'],
-				'given'                    => (string) $row['value'],
-			)
-		);
-		if ( is_wp_error( $result ) ) {
-			return;
-		}
-	}
-	update_option( 'ax_actors_person_name_text_migrated', '1', false );
 }

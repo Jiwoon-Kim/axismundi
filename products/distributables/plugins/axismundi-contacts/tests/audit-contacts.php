@@ -1647,7 +1647,9 @@ try {
 		$card  = axismundi_contacts_create_profile_card( $sid );
 		$card  = is_wp_error( $card ) ? 0 : (int) $card;
 		$loose[] = $card;
-		axismundi_actors_set_person_name( $sid, array_merge( array( 'structured_name_language' => 'en-US' ), $parts ) );
+		// Written straight into the columns, because nothing offers to write them any more. This is what
+		// an install that upgraded with a name on the Actor side actually looks like.
+		axismundi_actors_write_person_profile( $sid, array_merge( array( 'structured_name_language' => 'en-US' ), $parts ) );
 		return array( $sid, $card );
 	};
 
@@ -1784,6 +1786,79 @@ try {
 		'conflict' === $ax_ct_cu_state
 			&& 'Jiwoon of Busan' === (string) ( $ax_ct_cu_after['full'] ?? '' )
 			&& ! isset( $ax_ct_cu_after['components'] )
+	);
+
+	// -- a name an Actor shows is chosen, never assembled ------------------------------------------------------
+
+	/*
+	 * Actors stopped building names out of parts, so what an Actor answers with in a language now has
+	 * exactly three sources: a label somebody typed on the Actor, a card writing a binding points at,
+	 * or a string that was already there. Nothing fills a language in because a card happens to have
+	 * something that would fit.
+	 *
+	 * That is a contract rather than a gap. A card may carry `ko-Kore`, `ko-Latn` and `en` and the
+	 * Actor still answer in two locales, because which writing a German-speaking reader should see is
+	 * a choice somebody makes -- and a site that guessed it would be inventing an answer nobody gave.
+	 */
+	$ax_ct_nm_actor = ax_ct_actor( $ax_ct_users );
+	$ax_ct_nm_sid   = (int) $ax_ct_nm_actor->get_identity_id();
+	$ax_ct_nm_made  = axismundi_contacts_create_profile_card( $ax_ct_nm_sid );
+	$ax_ct_nm_card  = is_wp_error( $ax_ct_nm_made ) ? 0 : (int) $ax_ct_nm_made;
+	$ax_ct_loose[]  = $ax_ct_nm_card;
+
+	$ax_ct_nm_doc = axismundi_contacts_card_document( $ax_ct_nm_card );
+	$ax_ct_nm_doc['name'] = array( '@type' => 'Name', 'full' => 'Jiwoon Kim' );
+	$ax_ct_nm_doc = axismundi_contacts_set_localized_name( $ax_ct_nm_doc, 'ko-Latn', array( '@type' => 'Name', 'full' => 'Jiwoon KIM' ) );
+	axismundi_contacts_save_card_for_owner( $ax_ct_nm_sid, $ax_ct_nm_doc, $ax_ct_nm_card );
+
+	// A name typed on the Actor, in a locale pointed at nothing.
+	axismundi_actors_set_text( $ax_ct_nm_sid, 'name', 'de-DE', 'Eigener Name' );
+	axismundi_contacts_bind_actor_name( $ax_ct_nm_sid, 'en-US', 'ko-Latn' );
+
+	ax_ct_assert(
+		$ax_ct_results,
+		'a name written on the Actor and pointed at nothing stays exactly as it was written',
+		'Eigener Name' === (string) ( axismundi_actors_get_text_map( $ax_ct_nm_sid )['de-DE']['name'] ?? '' )
+			&& 'Jiwoon KIM' === (string) ( axismundi_actors_get_text_map( $ax_ct_nm_sid )['en-US']['name'] ?? '' )
+	);
+
+	// Changing the card reaches the locale that follows it, and only that one.
+	$ax_ct_nm_doc = axismundi_contacts_card_document( $ax_ct_nm_card );
+	$ax_ct_nm_doc = axismundi_contacts_set_localized_name( $ax_ct_nm_doc, 'ko-Latn', array( '@type' => 'Name', 'full' => 'Ji-woon Kim' ) );
+	axismundi_contacts_save_card_for_owner( $ax_ct_nm_sid, $ax_ct_nm_doc, $ax_ct_nm_card );
+	$ax_ct_nm_map = axismundi_actors_get_text_map( $ax_ct_nm_sid );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a card edit reaches the locale bound to it and leaves an unbound one alone',
+		'Ji-woon Kim' === (string) ( $ax_ct_nm_map['en-US']['name'] ?? '' )
+			&& 'Eigener Name' === (string) ( $ax_ct_nm_map['de-DE']['name'] ?? '' )
+	);
+
+	/*
+	 * And a writing the card offers that nothing points at does not become a locale. `ko-Latn` is on
+	 * the card and is not a language somebody chose to be shown in; making it one would decide, on
+	 * their behalf, that a reader asking for Korean-in-Latin-script should get it.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a writing the card offers creates no Actor locale of its own',
+		array_key_exists( 'ko-Latn', axismundi_contacts_name_representations( $ax_ct_nm_sid ) )
+			&& ! array_key_exists( 'ko-Latn', axismundi_actors_get_text_map( $ax_ct_nm_sid ) )
+	);
+
+	/*
+	 * The one that mattered most for the removal: a name already stored keeps standing. Nothing
+	 * republishes it, nothing regenerates it, and no assembler is left to overwrite it -- which is
+	 * exactly why removing the assembler was safe to do.
+	 */
+	$ax_ct_nm_actor = axismundi_actors_get_by_identity( $ax_ct_nm_sid );
+	ax_ct_assert(
+		$ax_ct_results,
+		'and the Actor still answers with what is stored, from a store nothing writes on its own',
+		$ax_ct_nm_actor instanceof Axismundi_Actor
+			&& 'Eigener Name' === axismundi_actors_person_display_name( $ax_ct_nm_actor, 'de-DE' )
+			&& ! function_exists( 'axismundi_contacts_sync_name_to_actor' )
+			&& ! function_exists( 'axismundi_contacts_sync_name_from_actor' )
 	);
 
 	ax_ct_assert(

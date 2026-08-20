@@ -800,9 +800,6 @@ function axismundi_actors_install() : void {
 	 * value once into `first_name`: rendering must not write data, and repeating this migration would
 	 * resurrect a structured name a person deliberately removed later.
 	 */
-	if ( '1' !== (string) get_option( 'ax_actors_person_name_text_migrated', '' ) && function_exists( 'axismundi_actors_migrate_person_name_texts' ) ) {
-		axismundi_actors_migrate_person_name_texts();
-	}
 	if (
 		in_array( 'avatar_attachment_id', $columns, true )
 		&& in_array( 'header_attachment_id', $columns, true )

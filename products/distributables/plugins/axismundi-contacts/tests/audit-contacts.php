@@ -2447,6 +2447,145 @@ try {
 	);
 	wp_set_current_user( 0 );
 
+	// -- an edit made through the editor becomes yours -----------------------------------------------------------
+
+	// Everything below is done as the person whose address book it is, through the route they use.
+	wp_set_current_user( (int) $ax_ct_dr_actor->get_local_user_id() );
+
+	/*
+	 * A value that came from an Actor is refreshed when the Actor changes, which is what makes linking
+	 * a contact worth doing. The moment somebody edits one, that has to stop being true of it -- or
+	 * the next refresh puts the Actor's answer back over the top of theirs.
+	 *
+	 * The screen form has always done this. Doing it only there would have made the editor this route
+	 * exists for the one place where editing a linked value did not make it yours.
+	 */
+	$ax_ct_pv_card = axismundi_contacts_save_card(
+		(int) $ax_ct_dr_book['id'],
+		array(
+			'@type'  => 'Card',
+			'kind'   => 'individual',
+			'name'   => array(
+				'@type'      => 'Name',
+				'full'       => 'Jiwoon Kim',
+				'isOrdered'  => true,
+				'components' => array(
+					array( '@type' => 'NameComponent', 'kind' => 'given', 'value' => 'Jiwoon' ),
+					array( '@type' => 'NameComponent', 'kind' => 'surname', 'value' => 'Kim' ),
+				),
+			),
+			'emails' => array( 'e1' => array( 'address' => 'from-actor@example.invalid', 'label' => 'Work' ) ),
+		)
+	);
+	$ax_ct_pv_id   = is_wp_error( $ax_ct_pv_card ) ? 0 : (int) $ax_ct_pv_card;
+	$ax_ct_loose[] = $ax_ct_pv_id;
+	axismundi_contacts_set_provenance( $ax_ct_pv_id, 'name', AXISMUNDI_CONTACTS_SOURCE_ACTOR );
+	axismundi_contacts_set_provenance( $ax_ct_pv_id, 'emails/e1', AXISMUNDI_CONTACTS_SOURCE_ACTOR );
+
+	/*
+	 * The edit that used to slip through: a surname corrected while the written-out name is left
+	 * alone. Nothing a list displays has changed, so a comparison of `name.full` saw no edit and the
+	 * value stayed the Actor's -- to be replaced on the next refresh by the name somebody had just
+	 * corrected.
+	 */
+	$ax_ct_pv_draft = (array) rest_do_request( new WP_REST_Request( 'GET', '/axismundi-contacts/v1/cards/' . $ax_ct_pv_id . '/draft' ) )->get_data();
+	$ax_ct_pv_edit  = (array) ( $ax_ct_pv_draft['card'] ?? array() );
+	$ax_ct_pv_edit['name']['components'][1]['value'] = 'KIM';
+	$ax_ct_pv_edit['emails']['e1']['label']          = 'Personal';
+	$ax_ct_pv_put = new WP_REST_Request( 'PUT', '/axismundi-contacts/v1/cards/' . $ax_ct_pv_id . '/draft' );
+	$ax_ct_pv_put->set_body_params( array( 'revision' => (int) ( $ax_ct_pv_draft['revision'] ?? 0 ), 'card' => $ax_ct_pv_edit ) );
+	$ax_ct_pv_res  = rest_do_request( $ax_ct_pv_put );
+	$ax_ct_pv_prov = axismundi_contacts_card_provenance( $ax_ct_pv_id );
+	ax_ct_assert(
+		$ax_ct_results,
+		'correcting a name in parts makes the name yours, even when the written-out form never moved',
+		200 === $ax_ct_pv_res->get_status()
+			&& AXISMUNDI_CONTACTS_SOURCE_LOCAL === (string) ( $ax_ct_pv_prov['name']['source'] ?? '' )
+			&& 'Jiwoon Kim' === (string) ( axismundi_contacts_card_document( $ax_ct_pv_id )['name']['full'] ?? '' )
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'and relabelling an entry is editing it, so that one becomes yours too',
+		AXISMUNDI_CONTACTS_SOURCE_LOCAL === (string) ( $ax_ct_pv_prov['emails/e1']['source'] ?? '' )
+			&& ! axismundi_contacts_source_may_write( $ax_ct_pv_id, 'emails/e1', AXISMUNDI_CONTACTS_SOURCE_ACTOR )
+	);
+
+	/*
+	 * And what was left alone keeps its source, so a refresh may still update it. Promoting everything
+	 * on every save would quietly unlink a contact somebody linked on purpose.
+	 */
+	$ax_ct_pv_second = (array) rest_do_request( new WP_REST_Request( 'GET', '/axismundi-contacts/v1/cards/' . $ax_ct_pv_id . '/draft' ) )->get_data();
+	$ax_ct_pv_note   = (array) ( $ax_ct_pv_second['card'] ?? array() );
+	$ax_ct_pv_note['notes'] = array( 'n1' => array( 'note' => 'Something unrelated.' ) );
+	axismundi_contacts_set_provenance( $ax_ct_pv_id, 'emails/e1', AXISMUNDI_CONTACTS_SOURCE_ACTOR );
+	$ax_ct_pv_put2 = new WP_REST_Request( 'PUT', '/axismundi-contacts/v1/cards/' . $ax_ct_pv_id . '/draft' );
+	$ax_ct_pv_put2->set_body_params( array( 'revision' => (int) ( $ax_ct_pv_second['revision'] ?? 0 ), 'card' => $ax_ct_pv_note ) );
+	rest_do_request( $ax_ct_pv_put2 );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a value nobody touched keeps its source, so the Actor it came from may still update it',
+		AXISMUNDI_CONTACTS_SOURCE_ACTOR === (string) ( axismundi_contacts_card_provenance( $ax_ct_pv_id )['emails/e1']['source'] ?? '' )
+	);
+
+	// -- the same person, two address books ----------------------------------------------------------------------
+
+	/*
+	 * A `uid` says two Cards are about the same somebody. It says nothing about who may change either
+	 * of them: that is decided by who owns the record. So the Card in my address book for Alice may
+	 * carry the `uid` from the Card Alice publishes about herself, and I may still call her what I
+	 * call her, add the number she gave me, and write a note she will never see.
+	 */
+	$ax_ct_uid_shared = 'urn:uuid:5f2c1b90-8a34-4e2f-9f01-2c5b6d7e8a90';
+	$ax_ct_uid_mine   = axismundi_contacts_save_card(
+		(int) $ax_ct_dr_book['id'],
+		array( '@type' => 'Card', 'kind' => 'individual', 'uid' => $ax_ct_uid_shared, 'name' => array( '@type' => 'Name', 'full' => 'Alice' ) )
+	);
+	$ax_ct_loose[] = is_wp_error( $ax_ct_uid_mine ) ? 0 : (int) $ax_ct_uid_mine;
+
+	$ax_ct_uid_actor = ax_ct_actor( $ax_ct_users );
+	$ax_ct_uid_sid   = (int) $ax_ct_uid_actor->get_identity_id();
+	$ax_ct_uid_book  = axismundi_contacts_book_for_actor( $ax_ct_uid_sid );
+	$ax_ct_books[]   = (int) ( $ax_ct_uid_book['id'] ?? 0 );
+	$ax_ct_uid_hers  = axismundi_contacts_save_card(
+		(int) $ax_ct_uid_book['id'],
+		array( '@type' => 'Card', 'kind' => 'individual', 'uid' => $ax_ct_uid_shared, 'name' => array( '@type' => 'Name', 'full' => 'Alice Smith' ) )
+	);
+	$ax_ct_loose[] = is_wp_error( $ax_ct_uid_hers ) ? 0 : (int) $ax_ct_uid_hers;
+
+	ax_ct_assert(
+		$ax_ct_results,
+		'two people may each keep a Card for the same somebody, under the same uid',
+		! is_wp_error( $ax_ct_uid_mine )
+			&& ! is_wp_error( $ax_ct_uid_hers )
+			&& (int) $ax_ct_uid_mine !== (int) $ax_ct_uid_hers
+			&& $ax_ct_uid_shared === (string) ( axismundi_contacts_card_document( (int) $ax_ct_uid_mine )['uid'] ?? '' )
+			&& $ax_ct_uid_shared === (string) ( axismundi_contacts_card_document( (int) $ax_ct_uid_hers )['uid'] ?? '' )
+	);
+
+	// Each edits their own, and neither reaches the other.
+	$ax_ct_uid_draft = (array) rest_do_request( new WP_REST_Request( 'GET', '/axismundi-contacts/v1/cards/' . (int) $ax_ct_uid_mine . '/draft' ) )->get_data();
+	$ax_ct_uid_edit  = (array) ( $ax_ct_uid_draft['card'] ?? array() );
+	$ax_ct_uid_edit['name']  = array( '@type' => 'Name', 'full' => "\xec\x95\xa8\xeb\xa6\xac\xec\x8a\xa4 \xeb\x88\x84\xeb\x82\x98" );
+	$ax_ct_uid_edit['notes'] = array( 'n1' => array( 'note' => 'Met in Busan.' ) );
+	$ax_ct_uid_put = new WP_REST_Request( 'PUT', '/axismundi-contacts/v1/cards/' . (int) $ax_ct_uid_mine . '/draft' );
+	$ax_ct_uid_put->set_body_params( array( 'revision' => (int) ( $ax_ct_uid_draft['revision'] ?? 0 ), 'card' => $ax_ct_uid_edit ) );
+	$ax_ct_uid_res = rest_do_request( $ax_ct_uid_put );
+	ax_ct_assert(
+		$ax_ct_results,
+		'what I call somebody in my address book is mine to decide, and never reaches theirs',
+		200 === $ax_ct_uid_res->get_status()
+			&& "\xec\x95\xa8\xeb\xa6\xac\xec\x8a\xa4 \xeb\x88\x84\xeb\x82\x98" === (string) ( axismundi_contacts_card_document( (int) $ax_ct_uid_mine )['name']['full'] ?? '' )
+			&& 'Alice Smith' === (string) ( axismundi_contacts_card_document( (int) $ax_ct_uid_hers )['name']['full'] ?? '' )
+			&& ! isset( axismundi_contacts_card_document( (int) $ax_ct_uid_hers )['notes'] )
+	);
+	// And the other owner's Card is still not mine to open, uid or no uid.
+	ax_ct_assert(
+		$ax_ct_results,
+		'and sharing a uid does not open somebody else’s record to me',
+		404 === rest_do_request( new WP_REST_Request( 'GET', '/axismundi-contacts/v1/cards/' . (int) $ax_ct_uid_hers . '/draft' ) )->get_status()
+	);
+	wp_set_current_user( 0 );
+
 	ax_ct_assert(
 		$ax_ct_results,
 		'this plugin stores address books and imitates neither the Actor registry nor its profiles',

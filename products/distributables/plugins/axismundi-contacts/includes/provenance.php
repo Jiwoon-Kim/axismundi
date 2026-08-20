@@ -95,6 +95,44 @@ function axismundi_contacts_card_provenance( int $card_id ) : array {
 }
 
 /**
+ * Whatever somebody changed by hand becomes theirs.
+ *
+ * A value that came from an Actor is refreshed when the Actor changes, which is what makes a linked
+ * contact worth linking. The moment a person edits one, that stops being true of it: they have said
+ * what this contact is called, and a later refresh must not put the Actor's answer back.
+ *
+ * Compared whole, not by the one string a list happens to show. An earlier version of this looked at
+ * `name.full` alone, so somebody who corrected a surname, added a title or changed the separator --
+ * and left the written-out form alone, or never had one -- stayed marked as following the Actor, and
+ * the next refresh took their edit away. The same applies to an entry: changing a label, or which
+ * address is preferred, is editing it.
+ *
+ * @param int                 $card_id Card.
+ * @param array<string,mixed> $before  Card as stored.
+ * @param array<string,mixed> $after   Card as submitted.
+ * @return void
+ */
+function axismundi_contacts_record_local_edits( int $card_id, array $before, array $after ) : void {
+	foreach ( array_keys( AXISMUNDI_CONTACTS_INDEXED_FIELDS ) as $field ) {
+		foreach ( (array) ( $after[ $field ] ?? array() ) as $entry_id => $entry ) {
+			if ( ( $before[ $field ][ $entry_id ] ?? null ) === $entry ) {
+				continue;
+			}
+			axismundi_contacts_set_provenance( $card_id, $field . '/' . (string) $entry_id, AXISMUNDI_CONTACTS_SOURCE_LOCAL );
+		}
+	}
+	/*
+	 * The name as a whole. Its parts, the order they are read in, what separates them and the
+	 * written-out form are one answer to one question, and changing any of them is somebody
+	 * answering it themselves.
+	 */
+	$after_name = $after['name'] ?? null;
+	if ( ( $before['name'] ?? null ) !== $after_name && is_array( $after_name ) && array() !== $after_name ) {
+		axismundi_contacts_set_provenance( $card_id, 'name', AXISMUNDI_CONTACTS_SOURCE_LOCAL );
+	}
+}
+
+/**
  * Whether a sync from one source may replace one entry.
  *
  * The rule that keeps an import from eating somebody's work: a source may replace what it wrote,

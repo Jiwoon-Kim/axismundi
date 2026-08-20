@@ -651,35 +651,6 @@ function axismundi_contacts_entries_from_request( string $field, string $value_k
 	return $out;
 }
 
-/**
- * Record that a person wrote these values themselves.
- *
- * Only where something changed. An imported value somebody edits by hand becomes theirs, which is
- * what stops the next sync from putting the old one back; an imported value they left alone keeps
- * its source, so that sync may still update it.
- *
- * @param int                 $card_id Card id.
- * @param array<string,mixed> $before  Document before the save.
- * @param array<string,mixed> $after   Document after it.
- * @return void
- */
-function axismundi_contacts_record_local_edits( int $card_id, array $before, array $after ) : void {
-	foreach ( AXISMUNDI_CONTACTS_INDEXED_FIELDS as $field => $value_key ) {
-		foreach ( (array) ( $after[ $field ] ?? array() ) as $entry_id => $entry ) {
-			$was = (string) ( $before[ $field ][ $entry_id ][ $value_key ] ?? '' );
-			$now = (string) ( $entry[ $value_key ] ?? '' );
-			if ( $was === $now ) {
-				continue;
-			}
-			axismundi_contacts_set_provenance( $card_id, $field . '/' . $entry_id, AXISMUNDI_CONTACTS_SOURCE_LOCAL );
-		}
-	}
-	$before_name = (string) ( $before['name']['full'] ?? '' );
-	$after_name  = (string) ( $after['name']['full'] ?? '' );
-	if ( $before_name !== $after_name && '' !== $after_name ) {
-		axismundi_contacts_set_provenance( $card_id, 'name', AXISMUNDI_CONTACTS_SOURCE_LOCAL );
-	}
-}
 
 /**
  * Say which card describes the Actor whose book this is.

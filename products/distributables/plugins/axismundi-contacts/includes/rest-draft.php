@@ -22,9 +22,14 @@
  * a Card: any of them refuses the whole request. A partly-applied save leaves a ledger nobody
  * authored, and the editor's own copy would still be the version that was rejected.
  *
- * Provenance is not here. It records where a value came from, which is a different question from
- * what the document says, and mixing it into the draft would have the editor round-tripping a fact
- * it did not author and cannot be responsible for.
+ * Provenance is in neither direction of the payload. It records where a value came from, which is a
+ * different question from what the document says, and mixing it in would have the editor
+ * round-tripping a fact it did not author. It is still written on save: whatever somebody changed by
+ * hand becomes theirs, so that refreshing the Actor a value came from does not take their edit away.
+ *
+ * A Card's `uid` is not authority over it. Two people may keep a Card for the same person, with the
+ * same `uid`, and each edits their own -- what may be changed is decided by who owns the record, and
+ * `uid` only says that the two are about the same somebody.
  *
  * @package AxismundiContacts
  */
@@ -187,16 +192,40 @@ function axismundi_contacts_rest_put_draft( WP_REST_Request $request ) {
 		$card['uid'] = (string) $row['uid'];
 	}
 
+	/*
+	 * The document and what it publishes are one save. They are two tables, and a request that wrote
+	 * the first and failed at the second would leave a Card published under a selection nobody chose
+	 * -- which on this route means values reaching strangers that the person had not agreed to.
+	 */
+	global $wpdb;
+	$before = axismundi_contacts_card_document( $card_id );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one save across two tables.
+	$wpdb->query( 'START TRANSACTION' );
 	$saved = axismundi_contacts_save_card_for_owner( $owner, $card, $card_id, (int) $request['revision'] );
 	if ( is_wp_error( $saved ) ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->query( 'ROLLBACK' );
 		return $saved;
 	}
 	if ( null !== $pointers ) {
 		$written = axismundi_contacts_set_published_pointers( $owner, $pointers );
 		if ( is_wp_error( $written ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->query( 'ROLLBACK' );
 			return $written;
 		}
 	}
+	/*
+	 * And whatever was changed by hand becomes this person's. A value that came from an Actor is
+	 * refreshed when the Actor changes; the moment somebody edits one, that has to stop being true of
+	 * it, or the next refresh puts the Actor's answer back over the top of theirs.
+	 *
+	 * The screen form has always done this. Doing it only there would have meant the editor this
+	 * route exists for was the one place where editing a linked value did not make it yours.
+	 */
+	axismundi_contacts_record_local_edits( $card_id, $before, axismundi_contacts_card_document( $card_id ) );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	$wpdb->query( 'COMMIT' );
 	// Read back rather than echoed: what the editor gets is what is stored, in the order it is stored.
 	return rest_ensure_response( axismundi_contacts_draft_payload( axismundi_contacts_get_card( $card_id ) ) );
 }

@@ -500,6 +500,42 @@ function axismundi_contacts_cards_for_owner( int $owner_actor_id, int $limit = 2
 }
 
 /**
+ * Count every Card one Contacts account keeps.
+ *
+ * This is deliberately separate from `cards_for_owner()`: the list is capped for
+ * an admin screen, while the sidebar count must not quietly become "200+" because
+ * somebody has a real address book.
+ *
+ * @param int $owner_actor_id Contacts-account Actor identity.
+ * @return int
+ */
+function axismundi_contacts_card_count_for_owner( int $owner_actor_id ) : int {
+	global $wpdb;
+	if ( $owner_actor_id <= 0 ) {
+		return 0;
+	}
+	$table = axismundi_contacts_cards_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed count in this plugin's own table.
+	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE owner_actor_id = %d", $owner_actor_id ) );
+}
+
+/**
+ * Count the Cards filed into one AddressBook.
+ *
+ * @param int $book_id AddressBook id.
+ * @return int
+ */
+function axismundi_contacts_card_count_in_book( int $book_id ) : int {
+	global $wpdb;
+	if ( $book_id <= 0 ) {
+		return 0;
+	}
+	$table = axismundi_contacts_memberships_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed count in this plugin's own table.
+	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE address_book_id = %d", $book_id ) );
+}
+
+/**
  * Find Cards in one book by a value somebody remembers.
  *
  * @param int    $book_id Address book id.

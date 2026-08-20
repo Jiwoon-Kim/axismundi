@@ -558,12 +558,26 @@ try {
 			&& 1 === count( array_filter( $ax_ct_shelf, static fn( array $b ) : bool => 1 === (int) $b['is_default'] ) )
 			&& 1 === (int) $ax_ct_shelf[0]['is_default']
 	);
+	ob_start();
+	axismundi_contacts_groups_sidebar( $ax_ct_owner, $ax_ct_book, (int) $ax_ct_second );
+	$ax_ct_sidebar = (string) ob_get_clean();
+	ax_ct_assert(
+		$ax_ct_results,
+		'AddressBooks render as private contact groups in the sidebar, not as group Cards or Group Actors',
+		str_contains( $ax_ct_sidebar, '>All contacts<' )
+			&& str_contains( $ax_ct_sidebar, '>Work<' )
+			&& str_contains( $ax_ct_sidebar, 'group=' . (int) $ax_ct_second )
+			&& str_contains( $ax_ct_sidebar, 'axismundi_contacts_create_group' )
+			&& ! str_contains( $ax_ct_sidebar, 'kind="group"' )
+	);
 	ax_ct_assert(
 		$ax_ct_results,
 		'a card filed into two books is one record seen from both, never a copy',
 		true === axismundi_contacts_add_card_to_book( $ax_ct_card, (int) $ax_ct_second )
 			&& array( $ax_ct_card ) === array_map( static fn( array $r ) : int => (int) $r['id'], axismundi_contacts_cards_in_book( (int) $ax_ct_second ) )
 			&& 2 === count( axismundi_contacts_card_books( $ax_ct_card ) )
+			&& 1 === axismundi_contacts_card_count_in_book( (int) $ax_ct_second )
+			&& count( axismundi_contacts_cards_for_owner( $ax_ct_owner_id ) ) === axismundi_contacts_card_count_for_owner( $ax_ct_owner_id )
 	);
 	/*
 	 * Unfiling is not deleting, and the difference is somebody's notes. A card taken out of every book

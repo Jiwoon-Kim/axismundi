@@ -1,0 +1,79 @@
+.ax-contacts-browser {
+	display: grid;
+	grid-template-columns: 13.5rem minmax(0, 1fr);
+	gap: 1.5rem;
+	margin-top: 1rem;
+}
+
+.ax-contacts-browser__sidebar {
+	border-right: 1px solid #dcdcde;
+	padding-right: 1rem;
+}
+
+.ax-contacts-browser__content {
+	min-width: 0;
+}
+
+.ax-contacts-groups h2 {
+	font-size: 0.875rem;
+	margin: 1.5rem 0 0.4rem;
+}
+
+.ax-contacts-groups h2:first-of-type {
+	margin-top: 1rem;
+}
+
+.ax-contacts-groups__item {
+	align-items: center;
+	border-radius: 3px;
+	color: #1d2327;
+	display: flex;
+	font-weight: 500;
+	gap: 0.5rem;
+	justify-content: space-between;
+	margin: 0.1rem 0;
+	padding: 0.45rem 0.5rem;
+	text-decoration: none;
+}
+
+.ax-contacts-groups__item:hover,
+.ax-contacts-groups__item:focus {
+	background: #f0f0f1;
+	color: #135e96;
+}
+
+.ax-contacts-groups__item.is-current {
+	background: #e7f5fe;
+	color: #135e96;
+}
+
+.ax-contacts-groups__item .count {
+	color: #646970;
+	font-size: 0.8125rem;
+	font-weight: 400;
+}
+
+.ax-contacts-groups__create {
+	border-top: 1px solid #dcdcde;
+	margin-top: 1rem;
+	padding-top: 1rem;
+}
+
+.ax-contacts-groups__create input {
+	box-sizing: border-box;
+	margin-bottom: 0.5rem;
+	width: 100%;
+}
+
+@media screen and (max-width: 782px) {
+	.ax-contacts-browser {
+		display: block;
+	}
+
+	.ax-contacts-browser__sidebar {
+		border-bottom: 1px solid #dcdcde;
+		border-right: 0;
+		margin-bottom: 1rem;
+		padding: 0 0 1rem;
+	}
+}

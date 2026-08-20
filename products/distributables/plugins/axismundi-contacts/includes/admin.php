@@ -57,16 +57,23 @@ function axismundi_contacts_admin_assets( string $hook ) : void {
 		(string) ( file_exists( $file ) ? filemtime( $file ) : AXISMUNDI_CONTACTS_VERSION ),
 		true
 	);
+	$css = plugin_dir_path( dirname( __FILE__ ) ) . 'assets/contacts.css';
+	wp_enqueue_style(
+		'axismundi-contacts-admin',
+		plugins_url( 'assets/contacts.css', dirname( __FILE__ ) . '/axismundi-contacts.php' ),
+		array(),
+		file_exists( $css ) ? (string) filemtime( $css ) : AXISMUNDI_CONTACTS_VERSION
+	);
 }
 add_action( 'admin_enqueue_scripts', 'axismundi_contacts_admin_assets' );
 
 /**
  * The address book of whoever is acting right now, or an honest explanation.
  *
- * @return array{actor:?Axismundi_Actor,book:array<string,mixed>,error:string}
+ * @return array{actor:?Axismundi_Actor,book:array<string,mixed>,default_book:array<string,mixed>,all:bool,error:string}
  */
 function axismundi_contacts_current_book() : array {
-	$none = array( 'actor' => null, 'book' => array(), 'error' => '' );
+	$none = array( 'actor' => null, 'book' => array(), 'default_book' => array(), 'all' => true, 'error' => '' );
 	if ( ! axismundi_contacts_ready() ) {
 		$unmet = axismundi_contacts_unmet_dependencies();
 		return array_merge(
@@ -87,17 +94,34 @@ function axismundi_contacts_current_book() : array {
 	if ( ! axismundi_contacts_can_use_book( (int) $actor->get_identity_id(), get_current_user_id() ) ) {
 		return array_merge( $none, array( 'error' => __( 'You cannot open this Actor&#8217;s address book.', 'axismundi-contacts' ) ) );
 	}
-	$book = axismundi_contacts_book_for_actor( (int) $actor->get_identity_id() );
-	if ( is_wp_error( $book ) ) {
-		return array_merge( $none, array( 'error' => $book->get_error_message() ) );
+	$default = axismundi_contacts_book_for_actor( (int) $actor->get_identity_id() );
+	if ( is_wp_error( $default ) ) {
+		return array_merge( $none, array( 'error' => $default->get_error_message() ) );
 	}
-	return array( 'actor' => $actor, 'book' => $book, 'error' => '' );
+	// A missing group means the virtual "All contacts" view, not the default book.
+	// The default book remains the filing target for a new Card made from that view.
+	$group_id = isset( $_GET['group'] ) ? absint( $_GET['group'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation.
+	if ( $group_id <= 0 ) {
+		return array( 'actor' => $actor, 'book' => $default, 'default_book' => $default, 'all' => true, 'error' => '' );
+	}
+	$group = axismundi_contacts_get_book( $group_id );
+	if ( array() === $group || (int) $group['owner_actor_id'] !== (int) $actor->get_identity_id() || (int) $group['is_default'] === 1 ) {
+		return array_merge( $none, array( 'error' => __( 'That contact group is not available.', 'axismundi-contacts' ) ) );
+	}
+	return array( 'actor' => $actor, 'book' => $group, 'default_book' => $default, 'all' => false, 'error' => '' );
 }
 
-/** The screen's own URL, optionally opening one card. */
-function axismundi_contacts_screen_url( int $card_id = -1 ) : string {
+/** The screen's own URL, optionally opening one card in one contact group. */
+function axismundi_contacts_screen_url( int $card_id = -1, int $group_id = 0 ) : string {
 	$url = admin_url( 'users.php?page=axismundi-contacts' );
-	return $card_id >= 0 ? add_query_arg( 'card', $card_id, $url ) : $url;
+	$args = array();
+	if ( $card_id >= 0 ) {
+		$args['card'] = $card_id;
+	}
+	if ( $group_id > 0 ) {
+		$args['group'] = $group_id;
+	}
+	return array() === $args ? $url : add_query_arg( $args, $url );
 }
 
 /**
@@ -115,6 +139,8 @@ function axismundi_contacts_render_screen() : void {
 	}
 	$actor   = $current['actor'];
 	$book    = $current['book'];
+	$default = $current['default_book'];
+	$all     = $current['all'];
 	$book_id = (int) $book['id'];
 	$self_id = axismundi_contacts_profile_card( (int) $book['owner_actor_id'] );
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing what to show, not writing.
@@ -132,27 +158,76 @@ function axismundi_contacts_render_screen() : void {
 	$editing = isset( $_GET['card'] ) ? absint( $_GET['card'] ) : -1;
 
 	if ( $editing >= 0 ) {
-		axismundi_contacts_card_editor( $book_id, $editing, $self_id );
+		axismundi_contacts_card_editor( $book_id, $editing, $self_id, $all, $all ? 0 : $book_id );
 		echo '</div>';
 		return;
 	}
 	?>
 	<h1 class="wp-heading-inline"><?php esc_html_e( 'Contacts', 'axismundi-contacts' ); ?></h1>
-	<a href="<?php echo esc_url( axismundi_contacts_screen_url( 0 ) ); ?>" class="page-title-action"><?php esc_html_e( 'Add contact', 'axismundi-contacts' ); ?></a>
+	<a href="<?php echo esc_url( axismundi_contacts_screen_url( 0, $all ? 0 : $book_id ) ); ?>" class="page-title-action"><?php esc_html_e( 'Add contact', 'axismundi-contacts' ); ?></a>
 	<hr class="wp-header-end">
-	<p class="description">
-		<?php
-		printf(
-			/* translators: %s: Actor display name. */
-			esc_html__( 'The address book kept by %s. Its cards are private to this Actor and are never published.', 'axismundi-contacts' ),
-			'<strong>' . esc_html( $actor->get_display_name() ) . '</strong>'
-		);
-		?>
-	</p>
+	<div class="ax-contacts-browser">
+		<?php axismundi_contacts_groups_sidebar( $actor, $default, $all ? 0 : $book_id ); ?>
+		<main class="ax-contacts-browser__content">
+			<p class="description">
+				<?php
+				printf(
+					/* translators: %s: Actor display name. */
+					esc_html__( 'The contacts kept by %s are private to this Actor and are never published.', 'axismundi-contacts' ),
+					'<strong>' . esc_html( $actor->get_display_name() ) . '</strong>'
+				);
+				?>
+			</p>
+			<?php axismundi_contacts_profile_band( $actor, $self_id ); ?>
+			<?php axismundi_contacts_card_list( $book_id, $self_id, $all ? axismundi_contacts_cards_for_owner( (int) $actor->get_identity_id() ) : axismundi_contacts_cards_in_book( $book_id ), $all ? __( 'All contacts', 'axismundi-contacts' ) : (string) $book['name'], $all ? 0 : $book_id ); ?>
+		</main>
+	</div>
 	<?php
-	axismundi_contacts_profile_band( $actor, $self_id );
-	axismundi_contacts_card_list( $book_id, $self_id, axismundi_contacts_cards_in_book( $book_id ) );
 	echo '</div>';
+}
+
+/**
+ * The private grouping browser for one Contacts account.
+ *
+ * These are AddressBooks rendered as the groups people expect in a personal
+ * address book. They are not JSContact group Cards (mailing/distribution lists)
+ * and they are not ActivityPub Group Actors.
+ *
+ * @param Axismundi_Actor     $actor        Acting Actor who owns the account.
+ * @param array<string,mixed> $default_book Default AddressBook, kept as the filing target.
+ * @param int                 $selected_id  Selected non-default group, or 0 for all contacts.
+ * @return void
+ */
+function axismundi_contacts_groups_sidebar( Axismundi_Actor $actor, array $default_book, int $selected_id ) : void {
+	$books = array_filter(
+		axismundi_contacts_books_for_actor( (int) $actor->get_identity_id() ),
+		static fn( array $book ) : bool => 1 !== (int) $book['is_default']
+	);
+	?>
+	<aside class="ax-contacts-browser__sidebar" aria-label="<?php esc_attr_e( 'Contact groups', 'axismundi-contacts' ); ?>">
+		<nav class="ax-contacts-groups">
+			<a class="ax-contacts-groups__item<?php echo 0 === $selected_id ? ' is-current' : ''; ?>" href="<?php echo esc_url( axismundi_contacts_screen_url() ); ?>">
+				<span><?php esc_html_e( 'All contacts', 'axismundi-contacts' ); ?></span>
+				<span class="count"><?php echo esc_html( (string) axismundi_contacts_card_count_for_owner( (int) $actor->get_identity_id() ) ); ?></span>
+			</a>
+			<h2><?php esc_html_e( 'Groups', 'axismundi-contacts' ); ?></h2>
+			<?php foreach ( $books as $group ) : ?>
+				<?php $group_id = (int) $group['id']; ?>
+				<a class="ax-contacts-groups__item<?php echo $group_id === $selected_id ? ' is-current' : ''; ?>" href="<?php echo esc_url( axismundi_contacts_screen_url( -1, $group_id ) ); ?>">
+					<span><?php echo esc_html( (string) $group['name'] ); ?></span>
+					<span class="count"><?php echo esc_html( (string) axismundi_contacts_card_count_in_book( $group_id ) ); ?></span>
+				</a>
+			<?php endforeach; ?>
+		</nav>
+		<form class="ax-contacts-groups__create" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="axismundi_contacts_create_group">
+			<?php wp_nonce_field( 'ax_contacts_create_group_' . (int) $default_book['id'] ); ?>
+			<label class="screen-reader-text" for="ax-contacts-group-name"><?php esc_html_e( 'New group name', 'axismundi-contacts' ); ?></label>
+			<input id="ax-contacts-group-name" name="group_name" type="text" placeholder="<?php esc_attr_e( 'New group', 'axismundi-contacts' ); ?>" required>
+			<button type="submit" class="button button-secondary"><?php esc_html_e( 'Add group', 'axismundi-contacts' ); ?></button>
+		</form>
+	</aside>
+	<?php
 }
 
 /**
@@ -160,10 +235,13 @@ function axismundi_contacts_render_screen() : void {
  *
  * @param int                            $book_id Address book id.
  * @param int                            $self_id Card marked as the owner's.
- * @param array<int,array<string,mixed>> $cards   Cards in the book.
+ * @param array<int,array<string,mixed>> $cards   Cards in the current view.
+ * @param string                          $title   Current view title.
+ * @param int                             $group_id Group query value, or 0 for all contacts.
  * @return void
  */
-function axismundi_contacts_card_list( int $book_id, int $self_id, array $cards ) : void {
+function axismundi_contacts_card_list( int $book_id, int $self_id, array $cards, string $title, int $group_id ) : void {
+	echo '<h2>' . esc_html( $title ) . '</h2>';
 	if ( array() === $cards ) {
 		echo '<p>' . esc_html__( 'Nothing saved yet.', 'axismundi-contacts' ) . '</p>';
 		return;
@@ -182,7 +260,7 @@ function axismundi_contacts_card_list( int $book_id, int $self_id, array $cards 
 				<?php $card_id = (int) $card['id']; ?>
 				<tr>
 					<td>
-						<a href="<?php echo esc_url( axismundi_contacts_screen_url( $card_id ) ); ?>">
+						<a href="<?php echo esc_url( axismundi_contacts_screen_url( $card_id, $group_id ) ); ?>">
 							<?php echo esc_html( '' !== (string) $card['display_name'] ? (string) $card['display_name'] : __( 'Untitled card', 'axismundi-contacts' ) ); ?>
 						</a>
 					</td>
@@ -195,6 +273,7 @@ function axismundi_contacts_card_list( int $book_id, int $self_id, array $cards 
 								<input type="hidden" name="action" value="axismundi_contacts_set_profile_card">
 								<input type="hidden" name="book_id" value="<?php echo esc_attr( (string) $book_id ); ?>">
 								<input type="hidden" name="card_id" value="<?php echo esc_attr( (string) $card_id ); ?>">
+								<input type="hidden" name="return_group" value="<?php echo esc_attr( (string) $group_id ); ?>">
 								<?php wp_nonce_field( 'ax_contacts_self_pointer_' . $book_id ); ?>
 								<button type="submit" class="button button-small"><?php esc_html_e( 'This is me', 'axismundi-contacts' ); ?></button>
 							</form>
@@ -215,12 +294,15 @@ function axismundi_contacts_card_list( int $book_id, int $self_id, array $cards 
  *
  * @param int $book_id Address book id.
  * @param int $card_id Card id, or 0 for a new one.
- * @param int $self_id Card marked as the owner's.
+ * @param int  $self_id  Card marked as the owner's.
+ * @param bool $all      Whether this is the virtual all-contacts view.
+ * @param int  $group_id Group query value, or 0 for all contacts.
  * @return void
  */
-function axismundi_contacts_card_editor( int $book_id, int $card_id, int $self_id ) : void {
-	$row = $card_id > 0 ? axismundi_contacts_get_card( $card_id ) : array();
-	if ( $card_id > 0 && ( array() === $row || ! in_array( $book_id, axismundi_contacts_card_books( $card_id ), true ) ) ) {
+function axismundi_contacts_card_editor( int $book_id, int $card_id, int $self_id, bool $all = false, int $group_id = 0 ) : void {
+	$row  = $card_id > 0 ? axismundi_contacts_get_card( $card_id ) : array();
+	$book = axismundi_contacts_get_book( $book_id );
+	if ( $card_id > 0 && ( array() === $row || array() === $book || (int) $row['owner_actor_id'] !== (int) $book['owner_actor_id'] || ( ! $all && ! in_array( $book_id, axismundi_contacts_card_books( $card_id ), true ) ) ) ) {
 		// A card id from another book is not this book's business, whatever the URL says.
 		echo '<h1>' . esc_html__( 'Contacts', 'axismundi-contacts' ) . '</h1>';
 		echo '<p>' . esc_html__( 'That card is not in this address book.', 'axismundi-contacts' ) . '</p>';
@@ -237,6 +319,7 @@ function axismundi_contacts_card_editor( int $book_id, int $card_id, int $self_i
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<input type="hidden" name="action" value="axismundi_contacts_save_card">
 		<input type="hidden" name="book_id" value="<?php echo esc_attr( (string) $book_id ); ?>">
+		<input type="hidden" name="return_group" value="<?php echo esc_attr( (string) $group_id ); ?>">
 		<input type="hidden" name="card_id" value="<?php echo esc_attr( (string) $card_id ); ?>">
 		<?php /* The revision this form was drawn from, so a save written against a stale view is refused. */ ?>
 		<input type="hidden" name="revision" value="<?php echo esc_attr( (string) ( $row['revision'] ?? 0 ) ); ?>">
@@ -271,11 +354,12 @@ function axismundi_contacts_card_editor( int $book_id, int $card_id, int $self_i
 		</table>
 		<?php submit_button( $card_id > 0 ? __( 'Save contact', 'axismundi-contacts' ) : __( 'Add contact', 'axismundi-contacts' ) ); ?>
 	</form>
-	<p><a href="<?php echo esc_url( axismundi_contacts_screen_url() ); ?>">&larr; <?php esc_html_e( 'Back to contacts', 'axismundi-contacts' ); ?></a></p>
+	<p><a href="<?php echo esc_url( axismundi_contacts_screen_url( -1, $group_id ) ); ?>">&larr; <?php esc_html_e( 'Back to contacts', 'axismundi-contacts' ); ?></a></p>
 	<?php if ( $card_id > 0 ) : ?>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return confirm( '<?php echo esc_js( __( 'Delete this contact?', 'axismundi-contacts' ) ); ?>' );">
 			<input type="hidden" name="action" value="axismundi_contacts_delete_card">
 			<input type="hidden" name="book_id" value="<?php echo esc_attr( (string) $book_id ); ?>">
+			<input type="hidden" name="return_group" value="<?php echo esc_attr( (string) $group_id ); ?>">
 			<input type="hidden" name="card_id" value="<?php echo esc_attr( (string) $card_id ); ?>">
 			<?php wp_nonce_field( 'ax_contacts_delete_' . $card_id ); ?>
 			<?php submit_button( __( 'Delete contact', 'axismundi-contacts' ), 'delete', 'submit', false ); ?>
@@ -567,6 +651,31 @@ function axismundi_contacts_handle_set_profile_card() : void {
 add_action( 'admin_post_axismundi_contacts_set_profile_card', 'axismundi_contacts_handle_set_profile_card' );
 
 /**
+ * Create one contact group for the acting Actor's Contacts account.
+ *
+ * A group is a named AddressBook in the personal UI. It does not create an
+ * ActivityPub Group Actor or a JSContact `kind: group` distribution-list Card.
+ *
+ * @return void
+ */
+function axismundi_contacts_handle_create_group() : void {
+	$current = axismundi_contacts_current_book();
+	if ( '' !== $current['error'] || ! $current['actor'] instanceof Axismundi_Actor ) {
+		wp_die( esc_html( '' !== $current['error'] ? $current['error'] : __( 'You cannot create a contact group.', 'axismundi-contacts' ) ), '', array( 'response' => 403 ) );
+	}
+	$default_book = $current['default_book'];
+	check_admin_referer( 'ax_contacts_create_group_' . (int) $default_book['id'] );
+	$name   = isset( $_POST['group_name'] ) ? sanitize_text_field( wp_unslash( $_POST['group_name'] ) ) : '';
+	$created = axismundi_contacts_create_book( (int) $current['actor']->get_identity_id(), $name );
+	if ( is_wp_error( $created ) ) {
+		axismundi_contacts_redirect_result( $created );
+	}
+	wp_safe_redirect( axismundi_contacts_screen_url( -1, (int) $created ) );
+	exit;
+}
+add_action( 'admin_post_axismundi_contacts_create_group', 'axismundi_contacts_handle_create_group' );
+
+/**
  * Remove one card from this book.
  *
  * @return void
@@ -599,7 +708,8 @@ add_action( 'admin_post_axismundi_contacts_delete_card', 'axismundi_contacts_han
 function axismundi_contacts_redirect_result( $result, int $card_id = -1 ) : void {
 	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- the handler verified the nonce.
 	$profile = isset( $_POST['return'] ) && 'profile' === sanitize_key( wp_unslash( $_POST['return'] ) );
-	$url     = $profile ? axismundi_contacts_profile_url() : axismundi_contacts_screen_url( $card_id );
+	$group_id = isset( $_POST['return_group'] ) ? absint( $_POST['return_group'] ) : 0;
+	$url      = $profile ? axismundi_contacts_profile_url() : axismundi_contacts_screen_url( $card_id, $group_id );
 	if ( is_wp_error( $result ) ) {
 		$url = add_query_arg( 'ax_contacts_error', rawurlencode( $result->get_error_message() ), $url );
 	}

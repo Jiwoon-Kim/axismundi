@@ -50,6 +50,7 @@ require_once __DIR__ . '/includes/actor-link.php';
 require_once __DIR__ . '/includes/name-sync.php';
 require_once __DIR__ . '/includes/public-projection.php';
 require_once __DIR__ . '/includes/jscontact.php';
+require_once __DIR__ . '/includes/rest-draft.php';
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/name-editor.php';
 	require_once __DIR__ . '/includes/card-detail.php';

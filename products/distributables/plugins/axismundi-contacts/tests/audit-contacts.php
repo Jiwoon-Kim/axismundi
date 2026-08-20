@@ -2267,6 +2267,186 @@ try {
 			&& 'A' === (string) ( $ax_ct_empty['name']['full'] ?? '' )
 	);
 
+	// -- the one door the editor writes through -----------------------------------------------------------------
+
+	/*
+	 * The visual form, the localizations screen and the Advanced JSON box are three views of one
+	 * document, so they read and write one thing. What this pins is that the document survives the
+	 * trip: a Card that lost whatever a view does not display would be lost by whichever view saved
+	 * last, and nobody would know which.
+	 */
+	$ax_ct_dr_actor = ax_ct_actor( $ax_ct_users );
+	$ax_ct_dr_sid   = (int) $ax_ct_dr_actor->get_identity_id();
+	$ax_ct_dr_book  = axismundi_contacts_book_for_actor( $ax_ct_dr_sid );
+	$ax_ct_books[]  = (int) ( $ax_ct_dr_book['id'] ?? 0 );
+	$ax_ct_dr_made  = axismundi_contacts_save_card( (int) $ax_ct_dr_book['id'], (array) $ax_ct_fixture );
+	$ax_ct_dr_id    = is_wp_error( $ax_ct_dr_made ) ? 0 : (int) $ax_ct_dr_made;
+	$ax_ct_loose[]  = $ax_ct_dr_id;
+
+	wp_set_current_user( (int) $ax_ct_users[ count( $ax_ct_users ) - 1 ] );
+
+	$ax_ct_dr_get = rest_do_request( new WP_REST_Request( 'GET', '/axismundi-contacts/v1/cards/' . $ax_ct_dr_id . '/draft' ) );
+	$ax_ct_dr_one = (array) $ax_ct_dr_get->get_data();
+
+	$ax_ct_dr_put = new WP_REST_Request( 'PUT', '/axismundi-contacts/v1/cards/' . $ax_ct_dr_id . '/draft' );
+	$ax_ct_dr_put->set_body_params(
+		array( 'revision' => (int) ( $ax_ct_dr_one['revision'] ?? 0 ), 'card' => (array) ( $ax_ct_dr_one['card'] ?? array() ) )
+	);
+	$ax_ct_dr_saved = rest_do_request( $ax_ct_dr_put );
+
+	$ax_ct_dr_get2 = rest_do_request( new WP_REST_Request( 'GET', '/axismundi-contacts/v1/cards/' . $ax_ct_dr_id . '/draft' ) );
+	$ax_ct_dr_two  = (array) $ax_ct_dr_get2->get_data();
+
+	$ax_ct_dr_lost = array();
+	$ax_ct_dr_add  = array();
+	ax_ct_preserves( (array) ( $ax_ct_dr_one['card'] ?? array() ), (array) ( $ax_ct_dr_two['card'] ?? array() ), $ax_ct_dr_lost );
+	ax_ct_collect_additions( (array) ( $ax_ct_dr_one['card'] ?? array() ), (array) ( $ax_ct_dr_two['card'] ?? array() ), $ax_ct_dr_add );
+	if ( array() !== $ax_ct_dr_lost || array() !== $ax_ct_dr_add ) {
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI fixture output.
+		printf( "       moved: %s %s\n", implode( ',', $ax_ct_dr_lost ), implode( ',', $ax_ct_dr_add ) );
+	}
+	ax_ct_assert(
+		$ax_ct_results,
+		'a whole Card goes out and comes back through the editor door unchanged',
+		200 === $ax_ct_dr_get->get_status()
+			&& 200 === $ax_ct_dr_saved->get_status()
+			&& array() === $ax_ct_dr_lost
+			&& array() === $ax_ct_dr_add
+			&& (int) ( $ax_ct_dr_two['revision'] ?? 0 ) > (int) ( $ax_ct_dr_one['revision'] ?? 0 )
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'and what it holds is the ledger and the revision it was read at, with no provenance mixed in',
+		array( 'card', 'revision' ) === array_keys( $ax_ct_dr_one )
+			&& isset( $ax_ct_dr_two['card']['localizations']['zh-Hant-TW']['name/phoneticScript'] )
+			&& isset( $ax_ct_dr_two['card']['example.com:favouriteColour'] )
+	);
+
+	/*
+	 * A save written against a version somebody else has replaced is refused whole. The editor still
+	 * holds its own copy, which is the point: a half-applied save would leave a ledger nobody authored
+	 * and an editor that could not tell which half it had.
+	 */
+	$ax_ct_dr_stale = new WP_REST_Request( 'PUT', '/axismundi-contacts/v1/cards/' . $ax_ct_dr_id . '/draft' );
+	$ax_ct_dr_stale->set_body_params(
+		array(
+			'revision' => (int) ( $ax_ct_dr_one['revision'] ?? 0 ),
+			'card'     => array_merge( (array) ( $ax_ct_dr_two['card'] ?? array() ), array( 'kind' => 'org' ) ),
+		)
+	);
+	$ax_ct_dr_refused = rest_do_request( $ax_ct_dr_stale );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a save written against a version that has been replaced changes nothing',
+		409 === $ax_ct_dr_refused->get_status()
+			&& 'individual' === (string) ( axismundi_contacts_card_document( $ax_ct_dr_id )['kind'] ?? '' )
+	);
+
+	/*
+	 * And a document that is not a Card is refused before anything is written. A hand-edited JSON box
+	 * can send anything, which is the whole reason this is checked here rather than trusted.
+	 */
+	$ax_ct_dr_bad = static function ( array $card ) use ( $ax_ct_dr_id, $ax_ct_dr_two ) {
+		$request = new WP_REST_Request( 'PUT', '/axismundi-contacts/v1/cards/' . $ax_ct_dr_id . '/draft' );
+		$request->set_body_params( array( 'revision' => (int) ( $ax_ct_dr_two['revision'] ?? 0 ), 'card' => $card ) );
+		return rest_do_request( $request )->get_status();
+	};
+	$ax_ct_dr_ok = (array) ( $ax_ct_dr_two['card'] ?? array() );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a document that is not a JSContact Card is refused, and a name that says nothing with it',
+		400 === $ax_ct_dr_bad( array_diff_key( $ax_ct_dr_ok, array( '@type' => true ) ) )
+			&& 400 === $ax_ct_dr_bad( array_merge( $ax_ct_dr_ok, array( 'version' => 7 ) ) )
+			&& 400 === $ax_ct_dr_bad( array_merge( $ax_ct_dr_ok, array( 'name' => array( '@type' => 'Name' ) ) ) )
+			&& 400 === $ax_ct_dr_bad( array_merge( $ax_ct_dr_ok, array( 'localizations' => array( 'en' => array( 'localizations/en' => 'x' ) ) ) ) )
+			&& 'individual' === (string) ( axismundi_contacts_card_document( $ax_ct_dr_id )['kind'] ?? '' )
+	);
+	/*
+	 * Either half of a name is a whole name. Components with nothing written out is what an import
+	 * brings; a written-out name that was never taken apart is how most of the world's names are best
+	 * recorded.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a name is complete written out, or complete in parts, and neither needs the other',
+		200 === $ax_ct_dr_bad( array_merge( $ax_ct_dr_ok, array( 'name' => array( '@type' => 'Name', 'full' => 'Prince' ) ) ) )
+	);
+
+	// -- what belongs to the Card an Actor publishes about itself -----------------------------------------------
+
+	/*
+	 * The public selection is one Card's, and absent rather than empty everywhere else. An ordinary
+	 * contact has no public policy to send, and a field that arrived anyway is a caller confused about
+	 * which Card this is rather than one asking to publish nothing.
+	 */
+	$ax_ct_dr_profile = axismundi_contacts_create_profile_card( $ax_ct_dr_sid );
+	$ax_ct_dr_pcard   = is_wp_error( $ax_ct_dr_profile ) ? 0 : (int) $ax_ct_dr_profile;
+	$ax_ct_loose[]    = $ax_ct_dr_pcard;
+	$ax_ct_dr_pget    = (array) rest_do_request( new WP_REST_Request( 'GET', '/axismundi-contacts/v1/cards/' . $ax_ct_dr_pcard . '/draft' ) )->get_data();
+
+	$ax_ct_dr_pput = new WP_REST_Request( 'PUT', '/axismundi-contacts/v1/cards/' . $ax_ct_dr_pcard . '/draft' );
+	$ax_ct_dr_pput->set_body_params(
+		array(
+			'revision'          => (int) ( $ax_ct_dr_pget['revision'] ?? 0 ),
+			'card'             => (array) ( $ax_ct_dr_pget['card'] ?? array() ),
+			'publishedPointers' => array( 'name', 'kind' ),
+		)
+	);
+	$ax_ct_dr_pres = rest_do_request( $ax_ct_dr_pput );
+	ax_ct_assert(
+		$ax_ct_results,
+		'the public selection travels with the Card that has one, and with no other',
+		array_key_exists( 'publishedPointers', $ax_ct_dr_pget )
+			&& ! array_key_exists( 'publishedPointers', $ax_ct_dr_one )
+			&& 200 === $ax_ct_dr_pres->get_status()
+			&& array( 'name', 'kind' ) === axismundi_contacts_published_pointers( $ax_ct_dr_sid )
+	);
+
+	$ax_ct_dr_wrong = new WP_REST_Request( 'PUT', '/axismundi-contacts/v1/cards/' . $ax_ct_dr_id . '/draft' );
+	$ax_ct_dr_wrong->set_body_params(
+		array(
+			'revision'          => (int) ( axismundi_contacts_get_card( $ax_ct_dr_id )['revision'] ?? 0 ),
+			'card'             => $ax_ct_dr_ok,
+			'publishedPointers' => array( 'name' ),
+		)
+	);
+	$ax_ct_dr_pbad = new WP_REST_Request( 'PUT', '/axismundi-contacts/v1/cards/' . $ax_ct_dr_pcard . '/draft' );
+	$ax_ct_dr_pbad->set_body_params(
+		array(
+			'revision'          => (int) ( axismundi_contacts_get_card( $ax_ct_dr_pcard )['revision'] ?? 0 ),
+			'card'             => (array) axismundi_contacts_card_document( $ax_ct_dr_pcard ),
+			'publishedPointers' => array( 'phones' ),
+		)
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'a selection sent for an ordinary contact is refused, and so is one naming nothing publishable',
+		400 === rest_do_request( $ax_ct_dr_wrong )->get_status()
+			&& 400 === rest_do_request( $ax_ct_dr_pbad )->get_status()
+			&& array( 'name', 'kind' ) === axismundi_contacts_published_pointers( $ax_ct_dr_sid )
+	);
+
+	// -- whose Card it is decides, not which group it was opened from -------------------------------------------
+
+	/*
+	 * A Card belongs to as many groups as somebody files it into, so which sidebar it was opened from
+	 * says nothing about who may change it. The answer comes from its owner, and somebody else's Card
+	 * answers the same way a Card that does not exist does -- so this route cannot be used to ask which
+	 * contacts a stranger keeps.
+	 */
+	$ax_ct_dr_other = ax_ct_actor( $ax_ct_users );
+	wp_set_current_user( (int) $ax_ct_users[ count( $ax_ct_users ) - 1 ] );
+	$ax_ct_dr_denied = rest_do_request( new WP_REST_Request( 'GET', '/axismundi-contacts/v1/cards/' . $ax_ct_dr_id . '/draft' ) );
+	$ax_ct_dr_ghost  = rest_do_request( new WP_REST_Request( 'GET', '/axismundi-contacts/v1/cards/99999999/draft' ) );
+	ax_ct_assert(
+		$ax_ct_results,
+		'somebody else’s contact answers exactly as one that does not exist',
+		404 === $ax_ct_dr_denied->get_status()
+			&& $ax_ct_dr_ghost->get_status() === $ax_ct_dr_denied->get_status()
+			&& $ax_ct_dr_other instanceof Axismundi_Actor
+	);
+	wp_set_current_user( 0 );
+
 	ax_ct_assert(
 		$ax_ct_results,
 		'this plugin stores address books and imitates neither the Actor registry nor its profiles',

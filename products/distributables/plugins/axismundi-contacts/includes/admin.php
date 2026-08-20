@@ -190,8 +190,14 @@ function axismundi_contacts_render_screen() : void {
 	$editing = 'edit' === $action && $item >= 0 ? $item : -1;
 	$reading = 'edit' === $action ? -1 : $item;
 
-	if ( $editing >= 0 ) {
-		axismundi_contacts_card_editor( $book_id, $editing, $self_id, $all, $all ? 0 : $book_id );
+	if ( $editing > 0 ) {
+		axismundi_contacts_card_editor_screen( $editing, $all ? 0 : $book_id );
+		echo '</div>';
+		return;
+	}
+	if ( 0 === $editing ) {
+		// A contact that does not exist yet has no draft to open, so it is made first and then edited.
+		axismundi_contacts_card_editor( $book_id, 0, $self_id, $all, $all ? 0 : $book_id );
 		echo '</div>';
 		return;
 	}

@@ -1,0 +1,122 @@
+<?php
+/**
+ * Where the Card editor is mounted, and what it is handed to start from.
+ *
+ * The screen is a heading and an empty element. Everything else is the editor, which reads and writes
+ * the draft route: this file does not save anything, and adding a form here would be a second way to
+ * write a Card whose rules were maintained separately from the first.
+ *
+ * The draft is handed over in the page rather than fetched, so the editor draws the Card on its first
+ * paint instead of an empty form that fills in a moment later. It is the same payload the route
+ * returns, from the same function, so there is one shape rather than two that must be kept in step.
+ *
+ * @package AxismundiContacts
+ */
+
+defined( 'ABSPATH' ) || exit;
+
+/**
+ * Load the editor on the screen that edits a Card.
+ *
+ * @param string $hook Current admin page.
+ * @return void
+ */
+function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
+	if ( ! str_contains( $hook, 'axismundi-contacts' ) ) {
+		return;
+	}
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing what to load, not writing.
+	$action = isset( $_GET['action'] ) ? sanitize_key( wp_unslash( $_GET['action'] ) ) : '';
+	if ( 'edit' !== $action ) {
+		return;
+	}
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing what to load, not writing.
+	$card_id = isset( $_GET['item'] ) ? absint( $_GET['item'] ) : 0;
+	$row     = axismundi_contacts_get_card( $card_id );
+	if ( array() === $row || ! axismundi_contacts_can_use_book( (int) $row['owner_actor_id'], get_current_user_id() ) ) {
+		return;
+	}
+
+	$plugin = dirname( __DIR__ ) . '/axismundi-contacts.php';
+	$script = dirname( __DIR__ ) . '/assets/admin/card-editor.js';
+	$style  = dirname( __DIR__ ) . '/assets/admin/card-editor.css';
+	if ( ! file_exists( $script ) ) {
+		return;
+	}
+	wp_enqueue_style(
+		'axismundi-contacts-card-editor',
+		plugins_url( 'assets/admin/card-editor.css', $plugin ),
+		array(),
+		AXISMUNDI_CONTACTS_VERSION . '-' . (string) filemtime( $style )
+	);
+	wp_enqueue_script(
+		'axismundi-contacts-card-editor',
+		plugins_url( 'assets/admin/card-editor.js', $plugin ),
+		array( 'wp-element', 'wp-api-fetch', 'wp-i18n' ),
+		// Versioned by mtime: a fixed string becomes the `ver=` query and serves yesterday's script
+		// from cache after every edit.
+		AXISMUNDI_CONTACTS_VERSION . '-' . (string) filemtime( $script ),
+		true
+	);
+	wp_set_script_translations( 'axismundi-contacts-card-editor', 'axismundi-contacts' );
+
+	$draft = axismundi_contacts_draft_payload( $row );
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing where Done returns to.
+	$group = isset( $_GET['group'] ) ? absint( $_GET['group'] ) : 0;
+	$config = array(
+		'draftPath'           => '/' . axismundi_contacts_rest_namespace() . '/cards/' . $card_id . '/draft',
+		'card'                => (object) $draft['card'],
+		'revision'            => (int) $draft['revision'],
+		'isProfile'           => array_key_exists( 'publishedPointers', $draft ),
+		'published'           => (array) ( $draft['publishedPointers'] ?? array() ),
+		'publishableSingular' => AXISMUNDI_CONTACTS_PUBLISHABLE_SINGULAR,
+		'publishableEntries'  => AXISMUNDI_CONTACTS_PUBLISHABLE_ENTRIES,
+		'backUrl'             => axismundi_contacts_screen_url( $card_id, $group ),
+	);
+	/*
+	 * `wp_add_inline_script()` rather than `wp_localize_script()`, which casts every value to a
+	 * string. A revision that arrived as "4" would be compared against a number and a Card's booleans
+	 * would all become "1", which is the shape of bug that is found weeks later in one field.
+	 */
+	wp_add_inline_script(
+		'axismundi-contacts-card-editor',
+		'window.axismundiContactsCardEditor = ' . wp_json_encode( $config ) . ';',
+		'before'
+	);
+}
+add_action( 'admin_enqueue_scripts', 'axismundi_contacts_enqueue_card_editor' );
+
+/**
+ * The screen the editor mounts into.
+ *
+ * Deliberately almost nothing. A heading, a link back to the record, and an element -- a card drawn
+ * here in PHP as well would be a second rendering of the same document, and the two would disagree
+ * the first time one of them was changed.
+ *
+ * @param int $card_id  Card being edited.
+ * @param int $group_id Group being browsed, so Done returns to it.
+ * @return void
+ */
+function axismundi_contacts_card_editor_screen( int $card_id, int $group_id ) : void {
+	$row = axismundi_contacts_get_card( $card_id );
+	if ( array() === $row ) {
+		echo '<h1>' . esc_html__( 'Edit contact', 'axismundi-contacts' ) . '</h1>';
+		echo '<p>' . esc_html__( 'That contact does not exist.', 'axismundi-contacts' ) . '</p>';
+		return;
+	}
+	$card = axismundi_contacts_card_document( $card_id );
+	$name = trim( axismundi_contacts_name_text( is_array( $card['name'] ?? null ) ? $card['name'] : array() ) );
+	?>
+	<p><a href="<?php echo esc_url( axismundi_contacts_screen_url( $card_id, $group_id ) ); ?>">&larr; <?php esc_html_e( 'Back to the contact', 'axismundi-contacts' ); ?></a></p>
+	<h1><?php echo esc_html( '' !== $name ? $name : __( '(no name)', 'axismundi-contacts' ) ); ?></h1>
+	<?php if ( axismundi_contacts_is_profile_card( $row ) ) : ?>
+		<p class="description">
+			<?php esc_html_e( 'This is the card this Actor publishes about itself. Who may read it is decided on My profile; what of it they receive is decided below.', 'axismundi-contacts' ); ?>
+		</p>
+	<?php endif; ?>
+	<div id="ax-contacts-card-editor"></div>
+	<noscript>
+		<p><?php esc_html_e( 'The card editor needs JavaScript. The contact itself is readable without it.', 'axismundi-contacts' ); ?></p>
+	</noscript>
+	<?php
+}

@@ -15,6 +15,7 @@ defined( 'ABSPATH' ) || exit( 1 );
 
 // WP-CLI does not load the administrator screen this fixture renders.
 require_once dirname( __DIR__ ) . '/includes/card-detail.php';
+require_once dirname( __DIR__ ) . '/includes/card-editor.php';
 require_once dirname( __DIR__ ) . '/includes/name-editor.php';
 require_once dirname( __DIR__ ) . '/includes/admin.php';
 require_once dirname( __DIR__ ) . '/includes/profile-screen.php';
@@ -2627,6 +2628,87 @@ try {
 		$ax_ct_results,
 		'and sharing a uid does not open somebody else’s record to me',
 		404 === rest_do_request( new WP_REST_Request( 'GET', '/axismundi-contacts/v1/cards/' . (int) $ax_ct_uid_hers . '/draft' ) )->get_status()
+	);
+	wp_set_current_user( 0 );
+
+	// -- the editor, and the one thing it may write through -----------------------------------------------------
+
+	/*
+	 * The screen is a heading and an empty element. Drawing the Card here in PHP as well would be a
+	 * second rendering of the same document, and the two would disagree the first time one of them
+	 * was changed.
+	 */
+	wp_set_current_user( (int) $ax_ct_dr_actor->get_local_user_id() );
+	ob_start();
+	axismundi_contacts_card_editor_screen( $ax_ct_dr_id, 0 );
+	$ax_ct_ed_screen = (string) ob_get_clean();
+	ax_ct_assert(
+		$ax_ct_results,
+		'the edit screen mounts the editor and renders no second copy of the card',
+		str_contains( $ax_ct_ed_screen, 'id="ax-contacts-card-editor"' )
+			&& ! str_contains( $ax_ct_ed_screen, '<form' )
+			&& ! str_contains( $ax_ct_ed_screen, 'name="primary_name' )
+	);
+
+	/*
+	 * What it is handed to start from is the same payload the route returns, from the same function.
+	 * Two shapes would be two things to keep in step, and the one that drifted would be the one nobody
+	 * was looking at.
+	 */
+	$ax_ct_ed_payload = axismundi_contacts_draft_payload( axismundi_contacts_get_card( $ax_ct_dr_id ) );
+	ax_ct_assert(
+		$ax_ct_results,
+		'the editor starts from the draft the route would have given it',
+		array( 'card', 'revision' ) === array_keys( $ax_ct_ed_payload )
+			&& isset( $ax_ct_ed_payload['card']['example.com:favouriteColour'] )
+	);
+
+	/*
+	 * And the script writes through the draft and nothing else. A second save path would be a second
+	 * set of rules about revisions, provenance and what may be published, maintained separately from
+	 * the first and diverging from it quietly.
+	 */
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_ed_source = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/card-editor.js' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'the editor saves through the draft route and has no second way to write a card',
+		'' !== $ax_ct_ed_source
+			&& str_contains( $ax_ct_ed_source, 'config.draftPath' )
+			&& 1 === substr_count( $ax_ct_ed_source, "method: 'PUT'" )
+			&& ! str_contains( $ax_ct_ed_source, 'admin-post.php' )
+			&& ! str_contains( $ax_ct_ed_source, "method: 'POST'" )
+	);
+	/*
+	 * The revision it read at goes back with the save, so a write against a version somebody else has
+	 * replaced is refused rather than merged.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'and it sends back the revision it read, so a stale save is refused rather than merged',
+		str_contains( $ax_ct_ed_source, 'revision: revision' )
+			&& str_contains( $ax_ct_ed_source, 'setRevision( response.revision )' )
+	);
+	/*
+	 * One draft behind three views. A Card carries `contexts`, `personalInfo` and properties this
+	 * editor has no field for, and an editor that rebuilt the document from its inputs would drop
+	 * every one of them -- so the fields and the JSON box write the same object.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'the fields and the card itself are one draft, so a property with no field survives being edited',
+		str_contains( $ax_ct_ed_source, 'Object.assign( {}, card )' )
+			&& str_contains( $ax_ct_ed_source, 'JSON.stringify( next, null, 2 )' )
+	);
+	/*
+	 * A new entry gets a new id. An entry id is the address a published pointer and a provenance row
+	 * name, so handing a fresh value the id of one that was removed would hand it that value's
+	 * publishing consent along with it.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a new entry is given an id of its own rather than one that has been used before',
+		str_contains( $ax_ct_ed_source, "Math.random().toString( 36 )" )
 	);
 	wp_set_current_user( 0 );
 

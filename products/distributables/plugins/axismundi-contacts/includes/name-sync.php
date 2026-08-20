@@ -381,48 +381,17 @@ function axismundi_contacts_bind_actor_name( int $actor_id, string $language, st
 /**
  * Move the structured name out of the identity registry and onto the card.
  *
- * Actors kept `given`, `surname` and the order they are read in because it used to assemble the
- * JSContact document. It does not any more, and two tables holding the same components is how they
- * come to disagree -- so the card takes them and Actors stops being asked.
+ * Kept as the name the upgrade already calls, and now no more than a way in. What it used to do --
+ * carry the components across where the card was silent -- is what
+ * `axismundi_contacts_reconcile_legacy_names()` does, and doing it in one place means the rule for
+ * an upgrade and the rule for an install that has been running for a week are the same rule.
  *
- * Nothing is guessed. A card that already carries these components keeps them; a `nameMap` entry is
- * left exactly as it is, because the fact that `en-US` reads `Jiwoon Kim` does not say it was
- * derived from anything, and a migration that inferred a source would invent a binding somebody
- * never made. Recovering provenance is not what this is for.
- *
- * Run from the Contacts upgrade and written against the columns, so it happens while the values are
- * still there whichever plugin upgrades first, does nothing on a second run, and leaves an
- * Actors-only install untouched until Contacts arrives.
+ * The difference that matters is what happens afterwards. This ran once, at the version it was
+ * written for, and both screens stayed editable after it; so the two copies can now disagree, and a
+ * migration is not who decides that. See `includes/legacy-names.php`.
  *
  * @return void
  */
 function axismundi_contacts_adopt_structured_names() : void {
-	global $wpdb;
-	if ( ! function_exists( 'axismundi_actors_profile_table' ) || ! function_exists( 'axismundi_actors_person_profile' ) ) {
-		return;
-	}
-	$profiles = axismundi_actors_profile_table();
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.
-	$columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profiles}" );
-	if ( ! in_array( 'surname', $columns, true ) ) {
-		return;
-	}
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration.
-	$rows = (array) $wpdb->get_col( "SELECT identity_id FROM {$profiles}" );
-	foreach ( $rows as $identity_id ) {
-		$actor_id = (int) $identity_id;
-		if ( axismundi_contacts_profile_card( $actor_id ) <= 0 ) {
-			// Nothing published about this Actor. The values stay where they are rather than being
-			// written into a card that does not exist.
-			continue;
-		}
-		$card = axismundi_contacts_card_document( axismundi_contacts_profile_card( $actor_id ) );
-		foreach ( (array) ( $card['name']['components'] ?? array() ) as $component ) {
-			if ( is_array( $component ) && in_array( (string) ( $component['kind'] ?? '' ), AXISMUNDI_CONTACTS_ACTOR_NAME_PARTS, true ) ) {
-				// The card already answers this. An older copy of the same fact does not overwrite it.
-				continue 2;
-			}
-		}
-		axismundi_contacts_sync_name_from_actor( $actor_id );
-	}
+	axismundi_contacts_reconcile_legacy_names();
 }

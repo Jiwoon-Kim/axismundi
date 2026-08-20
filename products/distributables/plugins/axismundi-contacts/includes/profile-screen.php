@@ -99,6 +99,7 @@ function axismundi_contacts_profile_editor( int $book_id, Axismundi_Actor $actor
 	<p class="description">
 		<?php esc_html_e( 'The card this Actor publishes about itself. Everything on it may be read by whoever the audience below allows.', 'axismundi-contacts' ); ?>
 	</p>
+	<?php axismundi_contacts_legacy_name_notice( $actor_id ); ?>
 
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<input type="hidden" name="action" value="axismundi_contacts_save_card">
@@ -180,6 +181,108 @@ function axismundi_contacts_profile_editor( int $book_id, Axismundi_Actor $actor
 	</form>
 	<?php
 }
+
+/**
+ * The name this Actor used to hold, where it disagrees with the card.
+ *
+ * Shown rather than settled. Both were editable for a while and nothing in either says which was
+ * typed last, so this puts the two readings side by side and asks -- which is the only honest thing
+ * left to do with them.
+ *
+ * Nothing is shown when they agree, when the Actor holds nothing, or once somebody has answered.
+ * The question is computed from what is stored rather than recorded anywhere, so answering it is
+ * what makes it stop being asked.
+ *
+ * @param int $actor_id Actor identity.
+ * @return void
+ */
+function axismundi_contacts_legacy_name_notice( int $actor_id ) : void {
+	if ( 'conflict' !== axismundi_contacts_legacy_name_state( $actor_id ) ) {
+		return;
+	}
+	$legacy  = axismundi_contacts_legacy_name( $actor_id );
+	$card_id = axismundi_contacts_profile_card( $actor_id );
+	$card    = axismundi_contacts_card_document( $card_id );
+	$current = is_array( $card['name'] ?? null ) ? $card['name'] : array();
+	$labels  = axismundi_contacts_name_kind_labels();
+	?>
+	<div class="notice notice-warning">
+		<h2><?php esc_html_e( 'An earlier name from the Actor profile', 'axismundi-contacts' ); ?></h2>
+		<p>
+			<?php esc_html_e( 'This name used to be kept on the Actor profile as well as here, and the two now say different things. Nothing recorded which was written last, so it is not for this site to choose.', 'axismundi-contacts' ); ?>
+		</p>
+		<table class="widefat striped" style="max-width:40em">
+			<thead>
+				<tr>
+					<th scope="col"><?php esc_html_e( 'This contact card', 'axismundi-contacts' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'The earlier Actor profile', 'axismundi-contacts' ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td><strong><?php echo esc_html( (string) ( $current['full'] ?? '' ) ); ?></strong></td>
+					<td><strong><?php echo esc_html( (string) ( $legacy['full'] ?? '' ) ); ?></strong></td>
+				</tr>
+				<?php foreach ( AXISMUNDI_CONTACTS_ACTOR_NAME_PARTS as $ax_ct_kind ) : ?>
+					<?php
+					$ax_ct_here  = (string) ( axismundi_contacts_name_actor_parts( $current )[ $ax_ct_kind ] ?? '' );
+					$ax_ct_there = (string) ( axismundi_contacts_name_actor_parts( $legacy )[ $ax_ct_kind ] ?? '' );
+					if ( '' === $ax_ct_here && '' === $ax_ct_there ) {
+						continue;
+					}
+					?>
+					<tr>
+						<td><?php echo esc_html( $labels[ $ax_ct_kind ] . ': ' . $ax_ct_here ); ?></td>
+						<td><?php echo esc_html( $labels[ $ax_ct_kind ] . ': ' . $ax_ct_there ); ?></td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+		<p>
+			<?php
+			/*
+			 * Two forms rather than one with a choice, because both buttons are the answer to the same
+			 * question and neither is the default. A screen that pre-selected one of them would be
+			 * making the choice it just said it could not make.
+			 */
+			?>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline">
+				<input type="hidden" name="action" value="axismundi_contacts_resolve_legacy_name">
+				<input type="hidden" name="choice" value="card">
+				<?php wp_nonce_field( 'ax_contacts_legacy_name_' . $actor_id ); ?>
+				<?php submit_button( __( 'Keep this card', 'axismundi-contacts' ), 'primary', 'submit', false ); ?>
+			</form>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline">
+				<input type="hidden" name="action" value="axismundi_contacts_resolve_legacy_name">
+				<input type="hidden" name="choice" value="actor">
+				<?php wp_nonce_field( 'ax_contacts_legacy_name_' . $actor_id ); ?>
+				<?php submit_button( __( 'Use the earlier name', 'axismundi-contacts' ), 'secondary', 'submit', false ); ?>
+			</form>
+		</p>
+		<p class="description">
+			<?php esc_html_e( 'Either way the Actor profile stops keeping a second copy, and this question does not come back.', 'axismundi-contacts' ); ?>
+		</p>
+	</div>
+	<?php
+}
+
+/**
+ * Record which of the two names was meant.
+ *
+ * @return void
+ */
+function axismundi_contacts_handle_resolve_legacy_name() : void {
+	$current = axismundi_contacts_current_book();
+	if ( '' !== $current['error'] ) {
+		wp_die( esc_html( $current['error'] ), '', array( 'response' => 403 ) );
+	}
+	$actor_id = (int) $current['actor']->get_identity_id();
+	check_admin_referer( 'ax_contacts_legacy_name_' . $actor_id );
+	$choice   = isset( $_POST['choice'] ) ? sanitize_key( wp_unslash( $_POST['choice'] ) ) : '';
+	$resolved = axismundi_contacts_resolve_legacy_name( $actor_id, $choice );
+	axismundi_contacts_redirect_to( $resolved, axismundi_contacts_profile_url() );
+}
+add_action( 'admin_post_axismundi_contacts_resolve_legacy_name', 'axismundi_contacts_handle_resolve_legacy_name' );
 
 /**
  * Choose who may read the profile card.

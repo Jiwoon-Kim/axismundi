@@ -1632,6 +1632,160 @@ try {
 		'Jiwoon Kim' === (string) ( axismundi_contacts_name_representations( $ax_ct_fmt_sid )[''] ?? '' )
 	);
 
+	// -- the copy Actors was left holding ---------------------------------------------------------------------
+
+	/*
+	 * Both sides were editable between the migration that moved the structured name and the removal of
+	 * the screen that edited it here. So the two copies may now differ, and nothing in either says
+	 * which was typed last. What follows pins that no code decides that.
+	 */
+
+	/** One Actor with a profile card and a structured name still on the Actor side. */
+	$ax_ct_legacy_actor = static function ( array &$users, array &$loose, array $parts ) : array {
+		$actor = ax_ct_actor( $users );
+		$sid   = (int) $actor->get_identity_id();
+		$card  = axismundi_contacts_create_profile_card( $sid );
+		$card  = is_wp_error( $card ) ? 0 : (int) $card;
+		$loose[] = $card;
+		axismundi_actors_set_person_name( $sid, array_merge( array( 'structured_name_language' => 'en-US' ), $parts ) );
+		return array( $sid, $card );
+	};
+
+	list( $ax_ct_lg_sid, $ax_ct_lg_card ) = $ax_ct_legacy_actor(
+		$ax_ct_users,
+		$ax_ct_loose,
+		array( 'given' => 'Jiwoon', 'surname' => 'Kim', 'display_order' => 'given-family' )
+	);
+	// The card is made with a written-out name and no components, which is every profile card's start.
+	$ax_ct_lg_doc = axismundi_contacts_card_document( $ax_ct_lg_card );
+	$ax_ct_lg_doc['name'] = array( '@type' => 'Name', 'full' => 'Jiwoon Kim' );
+	axismundi_contacts_save_card_for_owner( $ax_ct_lg_sid, $ax_ct_lg_doc, $ax_ct_lg_card );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a card with no components of its own takes the ones the Actor was holding',
+		'adoptable' === axismundi_contacts_legacy_name_state( $ax_ct_lg_sid )
+			&& axismundi_contacts_reconcile_legacy_names() >= 1
+			&& array( 'given' => 'Jiwoon', 'surname' => 'Kim' ) === axismundi_contacts_name_actor_parts(
+				axismundi_contacts_card_document( $ax_ct_lg_card )['name'] ?? array()
+			)
+	);
+
+	ax_ct_assert(
+		$ax_ct_results,
+		'and once they agree there is nothing left to carry, however often it runs',
+		'settled' === axismundi_contacts_legacy_name_state( $ax_ct_lg_sid )
+			&& 0 === axismundi_contacts_reconcile_legacy_names()
+			&& 'Jiwoon Kim' === (string) ( axismundi_contacts_card_document( $ax_ct_lg_card )['name']['full'] ?? '' )
+	);
+
+	/*
+	 * The state this whole file exists for. Both sides say a name, the two are not the same name, and
+	 * no timestamp, length or similarity is evidence of which somebody meant.
+	 */
+	list( $ax_ct_cf_sid, $ax_ct_cf_card ) = $ax_ct_legacy_actor(
+		$ax_ct_users,
+		$ax_ct_loose,
+		array( 'given' => '지운2', 'surname' => '김', 'display_order' => 'family-given-compact' )
+	);
+	$ax_ct_cf_doc = axismundi_contacts_card_document( $ax_ct_cf_card );
+	$ax_ct_cf_doc['name'] = array(
+		'@type'            => 'Name',
+		'isOrdered'        => true,
+		'defaultSeparator' => '',
+		'components'       => array(
+			array( '@type' => 'NameComponent', 'kind' => 'surname', 'value' => '김' ),
+			array( '@type' => 'NameComponent', 'kind' => 'given', 'value' => '지운' ),
+		),
+	);
+	axismundi_contacts_save_card_for_owner( $ax_ct_cf_sid, $ax_ct_cf_doc, $ax_ct_cf_card );
+	$ax_ct_cf_before = axismundi_contacts_card_document( $ax_ct_cf_card )['name'];
+	ax_ct_assert(
+		$ax_ct_results,
+		'two structured names that differ are a question rather than a merge',
+		'conflict' === axismundi_contacts_legacy_name_state( $ax_ct_cf_sid )
+	);
+
+	// Running the reconciliation again touches neither side, which is what makes it safe to leave in.
+	axismundi_contacts_reconcile_legacy_names();
+	axismundi_contacts_adopt_structured_names();
+	ax_ct_assert(
+		$ax_ct_results,
+		'a conflict survives the migration running again, on both sides and unchanged',
+		'conflict' === axismundi_contacts_legacy_name_state( $ax_ct_cf_sid )
+			&& $ax_ct_cf_before === axismundi_contacts_card_document( $ax_ct_cf_card )['name']
+			&& '지운2' === (string) ( axismundi_actors_person_profile( $ax_ct_cf_sid )['given'] ?? '' )
+	);
+
+	// Answered in favour of the card: the card stands, and the Actor stops holding a second opinion.
+	$ax_ct_kept_card = axismundi_contacts_resolve_legacy_name( $ax_ct_cf_sid, 'card' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'keeping the card leaves it exactly as it was and the question does not come back',
+		true === $ax_ct_kept_card
+			&& $ax_ct_cf_before === axismundi_contacts_card_document( $ax_ct_cf_card )['name']
+			&& 'none' === axismundi_contacts_legacy_name_state( $ax_ct_cf_sid )
+			&& '' === (string) ( axismundi_actors_person_profile( $ax_ct_cf_sid )['given'] ?? '' )
+	);
+
+	// Answered the other way: the earlier name is written onto the card, in full and in parts.
+	list( $ax_ct_ac_sid, $ax_ct_ac_card ) = $ax_ct_legacy_actor(
+		$ax_ct_users,
+		$ax_ct_loose,
+		array( 'given' => '지운', 'surname' => '김', 'display_order' => 'family-given-compact' )
+	);
+	$ax_ct_ac_doc = axismundi_contacts_card_document( $ax_ct_ac_card );
+	$ax_ct_ac_doc['name'] = array(
+		'@type'      => 'Name',
+		'isOrdered'  => true,
+		'components' => array( array( '@type' => 'NameComponent', 'kind' => 'given', 'value' => 'Jiwoon' ) ),
+	);
+	axismundi_contacts_save_card_for_owner( $ax_ct_ac_sid, $ax_ct_ac_doc, $ax_ct_ac_card );
+	$ax_ct_took = axismundi_contacts_resolve_legacy_name( $ax_ct_ac_sid, 'actor' );
+	$ax_ct_ac_after = axismundi_contacts_card_document( $ax_ct_ac_card )['name'] ?? array();
+	ax_ct_assert(
+		$ax_ct_results,
+		'choosing the earlier name writes it onto the card, and the Actor stops holding it too',
+		true === $ax_ct_took
+			&& array( 'surname' => '김', 'given' => '지운' ) === axismundi_contacts_name_actor_parts( $ax_ct_ac_after )
+			&& 'none' === axismundi_contacts_legacy_name_state( $ax_ct_ac_sid )
+	);
+
+	/*
+	 * A compact reading order was two facts on the Actor -- the order, and a rule about whether the
+	 * parts were written in Latin letters -- and is one field on a card. Carrying it over states it
+	 * outright rather than leaving the card to work it out again.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a compact reading order arrives as an empty default separator and reads the same',
+		'' === (string) ( $ax_ct_ac_after['defaultSeparator'] ?? 'unset' )
+			&& '김지운' === (string) ( $ax_ct_ac_after['full'] ?? '' )
+	);
+
+	/*
+	 * And a name the Actor held as one written-out string arrives as one. `custom` meant "show this,
+	 * ignore the parts", which on a card is a `full` with nothing under it -- so nothing is split, and
+	 * no fifth reading order is invented to hold it.
+	 */
+	list( $ax_ct_cu_sid, $ax_ct_cu_card ) = $ax_ct_legacy_actor(
+		$ax_ct_users,
+		$ax_ct_loose,
+		array( 'given' => 'Jiwoon', 'surname' => 'Kim', 'display_order' => 'custom', 'display_name' => 'Jiwoon of Busan' )
+	);
+	$ax_ct_cu_doc = axismundi_contacts_card_document( $ax_ct_cu_card );
+	$ax_ct_cu_doc['name'] = array( '@type' => 'Name', 'full' => 'Jiwoon Kim' );
+	axismundi_contacts_save_card_for_owner( $ax_ct_cu_sid, $ax_ct_cu_doc, $ax_ct_cu_card );
+	$ax_ct_cu_state = axismundi_contacts_legacy_name_state( $ax_ct_cu_sid );
+	axismundi_contacts_resolve_legacy_name( $ax_ct_cu_sid, 'actor' );
+	$ax_ct_cu_after = axismundi_contacts_card_document( $ax_ct_cu_card )['name'] ?? array();
+	ax_ct_assert(
+		$ax_ct_results,
+		'a name the Actor held as one string arrives as one string, with no components invented for it',
+		'conflict' === $ax_ct_cu_state
+			&& 'Jiwoon of Busan' === (string) ( $ax_ct_cu_after['full'] ?? '' )
+			&& ! isset( $ax_ct_cu_after['components'] )
+	);
+
 	ax_ct_assert(
 		$ax_ct_results,
 		'this plugin stores address books and imitates neither the Actor registry nor its profiles',

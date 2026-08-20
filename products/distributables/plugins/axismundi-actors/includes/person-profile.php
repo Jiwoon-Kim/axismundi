@@ -283,6 +283,44 @@ function axismundi_actors_make_profile_primary( int $identity_id, string $langua
 	return $result;
 }
 
+/**
+ * Forget the structured name Actors used to own, leaving everything else on the profile.
+ *
+ * Migration baggage, and deliberately narrow. It exists so that Contacts can record which of two
+ * disagreeing copies of a name somebody chose: picking the card means the values here are no longer
+ * anybody's answer, and the only way to say that without inventing a flag is to stop holding them.
+ *
+ * Not `axismundi_actors_clear_person_name()`, which clears the whole profile. A pronunciation is
+ * still Actors' own -- no card carries one yet -- and taking it away because somebody settled a
+ * question about surnames would remove a fact nobody asked about.
+ *
+ * Goes when the columns do.
+ *
+ * @param int $identity_id Actor identity.
+ * @return void
+ */
+function axismundi_actors_discard_legacy_structured_name( int $identity_id ) : void {
+	global $wpdb;
+	if ( $identity_id <= 0 ) {
+		return;
+	}
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+	$wpdb->update(
+		axismundi_actors_profile_table(),
+		array(
+			'given'         => '',
+			'given2'        => '',
+			'surname'       => '',
+			'surname2'      => '',
+			'display_order' => 'given-family',
+			'updated_at'    => current_time( 'mysql', true ),
+		),
+		array( 'identity_id' => $identity_id ),
+		array( '%s', '%s', '%s', '%s', '%s', '%s' ),
+		array( '%d' )
+	);
+}
+
 /** Remove a base profile when an Actor identity is explicitly deleted. */
 function axismundi_actors_delete_person_profile( int $identity_id ) : void {
 	global $wpdb;

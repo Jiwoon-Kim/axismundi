@@ -39,17 +39,6 @@ function axismundi_actors_alternate_names_table() : string {
 	return $wpdb->prefix . 'ax_actor_alternate_names';
 }
 
-/**
- * How the components of a name are put together.
- *
- * No `nickname` here. Being known by one is a real thing, but the public name of an Actor is the
- * `name` string of its primary language and nothing else, and letting a nickname win instead would
- * make `name` and `nameMap` disagree for reasons a reader could not see. A nickname is kept as an
- * alternate name; whether it may become somebody's shown name is a policy to decide on its own,
- * with `name` and `nameMap` in view, rather than a fourth option in this list.
- */
-const AXISMUNDI_ACTORS_NAME_ORDERS = array( 'family-given', 'family-given-compact', 'given-family', 'given-family-compact', 'custom' );
-
 /** The parts a pronunciation can be given for, keyed by the part they are said for. */
 const AXISMUNDI_ACTORS_NAME_PHONETIC_PARTS = array(
 	'phonetic_surname'  => 'surname',

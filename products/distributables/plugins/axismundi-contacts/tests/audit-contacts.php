@@ -1640,16 +1640,51 @@ try {
 	 * which was typed last. What follows pins that no code decides that.
 	 */
 
+	/*
+	 * The columns are put back for the length of this section. A site that has finished upgrading no
+	 * longer has them, and the reconciliation is precisely the code that runs on one that has not --
+	 * so checking it means arranging the state it exists for. The schema is restored at the end.
+	 */
+	global $wpdb;
+	foreach ( array( 'given', 'given2', 'surname', 'surname2' ) as $ax_ct_legacy_column ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture schema check.
+		$ax_ct_profile_columns = (array) $wpdb->get_col( 'SHOW COLUMNS FROM ' . axismundi_actors_profile_table() );
+		if ( ! in_array( $ax_ct_legacy_column, $ax_ct_profile_columns, true ) ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture schema setup.
+			$wpdb->query( 'ALTER TABLE ' . axismundi_actors_profile_table() . " ADD COLUMN {$ax_ct_legacy_column} varchar(191) NOT NULL default ''" );
+		}
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture schema check.
+	$ax_ct_profile_columns = (array) $wpdb->get_col( 'SHOW COLUMNS FROM ' . axismundi_actors_profile_table() );
+	if ( ! in_array( 'display_order', $ax_ct_profile_columns, true ) ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture schema setup.
+		$wpdb->query( 'ALTER TABLE ' . axismundi_actors_profile_table() . " ADD COLUMN display_order varchar(32) NOT NULL default 'given-family'" );
+	}
+	// The schema just changed under this request, so the answer remembered from before it is stale.
+	axismundi_contacts_legacy_name_columns_present( true );
+	$ax_ct_legacy_restored = true;
+
 	/** One Actor with a profile card and a structured name still on the Actor side. */
 	$ax_ct_legacy_actor = static function ( array &$users, array &$loose, array $parts ) : array {
+		global $wpdb;
 		$actor = ax_ct_actor( $users );
 		$sid   = (int) $actor->get_identity_id();
 		$card  = axismundi_contacts_create_profile_card( $sid );
 		$card  = is_wp_error( $card ) ? 0 : (int) $card;
 		$loose[] = $card;
-		// Written straight into the columns, because nothing offers to write them any more. This is what
-		// an install that upgraded with a name on the Actor side actually looks like.
-		axismundi_actors_write_person_profile( $sid, array_merge( array( 'structured_name_language' => 'en-US' ), $parts ) );
+		/*
+		 * Written straight into the columns, because nothing offers to write them any more -- and
+		 * replaced rather than updated, because an Actor that has only ever had components has no
+		 * profile row of its own. That is exactly the state a site mid-upgrade is in.
+		 */
+		$row = array_merge(
+			axismundi_actors_person_profile( $sid ),
+			array( 'structured_name_language' => 'en-US' ),
+			$parts,
+			array( 'identity_id' => $sid, 'updated_at' => current_time( 'mysql', true ) )
+		);
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture write into the Actors table.
+		$wpdb->replace( axismundi_actors_profile_table(), $row );
 		return array( $sid, $card );
 	};
 
@@ -1765,9 +1800,13 @@ try {
 	);
 
 	/*
-	 * And a name the Actor held as one written-out string arrives as one. `custom` meant "show this,
-	 * ignore the parts", which on a card is a `full` with nothing under it -- so nothing is split, and
-	 * no fifth reading order is invented to hold it.
+	 * And the label an Actor is shown as is not legacy at all. `display_name` is still Actors' own and
+	 * still edited there, so there is nothing to carry -- and reading it here would make every Actor
+	 * with a chosen label look like one whose name disagreed with its card, which is a question nobody
+	 * has.
+	 *
+	 * The `custom` reading order is the same answer from the other side: it meant "show the label,
+	 * ignore the parts", so the parts were already answering nothing.
 	 */
 	list( $ax_ct_cu_sid, $ax_ct_cu_card ) = $ax_ct_legacy_actor(
 		$ax_ct_users,
@@ -1777,15 +1816,12 @@ try {
 	$ax_ct_cu_doc = axismundi_contacts_card_document( $ax_ct_cu_card );
 	$ax_ct_cu_doc['name'] = array( '@type' => 'Name', 'full' => 'Jiwoon Kim' );
 	axismundi_contacts_save_card_for_owner( $ax_ct_cu_sid, $ax_ct_cu_doc, $ax_ct_cu_card );
-	$ax_ct_cu_state = axismundi_contacts_legacy_name_state( $ax_ct_cu_sid );
-	axismundi_contacts_resolve_legacy_name( $ax_ct_cu_sid, 'actor' );
-	$ax_ct_cu_after = axismundi_contacts_card_document( $ax_ct_cu_card )['name'] ?? array();
 	ax_ct_assert(
 		$ax_ct_results,
-		'a name the Actor held as one string arrives as one string, with no components invented for it',
-		'conflict' === $ax_ct_cu_state
-			&& 'Jiwoon of Busan' === (string) ( $ax_ct_cu_after['full'] ?? '' )
-			&& ! isset( $ax_ct_cu_after['components'] )
+		'a label the Actor is shown as is not a name the card is missing, and asks nobody anything',
+		'none' === axismundi_contacts_legacy_name_state( $ax_ct_cu_sid )
+			&& 'Jiwoon Kim' === (string) ( axismundi_contacts_card_document( $ax_ct_cu_card )['name']['full'] ?? '' )
+			&& 'Jiwoon of Busan' === (string) ( axismundi_actors_person_profile( $ax_ct_cu_sid )['display_name'] ?? '' )
 	);
 
 	// -- a name an Actor shows is chosen, never assembled ------------------------------------------------------
@@ -1870,6 +1906,14 @@ try {
 	);
 } finally {
 	global $wpdb;
+	/*
+	 * The columns this file put back come off again, through the migration that owns that decision
+	 * rather than by dropping them here: it is the thing that knows when it is safe, and the fixtures
+	 * above are gone by now.
+	 */
+	if ( isset( $ax_ct_legacy_restored ) && function_exists( 'axismundi_actors_install' ) ) {
+		$ax_ct_restore_schema = true;
+	}
 	foreach ( array_unique( array_filter( $ax_ct_loose ) ) as $ax_ct_loose_card ) {
 		axismundi_contacts_delete_card( (int) $ax_ct_loose_card );
 	}
@@ -1882,6 +1926,9 @@ try {
 	}
 	foreach ( array_unique( $ax_ct_users ) as $ax_ct_user_id ) {
 		wp_delete_user( (int) $ax_ct_user_id );
+	}
+	if ( isset( $ax_ct_restore_schema ) ) {
+		axismundi_actors_install();
 	}
 }
 

@@ -32,22 +32,21 @@ function axismundi_actors_profile_table() : string {
 	return $wpdb->prefix . 'ax_actor_profile';
 }
 
-/** Everything the base profile holds, so no caller has to list them again. */
+/**
+ * Everything the base profile holds, so no caller has to list them again.
+ *
+ * No components and no reading order. Those were here while Actors assembled names; the contact
+ * card holds them now, and a list that still named them would be a way back in -- a caller passing
+ * `given` and finding it stored is how a second copy starts existing again.
+ */
 const AXISMUNDI_ACTORS_PROFILE_COLUMNS = array(
 	'structured_name_language',
-	'given',
-	'given2',
-	'surname',
-	'surname2',
-	'title',
-	'credential',
 	'phonetic_given',
 	'phonetic_given2',
 	'phonetic_surname',
 	'phonetic_surname2',
 	'phonetic_system',
 	'phonetic_script',
-	'display_order',
 	'display_name',
 );
 
@@ -76,8 +75,8 @@ function axismundi_actors_person_profile( int $identity_id ) : array {
  */
 function axismundi_actors_person_profile_is_empty( array $row ) : bool {
 	foreach ( AXISMUNDI_ACTORS_PROFILE_COLUMNS as $column ) {
-		// None of these is content: they always hold a value, or only say where other values belong.
-		if ( in_array( $column, array( 'display_order', 'structured_name_language' ), true ) ) {
+		// Not content: it only says where other values belong.
+		if ( 'structured_name_language' === $column ) {
 			continue;
 		}
 		$value = trim( (string) ( $row[ $column ] ?? '' ) );
@@ -115,18 +114,12 @@ function axismundi_actors_write_person_profile( int $identity_id, array $changes
 	foreach ( AXISMUNDI_ACTORS_PROFILE_COLUMNS as $column ) {
 		$row[ $column ] = (string) ( $changes[ $column ] ?? $existing[ $column ] ?? '' );
 	}
-	if ( '' === $row['display_order'] ) {
-		$row['display_order'] = 'given-family';
-	}
 	$row['phonetic_system'] = strtolower( $row['phonetic_system'] );
 	// Titlecased on the way in, so `hira` and `Hira` are the same subtag rather than two.
 	$row['phonetic_script'] = ucfirst( strtolower( $row['phonetic_script'] ) );
 	$row = axismundi_actors_normalize_name_phonetics( $row );
 	if ( is_wp_error( $row ) ) {
 		return $row;
-	}
-	if ( ! in_array( (string) $row['display_order'], AXISMUNDI_ACTORS_NAME_ORDERS, true ) ) {
-		return new WP_Error( 'ax_actors_name_order', __( 'That is not a way of showing a name.', 'axismundi-actors' ), array( 'status' => 400 ) );
 	}
 	if ( axismundi_actors_person_profile_is_empty( $row ) ) {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
@@ -246,21 +239,22 @@ function axismundi_actors_discard_legacy_structured_name( int $identity_id ) : v
 	if ( $identity_id <= 0 ) {
 		return;
 	}
+	$table = axismundi_actors_profile_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema check.
+	$columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
+	$clear   = array();
+	foreach ( array( 'given', 'given2', 'surname', 'surname2' ) as $column ) {
+		if ( in_array( $column, $columns, true ) ) {
+			$clear[ $column ] = '';
+		}
+	}
+	if ( array() === $clear ) {
+		// The columns are gone, so there is nothing left to be holding.
+		return;
+	}
+	$clear['updated_at'] = current_time( 'mysql', true );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	$wpdb->update(
-		axismundi_actors_profile_table(),
-		array(
-			'given'         => '',
-			'given2'        => '',
-			'surname'       => '',
-			'surname2'      => '',
-			'display_order' => 'given-family',
-			'updated_at'    => current_time( 'mysql', true ),
-		),
-		array( 'identity_id' => $identity_id ),
-		array( '%s', '%s', '%s', '%s', '%s', '%s' ),
-		array( '%d' )
-	);
+	$wpdb->update( $table, $clear, array( 'identity_id' => $identity_id ), array_fill( 0, count( $clear ), '%s' ), array( '%d' ) );
 }
 
 /** Remove a base profile when an Actor identity is explicitly deleted. */
@@ -355,7 +349,7 @@ function axismundi_actors_migrate_person_profile() : bool {
 		}
 		$default = axismundi_actors_normalize_language_tag( (string) ( reset( $languages )['default_language'] ?? '' ) );
 		$base    = $languages[ $default ] ?? reset( $languages );
-		$changes = array();
+		$changes = array( 'identity_id' => $identity_id, 'updated_at' => current_time( 'mysql', true ) );
 		$legacy_columns = array(
 			'given'           => 'first_name',
 			'given2'          => 'middle_name',
@@ -368,13 +362,24 @@ function axismundi_actors_migrate_person_profile() : bool {
 			'phonetic_surname' => 'phonetic_last',
 			'phonetic_surname2' => 'phonetic_second_surname',
 		);
-		foreach ( AXISMUNDI_ACTORS_PROFILE_COLUMNS as $column ) {
+		/*
+		 * Written straight into the table, and into the columns on their way out as well as the ones
+		 * that stay. This is the first link of a chain that runs in one upgrade -- the old table folds
+		 * into these columns, Contacts takes the components off them, and then they are dropped -- so
+		 * the values have to arrive even though nothing will read them from here.
+		 */
+		$profile_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profile}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema check.
+		foreach ( array_merge( AXISMUNDI_ACTORS_PROFILE_COLUMNS, AXISMUNDI_ACTORS_LEGACY_NAME_COLUMNS ) as $column ) {
+			if ( ! in_array( $column, $profile_columns, true ) ) {
+				continue;
+			}
 			$source = $legacy_columns[ $column ] ?? $column;
 			$changes[ $column ] = (string) ( $base[ $source ] ?? '' );
 		}
 		// The language those components were written in is now recorded rather than implied.
 		$changes['structured_name_language'] = (string) ( $base['language_tag'] ?? $default );
-		axismundi_actors_write_person_profile( $identity_id, $changes );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration into this plugin's own table.
+		$wpdb->replace( $profile, $changes );
 		// Everything else becomes the plain string that language always amounted to.
 		foreach ( $languages as $language => $row ) {
 			if ( $row === $base ) {

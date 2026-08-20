@@ -40,12 +40,17 @@ defined( 'ABSPATH' ) || exit;
  * install whose Actors has already dropped them has nothing left to reconcile, which is the answer
  * rather than a failure.
  *
+ * Remembered for the request, because the reconciliation asks it once per Actor. The upgrade that
+ * removes the columns runs in a request like any other, so it asks again rather than trusting an
+ * answer from before it started.
+ *
+ * @param bool $recheck Ask the database again rather than reusing this request's answer.
  * @return bool
  */
-function axismundi_contacts_legacy_name_columns_present() : bool {
+function axismundi_contacts_legacy_name_columns_present( bool $recheck = false ) : bool {
 	global $wpdb;
 	static $present = null;
-	if ( null !== $present ) {
+	if ( null !== $present && ! $recheck ) {
 		return $present;
 	}
 	if ( ! function_exists( 'axismundi_actors_profile_table' ) ) {
@@ -86,9 +91,13 @@ function axismundi_contacts_legacy_name_separator( array $row ) : string {
 /**
  * The Actor's legacy structured name, as a JSContact name.
  *
- * A row that says `custom`, or that carries a written-out display name, has no components to carry:
- * it means "show this string", which on a card is a `full` with nothing under it. Inventing
- * components for it would be exactly the split this codebase refuses to make.
+ * The components, and nothing else on the row. The label beside them is not legacy: `display_name`
+ * is what this Actor is shown as, it is still Actors' own, and it is still edited there -- so it is
+ * not something to be carried anywhere, and reading it here would mean every Actor with a chosen
+ * label looked like an Actor whose name disagreed with its card.
+ *
+ * A row that reads `custom` has no components to carry either. That order meant "show the label,
+ * ignore the parts", so the parts were already answering nothing, and the label stays where it is.
  *
  * @param int $actor_id Actor identity.
  * @return array<string,mixed> JSContact Name, or an empty array when the Actor holds none.
@@ -101,10 +110,9 @@ function axismundi_contacts_legacy_name( int $actor_id ) : array {
 	if ( array() === $row ) {
 		return array();
 	}
-	$order   = (string) ( $row['display_order'] ?? '' );
-	$written = trim( (string) ( $row['display_name'] ?? '' ) );
-	if ( 'custom' === $order || '' !== $written ) {
-		return '' === $written ? array() : array( '@type' => 'Name', 'full' => $written );
+	$order = (string) ( $row['display_order'] ?? '' );
+	if ( 'custom' === $order ) {
+		return array();
 	}
 	$sequence = in_array( $order, array( 'family-given', 'family-given-compact' ), true )
 		? array( 'surname', 'surname2', 'given', 'given2' )
@@ -242,7 +250,7 @@ function axismundi_contacts_adopt_legacy_name( int $actor_id ) : bool {
  */
 function axismundi_contacts_reconcile_legacy_names() : int {
 	global $wpdb;
-	if ( ! axismundi_contacts_legacy_name_columns_present() ) {
+	if ( ! axismundi_contacts_legacy_name_columns_present( true ) ) {
 		return 0;
 	}
 	$table = axismundi_actors_profile_table();

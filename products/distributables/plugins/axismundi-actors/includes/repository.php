@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '28.0';
+const AXISMUNDI_ACTORS_DB_VERSION = '29.0';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -233,7 +233,6 @@ function axismundi_actors_install() : void {
 			phonetic_second_surname varchar(191) NOT NULL default '',
 			phonetic_system varchar(16) NOT NULL default '',
 			phonetic_script varchar(8) NOT NULL default '',
-			display_order varchar(32) NOT NULL default 'given-family',
 			display_name varchar(191) NOT NULL default '',
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),
@@ -285,12 +284,6 @@ function axismundi_actors_install() : void {
 		"CREATE TABLE {$profile} (
 			identity_id bigint(20) unsigned NOT NULL,
 			structured_name_language varchar(35) NOT NULL default '',
-			given varchar(191) NOT NULL default '',
-			given2 varchar(191) NOT NULL default '',
-			surname varchar(191) NOT NULL default '',
-			surname2 varchar(191) NOT NULL default '',
-			title varchar(64) NOT NULL default '',
-			credential varchar(64) NOT NULL default '',
 			phonetic_given varchar(191) NOT NULL default '',
 			phonetic_given2 varchar(191) NOT NULL default '',
 			phonetic_surname varchar(191) NOT NULL default '',
@@ -366,8 +359,20 @@ function axismundi_actors_install() : void {
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time custom-table migration.
 	$profile_columns_before = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profile}" );
 	foreach ( $profile_renames as $old_column => $new_column ) {
-		if ( ! in_array( $old_column, $profile_columns_before, true ) || ! in_array( $new_column, $profile_columns_before, true ) ) {
+		if ( ! in_array( $old_column, $profile_columns_before, true ) ) {
 			continue;
+		}
+		if ( ! in_array( $new_column, $profile_columns_before, true ) ) {
+			/*
+			 * The target is not in the table any more: the structured-name columns are gone from the
+			 * schema, so a site still on the old vocabulary has nothing to be renamed into. Added back
+			 * for the length of this upgrade, because the chain that follows -- fold, hand to Contacts,
+			 * drop -- has to be able to carry the value, and a column dropped in the same run costs
+			 * nothing.
+			 */
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed internal identifiers only.
+			$wpdb->query( "ALTER TABLE {$profile} ADD COLUMN {$new_column} varchar(191) NOT NULL default ''" );
+			$profile_columns_before[] = $new_column;
 		}
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed internal identifiers only.
 		$wpdb->query( "UPDATE {$profile} SET {$new_column} = {$old_column} WHERE {$new_column} = ''" );
@@ -793,6 +798,18 @@ function axismundi_actors_install() : void {
 	 * its names still only in the per-language table. That table is not dropped.
 	 */
 	$profile_migrated = axismundi_actors_migrate_person_profile();
+	/*
+	 * And then the columns go, if nothing is waiting on them. Ordered exactly here on purpose: the old
+	 * per-language table has just been folded into them, so an install jumping several versions at once
+	 * still hands its names to Contacts before they are removed rather than after.
+	 *
+	 * A refusal is not a failure. It leaves the columns, records why, and the version is not stamped --
+	 * so this runs again on the next request, and settling the question in Contacts is all it takes to
+	 * let the upgrade finish.
+	 */
+	$legacy_names_dropped = axismundi_actors_drop_legacy_name_columns( $profile_columns );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$profile_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profile}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$alternate_name_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$alternate_names} WHERE Key_name = 'identity_kind_position'" );
 	/*
@@ -849,7 +866,8 @@ function axismundi_actors_install() : void {
 		&& in_array( 'person_name_edited_at', $final_actor_columns, true )
 		&& array() === array_diff( AXISMUNDI_ACTORS_PROFILE_COLUMNS, $profile_columns )
 		&& in_array( 'structured_name_language', $profile_columns, true )
-		&& in_array( 'display_order', $profile_columns, true )
+		&& $legacy_names_dropped
+		&& array() === axismundi_actors_legacy_name_columns_in( $profile_columns )
 		&& $profile_migrated
 		&& in_array( 'anniversary_kind', $anniversary_columns, true )
 		&& in_array( 'visibility', $anniversary_columns, true )

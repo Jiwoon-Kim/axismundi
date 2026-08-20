@@ -375,11 +375,5 @@ function axismundi_contacts_create_profile_card( int $actor_id ) {
 	if ( is_wp_error( $bound ) ) {
 		return $bound;
 	}
-	/*
-	 * Bound first, then filled: this only writes to a Card it can see is this Actor's profile. What it
-	 * takes is the structured name the Actor may still be holding from before the card owned one --
-	 * and only where that answers no question, which on a card made a moment ago it never does.
-	 */
-	axismundi_contacts_adopt_legacy_name( $actor_id );
 	return (int) $card;
 }

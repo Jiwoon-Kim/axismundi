@@ -7,10 +7,9 @@
  * `Jiwoon` and `Kim` as components for every language their profile was written in -- when what they
  * have in English is one string and nothing more.
  *
- *   ax_actor_texts    name and summary per language, as plain strings -- every language, including
- *                     the one the parts belong to. This is what `nameMap` publishes.
- *   base profile      the components of the name in one language, said by
- *                     `structured_name_language`, plus how they are ordered and pronounced
+ *   ax_actor_texts    name and summary per language, as plain strings. This is what `nameMap`
+ *                     publishes.
+ *   base profile      a chosen label, and how the name is pronounced
  *   ax_actors         display_name -- the primary language's name, kept for lists and search
  *
  * So a Korean profile stores `김` and `지운` and assembles them into the Korean name; the English
@@ -218,45 +217,6 @@ function axismundi_actors_make_profile_primary( int $identity_id, string $langua
 	return $result;
 }
 
-/**
- * Forget the structured name Actors used to own, leaving everything else on the profile.
- *
- * Migration baggage, and deliberately narrow. It exists so that Contacts can record which of two
- * disagreeing copies of a name somebody chose: picking the card means the values here are no longer
- * anybody's answer, and the only way to say that without inventing a flag is to stop holding them.
- *
- * Narrow on purpose: it clears the components and the reading order, and leaves the rest of the
- * profile where it is. A pronunciation is still Actors' own -- no card carries one yet -- and taking
- * it away because somebody settled a question about surnames would remove a fact nobody asked about.
- *
- * Goes when the columns do.
- *
- * @param int $identity_id Actor identity.
- * @return void
- */
-function axismundi_actors_discard_legacy_structured_name( int $identity_id ) : void {
-	global $wpdb;
-	if ( $identity_id <= 0 ) {
-		return;
-	}
-	$table = axismundi_actors_profile_table();
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema check.
-	$columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
-	$clear   = array();
-	foreach ( array( 'given', 'given2', 'surname', 'surname2' ) as $column ) {
-		if ( in_array( $column, $columns, true ) ) {
-			$clear[ $column ] = '';
-		}
-	}
-	if ( array() === $clear ) {
-		// The columns are gone, so there is nothing left to be holding.
-		return;
-	}
-	$clear['updated_at'] = current_time( 'mysql', true );
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	$wpdb->update( $table, $clear, array( 'identity_id' => $identity_id ), array_fill( 0, count( $clear ), '%s' ), array( '%d' ) );
-}
-
 /** Remove a base profile when an Actor identity is explicitly deleted. */
 function axismundi_actors_delete_person_profile( int $identity_id ) : void {
 	global $wpdb;
@@ -264,132 +224,4 @@ function axismundi_actors_delete_person_profile( int $identity_id ) : void {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- logical child cleanup.
 		$wpdb->delete( axismundi_actors_profile_table(), array( 'identity_id' => $identity_id ), array( '%d' ) );
 	}
-}
-
-/**
- * Join one old name row into the string it read as.
- *
- * Migration baggage. Actors used to assemble names for everybody and does not any more -- the parts
- * are the card's -- but the fold below reads rows written before any of that and has to turn each
- * one into the plain string its language always amounted to. Keeping its own copy is what lets the
- * public assembler go now rather than at the end.
- *
- * Goes when the columns do.
- *
- * @param array<string,mixed> $row Old per-language name row.
- * @return string
- */
-function axismundi_actors_migration_join_name( array $row ) : string {
-	$order   = (string) ( $row['display_order'] ?? '' );
-	$written = trim( (string) ( $row['display_name'] ?? '' ) );
-	if ( '' !== $written || 'custom' === $order ) {
-		return $written;
-	}
-	$family        = trim( (string) ( $row['last_name'] ?? $row['surname'] ?? '' ) );
-	$second_family = trim( (string) ( $row['second_surname'] ?? $row['surname2'] ?? '' ) );
-	$given         = trim( (string) ( $row['first_name'] ?? $row['given'] ?? '' ) );
-	$middle        = trim( (string) ( $row['middle_name'] ?? $row['given2'] ?? '' ) );
-	$family_first  = in_array( $order, array( 'family-given', 'family-given-compact' ), true );
-	$compact       = in_array( $order, array( 'family-given-compact', 'given-family-compact' ), true );
-	$parts         = $family_first
-		? array( $family, $second_family, $given, $middle )
-		: array( $given, $middle, $family, $second_family );
-	$parts = array_values( array_filter( $parts, static fn( string $part ) : bool => '' !== $part ) );
-	if ( array() === $parts ) {
-		return '';
-	}
-	// A Korean name written 김 지운 is one word to a reader of it, so the separator follows the script
-	// rather than the order.
-	$separator = $compact || ( $family_first && ! preg_match( '/[A-Za-z]/', $family . $given ) ) ? '' : ' ';
-	return implode( $separator, $parts );
-}
-
-/**
- * Fold the per-language name rows into one base profile per Actor.
- *
- * The Actor's default language is the one that becomes the base profile, because that is the
- * language its scalar `name` is already published in. Every other language keeps the name it
- * assembled to, as a plain string in the text store -- which is what those languages needed all
- * along and is exactly what the new model asks for.
- *
- * Remote Actors are skipped outright. The old table should not have held any, and if it does, their
- * components are a local invention that must not be promoted into a base profile.
- *
- * @return bool Whether the tables were readable.
- */
-function axismundi_actors_migrate_person_profile() : bool {
-	global $wpdb;
-	$names      = axismundi_actors_person_names_table();
-	$profile    = axismundi_actors_profile_table();
-	$actors     = axismundi_actors_actors_table();
-	$identities = axismundi_actors_identities_table();
-	foreach ( array( $names, $profile ) as $table ) {
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema check.
-		if ( $table !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) ) {
-			return false;
-		}
-	}
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration.
-	$rows = (array) $wpdb->get_results(
-		"SELECT n.*, a.default_language FROM {$names} n
-			INNER JOIN {$actors} a ON a.identity_id = n.identity_id
-			INNER JOIN {$identities} i ON i.id = n.identity_id
-			WHERE i.origin = 'local'
-			ORDER BY n.identity_id ASC, n.language_tag ASC",
-		ARRAY_A
-	);
-	$by_actor = array();
-	foreach ( $rows as $row ) {
-		$by_actor[ (int) $row['identity_id'] ][ (string) $row['language_tag'] ] = $row;
-	}
-	foreach ( $by_actor as $identity_id => $languages ) {
-		if ( array() !== axismundi_actors_person_profile( $identity_id ) ) {
-			// Already migrated, or edited since. Either way the base profile is the newer truth.
-			continue;
-		}
-		$default = axismundi_actors_normalize_language_tag( (string) ( reset( $languages )['default_language'] ?? '' ) );
-		$base    = $languages[ $default ] ?? reset( $languages );
-		$changes = array( 'identity_id' => $identity_id, 'updated_at' => current_time( 'mysql', true ) );
-		$legacy_columns = array(
-			'given'           => 'first_name',
-			'given2'          => 'middle_name',
-			'surname'         => 'last_name',
-			'surname2'        => 'second_surname',
-			'title'           => 'honorific_prefix',
-			'credential'      => 'honorific_suffix',
-			'phonetic_given'  => 'phonetic_first',
-			'phonetic_given2' => 'phonetic_middle',
-			'phonetic_surname' => 'phonetic_last',
-			'phonetic_surname2' => 'phonetic_second_surname',
-		);
-		/*
-		 * Written straight into the table, and into the columns on their way out as well as the ones
-		 * that stay. This is the first link of a chain that runs in one upgrade -- the old table folds
-		 * into these columns, Contacts takes the components off them, and then they are dropped -- so
-		 * the values have to arrive even though nothing will read them from here.
-		 */
-		$profile_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profile}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema check.
-		foreach ( array_merge( AXISMUNDI_ACTORS_PROFILE_COLUMNS, AXISMUNDI_ACTORS_LEGACY_NAME_COLUMNS ) as $column ) {
-			if ( ! in_array( $column, $profile_columns, true ) ) {
-				continue;
-			}
-			$source = $legacy_columns[ $column ] ?? $column;
-			$changes[ $column ] = (string) ( $base[ $source ] ?? '' );
-		}
-		// The language those components were written in is now recorded rather than implied.
-		$changes['structured_name_language'] = (string) ( $base['language_tag'] ?? $default );
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration into this plugin's own table.
-		$wpdb->replace( $profile, $changes );
-		// Everything else becomes the plain string that language always amounted to.
-		foreach ( $languages as $language => $row ) {
-			if ( $row === $base ) {
-				continue;
-			}
-			$assembled = axismundi_actors_migration_join_name( $row );
-			if ( '' !== $assembled && '' === (string) ( axismundi_actors_get_text_map( $identity_id )[ $language ]['name'] ?? '' ) ) {
-				axismundi_actors_set_text( $identity_id, 'name', (string) $language, $assembled );
-			}
-		}
-	}
-	return true;
 }

@@ -47,7 +47,6 @@ require_once __DIR__ . '/includes/lifecycle.php';
 require_once __DIR__ . '/includes/provenance.php';
 require_once __DIR__ . '/includes/actor-link.php';
 require_once __DIR__ . '/includes/name-sync.php';
-require_once __DIR__ . '/includes/legacy-names.php';
 require_once __DIR__ . '/includes/jscontact.php';
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/name-editor.php';

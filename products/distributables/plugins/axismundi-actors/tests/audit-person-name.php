@@ -58,6 +58,51 @@ try {
 			&& ! function_exists( 'axismundi_actors_jscontact_name' )
 			&& ! function_exists( 'axismundi_actors_set_person_name' )
 	);
+	/*
+	 * And no store to build one from. The per-language name table and the columns that replaced it
+	 * are both gone, so this is not "nothing reads them" -- there is nothing to read.
+	 */
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema check.
+	$ax_pn_profile_columns = (array) $wpdb->get_col( 'SHOW COLUMNS FROM ' . axismundi_actors_profile_table() );
+	ax_pn_assert(
+		$ax_pn_results,
+		'and no store to build one from: neither the columns nor the table they replaced',
+		array() === array_intersect( AXISMUNDI_ACTORS_RETIRED_PROFILE_COLUMNS, $ax_pn_profile_columns )
+			&& null === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->prefix . 'ax_actor_person_names' ) )
+			&& ! function_exists( 'axismundi_actors_person_names_table' )
+			&& ! function_exists( 'axismundi_actors_migrate_person_profile' )
+	);
+
+	/*
+	 * Asked of the declaration rather than of the table, because those are different questions and
+	 * the one that hid a bug is the declaration. A migration that drops a column `CREATE TABLE` still
+	 * declares leaves every new site carrying it -- and every check that reads the live table passes
+	 * anyway, because the migration dropped it a moment after creating it.
+	 *
+	 * So the shipped schema is read as text. Unusual for an audit, and the only way to tell "this is
+	 * not declared" from "this is declared and then taken away again".
+	 */
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_pn_schema = (string) file_get_contents( dirname( __DIR__ ) . '/includes/repository.php' );
+	$ax_pn_create = '';
+	if ( false !== strpos( $ax_pn_schema, 'CREATE TABLE {$profile} (' ) ) {
+		$ax_pn_create = substr( $ax_pn_schema, (int) strpos( $ax_pn_schema, 'CREATE TABLE {$profile} (' ) );
+		$ax_pn_create = substr( $ax_pn_create, 0, (int) strpos( $ax_pn_create, ');' ) );
+	}
+	$ax_pn_declared = true;
+	foreach ( AXISMUNDI_ACTORS_RETIRED_PROFILE_COLUMNS as $ax_pn_retired ) {
+		if ( 1 === preg_match( '/^\s*' . preg_quote( $ax_pn_retired, '/' ) . '\s/m', $ax_pn_create ) ) {
+			$ax_pn_declared = false;
+		}
+	}
+	ax_pn_assert(
+		$ax_pn_results,
+		'the schema itself declares none of them, so a table made from it never has one to drop',
+		'' !== $ax_pn_create
+			&& $ax_pn_declared
+			&& 1 === preg_match( '/^\s*display_name\s/m', $ax_pn_create )
+			&& 1 === preg_match( '/^\s*phonetic_script\s/m', $ax_pn_create )
+	);
 
 	axismundi_actors_set_default_language( $ax_pn_id, 'ko-KR' );
 	axismundi_actors_set_text( $ax_pn_id, 'name', 'ko-KR', '김지운' );
@@ -377,8 +422,6 @@ try {
 	foreach ( array_unique( $ax_pn_users ) as $ax_pn_user_id ) {
 		$ax_pn_gone = axismundi_actors_get_for_user( (int) $ax_pn_user_id );
 		if ( $ax_pn_gone instanceof Axismundi_Actor ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
-			$wpdb->delete( axismundi_actors_person_names_table(), array( 'identity_id' => (int) $ax_pn_gone->get_identity_id() ), array( '%d' ) );
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 			$wpdb->delete( axismundi_actors_alternate_names_table(), array( 'identity_id' => (int) $ax_pn_gone->get_identity_id() ), array( '%d' ) );
 		}

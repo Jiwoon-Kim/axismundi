@@ -1632,198 +1632,6 @@ try {
 		'Jiwoon Kim' === (string) ( axismundi_contacts_name_representations( $ax_ct_fmt_sid )[''] ?? '' )
 	);
 
-	// -- the copy Actors was left holding ---------------------------------------------------------------------
-
-	/*
-	 * Both sides were editable between the migration that moved the structured name and the removal of
-	 * the screen that edited it here. So the two copies may now differ, and nothing in either says
-	 * which was typed last. What follows pins that no code decides that.
-	 */
-
-	/*
-	 * The columns are put back for the length of this section. A site that has finished upgrading no
-	 * longer has them, and the reconciliation is precisely the code that runs on one that has not --
-	 * so checking it means arranging the state it exists for. The schema is restored at the end.
-	 */
-	global $wpdb;
-	foreach ( array( 'given', 'given2', 'surname', 'surname2' ) as $ax_ct_legacy_column ) {
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture schema check.
-		$ax_ct_profile_columns = (array) $wpdb->get_col( 'SHOW COLUMNS FROM ' . axismundi_actors_profile_table() );
-		if ( ! in_array( $ax_ct_legacy_column, $ax_ct_profile_columns, true ) ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture schema setup.
-			$wpdb->query( 'ALTER TABLE ' . axismundi_actors_profile_table() . " ADD COLUMN {$ax_ct_legacy_column} varchar(191) NOT NULL default ''" );
-		}
-	}
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture schema check.
-	$ax_ct_profile_columns = (array) $wpdb->get_col( 'SHOW COLUMNS FROM ' . axismundi_actors_profile_table() );
-	if ( ! in_array( 'display_order', $ax_ct_profile_columns, true ) ) {
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture schema setup.
-		$wpdb->query( 'ALTER TABLE ' . axismundi_actors_profile_table() . " ADD COLUMN display_order varchar(32) NOT NULL default 'given-family'" );
-	}
-	// The schema just changed under this request, so the answer remembered from before it is stale.
-	axismundi_contacts_legacy_name_columns_present( true );
-	$ax_ct_legacy_restored = true;
-
-	/** One Actor with a profile card and a structured name still on the Actor side. */
-	$ax_ct_legacy_actor = static function ( array &$users, array &$loose, array $parts ) : array {
-		global $wpdb;
-		$actor = ax_ct_actor( $users );
-		$sid   = (int) $actor->get_identity_id();
-		$card  = axismundi_contacts_create_profile_card( $sid );
-		$card  = is_wp_error( $card ) ? 0 : (int) $card;
-		$loose[] = $card;
-		/*
-		 * Written straight into the columns, because nothing offers to write them any more -- and
-		 * replaced rather than updated, because an Actor that has only ever had components has no
-		 * profile row of its own. That is exactly the state a site mid-upgrade is in.
-		 */
-		$row = array_merge(
-			axismundi_actors_person_profile( $sid ),
-			array( 'structured_name_language' => 'en-US' ),
-			$parts,
-			array( 'identity_id' => $sid, 'updated_at' => current_time( 'mysql', true ) )
-		);
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture write into the Actors table.
-		$wpdb->replace( axismundi_actors_profile_table(), $row );
-		return array( $sid, $card );
-	};
-
-	list( $ax_ct_lg_sid, $ax_ct_lg_card ) = $ax_ct_legacy_actor(
-		$ax_ct_users,
-		$ax_ct_loose,
-		array( 'given' => 'Jiwoon', 'surname' => 'Kim', 'display_order' => 'given-family' )
-	);
-	// The card is made with a written-out name and no components, which is every profile card's start.
-	$ax_ct_lg_doc = axismundi_contacts_card_document( $ax_ct_lg_card );
-	$ax_ct_lg_doc['name'] = array( '@type' => 'Name', 'full' => 'Jiwoon Kim' );
-	axismundi_contacts_save_card_for_owner( $ax_ct_lg_sid, $ax_ct_lg_doc, $ax_ct_lg_card );
-	ax_ct_assert(
-		$ax_ct_results,
-		'a card with no components of its own takes the ones the Actor was holding',
-		'adoptable' === axismundi_contacts_legacy_name_state( $ax_ct_lg_sid )
-			&& axismundi_contacts_reconcile_legacy_names() >= 1
-			&& array( 'given' => 'Jiwoon', 'surname' => 'Kim' ) === axismundi_contacts_name_actor_parts(
-				axismundi_contacts_card_document( $ax_ct_lg_card )['name'] ?? array()
-			)
-	);
-
-	ax_ct_assert(
-		$ax_ct_results,
-		'and once they agree there is nothing left to carry, however often it runs',
-		'settled' === axismundi_contacts_legacy_name_state( $ax_ct_lg_sid )
-			&& 0 === axismundi_contacts_reconcile_legacy_names()
-			&& 'Jiwoon Kim' === (string) ( axismundi_contacts_card_document( $ax_ct_lg_card )['name']['full'] ?? '' )
-	);
-
-	/*
-	 * The state this whole file exists for. Both sides say a name, the two are not the same name, and
-	 * no timestamp, length or similarity is evidence of which somebody meant.
-	 */
-	list( $ax_ct_cf_sid, $ax_ct_cf_card ) = $ax_ct_legacy_actor(
-		$ax_ct_users,
-		$ax_ct_loose,
-		array( 'given' => '지운2', 'surname' => '김', 'display_order' => 'family-given-compact' )
-	);
-	$ax_ct_cf_doc = axismundi_contacts_card_document( $ax_ct_cf_card );
-	$ax_ct_cf_doc['name'] = array(
-		'@type'            => 'Name',
-		'isOrdered'        => true,
-		'defaultSeparator' => '',
-		'components'       => array(
-			array( '@type' => 'NameComponent', 'kind' => 'surname', 'value' => '김' ),
-			array( '@type' => 'NameComponent', 'kind' => 'given', 'value' => '지운' ),
-		),
-	);
-	axismundi_contacts_save_card_for_owner( $ax_ct_cf_sid, $ax_ct_cf_doc, $ax_ct_cf_card );
-	$ax_ct_cf_before = axismundi_contacts_card_document( $ax_ct_cf_card )['name'];
-	ax_ct_assert(
-		$ax_ct_results,
-		'two structured names that differ are a question rather than a merge',
-		'conflict' === axismundi_contacts_legacy_name_state( $ax_ct_cf_sid )
-	);
-
-	// Running the reconciliation again touches neither side, which is what makes it safe to leave in.
-	axismundi_contacts_reconcile_legacy_names();
-	axismundi_contacts_adopt_structured_names();
-	ax_ct_assert(
-		$ax_ct_results,
-		'a conflict survives the migration running again, on both sides and unchanged',
-		'conflict' === axismundi_contacts_legacy_name_state( $ax_ct_cf_sid )
-			&& $ax_ct_cf_before === axismundi_contacts_card_document( $ax_ct_cf_card )['name']
-			&& '지운2' === (string) ( axismundi_actors_person_profile( $ax_ct_cf_sid )['given'] ?? '' )
-	);
-
-	// Answered in favour of the card: the card stands, and the Actor stops holding a second opinion.
-	$ax_ct_kept_card = axismundi_contacts_resolve_legacy_name( $ax_ct_cf_sid, 'card' );
-	ax_ct_assert(
-		$ax_ct_results,
-		'keeping the card leaves it exactly as it was and the question does not come back',
-		true === $ax_ct_kept_card
-			&& $ax_ct_cf_before === axismundi_contacts_card_document( $ax_ct_cf_card )['name']
-			&& 'none' === axismundi_contacts_legacy_name_state( $ax_ct_cf_sid )
-			&& '' === (string) ( axismundi_actors_person_profile( $ax_ct_cf_sid )['given'] ?? '' )
-	);
-
-	// Answered the other way: the earlier name is written onto the card, in full and in parts.
-	list( $ax_ct_ac_sid, $ax_ct_ac_card ) = $ax_ct_legacy_actor(
-		$ax_ct_users,
-		$ax_ct_loose,
-		array( 'given' => '지운', 'surname' => '김', 'display_order' => 'family-given-compact' )
-	);
-	$ax_ct_ac_doc = axismundi_contacts_card_document( $ax_ct_ac_card );
-	$ax_ct_ac_doc['name'] = array(
-		'@type'      => 'Name',
-		'isOrdered'  => true,
-		'components' => array( array( '@type' => 'NameComponent', 'kind' => 'given', 'value' => 'Jiwoon' ) ),
-	);
-	axismundi_contacts_save_card_for_owner( $ax_ct_ac_sid, $ax_ct_ac_doc, $ax_ct_ac_card );
-	$ax_ct_took = axismundi_contacts_resolve_legacy_name( $ax_ct_ac_sid, 'actor' );
-	$ax_ct_ac_after = axismundi_contacts_card_document( $ax_ct_ac_card )['name'] ?? array();
-	ax_ct_assert(
-		$ax_ct_results,
-		'choosing the earlier name writes it onto the card, and the Actor stops holding it too',
-		true === $ax_ct_took
-			&& array( 'surname' => '김', 'given' => '지운' ) === axismundi_contacts_name_actor_parts( $ax_ct_ac_after )
-			&& 'none' === axismundi_contacts_legacy_name_state( $ax_ct_ac_sid )
-	);
-
-	/*
-	 * A compact reading order was two facts on the Actor -- the order, and a rule about whether the
-	 * parts were written in Latin letters -- and is one field on a card. Carrying it over states it
-	 * outright rather than leaving the card to work it out again.
-	 */
-	ax_ct_assert(
-		$ax_ct_results,
-		'a compact reading order arrives as an empty default separator and reads the same',
-		'' === (string) ( $ax_ct_ac_after['defaultSeparator'] ?? 'unset' )
-			&& '김지운' === (string) ( $ax_ct_ac_after['full'] ?? '' )
-	);
-
-	/*
-	 * And the label an Actor is shown as is not legacy at all. `display_name` is still Actors' own and
-	 * still edited there, so there is nothing to carry -- and reading it here would make every Actor
-	 * with a chosen label look like one whose name disagreed with its card, which is a question nobody
-	 * has.
-	 *
-	 * The `custom` reading order is the same answer from the other side: it meant "show the label,
-	 * ignore the parts", so the parts were already answering nothing.
-	 */
-	list( $ax_ct_cu_sid, $ax_ct_cu_card ) = $ax_ct_legacy_actor(
-		$ax_ct_users,
-		$ax_ct_loose,
-		array( 'given' => 'Jiwoon', 'surname' => 'Kim', 'display_order' => 'custom', 'display_name' => 'Jiwoon of Busan' )
-	);
-	$ax_ct_cu_doc = axismundi_contacts_card_document( $ax_ct_cu_card );
-	$ax_ct_cu_doc['name'] = array( '@type' => 'Name', 'full' => 'Jiwoon Kim' );
-	axismundi_contacts_save_card_for_owner( $ax_ct_cu_sid, $ax_ct_cu_doc, $ax_ct_cu_card );
-	ax_ct_assert(
-		$ax_ct_results,
-		'a label the Actor is shown as is not a name the card is missing, and asks nobody anything',
-		'none' === axismundi_contacts_legacy_name_state( $ax_ct_cu_sid )
-			&& 'Jiwoon Kim' === (string) ( axismundi_contacts_card_document( $ax_ct_cu_card )['name']['full'] ?? '' )
-			&& 'Jiwoon of Busan' === (string) ( axismundi_actors_person_profile( $ax_ct_cu_sid )['display_name'] ?? '' )
-	);
-
 	// -- a name an Actor shows is chosen, never assembled ------------------------------------------------------
 
 	/*
@@ -1894,7 +1702,7 @@ try {
 		$ax_ct_nm_actor instanceof Axismundi_Actor
 			&& 'Eigener Name' === axismundi_actors_person_display_name( $ax_ct_nm_actor, 'de-DE' )
 			&& ! function_exists( 'axismundi_contacts_sync_name_to_actor' )
-			&& ! function_exists( 'axismundi_contacts_sync_name_from_actor' )
+			&& ! function_exists( 'axismundi_contacts_legacy_name_state' )
 	);
 
 	ax_ct_assert(
@@ -1906,14 +1714,6 @@ try {
 	);
 } finally {
 	global $wpdb;
-	/*
-	 * The columns this file put back come off again, through the migration that owns that decision
-	 * rather than by dropping them here: it is the thing that knows when it is safe, and the fixtures
-	 * above are gone by now.
-	 */
-	if ( isset( $ax_ct_legacy_restored ) && function_exists( 'axismundi_actors_install' ) ) {
-		$ax_ct_restore_schema = true;
-	}
 	foreach ( array_unique( array_filter( $ax_ct_loose ) ) as $ax_ct_loose_card ) {
 		axismundi_contacts_delete_card( (int) $ax_ct_loose_card );
 	}
@@ -1926,9 +1726,6 @@ try {
 	}
 	foreach ( array_unique( $ax_ct_users ) as $ax_ct_user_id ) {
 		wp_delete_user( (int) $ax_ct_user_id );
-	}
-	if ( isset( $ax_ct_restore_schema ) ) {
-		axismundi_actors_install();
 	}
 }
 

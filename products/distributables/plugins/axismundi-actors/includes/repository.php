@@ -11,7 +11,31 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '29.0';
+const AXISMUNDI_ACTORS_DB_VERSION = '30.0';
+
+/**
+ * Columns the base profile used to have, kept only so they can be removed.
+ *
+ * The parts of a person's name, and the order they are read in. They belong to the contact card,
+ * which is the only place they are stored now; these are named here so that a table made before
+ * that ends up looking like one made after it. The older development spellings are included for the
+ * same reason.
+ */
+const AXISMUNDI_ACTORS_RETIRED_PROFILE_COLUMNS = array(
+	'given',
+	'given2',
+	'surname',
+	'surname2',
+	'display_order',
+	'title',
+	'credential',
+	'first_name',
+	'middle_name',
+	'last_name',
+	'second_surname',
+	'honorific_prefix',
+	'honorific_suffix',
+);
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -130,7 +154,8 @@ function axismundi_actors_install() : void {
 	$actors     = axismundi_actors_actors_table();
 	$texts      = axismundi_actors_texts_table();
 	$profile_fields = axismundi_actors_profile_fields_table();
-	$person_names   = axismundi_actors_person_names_table();
+	// Named here and nowhere else: the only thing left to do with this table is get rid of it.
+	$person_names   = $wpdb->prefix . 'ax_actor_person_names';
 	$alternate_names = axismundi_actors_alternate_names_table();
 	$profile         = axismundi_actors_profile_table();
 	$anniversaries   = axismundi_actors_anniversaries_table();
@@ -206,64 +231,13 @@ function axismundi_actors_install() : void {
 	);
 
 	/*
-	 * A person's name in parts, per language. Stored beside the display name rather than replacing it:
-	 * a mononym or an organisation has no parts, and the order the parts read in belongs to the person
-	 * rather than to the language tag.
-	 *
-	 * The phonetic columns say how the parts are said, per part, because that is how both standards
-	 * model it -- JSContact hangs `phonetic` off each name component and vCard puts PHONETIC on the
-	 * property. The system and script are stored once for the whole name and are what make the values
-	 * readable: `jee-WOON` is not IPA, and a phonetic value with nothing saying which notation it is
-	 * written in cannot be pronounced correctly by anybody who did not write it.
+	 * The per-language structured name table is gone rather than kept empty. It held the parts of a
+	 * person's name once, before the base profile and then before the contact card; nothing has read
+	 * it since, and a table of `first_name` and `honorific_prefix` columns sitting in the schema is
+	 * the kind of thing somebody finds in a year and has to work out from scratch.
 	 */
-	dbDelta(
-		"CREATE TABLE {$person_names} (
-			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-			identity_id bigint(20) unsigned NOT NULL,
-			language_tag varchar(35) NOT NULL,
-			first_name varchar(191) NOT NULL default '',
-			middle_name varchar(191) NOT NULL default '',
-			last_name varchar(191) NOT NULL default '',
-			second_surname varchar(191) NOT NULL default '',
-			honorific_prefix varchar(64) NOT NULL default '',
-			honorific_suffix varchar(64) NOT NULL default '',
-			phonetic_first varchar(191) NOT NULL default '',
-			phonetic_middle varchar(191) NOT NULL default '',
-			phonetic_last varchar(191) NOT NULL default '',
-			phonetic_second_surname varchar(191) NOT NULL default '',
-			phonetic_system varchar(16) NOT NULL default '',
-			phonetic_script varchar(8) NOT NULL default '',
-			display_name varchar(191) NOT NULL default '',
-			updated_at datetime NOT NULL,
-			PRIMARY KEY  (id),
-			UNIQUE KEY identity_language (identity_id, language_tag)
-		) ENGINE=InnoDB {$charset};"
-	);
-
-	/*
-	 * DB v20 uses WordPress-shaped first/last names plus the Actor-only middle name. dbDelta adds the
-	 * new columns but deliberately does not remove old ones, so copy each value before dropping the
-	 * obsolete vocabulary. A half-complete migration keeps the version unstamped and is retried.
-	 */
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time custom-table migration.
-	$person_name_columns_before = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$person_names}" );
-	$person_name_renames        = array(
-		'given_name'          => 'first_name',
-		'additional_name'     => 'middle_name',
-		'family_name'         => 'last_name',
-		'phonetic_given'      => 'phonetic_first',
-		'phonetic_additional' => 'phonetic_middle',
-		'phonetic_family'     => 'phonetic_last',
-	);
-	foreach ( $person_name_renames as $old_column => $new_column ) {
-		if ( ! in_array( $old_column, $person_name_columns_before, true ) || ! in_array( $new_column, $person_name_columns_before, true ) ) {
-			continue;
-		}
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed internal identifiers only.
-		$wpdb->query( "UPDATE {$person_names} SET {$new_column} = {$old_column} WHERE {$new_column} = ''" );
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed internal identifiers only.
-		$wpdb->query( "ALTER TABLE {$person_names} DROP COLUMN {$old_column}" );
-	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed internal identifier.
+	$wpdb->query( "DROP TABLE IF EXISTS {$person_names}" );
 
 	/*
 	 * One base profile per local Actor, with no language axis at all.
@@ -290,12 +264,30 @@ function axismundi_actors_install() : void {
 			phonetic_surname2 varchar(191) NOT NULL default '',
 			phonetic_system varchar(16) NOT NULL default '',
 			phonetic_script varchar(8) NOT NULL default '',
-			display_order varchar(32) NOT NULL default 'given-family',
 			display_name varchar(191) NOT NULL default '',
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (identity_id)
 		) ENGINE=InnoDB {$charset};"
 	);
+
+	/*
+	 * The columns a person's name used to be kept in. `dbDelta` adds what the schema declares and
+	 * never removes what it does not, so a table made before the contact card took the name over
+	 * still has them; without this they would sit there for the life of every existing site while
+	 * every new one was built without them.
+	 *
+	 * Unconditional, and nothing is read out of them first. Nothing has written them since the
+	 * screen that edited them was removed, and the name each Actor answers with lives in the text
+	 * store rather than here.
+	 */
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema check.
+	$profile_columns_before = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profile}" );
+	foreach ( AXISMUNDI_ACTORS_RETIRED_PROFILE_COLUMNS as $retired_column ) {
+		if ( in_array( $retired_column, $profile_columns_before, true ) ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed internal identifiers from the list above.
+			$wpdb->query( "ALTER TABLE {$profile} DROP COLUMN {$retired_column}" );
+		}
+	}
 
 	/* A date is an Actor fact, not a column reserved for one kind of anniversary. */
 	dbDelta(
@@ -339,47 +331,6 @@ function axismundi_actors_install() : void {
 			$wpdb->query( "ALTER TABLE {$anniversaries} DROP COLUMN {$obsolete_anniversary_column}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- calendar recurrence does not belong to Actor facts.
 		}
 	}
-	/*
-	 * The base profile is the JSContact-shaped canonical store. Earlier development builds used
-	 * WordPress's first/last vocabulary there; copy it forward before removing it so a pre-release
-	 * site never has two column names for the same fact.
-	 */
-	$profile_renames = array(
-		'first_name'              => 'given',
-		'middle_name'             => 'given2',
-		'last_name'               => 'surname',
-		'second_surname'          => 'surname2',
-		'honorific_prefix'        => 'title',
-		'honorific_suffix'        => 'credential',
-		'phonetic_first'          => 'phonetic_given',
-		'phonetic_middle'         => 'phonetic_given2',
-		'phonetic_last'           => 'phonetic_surname',
-		'phonetic_second_surname' => 'phonetic_surname2',
-	);
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time custom-table migration.
-	$profile_columns_before = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profile}" );
-	foreach ( $profile_renames as $old_column => $new_column ) {
-		if ( ! in_array( $old_column, $profile_columns_before, true ) ) {
-			continue;
-		}
-		if ( ! in_array( $new_column, $profile_columns_before, true ) ) {
-			/*
-			 * The target is not in the table any more: the structured-name columns are gone from the
-			 * schema, so a site still on the old vocabulary has nothing to be renamed into. Added back
-			 * for the length of this upgrade, because the chain that follows -- fold, hand to Contacts,
-			 * drop -- has to be able to carry the value, and a column dropped in the same run costs
-			 * nothing.
-			 */
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed internal identifiers only.
-			$wpdb->query( "ALTER TABLE {$profile} ADD COLUMN {$new_column} varchar(191) NOT NULL default ''" );
-			$profile_columns_before[] = $new_column;
-		}
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed internal identifiers only.
-		$wpdb->query( "UPDATE {$profile} SET {$new_column} = {$old_column} WHERE {$new_column} = ''" );
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed internal identifiers only.
-		$wpdb->query( "ALTER TABLE {$profile} DROP COLUMN {$old_column}" );
-	}
-
 	/*
 	 * The other names a person goes by, which are not the same question as the same name written in
 	 * another script -- that is a localization of one name and lives in the table above. A nickname, a
@@ -786,30 +737,13 @@ function axismundi_actors_install() : void {
 	 * migration that half-applied and still stamped the version is a site that reports itself current
 	 * while the editor writing to those columns fails on every save.
 	 */
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$person_name_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$person_names}" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.
+	$person_names_dropped = $person_names !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $person_names ) );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$alternate_name_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$alternate_names}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$profile_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profile}" );
 	$anniversary_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$anniversaries}" );
-	/*
-	 * Folded in here rather than as a separate step, so a site cannot come up on the new schema with
-	 * its names still only in the per-language table. That table is not dropped.
-	 */
-	$profile_migrated = axismundi_actors_migrate_person_profile();
-	/*
-	 * And then the columns go, if nothing is waiting on them. Ordered exactly here on purpose: the old
-	 * per-language table has just been folded into them, so an install jumping several versions at once
-	 * still hands its names to Contacts before they are removed rather than after.
-	 *
-	 * A refusal is not a failure. It leaves the columns, records why, and the version is not stamped --
-	 * so this runs again on the next request, and settling the question in Contacts is all it takes to
-	 * let the upgrade finish.
-	 */
-	$legacy_names_dropped = axismundi_actors_drop_legacy_name_columns( $profile_columns );
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$profile_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profile}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$alternate_name_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$alternate_names} WHERE Key_name = 'identity_kind_position'" );
 	/*
@@ -855,27 +789,16 @@ function axismundi_actors_install() : void {
 		&& $transactional_engines
 		&& $migrated
 		&& $relations_migrated
-		&& in_array( 'first_name', $person_name_columns, true )
-		&& in_array( 'middle_name', $person_name_columns, true )
-		&& in_array( 'last_name', $person_name_columns, true )
-		&& in_array( 'phonetic_first', $person_name_columns, true )
-		&& in_array( 'phonetic_middle', $person_name_columns, true )
-		&& in_array( 'phonetic_last', $person_name_columns, true )
-		&& in_array( 'phonetic_system', $person_name_columns, true )
-		&& in_array( 'phonetic_script', $person_name_columns, true )
 		&& in_array( 'person_name_edited_at', $final_actor_columns, true )
 		&& array() === array_diff( AXISMUNDI_ACTORS_PROFILE_COLUMNS, $profile_columns )
 		&& in_array( 'structured_name_language', $profile_columns, true )
-		&& $legacy_names_dropped
-		&& array() === axismundi_actors_legacy_name_columns_in( $profile_columns )
-		&& $profile_migrated
+		&& array() === array_intersect( AXISMUNDI_ACTORS_RETIRED_PROFILE_COLUMNS, $profile_columns )
+		&& $person_names_dropped
 		&& in_array( 'anniversary_kind', $anniversary_columns, true )
 		&& in_array( 'visibility', $anniversary_columns, true )
 		&& in_array( 'name_kind', $alternate_name_columns, true )
 		&& in_array( 'value', $alternate_name_columns, true )
 		&& ! empty( $alternate_name_indexes )
-		&& array() === array_intersect( array_keys( $person_name_renames ), $person_name_columns )
-		&& array() === array_intersect( array_keys( $profile_renames ), $profile_columns )
 	) {
 		update_option( 'ax_actors_db_version', AXISMUNDI_ACTORS_DB_VERSION, false );
 	}

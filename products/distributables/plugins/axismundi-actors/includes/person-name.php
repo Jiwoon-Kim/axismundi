@@ -27,12 +27,6 @@
 
 defined( 'ABSPATH' ) || exit;
 
-/** @return string Structured person-name table. */
-function axismundi_actors_person_names_table() : string {
-	global $wpdb;
-	return $wpdb->prefix . 'ax_actor_person_names';
-}
-
 /** @return string The other names a person goes by. */
 function axismundi_actors_alternate_names_table() : string {
 	global $wpdb;

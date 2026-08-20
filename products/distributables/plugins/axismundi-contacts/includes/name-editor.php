@@ -25,19 +25,42 @@ defined( 'ABSPATH' ) || exit;
 const AXISMUNDI_CONTACTS_NAME_KINDS = array( 'title', 'given', 'given2', 'surname', 'surname2', 'credential' );
 
 /**
- * The two layouts offered, as the sequence of kinds each reads in.
+ * The layouts offered, as the sequence of kinds each reads in and what goes between them.
  *
- * @return array<string,array{label:string,order:string[]}>
+ * Four rather than two, because whether a name is written with spaces is not the same question as
+ * which part comes first. `김지운` is a family-given name with nothing between the parts, and
+ * offering only the spaced form would mean the only way to write it correctly was to type the whole
+ * string into `full` and leave the components behind.
+ *
+ * The separator is the JSContact one: `defaultSeparator`, empty. No new vocabulary is invented for
+ * this -- a reader that knows the standard already knows what an empty default separator means, and
+ * a compact name exported from here needs no Axismundi-specific field to survive the trip.
+ *
+ * @return array<string,array{label:string,order:string[],separator:string}>
  */
 function axismundi_contacts_name_orders() : array {
+	$given_first  = array( 'title', 'given', 'given2', 'surname', 'surname2', 'credential' );
+	$family_first = array( 'title', 'surname', 'surname2', 'given', 'given2', 'credential' );
 	return array(
 		'given-family' => array(
-			'label' => __( 'Given name first', 'axismundi-contacts' ),
-			'order' => array( 'title', 'given', 'given2', 'surname', 'surname2', 'credential' ),
+			'label'     => __( 'Given name first', 'axismundi-contacts' ),
+			'order'     => $given_first,
+			'separator' => ' ',
+		),
+		'given-family-compact' => array(
+			'label'     => __( 'Given name first, no spaces', 'axismundi-contacts' ),
+			'order'     => $given_first,
+			'separator' => '',
 		),
 		'family-given' => array(
-			'label' => __( 'Family name first', 'axismundi-contacts' ),
-			'order' => array( 'title', 'surname', 'surname2', 'given', 'given2', 'credential' ),
+			'label'     => __( 'Family name first', 'axismundi-contacts' ),
+			'order'     => $family_first,
+			'separator' => ' ',
+		),
+		'family-given-compact' => array(
+			'label'     => __( 'Family name first, no spaces', 'axismundi-contacts' ),
+			'order'     => $family_first,
+			'separator' => '',
 		),
 	);
 }
@@ -77,9 +100,13 @@ function axismundi_contacts_name_values( array $name ) : array {
 /**
  * Which of the offered layouts a name already reads as.
  *
- * Derived from the components rather than stored, for the same reason an entry's label is: storing
- * the answer as well as the values it produced would be two records of one fact, and a Card arriving
- * from another client has no stored answer to read.
+ * Derived from the components and the separator rather than stored, for the same reason an entry's
+ * label is: storing the answer as well as the values it produced would be two records of one fact,
+ * and a Card arriving from another client has no stored answer to read.
+ *
+ * A separator that is neither a space nor nothing -- a hyphen an import brought with it -- is not
+ * one of the layouts offered here, and is reported as the spaced form so that the select has
+ * something honest to show. It is not overwritten on the way back out; see below.
  *
  * @param array<string,mixed> $name Name object.
  * @return string
@@ -92,7 +119,9 @@ function axismundi_contacts_name_order( array $name ) : string {
 			$kinds[] = $kind;
 		}
 	}
-	return array( 'surname', 'given' ) === $kinds ? 'family-given' : 'given-family';
+	$order   = array( 'surname', 'given' ) === $kinds ? 'family-given' : 'given-family';
+	$compact = isset( $name['defaultSeparator'] ) && '' === $name['defaultSeparator'];
+	return $compact ? $order . '-compact' : $order;
 }
 
 /**
@@ -167,13 +196,27 @@ function axismundi_contacts_name_from_request( string $prefix, array $existing =
 		$name['components'] = $components;
 		// Said to be ordered because they are: the sequence above is the one somebody chose.
 		$name['isOrdered'] = true;
+		/*
+		 * A compact layout states its separator outright, because the absence of one means a space.
+		 * The spaced layouts state nothing, which is the same thing said by saying less.
+		 *
+		 * A separator this screen never offered is left where it is. Somebody's Card that joins their
+		 * name with a hyphen did not stop meaning that because it was opened in an editor with four
+		 * choices, and flattening it to a space would be the editor overwriting a fact it cannot show.
+		 */
+		$previous = $existing['defaultSeparator'] ?? null;
+		if ( '' === $plan['separator'] ) {
+			$name['defaultSeparator'] = '';
+		} elseif ( ! is_string( $previous ) || '' === $previous || ' ' === $previous ) {
+			unset( $name['defaultSeparator'] );
+		}
 	} else {
 		/*
 		 * A name given as a written-out string keeps no components. Nothing is inferred from `full`
 		 * here, which is the same rule the store keeps: this screen may not decide which half of
 		 * `Jiwoon Kim` is the surname either.
 		 */
-		unset( $name['components'], $name['isOrdered'] );
+		unset( $name['components'], $name['isOrdered'], $name['defaultSeparator'] );
 	}
 	return $name;
 }

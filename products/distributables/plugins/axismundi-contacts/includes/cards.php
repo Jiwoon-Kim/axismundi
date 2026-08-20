@@ -163,6 +163,15 @@ function axismundi_contacts_save_card_for_owner( int $owner_actor_id, array $car
 	if ( is_wp_error( $valid ) ) {
 		return $valid;
 	}
+	/*
+	 * Made complete on the way in, so that a name with components and no written-out form gets one.
+	 * Here rather than in the editor because an import arrives the same way and needs the same thing,
+	 * and because the Actor name bindings read `full` alone -- a Card stored without one offers that
+	 * language no name to bind, and the Actor stops answering in it.
+	 *
+	 * Only that direction. Nothing is taken apart, and a `full` somebody wrote is never replaced.
+	 */
+	$card = axismundi_contacts_complete_card_names( $card );
 	$existing = $card_id > 0 ? axismundi_contacts_get_card( $card_id ) : array();
 	if ( $card_id > 0 && array() === $existing ) {
 		return new WP_Error( 'ax_contacts_card_missing', __( 'That card does not exist.', 'axismundi-contacts' ), array( 'status' => 404 ) );

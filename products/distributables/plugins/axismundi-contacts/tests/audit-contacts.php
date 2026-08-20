@@ -1432,6 +1432,206 @@ try {
 	 * it does not decide what an Actor is -- that boundary is the reason a Card may be a person with
 	 * a phone number and nothing else.
 	 */
+	// -- a card is presentation-ready when it is stored -------------------------------------------------------
+
+	/*
+	 * The gap this closes: the name bindings offer one writing per tag and read `full` to do it, so a
+	 * card holding components and no written-out form offered that language nothing. Nothing noticed
+	 * while Actors still assembled the name itself; the moment it stops, the Actor goes quiet in that
+	 * language. So the card is completed on the way in, once, rather than by each reader.
+	 */
+	$ax_ct_fmt_id = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array(
+			'@type' => 'Card',
+			'kind'  => 'individual',
+			'name'  => array(
+				'@type'      => 'Name',
+				'isOrdered'  => true,
+				'components' => array(
+					array( '@type' => 'NameComponent', 'kind' => 'given', 'value' => 'Jiwoon' ),
+					array( '@type' => 'NameComponent', 'kind' => 'surname', 'value' => 'Kim' ),
+				),
+			),
+		)
+	);
+	$ax_ct_loose[] = is_wp_error( $ax_ct_fmt_id ) ? 0 : (int) $ax_ct_fmt_id;
+	$ax_ct_fmt     = is_wp_error( $ax_ct_fmt_id ) ? array() : axismundi_contacts_card_document( (int) $ax_ct_fmt_id );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a card stored with components and no written-out name is given one, so a locale has something to bind to',
+		'Jiwoon Kim' === (string) ( $ax_ct_fmt['name']['full'] ?? '' )
+	);
+
+	/*
+	 * Compact is a separator and not a different kind of name. `defaultSeparator` empty is what
+	 * JSContact already says for it, so a reader that knows the standard needs nothing from us.
+	 */
+	$ax_ct_compact_id = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array(
+			'@type' => 'Card',
+			'kind'  => 'individual',
+			'name'  => array(
+				'@type'            => 'Name',
+				'isOrdered'        => true,
+				'defaultSeparator' => '',
+				'components'       => array(
+					array( '@type' => 'NameComponent', 'kind' => 'surname', 'value' => '김' ),
+					array( '@type' => 'NameComponent', 'kind' => 'given', 'value' => '지운' ),
+				),
+			),
+		)
+	);
+	$ax_ct_loose[]  = is_wp_error( $ax_ct_compact_id ) ? 0 : (int) $ax_ct_compact_id;
+	$ax_ct_compact  = is_wp_error( $ax_ct_compact_id ) ? array() : axismundi_contacts_card_document( (int) $ax_ct_compact_id );
+	ax_ct_assert(
+		$ax_ct_results,
+		'an empty default separator assembles with nothing between the parts, and stays on the card',
+		'김지운' === (string) ( $ax_ct_compact['name']['full'] ?? '' )
+			&& '' === (string) ( $ax_ct_compact['name']['defaultSeparator'] ?? 'unset' )
+	);
+
+	/*
+	 * The forbidden direction, pinned. Completing a name is a derivation -- the components were
+	 * already in the order somebody chose -- and taking a written-out name apart would be a guess
+	 * about which half of it is a surname, written into a field that does not look like a guess
+	 * afterwards.
+	 */
+	$ax_ct_fullonly_id = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array( '@type' => 'Card', 'kind' => 'individual', 'name' => array( '@type' => 'Name', 'full' => 'Jiwoon Kim' ) )
+	);
+	$ax_ct_loose[]  = is_wp_error( $ax_ct_fullonly_id ) ? 0 : (int) $ax_ct_fullonly_id;
+	$ax_ct_fullonly = is_wp_error( $ax_ct_fullonly_id ) ? array() : axismundi_contacts_card_document( (int) $ax_ct_fullonly_id );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a written-out name is never taken apart into components',
+		'Jiwoon Kim' === (string) ( $ax_ct_fullonly['name']['full'] ?? '' )
+			&& ! isset( $ax_ct_fullonly['name']['components'] )
+	);
+
+	/*
+	 * A `full` somebody typed wins over what the components join to. Writing `Dr. Kim` beside a
+	 * surname is two statements on purpose, and the second must not overwrite the first.
+	 */
+	$ax_ct_both_id = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array(
+			'@type' => 'Card',
+			'kind'  => 'individual',
+			'name'  => array(
+				'@type'      => 'Name',
+				'full'       => 'Dr. Kim',
+				'components' => array( array( '@type' => 'NameComponent', 'kind' => 'surname', 'value' => 'Kim' ) ),
+			),
+		)
+	);
+	$ax_ct_loose[] = is_wp_error( $ax_ct_both_id ) ? 0 : (int) $ax_ct_both_id;
+	$ax_ct_both    = is_wp_error( $ax_ct_both_id ) ? array() : axismundi_contacts_card_document( (int) $ax_ct_both_id );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a written-out name that differs from its components is left as it was written',
+		'Dr. Kim' === (string) ( $ax_ct_both['name']['full'] ?? '' )
+	);
+
+	// A localized name is a name: the bindings read it the same way, so it is completed the same way.
+	$ax_ct_loc_id = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		axismundi_contacts_set_localized_name(
+			array( '@type' => 'Card', 'kind' => 'individual', 'name' => array( '@type' => 'Name', 'full' => 'Jiwoon Kim' ) ),
+			'ko-KR',
+			array(
+				'@type'            => 'Name',
+				'isOrdered'        => true,
+				'defaultSeparator' => '',
+				'components'       => array(
+					array( '@type' => 'NameComponent', 'kind' => 'surname', 'value' => '김' ),
+					array( '@type' => 'NameComponent', 'kind' => 'given', 'value' => '지운' ),
+				),
+			)
+		)
+	);
+	$ax_ct_loose[] = is_wp_error( $ax_ct_loc_id ) ? 0 : (int) $ax_ct_loc_id;
+	$ax_ct_loc     = is_wp_error( $ax_ct_loc_id ) ? array() : axismundi_contacts_card_document( (int) $ax_ct_loc_id );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a localized name with components and no written-out form is completed too',
+		'김지운' === (string) ( axismundi_contacts_localized_name( $ax_ct_loc, 'ko-KR' )['full'] ?? '' )
+	);
+
+	/*
+	 * The editor round trip, which is where the separator could be lost. A layout it never offered --
+	 * a hyphen an import brought -- is not flattened to a space because somebody opened the screen and
+	 * saved it, and the compact layout it does offer survives being read back out of the card.
+	 */
+	$_POST             = array( 'ax_ct_name' => array( 'full' => '', 'order' => 'family-given-compact', 'surname' => '김', 'given' => '지운' ) );
+	$ax_ct_editor_name = axismundi_contacts_name_from_request( 'ax_ct_name' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'the editor states a compact layout as an empty default separator, and reads it back as the same layout',
+		'' === (string) ( $ax_ct_editor_name['defaultSeparator'] ?? 'unset' )
+			&& 'family-given-compact' === axismundi_contacts_name_order( $ax_ct_editor_name )
+			&& '김지운' === axismundi_contacts_assemble_name( $ax_ct_editor_name )
+	);
+
+	$_POST      = array( 'ax_ct_name' => array( 'full' => '', 'order' => 'given-family', 'given' => 'Jiwoon', 'surname' => 'Kim' ) );
+	$ax_ct_kept = axismundi_contacts_name_from_request( 'ax_ct_name', array( '@type' => 'Name', 'defaultSeparator' => '-' ) );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a separator the editor cannot show is left where it is rather than flattened to a space',
+		'-' === (string) ( $ax_ct_kept['defaultSeparator'] ?? '' )
+			&& 'Jiwoon-Kim' === axismundi_contacts_assemble_name( $ax_ct_kept )
+	);
+	$_POST = array();
+
+	/*
+	 * A `separator` component is a literal RFC 9553 allows between two parts, and where one appears it
+	 * stands in place of the default rather than beside it.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a separator component is used as written, in place of the default',
+		'Kim, Jiwoon' === axismundi_contacts_assemble_name(
+			array(
+				'@type'      => 'Name',
+				'components' => array(
+					array( '@type' => 'NameComponent', 'kind' => 'surname', 'value' => 'Kim' ),
+					array( '@type' => 'NameComponent', 'kind' => 'separator', 'value' => ', ' ),
+					array( '@type' => 'NameComponent', 'kind' => 'given', 'value' => 'Jiwoon' ),
+				),
+			)
+		)
+	);
+
+	/*
+	 * And the reason all of the above matters: the Actor's own card, holding components alone, now
+	 * offers that name to a locale. Before this it offered nothing, and the only thing hiding it was
+	 * that Actors still assembled the name on its own side.
+	 */
+	$ax_ct_fmt_actor = ax_ct_actor( $ax_ct_users );
+	$ax_ct_fmt_sid   = (int) $ax_ct_fmt_actor->get_identity_id();
+	$ax_ct_fmt_made  = axismundi_contacts_create_profile_card( $ax_ct_fmt_sid );
+	$ax_ct_fmt_card  = is_wp_error( $ax_ct_fmt_made ) ? 0 : (int) $ax_ct_fmt_made;
+	$ax_ct_loose[]   = $ax_ct_fmt_card;
+	if ( $ax_ct_fmt_card > 0 ) {
+		$ax_ct_fmt_doc         = axismundi_contacts_card_document( $ax_ct_fmt_card );
+		$ax_ct_fmt_doc['name'] = array(
+			'@type'      => 'Name',
+			'isOrdered'  => true,
+			'components' => array(
+				array( '@type' => 'NameComponent', 'kind' => 'given', 'value' => 'Jiwoon' ),
+				array( '@type' => 'NameComponent', 'kind' => 'surname', 'value' => 'Kim' ),
+			),
+		);
+		axismundi_contacts_save_card_for_owner( $ax_ct_fmt_sid, $ax_ct_fmt_doc, $ax_ct_fmt_card );
+	}
+	ax_ct_assert(
+		$ax_ct_results,
+		'a profile card holding only components offers its name to an Actor locale',
+		'Jiwoon Kim' === (string) ( axismundi_contacts_name_representations( $ax_ct_fmt_sid )[''] ?? '' )
+	);
+
 	ax_ct_assert(
 		$ax_ct_results,
 		'this plugin stores address books and imitates neither the Actor registry nor its profiles',

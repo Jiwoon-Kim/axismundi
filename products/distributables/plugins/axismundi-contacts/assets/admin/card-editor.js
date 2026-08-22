@@ -53,7 +53,7 @@
 	 * vendor value is a real answer and drawing a person for it would be inventing one.
 	 */
 	var KIND_ICONS = {
-		individual: 'account-circle',
+		individual: 'person',
 		org: 'domain',
 		group: 'group',
 		location: 'location-on',
@@ -95,7 +95,7 @@
 		{ key: 'phones', label: __( 'Phone', 'axismundi-contacts' ), value: 'number', icon: 'call' },
 		{ key: 'links', label: __( 'Links', 'axismundi-contacts' ), value: 'uri', type: 'url', icon: 'link' },
 		{ key: 'media', label: __( 'Media', 'axismundi-contacts' ), value: 'uri', type: 'url', icon: 'image' },
-		{ key: 'notes', label: __( 'Notes', 'axismundi-contacts' ), value: 'note', icon: 'file-json' }
+		{ key: 'notes', label: __( 'Notes', 'axismundi-contacts' ), value: 'note', icon: 'notes' }
 	];
 
 	/** The component kinds a name is made of, plus the separator that goes between them. */
@@ -611,7 +611,13 @@
 			 */
 			written || ! personal
 				? el( TextField, {
-					label: __( 'Written out', 'axismundi-contacts' ),
+					/*
+					 * `Full name` rather than `Written out`. The property is `full` and the standard
+					 * calls it the full name; "written out" reads in English as the opposite of an
+					 * abbreviation -- `J. Kim` written out, `Dr.` written out -- which is a different
+					 * question from the one this field asks.
+					 */
+					label: __( 'Full name', 'axismundi-contacts' ),
 					value: name.full || '',
 					supporting: personal
 						? sprintf(
@@ -859,7 +865,7 @@
 								}
 							} ),
 							' ',
-							__( 'Write the name out as well', 'axismundi-contacts' )
+							__( 'Also give a full name', 'axismundi-contacts' )
 						)
 					)
 					: null,
@@ -1052,7 +1058,7 @@
 							? __( 'Turning this off removes the separator this name is written with.', 'axismundi-contacts' )
 							: 'sorting' === asking
 								? __( 'Turning this off removes the way this name is filed.', 'axismundi-contacts' )
-								: __( 'Turning this off removes the written-out name.', 'axismundi-contacts' )
+								: __( 'Turning this off removes the full name.', 'axismundi-contacts' )
 					),
 					el(
 						'p',
@@ -1583,9 +1589,8 @@
 		}
 
 		return el(
-			'section',
-			{ className: 'ax-ce-section' },
-			el( 'h2', null, __( 'Other languages', 'axismundi-contacts' ) ),
+			Section,
+			{ icon: 'language-international', title: __( 'Other languages', 'axismundi-contacts' ) },
 			el(
 				'p',
 				{ className: 'description' },
@@ -2125,9 +2130,8 @@
 						}
 					} ),
 					el(
-						'section',
-						{ className: 'ax-ce-section' },
-						el( 'h2', null, __( 'Language', 'axismundi-contacts' ) ),
+						Section,
+						{ icon: 'language', title: __( 'Language', 'axismundi-contacts' ) },
 						el( CardLanguage, {
 							value: card.language,
 							onChange: function ( value ) {

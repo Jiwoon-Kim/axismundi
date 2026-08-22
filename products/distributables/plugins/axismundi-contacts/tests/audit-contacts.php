@@ -3282,10 +3282,10 @@ try {
 	 */
 	ax_ct_assert(
 		$ax_ct_results,
-		'a name written out is what a card already says, not something this builds or quietly drops',
+		'a full name is what a card already says, not something this builds or quietly drops',
 		str_contains( $ax_ct_kn_js, 'var [ written, setWritten ] = useState( undefined !== name.full );' )
 			&& str_contains( $ax_ct_kn_js, "setAsking( 'written' )" )
-			&& str_contains( $ax_ct_kn_js, "__( 'Write the name out as well', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_kn_js, "__( 'Also give a full name', 'axismundi-contacts' )" )
 	);
 	/*
 	 * And a card carrying both is stored carrying both. Neither is derived from the other, in either
@@ -3993,6 +3993,7 @@ try {
 		$ax_ct_results,
 		'what a card is about is drawn beside its name, and changes when the card does',
 		str_contains( $ax_ct_ic_js, 'var KIND_ICONS = {' )
+			&& str_contains( $ax_ct_ic_js, "individual: 'person'," )
 			&& str_contains( $ax_ct_ic_js, "org: 'domain'," )
 			&& str_contains( $ax_ct_ic_js, "location: 'location-on'," )
 			&& str_contains( $ax_ct_ic_js, "device: 'devices'" )
@@ -4003,7 +4004,7 @@ try {
 	 * And every icon a screen names is one the registry holds. A mark that resolves to nothing is a
 	 * section with a gap where its subject should be, which nobody notices until it ships.
 	 */
-	$ax_ct_ic_named = array( 'account-circle', 'domain', 'group', 'location-on', 'apps', 'devices', 'mail', 'call', 'alternate-email', 'link', 'image', 'language', 'file-json', 'keyboard-arrow-down' );
+	$ax_ct_ic_named = array( 'person', 'domain', 'group', 'location-on', 'apps', 'devices', 'mail', 'call', 'alternate-email', 'link', 'image', 'language', 'language-international', 'notes', 'keyboard-arrow-down' );
 	$ax_ct_ic_have  = array_keys( axismundi_contacts_icons() );
 	$ax_ct_ic_files = true;
 	foreach ( $ax_ct_ic_named as $ax_ct_ic_one ) {

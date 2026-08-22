@@ -135,49 +135,80 @@ function axismundi_contacts_canonical_entry_order() : array {
 }
 
 /**
- * The types a position already states.
+ * Where a type is already stated by the property it sits on.
  *
- * RFC 9553 gives every object an `@type`, and requires only that it be right when it is there. In
+ * RFC 9553 gives every object an `@type` and requires only that it be right when it is there. In
  * almost every case it restates what the property already says: the object under `name` is a Name,
  * and the objects in its `components` are NameComponents, because there is nowhere else either can
  * appear. Written out it is noise in a document meant to be read -- the standard's own examples
  * leave it off -- so a stored Card leaves it off too.
  *
- * The Card's own `@type` stays. That one is not implied by anything: it is the top of the document,
- * and a reader handed the bytes has nothing else to tell it what it has been handed.
+ * By position and never by the word. A vendor's own property may hold an object that calls itself a
+ * Media, and it is not one: it is whatever that vendor says it is, in a place this file knows
+ * nothing about. Matching on the type name alone would strip the one line saying what that object
+ * was, out of a document this plugin does not own the meaning of. So a type is dropped only where
+ * this map says a type of exactly that name is what the position means, and everything else -- a
+ * property from a newer revision, an extension, an object somewhere unexpected -- is written down
+ * exactly as it arrived.
  *
- * A type absent from this list is kept exactly as it arrived. The date on an anniversary is why the
- * list exists at all rather than a rule about depth: that date is a Timestamp or a PartialDate, and
- * which of the two it is is a real answer that only `@type` carries.
+ * `date` on an anniversary shows what "already stated" means precisely. It is a PartialDate or a
+ * Timestamp, and the standard's default is PartialDate -- so a PartialDate there is implied and
+ * goes, while a Timestamp is the answer `@type` is carrying and stays.
  *
- * @return string[]
+ * The Card's own `@type` stays too. That one is not implied by anything: it is the top of the
+ * document, and a reader handed the bytes has nothing else to tell it what it has been handed.
+ *
+ * Each node says what the objects at that property are (`type`), whether the property holds a
+ * collection of them (`map` for entries addressed by id, `list` for ordered data) and what its own
+ * properties are in turn (`children`).
+ *
+ * @return array<string,array<string,mixed>>
  */
-function axismundi_contacts_implied_types() : array {
+function axismundi_contacts_typed_positions() : array {
+	$address = array( 'type' => 'Address', 'children' => array( 'components' => array( 'list' => true, 'type' => 'AddressComponent' ) ) );
 	return array(
-		'Name',
-		'NameComponent',
-		'Nickname',
-		'Organization',
-		'OrgUnit',
-		'SpeakToAs',
-		'Pronouns',
-		'Title',
-		'EmailAddress',
-		'OnlineService',
-		'Phone',
-		'LanguagePref',
-		'Calendar',
-		'SchedulingAddress',
-		'Address',
-		'AddressComponent',
-		'CryptoKey',
-		'Directory',
-		'Link',
-		'Media',
-		'Anniversary',
-		'Note',
-		'PersonalInfo',
-		'Relation',
+		'name'                => array(
+			'type'     => 'Name',
+			'children' => array( 'components' => array( 'list' => true, 'type' => 'NameComponent' ) ),
+		),
+		'nicknames'           => array( 'map' => true, 'type' => 'Nickname' ),
+		'organizations'       => array(
+			'map'      => true,
+			'type'     => 'Organization',
+			'children' => array( 'units' => array( 'list' => true, 'type' => 'OrgUnit' ) ),
+		),
+		'speakToAs'           => array(
+			'type'     => 'SpeakToAs',
+			'children' => array( 'pronouns' => array( 'map' => true, 'type' => 'Pronouns' ) ),
+		),
+		'titles'              => array( 'map' => true, 'type' => 'Title' ),
+		'emails'              => array( 'map' => true, 'type' => 'EmailAddress' ),
+		'onlineServices'      => array( 'map' => true, 'type' => 'OnlineService' ),
+		'phones'              => array( 'map' => true, 'type' => 'Phone' ),
+		'preferredLanguages'  => array( 'map' => true, 'type' => 'LanguagePref' ),
+		'calendars'           => array( 'map' => true, 'type' => 'Calendar' ),
+		'schedulingAddresses' => array( 'map' => true, 'type' => 'SchedulingAddress' ),
+		'addresses'           => array( 'map' => true ) + $address,
+		'cryptoKeys'          => array( 'map' => true, 'type' => 'CryptoKey' ),
+		'directories'         => array( 'map' => true, 'type' => 'Directory' ),
+		'links'               => array( 'map' => true, 'type' => 'Link' ),
+		'media'               => array( 'map' => true, 'type' => 'Media' ),
+		'anniversaries'       => array(
+			'map'      => true,
+			'type'     => 'Anniversary',
+			'children' => array(
+				// A PartialDate is what a date here means unless it says otherwise, so only that goes.
+				'date'  => array( 'type' => 'PartialDate' ),
+				'place' => $address,
+			),
+		),
+		'notes'               => array(
+			'map'      => true,
+			'type'     => 'Note',
+			'children' => array( 'author' => array( 'type' => 'Author' ) ),
+		),
+		'personalInfo'        => array( 'map' => true, 'type' => 'PersonalInfo' ),
+		'relatedTo'           => array( 'map' => true, 'type' => 'Relation' ),
 	);
 }
 
@@ -228,6 +259,7 @@ function axismundi_contacts_is_list( array $value ) : bool {
  */
 function axismundi_contacts_canonical_card( array $card ) : array {
 	$card = axismundi_contacts_canonical_value( $card, 0 );
+	// The Card's own type is not implied by anything, so it is never one of the ones dropped below.
 	return axismundi_contacts_order_keys( $card, axismundi_contacts_canonical_order() );
 }
 
@@ -238,20 +270,34 @@ function axismundi_contacts_canonical_card( array $card ) : array {
  * `name/components/0/value` -- and their shape is the patch, not an object to be tidied. Ordering
  * the tags themselves is safe and makes four languages readable.
  *
- * @param mixed $value Value.
- * @param int   $depth How far from the Card's own properties.
- * @param bool  $patch Whether this sits inside a localization patch.
+ * Inside a localization there is no position to read: a patch's keys are paths and its values are
+ * whatever goes there, so nothing is recognised and nothing is dropped.
+ *
+ * @param mixed              $value Value.
+ * @param int                $depth How far from the Card's own properties.
+ * @param bool               $patch Whether this sits inside a localization patch.
+ * @param array<string,mixed>|null $spec What this position is known to hold, or null when it is not
+ *                                       a position this file knows.
  * @return mixed
  */
-function axismundi_contacts_canonical_value( $value, int $depth, bool $patch = false ) {
+function axismundi_contacts_canonical_value( $value, int $depth, bool $patch = false, ?array $spec = null ) {
 	if ( ! is_array( $value ) ) {
 		return $value;
 	}
+	/*
+	 * A property that holds several of something: entries addressed by id, or ordered data. The spec
+	 * describes what each of them is, so the collection itself is nothing and its items are objects.
+	 */
+	$collection = null !== $spec && ( ! empty( $spec['map'] ) || ! empty( $spec['list'] ) );
+	$item_spec  = $collection
+		? array( 'type' => (string) ( $spec['type'] ?? '' ), 'children' => (array) ( $spec['children'] ?? array() ) )
+		: null;
+
 	if ( axismundi_contacts_is_list( $value ) ) {
 		// Ordered data. Each item is still written in a stable key order; the sequence is untouched.
 		$out = array();
 		foreach ( $value as $item ) {
-			$out[] = axismundi_contacts_canonical_value( $item, $depth + 1, $patch );
+			$out[] = axismundi_contacts_canonical_value( $item, $depth + 1, $patch, $item_spec );
 		}
 		return $out;
 	}
@@ -259,7 +305,15 @@ function axismundi_contacts_canonical_value( $value, int $depth, bool $patch = f
 	foreach ( $value as $key => $item ) {
 		$key      = (string) $key;
 		$in_patch = $patch || ( 0 === $depth && 'localizations' === $key );
-		$item     = axismundi_contacts_canonical_value( $item, $depth + 1, $in_patch && $depth >= 1 );
+		if ( $collection ) {
+			// An entry, addressed by an id that says nothing about what it holds.
+			$child = $item_spec;
+		} elseif ( 0 === $depth ) {
+			$child = axismundi_contacts_typed_positions()[ $key ] ?? null;
+		} else {
+			$child = null !== $spec ? ( (array) ( $spec['children'] ?? array() ) )[ $key ] ?? null : null;
+		}
+		$item = axismundi_contacts_canonical_value( $item, $depth + 1, $in_patch && $depth >= 1, $in_patch ? null : $child );
 		if ( is_array( $item ) && array() === $item && ! $patch ) {
 			// An empty object says nothing the absent property does not say.
 			continue;
@@ -272,9 +326,9 @@ function axismundi_contacts_canonical_value( $value, int $depth, bool $patch = f
 		return $out;
 	}
 	if ( $depth >= 1 ) {
-		if ( isset( $out['@type'] ) && is_string( $out['@type'] )
-			&& in_array( $out['@type'], axismundi_contacts_implied_types(), true ) ) {
-			// The property this sits under already says it. Only the Card's own type is load-bearing.
+		if ( ! $collection && null !== $spec && isset( $out['@type'] )
+			&& is_string( $out['@type'] ) && $out['@type'] === (string) ( $spec['type'] ?? '' ) ) {
+			// This position means exactly that, so saying it again says nothing.
 			unset( $out['@type'] );
 		}
 		return axismundi_contacts_order_keys( $out, axismundi_contacts_canonical_entry_order() );

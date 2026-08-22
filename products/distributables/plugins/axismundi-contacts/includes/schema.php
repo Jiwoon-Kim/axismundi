@@ -366,11 +366,17 @@ function axismundi_contacts_install_schema() : bool {
  * a provenance row is written against, so a key that reads as a label ties both to a word somebody
  * is free to change -- and what the entry is called belongs in `service`, which is a value.
  *
- * Three things say that address and all three move together or none of them do: the Card itself,
- * the pointers its owner selected for publication, and the provenance row saying the value came from
- * an Actor. A Card renamed without its pointer would quietly unpublish an account somebody chose to
- * publish; a Card renamed without its provenance row would turn a seeded value into an authored one
- * and never refresh again. Hence one transaction per Card.
+ * Only the Card an Actor publishes about itself, which is the only place this site ever wrote that
+ * key. A contact somebody imported may have arrived with an entry called `axismundi` for reasons of
+ * its own -- a Card exported from another site that used the same word -- and rewriting it would be
+ * this migration editing a document it did not author, to fix a convention that document never had.
+ *
+ * Four things say that address and all four move together or none of them do: the entry in the Card,
+ * any localization patching into it, the pointers its owner selected for publication, and the
+ * provenance row saying the value came from an Actor. A Card renamed without its pointer would
+ * quietly unpublish an account somebody chose to publish; without its provenance row it would turn a
+ * seeded value into an authored one that never refreshes again; without its localization patches it
+ * would leave a translation pointing at nothing, which the store refuses. Hence one transaction.
  *
  * Written against the data and safe to run twice. A Card already using the new key has nothing to
  * move; a Card where the new key is taken by something else keeps the old one, because renaming onto
@@ -386,8 +392,14 @@ function axismundi_contacts_migrate_home_service_key() : void {
 	if ( $from === $to ) {
 		return;
 	}
+	$profiles = axismundi_contacts_profiles_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
-	$rows = (array) $wpdb->get_results( "SELECT id, owner_actor_id, card_json FROM {$cards} WHERE card_json LIKE '%\"onlineServices\"%'", ARRAY_A );
+	$rows = (array) $wpdb->get_results(
+		"SELECT c.id, c.owner_actor_id, c.card_json FROM {$cards} c
+			INNER JOIN {$profiles} p ON p.card_id = c.id
+			WHERE c.card_json LIKE '%\"onlineServices\"%'",
+		ARRAY_A
+	);
 	foreach ( $rows as $row ) {
 		$document = json_decode( (string) ( $row['card_json'] ?? '' ), true );
 		if ( ! is_array( $document ) ) {
@@ -405,6 +417,27 @@ function axismundi_contacts_migrate_home_service_key() : void {
 		$document['onlineServices'] = $moved;
 		$card_id                    = (int) $row['id'];
 		$owner                      = (int) $row['owner_actor_id'];
+
+		/*
+		 * And every language that says something about that entry. A localization key is a path into
+		 * the Card -- `onlineServices/axismundi/service` -- so it is the same address written a third
+		 * way, and a patch left behind would point at an entry that is no longer there.
+		 */
+		$localizations = (array) ( $document['localizations'] ?? array() );
+		foreach ( $localizations as $tag => $patch ) {
+			$rewritten = array();
+			foreach ( (array) $patch as $path => $patched ) {
+				$path = (string) $path;
+				if ( 'onlineServices/' . $from === $path || str_starts_with( $path, 'onlineServices/' . $from . '/' ) ) {
+					$path = 'onlineServices/' . $to . substr( $path, strlen( 'onlineServices/' . $from ) );
+				}
+				$rewritten[ $path ] = $patched;
+			}
+			$localizations[ $tag ] = $rewritten;
+		}
+		if ( array() !== $localizations ) {
+			$document['localizations'] = $localizations;
+		}
 
 		$wpdb->query( 'START TRANSACTION' );
 		$saved = axismundi_contacts_save_card_for_owner( $owner, $document, $card_id );

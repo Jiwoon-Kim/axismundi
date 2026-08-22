@@ -3197,6 +3197,18 @@ try {
 	$ax_ct_kn_php = (string) file_get_contents( dirname( __DIR__ ) . '/includes/card-editor.php' );
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
 	$ax_ct_kn_js = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/card-editor.js' );
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_kn_kinds = (string) file_get_contents( dirname( __DIR__ ) . '/includes/card-editor.php' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'every kind the standard registers is something somebody can say a card is',
+		str_contains( $ax_ct_kn_kinds, "'value' => 'individual'" )
+			&& str_contains( $ax_ct_kn_kinds, "'value' => 'org'" )
+			&& str_contains( $ax_ct_kn_kinds, "'value' => 'group'" )
+			&& str_contains( $ax_ct_kn_kinds, "'value' => 'location'" )
+			&& str_contains( $ax_ct_kn_kinds, "'value' => 'application'" )
+			&& str_contains( $ax_ct_kn_kinds, "'value' => 'device'" )
+	);
 	ax_ct_assert(
 		$ax_ct_results,
 		'the card an Actor publishes says what that Actor is, and does not offer to say otherwise',
@@ -3292,19 +3304,25 @@ try {
 	 */
 	$ax_ct_ty_card = axismundi_contacts_canonical_card(
 		array(
-			'@type'         => 'Card',
-			'version'       => '2.0',
-			'name'          => array(
+			'@type'                 => 'Card',
+			'version'               => '2.0',
+			'name'                  => array(
 				'@type'      => 'Name',
 				'components' => array( array( '@type' => 'NameComponent', 'kind' => 'given', 'value' => 'Jiwoon' ) ),
 			),
-			'anniversaries' => array(
+			'anniversaries'         => array(
 				'a1' => array(
 					'@type' => 'Anniversary',
 					'kind'  => 'birth',
 					'date'  => array( '@type' => 'PartialDate', 'year' => 1975 ),
 				),
+				'a2' => array(
+					'kind' => 'wedding',
+					'date' => array( '@type' => 'Timestamp', 'utc' => '2022-05-01T00:00:00Z' ),
+				),
 			),
+			// Somebody else's property, holding an object that calls itself by a name this file knows.
+			'example.com:favourite' => array( '@type' => 'Media', 'uri' => 'https://example.test/x' ),
 		)
 	);
 	ax_ct_assert(
@@ -3314,7 +3332,20 @@ try {
 			&& ! array_key_exists( '@type', $ax_ct_ty_card['name'] )
 			&& ! array_key_exists( '@type', $ax_ct_ty_card['name']['components'][0] )
 			&& ! array_key_exists( '@type', $ax_ct_ty_card['anniversaries']['a1'] )
-			&& 'PartialDate' === (string) ( $ax_ct_ty_card['anniversaries']['a1']['date']['@type'] ?? '' )
+			// A date is a PartialDate unless it says otherwise, so that one is implied and goes.
+			&& ! array_key_exists( '@type', $ax_ct_ty_card['anniversaries']['a1']['date'] )
+			// And a Timestamp there is the answer `@type` is carrying, so it stays.
+			&& 'Timestamp' === (string) ( $ax_ct_ty_card['anniversaries']['a2']['date']['@type'] ?? '' )
+	);
+	/*
+	 * By position and never by the word. An object under somebody else's property is whatever they
+	 * say it is, in a place this file knows nothing about -- and matching on the type name alone
+	 * would strip the one line saying what it was out of a document this plugin does not own.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'and a type somewhere this does not recognise is left alone, whatever it calls itself',
+		'Media' === (string) ( $ax_ct_ty_card['example.com:favourite']['@type'] ?? '' )
 	);
 	/*
 	 * How a name files. The value is free: RFC 9553 files a surname of `Shou Chang` under
@@ -3424,6 +3455,55 @@ try {
 			&& in_array( 'onlineServices/x1', $ax_ct_mv_pub, true )
 			&& ! in_array( 'onlineServices/axismundi', $ax_ct_mv_pub, true )
 	);
+	/*
+	 * And it is that Card's alone. A contact somebody imported may have arrived with an entry called
+	 * `axismundi` for reasons of its own -- exported from another site that used the same word -- and
+	 * rewriting it would be this migration editing a document it did not author.
+	 */
+	$ax_ct_mv_theirs = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array(
+			'@type'          => 'Card',
+			'name'           => array( 'full' => 'Somebody else' ),
+			'onlineServices' => array( 'axismundi' => array( 'service' => 'Axismundi', 'uri' => 'https://elsewhere.test/@them' ) ),
+		)
+	);
+	$ax_ct_mv_tkey = is_wp_error( $ax_ct_mv_theirs ) ? 0 : (int) $ax_ct_mv_theirs;
+	$ax_ct_loose[] = $ax_ct_mv_tkey;
+	/*
+	 * A language that says something about the account moves with it. A localization key is a path
+	 * into the Card, so it is the same address written a third way, and a patch left behind would
+	 * point at an entry that is no longer there -- which the store refuses.
+	 */
+	$ax_ct_mv_second = ax_ct_actor( $ax_ct_users );
+	$ax_ct_mv_ssid   = (int) $ax_ct_mv_second->get_identity_id();
+	$ax_ct_mv_smade  = axismundi_contacts_create_profile_card( $ax_ct_mv_ssid );
+	$ax_ct_mv_scard  = is_wp_error( $ax_ct_mv_smade ) ? 0 : (int) $ax_ct_mv_smade;
+	$ax_ct_loose[]   = $ax_ct_mv_scard;
+	$ax_ct_mv_sdoc   = axismundi_contacts_card_document( $ax_ct_mv_scard );
+
+	$ax_ct_mv_sdoc['onlineServices'] = array(
+		'axismundi' => array( 'service' => 'Axismundi', 'user' => '@them@localhost', 'uri' => $ax_ct_mv_second->get_uri(), 'pref' => 1 ),
+	);
+	$ax_ct_mv_sdoc['localizations'] = array(
+		'ko-KR' => array( 'onlineServices/axismundi/service' => 'AX' ),
+	);
+	axismundi_contacts_save_card_for_owner( $ax_ct_mv_ssid, $ax_ct_mv_sdoc, $ax_ct_mv_scard );
+
+	axismundi_contacts_migrate_home_service_key();
+
+	$ax_ct_mv_stheirs = axismundi_contacts_card_document( $ax_ct_mv_tkey );
+	$ax_ct_mv_safter  = axismundi_contacts_card_document( $ax_ct_mv_scard );
+	ax_ct_assert(
+		$ax_ct_results,
+		'it moves what this site wrote and nothing anybody imported, and a translation moves with it',
+		// Somebody else's card, and somebody else's word for it, are exactly as they arrived.
+		array( 'axismundi' ) === array_keys( (array) $ax_ct_mv_stheirs['onlineServices'] )
+			&& array( 'x1' ) === array_keys( (array) $ax_ct_mv_safter['onlineServices'] )
+			&& isset( $ax_ct_mv_safter['localizations']['ko-KR']['onlineServices/x1/service'] )
+			&& ! isset( $ax_ct_mv_safter['localizations']['ko-KR']['onlineServices/axismundi/service'] )
+	);
+
 	/*
 	 * And it is safe to run twice, and refuses to run onto an address something else already has --
 	 * renaming onto an occupied key would merge two accounts into one.

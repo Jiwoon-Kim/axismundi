@@ -114,16 +114,21 @@ function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
 	$config = array(
 		'draftPath'           => '/' . axismundi_contacts_rest_namespace() . '/cards/' . $card_id . '/draft',
 		/*
-		 * The four a person filling in an address book is choosing between. `application` and `device`
-		 * are standard values too and belong here the day something writes them -- an Application
-		 * Actor's card already stores `application`, which this list does not have to offer for the
-		 * store to keep it.
+		 * Every kind RFC 9553 registers, because each is something somebody keeps the address of. A
+		 * card for a building, for the software that runs a service, for a machine that reports its
+		 * own readings: an address book that could not say which would be asking people to file all
+		 * three as people.
+		 *
+		 * The words are the standard's. `org` and `location` are what a Card stores whatever a screen
+		 * calls them, and a reader elsewhere is matching on those rather than on `An organisation`.
 		 */
 		'kinds'               => array(
 			array( 'value' => 'individual', 'label' => __( 'A person', 'axismundi-contacts' ) ),
 			array( 'value' => 'org', 'label' => __( 'An organisation', 'axismundi-contacts' ) ),
 			array( 'value' => 'group', 'label' => __( 'A group', 'axismundi-contacts' ) ),
 			array( 'value' => 'location', 'label' => __( 'A place', 'axismundi-contacts' ) ),
+			array( 'value' => 'application', 'label' => __( 'An application', 'axismundi-contacts' ) ),
+			array( 'value' => 'device', 'label' => __( 'A device', 'axismundi-contacts' ) ),
 		),
 		'lockedKind'          => $locked,
 		'card'                => (object) $draft['card'],

@@ -302,19 +302,18 @@ function axismundi_contacts_validate_draft( array $card ) {
 				array( 'status' => 400 )
 			);
 		}
-		foreach ( array_keys( $patch ) as $path ) {
-			/*
-			 * A localization patches the Card it is on. Patching the localizations themselves is
-			 * refused by RFC 9553, and a path that started there would be a document describing its own
-			 * translations recursively.
-			 */
-			if ( 'localizations' === (string) $path || 0 === strpos( (string) $path, 'localizations/' ) ) {
-				return new WP_Error(
-					'ax_contacts_draft_patch_recursive',
-					__( 'A localization cannot patch the localizations.', 'axismundi-contacts' ),
-					array( 'status' => 400 )
-				);
-			}
+		/*
+		 * Checked the same way whatever wrote it. A patch that an import brought and a patch somebody
+		 * typed are the same kind of thing, and validating them differently would mean a Card that
+		 * arrived could not be read out and written back unchanged.
+		 *
+		 * The first one that cannot be applied refuses the whole request. A localization is a set of
+		 * changes to one document, and applying the half that happened to come first would leave a
+		 * Card in a state nobody asked for.
+		 */
+		$patched = axismundi_contacts_validate_patch( $card, (string) $tag, $patch );
+		if ( is_wp_error( $patched ) ) {
+			return $patched;
 		}
 	}
 	return axismundi_contacts_validate_card( $card );

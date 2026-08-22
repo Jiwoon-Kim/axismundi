@@ -2396,10 +2396,104 @@ try {
 	 * brings; a written-out name that was never taken apart is how most of the world's names are best
 	 * recorded.
 	 */
+	$ax_ct_dr_plain = array_diff_key( $ax_ct_dr_ok, array( 'localizations' => true ) );
 	ax_ct_assert(
 		$ax_ct_results,
 		'a name is complete written out, or complete in parts, and neither needs the other',
-		200 === $ax_ct_dr_bad( array_merge( $ax_ct_dr_ok, array( 'name' => array( '@type' => 'Name', 'full' => 'Prince' ) ) ) )
+		200 === $ax_ct_dr_bad( array_merge( $ax_ct_dr_plain, array( 'name' => array( '@type' => 'Name', 'full' => 'Prince' ) ) ) )
+	);
+
+	// -- a localization patches something that is there ----------------------------------------------------------
+
+	/*
+	 * A patch names a value inside the Card. Everything but the last step of that path has to be there
+	 * already -- a patch replaces a value inside something rather than conjuring the thing that holds
+	 * it -- so a name rewritten without its parts leaves every patch that pointed into them with
+	 * nothing to apply to, and the save is refused rather than storing a document that cannot be read.
+	 */
+	/*
+	 * Its own copy of the fixture, without the uid: one owner may keep one Card per uid, and the checks
+	 * above have already changed the one they were given.
+	 */
+	$ax_ct_pa_made = axismundi_contacts_save_card(
+		(int) $ax_ct_dr_book['id'],
+		array_diff_key( (array) $ax_ct_fixture, array( 'uid' => true ) )
+	);
+	$ax_ct_pa_key   = is_wp_error( $ax_ct_pa_made ) ? 0 : (int) $ax_ct_pa_made;
+	$ax_ct_loose[]  = $ax_ct_pa_key;
+	$ax_ct_pa_draft = (array) rest_do_request( new WP_REST_Request( 'GET', '/axismundi-contacts/v1/cards/' . $ax_ct_pa_key . '/draft' ) )->get_data();
+	// Written against whatever the record says now, so that a refusal here is about the patch rather
+	// than about a revision an earlier check moved on from.
+	$ax_ct_pa_send = static function ( array $card ) use ( $ax_ct_pa_key ) {
+		$request = new WP_REST_Request( 'PUT', '/axismundi-contacts/v1/cards/' . $ax_ct_pa_key . '/draft' );
+		$request->set_body_params(
+			array( 'revision' => (int) ( axismundi_contacts_get_card( $ax_ct_pa_key )['revision'] ?? 0 ), 'card' => $card )
+		);
+		return rest_do_request( $request );
+	};
+	$ax_ct_pa_card = (array) ( $ax_ct_pa_draft['card'] ?? array() );
+
+	ax_ct_assert(
+		$ax_ct_results,
+		'a card that arrived with patches is stored and read back with all of them, unchanged',
+		200 === $ax_ct_pa_send( $ax_ct_pa_card )->get_status()
+			&& "\xe9\x87\x91" === (string) ( axismundi_contacts_card_document( $ax_ct_pa_key )['localizations']['ko-Hani']['name/components/0/value'] ?? '' )
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'and taking away what a patch points into is refused, because the patch would have nothing to apply to',
+		400 === $ax_ct_pa_send(
+			array_merge( $ax_ct_pa_card, array( 'name' => array( '@type' => 'Name', 'full' => 'Prince' ) ) )
+		)->get_status()
+	);
+
+	/*
+	 * The rules a PatchObject has, checked the same way whatever wrote the patch. Validating an import
+	 * differently from a typed edit would mean a Card that arrived could not be read out and written
+	 * back unchanged, which is the one thing the draft route exists to guarantee.
+	 */
+	$ax_ct_pa_with = static function ( array $patch ) use ( $ax_ct_pa_card ) : array {
+		$card                        = $ax_ct_pa_card;
+		$card['localizations']['de'] = $patch;
+		return $card;
+	};
+	ax_ct_assert(
+		$ax_ct_results,
+		'a path through something the card does not have is refused, and so is a position past the end of a list',
+		400 === $ax_ct_pa_send( $ax_ct_pa_with( array( 'nicknames/n1/name' => 'Kim' ) ) )->get_status()
+			&& 400 === $ax_ct_pa_send( $ax_ct_pa_with( array( 'name/components/9/value' => 'Kim' ) ) )->get_status()
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'appending to a list is not something a localization does, and neither is patching the localizations',
+		400 === $ax_ct_pa_send( $ax_ct_pa_with( array( 'name/components/-/value' => 'Kim' ) ) )->get_status()
+			&& 400 === $ax_ct_pa_send( $ax_ct_pa_with( array( 'localizations/en/name' => array( 'full' => 'x' ) ) ) )->get_status()
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'two patches to the same value are refused, because there is no order between them',
+		400 === $ax_ct_pa_send( $ax_ct_pa_with( array( 'name' => array( 'full' => 'Kim' ), 'name/full' => 'Kim' ) ) )->get_status()
+	);
+	/*
+	 * And the last step is deliberately not required to exist. Setting a property the base Card does
+	 * not carry is something the standard advises a writer against rather than something a reader may
+	 * refuse -- so a document that arrived with one is stored, and the screens follow the advice by
+	 * offering only paths that are already there.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'setting a value the card does not have yet is allowed, because that is advice to a writer rather than a rule',
+		200 === $ax_ct_pa_send( $ax_ct_pa_with( array( 'name/full' => 'Jiwoon Kim' ) ) )->get_status()
+	);
+	$ax_ct_pa_offer = axismundi_contacts_patchable_paths( $ax_ct_pa_card );
+	ax_ct_assert(
+		$ax_ct_results,
+		'and a screen offers only what the card already says, not what the document is',
+		in_array( 'name/full', $ax_ct_pa_offer, true )
+			&& in_array( 'name/components/0/value', $ax_ct_pa_offer, true )
+			&& ! in_array( 'uid', $ax_ct_pa_offer, true )
+			&& ! in_array( 'version', $ax_ct_pa_offer, true )
+			&& ! in_array( 'localizations', $ax_ct_pa_offer, true )
 	);
 
 	// -- what belongs to the Card an Actor publishes about itself -----------------------------------------------

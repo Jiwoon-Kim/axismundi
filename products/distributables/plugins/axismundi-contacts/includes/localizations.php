@@ -151,3 +151,147 @@ function axismundi_contacts_localized_name_tags( array $card ) : array {
 	}
 	return $tags;
 }
+
+/**
+ * Whether one language's patch is a PatchObject that can be applied.
+ *
+ * A localization is a set of paths into the Card and the values to put there. What makes one valid
+ * is structural and has nothing to do with where the document came from: the same patch is valid or
+ * invalid whether somebody typed it or an import brought it, because otherwise a Card that arrived
+ * could not be read out and written back unchanged.
+ *
+ * The rules RFC 9553 states for a PatchObject, and no more:
+ *
+ *   every path but the last token must already exist, because a patch replaces a value inside
+ *   something rather than conjuring the thing that holds it
+ *
+ *   `-` is never an array index here; it means "append" in JSON Patch and a PatchObject has no
+ *   such thing
+ *
+ *   no path may be a prefix of another, because two patches to the same place have no defined order
+ *
+ *   nothing may patch `localizations`, which would be a document describing its own translations
+ *
+ * The last token is deliberately not required to exist. A patch may set a property the base Card
+ * does not have -- the standard says a localization SHOULD NOT do that, which is advice to whoever
+ * writes one rather than a reason to refuse a document that does. The screens follow the advice by
+ * offering only paths that are already there; this refuses only what cannot be applied at all.
+ *
+ * @param array<string,mixed> $card  The Card the patch applies to.
+ * @param string              $tag   Language tag, for the message.
+ * @param array<string,mixed> $patch Paths and the values to put there.
+ * @return true|WP_Error
+ */
+function axismundi_contacts_validate_patch( array $card, string $tag, array $patch ) {
+	$paths = array_map( 'strval', array_keys( $patch ) );
+	foreach ( $paths as $path ) {
+		$segments = explode( '/', $path );
+		if ( '' === $path || in_array( '', $segments, true ) ) {
+			return axismundi_contacts_patch_error( $tag, $path, __( 'A path in a localization names a value, one step at a time.', 'axismundi-contacts' ) );
+		}
+		if ( in_array( '-', $segments, true ) ) {
+			// `-` is JSON Patch's "after the last item". A PatchObject replaces values that are there.
+			return axismundi_contacts_patch_error( $tag, $path, __( 'A localization patches values that exist; it cannot append to a list.', 'axismundi-contacts' ) );
+		}
+		if ( 'localizations' === $segments[0] ) {
+			return axismundi_contacts_patch_error( $tag, $path, __( 'A localization cannot patch the localizations.', 'axismundi-contacts' ) );
+		}
+		/*
+		 * Two patches to the same place have no order between them, so a document that carried both
+		 * would mean different things depending on which was read second.
+		 */
+		foreach ( $paths as $other ) {
+			if ( $other !== $path && 0 === strpos( $other, $path . '/' ) ) {
+				return axismundi_contacts_patch_error(
+					$tag,
+					$path,
+					/* translators: %s: the other path. */
+					sprintf( __( 'This patches the same value as %s, and there is no order between them.', 'axismundi-contacts' ), $other )
+				);
+			}
+		}
+		$walked = axismundi_contacts_walk_patch_path( $card, array_slice( $segments, 0, -1 ) );
+		if ( is_wp_error( $walked ) ) {
+			return axismundi_contacts_patch_error( $tag, $path, $walked->get_error_message() );
+		}
+	}
+	return true;
+}
+
+/**
+ * Follow the part of a path that has to be there already.
+ *
+ * @param mixed    $value    The Card, then whatever is inside it.
+ * @param string[] $segments Path without its last token.
+ * @return true|WP_Error
+ */
+function axismundi_contacts_walk_patch_path( $value, array $segments ) {
+	foreach ( $segments as $segment ) {
+		if ( ! is_array( $value ) ) {
+			return new WP_Error( 'ax_contacts_patch_step', __( 'That path goes inside a value that has nothing inside it.', 'axismundi-contacts' ) );
+		}
+		if ( axismundi_contacts_is_list( $value ) ) {
+			// A list is addressed by position, and a position outside it is not a place.
+			if ( 1 !== preg_match( '/^(0|[1-9][0-9]*)$/', $segment ) || (int) $segment >= count( $value ) ) {
+				return new WP_Error( 'ax_contacts_patch_index', __( 'That path names a position that is not in the list.', 'axismundi-contacts' ) );
+			}
+			$value = $value[ (int) $segment ];
+			continue;
+		}
+		if ( ! array_key_exists( $segment, $value ) ) {
+			return new WP_Error( 'ax_contacts_patch_missing', __( 'That path goes through something the card does not have.', 'axismundi-contacts' ) );
+		}
+		$value = $value[ $segment ];
+	}
+	return true;
+}
+
+/**
+ * One refusal, saying which language and which path.
+ *
+ * @param string $tag     Language tag.
+ * @param string $path    Path.
+ * @param string $message What is wrong with it.
+ * @return WP_Error
+ */
+function axismundi_contacts_patch_error( string $tag, string $path, string $message ) : WP_Error {
+	return new WP_Error(
+		'ax_contacts_draft_patch_path',
+		sprintf(
+			/* translators: 1: language tag, 2: path inside the card, 3: what is wrong. */
+			__( 'The localization for %1$s cannot patch %2$s: %3$s', 'axismundi-contacts' ),
+			$tag,
+			$path,
+			$message
+		),
+		array( 'status' => 400 )
+	);
+}
+
+/**
+ * The paths a screen may offer, which is narrower than what is valid.
+ *
+ * Only values the Card already has. A localization that introduced a property the base Card does not
+ * carry is something RFC 9553 says a writer should not do -- so the picker does not offer it, while
+ * the validator still accepts a document that arrived with one.
+ *
+ * @param array<string,mixed> $value  The Card, or something inside it.
+ * @param string              $prefix Path so far.
+ * @return string[]
+ */
+function axismundi_contacts_patchable_paths( array $value, string $prefix = '' ) : array {
+	$paths = array();
+	foreach ( $value as $key => $item ) {
+		$key  = (string) $key;
+		$path = '' === $prefix ? $key : $prefix . '/' . $key;
+		if ( '' === $prefix && in_array( $key, array( '@type', 'version', 'uid', 'created', 'updated', 'prodId', 'localizations' ), true ) ) {
+			// What the document is, rather than what it says about somebody. None of it is translated.
+			continue;
+		}
+		$paths[] = $path;
+		if ( is_array( $item ) ) {
+			$paths = array_merge( $paths, axismundi_contacts_patchable_paths( $item, $path ) );
+		}
+	}
+	return $paths;
+}

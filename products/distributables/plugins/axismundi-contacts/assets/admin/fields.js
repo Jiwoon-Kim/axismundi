@@ -143,10 +143,11 @@
 	 * `addresses/home/components/2/value` and there are dozens of them on a full Card, so a fixed
 	 * dropdown is a list somebody scrolls rather than a question they answer. Typing narrows it.
 	 *
-	 * What it will not do is accept something that is not on the list. A localization patches a value
-	 * the Card already has, and a picker that let somebody invent a path would be offering them a
-	 * patch the server is about to refuse. Anything the list cannot express belongs in the JSON box,
-	 * which is the escape hatch and says so.
+	 * Whether it accepts something that is not on the list depends on what the list is. The paths a
+	 * localization may patch are a closed set -- inventing one would be offering somebody a patch the
+	 * server is about to refuse -- so that picker takes only what it offers. A language tag is not:
+	 * BCP 47 has more of them than anyone would put in a menu, and refusing an unusual one would be
+	 * this editor deciding which languages exist. `allowFree` is which of the two a caller wants.
 	 */
 	function Combobox( props ) {
 		var id = useFieldId( props.id );
@@ -180,6 +181,10 @@
 					setQuery( value );
 					setActive( 0 );
 					setOpen( true );
+					if ( props.allowFree ) {
+						// What was typed is already an answer; the list is only a shortcut to a common one.
+						props.onChange( value );
+					}
 				},
 				onFocus: function () {
 					setOpen( true );
@@ -214,7 +219,8 @@
 							setOpen( false );
 							setQuery( '' );
 						}, 150 );
-					}
+					},
+					disabled: props.disabled
 				}
 			} ),
 			open

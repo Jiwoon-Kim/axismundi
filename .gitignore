@@ -28,3 +28,4 @@ __pycache__/
 # else a deployment would hold -- so it must never be committed. The tracked .wp-env.json stays free
 # of them, which is the whole point of the split.
 .wp-env.override.json
+.svn-deploy-*/

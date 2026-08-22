@@ -3182,6 +3182,93 @@ try {
 			&& "\xe3\x82\xad\xe3\x83\xa0" === (string) ( axismundi_contacts_card_document( $ax_ct_lo_key )['localizations']['ja-Kana']['name/components/0/value'] ?? '' )
 	);
 
+	// -- what a card is, and how it says a name ------------------------------------------------------------------
+
+	/*
+	 * What a Card describes decides what the rest of it is for -- a person has a given name, an
+	 * organisation has units, a group has members -- so it is asked first rather than after somebody
+	 * has filled the card in.
+	 *
+	 * On the Card an Actor publishes about itself it is not a question. That Actor is a Person, a Group
+	 * or an Organization in a registry that federates, and a Card claiming otherwise would say one
+	 * thing to a reader and the Actor document another. Shown, and shown as decided.
+	 */
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_kn_php = (string) file_get_contents( dirname( __DIR__ ) . '/includes/card-editor.php' );
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_kn_js = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/card-editor.js' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'the card an Actor publishes says what that Actor is, and does not offer to say otherwise',
+		str_contains( $ax_ct_kn_php, 'axismundi_contacts_is_profile_card( $row )' )
+			&& str_contains( $ax_ct_kn_php, 'axismundi_actors_jscontact_kind' )
+			&& str_contains( $ax_ct_kn_js, 'disabled: !! locked' )
+			&& 'individual' === axismundi_actors_jscontact_kind( 'Person' )
+			&& 'group' === axismundi_actors_jscontact_kind( 'Group' )
+			&& 'org' === axismundi_actors_jscontact_kind( 'Organization' )
+	);
+	/*
+	 * A name may be written out, given in parts, or both. The checkboxes decide which editor is open
+	 * and nothing else: unticking one leaves its value exactly where it was, because a screen tidying
+	 * itself is not somebody deleting their name.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'which name editor is open is a screen deciding what to show, never the card losing a value',
+		str_contains( $ax_ct_kn_js, 'var [ showFull, setShowFull ]' )
+			&& str_contains( $ax_ct_kn_js, 'var [ showParts, setShowParts ]' )
+			&& str_contains( $ax_ct_kn_js, 'disabled: ! props.showFull' )
+			// Nothing in the toggles reaches the draft; they set screen state and stop there.
+			&& ! str_contains( $ax_ct_kn_js, 'onShowFull: function' )
+	);
+	/*
+	 * And a card carrying both is stored carrying both. Neither is derived from the other, in either
+	 * direction, at any point between the editor and the database.
+	 */
+	$ax_ct_kn_id = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array(
+			'@type' => 'Card',
+			'kind'  => 'individual',
+			'name'  => array(
+				'@type'      => 'Name',
+				'full'       => 'Kim Jiwoon',
+				'components' => array( array( '@type' => 'NameComponent', 'kind' => 'surname', 'value' => 'Kim' ) ),
+				'sortAs'     => array( 'surname' => 'Kim' ),
+			),
+		)
+	);
+	$ax_ct_kn_key  = is_wp_error( $ax_ct_kn_id ) ? 0 : (int) $ax_ct_kn_id;
+	$ax_ct_loose[] = $ax_ct_kn_key;
+	$ax_ct_kn_name = axismundi_contacts_card_document( $ax_ct_kn_key )['name'] ?? array();
+	ax_ct_assert(
+		$ax_ct_results,
+		'a name written out and given in parts keeps both, and how it files is a third answer',
+		'Kim Jiwoon' === (string) ( $ax_ct_kn_name['full'] ?? '' )
+			&& 'Kim' === (string) ( $ax_ct_kn_name['components'][0]['value'] ?? '' )
+			&& 'Kim' === (string) ( $ax_ct_kn_name['sortAs']['surname'] ?? '' )
+	);
+	/*
+	 * The card's language and the languages this contact prefers are asked with the same control and
+	 * are never the same value. One says what the card above is written in; the other says what
+	 * somebody would rather receive -- a person whose card is in Korean may ask to be written to in
+	 * English, and a card that conflated them would have no way to say so.
+	 */
+	$ax_ct_kn_langs = axismundi_contacts_card_document( $ax_ct_kn_key );
+	$ax_ct_kn_langs['language'] = 'ko-KR';
+	$ax_ct_kn_langs['preferredLanguages'] = array( 'l1' => array( '@type' => 'LanguagePref', 'language' => 'en', 'pref' => 1 ) );
+	axismundi_contacts_save_card_for_owner( (int) $ax_ct_owner->get_identity_id(), $ax_ct_kn_langs, $ax_ct_kn_key );
+	$ax_ct_kn_stored = axismundi_contacts_card_document( $ax_ct_kn_key );
+	ax_ct_assert(
+		$ax_ct_results,
+		'what a card is written in and what its subject prefers to receive are two answers, kept apart',
+		'ko-KR' === (string) ( $ax_ct_kn_stored['language'] ?? '' )
+			&& 'en' === (string) ( $ax_ct_kn_stored['preferredLanguages']['l1']['language'] ?? '' )
+			&& str_contains( $ax_ct_kn_js, 'COMMON_LANGUAGES' )
+			// A shortcut rather than a list of the languages that exist.
+			&& str_contains( $ax_ct_kn_js, 'allowFree: true' )
+	);
+
 	ax_ct_assert(
 		$ax_ct_results,
 		'this plugin stores address books and imitates neither the Actor registry nor its profiles',

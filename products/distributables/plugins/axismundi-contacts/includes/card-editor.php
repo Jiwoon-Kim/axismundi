@@ -99,8 +99,27 @@ function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
 	$draft = axismundi_contacts_draft_payload( $row );
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing where Done returns to.
 	$group = isset( $_GET['group'] ) ? absint( $_GET['group'] ) : 0;
+	/*
+	 * What a Card describes, and whether it is a question. On the Card an Actor publishes about itself
+	 * it is not: that Actor is a Person, a Group or an Organization in a registry that federates, and a
+	 * Card claiming otherwise would say one thing to a reader and the Actor document another.
+	 */
+	$locked = null;
+	if ( axismundi_contacts_is_profile_card( $row ) && function_exists( 'axismundi_actors_jscontact_kind' ) ) {
+		$actor  = axismundi_actors_get_by_identity( (int) $row['owner_actor_id'] );
+		$locked = $actor instanceof Axismundi_Actor
+			? ( axismundi_actors_jscontact_kind( (string) $actor->get_type() ) ?: null )
+			: null;
+	}
 	$config = array(
 		'draftPath'           => '/' . axismundi_contacts_rest_namespace() . '/cards/' . $card_id . '/draft',
+		'kinds'               => array(
+			array( 'value' => 'individual', 'label' => __( 'A person', 'axismundi-contacts' ) ),
+			array( 'value' => 'org', 'label' => __( 'An organisation', 'axismundi-contacts' ) ),
+			array( 'value' => 'group', 'label' => __( 'A group', 'axismundi-contacts' ) ),
+			array( 'value' => 'location', 'label' => __( 'A place', 'axismundi-contacts' ) ),
+		),
+		'lockedKind'          => $locked,
 		'card'                => (object) $draft['card'],
 		'revision'            => (int) $draft['revision'],
 		'isProfile'           => array_key_exists( 'publishedPointers', $draft ),

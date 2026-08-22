@@ -241,3 +241,31 @@
 	font-family: Menlo, Consolas, monospace;
 	font-size: .85em;
 }
+
+/* -- what this card is ----------------------------------------------------------------------- */
+
+.ax-ce-kinds {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1em;
+}
+
+.ax-ce-kind {
+	display: inline-flex;
+	gap: .35em;
+	align-items: center;
+}
+
+/* Decided rather than disabled: it still says what the answer is. */
+.ax-ce-kind.is-locked {
+	opacity: .7;
+}
+
+.ax-ce-sortas {
+	display: flex;
+	gap: .5em;
+}
+
+.ax-ce-sortas .text-field {
+	flex: 1 1 0;
+}

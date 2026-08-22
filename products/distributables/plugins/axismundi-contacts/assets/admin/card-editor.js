@@ -106,6 +106,87 @@
 	}
 
 	/**
+	 * Language tags this offers as a shortcut.
+	 *
+	 * A shortcut and not a list of the languages that exist. BCP 47 has far more tags than belong in a
+	 * menu, and script and region subtags multiply them further -- `ko-Hani` and `ja-Kana` are both
+	 * ordinary answers and neither is in any short list. Anything may be typed.
+	 */
+	var COMMON_LANGUAGES = [
+		'en', 'en-US', 'en-GB', 'ko', 'ko-KR', 'ko-Latn', 'ko-Hani',
+		'ja', 'ja-JP', 'ja-Kana', 'zh', 'zh-Hans', 'zh-Hant', 'zh-Hant-TW',
+		'fr', 'de', 'es', 'pt', 'it', 'ru', 'ar', 'hi', 'id', 'vi', 'th'
+	];
+
+	/**
+	 * What kind of thing this Card describes.
+	 *
+	 * First, because it decides what the rest of the card is for: a person has a given name, an
+	 * organisation has units, a group has members. Asking it after somebody has filled the card in is
+	 * asking them to reconsider what they have already written.
+	 *
+	 * On the Card an Actor publishes about itself it is not a question at all. That Actor is a Person,
+	 * a Group or an Organization in a registry that federates, and a Card claiming otherwise would say
+	 * one thing to a reader and the Actor document another. Shown, and shown as decided.
+	 */
+	function KindField( props ) {
+		var locked = props.locked;
+		return el(
+			'section',
+			{ className: 'ax-ce-section' },
+			el( 'h2', null, __( 'What this is', 'axismundi-contacts' ) ),
+			el(
+				'div',
+				{ className: 'ax-ce-kinds', role: 'radiogroup', 'aria-label': __( 'What this card describes', 'axismundi-contacts' ) },
+				config.kinds.map( function ( kind ) {
+					return el(
+						'label',
+						{ key: kind.value, className: 'ax-ce-kind' + ( locked ? ' is-locked' : '' ) },
+						el( 'input', {
+							type: 'radio',
+							name: 'ax-ce-kind',
+							value: kind.value,
+							checked: ( props.value || 'individual' ) === kind.value,
+							disabled: !! locked,
+							onChange: function () {
+								props.onChange( kind.value );
+							}
+						} ),
+						' ',
+						kind.label
+					);
+				} )
+			),
+			locked
+				? el(
+					'p',
+					{ className: 'description' },
+					__( 'This is the card an Actor publishes about itself, so what it describes is what that Actor is.', 'axismundi-contacts' )
+				)
+				: null
+		);
+	}
+
+	/**
+	 * The language this card is written in.
+	 *
+	 * Not the languages this person prefers to be written to in -- that is `preferredLanguages`, a
+	 * ranked list further down, and the two are asked with the same control because they are the same
+	 * kind of answer, never from the same value because they are different questions. This one says
+	 * what the card above says it in, and what every localization is a translation *of*.
+	 */
+	function CardLanguage( props ) {
+		return el( Combobox, {
+			label: __( 'Written in', 'axismundi-contacts' ),
+			value: props.value || '',
+			options: COMMON_LANGUAGES,
+			allowFree: true,
+			supporting: __( 'A language tag. Everything above is what the card says in this language.', 'axismundi-contacts' ),
+			onChange: props.onChange
+		} );
+	}
+
+	/**
 	 * One part of a name.
 	 *
 	 * A separator is a component like any other and carries a value, which may be empty -- that is how
@@ -214,9 +295,33 @@
 			'section',
 			{ className: 'ax-ce-section' },
 			el( 'h2', null, __( 'Name', 'axismundi-contacts' ) ),
+			/*
+			 * Two ways of saying a name, and a card may carry either or both. The checkboxes decide
+			 * which editor is open, not what the card holds: unticking one leaves its value exactly
+			 * where it was, because a screen tidying itself is not somebody deleting their name. What
+			 * is stored stays stored until they remove it.
+			 */
+			el(
+				'p',
+				null,
+				el(
+					'label',
+					null,
+					el( 'input', {
+						type: 'checkbox',
+						checked: props.showFull,
+						onChange: function ( event ) {
+							props.onShowFull( event.target.checked );
+						}
+					} ),
+					' ',
+					__( 'Write the name out', 'axismundi-contacts' )
+				)
+			),
 			el( TextField, {
 				label: __( 'Written out', 'axismundi-contacts' ),
 				value: name.full || '',
+				disabled: ! props.showFull,
 				supporting: sprintf(
 					/* translators: %s: what the name reads as. */
 					__( 'Reads as: %s', 'axismundi-contacts' ),
@@ -227,6 +332,23 @@
 				}
 			} ),
 			el(
+				'p',
+				null,
+				el(
+					'label',
+					null,
+					el( 'input', {
+						type: 'checkbox',
+						checked: props.showParts,
+						onChange: function ( event ) {
+							props.onShowParts( event.target.checked );
+						}
+					} ),
+					' ',
+					__( 'Give the name in parts', 'axismundi-contacts' )
+				)
+			),
+			props.showParts ? el(
 				'ul',
 				{ className: 'ax-ce-parts' + ( null === dragging ? '' : ' is-dragging' ) },
 				components.map( function ( part, index ) {
@@ -270,7 +392,7 @@
 						}
 					} );
 				} )
-			),
+			) : null,
 			blocked
 				? el(
 					'div',
@@ -310,7 +432,7 @@
 					)
 				)
 				: null,
-			el(
+			props.showParts ? el(
 				'p',
 				null,
 				el(
@@ -324,8 +446,8 @@
 					},
 					__( 'Add a part', 'axismundi-contacts' )
 				)
-			),
-			components.length
+			) : null,
+			props.showParts && components.length
 				? el(
 					Fragment,
 					null,
@@ -358,9 +480,42 @@
 						}
 					} )
 				)
-				: null
+				: null,
+			/*
+			 * How it files, which is a third answer rather than a consequence of the other two. `Kim`
+			 * sorts under K and `김` under ㄱ, and a directory that worked either out from the name
+			 * would be guessing at a rule that changes by language.
+			 */
+			el(
+				'div',
+				{ className: 'ax-ce-sortas' },
+				SORT_KINDS.map( function ( kind ) {
+					return el( TextField, {
+						key: kind,
+						label: sprintf(
+							/* translators: %s: which part of the name, such as surname. */
+							__( 'Sort %s as', 'axismundi-contacts' ),
+							kind
+						),
+						value: ( name.sortAs || {} )[ kind ] || '',
+						onChange: function ( value ) {
+							var sortAs = withKey( name.sortAs || {}, kind, value );
+							var next = Object.assign( {}, name );
+							if ( Object.keys( sortAs ).length ) {
+								next.sortAs = sortAs;
+							} else {
+								delete next.sortAs;
+							}
+							setName( next );
+						}
+					} );
+				} )
+			)
 		);
 	}
+
+	/** The parts a name may be filed under. */
+	var SORT_KINDS = [ 'surname', 'given' ];
 
 	/** One repeating property, as rows keyed by the id the rest of the system addresses them by. */
 	function EntryField( props ) {
@@ -709,6 +864,88 @@
 	}
 
 	/**
+	 * The languages this contact would rather be written to in, in order.
+	 *
+	 * The same control as the card's own language and never the same value. One says what the card
+	 * above is written in; this says what somebody would like to receive -- a person whose card is in
+	 * Korean may ask to be written to in English, and a card that conflated the two would have no way
+	 * to say so.
+	 *
+	 * Order is `pref`, which is what the standard reads: 1 is the one they would rather have.
+	 */
+	function PreferredLanguages( props ) {
+		var entries = props.value || {};
+		var ids = Object.keys( entries );
+
+		function setEntries( next ) {
+			props.onChange( Object.keys( next ).length ? next : undefined );
+		}
+
+		return el(
+			'section',
+			{ className: 'ax-ce-section' },
+			el( 'h2', null, __( 'Preferred languages', 'axismundi-contacts' ) ),
+			el(
+				'p',
+				{ className: 'description' },
+				__( 'What this contact would rather be written to in, most preferred first. Not the language the card is written in.', 'axismundi-contacts' )
+			),
+			ids.map( function ( id, index ) {
+				var entry = entries[ id ] || {};
+				return el(
+					'div',
+					{ key: id, className: 'ax-ce-entry' },
+					el( Combobox, {
+						label: __( 'Language', 'axismundi-contacts' ),
+						className: 'ax-ce-entry__value',
+						value: entry.language || '',
+						options: COMMON_LANGUAGES,
+						allowFree: true,
+						supporting: sprintf(
+							/* translators: %d: where this sits in the order of preference. */
+							__( 'Preferred %d', 'axismundi-contacts' ),
+							index + 1
+						),
+						onChange: function ( value ) {
+							var next = Object.assign( {}, entries );
+							next[ id ] = Object.assign( {}, entry, { language: value, pref: index + 1 } );
+							setEntries( next );
+						}
+					} ),
+					el( IconButton, {
+						icon: 'delete',
+						variant: 'danger',
+						label: __( 'Remove this language', 'axismundi-contacts' ),
+						onClick: function () {
+							var next = Object.assign( {}, entries );
+							delete next[ id ];
+							setEntries( next );
+						}
+					} )
+				);
+			} ),
+			el(
+				'p',
+				null,
+				el(
+					'button',
+					{
+						type: 'button',
+						className: 'button',
+						onClick: function () {
+							var id = 'lang-' + Math.random().toString( 36 ).slice( 2, 8 );
+							var next = Object.assign( {}, entries );
+							next[ id ] = { '@type': 'LanguagePref', language: '', pref: ids.length + 1 };
+							setEntries( next );
+						}
+					},
+					__( 'Add a preferred language', 'axismundi-contacts' )
+				)
+			)
+		);
+	}
+
+	/**
 	 * The ledger itself.
 	 *
 	 * Everything the fields above do not show is here, and stays here: this reads and writes the same
@@ -806,6 +1043,19 @@
 		var [ jsonError, setJsonError ] = useState( '' );
 		var [ dragging, setDragging ] = useState( null );
 		var [ blocked, setBlocked ] = useState( null );
+		/*
+		 * Which name editors are open. Screen state and nothing else: what is stored decides how these
+		 * start, and turning one off never takes a value away. A card that says both keeps saying both.
+		 */
+		var [ showFull, setShowFull ] = useState( undefined !== ( config.card.name || {} ).full );
+		var [ showParts, setShowParts ] = useState( !! ( config.card.name || {} ).components );
+
+		// A locked kind is the Actor's answer, so the card says it whatever it said before.
+		if ( config.lockedKind && card.kind !== config.lockedKind ) {
+			window.setTimeout( function () {
+				setProperty( 'kind', config.lockedKind );
+			}, 0 );
+		}
 		var [ status, setStatus ] = useState( '' );
 		var [ saving, setSaving ] = useState( false );
 
@@ -880,8 +1130,30 @@
 				el(
 					'div',
 					{ className: 'ax-ce__main' },
+					el( KindField, {
+						value: card.kind,
+						locked: config.lockedKind,
+						onChange: function ( value ) {
+							setProperty( 'kind', value );
+						}
+					} ),
+					el(
+						'section',
+						{ className: 'ax-ce-section' },
+						el( 'h2', null, __( 'Language', 'axismundi-contacts' ) ),
+						el( CardLanguage, {
+							value: card.language,
+							onChange: function ( value ) {
+								setProperty( 'language', value );
+							}
+						} )
+					),
 					el( NameEditor, {
 						name: card.name,
+						showFull: showFull,
+						showParts: showParts,
+						onShowFull: setShowFull,
+						onShowParts: setShowParts,
 						dragging: dragging,
 						onDragStart: setDragging,
 						localizations: card.localizations,
@@ -930,6 +1202,12 @@
 						},
 						onChange: function ( value ) {
 							setProperty( 'name', value );
+						}
+					} ),
+					el( PreferredLanguages, {
+						value: card.preferredLanguages,
+						onChange: function ( value ) {
+							setProperty( 'preferredLanguages', value );
 						}
 					} ),
 					ENTRY_FIELDS.map( function ( field ) {

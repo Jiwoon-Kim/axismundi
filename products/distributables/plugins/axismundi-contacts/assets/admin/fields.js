@@ -162,9 +162,25 @@
 	 */
 	function Combobox( props ) {
 		var id = useFieldId( props.id );
-		var [ query, setQuery ] = wp.element.useState( '' );
+		/*
+		 * What has been typed, or `null` for nothing yet. The distinction is the whole of this: a
+		 * field somebody has clicked into still holds the answer they chose last time, and a list
+		 * filtered by that answer offers them the one thing they already have. Typing is what narrows
+		 * it; opening it is not.
+		 */
+		var [ query, setQuery ] = wp.element.useState( null );
 		var [ open, setOpen ] = wp.element.useState( false );
 		var [ active, setActive ] = wp.element.useState( 0 );
+		// Closing waits, in case the click that blurred the field was a click on one of the options.
+		var closing = useRef( null );
+		var typing = null !== query;
+
+		function stopClosing() {
+			if ( closing.current ) {
+				window.clearTimeout( closing.current );
+				closing.current = null;
+			}
+		}
 		/*
 		 * An option is a value, and sometimes a name for it. `ko-KR` is the answer; `Korean (Korea)`
 		 * is how somebody finds it -- and they will type either, so both are searched and the name is
@@ -174,7 +190,7 @@
 			return 'string' === typeof option ? { value: option, label: option } : option;
 		} ).filter( function ( option ) {
 			var against = ( option.value + ' ' + ( option.label || '' ) ).toLowerCase();
-			return ! query || -1 !== against.indexOf( query.toLowerCase() );
+			return ! typing || ! query || -1 !== against.indexOf( query.toLowerCase() );
 		} );
 		var listId = id + '-list';
 
@@ -183,7 +199,7 @@
 				return;
 			}
 			props.onChange( option.value );
-			setQuery( '' );
+			setQuery( null );
 			setOpen( false );
 		}
 
@@ -194,7 +210,8 @@
 				hideLabel: props.hideLabel,
 				id: id,
 				label: props.label,
-				value: open ? query : ( props.value || '' ),
+				// What is in the field is what the card says, until somebody types something else.
+				value: typing ? query : ( props.value || '' ),
 				supporting: props.supporting,
 				error: props.error,
 				onChange: function ( value ) {
@@ -207,6 +224,9 @@
 					}
 				},
 				onFocus: function () {
+					stopClosing();
+					// Opened, not narrowed: everything is on offer until a key is pressed.
+					setActive( 0 );
 					setOpen( true );
 				},
 				inputProps: {
@@ -234,10 +254,14 @@
 						}
 					},
 					onBlur: function () {
-						// Late enough for a click on an option to land first.
-						window.setTimeout( function () {
+						// Late enough for a click on an option to land first, and cancelled if the
+						// field is focused again before then -- otherwise coming back closes the list
+						// that coming back just opened.
+						stopClosing();
+						closing.current = window.setTimeout( function () {
+							closing.current = null;
 							setOpen( false );
-							setQuery( '' );
+							setQuery( null );
 						}, 150 );
 					},
 					disabled: props.disabled

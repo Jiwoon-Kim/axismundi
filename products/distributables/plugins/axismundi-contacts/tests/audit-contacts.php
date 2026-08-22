@@ -3246,8 +3246,8 @@ try {
 		'a name opens as the two lines a name usually is, and what is not a person opens as one',
 		str_contains( $ax_ct_kn_js, "var BASIC_SLOTS = [ 'given', 'surname' ];" )
 			&& str_contains( $ax_ct_kn_js, "var NAME_SLOTS = [ 'title', 'given', 'given2', 'surname', 'surname2', 'credential' ];" )
-			&& str_contains( $ax_ct_kn_js, 'slotRows( components, BASIC_SLOTS ).map( line )' )
-			&& str_contains( $ax_ct_kn_js, 'slotRows( components, MIDDLE_SLOTS ).map( line )' )
+			&& str_contains( $ax_ct_kn_js, 'withGaps( slotRows( components, BASIC_SLOTS ) )' )
+			&& str_contains( $ax_ct_kn_js, 'withGaps( slotRows( components, MIDDLE_SLOTS, pending ) )' )
 			&& str_contains( $ax_ct_kn_js, "var personal = 'individual' === ( props.kind || 'individual' );" )
 			&& str_contains( $ax_ct_kn_js, 'written || ! personal' )
 	);
@@ -3266,7 +3266,7 @@ try {
 		str_contains( $ax_ct_kn_js, 'var movable = !! props.part && props.ordered' )
 			&& str_contains( $ax_ct_kn_js, 'draggable: movable,' )
 			// An empty line is a place to type, so opening the screen it appears on writes nothing.
-			&& str_contains( $ax_ct_kn_js, 'return { part: null, kind: kind };' )
+			&& str_contains( $ax_ct_kn_js, "rows.push( { key: kind + '#0', kind: kind, part: null } );" )
 			&& str_contains( $ax_ct_kn_js, "movable ? icon( 'drag-indicator' ) : ''" )
 			// And moving one moves the part it stands for, in the document.
 			&& str_contains( $ax_ct_kn_js, 'var moved = list.splice( dragging, 1 )[ 0 ];' )
@@ -3521,7 +3521,7 @@ try {
 			&& str_contains( $ax_ct_sep_js, "var FIXED_LAST = 'credential';" )
 			// Applied after anything that moves a part, so no drag can leave them in the middle.
 			&& str_contains( $ax_ct_sep_js, 'setComponents( endsFirstAndLast( list ) );' )
-			&& str_contains( $ax_ct_sep_js, 'list = endsFirstAndLast( list );' )
+			&& str_contains( $ax_ct_sep_js, 'setComponents( endsFirstAndLast( list ), components.length' )
 			// And neither of the two is something to pick up in the first place.
 			&& str_contains( $ax_ct_sep_js, "-1 !== MIDDLE_SLOTS.indexOf( props.kind )" )
 	);
@@ -3534,7 +3534,7 @@ try {
 	ax_ct_assert(
 		$ax_ct_results,
 		'a name built here says its parts are in the order they are read, and an import is not made to',
-		str_contains( $ax_ct_sep_js, 'setComponents( list, components.length ? {} : { isOrdered: true } );' )
+		str_contains( $ax_ct_sep_js, 'components.length ? {} : { isOrdered: true }' )
 			&& str_contains( $ax_ct_sep_js, "__( 'Say they are in the order they are read', 'axismundi-contacts' )" )
 	);
 	/*
@@ -4127,6 +4127,84 @@ try {
 		str_contains( $ax_ct_lg_js, 'phonetic && ( expanded || custom )' )
 			&& str_contains( $ax_ct_lg_js, "options: PHONETIC_SYSTEMS," )
 			&& str_contains( $ax_ct_lg_js, "options: PHONETIC_SCRIPTS," )
+	);
+
+	/*
+	 * A field somebody has clicked back into still shows what they chose. It held `ko-KR`, and
+	 * clicking it emptied the box while the card still said `ko-KR` -- the field was showing the
+	 * search, and the search starts empty. Now the search is a separate thing that does not exist
+	 * until somebody types, so opening the list shows the answer and offers all of them.
+	 */
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_cb_js = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/fields.js' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a chosen value is still in the field when somebody clicks back into it, with everything on offer',
+		// Nothing typed is `null`, which is not the same as having typed nothing.
+		str_contains( $ax_ct_cb_js, 'var [ query, setQuery ] = wp.element.useState( null );' )
+			&& str_contains( $ax_ct_cb_js, 'var typing = null !== query;' )
+			&& str_contains( $ax_ct_cb_js, "value: typing ? query : ( props.value || '' )," )
+			// So the list is narrowed by typing rather than by having a value already.
+			&& str_contains( $ax_ct_cb_js, '! typing || ! query ||' )
+			&& str_contains( $ax_ct_cb_js, 'setQuery( null );' )
+	);
+	/*
+	 * And coming back to the field does not close the list that coming back opened: the blur that
+	 * fired on the way out is waiting to close it, and focusing again cancels that.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'leaving and returning to the field leaves it open, rather than closing what returning opened',
+		str_contains( $ax_ct_cb_js, 'var closing = useRef( null );' )
+			&& str_contains( $ax_ct_cb_js, 'function stopClosing()' )
+			&& str_contains( $ax_ct_cb_js, 'closing.current = window.setTimeout(' )
+			&& str_contains( $ax_ct_cb_js, "onFocus: function () {\n\t\t\t\t\tstopClosing();" )
+	);
+	/*
+	 * Two parts of the same kind are two rows. A name may carry two middle names -- RFC 9553's own
+	 * example does -- and a row named after its kind alone means the second is the first as far as
+	 * the screen is concerned: editing one edits the other, and deleting one deletes the other.
+	 */
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_cb_editor = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/card-editor.js' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'two parts of one kind are two rows, each writing to the part it stands for',
+		// Named by which one of its kind it is, and writing by where that part sits.
+		str_contains( $ax_ct_cb_editor, "key: part.kind + '#' + ( seen[ part.kind ] - 1 )," )
+			&& str_contains( $ax_ct_cb_editor, 'function writeSlot( row, key, value )' )
+			&& str_contains( $ax_ct_cb_editor, 'var at = row.index;' )
+			&& str_contains( $ax_ct_cb_editor, 'key: row.key,' )
+			// And never by looking up the first of that kind, which is what made them one row.
+			&& ! str_contains( $ax_ct_cb_editor, 'var at = slotIndex( components, kind );' )
+	);
+	/*
+	 * Adding opens a line rather than writing a part. A card does not collect empty parts from people
+	 * who clicked a button and thought better of it -- and the line keeps its name when it becomes a
+	 * part, so the field somebody is typing into is not replaced under them at the first keystroke.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'adding a part opens somewhere to type, and typing there is what writes the part down',
+		str_contains( $ax_ct_cb_editor, 'var [ pending, setPending ] = useState( [] );' )
+			&& str_contains( $ax_ct_cb_editor, "setPending( pending.concat( [ { id: 'row-' + rows, kind: kind } ] ) );" )
+			&& str_contains( $ax_ct_cb_editor, 'if ( row.pendingId ) {' )
+			&& str_contains( $ax_ct_cb_editor, "rows.push( {\n\t\t\t\tkey: row.kind + '#' + ( seen[ row.kind ] - 1 )," )
+	);
+	/*
+	 * And a separator is added where it goes. Reached from a list of kinds it had to be put somewhere
+	 * first -- which was the front of the name, because a separator is not one of the lines and so
+	 * sorted before all of them -- and dragged into place afterwards.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'something written between two parts is added from between those two parts, and nowhere else',
+		str_contains( $ax_ct_cb_editor, "var ADDABLE = [ 'given2', 'surname2' ];" )
+			&& str_contains( $ax_ct_cb_editor, 'function addSeparator( before )' )
+			&& str_contains( $ax_ct_cb_editor, "list.splice( before, 0, { kind: 'separator', value: '' } );" )
+			&& str_contains( $ax_ct_cb_editor, 'addSeparator( row.index );' )
+			// Offered between two parts that are both there, and only where there is an order to sit in.
+			&& str_contains( $ax_ct_cb_editor, 'ordered && at > 0 && row.part && list[ at - 1 ].part' )
 	);
 
 	ax_ct_assert(

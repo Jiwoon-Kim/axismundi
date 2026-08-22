@@ -36,6 +36,9 @@
 	var __ = wp.i18n.__;
 	var sprintf = wp.i18n.sprintf;
 
+	/** How many lines this screen has opened, so each of them can be told from the others. */
+	var rows = 0;
+
 	/** One icon's markup, from the registry this plugin fills. */
 	function icon( name ) {
 		return ( window.axismundiContactsIcons || {} )[ name ] || '';
@@ -388,8 +391,14 @@
 	var FIXED_LAST = 'credential';
 	var MIDDLE_SLOTS = [ 'given', 'given2', 'surname', 'surname2' ];
 
-	/** The parts somebody adds themselves, which are the ones there is a point in removing. */
-	var ADDABLE = [ 'given2', 'surname2', 'separator' ];
+	/**
+	 * The parts somebody adds themselves, which are the ones there is a point in removing.
+	 *
+	 * A separator is not among them. It goes between two parts, so it is added from the gap between
+	 * two parts: reached from a list of kinds it has to be put somewhere first and dragged into place
+	 * afterwards, and "somewhere first" was the front of the name.
+	 */
+	var ADDABLE = [ 'given2', 'surname2' ];
 
 	/**
 	 * The lines to draw for a set of kinds: what the name has, in the order it has it, then a line
@@ -399,18 +408,51 @@
 	 * the document, and opening the screen it appears on does not put it there -- which is the whole
 	 * difference between a field and a record.
 	 */
-	function slotRows( components, kinds ) {
-		var filled = ( components || [] ).map( function ( part, index ) {
-			return { part: part, index: index, kind: part && part.kind };
-		} ).filter( function ( row ) {
-			return row.part && -1 !== kinds.indexOf( row.kind );
+	function slotRows( components, kinds, pending ) {
+		var seen = {};
+		var rows = [];
+		( components || [] ).forEach( function ( part, index ) {
+			if ( ! part || -1 === kinds.indexOf( part.kind ) ) {
+				return;
+			}
+			/*
+			 * Which one of its kind this is, counted down the document. That is the row's name for as
+			 * long as it is on screen -- not the kind alone, because a name may have two middle names
+			 * and two rows called `given2` are one row as far as React is concerned: editing the
+			 * second would change the first.
+			 */
+			seen[ part.kind ] = ( seen[ part.kind ] || 0 ) + 1;
+			rows.push( {
+				key: part.kind + '#' + ( seen[ part.kind ] - 1 ),
+				kind: part.kind,
+				part: part,
+				index: index
+			} );
 		} );
-		var empty = kinds.filter( function ( kind ) {
-			return -1 === slotIndex( components, kind );
-		} ).map( function ( kind ) {
-			return { part: null, kind: kind };
+		kinds.forEach( function ( kind ) {
+			if ( ! seen[ kind ] ) {
+				rows.push( { key: kind + '#0', kind: kind, part: null } );
+			}
 		} );
-		return filled.concat( empty );
+		/*
+		 * And the rows somebody asked for that the document has nothing for yet. A row is a place to
+		 * type: it becomes a part of the name when somebody types in it, and it keeps its name when it
+		 * does -- the second `given2` a person adds is `given2#1` before and after they fill it in, so
+		 * the field they are typing into is not replaced under them.
+		 */
+		( pending || [] ).forEach( function ( row ) {
+			if ( -1 === kinds.indexOf( row.kind ) ) {
+				return;
+			}
+			seen[ row.kind ] = ( seen[ row.kind ] || 0 ) + 1;
+			rows.push( {
+				key: row.kind + '#' + ( seen[ row.kind ] - 1 ),
+				kind: row.kind,
+				part: null,
+				pendingId: row.id
+			} );
+		} );
+		return rows;
 	}
 
 	/**
@@ -479,12 +521,30 @@
 
 	/** Where a part of some kind goes, so the parts stay in the order the fields are read in. */
 	function slotInsertion( components, kind ) {
+		var list = components || [];
+		/*
+		 * Next to the part it extends, where there is one. A second middle name belongs after the
+		 * first given name and a second surname after the first surname -- and which of those comes
+		 * first is the name's own business: `김 지운` is stored surname first, and a rule that only
+		 * knew the order the fields are drawn in would file a middle name in front of the surname.
+		 */
+		var anchor = { given2: 'given', surname2: 'surname' }[ kind ] || kind;
+		var after = -1;
+		list.forEach( function ( part, index ) {
+			if ( part && ( part.kind === anchor || part.kind === kind ) ) {
+				after = index;
+			}
+		} );
+		if ( -1 !== after ) {
+			return after + 1;
+		}
+		// Nothing to sit beside, so the order the lines are drawn in is the best answer there is.
 		var rank = NAME_SLOTS.indexOf( kind );
-		var at = ( components || [] ).findIndex( function ( part ) {
+		var at = list.findIndex( function ( part ) {
 			var other = NAME_SLOTS.indexOf( part && part.kind );
 			return -1 !== other && other > rank;
 		} );
-		return -1 === at ? ( components || [] ).length : at;
+		return -1 === at ? list.length : at;
 	}
 
 	/**
@@ -498,6 +558,7 @@
 		var part = props.part || {};
 		// Only a line holding something, of a kind that sits between the ends, is somewhere to move.
 		var movable = !! props.part && props.ordered && -1 !== MIDDLE_SLOTS.indexOf( props.kind );
+		var at = props.row.index;
 		return el(
 			'div',
 			{
@@ -505,7 +566,7 @@
 				draggable: movable,
 				onDragStart: function () {
 					if ( movable ) {
-						props.onDragStart( props.index );
+						props.onDragStart( at );
 					}
 				},
 				onDragOver: function ( event ) {
@@ -515,7 +576,7 @@
 				},
 				onDrop: function () {
 					if ( movable ) {
-						props.onDrop( props.index );
+						props.onDrop( at );
 					}
 				}
 			},
@@ -532,7 +593,7 @@
 				className: 'ax-ce-slot__value',
 				value: part.value || '',
 				onChange: function ( value ) {
-					props.onChange( props.kind, 'value', value );
+					props.onChange( props.row, 'value', value );
 				}
 			} ),
 			props.phonetic && -1 !== PHONETIC_SLOTS.indexOf( props.kind )
@@ -541,7 +602,7 @@
 					className: 'ax-ce-slot__phonetic',
 					value: part.phonetic || '',
 					onChange: function ( value ) {
-						props.onChange( props.kind, 'phonetic', value );
+						props.onChange( props.row, 'phonetic', value );
 					}
 				} )
 				: null,
@@ -551,7 +612,7 @@
 			 * four are emptied rather than taken away, and the line stays to be typed into again. A
 			 * second middle name is something somebody added, so it is something they can take back.
 			 */
-			props.part && -1 !== ADDABLE.indexOf( props.kind )
+			( props.part || props.row.pendingId ) && -1 !== ADDABLE.indexOf( props.kind )
 				? el( IconButton, {
 					icon: 'delete',
 					variant: 'danger',
@@ -561,7 +622,7 @@
 						componentLabel( props.kind )
 					),
 					onClick: function () {
-						props.onRemove( props.index );
+						props.onRemove( props.row );
 					}
 				} )
 				: el( 'span', { className: 'ax-ce-slot__spacer', 'aria-hidden': 'true' } )
@@ -617,6 +678,12 @@
 		var [ written, setWritten ] = useState( ! components.length && undefined !== name.full );
 		var [ asking, setAsking ] = useState( '' );
 		var [ adding, setAdding ] = useState( false );
+		/*
+		 * Lines somebody asked for that the document has nothing for yet. Screen state, like every
+		 * other line that is empty -- the difference is only that these were asked for rather than
+		 * always drawn.
+		 */
+		var [ pending, setPending ] = useState( [] );
 
 		function setName( next ) {
 			// A name with nothing in it is not a name, so the property goes rather than sitting empty.
@@ -641,19 +708,21 @@
 			setName( next );
 		}
 
+		/*
+		 * Adding opens a line, and nothing more. The document gets a part when somebody types in that
+		 * line -- the same rule as every other line on the screen, and the reason a card does not
+		 * collect empty parts from people who clicked a button and thought better of it.
+		 */
 		function addPart( kind ) {
+			rows += 1;
+			setPending( pending.concat( [ { id: 'row-' + rows, kind: kind } ] ) );
+		}
+
+		/** A separator, which goes in the one place that says where it goes: between these two parts. */
+		function addSeparator( before ) {
 			var list = components.slice();
-			list.splice( slotInsertion( components, kind ), 0, { kind: kind, value: '' } );
-			list = endsFirstAndLast( list );
-			/*
-			 * A name this editor builds is a name whose order it knows: the fields somebody is filling
-			 * in are read down the screen in the order they are read aloud. So the first part written
-			 * here says so.
-			 *
-			 * A name that arrived saying otherwise is left saying it. An import that did not know the
-			 * reading order is not made to claim one because somebody opened it.
-			 */
-			setComponents( list, components.length ? {} : { isOrdered: true } );
+			list.splice( before, 0, { kind: 'separator', value: '' } );
+			setComponents( list );
 		}
 
 		/**
@@ -664,17 +733,31 @@
 		 * a name half-retyped is not a name being deleted, and what is left empty is dropped on the way
 		 * out rather than mid-keystroke.
 		 */
-		function writeSlot( kind, key, value ) {
-			var at = slotIndex( components, kind );
-			if ( -1 === at ) {
+		function writeSlot( row, key, value ) {
+			var at = row.index;
+			if ( undefined === at ) {
 				if ( ! value ) {
 					return;
 				}
-				var made = { kind: kind, value: '' };
+				var made = { kind: row.kind, value: '' };
 				made[ key ] = value;
 				var list = components.slice();
-				list.splice( slotInsertion( components, kind ), 0, made );
-				setComponents( list, components.length ? {} : { isOrdered: true } );
+				list.splice( slotInsertion( components, row.kind ), 0, made );
+				if ( row.pendingId ) {
+					// The line is the document's now, so it stops being one this screen is holding.
+					setPending( pending.filter( function ( each ) {
+						return each.id !== row.pendingId;
+					} ) );
+				}
+				/*
+				 * A name this editor builds is a name whose order it knows: the lines somebody is
+				 * filling in are read down the screen in the order they are read aloud. So the first
+				 * part written here says so.
+				 *
+				 * A name that arrived saying otherwise is left saying it. An import that did not know
+				 * the reading order is not made to claim one because somebody opened it.
+				 */
+				setComponents( endsFirstAndLast( list ), components.length ? {} : { isOrdered: true } );
 				return;
 			}
 			var part = Object.assign( {}, components[ at ] );
@@ -709,8 +792,15 @@
 			setComponents( next );
 		}
 
-		/** Take a part away outright, which is only offered for the parts somebody added. */
-		function removePart( at ) {
+		/** Take a line away outright, which is only offered for the lines somebody added. */
+		function removePart( row ) {
+			if ( undefined === row.index ) {
+				setPending( pending.filter( function ( each ) {
+					return each.id !== row.pendingId;
+				} ) );
+				return;
+			}
+			var at = row.index;
 			var affected = patchesUnder( props.localizations, 'name/components/' + at );
 			if ( affected.length ) {
 				props.onBlocked( at, affected );
@@ -729,10 +819,10 @@
 		 */
 		function line( row ) {
 			return el( NameSlot, {
-				key: row.kind,
+				key: row.key,
+				row: row,
 				kind: row.kind,
 				part: row.part,
-				index: row.index,
 				ordered: ordered,
 				phonetic: phonetic,
 				onChange: writeSlot,
@@ -752,11 +842,38 @@
 			} );
 		}
 
+		/*
+		 * A separator goes between two parts, so it is put there: the gap between two lines is the one
+		 * place on the screen that says exactly where it goes, and a name carrying one is edited as
+		 * the list it has become.
+		 */
+		function withGaps( list ) {
+			var out = [];
+			list.forEach( function ( row, at ) {
+				if ( ordered && at > 0 && row.part && list[ at - 1 ].part ) {
+					out.push( el(
+						'div',
+						{ key: 'gap-' + row.key, className: 'ax-ce-slot-gap' },
+						el( IconButton, {
+							icon: 'add',
+							className: 'ax-ce-slot-gap__add',
+							label: __( 'Put something between these two parts', 'axismundi-contacts' ),
+							onClick: function () {
+								addSeparator( row.index );
+							}
+						} )
+					) );
+				}
+				out.push( line( row ) );
+			} );
+			return out;
+		}
+
 		var slots = expanded
 			? slotRows( components, [ FIXED_FIRST ] ).map( line )
-				.concat( slotRows( components, MIDDLE_SLOTS ).map( line ) )
+				.concat( withGaps( slotRows( components, MIDDLE_SLOTS, pending ) ) )
 				.concat( slotRows( components, [ FIXED_LAST ] ).map( line ) )
-			: slotRows( components, BASIC_SLOTS ).map( line );
+			: withGaps( slotRows( components, BASIC_SLOTS ) );
 
 		return el(
 			Section,
@@ -836,7 +953,15 @@
 										key: kind,
 										type: 'button',
 										className: 'button',
-										disabled: 'separator' !== kind && ! ordered && -1 !== slotIndex( components, kind ),
+										/*
+										 * Offered only when every line of that kind already holds
+										 * something. A card with an empty `Given name 2` on screen
+										 * does not need a second empty one, and offering it is how
+										 * somebody ends up with two lines and one name.
+										 */
+										disabled: -1 === slotIndex( components, kind ) || pending.some( function ( each ) {
+											return each.kind === kind;
+										} ),
 										onClick: function () {
 											setAdding( false );
 											addPart( kind );
@@ -925,11 +1050,23 @@
 					);
 				} )
 			) : null,
+			/*
+			 * In the list the document is the screen, so adding there adds a part outright rather than
+			 * opening a line: there are no lines here to open, only parts.
+			 */
 			custom ? el(
 				'p',
 				{ className: 'ax-ce-addpart__row' },
 				NAME_SLOTS.map( function ( kind ) {
-					return el( AddPart, { key: kind, kind: kind, onAdd: addPart } );
+					return el( AddPart, {
+						key: kind,
+						kind: kind,
+						onAdd: function ( each ) {
+							var list = components.slice();
+							list.splice( slotInsertion( components, each ), 0, { kind: each, value: '' } );
+							setComponents( endsFirstAndLast( list ), components.length ? {} : { isOrdered: true } );
+						}
+					} );
 				} )
 			) : null,
 			blocked

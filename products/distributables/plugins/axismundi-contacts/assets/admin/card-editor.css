@@ -599,3 +599,20 @@
 	flex-wrap: wrap;
 	gap: .5em;
 }
+
+/* The gap between two parts, which is where something goes between them. */
+.ax-ce-slot-gap {
+	display: flex;
+	justify-content: center;
+	margin: -4px 0;
+}
+
+.ax-ce-slot-gap__add {
+	opacity: 0;
+	transition: opacity .1s ease;
+}
+
+.ax-ce-name:hover .ax-ce-slot-gap__add,
+.ax-ce-slot-gap__add:focus-visible {
+	opacity: 1;
+}

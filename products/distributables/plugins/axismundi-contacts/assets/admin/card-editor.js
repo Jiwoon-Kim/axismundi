@@ -24,20 +24,30 @@
 
 	var el = wp.element.createElement;
 	var Fragment = wp.element.Fragment;
+	// The field primitives, which own the markup and the states so this file can own the Card.
+	var fields = window.axismundiContactsFields || {};
+	var TextField = fields.TextField;
+	var Textarea = fields.Textarea;
+	var IconButton = fields.IconButton;
 	var useState = wp.element.useState;
 	var useCallback = wp.element.useCallback;
 	var apiFetch = wp.apiFetch;
 	var __ = wp.i18n.__;
 	var sprintf = wp.i18n.sprintf;
 
+	/** One icon's markup, from the registry this plugin fills. */
+	function icon( name ) {
+		return ( window.axismundiContactsIcons || {} )[ name ] || '';
+	}
+
 	/** Properties this draws rows for, and what each entry's value is called. */
 	var ENTRY_FIELDS = [
-		{ key: 'emails', label: __( 'Email', 'axismundi-contacts' ), value: 'address' },
-		{ key: 'phones', label: __( 'Phone', 'axismundi-contacts' ), value: 'number' },
-		{ key: 'onlineServices', label: __( 'Online accounts', 'axismundi-contacts' ), value: 'uri' },
-		{ key: 'links', label: __( 'Links', 'axismundi-contacts' ), value: 'uri' },
-		{ key: 'media', label: __( 'Media', 'axismundi-contacts' ), value: 'uri' },
-		{ key: 'notes', label: __( 'Notes', 'axismundi-contacts' ), value: 'note' }
+		{ key: 'emails', label: __( 'Email', 'axismundi-contacts' ), value: 'address', type: 'email', icon: 'mail' },
+		{ key: 'phones', label: __( 'Phone', 'axismundi-contacts' ), value: 'number', icon: 'call' },
+		{ key: 'onlineServices', label: __( 'Online accounts', 'axismundi-contacts' ), value: 'uri', type: 'url', icon: 'account-circle' },
+		{ key: 'links', label: __( 'Links', 'axismundi-contacts' ), value: 'uri', type: 'url', icon: 'link' },
+		{ key: 'media', label: __( 'Media', 'axismundi-contacts' ), value: 'uri', type: 'url', icon: 'image' },
+		{ key: 'notes', label: __( 'Notes', 'axismundi-contacts' ), value: 'note', icon: 'file-json' }
 	];
 
 	/** The component kinds a name is made of, plus the separator that goes between them. */
@@ -117,10 +127,19 @@
 					props.onDrop( props.index );
 				}
 			},
-			el( 'span', { className: 'ax-ce-part__grip', 'aria-hidden': 'true' }, '☰' ),
+			el(
+				'span',
+				{ className: 'ax-ce-part__grip', 'aria-hidden': 'true', dangerouslySetInnerHTML: { __html: icon( 'drag-indicator' ) } }
+			),
+			/*
+			 * A plain select, for now. Which of the six kinds a part is comes from a closed list, and
+			 * the field adapter deliberately has no Select yet -- the path picker that will want one
+			 * has to decide first whether it is a menu or something you type into.
+			 */
 			el(
 				'select',
 				{
+					className: 'ax-ce-part__kind',
 					value: part.kind || 'given',
 					'aria-label': __( 'Kind of name part', 'axismundi-contacts' ),
 					onChange: function ( event ) {
@@ -131,31 +150,29 @@
 					return el( 'option', { key: kind, value: kind }, kind );
 				} )
 			),
-			el( 'input', {
-				type: 'text',
+			el( TextField, {
+				label: 'separator' === part.kind ? __( 'Between the parts', 'axismundi-contacts' ) : __( 'Value', 'axismundi-contacts' ),
+				className: 'ax-ce-part__value',
 				value: undefined === part.value ? '' : part.value,
-				placeholder: 'separator' === part.kind ? __( 'nothing, for names written without spaces', 'axismundi-contacts' ) : '',
-				onChange: function ( event ) {
+				supporting: 'separator' === part.kind ? __( 'Empty for names written without spaces.', 'axismundi-contacts' ) : undefined,
+				onChange: function ( value ) {
 					// A separator keeps an empty value, because an empty separator is a real answer.
 					var next = Object.assign( {}, part );
-					next.value = event.target.value;
+					next.value = value;
 					if ( '' === next.value && 'separator' !== next.kind ) {
 						delete next.value;
 					}
 					props.onChange( props.index, next );
 				}
 			} ),
-			el(
-				'button',
-				{
-					type: 'button',
-					className: 'button-link',
-					onClick: function () {
-						props.onRemove( props.index );
-					}
-				},
-				__( 'Remove', 'axismundi-contacts' )
-			)
+			el( IconButton, {
+				icon: 'delete',
+				variant: 'danger',
+				label: __( 'Remove this part of the name', 'axismundi-contacts' ),
+				onClick: function () {
+					props.onRemove( props.index );
+				}
+			} )
 		);
 	}
 
@@ -195,32 +212,18 @@
 			'section',
 			{ className: 'ax-ce-section' },
 			el( 'h2', null, __( 'Name', 'axismundi-contacts' ) ),
-			el(
-				'p',
-				null,
-				el(
-					'label',
-					null,
-					el( 'span', { className: 'ax-ce-label' }, __( 'Written out', 'axismundi-contacts' ) ),
-					el( 'input', {
-						type: 'text',
-						className: 'regular-text',
-						value: name.full || '',
-						onChange: function ( event ) {
-							setName( withKey( name, 'full', event.target.value ) );
-						}
-					} )
-				)
-			),
-			el(
-				'p',
-				{ className: 'description' },
-				sprintf(
+			el( TextField, {
+				label: __( 'Written out', 'axismundi-contacts' ),
+				value: name.full || '',
+				supporting: sprintf(
 					/* translators: %s: what the name reads as. */
 					__( 'Reads as: %s', 'axismundi-contacts' ),
 					nameText( name ) || __( '(nothing yet)', 'axismundi-contacts' )
-				)
-			),
+				),
+				onChange: function ( value ) {
+					setName( withKey( name, 'full', value ) );
+				}
+			} ),
 			el(
 				'ul',
 				{ className: 'ax-ce-parts' + ( null === dragging ? '' : ' is-dragging' ) },
@@ -289,27 +292,17 @@
 							__( 'These parts are already in the order they are read', 'axismundi-contacts' )
 						)
 					),
-					el(
-						'p',
-						null,
-						el(
-							'label',
-							null,
-							el( 'span', { className: 'ax-ce-label' }, __( 'Between the parts', 'axismundi-contacts' ) ),
-							el( 'input', {
-								type: 'text',
-								className: 'small-text',
-								value: undefined === name.defaultSeparator ? ' ' : name.defaultSeparator,
-								onChange: function ( event ) {
-									var next = Object.assign( {}, name );
-									next.defaultSeparator = event.target.value;
-									setName( next );
-								}
-							} ),
-							' ',
-							el( 'span', { className: 'description' }, __( 'Empty for names written without spaces.', 'axismundi-contacts' ) )
-						)
-					)
+					el( TextField, {
+						label: __( 'Between the parts', 'axismundi-contacts' ),
+						className: 'ax-ce-separator',
+						value: undefined === name.defaultSeparator ? ' ' : name.defaultSeparator,
+						supporting: __( 'Empty for names written without spaces.', 'axismundi-contacts' ),
+						onChange: function ( value ) {
+							var next = Object.assign( {}, name );
+							next.defaultSeparator = value;
+							setName( next );
+						}
+					} )
 				)
 				: null
 		);
@@ -331,44 +324,42 @@
 			ids.map( function ( id ) {
 				var entry = entries[ id ] || {};
 				return el(
-					'p',
+					'div',
 					{ key: id, className: 'ax-ce-entry' },
-					el( 'code', { className: 'ax-ce-entry__id' }, id ),
-					el( 'input', {
-						type: 'text',
-						className: 'regular-text',
-						'aria-label': props.field.label,
+					el( TextField, {
+						label: props.field.label,
+						type: props.field.type,
+						className: 'ax-ce-entry__value',
 						value: entry[ props.field.value ] || '',
-						onChange: function ( event ) {
+						// The id is the address a published pointer and a provenance row name, so it is
+						// shown rather than hidden: somebody choosing what to publish is choosing by it.
+						supporting: id,
+						onChange: function ( value ) {
 							var next = Object.assign( {}, entries );
-							next[ id ] = withKey( entry, props.field.value, event.target.value );
+							next[ id ] = withKey( entry, props.field.value, value );
 							setEntries( next );
 						}
 					} ),
-					el( 'input', {
-						type: 'text',
-						className: 'small-text',
-						placeholder: __( 'label', 'axismundi-contacts' ),
+					el( TextField, {
+						label: __( 'Label', 'axismundi-contacts' ),
+						className: 'ax-ce-entry__label',
 						value: entry.label || '',
-						onChange: function ( event ) {
+						onChange: function ( value ) {
 							var next = Object.assign( {}, entries );
-							next[ id ] = withKey( entry, 'label', event.target.value );
+							next[ id ] = withKey( entry, 'label', value );
 							setEntries( next );
 						}
 					} ),
-					el(
-						'button',
-						{
-							type: 'button',
-							className: 'button-link',
-							onClick: function () {
-								var next = Object.assign( {}, entries );
-								delete next[ id ];
-								setEntries( next );
-							}
-						},
-						__( 'Remove', 'axismundi-contacts' )
-					)
+					el( IconButton, {
+						icon: 'delete',
+						variant: 'danger',
+						label: __( 'Remove this entry', 'axismundi-contacts' ),
+						onClick: function () {
+							var next = Object.assign( {}, entries );
+							delete next[ id ];
+							setEntries( next );
+						}
+					} )
 				);
 			} ),
 			el(
@@ -420,16 +411,16 @@
 				{ className: 'description' },
 				__( 'Everything above, and everything this editor has no field for. Edits here and edits above are the same document.', 'axismundi-contacts' )
 			),
-			el( 'textarea', {
+			el( Textarea, {
+				label: __( 'JSContact', 'axismundi-contacts' ),
 				className: 'ax-ce-json',
 				rows: 18,
 				spellCheck: false,
 				value: text,
-				onChange: function ( event ) {
-					props.onChange( event.target.value );
-				}
-			} ),
-			props.error ? el( 'p', { className: 'ax-ce-error' }, props.error ) : null
+				error: !! props.error,
+				supporting: props.error || undefined,
+				onChange: props.onChange
+			} )
 		);
 	}
 

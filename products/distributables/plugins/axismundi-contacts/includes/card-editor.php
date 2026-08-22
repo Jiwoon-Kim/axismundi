@@ -43,22 +43,58 @@ function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
 	if ( ! file_exists( $script ) ) {
 		return;
 	}
+	$fields_css = dirname( __DIR__ ) . '/assets/admin/fields.css';
+	$fields_js  = dirname( __DIR__ ) . '/assets/admin/fields.js';
+	/*
+	 * `wp-theme` supplies `--wpds-*`, so a field is the same neutral, focus blue and error red as the
+	 * rest of wp-admin. Asked for by handle rather than by URL: WordPress registers it against its own
+	 * stylesheet and Gutenberg replaces the source with its build, so a plugin naming either path
+	 * breaks the moment the other one is in charge. The fields have M3 baselines behind every token,
+	 * so a context that does not enqueue it still draws something usable.
+	 */
+	wp_enqueue_style(
+		'axismundi-contacts-fields',
+		plugins_url( 'assets/admin/fields.css', $plugin ),
+		wp_style_is( 'wp-theme', 'registered' ) ? array( 'wp-theme' ) : array(),
+		AXISMUNDI_CONTACTS_VERSION . '-' . (string) filemtime( $fields_css )
+	);
 	wp_enqueue_style(
 		'axismundi-contacts-card-editor',
 		plugins_url( 'assets/admin/card-editor.css', $plugin ),
-		array(),
+		array( 'axismundi-contacts-fields' ),
 		AXISMUNDI_CONTACTS_VERSION . '-' . (string) filemtime( $style )
+	);
+	wp_enqueue_script(
+		'axismundi-contacts-fields',
+		plugins_url( 'assets/admin/fields.js', $plugin ),
+		array( 'wp-element' ),
+		AXISMUNDI_CONTACTS_VERSION . '-' . (string) filemtime( $fields_js ),
+		true
 	);
 	wp_enqueue_script(
 		'axismundi-contacts-card-editor',
 		plugins_url( 'assets/admin/card-editor.js', $plugin ),
-		array( 'wp-element', 'wp-api-fetch', 'wp-i18n' ),
+		array( 'wp-element', 'wp-api-fetch', 'wp-i18n', 'axismundi-contacts-fields' ),
 		// Versioned by mtime: a fixed string becomes the `ver=` query and serves yesterday's script
 		// from cache after every edit.
 		AXISMUNDI_CONTACTS_VERSION . '-' . (string) filemtime( $script ),
 		true
 	);
 	wp_set_script_translations( 'axismundi-contacts-card-editor', 'axismundi-contacts' );
+
+	/*
+	 * The icons, as markup, once. A button asks for one by name; drawing SVG in the script would put a
+	 * second copy of every icon somewhere nobody would think to update.
+	 */
+	$icons = array();
+	foreach ( array_keys( axismundi_contacts_icons() ) as $icon ) {
+		$icons[ $icon ] = axismundi_contacts_icon( (string) $icon );
+	}
+	wp_add_inline_script(
+		'axismundi-contacts-fields',
+		'window.axismundiContactsIcons = ' . wp_json_encode( $icons ) . ';',
+		'before'
+	);
 
 	$draft = axismundi_contacts_draft_payload( $row );
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing where Done returns to.
@@ -114,7 +150,7 @@ function axismundi_contacts_card_editor_screen( int $card_id, int $group_id ) : 
 			<?php esc_html_e( 'This is the card this Actor publishes about itself. Who may read it is decided on My profile; what of it they receive is decided below.', 'axismundi-contacts' ); ?>
 		</p>
 	<?php endif; ?>
-	<div id="ax-contacts-card-editor"></div>
+	<div id="ax-contacts-card-editor" class="ax-contacts-fields"></div>
 	<noscript>
 		<p><?php esc_html_e( 'The card editor needs JavaScript. The contact itself is readable without it.', 'axismundi-contacts' ); ?></p>
 	</noscript>

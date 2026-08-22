@@ -92,3 +92,53 @@
 	margin-left: .75em;
 	color: #50575e;
 }
+
+/* -- the rows the fields sit in -------------------------------------------------------------- */
+
+/*
+ * A row is a grip, what kind of thing it is, the value, and a way to remove it. The value takes the
+ * space that is left, because that is the part somebody is reading.
+ */
+.ax-ce-part {
+	align-items: flex-start;
+	padding: .5em;
+}
+
+.ax-ce-part__kind {
+	margin-top: 8px;
+}
+
+.ax-ce-part__value,
+.ax-ce-entry__value {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.ax-ce-part__grip svg {
+	width: 24px;
+	height: 24px;
+	margin-top: 16px;
+	fill: currentColor;
+}
+
+.ax-ce-entry {
+	display: flex;
+	gap: .5em;
+	align-items: flex-start;
+	margin: 0 0 .5em;
+}
+
+.ax-ce-entry__label {
+	flex: 0 0 12em;
+}
+
+.ax-ce-part .ax-icon-button,
+.ax-ce-entry .ax-icon-button {
+	margin-top: 8px;
+}
+
+/* The card itself is a document, so it gets the width of one. */
+.ax-ce-json .text-field__input {
+	font-family: Menlo, Consolas, monospace;
+	font-size: .85em;
+}

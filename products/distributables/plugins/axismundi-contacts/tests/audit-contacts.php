@@ -3004,6 +3004,81 @@ try {
 			&& file_exists( dirname( __DIR__ ) . '/assets/icons/LICENSE.md' )
 	);
 
+	// -- the fields the screens are built from ------------------------------------------------------------------
+
+	/*
+	 * Three primitives and no more: a text field, a multi-line one, and a button with a picture on it.
+	 * A `Select` is deliberately absent -- the path picker that will want one has to decide first
+	 * whether it is a menu or something you type into, and a fake select bolted onto a text field would
+	 * answer that by accident.
+	 */
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_fd_js = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/fields.js' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'the field adapter offers a text field, a multi-line one and an icon button, and no select',
+		str_contains( $ax_ct_fd_js, 'TextField: TextField' )
+			&& str_contains( $ax_ct_fd_js, 'Textarea: Textarea' )
+			&& str_contains( $ax_ct_fd_js, 'IconButton: IconButton' )
+			&& ! str_contains( $ax_ct_fd_js, 'Select: ' )
+	);
+	/*
+	 * The label floats because the input is empty, which the input already knows. Asking a script would
+	 * mean the label sat wrong for as long as the script took to load, so every input carries a space
+	 * as its placeholder and the CSS reads `:placeholder-shown`.
+	 */
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own asset in a dev fixture.
+	$ax_ct_fd_css = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/fields.css' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'the label floats from what the field already knows rather than from anything a script says',
+		str_contains( $ax_ct_fd_js, "placeholder: ' '" )
+			&& str_contains( $ax_ct_fd_css, ':placeholder-shown' )
+			&& str_contains( $ax_ct_fd_js, "'aria-describedby': describedBy" )
+	);
+	/*
+	 * Colours come from wp-admin and are asked for by handle. WordPress registers `wp-theme` against
+	 * its own stylesheet and Gutenberg replaces the source with its build, so a plugin naming either
+	 * path breaks the moment the other is in charge. Every token has an M3 baseline behind it, so a
+	 * context without them still draws a field somebody can use.
+	 */
+	$ax_ct_fd_tokens = array(
+		'--wpds-color-stroke-interactive-neutral',
+		'--wpds-color-stroke-focus',
+		'--wpds-color-foreground-content-error',
+		'--wpds-border-radius-md',
+	);
+	$ax_ct_fd_missing = array();
+	foreach ( $ax_ct_fd_tokens as $ax_ct_fd_token ) {
+		if ( ! str_contains( $ax_ct_fd_css, $ax_ct_fd_token . ',' ) ) {
+			$ax_ct_fd_missing[] = $ax_ct_fd_token;
+		}
+	}
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading WordPress's own stylesheet in a dev fixture.
+	$ax_ct_fd_core = (string) file_get_contents( ABSPATH . 'wp-includes/css/dist/theme/design-tokens.css' );
+	$ax_ct_fd_absent = array();
+	foreach ( $ax_ct_fd_tokens as $ax_ct_fd_token ) {
+		if ( ! str_contains( $ax_ct_fd_core, $ax_ct_fd_token ) ) {
+			$ax_ct_fd_absent[] = $ax_ct_fd_token;
+		}
+	}
+	ax_ct_assert(
+		$ax_ct_results,
+		'every colour it uses is one WordPress itself defines, with a baseline behind it for when nothing does',
+		array() === $ax_ct_fd_missing
+			&& array() === $ax_ct_fd_absent
+			&& ! str_contains( $ax_ct_fd_css, 'gutenberg' )
+	);
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_fd_php = (string) file_get_contents( dirname( __DIR__ ) . '/includes/card-editor.php' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'and it asks for them by handle rather than by a path that belongs to whoever is in charge today',
+		str_contains( $ax_ct_fd_php, "wp_style_is( 'wp-theme', 'registered' )" )
+			&& ! str_contains( $ax_ct_fd_php, 'design-tokens.css' )
+			&& ! str_contains( $ax_ct_fd_php, 'wp-components' )
+	);
+
 	ax_ct_assert(
 		$ax_ct_results,
 		'this plugin stores address books and imitates neither the Actor registry nor its profiles',

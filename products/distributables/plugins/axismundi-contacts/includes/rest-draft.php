@@ -185,11 +185,41 @@ function axismundi_contacts_rest_put_draft( WP_REST_Request $request ) {
 	}
 
 	/*
-	 * The uid is the Card's identity and is not the editor's to change. A draft that came back with a
-	 * different one would be published as a different contact to everybody who had saved the first.
+	 * The uid is the Card's identity and is not the editor's to change. A Card that came back with a
+	 * different one would be published as a different contact to everybody who had saved the first --
+	 * they would end up holding two records of one person and no way to tell which is current.
+	 *
+	 * Refused rather than quietly put back. Somebody who typed a uid into the JSON box meant it, and
+	 * a save that discarded it while reporting success would leave them believing the Card had an
+	 * identity it does not have. A request that omits it is not changing it, so it is restored.
 	 */
-	if ( '' !== (string) ( $row['uid'] ?? '' ) ) {
-		$card['uid'] = (string) $row['uid'];
+	$uid = (string) ( $row['uid'] ?? '' );
+	if ( '' !== $uid ) {
+		if ( isset( $card['uid'] ) && (string) $card['uid'] !== $uid ) {
+			return new WP_Error(
+				'ax_contacts_draft_uid',
+				__( 'A card keeps the identity it was published under. Anybody holding a copy of this one finds it by that.', 'axismundi-contacts' ),
+				array( 'status' => 409 )
+			);
+		}
+		$card['uid'] = $uid;
+	}
+
+	/*
+	 * And what the Card an Actor publishes about itself describes is that Actor's answer, not a field
+	 * on this screen. A Person's card claiming to be an organisation would say one thing to a reader
+	 * and the Actor document another, and the two are served from the same site.
+	 */
+	if ( $profile && function_exists( 'axismundi_actors_jscontact_kind' ) && function_exists( 'axismundi_actors_get_by_identity' ) ) {
+		$actor = axismundi_actors_get_by_identity( $owner );
+		$kind  = $actor instanceof Axismundi_Actor ? axismundi_actors_jscontact_kind( (string) $actor->get_type() ) : '';
+		if ( '' !== $kind && (string) ( $card['kind'] ?? $kind ) !== $kind ) {
+			return new WP_Error(
+				'ax_contacts_draft_kind',
+				__( 'This is the card an Actor publishes about itself, so what it describes is what that Actor is.', 'axismundi-contacts' ),
+				array( 'status' => 409 )
+			);
+		}
 	}
 
 	/*

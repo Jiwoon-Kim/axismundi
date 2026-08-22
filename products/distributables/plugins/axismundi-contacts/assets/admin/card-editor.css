@@ -17,7 +17,8 @@
 
 .ax-ce-section h2 {
 	margin: 0 0 .5em;
-	font-size: 1.1em;
+	font-size: 15px;
+	font-weight: 600;
 }
 
 .ax-ce-label {
@@ -66,13 +67,13 @@
 .ax-ce-entry__id {
 	min-width: 8em;
 	color: #787c82;
-	font-size: .85em;
+	font-size: 13px;
 }
 
 .ax-ce-json {
 	width: 100%;
 	font-family: Menlo, Consolas, monospace;
-	font-size: .85em;
+	font-size: 13px;
 }
 
 .ax-ce-error {
@@ -140,7 +141,7 @@
 /* The card itself is a document, so it gets the width of one. */
 .ax-ce-json .text-field__input {
 	font-family: Menlo, Consolas, monospace;
-	font-size: .85em;
+	font-size: 13px;
 }
 
 /* -- the other languages --------------------------------------------------------------------- */
@@ -183,7 +184,7 @@
 .ax-ce-preview {
 	max-height: 18em;
 	overflow: auto;
-	font-size: .85em;
+	font-size: 13px;
 }
 
 /* The list a combobox offers, over whatever is below it. */
@@ -210,7 +211,7 @@
 	margin: 0;
 	padding: .4em .75em;
 	font-family: Menlo, Consolas, monospace;
-	font-size: .85em;
+	font-size: 13px;
 	cursor: pointer;
 }
 
@@ -239,7 +240,7 @@
 .ax-ce-blocked ul {
 	margin: .5em 0;
 	font-family: Menlo, Consolas, monospace;
-	font-size: .85em;
+	font-size: 13px;
 }
 
 /* -- what this card is ----------------------------------------------------------------------- */
@@ -305,4 +306,16 @@
 	color: var( --wpds-color-content-secondary, #50575e );
 	font-size: 13px;
 	overflow-wrap: anywhere;
+}
+
+/*
+ * The JSON box, one fold away. It reads as a heading rather than a control, because what it opens is
+ * a section like the others -- the fold is there so it does not compete with the fields, not to hide
+ * it from anybody who needs it.
+ */
+.ax-ce-json-section > summary {
+	margin: 0 0 .5em;
+	font-size: 15px;
+	font-weight: 600;
+	cursor: pointer;
 }

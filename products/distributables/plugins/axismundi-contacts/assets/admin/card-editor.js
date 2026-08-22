@@ -1175,22 +1175,55 @@
 	}
 
 	/**
-	 * The ledger itself.
+	 * Which record this is.
+	 *
+	 * A uid is not a name and not a URL: it is what somebody holding a copy of this Card finds it by,
+	 * so that a second copy arriving later is recognised as the same contact rather than kept as a
+	 * second person. Once a Card has been published under one it stops being editable -- changing it
+	 * would leave everybody who saved the first holding a record they can no longer match -- so it is
+	 * shown as what it is rather than hidden in the JSON.
+	 *
+	 * Cards about other people usually have none, and that is normal. A uid somebody can quote should
+	 * come from the person it describes; minting one here for every contact in a private address book
+	 * would put this site's invented identifiers into other people's exports.
+	 */
+	function Identity( props ) {
+		var minted = !! props.value;
+		return el(
+			'section',
+			{ className: 'ax-ce-section' },
+			el( 'h2', null, __( 'Identity', 'axismundi-contacts' ) ),
+			el( TextField, {
+				label: __( 'Unique identifier', 'axismundi-contacts' ),
+				value: props.value || '',
+				disabled: minted,
+				supporting: minted
+					? __( 'What anybody holding a copy of this card finds it by. It does not change.', 'axismundi-contacts' )
+					: __( 'Optional. If this contact published one, it belongs here, so a copy arriving later is recognised as the same person.', 'axismundi-contacts' ),
+				onChange: props.onChange
+			} )
+		);
+	}
+
+	/**
+	 * The ledger itself, folded away.
 	 *
 	 * Everything the fields above do not show is here, and stays here: this reads and writes the same
 	 * draft they do rather than a copy of it, so a property with no field survives being edited beside
-	 * one that has.
+	 * one that has. Closed by default, because open it reads as a second screen competing with the
+	 * first -- and the fields are where a Card is meant to be written. What it is for is the property
+	 * this editor has no field for yet, which is why it is one fold away rather than gone.
 	 */
 	function AdvancedJson( props ) {
 		var text = props.text;
 		return el(
-			'section',
-			{ className: 'ax-ce-section' },
-			el( 'h2', null, __( 'The card itself', 'axismundi-contacts' ) ),
+			'details',
+			{ className: 'ax-ce-section ax-ce-json-section' },
+			el( 'summary', null, __( 'Advanced JSON', 'axismundi-contacts' ) ),
 			el(
 				'p',
 				{ className: 'description' },
-				__( 'Everything above, and everything this editor has no field for. Edits here and edits above are the same document.', 'axismundi-contacts' )
+				__( 'Everything above, and everything this editor has no field for. Edits here and edits above are the same document, so this is a way to reach what has no field yet rather than a second way to fill in the fields that have one.', 'axismundi-contacts' )
 			),
 			el( Textarea, {
 				label: __( 'JSContact', 'axismundi-contacts' ),
@@ -1357,7 +1390,7 @@
 
 		function save() {
 			if ( jsonError ) {
-				setStatus( __( 'The card itself has an error, so nothing was saved.', 'axismundi-contacts' ) );
+				setStatus( __( 'The JSON has an error, so nothing was saved.', 'axismundi-contacts' ) );
 				return;
 			}
 			setSaving( true );
@@ -1498,6 +1531,12 @@
 					config.isProfile
 						? el( PublishedFields, { card: card, published: published, onChange: setPublished } )
 						: null,
+					el( Identity, {
+						value: card.uid,
+						onChange: function ( value ) {
+							setProperty( 'uid', value );
+						}
+					} ),
 					el( AdvancedJson, { text: json, error: jsonError, onChange: onJson } )
 				)
 			),

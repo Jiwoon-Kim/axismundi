@@ -113,6 +113,12 @@ function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
 	}
 	$config = array(
 		'draftPath'           => '/' . axismundi_contacts_rest_namespace() . '/cards/' . $card_id . '/draft',
+		/*
+		 * The four a person filling in an address book is choosing between. `application` and `device`
+		 * are standard values too and belong here the day something writes them -- an Application
+		 * Actor's card already stores `application`, which this list does not have to offer for the
+		 * store to keep it.
+		 */
 		'kinds'               => array(
 			array( 'value' => 'individual', 'label' => __( 'A person', 'axismundi-contacts' ) ),
 			array( 'value' => 'org', 'label' => __( 'An organisation', 'axismundi-contacts' ) ),

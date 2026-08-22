@@ -28,6 +28,8 @@
 	--ax-field-outline-focus: var( --wpds-color-stroke-focus, #6750a4 );
 	--ax-field-text: var( --wpds-color-foreground-content-neutral, #1d1b20 );
 	--ax-field-label: var( --wpds-color-foreground-content-neutral-weak, #49454f );
+	/* Said quietly, still read: the admin's own secondary text, which clears AA on the surface. */
+	--ax-field-support: var( --wpds-color-foreground-content-neutral-weak, #50575e );
 	--ax-field-error: var( --wpds-color-foreground-content-error, #b3261e );
 	--ax-field-error-outline: var( --wpds-color-stroke-interactive-error, #b3261e );
 	--ax-field-surface: var( --wpds-color-background-surface-neutral-strong, #fff );
@@ -46,7 +48,14 @@
 	--ax-field-inline: 16px;
 	--ax-field-height: 56px;
 	--ax-field-label-size: 16px;
-	--ax-field-label-size-floated: 12px;
+	/*
+	 * Material's floated label and supporting text are 12px, which is calibrated for a phone held at
+	 * arm's length. This runs inside the WordPress admin, where 13px is the size everything else is
+	 * read at, and a label a pixel smaller than the page around it reads as an afterthought rather
+	 * than as the name of the field somebody is typing in.
+	 */
+	--ax-field-label-size-floated: 13px;
+	--ax-field-support-size: 13px;
 	--ax-field-disabled-opacity: 0.38;
 	--ax-field-disabled-outline-opacity: 0.12;
 }
@@ -166,9 +175,9 @@
 
 .ax-contacts-fields .text-field__supporting {
 	display: block;
-	color: var( --ax-field-label );
-	font-size: 12px;
-	line-height: 16px;
+	color: var( --ax-field-support );
+	font-size: var( --ax-field-support-size );
+	line-height: 18px;
 }
 
 .ax-contacts-fields .text-field.is-error .text-field__container {

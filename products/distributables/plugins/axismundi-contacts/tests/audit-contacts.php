@@ -3482,6 +3482,98 @@ try {
 			&& str_contains( $ax_ct_os_js, 'pref: index + 1' )
 	);
 
+	// -- which record this is, and who decides it ---------------------------------------------------------------
+
+	/*
+	 * The uid is what somebody holding a copy of this Card finds it by. Changing it would leave
+	 * everybody who saved the first holding a record they can no longer match to this one -- two
+	 * contacts for one person, and no way to tell which is current.
+	 *
+	 * Refused rather than quietly put back. Somebody who typed a uid into the JSON box meant it, and
+	 * a save that discarded it while reporting success would leave them believing the Card carries an
+	 * identity it does not.
+	 */
+	$ax_ct_id_actor = ax_ct_actor( $ax_ct_users );
+	$ax_ct_id_sid   = (int) $ax_ct_id_actor->get_identity_id();
+	$ax_ct_id_made  = axismundi_contacts_create_profile_card( $ax_ct_id_sid );
+	$ax_ct_id_card  = is_wp_error( $ax_ct_id_made ) ? 0 : (int) $ax_ct_id_made;
+	$ax_ct_loose[]  = $ax_ct_id_card;
+	$ax_ct_id_uid   = (string) ( axismundi_contacts_get_card( $ax_ct_id_card )['uid'] ?? '' );
+
+	$ax_ct_id_put = static function ( array $document ) use ( $ax_ct_id_card ) {
+		$request = new WP_REST_Request( 'PUT', '/axismundi-contacts/v1/cards/' . $ax_ct_id_card . '/draft' );
+		$request->set_param( 'id', $ax_ct_id_card );
+		$request->set_param( 'revision', (int) ( axismundi_contacts_get_card( $ax_ct_id_card )['revision'] ?? 0 ) );
+		$request->set_param( 'card', $document );
+		return axismundi_contacts_rest_put_draft( $request );
+	};
+	wp_set_current_user( (int) $ax_ct_id_actor->get_local_user_id() );
+
+	$ax_ct_id_other        = axismundi_contacts_card_document( $ax_ct_id_card );
+	$ax_ct_id_other['uid'] = 'urn:uuid:00000000-0000-4000-8000-000000000000';
+	$ax_ct_id_refused      = $ax_ct_id_put( $ax_ct_id_other );
+
+	// Leaving it out is not changing it, so a caller that never mentions the uid still saves.
+	$ax_ct_id_silent = axismundi_contacts_card_document( $ax_ct_id_card );
+	unset( $ax_ct_id_silent['uid'] );
+	$ax_ct_id_kept = $ax_ct_id_put( $ax_ct_id_silent );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a card keeps the identity it was published under, and a request that never mentions it changes nothing',
+		is_wp_error( $ax_ct_id_refused )
+			&& 'ax_contacts_draft_uid' === $ax_ct_id_refused->get_error_code()
+			&& ! is_wp_error( $ax_ct_id_kept )
+			&& $ax_ct_id_uid === (string) ( axismundi_contacts_get_card( $ax_ct_id_card )['uid'] ?? '' )
+	);
+	/*
+	 * And what the Card an Actor publishes about itself describes is that Actor's answer. The radio
+	 * at the top shows it decided; the JSON box below could still say otherwise, and this is where
+	 * that is answered -- a Person's card claiming to be an organisation would say one thing to a
+	 * reader and the Actor document another, both served from this site.
+	 */
+	$ax_ct_id_wrong         = axismundi_contacts_card_document( $ax_ct_id_card );
+	$ax_ct_id_wrong['kind'] = 'org';
+	$ax_ct_id_kind          = $ax_ct_id_put( $ax_ct_id_wrong );
+	ax_ct_assert(
+		$ax_ct_results,
+		'and the card an Actor publishes cannot be told it describes something the Actor is not',
+		is_wp_error( $ax_ct_id_kind )
+			&& 'ax_contacts_draft_kind' === $ax_ct_id_kind->get_error_code()
+			&& 'individual' === (string) ( axismundi_contacts_card_document( $ax_ct_id_card )['kind'] ?? '' )
+	);
+	wp_set_current_user( (int) $ax_ct_owner->get_local_user_id() );
+	/*
+	 * Which is why the JSON box is one fold away rather than a second screen beside the first. It is
+	 * how to reach a property this editor has no field for yet; it is not the way to answer questions
+	 * the fields above already ask, and a section competing with them for the same answers is a
+	 * screen inviting somebody to disagree with themselves.
+	 */
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_id_js = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/card-editor.js' );
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_id_css = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/fields.css' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'the json is an escape hatch one fold away, and which record this is has a field of its own',
+		str_contains( $ax_ct_id_js, "__( 'Advanced JSON', 'axismundi-contacts' )" )
+			&& ! str_contains( $ax_ct_id_js, "__( 'The card itself', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_id_js, 'ax-ce-json-section' )
+			&& str_contains( $ax_ct_id_js, 'function Identity' )
+			&& str_contains( $ax_ct_id_js, "__( 'Unique identifier', 'axismundi-contacts' )" )
+	);
+	/*
+	 * And it is read at the size the admin around it is read at. Material's 12px is calibrated for a
+	 * phone held at arm's length; here a label smaller than the page it sits on reads as an
+	 * afterthought rather than as the name of the field somebody is typing in.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a label and what it explains are read at the size everything around them is read at',
+		str_contains( $ax_ct_id_css, '--ax-field-label-size-floated: 13px;' )
+			&& str_contains( $ax_ct_id_css, '--ax-field-support-size: 13px;' )
+			&& ! str_contains( $ax_ct_id_css, 'font-size: 12px;' )
+	);
+
 	ax_ct_assert(
 		$ax_ct_results,
 		'this plugin stores address books and imitates neither the Actor registry nor its profiles',

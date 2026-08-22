@@ -36,6 +36,14 @@
 	/* M3 has no counterpart in the admin tokens for these, so they are stated here. */
 	--ax-field-outline-width: 1px;
 	--ax-field-outline-width-focus: 3px;
+	/*
+	 * How thick the outline is *now*. Focus changes this one value, and everything that has to give
+	 * way to it -- the padding inside, where the label sits -- is written in terms of it. Written the
+	 * other way round, each of those would be a second place to remember when the width changed, and
+	 * the field would grow by two pixels the first time somebody forgot one.
+	 */
+	--ax-field-border: var( --ax-field-outline-width );
+	--ax-field-inline: 16px;
 	--ax-field-height: 56px;
 	--ax-field-label-size: 16px;
 	--ax-field-label-size-floated: 12px;
@@ -55,10 +63,17 @@
 	display: flex;
 	align-items: center;
 	gap: 8px;
+	/*
+	 * Stated rather than inherited. `min-height` has to count the outline, or thickening it on focus
+	 * makes the field two pixels taller and pushes everything below it down the page. wp-admin happens
+	 * to set this globally today; a field that relied on that would break the first time one was drawn
+	 * anywhere else.
+	 */
+	box-sizing: border-box;
 	min-height: var( --ax-field-height );
-	padding: 0 16px;
+	padding: 0 calc( var( --ax-field-inline ) - var( --ax-field-border ) );
 	background: var( --ax-field-surface );
-	border: var( --ax-field-outline-width ) solid var( --ax-field-outline );
+	border: var( --ax-field-border ) solid var( --ax-field-outline );
 	border-radius: var( --ax-field-radius );
 }
 
@@ -71,10 +86,8 @@
  * specifies and what keeps the field from moving as it is focused.
  */
 .ax-contacts-fields .text-field__container:focus-within {
-	border-width: var( --ax-field-outline-width-focus );
+	--ax-field-border: var( --ax-field-outline-width-focus );
 	border-color: var( --ax-field-outline-focus );
-	/* The border grew by 2px, so the padding gives it back and nothing shifts. */
-	padding: 0 14px;
 }
 
 .ax-contacts-fields .text-field__input {
@@ -82,7 +95,13 @@
 	width: 100%;
 	min-width: 0;
 	margin: 0;
-	padding: 16px 0;
+	/*
+	 * The height of a field is its content plus its outline, and `min-height` is a floor rather than a
+	 * ceiling -- so the padding has to give the outline its two pixels back or the field grows as it is
+	 * focused and pushes the page down. 16 - border, twice, plus a 24px line, is 56 whatever the
+	 * outline is doing.
+	 */
+	padding: calc( 16px - var( --ax-field-border ) ) 0;
 	color: var( --ax-field-text );
 	font-size: 16px;
 	line-height: 24px;
@@ -100,7 +119,7 @@
 }
 
 .ax-contacts-fields textarea.text-field__input {
-	padding: 16px 0;
+	padding: calc( 16px - var( --ax-field-border ) ) 0;
 	line-height: 24px;
 	resize: vertical;
 }
@@ -115,7 +134,8 @@
 .ax-contacts-fields .text-field__label {
 	position: absolute;
 	top: 50%;
-	left: 16px;
+	/* Absolute children sit against the padding box, so this is measured from inside the outline. */
+	left: calc( var( --ax-field-inline ) - var( --ax-field-border ) );
 	padding: 0 4px;
 	color: var( --ax-field-label );
 	font-size: var( --ax-field-label-size );
@@ -136,13 +156,12 @@
 
 .ax-contacts-fields .text-field__container:focus-within .text-field__label {
 	color: var( --ax-field-outline-focus );
-	left: 14px;
 }
 
 /* -- what it is saying ----------------------------------------------------------------------- */
 
 .ax-contacts-fields .text-field__bottom {
-	padding: 4px 16px 0;
+	padding: 4px var( --ax-field-inline ) 0;
 }
 
 .ax-contacts-fields .text-field__supporting {

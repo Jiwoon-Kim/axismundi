@@ -3071,6 +3071,24 @@ try {
 	);
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
 	$ax_ct_fd_php = (string) file_get_contents( dirname( __DIR__ ) . '/includes/card-editor.php' );
+	/*
+	 * A field is its content plus its outline, and `min-height` is a floor rather than a ceiling. So
+	 * thickening the outline on focus has to be given back somewhere, or the field grows by two pixels
+	 * and pushes the page below it down as somebody tabs through. Measured in the browser at 56px in
+	 * both states; what is pinned here is the mechanism, so a later edit cannot quietly bring the two
+	 * pixels back.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a field counts its outline in its height, and the padding gives back whatever focus takes',
+		str_contains( $ax_ct_fd_css, 'box-sizing: border-box' )
+			&& str_contains( $ax_ct_fd_css, '--ax-field-border: var( --ax-field-outline-width );' )
+			&& str_contains( $ax_ct_fd_css, '--ax-field-border: var( --ax-field-outline-width-focus );' )
+			&& str_contains( $ax_ct_fd_css, 'padding: calc( 16px - var( --ax-field-border ) ) 0;' )
+			&& str_contains( $ax_ct_fd_css, 'padding: 0 calc( var( --ax-field-inline ) - var( --ax-field-border ) );' )
+			// Focus changes the one variable and nothing else restates the width.
+			&& ! str_contains( $ax_ct_fd_css, 'border-width:' )
+	);
 	ax_ct_assert(
 		$ax_ct_results,
 		'and it asks for them by handle rather than by a path that belongs to whoever is in charge today',

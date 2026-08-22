@@ -2265,7 +2265,7 @@ try {
 	};
 	ax_ct_assert(
 		$ax_ct_results,
-		'a Card is written in the groups the standard documents, alphabetically within each',
+		'a Card is written in the groups the standard documents, and in that order within each',
 		$ax_ct_at( 'uid' ) < $ax_ct_at( 'name' )
 			&& $ax_ct_at( 'name' ) < $ax_ct_at( 'organizations' )
 			&& $ax_ct_at( 'organizations' ) < $ax_ct_at( 'titles' )
@@ -3267,6 +3267,108 @@ try {
 			&& str_contains( $ax_ct_kn_js, 'COMMON_LANGUAGES' )
 			// A shortcut rather than a list of the languages that exist.
 			&& str_contains( $ax_ct_kn_js, 'allowFree: true' )
+	);
+
+	// -- the standard's own words -------------------------------------------------------------------------------
+
+	/*
+	 * The head of a stored Card answers, in order, what somebody opening one asks: what kind of
+	 * document, which version of the standard, which record, what it describes, when it was written
+	 * and last touched, what language it says that in, and what wrote it.
+	 */
+	$ax_ct_hd_order = array_slice( axismundi_contacts_canonical_order(), 0, 8 );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a stored card opens with what it is, which record, and what it describes, in that order',
+		array( '@type', 'version', 'uid', 'kind', 'created', 'updated', 'language', 'prodId' ) === $ax_ct_hd_order
+	);
+	/*
+	 * `@type` stays only where it says something. Under `name` it restates the property it is written
+	 * on -- there is nowhere else a Name can appear -- and the standard's own examples leave it off.
+	 * On the Card it is the top of the document and the only thing telling a reader what it has.
+	 *
+	 * The date on an anniversary is the exception the rule is written around: there it is a Timestamp
+	 * or a PartialDate, and which of the two is an answer nothing else carries.
+	 */
+	$ax_ct_ty_card = axismundi_contacts_canonical_card(
+		array(
+			'@type'         => 'Card',
+			'version'       => '2.0',
+			'name'          => array(
+				'@type'      => 'Name',
+				'components' => array( array( '@type' => 'NameComponent', 'kind' => 'given', 'value' => 'Jiwoon' ) ),
+			),
+			'anniversaries' => array(
+				'a1' => array(
+					'@type' => 'Anniversary',
+					'kind'  => 'birth',
+					'date'  => array( '@type' => 'PartialDate', 'year' => 1975 ),
+				),
+			),
+		)
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'a type a position already states is not written down, and one that answers something is',
+		'Card' === (string) ( $ax_ct_ty_card['@type'] ?? '' )
+			&& ! array_key_exists( '@type', $ax_ct_ty_card['name'] )
+			&& ! array_key_exists( '@type', $ax_ct_ty_card['name']['components'][0] )
+			&& ! array_key_exists( '@type', $ax_ct_ty_card['anniversaries']['a1'] )
+			&& 'PartialDate' === (string) ( $ax_ct_ty_card['anniversaries']['a1']['date']['@type'] ?? '' )
+	);
+	/*
+	 * How a name files. The value is free: RFC 9553 files a surname of `Shou Chang` under
+	 * `Pau Shou Chang`, because a sort key is what a directory should compare rather than a copy of
+	 * what the name says.
+	 */
+	$ax_ct_sa_card = array(
+		'@type'   => 'Card',
+		'version' => '2.0',
+		'name'    => array(
+			'components' => array(
+				array( 'kind' => 'given', 'value' => 'Robert' ),
+				array( 'kind' => 'surname', 'value' => 'Shou Chang' ),
+			),
+			'sortAs'     => array( 'surname' => 'Pau Shou Chang', 'given' => 'Robert' ),
+		),
+	);
+	$ax_ct_sa_free = axismundi_contacts_validate_card_values( $ax_ct_sa_card );
+	// But every key names a part. Filing by a `given` this card does not have tells a directory to
+	// sort it under something nobody wrote down.
+	$ax_ct_sa_card['name']['components'] = array( array( 'kind' => 'surname', 'value' => 'Shou Chang' ) );
+	$ax_ct_sa_missing = axismundi_contacts_validate_card_values( $ax_ct_sa_card );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a name files under whatever text somebody chooses, but only by a part the name actually has',
+		true === $ax_ct_sa_free
+			&& is_wp_error( $ax_ct_sa_missing )
+			&& str_contains( (string) $ax_ct_sa_missing->get_error_message(), 'name/sortAs/given' )
+	);
+	/*
+	 * The separator between the parts, where empty is an answer. A name written without spaces says
+	 * `""`, and a card that says nothing about separators at all is a different card -- so the screen
+	 * asks with a checkbox and the store keeps the two apart.
+	 */
+	$ax_ct_sep_empty = axismundi_contacts_canonical_card(
+		array(
+			'@type' => 'Card',
+			'name'  => array(
+				'defaultSeparator' => '',
+				'components'       => array( array( 'kind' => 'surname', 'value' => 'Kim' ) ),
+			),
+		)
+	);
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_sep_js = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/card-editor.js' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a name written with nothing between its parts says so, rather than saying nothing',
+		array_key_exists( 'defaultSeparator', $ax_ct_sep_empty['name'] )
+			&& '' === $ax_ct_sep_empty['name']['defaultSeparator']
+			&& str_contains( $ax_ct_sep_js, 'checked: showSeparator' )
+			&& str_contains( $ax_ct_sep_js, 'disabled: ! showSeparator' )
+			// And only the parts a name has are offered as ways of filing it.
+			&& str_contains( $ax_ct_sep_js, 'sortableKinds( components )' )
 	);
 
 	ax_ct_assert(

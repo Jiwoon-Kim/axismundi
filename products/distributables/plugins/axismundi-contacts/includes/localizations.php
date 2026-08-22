@@ -382,6 +382,37 @@ function axismundi_contacts_validate_card_values( array $card ) {
 				return axismundi_contacts_value_error( 'name/' . $key, sprintf( __( 'it is %s', 'axismundi-contacts' ), $type ) );
 			}
 		}
+		/*
+		 * How a name files. The values are free -- RFC 9553's own example files a surname of
+		 * `Shou Chang` under `Pau Shou Chang`, because a sort key is what a directory should compare
+		 * and not a copy of what the name says.
+		 *
+		 * The keys are not free. Each one names a component kind, and a card sorting by a `given` it
+		 * does not have is telling a directory to file it under something nobody wrote down.
+		 */
+		if ( array_key_exists( 'sortAs', $name ) ) {
+			if ( ! axismundi_contacts_value_is( $name['sortAs'], 'object' ) ) {
+				/* translators: %s: the shape the value should have. */
+				return axismundi_contacts_value_error( 'name/sortAs', sprintf( __( 'it is %s', 'axismundi-contacts' ), 'object' ) );
+			}
+			$kinds = array();
+			foreach ( (array) ( $name['components'] ?? array() ) as $component ) {
+				if ( is_array( $component ) && isset( $component['kind'] ) && is_string( $component['kind'] ) ) {
+					$kinds[] = $component['kind'];
+				}
+			}
+			foreach ( (array) $name['sortAs'] as $kind => $sort_value ) {
+				if ( ! is_string( $sort_value ) ) {
+					return axismundi_contacts_value_error( 'name/sortAs/' . $kind, __( 'a sort key is text', 'axismundi-contacts' ) );
+				}
+				if ( ! in_array( (string) $kind, $kinds, true ) ) {
+					return axismundi_contacts_value_error(
+						'name/sortAs/' . $kind,
+						__( 'a name can only be filed by a part it has', 'axismundi-contacts' )
+					);
+				}
+			}
+		}
 		foreach ( (array) ( $name['components'] ?? array() ) as $index => $component ) {
 			if ( ! axismundi_contacts_value_is( $component, 'object' ) ) {
 				// A list is positions and values; a position holding nothing is a component removed by

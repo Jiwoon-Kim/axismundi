@@ -270,6 +270,8 @@
 		var components = name.components || [];
 		var dragging = props.dragging;
 		var blocked = props.blocked;
+		// Whether the card answers the separator question at all, which is not what the answer is.
+		var [ showSeparator, setShowSeparator ] = useState( undefined !== name.defaultSeparator );
 
 		function setName( next ) {
 			// A name with nothing in it is not a name, so the property goes rather than sitting empty.
@@ -441,7 +443,7 @@
 						type: 'button',
 						className: 'button',
 						onClick: function () {
-							setComponents( components.concat( [ { '@type': 'NameComponent', kind: 'given', value: '' } ] ) );
+							setComponents( components.concat( [ { kind: 'given', value: '' } ] ) );
 						}
 					},
 					__( 'Add a part', 'axismundi-contacts' )
@@ -468,12 +470,42 @@
 							__( 'These parts are already in the order they are read', 'axismundi-contacts' )
 						)
 					),
+					/*
+					 * The separator needs a checkbox because empty is an answer. A card written without
+					 * spaces between its parts says `""`, which is not the same as a card that says
+					 * nothing about separators at all -- and a bare text field cannot tell the two apart.
+					 * Unticking disables the field and leaves whatever is stored where it is.
+					 */
+					el(
+						'p',
+						null,
+						el(
+							'label',
+							null,
+							el( 'input', {
+								type: 'checkbox',
+								checked: showSeparator,
+								onChange: function ( event ) {
+									setShowSeparator( event.target.checked );
+									if ( event.target.checked && undefined === name.defaultSeparator ) {
+										var next = Object.assign( {}, name );
+										next.defaultSeparator = ' ';
+										setName( next );
+									}
+								}
+							} ),
+							' ',
+							__( 'Default separator', 'axismundi-contacts' )
+						)
+					),
 					el( TextField, {
-						label: __( 'Between the parts', 'axismundi-contacts' ),
+						label: __( 'Default separator', 'axismundi-contacts' ),
 						className: 'ax-ce-separator',
-						value: undefined === name.defaultSeparator ? ' ' : name.defaultSeparator,
-						supporting: __( 'Empty for names written without spaces.', 'axismundi-contacts' ),
+						value: undefined === name.defaultSeparator ? '' : name.defaultSeparator,
+						disabled: ! showSeparator,
+						supporting: __( 'What goes between the parts. Empty for names written without spaces.', 'axismundi-contacts' ),
 						onChange: function ( value ) {
+							// Empty is a value here, so it is written rather than treated as nothing.
 							var next = Object.assign( {}, name );
 							next.defaultSeparator = value;
 							setName( next );
@@ -484,12 +516,14 @@
 			/*
 			 * How it files, which is a third answer rather than a consequence of the other two. `Kim`
 			 * sorts under K and `김` under ㄱ, and a directory that worked either out from the name
-			 * would be guessing at a rule that changes by language.
+			 * would be guessing at a rule that changes by language. The value is free -- the standard
+			 * files a surname of `Shou Chang` under `Pau Shou Chang` -- but every key names a part, so
+			 * only the parts this name has are offered.
 			 */
-			el(
+			sortableKinds( components ).length ? el(
 				'div',
 				{ className: 'ax-ce-sortas' },
-				SORT_KINDS.map( function ( kind ) {
+				sortableKinds( components ).map( function ( kind ) {
 					return el( TextField, {
 						key: kind,
 						label: sprintf(
@@ -510,12 +544,25 @@
 						}
 					} );
 				} )
-			)
+			) : null
 		);
 	}
 
-	/** The parts a name may be filed under. */
-	var SORT_KINDS = [ 'surname', 'given' ];
+	/**
+	 * The parts of a name this one may be filed under.
+	 *
+	 * Whatever it has, in the order it has them. A separator is not something a directory sorts by.
+	 */
+	function sortableKinds( components ) {
+		var kinds = [];
+		( components || [] ).forEach( function ( part ) {
+			var kind = part && part.kind;
+			if ( kind && 'separator' !== kind && -1 === kinds.indexOf( kind ) ) {
+				kinds.push( kind );
+			}
+		} );
+		return kinds;
+	}
 
 	/** One repeating property, as rows keyed by the id the rest of the system addresses them by. */
 	function EntryField( props ) {
@@ -935,7 +982,7 @@
 						onClick: function () {
 							var id = 'lang-' + Math.random().toString( 36 ).slice( 2, 8 );
 							var next = Object.assign( {}, entries );
-							next[ id ] = { '@type': 'LanguagePref', language: '', pref: ids.length + 1 };
+							next[ id ] = { language: '', pref: ids.length + 1 };
 							setEntries( next );
 						}
 					},

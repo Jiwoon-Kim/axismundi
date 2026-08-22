@@ -7,7 +7,7 @@
  * by somebody, and a Card whose properties land in whatever order they were last edited is one
  * nobody can scan or review.
  *
- * The order is the standard's own: the groups RFC 9553 documents, alphabetically within each. A
+ * The order is the standard's own: the groups RFC 9553 documents, in the order it documents them. A
  * stored Card is read beside the specification -- when checking an import, when comparing two
  * exports, when working out what a field is called -- and an order somebody has to learn first is an
  * order that makes all three harder.
@@ -39,17 +39,23 @@ defined( 'ABSPATH' ) || exit;
  */
 function axismundi_contacts_canonical_order() : array {
 	return array(
-		// What this document is, and which record it is.
+		/*
+		 * What this document is, and which record it is. Read top to bottom it answers the questions
+		 * in the order somebody opening a stored Card asks them: what kind of document, which version
+		 * of the standard, which record, what it describes, when it was written and last touched, what
+		 * language it says all of that in, and what wrote it.
+		 */
 		'@type',
 		'version',
 		'uid',
-		'created',
 		'kind',
-		'language',
-		'members',
-		'prodId',
-		'relatedTo',
+		'created',
 		'updated',
+		'language',
+		'prodId',
+
+		// Who a group card is a card for.
+		'members',
 
 		// Name and organization.
 		'name',
@@ -82,6 +88,7 @@ function axismundi_contacts_canonical_order() : array {
 		'keywords',
 		'notes',
 		'personalInfo',
+		'relatedTo',
 
 		// Applied over everything above, so it is written after all of it.
 		'localizations',
@@ -124,6 +131,53 @@ function axismundi_contacts_canonical_entry_order() : array {
 		'sortAs',
 		'pref',
 		'label',
+	);
+}
+
+/**
+ * The types a position already states.
+ *
+ * RFC 9553 gives every object an `@type`, and requires only that it be right when it is there. In
+ * almost every case it restates what the property already says: the object under `name` is a Name,
+ * and the objects in its `components` are NameComponents, because there is nowhere else either can
+ * appear. Written out it is noise in a document meant to be read -- the standard's own examples
+ * leave it off -- so a stored Card leaves it off too.
+ *
+ * The Card's own `@type` stays. That one is not implied by anything: it is the top of the document,
+ * and a reader handed the bytes has nothing else to tell it what it has been handed.
+ *
+ * A type absent from this list is kept exactly as it arrived. The date on an anniversary is why the
+ * list exists at all rather than a rule about depth: that date is a Timestamp or a PartialDate, and
+ * which of the two it is is a real answer that only `@type` carries.
+ *
+ * @return string[]
+ */
+function axismundi_contacts_implied_types() : array {
+	return array(
+		'Name',
+		'NameComponent',
+		'Nickname',
+		'Organization',
+		'OrgUnit',
+		'SpeakToAs',
+		'Pronouns',
+		'Title',
+		'EmailAddress',
+		'OnlineService',
+		'Phone',
+		'LanguagePref',
+		'Calendar',
+		'SchedulingAddress',
+		'Address',
+		'AddressComponent',
+		'CryptoKey',
+		'Directory',
+		'Link',
+		'Media',
+		'Anniversary',
+		'Note',
+		'PersonalInfo',
+		'Relation',
 	);
 }
 
@@ -218,6 +272,11 @@ function axismundi_contacts_canonical_value( $value, int $depth, bool $patch = f
 		return $out;
 	}
 	if ( $depth >= 1 ) {
+		if ( isset( $out['@type'] ) && is_string( $out['@type'] )
+			&& in_array( $out['@type'], axismundi_contacts_implied_types(), true ) ) {
+			// The property this sits under already says it. Only the Card's own type is load-bearing.
+			unset( $out['@type'] );
+		}
 		return axismundi_contacts_order_keys( $out, axismundi_contacts_canonical_entry_order() );
 	}
 	return $out;

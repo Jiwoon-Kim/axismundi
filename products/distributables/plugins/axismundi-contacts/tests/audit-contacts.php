@@ -3396,10 +3396,106 @@ try {
 		'a name written with nothing between its parts says so, rather than saying nothing',
 		array_key_exists( 'defaultSeparator', $ax_ct_sep_empty['name'] )
 			&& '' === $ax_ct_sep_empty['name']['defaultSeparator']
-			&& str_contains( $ax_ct_sep_js, 'checked: showSeparator' )
-			&& str_contains( $ax_ct_sep_js, 'disabled: ! showSeparator' )
-			// And only the parts a name has are offered as ways of filing it.
-			&& str_contains( $ax_ct_sep_js, 'sortableKinds( components )' )
+			// The checkbox is whether the card answers: ticking it writes the empty answer.
+			&& str_contains( $ax_ct_sep_js, 'checked: undefined !== name.defaultSeparator' )
+			&& str_contains( $ax_ct_sep_js, "setName( Object.assign( {}, name, { defaultSeparator: '' } ) );" )
+			// And turning it off throws an answer away, so when there is one to lose it asks first.
+			&& str_contains( $ax_ct_sep_js, "setAsking( 'separator' )" )
+			&& str_contains( $ax_ct_sep_js, "__( 'Keep it', 'axismundi-contacts' )" )
+	);
+	/*
+	 * A separator belongs between two parts, which is where it is added from: a general list of kinds
+	 * would put it at the end for somebody to drag into place, and pointing at the gap says where it
+	 * goes better than moving it there afterwards. It exists only for a name whose parts are in the
+	 * order they are read, because joining parts nobody has put in order joins them in no order.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'something goes between two parts by being put between them, and only where there is an order',
+		str_contains( $ax_ct_sep_js, 'ax-ce-gap__add' )
+			&& str_contains( $ax_ct_sep_js, 'ordered && index > 0' )
+			&& str_contains( $ax_ct_sep_js, 'props.showParts && ordered && components.length' )
+			&& str_contains( $ax_ct_sep_js, 'draggable: ordered' )
+	);
+	/*
+	 * How a name files is asked only of somebody who says it is not what the parts already say. Left
+	 * alone, a directory reads the parts themselves; the two keys are the two columns a directory
+	 * has, and RFC 9553's own example writes a `given2` into the surname key rather than inventing a
+	 * third.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a name is filed by its parts unless somebody says otherwise, and a directory has two columns',
+		str_contains( $ax_ct_sep_js, "__( 'Custom sorting', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_sep_js, "var SORT_KEYS = [ 'given', 'surname' ];" )
+			// Offered only for a part this name has, which is also all the store will accept.
+			&& str_contains( $ax_ct_sep_js, 'return hasKind( components, kind );' )
+			&& str_contains( $ax_ct_sep_js, "setAsking( 'sorting' )" )
+	);
+	/*
+	 * A title opens a name and a credential closes it, so the buttons for those two put them there.
+	 * Everything else joins the end of the name proper, which is in front of any credential already
+	 * written -- a name whose letters after it end up in the middle is a name somebody has to drag
+	 * back into shape after every addition.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a title opens a name and a credential closes it, wherever somebody adds them from',
+		str_contains( $ax_ct_sep_js, 'function insertionIndex' )
+			&& str_contains( $ax_ct_sep_js, "if ( 'title' === kind ) {" )
+			&& str_contains( $ax_ct_sep_js, "'credential' === part.kind;" )
+			// And the list is the record: the buttons add to it rather than standing beside it.
+			&& str_contains( $ax_ct_sep_js, 'function AddPart' )
+			&& str_contains( $ax_ct_sep_js, "el( AddPart, { kind: 'given2', onAdd: addPart } )" )
+	);
+	/*
+	 * A name this editor builds is a name whose order it knows -- the list somebody is looking at is
+	 * the order they are putting it in -- so the first part written here says so. A name that arrived
+	 * saying otherwise keeps saying it: an import that did not know the reading order is not made to
+	 * claim one because somebody opened the screen.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a name built here says its parts are in the order they are read, and an import is not made to',
+		str_contains( $ax_ct_sep_js, 'setComponents( list, components.length ? {} : { isOrdered: true } );' )
+			&& str_contains( $ax_ct_sep_js, "__( 'Say they are in the order they are read', 'axismundi-contacts' )" )
+	);
+	/*
+	 * And a part somebody added and never filled in is somebody who changed their mind, so it is
+	 * dropped on the way out rather than stored empty. A separator keeps its empty value, because
+	 * there that is the answer.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a part nobody filled in is not part of a name, and an empty separator still is',
+		str_contains( $ax_ct_sep_js, 'function prepare( card )' )
+			&& str_contains( $ax_ct_sep_js, "'separator' === part.kind || ( part.value && String( part.value ).trim() )" )
+			&& str_contains( $ax_ct_sep_js, 'card: prepare( card )' )
+			// Left alone when a language patches into the parts, because dropping one would move the rest.
+			&& str_contains( $ax_ct_sep_js, "patchesUnder( card.localizations, 'name/components' ).length" )
+	);
+	/*
+	 * What a Card describes is written down, even when the standard would let it be left out. A Card
+	 * with no `kind` is a Card about a person -- that is the default, not an unknown -- and a store
+	 * that omitted it would make every reader carry the default: the editor deciding which fields to
+	 * draw, the projection deciding what to publish, the importer deciding what it received.
+	 */
+	$ax_ct_kd_id  = axismundi_contacts_save_card( $ax_ct_book_id, array( '@type' => 'Card', 'name' => array( 'full' => 'No kind stated' ) ) );
+	$ax_ct_kd_key = is_wp_error( $ax_ct_kd_id ) ? 0 : (int) $ax_ct_kd_id;
+	$ax_ct_loose[] = $ax_ct_kd_key;
+	$ax_ct_kd_doc = axismundi_contacts_card_document( $ax_ct_kd_key );
+	// And a kind that is already there is never touched, including one this file has never heard of.
+	$ax_ct_kd_odd  = axismundi_contacts_save_card( $ax_ct_book_id, array( '@type' => 'Card', 'kind' => 'example.com:vessel', 'name' => array( 'full' => 'Something else' ) ) );
+	$ax_ct_kd_okey = is_wp_error( $ax_ct_kd_odd ) ? 0 : (int) $ax_ct_kd_odd;
+	$ax_ct_loose[] = $ax_ct_kd_okey;
+	ax_ct_assert(
+		$ax_ct_results,
+		'a card says what it describes even when the standard would let it stay unsaid',
+		'individual' === (string) ( $ax_ct_kd_doc['kind'] ?? '' )
+			&& 'example.com:vessel' === (string) ( axismundi_contacts_card_document( $ax_ct_kd_okey )['kind'] ?? '' )
+			// Written where the standard writes it rather than appended after the fact.
+			&& array_search( 'kind', array_keys( $ax_ct_kd_doc ), true ) < array_search( 'name', array_keys( $ax_ct_kd_doc ), true )
+			&& is_wp_error( axismundi_contacts_validate_card_values( array( 'kind' => '' ) ) )
 	);
 
 	// -- an account is a service, a name there, and an address --------------------------------------------------
@@ -3652,6 +3748,32 @@ try {
 		str_contains( $ax_ct_id_css, '--ax-field-label-size-floated: 13px;' )
 			&& str_contains( $ax_ct_id_css, '--ax-field-support-size: 13px;' )
 			&& ! str_contains( $ax_ct_id_css, 'font-size: 12px;' )
+	);
+
+	/*
+	 * A property somebody opened and did not fill in. JSON's `{}` and `[]` both arrive as an empty PHP
+	 * array and nothing afterwards tells them apart, so a validator reading an empty map as a list
+	 * refuses `"emails": {}` -- and with it every screen that ticks a box before there is anything to
+	 * put behind it. The store drops empties on the way in, which is the right place to deal with a
+	 * document that says the same as one that never mentioned the property at all.
+	 */
+	$ax_ct_mt_card = array(
+		'@type'  => 'Card',
+		'name'   => array( 'full' => 'Opened and not filled in', 'sortAs' => array() ),
+		'emails' => array(),
+	);
+	$ax_ct_mt_ok   = axismundi_contacts_validate_card_values( $ax_ct_mt_card );
+	$ax_ct_mt_id   = axismundi_contacts_save_card( $ax_ct_book_id, $ax_ct_mt_card );
+	$ax_ct_mt_key  = is_wp_error( $ax_ct_mt_id ) ? 0 : (int) $ax_ct_mt_id;
+	$ax_ct_loose[] = $ax_ct_mt_key;
+	$ax_ct_mt_doc  = axismundi_contacts_card_document( $ax_ct_mt_key );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a property with nothing in it yet is stored as no property, rather than refused at the door',
+		true === $ax_ct_mt_ok
+			&& $ax_ct_mt_key > 0
+			&& ! array_key_exists( 'emails', $ax_ct_mt_doc )
+			&& ! array_key_exists( 'sortAs', (array) $ax_ct_mt_doc['name'] )
 	);
 
 	ax_ct_assert(

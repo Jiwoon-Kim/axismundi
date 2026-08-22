@@ -185,19 +185,65 @@
 		} );
 	}
 
+	/** What each part of a name is called where somebody reads it. */
+	function componentLabel( kind ) {
+		var labels = {
+			title: __( 'Title', 'axismundi-contacts' ),
+			given: __( 'Given name', 'axismundi-contacts' ),
+			given2: __( 'Given name 2', 'axismundi-contacts' ),
+			surname: __( 'Surname', 'axismundi-contacts' ),
+			surname2: __( 'Surname 2', 'axismundi-contacts' ),
+			credential: __( 'Credential', 'axismundi-contacts' ),
+			separator: __( 'Separator', 'axismundi-contacts' )
+		};
+		return labels[ kind ] || kind;
+	}
+
+	/** Whether a name already has a part of some kind. */
+	function hasKind( components, kind ) {
+		return ( components || [] ).some( function ( part ) {
+			return part && kind === part.kind;
+		} );
+	}
+
+	/**
+	 * Where a new part goes.
+	 *
+	 * A title opens a name and a credential closes it, so those two are put where they belong rather
+	 * than appended and dragged into place. Everything else joins the end of the name proper, which is
+	 * in front of any credential already there.
+	 */
+	function insertionIndex( components, kind ) {
+		if ( 'title' === kind ) {
+			return 0;
+		}
+		if ( 'credential' === kind ) {
+			return components.length;
+		}
+		var first = components.findIndex( function ( part ) {
+			return part && 'credential' === part.kind;
+		} );
+		return -1 === first ? components.length : first;
+	}
+
 	/**
 	 * One part of a name.
 	 *
 	 * A separator is a component like any other and carries a value, which may be empty -- that is how
 	 * a name written with nothing between its parts is said.
+	 *
+	 * Draggable only when the name says its parts are in the order they are read. Otherwise their
+	 * order in the list is how they were stored and not how anybody says them, and offering to
+	 * rearrange it would be offering to change something that means nothing.
 	 */
 	function Component( props ) {
 		var part = props.part;
+		var ordered = props.ordered;
 		return el(
 			'li',
 			{
 				className: 'ax-ce-part',
-				draggable: true,
+				draggable: ordered,
 				onDragStart: function () {
 					props.onDragStart( props.index );
 				},
@@ -208,12 +254,11 @@
 					props.onDrop( props.index );
 				}
 			},
-			el(
-				'span',
-				{ className: 'ax-ce-part__grip', 'aria-hidden': 'true', dangerouslySetInnerHTML: { __html: icon( 'drag-indicator' ) } }
-			),
+			ordered
+				? el( 'span', { className: 'ax-ce-part__grip', 'aria-hidden': 'true', dangerouslySetInnerHTML: { __html: icon( 'drag-indicator' ) } } )
+				: null,
 			/*
-			 * A plain select, for now. Which of the six kinds a part is comes from a closed list, and
+			 * A plain select, for now. Which of the seven kinds a part is comes from a closed list, and
 			 * the field adapter deliberately has no Select yet -- the path picker that will want one
 			 * has to decide first whether it is a menu or something you type into.
 			 */
@@ -228,14 +273,14 @@
 					}
 				},
 				COMPONENT_KINDS.map( function ( kind ) {
-					return el( 'option', { key: kind, value: kind }, kind );
+					return el( 'option', { key: kind, value: kind }, componentLabel( kind ) );
 				} )
 			),
 			el( TextField, {
-				label: 'separator' === part.kind ? __( 'Between the parts', 'axismundi-contacts' ) : __( 'Value', 'axismundi-contacts' ),
+				label: componentLabel( part.kind || 'given' ),
 				className: 'ax-ce-part__value',
 				value: undefined === part.value ? '' : part.value,
-				supporting: 'separator' === part.kind ? __( 'Empty for names written without spaces.', 'axismundi-contacts' ) : undefined,
+				supporting: 'separator' === part.kind ? __( 'What goes here, which may be nothing.', 'axismundi-contacts' ) : undefined,
 				onChange: function ( value ) {
 					// A separator keeps an empty value, because an empty separator is a real answer.
 					var next = Object.assign( {}, part );
@@ -257,20 +302,42 @@
 		);
 	}
 
+	/** A button that adds one part of a name where that kind of part belongs. */
+	function AddPart( props ) {
+		return el(
+			'button',
+			{
+				type: 'button',
+				className: 'button ax-ce-addpart',
+				onClick: function () {
+					props.onAdd( props.kind );
+				}
+			},
+			el( 'span', { 'aria-hidden': 'true', dangerouslySetInnerHTML: { __html: icon( 'add' ) } } ),
+			componentLabel( props.kind )
+		);
+	}
+
 	/**
 	 * The name.
 	 *
 	 * Either half is a whole name. Somebody may write one out and never take it apart, or give the
 	 * parts and never write it out -- which is what an import brings, and what the drag order and the
 	 * separator are for. Neither is filled in on the other's behalf.
+	 *
+	 * The list of parts is the record. The buttons around it are ways of adding to that list and
+	 * nothing else: a fixed field per kind would be a second place a name lives, and it would be the
+	 * wrong shape as soon as somebody has two middle names -- which the standard allows and real
+	 * names have.
 	 */
 	function NameEditor( props ) {
 		var name = props.name || {};
 		var components = name.components || [];
 		var dragging = props.dragging;
 		var blocked = props.blocked;
-		// Whether the card answers the separator question at all, which is not what the answer is.
-		var [ showSeparator, setShowSeparator ] = useState( undefined !== name.defaultSeparator );
+		var ordered = true === name.isOrdered;
+		// A question about to throw something away, waiting for somebody to answer it.
+		var [ asking, setAsking ] = useState( '' );
 
 		function setName( next ) {
 			// A name with nothing in it is not a name, so the property goes rather than sitting empty.
@@ -280,16 +347,30 @@
 			props.onChange( keys.length ? next : undefined );
 		}
 
-		function setComponents( list ) {
-			var next = Object.assign( {}, name );
+		function setComponents( list, extra ) {
+			var next = Object.assign( {}, name, extra || {} );
 			if ( list.length ) {
 				next.components = list;
 			} else {
 				delete next.components;
 				delete next.isOrdered;
 				delete next.defaultSeparator;
+				delete next.sortAs;
 			}
 			setName( next );
+		}
+
+		function addPart( kind ) {
+			var list = components.slice();
+			list.splice( insertionIndex( components, kind ), 0, { kind: kind, value: '' } );
+			/*
+			 * A name this editor builds is a name whose order it knows: the list somebody is looking
+			 * at is the order they are putting it in. So the first part written here says so.
+			 *
+			 * A name that arrived saying otherwise is left saying it. An import that did not know the
+			 * reading order is not made to claim one because somebody opened it.
+			 */
+			setComponents( list, components.length ? {} : { isOrdered: true } );
 		}
 
 		return el(
@@ -349,49 +430,82 @@
 					__( 'Give the name in parts', 'axismundi-contacts' )
 				)
 			),
+			// A title opens a name, so it is added at the front rather than added and dragged there.
+			props.showParts && ! hasKind( components, 'title' )
+				? el( 'p', { className: 'ax-ce-addpart__row' }, el( AddPart, { kind: 'title', onAdd: addPart } ) )
+				: null,
 			props.showParts ? el(
 				'ul',
 				{ className: 'ax-ce-parts' + ( null === dragging ? '' : ' is-dragging' ) },
 				components.map( function ( part, index ) {
-					return el( Component, {
-						key: index,
-						index: index,
-						part: part || {},
-						localizations: props.localizations,
-						onBlocked: props.onBlocked,
-						onChange: function ( at, next ) {
-							var list = components.slice();
-							list[ at ] = next;
-							setComponents( list );
-						},
-						onRemove: function ( at ) {
-							/*
-							 * A translation may patch into this part. Removing it would leave those patches
-							 * pointing at nothing, which the server refuses -- so the ones affected are
-							 * named and somebody decides, rather than being deleted quietly along with a
-							 * part they were not looking at.
-							 */
-							var affected = patchesUnder( props.localizations, 'name/components/' + at );
-							if ( affected.length ) {
-								props.onBlocked( at, affected );
-								return;
+					return el(
+						Fragment,
+						{ key: index },
+						/*
+						 * A separator goes between two parts, so it is added between two parts. Reached
+						 * from a general list of kinds it would be added at the end and dragged into
+						 * place, which is a worse way of saying where it goes than pointing at the gap.
+						 */
+						ordered && index > 0
+							? el(
+								'li',
+								{ className: 'ax-ce-gap' },
+								el(
+									'button',
+									{
+										type: 'button',
+										className: 'button-link ax-ce-gap__add',
+										'aria-label': __( 'Put something between these parts', 'axismundi-contacts' ),
+										onClick: function () {
+											var list = components.slice();
+											list.splice( index, 0, { kind: 'separator', value: '' } );
+											setComponents( list );
+										}
+									},
+									'+'
+								)
+							)
+							: null,
+						el( Component, {
+							index: index,
+							part: part || {},
+							ordered: ordered,
+							localizations: props.localizations,
+							onBlocked: props.onBlocked,
+							onChange: function ( at, next ) {
+								var list = components.slice();
+								list[ at ] = next;
+								setComponents( list );
+							},
+							onRemove: function ( at ) {
+								/*
+								 * A translation may patch into this part. Removing it would leave those
+								 * patches pointing at nothing, which the server refuses -- so the ones
+								 * affected are named and somebody decides, rather than being deleted
+								 * quietly along with a part they were not looking at.
+								 */
+								var affected = patchesUnder( props.localizations, 'name/components/' + at );
+								if ( affected.length ) {
+									props.onBlocked( at, affected );
+									return;
+								}
+								setComponents( components.filter( function ( ignored, i ) {
+									return i !== at;
+								} ) );
+							},
+							onDragStart: props.onDragStart,
+							onDrop: function ( at ) {
+								if ( null === dragging || dragging === at ) {
+									return;
+								}
+								var list = components.slice();
+								var moved = list.splice( dragging, 1 )[ 0 ];
+								list.splice( at, 0, moved );
+								setComponents( list );
+								props.onDragStart( null );
 							}
-							setComponents( components.filter( function ( ignored, i ) {
-								return i !== at;
-							} ) );
-						},
-						onDragStart: props.onDragStart,
-						onDrop: function ( at ) {
-							if ( null === dragging || dragging === at ) {
-								return;
-							}
-							var list = components.slice();
-							var moved = list.splice( dragging, 1 )[ 0 ];
-							list.splice( at, 0, moved );
-							setComponents( list );
-							props.onDragStart( null );
-						}
-					} );
+						} )
+					);
 				} )
 			) : null,
 			blocked
@@ -435,19 +549,106 @@
 				: null,
 			props.showParts ? el(
 				'p',
-				null,
-				el(
-					'button',
-					{
-						type: 'button',
-						className: 'button',
-						onClick: function () {
-							setComponents( components.concat( [ { kind: 'given', value: '' } ] ) );
-						}
-					},
-					__( 'Add a part', 'axismundi-contacts' )
-				)
+				{ className: 'ax-ce-addpart__row' },
+				el( AddPart, { kind: 'given', onAdd: addPart } ),
+				el( AddPart, { kind: 'surname', onAdd: addPart } ),
+				el( AddPart, { kind: 'given2', onAdd: addPart } ),
+				el( AddPart, { kind: 'surname2', onAdd: addPart } )
 			) : null,
+			// And a credential closes one, so that is where it is added.
+			props.showParts && ! hasKind( components, 'credential' )
+				? el( 'p', { className: 'ax-ce-addpart__row' }, el( AddPart, { kind: 'credential', onAdd: addPart } ) )
+				: null,
+			/*
+			 * A name that arrived without saying its parts are in the order they are read. Nothing here
+			 * decides that on its behalf -- the parts may have come from a vCard that recorded what
+			 * they were and not how they are said -- so the order is offered as something to state
+			 * rather than assumed by opening the screen.
+			 */
+			props.showParts && components.length && ! ordered
+				? el(
+					'div',
+					{ className: 'ax-ce-unordered' },
+					el(
+						'p',
+						null,
+						__( 'These parts are stored without a reading order, so they cannot be rearranged and nothing can go between them.', 'axismundi-contacts' )
+					),
+					el(
+						'button',
+						{
+							type: 'button',
+							className: 'button',
+							onClick: function () {
+								setComponents( components, { isOrdered: true } );
+							}
+						},
+						__( 'Say they are in the order they are read', 'axismundi-contacts' )
+					)
+				)
+				: null,
+			/*
+			 * The separator between the parts, which exists only for a name whose parts are in order --
+			 * the standard says as much, and a separator between parts nobody has put in order would
+			 * be joining them in an order that means nothing.
+			 *
+			 * The checkbox is whether the card answers at all. Unticked there is no property and a
+			 * reader uses a space; ticked and empty says `""`, which is how a name written without
+			 * spaces is said. Turning it off throws an answer away, so when there is one to lose it
+			 * asks first.
+			 */
+			props.showParts && ordered && components.length
+				? el(
+					Fragment,
+					null,
+					el(
+						'p',
+						null,
+						el(
+							'label',
+							null,
+							el( 'input', {
+								type: 'checkbox',
+								checked: undefined !== name.defaultSeparator,
+								onChange: function ( event ) {
+									if ( event.target.checked ) {
+										setName( Object.assign( {}, name, { defaultSeparator: '' } ) );
+										return;
+									}
+									if ( name.defaultSeparator ) {
+										setAsking( 'separator' );
+										return;
+									}
+									var next = Object.assign( {}, name );
+									delete next.defaultSeparator;
+									setName( next );
+								}
+							} ),
+							' ',
+							__( 'Default separator', 'axismundi-contacts' )
+						)
+					),
+					undefined !== name.defaultSeparator
+						? el( TextField, {
+							label: __( 'Default separator', 'axismundi-contacts' ),
+							className: 'ax-ce-separator',
+							value: name.defaultSeparator,
+							supporting: __( 'What goes between the parts. Empty for names written without spaces.', 'axismundi-contacts' ),
+							onChange: function ( value ) {
+								// Empty is a value here, so it is written rather than treated as nothing.
+								setName( Object.assign( {}, name, { defaultSeparator: value } ) );
+							}
+						} )
+						: null
+				)
+				: null,
+			/*
+			 * How it files, which is a third answer rather than a consequence of the other two. Left
+			 * alone, a directory reads the parts themselves -- so this is here for the name whose
+			 * filing does not follow from them: RFC 9553 files `Pau Shou Chang` under a surname whose
+			 * value is `Shou Chang`, because the `given2` belongs with the surname when sorting and
+			 * nowhere else. Two keys, because a directory has two columns.
+			 */
 			props.showParts && components.length
 				? el(
 					Fragment,
@@ -460,108 +661,104 @@
 							null,
 							el( 'input', {
 								type: 'checkbox',
-								checked: true === name.isOrdered,
+								checked: undefined !== name.sortAs,
 								onChange: function ( event ) {
-									setName( withKey( name, 'isOrdered', event.target.checked ? true : '' ) );
+									if ( event.target.checked ) {
+										setName( Object.assign( {}, name, { sortAs: {} } ) );
+										return;
+									}
+									if ( Object.keys( name.sortAs || {} ).length ) {
+										setAsking( 'sorting' );
+										return;
+									}
+									var next = Object.assign( {}, name );
+									delete next.sortAs;
+									setName( next );
 								}
 							} ),
 							' ',
-							__( 'These parts are already in the order they are read', 'axismundi-contacts' )
+							__( 'Custom sorting', 'axismundi-contacts' )
 						)
 					),
-					/*
-					 * The separator needs a checkbox because empty is an answer. A card written without
-					 * spaces between its parts says `""`, which is not the same as a card that says
-					 * nothing about separators at all -- and a bare text field cannot tell the two apart.
-					 * Unticking disables the field and leaves whatever is stored where it is.
-					 */
+					undefined !== name.sortAs
+						? el(
+							'div',
+							{ className: 'ax-ce-sortas' },
+							SORT_KEYS.filter( function ( kind ) {
+								return hasKind( components, kind );
+							} ).map( function ( kind ) {
+								return el( TextField, {
+									key: kind,
+									label: sprintf(
+										/* translators: %s: which part of the name, such as Surname. */
+										__( 'File %s under', 'axismundi-contacts' ),
+										componentLabel( kind )
+									),
+									value: ( name.sortAs || {} )[ kind ] || '',
+									onChange: function ( value ) {
+										var sortAs = withKey( name.sortAs || {}, kind, value );
+										setName( Object.assign( {}, name, { sortAs: sortAs } ) );
+									}
+								} );
+							} )
+						)
+						: null
+				)
+				: null,
+			asking
+				? el(
+					'div',
+					{ className: 'ax-ce-blocked', role: 'alert' },
+					el(
+						'p',
+						null,
+						'separator' === asking
+							? __( 'Turning this off removes the separator this name is written with.', 'axismundi-contacts' )
+							: __( 'Turning this off removes the way this name is filed.', 'axismundi-contacts' )
+					),
 					el(
 						'p',
 						null,
 						el(
-							'label',
-							null,
-							el( 'input', {
-								type: 'checkbox',
-								checked: showSeparator,
-								onChange: function ( event ) {
-									setShowSeparator( event.target.checked );
-									if ( event.target.checked && undefined === name.defaultSeparator ) {
-										var next = Object.assign( {}, name );
-										next.defaultSeparator = ' ';
-										setName( next );
-									}
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									var next = Object.assign( {}, name );
+									delete next[ 'separator' === asking ? 'defaultSeparator' : 'sortAs' ];
+									setAsking( '' );
+									setName( next );
 								}
-							} ),
-							' ',
-							__( 'Default separator', 'axismundi-contacts' )
-						)
-					),
-					el( TextField, {
-						label: __( 'Default separator', 'axismundi-contacts' ),
-						className: 'ax-ce-separator',
-						value: undefined === name.defaultSeparator ? '' : name.defaultSeparator,
-						disabled: ! showSeparator,
-						supporting: __( 'What goes between the parts. Empty for names written without spaces.', 'axismundi-contacts' ),
-						onChange: function ( value ) {
-							// Empty is a value here, so it is written rather than treated as nothing.
-							var next = Object.assign( {}, name );
-							next.defaultSeparator = value;
-							setName( next );
-						}
-					} )
-				)
-				: null,
-			/*
-			 * How it files, which is a third answer rather than a consequence of the other two. `Kim`
-			 * sorts under K and `김` under ㄱ, and a directory that worked either out from the name
-			 * would be guessing at a rule that changes by language. The value is free -- the standard
-			 * files a surname of `Shou Chang` under `Pau Shou Chang` -- but every key names a part, so
-			 * only the parts this name has are offered.
-			 */
-			sortableKinds( components ).length ? el(
-				'div',
-				{ className: 'ax-ce-sortas' },
-				sortableKinds( components ).map( function ( kind ) {
-					return el( TextField, {
-						key: kind,
-						label: sprintf(
-							/* translators: %s: which part of the name, such as surname. */
-							__( 'Sort %s as', 'axismundi-contacts' ),
-							kind
+							},
+							__( 'Remove it', 'axismundi-contacts' )
 						),
-						value: ( name.sortAs || {} )[ kind ] || '',
-						onChange: function ( value ) {
-							var sortAs = withKey( name.sortAs || {}, kind, value );
-							var next = Object.assign( {}, name );
-							if ( Object.keys( sortAs ).length ) {
-								next.sortAs = sortAs;
-							} else {
-								delete next.sortAs;
-							}
-							setName( next );
-						}
-					} );
-				} )
-			) : null
+						' ',
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									setAsking( '' );
+								}
+							},
+							__( 'Keep it', 'axismundi-contacts' )
+						)
+					)
+				)
+				: null
 		);
 	}
 
 	/**
-	 * The parts of a name this one may be filed under.
+	 * The columns a directory files a name in.
 	 *
-	 * Whatever it has, in the order it has them. A separator is not something a directory sorts by.
+	 * Two, because that is what a directory has. A name with three given names still files under one
+	 * given sort key, and RFC 9553's own example writes a `given2` into the surname key rather than
+	 * inventing a column for it.
 	 */
-	function sortableKinds( components ) {
-		var kinds = [];
-		( components || [] ).forEach( function ( part ) {
-			var kind = part && part.kind;
-			if ( kind && 'separator' !== kind && -1 === kinds.indexOf( kind ) ) {
-				kinds.push( kind );
-			}
-		} );
-		return kinds;
-	}
+	var SORT_KEYS = [ 'given', 'surname' ];
 
 	/** One repeating property, as rows keyed by the id the rest of the system addresses them by. */
 	function EntryField( props ) {
@@ -1330,6 +1527,49 @@
 		);
 	}
 
+	/**
+	 * The draft, as it is worth storing.
+	 *
+	 * A part of a name that was added and never filled in is somebody who clicked a button and
+	 * changed their mind, not a part of their name that is blank. It is dropped on the way out rather
+	 * than written down, which is why the buttons above can add a row without asking first.
+	 *
+	 * A separator keeps its empty value: that one is an answer -- it is how a name written with
+	 * nothing between its parts is said.
+	 *
+	 * Left alone entirely when a language patches into the parts. Dropping one there would move every
+	 * part after it up a place while the patches still name the old positions, and a patch pointing
+	 * at the wrong part is worse than a row nobody filled in.
+	 */
+	function prepare( card ) {
+		var parts = ( card.name || {} ).components;
+		if ( ! parts || patchesUnder( card.localizations, 'name/components' ).length ) {
+			return card;
+		}
+		var kept = parts.filter( function ( part ) {
+			return part && ( 'separator' === part.kind || ( part.value && String( part.value ).trim() ) );
+		} );
+		if ( kept.length === parts.length ) {
+			return card;
+		}
+		var next = Object.assign( {}, card );
+		var name = Object.assign( {}, next.name );
+		if ( kept.length ) {
+			name.components = kept;
+		} else {
+			delete name.components;
+			delete name.isOrdered;
+			delete name.defaultSeparator;
+			delete name.sortAs;
+		}
+		if ( Object.keys( name ).length ) {
+			next.name = name;
+		} else {
+			delete next.name;
+		}
+		return next;
+	}
+
 	/** The whole screen. */
 	function Editor() {
 		var [ card, setCard ] = useState( config.card );
@@ -1395,7 +1635,7 @@
 			}
 			setSaving( true );
 			setStatus( '' );
-			var body = { revision: revision, card: card };
+			var body = { revision: revision, card: prepare( card ) };
 			if ( config.isProfile ) {
 				body.publishedPointers = published;
 			}

@@ -354,7 +354,14 @@ function axismundi_contacts_value_is( $value, string $type ) : bool {
 		case 'list':
 			return is_array( $value ) && axismundi_contacts_is_list( $value );
 		case 'object':
-			return is_array( $value ) && ! axismundi_contacts_is_list( $value );
+			/*
+			 * An empty one counts. JSON's `{}` and `[]` both arrive here as an empty PHP array and
+			 * nothing distinguishes them afterwards, so refusing it would refuse `"emails": {}` and
+			 * every other property somebody opened and did not fill in -- a document that says the
+			 * same thing as one that never mentioned the property, and that the store drops on the way
+			 * in rather than rejecting at the door.
+			 */
+			return is_array( $value ) && ( array() === $value || ! axismundi_contacts_is_list( $value ) );
 		default:
 			return true;
 	}
@@ -371,6 +378,14 @@ function axismundi_contacts_value_is( $value, string $type ) : bool {
  * @return true|WP_Error
  */
 function axismundi_contacts_validate_card_values( array $card ) {
+	/*
+	 * What the Card describes. The store states `individual` on save for anything that says nothing,
+	 * so a stored Card always carries one -- and a patch that emptied it would leave a document whose
+	 * readers each have to remember the default again.
+	 */
+	if ( array_key_exists( 'kind', $card ) && ( ! is_string( $card['kind'] ) || '' === trim( (string) $card['kind'] ) ) ) {
+		return axismundi_contacts_value_error( 'kind', __( 'what a card describes is a word, such as individual', 'axismundi-contacts' ) );
+	}
 	$name = $card['name'] ?? null;
 	if ( null !== $name ) {
 		if ( ! axismundi_contacts_value_is( $name, 'object' ) ) {

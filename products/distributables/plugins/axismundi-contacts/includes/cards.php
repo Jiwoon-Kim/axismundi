@@ -188,15 +188,25 @@ function axismundi_contacts_save_card_for_owner( int $owner_actor_id, array $car
 	 * and the Advanced JSON box are all read by somebody, and a Card whose properties land wherever
 	 * the last edit put them is one nobody can scan.
 	 *
-	 * Nothing is added here, either. A Card that arrived with components and no written-out name is
+	 * No fact is added here either. A Card that arrived with components and no written-out name is
 	 * stored that way: filling it in would be this code answering a question the standard leaves to
 	 * whoever displays the name, and an import that rewrote the document it was given is an import
 	 * whose output nobody can compare with its input.
+	 *
+	 * What is stated is what the document already says by saying nothing. A Card with no `kind` is a
+	 * Card about a person -- that is the standard's default, not an unknown -- and a store that left
+	 * the property out would make every reader of it carry the default around: the editor deciding
+	 * which fields to draw, the projection deciding what to publish, the importer deciding what it
+	 * received. Written down once here, nothing downstream has to remember it. A `kind` that is
+	 * already there is never touched, including one this file has never heard of.
 	 */
-	$card = axismundi_contacts_canonical_card( $card );
 	// One revision for everything editable here. See the constant above for why a 1.0 document does
 	// not stay one.
 	$card['version'] = AXISMUNDI_CONTACTS_JSCONTACT_VERSION;
+	if ( ! array_key_exists( 'kind', $card ) ) {
+		$card['kind'] = 'individual';
+	}
+	$card = axismundi_contacts_canonical_card( $card );
 	$existing = $card_id > 0 ? axismundi_contacts_get_card( $card_id ) : array();
 	if ( $card_id > 0 && array() === $existing ) {
 		return new WP_Error( 'ax_contacts_card_missing', __( 'That card does not exist.', 'axismundi-contacts' ), array( 'status' => 404 ) );

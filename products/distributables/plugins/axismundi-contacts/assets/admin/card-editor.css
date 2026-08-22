@@ -319,3 +319,56 @@
 	font-weight: 600;
 	cursor: pointer;
 }
+
+/* -- adding a part of a name ----------------------------------------------------------------- */
+
+.ax-ce-addpart__row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .5em;
+	margin: .5em 0;
+}
+
+.ax-ce-addpart {
+	display: inline-flex;
+	gap: .25em;
+	align-items: center;
+}
+
+.ax-ce-addpart svg {
+	width: 16px;
+	height: 16px;
+	fill: currentColor;
+}
+
+/* The gap between two parts, which is where something goes between them. */
+.ax-ce-gap {
+	display: flex;
+	justify-content: center;
+	margin: 0;
+	padding: 0;
+	line-height: 1;
+}
+
+.ax-ce-gap__add {
+	padding: 0 .5em;
+	color: #787c82;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.ax-ce-gap__add:hover {
+	color: #2271b1;
+}
+
+/* Said, rather than assumed: a name whose parts arrived without a reading order. */
+.ax-ce-unordered {
+	margin: .5em 0;
+	padding: .75em;
+	background: #f6f7f7;
+	border-left: 4px solid #dcdcde;
+}
+
+.ax-ce-unordered p {
+	margin: 0 0 .5em;
+}

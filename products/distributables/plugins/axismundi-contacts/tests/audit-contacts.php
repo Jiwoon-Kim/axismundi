@@ -3246,7 +3246,8 @@ try {
 		'a name opens as the two lines a name usually is, and what is not a person opens as one',
 		str_contains( $ax_ct_kn_js, "var BASIC_SLOTS = [ 'given', 'surname' ];" )
 			&& str_contains( $ax_ct_kn_js, "var NAME_SLOTS = [ 'title', 'given', 'given2', 'surname', 'surname2', 'credential' ];" )
-			&& str_contains( $ax_ct_kn_js, 'expanded ? NAME_SLOTS : BASIC_SLOTS' )
+			&& str_contains( $ax_ct_kn_js, 'slotRows( components, BASIC_SLOTS ).map( line )' )
+			&& str_contains( $ax_ct_kn_js, 'slotRows( components, MIDDLE_SLOTS ).map( line )' )
 			&& str_contains( $ax_ct_kn_js, "var personal = 'individual' === ( props.kind || 'individual' );" )
 			&& str_contains( $ax_ct_kn_js, 'written || ! personal' )
 	);
@@ -3262,8 +3263,10 @@ try {
 	ax_ct_assert(
 		$ax_ct_results,
 		'a line of a name is moved by picking it up, and an empty one has nothing to pick up',
-		str_contains( $ax_ct_kn_js, 'var movable = undefined !== props.index && props.ordered;' )
+		str_contains( $ax_ct_kn_js, 'var movable = !! props.part && props.ordered' )
 			&& str_contains( $ax_ct_kn_js, 'draggable: movable,' )
+			// An empty line is a place to type, so opening the screen it appears on writes nothing.
+			&& str_contains( $ax_ct_kn_js, 'return { part: null, kind: kind };' )
 			&& str_contains( $ax_ct_kn_js, "movable ? icon( 'drag-indicator' ) : ''" )
 			// And moving one moves the part it stands for, in the document.
 			&& str_contains( $ax_ct_kn_js, 'var moved = list.splice( dragging, 1 )[ 0 ];' )
@@ -3512,13 +3515,14 @@ try {
 	ax_ct_assert(
 		$ax_ct_results,
 		'a title opens a name and a credential closes it, wherever somebody adds them from',
-		str_contains( $ax_ct_sep_js, 'function insertionIndex' )
-			&& str_contains( $ax_ct_sep_js, "if ( 'title' === kind ) {" )
-			&& str_contains( $ax_ct_sep_js, "'credential' === part.kind;" )
-			// And a field writes its part into the same place, so the list reads as the stack does.
-			&& str_contains( $ax_ct_sep_js, 'function slotInsertion( components, kind )' )
-			&& str_contains( $ax_ct_sep_js, 'var rank = NAME_SLOTS.indexOf( kind );' )
-			&& str_contains( $ax_ct_sep_js, 'function AddPart' )
+		str_contains( $ax_ct_sep_js, 'function endsFirstAndLast( components )' )
+			&& str_contains( $ax_ct_sep_js, "var FIXED_FIRST = 'title';" )
+			&& str_contains( $ax_ct_sep_js, "var FIXED_LAST = 'credential';" )
+			// Applied after anything that moves a part, so no drag can leave them in the middle.
+			&& str_contains( $ax_ct_sep_js, 'setComponents( endsFirstAndLast( list ) );' )
+			&& str_contains( $ax_ct_sep_js, 'list = endsFirstAndLast( list );' )
+			// And neither of the two is something to pick up in the first place.
+			&& str_contains( $ax_ct_sep_js, "-1 !== MIDDLE_SLOTS.indexOf( props.kind )" )
 	);
 	/*
 	 * A name this editor builds is a name whose order it knows -- the list somebody is looking at is

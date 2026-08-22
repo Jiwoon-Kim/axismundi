@@ -262,7 +262,9 @@
 		var icon = ( window.axismundiContactsIcons || {} )[ props.icon ] || '';
 		return el( 'button', {
 			type: 'button',
-			className: 'ax-icon-button' + ( props.variant ? ' ax-icon-button--' + props.variant : '' ),
+			className: 'ax-icon-button'
+				+ ( props.variant ? ' ax-icon-button--' + props.variant : '' )
+				+ ( props.className ? ' ' + props.className : '' ),
 			'aria-label': props.label,
 			title: props.label,
 			disabled: props.disabled,

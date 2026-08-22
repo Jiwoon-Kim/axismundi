@@ -580,3 +580,22 @@
 .ax-ce-slot.is-movable {
 	cursor: grab;
 }
+
+/* An empty line keeps the width its delete button would have had, so the column does not jog. */
+.ax-ce-slot__spacer {
+	flex: 0 0 40px;
+}
+
+/* Adding the parts a line each does not keep open. */
+.ax-ce-name__add {
+	display: flex;
+	gap: .5em;
+	align-items: center;
+	margin: .5em 0 0 32px;
+}
+
+.ax-ce-name__add-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .5em;
+}

@@ -255,26 +255,6 @@
 	}
 
 	/**
-	 * Where a new part goes.
-	 *
-	 * A title opens a name and a credential closes it, so those two are put where they belong rather
-	 * than appended and dragged into place. Everything else joins the end of the name proper, which is
-	 * in front of any credential already there.
-	 */
-	function insertionIndex( components, kind ) {
-		if ( 'title' === kind ) {
-			return 0;
-		}
-		if ( 'credential' === kind ) {
-			return components.length;
-		}
-		var first = components.findIndex( function ( part ) {
-			return part && 'credential' === part.kind;
-		} );
-		return -1 === first ? components.length : first;
-	}
-
-	/**
 	 * One part of a name.
 	 *
 	 * A separator is a component like any other and carries a value, which may be empty -- that is how
@@ -396,6 +376,65 @@
 	var BASIC_SLOTS = [ 'given', 'surname' ];
 
 	/**
+	 * The lines that stay where they are.
+	 *
+	 * A title opens a name and letters after it close one. Neither is somewhere in the middle of how
+	 * a name is read, so neither is something to drag: the two are drawn at the ends and the parts
+	 * between them are what has an order worth arranging.
+	 */
+	var FIXED_FIRST = 'title';
+	var FIXED_LAST = 'credential';
+	var MIDDLE_SLOTS = [ 'given', 'given2', 'surname', 'surname2' ];
+
+	/** The parts somebody adds themselves, which are the ones there is a point in removing. */
+	var ADDABLE = [ 'given2', 'surname2', 'separator' ];
+
+	/**
+	 * The lines to draw for a set of kinds: what the name has, in the order it has it, then a line
+	 * for each one it does not.
+	 *
+	 * An empty line is a place to type and nothing else. It is not a part of the name, it is not in
+	 * the document, and opening the screen it appears on does not put it there -- which is the whole
+	 * difference between a field and a record.
+	 */
+	function slotRows( components, kinds ) {
+		var filled = ( components || [] ).map( function ( part, index ) {
+			return { part: part, index: index, kind: part && part.kind };
+		} ).filter( function ( row ) {
+			return row.part && -1 !== kinds.indexOf( row.kind );
+		} );
+		var empty = kinds.filter( function ( kind ) {
+			return -1 === slotIndex( components, kind );
+		} ).map( function ( kind ) {
+			return { part: null, kind: kind };
+		} );
+		return filled.concat( empty );
+	}
+
+	/**
+	 * The parts, with the two that belong at the ends put back at the ends.
+	 *
+	 * Applied after anything that moves a part. A name whose letters after it ended up in the middle
+	 * is a name somebody has to tidy up after every drag, and the standard's reading order is exactly
+	 * what the list is for.
+	 */
+	function endsFirstAndLast( components ) {
+		var first = [];
+		var middle = [];
+		var last = [];
+		( components || [] ).forEach( function ( part ) {
+			if ( part && FIXED_FIRST === part.kind ) {
+				first.push( part );
+			} else if ( part && FIXED_LAST === part.kind ) {
+				last.push( part );
+			} else {
+				middle.push( part );
+			}
+		} );
+		return first.concat( middle, last );
+	}
+
+	/**
 	 * The parts a pronunciation belongs to.
 	 *
 	 * A separator is `-` or `・`; a title is `Dr`. Neither is somebody's name being said, so neither
@@ -455,7 +494,8 @@
 	 */
 	function NameSlot( props ) {
 		var part = props.part || {};
-		var movable = undefined !== props.index && props.ordered;
+		// Only a line holding something, of a kind that sits between the ends, is somewhere to move.
+		var movable = !! props.part && props.ordered && -1 !== MIDDLE_SLOTS.indexOf( props.kind );
 		return el(
 			'div',
 			{
@@ -502,7 +542,27 @@
 						props.onChange( props.kind, 'phonetic', value );
 					}
 				} )
-				: null
+				: null,
+			/*
+			 * Removed only where removing means something. A given name and a surname are the two
+			 * lines the section is, and a title and letters after it are where they always are: those
+			 * four are emptied rather than taken away, and the line stays to be typed into again. A
+			 * second middle name is something somebody added, so it is something they can take back.
+			 */
+			props.part && -1 !== ADDABLE.indexOf( props.kind )
+				? el( IconButton, {
+					icon: 'delete',
+					variant: 'danger',
+					label: sprintf(
+						/* translators: %s: which part of the name, such as Surname 2. */
+						__( 'Remove %s', 'axismundi-contacts' ),
+						componentLabel( props.kind )
+					),
+					onClick: function () {
+						props.onRemove( props.index );
+					}
+				} )
+				: el( 'span', { className: 'ax-ce-slot__spacer', 'aria-hidden': 'true' } )
 		);
 	}
 
@@ -554,6 +614,7 @@
 		 */
 		var [ written, setWritten ] = useState( ! components.length && undefined !== name.full );
 		var [ asking, setAsking ] = useState( '' );
+		var [ adding, setAdding ] = useState( false );
 
 		function setName( next ) {
 			// A name with nothing in it is not a name, so the property goes rather than sitting empty.
@@ -580,7 +641,8 @@
 
 		function addPart( kind ) {
 			var list = components.slice();
-			list.splice( ordered ? insertionIndex( components, kind ) : slotInsertion( components, kind ), 0, { kind: kind, value: '' } );
+			list.splice( slotInsertion( components, kind ), 0, { kind: kind, value: '' } );
+			list = endsFirstAndLast( list );
 			/*
 			 * A name this editor builds is a name whose order it knows: the fields somebody is filling
 			 * in are read down the screen in the order they are read aloud. So the first part written
@@ -619,32 +681,60 @@
 			} else {
 				part[ key ] = value;
 			}
+			/*
+			 * A line emptied of everything is a part of the name that is no longer there. The line
+			 * itself stays -- it is a place to type, not a record -- but the document stops carrying a
+			 * part with nothing in it, which is the difference the screen has to keep straight.
+			 *
+			 * Unless another language says something about it. Taking it away would leave those
+			 * patches pointing at nothing, which the server refuses, so the ones affected are named
+			 * and somebody decides.
+			 */
+			var emptied = ! String( part.value || '' ).trim() && ! String( part.phonetic || '' ).trim();
+			if ( emptied ) {
+				var affected = patchesUnder( props.localizations, 'name/components/' + at );
+				if ( affected.length ) {
+					props.onBlocked( at, affected );
+					return;
+				}
+				setComponents( components.filter( function ( ignored, i ) {
+					return i !== at;
+				} ) );
+				return;
+			}
 			var next = components.slice();
 			next[ at ] = part;
 			setComponents( next );
 		}
 
+		/** Take a part away outright, which is only offered for the parts somebody added. */
+		function removePart( at ) {
+			var affected = patchesUnder( props.localizations, 'name/components/' + at );
+			if ( affected.length ) {
+				props.onBlocked( at, affected );
+				return;
+			}
+			setComponents( components.filter( function ( ignored, i ) {
+				return i !== at;
+			} ) );
+		}
+
 		/*
-		 * The parts this name has, in the order it has them, and then a line for each one it does not.
-		 * The filled lines are the document -- picking one up moves it, the way a row of accounts is
-		 * moved -- and the empty ones are somewhere to type, which is why they have no grip: there is
-		 * nothing there yet to be anywhere.
+		 * The lines. Collapsed, the two a name usually is; open, a title above them and letters after
+		 * the name below, both where they always are. In between, what the name has in the order it
+		 * has it, and then a line for each part it does not -- which is a place to type and not a part
+		 * of anything until somebody types in it.
 		 */
-		var visible = expanded ? NAME_SLOTS : BASIC_SLOTS;
-		var filled = components.map( function ( part, index ) {
-			return { part: part, index: index };
-		} ).filter( function ( row ) {
-			return row.part && -1 !== visible.indexOf( row.part.kind );
-		} );
-		var slots = filled.map( function ( row ) {
+		function line( row ) {
 			return el( NameSlot, {
-				key: row.part.kind,
-				kind: row.part.kind,
+				key: row.kind,
+				kind: row.kind,
 				part: row.part,
 				index: row.index,
 				ordered: ordered,
 				phonetic: phonetic,
 				onChange: writeSlot,
+				onRemove: removePart,
 				onDragStart: props.onDragStart,
 				onDrop: function ( at ) {
 					if ( null === dragging || dragging === at ) {
@@ -653,23 +743,18 @@
 					var list = components.slice();
 					var moved = list.splice( dragging, 1 )[ 0 ];
 					list.splice( at, 0, moved );
-					setComponents( list );
+					// And whatever the drag did, a title opens the name and a credential closes it.
+					setComponents( endsFirstAndLast( list ) );
 					props.onDragStart( null );
 				}
 			} );
-		} ).concat(
-			visible.filter( function ( kind ) {
-				return -1 === slotIndex( components, kind );
-			} ).map( function ( kind ) {
-				return el( NameSlot, {
-					key: kind,
-					kind: kind,
-					part: null,
-					phonetic: phonetic,
-					onChange: writeSlot
-				} );
-			} )
-		);
+		}
+
+		var slots = expanded
+			? slotRows( components, [ FIXED_FIRST ] ).map( line )
+				.concat( slotRows( components, MIDDLE_SLOTS ).map( line ) )
+				.concat( slotRows( components, [ FIXED_LAST ] ).map( line ) )
+			: slotRows( components, BASIC_SLOTS ).map( line );
 
 		return el(
 			Section,
@@ -709,21 +794,57 @@
 					'div',
 					{ className: 'ax-ce-name' },
 					el( 'div', { className: 'ax-ce-name__slots' }, slots ),
-					el(
-						'button',
-						{
-							type: 'button',
-							className: 'ax-ce-name__more' + ( expanded ? ' is-open' : '' ),
-							'aria-expanded': expanded ? 'true' : 'false',
-							'aria-label': expanded
-								? __( 'Fewer parts of the name', 'axismundi-contacts' )
-								: __( 'More parts of the name', 'axismundi-contacts' ),
-							onClick: function () {
-								setExpanded( ! expanded );
-							}
-						},
-						el( 'span', { 'aria-hidden': 'true', dangerouslySetInnerHTML: { __html: icon( 'keyboard-arrow-down' ) } } )
-					)
+					el( IconButton, {
+						icon: 'keyboard-arrow-down',
+						className: 'ax-ce-name__more' + ( expanded ? ' is-open' : '' ),
+						label: expanded
+							? __( 'Fewer parts of the name', 'axismundi-contacts' )
+							: __( 'More parts of the name', 'axismundi-contacts' ),
+						onClick: function () {
+							setExpanded( ! expanded );
+						}
+					} )
+				)
+				: null,
+			/*
+			 * A second middle name, a second surname, something written between two parts. Each of
+			 * these is a real part of somebody's name and none of them is a line worth keeping open on
+			 * every card, so they are added rather than offered -- and a name that ends up with two of
+			 * a kind is one the lines cannot hold, so it opens as the list below.
+			 */
+			! custom && expanded
+				? el(
+					'div',
+					{ className: 'ax-ce-name__add' },
+					el( IconButton, {
+						icon: 'add',
+						label: __( 'Add a part of the name', 'axismundi-contacts' ),
+						onClick: function () {
+							setAdding( ! adding );
+						}
+					} ),
+					adding
+						? el(
+							'span',
+							{ className: 'ax-ce-name__add-list' },
+							ADDABLE.map( function ( kind ) {
+								return el(
+									'button',
+									{
+										key: kind,
+										type: 'button',
+										className: 'button',
+										disabled: 'separator' !== kind && ! ordered && -1 !== slotIndex( components, kind ),
+										onClick: function () {
+											setAdding( false );
+											addPart( kind );
+										}
+									},
+									componentLabel( kind )
+								);
+							} )
+						)
+						: null
 				)
 				: null,
 			// A name the fields cannot hold, or one somebody has asked to arrange themselves.

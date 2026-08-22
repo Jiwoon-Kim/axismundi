@@ -110,10 +110,12 @@ function axismundi_contacts_validate_card( array $card ) {
 		return new WP_Error( 'ax_contacts_card_kind', __( 'The kind of a Card is a word.', 'axismundi-contacts' ), array( 'status' => 400 ) );
 	}
 	/*
-	 * A Card with nothing in it is not a contact. Everything else is allowed: a name alone, a phone
-	 * number alone, an imported document full of fields this code does not read.
+	 * A Card with nothing in it at all is not a contact. Saying what kind of thing it is counts:
+	 * somebody who has just made a contact and not yet typed anything into it has a real record they
+	 * are about to fill in, and refusing that would force a screen to collect a Card before making
+	 * one -- which is a second way to write a Card, with its own idea of what one must contain.
 	 */
-	if ( array() === array_diff_key( $card, array( '@type' => true, 'version' => true, 'kind' => true ) ) ) {
+	if ( array() === array_diff_key( $card, array( '@type' => true, 'version' => true ) ) ) {
 		return new WP_Error( 'ax_contacts_card_empty', __( 'A card needs to say something.', 'axismundi-contacts' ), array( 'status' => 400 ) );
 	}
 	return true;

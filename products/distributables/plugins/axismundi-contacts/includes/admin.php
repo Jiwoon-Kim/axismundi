@@ -19,17 +19,6 @@
 
 defined( 'ABSPATH' ) || exit;
 
-/**
- * The repeating fields the editor offers, and where each entry's value lives.
- *
- * A contact has as many numbers as it has. Fixing the form at two of each would make the model's
- * multiple values into a limit nobody chose.
- */
-const AXISMUNDI_CONTACTS_EDITABLE_FIELDS = array(
-	'emails'    => array( 'value_key' => 'address', 'type' => 'email' ),
-	'phones'    => array( 'value_key' => 'number', 'type' => 'tel' ),
-	'addresses' => array( 'value_key' => 'full', 'type' => 'text' ),
-);
 
 /** Add the address book to the Users menu, beside the Actor profile it belongs to. */
 function axismundi_contacts_admin_menu() : void {
@@ -195,12 +184,6 @@ function axismundi_contacts_render_screen() : void {
 		echo '</div>';
 		return;
 	}
-	if ( 0 === $editing ) {
-		// A contact that does not exist yet has no draft to open, so it is made first and then edited.
-		axismundi_contacts_card_editor( $book_id, 0, $self_id, $all, $all ? 0 : $book_id );
-		echo '</div>';
-		return;
-	}
 	if ( $reading > 0 ) {
 		axismundi_contacts_card_detail( $reading, $all ? 0 : $book_id, $self_id, (int) $actor->get_identity_id() );
 		echo '</div>';
@@ -208,7 +191,14 @@ function axismundi_contacts_render_screen() : void {
 	}
 	?>
 	<h1 class="wp-heading-inline"><?php esc_html_e( 'Contacts', 'axismundi-contacts' ); ?></h1>
-	<a href="<?php echo esc_url( axismundi_contacts_edit_url( 0, $all ? 0 : $book_id ) ); ?>" class="page-title-action"><?php esc_html_e( 'Add contact', 'axismundi-contacts' ); ?></a>
+	<?php
+	/*
+	 * A contact is made and then edited, rather than typed into a form and then made. The editor works
+	 * on a record with a revision to save against, and a screen that collected a Card first would be a
+	 * second way to write one -- with its own rules about what a Card must contain.
+	 */
+	?>
+	<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( array( 'action' => 'axismundi_contacts_create_card', 'book_id' => $book_id, 'group' => $all ? 0 : $book_id ), admin_url( 'admin-post.php' ) ), 'ax_contacts_create_card_' . $book_id ) ); ?>" class="page-title-action"><?php esc_html_e( 'Add contact', 'axismundi-contacts' ); ?></a>
 	<hr class="wp-header-end">
 	<div class="ax-contacts-browser">
 		<?php axismundi_contacts_groups_sidebar( $actor, $default, $all ? 0 : $book_id ); ?>
@@ -330,189 +320,7 @@ function axismundi_contacts_card_list( int $book_id, int $self_id, array $cards,
 	<?php
 }
 
-/**
- * Create or edit one card.
- *
- * The same form for the owner's card and everybody else's, because they are the same kind of thing.
- * What differs is only a line of explanation and whether deleting it is offered.
- *
- * @param int $book_id Address book id.
- * @param int $card_id Card id, or 0 for a new one.
- * @param int  $self_id  Card marked as the owner's.
- * @param bool $all      Whether this is the virtual all-contacts view.
- * @param int  $group_id Group query value, or 0 for all contacts.
- * @return void
- */
-function axismundi_contacts_card_editor( int $book_id, int $card_id, int $self_id, bool $all = false, int $group_id = 0 ) : void {
-	$row  = $card_id > 0 ? axismundi_contacts_get_card( $card_id ) : array();
-	$book = axismundi_contacts_get_book( $book_id );
-	if ( $card_id > 0 && ( array() === $row || array() === $book || (int) $row['owner_actor_id'] !== (int) $book['owner_actor_id'] || ( ! $all && ! in_array( $book_id, axismundi_contacts_card_books( $card_id ), true ) ) ) ) {
-		// A card id from another book is not this book's business, whatever the URL says.
-		echo '<h1>' . esc_html__( 'Contacts', 'axismundi-contacts' ) . '</h1>';
-		echo '<p>' . esc_html__( 'That card is not in this address book.', 'axismundi-contacts' ) . '</p>';
-		return;
-	}
-	$card    = $card_id > 0 ? axismundi_contacts_card_document( $card_id ) : array();
-	$prov    = $card_id > 0 ? axismundi_contacts_card_provenance( $card_id ) : array();
-	$is_self = $card_id > 0 && $card_id === $self_id;
-	?>
-	<h1><?php echo esc_html( $card_id > 0 ? __( 'Edit contact', 'axismundi-contacts' ) : __( 'Add contact', 'axismundi-contacts' ) ); ?></h1>
-	<?php if ( $is_self ) : ?>
-		<p class="description"><?php esc_html_e( 'This is the card that describes you. Your public name and profile are edited on the Actor profile screen; nothing here is published.', 'axismundi-contacts' ); ?></p>
-	<?php endif; ?>
-	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-		<input type="hidden" name="action" value="axismundi_contacts_save_card">
-		<input type="hidden" name="book_id" value="<?php echo esc_attr( (string) $book_id ); ?>">
-		<input type="hidden" name="return_group" value="<?php echo esc_attr( (string) $group_id ); ?>">
-		<input type="hidden" name="card_id" value="<?php echo esc_attr( (string) $card_id ); ?>">
-		<?php /* The revision this form was drawn from, so a save written against a stale view is refused. */ ?>
-		<input type="hidden" name="revision" value="<?php echo esc_attr( (string) ( $row['revision'] ?? 0 ) ); ?>">
-		<?php wp_nonce_field( 'ax_contacts_card_' . $book_id ); ?>
-		<table class="form-table" role="presentation">
-			<tr>
-				<th scope="row"><label for="ax-contacts-name"><?php esc_html_e( 'Name', 'axismundi-contacts' ); ?></label></th>
-				<td>
-					<input id="ax-contacts-name" name="primary_name[full]" value="<?php echo esc_attr( (string) ( $card['name']['full'] ?? '' ) ); ?>" class="regular-text">
-					<?php axismundi_contacts_name_details( 'primary_name', (array) ( $card['name'] ?? array() ) ); ?>
-				</td>
-			</tr>
-			<?php
-			/*
-			 * No row for the Card's own language here. The primary name above is that language's name,
-			 * and offering a localization for it as well would put one fact in two editable places.
-			 */
-			axismundi_contacts_localized_name_rows( $card );
-			?>
-			<?php
-			axismundi_contacts_entry_rows( 'emails', __( 'Email', 'axismundi-contacts' ), $card, $prov );
-			axismundi_contacts_entry_rows( 'phones', __( 'Phone', 'axismundi-contacts' ), $card, $prov );
-			axismundi_contacts_entry_rows( 'addresses', __( 'Address', 'axismundi-contacts' ), $card, $prov );
-			?>
-			<tr>
-				<th scope="row"><label for="ax-contacts-note"><?php esc_html_e( 'Note', 'axismundi-contacts' ); ?></label></th>
-				<td>
-					<textarea id="ax-contacts-note" name="note" rows="4" class="large-text"><?php echo esc_textarea( (string) ( $card['notes']['note']['note'] ?? '' ) ); ?></textarea>
-					<p class="description"><?php esc_html_e( 'Kept in this address book and never published.', 'axismundi-contacts' ); ?></p>
-				</td>
-			</tr>
-		</table>
-		<?php submit_button( $card_id > 0 ? __( 'Save contact', 'axismundi-contacts' ) : __( 'Add contact', 'axismundi-contacts' ) ); ?>
-	</form>
-	<p><a href="<?php echo esc_url( axismundi_contacts_screen_url( -1, $group_id ) ); ?>">&larr; <?php esc_html_e( 'Back to contacts', 'axismundi-contacts' ); ?></a></p>
-	<?php if ( $card_id > 0 ) : ?>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return confirm( '<?php echo esc_js( __( 'Delete this contact?', 'axismundi-contacts' ) ); ?>' );">
-			<input type="hidden" name="action" value="axismundi_contacts_delete_card">
-			<input type="hidden" name="book_id" value="<?php echo esc_attr( (string) $book_id ); ?>">
-			<input type="hidden" name="return_group" value="<?php echo esc_attr( (string) $group_id ); ?>">
-			<input type="hidden" name="card_id" value="<?php echo esc_attr( (string) $card_id ); ?>">
-			<?php wp_nonce_field( 'ax_contacts_delete_' . $card_id ); ?>
-			<?php submit_button( __( 'Delete contact', 'axismundi-contacts' ), 'delete', 'submit', false ); ?>
-		</form>
-	<?php endif; ?>
-	<?php
-}
 
-/**
- * One repeating field, with a row per entry and a way to add another.
- *
- * The key each entry is addressed by travels in a hidden field rather than being regenerated on
- * save, because provenance is recorded against it: renumbering entries on every edit would detach
- * last year's record of where a value came from from the value it was written for.
- *
- * One blank row is always rendered, so the form still grows without the script.
- *
- * @param string                            $field      JSContact field name.
- * @param string                            $label      What to call it on screen.
- * @param array<string,mixed>               $card       Card document.
- * @param array<string,array<string,mixed>> $provenance Provenance by pointer.
- * @return void
- */
-function axismundi_contacts_entry_rows( string $field, string $label, array $card, array $provenance ) : void {
-	$spec      = AXISMUNDI_CONTACTS_EDITABLE_FIELDS[ $field ] ?? array( 'value_key' => 'value', 'type' => 'text' );
-	$value_key = (string) $spec['value_key'];
-	$presets   = axismundi_contacts_presets_for( $field );
-	$default   = (string) ( array_key_first( $presets ) ?? 'custom' );
-	$rows      = array();
-	foreach ( (array) ( $card[ $field ] ?? array() ) as $entry_id => $entry ) {
-		$entry   = is_array( $entry ) ? $entry : array();
-		$rows[] = array(
-			'key'    => (string) $entry_id,
-			'value'  => (string) ( $entry[ $value_key ] ?? '' ),
-			// Which label this reads as, asked of the stored values rather than kept beside them.
-			'preset' => axismundi_contacts_entry_preset( $field, $entry ),
-			'label'  => (string) ( $entry['label'] ?? '' ),
-		);
-	}
-	// Always one empty row, so a card can gain another value with or without JavaScript.
-	$rows[] = array( 'key' => '', 'value' => '', 'preset' => $default, 'label' => '' );
-	$list   = 'ax-contacts-' . $field;
-	?>
-	<tr>
-		<th scope="row"><?php echo esc_html( $label ); ?></th>
-		<td>
-			<div id="<?php echo esc_attr( $list ); ?>">
-				<?php foreach ( $rows as $entry ) : ?>
-					<?php
-					$pointer = '' !== $entry['key'] ? $field . '/' . $entry['key'] : '';
-					$source  = '' !== $pointer ? (string) ( $provenance[ $pointer ]['source'] ?? '' ) : '';
-					?>
-					<p data-ax-contacts-row>
-						<input type="hidden" name="<?php echo esc_attr( $field ); ?>_key[]" value="<?php echo esc_attr( $entry['key'] ); ?>">
-						<input
-							type="<?php echo esc_attr( (string) $spec['type'] ); ?>"
-							name="<?php echo esc_attr( $field ); ?>_value[]"
-							value="<?php echo esc_attr( $entry['value'] ); ?>"
-							class="regular-text"
-							aria-label="<?php echo esc_attr( $label ); ?>">
-						<?php
-						/*
-						 * What this row is for. A phone book shows the label before the number, because
-						 * which number to ring matters more than the digits -- and what is stored is the
-						 * standard pair behind the word, so an export means the same thing elsewhere.
-						 */
-						?>
-						<select name="<?php echo esc_attr( $field ); ?>_preset[]" aria-label="<?php esc_attr_e( 'Label', 'axismundi-contacts' ); ?>">
-							<?php foreach ( $presets as $ax_key => $ax_preset ) : ?>
-								<option value="<?php echo esc_attr( (string) $ax_key ); ?>" <?php selected( $entry['preset'], (string) $ax_key ); ?>><?php echo esc_html( (string) $ax_preset['label'] ); ?></option>
-							<?php endforeach; ?>
-							<option value="custom" <?php selected( $entry['preset'], 'custom' ); ?>><?php esc_html_e( 'Custom', 'axismundi-contacts' ); ?></option>
-						</select>
-						<input
-							name="<?php echo esc_attr( $field ); ?>_label[]"
-							value="<?php echo esc_attr( $entry['label'] ); ?>"
-							class="small-text"
-							placeholder="<?php esc_attr_e( 'Custom label', 'axismundi-contacts' ); ?>"
-							aria-label="<?php esc_attr_e( 'Custom label', 'axismundi-contacts' ); ?>">
-						<?php if ( '' !== $source && AXISMUNDI_CONTACTS_SOURCE_LOCAL !== $source ) : ?>
-							<span class="description" data-ax-contacts-source>
-								<?php
-								printf(
-									/* translators: %s: name of the source this value was imported from. */
-									esc_html__( 'from %s — editing it makes it yours', 'axismundi-contacts' ),
-									esc_html( $source )
-								);
-								?>
-							</span>
-						<?php endif; ?>
-					</p>
-				<?php endforeach; ?>
-			</div>
-			<p>
-				<button type="button" class="button button-small" data-ax-contacts-add="<?php echo esc_attr( $list ); ?>">
-					<?php
-					printf(
-						/* translators: %s: field label, such as Email. */
-						esc_html__( '+ %s', 'axismundi-contacts' ),
-						esc_html( $label )
-					);
-					?>
-				</button>
-				<span class="description"><?php esc_html_e( 'Clearing a row removes that entry.', 'axismundi-contacts' ); ?></span>
-			</p>
-		</td>
-	</tr>
-	<?php
-}
 
 /**
  * Whether the person submitting may write to this book, asked without trusting the form.
@@ -531,124 +339,38 @@ function axismundi_contacts_authorize_book( int $book_id ) {
 	return $book;
 }
 
+
+
 /**
- * Save one card, new or existing.
+ * Make a contact, then open it.
  *
- * The document is rebuilt from the form, stored, and reindexed by one call, so the index cannot
- * describe a Card that was never written.
+ * An empty Card rather than a form: `@type` and a kind, which is the least a JSContact document can
+ * say and still be one. Everything else -- whether there is a name, whether it is written out or
+ * given in parts -- is answered in the editor, on a record that exists and has a revision to save
+ * against.
+ *
+ * Nothing is guessed about what kind of thing this is either. `individual` is what an address book
+ * is mostly full of, and it is changed in the editor like any other value.
  *
  * @return void
  */
-function axismundi_contacts_handle_save_card() : void {
-	$book_id = isset( $_POST['book_id'] ) ? absint( $_POST['book_id'] ) : 0;
-	check_admin_referer( 'ax_contacts_card_' . $book_id );
+function axismundi_contacts_handle_create_card() : void {
+	$book_id = isset( $_GET['book_id'] ) ? absint( $_GET['book_id'] ) : 0;
+	check_admin_referer( 'ax_contacts_create_card_' . $book_id );
 	$book = axismundi_contacts_authorize_book( $book_id );
 	if ( is_wp_error( $book ) ) {
 		wp_die( esc_html( $book->get_error_message() ), '', array( 'response' => 403 ) );
 	}
-	$card_id  = isset( $_POST['card_id'] ) ? absint( $_POST['card_id'] ) : 0;
-	$revision = isset( $_POST['revision'] ) ? absint( $_POST['revision'] ) : 0;
-	$before   = $card_id > 0 ? axismundi_contacts_card_document( $card_id ) : array();
-
-	// Everything the form did not show is carried through untouched, including fields it cannot edit.
-	$card          = $before;
-	$card['@type'] = 'Card';
-	$name = axismundi_contacts_name_from_request( 'primary_name', (array) ( $card['name'] ?? array() ) );
-	if ( array() !== $name ) {
-		$card['name'] = $name;
-	} else {
-		unset( $card['name'] );
+	$group = isset( $_GET['group'] ) ? absint( $_GET['group'] ) : 0;
+	$made  = axismundi_contacts_save_card( $book_id, array( '@type' => 'Card', 'kind' => 'individual' ) );
+	if ( is_wp_error( $made ) ) {
+		axismundi_contacts_redirect_result( $made );
+		return;
 	}
-	$card = axismundi_contacts_localized_names_from_request( $card );
-	/*
-	 * One note, written as JSContact writes them: a keyed entry rather than a bare string, so a Card
-	 * that arrives with several keeps them all and this form edits the one it owns.
-	 */
-	$note = isset( $_POST['note'] ) ? sanitize_textarea_field( wp_unslash( $_POST['note'] ) ) : '';
-	if ( '' !== trim( $note ) ) {
-		$card['notes']['note'] = array_merge(
-			(array) ( $card['notes']['note'] ?? array() ),
-			array( '@type' => 'Note', 'note' => $note )
-		);
-	} else {
-		unset( $card['notes']['note'] );
-		if ( array() === (array) ( $card['notes'] ?? array() ) ) {
-			unset( $card['notes'] );
-		}
-	}
-	foreach ( AXISMUNDI_CONTACTS_EDITABLE_FIELDS as $field => $spec ) {
-		$card[ $field ] = axismundi_contacts_entries_from_request( $field, (string) $spec['value_key'], $card[ $field ] ?? array() );
-		if ( array() === $card[ $field ] ) {
-			unset( $card[ $field ] );
-		}
-	}
-
-	$saved = axismundi_contacts_save_card( $book_id, $card, $card_id, $card_id > 0 ? $revision : null );
-	if ( ! is_wp_error( $saved ) ) {
-		/*
-		 * Reported rather than swallowed. A Card holding somebody's edit while provenance still says an
-		 * Actor owns the value is the exact state the next refresh silently undoes, so it is better to
-		 * be told the save did not finish than to find the edit gone next week.
-		 */
-		$outcome = axismundi_contacts_record_local_edits( (int) $saved, $before, $card );
-		axismundi_contacts_redirect_result( is_wp_error( $outcome ) ? $outcome : $saved, (int) $saved );
-	}
-	axismundi_contacts_redirect_result( $saved, $card_id );
+	wp_safe_redirect( axismundi_contacts_edit_url( (int) $made, $group ) );
+	exit;
 }
-add_action( 'admin_post_axismundi_contacts_save_card', 'axismundi_contacts_handle_save_card' );
-
-/**
- * Rebuild one repeating field from the submitted rows.
- *
- * A row whose value was cleared is dropped, which is how an entry is removed. A row that arrived
- * with no key is new and gets one derived from the field, so the pointer provenance is recorded
- * against stays put for the life of that entry.
- *
- * @param string              $field     JSContact field name.
- * @param string              $value_key Key holding the value inside an entry.
- * @param array<string,mixed> $existing  Entries already on the Card.
- * @return array<string,mixed>
- */
-function axismundi_contacts_entries_from_request( string $field, string $value_key, array $existing ) : array {
-	// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- each element is sanitized below.
-	$keys = isset( $_POST[ $field . '_key' ] ) ? (array) wp_unslash( $_POST[ $field . '_key' ] ) : array();
-	// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- each element is sanitized below.
-	$values = isset( $_POST[ $field . '_value' ] ) ? (array) wp_unslash( $_POST[ $field . '_value' ] ) : array();
-	// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- each element is sanitized below.
-	$presets = isset( $_POST[ $field . '_preset' ] ) ? array_values( (array) wp_unslash( $_POST[ $field . '_preset' ] ) ) : array();
-	// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- each element is sanitized below.
-	$labels = isset( $_POST[ $field . '_label' ] ) ? array_values( (array) wp_unslash( $_POST[ $field . '_label' ] ) ) : array();
-	$out    = array();
-	$next   = 1;
-	foreach ( array_values( $values ) as $index => $value ) {
-		$value = sanitize_text_field( (string) $value );
-		if ( '' === trim( $value ) ) {
-			continue;
-		}
-		$key = sanitize_key( (string) ( $keys[ $index ] ?? '' ) );
-		while ( '' === $key || isset( $out[ $key ] ) ) {
-			$key = $field . '-' . $next;
-			++$next;
-		}
-		// Whatever else the entry carried is kept: a preference, a type this form never showed.
-		$entry               = is_array( $existing[ $key ] ?? null ) ? $existing[ $key ] : array();
-		$entry[ $value_key ] = $value;
-		/*
-		 * The label is written as the standard pair behind it, so the word on screen stays a rendering
-		 * of what is stored. A custom label is the exception the vocabulary makes for itself: somebody
-		 * typing their own word is saying the enumeration did not have what they meant.
-		 */
-		$entry       = axismundi_contacts_apply_preset(
-			$field,
-			$entry,
-			sanitize_text_field( (string) ( $presets[ $index ] ?? '' ) ),
-			sanitize_text_field( (string) ( $labels[ $index ] ?? '' ) )
-		);
-		$out[ $key ] = $entry;
-	}
-	return $out;
-}
-
+add_action( 'admin_post_axismundi_contacts_create_card', 'axismundi_contacts_handle_create_card' );
 
 /**
  * Say which card describes the Actor whose book this is.

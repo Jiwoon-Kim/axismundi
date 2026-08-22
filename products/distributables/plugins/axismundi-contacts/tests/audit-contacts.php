@@ -16,7 +16,6 @@ defined( 'ABSPATH' ) || exit( 1 );
 // WP-CLI does not load the administrator screen this fixture renders.
 require_once dirname( __DIR__ ) . '/includes/card-detail.php';
 require_once dirname( __DIR__ ) . '/includes/card-editor.php';
-require_once dirname( __DIR__ ) . '/includes/name-editor.php';
 require_once dirname( __DIR__ ) . '/includes/admin.php';
 require_once dirname( __DIR__ ) . '/includes/profile-screen.php';
 require_once dirname( __DIR__ ) . '/includes/name-bindings.php';
@@ -327,32 +326,20 @@ try {
 	// -- somebody can reach it ---------------------------------------------------------------------------------
 
 	/*
-	 * A store nobody can write to is what the last few slices kept producing, so the screen is part of
-	 * this one. Rendered here for the reason the Actors forms are: a template whose PHP block closes
-	 * early prints its own source, and no amount of correct storage underneath shows that.
+	 * A store nobody can write to is what several slices kept producing, so the screen is part of this
+	 * one. What changed is which screen: the PHP form is gone and the editor is the only thing that
+	 * writes a Card, so what is checked here is that it is reachable and that nothing else is.
 	 */
 	wp_set_current_user( (int) $ax_ct_owner->get_local_user_id() );
 	ob_start();
-	axismundi_contacts_card_editor( $ax_ct_book_id, $ax_ct_card, $ax_ct_card );
+	axismundi_contacts_card_editor_screen( $ax_ct_card, $ax_ct_book_id );
 	$ax_ct_form = (string) ob_get_clean();
 	ax_ct_assert(
 		$ax_ct_results,
 		'the card is editable on a screen that renders itself rather than its own source',
-		str_contains( $ax_ct_form, 'name="primary_name[full]"' )
-			&& str_contains( $ax_ct_form, 'name="emails_value[]"' )
-			&& str_contains( $ax_ct_form, 'name="phones_value[]"' )
-			&& str_contains( $ax_ct_form, '_wpnonce' )
+		str_contains( $ax_ct_form, 'id="ax-contacts-card-editor"' )
 			&& ! str_contains( $ax_ct_form, '<?php' )
-	);
-	/*
-	 * The entry key travels with the row. Regenerating it on every save would detach provenance from
-	 * the value it was written for, which is the whole reason provenance is keyed by pointer.
-	 */
-	ax_ct_assert(
-		$ax_ct_results,
-		'each entry keeps the key its provenance is recorded against',
-		str_contains( $ax_ct_form, 'name="emails_key[]" value="work"' )
-			&& str_contains( $ax_ct_form, 'name="emails_key[]" value="home"' )
+			&& ! str_contains( $ax_ct_form, '<form' )
 	);
 	/*
 	 * One editor for everybody. The owner's card and a card about somebody else are the same kind of
@@ -360,62 +347,46 @@ try {
 	 * different fields.
 	 */
 	ob_start();
-	axismundi_contacts_card_editor( $ax_ct_book_id, $ax_ct_phone_card, $ax_ct_card );
+	axismundi_contacts_card_editor_screen( $ax_ct_phone_card, $ax_ct_book_id );
 	$ax_ct_other_form = (string) ob_get_clean();
 	ax_ct_assert(
 		$ax_ct_results,
-		'a card about somebody else uses the same form as the owner card',
-		str_contains( $ax_ct_other_form, 'name="primary_name[full]"' )
-			&& str_contains( $ax_ct_other_form, 'name="phones_value[]"' )
-			&& str_contains( $ax_ct_other_form, 'axismundi_contacts_save_card' )
+		'a card about somebody else opens the same editor as the owner card',
+		str_contains( $ax_ct_other_form, 'id="ax-contacts-card-editor"' )
+			&& ! str_contains( $ax_ct_other_form, 'axismundi_contacts_save_card' )
 	);
 	/*
-	 * A contact has as many numbers as it has, so the form grows. Fixed rows would turn the model's
-	 * multiple values into a limit nobody chose -- and the blank row means it still grows with the
-	 * script switched off.
-	 */
-	// The label control sits on every row, and the address and note fields are on the same form.
-	ax_ct_assert(
-		$ax_ct_results,
-		'each row carries its own label control, and addresses and a note are edited here too',
-		str_contains( $ax_ct_form, 'name="phones_preset[]"' )
-			&& str_contains( $ax_ct_form, 'name="phones_label[]"' )
-			&& str_contains( $ax_ct_form, 'name="addresses_value[]"' )
-			&& str_contains( $ax_ct_form, 'name="note"' )
-	);
-	ax_ct_assert(
-		$ax_ct_results,
-		'a repeating field offers a way to add another and always leaves one row blank',
-		str_contains( $ax_ct_form, 'data-ax-contacts-add="ax-contacts-emails"' )
-			&& str_contains( $ax_ct_form, 'name="emails_key[]" value=""' )
-	);
-	// A card id from another book is refused however the URL asks for it.
-	ob_start();
-	axismundi_contacts_card_editor( (int) $ax_ct_other_book['id'], $ax_ct_card, 0 );
-	$ax_ct_wrong_book = (string) ob_get_clean();
-	ax_ct_assert(
-		$ax_ct_results,
-		'a card belonging to another book cannot be opened by asking for its id',
-		str_contains( $ax_ct_wrong_book, 'not in this address book' )
-			&& ! str_contains( $ax_ct_wrong_book, 'name="primary_name[full]"' )
-	);
-	// And an imported value says so, beside the field, before somebody wonders why it changed back.
-	ax_ct_assert(
-		$ax_ct_results,
-		'a value that came from a sync is marked as such on the screen',
-		str_contains( $ax_ct_form, 'from google' )
-	);
-	/*
-	 * This screen edits contact facts and never the Actor. A public name and a private phone number
-	 * arriving under one save button is how the second gets published.
+	 * And there is one writer. The form that used to post a Card to `admin-post.php` is gone, along
+	 * with the helpers that existed only to read it back -- two ways to write one document is two sets
+	 * of rules about revisions and provenance, and the one that fell behind would have been whichever
+	 * was touched less.
 	 */
 	ax_ct_assert(
 		$ax_ct_results,
-		'and it does not edit the Actor whose book this is',
-		! str_contains( $ax_ct_form, 'name="display_name"' )
-			&& ! str_contains( $ax_ct_form, 'name="summary"' )
-			&& ! str_contains( $ax_ct_form, 'axismundi_actors_' )
+		'nothing in this plugin writes a Card except the draft route',
+		! function_exists( 'axismundi_contacts_card_editor' )
+			&& ! function_exists( 'axismundi_contacts_handle_save_card' )
+			&& ! function_exists( 'axismundi_contacts_entries_from_request' )
+			&& ! function_exists( 'axismundi_contacts_name_from_request' )
+			&& ! has_action( 'admin_post_axismundi_contacts_save_card' )
 	);
+	/*
+	 * A contact is made and then edited, rather than typed into a form and then made. What it starts as
+	 * is the least a JSContact document can say and still be one: no name is invented, and whether
+	 * there is one at all is answered in the editor.
+	 */
+	$ax_ct_made_id = axismundi_contacts_save_card( $ax_ct_book_id, array( '@type' => 'Card', 'kind' => 'individual' ) );
+	$ax_ct_loose[] = is_wp_error( $ax_ct_made_id ) ? 0 : (int) $ax_ct_made_id;
+	$ax_ct_made    = is_wp_error( $ax_ct_made_id ) ? array() : axismundi_contacts_card_document( (int) $ax_ct_made_id );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a new contact starts as a card that says only what it is, with no name invented for it',
+		! is_wp_error( $ax_ct_made_id )
+			&& 'individual' === (string) ( $ax_ct_made['kind'] ?? '' )
+			&& ! array_key_exists( 'name', $ax_ct_made )
+			&& has_action( 'admin_post_axismundi_contacts_create_card' )
+	);
+	wp_set_current_user( 0 );
 
 	// -- connecting a card to an Actor -------------------------------------------------------------------------
 
@@ -1196,40 +1167,33 @@ try {
 	// -- editing those writings -----------------------------------------------------------------------------------
 
 	/*
-	 * A save from the form replaces the name and nothing else. A localization may carry paths for
-	 * fields this screen knows nothing about, and rewriting the whole patch would throw them away --
-	 * the value below is a nickname somebody localized, which no name editor should be able to delete.
+	 * Writing a localized name replaces the name and nothing else. A localization may carry paths for
+	 * fields no name editor knows about, and rewriting the whole patch would throw them away -- the
+	 * value below is a nickname somebody localized, which editing a name must not be able to delete.
 	 */
 	$ax_ct_form_card = axismundi_contacts_set_localized_name( array( '@type' => 'Card' ), 'en', array( 'full' => 'Trump' ) );
 	$ax_ct_form_card['localizations']['en']['nicknames/n1/name'] = 'Don';
-	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- fixture standing in for a verified post.
-	$_POST = array(
-		'localized'             => array( array( 'tag' => 'en', 'full' => 'Donald' ) ),
-		'localized_detail_0'    => array( 'order' => 'given-family' ),
-	);
-	$ax_ct_saved_form = axismundi_contacts_localized_names_from_request( $ax_ct_form_card );
+	$ax_ct_saved_form = axismundi_contacts_set_localized_name( $ax_ct_form_card, 'en', array( '@type' => 'Name', 'full' => 'Donald' ) );
 	ax_ct_assert(
 		$ax_ct_results,
-		'editing a localized name changes the name and leaves that language\u0027s other localizations alone',
+		'editing a localized name changes the name and leaves that language’s other localizations alone',
 		'Donald' === (string) ( axismundi_contacts_localized_name( $ax_ct_saved_form, 'en' )['full'] ?? '' )
 			&& 'Don' === (string) ( $ax_ct_saved_form['localizations']['en']['nicknames/n1/name'] ?? '' )
 	);
 	/*
-	 * And a name written out in full gains no components from being edited. The screen may not decide
-	 * which half of a name is the surname either -- that is the same rule the store keeps.
+	 * And a name written out in full gains no components from being stored. Nothing here may decide
+	 * which half of a name is the surname -- not the store, and not the editor either.
 	 */
 	ax_ct_assert(
 		$ax_ct_results,
-		'a name typed as one string gains no components from passing through the form',
+		'a name typed as one string gains no components from being written down',
 		! isset( axismundi_contacts_localized_name( $ax_ct_saved_form, 'en' )['components'] )
 	);
 	/*
 	 * Removing the name leaves the tag, because something else is still localized under it. The tag
 	 * only goes when nothing is left, which is what lets a contributor fill the gap again.
 	 */
-	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- fixture standing in for a verified post.
-	$_POST = array( 'localized' => array( array( 'tag' => 'en', 'full' => 'Donald', 'remove' => '1' ) ) );
-	$ax_ct_removed = axismundi_contacts_localized_names_from_request( $ax_ct_saved_form );
+	$ax_ct_removed = axismundi_contacts_set_localized_name( $ax_ct_saved_form, 'en', array() );
 	ax_ct_assert(
 		$ax_ct_results,
 		'removing a writing removes the name and keeps a tag that still localizes something else',
@@ -1237,23 +1201,37 @@ try {
 			&& 'Don' === (string) ( $ax_ct_removed['localizations']['en']['nicknames/n1/name'] ?? '' )
 	);
 	/*
-	 * Typing components is how components appear, and the layout chosen is the order they are stored
-	 * in -- said to be ordered, because the sequence is one somebody picked rather than one a reader
-	 * should reassemble its own way.
+	 * A name given in parts is stored in parts, in the order they were put in, and said to be ordered
+	 * -- because that sequence is one somebody chose rather than one a reader should work out for
+	 * itself. Nothing writes a written-out form for it: components alone are a whole name, and what it
+	 * reads as is worked out where it is shown.
 	 */
-	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- fixture standing in for a verified post.
-	$_POST = array( 'primary_name' => array( 'full' => 'Kim Jiwoon', 'order' => 'family-given', 'surname' => 'Kim', 'given' => 'Jiwoon' ) );
-	$ax_ct_typed = axismundi_contacts_name_from_request( 'primary_name' );
-	$ax_ct_typed_kinds = array();
-	foreach ( (array) ( $ax_ct_typed['components'] ?? array() ) as $ax_ct_c ) {
-		$ax_ct_typed_kinds[] = (string) $ax_ct_c['kind'];
-	}
+	$ax_ct_typed_id = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array(
+			'@type' => 'Card',
+			'kind'  => 'individual',
+			'name'  => array(
+				'@type'            => 'Name',
+				'isOrdered'        => true,
+				'defaultSeparator' => '',
+				'components'       => array(
+					array( '@type' => 'NameComponent', 'kind' => 'surname', 'value' => "\xea\xb9\x80" ),
+					array( '@type' => 'NameComponent', 'kind' => 'given', 'value' => "\xec\xa7\x80\xec\x9a\xb4" ),
+				),
+			),
+		)
+	);
+	$ax_ct_loose[] = is_wp_error( $ax_ct_typed_id ) ? 0 : (int) $ax_ct_typed_id;
+	$ax_ct_typed   = is_wp_error( $ax_ct_typed_id ) ? array() : ( axismundi_contacts_card_document( (int) $ax_ct_typed_id )['name'] ?? array() );
 	ax_ct_assert(
 		$ax_ct_results,
-		'components appear where somebody typed them, in the layout they chose',
-		array( 'surname', 'given' ) === $ax_ct_typed_kinds && true === ( $ax_ct_typed['isOrdered'] ?? false )
+		'a name given in parts keeps them, in the order chosen, and is not written out on its behalf',
+		array( 'surname', 'given' ) === array_column( (array) ( $ax_ct_typed['components'] ?? array() ), 'kind' )
+			&& true === ( $ax_ct_typed['isOrdered'] ?? false )
+			&& ! isset( $ax_ct_typed['full'] )
+			&& "\xea\xb9\x80\xec\xa7\x80\xec\x9a\xb4" === axismundi_contacts_name_text( (array) $ax_ct_typed )
 	);
-	$_POST = array();
 
 	// -- sharing is two decisions ---------------------------------------------------------------------------------
 
@@ -1661,29 +1639,35 @@ try {
 	);
 
 	/*
-	 * The editor round trip, which is where the separator could be lost. A layout it never offered --
-	 * a hyphen an import brought -- is not flattened to a space because somebody opened the screen and
-	 * saved it, and the compact layout it does offer survives being read back out of the card.
+	 * The separator is a value on the name and travels with it. A compact name -- the parts written
+	 * with nothing between them -- says so with an empty `defaultSeparator`, and a separator an import
+	 * brought that no screen offers as a choice is still just a value, stored and read like any other.
+	 * Nothing normalises it on the way through.
 	 */
-	$_POST             = array( 'ax_ct_name' => array( 'full' => '', 'order' => 'family-given-compact', 'surname' => '김', 'given' => '지운' ) );
-	$ax_ct_editor_name = axismundi_contacts_name_from_request( 'ax_ct_name' );
+	$ax_ct_sep_id = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array(
+			'@type' => 'Card',
+			'kind'  => 'individual',
+			'name'  => array(
+				'@type'            => 'Name',
+				'isOrdered'        => true,
+				'defaultSeparator' => '-',
+				'components'       => array(
+					array( '@type' => 'NameComponent', 'kind' => 'given', 'value' => 'Jiwoon' ),
+					array( '@type' => 'NameComponent', 'kind' => 'surname', 'value' => 'Kim' ),
+				),
+			),
+		)
+	);
+	$ax_ct_loose[] = is_wp_error( $ax_ct_sep_id ) ? 0 : (int) $ax_ct_sep_id;
+	$ax_ct_sep     = is_wp_error( $ax_ct_sep_id ) ? array() : ( axismundi_contacts_card_document( (int) $ax_ct_sep_id )['name'] ?? array() );
 	ax_ct_assert(
 		$ax_ct_results,
-		'the editor states a compact layout as an empty default separator, and reads it back as the same layout',
-		'' === (string) ( $ax_ct_editor_name['defaultSeparator'] ?? 'unset' )
-			&& 'family-given-compact' === axismundi_contacts_name_order( $ax_ct_editor_name )
-			&& '김지운' === axismundi_contacts_assemble_name( $ax_ct_editor_name )
+		'a separator nobody offers as a choice is stored as written and read back the same way',
+		'-' === (string) ( $ax_ct_sep['defaultSeparator'] ?? '' )
+			&& 'Jiwoon-Kim' === axismundi_contacts_name_text( (array) $ax_ct_sep )
 	);
-
-	$_POST      = array( 'ax_ct_name' => array( 'full' => '', 'order' => 'given-family', 'given' => 'Jiwoon', 'surname' => 'Kim' ) );
-	$ax_ct_kept = axismundi_contacts_name_from_request( 'ax_ct_name', array( '@type' => 'Name', 'defaultSeparator' => '-' ) );
-	ax_ct_assert(
-		$ax_ct_results,
-		'a separator the editor cannot show is left where it is rather than flattened to a space',
-		'-' === (string) ( $ax_ct_kept['defaultSeparator'] ?? '' )
-			&& 'Jiwoon-Kim' === axismundi_contacts_assemble_name( $ax_ct_kept )
-	);
-	$_POST = array();
 
 	/*
 	 * A `separator` component is a literal RFC 9553 allows between two parts, and where one appears it

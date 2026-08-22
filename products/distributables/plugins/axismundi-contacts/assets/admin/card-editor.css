@@ -142,3 +142,102 @@
 	font-family: Menlo, Consolas, monospace;
 	font-size: .85em;
 }
+
+/* -- the other languages --------------------------------------------------------------------- */
+
+.ax-ce-localization {
+	margin: 0 0 1em;
+	padding: .75em;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+}
+
+.ax-ce-localization__head {
+	display: flex;
+	gap: .5em;
+	align-items: center;
+	justify-content: space-between;
+	margin: 0 0 .5em;
+}
+
+.ax-ce-localization__head h3 {
+	margin: 0;
+	font-family: Menlo, Consolas, monospace;
+}
+
+.ax-ce-localization__add {
+	display: flex;
+	gap: .5em;
+	align-items: flex-start;
+}
+
+.ax-ce-localization__add .text-field,
+.ax-ce-localization__add .ax-combobox {
+	flex: 1 1 auto;
+}
+
+.ax-ce-localization__add .button {
+	margin-top: 8px;
+}
+
+.ax-ce-preview {
+	max-height: 18em;
+	overflow: auto;
+	font-size: .85em;
+}
+
+/* The list a combobox offers, over whatever is below it. */
+.ax-combobox {
+	position: relative;
+}
+
+.ax-combobox__list {
+	position: absolute;
+	z-index: 10;
+	right: 0;
+	left: 0;
+	max-height: 16em;
+	margin: 0;
+	overflow: auto;
+	list-style: none;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	box-shadow: 0 2px 6px rgba( 0, 0, 0, .12 );
+}
+
+.ax-combobox__option {
+	margin: 0;
+	padding: .4em .75em;
+	font-family: Menlo, Consolas, monospace;
+	font-size: .85em;
+	cursor: pointer;
+}
+
+.ax-combobox__option.is-active,
+.ax-combobox__option:hover {
+	background: #f0f0f1;
+}
+
+.ax-combobox__empty {
+	margin: 0;
+	padding: .4em .75em;
+	color: #787c82;
+}
+
+/*
+ * A question rather than a warning: something is about to be lost and this says what, so the answer
+ * is somebody's rather than the editor's.
+ */
+.ax-ce-blocked {
+	margin: 0 0 1em;
+	padding: .75em;
+	border-left: 4px solid #b3261e;
+	background: #fcf0f0;
+}
+
+.ax-ce-blocked ul {
+	margin: .5em 0;
+	font-family: Menlo, Consolas, monospace;
+	font-size: .85em;
+}

@@ -3097,6 +3097,91 @@ try {
 			&& ! str_contains( $ax_ct_fd_php, 'wp-components' )
 	);
 
+	// -- the other languages, and what removing a part costs -----------------------------------------------------
+
+	/*
+	 * The picker offers paths rather than taking them typed, and offers only what the Card already
+	 * says. A patch naming something the Card does not have is one the server refuses, so a picker that
+	 * allowed it would be handing somebody a save that fails; what the list cannot express is written
+	 * in the JSON box, which is the escape hatch and says so.
+	 */
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_lo_js = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/card-editor.js' );
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_lo_fields = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/fields.js' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a language patches a path chosen from what the card already says, typed into rather than scrolled',
+		str_contains( $ax_ct_lo_js, 'patchablePaths' )
+			&& str_contains( $ax_ct_lo_js, 'NOT_TRANSLATED' )
+			&& str_contains( $ax_ct_lo_fields, 'Combobox: Combobox' )
+			&& ! str_contains( $ax_ct_lo_fields, 'Select: ' )
+	);
+	/*
+	 * And what the picker offers is the same set the server computes. Two answers to "which paths may
+	 * be translated" would drift, and the one that drifted would be the one somebody was looking at.
+	 */
+	$ax_ct_lo_card = array(
+		'@type'   => 'Card',
+		'version' => AXISMUNDI_CONTACTS_JSCONTACT_VERSION,
+		'uid'     => 'urn:uuid:0d4b1e9c-6a2f-4c31-9f77-2b8e5a1c4d60',
+		'kind'    => 'individual',
+		'name'    => array(
+			'@type'      => 'Name',
+			'components' => array( array( '@type' => 'NameComponent', 'kind' => 'given', 'value' => 'Jiwoon' ) ),
+		),
+	);
+	$ax_ct_lo_offer = axismundi_contacts_patchable_paths( $ax_ct_lo_card );
+	ax_ct_assert(
+		$ax_ct_results,
+		'and the paths it offers are values the card holds, never what the document is',
+		in_array( 'name/components/0/value', $ax_ct_lo_offer, true )
+			&& ! in_array( 'uid', $ax_ct_lo_offer, true )
+			&& ! in_array( 'version', $ax_ct_lo_offer, true )
+	);
+	/*
+	 * Removing a part of a name that a language patches into is the one place the editor has to ask.
+	 * Doing it silently would either leave a patch pointing at nothing -- which the server refuses, so
+	 * the next save would fail for a reason nobody could see -- or delete somebody's translation along
+	 * with a part they were not looking at.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'removing a part that a language translates asks first, and never deletes the translation on its own',
+		str_contains( $ax_ct_lo_js, 'patchesUnder' )
+			&& str_contains( $ax_ct_lo_js, 'props.onBlocked( at, affected )' )
+			&& str_contains( $ax_ct_lo_js, 'Remove them and the part' )
+			&& str_contains( $ax_ct_lo_js, 'Keep everything' )
+	);
+	/*
+	 * That the refusal is real, from the server's side: this is the state the editor is protecting
+	 * somebody from reaching by accident.
+	 */
+	$ax_ct_lo_id   = axismundi_contacts_save_card( $ax_ct_book_id, $ax_ct_lo_card );
+	$ax_ct_lo_key  = is_wp_error( $ax_ct_lo_id ) ? 0 : (int) $ax_ct_lo_id;
+	$ax_ct_loose[] = $ax_ct_lo_key;
+	$ax_ct_lo_doc  = axismundi_contacts_card_document( $ax_ct_lo_key );
+	$ax_ct_lo_doc['localizations'] = array( 'ja-Kana' => array( 'name/components/0/value' => "\xe3\x82\xad\xe3\x83\xa0" ) );
+	axismundi_contacts_save_card_for_owner( (int) $ax_ct_owner->get_identity_id(), $ax_ct_lo_doc, $ax_ct_lo_key );
+
+	$ax_ct_lo_without         = axismundi_contacts_card_document( $ax_ct_lo_key );
+	$ax_ct_lo_without['name'] = array( '@type' => 'Name', 'full' => 'Jiwoon' );
+	$ax_ct_lo_refused = axismundi_contacts_rest_put_draft(
+		( function () use ( $ax_ct_lo_key, $ax_ct_lo_without ) {
+			$request = new WP_REST_Request( 'PUT', '/axismundi-contacts/v1/cards/' . $ax_ct_lo_key . '/draft' );
+			$request->set_param( 'id', $ax_ct_lo_key );
+			$request->set_param( 'revision', (int) ( axismundi_contacts_get_card( $ax_ct_lo_key )['revision'] ?? 0 ) );
+			$request->set_param( 'card', $ax_ct_lo_without );
+			return $request;
+		} )()
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'because taking the part away while a language still patches into it is refused outright',
+		is_wp_error( $ax_ct_lo_refused )
+			&& "\xe3\x82\xad\xe3\x83\xa0" === (string) ( axismundi_contacts_card_document( $ax_ct_lo_key )['localizations']['ja-Kana']['name/components/0/value'] ?? '' )
+	);
+
 	ax_ct_assert(
 		$ax_ct_results,
 		'this plugin stores address books and imitates neither the Actor registry nor its profiles',

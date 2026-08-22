@@ -1,10 +1,11 @@
 /**
  * The field primitives the contacts editor is built from.
  *
- * Three of them, and only three: this screen needs a text field, a multi-line one, and a button with
- * a picture on it. A `Select` is deliberately absent -- the path picker that will want one has to
- * decide first whether it is a menu or something you can type into, and a fake select bolted onto a
- * text field would answer that question by accident.
+ * Four of them: a text field, a multi-line one, a button with a picture on it, and a field you type
+ * into that offers what is already there. A `Select` is deliberately absent -- the paths a
+ * localization may patch run deep and there are dozens on a full Card, so the picker that needed one
+ * turned out to want typing rather than scrolling, and a general dropdown nobody uses would be a
+ * component maintained for nothing.
  *
  * The markup is the lab pattern's, not an approximation of it: `text-field > __container > input +
  * label`, with the label floated by `:placeholder-shown` rather than by anything here. That is why
@@ -86,7 +87,7 @@
 			className: props.className,
 			trailing: props.trailing,
 			control: function ( describedBy ) {
-				return el( 'input', {
+				return el( 'input', Object.assign( {
 					id: id,
 					className: 'text-field__input',
 					type: props.type || 'text',
@@ -97,10 +98,11 @@
 					readOnly: props.readOnly,
 					'aria-describedby': describedBy,
 					'aria-invalid': props.error ? 'true' : undefined,
+					onFocus: props.onFocus,
 					onChange: function ( event ) {
 						props.onChange( event.target.value );
 					}
-				} );
+				}, props.inputProps || {} ) );
 			}
 		} );
 	}
@@ -135,6 +137,115 @@
 	}
 
 	/**
+	 * A field you type into that offers what is already there.
+	 *
+	 * Not a `Select`, and deliberately not built out of one. The paths a localization may patch run to
+	 * `addresses/home/components/2/value` and there are dozens of them on a full Card, so a fixed
+	 * dropdown is a list somebody scrolls rather than a question they answer. Typing narrows it.
+	 *
+	 * What it will not do is accept something that is not on the list. A localization patches a value
+	 * the Card already has, and a picker that let somebody invent a path would be offering them a
+	 * patch the server is about to refuse. Anything the list cannot express belongs in the JSON box,
+	 * which is the escape hatch and says so.
+	 */
+	function Combobox( props ) {
+		var id = useFieldId( props.id );
+		var [ query, setQuery ] = wp.element.useState( '' );
+		var [ open, setOpen ] = wp.element.useState( false );
+		var [ active, setActive ] = wp.element.useState( 0 );
+		var options = ( props.options || [] ).filter( function ( option ) {
+			return ! query || -1 !== option.toLowerCase().indexOf( query.toLowerCase() );
+		} );
+		var listId = id + '-list';
+
+		function choose( option ) {
+			if ( ! option ) {
+				return;
+			}
+			props.onChange( option );
+			setQuery( '' );
+			setOpen( false );
+		}
+
+		return el(
+			'div',
+			{ className: 'ax-combobox' + ( props.className ? ' ' + props.className : '' ) },
+			el( TextField, {
+				id: id,
+				label: props.label,
+				value: open ? query : ( props.value || '' ),
+				supporting: props.supporting,
+				error: props.error,
+				onChange: function ( value ) {
+					setQuery( value );
+					setActive( 0 );
+					setOpen( true );
+				},
+				onFocus: function () {
+					setOpen( true );
+				},
+				inputProps: {
+					role: 'combobox',
+					'aria-expanded': open ? 'true' : 'false',
+					'aria-controls': listId,
+					'aria-autocomplete': 'list',
+					onKeyDown: function ( event ) {
+						if ( 'ArrowDown' === event.key || 'ArrowUp' === event.key ) {
+							event.preventDefault();
+							setOpen( true );
+							setActive( function ( at ) {
+								var next = 'ArrowDown' === event.key ? at + 1 : at - 1;
+								return Math.max( 0, Math.min( options.length - 1, next ) );
+							} );
+							return;
+						}
+						if ( 'Enter' === event.key && open ) {
+							event.preventDefault();
+							choose( options[ active ] );
+							return;
+						}
+						if ( 'Escape' === event.key ) {
+							setOpen( false );
+						}
+					},
+					onBlur: function () {
+						// Late enough for a click on an option to land first.
+						window.setTimeout( function () {
+							setOpen( false );
+							setQuery( '' );
+						}, 150 );
+					}
+				}
+			} ),
+			open
+				? el(
+					'ul',
+					{ className: 'ax-combobox__list', id: listId, role: 'listbox' },
+					options.length
+						? options.slice( 0, 40 ).map( function ( option, index ) {
+							return el(
+								'li',
+								{
+									key: option,
+									role: 'option',
+									'aria-selected': index === active ? 'true' : 'false',
+									className: 'ax-combobox__option' + ( index === active ? ' is-active' : '' ),
+									onMouseDown: function ( event ) {
+										// Before blur, so the choice survives the field losing focus.
+										event.preventDefault();
+										choose( option );
+									}
+								},
+								option
+							);
+						} )
+						: el( 'li', { className: 'ax-combobox__empty' }, props.emptyLabel || __( 'Nothing matches', 'axismundi-contacts' ) )
+				)
+				: null
+		);
+	}
+
+	/**
 	 * A button with a picture on it.
 	 *
 	 * The picture comes from the icon registry, handed over as markup rather than drawn here, so that
@@ -158,6 +269,7 @@
 	window.axismundiContactsFields = {
 		TextField: TextField,
 		Textarea: Textarea,
+		Combobox: Combobox,
 		IconButton: IconButton
 	};
 }( window.wp ) );

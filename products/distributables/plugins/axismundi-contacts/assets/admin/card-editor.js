@@ -29,6 +29,7 @@
 	var TextField = fields.TextField;
 	var Textarea = fields.Textarea;
 	var IconButton = fields.IconButton;
+	var Combobox = fields.Combobox;
 	var useState = wp.element.useState;
 	var useCallback = wp.element.useCallback;
 	var apiFetch = wp.apiFetch;
@@ -187,6 +188,7 @@
 		var name = props.name || {};
 		var components = name.components || [];
 		var dragging = props.dragging;
+		var blocked = props.blocked;
 
 		function setName( next ) {
 			// A name with nothing in it is not a name, so the property goes rather than sitting empty.
@@ -232,12 +234,25 @@
 						key: index,
 						index: index,
 						part: part || {},
+						localizations: props.localizations,
+						onBlocked: props.onBlocked,
 						onChange: function ( at, next ) {
 							var list = components.slice();
 							list[ at ] = next;
 							setComponents( list );
 						},
 						onRemove: function ( at ) {
+							/*
+							 * A translation may patch into this part. Removing it would leave those patches
+							 * pointing at nothing, which the server refuses -- so the ones affected are
+							 * named and somebody decides, rather than being deleted quietly along with a
+							 * part they were not looking at.
+							 */
+							var affected = patchesUnder( props.localizations, 'name/components/' + at );
+							if ( affected.length ) {
+								props.onBlocked( at, affected );
+								return;
+							}
 							setComponents( components.filter( function ( ignored, i ) {
 								return i !== at;
 							} ) );
@@ -256,6 +271,45 @@
 					} );
 				} )
 			),
+			blocked
+				? el(
+					'div',
+					{ className: 'ax-ce-blocked', role: 'alert' },
+					el(
+						'p',
+						null,
+						__( 'Other languages say something about this part of the name. Removing it would leave them pointing at nothing.', 'axismundi-contacts' )
+					),
+					el(
+						'ul',
+						null,
+						blocked.affected.map( function ( each ) {
+							return el( 'li', { key: each.tag + each.path }, each.tag + ' — ' + each.path );
+						} )
+					),
+					el(
+						'p',
+						null,
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									props.onResolve( blocked );
+								}
+							},
+							__( 'Remove them and the part', 'axismundi-contacts' )
+						),
+						' ',
+						el(
+							'button',
+							{ type: 'button', className: 'button', onClick: props.onCancel },
+							__( 'Keep everything', 'axismundi-contacts' )
+						)
+					)
+				)
+				: null,
 			el(
 				'p',
 				null,
@@ -394,6 +448,267 @@
 	}
 
 	/**
+	 * What a Card is when read in one language.
+	 *
+	 * The same walk the server does, for showing rather than for storing: a patch names a path and a
+	 * value to put there, and `null` takes one away. Nothing here is written back -- this answers
+	 * "what would somebody reading in Japanese see", which is a question the editor has to be able to
+	 * show before somebody saves.
+	 */
+	function applyPatch( card, patch ) {
+		var out = JSON.parse( JSON.stringify( card || {} ) );
+		Object.keys( patch || {} ).forEach( function ( path ) {
+			var segments = path.split( '/' );
+			var last = segments.pop();
+			var at = out;
+			for ( var i = 0; i < segments.length; i += 1 ) {
+				var step = segments[ i ];
+				if ( ! at || 'object' !== typeof at[ step ] ) {
+					return;
+				}
+				at = at[ step ];
+			}
+			if ( ! at || 'object' !== typeof at ) {
+				return;
+			}
+			if ( null === patch[ path ] ) {
+				if ( Array.isArray( at ) ) {
+					at.splice( Number( last ), 1 );
+				} else {
+					delete at[ last ];
+				}
+				return;
+			}
+			at[ last ] = patch[ path ];
+		} );
+		return out;
+	}
+
+	/**
+	 * The paths a localization may be offered, which is narrower than what is valid.
+	 *
+	 * Only values the Card already has, and nothing that is about the document rather than about the
+	 * person. Setting a property the base Card does not carry is something the standard advises a
+	 * writer against, so the picker does not offer it -- while a document that arrived with one is
+	 * still stored, because that is a rule for writers and not a reason to refuse.
+	 */
+	var NOT_TRANSLATED = [ '@type', 'version', 'uid', 'created', 'updated', 'prodId', 'localizations' ];
+
+	function patchablePaths( value, prefix ) {
+		var paths = [];
+		Object.keys( value || {} ).forEach( function ( key ) {
+			var path = prefix ? prefix + '/' + key : key;
+			if ( ! prefix && -1 !== NOT_TRANSLATED.indexOf( key ) ) {
+				return;
+			}
+			paths.push( path );
+			if ( value[ key ] && 'object' === typeof value[ key ] ) {
+				paths = paths.concat( patchablePaths( value[ key ], path ) );
+			}
+		} );
+		return paths;
+	}
+
+	/** Every localization path that goes through one place in the Card. */
+	function patchesUnder( localizations, path ) {
+		var found = [];
+		Object.keys( localizations || {} ).forEach( function ( tag ) {
+			Object.keys( localizations[ tag ] || {} ).forEach( function ( patch ) {
+				if ( patch === path || 0 === patch.indexOf( path + '/' ) ) {
+					found.push( { tag: tag, path: patch } );
+				}
+			} );
+		} );
+		return found;
+	}
+
+	/**
+	 * One language's patch, and what the Card reads as with it applied.
+	 *
+	 * The paths are offered from the base Card rather than typed, because a patch that names something
+	 * the Card does not have is one the server refuses -- so a picker that allowed it would be handing
+	 * somebody a save that fails. Anything the list cannot express is written in the JSON below, which
+	 * is why that box is here rather than only at the bottom of the screen.
+	 */
+	function Localization( props ) {
+		var patch = props.patch || {};
+		var paths = props.paths;
+		var [ adding, setAdding ] = useState( '' );
+		var applied = applyPatch( props.card, patch );
+
+		function setPatch( next ) {
+			props.onChange( next );
+		}
+
+		return el(
+			'div',
+			{ className: 'ax-ce-localization' },
+			el(
+				'div',
+				{ className: 'ax-ce-localization__head' },
+				el( 'h3', null, props.tag ),
+				el( IconButton, {
+					icon: 'delete',
+					variant: 'danger',
+					label: sprintf(
+						/* translators: %s: a language tag. */
+						__( 'Remove everything written for %s', 'axismundi-contacts' ),
+						props.tag
+					),
+					onClick: props.onRemove
+				} )
+			),
+			Object.keys( patch ).map( function ( path ) {
+				var value = patch[ path ];
+				var isText = 'string' === typeof value;
+				return el(
+					'div',
+					{ key: path, className: 'ax-ce-entry' },
+					isText
+						? el( TextField, {
+							label: path,
+							className: 'ax-ce-entry__value',
+							value: value,
+							onChange: function ( next ) {
+								var updated = Object.assign( {}, patch );
+								updated[ path ] = next;
+								setPatch( updated );
+							}
+						} )
+						: el( TextField, {
+							label: path,
+							className: 'ax-ce-entry__value',
+							value: JSON.stringify( value ),
+							readOnly: true,
+							// A patch may set a whole object; this screen edits the strings and says so.
+							supporting: __( 'Written below, in the JSON, because it is not a single value.', 'axismundi-contacts' ),
+							onChange: function () {}
+						} ),
+					el( IconButton, {
+						icon: 'delete',
+						variant: 'danger',
+						label: sprintf(
+							/* translators: %s: a path inside the card. */
+							__( 'Stop translating %s', 'axismundi-contacts' ),
+							path
+						),
+						onClick: function () {
+							var updated = Object.assign( {}, patch );
+							delete updated[ path ];
+							setPatch( updated );
+						}
+					} )
+				);
+			} ),
+			el(
+				'div',
+				{ className: 'ax-ce-localization__add' },
+				el( Combobox, {
+					label: __( 'Translate something else', 'axismundi-contacts' ),
+					value: adding,
+					options: paths.filter( function ( path ) {
+						return ! Object.prototype.hasOwnProperty.call( patch, path );
+					} ),
+					supporting: __( 'Only what the card already says. Anything else goes in the JSON below.', 'axismundi-contacts' ),
+					onChange: function ( path ) {
+						var updated = Object.assign( {}, patch );
+						updated[ path ] = '';
+						setAdding( '' );
+						setPatch( updated );
+					}
+				} )
+			),
+			el(
+				'details',
+				{ className: 'ax-ce-localization__raw' },
+				el( 'summary', null, __( 'What this language reads as', 'axismundi-contacts' ) ),
+				el(
+					'pre',
+					{ className: 'ax-ce-preview' },
+					JSON.stringify( applied, null, 2 )
+				)
+			)
+		);
+	}
+
+	/**
+	 * Every language this Card is written in.
+	 *
+	 * At the bottom of the screen because that is what it is: a set of changes applied over everything
+	 * above it. It is not part of the name, however much of it is usually about one -- a localization
+	 * can patch a title, an address component or a note just as well.
+	 */
+	function Localizations( props ) {
+		var localizations = props.card.localizations || {};
+		var [ tag, setTag ] = useState( '' );
+		var paths = patchablePaths( props.card, '' );
+
+		function setLocalizations( next ) {
+			props.onChange( Object.keys( next ).length ? next : undefined );
+		}
+
+		return el(
+			'section',
+			{ className: 'ax-ce-section' },
+			el( 'h2', null, __( 'Other languages', 'axismundi-contacts' ) ),
+			el(
+				'p',
+				{ className: 'description' },
+				__( 'Each one says what to put where when the card is read in that language. Everything above is what it says otherwise.', 'axismundi-contacts' )
+			),
+			Object.keys( localizations ).map( function ( each ) {
+				return el( Localization, {
+					key: each,
+					tag: each,
+					patch: localizations[ each ],
+					card: props.card,
+					paths: paths,
+					onChange: function ( next ) {
+						var updated = Object.assign( {}, localizations );
+						if ( next && Object.keys( next ).length ) {
+							updated[ each ] = next;
+						} else {
+							// A language with nothing written for it is a language nobody chose.
+							delete updated[ each ];
+						}
+						setLocalizations( updated );
+					},
+					onRemove: function () {
+						var updated = Object.assign( {}, localizations );
+						delete updated[ each ];
+						setLocalizations( updated );
+					}
+				} );
+			} ),
+			el(
+				'div',
+				{ className: 'ax-ce-localization__add' },
+				el( TextField, {
+					label: __( 'Add a language', 'axismundi-contacts' ),
+					value: tag,
+					supporting: __( 'A language tag, like ko-KR or ja-Kana.', 'axismundi-contacts' ),
+					onChange: setTag
+				} ),
+				el(
+					'button',
+					{
+						type: 'button',
+						className: 'button',
+						disabled: ! tag.trim() || Object.prototype.hasOwnProperty.call( localizations, tag.trim() ),
+						onClick: function () {
+							var updated = Object.assign( {}, localizations );
+							updated[ tag.trim() ] = {};
+							setTag( '' );
+							setLocalizations( updated );
+						}
+					},
+					__( 'Add', 'axismundi-contacts' )
+				)
+			)
+		);
+	}
+
+	/**
 	 * The ledger itself.
 	 *
 	 * Everything the fields above do not show is here, and stays here: this reads and writes the same
@@ -490,6 +805,7 @@
 		var [ json, setJson ] = useState( JSON.stringify( config.card, null, 2 ) );
 		var [ jsonError, setJsonError ] = useState( '' );
 		var [ dragging, setDragging ] = useState( null );
+		var [ blocked, setBlocked ] = useState( null );
 		var [ status, setStatus ] = useState( '' );
 		var [ saving, setSaving ] = useState( false );
 
@@ -568,6 +884,50 @@
 						name: card.name,
 						dragging: dragging,
 						onDragStart: setDragging,
+						localizations: card.localizations,
+						blocked: blocked,
+						onBlocked: function ( at, affected ) {
+							setBlocked( { at: at, affected: affected } );
+						},
+						onCancel: function () {
+							setBlocked( null );
+						},
+						onResolve: function ( question ) {
+							/*
+							 * Both at once, because either alone is a Card the server refuses: the part
+							 * without its translations is what somebody asked for, and the translations
+							 * without their part is a patch pointing at nothing.
+							 */
+							var next = Object.assign( {}, card );
+							var parts = ( ( next.name || {} ).components || [] ).filter( function ( ignored, i ) {
+								return i !== question.at;
+							} );
+							next.name = Object.assign( {}, next.name );
+							if ( parts.length ) {
+								next.name.components = parts;
+							} else {
+								delete next.name.components;
+								delete next.name.isOrdered;
+								delete next.name.defaultSeparator;
+							}
+							var localizations = Object.assign( {}, next.localizations );
+							question.affected.forEach( function ( each ) {
+								var patch = Object.assign( {}, localizations[ each.tag ] );
+								delete patch[ each.path ];
+								if ( Object.keys( patch ).length ) {
+									localizations[ each.tag ] = patch;
+								} else {
+									delete localizations[ each.tag ];
+								}
+							} );
+							if ( Object.keys( localizations ).length ) {
+								next.localizations = localizations;
+							} else {
+								delete next.localizations;
+							}
+							setBlocked( null );
+							update( next );
+						},
 						onChange: function ( value ) {
 							setProperty( 'name', value );
 						}
@@ -581,6 +941,12 @@
 								setProperty( field.key, value );
 							}
 						} );
+					} ),
+					el( Localizations, {
+						card: card,
+						onChange: function ( value ) {
+							setProperty( 'localizations', value );
+						}
 					} ),
 					config.isProfile
 						? el( PublishedFields, { card: card, published: published, onChange: setPublished } )

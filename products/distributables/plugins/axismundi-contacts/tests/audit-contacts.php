@@ -2485,6 +2485,52 @@ try {
 		'setting a value the card does not have yet is allowed, because that is advice to a writer rather than a rule',
 		200 === $ax_ct_pa_send( $ax_ct_pa_with( array( 'name/full' => 'Jiwoon Kim' ) ) )->get_status()
 	);
+	/*
+	 * And what the patch leaves behind has to be a Card. A path can be perfectly well formed and still
+	 * produce a document no reader can use, so the answer is asked of the result rather than of the
+	 * change -- these three are well formed and none of them may be stored.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a patch that would leave a value the wrong shape is refused, however well formed its path is',
+		400 === $ax_ct_pa_send( $ax_ct_pa_with( array( 'name/isOrdered' => 'yes' ) ) )->get_status()
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'and one that would empty a position in a list, leaving a hole where a part of a name was',
+		400 === $ax_ct_pa_send( $ax_ct_pa_with( array( 'name/components/0' => null ) ) )->get_status()
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'and one that would take away something an entry of that kind has to have',
+		400 === $ax_ct_pa_send( $ax_ct_pa_with( array( 'media/icon/kind' => null ) ) )->get_status()
+			// A label may go: what may be removed is decided by what is left, not by the shape of the patch.
+			&& 200 === $ax_ct_pa_send( $ax_ct_pa_with( array( 'emails/e1/label' => null ) ) )->get_status()
+	);
+	/*
+	 * A property nobody here has heard of is not held to rules nobody has written. Refusing what is
+	 * merely unrecognised is how an editor becomes the reason somebody's data cannot be stored.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a value in a property this code does not know is left alone, whatever shape it is',
+		200 === $ax_ct_pa_send( $ax_ct_pa_with( array( 'example.com:favouriteColour/value' => array( 1, 2 ) ) ) )->get_status()
+	);
+	/*
+	 * And the Card itself is held to the same rules. A document the editor may not produce by patching
+	 * is not one it should be able to produce by typing either.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'the card itself answers to the same rules as anything a patch would leave behind',
+		400 === $ax_ct_pa_send(
+			array_merge( $ax_ct_pa_card, array( 'name' => array( '@type' => 'Name', 'full' => 'Kim', 'isOrdered' => 'yes' ) ) )
+		)->get_status()
+			&& 400 === $ax_ct_pa_send(
+				array_merge( $ax_ct_pa_card, array( 'emails' => array( 'e1' => array( 'label' => 'Home' ) ) ) )
+			)->get_status()
+	);
+
 	$ax_ct_pa_offer = axismundi_contacts_patchable_paths( $ax_ct_pa_card );
 	ax_ct_assert(
 		$ax_ct_results,

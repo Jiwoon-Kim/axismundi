@@ -130,9 +130,11 @@ function axismundi_contacts_validate_card( array $card ) {
  * valid 2.0 Card. What 2.0 changed is that `uid` became optional, which is what lets an import
  * without one be stored without inventing an identifier for somebody.
  *
- * So a document that arrives at 1.0, or with no version at all, is stored as what it now is. Where
- * the exact bytes somebody sent matter, they belong in an import snapshot beside the record rather
- * than in the record -- a ledger that is edited is not a copy of what arrived.
+ * So a document that arrives at 1.0, or with no version at all, is stored as what it now is. Nothing
+ * keeps the bytes it arrived as: an import parses, merges and is done with, and what is worth
+ * remembering about where a value came from is the provenance row, not the file. If a two-way sync
+ * connector ever needs a baseline to compare against, that is its own state for as long as it is
+ * connected -- not something the ledger carries for everybody else's benefit.
  */
 const AXISMUNDI_CONTACTS_JSCONTACT_VERSION = '2.0';
 

@@ -256,11 +256,11 @@ function axismundi_contacts_validate_draft( array $card ) {
 		return new WP_Error( 'ax_contacts_draft_type', __( 'A card says what it is: "@type": "Card".', 'axismundi-contacts' ), array( 'status' => 400 ) );
 	}
 	/*
-	 * `version` is deliberately not required. It says which revision of JSContact a document is
-	 * serialised as, which is a statement about a copy leaving here rather than a fact about the
-	 * contact -- so the public route states it on the way out and the ledger does not have to carry
-	 * one. Requiring it would mean the editor could not save a Card this site made itself. A Card
-	 * that arrived with one keeps it, like every other property.
+	 * `version` is not required of a caller, and not because the ledger does without one: the store
+	 * states it on save, for everything, so that this site holds one revision rather than a mixture
+	 * every reader and every export has to handle. Requiring it here would only mean the editor could
+	 * not send back a Card it had been given before that was true. What is checked is that a caller
+	 * who does send one sends a version rather than a number.
 	 */
 	if ( isset( $card['version'] ) && ( ! is_string( $card['version'] ) || '' === trim( $card['version'] ) ) ) {
 		return new WP_Error( 'ax_contacts_draft_version', __( 'The version of a card is the revision it is written in.', 'axismundi-contacts' ), array( 'status' => 400 ) );
@@ -315,6 +315,15 @@ function axismundi_contacts_validate_draft( array $card ) {
 		if ( is_wp_error( $patched ) ) {
 			return $patched;
 		}
+	}
+	/*
+	 * And the Card says each thing it knows about in the shape that thing has. Held to the same rules
+	 * as a localization's result, because a document the editor may not produce by patching is not one
+	 * it should be able to produce by typing either.
+	 */
+	$values = axismundi_contacts_validate_card_values( $card );
+	if ( is_wp_error( $values ) ) {
+		return $values;
 	}
 	return axismundi_contacts_validate_card( $card );
 }

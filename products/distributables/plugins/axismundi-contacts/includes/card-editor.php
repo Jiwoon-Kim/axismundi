@@ -67,7 +67,8 @@ function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
 	wp_enqueue_script(
 		'axismundi-contacts-fields',
 		plugins_url( 'assets/admin/fields.js', $plugin ),
-		array( 'wp-element' ),
+		// It draws one string of its own, so it needs the thing that translates one.
+		array( 'wp-element', 'wp-i18n' ),
 		AXISMUNDI_CONTACTS_VERSION . '-' . (string) filemtime( $fields_js ),
 		true
 	);
@@ -80,6 +81,7 @@ function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
 		AXISMUNDI_CONTACTS_VERSION . '-' . (string) filemtime( $script ),
 		true
 	);
+	wp_set_script_translations( 'axismundi-contacts-fields', 'axismundi-contacts' );
 	wp_set_script_translations( 'axismundi-contacts-card-editor', 'axismundi-contacts' );
 
 	/*

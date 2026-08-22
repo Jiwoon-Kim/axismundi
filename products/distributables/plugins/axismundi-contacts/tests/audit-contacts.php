@@ -4214,6 +4214,21 @@ try {
 			&& str_contains( $ax_ct_cb_editor, 'props.row.occurrence > 0' )
 	);
 
+	/*
+	 * A list says something when nothing in it matches, and saying it needs the thing that translates
+	 * it. That string is drawn on exactly one render -- the one where somebody has typed a tag the
+	 * list does not have, which is how `ko-Hani` is typed -- so a missing function took the editor
+	 * down at the moment it was most in use. The dependency is declared, and the file does not fall
+	 * over when it is not there.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'the fields can say that nothing matches, which is the one render nobody had reached',
+		str_contains( $ax_ct_cb_js, 'var __ = wp.i18n && wp.i18n.__ ? wp.i18n.__ : function ( text ) {' )
+			&& str_contains( $ax_ct_lg_php, "array( 'wp-element', 'wp-i18n' )," )
+			&& str_contains( $ax_ct_lg_php, "wp_set_script_translations( 'axismundi-contacts-fields'" )
+	);
+
 	ax_ct_assert(
 		$ax_ct_results,
 		'this plugin stores address books and imitates neither the Actor registry nor its profiles',

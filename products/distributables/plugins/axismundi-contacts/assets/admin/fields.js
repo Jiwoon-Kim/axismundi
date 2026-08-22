@@ -25,6 +25,14 @@
 	var el = wp.element.createElement;
 	var Fragment = wp.element.Fragment;
 	var useRef = wp.element.useRef;
+	/*
+	 * Translation, guarded. This file draws one string of its own -- what a list says when nothing in
+	 * it matches -- and it is drawn on the one render where somebody has typed something the list
+	 * does not have, which is exactly when a missing function takes the whole editor down with it.
+	 */
+	var __ = wp.i18n && wp.i18n.__ ? wp.i18n.__ : function ( text ) {
+		return text;
+	};
 	var counter = 0;
 
 	/** An id of this field's own, stable for as long as it is on screen. */

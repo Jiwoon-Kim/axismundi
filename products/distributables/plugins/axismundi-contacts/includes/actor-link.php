@@ -28,8 +28,14 @@ defined( 'ABSPATH' ) || exit;
  *
  * Fixed, because that row is the one seeded and refreshed from the Actor the book belongs to, and a
  * generated key would make it a different row every time it was written.
+ *
+ * Opaque, because an entry key is an address and not a label. `onlineServices/x1` is what a
+ * published pointer names and what a provenance row is written against, and a key spelling out the
+ * service would tie both to a word somebody is free to change: rename the service on screen and the
+ * consent to publish it, along with the record of where the value came from, would be pointing at a
+ * row that no longer exists. What the entry is called is `service`, which is a value and editable.
  */
-const AXISMUNDI_CONTACTS_HOME_SERVICE_KEY = 'axismundi';
+const AXISMUNDI_CONTACTS_HOME_SERVICE_KEY = 'x1';
 
 /** The kind of source a linked Actor is, with the Actor URI carried as its reference. */
 const AXISMUNDI_CONTACTS_SOURCE_ACTOR = 'linked-actor';
@@ -58,11 +64,11 @@ function axismundi_contacts_actor_handle( Axismundi_Actor $actor ) : string {
  */
 function axismundi_contacts_free_service_key( array $document ) : string {
 	$taken = (array) ( $document['onlineServices'] ?? array() );
-	$index = count( $taken ) + 1;
-	while ( isset( $taken[ 'service-' . $index ] ) ) {
+	$index = 1;
+	while ( isset( $taken[ 'x' . $index ] ) ) {
 		++$index;
 	}
-	return 'service-' . $index;
+	return 'x' . $index;
 }
 
 /**

@@ -34,7 +34,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CONTACTS_DB_VERSION        = '8';
+const AXISMUNDI_CONTACTS_DB_VERSION        = '9';
 const AXISMUNDI_CONTACTS_DB_VERSION_OPTION = 'ax_contacts_db_version';
 
 /**
@@ -329,6 +329,8 @@ function axismundi_contacts_install_schema() : bool {
 	 * after the tables exist, because it reads provenance to tell ours from somebody else's.
 	 */
 	axismundi_contacts_state_jscontact_version();
+	// And the one entry key that was ever spelled out is moved, with everything that addresses it.
+	axismundi_contacts_migrate_home_service_key();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.
 	$card_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$cards}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.
@@ -355,6 +357,98 @@ function axismundi_contacts_install_schema() : bool {
 		update_option( AXISMUNDI_CONTACTS_DB_VERSION_OPTION, AXISMUNDI_CONTACTS_DB_VERSION, false );
 	}
 	return $valid;
+}
+
+/**
+ * Move the home account from a key that spelled itself out to one that does not.
+ *
+ * An entry key is an address. `onlineServices/axismundi` is what a published pointer names and what
+ * a provenance row is written against, so a key that reads as a label ties both to a word somebody
+ * is free to change -- and what the entry is called belongs in `service`, which is a value.
+ *
+ * Three things say that address and all three move together or none of them do: the Card itself,
+ * the pointers its owner selected for publication, and the provenance row saying the value came from
+ * an Actor. A Card renamed without its pointer would quietly unpublish an account somebody chose to
+ * publish; a Card renamed without its provenance row would turn a seeded value into an authored one
+ * and never refresh again. Hence one transaction per Card.
+ *
+ * Written against the data and safe to run twice. A Card already using the new key has nothing to
+ * move; a Card where the new key is taken by something else keeps the old one, because renaming onto
+ * an occupied address would merge two accounts into one.
+ *
+ * @return void
+ */
+function axismundi_contacts_migrate_home_service_key() : void {
+	global $wpdb;
+	$cards = axismundi_contacts_cards_table();
+	$from  = 'axismundi';
+	$to    = AXISMUNDI_CONTACTS_HOME_SERVICE_KEY;
+	if ( $from === $to ) {
+		return;
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
+	$rows = (array) $wpdb->get_results( "SELECT id, owner_actor_id, card_json FROM {$cards} WHERE card_json LIKE '%\"onlineServices\"%'", ARRAY_A );
+	foreach ( $rows as $row ) {
+		$document = json_decode( (string) ( $row['card_json'] ?? '' ), true );
+		if ( ! is_array( $document ) ) {
+			continue;
+		}
+		$services = (array) ( $document['onlineServices'] ?? array() );
+		if ( ! isset( $services[ $from ] ) || isset( $services[ $to ] ) ) {
+			continue;
+		}
+		// Rebuilt rather than reassigned, so the entry keeps the position it had in the document.
+		$moved = array();
+		foreach ( $services as $key => $entry ) {
+			$moved[ $from === (string) $key ? $to : (string) $key ] = $entry;
+		}
+		$document['onlineServices'] = $moved;
+		$card_id                    = (int) $row['id'];
+		$owner                      = (int) $row['owner_actor_id'];
+
+		$wpdb->query( 'START TRANSACTION' );
+		$saved = axismundi_contacts_save_card_for_owner( $owner, $document, $card_id );
+		if ( is_wp_error( $saved ) ) {
+			$wpdb->query( 'ROLLBACK' );
+			continue;
+		}
+		/*
+		 * Anything already written against the new address is stale by definition: this Card has no
+		 * entry there -- a Card that did was left alone above -- so the row records where a value came
+		 * from that nothing on the Card holds any more. It goes, inside the same transaction, because
+		 * the alternative is the rename failing on a unique key and leaving the Card renamed with its
+		 * provenance behind.
+		 */
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
+		$wpdb->delete(
+			axismundi_contacts_provenance_table(),
+			array( 'card_id' => $card_id, 'pointer' => 'onlineServices/' . $to ),
+			array( '%d', '%s' )
+		);
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
+		$wpdb->update(
+			axismundi_contacts_provenance_table(),
+			array( 'pointer' => 'onlineServices/' . $to ),
+			array( 'card_id' => $card_id, 'pointer' => 'onlineServices/' . $from ),
+			array( '%s' ),
+			array( '%d', '%s' )
+		);
+		$pointers = axismundi_contacts_published_pointers( $owner );
+		if ( in_array( 'onlineServices/' . $from, $pointers, true ) ) {
+			$pointers = array_map(
+				static function ( string $pointer ) use ( $from, $to ) : string {
+					return 'onlineServices/' . $from === $pointer ? 'onlineServices/' . $to : $pointer;
+				},
+				$pointers
+			);
+			$published = axismundi_contacts_set_published_pointers( $owner, $pointers );
+			if ( is_wp_error( $published ) ) {
+				$wpdb->query( 'ROLLBACK' );
+				continue;
+			}
+		}
+		$wpdb->query( 'COMMIT' );
+	}
 }
 
 /**

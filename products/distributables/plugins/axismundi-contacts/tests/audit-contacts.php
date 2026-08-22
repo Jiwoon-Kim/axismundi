@@ -3371,6 +3371,117 @@ try {
 			&& str_contains( $ax_ct_sep_js, 'sortableKinds( components )' )
 	);
 
+	// -- an account is a service, a name there, and an address --------------------------------------------------
+
+	/*
+	 * An entry key is an address, not a label. `onlineServices/x1` is what a published pointer names
+	 * and what a provenance row is written against, so a key spelling out the service would tie both
+	 * to a word somebody is free to change: rename the service and the consent to publish it, along
+	 * with the record of where the value came from, point at a row that no longer exists.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'the key an account is stored under says nothing, because it is an address and not a label',
+		'x1' === AXISMUNDI_CONTACTS_HOME_SERVICE_KEY
+			&& 'x1' === axismundi_contacts_free_service_key( array() )
+			&& 'x2' === axismundi_contacts_free_service_key( array( 'onlineServices' => array( 'x1' => array() ) ) )
+	);
+	/*
+	 * Moving the one key that did spell itself out moves everything that addresses it. A Card renamed
+	 * without its published pointer would quietly unpublish an account somebody chose to publish; a
+	 * Card renamed without its provenance row would turn a seeded value into an authored one that
+	 * never refreshes again. All three or none.
+	 */
+	$ax_ct_mv_actor = ax_ct_actor( $ax_ct_users );
+	$ax_ct_mv_sid   = (int) $ax_ct_mv_actor->get_identity_id();
+	$ax_ct_mv_made  = axismundi_contacts_create_profile_card( $ax_ct_mv_sid );
+	$ax_ct_mv_card  = is_wp_error( $ax_ct_mv_made ) ? 0 : (int) $ax_ct_mv_made;
+	$ax_ct_loose[]  = $ax_ct_mv_card;
+	$ax_ct_mv_doc   = axismundi_contacts_card_document( $ax_ct_mv_card );
+	// Put it back the way it was written before the key was opaque.
+	$ax_ct_mv_doc['onlineServices'] = array(
+		'axismundi' => array( 'service' => 'Axismundi', 'user' => '@someone@localhost', 'uri' => $ax_ct_mv_actor->get_uri(), 'pref' => 1 ),
+		'x2'        => array( 'service' => 'Mastodon', 'user' => '@someone@mastodon.test', 'uri' => 'https://mastodon.test/@someone', 'pref' => 2 ),
+	);
+	axismundi_contacts_save_card_for_owner( $ax_ct_mv_sid, $ax_ct_mv_doc, $ax_ct_mv_card );
+	axismundi_contacts_set_provenance( $ax_ct_mv_card, 'onlineServices/axismundi', AXISMUNDI_CONTACTS_SOURCE_ACTOR, $ax_ct_mv_actor->get_uri() );
+	axismundi_contacts_set_published_pointers( $ax_ct_mv_sid, array( 'name', 'onlineServices/axismundi' ) );
+
+	axismundi_contacts_migrate_home_service_key();
+
+	$ax_ct_mv_after = axismundi_contacts_card_document( $ax_ct_mv_card );
+	$ax_ct_mv_prov  = axismundi_contacts_card_provenance( $ax_ct_mv_card );
+	$ax_ct_mv_pub   = axismundi_contacts_published_pointers( $ax_ct_mv_sid );
+	ax_ct_assert(
+		$ax_ct_results,
+		'moving an account to an opaque key takes its provenance and its consent to publish with it',
+		array( 'x1', 'x2' ) === array_keys( (array) $ax_ct_mv_after['onlineServices'] )
+			// The account itself is untouched: only where it is addressed changed.
+			&& 'Axismundi' === (string) ( $ax_ct_mv_after['onlineServices']['x1']['service'] ?? '' )
+			&& 'Mastodon' === (string) ( $ax_ct_mv_after['onlineServices']['x2']['service'] ?? '' )
+			&& isset( $ax_ct_mv_prov['onlineServices/x1'] )
+			&& ! isset( $ax_ct_mv_prov['onlineServices/axismundi'] )
+			&& in_array( 'onlineServices/x1', $ax_ct_mv_pub, true )
+			&& ! in_array( 'onlineServices/axismundi', $ax_ct_mv_pub, true )
+	);
+	/*
+	 * And it is safe to run twice, and refuses to run onto an address something else already has --
+	 * renaming onto an occupied key would merge two accounts into one.
+	 */
+	$ax_ct_mv_taken = axismundi_contacts_card_document( $ax_ct_mv_card );
+	$ax_ct_mv_taken['onlineServices'] = array(
+		'axismundi' => array( 'service' => 'Axismundi', 'uri' => $ax_ct_mv_actor->get_uri() ),
+		'x1'        => array( 'service' => 'Mastodon', 'uri' => 'https://mastodon.test/@someone' ),
+	);
+	axismundi_contacts_save_card_for_owner( $ax_ct_mv_sid, $ax_ct_mv_taken, $ax_ct_mv_card );
+	axismundi_contacts_migrate_home_service_key();
+	$ax_ct_mv_kept = axismundi_contacts_card_document( $ax_ct_mv_card );
+	ax_ct_assert(
+		$ax_ct_results,
+		'and it never renames onto an address something else is already using',
+		array( 'axismundi', 'x1' ) === array_keys( (array) $ax_ct_mv_kept['onlineServices'] )
+			&& 'Mastodon' === (string) ( $ax_ct_mv_kept['onlineServices']['x1']['service'] ?? '' )
+	);
+	/*
+	 * What the screen shows instead of that key. An account is a service and a name on it, and the
+	 * address goes underneath -- a Published checkbox beside a bare URI asks a question nobody can
+	 * answer, which is what it was doing.
+	 */
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_os_js = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/card-editor.js' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'an account is edited as what it is called, who somebody is there, and where it lives',
+		str_contains( $ax_ct_os_js, "__( 'Service', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_os_js, "__( 'Username', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_os_js, "withKey( entry, 'service', value )" )
+			&& str_contains( $ax_ct_os_js, "withKey( entry, 'user', value )" )
+			// And the published list reads the same way rather than showing the address alone.
+			&& str_contains( $ax_ct_os_js, "named.join( ' · ' )" )
+			&& str_contains( $ax_ct_os_js, 'function entryLabel' )
+	);
+	/*
+	 * Order is `pref` and nothing else. The list, the account a reader leads with and the face taken
+	 * from it are one answer, so dragging a row rewrites the numbers rather than storing a second
+	 * order beside them.
+	 */
+	$ax_ct_os_order = axismundi_contacts_ordered_services(
+		array(
+			'onlineServices' => array(
+				'x1' => array( 'service' => 'Later', 'pref' => 3 ),
+				'x2' => array( 'service' => 'Unranked' ),
+				'x3' => array( 'service' => 'First', 'pref' => 1 ),
+			),
+		)
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'accounts are read in the order they are preferred, and an unranked one waits behind those that said',
+		array( 'x3', 'x1', 'x2' ) === array_column( $ax_ct_os_order, 'entry_id' )
+			&& str_contains( $ax_ct_os_js, 'function orderedServices' )
+			&& str_contains( $ax_ct_os_js, 'pref: index + 1' )
+	);
+
 	ax_ct_assert(
 		$ax_ct_results,
 		'this plugin stores address books and imitates neither the Actor registry nor its profiles',

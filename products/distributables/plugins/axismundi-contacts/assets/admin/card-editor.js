@@ -45,7 +45,6 @@
 	var ENTRY_FIELDS = [
 		{ key: 'emails', label: __( 'Email', 'axismundi-contacts' ), value: 'address', type: 'email', icon: 'mail' },
 		{ key: 'phones', label: __( 'Phone', 'axismundi-contacts' ), value: 'number', icon: 'call' },
-		{ key: 'onlineServices', label: __( 'Online accounts', 'axismundi-contacts' ), value: 'uri', type: 'url', icon: 'account-circle' },
 		{ key: 'links', label: __( 'Links', 'axismundi-contacts' ), value: 'uri', type: 'url', icon: 'link' },
 		{ key: 'media', label: __( 'Media', 'axismundi-contacts' ), value: 'uri', type: 'url', icon: 'image' },
 		{ key: 'notes', label: __( 'Notes', 'axismundi-contacts' ), value: 'note', icon: 'file-json' }
@@ -650,6 +649,189 @@
 	}
 
 	/**
+	 * One account on some service.
+	 *
+	 * Four answers rather than a URI: what the service is called, what somebody is called there, the
+	 * address that identifies them, and where the account sits among the others. A row showing only
+	 * its URI is a row nobody can read -- `Mastodon · @pfefferle@mastodon.social` says in two words
+	 * what a link says in forty characters, and it is what the Published list has to show for a
+	 * checkbox beside it to mean anything.
+	 *
+	 * The key each row is stored under is not on screen. It is an address -- what a published pointer
+	 * names and what a provenance row is written against -- and showing it invites somebody to want
+	 * it to say `mastodon`, which would tie their consent to publish to a word they can rename.
+	 */
+	function OnlineService( props ) {
+		var entry = props.entry;
+		return el(
+			'div',
+			{
+				className: 'ax-ce-service',
+				draggable: true,
+				onDragStart: function () {
+					props.onDragStart( props.index );
+				},
+				onDragOver: function ( event ) {
+					event.preventDefault();
+				},
+				onDrop: function () {
+					props.onDrop( props.index );
+				}
+			},
+			el( 'span', { className: 'ax-ce-part__grip', 'aria-hidden': 'true', dangerouslySetInnerHTML: { __html: icon( 'drag-indicator' ) } } ),
+			el(
+				'div',
+				{ className: 'ax-ce-service__fields' },
+				el( TextField, {
+					label: __( 'Service', 'axismundi-contacts' ),
+					value: entry.service || '',
+					supporting: __( 'What the service is called, such as Mastodon.', 'axismundi-contacts' ),
+					onChange: function ( value ) {
+						props.onChange( withKey( entry, 'service', value ) );
+					}
+				} ),
+				el( TextField, {
+					label: __( 'Username', 'axismundi-contacts' ),
+					value: entry.user || '',
+					supporting: __( 'What they are called there, such as @name@host.', 'axismundi-contacts' ),
+					onChange: function ( value ) {
+						props.onChange( withKey( entry, 'user', value ) );
+					}
+				} ),
+				el( TextField, {
+					label: __( 'Address', 'axismundi-contacts' ),
+					type: 'url',
+					value: entry.uri || '',
+					supporting: __( 'The profile or Actor this account is.', 'axismundi-contacts' ),
+					onChange: function ( value ) {
+						props.onChange( withKey( entry, 'uri', value ) );
+					}
+				} ),
+				el( TextField, {
+					label: __( 'Label', 'axismundi-contacts' ),
+					value: entry.label || '',
+					onChange: function ( value ) {
+						props.onChange( withKey( entry, 'label', value ) );
+					}
+				} )
+			),
+			el( IconButton, {
+				icon: 'delete',
+				variant: 'danger',
+				label: __( 'Remove this account', 'axismundi-contacts' ),
+				onClick: props.onRemove
+			} )
+		);
+	}
+
+	/**
+	 * The accounts, in the order they are preferred.
+	 *
+	 * `pref` is that order and the only thing recording it: 1 is the account this person leads with,
+	 * which is the one a reader shows and the one a face is taken from. Dragging a row rewrites the
+	 * numbers rather than storing a second order beside them, so what the list shows, what a reader
+	 * shows, and what the document says are one answer.
+	 */
+	function OnlineServices( props ) {
+		var entries = props.value || {};
+		var [ dragging, setDragging ] = useState( null );
+		var ordered = orderedServices( entries );
+
+		function setEntries( next ) {
+			props.onChange( Object.keys( next ).length ? next : undefined );
+		}
+
+		// Whatever the rows read as now, numbered from the top.
+		function renumber( ids ) {
+			var next = {};
+			Object.keys( entries ).forEach( function ( id ) {
+				next[ id ] = entries[ id ];
+			} );
+			ids.forEach( function ( id, index ) {
+				next[ id ] = Object.assign( {}, next[ id ], { pref: index + 1 } );
+			} );
+			setEntries( next );
+		}
+
+		return el(
+			'section',
+			{ className: 'ax-ce-section' },
+			el( 'h2', null, __( 'Online accounts', 'axismundi-contacts' ) ),
+			el(
+				'p',
+				{ className: 'description' },
+				__( 'Most preferred first. The one at the top is the account this contact leads with.', 'axismundi-contacts' )
+			),
+			ordered.map( function ( id, index ) {
+				return el( OnlineService, {
+					key: id,
+					index: index,
+					entry: entries[ id ] || {},
+					onDragStart: setDragging,
+					onDrop: function ( at ) {
+						if ( null === dragging || dragging === at ) {
+							return;
+						}
+						var ids = ordered.slice();
+						var moved = ids.splice( dragging, 1 )[ 0 ];
+						ids.splice( at, 0, moved );
+						setDragging( null );
+						renumber( ids );
+					},
+					onChange: function ( next ) {
+						var updated = Object.assign( {}, entries );
+						updated[ id ] = next;
+						setEntries( updated );
+					},
+					onRemove: function () {
+						var updated = Object.assign( {}, entries );
+						delete updated[ id ];
+						setEntries( updated );
+					}
+				} );
+			} ),
+			el(
+				'p',
+				null,
+				el(
+					'button',
+					{
+						type: 'button',
+						className: 'button',
+						onClick: function () {
+							var index = 1;
+							while ( Object.prototype.hasOwnProperty.call( entries, 'x' + index ) ) {
+								index += 1;
+							}
+							var updated = Object.assign( {}, entries );
+							// New accounts go to the end; the order somebody chose is theirs to change.
+							updated[ 'x' + index ] = { service: '', user: '', uri: '', pref: ordered.length + 1 };
+							setEntries( updated );
+						}
+					},
+					__( 'Add an account', 'axismundi-contacts' )
+				)
+			)
+		);
+	}
+
+	/**
+	 * Entry ids in the order they are preferred.
+	 *
+	 * By `pref`, with the order they sit in the document breaking ties, which is what the server does
+	 * when it decides which account leads. An account with no preference is not unranked and last: it
+	 * is unranked, which is behind everything that said where it goes.
+	 */
+	function orderedServices( entries ) {
+		var ids = Object.keys( entries || {} );
+		return ids.slice().sort( function ( a, b ) {
+			var pa = entries[ a ] && 'number' === typeof entries[ a ].pref ? entries[ a ].pref : Infinity;
+			var pb = entries[ b ] && 'number' === typeof entries[ b ].pref ? entries[ b ].pref : Infinity;
+			return pa === pb ? ids.indexOf( a ) - ids.indexOf( b ) : pa - pb;
+		} );
+	}
+
+	/**
 	 * What a Card is when read in one language.
 	 *
 	 * The same walk the server does, for showing rather than for storing: a patch names a path and a
@@ -1023,6 +1205,38 @@
 		);
 	}
 
+	/**
+	 * What one entry reads as, for somebody deciding whether to publish it.
+	 *
+	 * A checkbox beside a URI asks a question nobody can answer. An account is `Mastodon` and
+	 * `@pfefferle@mastodon.social`; the address is how a machine finds it and goes underneath, where
+	 * it can be checked without being what the row says. When an entry has neither, the property and
+	 * its position are still something to point at -- `Online account 2` is at least a row on the
+	 * screen above, which its key is not.
+	 */
+	function entryLabel( property, entry, index ) {
+		if ( 'onlineServices' === property ) {
+			var named = [ entry.service, entry.user ].filter( function ( part ) {
+				return part && String( part ).trim();
+			} );
+			return {
+				label: named.length
+					? named.join( ' · ' )
+					: sprintf(
+						/* translators: %d: which account on the card, counting from the top. */
+						__( 'Online account %d', 'axismundi-contacts' ),
+						index + 1
+					),
+				detail: entry.uri || ''
+			};
+		}
+		var text = entry.address || entry.number || entry.uri || entry.note || entry.name || '';
+		return {
+			label: property + ( text ? ': ' + text : '' ),
+			detail: ''
+		};
+	}
+
 	/** Which parts of this Card a stranger may have. Only the Card an Actor publishes has any. */
 	function PublishedFields( props ) {
 		var card = props.card || {};
@@ -1038,10 +1252,10 @@
 			props.onChange( next );
 		}
 
-		function row( pointer, label ) {
+		function row( pointer, label, detail ) {
 			return el(
 				'p',
-				{ key: pointer },
+				{ key: pointer, className: 'ax-ce-published__row' },
 				el(
 					'label',
 					null,
@@ -1053,7 +1267,8 @@
 						}
 					} ),
 					' ',
-					label
+					el( 'span', { className: 'ax-ce-published__label' }, label ),
+					detail ? el( 'span', { className: 'ax-ce-published__detail' }, detail ) : null
 				)
 			);
 		}
@@ -1072,10 +1287,11 @@
 			} ),
 			config.publishableEntries.map( function ( property ) {
 				var entries = card[ property ] || {};
-				return Object.keys( entries ).map( function ( id ) {
+				var ids = 'onlineServices' === property ? orderedServices( entries ) : Object.keys( entries );
+				return ids.map( function ( id, index ) {
 					var entry = entries[ id ] || {};
-					var text = entry.address || entry.number || entry.uri || entry.note || entry.name || id;
-					return row( property + '/' + id, property + ': ' + text );
+					var read = entryLabel( property, entry, index );
+					return row( property + '/' + id, read.label, read.detail );
 				} );
 			} )
 		);
@@ -1249,6 +1465,12 @@
 						},
 						onChange: function ( value ) {
 							setProperty( 'name', value );
+						}
+					} ),
+					el( OnlineServices, {
+						value: card.onlineServices,
+						onChange: function ( value ) {
+							setProperty( 'onlineServices', value );
 						}
 					} ),
 					el( PreferredLanguages, {

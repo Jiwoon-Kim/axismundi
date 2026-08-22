@@ -269,3 +269,40 @@
 .ax-ce-sortas .text-field {
 	flex: 1 1 0;
 }
+
+/*
+ * One account: the grip, the four things it says, and the way to remove it. The fields wrap rather
+ * than scroll, because a narrow screen is a smaller version of the same row and not a different one.
+ */
+.ax-ce-service {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	padding: 12px 0;
+	border-block-end: 1px solid var( --wpds-color-border-secondary, #e0e0e0 );
+}
+
+.ax-ce-service__fields {
+	display: grid;
+	flex: 1;
+	grid-template-columns: repeat( auto-fit, minmax( 220px, 1fr ) );
+	gap: 12px;
+}
+
+/* What a row publishes, said before the address that proves which row it is. */
+.ax-ce-published__row label {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.ax-ce-published__label {
+	font-weight: 600;
+}
+
+.ax-ce-published__detail {
+	color: var( --wpds-color-content-secondary, #50575e );
+	font-size: 13px;
+	overflow-wrap: anywhere;
+}

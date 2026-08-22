@@ -362,7 +362,10 @@ function axismundi_contacts_handle_create_card() : void {
 		wp_die( esc_html( $book->get_error_message() ), '', array( 'response' => 403 ) );
 	}
 	$group = isset( $_GET['group'] ) ? absint( $_GET['group'] ) : 0;
-	$made  = axismundi_contacts_save_card( $book_id, array( '@type' => 'Card', 'kind' => 'individual' ) );
+	$made  = axismundi_contacts_save_card(
+		$book_id,
+		array( '@type' => 'Card', 'version' => AXISMUNDI_CONTACTS_JSCONTACT_VERSION, 'kind' => 'individual' )
+	);
 	if ( is_wp_error( $made ) ) {
 		axismundi_contacts_redirect_result( $made );
 		return;

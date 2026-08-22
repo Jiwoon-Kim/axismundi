@@ -171,7 +171,7 @@ function axismundi_contacts_set_published_pointers( int $actor_id, array $pointe
  * @return array<string,mixed>
  */
 function axismundi_contacts_public_projection( array $card, array $published ) : array {
-	$out = array( '@type' => 'Card', 'version' => '2.0' );
+	$out = array( '@type' => 'Card', 'version' => AXISMUNDI_CONTACTS_JSCONTACT_VERSION );
 	if ( isset( $card['uid'] ) ) {
 		$out['uid'] = $card['uid'];
 	}

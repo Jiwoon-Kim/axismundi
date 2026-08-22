@@ -122,6 +122,16 @@ function axismundi_contacts_validate_card( array $card ) {
 }
 
 /**
+ * The revision of JSContact a Card made here is written in.
+ *
+ * Stated on every Card this site creates, because RFC 9982 asks an implementation to say which
+ * revision it wrote a document in and a reader has no other way to know. Not stamped onto documents
+ * that arrived from somewhere else: a Card carrying its own `version` keeps it, and one that arrived
+ * without is left as it came rather than being told what it is.
+ */
+const AXISMUNDI_CONTACTS_JSCONTACT_VERSION = '2.0';
+
+/**
  * Store a Card, as authored.
  *
  * @param int                  $book_id  Address book the Card belongs to.

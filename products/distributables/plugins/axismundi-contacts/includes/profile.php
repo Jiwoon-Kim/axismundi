@@ -350,7 +350,11 @@ function axismundi_contacts_create_profile_card( int $actor_id ) {
 	 * entity it describes; minting identities on their behalf for every contact in a private address
 	 * book would put this site's invented identifiers into other people's exports.
 	 */
-	$document = array( '@type' => 'Card', 'uid' => 'urn:uuid:' . wp_generate_uuid4() );
+	$document = array(
+		'@type'   => 'Card',
+		'version' => AXISMUNDI_CONTACTS_JSCONTACT_VERSION,
+		'uid'     => 'urn:uuid:' . wp_generate_uuid4(),
+	);
 	if ( '' !== $kind ) {
 		$document['kind'] = $kind;
 	}

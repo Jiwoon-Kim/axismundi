@@ -372,10 +372,14 @@ try {
 	);
 	/*
 	 * A contact is made and then edited, rather than typed into a form and then made. What it starts as
-	 * is the least a JSContact document can say and still be one: no name is invented, and whether
-	 * there is one at all is answered in the editor.
+	 * is the least a JSContact document can say and still be one: which revision it is written in, and
+	 * what kind of thing it describes. No name is invented, and whether there is one at all is answered
+	 * in the editor.
 	 */
-	$ax_ct_made_id = axismundi_contacts_save_card( $ax_ct_book_id, array( '@type' => 'Card', 'kind' => 'individual' ) );
+	$ax_ct_made_id = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array( '@type' => 'Card', 'version' => AXISMUNDI_CONTACTS_JSCONTACT_VERSION, 'kind' => 'individual' )
+	);
 	$ax_ct_loose[] = is_wp_error( $ax_ct_made_id ) ? 0 : (int) $ax_ct_made_id;
 	$ax_ct_made    = is_wp_error( $ax_ct_made_id ) ? array() : axismundi_contacts_card_document( (int) $ax_ct_made_id );
 	ax_ct_assert(
@@ -385,6 +389,43 @@ try {
 			&& 'individual' === (string) ( $ax_ct_made['kind'] ?? '' )
 			&& ! array_key_exists( 'name', $ax_ct_made )
 			&& has_action( 'admin_post_axismundi_contacts_create_card' )
+	);
+	/*
+	 * And it says which revision it is written in, in the ledger rather than only on the way out. A
+	 * document that only gained a `version` as it was published would be a v2 Card to a stranger and
+	 * an unversioned one to everything here, including the editor that saves it back.
+	 */
+	$ax_ct_self_actor = ax_ct_actor( $ax_ct_users );
+	$ax_ct_self_made  = axismundi_contacts_create_profile_card( (int) $ax_ct_self_actor->get_identity_id() );
+	$ax_ct_loose[]    = is_wp_error( $ax_ct_self_made ) ? 0 : (int) $ax_ct_self_made;
+	$ax_ct_self_doc   = is_wp_error( $ax_ct_self_made ) ? array() : axismundi_contacts_card_document( (int) $ax_ct_self_made );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a card made here says which revision of JSContact it is written in, in the ledger itself',
+		'2.0' === AXISMUNDI_CONTACTS_JSCONTACT_VERSION
+			&& AXISMUNDI_CONTACTS_JSCONTACT_VERSION === (string) ( $ax_ct_made['version'] ?? '' )
+			&& AXISMUNDI_CONTACTS_JSCONTACT_VERSION === (string) ( $ax_ct_self_doc['version'] ?? '' )
+	);
+	/*
+	 * A document that came from somewhere else is not told what it is. One carrying its own version
+	 * keeps it, and one that arrived without stays without: stamping a revision onto somebody's import
+	 * would be this site asserting something about a document it did not write.
+	 */
+	$ax_ct_v1_id = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array( '@type' => 'Card', 'version' => '1.0', 'kind' => 'individual', 'name' => array( '@type' => 'Name', 'full' => 'From elsewhere' ) )
+	);
+	$ax_ct_loose[] = is_wp_error( $ax_ct_v1_id ) ? 0 : (int) $ax_ct_v1_id;
+	$ax_ct_bare_id = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array( '@type' => 'Card', 'kind' => 'individual', 'name' => array( '@type' => 'Name', 'full' => 'No version given' ) )
+	);
+	$ax_ct_loose[] = is_wp_error( $ax_ct_bare_id ) ? 0 : (int) $ax_ct_bare_id;
+	ax_ct_assert(
+		$ax_ct_results,
+		'and a document from somewhere else keeps the version it came with, or none at all',
+		'1.0' === (string) ( axismundi_contacts_card_document( (int) $ax_ct_v1_id )['version'] ?? '' )
+			&& ! array_key_exists( 'version', axismundi_contacts_card_document( (int) $ax_ct_bare_id ) )
 	);
 	wp_set_current_user( 0 );
 

@@ -90,54 +90,36 @@ function axismundi_contacts_profile_editor( int $book_id, Axismundi_Actor $actor
 		echo '<p>' . esc_html__( 'This Actor publishes no contact card yet.', 'axismundi-contacts' ) . '</p>';
 		return;
 	}
-	$row     = axismundi_contacts_get_card( $card_id );
 	$card    = axismundi_contacts_card_document( $card_id );
-	$prov    = axismundi_contacts_card_provenance( $card_id );
 	$sharing = axismundi_contacts_profile_sharing( $actor_id );
 	?>
 	<h1><?php esc_html_e( 'My profile', 'axismundi-contacts' ); ?></h1>
 	<p class="description">
-		<?php esc_html_e( 'The card this Actor publishes about itself. Everything on it may be read by whoever the audience below allows.', 'axismundi-contacts' ); ?>
+		<?php esc_html_e( 'The card this Actor publishes about itself, and who may read it. What of it they receive is chosen on the card.', 'axismundi-contacts' ); ?>
 	</p>
 
-	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-		<input type="hidden" name="action" value="axismundi_contacts_save_card">
-		<input type="hidden" name="book_id" value="<?php echo esc_attr( (string) $book_id ); ?>">
-		<input type="hidden" name="card_id" value="<?php echo esc_attr( (string) $card_id ); ?>">
-		<input type="hidden" name="return" value="profile">
-		<input type="hidden" name="revision" value="<?php echo esc_attr( (string) ( $row['revision'] ?? 0 ) ); ?>">
-		<?php wp_nonce_field( 'ax_contacts_card_' . $book_id ); ?>
-
-		<h2><?php esc_html_e( 'Name', 'axismundi-contacts' ); ?></h2>
-		<table class="form-table" role="presentation">
-			<tr>
-				<th scope="row"><label for="ax-contacts-name"><?php esc_html_e( 'Full name', 'axismundi-contacts' ); ?></label></th>
-				<td>
-					<input id="ax-contacts-name" name="primary_name[full]" value="<?php echo esc_attr( (string) ( $card['name']['full'] ?? '' ) ); ?>" class="regular-text">
-					<?php
-					/*
-					 * Open on this screen and folded away on the other. Somebody editing their own card came
-					 * to write their name properly; somebody saving a number for a friend did not.
-					 */
-					axismundi_contacts_name_details( 'primary_name', (array) ( $card['name'] ?? array() ), true );
-					?>
-				</td>
-			</tr>
-			<?php axismundi_contacts_localized_name_rows( $card ); ?>
-		</table>
-
-		<h2><?php esc_html_e( 'Contact information', 'axismundi-contacts' ); ?></h2>
-		<table class="form-table" role="presentation">
-			<?php
-			axismundi_contacts_entry_rows( 'emails', __( 'Email', 'axismundi-contacts' ), $card, $prov );
-			axismundi_contacts_entry_rows( 'phones', __( 'Phone', 'axismundi-contacts' ), $card, $prov );
-			axismundi_contacts_entry_rows( 'addresses', __( 'Address', 'axismundi-contacts' ), $card, $prov );
-			?>
-		</table>
-
-		<?php axismundi_contacts_publish_fields( (int) $actor->get_identity_id(), $card ); ?>
-		<?php submit_button( __( 'Save profile', 'axismundi-contacts' ) ); ?>
-	</form>
+	<?php
+	/*
+	 * What the card says is edited where every card is edited. This screen used to carry a second form
+	 * for the same document -- a name, some entries, the public selection -- which meant two writers
+	 * with two sets of rules about revisions and provenance, and the one that fell behind would have
+	 * been whichever was touched less.
+	 *
+	 * What is left here is everything that is not the card: whether it exists, who may read it, and
+	 * which of its writings each Actor locale follows. None of those is a property of the document.
+	 */
+	?>
+	<p>
+		<a class="button button-primary" href="<?php echo esc_url( axismundi_contacts_edit_url( $card_id ) ); ?>">
+			<?php esc_html_e( 'Edit this card', 'axismundi-contacts' ); ?>
+		</a>
+		<a class="button" href="<?php echo esc_url( axismundi_contacts_screen_url( $card_id ) ); ?>">
+			<?php esc_html_e( 'See what it says', 'axismundi-contacts' ); ?>
+		</a>
+	</p>
+	<p class="description">
+		<?php esc_html_e( 'The name, the ways to reach this Actor, and which parts of the card strangers receive are all edited there.', 'axismundi-contacts' ); ?>
+	</p>
 
 	<?php axismundi_contacts_binding_rows( $actor_id ); ?>
 

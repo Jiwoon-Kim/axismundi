@@ -2068,20 +2068,16 @@ try {
 	);
 
 	/*
-	 * The checkboxes are on the edit screen and only there. A record somebody opened to read is not a
-	 * place to change who may see it, and a tick that published a phone number from a page labelled as
-	 * a view would be the same mistake as the one the projection fixed.
+	 * The record says what is published and offers no way to change it. A tick that published a phone
+	 * number from a page labelled as a view would be the same mistake the projection fixed -- and the
+	 * only thing that writes the selection at all is the editor, through the draft route.
 	 */
-	ob_start();
-	axismundi_contacts_publish_fields( $ax_ct_split_sid, axismundi_contacts_card_document( $ax_ct_profile_card ) );
-	$ax_ct_fields = (string) ob_get_clean();
 	ax_ct_assert(
 		$ax_ct_results,
-		'choosing what is published is a tick per value, on the screen that changes things',
-		str_contains( $ax_ct_fields, 'name="published[]" value="emails/e1"' )
-			&& str_contains( $ax_ct_fields, 'name="published[]" value="emails/e2"' )
-			&& str_contains( $ax_ct_fields, 'name="published[]" value="name"' )
-			&& ! str_contains( $ax_ct_detail, 'name="published[]"' )
+		'a record shows what is published and changes nothing, and only the editor writes that choice',
+		! str_contains( $ax_ct_own, 'name="published' )
+			&& ! str_contains( $ax_ct_own, '<form' )
+			&& ! function_exists( 'axismundi_contacts_publish_fields' )
 	);
 	/*
 	 * A tick is attached to the entry's own id, never to the text beside it or the row it was on.
@@ -2711,6 +2707,37 @@ try {
 		str_contains( $ax_ct_ed_source, "Math.random().toString( 36 )" )
 	);
 	wp_set_current_user( 0 );
+
+	// -- one screen writes a Card ------------------------------------------------------------------------------
+
+	/*
+	 * My profile used to carry a second form for the same document: a name, some entries, the public
+	 * selection. Two writers with two sets of rules about revisions and provenance, and the one that
+	 * fell behind would have been whichever was touched less.
+	 *
+	 * What is left there is everything that is not the card -- whether it exists, who may read it, and
+	 * which of its writings each Actor locale follows. None of those is a property of the document.
+	 */
+	wp_set_current_user( (int) $ax_ct_dr_actor->get_local_user_id() );
+	ob_start();
+	axismundi_contacts_profile_editor( (int) $ax_ct_dr_book['id'], $ax_ct_dr_actor );
+	$ax_ct_ow_profile = (string) ob_get_clean();
+	wp_set_current_user( 0 );
+
+	ax_ct_assert(
+		$ax_ct_results,
+		'My profile no longer writes the card, and sends people to the one screen that does',
+		! str_contains( $ax_ct_ow_profile, 'value="axismundi_contacts_save_card"' )
+			&& ! str_contains( $ax_ct_ow_profile, 'name="primary_name' )
+			&& ! str_contains( $ax_ct_ow_profile, 'name="published' )
+			&& str_contains( $ax_ct_ow_profile, 'action=edit' )
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'and keeps what is not the card: who may read it, and which writing each locale follows',
+		str_contains( $ax_ct_ow_profile, 'value="axismundi_contacts_set_sharing"' )
+			&& str_contains( $ax_ct_ow_profile, 'name="audience"' )
+	);
 
 	ax_ct_assert(
 		$ax_ct_results,

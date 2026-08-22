@@ -1721,27 +1721,92 @@
 	 * this editor has no field for yet, which is why it is one fold away rather than gone.
 	 */
 	function AdvancedJson( props ) {
-		var text = props.text;
+		var box = el( Textarea, {
+			label: __( 'JSContact', 'axismundi-contacts' ),
+			className: 'ax-ce-json',
+			rows: props.beside ? 30 : 18,
+			spellCheck: false,
+			value: props.text,
+			error: !! props.error,
+			supporting: props.error || undefined,
+			onChange: props.onChange
+		} );
+		var explains = __( 'Everything beside this, and everything this editor has no field for. Edits here and edits there are the same document, so this is a way to reach what has no field yet rather than a second way to fill in the fields that have one.', 'axismundi-contacts' );
+		/*
+		 * Beside the fields it is not a section of the form: it is the same draft, seen the other way,
+		 * and it scrolls with itself so that reading the document does not mean losing the field being
+		 * typed into.
+		 */
+		if ( props.beside ) {
+			return el(
+				'div',
+				{ className: 'ax-ce-json-pane' },
+				el( 'h2', null, __( 'JSContact', 'axismundi-contacts' ) ),
+				el( 'p', { className: 'description' }, explains ),
+				box
+			);
+		}
 		return el(
 			'details',
 			{ className: 'ax-ce-section ax-ce-json-section' },
 			el( 'summary', null, __( 'Advanced JSON', 'axismundi-contacts' ) ),
-			el(
-				'p',
-				{ className: 'description' },
-				__( 'Everything above, and everything this editor has no field for. Edits here and edits above are the same document, so this is a way to reach what has no field yet rather than a second way to fill in the fields that have one.', 'axismundi-contacts' )
-			),
-			el( Textarea, {
-				label: __( 'JSContact', 'axismundi-contacts' ),
-				className: 'ax-ce-json',
-				rows: 18,
-				spellCheck: false,
-				value: text,
-				error: !! props.error,
-				supporting: props.error || undefined,
-				onChange: props.onChange
-			} )
+			el( 'p', { className: 'description' }, explains ),
+			box
 		);
+	}
+
+	/** Where the split sits, as a share of the screen given to the fields. */
+	var SPLIT_KEY = 'axismundiContactsSplit';
+	var SPLIT_DEFAULT = 40;
+
+	/**
+	 * The handle between the two.
+	 *
+	 * Dragged with the mouse and moved with the arrow keys, because a divider that can only be
+	 * dragged is a divider some people cannot move at all.
+	 */
+	function SplitHandle( props ) {
+		function fromPointer( event ) {
+			var host = event.currentTarget.parentNode;
+			var box = host.getBoundingClientRect();
+			if ( ! box.width ) {
+				return;
+			}
+			props.onChange( ( ( event.clientX - box.left ) / box.width ) * 100 );
+		}
+		return el( 'div', {
+			className: 'ax-ce-split__handle',
+			role: 'separator',
+			tabIndex: 0,
+			'aria-orientation': 'vertical',
+			'aria-label': __( 'How much of the screen the fields take', 'axismundi-contacts' ),
+			'aria-valuenow': Math.round( props.value ),
+			'aria-valuemin': 20,
+			'aria-valuemax': 80,
+			onKeyDown: function ( event ) {
+				if ( 'ArrowLeft' === event.key ) {
+					props.onChange( props.value - 2 );
+				} else if ( 'ArrowRight' === event.key ) {
+					props.onChange( props.value + 2 );
+				} else {
+					return;
+				}
+				event.preventDefault();
+			},
+			onPointerDown: function ( event ) {
+				event.currentTarget.setPointerCapture( event.pointerId );
+				props.onDragging( true );
+			},
+			onPointerMove: function ( event ) {
+				if ( event.currentTarget.hasPointerCapture( event.pointerId ) ) {
+					fromPointer( event );
+				}
+			},
+			onPointerUp: function ( event ) {
+				event.currentTarget.releasePointerCapture( event.pointerId );
+				props.onDragging( false );
+			}
+		} );
 	}
 
 	/**
@@ -1901,6 +1966,20 @@
 		}
 		var [ status, setStatus ] = useState( '' );
 		var [ saving, setSaving ] = useState( false );
+		/*
+		 * Whether the document stands beside the fields. Useful while the fields are being built --
+		 * type on the left, watch what it writes on the right -- and noise for somebody writing down
+		 * a phone number, so it is remembered per person rather than decided for everybody.
+		 */
+		var [ beside, setBeside ] = useState( 'true' === window.localStorage.getItem( SPLIT_KEY + 'Open' ) );
+		var [ split, setSplitAt ] = useState( Number( window.localStorage.getItem( SPLIT_KEY ) ) || SPLIT_DEFAULT );
+		var [ sliding, setSliding ] = useState( false );
+
+		function setSplit( value ) {
+			var next = Math.min( 80, Math.max( 20, value ) );
+			window.localStorage.setItem( SPLIT_KEY, String( Math.round( next ) ) );
+			setSplitAt( next );
+		}
 
 		// One draft. Every view writes through here, so the JSON box and the fields never diverge.
 		var update = useCallback( function ( next ) {
@@ -1968,8 +2047,29 @@
 			Fragment,
 			null,
 			el(
+				'p',
+				{ className: 'ax-ce__view' },
+				el(
+					'label',
+					null,
+					el( 'input', {
+						type: 'checkbox',
+						checked: beside,
+						onChange: function ( event ) {
+							window.localStorage.setItem( SPLIT_KEY + 'Open', event.target.checked ? 'true' : 'false' );
+							setBeside( event.target.checked );
+						}
+					} ),
+					' ',
+					__( 'Show the JSContact beside the fields', 'axismundi-contacts' )
+				)
+			),
+			el(
 				'div',
-				{ className: 'ax-ce' },
+				{
+					className: 'ax-ce' + ( beside ? ' is-split' : '' ) + ( sliding ? ' is-sliding' : '' ),
+					style: beside ? { gridTemplateColumns: split + '% 8px 1fr' } : undefined
+				},
 				el(
 					'div',
 					{ className: 'ax-ce__main' },
@@ -2082,8 +2182,10 @@
 							setProperty( 'uid', value );
 						}
 					} ),
-					el( AdvancedJson, { text: json, error: jsonError, onChange: onJson } )
-				)
+					beside ? null : el( AdvancedJson, { text: json, error: jsonError, onChange: onJson } )
+				),
+				beside ? el( SplitHandle, { value: split, onChange: setSplit, onDragging: setSliding } ) : null,
+				beside ? el( AdvancedJson, { text: json, error: jsonError, onChange: onJson, beside: true } ) : null
 			),
 			el(
 				'p',

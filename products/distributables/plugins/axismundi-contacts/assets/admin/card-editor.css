@@ -448,3 +448,74 @@
 	color: #2271b1;
 	cursor: pointer;
 }
+
+/* -- the document beside the fields ---------------------------------------------------------- */
+
+/*
+ * One draft, two views of it. A grid rather than two floats, because the handle between them has to
+ * be a track of its own for the drag to mean anything -- and the widths are set inline from where
+ * somebody last put it.
+ */
+.ax-ce.is-split {
+	display: grid;
+	align-items: start;
+	gap: 0;
+}
+
+.ax-ce.is-split .ax-ce__main {
+	max-width: none;
+	min-width: 0;
+	padding-right: 1em;
+}
+
+.ax-ce__view {
+	margin: 0 0 1em;
+}
+
+.ax-ce-split__handle {
+	align-self: stretch;
+	min-height: 12em;
+	background: #dcdcde;
+	border-radius: 2px;
+	cursor: col-resize;
+	touch-action: none;
+}
+
+.ax-ce-split__handle:hover,
+.ax-ce-split__handle:focus-visible {
+	background: #2271b1;
+}
+
+/* While the handle is moving, nothing under the pointer should be selecting text. */
+.ax-ce.is-sliding {
+	user-select: none;
+}
+
+.ax-ce-json-pane {
+	min-width: 0;
+	padding-left: 1em;
+	position: sticky;
+	top: 32px;
+}
+
+.ax-ce-json-pane h2 {
+	margin: 0 0 .5em;
+	font-size: 15px;
+	font-weight: 600;
+}
+
+/* Narrow enough and there is no beside: the document goes back under the fields. */
+@media ( max-width: 960px ) {
+	.ax-ce.is-split {
+		display: block;
+	}
+
+	.ax-ce-json-pane {
+		position: static;
+		padding-left: 0;
+	}
+
+	.ax-ce-split__handle {
+		display: none;
+	}
+}

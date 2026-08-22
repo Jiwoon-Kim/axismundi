@@ -3936,6 +3936,49 @@ try {
 			&& str_contains( $ax_ct_ph_js, 'return part && part.phonetic && String( part.phonetic ).trim();' )
 	);
 
+	/*
+	 * The document beside the fields, which is one draft seen twice rather than two editors of one
+	 * card. There is exactly one JSON box either way: folded under the fields, or standing beside
+	 * them -- two of them open at once would be two places to type the same property into, and the
+	 * question of which one wins is a question nobody should have to answer.
+	 */
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_sp_js = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/card-editor.js' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'the document stands beside the fields or folds under them, and is one draft either way',
+		str_contains( $ax_ct_sp_js, 'beside ? null : el( AdvancedJson,' )
+			&& str_contains( $ax_ct_sp_js, 'beside ? el( AdvancedJson,' )
+			&& str_contains( $ax_ct_sp_js, "{ className: 'ax-ce-json-pane' }," )
+			// Both write through `onJson`, which is the one way anything reaches the draft.
+			&& 2 === substr_count( $ax_ct_sp_js, 'onChange: onJson' )
+	);
+	/*
+	 * Where the split sits is somebody's, and stays theirs. Useful while the fields are being built --
+	 * type on the left, watch what it writes on the right -- and noise for somebody writing down a
+	 * phone number, so it is remembered per person rather than decided for everybody.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'where the split sits is remembered for whoever moved it, rather than decided for everybody',
+		str_contains( $ax_ct_sp_js, "var SPLIT_KEY = 'axismundiContactsSplit';" )
+			&& str_contains( $ax_ct_sp_js, 'var SPLIT_DEFAULT = 40;' )
+			&& str_contains( $ax_ct_sp_js, 'window.localStorage.setItem( SPLIT_KEY, String( Math.round( next ) ) );' )
+			&& str_contains( $ax_ct_sp_js, 'Math.min( 80, Math.max( 20, value ) )' )
+	);
+	/*
+	 * And it is moved with the arrow keys as well as dragged. A divider that can only be dragged is a
+	 * divider some people cannot move at all.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'the handle between the two is something to drag and something to press a key on',
+		str_contains( $ax_ct_sp_js, "role: 'separator'" )
+			&& str_contains( $ax_ct_sp_js, "'aria-valuenow': Math.round( props.value )" )
+			&& str_contains( $ax_ct_sp_js, "if ( 'ArrowLeft' === event.key )" )
+			&& str_contains( $ax_ct_sp_js, 'setPointerCapture( event.pointerId )' )
+	);
+
 	ax_ct_assert(
 		$ax_ct_results,
 		'this plugin stores address books and imitates neither the Actor registry nor its profiles',

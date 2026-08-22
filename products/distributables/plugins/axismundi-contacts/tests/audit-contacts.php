@@ -3246,8 +3246,8 @@ try {
 		'a name opens as the two lines a name usually is, and what is not a person opens as one',
 		str_contains( $ax_ct_kn_js, "var BASIC_SLOTS = [ 'given', 'surname' ];" )
 			&& str_contains( $ax_ct_kn_js, "var NAME_SLOTS = [ 'title', 'given', 'given2', 'surname', 'surname2', 'credential' ];" )
-			&& str_contains( $ax_ct_kn_js, 'withGaps( slotRows( components, BASIC_SLOTS ) )' )
-			&& str_contains( $ax_ct_kn_js, 'withGaps( slotRows( components, MIDDLE_SLOTS, pending ) )' )
+			&& str_contains( $ax_ct_kn_js, 'slotRows( components, BASIC_SLOTS ).map( line )' )
+			&& str_contains( $ax_ct_kn_js, 'slotRows( components, MIDDLE_SLOTS, pending, true ).map( line )' )
 			&& str_contains( $ax_ct_kn_js, "var personal = 'individual' === ( props.kind || 'individual' );" )
 			&& str_contains( $ax_ct_kn_js, 'written || ! personal' )
 	);
@@ -3276,23 +3276,23 @@ try {
 		'how a part sounds sits beside what it says, for the parts that are somebody rather than punctuation',
 		str_contains( $ax_ct_kn_js, "var PHONETIC_SLOTS = [ 'given', 'given2', 'surname', 'surname2' ];" )
 			&& str_contains( $ax_ct_kn_js, "props.phonetic && -1 !== PHONETIC_SLOTS.indexOf( props.kind )" )
-			&& str_contains( $ax_ct_kn_js, "props.phonetic && -1 !== PHONETIC_SLOTS.indexOf( part.kind )" )
 			&& str_contains( $ax_ct_kn_js, "__( 'Add pronunciation', 'axismundi-contacts' )" )
 	);
 	/*
-	 * And the fields are a way in rather than the record. A name with two middle names or a separator
-	 * between two parts says something a fixed field per kind cannot hold, so that name is edited as
-	 * what it is and the choice is not somebody's to get wrong.
+	 * And there is one screen. A name with two middle names, something written between two parts, a
+	 * kind out of somebody else's export: each of those is a row, in the same stack, rather than a
+	 * reason for the editor to turn into a different editor while somebody is part-way through a
+	 * name. What a screen cannot draw it loses, so it draws everything.
 	 */
 	ax_ct_assert(
 		$ax_ct_results,
-		'a name the fields cannot hold is edited as what it is, rather than shown as less than it says',
-		str_contains( $ax_ct_kn_js, 'function fitsSlots( components )' )
-			// Not a choice: the list opens because the lines cannot say what the document says.
-			&& str_contains( $ax_ct_kn_js, 'var custom = ! fits;' )
-			&& str_contains( $ax_ct_kn_js, 'custom ? el(' )
-			&& str_contains( $ax_ct_kn_js, '! fits' )
-			&& ! str_contains( $ax_ct_kn_js, 'setCustom' )
+		'every part of a name is a row in one stack, whatever kind it is',
+		str_contains( $ax_ct_kn_js, 'function slotRows( components, kinds, pending, everything )' )
+			&& str_contains( $ax_ct_kn_js, '-1 === NAME_SLOTS.indexOf( part.kind ) || -1 !== kinds.indexOf( part.kind )' )
+			// No second view to fall into, and nothing left that could switch to one.
+			&& ! str_contains( $ax_ct_kn_js, 'fitsSlots' )
+			&& ! str_contains( $ax_ct_kn_js, 'var custom' )
+			&& ! str_contains( $ax_ct_kn_js, 'function Component(' )
 	);
 	/*
 	 * The written-out name is never built from the parts and never removed on their account. It is
@@ -3479,18 +3479,21 @@ try {
 			&& str_contains( $ax_ct_sep_js, "__( 'Keep it', 'axismundi-contacts' )" )
 	);
 	/*
-	 * A separator belongs between two parts, which is where it is added from: a general list of kinds
-	 * would put it at the end for somebody to drag into place, and pointing at the gap says where it
-	 * goes better than moving it there afterwards. It exists only for a name whose parts are in the
-	 * order they are read, because joining parts nobody has put in order joins them in no order.
+	 * A separator is a row like the others: added at the end and dragged where it belongs, the same
+	 * as a second middle name. A control hidden in the space between two rows put a button between
+	 * every pair of lines to serve the one card in fifty that wants one.
+	 *
+	 * It still exists only for a name whose parts are in the order they are read, because joining
+	 * parts nobody has put in order joins them in no order.
 	 */
 	ax_ct_assert(
 		$ax_ct_results,
-		'something goes between two parts by being put between them, and only where there is an order',
-		str_contains( $ax_ct_sep_js, 'ax-ce-gap__add' )
-			&& str_contains( $ax_ct_sep_js, 'ordered && index > 0' )
+		'something written between two parts is a part, added and moved like the rest of them',
+		str_contains( $ax_ct_sep_js, "var ADDABLE = [ 'given2', 'surname2', 'separator' ];" )
+			&& ! str_contains( $ax_ct_sep_js, 'ax-ce-slot-gap' )
+			&& ! str_contains( $ax_ct_sep_js, 'addSeparator' )
 			&& str_contains( $ax_ct_sep_js, 'ordered && components.length' )
-			&& str_contains( $ax_ct_sep_js, 'draggable: ordered' )
+			&& str_contains( $ax_ct_sep_js, 'draggable: movable' )
 	);
 	/*
 	 * How a name files is asked only of somebody who says it is not what the parts already say. Left
@@ -3523,7 +3526,7 @@ try {
 			&& str_contains( $ax_ct_sep_js, 'setComponents( endsFirstAndLast( list ) );' )
 			&& str_contains( $ax_ct_sep_js, 'setComponents( endsFirstAndLast( list ), components.length' )
 			// And neither of the two is something to pick up in the first place.
-			&& str_contains( $ax_ct_sep_js, "-1 !== MIDDLE_SLOTS.indexOf( props.kind )" )
+			&& str_contains( $ax_ct_sep_js, 'FIXED_FIRST !== props.kind && FIXED_LAST !== props.kind' )
 	);
 	/*
 	 * A name this editor builds is a name whose order it knows -- the list somebody is looking at is
@@ -3950,7 +3953,7 @@ try {
 	ax_ct_assert(
 		$ax_ct_results,
 		'the screen asks how a part is said beside it, and what that is written in once for the name',
-		str_contains( $ax_ct_ph_js, "withKey( part, 'phonetic', value )" )
+		str_contains( $ax_ct_ph_js, "props.onChange( props.row, 'phonetic', value )" )
 			&& str_contains( $ax_ct_ph_js, "var PHONETIC_SYSTEMS = [ 'ipa', 'jyut', 'piny' ];" )
 			&& str_contains( $ax_ct_ph_js, "withKey( name, 'phoneticSystem', value )" )
 			&& str_contains( $ax_ct_ph_js, "withKey( name, 'phoneticScript', value )" )
@@ -4124,7 +4127,7 @@ try {
 	ax_ct_assert(
 		$ax_ct_results,
 		'saying you are writing pronunciations down asks what they are written in, before one is',
-		str_contains( $ax_ct_lg_js, 'phonetic && ( expanded || custom )' )
+		str_contains( $ax_ct_lg_js, 'phonetic && expanded' )
 			&& str_contains( $ax_ct_lg_js, "options: PHONETIC_SYSTEMS," )
 			&& str_contains( $ax_ct_lg_js, "options: PHONETIC_SCRIPTS," )
 	);
@@ -4196,15 +4199,19 @@ try {
 	 * first -- which was the front of the name, because a separator is not one of the lines and so
 	 * sorted before all of them -- and dragged into place afterwards.
 	 */
+	/*
+	 * And a part with no line of its own joins the end rather than the front. A separator is not one
+	 * of the six, so a rule that sorted by which line a kind belongs to put it before all of them --
+	 * at the head of the name, to be dragged back afterwards.
+	 */
 	ax_ct_assert(
 		$ax_ct_results,
-		'something written between two parts is added from between those two parts, and nowhere else',
-		str_contains( $ax_ct_cb_editor, "var ADDABLE = [ 'given2', 'surname2' ];" )
-			&& str_contains( $ax_ct_cb_editor, 'function addSeparator( before )' )
-			&& str_contains( $ax_ct_cb_editor, "list.splice( before, 0, { kind: 'separator', value: '' } );" )
-			&& str_contains( $ax_ct_cb_editor, 'addSeparator( row.index );' )
-			// Offered between two parts that are both there, and only where there is an order to sit in.
-			&& str_contains( $ax_ct_cb_editor, 'ordered && at > 0 && row.part && list[ at - 1 ].part' )
+		'a part with no line of its own joins the end of the name, not the head of it',
+		str_contains( $ax_ct_cb_editor, 'if ( -1 === rank ) {' )
+			&& str_contains( $ax_ct_cb_editor, 'return list.length;' )
+			// And it is removable, along with anything past the first of its kind.
+			&& str_contains( $ax_ct_cb_editor, '-1 === NAME_SLOTS.indexOf( props.kind )' )
+			&& str_contains( $ax_ct_cb_editor, 'props.row.occurrence > 0' )
 	);
 
 	ax_ct_assert(

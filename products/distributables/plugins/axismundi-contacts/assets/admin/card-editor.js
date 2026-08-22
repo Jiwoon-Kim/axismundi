@@ -260,113 +260,6 @@
 	}
 
 	/**
-	 * One part of a name.
-	 *
-	 * A separator is a component like any other and carries a value, which may be empty -- that is how
-	 * a name written with nothing between its parts is said.
-	 *
-	 * Draggable only when the name says its parts are in the order they are read. Otherwise their
-	 * order in the list is how they were stored and not how anybody says them, and offering to
-	 * rearrange it would be offering to change something that means nothing.
-	 */
-	function Component( props ) {
-		var part = props.part;
-		var ordered = props.ordered;
-		return el(
-			'li',
-			{
-				className: 'ax-ce-part',
-				draggable: ordered,
-				onDragStart: function () {
-					props.onDragStart( props.index );
-				},
-				onDragOver: function ( event ) {
-					event.preventDefault();
-				},
-				onDrop: function () {
-					props.onDrop( props.index );
-				}
-			},
-			ordered
-				? el( 'span', { className: 'ax-ce-part__grip', 'aria-hidden': 'true', dangerouslySetInnerHTML: { __html: icon( 'drag-indicator' ) } } )
-				: null,
-			/*
-			 * A plain select, for now. Which of the seven kinds a part is comes from a closed list, and
-			 * the field adapter deliberately has no Select yet -- the path picker that will want one
-			 * has to decide first whether it is a menu or something you type into.
-			 */
-			el(
-				'select',
-				{
-					className: 'ax-ce-part__kind',
-					value: part.kind || 'given',
-					'aria-label': __( 'Kind of name part', 'axismundi-contacts' ),
-					onChange: function ( event ) {
-						props.onChange( props.index, withKey( part, 'kind', event.target.value ) );
-					}
-				},
-				COMPONENT_KINDS.map( function ( kind ) {
-					return el( 'option', { key: kind, value: kind }, componentLabel( kind ) );
-				} )
-			),
-			el( TextField, {
-				label: componentLabel( part.kind || 'given' ),
-				className: 'ax-ce-part__value',
-				value: undefined === part.value ? '' : part.value,
-				supporting: 'separator' === part.kind ? __( 'What goes here, which may be nothing.', 'axismundi-contacts' ) : undefined,
-				onChange: function ( value ) {
-					// A separator keeps an empty value, because an empty separator is a real answer.
-					var next = Object.assign( {}, part );
-					next.value = value;
-					if ( '' === next.value && 'separator' !== next.kind ) {
-						delete next.value;
-					}
-					props.onChange( props.index, next );
-				}
-			} ),
-			/*
-			 * How this part is said. A property of the part rather than a part of its own: `김` and
-			 * `/kim/` are one thing written two ways, and a separate component for the sound would be
-			 * a second name to keep in step with the first.
-			 */
-			props.phonetic && -1 !== PHONETIC_SLOTS.indexOf( part.kind )
-				? el( TextField, {
-					label: __( 'Pronunciation', 'axismundi-contacts' ),
-					className: 'ax-ce-part__phonetic',
-					value: part.phonetic || '',
-					onChange: function ( value ) {
-						props.onChange( props.index, withKey( part, 'phonetic', value ) );
-					}
-				} )
-				: null,
-			el( IconButton, {
-				icon: 'delete',
-				variant: 'danger',
-				label: __( 'Remove this part of the name', 'axismundi-contacts' ),
-				onClick: function () {
-					props.onRemove( props.index );
-				}
-			} )
-		);
-	}
-
-	/** A button that adds one part of a name where that kind of part belongs. */
-	function AddPart( props ) {
-		return el(
-			'button',
-			{
-				type: 'button',
-				className: 'button ax-ce-addpart',
-				onClick: function () {
-					props.onAdd( props.kind );
-				}
-			},
-			el( 'span', { 'aria-hidden': 'true', dangerouslySetInnerHTML: { __html: icon( 'add' ) } } ),
-			componentLabel( props.kind )
-		);
-	}
-
-	/**
 	 * The parts a name is filled in as, in the order they are read down the screen.
 	 *
 	 * Not the JSContact model with a form around it. Somebody writing down a person's name is filling
@@ -394,11 +287,12 @@
 	/**
 	 * The parts somebody adds themselves, which are the ones there is a point in removing.
 	 *
-	 * A separator is not among them. It goes between two parts, so it is added from the gap between
-	 * two parts: reached from a list of kinds it has to be put somewhere first and dragged into place
-	 * afterwards, and "somewhere first" was the front of the name.
+	 * A separator among them. It is a line like the others -- added at the end and dragged where it
+	 * belongs, the same as a second middle name -- rather than a control hidden in the space between
+	 * two rows, which put a button between every pair of lines to serve the one card in fifty that
+	 * wants one.
 	 */
-	var ADDABLE = [ 'given2', 'surname2' ];
+	var ADDABLE = [ 'given2', 'surname2', 'separator' ];
 
 	/**
 	 * The lines to draw for a set of kinds: what the name has, in the order it has it, then a line
@@ -408,11 +302,24 @@
 	 * the document, and opening the screen it appears on does not put it there -- which is the whole
 	 * difference between a field and a record.
 	 */
-	function slotRows( components, kinds, pending ) {
+	function slotRows( components, kinds, pending, everything ) {
 		var seen = {};
 		var rows = [];
 		( components || [] ).forEach( function ( part, index ) {
-			if ( ! part || -1 === kinds.indexOf( part.kind ) ) {
+			if ( ! part ) {
+				return;
+			}
+			/*
+			 * Everything the middle of a name holds, not only the kinds that have a line of their own.
+			 * A separator, a second middle name, a kind out of some other system's export: each is a
+			 * part of somebody's name and each gets a row. A screen that could only draw six kinds had
+			 * to turn into a different screen when it met a seventh, and turning into a different
+			 * screen is not something an editor should do to somebody mid-name.
+			 */
+			var mine = everything
+				? -1 === NAME_SLOTS.indexOf( part.kind ) || -1 !== kinds.indexOf( part.kind )
+				: -1 !== kinds.indexOf( part.kind );
+			if ( ! mine ) {
 				return;
 			}
 			/*
@@ -434,6 +341,11 @@
 				rows.push( { key: kind + '#0', kind: kind, part: null } );
 			}
 		} );
+		rows.forEach( function ( row ) {
+			// Which one of its kind it is, so a line that is one of several knows whether it is the
+			// first -- the first `given` is the section, and a second is something somebody added.
+			row.occurrence = Number( row.key.split( '#' )[ 1 ] );
+		} );
 		/*
 		 * And the rows somebody asked for that the document has nothing for yet. A row is a place to
 		 * type: it becomes a part of the name when somebody types in it, and it keeps its name when it
@@ -441,7 +353,11 @@
 		 * the field they are typing into is not replaced under them.
 		 */
 		( pending || [] ).forEach( function ( row ) {
-			if ( -1 === kinds.indexOf( row.kind ) ) {
+			// The same rule the parts follow: a kind with no line of its own still belongs somewhere.
+			var mine = everything
+				? -1 === NAME_SLOTS.indexOf( row.kind ) || -1 !== kinds.indexOf( row.kind )
+				: -1 !== kinds.indexOf( row.kind );
+			if ( ! mine ) {
 				return;
 			}
 			seen[ row.kind ] = ( seen[ row.kind ] || 0 ) + 1;
@@ -493,25 +409,6 @@
 		} );
 	}
 
-	/**
-	 * Whether a stack of fields can say everything this name says.
-	 *
-	 * One of each kind and nothing else. A name with two middle names, or a separator between two
-	 * parts, is saying something a fixed field per kind cannot hold -- so that name is edited as what
-	 * it is, and the fields would quietly drop half of it.
-	 */
-	function fitsSlots( components ) {
-		var seen = [];
-		return ( components || [] ).every( function ( part ) {
-			var kind = part && part.kind;
-			if ( -1 === NAME_SLOTS.indexOf( kind ) || -1 !== seen.indexOf( kind ) ) {
-				return false;
-			}
-			seen.push( kind );
-			return true;
-		} );
-	}
-
 	/** Whether any part of this name says how it is said. */
 	function hasPhonetic( components ) {
 		return ( components || [] ).some( function ( part ) {
@@ -540,6 +437,10 @@
 		}
 		// Nothing to sit beside, so the order the lines are drawn in is the best answer there is.
 		var rank = NAME_SLOTS.indexOf( kind );
+		if ( -1 === rank ) {
+			// And a kind with no line of its own joins the end, rather than sorting before them all.
+			return list.length;
+		}
 		var at = list.findIndex( function ( part ) {
 			var other = NAME_SLOTS.indexOf( part && part.kind );
 			return -1 !== other && other > rank;
@@ -557,7 +458,9 @@
 	function NameSlot( props ) {
 		var part = props.part || {};
 		// Only a line holding something, of a kind that sits between the ends, is somewhere to move.
-		var movable = !! props.part && props.ordered && -1 !== MIDDLE_SLOTS.indexOf( props.kind );
+		// Anything but the two that belong at the ends, which is where they always are.
+		var movable = !! props.part && props.ordered
+			&& FIXED_FIRST !== props.kind && FIXED_LAST !== props.kind;
 		var at = props.row.index;
 		return el(
 			'div',
@@ -612,7 +515,14 @@
 			 * four are emptied rather than taken away, and the line stays to be typed into again. A
 			 * second middle name is something somebody added, so it is something they can take back.
 			 */
-			( props.part || props.row.pendingId ) && -1 !== ADDABLE.indexOf( props.kind )
+			( props.part || props.row.pendingId )
+				&& (
+					-1 !== ADDABLE.indexOf( props.kind )
+					// A kind with no line of its own, and any part past the first of its kind, is
+					// something somebody put there rather than a line the section is made of.
+					|| -1 === NAME_SLOTS.indexOf( props.kind )
+					|| props.row.occurrence > 0
+				)
 				? el( IconButton, {
 					icon: 'delete',
 					variant: 'danger',
@@ -652,7 +562,6 @@
 		var blocked = props.blocked;
 		var ordered = true === name.isOrdered;
 		var personal = 'individual' === ( props.kind || 'individual' );
-		var fits = fitsSlots( components );
 
 		/*
 		 * What is open. Screen state, all of it: a name that arrived with a middle name opens showing
@@ -664,12 +573,6 @@
 			} )
 		);
 		var [ phonetic, setPhonetic ] = useState( hasPhonetic( components ) );
-		/*
-		 * The document itself, for a name the fields above cannot hold: two middle names, or something
-		 * written between two parts. Not a choice -- a screen that cannot show what is stored is a
-		 * screen that will lose it, and the ordinary fields can be picked up and moved anyway.
-		 */
-		var custom = ! fits;
 		/*
 		 * The full name, which a person's card does not lead with. It is asked for, or shown because
 		 * the card arrived with one and nothing else -- a name somebody wrote down and never took
@@ -716,13 +619,6 @@
 		function addPart( kind ) {
 			rows += 1;
 			setPending( pending.concat( [ { id: 'row-' + rows, kind: kind } ] ) );
-		}
-
-		/** A separator, which goes in the one place that says where it goes: between these two parts. */
-		function addSeparator( before ) {
-			var list = components.slice();
-			list.splice( before, 0, { kind: 'separator', value: '' } );
-			setComponents( list );
 		}
 
 		/**
@@ -842,38 +738,11 @@
 			} );
 		}
 
-		/*
-		 * A separator goes between two parts, so it is put there: the gap between two lines is the one
-		 * place on the screen that says exactly where it goes, and a name carrying one is edited as
-		 * the list it has become.
-		 */
-		function withGaps( list ) {
-			var out = [];
-			list.forEach( function ( row, at ) {
-				if ( ordered && at > 0 && row.part && list[ at - 1 ].part ) {
-					out.push( el(
-						'div',
-						{ key: 'gap-' + row.key, className: 'ax-ce-slot-gap' },
-						el( IconButton, {
-							icon: 'add',
-							className: 'ax-ce-slot-gap__add',
-							label: __( 'Put something between these two parts', 'axismundi-contacts' ),
-							onClick: function () {
-								addSeparator( row.index );
-							}
-						} )
-					) );
-				}
-				out.push( line( row ) );
-			} );
-			return out;
-		}
-
 		var slots = expanded
 			? slotRows( components, [ FIXED_FIRST ] ).map( line )
-				.concat( withGaps( slotRows( components, MIDDLE_SLOTS, pending ) ) )
+				.concat( slotRows( components, MIDDLE_SLOTS, pending, true ).map( line ) )
 				.concat( slotRows( components, [ FIXED_LAST ] ).map( line ) )
-			: withGaps( slotRows( components, BASIC_SLOTS ) );
+			: slotRows( components, BASIC_SLOTS ).map( line );
 
 		return el(
 			Section,
@@ -908,7 +777,7 @@
 				} )
 				: null,
 			// The parts, as a stack of fields, whenever a stack of fields can say what they say.
-			! custom && ( personal || expanded )
+			personal || expanded
 				? el(
 					'div',
 					{ className: 'ax-ce-name' },
@@ -931,7 +800,7 @@
 			 * every card, so they are added rather than offered -- and a name that ends up with two of
 			 * a kind is one the lines cannot hold, so it opens as the list below.
 			 */
-			! custom && expanded
+			expanded
 				? el(
 					'div',
 					{ className: 'ax-ce-name__add' },
@@ -959,9 +828,13 @@
 										 * does not need a second empty one, and offering it is how
 										 * somebody ends up with two lines and one name.
 										 */
-										disabled: -1 === slotIndex( components, kind ) || pending.some( function ( each ) {
-											return each.kind === kind;
-										} ),
+										disabled: (
+											// A line of that kind is already open and empty.
+											( -1 !== NAME_SLOTS.indexOf( kind ) && -1 === slotIndex( components, kind ) )
+											|| pending.some( function ( each ) {
+												return each.kind === kind;
+											} )
+										),
 										onClick: function () {
 											setAdding( false );
 											addPart( kind );
@@ -974,101 +847,6 @@
 						: null
 				)
 				: null,
-			// A name the fields cannot hold, or one somebody has asked to arrange themselves.
-			custom ? el(
-				'ul',
-				{ className: 'ax-ce-parts' + ( null === dragging ? '' : ' is-dragging' ) },
-				components.map( function ( part, index ) {
-					return el(
-						Fragment,
-						{ key: index },
-						/*
-						 * A separator goes between two parts, so it is added between two parts. Reached
-						 * from a general list of kinds it would be added at the end and dragged into
-						 * place, which is a worse way of saying where it goes than pointing at the gap.
-						 */
-						ordered && index > 0
-							? el(
-								'li',
-								{ className: 'ax-ce-gap' },
-								el(
-									'button',
-									{
-										type: 'button',
-										className: 'button-link ax-ce-gap__add',
-										'aria-label': __( 'Put something between these parts', 'axismundi-contacts' ),
-										onClick: function () {
-											var list = components.slice();
-											list.splice( index, 0, { kind: 'separator', value: '' } );
-											setComponents( list );
-										}
-									},
-									'+'
-								)
-							)
-							: null,
-						el( Component, {
-							index: index,
-							part: part || {},
-							ordered: ordered,
-							phonetic: phonetic,
-							localizations: props.localizations,
-							onBlocked: props.onBlocked,
-							onChange: function ( at, next ) {
-								var list = components.slice();
-								list[ at ] = next;
-								setComponents( list );
-							},
-							onRemove: function ( at ) {
-								/*
-								 * A translation may patch into this part. Removing it would leave those
-								 * patches pointing at nothing, which the server refuses -- so the ones
-								 * affected are named and somebody decides, rather than being deleted
-								 * quietly along with a part they were not looking at.
-								 */
-								var affected = patchesUnder( props.localizations, 'name/components/' + at );
-								if ( affected.length ) {
-									props.onBlocked( at, affected );
-									return;
-								}
-								setComponents( components.filter( function ( ignored, i ) {
-									return i !== at;
-								} ) );
-							},
-							onDragStart: props.onDragStart,
-							onDrop: function ( at ) {
-								if ( null === dragging || dragging === at ) {
-									return;
-								}
-								var list = components.slice();
-								var moved = list.splice( dragging, 1 )[ 0 ];
-								list.splice( at, 0, moved );
-								setComponents( list );
-								props.onDragStart( null );
-							}
-						} )
-					);
-				} )
-			) : null,
-			/*
-			 * In the list the document is the screen, so adding there adds a part outright rather than
-			 * opening a line: there are no lines here to open, only parts.
-			 */
-			custom ? el(
-				'p',
-				{ className: 'ax-ce-addpart__row' },
-				NAME_SLOTS.map( function ( kind ) {
-					return el( AddPart, {
-						key: kind,
-						kind: kind,
-						onAdd: function ( each ) {
-							var list = components.slice();
-							list.splice( slotInsertion( components, each ), 0, { kind: each, value: '' } );
-							setComponents( endsFirstAndLast( list ), components.length ? {} : { isOrdered: true } );
-						}
-					} );
-				} )
-			) : null,
 			blocked
 				? el(
 					'div',
@@ -1113,7 +891,7 @@
 			 * leaves every pronunciation exactly where it was: a screen being tidied is not somebody
 			 * deleting how their name sounds.
 			 */
-			expanded || custom
+			expanded
 				? el(
 					'p',
 					null,
@@ -1145,7 +923,7 @@
 			 * carries a sound, so a screen that waited for the value would be letting somebody fill in
 			 * a name and then refusing to save it.
 			 */
-			phonetic && ( expanded || custom )
+			phonetic && expanded
 				? el(
 					'div',
 					{ className: 'ax-ce-phonetic' },
@@ -1210,13 +988,6 @@
 							' ',
 							__( 'Full name', 'axismundi-contacts' )
 						)
-					)
-					: null,
-				! fits
-					? el(
-						'p',
-						{ className: 'description' },
-						__( 'This name has parts a line each cannot hold -- two of a kind, or something written between two of them -- so it is arranged above as the list it is.', 'axismundi-contacts' )
 					)
 					: null,
 				/*

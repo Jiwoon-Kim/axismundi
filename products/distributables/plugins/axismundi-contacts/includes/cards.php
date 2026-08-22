@@ -122,12 +122,17 @@ function axismundi_contacts_validate_card( array $card ) {
 }
 
 /**
- * The revision of JSContact a Card made here is written in.
+ * The revision of JSContact this store is written in.
  *
- * Stated on every Card this site creates, because RFC 9982 asks an implementation to say which
- * revision it wrote a document in and a reader has no other way to know. Not stamped onto documents
- * that arrived from somewhere else: a Card carrying its own `version` keeps it, and one that arrived
- * without is left as it came rather than being told what it is.
+ * One revision, for everything that is editable here. RFC 9982 asks an implementation to say which
+ * revision it wrote a document in, and a store holding some documents at 1.0 and some at 2.0 asks
+ * every reader, every screen and every export to handle both -- for no gain, because a 1.0 Card is a
+ * valid 2.0 Card. What 2.0 changed is that `uid` became optional, which is what lets an import
+ * without one be stored without inventing an identifier for somebody.
+ *
+ * So a document that arrives at 1.0, or with no version at all, is stored as what it now is. Where
+ * the exact bytes somebody sent matter, they belong in an import snapshot beside the record rather
+ * than in the record -- a ledger that is edited is not a copy of what arrived.
  */
 const AXISMUNDI_CONTACTS_JSCONTACT_VERSION = '2.0';
 
@@ -187,6 +192,9 @@ function axismundi_contacts_save_card_for_owner( int $owner_actor_id, array $car
 	 * whose output nobody can compare with its input.
 	 */
 	$card = axismundi_contacts_canonical_card( $card );
+	// One revision for everything editable here. See the constant above for why a 1.0 document does
+	// not stay one.
+	$card['version'] = AXISMUNDI_CONTACTS_JSCONTACT_VERSION;
 	$existing = $card_id > 0 ? axismundi_contacts_get_card( $card_id ) : array();
 	if ( $card_id > 0 && array() === $existing ) {
 		return new WP_Error( 'ax_contacts_card_missing', __( 'That card does not exist.', 'axismundi-contacts' ), array( 'status' => 404 ) );

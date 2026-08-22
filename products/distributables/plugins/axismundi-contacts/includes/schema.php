@@ -95,56 +95,38 @@ function axismundi_contacts_provenance_table() : string {
 }
 
 /**
- * Say which revision the Cards this site made are written in.
+ * Say which revision every Card in the store is written in.
  *
- * They were stored without one and only gained a `version` as they were published, so a Card made
- * here before that was fixed is a v2 document to a stranger and an unversioned one to everything
- * else -- including the editor that reads and saves it back. Saying it once, in the ledger, is what
- * the fix was; this is the same fix applied to the Cards that already existed.
+ * Cards were stored without one and only gained a `version` as they were published, so a Card made
+ * before that is a v2 document to a stranger and an unversioned one to everything here -- including
+ * the editor that reads and saves it back.
  *
- * Ours only. A Card is treated as somebody else's the moment its provenance names a source that is
- * not this site: `local` is a value typed here and `linked-actor` is one taken from an Actor this
- * site keeps, and anything else -- an import, a sync, a service -- means the document came from
- * somewhere with its own idea of what revision it is. Writing a version onto one of those would be
- * this site asserting something about a document it did not write, which is exactly what the
- * creation fix was careful not to do.
+ * Every Card, not only the ones this site made. A store holding some documents at 1.0 and some at
+ * 2.0 asks every reader and every export to handle both, for no gain: a 1.0 Card is a valid 2.0
+ * Card, and what 2.0 changed -- `uid` becoming optional -- takes nothing away from one that has an
+ * identifier already. Where the bytes somebody sent matter, they belong in an import snapshot beside
+ * the record rather than in the record.
  *
- * A Card that already says a version keeps it, whatever it says. `1.0` is not a mistake to correct.
- *
- * @return int How many were given one.
+ * @return int How many were changed.
  */
 function axismundi_contacts_state_jscontact_version() : int {
 	global $wpdb;
-	$cards       = axismundi_contacts_cards_table();
-	$provenance  = axismundi_contacts_provenance_table();
-	$ours        = array( AXISMUNDI_CONTACTS_SOURCE_LOCAL, AXISMUNDI_CONTACTS_SOURCE_ACTOR );
-	$placeholders = implode( ',', array_fill( 0, count( $ours ), '%s' ) );
+	$cards = axismundi_contacts_cards_table();
 	/*
-	 * Read whole rather than matched in SQL. Whether a JSON document has a property is a question
-	 * about the document, and a `LIKE` for the word `version` would also find a note that mentioned
-	 * one.
+	 * Read whole rather than matched in SQL. Whether a JSON document has a property, and what it says,
+	 * are questions about the document -- a `LIKE` for the word `version` would also find a note that
+	 * mentioned one.
 	 */
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration over this plugin's own tables.
-	$rows = (array) $wpdb->get_results(
-		$wpdb->prepare(
-			"SELECT c.id, c.card_json FROM {$cards} c
-				WHERE NOT EXISTS (
-					SELECT 1 FROM {$provenance} p
-					WHERE p.card_id = c.id AND p.source NOT IN ({$placeholders})
-				)",
-			...$ours
-		),
-		ARRAY_A
-	);
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration over this plugin's own table.
+	$rows   = (array) $wpdb->get_results( "SELECT id, card_json FROM {$cards}", ARRAY_A );
 	$stated = 0;
 	foreach ( $rows as $row ) {
 		$card = json_decode( (string) $row['card_json'], true );
-		if ( ! is_array( $card ) || array_key_exists( 'version', $card ) ) {
+		if ( ! is_array( $card ) || AXISMUNDI_CONTACTS_JSCONTACT_VERSION === ( $card['version'] ?? null ) ) {
 			continue;
 		}
-		$card = axismundi_contacts_canonical_card(
-			array_merge( array( '@type' => 'Card', 'version' => AXISMUNDI_CONTACTS_JSCONTACT_VERSION ), $card )
-		);
+		$card['version'] = AXISMUNDI_CONTACTS_JSCONTACT_VERSION;
+		$card            = axismundi_contacts_canonical_card( $card );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 		$wpdb->update(
 			$cards,

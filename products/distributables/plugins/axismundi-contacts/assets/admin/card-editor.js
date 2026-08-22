@@ -296,9 +296,9 @@
 			 * `/kim/` are one thing written two ways, and a separate component for the sound would be
 			 * a second name to keep in step with the first.
 			 */
-			'separator' !== part.kind
+			props.phonetic && -1 !== PHONETIC_SLOTS.indexOf( part.kind )
 				? el( TextField, {
-					label: __( 'Phonetic', 'axismundi-contacts' ),
+					label: __( 'Pronunciation', 'axismundi-contacts' ),
 					className: 'ax-ce-part__phonetic',
 					value: part.phonetic || '',
 					onChange: function ( value ) {
@@ -334,16 +334,118 @@
 	}
 
 	/**
+	 * The parts a name is filled in as, in the order they are read down the screen.
+	 *
+	 * Not the JSContact model with a form around it. Somebody writing down a person's name is filling
+	 * in a name, and the shape of the document that results -- that each of these is an object in an
+	 * ordered list, that the list may hold two of some of them, that a separator is one of them -- is
+	 * true and is not what they came to do. So the ordinary way in is a stack of fields, and the
+	 * document underneath it is reached by asking for it.
+	 */
+	var NAME_SLOTS = [ 'title', 'given', 'given2', 'surname', 'surname2', 'credential' ];
+
+	/** The two a name usually is, which is what is open before anybody asks for more. */
+	var BASIC_SLOTS = [ 'given', 'surname' ];
+
+	/**
+	 * The parts a pronunciation belongs to.
+	 *
+	 * A separator is `-` or `・`; a title is `Dr`. Neither is somebody's name being said, so neither
+	 * gets a column for how it sounds.
+	 */
+	var PHONETIC_SLOTS = [ 'given', 'given2', 'surname', 'surname2' ];
+
+	/** Where the first part of some kind sits, or -1. */
+	function slotIndex( components, kind ) {
+		return ( components || [] ).findIndex( function ( part ) {
+			return part && kind === part.kind;
+		} );
+	}
+
+	/**
+	 * Whether a stack of fields can say everything this name says.
+	 *
+	 * One of each kind and nothing else. A name with two middle names, or a separator between two
+	 * parts, is saying something a fixed field per kind cannot hold -- so that name is edited as what
+	 * it is, and the fields would quietly drop half of it.
+	 */
+	function fitsSlots( components ) {
+		var seen = [];
+		return ( components || [] ).every( function ( part ) {
+			var kind = part && part.kind;
+			if ( -1 === NAME_SLOTS.indexOf( kind ) || -1 !== seen.indexOf( kind ) ) {
+				return false;
+			}
+			seen.push( kind );
+			return true;
+		} );
+	}
+
+	/** Whether any part of this name says how it is said. */
+	function hasPhonetic( components ) {
+		return ( components || [] ).some( function ( part ) {
+			return part && part.phonetic && String( part.phonetic ).trim();
+		} );
+	}
+
+	/** Where a part of some kind goes, so the parts stay in the order the fields are read in. */
+	function slotInsertion( components, kind ) {
+		var rank = NAME_SLOTS.indexOf( kind );
+		var at = ( components || [] ).findIndex( function ( part ) {
+			var other = NAME_SLOTS.indexOf( part && part.kind );
+			return -1 !== other && other > rank;
+		} );
+		return -1 === at ? ( components || [] ).length : at;
+	}
+
+	/**
+	 * One line of the name.
+	 *
+	 * What it says, and -- when somebody has asked for it, and only for the parts that are somebody's
+	 * name rather than punctuation around it -- how it is said. The two sit beside each other because
+	 * that is what they are: one part of a name, written and spoken.
+	 */
+	function NameSlot( props ) {
+		var part = props.part || {};
+		return el(
+			'div',
+			{ className: 'ax-ce-slot' },
+			el( TextField, {
+				label: componentLabel( props.kind ),
+				className: 'ax-ce-slot__value',
+				value: part.value || '',
+				onChange: function ( value ) {
+					props.onChange( props.kind, 'value', value );
+				}
+			} ),
+			props.phonetic && -1 !== PHONETIC_SLOTS.indexOf( props.kind )
+				? el( TextField, {
+					label: __( 'Pronunciation', 'axismundi-contacts' ),
+					className: 'ax-ce-slot__phonetic',
+					value: part.phonetic || '',
+					onChange: function ( value ) {
+						props.onChange( props.kind, 'phonetic', value );
+					}
+				} )
+				: null
+		);
+	}
+
+	/**
 	 * The name.
 	 *
-	 * Either half is a whole name. Somebody may write one out and never take it apart, or give the
-	 * parts and never write it out -- which is what an import brings, and what the drag order and the
-	 * separator are for. Neither is filled in on the other's behalf.
+	 * Two fields and a way to open the rest. A person has a given name and a surname far more often
+	 * than they have a credential or a second middle name, and a screen that shows every part a name
+	 * could have is a screen that asks everybody to read past what they do not need on the way to the
+	 * two things they came to type.
 	 *
-	 * The list of parts is the record. The buttons around it are ways of adding to that list and
-	 * nothing else: a fixed field per kind would be a second place a name lives, and it would be the
-	 * wrong shape as soon as somebody has two middle names -- which the standard allows and real
-	 * names have.
+	 * Everything else the standard allows is still reachable and nothing is decided on anybody's
+	 * behalf: the written-out form, the reading order and the separators inside it, and how the name
+	 * files are each asked for rather than offered. A name that already carries one of them opens
+	 * with it in view, because what is stored is what a screen has to be able to show.
+	 *
+	 * A card about an organisation, a place or a machine has no given name. That name is the name --
+	 * `full` and nothing else -- and the parts are there for the rare card that wants them.
 	 */
 	function NameEditor( props ) {
 		var name = props.name || {};
@@ -351,7 +453,22 @@
 		var dragging = props.dragging;
 		var blocked = props.blocked;
 		var ordered = true === name.isOrdered;
-		// A question about to throw something away, waiting for somebody to answer it.
+		var personal = 'individual' === ( props.kind || 'individual' );
+		var fits = fitsSlots( components );
+
+		/*
+		 * What is open. Screen state, all of it: a name that arrived with a middle name opens showing
+		 * it, and closing the fields never takes anything away.
+		 */
+		var [ expanded, setExpanded ] = useState(
+			components.some( function ( part ) {
+				return part && -1 === BASIC_SLOTS.indexOf( part.kind );
+			} )
+		);
+		var [ phonetic, setPhonetic ] = useState( hasPhonetic( components ) );
+		// The document itself, for a name the fields above cannot hold or somebody wants to arrange.
+		var [ custom, setCustom ] = useState( ! fits );
+		var [ written, setWritten ] = useState( undefined !== name.full );
 		var [ asking, setAsking ] = useState( '' );
 
 		function setName( next ) {
@@ -371,16 +488,19 @@
 				delete next.isOrdered;
 				delete next.defaultSeparator;
 				delete next.sortAs;
+				delete next.phoneticSystem;
+				delete next.phoneticScript;
 			}
 			setName( next );
 		}
 
 		function addPart( kind ) {
 			var list = components.slice();
-			list.splice( insertionIndex( components, kind ), 0, { kind: kind, value: '' } );
+			list.splice( ordered ? insertionIndex( components, kind ) : slotInsertion( components, kind ), 0, { kind: kind, value: '' } );
 			/*
-			 * A name this editor builds is a name whose order it knows: the list somebody is looking
-			 * at is the order they are putting it in. So the first part written here says so.
+			 * A name this editor builds is a name whose order it knows: the fields somebody is filling
+			 * in are read down the screen in the order they are read aloud. So the first part written
+			 * here says so.
 			 *
 			 * A name that arrived saying otherwise is left saying it. An import that did not know the
 			 * reading order is not made to claim one because somebody opened it.
@@ -388,68 +508,101 @@
 			setComponents( list, components.length ? {} : { isOrdered: true } );
 		}
 
+		/**
+		 * One field of the stack, writing through to the part it stands for.
+		 *
+		 * The part is made when there is something to put in it and never before, which is what keeps
+		 * an untouched field out of the document. It is not taken away again when somebody empties it:
+		 * a name half-retyped is not a name being deleted, and what is left empty is dropped on the way
+		 * out rather than mid-keystroke.
+		 */
+		function writeSlot( kind, key, value ) {
+			var at = slotIndex( components, kind );
+			if ( -1 === at ) {
+				if ( ! value ) {
+					return;
+				}
+				var made = { kind: kind, value: '' };
+				made[ key ] = value;
+				var list = components.slice();
+				list.splice( slotInsertion( components, kind ), 0, made );
+				setComponents( list, components.length ? {} : { isOrdered: true } );
+				return;
+			}
+			var part = Object.assign( {}, components[ at ] );
+			if ( '' === value && 'phonetic' === key ) {
+				delete part.phonetic;
+			} else {
+				part[ key ] = value;
+			}
+			var next = components.slice();
+			next[ at ] = part;
+			setComponents( next );
+		}
+
+		var slots = ( expanded ? NAME_SLOTS : BASIC_SLOTS ).map( function ( kind ) {
+			var at = slotIndex( components, kind );
+			return el( NameSlot, {
+				key: kind,
+				kind: kind,
+				part: -1 === at ? null : components[ at ],
+				phonetic: phonetic,
+				onChange: writeSlot
+			} );
+		} );
+
 		return el(
 			'section',
 			{ className: 'ax-ce-section' },
 			el( 'h2', null, __( 'Name', 'axismundi-contacts' ) ),
 			/*
-			 * Two ways of saying a name, and a card may carry either or both. The checkboxes decide
-			 * which editor is open, not what the card holds: unticking one leaves its value exactly
-			 * where it was, because a screen tidying itself is not somebody deleting their name. What
-			 * is stored stays stored until they remove it.
+			 * The written-out name. Not offered to somebody filling in a person's name, and never
+			 * built from the parts -- how a name reads is a question the standard leaves to whoever
+			 * shows it. It is here when the card already carries one, which is what an import of a
+			 * name nobody took apart brings, and when a card is about something that has one name
+			 * rather than parts.
 			 */
-			el(
-				'p',
-				null,
-				el(
-					'label',
-					null,
-					el( 'input', {
-						type: 'checkbox',
-						checked: props.showFull,
-						onChange: function ( event ) {
-							props.onShowFull( event.target.checked );
-						}
-					} ),
-					' ',
-					__( 'Write the name out', 'axismundi-contacts' )
-				)
-			),
-			el( TextField, {
-				label: __( 'Written out', 'axismundi-contacts' ),
-				value: name.full || '',
-				disabled: ! props.showFull,
-				supporting: sprintf(
-					/* translators: %s: what the name reads as. */
-					__( 'Reads as: %s', 'axismundi-contacts' ),
-					nameText( name ) || __( '(nothing yet)', 'axismundi-contacts' )
-				),
-				onChange: function ( value ) {
-					setName( withKey( name, 'full', value ) );
-				}
-			} ),
-			el(
-				'p',
-				null,
-				el(
-					'label',
-					null,
-					el( 'input', {
-						type: 'checkbox',
-						checked: props.showParts,
-						onChange: function ( event ) {
-							props.onShowParts( event.target.checked );
-						}
-					} ),
-					' ',
-					__( 'Give the name in parts', 'axismundi-contacts' )
-				)
-			),
-			// A title opens a name, so it is added at the front rather than added and dragged there.
-			props.showParts && ! hasKind( components, 'title' )
-				? el( 'p', { className: 'ax-ce-addpart__row' }, el( AddPart, { kind: 'title', onAdd: addPart } ) )
+			written || ! personal
+				? el( TextField, {
+					label: __( 'Written out', 'axismundi-contacts' ),
+					value: name.full || '',
+					supporting: personal
+						? sprintf(
+							/* translators: %s: what the name reads as. */
+							__( 'Reads as: %s', 'axismundi-contacts' ),
+							nameText( name ) || __( '(nothing yet)', 'axismundi-contacts' )
+						)
+						: __( 'The name this is known by.', 'axismundi-contacts' ),
+					onChange: function ( value ) {
+						setName( withKey( name, 'full', value ) );
+					}
+				} )
 				: null,
-			props.showParts ? el(
+			// The parts, as a stack of fields, whenever a stack of fields can say what they say.
+			! custom && ( personal || expanded )
+				? el(
+					'div',
+					{ className: 'ax-ce-name' },
+					el( 'div', { className: 'ax-ce-name__slots' }, slots ),
+					el(
+						'button',
+						{
+							type: 'button',
+							className: 'ax-ce-name__more',
+							'aria-expanded': expanded ? 'true' : 'false',
+							'aria-label': expanded
+								? __( 'Fewer parts of the name', 'axismundi-contacts' )
+								: __( 'More parts of the name', 'axismundi-contacts' ),
+							onClick: function () {
+								setExpanded( ! expanded );
+							}
+						},
+						expanded ? '⌃' : '⌄'
+					)
+				)
+				: null,
+			// A name the fields cannot hold, or one somebody has asked to arrange themselves.
+			custom ? el(
 				'ul',
 				{ className: 'ax-ce-parts' + ( null === dragging ? '' : ' is-dragging' ) },
 				components.map( function ( part, index ) {
@@ -485,6 +638,7 @@
 							index: index,
 							part: part || {},
 							ordered: ordered,
+							phonetic: phonetic,
 							localizations: props.localizations,
 							onBlocked: props.onBlocked,
 							onChange: function ( at, next ) {
@@ -521,6 +675,13 @@
 							}
 						} )
 					);
+				} )
+			) : null,
+			custom ? el(
+				'p',
+				{ className: 'ax-ce-addpart__row' },
+				NAME_SLOTS.map( function ( kind ) {
+					return el( AddPart, { key: kind, kind: kind, onAdd: addPart } );
 				} )
 			) : null,
 			blocked
@@ -562,99 +723,28 @@
 					)
 				)
 				: null,
-			props.showParts ? el(
-				'p',
-				{ className: 'ax-ce-addpart__row' },
-				el( AddPart, { kind: 'given', onAdd: addPart } ),
-				el( AddPart, { kind: 'surname', onAdd: addPart } ),
-				el( AddPart, { kind: 'given2', onAdd: addPart } ),
-				el( AddPart, { kind: 'surname2', onAdd: addPart } )
-			) : null,
-			// And a credential closes one, so that is where it is added.
-			props.showParts && ! hasKind( components, 'credential' )
-				? el( 'p', { className: 'ax-ce-addpart__row' }, el( AddPart, { kind: 'credential', onAdd: addPart } ) )
-				: null,
 			/*
-			 * A name that arrived without saying its parts are in the order they are read. Nothing here
-			 * decides that on its behalf -- the parts may have come from a vCard that recorded what
-			 * they were and not how they are said -- so the order is offered as something to state
-			 * rather than assumed by opening the screen.
+			 * How it is said, asked for rather than shown. Turning it off folds the column away and
+			 * leaves every pronunciation exactly where it was: a screen being tidied is not somebody
+			 * deleting how their name sounds.
 			 */
-			props.showParts && components.length && ! ordered
+			expanded || custom
 				? el(
-					'div',
-					{ className: 'ax-ce-unordered' },
-					el(
-						'p',
-						null,
-						__( 'These parts are stored without a reading order, so they cannot be rearranged and nothing can go between them.', 'axismundi-contacts' )
-					),
-					el(
-						'button',
-						{
-							type: 'button',
-							className: 'button',
-							onClick: function () {
-								setComponents( components, { isOrdered: true } );
-							}
-						},
-						__( 'Say they are in the order they are read', 'axismundi-contacts' )
-					)
-				)
-				: null,
-			/*
-			 * The separator between the parts, which exists only for a name whose parts are in order --
-			 * the standard says as much, and a separator between parts nobody has put in order would
-			 * be joining them in an order that means nothing.
-			 *
-			 * The checkbox is whether the card answers at all. Unticked there is no property and a
-			 * reader uses a space; ticked and empty says `""`, which is how a name written without
-			 * spaces is said. Turning it off throws an answer away, so when there is one to lose it
-			 * asks first.
-			 */
-			props.showParts && ordered && components.length
-				? el(
-					Fragment,
+					'p',
 					null,
 					el(
-						'p',
+						'label',
 						null,
-						el(
-							'label',
-							null,
-							el( 'input', {
-								type: 'checkbox',
-								checked: undefined !== name.defaultSeparator,
-								onChange: function ( event ) {
-									if ( event.target.checked ) {
-										setName( Object.assign( {}, name, { defaultSeparator: '' } ) );
-										return;
-									}
-									if ( name.defaultSeparator ) {
-										setAsking( 'separator' );
-										return;
-									}
-									var next = Object.assign( {}, name );
-									delete next.defaultSeparator;
-									setName( next );
-								}
-							} ),
-							' ',
-							__( 'Default separator', 'axismundi-contacts' )
-						)
-					),
-					undefined !== name.defaultSeparator
-						? el( TextField, {
-							label: __( 'Default separator', 'axismundi-contacts' ),
-							className: 'ax-ce-separator',
-							value: name.defaultSeparator,
-							supporting: __( 'What goes between the parts. Empty for names written without spaces.', 'axismundi-contacts' ),
-							onChange: function ( value ) {
-								// Empty is a value here, so it is written rather than treated as nothing.
-								setName( Object.assign( {}, name, { defaultSeparator: value } ) );
+						el( 'input', {
+							type: 'checkbox',
+							checked: phonetic,
+							onChange: function ( event ) {
+								setPhonetic( event.target.checked );
 							}
-						} )
-						: null
+						} ),
+						' ',
+						__( 'Add pronunciation', 'axismundi-contacts' )
+					)
 				)
 				: null,
 			/*
@@ -664,14 +754,12 @@
 			 * in an unstated alphabet are sounds nobody can read: `Jīn` is Pinyin, `キム` is kana, and
 			 * the standard will not store one without the other.
 			 */
-			props.showParts && components.some( function ( part ) {
-				return part && part.phonetic && String( part.phonetic ).trim();
-			} )
+			hasPhonetic( components )
 				? el(
 					'div',
 					{ className: 'ax-ce-phonetic' },
 					el( Combobox, {
-						label: __( 'Phonetic system', 'axismundi-contacts' ),
+						label: __( 'Pronunciation system', 'axismundi-contacts' ),
 						value: name.phoneticSystem || '',
 						options: PHONETIC_SYSTEMS,
 						allowFree: true,
@@ -681,7 +769,7 @@
 						}
 					} ),
 					el( Combobox, {
-						label: __( 'Phonetic script', 'axismundi-contacts' ),
+						label: __( 'Pronunciation script', 'axismundi-contacts' ),
 						value: name.phoneticScript || '',
 						options: PHONETIC_SCRIPTS,
 						allowFree: true,
@@ -693,17 +781,16 @@
 				)
 				: null,
 			/*
-			 * How it files, which is a third answer rather than a consequence of the other two. Left
-			 * alone, a directory reads the parts themselves -- so this is here for the name whose
-			 * filing does not follow from them: RFC 9553 files `Pau Shou Chang` under a surname whose
-			 * value is `Shou Chang`, because the `given2` belongs with the surname when sorting and
-			 * nowhere else. Two keys, because a directory has two columns.
+			 * Everything a name can say that filling one in does not ask about. Each of these is a
+			 * real answer somebody may need and none of them is a question to put in front of
+			 * somebody typing a surname.
 			 */
-			props.showParts && components.length
-				? el(
-					Fragment,
-					null,
-					el(
+			el(
+				'details',
+				{ className: 'ax-ce-name__advanced' },
+				el( 'summary', null, __( 'More about this name', 'axismundi-contacts' ) ),
+				personal
+					? el(
 						'p',
 						null,
 						el(
@@ -711,50 +798,202 @@
 							null,
 							el( 'input', {
 								type: 'checkbox',
-								checked: undefined !== name.sortAs,
+								checked: written,
 								onChange: function ( event ) {
 									if ( event.target.checked ) {
-										setName( Object.assign( {}, name, { sortAs: {} } ) );
+										setWritten( true );
 										return;
 									}
-									if ( Object.keys( name.sortAs || {} ).length ) {
-										setAsking( 'sorting' );
+									if ( name.full ) {
+										setAsking( 'written' );
 										return;
 									}
-									var next = Object.assign( {}, name );
-									delete next.sortAs;
-									setName( next );
+									setWritten( false );
 								}
 							} ),
 							' ',
-							__( 'Custom sorting', 'axismundi-contacts' )
+							__( 'Write the name out as well', 'axismundi-contacts' )
 						)
+					)
+					: null,
+				/*
+				 * The parts as the document holds them: an ordered list, which may carry two of a kind
+				 * and a separator between any two of them. Offered rather than shown, and forced open
+				 * for a name the fields above cannot hold, because a screen that cannot show what is
+				 * stored is a screen that will lose it.
+				 */
+				el(
+					'p',
+					null,
+					el(
+						'label',
+						null,
+						el( 'input', {
+							type: 'checkbox',
+							checked: custom,
+							disabled: ! fits,
+							onChange: function ( event ) {
+								setCustom( event.target.checked );
+							}
+						} ),
+						' ',
+						__( 'Arrange the parts myself', 'axismundi-contacts' )
 					),
-					undefined !== name.sortAs
+					! fits
 						? el(
-							'div',
-							{ className: 'ax-ce-sortas' },
-							SORT_KEYS.filter( function ( kind ) {
-								return hasKind( components, kind );
-							} ).map( function ( kind ) {
-								return el( TextField, {
-									key: kind,
-									label: sprintf(
-										/* translators: %s: which part of the name, such as Surname. */
-										__( 'File %s under', 'axismundi-contacts' ),
-										componentLabel( kind )
-									),
-									value: ( name.sortAs || {} )[ kind ] || '',
-									onChange: function ( value ) {
-										var sortAs = withKey( name.sortAs || {}, kind, value );
-										setName( Object.assign( {}, name, { sortAs: sortAs } ) );
-									}
-								} );
-							} )
+							'span',
+							{ className: 'description' },
+							' ' + __( 'This name has parts the fields above cannot hold, so it is arranged here.', 'axismundi-contacts' )
 						)
 						: null
-				)
-				: null,
+				),
+				/*
+				 * A name that arrived without saying its parts are in the order they are read. Nothing
+				 * here decides that on its behalf -- the parts may have come from a vCard that recorded
+				 * what they were and not how they are said -- so the order is offered as something to
+				 * state rather than assumed by opening the screen.
+				 */
+				components.length && ! ordered
+					? el(
+						'div',
+						{ className: 'ax-ce-unordered' },
+						el(
+							'p',
+							null,
+							__( 'These parts are stored without a reading order, so they cannot be rearranged and nothing can go between them.', 'axismundi-contacts' )
+						),
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									setComponents( components, { isOrdered: true } );
+								}
+							},
+							__( 'Say they are in the order they are read', 'axismundi-contacts' )
+						)
+					)
+					: null,
+				/*
+				 * The separator between the parts, which exists only for a name whose parts are in
+				 * order -- the standard says as much, and a separator between parts nobody has put in
+				 * order would be joining them in an order that means nothing.
+				 *
+				 * The checkbox is whether the card answers at all. Unticked there is no property and a
+				 * reader uses a space; ticked and empty says `""`, which is how a name written without
+				 * spaces is said. Turning it off throws an answer away, so when there is one to lose it
+				 * asks first.
+				 */
+				ordered && components.length
+					? el(
+						Fragment,
+						null,
+						el(
+							'p',
+							null,
+							el(
+								'label',
+								null,
+								el( 'input', {
+									type: 'checkbox',
+									checked: undefined !== name.defaultSeparator,
+									onChange: function ( event ) {
+										if ( event.target.checked ) {
+											setName( Object.assign( {}, name, { defaultSeparator: '' } ) );
+											return;
+										}
+										if ( name.defaultSeparator ) {
+											setAsking( 'separator' );
+											return;
+										}
+										var next = Object.assign( {}, name );
+										delete next.defaultSeparator;
+										setName( next );
+									}
+								} ),
+								' ',
+								__( 'Default separator', 'axismundi-contacts' )
+							)
+						),
+						undefined !== name.defaultSeparator
+							? el( TextField, {
+								label: __( 'Default separator', 'axismundi-contacts' ),
+								className: 'ax-ce-separator',
+								value: name.defaultSeparator,
+								supporting: __( 'What goes between the parts. Empty for names written without spaces.', 'axismundi-contacts' ),
+								onChange: function ( value ) {
+									// Empty is a value here, so it is written rather than treated as nothing.
+									setName( Object.assign( {}, name, { defaultSeparator: value } ) );
+								}
+							} )
+							: null
+					)
+					: null,
+				/*
+				 * How it files, which is a third answer rather than a consequence of the other two.
+				 * Left alone, a directory reads the parts themselves -- so this is here for the name
+				 * whose filing does not follow from them: RFC 9553 files `Pau Shou Chang` under a
+				 * surname whose value is `Shou Chang`, because the `given2` belongs with the surname
+				 * when sorting and nowhere else. Two keys, because a directory has two columns.
+				 */
+				components.length
+					? el(
+						Fragment,
+						null,
+						el(
+							'p',
+							null,
+							el(
+								'label',
+								null,
+								el( 'input', {
+									type: 'checkbox',
+									checked: undefined !== name.sortAs,
+									onChange: function ( event ) {
+										if ( event.target.checked ) {
+											setName( Object.assign( {}, name, { sortAs: {} } ) );
+											return;
+										}
+										if ( Object.keys( name.sortAs || {} ).length ) {
+											setAsking( 'sorting' );
+											return;
+										}
+										var next = Object.assign( {}, name );
+										delete next.sortAs;
+										setName( next );
+									}
+								} ),
+								' ',
+								__( 'Custom sorting', 'axismundi-contacts' )
+							)
+						),
+						undefined !== name.sortAs
+							? el(
+								'div',
+								{ className: 'ax-ce-sortas' },
+								SORT_KEYS.filter( function ( kind ) {
+									return hasKind( components, kind );
+								} ).map( function ( kind ) {
+									return el( TextField, {
+										key: kind,
+										label: sprintf(
+											/* translators: %s: which part of the name, such as Surname. */
+											__( 'File %s under', 'axismundi-contacts' ),
+											componentLabel( kind )
+										),
+										value: ( name.sortAs || {} )[ kind ] || '',
+										onChange: function ( value ) {
+											var sortAs = withKey( name.sortAs || {}, kind, value );
+											setName( Object.assign( {}, name, { sortAs: sortAs } ) );
+										}
+									} );
+								} )
+							)
+							: null
+					)
+					: null
+			),
 			asking
 				? el(
 					'div',
@@ -764,7 +1003,9 @@
 						null,
 						'separator' === asking
 							? __( 'Turning this off removes the separator this name is written with.', 'axismundi-contacts' )
-							: __( 'Turning this off removes the way this name is filed.', 'axismundi-contacts' )
+							: 'sorting' === asking
+								? __( 'Turning this off removes the way this name is filed.', 'axismundi-contacts' )
+								: __( 'Turning this off removes the written-out name.', 'axismundi-contacts' )
 					),
 					el(
 						'p',
@@ -775,6 +1016,14 @@
 								type: 'button',
 								className: 'button',
 								onClick: function () {
+									if ( 'written' === asking ) {
+										var without = Object.assign( {}, name );
+										delete without.full;
+										setWritten( false );
+										setAsking( '' );
+										setName( without );
+										return;
+									}
 									var next = Object.assign( {}, name );
 									delete next[ 'separator' === asking ? 'defaultSeparator' : 'sortAs' ];
 									setAsking( '' );
@@ -1607,7 +1856,11 @@
 			return card;
 		}
 		var kept = parts.filter( function ( part ) {
-			return part && ( 'separator' === part.kind || ( part.value && String( part.value ).trim() ) );
+			return part && (
+				'separator' === part.kind
+					|| ( part.value && String( part.value ).trim() )
+					|| ( part.phonetic && String( part.phonetic ).trim() )
+			);
 		} );
 		if ( kept.length === parts.length ) {
 			return card;
@@ -1639,12 +1892,6 @@
 		var [ jsonError, setJsonError ] = useState( '' );
 		var [ dragging, setDragging ] = useState( null );
 		var [ blocked, setBlocked ] = useState( null );
-		/*
-		 * Which name editors are open. Screen state and nothing else: what is stored decides how these
-		 * start, and turning one off never takes a value away. A card that says both keeps saying both.
-		 */
-		var [ showFull, setShowFull ] = useState( undefined !== ( config.card.name || {} ).full );
-		var [ showParts, setShowParts ] = useState( !! ( config.card.name || {} ).components );
 
 		// A locked kind is the Actor's answer, so the card says it whatever it said before.
 		if ( config.lockedKind && card.kind !== config.lockedKind ) {
@@ -1746,10 +1993,8 @@
 					),
 					el( NameEditor, {
 						name: card.name,
-						showFull: showFull,
-						showParts: showParts,
-						onShowFull: setShowFull,
-						onShowParts: setShowParts,
+						// What the card describes decides what a name is: an organisation has no surname.
+						kind: card.kind,
 						dragging: dragging,
 						onDragStart: setDragging,
 						localizations: card.localizations,

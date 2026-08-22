@@ -3226,12 +3226,66 @@ try {
 	 */
 	ax_ct_assert(
 		$ax_ct_results,
-		'which name editor is open is a screen deciding what to show, never the card losing a value',
-		str_contains( $ax_ct_kn_js, 'var [ showFull, setShowFull ]' )
-			&& str_contains( $ax_ct_kn_js, 'var [ showParts, setShowParts ]' )
-			&& str_contains( $ax_ct_kn_js, 'disabled: ! props.showFull' )
-			// Nothing in the toggles reaches the draft; they set screen state and stop there.
-			&& ! str_contains( $ax_ct_kn_js, 'onShowFull: function' )
+		'how much of a name is on screen is the screen deciding, never the card losing a value',
+		str_contains( $ax_ct_kn_js, 'var [ expanded, setExpanded ]' )
+			&& str_contains( $ax_ct_kn_js, 'var [ phonetic, setPhonetic ]' )
+			// What is stored decides what opens, and closing something writes nothing.
+			&& str_contains( $ax_ct_kn_js, 'useState( hasPhonetic( components ) )' )
+			&& str_contains( $ax_ct_kn_js, 'setExpanded( ! expanded );' )
+			&& str_contains( $ax_ct_kn_js, 'setPhonetic( event.target.checked );' )
+			// And nobody is asked which half of a name they are writing any more.
+			&& ! str_contains( $ax_ct_kn_js, "__( 'Give the name in parts', 'axismundi-contacts' )" )
+	);
+	/*
+	 * A person has a given name and a surname far more often than a credential or a second middle
+	 * name, so those two are the section and everything else is behind one control. What a card
+	 * describes decides even that: an organisation has no surname, and its name is the name.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a name opens as the two lines a name usually is, and what is not a person opens as one',
+		str_contains( $ax_ct_kn_js, "var BASIC_SLOTS = [ 'given', 'surname' ];" )
+			&& str_contains( $ax_ct_kn_js, "var NAME_SLOTS = [ 'title', 'given', 'given2', 'surname', 'surname2', 'credential' ];" )
+			&& str_contains( $ax_ct_kn_js, 'expanded ? NAME_SLOTS : BASIC_SLOTS' )
+			&& str_contains( $ax_ct_kn_js, "var personal = 'individual' === ( props.kind || 'individual' );" )
+			&& str_contains( $ax_ct_kn_js, 'written || ! personal' )
+	);
+	/*
+	 * A pronunciation belongs beside the part it is a pronunciation of, and only for the parts that
+	 * are somebody's name: a separator is `-` and a title is `Dr`, and neither is being said.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'how a part sounds sits beside what it says, for the parts that are somebody rather than punctuation',
+		str_contains( $ax_ct_kn_js, "var PHONETIC_SLOTS = [ 'given', 'given2', 'surname', 'surname2' ];" )
+			&& str_contains( $ax_ct_kn_js, "props.phonetic && -1 !== PHONETIC_SLOTS.indexOf( props.kind )" )
+			&& str_contains( $ax_ct_kn_js, "props.phonetic && -1 !== PHONETIC_SLOTS.indexOf( part.kind )" )
+			&& str_contains( $ax_ct_kn_js, "__( 'Add pronunciation', 'axismundi-contacts' )" )
+	);
+	/*
+	 * And the fields are a way in rather than the record. A name with two middle names or a separator
+	 * between two parts says something a fixed field per kind cannot hold, so that name is edited as
+	 * what it is and the choice is not somebody's to get wrong.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a name the fields cannot hold is edited as what it is, rather than shown as less than it says',
+		str_contains( $ax_ct_kn_js, 'function fitsSlots( components )' )
+			&& str_contains( $ax_ct_kn_js, 'var [ custom, setCustom ] = useState( ! fits );' )
+			&& str_contains( $ax_ct_kn_js, 'disabled: ! fits,' )
+			&& str_contains( $ax_ct_kn_js, "__( 'Arrange the parts myself', 'axismundi-contacts' )" )
+	);
+	/*
+	 * The written-out name is never built from the parts and never removed on their account. It is
+	 * shown when the card carries one -- an import of a name nobody took apart -- and asked for
+	 * otherwise, and turning it off throws away what somebody else wrote, so it asks first.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a name written out is what a card already says, not something this builds or quietly drops',
+		str_contains( $ax_ct_kn_js, 'var [ written, setWritten ] = useState( undefined !== name.full );' )
+			&& str_contains( $ax_ct_kn_js, "setAsking( 'written' )" )
+			&& str_contains( $ax_ct_kn_js, "__( 'Write the name out as well', 'axismundi-contacts' )" )
 	);
 	/*
 	 * And a card carrying both is stored carrying both. Neither is derived from the other, in either
@@ -3414,7 +3468,7 @@ try {
 		'something goes between two parts by being put between them, and only where there is an order',
 		str_contains( $ax_ct_sep_js, 'ax-ce-gap__add' )
 			&& str_contains( $ax_ct_sep_js, 'ordered && index > 0' )
-			&& str_contains( $ax_ct_sep_js, 'props.showParts && ordered && components.length' )
+			&& str_contains( $ax_ct_sep_js, 'ordered && components.length' )
 			&& str_contains( $ax_ct_sep_js, 'draggable: ordered' )
 	);
 	/*
@@ -3444,9 +3498,10 @@ try {
 		str_contains( $ax_ct_sep_js, 'function insertionIndex' )
 			&& str_contains( $ax_ct_sep_js, "if ( 'title' === kind ) {" )
 			&& str_contains( $ax_ct_sep_js, "'credential' === part.kind;" )
-			// And the list is the record: the buttons add to it rather than standing beside it.
+			// And a field writes its part into the same place, so the list reads as the stack does.
+			&& str_contains( $ax_ct_sep_js, 'function slotInsertion( components, kind )' )
+			&& str_contains( $ax_ct_sep_js, 'var rank = NAME_SLOTS.indexOf( kind );' )
 			&& str_contains( $ax_ct_sep_js, 'function AddPart' )
-			&& str_contains( $ax_ct_sep_js, "el( AddPart, { kind: 'given2', onAdd: addPart } )" )
 	);
 	/*
 	 * A name this editor builds is a name whose order it knows -- the list somebody is looking at is
@@ -3469,7 +3524,9 @@ try {
 		$ax_ct_results,
 		'a part nobody filled in is not part of a name, and an empty separator still is',
 		str_contains( $ax_ct_sep_js, 'function prepare( card )' )
-			&& str_contains( $ax_ct_sep_js, "'separator' === part.kind || ( part.value && String( part.value ).trim() )" )
+			&& str_contains( $ax_ct_sep_js, "|| ( part.value && String( part.value ).trim() )" )
+			// And a part somebody has said the sound of but not yet written is still being written.
+			&& str_contains( $ax_ct_sep_js, "|| ( part.phonetic && String( part.phonetic ).trim() )" )
 			&& str_contains( $ax_ct_sep_js, 'card: prepare( card )' )
 			// Left alone when a language patches into the parts, because dropping one would move the rest.
 			&& str_contains( $ax_ct_sep_js, "patchesUnder( card.localizations, 'name/components' ).length" )

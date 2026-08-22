@@ -388,3 +388,63 @@
 	flex: 1 1 auto;
 	min-width: 0;
 }
+
+/* -- the name, as a stack of fields ---------------------------------------------------------- */
+
+/*
+ * The fields and the way to open the rest of them. The control sits beside the stack rather than
+ * under it, so the two lines somebody usually types stay the top of the section.
+ */
+.ax-ce-name {
+	display: flex;
+	gap: .5em;
+	align-items: flex-start;
+}
+
+.ax-ce-name__slots {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.ax-ce-name__more {
+	margin-top: 12px;
+	padding: 0 .5em;
+	color: #2271b1;
+	font-size: 16px;
+	line-height: 32px;
+	background: none;
+	border: 0;
+	border-radius: 50%;
+	cursor: pointer;
+}
+
+.ax-ce-name__more:hover,
+.ax-ce-name__more:focus-visible {
+	background: #f0f0f1;
+}
+
+.ax-ce-slot {
+	display: flex;
+	gap: .5em;
+	align-items: flex-start;
+}
+
+.ax-ce-slot__value {
+	flex: 2 1 0;
+	min-width: 0;
+}
+
+.ax-ce-slot__phonetic {
+	flex: 1 1 0;
+	min-width: 0;
+}
+
+/* Everything a name can say that filling one in does not ask about. */
+.ax-ce-name__advanced {
+	margin-top: 1em;
+}
+
+.ax-ce-name__advanced > summary {
+	color: #2271b1;
+	cursor: pointer;
+}

@@ -3759,7 +3759,12 @@ try {
 	 */
 	$ax_ct_mt_card = array(
 		'@type'  => 'Card',
-		'name'   => array( 'full' => 'Opened and not filled in', 'sortAs' => array() ),
+		'name'   => array(
+			'full'       => 'Opened and not filled in',
+			'components' => array( array( 'kind' => 'given', 'value' => 'Opened' ) ),
+			// Ticked, and nothing typed behind it yet.
+			'sortAs'     => array(),
+		),
 		'emails' => array(),
 	);
 	$ax_ct_mt_ok   = axismundi_contacts_validate_card_values( $ax_ct_mt_card );
@@ -3774,6 +3779,104 @@ try {
 			&& $ax_ct_mt_key > 0
 			&& ! array_key_exists( 'emails', $ax_ct_mt_doc )
 			&& ! array_key_exists( 'sortAs', (array) $ax_ct_mt_doc['name'] )
+	);
+
+	// -- how a name is said ------------------------------------------------------------------------------------
+
+	/*
+	 * A pronunciation belongs to the part it is a pronunciation of. `\xea\xb9\x80` and `/kim/` are one thing
+	 * written two ways, and a component of its own for the sound would be a second name to keep in
+	 * step with the first. What system or script those sounds are written in belongs to the name,
+	 * because it is the same answer for all of them.
+	 */
+	$ax_ct_ph_card = array(
+		'@type' => 'Card',
+		'name'  => array(
+			'components'       => array(
+				array( 'kind' => 'surname', 'value' => "\xea\xb9\x80", 'phonetic' => '/kim/' ),
+				array( 'kind' => 'given', 'value' => "\xec\xa7\x80\xec\x9a\xb4", 'phonetic' => '/t\xc9\x95i.un/' ),
+			),
+			'phoneticSystem'   => 'ipa',
+			'defaultSeparator' => '',
+			'isOrdered'        => true,
+			'full'             => "\xea\xb9\x80\xec\xa7\x80\xec\x9a\xb4",
+		),
+	);
+	$ax_ct_ph_id   = axismundi_contacts_save_card( $ax_ct_book_id, $ax_ct_ph_card );
+	$ax_ct_ph_key  = is_wp_error( $ax_ct_ph_id ) ? 0 : (int) $ax_ct_ph_id;
+	$ax_ct_loose[] = $ax_ct_ph_key;
+	$ax_ct_ph_doc  = axismundi_contacts_card_document( $ax_ct_ph_key );
+	$ax_ct_ph_part = array_keys( (array) ( $ax_ct_ph_doc['name']['components'][0] ?? array() ) );
+	ax_ct_assert(
+		$ax_ct_results,
+		'how a part of a name is said is stored on that part, next to what it says',
+		'/kim/' === (string) ( $ax_ct_ph_doc['name']['components'][0]['phonetic'] ?? '' )
+			&& 'ipa' === (string) ( $ax_ct_ph_doc['name']['phoneticSystem'] ?? '' )
+			&& array( 'kind', 'value', 'phonetic' ) === $ax_ct_ph_part
+	);
+	/*
+	 * And sounds in an unstated alphabet are sounds nobody can read. `Jin` is Pinyin, the same letters
+	 * are something else in IPA, and the standard requires the name to say which -- so a pronunciation
+	 * with neither system nor script is refused rather than stored for somebody to guess at.
+	 */
+	$ax_ct_ph_mute = $ax_ct_ph_card;
+	unset( $ax_ct_ph_mute['name']['phoneticSystem'] );
+	$ax_ct_ph_alone = axismundi_contacts_validate_card_values( $ax_ct_ph_mute );
+	// A script alone answers it, which is what a card romanising a name has.
+	$ax_ct_ph_mute['name']['phoneticScript'] = 'Latn';
+	$ax_ct_ph_script = axismundi_contacts_validate_card_values( $ax_ct_ph_mute );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a pronunciation says nothing until the name says what it is written in, and either answer does',
+		is_wp_error( $ax_ct_ph_alone )
+			&& str_contains( (string) $ax_ct_ph_alone->get_error_message(), 'phonetic' )
+			&& true === $ax_ct_ph_script
+	);
+	/*
+	 * The other way of writing the same name is a language patching the same paths. Nothing new is
+	 * invented for it: `name/components/0/phonetic` is where the sound lives in the base card, so it
+	 * is where a language says its own.
+	 */
+	$ax_ct_ph_local = axismundi_contacts_card_document( $ax_ct_ph_key );
+	$ax_ct_ph_local['localizations'] = array(
+		'zh-Hant-TW' => array(
+			'name/phoneticSystem'          => 'piny',
+			'name/phoneticScript'          => 'Latn',
+			'name/components/0/value'      => "\xe9\x87\x91",
+			'name/components/0/phonetic'   => "J\xc4\xabn",
+		),
+	);
+	$ax_ct_ph_saved = axismundi_contacts_save_card_for_owner( $ax_ct_owner_id, $ax_ct_ph_local, $ax_ct_ph_key );
+	$ax_ct_ph_back  = axismundi_contacts_card_document( $ax_ct_ph_key );
+	ax_ct_assert(
+		$ax_ct_results,
+		'another language says how it is written by patching where it was written, inventing nothing',
+		! is_wp_error( $ax_ct_ph_saved )
+			&& "J\xc4\xabn" === (string) ( $ax_ct_ph_back['localizations']['zh-Hant-TW']['name/components/0/phonetic'] ?? '' )
+			&& 'piny' === (string) ( $ax_ct_ph_back['localizations']['zh-Hant-TW']['name/phoneticSystem'] ?? '' )
+			// And the base card still says what it said.
+			&& 'ipa' === (string) ( $ax_ct_ph_back['name']['phoneticSystem'] ?? '' )
+	);
+	/*
+	 * A name with no parts has nothing to file by, which the standard states outright and the question
+	 * answers by itself: a sort key names a part, and there are none.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a name with no parts is not filed by one',
+		is_wp_error( axismundi_contacts_validate_card_values( array( 'name' => array( 'full' => 'Only written out', 'sortAs' => array( 'surname' => 'Kim' ) ) ) ) )
+	);
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_ph_js = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/card-editor.js' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'the screen asks how a part is said beside it, and what that is written in once for the name',
+		str_contains( $ax_ct_ph_js, "withKey( part, 'phonetic', value )" )
+			&& str_contains( $ax_ct_ph_js, "var PHONETIC_SYSTEMS = [ 'ipa', 'jyut', 'piny' ];" )
+			&& str_contains( $ax_ct_ph_js, "withKey( name, 'phoneticSystem', value )" )
+			&& str_contains( $ax_ct_ph_js, "withKey( name, 'phoneticScript', value )" )
+			// Asked as soon as there is a pronunciation to read, and not before.
+			&& str_contains( $ax_ct_ph_js, 'return part && part.phonetic && String( part.phonetic ).trim();' )
 	);
 
 	ax_ct_assert(

@@ -291,6 +291,21 @@
 					props.onChange( props.index, next );
 				}
 			} ),
+			/*
+			 * How this part is said. A property of the part rather than a part of its own: `김` and
+			 * `/kim/` are one thing written two ways, and a separate component for the sound would be
+			 * a second name to keep in step with the first.
+			 */
+			'separator' !== part.kind
+				? el( TextField, {
+					label: __( 'Phonetic', 'axismundi-contacts' ),
+					className: 'ax-ce-part__phonetic',
+					value: part.phonetic || '',
+					onChange: function ( value ) {
+						props.onChange( props.index, withKey( part, 'phonetic', value ) );
+					}
+				} )
+				: null,
 			el( IconButton, {
 				icon: 'delete',
 				variant: 'danger',
@@ -643,6 +658,41 @@
 				)
 				: null,
 			/*
+			 * And what those pronunciations are written in, which belongs to the name rather than to
+			 * any one part of it. Shown as soon as there is a pronunciation to read, because until
+			 * then there is nothing to say it about -- and required from that moment, because sounds
+			 * in an unstated alphabet are sounds nobody can read: `Jīn` is Pinyin, `キム` is kana, and
+			 * the standard will not store one without the other.
+			 */
+			props.showParts && components.some( function ( part ) {
+				return part && part.phonetic && String( part.phonetic ).trim();
+			} )
+				? el(
+					'div',
+					{ className: 'ax-ce-phonetic' },
+					el( Combobox, {
+						label: __( 'Phonetic system', 'axismundi-contacts' ),
+						value: name.phoneticSystem || '',
+						options: PHONETIC_SYSTEMS,
+						allowFree: true,
+						supporting: __( 'ipa, jyut or piny. One of this and the script is required.', 'axismundi-contacts' ),
+						onChange: function ( value ) {
+							setName( withKey( name, 'phoneticSystem', value ) );
+						}
+					} ),
+					el( Combobox, {
+						label: __( 'Phonetic script', 'axismundi-contacts' ),
+						value: name.phoneticScript || '',
+						options: PHONETIC_SCRIPTS,
+						allowFree: true,
+						supporting: __( 'The script the pronunciations above are written in.', 'axismundi-contacts' ),
+						onChange: function ( value ) {
+							setName( withKey( name, 'phoneticScript', value ) );
+						}
+					} )
+				)
+				: null,
+			/*
 			 * How it files, which is a third answer rather than a consequence of the other two. Left
 			 * alone, a directory reads the parts themselves -- so this is here for the name whose
 			 * filing does not follow from them: RFC 9553 files `Pau Shou Chang` under a surname whose
@@ -750,6 +800,16 @@
 				: null
 		);
 	}
+
+	/**
+	 * The phonetic systems the standard registers, and the scripts a pronunciation is usually in.
+	 *
+	 * The systems are a closed list in RFC 9553 and the scripts are not, so both are typed into: a
+	 * pronunciation written in a script nobody listed is still a pronunciation, and refusing it would
+	 * be this editor deciding which alphabets exist.
+	 */
+	var PHONETIC_SYSTEMS = [ 'ipa', 'jyut', 'piny' ];
+	var PHONETIC_SCRIPTS = [ 'Latn', 'Kana', 'Hira', 'Hang', 'Hani', 'Cyrl', 'Arab', 'Grek' ];
 
 	/**
 	 * The columns a directory files a name in.

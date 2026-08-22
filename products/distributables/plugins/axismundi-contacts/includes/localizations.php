@@ -391,7 +391,16 @@ function axismundi_contacts_validate_card_values( array $card ) {
 		if ( ! axismundi_contacts_value_is( $name, 'object' ) ) {
 			return axismundi_contacts_value_error( 'name', __( 'a name is an object', 'axismundi-contacts' ) );
 		}
-		foreach ( array( 'full' => 'string', 'defaultSeparator' => 'string', 'isOrdered' => 'boolean', 'components' => 'list' ) as $key => $type ) {
+		foreach (
+			array(
+				'full'             => 'string',
+				'defaultSeparator' => 'string',
+				'isOrdered'        => 'boolean',
+				'components'       => 'list',
+				'phoneticSystem'   => 'string',
+				'phoneticScript'   => 'string',
+			) as $key => $type
+		) {
 			if ( array_key_exists( $key, $name ) && ! axismundi_contacts_value_is( $name[ $key ], $type ) ) {
 				/* translators: %s: the shape the value should have. */
 				return axismundi_contacts_value_error( 'name/' . $key, sprintf( __( 'it is %s', 'axismundi-contacts' ), $type ) );
@@ -406,6 +415,11 @@ function axismundi_contacts_validate_card_values( array $card ) {
 		 * does not have is telling a directory to file it under something nobody wrote down.
 		 */
 		if ( array_key_exists( 'sortAs', $name ) ) {
+			if ( ! array_key_exists( 'components', $name ) ) {
+				// There is nothing to file by. The standard says as much, and so does the question:
+				// a sort key names a part of the name, and this name has no parts.
+				return axismundi_contacts_value_error( 'name/sortAs', __( 'a name is filed by its parts, and this one has none', 'axismundi-contacts' ) );
+			}
 			if ( ! axismundi_contacts_value_is( $name['sortAs'], 'object' ) ) {
 				/* translators: %s: the shape the value should have. */
 				return axismundi_contacts_value_error( 'name/sortAs', sprintf( __( 'it is %s', 'axismundi-contacts' ), 'object' ) );
@@ -439,6 +453,23 @@ function axismundi_contacts_validate_card_values( array $card ) {
 					/* translators: %s: the key a name component must have. */
 					return axismundi_contacts_value_error( 'name/components/' . $index . '/' . $key, __( 'a part of a name says what kind it is and what it says', 'axismundi-contacts' ) );
 				}
+			}
+			if ( array_key_exists( 'phonetic', $component ) && ! is_string( $component['phonetic'] ) ) {
+				return axismundi_contacts_value_error( 'name/components/' . $index . '/phonetic', __( 'how a part of a name is said is text', 'axismundi-contacts' ) );
+			}
+			/*
+			 * And a pronunciation without saying how it is written is a pronunciation nobody can read.
+			 * `/kim/` is IPA, `Jīn` is Pinyin and `キム` is kana, and the same letters mean different
+			 * sounds in each -- so the standard requires the Name to state the system or the script,
+			 * and a document that skipped it would be handing a reader sounds in an unknown alphabet.
+			 */
+			if ( '' !== trim( (string) ( $component['phonetic'] ?? '' ) )
+				&& '' === trim( (string) ( $name['phoneticSystem'] ?? '' ) )
+				&& '' === trim( (string) ( $name['phoneticScript'] ?? '' ) ) ) {
+				return axismundi_contacts_value_error(
+					'name/components/' . $index . '/phonetic',
+					__( 'a pronunciation says nothing until the name says what system or script it is written in', 'axismundi-contacts' )
+				);
 			}
 		}
 	}

@@ -372,3 +372,19 @@
 .ax-ce-unordered p {
 	margin: 0 0 .5em;
 }
+
+/* What the parts above are said as, which belongs to the whole name. */
+.ax-ce-phonetic {
+	display: flex;
+	gap: .5em;
+	margin: .5em 0;
+}
+
+.ax-ce-phonetic .ax-combobox {
+	flex: 1 1 0;
+}
+
+.ax-ce-part__phonetic {
+	flex: 1 1 auto;
+	min-width: 0;
+}

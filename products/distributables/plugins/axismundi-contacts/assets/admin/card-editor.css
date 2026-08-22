@@ -519,3 +519,46 @@
 		display: none;
 	}
 }
+
+/* -- what a section is about, drawn once beside it ------------------------------------------- */
+
+/*
+ * The mark and the stack, side by side, with the mark on the first line rather than centred against
+ * the whole column: a section that grows downwards should not move its own icon.
+ */
+.ax-ce-section.is-marked {
+	display: flex;
+	gap: 1em;
+	align-items: flex-start;
+}
+
+.ax-ce-section__mark {
+	flex: 0 0 24px;
+	margin-top: 16px;
+	color: #50575e;
+}
+
+.ax-ce-section__mark svg {
+	display: block;
+	width: 24px;
+	height: 24px;
+	fill: currentColor;
+}
+
+.ax-ce-section__body {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+/* The chevron is the same glyph either way; which way it points is which way it opens. */
+.ax-ce-name__more svg {
+	display: block;
+	width: 24px;
+	height: 24px;
+	fill: currentColor;
+	transition: transform .15s ease;
+}
+
+.ax-ce-name__more.is-open svg {
+	transform: rotate( 180deg );
+}

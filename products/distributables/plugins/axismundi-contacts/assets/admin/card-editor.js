@@ -41,6 +41,54 @@
 		return ( window.axismundiContactsIcons || {} )[ name ] || '';
 	}
 
+	/**
+	 * What each kind of card looks like at a glance.
+	 *
+	 * Beside the name rather than beside the word "Name", because what sits there is what this card is
+	 * about: a person, a company, a building, a machine. An icon of a person on a card describing an
+	 * office would be the screen saying something the card does not, and the radio at the top is
+	 * exactly where somebody changes their mind about that -- so this follows it.
+	 *
+	 * A kind nothing here recognises gets the address-book mark rather than a guess. Somebody else's
+	 * vendor value is a real answer and drawing a person for it would be inventing one.
+	 */
+	var KIND_ICONS = {
+		individual: 'account-circle',
+		org: 'domain',
+		group: 'group',
+		location: 'location-on',
+		application: 'apps',
+		device: 'devices'
+	};
+
+	function kindIcon( kind ) {
+		return KIND_ICONS[ kind || 'individual' ] || 'contacts';
+	}
+
+	/**
+	 * A section, with what it is about drawn once beside it.
+	 *
+	 * Once, and not on every row. Six rows of email addresses do not each need telling that they are
+	 * email addresses, and an icon repeated down a column is a column of noise -- so it sits at the
+	 * top of the stack, on the first line, where a heading would be.
+	 */
+	function Section( props ) {
+		return el(
+			'section',
+			{ className: 'ax-ce-section is-marked' + ( props.className ? ' ' + props.className : '' ) },
+			el(
+				'div',
+				{ className: 'ax-ce-section__mark', 'aria-hidden': 'true', dangerouslySetInnerHTML: { __html: icon( props.icon ) } }
+			),
+			el(
+				'div',
+				{ className: 'ax-ce-section__body' },
+				props.title ? el( 'h2', null, props.title ) : el( 'h2', { className: 'screen-reader-text' }, props.label ),
+				props.children
+			)
+		);
+	}
+
 	/** Properties this draws rows for, and what each entry's value is called. */
 	var ENTRY_FIELDS = [
 		{ key: 'emails', label: __( 'Email', 'axismundi-contacts' ), value: 'address', type: 'email', icon: 'mail' },
@@ -552,9 +600,8 @@
 		} );
 
 		return el(
-			'section',
-			{ className: 'ax-ce-section' },
-			el( 'h2', null, __( 'Name', 'axismundi-contacts' ) ),
+			Section,
+			{ icon: kindIcon( props.kind ), label: __( 'Name', 'axismundi-contacts' ) },
 			/*
 			 * The written-out name. Not offered to somebody filling in a person's name, and never
 			 * built from the parts -- how a name reads is a question the standard leaves to whoever
@@ -588,7 +635,7 @@
 						'button',
 						{
 							type: 'button',
-							className: 'ax-ce-name__more',
+							className: 'ax-ce-name__more' + ( expanded ? ' is-open' : '' ),
 							'aria-expanded': expanded ? 'true' : 'false',
 							'aria-label': expanded
 								? __( 'Fewer parts of the name', 'axismundi-contacts' )
@@ -597,7 +644,7 @@
 								setExpanded( ! expanded );
 							}
 						},
-						expanded ? '⌃' : '⌄'
+						el( 'span', { 'aria-hidden': 'true', dangerouslySetInnerHTML: { __html: icon( 'keyboard-arrow-down' ) } } )
 					)
 				)
 				: null,
@@ -1079,9 +1126,8 @@
 		}
 
 		return el(
-			'section',
-			{ className: 'ax-ce-section' },
-			el( 'h2', null, props.field.label ),
+			Section,
+			{ icon: props.field.icon, label: props.field.label },
 			ids.map( function ( id ) {
 				var entry = entries[ id ] || {};
 				return el(
@@ -1260,9 +1306,8 @@
 		}
 
 		return el(
-			'section',
-			{ className: 'ax-ce-section' },
-			el( 'h2', null, __( 'Online accounts', 'axismundi-contacts' ) ),
+			Section,
+			{ icon: 'alternate-email', label: __( 'Online accounts', 'axismundi-contacts' ) },
 			el(
 				'p',
 				{ className: 'description' },
@@ -1617,9 +1662,8 @@
 		}
 
 		return el(
-			'section',
-			{ className: 'ax-ce-section' },
-			el( 'h2', null, __( 'Preferred languages', 'axismundi-contacts' ) ),
+			Section,
+			{ icon: 'language', title: __( 'Preferred languages', 'axismundi-contacts' ) },
 			el(
 				'p',
 				{ className: 'description' },

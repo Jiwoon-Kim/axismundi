@@ -3979,6 +3979,59 @@ try {
 			&& str_contains( $ax_ct_sp_js, 'setPointerCapture( event.pointerId )' )
 	);
 
+	/*
+	 * What a card is about is drawn beside its name, and follows what the card says it is. An icon of
+	 * a person on a card describing an office would be the screen saying something the card does not,
+	 * and the radio at the top is exactly where somebody changes their mind about that.
+	 *
+	 * A kind nothing here recognises gets the address-book mark rather than a guess: somebody else's
+	 * vendor value is a real answer, and drawing a person for it would be inventing one.
+	 */
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_ic_js = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/card-editor.js' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'what a card is about is drawn beside its name, and changes when the card does',
+		str_contains( $ax_ct_ic_js, 'var KIND_ICONS = {' )
+			&& str_contains( $ax_ct_ic_js, "org: 'domain'," )
+			&& str_contains( $ax_ct_ic_js, "location: 'location-on'," )
+			&& str_contains( $ax_ct_ic_js, "device: 'devices'" )
+			&& str_contains( $ax_ct_ic_js, "return KIND_ICONS[ kind || 'individual' ] || 'contacts';" )
+			&& str_contains( $ax_ct_ic_js, 'icon: kindIcon( props.kind )' )
+	);
+	/*
+	 * And every icon a screen names is one the registry holds. A mark that resolves to nothing is a
+	 * section with a gap where its subject should be, which nobody notices until it ships.
+	 */
+	$ax_ct_ic_named = array( 'account-circle', 'domain', 'group', 'location-on', 'apps', 'devices', 'mail', 'call', 'alternate-email', 'link', 'image', 'language', 'file-json', 'keyboard-arrow-down' );
+	$ax_ct_ic_have  = array_keys( axismundi_contacts_icons() );
+	$ax_ct_ic_files = true;
+	foreach ( $ax_ct_ic_named as $ax_ct_ic_one ) {
+		if ( ! in_array( $ax_ct_ic_one, $ax_ct_ic_have, true ) || ! is_readable( dirname( __DIR__ ) . '/assets/icons/' . $ax_ct_ic_one . '.svg' ) ) {
+			$ax_ct_ic_files = false;
+		}
+	}
+	ax_ct_assert(
+		$ax_ct_results,
+		'every mark a section draws is one the registry holds and one that is on disk',
+		$ax_ct_ic_files
+	);
+	/*
+	 * Drawn once beside the stack rather than on every row. Six rows of email addresses do not each
+	 * need telling that they are email addresses, and an icon repeated down a column is a column of
+	 * noise.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a section says what it is about once, beside the stack rather than down it',
+		str_contains( $ax_ct_ic_js, 'function Section( props )' )
+			&& str_contains( $ax_ct_ic_js, "className: 'ax-ce-section__mark'" )
+			&& str_contains( $ax_ct_ic_js, "{ icon: props.field.icon, label: props.field.label }," )
+			&& str_contains( $ax_ct_ic_js, "{ icon: 'alternate-email', label:" )
+			// The heading is still there for anybody reading the page rather than looking at it.
+			&& str_contains( $ax_ct_ic_js, "{ className: 'screen-reader-text' }, props.label )" )
+	);
+
 	ax_ct_assert(
 		$ax_ct_results,
 		'this plugin stores address books and imitates neither the Actor registry nor its profiles',

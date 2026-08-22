@@ -34,7 +34,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CONTACTS_DB_VERSION        = '7';
+const AXISMUNDI_CONTACTS_DB_VERSION        = '8';
 const AXISMUNDI_CONTACTS_DB_VERSION_OPTION = 'ax_contacts_db_version';
 
 /**
@@ -92,6 +92,70 @@ function axismundi_contacts_values_table() : string {
 function axismundi_contacts_provenance_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_contact_card_provenance';
+}
+
+/**
+ * Say which revision the Cards this site made are written in.
+ *
+ * They were stored without one and only gained a `version` as they were published, so a Card made
+ * here before that was fixed is a v2 document to a stranger and an unversioned one to everything
+ * else -- including the editor that reads and saves it back. Saying it once, in the ledger, is what
+ * the fix was; this is the same fix applied to the Cards that already existed.
+ *
+ * Ours only. A Card is treated as somebody else's the moment its provenance names a source that is
+ * not this site: `local` is a value typed here and `linked-actor` is one taken from an Actor this
+ * site keeps, and anything else -- an import, a sync, a service -- means the document came from
+ * somewhere with its own idea of what revision it is. Writing a version onto one of those would be
+ * this site asserting something about a document it did not write, which is exactly what the
+ * creation fix was careful not to do.
+ *
+ * A Card that already says a version keeps it, whatever it says. `1.0` is not a mistake to correct.
+ *
+ * @return int How many were given one.
+ */
+function axismundi_contacts_state_jscontact_version() : int {
+	global $wpdb;
+	$cards       = axismundi_contacts_cards_table();
+	$provenance  = axismundi_contacts_provenance_table();
+	$ours        = array( AXISMUNDI_CONTACTS_SOURCE_LOCAL, AXISMUNDI_CONTACTS_SOURCE_ACTOR );
+	$placeholders = implode( ',', array_fill( 0, count( $ours ), '%s' ) );
+	/*
+	 * Read whole rather than matched in SQL. Whether a JSON document has a property is a question
+	 * about the document, and a `LIKE` for the word `version` would also find a note that mentioned
+	 * one.
+	 */
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration over this plugin's own tables.
+	$rows = (array) $wpdb->get_results(
+		$wpdb->prepare(
+			"SELECT c.id, c.card_json FROM {$cards} c
+				WHERE NOT EXISTS (
+					SELECT 1 FROM {$provenance} p
+					WHERE p.card_id = c.id AND p.source NOT IN ({$placeholders})
+				)",
+			...$ours
+		),
+		ARRAY_A
+	);
+	$stated = 0;
+	foreach ( $rows as $row ) {
+		$card = json_decode( (string) $row['card_json'], true );
+		if ( ! is_array( $card ) || array_key_exists( 'version', $card ) ) {
+			continue;
+		}
+		$card = axismundi_contacts_canonical_card(
+			array_merge( array( '@type' => 'Card', 'version' => AXISMUNDI_CONTACTS_JSCONTACT_VERSION ), $card )
+		);
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+		$wpdb->update(
+			$cards,
+			array( 'card_json' => (string) wp_json_encode( $card ), 'updated_at' => current_time( 'mysql', true ) ),
+			array( 'id' => (int) $row['id'] ),
+			array( '%s', '%s' ),
+			array( '%d' )
+		);
+		++$stated;
+	}
+	return $stated;
 }
 
 /**
@@ -278,6 +342,11 @@ function axismundi_contacts_install_schema() : bool {
 	);
 
 	axismundi_contacts_migrate_books_to_memberships();
+	/*
+	 * And the Cards this site made before it said so are told which revision they are written in. Run
+	 * after the tables exist, because it reads provenance to tell ours from somebody else's.
+	 */
+	axismundi_contacts_state_jscontact_version();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.
 	$card_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$cards}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.

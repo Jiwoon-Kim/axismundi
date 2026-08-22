@@ -2764,6 +2764,73 @@ try {
 			&& str_contains( $ax_ct_ow_profile, 'name="audience"' )
 	);
 
+	// -- and the ones that were made before it said so ----------------------------------------------------------
+
+	/*
+	 * Stating the revision on new Cards leaves every Card made before it unversioned -- a v2 document
+	 * to a stranger and an unversioned one to everything here. The upgrade says it for them, on the
+	 * same terms the creation path does: ours only.
+	 *
+	 * Written straight into the column, because nothing offers to store a Card without a version any
+	 * more. That is exactly the state an install upgrading from before this is in.
+	 */
+	$ax_ct_vm_cards = axismundi_contacts_cards_table();
+	$ax_ct_vm_write = static function ( int $card_id, array $card ) use ( $wpdb, $ax_ct_vm_cards ) : void {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture writes the state an upgrade finds.
+		$wpdb->update( $ax_ct_vm_cards, array( 'card_json' => (string) wp_json_encode( $card ) ), array( 'id' => $card_id ), array( '%s' ), array( '%d' ) );
+	};
+
+	// One this site made, and one that came from somewhere else with its own idea of what it is.
+	$ax_ct_vm_mine = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array( '@type' => 'Card', 'version' => AXISMUNDI_CONTACTS_JSCONTACT_VERSION, 'kind' => 'individual', 'name' => array( '@type' => 'Name', 'full' => 'Made here' ) )
+	);
+	$ax_ct_vm_mine_id = is_wp_error( $ax_ct_vm_mine ) ? 0 : (int) $ax_ct_vm_mine;
+	$ax_ct_loose[]    = $ax_ct_vm_mine_id;
+	$ax_ct_vm_write( $ax_ct_vm_mine_id, array( '@type' => 'Card', 'kind' => 'individual', 'name' => array( '@type' => 'Name', 'full' => 'Made here' ) ) );
+
+	$ax_ct_vm_theirs = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array( '@type' => 'Card', 'version' => AXISMUNDI_CONTACTS_JSCONTACT_VERSION, 'kind' => 'individual', 'name' => array( '@type' => 'Name', 'full' => 'Came from a sync' ) )
+	);
+	$ax_ct_vm_theirs_id = is_wp_error( $ax_ct_vm_theirs ) ? 0 : (int) $ax_ct_vm_theirs;
+	$ax_ct_loose[]      = $ax_ct_vm_theirs_id;
+	$ax_ct_vm_write( $ax_ct_vm_theirs_id, array( '@type' => 'Card', 'kind' => 'individual', 'name' => array( '@type' => 'Name', 'full' => 'Came from a sync' ) ) );
+	axismundi_contacts_set_provenance( $ax_ct_vm_theirs_id, 'name', 'google', 'people/c1' );
+
+	// And one that already says what it is, in a revision this code did not write.
+	$ax_ct_vm_old = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array( '@type' => 'Card', 'version' => '1.0', 'kind' => 'individual', 'name' => array( '@type' => 'Name', 'full' => 'An older revision' ) )
+	);
+	$ax_ct_vm_old_id = is_wp_error( $ax_ct_vm_old ) ? 0 : (int) $ax_ct_vm_old;
+	$ax_ct_loose[]   = $ax_ct_vm_old_id;
+
+	$ax_ct_vm_stated = axismundi_contacts_state_jscontact_version();
+	ax_ct_assert(
+		$ax_ct_results,
+		'a card this site made before it said so is told which revision it is written in',
+		$ax_ct_vm_stated >= 1
+			&& AXISMUNDI_CONTACTS_JSCONTACT_VERSION === (string) ( axismundi_contacts_card_document( $ax_ct_vm_mine_id )['version'] ?? '' )
+			&& 'Made here' === (string) ( axismundi_contacts_card_document( $ax_ct_vm_mine_id )['name']['full'] ?? '' )
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'a card whose provenance names somewhere else is left as it came, and one that already says a revision keeps it',
+		! array_key_exists( 'version', axismundi_contacts_card_document( $ax_ct_vm_theirs_id ) )
+			&& '1.0' === (string) ( axismundi_contacts_card_document( $ax_ct_vm_old_id )['version'] ?? '' )
+	);
+	/*
+	 * Running again finds nothing, because the question it asks is answered by the database it just
+	 * changed. An upgrade that restated the version on every load would rewrite every Card's row for
+	 * no reason, and `updated_at` would stop meaning anything.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'and a second run states nothing, because there is nothing left that does not say',
+		0 === axismundi_contacts_state_jscontact_version()
+	);
+
 	ax_ct_assert(
 		$ax_ct_results,
 		'this plugin stores address books and imitates neither the Actor registry nor its profiles',

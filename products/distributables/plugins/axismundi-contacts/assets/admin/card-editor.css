@@ -562,3 +562,21 @@
 .ax-ce-name__more.is-open svg {
 	transform: rotate( 180deg );
 }
+
+/* A line of the name can be picked up when it holds one; an empty line keeps the column, not a grip. */
+.ax-ce-slot__grip {
+	flex: 0 0 24px;
+	margin-top: 16px;
+	color: #787c82;
+}
+
+.ax-ce-slot__grip svg {
+	display: block;
+	width: 24px;
+	height: 24px;
+	fill: currentColor;
+}
+
+.ax-ce-slot.is-movable {
+	cursor: grab;
+}

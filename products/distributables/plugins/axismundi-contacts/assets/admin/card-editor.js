@@ -224,7 +224,7 @@
 	 */
 	function CardLanguage( props ) {
 		return el( Combobox, {
-			label: __( 'Written in', 'axismundi-contacts' ),
+			label: __( 'Language', 'axismundi-contacts' ),
 			value: props.value || '',
 			options: COMMON_LANGUAGES,
 			allowFree: true,
@@ -455,9 +455,36 @@
 	 */
 	function NameSlot( props ) {
 		var part = props.part || {};
+		var movable = undefined !== props.index && props.ordered;
 		return el(
 			'div',
-			{ className: 'ax-ce-slot' },
+			{
+				className: 'ax-ce-slot' + ( movable ? ' is-movable' : '' ),
+				draggable: movable,
+				onDragStart: function () {
+					if ( movable ) {
+						props.onDragStart( props.index );
+					}
+				},
+				onDragOver: function ( event ) {
+					if ( movable ) {
+						event.preventDefault();
+					}
+				},
+				onDrop: function () {
+					if ( movable ) {
+						props.onDrop( props.index );
+					}
+				}
+			},
+			el(
+				'span',
+				{
+					className: 'ax-ce-slot__grip',
+					'aria-hidden': 'true',
+					dangerouslySetInnerHTML: { __html: movable ? icon( 'drag-indicator' ) : '' }
+				}
+			),
 			el( TextField, {
 				label: componentLabel( props.kind ),
 				className: 'ax-ce-slot__value',
@@ -514,9 +541,18 @@
 			} )
 		);
 		var [ phonetic, setPhonetic ] = useState( hasPhonetic( components ) );
-		// The document itself, for a name the fields above cannot hold or somebody wants to arrange.
-		var [ custom, setCustom ] = useState( ! fits );
-		var [ written, setWritten ] = useState( undefined !== name.full );
+		/*
+		 * The document itself, for a name the fields above cannot hold: two middle names, or something
+		 * written between two parts. Not a choice -- a screen that cannot show what is stored is a
+		 * screen that will lose it, and the ordinary fields can be picked up and moved anyway.
+		 */
+		var custom = ! fits;
+		/*
+		 * The full name, which a person's card does not lead with. It is asked for, or shown because
+		 * the card arrived with one and nothing else -- a name somebody wrote down and never took
+		 * apart, which there is nowhere else to put.
+		 */
+		var [ written, setWritten ] = useState( ! components.length && undefined !== name.full );
 		var [ asking, setAsking ] = useState( '' );
 
 		function setName( next ) {
@@ -588,16 +624,52 @@
 			setComponents( next );
 		}
 
-		var slots = ( expanded ? NAME_SLOTS : BASIC_SLOTS ).map( function ( kind ) {
-			var at = slotIndex( components, kind );
-			return el( NameSlot, {
-				key: kind,
-				kind: kind,
-				part: -1 === at ? null : components[ at ],
-				phonetic: phonetic,
-				onChange: writeSlot
-			} );
+		/*
+		 * The parts this name has, in the order it has them, and then a line for each one it does not.
+		 * The filled lines are the document -- picking one up moves it, the way a row of accounts is
+		 * moved -- and the empty ones are somewhere to type, which is why they have no grip: there is
+		 * nothing there yet to be anywhere.
+		 */
+		var visible = expanded ? NAME_SLOTS : BASIC_SLOTS;
+		var filled = components.map( function ( part, index ) {
+			return { part: part, index: index };
+		} ).filter( function ( row ) {
+			return row.part && -1 !== visible.indexOf( row.part.kind );
 		} );
+		var slots = filled.map( function ( row ) {
+			return el( NameSlot, {
+				key: row.part.kind,
+				kind: row.part.kind,
+				part: row.part,
+				index: row.index,
+				ordered: ordered,
+				phonetic: phonetic,
+				onChange: writeSlot,
+				onDragStart: props.onDragStart,
+				onDrop: function ( at ) {
+					if ( null === dragging || dragging === at ) {
+						return;
+					}
+					var list = components.slice();
+					var moved = list.splice( dragging, 1 )[ 0 ];
+					list.splice( at, 0, moved );
+					setComponents( list );
+					props.onDragStart( null );
+				}
+			} );
+		} ).concat(
+			visible.filter( function ( kind ) {
+				return -1 === slotIndex( components, kind );
+			} ).map( function ( kind ) {
+				return el( NameSlot, {
+					key: kind,
+					kind: kind,
+					part: null,
+					phonetic: phonetic,
+					onChange: writeSlot
+				} );
+			} )
+		);
 
 		return el(
 			Section,
@@ -865,41 +937,17 @@
 								}
 							} ),
 							' ',
-							__( 'Also give a full name', 'axismundi-contacts' )
+							__( 'Full name', 'axismundi-contacts' )
 						)
 					)
 					: null,
-				/*
-				 * The parts as the document holds them: an ordered list, which may carry two of a kind
-				 * and a separator between any two of them. Offered rather than shown, and forced open
-				 * for a name the fields above cannot hold, because a screen that cannot show what is
-				 * stored is a screen that will lose it.
-				 */
-				el(
-					'p',
-					null,
-					el(
-						'label',
-						null,
-						el( 'input', {
-							type: 'checkbox',
-							checked: custom,
-							disabled: ! fits,
-							onChange: function ( event ) {
-								setCustom( event.target.checked );
-							}
-						} ),
-						' ',
-						__( 'Arrange the parts myself', 'axismundi-contacts' )
-					),
-					! fits
-						? el(
-							'span',
-							{ className: 'description' },
-							' ' + __( 'This name has parts the fields above cannot hold, so it is arranged here.', 'axismundi-contacts' )
-						)
-						: null
-				),
+				! fits
+					? el(
+						'p',
+						{ className: 'description' },
+						__( 'This name has parts a line each cannot hold -- two of a kind, or something written between two of them -- so it is arranged above as the list it is.', 'axismundi-contacts' )
+					)
+					: null,
 				/*
 				 * A name that arrived without saying its parts are in the order they are read. Nothing
 				 * here decides that on its behalf -- the parts may have come from a vCard that recorded

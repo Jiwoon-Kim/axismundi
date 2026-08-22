@@ -3254,6 +3254,20 @@ try {
 	 * A pronunciation belongs beside the part it is a pronunciation of, and only for the parts that
 	 * are somebody's name: a separator is `-` and a title is `Dr`, and neither is being said.
 	 */
+	/*
+	 * A line holding a part of the name can be picked up and moved, the way a row of accounts is.
+	 * An empty line cannot: there is nothing there yet to be anywhere, so it keeps the column and
+	 * leaves the grip out.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a line of a name is moved by picking it up, and an empty one has nothing to pick up',
+		str_contains( $ax_ct_kn_js, 'var movable = undefined !== props.index && props.ordered;' )
+			&& str_contains( $ax_ct_kn_js, 'draggable: movable,' )
+			&& str_contains( $ax_ct_kn_js, "movable ? icon( 'drag-indicator' ) : ''" )
+			// And moving one moves the part it stands for, in the document.
+			&& str_contains( $ax_ct_kn_js, 'var moved = list.splice( dragging, 1 )[ 0 ];' )
+	);
 	ax_ct_assert(
 		$ax_ct_results,
 		'how a part sounds sits beside what it says, for the parts that are somebody rather than punctuation',
@@ -3271,9 +3285,11 @@ try {
 		$ax_ct_results,
 		'a name the fields cannot hold is edited as what it is, rather than shown as less than it says',
 		str_contains( $ax_ct_kn_js, 'function fitsSlots( components )' )
-			&& str_contains( $ax_ct_kn_js, 'var [ custom, setCustom ] = useState( ! fits );' )
-			&& str_contains( $ax_ct_kn_js, 'disabled: ! fits,' )
-			&& str_contains( $ax_ct_kn_js, "__( 'Arrange the parts myself', 'axismundi-contacts' )" )
+			// Not a choice: the list opens because the lines cannot say what the document says.
+			&& str_contains( $ax_ct_kn_js, 'var custom = ! fits;' )
+			&& str_contains( $ax_ct_kn_js, 'custom ? el(' )
+			&& str_contains( $ax_ct_kn_js, '! fits' )
+			&& ! str_contains( $ax_ct_kn_js, 'setCustom' )
 	);
 	/*
 	 * The written-out name is never built from the parts and never removed on their account. It is
@@ -3283,9 +3299,10 @@ try {
 	ax_ct_assert(
 		$ax_ct_results,
 		'a full name is what a card already says, not something this builds or quietly drops',
-		str_contains( $ax_ct_kn_js, 'var [ written, setWritten ] = useState( undefined !== name.full );' )
+		// Shown because the card arrived with a name and nothing else, or because somebody asked.
+		str_contains( $ax_ct_kn_js, 'var [ written, setWritten ] = useState( ! components.length && undefined !== name.full );' )
 			&& str_contains( $ax_ct_kn_js, "setAsking( 'written' )" )
-			&& str_contains( $ax_ct_kn_js, "__( 'Also give a full name', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_kn_js, "__( 'Full name', 'axismundi-contacts' )" )
 	);
 	/*
 	 * And a card carrying both is stored carrying both. Neither is derived from the other, in either

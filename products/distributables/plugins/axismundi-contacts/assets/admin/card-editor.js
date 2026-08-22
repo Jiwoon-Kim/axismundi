@@ -1297,6 +1297,233 @@
 	}
 
 	/**
+	 * The places somebody belongs, and what they are there.
+	 *
+	 * Two properties rather than one, because the standard keeps them apart and so does life: an
+	 * organization is a place with a name, and a title is what somebody is called inside one. A person
+	 * has two titles at one company far more often than they have two companies, and a card that
+	 * folded the two together would have to invent a rule for which title belonged to which employer.
+	 * `organizationId` is that rule, and it is the standard's.
+	 */
+	function Organizations( props ) {
+		var entries = props.value || {};
+		var ids = Object.keys( entries );
+
+		function setEntries( next ) {
+			props.onChange( Object.keys( next ).length ? next : undefined );
+		}
+
+		function setEntry( id, entry ) {
+			var next = Object.assign( {}, entries );
+			next[ id ] = entry;
+			setEntries( next );
+		}
+
+		return el(
+			Section,
+			{ icon: 'domain', label: __( 'Organizations', 'axismundi-contacts' ) },
+			ids.map( function ( id ) {
+				var entry = entries[ id ] || {};
+				var units = entry.units || [];
+				return el(
+					'div',
+					{ key: id, className: 'ax-ce-org' },
+					el(
+						'div',
+						{ className: 'ax-ce-org__fields' },
+						el( TextField, {
+							label: __( 'Organization', 'axismundi-contacts' ),
+							value: entry.name || '',
+							onChange: function ( value ) {
+								setEntry( id, withKey( entry, 'name', value ) );
+							}
+						} ),
+						/*
+						 * The parts of it somebody belongs to, from the outside in: a faculty inside a
+						 * university, a team inside a department. A list, because the order is what
+						 * says which contains which.
+						 */
+						units.map( function ( unit, at ) {
+							return el(
+								'div',
+								{ key: at, className: 'ax-ce-org__unit' },
+								el( TextField, {
+									label: __( 'Part of it', 'axismundi-contacts' ),
+									value: ( unit || {} ).name || '',
+									onChange: function ( value ) {
+										var list = units.slice();
+										list[ at ] = withKey( unit || {}, 'name', value );
+										setEntry( id, withKey( entry, 'units', list ) );
+									}
+								} ),
+								el( IconButton, {
+									icon: 'delete',
+									variant: 'danger',
+									label: __( 'Remove this part', 'axismundi-contacts' ),
+									onClick: function () {
+										var list = units.filter( function ( ignored, i ) {
+											return i !== at;
+										} );
+										setEntry( id, list.length ? withKey( entry, 'units', list ) : withKey( entry, 'units', '' ) );
+									}
+								} )
+							);
+						} ),
+						el(
+							'p',
+							null,
+							el(
+								'button',
+								{
+									type: 'button',
+									className: 'button',
+									onClick: function () {
+										setEntry( id, withKey( entry, 'units', units.concat( [ { name: '' } ] ) ) );
+									}
+								},
+								__( 'Add a part of it', 'axismundi-contacts' )
+							)
+						)
+					),
+					el( IconButton, {
+						icon: 'delete',
+						variant: 'danger',
+						label: __( 'Remove this organization', 'axismundi-contacts' ),
+						onClick: function () {
+							var next = Object.assign( {}, entries );
+							delete next[ id ];
+							setEntries( next );
+						}
+					} )
+				);
+			} ),
+			el(
+				'p',
+				null,
+				el(
+					'button',
+					{
+						type: 'button',
+						className: 'button',
+						onClick: function () {
+							var index = 1;
+							while ( Object.prototype.hasOwnProperty.call( entries, 'o' + index ) ) {
+								index += 1;
+							}
+							setEntry( 'o' + index, { name: '' } );
+						}
+					},
+					__( 'Add an organization', 'axismundi-contacts' )
+				)
+			)
+		);
+	}
+
+	/** What somebody is called, and whether that is a post or a part they play. */
+	var TITLE_KINDS = [
+		{ value: 'title', label: __( 'A post they hold', 'axismundi-contacts' ) },
+		{ value: 'role', label: __( 'A part they play', 'axismundi-contacts' ) }
+	];
+
+	/**
+	 * What somebody is called where they work.
+	 *
+	 * Which employer a title belongs to is `organizationId`, which names an entry in the section
+	 * above rather than repeating its name -- so renaming the company renames it once. A title with
+	 * no organization is a title somebody holds on their own, which is an ordinary thing to be.
+	 */
+	function Titles( props ) {
+		var entries = props.value || {};
+		var ids = Object.keys( entries );
+		var organizations = props.organizations || {};
+		var employers = Object.keys( organizations ).map( function ( id ) {
+			return { value: id, label: ( organizations[ id ] || {} ).name || id };
+		} );
+
+		function setEntries( next ) {
+			props.onChange( Object.keys( next ).length ? next : undefined );
+		}
+
+		return el(
+			Section,
+			{ icon: 'person-text', label: __( 'Titles', 'axismundi-contacts' ) },
+			ids.map( function ( id ) {
+				var entry = entries[ id ] || {};
+				return el(
+					'div',
+					{ key: id, className: 'ax-ce-title' },
+					el( TextField, {
+						label: __( 'Title', 'axismundi-contacts' ),
+						className: 'ax-ce-title__name',
+						value: entry.name || '',
+						onChange: function ( value ) {
+							var next = Object.assign( {}, entries );
+							next[ id ] = withKey( entry, 'name', value );
+							setEntries( next );
+						}
+					} ),
+					el( Combobox, {
+						label: __( 'What kind', 'axismundi-contacts' ),
+						className: 'ax-ce-title__kind',
+						value: entry.kind || '',
+						options: TITLE_KINDS,
+						onChange: function ( value ) {
+							var next = Object.assign( {}, entries );
+							next[ id ] = withKey( entry, 'kind', value );
+							setEntries( next );
+						}
+					} ),
+					employers.length
+						? el( Combobox, {
+							label: __( 'Where', 'axismundi-contacts' ),
+							className: 'ax-ce-title__where',
+							value: entry.organizationId || '',
+							options: employers,
+							supporting: __( 'One of the organizations above.', 'axismundi-contacts' ),
+							onChange: function ( value ) {
+								var next = Object.assign( {}, entries );
+								next[ id ] = withKey( entry, 'organizationId', value );
+								setEntries( next );
+							}
+						} )
+						: null,
+					el( IconButton, {
+						icon: 'delete',
+						variant: 'danger',
+						label: __( 'Remove this title', 'axismundi-contacts' ),
+						onClick: function () {
+							var next = Object.assign( {}, entries );
+							delete next[ id ];
+							setEntries( next );
+						}
+					} )
+				);
+			} ),
+			el(
+				'p',
+				null,
+				el(
+					'button',
+					{
+						type: 'button',
+						className: 'button',
+						onClick: function () {
+							var index = 1;
+							while ( Object.prototype.hasOwnProperty.call( entries, 't' + index ) ) {
+								index += 1;
+							}
+							var next = Object.assign( {}, entries );
+							next[ 't' + index ] = { name: '' };
+							setEntries( next );
+						}
+					},
+					__( 'Add a title', 'axismundi-contacts' )
+				)
+			)
+		);
+	}
+
+	/**
 	 * One account on some service.
 	 *
 	 * Four answers rather than a URI: what the service is called, what somebody is called there, the
@@ -1540,6 +1767,19 @@
 		return paths;
 	}
 
+	/** What a card says at one path, for a screen that wants to start from it. */
+	function valueAt( card, path ) {
+		var at = card;
+		var segments = String( path ).split( '/' );
+		for ( var i = 0; i < segments.length; i += 1 ) {
+			if ( ! at || 'object' !== typeof at ) {
+				return undefined;
+			}
+			at = at[ segments[ i ] ];
+		}
+		return at;
+	}
+
 	/** Every localization path that goes through one place in the Card. */
 	function patchesUnder( localizations, path ) {
 		var found = [];
@@ -1565,10 +1805,22 @@
 		var patch = props.patch || {};
 		var paths = props.paths;
 		var [ adding, setAdding ] = useState( '' );
+		var [ dragging, setDragging ] = useState( null );
+		var [ blocked, setBlocked ] = useState( null );
 		var applied = applyPatch( props.card, patch );
 
 		function setPatch( next ) {
 			props.onChange( next );
+		}
+
+		function setPath( path, value ) {
+			var updated = Object.assign( {}, patch );
+			if ( undefined === value ) {
+				delete updated[ path ];
+			} else {
+				updated[ path ] = value;
+			}
+			setPatch( updated );
 		}
 
 		return el(
@@ -1592,6 +1844,58 @@
 			Object.keys( patch ).map( function ( path ) {
 				var value = patch[ path ];
 				var isText = 'string' === typeof value;
+				/*
+				 * A language that gives the whole name gets the whole name editor. `Kim Jiwoon` in
+				 * English is a name, with parts and an order and a way of being said, and asking
+				 * somebody to type `{"components":[{"kind":"given",...}]}` into a box is asking them
+				 * to be a serializer. It is the same editor as above because it is the same question.
+				 */
+				if ( 'name' === path && value && 'object' === typeof value && ! Array.isArray( value ) ) {
+					return el(
+						'div',
+						{ key: path, className: 'ax-ce-localization__name' },
+						el( NameEditor, {
+							name: value,
+							kind: props.kind,
+							dragging: dragging,
+							onDragStart: setDragging,
+							// A localization holds no localizations of its own, so nothing patches into this.
+							localizations: {},
+							blocked: blocked,
+							onBlocked: function ( at, affected ) {
+								setBlocked( { at: at, affected: affected } );
+							},
+							onCancel: function () {
+								setBlocked( null );
+							},
+							onResolve: function () {
+								setBlocked( null );
+							},
+							onChange: function ( next ) {
+								setPath( path, next );
+							}
+						} ),
+						el(
+							'p',
+							null,
+							el(
+								'button',
+								{
+									type: 'button',
+									className: 'button',
+									onClick: function () {
+										setPath( path, undefined );
+									}
+								},
+								sprintf(
+									/* translators: %s: a language tag. */
+									__( 'Stop giving the name in %s', 'axismundi-contacts' ),
+									props.tag
+								)
+							)
+						)
+					);
+				}
 				return el(
 					'div',
 					{ key: path, className: 'ax-ce-entry' },
@@ -1642,8 +1946,16 @@
 					} ),
 					supporting: __( 'Only what the card already says. Anything else goes in the JSON below.', 'axismundi-contacts' ),
 					onChange: function ( path ) {
+						/*
+						 * Started from what the card already says there. Translating a name means
+						 * changing one, and handing somebody an empty box for a structure they are
+						 * about to rebuild by hand is handing them the serializer's job.
+						 */
 						var updated = Object.assign( {}, patch );
-						updated[ path ] = '';
+						var from = valueAt( props.card, path );
+						updated[ path ] = null !== from && 'object' === typeof from
+							? JSON.parse( JSON.stringify( from ) )
+							: '';
 						setAdding( '' );
 						setPatch( updated );
 					}
@@ -1692,6 +2004,7 @@
 					tag: each,
 					patch: localizations[ each ],
 					card: props.card,
+					kind: props.card.kind,
 					paths: paths,
 					onChange: function ( next ) {
 						var updated = Object.assign( {}, localizations );
@@ -2284,6 +2597,19 @@
 						},
 						onChange: function ( value ) {
 							setProperty( 'name', value );
+						}
+					} ),
+					el( Organizations, {
+						value: card.organizations,
+						onChange: function ( value ) {
+							setProperty( 'organizations', value );
+						}
+					} ),
+					el( Titles, {
+						value: card.titles,
+						organizations: card.organizations,
+						onChange: function ( value ) {
+							setProperty( 'titles', value );
 						}
 					} ),
 					el( OnlineServices, {

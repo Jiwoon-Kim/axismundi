@@ -4229,6 +4229,72 @@ try {
 			&& str_contains( $ax_ct_lg_php, "wp_set_script_translations( 'axismundi-contacts-fields'" )
 	);
 
+	/*
+	 * A language that gives the whole name gets the whole name editor. `Kim Jiwoon` in English is a
+	 * name -- parts, an order, a way of being said -- and the screen was handing somebody a read-only
+	 * box holding `{"components":[{"kind":"given",...}]}` and calling that a translation. Nobody
+	 * writes that. It is the same editor as the one above because it is the same question.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a language that gives the whole name is given the same editor the name has',
+		str_contains( $ax_ct_cb_editor, "if ( 'name' === path && value && 'object' === typeof value && ! Array.isArray( value ) ) {" )
+			&& str_contains( $ax_ct_cb_editor, "className: 'ax-ce-localization__name'" )
+			&& str_contains( $ax_ct_cb_editor, "__( 'Stop giving the name in %s', 'axismundi-contacts' )" )
+	);
+	/*
+	 * And translating something starts from what the card already says there, rather than from an
+	 * empty box: changing a name means changing one, and rebuilding the structure by hand is the
+	 * serializer's job rather than the translator's.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'translating something starts from what the card says there, not from nothing',
+		str_contains( $ax_ct_cb_editor, 'function valueAt( card, path )' )
+			&& str_contains( $ax_ct_cb_editor, 'var from = valueAt( props.card, path );' )
+			&& str_contains( $ax_ct_cb_editor, 'JSON.parse( JSON.stringify( from ) )' )
+	);
+	/*
+	 * The store took all of this before the screen could show any of it: a patch may set a whole
+	 * object, and an editor with no field for the property it names is why somebody would want to.
+	 */
+	$ax_ct_or_card = array(
+		'@type'         => 'Card',
+		'name'          => array( 'components' => array( array( 'kind' => 'given', 'value' => 'Jiwoon' ) ), 'isOrdered' => true ),
+		'organizations' => array( 'o1' => array( 'name' => 'Axismundi', 'units' => array( array( 'name' => 'Contacts' ) ) ) ),
+		'titles'        => array( 't1' => array( 'name' => 'Site Owner', 'kind' => 'title', 'organizationId' => 'o1' ) ),
+		'localizations' => array(
+			'ko-KR' => array(
+				'name'      => array( 'components' => array( array( 'kind' => 'given', 'value' => "\xec\xa7\x80\xec\x9a\xb4" ) ), 'isOrdered' => true ),
+				'titles/t1' => array( 'name' => "\xec\x82\xac\xec\x9d\xb4\xed\x8a\xb8" ),
+			),
+		),
+	);
+	$ax_ct_or_id   = axismundi_contacts_save_card( $ax_ct_book_id, $ax_ct_or_card );
+	$ax_ct_or_key  = is_wp_error( $ax_ct_or_id ) ? 0 : (int) $ax_ct_or_id;
+	$ax_ct_loose[] = $ax_ct_or_key;
+	$ax_ct_or_back = axismundi_contacts_card_document( $ax_ct_or_key );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a language may give a whole property, and what it gives comes back the way it was given',
+		'Axismundi' === (string) ( $ax_ct_or_back['organizations']['o1']['name'] ?? '' )
+			&& 'Contacts' === (string) ( $ax_ct_or_back['organizations']['o1']['units'][0]['name'] ?? '' )
+			// A title says which of them it belongs to rather than repeating its name.
+			&& 'o1' === (string) ( $ax_ct_or_back['titles']['t1']['organizationId'] ?? '' )
+			&& "\xec\xa7\x80\xec\x9a\xb4" === (string) ( $ax_ct_or_back['localizations']['ko-KR']['name']['components'][0]['value'] ?? '' )
+			&& "\xec\x82\xac\xec\x9d\xb4\xed\x8a\xb8" === (string) ( $ax_ct_or_back['localizations']['ko-KR']['titles/t1']['name'] ?? '' )
+	);
+	// And each of those properties now has somewhere to be typed.
+	ax_ct_assert(
+		$ax_ct_results,
+		'where somebody belongs and what they are called there are fields rather than json',
+		str_contains( $ax_ct_cb_editor, 'function Organizations( props )' )
+			&& str_contains( $ax_ct_cb_editor, 'function Titles( props )' )
+			&& str_contains( $ax_ct_cb_editor, "__( 'Part of it', 'axismundi-contacts' )" )
+			// Which employer a title belongs to names an entry above rather than repeating it.
+			&& str_contains( $ax_ct_cb_editor, "withKey( entry, 'organizationId', value )" )
+	);
+
 	ax_ct_assert(
 		$ax_ct_results,
 		'this plugin stores address books and imitates neither the Actor registry nor its profiles',

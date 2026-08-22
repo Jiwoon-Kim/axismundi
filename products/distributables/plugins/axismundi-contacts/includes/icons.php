@@ -38,6 +38,7 @@ function axismundi_contacts_icons() : array {
 		'contacts'               => __( 'Contacts', 'axismundi-contacts' ),
 		'person'                 => __( 'Person', 'axismundi-contacts' ),
 		'domain'                 => __( 'Organisation', 'axismundi-contacts' ),
+		'person-text'            => __( 'Titles', 'axismundi-contacts' ),
 		'group'                  => __( 'Group', 'axismundi-contacts' ),
 		'location-on'            => __( 'Place', 'axismundi-contacts' ),
 		'apps'                   => __( 'Application', 'axismundi-contacts' ),

@@ -599,3 +599,47 @@
 	flex-wrap: wrap;
 	gap: .5em;
 }
+
+/* -- where somebody belongs, and what they are there ----------------------------------------- */
+
+.ax-ce-org {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	padding: 12px 0;
+	border-block-end: 1px solid var( --wpds-color-border-secondary, #e0e0e0 );
+}
+
+.ax-ce-org__fields {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.ax-ce-org__unit {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+	margin-left: 2em;
+}
+
+.ax-ce-org__unit .text-field {
+	flex: 1 1 auto;
+}
+
+.ax-ce-title {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+	margin: 0 0 8px;
+}
+
+.ax-ce-title__name {
+	flex: 2 1 0;
+	min-width: 0;
+}
+
+.ax-ce-title__kind,
+.ax-ce-title__where {
+	flex: 1 1 0;
+	min-width: 0;
+}

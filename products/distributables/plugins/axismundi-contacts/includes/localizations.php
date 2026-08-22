@@ -278,6 +278,88 @@ function axismundi_contacts_patch_error( string $tag, string $path, string $mess
 }
 
 /**
+ * One language tag, written the way this site writes them.
+ *
+ * Not this plugin's rule. An Actor's `nameMap`, a Note's language and a Card all name languages, and
+ * three plugins each normalising tags their own way is three spellings of Korean-in-Latin-letters in
+ * one database -- `ko-latn` here, `ko-LATN` there -- which nothing downstream can match up.
+ *
+ * Left exactly as it arrived when the registry is not there to ask. A second copy of the rule would
+ * be the thing this avoids, and a tag written as somebody typed it is at least honest about where it
+ * came from.
+ *
+ * @param string $tag Language tag.
+ * @return string Normalized tag, or the tag as given when there is nothing to normalize it with.
+ */
+function axismundi_contacts_language_tag( string $tag ) : string {
+	if ( ! function_exists( 'axismundi_actors_normalize_language_tag' ) ) {
+		return trim( $tag );
+	}
+	$normalized = axismundi_actors_normalize_language_tag( $tag );
+	// An unparseable tag is returned as it was: refusing a Card because of one is not this to decide.
+	return '' !== $normalized ? $normalized : trim( $tag );
+}
+
+/**
+ * Every language a Card names, so a picker can offer them back.
+ *
+ * What it is written in, what its subject would rather receive, and which languages it carries
+ * translations for. A tag nobody listed is still the tag this Card uses, and a picker that dropped
+ * it would offer somebody every language except theirs.
+ *
+ * @param array<string,mixed> $card Card.
+ * @return string[]
+ */
+function axismundi_contacts_card_languages( array $card ) : array {
+	$tags = array();
+	if ( isset( $card['language'] ) && is_string( $card['language'] ) ) {
+		$tags[] = $card['language'];
+	}
+	foreach ( (array) ( $card['preferredLanguages'] ?? array() ) as $entry ) {
+		if ( is_array( $entry ) && isset( $entry['language'] ) && is_string( $entry['language'] ) ) {
+			$tags[] = $entry['language'];
+		}
+	}
+	foreach ( array_keys( (array) ( $card['localizations'] ?? array() ) ) as $tag ) {
+		$tags[] = (string) $tag;
+	}
+	return array_values( array_unique( array_filter( $tags ) ) );
+}
+
+/**
+ * A Card with its language tags written the way this site writes them.
+ *
+ * Every place a Card names a language: what it is written in, what its subject would rather receive,
+ * and which language each set of patches is for. Two tags that normalize to the same thing are left
+ * alone -- that Card already says one language twice, and merging the two would be this code
+ * deciding which of them somebody meant.
+ *
+ * @param array<string,mixed> $card Card.
+ * @return array<string,mixed>
+ */
+function axismundi_contacts_normalize_languages( array $card ) : array {
+	if ( isset( $card['language'] ) && is_string( $card['language'] ) ) {
+		$card['language'] = axismundi_contacts_language_tag( $card['language'] );
+	}
+	foreach ( (array) ( $card['preferredLanguages'] ?? array() ) as $id => $entry ) {
+		if ( is_array( $entry ) && isset( $entry['language'] ) && is_string( $entry['language'] ) ) {
+			$card['preferredLanguages'][ $id ]['language'] = axismundi_contacts_language_tag( $entry['language'] );
+		}
+	}
+	$localizations = (array) ( $card['localizations'] ?? array() );
+	if ( array() !== $localizations ) {
+		$written = array();
+		foreach ( $localizations as $tag => $patch ) {
+			$tag  = (string) $tag;
+			$next = axismundi_contacts_language_tag( $tag );
+			$written[ isset( $localizations[ $next ] ) && $next !== $tag ? $tag : $next ] = $patch;
+		}
+		$card['localizations'] = $written;
+	}
+	return $card;
+}
+
+/**
  * The paths a screen may offer, which is narrower than what is valid.
  *
  * Only values the Card already has. A localization that introduced a property the base Card does not

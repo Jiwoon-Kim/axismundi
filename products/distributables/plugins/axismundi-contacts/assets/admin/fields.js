@@ -165,8 +165,16 @@
 		var [ query, setQuery ] = wp.element.useState( '' );
 		var [ open, setOpen ] = wp.element.useState( false );
 		var [ active, setActive ] = wp.element.useState( 0 );
-		var options = ( props.options || [] ).filter( function ( option ) {
-			return ! query || -1 !== option.toLowerCase().indexOf( query.toLowerCase() );
+		/*
+		 * An option is a value, and sometimes a name for it. `ko-KR` is the answer; `Korean (Korea)`
+		 * is how somebody finds it -- and they will type either, so both are searched and the name is
+		 * what the list shows.
+		 */
+		var options = ( props.options || [] ).map( function ( option ) {
+			return 'string' === typeof option ? { value: option, label: option } : option;
+		} ).filter( function ( option ) {
+			var against = ( option.value + ' ' + ( option.label || '' ) ).toLowerCase();
+			return ! query || -1 !== against.indexOf( query.toLowerCase() );
 		} );
 		var listId = id + '-list';
 
@@ -174,7 +182,7 @@
 			if ( ! option ) {
 				return;
 			}
-			props.onChange( option );
+			props.onChange( option.value );
 			setQuery( '' );
 			setOpen( false );
 		}
@@ -244,7 +252,7 @@
 							return el(
 								'li',
 								{
-									key: option,
+									key: option.value,
 									role: 'option',
 									'aria-selected': index === active ? 'true' : 'false',
 									className: 'ax-combobox__option' + ( index === active ? ' is-active' : '' ),
@@ -254,7 +262,7 @@
 										choose( option );
 									}
 								},
-								option
+								option.label || option.value
 							);
 						} )
 						: el( 'li', { className: 'ax-combobox__empty' }, props.emptyLabel || __( 'Nothing matches', 'axismundi-contacts' ) )

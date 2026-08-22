@@ -3350,7 +3350,8 @@ try {
 		'what a card is written in and what its subject prefers to receive are two answers, kept apart',
 		'ko-KR' === (string) ( $ax_ct_kn_stored['language'] ?? '' )
 			&& 'en' === (string) ( $ax_ct_kn_stored['preferredLanguages']['l1']['language'] ?? '' )
-			&& str_contains( $ax_ct_kn_js, 'COMMON_LANGUAGES' )
+			// Both ask with the same control, from the one list this site offers everywhere.
+			&& str_contains( $ax_ct_kn_js, 'var LANGUAGES = config.languages || [];' )
 			// A shortcut rather than a list of the languages that exist.
 			&& str_contains( $ax_ct_kn_js, 'allowFree: true' )
 	);
@@ -4062,15 +4063,43 @@ try {
 	 */
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
 	$ax_ct_lg_js = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/card-editor.js' );
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_lg_php = (string) file_get_contents( dirname( __DIR__ ) . '/includes/card-editor.php' );
 	ax_ct_assert(
 		$ax_ct_results,
-		'a card is written in a language and a place; a translation of it is usually another script',
-		str_contains( $ax_ct_lg_js, "'en-US', 'en-GB', 'ko-KR'" )
-			&& str_contains( $ax_ct_lg_js, 'var SCRIPT_LANGUAGES' )
-			&& str_contains( $ax_ct_lg_js, "'ko-Latn', 'ko-Hani', 'ja-Kana'" )
-			// The card's own language is offered neither of the script forms.
-			&& ! str_contains( substr( $ax_ct_lg_js, strpos( $ax_ct_lg_js, 'var COMMON_LANGUAGES' ), 400 ), 'ko-Latn' )
-			&& str_contains( $ax_ct_lg_js, 'options: SCRIPT_LANGUAGES.concat( COMMON_LANGUAGES )' )
+		'the languages a card offers are the ones this site offers everywhere, plus the ones it uses',
+		// One list, from the surface every other authoring screen here reads.
+		str_contains( $ax_ct_lg_js, 'var LANGUAGES = config.languages || [];' )
+			&& ! str_contains( $ax_ct_lg_js, 'COMMON_LANGUAGES' )
+			&& ! str_contains( $ax_ct_lg_js, 'SCRIPT_LANGUAGES' )
+			&& str_contains( $ax_ct_lg_php, 'axismundi_actors_profile_language_options' )
+			// Whatever this Card already says is added to it, listed or not.
+			&& str_contains( $ax_ct_lg_php, "axismundi_contacts_card_languages( \$draft['card'] )" )
+	);
+	/*
+	 * And a tag is written down the way the Actor registry writes one. Three plugins each normalising
+	 * their own way is three spellings of Korean-in-Latin-letters in one database, which nothing
+	 * downstream can match up.
+	 */
+	$ax_ct_lg_id   = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array(
+			'@type'              => 'Card',
+			'language'           => 'ko_kr',
+			'name'               => array( 'full' => 'Written any old way' ),
+			'preferredLanguages' => array( 'l1' => array( 'language' => 'EN-gb', 'pref' => 1 ) ),
+			'localizations'      => array( 'ko-latn' => array( 'name/full' => 'Kim Jiwoon' ) ),
+		)
+	);
+	$ax_ct_lg_key  = is_wp_error( $ax_ct_lg_id ) ? 0 : (int) $ax_ct_lg_id;
+	$ax_ct_loose[] = $ax_ct_lg_key;
+	$ax_ct_lg_doc  = axismundi_contacts_card_document( $ax_ct_lg_key );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a language tag is written the way this site writes one, wherever a card names a language',
+		'ko-KR' === (string) ( $ax_ct_lg_doc['language'] ?? '' )
+			&& 'en-GB' === (string) ( $ax_ct_lg_doc['preferredLanguages']['l1']['language'] ?? '' )
+			&& array( 'ko-Latn' ) === array_keys( (array) ( $ax_ct_lg_doc['localizations'] ?? array() ) )
 	);
 	/*
 	 * And a field inside a section that already says what it is does not say it again. The label is

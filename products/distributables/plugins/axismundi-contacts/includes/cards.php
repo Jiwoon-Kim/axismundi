@@ -206,6 +206,8 @@ function axismundi_contacts_save_card_for_owner( int $owner_actor_id, array $car
 	if ( ! array_key_exists( 'kind', $card ) ) {
 		$card['kind'] = 'individual';
 	}
+	// And its language tags the way this site writes them, which is the Actor registry's rule.
+	$card = axismundi_contacts_normalize_languages( $card );
 	$card = axismundi_contacts_canonical_card( $card );
 	$existing = $card_id > 0 ? axismundi_contacts_get_card( $card_id ) : array();
 	if ( $card_id > 0 && array() === $existing ) {

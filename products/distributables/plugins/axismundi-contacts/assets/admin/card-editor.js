@@ -153,32 +153,18 @@
 	}
 
 	/**
-	 * Language tags this offers as a shortcut.
+	 * The languages this site offers, wherever somebody names one.
 	 *
-	 * A shortcut and not a list of the languages that exist. BCP 47 has far more tags than belong in a
-	 * menu, and script and region subtags multiply them further -- `ko-Hani` and `ja-Kana` are both
-	 * ordinary answers and neither is in any short list. Anything may be typed.
-	 */
-	var COMMON_LANGUAGES = [
-		'en-US', 'en-GB', 'ko-KR', 'ja-JP', 'zh-CN', 'zh-TW', 'zh-HK',
-		'fr-FR', 'de-DE', 'es-ES', 'es-MX', 'pt-BR', 'pt-PT', 'it-IT',
-		'nl-NL', 'pl-PL', 'sv-SE', 'tr-TR', 'ru-RU', 'ar-SA', 'hi-IN',
-		'id-ID', 'vi-VN', 'th-TH'
-	];
-
-	/**
-	 * The tags a translation is written in, which are a different shape.
+	 * Not a list of this plugin's own. A Note's language, an Actor's `nameMap` and a Card all name
+	 * the same languages, and a second list invented here would be a second answer to a question the
+	 * site has already answered -- the kind nobody notices until the two disagree.
 	 *
-	 * A language and a place is what a card is written in: `ko-KR` is Korean as written in Korea. A
-	 * translation is usually the same language in another script -- `ko-Latn` is Korean in Latin
-	 * letters, `ja-Kana` is Japanese in kana -- and that is a subtag the card's own language has no
-	 * use for. Offering the script forms in both places would put the wrong answer in front of
-	 * whoever is filling in either.
+	 * Anything may still be typed. BCP 47 has far more tags than belong in a menu -- `ko-Latn` is
+	 * Korean written in Latin letters and `ja-Kana` is Japanese in kana, both ordinary answers and
+	 * neither in any short list -- and what is typed is written down the way the Actor registry
+	 * writes tags, by the store rather than by the screen.
 	 */
-	var SCRIPT_LANGUAGES = [
-		'ko-Latn', 'ko-Hani', 'ja-Kana', 'ja-Hira', 'ja-Latn',
-		'zh-Hans', 'zh-Hant', 'zh-Latn', 'ru-Latn', 'ar-Latn', 'th-Latn'
-	];
+	var LANGUAGES = config.languages || [];
 
 	/**
 	 * What kind of thing this Card describes.
@@ -242,9 +228,9 @@
 			label: __( 'Language', 'axismundi-contacts' ),
 			hideLabel: true,
 			value: props.value || '',
-			options: COMMON_LANGUAGES,
+			options: LANGUAGES,
 			allowFree: true,
-			supporting: __( 'A language and where it is written, like ko-KR. Everything above is what the card says in it.', 'axismundi-contacts' ),
+			supporting: __( 'What the card above says it in. Anything BCP 47 allows, whether it is on the list or not.', 'axismundi-contacts' ),
 			onChange: props.onChange
 		} );
 	}
@@ -1822,9 +1808,9 @@
 				el( Combobox, {
 					label: __( 'Add a language', 'axismundi-contacts' ),
 					value: tag,
-					options: SCRIPT_LANGUAGES.concat( COMMON_LANGUAGES ),
+					options: LANGUAGES,
 					allowFree: true,
-					supporting: __( 'Usually the same language in another script, like ko-Latn or ja-Kana.', 'axismundi-contacts' ),
+					supporting: __( 'Often the same language in another script, like ko-Latn or ja-Kana, which are typed rather than listed.', 'axismundi-contacts' ),
 					onChange: setTag
 				} ),
 				el(
@@ -1881,7 +1867,7 @@
 						label: __( 'Language', 'axismundi-contacts' ),
 						className: 'ax-ce-entry__value',
 						value: entry.language || '',
-						options: COMMON_LANGUAGES,
+						options: LANGUAGES,
 						allowFree: true,
 						hideLabel: true,
 						supporting: sprintf(

@@ -111,8 +111,25 @@ function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
 			? ( axismundi_actors_jscontact_kind( (string) $actor->get_type() ) ?: null )
 			: null;
 	}
+	/*
+	 * The languages every authoring surface on this site offers, which is one list rather than one
+	 * per plugin: a Note's language, an Actor's `nameMap` and a Card all name the same languages, and
+	 * a second list invented here would be a second answer to a question already answered -- and the
+	 * one somebody notices when the two disagree.
+	 *
+	 * Whatever the Card already says is added to it. A tag nobody listed is still the tag this Card
+	 * is written in, and a picker that dropped it would offer somebody every language except theirs.
+	 */
+	$languages = function_exists( 'axismundi_actors_profile_language_options' )
+		? axismundi_actors_profile_language_options( axismundi_contacts_card_languages( $draft['card'] ) )
+		: array();
+	$language_options = array();
+	foreach ( $languages as $tag => $label ) {
+		$language_options[] = array( 'value' => (string) $tag, 'label' => (string) $label );
+	}
 	$config = array(
 		'draftPath'           => '/' . axismundi_contacts_rest_namespace() . '/cards/' . $card_id . '/draft',
+		'languages'           => $language_options,
 		/*
 		 * Every kind RFC 9553 registers, because each is something somebody keeps the address of. A
 		 * card for a building, for the software that runs a service, for a machine that reports its

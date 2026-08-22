@@ -4054,6 +4054,52 @@ try {
 			&& str_contains( $ax_ct_ic_js, "{ className: 'screen-reader-text' }, props.label )" )
 	);
 
+	/*
+	 * What a card is written in and what a translation of it is written in are different shapes of the
+	 * same standard. `ko-KR` is Korean as written in Korea, which is what a card says; `ko-Latn` is
+	 * Korean in Latin letters, which is what a translation of it usually is. Offering the script forms
+	 * in both places would put the wrong answer in front of whoever is filling in either.
+	 */
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_lg_js = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/card-editor.js' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a card is written in a language and a place; a translation of it is usually another script',
+		str_contains( $ax_ct_lg_js, "'en-US', 'en-GB', 'ko-KR'" )
+			&& str_contains( $ax_ct_lg_js, 'var SCRIPT_LANGUAGES' )
+			&& str_contains( $ax_ct_lg_js, "'ko-Latn', 'ko-Hani', 'ja-Kana'" )
+			// The card's own language is offered neither of the script forms.
+			&& ! str_contains( substr( $ax_ct_lg_js, strpos( $ax_ct_lg_js, 'var COMMON_LANGUAGES' ), 400 ), 'ko-Latn' )
+			&& str_contains( $ax_ct_lg_js, 'options: SCRIPT_LANGUAGES.concat( COMMON_LANGUAGES )' )
+	);
+	/*
+	 * And a field inside a section that already says what it is does not say it again. The label is
+	 * still written down -- a field a screen reader cannot name is a field only some people can use --
+	 * it is just not read out twice to everybody else.
+	 */
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_lg_fields = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/fields.js' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a field under a heading that names it is still named, and does not say it twice',
+		str_contains( $ax_ct_lg_js, 'hideLabel: true,' )
+			&& str_contains( $ax_ct_lg_fields, "props.hideLabel ? ' screen-reader-text' : ''" )
+			// Through the combobox as well, which is a text field wearing a list.
+			&& str_contains( $ax_ct_lg_fields, 'hideLabel: props.hideLabel,' )
+	);
+	/*
+	 * Asking for a pronunciation asks what it is written in, rather than waiting until one is typed.
+	 * The standard requires the system or the script the moment any part carries a sound, so a screen
+	 * that waited for the value would let somebody fill in a name and then refuse to save it.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'saying you are writing pronunciations down asks what they are written in, before one is',
+		str_contains( $ax_ct_lg_js, 'phonetic && ( expanded || custom )' )
+			&& str_contains( $ax_ct_lg_js, "options: PHONETIC_SYSTEMS," )
+			&& str_contains( $ax_ct_lg_js, "options: PHONETIC_SCRIPTS," )
+	);
+
 	ax_ct_assert(
 		$ax_ct_results,
 		'this plugin stores address books and imitates neither the Actor registry nor its profiles',

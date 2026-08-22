@@ -160,9 +160,24 @@
 	 * ordinary answers and neither is in any short list. Anything may be typed.
 	 */
 	var COMMON_LANGUAGES = [
-		'en', 'en-US', 'en-GB', 'ko', 'ko-KR', 'ko-Latn', 'ko-Hani',
-		'ja', 'ja-JP', 'ja-Kana', 'zh', 'zh-Hans', 'zh-Hant', 'zh-Hant-TW',
-		'fr', 'de', 'es', 'pt', 'it', 'ru', 'ar', 'hi', 'id', 'vi', 'th'
+		'en-US', 'en-GB', 'ko-KR', 'ja-JP', 'zh-CN', 'zh-TW', 'zh-HK',
+		'fr-FR', 'de-DE', 'es-ES', 'es-MX', 'pt-BR', 'pt-PT', 'it-IT',
+		'nl-NL', 'pl-PL', 'sv-SE', 'tr-TR', 'ru-RU', 'ar-SA', 'hi-IN',
+		'id-ID', 'vi-VN', 'th-TH'
+	];
+
+	/**
+	 * The tags a translation is written in, which are a different shape.
+	 *
+	 * A language and a place is what a card is written in: `ko-KR` is Korean as written in Korea. A
+	 * translation is usually the same language in another script -- `ko-Latn` is Korean in Latin
+	 * letters, `ja-Kana` is Japanese in kana -- and that is a subtag the card's own language has no
+	 * use for. Offering the script forms in both places would put the wrong answer in front of
+	 * whoever is filling in either.
+	 */
+	var SCRIPT_LANGUAGES = [
+		'ko-Latn', 'ko-Hani', 'ja-Kana', 'ja-Hira', 'ja-Latn',
+		'zh-Hans', 'zh-Hant', 'zh-Latn', 'ru-Latn', 'ar-Latn', 'th-Latn'
 	];
 
 	/**
@@ -225,10 +240,11 @@
 	function CardLanguage( props ) {
 		return el( Combobox, {
 			label: __( 'Language', 'axismundi-contacts' ),
+			hideLabel: true,
 			value: props.value || '',
 			options: COMMON_LANGUAGES,
 			allowFree: true,
-			supporting: __( 'A language tag. Everything above is what the card says in this language.', 'axismundi-contacts' ),
+			supporting: __( 'A language and where it is written, like ko-KR. Everything above is what the card says in it.', 'axismundi-contacts' ),
 			onChange: props.onChange
 		} );
 	}
@@ -1000,7 +1016,13 @@
 			 * in an unstated alphabet are sounds nobody can read: `Jīn` is Pinyin, `キム` is kana, and
 			 * the standard will not store one without the other.
 			 */
-			hasPhonetic( components )
+			/*
+			 * Asked as soon as somebody says they are writing pronunciations down, rather than after
+			 * they have written one. The standard requires one of these two the moment any part
+			 * carries a sound, so a screen that waited for the value would be letting somebody fill in
+			 * a name and then refusing to save it.
+			 */
+			phonetic && ( expanded || custom )
 				? el(
 					'div',
 					{ className: 'ax-ce-phonetic' },
@@ -1009,17 +1031,22 @@
 						value: name.phoneticSystem || '',
 						options: PHONETIC_SYSTEMS,
 						allowFree: true,
-						supporting: __( 'ipa, jyut or piny. One of this and the script is required.', 'axismundi-contacts' ),
+						supporting: __( 'How the sounds are spelled: IPA, Jyutping or Pinyin.', 'axismundi-contacts' ),
 						onChange: function ( value ) {
 							setName( withKey( name, 'phoneticSystem', value ) );
 						}
 					} ),
+					/*
+					 * The other way of answering the same requirement, and the one that fits a
+					 * pronunciation written in an alphabet rather than a notation: `キム` is not a
+					 * system, it is kana. Either will do, which is why neither is asked for twice.
+					 */
 					el( Combobox, {
 						label: __( 'Pronunciation script', 'axismundi-contacts' ),
 						value: name.phoneticScript || '',
 						options: PHONETIC_SCRIPTS,
 						allowFree: true,
-						supporting: __( 'The script the pronunciations above are written in.', 'axismundi-contacts' ),
+						supporting: __( 'Or the script they are written in, like Kana. One of the two is required.', 'axismundi-contacts' ),
 						onChange: function ( value ) {
 							setName( withKey( name, 'phoneticScript', value ) );
 						}
@@ -1792,10 +1819,12 @@
 			el(
 				'div',
 				{ className: 'ax-ce-localization__add' },
-				el( TextField, {
+				el( Combobox, {
 					label: __( 'Add a language', 'axismundi-contacts' ),
 					value: tag,
-					supporting: __( 'A language tag, like ko-KR or ja-Kana.', 'axismundi-contacts' ),
+					options: SCRIPT_LANGUAGES.concat( COMMON_LANGUAGES ),
+					allowFree: true,
+					supporting: __( 'Usually the same language in another script, like ko-Latn or ja-Kana.', 'axismundi-contacts' ),
 					onChange: setTag
 				} ),
 				el(
@@ -1854,6 +1883,7 @@
 						value: entry.language || '',
 						options: COMMON_LANGUAGES,
 						allowFree: true,
+						hideLabel: true,
 						supporting: sprintf(
 							/* translators: %d: where this sits in the order of preference. */
 							__( 'Preferred %d', 'axismundi-contacts' ),

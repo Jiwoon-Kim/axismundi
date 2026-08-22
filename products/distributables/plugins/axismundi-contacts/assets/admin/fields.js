@@ -57,7 +57,16 @@
 				'div',
 				{ className: 'text-field__container' },
 				props.control( describedBy ),
-				el( 'label', { className: 'text-field__label', htmlFor: id }, props.label ),
+				/*
+				 * The label is still written down when it is not shown. A section headed `Language`
+				 * holding one field does not need the word twice, but the field is still the thing
+				 * being labelled -- for a screen reader, and for whoever is tabbing through it.
+				 */
+				el(
+					'label',
+					{ className: 'text-field__label' + ( props.hideLabel ? ' screen-reader-text' : '' ), htmlFor: id },
+					props.label
+				),
 				props.trailing || null
 			),
 			props.supporting
@@ -82,6 +91,7 @@
 		return el( Shell, {
 			id: id,
 			label: props.label,
+			hideLabel: props.hideLabel,
 			error: props.error,
 			supporting: props.supporting,
 			className: props.className,
@@ -113,6 +123,7 @@
 		return el( Shell, {
 			id: id,
 			label: props.label,
+			hideLabel: props.hideLabel,
 			error: props.error,
 			supporting: props.supporting,
 			className: props.className,
@@ -172,6 +183,7 @@
 			'div',
 			{ className: 'ax-combobox' + ( props.className ? ' ' + props.className : '' ) },
 			el( TextField, {
+				hideLabel: props.hideLabel,
 				id: id,
 				label: props.label,
 				value: open ? query : ( props.value || '' ),

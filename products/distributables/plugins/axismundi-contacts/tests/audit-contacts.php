@@ -2964,6 +2964,46 @@ try {
 		0 === axismundi_contacts_state_jscontact_version()
 	);
 
+	// -- the pictures on the buttons ------------------------------------------------------------------------------
+
+	/*
+	 * Registered once and named everywhere else. A screen that inlined its own SVG would be one more
+	 * place a bin could look different from the bin next to it, and the second screen to need `delete`
+	 * would have had to copy the first.
+	 */
+	do_action( 'init' );
+	$ax_ct_ic_missing = array();
+	foreach ( array_keys( axismundi_contacts_icons() ) as $ax_ct_ic_name ) {
+		if ( '' === axismundi_contacts_icon( (string) $ax_ct_ic_name ) ) {
+			$ax_ct_ic_missing[] = (string) $ax_ct_ic_name;
+		}
+	}
+	ax_ct_assert(
+		$ax_ct_results,
+		'every icon this plugin names is in the registry and readable from it',
+		array() === $ax_ct_ic_missing
+			&& count( axismundi_contacts_icons() ) >= 13
+	);
+	/*
+	 * And each takes the colour of what it sits in. The downloads carry a literal grey, which would
+	 * render the same pale shade whatever the surface around it was doing -- a picture of an icon
+	 * rather than an icon.
+	 */
+	$ax_ct_ic_literal = array();
+	foreach ( array_keys( axismundi_contacts_icons() ) as $ax_ct_ic_name ) {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own asset in a dev fixture.
+		$ax_ct_ic_svg = (string) file_get_contents( dirname( __DIR__ ) . '/assets/icons/' . $ax_ct_ic_name . '.svg' );
+		if ( ! str_contains( $ax_ct_ic_svg, 'currentColor' ) || 1 === preg_match( '/fill="#[0-9a-fA-F]/', $ax_ct_ic_svg ) ) {
+			$ax_ct_ic_literal[] = (string) $ax_ct_ic_name;
+		}
+	}
+	ax_ct_assert(
+		$ax_ct_results,
+		'and every one of them takes its colour from what it sits in rather than carrying its own',
+		array() === $ax_ct_ic_literal
+			&& file_exists( dirname( __DIR__ ) . '/assets/icons/LICENSE.md' )
+	);
+
 	ax_ct_assert(
 		$ax_ct_results,
 		'this plugin stores address books and imitates neither the Actor registry nor its profiles',

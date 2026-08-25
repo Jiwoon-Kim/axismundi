@@ -132,6 +132,8 @@ ax_geo_iso_assert(
 		&& ! axismundi_geodata_is_subdivision_code( 'KR-XX' )
 		&& 'KR' === axismundi_geodata_subdivision_country_code( 'KR-26' )
 		&& '' === axismundi_geodata_subdivision_country_code( 'KR-XX' )
+		&& axismundi_geodata_subdivision_belongs_to_country( 'KR-26', 'KR' )
+		&& ! axismundi_geodata_subdivision_belongs_to_country( 'US-CA', 'KR' )
 		&& array( 'KR-11' => 'KR', 'KR-26' => 'KR' ) === array_intersect_key(
 			axismundi_geodata_subdivisions_for_country( 'KR' ),
 			array_flip( array( 'KR-11', 'KR-26' ) )
@@ -164,6 +166,23 @@ ax_geo_iso_assert(
 		&& str_contains( $ax_geo_iso_country_select, 'Korea, Republic of (KR)' )
 		&& str_contains( $ax_geo_iso_unknown_select, 'XK (not in this registry)' )
 		&& ! str_contains( $ax_geo_iso_country_select, '<input type="text"' )
+);
+
+/* A subdivision gets its Country from the hierarchy. It is not copied onto every area beneath it. */
+$ax_geo_iso_kr_subdivision_select = axismundi_geodata_subdivision_code_select( 'ax_geo_iso_3166_2', 'KR-26', 'KR' );
+$ax_geo_iso_imported_subdivision_select = axismundi_geodata_subdivision_code_select( 'ax_geo_iso_3166_2', 'US-CA', 'KR' );
+$ax_geo_iso_no_country_select = axismundi_geodata_subdivision_code_select( 'ax_geo_iso_3166_2', '', '' );
+// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own term save path in a dev fixture.
+$ax_geo_iso_term_src = (string) file_get_contents( dirname( __DIR__ ) . '/includes/term-fields.php' );
+ax_geo_iso_assert(
+	$ax_geo_iso_results,
+	'a Geo Area filters subdivision choices by its inherited Country and refuses a newly mismatched code',
+	str_contains( $ax_geo_iso_kr_subdivision_select, 'value="KR-26"' )
+		&& ! str_contains( $ax_geo_iso_kr_subdivision_select, 'value="US-CA"' )
+		&& str_contains( $ax_geo_iso_imported_subdivision_select, 'US-CA (not assigned to KR)' )
+		&& str_contains( $ax_geo_iso_no_country_select, 'disabled="disabled"' )
+		&& str_contains( $ax_geo_iso_term_src, 'axismundi_geodata_subdivision_belongs_to_country( $requested, $country )' )
+		&& str_contains( $ax_geo_iso_term_src, '$requested !== $current' )
 );
 
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI fixture output.

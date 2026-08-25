@@ -57,6 +57,17 @@ function axismundi_geodata_subdivision_country_code( string $code ) : string {
 }
 
 /**
+ * Whether this known subdivision is assigned by this country.
+ *
+ * @param string $code    ISO 3166-2 code.
+ * @param string $country ISO 3166-1 alpha-2 code.
+ * @return bool
+ */
+function axismundi_geodata_subdivision_belongs_to_country( string $code, string $country ) : bool {
+	return strtoupper( trim( $country ) ) === axismundi_geodata_subdivision_country_code( $code );
+}
+
+/**
  * The codes a country assigns, keyed by their full ISO 3166-2 spelling.
  *
  * @param string $country ISO 3166-1 alpha-2 code.

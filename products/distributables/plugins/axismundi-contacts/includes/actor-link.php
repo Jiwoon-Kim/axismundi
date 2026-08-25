@@ -78,7 +78,7 @@ function axismundi_contacts_free_service_key( array $document ) : string {
 		 * account's address -- with its provenance and whoever agreed it could be published -- to an
 		 * account added later. The key is never shown, so its length costs nobody anything.
 		 */
-		$key = 'x-' . wp_generate_uuid4();
+		$key = 'onl-' . wp_generate_uuid4();
 	} while ( isset( $taken[ $key ] ) );
 	return $key;
 }

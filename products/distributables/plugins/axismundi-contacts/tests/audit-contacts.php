@@ -3600,7 +3600,7 @@ try {
 			 * published -- the home row keeps its fixed key because that row is the same account
 			 * every time it is seeded.
 			 */
-			&& 1 === preg_match( '/^x-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', axismundi_contacts_free_service_key( array() ) )
+			&& 1 === preg_match( '/^onl-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', axismundi_contacts_free_service_key( array() ) )
 			&& axismundi_contacts_free_service_key( array() ) !== axismundi_contacts_free_service_key( array() )
 	);
 	/*
@@ -4623,9 +4623,17 @@ try {
 			// A whole uuid: what this Card holds says nothing about what it used to hold.
 			&& str_contains( $ax_ct_cb_editor, 'window.crypto.randomUUID()' )
 			&& str_contains( $ax_ct_cb_editor, 'window.crypto.getRandomValues( new Uint8Array( 16 ) )' )
-			&& str_contains( $ax_ct_cb_editor, "newEntryId( 'pho', entries )" )
+			/*
+			 * And the address says which collection it is in, not what the entry is called: a number
+			 * that moves from `Mobile` to `Work` keeps the address its provenance and its publishing
+			 * consent were written against.
+			 */
+			&& str_contains( $ax_ct_cb_editor, "newEntryId( 'tel', entries )" )
+			&& str_contains( $ax_ct_cb_editor, "newEntryId( 'onl', entries )" )
 			&& str_contains( $ax_ct_cb_editor, "newEntryId( 'org', entries )" )
 			&& str_contains( $ax_ct_cb_editor, "newEntryId( 'ttl', entries )" )
+			&& str_contains( $ax_ct_cb_editor, "prefix: 'eml'" )
+			&& str_contains( $ax_ct_cb_editor, "newEntryId( props.field.prefix, entries )" )
 			// Nothing counts up any more, here or in the accounts the server seeds.
 			&& ! str_contains( $ax_ct_cb_editor, "'p' + index" )
 			&& ! str_contains( $ax_ct_cb_editor, "'x' + index" )
@@ -4661,6 +4669,67 @@ try {
 			// Unless a language says something about it, in which case taking it away is a question.
 			&& str_contains( $ax_ct_cb_editor, "patchesUnder( ( props.card || {} ).localizations, 'phones/' + row.id )" )
 			&& str_contains( $ax_ct_cb_editor, "__( 'Remove them and the number', 'axismundi-contacts' )" )
+	);
+
+	/*
+	 * `pho-` was written for a few days before the collections agreed on what to call themselves.
+	 * `tel-` is what a phone entry is: it reads straight in an export beside `"number": "tel:+82…"`,
+	 * and a document addressing one collection two ways depending on when it was written is one
+	 * nobody can search or explain.
+	 *
+	 * Moving one moves everything that addresses it, in one transaction -- the key, any language
+	 * patching a path through it, the provenance row, and the pointer saying it may be published.
+	 */
+	$ax_ct_tk_actor = ax_ct_actor( $ax_ct_users );
+	$ax_ct_tk_sid   = (int) $ax_ct_tk_actor->get_identity_id();
+	$ax_ct_tk_made  = axismundi_contacts_create_profile_card( $ax_ct_tk_sid );
+	$ax_ct_tk_card  = is_wp_error( $ax_ct_tk_made ) ? 0 : (int) $ax_ct_tk_made;
+	$ax_ct_loose[]  = $ax_ct_tk_card;
+	$ax_ct_tk_doc   = axismundi_contacts_card_document( $ax_ct_tk_card );
+	$ax_ct_tk_doc['phones'] = array(
+		'pho-aaaaaa' => array( 'number' => 'tel:+821027421672', 'features' => array( 'mobile' => true ) ),
+		'tel-bbbbbb' => array( 'number' => 'tel:+8221234567' ),
+	);
+	$ax_ct_tk_doc['localizations'] = array( 'en' => array( 'phones/pho-aaaaaa/label' => 'Mobile' ) );
+	axismundi_contacts_save_card_for_owner( $ax_ct_tk_sid, $ax_ct_tk_doc, $ax_ct_tk_card );
+	axismundi_contacts_set_provenance( $ax_ct_tk_card, 'phones/pho-aaaaaa', AXISMUNDI_CONTACTS_SOURCE_ACTOR, $ax_ct_tk_actor->get_uri() );
+	axismundi_contacts_set_published_pointers( $ax_ct_tk_sid, array( 'name', 'phones/pho-aaaaaa' ) );
+
+	axismundi_contacts_migrate_phone_keys();
+	// Twice, because a migration that is not safe to run again is one that runs again anyway.
+	axismundi_contacts_migrate_phone_keys();
+
+	$ax_ct_tk_after = axismundi_contacts_card_document( $ax_ct_tk_card );
+	$ax_ct_tk_prov  = axismundi_contacts_card_provenance( $ax_ct_tk_card );
+	$ax_ct_tk_pub   = axismundi_contacts_published_pointers( $ax_ct_tk_sid );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a phone moved onto the name its collection goes by takes everything that addressed it',
+		array( 'tel-aaaaaa', 'tel-bbbbbb' ) === array_keys( (array) $ax_ct_tk_after['phones'] )
+			// The entry itself is untouched: only where it is addressed changed.
+			&& 'tel:+821027421672' === (string) ( $ax_ct_tk_after['phones']['tel-aaaaaa']['number'] ?? '' )
+			&& isset( $ax_ct_tk_after['localizations']['en']['phones/tel-aaaaaa/label'] )
+			&& ! isset( $ax_ct_tk_after['localizations']['en']['phones/pho-aaaaaa/label'] )
+			&& isset( $ax_ct_tk_prov['phones/tel-aaaaaa'] )
+			&& ! isset( $ax_ct_tk_prov['phones/pho-aaaaaa'] )
+			&& in_array( 'phones/tel-aaaaaa', $ax_ct_tk_pub, true )
+			&& ! in_array( 'phones/pho-aaaaaa', $ax_ct_tk_pub, true )
+	);
+	/*
+	 * And the two migrations are one mover. The older one moved an account and this one moves a
+	 * number, and what has to move with either is the same four things -- written twice, they would
+	 * have drifted the first time one of them learned something.
+	 */
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_tk_schema = (string) file_get_contents( dirname( __DIR__ ) . '/includes/schema.php' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'moving an entry from one address to another is one thing this knows how to do, not two',
+		str_contains( $ax_ct_tk_schema, 'function axismundi_contacts_move_entry_key(' )
+			// Defined once and called from both migrations.
+			&& 3 === substr_count( $ax_ct_tk_schema, 'axismundi_contacts_move_entry_key(' )
+			&& str_contains( $ax_ct_tk_schema, "'onlineServices'," )
+			&& str_contains( $ax_ct_tk_schema, "'phones'," )
 	);
 
 	ax_ct_assert(

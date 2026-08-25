@@ -34,7 +34,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CONTACTS_DB_VERSION        = '9';
+const AXISMUNDI_CONTACTS_DB_VERSION        = '10';
 const AXISMUNDI_CONTACTS_DB_VERSION_OPTION = 'ax_contacts_db_version';
 
 /**
@@ -331,6 +331,8 @@ function axismundi_contacts_install_schema() : bool {
 	axismundi_contacts_state_jscontact_version();
 	// And the one entry key that was ever spelled out is moved, with everything that addresses it.
 	axismundi_contacts_migrate_home_service_key();
+	// So are the phone addresses written before the collections agreed on what to call themselves.
+	axismundi_contacts_migrate_phone_keys();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.
 	$card_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$cards}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.
@@ -395,92 +397,154 @@ function axismundi_contacts_migrate_home_service_key() : void {
 	$profiles = axismundi_contacts_profiles_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
 	$rows = (array) $wpdb->get_results(
-		"SELECT c.id, c.owner_actor_id, c.card_json FROM {$cards} c
+		"SELECT c.id, c.owner_actor_id FROM {$cards} c
 			INNER JOIN {$profiles} p ON p.card_id = c.id
 			WHERE c.card_json LIKE '%\"onlineServices\"%'",
 		ARRAY_A
 	);
 	foreach ( $rows as $row ) {
+		axismundi_contacts_move_entry_key(
+			(int) $row['id'],
+			(int) $row['owner_actor_id'],
+			axismundi_contacts_card_document( (int) $row['id'] ),
+			'onlineServices',
+			$from,
+			$to
+		);
+	}
+}
+
+/**
+ * Move one entry from one address to another, with everything that addresses it.
+ *
+ * Four things say where an entry lives and all four move together or none of them do: the key in
+ * the Card, any language patching a path through it, the provenance row saying where the value came
+ * from, and the pointer saying its owner agreed it could be published. A Card renamed without its
+ * pointer quietly unpublishes something somebody chose to publish; without its provenance row a
+ * seeded value becomes an authored one that never refreshes again; without its patches a translation
+ * points at nothing, which the store refuses. Hence one transaction.
+ *
+ * @param int                 $card_id  Card id.
+ * @param int                 $owner    Owning Actor identity.
+ * @param array<string,mixed> $document Card document, already read.
+ * @param string              $property Which collection the entry is in.
+ * @param string              $from     The address it has.
+ * @param string              $to       The address it should have.
+ * @return bool Whether it moved.
+ */
+function axismundi_contacts_move_entry_key( int $card_id, int $owner, array $document, string $property, string $from, string $to ) : bool {
+	global $wpdb;
+	$entries = (array) ( $document[ $property ] ?? array() );
+	if ( $from === $to || ! isset( $entries[ $from ] ) || isset( $entries[ $to ] ) ) {
+		// Nothing to move, or somewhere already occupied -- renaming onto that would merge two entries.
+		return false;
+	}
+	// Rebuilt rather than reassigned, so the entry keeps the position it had in the document.
+	$moved = array();
+	foreach ( $entries as $key => $entry ) {
+		$moved[ $from === (string) $key ? $to : (string) $key ] = $entry;
+	}
+	$document[ $property ] = $moved;
+
+	$was = $property . '/' . $from;
+	$now = $property . '/' . $to;
+	$localizations = (array) ( $document['localizations'] ?? array() );
+	foreach ( $localizations as $tag => $patch ) {
+		$rewritten = array();
+		foreach ( (array) $patch as $path => $patched ) {
+			$path = (string) $path;
+			if ( $was === $path || str_starts_with( $path, $was . '/' ) ) {
+				$path = $now . substr( $path, strlen( $was ) );
+			}
+			$rewritten[ $path ] = $patched;
+		}
+		$localizations[ $tag ] = $rewritten;
+	}
+	if ( array() !== $localizations ) {
+		$document['localizations'] = $localizations;
+	}
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
+	$wpdb->query( 'START TRANSACTION' );
+	$saved = axismundi_contacts_save_card_for_owner( $owner, $document, $card_id );
+	if ( is_wp_error( $saved ) ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->query( 'ROLLBACK' );
+		return false;
+	}
+	/*
+	 * Anything already written against the new address is stale by definition: this Card has no entry
+	 * there -- one that did was left alone above -- so the row records where a value came from that
+	 * nothing on the Card holds any more. It goes inside the same transaction, because the alternative
+	 * is the rename failing on a unique key and leaving the Card renamed with its provenance behind.
+	 */
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
+	$wpdb->delete( axismundi_contacts_provenance_table(), array( 'card_id' => $card_id, 'pointer' => $now ), array( '%d', '%s' ) );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
+	$wpdb->update(
+		axismundi_contacts_provenance_table(),
+		array( 'pointer' => $now ),
+		array( 'card_id' => $card_id, 'pointer' => $was ),
+		array( '%s' ),
+		array( '%d', '%s' )
+	);
+	$pointers = axismundi_contacts_published_pointers( $owner );
+	if ( in_array( $was, $pointers, true ) ) {
+		$pointers = array_map(
+			static function ( string $pointer ) use ( $was, $now ) : string {
+				return $was === $pointer ? $now : $pointer;
+			},
+			$pointers
+		);
+		$published = axismundi_contacts_set_published_pointers( $owner, $pointers );
+		if ( is_wp_error( $published ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->query( 'ROLLBACK' );
+			return false;
+		}
+	}
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
+	$wpdb->query( 'COMMIT' );
+	return true;
+}
+
+/**
+ * Move phone addresses onto the name the collections agreed on.
+ *
+ * `pho-` was written for a few days before the prefixes were settled, and `tel-` is what a phone
+ * entry is called: it reads straight in an export beside `"number": "tel:+82…"`, and a document
+ * where the same collection is addressed two ways depending on when it was written is one nobody
+ * can search or explain.
+ *
+ * Safe to run twice, and safe on a Card that has both -- the one already moved is left alone.
+ *
+ * @return void
+ */
+function axismundi_contacts_migrate_phone_keys() : void {
+	global $wpdb;
+	$cards = axismundi_contacts_cards_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
+	$rows = (array) $wpdb->get_results( "SELECT id, owner_actor_id, card_json FROM {$cards} WHERE card_json LIKE '%\"pho-%'", ARRAY_A );
+	foreach ( $rows as $row ) {
 		$document = json_decode( (string) ( $row['card_json'] ?? '' ), true );
 		if ( ! is_array( $document ) ) {
 			continue;
 		}
-		$services = (array) ( $document['onlineServices'] ?? array() );
-		if ( ! isset( $services[ $from ] ) || isset( $services[ $to ] ) ) {
-			continue;
-		}
-		// Rebuilt rather than reassigned, so the entry keeps the position it had in the document.
-		$moved = array();
-		foreach ( $services as $key => $entry ) {
-			$moved[ $from === (string) $key ? $to : (string) $key ] = $entry;
-		}
-		$document['onlineServices'] = $moved;
-		$card_id                    = (int) $row['id'];
-		$owner                      = (int) $row['owner_actor_id'];
-
-		/*
-		 * And every language that says something about that entry. A localization key is a path into
-		 * the Card -- `onlineServices/axismundi/service` -- so it is the same address written a third
-		 * way, and a patch left behind would point at an entry that is no longer there.
-		 */
-		$localizations = (array) ( $document['localizations'] ?? array() );
-		foreach ( $localizations as $tag => $patch ) {
-			$rewritten = array();
-			foreach ( (array) $patch as $path => $patched ) {
-				$path = (string) $path;
-				if ( 'onlineServices/' . $from === $path || str_starts_with( $path, 'onlineServices/' . $from . '/' ) ) {
-					$path = 'onlineServices/' . $to . substr( $path, strlen( 'onlineServices/' . $from ) );
-				}
-				$rewritten[ $path ] = $patched;
-			}
-			$localizations[ $tag ] = $rewritten;
-		}
-		if ( array() !== $localizations ) {
-			$document['localizations'] = $localizations;
-		}
-
-		$wpdb->query( 'START TRANSACTION' );
-		$saved = axismundi_contacts_save_card_for_owner( $owner, $document, $card_id );
-		if ( is_wp_error( $saved ) ) {
-			$wpdb->query( 'ROLLBACK' );
-			continue;
-		}
-		/*
-		 * Anything already written against the new address is stale by definition: this Card has no
-		 * entry there -- a Card that did was left alone above -- so the row records where a value came
-		 * from that nothing on the Card holds any more. It goes, inside the same transaction, because
-		 * the alternative is the rename failing on a unique key and leaving the Card renamed with its
-		 * provenance behind.
-		 */
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
-		$wpdb->delete(
-			axismundi_contacts_provenance_table(),
-			array( 'card_id' => $card_id, 'pointer' => 'onlineServices/' . $to ),
-			array( '%d', '%s' )
-		);
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
-		$wpdb->update(
-			axismundi_contacts_provenance_table(),
-			array( 'pointer' => 'onlineServices/' . $to ),
-			array( 'card_id' => $card_id, 'pointer' => 'onlineServices/' . $from ),
-			array( '%s' ),
-			array( '%d', '%s' )
-		);
-		$pointers = axismundi_contacts_published_pointers( $owner );
-		if ( in_array( 'onlineServices/' . $from, $pointers, true ) ) {
-			$pointers = array_map(
-				static function ( string $pointer ) use ( $from, $to ) : string {
-					return 'onlineServices/' . $from === $pointer ? 'onlineServices/' . $to : $pointer;
-				},
-				$pointers
-			);
-			$published = axismundi_contacts_set_published_pointers( $owner, $pointers );
-			if ( is_wp_error( $published ) ) {
-				$wpdb->query( 'ROLLBACK' );
+		foreach ( array_keys( (array) ( $document['phones'] ?? array() ) ) as $key ) {
+			$key = (string) $key;
+			if ( ! str_starts_with( $key, 'pho-' ) ) {
 				continue;
 			}
+			$moved = axismundi_contacts_move_entry_key(
+				(int) $row['id'],
+				(int) $row['owner_actor_id'],
+				axismundi_contacts_card_document( (int) $row['id'] ),
+				'phones',
+				$key,
+				'tel-' . substr( $key, 4 )
+			);
+			unset( $moved );
 		}
-		$wpdb->query( 'COMMIT' );
 	}
 }
 

@@ -92,12 +92,20 @@
 		);
 	}
 
-	/** Properties this draws rows for, and what each entry's value is called. */
+	/**
+	 * Properties this draws rows for, and what each entry's value is called.
+	 *
+	 * `prefix` is what a new entry's address starts with. It says which collection the entry belongs
+	 * to and nothing else -- not what it is called, not what kind it is -- so a number that moves from
+	 * `Mobile` to `Work` keeps the address its provenance and its publishing consent were written
+	 * against. Three letters, because a stored document is read: `tel-`, beside `"number": "tel:+82…"`,
+	 * says what the entry is at a glance.
+	 */
 	var ENTRY_FIELDS = [
-		{ key: 'emails', label: __( 'Email', 'axismundi-contacts' ), value: 'address', type: 'email', icon: 'mail' },
-		{ key: 'links', label: __( 'Links', 'axismundi-contacts' ), value: 'uri', type: 'url', icon: 'link' },
-		{ key: 'media', label: __( 'Media', 'axismundi-contacts' ), value: 'uri', type: 'url', icon: 'image' },
-		{ key: 'notes', label: __( 'Notes', 'axismundi-contacts' ), value: 'note', icon: 'notes' }
+		{ key: 'emails', prefix: 'eml', label: __( 'Email', 'axismundi-contacts' ), value: 'address', type: 'email', icon: 'mail' },
+		{ key: 'links', prefix: 'lnk', label: __( 'Links', 'axismundi-contacts' ), value: 'uri', type: 'url', icon: 'link' },
+		{ key: 'media', prefix: 'med', label: __( 'Media', 'axismundi-contacts' ), value: 'uri', type: 'url', icon: 'image' },
+		{ key: 'notes', prefix: 'not', label: __( 'Notes', 'axismundi-contacts' ), value: 'note', icon: 'notes' }
 	];
 
 	/** The component kinds a name is made of, plus the separator that goes between them. */
@@ -1278,7 +1286,7 @@
 							 * pointer and a provenance row name, so handing a fresh value the id of one
 							 * that was removed would hand it that value's publishing consent too.
 							 */
-							var id = props.field.key.slice( 0, 3 ) + '-' + Math.random().toString( 36 ).slice( 2, 8 );
+							var id = newEntryId( props.field.prefix, entries );
 							var next = Object.assign( {}, entries );
 							next[ id ] = {};
 							next[ id ][ props.field.value ] = '';
@@ -1539,7 +1547,7 @@
 					return;
 				}
 				var next = Object.assign( {}, entries );
-				next[ newEntryId( 'pho', entries ) ] = made;
+				next[ newEntryId( 'tel', entries ) ] = made;
 				setPending( pending.filter( function ( each ) {
 					return each.id !== row.pending;
 				} ) );
@@ -2433,7 +2441,7 @@
 						onClick: function () {
 							var updated = Object.assign( {}, entries );
 							// New accounts go to the end; the order somebody chose is theirs to change.
-							updated[ newEntryId( 'x', entries ) ] = { service: '', user: '', uri: '', pref: ordered.length + 1 };
+							updated[ newEntryId( 'onl', entries ) ] = { service: '', user: '', uri: '', pref: ordered.length + 1 };
 							setEntries( updated );
 						}
 					},

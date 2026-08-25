@@ -3283,7 +3283,57 @@
 				 * somebody to type `{"components":[{"kind":"given",...}]}` into a box is asking them
 				 * to be a serializer. It is the same editor as above because it is the same question.
 				 */
-				if ( 'name' === path && value && 'object' === typeof value && ! Array.isArray( value ) ) {
+				var isObject = value && 'object' === typeof value && ! Array.isArray( value );
+				/*
+				 * A language that gives a whole address gets the address editor, for the same reason
+				 * the name does: `〒100-8994東京都千代田区丸ノ内2-7-2` is an address, with parts and an
+				 * order and a separator, and the standard's own Tokyo example writes it exactly that
+				 * way. Asking somebody to type the components array into a box would be asking them
+				 * to be a serializer.
+				 */
+				if ( isObject && /^addresses\/[^/]+$/.test( path ) ) {
+					return el(
+						'div',
+						{ key: path, className: 'ax-ce-localization__name' },
+						el( 'h4', null, path ),
+						el( AddressParts, {
+							address: value,
+							onChange: function ( next ) {
+								setPath( path, next );
+							}
+						} ),
+						el( Textarea, {
+							label: __( 'Written out', 'axismundi-contacts' ),
+							className: 'ax-ce-address__full',
+							rows: 2,
+							value: value.full || '',
+							supporting: __( 'The whole address in this language, kept as written.', 'axismundi-contacts' ),
+							onChange: function ( next ) {
+								setPath( path, withKey( value, 'full', next ) );
+							}
+						} ),
+						el(
+							'p',
+							null,
+							el(
+								'button',
+								{
+									type: 'button',
+									className: 'button',
+									onClick: function () {
+										setPath( path, undefined );
+									}
+								},
+								sprintf(
+									/* translators: %s: a language tag. */
+									__( 'Stop giving this address in %s', 'axismundi-contacts' ),
+									props.tag
+								)
+							)
+						)
+					);
+				}
+				if ( 'name' === path && isObject ) {
 					return el(
 						'div',
 						{ key: path, className: 'ax-ce-localization__name' },

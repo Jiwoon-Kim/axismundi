@@ -4248,7 +4248,8 @@ try {
 	ax_ct_assert(
 		$ax_ct_results,
 		'a language that gives the whole name is given the same editor the name has',
-		str_contains( $ax_ct_cb_editor, "if ( 'name' === path && value && 'object' === typeof value && ! Array.isArray( value ) ) {" )
+		str_contains( $ax_ct_cb_editor, "if ( 'name' === path && isObject ) {" )
+			&& str_contains( $ax_ct_cb_editor, "var isObject = value && 'object' === typeof value && ! Array.isArray( value );" )
 			&& str_contains( $ax_ct_cb_editor, "className: 'ax-ce-localization__name'" )
 			&& str_contains( $ax_ct_cb_editor, "__( 'Stop giving the name in %s', 'axismundi-contacts' )" )
 	);
@@ -5032,6 +5033,117 @@ try {
 			&& str_contains( $ax_ct_cb_editor, "{ value: 'billing'," )
 			&& str_contains( $ax_ct_cb_editor, "{ value: 'delivery'," )
 			&& str_contains( $ax_ct_cb_editor, "className: 'ax-ce-address__contexts'" )
+	);
+
+	/*
+	 * The standard's Tokyo example, which is the one that proves the whole shape: an address written
+	 * both as parts and as a line, and a language giving the same address again in its own order with
+	 * its own separator and its own line. The Latin form reads block-first and the Japanese form
+	 * region-first -- the same place, written the way each language writes it -- and neither is
+	 * derived from the other.
+	 */
+	$ax_ct_k26 = array(
+		'components'       => array(
+			array( 'kind' => 'block', 'value' => '2-7' ),
+			array( 'kind' => 'separator', 'value' => '-' ),
+			array( 'kind' => 'number', 'value' => '2' ),
+			array( 'kind' => 'separator', 'value' => ' ' ),
+			array( 'kind' => 'district', 'value' => 'Marunouchi' ),
+			array( 'kind' => 'locality', 'value' => 'Chiyoda-ku' ),
+			array( 'kind' => 'region', 'value' => 'Tokyo' ),
+			array( 'kind' => 'separator', 'value' => ' ' ),
+			array( 'kind' => 'postcode', 'value' => '100-8994' ),
+		),
+		'defaultSeparator' => ', ',
+		'full'             => '2-7-2 Marunouchi, Chiyoda-ku, Tokyo 100-8994',
+		'isOrdered'        => true,
+	);
+	$ax_ct_k26_ja = array(
+		'components'       => array(
+			array( 'kind' => 'region', 'value' => "\xe6\x9d\xb1\xe4\xba\xac\xe9\x83\xbd" ),
+			array( 'kind' => 'locality', 'value' => "\xe5\x8d\x83\xe4\xbb\xa3\xe7\x94\xb0\xe5\x8c\xba" ),
+			array( 'kind' => 'district', 'value' => "\xe4\xb8\xb8\xe3\x83\x8e\xe5\x86\x85" ),
+			array( 'kind' => 'block', 'value' => '2-7' ),
+			array( 'kind' => 'separator', 'value' => '-' ),
+			array( 'kind' => 'number', 'value' => '2' ),
+			array( 'kind' => 'postcode', 'value' => "\xe3\x80\x92100-8994" ),
+		),
+		// Written without anything between the parts, which is how the address is read there.
+		'defaultSeparator' => '',
+		'full'             => "\xe3\x80\x92100-8994\xe6\x9d\xb1\xe4\xba\xac\xe9\x83\xbd\xe5\x8d\x83\xe4\xbb\xa3\xe7\x94\xb0\xe5\x8c\xba\xe4\xb8\xb8\xe3\x83\x8e\xe5\x86\x852-7-2",
+		'isOrdered'        => true,
+	);
+	$ax_ct_k26_id  = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array(
+			'@type'         => 'Card',
+			'name'          => array( 'full' => 'Tokyo' ),
+			'addresses'     => array( 'k26' => $ax_ct_k26 ),
+			'localizations' => array( 'jp' => array( 'addresses/k26' => $ax_ct_k26_ja ) ),
+		)
+	);
+	$ax_ct_k26_key = is_wp_error( $ax_ct_k26_id ) ? 0 : (int) $ax_ct_k26_id;
+	$ax_ct_loose[] = $ax_ct_k26_key;
+	$ax_ct_k26_back = axismundi_contacts_card_document( $ax_ct_k26_key );
+	$ax_ct_k26_bja  = (array) ( $ax_ct_k26_back['localizations']['jp']['addresses/k26'] ?? array() );
+	ax_ct_assert(
+		$ax_ct_results,
+		'one address written as parts and as a line, and a language giving both again its own way',
+		// Both representations survive on the base card, neither built from the other.
+		array_column( $ax_ct_k26['components'], 'value' ) === array_column( (array) $ax_ct_k26_back['addresses']['k26']['components'], 'value' )
+			&& $ax_ct_k26['full'] === (string) $ax_ct_k26_back['addresses']['k26']['full']
+			// And the language replaces the whole thing: its own order, separator and line.
+			&& array_column( $ax_ct_k26_ja['components'], 'kind' ) === array_column( (array) $ax_ct_k26_bja['components'], 'kind' )
+			&& '' === (string) $ax_ct_k26_bja['defaultSeparator']
+			&& $ax_ct_k26_ja['full'] === (string) $ax_ct_k26_bja['full']
+			// Read one way it opens with the block, the other with the region. Same place.
+			&& 'block' === (string) $ax_ct_k26_back['addresses']['k26']['components'][0]['kind']
+			&& 'region' === (string) $ax_ct_k26_bja['components'][0]['kind']
+	);
+	// And a language giving a whole address is given the address editor, not a box of JSON.
+	ax_ct_assert(
+		$ax_ct_results,
+		'a language that gives a whole address is given the same editor the address has',
+		str_contains( $ax_ct_cb_editor, "if ( isObject && /^addresses\\/[^/]+$/.test( path ) ) {" )
+			&& str_contains( $ax_ct_cb_editor, "__( 'Stop giving this address in %s', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_cb_editor, "__( 'The whole address in this language, kept as written.', 'axismundi-contacts' )" )
+	);
+	/*
+	 * And an address that arrived saying its parts are in no order keeps saying it. Nothing decides
+	 * that on its behalf: the parts may have come from something that recorded what they were and not
+	 * how they are written, and until somebody states an order there is nothing to drag and nothing
+	 * to put between them.
+	 */
+	$ax_ct_k26_loose = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array(
+			'@type'     => 'Card',
+			'name'      => array( 'full' => 'No order stated' ),
+			'addresses' => array(
+				'adr-z' => array(
+					'components' => array(
+						array( 'kind' => 'locality', 'value' => 'Bristol' ),
+						array( 'kind' => 'postcode', 'value' => 'BS1' ),
+					),
+					'isOrdered'  => false,
+				),
+			),
+		)
+	);
+	$ax_ct_k26_lkey = is_wp_error( $ax_ct_k26_loose ) ? 0 : (int) $ax_ct_k26_loose;
+	$ax_ct_loose[]  = $ax_ct_k26_lkey;
+	$ax_ct_k26_lback = (array) ( axismundi_contacts_card_document( $ax_ct_k26_lkey )['addresses']['adr-z'] ?? array() );
+	ax_ct_assert(
+		$ax_ct_results,
+		'an address whose parts are in no order stays that way until somebody says otherwise',
+		false === $ax_ct_k26_lback['isOrdered']
+			&& ! array_key_exists( 'defaultSeparator', $ax_ct_k26_lback )
+			&& 2 === count( (array) $ax_ct_k26_lback['components'] )
+			// The screen offers the order rather than writing it, and holds back what needs one.
+			&& str_contains( $ax_ct_cb_editor, "__( 'Say they are in the order they are read', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_cb_editor, "disabled: ( 'separator' === kind && ! ordered )" )
+			&& str_contains( $ax_ct_cb_editor, 'var movable = !! props.row.part && props.ordered;' )
+			&& str_contains( $ax_ct_cb_editor, 'ordered && components.length' )
 	);
 
 	ax_ct_assert(

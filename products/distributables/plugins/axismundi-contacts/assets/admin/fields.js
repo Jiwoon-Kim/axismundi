@@ -211,6 +211,18 @@
 			setOpen( false );
 		}
 
+		/*
+		 * What the field shows when nobody is typing in it: what the chosen option is called, rather
+		 * than the value stored behind it. `KR` is the answer a card wants; `대한민국 (+82)` is the
+		 * answer a person recognises, and a picker showing the first was showing its own workings.
+		 * A value nothing on the list matches -- which `allowFree` exists for -- is shown as it is.
+		 */
+		var chosen = ( props.options || [] ).map( function ( option ) {
+			return 'string' === typeof option ? { value: option, label: option } : option;
+		} ).filter( function ( option ) {
+			return option.value === props.value;
+		} )[ 0 ];
+
 		return el(
 			'div',
 			{ className: 'ax-combobox' + ( props.className ? ' ' + props.className : '' ) },
@@ -219,7 +231,7 @@
 				id: id,
 				label: props.label,
 				// What is in the field is what the card says, until somebody types something else.
-				value: typing ? query : ( props.value || '' ),
+				value: typing ? query : ( ( chosen && chosen.label ) || props.value || '' ),
 				supporting: props.supporting,
 				error: props.error,
 				onChange: function ( value ) {

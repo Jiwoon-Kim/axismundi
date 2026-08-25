@@ -95,7 +95,6 @@
 	/** Properties this draws rows for, and what each entry's value is called. */
 	var ENTRY_FIELDS = [
 		{ key: 'emails', label: __( 'Email', 'axismundi-contacts' ), value: 'address', type: 'email', icon: 'mail' },
-		{ key: 'phones', label: __( 'Phone', 'axismundi-contacts' ), value: 'number', icon: 'call' },
 		{ key: 'links', label: __( 'Links', 'axismundi-contacts' ), value: 'uri', type: 'url', icon: 'link' },
 		{ key: 'media', label: __( 'Media', 'axismundi-contacts' ), value: 'uri', type: 'url', icon: 'image' },
 		{ key: 'notes', label: __( 'Notes', 'axismundi-contacts' ), value: 'note', icon: 'notes' }
@@ -1291,6 +1290,330 @@
 						__( 'Add %s', 'axismundi-contacts' ),
 						props.field.label.toLowerCase()
 					)
+				)
+			)
+		);
+	}
+
+	/**
+	 * Google's phone number rules, when they loaded.
+	 *
+	 * Everything below works without them: the country control disappears, what somebody types is
+	 * stored as they typed it, and a number that already says its country still reads back. A phone
+	 * field that stopped working because a script did not arrive would be worse than one that stops
+	 * helping.
+	 */
+	var phoneRules = window.libphonenumber || null;
+
+	/** The countries a number can be read as, named the way this browser names them. */
+	function phoneRegions() {
+		if ( ! phoneRules ) {
+			return [];
+		}
+		var names = null;
+		try {
+			names = new Intl.DisplayNames( undefined, { type: 'region' } );
+		} catch ( error ) {
+			names = null;
+		}
+		return phoneRules.getCountries().map( function ( region ) {
+			var name = region;
+			try {
+				name = names ? names.of( region ) : region;
+			} catch ( error ) {
+				name = region;
+			}
+			return {
+				value: region,
+				label: name + ' (+' + phoneRules.getCountryCallingCode( region ) + ')'
+			};
+		} ).sort( function ( a, b ) {
+			return a.label.localeCompare( b.label );
+		} );
+	}
+
+	/** What a stored number says, when it says enough to be read. */
+	function readNumber( value ) {
+		if ( ! phoneRules || ! value ) {
+			return null;
+		}
+		try {
+			return phoneRules.parsePhoneNumberFromString( String( value ) ) || null;
+		} catch ( error ) {
+			return null;
+		}
+	}
+
+	/**
+	 * What to show in the box.
+	 *
+	 * A number that says its own country is shown the way that country writes it, which is how
+	 * somebody recognises their own number. Anything else -- an extension, a short code, a note
+	 * somebody imported from a phone that let them type anything -- is shown exactly as it is stored.
+	 */
+	function showNumber( value, region ) {
+		var read = readNumber( value );
+		if ( ! read ) {
+			return String( value || '' );
+		}
+		return read.country === region ? read.formatNational() : read.formatInternational();
+	}
+
+	/**
+	 * What to store for what somebody typed.
+	 *
+	 * `tel:+82…` when it can be read, and what they typed when it cannot. A number this cannot parse
+	 * is not a number this gets to refuse: extensions, short codes, an internal four-digit line, and
+	 * whatever an import brought are all real entries in somebody's address book, and a card that
+	 * dropped them would be a worse record than the phone it came from.
+	 */
+	function storeNumber( text, region ) {
+		var typed = String( text || '' ).trim();
+		if ( ! phoneRules || ! typed ) {
+			return typed;
+		}
+		try {
+			var read = phoneRules.parsePhoneNumberFromString( typed, region || undefined );
+			/*
+			 * Valid, not merely possible. `isPossible` asks whether the digits are the right length,
+			 * which a Korean number typed into a row that says United States passes -- and settling it
+			 * into `tel:+102…` would be this screen inventing a number nobody has. When it cannot be
+			 * sure, what somebody typed stays exactly as they typed it.
+			 */
+			return read && read.isValid() ? read.getURI() : typed;
+		} catch ( error ) {
+			return typed;
+		}
+	}
+
+	/**
+	 * Which of the offered labels an entry reads as, or `custom` when it reads as none.
+	 *
+	 * Derived every time rather than stored beside the values it set: an entry from another client has
+	 * no preset to store, and a second record of the same fact is one that eventually disagrees. The
+	 * table is the server's -- it decides the same question when the row is drawn anywhere else.
+	 */
+	function presetOf( entry, presets ) {
+		var contexts = Object.keys( ( entry || {} ).contexts || {} ).filter( function ( key ) {
+			return entry.contexts[ key ];
+		} ).sort().join( ',' );
+		var features = Object.keys( ( entry || {} ).features || {} ).filter( function ( key ) {
+			return entry.features[ key ];
+		} ).sort().join( ',' );
+		// A label somebody typed is the fact, and outranks whatever the axes happen to say.
+		if ( String( ( entry || {} ).label || '' ).trim() ) {
+			return 'custom';
+		}
+		var found = ( presets || [] ).filter( function ( preset ) {
+			return 'custom' !== preset.value
+				&& contexts === ( preset.contexts || [] ).slice().sort().join( ',' )
+				&& features === ( preset.features || [] ).slice().sort().join( ',' );
+		} );
+		return found.length ? found[ 0 ].value : 'custom';
+	}
+
+	/**
+	 * One entry with a label applied, or with somebody's own word for it.
+	 *
+	 * The two are exclusive. An entry saying both `work` and `Google Voice` is claiming two different
+	 * answers to one question, and whoever reads it has to pick.
+	 */
+	function withPreset( entry, key, presets, label ) {
+		var next = Object.assign( {}, entry );
+		delete next.contexts;
+		delete next.features;
+		delete next.label;
+		if ( 'custom' === key ) {
+			return String( label || '' ).trim() ? Object.assign( next, { label: String( label ).trim() } ) : next;
+		}
+		var preset = ( presets || [] ).filter( function ( each ) {
+			return each.value === key;
+		} )[ 0 ];
+		if ( ! preset ) {
+			return next;
+		}
+		[ 'contexts', 'features' ].forEach( function ( axis ) {
+			if ( ( preset[ axis ] || [] ).length ) {
+				// JSContact says these as sets: a map of value => true, not a list.
+				next[ axis ] = {};
+				preset[ axis ].forEach( function ( value ) {
+					next[ axis ][ value ] = true;
+				} );
+			}
+		} );
+		return next;
+	}
+
+	/**
+	 * The phone numbers.
+	 *
+	 * A country, a number, and what to call it. The country is a hint for reading what somebody
+	 * types and is never written down: the card keeps `tel:+821027421672`, which says Korea itself,
+	 * and a second field saying `KR` beside it would be the same answer twice with nothing keeping
+	 * the two in step.
+	 *
+	 * What is typed stays as typed until the box is left. Somebody writing `010-2742-1672` is writing
+	 * the number the way they know it, and a field that rewrote it into `+82 10…` under their hands
+	 * mid-keystroke would be arguing with them about their own phone number.
+	 */
+	function Phones( props ) {
+		var entries = props.value || {};
+		var presets = ( config.presets || {} ).phones || [];
+		var regions = phoneRegions();
+		var [ hints, setHints ] = useState( {} );
+		var [ pending, setPending ] = useState( [] );
+
+		function regionFor( id, entry ) {
+			if ( hints[ id ] ) {
+				return hints[ id ];
+			}
+			var read = readNumber( ( entry || {} ).number );
+			return read && read.country ? read.country : ( config.region || '' );
+		}
+
+		function setEntries( next ) {
+			props.onChange( Object.keys( next ).length ? next : undefined );
+		}
+
+		function write( row, change ) {
+			if ( row.pending ) {
+				var made = change( {} );
+				if ( ! String( made.number || '' ).trim() ) {
+					// A phone entry is a number. Until there is one, this is a line and not an entry.
+					return;
+				}
+				var index = 1;
+				while ( Object.prototype.hasOwnProperty.call( entries, 'p' + index ) ) {
+					index += 1;
+				}
+				var next = Object.assign( {}, entries );
+				next[ 'p' + index ] = made;
+				setPending( pending.filter( function ( each ) {
+					return each !== row.pending;
+				} ) );
+				setEntries( next );
+				return;
+			}
+			var updated = Object.assign( {}, entries );
+			updated[ row.id ] = change( entries[ row.id ] || {} );
+			setEntries( updated );
+		}
+
+		var rows = Object.keys( entries ).map( function ( id ) {
+			return { key: id, id: id, entry: entries[ id ] || {} };
+		} ).concat( pending.map( function ( id ) {
+			return { key: id, pending: id, entry: {} };
+		} ) );
+
+		return el(
+			Section,
+			{ icon: 'call', label: __( 'Phone', 'axismundi-contacts' ) },
+			rows.map( function ( row ) {
+				var entry = row.entry;
+				var region = regionFor( row.key, entry );
+				var preset = presetOf( entry, presets );
+				return el(
+					'div',
+					{ key: row.key, className: 'ax-ce-phone' },
+					regions.length
+						? el( Combobox, {
+							label: __( 'Country', 'axismundi-contacts' ),
+							className: 'ax-ce-phone__region',
+							value: region,
+							options: regions,
+							onChange: function ( value ) {
+								var next = Object.assign( {}, hints );
+								next[ row.key ] = value;
+								setHints( next );
+								/*
+								 * The country somebody picked is how the number they already typed
+								 * should be read, so it is read again -- but only for a number that
+								 * has not been settled into one already.
+								 */
+								if ( entry.number && ! readNumber( entry.number ) ) {
+									write( row, function ( each ) {
+										return withKey( each, 'number', storeNumber( each.number, value ) );
+									} );
+								}
+							}
+						} )
+						: null,
+					el( TextField, {
+						label: __( 'Phone', 'axismundi-contacts' ),
+						className: 'ax-ce-phone__number',
+						type: 'tel',
+						value: showNumber( entry.number, region ),
+						onChange: function ( value ) {
+							write( row, function ( each ) {
+								return withKey( each, 'number', value );
+							} );
+						},
+						inputProps: {
+							onBlur: function ( event ) {
+								// Settled when the box is left, and not one keystroke sooner.
+								var settled = storeNumber( event.target.value, region );
+								if ( settled !== entry.number ) {
+									write( row, function ( each ) {
+										return withKey( each, 'number', settled );
+									} );
+								}
+							}
+						}
+					} ),
+					el( Combobox, {
+						label: __( 'What it is', 'axismundi-contacts' ),
+						className: 'ax-ce-phone__preset',
+						value: preset,
+						options: presets,
+						onChange: function ( value ) {
+							write( row, function ( each ) {
+								return withPreset( each, value, presets, each.label );
+							} );
+						}
+					} ),
+					'custom' === preset
+						? el( TextField, {
+							label: __( 'Called', 'axismundi-contacts' ),
+							className: 'ax-ce-phone__label',
+							value: entry.label || '',
+							onChange: function ( value ) {
+								write( row, function ( each ) {
+									return withKey( each, 'label', value );
+								} );
+							}
+						} )
+						: null,
+					el( IconButton, {
+						icon: 'delete',
+						variant: 'danger',
+						label: __( 'Remove this number', 'axismundi-contacts' ),
+						onClick: function () {
+							if ( row.pending ) {
+								setPending( pending.filter( function ( each ) {
+									return each !== row.pending;
+								} ) );
+								return;
+							}
+							var next = Object.assign( {}, entries );
+							delete next[ row.id ];
+							setEntries( next );
+						}
+					} )
+				);
+			} ),
+			el(
+				'p',
+				null,
+				el(
+					'button',
+					{
+						type: 'button',
+						className: 'button',
+						onClick: function () {
+							setPending( pending.concat( [ 'phone-' + Math.random().toString( 36 ).slice( 2, 8 ) ] ) );
+						}
+					},
+					__( 'Add a phone number', 'axismundi-contacts' )
 				)
 			)
 		);
@@ -3011,6 +3334,12 @@
 								delete next.localizations;
 							}
 							update( next );
+						}
+					} ),
+					el( Phones, {
+						value: card.phones,
+						onChange: function ( value ) {
+							setProperty( 'phones', value );
 						}
 					} ),
 					el( OnlineServices, {

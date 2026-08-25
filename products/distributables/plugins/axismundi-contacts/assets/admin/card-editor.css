@@ -643,3 +643,29 @@
 	flex: 1 1 0;
 	min-width: 0;
 }
+
+/* -- a phone number, and where to read it from ----------------------------------------------- */
+
+.ax-ce-phone {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+	margin: 0 0 8px;
+	flex-wrap: wrap;
+}
+
+.ax-ce-phone__region {
+	flex: 1 1 12em;
+	min-width: 0;
+}
+
+.ax-ce-phone__number {
+	flex: 2 1 14em;
+	min-width: 0;
+}
+
+.ax-ce-phone__preset,
+.ax-ce-phone__label {
+	flex: 1 1 10em;
+	min-width: 0;
+}

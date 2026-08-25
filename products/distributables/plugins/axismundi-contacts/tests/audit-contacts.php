@@ -4148,7 +4148,9 @@ try {
 		// Nothing typed is `null`, which is not the same as having typed nothing.
 		str_contains( $ax_ct_cb_js, 'var [ query, setQuery ] = wp.element.useState( null );' )
 			&& str_contains( $ax_ct_cb_js, 'var typing = null !== query;' )
-			&& str_contains( $ax_ct_cb_js, "value: typing ? query : ( props.value || '' )," )
+			// And what it shows is what the chosen option is called, rather than the value behind it.
+			&& str_contains( $ax_ct_cb_js, "value: typing ? query : ( ( chosen && chosen.label ) || props.value || '' )," )
+			&& str_contains( $ax_ct_cb_js, 'return option.value === props.value;' )
 			// So the list is narrowed by typing rather than by having a value already.
 			&& str_contains( $ax_ct_cb_js, '! typing || ! query ||' )
 			&& str_contains( $ax_ct_cb_js, 'setQuery( null );' )
@@ -4497,6 +4499,108 @@ try {
 		is_wp_error( $ax_ct_tn_orphan )
 			&& str_contains( $ax_ct_cb_editor, "patchesUnder( ( props.card || {} ).localizations, 'titles/' + row.id )" )
 			&& str_contains( $ax_ct_cb_editor, "__( 'Remove them and the title', 'axismundi-contacts' )" )
+	);
+
+	// -- a phone number, and where to read it from --------------------------------------------------------------
+
+	/*
+	 * What a national number means -- which leading zero is a trunk prefix and which is part of the
+	 * number, where Italy differs from Korea -- is a table per country that changes. A plugin writing
+	 * its own would be wrong about somewhere within a year, so Google's rules are carried as a browser
+	 * build with its licence and its version recorded beside it.
+	 */
+	$ax_ct_ph_dir = dirname( __DIR__ ) . '/assets/vendor/libphonenumber-js/';
+	ax_ct_assert(
+		$ax_ct_results,
+		'the rules for reading a phone number are carried rather than guessed at, with their licence',
+		is_readable( $ax_ct_ph_dir . 'libphonenumber.min.js' )
+			&& is_readable( $ax_ct_ph_dir . 'LICENSE' )
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own asset in a dev fixture.
+			&& str_contains( (string) file_get_contents( $ax_ct_ph_dir . 'VERSION' ), 'libphonenumber-js 1.13.11' )
+			&& str_contains( $ax_ct_lg_php, "'axismundi-contacts-libphonenumber'," )
+	);
+	/*
+	 * The country is a hint for reading what somebody types and is never written down. The card keeps
+	 * `tel:+82…`, which says Korea itself; a second field saying `KR` beside it would be the same
+	 * answer twice, with nothing keeping the two in step.
+	 */
+	$ax_ct_ph_num = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array(
+			'@type'  => 'Card',
+			'name'   => array( 'full' => 'Three shapes of number' ),
+			'phones' => array(
+				'p1' => array( 'number' => 'tel:+821027421672', 'contexts' => array( 'private' => true ), 'features' => array( 'mobile' => true ) ),
+				// An extension, which the standard writes into the URI.
+				'p2' => array( 'number' => 'tel:+15555555555;ext=5555', 'label' => 'Google Voice' ),
+				// And something that is not a number at all, which is still an entry in somebody's book.
+				'p3' => array( 'number' => 'x4821' ),
+			),
+		)
+	);
+	$ax_ct_ph_key  = is_wp_error( $ax_ct_ph_num ) ? 0 : (int) $ax_ct_ph_num;
+	$ax_ct_loose[] = $ax_ct_ph_key;
+	$ax_ct_ph_read = axismundi_contacts_card_document( $ax_ct_ph_key );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a number this cannot read is kept as it was written, and no entry says which country it is in',
+		'x4821' === (string) ( $ax_ct_ph_read['phones']['p3']['number'] ?? '' )
+			&& 'tel:+15555555555;ext=5555' === (string) ( $ax_ct_ph_read['phones']['p2']['number'] ?? '' )
+			// Nothing anywhere stores the region: it is a hint the screen holds while somebody types.
+			&& ! array_key_exists( 'region', (array) $ax_ct_ph_read['phones']['p1'] )
+			&& ! str_contains( $ax_ct_cb_editor, "withKey( each, 'region'" )
+			&& str_contains( $ax_ct_cb_editor, 'var [ hints, setHints ] = useState( {} );' )
+	);
+	/*
+	 * Settled when the box is left and not one keystroke sooner. Somebody writing `010-2742-1672` is
+	 * writing the number the way they know it, and a field rewriting it into `+82 10…` under their
+	 * hands would be arguing with them about their own phone number.
+	 *
+	 * And settled only when it is valid, not merely possible: a Korean number typed into a row that
+	 * says United States is the right length for one, and storing `tel:+102…` would invent a number
+	 * nobody has.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a number is settled when the box is left, and only when this is sure what it says',
+		str_contains( $ax_ct_cb_editor, '// Settled when the box is left, and not one keystroke sooner.' )
+			&& str_contains( $ax_ct_cb_editor, 'read && read.isValid() ? read.getURI() : typed' )
+			&& str_contains( $ax_ct_cb_editor, 'function storeNumber( text, region )' )
+			// Without the rules loaded the field still works: what is typed is what is stored.
+			&& str_contains( $ax_ct_cb_editor, 'if ( ! phoneRules || ! typed ) {' )
+	);
+	/*
+	 * What a row is called is stored as the standard's two axes rather than as the word on the
+	 * screen. A mobile is somebody's own phone unless they say otherwise, so it is `private` as well
+	 * as `mobile`; the number a place answers on is not always somebody's number at work, so `main`
+	 * carries no context at all.
+	 */
+	$ax_ct_ph_presets = axismundi_contacts_phone_presets();
+	ax_ct_assert(
+		$ax_ct_results,
+		'what a phone row is called is stored as what it means, and a mobile is somebody’s own',
+		array( 'private' ) === $ax_ct_ph_presets['mobile']['contexts']
+			&& array( 'mobile' ) === $ax_ct_ph_presets['mobile']['features']
+			&& array( 'work' ) === $ax_ct_ph_presets['work-mobile']['contexts']
+			&& array() === $ax_ct_ph_presets['main']['contexts']
+			// `voice` is not written alongside `mobile`: what kind of thing it is is already said.
+			&& ! in_array( 'voice', $ax_ct_ph_presets['mobile']['features'], true )
+			// And a stored entry reads back as the row it was chosen from.
+			&& 'mobile' === axismundi_contacts_entry_preset( 'phones', (array) $ax_ct_ph_read['phones']['p1'] )
+			&& 'custom' === axismundi_contacts_entry_preset( 'phones', (array) $ax_ct_ph_read['phones']['p2'] )
+	);
+	/*
+	 * And where to read a number typed without a country. The card comes first -- one written in
+	 * `ko-KR` is one whose numbers are most likely Korean -- and the site after it. Neither is a
+	 * guarantee, which is why it is a control somebody can change rather than a decision.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'where to read a number from is suggested by the card, then the site, and never decided',
+		'KR' === axismundi_contacts_default_region( array( 'language' => 'ko-KR' ) )
+			&& 'GB' === axismundi_contacts_default_region( array( 'language' => 'en-GB' ) )
+			// A language with no place in it says nothing about where a number is from.
+			&& axismundi_contacts_default_region( array( 'language' => 'ko' ) ) === axismundi_contacts_default_region( array() )
 	);
 
 	ax_ct_assert(

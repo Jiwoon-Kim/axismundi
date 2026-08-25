@@ -45,14 +45,24 @@ const AXISMUNDI_CONTACTS_PHONE_FEATURES = array( 'voice', 'mobile', 'fax', 'page
  */
 function axismundi_contacts_phone_presets() : array {
 	return array(
-		'mobile'     => array( 'label' => __( 'Mobile', 'axismundi-contacts' ), 'contexts' => array(), 'features' => array( 'mobile' ) ),
-		'home'       => array( 'label' => __( 'Home', 'axismundi-contacts' ), 'contexts' => array( 'private' ), 'features' => array( 'voice' ) ),
-		'work'       => array( 'label' => __( 'Work', 'axismundi-contacts' ), 'contexts' => array( 'work' ), 'features' => array( 'voice' ) ),
-		'home-fax'   => array( 'label' => __( 'Home fax', 'axismundi-contacts' ), 'contexts' => array( 'private' ), 'features' => array( 'fax' ) ),
-		'work-fax'   => array( 'label' => __( 'Work fax', 'axismundi-contacts' ), 'contexts' => array( 'work' ), 'features' => array( 'fax' ) ),
-		'main'       => array( 'label' => __( 'Main', 'axismundi-contacts' ), 'contexts' => array( 'work' ), 'features' => array( 'main-number' ) ),
-		'pager'      => array( 'label' => __( 'Pager', 'axismundi-contacts' ), 'contexts' => array(), 'features' => array( 'pager' ) ),
-		'other'      => array( 'label' => __( 'Other', 'axismundi-contacts' ), 'contexts' => array(), 'features' => array() ),
+		/*
+		 * A mobile is somebody's own phone unless they say otherwise, so it is `private` as well as
+		 * `mobile` -- and a work one is the same number in the other half of somebody's life, which is
+		 * why both are offered rather than one of them standing for both.
+		 *
+		 * `voice` is not written alongside `mobile`. What kind of thing the number is is already said,
+		 * and a mobile is not necessarily for talking into.
+		 */
+		'mobile'      => array( 'label' => __( 'Mobile', 'axismundi-contacts' ), 'contexts' => array( 'private' ), 'features' => array( 'mobile' ) ),
+		'work-mobile' => array( 'label' => __( 'Work mobile', 'axismundi-contacts' ), 'contexts' => array( 'work' ), 'features' => array( 'mobile' ) ),
+		'home'        => array( 'label' => __( 'Home', 'axismundi-contacts' ), 'contexts' => array( 'private' ), 'features' => array( 'voice' ) ),
+		'work'        => array( 'label' => __( 'Work', 'axismundi-contacts' ), 'contexts' => array( 'work' ), 'features' => array( 'voice' ) ),
+		'home-fax'    => array( 'label' => __( 'Home fax', 'axismundi-contacts' ), 'contexts' => array( 'private' ), 'features' => array( 'fax' ) ),
+		'work-fax'    => array( 'label' => __( 'Work fax', 'axismundi-contacts' ), 'contexts' => array( 'work' ), 'features' => array( 'fax' ) ),
+		// Not `work`: the number a place answers on is not always somebody's number at work.
+		'main'        => array( 'label' => __( 'Main', 'axismundi-contacts' ), 'contexts' => array(), 'features' => array( 'main-number' ) ),
+		'pager'       => array( 'label' => __( 'Pager', 'axismundi-contacts' ), 'contexts' => array(), 'features' => array( 'pager' ) ),
+		'other'       => array( 'label' => __( 'Other', 'axismundi-contacts' ), 'contexts' => array(), 'features' => array() ),
 	);
 }
 
@@ -185,4 +195,51 @@ function axismundi_contacts_entry_label( string $field, array $entry ) : string 
 		return trim( (string) ( $entry['label'] ?? '' ) );
 	}
 	return (string) ( axismundi_contacts_presets_for( $field )[ $preset ]['label'] ?? '' );
+}
+
+/**
+ * The labels one field offers, as a screen needs them: a value and the words on it.
+ *
+ * @param string $field JSContact field name.
+ * @return array<int,array{value:string,label:string}>
+ */
+function axismundi_contacts_preset_options( string $field ) : array {
+	$options = array();
+	foreach ( axismundi_contacts_presets_for( $field ) as $key => $preset ) {
+		// The words and what they stand for, together: a screen has to read a stored entry back as one
+		// of these, and it cannot do that from the words alone.
+		$options[] = array(
+			'value'    => (string) $key,
+			'label'    => (string) $preset['label'],
+			'contexts' => array_values( $preset['contexts'] ),
+			'features' => array_values( $preset['features'] ),
+		);
+	}
+	// The one that is not a preset: somebody's own word for it, which the standard stores as a label.
+	$options[] = array( 'value' => 'custom', 'label' => __( 'Custom', 'axismundi-contacts' ), 'contexts' => array(), 'features' => array() );
+	return $options;
+}
+
+/**
+ * Where to read a phone number that was typed without a country.
+ *
+ * A hint for the screen and never a fact on the Card. The card the number is being written on comes
+ * first -- a card written in `ko-KR` is a card whose numbers are most likely Korean -- and the site's
+ * own locale after it. Neither is a guarantee, which is why the country is a control somebody can
+ * change rather than something decided for them.
+ *
+ * @param array<string,mixed> $card Card being edited.
+ * @return string Two-letter region, or '' when nothing suggests one.
+ */
+function axismundi_contacts_default_region( array $card ) : string {
+	$tags = array( (string) ( $card['language'] ?? '' ), (string) get_locale() );
+	foreach ( $tags as $tag ) {
+		$parts = preg_split( '/[-_]/', trim( $tag ) );
+		foreach ( (array) $parts as $part ) {
+			if ( 2 === strlen( (string) $part ) && ctype_alpha( (string) $part ) && strtoupper( (string) $part ) === (string) $part ) {
+				return strtoupper( (string) $part );
+			}
+		}
+	}
+	return '';
 }

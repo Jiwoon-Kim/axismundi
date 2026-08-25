@@ -64,6 +64,21 @@ function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
 		array( 'axismundi-contacts-fields' ),
 		AXISMUNDI_CONTACTS_VERSION . '-' . (string) filemtime( $style )
 	);
+	/*
+	 * Google's phone number rules, as a browser build. What a national number means -- which leading
+	 * zero is a trunk prefix and which is part of the number, where Italy differs from Korea -- is a
+	 * table per country that changes, and a plugin that wrote its own would be wrong about somewhere
+	 * within a year. MIT, over metadata derived from Google's Apache-2.0 libphonenumber; the version
+	 * is recorded beside the file and updated with a release rather than silently.
+	 */
+	$phone_js = dirname( __DIR__ ) . '/assets/vendor/libphonenumber-js/libphonenumber.min.js';
+	wp_enqueue_script(
+		'axismundi-contacts-libphonenumber',
+		plugins_url( 'assets/vendor/libphonenumber-js/libphonenumber.min.js', $plugin ),
+		array(),
+		AXISMUNDI_CONTACTS_VERSION . '-' . (string) filemtime( $phone_js ),
+		true
+	);
 	wp_enqueue_script(
 		'axismundi-contacts-fields',
 		plugins_url( 'assets/admin/fields.js', $plugin ),
@@ -75,7 +90,7 @@ function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
 	wp_enqueue_script(
 		'axismundi-contacts-card-editor',
 		plugins_url( 'assets/admin/card-editor.js', $plugin ),
-		array( 'wp-element', 'wp-api-fetch', 'wp-i18n', 'axismundi-contacts-fields' ),
+		array( 'wp-element', 'wp-api-fetch', 'wp-i18n', 'axismundi-contacts-fields', 'axismundi-contacts-libphonenumber' ),
 		// Versioned by mtime: a fixed string becomes the `ver=` query and serves yesterday's script
 		// from cache after every edit.
 		AXISMUNDI_CONTACTS_VERSION . '-' . (string) filemtime( $script ),
@@ -139,6 +154,21 @@ function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
 		 * and the JSON somebody is reading while they type is the one that looked wrong.
 		 */
 		'order'               => axismundi_contacts_canonical_order(),
+		/*
+		 * The labels a row offers and what each of them stores. Served rather than written again in
+		 * the script: the same table decides what a stored entry reads back as, and two copies of it
+		 * would eventually disagree about what `Main` means.
+		 */
+		'presets'             => array(
+			'phones' => axismundi_contacts_preset_options( 'phones' ),
+			'emails' => axismundi_contacts_preset_options( 'emails' ),
+		),
+		/*
+		 * Where to read a phone number typed without a country. A hint and never a stored fact: the
+		 * card keeps `tel:+82…`, which says the country itself, and a second field saying `KR` beside
+		 * it would be the same answer twice with nothing keeping the two in step.
+		 */
+		'region'              => axismundi_contacts_default_region( $draft['card'] ),
 		/*
 		 * Every kind RFC 9553 registers, because each is something somebody keeps the address of. A
 		 * card for a building, for the software that runs a service, for a machine that reports its

@@ -4732,6 +4732,44 @@ try {
 			&& str_contains( $ax_ct_tk_schema, "'phones'," )
 	);
 
+	/*
+	 * And a phone whose new address is already taken -- two entries whose ids differ only by the
+	 * prefix -- moves to a fresh one rather than staying where it is. Merging them would put one
+	 * number's provenance and publishing consent onto another; leaving it would leave a `pho-` behind
+	 * for good, and which address a document uses would depend on the week it was written.
+	 */
+	$ax_ct_tc_doc = axismundi_contacts_card_document( $ax_ct_tk_card );
+	$ax_ct_tc_doc['phones'] = array(
+		'pho-cccccc' => array( 'number' => 'tel:+821011112222' ),
+		'tel-cccccc' => array( 'number' => 'tel:+821033334444' ),
+	);
+	$ax_ct_tc_doc['localizations'] = array( 'en' => array( 'phones/pho-cccccc/label' => 'The one that had to move' ) );
+	axismundi_contacts_save_card_for_owner( $ax_ct_tk_sid, $ax_ct_tc_doc, $ax_ct_tk_card );
+	axismundi_contacts_set_provenance( $ax_ct_tk_card, 'phones/pho-cccccc', AXISMUNDI_CONTACTS_SOURCE_ACTOR, $ax_ct_tk_actor->get_uri() );
+	axismundi_contacts_set_published_pointers( $ax_ct_tk_sid, array( 'name', 'phones/pho-cccccc' ) );
+
+	axismundi_contacts_migrate_phone_keys();
+
+	$ax_ct_tc_after = axismundi_contacts_card_document( $ax_ct_tk_card );
+	$ax_ct_tc_keys  = array_keys( (array) $ax_ct_tc_after['phones'] );
+	$ax_ct_tc_new   = array_values( array_diff( $ax_ct_tc_keys, array( 'tel-cccccc' ) ) );
+	$ax_ct_tc_moved = $ax_ct_tc_new[0] ?? '';
+	$ax_ct_tc_prov  = axismundi_contacts_card_provenance( $ax_ct_tk_card );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a number whose new address is occupied is given another, rather than left where it was',
+		2 === count( $ax_ct_tc_keys )
+			// Nothing is left on the old name, and nothing was merged into the address already there.
+			&& ! in_array( 'pho-cccccc', $ax_ct_tc_keys, true )
+			&& 1 === preg_match( '/^tel-[0-9a-f]{8}-/', $ax_ct_tc_moved )
+			&& 'tel:+821011112222' === (string) ( $ax_ct_tc_after['phones'][ $ax_ct_tc_moved ]['number'] ?? '' )
+			&& 'tel:+821033334444' === (string) ( $ax_ct_tc_after['phones']['tel-cccccc']['number'] ?? '' )
+			// And everything that addressed it went with it.
+			&& isset( $ax_ct_tc_after['localizations']['en'][ 'phones/' . $ax_ct_tc_moved . '/label' ] )
+			&& isset( $ax_ct_tc_prov[ 'phones/' . $ax_ct_tc_moved ] )
+			&& in_array( 'phones/' . $ax_ct_tc_moved, axismundi_contacts_published_pointers( $ax_ct_tk_sid ), true )
+	);
+
 	ax_ct_assert(
 		$ax_ct_results,
 		'this plugin stores address books and imitates neither the Actor registry nor its profiles',

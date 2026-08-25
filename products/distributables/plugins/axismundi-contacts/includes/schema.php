@@ -535,15 +535,27 @@ function axismundi_contacts_migrate_phone_keys() : void {
 			if ( ! str_starts_with( $key, 'pho-' ) ) {
 				continue;
 			}
-			$moved = axismundi_contacts_move_entry_key(
+			$current = axismundi_contacts_card_document( (int) $row['id'] );
+			/*
+			 * Usually the same address with the collection's name on it, so a diff of this migration
+			 * reads as one word changing. When a Card already holds that address -- two entries whose
+			 * ids differ only by the prefix -- the number moves to a new one instead. Merging them
+			 * would put one number's provenance and publishing consent onto another; leaving it would
+			 * leave a `pho-` behind for good, and the address a document uses would depend on the week
+			 * it was written.
+			 */
+			$target = 'tel-' . substr( $key, 4 );
+			while ( isset( $current['phones'][ $target ] ) ) {
+				$target = 'tel-' . wp_generate_uuid4();
+			}
+			axismundi_contacts_move_entry_key(
 				(int) $row['id'],
 				(int) $row['owner_actor_id'],
-				axismundi_contacts_card_document( (int) $row['id'] ),
+				$current,
 				'phones',
 				$key,
-				'tel-' . substr( $key, 4 )
+				$target
 			);
-			unset( $moved );
 		}
 	}
 }

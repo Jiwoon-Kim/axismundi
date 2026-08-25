@@ -1820,7 +1820,7 @@
 					} ),
 					'custom' === preset
 						? el( TextField, {
-							label: __( 'Called', 'axismundi-contacts' ),
+							label: __( 'Label', 'axismundi-contacts' ),
 							className: 'ax-ce-phone__label',
 							value: entry.label || '',
 							onChange: function ( value ) {
@@ -1901,7 +1901,7 @@
 					} ),
 					'custom' === preset
 						? el( TextField, {
-							label: __( 'Called', 'axismundi-contacts' ),
+							label: __( 'Label', 'axismundi-contacts' ),
 							className: 'ax-ce-email__label',
 							value: entry.label || '',
 							onChange: function ( value ) {
@@ -2362,8 +2362,9 @@
 						 * with two contexts rather than making somebody choose.
 						 */
 						el(
-							'p',
+							'fieldset',
 							{ className: 'ax-ce-address__contexts' },
+							el( 'legend', null, __( 'Use this address for', 'axismundi-contacts' ) ),
 							ADDRESS_CONTEXTS.map( function ( context ) {
 								return el(
 									'label',
@@ -2395,10 +2396,10 @@
 							} )
 						),
 						el( TextField, {
-							label: __( 'Called', 'axismundi-contacts' ),
+							label: __( 'Label', 'axismundi-contacts' ),
 							className: 'ax-ce-address__label',
 							value: entry.label || '',
-							supporting: __( 'Optional, for an address none of those describes.', 'axismundi-contacts' ),
+							supporting: __( 'Optional. What this place is called between you: Parents’ home, the Busan office, the warehouse.', 'axismundi-contacts' ),
 							onChange: function ( value ) {
 								rows.write( row, function ( each ) {
 									return withKey( each, 'label', value );
@@ -2416,11 +2417,11 @@
 							{ className: 'ax-ce-name__advanced' },
 							el( 'summary', null, __( 'More about this address', 'axismundi-contacts' ) ),
 							el( Textarea, {
-								label: __( 'Written out', 'axismundi-contacts' ),
+								label: __( 'Full address', 'axismundi-contacts' ),
 								className: 'ax-ce-address__full',
 								rows: 3,
 								value: entry.full || '',
-								supporting: __( 'The whole address as one line. Kept as written, and never built from the parts above or replaced by them.', 'axismundi-contacts' ),
+								supporting: __( 'Optional. The whole address written out as one string, kept as written -- never built from the parts above, and never replaced by them.', 'axismundi-contacts' ),
 								inputProps: { autoComplete: 'street-address' },
 								onChange: function ( value ) {
 									rows.write( row, function ( each ) {
@@ -3357,11 +3358,11 @@
 							}
 						} ),
 						el( Textarea, {
-							label: __( 'Written out', 'axismundi-contacts' ),
+							label: __( 'Full address', 'axismundi-contacts' ),
 							className: 'ax-ce-address__full',
 							rows: 2,
 							value: value.full || '',
-							supporting: __( 'The whole address in this language, kept as written.', 'axismundi-contacts' ),
+							supporting: __( 'The whole address written out in this language, kept as written.', 'axismundi-contacts' ),
 							onChange: function ( next ) {
 								setPath( path, withKey( value, 'full', next ) );
 							}

@@ -5033,6 +5033,9 @@ try {
 			&& str_contains( $ax_ct_cb_editor, "{ value: 'billing'," )
 			&& str_contains( $ax_ct_cb_editor, "{ value: 'delivery'," )
 			&& str_contains( $ax_ct_cb_editor, "className: 'ax-ce-address__contexts'" )
+			// Asked as one question rather than four loose boxes under the fields.
+			&& str_contains( $ax_ct_cb_editor, "__( 'Use this address for', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_cb_editor, "el( 'legend', null," )
 	);
 
 	/*
@@ -5106,7 +5109,7 @@ try {
 		'a language that gives a whole address is given the same editor the address has',
 		str_contains( $ax_ct_cb_editor, "if ( isObject && /^addresses\\/[^/]+$/.test( path ) ) {" )
 			&& str_contains( $ax_ct_cb_editor, "__( 'Stop giving this address in %s', 'axismundi-contacts' )" )
-			&& str_contains( $ax_ct_cb_editor, "__( 'The whole address in this language, kept as written.', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_cb_editor, "__( 'The whole address written out in this language, kept as written.', 'axismundi-contacts' )" )
 	);
 	/*
 	 * And an address that arrived saying its parts are in no order keeps saying it. Nothing decides

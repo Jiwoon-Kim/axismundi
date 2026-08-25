@@ -786,11 +786,25 @@
 	min-width: 0;
 }
 
+/* What this address is for, which can be more than one thing, asked as one question. */
 .ax-ce-address__contexts {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 1em;
 	margin: .5em 0;
+	padding: .5em .75em;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+}
+
+.ax-ce-address__contexts legend {
+	padding: 0 .35em;
+	color: #50575e;
+	font-size: 13px;
+}
+
+.ax-ce-address__contexts label {
+	display: inline-flex;
+	gap: .35em;
+	align-items: center;
+	margin-right: 1em;
 }
 
 .ax-ce-address__fields {

@@ -4825,7 +4825,7 @@ try {
 		'a preference is a row until it names a language, and its place in the order is stated rather than assumed',
 		str_contains( $ax_ct_cb_editor, "// A preference is a language. Until there is one, this is a line and what has been" )
 			&& str_contains( $ax_ct_cb_editor, "newEntryId( 'lng', entries )" )
-			&& str_contains( $ax_ct_cb_editor, 'next[ id ] = Object.assign( {}, entries[ id ], { pref: index + 1 } );' )
+			&& str_contains( $ax_ct_cb_editor, 'next[ id ] = Object.assign( {}, latest.current[ id ], { pref: index + 1 } );' )
 			// Read in the same order the accounts are, because `pref` means the same thing in both.
 			&& str_contains( $ax_ct_cb_editor, 'var order = orderedByPreference( entries );' )
 			&& str_contains( $ax_ct_cb_editor, 'function orderedByPreference( entries )' )
@@ -5144,7 +5144,7 @@ try {
 			&& 2 === count( (array) $ax_ct_k26_lback['components'] )
 			// The screen offers the order rather than writing it, and holds back what needs one.
 			&& str_contains( $ax_ct_cb_editor, "__( 'Say they are in the order they are read', 'axismundi-contacts' )" )
-			&& str_contains( $ax_ct_cb_editor, "disabled: ( 'separator' === kind && ! ordered )" )
+			&& str_contains( $ax_ct_cb_editor, "disabled: 'separator' === kind && ! ordered," )
 			&& str_contains( $ax_ct_cb_editor, 'var movable = !! props.row.part && props.ordered;' )
 			&& str_contains( $ax_ct_cb_editor, 'ordered && components.length' )
 	);
@@ -5245,6 +5245,79 @@ try {
 			&& str_contains( $ax_ct_cb_editor, "( options.makes || [ options.required ] ).some( function ( key ) {" )
 			// And the store agrees: an address that says only where in the world it is, is an address.
 			&& true === axismundi_contacts_validate_card_values( array( 'addresses' => array( 'adr-q' => array( 'countryCode' => 'KR' ) ) ) )
+	);
+
+	/*
+	 * A Korean address with everything in it: a region that opens rather than closes, a building, a
+	 * floor and a room, three different separators, and a subdistrict in brackets. Twelve parts, of
+	 * which three are the punctuation between the others.
+	 *
+	 * Built through the screen part by part -- adding each in the order it is read appends it in that
+	 * order, so nothing had to be dragged. The store keeps every one of them.
+	 */
+	$ax_ct_kr = array(
+		'countryCode'      => 'KR',
+		'components'       => array(
+			array( 'kind' => 'region', 'value' => "\xeb\xb6\x80\xec\x82\xb0\xea\xb4\x91\xec\x97\xad\xec\x8b\x9c" ),
+			array( 'kind' => 'district', 'value' => "\xeb\x82\xa8\xea\xb5\xac" ),
+			array( 'kind' => 'name', 'value' => "\xeb\x8f\x99\xeb\xaa\x85\xeb\xa1\x9c" ),
+			array( 'kind' => 'number', 'value' => '26' ),
+			array( 'kind' => 'separator', 'value' => ', ' ),
+			array( 'kind' => 'building', 'value' => "102\xeb\x8f\x99" ),
+			array( 'kind' => 'floor', 'value' => "7\xec\xb8\xb5" ),
+			array( 'kind' => 'room', 'value' => "706\xed\x98\xb8" ),
+			array( 'kind' => 'separator', 'value' => ' (' ),
+			array( 'kind' => 'subdistrict', 'value' => "\xec\x9a\xa9\xeb\x8b\xb9\xeb\x8f\x99" ),
+			array( 'kind' => 'separator', 'value' => ')' ),
+			array( 'kind' => 'postcode', 'value' => '48559' ),
+		),
+		'defaultSeparator' => ' ',
+		'isOrdered'        => true,
+		'full'             => "\xeb\xb6\x80\xec\x82\xb0\xea\xb4\x91\xec\x97\xad\xec\x8b\x9c \xeb\x82\xa8\xea\xb5\xac \xeb\x8f\x99\xeb\xaa\x85\xeb\xa1\x9c 26, 102\xeb\x8f\x99 706\xed\x98\xb8 (\xec\x9a\xa9\xeb\x8b\xb9\xeb\x8f\x99)",
+	);
+	$ax_ct_kr_id   = axismundi_contacts_save_card( $ax_ct_book_id, array( '@type' => 'Card', 'name' => array( 'full' => 'Busan' ), 'addresses' => array( 'adr-kr' => $ax_ct_kr ) ) );
+	$ax_ct_kr_key  = is_wp_error( $ax_ct_kr_id ) ? 0 : (int) $ax_ct_kr_id;
+	$ax_ct_loose[] = $ax_ct_kr_key;
+	$ax_ct_kr_back = (array) ( axismundi_contacts_card_document( $ax_ct_kr_key )['addresses']['adr-kr'] ?? array() );
+	ax_ct_assert(
+		$ax_ct_results,
+		'an address of twelve parts, three of them punctuation, keeps all twelve and their order',
+		array_column( $ax_ct_kr['components'], 'kind' ) === array_column( (array) $ax_ct_kr_back['components'], 'kind' )
+			&& array_column( $ax_ct_kr['components'], 'value' ) === array_column( (array) $ax_ct_kr_back['components'], 'value' )
+			// Three separators, each saying something different.
+			&& 3 === count( array_filter( (array) $ax_ct_kr_back['components'], static fn( $c ) : bool => 'separator' === $c['kind'] ) )
+			// A single space is a separator somebody chose, not an empty one.
+			&& ' ' === (string) $ax_ct_kr_back['defaultSeparator']
+			&& $ax_ct_kr['full'] === (string) $ax_ct_kr_back['full']
+			&& 'KR' === (string) $ax_ct_kr_back['countryCode']
+	);
+	/*
+	 * Moving a part rebuilds the list as it stands rather than as it stood when the row was drawn. A
+	 * part added a moment ago is in one and not the other, and rebuilding from the older copy drops
+	 * it -- a drag that quietly deletes something somebody typed. Every collection that can be
+	 * rearranged had it.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'moving something rebuilds the list that exists, not the one that was drawn',
+		// Two lists of parts and one of accounts, each guarded against a position that is not there.
+		2 === substr_count( $ax_ct_cb_editor, 'undefined === list[ dragging ]' )
+			&& 1 === substr_count( $ax_ct_cb_editor, 'undefined === ids[ dragging ]' )
+			&& str_contains( $ax_ct_cb_editor, "var list = ( latest.current.components || [] ).slice();" )
+			&& str_contains( $ax_ct_cb_editor, 'var ids = orderedByPreference( latest.current );' )
+			&& str_contains( $ax_ct_cb_editor, 'order = orderedByPreference( latest.current );' )
+			// And nothing rearranges from a render's own copy any more.
+			&& ! str_contains( $ax_ct_cb_editor, 'var list = components.slice();' )
+	);
+	/*
+	 * And a part is never refused because another of its kind is waiting to be typed. An address may
+	 * want three separators, two of them open at once, and a button going grey without saying why
+	 * reads as "you cannot have another one of those".
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a second part of the same kind is never refused for the first one being empty',
+		str_contains( $ax_ct_cb_editor, "disabled: 'separator' === kind && ! ordered," )
 	);
 
 	ax_ct_assert(

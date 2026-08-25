@@ -569,6 +569,14 @@
 		var blocked = props.blocked;
 		var ordered = true === name.isOrdered;
 		var personal = 'individual' === ( props.kind || 'individual' );
+		/*
+		 * The name as it stands, not as it stood when this render began. Everything that changes it
+		 * moves this forward, so two changes before the screen is drawn again build on each other --
+		 * and a drag rebuilds from the list that exists rather than from one missing whatever was
+		 * typed a moment ago.
+		 */
+		var latest = useRef( name );
+		latest.current = name;
 
 		/*
 		 * What is open. Screen state, all of it: a name that arrived with a middle name opens showing
@@ -600,11 +608,12 @@
 			var keys = Object.keys( next ).filter( function ( key ) {
 				return '@type' !== key;
 			} );
+			latest.current = next;
 			props.onChange( keys.length ? next : undefined );
 		}
 
 		function setComponents( list, extra ) {
-			var next = Object.assign( {}, name, extra || {} );
+			var next = Object.assign( {}, latest.current, extra || {} );
 			if ( list.length ) {
 				next.components = list;
 			} else {
@@ -644,7 +653,7 @@
 				}
 				var made = { kind: row.kind, value: '' };
 				made[ key ] = value;
-				var list = components.slice();
+				var list = ( latest.current.components || [] ).slice();
 				list.splice( slotInsertion( components, row.kind ), 0, made );
 				if ( row.pendingId ) {
 					// The line is the document's now, so it stops being one this screen is holding.
@@ -663,7 +672,7 @@
 				setComponents( endsFirstAndLast( list ), components.length ? {} : { isOrdered: true } );
 				return;
 			}
-			var part = Object.assign( {}, components[ at ] );
+			var part = Object.assign( {}, ( latest.current.components || [] )[ at ] );
 			if ( '' === value && 'phonetic' === key ) {
 				delete part.phonetic;
 			} else {
@@ -690,7 +699,7 @@
 				} ) );
 				return;
 			}
-			var next = components.slice();
+			var next = ( latest.current.components || [] ).slice();
 			next[ at ] = part;
 			setComponents( next );
 		}
@@ -709,7 +718,7 @@
 				props.onBlocked( at, affected );
 				return;
 			}
-			setComponents( components.filter( function ( ignored, i ) {
+			setComponents( ( latest.current.components || [] ).filter( function ( ignored, i ) {
 				return i !== at;
 			} ) );
 		}
@@ -732,10 +741,10 @@
 				onRemove: removePart,
 				onDragStart: props.onDragStart,
 				onDrop: function ( at ) {
-					if ( null === dragging || dragging === at ) {
+					var list = ( latest.current.components || [] ).slice();
+					if ( null === dragging || dragging === at || undefined === list[ dragging ] ) {
 						return;
 					}
-					var list = components.slice();
 					var moved = list.splice( dragging, 1 )[ 0 ];
 					list.splice( at, 0, moved );
 					// And whatever the drag did, a title opens the name and a credential closes it.
@@ -2163,10 +2172,16 @@
 					onRemove: remove,
 					onDragStart: setDragging,
 					onDrop: function ( at ) {
-						if ( null === dragging || dragging === at ) {
+						/*
+						 * Moved within the list as it stands, not as it stood when this row was drawn.
+						 * A part added a moment ago is in one and not the other, and rebuilding from
+						 * the older copy drops it -- which is a drag that quietly deletes something
+						 * somebody typed.
+						 */
+						var list = ( latest.current.components || [] ).slice();
+						if ( null === dragging || dragging === at || undefined === list[ dragging ] ) {
 							return;
 						}
-						var list = components.slice();
 						var moved = list.splice( dragging, 1 )[ 0 ];
 						list.splice( at, 0, moved );
 						setDragging( null );
@@ -2195,10 +2210,14 @@
 									key: kind,
 									type: 'button',
 									className: 'button',
-									// A separator joins two parts in an order, so it needs one to join them in.
-									disabled: ( 'separator' === kind && ! ordered ) || pending.some( function ( each ) {
-										return each.kind === kind;
-									} ),
+									/*
+									 * A separator joins two parts in an order, so it needs one to join
+									 * them in. Nothing else is refused: an address may want three
+									 * separators and two of them may be waiting to be typed at once,
+									 * and a button that goes grey without saying why reads as "you
+									 * cannot have another one of those".
+									 */
+									disabled: 'separator' === kind && ! ordered,
 									onClick: function () {
 										setAdding( false );
 										setPending( pending.concat( [ { id: newEntryId( 'part', {} ), kind: kind } ] ) );
@@ -3100,16 +3119,20 @@
 		var entries = props.value || {};
 		var [ dragging, setDragging ] = useState( null );
 		var ordered = orderedByPreference( entries );
+		// The accounts as they stand, for the same reason every other collection keeps one.
+		var latest = useRef( entries );
+		latest.current = entries;
 
 		function setEntries( next ) {
+			latest.current = next;
 			props.onChange( Object.keys( next ).length ? next : undefined );
 		}
 
 		// Whatever the rows read as now, numbered from the top.
 		function renumber( ids ) {
 			var next = {};
-			Object.keys( entries ).forEach( function ( id ) {
-				next[ id ] = entries[ id ];
+			Object.keys( latest.current ).forEach( function ( id ) {
+				next[ id ] = latest.current[ id ];
 			} );
 			ids.forEach( function ( id, index ) {
 				next[ id ] = Object.assign( {}, next[ id ], { pref: index + 1 } );
@@ -3132,10 +3155,11 @@
 					entry: entries[ id ] || {},
 					onDragStart: setDragging,
 					onDrop: function ( at ) {
-						if ( null === dragging || dragging === at ) {
+						// The order as it stands, so a row added a moment ago is not left out of it.
+						var ids = orderedByPreference( latest.current );
+						if ( null === dragging || dragging === at || undefined === ids[ dragging ] ) {
 							return;
 						}
-						var ids = ordered.slice();
 						var moved = ids.splice( dragging, 1 )[ 0 ];
 						ids.splice( at, 0, moved );
 						setDragging( null );
@@ -3648,8 +3672,12 @@
 		var entries = props.value || {};
 		var [ pending, setPending ] = useState( [] );
 		var [ dragging, setDragging ] = useState( null );
+		// As they stand, for the same reason every other collection keeps one.
+		var latest = useRef( entries );
+		latest.current = entries;
 
 		function setEntries( next ) {
+			latest.current = next;
 			props.onChange( Object.keys( next ).length ? next : undefined );
 		}
 
@@ -3715,6 +3743,8 @@
 							if ( null === dragging || dragging === at || ! movable ) {
 								return;
 							}
+							// The order as it stands, so a row added a moment ago is not left out.
+							order = orderedByPreference( latest.current );
 							/*
 							 * Dragging is somebody stating an order, so the order is written down --
 							 * for every row, because saying one comes first says what the others come
@@ -3725,7 +3755,7 @@
 							ids.splice( at, 0, moved );
 							var next = {};
 							ids.forEach( function ( id, index ) {
-								next[ id ] = Object.assign( {}, entries[ id ], { pref: index + 1 } );
+								next[ id ] = Object.assign( {}, latest.current[ id ], { pref: index + 1 } );
 							} );
 							setDragging( null );
 							setEntries( next );

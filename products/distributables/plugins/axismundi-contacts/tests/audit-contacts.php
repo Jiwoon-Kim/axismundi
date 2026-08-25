@@ -4413,6 +4413,92 @@ try {
 			&& str_contains( $ax_ct_cb_editor, '// Not reordered: this is somebody typing' )
 	);
 
+	/*
+	 * A title is a title because it has a name -- the standard requires one -- so a row where
+	 * somebody has picked the kind and the employer and not yet typed the name is a row and not a
+	 * title. Written down at that point it is a document the store refuses, which is a Save button
+	 * failing on a card somebody was part-way through filling in.
+	 */
+	wp_set_current_user( (int) $ax_ct_rf_actor->get_local_user_id() );
+	$ax_ct_tn_half = axismundi_contacts_card_document( $ax_ct_rf_card );
+	$ax_ct_tn_half['titles']['t2'] = array( 'kind' => 'role' );
+	$ax_ct_tn_refused = $ax_ct_rf_put( $ax_ct_tn_half );
+	wp_set_current_user( (int) $ax_ct_owner->get_local_user_id() );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a title with a kind and no name is not a title, and the screen holds it rather than writing it',
+		is_wp_error( $ax_ct_tn_refused )
+			// Held on the row until the name arrives, with what was answered already on it.
+			&& str_contains( $ax_ct_cb_editor, "// Still only a row: what has been answered waits here for the name." )
+			&& str_contains( $ax_ct_cb_editor, 'var held = withKey( row.entry, key, value );' )
+			&& str_contains( $ax_ct_cb_editor, "return each.id === row.pending ? { id: each.id, entry: held } : each;" )
+	);
+	// And a part of an organization is a row until it is named, the same way.
+	ax_ct_assert(
+		$ax_ct_results,
+		'a part of an organization nobody has named yet is a line on the screen and nothing in the card',
+		str_contains( $ax_ct_cb_editor, 'function openUnit( key )' )
+			&& str_contains( $ax_ct_cb_editor, "( openUnits[ row.key ] || [] ).map( function ( unit ) {" )
+			&& str_contains( $ax_ct_cb_editor, 'closeUnit( row.key, unit );' )
+			// Nothing writes an empty one on the way in any more.
+			&& ! str_contains( $ax_ct_cb_editor, "concat( [ { name: '' } ] )" )
+	);
+	/*
+	 * A language says where a title is held in one of two shapes -- the whole title, or just the line
+	 * naming its employer -- and both name the organization by the id being taken away. Looking only
+	 * under `organizations/` found neither: they are written under `titles/`, about a different
+	 * property, and they would have gone on pointing at something the card no longer holds.
+	 */
+	$ax_ct_tn_card = array(
+		'@type'         => 'Card',
+		'name'          => array( 'full' => 'Points at an organization' ),
+		'organizations' => array( 'o1' => array( 'name' => 'Axismundi' ) ),
+		'titles'        => array( 't1' => array( 'name' => "\xec\x82\xac\xec\x9d\xb4\xed\x8a\xb8", 'organizationId' => 'o1' ) ),
+		'localizations' => array(
+			'en' => array(
+				'titles/t1/organizationId' => 'o1',
+				'organizations/o1'         => array( 'name' => 'Axismundi' ),
+			),
+		),
+	);
+	$ax_ct_tn_id   = axismundi_contacts_save_card( $ax_ct_book_id, $ax_ct_tn_card );
+	$ax_ct_tn_key  = is_wp_error( $ax_ct_tn_id ) ? 0 : (int) $ax_ct_tn_id;
+	$ax_ct_loose[] = $ax_ct_tn_key;
+	// The organization taken away with the base title cleaned up but the languages left behind.
+	$ax_ct_tn_left = axismundi_contacts_card_document( $ax_ct_tn_key );
+	unset( $ax_ct_tn_left['organizations'], $ax_ct_tn_left['titles']['t1']['organizationId'] );
+	// Checked the way a save checks it: a patch names a path, and every step of that path has to be
+	// somewhere on the card it patches.
+	$ax_ct_tn_stale = axismundi_contacts_validate_patch( $ax_ct_tn_left, 'en', $ax_ct_tn_left['localizations']['en'] );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a language saying where a title is held is found by the id it names, wherever it names it',
+		// Left behind, it names an organization the card no longer holds, and the next save refuses.
+		is_wp_error( $ax_ct_tn_stale )
+			&& str_contains( $ax_ct_cb_editor, "/^titles\\/[^/]+\\/organizationId$/.test( path ) && id === value" )
+			&& str_contains( $ax_ct_cb_editor, "/^titles\\/[^/]+$/.test( path ) && value && 'object' === typeof value && id === value.organizationId" )
+			// A patch about more than the organization keeps the rest of what it says.
+			&& str_contains( $ax_ct_cb_editor, 'function withoutPatches( localizations, going )' )
+			&& str_contains( $ax_ct_cb_editor, 'delete value.organizationId;' )
+	);
+	/*
+	 * And taking the title itself away leaves every language that said it in their own words naming a
+	 * property the card no longer has.
+	 */
+	$ax_ct_tn_gone = axismundi_contacts_card_document( $ax_ct_tn_key );
+	$ax_ct_tn_gone['localizations']['en'] = array( 'titles/t1/name' => 'Site Owner' );
+	axismundi_contacts_save_card_for_owner( (int) $ax_ct_owner->get_identity_id(), $ax_ct_tn_gone, $ax_ct_tn_key );
+	$ax_ct_tn_without = axismundi_contacts_card_document( $ax_ct_tn_key );
+	unset( $ax_ct_tn_without['titles'] );
+	$ax_ct_tn_orphan = axismundi_contacts_validate_patch( $ax_ct_tn_without, 'en', $ax_ct_tn_without['localizations']['en'] );
+	ax_ct_assert(
+		$ax_ct_results,
+		'removing a title names the languages that say it, and lets go of both together',
+		is_wp_error( $ax_ct_tn_orphan )
+			&& str_contains( $ax_ct_cb_editor, "patchesUnder( ( props.card || {} ).localizations, 'titles/' + row.id )" )
+			&& str_contains( $ax_ct_cb_editor, "__( 'Remove them and the title', 'axismundi-contacts' )" )
+	);
+
 	ax_ct_assert(
 		$ax_ct_results,
 		'this plugin stores address books and imitates neither the Actor registry nor its profiles',

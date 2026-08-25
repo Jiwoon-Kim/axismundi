@@ -1311,9 +1311,61 @@
 			}
 		} );
 		patchesUnder( ( card || {} ).localizations, 'organizations/' + id ).forEach( function ( each ) {
-			found.push( { kind: 'patch', id: each.tag + ' ' + each.path, label: each.tag + ' — ' + each.path } );
+			found.push( { kind: 'patch', tag: each.tag, path: each.path, label: each.tag + ' — ' + each.path } );
+		} );
+		/*
+		 * And a language that says where a title is held. It says it in one of two shapes -- the
+		 * whole title, or just the line naming its employer -- and both name this organization by the
+		 * id being taken away. Looking only under `organizations/` found neither: they are written
+		 * under `titles/`, about a different property, and they would have gone on pointing here.
+		 */
+		var localizations = ( card || {} ).localizations || {};
+		Object.keys( localizations ).forEach( function ( tag ) {
+			Object.keys( localizations[ tag ] || {} ).forEach( function ( path ) {
+				var value = localizations[ tag ][ path ];
+				var names = /^titles\/[^/]+\/organizationId$/.test( path ) && id === value;
+				var holds = /^titles\/[^/]+$/.test( path ) && value && 'object' === typeof value && id === value.organizationId;
+				if ( names || holds ) {
+					found.push( {
+						kind: holds ? 'inside' : 'patch',
+						tag: tag,
+						path: path,
+						label: tag + ' — ' + path
+					} );
+				}
+			} );
 		} );
 		return found;
+	}
+
+	/**
+	 * A localization with some of it taken away.
+	 *
+	 * A patch removed outright when it was only about the thing that is going, and emptied of one key
+	 * when it was about more than that: a language giving a whole title still gives the title after
+	 * the organization it named is gone, so what goes is the line naming it and nothing else.
+	 */
+	function withoutPatches( localizations, going ) {
+		var out = Object.assign( {}, localizations || {} );
+		going.forEach( function ( each ) {
+			if ( ! each.tag || ! out[ each.tag ] ) {
+				return;
+			}
+			var patch = Object.assign( {}, out[ each.tag ] );
+			if ( 'inside' === each.kind ) {
+				var value = Object.assign( {}, patch[ each.path ] );
+				delete value.organizationId;
+				patch[ each.path ] = value;
+			} else {
+				delete patch[ each.path ];
+			}
+			if ( Object.keys( patch ).length ) {
+				out[ each.tag ] = patch;
+			} else {
+				delete out[ each.tag ];
+			}
+		} );
+		return out;
 	}
 
 	/**
@@ -1332,6 +1384,22 @@
 		var entries = props.value || {};
 		var [ pending, setPending ] = useState( [] );
 		var [ asking, setAsking ] = useState( null );
+		// Parts somebody has opened a line for, by the row they were opened on.
+		var [ openUnits, setOpenUnits ] = useState( {} );
+
+		function openUnit( key ) {
+			var next = Object.assign( {}, openUnits );
+			next[ key ] = ( next[ key ] || [] ).concat( [ 'unit-' + Math.random().toString( 36 ).slice( 2, 8 ) ] );
+			setOpenUnits( next );
+		}
+
+		function closeUnit( key, unit ) {
+			var next = Object.assign( {}, openUnits );
+			next[ key ] = ( next[ key ] || [] ).filter( function ( each ) {
+				return each !== unit;
+			} );
+			setOpenUnits( next );
+		}
 
 		function setEntries( next ) {
 			props.onChange( Object.keys( next ).length ? next : undefined );
@@ -1427,7 +1495,7 @@
 										write( row, function ( each ) {
 											var list = ( each.units || [] ).slice();
 											list[ at ] = { name: value };
-											return withKey( each, 'units', value || list.length > 1 ? list : '' );
+											return withKey( each, 'units', list );
 										} );
 									}
 								} ),
@@ -1446,6 +1514,38 @@
 								} )
 							);
 						} ),
+						/*
+						 * And a part somebody has opened but not named. A row, like everything else on
+						 * this screen: `units: [{ "name": "" }]` is a list saying that an organization
+						 * contains something nobody can name, which is not a thing anybody meant.
+						 */
+						( openUnits[ row.key ] || [] ).map( function ( unit ) {
+							return el(
+								'div',
+								{ key: unit, className: 'ax-ce-org__unit' },
+								el( TextField, {
+									label: __( 'Part of it', 'axismundi-contacts' ),
+									value: '',
+									onChange: function ( value ) {
+										if ( ! String( value ).trim() ) {
+											return;
+										}
+										closeUnit( row.key, unit );
+										write( row, function ( each ) {
+											return withKey( each, 'units', ( each.units || [] ).concat( [ { name: value } ] ) );
+										} );
+									}
+								} ),
+								el( IconButton, {
+									icon: 'delete',
+									variant: 'danger',
+									label: __( 'Remove this part', 'axismundi-contacts' ),
+									onClick: function () {
+										closeUnit( row.key, unit );
+									}
+								} )
+							);
+						} ),
 						row.id
 							? el(
 								'p',
@@ -1456,9 +1556,7 @@
 										type: 'button',
 										className: 'button',
 										onClick: function () {
-											write( row, function ( each ) {
-												return withKey( each, 'units', ( each.units || [] ).concat( [ { name: '' } ] ) );
-											} );
+											openUnit( row.key );
 										}
 									},
 									__( 'Add a part of it', 'axismundi-contacts' )
@@ -1555,7 +1653,15 @@
 	 */
 	function Titles( props ) {
 		var entries = props.value || {};
+		/*
+		 * Rows somebody has opened, each holding whatever they have answered so far. A title is a
+		 * title because it has a name -- the standard requires one -- so a row where somebody has
+		 * picked the kind and the employer but not yet typed the name is a row and not a title. It
+		 * keeps those answers itself until the name arrives, rather than writing a document the
+		 * server would refuse.
+		 */
 		var [ pending, setPending ] = useState( [] );
+		var [ asking, setAsking ] = useState( null );
 		var organizations = props.organizations || {};
 		var employers = Object.keys( organizations ).map( function ( id ) {
 			return { value: id, label: ( organizations[ id ] || {} ).name || id };
@@ -1567,19 +1673,22 @@
 
 		function write( row, key, value ) {
 			if ( row.pending ) {
-				if ( ! value ) {
+				var held = withKey( row.entry, key, value );
+				if ( ! String( held.name || '' ).trim() ) {
+					// Still only a row: what has been answered waits here for the name.
+					setPending( pending.map( function ( each ) {
+						return each.id === row.pending ? { id: each.id, entry: held } : each;
+					} ) );
 					return;
 				}
 				var index = 1;
 				while ( Object.prototype.hasOwnProperty.call( entries, 't' + index ) ) {
 					index += 1;
 				}
-				var made = {};
-				made[ key ] = value;
 				var next = Object.assign( {}, entries );
-				next[ 't' + index ] = made;
+				next[ 't' + index ] = held;
 				setPending( pending.filter( function ( each ) {
-					return each !== row.pending;
+					return each.id !== row.pending;
 				} ) );
 				setEntries( next );
 				return;
@@ -1589,10 +1698,34 @@
 			setEntries( updated );
 		}
 
+		function remove( row ) {
+			if ( row.pending ) {
+				setPending( pending.filter( function ( each ) {
+					return each.id !== row.pending;
+				} ) );
+				return;
+			}
+			/*
+			 * A language may say this title in its own words. Taking the title away would leave those
+			 * patches naming a property the card no longer has, which the server refuses -- so they
+			 * are named and somebody decides, the same as removing a part of a name.
+			 */
+			var affected = patchesUnder( ( props.card || {} ).localizations, 'titles/' + row.id );
+			if ( affected.length ) {
+				setAsking( { id: row.id, depends: affected.map( function ( each ) {
+					return { kind: 'patch', tag: each.tag, path: each.path, label: each.tag + ' — ' + each.path };
+				} ) } );
+				return;
+			}
+			var next = Object.assign( {}, entries );
+			delete next[ row.id ];
+			setEntries( next );
+		}
+
 		var rows = Object.keys( entries ).map( function ( id ) {
 			return { key: id, id: id, entry: entries[ id ] || {} };
-		} ).concat( pending.map( function ( id ) {
-			return { key: id, pending: id, entry: {} };
+		} ).concat( pending.map( function ( each ) {
+			return { key: each.id, pending: each.id, entry: each.entry };
 		} ) );
 
 		return el(
@@ -1637,19 +1770,57 @@
 						variant: 'danger',
 						label: __( 'Remove this title', 'axismundi-contacts' ),
 						onClick: function () {
-							if ( row.pending ) {
-								setPending( pending.filter( function ( each ) {
-									return each !== row.pending;
-								} ) );
-								return;
-							}
-							var next = Object.assign( {}, entries );
-							delete next[ row.id ];
-							setEntries( next );
+							remove( row );
 						}
 					} )
 				);
 			} ),
+			asking
+				? el(
+					'div',
+					{ className: 'ax-ce-blocked', role: 'alert' },
+					el(
+						'p',
+						null,
+						__( 'Other languages say this title in their own words. Removing it would leave them saying it about nothing.', 'axismundi-contacts' )
+					),
+					el(
+						'ul',
+						null,
+						asking.depends.map( function ( each ) {
+							return el( 'li', { key: each.tag + each.path }, each.label );
+						} )
+					),
+					el(
+						'p',
+						null,
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									props.onResolve( asking );
+									setAsking( null );
+								}
+							},
+							__( 'Remove them and the title', 'axismundi-contacts' )
+						),
+						' ',
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									setAsking( null );
+								}
+							},
+							__( 'Keep everything', 'axismundi-contacts' )
+						)
+					)
+				)
+				: null,
 			el(
 				'p',
 				null,
@@ -1659,7 +1830,7 @@
 						type: 'button',
 						className: 'button',
 						onClick: function () {
-							setPending( pending.concat( [ 'title-' + Math.random().toString( 36 ).slice( 2, 8 ) ] ) );
+							setPending( pending.concat( [ { id: 'title-' + Math.random().toString( 36 ).slice( 2, 8 ), entry: {} } ] ) );
 						}
 					},
 					__( 'Add a title', 'axismundi-contacts' )
@@ -2801,16 +2972,9 @@
 							if ( Object.keys( titles ).length ) {
 								next.titles = titles;
 							}
-							var localizations = Object.assign( {}, next.localizations );
-							patchesUnder( localizations, 'organizations/' + question.id ).forEach( function ( each ) {
-								var patch = Object.assign( {}, localizations[ each.tag ] );
-								delete patch[ each.path ];
-								if ( Object.keys( patch ).length ) {
-									localizations[ each.tag ] = patch;
-								} else {
-									delete localizations[ each.tag ];
-								}
-							} );
+							var localizations = withoutPatches( next.localizations, question.depends.filter( function ( each ) {
+								return each.tag;
+							} ) );
 							if ( Object.keys( localizations ).length ) {
 								next.localizations = localizations;
 							} else {
@@ -2822,8 +2986,31 @@
 					el( Titles, {
 						value: card.titles,
 						organizations: card.organizations,
+						card: card,
 						onChange: function ( value ) {
 							setProperty( 'titles', value );
+						},
+						/*
+						 * Both at once, because either alone is a Card the server refuses: the title
+						 * gone without its translations leaves them saying something about a property
+						 * the card no longer has.
+						 */
+						onResolve: function ( question ) {
+							var next = Object.assign( {}, card );
+							var titles = Object.assign( {}, next.titles );
+							delete titles[ question.id ];
+							if ( Object.keys( titles ).length ) {
+								next.titles = titles;
+							} else {
+								delete next.titles;
+							}
+							var localizations = withoutPatches( next.localizations, question.depends );
+							if ( Object.keys( localizations ).length ) {
+								next.localizations = localizations;
+							} else {
+								delete next.localizations;
+							}
+							update( next );
 						}
 					} ),
 					el( OnlineServices, {

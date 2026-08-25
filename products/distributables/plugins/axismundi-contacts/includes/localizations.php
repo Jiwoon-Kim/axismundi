@@ -301,6 +301,27 @@ function axismundi_contacts_language_tag( string $tag ) : string {
 }
 
 /**
+ * What a Card calls the organization it names first.
+ *
+ * The first one with a name, in the order the document holds them. Not a fixed key: an entry id is
+ * an address a screen chose, and a lookup for one particular word was a lookup that worked for
+ * exactly the cards one importer happened to write -- everything else appeared in the list as
+ * nothing at all.
+ *
+ * @param array<string,mixed> $card Card.
+ * @return string
+ */
+function axismundi_contacts_first_organization_name( array $card ) : string {
+	foreach ( (array) ( $card['organizations'] ?? array() ) as $entry ) {
+		$name = is_array( $entry ) ? trim( (string) ( $entry['name'] ?? '' ) ) : '';
+		if ( '' !== $name ) {
+			return $name;
+		}
+	}
+	return '';
+}
+
+/**
  * Every language a Card names, so a picker can offer them back.
  *
  * What it is written in, what its subject would rather receive, and which languages it carries
@@ -553,6 +574,21 @@ function axismundi_contacts_validate_card_values( array $card ) {
 					__( 'a pronunciation says nothing until the name says what system or script it is written in', 'axismundi-contacts' )
 				);
 			}
+		}
+	}
+	/*
+	 * A title says which organization it belongs to by naming an entry rather than repeating its
+	 * name, so that renaming the company renames it once. The other side of that bargain is that the
+	 * entry has to be there: a title pointing at an organization the card no longer holds is a title
+	 * whose employer nothing can resolve, and every reader of it has to invent an answer.
+	 */
+	foreach ( (array) ( $card['titles'] ?? array() ) as $id => $title ) {
+		$of = is_array( $title ) ? trim( (string) ( $title['organizationId'] ?? '' ) ) : '';
+		if ( '' !== $of && ! isset( $card['organizations'][ $of ] ) ) {
+			return axismundi_contacts_value_error(
+				'titles/' . $id . '/organizationId',
+				__( 'a title belongs to an organization this card holds', 'axismundi-contacts' )
+			);
 		}
 	}
 	foreach ( axismundi_contacts_value_rules() as $property => $rules ) {

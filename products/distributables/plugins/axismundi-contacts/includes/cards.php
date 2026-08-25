@@ -338,7 +338,8 @@ function axismundi_contacts_derive_card_columns( array $card ) : array {
 		$name       = trim( implode( ' ', array_map( static fn( $part ) : string => (string) ( $part['value'] ?? '' ), $components ) ) );
 	}
 	if ( '' === $name ) {
-		$name = trim( (string) ( $card['organizations']['org']['name'] ?? '' ) );
+		// A card for a company may carry no personal name at all, and it still has to appear in a list.
+		$name = axismundi_contacts_first_organization_name( $card );
 	}
 	/*
 	 * The first account this person has, in the order they put them in. One Card holds as many as

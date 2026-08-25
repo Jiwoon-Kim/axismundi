@@ -133,6 +133,13 @@ function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
 		'draftPath'           => '/' . axismundi_contacts_rest_namespace() . '/cards/' . $card_id . '/draft',
 		'languages'           => $language_options,
 		/*
+		 * The order a Card is written down in, handed to the screen rather than written there again.
+		 * The draft is the document: a property assigned to a JavaScript object lands at the end of
+		 * it, so `language` and `organizations` sat below `localizations` until a save moved them --
+		 * and the JSON somebody is reading while they type is the one that looked wrong.
+		 */
+		'order'               => axismundi_contacts_canonical_order(),
+		/*
 		 * Every kind RFC 9553 registers, because each is something somebody keeps the address of. A
 		 * card for a building, for the software that runs a service, for a machine that reports its
 		 * own readings: an address book that could not say which would be asking people to file all

@@ -2867,7 +2867,9 @@ try {
 		$ax_ct_results,
 		'the fields and the card itself are one draft, so a property with no field survives being edited',
 		str_contains( $ax_ct_ed_source, 'Object.assign( {}, card )' )
-			&& str_contains( $ax_ct_ed_source, 'JSON.stringify( next, null, 2 )' )
+			// Written down in the order a stored Card is written in, so the two never look different.
+			&& str_contains( $ax_ct_ed_source, 'var written = ordered( next );' )
+			&& str_contains( $ax_ct_ed_source, 'JSON.stringify( written, null, 2 )' )
 	);
 	/*
 	 * A new entry gets a new id. An entry id is the address a published pointer and a provenance row
@@ -4292,7 +4294,123 @@ try {
 			&& str_contains( $ax_ct_cb_editor, 'function Titles( props )' )
 			&& str_contains( $ax_ct_cb_editor, "__( 'Part of it', 'axismundi-contacts' )" )
 			// Which employer a title belongs to names an entry above rather than repeating it.
-			&& str_contains( $ax_ct_cb_editor, "withKey( entry, 'organizationId', value )" )
+			&& str_contains( $ax_ct_cb_editor, "write( row, 'organizationId', value )" )
+			// And a row is a place to type: the document gets an entry when somebody types in one.
+			&& str_contains( $ax_ct_cb_editor, "// An organization is a place with a name. Until there is one, this is only a row." )
+	);
+
+	// -- what points at what, through an actual save ------------------------------------------------------------
+
+	/*
+	 * A card for a company carries no personal name, so the list has to read one off the organization
+	 * it names. It looked under one fixed entry id -- the word one importer happened to use -- and
+	 * every card written by anything else appeared in the list as nothing at all. The first one with
+	 * a name, in the order the document holds them, is the answer.
+	 */
+	$ax_ct_rf_org  = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array(
+			'@type'         => 'Card',
+			'kind'          => 'org',
+			// The ids a screen makes, which are not the id anything should look for.
+			'organizations' => array( 'o1' => array( 'name' => 'Axismundi' ) ),
+		)
+	);
+	$ax_ct_rf_key  = is_wp_error( $ax_ct_rf_org ) ? 0 : (int) $ax_ct_rf_org;
+	$ax_ct_loose[] = $ax_ct_rf_key;
+	ax_ct_assert(
+		$ax_ct_results,
+		'a card with no personal name is listed by the organization it names, whatever that entry is called',
+		'Axismundi' === (string) ( axismundi_contacts_get_card( $ax_ct_rf_key )['display_name'] ?? '' )
+			&& 'Axismundi' === axismundi_contacts_first_organization_name( array( 'organizations' => array( 'x' => array( 'name' => '' ), 'y' => array( 'name' => 'Axismundi' ) ) ) )
+	);
+	/*
+	 * A title says which organization it belongs to by naming an entry rather than repeating its
+	 * name. The other side of that bargain is that the entry has to be there: a title pointing at an
+	 * organization the card no longer holds is a title whose employer nothing can resolve.
+	 */
+	$ax_ct_rf_actor = ax_ct_actor( $ax_ct_users );
+	$ax_ct_rf_sid   = (int) $ax_ct_rf_actor->get_identity_id();
+	$ax_ct_rf_made  = axismundi_contacts_create_profile_card( $ax_ct_rf_sid );
+	$ax_ct_rf_card  = is_wp_error( $ax_ct_rf_made ) ? 0 : (int) $ax_ct_rf_made;
+	$ax_ct_loose[]  = $ax_ct_rf_card;
+	$ax_ct_rf_doc   = axismundi_contacts_card_document( $ax_ct_rf_card );
+	$ax_ct_rf_doc['organizations'] = array( 'o1' => array( 'name' => 'Axismundi' ) );
+	$ax_ct_rf_doc['titles']        = array( 't1' => array( 'name' => 'Site Owner', 'organizationId' => 'o1' ) );
+	axismundi_contacts_save_card_for_owner( $ax_ct_rf_sid, $ax_ct_rf_doc, $ax_ct_rf_card );
+
+	wp_set_current_user( (int) $ax_ct_rf_actor->get_local_user_id() );
+	$ax_ct_rf_put = static function ( array $document ) use ( $ax_ct_rf_card ) {
+		$request = new WP_REST_Request( 'PUT', '/axismundi-contacts/v1/cards/' . $ax_ct_rf_card . '/draft' );
+		$request->set_param( 'id', $ax_ct_rf_card );
+		$request->set_param( 'revision', (int) ( axismundi_contacts_get_card( $ax_ct_rf_card )['revision'] ?? 0 ) );
+		$request->set_param( 'card', $document );
+		return axismundi_contacts_rest_put_draft( $request );
+	};
+
+	// The organization taken away on its own, which is what a screen that only deleted one would send.
+	$ax_ct_rf_alone = axismundi_contacts_card_document( $ax_ct_rf_card );
+	unset( $ax_ct_rf_alone['organizations'] );
+	$ax_ct_rf_orphan = $ax_ct_rf_put( $ax_ct_rf_alone );
+
+	// And both together, which is what it sends now.
+	$ax_ct_rf_both = axismundi_contacts_card_document( $ax_ct_rf_card );
+	unset( $ax_ct_rf_both['organizations'] );
+	unset( $ax_ct_rf_both['titles']['t1']['organizationId'] );
+	$ax_ct_rf_ok = $ax_ct_rf_put( $ax_ct_rf_both );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a title cannot be left pointing at an organization the card no longer holds',
+		is_wp_error( $ax_ct_rf_orphan )
+			&& str_contains( (string) $ax_ct_rf_orphan->get_error_message(), 'organizationId' )
+			&& ! is_wp_error( $ax_ct_rf_ok )
+			&& 'Site Owner' === (string) ( axismundi_contacts_card_document( $ax_ct_rf_card )['titles']['t1']['name'] ?? '' )
+	);
+	/*
+	 * And an organization with an empty list of parts is a property saying nothing, while one with a
+	 * part that is not a list is a document the store refuses. A screen that wrote either would be a
+	 * screen whose Save button fails on a card somebody filled in correctly.
+	 */
+	$ax_ct_rf_units = axismundi_contacts_card_document( $ax_ct_rf_card );
+	$ax_ct_rf_units['organizations'] = array( 'o1' => array( 'name' => 'Axismundi', 'units' => array() ) );
+	$ax_ct_rf_empty = $ax_ct_rf_put( $ax_ct_rf_units );
+	$ax_ct_rf_units['organizations']['o1']['units'] = '';
+	$ax_ct_rf_bad = $ax_ct_rf_put( $ax_ct_rf_units );
+	wp_set_current_user( (int) $ax_ct_owner->get_local_user_id() );
+	ax_ct_assert(
+		$ax_ct_results,
+		'the parts of an organization are a list when there are any, and nothing at all when there are not',
+		! is_wp_error( $ax_ct_rf_empty )
+			&& ! array_key_exists( 'units', (array) ( axismundi_contacts_card_document( $ax_ct_rf_card )['organizations']['o1'] ?? array() ) )
+			&& is_wp_error( $ax_ct_rf_bad )
+	);
+	/*
+	 * And the screen asks before it sends any of that: what points at an organization is named, and
+	 * somebody decides, rather than finding out from a save that failed.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'removing an organization names what points at it first, and lets go of both together',
+		str_contains( $ax_ct_cb_editor, 'function dependsOnOrganization( card, id )' )
+			&& str_contains( $ax_ct_cb_editor, "patchesUnder( ( card || {} ).localizations, 'organizations/' + id )" )
+			&& str_contains( $ax_ct_cb_editor, "__( 'Remove them and the organization', 'axismundi-contacts' )" )
+			// The title stays; what it said about where it was held does not.
+			&& str_contains( $ax_ct_cb_editor, "titles[ key ] = withKey( titles[ key ], 'organizationId', '' );" )
+	);
+	/*
+	 * The order a stored Card is written in is the server's, and the screen is handed it rather than
+	 * writing it down again. A property assigned to a JavaScript object lands at the end of it, so a
+	 * card that gained a `language` showed it below `localizations` until a save moved it -- and the
+	 * JSON somebody is reading while they type is the one that looked wrong.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'the draft is written in the order a stored card is, before it is saved rather than after',
+		str_contains( $ax_ct_lg_php, "'order'               => axismundi_contacts_canonical_order()," )
+			&& str_contains( $ax_ct_cb_editor, 'function ordered( card )' )
+			&& str_contains( $ax_ct_cb_editor, '( config.order || [] ).forEach(' )
+			// Except the box somebody is typing in, where tidying would move the cursor.
+			&& str_contains( $ax_ct_cb_editor, '// Not reordered: this is somebody typing' )
 	);
 
 	ax_ct_assert(

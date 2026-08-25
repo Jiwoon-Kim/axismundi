@@ -1297,6 +1297,26 @@
 	}
 
 	/**
+	 * What points at one organization, and would be pointing at nothing without it.
+	 *
+	 * A title names its employer by entry id, and a language may translate that organization's name.
+	 * Removing the entry leaves both saying something about a thing the card no longer holds -- which
+	 * the server refuses on the way in, so the screen has to ask before it gets there.
+	 */
+	function dependsOnOrganization( card, id ) {
+		var found = [];
+		Object.keys( ( card || {} ).titles || {} ).forEach( function ( key ) {
+			if ( id === ( card.titles[ key ] || {} ).organizationId ) {
+				found.push( { kind: 'title', id: key, label: ( card.titles[ key ] || {} ).name || key } );
+			}
+		} );
+		patchesUnder( ( card || {} ).localizations, 'organizations/' + id ).forEach( function ( each ) {
+			found.push( { kind: 'patch', id: each.tag + ' ' + each.path, label: each.tag + ' — ' + each.path } );
+		} );
+		return found;
+	}
+
+	/**
 	 * The places somebody belongs, and what they are there.
 	 *
 	 * Two properties rather than one, because the standard keeps them apart and so does life: an
@@ -1304,30 +1324,80 @@
 	 * has two titles at one company far more often than they have two companies, and a card that
 	 * folded the two together would have to invent a rule for which title belonged to which employer.
 	 * `organizationId` is that rule, and it is the standard's.
+	 *
+	 * A row is a place to type, the same as every line of the name: the document gets an entry when
+	 * somebody types in one, not when they open one.
 	 */
 	function Organizations( props ) {
 		var entries = props.value || {};
-		var ids = Object.keys( entries );
+		var [ pending, setPending ] = useState( [] );
+		var [ asking, setAsking ] = useState( null );
 
 		function setEntries( next ) {
 			props.onChange( Object.keys( next ).length ? next : undefined );
 		}
 
-		function setEntry( id, entry ) {
+		function freeId() {
+			var index = 1;
+			while ( Object.prototype.hasOwnProperty.call( entries, 'o' + index ) ) {
+				index += 1;
+			}
+			return 'o' + index;
+		}
+
+		/** Write through to an entry, making it when there is something to put in it. */
+		function write( row, change ) {
+			if ( row.pending ) {
+				var made = change( {} );
+				if ( ! String( made.name || '' ).trim() ) {
+					// An organization is a place with a name. Until there is one, this is only a row.
+					return;
+				}
+				var next = Object.assign( {}, entries );
+				next[ freeId() ] = made;
+				setPending( pending.filter( function ( each ) {
+					return each !== row.pending;
+				} ) );
+				setEntries( next );
+				return;
+			}
+			var updated = Object.assign( {}, entries );
+			updated[ row.id ] = change( entries[ row.id ] || {} );
+			setEntries( updated );
+		}
+
+		function remove( row ) {
+			if ( row.pending ) {
+				setPending( pending.filter( function ( each ) {
+					return each !== row.pending;
+				} ) );
+				return;
+			}
+			var depends = dependsOnOrganization( props.card, row.id );
+			if ( depends.length ) {
+				setAsking( { id: row.id, depends: depends } );
+				return;
+			}
 			var next = Object.assign( {}, entries );
-			next[ id ] = entry;
+			delete next[ row.id ];
 			setEntries( next );
 		}
+
+		var rows = Object.keys( entries ).map( function ( id ) {
+			return { key: id, id: id, entry: entries[ id ] || {} };
+		} ).concat( pending.map( function ( id ) {
+			return { key: id, pending: id, entry: {} };
+		} ) );
 
 		return el(
 			Section,
 			{ icon: 'domain', label: __( 'Organizations', 'axismundi-contacts' ) },
-			ids.map( function ( id ) {
-				var entry = entries[ id ] || {};
+			rows.map( function ( row ) {
+				var entry = row.entry;
 				var units = entry.units || [];
 				return el(
 					'div',
-					{ key: id, className: 'ax-ce-org' },
+					{ key: row.key, className: 'ax-ce-org' },
 					el(
 						'div',
 						{ className: 'ax-ce-org__fields' },
@@ -1335,13 +1405,16 @@
 							label: __( 'Organization', 'axismundi-contacts' ),
 							value: entry.name || '',
 							onChange: function ( value ) {
-								setEntry( id, withKey( entry, 'name', value ) );
+								write( row, function ( each ) {
+									return withKey( each, 'name', value );
+								} );
 							}
 						} ),
 						/*
 						 * The parts of it somebody belongs to, from the outside in: a faculty inside a
 						 * university, a team inside a department. A list, because the order is what
-						 * says which contains which.
+						 * says which contains which -- and a list that exists only once something is
+						 * in it, because `units: []` is a property saying nothing.
 						 */
 						units.map( function ( unit, at ) {
 							return el(
@@ -1351,9 +1424,11 @@
 									label: __( 'Part of it', 'axismundi-contacts' ),
 									value: ( unit || {} ).name || '',
 									onChange: function ( value ) {
-										var list = units.slice();
-										list[ at ] = withKey( unit || {}, 'name', value );
-										setEntry( id, withKey( entry, 'units', list ) );
+										write( row, function ( each ) {
+											var list = ( each.units || [] ).slice();
+											list[ at ] = { name: value };
+											return withKey( each, 'units', value || list.length > 1 ? list : '' );
+										} );
 									}
 								} ),
 								el( IconButton, {
@@ -1361,42 +1436,92 @@
 									variant: 'danger',
 									label: __( 'Remove this part', 'axismundi-contacts' ),
 									onClick: function () {
-										var list = units.filter( function ( ignored, i ) {
-											return i !== at;
+										write( row, function ( each ) {
+											var list = ( each.units || [] ).filter( function ( ignored, i ) {
+												return i !== at;
+											} );
+											return withKey( each, 'units', list.length ? list : '' );
 										} );
-										setEntry( id, list.length ? withKey( entry, 'units', list ) : withKey( entry, 'units', '' ) );
 									}
 								} )
 							);
 						} ),
-						el(
-							'p',
-							null,
-							el(
-								'button',
-								{
-									type: 'button',
-									className: 'button',
-									onClick: function () {
-										setEntry( id, withKey( entry, 'units', units.concat( [ { name: '' } ] ) ) );
-									}
-								},
-								__( 'Add a part of it', 'axismundi-contacts' )
+						row.id
+							? el(
+								'p',
+								null,
+								el(
+									'button',
+									{
+										type: 'button',
+										className: 'button',
+										onClick: function () {
+											write( row, function ( each ) {
+												return withKey( each, 'units', ( each.units || [] ).concat( [ { name: '' } ] ) );
+											} );
+										}
+									},
+									__( 'Add a part of it', 'axismundi-contacts' )
+								)
 							)
-						)
+							: null
 					),
 					el( IconButton, {
 						icon: 'delete',
 						variant: 'danger',
 						label: __( 'Remove this organization', 'axismundi-contacts' ),
 						onClick: function () {
-							var next = Object.assign( {}, entries );
-							delete next[ id ];
-							setEntries( next );
+							remove( row );
 						}
 					} )
 				);
 			} ),
+			asking
+				? el(
+					'div',
+					{ className: 'ax-ce-blocked', role: 'alert' },
+					el(
+						'p',
+						null,
+						__( 'Other parts of this card point at this organization. Removing it would leave them pointing at nothing.', 'axismundi-contacts' )
+					),
+					el(
+						'ul',
+						null,
+						asking.depends.map( function ( each ) {
+							return el( 'li', { key: each.kind + each.id }, each.label );
+						} )
+					),
+					el(
+						'p',
+						null,
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									props.onResolve( asking );
+									setAsking( null );
+								}
+							},
+							__( 'Remove them and the organization', 'axismundi-contacts' )
+						),
+						' ',
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									setAsking( null );
+								}
+							},
+							__( 'Keep everything', 'axismundi-contacts' )
+						)
+					)
+				)
+				: null,
 			el(
 				'p',
 				null,
@@ -1406,11 +1531,7 @@
 						type: 'button',
 						className: 'button',
 						onClick: function () {
-							var index = 1;
-							while ( Object.prototype.hasOwnProperty.call( entries, 'o' + index ) ) {
-								index += 1;
-							}
-							setEntry( 'o' + index, { name: '' } );
+							setPending( pending.concat( [ 'org-' + Math.random().toString( 36 ).slice( 2, 8 ) ] ) );
 						}
 					},
 					__( 'Add an organization', 'axismundi-contacts' )
@@ -1434,7 +1555,7 @@
 	 */
 	function Titles( props ) {
 		var entries = props.value || {};
-		var ids = Object.keys( entries );
+		var [ pending, setPending ] = useState( [] );
 		var organizations = props.organizations || {};
 		var employers = Object.keys( organizations ).map( function ( id ) {
 			return { value: id, label: ( organizations[ id ] || {} ).name || id };
@@ -1444,22 +1565,50 @@
 			props.onChange( Object.keys( next ).length ? next : undefined );
 		}
 
+		function write( row, key, value ) {
+			if ( row.pending ) {
+				if ( ! value ) {
+					return;
+				}
+				var index = 1;
+				while ( Object.prototype.hasOwnProperty.call( entries, 't' + index ) ) {
+					index += 1;
+				}
+				var made = {};
+				made[ key ] = value;
+				var next = Object.assign( {}, entries );
+				next[ 't' + index ] = made;
+				setPending( pending.filter( function ( each ) {
+					return each !== row.pending;
+				} ) );
+				setEntries( next );
+				return;
+			}
+			var updated = Object.assign( {}, entries );
+			updated[ row.id ] = withKey( entries[ row.id ] || {}, key, value );
+			setEntries( updated );
+		}
+
+		var rows = Object.keys( entries ).map( function ( id ) {
+			return { key: id, id: id, entry: entries[ id ] || {} };
+		} ).concat( pending.map( function ( id ) {
+			return { key: id, pending: id, entry: {} };
+		} ) );
+
 		return el(
 			Section,
 			{ icon: 'person-text', label: __( 'Titles', 'axismundi-contacts' ) },
-			ids.map( function ( id ) {
-				var entry = entries[ id ] || {};
+			rows.map( function ( row ) {
+				var entry = row.entry;
 				return el(
 					'div',
-					{ key: id, className: 'ax-ce-title' },
+					{ key: row.key, className: 'ax-ce-title' },
 					el( TextField, {
 						label: __( 'Title', 'axismundi-contacts' ),
 						className: 'ax-ce-title__name',
 						value: entry.name || '',
 						onChange: function ( value ) {
-							var next = Object.assign( {}, entries );
-							next[ id ] = withKey( entry, 'name', value );
-							setEntries( next );
+							write( row, 'name', value );
 						}
 					} ),
 					el( Combobox, {
@@ -1468,9 +1617,7 @@
 						value: entry.kind || '',
 						options: TITLE_KINDS,
 						onChange: function ( value ) {
-							var next = Object.assign( {}, entries );
-							next[ id ] = withKey( entry, 'kind', value );
-							setEntries( next );
+							write( row, 'kind', value );
 						}
 					} ),
 					employers.length
@@ -1481,9 +1628,7 @@
 							options: employers,
 							supporting: __( 'One of the organizations above.', 'axismundi-contacts' ),
 							onChange: function ( value ) {
-								var next = Object.assign( {}, entries );
-								next[ id ] = withKey( entry, 'organizationId', value );
-								setEntries( next );
+								write( row, 'organizationId', value );
 							}
 						} )
 						: null,
@@ -1492,8 +1637,14 @@
 						variant: 'danger',
 						label: __( 'Remove this title', 'axismundi-contacts' ),
 						onClick: function () {
+							if ( row.pending ) {
+								setPending( pending.filter( function ( each ) {
+									return each !== row.pending;
+								} ) );
+								return;
+							}
 							var next = Object.assign( {}, entries );
-							delete next[ id ];
+							delete next[ row.id ];
 							setEntries( next );
 						}
 					} )
@@ -1508,13 +1659,7 @@
 						type: 'button',
 						className: 'button',
 						onClick: function () {
-							var index = 1;
-							while ( Object.prototype.hasOwnProperty.call( entries, 't' + index ) ) {
-								index += 1;
-							}
-							var next = Object.assign( {}, entries );
-							next[ 't' + index ] = { name: '' };
-							setEntries( next );
+							setPending( pending.concat( [ 'title-' + Math.random().toString( 36 ).slice( 2, 8 ) ] ) );
 						}
 					},
 					__( 'Add a title', 'axismundi-contacts' )
@@ -2403,6 +2548,30 @@
 		return next;
 	}
 
+	/**
+	 * The draft, in the order a stored Card is written in.
+	 *
+	 * A property assigned to a JavaScript object lands at the end of it, so a card that gained a
+	 * `language` showed it below `localizations` until a save moved it -- and the JSON somebody is
+	 * reading while they type is exactly the one that looked wrong. The order is the server's own,
+	 * handed over rather than written here again, so the two cannot drift.
+	 */
+	function ordered( card ) {
+		var out = {};
+		( config.order || [] ).forEach( function ( key ) {
+			if ( Object.prototype.hasOwnProperty.call( card, key ) ) {
+				out[ key ] = card[ key ];
+			}
+		} );
+		Object.keys( card ).sort().forEach( function ( key ) {
+			// Anything the list does not name -- a vendor's own property, a newer revision's -- after it.
+			if ( ! Object.prototype.hasOwnProperty.call( out, key ) ) {
+				out[ key ] = card[ key ];
+			}
+		} );
+		return out;
+	}
+
 	/** The whole screen. */
 	function Editor() {
 		var [ card, setCard ] = useState( config.card );
@@ -2438,8 +2607,9 @@
 
 		// One draft. Every view writes through here, so the JSON box and the fields never diverge.
 		var update = useCallback( function ( next ) {
-			setCard( next );
-			setJson( JSON.stringify( next, null, 2 ) );
+			var written = ordered( next );
+			setCard( written );
+			setJson( JSON.stringify( written, null, 2 ) );
 			setJsonError( '' );
 		}, [] );
 
@@ -2460,6 +2630,8 @@
 				if ( ! parsed || 'object' !== typeof parsed || Array.isArray( parsed ) ) {
 					throw new Error( __( 'A card is an object.', 'axismundi-contacts' ) );
 				}
+				// Not reordered: this is somebody typing, and tidying it would move the cursor out
+				// from under them. What is stored is ordered on save, and read back that way.
 				setCard( parsed );
 				setJsonError( '' );
 			} catch ( error ) {
@@ -2601,8 +2773,50 @@
 					} ),
 					el( Organizations, {
 						value: card.organizations,
+						card: card,
 						onChange: function ( value ) {
 							setProperty( 'organizations', value );
+						},
+						/*
+						 * Both at once, because either alone is a Card the server refuses: an
+						 * organization removed on its own leaves a title whose employer nothing can
+						 * resolve, and a language still translating a name that is no longer there.
+						 */
+						onResolve: function ( question ) {
+							var next = Object.assign( {}, card );
+							var organizations = Object.assign( {}, next.organizations );
+							delete organizations[ question.id ];
+							if ( Object.keys( organizations ).length ) {
+								next.organizations = organizations;
+							} else {
+								delete next.organizations;
+							}
+							var titles = Object.assign( {}, next.titles );
+							Object.keys( titles ).forEach( function ( key ) {
+								if ( question.id === ( titles[ key ] || {} ).organizationId ) {
+									// The title stays; what it said about where it was held does not.
+									titles[ key ] = withKey( titles[ key ], 'organizationId', '' );
+								}
+							} );
+							if ( Object.keys( titles ).length ) {
+								next.titles = titles;
+							}
+							var localizations = Object.assign( {}, next.localizations );
+							patchesUnder( localizations, 'organizations/' + question.id ).forEach( function ( each ) {
+								var patch = Object.assign( {}, localizations[ each.tag ] );
+								delete patch[ each.path ];
+								if ( Object.keys( patch ).length ) {
+									localizations[ each.tag ] = patch;
+								} else {
+									delete localizations[ each.tag ];
+								}
+							} );
+							if ( Object.keys( localizations ).length ) {
+								next.localizations = localizations;
+							} else {
+								delete next.localizations;
+							}
+							update( next );
 						}
 					} ),
 					el( Titles, {

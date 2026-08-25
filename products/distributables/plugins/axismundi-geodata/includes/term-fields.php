@@ -57,7 +57,7 @@ function axismundi_geodata_term_fields( string $taxonomy = '' ) : array {
 		);
 		$fields['ax_geo_country_code'] = array(
 			'label' => __( 'Country code', 'axismundi-geodata' ),
-			'type'  => 'text',
+			'type'  => 'country',
 			'help'  => __( 'ISO 3166-1 alpha-2, e.g. KR (schema.org addressCountry). Set it on the Country term; descendants inherit it through the hierarchy.', 'axismundi-geodata' ),
 		);
 		$fields['ax_geo_iso_3166_2']   = array(
@@ -97,6 +97,9 @@ function axismundi_geodata_term_control( string $key, array $field, string $valu
 	if ( 'select' === $field['type'] ) {
 		return axismundi_geodata_place_type_select( $taxonomy, $key, $value );
 	}
+	if ( 'country' === $field['type'] ) {
+		return axismundi_geodata_country_code_select( $key, $value );
+	}
 
 	$attrs = 'number' === $field['type'] ? ' step="any"' : '';
 	if ( 'ax_geo_zoom' === $key ) {
@@ -111,6 +114,47 @@ function axismundi_geodata_term_control( string $key, array $field, string $valu
 		$attrs, // $attrs is built from static literals above.
 		esc_attr( $value )
 	);
+}
+
+/**
+ * The country-code control for a Country area.
+ *
+ * The code is what is stored; the reference name is just enough to find it in a long native
+ * WordPress select. It is deliberately not a second translation table -- a browser-facing picker
+ * can use Intl.DisplayNames, while this server-rendered admin control has the versioned registry's
+ * English fallback. An unknown existing value remains selected, so opening an imported term and
+ * changing another field does not erase it.
+ *
+ * @param string $key Meta key.
+ * @param string $value Selected value.
+ * @return string Escaped select markup.
+ */
+function axismundi_geodata_country_code_select( string $key, string $value ) : string {
+	$countries = axismundi_geodata_countries();
+	$value     = strtoupper( trim( $value ) );
+
+	uksort(
+		$countries,
+		static function ( string $left, string $right ) use ( $countries ) : int {
+			return strnatcasecmp( $countries[ $left ]['name'], $countries[ $right ]['name'] );
+		}
+	);
+
+	$options = '<option value="">' . esc_html__( 'Select a country', 'axismundi-geodata' ) . '</option>';
+	if ( '' !== $value && ! isset( $countries[ $value ] ) ) {
+		/* Translators: %s: an imported, unknown two-letter country code. */
+		$options .= sprintf( '<option value="%1$s" selected="selected">%2$s</option>', esc_attr( $value ), esc_html( sprintf( __( '%s (not in this registry)', 'axismundi-geodata' ), $value ) ) );
+	}
+	foreach ( $countries as $code => $country ) {
+		$options .= sprintf(
+			'<option value="%1$s"%2$s>%3$s</option>',
+			esc_attr( $code ),
+			selected( $value, $code, false ),
+			esc_html( sprintf( '%1$s (%2$s)', $country['name'], $code ) )
+		);
+	}
+
+	return sprintf( '<select name="%1$s" id="%1$s">%2$s</select>', esc_attr( $key ), $options );
 }
 
 /**

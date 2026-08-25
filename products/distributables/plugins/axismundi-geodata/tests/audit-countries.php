@@ -7,6 +7,9 @@
 
 defined( 'ABSPATH' ) || exit( 1 );
 
+// This is normally an admin-only include; the audit exercises the markup that term.php receives.
+require_once dirname( __DIR__ ) . '/includes/term-fields.php';
+
 $ax_geo_iso_results = array();
 
 /** @param bool[] $results Results. */
@@ -144,6 +147,23 @@ ax_geo_iso_assert(
 		&& is_readable( dirname( __DIR__ ) . '/data/iso-3166-2.tsv' )
 		&& is_readable( dirname( __DIR__ ) . '/data/LICENSE-UNICODE-3.0.txt' )
 		&& str_contains( (string) file_get_contents( dirname( __DIR__ ) . '/data/LICENSE-UNICODE-3.0.txt' ), 'UNICODE LICENSE V3' )
+);
+
+/*
+ * A Geo Area Country is authored from the registry, not by guessing two letters. This changes only
+ * the term-editor control: REST/import sanitisation remains deliberately tolerant of a newer or
+ * exceptional code, and a value already on a term must remain visible until somebody changes it.
+ */
+$ax_geo_iso_country_select = axismundi_geodata_country_code_select( 'ax_geo_country_code', 'KR' );
+$ax_geo_iso_unknown_select = axismundi_geodata_country_code_select( 'ax_geo_country_code', 'XK' );
+ax_geo_iso_assert(
+	$ax_geo_iso_results,
+	'a Country term chooses one registered code, while an imported unknown code is retained rather than erased',
+	str_contains( $ax_geo_iso_country_select, '<select name="ax_geo_country_code" id="ax_geo_country_code">' )
+		&& 250 === substr_count( $ax_geo_iso_country_select, '<option ' )
+		&& str_contains( $ax_geo_iso_country_select, 'Korea, Republic of (KR)' )
+		&& str_contains( $ax_geo_iso_unknown_select, 'XK (not in this registry)' )
+		&& ! str_contains( $ax_geo_iso_country_select, '<input type="text"' )
 );
 
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI fixture output.

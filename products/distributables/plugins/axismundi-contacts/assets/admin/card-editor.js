@@ -1901,33 +1901,370 @@
 	}
 
 	/**
+	 * The parts of an address a screen keeps a line open for.
+	 *
+	 * Seven, because they are the ones nearly every address has somewhere in it. Their order down the
+	 * screen is not a claim about any country: the order an address is read in is the order its own
+	 * components are in, which is why they can be dragged. This is only where an empty line for each
+	 * one sits until somebody types in it.
+	 */
+	var ADDRESS_SLOTS = [ 'number', 'name', 'district', 'locality', 'region', 'postcode', 'country' ];
+
+	/**
+	 * And the parts that are asked for rather than offered.
+	 *
+	 * A floor, a landmark, a post office box: each is a real part of somebody's address and none is a
+	 * line worth keeping open on every card. `separator` is here too -- between two parts is where it
+	 * goes, and it is dragged there like anything else.
+	 */
+	var ADDRESS_EXTRAS = [ 'room', 'apartment', 'floor', 'building', 'block', 'subdistrict', 'direction', 'landmark', 'postOfficeBox', 'separator' ];
+
+	/** What each part of an address is called where somebody reads it. */
+	function addressLabel( kind ) {
+		var labels = {
+			number: __( 'Number', 'axismundi-contacts' ),
+			name: __( 'Street', 'axismundi-contacts' ),
+			district: __( 'District', 'axismundi-contacts' ),
+			locality: __( 'City or town', 'axismundi-contacts' ),
+			region: __( 'Region', 'axismundi-contacts' ),
+			postcode: __( 'Postcode', 'axismundi-contacts' ),
+			country: __( 'Country', 'axismundi-contacts' ),
+			room: __( 'Room', 'axismundi-contacts' ),
+			apartment: __( 'Apartment', 'axismundi-contacts' ),
+			floor: __( 'Floor', 'axismundi-contacts' ),
+			building: __( 'Building', 'axismundi-contacts' ),
+			block: __( 'Block', 'axismundi-contacts' ),
+			subdistrict: __( 'Subdistrict', 'axismundi-contacts' ),
+			direction: __( 'Direction', 'axismundi-contacts' ),
+			landmark: __( 'Landmark', 'axismundi-contacts' ),
+			postOfficeBox: __( 'Post office box', 'axismundi-contacts' ),
+			separator: __( 'Separator', 'axismundi-contacts' )
+		};
+		return labels[ kind ] || kind;
+	}
+
+	/**
+	 * What a browser may fill a part in from.
+	 *
+	 * The autofill tokens the platform defines, so that somebody who has told their own browser where
+	 * they live can hand it over themselves. Nothing is sent anywhere: the browser holds the addresses
+	 * and the person chooses, which is the difference between this and asking a service.
+	 */
+	function addressAutofill( kind ) {
+		var tokens = {
+			name: 'address-line1',
+			district: 'address-level3',
+			locality: 'address-level2',
+			region: 'address-level1',
+			postcode: 'postal-code',
+			country: 'country-name'
+		};
+		return tokens[ kind ] || 'off';
+	}
+
+	/** The contexts an address can be in, which are more than the two a phone has. */
+	var ADDRESS_CONTEXTS = [
+		{ value: 'private', label: __( 'Personal', 'axismundi-contacts' ) },
+		{ value: 'work', label: __( 'Work', 'axismundi-contacts' ) },
+		{ value: 'billing', label: __( 'Billing', 'axismundi-contacts' ) },
+		{ value: 'delivery', label: __( 'Delivery', 'axismundi-contacts' ) }
+	];
+
+	/** One part of one address. */
+	function AddressPart( props ) {
+		var part = props.part || {};
+		var movable = !! props.row.part && props.ordered;
+		var at = props.row.index;
+		return el(
+			'div',
+			{
+				className: 'ax-ce-part-row' + ( movable ? ' is-movable' : '' ),
+				draggable: movable,
+				onDragStart: function () {
+					if ( movable ) {
+						props.onDragStart( at );
+					}
+				},
+				onDragOver: function ( event ) {
+					if ( movable ) {
+						event.preventDefault();
+					}
+				},
+				onDrop: function () {
+					if ( movable ) {
+						props.onDrop( at );
+					}
+				}
+			},
+			el(
+				'span',
+				{
+					className: 'ax-ce-part-row__grip',
+					'aria-hidden': 'true',
+					dangerouslySetInnerHTML: { __html: movable ? icon( 'drag-indicator' ) : '' }
+				}
+			),
+			el( TextField, {
+				label: addressLabel( props.row.kind ),
+				className: 'ax-ce-part-row__value',
+				value: part.value || '',
+				supporting: 'separator' === props.row.kind ? __( 'What goes between the parts either side of it.', 'axismundi-contacts' ) : undefined,
+				inputProps: { autoComplete: addressAutofill( props.row.kind ) },
+				onChange: function ( value ) {
+					props.onChange( props.row, value );
+				}
+			} ),
+			props.row.part || props.row.pendingId
+				? el( IconButton, {
+					icon: 'delete',
+					variant: 'danger',
+					label: sprintf(
+						/* translators: %s: which part of an address, such as Postcode. */
+						__( 'Remove %s', 'axismundi-contacts' ),
+						addressLabel( props.row.kind )
+					),
+					onClick: function () {
+						props.onRemove( props.row );
+					}
+				} )
+				: el( 'span', { className: 'ax-ce-slot__spacer', 'aria-hidden': 'true' } )
+		);
+	}
+
+	/**
+	 * The parts of one address.
+	 *
+	 * The same shape as the parts of a name and for the same reason: what is stored is an ordered
+	 * list, a line is a place to type, and the order somebody puts them in is the order the address
+	 * is read in. What differs is which parts there are, and that none of them belongs at an end --
+	 * a Korean address opens with the region and an American one closes with it, so nothing here
+	 * decides where anything goes.
+	 */
+	function AddressParts( props ) {
+		var address = props.address || {};
+		var components = address.components || [];
+		var ordered = true === address.isOrdered;
+		var [ pending, setPending ] = useState( [] );
+		var [ adding, setAdding ] = useState( false );
+		var [ dragging, setDragging ] = useState( null );
+
+		function setParts( list, extra ) {
+			var next = Object.assign( {}, address, extra || {} );
+			if ( list.length ) {
+				next.components = list;
+			} else {
+				delete next.components;
+				delete next.isOrdered;
+				delete next.defaultSeparator;
+			}
+			props.onChange( next );
+		}
+
+		function write( row, value ) {
+			if ( undefined === row.index ) {
+				if ( ! String( value ).trim() ) {
+					return;
+				}
+				/*
+				 * An address this editor builds is one whose order it knows: the lines somebody is
+				 * filling in are read down the screen in the order they wrote them. So the first part
+				 * written here says so, and an import that said otherwise is left saying it.
+				 */
+				var list = components.concat( [ { kind: row.kind, value: value } ] );
+				if ( row.pendingId ) {
+					setPending( pending.filter( function ( each ) {
+						return each.id !== row.pendingId;
+					} ) );
+				}
+				setParts( list, components.length ? {} : { isOrdered: true } );
+				return;
+			}
+			var next = components.slice();
+			if ( ! String( value ).trim() && 'separator' !== row.kind ) {
+				// A part rubbed out is a part removed; the line stays to be typed into again.
+				next.splice( row.index, 1 );
+				setParts( next );
+				return;
+			}
+			next[ row.index ] = Object.assign( {}, next[ row.index ], { value: value } );
+			setParts( next );
+		}
+
+		function remove( row ) {
+			if ( undefined === row.index ) {
+				setPending( pending.filter( function ( each ) {
+					return each.id !== row.pendingId;
+				} ) );
+				return;
+			}
+			setParts( components.filter( function ( ignored, i ) {
+				return i !== row.index;
+			} ) );
+		}
+
+		var rows = slotRows( components, ADDRESS_SLOTS, pending, true );
+
+		return el(
+			Fragment,
+			null,
+			rows.map( function ( row ) {
+				return el( AddressPart, {
+					key: row.key,
+					row: row,
+					part: row.part,
+					ordered: ordered,
+					onChange: write,
+					onRemove: remove,
+					onDragStart: setDragging,
+					onDrop: function ( at ) {
+						if ( null === dragging || dragging === at ) {
+							return;
+						}
+						var list = components.slice();
+						var moved = list.splice( dragging, 1 )[ 0 ];
+						list.splice( at, 0, moved );
+						setDragging( null );
+						setParts( list );
+					}
+				} );
+			} ),
+			el(
+				'div',
+				{ className: 'ax-ce-name__add' },
+				el( IconButton, {
+					icon: 'add',
+					label: __( 'Add a part of the address', 'axismundi-contacts' ),
+					onClick: function () {
+						setAdding( ! adding );
+					}
+				} ),
+				adding
+					? el(
+						'span',
+						{ className: 'ax-ce-name__add-list' },
+						ADDRESS_EXTRAS.map( function ( kind ) {
+							return el(
+								'button',
+								{
+									key: kind,
+									type: 'button',
+									className: 'button',
+									// A separator joins two parts in an order, so it needs one to join them in.
+									disabled: ( 'separator' === kind && ! ordered ) || pending.some( function ( each ) {
+										return each.kind === kind;
+									} ),
+									onClick: function () {
+										setAdding( false );
+										setPending( pending.concat( [ { id: newEntryId( 'part', {} ), kind: kind } ] ) );
+									}
+								},
+								addressLabel( kind )
+							);
+						} )
+					)
+					: null
+			),
+			/*
+			 * An address that arrived without saying its parts are in the order they are read. Nothing
+			 * decides that for it -- they may have come from something that recorded what they were and
+			 * not how they are written -- so it is offered as something to state.
+			 */
+			components.length && ! ordered
+				? el(
+					'div',
+					{ className: 'ax-ce-unordered' },
+					el(
+						'p',
+						null,
+						__( 'These parts are stored without a reading order, so they cannot be rearranged and nothing can go between them.', 'axismundi-contacts' )
+					),
+					el(
+						'button',
+						{
+							type: 'button',
+							className: 'button',
+							onClick: function () {
+								setParts( components, { isOrdered: true } );
+							}
+						},
+						__( 'Say they are in the order they are read', 'axismundi-contacts' )
+					)
+				)
+				: null,
+			/*
+			 * What goes between the parts when nothing says otherwise. The standard will not store one
+			 * for an address whose parts are in no order, which is the same rule the name follows.
+			 */
+			ordered && components.length
+				? el(
+					Fragment,
+					null,
+					el(
+						'p',
+						null,
+						el(
+							'label',
+							null,
+							el( 'input', {
+								type: 'checkbox',
+								checked: undefined !== address.defaultSeparator,
+								onChange: function ( event ) {
+									var next = Object.assign( {}, address );
+									if ( event.target.checked ) {
+										next.defaultSeparator = ', ';
+									} else {
+										delete next.defaultSeparator;
+									}
+									props.onChange( next );
+								}
+							} ),
+							' ',
+							__( 'Default separator', 'axismundi-contacts' )
+						)
+					),
+					undefined !== address.defaultSeparator
+						? el( TextField, {
+							label: __( 'Default separator', 'axismundi-contacts' ),
+							className: 'ax-ce-separator',
+							value: address.defaultSeparator,
+							supporting: __( 'What goes between the parts. Empty for addresses written without spaces.', 'axismundi-contacts' ),
+							onChange: function ( value ) {
+								props.onChange( Object.assign( {}, address, { defaultSeparator: value } ) );
+							}
+						} )
+						: null
+				)
+				: null
+		);
+	}
+
+	/**
 	 * Where somebody is.
 	 *
-	 * A country, the address as it is written, and where it belongs in their life. Nothing more, on
-	 * purpose. An address is not a name: a name is six parts in an order, the same six everywhere,
-	 * while an address is a different shape in every country -- a Korean address runs largest to
-	 * smallest and a British one the other way, and the fields themselves differ. A screen that took
-	 * one apart into boxes would be picking one country's form and asking the rest of the world to
-	 * fit it.
+	 * An address is written two ways and a Card may hold both: the parts it is made of, and the line
+	 * it is written as. Neither is built from the other. A Tokyo address in the standard's own
+	 * examples carries components, a `full`, and a Japanese localization of both -- the parts are how
+	 * a machine reads it, the line is how a person writes it, and a screen deriving either would be
+	 * throwing away whichever one somebody actually typed.
 	 *
-	 * So this stores what somebody wrote, and `countryCode` beside it because that is the one part
-	 * every address has and the one a reader needs to know how to read the rest. `components` is not
-	 * built from the line and the line is not rebuilt from `components`: an address that arrived taken
-	 * apart keeps its parts, visible in the JSON, until there is a screen that can show them properly.
+	 * `countryCode` sits beside them because it is the one part every address has and the one a
+	 * reader needs in order to know how to read the rest. It is not the `country` component and does
+	 * not write one: `US` is the code, `USA` is what somebody put in the address, and the standard's
+	 * example carries both.
 	 *
-	 * Nothing here sends an address anywhere to be completed or checked. Where somebody lives is not
-	 * a search query, and a field that quietly handed it to a service to be autocompleted would be
-	 * doing that on their behalf without asking.
+	 * Nothing here sends an address anywhere to be completed or checked. The fields carry the
+	 * platform's own autofill tokens, so somebody who has told their browser where they live can hand
+	 * it over themselves -- which is the opposite of a screen asking a service on their behalf.
 	 */
 	function Addresses( props ) {
-		var presets = ( config.presets || {} ).addresses || [];
 		var countries = regionOptions( false );
 		var rows = useEntryRows( props, {
 			prefix: 'adr',
 			required: 'full',
 			property: 'addresses',
-			// An address that arrived in pieces is an address, whatever the line says.
-			keeps: [ 'components', 'coordinates' ]
+			// An address is whatever it holds. The standard needs one of these and not `full` in
+			// particular, so any of them keeps an entry that has it.
+			keeps: [ 'components', 'coordinates', 'countryCode', 'timeZone' ]
 		} );
 
 		return el(
@@ -1935,7 +2272,7 @@
 			{ icon: 'location-on', label: __( 'Addresses', 'axismundi-contacts' ) },
 			rows.rows.map( function ( row ) {
 				var entry = row.entry;
-				var preset = presetOf( entry, presets );
+				var contexts = entry.contexts || {};
 				return el(
 					'div',
 					{ key: row.key, className: 'ax-ce-address' },
@@ -1949,6 +2286,7 @@
 								value: entry.countryCode || '',
 								options: countries,
 								allowFree: true,
+								supporting: __( 'Which country reads this address. Not the country written in it.', 'axismundi-contacts' ),
 								onChange: function ( value ) {
 									rows.write( row, function ( each ) {
 										return withKey( each, 'countryCode', value );
@@ -1956,43 +2294,107 @@
 								}
 							} )
 							: null,
-						el( Textarea, {
-							label: __( 'Address', 'axismundi-contacts' ),
-							className: 'ax-ce-address__full',
-							rows: 3,
-							value: entry.full || '',
-							supporting: entry.components
-								? __( 'This address also arrived in parts, which are kept as they came.', 'axismundi-contacts' )
-								: __( 'Written the way that country writes it.', 'axismundi-contacts' ),
-							onChange: function ( value ) {
-								rows.write( row, function ( each ) {
-									return withKey( each, 'full', value );
+						el( AddressParts, {
+							address: entry,
+							onChange: function ( next ) {
+								rows.write( row, function () {
+									return next;
 								} );
 							}
 						} ),
-						el( Combobox, {
-							label: __( 'What it is', 'axismundi-contacts' ),
-							className: 'ax-ce-address__preset',
-							value: preset,
-							options: presets,
+						/*
+						 * Where it belongs, which for an address is more than one answer: a work
+						 * address may also be where things are delivered, and the standard says both
+						 * with two contexts rather than making somebody choose.
+						 */
+						el(
+							'p',
+							{ className: 'ax-ce-address__contexts' },
+							ADDRESS_CONTEXTS.map( function ( context ) {
+								return el(
+									'label',
+									{ key: context.value },
+									el( 'input', {
+										type: 'checkbox',
+										checked: true === contexts[ context.value ],
+										onChange: function ( event ) {
+											rows.write( row, function ( each ) {
+												var next = Object.assign( {}, each );
+												var held = Object.assign( {}, next.contexts );
+												if ( event.target.checked ) {
+													held[ context.value ] = true;
+												} else {
+													delete held[ context.value ];
+												}
+												if ( Object.keys( held ).length ) {
+													next.contexts = held;
+												} else {
+													delete next.contexts;
+												}
+												return next;
+											} );
+										}
+									} ),
+									' ',
+									context.label
+								);
+							} )
+						),
+						el( TextField, {
+							label: __( 'Called', 'axismundi-contacts' ),
+							className: 'ax-ce-address__label',
+							value: entry.label || '',
+							supporting: __( 'Optional, for an address none of those describes.', 'axismundi-contacts' ),
 							onChange: function ( value ) {
 								rows.write( row, function ( each ) {
-									return withPreset( each, value, presets, each.label );
+									return withKey( each, 'label', value );
 								} );
 							}
 						} ),
-						'custom' === preset
-							? el( TextField, {
-								label: __( 'Called', 'axismundi-contacts' ),
-								className: 'ax-ce-address__label',
-								value: entry.label || '',
+						/*
+						 * The line, and the two facts about where this address is. All three are here
+						 * rather than in front of somebody typing a street name: the line is what an
+						 * import of an address nobody took apart brings, and the other two are things
+						 * a machine wants and a person rarely does.
+						 */
+						el(
+							'details',
+							{ className: 'ax-ce-name__advanced' },
+							el( 'summary', null, __( 'More about this address', 'axismundi-contacts' ) ),
+							el( Textarea, {
+								label: __( 'Written out', 'axismundi-contacts' ),
+								className: 'ax-ce-address__full',
+								rows: 3,
+								value: entry.full || '',
+								supporting: __( 'The whole address as one line. Kept as written, and never built from the parts above or replaced by them.', 'axismundi-contacts' ),
+								inputProps: { autoComplete: 'street-address' },
 								onChange: function ( value ) {
 									rows.write( row, function ( each ) {
-										return withKey( each, 'label', value );
+										return withKey( each, 'full', value );
+									} );
+								}
+							} ),
+							el( TextField, {
+								label: __( 'Coordinates', 'axismundi-contacts' ),
+								value: entry.coordinates || '',
+								supporting: __( 'A geo: URI, like geo:37.386,-122.084.', 'axismundi-contacts' ),
+								onChange: function ( value ) {
+									rows.write( row, function ( each ) {
+										return withKey( each, 'coordinates', value );
+									} );
+								}
+							} ),
+							el( TextField, {
+								label: __( 'Time zone', 'axismundi-contacts' ),
+								value: entry.timeZone || '',
+								supporting: __( 'A time zone name, like Asia/Seoul.', 'axismundi-contacts' ),
+								onChange: function ( value ) {
+									rows.write( row, function ( each ) {
+										return withKey( each, 'timeZone', value );
 									} );
 								}
 							} )
-							: null
+						)
 					),
 					el( IconButton, {
 						icon: 'delete',

@@ -756,3 +756,43 @@
 	flex: 1 1 100%;
 	min-width: 0;
 }
+
+/* One part of an address: a grip, what it says, and a way to take it away. */
+.ax-ce-part-row {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+}
+
+.ax-ce-part-row.is-movable {
+	cursor: grab;
+}
+
+.ax-ce-part-row__grip {
+	flex: 0 0 24px;
+	margin-top: 16px;
+	color: #787c82;
+}
+
+.ax-ce-part-row__grip svg {
+	display: block;
+	width: 24px;
+	height: 24px;
+	fill: currentColor;
+}
+
+.ax-ce-part-row__value {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.ax-ce-address__contexts {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1em;
+	margin: .5em 0;
+}
+
+.ax-ce-address__fields {
+	display: block;
+}

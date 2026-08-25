@@ -591,6 +591,30 @@ function axismundi_contacts_validate_card_values( array $card ) {
 			);
 		}
 	}
+	/*
+	 * An address made only of the things that go between its parts is an address with no parts. The
+	 * standard says as much, and so does reading one: `, , ,` names nowhere. Everything else about an
+	 * address is left as it arrived -- a separator on an unordered address is wrong rather than
+	 * meaningless, and refusing it would refuse somebody's import over a rule for writers.
+	 */
+	foreach ( (array) ( $card['addresses'] ?? array() ) as $id => $address ) {
+		$components = is_array( $address ) ? (array) ( $address['components'] ?? array() ) : array();
+		if ( array() === $components ) {
+			continue;
+		}
+		$named = array_filter(
+			$components,
+			static function ( $component ) : bool {
+				return is_array( $component ) && 'separator' !== ( $component['kind'] ?? '' );
+			}
+		);
+		if ( array() === $named ) {
+			return axismundi_contacts_value_error(
+				'addresses/' . $id . '/components',
+				__( 'an address made only of separators names nowhere', 'axismundi-contacts' )
+			);
+		}
+	}
 	foreach ( axismundi_contacts_value_rules() as $property => $rules ) {
 		$entries = $card[ $property ] ?? null;
 		if ( null === $entries ) {

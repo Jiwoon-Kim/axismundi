@@ -4929,24 +4929,109 @@ try {
 	ax_ct_assert(
 		$ax_ct_results,
 		'an entry stays for what it holds, not only for the one thing that would have started it',
-		str_contains( $ax_ct_cb_editor, "keeps: [ 'components', 'coordinates' ]" )
+		str_contains( $ax_ct_cb_editor, "keeps: [ 'components', 'coordinates', 'countryCode', 'timeZone' ]" )
 			&& str_contains( $ax_ct_cb_editor, 'var keeps = ( options.keeps || [] ).some( function ( key ) {' )
 			&& str_contains( $ax_ct_cb_editor, "required: 'full'," )
 	);
 	/*
-	 * Nothing here sends an address anywhere to be completed or checked. Where somebody lives is not
-	 * a search query, and a field quietly handing it to a service to be autocompleted would be doing
-	 * that on their behalf without asking.
+	 * Nothing here sends an address anywhere to be completed or checked. The fields carry the
+	 * platform's own autofill tokens instead, so somebody who has told their browser where they live
+	 * can hand it over themselves -- the browser holds the addresses and the person chooses, which is
+	 * the opposite of a screen asking a service on their behalf.
 	 */
 	ax_ct_assert(
 		$ax_ct_results,
-		'where somebody lives is not sent anywhere to be finished off',
-		// Nothing fetches, and nothing points at a service that would.
-		! str_contains( $ax_ct_cb_editor, 'autocomplete=' )
-			&& ! str_contains( $ax_ct_cb_editor, "'autocomplete'" )
+		'a browser may offer what somebody told it, and nothing is asked of anybody else',
+		str_contains( $ax_ct_cb_editor, 'function addressAutofill( kind )' )
+			&& str_contains( $ax_ct_cb_editor, "locality: 'address-level2'," )
+			&& str_contains( $ax_ct_cb_editor, "inputProps: { autoComplete: 'street-address' }," )
+			// Nothing fetches, and nothing names a service that would.
 			&& ! str_contains( $ax_ct_cb_editor, 'maps.googleapis' )
 			&& ! str_contains( $ax_ct_cb_editor, 'nominatim' )
-			&& str_contains( $ax_ct_cb_editor, 'Where somebody lives is not' )
+			&& ! str_contains( $ax_ct_cb_editor, 'geocod' )
+			&& str_contains( $ax_ct_cb_editor, 'Nothing is sent anywhere: the browser holds the addresses' )
+	);
+
+	/*
+	 * The standard's own example, made and read back without losing anything. An address is written
+	 * two ways and a Card may hold both -- the parts it is made of and the line it is written as --
+	 * and neither is built from the other: the Tokyo example in RFC 9553 carries components, a `full`
+	 * and a Japanese localization of both.
+	 */
+	$ax_ct_k23 = array(
+		'contexts'         => array( 'work' => true ),
+		'components'       => array(
+			array( 'kind' => 'number', 'value' => '54321' ),
+			array( 'kind' => 'separator', 'value' => ' ' ),
+			array( 'kind' => 'name', 'value' => 'Oak St' ),
+			array( 'kind' => 'locality', 'value' => 'Reston' ),
+			array( 'kind' => 'region', 'value' => 'VA' ),
+			array( 'kind' => 'separator', 'value' => ' ' ),
+			array( 'kind' => 'postcode', 'value' => '20190' ),
+			array( 'kind' => 'country', 'value' => 'USA' ),
+		),
+		'countryCode'      => 'US',
+		'defaultSeparator' => ', ',
+		'isOrdered'        => true,
+	);
+	$ax_ct_k23_id  = axismundi_contacts_save_card( $ax_ct_book_id, array( '@type' => 'Card', 'name' => array( 'full' => 'k23' ), 'addresses' => array( 'k23' => $ax_ct_k23 ) ) );
+	$ax_ct_k23_key = is_wp_error( $ax_ct_k23_id ) ? 0 : (int) $ax_ct_k23_id;
+	$ax_ct_loose[] = $ax_ct_k23_key;
+	$ax_ct_k23_back = (array) ( axismundi_contacts_card_document( $ax_ct_k23_key )['addresses']['k23'] ?? array() );
+	ax_ct_assert(
+		$ax_ct_results,
+		'the standard’s own address comes back the way it went in, separators and all',
+		array_column( $ax_ct_k23['components'], 'kind' ) === array_column( (array) $ax_ct_k23_back['components'], 'kind' )
+			&& array_column( $ax_ct_k23['components'], 'value' ) === array_column( (array) $ax_ct_k23_back['components'], 'value' )
+			// `US` is the code and `USA` is what somebody wrote in the address: two facts, both kept.
+			&& 'US' === (string) $ax_ct_k23_back['countryCode']
+			&& 'USA' === (string) $ax_ct_k23_back['components'][7]['value']
+			&& ', ' === (string) $ax_ct_k23_back['defaultSeparator']
+			&& true === $ax_ct_k23_back['isOrdered']
+	);
+	// And the parts are a line each, with a way to ask for the ones that are not.
+	ax_ct_assert(
+		$ax_ct_results,
+		'an address is written as its parts, in whatever order that address is read in',
+		str_contains( $ax_ct_cb_editor, "var ADDRESS_SLOTS = [ 'number', 'name', 'district', 'locality', 'region', 'postcode', 'country' ];" )
+			&& str_contains( $ax_ct_cb_editor, "'postOfficeBox', 'separator' ];" )
+			&& str_contains( $ax_ct_cb_editor, 'function AddressParts( props )' )
+			&& str_contains( $ax_ct_cb_editor, 'slotRows( components, ADDRESS_SLOTS, pending, true )' )
+			// Nothing at an end: a Korean address opens with the region and an American one closes.
+			&& ! str_contains( $ax_ct_cb_editor, 'ADDRESS_FIXED' )
+	);
+	/*
+	 * An address made only of the things that go between its parts is an address with no parts:
+	 * `, , ,` names nowhere. Everything else is left as it arrived -- a separator on an unordered
+	 * address is wrong rather than meaningless, and refusing it would refuse somebody's import over a
+	 * rule written for whoever is doing the writing.
+	 */
+	$ax_ct_k23_empty = array(
+		'@type'     => 'Card',
+		'name'      => array( 'full' => 'Nowhere' ),
+		'addresses' => array( 'adr-x' => array( 'components' => array( array( 'kind' => 'separator', 'value' => ', ' ) ), 'isOrdered' => true ) ),
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'an address made only of separators names nowhere, and is refused for saying nothing',
+		is_wp_error( axismundi_contacts_validate_card_values( $ax_ct_k23_empty ) )
+			// While one whose parts are in no order keeps whatever it arrived with.
+			&& true === axismundi_contacts_validate_card_values(
+				array( 'addresses' => array( 'adr-y' => array( 'components' => array( array( 'kind' => 'locality', 'value' => 'London' ) ), 'defaultSeparator' => ', ' ) ) )
+			)
+	);
+	/*
+	 * Where an address belongs is more than one answer. A work address may also be where things are
+	 * delivered, and the standard says both with two contexts rather than making somebody choose --
+	 * which is why this row has checkboxes where a phone row has a list.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'an address can be two places in somebody’s life at once, which a phone cannot',
+		str_contains( $ax_ct_cb_editor, 'var ADDRESS_CONTEXTS = [' )
+			&& str_contains( $ax_ct_cb_editor, "{ value: 'billing'," )
+			&& str_contains( $ax_ct_cb_editor, "{ value: 'delivery'," )
+			&& str_contains( $ax_ct_cb_editor, "className: 'ax-ce-address__contexts'" )
 	);
 
 	ax_ct_assert(

@@ -3600,7 +3600,7 @@ try {
 			 * published -- the home row keeps its fixed key because that row is the same account
 			 * every time it is seeded.
 			 */
-			&& 1 === preg_match( '/^x-[0-9a-f]{6}$/', axismundi_contacts_free_service_key( array() ) )
+			&& 1 === preg_match( '/^x-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', axismundi_contacts_free_service_key( array() ) )
 			&& axismundi_contacts_free_service_key( array() ) !== axismundi_contacts_free_service_key( array() )
 	);
 	/*
@@ -4619,7 +4619,10 @@ try {
 		$ax_ct_results,
 		'a new entry gets an address nothing here has used, rather than the next number up',
 		str_contains( $ax_ct_cb_editor, 'function newEntryId( prefix, entries )' )
-			&& str_contains( $ax_ct_cb_editor, "id = prefix + '-' + Math.random().toString( 36 ).slice( 2, 8 );" )
+			&& str_contains( $ax_ct_cb_editor, "id = prefix + '-' + uniqueId();" )
+			// A whole uuid: what this Card holds says nothing about what it used to hold.
+			&& str_contains( $ax_ct_cb_editor, 'window.crypto.randomUUID()' )
+			&& str_contains( $ax_ct_cb_editor, 'window.crypto.getRandomValues( new Uint8Array( 16 ) )' )
 			&& str_contains( $ax_ct_cb_editor, "newEntryId( 'pho', entries )" )
 			&& str_contains( $ax_ct_cb_editor, "newEntryId( 'org', entries )" )
 			&& str_contains( $ax_ct_cb_editor, "newEntryId( 'ttl', entries )" )

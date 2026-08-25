@@ -1309,9 +1309,37 @@
 	function newEntryId( prefix, entries ) {
 		var id = '';
 		do {
-			id = prefix + '-' + Math.random().toString( 36 ).slice( 2, 8 );
+			id = prefix + '-' + uniqueId();
 		} while ( Object.prototype.hasOwnProperty.call( entries || {}, id ) );
 		return id;
+	}
+
+	/**
+	 * Something nothing has been called before.
+	 *
+	 * A whole uuid rather than a few characters of one. Checking against the ids this Card holds says
+	 * nothing about the ids it used to hold: a deleted `phones/pho-a1b2c3` is still the address a
+	 * provenance row and somebody's agreement to publish were written against, and six characters of
+	 * base36 come round often enough to hand one of those to a number typed months later. The id is
+	 * never shown, so its length costs nobody anything.
+	 */
+	function uniqueId() {
+		if ( window.crypto && window.crypto.randomUUID ) {
+			return window.crypto.randomUUID();
+		}
+		if ( window.crypto && window.crypto.getRandomValues ) {
+			// The same 122 bits, drawn by hand where `randomUUID` is not offered -- it needs a secure
+			// context, and an admin screen served over plain http on somebody's network is not one.
+			var bytes = window.crypto.getRandomValues( new Uint8Array( 16 ) );
+			bytes[ 6 ] = ( bytes[ 6 ] & 0x0f ) | 0x40;
+			bytes[ 8 ] = ( bytes[ 8 ] & 0x3f ) | 0x80;
+			var hex = Array.prototype.map.call( bytes, function ( byte ) {
+				return ( '0' + byte.toString( 16 ) ).slice( -2 );
+			} ).join( '' );
+			return [ hex.slice( 0, 8 ), hex.slice( 8, 12 ), hex.slice( 12, 16 ), hex.slice( 16, 20 ), hex.slice( 20 ) ].join( '-' );
+		}
+		// Nothing to draw from. Long enough that the birthday problem is somebody else's.
+		return Date.now().toString( 36 ) + '-' + Math.random().toString( 36 ).slice( 2, 14 ) + Math.random().toString( 36 ).slice( 2, 14 );
 	}
 
 	/**

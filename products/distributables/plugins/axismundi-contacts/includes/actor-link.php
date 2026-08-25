@@ -72,7 +72,13 @@ function axismundi_contacts_free_service_key( array $document ) : string {
 	 */
 	$taken = (array) ( $document['onlineServices'] ?? array() );
 	do {
-		$key = 'x-' . substr( str_replace( '-', '', wp_generate_uuid4() ), 0, 6 );
+		/*
+		 * The whole uuid. Checking against the keys this Card holds says nothing about the keys it
+		 * used to hold, and a few characters of one come round often enough to hand a deleted
+		 * account's address -- with its provenance and whoever agreed it could be published -- to an
+		 * account added later. The key is never shown, so its length costs nobody anything.
+		 */
+		$key = 'x-' . wp_generate_uuid4();
 	} while ( isset( $taken[ $key ] ) );
 	return $key;
 }

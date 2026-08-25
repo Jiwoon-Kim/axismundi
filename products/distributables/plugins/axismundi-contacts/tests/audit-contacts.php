@@ -4628,7 +4628,9 @@ try {
 			 * that moves from `Mobile` to `Work` keeps the address its provenance and its publishing
 			 * consent were written against.
 			 */
-			&& str_contains( $ax_ct_cb_editor, "newEntryId( 'tel', entries )" )
+			&& str_contains( $ax_ct_cb_editor, "prefix: 'tel', required: 'number'" )
+			&& str_contains( $ax_ct_cb_editor, "prefix: 'eml', required: 'address'" )
+			&& str_contains( $ax_ct_cb_editor, "newEntryId( options.prefix, entries )" )
 			&& str_contains( $ax_ct_cb_editor, "newEntryId( 'onl', entries )" )
 			&& str_contains( $ax_ct_cb_editor, "newEntryId( 'org', entries )" )
 			&& str_contains( $ax_ct_cb_editor, "newEntryId( 'ttl', entries )" )
@@ -4648,6 +4650,9 @@ try {
 		$ax_ct_results,
 		'what a number is called can be answered first, and is still there when the number arrives',
 		str_contains( $ax_ct_cb_editor, 'var made = change( row.entry );' )
+			// One set of row mechanics, because it was got wrong once per collection.
+			&& str_contains( $ax_ct_cb_editor, 'function useEntryRows( props, options )' )
+			&& str_contains( $ax_ct_cb_editor, 'function resolveEntryRemoval( card, property, question, update )' )
 			&& str_contains( $ax_ct_cb_editor, "return each.id === row.pending ? { id: each.id, entry: made } : each;" )
 	);
 	/*
@@ -4664,11 +4669,12 @@ try {
 		$ax_ct_results,
 		'an entry that is only a label is not an entry, and rubbing out a number leaves a row instead',
 		is_wp_error( axismundi_contacts_validate_card_values( $ax_ct_pi_only ) )
-			&& str_contains( $ax_ct_cb_editor, "if ( ! String( written.number || '' ).trim() ) {" )
+			&& str_contains( $ax_ct_cb_editor, "if ( ! String( written[ options.required ] || '' ).trim() ) {" )
 			&& str_contains( $ax_ct_cb_editor, "setPending( pending.concat( [ { id: newEntryId( 'row', {} ), entry: written } ] ) );" )
 			// Unless a language says something about it, in which case taking it away is a question.
-			&& str_contains( $ax_ct_cb_editor, "patchesUnder( ( props.card || {} ).localizations, 'phones/' + row.id )" )
+			&& str_contains( $ax_ct_cb_editor, "patchesUnder( ( props.card || {} ).localizations, options.property + '/' + id )" )
 			&& str_contains( $ax_ct_cb_editor, "__( 'Remove them and the number', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_cb_editor, "__( 'Remove them and the address', 'axismundi-contacts' )" )
 	);
 
 	/*
@@ -4822,6 +4828,56 @@ try {
 			// Read in the same order the accounts are, because `pref` means the same thing in both.
 			&& str_contains( $ax_ct_cb_editor, 'var order = orderedByPreference( entries );' )
 			&& str_contains( $ax_ct_cb_editor, 'function orderedByPreference( entries )' )
+	);
+
+	/*
+	 * An email address has one axis where a phone has two. A phone can be a fax and a mobile at once,
+	 * which is why it says both what it is for and where it belongs; an address is only ever somewhere
+	 * in somebody's life. Anything the three answers cannot say is somebody's own word for it, which
+	 * the standard stores as a label -- and the two are exclusive, because an entry saying both `work`
+	 * and `Newsletter` is claiming two answers to one question.
+	 */
+	$ax_ct_em_presets = axismundi_contacts_email_presets();
+	$ax_ct_em_id      = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array(
+			'@type'  => 'Card',
+			'name'   => array( 'full' => 'Two addresses' ),
+			'emails' => array(
+				'eml-one' => array( 'address' => 'me@example.test', 'contexts' => array( 'private' => true ) ),
+				'eml-two' => array( 'address' => 'listed@example.test', 'label' => 'Newsletter' ),
+			),
+		)
+	);
+	$ax_ct_em_key  = is_wp_error( $ax_ct_em_id ) ? 0 : (int) $ax_ct_em_id;
+	$ax_ct_loose[] = $ax_ct_em_key;
+	$ax_ct_em_back = axismundi_contacts_card_document( $ax_ct_em_key );
+	ax_ct_assert(
+		$ax_ct_results,
+		'an address says where it belongs, or what somebody calls it, and never both',
+		array() === $ax_ct_em_presets['private']['features']
+			&& 'private' === axismundi_contacts_entry_preset( 'emails', (array) $ax_ct_em_back['emails']['eml-one'] )
+			&& 'custom' === axismundi_contacts_entry_preset( 'emails', (array) $ax_ct_em_back['emails']['eml-two'] )
+			&& ! array_key_exists( 'contexts', (array) $ax_ct_em_back['emails']['eml-two'] )
+			&& str_contains( $ax_ct_cb_editor, 'function Emails( props )' )
+			&& str_contains( $ax_ct_cb_editor, "__( 'Add an email address', 'axismundi-contacts' )" )
+	);
+	/*
+	 * And the rows work the way every other collection's do, because they are the same rows. Each of
+	 * these was got wrong once, in a different section, before it was written down in one place:
+	 * opening a row writes nothing, what is answered first waits for what makes it an entry, emptying
+	 * that takes the entry away and leaves the row, and an entry a language talks about is a question
+	 * rather than a keystroke.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'every collection asks the same things of a row, because it is the same row',
+		str_contains( $ax_ct_cb_editor, "useEntryRows( props, { prefix: 'tel', required: 'number', property: 'phones' } )" )
+			&& str_contains( $ax_ct_cb_editor, "useEntryRows( props, { prefix: 'eml', required: 'address', property: 'emails' } )" )
+			&& str_contains( $ax_ct_cb_editor, "resolveEntryRemoval( card, 'phones', question, update )" )
+			&& str_contains( $ax_ct_cb_editor, "resolveEntryRemoval( card, 'emails', question, update )" )
+			// Written once because it was got wrong once per collection.
+			&& str_contains( $ax_ct_cb_editor, 'Written once because it was got wrong once per collection.' )
 	);
 
 	ax_ct_assert(

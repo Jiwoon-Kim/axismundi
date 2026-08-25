@@ -102,7 +102,6 @@
 	 * says what the entry is at a glance.
 	 */
 	var ENTRY_FIELDS = [
-		{ key: 'emails', prefix: 'eml', label: __( 'Email', 'axismundi-contacts' ), value: 'address', type: 'email', icon: 'mail' },
 		{ key: 'links', prefix: 'lnk', label: __( 'Links', 'axismundi-contacts' ), value: 'uri', type: 'url', icon: 'link' },
 		{ key: 'media', prefix: 'med', label: __( 'Media', 'axismundi-contacts' ), value: 'uri', type: 'url', icon: 'image' },
 		{ key: 'notes', prefix: 'not', label: __( 'Notes', 'axismundi-contacts' ), value: 'note', icon: 'notes' }
@@ -1351,6 +1350,177 @@
 	}
 
 	/**
+	 * The rows of one repeating property, and the difference between a row and an entry.
+	 *
+	 * Every collection on this screen works the same way and learned it the same way, one defect at a
+	 * time: a row is a place to type and an entry is something the card says. Opening a row writes
+	 * nothing. What somebody answers about a row waits on the row until the thing that makes it an
+	 * entry arrives -- picking `Work` before typing the address means both, and the screen that
+	 * dropped the first because the second came second was forgetting what it was told. Emptying the
+	 * thing that made it an entry takes the entry away and leaves the row, holding everything else it
+	 * said. And an entry a language says something about is not removed by a keystroke: what would be
+	 * left pointing at nothing is named, and somebody decides.
+	 *
+	 * Written once because it was got wrong once per collection.
+	 *
+	 * @param {Object} props   The section's own props: `value`, `card`, `onChange`, `onResolve`.
+	 * @param {Object} options `prefix` for new addresses, `required` key, `property` for patch paths.
+	 */
+	function useEntryRows( props, options ) {
+		var entries = props.value || {};
+		var [ pending, setPending ] = useState( [] );
+		var [ asking, setAsking ] = useState( null );
+
+		function setEntries( next ) {
+			props.onChange( Object.keys( next ).length ? next : undefined );
+		}
+
+		/** Everything a language says about one entry, which removing it would leave pointing at nothing. */
+		function dependsOn( id ) {
+			return patchesUnder( ( props.card || {} ).localizations, options.property + '/' + id ).map( function ( each ) {
+				return { kind: 'patch', tag: each.tag, path: each.path, label: each.tag + ' — ' + each.path };
+			} );
+		}
+
+		function write( row, change ) {
+			if ( row.pending ) {
+				var made = change( row.entry );
+				if ( ! String( made[ options.required ] || '' ).trim() ) {
+					setPending( pending.map( function ( each ) {
+						return each.id === row.pending ? { id: each.id, entry: made } : each;
+					} ) );
+					return;
+				}
+				var next = Object.assign( {}, entries );
+				next[ newEntryId( options.prefix, entries ) ] = made;
+				setPending( pending.filter( function ( each ) {
+					return each.id !== row.pending;
+				} ) );
+				setEntries( next );
+				return;
+			}
+			var written = change( entries[ row.id ] || {} );
+			if ( ! String( written[ options.required ] || '' ).trim() ) {
+				var affected = dependsOn( row.id );
+				if ( affected.length ) {
+					setAsking( { id: row.id, depends: affected } );
+					return;
+				}
+				var without = Object.assign( {}, entries );
+				delete without[ row.id ];
+				delete written[ options.required ];
+				setPending( pending.concat( [ { id: newEntryId( 'row', {} ), entry: written } ] ) );
+				setEntries( without );
+				return;
+			}
+			var updated = Object.assign( {}, entries );
+			updated[ row.id ] = written;
+			setEntries( updated );
+		}
+
+		function remove( row ) {
+			if ( row.pending ) {
+				setPending( pending.filter( function ( each ) {
+					return each.id !== row.pending;
+				} ) );
+				return;
+			}
+			var affected = dependsOn( row.id );
+			if ( affected.length ) {
+				setAsking( { id: row.id, depends: affected } );
+				return;
+			}
+			var next = Object.assign( {}, entries );
+			delete next[ row.id ];
+			setEntries( next );
+		}
+
+		function open() {
+			setPending( pending.concat( [ { id: newEntryId( 'row', {} ), entry: {} } ] ) );
+		}
+
+		/** The question, when there is one to ask. */
+		function question( notice, action ) {
+			if ( ! asking ) {
+				return null;
+			}
+			return el(
+				'div',
+				{ className: 'ax-ce-blocked', role: 'alert' },
+				el( 'p', null, notice ),
+				el(
+					'ul',
+					null,
+					asking.depends.map( function ( each ) {
+						return el( 'li', { key: each.tag + each.path }, each.label );
+					} )
+				),
+				el(
+					'p',
+					null,
+					el(
+						'button',
+						{
+							type: 'button',
+							className: 'button',
+							onClick: function () {
+								props.onResolve( asking );
+								setAsking( null );
+							}
+						},
+						action
+					),
+					' ',
+					el(
+						'button',
+						{
+							type: 'button',
+							className: 'button',
+							onClick: function () {
+								setAsking( null );
+							}
+						},
+						__( 'Keep everything', 'axismundi-contacts' )
+					)
+				)
+			);
+		}
+
+		var rows = Object.keys( entries ).map( function ( id ) {
+			return { key: id, id: id, entry: entries[ id ] || {} };
+		} ).concat( pending.map( function ( each ) {
+			return { key: each.id, pending: each.id, entry: each.entry };
+		} ) );
+
+		return { entries: entries, rows: rows, write: write, remove: remove, open: open, question: question };
+	}
+
+	/**
+	 * Letting go of one entry and everything a language said about it.
+	 *
+	 * The card's own answer to the question the rows ask, which is the same answer for every
+	 * collection: the entry goes, and the patches that named it go with it, because either alone is a
+	 * document the store refuses.
+	 */
+	function resolveEntryRemoval( card, property, question, update ) {
+		var next = Object.assign( {}, card );
+		var entries = Object.assign( {}, next[ property ] );
+		delete entries[ question.id ];
+		if ( Object.keys( entries ).length ) {
+			next[ property ] = entries;
+		} else {
+			delete next[ property ];
+		}
+		var localizations = withoutPatches( next.localizations, question.depends );
+		if ( Object.keys( localizations ).length ) {
+			next.localizations = localizations;
+		} else {
+			delete next.localizations;
+		}
+		update( next );
+	}
+
+	/**
 	 * Google's phone number rules, when they loaded.
 	 *
 	 * Everything below works without them: the country control disappears, what somebody types is
@@ -1512,12 +1682,10 @@
 	 * mid-keystroke would be arguing with them about their own phone number.
 	 */
 	function Phones( props ) {
-		var entries = props.value || {};
 		var presets = ( config.presets || {} ).phones || [];
 		var regions = phoneRegions();
 		var [ hints, setHints ] = useState( {} );
-		var [ pending, setPending ] = useState( [] );
-		var [ asking, setAsking ] = useState( null );
+		var rows = useEntryRows( props, { prefix: 'tel', required: 'number', property: 'phones' } );
 
 		function regionFor( id, entry ) {
 			if ( hints[ id ] ) {
@@ -1527,70 +1695,10 @@
 			return read && read.country ? read.country : ( config.region || '' );
 		}
 
-		function setEntries( next ) {
-			props.onChange( Object.keys( next ).length ? next : undefined );
-		}
-
-		function write( row, change ) {
-			if ( row.pending ) {
-				var made = change( row.entry );
-				if ( ! String( made.number || '' ).trim() ) {
-					/*
-					 * A phone entry is a number, so until there is one this is a line. What has been
-					 * answered about it waits on the line: somebody who picks `Mobile` and then types
-					 * the number meant both, and dropping the first because the second came second
-					 * would be the screen forgetting what it was told.
-					 */
-					setPending( pending.map( function ( each ) {
-						return each.id === row.pending ? { id: each.id, entry: made } : each;
-					} ) );
-					return;
-				}
-				var next = Object.assign( {}, entries );
-				next[ newEntryId( 'tel', entries ) ] = made;
-				setPending( pending.filter( function ( each ) {
-					return each.id !== row.pending;
-				} ) );
-				setEntries( next );
-				return;
-			}
-			var written = change( entries[ row.id ] || {} );
-			if ( ! String( written.number || '' ).trim() ) {
-				/*
-				 * A number rubbed out is a number removed, and an entry that is only a label is one
-				 * the store refuses. The row stays with everything else it said, waiting for another
-				 * number -- unless a language says something about this entry, in which case taking it
-				 * away is a question rather than a keystroke.
-				 */
-				var affected = patchesUnder( ( props.card || {} ).localizations, 'phones/' + row.id );
-				if ( affected.length ) {
-					setAsking( { id: row.id, depends: affected.map( function ( each ) {
-						return { kind: 'patch', tag: each.tag, path: each.path, label: each.tag + ' — ' + each.path };
-					} ) } );
-					return;
-				}
-				var without = Object.assign( {}, entries );
-				delete without[ row.id ];
-				delete written.number;
-				setPending( pending.concat( [ { id: newEntryId( 'row', {} ), entry: written } ] ) );
-				setEntries( without );
-				return;
-			}
-			var updated = Object.assign( {}, entries );
-			updated[ row.id ] = written;
-			setEntries( updated );
-		}
-
-		var rows = Object.keys( entries ).map( function ( id ) {
-			return { key: id, id: id, entry: entries[ id ] || {} };
-		} ).concat( pending.map( function ( each ) {
-			return { key: each.id, pending: each.id, entry: each.entry };
-		} ) );
-
 		return el(
 			Section,
 			{ icon: 'call', label: __( 'Phone', 'axismundi-contacts' ) },
-			rows.map( function ( row ) {
+			rows.rows.map( function ( row ) {
 				var entry = row.entry;
 				var region = regionFor( row.key, entry );
 				var preset = presetOf( entry, presets );
@@ -1613,7 +1721,7 @@
 								 * has not been settled into one already.
 								 */
 								if ( entry.number && ! readNumber( entry.number ) ) {
-									write( row, function ( each ) {
+									rows.write( row, function ( each ) {
 										return withKey( each, 'number', storeNumber( each.number, value ) );
 									} );
 								}
@@ -1626,7 +1734,7 @@
 						type: 'tel',
 						value: showNumber( entry.number, region ),
 						onChange: function ( value ) {
-							write( row, function ( each ) {
+							rows.write( row, function ( each ) {
 								return withKey( each, 'number', value );
 							} );
 						},
@@ -1635,7 +1743,7 @@
 								// Settled when the box is left, and not one keystroke sooner.
 								var settled = storeNumber( event.target.value, region );
 								if ( settled !== entry.number ) {
-									write( row, function ( each ) {
+									rows.write( row, function ( each ) {
 										return withKey( each, 'number', settled );
 									} );
 								}
@@ -1648,7 +1756,7 @@
 						value: preset,
 						options: presets,
 						onChange: function ( value ) {
-							write( row, function ( each ) {
+							rows.write( row, function ( each ) {
 								return withPreset( each, value, presets, each.label );
 							} );
 						}
@@ -1659,7 +1767,7 @@
 							className: 'ax-ce-phone__label',
 							value: entry.label || '',
 							onChange: function ( value ) {
-								write( row, function ( each ) {
+								rows.write( row, function ( each ) {
 									return withKey( each, 'label', value );
 								} );
 							}
@@ -1670,85 +1778,103 @@
 						variant: 'danger',
 						label: __( 'Remove this number', 'axismundi-contacts' ),
 						onClick: function () {
-							if ( row.pending ) {
-								setPending( pending.filter( function ( each ) {
-									return each.id !== row.pending;
-								} ) );
-								return;
-							}
-							var affected = patchesUnder( ( props.card || {} ).localizations, 'phones/' + row.id );
-							if ( affected.length ) {
-								setAsking( { id: row.id, depends: affected.map( function ( each ) {
-									return { kind: 'patch', tag: each.tag, path: each.path, label: each.tag + ' — ' + each.path };
-								} ) } );
-								return;
-							}
-							var next = Object.assign( {}, entries );
-							delete next[ row.id ];
-							setEntries( next );
+							rows.remove( row );
 						}
 					} )
 				);
 			} ),
-			asking
-				? el(
-					'div',
-					{ className: 'ax-ce-blocked', role: 'alert' },
-					el(
-						'p',
-						null,
-						__( 'Other languages say something about this number. Removing it would leave them saying it about nothing.', 'axismundi-contacts' )
-					),
-					el(
-						'ul',
-						null,
-						asking.depends.map( function ( each ) {
-							return el( 'li', { key: each.tag + each.path }, each.label );
-						} )
-					),
-					el(
-						'p',
-						null,
-						el(
-							'button',
-							{
-								type: 'button',
-								className: 'button',
-								onClick: function () {
-									props.onResolve( asking );
-									setAsking( null );
-								}
-							},
-							__( 'Remove them and the number', 'axismundi-contacts' )
-						),
-						' ',
-						el(
-							'button',
-							{
-								type: 'button',
-								className: 'button',
-								onClick: function () {
-									setAsking( null );
-								}
-							},
-							__( 'Keep everything', 'axismundi-contacts' )
-						)
-					)
-				)
-				: null,
+			rows.question(
+				__( 'Other languages say something about this number. Removing it would leave them saying it about nothing.', 'axismundi-contacts' ),
+				__( 'Remove them and the number', 'axismundi-contacts' )
+			),
 			el(
 				'p',
 				null,
 				el(
 					'button',
-					{
-						type: 'button',
-						className: 'button',
-						onClick: function () {
-							setPending( pending.concat( [ { id: newEntryId( 'row', {} ), entry: {} } ] ) );
-						}
-					},
+					{ type: 'button', className: 'button', onClick: rows.open },
 					__( 'Add a phone number', 'axismundi-contacts' )
+				)
+			)
+		);
+	}
+
+	/**
+	 * The email addresses.
+	 *
+	 * One axis rather than two. A phone can be a fax and a mobile at once, which is why it says both
+	 * what it is for and where it belongs; an address is only ever somewhere in somebody's life, so
+	 * the row asks that and nothing else. Anything the three answers cannot say is somebody's own
+	 * word for it, which the standard stores as a label.
+	 */
+	function Emails( props ) {
+		var presets = ( config.presets || {} ).emails || [];
+		var rows = useEntryRows( props, { prefix: 'eml', required: 'address', property: 'emails' } );
+
+		return el(
+			Section,
+			{ icon: 'mail', label: __( 'Email', 'axismundi-contacts' ) },
+			rows.rows.map( function ( row ) {
+				var entry = row.entry;
+				var preset = presetOf( entry, presets );
+				return el(
+					'div',
+					{ key: row.key, className: 'ax-ce-email' },
+					el( TextField, {
+						label: __( 'Email', 'axismundi-contacts' ),
+						className: 'ax-ce-email__address',
+						type: 'email',
+						value: entry.address || '',
+						onChange: function ( value ) {
+							rows.write( row, function ( each ) {
+								return withKey( each, 'address', value );
+							} );
+						}
+					} ),
+					el( Combobox, {
+						label: __( 'What it is', 'axismundi-contacts' ),
+						className: 'ax-ce-email__preset',
+						value: preset,
+						options: presets,
+						onChange: function ( value ) {
+							rows.write( row, function ( each ) {
+								return withPreset( each, value, presets, each.label );
+							} );
+						}
+					} ),
+					'custom' === preset
+						? el( TextField, {
+							label: __( 'Called', 'axismundi-contacts' ),
+							className: 'ax-ce-email__label',
+							value: entry.label || '',
+							onChange: function ( value ) {
+								rows.write( row, function ( each ) {
+									return withKey( each, 'label', value );
+								} );
+							}
+						} )
+						: null,
+					el( IconButton, {
+						icon: 'delete',
+						variant: 'danger',
+						label: __( 'Remove this address', 'axismundi-contacts' ),
+						onClick: function () {
+							rows.remove( row );
+						}
+					} )
+				);
+			} ),
+			rows.question(
+				__( 'Other languages say something about this address. Removing it would leave them saying it about nothing.', 'axismundi-contacts' ),
+				__( 'Remove them and the address', 'axismundi-contacts' )
+			),
+			el(
+				'p',
+				null,
+				el(
+					'button',
+					{ type: 'button', className: 'button', onClick: rows.open },
+					__( 'Add an email address', 'axismundi-contacts' )
 				)
 			)
 		);
@@ -3594,21 +3720,17 @@
 							setProperty( 'phones', value );
 						},
 						onResolve: function ( question ) {
-							var next = Object.assign( {}, card );
-							var phones = Object.assign( {}, next.phones );
-							delete phones[ question.id ];
-							if ( Object.keys( phones ).length ) {
-								next.phones = phones;
-							} else {
-								delete next.phones;
-							}
-							var localizations = withoutPatches( next.localizations, question.depends );
-							if ( Object.keys( localizations ).length ) {
-								next.localizations = localizations;
-							} else {
-								delete next.localizations;
-							}
-							update( next );
+							resolveEntryRemoval( card, 'phones', question, update );
+						}
+					} ),
+					el( Emails, {
+						value: card.emails,
+						card: card,
+						onChange: function ( value ) {
+							setProperty( 'emails', value );
+						},
+						onResolve: function ( question ) {
+							resolveEntryRemoval( card, 'emails', question, update );
 						}
 					} ),
 					el( OnlineServices, {

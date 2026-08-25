@@ -705,3 +705,24 @@
 	flex: 1 1 0;
 	min-width: 0;
 }
+
+/* -- an email address ------------------------------------------------------------------------ */
+
+.ax-ce-email {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+	margin: 0 0 8px;
+	flex-wrap: wrap;
+}
+
+.ax-ce-email__address {
+	flex: 2 1 16em;
+	min-width: 0;
+}
+
+.ax-ce-email__preset,
+.ax-ce-email__label {
+	flex: 1 1 10em;
+	min-width: 0;
+}

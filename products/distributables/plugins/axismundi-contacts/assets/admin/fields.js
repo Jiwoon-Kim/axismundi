@@ -46,6 +46,30 @@
 	}
 
 	/**
+	 * What a browser filled in without telling anybody.
+	 *
+	 * Autofill sets the input's value in the DOM and fires nothing React listens for, so the box goes
+	 * yellow, the draft still holds what was there before, and the JSON beside it disagrees with the
+	 * screen. The one signal that does arrive is a CSS animation: `:-webkit-autofill` starts one, and
+	 * an animation handler is somewhere to read the value the browser just wrote and put it through
+	 * the same writer a keystroke would.
+	 *
+	 * Nothing here decides what to fill in. The browser holds what somebody told it and offers it;
+	 * this only notices that they accepted.
+	 */
+	function autofilled( onChange ) {
+		return function ( event ) {
+			if ( 'ax-contacts-autofill' !== event.animationName ) {
+				return;
+			}
+			var value = event.target.value;
+			if ( undefined !== value ) {
+				onChange( value );
+			}
+		};
+	}
+
+	/**
 	 * The shell both text fields share.
 	 *
 	 * `supporting` is tied to the input with `aria-describedby` rather than sitting near it: an error
@@ -117,6 +141,7 @@
 					'aria-describedby': describedBy,
 					'aria-invalid': props.error ? 'true' : undefined,
 					onFocus: props.onFocus,
+					onAnimationStart: autofilled( props.onChange ),
 					onChange: function ( event ) {
 						props.onChange( event.target.value );
 					}
@@ -136,7 +161,7 @@
 			supporting: props.supporting,
 			className: props.className,
 			control: function ( describedBy ) {
-				return el( 'textarea', {
+				return el( 'textarea', Object.assign( {
 					id: id,
 					className: 'text-field__input',
 					rows: props.rows || 4,
@@ -147,10 +172,11 @@
 					readOnly: props.readOnly,
 					'aria-describedby': describedBy,
 					'aria-invalid': props.error ? 'true' : undefined,
+					onAnimationStart: autofilled( props.onChange ),
 					onChange: function ( event ) {
 						props.onChange( event.target.value );
 					}
-				} );
+				}, props.inputProps || {} ) );
 			}
 		} );
 	}
@@ -249,7 +275,7 @@
 					setActive( 0 );
 					setOpen( true );
 				},
-				inputProps: {
+				inputProps: Object.assign( {
 					role: 'combobox',
 					'aria-expanded': open ? 'true' : 'false',
 					'aria-controls': listId,
@@ -285,7 +311,7 @@
 						}, 150 );
 					},
 					disabled: props.disabled
-				}
+				}, props.inputProps || {} )
 			} ),
 			open
 				? el(

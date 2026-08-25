@@ -4631,7 +4631,7 @@ try {
 			 */
 			&& str_contains( $ax_ct_cb_editor, "prefix: 'tel', required: 'number'" )
 			&& str_contains( $ax_ct_cb_editor, "prefix: 'eml', required: 'address'" )
-			&& str_contains( $ax_ct_cb_editor, "newEntryId( options.prefix, entries )" )
+			&& str_contains( $ax_ct_cb_editor, "newEntryId( options.prefix, latest.current )" )
 			&& str_contains( $ax_ct_cb_editor, "newEntryId( 'onl', entries )" )
 			&& str_contains( $ax_ct_cb_editor, "newEntryId( 'org', entries )" )
 			&& str_contains( $ax_ct_cb_editor, "newEntryId( 'ttl', entries )" )
@@ -5144,6 +5144,62 @@ try {
 			&& str_contains( $ax_ct_cb_editor, "disabled: ( 'separator' === kind && ! ordered )" )
 			&& str_contains( $ax_ct_cb_editor, 'var movable = !! props.row.part && props.ordered;' )
 			&& str_contains( $ax_ct_cb_editor, 'ordered && components.length' )
+	);
+
+	/*
+	 * What a browser fills in without telling anybody. Autofill writes the value straight into the
+	 * field and fires nothing a script listens for, so the box goes yellow while the document behind
+	 * it still holds what was there before -- and the JSON beside it disagrees with the screen. The
+	 * one signal that does arrive is a CSS animation, which is why there is one that does nothing and
+	 * exists to be noticed.
+	 */
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_af_css = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/fields.css' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a field the browser filled in reaches the card, which is not something the browser says',
+		str_contains( $ax_ct_af_css, '@keyframes ax-contacts-autofill' )
+			&& str_contains( $ax_ct_af_css, ':-webkit-autofill' )
+			&& str_contains( $ax_ct_cb_js, 'function autofilled( onChange )' )
+			&& str_contains( $ax_ct_cb_js, "if ( 'ax-contacts-autofill' !== event.animationName ) {" )
+			// Both kinds of box, since an address is filled into one of each.
+			&& 2 === substr_count( $ax_ct_cb_js, 'onAnimationStart: autofilled( props.onChange ),' )
+	);
+	/*
+	 * And a browser fills several boxes at once. Each of them working out what to store from the copy
+	 * this render started with means the last one wins and the rest are lost -- the postcode lands and
+	 * the region it arrived with is gone, which is worse than autofill not working at all.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'several fields filled in one go all survive, rather than the last one winning',
+		str_contains( $ax_ct_cb_editor, 'var latest = useRef( entries );' )
+			&& str_contains( $ax_ct_cb_editor, 'var latest = useRef( address );' )
+			&& str_contains( $ax_ct_cb_editor, 'var latest = useRef( card );' )
+			// Reset on every render, so it follows the card; moved forward on every write.
+			&& str_contains( $ax_ct_cb_editor, 'latest.current = next;' )
+			&& str_contains( $ax_ct_cb_editor, 'var written = change( latest.current[ row.id ] || {} );' )
+			&& str_contains( $ax_ct_cb_editor, 'var next = Object.assign( {}, latest.current );' )
+	);
+	/*
+	 * Only the parts a browser can hand over whole. Its idea of the first line is `123 Oak St` -- the
+	 * number and the street together -- and those are separate parts here, so asking for it would put
+	 * a house number inside a street name and call the address structured. The line as a whole has its
+	 * own field, which is where that token belongs.
+	 *
+	 * The country picker takes nothing: it shows a country's name and stores its code, and a browser
+	 * handing over either would be writing into a field whose displayed value it cannot see.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a browser is asked only for the parts it can give whole, and never for the first line',
+		str_contains( $ax_ct_cb_editor, "region: 'address-level1'," )
+			&& str_contains( $ax_ct_cb_editor, "postcode: 'postal-code'," )
+			&& str_contains( $ax_ct_cb_editor, "country: 'country-name'" )
+			&& ! str_contains( $ax_ct_cb_editor, "name: 'address-line1'," )
+			&& str_contains( $ax_ct_cb_editor, "inputProps: { autoComplete: 'off' }," )
+			// And the whole line is what `street-address` is for.
+			&& str_contains( $ax_ct_cb_editor, "inputProps: { autoComplete: 'street-address' }," )
 	);
 
 	ax_ct_assert(

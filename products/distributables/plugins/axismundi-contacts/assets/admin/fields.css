@@ -249,3 +249,23 @@
 	color: var( --ax-field-error );
 	background: color-mix( in srgb, var( --ax-field-error ) 8%, transparent );
 }
+
+/* -- what the browser filled in ---------------------------------------------------------------- */
+
+/*
+ * Autofill writes the value straight into the DOM and fires nothing a script can listen for, so a
+ * field goes yellow while the document behind it still holds what was there before. The one signal
+ * that does arrive is this: a rule that starts an animation when the browser fills a field, which
+ * the field adapter listens for and reads the value from.
+ *
+ * The animation itself does nothing. It exists to be noticed.
+ */
+@keyframes ax-contacts-autofill {
+	from { /* noop */ }
+	to { /* noop */ }
+}
+
+.ax-contacts-fields .text-field__input:-webkit-autofill {
+	animation-name: ax-contacts-autofill;
+	animation-duration: 1ms;
+}

@@ -32,6 +32,7 @@
 	var Combobox = fields.Combobox;
 	var useState = wp.element.useState;
 	var useCallback = wp.element.useCallback;
+	var useRef = wp.element.useRef;
 	var apiFetch = wp.apiFetch;
 	var __ = wp.i18n.__;
 	var sprintf = wp.i18n.sprintf;
@@ -1370,8 +1371,20 @@
 		var entries = props.value || {};
 		var [ pending, setPending ] = useState( [] );
 		var [ asking, setAsking ] = useState( null );
+		/*
+		 * What the collection holds now, rather than what it held when this render began. A browser
+		 * filling in an address fills several boxes at once, and each of them would otherwise work out
+		 * what to store from the same stale copy -- so the postcode would land and the region it
+		 * arrived with would be gone, which is worse than autofill not working at all.
+		 *
+		 * Reset on every render, so it follows the card, and moved forward on every write, so two
+		 * writes in one tick build on each other.
+		 */
+		var latest = useRef( entries );
+		latest.current = entries;
 
 		function setEntries( next ) {
+			latest.current = next;
 			props.onChange( Object.keys( next ).length ? next : undefined );
 		}
 
@@ -1391,15 +1404,15 @@
 					} ) );
 					return;
 				}
-				var next = Object.assign( {}, entries );
-				next[ newEntryId( options.prefix, entries ) ] = made;
+				var next = Object.assign( {}, latest.current );
+				next[ newEntryId( options.prefix, latest.current ) ] = made;
 				setPending( pending.filter( function ( each ) {
 					return each.id !== row.pending;
 				} ) );
 				setEntries( next );
 				return;
 			}
-			var written = change( entries[ row.id ] || {} );
+			var written = change( latest.current[ row.id ] || {} );
 			/*
 			 * What makes a new entry is not always the only thing that makes an existing one worth
 			 * keeping. An address imported from somewhere that took it apart may carry `components`
@@ -1416,14 +1429,14 @@
 					setAsking( { id: row.id, depends: affected } );
 					return;
 				}
-				var without = Object.assign( {}, entries );
+				var without = Object.assign( {}, latest.current );
 				delete without[ row.id ];
 				delete written[ options.required ];
 				setPending( pending.concat( [ { id: newEntryId( 'row', {} ), entry: written } ] ) );
 				setEntries( without );
 				return;
 			}
-			var updated = Object.assign( {}, entries );
+			var updated = Object.assign( {}, latest.current );
 			updated[ row.id ] = written;
 			setEntries( updated );
 		}
@@ -1951,8 +1964,13 @@
 	 * and the person chooses, which is the difference between this and asking a service.
 	 */
 	function addressAutofill( kind ) {
+		/*
+		 * Only the parts a browser can hand over whole. A browser's idea of the first line is
+		 * `123 Oak St` -- the number and the street together -- and these are separate parts here, so
+		 * asking for it would put a house number inside a street name and call the address structured.
+		 * The line as a whole has its own field, which is where that token belongs.
+		 */
 		var tokens = {
-			name: 'address-line1',
 			district: 'address-level3',
 			locality: 'address-level2',
 			region: 'address-level1',
@@ -2047,9 +2065,12 @@
 		var [ pending, setPending ] = useState( [] );
 		var [ adding, setAdding ] = useState( false );
 		var [ dragging, setDragging ] = useState( null );
+		// The same reason as the rows above: a browser fills several parts of an address at once.
+		var latest = useRef( address );
+		latest.current = address;
 
 		function setParts( list, extra ) {
-			var next = Object.assign( {}, address, extra || {} );
+			var next = Object.assign( {}, latest.current, extra || {} );
 			if ( list.length ) {
 				next.components = list;
 			} else {
@@ -2057,6 +2078,7 @@
 				delete next.isOrdered;
 				delete next.defaultSeparator;
 			}
+			latest.current = next;
 			props.onChange( next );
 		}
 
@@ -2070,7 +2092,7 @@
 				 * filling in are read down the screen in the order they wrote them. So the first part
 				 * written here says so, and an import that said otherwise is left saying it.
 				 */
-				var list = components.concat( [ { kind: row.kind, value: value } ] );
+				var list = ( latest.current.components || [] ).concat( [ { kind: row.kind, value: value } ] );
 				if ( row.pendingId ) {
 					setPending( pending.filter( function ( each ) {
 						return each.id !== row.pendingId;
@@ -2079,7 +2101,7 @@
 				setParts( list, components.length ? {} : { isOrdered: true } );
 				return;
 			}
-			var next = components.slice();
+			var next = ( latest.current.components || [] ).slice();
 			if ( ! String( value ).trim() && 'separator' !== row.kind ) {
 				// A part rubbed out is a part removed; the line stays to be typed into again.
 				next.splice( row.index, 1 );
@@ -2286,6 +2308,12 @@
 								value: entry.countryCode || '',
 								options: countries,
 								allowFree: true,
+								/*
+								 * Not filled in by the browser. This box shows a country's name and
+								 * stores its code, and a browser handing over either one would be
+								 * writing into a field whose displayed value it cannot see.
+								 */
+								inputProps: { autoComplete: 'off' },
 								supporting: __( 'Which country reads this address. Not the country written in it.', 'axismundi-contacts' ),
 								onChange: function ( value ) {
 									rows.write( row, function ( each ) {
@@ -4068,16 +4096,25 @@
 			setSplitAt( next );
 		}
 
+		/*
+		 * What the draft is now. Two properties can be written in one tick -- a browser filling an
+		 * address writes several boxes before anything renders -- and each of them working from the
+		 * copy this render started with would mean the last one wins and the rest are lost.
+		 */
+		var latest = useRef( card );
+		latest.current = card;
+
 		// One draft. Every view writes through here, so the JSON box and the fields never diverge.
 		var update = useCallback( function ( next ) {
 			var written = ordered( next );
+			latest.current = written;
 			setCard( written );
 			setJson( JSON.stringify( written, null, 2 ) );
 			setJsonError( '' );
 		}, [] );
 
 		function setProperty( key, value ) {
-			var next = Object.assign( {}, card );
+			var next = Object.assign( {}, latest.current );
 			if ( undefined === value ) {
 				delete next[ key ];
 			} else {

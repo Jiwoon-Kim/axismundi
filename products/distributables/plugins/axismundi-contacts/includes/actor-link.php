@@ -63,12 +63,18 @@ function axismundi_contacts_actor_handle( Axismundi_Actor $actor ) : string {
  * @return string
  */
 function axismundi_contacts_free_service_key( array $document ) : string {
+	/*
+	 * Drawn rather than counted. An entry key is an address -- what a published pointer names and
+	 * what a provenance row is written against -- so counting up from `x1` hands a deleted account's
+	 * address to the next one somebody adds, along with whoever had agreed that one could be
+	 * published. The home account keeps its fixed key because that row is the same account every time
+	 * it is seeded; everything else gets an id that has never been used here before.
+	 */
 	$taken = (array) ( $document['onlineServices'] ?? array() );
-	$index = 1;
-	while ( isset( $taken[ 'x' . $index ] ) ) {
-		++$index;
-	}
-	return 'x' . $index;
+	do {
+		$key = 'x-' . substr( str_replace( '-', '', wp_generate_uuid4() ), 0, 6 );
+	} while ( isset( $taken[ $key ] ) );
+	return $key;
 }
 
 /**

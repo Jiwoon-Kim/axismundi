@@ -3594,8 +3594,14 @@ try {
 		$ax_ct_results,
 		'the key an account is stored under says nothing, because it is an address and not a label',
 		'x1' === AXISMUNDI_CONTACTS_HOME_SERVICE_KEY
-			&& 'x1' === axismundi_contacts_free_service_key( array() )
-			&& 'x2' === axismundi_contacts_free_service_key( array( 'onlineServices' => array( 'x1' => array() ) ) )
+			/*
+			 * And a new one is drawn rather than counted. Counting up hands a deleted account's
+			 * address to the next one somebody adds, along with whoever had agreed that one could be
+			 * published -- the home row keeps its fixed key because that row is the same account
+			 * every time it is seeded.
+			 */
+			&& 1 === preg_match( '/^x-[0-9a-f]{6}$/', axismundi_contacts_free_service_key( array() ) )
+			&& axismundi_contacts_free_service_key( array() ) !== axismundi_contacts_free_service_key( array() )
 	);
 	/*
 	 * Moving the one key that did spell itself out moves everything that addresses it. A Card renamed
@@ -4601,6 +4607,57 @@ try {
 			&& 'GB' === axismundi_contacts_default_region( array( 'language' => 'en-GB' ) )
 			// A language with no place in it says nothing about where a number is from.
 			&& axismundi_contacts_default_region( array( 'language' => 'ko' ) ) === axismundi_contacts_default_region( array() )
+	);
+
+	/*
+	 * An entry id is an address: what a provenance row is written against and what a published
+	 * pointer names. Counting up from `p1` hands a deleted number's address to the next one somebody
+	 * types, along with where that old value came from and whoever had agreed it could be published.
+	 * Every id is drawn, and drawn again if the card already has it.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a new entry gets an address nothing here has used, rather than the next number up',
+		str_contains( $ax_ct_cb_editor, 'function newEntryId( prefix, entries )' )
+			&& str_contains( $ax_ct_cb_editor, "id = prefix + '-' + Math.random().toString( 36 ).slice( 2, 8 );" )
+			&& str_contains( $ax_ct_cb_editor, "newEntryId( 'pho', entries )" )
+			&& str_contains( $ax_ct_cb_editor, "newEntryId( 'org', entries )" )
+			&& str_contains( $ax_ct_cb_editor, "newEntryId( 'ttl', entries )" )
+			// Nothing counts up any more, here or in the accounts the server seeds.
+			&& ! str_contains( $ax_ct_cb_editor, "'p' + index" )
+			&& ! str_contains( $ax_ct_cb_editor, "'x' + index" )
+	);
+	/*
+	 * A phone entry is a number, so a row where somebody has picked what to call it and not yet typed
+	 * one is a row. What they answered waits on it: picking `Work mobile` and then typing the number
+	 * means both, and dropping the first because the second came second is the screen forgetting what
+	 * it was told.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'what a number is called can be answered first, and is still there when the number arrives',
+		str_contains( $ax_ct_cb_editor, 'var made = change( row.entry );' )
+			&& str_contains( $ax_ct_cb_editor, "return each.id === row.pending ? { id: each.id, entry: made } : each;" )
+	);
+	/*
+	 * And a number rubbed out is a number removed. An entry that is only a label is one the store
+	 * refuses -- `number` is required -- so what is left is a row holding everything else it said,
+	 * waiting for another number.
+	 */
+	$ax_ct_pi_only = array(
+		'@type'  => 'Card',
+		'name'   => array( 'full' => 'A label and no number' ),
+		'phones' => array( 'pho-abc123' => array( 'contexts' => array( 'work' => true ), 'features' => array( 'mobile' => true ) ) ),
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'an entry that is only a label is not an entry, and rubbing out a number leaves a row instead',
+		is_wp_error( axismundi_contacts_validate_card_values( $ax_ct_pi_only ) )
+			&& str_contains( $ax_ct_cb_editor, "if ( ! String( written.number || '' ).trim() ) {" )
+			&& str_contains( $ax_ct_cb_editor, "setPending( pending.concat( [ { id: newEntryId( 'row', {} ), entry: written } ] ) );" )
+			// Unless a language says something about it, in which case taking it away is a question.
+			&& str_contains( $ax_ct_cb_editor, "patchesUnder( ( props.card || {} ).localizations, 'phones/' + row.id )" )
+			&& str_contains( $ax_ct_cb_editor, "__( 'Remove them and the number', 'axismundi-contacts' )" )
 	);
 
 	ax_ct_assert(

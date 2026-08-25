@@ -1296,6 +1296,25 @@
 	}
 
 	/**
+	 * An id for a new entry, which is never one that has been used before.
+	 *
+	 * An entry id is an address. `phones/p1` is what a provenance row is written against and what a
+	 * published pointer names, so counting up from `p1` hands a deleted number's address to the next
+	 * one somebody types -- along with where that old value came from and whoever had agreed it could
+	 * be published. Nothing counts: an id is drawn, and drawn again if the card already has it.
+	 *
+	 * @param {string} prefix  A short word saying what kind of entry it is, for reading a diff.
+	 * @param {Object} entries The entries this card already holds.
+	 */
+	function newEntryId( prefix, entries ) {
+		var id = '';
+		do {
+			id = prefix + '-' + Math.random().toString( 36 ).slice( 2, 8 );
+		} while ( Object.prototype.hasOwnProperty.call( entries || {}, id ) );
+		return id;
+	}
+
+	/**
 	 * Google's phone number rules, when they loaded.
 	 *
 	 * Everything below works without them: the country control disappears, what somebody types is
@@ -1462,6 +1481,7 @@
 		var regions = phoneRegions();
 		var [ hints, setHints ] = useState( {} );
 		var [ pending, setPending ] = useState( [] );
+		var [ asking, setAsking ] = useState( null );
 
 		function regionFor( id, entry ) {
 			if ( hints[ id ] ) {
@@ -1477,32 +1497,58 @@
 
 		function write( row, change ) {
 			if ( row.pending ) {
-				var made = change( {} );
+				var made = change( row.entry );
 				if ( ! String( made.number || '' ).trim() ) {
-					// A phone entry is a number. Until there is one, this is a line and not an entry.
+					/*
+					 * A phone entry is a number, so until there is one this is a line. What has been
+					 * answered about it waits on the line: somebody who picks `Mobile` and then types
+					 * the number meant both, and dropping the first because the second came second
+					 * would be the screen forgetting what it was told.
+					 */
+					setPending( pending.map( function ( each ) {
+						return each.id === row.pending ? { id: each.id, entry: made } : each;
+					} ) );
 					return;
 				}
-				var index = 1;
-				while ( Object.prototype.hasOwnProperty.call( entries, 'p' + index ) ) {
-					index += 1;
-				}
 				var next = Object.assign( {}, entries );
-				next[ 'p' + index ] = made;
+				next[ newEntryId( 'pho', entries ) ] = made;
 				setPending( pending.filter( function ( each ) {
-					return each !== row.pending;
+					return each.id !== row.pending;
 				} ) );
 				setEntries( next );
 				return;
 			}
+			var written = change( entries[ row.id ] || {} );
+			if ( ! String( written.number || '' ).trim() ) {
+				/*
+				 * A number rubbed out is a number removed, and an entry that is only a label is one
+				 * the store refuses. The row stays with everything else it said, waiting for another
+				 * number -- unless a language says something about this entry, in which case taking it
+				 * away is a question rather than a keystroke.
+				 */
+				var affected = patchesUnder( ( props.card || {} ).localizations, 'phones/' + row.id );
+				if ( affected.length ) {
+					setAsking( { id: row.id, depends: affected.map( function ( each ) {
+						return { kind: 'patch', tag: each.tag, path: each.path, label: each.tag + ' — ' + each.path };
+					} ) } );
+					return;
+				}
+				var without = Object.assign( {}, entries );
+				delete without[ row.id ];
+				delete written.number;
+				setPending( pending.concat( [ { id: newEntryId( 'row', {} ), entry: written } ] ) );
+				setEntries( without );
+				return;
+			}
 			var updated = Object.assign( {}, entries );
-			updated[ row.id ] = change( entries[ row.id ] || {} );
+			updated[ row.id ] = written;
 			setEntries( updated );
 		}
 
 		var rows = Object.keys( entries ).map( function ( id ) {
 			return { key: id, id: id, entry: entries[ id ] || {} };
-		} ).concat( pending.map( function ( id ) {
-			return { key: id, pending: id, entry: {} };
+		} ).concat( pending.map( function ( each ) {
+			return { key: each.id, pending: each.id, entry: each.entry };
 		} ) );
 
 		return el(
@@ -1590,8 +1636,15 @@
 						onClick: function () {
 							if ( row.pending ) {
 								setPending( pending.filter( function ( each ) {
-									return each !== row.pending;
+									return each.id !== row.pending;
 								} ) );
+								return;
+							}
+							var affected = patchesUnder( ( props.card || {} ).localizations, 'phones/' + row.id );
+							if ( affected.length ) {
+								setAsking( { id: row.id, depends: affected.map( function ( each ) {
+									return { kind: 'patch', tag: each.tag, path: each.path, label: each.tag + ' — ' + each.path };
+								} ) } );
 								return;
 							}
 							var next = Object.assign( {}, entries );
@@ -1601,6 +1654,52 @@
 					} )
 				);
 			} ),
+			asking
+				? el(
+					'div',
+					{ className: 'ax-ce-blocked', role: 'alert' },
+					el(
+						'p',
+						null,
+						__( 'Other languages say something about this number. Removing it would leave them saying it about nothing.', 'axismundi-contacts' )
+					),
+					el(
+						'ul',
+						null,
+						asking.depends.map( function ( each ) {
+							return el( 'li', { key: each.tag + each.path }, each.label );
+						} )
+					),
+					el(
+						'p',
+						null,
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									props.onResolve( asking );
+									setAsking( null );
+								}
+							},
+							__( 'Remove them and the number', 'axismundi-contacts' )
+						),
+						' ',
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									setAsking( null );
+								}
+							},
+							__( 'Keep everything', 'axismundi-contacts' )
+						)
+					)
+				)
+				: null,
 			el(
 				'p',
 				null,
@@ -1610,7 +1709,7 @@
 						type: 'button',
 						className: 'button',
 						onClick: function () {
-							setPending( pending.concat( [ 'phone-' + Math.random().toString( 36 ).slice( 2, 8 ) ] ) );
+							setPending( pending.concat( [ { id: newEntryId( 'row', {} ), entry: {} } ] ) );
 						}
 					},
 					__( 'Add a phone number', 'axismundi-contacts' )
@@ -1729,11 +1828,7 @@
 		}
 
 		function freeId() {
-			var index = 1;
-			while ( Object.prototype.hasOwnProperty.call( entries, 'o' + index ) ) {
-				index += 1;
-			}
-			return 'o' + index;
+			return newEntryId( 'org', entries );
 		}
 
 		/** Write through to an entry, making it when there is something to put in it. */
@@ -2004,12 +2099,8 @@
 					} ) );
 					return;
 				}
-				var index = 1;
-				while ( Object.prototype.hasOwnProperty.call( entries, 't' + index ) ) {
-					index += 1;
-				}
 				var next = Object.assign( {}, entries );
-				next[ 't' + index ] = held;
+				next[ newEntryId( 'ttl', entries ) ] = held;
 				setPending( pending.filter( function ( each ) {
 					return each.id !== row.pending;
 				} ) );
@@ -2312,13 +2403,9 @@
 						type: 'button',
 						className: 'button',
 						onClick: function () {
-							var index = 1;
-							while ( Object.prototype.hasOwnProperty.call( entries, 'x' + index ) ) {
-								index += 1;
-							}
 							var updated = Object.assign( {}, entries );
 							// New accounts go to the end; the order somebody chose is theirs to change.
-							updated[ 'x' + index ] = { service: '', user: '', uri: '', pref: ordered.length + 1 };
+							updated[ newEntryId( 'x', entries ) ] = { service: '', user: '', uri: '', pref: ordered.length + 1 };
 							setEntries( updated );
 						}
 					},
@@ -3338,8 +3425,26 @@
 					} ),
 					el( Phones, {
 						value: card.phones,
+						card: card,
 						onChange: function ( value ) {
 							setProperty( 'phones', value );
+						},
+						onResolve: function ( question ) {
+							var next = Object.assign( {}, card );
+							var phones = Object.assign( {}, next.phones );
+							delete phones[ question.id ];
+							if ( Object.keys( phones ).length ) {
+								next.phones = phones;
+							} else {
+								delete next.phones;
+							}
+							var localizations = withoutPatches( next.localizations, question.depends );
+							if ( Object.keys( localizations ).length ) {
+								next.localizations = localizations;
+							} else {
+								delete next.localizations;
+							}
+							update( next );
 						}
 					} ),
 					el( OnlineServices, {

@@ -171,6 +171,20 @@ function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
 		 */
 		'region'              => axismundi_contacts_default_region( $draft['card'] ),
 		/*
+		 * The countries an address may be in, from the plugin whose subject that is. It was being
+		 * taken from the phone number rules, which is a list of places with a numbering plan -- so
+		 * Antarctica, Pitcairn and the French Southern Territories were missing from a list of places
+		 * somebody can live, and removing the phone library would have removed the address country
+		 * picker with it. The phone row still asks the phone rules, because which countries have
+		 * numbering plans is exactly what they know.
+		 *
+		 * Empty when GeoData is not installed. The field takes what is typed either way, so an
+		 * address is still writable -- it just stops suggesting.
+		 */
+		'countries'           => function_exists( 'axismundi_geodata_country_options' )
+			? axismundi_geodata_country_options()
+			: array(),
+		/*
 		 * Every kind RFC 9553 registers, because each is something somebody keeps the address of. A
 		 * card for a building, for the software that runs a service, for a machine that reports its
 		 * own readings: an address book that could not say which would be asking people to file all

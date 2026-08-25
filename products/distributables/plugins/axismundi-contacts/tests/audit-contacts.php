@@ -5320,6 +5320,38 @@ try {
 		str_contains( $ax_ct_cb_editor, "disabled: 'separator' === kind && ! ordered," )
 	);
 
+	/*
+	 * Which countries an address may be in comes from the plugin whose subject that is. It was coming
+	 * from the telephone numbering rules, which is a list of places with a phone plan -- so Antarctica,
+	 * Pitcairn and the French Southern Territories were missing from a list of places somebody can
+	 * live, and removing the phone library would have taken the address country picker with it.
+	 *
+	 * The phone row still asks the phone rules, because which countries have numbering plans is
+	 * exactly what they know.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'where an address is comes from the geography, and where a number is from the numbering plans',
+		str_contains( $ax_ct_lg_php, "function_exists( 'axismundi_geodata_country_options' )" )
+			&& str_contains( $ax_ct_cb_editor, 'function addressCountries()' )
+			&& str_contains( $ax_ct_cb_editor, 'var countries = addressCountries();' )
+			// The phone row is the only thing left asking the numbering plans for a list of places.
+			&& 1 === substr_count( $ax_ct_cb_editor, 'regionOptions( true )' )
+			&& ! str_contains( $ax_ct_cb_editor, 'regionOptions( false )' )
+			// And it works without the geography: it stops suggesting rather than stops working.
+			&& str_contains( $ax_ct_cb_editor, '( config.countries || [] ).map(' )
+			&& str_contains( $ax_ct_cb_editor, 'allowFree: true' )
+	);
+	// Which is a list of every country there is, not of every country with a telephone.
+	ax_ct_assert(
+		$ax_ct_results,
+		'and it is every country there is, including the ones nobody dials',
+		function_exists( 'axismundi_geodata_country_options' )
+			&& 249 === count( axismundi_geodata_country_options() )
+			&& axismundi_geodata_is_country_code( 'AQ' )
+			&& axismundi_geodata_is_country_code( 'PN' )
+	);
+
 	ax_ct_assert(
 		$ax_ct_results,
 		'this plugin stores address books and imitates neither the Actor registry nor its profiles',

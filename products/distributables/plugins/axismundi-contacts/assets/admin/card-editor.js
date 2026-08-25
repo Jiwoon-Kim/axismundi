@@ -1598,6 +1598,7 @@
 	 * @param {boolean} calling Whether to say the calling code, which only a phone row wants.
 	 */
 	function regionOptions( calling ) {
+		// The places with a telephone numbering plan, which is what a phone row is asking about.
 		if ( ! phoneRules ) {
 			return [];
 		}
@@ -1944,6 +1945,36 @@
 				)
 			)
 		);
+	}
+
+	/**
+	 * The countries an address may be in.
+	 *
+	 * From the plugin whose subject that is, named by the browser in whatever language the person
+	 * reading is in. What it is not is the list of places with a telephone numbering plan, which is
+	 * where this came from and which leaves out Antarctica, Pitcairn and everywhere else nobody dials
+	 * -- and which would have taken the country picker with it the day the phone rules were removed.
+	 *
+	 * Empty when nothing supplies one. The field still takes what is typed; it just stops suggesting.
+	 */
+	function addressCountries() {
+		var names = null;
+		try {
+			names = new Intl.DisplayNames( undefined, { type: 'region' } );
+		} catch ( error ) {
+			names = null;
+		}
+		return ( config.countries || [] ).map( function ( country ) {
+			var name = country.label;
+			try {
+				name = names ? names.of( country.value ) : country.label;
+			} catch ( error ) {
+				name = country.label;
+			}
+			return { value: country.value, label: name };
+		} ).sort( function ( a, b ) {
+			return a.label.localeCompare( b.label );
+		} );
 	}
 
 	/**
@@ -2322,7 +2353,7 @@
 	 * it over themselves -- which is the opposite of a screen asking a service on their behalf.
 	 */
 	function Addresses( props ) {
-		var countries = regionOptions( false );
+		var countries = addressCountries();
 		var rows = useEntryRows( props, {
 			prefix: 'adr',
 			required: 'full',

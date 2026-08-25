@@ -96,11 +96,54 @@ ax_geo_iso_assert(
  * them needs a Country term for each of them, and one is made when somewhere actually has to be a
  * place in this site's geography.
  */
+// A bare audit bootstrap may not have registered the taxonomy yet; that is still zero persisted terms.
+$ax_geo_iso_term_count = wp_count_terms( array( 'taxonomy' => 'ax_geo_area', 'hide_empty' => false ) );
+$ax_geo_iso_term_count = is_wp_error( $ax_geo_iso_term_count ) ? 0 : (int) $ax_geo_iso_term_count;
 ax_geo_iso_assert(
 	$ax_geo_iso_results,
 	'knowing every country does not mean keeping a term for every country',
-	0 === (int) wp_count_terms( array( 'taxonomy' => 'ax_geo_area', 'hide_empty' => false ) )
-		|| count( $ax_geo_iso_all ) > (int) wp_count_terms( array( 'taxonomy' => 'ax_geo_area', 'hide_empty' => false ) )
+	0 === $ax_geo_iso_term_count
+		|| count( $ax_geo_iso_all ) > $ax_geo_iso_term_count
+);
+
+/*
+ * A subdivision code has two jobs: it is a stable code somebody may import, and it tells GeoData
+ * which Country term it can belong under. It is not a display-name table or a claim that every
+ * country has a uniform province/county hierarchy.
+ */
+$ax_geo_iso_subdivisions = axismundi_geodata_subdivisions();
+ax_geo_iso_assert(
+	$ax_geo_iso_results,
+	'the subdivision register holds the CLDR snapshot’s codes under the countries that assign them',
+	5046 === count( $ax_geo_iso_subdivisions )
+		&& 'KR' === (string) ( $ax_geo_iso_subdivisions['KR-26'] ?? '' )
+		&& 'JP' === (string) ( $ax_geo_iso_subdivisions['JP-13'] ?? '' )
+		&& 'US' === (string) ( $ax_geo_iso_subdivisions['US-DC'] ?? '' )
+		&& AXISMUNDI_GEODATA_ISO_3166_2_EDITION === 'CLDR-48.2'
+);
+
+ax_geo_iso_assert(
+	$ax_geo_iso_results,
+	'a subdivision’s country is available in either direction without turning terms into a global tree',
+	axismundi_geodata_is_subdivision_code( 'kr-26' )
+		&& ! axismundi_geodata_is_subdivision_code( 'KR-XX' )
+		&& 'KR' === axismundi_geodata_subdivision_country_code( 'KR-26' )
+		&& '' === axismundi_geodata_subdivision_country_code( 'KR-XX' )
+		&& array( 'KR-11' => 'KR', 'KR-26' => 'KR' ) === array_intersect_key(
+			axismundi_geodata_subdivisions_for_country( 'KR' ),
+			array_flip( array( 'KR-11', 'KR-26' ) )
+		)
+);
+
+// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's generated runtime source in a dev fixture.
+$ax_geo_iso_2_src = (string) file_get_contents( dirname( __DIR__ ) . '/includes/iso-3166-2.generated.php' );
+ax_geo_iso_assert(
+	$ax_geo_iso_results,
+	'the registry comes from a versioned Unicode CLDR input and carries its licence',
+	str_contains( $ax_geo_iso_2_src, 'Unicode CLDR 48.2 subdivision containment (Unicode-3.0).' )
+		&& is_readable( dirname( __DIR__ ) . '/data/iso-3166-2.tsv' )
+		&& is_readable( dirname( __DIR__ ) . '/data/LICENSE-UNICODE-3.0.txt' )
+		&& str_contains( (string) file_get_contents( dirname( __DIR__ ) . '/data/LICENSE-UNICODE-3.0.txt' ), 'UNICODE LICENSE V3' )
 );
 
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI fixture output.

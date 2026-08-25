@@ -86,6 +86,12 @@
 			}
 			var shown = undefined === held.value || null === held.value ? '' : String( held.value );
 			if ( node.value === shown ) {
+				/*
+				 * React has caught up with the value we reported. A later autofill may happen to
+				 * choose this very value again, so the short-lived duplicate guard is no longer
+				 * useful once the document and the box agree.
+				 */
+				each.pushed = undefined;
 				return;
 			}
 			/*
@@ -104,25 +110,36 @@
 
 	/*
 	 * When to look. A browser fills in on a gesture -- somebody clicks a field and accepts what it
-	 * offers -- so a focus is the signal that one may be about to happen, and the next second or two
-	 * is when it does. Blur is the last chance, and the CSS animation below is a third way of hearing
-	 * about it where the browser offers one.
+	 * offers -- so focus is the signal that it may happen. The suggestion can sit open for longer than
+	 * a fixed timeout, though, so keep looking while focus remains in a registered field. Blur is the
+	 * last chance, and the CSS animation below is a third way of hearing about it where the browser
+	 * offers one.
 	 *
 	 * Nothing runs while nobody is in a field.
 	 */
 	var looking = null;
 
+	function lookingAtAField() {
+		var active = document.activeElement;
+		return onScreen.some( function ( each ) {
+			return each.node.current === active;
+		} );
+	}
+
+	function stopLookingWhenFocusLeaves() {
+		window.setTimeout( function () {
+			sweep();
+			if ( looking && ! lookingAtAField() ) {
+				window.clearInterval( looking.every );
+				looking = null;
+			}
+		}, 0 );
+	}
+
 	function lookForAWhile() {
-		if ( looking ) {
-			window.clearTimeout( looking.until );
-		} else {
+		if ( ! looking ) {
 			looking = { every: window.setInterval( sweep, 120 ) };
 		}
-		looking.until = window.setTimeout( function () {
-			window.clearInterval( looking.every );
-			looking = null;
-			sweep();
-		}, 2000 );
 	}
 
 	/** The animation a browser starts when it fills a field in, where it starts one. */
@@ -229,7 +246,7 @@
 						}
 					},
 					onBlur: function ( event ) {
-						sweep();
+						stopLookingWhenFocusLeaves();
 						if ( extra.onBlur ) {
 							extra.onBlur( event );
 						}
@@ -273,7 +290,7 @@
 					'aria-describedby': describedBy,
 					'aria-invalid': props.error ? 'true' : undefined,
 					onFocus: lookForAWhile,
-					onBlur: sweep,
+					onBlur: stopLookingWhenFocusLeaves,
 					onAnimationStart: autofilled(),
 					onChange: function ( event ) {
 						props.onChange( event.target.value );

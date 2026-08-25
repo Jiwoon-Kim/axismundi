@@ -5170,7 +5170,11 @@ try {
 		str_contains( $ax_ct_cb_js, 'function sweep()' )
 			&& str_contains( $ax_ct_cb_js, 'function watchField( node, current )' )
 			&& str_contains( $ax_ct_cb_js, 'function lookForAWhile()' )
+			&& str_contains( $ax_ct_cb_js, 'function lookingAtAField()' )
+			&& str_contains( $ax_ct_cb_js, 'function stopLookingWhenFocusLeaves()' )
 			&& str_contains( $ax_ct_cb_js, 'window.setInterval( sweep, 120 )' )
+			// A suggestion may remain open longer than an arbitrary timer, so focus ends the watch.
+			&& str_contains( $ax_ct_cb_js, 'if ( looking && ! lookingAtAField() ) {' )
 			// Every field, not the one with focus: a browser fills in the boxes beside it too.
 			&& str_contains( $ax_ct_cb_js, 'onScreen.forEach( function ( each ) {' )
 			&& str_contains( $ax_ct_cb_js, 'held.onChange( node.value );' )
@@ -5228,6 +5232,8 @@ try {
 		'a value noticed once is written once, and a row becomes an entry once',
 		str_contains( $ax_ct_cb_js, 'if ( node.value === each.pushed ) {' )
 			&& str_contains( $ax_ct_cb_js, 'each.pushed = node.value;' )
+			// Once the document catches up, the same value may be autofilled again later.
+			&& str_contains( $ax_ct_cb_js, 'each.pushed = undefined;' )
 			&& str_contains( $ax_ct_cb_editor, 'var adopted = useRef( {} );' )
 			&& str_contains( $ax_ct_cb_editor, 'if ( row.pending && adopted.current[ row.pending ] ) {' )
 			&& str_contains( $ax_ct_cb_editor, 'adopted.current[ row.pending ] = made_id;' )

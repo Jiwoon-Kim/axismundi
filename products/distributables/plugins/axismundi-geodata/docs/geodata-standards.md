@@ -151,7 +151,9 @@ removed alternate-CRS support).
 
 **Implemented / aligned**
 - ISO 3166-1 alpha-2 — `ax_geo_country_code` (→ schema.org addressCountry)
-- ISO 3166-2 — `ax_geo_iso_3166_2` (subdivision code, any level → schema.org addressRegion)
+- ISO 3166-2 — `ax_geo_iso_3166_2` (subdivision code, any level → schema.org addressRegion); the
+  versioned CLDR 48.2 registry validates a code and its ISO 3166-1 parent, while the GeoData term
+  remains the human name and hierarchy
 - GeoJSON / RFC 7946 — REST export ([lon,lat], WGS84)
 - RFC 5870 Geo URI, ISO 6709 — coordinate formatters (`includes/coordinates.php`);
   `geo_uri` on GeoJSON point features

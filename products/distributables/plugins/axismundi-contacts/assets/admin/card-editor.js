@@ -1400,7 +1400,17 @@
 				return;
 			}
 			var written = change( entries[ row.id ] || {} );
-			if ( ! String( written[ options.required ] || '' ).trim() ) {
+			/*
+			 * What makes a new entry is not always the only thing that makes an existing one worth
+			 * keeping. An address imported from somewhere that took it apart may carry `components`
+			 * and no `full`: rubbing out the line somebody was reading would then throw away a
+			 * structure this screen never showed them, which is the worst kind of loss -- silent, and
+			 * of something they did not know was there.
+			 */
+			var keeps = ( options.keeps || [] ).some( function ( key ) {
+				return undefined !== written[ key ] && null !== written[ key ];
+			} );
+			if ( ! keeps && ! String( written[ options.required ] || '' ).trim() ) {
 				var affected = dependsOn( row.id );
 				if ( affected.length ) {
 					setAsking( { id: row.id, depends: affected } );
@@ -1530,8 +1540,18 @@
 	 */
 	var phoneRules = window.libphonenumber || null;
 
-	/** The countries a number can be read as, named the way this browser names them. */
-	function phoneRegions() {
+	/**
+	 * The countries, named the way this browser names them.
+	 *
+	 * The codes are ISO 3166-1 alpha-2, enumerated from the phone rules because a browser can name a
+	 * region from a code and cannot list them: there is no `Intl` call that hands over the set. That
+	 * list is every region with a numbering plan, which is ISO 3166-1 short of a few places nobody
+	 * has an address in either -- and anything missing can still be typed, because both fields that
+	 * use this take what they are given.
+	 *
+	 * @param {boolean} calling Whether to say the calling code, which only a phone row wants.
+	 */
+	function regionOptions( calling ) {
 		if ( ! phoneRules ) {
 			return [];
 		}
@@ -1550,7 +1570,7 @@
 			}
 			return {
 				value: region,
-				label: name + ' (+' + phoneRules.getCountryCallingCode( region ) + ')'
+				label: calling ? name + ' (+' + phoneRules.getCountryCallingCode( region ) + ')' : name
 			};
 		} ).sort( function ( a, b ) {
 			return a.label.localeCompare( b.label );
@@ -1683,7 +1703,7 @@
 	 */
 	function Phones( props ) {
 		var presets = ( config.presets || {} ).phones || [];
-		var regions = phoneRegions();
+		var regions = regionOptions( true );
 		var [ hints, setHints ] = useState( {} );
 		var rows = useEntryRows( props, { prefix: 'tel', required: 'number', property: 'phones' } );
 
@@ -1875,6 +1895,126 @@
 					'button',
 					{ type: 'button', className: 'button', onClick: rows.open },
 					__( 'Add an email address', 'axismundi-contacts' )
+				)
+			)
+		);
+	}
+
+	/**
+	 * Where somebody is.
+	 *
+	 * A country, the address as it is written, and where it belongs in their life. Nothing more, on
+	 * purpose. An address is not a name: a name is six parts in an order, the same six everywhere,
+	 * while an address is a different shape in every country -- a Korean address runs largest to
+	 * smallest and a British one the other way, and the fields themselves differ. A screen that took
+	 * one apart into boxes would be picking one country's form and asking the rest of the world to
+	 * fit it.
+	 *
+	 * So this stores what somebody wrote, and `countryCode` beside it because that is the one part
+	 * every address has and the one a reader needs to know how to read the rest. `components` is not
+	 * built from the line and the line is not rebuilt from `components`: an address that arrived taken
+	 * apart keeps its parts, visible in the JSON, until there is a screen that can show them properly.
+	 *
+	 * Nothing here sends an address anywhere to be completed or checked. Where somebody lives is not
+	 * a search query, and a field that quietly handed it to a service to be autocompleted would be
+	 * doing that on their behalf without asking.
+	 */
+	function Addresses( props ) {
+		var presets = ( config.presets || {} ).addresses || [];
+		var countries = regionOptions( false );
+		var rows = useEntryRows( props, {
+			prefix: 'adr',
+			required: 'full',
+			property: 'addresses',
+			// An address that arrived in pieces is an address, whatever the line says.
+			keeps: [ 'components', 'coordinates' ]
+		} );
+
+		return el(
+			Section,
+			{ icon: 'location-on', label: __( 'Addresses', 'axismundi-contacts' ) },
+			rows.rows.map( function ( row ) {
+				var entry = row.entry;
+				var preset = presetOf( entry, presets );
+				return el(
+					'div',
+					{ key: row.key, className: 'ax-ce-address' },
+					el(
+						'div',
+						{ className: 'ax-ce-address__fields' },
+						countries.length
+							? el( Combobox, {
+								label: __( 'Country', 'axismundi-contacts' ),
+								className: 'ax-ce-address__country',
+								value: entry.countryCode || '',
+								options: countries,
+								allowFree: true,
+								onChange: function ( value ) {
+									rows.write( row, function ( each ) {
+										return withKey( each, 'countryCode', value );
+									} );
+								}
+							} )
+							: null,
+						el( Textarea, {
+							label: __( 'Address', 'axismundi-contacts' ),
+							className: 'ax-ce-address__full',
+							rows: 3,
+							value: entry.full || '',
+							supporting: entry.components
+								? __( 'This address also arrived in parts, which are kept as they came.', 'axismundi-contacts' )
+								: __( 'Written the way that country writes it.', 'axismundi-contacts' ),
+							onChange: function ( value ) {
+								rows.write( row, function ( each ) {
+									return withKey( each, 'full', value );
+								} );
+							}
+						} ),
+						el( Combobox, {
+							label: __( 'What it is', 'axismundi-contacts' ),
+							className: 'ax-ce-address__preset',
+							value: preset,
+							options: presets,
+							onChange: function ( value ) {
+								rows.write( row, function ( each ) {
+									return withPreset( each, value, presets, each.label );
+								} );
+							}
+						} ),
+						'custom' === preset
+							? el( TextField, {
+								label: __( 'Called', 'axismundi-contacts' ),
+								className: 'ax-ce-address__label',
+								value: entry.label || '',
+								onChange: function ( value ) {
+									rows.write( row, function ( each ) {
+										return withKey( each, 'label', value );
+									} );
+								}
+							} )
+							: null
+					),
+					el( IconButton, {
+						icon: 'delete',
+						variant: 'danger',
+						label: __( 'Remove this address', 'axismundi-contacts' ),
+						onClick: function () {
+							rows.remove( row );
+						}
+					} )
+				);
+			} ),
+			rows.question(
+				__( 'Other languages say something about this address. Removing it would leave them saying it about nothing.', 'axismundi-contacts' ),
+				__( 'Remove them and the address', 'axismundi-contacts' )
+			),
+			el(
+				'p',
+				null,
+				el(
+					'button',
+					{ type: 'button', className: 'button', onClick: rows.open },
+					__( 'Add an address', 'axismundi-contacts' )
 				)
 			)
 		);
@@ -3731,6 +3871,16 @@
 						},
 						onResolve: function ( question ) {
 							resolveEntryRemoval( card, 'emails', question, update );
+						}
+					} ),
+					el( Addresses, {
+						value: card.addresses,
+						card: card,
+						onChange: function ( value ) {
+							setProperty( 'addresses', value );
+						},
+						onResolve: function ( question ) {
+							resolveEntryRemoval( card, 'addresses', question, update );
 						}
 					} ),
 					el( OnlineServices, {

@@ -4669,7 +4669,7 @@ try {
 		$ax_ct_results,
 		'an entry that is only a label is not an entry, and rubbing out a number leaves a row instead',
 		is_wp_error( axismundi_contacts_validate_card_values( $ax_ct_pi_only ) )
-			&& str_contains( $ax_ct_cb_editor, "if ( ! String( written[ options.required ] || '' ).trim() ) {" )
+			&& str_contains( $ax_ct_cb_editor, "if ( ! keeps && ! String( written[ options.required ] || '' ).trim() ) {" )
 			&& str_contains( $ax_ct_cb_editor, "setPending( pending.concat( [ { id: newEntryId( 'row', {} ), entry: written } ] ) );" )
 			// Unless a language says something about it, in which case taking it away is a question.
 			&& str_contains( $ax_ct_cb_editor, "patchesUnder( ( props.card || {} ).localizations, options.property + '/' + id )" )
@@ -4878,6 +4878,75 @@ try {
 			&& str_contains( $ax_ct_cb_editor, "resolveEntryRemoval( card, 'emails', question, update )" )
 			// Written once because it was got wrong once per collection.
 			&& str_contains( $ax_ct_cb_editor, 'Written once because it was got wrong once per collection.' )
+	);
+
+	/*
+	 * An address is not a name. A name is six parts in an order, the same six everywhere; an address
+	 * is a different shape in every country -- Korean runs largest to smallest and British the other
+	 * way, and the fields themselves differ. A screen taking one apart into boxes would be picking one
+	 * country's form and asking the rest of the world to fit it.
+	 *
+	 * So a row is the country, the address as somebody writes it, and where it belongs in their life.
+	 * `components` is neither built from the line nor overwritten by it.
+	 */
+	$ax_ct_ad_id = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array(
+			'@type'     => 'Card',
+			'name'      => array( 'full' => 'Two addresses' ),
+			'addresses' => array(
+				'adr-one' => array( 'countryCode' => 'KR', 'full' => "\xeb\xb6\x80\xec\x82\xb0", 'contexts' => array( 'private' => true ) ),
+				// Arrived in pieces from something that took it apart, with no line to read.
+				'adr-two' => array(
+					'countryCode'      => 'GB',
+					'components'       => array( array( 'kind' => 'locality', 'value' => 'London' ) ),
+					'defaultSeparator' => ', ',
+				),
+			),
+		)
+	);
+	$ax_ct_ad_key  = is_wp_error( $ax_ct_ad_id ) ? 0 : (int) $ax_ct_ad_id;
+	$ax_ct_loose[] = $ax_ct_ad_key;
+	$ax_ct_ad_back = axismundi_contacts_card_document( $ax_ct_ad_key );
+	ax_ct_assert(
+		$ax_ct_results,
+		'an address is what somebody wrote and which country reads it, and its parts are left alone',
+		'KR' === (string) ( $ax_ct_ad_back['addresses']['adr-one']['countryCode'] ?? '' )
+			// The one that came in pieces keeps them, and gains no line it did not have.
+			&& 'London' === (string) ( $ax_ct_ad_back['addresses']['adr-two']['components'][0]['value'] ?? '' )
+			&& ', ' === (string) ( $ax_ct_ad_back['addresses']['adr-two']['defaultSeparator'] ?? '' )
+			&& ! array_key_exists( 'full', (array) $ax_ct_ad_back['addresses']['adr-two'] )
+			&& str_contains( $ax_ct_cb_editor, 'function Addresses( props )' )
+			// Nothing takes an address apart or puts it back together.
+			&& ! str_contains( $ax_ct_cb_editor, 'addressComponents' )
+	);
+	/*
+	 * And an address that arrived in pieces survives somebody typing a line into it and rubbing it out
+	 * again. What makes a new entry is not the only thing that makes an existing one worth keeping,
+	 * and losing a structure this screen never showed them would be the worst kind of loss: silent,
+	 * and of something they did not know was there.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'an entry stays for what it holds, not only for the one thing that would have started it',
+		str_contains( $ax_ct_cb_editor, "keeps: [ 'components', 'coordinates' ]" )
+			&& str_contains( $ax_ct_cb_editor, 'var keeps = ( options.keeps || [] ).some( function ( key ) {' )
+			&& str_contains( $ax_ct_cb_editor, "required: 'full'," )
+	);
+	/*
+	 * Nothing here sends an address anywhere to be completed or checked. Where somebody lives is not
+	 * a search query, and a field quietly handing it to a service to be autocompleted would be doing
+	 * that on their behalf without asking.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'where somebody lives is not sent anywhere to be finished off',
+		// Nothing fetches, and nothing points at a service that would.
+		! str_contains( $ax_ct_cb_editor, 'autocomplete=' )
+			&& ! str_contains( $ax_ct_cb_editor, "'autocomplete'" )
+			&& ! str_contains( $ax_ct_cb_editor, 'maps.googleapis' )
+			&& ! str_contains( $ax_ct_cb_editor, 'nominatim' )
+			&& str_contains( $ax_ct_cb_editor, 'Where somebody lives is not' )
 	);
 
 	ax_ct_assert(

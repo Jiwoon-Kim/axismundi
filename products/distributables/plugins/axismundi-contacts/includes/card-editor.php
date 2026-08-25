@@ -162,6 +162,7 @@ function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
 		'presets'             => array(
 			'phones' => axismundi_contacts_preset_options( 'phones' ),
 			'emails' => axismundi_contacts_preset_options( 'emails' ),
+			'addresses' => axismundi_contacts_preset_options( 'addresses' ),
 		),
 		/*
 		 * Where to read a phone number typed without a country. A hint and never a stored fact: the

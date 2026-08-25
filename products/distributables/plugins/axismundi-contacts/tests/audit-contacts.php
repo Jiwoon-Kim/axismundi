@@ -3744,7 +3744,7 @@ try {
 		$ax_ct_results,
 		'accounts are read in the order they are preferred, and an unranked one waits behind those that said',
 		array( 'x3', 'x1', 'x2' ) === array_column( $ax_ct_os_order, 'entry_id' )
-			&& str_contains( $ax_ct_os_js, 'function orderedServices' )
+			&& str_contains( $ax_ct_os_js, 'function orderedByPreference' )
 			&& str_contains( $ax_ct_os_js, 'pref: index + 1' )
 	);
 
@@ -4768,6 +4768,60 @@ try {
 			&& isset( $ax_ct_tc_after['localizations']['en'][ 'phones/' . $ax_ct_tc_moved . '/label' ] )
 			&& isset( $ax_ct_tc_prov[ 'phones/' . $ax_ct_tc_moved ] )
 			&& in_array( 'phones/' . $ax_ct_tc_moved, axismundi_contacts_published_pointers( $ax_ct_tk_sid ), true )
+	);
+
+	/*
+	 * What somebody would rather be written to in is not only which language. French at work and
+	 * French with friends are two things a person can prefer, and RFC 9553's own example says exactly
+	 * that -- so a row is a language and where it applies, and two rows differing only in the second
+	 * are two answers rather than a mistake.
+	 *
+	 * The store took this the whole time. The screen could not: it edited the language and nothing
+	 * else, which meant the only way to write that example was the JSON box.
+	 */
+	$ax_ct_pl_id = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array(
+			'@type'              => 'Card',
+			'name'               => array( 'full' => 'Three preferences' ),
+			'preferredLanguages' => array(
+				'lng-a' => array( 'language' => 'en', 'contexts' => array( 'work' => true ), 'pref' => 1 ),
+				'lng-b' => array( 'language' => 'fr', 'contexts' => array( 'work' => true ), 'pref' => 2 ),
+				// The same language again, somewhere else in their life, and with no place in the order.
+				'lng-c' => array( 'language' => 'fr', 'contexts' => array( 'private' => true ) ),
+			),
+		)
+	);
+	$ax_ct_pl_key  = is_wp_error( $ax_ct_pl_id ) ? 0 : (int) $ax_ct_pl_id;
+	$ax_ct_loose[] = $ax_ct_pl_key;
+	$ax_ct_pl_back = axismundi_contacts_card_document( $ax_ct_pl_key );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a language can be preferred at work and another way at home, and the screen can say so',
+		'fr' === (string) ( $ax_ct_pl_back['preferredLanguages']['lng-b']['language'] ?? '' )
+			&& 'fr' === (string) ( $ax_ct_pl_back['preferredLanguages']['lng-c']['language'] ?? '' )
+			&& true === ( $ax_ct_pl_back['preferredLanguages']['lng-b']['contexts']['work'] ?? null )
+			&& true === ( $ax_ct_pl_back['preferredLanguages']['lng-c']['contexts']['private'] ?? null )
+			// A row nobody has put anywhere carries no place in the order at all.
+			&& ! array_key_exists( 'pref', (array) $ax_ct_pl_back['preferredLanguages']['lng-c'] )
+			&& str_contains( $ax_ct_cb_editor, 'var CONTEXT_CHOICES = [' )
+			&& str_contains( $ax_ct_cb_editor, "{ value: 'private+work'," )
+			&& str_contains( $ax_ct_cb_editor, 'function withContext( entry, choice )' )
+	);
+	/*
+	 * Where it applies can be answered before which language, the way it can everywhere else, and the
+	 * row holds it until the language arrives. And `pref` is written by dragging, because dragging is
+	 * somebody stating an order -- a row nobody has moved is not given a number this invented.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a preference is a row until it names a language, and its place in the order is stated rather than assumed',
+		str_contains( $ax_ct_cb_editor, "// A preference is a language. Until there is one, this is a line and what has been" )
+			&& str_contains( $ax_ct_cb_editor, "newEntryId( 'lng', entries )" )
+			&& str_contains( $ax_ct_cb_editor, 'next[ id ] = Object.assign( {}, entries[ id ], { pref: index + 1 } );' )
+			// Read in the same order the accounts are, because `pref` means the same thing in both.
+			&& str_contains( $ax_ct_cb_editor, 'var order = orderedByPreference( entries );' )
+			&& str_contains( $ax_ct_cb_editor, 'function orderedByPreference( entries )' )
 	);
 
 	ax_ct_assert(

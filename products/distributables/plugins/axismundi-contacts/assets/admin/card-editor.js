@@ -2376,7 +2376,7 @@
 	function OnlineServices( props ) {
 		var entries = props.value || {};
 		var [ dragging, setDragging ] = useState( null );
-		var ordered = orderedServices( entries );
+		var ordered = orderedByPreference( entries );
 
 		function setEntries( next ) {
 			props.onChange( Object.keys( next ).length ? next : undefined );
@@ -2455,10 +2455,13 @@
 	 * Entry ids in the order they are preferred.
 	 *
 	 * By `pref`, with the order they sit in the document breaking ties, which is what the server does
-	 * when it decides which account leads. An account with no preference is not unranked and last: it
-	 * is unranked, which is behind everything that said where it goes.
+	 * when it decides which account leads. An entry with no preference is not unranked and last: it is
+	 * unranked, which is behind everything that said where it goes.
+	 *
+	 * Two collections read this way -- the accounts somebody leads with and the languages they would
+	 * rather be written to in -- and `pref` means the same thing in both, so it is asked once.
 	 */
-	function orderedServices( entries ) {
+	function orderedByPreference( entries ) {
 		var ids = Object.keys( entries || {} );
 		return ids.slice().sort( function ( a, b ) {
 			var pa = entries[ a ] && 'number' === typeof entries[ a ].pref ? entries[ a ].pref : Infinity;
@@ -2816,22 +2819,97 @@
 	}
 
 	/**
-	 * The languages this contact would rather be written to in, in order.
+	 * Which half of somebody's life an entry belongs to.
+	 *
+	 * The standard's `contexts`, as the four answers a person actually gives. Both is a real answer
+	 * and so is neither: a language somebody would rather be written to in full stop is not the same
+	 * as one they want at work, and a card that could only say the second would be putting words in
+	 * their mouth.
+	 */
+	var CONTEXT_CHOICES = [
+		{ value: '', label: __( 'Anywhere', 'axismundi-contacts' ), contexts: [] },
+		{ value: 'private', label: __( 'Personal', 'axismundi-contacts' ), contexts: [ 'private' ] },
+		{ value: 'work', label: __( 'Work', 'axismundi-contacts' ), contexts: [ 'work' ] },
+		{ value: 'private+work', label: __( 'Personal and work', 'axismundi-contacts' ), contexts: [ 'private', 'work' ] }
+	];
+
+	/** Which of those an entry reads as. */
+	function contextOf( entry ) {
+		return Object.keys( ( entry || {} ).contexts || {} ).filter( function ( key ) {
+			return entry.contexts[ key ];
+		} ).sort().join( '+' );
+	}
+
+	/** One entry with that answer written into it, or with the property gone when there is none. */
+	function withContext( entry, choice ) {
+		var next = Object.assign( {}, entry );
+		delete next.contexts;
+		if ( ! choice ) {
+			return next;
+		}
+		next.contexts = {};
+		choice.split( '+' ).forEach( function ( value ) {
+			next.contexts[ value ] = true;
+		} );
+		return next;
+	}
+
+	/**
+	 * The languages this contact would rather be written to in.
 	 *
 	 * The same control as the card's own language and never the same value. One says what the card
 	 * above is written in; this says what somebody would like to receive -- a person whose card is in
 	 * Korean may ask to be written to in English, and a card that conflated the two would have no way
 	 * to say so.
 	 *
-	 * Order is `pref`, which is what the standard reads: 1 is the one they would rather have.
+	 * A language may appear twice, because the answer is not only which language: French at work and
+	 * French with friends are two things somebody can prefer, and the standard's own example says
+	 * exactly that. So the row is a language and where it applies, and two rows differing only in the
+	 * second are two different answers rather than a mistake.
+	 *
+	 * Order is `pref`, which is what the standard reads: 1 is the one they would rather have. It is
+	 * written by dragging, because dragging is somebody stating an order -- a row nobody has put
+	 * anywhere carries no `pref` at all rather than a number this invented for it.
 	 */
 	function PreferredLanguages( props ) {
 		var entries = props.value || {};
-		var ids = Object.keys( entries );
+		var [ pending, setPending ] = useState( [] );
+		var [ dragging, setDragging ] = useState( null );
 
 		function setEntries( next ) {
 			props.onChange( Object.keys( next ).length ? next : undefined );
 		}
+
+		function write( row, change ) {
+			if ( row.pending ) {
+				var made = change( row.entry );
+				if ( ! String( made.language || '' ).trim() ) {
+					// A preference is a language. Until there is one, this is a line and what has been
+					// answered about it waits on the line.
+					setPending( pending.map( function ( each ) {
+						return each.id === row.pending ? { id: each.id, entry: made } : each;
+					} ) );
+					return;
+				}
+				var next = Object.assign( {}, entries );
+				next[ newEntryId( 'lng', entries ) ] = made;
+				setPending( pending.filter( function ( each ) {
+					return each.id !== row.pending;
+				} ) );
+				setEntries( next );
+				return;
+			}
+			var updated = Object.assign( {}, entries );
+			updated[ row.id ] = change( entries[ row.id ] || {} );
+			setEntries( updated );
+		}
+
+		var order = orderedByPreference( entries );
+		var rows = order.map( function ( id ) {
+			return { key: id, id: id, entry: entries[ id ] || {} };
+		} ).concat( pending.map( function ( each ) {
+			return { key: each.id, pending: each.id, entry: each.entry };
+		} ) );
 
 		return el(
 			Section,
@@ -2839,29 +2917,76 @@
 			el(
 				'p',
 				{ className: 'description' },
-				__( 'What this contact would rather be written to in, most preferred first. Not the language the card is written in.', 'axismundi-contacts' )
+				__( 'What this contact would rather be written to in. Not the language the card is written in, and a language may appear twice if they want it in one part of their life and not another.', 'axismundi-contacts' )
 			),
-			ids.map( function ( id, index ) {
-				var entry = entries[ id ] || {};
+			rows.map( function ( row, at ) {
+				var entry = row.entry;
+				var movable = !! row.id;
 				return el(
 					'div',
-					{ key: id, className: 'ax-ce-entry' },
+					{
+						key: row.key,
+						className: 'ax-ce-lang' + ( movable ? ' is-movable' : '' ),
+						draggable: movable,
+						onDragStart: function () {
+							if ( movable ) {
+								setDragging( at );
+							}
+						},
+						onDragOver: function ( event ) {
+							if ( movable ) {
+								event.preventDefault();
+							}
+						},
+						onDrop: function () {
+							if ( null === dragging || dragging === at || ! movable ) {
+								return;
+							}
+							/*
+							 * Dragging is somebody stating an order, so the order is written down --
+							 * for every row, because saying one comes first says what the others come
+							 * after. Rows nobody has ever dragged keep no `pref` until then.
+							 */
+							var ids = order.slice();
+							var moved = ids.splice( dragging, 1 )[ 0 ];
+							ids.splice( at, 0, moved );
+							var next = {};
+							ids.forEach( function ( id, index ) {
+								next[ id ] = Object.assign( {}, entries[ id ], { pref: index + 1 } );
+							} );
+							setDragging( null );
+							setEntries( next );
+						}
+					},
+					el(
+						'span',
+						{
+							className: 'ax-ce-lang__grip',
+							'aria-hidden': 'true',
+							dangerouslySetInnerHTML: { __html: movable ? icon( 'drag-indicator' ) : '' }
+						}
+					),
 					el( Combobox, {
 						label: __( 'Language', 'axismundi-contacts' ),
-						className: 'ax-ce-entry__value',
+						className: 'ax-ce-lang__language',
 						value: entry.language || '',
 						options: LANGUAGES,
 						allowFree: true,
-						hideLabel: true,
-						supporting: sprintf(
-							/* translators: %d: where this sits in the order of preference. */
-							__( 'Preferred %d', 'axismundi-contacts' ),
-							index + 1
-						),
 						onChange: function ( value ) {
-							var next = Object.assign( {}, entries );
-							next[ id ] = Object.assign( {}, entry, { language: value, pref: index + 1 } );
-							setEntries( next );
+							write( row, function ( each ) {
+								return withKey( each, 'language', value );
+							} );
+						}
+					} ),
+					el( Combobox, {
+						label: __( 'Where', 'axismundi-contacts' ),
+						className: 'ax-ce-lang__context',
+						value: contextOf( entry ),
+						options: CONTEXT_CHOICES,
+						onChange: function ( value ) {
+							write( row, function ( each ) {
+								return withContext( each, value );
+							} );
 						}
 					} ),
 					el( IconButton, {
@@ -2869,8 +2994,14 @@
 						variant: 'danger',
 						label: __( 'Remove this language', 'axismundi-contacts' ),
 						onClick: function () {
+							if ( row.pending ) {
+								setPending( pending.filter( function ( each ) {
+									return each.id !== row.pending;
+								} ) );
+								return;
+							}
 							var next = Object.assign( {}, entries );
-							delete next[ id ];
+							delete next[ row.id ];
 							setEntries( next );
 						}
 					} )
@@ -2885,10 +3016,7 @@
 						type: 'button',
 						className: 'button',
 						onClick: function () {
-							var id = 'lang-' + Math.random().toString( 36 ).slice( 2, 8 );
-							var next = Object.assign( {}, entries );
-							next[ id ] = { language: '', pref: ids.length + 1 };
-							setEntries( next );
+							setPending( pending.concat( [ { id: newEntryId( 'row', {} ), entry: {} } ] ) );
 						}
 					},
 					__( 'Add a preferred language', 'axismundi-contacts' )
@@ -3108,7 +3236,7 @@
 			} ),
 			config.publishableEntries.map( function ( property ) {
 				var entries = card[ property ] || {};
-				var ids = 'onlineServices' === property ? orderedServices( entries ) : Object.keys( entries );
+				var ids = 'onlineServices' === property ? orderedByPreference( entries ) : Object.keys( entries );
 				return ids.map( function ( id, index ) {
 					var entry = entries[ id ] || {};
 					var read = entryLabel( property, entry, index );

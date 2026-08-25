@@ -669,3 +669,39 @@
 	flex: 1 1 10em;
 	min-width: 0;
 }
+
+/* -- a language somebody would rather be written to in ---------------------------------------- */
+
+.ax-ce-lang {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+	margin: 0 0 8px;
+}
+
+.ax-ce-lang.is-movable {
+	cursor: grab;
+}
+
+.ax-ce-lang__grip {
+	flex: 0 0 24px;
+	margin-top: 16px;
+	color: #787c82;
+}
+
+.ax-ce-lang__grip svg {
+	display: block;
+	width: 24px;
+	height: 24px;
+	fill: currentColor;
+}
+
+.ax-ce-lang__language {
+	flex: 2 1 0;
+	min-width: 0;
+}
+
+.ax-ce-lang__context {
+	flex: 1 1 0;
+	min-width: 0;
+}

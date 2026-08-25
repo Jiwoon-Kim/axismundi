@@ -5158,12 +5158,24 @@ try {
 	ax_ct_assert(
 		$ax_ct_results,
 		'a field the browser filled in reaches the card, which is not something the browser says',
-		str_contains( $ax_ct_af_css, '@keyframes ax-contacts-autofill' )
-			&& str_contains( $ax_ct_af_css, ':-webkit-autofill' )
-			&& str_contains( $ax_ct_cb_js, 'function autofilled( onChange )' )
-			&& str_contains( $ax_ct_cb_js, "if ( 'ax-contacts-autofill' !== event.animationName ) {" )
-			// Both kinds of box, since an address is filled into one of each.
-			&& 2 === substr_count( $ax_ct_cb_js, 'onAnimationStart: autofilled( props.onChange ),' )
+		/*
+		 * Watched rather than waited on. The animation a browser starts when it fills a field is one
+		 * way of hearing about it and is not offered everywhere -- on the address fields in Chrome the
+		 * rule does not match at all -- so what this actually does is look: at every field on screen,
+		 * while somebody is in one of them, for anything showing a value the document does not say.
+		 */
+		str_contains( $ax_ct_cb_js, 'function sweep()' )
+			&& str_contains( $ax_ct_cb_js, 'function watchField( node, current )' )
+			&& str_contains( $ax_ct_cb_js, 'function lookForAWhile()' )
+			&& str_contains( $ax_ct_cb_js, 'window.setInterval( sweep, 120 )' )
+			// Every field, not the one with focus: a browser fills in the boxes beside it too.
+			&& str_contains( $ax_ct_cb_js, 'onScreen.forEach( function ( each ) {' )
+			&& str_contains( $ax_ct_cb_js, 'held.onChange( node.value );' )
+			// Compared against what this code drew, so a formatted field is not mistaken for a change.
+			&& str_contains( $ax_ct_cb_js, "var shown = undefined === held.value || null === held.value ? '' : String( held.value );" )
+			// And the animation, where a browser does start one.
+			&& str_contains( $ax_ct_af_css, '@keyframes ax-contacts-autofill' )
+			&& 2 === substr_count( $ax_ct_cb_js, 'onAnimationStart: autofilled(),' )
 	);
 	/*
 	 * And a browser fills several boxes at once. Each of them working out what to store from the copy
@@ -5200,6 +5212,36 @@ try {
 			&& str_contains( $ax_ct_cb_editor, "inputProps: { autoComplete: 'off' }," )
 			// And the whole line is what `street-address` is for.
 			&& str_contains( $ax_ct_cb_editor, "inputProps: { autoComplete: 'street-address' }," )
+	);
+
+	/*
+	 * Said once, and made once. Between writing a value and the screen being drawn again there is a
+	 * gap, and a check running every tenth of a second inside it keeps finding the same difference --
+	 * which for a row that becomes an entry the first time it is filled in means three filled boxes
+	 * turning into three addresses, each holding a bit more than the last. That is what happened.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a value noticed once is written once, and a row becomes an entry once',
+		str_contains( $ax_ct_cb_js, 'if ( node.value === each.pushed ) {' )
+			&& str_contains( $ax_ct_cb_js, 'each.pushed = node.value;' )
+			&& str_contains( $ax_ct_cb_editor, 'var adopted = useRef( {} );' )
+			&& str_contains( $ax_ct_cb_editor, 'if ( row.pending && adopted.current[ row.pending ] ) {' )
+			&& str_contains( $ax_ct_cb_editor, 'adopted.current[ row.pending ] = made_id;' )
+	);
+	/*
+	 * And what turns a row into an entry is not always one field. An address is an address if it says
+	 * where it is at all -- the standard needs one of components, coordinates, a country code, a line
+	 * or a time zone -- so a browser filling in the parts of a new one leaves them on the card rather
+	 * than on a row that never became anything.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'an address is one for any of the things that make it one, not for a written-out line alone',
+		str_contains( $ax_ct_cb_editor, "makes: [ 'full', 'components', 'countryCode', 'coordinates', 'timeZone' ]," )
+			&& str_contains( $ax_ct_cb_editor, "( options.makes || [ options.required ] ).some( function ( key ) {" )
+			// And the store agrees: an address that says only where in the world it is, is an address.
+			&& true === axismundi_contacts_validate_card_values( array( 'addresses' => array( 'adr-q' => array( 'countryCode' => 'KR' ) ) ) )
 	);
 
 	ax_ct_assert(

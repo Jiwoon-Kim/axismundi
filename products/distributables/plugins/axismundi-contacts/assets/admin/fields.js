@@ -25,6 +25,7 @@
 	var el = wp.element.createElement;
 	var Fragment = wp.element.Fragment;
 	var useRef = wp.element.useRef;
+	var useEffect = wp.element.useEffect;
 	/*
 	 * Translation, guarded. This file draws one string of its own -- what a list says when nothing in
 	 * it matches -- and it is drawn on the one render where somebody has typed something the list
@@ -46,26 +47,91 @@
 	}
 
 	/**
-	 * What a browser filled in without telling anybody.
+	 * Every field on screen, so that one filled in behind this code's back can be noticed.
 	 *
-	 * Autofill sets the input's value in the DOM and fires nothing React listens for, so the box goes
-	 * yellow, the draft still holds what was there before, and the JSON beside it disagrees with the
-	 * screen. The one signal that does arrive is a CSS animation: `:-webkit-autofill` starts one, and
-	 * an animation handler is somewhere to read the value the browser just wrote and put it through
-	 * the same writer a keystroke would.
+	 * A browser filling in an address writes several boxes at once and fires nothing a script
+	 * listens for. Worse, it writes into boxes nobody is looking at: the person clicked one field and
+	 * accepted a suggestion, and the city, the region and the postcode were filled in beside it. So
+	 * there is no one field to watch -- the answer is to look at all of them.
 	 *
-	 * Nothing here decides what to fill in. The browser holds what somebody told it and offers it;
-	 * this only notices that they accepted.
+	 * Each entry holds the node and a box carrying whatever this render's value and writer are, since
+	 * both change on every render and the registration does not.
 	 */
-	function autofilled( onChange ) {
+	var onScreen = [];
+
+	function watchField( node, current ) {
+		var entry = { node: node, current: current };
+		onScreen.push( entry );
+		return function () {
+			onScreen = onScreen.filter( function ( each ) {
+				return each !== entry;
+			} );
+		};
+	}
+
+	/**
+	 * Anything a field is showing that the document does not say.
+	 *
+	 * What is compared is what this code last drew, so a field showing `010-2742-1672` for a card
+	 * saying `tel:+82…` is not mistaken for a change -- the caller passes what it wants shown, and
+	 * that is what is checked against. When they differ, something wrote into the field, and it goes
+	 * through the same writer a keystroke would.
+	 */
+	function sweep() {
+		onScreen.forEach( function ( each ) {
+			var node = each.node.current;
+			var held = each.current.current;
+			if ( ! node || ! held || 'function' !== typeof held.onChange ) {
+				return;
+			}
+			var shown = undefined === held.value || null === held.value ? '' : String( held.value );
+			if ( node.value === shown ) {
+				return;
+			}
+			/*
+			 * Said once. Between writing a value and the screen being drawn again there is a gap, and
+			 * a check running every tenth of a second inside that gap would keep finding the same
+			 * difference and keep reporting it -- which for a field that makes something when it is
+			 * first filled in means making it over and over.
+			 */
+			if ( node.value === each.pushed ) {
+				return;
+			}
+			each.pushed = node.value;
+			held.onChange( node.value );
+		} );
+	}
+
+	/*
+	 * When to look. A browser fills in on a gesture -- somebody clicks a field and accepts what it
+	 * offers -- so a focus is the signal that one may be about to happen, and the next second or two
+	 * is when it does. Blur is the last chance, and the CSS animation below is a third way of hearing
+	 * about it where the browser offers one.
+	 *
+	 * Nothing runs while nobody is in a field.
+	 */
+	var looking = null;
+
+	function lookForAWhile() {
+		if ( looking ) {
+			window.clearTimeout( looking.until );
+		} else {
+			looking = { every: window.setInterval( sweep, 120 ) };
+		}
+		looking.until = window.setTimeout( function () {
+			window.clearInterval( looking.every );
+			looking = null;
+			sweep();
+		}, 2000 );
+	}
+
+	/** The animation a browser starts when it fills a field in, where it starts one. */
+	function autofilled() {
 		return function ( event ) {
 			if ( 'ax-contacts-autofill' !== event.animationName ) {
 				return;
 			}
-			var value = event.target.value;
-			if ( undefined !== value ) {
-				onChange( value );
-			}
+			sweep();
 		};
 	}
 
@@ -120,6 +186,12 @@
 	 */
 	function TextField( props ) {
 		var id = useFieldId( props.id );
+		var node = useRef( null );
+		var current = useRef( null );
+		current.current = { value: props.value, onChange: props.onChange };
+		useEffect( function () {
+			return watchField( node, current );
+		}, [] );
 		return el( Shell, {
 			id: id,
 			label: props.label,
@@ -129,8 +201,15 @@
 			className: props.className,
 			trailing: props.trailing,
 			control: function ( describedBy ) {
-				return el( 'input', Object.assign( {
+				var extra = props.inputProps || {};
+				/*
+				 * Merged rather than overwritten. A caller adds its own `onBlur` -- a phone number
+				 * settles into `tel:` when the box is left -- and a merge that let one win would be
+				 * the field quietly losing either that or the watch for what a browser filled in.
+				 */
+				return el( 'input', Object.assign( {}, extra, {
 					id: id,
+					ref: node,
 					className: 'text-field__input',
 					type: props.type || 'text',
 					// The floating label is CSS, and this is what it reads.
@@ -140,12 +219,26 @@
 					readOnly: props.readOnly,
 					'aria-describedby': describedBy,
 					'aria-invalid': props.error ? 'true' : undefined,
-					onFocus: props.onFocus,
-					onAnimationStart: autofilled( props.onChange ),
+					onFocus: function ( event ) {
+						lookForAWhile();
+						if ( props.onFocus ) {
+							props.onFocus( event );
+						}
+						if ( extra.onFocus ) {
+							extra.onFocus( event );
+						}
+					},
+					onBlur: function ( event ) {
+						sweep();
+						if ( extra.onBlur ) {
+							extra.onBlur( event );
+						}
+					},
+					onAnimationStart: autofilled(),
 					onChange: function ( event ) {
 						props.onChange( event.target.value );
 					}
-				}, props.inputProps || {} ) );
+				} ) );
 			}
 		} );
 	}
@@ -153,6 +246,12 @@
 	/** The same field, taller, for things that are paragraphs or documents. */
 	function Textarea( props ) {
 		var id = useFieldId( props.id );
+		var node = useRef( null );
+		var current = useRef( null );
+		current.current = { value: props.value, onChange: props.onChange };
+		useEffect( function () {
+			return watchField( node, current );
+		}, [] );
 		return el( Shell, {
 			id: id,
 			label: props.label,
@@ -163,6 +262,7 @@
 			control: function ( describedBy ) {
 				return el( 'textarea', Object.assign( {
 					id: id,
+					ref: node,
 					className: 'text-field__input',
 					rows: props.rows || 4,
 					placeholder: ' ',
@@ -172,7 +272,9 @@
 					readOnly: props.readOnly,
 					'aria-describedby': describedBy,
 					'aria-invalid': props.error ? 'true' : undefined,
-					onAnimationStart: autofilled( props.onChange ),
+					onFocus: lookForAWhile,
+					onBlur: sweep,
+					onAnimationStart: autofilled(),
 					onChange: function ( event ) {
 						props.onChange( event.target.value );
 					}

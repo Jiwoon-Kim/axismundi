@@ -1382,6 +1382,13 @@
 		 */
 		var latest = useRef( entries );
 		latest.current = entries;
+		/*
+		 * Rows that have already become entries, by the id they had while they were rows. Several
+		 * fields can be filled in before the screen is drawn again, and without this the second one
+		 * would find the row still looking like a row and make a second entry from it -- three filled
+		 * boxes, three addresses, each holding a bit more than the last.
+		 */
+		var adopted = useRef( {} );
 
 		function setEntries( next ) {
 			latest.current = next;
@@ -1396,16 +1403,33 @@
 		}
 
 		function write( row, change ) {
+			if ( row.pending && adopted.current[ row.pending ] ) {
+				// It became one a moment ago; this is the same row, writing into what it became.
+				var became = adopted.current[ row.pending ];
+				row = { key: row.key, id: became, entry: latest.current[ became ] || {} };
+			}
 			if ( row.pending ) {
 				var made = change( row.entry );
-				if ( ! String( made[ options.required ] || '' ).trim() ) {
+				/*
+				 * What turns a row into an entry is not always one field. An address is an address if
+				 * it says where it is at all -- parts, a country, coordinates -- and a browser filling
+				 * in the parts of a new one would otherwise leave every one of them on a row that
+				 * never became anything, which is a screen quietly eating what somebody was given.
+				 */
+				var enough = ( options.makes || [ options.required ] ).some( function ( key ) {
+					var held = made[ key ];
+					return held && ( 'string' !== typeof held ? true : held.trim() );
+				} );
+				if ( ! enough ) {
 					setPending( pending.map( function ( each ) {
 						return each.id === row.pending ? { id: each.id, entry: made } : each;
 					} ) );
 					return;
 				}
 				var next = Object.assign( {}, latest.current );
-				next[ newEntryId( options.prefix, latest.current ) ] = made;
+				var made_id = newEntryId( options.prefix, latest.current );
+				next[ made_id ] = made;
+				adopted.current[ row.pending ] = made_id;
 				setPending( pending.filter( function ( each ) {
 					return each.id !== row.pending;
 				} ) );
@@ -2284,6 +2308,8 @@
 			prefix: 'adr',
 			required: 'full',
 			property: 'addresses',
+			// The standard needs one of these and not `full` in particular, so any of them makes one.
+			makes: [ 'full', 'components', 'countryCode', 'coordinates', 'timeZone' ],
 			// An address is whatever it holds. The standard needs one of these and not `full` in
 			// particular, so any of them keeps an entry that has it.
 			keeps: [ 'components', 'coordinates', 'countryCode', 'timeZone' ]

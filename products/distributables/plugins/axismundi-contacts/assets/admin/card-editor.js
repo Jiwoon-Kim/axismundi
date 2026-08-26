@@ -210,7 +210,7 @@
 		return el(
 			'section',
 			{ className: 'ax-ce-section' },
-			el( Heading, null, __( 'What this is', 'axismundi-contacts' ) ),
+			el( Heading, null, __( 'Type', 'axismundi-contacts' ) ),
 			el(
 				'div',
 				{ className: 'ax-ce-kinds', role: 'radiogroup', 'aria-label': __( 'What this card describes', 'axismundi-contacts' ) },

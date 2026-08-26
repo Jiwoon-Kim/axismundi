@@ -4945,7 +4945,8 @@ try {
 		'a browser may offer what somebody told it, and nothing is asked of anybody else',
 		str_contains( $ax_ct_cb_editor, 'function addressAutofill( kind )' )
 			&& str_contains( $ax_ct_cb_editor, "locality: 'address-level2'," )
-			&& str_contains( $ax_ct_cb_editor, "inputProps: { autoComplete: 'street-address' }," )
+			// The line's own token, handed to the field that draws it.
+			&& str_contains( $ax_ct_cb_editor, "fullInputProps: { autoComplete: 'street-address' }," )
 			// Nothing fetches, and nothing names a service that would.
 			&& ! str_contains( $ax_ct_cb_editor, 'maps.googleapis' )
 			&& ! str_contains( $ax_ct_cb_editor, 'nominatim' )
@@ -5218,7 +5219,7 @@ try {
 			&& ! str_contains( $ax_ct_cb_editor, "name: 'address-line1'," )
 			&& str_contains( $ax_ct_cb_editor, "inputProps: { autoComplete: 'off' }," )
 			// And the whole line is what `street-address` is for.
-			&& str_contains( $ax_ct_cb_editor, "inputProps: { autoComplete: 'street-address' }," )
+			&& str_contains( $ax_ct_cb_editor, "fullInputProps: { autoComplete: 'street-address' }," )
 	);
 
 	/*
@@ -5397,6 +5398,58 @@ try {
 			// And nothing rearranges from a render's own copy any more.
 			&& ! str_contains( $ax_ct_cb_editor, 'var list = components.slice();' )
 	);
+	/*
+	 * The address written out as one line is a way of saying where somewhere is, not a summary of the
+	 * parts, so it is offered beside them rather than behind the fold that holds the coordinates and
+	 * the time zone. A checkbox, like the name's, because an empty box in front of somebody reads as
+	 * a question they have not answered and most addresses answer with parts and never with a line.
+	 *
+	 * It has one writer. The line used to be drawn twice -- once in the address row and once in the
+	 * localization editor -- and two fields writing one key is how they end up disagreeing about what
+	 * it says.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'the written-out address is one field, offered beside the parts rather than behind the fold',
+		1 === substr_count( $ax_ct_cb_editor, "className: 'ax-ce-address__full'," )
+			// Asked before the separator between the parts, which is the order somebody reads them in.
+			&& strpos( $ax_ct_cb_editor, "__( 'Full address', 'axismundi-contacts' )" )
+				< strpos( $ax_ct_cb_editor, "__( 'Default separator', 'axismundi-contacts' )", (int) strpos( $ax_ct_cb_editor, 'function AddressParts' ) )
+			// Ticked and empty is somebody about to write one, so nothing is stored until they do.
+			&& str_contains( $ax_ct_cb_editor, 'var [ written, setWritten ] = useState( undefined !== address.full );' )
+			// And turning it off throws an answer away, so when there is one to lose it asks first.
+			&& str_contains( $ax_ct_cb_editor, 'if ( latest.current.full ) {' )
+			&& str_contains( $ax_ct_cb_editor, "__( 'Turning this off removes the address as it was written out.', 'axismundi-contacts' )" )
+			/*
+			 * A browser fills in where somebody lives, which is an answer in their own language. The
+			 * localization editor asks for a translation of it, and autofilling that would put the
+			 * same address under a heading saying it is in another language.
+			 */
+			&& 1 === substr_count( $ax_ct_cb_editor, "fullInputProps: { autoComplete: 'street-address' }," )
+	);
+
+	/*
+	 * And a line on its own is a whole address. The standard asks for any one of the parts, the line,
+	 * a country code, coordinates or a time zone -- so `{"full": "부산광역시 남구 동명로 26"}` is an
+	 * address and nothing may require the parts, or a country, before it will accept one. A screen
+	 * that marked the country required would be inventing a rule the standard does not have, and a
+	 * person who does not know it would have to make one up.
+	 */
+	$ax_ct_line       = "ë¶ì°ê´ì­ì ë¨êµ¬ ëëªë¡ 26";
+	$ax_ct_line_id    = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array( '@type' => 'Card', 'name' => array( 'full' => 'Line only' ), 'addresses' => array( 'adr-line' => array( 'full' => $ax_ct_line ) ) )
+	);
+	$ax_ct_line_key   = is_wp_error( $ax_ct_line_id ) ? 0 : (int) $ax_ct_line_id;
+	$ax_ct_loose[]    = $ax_ct_line_key;
+	$ax_ct_line_back  = (array) ( axismundi_contacts_card_document( $ax_ct_line_key )['addresses']['adr-line'] ?? array() );
+	ax_ct_assert(
+		$ax_ct_results,
+		'an address written out and nothing else is a whole address, with no country asked of it',
+		true === axismundi_contacts_validate_card_values( array( 'addresses' => array( 'adr-x' => array( 'full' => $ax_ct_line ) ) ) )
+			&& array( 'full' => $ax_ct_line ) === $ax_ct_line_back
+	);
+
 	/*
 	 * And the list a person actually leaves behind after moving things around. This one was not
 	 * written here first: it was built on the screen -- a separator and a building added, the

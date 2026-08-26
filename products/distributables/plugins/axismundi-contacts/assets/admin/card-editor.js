@@ -2130,6 +2130,14 @@
 		var [ pending, setPending ] = useState( [] );
 		var [ adding, setAdding ] = useState( false );
 		var [ dragging, setDragging ] = useState( null );
+		/*
+		 * Whether this address answers with a written-out line as well. Held here rather than read
+		 * from the value, because a line somebody has ticked and not yet typed is still a line they
+		 * are about to write, and an empty one is not stored -- so the box would untick itself under
+		 * the cursor.
+		 */
+		var [ written, setWritten ] = useState( undefined !== address.full );
+		var [ askingFull, setAskingFull ] = useState( false );
 		// The same reason as the rows above: a browser fills several parts of an address at once.
 		var latest = useRef( address );
 		latest.current = address;
@@ -2289,6 +2297,100 @@
 				)
 				: null,
 			/*
+			 * The address written out as one line, which is a second way of saying where somewhere is
+			 * rather than a summary of the first. The standard asks for any one of the parts, the
+			 * line, a country code, coordinates or a time zone -- so `{"full": "부산광역시 남구 동명로
+			 * 26"}` is a whole address on its own, and nothing here requires the parts to exist before
+			 * it can be written.
+			 *
+			 * A checkbox rather than a box that is always open, for the reason the name has one: an
+			 * empty field in front of somebody reads as a question they have not answered yet, and
+			 * most addresses answer with parts and never with a line. Ticking it is how somebody says
+			 * this address is written out; the line is never built from the parts above and never
+			 * replaced by them.
+			 */
+			el(
+				Fragment,
+				null,
+				el(
+					'p',
+					null,
+					el(
+						'label',
+						null,
+						el( 'input', {
+							type: 'checkbox',
+							checked: written,
+							onChange: function ( event ) {
+								if ( event.target.checked ) {
+									setWritten( true );
+									return;
+								}
+								// Something to lose is something to ask about first.
+								if ( latest.current.full ) {
+									setAskingFull( true );
+									return;
+								}
+								setWritten( false );
+							}
+						} ),
+						' ',
+						__( 'Full address', 'axismundi-contacts' )
+					)
+				),
+				written
+					? el( Textarea, {
+						label: __( 'Full address', 'axismundi-contacts' ),
+						className: 'ax-ce-address__full',
+						rows: props.fullRows || 3,
+						value: address.full || '',
+						supporting: props.fullSupporting || __( 'The whole address written out as one string, kept as written -- never built from the parts above, and never replaced by them.', 'axismundi-contacts' ),
+						inputProps: props.fullInputProps,
+						onChange: function ( value ) {
+							props.onChange( withKey( latest.current, 'full', value ) );
+						}
+					} )
+					: null,
+				askingFull
+					? el(
+						'div',
+						{ className: 'ax-ce-blocked', role: 'alert' },
+						el( 'p', null, __( 'Turning this off removes the address as it was written out.', 'axismundi-contacts' ) ),
+						el(
+							'p',
+							null,
+							el(
+								'button',
+								{
+									type: 'button',
+									className: 'button',
+									onClick: function () {
+										var without = Object.assign( {}, latest.current );
+										delete without.full;
+										setWritten( false );
+										setAskingFull( false );
+										props.onChange( without );
+									}
+								},
+								__( 'Remove it', 'axismundi-contacts' )
+							),
+							' ',
+							el(
+								'button',
+								{
+									type: 'button',
+									className: 'button',
+									onClick: function () {
+										setAskingFull( false );
+									}
+								},
+								__( 'Keep it', 'axismundi-contacts' )
+							)
+						)
+					)
+					: null
+			),
+			/*
 			 * What goes between the parts when nothing says otherwise. The standard will not store one
 			 * for an address whose parts are in no order, which is the same rule the name follows.
 			 */
@@ -2401,6 +2503,8 @@
 							: null,
 						el( AddressParts, {
 							address: entry,
+							// The line is one field a browser can fill, and the only one it fills whole.
+							fullInputProps: { autoComplete: 'street-address' },
 							onChange: function ( next ) {
 								rows.write( row, function () {
 									return next;
@@ -2458,28 +2562,15 @@
 							}
 						} ),
 						/*
-						 * The line, and the two facts about where this address is. All three are here
-						 * rather than in front of somebody typing a street name: the line is what an
-						 * import of an address nobody took apart brings, and the other two are things
-						 * a machine wants and a person rarely does.
+						 * The two facts about where this address is that a machine wants and a person
+						 * rarely does. The written-out line used to be here too and is not any more:
+						 * it is one of the ways an address says where it is, so it is offered beside
+						 * the parts rather than behind a fold.
 						 */
 						el(
 							'details',
 							{ className: 'ax-ce-name__advanced' },
 							el( 'summary', null, __( 'More about this address', 'axismundi-contacts' ) ),
-							el( Textarea, {
-								label: __( 'Full address', 'axismundi-contacts' ),
-								className: 'ax-ce-address__full',
-								rows: 3,
-								value: entry.full || '',
-								supporting: __( 'Optional. The whole address written out as one string, kept as written -- never built from the parts above, and never replaced by them.', 'axismundi-contacts' ),
-								inputProps: { autoComplete: 'street-address' },
-								onChange: function ( value ) {
-									rows.write( row, function ( each ) {
-										return withKey( each, 'full', value );
-									} );
-								}
-							} ),
 							el( TextField, {
 								label: __( 'Coordinates', 'axismundi-contacts' ),
 								value: entry.coordinates || '',
@@ -3410,18 +3501,14 @@
 						el( 'h4', null, path ),
 						el( AddressParts, {
 							address: value,
+							fullRows: 2,
+							fullSupporting: __( 'The whole address written out in this language, kept as written.', 'axismundi-contacts' ),
+							/*
+							 * And no autofill hint here. A browser fills in where somebody lives, which
+							 * is an answer in their own language and never a translation of it.
+							 */
 							onChange: function ( next ) {
 								setPath( path, next );
-							}
-						} ),
-						el( Textarea, {
-							label: __( 'Full address', 'axismundi-contacts' ),
-							className: 'ax-ce-address__full',
-							rows: 2,
-							value: value.full || '',
-							supporting: __( 'The whole address written out in this language, kept as written.', 'axismundi-contacts' ),
-							onChange: function ( next ) {
-								setPath( path, withKey( value, 'full', next ) );
 							}
 						} ),
 						el(

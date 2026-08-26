@@ -4417,8 +4417,12 @@ try {
 			&& str_contains( $ax_ct_cb_editor, "headingTag: 'h3'" )
 			&& 3 === substr_count( $ax_ct_cb_editor, 'showHeading: true' )
 			&& str_contains( $ax_ct_cb_editor, "__( 'Department', 'axismundi-contacts' )" )
-			&& str_contains( $ax_ct_cb_editor, "__( 'File this organization under', 'axismundi-contacts' )" )
-			&& str_contains( $ax_ct_cb_editor, "__( 'File this department under', 'axismundi-contacts' )" )
+			// Organization and department sort keys look alike in JSON; their controls must name their owner.
+			&& str_contains( $ax_ct_cb_editor, "__( 'More about this organization', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_cb_editor, "__( 'Sort this organization as', 'axismundi-contacts' )" )
+			// OrgUnit.sortAs is valid but only compares departments at one hierarchy level; the form preserves it
+			// from imports without presenting it beside the organization-wide sort key.
+			&& ! str_contains( $ax_ct_cb_editor, "__( 'Sort this department as', 'axismundi-contacts' )" )
 			&& str_contains( $ax_ct_cb_editor, "__( 'Use this organization for', 'axismundi-contacts' )" )
 			&& str_contains( $ax_ct_cb_editor, "__( 'Job title', 'axismundi-contacts' )" )
 			&& str_contains( $ax_ct_cb_editor, "__( 'Role', 'axismundi-contacts' )" )

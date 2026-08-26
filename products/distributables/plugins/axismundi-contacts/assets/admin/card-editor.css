@@ -652,14 +652,9 @@
 	min-width: 0;
 }
 
-.ax-ce-org__sort,
-.ax-ce-org__context {
-	flex: 1 1 14em;
-	min-width: 0;
-}
-
 .ax-ce-org__unit {
 	display: flex;
+	flex-wrap: wrap;
 	gap: 8px;
 	align-items: flex-start;
 	margin-left: 2em;
@@ -670,9 +665,18 @@
 	min-width: 0;
 }
 
-.ax-ce-org__unit-sort {
-	flex: 1 1 14em;
-	min-width: 0;
+.ax-ce-org__advanced {
+	flex: 1 1 100%;
+	margin: 0;
+}
+
+.ax-ce-org__advanced > summary {
+	color: #2271b1;
+	cursor: pointer;
+}
+
+.ax-ce-org__advanced > .ax-ce-field {
+	margin-top: 8px;
 }
 
 .ax-ce-title {

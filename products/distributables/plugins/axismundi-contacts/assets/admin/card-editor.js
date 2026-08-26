@@ -2926,27 +2926,6 @@
 								} );
 							}
 						} ),
-						el( TextField, {
-							label: __( 'File this organization under', 'axismundi-contacts' ),
-							className: 'ax-ce-org__sort',
-							value: entry.sortAs || '',
-							onChange: function ( value ) {
-								write( row, function ( each ) {
-									return withKey( each, 'sortAs', value );
-								} );
-							}
-						} ),
-						el( Combobox, {
-							label: __( 'Use this organization for', 'axismundi-contacts' ),
-							className: 'ax-ce-org__context',
-							value: contextOf( entry ),
-							options: CONTEXT_CHOICES,
-							onChange: function ( value ) {
-								write( row, function ( each ) {
-									return withContext( each, value );
-								} );
-							}
-						} ),
 						/*
 						 * The parts of it somebody belongs to, from the outside in: a faculty inside a
 						 * university, a team inside a department. A list, because the order is what
@@ -2970,18 +2949,6 @@
 												list.splice( at, 1 );
 											}
 											return withKey( each, 'units', list.length ? list : '' );
-										} );
-									}
-								} ),
-								el( TextField, {
-									label: __( 'File this department under', 'axismundi-contacts' ),
-									className: 'ax-ce-org__unit-sort',
-									value: ( unit || {} ).sortAs || '',
-									onChange: function ( value ) {
-										write( row, function ( each ) {
-											var list = ( each.units || [] ).slice();
-											list[ at ] = withKey( list[ at ] || {}, 'sortAs', value );
-											return withKey( each, 'units', list );
 										} );
 									}
 								} ),
@@ -3047,7 +3014,34 @@
 									},
 									__( 'Add a department', 'axismundi-contacts' )
 								)
-							)
+							),
+						el(
+							'details',
+							{
+								className: 'ax-ce-org__advanced',
+								open: !! entry.sortAs || 'anywhere' !== contextOf( entry )
+							},
+							el( 'summary', null, __( 'More about this organization', 'axismundi-contacts' ) ),
+							el( TextField, {
+								label: __( 'Sort this organization as', 'axismundi-contacts' ),
+								value: entry.sortAs || '',
+								onChange: function ( value ) {
+									write( row, function ( each ) {
+										return withKey( each, 'sortAs', value );
+									} );
+								}
+							} ),
+							el( Combobox, {
+								label: __( 'Use this organization for', 'axismundi-contacts' ),
+								value: contextOf( entry ),
+								options: CONTEXT_CHOICES,
+								onChange: function ( value ) {
+									write( row, function ( each ) {
+										return withContext( each, value );
+									} );
+								}
+							} )
+						)
 					),
 					el( IconButton, {
 						icon: 'delete',

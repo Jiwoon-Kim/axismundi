@@ -4411,7 +4411,9 @@ try {
 			&& str_contains( $ax_ct_cb_editor, "__( 'Name and organization', 'axismundi-contacts' )" )
 			&& str_contains( $ax_ct_cb_editor, "headingTag: 'h3'" )
 			&& 3 === substr_count( $ax_ct_cb_editor, 'showHeading: true' )
-			&& str_contains( $ax_ct_cb_editor, "__( 'Part of it', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_cb_editor, "__( 'Department', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_cb_editor, "__( 'Job title', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_cb_editor, "__( 'Role', 'axismundi-contacts' )" )
 			// Which employer a title belongs to names an entry above rather than repeating it.
 			&& str_contains( $ax_ct_cb_editor, "write( row, 'organizationId', value )" )
 			// And a row is a place to type: the document gets an entry when somebody types in one.

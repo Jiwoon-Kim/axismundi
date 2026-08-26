@@ -2895,7 +2895,7 @@
 								'div',
 								{ key: at, className: 'ax-ce-org__unit' },
 								el( TextField, {
-									label: __( 'Part of it', 'axismundi-contacts' ),
+									label: __( 'Department', 'axismundi-contacts' ),
 									value: ( unit || {} ).name || '',
 									onChange: function ( value ) {
 										write( row, function ( each ) {
@@ -2930,7 +2930,7 @@
 								'div',
 								{ key: unit, className: 'ax-ce-org__unit' },
 								el( TextField, {
-									label: __( 'Part of it', 'axismundi-contacts' ),
+									label: __( 'Department', 'axismundi-contacts' ),
 									value: '',
 									onChange: function ( value ) {
 										if ( ! String( value ).trim() ) {
@@ -3044,10 +3044,10 @@
 		);
 	}
 
-	/** What somebody is called, and whether that is a post or a part they play. */
+	/** A formal job title or an assignment somebody carries out. */
 	var TITLE_KINDS = [
-		{ value: 'title', label: __( 'A post they hold', 'axismundi-contacts' ) },
-		{ value: 'role', label: __( 'A part they play', 'axismundi-contacts' ) }
+		{ value: 'title', label: __( 'Job title', 'axismundi-contacts' ) },
+		{ value: 'role', label: __( 'Role', 'axismundi-contacts' ) }
 	];
 
 	/**
@@ -3132,14 +3132,14 @@
 
 		return el(
 			Section,
-			{ icon: 'person-text', label: __( 'Titles', 'axismundi-contacts' ), headingTag: props.headingTag, showHeading: props.showHeading },
+			{ icon: 'person-text', label: __( 'Positions', 'axismundi-contacts' ), headingTag: props.headingTag, showHeading: props.showHeading },
 			rows.map( function ( row ) {
 				var entry = row.entry;
 				return el(
 					'div',
 					{ key: row.key, className: 'ax-ce-title' },
 					el( TextField, {
-						label: __( 'Title', 'axismundi-contacts' ),
+						label: __( 'Position or role', 'axismundi-contacts' ),
 						className: 'ax-ce-title__name',
 						value: entry.name || '',
 						onChange: function ( value ) {
@@ -3147,7 +3147,7 @@
 						}
 					} ),
 					el( Combobox, {
-						label: __( 'What kind', 'axismundi-contacts' ),
+						label: __( 'Type', 'axismundi-contacts' ),
 						className: 'ax-ce-title__kind',
 						value: entry.kind || '',
 						options: TITLE_KINDS,
@@ -3157,7 +3157,7 @@
 					} ),
 					employers.length
 						? el( Combobox, {
-							label: __( 'Where', 'axismundi-contacts' ),
+							label: __( 'Organization', 'axismundi-contacts' ),
 							className: 'ax-ce-title__where',
 							value: entry.organizationId || '',
 							options: employers,
@@ -3170,7 +3170,7 @@
 					el( IconButton, {
 						icon: 'delete',
 						variant: 'danger',
-						label: __( 'Remove this title', 'axismundi-contacts' ),
+						label: __( 'Remove this position', 'axismundi-contacts' ),
 						onClick: function () {
 							remove( row );
 						}
@@ -3184,7 +3184,7 @@
 					el(
 						'p',
 						null,
-						__( 'Other languages say this title in their own words. Removing it would leave them saying it about nothing.', 'axismundi-contacts' )
+						__( 'Other languages give this position in their own words. Removing it would leave them saying it about nothing.', 'axismundi-contacts' )
 					),
 					el(
 						'ul',
@@ -3206,7 +3206,7 @@
 									setAsking( null );
 								}
 							},
-							__( 'Remove them and the title', 'axismundi-contacts' )
+							__( 'Remove them and the position', 'axismundi-contacts' )
 						),
 						' ',
 						el(
@@ -3235,7 +3235,7 @@
 							setPending( pending.concat( [ { id: 'title-' + Math.random().toString( 36 ).slice( 2, 8 ), entry: {} } ] ) );
 						}
 					},
-					__( 'Add a title', 'axismundi-contacts' )
+					__( 'Add a position', 'axismundi-contacts' )
 				)
 			)
 		);

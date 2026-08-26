@@ -206,10 +206,11 @@
 	 */
 	function KindField( props ) {
 		var locked = props.locked;
+		var Heading = props.headingTag || 'h2';
 		return el(
 			'section',
 			{ className: 'ax-ce-section' },
-			el( 'h2', null, __( 'What this is', 'axismundi-contacts' ) ),
+			el( Heading, null, __( 'What this is', 'axismundi-contacts' ) ),
 			el(
 				'div',
 				{ className: 'ax-ce-kinds', role: 'radiogroup', 'aria-label': __( 'What this card describes', 'axismundi-contacts' ) },
@@ -4065,10 +4066,11 @@
 	 */
 	function Identity( props ) {
 		var minted = !! props.value;
+		var Heading = props.headingTag || 'h2';
 		return el(
 			'section',
 			{ className: 'ax-ce-section' },
-			el( 'h2', null, __( 'Identity', 'axismundi-contacts' ) ),
+			el( Heading, null, __( 'Identity', 'axismundi-contacts' ) ),
 			el( TextField, {
 				label: __( 'Unique identifier', 'axismundi-contacts' ),
 				value: props.value || '',
@@ -4479,20 +4481,32 @@
 				el(
 					'div',
 					{ className: 'ax-ce__main' },
-					el( KindField, {
-						value: card.kind,
-						locked: config.lockedKind,
-						onChange: function ( value ) {
-							setProperty( 'kind', value );
-						}
-					} ),
 					el(
-						Section,
-						{ icon: 'language', title: __( 'Language', 'axismundi-contacts' ) },
-						el( CardLanguage, {
-							value: card.language,
+						PropertyCluster,
+						{ title: __( 'Metadata', 'axismundi-contacts' ) },
+						el( KindField, {
+							value: card.kind,
+							locked: config.lockedKind,
+							headingTag: 'h3',
 							onChange: function ( value ) {
-								setProperty( 'language', value );
+								setProperty( 'kind', value );
+							}
+						} ),
+						el(
+							Section,
+							{ icon: 'language', title: __( 'Language', 'axismundi-contacts' ), headingTag: 'h3' },
+							el( CardLanguage, {
+								value: card.language,
+								onChange: function ( value ) {
+									setProperty( 'language', value );
+								}
+							} )
+						),
+						el( Identity, {
+							value: card.uid,
+							headingTag: 'h3',
+							onChange: function ( value ) {
+								setProperty( 'uid', value );
 							}
 						} )
 					),
@@ -4693,12 +4707,6 @@
 					config.isProfile
 						? el( PublishedFields, { card: card, published: published, onChange: setPublished } )
 						: null,
-					el( Identity, {
-						value: card.uid,
-						onChange: function ( value ) {
-							setProperty( 'uid', value );
-						}
-					} ),
 					beside ? null : el( AdvancedJson, { text: json, error: jsonError, onChange: onJson } )
 				),
 				beside ? el( SplitHandle, { value: split, onChange: setSplit, onDragging: setSliding } ) : null,

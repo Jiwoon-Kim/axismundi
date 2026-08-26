@@ -4394,6 +4394,17 @@ try {
 	// And each of those properties now has somewhere to be typed.
 	ax_ct_assert(
 		$ax_ct_results,
+		'metadata properties share the top cluster without inventing empty editors',
+		str_contains( $ax_ct_cb_editor, "__( 'Metadata', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_cb_editor, 'function KindField( props )' )
+			&& str_contains( $ax_ct_cb_editor, 'function CardLanguage( props )' )
+			&& str_contains( $ax_ct_cb_editor, 'function Identity( props )' )
+			&& 2 === substr_count( $ax_ct_cb_editor, "headingTag: 'h3',\n\t\t\t\t\t\t\t\t\tonChange" ),
+		$ax_ct_cb_editor
+	);
+
+	ax_ct_assert(
+		$ax_ct_results,
 		'name and organization properties keep the RFC cluster and use fields rather than json',
 		str_contains( $ax_ct_cb_editor, 'function Organizations( props )' )
 			&& str_contains( $ax_ct_cb_editor, 'function Titles( props )' )

@@ -567,6 +567,10 @@
 	color: #50575e;
 }
 
+.ax-ce-section.has-heading .ax-ce-section__mark {
+	margin-top: 1px;
+}
+
 .ax-ce-section__mark svg {
 	display: block;
 	width: 24px;

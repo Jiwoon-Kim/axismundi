@@ -4399,6 +4399,7 @@ try {
 			&& str_contains( $ax_ct_cb_editor, 'function Titles( props )' )
 			&& str_contains( $ax_ct_cb_editor, "__( 'Name and organization', 'axismundi-contacts' )" )
 			&& str_contains( $ax_ct_cb_editor, "headingTag: 'h3'" )
+			&& 3 === substr_count( $ax_ct_cb_editor, 'showHeading: true' )
 			&& str_contains( $ax_ct_cb_editor, "__( 'Part of it', 'axismundi-contacts' )" )
 			// Which employer a title belongs to names an entry above rather than repeating it.
 			&& str_contains( $ax_ct_cb_editor, "write( row, 'organizationId', value )" )

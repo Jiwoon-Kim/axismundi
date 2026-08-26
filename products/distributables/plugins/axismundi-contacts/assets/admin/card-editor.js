@@ -79,9 +79,10 @@
 	 */
 	function Section( props ) {
 		var Heading = props.headingTag || 'h2';
+		var showHeading = props.title || props.showHeading;
 		return el(
 			'section',
-			{ className: 'ax-ce-section is-marked' + ( props.className ? ' ' + props.className : '' ) },
+			{ className: 'ax-ce-section is-marked' + ( showHeading ? ' has-heading' : '' ) + ( props.className ? ' ' + props.className : '' ) },
 			el(
 				'div',
 				{ className: 'ax-ce-section__mark', 'aria-hidden': 'true', dangerouslySetInnerHTML: { __html: icon( props.icon ) } }
@@ -89,7 +90,7 @@
 			el(
 				'div',
 				{ className: 'ax-ce-section__body' },
-				props.title ? el( Heading, null, props.title ) : el( Heading, { className: 'screen-reader-text' }, props.label ),
+				showHeading ? el( Heading, null, props.title || props.label ) : el( Heading, { className: 'screen-reader-text' }, props.label ),
 				props.children
 			)
 		);
@@ -774,7 +775,7 @@
 
 		return el(
 			Section,
-			{ icon: kindIcon( props.kind ), label: __( 'Name', 'axismundi-contacts' ), headingTag: props.headingTag },
+			{ icon: kindIcon( props.kind ), label: __( 'Name', 'axismundi-contacts' ), headingTag: props.headingTag, showHeading: props.showHeading },
 			/*
 			 * The written-out name. Not offered to somebody filling in a person's name, and never
 			 * built from the parts -- how a name reads is a question the standard leaves to whoever
@@ -2859,7 +2860,7 @@
 
 		return el(
 			Section,
-			{ icon: 'domain', label: __( 'Organizations', 'axismundi-contacts' ), headingTag: props.headingTag },
+			{ icon: 'domain', label: __( 'Organizations', 'axismundi-contacts' ), headingTag: props.headingTag, showHeading: props.showHeading },
 			rows.map( function ( row ) {
 				var entry = row.entry;
 				var units = entry.units || [];
@@ -3126,7 +3127,7 @@
 
 		return el(
 			Section,
-			{ icon: 'person-text', label: __( 'Titles', 'axismundi-contacts' ), headingTag: props.headingTag },
+			{ icon: 'person-text', label: __( 'Titles', 'axismundi-contacts' ), headingTag: props.headingTag, showHeading: props.showHeading },
 			rows.map( function ( row ) {
 				var entry = row.entry;
 				return el(
@@ -4499,6 +4500,7 @@
 						// What the card describes decides what a name is: an organisation has no surname.
 						kind: card.kind,
 						headingTag: 'h3',
+						showHeading: true,
 						dragging: dragging,
 						onDragStart: setDragging,
 						localizations: card.localizations,
@@ -4553,6 +4555,7 @@
 						el( Organizations, {
 						value: card.organizations,
 						headingTag: 'h3',
+						showHeading: true,
 						card: card,
 						onChange: function ( value ) {
 							setProperty( 'organizations', value );
@@ -4595,6 +4598,7 @@
 						el( Titles, {
 						value: card.titles,
 						headingTag: 'h3',
+						showHeading: true,
 						organizations: card.organizations,
 						card: card,
 						onChange: function ( value ) {

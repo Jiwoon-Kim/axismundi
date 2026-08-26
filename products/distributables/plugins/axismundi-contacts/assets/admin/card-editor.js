@@ -2926,6 +2926,9 @@
 								} );
 							}
 						} ),
+						el(
+							'div',
+							{ className: 'ax-ce-org__units' },
 						/*
 						 * The parts of it somebody belongs to, from the outside in: a faculty inside a
 						 * university, a team inside a department. A list, because the order is what
@@ -3014,7 +3017,8 @@
 									},
 									__( 'Add a department', 'axismundi-contacts' )
 								)
-							),
+							)
+						),
 						el(
 							'details',
 							{

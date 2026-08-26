@@ -4417,6 +4417,8 @@ try {
 			&& str_contains( $ax_ct_cb_editor, "headingTag: 'h3'" )
 			&& 3 === substr_count( $ax_ct_cb_editor, 'showHeading: true' )
 			&& str_contains( $ax_ct_cb_editor, "__( 'Department', 'axismundi-contacts' )" )
+			// Departments are a path beneath one organization, never flex siblings of its name field.
+			&& str_contains( $ax_ct_cb_editor, "{ className: 'ax-ce-org__units' }" )
 			// Organization and department sort keys look alike in JSON; their controls must name their owner.
 			&& str_contains( $ax_ct_cb_editor, "__( 'More about this organization', 'axismundi-contacts' )" )
 			&& str_contains( $ax_ct_cb_editor, "__( 'Sort this organization as', 'axismundi-contacts' )" )

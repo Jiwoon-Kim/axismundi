@@ -642,22 +642,22 @@
 .ax-ce-org__fields {
 	flex: 1 1 auto;
 	min-width: 0;
-	display: flex;
-	flex-wrap: wrap;
-	gap: 8px;
 }
 
 .ax-ce-org__name {
-	flex: 2 1 16em;
+	max-width: 42em;
 	min-width: 0;
+}
+
+.ax-ce-org__units {
+	margin: 8px 0 0 2em;
 }
 
 .ax-ce-org__unit {
 	display: flex;
-	flex-wrap: wrap;
 	gap: 8px;
 	align-items: flex-start;
-	margin-left: 2em;
+	margin: 8px 0;
 }
 
 .ax-ce-org__unit-name {
@@ -666,8 +666,7 @@
 }
 
 .ax-ce-org__advanced {
-	flex: 1 1 100%;
-	margin: 0;
+	margin: 12px 0 0;
 }
 
 .ax-ce-org__advanced > summary {

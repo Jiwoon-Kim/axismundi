@@ -301,6 +301,38 @@
 	}
 
 	/**
+	 * One answer from WordPress Core's timezone picker.
+	 *
+	 * This is intentionally not a general Select. The editor has no other fixed list large enough to
+	 * justify one: localization paths want a searchable combobox, while a timezone is one Core-owned
+	 * choice with localized regional groups. `options` is Core's option markup, filtered by PHP to
+	 * named IANA zones before it reaches this screen.
+	 */
+	function TimeZonePicker( props ) {
+		var id = useFieldId( props.id );
+		return el( Shell, {
+			id: id,
+			label: props.label,
+			supporting: props.supporting,
+			className: 'text-field--select' + ( props.className ? ' ' + props.className : '' ),
+			control: function ( describedBy ) {
+				return el( 'select', {
+					id: id,
+					className: 'text-field__input text-field__select',
+					value: props.value || '',
+					disabled: props.disabled,
+					'aria-describedby': describedBy,
+					onChange: function ( event ) {
+						props.onChange( event.target.value );
+					},
+					// Core produced this markup; user-authored values never enter it.
+					dangerouslySetInnerHTML: { __html: props.options || '' }
+				} );
+			}
+		} );
+	}
+
+	/**
 	 * A field you type into that offers what is already there.
 	 *
 	 * Not a `Select`, and deliberately not built out of one. The paths a localization may patch run to
@@ -486,6 +518,7 @@
 	window.axismundiContactsFields = {
 		TextField: TextField,
 		Textarea: Textarea,
+		TimeZonePicker: TimeZonePicker,
 		Combobox: Combobox,
 		IconButton: IconButton
 	};

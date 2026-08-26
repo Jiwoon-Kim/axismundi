@@ -30,6 +30,7 @@
 	var Textarea = fields.Textarea;
 	var IconButton = fields.IconButton;
 	var Combobox = fields.Combobox;
+	var TimeZonePicker = fields.TimeZonePicker;
 	var useState = wp.element.useState;
 	var useCallback = wp.element.useCallback;
 	var useRef = wp.element.useRef;
@@ -2489,10 +2490,11 @@
 									} );
 								}
 							} ),
-							el( TextField, {
+							el( TimeZonePicker, {
 								label: __( 'Time zone', 'axismundi-contacts' ),
 								value: entry.timeZone || '',
-								supporting: __( 'A time zone name, like Asia/Seoul.', 'axismundi-contacts' ),
+								options: config.timeZoneOptions,
+								supporting: __( 'The IANA time zone where this address is located.', 'axismundi-contacts' ),
 								onChange: function ( value ) {
 									rows.write( row, function ( each ) {
 										return withKey( each, 'timeZone', value );

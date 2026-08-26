@@ -598,6 +598,18 @@ function axismundi_contacts_validate_card_values( array $card ) {
 	 * meaningless, and refusing it would refuse somebody's import over a rule for writers.
 	 */
 	foreach ( (array) ( $card['addresses'] ?? array() ) as $id => $address ) {
+		if ( ! is_array( $address ) ) {
+			continue;
+		}
+		if ( array_key_exists( 'timeZone', $address ) ) {
+			$zone = $address['timeZone'];
+			if ( ! is_string( $zone ) || ! in_array( $zone, timezone_identifiers_list(), true ) ) {
+				return axismundi_contacts_value_error(
+					'addresses/' . $id . '/timeZone',
+					__( 'an address time zone is an IANA name, such as Asia/Seoul', 'axismundi-contacts' )
+				);
+			}
+		}
 		$components = is_array( $address ) ? (array) ( $address['components'] ?? array() ) : array();
 		if ( array() === $components ) {
 			continue;

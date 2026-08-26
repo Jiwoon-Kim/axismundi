@@ -5254,6 +5254,88 @@ try {
 	);
 
 	/*
+	 * Which timezone an address is in is a question WordPress already asks on its own Settings screen,
+	 * and it asks it well: the city names are localized, they are grouped by region, and the list
+	 * follows the tz database as WordPress updates. A list written here would be a worse copy of it.
+	 *
+	 * What this checks is that the two ends agree. Core also offers fixed offsets, which a site may
+	 * legitimately run its clock on but an address cannot be in -- `UTC+9` is not a name in the IANA
+	 * database and cannot say when summer time starts. So the offsets come out, and what is left has
+	 * to be exactly the set the store will accept: an answer offered but refused on save would waste
+	 * somebody's work, and a stored zone the picker cannot show would go blank on screen and be lost
+	 * the next time that address was touched.
+	 */
+	require_once dirname( __DIR__ ) . '/includes/card-editor.php';
+	$ax_ct_tz_markup = axismundi_contacts_timezone_choice();
+	preg_match_all( '/<option[^>]*value="([^"]*)"/', $ax_ct_tz_markup, $ax_ct_tz_hit );
+	$ax_ct_tz_offered = array_values( array_filter( $ax_ct_tz_hit[1] ) );
+	ax_ct_assert(
+		$ax_ct_results,
+		'the timezone a place is in is offered exactly as it may be saved, and an offset is neither',
+		array() !== $ax_ct_tz_offered
+			// Both directions: nothing offered is refused, and nothing acceptable is missing.
+			&& array() === array_diff( $ax_ct_tz_offered, timezone_identifiers_list() )
+			&& array() === array_diff( timezone_identifiers_list(), $ax_ct_tz_offered )
+			&& array() === preg_grep( '/^UTC[+-]/', $ax_ct_tz_offered )
+			// A region left with nothing in it is a heading over nothing.
+			&& 0 === preg_match( '/<optgroup\b[^>]*>\s*<\/optgroup>/i', $ax_ct_tz_markup )
+			&& str_contains( $ax_ct_tz_markup, '<optgroup' )
+			&& true === axismundi_contacts_validate_card_values( array( 'addresses' => array( 'adr-tz' => array( 'timeZone' => 'Asia/Seoul' ) ) ) )
+			&& is_wp_error( axismundi_contacts_validate_card_values( array( 'addresses' => array( 'adr-tz' => array( 'timeZone' => 'UTC+9' ) ) ) ) )
+	);
+
+	/*
+	 * And it stays Core's markup rather than a list this plugin assembles: Core returns it, so a
+	 * capture that expected it to be printed would leave the picker with nothing in it -- a field that
+	 * looks like a field and cannot answer anything. The control it feeds is the timezone's own, not a
+	 * general Select: the other fixed lists on this screen are long enough to be searched rather than
+	 * scrolled, and one dropdown does not make a component.
+	 */
+	$ax_ct_cb_fields = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/fields.js' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'the picker is Core’s own markup, drawn by the timezone’s control rather than a general Select',
+		str_contains( $ax_ct_cb_editor, 'el( TimeZonePicker, {' )
+			&& str_contains( $ax_ct_cb_editor, 'options: config.timeZoneOptions,' )
+			&& str_contains( $ax_ct_cb_fields, 'function TimeZonePicker( props )' )
+			&& ! str_contains( $ax_ct_cb_fields, 'function Select( props )' )
+			// Core returns this markup; capturing output instead would silently empty the field.
+			&& str_contains( $ax_ct_tz_markup, 'value="Asia/Seoul"' )
+			/*
+			 * And it stands the same height as every field beside it. A select is the one control that
+			 * will not take the 24px line the others are built from -- browsers force `normal` on it --
+			 * so the line is stated as a box. Measured on the screen rather than here: this only records
+			 * which line is load-bearing so that removing it is a decision.
+			 */
+			&& str_contains(
+				(string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/fields.css' ),
+				'height: calc( 24px + 2 * ( 16px - var( --ax-field-border ) ) );'
+			)
+	);
+
+	/*
+	 * An address may not say which zone it is in, and a dropdown always shows something. So there is
+	 * an answer for not having one, first, before any zone -- otherwise an address that names none
+	 * would read as being in whichever zone happens to sort first, and somebody who saved that page
+	 * would have said it. Choosing it again takes the answer off the Card rather than writing an
+	 * empty one, which is also the only reading the store accepts.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'an address may not say which timezone it is in, and saying so takes the answer off the Card',
+		str_starts_with( $ax_ct_tz_markup, '<option value="">' )
+			// One of them, and only one: Core carries its own blank prompt, which reads as an
+			// instruction rather than an answer somebody chose.
+			&& 1 === preg_match_all( '/<option[^>]*value=""/', $ax_ct_tz_markup )
+			&& ! str_contains( $ax_ct_tz_markup, 'Select a city' )
+			&& str_contains( $ax_ct_cb_editor, "return withKey( each, 'timeZone', value );" )
+			// An emptied key is gone, not present and blank: the store refuses a zone that is no zone.
+			&& str_contains( $ax_ct_cb_editor, "if ( '' === value || undefined === value || null === value ) {" )
+			&& true === axismundi_contacts_validate_card_values( array( 'addresses' => array( 'adr-tz' => array( 'countryCode' => 'KR' ) ) ) )
+			&& is_wp_error( axismundi_contacts_validate_card_values( array( 'addresses' => array( 'adr-tz' => array( 'timeZone' => '' ) ) ) ) )
+	);
+
+	/*
 	 * A Korean address with everything in it: a region that opens rather than closes, a building, a
 	 * floor and a room, three different separators, and a subdistrict in brackets. Twelve parts, of
 	 * which three are the punctuation between the others.

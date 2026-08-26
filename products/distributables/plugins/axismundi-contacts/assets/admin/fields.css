@@ -163,6 +163,24 @@
 	line-height: 16px;
 }
 
+/* A select never has a placeholder, so its label is a legend from the first paint. */
+.ax-contacts-fields .text-field--select .text-field__label {
+	top: 0;
+	font-size: var( --ax-field-label-size-floated );
+	line-height: 16px;
+}
+
+.ax-contacts-fields select.text-field__input {
+	appearance: auto;
+	cursor: pointer;
+	/*
+	 * The one line a select will not take. Chrome's own sheet sets `line-height: normal !important` on
+	 * it, so the 24px line every other field is built from cannot be given to this one and it lands a
+	 * pixel short of the rest. The line is stated as a box instead, which browsers do honour.
+	 */
+	height: calc( 24px + 2 * ( 16px - var( --ax-field-border ) ) );
+}
+
 .ax-contacts-fields .text-field__container:focus-within .text-field__label {
 	color: var( --ax-field-outline-focus );
 }

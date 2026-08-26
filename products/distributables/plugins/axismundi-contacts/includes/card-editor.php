@@ -16,6 +16,48 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
+ * The same localized IANA timezone choices WordPress gives its own Settings screen.
+ *
+ * Core also appends manual UTC offsets. They are useful as a site display preference, but an
+ * Address's `timeZone` is required to name a place in the IANA Time Zone Database, so do not offer
+ * an answer this Card cannot say. The option markup remains Core's: its labels and regional groups
+ * follow the current WordPress locale without this plugin maintaining another timezone list.
+ *
+ * @return string Safe Core-generated option and optgroup markup.
+ */
+function axismundi_contacts_timezone_choice() : string {
+	require_once ABSPATH . 'wp-admin/includes/template.php';
+	// Core returns this markup rather than printing it, as its own callers `echo` it.
+	$choices = (string) wp_timezone_choice( '', get_user_locale() );
+	$names   = array_fill_keys( timezone_identifiers_list(), true );
+
+	$choices = (string) preg_replace_callback(
+		'/<option\\b[^>]*\\bvalue=(?:"([^"]*)"|\'([^\']*)\')[^>]*>.*?<\\/option>/is',
+		static function ( array $match ) use ( $names ) : string {
+			$value = html_entity_decode( (string) ( $match[1] ?? $match[2] ?? '' ), ENT_QUOTES, 'UTF-8' );
+			// Core's own empty choice reads as an instruction rather than an answer, and this field
+			// has its own way of saying nothing. Two blanks in one menu is one too many.
+			return isset( $names[ $value ] ) ? $match[0] : '';
+		},
+		$choices
+	);
+
+	/*
+	 * A group whose every answer was an offset is now a heading over nothing. Core writes the offsets
+	 * as one group, so this drops the emptied group rather than matching a label that is translated.
+	 */
+	$choices = (string) preg_replace( '/<optgroup\b[^>]*>\s*<\/optgroup>/i', '', $choices );
+
+	/*
+	 * And an answer for not having one. Core's picker is used where a site must be on some clock, so
+	 * it offers no empty choice; an address may simply not say which zone it is in. Without this the
+	 * first zone in the list is shown for an address that names none -- the screen saying Antarctica
+	 * while the Card says nothing -- and choosing it again is how somebody takes the answer back off.
+	 */
+	return '<option value="">' . esc_html__( 'Not said', 'axismundi-contacts' ) . '</option>' . $choices;
+}
+
+/**
  * Load the editor on the screen that edits a Card.
  *
  * @param string $hook Current admin page.
@@ -147,6 +189,12 @@ function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
 	$config = array(
 		'draftPath'           => '/' . axismundi_contacts_rest_namespace() . '/cards/' . $card_id . '/draft',
 		'languages'           => $language_options,
+		/*
+		 * Core owns the human-facing timezone names and regional groups. Its ordinary picker also
+		 * has fixed UTC offsets, which are deliberately filtered by the helper above: an Address
+		 * stores an IANA place name, never a snapshot offset.
+		 */
+		'timeZoneOptions'     => axismundi_contacts_timezone_choice(),
 		/*
 		 * The order a Card is written down in, handed to the screen rather than written there again.
 		 * The draft is the document: a property assigned to a JavaScript object lands at the end of

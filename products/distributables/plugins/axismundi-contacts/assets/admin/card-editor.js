@@ -3833,7 +3833,7 @@
 				el(
 					'pre',
 					{ className: 'ax-ce-preview' },
-					JSON.stringify( applied, null, 2 )
+					formatJson( applied )
 				)
 			)
 		);
@@ -4424,12 +4424,66 @@
 		return out;
 	}
 
+	/**
+	 * Keep a repeated, short object on one line in the inspector.
+	 *
+	 * The Card remains ordinary JSON and is still parsed with JSON.parse(). This is only how the
+	 * editor lays it out for a person reading it: `{ "name": "Contacts" }` should not take five
+	 * lines merely because it is an item in a list.
+	 */
+	function formatJson( value ) {
+		function indent( depth ) {
+			return '  '.repeat( depth );
+		}
+
+		function inlineObject( each ) {
+			if ( ! each || 'object' !== typeof each || Array.isArray( each ) ) {
+				return false;
+			}
+			var keys = Object.keys( each );
+			return keys.length > 0
+				&& keys.every( function ( key ) {
+					return undefined !== each[ key ] && ( null === each[ key ] || 'object' !== typeof each[ key ] );
+				} )
+				&& JSON.stringify( each ).length <= 96;
+		}
+
+		function writeInlineObject( each ) {
+			return '{ ' + Object.keys( each ).map( function ( key ) {
+				return JSON.stringify( key ) + ': ' + JSON.stringify( each[ key ] );
+			} ).join( ', ' ) + ' }';
+		}
+
+		function write( each, depth ) {
+			if ( null === each || 'object' !== typeof each ) {
+				return JSON.stringify( each );
+			}
+			if ( Array.isArray( each ) ) {
+				if ( ! each.length ) {
+					return '[]';
+				}
+				return '[\n' + each.map( function ( item ) {
+					return indent( depth + 1 ) + ( inlineObject( item ) ? writeInlineObject( item ) : write( item, depth + 1 ) );
+				} ).join( ',\n' ) + '\n' + indent( depth ) + ']';
+			}
+			var keys = Object.keys( each );
+			if ( ! keys.length ) {
+				return '{}';
+			}
+			return '{\n' + keys.map( function ( key ) {
+				return indent( depth + 1 ) + JSON.stringify( key ) + ': ' + write( each[ key ], depth + 1 );
+			} ).join( ',\n' ) + '\n' + indent( depth ) + '}';
+		}
+
+		return write( value, 0 );
+	}
+
 	/** The whole screen. */
 	function Editor() {
 		var [ card, setCard ] = useState( config.card );
 		var [ revision, setRevision ] = useState( config.revision );
 		var [ published, setPublished ] = useState( config.published );
-		var [ json, setJson ] = useState( JSON.stringify( config.card, null, 2 ) );
+		var [ json, setJson ] = useState( formatJson( config.card ) );
 		var [ jsonError, setJsonError ] = useState( '' );
 		var [ dragging, setDragging ] = useState( null );
 		var [ blocked, setBlocked ] = useState( null );
@@ -4470,7 +4524,7 @@
 			var written = ordered( next );
 			latest.current = written;
 			setCard( written );
-			setJson( JSON.stringify( written, null, 2 ) );
+			setJson( formatJson( written ) );
 			setJsonError( '' );
 		}, [] );
 

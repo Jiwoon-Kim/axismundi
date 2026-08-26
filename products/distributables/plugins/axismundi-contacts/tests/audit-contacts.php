@@ -2961,7 +2961,8 @@ try {
 		str_contains( $ax_ct_ed_source, 'Object.assign( {}, card )' )
 			// Written down in the order a stored Card is written in, so the two never look different.
 			&& str_contains( $ax_ct_ed_source, 'var written = ordered( next );' )
-			&& str_contains( $ax_ct_ed_source, 'JSON.stringify( written, null, 2 )' )
+			&& str_contains( $ax_ct_ed_source, 'function formatJson( value )' )
+			&& str_contains( $ax_ct_ed_source, 'setJson( formatJson( written ) )' )
 	);
 	/*
 	 * A new entry gets a new id. An entry id is the address a published pointer and a provenance row

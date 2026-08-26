@@ -5483,6 +5483,37 @@ try {
 	);
 
 	/*
+	 * One line, in a box that holds one line. A written-out address is a string and this asks for it as
+	 * one, which leaves the case of a line that arrived with a break in it: a single-line box drops the
+	 * break, so what it holds differs from what the Card says without anybody having touched it.
+	 *
+	 * That difference used to be read as somebody typing. The watcher that notices a browser filling a
+	 * field in compares what the box holds against what was drawn, and a break is exactly such a
+	 * difference -- so clicking into the field, with no key pressed, wrote `남구\n동명로` back as
+	 * `남구동명로`. Two ends of the same fix: the watcher no longer counts a break a box removed as a
+	 * change, and the field shows the break as the space it stands for, so the words either side of it
+	 * do not run together. What is stored keeps its break until somebody edits the line.
+	 */
+	$ax_ct_cb_fields = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/fields.js' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a line break a single-line box removes is the box, not somebody typing, and is not written back',
+		// One line: the field is a text field, and nothing in the address editor is a box that grows.
+		! str_contains( $ax_ct_cb_parts, 'el( Textarea, {' )
+			&& str_contains( $ax_ct_cb_parts, "className: 'ax-ce-address__full'," )
+			// Shown as the space it stands for rather than as nothing.
+			&& str_contains( $ax_ct_cb_parts, "( address.full || '' ).replace( /[\\r\\n]+/g, ' ' )," )
+			// And the watcher compares against what a box of that kind can actually hold.
+			&& str_contains( $ax_ct_cb_fields, "if ( 'TEXTAREA' !== node.tagName ) {" )
+			&& str_contains( $ax_ct_cb_fields, "shown = shown.replace( /[\\r\\n]+/g, '' );" )
+			// A line with a break in it is still a line the store keeps as it is.
+			&& true === axismundi_contacts_validate_card_values(
+				array( 'addresses' => array( 'adr-b' => array( 'full' => "ë¶ì°
+ë¨êµ¬" ) ) )
+			)
+	);
+
+	/*
 	 * And a line on its own is a whole address. The standard asks for any one of the parts, the line,
 	 * a country code, coordinates or a time zone -- so `{"full": "부산광역시 남구 동명로 26"}` is an
 	 * address and nothing may require the parts, or a country, before it will accept one. A screen

@@ -76,6 +76,12 @@
 	 * saying `tel:+82…` is not mistaken for a change -- the caller passes what it wants shown, and
 	 * that is what is checked against. When they differ, something wrote into the field, and it goes
 	 * through the same writer a keystroke would.
+	 *
+	 * Except for the one difference a box makes on its own. A single-line field drops the line breaks
+	 * out of anything put into it, so a value that arrived with one is held there without it -- and
+	 * that difference is the box, not a person. Reading it as a change is how merely clicking into a
+	 * field rewrites what somebody imported, which is what happened to an address that had a line
+	 * break in it: `남구\n동명로` was written back as `남구동명로` before anyone typed a thing.
 	 */
 	function sweep() {
 		onScreen.forEach( function ( each ) {
@@ -85,6 +91,9 @@
 				return;
 			}
 			var shown = undefined === held.value || null === held.value ? '' : String( held.value );
+			if ( 'TEXTAREA' !== node.tagName ) {
+				shown = shown.replace( /[\r\n]+/g, '' );
+			}
 			if ( node.value === shown ) {
 				/*
 				 * React has caught up with the value we reported. A later autofill may happen to

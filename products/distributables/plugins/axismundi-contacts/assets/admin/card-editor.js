@@ -2207,11 +2207,17 @@
 			 * from them and never replaced by them.
 			 */
 			props.written
-				? el( Textarea, {
+				? el( TextField, {
 					label: __( 'Full address', 'axismundi-contacts' ),
 					className: 'ax-ce-address__full',
-					rows: props.fullRows || 3,
-					value: address.full || '',
+					/*
+					 * One line, and shown as one. A line that arrived with a break in it cannot be put
+					 * into a single-line box as it stands -- the box drops the break and runs the words
+					 * either side of it together, which is how `남구\n동명로` would read as
+					 * `남구동명로`. So the break is shown as the space it stands for. What is stored keeps
+					 * its break until somebody edits the line, and then they write what they can see.
+					 */
+					value: ( address.full || '' ).replace( /[\r\n]+/g, ' ' ),
 					supporting: props.fullSupporting || __( 'The whole address written out as one string, kept as written -- never built from the parts above, and never replaced by them.', 'axismundi-contacts' ),
 					inputProps: props.fullInputProps,
 					onChange: function ( value ) {
@@ -3567,7 +3573,6 @@
 						el( AddressParts, {
 							address: value,
 							written: undefined === lines[ path ] ? undefined !== value.full : lines[ path ],
-							fullRows: 2,
 							fullSupporting: __( 'The whole address written out in this language, kept as written.', 'axismundi-contacts' ),
 							/*
 							 * And no autofill hint here. A browser fills in where somebody lives, which

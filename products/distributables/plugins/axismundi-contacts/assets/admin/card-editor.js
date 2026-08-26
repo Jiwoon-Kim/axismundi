@@ -82,16 +82,20 @@
 		var showHeading = props.title || props.showHeading;
 		return el(
 			'section',
-			{ className: 'ax-ce-section is-marked' + ( showHeading ? ' has-heading' : '' ) + ( props.className ? ' ' + props.className : '' ) },
+			{ className: 'ax-ce-section' + ( props.className ? ' ' + props.className : '' ) },
+			showHeading ? el( Heading, null, props.title || props.label ) : el( Heading, { className: 'screen-reader-text' }, props.label ),
 			el(
 				'div',
-				{ className: 'ax-ce-section__mark', 'aria-hidden': 'true', dangerouslySetInnerHTML: { __html: icon( props.icon ) } }
-			),
-			el(
-				'div',
-				{ className: 'ax-ce-section__body' },
-				showHeading ? el( Heading, null, props.title || props.label ) : el( Heading, { className: 'screen-reader-text' }, props.label ),
-				props.children
+				{ className: 'ax-ce-section__content is-marked' },
+				el(
+					'div',
+					{ className: 'ax-ce-section__mark', 'aria-hidden': 'true', dangerouslySetInnerHTML: { __html: icon( props.icon ) } }
+				),
+				el(
+					'div',
+					{ className: 'ax-ce-section__body' },
+					props.children
+				)
 			)
 		);
 	}

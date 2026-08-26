@@ -555,7 +555,7 @@
  * The mark and the stack, side by side, with the mark on the first line rather than centred against
  * the whole column: a section that grows downwards should not move its own icon.
  */
-.ax-ce-section.is-marked {
+.ax-ce-section__content.is-marked {
 	display: flex;
 	gap: 1em;
 	align-items: flex-start;
@@ -565,10 +565,6 @@
 	flex: 0 0 24px;
 	margin-top: 16px;
 	color: #50575e;
-}
-
-.ax-ce-section.has-heading .ax-ce-section__mark {
-	margin-top: 1px;
 }
 
 .ax-ce-section__mark svg {

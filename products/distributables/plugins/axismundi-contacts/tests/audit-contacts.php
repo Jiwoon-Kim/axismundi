@@ -5429,6 +5429,48 @@ try {
 	);
 
 	/*
+	 * And the country is asked outright rather than behind the same tickbox. Both are optional to the
+	 * standard; they are not the same kind of optional to somebody filling this in. Which country an
+	 * address is read in is a question nearly every address has an answer to and the one that says how
+	 * to read the rest, while a line written out is a second way of saying what the parts already say.
+	 *
+	 * Optional still means optional: nothing marks it required and nothing fills one in. An address
+	 * with no country is a complete address, and a country nobody stated is a fact about it rather
+	 * than a gap to close.
+	 */
+	$ax_ct_cb_parts = substr(
+		$ax_ct_cb_editor,
+		(int) strpos( $ax_ct_cb_editor, 'function AddressParts' ),
+		(int) strpos( $ax_ct_cb_editor, 'function Addresses' ) - (int) strpos( $ax_ct_cb_editor, 'function AddressParts' )
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'the country is asked outright, is never required, and is never filled in on somebody’s behalf',
+		str_contains( $ax_ct_cb_editor, "label: __( 'Country', 'axismundi-contacts' )," )
+			// Drawn whenever there is a registry to draw it from, and behind nothing else.
+			&& str_contains( $ax_ct_cb_editor, 'countries.length' )
+			/*
+			 * And the tickboxes an address row has are the two that belong to answers most addresses
+			 * do not give: the line it is written out as, and the separator between its parts.
+			 */
+			&& array( "__( 'Full address', 'axismundi-contacts' )", "__( 'Default separator', 'axismundi-contacts' )" ) === array_values(
+				array_filter(
+					array_map(
+						static function ( string $chunk ) : string {
+							return 1 === preg_match( "/__\( '[^']+', 'axismundi-contacts' \)/", $chunk, $found ) ? $found[0] : '';
+						},
+						array_slice( explode( "type: 'checkbox',", $ax_ct_cb_parts ), 1 )
+					)
+				)
+			)
+			&& true === axismundi_contacts_validate_card_values(
+				array( 'addresses' => array( 'adr-n' => array( 'components' => array( array( 'kind' => 'name', 'value' => 'Oak St' ) ) ) ) )
+			)
+			// And the picker takes a code the registry does not know rather than deciding it is not one.
+			&& str_contains( $ax_ct_cb_editor, "allowFree: true," )
+	);
+
+	/*
 	 * And a line on its own is a whole address. The standard asks for any one of the parts, the line,
 	 * a country code, coordinates or a time zone -- so `{"full": "부산광역시 남구 동명로 26"}` is an
 	 * address and nothing may require the parts, or a country, before it will accept one. A screen

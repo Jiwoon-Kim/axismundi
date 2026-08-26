@@ -2480,6 +2480,28 @@
 					el(
 						'div',
 						{ className: 'ax-ce-address__fields' },
+						/*
+						 * Asked outright, and deliberately not behind a checkbox like the written-out
+						 * line beneath it. `countryCode` is optional in the same way the line is --
+						 * the standard asks for any one of the parts, the line, a country code,
+						 * coordinates or a time zone -- but the two are not the same kind of optional
+						 * to somebody filling this in. Which country an address is read in is a
+						 * question almost every address has an answer to, and asking it is how the
+						 * rest of the address gets read; a line written out is a second way of saying
+						 * what the parts already say, which most addresses never need. A checkbox in
+						 * front of a question somebody can nearly always answer is a step between
+						 * them and the answer.
+						 *
+						 * Nothing requires it. Left empty there is no `countryCode`, and no screen
+						 * here marks it required or fills one in -- a country nobody stated is a
+						 * country nobody knows, which is a fact about the address rather than a gap
+						 * to close. It is also not the `country` component, which is separately
+						 * optional and says what somebody wrote in the address itself.
+						 *
+						 * If the parts alone should ever become the whole of what this asks by
+						 * default, this moves into `More about this address` as the optional picker
+						 * it already is -- not behind a tickbox.
+						 */
 						countries.length
 							? el( Combobox, {
 								label: __( 'Country', 'axismundi-contacts' ),

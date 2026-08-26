@@ -4391,7 +4391,12 @@ try {
 			&& "\xec\xa7\x80\xec\x9a\xb4" === (string) ( $ax_ct_or_back['localizations']['ko-KR']['name']['components'][0]['value'] ?? '' )
 			&& "\xec\x82\xac\xec\x9d\xb4\xed\x8a\xb8" === (string) ( $ax_ct_or_back['localizations']['ko-KR']['titles/t1']['name'] ?? '' )
 	);
-	// And each of those properties now has somewhere to be typed.
+	$ax_ct_metadata_at   = strpos( $ax_ct_cb_editor, "__( 'Metadata', 'axismundi-contacts' )" );
+	$ax_ct_name_group_at = strpos( $ax_ct_cb_editor, "__( 'Name and organization', 'axismundi-contacts' )" );
+	$ax_ct_metadata_ui   = false !== $ax_ct_metadata_at && false !== $ax_ct_name_group_at
+		? substr( $ax_ct_cb_editor, $ax_ct_metadata_at, $ax_ct_name_group_at - $ax_ct_metadata_at )
+		: '';
+	// And each editable metadata property currently has somewhere to be typed.
 	ax_ct_assert(
 		$ax_ct_results,
 		'metadata properties share the top cluster without inventing empty editors',
@@ -4399,7 +4404,7 @@ try {
 			&& str_contains( $ax_ct_cb_editor, 'function KindField( props )' )
 			&& str_contains( $ax_ct_cb_editor, 'function CardLanguage( props )' )
 			&& str_contains( $ax_ct_cb_editor, 'function Identity( props )' )
-			&& 2 === substr_count( $ax_ct_cb_editor, "headingTag: 'h3',\n\t\t\t\t\t\t\t\t\tonChange" ),
+			&& 3 === substr_count( $ax_ct_metadata_ui, "headingTag: 'h3'" ),
 		$ax_ct_cb_editor
 	);
 
@@ -4412,12 +4417,47 @@ try {
 			&& str_contains( $ax_ct_cb_editor, "headingTag: 'h3'" )
 			&& 3 === substr_count( $ax_ct_cb_editor, 'showHeading: true' )
 			&& str_contains( $ax_ct_cb_editor, "__( 'Department', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_cb_editor, "__( 'File this organization under', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_cb_editor, "__( 'File this department under', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_cb_editor, "__( 'Use this organization for', 'axismundi-contacts' )" )
 			&& str_contains( $ax_ct_cb_editor, "__( 'Job title', 'axismundi-contacts' )" )
 			&& str_contains( $ax_ct_cb_editor, "__( 'Role', 'axismundi-contacts' )" )
 			// Which employer a title belongs to names an entry above rather than repeating it.
 			&& str_contains( $ax_ct_cb_editor, "write( row, 'organizationId', value )" )
-			// And a row is a place to type: the document gets an entry when somebody types in one.
-			&& str_contains( $ax_ct_cb_editor, "// An organization is a place with a name. Until there is one, this is only a row." )
+			// A row becomes an organization with either answer RFC 9553 permits, not only a name.
+			&& str_contains( $ax_ct_cb_editor, 'function organizationHasContent( entry )' )
+			&& str_contains( $ax_ct_cb_editor, 'if ( ! organizationHasContent( made ) )' )
+	);
+
+	$ax_ct_units_only = array(
+		'@type'         => 'Card',
+		'organizations' => array(
+			'o-units' => array(
+				'units'    => array( array( 'name' => 'Development', 'sortAs' => 'Dev' ) ),
+				'sortAs'   => 'Axismundi',
+				'contexts' => array( 'work' => true ),
+			),
+		),
+	);
+	$ax_ct_units_only_id  = axismundi_contacts_save_card( $ax_ct_book_id, $ax_ct_units_only );
+	$ax_ct_units_only_key = is_wp_error( $ax_ct_units_only_id ) ? 0 : (int) $ax_ct_units_only_id;
+	$ax_ct_loose[]        = $ax_ct_units_only_key;
+	$ax_ct_units_only_back = axismundi_contacts_card_document( $ax_ct_units_only_key );
+	ax_ct_assert(
+		$ax_ct_results,
+		'an organization may be only a department, and keeps its sort keys and context',
+		! is_wp_error( $ax_ct_units_only_id )
+			&& ! isset( $ax_ct_units_only_back['organizations']['o-units']['name'] )
+			&& 'Development' === (string) ( $ax_ct_units_only_back['organizations']['o-units']['units'][0]['name'] ?? '' )
+			&& 'Dev' === (string) ( $ax_ct_units_only_back['organizations']['o-units']['units'][0]['sortAs'] ?? '' )
+			&& 'Axismundi' === (string) ( $ax_ct_units_only_back['organizations']['o-units']['sortAs'] ?? '' )
+			&& array( 'work' => true ) === ( $ax_ct_units_only_back['organizations']['o-units']['contexts'] ?? array() )
+	);
+
+	ax_ct_assert(
+		$ax_ct_results,
+		'an organization with neither a name nor a department is rejected',
+		is_wp_error( axismundi_contacts_validate_card_values( array( '@type' => 'Card', 'organizations' => array( 'empty' => array() ) ) ) )
 	);
 
 	// -- what points at what, through an actual save ------------------------------------------------------------
@@ -4614,10 +4654,10 @@ try {
 	$ax_ct_tn_orphan = axismundi_contacts_validate_patch( $ax_ct_tn_without, 'en', $ax_ct_tn_without['localizations']['en'] );
 	ax_ct_assert(
 		$ax_ct_results,
-		'removing a title names the languages that say it, and lets go of both together',
+		'removing a position names the languages that give it, and lets go of both together',
 		is_wp_error( $ax_ct_tn_orphan )
 			&& str_contains( $ax_ct_cb_editor, "patchesUnder( ( props.card || {} ).localizations, 'titles/' + row.id )" )
-			&& str_contains( $ax_ct_cb_editor, "__( 'Remove them and the title', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_cb_editor, "__( 'Remove them and the position', 'axismundi-contacts' )" )
 	);
 
 	// -- a phone number, and where to read it from --------------------------------------------------------------

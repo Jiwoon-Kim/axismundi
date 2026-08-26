@@ -642,6 +642,20 @@
 .ax-ce-org__fields {
 	flex: 1 1 auto;
 	min-width: 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.ax-ce-org__name {
+	flex: 2 1 16em;
+	min-width: 0;
+}
+
+.ax-ce-org__sort,
+.ax-ce-org__context {
+	flex: 1 1 14em;
+	min-width: 0;
 }
 
 .ax-ce-org__unit {
@@ -651,8 +665,14 @@
 	margin-left: 2em;
 }
 
-.ax-ce-org__unit .text-field {
-	flex: 1 1 auto;
+.ax-ce-org__unit-name {
+	flex: 2 1 14em;
+	min-width: 0;
+}
+
+.ax-ce-org__unit-sort {
+	flex: 1 1 14em;
+	min-width: 0;
 }
 
 .ax-ce-title {

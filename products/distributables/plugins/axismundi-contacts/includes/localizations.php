@@ -432,7 +432,7 @@ function axismundi_contacts_value_rules() : array {
 		'calendars'           => array( 'required' => array( 'uri' => 'string' ), 'optional' => $entry + array( 'kind' => 'string' ) ),
 		'schedulingAddresses' => array( 'required' => array( 'uri' => 'string' ), 'optional' => $entry ),
 		'notes'               => array( 'required' => array( 'note' => 'string' ), 'optional' => array( 'created' => 'string', 'author' => 'object' ) ),
-		'organizations'       => array( 'required' => array( 'name' => 'string' ), 'optional' => array( 'units' => 'list', 'sortAs' => 'string' ) ),
+		'organizations'       => array( 'required' => array(), 'optional' => $entry + array( 'name' => 'string', 'units' => 'list', 'sortAs' => 'string' ) ),
 		'titles'              => array( 'required' => array( 'name' => 'string' ), 'optional' => array( 'kind' => 'string', 'organizationId' => 'string' ) ),
 		'anniversaries'       => array( 'required' => array( 'kind' => 'string' ), 'optional' => array( 'date' => 'object', 'place' => 'object' ) ),
 		'personalInfo'        => array( 'required' => array( 'value' => 'string' ), 'optional' => array( 'kind' => 'string', 'level' => 'string', 'listAs' => 'integer' ) ),
@@ -650,6 +650,24 @@ function axismundi_contacts_validate_card_values( array $card ) {
 				if ( array_key_exists( $key, $entry ) && ! axismundi_contacts_value_is( $entry[ $key ], $type ) ) {
 					/* translators: %s: the shape the value should have. */
 					return axismundi_contacts_value_error( $at . '/' . $key, sprintf( __( 'it is %s', 'axismundi-contacts' ), $type ) );
+				}
+			}
+			if ( 'organizations' === $property ) {
+				$name  = trim( (string) ( $entry['name'] ?? '' ) );
+				$units = (array) ( $entry['units'] ?? array() );
+				if ( '' === $name && array() === $units ) {
+					return axismundi_contacts_value_error( $at, __( 'an organization needs a name or a department', 'axismundi-contacts' ) );
+				}
+				foreach ( $units as $index => $unit ) {
+					if ( ! axismundi_contacts_value_is( $unit, 'object' )
+						|| ! isset( $unit['name'] )
+						|| ! is_string( $unit['name'] )
+						|| '' === trim( $unit['name'] ) ) {
+						return axismundi_contacts_value_error( $at . '/units/' . $index . '/name', __( 'a department needs a name', 'axismundi-contacts' ) );
+					}
+					if ( array_key_exists( 'sortAs', $unit ) && ! is_string( $unit['sortAs'] ) ) {
+						return axismundi_contacts_value_error( $at . '/units/' . $index . '/sortAs', __( 'a department sort key is text', 'axismundi-contacts' ) );
+					}
 				}
 			}
 		}

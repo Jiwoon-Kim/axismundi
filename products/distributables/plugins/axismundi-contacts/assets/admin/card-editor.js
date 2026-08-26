@@ -2790,6 +2790,15 @@
 	 * A row is a place to type, the same as every line of the name: the document gets an entry when
 	 * somebody types in one, not when they open one.
 	 */
+	function organizationHasContent( entry ) {
+		if ( String( ( entry || {} ).name || '' ).trim() ) {
+			return true;
+		}
+		return ( ( entry || {} ).units || [] ).some( function ( unit ) {
+			return String( ( unit || {} ).name || '' ).trim();
+		} );
+	}
+
 	function Organizations( props ) {
 		var entries = props.value || {};
 		var [ pending, setPending ] = useState( [] );
@@ -2819,31 +2828,63 @@
 			return newEntryId( 'org', entries );
 		}
 
+		function pendingId() {
+			return 'pending-org-' + Math.random().toString( 36 ).slice( 2, 8 );
+		}
+
+		function setPendingEntry( id, entry ) {
+			setPending( pending.map( function ( each ) {
+				return each.id === id ? { id: each.id, entry: entry } : each;
+			} ) );
+		}
+
+		function moveToPending( row, entry ) {
+			if ( row.pending ) {
+				setPendingEntry( row.pending, entry );
+				return;
+			}
+			var depends = dependsOnOrganization( props.card, row.id );
+			if ( depends.length ) {
+				setAsking( { id: row.id, depends: depends, held: entry } );
+				return;
+			}
+			var next = Object.assign( {}, entries );
+			delete next[ row.id ];
+			setEntries( next );
+			setPending( pending.concat( [ { id: pendingId(), entry: entry } ] ) );
+		}
+
 		/** Write through to an entry, making it when there is something to put in it. */
 		function write( row, change ) {
 			if ( row.pending ) {
-				var made = change( {} );
-				if ( ! String( made.name || '' ).trim() ) {
-					// An organization is a place with a name. Until there is one, this is only a row.
+				var made = change( row.entry );
+				if ( ! organizationHasContent( made ) ) {
+					// `sortAs` and `contexts` answer real questions, but do not make an organization.
+					setPendingEntry( row.pending, made );
 					return;
 				}
 				var next = Object.assign( {}, entries );
 				next[ freeId() ] = made;
 				setPending( pending.filter( function ( each ) {
-					return each !== row.pending;
+					return each.id !== row.pending;
 				} ) );
 				setEntries( next );
 				return;
 			}
 			var updated = Object.assign( {}, entries );
-			updated[ row.id ] = change( entries[ row.id ] || {} );
+			var changed = change( entries[ row.id ] || {} );
+			if ( ! organizationHasContent( changed ) ) {
+				moveToPending( row, changed );
+				return;
+			}
+			updated[ row.id ] = changed;
 			setEntries( updated );
 		}
 
 		function remove( row ) {
 			if ( row.pending ) {
 				setPending( pending.filter( function ( each ) {
-					return each !== row.pending;
+					return each.id !== row.pending;
 				} ) );
 				return;
 			}
@@ -2859,8 +2900,8 @@
 
 		var rows = Object.keys( entries ).map( function ( id ) {
 			return { key: id, id: id, entry: entries[ id ] || {} };
-		} ).concat( pending.map( function ( id ) {
-			return { key: id, pending: id, entry: {} };
+		} ).concat( pending.map( function ( each ) {
+			return { key: each.id, pending: each.id, entry: each.entry };
 		} ) );
 
 		return el(
@@ -2877,10 +2918,32 @@
 						{ className: 'ax-ce-org__fields' },
 						el( TextField, {
 							label: __( 'Organization', 'axismundi-contacts' ),
+							className: 'ax-ce-org__name',
 							value: entry.name || '',
 							onChange: function ( value ) {
 								write( row, function ( each ) {
 									return withKey( each, 'name', value );
+								} );
+							}
+						} ),
+						el( TextField, {
+							label: __( 'File this organization under', 'axismundi-contacts' ),
+							className: 'ax-ce-org__sort',
+							value: entry.sortAs || '',
+							onChange: function ( value ) {
+								write( row, function ( each ) {
+									return withKey( each, 'sortAs', value );
+								} );
+							}
+						} ),
+						el( Combobox, {
+							label: __( 'Use this organization for', 'axismundi-contacts' ),
+							className: 'ax-ce-org__context',
+							value: contextOf( entry ),
+							options: CONTEXT_CHOICES,
+							onChange: function ( value ) {
+								write( row, function ( each ) {
+									return withContext( each, value );
 								} );
 							}
 						} ),
@@ -2896,11 +2959,28 @@
 								{ key: at, className: 'ax-ce-org__unit' },
 								el( TextField, {
 									label: __( 'Department', 'axismundi-contacts' ),
+									className: 'ax-ce-org__unit-name',
 									value: ( unit || {} ).name || '',
 									onChange: function ( value ) {
 										write( row, function ( each ) {
 											var list = ( each.units || [] ).slice();
-											list[ at ] = { name: value };
+											if ( String( value ).trim() ) {
+												list[ at ] = Object.assign( {}, list[ at ] || {}, { name: value } );
+											} else {
+												list.splice( at, 1 );
+											}
+											return withKey( each, 'units', list.length ? list : '' );
+										} );
+									}
+								} ),
+								el( TextField, {
+									label: __( 'File this department under', 'axismundi-contacts' ),
+									className: 'ax-ce-org__unit-sort',
+									value: ( unit || {} ).sortAs || '',
+									onChange: function ( value ) {
+										write( row, function ( each ) {
+											var list = ( each.units || [] ).slice();
+											list[ at ] = withKey( list[ at ] || {}, 'sortAs', value );
 											return withKey( each, 'units', list );
 										} );
 									}
@@ -2931,6 +3011,7 @@
 								{ key: unit, className: 'ax-ce-org__unit' },
 								el( TextField, {
 									label: __( 'Department', 'axismundi-contacts' ),
+									className: 'ax-ce-org__unit-name',
 									value: '',
 									onChange: function ( value ) {
 										if ( ! String( value ).trim() ) {
@@ -2952,8 +3033,7 @@
 								} )
 							);
 						} ),
-						row.id
-							? el(
+						el(
 								'p',
 								null,
 								el(
@@ -2965,10 +3045,9 @@
 											openUnit( row.key );
 										}
 									},
-									__( 'Add a part of it', 'axismundi-contacts' )
+									__( 'Add a department', 'axismundi-contacts' )
 								)
 							)
-							: null
 					),
 					el( IconButton, {
 						icon: 'delete',
@@ -3006,6 +3085,9 @@
 								className: 'button',
 								onClick: function () {
 									props.onResolve( asking );
+									if ( asking.held ) {
+										setPending( pending.concat( [ { id: pendingId(), entry: asking.held } ] ) );
+									}
 									setAsking( null );
 								}
 							},
@@ -3035,7 +3117,7 @@
 						type: 'button',
 						className: 'button',
 						onClick: function () {
-							setPending( pending.concat( [ 'org-' + Math.random().toString( 36 ).slice( 2, 8 ) ] ) );
+							setPending( pending.concat( [ { id: pendingId(), entry: {} } ] ) );
 						}
 					},
 					__( 'Add an organization', 'axismundi-contacts' )

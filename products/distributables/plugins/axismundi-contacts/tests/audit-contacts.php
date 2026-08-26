@@ -4394,8 +4394,16 @@ try {
 	);
 	$ax_ct_metadata_at   = strpos( $ax_ct_cb_editor, "__( 'Metadata', 'axismundi-contacts' )" );
 	$ax_ct_name_group_at = strpos( $ax_ct_cb_editor, "__( 'Name and organization', 'axismundi-contacts' )" );
+	$ax_ct_contact_at    = strpos( $ax_ct_cb_editor, "__( 'Contact properties', 'axismundi-contacts' )" );
+	$ax_ct_addresses_at  = false !== $ax_ct_contact_at ? strpos( $ax_ct_cb_editor, 'el( Addresses', $ax_ct_contact_at ) : false;
 	$ax_ct_metadata_ui   = false !== $ax_ct_metadata_at && false !== $ax_ct_name_group_at
 		? substr( $ax_ct_cb_editor, $ax_ct_metadata_at, $ax_ct_name_group_at - $ax_ct_metadata_at )
+		: '';
+	$ax_ct_name_ui       = false !== $ax_ct_name_group_at && false !== $ax_ct_contact_at
+		? substr( $ax_ct_cb_editor, $ax_ct_name_group_at, $ax_ct_contact_at - $ax_ct_name_group_at )
+		: '';
+	$ax_ct_contact_ui    = false !== $ax_ct_contact_at && false !== $ax_ct_addresses_at
+		? substr( $ax_ct_cb_editor, $ax_ct_contact_at, $ax_ct_addresses_at - $ax_ct_contact_at )
 		: '';
 	// And each editable metadata property currently has somewhere to be typed.
 	ax_ct_assert(
@@ -4416,7 +4424,7 @@ try {
 			&& str_contains( $ax_ct_cb_editor, 'function Titles( props )' )
 			&& str_contains( $ax_ct_cb_editor, "__( 'Name and organization', 'axismundi-contacts' )" )
 			&& str_contains( $ax_ct_cb_editor, "headingTag: 'h3'" )
-			&& 3 === substr_count( $ax_ct_cb_editor, 'showHeading: true' )
+			&& 3 === substr_count( $ax_ct_name_ui, 'showHeading: true' )
 			&& str_contains( $ax_ct_cb_editor, "__( 'Department', 'axismundi-contacts' )" )
 			// Departments are a path beneath one organization, never flex siblings of its name field.
 			&& str_contains( $ax_ct_cb_editor, "{ className: 'ax-ce-org__units' }" )
@@ -4434,6 +4442,18 @@ try {
 			// A row becomes an organization with either answer RFC 9553 permits, not only a name.
 			&& str_contains( $ax_ct_cb_editor, 'function organizationHasContent( entry )' )
 			&& str_contains( $ax_ct_cb_editor, 'if ( ! organizationHasContent( made ) )' )
+	);
+
+	ax_ct_assert(
+		$ax_ct_results,
+		'contact properties share one RFC cluster in the order this editor uses them',
+		str_contains( $ax_ct_cb_editor, "__( 'Contact properties', 'axismundi-contacts' )" )
+			&& 4 === substr_count( $ax_ct_contact_ui, "headingTag: 'h3'" )
+			&& 3 === substr_count( $ax_ct_contact_ui, 'showHeading: true' )
+			&& false !== strpos( $ax_ct_contact_ui, 'el( OnlineServices' )
+			&& strpos( $ax_ct_contact_ui, 'el( OnlineServices' ) < strpos( $ax_ct_contact_ui, 'el( Emails' )
+			&& strpos( $ax_ct_contact_ui, 'el( Emails' ) < strpos( $ax_ct_contact_ui, 'el( Phones' )
+			&& strpos( $ax_ct_contact_ui, 'el( Phones' ) < strpos( $ax_ct_contact_ui, 'el( PreferredLanguages' )
 	);
 
 	$ax_ct_units_only = array(

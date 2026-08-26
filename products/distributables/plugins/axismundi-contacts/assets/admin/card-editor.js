@@ -1782,7 +1782,7 @@
 
 		return el(
 			Section,
-			{ icon: 'call', label: __( 'Phone', 'axismundi-contacts' ) },
+			{ icon: 'call', label: __( 'Phone', 'axismundi-contacts' ), headingTag: props.headingTag, showHeading: props.showHeading },
 			rows.rows.map( function ( row ) {
 				var entry = row.entry;
 				var region = regionFor( row.key, entry );
@@ -1898,7 +1898,7 @@
 
 		return el(
 			Section,
-			{ icon: 'mail', label: __( 'Email', 'axismundi-contacts' ) },
+			{ icon: 'mail', label: __( 'Email', 'axismundi-contacts' ), headingTag: props.headingTag, showHeading: props.showHeading },
 			rows.rows.map( function ( row ) {
 				var entry = row.entry;
 				var preset = presetOf( entry, presets );
@@ -3425,7 +3425,7 @@
 
 		return el(
 			Section,
-			{ icon: 'alternate-email', label: __( 'Online accounts', 'axismundi-contacts' ) },
+			{ icon: 'alternate-email', label: __( 'Online accounts', 'axismundi-contacts' ), headingTag: props.headingTag, showHeading: props.showHeading },
 			el(
 				'p',
 				{ className: 'description' },
@@ -4017,7 +4017,7 @@
 
 		return el(
 			Section,
-			{ icon: 'language', title: __( 'Preferred languages', 'axismundi-contacts' ) },
+			{ icon: 'language', title: __( 'Preferred languages', 'axismundi-contacts' ), headingTag: props.headingTag },
 			el(
 				'p',
 				{ className: 'description' },
@@ -4780,26 +4780,49 @@
 							}
 						} )
 					),
-					el( Phones, {
-						value: card.phones,
-						card: card,
-						onChange: function ( value ) {
-							setProperty( 'phones', value );
-						},
-						onResolve: function ( question ) {
-							resolveEntryRemoval( card, 'phones', question, update );
-						}
-					} ),
-					el( Emails, {
-						value: card.emails,
-						card: card,
-						onChange: function ( value ) {
-							setProperty( 'emails', value );
-						},
-						onResolve: function ( question ) {
-							resolveEntryRemoval( card, 'emails', question, update );
-						}
-					} ),
+					el(
+						PropertyCluster,
+						{ title: __( 'Contact properties', 'axismundi-contacts' ) },
+						el( OnlineServices, {
+							value: card.onlineServices,
+							headingTag: 'h3',
+							showHeading: true,
+							onChange: function ( value ) {
+								setProperty( 'onlineServices', value );
+							}
+						} ),
+						el( Emails, {
+							value: card.emails,
+							card: card,
+							headingTag: 'h3',
+							showHeading: true,
+							onChange: function ( value ) {
+								setProperty( 'emails', value );
+							},
+							onResolve: function ( question ) {
+								resolveEntryRemoval( card, 'emails', question, update );
+							}
+						} ),
+						el( Phones, {
+							value: card.phones,
+							card: card,
+							headingTag: 'h3',
+							showHeading: true,
+							onChange: function ( value ) {
+								setProperty( 'phones', value );
+							},
+							onResolve: function ( question ) {
+								resolveEntryRemoval( card, 'phones', question, update );
+							}
+						} ),
+						el( PreferredLanguages, {
+							value: card.preferredLanguages,
+							headingTag: 'h3',
+							onChange: function ( value ) {
+								setProperty( 'preferredLanguages', value );
+							}
+						} )
+					),
 					el( Addresses, {
 						value: card.addresses,
 						card: card,
@@ -4808,18 +4831,6 @@
 						},
 						onResolve: function ( question ) {
 							resolveEntryRemoval( card, 'addresses', question, update );
-						}
-					} ),
-					el( OnlineServices, {
-						value: card.onlineServices,
-						onChange: function ( value ) {
-							setProperty( 'onlineServices', value );
-						}
-					} ),
-					el( PreferredLanguages, {
-						value: card.preferredLanguages,
-						onChange: function ( value ) {
-							setProperty( 'preferredLanguages', value );
 						}
 					} ),
 					ENTRY_FIELDS.map( function ( field ) {

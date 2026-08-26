@@ -15,10 +15,15 @@
 	border-bottom: 1px solid #dcdcde;
 }
 
-.ax-ce-section h2,
-.ax-ce-section h3 {
+.ax-ce-section h2 {
 	margin: 0 0 .5em;
 	font-size: 15px;
+	font-weight: 600;
+}
+
+.ax-ce-section h3 {
+	margin: 0 0 .5em;
+	font-size: 16px;
 	font-weight: 600;
 }
 
@@ -31,7 +36,7 @@
 
 .ax-ce-cluster > h2 {
 	margin: 0 0 .75em;
-	font-size: 17px;
+	font-size: 18px;
 	font-weight: 600;
 }
 

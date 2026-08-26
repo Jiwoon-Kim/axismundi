@@ -78,6 +78,7 @@
 	 * top of the stack, on the first line, where a heading would be.
 	 */
 	function Section( props ) {
+		var Heading = props.headingTag || 'h2';
 		return el(
 			'section',
 			{ className: 'ax-ce-section is-marked' + ( props.className ? ' ' + props.className : '' ) },
@@ -88,9 +89,19 @@
 			el(
 				'div',
 				{ className: 'ax-ce-section__body' },
-				props.title ? el( 'h2', null, props.title ) : el( 'h2', { className: 'screen-reader-text' }, props.label ),
+				props.title ? el( Heading, null, props.title ) : el( Heading, { className: 'screen-reader-text' }, props.label ),
 				props.children
 			)
+		);
+	}
+
+	/** A group of sibling JSContact properties that the specification describes together. */
+	function PropertyCluster( props ) {
+		return el(
+			'section',
+			{ className: 'ax-ce-cluster' },
+			el( 'h2', null, props.title ),
+			props.children
 		);
 	}
 
@@ -763,7 +774,7 @@
 
 		return el(
 			Section,
-			{ icon: kindIcon( props.kind ), label: __( 'Name', 'axismundi-contacts' ) },
+			{ icon: kindIcon( props.kind ), label: __( 'Name', 'axismundi-contacts' ), headingTag: props.headingTag },
 			/*
 			 * The written-out name. Not offered to somebody filling in a person's name, and never
 			 * built from the parts -- how a name reads is a question the standard leaves to whoever
@@ -2848,7 +2859,7 @@
 
 		return el(
 			Section,
-			{ icon: 'domain', label: __( 'Organizations', 'axismundi-contacts' ) },
+			{ icon: 'domain', label: __( 'Organizations', 'axismundi-contacts' ), headingTag: props.headingTag },
 			rows.map( function ( row ) {
 				var entry = row.entry;
 				var units = entry.units || [];
@@ -3115,7 +3126,7 @@
 
 		return el(
 			Section,
-			{ icon: 'person-text', label: __( 'Titles', 'axismundi-contacts' ) },
+			{ icon: 'person-text', label: __( 'Titles', 'axismundi-contacts' ), headingTag: props.headingTag },
 			rows.map( function ( row ) {
 				var entry = row.entry;
 				return el(
@@ -4480,10 +4491,14 @@
 							}
 						} )
 					),
-					el( NameEditor, {
+					el(
+						PropertyCluster,
+						{ title: __( 'Name and organization', 'axismundi-contacts' ) },
+						el( NameEditor, {
 						name: card.name,
 						// What the card describes decides what a name is: an organisation has no surname.
 						kind: card.kind,
+						headingTag: 'h3',
 						dragging: dragging,
 						onDragStart: setDragging,
 						localizations: card.localizations,
@@ -4533,9 +4548,11 @@
 						onChange: function ( value ) {
 							setProperty( 'name', value );
 						}
-					} ),
-					el( Organizations, {
+						} ),
+						/* `nicknames` and `speakToAs` join this group in RFC 9553 order when their editors exist. */
+						el( Organizations, {
 						value: card.organizations,
+						headingTag: 'h3',
 						card: card,
 						onChange: function ( value ) {
 							setProperty( 'organizations', value );
@@ -4574,9 +4591,10 @@
 							}
 							update( next );
 						}
-					} ),
-					el( Titles, {
+						} ),
+						el( Titles, {
 						value: card.titles,
+						headingTag: 'h3',
 						organizations: card.organizations,
 						card: card,
 						onChange: function ( value ) {
@@ -4603,8 +4621,9 @@
 								delete next.localizations;
 							}
 							update( next );
-						}
-					} ),
+							}
+						} )
+					),
 					el( Phones, {
 						value: card.phones,
 						card: card,

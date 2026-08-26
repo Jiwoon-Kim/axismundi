@@ -4394,9 +4394,11 @@ try {
 	// And each of those properties now has somewhere to be typed.
 	ax_ct_assert(
 		$ax_ct_results,
-		'where somebody belongs and what they are called there are fields rather than json',
+		'name and organization properties keep the RFC cluster and use fields rather than json',
 		str_contains( $ax_ct_cb_editor, 'function Organizations( props )' )
 			&& str_contains( $ax_ct_cb_editor, 'function Titles( props )' )
+			&& str_contains( $ax_ct_cb_editor, "__( 'Name and organization', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_cb_editor, "headingTag: 'h3'" )
 			&& str_contains( $ax_ct_cb_editor, "__( 'Part of it', 'axismundi-contacts' )" )
 			// Which employer a title belongs to names an entry above rather than repeating it.
 			&& str_contains( $ax_ct_cb_editor, "write( row, 'organizationId', value )" )

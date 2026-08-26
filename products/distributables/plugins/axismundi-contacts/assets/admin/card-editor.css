@@ -15,10 +15,34 @@
 	border-bottom: 1px solid #dcdcde;
 }
 
-.ax-ce-section h2 {
+.ax-ce-section h2,
+.ax-ce-section h3 {
 	margin: 0 0 .5em;
 	font-size: 15px;
 	font-weight: 600;
+}
+
+/* RFC 9553 describes name, nicknames, organizations, speakToAs and titles as one family. */
+.ax-ce-cluster {
+	margin: 0 0 1.5em;
+	padding: 0 0 1em;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.ax-ce-cluster > h2 {
+	margin: 0 0 .75em;
+	font-size: 17px;
+	font-weight: 600;
+}
+
+.ax-ce-cluster > .ax-ce-section {
+	margin: 0 0 1em;
+	padding: 0;
+	border: 0;
+}
+
+.ax-ce-cluster > .ax-ce-section:last-child {
+	margin-bottom: 0;
 }
 
 .ax-ce-label {

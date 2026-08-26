@@ -258,7 +258,7 @@ function axismundi_contacts_save_card_for_owner( int $owner_actor_id, array $car
 	}
 
 	$now     = current_time( 'mysql', true );
-	$derived = axismundi_contacts_derive_card_columns( $card );
+	$derived = axismundi_contacts_derive_card_columns( $card, $card_id );
 	$row     = array_merge(
 		$derived,
 		array(
@@ -327,10 +327,11 @@ function axismundi_contacts_find_by_uid( int $owner_actor_id, string $uid ) : in
 /**
  * The columns a Card is looked up by, read out of the document.
  *
- * @param array<string,mixed> $card Card document.
+ * @param array<string,mixed> $card    Card document.
+ * @param int                 $card_id Card id, when it has one, so an entry can be traced to its Actor.
  * @return array<string,mixed>
  */
-function axismundi_contacts_derive_card_columns( array $card ) : array {
+function axismundi_contacts_derive_card_columns( array $card, int $card_id = 0 ) : array {
 	$name = trim( (string) ( $card['name']['full'] ?? '' ) );
 	if ( '' === $name ) {
 		// A Card with components and no assembled name still has to appear in a list.
@@ -347,15 +348,21 @@ function axismundi_contacts_derive_card_columns( array $card ) : array {
 	 * the top one is the one they lead with. This column is that entry, derived rather than chosen
 	 * separately, so a list can be drawn without opening every document.
 	 */
-	$uri = '';
+	$uri  = '';
+	$prov = $card_id > 0 ? axismundi_contacts_card_provenance( $card_id ) : array();
 	foreach ( axismundi_contacts_ordered_services( $card ) as $service ) {
-		$candidate = trim( (string) ( $service['uri'] ?? '' ) );
 		/*
-		 * A dereferenceable Actor URI, which is what makes it a link rather than a label. `acct:` is a
-		 * locator for one and not one itself. Plain http counts: a site behind a VPN or a development
-		 * one is still addressable, and refusing it would mean the link silently never forms there.
+		 * The Actor this entry is, which is not the same string the entry shows. An account seeded
+		 * from an Actor carries the profile a person opens and is identified by the `id` recorded
+		 * against it, so this column -- which exists to be hashed, looked up and refreshed from --
+		 * takes the identifier and not the profile.
+		 *
+		 * A dereferenceable address is what makes it a link rather than a label. `acct:` is a locator
+		 * for one and not one itself. Plain http counts: a site behind a VPN or a development one is
+		 * still addressable, and refusing it would mean the link silently never forms there.
 		 */
-		if ( '' !== $candidate && 1 === preg_match( '#^https?://#', $candidate ) ) {
+		$candidate = axismundi_contacts_service_actor_uri( $prov, (string) $service['entry_id'], $service );
+		if ( '' !== $candidate ) {
 			$uri = $candidate;
 			break;
 		}

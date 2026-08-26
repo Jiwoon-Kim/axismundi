@@ -84,6 +84,76 @@ function axismundi_contacts_free_service_key( array $document ) : string {
 }
 
 /**
+ * The address of an Actor that belongs on a Card, which is the one a person opens.
+ *
+ * An Actor has two addresses and they are not interchangeable. Its `id` is what identifies it
+ * between servers -- what a Follow is addressed to, what a cache is keyed by, what a signature is
+ * checked against -- and on Mastodon it looks like `https://mastodon.social/users/alice`. Its `url`
+ * is the profile a person opens, shares and recognises: `https://mastodon.social/@alice`.
+ *
+ * JSContact wants the second one. `uri` on an OnlineService identifies the entity on that service,
+ * and the standard's own example gives a Mastodon account as `https://example2.com/@alice` beside
+ * the `@alice@example2.com` that names it. A Card is something a person reads, and handing them the
+ * machine identifier because the two happen to resolve to the same account would be showing them
+ * the plumbing.
+ *
+ * The id is not thrown away -- it is what provenance records for the entry, which is where a sync
+ * identifier belongs. See `axismundi_contacts_service_actor_uri()` for the way back.
+ *
+ * Falls back to the id when there is no usable profile: a handle-less local Actor has none yet, and
+ * a remote one that published no `url` is cached with its id in that column. An address that is
+ * only ever the machine one is still better than an empty entry.
+ *
+ * @param Axismundi_Actor $actor Actor.
+ * @return string
+ */
+function axismundi_contacts_actor_service_uri( Axismundi_Actor $actor ) : string {
+	if ( ! method_exists( $actor, 'get_profile_url' ) ) {
+		return $actor->get_uri();
+	}
+	$profile = trim( (string) $actor->get_profile_url() );
+	/*
+	 * Plain http counts, for the reason the linked column allows it: a site behind a VPN or a
+	 * development one is still somewhere a person opens, and refusing it would silently push every
+	 * such Card back onto the machine identifier.
+	 */
+	return 1 === preg_match( '#^https?://#', $profile ) ? $profile : $actor->get_uri();
+}
+
+/**
+ * Which Actor an account entry is, when this site knows of one.
+ *
+ * Asked of provenance first, because that is where the identifier lives now. An entry seeded from
+ * an Actor carries the profile URL a person reads, and the `id` that identifies it was written
+ * against the same pointer when the value was seeded -- so the way from an entry back to its Actor
+ * is the record of where the entry came from, not the value itself.
+ *
+ * Falling back to the entry's own `uri` covers two real cases: an account somebody typed in by hand
+ * that happens to be an Actor id, and every Card written before the profile URL was preferred.
+ *
+ * @param array<string,array<string,mixed>> $provenance Card provenance, keyed by pointer.
+ * @param string                            $entry_id   Entry key.
+ * @param array<string,mixed>               $entry      The entry itself.
+ * @return string Empty when the entry names nothing dereferenceable.
+ */
+function axismundi_contacts_service_actor_uri( array $provenance, string $entry_id, array $entry ) : string {
+	$pointer = 'onlineServices/' . $entry_id;
+	$record  = (array) ( $provenance[ $pointer ] ?? array() );
+	/*
+	 * Whatever the source now says. `source` answers who may write the value and `source_ref` answers
+	 * what it is about, and an account somebody edited by hand is still that person's account on that
+	 * server -- so the reference is read from a local row as readily as a seeded one. Only the writing
+	 * is refused there, which is `axismundi_contacts_source_may_write()`'s business and not this one.
+	 */
+	$ref = trim( (string) ( $record['source_ref'] ?? '' ) );
+	if ( '' !== $ref ) {
+		return $ref;
+	}
+	$uri = trim( (string) ( $entry['uri'] ?? '' ) );
+	return 1 === preg_match( '#^https?://#', $uri ) ? $uri : '';
+}
+
+/**
  * Connect a Card to an Actor, seeding what the Actor already says.
  *
  * Seeds only what is not already somebody's own: an empty name takes the Actor's, and a name a
@@ -139,8 +209,13 @@ function axismundi_contacts_link_actor( int $card_id, string $actor_uri, string 
 	 */
 	$key = '' !== $entry_key ? $entry_key : '';
 	if ( '' === $key ) {
+		/*
+		 * Which entry is already this Actor, asked the way everything else asks it: of the record of
+		 * where the entry came from. Comparing the entry's `uri` would have missed it, because that
+		 * now holds the profile somebody opens and the Actor is identified by its id.
+		 */
 		foreach ( axismundi_contacts_ordered_services( $document ) as $entry ) {
-			if ( trim( (string) ( $entry['uri'] ?? '' ) ) === $ref ) {
+			if ( axismundi_contacts_service_actor_uri( $prov, (string) $entry['entry_id'], $entry ) === $ref ) {
 				$key = (string) $entry['entry_id'];
 				break;
 			}
@@ -156,7 +231,7 @@ function axismundi_contacts_link_actor( int $card_id, string $actor_uri, string 
 		$existing = (array) ( $document['onlineServices'][ $key ] ?? array() );
 		$entry    = array_merge(
 			$existing,
-			array( '@type' => 'OnlineService', 'service' => $service, 'uri' => $ref )
+			array( '@type' => 'OnlineService', 'service' => $service, 'uri' => axismundi_contacts_actor_service_uri( $actor ) )
 		);
 		$handle = axismundi_contacts_actor_handle( $actor );
 		if ( '' !== $handle ) {
@@ -170,16 +245,23 @@ function axismundi_contacts_link_actor( int $card_id, string $actor_uri, string 
 		$written[]                          = $pointer;
 	}
 
-	$saved = axismundi_contacts_save_card( axismundi_contacts_home_book_id( (int) $card['owner_actor_id'] ), $document, $card_id );
-	if ( is_wp_error( $saved ) ) {
-		return $saved;
-	}
+	/*
+	 * Recorded before it is saved, which is the opposite of the obvious order and the right one. The
+	 * record is now what says which Actor an entry is, so a value saved ahead of it is a value
+	 * nothing can resolve -- including the columns derived during that very save. Written first, the
+	 * worst a failed save leaves is a record of where a value would have come from, which the next
+	 * refresh fills in; written second, a failed record leaves a seeded value that looks authored and
+	 * never refreshes again.
+	 */
 	foreach ( $written as $pointer ) {
 		$recorded = axismundi_contacts_set_provenance( $card_id, $pointer, $source, $ref );
 		if ( is_wp_error( $recorded ) ) {
-			// A seeded value whose origin was not recorded would look authored, and never refresh again.
 			return $recorded;
 		}
+	}
+	$saved = axismundi_contacts_save_card( axismundi_contacts_home_book_id( (int) $card['owner_actor_id'] ), $document, $card_id );
+	if ( is_wp_error( $saved ) ) {
+		return $saved;
 	}
 	return true;
 }
@@ -229,7 +311,7 @@ function axismundi_contacts_refresh_from_actor( int $card_id ) {
 		}
 		$handle = axismundi_contacts_actor_handle( $link['actor'] );
 		$entry  = (array) ( $document['onlineServices'][ $link['entry_id'] ] ?? array() );
-		$after  = array_merge( $entry, array( 'uri' => $link['uri'] ) );
+		$after  = array_merge( $entry, array( 'uri' => axismundi_contacts_actor_service_uri( $link['actor'] ) ) );
 		if ( '' !== $handle ) {
 			$after['user'] = $handle;
 		}
@@ -248,9 +330,13 @@ function axismundi_contacts_refresh_from_actor( int $card_id ) {
 /**
  * The accounts on a Card that resolve to an Actor this site knows, in the Card's own order.
  *
- * A binding is not stored anywhere: the service entry already holds the Actor URI, and asking the
- * Actor registry whether it knows that URI is the whole question. A binding table would be a second
- * copy of a fact the Card already states, and the two would eventually disagree.
+ * A binding is not stored anywhere new: the entry already carries where it came from, and asking the
+ * Actor registry whether it knows that address is the whole question. A binding table would be a
+ * second copy of a fact the Card already states, and the two would eventually disagree.
+ *
+ * What is asked has moved, though. The entry's own `uri` is the profile a person opens, so the
+ * address that identifies the Actor is read from the record of where the entry was seeded -- and
+ * from the entry itself for one somebody typed, or one written before the profile was preferred.
  *
  * Entries that resolve to nothing are still real. Somebody's account on a service this site has
  * never spoken to belongs on their card exactly as much as one it has.
@@ -264,9 +350,10 @@ function axismundi_contacts_card_actor_links( int $card_id ) : array {
 		return array();
 	}
 	$links = array();
+	$prov  = axismundi_contacts_card_provenance( $card_id );
 	foreach ( axismundi_contacts_ordered_services( $document ) as $entry ) {
-		$uri = trim( (string) ( $entry['uri'] ?? '' ) );
-		if ( '' === $uri || 1 !== preg_match( '#^https?://#', $uri ) ) {
+		$uri = axismundi_contacts_service_actor_uri( $prov, (string) $entry['entry_id'], $entry );
+		if ( '' === $uri ) {
 			continue;
 		}
 		$actor = axismundi_actors_get_by_uri( $uri );

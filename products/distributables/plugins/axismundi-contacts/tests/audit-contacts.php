@@ -457,18 +457,100 @@ try {
 			&& $ax_ct_fresh->get_uri() === (string) axismundi_contacts_get_card( $ax_ct_seeded )['linked_actor_uri']
 	);
 	/*
-	 * The address goes where the standard puts it: an `onlineServices` entry whose `uri` can be
-	 * dereferenced and whose `user` is the handle a person reads. Not a field this project invented,
+	 * The address goes where the standard puts it: an `onlineServices` entry whose `uri` identifies
+	 * the account and whose `user` is the handle a person reads. Not a field this project invented,
 	 * so it survives an export.
+	 *
+	 * Which of an Actor's two addresses goes in `uri` is the question. An Actor has an `id` that
+	 * identifies it between servers -- `/actors/<uuid>` here, `/users/alice` on Mastodon -- and a
+	 * `url` that is the profile a person opens and shares: `/@admin`, `/@alice`. RFC 9553's own
+	 * example writes a Mastodon account as `https://example2.com/@alice`, and a Card is something a
+	 * person reads, so it takes the profile.
+	 *
+	 * The id is not lost. It goes where a sync identifier belongs -- the record of where the entry
+	 * came from, and the column the Card is looked up by -- and that is what a refresh and an avatar
+	 * lookup ask for. Two addresses, two jobs, neither doing the other's.
 	 */
 	$ax_ct_service = $ax_ct_seeded_doc['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] ?? array();
 	ax_ct_assert(
 		$ax_ct_results,
-		'the fediverse address is an ordinary online service entry, with the URI and the handle',
+		'the account entry carries the profile a person opens, and the identifier is kept elsewhere',
 		'Axismundi' === (string) ( $ax_ct_service['service'] ?? '' )
-			&& $ax_ct_fresh->get_uri() === (string) ( $ax_ct_service['uri'] ?? '' )
+			&& $ax_ct_fresh->get_profile_url() === (string) ( $ax_ct_service['uri'] ?? '' )
+			&& $ax_ct_fresh->get_uri() !== (string) ( $ax_ct_service['uri'] ?? '' )
 			&& str_starts_with( (string) ( $ax_ct_service['user'] ?? '' ), '@' )
+			// The identifier, where the machinery reads it.
+			&& $ax_ct_fresh->get_uri() === (string) ( axismundi_contacts_card_provenance( $ax_ct_seeded )[ 'onlineServices/' . AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ]['source_ref'] ?? '' )
+			&& $ax_ct_fresh->get_uri() === (string) axismundi_contacts_get_card( $ax_ct_seeded )['linked_actor_uri']
+			/*
+			 * And the way back still works: an entry showing a profile is still resolvable to the
+			 * Actor it came from, which is what a refresh and an avatar walk on.
+			 */
+			&& $ax_ct_fresh->get_uri() === (string) ( axismundi_contacts_card_actor_links( $ax_ct_seeded )[0]['uri'] ?? '' )
 	);
+	/*
+	 * And the tie survives being edited. `source` says who may write the value; `source_ref` says what
+	 * the value is about, and those are different questions -- an account somebody corrected by hand
+	 * is still that person's account on that server. Before the entry showed a profile this did not
+	 * matter, because the value itself was the identifier and anything wanting the Actor read it. Now
+	 * the reference is the only thing holding the two together, and dropping it when somebody edits
+	 * the row would cost the Card its avatar, its refresh and the column it is looked up by -- in
+	 * exchange for a keystroke.
+	 */
+	$ax_ct_before_edit = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_edited      = $ax_ct_before_edit;
+	$ax_ct_edited['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ]['user'] = '@renamed@example.test';
+	axismundi_contacts_save_card_for_owner( (int) $ax_ct_fresh->get_identity_id(), $ax_ct_edited, $ax_ct_seeded );
+	/*
+	 * Through the step the editor's save takes: saving is how a sync writes too, so what makes a value
+	 * somebody's own is this, and an audit that skipped it would be testing a path nobody uses.
+	 */
+	axismundi_contacts_record_local_edits( $ax_ct_seeded, $ax_ct_before_edit, axismundi_contacts_card_document( $ax_ct_seeded ) );
+	$ax_ct_after_edit = axismundi_contacts_card_provenance( $ax_ct_seeded )[ 'onlineServices/' . AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] ?? array();
+	ax_ct_assert(
+		$ax_ct_results,
+		'editing an account makes the value yours without forgetting whose account it is',
+		'local' === (string) ( $ax_ct_after_edit['source'] ?? '' )
+			&& $ax_ct_fresh->get_uri() === (string) ( $ax_ct_after_edit['source_ref'] ?? '' )
+			// Still resolvable, which is what the avatar and the refresh walk on.
+			&& $ax_ct_fresh->get_uri() === (string) ( axismundi_contacts_card_actor_links( $ax_ct_seeded )[0]['uri'] ?? '' )
+			// And still refused as something a sync may overwrite, which is what `local` is for.
+			&& ! axismundi_contacts_source_may_write(
+				$ax_ct_seeded,
+				'onlineServices/' . AXISMUNDI_CONTACTS_HOME_SERVICE_KEY,
+				AXISMUNDI_CONTACTS_SOURCE_ACTOR,
+				$ax_ct_fresh->get_uri()
+			)
+	);
+
+	/*
+	 * A Card written before any of this said the identifier where it meant the profile, and lost the
+	 * reference the first time somebody touched the row. Both are repaired on upgrade, in that order:
+	 * the reference first, because it is what says which Actor the entry is, and only then the value.
+	 *
+	 * What is not repaired is a value somebody chose. A migration that rewrote those would be deciding
+	 * that its idea of an address beats a person's, on a Card they keep.
+	 */
+	$ax_ct_old = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_old['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ]['uri'] = $ax_ct_fresh->get_uri();
+	axismundi_contacts_save_card_for_owner( (int) $ax_ct_fresh->get_identity_id(), $ax_ct_old, $ax_ct_seeded );
+	// As an old Card had it: the identifier in the value, and nothing recorded about where it came from.
+	axismundi_contacts_set_provenance( $ax_ct_seeded, 'onlineServices/' . AXISMUNDI_CONTACTS_HOME_SERVICE_KEY, AXISMUNDI_CONTACTS_SOURCE_ACTOR, '' );
+	axismundi_contacts_restore_service_actor_refs();
+	$ax_ct_restored = axismundi_contacts_card_provenance( $ax_ct_seeded )[ 'onlineServices/' . AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] ?? array();
+	axismundi_contacts_migrate_service_profile_uris();
+	$ax_ct_moved = axismundi_contacts_card_document( $ax_ct_seeded );
+	ax_ct_assert(
+		$ax_ct_results,
+		'an upgrade gives an account back its reference, and then shows the profile instead of the identifier',
+		// The reference, read back from the value that was still the identifier.
+		$ax_ct_fresh->get_uri() === (string) ( $ax_ct_restored['source_ref'] ?? '' )
+			// And the value, once there was something to tell it from.
+			&& $ax_ct_fresh->get_profile_url() === (string) ( $ax_ct_moved['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ]['uri'] ?? '' )
+			// The Card is still looked up by the identifier.
+			&& $ax_ct_fresh->get_uri() === (string) axismundi_contacts_get_card( $ax_ct_seeded )['linked_actor_uri']
+	);
+
 	/*
 	 * Seeded values are recorded as the Actor's, which is what lets a later rename be pulled in --
 	 * and what stops it once somebody edits the value themselves.

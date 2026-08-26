@@ -34,7 +34,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CONTACTS_DB_VERSION        = '10';
+const AXISMUNDI_CONTACTS_DB_VERSION        = '11';
 const AXISMUNDI_CONTACTS_DB_VERSION_OPTION = 'ax_contacts_db_version';
 
 /**
@@ -333,6 +333,13 @@ function axismundi_contacts_install_schema() : bool {
 	axismundi_contacts_migrate_home_service_key();
 	// So are the phone addresses written before the collections agreed on what to call themselves.
 	axismundi_contacts_migrate_phone_keys();
+	/*
+	 * The reference first, because it is what the rewrite reads: an account whose value is an Actor
+	 * identifier is tied to that Actor before its value stops being one.
+	 */
+	axismundi_contacts_restore_service_actor_refs();
+	// And then the accounts that were showing an Actor's identifier where its profile belongs.
+	axismundi_contacts_migrate_service_profile_uris();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.
 	$card_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$cards}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.
@@ -359,6 +366,119 @@ function axismundi_contacts_install_schema() : bool {
 		update_option( AXISMUNDI_CONTACTS_DB_VERSION_OPTION, AXISMUNDI_CONTACTS_DB_VERSION, false );
 	}
 	return $valid;
+}
+
+/**
+ * Show the profile where an account was showing the identifier it was seeded from.
+ *
+ * An Actor has two addresses: the `id` that identifies it between servers, and the `url` that is the
+ * profile a person opens. Accounts seeded before that distinction was drawn carry the id, so a Card
+ * offers `.../actors/6d34d931-...` where it means `/@admin` -- correct, dereferenceable, and not the
+ * thing anybody would copy to a friend.
+ *
+ * Only the ones nobody has touched. An entry is rewritten when its value is still exactly the
+ * address it was seeded from -- what provenance recorded -- and left alone otherwise: a person who
+ * typed their own URI there meant that URI, and this is not a migration's business. The identifier
+ * is not lost either way, because it is what provenance holds and what the migration matched on.
+ *
+ * @return void
+ */
+function axismundi_contacts_migrate_service_profile_uris() : void {
+	global $wpdb;
+	if ( ! function_exists( 'axismundi_actors_get_by_uri' ) ) {
+		// Nothing to resolve against; the accounts keep saying what they say until Actors is there.
+		return;
+	}
+	$provenance = axismundi_contacts_provenance_table();
+	$rows       = (array) $wpdb->get_results(
+		$wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- this plugin's own table name.
+			"SELECT card_id, pointer, source_ref FROM {$provenance} WHERE source = %s AND pointer LIKE %s",
+			AXISMUNDI_CONTACTS_SOURCE_ACTOR,
+			$wpdb->esc_like( 'onlineServices/' ) . '%'
+		),
+		ARRAY_A
+	);
+	foreach ( $rows as $row ) {
+		$card_id = (int) ( $row['card_id'] ?? 0 );
+		$ref     = trim( (string) ( $row['source_ref'] ?? '' ) );
+		$key     = substr( (string) ( $row['pointer'] ?? '' ), strlen( 'onlineServices/' ) );
+		if ( $card_id <= 0 || '' === $ref || '' === $key ) {
+			continue;
+		}
+		$document = axismundi_contacts_card_document( $card_id );
+		$entry    = (array) ( $document['onlineServices'][ $key ] ?? array() );
+		// Untouched means still saying exactly what it was seeded with.
+		if ( array() === $entry || trim( (string) ( $entry['uri'] ?? '' ) ) !== $ref ) {
+			continue;
+		}
+		$actor = axismundi_actors_get_by_uri( $ref );
+		if ( ! $actor instanceof Axismundi_Actor ) {
+			// An Actor this site no longer knows: leave the address that at least still resolves.
+			continue;
+		}
+		$profile = axismundi_contacts_actor_service_uri( $actor );
+		if ( $profile === $ref ) {
+			continue;
+		}
+		$document['onlineServices'][ $key ]['uri'] = $profile;
+		$card                                      = axismundi_contacts_get_card( $card_id );
+		if ( array() === $card ) {
+			continue;
+		}
+		axismundi_contacts_save_card_for_owner( (int) $card['owner_actor_id'], $document, $card_id );
+	}
+}
+
+/**
+ * Give an account back the reference to the Actor it is about.
+ *
+ * An entry used to carry the Actor's identifier as its value, so nothing else had to remember it:
+ * whoever wanted the Actor read the entry. Editing the entry set its source to local and dropped the
+ * reference, and that cost nothing while the value itself was still the identifier.
+ *
+ * It costs something now. The value is the profile a person opens, so the reference is what ties the
+ * entry to its Actor -- and an entry showing an identifier, recorded as somebody's own, with no
+ * reference, is one hand-edit away from losing that tie for good. This writes the reference back
+ * wherever the value still resolves to an Actor this site knows, and changes nothing else: the
+ * source stays exactly as it is, so nothing becomes refreshable that was not.
+ *
+ * @return void
+ */
+function axismundi_contacts_restore_service_actor_refs() : void {
+	global $wpdb;
+	if ( ! function_exists( 'axismundi_actors_get_by_uri' ) ) {
+		return;
+	}
+	$cards = axismundi_contacts_cards_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
+	$rows = (array) $wpdb->get_col( "SELECT id FROM {$cards} WHERE card_json LIKE '%onlineServices%'" );
+	foreach ( $rows as $card_id ) {
+		$card_id  = (int) $card_id;
+		$document = axismundi_contacts_card_document( $card_id );
+		$prov     = axismundi_contacts_card_provenance( $card_id );
+		foreach ( (array) ( $document['onlineServices'] ?? array() ) as $key => $entry ) {
+			$pointer = 'onlineServices/' . (string) $key;
+			$record  = (array) ( $prov[ $pointer ] ?? array() );
+			if ( '' !== trim( (string) ( $record['source_ref'] ?? '' ) ) ) {
+				continue;
+			}
+			$uri = trim( (string) ( ( (array) $entry )['uri'] ?? '' ) );
+			if ( '' === $uri || 1 !== preg_match( '#^https?://#', $uri ) ) {
+				continue;
+			}
+			if ( ! axismundi_actors_get_by_uri( $uri ) instanceof Axismundi_Actor ) {
+				// Not an identifier this site knows: nothing to tie it to, and nothing to write down.
+				continue;
+			}
+			axismundi_contacts_set_provenance(
+				$card_id,
+				$pointer,
+				(string) ( $record['source'] ?? AXISMUNDI_CONTACTS_SOURCE_LOCAL ),
+				$uri
+			);
+		}
+	}
 }
 
 /**

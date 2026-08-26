@@ -118,12 +118,30 @@ function axismundi_contacts_card_provenance( int $card_id ) : array {
  * @return true|WP_Error
  */
 function axismundi_contacts_record_local_edits( int $card_id, array $before, array $after ) {
+	$known = axismundi_contacts_card_provenance( $card_id );
 	foreach ( array_keys( AXISMUNDI_CONTACTS_INDEXED_FIELDS ) as $field ) {
 		foreach ( (array) ( $after[ $field ] ?? array() ) as $entry_id => $entry ) {
 			if ( ( $before[ $field ][ $entry_id ] ?? null ) === $entry ) {
 				continue;
 			}
-			$written = axismundi_contacts_set_provenance( $card_id, $field . '/' . (string) $entry_id, AXISMUNDI_CONTACTS_SOURCE_LOCAL );
+			$pointer = $field . '/' . (string) $entry_id;
+			/*
+			 * Whose the value is changes; what it is about does not. An account seeded from an Actor
+			 * and then edited is still that person's account -- so the address that identifies the
+			 * Actor is kept while the source becomes local, which is the difference between "you wrote
+			 * this" and "this has nothing to do with that Actor any more".
+			 *
+			 * It matters more than it used to. The entry itself now shows the profile somebody opens,
+			 * so this record is the only thing tying the entry to the Actor it belongs to -- and
+			 * dropping it here would mean editing an account by hand silently cost the Card its
+			 * avatar, its refresh and the column it is looked up by.
+			 */
+			$written = axismundi_contacts_set_provenance(
+				$card_id,
+				$pointer,
+				AXISMUNDI_CONTACTS_SOURCE_LOCAL,
+				(string) ( $known[ $pointer ]['source_ref'] ?? '' )
+			);
 			if ( is_wp_error( $written ) ) {
 				return $written;
 			}

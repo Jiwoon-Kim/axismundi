@@ -5398,6 +5398,47 @@ try {
 			&& ! str_contains( $ax_ct_cb_editor, 'var list = components.slice();' )
 	);
 	/*
+	 * And the list a person actually leaves behind after moving things around. This one was not
+	 * written here first: it was built on the screen -- a separator and a building added, the
+	 * separator dragged above the building, two more separators and a subdistrict added between
+	 * them, the building dragged past the subdistrict and back again, and then every one of the six
+	 * values retyped -- and this is what the screen held when it was done.
+	 *
+	 * What makes it worth keeping is the shape rather than the count. The separator at position one
+	 * is only there because somebody dragged it there, so a list that survives being written in
+	 * order says nothing about this one. The comparison is the strings themselves: `", "`, `" ("`,
+	 * `")"` and `102동` are what a reader sees, and a check on kinds alone would pass while every
+	 * separator said the wrong thing.
+	 */
+	$ax_ct_moved      = array(
+		array( 'kind' => 'name', 'value' => "íí¤ëë¡ 152" ),
+		array( 'kind' => 'separator', 'value' => ', ' ),
+		array( 'kind' => 'building', 'value' => "102ë" ),
+		array( 'kind' => 'separator', 'value' => ' (' ),
+		array( 'kind' => 'subdistrict', 'value' => "ì­ì¼1ë" ),
+		array( 'kind' => 'separator', 'value' => ')' ),
+	);
+	$ax_ct_moved_id   = axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array(
+			'@type'     => 'Card',
+			'name'      => array( 'full' => 'Dragged' ),
+			'addresses' => array( 'adr-a' => array( 'components' => $ax_ct_moved, 'isOrdered' => true, 'countryCode' => 'KR' ) ),
+		)
+	);
+	$ax_ct_moved_key  = is_wp_error( $ax_ct_moved_id ) ? 0 : (int) $ax_ct_moved_id;
+	$ax_ct_loose[]    = $ax_ct_moved_key;
+	$ax_ct_moved_back = (array) ( axismundi_contacts_card_document( $ax_ct_moved_key )['addresses']['adr-a'] ?? array() );
+	ax_ct_assert(
+		$ax_ct_results,
+		'an address that was rearranged and then retyped keeps every string, in the order it was left',
+		$ax_ct_moved === (array) ( $ax_ct_moved_back['components'] ?? array() )
+			// The entry keeps its own name through all of it: a moved part is not a new address.
+			&& array_key_exists( 'adr-a', (array) ( axismundi_contacts_card_document( $ax_ct_moved_key )['addresses'] ?? array() ) )
+			&& true === ( $ax_ct_moved_back['isOrdered'] ?? null )
+	);
+
+	/*
 	 * And a part is never refused because another of its kind is waiting to be typed. An address may
 	 * want three separators, two of them open at once, and a button going grey without saying why
 	 * reads as "you cannot have another one of those".

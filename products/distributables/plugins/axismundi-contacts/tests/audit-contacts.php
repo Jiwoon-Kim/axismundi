@@ -299,6 +299,16 @@ try {
 		'a pinned entry is refused even to the source that wrote it',
 		! axismundi_contacts_source_may_write( $ax_ct_card, 'emails/work', 'google', 'sync-account@example.test' )
 	);
+	/* Updating a source record must not undo a person's explicit lock on the value. */
+	axismundi_contacts_set_provenance( $ax_ct_card, 'emails/work', AXISMUNDI_CONTACTS_SOURCE_LOCAL, 'linked-actor@example.test' );
+	$ax_ct_locked_provenance = axismundi_contacts_card_provenance( $ax_ct_card );
+	ax_ct_assert(
+		$ax_ct_results,
+		'updating provenance never unlocks an entry somebody locked',
+		1 === (int) ( $ax_ct_locked_provenance['emails/work']['locked'] ?? 0 )
+			&& AXISMUNDI_CONTACTS_SOURCE_LOCAL === (string) ( $ax_ct_locked_provenance['emails/work']['source'] ?? '' )
+			&& 'linked-actor@example.test' === (string) ( $ax_ct_locked_provenance['emails/work']['source_ref'] ?? '' )
+	);
 	// None of that bookkeeping belongs in the document that gets exported.
 	ax_ct_assert(
 		$ax_ct_results,

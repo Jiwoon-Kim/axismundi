@@ -55,18 +55,23 @@ function axismundi_contacts_set_provenance( int $card_id, string $pointer, strin
 	if ( $card_id <= 0 || '' === $pointer || '' === $source ) {
 		return new WP_Error( 'ax_contacts_provenance_key', __( 'Provenance needs a card, a pointer and a source.', 'axismundi-contacts' ) );
 	}
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	$written = $wpdb->replace(
-		axismundi_contacts_provenance_table(),
-		array(
-			'card_id'    => $card_id,
-			'pointer'    => $pointer,
-			'source'     => $source,
-			'source_ref' => $source_ref,
-			'locked'     => 0,
-			'updated_at' => current_time( 'mysql', true ),
-		),
-		array( '%d', '%s', '%s', '%s', '%d', '%s' )
+	$table      = axismundi_contacts_provenance_table();
+	$updated_at = current_time( 'mysql', true );
+	/*
+	 * REPLACE deletes the row before inserting its replacement, which turns a deliberate lock back
+	 * into the column default. A provenance write changes where an entry came from, not whether its
+	 * owner has forbidden sync from changing it.
+	 */
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table name and keyed upsert.
+	$written = $wpdb->query(
+		$wpdb->prepare(
+			"INSERT INTO {$table} ( card_id, pointer, source, source_ref, updated_at ) VALUES ( %d, %s, %s, %s, %s ) ON DUPLICATE KEY UPDATE source = VALUES(source), source_ref = VALUES(source_ref), updated_at = VALUES(updated_at)",
+			$card_id,
+			$pointer,
+			$source,
+			$source_ref,
+			$updated_at
+		)
 	);
 	return false === $written
 		? new WP_Error( 'ax_contacts_provenance_save', __( 'The provenance could not be saved.', 'axismundi-contacts' ) )

@@ -2130,14 +2130,6 @@
 		var [ pending, setPending ] = useState( [] );
 		var [ adding, setAdding ] = useState( false );
 		var [ dragging, setDragging ] = useState( null );
-		/*
-		 * Whether this address answers with a written-out line as well. Held here rather than read
-		 * from the value, because a line somebody has ticked and not yet typed is still a line they
-		 * are about to write, and an empty one is not stored -- so the box would untick itself under
-		 * the cursor.
-		 */
-		var [ written, setWritten ] = useState( undefined !== address.full );
-		var [ askingFull, setAskingFull ] = useState( false );
 		// The same reason as the rows above: a browser fills several parts of an address at once.
 		var latest = useRef( address );
 		latest.current = address;
@@ -2202,6 +2194,31 @@
 		return el(
 			Fragment,
 			null,
+			/*
+			 * The address written out as one line, above the parts for the reason the name's is: it
+			 * is how somebody would write the address down, so it is the first thing to read and the
+			 * parts are what it is taken apart into. Whether it is asked at all is a question about
+			 * this address rather than an answer to it, which is why the tick that turns it on lives
+			 * in the fold and this does not.
+			 *
+			 * The standard asks for any one of the parts, the line, a country code, coordinates or a
+			 * time zone, so `{"full": "부산광역시 남구 동명로 26"}` is a whole address on its own and
+			 * nothing here needs the parts to exist before the line can be written. It is never built
+			 * from them and never replaced by them.
+			 */
+			props.written
+				? el( Textarea, {
+					label: __( 'Full address', 'axismundi-contacts' ),
+					className: 'ax-ce-address__full',
+					rows: props.fullRows || 3,
+					value: address.full || '',
+					supporting: props.fullSupporting || __( 'The whole address written out as one string, kept as written -- never built from the parts above, and never replaced by them.', 'axismundi-contacts' ),
+					inputProps: props.fullInputProps,
+					onChange: function ( value ) {
+						props.onChange( withKey( latest.current, 'full', value ) );
+					}
+				} )
+				: null,
 			rows.map( function ( row ) {
 				return el( AddressPart, {
 					key: row.key,
@@ -2297,100 +2314,6 @@
 				)
 				: null,
 			/*
-			 * The address written out as one line, which is a second way of saying where somewhere is
-			 * rather than a summary of the first. The standard asks for any one of the parts, the
-			 * line, a country code, coordinates or a time zone -- so `{"full": "부산광역시 남구 동명로
-			 * 26"}` is a whole address on its own, and nothing here requires the parts to exist before
-			 * it can be written.
-			 *
-			 * A checkbox rather than a box that is always open, for the reason the name has one: an
-			 * empty field in front of somebody reads as a question they have not answered yet, and
-			 * most addresses answer with parts and never with a line. Ticking it is how somebody says
-			 * this address is written out; the line is never built from the parts above and never
-			 * replaced by them.
-			 */
-			el(
-				Fragment,
-				null,
-				el(
-					'p',
-					null,
-					el(
-						'label',
-						null,
-						el( 'input', {
-							type: 'checkbox',
-							checked: written,
-							onChange: function ( event ) {
-								if ( event.target.checked ) {
-									setWritten( true );
-									return;
-								}
-								// Something to lose is something to ask about first.
-								if ( latest.current.full ) {
-									setAskingFull( true );
-									return;
-								}
-								setWritten( false );
-							}
-						} ),
-						' ',
-						__( 'Full address', 'axismundi-contacts' )
-					)
-				),
-				written
-					? el( Textarea, {
-						label: __( 'Full address', 'axismundi-contacts' ),
-						className: 'ax-ce-address__full',
-						rows: props.fullRows || 3,
-						value: address.full || '',
-						supporting: props.fullSupporting || __( 'The whole address written out as one string, kept as written -- never built from the parts above, and never replaced by them.', 'axismundi-contacts' ),
-						inputProps: props.fullInputProps,
-						onChange: function ( value ) {
-							props.onChange( withKey( latest.current, 'full', value ) );
-						}
-					} )
-					: null,
-				askingFull
-					? el(
-						'div',
-						{ className: 'ax-ce-blocked', role: 'alert' },
-						el( 'p', null, __( 'Turning this off removes the address as it was written out.', 'axismundi-contacts' ) ),
-						el(
-							'p',
-							null,
-							el(
-								'button',
-								{
-									type: 'button',
-									className: 'button',
-									onClick: function () {
-										var without = Object.assign( {}, latest.current );
-										delete without.full;
-										setWritten( false );
-										setAskingFull( false );
-										props.onChange( without );
-									}
-								},
-								__( 'Remove it', 'axismundi-contacts' )
-							),
-							' ',
-							el(
-								'button',
-								{
-									type: 'button',
-									className: 'button',
-									onClick: function () {
-										setAskingFull( false );
-									}
-								},
-								__( 'Keep it', 'axismundi-contacts' )
-							)
-						)
-					)
-					: null
-			),
-			/*
 			 * What goes between the parts when nothing says otherwise. The standard will not store one
 			 * for an address whose parts are in no order, which is the same rule the name follows.
 			 */
@@ -2438,6 +2361,86 @@
 	}
 
 	/**
+	 * Whether an address answers with a written-out line as well.
+	 *
+	 * Its own component because the tick and the field it turns on are no longer next to each other:
+	 * the line is read first, above the parts, and the question of whether to ask for one at all sits
+	 * in the fold with the other things about this address rather than in the middle of it. The name
+	 * is arranged the same way and for the same reason.
+	 *
+	 * Ticked and empty stores nothing -- somebody is about to write one -- so what is ticked is held
+	 * by whoever draws the row rather than read back from the value, which would untick itself under
+	 * the cursor. Turning it off throws an answer away, so when there is one to lose it asks first.
+	 */
+	function FullAddressToggle( props ) {
+		var [ asking, setAsking ] = useState( false );
+		return el(
+			Fragment,
+			null,
+			el(
+				'p',
+				null,
+				el(
+					'label',
+					null,
+					el( 'input', {
+						type: 'checkbox',
+						checked: props.written,
+						onChange: function ( event ) {
+							if ( event.target.checked ) {
+								props.onWritten( true );
+								return;
+							}
+							if ( props.hasLine ) {
+								setAsking( true );
+								return;
+							}
+							props.onWritten( false );
+						}
+					} ),
+					' ',
+					__( 'Full address', 'axismundi-contacts' )
+				)
+			),
+			asking
+				? el(
+					'div',
+					{ className: 'ax-ce-blocked', role: 'alert' },
+					el( 'p', null, __( 'Turning this off removes the address as it was written out.', 'axismundi-contacts' ) ),
+					el(
+						'p',
+						null,
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									setAsking( false );
+									props.onRemove();
+								}
+							},
+							__( 'Remove it', 'axismundi-contacts' )
+						),
+						' ',
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									setAsking( false );
+								}
+							},
+							__( 'Keep it', 'axismundi-contacts' )
+						)
+					)
+				)
+				: null
+		);
+	}
+
+	/**
 	 * Where somebody is.
 	 *
 	 * An address is written two ways and a Card may hold both: the parts it is made of, and the line
@@ -2467,6 +2470,23 @@
 			// particular, so any of them keeps an entry that has it.
 			keeps: [ 'components', 'coordinates', 'countryCode', 'timeZone' ]
 		} );
+		/*
+		 * Which rows are answering with a written-out line. Kept for the whole section rather than by
+		 * each row, because the rows are drawn in a loop and a loop cannot hold state of its own. A
+		 * row that has said nothing about it is read from the address: one that arrived with a line
+		 * is already answering with one.
+		 */
+		var [ lines, setLines ] = useState( {} );
+
+		function writesALine( row ) {
+			return undefined === lines[ row.key ] ? undefined !== row.entry.full : lines[ row.key ];
+		}
+
+		function setWritesALine( row, on ) {
+			var next = Object.assign( {}, lines );
+			next[ row.key ] = on;
+			setLines( next );
+		}
 
 		return el(
 			Section,
@@ -2525,6 +2545,7 @@
 							: null,
 						el( AddressParts, {
 							address: entry,
+							written: writesALine( row ),
 							// The line is one field a browser can fill, and the only one it fills whole.
 							fullInputProps: { autoComplete: 'street-address' },
 							onChange: function ( next ) {
@@ -2593,6 +2614,26 @@
 							'details',
 							{ className: 'ax-ce-name__advanced' },
 							el( 'summary', null, __( 'More about this address', 'axismundi-contacts' ) ),
+							/*
+							 * Whether this address is written out at all, asked here rather than beside
+							 * the line itself: it is a question about the address and not one of its
+							 * answers, and most addresses answer with their parts and never with a line.
+							 */
+							el( FullAddressToggle, {
+								written: writesALine( row ),
+								hasLine: undefined !== entry.full,
+								onWritten: function ( on ) {
+									setWritesALine( row, on );
+								},
+								onRemove: function () {
+									setWritesALine( row, false );
+									rows.write( row, function ( each ) {
+										var without = Object.assign( {}, each );
+										delete without.full;
+										return without;
+									} );
+								}
+							} ),
 							el( TextField, {
 								label: __( 'Coordinates', 'axismundi-contacts' ),
 								value: entry.coordinates || '',
@@ -3465,6 +3506,8 @@
 		var [ adding, setAdding ] = useState( '' );
 		var [ dragging, setDragging ] = useState( null );
 		var [ blocked, setBlocked ] = useState( null );
+		// Which translated addresses are answering with a line, for the reason the section above has it.
+		var [ lines, setLines ] = useState( {} );
 		var applied = applyPatch( props.card, patch );
 
 		function setPatch( next ) {
@@ -3523,6 +3566,7 @@
 						el( 'h4', null, path ),
 						el( AddressParts, {
 							address: value,
+							written: undefined === lines[ path ] ? undefined !== value.full : lines[ path ],
 							fullRows: 2,
 							fullSupporting: __( 'The whole address written out in this language, kept as written.', 'axismundi-contacts' ),
 							/*
@@ -3531,6 +3575,28 @@
 							 */
 							onChange: function ( next ) {
 								setPath( path, next );
+							}
+						} ),
+						/*
+						 * The same question, asked in the open. There is no fold here to put it in --
+						 * this whole screen is the fold -- and a translated address is one somebody
+						 * came here to write out, so it is not a question to hide from them.
+						 */
+						el( FullAddressToggle, {
+							written: undefined === lines[ path ] ? undefined !== value.full : lines[ path ],
+							hasLine: undefined !== value.full,
+							onWritten: function ( on ) {
+								var next = Object.assign( {}, lines );
+								next[ path ] = on;
+								setLines( next );
+							},
+							onRemove: function () {
+								var next = Object.assign( {}, lines );
+								next[ path ] = false;
+								setLines( next );
+								var without = Object.assign( {}, value );
+								delete without.full;
+								setPath( path, without );
 							}
 						} ),
 						el(

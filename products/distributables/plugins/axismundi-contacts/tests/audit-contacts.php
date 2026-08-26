@@ -5398,11 +5398,20 @@ try {
 			// And nothing rearranges from a render's own copy any more.
 			&& ! str_contains( $ax_ct_cb_editor, 'var list = components.slice();' )
 	);
+	// The address editor: the parts, and the tick that asks whether there is a line as well.
+	$ax_ct_cb_parts = substr(
+		$ax_ct_cb_editor,
+		(int) strpos( $ax_ct_cb_editor, 'function AddressParts' ),
+		(int) strpos( $ax_ct_cb_editor, 'function Addresses' ) - (int) strpos( $ax_ct_cb_editor, 'function AddressParts' )
+	);
 	/*
 	 * The address written out as one line is a way of saying where somewhere is, not a summary of the
-	 * parts, so it is offered beside them rather than behind the fold that holds the coordinates and
-	 * the time zone. A checkbox, like the name's, because an empty box in front of somebody reads as
-	 * a question they have not answered and most addresses answer with parts and never with a line.
+	 * parts. So it is read where somebody would write it -- above them, the way the name's full form
+	 * sits above its parts -- and the question of whether to ask for one at all sits in the fold with
+	 * the other things about this address rather than in the middle of it.
+	 *
+	 * Two different things in two different places, which is why the tick is its own component: the
+	 * field is part of the address and the tick is a question about it.
 	 *
 	 * It has one writer. The line used to be drawn twice -- once in the address row and once in the
 	 * localization editor -- and two fields writing one key is how they end up disagreeing about what
@@ -5410,15 +5419,20 @@ try {
 	 */
 	ax_ct_assert(
 		$ax_ct_results,
-		'the written-out address is one field, offered beside the parts rather than behind the fold',
+		'the written-out address is one field, read above the parts, and asked for from the fold',
 		1 === substr_count( $ax_ct_cb_editor, "className: 'ax-ce-address__full'," )
-			// Asked before the separator between the parts, which is the order somebody reads them in.
-			&& strpos( $ax_ct_cb_editor, "__( 'Full address', 'axismundi-contacts' )" )
-				< strpos( $ax_ct_cb_editor, "__( 'Default separator', 'axismundi-contacts' )", (int) strpos( $ax_ct_cb_editor, 'function AddressParts' ) )
-			// Ticked and empty is somebody about to write one, so nothing is stored until they do.
-			&& str_contains( $ax_ct_cb_editor, 'var [ written, setWritten ] = useState( undefined !== address.full );' )
+			// Above the parts: the field itself is drawn before the rows it is taken apart into.
+			&& strpos( $ax_ct_cb_parts, "className: 'ax-ce-address__full'," ) < strpos( $ax_ct_cb_parts, 'rows.map( function ( row ) {' )
+			// And the tick is in the fold, before the two facts a machine wants and a person rarely does.
+			&& strpos( $ax_ct_cb_editor, 'el( FullAddressToggle, {' ) > strpos( $ax_ct_cb_editor, "el( 'summary', null, __( 'More about this address', 'axismundi-contacts' ) )," )
+			&& strpos( $ax_ct_cb_editor, 'el( FullAddressToggle, {' ) < strpos( $ax_ct_cb_editor, "label: __( 'Coordinates', 'axismundi-contacts' )," )
+			/*
+			 * Ticked and empty is somebody about to write one, so what is ticked is held by whoever
+			 * draws the row. Read back from the value it would untick itself under the cursor.
+			 */
+			&& str_contains( $ax_ct_cb_editor, 'return undefined === lines[ row.key ] ? undefined !== row.entry.full : lines[ row.key ];' )
 			// And turning it off throws an answer away, so when there is one to lose it asks first.
-			&& str_contains( $ax_ct_cb_editor, 'if ( latest.current.full ) {' )
+			&& str_contains( $ax_ct_cb_editor, 'if ( props.hasLine ) {' )
 			&& str_contains( $ax_ct_cb_editor, "__( 'Turning this off removes the address as it was written out.', 'axismundi-contacts' )" )
 			/*
 			 * A browser fills in where somebody lives, which is an answer in their own language. The
@@ -5438,11 +5452,6 @@ try {
 	 * with no country is a complete address, and a country nobody stated is a fact about it rather
 	 * than a gap to close.
 	 */
-	$ax_ct_cb_parts = substr(
-		$ax_ct_cb_editor,
-		(int) strpos( $ax_ct_cb_editor, 'function AddressParts' ),
-		(int) strpos( $ax_ct_cb_editor, 'function Addresses' ) - (int) strpos( $ax_ct_cb_editor, 'function AddressParts' )
-	);
 	ax_ct_assert(
 		$ax_ct_results,
 		'the country is asked outright, is never required, and is never filled in on somebody’s behalf',
@@ -5453,11 +5462,14 @@ try {
 			 * And the tickboxes an address row has are the two that belong to answers most addresses
 			 * do not give: the line it is written out as, and the separator between its parts.
 			 */
-			&& array( "__( 'Full address', 'axismundi-contacts' )", "__( 'Default separator', 'axismundi-contacts' )" ) === array_values(
+			&& array( "__( 'Default separator', 'axismundi-contacts' )", "__( 'Full address', 'axismundi-contacts' )" ) === ( static function ( array $found ) : array {
+				sort( $found );
+				return $found;
+			} )(
 				array_filter(
 					array_map(
 						static function ( string $chunk ) : string {
-							return 1 === preg_match( "/__\( '[^']+', 'axismundi-contacts' \)/", $chunk, $found ) ? $found[0] : '';
+							return 1 === preg_match( "/__\( '[^']+', 'axismundi-contacts' \)/", $chunk, $label ) ? $label[0] : '';
 						},
 						array_slice( explode( "type: 'checkbox',", $ax_ct_cb_parts ), 1 )
 					)

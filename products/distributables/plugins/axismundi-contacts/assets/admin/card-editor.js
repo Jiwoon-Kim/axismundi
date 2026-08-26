@@ -3282,13 +3282,6 @@
 					onChange: function ( value ) {
 						props.onChange( withKey( entry, 'uri', value ) );
 					}
-				} ),
-				el( TextField, {
-					label: __( 'Label', 'axismundi-contacts' ),
-					value: entry.label || '',
-					onChange: function ( value ) {
-						props.onChange( withKey( entry, 'label', value ) );
-					}
 				} )
 			),
 			el( IconButton, {

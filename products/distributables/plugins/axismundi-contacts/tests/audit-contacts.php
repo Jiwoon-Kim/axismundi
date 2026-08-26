@@ -3809,11 +3809,15 @@ try {
 	$ax_ct_os_js = (string) file_get_contents( dirname( __DIR__ ) . '/assets/admin/card-editor.js' );
 	ax_ct_assert(
 		$ax_ct_results,
-		'an account is edited as what it is called, who somebody is there, and where it lives',
+		'an account is edited as what it is called, who somebody is there, and where it lives without a second label',
 		str_contains( $ax_ct_os_js, "__( 'Service', 'axismundi-contacts' )" )
 			&& str_contains( $ax_ct_os_js, "__( 'Username', 'axismundi-contacts' )" )
 			&& str_contains( $ax_ct_os_js, "withKey( entry, 'service', value )" )
 			&& str_contains( $ax_ct_os_js, "withKey( entry, 'user', value )" )
+			&& ! str_contains(
+				substr( $ax_ct_os_js, strpos( $ax_ct_os_js, 'function OnlineService' ), strpos( $ax_ct_os_js, 'function OnlineServices' ) - strpos( $ax_ct_os_js, 'function OnlineService' ) ),
+				"withKey( entry, 'label', value )"
+			)
 			// And the published list reads the same way rather than showing the address alone.
 			&& str_contains( $ax_ct_os_js, "named.join( ' · ' )" )
 			&& str_contains( $ax_ct_os_js, 'function entryLabel' )

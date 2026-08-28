@@ -86,41 +86,6 @@ function axismundi_contacts_profile_audience( int $actor_id ) : string {
 }
 
 /**
- * The link to this Actor's Card, when there is one anybody may fetch.
- *
- * The whole question another domain has to ask. Actors puts this on the Actor document and needs to
- * know nothing about profile bindings, audiences, or what `public` is called in this plugin's
- * tables -- it asks whether there is a public contact card and gets a link or nothing.
- *
- * @param int $actor_id Actor identity.
- * @return array<string,string>|null AS2 Link properties, or null.
- */
-function axismundi_contacts_public_profile_link( int $actor_id ) {
-	if ( ! function_exists( 'axismundi_actors_get_by_identity' ) ) {
-		return null;
-	}
-	$actor = axismundi_actors_get_by_identity( $actor_id );
-	if ( ! $actor instanceof Axismundi_Actor || ! axismundi_contacts_jscontact_is_public( $actor ) ) {
-		return null;
-	}
-	$href = axismundi_contacts_jscontact_url( $actor );
-	if ( '' === $href ) {
-		return null;
-	}
-	/*
-	 * Where the Card is, and not what it is. The Card's own `uid` says which Card this is, and
-	 * repeating it here would make two places authoritative about one identity -- so an address that
-	 * later moves does not take the identity with it.
-	 */
-	return array(
-		'type'      => 'Link',
-		'href'      => $href,
-		'mediaType' => AXISMUNDI_CONTACTS_JSCONTACT_MEDIA_TYPE,
-		'name'      => 'JSContact',
-	);
-}
-
-/**
  * Say which Card describes an Actor.
  *
  * The Card is an ordinary Card that happens to be pointed at, rather than a special kind of row: it

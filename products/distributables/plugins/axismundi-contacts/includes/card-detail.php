@@ -185,7 +185,7 @@ function axismundi_contacts_public_preview( int $actor_id, array $card ) : void 
 				printf(
 					/* translators: %s: the public address of this card. */
 					esc_html__( 'Anybody may fetch this at %s.', 'axismundi-contacts' ),
-					'<code>' . esc_html( (string) axismundi_contacts_public_profile_link( $actor_id ) ) . '</code>'
+					'<code>' . esc_html( axismundi_contacts_jscontact_url( axismundi_actors_get_by_identity( $actor_id ) ) ) . '</code>'
 				);
 				?>
 			</p>

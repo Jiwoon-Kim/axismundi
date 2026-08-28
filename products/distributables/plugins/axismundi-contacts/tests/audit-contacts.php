@@ -1767,27 +1767,12 @@ try {
 	// -- what another domain has to ask -----------------------------------------------------------------------
 
 	/*
-	 * One question, answered by whoever owns the policy. Actors puts this on the Actor document and
-	 * needs to know nothing about profile bindings or what `public` is called in these tables.
-	 *
-	 * The link says where the Card is, not what it is. Repeating the Card's `uid` here would make two
-	 * places authoritative about one identity, and an address that later moves would take the identity
-	 * with it.
+	 * There is one place that answers it. The Card used to be announced twice -- once in the directory
+	 * and once as an attachment on the Actor document -- under two different conditions, so the same
+	 * question had two answers depending on which one a reader happened to follow. The directory is
+	 * the one that answers now.
 	 */
-	$ax_ct_link = axismundi_contacts_public_profile_link( $ax_ct_sid );
-	ax_ct_assert(
-		$ax_ct_results,
-		'a public card is offered as a link that says where it is and not which card it is',
-		is_array( $ax_ct_link )
-			&& 'Link' === $ax_ct_link['type']
-			&& str_ends_with( (string) $ax_ct_link['href'], '.jscontact' )
-			&& str_starts_with( (string) $ax_ct_link['mediaType'], 'application/jscontact+json' )
-			&& ! isset( $ax_ct_link['uid'] )
-	);
-	/*
-	 * And nothing is offered in any other case. `contacts` is decided from this address book, which no
-	 * other server can answer, so advertising it would point at a route that refuses them.
-	 */
+
 	/*
 	 * A profile stored under the audience that was withdrawn is not sharing: the upgrade switched it
 	 * off rather than reading it as public, because the two readings differ by everything and the
@@ -1799,67 +1784,15 @@ try {
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- writing the old value this upgrade is about.
 	$wpdb->update( $ax_ct_stale, array( 'audience' => 'contacts' ), array( 'actor_id' => $ax_ct_sid ), array( '%s' ), array( '%d' ) );
 	axismundi_contacts_stop_unkeepable_sharing();
-	$ax_ct_withdrawn_link = axismundi_contacts_public_profile_link( $ax_ct_sid );
-	$ax_ct_withdrawn      = axismundi_contacts_profile_sharing_enabled( $ax_ct_sid );
+	$ax_ct_withdrawn = axismundi_contacts_profile_sharing_enabled( $ax_ct_sid );
 	axismundi_contacts_set_profile_sharing_enabled( $ax_ct_sid, false );
-	$ax_ct_off_link = axismundi_contacts_public_profile_link( $ax_ct_sid );
 	ax_ct_assert(
 		$ax_ct_results,
-		'an audience this site could not keep stops sharing on upgrade, and nothing unshared is linked',
-		false === $ax_ct_withdrawn && null === $ax_ct_withdrawn_link && null === $ax_ct_off_link
-	);
-	ax_ct_assert(
-		$ax_ct_results,
-		'and an Actor with no card of its own offers none either',
-		null === axismundi_contacts_public_profile_link( (int) $ax_ct_cardless->get_identity_id() )
+		'an audience this site could not keep stops sharing on upgrade',
+		false === $ax_ct_withdrawn
+			&& 'off' === axismundi_contacts_profile_sharing( $ax_ct_sid )
 	);
 
-	// -- how the network finds it ---------------------------------------------------------------------------------
-
-	/*
-	 * AS2 already says this. `attachment` is what is associated with an Object by inclusion, which is a
-	 * contact document hanging off a profile; `tag` is association by reference, for entities an object
-	 * mentions, and would be the wrong word. The media type is what makes it discoverable as a contact
-	 * card rather than as one more link.
-	 */
-	axismundi_contacts_set_profile_audience( $ax_ct_sid, 'public' );
-	axismundi_contacts_set_profile_sharing_enabled( $ax_ct_sid, true );
-	$ax_ct_actor_doc = axismundi_contacts_actor_attachment( array( 'type' => 'Person' ), axismundi_actors_get_by_identity( $ax_ct_sid ) );
-	ax_ct_assert(
-		$ax_ct_results,
-		'a public card appears on the Actor document as one attached link with its media type',
-		1 === count( (array) ( $ax_ct_actor_doc['attachment'] ?? array() ) )
-			&& 'Link' === (string) ( $ax_ct_actor_doc['attachment'][0]['type'] ?? '' )
-			&& str_starts_with( (string) ( $ax_ct_actor_doc['attachment'][0]['mediaType'] ?? '' ), 'application/jscontact+json' )
-			&& ! isset( $ax_ct_actor_doc['tag'] )
-	);
-	/*
-	 * Appended, never assigned. What is already there is what somebody put on their profile, and an
-	 * attachment list replaced wholesale would drop their website to make room for this.
-	 */
-	$ax_ct_had = array( 'type' => 'Person', 'attachment' => array( array( 'type' => 'PropertyValue', 'name' => 'Website', 'value' => 'https://example.test' ) ) );
-	$ax_ct_now = axismundi_contacts_actor_attachment( $ax_ct_had, axismundi_actors_get_by_identity( $ax_ct_sid ) );
-	ax_ct_assert(
-		$ax_ct_results,
-		'an attachment somebody already had survives, and the card is added beside it',
-		2 === count( $ax_ct_now['attachment'] )
-			&& 'PropertyValue' === (string) $ax_ct_now['attachment'][0]['type']
-			&& 'Link' === (string) $ax_ct_now['attachment'][1]['type']
-	);
-	// Added once. A projection may be built twice in a request, and two copies would say two cards.
-	ax_ct_assert(
-		$ax_ct_results,
-		'running again adds nothing, because a second copy would claim a second card',
-		2 === count( axismundi_contacts_actor_attachment( $ax_ct_now, axismundi_actors_get_by_identity( $ax_ct_sid ) )['attachment'] )
-	);
-	/*
-	 * And nothing is advertised that a stranger cannot fetch. There is one audience now, so what used
-	 * to be advertised-but-unfetchable -- a card shared only with people the owner had saved, behind a
-	 * link no other server could follow -- is not a state this can be in any more.
-	 */
-	axismundi_contacts_set_profile_sharing_enabled( $ax_ct_sid, false );
-	$ax_ct_off_doc = axismundi_contacts_actor_attachment( array( 'type' => 'Person' ), axismundi_actors_get_by_identity( $ax_ct_sid ) );
-	$ax_ct_none_doc = axismundi_contacts_actor_attachment( array( 'type' => 'Person' ), $ax_ct_cardless );
 	/*
 	 * How another server finds the Card at all. WebFinger is the question "what is there about this
 	 * account", and the contact document is one of the answers -- so the chain a stranger walks is
@@ -1898,6 +1831,13 @@ try {
 		1 === count( $ax_ct_wf_card )
 			&& axismundi_contacts_jscontact_url( $ax_ct_fresh ) === (string) ( $ax_ct_wf_card[0]['href'] ?? '' )
 			/*
+			 * Where the Card is, and not which Card it is. Repeating the `uid` in the directory would
+			 * make two places authoritative about one identity, and an address that later moved would
+			 * take the identity with it.
+			 */
+			&& ! isset( $ax_ct_wf_card[0]['uid'] )
+			&& array( 'rel', 'type', 'href' ) === array_keys( $ax_ct_wf_card[0] )
+			/*
 			 * Said whenever the address answers, which for a public Actor is always: the Card says the
 			 * things that Actor is already saying next door, so a JRD leaving the link out would
 			 * describe the account less completely than the account describes itself. How much comes
@@ -1920,11 +1860,6 @@ try {
 			)
 	);
 
-	ax_ct_assert(
-		$ax_ct_results,
-		'an unshared card and an Actor with none are not advertised',
-		! isset( $ax_ct_off_doc['attachment'] ) && ! isset( $ax_ct_none_doc['attachment'] )
-	);
 
 	// -- what an Actor shows, and what it follows -------------------------------------------------------------
 

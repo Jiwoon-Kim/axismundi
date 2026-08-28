@@ -450,13 +450,83 @@ function axismundi_contacts_card_actor_links( int $card_id ) : array {
 }
 
 /**
+ * The Actor an account entry is about, as far as this site already knows.
+ *
+ * For a card somebody wrote out themselves there is no record of where it came from, so the entry
+ * has to be recognised. What recognises it is an identifier: the address, if that address is an
+ * Actor this site holds, or the handle, which is an address in its own right and resolvable without
+ * asking anybody.
+ *
+ * `service` is not one of them. `Mastodon` in that field is what a person calls the service, not a
+ * statement about which server anything is on, and matching on it would hand somebody else's picture
+ * to whoever typed the same word.
+ *
+ * Nothing here fetches. A screen drawing twenty contacts must not become twenty requests to other
+ * servers, and an Actor this site has never met has no picture here to show whether or not it has
+ * one elsewhere.
+ *
+ * @param array<string,mixed> $entry One `onlineServices` entry.
+ * @return Axismundi_Actor|null
+ */
+function axismundi_contacts_actor_for_service( array $entry ) : ?Axismundi_Actor {
+	if ( ! function_exists( 'axismundi_actors_get_by_uri' ) ) {
+		return null;
+	}
+	$uri = trim( (string) ( $entry['uri'] ?? '' ) );
+	if ( '' !== $uri ) {
+		$byuri = axismundi_actors_get_by_uri( $uri );
+		if ( $byuri instanceof Axismundi_Actor ) {
+			return $byuri;
+		}
+	}
+	/*
+	 * Then the handle, which is where a card written by hand usually carries the recognisable part:
+	 * somebody types `@alice@example.com` far more often than they paste a canonical Actor id.
+	 */
+	$handle = trim( (string) ( $entry['user'] ?? '' ) );
+	if ( 1 !== preg_match( '#^@?([^@/\s]+)@([^@/\s]+)$#', $handle, $found ) ) {
+		return null;
+	}
+	$username  = $found[1];
+	$authority = strtolower( $found[2] );
+	$here      = function_exists( 'axismundi_actors_webfinger_authority' )
+		? strtolower( (string) axismundi_actors_webfinger_authority() )
+		: '';
+	if ( '' !== $here && $authority === $here ) {
+		return function_exists( 'axismundi_actors_get_by_handle' ) ? axismundi_actors_get_by_handle( $username ) : null;
+	}
+	return function_exists( 'axismundi_actors_get_by_remote_acct' )
+		? axismundi_actors_get_by_remote_acct( $username . '@' . $authority )
+		: null;
+}
+
+/**
+ * The Actor a saved contact was found through, when it was saved by looking somebody up.
+ *
+ * Recorded at the time rather than worked out afterwards, which is why it is trusted first: the
+ * directory said which Actor this card describes, and this site already had the row.
+ *
+ * @param int $card_id Card id.
+ * @return Axismundi_Actor|null
+ */
+function axismundi_contacts_discovered_via_actor( int $card_id ) : ?Axismundi_Actor {
+	if ( ! function_exists( 'axismundi_actors_get_by_identity' ) ) {
+		return null;
+	}
+	$row = (int) ( axismundi_contacts_card_provenance( $card_id )[ AXISMUNDI_CONTACTS_SOURCE_POINTERS['row'] ]['source_ref'] ?? 0 );
+	return $row > 0 ? axismundi_actors_get_by_identity( $row ) : null;
+}
+
+/**
  * The face to show for a Card.
  *
  * In order, and the order is the point:
  *
- *   1. a photo on the Card itself      -- somebody chose it, for this contact
- *   2. the first account with a face    -- the one they lead with, then the next
- *   3. the bundled default image         -- an honest, local fallback
+ *   1. a photo on the Card itself       -- somebody chose it, for this contact
+ *   2. the Actor it was found through   -- recorded when it was saved, so nothing is guessed
+ *   3. an account that resolves          -- the one they lead with, then the next
+ *   4. an account this site recognises   -- for a card written by hand, which recorded nothing
+ *   5. the bundled default image         -- an honest, local fallback
  *
  * The Actor's own picture is resolved here rather than copied onto the Card, and the difference
  * matters twice over: somebody who changes their avatar changes what this shows without anything
@@ -494,6 +564,21 @@ function axismundi_contacts_card_avatar( int $card_id, int $size = 96 ) : array 
 		return $default;
 	}
 	/*
+	 * The Actor this card was found through, if it was found rather than written. That link was
+	 * recorded when somebody saved the contact, so it says whose picture this is without anything
+	 * having to be recognised.
+	 */
+	$discovered = axismundi_contacts_discovered_via_actor( $card_id );
+	if ( $discovered instanceof Axismundi_Actor ) {
+		$url = (string) axismundi_actors_avatar_url( $discovered, $size );
+		if ( '' !== $url ) {
+			return array(
+				'url'    => $url,
+				'source' => $discovered->is_local() ? 'actor' : 'actor-remote',
+			);
+		}
+	}
+	/*
 	 * The account that says which Actor this Card is, ahead of the accounts somebody added to it.
 	 * Everything else keeps the Card's own order, which is where a person put them.
 	 */
@@ -517,6 +602,25 @@ function axismundi_contacts_card_avatar( int $card_id, int $size = 96 ) : array 
 			return array(
 				'url'    => $url,
 				'source' => $link['actor']->is_local() ? 'actor' : 'actor-remote',
+			);
+		}
+	}
+	/*
+	 * And last, the accounts on a card nobody looked up: read in the order the person put them, and
+	 * recognised rather than recorded. This is the path a contact typed out by hand takes -- an
+	 * account naming somebody this site already knows shows their picture, and one naming a stranger
+	 * shows the mark.
+	 */
+	foreach ( axismundi_contacts_ordered_services( $document ) as $entry ) {
+		$actor = axismundi_contacts_actor_for_service( $entry );
+		if ( ! $actor instanceof Axismundi_Actor ) {
+			continue;
+		}
+		$url = (string) axismundi_actors_avatar_url( $actor, $size );
+		if ( '' !== $url ) {
+			return array(
+				'url'    => $url,
+				'source' => $actor->is_local() ? 'actor' : 'actor-remote',
 			);
 		}
 	}

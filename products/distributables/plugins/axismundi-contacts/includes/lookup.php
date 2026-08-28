@@ -49,6 +49,13 @@ const AXISMUNDI_CONTACTS_SOURCE_POINTERS = array(
 	'card'    => 'source:card',
 	'profile' => 'source:profile',
 	'actor'   => 'source:actor',
+	/*
+	 * And which row in the Actor registry that address turned out to be, when it was one this site
+	 * already had. A different fact from the one above and worth keeping apart: `source:actor` is
+	 * somebody else's identifier for themselves, while this is where the answer about them is kept
+	 * here. One survives this site being rebuilt and the other does not.
+	 */
+	'row'     => 'source:actor-row',
 );
 
 /**
@@ -418,11 +425,25 @@ function axismundi_contacts_save_looked_up( int $owner_actor_id, array $found ) 
 	 * address it was fetched from, the page that announced it where there was one, and the Actor it
 	 * belongs to where the directory said so.
 	 */
+	/*
+	 * If the Actor the directory named is one this site already knows, the row it is kept in is
+	 * written down too. That is the confident answer to "whose picture goes with this card": a
+	 * contact saved by looking somebody up never has to be matched by guesswork afterwards.
+	 *
+	 * Only if it is already known. Fetching an Actor to fill this in would turn saving a contact into
+	 * a second act of federation, and the picture is not worth that.
+	 */
+	$row = '';
+	if ( '' !== (string) ( $found['actor_uri'] ?? '' ) && function_exists( 'axismundi_actors_get_by_uri' ) ) {
+		$known = axismundi_actors_get_by_uri( (string) $found['actor_uri'] );
+		$row   = $known instanceof Axismundi_Actor ? (string) $known->get_identity_id() : '';
+	}
 	foreach (
 		array(
 			'card'    => (string) ( $found['card_url'] ?? '' ),
 			'profile' => (string) ( $found['profile_url'] ?? '' ),
 			'actor'   => (string) ( $found['actor_uri'] ?? '' ),
+			'row'     => $row,
 		) as $which => $value
 	) {
 		if ( '' === $value ) {

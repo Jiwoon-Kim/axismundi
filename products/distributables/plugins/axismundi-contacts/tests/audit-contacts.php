@@ -729,6 +729,97 @@ try {
 			&& ! isset( axismundi_contacts_card_document( $ax_ct_phone_card )['media'] )
 	);
 
+	/*
+	 * Two ways to know whose picture belongs on a card, and they are not the same kind of answer.
+	 *
+	 * A contact saved by looking somebody up was found through an Actor the directory named, and if
+	 * this site already held that Actor, the row it is held in is written down at the time. Nothing is
+	 * recognised afterwards, because nothing has to be.
+	 *
+	 * A contact somebody wrote out has no such record, so the accounts on it are recognised instead --
+	 * by an address that is an Actor this site knows, or by a handle, which is an address in its own
+	 * right. That is the Mastodon case: an account naming somebody already cached shows their picture,
+	 * and the card that names them was typed by hand.
+	 *
+	 * The remote Actor URI and the row id are kept apart on purpose. One is somebody else's identifier
+	 * for themselves and survives this site being rebuilt; the other is where the answer about them is
+	 * filed here, and does not.
+	 */
+	$ax_ct_av_found = axismundi_contacts_save_looked_up(
+		$ax_ct_owner_id,
+		array(
+			'card'        => array( '@type' => 'Card', 'uid' => 'urn:uuid:aaaaaaaa-1111-4222-8333-444444444444', 'name' => array( 'full' => 'Found by looking' ) ),
+			'card_url'    => 'https://example.com/@found.jscontact',
+			'profile_url' => '',
+			'actor_uri'   => $ax_ct_fresh->get_uri(),
+		)
+	);
+	$ax_ct_av_found_id = is_wp_error( $ax_ct_av_found ) ? 0 : (int) $ax_ct_av_found['card_id'];
+	$ax_ct_loose[]     = $ax_ct_av_found_id;
+	$ax_ct_av_prov     = $ax_ct_av_found_id > 0 ? axismundi_contacts_card_provenance( $ax_ct_av_found_id ) : array();
+	$ax_ct_av_via      = $ax_ct_av_found_id > 0 ? axismundi_contacts_discovered_via_actor( $ax_ct_av_found_id ) : null;
+	ax_ct_assert(
+		$ax_ct_results,
+		'a contact found by looking somebody up remembers which Actor it was found through',
+		// Their identifier for themselves, and where this site files them, written down separately.
+		$ax_ct_fresh->get_uri() === (string) ( $ax_ct_av_prov['source:actor']['source_ref'] ?? '' )
+			&& (string) $ax_ct_fresh->get_identity_id() === (string) ( $ax_ct_av_prov['source:actor-row']['source_ref'] ?? '' )
+			&& $ax_ct_fresh->get_uri() !== (string) ( $ax_ct_av_prov['source:actor-row']['source_ref'] ?? '' )
+			// And it leads back to the Actor without anything being recognised.
+			&& $ax_ct_av_via instanceof Axismundi_Actor
+			&& (int) $ax_ct_fresh->get_identity_id() === (int) $ax_ct_av_via->get_identity_id()
+	);
+
+	/*
+	 * And a card written by hand is recognised from what it says. The handle is what somebody types --
+	 * `@alice@example.com` far more often than a canonical Actor id -- so it is what this reads.
+	 */
+	$ax_ct_av_typed = (int) axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array(
+			'@type'          => 'Card',
+			'name'           => array( 'full' => 'Written out by hand' ),
+			'onlineServices' => array(
+				'onl-typed' => array( 'service' => 'Axismundi', 'user' => axismundi_contacts_actor_handle( $ax_ct_fresh ) ),
+			),
+		)
+	);
+	$ax_ct_loose[]    = $ax_ct_av_typed;
+	$ax_ct_av_entry   = axismundi_contacts_card_document( $ax_ct_av_typed )['onlineServices']['onl-typed'] ?? array();
+	$ax_ct_av_matched = axismundi_contacts_actor_for_service( (array) $ax_ct_av_entry );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a card written by hand is recognised by an address it names, and never by the name of a service',
+		$ax_ct_av_matched instanceof Axismundi_Actor
+			&& (int) $ax_ct_fresh->get_identity_id() === (int) $ax_ct_av_matched->get_identity_id()
+			// Nothing was recorded for it, because nobody looked anybody up.
+			&& ! isset( axismundi_contacts_card_provenance( $ax_ct_av_typed )['source:actor-row'] )
+			/*
+			 * `Axismundi` in the service field is what a person calls the service, not a statement
+			 * about which server anything is on. Matching on it would hand somebody else's picture to
+			 * whoever typed the same word.
+			 */
+			&& null === axismundi_contacts_actor_for_service( array( 'service' => 'Axismundi' ) )
+			// And somebody this site has never met stays unmatched rather than being fetched.
+			&& null === axismundi_contacts_actor_for_service( array( 'user' => '@nobody@elsewhere.test' ) )
+	);
+
+	/*
+	 * None of which asks anybody anything. A screen drawing twenty contacts must not become twenty
+	 * requests to other servers, so every step reads what this site already holds -- and an Actor it
+	 * has never met has no picture here, whether or not it has one elsewhere.
+	 */
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+	$ax_ct_av_src = (string) file_get_contents( dirname( __DIR__ ) . '/includes/actor-link.php' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a face is found in what this site already holds, and drawing one asks nobody anything',
+		! str_contains( $ax_ct_av_src, 'wp_remote_get' )
+			&& ! str_contains( $ax_ct_av_src, 'wp_safe_remote_get' )
+			&& str_contains( $ax_ct_av_src, 'function axismundi_contacts_actor_for_service' )
+			&& str_contains( $ax_ct_av_src, 'function axismundi_contacts_discovered_via_actor' )
+	);
+
 	// -- a label is a reading, not a value -----------------------------------------------------------------------
 
 	/*

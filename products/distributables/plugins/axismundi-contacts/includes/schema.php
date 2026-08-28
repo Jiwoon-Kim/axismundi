@@ -448,8 +448,10 @@ function axismundi_contacts_migrate_service_profile_uris() : void {
  * something somebody wrote and might have meant: it is this site's own answer to which Actor the
  * Card is about, and the save path now refuses to let anybody change it -- so a Card still carrying
  * an address from before profiles were preferred, or a handle from before a rename, would carry it
- * for good and have no way back. Everything else on the Card, including every other account, is left
- * exactly as it is.
+ * for good and have no way back.
+ *
+ * Brought up to date whole. Nothing on the row survives, because no part of it was anybody else's to
+ * write. Every other account on the Card is left exactly as it is.
  *
  * @return void
  */
@@ -481,13 +483,11 @@ function axismundi_contacts_ensure_identity_services() : void {
 			continue;
 		}
 		/*
-		 * What the Actor answers, over whatever was there. Anything the Actor does not own -- a label
-		 * somebody wrote on the row, say -- is kept, because that part was theirs to write.
+		 * What the Actor answers, and only that. Nothing is carried over from what was there: this row
+		 * is the binding, so there is no part of it that belonged to somebody else -- a label left on
+		 * it would be a name for the handle that the save path then refuses to let anybody change.
 		 */
-		$document['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] = array_merge(
-			is_array( $current ) ? $current : array(),
-			$fixed
-		);
+		$document['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] = $fixed;
 		$saved = axismundi_contacts_save_card_for_owner( $actor_id, $document, $card_id );
 		if ( is_wp_error( $saved ) ) {
 			continue;

@@ -87,22 +87,25 @@ function axismundi_contacts_identity_service( Axismundi_Actor $actor, string $se
 }
 
 /**
- * Whether an entry still says what the Actor says.
+ * Whether an entry is what the Actor says, whole.
  *
- * Compared on the parts the Actor owns and no others: somebody may reorder their accounts or write a
- * label, and neither changes which Actor this is.
+ * Every part of it, not the four keys the Actor happens to fill in. This row is the binding itself --
+ * which Actor this Card is -- so there is no part of it left over for somebody to write on. A label
+ * on an ordinary account is a name its owner gave it; a label here would be a second name for the
+ * handle, sitting in the one row nobody may edit and published to everybody as part of the identity.
+ *
+ * `@type` is left out of the comparison because the store drops it: the position already says what
+ * the object is, so a stored entry does not repeat it while a freshly built one does.
  *
  * @param array<string,mixed> $entry Entry as submitted.
  * @param array<string,mixed> $fixed Entry as the Actor answers it.
  * @return bool
  */
 function axismundi_contacts_identity_service_matches( array $entry, array $fixed ) : bool {
-	foreach ( array( 'service', 'uri', 'user', 'pref' ) as $key ) {
-		if ( ( $entry[ $key ] ?? null ) !== ( $fixed[ $key ] ?? null ) ) {
-			return false;
-		}
-	}
-	return true;
+	unset( $entry['@type'], $fixed['@type'] );
+	ksort( $entry );
+	ksort( $fixed );
+	return $entry === $fixed;
 }
 
 /**

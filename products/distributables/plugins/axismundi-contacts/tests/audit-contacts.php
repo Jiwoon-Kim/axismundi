@@ -1149,9 +1149,11 @@ try {
 	 * carrying an address from before profile URLs were preferred, or a handle from before a rename,
 	 * would carry it for good with no way back -- the one door in was closed behind it.
 	 *
-	 * What the Actor does not own is kept. A label somebody wrote on the row is theirs, and an upgrade
-	 * that tidied it away would be taking something while claiming to repair something else. Neither
-	 * does it touch any other account: those are the ones a person actually keeps.
+	 * Brought up to date whole, including a label. On an ordinary account a label is the name its
+	 * owner gave it; on this row it would be a second name for the handle, sitting in the one entry
+	 * nobody may edit and published to everybody as part of the identity. There is no part of this row
+	 * that was somebody else's to write, so none of it survives the repair. Every other account is
+	 * untouched: those are the ones a person actually keeps.
 	 */
 	$ax_ct_stale_doc = axismundi_contacts_card_document( $ax_ct_seeded );
 	$ax_ct_stale_doc['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] = array(
@@ -1179,8 +1181,12 @@ try {
 			&& axismundi_contacts_actor_handle( $ax_ct_fresh ) === (string) ( $ax_ct_repaired_x1['user'] ?? '' )
 			&& 'Axismundi' === (string) ( $ax_ct_repaired_x1['service'] ?? '' )
 			&& 1 === (int) ( $ax_ct_repaired_x1['pref'] ?? 0 )
-			// What the Actor does not answer stays.
-			&& 'mine' === (string) ( $ax_ct_repaired_x1['label'] ?? '' )
+			// And nothing else rides along on it.
+			&& ! array_key_exists( 'label', $ax_ct_repaired_x1 )
+			&& array( 'pref', 'service', 'uri', 'user' ) === ( static function ( array $keys ) : array {
+				sort( $keys );
+				return $keys;
+			} )( array_keys( $ax_ct_repaired_x1 ) )
 			// And the account somebody actually keeps is untouched.
 			&& 'https://example.test/@someone' === (string) ( $ax_ct_repaired['onlineServices']['onl-kept']['uri'] ?? '' )
 	);

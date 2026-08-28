@@ -120,9 +120,16 @@
 	 * says what the entry is at a glance.
 	 */
 	var ENTRY_FIELDS = [
-		{ key: 'links', prefix: 'lnk', label: __( 'Links', 'axismundi-contacts' ), value: 'uri', type: 'url', icon: 'link' },
-		{ key: 'media', prefix: 'med', label: __( 'Media', 'axismundi-contacts' ), value: 'uri', type: 'url', icon: 'image' },
-		{ key: 'notes', prefix: 'not', label: __( 'Notes', 'axismundi-contacts' ), value: 'note', icon: 'notes' }
+		/*
+		 * `cluster` is which of the standard's groups the property belongs to. Links and media are
+		 * resources -- things this contact is reachable through or represented by -- and a note is
+		 * not one of those; the standard files it under what is left over. They sit next to each
+		 * other in this list because they are built the same way, which is not a reason to show them
+		 * under one heading.
+		 */
+		{ key: 'links', prefix: 'lnk', cluster: 'resource', label: __( 'Links', 'axismundi-contacts' ), value: 'uri', type: 'url', icon: 'link' },
+		{ key: 'media', prefix: 'med', cluster: 'resource', label: __( 'Media', 'axismundi-contacts' ), value: 'uri', type: 'url', icon: 'image' },
+		{ key: 'notes', prefix: 'not', cluster: 'additional', label: __( 'Notes', 'axismundi-contacts' ), value: 'note', icon: 'notes' }
 	];
 
 	/** The component kinds a name is made of, plus the separator that goes between them. */
@@ -1257,7 +1264,12 @@
 
 		return el(
 			Section,
-			{ icon: props.field.icon, label: props.field.label },
+			{
+				icon: props.field.icon,
+				label: props.field.label,
+				headingTag: props.headingTag,
+				showHeading: props.showHeading
+			},
 			ids.map( function ( id ) {
 				var entry = entries[ id ] || {};
 				return el(
@@ -2513,7 +2525,12 @@
 
 		return el(
 			Section,
-			{ icon: 'location-on', label: __( 'Addresses', 'axismundi-contacts' ) },
+			{
+				icon: 'location-on',
+				label: __( 'Addresses', 'axismundi-contacts' ),
+				headingTag: props.headingTag,
+				showHeading: props.showHeading
+			},
 			rows.rows.map( function ( row ) {
 				var entry = row.entry;
 				var contexts = entry.contexts || {};
@@ -3626,7 +3643,13 @@
 			el(
 				'div',
 				{ className: 'ax-ce-localization__head' },
-				el( 'h3', null, props.tag ),
+				/*
+				 * Under the heading that lists the languages, not beside it. The cluster is a level,
+				 * the section inside it is a level, and a language is a level below that -- a page
+				 * whose headings skip or repeat a level reads, to anything navigating by them, as one
+				 * long flat list of equals.
+				 */
+				el( 'h4', null, props.tag ),
 				el( IconButton, {
 					icon: 'delete',
 					variant: 'danger',
@@ -3659,7 +3682,7 @@
 					return el(
 						'div',
 						{ key: path, className: 'ax-ce-localization__name' },
-						el( 'h4', null, path ),
+						el( 'h5', null, path ),
 						el( AddressParts, {
 							address: value,
 							written: undefined === lines[ path ] ? undefined !== value.full : lines[ path ],
@@ -3719,9 +3742,13 @@
 					return el(
 						'div',
 						{ key: path, className: 'ax-ce-localization__name' },
+						// Which path this is, as every other patch says: the name is not the exception.
+						el( 'h5', null, path ),
 						el( NameEditor, {
 							name: value,
 							kind: props.kind,
+							// Named for a screen reader at the level it sits at, which is under the path.
+							headingTag: 'h6',
 							dragging: dragging,
 							onDragStart: setDragging,
 							// A localization holds no localizations of its own, so nothing patches into this.
@@ -3857,7 +3884,11 @@
 
 		return el(
 			Section,
-			{ icon: 'language-international', title: __( 'Other languages', 'axismundi-contacts' ) },
+			{
+				icon: 'language-international',
+				title: __( 'Other languages', 'axismundi-contacts' ),
+				headingTag: props.headingTag
+			},
 			el(
 				'p',
 				{ className: 'description' },
@@ -4538,6 +4569,28 @@
 			update( next );
 		}
 
+		/*
+		 * The simple collections belonging to one of the standard's groups. They are built from one
+		 * list because they are built the same way, and drawn from it in pieces because being built
+		 * the same way is not what decides which heading a property is read under.
+		 */
+		function entryFieldsIn( cluster ) {
+			return ENTRY_FIELDS.filter( function ( field ) {
+				return cluster === field.cluster;
+			} ).map( function ( field ) {
+				return el( EntryField, {
+					key: field.key,
+					field: field,
+					entries: card[ field.key ],
+					headingTag: 'h3',
+					showHeading: true,
+					onChange: function ( value ) {
+						setProperty( field.key, value );
+					}
+				} );
+			} );
+		}
+
 		function onJson( text ) {
 			setJson( text );
 			try {
@@ -4823,32 +4876,55 @@
 							}
 						} )
 					),
-					el( Addresses, {
-						value: card.addresses,
-						card: card,
-						onChange: function ( value ) {
-							setProperty( 'addresses', value );
-						},
-						onResolve: function ( question ) {
-							resolveEntryRemoval( card, 'addresses', question, update );
-						}
-					} ),
-					ENTRY_FIELDS.map( function ( field ) {
-						return el( EntryField, {
-							key: field.key,
-							field: field,
-							entries: card[ field.key ],
+					el(
+						PropertyCluster,
+						{ title: __( 'Address and location properties', 'axismundi-contacts' ) },
+						el( Addresses, {
+							value: card.addresses,
+							card: card,
+							headingTag: 'h3',
+							showHeading: true,
 							onChange: function ( value ) {
-								setProperty( field.key, value );
+								setProperty( 'addresses', value );
+							},
+							onResolve: function ( question ) {
+								resolveEntryRemoval( card, 'addresses', question, update );
 							}
-						} );
-					} ),
-					el( Localizations, {
-						card: card,
-						onChange: function ( value ) {
-							setProperty( 'localizations', value );
-						}
-					} ),
+						} )
+					),
+					/*
+					 * What this contact is reachable through or represented by. The standard's own
+					 * group holds cryptographic keys and directory entries as well; neither has a
+					 * field here yet, and an empty section is a promise a screen cannot keep, so they
+					 * are reached through the JSON until they do.
+					 */
+					el(
+						PropertyCluster,
+						{ title: __( 'Resource properties', 'axismundi-contacts' ) },
+						entryFieldsIn( 'resource' )
+					),
+					el(
+						PropertyCluster,
+						{ title: __( 'Multilingual properties', 'axismundi-contacts' ) },
+						el( Localizations, {
+							card: card,
+							headingTag: 'h3',
+							onChange: function ( value ) {
+								setProperty( 'localizations', value );
+							}
+						} )
+					),
+					/*
+					 * And what the standard files under everything else: anniversaries, keywords,
+					 * notes and personal information. Notes are the one with a field, and it reads
+					 * last here because that is where the standard puts the group -- after the
+					 * languages a card is written in, not before them.
+					 */
+					el(
+						PropertyCluster,
+						{ title: __( 'Additional properties', 'axismundi-contacts' ) },
+						entryFieldsIn( 'additional' )
+					),
 					config.isProfile
 						? el( PublishedFields, { card: card, published: published, onChange: setPublished } )
 						: null,

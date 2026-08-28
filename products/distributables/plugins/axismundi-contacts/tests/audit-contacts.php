@@ -4157,7 +4157,9 @@ try {
 		'a section says what it is about once, beside the stack rather than down it',
 		str_contains( $ax_ct_ic_js, 'function Section( props )' )
 			&& str_contains( $ax_ct_ic_js, "className: 'ax-ce-section__mark'" )
-			&& str_contains( $ax_ct_ic_js, "{ icon: props.field.icon, label: props.field.label }," )
+			// A simple collection draws its own mark and says its own name, whatever else it is passed.
+			&& str_contains( $ax_ct_ic_js, 'icon: props.field.icon,' )
+			&& str_contains( $ax_ct_ic_js, 'label: props.field.label,' )
 			&& str_contains( $ax_ct_ic_js, "{ icon: 'alternate-email', label:" )
 			// The heading is still there for anybody reading the page rather than looking at it.
 			&& str_contains( $ax_ct_ic_js, "{ className: 'screen-reader-text' }, props.label )" )
@@ -4442,6 +4444,91 @@ try {
 			// A row becomes an organization with either answer RFC 9553 permits, not only a name.
 			&& str_contains( $ax_ct_cb_editor, 'function organizationHasContent( entry )' )
 			&& str_contains( $ax_ct_cb_editor, 'if ( ! organizationHasContent( made ) )' )
+	);
+
+	$ax_ct_where_at    = strpos( $ax_ct_cb_editor, "__( 'Address and location properties', 'axismundi-contacts' )" );
+	$ax_ct_resource_at = strpos( $ax_ct_cb_editor, "__( 'Resource properties', 'axismundi-contacts' )" );
+	$ax_ct_lang_at     = strpos( $ax_ct_cb_editor, "__( 'Multilingual properties', 'axismundi-contacts' )" );
+	$ax_ct_extra_at    = strpos( $ax_ct_cb_editor, "__( 'Additional properties', 'axismundi-contacts' )" );
+	$ax_ct_slice       = static function ( string $source, $from, $to ) : string {
+		return false !== $from && false !== $to && $to > $from ? substr( $source, (int) $from, (int) $to - (int) $from ) : '';
+	};
+	$ax_ct_where_ui    = $ax_ct_slice( $ax_ct_cb_editor, $ax_ct_where_at, $ax_ct_resource_at );
+	$ax_ct_resource_ui = $ax_ct_slice( $ax_ct_cb_editor, $ax_ct_resource_at, $ax_ct_lang_at );
+	$ax_ct_lang_ui     = $ax_ct_slice( $ax_ct_cb_editor, $ax_ct_lang_at, $ax_ct_extra_at );
+	$ax_ct_extra_ui    = substr( $ax_ct_cb_editor, false !== $ax_ct_extra_at ? (int) $ax_ct_extra_at : 0 );
+
+	/*
+	 * The rest of the Card, under the headings the standard reads it under and in that order: where
+	 * somebody is, what they are reachable through, what the card says in other languages, and what
+	 * is left over. Following the document rather than the shape of this code is the whole point --
+	 * links, media and notes are built from one list because they are built the same way, and being
+	 * built the same way is not a reason to read them under one heading.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'the rest of the card is read under the standard’s own headings, in the standard’s own order',
+		false !== $ax_ct_contact_at && false !== $ax_ct_where_at
+			&& $ax_ct_contact_at < $ax_ct_where_at
+			&& $ax_ct_where_at < $ax_ct_resource_at
+			&& $ax_ct_resource_at < $ax_ct_lang_at
+			&& $ax_ct_lang_at < $ax_ct_extra_at
+			// Where somebody is.
+			&& str_contains( $ax_ct_where_ui, 'el( Addresses, {' )
+			&& str_contains( $ax_ct_where_ui, 'showHeading: true' )
+			// What they are reachable through, and not the note that is none of those.
+			&& str_contains( $ax_ct_resource_ui, "entryFieldsIn( 'resource' )" )
+			&& str_contains( $ax_ct_cb_editor, "{ key: 'links', prefix: 'lnk', cluster: 'resource'" )
+			&& str_contains( $ax_ct_cb_editor, "{ key: 'media', prefix: 'med', cluster: 'resource'" )
+			&& str_contains( $ax_ct_cb_editor, "{ key: 'notes', prefix: 'not', cluster: 'additional'" )
+			// What it says in other languages.
+			&& str_contains( $ax_ct_lang_ui, 'el( Localizations, {' )
+			&& str_contains( $ax_ct_lang_ui, "headingTag: 'h3'" )
+			// And what is left over, which the standard reads after the languages rather than before.
+			&& str_contains( $ax_ct_extra_ui, "entryFieldsIn( 'additional' )" )
+	);
+
+	/*
+	 * The headings descend a level at a time, including inside a translation. A cluster is a level,
+	 * the section in it is a level, the language a patch is written in is a level under that, the path
+	 * it patches is under that, and the editor that opens for the path is under that again. Skipping
+	 * or repeating a level makes the page read, to anything navigating by headings, as one flat list
+	 * of equals -- which is what this had: a translation's languages were siblings of the heading that
+	 * lists them, and the name editor inside announced itself as an `h2` from three levels down.
+	 *
+	 * Measured on the screen as well, where a walk of every heading in the editor now reports no skips.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a translation nests one heading level at a time rather than starting again from the top',
+		str_contains( $ax_ct_cb_editor, "el( 'h4', null, props.tag )," )
+			&& str_contains( $ax_ct_cb_editor, "el( 'h5', null, path )," )
+			&& str_contains( $ax_ct_cb_editor, "headingTag: 'h6'," )
+			// Every patch says which path it is, the name included.
+			&& 2 === substr_count( $ax_ct_cb_editor, "el( 'h5', null, path )," )
+			// And nothing inside a translation opens at the top level again.
+			&& ! str_contains( $ax_ct_cb_editor, "el( 'h3', null, props.tag )," )
+	);
+
+	/*
+	 * And nothing is promised that is not there. Half of these groups hold properties this editor has
+	 * no field for -- keys, directories, calendars, anniversaries, keywords, personal information --
+	 * and a heading over an empty space reads as a screen that failed to load rather than one that
+	 * has not been written yet. They are reached through the JSON until they have a field.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a heading is only drawn for a property somebody can actually fill in',
+		! str_contains( $ax_ct_cb_editor, "__( 'Calendaring and scheduling properties', 'axismundi-contacts' )" )
+			&& ! str_contains( $ax_ct_cb_editor, "__( 'Anniversaries', 'axismundi-contacts' )" )
+			&& ! str_contains( $ax_ct_cb_editor, "__( 'Keywords', 'axismundi-contacts' )" )
+			&& ! str_contains( $ax_ct_cb_editor, "__( 'Personal information', 'axismundi-contacts' )" )
+			&& ! str_contains( $ax_ct_cb_editor, "__( 'Cryptographic keys', 'axismundi-contacts' )" )
+			&& ! str_contains( $ax_ct_cb_editor, "__( 'Directories', 'axismundi-contacts' )" )
+			// What they are is still a Card this store accepts and hands back unchanged.
+			&& true === axismundi_contacts_validate_card_values(
+				array( 'keywords' => array( 'friend' => true ), 'anniversaries' => array() )
+			)
 	);
 
 	ax_ct_assert(

@@ -57,6 +57,55 @@ function axismundi_contacts_actor_handle( Axismundi_Actor $actor ) : string {
 }
 
 /**
+ * The account entry that says which Actor a self Card is about.
+ *
+ * Not an account somebody added: the one the Card is. It is what a reader uses to tell this profile
+ * from another with the same name, it is served to everybody as part of the public identity, and it
+ * is answered by the Actor rather than typed -- so it is assembled here, from the Actor, every time
+ * it is needed.
+ *
+ * The parallel is a Google profile's account address: the thing that says whose profile this is,
+ * shown to everyone, and not a row in the list of addresses somebody keeps.
+ *
+ * @param Axismundi_Actor $actor Actor the Card describes.
+ * @param string          $service What this site's own service is called on a Card.
+ * @return array<string,mixed>
+ */
+function axismundi_contacts_identity_service( Axismundi_Actor $actor, string $service = 'Axismundi' ) : array {
+	$entry = array(
+		'@type'   => 'OnlineService',
+		'service' => $service,
+		'uri'     => axismundi_contacts_actor_service_uri( $actor ),
+		// Most preferred, because it is the one this profile leads with wherever it is read.
+		'pref'    => 1,
+	);
+	$handle = axismundi_contacts_actor_handle( $actor );
+	if ( '' !== $handle ) {
+		$entry['user'] = $handle;
+	}
+	return $entry;
+}
+
+/**
+ * Whether an entry still says what the Actor says.
+ *
+ * Compared on the parts the Actor owns and no others: somebody may reorder their accounts or write a
+ * label, and neither changes which Actor this is.
+ *
+ * @param array<string,mixed> $entry Entry as submitted.
+ * @param array<string,mixed> $fixed Entry as the Actor answers it.
+ * @return bool
+ */
+function axismundi_contacts_identity_service_matches( array $entry, array $fixed ) : bool {
+	foreach ( array( 'service', 'uri', 'user', 'pref' ) as $key ) {
+		if ( ( $entry[ $key ] ?? null ) !== ( $fixed[ $key ] ?? null ) ) {
+			return false;
+		}
+	}
+	return true;
+}
+
+/**
  * An entry key nothing on this Card is using yet.
  *
  * @param array<string,mixed> $document Card document.

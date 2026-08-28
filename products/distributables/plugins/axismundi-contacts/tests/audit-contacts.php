@@ -1136,9 +1136,95 @@ try {
 	 */
 	ax_ct_assert(
 		$ax_ct_results,
-		'a card is served only when its Actor shares it publicly, not merely because the profile is public',
+		'a card is advertised only when its Actor shares it publicly, not merely because the profile is public',
 		! axismundi_contacts_jscontact_is_public( $ax_ct_fresh )
 			&& 'off' === axismundi_contacts_profile_sharing( (int) $ax_ct_fresh->get_identity_id() )
+	);
+
+	/*
+	 * The account that says which Actor a self Card is about is this site's answer, not the editor's.
+	 * It is what tells one profile from another with the same name, it is served to everybody as part
+	 * of the public identity, and it is answered by the Actor -- so the editor may not repoint it,
+	 * rename what it says, or retire it.
+	 *
+	 * Deleting it is not refused, though: it is put back. A Card that simply does not have it is one
+	 * written before this was guaranteed, and refusing the save would leave somebody unable to edit
+	 * their own profile until a migration ran for them. Changing it is refused, because somebody meant
+	 * to change it, and quietly restoring the Actor's answer would tell them their edit was saved.
+	 *
+	 * Exercised through the route rather than asserted about its source: what a screen may do to a
+	 * document is decided by what the server accepts.
+	 */
+	$ax_ct_was_user = get_current_user_id();
+	wp_set_current_user( (int) $ax_ct_fresh->get_local_user_id() );
+	$ax_ct_put = static function ( int $card_id, array $card ) {
+		$request = new WP_REST_Request( 'PUT', '/' . axismundi_contacts_rest_namespace() . '/cards/' . $card_id . '/draft' );
+		$request->set_header( 'content-type', 'application/json' );
+		$request->set_body(
+			(string) wp_json_encode(
+				array( 'card' => $card, 'revision' => (int) ( axismundi_contacts_get_card( $card_id )['revision'] ?? 0 ) )
+			)
+		);
+		return rest_do_request( $request );
+	};
+	$ax_ct_id_doc  = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_renamed = $ax_ct_id_doc;
+	$ax_ct_renamed['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ]['service'] = 'Something else';
+	$ax_ct_moved_id = $ax_ct_id_doc;
+	$ax_ct_moved_id['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ]['uri'] = 'https://example.test/@someone';
+	$ax_ct_dropped = $ax_ct_id_doc;
+	unset( $ax_ct_dropped['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] );
+	$ax_ct_renamed_res = $ax_ct_put( $ax_ct_seeded, $ax_ct_renamed );
+	$ax_ct_moved_res   = $ax_ct_put( $ax_ct_seeded, $ax_ct_moved_id );
+	$ax_ct_dropped_res = $ax_ct_put( $ax_ct_seeded, $ax_ct_dropped );
+	$ax_ct_id_after    = axismundi_contacts_card_document( $ax_ct_seeded );
+	wp_set_current_user( $ax_ct_was_user );
+	ax_ct_assert(
+		$ax_ct_results,
+		'the account that says which Actor a profile is cannot be repointed, renamed, or retired',
+		409 === $ax_ct_renamed_res->get_status()
+			&& 409 === $ax_ct_moved_res->get_status()
+			// Removing it is not a refusal, and what comes back is the Actor's own answer.
+			&& 200 === $ax_ct_dropped_res->get_status()
+			&& $ax_ct_fresh->get_profile_url() === (string) ( $ax_ct_id_after['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ]['uri'] ?? '' )
+			&& 1 === (int) ( $ax_ct_id_after['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ]['pref'] ?? 0 )
+			// And a refused save left the document alone rather than half-writing it.
+			&& 'Something else' !== (string) ( $ax_ct_id_after['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ]['service'] ?? '' )
+	);
+
+	/*
+	 * What the address answers with is two layers, and only one of them is a choice.
+	 *
+	 * A public Actor is already telling everybody its name, its picture and its handle: that is what
+	 * a profile is, readable at `/actors/<uuid>` and `/@handle` without asking anyone. Saying the same
+	 * three things in JSContact publishes nothing new, so it is not offered as a setting -- a switch
+	 * that claims to hide what is being served next door would be a promise this cannot keep. Google's
+	 * profile draws the same line: a name, a photo and the account address are public, and the rest of
+	 * the card is not.
+	 *
+	 * Everything past identity is a choice, and off until it is made. A telephone number, a home
+	 * address, a note about somebody else: none of that is who this is, and none of it is served until
+	 * its owner has published it to everybody.
+	 */
+	$ax_ct_id_card = axismundi_contacts_jscontact_card( $ax_ct_fresh );
+	// An Actor that is not published at all. Its card answers nothing, whatever its owner selected.
+	$ax_ct_hidden  = ax_ct_actor( $ax_ct_users );
+	axismundi_actors_set_status( (int) $ax_ct_hidden->get_identity_id(), 'internal' );
+	$ax_ct_hidden  = axismundi_actors_get_by_identity( (int) $ax_ct_hidden->get_identity_id() );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a public Actor answers with who it is, and with nothing else until it has said so',
+		// Sharing is off, and the address still answers.
+		'off' === axismundi_contacts_profile_sharing( (int) $ax_ct_fresh->get_identity_id() )
+			&& axismundi_contacts_jscontact_is_readable( $ax_ct_fresh )
+			&& is_array( $ax_ct_id_card )
+			// Who it is: the name, and the account that says which Actor this is.
+			&& '' !== (string) ( $ax_ct_id_card['name']['full'] ?? '' )
+			&& $ax_ct_fresh->get_profile_url() === (string) ( $ax_ct_id_card['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ]['uri'] ?? '' )
+			// And nothing anybody would have had to agree to.
+			&& ! isset( $ax_ct_id_card['emails'], $ax_ct_id_card['phones'], $ax_ct_id_card['addresses'], $ax_ct_id_card['notes'] )
+			// An Actor that is not answering at its own address answers nothing here either.
+			&& ! axismundi_contacts_jscontact_is_readable( $ax_ct_hidden )
 	);
 
 	// -- the card owns the structured name ------------------------------------------------------------------------

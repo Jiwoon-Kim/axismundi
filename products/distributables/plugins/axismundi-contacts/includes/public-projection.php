@@ -76,6 +76,49 @@ function axismundi_contacts_default_published() : array {
 }
 
 /**
+ * What an Actor says about itself no matter what its owner has chosen to publish.
+ *
+ * A public Actor already answers with its name, its picture and its handle: that is what a profile
+ * is, and anybody can read it from the Actor document at `/actors/<uuid>` or the page at `/@handle`
+ * without asking anyone. Saying the same three things in JSContact reveals nothing that was not
+ * already being served -- it says it in a second format.
+ *
+ * So this layer is not a thing to switch off, and pretending otherwise would be offering a privacy
+ * setting that does not do what it says. What it is instead is a floor: the least a contact card can
+ * be and still identify who it is about. Google's profile does the same with a name, a photo and the
+ * account address; here the account address is the Actor's own handle.
+ *
+ * Everything else -- a phone number, a home address, a second email -- is not identity and is not
+ * here. That is the extended card, and it is published only when its owner says so and only to the
+ * audience they chose.
+ *
+ * @param array<string,mixed> $card Stored Card.
+ * @return string[] Pointers.
+ */
+function axismundi_contacts_identity_pointers( array $card ) : array {
+	$pointers = array( 'name' );
+	/*
+	 * The account that says which Actor this is. Its key is fixed for exactly this reason: a pointer
+	 * naming the identity has to keep naming it, and a generated key would make the floor of a public
+	 * profile depend on which row an editor happened to write.
+	 */
+	if ( isset( $card['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] ) ) {
+		$pointers[] = 'onlineServices/' . AXISMUNDI_CONTACTS_HOME_SERVICE_KEY;
+	}
+	/*
+	 * And the picture, which is the one an Actor is already showing. The first photo, by the same rule
+	 * the avatar follows -- the one they lead with -- rather than every image on the Card.
+	 */
+	foreach ( (array) ( $card['media'] ?? array() ) as $id => $entry ) {
+		if ( is_array( $entry ) && 'photo' === (string) ( $entry['kind'] ?? 'photo' ) && '' !== trim( (string) ( $entry['uri'] ?? '' ) ) ) {
+			$pointers[] = 'media/' . (string) $id;
+			break;
+		}
+	}
+	return $pointers;
+}
+
+/**
  * Whether a pointer names something that may be published at all.
  *
  * `name`, or `emails/e1`. Anything else -- a property this does not know, a path reaching inside an

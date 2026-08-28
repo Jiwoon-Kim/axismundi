@@ -53,7 +53,17 @@ function axismundi_contacts_jscontact_card( Axismundi_Actor $actor ) {
 	 * published, entry by entry. `version` is stated on the way out rather than stored, because the
 	 * document is what was authored rather than what it is currently serialised as.
 	 */
-	$card = axismundi_contacts_public_projection( $stored, axismundi_contacts_published_pointers( (int) $actor->get_identity_id() ) );
+	/*
+	 * Two layers, and they answer to different things. The identity -- name, picture, handle -- is
+	 * what a public Actor is already telling everybody, so it is served whenever the Actor is public.
+	 * The rest of the Card is served only when its owner has published it to everybody, which is what
+	 * `sharing` says and what `published` chooses from.
+	 */
+	$identity = axismundi_contacts_identity_pointers( $stored );
+	$chosen   = 'public' === axismundi_contacts_profile_sharing( (int) $actor->get_identity_id() )
+		? axismundi_contacts_published_pointers( (int) $actor->get_identity_id() )
+		: array();
+	$card     = axismundi_contacts_public_projection( $stored, array_values( array_unique( array_merge( $identity, $chosen ) ) ) );
 
 	/**
 	 * Let a domain add what it owns.
@@ -119,6 +129,28 @@ function axismundi_contacts_jscontact_is_public( Axismundi_Actor $actor ) : bool
 	return 'public' === axismundi_contacts_profile_sharing( (int) $actor->get_identity_id() );
 }
 
+/**
+ * Whether this address answers at all.
+ *
+ * A different question from the one above, and they were the same question until identity stopped
+ * being something a person could switch off. A public Actor already answers with its name, its
+ * picture and its handle at its own address; the same facts in JSContact are readable for the same
+ * reason, whatever its owner has chosen to publish beyond them.
+ *
+ * What sharing decides is how much comes back -- identity alone, or identity and the card its owner
+ * published to everybody. That is `axismundi_contacts_jscontact_card()`'s business, and it is why
+ * this may say yes where the question above says no.
+ *
+ * An Actor that is not public answers nothing here whatever its owner published, because the person
+ * this card is about is not answering at their own address either.
+ *
+ * @param Axismundi_Actor $actor Actor.
+ * @return bool
+ */
+function axismundi_contacts_jscontact_is_readable( Axismundi_Actor $actor ) : bool {
+	return function_exists( 'axismundi_actors_is_public_profile' ) && axismundi_actors_is_public_profile( $actor );
+}
+
 /** @return array<string,string> */
 function axismundi_contacts_jscontact_rewrite_rules() : array {
 	// The URL the Actors plugin served this at, kept exactly: the owner moved, the address did not.
@@ -154,7 +186,7 @@ function axismundi_contacts_serve_jscontact() : void {
 		return;
 	}
 	$actor = axismundi_actors_get_by_handle( $handle );
-	$card  = $actor instanceof Axismundi_Actor && axismundi_contacts_jscontact_is_public( $actor )
+	$card  = $actor instanceof Axismundi_Actor && axismundi_contacts_jscontact_is_readable( $actor )
 		? axismundi_contacts_jscontact_card( $actor )
 		: new WP_Error( 'ax_contacts_jscontact_missing', 'not_found' );
 	if ( is_wp_error( $card ) ) {

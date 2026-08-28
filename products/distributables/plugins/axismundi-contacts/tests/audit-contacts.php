@@ -1764,6 +1764,29 @@ try {
 		'public' === axismundi_contacts_profile_sharing( $ax_ct_sid )
 	);
 
+	/*
+	 * What the Card is served as. `type=Card` is the standard's own parameter and says which kind of
+	 * JSContact object this is, which is worth stating in a response. A charset is not: JSON is UTF-8
+	 * by definition and no charset parameter is defined for a `+json` type, so one would state what
+	 * the format already settles and give a reader comparing the header a third string to fail on.
+	 */
+	$ax_ct_ct_src = (string) file_get_contents( dirname( __DIR__ ) . '/includes/jscontact.php' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a card is served as what it is, with the standard’s parameter and nothing invented beside it',
+		'application/jscontact+json; type=Card' === AXISMUNDI_CONTACTS_JSCONTACT_MEDIA_TYPE
+			&& str_contains( $ax_ct_ct_src, "header( 'Content-Type: ' . AXISMUNDI_CONTACTS_JSCONTACT_MEDIA_TYPE );" )
+			// Nothing appended to it, least of all a charset.
+			&& ! str_contains( $ax_ct_ct_src, "AXISMUNDI_CONTACTS_JSCONTACT_MEDIA_TYPE . '; charset=" )
+			// And a reader is told not to guess at the type it was given.
+			&& str_contains( $ax_ct_ct_src, "header( 'X-Content-Type-Options: nosniff' );" )
+			/*
+			 * The directory advertises the type without the parameter, so a reader comparing strings
+			 * finds the link; the response states it, where saying it costs nothing.
+			 */
+			&& str_contains( $ax_ct_ct_src, "'type' => 'application/jscontact+json'," )
+	);
+
 	// -- looking somebody up, and keeping them only when asked ---------------------------------------------------
 
 	/*

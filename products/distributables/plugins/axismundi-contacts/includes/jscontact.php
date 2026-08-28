@@ -260,7 +260,13 @@ function axismundi_contacts_serve_jscontact() : void {
 		exit;
 	}
 	status_header( 200 );
-	header( 'Content-Type: ' . AXISMUNDI_CONTACTS_JSCONTACT_MEDIA_TYPE . '; charset=' . get_option( 'blog_charset' ) );
+	/*
+	 * The media type and its own parameter, and nothing else. `type=Card` is the standard's, and says
+	 * which kind of JSContact object this is. A charset is not: JSON is UTF-8 by definition and no
+	 * charset parameter is defined for a `+json` type, so adding one states something the format
+	 * already settles and gives a reader comparing the header a third string to fail to recognise.
+	 */
+	header( 'Content-Type: ' . AXISMUNDI_CONTACTS_JSCONTACT_MEDIA_TYPE );
 	header( 'X-Content-Type-Options: nosniff' );
 	header( 'Access-Control-Allow-Origin: *' );
 	echo wp_json_encode( $card ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON response.

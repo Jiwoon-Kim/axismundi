@@ -330,6 +330,16 @@ function axismundi_contacts_canonical_value( $value, int $depth, bool $patch = f
 		return $out;
 	}
 	if ( $depth >= 1 ) {
+		/*
+		 * A collection's members are entry ids, which are not property names and have no canonical
+		 * order of their own to be written in. What they have is `pref`: the standard's own answer to
+		 * which of these comes first. So a collection is written most preferred first, and the ids
+		 * settle the rest -- which is what the key ordering below did to them anyway, and is why an
+		 * entry marked most preferred could be written third.
+		 */
+		if ( $collection && ! axismundi_contacts_is_list( $value ) ) {
+			return axismundi_contacts_by_preference( $out );
+		}
 		if ( ! $collection && null !== $spec && isset( $out['@type'] )
 			&& is_string( $out['@type'] ) && $out['@type'] === (string) ( $spec['type'] ?? '' ) ) {
 			// This position means exactly that, so saying it again says nothing.

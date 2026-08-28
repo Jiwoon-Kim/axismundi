@@ -1572,7 +1572,12 @@
 			);
 		}
 
-		var rows = Object.keys( entries ).map( function ( id ) {
+		/*
+		 * Most preferred first, for every collection rather than for accounts alone. `pref` is the
+		 * standard's answer to which of these comes first, and the stored document is now written in
+		 * that order too -- so the fields and the JSON beside them read the same way down.
+		 */
+		var rows = orderedByPreference( entries ).map( function ( id ) {
 			return { key: id, id: id, entry: entries[ id ] || {} };
 		} ).concat( pending.map( function ( each ) {
 			return { key: each.id, pending: each.id, entry: each.entry };
@@ -4493,7 +4498,7 @@
 			} ),
 			config.publishableEntries.map( function ( property ) {
 				var entries = card[ property ] || {};
-				var ids = 'onlineServices' === property ? orderedByPreference( entries ) : Object.keys( entries );
+				var ids = orderedByPreference( entries );
 				return ids.map( function ( id, index ) {
 					var entry = entries[ id ] || {};
 					var read = entryLabel( property, entry, index );

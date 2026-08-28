@@ -386,6 +386,47 @@ function axismundi_contacts_derive_card_columns( array $card, int $card_id = 0 )
 }
 
 /**
+ * One collection's entries, most preferred first.
+ *
+ * `pref` is the standard's own answer to "which of these comes first": 1 is the most preferred, and
+ * an entry that does not say has no preference rather than the lowest one -- so it sorts after
+ * everything that does, not before it and not among it.
+ *
+ * Ties go to the entry id, which is what the canonical form already did with every entry before
+ * preference was read at all -- so a collection nobody has expressed a preference about is written
+ * exactly as it was written before, and the same Card canonicalises to the same bytes whatever order
+ * its members arrived in. That last part is what canonical means, and a tie broken by the order the
+ * members happened to arrive in would quietly give it up.
+ *
+ * The screen sorts by this too. It reads the stored document, whose ties are already in id order, so
+ * breaking ties there by position lands on the same sequence -- and the JSON beside the fields stops
+ * disagreeing with the fields.
+ *
+ * @param array<string,mixed> $entries Entries keyed by id.
+ * @return array<string,mixed> The same entries, in preference order.
+ */
+function axismundi_contacts_by_preference( array $entries ) : array {
+	$order = array();
+	foreach ( $entries as $id => $entry ) {
+		$pref    = is_array( $entry ) && isset( $entry['pref'] ) && is_numeric( $entry['pref'] )
+			? (int) $entry['pref']
+			: PHP_INT_MAX;
+		$order[] = array( 'id' => (string) $id, 'pref' => $pref );
+	}
+	usort(
+		$order,
+		static function ( array $a, array $b ) : int {
+			return $a['pref'] === $b['pref'] ? strcmp( $a['id'], $b['id'] ) : $a['pref'] <=> $b['pref'];
+		}
+	);
+	$out = array();
+	foreach ( $order as $each ) {
+		$out[ $each['id'] ] = $entries[ $each['id'] ];
+	}
+	return $out;
+}
+
+/**
  * A Card's online services, in the order its owner put them in.
  *
  * JSContact keys its multi-value fields by name rather than by position, so the order somebody
@@ -400,32 +441,17 @@ function axismundi_contacts_derive_card_columns( array $card, int $card_id = 0 )
  */
 function axismundi_contacts_ordered_services( array $card ) : array {
 	$entries = array();
-	$index   = 0;
 	foreach ( (array) ( $card['onlineServices'] ?? array() ) as $entry_id => $entry ) {
-		if ( ! is_array( $entry ) ) {
-			continue;
+		if ( is_array( $entry ) ) {
+			$entries[ (string) $entry_id ] = $entry;
 		}
-		$entry['entry_id'] = (string) $entry_id;
-		// Position within the document breaks ties, so entries with no preference keep their order.
-		$entry['_seq']     = $index;
-		$entries[]         = $entry;
-		++$index;
 	}
-	usort(
-		$entries,
-		static function ( array $a, array $b ) : int {
-			$pref_a = isset( $a['pref'] ) ? (int) $a['pref'] : PHP_INT_MAX;
-			$pref_b = isset( $b['pref'] ) ? (int) $b['pref'] : PHP_INT_MAX;
-			return $pref_a === $pref_b ? $a['_seq'] <=> $b['_seq'] : $pref_a <=> $pref_b;
-		}
-	);
-	return array_map(
-		static function ( array $entry ) : array {
-			unset( $entry['_seq'] );
-			return $entry;
-		},
-		$entries
-	);
+	$out = array();
+	foreach ( axismundi_contacts_by_preference( $entries ) as $entry_id => $entry ) {
+		$entry['entry_id'] = (string) $entry_id;
+		$out[]             = $entry;
+	}
+	return $out;
 }
 
 /**

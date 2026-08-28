@@ -4446,6 +4446,64 @@ try {
 			&& str_contains( $ax_ct_cb_editor, 'if ( ! organizationHasContent( made ) )' )
 	);
 
+	/*
+	 * Which of several comes first is a question the standard already answers. `pref` is what an entry
+	 * says about it -- 1 is the most preferred -- and an entry that says nothing has no preference
+	 * rather than the lowest one, so it is written after everything that does.
+	 *
+	 * The stored form used to order entries by their ids, because an id is not a property name and the
+	 * key ordering had nothing else to do with it. So a Card could say an address was the preferred one
+	 * and have it written third, and the fields on the left read in one order while the JSON on the
+	 * right read in another. One comparator now decides both.
+	 *
+	 * A collection nobody has expressed a preference about is written exactly as it was before: every
+	 * entry ties, and ties go to the id. That also keeps the canonical form independent of the order
+	 * the members arrived in, which is what makes it canonical.
+	 */
+	$ax_ct_pref_card = axismundi_contacts_canonical_card(
+		array(
+			'@type'  => 'Card',
+			'name'   => array( 'full' => 'Preference' ),
+			'emails' => array(
+				'eml-c' => array( 'address' => 'c@example.test' ),
+				'eml-a' => array( 'address' => 'a@example.test', 'pref' => 2 ),
+				'eml-b' => array( 'address' => 'b@example.test', 'pref' => 1 ),
+			),
+			'phones' => array(
+				'tel-z' => array( 'number' => 'tel:+8210000001' ),
+				'tel-a' => array( 'number' => 'tel:+8210000002' ),
+			),
+		)
+	);
+	// The same Card with its members handed over in a different order canonicalises to the same thing.
+	$ax_ct_pref_again = axismundi_contacts_canonical_card(
+		array(
+			'@type'  => 'Card',
+			'name'   => array( 'full' => 'Preference' ),
+			'emails' => array(
+				'eml-b' => array( 'address' => 'b@example.test', 'pref' => 1 ),
+				'eml-c' => array( 'address' => 'c@example.test' ),
+				'eml-a' => array( 'address' => 'a@example.test', 'pref' => 2 ),
+			),
+			'phones' => array(
+				'tel-a' => array( 'number' => 'tel:+8210000002' ),
+				'tel-z' => array( 'number' => 'tel:+8210000001' ),
+			),
+		)
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'a collection is written most preferred first, and one with no preference is written as it was',
+		array( 'eml-b', 'eml-a', 'eml-c' ) === array_keys( (array) $ax_ct_pref_card['emails'] )
+			// Nobody said anything about the numbers, so nothing about them moved.
+			&& array( 'tel-a', 'tel-z' ) === array_keys( (array) $ax_ct_pref_card['phones'] )
+			// And the order the members arrived in decides nothing.
+			&& wp_json_encode( $ax_ct_pref_card ) === wp_json_encode( $ax_ct_pref_again )
+			// One comparator, and the screen reads by it too rather than only for accounts.
+			&& str_contains( $ax_ct_cb_editor, 'var rows = orderedByPreference( entries ).map( function ( id ) {' )
+			&& ! str_contains( $ax_ct_cb_editor, "'onlineServices' === property ? orderedByPreference( entries ) : Object.keys( entries )" )
+	);
+
 	$ax_ct_where_at    = strpos( $ax_ct_cb_editor, "__( 'Address and location properties', 'axismundi-contacts' )" );
 	$ax_ct_resource_at = strpos( $ax_ct_cb_editor, "__( 'Resource properties', 'axismundi-contacts' )" );
 	$ax_ct_lang_at     = strpos( $ax_ct_cb_editor, "__( 'Multilingual properties', 'axismundi-contacts' )" );

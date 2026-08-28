@@ -414,6 +414,46 @@ function axismundi_actors_name_map( Axismundi_Actor $actor ) : array {
 	return axismundi_actors_get_text_map( $actor->get_identity_id() );
 }
 
+/** Keep the local Actor's inexpensive list/search name aligned with its primary text. */
+function axismundi_actors_refresh_display_name( int $identity_id ) : void {
+	global $wpdb;
+	$actor = axismundi_actors_get_by_identity( $identity_id );
+	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() ) {
+		return;
+	}
+	$primary = axismundi_actors_serialization_language( $actor );
+	$name    = trim( (string) ( axismundi_actors_get_text_map( $identity_id )[ $primary ]['name'] ?? '' ) );
+	if ( '' === $name ) {
+		return;
+	}
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own cache column.
+	$wpdb->update(
+		axismundi_actors_actors_table(),
+		array( 'display_name' => $name, 'updated_at' => current_time( 'mysql', true ) ),
+		array( 'identity_id' => $identity_id ),
+		array( '%s', '%s' ),
+		array( '%d' )
+	);
+}
+
+/** Make an authored Actor profile language the scalar ActivityStreams name. */
+function axismundi_actors_make_profile_primary( int $identity_id, string $language ) {
+	$actor    = axismundi_actors_get_by_identity( $identity_id );
+	$language = axismundi_actors_normalize_language_tag( $language );
+	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || '' === $language ) {
+		return new WP_Error( 'ax_actors_primary_language', __( 'Enter a valid local profile language.', 'axismundi-actors' ) );
+	}
+	$name = trim( (string) ( axismundi_actors_get_text_map( $identity_id )[ $language ]['name'] ?? '' ) );
+	if ( '' === $name ) {
+		return new WP_Error( 'ax_actors_primary_name', __( 'Write a name for this profile before making it primary.', 'axismundi-actors' ) );
+	}
+	$result = axismundi_actors_set_default_language( $identity_id, $language );
+	if ( ! is_wp_error( $result ) ) {
+		axismundi_actors_refresh_display_name( $identity_id );
+	}
+	return $result;
+}
+
 
 /** Remove child text rows when an Actor identity is explicitly deleted. */
 function axismundi_actors_delete_texts( int $identity_id ) : void {

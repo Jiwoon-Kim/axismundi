@@ -144,46 +144,6 @@ function axismundi_actors_normalize_name_phonetics( array $row ) {
 }
 
 /**
- * Record that somebody has decided this Actor's name.
- *
- * Kept as a fact of its own rather than inferred from the rows, because the interesting state is
- * "nobody has ever said" and an empty table is two different things: an Actor whose name has never
- * been touched, and one whose name was deliberately emptied. Reading emptiness would let the
- * WordPress account name walk back in after somebody removed it -- once, quietly, and looking for
- * all the world like the software had simply remembered.
- *
- * Set by every write and every deletion, and never cleared.
- *
- * @param int $identity_id Actor identity.
- * @return void
- */
-function axismundi_actors_mark_person_name_edited( int $identity_id ) : void {
-	global $wpdb;
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	$wpdb->update(
-		axismundi_actors_actors_table(),
-		array( 'person_name_edited_at' => current_time( 'mysql', true ) ),
-		array( 'identity_id' => $identity_id ),
-		array( '%s' ),
-		array( '%d' )
-	);
-}
-
-/**
- * Whether this Actor's name has ever been decided by a person.
- *
- * @param int $identity_id Actor identity.
- * @return bool
- */
-function axismundi_actors_person_name_was_edited( int $identity_id ) : bool {
-	global $wpdb;
-	$table = axismundi_actors_actors_table();
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
-	$edited = $wpdb->get_var( $wpdb->prepare( "SELECT person_name_edited_at FROM {$table} WHERE identity_id = %d", $identity_id ) );
-	return null !== $edited && '' !== (string) $edited;
-}
-
-/**
  * The display name for one Actor in one language, from the parts if they are there.
  *
  * Falls through to the text store and then to whatever the Actor already answers with, so an Actor

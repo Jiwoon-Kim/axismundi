@@ -11,31 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '31.0';
-
-/**
- * Columns the base profile used to have, kept only so they can be removed.
- *
- * The parts of a person's name, and the order they are read in. They belong to the contact card,
- * which is the only place they are stored now; these are named here so that a table made before
- * that ends up looking like one made after it. The older development spellings are included for the
- * same reason.
- */
-const AXISMUNDI_ACTORS_RETIRED_PROFILE_COLUMNS = array(
-	'given',
-	'given2',
-	'surname',
-	'surname2',
-	'display_order',
-	'title',
-	'credential',
-	'first_name',
-	'middle_name',
-	'last_name',
-	'second_surname',
-	'honorific_prefix',
-	'honorific_suffix',
-);
+const AXISMUNDI_ACTORS_DB_VERSION = '32.0';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -151,7 +127,7 @@ function axismundi_actors_install() : void {
 	// Named here and nowhere else: the only thing left to do with this table is get rid of it.
 	$person_names   = $wpdb->prefix . 'ax_actor_person_names';
 	$alternate_names = axismundi_actors_alternate_names_table();
-	$profile         = axismundi_actors_profile_table();
+	$profile         = $wpdb->prefix . 'ax_actor_profile';
 	$anniversaries   = $wpdb->prefix . 'ax_actor_anniversaries';
 
 	dbDelta(
@@ -196,7 +172,6 @@ function axismundi_actors_install() : void {
 			followers_total bigint(20) unsigned DEFAULT NULL,
 			following_total bigint(20) unsigned DEFAULT NULL,
 			follow_counts_fetched_at datetime DEFAULT NULL,
-			person_name_edited_at datetime DEFAULT NULL,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (identity_id),
@@ -233,54 +208,14 @@ function axismundi_actors_install() : void {
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed internal identifier.
 	$wpdb->query( "DROP TABLE IF EXISTS {$person_names}" );
 
-	/*
-	 * One base profile per local Actor, with no language axis at all.
-	 *
-	 * The parts of a name are a fact about the person, not about a translation of them. Storing them
-	 * per language asked somebody to re-enter `Jiwoon` and `Kim` as components for every language they
-	 * write their profile in, when what they actually have in English is one string. So the components
-	 * live here once, and the other languages keep a plain name in the text store.
-	 *
-	 * Local only. A remote Actor's name arrives as a string from another server, and deciding which
-	 * half of it is a surname would be inventing a fact about somebody and re-inventing it on every
-	 * fetch. Their name is cached whole, in `ax_actors.display_name` and `payload_json`.
-	 *
-	 * Not Person-only either. An Organization or a Place fills in nothing here and is named by
-	 * `ax_actors.display_name` like everybody else; a few empty columns cost less than a second table.
-	 */
-	dbDelta(
-		"CREATE TABLE {$profile} (
-			identity_id bigint(20) unsigned NOT NULL,
-			structured_name_language varchar(35) NOT NULL default '',
-			phonetic_given varchar(191) NOT NULL default '',
-			phonetic_given2 varchar(191) NOT NULL default '',
-			phonetic_surname varchar(191) NOT NULL default '',
-			phonetic_surname2 varchar(191) NOT NULL default '',
-			phonetic_system varchar(16) NOT NULL default '',
-			phonetic_script varchar(8) NOT NULL default '',
-			display_name varchar(191) NOT NULL default '',
-			updated_at datetime NOT NULL,
-			PRIMARY KEY  (identity_id)
-		) ENGINE=InnoDB {$charset};"
-	);
-
-	/*
-	 * The columns a person's name used to be kept in. `dbDelta` adds what the schema declares and
-	 * never removes what it does not, so a table made before the contact card took the name over
-	 * still has them; without this they would sit there for the life of every existing site while
-	 * every new one was built without them.
-	 *
-	 * Unconditional, and nothing is read out of them first. Nothing has written them since the
-	 * screen that edited them was removed, and the name each Actor answers with lives in the text
-	 * store rather than here.
-	 */
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema check.
-	$profile_columns_before = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profile}" );
-	foreach ( AXISMUNDI_ACTORS_RETIRED_PROFILE_COLUMNS as $retired_column ) {
-		if ( in_array( $retired_column, $profile_columns_before, true ) ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed internal identifiers from the list above.
-			$wpdb->query( "ALTER TABLE {$profile} DROP COLUMN {$retired_column}" );
-		}
+	/* Structured names and pronunciations are authored only on the Contacts self Card. */
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed retired internal table.
+	$wpdb->query( "DROP TABLE IF EXISTS {$profile}" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema migration of a retired cache marker.
+	$actor_columns_before = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$actors}" );
+	if ( in_array( 'person_name_edited_at', $actor_columns_before, true ) ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed retired column.
+		$wpdb->query( "ALTER TABLE {$actors} DROP COLUMN person_name_edited_at" );
 	}
 
 	/*
@@ -701,7 +636,6 @@ function axismundi_actors_install() : void {
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$alternate_name_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$alternate_names}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$profile_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profile}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$alternate_name_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$alternate_names} WHERE Key_name = 'identity_kind_position'" );
 	/*
@@ -747,10 +681,8 @@ function axismundi_actors_install() : void {
 		&& $transactional_engines
 		&& $migrated
 		&& $relations_migrated
-		&& in_array( 'person_name_edited_at', $final_actor_columns, true )
-		&& array() === array_diff( AXISMUNDI_ACTORS_PROFILE_COLUMNS, $profile_columns )
-		&& in_array( 'structured_name_language', $profile_columns, true )
-		&& array() === array_intersect( AXISMUNDI_ACTORS_RETIRED_PROFILE_COLUMNS, $profile_columns )
+		&& ! in_array( 'person_name_edited_at', $final_actor_columns, true )
+		&& $profile !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $profile ) )
 		&& $person_names_dropped
 		&& $anniversaries !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $anniversaries ) )
 		&& in_array( 'name_kind', $alternate_name_columns, true )

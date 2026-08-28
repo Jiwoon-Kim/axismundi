@@ -133,12 +133,6 @@ try {
 		! isset( $ax_jc_pcard['name']['components'] )
 			&& ( ! isset( $ax_jc_pcard['name'] ) || '' !== (string) ( $ax_jc_pcard['name']['full'] ?? '' ) )
 	);
-	// A profile is authored here for an Actor this site keeps, and for no other.
-	ax_jc_assert(
-		$ax_jc_results,
-		'a profile cannot be written for an Actor that is not ours',
-		is_wp_error( axismundi_actors_write_person_profile( $ax_jc_id + 100000, array( 'display_name' => 'Nope' ) ) )
-	);
 
 	// -- what is not ours to mint ---------------------------------------------------------------------------
 
@@ -164,12 +158,6 @@ try {
 		$ax_jc_results,
 		'a cached remote Actor publishes nothing of ours: no card, and so no invented uid either',
 		$ax_jc_remote instanceof Axismundi_Actor && is_wp_error( $ax_jc_rcard )
-	);
-	ax_jc_assert(
-		$ax_jc_results,
-		'a remote name remains the received document rather than becoming something authored here',
-		$ax_jc_remote instanceof Axismundi_Actor
-			&& is_wp_error( axismundi_actors_write_person_profile( (int) $ax_jc_remote->get_identity_id(), array( 'display_name' => 'Invented' ) ) )
 	);
 	// -- neither owned nor contributed ----------------------------------------------------------------------
 

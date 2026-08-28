@@ -940,26 +940,6 @@ function axismundi_actors_text_form( Axismundi_Actor $actor ) : void {
 	$back      = axismundi_actors_management_back_url( $actor );
 	$add_url   = remove_query_arg( 'ax_actor_lang', $back );
 	$adding_translation = isset( $_GET['ax_actor_add_language'] ) && '1' === (string) $_GET['ax_actor_add_language']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- changes no state.
-	/*
-	 * The name parts belong to the base profile, so they are edited in the Actor's own language and
-	 * nowhere else. Switching to another language offers a plain name box, because a translation of a
-	 * profile is a written-out name and nothing more -- nobody should have to re-enter `Jiwoon` and
-	 * `Kim` as components to say their profile in English too.
-	 */
-	/*
-	 * The name details belong to the primary profile, and only to it. A secondary language is the same
-	 * profile written out again -- a name and a summary -- so it is never asked which parts of a name
-	 * it holds, and switching languages never moves anything.
-	 */
-	$person_name = 'Person' === $actor->get_type() && $actor->is_local()
-		? axismundi_actors_person_profile( $actor->get_identity_id() )
-		: array();
-	/*
-	 * The label and the pronunciation are edited on the primary profile, and nothing else about a name
-	 * is edited here at all. The parts of a name live on the contact card now, and the box below is a
-	 * plain string: typed here, or followed from a card by a binding, or left as it was.
-	 */
-	$structured = 'Person' === $actor->get_type() && $actor->is_local() && $language === $primary;
 	?>
 	<h2><?php esc_html_e( 'Profile languages', 'axismundi-actors' ); ?></h2>
 	<p class="description"><?php esc_html_e( 'Translations are optional. Empty fields continue to use the live WordPress profile or site value.', 'axismundi-actors' ); ?></p>
@@ -1027,39 +1007,6 @@ function axismundi_actors_text_form( Axismundi_Actor $actor ) : void {
 				<th scope="row"><label for="ax-actor-summary"><?php esc_html_e( 'Summary', 'axismundi-actors' ); ?></label></th>
 				<td><textarea id="ax-actor-summary" name="summary" rows="4" class="large-text"><?php echo esc_textarea( $map[ $language ]['summary'] ?? '' ); ?></textarea></td>
 			</tr>
-			<?php if ( $structured ) : ?>
-				<tr>
-					<th scope="row"><?php esc_html_e( 'How this name is shown and said', 'axismundi-actors' ); ?></th>
-					<td>
-						<?php
-						/*
-						 * A label somebody chose for this Actor, and how the name is pronounced. The parts it
-						 * is made of are not here: they belong to the contact card, which is where a title and
-						 * a credential already lived, and holding a second copy of them is what let the two
-						 * disagree.
-						 */
-						?>
-						<p><label for="ax-actor-custom-display-name" style="display:block"><?php esc_html_e( 'Shown as', 'axismundi-actors' ); ?></label><input id="ax-actor-custom-display-name" name="display_name" value="<?php echo esc_attr( (string) ( $person_name['display_name'] ?? '' ) ); ?>" class="regular-text"></p>
-						<p class="description"><?php esc_html_e( 'Left empty, this Actor is shown as the name written above for its primary language.', 'axismundi-actors' ); ?></p>
-						<?php /* One name, said one way: a pronunciation belongs to the parts and not to each translation. */ ?>
-						<p>
-							<label for="ax-actor-ph-system" style="display:block"><?php esc_html_e( 'Pronunciation notation or script', 'axismundi-actors' ); ?></label>
-							<select id="ax-actor-ph-system" name="phonetic_system">
-								<option value=""><?php esc_html_e( 'None', 'axismundi-actors' ); ?></option>
-								<?php foreach ( AXISMUNDI_ACTORS_PHONETIC_SYSTEMS as $ax_system ) : ?>
-									<option value="<?php echo esc_attr( $ax_system ); ?>" <?php selected( (string) ( $person_name['phonetic_system'] ?? '' ), $ax_system ); ?>><?php echo esc_html( $ax_system ); ?></option>
-								<?php endforeach; ?>
-							</select>
-							<input name="phonetic_script" value="<?php echo esc_attr( (string) ( $person_name['phonetic_script'] ?? '' ) ); ?>" class="small-text" placeholder="Hira" aria-label="<?php esc_attr_e( 'Script subtag', 'axismundi-actors' ); ?>">
-						</p>
-						<div style="max-width:26em">
-							<p><label for="ax-ph-given" style="display:block"><?php esc_html_e( 'Pronunciation of given name', 'axismundi-actors' ); ?></label><input id="ax-ph-given" name="phonetic_given" value="<?php echo esc_attr( (string) ( $person_name['phonetic_given'] ?? '' ) ); ?>" class="regular-text"></p>
-							<p><label for="ax-ph-surname" style="display:block"><?php esc_html_e( 'Pronunciation of family name', 'axismundi-actors' ); ?></label><input id="ax-ph-surname" name="phonetic_surname" value="<?php echo esc_attr( (string) ( $person_name['phonetic_surname'] ?? '' ) ); ?>" class="regular-text"></p>
-							<p><label for="ax-ph-surname2" style="display:block"><?php esc_html_e( 'Pronunciation of second family name', 'axismundi-actors' ); ?></label><input id="ax-ph-surname2" name="phonetic_surname2" value="<?php echo esc_attr( (string) ( $person_name['phonetic_surname2'] ?? '' ) ); ?>" class="regular-text"></p>
-						</div>
-					</td>
-				</tr>
-			<?php endif; ?>
 		</table>
 		<?php submit_button( __( 'Save profile language', 'axismundi-actors' ) ); ?>
 	</form>
@@ -1399,12 +1346,6 @@ function axismundi_actors_handle_set_texts() : void {
 		$result = axismundi_actors_rename_text_language( $identity_id, $language, $target_language );
 		if ( ! is_wp_error( $result ) && $language === $current_primary ) {
 			$result = axismundi_actors_set_default_language( $identity_id, $target_language );
-			if ( ! is_wp_error( $result ) && 'Person' === $actor->get_type() && $actor->is_local() ) {
-				$profile = axismundi_actors_person_profile( $identity_id );
-				if ( $language === axismundi_actors_normalize_language_tag( (string) ( $profile['structured_name_language'] ?? '' ) ) ) {
-					$result = axismundi_actors_write_person_profile( $identity_id, array( 'structured_name_language' => $target_language ) );
-				}
-			}
 		}
 		if ( ! is_wp_error( $result ) ) {
 			$language = $target_language;
@@ -1416,24 +1357,6 @@ function axismundi_actors_handle_set_texts() : void {
 		// by a set of parts that published themselves a moment ago.
 		'name'    => isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '',
 	);
-	/*
-	 * The label and the pronunciation arrive only from the primary profile, because that is the only
-	 * screen offering them. A secondary language sends a name and a summary and nothing else.
-	 */
-	if ( ! is_wp_error( $result ) && 'Person' === $actor->get_type() && $actor->is_local()
-		&& $source_language === $current_primary ) {
-		$parts = array( 'structured_name_language' => $language );
-		foreach ( array( 'display_name', 'phonetic_given', 'phonetic_given2', 'phonetic_surname', 'phonetic_surname2', 'phonetic_system', 'phonetic_script' ) as $field ) {
-			// Present-and-empty clears the stored value; a field this form did not send is left alone.
-			if ( isset( $_POST[ $field ] ) ) {
-				$parts[ $field ] = sanitize_text_field( wp_unslash( $_POST[ $field ] ) );
-			}
-		}
-		$outcome = axismundi_actors_write_person_profile( $identity_id, $parts );
-		if ( is_wp_error( $outcome ) ) {
-			$result = $outcome;
-		}
-	}
 	if ( ! is_wp_error( $result ) ) {
 		foreach ( $values as $field => $value ) {
 			$outcome = axismundi_actors_set_text( $identity_id, $field, $language, $value );

@@ -1755,21 +1755,13 @@ try {
 		'isOrdered'  => true,
 	);
 	axismundi_contacts_save_card_for_owner( (int) $ax_ct_fresh->get_identity_id(), $ax_ct_owned, $ax_ct_seeded );
-	/*
-	 * And an Actor write no longer reaches it. The columns are still there until they are dropped, so
-	 * this is what says the write path is closed rather than merely unused.
-	 */
-	axismundi_actors_write_person_profile(
-		(int) $ax_ct_fresh->get_identity_id(),
-		array( 'structured_name_language' => 'ko', 'given' => 'Nope', 'surname' => 'Nope', 'display_order' => 'given-family' )
-	);
 	$ax_ct_kept = array();
 	foreach ( (array) ( axismundi_contacts_card_document( $ax_ct_seeded )['name']['components'] ?? array() ) as $ax_ct_c ) {
 		$ax_ct_kept[ (string) $ax_ct_c['kind'] ] = (string) $ax_ct_c['value'];
 	}
 	ax_ct_assert(
 		$ax_ct_results,
-		'the card keeps the structured name, and writing one on the Actor no longer reaches it',
+		'the card is the only stored structured name',
 		"\xea\xb9\x80" === ( $ax_ct_kept['surname'] ?? '' )
 			&& "\xec\xa7\x80\xec\x9a\xb4" === ( $ax_ct_kept['given'] ?? '' )
 			&& 'Ph.D.' === ( $ax_ct_kept['credential'] ?? '' )

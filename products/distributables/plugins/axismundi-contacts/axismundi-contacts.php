@@ -52,6 +52,7 @@ require_once __DIR__ . '/includes/name-sync.php';
 require_once __DIR__ . '/includes/public-projection.php';
 require_once __DIR__ . '/includes/jscontact.php';
 require_once __DIR__ . '/includes/rest-draft.php';
+require_once __DIR__ . '/includes/lookup.php';
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/card-detail.php';
 	require_once __DIR__ . '/includes/card-editor.php';

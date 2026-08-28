@@ -1764,6 +1764,158 @@ try {
 		'public' === axismundi_contacts_profile_sharing( $ax_ct_sid )
 	);
 
+	// -- looking somebody up, and keeping them only when asked ---------------------------------------------------
+
+	/*
+	 * Answered from canned responses rather than from the network. What is being tested is the walk --
+	 * which address is asked, what is read out of the answer, and what is written down at the end --
+	 * and a test that reached a real server would be testing that server's uptime as well.
+	 */
+	$ax_ct_lu_card = array(
+		'@type'   => 'Card',
+		'version' => '2.0',
+		'uid'     => 'urn:uuid:11111111-2222-4333-8444-555555555555',
+		'kind'    => 'individual',
+		'name'    => array( 'full' => 'Alice Example' ),
+	);
+	$ax_ct_lu_asked = array();
+	add_filter(
+		'pre_http_request',
+		static function ( $pre, $args, $url ) use ( $ax_ct_lu_card, &$ax_ct_lu_asked ) {
+			$ax_ct_lu_asked[] = $url;
+			$headers          = static function ( string $type ) {
+				return new WpOrg\Requests\Utility\CaseInsensitiveDictionary( array( 'content-type' => $type ) );
+			};
+			if ( str_contains( $url, '/.well-known/webfinger' ) ) {
+				return array(
+					'headers'  => $headers( 'application/jrd+json' ),
+					'response' => array( 'code' => 200 ),
+					'body'     => (string) wp_json_encode(
+						array(
+							'subject' => 'acct:alice@example.com',
+							'links'   => array(
+								array( 'rel' => 'self', 'type' => 'application/activity+json', 'href' => 'https://example.com/actors/alice' ),
+								array( 'rel' => 'describedby', 'type' => 'application/jscontact+json', 'href' => 'https://example.com/@alice.jscontact' ),
+							),
+						)
+					),
+				);
+			}
+			if ( str_ends_with( $url, '.jscontact' ) ) {
+				return array(
+					'headers'  => $headers( 'application/jscontact+json; type=Card' ),
+					'response' => array( 'code' => 200 ),
+					'body'     => (string) wp_json_encode( $ax_ct_lu_card ),
+				);
+			}
+			return array(
+				'headers'  => $headers( 'text/html; charset=utf-8' ),
+				'response' => array( 'code' => 200 ),
+				'body'     => '<html><head><link rel="alternate" type="application/jscontact+json" href="/@alice.jscontact"></head></html>',
+			);
+		},
+		10,
+		3
+	);
+
+	/*
+	 * People arrive holding different things, so there are three ways in and they end at one Card. An
+	 * address needs the directory to say where anything is; a profile page announces its own contact
+	 * document; a `.jscontact` address is already the document.
+	 *
+	 * What is remembered differs, and that is the point of walking all three: the way in is part of
+	 * what gets written down when somebody saves.
+	 */
+	$ax_ct_lu_acct    = axismundi_contacts_lookup( '@alice@example.com' );
+	$ax_ct_lu_profile = axismundi_contacts_lookup( 'https://example.com/@alice' );
+	$ax_ct_lu_direct  = axismundi_contacts_lookup( 'https://example.com/@alice.jscontact' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'an address, a profile page and a card all reach the same card, by their own routes',
+		'acct' === axismundi_contacts_lookup_route( '@alice@example.com' )['kind']
+			&& 'acct' === axismundi_contacts_lookup_route( 'acct:alice@example.com' )['kind']
+			&& 'profile' === axismundi_contacts_lookup_route( 'https://example.com/@alice' )['kind']
+			&& 'card' === axismundi_contacts_lookup_route( 'https://example.com/@alice.jscontact' )['kind']
+			&& '' === axismundi_contacts_lookup_route( 'nonsense' )['kind']
+			// One card, three ways.
+			&& 'Alice Example' === (string) ( $ax_ct_lu_acct['card']['name']['full'] ?? '' )
+			&& 'Alice Example' === (string) ( $ax_ct_lu_profile['card']['name']['full'] ?? '' )
+			&& 'Alice Example' === (string) ( $ax_ct_lu_direct['card']['name']['full'] ?? '' )
+			// The directory says which Actor it is; the page says which page announced it.
+			&& 'https://example.com/actors/alice' === (string) ( $ax_ct_lu_acct['actor_uri'] ?? '' )
+			&& 'https://example.com/@alice' === (string) ( $ax_ct_lu_profile['profile_url'] ?? '' )
+			&& '' === (string) ( $ax_ct_lu_direct['profile_url'] ?? '' )
+	);
+
+	/*
+	 * And looking is not keeping. Nothing about the person read here is written down: an address book
+	 * that filled itself with everybody somebody glanced at would answer "who are my contacts" with a
+	 * browsing history.
+	 */
+	global $wpdb;
+	$ax_ct_lu_cards  = axismundi_contacts_cards_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- counting this plugin's own rows.
+	$ax_ct_lu_before = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$ax_ct_lu_cards}" );
+	axismundi_contacts_lookup( '@alice@example.com' );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- counting this plugin's own rows.
+	$ax_ct_lu_after  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$ax_ct_lu_cards}" );
+	$ax_ct_lu_saved  = axismundi_contacts_save_looked_up( $ax_ct_owner_id, $ax_ct_lu_acct );
+	$ax_ct_lu_id     = is_wp_error( $ax_ct_lu_saved ) ? 0 : (int) $ax_ct_lu_saved['card_id'];
+	$ax_ct_loose[]   = $ax_ct_lu_id;
+	$ax_ct_lu_doc    = $ax_ct_lu_id > 0 ? axismundi_contacts_card_document( $ax_ct_lu_id ) : array();
+	$ax_ct_lu_prov   = $ax_ct_lu_id > 0 ? axismundi_contacts_card_provenance( $ax_ct_lu_id ) : array();
+	ax_ct_assert(
+		$ax_ct_results,
+		'looking somebody up writes nothing, and keeping them writes once with the uid they published',
+		$ax_ct_lu_before === $ax_ct_lu_after
+			// The uid is theirs. Minting a new one would leave this book holding a record nothing matches.
+			&& 'urn:uuid:11111111-2222-4333-8444-555555555555' === (string) ( $ax_ct_lu_doc['uid'] ?? '' )
+			// And how it was reached, so finding it again does not depend on anybody remembering.
+			&& AXISMUNDI_CONTACTS_SOURCE_LOOKUP === (string) ( $ax_ct_lu_prov['source:card']['source'] ?? '' )
+			&& 'https://example.com/@alice.jscontact' === (string) ( $ax_ct_lu_prov['source:card']['source_ref'] ?? '' )
+			&& 'https://example.com/actors/alice' === (string) ( $ax_ct_lu_prov['source:actor']['source_ref'] ?? '' )
+			/*
+			 * Which are facts about the document, not paths into it -- a JSContact pointer is a
+			 * property name, or a property and an entry id, and none of them contains a colon.
+			 */
+			&& ! axismundi_contacts_is_publishable_pointer( 'source:card' )
+	);
+
+	/*
+	 * Somebody already in the book is opened rather than saved again. Two rows for one person is the
+	 * state from which nothing can say which is current, and writing over the first would throw away
+	 * whatever its keeper had already written about them.
+	 */
+	$ax_ct_lu_twice = axismundi_contacts_save_looked_up( $ax_ct_owner_id, $ax_ct_lu_acct );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- counting this plugin's own rows.
+	$ax_ct_lu_count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$ax_ct_lu_cards}" );
+	ax_ct_assert(
+		$ax_ct_results,
+		'saving somebody already saved opens the card there is, rather than making a second one',
+		! is_wp_error( $ax_ct_lu_twice )
+			&& true === $ax_ct_lu_twice['existed']
+			&& $ax_ct_lu_id === (int) $ax_ct_lu_twice['card_id']
+			&& $ax_ct_lu_before + 1 === $ax_ct_lu_count
+	);
+
+	/*
+	 * And nothing is fetched that this would not be willing to fetch. `https` only, no redirect
+	 * followed somewhere else, a size it stops reading at, and the safe fetcher that refuses an
+	 * address inside this network -- which is the difference between reading a contact card and being
+	 * told to knock on a door only this server can reach.
+	 */
+	$ax_ct_lu_src = (string) file_get_contents( dirname( __DIR__ ) . '/includes/lookup.php' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a lookup reads only what it is willing to read, from somewhere it is willing to ask',
+		is_wp_error( axismundi_contacts_lookup( 'http://example.com/@alice.jscontact' ) )
+			&& str_contains( $ax_ct_lu_src, 'wp_safe_remote_get' )
+			&& str_contains( $ax_ct_lu_src, "'redirection'         => 0," )
+			&& str_contains( $ax_ct_lu_src, "'limit_response_size' => AXISMUNDI_CONTACTS_LOOKUP_MAX_BYTES," )
+			&& ! str_contains( $ax_ct_lu_src, 'wp_remote_get(' )
+	);
+	remove_all_filters( 'pre_http_request' );
+
 	// -- what another domain has to ask -----------------------------------------------------------------------
 
 	/*

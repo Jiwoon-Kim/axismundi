@@ -110,7 +110,7 @@ function axismundi_contacts_profile_editor( int $book_id, Axismundi_Actor $actor
 	?>
 	<h1><?php esc_html_e( 'My profile', 'axismundi-contacts' ); ?></h1>
 	<p class="description">
-		<?php esc_html_e( 'The card this Actor publishes about itself, and who may read it. What of it they receive is chosen on the card.', 'axismundi-contacts' ); ?>
+		<?php esc_html_e( 'The card this Actor publishes about itself. What is always readable, what else is published, and what a stranger actually receives are all here.', 'axismundi-contacts' ); ?>
 	</p>
 
 	<?php
@@ -128,17 +128,39 @@ function axismundi_contacts_profile_editor( int $book_id, Axismundi_Actor $actor
 		<a class="button button-primary" href="<?php echo esc_url( axismundi_contacts_profile_url( true ) ); ?>">
 			<?php esc_html_e( 'Edit this card', 'axismundi-contacts' ); ?>
 		</a>
-		<a class="button" href="<?php echo esc_url( axismundi_contacts_screen_url( $card_id ) ); ?>">
-			<?php esc_html_e( 'See what it says', 'axismundi-contacts' ); ?>
-		</a>
 	</p>
 	<p class="description">
-		<?php esc_html_e( 'The name, the ways to reach this Actor, and which parts of the card strangers receive are all edited there.', 'axismundi-contacts' ); ?>
+		<?php esc_html_e( 'The name, the ways to reach this Actor, and everything else the card says are edited there.', 'axismundi-contacts' ); ?>
 	</p>
 
-	<?php axismundi_contacts_binding_rows( $actor_id ); ?>
+	<h2><?php esc_html_e( 'Public actor identity', 'axismundi-contacts' ); ?></h2>
+	<?php
+	/*
+	 * Not a setting. A public Actor already answers with its name, its handle and its picture at its
+	 * own address, and saying the same things in JSContact publishes nothing that was not already
+	 * being served -- so a switch here claiming to hide them would be a promise this cannot keep.
+	 * What it is instead is the floor: the least a card can be and still say who it is about.
+	 */
+	?>
+	<p class="description">
+		<?php esc_html_e( 'Always readable: the name, the handle below, and the few facts that make this a card somebody can follow -- what it is, what language it is written in, and when it last changed.', 'axismundi-contacts' ); ?>
+	</p>
+	<?php $handle = axismundi_contacts_actor_handle( $actor ); ?>
+	<?php if ( '' !== $handle ) : ?>
+		<p><code><?php echo esc_html( $handle ); ?></code></p>
+	<?php endif; ?>
 
-	<h2><?php esc_html_e( 'Who may read it', 'axismundi-contacts' ); ?></h2>
+	<?php
+	/*
+	 * And what that actually comes to, shown rather than described. Somebody should be able to answer
+	 * "is my telephone number on the internet" by looking at the answer, not by reasoning about a
+	 * settings page. It lives here because this is where the decision is made -- it used to sit on the
+	 * card's own screen, which is not where anybody goes to think about publishing.
+	 */
+	axismundi_contacts_public_preview( $actor_id, $card );
+	?>
+
+	<h2><?php esc_html_e( 'Share additional profile information publicly', 'axismundi-contacts' ); ?></h2>
 	<?php
 	/*
 	 * Its own form, because it is its own decision. Publishing a card is not a side effect of
@@ -149,34 +171,29 @@ function axismundi_contacts_profile_editor( int $book_id, Axismundi_Actor $actor
 		<input type="hidden" name="action" value="axismundi_contacts_set_sharing">
 		<input type="hidden" name="book_id" value="<?php echo esc_attr( (string) $book_id ); ?>">
 		<?php wp_nonce_field( 'ax_contacts_sharing_' . $book_id ); ?>
-		<table class="form-table" role="presentation">
-			<tr>
-				<th scope="row"><?php esc_html_e( 'Share this card', 'axismundi-contacts' ); ?></th>
-				<td>
-					<label>
-						<input type="checkbox" name="sharing_enabled" value="1"<?php checked( axismundi_contacts_profile_sharing_enabled( $actor_id ) ); ?>>
-						<?php esc_html_e( 'Share it', 'axismundi-contacts' ); ?>
-					</label>
-					<p class="description"><?php esc_html_e( 'Turning this off stops sharing and keeps the audience below, so switching it back on does not ask you to choose again.', 'axismundi-contacts' ); ?></p>
-				</td>
-			</tr>
-			<tr>
-				<th scope="row"><?php esc_html_e( 'Shared with', 'axismundi-contacts' ); ?></th>
-				<td>
-					<?php $audience = axismundi_contacts_profile_audience( $actor_id ); ?>
-					<label><input type="radio" name="audience" value="contacts"<?php checked( 'contacts', $audience ); ?>> <?php esc_html_e( 'People I have saved', 'axismundi-contacts' ); ?></label><br>
-					<label><input type="radio" name="audience" value="public"<?php checked( 'public', $audience ); ?>> <?php esc_html_e( 'Anyone', 'axismundi-contacts' ); ?></label>
-					<p class="description">
-						<?php esc_html_e( 'Saved people are decided from this address book, which only this site can answer, so that audience is never served to another server. Only a public card is.', 'axismundi-contacts' ); ?>
-					</p>
-					<?php if ( 'public' === $sharing ) : ?>
-						<p><code><?php echo esc_html( home_url( '/@' . $actor->get_preferred_username() . '.jscontact' ) ); ?></code></p>
-					<?php endif; ?>
-				</td>
-			</tr>
-		</table>
-		<?php submit_button( __( 'Save audience', 'axismundi-contacts' ) ); ?>
+		<p>
+			<label>
+				<input type="checkbox" name="sharing_enabled" value="1"<?php checked( axismundi_contacts_profile_sharing_enabled( $actor_id ) ); ?>>
+				<?php esc_html_e( 'Publish the rest of this card to everybody', 'axismundi-contacts' ); ?>
+			</label>
+		</p>
+		<p class="description">
+			<?php esc_html_e( 'On or off, and on means anybody. Sharing with only the people you have saved is not offered, because a card is read from a public address where nothing can tell those people from anybody else -- that choice returns when a request can prove whose it is.', 'axismundi-contacts' ); ?>
+		</p>
+		<?php if ( 'public' === $sharing ) : ?>
+			<p><code><?php echo esc_html( home_url( '/@' . $actor->get_preferred_username() . '.jscontact' ) ); ?></code></p>
+		<?php endif; ?>
+		<?php submit_button( __( 'Save', 'axismundi-contacts' ) ); ?>
 	</form>
+
+	<?php
+	/*
+	 * And below the publishing decision, the one that is not about publishing at all: which of the
+	 * card's writings each Actor locale follows. It reads as a settings row and used to sit above the
+	 * identity, where the first thing on the page was a question almost nobody has.
+	 */
+	axismundi_contacts_binding_rows( $actor_id );
+	?>
 	<?php
 }
 
@@ -193,9 +210,13 @@ function axismundi_contacts_handle_set_sharing() : void {
 		wp_die( esc_html( $book->get_error_message() ), '', array( 'response' => 403 ) );
 	}
 	$actor_id = (int) $book['owner_actor_id'];
-	$audience = isset( $_POST['audience'] ) ? sanitize_key( wp_unslash( $_POST['audience'] ) ) : 'contacts';
-	// The audience is written whether or not sharing is on, which is what makes turning it off safe.
-	$saved = axismundi_contacts_set_profile_audience( $actor_id, $audience );
+	/*
+	 * One audience, so the form no longer carries one. It is still written on every save, because a
+	 * profile stored before the choice was withdrawn may still say `contacts` -- and leaving that
+	 * there would mean somebody who turns sharing on gets a card that is shared with nobody, with a
+	 * switch that says it is on.
+	 */
+	$saved = axismundi_contacts_set_profile_audience( $actor_id, 'public' );
 	if ( ! is_wp_error( $saved ) ) {
 		$saved = axismundi_contacts_set_profile_sharing_enabled( $actor_id, isset( $_POST['sharing_enabled'] ) );
 	}

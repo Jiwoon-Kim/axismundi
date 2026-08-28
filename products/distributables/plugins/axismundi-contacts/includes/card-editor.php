@@ -274,8 +274,6 @@ function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
 		'revision'            => (int) $draft['revision'],
 		'isProfile'           => array_key_exists( 'publishedPointers', $draft ),
 		'published'           => (array) ( $draft['publishedPointers'] ?? array() ),
-		'publishableSingular' => AXISMUNDI_CONTACTS_PUBLISHABLE_SINGULAR,
-		'publishableEntries'  => AXISMUNDI_CONTACTS_PUBLISHABLE_ENTRIES,
 		'backUrl'             => axismundi_contacts_screen_url( $card_id, $group ),
 	);
 	/*

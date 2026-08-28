@@ -4417,98 +4417,6 @@
 	}
 
 	/**
-	 * What one entry reads as, for somebody deciding whether to publish it.
-	 *
-	 * A checkbox beside a URI asks a question nobody can answer. An account is `Mastodon` and
-	 * `@pfefferle@mastodon.social`; the address is how a machine finds it and goes underneath, where
-	 * it can be checked without being what the row says. When an entry has neither, the property and
-	 * its position are still something to point at -- `Online account 2` is at least a row on the
-	 * screen above, which its key is not.
-	 */
-	function entryLabel( property, entry, index ) {
-		if ( 'onlineServices' === property ) {
-			var named = [ entry.service, entry.user ].filter( function ( part ) {
-				return part && String( part ).trim();
-			} );
-			return {
-				label: named.length
-					? named.join( ' · ' )
-					: sprintf(
-						/* translators: %d: which account on the card, counting from the top. */
-						__( 'Online account %d', 'axismundi-contacts' ),
-						index + 1
-					),
-				detail: entry.uri || ''
-			};
-		}
-		var text = entry.address || entry.number || entry.uri || entry.note || entry.name || '';
-		return {
-			label: property + ( text ? ': ' + text : '' ),
-			detail: ''
-		};
-	}
-
-	/** Which parts of this Card a stranger may have. Only the Card an Actor publishes has any. */
-	function PublishedFields( props ) {
-		var card = props.card || {};
-		var chosen = props.published || [];
-
-		function toggle( pointer, on ) {
-			var next = chosen.filter( function ( value ) {
-				return value !== pointer;
-			} );
-			if ( on ) {
-				next.push( pointer );
-			}
-			props.onChange( next );
-		}
-
-		function row( pointer, label, detail ) {
-			return el(
-				'p',
-				{ key: pointer, className: 'ax-ce-published__row' },
-				el(
-					'label',
-					null,
-					el( 'input', {
-						type: 'checkbox',
-						checked: -1 !== chosen.indexOf( pointer ),
-						onChange: function ( event ) {
-							toggle( pointer, event.target.checked );
-						}
-					} ),
-					' ',
-					el( 'span', { className: 'ax-ce-published__label' }, label ),
-					detail ? el( 'span', { className: 'ax-ce-published__detail' }, detail ) : null
-				)
-			);
-		}
-
-		return el(
-			'section',
-			{ className: 'ax-ce-section' },
-			el( 'h2', null, __( 'Published', 'axismundi-contacts' ) ),
-			el(
-				'p',
-				{ className: 'description' },
-				__( 'Sharing decides whether this card is published at all. This decides what of it.', 'axismundi-contacts' )
-			),
-			config.publishableSingular.map( function ( property ) {
-				return row( property, property );
-			} ),
-			config.publishableEntries.map( function ( property ) {
-				var entries = card[ property ] || {};
-				var ids = orderedByPreference( entries );
-				return ids.map( function ( id, index ) {
-					var entry = entries[ id ] || {};
-					var read = entryLabel( property, entry, index );
-					return row( property + '/' + id, read.label, read.detail );
-				} );
-			} )
-		);
-	}
-
-	/**
 	 * The draft, as it is worth storing.
 	 *
 	 * A part of a name that was added and never filled in is somebody who clicked a button and
@@ -4637,6 +4545,13 @@
 	function Editor() {
 		var [ card, setCard ] = useState( config.card );
 		var [ revision, setRevision ] = useState( config.revision );
+		/*
+		 * What this profile publishes beyond its identity. There is no field for it on this screen any
+		 * more -- choosing among a card's values one at a time is a settings page, not a question to
+		 * put beside the name -- but the answer is still carried through every save, because deleting
+		 * somebody's selection as a side effect of taking away the form that showed it would be
+		 * throwing away a decision they made.
+		 */
 		var [ published, setPublished ] = useState( config.published );
 		var [ json, setJson ] = useState( formatJson( config.card ) );
 		var [ jsonError, setJsonError ] = useState( '' );
@@ -5049,9 +4964,6 @@
 						{ title: __( 'Additional properties', 'axismundi-contacts' ) },
 						entryFieldsIn( 'additional' )
 					),
-					config.isProfile
-						? el( PublishedFields, { card: card, published: published, onChange: setPublished } )
-						: null,
 					beside ? null : el( AdvancedJson, { text: json, error: jsonError, onChange: onJson } )
 				),
 				beside ? el( SplitHandle, { value: split, onChange: setSplit, onDragging: setSliding } ) : null,

@@ -153,9 +153,6 @@ function axismundi_contacts_card_detail( int $card_id, int $group_id, int $self_
 			<?php endforeach; ?>
 		</section>
 
-		<?php if ( $is_self ) : ?>
-			<?php axismundi_contacts_public_preview( $actor_id, $card ); ?>
-		<?php endif; ?>
 	</div>
 	<?php
 }

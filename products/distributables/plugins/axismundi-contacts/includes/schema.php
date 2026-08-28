@@ -34,19 +34,26 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CONTACTS_DB_VERSION        = '12';
+const AXISMUNDI_CONTACTS_DB_VERSION        = '13';
 const AXISMUNDI_CONTACTS_DB_VERSION_OPTION = 'ax_contacts_db_version';
 
 /**
  * How widely the Card an Actor keeps about themselves may be read.
  *
- * `contacts` is decided from the owner's own address book -- whether *they* saved the requester --
- * because the other direction cannot be checked without reading somebody else's book. That test is
- * only answerable on this site, so it does not federate: a request arriving from another server is
- * never measured against it, it is simply not served. An audience that degrades to silence off-site
- * is a policy this code can actually keep.
+ * Two answers, because there are two this site can keep: a Card is published to everybody, or it is
+ * not published.
+ *
+ * `contacts` -- readable by people the owner has saved -- was the third, and it was a promise this
+ * could not keep. The address it would be read from is a public HTTP response: anybody may ask, and
+ * an audience is only real when a request can be measured against it, which needs the asker's own
+ * Actor to have proved who it is. Offering the choice told somebody their telephone number was going
+ * to a few people, while what the code actually did was refuse to serve it at all -- safe, and not
+ * what the words said.
+ *
+ * It comes back when a signed request can name its Actor and the relationship can be re-checked
+ * here. Until then the honest offer is the one below.
  */
-const AXISMUNDI_CONTACTS_SHARING = array( 'off', 'contacts', 'public' );
+const AXISMUNDI_CONTACTS_SHARING = array( 'off', 'public' );
 
 /**
  * Who a shared profile Card is shared with.
@@ -56,7 +63,7 @@ const AXISMUNDI_CONTACTS_SHARING = array( 'off', 'contacts', 'public' );
  * setting makes it so: switching off forgets which audience had been chosen and the way back is a
  * second decision somebody has to make again.
  */
-const AXISMUNDI_CONTACTS_AUDIENCES = array( 'contacts', 'public' );
+const AXISMUNDI_CONTACTS_AUDIENCES = array( 'public' );
 
 /** @return string Address books. */
 function axismundi_contacts_books_table() : string {
@@ -340,6 +347,8 @@ function axismundi_contacts_install_schema() : bool {
 	axismundi_contacts_restore_service_actor_refs();
 	// And then the accounts that were showing an Actor's identifier where its profile belongs.
 	axismundi_contacts_migrate_service_profile_uris();
+	// And anybody sharing to an audience this site could not actually keep stops sharing.
+	axismundi_contacts_stop_unkeepable_sharing();
 	/*
 	 * And every self Card is given the account that says whose it is, because from here on the save
 	 * path refuses to let one go missing -- and a Card that arrived without one would otherwise be a
@@ -434,6 +443,34 @@ function axismundi_contacts_migrate_service_profile_uris() : void {
 		}
 		axismundi_contacts_save_card_for_owner( (int) $card['owner_actor_id'], $document, $card_id );
 	}
+}
+
+/**
+ * Stop sharing where the audience was one this site could not keep.
+ *
+ * `contacts` meant "the people I have saved", and at a public address there was no way to tell them
+ * from anybody else -- so what actually happened was that the Card was not served. Withdrawing the
+ * choice leaves those profiles saying they are shared, and of the two ways to read that, one is
+ * catastrophic: treating them as public would start handing everybody what somebody chose to show a
+ * few people.
+ *
+ * So they stop sharing. Nothing that was reaching anybody stops reaching them -- nothing was -- and
+ * turning it back on is a decision made once, knowing what the switch now means.
+ *
+ * @return void
+ */
+function axismundi_contacts_stop_unkeepable_sharing() : void {
+	global $wpdb;
+	$profiles = axismundi_contacts_profiles_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
+	$wpdb->query(
+		$wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- this plugin's own table name.
+			"UPDATE {$profiles} SET sharing_enabled = 0, updated_at = %s WHERE audience = %s",
+			current_time( 'mysql', true ),
+			'contacts'
+		)
+	);
 }
 
 /**

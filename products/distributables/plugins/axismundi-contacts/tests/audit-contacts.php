@@ -838,11 +838,18 @@ try {
 	 */
 	ax_ct_assert(
 		$ax_ct_results,
-		'the card about yourself is shared with nobody until you say otherwise, and only audiences this site can decide are accepted',
+		'the card about yourself is shared with nobody until you say otherwise, and then with everybody',
 		'off' === axismundi_contacts_profile_sharing( $ax_ct_owner_id )
-			&& true === axismundi_contacts_set_profile_sharing( $ax_ct_owner_id, 'contacts' )
+			&& true === axismundi_contacts_set_profile_sharing( $ax_ct_owner_id, 'public' )
+			&& 'public' === axismundi_contacts_profile_sharing( $ax_ct_owner_id )
+			/*
+			 * `contacts` is refused with `followers`, and for the same reason it always refused
+			 * `followers`: an audience is real when a request can be measured against it. That one
+			 * never could be at a public address, and offering it said something the code did not do.
+			 */
+			&& is_wp_error( axismundi_contacts_set_profile_sharing( $ax_ct_owner_id, 'contacts' ) )
 			&& is_wp_error( axismundi_contacts_set_profile_sharing( $ax_ct_owner_id, 'followers' ) )
-			&& 'contacts' === axismundi_contacts_profile_sharing( $ax_ct_owner_id )
+			&& 'public' === axismundi_contacts_profile_sharing( $ax_ct_owner_id )
 	);
 	/*
 	 * What gets published is the Actor's card, never the book it happens to sit in. Opening a second
@@ -854,7 +861,7 @@ try {
 		'the audience belongs to the Actor rather than to any of its address books',
 		! array_key_exists( 'self_card_sharing', axismundi_contacts_get_book( $ax_ct_book_id ) )
 			&& ! array_key_exists( 'self_card_id', axismundi_contacts_get_book( $ax_ct_book_id ) )
-			&& 'contacts' === axismundi_contacts_profile_sharing( $ax_ct_owner_id )
+			&& 'public' === axismundi_contacts_profile_sharing( $ax_ct_owner_id )
 			&& axismundi_contacts_profile_card( $ax_ct_owner_id ) === axismundi_contacts_profile_card( $ax_ct_owner_id )
 	);
 	$ax_ct_actorless = ax_ct_actor( $ax_ct_users );
@@ -1745,14 +1752,25 @@ try {
 	 * And nothing is offered in any other case. `contacts` is decided from this address book, which no
 	 * other server can answer, so advertising it would point at a route that refuses them.
 	 */
-	axismundi_contacts_set_profile_audience( $ax_ct_sid, 'contacts' );
-	$ax_ct_contacts_link = axismundi_contacts_public_profile_link( $ax_ct_sid );
+	/*
+	 * A profile stored under the audience that was withdrawn is not sharing: the upgrade switched it
+	 * off rather than reading it as public, because the two readings differ by everything and the
+	 * wrong one hands strangers what somebody meant for a few people.
+	 */
+	axismundi_contacts_set_profile_sharing_enabled( $ax_ct_sid, true );
+	global $wpdb;
+	$ax_ct_stale = axismundi_contacts_profiles_table();
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- writing the old value this upgrade is about.
+	$wpdb->update( $ax_ct_stale, array( 'audience' => 'contacts' ), array( 'actor_id' => $ax_ct_sid ), array( '%s' ), array( '%d' ) );
+	axismundi_contacts_stop_unkeepable_sharing();
+	$ax_ct_withdrawn_link = axismundi_contacts_public_profile_link( $ax_ct_sid );
+	$ax_ct_withdrawn      = axismundi_contacts_profile_sharing_enabled( $ax_ct_sid );
 	axismundi_contacts_set_profile_sharing_enabled( $ax_ct_sid, false );
 	$ax_ct_off_link = axismundi_contacts_public_profile_link( $ax_ct_sid );
 	ax_ct_assert(
 		$ax_ct_results,
-		'sharing with saved people only, or not sharing, offers no link at all',
-		null === $ax_ct_contacts_link && null === $ax_ct_off_link
+		'an audience this site could not keep stops sharing on upgrade, and nothing unshared is linked',
+		false === $ax_ct_withdrawn && null === $ax_ct_withdrawn_link && null === $ax_ct_off_link
 	);
 	ax_ct_assert(
 		$ax_ct_results,
@@ -1799,18 +1817,17 @@ try {
 		2 === count( axismundi_contacts_actor_attachment( $ax_ct_now, axismundi_actors_get_by_identity( $ax_ct_sid ) )['attachment'] )
 	);
 	/*
-	 * And nothing is advertised that a stranger cannot fetch. `contacts` is decided from this address
-	 * book, which no other server can answer, so a link to it would point at a route that refuses them.
+	 * And nothing is advertised that a stranger cannot fetch. There is one audience now, so what used
+	 * to be advertised-but-unfetchable -- a card shared only with people the owner had saved, behind a
+	 * link no other server could follow -- is not a state this can be in any more.
 	 */
-	axismundi_contacts_set_profile_audience( $ax_ct_sid, 'contacts' );
-	$ax_ct_private_doc = axismundi_contacts_actor_attachment( array( 'type' => 'Person' ), axismundi_actors_get_by_identity( $ax_ct_sid ) );
 	axismundi_contacts_set_profile_sharing_enabled( $ax_ct_sid, false );
 	$ax_ct_off_doc = axismundi_contacts_actor_attachment( array( 'type' => 'Person' ), axismundi_actors_get_by_identity( $ax_ct_sid ) );
 	$ax_ct_none_doc = axismundi_contacts_actor_attachment( array( 'type' => 'Person' ), $ax_ct_cardless );
 	ax_ct_assert(
 		$ax_ct_results,
-		'a card shared with saved people, an unshared one, and an Actor with none are all not advertised',
-		! isset( $ax_ct_private_doc['attachment'] ) && ! isset( $ax_ct_off_doc['attachment'] ) && ! isset( $ax_ct_none_doc['attachment'] )
+		'an unshared card and an Actor with none are not advertised',
+		! isset( $ax_ct_off_doc['attachment'] ) && ! isset( $ax_ct_none_doc['attachment'] )
 	);
 
 	// -- what an Actor shows, and what it follows -------------------------------------------------------------
@@ -2516,30 +2533,58 @@ try {
 	axismundi_contacts_save_card_for_owner( $ax_ct_split_sid, $ax_ct_profile_doc, $ax_ct_profile_card );
 	axismundi_contacts_set_published_pointers( $ax_ct_split_sid, array( 'name', 'emails/e1' ) );
 
+	/*
+	 * What a stranger receives is shown where the decision to publish is made, which is My profile --
+	 * not on the card's own screen, where nobody goes to think about publishing. Shown rather than
+	 * described: somebody should be able to answer "is my telephone number on the internet" by
+	 * looking at the answer instead of reasoning about a settings page.
+	 */
+	require_once dirname( __DIR__ ) . '/includes/profile-screen.php';
+	ob_start();
+	axismundi_contacts_profile_editor(
+		axismundi_contacts_home_book_id( $ax_ct_split_sid ),
+		axismundi_actors_get_by_identity( $ax_ct_split_sid )
+	);
+	$ax_ct_own = (string) ob_get_clean();
 	ob_start();
 	axismundi_contacts_card_detail( $ax_ct_profile_card, 0, $ax_ct_profile_card, $ax_ct_split_sid );
-	$ax_ct_own = (string) ob_get_clean();
+	$ax_ct_own_detail = (string) ob_get_clean();
 	ax_ct_assert(
 		$ax_ct_results,
-		'the Actor’s own card shows what a stranger receives, which is not what is stored',
+		'what a stranger receives is shown where publishing is decided, and is not what is stored',
 		str_contains( $ax_ct_own, 'What strangers receive' )
+			/*
+			 * What the screen shows is the projection, not the document beside it: the published
+			 * address appears because it is published, and the withheld one appears nowhere at all.
+			 * That second count is the one worth having -- a screen about publishing that printed the
+			 * value somebody withheld would be the leak it exists to rule out.
+			 */
 			&& str_contains( $ax_ct_own, 'hello@example.test' )
-			&& str_contains( $ax_ct_own, 'secret@example.test' )
-			&& 1 === substr_count( $ax_ct_own, 'secret@example.test' )
-			&& 2 === substr_count( $ax_ct_own, 'hello@example.test' )
+			&& 0 === substr_count( $ax_ct_own, 'secret@example.test' )
+			// And the card's own screen no longer answers a question nobody asked it.
+			&& ! str_contains( $ax_ct_own_detail, 'What strangers receive' )
 	);
 
 	/*
-	 * The record says what is published and offers no way to change it. A tick that published a phone
-	 * number from a page labelled as a view would be the same mistake the projection fixed -- and the
-	 * only thing that writes the selection at all is the editor, through the draft route.
+	 * The screen says what is published and offers no way to pick through it value by value. A tick
+	 * beside a telephone number, on the page somebody opened to read what they publish, would be the
+	 * same mistake the projection fixed. The one form here is the switch itself -- publish this card
+	 * or do not -- and choosing among a card's values is a settings page that does not exist yet.
 	 */
 	ax_ct_assert(
 		$ax_ct_results,
-		'a record shows what is published and changes nothing, and only the editor writes that choice',
+		'the screen shows what is published and offers one switch, not a tick beside every value',
 		! str_contains( $ax_ct_own, 'name="published' )
-			&& ! str_contains( $ax_ct_own, '<form' )
 			&& ! function_exists( 'axismundi_contacts_publish_fields' )
+			/*
+			 * One switch for publishing, and nothing that publishes a value by itself. The screen
+			 * carries another form -- which of the card's writings each Actor locale follows -- and
+			 * that decides what a name is read as, never what leaves this site.
+			 */
+			&& str_contains( $ax_ct_own, 'value="axismundi_contacts_set_sharing"' )
+			&& 1 === substr_count( $ax_ct_own, 'name="sharing_enabled"' )
+			// And the record about a contact still offers nothing of the kind.
+			&& ! str_contains( $ax_ct_own_detail, 'name="published' )
 	);
 	/*
 	 * A tick is attached to the entry's own id, never to the text beside it or the row it was on.
@@ -3339,9 +3384,15 @@ try {
 	);
 	ax_ct_assert(
 		$ax_ct_results,
-		'and keeps what is not the card: who may read it, and which writing each locale follows',
+		'and keeps what is not the card: whether it is published, and which writing each locale follows',
 		str_contains( $ax_ct_ow_profile, 'value="axismundi_contacts_set_sharing"' )
-			&& str_contains( $ax_ct_ow_profile, 'name="audience"' )
+			&& str_contains( $ax_ct_ow_profile, 'name="sharing_enabled"' )
+			/*
+			 * One switch and no audience picker. What is always readable is stated rather than offered,
+			 * because a public Actor is already answering with it next door.
+			 */
+			&& ! str_contains( $ax_ct_ow_profile, 'name="audience"' )
+			&& str_contains( $ax_ct_ow_profile, 'Public actor identity' )
 	);
 
 	// -- and the ones that were stored before it said so --------------------------------------------------------
@@ -4156,9 +4207,13 @@ try {
 				substr( $ax_ct_os_js, strpos( $ax_ct_os_js, 'function OnlineService' ), strpos( $ax_ct_os_js, 'function OnlineServices' ) - strpos( $ax_ct_os_js, 'function OnlineService' ) ),
 				"withKey( entry, 'label', value )"
 			)
-			// And the published list reads the same way rather than showing the address alone.
-			&& str_contains( $ax_ct_os_js, "named.join( ' · ' )" )
-			&& str_contains( $ax_ct_os_js, 'function entryLabel' )
+			/*
+			 * The list that chose values to publish one at a time read accounts the same way. It is
+			 * gone from this screen -- that is a settings page, not a question beside the name -- and
+			 * so is the reading it needed.
+			 */
+			&& ! str_contains( $ax_ct_os_js, 'function PublishedFields' )
+			&& ! str_contains( $ax_ct_os_js, 'function entryLabel' )
 	);
 	/*
 	 * Order is `pref` and nothing else. The list, the account a reader leads with and the face taken

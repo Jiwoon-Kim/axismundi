@@ -693,14 +693,40 @@ try {
 		str_ends_with( $ax_ct_avatar['url'], '/assets/avatar-default.svg' ) && 'default' === $ax_ct_avatar['source']
 	);
 	/*
-	 * And an email address is never turned into an avatar lookup. Handing a third party the addresses
-	 * in a private address book, one request at a time, is not something to do quietly for a picture.
+	 * And an email address is never turned into an avatar lookup. The server would make no request --
+	 * an avatar URL is built locally -- but every one of them drawn on a screen is a request the
+	 * reader's browser makes, so opening a contact list would tell a third party the address of
+	 * everybody in it. Core does that for people who posted comments, under a site setting written
+	 * for people who posted comments. An address book is a different population.
+	 *
+	 * Guarded by the names somebody would actually reach for. The old check watched for a link to one
+	 * provider, which the obvious way of doing this does not contain: core's avatar helpers name no
+	 * provider at all, and would have walked straight past it.
+	 *
+	 * `profile-screen.php` is deliberately not in this list. It draws the avatar of the person looking
+	 * at their own profile, which is core showing somebody themselves rather than this book handing
+	 * out the addresses in it.
 	 */
+	$ax_ct_av_faces = '';
+	foreach ( array( 'actor-link.php', 'admin.php', 'card-detail.php' ) as $ax_ct_av_file ) {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source in a dev fixture.
+		$ax_ct_av_faces .= (string) file_get_contents( dirname( __DIR__ ) . '/includes/' . $ax_ct_av_file );
+	}
 	ax_ct_assert(
 		$ax_ct_results,
 		'no address in this book is sent anywhere to find a face for it',
 		! function_exists( 'axismundi_contacts_gravatar_url' )
-			&& ! str_contains( (string) file_get_contents( dirname( __DIR__ ) . '/includes/actor-link.php' ), 'gravatar.com' )
+			&& ! str_contains( $ax_ct_av_faces, 'gravatar.com' )
+			// Nor by the helpers that would build such a URL without naming anybody.
+			&& ! str_contains( $ax_ct_av_faces, 'get_avatar_url(' )
+			&& ! str_contains( $ax_ct_av_faces, 'get_avatar_data(' )
+			&& ! str_contains( $ax_ct_av_faces, 'get_avatar(' )
+			/*
+			 * What a card with no picture gets instead is bundled here, so it is drawn without asking
+			 * anybody anything, and it is not contact data: the Card exports without a `media` entry.
+			 */
+			&& is_readable( dirname( __DIR__ ) . '/assets/avatar-default.svg' )
+			&& ! isset( axismundi_contacts_card_document( $ax_ct_phone_card )['media'] )
 	);
 
 	// -- a label is a reading, not a value -----------------------------------------------------------------------

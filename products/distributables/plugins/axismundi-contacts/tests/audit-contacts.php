@@ -1388,6 +1388,45 @@ try {
 	);
 
 	/*
+	 * A handle is an address, so it has to be one that answers.
+	 *
+	 * It was built from the host of the Actor's URI while the directory answered on host and port, so
+	 * on any site not running on a default port the two disagreed: a handle read off a card, pasted
+	 * into a lookup, was refused. The same card said `.../@alice` on port 8884 in one field and
+	 * `@alice@localhost` in the next, which is the mismatch written down.
+	 *
+	 * For an Actor of this site the authority is the directory's own, not the one in the stored URI.
+	 * They agree until they do not: a site that has moved carries Actor URIs written under its old
+	 * name, and a handle built from those is an address nothing answers to. The thing being addressed
+	 * is the directory, so the directory says what it is called.
+	 */
+	$ax_ct_hn_handle = axismundi_contacts_actor_handle( $ax_ct_fresh );
+	$ax_ct_hn_acct   = ltrim( $ax_ct_hn_handle, '@' );
+	$ax_ct_hn_found  = function_exists( 'axismundi_actors_webfinger_descriptor' )
+		? axismundi_actors_webfinger_descriptor( 'acct:' . $ax_ct_hn_acct )
+		: new WP_Error( 'ax_ct_no_webfinger', 'no webfinger' );
+	$ax_ct_hn_card   = axismundi_contacts_card_document( $ax_ct_seeded );
+	ax_ct_assert(
+		$ax_ct_results,
+		'the handle on a card is an address the directory answers to, port and all',
+		'@' . $ax_ct_fresh->get_preferred_username() . '@' . axismundi_actors_webfinger_authority() === $ax_ct_hn_handle
+			// Read it off the card, paste it into a lookup, and it resolves to the same account.
+			&& ! is_wp_error( $ax_ct_hn_found )
+			&& 'acct:' . $ax_ct_hn_acct === (string) ( $ax_ct_hn_found['subject'] ?? '' )
+			// And the card says the same thing in both fields.
+			&& $ax_ct_hn_handle === (string) ( $ax_ct_hn_card['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ]['user'] ?? '' )
+			/*
+			 * Changing how that handle is spelled changes the row the save path refuses to let anybody
+			 * edit, so the repair runs again on upgrade -- otherwise a card carrying the old spelling
+			 * is one its owner is told they may not save, for something they never touched.
+			 */
+			&& str_contains(
+				(string) file_get_contents( dirname( __DIR__ ) . '/includes/schema.php' ),
+				'function axismundi_contacts_ensure_identity_services() : void {'
+			)
+	);
+
+	/*
 	 * The account that says which Actor a self Card is about is this site's answer, not the editor's.
 	 * It is what tells one profile from another with the same name, it is served to everybody as part
 	 * of the public identity, and it is answered by the Actor -- so the editor may not repoint it,

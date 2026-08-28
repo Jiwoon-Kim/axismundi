@@ -34,7 +34,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CONTACTS_DB_VERSION        = '13';
+const AXISMUNDI_CONTACTS_DB_VERSION        = '14';
 const AXISMUNDI_CONTACTS_DB_VERSION_OPTION = 'ax_contacts_db_version';
 
 /**
@@ -489,6 +489,11 @@ function axismundi_contacts_stop_unkeepable_sharing() : void {
  *
  * Brought up to date whole. Nothing on the row survives, because no part of it was anybody else's to
  * write. Every other account on the Card is left exactly as it is.
+ *
+ * Which is also why this runs again whenever the way that row is built changes. The save path refuses
+ * an entry that differs from the Actor's answer in any part, so a Card still holding the old spelling
+ * of a handle is a Card its owner is told they may not save -- for something they never touched, and
+ * with no way to correct it.
  *
  * @return void
  */

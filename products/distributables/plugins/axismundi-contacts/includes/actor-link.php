@@ -43,17 +43,40 @@ const AXISMUNDI_CONTACTS_SOURCE_ACTOR = 'linked-actor';
 /**
  * The `@user@host` an Actor is known by, when it has one.
  *
- * Derived rather than stored: the handle is a locator built from the Actor's username and the host
- * of its URI, and the URI is the identity. A Place or anything else without a username has none,
- * which is normal and not an error.
+ * Derived rather than stored: the handle is a locator built from the Actor's username and the
+ * authority of its URI, and the URI is the identity. A Place or anything else without a username has
+ * none, which is normal and not an error.
+ *
+ * The authority is asked of the directory's own rule rather than taken as the bare host, because the
+ * handle's whole purpose is to be an address somebody can look up -- and a directory answers for
+ * `alice@example.com:8884`, not for `alice@example.com`, when that is where it lives. Taking the
+ * host alone produced a handle that could be read off a card, pasted into a lookup, and refused: the
+ * two strings were built by two different rules and only agreed when the port happened to be the
+ * default one. Now there is one rule, and a default port is still left off because that rule leaves
+ * it off.
  *
  * @param Axismundi_Actor $actor Actor.
  * @return string
  */
 function axismundi_contacts_actor_handle( Axismundi_Actor $actor ) : string {
 	$username = trim( $actor->get_preferred_username() );
-	$host     = (string) wp_parse_url( $actor->get_uri(), PHP_URL_HOST );
-	return '' !== $username && '' !== $host ? '@' . $username . '@' . $host : '';
+	/*
+	 * For an Actor of this site, the authority this site's own directory answers on -- not the one in
+	 * the Actor's stored URI. The two agree until they do not: a site that has moved carries Actor
+	 * URIs written under the old name, and a handle built from those would be an address nothing
+	 * answers to. The directory is the thing being addressed, so the directory says what it is called.
+	 *
+	 * For anybody else's Actor it is their URI, which is the only statement available about where they
+	 * live.
+	 */
+	if ( $actor->is_local() && function_exists( 'axismundi_actors_webfinger_authority' ) ) {
+		$authority = (string) axismundi_actors_webfinger_authority();
+	} elseif ( function_exists( 'axismundi_actors_webfinger_authority_from_url' ) ) {
+		$authority = axismundi_actors_webfinger_authority_from_url( $actor->get_uri() );
+	} else {
+		$authority = (string) wp_parse_url( $actor->get_uri(), PHP_URL_HOST );
+	}
+	return '' !== $username && '' !== $authority ? '@' . $username . '@' . $authority : '';
 }
 
 /**

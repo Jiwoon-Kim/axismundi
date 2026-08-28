@@ -37,6 +37,21 @@ const AXISMUNDI_CONTACTS_PUBLISHABLE_SINGULAR = array(
 	'language',
 	'speakToAs',
 	'preferredLanguages',
+	/*
+	 * When this Card was written and when it last changed. Not facts about a person -- facts about
+	 * the document -- and the ones a reader needs to answer "has this changed since I last looked"
+	 * without fetching the whole thing again and comparing it.
+	 */
+	'created',
+	'updated',
+	// What wrote it, which is an implementation saying so rather than anything about its subject.
+	'prodId',
+	/*
+	 * Who is in a group. A group Card whose membership is withheld is a group nobody can read, and
+	 * the relationship is the thing the Card is for. It names Card uids rather than rows in anybody's
+	 * database, so a reader that has none of those members still holds a valid group Card.
+	 */
+	'members',
 );
 
 /**
@@ -88,6 +103,9 @@ function axismundi_contacts_default_published() : array {
  * be and still identify who it is about. Google's profile does the same with a name, a photo and the
  * account address; here the account address is the Actor's own handle.
  *
+ * What is here beyond the name is what makes it a Card a reader can use: what kind of thing it is
+ * and what language it is written in, so the name can be read; when it was written and last changed,
+ * so a reader can ask whether to fetch it again; what wrote it; and, for a group, who is in it.
  * Everything else -- a phone number, a home address, a second email -- is not identity and is not
  * here. That is the extended card, and it is published only when its owner says so and only to the
  * audience they chose.
@@ -104,9 +122,12 @@ function axismundi_contacts_default_published() : array {
 function axismundi_contacts_identity_pointers( array $card ) : array {
 	/*
 	 * What kind of thing this is and what language it is written in come with the name, because
-	 * neither is a fact about the person: they are how to read the rest of the sentence.
+	 * neither is a fact about the person: they are how to read the rest of the sentence. So do the
+	 * document's own dates and the implementation that wrote it, because a public Card that cannot be
+	 * checked for changes has to be fetched in full to find out there were none. And a group's
+	 * members, because a group Card that will not say who is in it is not describing a group.
 	 */
-	$pointers = array( 'name', 'kind', 'language' );
+	$pointers = array( 'name', 'kind', 'language', 'created', 'updated', 'prodId', 'members' );
 	/*
 	 * The account that says which Actor this is. Its key is fixed for exactly this reason: a pointer
 	 * naming the identity has to keep naming it, and a generated key would make the floor of a public

@@ -206,10 +206,60 @@ function axismundi_contacts_save_card_for_owner( int $owner_actor_id, array $car
 	if ( ! array_key_exists( 'kind', $card ) ) {
 		$card['kind'] = 'individual';
 	}
+	$existing = $card_id > 0 ? axismundi_contacts_get_card( $card_id ) : array();
+	/*
+	 * When this document was written and when it last changed. Facts about the document rather than
+	 * about its subject, and the ones that make a published Card something a reader can follow: a
+	 * server holding a copy asks whether `updated` has moved rather than fetching the whole Card to
+	 * find out that nothing has.
+	 *
+	 * `created` is written once and then kept like the uid -- an edit form round trips the whole
+	 * document, and one that dropped a field it never drew would otherwise reset the age of somebody's
+	 * Card on every save. A Card that arrived without one is dated from the row that stored it rather
+	 * than from now, because that is when it actually arrived.
+	 */
+	$stored = $card_id > 0 ? axismundi_contacts_card_document( $card_id ) : array();
+	/*
+	 * Moved when this document changes, which is not the same as when it is written. Storing somebody
+	 * else's Card unchanged is a copy, not an edit, and stamping it would overwrite what they said
+	 * about their own document with the time we happened to read it -- so a save that changes nothing
+	 * else leaves it alone, and an import that carries one keeps it.
+	 */
+	$was     = $stored;
+	$becomes = $card;
+	unset( $was['updated'], $becomes['updated'] );
+	if ( array() !== $stored && $was === $becomes ) {
+		$carried_updated = trim( (string) ( $stored['updated'] ?? '' ) );
+		$card['updated'] = '' !== $carried_updated ? $carried_updated : axismundi_contacts_utc_datetime( current_time( 'mysql', true ) );
+	} elseif ( array() === $stored && '' !== trim( (string) ( $card['updated'] ?? '' ) ) ) {
+		// An import saying when it was last changed is describing its document, not this store.
+		$card['updated'] = trim( (string) $card['updated'] );
+	} else {
+		$card['updated'] = axismundi_contacts_utc_datetime( current_time( 'mysql', true ) );
+	}
+	$carried_created = '';
+	if ( $card_id > 0 ) {
+		$carried_created = trim( (string) ( $stored['created'] ?? '' ) );
+		if ( '' === $carried_created ) {
+			$carried_created = axismundi_contacts_utc_datetime( (string) ( $existing['created_at'] ?? '' ) );
+		}
+	}
+	if ( '' !== $carried_created ) {
+		$card['created'] = $carried_created;
+	} elseif ( ! array_key_exists( 'created', $card ) ) {
+		$card['created'] = $card['updated'];
+	}
+	/*
+	 * And what wrote it. Only when the document does not already say: a Card that arrived from
+	 * another product carries that product's name, and overwriting it would erase where it came from
+	 * in order to advertise where it is now.
+	 */
+	if ( ! array_key_exists( 'prodId', $card ) ) {
+		$card['prodId'] = AXISMUNDI_CONTACTS_PROD_ID;
+	}
 	// And its language tags the way this site writes them, which is the Actor registry's rule.
 	$card = axismundi_contacts_normalize_languages( $card );
 	$card = axismundi_contacts_canonical_card( $card );
-	$existing = $card_id > 0 ? axismundi_contacts_get_card( $card_id ) : array();
 	if ( $card_id > 0 && array() === $existing ) {
 		return new WP_Error( 'ax_contacts_card_missing', __( 'That card does not exist.', 'axismundi-contacts' ), array( 'status' => 404 ) );
 	}
@@ -322,6 +372,32 @@ function axismundi_contacts_find_by_uid( int $owner_actor_id, string $uid ) : in
 	$table = axismundi_contacts_cards_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
 	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE owner_actor_id = %d AND uid = %s", $owner_actor_id, $uid ) );
+}
+
+/**
+ * What this implementation calls itself in a document it wrote.
+ *
+ * Free-form in the standard, and read by people rather than parsed, so it says what it is.
+ */
+const AXISMUNDI_CONTACTS_PROD_ID = 'Axismundi Contacts';
+
+/**
+ * A stored timestamp as the standard writes one.
+ *
+ * The store keeps `YYYY-MM-DD HH:MM:SS` in UTC, which is a MySQL convention and not a date anything
+ * else can read. JSContact wants an RFC 3339 instant, and a reader comparing two of them across
+ * servers needs the offset stated rather than assumed.
+ *
+ * @param string $stored Datetime as the store keeps it, in UTC.
+ * @return string Empty when there is nothing to convert.
+ */
+function axismundi_contacts_utc_datetime( string $stored ) : string {
+	$stored = trim( $stored );
+	if ( '' === $stored ) {
+		return '';
+	}
+	$when = date_create_immutable( $stored, new DateTimeZone( 'UTC' ) );
+	return false === $when ? '' : $when->format( 'Y-m-d\\TH:i:s\\Z' );
 }
 
 /**

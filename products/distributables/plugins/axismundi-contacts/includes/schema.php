@@ -444,10 +444,12 @@ function axismundi_contacts_migrate_service_profile_uris() : void {
  * otherwise be a Card whose owner is told, every time they save, that something they never touched is
  * wrong.
  *
- * Only what is missing, and only from the Actor. A Card that already carries one is left exactly as
- * it is, including one that disagrees with the Actor: repairing that here would rewrite somebody's
- * document during an upgrade, with no way for them to see it happen. The save path asks them about
- * that one, which is where a question belongs.
+ * One that is there but out of date is brought up to date, not left alone. This account is not
+ * something somebody wrote and might have meant: it is this site's own answer to which Actor the
+ * Card is about, and the save path now refuses to let anybody change it -- so a Card still carrying
+ * an address from before profiles were preferred, or a handle from before a rename, would carry it
+ * for good and have no way back. Everything else on the Card, including every other account, is left
+ * exactly as it is.
  *
  * @return void
  */
@@ -466,14 +468,26 @@ function axismundi_contacts_ensure_identity_services() : void {
 			continue;
 		}
 		$document = axismundi_contacts_card_document( $card_id );
-		if ( array() === $document || isset( $document['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] ) ) {
+		if ( array() === $document ) {
 			continue;
 		}
 		$actor = axismundi_actors_get_by_identity( $actor_id );
 		if ( ! $actor instanceof Axismundi_Actor ) {
 			continue;
 		}
-		$document['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] = axismundi_contacts_identity_service( $actor );
+		$fixed   = axismundi_contacts_identity_service( $actor );
+		$current = $document['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] ?? null;
+		if ( is_array( $current ) && axismundi_contacts_identity_service_matches( $current, $fixed ) ) {
+			continue;
+		}
+		/*
+		 * What the Actor answers, over whatever was there. Anything the Actor does not own -- a label
+		 * somebody wrote on the row, say -- is kept, because that part was theirs to write.
+		 */
+		$document['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] = array_merge(
+			is_array( $current ) ? $current : array(),
+			$fixed
+		);
 		$saved = axismundi_contacts_save_card_for_owner( $actor_id, $document, $card_id );
 		if ( is_wp_error( $saved ) ) {
 			continue;

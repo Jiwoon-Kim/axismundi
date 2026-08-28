@@ -1142,6 +1142,136 @@ try {
 	);
 
 	/*
+	 * The identity account, brought up to date rather than merely filled in.
+	 *
+	 * This is not something somebody wrote and might have meant: it is this site's own answer to which
+	 * Actor the Card is about, and the save path refuses to let anybody change it. So a Card still
+	 * carrying an address from before profile URLs were preferred, or a handle from before a rename,
+	 * would carry it for good with no way back -- the one door in was closed behind it.
+	 *
+	 * What the Actor does not own is kept. A label somebody wrote on the row is theirs, and an upgrade
+	 * that tidied it away would be taking something while claiming to repair something else. Neither
+	 * does it touch any other account: those are the ones a person actually keeps.
+	 */
+	$ax_ct_stale_doc = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_stale_doc['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] = array(
+		'@type'   => 'OnlineService',
+		'service' => 'Axismundi',
+		// As a Card written before the profile was preferred had it, under a handle since changed.
+		'uri'     => $ax_ct_fresh->get_uri(),
+		'user'    => '@renamed@example.test',
+		'pref'    => 1,
+		'label'   => 'mine',
+	);
+	$ax_ct_stale_doc['onlineServices']['onl-kept'] = array(
+		'@type'   => 'OnlineService',
+		'service' => 'Mastodon',
+		'uri'     => 'https://example.test/@someone',
+	);
+	axismundi_contacts_save_card_for_owner( (int) $ax_ct_fresh->get_identity_id(), $ax_ct_stale_doc, $ax_ct_seeded );
+	axismundi_contacts_ensure_identity_services();
+	$ax_ct_repaired = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_repaired_x1 = (array) ( $ax_ct_repaired['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] ?? array() );
+	ax_ct_assert(
+		$ax_ct_results,
+		'an upgrade brings the identity account up to date, and leaves everything it does not answer',
+		$ax_ct_fresh->get_profile_url() === (string) ( $ax_ct_repaired_x1['uri'] ?? '' )
+			&& axismundi_contacts_actor_handle( $ax_ct_fresh ) === (string) ( $ax_ct_repaired_x1['user'] ?? '' )
+			&& 'Axismundi' === (string) ( $ax_ct_repaired_x1['service'] ?? '' )
+			&& 1 === (int) ( $ax_ct_repaired_x1['pref'] ?? 0 )
+			// What the Actor does not answer stays.
+			&& 'mine' === (string) ( $ax_ct_repaired_x1['label'] ?? '' )
+			// And the account somebody actually keeps is untouched.
+			&& 'https://example.test/@someone' === (string) ( $ax_ct_repaired['onlineServices']['onl-kept']['uri'] ?? '' )
+	);
+
+	/*
+	 * What a public Actor Card has to carry to be worth fetching twice. A name and a handle say who
+	 * this is; `created` and `updated` are what let a reader ask whether anything has changed since
+	 * last time instead of pulling the whole document to find out that nothing has; `kind` and
+	 * `language` are how to read the name; `prodId` says what wrote it; and `members` is the whole
+	 * point of a group Card, since a group that will not say who is in it is not describing a group.
+	 *
+	 * `members` names Card uids rather than rows in anybody's database, so a reader holding none of
+	 * those members still holds a valid group Card. That is a property of the format and not a gap.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a public identity is a Card a reader can follow, not only a name',
+		array( 'name', 'kind', 'language', 'created', 'updated', 'prodId', 'members', 'onlineServices/' . AXISMUNDI_CONTACTS_HOME_SERVICE_KEY )
+			=== axismundi_contacts_identity_pointers( array( 'onlineServices' => array( AXISMUNDI_CONTACTS_HOME_SERVICE_KEY => array( 'uri' => 'https://example.test/@a' ) ) ) )
+			// Each of them is a pointer the projection can actually act on.
+			&& axismundi_contacts_is_publishable_pointer( 'members' )
+			&& axismundi_contacts_is_publishable_pointer( 'created' )
+			&& axismundi_contacts_is_publishable_pointer( 'updated' )
+			&& axismundi_contacts_is_publishable_pointer( 'prodId' )
+			/*
+			 * A name written for another script comes with the name, because a localization is as
+			 * public as what it translates and the name is always published. That is proven where the
+			 * published fixture lives, further down, rather than asserted twice here.
+			 */
+	);
+
+	/*
+	 * When a document was written and when it last changed, which are facts about the document and
+	 * not about its subject. `updated` moves when this site changes the Card -- and only then: storing
+	 * somebody else's Card unchanged is a copy, and stamping it would overwrite what they said about
+	 * their own document with the time we happened to read it. `created` is written once and kept like
+	 * the uid, so an edit form that never drew the field cannot reset the age of a Card by saving it.
+	 */
+	$ax_ct_when_id  = (int) axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array( '@type' => 'Card', 'name' => array( 'full' => 'When' ) )
+	);
+	$ax_ct_loose[]  = $ax_ct_when_id;
+	$ax_ct_when     = axismundi_contacts_card_document( $ax_ct_when_id );
+	axismundi_contacts_save_card_for_owner( $ax_ct_owner_id, $ax_ct_when, $ax_ct_when_id );
+	$ax_ct_unmoved  = axismundi_contacts_card_document( $ax_ct_when_id );
+	/*
+	 * The change carries a stale `updated` with it, so what proves the stamp is that the stale value
+	 * did not survive. Comparing two wall-clock stamps would prove nothing here: both saves land in
+	 * the same second, and an audit that passes only when the machine is slow is not an audit.
+	 */
+	$ax_ct_changed  = $ax_ct_unmoved;
+	$ax_ct_changed['name']    = array( 'full' => 'When, corrected' );
+	$ax_ct_changed['updated'] = '2000-01-01T00:00:00Z';
+	axismundi_contacts_save_card_for_owner( $ax_ct_owner_id, $ax_ct_changed, $ax_ct_when_id );
+	$ax_ct_moved_at = axismundi_contacts_card_document( $ax_ct_when_id );
+	// A Card from somewhere else, saying its own dates and naming its own product.
+	$ax_ct_import_id = (int) axismundi_contacts_save_card(
+		$ax_ct_book_id,
+		array(
+			'@type'   => 'Card',
+			'name'    => array( 'full' => 'Imported' ),
+			'created' => '2019-01-02T03:04:05Z',
+			'updated' => '2020-02-03T04:05:06Z',
+			'prodId'  => 'Some Other Product',
+		)
+	);
+	$ax_ct_loose[]   = $ax_ct_import_id;
+	$ax_ct_imported  = axismundi_contacts_card_document( $ax_ct_import_id );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a document says when it was written and when it changed, and a copy is not a change',
+		1 === preg_match( '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/', (string) ( $ax_ct_when['created'] ?? '' ) )
+			&& AXISMUNDI_CONTACTS_PROD_ID === (string) ( $ax_ct_when['prodId'] ?? '' )
+			// Saving the same document again changed nothing, so it says nothing changed.
+			&& (string) $ax_ct_when['updated'] === (string) ( $ax_ct_unmoved['updated'] ?? '' )
+			// Correcting the name did change it, so the stale stamp submitted with it did not stand.
+			&& '2000-01-01T00:00:00Z' !== (string) ( $ax_ct_moved_at['updated'] ?? '' )
+			&& 1 === preg_match( '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/', (string) ( $ax_ct_moved_at['updated'] ?? '' ) )
+			// And the age of the Card is not reset by editing it.
+			&& (string) $ax_ct_when['created'] === (string) ( $ax_ct_moved_at['created'] ?? '' )
+			/*
+			 * A Card from elsewhere keeps what it said about itself. Overwriting a product name to
+			 * advertise this one would erase where the document came from.
+			 */
+			&& '2019-01-02T03:04:05Z' === (string) ( $ax_ct_imported['created'] ?? '' )
+			&& '2020-02-03T04:05:06Z' === (string) ( $ax_ct_imported['updated'] ?? '' )
+			&& 'Some Other Product' === (string) ( $ax_ct_imported['prodId'] ?? '' )
+	);
+
+	/*
 	 * The account that says which Actor a self Card is about is this site's answer, not the editor's.
 	 * It is what tells one profile from another with the same name, it is served to everybody as part
 	 * of the public identity, and it is answered by the Actor -- so the editor may not repoint it,

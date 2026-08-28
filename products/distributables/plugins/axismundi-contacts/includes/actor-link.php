@@ -509,8 +509,13 @@ function axismundi_contacts_actor_for_service( array $entry ) : ?Axismundi_Actor
 	/*
 	 * A kind is required, and not as a formality: an acct is shared between a Person and a Group on
 	 * the same host, so the registry answers nothing for a caller that does not say which it means.
-	 * An account written on somebody's contact card is a person's account, and a card that is about a
-	 * group says so in its own `kind` rather than in the accounts it lists.
+	 *
+	 * `Person` is asserted rather than derived, and that is the limit of this function as written: it
+	 * is handed one account entry and never the Card, so the Card's own `kind` -- the thing that
+	 * would actually say whether this is a person, a group, or a place -- cannot reach here. Within
+	 * an address book of people that is the right answer and the only reachable one. Extending the
+	 * avatar resolver to `kind: "group"` or `location` Cards means passing the Card's kind in and
+	 * choosing `Person` or `Group` from it, not widening the guess.
 	 */
 	return function_exists( 'axismundi_actors_get_by_remote_acct' )
 		? axismundi_actors_get_by_remote_acct( $username . '@' . $authority, 'Person' )

@@ -478,6 +478,17 @@ function axismundi_contacts_actor_for_service( array $entry ) : ?Axismundi_Actor
 		if ( $byuri instanceof Axismundi_Actor ) {
 			return $byuri;
 		}
+		/*
+		 * And then as what it usually is. `uri` on an account entry means the page a person opens --
+		 * `https://mastodon.social/@alice`, the string they copied out of a browser -- and that is a
+		 * different string from the Actor's id, which is why comparing it against ids finds nothing.
+		 */
+		if ( function_exists( 'axismundi_actors_get_by_profile_url' ) ) {
+			$bypage = axismundi_actors_get_by_profile_url( $uri );
+			if ( $bypage instanceof Axismundi_Actor ) {
+				return $bypage;
+			}
+		}
 	}
 	/*
 	 * Then the handle, which is where a card written by hand usually carries the recognisable part:
@@ -495,8 +506,14 @@ function axismundi_contacts_actor_for_service( array $entry ) : ?Axismundi_Actor
 	if ( '' !== $here && $authority === $here ) {
 		return function_exists( 'axismundi_actors_get_by_handle' ) ? axismundi_actors_get_by_handle( $username ) : null;
 	}
+	/*
+	 * A kind is required, and not as a formality: an acct is shared between a Person and a Group on
+	 * the same host, so the registry answers nothing for a caller that does not say which it means.
+	 * An account written on somebody's contact card is a person's account, and a card that is about a
+	 * group says so in its own `kind` rather than in the accounts it lists.
+	 */
 	return function_exists( 'axismundi_actors_get_by_remote_acct' )
-		? axismundi_actors_get_by_remote_acct( $username . '@' . $authority )
+		? axismundi_actors_get_by_remote_acct( $username . '@' . $authority, 'Person' )
 		: null;
 }
 
@@ -513,8 +530,19 @@ function axismundi_contacts_discovered_via_actor( int $card_id ) : ?Axismundi_Ac
 	if ( ! function_exists( 'axismundi_actors_get_by_identity' ) ) {
 		return null;
 	}
-	$row = (int) ( axismundi_contacts_card_provenance( $card_id )[ AXISMUNDI_CONTACTS_SOURCE_POINTERS['row'] ]['source_ref'] ?? 0 );
-	return $row > 0 ? axismundi_actors_get_by_identity( $row ) : null;
+	$provenance = axismundi_contacts_card_provenance( $card_id );
+	$row        = (int) ( $provenance[ AXISMUNDI_CONTACTS_SOURCE_POINTERS['row'] ]['source_ref'] ?? 0 );
+	$found      = $row > 0 ? axismundi_actors_get_by_identity( $row ) : null;
+	if ( $found instanceof Axismundi_Actor ) {
+		return $found;
+	}
+	/*
+	 * Failing that, the Actor's own identifier, which was written down whether or not this site had
+	 * heard of it. A contact saved before that Actor was ever cached has this and no row, and becomes
+	 * answerable the moment the Actor arrives -- without anything going and fetching it to find out.
+	 */
+	$uri = trim( (string) ( $provenance[ AXISMUNDI_CONTACTS_SOURCE_POINTERS['actor'] ]['source_ref'] ?? '' ) );
+	return '' !== $uri && function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $uri ) : null;
 }
 
 /**
@@ -525,8 +553,9 @@ function axismundi_contacts_discovered_via_actor( int $card_id ) : ?Axismundi_Ac
  *   1. a photo on the Card itself       -- somebody chose it, for this contact
  *   2. the Actor it was found through   -- recorded when it was saved, so nothing is guessed
  *   3. an account that resolves          -- the one they lead with, then the next
- *   4. an account this site recognises   -- for a card written by hand, which recorded nothing
- *   5. the bundled default image         -- an honest, local fallback
+ *   4. an address on an account          -- the page a person opens, for a card written by hand
+ *   5. a handle on an account            -- the same, one step weaker, because it must be resolved
+ *   6. the bundled default image         -- an honest, local fallback
  *
  * The Actor's own picture is resolved here rather than copied onto the Card, and the difference
  * matters twice over: somebody who changes their avatar changes what this shows without anything
@@ -611,17 +640,26 @@ function axismundi_contacts_card_avatar( int $card_id, int $size = 96 ) : array 
 	 * account naming somebody this site already knows shows their picture, and one naming a stranger
 	 * shows the mark.
 	 */
-	foreach ( axismundi_contacts_ordered_services( $document ) as $entry ) {
-		$actor = axismundi_contacts_actor_for_service( $entry );
-		if ( ! $actor instanceof Axismundi_Actor ) {
-			continue;
-		}
-		$url = (string) axismundi_actors_avatar_url( $actor, $size );
-		if ( '' !== $url ) {
-			return array(
-				'url'    => $url,
-				'source' => $actor->is_local() ? 'actor' : 'actor-remote',
-			);
+	$services = axismundi_contacts_ordered_services( $document );
+	/*
+	 * Addresses across the whole card before handles across the whole card, rather than finishing
+	 * each entry in turn. An address is the stronger claim -- it is a page that either is somebody's
+	 * or is not -- while a handle is a name that has to be read and resolved, so an address further
+	 * down the card still outranks a handle near the top.
+	 */
+	foreach ( array( 'uri', 'user' ) as $part ) {
+		foreach ( $services as $entry ) {
+			$actor = axismundi_contacts_actor_for_service( array( $part => $entry[ $part ] ?? '' ) );
+			if ( ! $actor instanceof Axismundi_Actor ) {
+				continue;
+			}
+			$url = (string) axismundi_actors_avatar_url( $actor, $size );
+			if ( '' !== $url ) {
+				return array(
+					'url'    => $url,
+					'source' => $actor->is_local() ? 'actor' : 'actor-remote',
+				);
+			}
 		}
 	}
 	return $default;

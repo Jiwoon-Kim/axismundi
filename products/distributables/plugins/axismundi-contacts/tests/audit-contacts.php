@@ -787,6 +787,80 @@ try {
 	$ax_ct_loose[]    = $ax_ct_av_typed;
 	$ax_ct_av_entry   = axismundi_contacts_card_document( $ax_ct_av_typed )['onlineServices']['onl-typed'] ?? array();
 	$ax_ct_av_matched = axismundi_contacts_actor_for_service( (array) $ax_ct_av_entry );
+	/*
+	 * And the address form of the same thing, which is what `uri` on an account entry actually means:
+	 * the page a person opens. It is a different string from the Actor's id -- that is the whole
+	 * reason it needs its own step -- and it outranks the handle because a page either is somebody's
+	 * or is not, while a handle is a name that still has to be resolved.
+	 */
+	$ax_ct_av_page = axismundi_contacts_actor_for_service( array( 'uri' => $ax_ct_fresh->get_profile_url() ) );
+	ax_ct_assert(
+		$ax_ct_results,
+		'the address on an account is read as the page a person opens, not as an identifier',
+		'' !== $ax_ct_fresh->get_profile_url()
+			// The two strings differ, so nothing here was answered by the id match.
+			&& $ax_ct_fresh->get_profile_url() !== $ax_ct_fresh->get_uri()
+			&& null === axismundi_actors_get_by_uri( $ax_ct_fresh->get_profile_url() )
+			&& $ax_ct_av_page instanceof Axismundi_Actor
+			&& (int) $ax_ct_fresh->get_identity_id() === (int) $ax_ct_av_page->get_identity_id()
+			// Somebody else's page is somebody else's, and an unknown one is nobody's.
+			&& null === axismundi_contacts_actor_for_service( array( 'uri' => home_url( '/@ax-ct-nobody' ) ) )
+	);
+
+	/*
+	 * A contact saved before this site had ever heard of that Actor kept the Actor's own identifier
+	 * and no row, because there was no row to keep. It becomes answerable when the Actor arrives --
+	 * and it arrives by being cached for some other reason, never by this going to look.
+	 */
+	$ax_ct_av_late = axismundi_contacts_save_looked_up(
+		$ax_ct_owner_id,
+		array(
+			'card'      => array( '@type' => 'Card', 'uid' => 'urn:uuid:bbbbbbbb-1111-4222-8333-444444444444', 'name' => array( 'full' => 'Found before we knew them' ) ),
+			'card_url'  => 'https://example.com/@later.jscontact',
+			'actor_uri' => 'https://example.com/users/ax-ct-later',
+		)
+	);
+	$ax_ct_av_late_id = is_wp_error( $ax_ct_av_late ) ? 0 : (int) $ax_ct_av_late['card_id'];
+	$ax_ct_loose[]    = $ax_ct_av_late_id;
+	$ax_ct_av_late_p  = $ax_ct_av_late_id > 0 ? axismundi_contacts_card_provenance( $ax_ct_av_late_id ) : array();
+	/*
+	 * Built from nothing every run. An Actor left over from an earlier run is a different starting
+	 * state than a fresh one, and a check that reads differently depending on what the last run left
+	 * behind is not reporting on the code.
+	 */
+	$ax_ct_av_late_old = axismundi_actors_get_by_uri( 'https://example.com/users/ax-ct-later' );
+	if ( $ax_ct_av_late_old instanceof Axismundi_Actor ) {
+		axismundi_contacts_purge_actor( $ax_ct_av_late_old->get_identity_id() );
+	}
+	$ax_ct_av_late_a  = axismundi_actors_upsert_remote(
+		array(
+			'uri'                => 'https://example.com/users/ax-ct-later',
+			'actor_type'         => 'Person',
+			'preferred_username' => 'ax-ct-later',
+			'profile_url'        => 'https://example.com/@ax-ct-later',
+			'endpoints'          => array(
+				'inbox'  => 'https://example.com/users/ax-ct-later/inbox',
+				'outbox' => 'https://example.com/users/ax-ct-later/outbox',
+			),
+			'payload'            => array( 'id' => 'https://example.com/users/ax-ct-later', 'type' => 'Person' ),
+		)
+	);
+	if ( $ax_ct_av_late_a instanceof Axismundi_Actor ) {
+		// Swept with the rest, so this run does not leave behind the orphan the registry audit hunts.
+		$GLOBALS['ax_ct_made_actors'][] = $ax_ct_av_late_a->get_identity_id();
+	}
+	$ax_ct_av_late_via = $ax_ct_av_late_id > 0 ? axismundi_contacts_discovered_via_actor( $ax_ct_av_late_id ) : null;
+	ax_ct_assert(
+		$ax_ct_results,
+		'a contact found before its actor was known is answerable once that actor turns up',
+		// Nothing was recorded but the identifier, because nothing else was known.
+		'' === (string) ( $ax_ct_av_late_p['source:actor-row']['source_ref'] ?? '' )
+			&& 'https://example.com/users/ax-ct-later' === (string) ( $ax_ct_av_late_p['source:actor']['source_ref'] ?? '' )
+			&& $ax_ct_av_late_a instanceof Axismundi_Actor
+			&& $ax_ct_av_late_via instanceof Axismundi_Actor
+			&& (int) $ax_ct_av_late_a->get_identity_id() === (int) $ax_ct_av_late_via->get_identity_id()
+	);
+
 	ax_ct_assert(
 		$ax_ct_results,
 		'a card written by hand is recognised by an address it names, and never by the name of a service',

@@ -103,8 +103,8 @@ function axismundi_contacts_public_profile_link( int $actor_id ) {
 	if ( ! $actor instanceof Axismundi_Actor || ! axismundi_contacts_jscontact_is_public( $actor ) ) {
 		return null;
 	}
-	$handle = trim( $actor->get_preferred_username() );
-	if ( '' === $handle ) {
+	$href = axismundi_contacts_jscontact_url( $actor );
+	if ( '' === $href ) {
 		return null;
 	}
 	/*
@@ -114,7 +114,7 @@ function axismundi_contacts_public_profile_link( int $actor_id ) {
 	 */
 	return array(
 		'type'      => 'Link',
-		'href'      => home_url( '/@' . rawurlencode( $handle ) . '.jscontact' ),
+		'href'      => $href,
 		'mediaType' => AXISMUNDI_CONTACTS_JSCONTACT_MEDIA_TYPE,
 		'name'      => 'JSContact',
 	);

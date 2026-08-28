@@ -151,6 +151,65 @@ function axismundi_contacts_jscontact_is_readable( Axismundi_Actor $actor ) : bo
 	return function_exists( 'axismundi_actors_is_public_profile' ) && axismundi_actors_is_public_profile( $actor );
 }
 
+/**
+ * Where an Actor's Card is read, whether or not anything advertises it.
+ *
+ * One place builds this address, because two would eventually disagree about it and the one nobody
+ * looked at would be the one in the JRD.
+ *
+ * @param Axismundi_Actor $actor Actor.
+ * @return string Empty when this Actor publishes no Card, or has no handle to publish it under.
+ */
+function axismundi_contacts_jscontact_url( Axismundi_Actor $actor ) : string {
+	$handle = trim( $actor->get_preferred_username() );
+	if ( '' === $handle || axismundi_contacts_profile_card( (int) $actor->get_identity_id() ) <= 0 ) {
+		return '';
+	}
+	return home_url( '/@' . rawurlencode( $handle ) . '.jscontact' );
+}
+
+/**
+ * Say, in answer to `acct:`, where the contact document for that account is.
+ *
+ * WebFinger is the question "what is there about this account", and this is one of the answers. The
+ * relation is `describedby` -- a registered one, meaning a resource that describes the subject --
+ * rather than something invented here, because the relation says what the link is *for* and the
+ * media type says what it *is*. A private relation naming the format would put the same fact in two
+ * places and make every reader learn a word this project made up. It also leaves room for a second
+ * description in another format later, which is the whole reason the two are separate fields.
+ *
+ * Advertised whenever the address answers. Since a public Actor's Card is readable for the same
+ * reason its name and picture are -- it says the things the Actor is already saying next door -- a
+ * JRD that omitted the link would be describing the account less completely than the account itself
+ * does. What sharing decides is how much comes back from that address, which is the Card's business
+ * and not the directory's.
+ *
+ * @param array<int,array<string,string>> $links Links so far.
+ * @param Axismundi_Actor                 $actor Actor being described.
+ * @return array<int,array<string,string>>
+ */
+function axismundi_contacts_webfinger_jscontact_link( array $links, $actor ) : array {
+	if ( ! $actor instanceof Axismundi_Actor || ! axismundi_contacts_jscontact_is_readable( $actor ) ) {
+		return $links;
+	}
+	$href = axismundi_contacts_jscontact_url( $actor );
+	if ( '' === $href ) {
+		return $links;
+	}
+	/*
+	 * The media type without its parameter. What is served states `type=Card`, which is the standard's
+	 * own parameter and worth saying in a response; here it would only give a reader comparing strings
+	 * a way to miss the link it is looking for.
+	 */
+	$links[] = array(
+		'rel'  => 'describedby',
+		'type' => 'application/jscontact+json',
+		'href' => $href,
+	);
+	return $links;
+}
+add_filter( 'axismundi_actors_webfinger_links', 'axismundi_contacts_webfinger_jscontact_link', 10, 2 );
+
 /** @return array<string,string> */
 function axismundi_contacts_jscontact_rewrite_rules() : array {
 	// The URL the Actors plugin served this at, kept exactly: the owner moved, the address did not.

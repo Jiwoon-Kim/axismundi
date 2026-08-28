@@ -1860,6 +1860,66 @@ try {
 	axismundi_contacts_set_profile_sharing_enabled( $ax_ct_sid, false );
 	$ax_ct_off_doc = axismundi_contacts_actor_attachment( array( 'type' => 'Person' ), axismundi_actors_get_by_identity( $ax_ct_sid ) );
 	$ax_ct_none_doc = axismundi_contacts_actor_attachment( array( 'type' => 'Person' ), $ax_ct_cardless );
+	/*
+	 * How another server finds the Card at all. WebFinger is the question "what is there about this
+	 * account", and the contact document is one of the answers -- so the chain a stranger walks is
+	 * `acct:` to a JRD, a `describedby` link to the Card, and a fetch.
+	 *
+	 * The relation is the registered one, meaning a resource that describes the subject, rather than
+	 * a private relation naming the format. The relation says what the link is for and the media type
+	 * says what it is; putting the format in both would make every reader learn a word invented here,
+	 * and would leave nowhere to say the same thing later in vCard.
+	 *
+	 * Added by this plugin through the Actors filter rather than by Actors knowing about Cards. The
+	 * directory answers for the account; what a contact document is, and whether there is one, is
+	 * this plugin's business.
+	 */
+	$ax_ct_wf = function_exists( 'axismundi_actors_webfinger_descriptor' )
+		? axismundi_actors_webfinger_descriptor( 'acct:' . $ax_ct_fresh->get_preferred_username() . '@' . axismundi_actors_webfinger_authority() )
+		: new WP_Error( 'ax_ct_no_webfinger', 'no webfinger' );
+	$ax_ct_wf_links = is_wp_error( $ax_ct_wf ) ? array() : (array) ( $ax_ct_wf['links'] ?? array() );
+	$ax_ct_wf_card  = array_values(
+		array_filter(
+			$ax_ct_wf_links,
+			static function ( array $link ) : bool {
+				return 'describedby' === (string) ( $link['rel'] ?? '' )
+					&& 'application/jscontact+json' === (string) ( $link['type'] ?? '' );
+			}
+		)
+	);
+	// An Actor with no Card of its own has nothing to point at, and points at nothing.
+	$ax_ct_wf_none = function_exists( 'axismundi_actors_webfinger_descriptor' )
+		? axismundi_actors_webfinger_descriptor( 'acct:' . $ax_ct_cardless->get_preferred_username() . '@' . axismundi_actors_webfinger_authority() )
+		: new WP_Error( 'ax_ct_no_webfinger', 'no webfinger' );
+	$ax_ct_wf_none_links = is_wp_error( $ax_ct_wf_none ) ? array() : (array) ( $ax_ct_wf_none['links'] ?? array() );
+	ax_ct_assert(
+		$ax_ct_results,
+		'an account says where its contact document is, in answer to the question about the account',
+		1 === count( $ax_ct_wf_card )
+			&& axismundi_contacts_jscontact_url( $ax_ct_fresh ) === (string) ( $ax_ct_wf_card[0]['href'] ?? '' )
+			/*
+			 * Said whenever the address answers, which for a public Actor is always: the Card says the
+			 * things that Actor is already saying next door, so a JRD leaving the link out would
+			 * describe the account less completely than the account describes itself. How much comes
+			 * back from that address is the Card's business, not the directory's.
+			 */
+			&& 'off' === axismundi_contacts_profile_sharing( (int) $ax_ct_fresh->get_identity_id() )
+			// The media type without the parameter, so a reader comparing strings cannot miss it.
+			&& ! str_contains( (string) ( $ax_ct_wf_card[0]['type'] ?? '' ), 'type=Card' )
+			// And nothing is pointed at where there is no Card.
+			&& array() === array_filter(
+				$ax_ct_wf_none_links,
+				static function ( array $link ) : bool {
+					return 'describedby' === (string) ( $link['rel'] ?? '' );
+				}
+			)
+			// Contacts says it, through the door Actors leaves open, rather than Actors knowing Cards.
+			&& str_contains(
+				(string) file_get_contents( dirname( __DIR__ ) . '/includes/jscontact.php' ),
+				"add_filter( 'axismundi_actors_webfinger_links', 'axismundi_contacts_webfinger_jscontact_link', 10, 2 );"
+			)
+	);
+
 	ax_ct_assert(
 		$ax_ct_results,
 		'an unshared card and an Actor with none are not advertised',

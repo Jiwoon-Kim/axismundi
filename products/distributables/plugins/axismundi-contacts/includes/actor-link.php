@@ -471,12 +471,8 @@ function axismundi_contacts_card_actor_links( int $card_id ) : array {
  *
  * Nothing here goes looking for a picture by email address. Handing a third party the addresses in
  * somebody's private address book, one request at a time, is not a thing to do quietly for an image;
- * a caller with no picture to show uses the bundled mark. It makes no network request and is not
- * contact data.
- *
- * An email address is never turned into an avatar lookup. Handing a third party the addresses in
- * somebody's private address book, one request at a time, is not a thing to do quietly for a
- * picture; if that is ever wanted it is a provider somebody switches on.
+ * if that is ever wanted it is a provider somebody switches on. What a caller with no picture gets
+ * instead is the bundled mark, which makes no request and is not contact data.
  *
  * @param int $card_id Card id.
  * @param int $size    Requested pixel size.

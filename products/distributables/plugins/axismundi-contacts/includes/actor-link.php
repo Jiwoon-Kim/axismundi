@@ -456,7 +456,7 @@ function axismundi_contacts_card_actor_links( int $card_id ) : array {
  *
  *   1. a photo on the Card itself      -- somebody chose it, for this contact
  *   2. the first account with a face    -- the one they lead with, then the next
- *   3. nothing                          -- the caller draws initials
+ *   3. the bundled default image         -- an honest, local fallback
  *
  * The Actor's own picture is resolved here rather than copied onto the Card, and the difference
  * matters twice over: somebody who changes their avatar changes what this shows without anything
@@ -471,7 +471,8 @@ function axismundi_contacts_card_actor_links( int $card_id ) : array {
  *
  * Nothing here goes looking for a picture by email address. Handing a third party the addresses in
  * somebody's private address book, one request at a time, is not a thing to do quietly for an image;
- * a caller with no picture to show draws a mark of its own.
+ * a caller with no picture to show uses the bundled mark. It makes no network request and is not
+ * contact data.
  *
  * An email address is never turned into an avatar lookup. Handing a third party the addresses in
  * somebody's private address book, one request at a time, is not a thing to do quietly for a
@@ -479,13 +480,13 @@ function axismundi_contacts_card_actor_links( int $card_id ) : array {
  *
  * @param int $card_id Card id.
  * @param int $size    Requested pixel size.
- * @return array{url:string,source:string} Empty url when there is no picture to show.
+ * @return array{url:string,source:string}
  */
 function axismundi_contacts_card_avatar( int $card_id, int $size = 96 ) : array {
-	$none     = array( 'url' => '', 'source' => '' );
+	$default  = array( 'url' => axismundi_contacts_default_avatar_url(), 'source' => 'default' );
 	$document = axismundi_contacts_card_document( $card_id );
 	if ( array() === $document ) {
-		return $none;
+		return $default;
 	}
 	foreach ( (array) ( $document['media'] ?? array() ) as $entry ) {
 		$uri = is_array( $entry ) ? trim( (string) ( $entry['uri'] ?? '' ) ) : '';
@@ -494,7 +495,7 @@ function axismundi_contacts_card_avatar( int $card_id, int $size = 96 ) : array 
 		}
 	}
 	if ( ! function_exists( 'axismundi_actors_avatar_url' ) ) {
-		return $none;
+		return $default;
 	}
 	/*
 	 * The account that says which Actor this Card is, ahead of the accounts somebody added to it.
@@ -523,7 +524,20 @@ function axismundi_contacts_card_avatar( int $card_id, int $size = 96 ) : array 
 			);
 		}
 	}
-	return $none;
+	return $default;
+}
+
+/**
+ * The local image used when a Card and every known Actor are both without a picture.
+ *
+ * This is a rendering fallback, not a Media entry. It deliberately has no provenance and never
+ * enters JSContact, so exporting an email-only contact does not turn a generic silhouette into a
+ * claim about that person.
+ *
+ * @return string
+ */
+function axismundi_contacts_default_avatar_url() : string {
+	return plugins_url( 'assets/avatar-default.svg', dirname( __DIR__ ) . '/axismundi-contacts.php' );
 }
 
 /**

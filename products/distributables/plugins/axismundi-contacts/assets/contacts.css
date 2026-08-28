@@ -65,6 +65,18 @@
 	width: 100%;
 }
 
+.ax-contacts-card-link {
+	align-items: center;
+	display: inline-flex;
+	gap: 0.65rem;
+}
+
+.ax-contacts-card-link__avatar {
+	border-radius: 50%;
+	flex: 0 0 40px;
+	object-fit: cover;
+}
+
 @media screen and (max-width: 782px) {
 	.ax-contacts-browser {
 		display: block;

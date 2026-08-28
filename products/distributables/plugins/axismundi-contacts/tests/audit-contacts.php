@@ -689,8 +689,8 @@ try {
 	$ax_ct_avatar = axismundi_contacts_card_avatar( $ax_ct_phone_card );
 	ax_ct_assert(
 		$ax_ct_results,
-		'a card with no photo and no linked Actor has no picture, and nobody is asked for one',
-		'' === $ax_ct_avatar['url'] && '' === $ax_ct_avatar['source']
+		'a card with no photo and no linked Actor draws the bundled default picture, and nobody is asked for one',
+		str_ends_with( $ax_ct_avatar['url'], '/assets/avatar-default.svg' ) && 'default' === $ax_ct_avatar['source']
 	);
 	/*
 	 * And an email address is never turned into an avatar lookup. Handing a third party the addresses

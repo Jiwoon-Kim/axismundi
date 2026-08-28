@@ -316,10 +316,12 @@ function axismundi_contacts_card_list( int $book_id, int $self_id, array $cards,
 		<tbody>
 			<?php foreach ( $cards as $card ) : ?>
 				<?php $card_id = (int) $card['id']; ?>
+				<?php $avatar = axismundi_contacts_card_avatar( $card_id, 40 ); ?>
 				<tr>
 					<td>
-						<a href="<?php echo esc_url( axismundi_contacts_screen_url( $card_id, $group_id ) ); ?>">
-							<?php echo esc_html( '' !== (string) $card['display_name'] ? (string) $card['display_name'] : __( 'Untitled card', 'axismundi-contacts' ) ); ?>
+						<a class="ax-contacts-card-link" href="<?php echo esc_url( axismundi_contacts_screen_url( $card_id, $group_id ) ); ?>">
+							<img class="ax-contacts-card-link__avatar" src="<?php echo esc_url( (string) $avatar['url'] ); ?>" alt="" width="40" height="40">
+							<span><?php echo esc_html( '' !== (string) $card['display_name'] ? (string) $card['display_name'] : __( 'Untitled card', 'axismundi-contacts' ) ); ?></span>
 						</a>
 					</td>
 					<td><?php echo '' !== (string) ( $card['linked_actor_uri'] ?? '' ) ? '<code>' . esc_html( (string) $card['linked_actor_uri'] ) . '</code>' : '&#8212;'; ?></td>

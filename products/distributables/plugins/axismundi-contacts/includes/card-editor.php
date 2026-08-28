@@ -72,9 +72,20 @@ function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
 	if ( 'edit' !== $action ) {
 		return;
 	}
+	/*
+	 * Which Card, asked the way the screen asks it. The Actor's own profile is addressed as the
+	 * profile rather than by the id of the Card behind it, so a route that names no item is not a
+	 * route with nothing to edit -- it is the one document this Actor always has.
+	 */
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing what to load, not writing.
-	$card_id = isset( $_GET['item'] ) ? absint( $_GET['item'] ) : 0;
-	$row     = axismundi_contacts_get_card( $card_id );
+	if ( isset( $_GET['profile'] ) ) {
+		$acting  = function_exists( 'axismundi_actors_acting_actor' ) ? axismundi_actors_acting_actor() : null;
+		$card_id = $acting instanceof Axismundi_Actor ? axismundi_contacts_profile_card( (int) $acting->get_identity_id() ) : 0;
+	} else {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing what to load, not writing.
+		$card_id = isset( $_GET['item'] ) ? absint( $_GET['item'] ) : 0;
+	}
+	$row = axismundi_contacts_get_card( $card_id );
 	if ( array() === $row || ! axismundi_contacts_can_use_book( (int) $row['owner_actor_id'], get_current_user_id() ) ) {
 		return;
 	}
@@ -229,6 +240,15 @@ function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
 		 * Empty when GeoData is not installed. The field takes what is typed either way, so an
 		 * address is still writable -- it just stops suggesting.
 		 */
+		/*
+		 * Which ledger this Card belongs to. One editor, two ledgers: the Actor's own profile document
+		 * and the contacts somebody keeps are the same format and the same fields, and everything that
+		 * differs between them -- an identity account that cannot be changed, a public projection, a
+		 * lifetime tied to an Actor -- is a property of where it is stored rather than of how it is
+		 * written. Saying so once here is what keeps that difference from spreading through the screen
+		 * as a hundred small questions about whether this is the self card.
+		 */
+		'mode'                => axismundi_contacts_is_profile_card( $row ) ? 'profile' : 'contact',
 		'countries'           => function_exists( 'axismundi_geodata_country_options' )
 			? axismundi_geodata_country_options()
 			: array(),

@@ -137,6 +137,7 @@ function axismundi_contacts_edit_url( int $card_id = 0, int $group_id = 0 ) : st
 	return add_query_arg( $args, admin_url( 'users.php?page=axismundi-contacts' ) );
 }
 
+
 /**
  * Render the address book: a list, or one card being edited.
  *
@@ -156,17 +157,6 @@ function axismundi_contacts_render_screen() : void {
 	$all     = $current['all'];
 	$book_id = (int) $book['id'];
 	$self_id = axismundi_contacts_profile_card( (int) $book['owner_actor_id'] );
-	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing what to show, not writing.
-	if ( isset( $_GET['profile'] ) ) {
-		/*
-		 * Its own screen. The card an Actor publishes about itself has an audience, is what a stranger
-		 * fetching it receives, and keeps its name in step with the Actor; a card about a friend has
-		 * none of that. One form for both meant every such control was shown to both or to neither.
-		 */
-		axismundi_contacts_profile_editor( $book_id, $actor );
-		echo '</div>';
-		return;
-	}
 	/*
 	 * One Card, one name for it, and the action says what is being done. Reading is the common case
 	 * and gets the bare id; changing says so, so nobody arrives at a form they meant to arrive at a
@@ -178,6 +168,27 @@ function axismundi_contacts_render_screen() : void {
 	$item = isset( $_GET['item'] ) ? absint( $_GET['item'] ) : -1;
 	$editing = 'edit' === $action && $item >= 0 ? $item : -1;
 	$reading = 'edit' === $action ? -1 : $item;
+
+	/*
+	 * The profile is opened as the profile. It is not a contact somebody keeps -- it is the document
+	 * this Actor publishes about itself, with a public projection, a forced identity account and a
+	 * lifetime tied to the Actor rather than to an address book -- so it has its own address here,
+	 * and an old link naming it by card id arrives at the same place rather than at a contact record.
+	 *
+	 * The editor is the same editor. What differs is which ledger it is opened against, which is what
+	 * `mode` tells it.
+	 */
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing what to show, not writing.
+	$profile = isset( $_GET['profile'] ) || ( $self_id > 0 && $self_id === $item );
+	if ( $profile ) {
+		if ( 'edit' === $action && $self_id > 0 ) {
+			axismundi_contacts_card_editor_screen( $self_id, 0 );
+		} else {
+			axismundi_contacts_profile_editor( $book_id, $actor );
+		}
+		echo '</div>';
+		return;
+	}
 
 	if ( $editing > 0 ) {
 		axismundi_contacts_card_editor_screen( $editing, $all ? 0 : $book_id );
@@ -275,6 +286,19 @@ function axismundi_contacts_groups_sidebar( Axismundi_Actor $actor, array $defau
  * @return void
  */
 function axismundi_contacts_card_list( int $book_id, int $self_id, array $cards, string $title, int $group_id ) : void {
+	/*
+	 * The Actor's own profile is not a contact and is not listed as one. It is read and written from
+	 * My profile, above -- listing it here would offer every action a contact has, and the ones it
+	 * must not have are exactly the ones a list is for: filing it, and deleting it.
+	 */
+	$cards = array_values(
+		array_filter(
+			$cards,
+			static function ( array $card ) use ( $self_id ) : bool {
+				return $self_id <= 0 || (int) ( $card['id'] ?? 0 ) !== $self_id;
+			}
+		)
+	);
 	echo '<h2>' . esc_html( $title ) . '</h2>';
 	if ( array() === $cards ) {
 		echo '<p>' . esc_html__( 'Nothing saved yet.', 'axismundi-contacts' ) . '</p>';
@@ -300,18 +324,6 @@ function axismundi_contacts_card_list( int $book_id, int $self_id, array $cards,
 					</td>
 					<td><?php echo '' !== (string) ( $card['linked_actor_uri'] ?? '' ) ? '<code>' . esc_html( (string) $card['linked_actor_uri'] ) . '</code>' : '&#8212;'; ?></td>
 					<td>
-						<?php if ( $self_id === $card_id ) : ?>
-							<strong><?php esc_html_e( 'My card', 'axismundi-contacts' ); ?></strong>
-						<?php else : ?>
-							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-								<input type="hidden" name="action" value="axismundi_contacts_set_profile_card">
-								<input type="hidden" name="book_id" value="<?php echo esc_attr( (string) $book_id ); ?>">
-								<input type="hidden" name="card_id" value="<?php echo esc_attr( (string) $card_id ); ?>">
-								<input type="hidden" name="return_group" value="<?php echo esc_attr( (string) $group_id ); ?>">
-								<?php wp_nonce_field( 'ax_contacts_self_pointer_' . $book_id ); ?>
-								<button type="submit" class="button button-small"><?php esc_html_e( 'This is me', 'axismundi-contacts' ); ?></button>
-							</form>
-						<?php endif; ?>
 					</td>
 				</tr>
 			<?php endforeach; ?>
@@ -376,26 +388,6 @@ function axismundi_contacts_handle_create_card() : void {
 add_action( 'admin_post_axismundi_contacts_create_card', 'axismundi_contacts_handle_create_card' );
 
 /**
- * Say which card describes the Actor whose book this is.
- *
- * Authorised against the book because that is what the screen is showing, then applied to the Actor,
- * because a profile belongs to the Actor rather than to whichever book it was chosen from.
- *
- * @return void
- */
-function axismundi_contacts_handle_set_profile_card() : void {
-	$book_id = isset( $_POST['book_id'] ) ? absint( $_POST['book_id'] ) : 0;
-	check_admin_referer( 'ax_contacts_self_pointer_' . $book_id );
-	$book = axismundi_contacts_authorize_book( $book_id );
-	if ( is_wp_error( $book ) ) {
-		wp_die( esc_html( $book->get_error_message() ), '', array( 'response' => 403 ) );
-	}
-	$card_id = isset( $_POST['card_id'] ) ? absint( $_POST['card_id'] ) : 0;
-	axismundi_contacts_redirect_result( axismundi_contacts_set_profile_card( (int) $book['owner_actor_id'], $card_id ) );
-}
-add_action( 'admin_post_axismundi_contacts_set_profile_card', 'axismundi_contacts_handle_set_profile_card' );
-
-/**
  * Create one contact group for the acting Actor's Contacts account.
  *
  * A group is a named AddressBook in the personal UI. It does not create an
@@ -432,6 +424,26 @@ function axismundi_contacts_handle_delete_card() : void {
 	$book    = axismundi_contacts_authorize_book( $book_id );
 	if ( is_wp_error( $book ) ) {
 		wp_die( esc_html( $book->get_error_message() ), '', array( 'response' => 403 ) );
+	}
+	/*
+	 * The one the Actor publishes about itself is refused before anything else is asked, because the
+	 * answer does not depend on where it is filed. That document is a singleton with a public address,
+	 * an identity account this site guarantees, and readers elsewhere holding its uid -- and deleting
+	 * it here would take the Actor's binding with it, so the Actor would quietly stop answering at its
+	 * own address. Emptying a profile is a different act from deleting a contact and wants a command
+	 * that says so.
+	 *
+	 * Asked first rather than after the book check, which today refuses it for the incidental reason
+	 * that a profile is filed in no book. That is true and not the reason, and it would stop being
+	 * true the moment somebody filed it.
+	 */
+	if ( $card_id > 0 && $card_id === axismundi_contacts_profile_card( (int) $book['owner_actor_id'] ) ) {
+		axismundi_contacts_redirect_result(
+			new WP_Error(
+				'ax_contacts_profile_delete',
+				__( 'This is the card this Actor publishes about itself, so it cannot be deleted here.', 'axismundi-contacts' )
+			)
+		);
 	}
 	$card = axismundi_contacts_get_card( $card_id );
 	if ( array() === $card || ! in_array( $book_id, axismundi_contacts_card_books( $card_id ), true ) ) {

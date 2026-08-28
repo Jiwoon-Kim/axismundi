@@ -31,9 +31,24 @@ function axismundi_contacts_redirect_to( $result, string $url ) : void {
 	exit;
 }
 
-/** @return string The profile screen's URL. */
-function axismundi_contacts_profile_url() : string {
-	return add_query_arg( 'profile', '1', admin_url( 'users.php?page=axismundi-contacts' ) );
+/**
+ * Where the Actor's own profile is read and written.
+ *
+ * Addressed as the profile rather than by the id of the Card behind it. That Card is not a contact
+ * somebody keeps: it is the document this Actor publishes about itself, it cannot be deleted, and it
+ * lasts as long as the Actor does. A link naming it by id would say it is one row among the contacts,
+ * and the first things anybody would try are the ones it must not allow -- filing it, and throwing it
+ * away.
+ *
+ * @param bool $edit Whether to open the editor rather than the profile screen.
+ * @return string
+ */
+function axismundi_contacts_profile_url( bool $edit = false ) : string {
+	$args = array( 'profile' => '1' );
+	if ( $edit ) {
+		$args['action'] = 'edit';
+	}
+	return add_query_arg( $args, admin_url( 'users.php?page=axismundi-contacts' ) );
 }
 
 /**
@@ -110,7 +125,7 @@ function axismundi_contacts_profile_editor( int $book_id, Axismundi_Actor $actor
 	 */
 	?>
 	<p>
-		<a class="button button-primary" href="<?php echo esc_url( axismundi_contacts_edit_url( $card_id ) ); ?>">
+		<a class="button button-primary" href="<?php echo esc_url( axismundi_contacts_profile_url( true ) ); ?>">
 			<?php esc_html_e( 'Edit this card', 'axismundi-contacts' ); ?>
 		</a>
 		<a class="button" href="<?php echo esc_url( axismundi_contacts_screen_url( $card_id ) ); ?>">

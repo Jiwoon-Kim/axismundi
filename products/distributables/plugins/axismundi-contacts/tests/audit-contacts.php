@@ -1278,6 +1278,73 @@ try {
 	);
 
 	/*
+	 * The Actor's own profile is not a contact, and the address book stops treating it as one.
+	 *
+	 * It is the same format and the same editor -- one screen, opened against two ledgers -- but its
+	 * lifetime is the Actor's, it publishes a projection, and it carries an identity account this site
+	 * guarantees. A row in a contact list offers exactly the two things it must never allow: filing it
+	 * somewhere, and throwing it away.
+	 *
+	 * So it is addressed as the profile, kept out of the list, and refused by the delete path. The
+	 * refusal is asked before the book check, because today a profile is filed in no book and would be
+	 * refused for that incidental reason -- true, not the reason, and untrue the moment anybody filed
+	 * it.
+	 */
+	require_once dirname( __DIR__ ) . '/includes/admin.php';
+	$ax_ct_sep_user = get_current_user_id();
+	wp_set_current_user( (int) $ax_ct_fresh->get_local_user_id() );
+	$ax_ct_sep_book = axismundi_contacts_home_book_id( (int) $ax_ct_fresh->get_identity_id() );
+	add_filter(
+		'wp_redirect',
+		static function ( $location ) {
+			throw new RuntimeException( (string) $location );
+		},
+		99
+	);
+	$ax_ct_delete_try = static function ( int $card_id, int $book_id ) : string {
+		$_POST['card_id']     = $card_id;
+		$_POST['book_id']     = $book_id;
+		$_REQUEST['_wpnonce'] = wp_create_nonce( 'ax_contacts_delete_' . $card_id );
+		$_POST['_wpnonce']    = $_REQUEST['_wpnonce'];
+		try {
+			axismundi_contacts_handle_delete_card();
+			return 'nothing happened';
+		} catch ( RuntimeException $stopped ) {
+			$where = $stopped->getMessage();
+			return str_contains( $where, 'ax_contacts_error' )
+				? urldecode( (string) ( explode( 'ax_contacts_error=', $where )[1] ?? '' ) )
+				: 'accepted';
+		}
+	};
+	$ax_ct_profile_delete = $ax_ct_delete_try( $ax_ct_seeded, $ax_ct_sep_book );
+	$ax_ct_throwaway      = (int) axismundi_contacts_save_card( $ax_ct_sep_book, array( '@type' => 'Card', 'name' => array( 'full' => 'Throwaway' ) ) );
+	$ax_ct_contact_delete = $ax_ct_delete_try( $ax_ct_throwaway, $ax_ct_sep_book );
+	remove_all_filters( 'wp_redirect', 99 );
+	unset( $_POST['card_id'], $_POST['book_id'], $_POST['_wpnonce'], $_REQUEST['_wpnonce'] );
+	wp_set_current_user( $ax_ct_sep_user );
+	$ax_ct_admin_src = (string) file_get_contents( dirname( __DIR__ ) . '/includes/admin.php' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'the profile is opened as the profile, kept out of the contacts, and cannot be deleted as one',
+		// Refused, and for being the profile rather than for where it happens to be filed.
+		str_contains( $ax_ct_profile_delete, 'publishes about itself' )
+			&& $ax_ct_seeded === axismundi_contacts_profile_card( (int) $ax_ct_fresh->get_identity_id() )
+			&& array() !== axismundi_contacts_get_card( $ax_ct_seeded )
+			// While an ordinary contact still goes when somebody says so.
+			&& 'accepted' === $ax_ct_contact_delete
+			&& array() === axismundi_contacts_get_card( $ax_ct_throwaway )
+			// Not listed among the contacts, and no longer promotable from one.
+			&& str_contains( $ax_ct_admin_src, 'return $self_id <= 0 || (int) ( $card[' )
+			&& ! str_contains( $ax_ct_admin_src, 'This is me' )
+			&& ! str_contains( $ax_ct_admin_src, 'axismundi_contacts_handle_set_profile_card' )
+			// And the editor is told which ledger it is open against rather than working it out.
+			&& str_contains(
+				(string) file_get_contents( dirname( __DIR__ ) . '/includes/card-editor.php' ),
+				"'mode'                => axismundi_contacts_is_profile_card( \$row ) ? 'profile' : 'contact',"
+			)
+	);
+
+	/*
 	 * The account that says which Actor a self Card is about is this site's answer, not the editor's.
 	 * It is what tells one profile from another with the same name, it is served to everybody as part
 	 * of the public identity, and it is answered by the Actor -- so the editor may not repoint it,

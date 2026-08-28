@@ -4287,7 +4287,13 @@ try {
 		'accounts are read in the order they are preferred, and an unranked one waits behind those that said',
 		array( 'x3', 'x1', 'x2' ) === array_column( $ax_ct_os_order, 'entry_id' )
 			&& str_contains( $ax_ct_os_js, 'function orderedByPreference' )
-			&& str_contains( $ax_ct_os_js, 'pref: index + 1' )
+			/*
+			 * And an account somebody adds is given no place in that order. Numbering it would be the
+			 * screen deciding, on their behalf, that the account they just typed is their fourth
+			 * preference -- a statement about how they want to be reached, made by a form.
+			 */
+			&& str_contains( $ax_ct_os_js, "updated[ newEntryId( 'onl', entries ) ] = { service: '', user: '', uri: '' };" )
+			&& ! str_contains( $ax_ct_os_js, 'pref: index + 1' )
 	);
 
 	// -- which record this is, and who decides it ---------------------------------------------------------------
@@ -5586,17 +5592,16 @@ try {
 	);
 	/*
 	 * Where it applies can be answered before which language, the way it can everywhere else, and the
-	 * row holds it until the language arrives. And `pref` is written by dragging, because dragging is
-	 * somebody stating an order -- a row nobody has moved is not given a number this invented.
+	 * row holds it until the language arrives. A row nobody has ranked carries no place in the order,
+	 * and nothing on this screen gives it one.
 	 */
 	ax_ct_assert(
 		$ax_ct_results,
-		'a preference is a row until it names a language, and its place in the order is stated rather than assumed',
+		'a preference is a row until it names a language, and is given no place in the order it did not state',
 		str_contains( $ax_ct_cb_editor, "// A preference is a language. Until there is one, this is a line and what has been" )
 			&& str_contains( $ax_ct_cb_editor, "newEntryId( 'lng', entries )" )
-			&& str_contains( $ax_ct_cb_editor, 'next[ id ] = Object.assign( {}, latest.current[ id ], { pref: index + 1 } );' )
 			// Read in the same order the accounts are, because `pref` means the same thing in both.
-			&& str_contains( $ax_ct_cb_editor, 'var order = orderedByPreference( entries );' )
+			&& str_contains( $ax_ct_cb_editor, 'var rows = orderedByPreference( entries ).map( function ( id ) {' )
 			&& str_contains( $ax_ct_cb_editor, 'function orderedByPreference( entries )' )
 	);
 
@@ -6161,9 +6166,36 @@ try {
 		// The two lists of parts, each guarded against a position that is not there.
 		2 === substr_count( $ax_ct_cb_editor, 'undefined === list[ dragging ]' )
 			&& str_contains( $ax_ct_cb_editor, "var list = ( latest.current.components || [] ).slice();" )
-			&& str_contains( $ax_ct_cb_editor, 'order = orderedByPreference( latest.current );' )
 			// And nothing rearranges from a render's own copy any more.
 			&& ! str_contains( $ax_ct_cb_editor, 'var list = components.slice();' )
+	);
+
+	/*
+	 * What may be dragged is what has an order to drag: the parts of a name and the parts of an
+	 * address are arrays, where position is the meaning and the standard says as much with
+	 * `isOrdered`.
+	 *
+	 * The collections keyed by id are not. `emails`, `phones`, `onlineServices` and
+	 * `preferredLanguages` are maps, and the order of an object's members means nothing in JSON -- so
+	 * a row dragged into place is either storing an order the format cannot keep, or renumbering
+	 * `pref` behind somebody's back and calling it a reorder. `pref` is what says which comes first,
+	 * both the stored form and the screen read it, and editing it is a thing to build on purpose
+	 * rather than a side effect of a gesture.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'what is dragged is what has an order to drag, and a map keyed by id has none',
+		// Two draggable collections, and they are the two arrays.
+		2 === substr_count( $ax_ct_cb_editor, 'draggable: movable,' )
+			&& str_contains( $ax_ct_cb_editor, "className: 'ax-ce-slot__grip'" )
+			&& str_contains( $ax_ct_cb_editor, "className: 'ax-ce-part-row__grip'" )
+			// And none of the four maps carries a grip or a drag of its own.
+			&& ! str_contains( $ax_ct_cb_editor, "className: 'ax-ce-lang__grip'" )
+			&& ! str_contains( $ax_ct_cb_editor, "ax-ce-service' + ( movable" )
+			&& ! str_contains( $ax_ct_cb_editor, 'undefined === ids[ dragging ]' )
+			// What decides their order is the property, read the same way in both places.
+			&& str_contains( $ax_ct_cb_editor, 'function orderedByPreference( entries )' )
+			&& str_contains( (string) file_get_contents( dirname( __DIR__ ) . '/includes/cards.php' ), 'function axismundi_contacts_by_preference( array $entries ) : array {' )
 	);
 
 	/*

@@ -3610,8 +3610,14 @@
 						className: 'button',
 						onClick: function () {
 							var updated = Object.assign( {}, entries );
-							// New accounts go to the end; the order somebody chose is theirs to change.
-							updated[ newEntryId( 'onl', entries ) ] = { service: '', user: '', uri: '', pref: ordered.length + 1 };
+							/*
+							 * No `pref` invented for it. Numbering a new row would be this screen
+							 * deciding, on somebody's behalf, that the account they just added is
+							 * their fourth preference -- a statement about how they want to be
+							 * reached, made by a form. An entry that says nothing has no preference,
+							 * and sorts after the ones that do.
+							 */
+							updated[ newEntryId( 'onl', entries ) ] = { service: '', user: '', uri: '' };
 							setEntries( updated );
 						}
 					},
@@ -4128,13 +4134,8 @@
 	function PreferredLanguages( props ) {
 		var entries = props.value || {};
 		var [ pending, setPending ] = useState( [] );
-		var [ dragging, setDragging ] = useState( null );
-		// As they stand, for the same reason every other collection keeps one.
-		var latest = useRef( entries );
-		latest.current = entries;
 
 		function setEntries( next ) {
-			latest.current = next;
 			props.onChange( Object.keys( next ).length ? next : undefined );
 		}
 
@@ -4162,8 +4163,7 @@
 			setEntries( updated );
 		}
 
-		var order = orderedByPreference( entries );
-		var rows = order.map( function ( id ) {
+		var rows = orderedByPreference( entries ).map( function ( id ) {
 			return { key: id, id: id, entry: entries[ id ] || {} };
 		} ).concat( pending.map( function ( each ) {
 			return { key: each.id, pending: each.id, entry: each.entry };
@@ -4177,55 +4177,11 @@
 				{ className: 'description' },
 				__( 'What this contact would rather be written to in. Not the language the card is written in, and a language may appear twice if they want it in one part of their life and not another.', 'axismundi-contacts' )
 			),
-			rows.map( function ( row, at ) {
+			rows.map( function ( row ) {
 				var entry = row.entry;
-				var movable = !! row.id;
 				return el(
 					'div',
-					{
-						key: row.key,
-						className: 'ax-ce-lang' + ( movable ? ' is-movable' : '' ),
-						draggable: movable,
-						onDragStart: function () {
-							if ( movable ) {
-								setDragging( at );
-							}
-						},
-						onDragOver: function ( event ) {
-							if ( movable ) {
-								event.preventDefault();
-							}
-						},
-						onDrop: function () {
-							if ( null === dragging || dragging === at || ! movable ) {
-								return;
-							}
-							// The order as it stands, so a row added a moment ago is not left out.
-							order = orderedByPreference( latest.current );
-							/*
-							 * Dragging is somebody stating an order, so the order is written down --
-							 * for every row, because saying one comes first says what the others come
-							 * after. Rows nobody has ever dragged keep no `pref` until then.
-							 */
-							var ids = order.slice();
-							var moved = ids.splice( dragging, 1 )[ 0 ];
-							ids.splice( at, 0, moved );
-							var next = {};
-							ids.forEach( function ( id, index ) {
-								next[ id ] = Object.assign( {}, latest.current[ id ], { pref: index + 1 } );
-							} );
-							setDragging( null );
-							setEntries( next );
-						}
-					},
-					el(
-						'span',
-						{
-							className: 'ax-ce-lang__grip',
-							'aria-hidden': 'true',
-							dangerouslySetInnerHTML: { __html: movable ? icon( 'drag-indicator' ) : '' }
-						}
-					),
+					{ key: row.key, className: 'ax-ce-lang' },
 					el( Combobox, {
 						label: __( 'Language', 'axismundi-contacts' ),
 						className: 'ax-ce-lang__language',

@@ -2475,6 +2475,74 @@
 		);
 	}
 
+	/* An optional address fact is only asked when its checkbox is on. */
+	function AddressPropertyToggle( props ) {
+		var [ asking, setAsking ] = useState( false );
+		return el(
+			Fragment,
+			null,
+			el(
+				'p',
+				null,
+				el(
+					'label',
+					null,
+					el( 'input', {
+						type: 'checkbox',
+						checked: props.enabled,
+						onChange: function ( event ) {
+							if ( event.target.checked ) {
+								props.onEnabled( true );
+								return;
+							}
+							if ( props.hasValue ) {
+								setAsking( true );
+								return;
+							}
+							props.onEnabled( false );
+						}
+					} ),
+					' ',
+					props.label
+				)
+			),
+			asking
+				? el(
+					'div',
+					{ className: 'ax-ce-blocked', role: 'alert' },
+					el( 'p', null, props.removeMessage ),
+					el(
+						'p',
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									setAsking( false );
+									props.onRemove();
+								}
+							},
+							__( 'Remove it', 'axismundi-contacts' )
+						),
+						' ',
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									setAsking( false );
+								}
+							},
+							__( 'Keep it', 'axismundi-contacts' )
+						)
+					)
+				)
+				: null
+		);
+	}
+
 	/**
 	 * Where somebody is.
 	 *
@@ -2512,6 +2580,7 @@
 		 * is already answering with one.
 		 */
 		var [ lines, setLines ] = useState( {} );
+		var [ optional, setOptional ] = useState( {} );
 
 		function writesALine( row ) {
 			return undefined === lines[ row.key ] ? undefined !== row.entry.full : lines[ row.key ];
@@ -2521,6 +2590,21 @@
 			var next = Object.assign( {}, lines );
 			next[ row.key ] = on;
 			setLines( next );
+		}
+
+		function optionalKey( row, property ) {
+			return row.key + ':' + property;
+		}
+
+		function writesOptional( row, property ) {
+			var key = optionalKey( row, property );
+			return undefined === optional[ key ] ? undefined !== row.entry[ property ] : optional[ key ];
+		}
+
+		function setWritesOptional( row, property, on ) {
+			var next = Object.assign( {}, optional );
+			next[ optionalKey( row, property ) ] = on;
+			setOptional( next );
 		}
 
 		return el(
@@ -2674,27 +2758,61 @@
 									} );
 								}
 							} ),
-							el( TextField, {
+							el( AddressPropertyToggle, {
 								label: __( 'Coordinates', 'axismundi-contacts' ),
-								value: entry.coordinates || '',
-								supporting: __( 'A geo: URI, like geo:37.386,-122.084.', 'axismundi-contacts' ),
-								onChange: function ( value ) {
+								enabled: writesOptional( row, 'coordinates' ),
+								hasValue: undefined !== entry.coordinates,
+								removeMessage: __( 'Turning this off removes the coordinates for this address.', 'axismundi-contacts' ),
+								onEnabled: function ( on ) {
+									setWritesOptional( row, 'coordinates', on );
+								},
+								onRemove: function () {
+									setWritesOptional( row, 'coordinates', false );
 									rows.write( row, function ( each ) {
-										return withKey( each, 'coordinates', value );
+										return withKey( each, 'coordinates', '' );
 									} );
 								}
 							} ),
-							el( TimeZonePicker, {
+							writesOptional( row, 'coordinates' )
+								? el( TextField, {
+									label: __( 'Coordinates', 'axismundi-contacts' ),
+									value: entry.coordinates || '',
+									supporting: __( 'A geo: URI, like geo:37.386,-122.084.', 'axismundi-contacts' ),
+									onChange: function ( value ) {
+										rows.write( row, function ( each ) {
+											return withKey( each, 'coordinates', value );
+										} );
+									}
+								} )
+								: null,
+							el( AddressPropertyToggle, {
 								label: __( 'Time zone', 'axismundi-contacts' ),
-								value: entry.timeZone || '',
-								options: config.timeZoneOptions,
-								supporting: __( 'The IANA time zone where this address is located.', 'axismundi-contacts' ),
-								onChange: function ( value ) {
+								enabled: writesOptional( row, 'timeZone' ),
+								hasValue: undefined !== entry.timeZone,
+								removeMessage: __( 'Turning this off removes the time zone for this address.', 'axismundi-contacts' ),
+								onEnabled: function ( on ) {
+									setWritesOptional( row, 'timeZone', on );
+								},
+								onRemove: function () {
+									setWritesOptional( row, 'timeZone', false );
 									rows.write( row, function ( each ) {
-										return withKey( each, 'timeZone', value );
+										return withKey( each, 'timeZone', '' );
 									} );
 								}
-							} )
+							} ),
+							writesOptional( row, 'timeZone' )
+								? el( TimeZonePicker, {
+									label: __( 'Time zone', 'axismundi-contacts' ),
+									value: entry.timeZone || '',
+									options: config.timeZoneOptions,
+									supporting: __( 'The IANA time zone where this address is located.', 'axismundi-contacts' ),
+									onChange: function ( value ) {
+										rows.write( row, function ( each ) {
+											return withKey( each, 'timeZone', value );
+										} );
+									}
+								} )
+								: null
 						)
 					),
 					el( IconButton, {

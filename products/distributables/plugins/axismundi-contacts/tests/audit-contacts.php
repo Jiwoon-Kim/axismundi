@@ -5725,22 +5725,16 @@ try {
 			// Drawn whenever there is a registry to draw it from, and behind nothing else.
 			&& str_contains( $ax_ct_cb_editor, 'countries.length' )
 			/*
-			 * And the tickboxes an address row has are the two that belong to answers most addresses
-			 * do not give: the line it is written out as, and the separator between its parts.
+			 * These four answers are opt-in. Full address has its own toggle because its field sits above
+			 * the parts; coordinates and time zone share the same toggle and removal contract in the fold.
 			 */
-			&& array( "__( 'Default separator', 'axismundi-contacts' )", "__( 'Full address', 'axismundi-contacts' )" ) === ( static function ( array $found ) : array {
-				sort( $found );
-				return $found;
-			} )(
-				array_filter(
-					array_map(
-						static function ( string $chunk ) : string {
-							return 1 === preg_match( "/__\( '[^']+', 'axismundi-contacts' \)/", $chunk, $label ) ? $label[0] : '';
-						},
-						array_slice( explode( "type: 'checkbox',", $ax_ct_cb_parts ), 1 )
-					)
-				)
-			)
+			&& str_contains( $ax_ct_cb_parts, "__( 'Default separator', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_cb_editor, 'function FullAddressToggle( props )' )
+			&& 2 === substr_count( $ax_ct_cb_editor, 'el( AddressPropertyToggle, {' )
+			&& str_contains( $ax_ct_cb_editor, "label: __( 'Coordinates', 'axismundi-contacts' )," )
+			&& str_contains( $ax_ct_cb_editor, "label: __( 'Time zone', 'axismundi-contacts' )," )
+			&& str_contains( $ax_ct_cb_editor, "removeMessage: __( 'Turning this off removes the coordinates for this address.', 'axismundi-contacts' )," )
+			&& str_contains( $ax_ct_cb_editor, "removeMessage: __( 'Turning this off removes the time zone for this address.', 'axismundi-contacts' )," )
 			&& true === axismundi_contacts_validate_card_values(
 				array( 'addresses' => array( 'adr-n' => array( 'components' => array( array( 'kind' => 'name', 'value' => 'Oak St' ) ) ) ) )
 			)

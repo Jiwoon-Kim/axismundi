@@ -5742,6 +5742,19 @@ try {
 			&& str_contains( $ax_ct_cb_editor, "allowFree: true," )
 	);
 
+	$ax_ct_cb_address_toggle = substr(
+		$ax_ct_cb_editor,
+		(int) strpos( $ax_ct_cb_editor, 'function AddressPropertyToggle' ),
+		(int) strpos( $ax_ct_cb_editor, 'function Addresses' ) - (int) strpos( $ax_ct_cb_editor, 'function AddressPropertyToggle' )
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'an optional address value can be removed or kept',
+		str_contains( $ax_ct_cb_address_toggle, "'p',\n\t\t\t\t\t\tnull,\n\t\t\t\t\t\tel(" )
+			&& str_contains( $ax_ct_cb_address_toggle, "__( 'Remove it', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_cb_address_toggle, "__( 'Keep it', 'axismundi-contacts' )" )
+	);
+
 	/*
 	 * One line, in a box that holds one line. A written-out address is a string and this asks for it as
 	 * one, which leaves the case of a line that arrived with a break in it: a single-line box drops the

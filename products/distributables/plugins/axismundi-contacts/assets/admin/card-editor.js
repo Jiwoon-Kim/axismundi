@@ -2513,6 +2513,7 @@
 					el( 'p', null, props.removeMessage ),
 					el(
 						'p',
+						null,
 						el(
 							'button',
 							{

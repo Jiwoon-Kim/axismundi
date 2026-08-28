@@ -190,9 +190,24 @@
 	margin: 0 0 .5em;
 }
 
-.ax-ce-localization__head h3 {
+/*
+ * The tag and the path are real levels in the Card outline, not helper text.
+ * WordPress's default h4/h5 scale makes both read like field labels, which loses
+ * the boundary between one language and the property it changes.
+ */
+.ax-ce-localization__head h4 {
 	margin: 0;
 	font-family: Menlo, Consolas, monospace;
+	font-size: 18px;
+	font-weight: 600;
+	line-height: 1.4;
+}
+
+.ax-ce-localization__name > h5 {
+	margin: 1em 0 .5em;
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 1.4;
 }
 
 .ax-ce-localization__add {

@@ -284,7 +284,6 @@ function axismundi_actors_render_managed_actors_page() : void {
 			<?php axismundi_actors_text_form( $selected ); ?>
 			<?php axismundi_actors_profile_fields_form( $selected ); ?>
 			<?php axismundi_actors_managers_form( $selected ); ?>
-			<?php axismundi_actors_anniversaries_form( $selected ); ?>
 			<?php do_action( 'axismundi_actors_managed_group_admin_sections', $selected ); ?>
 			<?php elseif ( $selected_is_moderator ) : ?>
 			<?php do_action( 'axismundi_actors_managed_group_admin_sections', $selected ); ?>
@@ -783,7 +782,6 @@ function axismundi_actors_render_management( Axismundi_Actor $actor, int $user_i
 	<?php axismundi_actors_text_form( $actor ); ?>
 	<?php axismundi_actors_profile_fields_form( $actor ); ?>
 	<?php axismundi_actors_follow_collections_form( $actor ); ?>
-	<?php axismundi_actors_anniversaries_form( $actor ); ?>
 	<?php
 }
 
@@ -1067,78 +1065,6 @@ function axismundi_actors_text_form( Axismundi_Actor $actor ) : void {
 	</form>
 	<?php
 }
-
-/** Render the JSContact anniversaries collection as an independent Actor-profile section. */
-function axismundi_actors_anniversaries_form( Axismundi_Actor $actor ) : void {
-	if ( ! $actor->is_local() ) {
-		return;
-	}
-	$identity_id = (int) $actor->get_identity_id();
-	$items       = axismundi_actors_get_anniversaries( $identity_id );
-	$items[]     = array( 'kind' => '', 'year' => 0, 'month' => 0, 'day' => 0, 'visibility' => 'none' );
-	$kinds       = axismundi_actors_anniversary_kind_labels();
-	?>
-	<h2><?php esc_html_e( 'Anniversaries', 'axismundi-actors' ); ?></h2>
-	<p class="description"><?php esc_html_e( 'Dates are Actor facts. Add only the anniversaries this Actor chooses to keep or publish. Adding one never creates a calendar event.', 'axismundi-actors' ); ?></p>
-	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-		<input type="hidden" name="action" value="axismundi_actors_set_anniversaries">
-		<input type="hidden" name="identity_id" value="<?php echo esc_attr( (string) $identity_id ); ?>">
-		<?php wp_nonce_field( 'ax_actors_anniversaries_' . $identity_id ); ?>
-		<table class="widefat striped" style="max-width:760px"><thead><tr><th><?php esc_html_e( 'Kind', 'axismundi-actors' ); ?></th><th><?php esc_html_e( 'Date', 'axismundi-actors' ); ?></th><th><?php esc_html_e( 'Show', 'axismundi-actors' ); ?></th></tr></thead><tbody>
-		<?php foreach ( $items as $index => $item ) : ?>
-			<tr>
-				<td><select name="anniversaries[<?php echo esc_attr( (string) $index ); ?>][kind]"><option value=""></option><?php foreach ( $kinds as $kind => $label ) : ?><option value="<?php echo esc_attr( $kind ); ?>" <?php selected( $item['kind'], $kind ); ?>><?php echo esc_html( $label ); ?></option><?php endforeach; ?></select></td>
-				<td><input name="anniversaries[<?php echo esc_attr( (string) $index ); ?>][year]" type="number" class="small-text" min="0" max="<?php echo esc_attr( gmdate( 'Y' ) ); ?>" value="<?php echo esc_attr( $item['year'] ? (string) $item['year'] : '' ); ?>" placeholder="<?php esc_attr_e( 'year', 'axismundi-actors' ); ?>"> <input name="anniversaries[<?php echo esc_attr( (string) $index ); ?>][month]" type="number" class="small-text" min="1" max="12" value="<?php echo esc_attr( $item['month'] ? (string) $item['month'] : '' ); ?>" placeholder="<?php esc_attr_e( 'month', 'axismundi-actors' ); ?>"> <input name="anniversaries[<?php echo esc_attr( (string) $index ); ?>][day]" type="number" class="small-text" min="1" max="31" value="<?php echo esc_attr( $item['day'] ? (string) $item['day'] : '' ); ?>" placeholder="<?php esc_attr_e( 'day', 'axismundi-actors' ); ?>"></td>
-				<td><select name="anniversaries[<?php echo esc_attr( (string) $index ); ?>][visibility]"><option value="none" <?php selected( $item['visibility'], 'none' ); ?>><?php esc_html_e( 'Not published', 'axismundi-actors' ); ?></option><option value="month-day" <?php selected( $item['visibility'], 'month-day' ); ?>><?php esc_html_e( 'Month and day', 'axismundi-actors' ); ?></option><option value="full" <?php selected( $item['visibility'], 'full' ); ?>><?php esc_html_e( 'Full date', 'axismundi-actors' ); ?></option></select></td>
-			</tr>
-		<?php endforeach; ?>
-		</tbody></table>
-		<template id="ax-actor-anniversary-row-template">
-			<tr>
-				<td><select data-name="anniversaries[__index__][kind]"><option value=""></option><?php foreach ( $kinds as $kind => $label ) : ?><option value="<?php echo esc_attr( $kind ); ?>"><?php echo esc_html( $label ); ?></option><?php endforeach; ?></select></td>
-				<td><input data-name="anniversaries[__index__][year]" type="number" class="small-text" min="0" max="<?php echo esc_attr( gmdate( 'Y' ) ); ?>" placeholder="<?php esc_attr_e( 'year', 'axismundi-actors' ); ?>"> <input data-name="anniversaries[__index__][month]" type="number" class="small-text" min="1" max="12" placeholder="<?php esc_attr_e( 'month', 'axismundi-actors' ); ?>"> <input data-name="anniversaries[__index__][day]" type="number" class="small-text" min="1" max="31" placeholder="<?php esc_attr_e( 'day', 'axismundi-actors' ); ?>"></td>
-				<td><select data-name="anniversaries[__index__][visibility]"><option value="none"><?php esc_html_e( 'Not published', 'axismundi-actors' ); ?></option><option value="month-day"><?php esc_html_e( 'Month and day', 'axismundi-actors' ); ?></option><option value="full"><?php esc_html_e( 'Full date', 'axismundi-actors' ); ?></option></select></td>
-			</tr>
-		</template>
-		<p><button type="button" class="button" id="ax-actor-add-anniversary"><?php esc_html_e( 'Add anniversary', 'axismundi-actors' ); ?></button></p>
-		<script>
-		(function () {
-			const button = document.getElementById('ax-actor-add-anniversary');
-			const template = document.getElementById('ax-actor-anniversary-row-template');
-			if (!button || !template) { return; }
-			let index = <?php echo (int) count( $items ); ?>;
-			button.addEventListener('click', function () {
-				const fragment = template.content.cloneNode(true);
-				fragment.querySelectorAll('[data-name]').forEach(function (field) {
-					field.name = field.dataset.name.replace('__index__', index);
-					field.removeAttribute('data-name');
-				});
-				template.previousElementSibling.querySelector('tbody').appendChild(fragment);
-				index += 1;
-			});
-		}());
-		</script>
-		<?php submit_button( __( 'Save anniversaries', 'axismundi-actors' ) ); ?>
-	</form>
-	<?php
-}
-
-/** @return void */
-function axismundi_actors_handle_set_anniversaries() : void {
-	$identity_id = isset( $_POST['identity_id'] ) ? absint( $_POST['identity_id'] ) : 0;
-	check_admin_referer( 'ax_actors_anniversaries_' . $identity_id );
-	$actor = axismundi_actors_get_by_identity( $identity_id );
-	if ( ! $actor instanceof Axismundi_Actor || ! axismundi_actors_can_manage( $actor ) ) {
-		wp_die( esc_html__( 'You cannot manage this actor profile.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
-	}
-	$items  = isset( $_POST['anniversaries'] ) && is_array( $_POST['anniversaries'] ) ? wp_unslash( $_POST['anniversaries'] ) : array();
-	$result = axismundi_actors_replace_anniversaries( $identity_id, $items );
-	if ( ! is_wp_error( $result ) ) {
-		axismundi_actors_profile_updated( $identity_id );
-	}
-	axismundi_actors_redirect_result( axismundi_actors_management_back_url( $actor ), $result );
-}
-add_action( 'admin_post_axismundi_actors_set_anniversaries', 'axismundi_actors_handle_set_anniversaries' );
 
 /** Render local Actor links as ActivityStreams PropertyValue attachments. */
 function axismundi_actors_profile_fields_form( Axismundi_Actor $actor ) : void {

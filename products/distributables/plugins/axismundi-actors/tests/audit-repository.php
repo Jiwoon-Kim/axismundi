@@ -37,6 +37,10 @@ try {
 	axismundi_actors_install();
 	$idents = axismundi_actors_identities_table();
 	$actors = axismundi_actors_actors_table();
+	$anniversaries = $wpdb->prefix . 'ax_actor_anniversaries';
+	// Actor profiles no longer own a parallel JSContact anniversaries collection.
+	$anniversary_table = (string) $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $anniversaries ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema assertion.
+	ax_rep_assert( $ax_results, 'the retired Actor anniversaries table is absent after upgrade', $anniversaries !== $anniversary_table );
 
 	// --- Person via ensure_for_user ---
 	$uid = (int) wp_insert_user( array( 'user_login' => 'ax_rep_alice', 'user_pass' => wp_generate_password(), 'role' => 'author' ) );

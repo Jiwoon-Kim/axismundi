@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '30.0';
+const AXISMUNDI_ACTORS_DB_VERSION = '31.0';
 
 /**
  * Columns the base profile used to have, kept only so they can be removed.
@@ -53,12 +53,6 @@ function axismundi_actors_actors_table() : string {
 function axismundi_actors_texts_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_actor_texts';
-}
-
-/** @return string Local Actor anniversaries. */
-function axismundi_actors_anniversaries_table() : string {
-	global $wpdb;
-	return $wpdb->prefix . 'ax_actor_anniversaries';
 }
 
 /** @return string Local Actor PropertyValue profile fields. */
@@ -158,7 +152,7 @@ function axismundi_actors_install() : void {
 	$person_names   = $wpdb->prefix . 'ax_actor_person_names';
 	$alternate_names = axismundi_actors_alternate_names_table();
 	$profile         = axismundi_actors_profile_table();
-	$anniversaries   = axismundi_actors_anniversaries_table();
+	$anniversaries   = $wpdb->prefix . 'ax_actor_anniversaries';
 
 	dbDelta(
 		"CREATE TABLE {$identities} (
@@ -289,48 +283,13 @@ function axismundi_actors_install() : void {
 		}
 	}
 
-	/* A date is an Actor fact, not a column reserved for one kind of anniversary. */
-	dbDelta(
-		"CREATE TABLE {$anniversaries} (
-			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-			identity_id bigint(20) unsigned NOT NULL,
-			anniversary_kind varchar(32) NOT NULL,
-			year smallint(5) unsigned NOT NULL default 0,
-			month tinyint(3) unsigned NOT NULL,
-			day tinyint(3) unsigned NOT NULL,
-			visibility varchar(16) NOT NULL default 'none',
-			created_at datetime NOT NULL,
-			updated_at datetime NOT NULL,
-			PRIMARY KEY  (id),
-			KEY identity_id (identity_id)
-		) ENGINE=InnoDB {$charset};"
-	);
-
-	/* Development builds briefly stored two birthday columns. Preserve them as ordinary rows. */
-	$profile_columns_before_anniversaries = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profile}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema migration.
-	if ( in_array( 'birth_month', $profile_columns_before_anniversaries, true ) ) {
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration from this plugin's development columns.
-		$legacy_birthdays = (array) $wpdb->get_results( "SELECT identity_id, birth_year, birth_month, birth_day, birth_visibility FROM {$profile} WHERE birth_month > 0 AND birth_day > 0", ARRAY_A );
-		foreach ( $legacy_birthdays as $legacy_birthday ) {
-			$now = current_time( 'mysql', true );
-			$existing = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$anniversaries} WHERE identity_id = %d", (int) $legacy_birthday['identity_id'] ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- migration idempotency check.
-			if ( 0 === $existing ) {
-				$wpdb->insert( $anniversaries, array( 'identity_id' => (int) $legacy_birthday['identity_id'], 'anniversary_kind' => 'birth', 'year' => (int) $legacy_birthday['birth_year'], 'month' => (int) $legacy_birthday['birth_month'], 'day' => (int) $legacy_birthday['birth_day'], 'visibility' => (string) $legacy_birthday['birth_visibility'], 'created_at' => $now, 'updated_at' => $now ), array( '%d', '%s', '%d', '%d', '%d', '%s', '%s', '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- migration insert.
-			}
-		}
-		// Experimental lunisolar fields deliberately do not migrate: Calendar/Contacts owns recurrence.
-		foreach ( array( 'birth_year', 'birth_month', 'birth_day', 'lunar_birth_year', 'lunar_birth_month', 'lunar_birth_day', 'lunar_birth_leap', 'birth_visibility' ) as $legacy_column ) {
-			if ( in_array( $legacy_column, $profile_columns_before_anniversaries, true ) ) {
-				$wpdb->query( "ALTER TABLE {$profile} DROP COLUMN {$legacy_column}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- obsolete development columns after preserved migration.
-			}
-		}
-	}
-	$anniversary_columns_before = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$anniversaries}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema migration.
-	foreach ( array( 'calendar_scale', 'leap_month' ) as $obsolete_anniversary_column ) {
-		if ( in_array( $obsolete_anniversary_column, $anniversary_columns_before, true ) ) {
-			$wpdb->query( "ALTER TABLE {$anniversaries} DROP COLUMN {$obsolete_anniversary_column}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- calendar recurrence does not belong to Actor facts.
-		}
-	}
+	/*
+	 * Anniversaries belong to the contact Card.  Actors used to keep a parallel JSContact collection,
+	 * which made profile and address-book facts compete. This retired store is intentionally
+	 * discarded rather than migrated: a future Contacts anniversaries UI is the sole authoring path.
+	 */
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed retired internal table.
+	$wpdb->query( "DROP TABLE IF EXISTS {$anniversaries}" );
 	/*
 	 * The other names a person goes by, which are not the same question as the same name written in
 	 * another script -- that is a localization of one name and lives in the table above. A nickname, a
@@ -743,7 +702,6 @@ function axismundi_actors_install() : void {
 	$alternate_name_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$alternate_names}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$profile_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profile}" );
-	$anniversary_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$anniversaries}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$alternate_name_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$alternate_names} WHERE Key_name = 'identity_kind_position'" );
 	/*
@@ -794,8 +752,7 @@ function axismundi_actors_install() : void {
 		&& in_array( 'structured_name_language', $profile_columns, true )
 		&& array() === array_intersect( AXISMUNDI_ACTORS_RETIRED_PROFILE_COLUMNS, $profile_columns )
 		&& $person_names_dropped
-		&& in_array( 'anniversary_kind', $anniversary_columns, true )
-		&& in_array( 'visibility', $anniversary_columns, true )
+		&& $anniversaries !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $anniversaries ) )
 		&& in_array( 'name_kind', $alternate_name_columns, true )
 		&& in_array( 'value', $alternate_name_columns, true )
 		&& ! empty( $alternate_name_indexes )

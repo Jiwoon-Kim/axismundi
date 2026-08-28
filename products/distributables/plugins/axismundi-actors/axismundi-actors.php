@@ -29,7 +29,6 @@ require_once __DIR__ . '/includes/identity-registry.php';
 require_once __DIR__ . '/includes/texts.php';
 require_once __DIR__ . '/includes/person-name.php';
 require_once __DIR__ . '/includes/person-profile.php';
-require_once __DIR__ . '/includes/anniversaries.php';
 require_once __DIR__ . '/includes/jscontact.php';
 require_once __DIR__ . '/includes/profile-fields.php';
 require_once __DIR__ . '/includes/follow-vocabulary.php';

@@ -34,7 +34,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CONTACTS_DB_VERSION        = '11';
+const AXISMUNDI_CONTACTS_DB_VERSION        = '12';
 const AXISMUNDI_CONTACTS_DB_VERSION_OPTION = 'ax_contacts_db_version';
 
 /**
@@ -340,6 +340,12 @@ function axismundi_contacts_install_schema() : bool {
 	axismundi_contacts_restore_service_actor_refs();
 	// And then the accounts that were showing an Actor's identifier where its profile belongs.
 	axismundi_contacts_migrate_service_profile_uris();
+	/*
+	 * And every self Card is given the account that says whose it is, because from here on the save
+	 * path refuses to let one go missing -- and a Card that arrived without one would otherwise be a
+	 * Card its owner could no longer save.
+	 */
+	axismundi_contacts_ensure_identity_services();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.
 	$card_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$cards}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.
@@ -427,6 +433,61 @@ function axismundi_contacts_migrate_service_profile_uris() : void {
 			continue;
 		}
 		axismundi_contacts_save_card_for_owner( (int) $card['owner_actor_id'], $document, $card_id );
+	}
+}
+
+/**
+ * Give every self Card the account that says which Actor it is about.
+ *
+ * The save path refuses to let this account be renamed, repointed or removed, which is only fair to
+ * somebody if the Card has one to begin with. A Card written before the account was guaranteed would
+ * otherwise be a Card whose owner is told, every time they save, that something they never touched is
+ * wrong.
+ *
+ * Only what is missing, and only from the Actor. A Card that already carries one is left exactly as
+ * it is, including one that disagrees with the Actor: repairing that here would rewrite somebody's
+ * document during an upgrade, with no way for them to see it happen. The save path asks them about
+ * that one, which is where a question belongs.
+ *
+ * @return void
+ */
+function axismundi_contacts_ensure_identity_services() : void {
+	global $wpdb;
+	if ( ! function_exists( 'axismundi_actors_get_by_identity' ) ) {
+		return;
+	}
+	$profiles = axismundi_contacts_profiles_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
+	$rows = (array) $wpdb->get_results( "SELECT actor_id, card_id FROM {$profiles}", ARRAY_A );
+	foreach ( $rows as $row ) {
+		$actor_id = (int) ( $row['actor_id'] ?? 0 );
+		$card_id  = (int) ( $row['card_id'] ?? 0 );
+		if ( $actor_id <= 0 || $card_id <= 0 ) {
+			continue;
+		}
+		$document = axismundi_contacts_card_document( $card_id );
+		if ( array() === $document || isset( $document['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] ) ) {
+			continue;
+		}
+		$actor = axismundi_actors_get_by_identity( $actor_id );
+		if ( ! $actor instanceof Axismundi_Actor ) {
+			continue;
+		}
+		$document['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] = axismundi_contacts_identity_service( $actor );
+		$saved = axismundi_contacts_save_card_for_owner( $actor_id, $document, $card_id );
+		if ( is_wp_error( $saved ) ) {
+			continue;
+		}
+		/*
+		 * And it is recorded as the Actor's, which is what says the account is about that Actor rather
+		 * than something somebody typed that happens to look like it.
+		 */
+		axismundi_contacts_set_provenance(
+			$card_id,
+			'onlineServices/' . AXISMUNDI_CONTACTS_HOME_SERVICE_KEY,
+			AXISMUNDI_CONTACTS_SOURCE_ACTOR,
+			$actor->get_uri()
+		);
 	}
 }
 

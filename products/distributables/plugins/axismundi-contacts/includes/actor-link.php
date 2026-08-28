@@ -422,9 +422,20 @@ function axismundi_contacts_card_actor_links( int $card_id ) : array {
  *   2. the first account with a face    -- the one they lead with, then the next
  *   3. nothing                          -- the caller draws initials
  *
- * Walking the accounts rather than taking one is what makes a Card with a Mastodon account, a blog,
- * a Misskey account and a bridged Bluesky handle show the right person: the top account is the one
- * they present themselves as, and the next only answers when that one has no picture yet.
+ * The Actor's own picture is resolved here rather than copied onto the Card, and the difference
+ * matters twice over: somebody who changes their avatar changes what this shows without anything
+ * being rewritten, and this site never claims another person's image as a photo on a Card it keeps.
+ * A `media` entry is the other thing -- an image somebody deliberately put here -- and it wins,
+ * because it was chosen for this contact.
+ *
+ * Which Actor to ask is read from the record of where an account came from, not from which account
+ * happens to be first. Preference decides what a person reads first and is theirs to change; it has
+ * no business deciding whose picture this is. A self Card's own account answers before the others,
+ * because that one is not an account somebody added -- it is which Actor this Card is.
+ *
+ * Nothing here goes looking for a picture by email address. Handing a third party the addresses in
+ * somebody's private address book, one request at a time, is not a thing to do quietly for an image;
+ * a caller with no picture to show draws a mark of its own.
  *
  * An email address is never turned into an avatar lookup. Handing a third party the addresses in
  * somebody's private address book, one request at a time, is not a thing to do quietly for a
@@ -449,7 +460,20 @@ function axismundi_contacts_card_avatar( int $card_id, int $size = 96 ) : array 
 	if ( ! function_exists( 'axismundi_actors_avatar_url' ) ) {
 		return $none;
 	}
-	foreach ( axismundi_contacts_card_actor_links( $card_id ) as $link ) {
+	/*
+	 * The account that says which Actor this Card is, ahead of the accounts somebody added to it.
+	 * Everything else keeps the Card's own order, which is where a person put them.
+	 */
+	$links = axismundi_contacts_card_actor_links( $card_id );
+	usort(
+		$links,
+		static function ( array $a, array $b ) : int {
+			$a_self = AXISMUNDI_CONTACTS_HOME_SERVICE_KEY === $a['entry_id'] ? 0 : 1;
+			$b_self = AXISMUNDI_CONTACTS_HOME_SERVICE_KEY === $b['entry_id'] ? 0 : 1;
+			return $a_self <=> $b_self;
+		}
+	);
+	foreach ( $links as $link ) {
 		/*
 		 * Whatever Actors has, which is a local attachment for a local Actor and a cached copy for a
 		 * remote one. Contacts does not fetch or store the image: two caches of one avatar is one too

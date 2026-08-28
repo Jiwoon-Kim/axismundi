@@ -92,11 +92,21 @@ function axismundi_contacts_default_published() : array {
  * here. That is the extended card, and it is published only when its owner says so and only to the
  * audience they chose.
  *
+ * A picture is not here either, and that is the part worth saying out loud. What a profile shows is
+ * the Actor's own icon, resolved when the page is drawn, so changing it upstream changes what people
+ * see without rewriting anybody's Card. `media` is a different fact: an image somebody deliberately
+ * put on this Card. Promoting the first of those to the public identity would publish an image on the
+ * strength of its position in a list, and would claim somebody else's picture as this Card's own.
+ *
  * @param array<string,mixed> $card Stored Card.
  * @return string[] Pointers.
  */
 function axismundi_contacts_identity_pointers( array $card ) : array {
-	$pointers = array( 'name' );
+	/*
+	 * What kind of thing this is and what language it is written in come with the name, because
+	 * neither is a fact about the person: they are how to read the rest of the sentence.
+	 */
+	$pointers = array( 'name', 'kind', 'language' );
 	/*
 	 * The account that says which Actor this is. Its key is fixed for exactly this reason: a pointer
 	 * naming the identity has to keep naming it, and a generated key would make the floor of a public
@@ -104,16 +114,6 @@ function axismundi_contacts_identity_pointers( array $card ) : array {
 	 */
 	if ( isset( $card['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] ) ) {
 		$pointers[] = 'onlineServices/' . AXISMUNDI_CONTACTS_HOME_SERVICE_KEY;
-	}
-	/*
-	 * And the picture, which is the one an Actor is already showing. The first photo, by the same rule
-	 * the avatar follows -- the one they lead with -- rather than every image on the Card.
-	 */
-	foreach ( (array) ( $card['media'] ?? array() ) as $id => $entry ) {
-		if ( is_array( $entry ) && 'photo' === (string) ( $entry['kind'] ?? 'photo' ) && '' !== trim( (string) ( $entry['uri'] ?? '' ) ) ) {
-			$pointers[] = 'media/' . (string) $id;
-			break;
-		}
 	}
 	return $pointers;
 }

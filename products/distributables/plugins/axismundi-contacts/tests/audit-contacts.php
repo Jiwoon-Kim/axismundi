@@ -1184,12 +1184,24 @@ try {
 		'the account that says which Actor a profile is cannot be repointed, renamed, or retired',
 		409 === $ax_ct_renamed_res->get_status()
 			&& 409 === $ax_ct_moved_res->get_status()
-			// Removing it is not a refusal, and what comes back is the Actor's own answer.
-			&& 200 === $ax_ct_dropped_res->get_status()
+			/*
+			 * Removing it is refused too, rather than accepted and quietly put back. Answering "saved"
+			 * to a save that did not happen is a lie a client will act on, and a request arriving
+			 * between the accept and the repair would read a Card that says nothing about whose it is.
+			 */
+			&& 409 === $ax_ct_dropped_res->get_status()
+			// Every refusal left the document exactly as it was.
 			&& $ax_ct_fresh->get_profile_url() === (string) ( $ax_ct_id_after['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ]['uri'] ?? '' )
 			&& 1 === (int) ( $ax_ct_id_after['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ]['pref'] ?? 0 )
-			// And a refused save left the document alone rather than half-writing it.
 			&& 'Something else' !== (string) ( $ax_ct_id_after['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ]['service'] ?? '' )
+			/*
+			 * Which is only fair to somebody if the account is there to begin with, so every self Card
+			 * is given one on upgrade rather than being refused for a gap nobody made.
+			 */
+			&& str_contains(
+				(string) file_get_contents( dirname( __DIR__ ) . '/includes/schema.php' ),
+				'function axismundi_contacts_ensure_identity_services() : void {'
+			)
 	);
 
 	/*
@@ -1207,6 +1219,19 @@ try {
 	 * its owner has published it to everybody.
 	 */
 	$ax_ct_id_card = axismundi_contacts_jscontact_card( $ax_ct_fresh );
+	/*
+	 * A picture is not one of the things identity says. What a profile shows is the Actor's own icon,
+	 * resolved when the page is drawn, so changing it upstream changes what people see without
+	 * rewriting anybody's Card -- and this site never claims somebody else's image as a photo on a
+	 * Card it keeps. `media` is the other thing: an image deliberately put on this Card, published
+	 * only if its owner published it.
+	 */
+	$ax_ct_pic_doc = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_pic_doc['media'] = array(
+		'med-1' => array( '@type' => 'Media', 'kind' => 'photo', 'uri' => 'https://example.test/face.png' ),
+	);
+	axismundi_contacts_save_card_for_owner( (int) $ax_ct_fresh->get_identity_id(), $ax_ct_pic_doc, $ax_ct_seeded );
+	$ax_ct_pic_out = axismundi_contacts_jscontact_card( $ax_ct_fresh );
 	// An Actor that is not published at all. Its card answers nothing, whatever its owner selected.
 	$ax_ct_hidden  = ax_ct_actor( $ax_ct_users );
 	axismundi_actors_set_status( (int) $ax_ct_hidden->get_identity_id(), 'internal' );
@@ -1225,6 +1250,14 @@ try {
 			&& ! isset( $ax_ct_id_card['emails'], $ax_ct_id_card['phones'], $ax_ct_id_card['addresses'], $ax_ct_id_card['notes'] )
 			// An Actor that is not answering at its own address answers nothing here either.
 			&& ! axismundi_contacts_jscontact_is_readable( $ax_ct_hidden )
+			/*
+			 * And a photo on the Card is not promoted to identity by being the first one there. It is
+			 * published when its owner publishes it, and until then the screen shows the Actor's icon
+			 * without the Card claiming it.
+			 */
+			&& is_array( $ax_ct_pic_out )
+			&& ! isset( $ax_ct_pic_out['media'] )
+			&& ! in_array( 'media/med-1', axismundi_contacts_identity_pointers( $ax_ct_pic_doc ), true )
 	);
 
 	// -- the card owns the structured name ------------------------------------------------------------------------
@@ -2127,10 +2160,25 @@ try {
 			&& isset( $ax_ct_pub_out['notes']['profile'] )
 			&& ! isset( $ax_ct_pub_out['notes']['n1'] )
 	);
+	/*
+	 * And the floor is a floor. Dropping a pointer stops publishing it -- that is the whole rule --
+	 * with the exception of the three things that say who this is: the name, what kind of thing it is,
+	 * and the language it is written in. None of those is a fact about a person, all three are already
+	 * being served at the Actor's own address, and a Card that withheld them would be published as
+	 * somebody unidentifiable rather than as somebody private.
+	 *
+	 * `language` is the one that shows it, because it is the only one of the three that this list does
+	 * not name: it is served anyway.
+	 */
 	ax_ct_assert(
 		$ax_ct_results,
-		'and dropping a language from the list stops publishing it',
-		is_array( $ax_ct_pub_out ) && ! isset( $ax_ct_pub_out['language'] )
+		'what says who this is cannot be dropped, and everything else still can',
+		is_array( $ax_ct_pub_out )
+			&& ! in_array( 'language', axismundi_contacts_published_pointers( $ax_ct_pub_sid ), true )
+			&& 'ko-KR' === (string) ( $ax_ct_pub_out['language'] ?? '' )
+			// And a note nobody named is still a note nobody sees.
+			&& ! isset( $ax_ct_pub_out['notes']['n1'] )
+			&& ! isset( $ax_ct_pub_out['emails']['e2'] )
 	);
 
 	/*

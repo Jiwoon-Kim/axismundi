@@ -228,22 +228,20 @@ function axismundi_contacts_rest_put_draft( WP_REST_Request $request ) {
 	 * not an entry on the list of accounts somebody keeps -- so the editor may not retire it, rename
 	 * what it says, or move it out of first place.
 	 *
-	 * A Card that simply does not have it is repaired rather than refused. Nobody removed anything
-	 * there: it is a Card written before this was guaranteed, and refusing the save would leave its
-	 * owner unable to edit their own profile until somebody ran a migration for them.
+	 * Removing it is refused too, rather than accepted and put back. Accepting a save that did not
+	 * happen tells a client the account is gone when it is not, and a second request arriving between
+	 * the two writes would read a Card that says nothing about whose it is. Every existing Card is
+	 * given one on upgrade, so nothing here has to make up for a Card that never had it.
 	 *
-	 * A Card that has it and disagrees with the Actor is refused, because somebody changed it. The
-	 * refusal says which Actor it is and leaves the submitted document alone; quietly putting the
-	 * Actor's answer back would tell them their edit was saved.
+	 * The refusal leaves the submitted document alone. Quietly writing the Actor's answer over
+	 * somebody's edit would tell them it was saved.
 	 */
 	if ( $profile && function_exists( 'axismundi_actors_get_by_identity' ) ) {
 		$identity_actor = axismundi_actors_get_by_identity( $owner );
 		if ( $identity_actor instanceof Axismundi_Actor ) {
 			$fixed    = axismundi_contacts_identity_service( $identity_actor );
 			$existing = $card['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] ?? null;
-			if ( null === $existing ) {
-				$card['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] = $fixed;
-			} elseif ( ! is_array( $existing ) || ! axismundi_contacts_identity_service_matches( $existing, $fixed ) ) {
+			if ( ! is_array( $existing ) || ! axismundi_contacts_identity_service_matches( $existing, $fixed ) ) {
 				return new WP_Error(
 					'ax_contacts_draft_identity',
 					__( 'This account says which Actor this card is about, so this site answers it rather than the editor.', 'axismundi-contacts' ),

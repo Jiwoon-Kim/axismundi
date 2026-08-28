@@ -82,7 +82,7 @@ function axismundi_contacts_binding_control( int $actor_id, string $locale, arra
 			<?php
 			printf(
 				/* translators: %s: the writing this name followed. */
-				esc_html__( 'This followed %s, which the card no longer has. The published name is unchanged until you choose again.', 'axismundi-contacts' ),
+				esc_html__( 'This was taken from %s, which the card no longer has. The published name is unchanged until you choose again.', 'axismundi-contacts' ),
 				'<code>' . esc_html( $binding['source_tag'] ) . '</code>'
 			);
 			?>
@@ -110,7 +110,7 @@ function axismundi_contacts_binding_rows( int $actor_id ) : void {
 	?>
 	<h2><?php esc_html_e( 'What each language shows', 'axismundi-contacts' ); ?></h2>
 	<p class="description">
-		<?php esc_html_e( 'Which writing of your name a reader sees. A romanisation and a name you use in another language are different things, so this is a choice rather than something worked out from the language tags.', 'axismundi-contacts' ); ?>
+		<?php esc_html_e( 'Which writing of your name a reader sees. A romanisation and a name you use in another language are different things, so this is a choice rather than something worked out from the language tags. The name is copied when you choose it; editing the card afterwards leaves what is published here alone.', 'axismundi-contacts' ); ?>
 	</p>
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<input type="hidden" name="action" value="axismundi_contacts_save_bindings">

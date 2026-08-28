@@ -1896,17 +1896,24 @@ try {
 			&& 'Jiwoon Kim' === (string) ( $ax_ct_texts['de-DE']['name'] ?? '' )
 			&& 'Trump' === (string) ( $ax_ct_texts['fr-FR']['name'] ?? '' )
 	);
-	// Correcting the card reaches every locale that follows it, and no others.
+	/*
+	 * And correcting the card afterwards moves none of them. The name was copied when somebody chose
+	 * it, and what an Actor publishes is not a mirror of an address book: a surname corrected here
+	 * would otherwise change, on save and without being asked, what every stranger and every remote
+	 * server sees. Taking the correction across is a second decision, made on the same screen.
+	 */
 	$ax_ct_fixdoc = axismundi_contacts_card_document( $ax_ct_seeded );
 	$ax_ct_fixdoc = axismundi_contacts_set_localized_name( $ax_ct_fixdoc, 'ko-Latn', array( 'full' => 'Ji-woon Kim' ) );
 	axismundi_contacts_save_card_for_owner( $ax_ct_sid, $ax_ct_fixdoc, $ax_ct_seeded );
 	$ax_ct_texts = axismundi_actors_get_text_map( $ax_ct_sid );
 	ax_ct_assert(
 		$ax_ct_results,
-		'correcting a writing reaches every locale bound to it and leaves the rest alone',
-		'Ji-woon Kim' === (string) ( $ax_ct_texts['en-US']['name'] ?? '' )
-			&& 'Ji-woon Kim' === (string) ( $ax_ct_texts['de-DE']['name'] ?? '' )
+		'correcting a writing leaves every published name as it was chosen',
+		'Jiwoon Kim' === (string) ( $ax_ct_texts['en-US']['name'] ?? '' )
+			&& 'Jiwoon Kim' === (string) ( $ax_ct_texts['de-DE']['name'] ?? '' )
 			&& 'Trump' === (string) ( $ax_ct_texts['fr-FR']['name'] ?? '' )
+			// The record of where each came from stands, so the screen can offer to take it again.
+			&& 'ko-Latn' === axismundi_actors_text_binding( $ax_ct_sid, 'name', 'en-US' )['source_tag']
 	);
 	/*
 	 * A name typed on the Actor follows nothing. Somebody who wrote it chose it, and a later change to
@@ -1918,15 +1925,17 @@ try {
 	$ax_ct_texts = axismundi_actors_get_text_map( $ax_ct_sid );
 	ax_ct_assert(
 		$ax_ct_results,
-		'a name typed on the Actor follows nothing and survives the next card edit',
+		'a name typed on the Actor survives a card edit, and so now does one taken from the card',
 		'Herr Kim' === (string) ( $ax_ct_texts['de-DE']['name'] ?? '' )
 			&& 'custom' === axismundi_actors_text_binding( $ax_ct_sid, 'name', 'de-DE' )['source']
-			&& 'Jiwoon KIM' === (string) ( $ax_ct_texts['en-US']['name'] ?? '' )
+			// Once the difference between the two was whether a card edit reached them. It is not now.
+			&& 'Jiwoon Kim' === (string) ( $ax_ct_texts['en-US']['name'] ?? '' )
 	);
 	/*
-	 * And a writing that is deleted leaves the published name standing. What strangers and remote
-	 * servers hold should not empty itself because somebody tidied an address book; the binding stays,
-	 * so a screen can say it needs choosing again.
+	 * And a writing that is deleted leaves the published name standing -- now for the plainest reason
+	 * there is, which is that nothing goes looking. What strangers and remote servers hold does not
+	 * empty itself because somebody tidied an address book. The record of where it came from stays, so
+	 * a screen can say that writing is gone and offer to choose again.
 	 */
 	$ax_ct_fixdoc = axismundi_contacts_set_localized_name( $ax_ct_fixdoc, 'ko-Latn', array() );
 	axismundi_contacts_save_card_for_owner( $ax_ct_sid, $ax_ct_fixdoc, $ax_ct_seeded );
@@ -1934,7 +1943,7 @@ try {
 	ax_ct_assert(
 		$ax_ct_results,
 		'deleting a writing leaves the name it was shown as, rather than emptying what was published',
-		'Jiwoon KIM' === (string) ( $ax_ct_texts['en-US']['name'] ?? '' )
+		'Jiwoon Kim' === (string) ( $ax_ct_texts['en-US']['name'] ?? '' )
 			&& 'ko-Latn' === axismundi_actors_text_binding( $ax_ct_sid, 'name', 'en-US' )['source_tag']
 	);
 	// A locale can only be pointed at a name the card actually has.
@@ -2266,16 +2275,24 @@ try {
 			&& 'Jiwoon KIM' === (string) ( axismundi_actors_get_text_map( $ax_ct_nm_sid )['en-US']['name'] ?? '' )
 	);
 
-	// Changing the card reaches the locale that follows it, and only that one.
+	/*
+	 * Changing the card reaches neither. A Card and an Actor are two documents about the same person
+	 * with different jobs -- one records who somebody is, the other is what they call themselves in
+	 * public -- and after the Card is first seeded from the Actor the only thing still crossing
+	 * between them is the account saying which Actor the Card is about.
+	 */
 	$ax_ct_nm_doc = axismundi_contacts_card_document( $ax_ct_nm_card );
 	$ax_ct_nm_doc = axismundi_contacts_set_localized_name( $ax_ct_nm_doc, 'ko-Latn', array( '@type' => 'Name', 'full' => 'Ji-woon Kim' ) );
 	axismundi_contacts_save_card_for_owner( $ax_ct_nm_sid, $ax_ct_nm_doc, $ax_ct_nm_card );
 	$ax_ct_nm_map = axismundi_actors_get_text_map( $ax_ct_nm_sid );
 	ax_ct_assert(
 		$ax_ct_results,
-		'a card edit reaches the locale bound to it and leaves an unbound one alone',
-		'Ji-woon Kim' === (string) ( $ax_ct_nm_map['en-US']['name'] ?? '' )
+		'a card edit reaches no published name, whether one was taken from the card or typed',
+		'Jiwoon KIM' === (string) ( $ax_ct_nm_map['en-US']['name'] ?? '' )
 			&& 'Eigener Name' === (string) ( $ax_ct_nm_map['de-DE']['name'] ?? '' )
+			// And nothing is left listening for a save to carry it across.
+			&& ! function_exists( 'axismundi_contacts_refresh_bound_names' )
+			&& ! has_action( 'axismundi_contacts_card_saved', 'axismundi_contacts_on_card_saved' )
 	);
 
 	/*

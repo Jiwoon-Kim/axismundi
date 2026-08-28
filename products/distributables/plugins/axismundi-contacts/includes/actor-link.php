@@ -212,6 +212,11 @@ function axismundi_contacts_service_actor_uri( array $provenance, string $entry_
  * person typed is left alone. Starting from a blank card would make linking useless; overwriting
  * what somebody wrote would make it dangerous.
  *
+ * A starting value, and only that. The name is copied when there is none and then belongs to the
+ * Card: nothing carries a later Actor rename into it, because a display name and a structured name
+ * are different answers to different questions and keeping them equal would make every profile edit
+ * an edit to somebody's address book. What goes on being inherited is the account below.
+ *
  * @param int    $card_id   Card id.
  * @param string $actor_uri Actor URI to link.
  * @param string $service   What to call the service on the card.
@@ -319,9 +324,20 @@ function axismundi_contacts_link_actor( int $card_id, string $actor_uri, string 
 }
 
 /**
- * Bring a linked Card back into step with its Actor, on request.
+ * Bring a Card's linked accounts back into step with the Actors they name, on request.
  *
- * Explicit because it overwrites. Only values still recorded as having come from this Actor are
+ * Accounts, and nothing else. An Actor's name and the name on a Card are different answers to
+ * different questions: an Actor's is a display name its owner may write as `Jiwoon Kim`, `김지운` or
+ * `Jiwoon | Axismundi`, and a Card's is a structured name with parts, an order and a language. The
+ * Card takes the Actor's as a starting value when it is first made, and from then on the two are
+ * independent -- so a rename upstream is not an edit to somebody's address book, and correcting a
+ * surname here does not reach across and rewrite a profile.
+ *
+ * What is still inherited is the account that says which Actor a Card is about, and the handle and
+ * profile of any other Actor a Card names. Those are facts the Actor owns: it is the thing that
+ * knows where it lives and what it is called there.
+ *
+ * Explicit because it overwrites. Only values still recorded as having come from an Actor are
  * replaced -- anything edited by hand became local and stays local, which is what makes an address
  * book a record rather than a mirror.
  *
@@ -344,14 +360,8 @@ function axismundi_contacts_refresh_from_actor( int $card_id ) {
 	$source   = AXISMUNDI_CONTACTS_SOURCE_ACTOR;
 	$document = axismundi_contacts_card_document( $card_id );
 	$changed  = false;
+	unset( $actor );
 
-	if ( axismundi_contacts_source_may_write( $card_id, 'name', $source, $actor_uri ) ) {
-		$name = trim( $actor->get_display_name() );
-		if ( '' !== $name && $name !== (string) ( $document['name']['full'] ?? '' ) ) {
-			$document['name'] = array_merge( (array) ( $document['name'] ?? array() ), array( '@type' => 'Name', 'full' => $name ) );
-			$changed          = true;
-		}
-	}
 	/*
 	 * Every account that resolves is refreshed from its own Actor, not from the first one. A handle
 	 * changes on the server that issued it, and the Card holds several servers.

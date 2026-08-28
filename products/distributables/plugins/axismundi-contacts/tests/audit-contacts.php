@@ -586,6 +586,42 @@ try {
 		'a name somebody wrote themselves survives a refresh from the Actor',
 		'What I call myself' === (string) ( axismundi_contacts_card_document( $ax_ct_seeded )['name']['full'] ?? '' )
 	);
+	/*
+	 * And a refresh does not touch the name, even where the record still says it came from the Actor.
+	 *
+	 * An Actor's name and a Card's are different answers to different questions. An Actor publishes a
+	 * display name its owner may write as `Jiwoon Kim`, `김지운` or `Jiwoon | Axismundi`; a Card holds a
+	 * structured name with parts, an order and a language, and the same person is `김지운` in Korean and
+	 * `Jiwoon Kim` in English without either being a translation of a display name. Keeping them equal
+	 * would make every profile rename an edit to somebody's address book, and every correction to a
+	 * surname here a rewrite of a profile.
+	 *
+	 * So the Actor gives the Card a starting value when it is first made, and after that the only
+	 * thing still inherited is the account that says which Actor the Card is about.
+	 */
+	$ax_ct_ns_doc = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_ns_doc['name'] = array( '@type' => 'Name', 'full' => 'A name this card keeps' );
+	axismundi_contacts_save_card( (int) $ax_ct_fresh_book['id'], $ax_ct_ns_doc, $ax_ct_seeded );
+	// Recorded as the Actor's, which is what a refresh used to read as permission to overwrite it.
+	axismundi_contacts_set_provenance( $ax_ct_seeded, 'name', AXISMUNDI_CONTACTS_SOURCE_ACTOR, $ax_ct_fresh->get_uri() );
+	$ax_ct_ns_before = axismundi_contacts_card_document( $ax_ct_seeded );
+	axismundi_contacts_refresh_from_actor( $ax_ct_seeded );
+	$ax_ct_ns_after  = axismundi_contacts_card_document( $ax_ct_seeded );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a refresh follows the account that says which Actor this is, and leaves the name alone',
+		// The Actor is called something else, and the record says the name is the Actor's to write.
+		$ax_ct_fresh->get_display_name() !== 'A name this card keeps'
+			&& axismundi_contacts_source_may_write( $ax_ct_seeded, 'name', AXISMUNDI_CONTACTS_SOURCE_ACTOR, $ax_ct_fresh->get_uri() )
+			// And the refresh still left it exactly as the Card had it.
+			&& 'A name this card keeps' === (string) ( $ax_ct_ns_after['name']['full'] ?? '' )
+			&& ( $ax_ct_ns_before['name'] ?? null ) === ( $ax_ct_ns_after['name'] ?? null )
+			// While the account it does own goes on saying where that Actor lives.
+			&& $ax_ct_fresh->get_profile_url() === (string) ( $ax_ct_ns_after['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ]['uri'] ?? '' )
+			// Nothing carries a card name back into the Actor either; that direction never existed.
+			&& $ax_ct_fresh->get_display_name() === axismundi_actors_get_by_identity( (int) $ax_ct_fresh->get_identity_id() )->get_display_name()
+	);
+
 	// An Actor this site has never heard of is refused rather than fetched from here.
 	ax_ct_assert(
 		$ax_ct_results,

@@ -1514,6 +1514,7 @@
 	function Anniversaries( props ) {
 		var entries = props.entries || {};
 		var ids = Object.keys( entries );
+		var countries = addressCountries();
 		/*
 		 * The shape a row is not currently in, kept here and never in the Card. Somebody who typed a
 		 * birthday, switched to an exact moment to see what it looked like, and switched back would
@@ -1549,19 +1550,26 @@
 			setEntry( id, next );
 		}
 
-		/** The time zone a day is read in, which the standard keeps on the place rather than the day. */
-		function setZone( id, entry, zone ) {
+		/**
+		 * Where it happened, which is also where the standard keeps how its day should be read.
+		 *
+		 * Everything this does not ask about is copied forward untouched. A place that arrived with
+		 * street components or coordinates keeps them while somebody corrects the time zone: this
+		 * screen asks three questions about a place and is not entitled to answer the rest by
+		 * omission.
+		 */
+		function setPlaceKey( id, entry, key, value ) {
 			var place = Object.assign( {}, entry.place || {} );
-			if ( zone ) {
-				place.timeZone = zone;
+			if ( value ) {
+				place[ key ] = value;
 			} else {
-				delete place.timeZone;
+				delete place[ key ];
 			}
 			var next = Object.assign( {}, entry );
 			if ( Object.keys( place ).length ) {
 				next.place = place;
 			} else {
-				// An address that said only a time zone says nothing once the zone is gone.
+				// A place that said only one thing says nothing once that thing is gone.
 				delete next.place;
 			}
 			setEntry( id, next );
@@ -1616,7 +1624,9 @@
 				var entry = entries[ id ] || {};
 				var date = entry.date || {};
 				var instant = isInstant( date );
-				var zone = ( entry.place || {} ).timeZone || '';
+				var place = entry.place || {};
+				var zone = place.timeZone || '';
+				var placeHasMore = undefined !== place.components || undefined !== place.coordinates;
 				var problem = anniversaryProblem( entry );
 				var reads = instant ? momentReadsAs( date.utc || '', zone ) : '';
 				return el(
@@ -1720,20 +1730,68 @@
 							} )
 						),
 					/*
-					 * Where it happened, which is the only place the standard has for saying how the day
-					 * should be read. A day is a day somewhere: an instant near midnight is one date in
-					 * Seoul and the day before in New York.
+					 * Where it happened. Written out rather than taken apart: a birthplace is the scene
+					 * of something and not somewhere post is delivered, so `부산광역시 수영구 자모병원`
+					 * is the whole answer and asking for a street, a district and a postcode would be
+					 * this screen insisting on a form nobody filled in.
+					 */
+					el( TextField, {
+						label: __( 'Place', 'axismundi-contacts' ),
+						className: 'ax-ce-anniversary__place',
+						value: place.full || '',
+						supporting: __( 'Where it happened, written the way you would say it.', 'axismundi-contacts' ),
+						onChange: function ( value ) {
+							setPlaceKey( id, entry, 'full', value );
+						}
+					} ),
+					countries.length
+						? el( Combobox, {
+							label: __( 'Country', 'axismundi-contacts' ),
+							className: 'ax-ce-anniversary__country',
+							value: place.countryCode || '',
+							/*
+							 * The list and nothing else, with a way back out of it. What is stored here
+							 * is an ISO code and what is shown is a country's name, so text typed and
+							 * kept would be a name sitting where a code belongs -- `대한민국` where the
+							 * store expects `KR`, refused on save by a screen that had accepted it.
+							 * Typing still narrows the list; it just does not become the answer.
+							 */
+							options: [ { value: '', label: __( 'Not said', 'axismundi-contacts' ) } ].concat( countries ),
+							// This box shows a country's name and stores its code, so a browser filling
+							// it in would be writing into a field whose displayed value it cannot see.
+							inputProps: { autoComplete: 'off' },
+							onChange: function ( value ) {
+								setPlaceKey( id, entry, 'countryCode', value );
+							}
+						} )
+						: null,
+					/*
+					 * And which clock the day is counted on. A country is not enough to work this out:
+					 * the United States, Russia and Australia each keep several, so the zone is asked
+					 * rather than inferred from the country beside it. A day is a day somewhere -- an
+					 * instant near midnight is one date in Seoul and the day before in New York.
 					 */
 					el( TimeZonePicker, {
 						label: __( 'Read in', 'axismundi-contacts' ),
 						className: 'ax-ce-anniversary__zone',
 						value: zone,
 						options: config.timeZoneOptions,
-						supporting: __( 'Where this day is counted. Leave it empty if you do not know.', 'axismundi-contacts' ),
+						supporting: __( 'Which clock this day is counted on. Leave it empty if you do not know.', 'axismundi-contacts' ),
 						onChange: function ( value ) {
-							setZone( id, entry, value );
+							setPlaceKey( id, entry, 'timeZone', value );
 						}
 					} ),
+					/*
+					 * A place that arrived with more than this asks about says so, rather than looking
+					 * like a place with three fields. It is left exactly as it came.
+					 */
+					placeHasMore
+						? el(
+							'p',
+							{ className: 'ax-ce-anniversary__more' },
+							__( 'This place also records an address or coordinates, which stay as they are and are edited through the JSON.', 'axismundi-contacts' )
+						)
+						: null,
 					problem ? el( 'p', { className: 'ax-ce-anniversary__problem' }, problem ) : null,
 					el( IconButton, {
 						icon: 'delete',

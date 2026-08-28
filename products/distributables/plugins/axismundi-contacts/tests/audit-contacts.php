@@ -1047,6 +1047,30 @@ try {
 	);
 
 	/*
+	 * A birthplace written out rather than taken apart, because it is the scene of something and not
+	 * somewhere post is delivered. The country is a second fact and never a substitute for the first:
+	 * the United States, Russia and Australia each keep several clocks, so knowing the country does
+	 * not tell anybody which day an instant fell on.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a birthplace is a sentence, a country and a clock, and the country is not the clock',
+		$ax_ct_ann_ok(
+			array(
+				'kind'  => 'birth',
+				'date'  => array( 'year' => 1996, 'month' => 11, 'day' => 20 ),
+				'place' => array( 'full' => '부산광역시 수영구 자모병원', 'countryCode' => 'KR', 'timeZone' => 'Asia/Seoul' ),
+			)
+		)
+			// Two letters as ISO writes them, rather than a name or a lowercase guess.
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 1996, 'month' => 11, 'day' => 20 ), 'place' => array( 'countryCode' => 'kr' ) ) )
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 1996, 'month' => 11, 'day' => 20 ), 'place' => array( 'countryCode' => 'KOR' ) ) )
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 1996, 'month' => 11, 'day' => 20 ), 'place' => array( 'countryCode' => '대한민국' ) ) )
+			// A country alone is still a place; it is simply not a time zone.
+			&& $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 1996, 'month' => 11, 'day' => 20 ), 'place' => array( 'countryCode' => 'US' ) ) )
+	);
+
+	/*
 	 * And a recorded instant is still allowed, because the standard allows it and somebody's record of
 	 * a death to the minute is not this plugin's to round off. It keeps its `@type`, which is the one
 	 * line saying it is not the partial date the position would otherwise imply.

@@ -237,9 +237,22 @@
 }
 
 .ax-ce-anniversary__scale,
-.ax-ce-anniversary__zone {
+.ax-ce-anniversary__zone,
+.ax-ce-anniversary__country {
 	flex: 1 1 12em;
 	min-width: 0;
+}
+
+/* Written out, so it gets the room a sentence needs rather than the room a field does. */
+.ax-ce-anniversary__place {
+	flex: 2 1 20em;
+	min-width: 0;
+}
+
+.ax-ce-anniversary__more {
+	flex: 1 0 100%;
+	margin: 0;
+	color: #50575e;
 }
 
 /* Under the row it is about, where the eye is already looking. */

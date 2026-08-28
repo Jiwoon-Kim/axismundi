@@ -807,6 +807,17 @@ function axismundi_contacts_anniversary_place_error( string $at, array $place ) 
 	if ( array() === $said ) {
 		return axismundi_contacts_value_error( $at, __( 'a place says at least one of where it is, what it is called, or which time zone it keeps', 'axismundi-contacts' ) );
 	}
+	if ( array_key_exists( 'countryCode', $place ) ) {
+		/*
+		 * Two letters, upper case, the way ISO 3166-1 writes them. Which is a different fact from the
+		 * time zone beside it and not a substitute for one: the United States, Russia and Australia
+		 * each keep several clocks, so a country never says which day an instant fell on.
+		 */
+		$country = $place['countryCode'];
+		if ( ! is_string( $country ) || 1 !== preg_match( '/^[A-Z]{2}$/', $country ) ) {
+			return axismundi_contacts_value_error( $at . '/countryCode', __( 'a country is its two-letter code, such as KR', 'axismundi-contacts' ) );
+		}
+	}
 	if ( array_key_exists( 'timeZone', $place ) ) {
 		$zone = $place['timeZone'];
 		/*

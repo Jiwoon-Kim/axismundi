@@ -824,6 +824,19 @@
 	min-width: 0;
 }
 
+/*
+ * The account this site answers for. Read as a stated fact rather than drawn as a field nobody may
+ * fill in: a disabled input still looks like somewhere to type.
+ */
+.ax-ce-service--system .ax-ce-service__system-name {
+	margin: 0;
+	font-weight: 600;
+}
+
+.ax-ce-service--system .ax-ce-service__system-uri {
+	margin: 2px 0 0;
+}
+
 /* One part of an address: a grip, what it says, and a way to take it away. */
 .ax-ce-part-row {
 	display: flex;

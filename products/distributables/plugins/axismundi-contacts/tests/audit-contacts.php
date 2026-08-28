@@ -6158,14 +6158,63 @@ try {
 	ax_ct_assert(
 		$ax_ct_results,
 		'moving something rebuilds the list that exists, not the one that was drawn',
-		// Two lists of parts and one of accounts, each guarded against a position that is not there.
+		// The two lists of parts, each guarded against a position that is not there.
 		2 === substr_count( $ax_ct_cb_editor, 'undefined === list[ dragging ]' )
-			&& 1 === substr_count( $ax_ct_cb_editor, 'undefined === ids[ dragging ]' )
 			&& str_contains( $ax_ct_cb_editor, "var list = ( latest.current.components || [] ).slice();" )
-			&& str_contains( $ax_ct_cb_editor, 'var ids = orderedByPreference( latest.current );' )
 			&& str_contains( $ax_ct_cb_editor, 'order = orderedByPreference( latest.current );' )
 			// And nothing rearranges from a render's own copy any more.
 			&& ! str_contains( $ax_ct_cb_editor, 'var list = components.slice();' )
+	);
+
+	/*
+	 * The accounts are not among them, because they are not dragged at all. `onlineServices` is a map
+	 * keyed by id, and the order of an object's members means nothing in JSON -- so a row dragged into
+	 * place is either storing an order the format cannot keep, or renumbering `pref` behind somebody's
+	 * back and calling it a reorder. `pref` is the thing being decided, and the canonical form and the
+	 * screen both read it, so the two agree without a second order to keep in step.
+	 */
+	$ax_ct_svc_src = substr(
+		$ax_ct_cb_editor,
+		(int) strpos( $ax_ct_cb_editor, 'function OnlineService( props )' ),
+		(int) strpos( $ax_ct_cb_editor, 'function OnlineServices( props )' ) - (int) strpos( $ax_ct_cb_editor, 'function OnlineService( props )' )
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'an account is put in order by saying which comes first, not by dragging a row of a map',
+		! str_contains( $ax_ct_svc_src, 'draggable' )
+			&& ! str_contains( $ax_ct_svc_src, 'onDragStart' )
+			&& ! str_contains( $ax_ct_svc_src, 'ax-ce-part__grip' )
+			&& 0 === substr_count( $ax_ct_cb_editor, 'undefined === ids[ dragging ]' )
+			// What decides the order is still read, in both places, from the same property.
+			&& str_contains( $ax_ct_cb_editor, 'var ordered = orderedByPreference( entries );' )
+	);
+
+	/*
+	 * And the account that says which Actor a profile is cannot be edited on the screen either, on the
+	 * Card that publishes it. The server refuses every change to that row -- the address, the handle,
+	 * the service name, its place at the top -- so a field here would be a box somebody types into and
+	 * a save that answers 409. An editor that offers what the store refuses is an editor lying about
+	 * what it can do.
+	 *
+	 * Only there. The same key on a contact somebody keeps, including one imported from a server whose
+	 * own Card carried an `x1`, is an ordinary account and theirs to correct: nothing here guarantees
+	 * it, so nothing here may lock it.
+	 */
+	$ax_ct_ed_php = (string) file_get_contents( dirname( __DIR__ ) . '/includes/card-editor.php' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'the account this site answers for is read on the screen, and only on the card that publishes it',
+		// Locked from the same fact the server refuses on, handed to the screen rather than guessed.
+		str_contains( $ax_ct_ed_php, "'systemOnlineService' => axismundi_contacts_is_profile_card( \$row ) ? AXISMUNDI_CONTACTS_HOME_SERVICE_KEY : '',"  )
+			&& str_contains( $ax_ct_cb_editor, "system: '' !== config.systemOnlineService && id === config.systemOnlineService," )
+			// Shown as what it is, with nothing to type into and nothing to remove.
+			&& str_contains( $ax_ct_cb_editor, 'if ( props.system ) {' )
+			&& ! str_contains(
+				substr( $ax_ct_svc_src, (int) strpos( $ax_ct_svc_src, 'if ( props.system ) {' ), (int) strpos( $ax_ct_svc_src, 'return el(' , (int) strpos( $ax_ct_svc_src, 'if ( props.system ) {' ) + 40 ) - (int) strpos( $ax_ct_svc_src, 'if ( props.system ) {' ) ),
+				'TextField'
+			)
+			// And the store agrees about which row that is.
+			&& 'x1' === AXISMUNDI_CONTACTS_HOME_SERVICE_KEY
 	);
 	// The address editor: the parts, and the tick that asks whether there is a line as well.
 	$ax_ct_cb_parts = substr(

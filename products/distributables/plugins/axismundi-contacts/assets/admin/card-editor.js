@@ -3477,22 +3477,40 @@
 	 */
 	function OnlineService( props ) {
 		var entry = props.entry;
+		/*
+		 * The account that says which Actor this profile is, shown rather than offered. The server
+		 * refuses every change to it -- the address, the handle, the service name, its place at the
+		 * top -- so a field here would be a box somebody types into and a save that answers 409. It
+		 * is read like a fact because that is what it is: this site's answer to whose profile this is.
+		 *
+		 * Only on the Card an Actor publishes about itself. The same key on a contact somebody keeps
+		 * is an ordinary account, and theirs to correct.
+		 */
+		if ( props.system ) {
+			var named = [ entry.service, entry.user ].filter( function ( part ) {
+				return part && String( part ).trim();
+			} );
+			return el(
+				'div',
+				{ className: 'ax-ce-service ax-ce-service--system' },
+				el(
+					'div',
+					{ className: 'ax-ce-service__fields' },
+					el( 'p', { className: 'ax-ce-service__system-name' }, named.join( ' · ' ) ),
+					entry.uri
+						? el( 'p', { className: 'ax-ce-service__system-uri' }, el( 'code', null, entry.uri ) )
+						: null,
+					el(
+						'p',
+						{ className: 'description' },
+						__( 'This is the account this site publishes as, so it is kept in step with your Actor rather than edited here.', 'axismundi-contacts' )
+					)
+				)
+			);
+		}
 		return el(
 			'div',
-			{
-				className: 'ax-ce-service',
-				draggable: true,
-				onDragStart: function () {
-					props.onDragStart( props.index );
-				},
-				onDragOver: function ( event ) {
-					event.preventDefault();
-				},
-				onDrop: function () {
-					props.onDrop( props.index );
-				}
-			},
-			el( 'span', { className: 'ax-ce-part__grip', 'aria-hidden': 'true', dangerouslySetInnerHTML: { __html: icon( 'drag-indicator' ) } } ),
+			{ className: 'ax-ce-service' },
 			el(
 				'div',
 				{ className: 'ax-ce-service__fields' },
@@ -3535,13 +3553,16 @@
 	 * The accounts, in the order they are preferred.
 	 *
 	 * `pref` is that order and the only thing recording it: 1 is the account this person leads with,
-	 * which is the one a reader shows and the one a face is taken from. Dragging a row rewrites the
-	 * numbers rather than storing a second order beside them, so what the list shows, what a reader
-	 * shows, and what the document says are one answer.
+	 * which is the one a reader shows and the one a face is taken from. What the list shows, what a
+	 * reader shows and what the document says are one answer because all three read that number.
+	 *
+	 * Not dragged. This is a map keyed by id, where the order of the members means nothing to JSON --
+	 * so a row dragged into place would either be storing an order the format cannot keep, or
+	 * renumbering `pref` behind somebody's back and calling it a reorder. The number is the thing
+	 * being decided, so it is the thing to edit.
 	 */
 	function OnlineServices( props ) {
 		var entries = props.value || {};
-		var [ dragging, setDragging ] = useState( null );
 		var ordered = orderedByPreference( entries );
 		// The accounts as they stand, for the same reason every other collection keeps one.
 		var latest = useRef( entries );
@@ -3550,18 +3571,6 @@
 		function setEntries( next ) {
 			latest.current = next;
 			props.onChange( Object.keys( next ).length ? next : undefined );
-		}
-
-		// Whatever the rows read as now, numbered from the top.
-		function renumber( ids ) {
-			var next = {};
-			Object.keys( latest.current ).forEach( function ( id ) {
-				next[ id ] = latest.current[ id ];
-			} );
-			ids.forEach( function ( id, index ) {
-				next[ id ] = Object.assign( {}, next[ id ], { pref: index + 1 } );
-			} );
-			setEntries( next );
 		}
 
 		return el(
@@ -3577,18 +3586,8 @@
 					key: id,
 					index: index,
 					entry: entries[ id ] || {},
-					onDragStart: setDragging,
-					onDrop: function ( at ) {
-						// The order as it stands, so a row added a moment ago is not left out of it.
-						var ids = orderedByPreference( latest.current );
-						if ( null === dragging || dragging === at || undefined === ids[ dragging ] ) {
-							return;
-						}
-						var moved = ids.splice( dragging, 1 )[ 0 ];
-						ids.splice( at, 0, moved );
-						setDragging( null );
-						renumber( ids );
-					},
+					// The one row this site answers for, on the Card an Actor publishes about itself.
+					system: '' !== config.systemOnlineService && id === config.systemOnlineService,
 					onChange: function ( next ) {
 						var updated = Object.assign( {}, entries );
 						updated[ id ] = next;

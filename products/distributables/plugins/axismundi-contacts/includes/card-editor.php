@@ -249,6 +249,17 @@ function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
 		 * as a hundred small questions about whether this is the self card.
 		 */
 		'mode'                => axismundi_contacts_is_profile_card( $row ) ? 'profile' : 'contact',
+		/*
+		 * The account this site answers for, when this Card is the one an Actor publishes about
+		 * itself. The save path refuses every change to it, so the screen has to know the same rule:
+		 * a field somebody can type into that is rejected on save is the editor lying about what it
+		 * can do.
+		 *
+		 * Empty for a contact somebody keeps -- including one imported from another server whose own
+		 * Card happens to carry an `x1`. That row is theirs to edit, because on this Card it is an
+		 * account like any other and nothing here guarantees it.
+		 */
+		'systemOnlineService' => axismundi_contacts_is_profile_card( $row ) ? AXISMUNDI_CONTACTS_HOME_SERVICE_KEY : '',
 		'countries'           => function_exists( 'axismundi_geodata_country_options' )
 			? axismundi_geodata_country_options()
 			: array(),

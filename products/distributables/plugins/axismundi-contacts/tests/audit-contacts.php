@@ -894,6 +894,93 @@ try {
 			&& str_contains( $ax_ct_av_src, 'function axismundi_contacts_discovered_via_actor' )
 	);
 
+	// -- the days a card remembers -------------------------------------------------------------------------------
+
+	/*
+	 * An anniversary is a kind of day and the day itself, and RFC 9553 requires both. A row carrying
+	 * only `birth` is somebody having started to write their friend's birthday down and stopped, and
+	 * storing it would put a record in an address book that no calendar, no reminder and no reader
+	 * can do anything with.
+	 *
+	 * The date is a calendar date rather than an instant. `1990-03-24` is a day; the same birthday
+	 * stored as a moment in a time zone lands on the 23rd for every reader far enough east, which is
+	 * how a birthday reminder arrives a day early for exactly the people furthest away.
+	 */
+	$ax_ct_ann = static function ( array $entry ) : array {
+		return array( '@type' => 'Card', 'name' => array( 'full' => 'Remembered day' ), 'anniversaries' => array( 'ann-1' => $entry ) );
+	};
+	$ax_ct_ann_ok = static function ( array $entry ) use ( $ax_ct_ann ) : bool {
+		return true === axismundi_contacts_validate_card_values( $ax_ct_ann( $entry ) );
+	};
+	ax_ct_assert(
+		$ax_ct_results,
+		'an anniversary is a kind of day and the day itself, and neither half stands alone',
+		// Both halves, and a year somebody does not know is left out rather than guessed.
+		$ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 1990, 'month' => 3, 'day' => 24 ) ) )
+			&& $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'month' => 3, 'day' => 24 ) ) )
+			&& $ax_ct_ann_ok( array( 'kind' => 'wedding', 'date' => array( 'year' => 2011 ) ) )
+			// A day nobody wrote down, and a kind of day nobody named.
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth' ) )
+			&& ! $ax_ct_ann_ok( array( 'kind' => '', 'date' => array( 'year' => 1990, 'month' => 3, 'day' => 24 ) ) )
+			&& ! $ax_ct_ann_ok( array( 'date' => array( 'year' => 1990, 'month' => 3, 'day' => 24 ) ) )
+			// And an empty date object is the same absence wearing a coat.
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array() ) )
+			// A date is a date object. Text that reads like one is somebody's own formatting.
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => '1990-03-24' ) )
+	);
+
+	/*
+	 * Partial in the ways the standard names, and not in any way at all. A month with neither a year
+	 * nor a day beside it, and a day belonging to no month, are not dates anybody could put on a
+	 * calendar -- they are halves of one, and a store that accepted them would be handing a birthday
+	 * reminder a question rather than a day.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a partial date is partial in the ways the standard names, and not in any other',
+		! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'month' => 3 ) ) )
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'day' => 24 ) ) )
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'month' => 13, 'day' => 1 ) ) )
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'month' => 0, 'day' => 1 ) ) )
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'month' => 4, 'day' => 31 ) ) )
+			// Whole numbers. `"3"` is text that happens to read like a month.
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'month' => '3', 'day' => 24 ) ) )
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 0 ) ) )
+	);
+
+	/*
+	 * The 29th of February is a real birthday and an impossible date in most years. Which of those it
+	 * is depends on a year, so it is judged against one only when the card names one -- a birthday
+	 * that says only `02-29` is asked whether such a day exists at all, and it does.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a leap day is a birthday when no year is named and a mistake when the wrong one is',
+		$ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'month' => 2, 'day' => 29 ) ) )
+			&& $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 2000, 'month' => 2, 'day' => 29 ) ) )
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 1900, 'month' => 2, 'day' => 29 ) ) )
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 2001, 'month' => 2, 'day' => 29 ) ) )
+	);
+
+	/*
+	 * And a recorded instant is still allowed, because the standard allows it and somebody's record of
+	 * a death to the minute is not this plugin's to round off. It keeps its `@type`, which is the one
+	 * line saying it is not the partial date the position would otherwise imply.
+	 */
+	$ax_ct_ann_stamp = array( '@type' => 'Timestamp', 'utc' => '2019-10-15T23:10:00Z' );
+	$ax_ct_ann_card  = (int) axismundi_contacts_save_card( $ax_ct_book_id, $ax_ct_ann( array( 'kind' => 'death', 'date' => $ax_ct_ann_stamp ) ) );
+	$ax_ct_loose[]   = $ax_ct_ann_card;
+	$ax_ct_ann_back  = $ax_ct_ann_card > 0 ? axismundi_contacts_card_document( $ax_ct_ann_card ) : array();
+	$ax_ct_ann_kept  = $ax_ct_ann_back['anniversaries']['ann-1'] ?? array();
+	ax_ct_assert(
+		$ax_ct_results,
+		'a moment recorded to the minute survives as one, and says so',
+		$ax_ct_ann_stamp === ( $ax_ct_ann_kept['date'] ?? array() )
+			// A partial date is what the position means, so that one drops its type and this one keeps it.
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'death', 'date' => array( '@type' => 'Timestamp' ) ) )
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'death', 'date' => array( 'utc' => '' ) ) )
+	);
+
 	// -- a label is a reading, not a value -----------------------------------------------------------------------
 
 	/*
@@ -5412,16 +5499,23 @@ try {
 	);
 
 	/*
-	 * And nothing is promised that is not there. Half of these groups hold properties this editor has
-	 * no field for -- keys, directories, calendars, anniversaries, keywords, personal information --
-	 * and a heading over an empty space reads as a screen that failed to load rather than one that
-	 * has not been written yet. They are reached through the JSON until they have a field.
+	 * And nothing is promised that is not there. Several of these groups hold properties this editor
+	 * has no field for -- keys, directories, calendars, keywords, personal information -- and a
+	 * heading over an empty space reads as a screen that failed to load rather than one that has not
+	 * been written yet. They are reached through the JSON until they have a field.
+	 *
+	 * Anniversaries had a heading forbidden here for exactly that reason, and now has a field, so it
+	 * changes sides rather than being struck out: the rule is that a heading and a field arrive
+	 * together, which is a claim about both directions.
 	 */
 	ax_ct_assert(
 		$ax_ct_results,
 		'a heading is only drawn for a property somebody can actually fill in',
 		! str_contains( $ax_ct_cb_editor, "__( 'Calendaring and scheduling properties', 'axismundi-contacts' )" )
-			&& ! str_contains( $ax_ct_cb_editor, "__( 'Anniversaries', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_cb_editor, "__( 'Anniversaries', 'axismundi-contacts' )" )
+			&& str_contains( $ax_ct_extra_ui, 'el( Anniversaries, {' )
+			// In the standard's own order inside the group: anniversaries, then notes.
+			&& strpos( $ax_ct_extra_ui, 'el( Anniversaries, {' ) < strpos( $ax_ct_extra_ui, "entryFieldsIn( 'additional' )" )
 			&& ! str_contains( $ax_ct_cb_editor, "__( 'Keywords', 'axismundi-contacts' )" )
 			&& ! str_contains( $ax_ct_cb_editor, "__( 'Personal information', 'axismundi-contacts' )" )
 			&& ! str_contains( $ax_ct_cb_editor, "__( 'Cryptographic keys', 'axismundi-contacts' )" )

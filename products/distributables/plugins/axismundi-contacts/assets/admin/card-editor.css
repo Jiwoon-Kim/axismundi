@@ -167,6 +167,52 @@
 	margin-top: 8px;
 }
 
+/*
+ * An anniversary is a kind and a date, and the date is three boxes that belong together. They wrap
+ * as a group rather than one at a time, because a year that has drifted onto its own line stops
+ * reading as part of the date beside it.
+ */
+.ax-ce-anniversary {
+	flex-wrap: wrap;
+}
+
+.ax-ce-anniversary__kind {
+	flex: 1 1 14em;
+	min-width: 0;
+}
+
+.ax-ce-anniversary__date {
+	display: flex;
+	gap: .5em;
+	flex: 2 1 20em;
+	min-width: 0;
+}
+
+/* Wide enough for what goes in it. Three equal boxes would say a day needs four digits. */
+.ax-ce-anniversary__year {
+	flex: 1 1 8em;
+	min-width: 0;
+}
+
+.ax-ce-anniversary__month,
+.ax-ce-anniversary__day {
+	flex: 1 1 5em;
+	min-width: 0;
+}
+
+.ax-ce-anniversary__instant {
+	flex: 2 1 20em;
+	margin: 14px 0 0;
+	color: #50575e;
+}
+
+/* Under the row it is about, where the eye is already looking. */
+.ax-ce-anniversary__problem {
+	flex: 1 0 100%;
+	margin: 0;
+	color: #b32d2e;
+}
+
 /* The card itself is a document, so it gets the width of one. */
 .ax-ce-json .text-field__input {
 	font-family: Menlo, Consolas, monospace;

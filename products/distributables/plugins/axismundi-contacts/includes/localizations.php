@@ -434,7 +434,7 @@ function axismundi_contacts_value_rules() : array {
 		'notes'               => array( 'required' => array( 'note' => 'string' ), 'optional' => array( 'created' => 'string', 'author' => 'object' ) ),
 		'organizations'       => array( 'required' => array(), 'optional' => $entry + array( 'name' => 'string', 'units' => 'list', 'sortAs' => 'string' ) ),
 		'titles'              => array( 'required' => array( 'name' => 'string' ), 'optional' => array( 'kind' => 'string', 'organizationId' => 'string' ) ),
-		'anniversaries'       => array( 'required' => array( 'kind' => 'string' ), 'optional' => array( 'date' => 'object', 'place' => 'object' ) ),
+		'anniversaries'       => array( 'required' => array( 'kind' => 'string' ), 'optional' => array( 'place' => 'object' ) ),
 		'personalInfo'        => array( 'required' => array( 'value' => 'string' ), 'optional' => array( 'kind' => 'string', 'level' => 'string', 'listAs' => 'integer' ) ),
 	);
 }
@@ -652,6 +652,20 @@ function axismundi_contacts_validate_card_values( array $card ) {
 					return axismundi_contacts_value_error( $at . '/' . $key, sprintf( __( 'it is %s', 'axismundi-contacts' ), $type ) );
 				}
 			}
+			if ( 'anniversaries' === $property ) {
+				if ( '' === trim( (string) $entry['kind'] ) ) {
+					return axismundi_contacts_value_error( $at . '/kind', __( 'an anniversary says what kind of day it is, such as birth', 'axismundi-contacts' ) );
+				}
+				/*
+				 * A date that is absent, empty, or not an object at all reaches the same refusal
+				 * below, and one rule saying "this is not a date" is better than three saying it in
+				 * different words about the same missing day.
+				 */
+				$wrong = axismundi_contacts_anniversary_date_error( $at . '/date', (array) ( $entry['date'] ?? array() ) );
+				if ( $wrong instanceof WP_Error ) {
+					return $wrong;
+				}
+			}
 			if ( 'organizations' === $property ) {
 				$name  = trim( (string) ( $entry['name'] ?? '' ) );
 				$units = (array) ( $entry['units'] ?? array() );
@@ -673,6 +687,71 @@ function axismundi_contacts_validate_card_values( array $card ) {
 		}
 	}
 	return true;
+}
+
+/**
+ * Whether a date on an anniversary is a date, and nothing if it is.
+ *
+ * Two shapes are allowed and they are not alike. A Timestamp is an instant -- a death recorded to
+ * the minute -- and a PartialDate is a calendar date somebody may only partly know. The standard
+ * makes PartialDate the default, which is what a birthday almost always is: `1990-03-24` is a date
+ * on a calendar and not a moment in a time zone, and storing it as one would move somebody's
+ * birthday across midnight for every reader far enough east.
+ *
+ * A PartialDate is partial in named ways rather than in any way at all. A month with neither a year
+ * nor a day beside it, or a day with no month, says nothing that could be put on a calendar -- so
+ * the standard requires the company, and so does this.
+ *
+ * @param string              $at   Where in the Card.
+ * @param array<string,mixed> $date The date as given.
+ * @return WP_Error|null Null when there is nothing wrong.
+ */
+function axismundi_contacts_anniversary_date_error( string $at, array $date ) : ?WP_Error {
+	// A Timestamp announces itself, and an instant is the one thing it has to carry.
+	if ( 'Timestamp' === ( $date['@type'] ?? '' ) || array_key_exists( 'utc', $date ) ) {
+		return isset( $date['utc'] ) && is_string( $date['utc'] ) && '' !== trim( $date['utc'] )
+			? null
+			: axismundi_contacts_value_error( $at . '/utc', __( 'a timestamp is one moment in UTC', 'axismundi-contacts' ) );
+	}
+	$parts = array();
+	foreach ( array( 'year', 'month', 'day' ) as $part ) {
+		if ( ! array_key_exists( $part, $date ) ) {
+			continue;
+		}
+		// Whole and positive. `0` is not a month, and `"3"` is text that happens to read like one.
+		if ( ! is_int( $date[ $part ] ) || $date[ $part ] < 1 ) {
+			/* translators: %s: year, month or day. */
+			return axismundi_contacts_value_error( $at . '/' . $part, sprintf( __( 'a %s is a whole number above zero', 'axismundi-contacts' ), $part ) );
+		}
+		$parts[ $part ] = (int) $date[ $part ];
+	}
+	if ( array() === $parts ) {
+		return axismundi_contacts_value_error( $at, __( 'a date says at least one of a year, a month and a day', 'axismundi-contacts' ) );
+	}
+	if ( isset( $parts['month'] ) && $parts['month'] > 12 ) {
+		return axismundi_contacts_value_error( $at . '/month', __( 'a year has twelve months', 'axismundi-contacts' ) );
+	}
+	if ( isset( $parts['day'] ) && ! isset( $parts['month'] ) ) {
+		return axismundi_contacts_value_error( $at . '/day', __( 'a day belongs to a month, and this one names none', 'axismundi-contacts' ) );
+	}
+	if ( isset( $parts['month'] ) && ! isset( $parts['year'] ) && ! isset( $parts['day'] ) ) {
+		return axismundi_contacts_value_error( $at . '/month', __( 'a month on its own says nothing; give it a year or a day', 'axismundi-contacts' ) );
+	}
+	if ( isset( $parts['day'], $parts['month'] ) ) {
+		/*
+		 * The 29th of February is a real birthday and an impossible date in most years, so the year
+		 * decides only when there is one. A date that does not name its year is asked whether the day
+		 * exists in any year -- which is what somebody born on a leap day has.
+		 */
+		$year = $parts['year'] ?? 2000;
+		if ( ! checkdate( $parts['month'], $parts['day'], $year ) ) {
+			return axismundi_contacts_value_error( $at . '/day', __( 'that month has no such day', 'axismundi-contacts' ) );
+		}
+	}
+	if ( array_key_exists( 'calendarScale', $date ) && ( ! is_string( $date['calendarScale'] ) || '' === trim( $date['calendarScale'] ) ) ) {
+		return axismundi_contacts_value_error( $at . '/calendarScale', __( 'a calendar system is named in lowercase text', 'axismundi-contacts' ) );
+	}
+	return null;
 }
 
 /**

@@ -132,6 +132,87 @@
 		{ key: 'notes', prefix: 'not', cluster: 'additional', label: __( 'Notes', 'axismundi-contacts' ), value: 'note', icon: 'notes' }
 	];
 
+	/*
+	 * The kinds of day the standard names. Offered rather than enforced: RFC 9553 registers these
+	 * three and lets a vendor add its own, so this is a combobox and not a menu -- somebody keeping
+	 * `첫만남` or a company's founding day is not making a mistake this screen should refuse.
+	 */
+	var ANNIVERSARY_KINDS = [
+		{ value: 'birth', label: __( 'Birthday', 'axismundi-contacts' ) },
+		{ value: 'death', label: __( 'Date of death', 'axismundi-contacts' ) },
+		{ value: 'wedding', label: __( 'Wedding anniversary', 'axismundi-contacts' ) }
+	];
+
+	/**
+	 * Whether this date is an instant rather than a day on a calendar.
+	 *
+	 * The standard allows both. A birthday is a calendar date and almost never an instant -- storing
+	 * `1990-03-24` as a moment in a time zone moves it across midnight for readers far enough east --
+	 * so this screen writes calendar dates only. An instant that arrived some other way is shown as
+	 * what it is and edited through the JSON, because turning it into a calendar date would be this
+	 * screen deciding which day somebody's record meant.
+	 */
+	function isInstant( date ) {
+		return !! date && ( 'Timestamp' === date['@type'] || 'string' === typeof date.utc );
+	}
+
+	/**
+	 * What is wrong with one anniversary, in a sentence, or nothing when it is a date.
+	 *
+	 * The same rules the store keeps, asked here so that they are answered before a save rather than
+	 * by one. A partial date is partial in named ways: a month with neither a year nor a day beside
+	 * it, and a day with no month, name nothing that could be put on a calendar.
+	 */
+	function anniversaryProblem( entry ) {
+		if ( ! ( entry.kind || '' ).trim() ) {
+			return __( 'An anniversary says what kind of day it is.', 'axismundi-contacts' );
+		}
+		var date = entry.date || {};
+		if ( isInstant( date ) ) {
+			return ( date.utc || '' ).trim() ? '' : __( 'A recorded moment needs its time.', 'axismundi-contacts' );
+		}
+		var year = date.year;
+		var month = date.month;
+		var day = date.day;
+		if ( undefined === year && undefined === month && undefined === day ) {
+			return __( 'An anniversary needs a date.', 'axismundi-contacts' );
+		}
+		if ( undefined !== month && ( month < 1 || month > 12 ) ) {
+			return __( 'A year has twelve months.', 'axismundi-contacts' );
+		}
+		if ( undefined !== year && year < 1 ) {
+			return __( 'A year is a whole number above zero.', 'axismundi-contacts' );
+		}
+		if ( undefined !== day && undefined === month ) {
+			return __( 'A day belongs to a month. Say which month.', 'axismundi-contacts' );
+		}
+		if ( undefined !== month && undefined === year && undefined === day ) {
+			return __( 'A month on its own says nothing. Add a year or a day.', 'axismundi-contacts' );
+		}
+		if ( undefined !== day ) {
+			/*
+			 * The 29th of February is a real birthday and an impossible date in most years, so a date
+			 * that does not name its year is asked whether the day exists in any year at all.
+			 */
+			var against = undefined === year ? 2000 : year;
+			var last = new Date( Date.UTC( against, month, 0 ) ).getUTCDate();
+			if ( day < 1 || day > last ) {
+				return __( 'That month has no such day.', 'axismundi-contacts' );
+			}
+		}
+		return '';
+	}
+
+	/** Every anniversary that is not yet a date, by the id it is filed under. */
+	function anniversaryProblems( card ) {
+		var entries = card.anniversaries || {};
+		return Object.keys( entries ).map( function ( id ) {
+			return { id: id, problem: anniversaryProblem( entries[ id ] || {} ) };
+		} ).filter( function ( row ) {
+			return !! row.problem;
+		} );
+	}
+
 	/** The component kinds a name is made of, plus the separator that goes between them. */
 	var COMPONENT_KINDS = [ 'title', 'given', 'given2', 'surname', 'surname2', 'credential', 'separator' ];
 
@@ -1337,6 +1418,147 @@
 						__( 'Add %s', 'axismundi-contacts' ),
 						props.field.label.toLowerCase()
 					)
+				)
+			)
+		);
+	}
+
+	/**
+	 * The days a card remembers.
+	 *
+	 * A birthday is the one almost every card has, so a new row starts as one -- and starts with no
+	 * date at all. A screen that filled it in with today would be answering, in somebody's stored
+	 * record, a question only they can answer.
+	 */
+	function Anniversaries( props ) {
+		var entries = props.entries || {};
+		var ids = Object.keys( entries );
+
+		function setEntries( next ) {
+			props.onChange( Object.keys( next ).length ? next : undefined );
+		}
+
+		function setEntry( id, entry ) {
+			var next = Object.assign( {}, entries );
+			next[ id ] = entry;
+			setEntries( next );
+		}
+
+		/** One part of a partial date, written as a whole number or taken away entirely. */
+		function DatePart( row ) {
+			return el( TextField, {
+				label: row.label,
+				type: 'number',
+				className: 'ax-ce-anniversary__' + row.part,
+				value: undefined === row.date[ row.part ] ? '' : String( row.date[ row.part ] ),
+				supporting: row.supporting,
+				onChange: function ( value ) {
+					var date = Object.assign( {}, row.date );
+					var number = parseInt( value, 10 );
+					if ( '' === value.trim() || isNaN( number ) ) {
+						// Cleared, rather than set to nothing: an absent year is what "I do not know
+						// the year" looks like in a partial date, and `0` would be a claim.
+						delete date[ row.part ];
+					} else {
+						date[ row.part ] = number;
+					}
+					var entry = Object.assign( {}, row.entry );
+					if ( Object.keys( date ).length ) {
+						entry.date = date;
+					} else {
+						delete entry.date;
+					}
+					setEntry( row.id, entry );
+				}
+			} );
+		}
+
+		return el(
+			Section,
+			{
+				icon: 'celebration',
+				label: __( 'Anniversaries', 'axismundi-contacts' ),
+				headingTag: props.headingTag,
+				showHeading: true
+			},
+			ids.map( function ( id ) {
+				var entry = entries[ id ] || {};
+				var date = entry.date || {};
+				var problem = anniversaryProblem( entry );
+				return el(
+					'div',
+					{ key: id, className: 'ax-ce-entry ax-ce-anniversary' },
+					el( Combobox, {
+						label: __( 'What day this is', 'axismundi-contacts' ),
+						className: 'ax-ce-anniversary__kind',
+						value: entry.kind || '',
+						options: ANNIVERSARY_KINDS,
+						// The three the standard registers are offered; anything else somebody keeps
+						// a day for is theirs to name, so the field does not refuse it.
+						allowFree: true,
+						// The id is the address a published pointer and a provenance row name.
+						supporting: id,
+						onChange: function ( value ) {
+							setEntry( id, withKey( entry, 'kind', value ) );
+						}
+					} ),
+					isInstant( date )
+						/*
+						 * Shown, not offered. This is a moment somebody recorded to the second, and
+						 * three boxes for a year, a month and a day would quietly throw the rest away.
+						 */
+						? el(
+							'p',
+							{ className: 'ax-ce-anniversary__instant' },
+							el( 'strong', null, date.utc || '' ),
+							' ',
+							__( 'was recorded as an exact moment, and is edited through the JSON.', 'axismundi-contacts' )
+						)
+						: el(
+							'div',
+							{ className: 'ax-ce-anniversary__date' },
+							DatePart( {
+								id: id,
+								entry: entry,
+								date: date,
+								part: 'year',
+								label: __( 'Year', 'axismundi-contacts' ),
+								supporting: __( 'Leave this empty if you do not know it.', 'axismundi-contacts' )
+							} ),
+							DatePart( { id: id, entry: entry, date: date, part: 'month', label: __( 'Month', 'axismundi-contacts' ) } ),
+							DatePart( { id: id, entry: entry, date: date, part: 'day', label: __( 'Day', 'axismundi-contacts' ) } )
+						),
+					problem ? el( 'p', { className: 'ax-ce-anniversary__problem' }, problem ) : null,
+					el( IconButton, {
+						icon: 'delete',
+						variant: 'danger',
+						label: __( 'Remove this anniversary', 'axismundi-contacts' ),
+						onClick: function () {
+							var next = Object.assign( {}, entries );
+							delete next[ id ];
+							setEntries( next );
+						}
+					} )
+				);
+			} ),
+			el(
+				'p',
+				null,
+				el(
+					'button',
+					{
+						type: 'button',
+						className: 'button',
+						onClick: function () {
+							var id = newEntryId( 'ann', entries );
+							var next = Object.assign( {}, entries );
+							// A birthday, because that is what nearly every one of these is, and no
+							// date, because that is the part nobody else can supply.
+							next[ id ] = { kind: 'birth' };
+							setEntries( next );
+						}
+					},
+					__( 'Add anniversary', 'axismundi-contacts' )
 				)
 			)
 		);
@@ -4608,6 +4830,21 @@
 				setStatus( __( 'The JSON has an error, so nothing was saved.', 'axismundi-contacts' ) );
 				return;
 			}
+			/*
+			 * A half-written date stops the save rather than being quietly dropped. The store refuses
+			 * it either way, and a row somebody typed is not this screen's to throw away on their
+			 * behalf -- so it is named, and stays on screen where they can finish it.
+			 */
+			var unfinished = anniversaryProblems( card );
+			if ( unfinished.length ) {
+				setStatus( sprintf(
+					/* translators: 1: the entry id, such as ann-4f2. 2: what is wrong with it. */
+					__( 'Nothing was saved: %1$s is not a date yet. %2$s', 'axismundi-contacts' ),
+					unfinished[ 0 ].id,
+					unfinished[ 0 ].problem
+				) );
+				return;
+			}
 			setSaving( true );
 			setStatus( '' );
 			var body = { revision: revision, card: prepare( card ) };
@@ -4910,13 +5147,20 @@
 					),
 					/*
 					 * And what the standard files under everything else: anniversaries, keywords,
-					 * notes and personal information. Notes are the one with a field, and it reads
-					 * last here because that is where the standard puts the group -- after the
-					 * languages a card is written in, not before them.
+					 * notes and personal information. The group reads last because that is where the
+					 * standard puts it -- after the languages a card is written in, not before them --
+					 * and within it, in the standard's own order.
 					 */
 					el(
 						PropertyCluster,
 						{ title: __( 'Additional properties', 'axismundi-contacts' ) },
+						el( Anniversaries, {
+							entries: card.anniversaries,
+							headingTag: 'h3',
+							onChange: function ( value ) {
+								setProperty( 'anniversaries', value );
+							}
+						} ),
 						entryFieldsIn( 'additional' )
 					),
 					beside ? null : el( AdvancedJson, { text: json, error: jsonError, onChange: onJson } )

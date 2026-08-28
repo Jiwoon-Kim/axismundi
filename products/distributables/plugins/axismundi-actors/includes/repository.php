@@ -1183,6 +1183,129 @@ function axismundi_actors_query_one( string $where, ...$args ) : ?Axismundi_Acto
 }
 
 /**
+ * Reduce a web address to the form two spellings of the same page share.
+ *
+ * Lowercased scheme and host, a default port dropped, one trailing slash gone -- and the query
+ * kept, because a plain-permalink profile lives entirely in its query string.
+ *
+ * This is a comparison form and not a canonical one: it says whether two addresses are the same
+ * address, and nothing about which of them anybody should be handed.
+ *
+ * @param string $url Candidate address.
+ * @return string Empty when the candidate is not an absolute web address.
+ */
+function axismundi_actors_normalize_web_url( string $url ) : string {
+	$parts  = wp_parse_url( $url );
+	$scheme = strtolower( (string) ( $parts['scheme'] ?? '' ) );
+	$host   = strtolower( (string) ( $parts['host'] ?? '' ) );
+	if ( ! in_array( $scheme, array( 'http', 'https' ), true ) || '' === $host ) {
+		return '';
+	}
+	$port      = isset( $parts['port'] ) ? (int) $parts['port'] : 0;
+	$authority = $host . ( $port > 0 && ! ( ( 'http' === $scheme && 80 === $port ) || ( 'https' === $scheme && 443 === $port ) ) ? ':' . $port : '' );
+	$path      = '/' . ltrim( (string) ( $parts['path'] ?? '' ), '/' );
+	if ( '/' !== $path ) {
+		$path = untrailingslashit( $path );
+	}
+	return $scheme . '://' . $authority . $path . ( isset( $parts['query'] ) && '' !== $parts['query'] ? '?' . $parts['query'] : '' );
+}
+
+/**
+ * Resolve one Actor from the human-readable profile address it is reached at.
+ *
+ * The page somebody opens, which is a different string from the Actor's canonical id and often the
+ * only one they ever see: `https://mastodon.social/@alice` rather than the id underneath it. A
+ * caller holding an address a person wrote down has this and not the id.
+ *
+ * A lookup and only a lookup. Nothing here discovers, fetches, or refreshes a cache: an address
+ * arriving from outside must never be able to make this server go knocking, and an Actor this site
+ * has not already cached simply is not here.
+ *
+ * Locally the profile address is derived from the handle rather than stored, so a local address is
+ * read for the handle it contains and the Actor found is then asked for its own address back. That
+ * confirmation is what makes the answer safe: whatever this reads out of a URL, only an Actor that
+ * answers with the same address is returned.
+ *
+ * Two Actors matching means no answer, on the same ground as an acct shared by a Person and a
+ * Group: `first cached` is not an identity, and differs from site to site.
+ *
+ * @param string $url Profile address.
+ * @return Axismundi_Actor|null
+ */
+function axismundi_actors_get_by_profile_url( string $url ) : ?Axismundi_Actor {
+	$wanted = axismundi_actors_normalize_web_url( $url );
+	if ( '' === $wanted ) {
+		return null;
+	}
+	static $memo = array();
+	if ( array_key_exists( $wanted, $memo ) ) {
+		return $memo[ $wanted ];
+	}
+	$found = axismundi_actors_local_actor_at_url( $wanted ) ?? axismundi_actors_remote_actor_at_url( $wanted );
+	/*
+	 * Whatever route found it, the Actor has to agree that this is where it lives. A handle read out
+	 * of a path is a guess until the Actor says the same thing back.
+	 */
+	if ( $found instanceof Axismundi_Actor && $wanted !== axismundi_actors_normalize_web_url( $found->get_profile_url() ) ) {
+		$found = null;
+	}
+	$memo[ $wanted ] = $found;
+	return $found;
+}
+
+/**
+ * The local Actor a profile address on this site names, by the handle the address carries.
+ *
+ * @param string $wanted Normalized address.
+ * @return Axismundi_Actor|null
+ */
+function axismundi_actors_local_actor_at_url( string $wanted ) : ?Axismundi_Actor {
+	$here = (string) wp_parse_url( axismundi_actors_normalize_web_url( home_url( '/' ) ), PHP_URL_HOST );
+	if ( '' === $here || strtolower( (string) wp_parse_url( $wanted, PHP_URL_HOST ) ) !== strtolower( $here ) ) {
+		return null;
+	}
+	// Pretty: `/@handle`, or `/group/@handle` where a Group keeps its own namespace.
+	$path   = rawurldecode( (string) wp_parse_url( $wanted, PHP_URL_PATH ) );
+	$handle = '';
+	if ( 1 === preg_match( '#(?:^|/)(?:group/)?@([^/]+)$#', $path, $matched ) ) {
+		$handle = $matched[1];
+	} else {
+		// Plain permalinks put the whole profile in the query string.
+		$query = array();
+		wp_parse_str( (string) wp_parse_url( $wanted, PHP_URL_QUERY ), $query );
+		$handle = (string) ( $query['ax_actor_handle'] ?? '' );
+	}
+	return '' !== $handle ? axismundi_actors_get_by_handle( $handle ) : null;
+}
+
+/**
+ * The cached remote Actor whose stored profile address is this one.
+ *
+ * Matched as stored rather than by a scan of near-misses: a cached address written in some other
+ * spelling is a miss here, and a miss costs a caller the answer it hoped for -- never somebody
+ * else's Actor, which is the only outcome worth avoiding.
+ *
+ * @param string $wanted Normalized address.
+ * @return Axismundi_Actor|null
+ */
+function axismundi_actors_remote_actor_at_url( string $wanted ) : ?Axismundi_Actor {
+	global $wpdb;
+	$identities = axismundi_actors_identities_table();
+	$actors     = axismundi_actors_actors_table();
+	$variants   = array_values( array_unique( array( $wanted, $wanted . '/' ) ) );
+	$slots      = implode( ', ', array_fill( 0, count( $variants ), '%s' ) );
+	$ids        = (array) $wpdb->get_col(
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- table names are ours; every value is prepared and the placeholders are generated from a counted array.
+		$wpdb->prepare(
+			"SELECT DISTINCT i.id FROM {$identities} i INNER JOIN {$actors} a ON a.identity_id = i.id WHERE i.origin = %s AND a.profile_url IN ({$slots}) LIMIT 2",
+			'remote',
+			...$variants
+		)
+	);
+	return 1 === count( $ids ) ? axismundi_actors_get_by_identity( (int) $ids[0] ) : null;
+}
+
+/**
  * @param string $uuid Identity UUID.
  * @return Axismundi_Actor|null
  */

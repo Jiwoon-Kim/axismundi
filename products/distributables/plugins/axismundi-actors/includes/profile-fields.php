@@ -214,19 +214,7 @@ function axismundi_actors_save_profile_fields( Axismundi_Actor $actor, array $fi
  * @return string Empty when the candidate is not an absolute web URL.
  */
 function axismundi_actors_normalize_profile_field_url( string $url ) : string {
-	$parts  = wp_parse_url( $url );
-	$scheme = strtolower( (string) ( $parts['scheme'] ?? '' ) );
-	$host   = strtolower( (string) ( $parts['host'] ?? '' ) );
-	if ( ! in_array( $scheme, array( 'http', 'https' ), true ) || '' === $host ) {
-		return '';
-	}
-	$port = isset( $parts['port'] ) ? (int) $parts['port'] : 0;
-	$authority = $host . ( $port > 0 && ! ( ( 'http' === $scheme && 80 === $port ) || ( 'https' === $scheme && 443 === $port ) ) ? ':' . $port : '' );
-	$path = '/' . ltrim( (string) ( $parts['path'] ?? '' ), '/' );
-	if ( '/' !== $path ) {
-		$path = untrailingslashit( $path );
-	}
-	return $scheme . '://' . $authority . $path . ( isset( $parts['query'] ) && '' !== $parts['query'] ? '?' . $parts['query'] : '' );
+	return axismundi_actors_normalize_web_url( $url );
 }
 
 /** Resolve an anchor href relative to the checked page, without dereferencing it. */

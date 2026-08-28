@@ -200,10 +200,46 @@
 	min-width: 0;
 }
 
-.ax-ce-anniversary__instant {
-	flex: 2 1 20em;
-	margin: 14px 0 0;
+/* Two shapes of one fact, so the choice sits on its own line above both. */
+.ax-ce-anniversary__shape {
+	flex: 1 0 100%;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	display: flex;
+	gap: 1em;
+	align-items: baseline;
+}
+
+.ax-ce-anniversary__shape legend {
+	float: left;
+	padding: 0 .75em 0 0;
 	color: #50575e;
+}
+
+.ax-ce-anniversary__shape label {
+	display: inline-flex;
+	align-items: baseline;
+	gap: .25em;
+}
+
+.ax-ce-anniversary__moment {
+	display: flex;
+	flex-direction: column;
+	flex: 2 1 20em;
+	min-width: 0;
+}
+
+/* The instant is the fact; this is the sentence somebody checks it against. */
+.ax-ce-anniversary__reads {
+	margin: .25em 0 0;
+	color: #50575e;
+}
+
+.ax-ce-anniversary__scale,
+.ax-ce-anniversary__zone {
+	flex: 1 1 12em;
+	min-width: 0;
 }
 
 /* Under the row it is about, where the eye is already looking. */

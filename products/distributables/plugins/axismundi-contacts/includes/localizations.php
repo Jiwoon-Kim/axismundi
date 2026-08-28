@@ -665,6 +665,19 @@ function axismundi_contacts_validate_card_values( array $card ) {
 				if ( $wrong instanceof WP_Error ) {
 					return $wrong;
 				}
+				/*
+				 * Where it happened, which is also the only standard place to say how its day should
+				 * be read. A day is a day somewhere: an instant near midnight is one date in Seoul and
+				 * the one before it in New York, and the same is true of the day a lunisolar month is
+				 * counted from. The standard has no time zone on an anniversary and does have one on
+				 * an Address, and an Address carrying nothing but a time zone is a valid Address.
+				 */
+				if ( array_key_exists( 'place', $entry ) ) {
+					$wrong = axismundi_contacts_anniversary_place_error( $at . '/place', (array) $entry['place'] );
+					if ( $wrong instanceof WP_Error ) {
+						return $wrong;
+					}
+				}
 			}
 			if ( 'organizations' === $property ) {
 				$name  = trim( (string) ( $entry['name'] ?? '' ) );
@@ -709,9 +722,18 @@ function axismundi_contacts_validate_card_values( array $card ) {
 function axismundi_contacts_anniversary_date_error( string $at, array $date ) : ?WP_Error {
 	// A Timestamp announces itself, and an instant is the one thing it has to carry.
 	if ( 'Timestamp' === ( $date['@type'] ?? '' ) || array_key_exists( 'utc', $date ) ) {
-		return isset( $date['utc'] ) && is_string( $date['utc'] ) && '' !== trim( $date['utc'] )
-			? null
-			: axismundi_contacts_value_error( $at . '/utc', __( 'a timestamp is one moment in UTC', 'axismundi-contacts' ) );
+		if ( ! isset( $date['utc'] ) || ! is_string( $date['utc'] ) || ! axismundi_contacts_is_utc_datetime( $date['utc'] ) ) {
+			return axismundi_contacts_value_error( $at . '/utc', __( 'a moment is written in UTC, ending in Z, such as 1996-11-20T03:15:00Z', 'axismundi-contacts' ) );
+		}
+		/*
+		 * And a calendar system may not be attached to it. `calendarScale` belongs to a partial date,
+		 * where it says which calendar the day was counted in; an instant is a point on the line and
+		 * has no month to be the seventh of. A Hebrew anniversary recorded to the minute is two facts
+		 * -- the instant, and the day it is kept on -- and this one object cannot carry both.
+		 */
+		return array_key_exists( 'calendarScale', $date )
+			? axismundi_contacts_value_error( $at . '/calendarScale', __( 'a moment in time is not counted in any calendar; the day it falls on is', 'axismundi-contacts' ) )
+			: null;
 	}
 	$parts = array();
 	foreach ( array( 'year', 'month', 'day' ) as $part ) {
@@ -748,10 +770,87 @@ function axismundi_contacts_anniversary_date_error( string $at, array $date ) : 
 			return axismundi_contacts_value_error( $at . '/day', __( 'that month has no such day', 'axismundi-contacts' ) );
 		}
 	}
-	if ( array_key_exists( 'calendarScale', $date ) && ( ! is_string( $date['calendarScale'] ) || '' === trim( $date['calendarScale'] ) ) ) {
-		return axismundi_contacts_value_error( $at . '/calendarScale', __( 'a calendar system is named in lowercase text', 'axismundi-contacts' ) );
+	/*
+	 * Which calendar the day was counted in. The numbers above stay Gregorian whatever this says --
+	 * the standard is explicit about that -- so this is the reading and not the value: a birthday
+	 * counted on the Korean lunisolar calendar is stored as the Gregorian day it fell on, with this
+	 * saying which calendar the family was counting in when they named it.
+	 */
+	if ( array_key_exists( 'calendarScale', $date ) ) {
+		$scale = $date['calendarScale'];
+		if ( ! is_string( $scale ) || '' === trim( $scale ) || strtolower( $scale ) !== $scale ) {
+			return axismundi_contacts_value_error( $at . '/calendarScale', __( 'a calendar system is named the way CLDR names it, in lowercase', 'axismundi-contacts' ) );
+		}
 	}
 	return null;
+}
+
+/**
+ * Whether the place on an anniversary is a place, and nothing if it is.
+ *
+ * An Address says at least one of what it is made of, where it is, which country it is in, how it
+ * is written out, or which time zone it keeps -- and an empty one is a property that survived an
+ * edit rather than an answer. A time zone alone is a whole Address here on purpose: it is how this
+ * ledger records that a day was counted in Seoul without asking anybody for a street.
+ *
+ * @param string              $at    Where in the Card.
+ * @param array<string,mixed> $place The place as given.
+ * @return WP_Error|null Null when there is nothing wrong.
+ */
+function axismundi_contacts_anniversary_place_error( string $at, array $place ) : ?WP_Error {
+	$said = array_filter(
+		array( 'components', 'coordinates', 'countryCode', 'full', 'timeZone' ),
+		static function ( string $key ) use ( $place ) : bool {
+			return array_key_exists( $key, $place ) && array() !== $place[ $key ] && '' !== $place[ $key ];
+		}
+	);
+	if ( array() === $said ) {
+		return axismundi_contacts_value_error( $at, __( 'a place says at least one of where it is, what it is called, or which time zone it keeps', 'axismundi-contacts' ) );
+	}
+	if ( array_key_exists( 'timeZone', $place ) ) {
+		$zone = $place['timeZone'];
+		/*
+		 * A name from the time zone database, not an offset. `+09:00` is what Seoul reads today and
+		 * says nothing about what it read in 1988, which is exactly the question a birthday recorded
+		 * to the minute in 1988 asks.
+		 */
+		if ( ! is_string( $zone ) || ! in_array( $zone, timezone_identifiers_list( DateTimeZone::ALL_WITH_BC ), true ) ) {
+			return axismundi_contacts_value_error( $at . '/timeZone', __( 'a time zone is named in the IANA database, such as Asia/Seoul', 'axismundi-contacts' ) );
+		}
+	}
+	return null;
+}
+
+/**
+ * Whether this is a UTCDateTime, which is narrower than a date and time.
+ *
+ * RFC 9553 requires one written form per instant: upper case throughout, the offset written as `Z`
+ * rather than `+00:00`, and a fraction of a second only when it is not zero and with no trailing
+ * zeros. `2010-10-10T10:10:10.000Z` is a valid RFC 3339 timestamp and not a valid one here, because
+ * two documents saying the same instant differently is what canonical form exists to prevent.
+ *
+ * An offset of `+03:30` is refused rather than converted. Converting would be this code deciding
+ * that an offset is a time zone, which it is not -- the same clock reading in Tehran is a different
+ * offset half the year -- and the zone belongs on `place`, where it can be named.
+ *
+ * @param string $value Candidate.
+ * @return bool
+ */
+function axismundi_contacts_is_utc_datetime( string $value ) : bool {
+	if ( 1 !== preg_match( '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/', $value ) ) {
+		return false;
+	}
+	// A fraction that is there says something. `.0`, `.000` and a trailing zero do not.
+	if ( 1 === preg_match( '/\.(\d+)Z$/', $value, $fraction ) && ( '' === rtrim( $fraction[1], '0' ) || str_ends_with( $fraction[1], '0' ) ) ) {
+		return false;
+	}
+	$parts = array_map( 'intval', array( substr( $value, 0, 4 ), substr( $value, 5, 2 ), substr( $value, 8, 2 ) ) );
+	if ( ! checkdate( $parts[1], $parts[2], $parts[0] ) ) {
+		return false;
+	}
+	$time = array_map( 'intval', array( substr( $value, 11, 2 ), substr( $value, 14, 2 ), substr( $value, 17, 2 ) ) );
+	// 24:00 is a real RFC 3339 reading and 25:00 is not; a leap second lands on 60.
+	return $time[0] <= 24 && $time[1] <= 59 && $time[2] <= 60;
 }
 
 /**

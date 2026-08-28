@@ -963,6 +963,90 @@ try {
 	);
 
 	/*
+	 * Which calendar the day was counted in, without the numbers changing. A birthday kept on the
+	 * Korean lunisolar calendar is still stored as the Gregorian day it fell on -- the standard is
+	 * explicit that `year`, `month` and `day` stay Gregorian -- so this says how the day is read and
+	 * never what it is. Anything CLDR names is allowed, because a plugin refusing `islamic-umalqura`
+	 * would be this editor deciding which calendars people are permitted to count in.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a day can say which calendar it was counted in, and is still written in Gregorian numbers',
+		$ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 1996, 'month' => 11, 'day' => 20, 'calendarScale' => 'dangi' ) ) )
+			&& $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'month' => 11, 'day' => 20, 'calendarScale' => 'hebrew' ) ) )
+			&& $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 1996, 'month' => 11, 'day' => 20, 'calendarScale' => 'islamic-umalqura' ) ) )
+			// Named the way CLDR names it. `Dangi` and `DANGI` are the same calendar spelled two ways.
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 1996, 'month' => 11, 'day' => 20, 'calendarScale' => 'Dangi' ) ) )
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 1996, 'month' => 11, 'day' => 20, 'calendarScale' => '' ) ) )
+			// And the numbers are still judged as Gregorian, whatever calendar is named beside them.
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 1996, 'month' => 13, 'day' => 20, 'calendarScale' => 'hebrew' ) ) )
+	);
+
+	/*
+	 * An instant is a point on the line, and a calendar system cannot be attached to one. That
+	 * combination reads as though it meant something -- a Hebrew anniversary recorded to the minute --
+	 * and it is two facts wearing one object: the moment, and the day it is kept on. The standard puts
+	 * `calendarScale` on a partial date and nowhere else, so this refuses rather than quietly keeping
+	 * a field no reader is required to look at.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'a moment in time is not counted in any calendar, and is refused when it claims to be',
+		$ax_ct_ann_ok( array( 'kind' => 'death', 'date' => array( '@type' => 'Timestamp', 'utc' => '2019-10-15T23:10:00Z' ) ) )
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'death', 'date' => array( '@type' => 'Timestamp', 'utc' => '2019-10-15T23:10:00Z', 'calendarScale' => 'hebrew' ) ) )
+	);
+
+	/*
+	 * And one written form per instant. RFC 9553 narrows RFC 3339: upper case throughout, the offset
+	 * written as `Z`, and a fraction of a second only when it is not zero and with no trailing zeros.
+	 * `.000` is a valid RFC 3339 timestamp and not a valid one here, because two documents saying the
+	 * same instant differently is the thing a canonical form exists to prevent.
+	 *
+	 * `+03:30` is refused rather than converted, because an offset is not a time zone: the same clock
+	 * reading in Tehran is a different offset half the year, and the zone belongs on `place`, where it
+	 * can be named rather than inferred.
+	 */
+	$ax_ct_ann_utc = static function ( string $value ) use ( $ax_ct_ann_ok ) : bool {
+		return $ax_ct_ann_ok( array( 'kind' => 'death', 'date' => array( '@type' => 'Timestamp', 'utc' => $value ) ) );
+	};
+	ax_ct_assert(
+		$ax_ct_results,
+		'an instant is written one way, so that the same moment is never two documents',
+		$ax_ct_ann_utc( '1996-11-20T03:15:00Z' )
+			&& $ax_ct_ann_utc( '2010-10-10T10:10:10.003Z' )
+			// The standard's own counter-example, and the rest of its narrowing.
+			&& ! $ax_ct_ann_utc( '2010-10-10T10:10:10.000Z' )
+			&& ! $ax_ct_ann_utc( '2010-10-10T10:10:10.030Z' )
+			&& ! $ax_ct_ann_utc( '1996-11-20t03:15:00z' )
+			&& ! $ax_ct_ann_utc( '1996-11-20T03:15:00+00:00' )
+			&& ! $ax_ct_ann_utc( '1996-11-20T12:00:00+03:30' )
+			&& ! $ax_ct_ann_utc( '1996-11-20' )
+			&& ! $ax_ct_ann_utc( '' )
+			// Still a real moment: February has no thirtieth, and a clock has no twenty-sixth hour.
+			&& ! $ax_ct_ann_utc( '1996-02-30T03:15:00Z' )
+			&& ! $ax_ct_ann_utc( '1996-11-20T26:15:00Z' )
+	);
+
+	/*
+	 * Where it happened, which is the only standard place to say how its day should be read. A day is
+	 * a day somewhere: an instant near midnight is one date in Seoul and the day before in New York,
+	 * and a lunisolar month is counted from a day that has the same problem. An Address carrying
+	 * nothing but a time zone is a whole Address, which is what makes this possible without asking
+	 * anybody for their street.
+	 */
+	ax_ct_assert(
+		$ax_ct_results,
+		'an anniversary can say which time zone its day is read in, without giving an address',
+		$ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 1953, 'month' => 4, 'day' => 15 ), 'place' => array( 'timeZone' => 'Asia/Seoul' ) ) )
+			&& $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 1953, 'month' => 4, 'day' => 15 ), 'place' => array( 'full' => 'Seoul' ) ) )
+			// A name from the database, never an offset: `+09:00` says nothing about 1988.
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 1953, 'month' => 4, 'day' => 15 ), 'place' => array( 'timeZone' => '+09:00' ) ) )
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 1953, 'month' => 4, 'day' => 15 ), 'place' => array( 'timeZone' => 'KST' ) ) )
+			// And a place that says nothing is a property that survived an edit, not an answer.
+			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 1953, 'month' => 4, 'day' => 15 ), 'place' => array() ) )
+	);
+
+	/*
 	 * And a recorded instant is still allowed, because the standard allows it and somebody's record of
 	 * a death to the minute is not this plugin's to round off. It keeps its `@type`, which is the one
 	 * line saying it is not the partial date the position would otherwise imply.

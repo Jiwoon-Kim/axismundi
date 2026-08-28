@@ -143,6 +143,82 @@
 		{ value: 'wedding', label: __( 'Wedding anniversary', 'axismundi-contacts' ) }
 	];
 
+	/*
+	 * The calendars a day can be counted in, named the way CLDR names them. Offered rather than
+	 * enforced, for the same reason as the kinds: this list is the common ones, and a plugin refusing
+	 * a calendar somebody actually keeps would be deciding which calendars people are allowed.
+	 *
+	 * What this never changes is the numbers. RFC 9553 is explicit that `year`, `month` and `day` stay
+	 * Gregorian whatever is named here -- so a birthday kept on the Korean lunisolar calendar is
+	 * stored as the Gregorian day it fell on, with this saying which calendar the family was counting
+	 * in. Which month of which year that becomes in a later year is a question for a calendar, not for
+	 * an address book.
+	 */
+	var CALENDAR_SCALES = [
+		{ value: 'gregory', label: __( 'Gregorian', 'axismundi-contacts' ) },
+		{ value: 'dangi', label: __( 'Korean lunisolar', 'axismundi-contacts' ) },
+		{ value: 'chinese', label: __( 'Chinese lunisolar', 'axismundi-contacts' ) },
+		{ value: 'hebrew', label: __( 'Hebrew', 'axismundi-contacts' ) },
+		{ value: 'islamic', label: __( 'Islamic', 'axismundi-contacts' ) },
+		{ value: 'islamic-umalqura', label: __( 'Islamic (Umm al-Qura)', 'axismundi-contacts' ) },
+		{ value: 'persian', label: __( 'Persian', 'axismundi-contacts' ) },
+		{ value: 'indian', label: __( 'Indian national', 'axismundi-contacts' ) },
+		{ value: 'buddhist', label: __( 'Buddhist', 'axismundi-contacts' ) },
+		{ value: 'ethiopic', label: __( 'Ethiopic', 'axismundi-contacts' ) },
+		{ value: 'coptic', label: __( 'Coptic', 'axismundi-contacts' ) },
+		{ value: 'japanese', label: __( 'Japanese', 'axismundi-contacts' ) },
+		{ value: 'roc', label: __( 'Minguo', 'axismundi-contacts' ) }
+	];
+
+	/**
+	 * Whether a moment is written the one way the standard writes moments.
+	 *
+	 * Narrower than a date and a time: upper case throughout, the offset written as `Z`, and a
+	 * fraction of a second only when it is not zero and with no trailing zeros. `.000` is a valid
+	 * RFC 3339 timestamp and not a valid one here, because two documents saying the same instant
+	 * differently is what a canonical form exists to prevent.
+	 */
+	function isUtcMoment( value ) {
+		if ( ! /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test( value ) ) {
+			return false;
+		}
+		var fraction = value.match( /\.(\d+)Z$/ );
+		if ( fraction && /0$/.test( fraction[ 1 ] ) ) {
+			return false;
+		}
+		var day = new Date( value.slice( 0, 10 ) + 'T00:00:00Z' );
+		if ( isNaN( day.getTime() ) || day.toISOString().slice( 0, 10 ) !== value.slice( 0, 10 ) ) {
+			return false;
+		}
+		// 24:00 is a real reading and 25:00 is not; a leap second lands on 60.
+		return parseInt( value.slice( 11, 13 ), 10 ) <= 24
+			&& parseInt( value.slice( 14, 16 ), 10 ) <= 59
+			&& parseInt( value.slice( 17, 19 ), 10 ) <= 60;
+	}
+
+	/**
+	 * What one instant reads as on the clock of one place, for showing back rather than for storing.
+	 *
+	 * The stored fact is the instant. This is the check somebody needs to see before they trust it:
+	 * `1996-11-20T03:15:00Z` is a number, and `1996년 11월 20일 12:15, Asia/Seoul` is the thing they
+	 * actually remember.
+	 */
+	function momentReadsAs( value, zone ) {
+		if ( ! zone || ! isUtcMoment( value ) ) {
+			return '';
+		}
+		try {
+			return new Intl.DateTimeFormat( undefined, {
+				timeZone: zone,
+				dateStyle: 'long',
+				timeStyle: 'short'
+			} ).format( new Date( value ) );
+		} catch ( error ) {
+			// An unknown zone is the picker's problem to report, not a reason to stop drawing the row.
+			return '';
+		}
+	}
+
 	/**
 	 * Whether this date is an instant rather than a day on a calendar.
 	 *
@@ -169,7 +245,12 @@
 		}
 		var date = entry.date || {};
 		if ( isInstant( date ) ) {
-			return ( date.utc || '' ).trim() ? '' : __( 'A recorded moment needs its time.', 'axismundi-contacts' );
+			if ( ! ( date.utc || '' ).trim() ) {
+				return __( 'A recorded moment needs its time.', 'axismundi-contacts' );
+			}
+			return isUtcMoment( date.utc )
+				? ''
+				: __( 'A moment is written in UTC, ending in Z, such as 1996-11-20T03:15:00Z.', 'axismundi-contacts' );
 		}
 		var year = date.year;
 		var month = date.month;
@@ -1433,6 +1514,13 @@
 	function Anniversaries( props ) {
 		var entries = props.entries || {};
 		var ids = Object.keys( entries );
+		/*
+		 * The shape a row is not currently in, kept here and never in the Card. Somebody who typed a
+		 * birthday, switched to an exact moment to see what it looked like, and switched back would
+		 * otherwise find the birthday gone -- so the other half waits in this screen's memory, where
+		 * it is nobody's stored record until they choose it again.
+		 */
+		var [ shadow, setShadow ] = useState( {} );
 
 		function setEntries( next ) {
 			props.onChange( Object.keys( next ).length ? next : undefined );
@@ -1444,6 +1532,61 @@
 			setEntries( next );
 		}
 
+		/** Write one key of the date, or take it away when it is emptied. */
+		function setDateKey( id, entry, key, value ) {
+			var date = Object.assign( {}, entry.date || {} );
+			if ( '' === value || undefined === value || null === value ) {
+				delete date[ key ];
+			} else {
+				date[ key ] = value;
+			}
+			var next = Object.assign( {}, entry );
+			if ( Object.keys( date ).length ) {
+				next.date = date;
+			} else {
+				delete next.date;
+			}
+			setEntry( id, next );
+		}
+
+		/** The time zone a day is read in, which the standard keeps on the place rather than the day. */
+		function setZone( id, entry, zone ) {
+			var place = Object.assign( {}, entry.place || {} );
+			if ( zone ) {
+				place.timeZone = zone;
+			} else {
+				delete place.timeZone;
+			}
+			var next = Object.assign( {}, entry );
+			if ( Object.keys( place ).length ) {
+				next.place = place;
+			} else {
+				// An address that said only a time zone says nothing once the zone is gone.
+				delete next.place;
+			}
+			setEntry( id, next );
+		}
+
+		/** Move a row between the two shapes, putting the one being left aside rather than dropping it. */
+		function setShape( id, entry, wantInstant ) {
+			var date = entry.date || {};
+			var kept = Object.assign( {}, shadow );
+			kept[ id ] = Object.assign( {}, kept[ id ] || {} );
+			kept[ id ][ isInstant( date ) ? 'instant' : 'partial' ] = date;
+			setShadow( kept );
+			var back = ( kept[ id ] || {} )[ wantInstant ? 'instant' : 'partial' ];
+			var next = Object.assign( {}, entry );
+			if ( back && Object.keys( back ).length ) {
+				next.date = back;
+			} else if ( wantInstant ) {
+				// Announced as a moment from the start, so the row draws as one before it has a value.
+				next.date = { '@type': 'Timestamp', utc: '' };
+			} else {
+				delete next.date;
+			}
+			setEntry( id, next );
+		}
+
 		/** One part of a partial date, written as a whole number or taken away entirely. */
 		function DatePart( row ) {
 			return el( TextField, {
@@ -1453,22 +1596,10 @@
 				value: undefined === row.date[ row.part ] ? '' : String( row.date[ row.part ] ),
 				supporting: row.supporting,
 				onChange: function ( value ) {
-					var date = Object.assign( {}, row.date );
 					var number = parseInt( value, 10 );
-					if ( '' === value.trim() || isNaN( number ) ) {
-						// Cleared, rather than set to nothing: an absent year is what "I do not know
-						// the year" looks like in a partial date, and `0` would be a claim.
-						delete date[ row.part ];
-					} else {
-						date[ row.part ] = number;
-					}
-					var entry = Object.assign( {}, row.entry );
-					if ( Object.keys( date ).length ) {
-						entry.date = date;
-					} else {
-						delete entry.date;
-					}
-					setEntry( row.id, entry );
+					// Cleared, rather than set to nothing: an absent year is what "I do not know the
+					// year" looks like in a partial date, and `0` would be a claim.
+					setDateKey( row.id, row.entry, row.part, '' === value.trim() || isNaN( number ) ? '' : number );
 				}
 			} );
 		}
@@ -1484,7 +1615,10 @@
 			ids.map( function ( id ) {
 				var entry = entries[ id ] || {};
 				var date = entry.date || {};
+				var instant = isInstant( date );
+				var zone = ( entry.place || {} ).timeZone || '';
 				var problem = anniversaryProblem( entry );
+				var reads = instant ? momentReadsAs( date.utc || '', zone ) : '';
 				return el(
 					'div',
 					{ key: id, className: 'ax-ce-entry ax-ce-anniversary' },
@@ -1502,17 +1636,56 @@
 							setEntry( id, withKey( entry, 'kind', value ) );
 						}
 					} ),
-					isInstant( date )
-						/*
-						 * Shown, not offered. This is a moment somebody recorded to the second, and
-						 * three boxes for a year, a month and a day would quietly throw the rest away.
-						 */
+					/*
+					 * A day, or a moment. Two different facts rather than two precisions of one: a day
+					 * is counted on a calendar and can be kept every year, while a moment is a point on
+					 * the line that no calendar counts and that only a time zone turns back into a day.
+					 */
+					el(
+						'fieldset',
+						{ className: 'ax-ce-anniversary__shape' },
+						el( 'legend', null, __( 'Recorded as', 'axismundi-contacts' ) ),
+						[
+							{ instant: false, label: __( 'A day', 'axismundi-contacts' ) },
+							{ instant: true, label: __( 'An exact moment', 'axismundi-contacts' ) }
+						].map( function ( choice ) {
+							return el(
+								'label',
+								{ key: choice.label },
+								el( 'input', {
+									type: 'radio',
+									name: 'ax-ce-shape-' + id,
+									checked: instant === choice.instant,
+									onChange: function () {
+										setShape( id, entry, choice.instant );
+									}
+								} ),
+								' ',
+								choice.label
+							);
+						} )
+					),
+					instant
 						? el(
-							'p',
-							{ className: 'ax-ce-anniversary__instant' },
-							el( 'strong', null, date.utc || '' ),
-							' ',
-							__( 'was recorded as an exact moment, and is edited through the JSON.', 'axismundi-contacts' )
+							'div',
+							{ className: 'ax-ce-anniversary__moment' },
+							el( TextField, {
+								label: __( 'The moment, in UTC', 'axismundi-contacts' ),
+								className: 'ax-ce-anniversary__utc',
+								value: date.utc || '',
+								supporting: __( 'Written one way only, ending in Z: 1996-11-20T03:15:00Z.', 'axismundi-contacts' ),
+								onChange: function ( value ) {
+									var next = Object.assign( {}, entry );
+									next.date = { '@type': 'Timestamp', utc: value.trim() };
+									setEntry( id, next );
+								}
+							} ),
+							/*
+							 * What that instant reads as where it happened. Shown and never stored: the
+							 * fact is the moment, and this is the sentence somebody actually remembers,
+							 * so that a wrong instant is caught by the person who knows.
+							 */
+							reads ? el( 'p', { className: 'ax-ce-anniversary__reads' }, reads ) : null
 						)
 						: el(
 							'div',
@@ -1526,8 +1699,41 @@
 								supporting: __( 'Leave this empty if you do not know it.', 'axismundi-contacts' )
 							} ),
 							DatePart( { id: id, entry: entry, date: date, part: 'month', label: __( 'Month', 'axismundi-contacts' ) } ),
-							DatePart( { id: id, entry: entry, date: date, part: 'day', label: __( 'Day', 'axismundi-contacts' ) } )
+							DatePart( { id: id, entry: entry, date: date, part: 'day', label: __( 'Day', 'axismundi-contacts' ) } ),
+							/*
+							 * Which calendar the day was counted in -- and only that. The numbers beside
+							 * it stay Gregorian whatever this says, because the standard requires it: a
+							 * birthday kept on the lunisolar calendar is stored as the Gregorian day it
+							 * fell on, and which day that becomes in a later year is a calendar's
+							 * question rather than an address book's.
+							 */
+							el( Combobox, {
+								label: __( 'Counted in', 'axismundi-contacts' ),
+								className: 'ax-ce-anniversary__scale',
+								value: date.calendarScale || '',
+								options: CALENDAR_SCALES,
+								allowFree: true,
+								supporting: __( 'The date above stays Gregorian. This says which calendar it was counted in.', 'axismundi-contacts' ),
+								onChange: function ( value ) {
+									setDateKey( id, entry, 'calendarScale', value );
+								}
+							} )
 						),
+					/*
+					 * Where it happened, which is the only place the standard has for saying how the day
+					 * should be read. A day is a day somewhere: an instant near midnight is one date in
+					 * Seoul and the day before in New York.
+					 */
+					el( TimeZonePicker, {
+						label: __( 'Read in', 'axismundi-contacts' ),
+						className: 'ax-ce-anniversary__zone',
+						value: zone,
+						options: config.timeZoneOptions,
+						supporting: __( 'Where this day is counted. Leave it empty if you do not know.', 'axismundi-contacts' ),
+						onChange: function ( value ) {
+							setZone( id, entry, value );
+						}
+					} ),
 					problem ? el( 'p', { className: 'ax-ce-anniversary__problem' }, problem ) : null,
 					el( IconButton, {
 						icon: 'delete',

@@ -1,0 +1,46 @@
+{
+  "core": "WordPress/WordPress#7.1",
+  "testsEnvironment": false,
+  "themes": [
+    "../../../products/distributables/themes/omphalos",
+    "../../../products/distributables/themes/axismundi",
+    "C:/Users/thaum/dev/twentytwentyfive.1.5/twentytwentyfive"
+  ],
+  "plugins": [
+    "https://downloads.wordpress.org/plugin/theme-check.zip",
+    "https://downloads.wordpress.org/plugin/create-block-theme.zip",
+    "https://downloads.wordpress.org/plugin/plugin-check.zip",
+    "../../../products/distributables/plugins/axismundi-theme-switcher",
+    "../../../products/distributables/plugins/axismundi-korean-font-provider",
+    "../../../products/distributables/plugins/axismundi-japanese-font-provider",
+    "../../../products/distributables/plugins/axismundi-traditional-chinese-font-provider",
+    "../../../products/distributables/plugins/axismundi-navigation-icons",
+    "../../../products/distributables/plugins/axismundi-table-of-contents",
+    "../../../products/distributables/plugins/axismundi-geodata",
+    "../../../products/distributables/plugins/axismundi-map",
+    "../../../products/distributables/plugins/axismundi-dialogs",
+    "../../../products/distributables/plugins/axismundi-media-library",
+    "../../../products/distributables/plugins/axismundi-note",
+    "../../../products/distributables/plugins/axismundi-actors",
+    "../../../products/distributables/plugins/axismundi-contacts",
+    "../../../products/distributables/plugins/axismundi-forum",
+    "../../../products/distributables/plugins/axismundi-emoji",
+    "../../../products/distributables/plugins/axismundi-object-projections",
+    "../../../products/distributables/plugins/axismundi-activities",
+    "../../../products/distributables/plugins/axismundi-calendar",
+    "../../../products/distributables/plugins/axismundi-notifications",
+    "C:/Users/thaum/dev/pwa/pwa.0.8.2/pwa",
+    "../../../products/distributables/plugins/axismundi-pwa",
+    "https://downloads.wordpress.org/plugin/activitypub.zip",
+    "../../../products/distributables/plugins/axismundi-activitypub-bridge"
+  ],
+  "port": 8885,
+  "config": {
+    "WP_DEBUG": true,
+    "WP_DEBUG_LOG": true,
+    "SCRIPT_DEBUG": true
+  },
+  "lifecycleScripts": {
+    "afterStart": "wp-env run cli wp rewrite structure /%postname%/ --hard"
+  }
+}

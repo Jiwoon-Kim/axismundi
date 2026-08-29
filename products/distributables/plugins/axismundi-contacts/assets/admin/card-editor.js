@@ -1711,19 +1711,28 @@
 							DatePart( { id: id, entry: entry, date: date, part: 'month', label: __( 'Month', 'axismundi-contacts' ) } ),
 							DatePart( { id: id, entry: entry, date: date, part: 'day', label: __( 'Day', 'axismundi-contacts' ) } ),
 							/*
-							 * Which calendar the day was counted in -- and only that. The numbers beside
-							 * it stay Gregorian whatever this says, because the standard requires it: a
-							 * birthday kept on the lunisolar calendar is stored as the Gregorian day it
-							 * fell on, and which day that becomes in a later year is a calendar's
-							 * question rather than an address book's.
+							 * Which calendar the day was counted in -- shown only when the Card already
+							 * says, and never asked of somebody writing one down.
+							 *
+							 * It reads like the way to keep a lunisolar birthday and it is not. The
+							 * numbers beside it stay Gregorian whatever it says, because the standard
+							 * requires that, so it never changes which day this is; it is a note about
+							 * where the day came from. Whether a birth is kept every year on the
+							 * Gregorian calendar, the lunisolar one, or both is a question about how
+							 * somebody is celebrated rather than when they were born -- one birth, and
+							 * as many observances as they keep -- so it belongs to the calendar that
+							 * draws the occurrences and not to the ledger that records the day.
+							 *
+							 * What it is for is arriving from somewhere else: a JSContact Card imported
+							 * with a scale keeps it, and can be corrected or cleared here.
 							 */
-							el( Combobox, {
+							undefined === date.calendarScale ? null : el( Combobox, {
 								label: __( 'Counted in', 'axismundi-contacts' ),
 								className: 'ax-ce-anniversary__scale',
 								value: date.calendarScale || '',
 								options: CALENDAR_SCALES,
 								allowFree: true,
-								supporting: __( 'The date above stays Gregorian. This says which calendar it was counted in.', 'axismundi-contacts' ),
+								supporting: __( 'Kept from wherever this card came from. The date above stays Gregorian, and how this day is celebrated each year is a calendar setting.', 'axismundi-contacts' ),
 								onChange: function ( value ) {
 									setDateKey( id, entry, 'calendarScale', value );
 								}
@@ -3143,8 +3152,15 @@
 								label: __( 'Country', 'axismundi-contacts' ),
 								className: 'ax-ce-address__country',
 								value: entry.countryCode || '',
-								options: countries,
-								allowFree: true,
+								/*
+								 * The list and nothing else, with a way back out of it. What is shown
+								 * here is a country's name and what is stored is its code, so text
+								 * typed and kept would be `대한민국` coming to rest where `KR` belongs
+								 * -- a value no other reader can match, written by a screen that had
+								 * accepted it. Typing still narrows the list; it does not become the
+								 * answer.
+								 */
+								options: [ { value: '', label: __( 'Not said', 'axismundi-contacts' ) } ].concat( countries ),
 								/*
 								 * Not filled in by the browser. This box shows a country's name and
 								 * stores its code, and a browser handing over either one would be

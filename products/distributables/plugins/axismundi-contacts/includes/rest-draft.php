@@ -324,6 +324,37 @@ function axismundi_contacts_validate_draft( array $card ) {
 	if ( isset( $card['version'] ) && ( ! is_string( $card['version'] ) || '' === trim( $card['version'] ) ) ) {
 		return new WP_Error( 'ax_contacts_draft_version', __( 'The version of a card is the revision it is written in.', 'axismundi-contacts' ), array( 'status' => 400 ) );
 	}
+	/*
+	 * A country code, on the way in from somebody writing one. Two letters as ISO writes them, so that
+	 * a country's name cannot come to rest where its code belongs: the box shows `대한민국` and stores
+	 * `KR`, and a screen that accepted the label would be storing a value no other reader can match.
+	 *
+	 * Asked here and not of every Card, deliberately. This is the authoring path. A Card imported from
+	 * somewhere else keeps whatever it arrived with -- refusing those in bulk would make this plugin
+	 * the reason somebody's address book cannot be brought over -- and the shape is checked rather
+	 * than the list, so `AC` and `XK`, which are codes this site does not offer, still pass.
+	 */
+	$ax_countries = (array) ( $card['addresses'] ?? array() );
+	foreach ( (array) ( $card['anniversaries'] ?? array() ) as $id => $anniversary ) {
+		// Where an anniversary happened is an Address too, and spelled by the same rule.
+		if ( is_array( $anniversary ) && is_array( $anniversary['place'] ?? null ) ) {
+			$ax_countries[ $id ] = $anniversary['place'];
+		}
+	}
+	foreach ( $ax_countries as $id => $address ) {
+		if ( ! is_array( $address ) || ! array_key_exists( 'countryCode', $address ) ) {
+			continue;
+		}
+		$country = $address['countryCode'];
+		if ( ! is_string( $country ) || 1 !== preg_match( '/^[A-Z]{2}$/', $country ) ) {
+			return new WP_Error(
+				'ax_contacts_draft_country',
+				/* translators: %s: the entry id, such as addr-1. */
+				sprintf( __( 'The country on %s is written as its two-letter code, such as KR.', 'axismundi-contacts' ), (string) $id ),
+				array( 'status' => 400 )
+			);
+		}
+	}
 	if ( isset( $card['name'] ) ) {
 		$name = $card['name'];
 		if ( ! is_array( $name ) ) {

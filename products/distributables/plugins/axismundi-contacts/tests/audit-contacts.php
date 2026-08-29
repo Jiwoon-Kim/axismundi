@@ -1062,11 +1062,11 @@ try {
 				'place' => array( 'full' => '부산광역시 수영구 자모병원', 'countryCode' => 'KR', 'timeZone' => 'Asia/Seoul' ),
 			)
 		)
-			// Two letters as ISO writes them, rather than a name or a lowercase guess.
-			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 1996, 'month' => 11, 'day' => 20 ), 'place' => array( 'countryCode' => 'kr' ) ) )
-			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 1996, 'month' => 11, 'day' => 20 ), 'place' => array( 'countryCode' => 'KOR' ) ) )
-			&& ! $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 1996, 'month' => 11, 'day' => 20 ), 'place' => array( 'countryCode' => '대한민국' ) ) )
-			// A country alone is still a place; it is simply not a time zone.
+			/*
+			 * A country alone is still a place; it is simply not a time zone. How it is spelled is a
+			 * convention rather than a meaning, so it is judged where conventions are judged -- on the
+			 * way in from an author -- and checked there rather than here.
+			 */
 			&& $ax_ct_ann_ok( array( 'kind' => 'birth', 'date' => array( 'year' => 1996, 'month' => 11, 'day' => 20 ), 'place' => array( 'countryCode' => 'US' ) ) )
 	);
 
@@ -1087,6 +1087,114 @@ try {
 			// A partial date is what the position means, so that one drops its type and this one keeps it.
 			&& ! $ax_ct_ann_ok( array( 'kind' => 'death', 'date' => array( '@type' => 'Timestamp' ) ) )
 			&& ! $ax_ct_ann_ok( array( 'kind' => 'death', 'date' => array( 'utc' => '' ) ) )
+	);
+
+	/*
+	 * When a day happened is not said in a language.
+	 *
+	 * A localization says the same thing in another language, and a date is the same fact in all of
+	 * them. A Korean patch moving a birthday to the tenth would not be a translation of anything: it
+	 * would be a second, contradictory record of when somebody was born, reachable only by readers who
+	 * happened to ask in Korean -- and a calendar drawing that year's occurrence would get a different
+	 * day depending on who was looking.
+	 *
+	 * Where it happened stays translatable, because a place name genuinely is said differently. `부산`
+	 * and `Busan` are one city in two languages. Its country code is not.
+	 */
+	$ax_ct_untrans_card = array(
+		'@type'         => 'Card',
+		'name'          => array( 'full' => 'Remembered day' ),
+		'anniversaries' => array(
+			'ann-1' => array(
+				'kind'  => 'birth',
+				'date'  => array( 'year' => 1996, 'month' => 11, 'day' => 20, 'calendarScale' => 'dangi' ),
+				'place' => array( 'full' => 'Busan', 'countryCode' => 'KR', 'timeZone' => 'Asia/Seoul' ),
+			),
+		),
+	);
+	$ax_ct_untrans_ok = static function ( string $path, $value ) use ( $ax_ct_untrans_card ) : bool {
+		return true === axismundi_contacts_validate_patch( $ax_ct_untrans_card, 'ko', array( $path => $value ) );
+	};
+	$ax_ct_untrans_paths = axismundi_contacts_patchable_paths( $ax_ct_untrans_card );
+	ax_ct_assert(
+		$ax_ct_results,
+		'when a day happened is the same fact in every language, so no translation may move it',
+		// Refused as a rule, not merely left off a list: a path can be typed straight into the JSON.
+		! $ax_ct_untrans_ok( 'anniversaries/ann-1/date/calendarScale', 'gregory' )
+			&& ! $ax_ct_untrans_ok( 'anniversaries/ann-1/date/day', 10 )
+			&& ! $ax_ct_untrans_ok( 'anniversaries/ann-1/date', array( 'month' => 10, 'day' => 10 ) )
+			&& ! $ax_ct_untrans_ok( 'anniversaries/ann-1/place/timeZone', 'America/New_York' )
+			&& ! $ax_ct_untrans_ok( 'anniversaries/ann-1/place/countryCode', 'KP' )
+			// And not offered either, so the editor does not list what the store refuses.
+			&& ! in_array( 'anniversaries/ann-1/date', $ax_ct_untrans_paths, true )
+			&& ! in_array( 'anniversaries/ann-1/date/calendarScale', $ax_ct_untrans_paths, true )
+			&& ! in_array( 'anniversaries/ann-1/place/timeZone', $ax_ct_untrans_paths, true )
+			// A place name is words, and so is what the day is called. Those are still translatable.
+			&& $ax_ct_untrans_ok( 'anniversaries/ann-1/place/full', '부산' )
+			&& in_array( 'anniversaries/ann-1/place/full', $ax_ct_untrans_paths, true )
+	);
+
+	/*
+	 * A country is chosen by its name and stored as its code, so the authoring path judges the shape.
+	 * `대한민국` coming to rest where `KR` belongs is a value no other reader can match, written by a
+	 * screen that had accepted it.
+	 *
+	 * The shape and never the list. `AC` and `XK` are real two-letter codes this site does not offer,
+	 * and a Card that arrived carrying one is not wrong. Nor is this asked of every Card: an import
+	 * keeps whatever it came with, because refusing those in bulk would make this plugin the reason
+	 * somebody's address book cannot be brought over.
+	 */
+	$ax_ct_country = static function ( $code ) : bool {
+		return true === axismundi_contacts_validate_draft(
+			array(
+				'@type'     => 'Card',
+				'name'      => array( 'full' => 'Somebody' ),
+				'addresses' => array( 'addr-1' => array( 'full' => 'Somewhere', 'countryCode' => $code ) ),
+			)
+		);
+	};
+	// Where an anniversary happened is an Address, and answers to the same rule on the same path.
+	$ax_ct_ann_country = static function ( $code ) : bool {
+		return true === axismundi_contacts_validate_draft(
+			array(
+				'@type'         => 'Card',
+				'name'          => array( 'full' => 'Somebody' ),
+				'anniversaries' => array( 'ann-1' => array( 'kind' => 'birth', 'date' => array( 'month' => 4, 'day' => 15 ), 'place' => array( 'countryCode' => $code ) ) ),
+			)
+		);
+	};
+	ax_ct_assert(
+		$ax_ct_results,
+		'a country is written by its code on the way in, and an import keeps whatever it arrived with',
+		$ax_ct_country( 'KR' )
+			// Codes nobody put on a list are still codes.
+			&& $ax_ct_country( 'AC' )
+			&& $ax_ct_country( 'XK' )
+			// A name is not a code, however it is spelled.
+			&& ! $ax_ct_country( '대한민국' )
+			&& ! $ax_ct_country( 'Korea, Republic of' )
+			&& ! $ax_ct_country( 'kr' )
+			&& ! $ax_ct_country( 'KOR' )
+			/*
+			 * And the ledger itself does not refuse what it is holding. This is the authoring gate;
+			 * a stored Card with a country somebody else wrote is read, not rejected.
+			 */
+			&& true === axismundi_contacts_validate_card_values(
+				array( '@type' => 'Card', 'addresses' => array( 'addr-1' => array( 'countryCode' => '대한민국' ) ) )
+			)
+			/*
+			 * Including an anniversary's place, which is an Address and was being judged one layer
+			 * lower than the addresses beside it. An imported Card carrying one would have been
+			 * refused whole -- which is the bulk rejection this rule exists to avoid.
+			 */
+			&& $ax_ct_ann_country( 'KR' )
+			&& ! $ax_ct_ann_country( '대한민국' )
+			&& true === axismundi_contacts_validate_card_values(
+				array(
+					'@type'         => 'Card',
+					'anniversaries' => array( 'ann-1' => array( 'kind' => 'birth', 'date' => array( 'month' => 4, 'day' => 15 ), 'place' => array( 'countryCode' => '대한민국' ) ) ),
+				)
+			)
 	);
 
 	// -- a label is a reading, not a value -----------------------------------------------------------------------

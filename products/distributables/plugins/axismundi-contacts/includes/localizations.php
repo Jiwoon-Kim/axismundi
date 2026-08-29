@@ -197,6 +197,15 @@ function axismundi_contacts_validate_patch( array $card, string $tag, array $pat
 			return axismundi_contacts_patch_error( $tag, $path, __( 'A localization cannot patch the localizations.', 'axismundi-contacts' ) );
 		}
 		/*
+		 * Offered and allowed are different things, and only this one is a rule. A path can be written
+		 * by hand into the JSON without ever passing the list the editor shows.
+		 */
+		for ( $depth = 1; $depth <= count( $segments ); $depth++ ) {
+			if ( axismundi_contacts_is_untranslatable_path( implode( '/', array_slice( $segments, 0, $depth ) ) ) ) {
+				return axismundi_contacts_patch_error( $tag, $path, __( 'When a day happened is the same fact in every language, so it is not translated.', 'axismundi-contacts' ) );
+			}
+		}
+		/*
 		 * Two patches to the same place have no order between them, so a document that carried both
 		 * would mean different things depending on which was read second.
 		 */
@@ -391,6 +400,34 @@ function axismundi_contacts_normalize_languages( array $card ) : array {
  * @param string              $prefix Path so far.
  * @return string[]
  */
+/**
+ * Whether a path names something a translation has no business changing.
+ *
+ * A localization says the same thing in another language. A day is not said in a language: the
+ * calendar an anniversary was counted in, the numbers of its date, the time zone its day is read in
+ * and the country it happened in are the same facts in every language, and they are what a calendar
+ * computes a recurrence from. A Korean patch that moved a birthday to the tenth would not be a
+ * translation of anything -- it would be a second, contradictory record of when somebody was born,
+ * reachable only by readers who happen to ask in Korean.
+ *
+ * Where it happened is left translatable, because a place name genuinely is said differently: `부산`
+ * and `Busan` are one city in two languages, and its country code is not.
+ *
+ * @param string $path Path inside the Card.
+ * @return bool
+ */
+function axismundi_contacts_is_untranslatable_path( string $path ) : bool {
+	$segments = explode( '/', $path );
+	if ( 'anniversaries' !== ( $segments[0] ?? '' ) || count( $segments ) < 3 ) {
+		return false;
+	}
+	if ( 'date' === $segments[2] ) {
+		return true;
+	}
+	return 'place' === $segments[2]
+		&& in_array( $segments[3] ?? '', array( 'timeZone', 'countryCode', 'coordinates' ), true );
+}
+
 function axismundi_contacts_patchable_paths( array $value, string $prefix = '' ) : array {
 	$paths = array();
 	foreach ( $value as $key => $item ) {
@@ -398,6 +435,10 @@ function axismundi_contacts_patchable_paths( array $value, string $prefix = '' )
 		$path = '' === $prefix ? $key : $prefix . '/' . $key;
 		if ( '' === $prefix && in_array( $key, array( '@type', 'version', 'uid', 'created', 'updated', 'prodId', 'localizations' ), true ) ) {
 			// What the document is, rather than what it says about somebody. None of it is translated.
+			continue;
+		}
+		if ( axismundi_contacts_is_untranslatable_path( $path ) ) {
+			// And nothing under it either: a date's year is no more translatable than the date.
 			continue;
 		}
 		$paths[] = $path;
@@ -806,17 +847,6 @@ function axismundi_contacts_anniversary_place_error( string $at, array $place ) 
 	);
 	if ( array() === $said ) {
 		return axismundi_contacts_value_error( $at, __( 'a place says at least one of where it is, what it is called, or which time zone it keeps', 'axismundi-contacts' ) );
-	}
-	if ( array_key_exists( 'countryCode', $place ) ) {
-		/*
-		 * Two letters, upper case, the way ISO 3166-1 writes them. Which is a different fact from the
-		 * time zone beside it and not a substitute for one: the United States, Russia and Australia
-		 * each keep several clocks, so a country never says which day an instant fell on.
-		 */
-		$country = $place['countryCode'];
-		if ( ! is_string( $country ) || 1 !== preg_match( '/^[A-Z]{2}$/', $country ) ) {
-			return axismundi_contacts_value_error( $at . '/countryCode', __( 'a country is its two-letter code, such as KR', 'axismundi-contacts' ) );
-		}
 	}
 	if ( array_key_exists( 'timeZone', $place ) ) {
 		$zone = $place['timeZone'];

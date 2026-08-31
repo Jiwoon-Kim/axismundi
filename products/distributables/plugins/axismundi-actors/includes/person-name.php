@@ -174,15 +174,33 @@ function axismundi_actors_alternate_names( int $identity_id, string $kind = '' )
 		return array();
 	}
 	$table = axismundi_actors_alternate_names_table();
-	$sql   = "SELECT * FROM {$table} WHERE identity_id = %d";
-	$args  = array( $identity_id );
+	/*
+	 * Written out twice rather than assembled. A query built in a variable and handed to `prepare()`
+	 * is prepared, but nothing reading the code can see that it is -- not a static analyser and not a
+	 * reviewer -- and the only way to say so is a suppression comment that reads the same whether the
+	 * query is safe or not. Two literal statements say it by being literal.
+	 */
 	if ( '' !== $kind ) {
-		$sql   .= ' AND name_kind = %s';
-		$args[] = $kind;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+		return (array) $wpdb->get_results(
+			$wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- the table name is this plugin's own, from its own function.
+				"SELECT * FROM {$table} WHERE identity_id = %d AND name_kind = %s ORDER BY name_kind ASC, position ASC, id ASC",
+				$identity_id,
+				$kind
+			),
+			ARRAY_A
+		);
 	}
-	$sql .= ' ORDER BY name_kind ASC, position ASC, id ASC';
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
-	return (array) $wpdb->get_results( $wpdb->prepare( $sql, $args ), ARRAY_A );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+	return (array) $wpdb->get_results(
+		$wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- the table name is this plugin's own, from its own function.
+			"SELECT * FROM {$table} WHERE identity_id = %d ORDER BY name_kind ASC, position ASC, id ASC",
+			$identity_id
+		),
+		ARRAY_A
+	);
 }
 
 /**

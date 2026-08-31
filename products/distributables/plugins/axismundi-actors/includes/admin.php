@@ -75,9 +75,6 @@ function axismundi_actors_management_back_url( Axismundi_Actor $actor ) : string
 	if ( $actor->is_managed() ) {
 		return axismundi_actors_managed_actors_admin_url( $actor->get_identity_id() );
 	}
-	if ( 'site' === $actor->get_scope() ) {
-		return admin_url( 'options-general.php?page=axismundi-actor-site' );
-	}
 	$user_id = $actor->get_local_user_id();
 	return axismundi_actors_admin_url( get_current_user_id() === $user_id ? 0 : (int) $user_id );
 }
@@ -222,13 +219,6 @@ function axismundi_actors_register_admin_pages() : void {
 		'read',
 		'axismundi-managed-actors',
 		'axismundi_actors_render_managed_actors_page'
-	);
-	add_options_page(
-		__( 'Actor Profile', 'axismundi-actors' ),
-		__( 'Actor Profile', 'axismundi-actors' ),
-		'manage_options',
-		'axismundi-actor-site',
-		'axismundi_actors_render_site_page'
 	);
 }
 add_action( 'admin_menu', 'axismundi_actors_register_admin_pages' );
@@ -785,29 +775,6 @@ function axismundi_actors_render_management( Axismundi_Actor $actor, int $user_i
 	<?php
 }
 
-/** @return void */
-function axismundi_actors_render_site_page() : void {
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_die( esc_html__( 'You cannot manage the site actor.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
-	}
-	$actor = axismundi_actors_get_site_actor();
-	echo '<div class="wrap"><h1>' . esc_html__( 'Site Actor Profile', 'axismundi-actors' ) . '</h1>';
-	axismundi_actors_admin_notice();
-	if ( ! $actor instanceof Axismundi_Actor ) {
-		echo '<p>' . esc_html__( 'The site actor has not been seeded yet.', 'axismundi-actors' ) . '</p></div>';
-		return;
-	}
-	?>
-	<table class="form-table" role="presentation">
-		<tr><th scope="row"><?php esc_html_e( 'Handle', 'axismundi-actors' ); ?></th><td><code>@<?php echo esc_html( $actor->get_preferred_username() ); ?></code></td></tr>
-		<tr><th scope="row"><?php esc_html_e( 'Actor type', 'axismundi-actors' ); ?></th><td><?php esc_html_e( 'Application', 'axismundi-actors' ); ?></td></tr>
-		<tr><th scope="row"><?php esc_html_e( 'Status', 'axismundi-actors' ); ?></th><td><strong><?php esc_html_e( 'Disabled', 'axismundi-actors' ); ?></strong></td></tr>
-	</table>
-	<p class="description"><?php esc_html_e( 'The Site Actor is reserved for a future Instance Actor implementation and cannot publish or be configured yet.', 'axismundi-actors' ); ?></p>
-	</div>
-	<?php
-}
-
 /* -------------------------------------------------------------------------- *
  * Avatar / header media pickers (core Media modal; assets on these screens only).
  * -------------------------------------------------------------------------- */
@@ -819,7 +786,7 @@ function axismundi_actors_render_site_page() : void {
  * @return void
  */
 function axismundi_actors_enqueue_media_picker( string $hook ) : void {
-	if ( ! in_array( $hook, array( 'users_page_axismundi-actor-profile', 'users_page_axismundi-managed-groups', 'settings_page_axismundi-actor-site' ), true ) ) {
+	if ( ! in_array( $hook, array( 'users_page_axismundi-actor-profile', 'users_page_axismundi-managed-groups' ), true ) ) {
 		return;
 	}
 	wp_enqueue_media();
@@ -939,7 +906,8 @@ function axismundi_actors_text_form( Axismundi_Actor $actor ) : void {
 	$language_options = axismundi_actors_profile_language_options( $languages );
 	$back      = axismundi_actors_management_back_url( $actor );
 	$add_url   = remove_query_arg( 'ax_actor_lang', $back );
-	$adding_translation = isset( $_GET['ax_actor_add_language'] ) && '1' === (string) $_GET['ax_actor_add_language']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- changes no state.
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing what to show, not writing.
+	$adding_translation = isset( $_GET['ax_actor_add_language'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['ax_actor_add_language'] ) );
 	?>
 	<h2><?php esc_html_e( 'Profile languages', 'axismundi-actors' ); ?></h2>
 	<p class="description"><?php esc_html_e( 'Translations are optional. Empty fields continue to use the live WordPress profile or site value.', 'axismundi-actors' ); ?></p>

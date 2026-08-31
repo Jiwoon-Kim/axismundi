@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Axismundi Actors
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-actors
- * Description:       Identity registry for Axismundi. Gives every local person, the site itself, and (later) remote actors one immutable identity URI and one human profile hub, and wires each domain plugin's archive in as a projection. Identity only — it owns no content, likes, collections, or activity.
+ * Description:       Identity registry for Axismundi. Gives every local person and every remote actor this site has cached one immutable identity URI and one human profile hub, and wires each domain plugin's archive in as a projection. Identity only — it owns no content, likes, collections, or activity.
  * Version:           0.1.0
  * Requires at least: 6.7
  * Requires PHP:      8.1
@@ -14,9 +14,14 @@
  *
  * @package AxismundiActors
  *
- * The local repository, profile routing, projection registry, administration,
- * profile media, and multilingual presentation are implemented. Federation remains
- * a later phase.
+ * Implemented: the local repository, profile routing, the projection registry,
+ * administration, profile media, multilingual presentation, and the remote side of
+ * identity -- WebFinger and NodeInfo discovery, a cache of remote actors, and cached
+ * copies of their avatars and headers.
+ *
+ * Not here: activity delivery. Nothing in this plugin sends anything to anybody; it
+ * reads. The site's own Instance Actor is seeded disabled and has no screen, because
+ * what it should be has not been designed yet.
  */
 
 defined( 'ABSPATH' ) || exit;

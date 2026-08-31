@@ -6,7 +6,7 @@
  * Version:           0.1.0
  * Requires at least: 6.7
  * Requires PHP:      8.1
- * Requires Plugins:  activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
+ * Requires Plugins:  activitypub
  * Author:            KIM JIWOON
  * Author URI:        https://designbusan.ai.kr
  * License:           GPL-3.0-or-later
@@ -14,6 +14,22 @@
  * Text Domain:       axismundi-activitypub-bridge
  *
  * @package AxismundiActivityPubBridge
+ *
+ * Two directions, two owners, and they are not the same owner.
+ *
+ * Receiving: the advertised Inbox is the official plugin's REST route. It verifies the HTTP
+ * Signature; this plugin registers no route at all and only runs on the actions that fire for
+ * an already-verified delivery, unhooking the official domain handlers so one Activity is not
+ * stored twice.
+ *
+ * Sending: this plugin owns the queue and opens the connection, and the official plugin's
+ * `http_request_args` filter signs it from the `key_id` and `private_key` passed with the
+ * request. Those keys are that plugin's, read into memory per request; the queue never holds
+ * key material.
+ *
+ * `Requires Plugins` names only `activitypub`, whose slug exists. The three Axismundi
+ * dependencies are added once their wordpress.org slugs are real -- a header naming a slug that
+ * is not there blocks activation instead of explaining anything.
  */
 
 defined( 'ABSPATH' ) || exit;

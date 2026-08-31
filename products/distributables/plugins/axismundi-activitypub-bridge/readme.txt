@@ -1,197 +1,133 @@
 === Axismundi ActivityPub Bridge ===
 Contributors: kimjiwoon
 Requires at least: 6.7
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 8.1
-Requires Plugins: activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
+Requires Plugins: activitypub
 Stable tag: 0.1.0
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, compatibility, adapter
 
-Connects Axismundi domain stores to supported S2S transport extension points in the official ActivityPub plugin.
+Connects Axismundi's domain stores to the official ActivityPub plugin's server-to-server transport.
 
 == Description ==
 
-This package is the only intended dependency boundary between Axismundi and the official
-ActivityPub plugin. Actors, Object Projections, and Activities remain independently usable.
+This is the seam, and the only one. Axismundi Actors, Object Projections and Activities each
+work without it and none of them talks to another server; this package is what puts them on
+the network, by composing with the **official ActivityPub plugin** rather than by
+reimplementing what that plugin already does well.
 
-After the official permission callback verifies the HTTP signature, the bridge consumes the
-existing `activitypub_inbox` and `activitypub_inbox_shared` actions and records Activities
-addressed to public local Axismundi Actors. Official domain callbacks are unhooked through their
-registration seams, while `activitypub_skip_inbox_storage` prevents duplicate CPT persistence.
+The division is worth stating precisely, because "which plugin sends it" and "which plugin
+signs it" have different answers.
 
-Outbound Activities use a private Bridge-owned transport spool and WordPress HTTP requests.
-The official plugin's existing request-signing filter signs those requests; Axismundi Activities
-remains the authoritative ledger.
+= Receiving =
+
+The inbox address advertised for an Axismundi Actor is the **official plugin's own REST
+route**. This plugin registers no inbox of its own, and no other public route either.
+
+That matters. The official plugin receives the request, and **the official plugin verifies the
+HTTP Signature**, before anything here runs. Only afterwards, on the actions it fires for an
+already-verified delivery, does this plugin take over: it unhooks the official domain handlers
+so the same Activity is not also stored that plugin's way, and records it in the Axismundi
+ledger instead. There is no path by which an unverified request reaches that ledger, because
+there is no route here for one to arrive on.
+
+An Activity that arrives twice is acknowledged twice and recorded once. The ledger is keyed by
+the Activity's own URI.
+
+= Sending =
+
+Here it is the other way round. **This plugin opens the connection.** When Axismundi
+Activities commits an outbound Activity, one row is written to a transport queue owned by this
+plugin, and a background worker POSTs the JSON-LD to each recipient inbox. **The official
+plugin signs it**: the signing key reference and the key itself go out with the request, and
+that plugin's request-signing filter turns them into an HTTP Signature header.
+
+The keys are the official plugin's too. Nothing here generates, stores or copies private key
+material; it is read from that plugin's key store into memory for the length of one request,
+and the queue holds the payload and the recipients and never a key.
+
+Recipients come from the Activity itself: the actors it is addressed to, the actor a Follow or
+Block is about, and -- only when it addresses the public collection or the sender's own
+followers -- that sender's accepted followers. Each address is resolved to the inbox of an
+Actor this site has already cached, and duplicates collapse, so one Activity reaches one inbox
+once.
+
+= What is not guaranteed =
+
+Sending a `Delete` or an `Undo` tells other servers what happened. It cannot make them act on
+it. A server holding your post may keep it, may have passed it on already, and may be
+unreachable when the Delete goes out. Delivery is attempted on a bounded retry schedule and
+then given up on. Federation is a request made to other people's computers, not control over
+them.
+
+= What this is not =
+
+Not a client, not an inbox implementation, and not a signature implementation -- those belong
+to the official plugin. Not the ledger either: Axismundi Activities stays authoritative, and a
+delivery succeeding or failing changes the queue row rather than the record of what happened.
+
+== Installation ==
+
+1. Install and activate the **ActivityPub** plugin, then **Axismundi Actors**, **Axismundi
+   Object Projections** and **Axismundi Activities**.
+2. Upload this plugin folder to `/wp-content/plugins/`, or install it through
+   **Plugins > Add New**, then activate it.
+3. Give your Actor a public status in **Users > Actor Profile**. An Actor whose signing key
+   cannot yet be published advertises no inbox and sends nothing, deliberately: a remote server
+   that fetched it during that window would cache a keyless document and reject every signature
+   afterwards.
+4. The transport queue is readable, read-only, from this plugin's administration screen.
+
+Activation creates this plugin's own delivery table. Nothing is contacted on the internet
+during installation.
+
+== External services ==
+
+This plugin sends your site's public content to other servers on the Fediverse. That is what it
+is for, so it is worth being exact about what leaves and when.
+
+* **What is sent.** The ActivityStreams JSON-LD of an Activity your site produced -- publishing,
+  editing, deleting, following, liking, announcing, replying -- as an HTTP `POST` to each
+  recipient's inbox, signed with your Actor's key so the receiving server can tell it really
+  came from you. As with any HTTP request, the receiving server also learns your site's IP
+  address.
+* **Who receives it.** The servers of the actors the Activity is addressed to, and, for a public
+  post, the servers of your accepted followers. Nobody else is contacted. A non-public Activity
+  is kept out of delivery by the ledger's own public projection rules.
+* **When.** On a background task shortly after the Activity is recorded, never while somebody is
+  waiting for a page. Failures are retried on a bounded, widening schedule and then left in a
+  dead-letter state an administrator can inspect and retry once.
+* **What is stored here.** The queue row keeps the payload that was sent, the inboxes still to
+  try, the attempt count, and a short sanitized description of the last failure. It never keeps
+  key material.
+
+**There is no Axismundi service.** Nothing is sent to this plugin's author and no central server
+is involved. Every server your site talks to is somebody else's, reached because somebody there
+follows you or because you addressed them, and each is run under its own terms of service and
+privacy policy. What they do with what you send -- how long they keep it, who they show it to,
+whether they honour a later Delete -- is theirs to decide, not yours and not this plugin's.
+
+Receiving is described above: the official ActivityPub plugin owns the inbox and the signature
+check, and this plugin only handles what that plugin has already verified.
 
 == Changelog ==
 
 = 0.1.0 =
-* Moves onto the canonical repository names, so the bridge and the ledger call
-  the same things by the same words.
-
-= 0.0.29 =
-* Retire the unused remote-only direct-Group predicate. The shared Group
-  predicate remains the transport contract for both local and remote public
-  community submissions.
-
-= 0.0.28 =
-* Include published managed Group Actors in the Bridge endpoint inspector so
-  their Inbox, Outbox, and signing-key records are visible alongside site and
-  Person Actors.
-
-= 0.0.27 =
-* Recognizes a Group addressed in either `to` or `cc` as a direct public
-  submission destination, so Lemmy-compatible Replies reach only the Group
-  inbox and never fan out through the author's followers.
-
-= 0.0.26 =
-* Extends direct-Group submission delivery to local public Groups. A Topic's
-  `Public` routing address now satisfies strict threadiverse validation without
-  fanning the author Create or Update out to Person followers.
-
-= 0.0.25 =
-* Keeps public direct submissions to cached remote Group Actors on the Group inbox
-  only; their `Public` address is for peer validation, not author-follower fan-out.
-
-= 0.0.24 =
-* Resolve product-owned local Object URIs, including Notes, before deriving an Inbox target Actor.
-* Record Misskey-style custom emoji reactions addressed to Notes through the URI-keyed Activities ledger.
-
-= 0.0.23 =
-* Keep Axismundi's plaintext inline-mention representation intact by removing the
-  official plugin's competing presentation filter only while this compatibility Bridge
-  owns the integrated runtime.
-
-= 0.0.22 =
-* Add end-to-end regression proving the existing generic outbound-Activity transport queue
-  already delivers the FEP-044f Quote lifecycle -- an outbound QuoteRequest, the Accept it
-  receives back, and the Delete that withdraws a revoked QuoteAuthorization -- to the correct
-  signed Inbox with no Quote-specific transport code, and that a local-direction (self or
-  local-other) QuoteRequest never reaches the spool.
-
-= 0.0.21 =
-* Expand the sending Actor's Followers collection address into accepted remote follower
-  inboxes only at the transport boundary, enabling followers-only Create delivery.
-* Deliver domain-recorded Note Create, Update, and Delete Activities through the same private,
-  atomically claimed transport spool without giving the Note domain network ownership.
-
-= 0.0.20 =
-* Advertise Inbox, endpoints, and publicKey as one atomic bundle and withhold the WebFinger self link when a public Actor cannot project its signing key, so a remote server never caches a keyless Actor.
-* Hold, rather than fail, an outbound delivery while the signing key is not yet projectable, preserving the queue row for retry.
-* Extend the peer key-recovery backoff to a bounded long schedule (5m, 1h, 24h, 48h) that crosses a remote Actor cache staleness window before dead-lettering; a generic 401, revoked key, or invalid signature stays terminal at once.
-
-= 0.0.19 =
-* Retry bounded peer key-discovery failures and let administrators safely requeue an immutable failed delivery.
-
-= 0.0.18 =
-* Keep user Actor public-key projection compatible with official ActivityPub versions that do not load the Application signing identity.
-
-= 0.0.17 =
-* Preserve a bounded peer-provided error message with failed delivery diagnostics so HTTP
-  authentication and protocol rejections can be distinguished in the transport queue.
-
-= 0.0.16 =
-* Replace the broad patched module gate with behavior-level composition using the official
-  handler and scheduler registration hooks; retain official request validation and Dispatcher.
-* Move external delivery rows out of `ap_outbox` and the Posts state machine into a private,
-  site-prefixed `ax_ap_deliveries` table with bounded retry and no persisted private key material.
-* Use a unique Activity URI identity and conditional-update worker claim to prevent duplicate delivery.
-* Preserve and link legacy fork and provisional Bridge CPT rows during a non-destructive migration.
-
-= 0.0.15 =
-* Queue a missing host instance-cache fill when verified Inbox traffic references an
-  already cached remote Actor.
-* Apply signature-verified Update(Actor) payloads only through Actors' cached-only,
-  complete-document repository gate; Follow and Accept never refresh Actor snapshots.
-
-= 0.0.14 =
-* Finalize outbound Activities through Object Projections before transport so Follow,
-  Accept, and other payloads carry the canonical ActivityStreams JSON-LD context.
-* Keep the Activities ledger payload immutable and leave signing, spool, retry, and HTTP
-  delivery with the official plugin.
-
-= 0.0.13 =
-* Add a bounded, content-free administrator diagnostic buffer that distinguishes recorded
-  and unclaimed per-Actor/shared Inbox deliveries by result code.
-* Accept an embedded ActivityStreams Mention href as a supplemental local target only after
-  the official shared Inbox has verified the request.
-* Keep official Inbox snapshot fallback for every unclaimed Activity and continue deferring
-  destructive legacy-data purge until legacy local Actor aliases are designed.
-
-= 0.0.12 =
-* Consume the official controllers' existing per-Actor and shared Inbox actions after request
-  validation instead of requiring a new verified-Inbox handoff API.
-* Keep official type handlers dormant and skip official Inbox CPT persistence only after
-  Axismundi records one URI-keyed Activity and relationship state.
-* Remove the temporary 503 compatibility guard while retaining official Inbox snapshot storage
-  as a fail-safe for Activities the bridge cannot claim.
-* Keep destructive legacy-data purge deferred until legacy local Actor aliases are designed.
-
-= 0.0.11 =
-* Keep the official WebFinger REST controller enabled in dormant transport mode so the
-  0.0.10 Axismundi descriptor adapter is reachable at the standard well-known endpoint.
-* Keep destructive legacy-data purge deferred to a later release.
-
-= 0.0.10 =
-* Supply public Axismundi Actors through the official plugin's WebFinger controller while
-  preserving official and third-party ownership of every other resource.
-* Advertise the canonical ActivityStreams Actor document with a WebFinger `self` link.
-* Keep destructive legacy-data purge deferred to a later release.
-
-= 0.0.9 =
-* Import accepted followers, accepted following, and pending following from official Actor
-  snapshots with explicit legacy provenance and without synthetic Activities.
-* Replay Inbox history first so real Follow state takes precedence; preserve pending requests
-  without retransmitting them and map official blog/application IDs to the site Actor.
-* Keep `ap_actor` rows runtime-required and defer every purge operation to a later release.
-
-= 0.0.8 =
-* Add explicit, administrator-confirmed import and immediate verification for legacy remote
-  Actors, remote Objects, and signature-verified Inbox Activities.
-* Replay Inbox history through the Activities state machine while refusing direct follower
-  snapshot writes, transport Outbox import, lifecycle synthesis, profile-field import, or key copying.
-* Keep every official source row intact, perform no network request, and make repeat imports
-  idempotent without allowing older official snapshots to overwrite existing Axismundi caches.
-
-= 0.0.7 =
-* Add a read-only legacy ActivityPub migration dry scan under Tools > ActivityPub Bridge.
-* Classify import and purge independently for remote Actors, remote Objects, Inbox history,
-  follower snapshots, transport Outbox rows, local lifecycle markers, profile fields, comments,
-  and official signing keys.
-* Perform no import, deletion, option update, network request, or payload/key rendering. Keep
-  `ap_actor` and signing keys runtime-required until external public-key resolution exists.
-
-= 0.0.6 =
-* Move public Actor Outbox representation and its GET route to Object Projections.
-* Keep Bridge ownership limited to Inbox/sharedInbox/publicKey transport fields, verified
-  Inbox handoff, signing identity resolution, and outbound delivery.
-* Continue showing the Object Projections-owned Outbox URL in the transport inspector.
-
-= 0.0.5 =
-* Supply inbox, sharedInbox, and publicKey transport properties to
-  the Object Projections-owned Actor JSON-LD representation.
-* Add a read-only Tools > ActivityPub Bridge inspector.
-* Queue complete outbound Activities through the official plugin's external transport
-  spool. Persist only a private-key reference; resolve signing material at send time.
-
-= 0.0.4 =
-* Claim signature-verified Inbox Activities through the patched upstream handoff.
-* Resolve local recipients and remote Actors before recording in the Axismundi ledger.
-* Bypass official domain handlers and persistence while retaining signature verification.
-
-= 0.0.3 =
-* Use the upstream module gate with a minimum explicit allowlist.
-* Block dormant Inbox writes before signature lookup and remote Actor caching.
-* Retain callback removal as a compatibility fallback for stock releases.
-
-= 0.0.2 =
-* Add conflict-safe dormant transport mode for simultaneous plugin activation.
-* Restore Axismundi object negotiation and post lifecycle ownership.
-* Fail closed on unclaimed official Inbox writes before default persistence can run.
-
-= 0.0.1 =
-* Add the isolated official-plugin dependency boundary and runtime readiness API.
-* Preserve the official plugin as the single post lifecycle publisher.
-* Lock transport, storage, identity, and license boundaries without enabling federation.
+* First release.
+* Composes with the official ActivityPub plugin instead of reimplementing it: that plugin owns
+  the inbox route and HTTP Signature verification, and this one takes over afterwards to record
+  the verified Activity in the Axismundi ledger rather than letting it be stored twice.
+* A transport queue of its own for outbound delivery, with an atomic single-worker claim, a
+  bounded widening retry schedule, a dead-letter state, and a one-shot administrator retry.
+* Outbound requests are signed by the official plugin's filter using keys read from its key
+  store in memory; the queue stores payloads and recipients and never key material.
+* Recipients are resolved from the Activity's own audience, expanding the public and followers
+  collections to accepted follower inboxes only at the transport boundary, deduplicated so one
+  Activity reaches one inbox once.
+* An Actor whose public key cannot yet be projected advertises no inbox, endpoints, publicKey or
+  WebFinger self link, and sends nothing, so that no remote server caches a keyless document.
+* Migration of provisional and legacy outbox jobs into the transport queue without deleting
+  their source rows.
+* Read-only administrator inspection of the transport queue.

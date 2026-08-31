@@ -595,20 +595,32 @@ function axismundi_act_get_object_audience_members( string $object_uri, string $
 	$recipients   = array();
 	$per_page     = 200;
 	do {
-		$sql = "SELECT id, audience_json FROM {$table}
-			WHERE id > %d
-				AND object_uri_hash = %s AND object_uri = %s
-				AND actor_uri_hash = %s AND actor_uri = %s
-				AND direction = 'outbound' AND effective_status = 'active'
-				AND activity_type IN ({$type_sql})
-			ORDER BY id ASC LIMIT %d";
 		$args = array_merge(
 			array( $after_id, hash( 'sha256', $object_uri ), $object_uri, hash( 'sha256', $actor_uri ), $actor_uri ),
 			$types,
 			array( $per_page )
 		);
+		/*
+		 * Passed to `prepare()` as a literal rather than through a variable. It was prepared
+		 * either way, but a query handed over in a `$sql` cannot be seen to be prepared by
+		 * anything reading the code, and the only way to say so is a comment that would read
+		 * the same if it were false. The two interpolations are this plugin's own table name
+		 * and a placeholder list counted from `$types`; every value is a placeholder.
+		 */
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed table and placeholder count; exact local lifecycle lookup.
-		$rows = (array) $wpdb->get_results( $wpdb->prepare( $sql, $args ), ARRAY_A );
+		$rows = (array) $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT id, audience_json FROM {$table}
+			WHERE id > %d
+				AND object_uri_hash = %s AND object_uri = %s
+				AND actor_uri_hash = %s AND actor_uri = %s
+				AND direction = 'outbound' AND effective_status = 'active'
+				AND activity_type IN ({$type_sql})
+			ORDER BY id ASC LIMIT %d",
+				$args
+			),
+			ARRAY_A
+		);
 		foreach ( $rows as $row ) {
 			$after_id = (int) $row['id'];
 			$audience = json_decode( (string) $row['audience_json'], true );

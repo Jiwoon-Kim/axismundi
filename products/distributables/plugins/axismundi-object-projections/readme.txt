@@ -1,7 +1,7 @@
 === Axismundi Object Projections ===
 Contributors: kimjiwoon
 Requires at least: 6.7
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 8.1
 Stable tag: 0.1.0
 License: GPL-3.0-or-later
@@ -12,479 +12,125 @@ Projects WordPress objects into ActivityStreams JSON-LD through a transformer re
 
 == Description ==
 
-Axismundi Object Projections turns a WordPress object (post, attachment, archive, folder)
-or Axismundi Actor into an ActivityStreams 2.0 object or collection, so its existing URL can answer
-with JSON-LD under content negotiation. It owns representation only — a transformer registry,
-object/collection URIs, and the single JSON-LD renderer.
+Axismundi Object Projections turns a WordPress object -- a post, an attachment, an
+archive, a folder -- or an Axismundi Actor into an ActivityStreams 2.0 object or
+collection, so that the URL it already has can answer with JSON-LD when something asks
+for it.
 
-It does not own an Activity ledger, Inbox writes, Follow/Like/Announce state, HTTP signatures, or delivery;
-those belong to Axismundi Activities and the ActivityPub transport boundary. It does own public
-read representations such as an Actor Outbox. It works standalone and treats
-the official ActivityPub plugin as optional (see docs/COMPATIBILITY.md).
+It owns **representation** and nothing else: a transformer registry, the URIs objects and
+collections are named by, and the single renderer that writes the JSON. What a thing *is*
+stays with the plugin that stores it; this decides how it is described to a reader that
+speaks ActivityStreams.
 
-This release also ships standalone content negotiation on the existing WordPress URL,
-the Core Post → Article transformer, and an optional first-party Axismundi Media Library
-attachment adapter. Shared media folders use a stable UUID collection route; the Actor
-Outbox uses a stable, read-only REST collection URI.
-When the official ActivityPub plugin is active, the standalone negotiator turns itself off
-so a future adapter can preserve that plugin's established object ids.
+**This plugin needs Axismundi Actors.** Every projected object is attributed to an Actor,
+and without that registry there is nobody to attribute anything to.
 
-The remote-object repository stores URI-keyed, rebuildable observations for later
-administrator inspection and Activities integration. A complete Object embedded in a
-verified inbound Create is cached after the Activity ledger commit when its identity and
-attribution exactly match the enclosing Activity. This path performs no network request and
-exposes a noindex local human view only for publicly addressed cached Objects and retained
-Tombstones; the remote Object URI remains canonical. Administrators may fetch and inspect metadata-only remote
-objects under Tools > Remote Objects, including tags, mentions, audience declarations,
-attachment descriptors, extension properties, and the complete escaped JSON payload;
-remote media is never hotlinked or downloaded.
+= What this version does =
 
-Administrators may also probe a remote ActivityStreams Collection and its same-host first
-page without persisting the Collection, fetching its item URLs, or downloading binaries.
+* **Content negotiation on the URL a post already has.** Ask for
+  `application/activity+json` and the same address answers with JSON-LD instead of HTML.
+* A **Core Post to Article transformer**, and an optional adapter for Axismundi Media
+  Library attachments.
+* **Collections**: a shared media folder at a stable UUID route, a replies collection, and
+  the representation of an Actor's outbox where Axismundi Activities supplies one.
+* The **relations that make a document readable in context** -- hashtags, mentions, thread
+  edges, reply context, and quote context -- kept as their own records rather than parsed
+  out of content each time.
+* A **remote object repository**: URI-keyed, rebuildable observations of objects this site
+  has been told about, for administrators to inspect under **Tools > Remote Objects**.
+* An administrator can **probe a remote collection** and its first page without storing the
+  collection, following its item URLs, or downloading anything binary.
+
+= What this version does not do =
+
+There is no Activity ledger, no inbox write handling, no Follow/Like/Announce state, no
+HTTP signatures, and no delivery. Those belong to Axismundi Activities and to the
+ActivityPub transport boundary. Nothing here signs or sends an Activity.
+
+= Alongside the official ActivityPub plugin =
+
+Both plugins negotiate the same canonical URLs, and two answers for one address is worse
+than either answer alone. So when the official ActivityPub plugin is active, this plugin's
+standalone negotiator **turns itself off** and leaves those URLs to it, while the registry
+and renderer stay available. Nothing here overrides or replaces that plugin's object ids.
+
+= What is stored about other people's documents =
+
+An observation of a remote object is a **cache, not a record**: it is keyed by the remote
+URI, which stays canonical, and it can be rebuilt by fetching again. Observations expire,
+and a scheduled daily task deletes the expired ones along with anything left pointing at
+them.
+
+Remote media is **never downloaded and never hotlinked**. A cached object's attachments are
+described -- type, size, the text the author wrote about them -- and not fetched. Where a
+cached object is shown locally at all, it is shown `noindex`, only for objects that were
+addressed publicly, and only as a courtesy view beside the remote original.
+
+== Installation ==
+
+1. Install and activate **Axismundi Actors** first. This plugin projects identities from
+   that registry and does very little without it.
+2. Upload this plugin folder to `/wp-content/plugins/`, or install it through
+   **Plugins > Add New**, then activate it.
+3. Nothing else is required. A published post is projected as soon as its author has a
+   public Actor; ask its URL for `application/activity+json` to see the result.
+4. Remote observations, where there are any, are listed under **Tools > Remote Objects**.
+
+Activation creates this plugin's own database tables. Nothing is contacted on the internet
+during installation, and deactivation removes the scheduled tasks it added.
+
+== External services ==
+
+This plugin reads documents from other websites. Every request is a `GET` made through
+`wp_safe_remote_get()`: redirects are not followed automatically, the response size is
+capped, and any address inside your own network is refused. Nothing about your site's
+content or your users is sent as data. As with any outgoing HTTP request the server being
+contacted receives **your site's IP address**, and a `User-Agent` header naming this
+plugin, its version, and **your site's home URL**.
+
+Requests happen for two reasons, and the second is worth being clear about.
+
+**Because an administrator asked.**
+
+* **Fetching one remote object.** Under **Tools > Remote Objects**, an administrator can
+  fetch the address of an ActivityStreams object to inspect it. What is read is that one
+  JSON document; what is stored is its metadata -- tags, mentions, audience, attachment
+  descriptors, extension properties, and the payload itself, escaped.
+* **Probing a remote collection.** An administrator can read a collection and its first
+  page from the same host to see what it contains. The collection is not stored, its item
+  URLs are not followed, and nothing binary is downloaded.
+
+**Because something arrived here naming an address.**
+
+* When a publicly addressed `Announce` reaches this site's inbox carrying only the URI of
+  the object it announces, that one address is queued for a single background fetch, so
+  that the announcement can be shown as something rather than as a link. The object's
+  author is looked up the same way if this site does not already know them.
+* This is deliberately bounded. It never runs while a page is being rendered, it does not
+  fan out to the mentions or the audience named in the document, an address already known
+  is not fetched again, and only `https` addresses are considered.
+
+Which servers are contacted therefore depends on which addresses your administrators enter
+and which sites send things to your inbox. This plugin has no service of its own and sends
+nothing to its author. Each server contacted is somebody else's, run under its own terms of
+service and privacy policy.
 
 == Changelog ==
 
 = 0.1.0 =
-* A single Object page is now a document rather than a card, and each reply
-  renders as its own Object instead of an excerpt.
-* Registers the emoji reactions route where REST can actually reach it.
-* Makes a request say which Actor it is about rather than calling it "current".
-
-= 0.0.74 =
-* Adds the generic Dislike control to bundled Object card and Article templates.
-  Forum composes it with Like as a community vote when Group context applies.
-
-= 0.0.73 =
-* Lets an Object Interaction row resolve the current Object URI from a claimed
-  singular WordPress post, so a local Forum Topic can keep its nested controls.
-
-= 0.0.72 =
-* Folds the reply page back into the root Object page. The two templates had
-  stayed identical apart from a comment, while the shared Object card already
-  states a reply's parent through the reply-context block that reads the model.
-  A reply now renders through `single-object`: whether an Object is a reply is
-  a fact, not a template.
-
-= 0.0.71 =
-* Preserves nested Interaction blocks when a template is saved in the Site
-  Editor, so an editor save no longer serializes the container as self-closing
-  markup and drops its controls.
-* Object dates link by default. Cached remote Objects open their local human
-  view first, keeping reading within this instance; local Objects retain their
-  normal local permalink.
-
-= 0.0.67 =
-* Adds a display-only list preview for surfaces that list Objects rather than
-  render them. The author's own `summary` is used when there is one; otherwise
-  the body is trimmed locally. The protocol object is left untouched -- a
-  generated `summary` would federate, and a peer receiving one cannot tell an
-  authored abstract from a machine-cut first paragraph.
-* A sensitive Object gets no preview at all, only its warning. An excerpt of
-  something behind a content warning is the warning defeated.
-
-= 0.0.66 =
-* Every theme design token in this plugin's CSS now carries a fallback, so the
-  plugin renders sensibly under any theme rather than only under Axismundi.
-  System colours are used where the browser has a real equivalent -- they
-  follow the reader's light/dark and forced-colors settings for free -- and
-  literals only where it does not. Verified under Twenty Twenty-Five.
-
-= 0.0.65 =
-* Object cards now state who owns their controls' clicks. A caller whose cards
-  are appended or replaced after load asks for `interactionOwner => feed`, and
-  the controls render as presentation for the surrounding region to dispatch;
-  everywhere else they stay interactive blocks that own themselves. It is
-  stated rather than inferred from the surface, because a stream that never
-  grows is a stream whose blocks are still fine.
-
-= 0.0.64 =
-* Splits the reply page from the root Object page. An Object that replies to
-  another now renders through its own `single-object-reply` template, so the
-  two can diverge in the Site Editor without either carrying conditionals for
-  the other.
-* Moves the Object template choice into one filterable decision that every
-  Object route asks, instead of each route deciding separately. A product that
-  owns an Object's context can route it to its own template from there.
-
-= 0.0.63 =
-* Lets the existing nested `axismundi/replies` block resolve the current
-  registry-backed Object URI on ordinary local singular pages as well as cached
-  Object routes.
-
-= 0.0.62 =
-* Adds the Object Replies block, which renders the reply collection this plugin already
-  served over ActivityStreams. Replies received from other servers were cached, indexed,
-  and returned by the API while remaining invisible on the page they belong to, because
-  nothing drew them. The block and the collection share one visibility rule, so a page and
-  its API can never disagree about who is in a conversation.
-* Resolves the Object a request is about through the transformer registry, so any product
-  that registers an object type gets this without naming its post type here.
-
-= 0.0.60 =
-* Project FEP-c0e0 `emojiReactions` collections from the immutable Activities ledger,
-  with public payload sanitization and accurate totals beyond a page of results.
-* Place the Activities Reaction Bar beneath object actions and its Add Reaction control
-  beside the existing social actions in local and cached-object templates.
-
-= 0.0.59 =
-* Support read-only Actor tokens for consumers that distinguish body-derived mentions from authored recipient metadata.
-
-= 0.0.58 =
-* Add a separator after a selected plaintext inline mention in the block editor, so consecutive autocomplete choices remain separate federated Mention tokens.
-
-= 0.0.57 =
-* Localize declared remote hashtag and Mention anchors to this site's archive and cached
-  Actor profile surfaces without creating cache state while rendering.
-* Use canonical plaintext Actor tokens in the shared editor completer while rebuilding
-  Mention tags and audience edges from the authored content.
-
-= 0.0.56 =
-* Make an Automatic Article or Note language follow the WordPress author profile language, then the site language, rather than the Actor serialization default.
-
-= 0.0.55 =
-* Serialize Actor scalar name and summary from its configured default language while retaining explicit language maps for peers that support them.
-
-= 0.0.54 =
-* Declare the custom emoji an Article or an Actor profile uses in its outbound `tag`
-  array, covering the title and the biography as well as the body. Guarded: with
-  Axismundi Emoji inactive nothing changes.
-
-= 0.0.53 =
-* Add inherited searchable BCP-47 language controls for Articles and Notes, public Followers/Following collection projections, and minimal negotiated JSON-LD for hashtag archives.
-
-= 0.0.51 =
-* Queue the URI-only target of a public inbound Announce for bounded background acquisition, then render a safe outbound reference while a cache miss is pending. Older ledger rows self-heal when their Actor profile is viewed; cached tombstones and non-public Objects remain hidden.
-
-= 0.0.50 =
-* Add the shared ax_hashtag vocabulary, remote-object hashtag index, mixed public hashtag archive, and persisted Object-to-Actor mention relations.
-* Unify single-object, actor-feed, and hashtag-archive rendering around configurable object card blocks, including declared Object.image featured-image presentation.
-
-= 0.0.49 =
-* Add a shared renderer that resolves one object URI (local product source or
-  cached remote observation) and renders the compact object card, reusing the
-  same public/unlisted-only visibility gate the thread and HTML routes enforce.
-  A default handler on the Activities Actor-feed seam uses it, so boosted and
-  authored feed objects render through one path; a Note-specific feed renderer is
-  no longer needed.
-
-= 0.0.48 =
-* Fix the Like/Repost row on the front end: its InnerBlocks wrapper carries Core's default `is-layout-flow` class, so Core's global blockGap-as-margin fallback still applied margin to every child but the first, even though this block's own CSS visually forces a flex row. That fallback selector's un-`:where()`'d `:root` gives it the same specificity as a single class, so the fix needed a doubled-class selector, not just a plain override.
-
-= 0.0.47 =
-* Add public, paginated ActivityStreams `replies` collections for locally authoritative Objects, derived from the URI thread graph without republishing cached remote reply bodies.
-
-= 0.0.46 =
-* Add public-gated local View links for cached remote Objects and a dedicated editable `object-tombstone` template shared by local and remote 410 responses.
-
-= 0.0.45 =
-* Add an Object Projections-owned editable single-Object template and reusable Object Card pattern for local and cached remote Notes, Questions, Quotes, media, thread context, and interactions.
-* Publish cached remote Actor profile links and normalize remote Question, attachment, quote, and Actor identity fields into the shared Object view model.
-
-= 0.0.44 =
-* Project local Actor profile links as ActivityStreams `PropertyValue` attachments without transferring their storage ownership from Axismundi Actors.
-
-= 0.0.43 =
-* Refresh cached remote Objects from verified inbound Update activities, including interoperable Question-to-Note type changes.
-
-= 0.0.42 =
-* Apply product reply filtering before the textual-thread display limit, so hidden interactions cannot starve later replies.
-
-= 0.0.41 =
-* Add a product action slot to the read-only Question block for its owning product's local vote form.
-
-= 0.0.40 =
-* Add a product filter for excluding non-text interactions from the shared reply-thread view.
-
-= 0.0.39 =
-* Let embedded consumers choose a semantic heading level and suppress the
-  personalized interaction slot while reusing the canonical object renderer.
-
-= 0.0.38 =
-* Render the `axismundi/replies` block as a bounded nested URI graph rather
-  than a flat direct-reply list. Tombstoned replies keep their visible
-  descendants connected, while existing source visibility gates still apply at
-  every node.
-
-= 0.0.37 =
-* Add the read-only `axismundi/question` block: a unified, purely presentational
-  Poll display driven by whatever `poll` shape the current object view model's
-  adapter supplies. Renders nothing for a non-Question object or a Tombstone.
-  Editing (casting a vote) is a later increment; this owns no vote authority.
-
-= 0.0.36 =
-* Add the URI-keyed, rebuildable thread-edge index (`wp_ax_thread_edges`): one direct-parent
-  edge per reply, local or remote, indexed generically from the Activities ledger and the
-  remote-object cache with no per-product wiring. A reply to an unresolved parent is preserved
-  rather than dropped, and automatically reconciles to resolved the moment that parent becomes
-  known; a Tombstone never erases a standing edge.
-* Add `axismundi_op_resolve_source_by_uri()`, a fallback-only URI resolver mirroring the
-  existing current-request source filter, plus OP's own remote-cache view-model adapter (the
-  `local-note`-sibling gap deferred from the single-object HTML view), so a reply or parent
-  resolves to one normalized view model regardless of local or remote origin.
-* Add the `axismundi/reply-context` and `axismundi/replies` server-rendered blocks, gated
-  through each source's own registered public-visibility predicate so a followers-only or
-  mentioned-only local reply can never surface through another object's thread display.
-
-= 0.0.35 =
-* Persist public and anyone defaults only for newly created Articles while
-  preserving fail-closed Quote semantics for legacy or explicitly unset Posts.
-
-= 0.0.34 =
-* Default Core Post Articles to public audience with anyone Quote approval when no
-  explicit federation metadata exists.
-* Keep the block editor and Quick Edit policy choices aligned with that default.
-
-= 0.0.33 =
-* Accept cached QuoteAuthorization objects for verified outbound Quote decisions.
-* Add conditional URI-valued FEP-044f quote and quoteAuthorization mappings to the
-  renderer-owned JSON-LD context.
-
-= 0.0.32 =
-* Serialize media embedded in an Article or Note with one bounded scalar media URL for
-  Mastodon and Misskey interoperability, while standalone media objects retain their
-  complete FEP-1311 Link ladder and human-page Link.
-
-= 0.0.31 =
-* Serialize trusted virtual image renditions without inventing a byte size, allowing
-  Jetpack Photon WebP derivatives to remain fetchable Note attachments while preserving
-  the original-file exclusion and fail-closed media boundary.
-
-= 0.0.30 =
-* Omit embedded media descriptors that have only an HTML object page and no fetchable
-  media rendition, preventing broken Mastodon previews and silently dropped Misskey files.
-
-= 0.0.29 =
-* Replace Core user autocomplete with canonical Actor mentions, validate saved mention anchors against the Actor registry, and derive Article recipients and Mention tags.
-* Add fallback-only source and deterministic view-model extension seams used by domain-owned
-  objects without introducing a dependency on those domains.
-* Register the dynamic object-view block and preserve plugin template, theme override, and
-  user-saved template precedence for human-readable object pages.
-* Reuse public Media Library descriptors for ordered Note attachments while keeping the
-  relation authority in Media Library.
-
-= 0.0.28 =
-* Add Core Post audience and Mention authoring controls to the block editor and Quick Edit.
-* Project matching Article to/cc members and Mention tags, while returning 404 and withholding
-  ActivityStreams discovery for followers-only and mentioned-only anonymous requests.
-
-= 0.0.27 =
-* Cache complete, self-consistent Objects embedded in verified inbound Create activities
-  without a second network request, and declare the FEP-044f QuoteRequest context for
-  Accept and Reject payloads that embed the request.
-
-= 0.0.26 =
-* Add the rebuildable DB v4 quote-relation projection for FEP-044f, Misskey aliases, FEP-e232 links, consent-independent public counts, and verified authorization revocation mapping.
-
-= 0.0.25 =
-* Dereference Activities-issued QuoteAuthorization identities as the exact FEP-044f stamp:
-  author, interacting Object, and interaction target remain URI references and are never
-  embedded.
-* Serve only the canonical root query URI, fail closed for unknown or malformed identities,
-  and bypass permalink rewrite dependence.
-* Return a privacy-minimal `410 Gone` Tombstone after revocation with `Cache-Control: no-store`,
-  preserving identity while exposing neither protected Object.
-
-= 0.0.24 =
-* Supply Activities with an exact local Article, author Actor, and explicit Quote policy
-  through a fail-closed object-domain provider seam.
-* Keep QuoteRequest decisions out of the representation plugin: the provider performs no
-  ledger write, Follow lookup, authorization issue, or network request.
-
-= 0.0.23 =
-* Add an explicit `Who can quote this post?` policy to the block-editor Federation
-  panel and Posts Quick Edit, preserving an unset state rather than inventing consent.
-* Project authored `anyone`, `followers`, and `me` choices as FEP-044f
-  `interactionPolicy.canQuote.automaticApproval`, with renderer-owned JSON-LD context.
-* Keep the declaration advisory: no policy value fabricates a QuoteAuthorization or
-  changes the Activities-owned consent state.
-
-= 0.0.22 =
-* Advertise an OP-owned UUID Followers URI on local Actor documents and serve a
-  count-only ActivityStreams Collection only when Actor policy permits public disclosure.
-* Restrict the Actor transport seam to inbox, endpoints, and publicKey so a Bridge cannot
-  replace representation-owned social collection identities.
-
-= 0.0.21 =
-* Advertise and serve count-only Object shares OrderedCollections backed by effective,
-  distinct-Actor Announce rows without exposing Actor or Activity membership.
-* Provide a fail-closed Announce visibility decision for public local projections and cached
-  remote observations that explicitly address ActivityStreams Public.
-* Resolve the original Object author for Announce delivery without a network request.
-
-= 0.0.20 =
-* List a folder's child folders alongside its media, so a remote peer can navigate a shared
-  folder instead of landing on a dead end. A parent holding a thousand items across eight
-  children previously reported zero and offered nothing to open, because the count was of
-  direct members only and nothing pointed at the children.
-* Order children first, then media. Media order comes from the folder-add time a child
-  folder has no value for, so the two cannot interleave; the resulting order is total and
-  page boundaries stay stable where they cut across both kinds.
-* Serialize a child as a shallow reference — identity, name, count, and its human URL —
-  never with its own items inlined, so depth costs one request per level rather than
-  recursing a tree into one document.
-* Hide a child that would not federate on its own. An internal, private, or gated child is
-  absent from the listing and from totalItems: a name is a disclosure.
-
-= 0.0.19 =
-* Fix /media/folder/{uuid} returning 404 after updating to 0.0.18. The routes were
-  registered but never reached the stored rewrite table, and the version counter meant to
-  install them had already burned itself, so the only remedy was saving permalinks by
-  hand. The routes now install whenever they are found missing, which also covers a
-  ZIP-replace update that never fires the activation hook and a host that discards the
-  write. Retries are limited to once an hour, and sites on plain permalinks are untouched.
-
-= 0.0.18 =
-* Project an eligible Media Library folder as a UUID-keyed OrderedCollection with bounded
-  OrderedCollectionPage responses, direct folder membership, owner-Actor attribution, and
-  anonymous visibility filtering.
-* Serve `/media/folder/{uuid}` independently of object content negotiation, with a plain
-  query fallback for environments where pretty rewrites are unavailable.
-* Add a metadata-only remote Collection probe under Tools > Remote Objects. It fetches at
-  most the root and its same-host first page, never item URLs or media binaries, and stores
-  no Collection cache row.
-
-= 0.0.17 =
-* Advertise exactly one media Link, capped at 1024, for media embedded in an Article
-  attachment or preview. Nothing in the wider fediverse selects between multiple versions
-  today, so extra Links were payload with no consumer; 1024 is also WordPress's own `large`
-  default. The standalone Attachment keeps the full ladder for Axismundi peers, which is the
-  case multiple versions exist for.
-* Keep the rendition builder shared and narrow only the policy per role, so identity, type,
-  MIME, and the media-first ordering never drift and a role can never widen what is federated.
-
-= 0.0.16 =
-* Merge the attachment's human page and nested media Link into one FEP-1311 `url` Link array:
-  media Links first with mediaType/width/height/size, the text/html page last, so a naive
-  url[0] consumer of an Image reads media rather than the page.
-* Advertise only the derivatives Media Library already generated. An image with no derivative
-  now emits the HTML Link alone: the original file is never advertised, and the previous
-  full-size fallback is gone. Video, audio, and documents keep their existing single-file
-  policy while no transcoding substrate exists.
-* Name embedded media with its alt text and omit `name` when alt is empty, while the
-  standalone Attachment keeps its own title. Identity, type, mediaType, and the ordered url[]
-  stay identical across the standalone, Article attachment, and preview.attachment roles.
-* Resolve the HTML representation by mediaType so an ordered url[] cannot make an alternate
-  Link or a collection url point at a media file.
-
-= 0.0.15 =
-* Establish the projected Post as the temporary global context while running the normal
-  `the_content` pipeline, then restore every affected caller global exactly.
-* Add regression coverage for the existing FEP-b2b8 preview image attachment mapping.
-
-= 0.0.14 =
-* Add shared Core Post sensitivity and content-warning metadata with controls in the
-  block editor document settings and Posts Quick Edit.
-* Project sensitive Articles with a boolean `sensitive` member and the warning as
-  FEP-b2b8 `dcterms:subject`, while retaining the manual Excerpt as `summary`.
-
-= 0.0.13 =
-* Align Core Post Article output with FEP-b2b8: a dedicated positive HTML allowlist,
-  manual Excerpt summary, More/Excerpt Note preview, Link-valued human URL, generator,
-  sensitivity, representative image, and rendered full content.
-* Project public Media Library reverse-index references as Article attachments. Embedded
-  local images, video, audio, and files are listed for prefetch without guessing IDs from
-  arbitrary external hotlinks.
-* Add a public Attachment `usedIn` OrderedCollection that lists distinct public Articles
-  only. Keep private usage and private/locked media fail-closed.
-
-= 0.0.12 =
-* Add DB v3 multi-reason object leases keyed by canonical object URI, reason, and reference.
-  Expiry maintenance skips every observation with an active lease.
-* Add a count-only public Object `likes` OrderedCollection backed by the Activities distinct-
-  Actor total. Do not enumerate liker identities or cap `totalItems` to a serialized page.
-* Keep Actor `liked` publication deferred until a user-facing privacy policy is defined;
-  Activities exposes only an internal current-liked-object query in this release.
-
-= 0.0.11 =
-* Add an Activity-specific JSON-LD finalizer so transport adapters can emit the canonical
-  ActivityStreams context without imposing object-only `url` and `attributedTo` members.
-* Keep the immutable Activity ledger free of representation concerns while retaining
-  Object Projections as the sole `@context` owner.
-
-= 0.0.10 =
-* Own the public Actor Outbox representation and neutral `axismundi/v1` read route through
-  the collection-transformer registry, backed by Activities public-safe queries.
-* Advertise Outbox from the Actor document without requiring the ActivityPub Bridge.
-* Prevent transport filters from overriding Outbox identity; retain Inbox, sharedInbox, and
-  publicKey as Bridge-supplied transport properties.
-
-= 0.0.9 =
-* Project public local Axismundi Actor URLs as Person, Application, Organization, Group,
-  or Service JSON-LD through the same renderer and content-negotiation surface.
-* Keep Actor representation ownership here while allowing the ActivityPub Bridge to add
-  transport properties such as inbox, sharedInbox, and publicKey.
-* Keep Inbox writes, Activity data, signatures, queues, and delivery outside this plugin.
-
-= 0.0.8 =
-* Emit an idempotent Core Post publish candidate from `wp_after_insert_post`, after terms
-  and post meta are stored. Object Projections performs no Activity write or transport.
-* Exclude drafts, password posts, pages, attachments, and Actor-less posts. Keep media
-  uploads silent and defer Reply semantics until Axismundi Notes defines local Note identity.
-* Fail closed when the official ActivityPub plugin owns post lifecycle publication; a
-  compatibility adapter must explicitly transfer single-publisher ownership.
-
-= 0.0.7 =
-* Expand Remote Object details with structured Tags/Mentions, audience declarations,
-  attachment metadata, extension properties, and complete escaped raw JSON. Remote media
-  remains metadata-only and is never rendered or downloaded.
-* Link Actor references to the cached Actors administrator record when available and fall
-  back to the canonical remote URI when absent; do not fetch while rendering.
-* Replace synchronous post-fetch Actor discovery with one deduplicated WP-Cron event for
-  the primary attributedTo Actor only. Object storage no longer waits on Actor discovery,
-  and Mention/audience members never cause request fan-out.
-
-= 0.0.6 =
-* Add Tools > Remote Objects: bounded public-HTTPS ActivityStreams fetch, conditional
-  ETag/Last-Modified refresh, explicit signed-fetch-required errors, refresh/delete, and
-  a text/metadata-only inspector that strips every media/embed element.
-* Add schema v2 metadata retention (`expires_at`, `last_accessed_at`) with a filterable
-  30-day sliding default, capped failure backoff, daily expiry maintenance, and manual
-  expired-cache purge. No front-end render path performs a network request.
-* Reserve metadata-only/preview/display/original cache levels while deferring every
-  binary, hotlink, shared-blob, and shadow-attachment decision.
-
-= 0.0.5 =
-* Add the InnoDB `wp_ax_remote_objects` repository for URI-keyed remote ActivityStreams
-  observations, with hash-indexed long URIs, normalized display fields, lossless bounded
-  payload JSON, tri-state sensitivity, fetch validators, refresh state, and Tombstones.
-* Keep invalid refresh input from overwriting the last good snapshot; verify the table,
-  unique identity index, and storage engine before recording schema version 1.
-* Keep fetching and public mirroring out of this increment. The repository performs no
-  network request; bounded administrator discovery follows separately.
-
-= 0.0.4 =
-* Detect Axismundi Media Library in Independent mode and project public/unlisted,
-  ungated attachments as Image, Video, Audio, or Document. Keep stable attachment ids,
-  human media-page URLs, bounded image renditions, sensitivity, and canonical licenses.
-* Keep the first-party boundary explicit: Media Library owns data and access services;
-  Object Projections owns ActivityStreams mapping and never uses authenticated bypasses.
-* Clarify that an Actor's primary feed is an Activities-owned outbox, not an Article
-  archive. Article and Media views may later be optional filtered profile tabs.
-
-= 0.0.3 =
-* Add the browser-friendly `?activitypub` representation selector alongside standard
-  Accept negotiation. It changes only retrieval format: the selector is never included
-  in the emitted object id, and all existing visibility and single-negotiator gates apply.
-
-= 0.0.2 =
-* Add precise Accept negotiation for application/activity+json and ActivityStreams-
-  profiled application/ld+json on existing WordPress object URLs. Bare application/json
-  and unprofiled application/ld+json never hijack HTML; responses emit Vary, alternate
-  Link, CORS, and nosniff headers, with GET/HEAD support.
-* Add the Core Post → Article transformer: stable /?p={ID} id, human permalink url,
-  public Actor attribution, rendered HTML content, manual summary, and timestamps.
-  Draft, private, password-protected, or Actor-less posts fail closed.
-* Disable standalone negotiation whenever the official ActivityPub plugin is active,
-  while leaving registry and renderer APIs available to the future compatibility adapter.
-
-= 0.0.1 =
-* Phase 0 — lock the projection contract and scaffold the plugin: object vs actor
-  projections, stable object id vs human url, the renderer as the sole @context owner,
-  transformers as pure projections, and the single-negotiator + legacy-id-preserving
-  compatibility contract for the official ActivityPub plugin (docs/).
-* Phase 1 — the transformer registry and renderer, with no table and no route. Public API:
-  axismundi_op_register_object_transformer(), axismundi_op_register_collection_transformer(),
-  axismundi_op_transform_object(), axismundi_op_transform_collection(). The renderer
-  validates the four required members, forces the emitted id to equal the declared object
-  URI, owns the JSON-LD @context, sanitizes HTML members, and keeps "no transformer", a
-  transformer error, and "not public" as three distinct outcomes.
+* First release.
+* Content negotiation on existing WordPress object URLs, so a post's own address answers
+  with ActivityStreams JSON-LD when asked for it, and a transformer registry with a single
+  renderer behind it.
+* A Core Post to Article transformer, and an optional adapter for Axismundi Media Library
+  attachments.
+* Collections: shared media folders on a stable UUID route, a replies collection, and the
+  representation of an Actor outbox where Axismundi Activities supplies one.
+* Hashtags, mentions, thread edges, reply context and quote context stored as their own
+  records rather than re-derived from content.
+* A URI-keyed repository of remote object observations, with administrator inspection under
+  Tools > Remote Objects and a remote collection probe that stores nothing.
+* Cached remote media is described and never downloaded or hotlinked; observations expire
+  and are purged daily.
+* The standalone negotiator disables itself when the official ActivityPub plugin is active,
+  so that one URL keeps one answer.

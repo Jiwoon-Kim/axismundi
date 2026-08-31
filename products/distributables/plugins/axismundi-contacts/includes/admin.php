@@ -170,6 +170,17 @@ function axismundi_contacts_render_screen() : void {
 	$reading = 'edit' === $action ? -1 : $item;
 
 	/*
+	 * Looking somebody up is its own screen because it is its own act. It reads a document from
+	 * somewhere else and writes nothing, so it has no card to be an action on and belongs beside the
+	 * list rather than inside a record.
+	 */
+	if ( 'lookup' === $action ) {
+		axismundi_contacts_lookup_screen( $actor );
+		echo '</div>';
+		return;
+	}
+
+	/*
 	 * The profile is opened as the profile. It is not a contact somebody keeps -- it is the document
 	 * this Actor publishes about itself, with a public projection, a forced identity account and a
 	 * lifetime tied to the Actor rather than to an address book -- so it has its own address here,
@@ -210,6 +221,7 @@ function axismundi_contacts_render_screen() : void {
 	 */
 	?>
 	<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( array( 'action' => 'axismundi_contacts_create_card', 'book_id' => $book_id, 'group' => $all ? 0 : $book_id ), admin_url( 'admin-post.php' ) ), 'ax_contacts_create_card_' . $book_id ) ); ?>" class="page-title-action"><?php esc_html_e( 'Add contact', 'axismundi-contacts' ); ?></a>
+	<a href="<?php echo esc_url( axismundi_contacts_lookup_url() ); ?>" class="page-title-action"><?php esc_html_e( 'Look somebody up', 'axismundi-contacts' ); ?></a>
 	<hr class="wp-header-end">
 	<div class="ax-contacts-browser">
 		<?php axismundi_contacts_groups_sidebar( $actor, $default, $all ? 0 : $book_id ); ?>

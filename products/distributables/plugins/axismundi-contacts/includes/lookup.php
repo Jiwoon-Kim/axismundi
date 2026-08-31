@@ -392,6 +392,17 @@ function axismundi_contacts_lookup( string $input ) {
  * the person keeping this book had already written about them. The card they already have is handed
  * back instead, for the screen to open.
  *
+ * A Card with no uid is saved every time it is saved. RFC 9553 makes `uid` optional, so there are
+ * documents that state nothing about which person they are a copy of, and this does not decide the
+ * question on their behalf. The two ways to make it idempotent both cost more than the duplicate
+ * does: minting a local uid produces an identifier no other implementation can match, and treating
+ * the address the card was fetched from as the person makes one person into two the moment they are
+ * served from a second place, and two people into one the moment an address is reused.
+ *
+ * So the honest answer is that a document declining to identify itself is not recognised, and a
+ * second save of one makes a second contact. Somebody who pressed the button twice can delete the
+ * copy; a book that had silently merged two people cannot be un-merged.
+ *
  * Nothing is refreshed or merged from here. What a saved contact does when the original changes is
  * a policy about saved contacts, and it is not decided by the act of saving one.
  *
@@ -457,4 +468,91 @@ function axismundi_contacts_save_looked_up( int $owner_actor_id, array $found ) 
 		);
 	}
 	return array( 'card_id' => $card_id, 'existed' => false );
+}
+
+/**
+ * How long a result somebody is looking at stays saveable.
+ *
+ * Long enough to read a card and decide, short enough that a form left open in a tab overnight is
+ * not still a licence to write. There is nothing to expire on the server, so this is the only thing
+ * that ends it.
+ */
+const AXISMUNDI_CONTACTS_LOOKUP_SEAL_TTL = 900;
+
+/**
+ * Hand a result to the next request without writing it down.
+ *
+ * The awkward part of a two-step lookup is where the result waits. Keeping it on the server -- a
+ * transient, a draft row -- contradicts the thing this screen promises: that looking somebody up
+ * leaves no trace. Fetching it again when Save is pressed avoids the write but breaks the other
+ * promise, because the card that arrives the second time is not necessarily the one that was read,
+ * and somebody would be saving a document they were never shown.
+ *
+ * So the result travels with the person. It goes into the form as text and comes back with it, and a
+ * signature over that text is what makes it trustworthy: this site wrote it, recently, for this
+ * person acting as this Actor. A payload that fails any of those is not a card that arrived late, it
+ * is a card this site never fetched, and it is refused rather than saved.
+ *
+ * @param array{card:array<string,mixed>,card_url:string,profile_url:string,actor_uri:string} $found What the lookup read.
+ * @param int                                                                                 $owner_actor_id Whose book it would be saved into.
+ * @return string Opaque to everything but `axismundi_contacts_lookup_unseal()`.
+ */
+function axismundi_contacts_lookup_seal( array $found, int $owner_actor_id ) : string {
+	$body = base64_encode(
+		(string) wp_json_encode(
+			array(
+				'found'   => $found,
+				'owner'   => $owner_actor_id,
+				'user'    => get_current_user_id(),
+				'expires' => time() + AXISMUNDI_CONTACTS_LOOKUP_SEAL_TTL,
+			)
+		)
+	);
+	return $body . '.' . hash_hmac( 'sha256', $body, wp_salt( 'nonce' ) );
+}
+
+/**
+ * The result somebody was shown, or nothing.
+ *
+ * Every refusal here answers the same way. Which of the four checks failed is a fact about how the
+ * payload was tampered with, and saying so out loud is free help to whoever tampered with it.
+ *
+ * @param string $sealed         What came back with the form.
+ * @param int    $owner_actor_id Who is acting now.
+ * @return array{card:array<string,mixed>,card_url:string,profile_url:string,actor_uri:string}|WP_Error
+ */
+function axismundi_contacts_lookup_unseal( string $sealed, int $owner_actor_id ) {
+	$stale = new WP_Error(
+		'ax_contacts_lookup_sealed',
+		__( 'That result is no longer available to save. Look them up again.', 'axismundi-contacts' ),
+		array( 'status' => 400 )
+	);
+	$at = strrpos( $sealed, '.' );
+	if ( false === $at ) {
+		return $stale;
+	}
+	$body      = substr( $sealed, 0, $at );
+	$signature = substr( $sealed, $at + 1 );
+	// Compared in constant time, which is what keeps a signature from being guessed one byte at a time.
+	if ( ! hash_equals( hash_hmac( 'sha256', $body, wp_salt( 'nonce' ) ), $signature ) ) {
+		return $stale;
+	}
+	$payload = json_decode( (string) base64_decode( $body, true ), true );
+	if ( ! is_array( $payload ) ) {
+		return $stale;
+	}
+	if (
+		(int) ( $payload['expires'] ?? 0 ) < time()
+		|| (int) ( $payload['user'] ?? 0 ) !== get_current_user_id()
+		|| (int) ( $payload['owner'] ?? 0 ) !== $owner_actor_id
+	) {
+		return $stale;
+	}
+	$found = (array) ( $payload['found'] ?? array() );
+	return array(
+		'card'        => (array) ( $found['card'] ?? array() ),
+		'card_url'    => (string) ( $found['card_url'] ?? '' ),
+		'profile_url' => (string) ( $found['profile_url'] ?? '' ),
+		'actor_uri'   => (string) ( $found['actor_uri'] ?? '' ),
+	);
 }

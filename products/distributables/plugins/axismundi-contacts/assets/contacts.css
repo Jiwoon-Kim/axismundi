@@ -77,6 +77,36 @@
 	object-fit: cover;
 }
 
+/*
+ * The lookup form. One field, because there is one question -- who -- and the three kinds of answer
+ * are told apart by looking at what was typed rather than by making somebody choose first.
+ */
+.ax-contacts-lookup {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin: 1rem 0;
+	max-width: 46rem;
+}
+
+.ax-contacts-lookup__label {
+	flex: 1 0 100%;
+	font-weight: 600;
+}
+
+.ax-contacts-lookup .description {
+	flex: 1 0 100%;
+	margin: 0;
+}
+
+.ax-contacts-lookup__result {
+	border-top: 1px solid #dcdcde;
+	margin-top: 1.5rem;
+	max-width: 46rem;
+	padding-top: 1rem;
+}
+
 @media screen and (max-width: 782px) {
 	.ax-contacts-browser {
 		display: block;

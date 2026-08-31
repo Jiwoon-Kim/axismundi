@@ -2447,6 +2447,80 @@ try {
 	);
 
 	/*
+	 * The result a person is looking at reaches the save request in the form, signed, because neither
+	 * of the alternatives keeps the promise this screen makes. Holding it on the server contradicts
+	 * "looking leaves no trace"; fetching it again on save means the card written down is not
+	 * necessarily the card that was read.
+	 *
+	 * So the signature has to carry who, as whom, and for how long. A payload failing any of those is
+	 * not a late arrival, it is a card this site never fetched.
+	 */
+	$ax_ct_seal_was   = get_current_user_id();
+	wp_set_current_user( (int) $ax_ct_owner->get_local_user_id() );
+	$ax_ct_seal_user  = get_current_user_id();
+	$ax_ct_sealed     = axismundi_contacts_lookup_seal( $ax_ct_lu_acct, $ax_ct_owner_id );
+	$ax_ct_seal_back  = axismundi_contacts_lookup_unseal( $ax_ct_sealed, $ax_ct_owner_id );
+	/*
+	 * Forged rather than mangled. A payload that stops being base64, or stops being JSON, is refused
+	 * before the signature is reached -- so a test built that way passes whether the signature is
+	 * checked or not. This one is well-formed and says all the right things about who and when; the
+	 * only thing wrong with it is that this site did not write it.
+	 */
+	$ax_ct_seal_forge = static function ( int $expires, string $key ) use ( $ax_ct_lu_acct, $ax_ct_owner_id, $ax_ct_seal_user ) : string {
+		$body = base64_encode(
+			(string) wp_json_encode(
+				array(
+					'found'   => $ax_ct_lu_acct,
+					'owner'   => $ax_ct_owner_id,
+					'user'    => $ax_ct_seal_user,
+					'expires' => $expires,
+				)
+			)
+		);
+		return $body . '.' . hash_hmac( 'sha256', $body, $key );
+	};
+	$ax_ct_seal_edit  = axismundi_contacts_lookup_unseal( $ax_ct_seal_forge( time() + 60, 'somebody else' ), $ax_ct_owner_id );
+	// And the same payload signed properly is accepted, so the refusal above is about the signature.
+	$ax_ct_seal_ours  = axismundi_contacts_lookup_unseal( $ax_ct_seal_forge( time() + 60, wp_salt( 'nonce' ) ), $ax_ct_owner_id );
+	// Carried to a different Actor's book, and to a different person's session.
+	$ax_ct_seal_other = axismundi_contacts_lookup_unseal( $ax_ct_sealed, $ax_ct_owner_id + 1 );
+	wp_set_current_user( (int) $ax_ct_stranger->get_local_user_id() );
+	$ax_ct_seal_them  = axismundi_contacts_lookup_unseal( $ax_ct_sealed, $ax_ct_owner_id );
+	wp_set_current_user( $ax_ct_seal_user );
+	// Left open in a tab: signed by this site, for this person, and out of time.
+	$ax_ct_seal_old   = axismundi_contacts_lookup_unseal( $ax_ct_seal_forge( time() - 1, wp_salt( 'nonce' ) ), $ax_ct_owner_id );
+	wp_set_current_user( $ax_ct_seal_was );
+	ax_ct_assert(
+		$ax_ct_results,
+		'a looked-up card can be saved only by the person who was shown it, as the Actor they were acting as, and not indefinitely',
+		! is_wp_error( $ax_ct_seal_back )
+			&& 'https://example.com/@alice.jscontact' === (string) $ax_ct_seal_back['card_url']
+			&& 'Alice Example' === (string) ( $ax_ct_seal_back['card']['name']['full'] ?? '' )
+			&& is_wp_error( $ax_ct_seal_edit )
+			&& ! is_wp_error( $ax_ct_seal_ours )
+			&& is_wp_error( $ax_ct_seal_other )
+			&& is_wp_error( $ax_ct_seal_them )
+			&& is_wp_error( $ax_ct_seal_old )
+	);
+
+	/*
+	 * The screen keeps the same split. Showing somebody is a read; keeping them is a write, and there
+	 * is one of it -- in a handler reached by a form that says Save, behind its own nonce. A second
+	 * call to the save function anywhere in that file would be a second way to write a contact, with
+	 * its own answer about what had been agreed to.
+	 */
+	$ax_ct_lu_screen = (string) file_get_contents( dirname( __DIR__ ) . '/includes/lookup-screen.php' );
+	ax_ct_assert(
+		$ax_ct_results,
+		'the lookup screen writes in one place, and both of its forms say who asked',
+		1 === substr_count( $ax_ct_lu_screen, 'axismundi_contacts_save_looked_up(' )
+			&& str_contains( $ax_ct_lu_screen, "check_admin_referer( 'ax_contacts_lookup' )" )
+			&& str_contains( $ax_ct_lu_screen, "check_admin_referer( 'ax_contacts_save_lookup' )" )
+			// The seal is what the save trusts, rather than anything else the form carried.
+			&& str_contains( $ax_ct_lu_screen, 'axismundi_contacts_lookup_unseal(' )
+	);
+
+	/*
 	 * And nothing is fetched that this would not be willing to fetch. `https` only, no redirect
 	 * followed somewhere else, a size it stops reading at, and the safe fetcher that refuses an
 	 * address inside this network -- which is the difference between reading a contact card and being

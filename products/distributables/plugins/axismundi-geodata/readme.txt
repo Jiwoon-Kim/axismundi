@@ -17,9 +17,9 @@ location, and lets the editor, map blocks, and federation serializers read it
 back through one shared model. It registers:
 
 * **`axismundi_geo_area`** — a hierarchical taxonomy for address / administrative
-  containment (대한민국 > 부산광역시 > 수영구 > 광안동). Answers "where is it?".
-* **`axismundi_geotag`** — a flat taxonomy for place / content geo tags (광안리해수욕장,
-  광안대교). Answers "what place is it about?".
+  containment (Republic of Korea > Busan Metropolitan City > Suyeong-gu > Gwang-an-dong). Answers "where is it?".
+* **`axismundi_geotag`** — a flat taxonomy for place / content geo tags (Gwangalli Beach,
+  Gwangan Bridge). Answers "what place is it about?".
 * **Coordinate meta** on posts, pages, and attachments — the observation /
   capture point, using the WordPress-convention `geo_latitude`, `geo_longitude`,
   `geo_public` keys plus `ax_geo_*` extensions.
@@ -56,8 +56,8 @@ The theme does not hard-code Geo taxonomy blocks. Insert the plugin-provided
 **Post geo terms** pattern where a post template should expose its areas and
 places.
 
-A demo place hierarchy (대한민국 > 부산광역시 > 수영구 > 광안동, with the
-광안리해수욕장 geotag) ships with the plugin but is created only on request — it
+A demo place hierarchy (Republic of Korea > Busan Metropolitan City > Suyeong-gu > Gwang-an-dong, with the
+Gwangalli Beach geotag) ships with the plugin but is created only on request — it
 is never seeded automatically. Run `wp axismundi-geodata seed-demo` to add it and
 `wp axismundi-geodata seed-demo --remove` to drop it.
 

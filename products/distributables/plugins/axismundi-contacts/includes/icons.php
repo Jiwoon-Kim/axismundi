@@ -53,6 +53,7 @@ function axismundi_contacts_icons() : array {
 		'notes'                  => __( 'Notes', 'axismundi-contacts' ),
 		'keyboard-arrow-down'    => __( 'More', 'axismundi-contacts' ),
 		'visibility'             => __( 'Published', 'axismundi-contacts' ),
+		'celebration'            => __( 'Anniversary', 'axismundi-contacts' ),
 	);
 }
 

@@ -9,13 +9,21 @@
  *                Use the pair together; the duration is part of the spring.
  *
  * The curves are M3 Expressive. Expressive and Standard publish identical
- * effects curves, so the choice only shows in spatial motion -- where Expressive
- * overshoots hard: fast spatial passes 67% beyond its target before settling.
+ * effects curves, so the choice only shows in spatial motion.
  *
- * Because of that overshoot, spatial curves are for position and size. Do not
- * put one on `border-radius`: interpolation dips below the target, negative
- * radii clamp to 0, and a rounded corner flashes square mid-morph. Shape morphs
- * take an effects curve, or a plain easing with a duration.
+ * Spatial covers geometry -- position, size, and shape. A shape morph is a
+ * spatial change, so `border-radius` takes a spatial curve; effects is for
+ * colour, opacity and other non-geometric properties.
+ *
+ * Spatial curves overshoot, by less than their control points suggest. The
+ * peak progress each one actually reaches:
+ *
+ *   Expressive fast     1.092   Expressive default  1.014
+ *   Expressive slow     1.019   Standard (any)      1.001
+ *
+ * So a 20px -> 8px morph on fast spatial dips to 6.9px before settling, not
+ * below zero. A radius only clamps at 0 when the target is under about 8% of
+ * the start, which this scale does not do except when morphing to `none`.
  *
  * The `standard` easing stays defined -- components.button.css depends on it
  * with no fallback -- and equals M3's Standard easing unchanged. "Expressive

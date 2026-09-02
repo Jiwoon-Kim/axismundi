@@ -3,9 +3,12 @@
 	"version": 3,
 	"title": "Elevated",
 	"slug": "elevated",
-	"blockTypes": [ "core/button" ],
+	"blockTypes": [
+		"core/button",
+		"axismundi/dialog",
+		"axismundi/sheet"
+	],
 	"styles": {
-		"shadow": "var:preset|shadow|elevation-1",
 		"elements": {
 			"button": {
 				"color": {
@@ -26,7 +29,8 @@
 					"color": {
 						"background": "color-mix(in srgb, var(--wp--preset--color--primary) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--wp--preset--color--surface-container-low))"
 					}
-				}
+				},
+				"shadow": "var:preset|shadow|elevation-1"
 			}
 		}
 	}

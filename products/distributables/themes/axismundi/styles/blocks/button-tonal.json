@@ -3,7 +3,11 @@
 	"version": 3,
 	"title": "Tonal",
 	"slug": "tonal",
-	"blockTypes": [ "core/button" ],
+	"blockTypes": [
+		"core/button",
+		"axismundi/dialog",
+		"axismundi/sheet"
+	],
 	"styles": {
 		"elements": {
 			"button": {

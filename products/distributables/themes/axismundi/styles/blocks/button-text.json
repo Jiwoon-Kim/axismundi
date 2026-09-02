@@ -3,7 +3,11 @@
 	"version": 3,
 	"title": "Text",
 	"slug": "text",
-	"blockTypes": [ "core/button" ],
+	"blockTypes": [
+		"core/button",
+		"axismundi/dialog",
+		"axismundi/sheet"
+	],
 	"styles": {
 		"elements": {
 			"button": {

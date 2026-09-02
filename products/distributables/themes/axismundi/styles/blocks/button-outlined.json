@@ -1,0 +1,47 @@
+{
+	"$schema": "https://schemas.wp.org/wp/7.1/theme.json",
+	"version": 3,
+	"title": "Outlined",
+	"slug": "outlined",
+	"blockTypes": [
+		"core/button",
+		"axismundi/dialog",
+		"axismundi/sheet"
+	],
+	"styles": {
+		"elements": {
+			"button": {
+				"color": {
+					"text": "var:preset|color|on-surface-variant"
+				},
+				"border": {
+					"color": "var:preset|color|outline-variant",
+					"style": "solid",
+					"width": "1px"
+				},
+				"spacing": {
+					"padding": {
+						"left": "var:preset|spacing|200",
+						"right": "var:preset|spacing|200"
+					}
+				},
+				":hover": {
+					"color": {
+						"background": "color-mix(in srgb, var(--wp--preset--color--on-surface-variant) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent)"
+					}
+				},
+				":focus": {
+					"color": {
+						"background": "color-mix(in srgb, var(--wp--preset--color--on-surface-variant) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent)"
+					}
+				},
+				":active": {
+					"color": {
+						"background": "color-mix(in srgb, var(--wp--preset--color--on-surface-variant) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent)"
+					}
+				}
+			}
+		},
+		"css": "& .wp-block-button__link:not(.has-background){background-color:initial;background-image:none;} & .ax-dialog__open-button{background-color:transparent;}"
+	}
+}

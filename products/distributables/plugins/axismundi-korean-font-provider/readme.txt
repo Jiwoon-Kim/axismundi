@@ -75,20 +75,7 @@ regional Hanja subset is provided.
 * Clarify that user-profile language controls admin UI translation, not the
   published document's regional glyph forms.
 
-= 0.1.2 =
-
-* Document the source URL, copyright, license, and license URL for each bundled
-  Noto font family directly in readme.txt.
-
-= 0.1.1 =
-
-* Prepare the package for WordPress.org Plugin Check by removing the hidden
-  distribution manifest and publishing the bundled-font notice as `NOTICE.txt`.
-
-= 0.1.0 =
-
-* Initial release: `@font-face` provider (front + editor) for Noto Sans KR and
-  Noto Serif KR, plus a Font Library collection registration.
+Earlier releases are listed in changelog.txt.
 
 == Copyright ==
 

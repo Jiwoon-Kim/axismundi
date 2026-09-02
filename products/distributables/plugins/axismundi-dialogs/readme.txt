@@ -72,46 +72,5 @@ part from the Site Editor's Uncategorized area.
   not part of any release; the components' own classes were already doing the
   work. Rendering is unchanged.
 
-= 0.2.3 =
+Earlier releases are listed in changelog.txt.
 
-* Match the Theme's supported Uncategorized template-part area so Sheet and
-  Dialog pickers continue to list their default parts in the Site Editor.
-
-= 0.2.2 =
-
-* Keep the standard `theme//slug` template-part contract for Sheet and Dialog
-  content while using the core-supported General template-part area.
-* Remove the plugin-defined `sheet` and `dialog` area registrations so the
-  Theme Directory does not categorize the parts as unsupported.
-
-= 0.2.1 =
-
-* Expose the native basic-dialog surface to dynamic Axismundi interaction
-  blocks, so contextual UI can reuse the accessible dialog chrome without a
-  template-part indirection.
-
-= 0.2.0 =
-
-* Add a Post Quick View Trigger block: a microblog-style comments action (icon
-  plus count) for a Post Template that opens the shared quick view, falling back
-  to the post's comments anchor when the hub or scripting is unavailable.
-* Add a singleton Post Quick View block: one per-page dialog that lazy-loads the
-  clicked post over the REST API — title, meta, featured image, content, and a
-  read-only comment thread with Reddit-style reply folding.
-* Let logged-in readers post comments and threaded replies from a fixed
-  composer without leaving the feed: a per-comment Reply puts the composer in
-  "replying to" mode, the thread refetches and expands on success, and
-  moderation is honoured. Anonymous commenting links out to the full post.
-
-= 0.1.0 =
-
-* Initial release of the Dialogs collection with Sheet and Dialog host blocks.
-* Side and bottom sheets with modal/standard, docked/detached, edge, width, and
-  body/sheet scrolling controls.
-* Basic, list, and full-screen Material 3 dialogs.
-* Native `<dialog>` and Interactivity API runtime with animated dismissal,
-  backdrop and Escape handling, focus restoration, responsive modal fallback,
-  scroll lock, and smooth standard-sheet page push.
-* Editable Sheet and Dialog template-part areas with title, icon, and close
-  companion blocks.
-* Reduced-motion and RTL support via logical properties.

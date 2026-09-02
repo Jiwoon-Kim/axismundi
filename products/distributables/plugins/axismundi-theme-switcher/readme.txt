@@ -46,47 +46,5 @@ color-scheme change depends on a theme or stylesheet that consumes
   not part of any release; the components' own classes were already doing the
   work. Rendering is unchanged.
 
-= 0.1.5 =
+Earlier releases are listed in changelog.txt.
 
-* Prepare the package for WordPress.org Plugin Check by removing the hidden
-  distribution manifest and relying on WordPress.org translation loading.
-* Prefix render-template variables with the full plugin prefix.
-
-= 0.1.4 =
-
-* The front-end switcher now dispatches the `axismundi-theme-scheme-change` event
-  (matching the editor preview), so JS consumers that cache theme colours (canvas,
-  charts, themed visuals) can re-read tokens on a light / dark / auto change.
-  `data-theme` plus this event are the public client-side contract.
-
-= 0.1.3 =
-
-* Stop applying the persisted theme scheme to the top-level WordPress admin
-  document. Editor preview and Style Book scheme synchronization now stays
-  scoped to preview documents, avoiding admin chrome color-scheme leakage.
-
-= 0.1.2 =
-
-* Animate the Material Symbols FILL axis on interaction: the cycle icon fills
-  on hover / focus / press, and the selected segment stays filled. The axis
-  interpolates continuously (the Axismundi theme registers `--md-icon-fill` via
-  `@property`); reduced-motion users get the instant state.
-
-= 0.1.1 =
-
-* Harden the cycle / segmented icons: notranslate, translate="no", and
-  draggable="false" on the Material Symbols spans so machine translation
-  cannot rewrite the ligature text and the glyph cannot be dragged out.
-* The icon-box contract (1em box, overflow clip) is now inherited from the
-  Axismundi theme's icons.css — fixes a header overflow while the icon font
-  was still loading.
-
-= 0.1.0 =
-
-* Initial release: the `axismundi/theme-switcher` block (light / dark / auto)
-  and the early color-scheme bridge that applies the persisted cookie before
-  paint.
-* Block Hooks auto-insertion of the cycle control into the theme header.
-* Material Design 3 styling that consumes the Axismundi theme tokens (with M3
-  fallbacks): a standard icon button for the cycle style and a segmented
-  control for the default three-mode layout.

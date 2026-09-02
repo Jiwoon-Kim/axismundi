@@ -1,0 +1,36 @@
+== Changelog ==
+
+Releases before 0.2.3. The current release is in readme.txt.
+
+= 0.2.2 =
+* Document every optional external service, the information it receives, and its terms and privacy links.
+* Restrict anonymous attachment and GPS-track GeoJSON output to opted-in media whose actual parent post is published and publicly viewable.
+
+= 0.2.1 =
+* Move the complete geo_area and geotag archive templates from the Axismundi theme to their Geodata domain owner.
+* Preserve the current-term map, inherited card feed, and geographic navigation while allowing normal theme and user overrides.
+
+= 0.2.0 =
+* Extend both RSS 2.0 and Atom feeds with conditional GeoRSS Simple geometry for
+  geo taxonomy feeds and posts carrying public geotag terms.
+* Add a `fetch_feed()` / SimplePie adapter that normalizes external GeoRSS and
+  W3C Geo feeds into bounded GeoJSON FeatureCollections for map clients.
+* Preserve structured feed properties for map popups, including title, image,
+  author, date, and excerpt, while sanitizing the only retained HTML fragment.
+
+= 0.1.0 =
+* Initial foundation: geo_area + geotag taxonomies, post/attachment coordinate
+  meta, term place-fact meta, public-coordinate gating, and REST exposure.
+* Attachment Location (GPS) editor: lat/lng/altitude/public fields, on-demand
+  EXIF GPS import, and a Leaflet mini map with a draggable marker.
+* Admin preview map settings (Settings → Geodata): none, admin-only OpenStreetMap
+  preview, custom raster (XYZ) tiles, or a self-hosted uploaded PMTiles map pack
+  rendered with MapLibre + the Protomaps light theme.
+* Optional place lookup for geo_area / geotag terms through a provider registry —
+  Google Places (server-side key) and OpenStreetMap / Nominatim (public opt-in or
+  custom endpoint) — with explicit candidate binding to a namespaced identity.
+* Controlled 508-type geotag vocabulary: Nature, Facilities, and Business,
+  combining Google Places tokens with reviewed local extensions and fallbacks.
+* PMTiles map-pack metadata and preview support, GPX/KML track recognition, and
+  GeoJSON REST exports for geotags, public GPS media, and tracks.
+

@@ -1,0 +1,215 @@
+== Changelog ==
+
+Releases before 0.1.0. The current release is in readme.txt.
+
+= 0.0.41 =
+* Lets the generic sentiment resolver bind local Notes for Dislike as well as
+  Like, without changing Note's canonical-object boundary.
+
+= 0.0.40 =
+* Gives public Notes and author-visible private or draft Notes their canonical
+  Object document links in the editor and list views.
+* Redirects legacy public Note post URLs to their canonical Object document.
+* Preserves the Group context on local Note document routes.
+
+= 0.0.39 =
+* Lets integrations normalize a validated reply target before it is persisted,
+  while preserving Note's URI validation boundary.
+
+= 0.0.38 =
+* Ships the current staging integration alongside the Actor feed and Object
+  listing-projection updates.
+
+= 0.0.37 =
+* Delegates the Note document's block-template choice to Object Projections. A
+  Note reply and a cached remote reply are the same kind of page, and deciding
+  separately here is what let the two paths drift apart. Notes keep their own
+  route and their own access rules.
+
+= 0.0.36 =
+* A followers-only or mentioned-only Note is now readable by the people it was actually
+  addressed to. The gate reads the recipients recorded on the emitted `Create`/`Update`,
+  not the current post body, so editing the text afterwards cannot grant or revoke access
+  to a document that was already delivered. Anonymous and unrelated visitors still get 404.
+* Site administrators may read an addressed Note as an explicit server-operation policy.
+* Lets a community claim a threaded reply's audience so a reply to a Group Topic is
+  addressed to that Group rather than to the author's own followers. Which replies qualify
+  is the community's decision, not Note's.
+
+= 0.0.35 =
+* A reply now inherits its parent's `context` when none is authored (FEP-11dd). An author
+  writing a reply knows what they are replying to and nothing about a thread URI, so without
+  this every reply in a threaded discussion carried no context while its root carried one.
+  An explicitly supplied `context` is never overwritten.
+
+= 0.0.34 =
+* Advertise the FEP-c0e0 emoji reaction collection on federated Notes.
+
+= 0.0.33 =
+* Separate federated authorship from site moderation: a public Actor may author only its
+  own Notes, while administrators can list, read private, and delete another Actor's Note
+  without ever emitting an impersonating edit.
+* Make the Note editor's direct publication capability follow public-Actor authorship, and
+  grant the plural WordPress primitives required by published-Note and bulk-trash screens.
+
+= 0.0.32 =
+* Show plaintext body mentions as read-only recipients in the editor without copying them into the explicit recipient list.
+
+= 0.0.31 =
+* Add the shared block-editor custom-emoji picker and derive Mention recipients from
+  authored plaintext `@handle` tokens while preserving the writer's text in the
+  federated Note body.
+
+= 0.0.30 =
+* Let an editor's Automatic language value preserve a federated Note's locked language snapshot, so content-only updates do not attempt to clear or recompute it.
+
+= 0.0.29 =
+* Use the WordPress author profile language for an Automatic Note language and publish known-language Note content in both `content` and `contentMap` for peers that do not consume language maps.
+
+= 0.0.28 =
+* Declare the custom emoji a Note's content uses in its outbound `tag` array, so a
+  `:shortcode:` renders as its image elsewhere instead of arriving as a bare word.
+  Guarded: with Axismundi Emoji inactive nothing changes.
+
+= 0.0.27 =
+* Replace the free-form Note language field with the inherited, searchable BCP-47 selector used for Articles.
+
+= 0.0.26 =
+* Validate a Note media-picker selection before it enters the editor save queue,
+  reporting the specific attachment when it has no federatable rendition.
+
+= 0.0.25 =
+* Remove the Note-specific Actor-feed object renderer. Object Projections now
+  resolves and renders any feed object (local Note or cached remote) through the
+  shared view model, gated by the same visibility predicate this plugin already
+  registers, so a boosted object renders as well as an authored one. Note keeps
+  only its domain adapters and owns no feed rendering.
+
+= 0.0.24 =
+* Advertise the Object Projections-owned replies collection from active local Notes and Questions; direct public textual replies are available as canonical URI pages while private and unresolved replies remain undisclosed.
+
+= 0.0.23 =
+* Let a Note's author (or an administrator) preview their own not-yet-public document at its canonical route and from the private list's row action, instead of it 404ing even for its own author. Robots directives keep any such preview out of search indexes; public visibility for everyone else is unchanged.
+
+= 0.0.22 =
+* Route local 410 Tombstones through Object Projections' dedicated privacy-minimal Tombstone template.
+
+= 0.0.21 =
+* Reuse the Object Projections-owned editable single-Object template and expose local Actor identity, avatar, and Quote context through the neutral Object view model.
+
+= 0.0.20 =
+* Allow a federated Question to become a Note through the editor, emitting a same-URI Update with a Note snapshot.
+
+= 0.0.19 =
+* Keep local vote redirects on the exact canonical Question URL and show the
+  one-time result without a route-breaking query argument.
+
+= 0.0.18 =
+* Add a canonical View link to the private Note list for Notes that the public
+  document route can safely expose.
+
+= 0.0.17 =
+* Let a locked Question update its closing time without resubmitting frozen poll options or voting mode.
+
+= 0.0.16 =
+* Let an unfederated Question return to an ordinary Note through the Question editor, while preserving the federation lock after first publication.
+
+= 0.0.15 =
+* Normalize Question option names at the editor REST boundary, disable frozen Question fields, and deduplicate manipulated vote-form selections.
+
+= 0.0.14 =
+* Add the Question editor panel and a nonce-protected local vote form that creates constrained vote Notes through the normal federation lifecycle.
+
+= 0.0.13 =
+* Derive local Question tallies from strict Activity-ledger vote observations, including oneOf/anyOf duplicate rules and Undo/Delete removal.
+* Keep confirmed votes out of the textual reply thread while preserving ordinary replies to Questions.
+
+= 0.0.12 =
+* Render a public Create(Note) on an Actor Activity feed through the current
+  Note source and the shared Object Projections view model, rather than through
+  an inline Activity snapshot. Feed cards reuse Note media, sensitive-content,
+  and Question rendering without emitting personalized interaction controls.
+
+= 0.0.11 =
+* Close a race where a Question's mode/options freeze could be bypassed: a save
+  that read the row as unlocked can no longer overwrite mode or options if a
+  concurrent lock commits before its own write runs. The freeze boundary is now
+  a `SELECT ... FOR UPDATE` row lock evaluated inside the write transaction,
+  not the earlier non-transactional read.
+* Treat a Question whose scheduled `closes_at` has already passed as closed --
+  in the JSON-LD `closed` member and the read-only Poll block alike -- even
+  when nothing ever recorded an explicit `closed_at`.
+
+= 0.0.10 =
+* Project a Question Note as ActivityStreams `type: Question` with a name-only
+  `oneOf`/`anyOf` option array, `votersCount`, and `endTime`/`closed` -- an ordinary
+  Note is completely unaffected. All tallies are structurally correct zero
+  placeholders; vote recording is a later increment.
+* Add the shared, tally-agnostic poll view (`axismundi_note_question_view()`) the
+  JSON-LD projection and the HTML view model both read, so a Question's `type`,
+  options, and closing state stay in lockstep between the two.
+
+= 0.0.9 =
+* Add Question, a sibling object type on the same private ax_note post: structured
+  `wp_ax_questions`/`wp_ax_question_options` storage (never post_content or a block
+  attribute), a plain-text option list unique and exact-match within one Question,
+  and mode/options that freeze at the same first-federation moment attribution does.
+  A Note already federated as an ordinary Note cannot retroactively become a Question,
+  and an under-provisioned Question is held rather than federated incomplete. Storage
+  and the freeze contract only in this release; JSON-LD projection, the read-only Poll
+  block, and the vote classifier are later increments.
+
+= 0.0.8 =
+* Resolve an arbitrary Note URI (not only the current request) for Object Projections'
+  new URI-keyed thread-edge index, so a Note's own `inReplyTo` participates in the same
+  unified local/remote reply and parent lookup other object types share without any
+  Note-specific write code -- the index derives every edge from the Activities ledger.
+* Add the reply-context and replies blocks to the single-Note template.
+
+= 0.0.7 =
+* Keep legacy unset Quote policy fail-closed while giving newly authored Notes
+  an explicit public and anyone default.
+* Mint a new outbound QuoteRequest generation when an author removes or changes
+  a target, allowing an explicit retry after a terminal decision.
+
+= 0.0.6 =
+* Default newly authored Notes to public audience with anyone Quote approval.
+* Add Quote target authoring and read-only pending, accepted, rejected, self, and invalid
+  status to the Federation panel.
+* Re-project quote aliases and verified QuoteAuthorization evidence from the immutable
+  ledger, while pending, rejected, or invalid Quotes remain unavailable on public routes.
+
+= 0.0.5 =
+* Add the authored Who can quote this post? policy to the Note envelope, REST document
+  panel, local QuoteRequest decision path, and conditional interactionPolicy projection.
+* Gate outbound Quotes through self, local-other, and remote branches: self-quotes create
+  immediately, while other targets require a matching QuoteAuthorization before Create.
+* Reconcile missed approval wake-ups idempotently and fail closed on rejected, stale,
+  tombstoned, unauthenticated, or mismatched Quote evidence.
+
+= 0.0.4 =
+* Store an authored outbound Quote target URI (schema v2) alongside the existing envelope, read and
+  written through the same structured REST panel field.
+* Add a no-fetch, three-way classification of a quote target's ownership -- the quoting Note's own
+  author, a different local Actor, or a remote Actor -- as the foundation for the outbound Quote
+  request/authorization lifecycle.
+
+= 0.0.3 =
+* Elevate an attachment's sensitive state to the containing federated Note so Mastodon and
+  other receivers apply the content warning boundary, without mutating the authored Note
+  envelope.
+
+= 0.0.2 =
+* Reject attachment selections that have no federatable media rendition instead of sending
+  an HTML object page as if it were image data.
+* Remove the unsupported Core category panel from the Note editor; Notes remain taxonomy-free.
+
+= 0.0.1 =
+* Register the private ax_note post type with a restricted block editor and structured envelope panel.
+* Install the verified wp_ax_notes federation envelope store with a tombstone state.
+* Add a strict read/write envelope API whose mention read is the ordered union of the explicit list and body-derived anchors.
+* Project public Notes and deleted Tombstones as ActivityStreams JSON-LD and human-readable block-template pages.
+* Add Like and Boost controls to active public Note pages without exposing private or deleted objects.
+* Add ordered Media Library attachment selection without adding an envelope column, and reuse public FEP-1311 descriptors in JSON-LD and HTML.
+* Record idempotent embedded-object Create/Update and URI-only Delete Activities from strict Note publication boundaries.
+

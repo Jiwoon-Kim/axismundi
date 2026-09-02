@@ -1,0 +1,47 @@
+== Changelog ==
+
+Releases before 0.2.0. The current release is in readme.txt.
+
+= 0.1.6 =
+* Keep an inbound reaction's retention reference on the reacted Object while deriving
+  FEP-9098 first-party provenance from the remote Actor that declared its emoji.
+
+= 0.1.5 =
+* Observe FEP-9098 declarations carried by inbound Like and EmojiReact Activities, so
+  custom reaction chips enter the same authority-gated review and cache pipeline as
+  Object and Actor emoji.
+
+= 0.1.4 =
+* Preserve non-default ports in emoji authority identity, including local custom emoji
+  reactions and registry lookups.
+* Let approved cached emoji provide an explicit, policy-gated presentation fallback for
+  reaction chips without changing the reaction's authority-qualified identity or payload.
+
+= 0.1.3 =
+* Provision newly bundled emoji after the schema check, so the upgrade path also runs when no database migration is needed.
+
+= 0.1.2 =
+* Register newly added bundled emoji on existing installations without restoring an emoji an operator deliberately removed.
+
+= 0.1.1 =
+* Render a local Note or Actor's emoji only from its own current outbound `tag` array,
+  so its home rendering and federated declaration stay in lockstep even on an HTTP local
+  development site.
+
+= 0.1.0 =
+* E1 complete: binary caching of approved emoji with a reference-counted, content-addressed
+  store, and HTML substitution scoped to what each Object or Actor declared. Same-named
+  emoji from two servers stay distinct.
+* E2 complete: local emoji upload through `wp_handle_upload()` without attachment posts,
+  a searchable catalogue with a REST endpoint, copying a cached remote emoji into the local
+  registry with provenance recorded, and outbound `tag` publication for Notes, Articles,
+  and Actors.
+* Per-authority review defaults, a reversible bulk approval, and an opt-in fallback source
+  for a shortcode the declaring server has not supplied.
+* Local emoji are dereferenceable at `/emojis/{shortcode}` as ActivityStreams `Emoji`.
+
+= 0.0.2 =
+* E0 scaffold plus E1a-E1c: registry schema, parser, authority-gated observation,
+  review queue, and queued authority-side metadata verification. No binary caching or
+  rendering yet.
+

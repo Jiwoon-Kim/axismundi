@@ -80,31 +80,5 @@ terms and privacy policies.
   provider.
 * Escape the map Interactivity context through the block wrapper at output.
 
-= 0.2.1 =
-* Follow Axismundi Geodata's namespaced internal taxonomy identifiers while keeping the public map and GeoJSON query contract unchanged.
+Earlier releases are listed in changelog.txt.
 
-= 0.2.0 =
-* Add a GeoRSS feed source: overlay an external GeoRSS Simple / W3C Geo feed,
-  fetched, cached, and converted to GeoJSON server-side by Axismundi Geo Data.
-* Render polygon and box geometries (fill + outline on MapLibre, native on
-  Leaflet) in addition to points and lines.
-* Rich GeoRSS marker popups: representative image, title link, structured author,
-  date, and excerpt — with per-block toggles (number of items, author, date,
-  excerpt, excerpt length, open links in new tab) mirroring the core RSS block.
-
-= 0.1.2 =
-* Fit geo-area archive maps to all geotag markers on the current query page;
-  when there are no markers, fall back to the term's manual zoom or provider
-  viewport.
-* Keep point overlays above the PMTiles raster fallback on wide-area views.
-
-= 0.1.1 =
-* Add the geo-area Query Map View: derive markers from geotags on the current
-  inherited-query page and update them through the Interactivity API during
-  enhanced pagination without remounting the map.
-* Centre empty geo-area maps on the term coordinate.
-
-= 0.1.0 =
-* Initial release: the axismundi/map block — basemap (Leaflet raster / MapLibre
-  PMTiles) plus geotags / selected media / track GeoJSON overlay, reusing
-  Axismundi Geo Data's map assets and REST export.

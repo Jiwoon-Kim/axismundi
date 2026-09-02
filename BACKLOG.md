@@ -2352,6 +2352,33 @@ Close evidence:
   items and stay routed outside this resolved item.
 - `npm test` passed with Axis A/B/C/D/E/F/G all 1.000.
 
+### 49. Connected button group has no gap on Gutenberg 23.9 (upstream regression)
+
+- **Bucket**: D (theme baseline) — but the defect is upstream, not ours.
+- **Source**: 2026-09-02 visual QA of `/prose-vqa/vqa-design/` §1a Connected
+  button group. Spacing collapsed after a Gutenberg update; also reproduced on
+  WordPress.com staging. Was correct during original development.
+- **Issue**: `styles/blocks/buttons-connected.json` declares
+  `spacing.blockGap: var:preset|spacing|25`. WordPress 7.1 / Gutenberg 23.9
+  emits **no layout CSS at all** for a block style variation — flow
+  `margin-block-start`, constrained, flex `gap` and grid `gap` all vanish
+  together. WordPress 7.0 emitted them.
+- **Cause**: `get_block_nodes()` puts the variation slug in the node's `name`.
+  `get_layout_styles()` reads `name` as a *block* name, finds nothing in the
+  block type registry, and returns before generating any rule. Introduced by
+  WordPress/gutenberg#78276.
+- **Upstream**: reported as WordPress/gutenberg#82332, fix in
+  WordPress/gutenberg#82335 (merged for the normal release path, not the 23.9
+  RC — jeryj declined the backport with the release already starting).
+- **Deliberately not worked around.** A per-instance `blockGap` in
+  `vqa-design.php` was tried and reverted at f18d9fd's predecessor: the pattern
+  exists to show what the variation does, and an instance override would both
+  hide the upstream defect and outrank the variation once it works again.
+- **Target**: none — resolves on its own when Gutenberg 23.10 ships. Re-check
+  §1a then and close.
+- **Known delta until then**: §1a renders with the global block gap instead of
+  spacing 25. No theme change pending.
+
 ### v3.6.10 Wave 2B-1 Form close evidence
 
 v3.6.10 closed the first Wave 2B slice by implementing Route B, Form Controls

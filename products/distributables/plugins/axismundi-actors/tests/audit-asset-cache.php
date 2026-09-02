@@ -153,8 +153,31 @@ try {
 	foreach ( $ax_asset_ids as $identity_id ) {
 		$wpdb->delete( $table, array( 'identity_id' => $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB
 	}
-	$gc = axismundi_actors_asset_gc( false, 0 );
-	ax_asset_assert( $ax_asset_results, 'GC removes an unreferenced content-hash directory after its grace period', $gc['directories'] >= 1 && ( ! is_array( $root ) || ! is_dir( $root['path'] ) ) );
+	/*
+	 * Measured before collecting, because this check has been seen to fail on a run that could not
+	 * afterwards be told apart from a passing one. It asserts two things at once -- that GC removed
+	 * something, and that it removed this -- and a bare false says which of the two nothing about.
+	 *
+	 * The three that could keep the directory are a surviving reference row, an mtime the grace
+	 * window still covers, and the directory already being gone. Reading them here costs one query
+	 * and turns the next occurrence into a fact instead of a rerun.
+	 */
+	$gc_hash       = $ax_asset_hash;
+	$gc_refs       = '' !== $gc_hash ? (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE content_hash = %s AND processor_version = %d", $gc_hash, AXISMUNDI_ACTORS_ASSET_PROCESSOR_VERSION ) ) : -1; // phpcs:ignore WordPress.DB
+	$gc_existed    = is_array( $root ) && is_dir( $root['path'] );
+	$gc_mtime_lead = $gc_existed ? (int) filemtime( $root['path'] ) - time() : 0; // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_filemtime -- diagnostic.
+	$gc            = axismundi_actors_asset_gc( false, 0 );
+	ax_asset_assert(
+		$ax_asset_results,
+		sprintf(
+			'GC removes an unreferenced content-hash directory after its grace period (refs=%d, existed=%s, mtime-now=%+ds, collected=%d)',
+			$gc_refs,
+			$gc_existed ? 'yes' : 'no',
+			$gc_mtime_lead,
+			(int) $gc['directories']
+		),
+		$gc['directories'] >= 1 && ( ! is_array( $root ) || ! is_dir( $root['path'] ) )
+	);
 } finally {
 	remove_filter( 'pre_http_request', $ax_asset_http, 10 );
 	wp_clear_scheduled_hook( 'axismundi_actors_process_asset_batch' );

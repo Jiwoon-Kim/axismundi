@@ -164,6 +164,74 @@ try {
 		'an owner sees their ownership but cannot rewrite it',
 		str_contains( $ax_ca_owner_html, $ax_ca_uri ) && ! str_contains( $ax_ca_owner_html, 'name="owner_actor_uri"' )
 	);
+	// -- whose calendars these are, when somebody has switched identity -----------------------------------
+
+	/*
+	 * The switcher is the one place a person says which identity they are working as, and this screen
+	 * has to agree with it. It once resolved the account's own Person instead, which made switching
+	 * look like it had worked while every calendar list, subscription and new calendar still belonged
+	 * to the person.
+	 */
+	$ax_ca_switch_owner = ax_ca_user( $ax_ca_users, 'administrator' );
+	$ax_ca_switcher     = ax_ca_user( $ax_ca_users, 'administrator' );
+	$ax_ca_person       = axismundi_actors_get_for_user( $ax_ca_switcher );
+	$ax_ca_org          = axismundi_actors_create_managed_actor(
+		array(
+			'owner_user_id'      => $ax_ca_switch_owner,
+			'preferred_username' => 'axcaorg' . strtolower( wp_generate_password( 8, false, false ) ),
+			'actor_type'         => 'Organization',
+			'status'             => 'public',
+		)
+	);
+	$ax_ca_org_id = $ax_ca_org instanceof Axismundi_Actor ? (int) $ax_ca_org->get_identity_id() : 0;
+
+	wp_set_current_user( $ax_ca_switcher );
+	$ax_ca_before_switch = axismundi_cal_current_actor_uri();
+	$ax_ca_week_before   = axismundi_cal_workspace_config()['startOfWeek'];
+	$ax_ca_zone_before   = axismundi_cal_workspace_config()['timezone'];
+
+	ax_ca_assert(
+		$ax_ca_results,
+		"with nothing chosen, these are the calendars of the account's own Person",
+		$ax_ca_person instanceof Axismundi_Actor && $ax_ca_person->get_uri() === $ax_ca_before_switch && '' !== $ax_ca_before_switch
+	);
+
+	axismundi_actors_add_manager( $ax_ca_org_id, $ax_ca_switcher, 'manager' );
+	axismundi_actors_set_acting_actor( $ax_ca_switcher, $ax_ca_org_id );
+	ax_ca_assert(
+		$ax_ca_results,
+		"acting as an Organization they manage, these are the Organization's calendars",
+		$ax_ca_org instanceof Axismundi_Actor && $ax_ca_org->get_uri() === axismundi_cal_current_actor_uri()
+	);
+
+	/*
+	 * And the viewer's own settings do not move with it. Which identity somebody publishes as says
+	 * nothing about which day their week starts on or which zone the grid is drawn in -- those belong
+	 * to the person looking at the screen, and following the switch would redraw the calendar for
+	 * reasons that have nothing to do with the calendar.
+	 */
+	ax_ca_assert(
+		$ax_ca_results,
+		"switching identity does not move the viewer's week start or zone",
+		$ax_ca_week_before === axismundi_cal_workspace_config()['startOfWeek']
+			&& $ax_ca_zone_before === axismundi_cal_workspace_config()['timezone']
+	);
+
+	/*
+	 * A stored choice is a preference and never authority. Losing the manager role has to stop the
+	 * screen answering as the Organization on the very next read, without anything having remembered
+	 * to clear the stored value.
+	 */
+	axismundi_actors_remove_manager( $ax_ca_org_id, $ax_ca_switcher );
+	ax_ca_assert(
+		$ax_ca_results,
+		'a revoked manager stops owning as that Organization and falls back to their own Person',
+		$ax_ca_person instanceof Axismundi_Actor
+			&& $ax_ca_person->get_uri() === axismundi_cal_current_actor_uri()
+			&& (int) get_user_meta( $ax_ca_switcher, AXISMUNDI_ACTORS_ACTING_META, true ) === $ax_ca_org_id
+	);
+	wp_set_current_user( 0 );
+
 } finally {
 	wp_set_current_user( 0 );
 	foreach ( array_unique( $ax_ca_calendars ) as $ax_ca_calendar_id ) {
@@ -171,6 +239,11 @@ try {
 	}
 	foreach ( array_unique( $ax_ca_users ) as $ax_ca_user_id ) {
 		wp_delete_user( (int) $ax_ca_user_id );
+	}
+	// The managed Organization belongs to nobody once its fixture users are gone.
+	if ( isset( $ax_ca_org_id ) && $ax_ca_org_id > 0 ) {
+		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => $ax_ca_org_id ), array( '%d' ) );
+		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $ax_ca_org_id ), array( '%d' ) );
 	}
 }
 

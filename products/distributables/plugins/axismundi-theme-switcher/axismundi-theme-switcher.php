@@ -117,8 +117,11 @@ add_action( 'wp_head', 'axismundi_theme_switcher_head_script', 0 );
  * Enqueue the editor color-scheme bridge.
  *
  * Block-editor and Style Book preview documents are separate iframes. The bridge
- * mirrors the axismundi_theme cookie into same-origin preview documents so token
- * selectors respond to the switcher while editing.
+ * mirrors the axismundi_theme cookie onto the editor document and same-origin preview
+ * documents, so token selectors respond to the switcher while editing. The editor
+ * document is included because Global Styles draws the colour-palette swatches there
+ * and the theme's palette is var()-based; without it the swatches follow the operating
+ * system while the canvas beside them follows the switcher.
  *
  * @return void
  */

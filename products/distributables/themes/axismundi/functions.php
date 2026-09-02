@@ -361,12 +361,13 @@ function axismundi_enqueue_editor_ui_assets() : void {
 	// have native controls (scrollbars/form fields) that follow the theme. In
 	// THIS document, though, :root is the WordPress admin chrome — color-scheme
 	// must not leak here or the editor's panels get dark native scrollbars on a
-	// light WP UI. It leaks two ways: data-theme="dark" (handled by the switcher
-	// plugin keeping data-theme off the admin root) AND the OS-dark fallback
-	// (`:root:not([data-theme])`), which matches the admin root whenever the OS
-	// is dark. The swatches only need the colour tokens, so reset the chrome's
-	// scheme to normal. enqueue_block_editor_assets is editor-only, so the rest
-	// of wp-admin is untouched.
+	// light WP UI. It leaks two ways, and this reset covers both: the OS-dark
+	// fallback (`:root:not([data-theme])`), which matches the admin root whenever
+	// the OS is dark, and `data-theme="dark"`, which the switcher plugin now does
+	// set on this document so the palette swatches follow the chosen scheme rather
+	// than the operating system. The swatches only need the colour tokens, so the
+	// chrome's scheme is reset to normal. enqueue_block_editor_assets is
+	// editor-only, so the rest of wp-admin is untouched.
 	if ( '' !== $prev ) {
 		wp_add_inline_style( $prev, ':root{color-scheme:normal !important;}' );
 	}

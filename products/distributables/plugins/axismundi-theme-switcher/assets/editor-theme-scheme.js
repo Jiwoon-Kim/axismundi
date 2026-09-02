@@ -80,7 +80,18 @@
 
 	function apply() {
 		current = readScheme();
-		syncButtons( document, current );
+		/*
+		 * The editor document too, not only the preview frames. Global Styles renders the
+		 * colour-palette swatches in this document, and the theme's palette entries are
+		 * var(--md-sys-color-*) -- so without data-theme here the dark token layer can only
+		 * match through `prefers-color-scheme`, and the swatches follow the operating system
+		 * while the canvas beside them follows the switcher.
+		 *
+		 * The theme loads only token layers into this document, so the attribute changes
+		 * custom property values and nothing else; `color-scheme` is separately pinned to
+		 * normal there so the admin chrome keeps its own native controls.
+		 */
+		applyToDocument( document, current );
 		document.querySelectorAll( 'iframe' ).forEach( function ( iframe ) {
 			applyToIframe( iframe, current );
 			if ( ! iframe.dataset.axismundiThemeSchemeBound ) {

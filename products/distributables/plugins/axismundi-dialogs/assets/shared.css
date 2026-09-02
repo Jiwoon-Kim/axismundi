@@ -23,30 +23,28 @@
 	max-inline-size: 100%;
 }
 
-/* Open button — icon-first compound button. Filled is the default treatment;
- * theme block-style variations (dialog-button-*) override this at block scope. */
+/* Open button — an icon-first compound button.
+ *
+ * It carries `wp-element-button`, the class WordPress themes style their buttons through, so its
+ * size, shape, colour, typography and states arrive from the theme rather than being declared a
+ * second time here. What stays is what makes this button this button: a row that can hold an icon
+ * beside a label, and the reset a <button> needs that an <a> does not.
+ *
+ * The size, radius and state colours that used to live here have gone. They were a filled M3
+ * button written out by hand, they duplicated what the theme already says, and they disagreed with
+ * it: 48px against Material 3's 40dp small button, and a 100px radius that made a different shape
+ * than the theme's. A duplicated value that drifts is worse than no value.
+ *
+ * Fallbacks stay off deliberately. A site with no `wp-element-button` styling gets an unstyled
+ * button, which is honest, rather than one M3 button hardcoded into a plugin that ships to other
+ * themes. */
 .ax-dialog__open-button {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	gap: 8px;
-	min-block-size: 48px;
-	padding: 0 16px 0 12px;
 	border: 0;
-	border-radius: 100px;
-	background-color: var( --wp--preset--color--primary, #6750a4 );
-	color: var( --wp--preset--color--on-primary, #fff );
 	cursor: pointer;
-}
-
-:where( .ax-dialog__open-button ):hover {
-	background-color: color-mix( in srgb, var( --wp--preset--color--on-primary, #fff ) calc( var( --md-sys-state-hover-state-layer-opacity, 0.08 ) * 100% ), var( --wp--preset--color--primary, #6750a4 ) );
-}
-:where( .ax-dialog__open-button ):focus-visible {
-	background-color: color-mix( in srgb, var( --wp--preset--color--on-primary, #fff ) calc( var( --md-sys-state-focus-state-layer-opacity, 0.1 ) * 100% ), var( --wp--preset--color--primary, #6750a4 ) );
-}
-:where( .ax-dialog__open-button ):active {
-	background-color: color-mix( in srgb, var( --wp--preset--color--on-primary, #fff ) calc( var( --md-sys-state-pressed-state-layer-opacity, 0.1 ) * 100% ), var( --wp--preset--color--primary, #6750a4 ) );
 }
 .ax-dialog__open-button-label {
 	font: inherit;

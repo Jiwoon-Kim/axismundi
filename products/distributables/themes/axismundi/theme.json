@@ -168,6 +168,36 @@
 				}
 			]
 		},
+		"custom": {
+			"shape": {
+				"corner": {
+					"none": "var(--md-sys-shape-corner-none)",
+					"extra-small": "var(--md-sys-shape-corner-extra-small)",
+					"small": "var(--md-sys-shape-corner-small)",
+					"medium": "var(--md-sys-shape-corner-medium)",
+					"large": "var(--md-sys-shape-corner-large)",
+					"large-increased": "var(--md-sys-shape-corner-large-increased)",
+					"extra-large": "var(--md-sys-shape-corner-extra-large)",
+					"extra-large-increased": "var(--md-sys-shape-corner-extra-large-increased)",
+					"extra-extra-large": "var(--md-sys-shape-corner-extra-extra-large)",
+					"full": "var(--md-sys-shape-corner-full)",
+					"extra-small-top": "var(--md-sys-shape-corner-extra-small-top)",
+					"large-top": "var(--md-sys-shape-corner-large-top)",
+					"extra-large-top": "var(--md-sys-shape-corner-extra-large-top)",
+					"value": {
+						"none": "var(--md-sys-shape-corner-value-none)",
+						"extra-small": "var(--md-sys-shape-corner-value-extra-small)",
+						"small": "var(--md-sys-shape-corner-value-small)",
+						"medium": "var(--md-sys-shape-corner-value-medium)",
+						"large": "var(--md-sys-shape-corner-value-large)",
+						"large-increased": "var(--md-sys-shape-corner-value-large-increased)",
+						"extra-large": "var(--md-sys-shape-corner-value-extra-large)",
+						"extra-large-increased": "var(--md-sys-shape-corner-value-extra-large-increased)",
+						"extra-extra-large": "var(--md-sys-shape-corner-value-extra-extra-large)"
+					}
+				}
+			}
+		},
 		"layout": {
 			"contentSize": "760px",
 			"wideSize": "1280px"

@@ -1072,6 +1072,11 @@
 				},
 				"css": "&{overflow-x:visible;white-space:pre-wrap;}"
 			},
+			"core/buttons": {
+				"spacing": {
+					"blockGap": "var:preset|spacing|150"
+				}
+			},
 			"core/button": {
 				"variations": {
 					"outline": {

@@ -1,0 +1,62 @@
+/**
+ * Axismundi — Material Design 3 shape tokens.
+ *
+ * M3 publishes two families and the difference is load-bearing:
+ *
+ *   corner-value.*  a finite length. Safe on either end of a transition.
+ *   corner.*        a complete border-radius, including the circular `full`.
+ *
+ * `corner-value` has no `full`, by design. A pill radius is not a length: a
+ * browser scales any radius over half the box down to fit, so animating from
+ * 9999px to 8px on a 40px control renders as an unchanged pill for 99.8% of the
+ * duration and then snaps. Shape morphs must start and end on `corner-value`.
+ *
+ * Unlike the motion tokens, the whole scale is published rather than only what
+ * the theme uses today: plugin blocks consume these as a contract, and half a
+ * scale is not one.
+ *
+ * Directional tokens: `*-top` is published because the block axis does not
+ * depend on writing direction. `*-start` and `*-end` are deliberately absent —
+ * a custom property can only hold a physical shorthand, which would be wrong in
+ * RTL, and `html[dir="rtl"]` overrides miss a `dir` set further down the tree.
+ * Round one side with logical longhands instead, as buttons-connected.json does:
+ *
+ *   border-start-start-radius: var(--md-sys-shape-corner-value-large-increased);
+ *   border-end-start-radius: var(--md-sys-shape-corner-value-large-increased);
+ *
+ * Core blocks keep literal radii in theme.json; WordPress has no radius preset
+ * scale to expose in the editor. These tokens serve the theme's structural CSS
+ * and custom blocks in plugins.
+ */
+
+:root {
+	/* Corner values — finite lengths. Valid as transition endpoints. */
+	--md-sys-shape-corner-value-none: 0;
+	--md-sys-shape-corner-value-extra-small: 4px;
+	--md-sys-shape-corner-value-small: 8px;
+	--md-sys-shape-corner-value-medium: 12px;
+	--md-sys-shape-corner-value-large: 16px;
+	--md-sys-shape-corner-value-large-increased: 20px;
+	--md-sys-shape-corner-value-extra-large: 28px;
+	--md-sys-shape-corner-value-extra-large-increased: 32px;
+	--md-sys-shape-corner-value-extra-extra-large: 48px;
+
+	/* Corner shapes — complete border-radius values. */
+	--md-sys-shape-corner-none: var(--md-sys-shape-corner-value-none);
+	--md-sys-shape-corner-extra-small: var(--md-sys-shape-corner-value-extra-small);
+	--md-sys-shape-corner-small: var(--md-sys-shape-corner-value-small);
+	--md-sys-shape-corner-medium: var(--md-sys-shape-corner-value-medium);
+	--md-sys-shape-corner-large: var(--md-sys-shape-corner-value-large);
+	--md-sys-shape-corner-large-increased: var(--md-sys-shape-corner-value-large-increased);
+	--md-sys-shape-corner-extra-large: var(--md-sys-shape-corner-value-extra-large);
+	--md-sys-shape-corner-extra-large-increased: var(--md-sys-shape-corner-value-extra-large-increased);
+	--md-sys-shape-corner-extra-extra-large: var(--md-sys-shape-corner-value-extra-extra-large);
+
+	/* Circular. Not a length — never a transition endpoint. */
+	--md-sys-shape-corner-full: 9999px;
+
+	/* Top-rounded shorthands. Block axis, so writing direction does not apply. */
+	--md-sys-shape-corner-extra-small-top: var(--md-sys-shape-corner-value-extra-small) var(--md-sys-shape-corner-value-extra-small) 0 0;
+	--md-sys-shape-corner-large-top: var(--md-sys-shape-corner-value-large) var(--md-sys-shape-corner-value-large) 0 0;
+	--md-sys-shape-corner-extra-large-top: var(--md-sys-shape-corner-value-extra-large) var(--md-sys-shape-corner-value-extra-large) 0 0;
+}

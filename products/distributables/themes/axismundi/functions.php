@@ -99,6 +99,7 @@ function axismundi_setup() : void {
 					file_exists( get_template_directory() . '/assets/styles/tokens.ref.css' ) ? 'assets/styles/tokens.ref.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/tokens.sys.color.light.css' ) ? 'assets/styles/tokens.sys.color.light.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/tokens.sys.color.dark.css' ) ? 'assets/styles/tokens.sys.color.dark.css' : null,
+					file_exists( get_template_directory() . '/assets/styles/tokens.sys.shape.css' ) ? 'assets/styles/tokens.sys.shape.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/tokens.sys.elevation.css' ) ? 'assets/styles/tokens.sys.elevation.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/tokens.sys.state.css' ) ? 'assets/styles/tokens.sys.state.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/tokens.sys.motion.css' ) ? 'assets/styles/tokens.sys.motion.css' : null,
@@ -264,11 +265,12 @@ function axismundi_enqueue_assets() : void {
 	$styles = array(
 		// M3 token layers (literals in ref; downstream var() in sys), in dependency
 		// order so the cascade stays explicit: ref palette -> color roles
-		// (light, then dark override) -> elevation -> state -> utilities.
+		// (light, then dark override) -> shape -> elevation -> state -> utilities.
 		'axismundi-tokens-ref'         => array( 'assets/styles/tokens.ref.css', array() ),
 		'axismundi-tokens-color-light' => array( 'assets/styles/tokens.sys.color.light.css', array( 'axismundi-tokens-ref' ) ),
 		'axismundi-tokens-color-dark'  => array( 'assets/styles/tokens.sys.color.dark.css', array( 'axismundi-tokens-color-light' ) ),
-		'axismundi-tokens-elevation'   => array( 'assets/styles/tokens.sys.elevation.css', array( 'axismundi-tokens-color-dark' ) ),
+		'axismundi-tokens-shape'       => array( 'assets/styles/tokens.sys.shape.css', array( 'axismundi-tokens-color-dark' ) ),
+		'axismundi-tokens-elevation'   => array( 'assets/styles/tokens.sys.elevation.css', array( 'axismundi-tokens-shape' ) ),
 		'axismundi-tokens-state'       => array( 'assets/styles/tokens.sys.state.css', array( 'axismundi-tokens-elevation' ) ),
 		'axismundi-tokens-motion'      => array( 'assets/styles/tokens.sys.motion.css', array( 'axismundi-tokens-state' ) ),
 		// Material Symbols icon utility (the font auto-loads from theme.json).
@@ -345,6 +347,7 @@ function axismundi_enqueue_editor_ui_assets() : void {
 		'axismundi-editor-tokens-ref'         => 'assets/styles/tokens.ref.css',
 		'axismundi-editor-tokens-color-light' => 'assets/styles/tokens.sys.color.light.css',
 		'axismundi-editor-tokens-color-dark'  => 'assets/styles/tokens.sys.color.dark.css',
+		'axismundi-editor-tokens-shape'       => 'assets/styles/tokens.sys.shape.css',
 		'axismundi-editor-tokens-elevation'   => 'assets/styles/tokens.sys.elevation.css',
 		'axismundi-editor-tokens-state'       => 'assets/styles/tokens.sys.state.css',
 		'axismundi-editor-tokens-motion'      => 'assets/styles/tokens.sys.motion.css',

@@ -1,13 +1,77 @@
 /**
  * Axismundi — Material Design 3 motion tokens.
  *
- * Duration + easing primitives shared by transitions and animations across
- * interactive surfaces (button shape morph, state layers, future components).
- * Only the values currently in use are defined; the full M3 motion scale is
- * added on demand.
+ * Three independent families. Do not mix them up:
+ *
+ *   duration-*   the M3 duration scale, on its own.
+ *   easing-*     the M3 easing set, on its own. Pair with any duration.
+ *   curve-*      a spring, already converted to a curve *and* its duration.
+ *                Use the pair together; the duration is part of the spring.
+ *
+ * The curves are M3 Expressive. Expressive and Standard publish identical
+ * effects curves, so the choice only shows in spatial motion -- where Expressive
+ * overshoots hard: fast spatial passes 67% beyond its target before settling.
+ *
+ * Because of that overshoot, spatial curves are for position and size. Do not
+ * put one on `border-radius`: interpolation dips below the target, negative
+ * radii clamp to 0, and a rounded corner flashes square mid-morph. Shape morphs
+ * take an effects curve, or a plain easing with a duration.
+ *
+ * The `standard` easing stays defined -- components.button.css depends on it
+ * with no fallback -- and equals M3's Standard easing unchanged. "Expressive
+ * only" applies to the spring conversions, which are the family that has two
+ * variants; the easing set is one table in M3, not two.
+ *
+ * Legacy (Material 2) easings are omitted; nothing here targets M2.
  */
 
 :root {
+	/* Duration scale. */
+	--md-sys-motion-duration-short1: 50ms;
+	--md-sys-motion-duration-short2: 100ms;
 	--md-sys-motion-duration-short3: 150ms;
+	--md-sys-motion-duration-short4: 200ms;
+	--md-sys-motion-duration-medium1: 250ms;
+	--md-sys-motion-duration-medium2: 300ms;
+	--md-sys-motion-duration-medium3: 350ms;
+	--md-sys-motion-duration-medium4: 400ms;
+	--md-sys-motion-duration-long1: 450ms;
+	--md-sys-motion-duration-long2: 500ms;
+	--md-sys-motion-duration-long3: 550ms;
+	--md-sys-motion-duration-long4: 600ms;
+	--md-sys-motion-duration-extra-long1: 700ms;
+	--md-sys-motion-duration-extra-long2: 800ms;
+	--md-sys-motion-duration-extra-long3: 900ms;
+	--md-sys-motion-duration-extra-long4: 1000ms;
+
+	/* Easing set. Pair with any duration. */
+	--md-sys-motion-easing-linear: cubic-bezier(0, 0, 1, 1);
 	--md-sys-motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+	--md-sys-motion-easing-standard-accelerate: cubic-bezier(0.3, 0, 1, 1);
+	--md-sys-motion-easing-standard-decelerate: cubic-bezier(0, 0, 0, 1);
+	--md-sys-motion-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+	--md-sys-motion-easing-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+	--md-sys-motion-easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+
+	/*
+	 * Springs converted for the web (M3 Expressive). Each curve carries its own
+	 * duration -- use them as a pair, and do not substitute one from the scale
+	 * above.
+	 *
+	 * Spatial moves position and size, and overshoots. Effects changes colour,
+	 * opacity and other non-geometric properties, and does not.
+	 */
+	--md-sys-motion-curve-fast-spatial: cubic-bezier(0.42, 1.67, 0.21, 0.9);
+	--md-sys-motion-curve-fast-spatial-duration: 350ms;
+	--md-sys-motion-curve-default-spatial: cubic-bezier(0.38, 1.21, 0.22, 1);
+	--md-sys-motion-curve-default-spatial-duration: 500ms;
+	--md-sys-motion-curve-slow-spatial: cubic-bezier(0.39, 1.29, 0.35, 0.98);
+	--md-sys-motion-curve-slow-spatial-duration: 650ms;
+
+	--md-sys-motion-curve-fast-effects: cubic-bezier(0.31, 0.94, 0.34, 1);
+	--md-sys-motion-curve-fast-effects-duration: 150ms;
+	--md-sys-motion-curve-default-effects: cubic-bezier(0.34, 0.8, 0.34, 1);
+	--md-sys-motion-curve-default-effects-duration: 200ms;
+	--md-sys-motion-curve-slow-effects: cubic-bezier(0.34, 0.88, 0.34, 1);
+	--md-sys-motion-curve-slow-effects-duration: 300ms;
 }

@@ -112,6 +112,7 @@ function axismundi_contacts_lookup_result( array $found, Axismundi_Actor $actor 
 
 		<div class="ax-contacts-detail">
 			<section class="ax-contacts-detail__facts">
+				<dl class="ax-contacts-detail__values">
 				<?php foreach ( axismundi_contacts_detail_sections() as $property => $label ) : ?>
 					<?php
 					$entries = (array) ( $card[ $property ] ?? array() );
@@ -119,17 +120,16 @@ function axismundi_contacts_lookup_result( array $found, Axismundi_Actor $actor 
 						continue;
 					}
 					?>
-					<h3><?php echo esc_html( $label ); ?></h3>
-					<ul class="ax-contacts-detail__values">
-						<?php foreach ( $entries as $entry ) : ?>
-							<?php
-							if ( is_array( $entry ) ) {
-								axismundi_contacts_detail_row( $entry, $property, false );
-							}
-							?>
-						<?php endforeach; ?>
-					</ul>
+					<dt><?php echo esc_html( $label ); ?></dt>
+					<?php foreach ( $entries as $entry ) : ?>
+						<?php
+						if ( is_array( $entry ) ) {
+							axismundi_contacts_detail_row( $entry, $property, false );
+						}
+						?>
+					<?php endforeach; ?>
 				<?php endforeach; ?>
+				</dl>
 			</section>
 		</div>
 
@@ -172,14 +172,14 @@ function axismundi_contacts_lookup_reached( array $found ) : void {
 	}
 	?>
 	<h3><?php esc_html_e( 'Reached through', 'axismundi-contacts' ); ?></h3>
-	<ul class="ax-contacts-detail__values">
+	<dl class="ax-contacts-detail__values">
 		<?php foreach ( $reached as $label => $value ) : ?>
-			<li class="ax-contacts-detail__value">
+			<dt><?php echo esc_html( $label ); ?></dt>
+			<dd class="ax-contacts-detail__value">
 				<code class="ax-contacts-detail__text"><?php echo esc_html( $value ); ?></code>
-				<span class="ax-contacts-detail__label"><?php echo esc_html( $label ); ?></span>
-			</li>
+			</dd>
 		<?php endforeach; ?>
-	</ul>
+	</dl>
 	<?php
 }
 

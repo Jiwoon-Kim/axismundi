@@ -71,6 +71,11 @@ function axismundi_contacts_detail_sections() : array {
 /**
  * One entry's line, with what it is called and whether a stranger sees it.
  *
+ * A `dd`, because a value on this screen is a description of the property above it. A card is a set
+ * of property-value pairs -- which is what a JSContact document is -- and saying so in the markup
+ * costs nothing and means the connection between "Email" and the addresses under it is stated
+ * rather than implied by adjacency.
+ *
  * @param array<string,mixed> $entry     Entry.
  * @param string              $property  Property it belongs to.
  * @param bool                $published Whether it is published.
@@ -92,7 +97,7 @@ function axismundi_contacts_detail_row( array $entry, string $property, bool $pu
 		return;
 	}
 	?>
-	<li class="ax-contacts-detail__value">
+	<dd class="ax-contacts-detail__value">
 		<span class="ax-contacts-detail__text"><?php echo esc_html( $text ); ?></span>
 		<?php if ( '' !== $label ) : ?>
 			<span class="ax-contacts-detail__label"><?php echo esc_html( $label ); ?></span>
@@ -100,7 +105,7 @@ function axismundi_contacts_detail_row( array $entry, string $property, bool $pu
 		<?php if ( $published ) : ?>
 			<span class="ax-contacts-detail__published"><?php esc_html_e( 'Published', 'axismundi-contacts' ); ?></span>
 		<?php endif; ?>
-	</li>
+	</dd>
 	<?php
 }
 
@@ -132,6 +137,15 @@ function axismundi_contacts_card_detail( int $card_id, int $group_id, int $self_
 
 	<div class="ax-contacts-detail">
 		<section class="ax-contacts-detail__facts">
+			<?php
+			/*
+			 * One list for the whole card rather than one per property. A property with several
+			 * entries is one term with several descriptions, which `dl` says natively; the previous
+			 * shape said it with a heading beside a list, and put eleven `h2`s in the outline of a
+			 * page whose real headings are the person's name and the public preview.
+			 */
+			?>
+			<dl class="ax-contacts-detail__values">
 			<?php foreach ( axismundi_contacts_detail_sections() as $property => $label ) : ?>
 				<?php
 				$entries = (array) ( $card[ $property ] ?? array() );
@@ -139,18 +153,17 @@ function axismundi_contacts_card_detail( int $card_id, int $group_id, int $self_
 					continue;
 				}
 				?>
-				<h2><?php echo esc_html( $label ); ?></h2>
-				<ul class="ax-contacts-detail__values">
-					<?php foreach ( $entries as $key => $entry ) : ?>
-						<?php
-						if ( ! is_array( $entry ) ) {
-							continue;
-						}
-						axismundi_contacts_detail_row( $entry, $property, in_array( $property . '/' . $key, $published, true ) );
-						?>
-					<?php endforeach; ?>
-				</ul>
+				<dt><?php echo esc_html( $label ); ?></dt>
+				<?php foreach ( $entries as $key => $entry ) : ?>
+					<?php
+					if ( ! is_array( $entry ) ) {
+						continue;
+					}
+					axismundi_contacts_detail_row( $entry, $property, in_array( $property . '/' . $key, $published, true ) );
+					?>
+				<?php endforeach; ?>
 			<?php endforeach; ?>
+			</dl>
 		</section>
 
 	</div>

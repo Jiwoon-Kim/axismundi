@@ -78,6 +78,63 @@
 }
 
 /*
+ * A card read as what it is: a set of property-value pairs.
+ *
+ * The browser indents `dd` and stacks `dt` above it, which is the wrong shape here -- a property
+ * name and its values belong on one line, and several values under one name belong in a column
+ * beside it rather than under a repeated label.
+ */
+.ax-contacts-detail__values {
+	display: grid;
+	gap: 0.35rem 1rem;
+	grid-template-columns: minmax(6rem, max-content) 1fr;
+	margin: 0;
+}
+
+.ax-contacts-detail__values dt {
+	color: #50575e;
+	font-weight: 600;
+	grid-column: 1;
+}
+
+.ax-contacts-detail__value {
+	align-items: baseline;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	grid-column: 2;
+	margin: 0;
+}
+
+/* A second value for the same property sits under the first, not under the name again. */
+.ax-contacts-detail__values dt ~ .ax-contacts-detail__value {
+	grid-column: 2;
+}
+
+.ax-contacts-detail__label,
+.ax-contacts-detail__published {
+	color: #646970;
+	font-size: 0.85em;
+}
+
+.ax-contacts-detail__published {
+	border: 1px solid #dcdcde;
+	border-radius: 2px;
+	padding: 0 0.35rem;
+}
+
+@media screen and (max-width: 600px) {
+	.ax-contacts-detail__values {
+		grid-template-columns: 1fr;
+	}
+
+	.ax-contacts-detail__values dt,
+	.ax-contacts-detail__value {
+		grid-column: 1;
+	}
+}
+
+/*
  * The lookup form. One field, because there is one question -- who -- and the three kinds of answer
  * are told apart by looking at what was typed rather than by making somebody choose first.
  */

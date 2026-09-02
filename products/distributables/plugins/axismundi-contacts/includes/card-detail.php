@@ -69,6 +69,35 @@ function axismundi_contacts_detail_sections() : array {
 }
 
 /**
+ * Where a value goes, when it goes anywhere.
+ *
+ * Only the three kinds of value that are an address of something: an email, a telephone number,
+ * and a URI that is already `http` or `https`. A handle like `@name@example.social` is not a URL
+ * and is left as text -- guessing a profile page from it would be inventing a destination.
+ *
+ * Deliberately small and local to this screen. What a public profile does with the same card is a
+ * different question with different answers -- a service-specific control, a map, a body of text --
+ * and that belongs to a projection renderer rather than here.
+ *
+ * @param array<string,mixed> $entry    Entry.
+ * @param string              $property Property it belongs to.
+ * @return string Empty when the value is not an address of anything.
+ */
+function axismundi_contacts_detail_href( array $entry, string $property ) : string {
+	if ( 'emails' === $property ) {
+		$address = trim( (string) ( $entry['address'] ?? '' ) );
+		return '' !== $address ? 'mailto:' . $address : '';
+	}
+	if ( 'phones' === $property ) {
+		// `tel:` takes digits and a leading plus; the spacing is for reading, not for dialling.
+		$dialled = preg_replace( '/[^0-9+]/', '', (string) ( $entry['number'] ?? '' ) );
+		return '' !== (string) $dialled ? 'tel:' . $dialled : '';
+	}
+	$uri = trim( (string) ( $entry['uri'] ?? '' ) );
+	return 1 === preg_match( '#^https?://#i', $uri ) ? $uri : '';
+}
+
+/**
  * One entry's line, with what it is called and whether a stranger sees it.
  *
  * A `dd`, because a value on this screen is a description of the property above it. A card is a set
@@ -96,9 +125,14 @@ function axismundi_contacts_detail_row( array $entry, string $property, bool $pu
 	if ( '' === trim( $text ) ) {
 		return;
 	}
+	$href = axismundi_contacts_detail_href( $entry, $property );
 	?>
 	<dd class="ax-contacts-detail__value">
-		<span class="ax-contacts-detail__text"><?php echo esc_html( $text ); ?></span>
+		<?php if ( '' !== $href ) : ?>
+			<a class="ax-contacts-detail__text" href="<?php echo esc_url( $href, array( 'http', 'https', 'mailto', 'tel' ) ); ?>"><?php echo esc_html( $text ); ?></a>
+		<?php else : ?>
+			<span class="ax-contacts-detail__text"><?php echo esc_html( $text ); ?></span>
+		<?php endif; ?>
 		<?php if ( '' !== $label ) : ?>
 			<span class="ax-contacts-detail__label"><?php echo esc_html( $label ); ?></span>
 		<?php endif; ?>

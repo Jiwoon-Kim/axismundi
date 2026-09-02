@@ -255,6 +255,126 @@ try {
 	ax_profile_assert( $ax_profile_results, 'the local handle alias opts out of Core trailing-slash canonicalization', false === axismundi_actors_handle_alias_canonical_redirect( 'https://example.test/@alice_profile/' ) );
 	$GLOBALS['axismundi_actors_profile_actor'] = $ax_previous_current_actor;
 	$GLOBALS['wp_query'] = $ax_previous_query;
+	$ax_profile_results[] = ( static function () use ( $ax_profile_group ) : bool {
+		/*
+		 * A profile address read back to the Actor it belongs to.
+		 *
+		 * This is the address a person actually has -- `https://mastodon.social/@alice`, copied out of a
+		 * browser -- and it is not the Actor's canonical id, so nothing matching on ids can answer from
+		 * it. Two stores are involved and they are not alike: a local profile address is derived from
+		 * the handle and stored nowhere, while a remote one is a cached string.
+		 */
+		global $wpdb;
+		$pass   = true;
+		$report = static function ( string $label, bool $held ) use ( &$pass ) : void {
+			$pass = $pass && $held;
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+			printf( "[%s] %s\n", $held ? 'PASS' : 'FAIL', $label );
+		};
+
+		$local = axismundi_actors_get_by_handle( 'alice_profile' );
+		$url   = $local instanceof Axismundi_Actor ? $local->get_profile_url() : '';
+		$again = '' !== $url ? axismundi_actors_get_by_profile_url( $url ) : null;
+		$slash = '' !== $url ? axismundi_actors_get_by_profile_url( trailingslashit( $url ) ) : null;
+		$report(
+			'a local actor is reachable by the profile address it publishes',
+			$local instanceof Axismundi_Actor && '' !== $url
+				&& $again instanceof Axismundi_Actor && $local->get_identity_id() === $again->get_identity_id()
+				// The same address said differently is the same address.
+				&& $slash instanceof Axismundi_Actor && $local->get_identity_id() === $slash->get_identity_id()
+				// A handle nobody holds stays nobody, rather than becoming the nearest match.
+				&& null === axismundi_actors_get_by_profile_url( home_url( '/@alice_profile_nobody' ) )
+				/*
+				 * And a handle read out of the wrong namespace is not an answer either. A Group is
+				 * addressed under `/group/@`, so `/@` carrying its handle is an address it does not live
+				 * at -- which is caught only because the Actor found is asked for its own address back,
+				 * rather than trusted because a handle happened to parse.
+				 */
+				&& $ax_profile_group instanceof Axismundi_Actor
+				&& null === axismundi_actors_get_by_profile_url( home_url( '/@ax_profile_forum' ) )
+				&& axismundi_actors_get_by_profile_url( $ax_profile_group->get_profile_url() ) instanceof Axismundi_Actor
+		);
+
+		/*
+		 * A cached remote Actor answers from the column its profile address is kept in. The id and the
+		 * profile address are deliberately different strings, because that is the case this accessor
+		 * exists for: matching that address against ids finds nothing at all.
+		 */
+		$uri    = 'https://example.com/users/ax_url_carol';
+		$remote = axismundi_actors_upsert_remote(
+			array(
+				'uri'                => $uri,
+				'actor_type'         => 'Person',
+				'preferred_username' => 'ax_url_carol',
+				'display_name'       => 'Carol Remote',
+				'profile_url'        => 'https://example.com/@ax_url_carol',
+				'endpoints'          => array(
+					'inbox'  => 'https://example.com/users/ax_url_carol/inbox',
+					'outbox' => 'https://example.com/users/ax_url_carol/outbox',
+				),
+				'payload'            => array( 'id' => $uri, 'type' => 'Person', 'preferredUsername' => 'ax_url_carol' ),
+			)
+		);
+		$remote_id = $remote instanceof Axismundi_Actor ? $remote->get_identity_id() : 0;
+		$found     = axismundi_actors_get_by_profile_url( 'https://Example.Com/@ax_url_carol' );
+		$report(
+			'a cached remote actor answers from the address people open, not from its id',
+			$remote_id > 0
+				// Host casing is a spelling, not a different server.
+				&& $found instanceof Axismundi_Actor && $remote_id === $found->get_identity_id()
+				// The two strings really are different, so this was not an id match in disguise.
+				&& $uri !== $remote->get_profile_url()
+				&& null === axismundi_actors_get_by_uri( 'https://example.com/@ax_url_carol' )
+				// A stranger is absent rather than approximated.
+				&& null === axismundi_actors_get_by_profile_url( 'https://example.com/@ax_url_dave' )
+				/*
+				 * And what is not a web address is not one. Asked of the comparison form directly,
+				 * because a lookup answers nothing for these either way -- and "nothing, because that was
+				 * never a web address" and "nothing, because nobody is at that address" are different
+				 * answers that must not be allowed to stand in for each other.
+				 */
+				&& '' === axismundi_actors_normalize_web_url( 'acct:ax_url_carol@example.com' )
+				&& '' === axismundi_actors_normalize_web_url( 'javascript:alert(1)' )
+				&& '' === axismundi_actors_normalize_web_url( 'not a url' )
+				&& null === axismundi_actors_get_by_profile_url( 'acct:ax_url_carol@example.com' )
+		);
+
+		/*
+		 * And it never goes and asks. An address arriving from outside must not be able to send this
+		 * server knocking on a door of the sender's choosing, so an Actor that is not cached is simply
+		 * not here. The source is read as well as the behaviour, because this failure is silent: a fetch
+		 * added later would look exactly like a cache that had quietly got better.
+		 */
+		$asked = false;
+		add_filter(
+			'pre_http_request',
+			static function ( $pre ) use ( &$asked ) {
+				$asked = true;
+				return $pre;
+			}
+		);
+		$uncached = axismundi_actors_get_by_profile_url( 'https://never-cached.example/@nobody' );
+		remove_all_filters( 'pre_http_request' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- local bundled source read.
+		$source = (string) file_get_contents( dirname( __DIR__ ) . '/includes/repository.php' );
+		$report(
+			'resolving a profile address reads the cache and asks nobody',
+			null === $uncached
+				&& ! $asked
+				&& ! str_contains( $source, 'wp_remote_get' )
+				&& ! str_contains( $source, 'wp_safe_remote_get' )
+		);
+
+		if ( $remote_id > 0 ) {
+			// All three, in the order the fixture teardown above uses: an actor row left behind
+			// without its identity is exactly what the repository audit refuses to find.
+			$wpdb->delete( axismundi_actors_addresses_table(), array( 'identity_id' => $remote_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB
+			$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => $remote_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB
+			$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $remote_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB
+		}
+		return $pass;
+	} )();
+
 } finally {
 	$GLOBALS['axismundi_actors_profile_actor'] = null;
 	update_option( 'permalink_structure', $ax_old_permalink );

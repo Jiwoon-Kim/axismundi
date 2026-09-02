@@ -75,9 +75,6 @@ function axismundi_actors_management_back_url( Axismundi_Actor $actor ) : string
 	if ( $actor->is_managed() ) {
 		return axismundi_actors_managed_actors_admin_url( $actor->get_identity_id() );
 	}
-	if ( 'site' === $actor->get_scope() ) {
-		return admin_url( 'options-general.php?page=axismundi-actor-site' );
-	}
 	$user_id = $actor->get_local_user_id();
 	return axismundi_actors_admin_url( get_current_user_id() === $user_id ? 0 : (int) $user_id );
 }
@@ -222,13 +219,6 @@ function axismundi_actors_register_admin_pages() : void {
 		'read',
 		'axismundi-managed-actors',
 		'axismundi_actors_render_managed_actors_page'
-	);
-	add_options_page(
-		__( 'Actor Profile', 'axismundi-actors' ),
-		__( 'Actor Profile', 'axismundi-actors' ),
-		'manage_options',
-		'axismundi-actor-site',
-		'axismundi_actors_render_site_page'
 	);
 }
 add_action( 'admin_menu', 'axismundi_actors_register_admin_pages' );
@@ -785,29 +775,6 @@ function axismundi_actors_render_management( Axismundi_Actor $actor, int $user_i
 	<?php
 }
 
-/** @return void */
-function axismundi_actors_render_site_page() : void {
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_die( esc_html__( 'You cannot manage the site actor.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
-	}
-	$actor = axismundi_actors_get_site_actor();
-	echo '<div class="wrap"><h1>' . esc_html__( 'Site Actor Profile', 'axismundi-actors' ) . '</h1>';
-	axismundi_actors_admin_notice();
-	if ( ! $actor instanceof Axismundi_Actor ) {
-		echo '<p>' . esc_html__( 'The site actor has not been seeded yet.', 'axismundi-actors' ) . '</p></div>';
-		return;
-	}
-	?>
-	<table class="form-table" role="presentation">
-		<tr><th scope="row"><?php esc_html_e( 'Handle', 'axismundi-actors' ); ?></th><td><code>@<?php echo esc_html( $actor->get_preferred_username() ); ?></code></td></tr>
-		<tr><th scope="row"><?php esc_html_e( 'Actor type', 'axismundi-actors' ); ?></th><td><?php esc_html_e( 'Application', 'axismundi-actors' ); ?></td></tr>
-		<tr><th scope="row"><?php esc_html_e( 'Status', 'axismundi-actors' ); ?></th><td><strong><?php esc_html_e( 'Disabled', 'axismundi-actors' ); ?></strong></td></tr>
-	</table>
-	<p class="description"><?php esc_html_e( 'The Site Actor is reserved for a future Instance Actor implementation and cannot publish or be configured yet.', 'axismundi-actors' ); ?></p>
-	</div>
-	<?php
-}
-
 /* -------------------------------------------------------------------------- *
  * Avatar / header media pickers (core Media modal; assets on these screens only).
  * -------------------------------------------------------------------------- */
@@ -819,7 +786,7 @@ function axismundi_actors_render_site_page() : void {
  * @return void
  */
 function axismundi_actors_enqueue_media_picker( string $hook ) : void {
-	if ( ! in_array( $hook, array( 'users_page_axismundi-actor-profile', 'users_page_axismundi-managed-groups', 'settings_page_axismundi-actor-site' ), true ) ) {
+	if ( ! in_array( $hook, array( 'users_page_axismundi-actor-profile', 'users_page_axismundi-managed-groups' ), true ) ) {
 		return;
 	}
 	wp_enqueue_media();
@@ -923,57 +890,90 @@ function axismundi_actors_admin_text_language( Axismundi_Actor $actor ) : string
  */
 function axismundi_actors_text_form( Axismundi_Actor $actor ) : void {
 	$map       = axismundi_actors_get_text_map( $actor->get_identity_id() );
+	$primary   = axismundi_actors_serialization_language( $actor );
 	$language  = axismundi_actors_admin_text_language( $actor );
-	$languages = array_keys( $map );
-	$languages[] = $actor->get_default_language() ?: axismundi_actors_site_language();
-	$languages[] = axismundi_actors_site_language();
-	$user_id = $actor->get_local_user_id();
-	if ( $user_id ) {
-		$languages[] = axismundi_actors_normalize_language_tag( get_user_locale( $user_id ) );
-	}
-	$languages = array_values( array_unique( array_filter( $languages ) ) );
+	$secondary = array_values(
+		array_unique(
+			array_filter(
+				array_merge( array_keys( $map ), array( $language ) ),
+				static function ( $candidate ) use ( $primary ) : bool {
+					return is_string( $candidate ) && '' !== $candidate && $candidate !== $primary;
+				}
+			)
+		)
+	);
+	$languages = array_merge( array( $primary ), $secondary );
+	$language_options = axismundi_actors_profile_language_options( $languages );
 	$back      = axismundi_actors_management_back_url( $actor );
-	$person_name = 'Person' === $actor->get_type()
-		? ( axismundi_actors_person_names( $actor->get_identity_id() )[ $language ] ?? array() )
-		: array();
+	$add_url   = remove_query_arg( 'ax_actor_lang', $back );
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing what to show, not writing.
+	$adding_translation = isset( $_GET['ax_actor_add_language'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['ax_actor_add_language'] ) );
 	?>
 	<h2><?php esc_html_e( 'Profile languages', 'axismundi-actors' ); ?></h2>
 	<p class="description"><?php esc_html_e( 'Translations are optional. Empty fields continue to use the live WordPress profile or site value.', 'axismundi-actors' ); ?></p>
 	<p>
 		<?php foreach ( $languages as $candidate ) : ?>
-			<a class="button <?php echo $candidate === $language ? 'button-primary' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'ax_actor_lang', $candidate, $back ) ); ?>"><?php echo esc_html( $candidate ); ?></a>
+			<a class="button <?php echo $candidate === $language ? 'button-primary' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'ax_actor_lang', $candidate, $back ) ); ?>">
+				<?php echo $candidate === $primary ? esc_html__( 'primary', 'axismundi-actors' ) . ' &middot; ' : ''; ?><?php echo esc_html( $candidate ); ?>
+			</a>
 		<?php endforeach; ?>
 	</p>
+	<p class="description">
+		<?php esc_html_e( 'The primary language is what other servers get when they ask for no language in particular. Every other language is the same profile written out again.', 'axismundi-actors' ); ?>
+	</p>
+	<p><a class="button" href="<?php echo esc_url( add_query_arg( 'ax_actor_add_language', '1', $add_url ) ); ?>"><?php esc_html_e( 'Add translated profile', 'axismundi-actors' ); ?></a></p>
+	<?php if ( $adding_translation ) : ?>
+		<form method="get" action="<?php echo esc_url( $add_url ); ?>">
+			<label for="ax-actor-add-language"><?php esc_html_e( 'Profile language', 'axismundi-actors' ); ?></label>
+			<input id="ax-actor-add-language" name="ax_actor_lang" list="ax-actor-language-options" class="regular-text" placeholder="en-US" required>
+			<datalist id="ax-actor-language-options">
+				<?php foreach ( $language_options as $tag => $label ) : ?>
+					<option value="<?php echo esc_attr( $tag ); ?>"><?php echo esc_html( $label ); ?></option>
+				<?php endforeach; ?>
+			</datalist>
+			<?php submit_button( __( 'Open translated profile', 'axismundi-actors' ), 'secondary', 'submit', false ); ?>
+		</form>
+	<?php endif; ?>
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<input type="hidden" name="action" value="axismundi_actors_set_texts">
 		<input type="hidden" name="identity_id" value="<?php echo esc_attr( (string) $actor->get_identity_id() ); ?>">
+		<input type="hidden" name="language_tag" value="<?php echo esc_attr( $language ); ?>">
 		<?php wp_nonce_field( 'ax_actors_texts_' . $actor->get_identity_id() ); ?>
 		<table class="form-table" role="presentation">
 			<tr>
-				<th scope="row"><label for="ax-actor-language"><?php esc_html_e( 'Language', 'axismundi-actors' ); ?></label></th>
-				<td><input id="ax-actor-language" name="language_tag" value="<?php echo esc_attr( $language ); ?>" class="regular-text" required><p class="description"><?php esc_html_e( 'BCP 47 language tag, for example ko-KR or en-US.', 'axismundi-actors' ); ?></p></td>
+				<th scope="row"><label for="ax-actor-primary-language"><?php esc_html_e( 'Profile language', 'axismundi-actors' ); ?></label></th>
+				<td>
+					<select id="ax-actor-primary-language" name="profile_language">
+						<?php foreach ( $language_options as $tag => $label ) : ?>
+							<option value="<?php echo esc_attr( $tag ); ?>" <?php selected( $language, $tag ); ?>><?php echo esc_html( $label ); ?></option>
+						<?php endforeach; ?>
+					</select>
+					<p class="description">
+						<?php esc_html_e( 'This is the language key this profile is filed under: changing it re-files the same name and summary, and never overwrites another language that is already written.', 'axismundi-actors' ); ?>
+					</p>
+					<?php if ( $language !== $primary ) : ?>
+						<p><button type="submit" class="button button-secondary" name="make_primary" value="1"><?php esc_html_e( 'Set this profile as primary', 'axismundi-actors' ); ?></button></p>
+						<p class="description">
+							<?php
+							printf(
+								/* translators: %s: BCP 47 tag of the current primary language. */
+								esc_html__( 'A separate decision. Re-filing a profile changes which language it is written in; making it primary changes what peers get when they ask for no language in particular, and moves the name details away from %s.', 'axismundi-actors' ),
+								esc_html( $primary )
+							);
+							?>
+						</p>
+					<?php endif; ?>
+				</td>
 			</tr>
 			<tr>
 				<th scope="row"><label for="ax-actor-name"><?php esc_html_e( 'Name', 'axismundi-actors' ); ?></label></th>
 				<td>
-					<?php if ( 'Person' === $actor->get_type() ) : ?>
-						<div style="max-width:26em">
-							<p><label for="ax-actor-given" style="display:block"><?php esc_html_e( 'Given name', 'axismundi-actors' ); ?></label><input id="ax-actor-given" name="first_name" value="<?php echo esc_attr( (string) ( $person_name['first_name'] ?? '' ) ); ?>" class="regular-text"></p>
-							<p><label for="ax-actor-additional" style="display:block"><?php esc_html_e( 'Middle name', 'axismundi-actors' ); ?></label><input id="ax-actor-additional" name="middle_name" value="<?php echo esc_attr( (string) ( $person_name['middle_name'] ?? '' ) ); ?>" class="regular-text"></p>
-							<p><label for="ax-actor-family" style="display:block"><?php esc_html_e( 'Family name', 'axismundi-actors' ); ?></label><input id="ax-actor-family" name="last_name" value="<?php echo esc_attr( (string) ( $person_name['last_name'] ?? '' ) ); ?>" class="regular-text"></p>
-						</div>
-					<?php else : ?>
-						<input id="ax-actor-name" name="name" value="<?php echo esc_attr( $map[ $language ]['name'] ?? '' ); ?>" class="regular-text">
-					<?php endif; ?>
+					<input id="ax-actor-name" name="name" value="<?php echo esc_attr( (string) ( $map[ $language ]['name'] ?? '' ) ); ?>" class="regular-text">
 				</td>
 			</tr>
 			<tr>
 				<th scope="row"><label for="ax-actor-summary"><?php esc_html_e( 'Summary', 'axismundi-actors' ); ?></label></th>
 				<td><textarea id="ax-actor-summary" name="summary" rows="4" class="large-text"><?php echo esc_textarea( $map[ $language ]['summary'] ?? '' ); ?></textarea></td>
-			</tr>
-			<tr>
-				<th scope="row"><?php esc_html_e( 'Default language', 'axismundi-actors' ); ?></th>
-				<td><label><input type="checkbox" name="make_default" value="1" <?php checked( $actor->get_default_language(), $language ); ?>> <?php esc_html_e( 'Use this language for scalar profile fields sent to peers.', 'axismundi-actors' ); ?></label></td>
 			</tr>
 		</table>
 		<?php submit_button( __( 'Save profile language', 'axismundi-actors' ) ); ?>
@@ -1300,31 +1300,41 @@ function axismundi_actors_handle_set_texts() : void {
 	if ( ! $actor instanceof Axismundi_Actor || ! axismundi_actors_can_manage( $actor ) ) {
 		wp_die( esc_html__( 'You cannot manage this actor profile.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
 	}
-	$language = isset( $_POST['language_tag'] ) ? sanitize_text_field( wp_unslash( $_POST['language_tag'] ) ) : '';
-	$result   = true;
-	$values   = array( 'summary' => isset( $_POST['summary'] ) ? wp_kses_post( wp_unslash( $_POST['summary'] ) ) : '' );
-	if ( 'Person' === $actor->get_type() ) {
-		$parts = array();
-		foreach ( array( 'first_name', 'middle_name', 'last_name' ) as $field ) {
-			if ( isset( $_POST[ $field ] ) ) {
-				$parts[ $field ] = sanitize_text_field( wp_unslash( $_POST[ $field ] ) );
+	$source_language  = isset( $_POST['language_tag'] ) ? sanitize_text_field( wp_unslash( $_POST['language_tag'] ) ) : '';
+	$profile_language = isset( $_POST['profile_language'] ) ? sanitize_text_field( wp_unslash( $_POST['profile_language'] ) ) : $source_language;
+	$source_language  = axismundi_actors_normalize_language_tag( $source_language );
+	$language         = $source_language;
+	$target_language  = axismundi_actors_normalize_language_tag( $profile_language );
+	$result           = true;
+	if ( '' === $language || '' === $target_language ) {
+		$result = new WP_Error( 'ax_actors_text_language', __( 'Enter a valid profile language.', 'axismundi-actors' ) );
+	}
+	$current_primary = axismundi_actors_serialization_language( $actor );
+	if ( ! is_wp_error( $result ) && $target_language !== $language ) {
+		$result = axismundi_actors_rename_text_language( $identity_id, $language, $target_language );
+		if ( ! is_wp_error( $result ) && $language === $current_primary ) {
+			$result = axismundi_actors_set_default_language( $identity_id, $target_language );
+		}
+		if ( ! is_wp_error( $result ) ) {
+			$language = $target_language;
+		}
+	}
+	$values = array(
+		'summary' => isset( $_POST['summary'] ) ? wp_kses_post( wp_unslash( $_POST['summary'] ) ) : '',
+		// Always what was typed. Nothing assembles this string any more, so nothing can be overwritten
+		// by a set of parts that published themselves a moment ago.
+		'name'    => isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '',
+	);
+	if ( ! is_wp_error( $result ) ) {
+		foreach ( $values as $field => $value ) {
+			$outcome = axismundi_actors_set_text( $identity_id, $field, $language, $value );
+			if ( is_wp_error( $outcome ) && ! is_wp_error( $result ) ) {
+				$result = $outcome;
 			}
 		}
-		$outcome = axismundi_actors_set_person_name( $identity_id, $language, $parts );
-		if ( is_wp_error( $outcome ) ) {
-			$result = $outcome;
-		}
-	} else {
-		$values['name'] = isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '';
 	}
-	foreach ( $values as $field => $value ) {
-		$outcome = axismundi_actors_set_text( $identity_id, $field, $language, $value );
-		if ( is_wp_error( $outcome ) && ! is_wp_error( $result ) ) {
-			$result = $outcome;
-		}
-	}
-	if ( ! is_wp_error( $result ) && ! empty( $_POST['make_default'] ) ) {
-		$result = axismundi_actors_set_default_language( $identity_id, $language );
+	if ( ! is_wp_error( $result ) && ! empty( $_POST['make_primary'] ) ) {
+		$result = axismundi_actors_make_profile_primary( $identity_id, $language );
 	}
 	if ( ! is_wp_error( $result ) ) {
 		axismundi_actors_profile_updated( $identity_id );

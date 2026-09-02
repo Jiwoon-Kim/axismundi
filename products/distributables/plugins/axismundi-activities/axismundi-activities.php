@@ -2,11 +2,10 @@
 /**
  * Plugin Name:       Axismundi Activities
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-activities
- * Description:       ActivityStreams activity ledger and social relationship state for Axismundi. It owns no HTTP inbox, signatures, delivery queue, notifications, or Web Push.
+ * Description:       ActivityStreams activity ledger and social relationship state for Axismundi. Requires Axismundi Actors and Axismundi Object Projections. It owns no HTTP inbox, signatures, delivery queue, notifications, or Web Push, and makes no network request of its own.
  * Version:           0.1.0
  * Requires at least: 6.7
  * Requires PHP:      8.1
- * Requires Plugins:  axismundi-actors
  * Author:            KIM JIWOON
  * Author URI:        https://designbusan.ai.kr
  * License:           GPL-3.0-or-later
@@ -15,10 +14,19 @@
  *
  * @package AxismundiActivities
  *
- * Phase 3 implements the immutable Activity ledger, social relation materialization,
- * Follow, Like, and personal Announce controls, local Object lifecycle recording, public-safe collection queries, and a read-only administrator log. It creates no public
- * Activity route, scheduled event, notification, signature, delivery queue, or
- * network request. Reply remains deferred until the Notes CPT contract is established.
+ * Implemented: the immutable Activity ledger, social relation materialization, Follow and
+ * Block, Like, Dislike, emoji reactions, Announce, Reply and votes with their Undos,
+ * FEP-044f QuoteRequest decisions, local Object lifecycle recording, feed blocks,
+ * public-safe collection queries, and a read-only administrator log.
+ *
+ * There is no HTTP client here, no scheduled event, no signature, no delivery queue, and no
+ * notification. The public REST routes are reads, plus one anonymous remote-follow endpoint
+ * that asks Actors to resolve a handle a visitor typed and answers with the address of
+ * their own server; it is rate limited and stores nothing. readme.txt says so publicly.
+ *
+ * `Requires Plugins` is deliberately absent until the dependency slugs exist on
+ * wordpress.org: a header naming a slug that is not there blocks activation instead of
+ * explaining anything.
  */
 
 defined( 'ABSPATH' ) || exit;

@@ -1,35 +1,32 @@
 <?php
 /**
- * An Actor as a JSContact Card (RFC 9553 / 9982).
+ * What Actors contributes to an Actor's JSContact Card, and what it no longer owns.
  *
- * The facts stay here, where they are owned; this says them in the contact vocabulary. It is the
- * second representation of the same Actor -- ActivityStreams is assembled by Object Projections and
- * answers "who is this on the network", while this answers "who is this as an entry in an address
- * book". Neither is derived from the other, and no fact is stored twice to make both work.
+ * The Card itself belongs to Contacts: it is a document somebody authored there, it carries the
+ * `uid`, and Contacts serves it. Actors used to build one from the identity registry, which meant
+ * two plugins each publishing a Card for the same Actor under different identifiers -- and anybody
+ * saving both would have kept the same person twice.
  *
- * Two shapes worth stating because getting them wrong is easy and quiet:
+ * It contributes nothing at all now, and that is the point. It used to add the Actor's other
+ * languages and the anniversaries it kept, which meant a public contact document carried facts
+ * assembled from the identity registry rather than facts somebody wrote on their card and said
+ * could be published. Two records of the same thing, one of them published without being chosen.
  *
- * `@type` is always `Card`. The kind of thing it describes is `kind`, so a Person Card is
- * `{"@type":"Card","kind":"individual"}` and never `{"@type":"Person"}` -- the second reads as
- * ActivityStreams wearing a JSContact filename.
+ * The Card is the ledger. A name in another language, a birthday, a calendar: those are written on
+ * the Card, and what a stranger receives is the part of it its owner selected. Published because
+ * somebody said so, rather than because a plugin was installed.
  *
- * `uid` is minted only for identities this site actually owns. A remote Actor's `uid` is whatever
- * that server published, or nothing at all: the UUID we generated while caching them names our
- * snapshot, not their portable identity, and publishing it would hand an address book a permanent
- * identifier for a person that only exists in our database. RFC 9982 makes `uid` optional precisely
- * so that a converter does not have to invent one.
+ * No `uid` is minted here, by anything, ever. An identifier for an Actor's contact card comes from
+ * the Card, and deriving one from the Actor's UUID is what created the duplicate this file no longer
+ * does.
  *
- * MVP scope: identity, kind, and names. Emails, phones, addresses, birthdays, links and calendars are
- * typed facts the Actor does not store yet, and an empty `emails` object would say something untrue
- * about somebody who simply has not been asked.
+ * What is left is the one thing Actors is the authority on for a contact document: what kind of
+ * entity an Actor is, in JSContact's vocabulary.
  *
  * @package AxismundiActors
  */
 
 defined( 'ABSPATH' ) || exit;
-
-/** The media type RFC 9553 registers. */
-const AXISMUNDI_ACTORS_JSCONTACT_MEDIA_TYPE = 'application/jscontact+json; type=Card';
 
 /**
  * What kind of thing this Actor is, in JSContact's vocabulary.
@@ -57,192 +54,24 @@ function axismundi_actors_jscontact_kind( string $actor_type ) : string {
 }
 
 /**
- * The `uid` for one Actor, or '' when this site has no business minting one.
+ * One Actor as a JSContact Card, from whoever owns that document.
  *
- * @param Axismundi_Actor $actor Actor.
- * @return string
- */
-function axismundi_actors_jscontact_uid( Axismundi_Actor $actor ) : string {
-	if ( ! $actor->is_local() ) {
-		// Only what they published themselves, and nothing is a valid answer.
-		$payload = axismundi_actors_get_remote_payload( $actor->get_identity_id() );
-		$uid     = trim( (string) ( $payload['uid'] ?? '' ) );
-		return $uid;
-	}
-	$uuid = trim( (string) $actor->get_uuid() );
-	return '' === $uuid ? '' : 'urn:uuid:' . $uuid;
-}
-
-/**
- * One language's name, as JSContact states it.
- *
- * `isOrdered` is the claim that the components are already in the order they are read in, which is
- * the whole reason the order is stored: a consumer must not reassemble a Korean name the way it
- * would an English one.
- *
- * @param array<string,mixed> $row Stored name row.
- * @return array<string,mixed>|null
- */
-function axismundi_actors_jscontact_name( array $row ) : ?array {
-	$map = array(
-		'honorific_prefix' => 'title',
-		'first_name'       => 'given',
-		'middle_name'  => 'given2',
-		'last_name'      => 'surname',
-		'honorific_suffix' => 'credential',
-	);
-	$order = 'family-given' === (string) ( $row['display_order'] ?? '' )
-		? array( 'honorific_prefix', 'last_name', 'first_name', 'middle_name', 'honorific_suffix' )
-		: array( 'honorific_prefix', 'first_name', 'middle_name', 'last_name', 'honorific_suffix' );
-
-	$components = array();
-	foreach ( $order as $part ) {
-		$value = trim( (string) ( $row[ $part ] ?? '' ) );
-		if ( '' !== $value ) {
-			$components[] = array( '@type' => 'NameComponent', 'kind' => $map[ $part ], 'value' => $value );
-		}
-	}
-	$full = axismundi_actors_assemble_person_name( $row );
-	if ( array() === $components && '' === $full ) {
-		return null;
-	}
-	$name = array( '@type' => 'Name' );
-	if ( '' !== $full ) {
-		$name['full'] = $full;
-	}
-	if ( array() !== $components ) {
-		$name['components'] = $components;
-		$name['isOrdered']  = true;
-	}
-	return $name;
-}
-
-/**
- * One Actor as a JSContact Card.
+ * Kept as the name callers already use. It builds nothing: Contacts holds the Card, and without
+ * Contacts there is no JSContact representation of an Actor at all. There is deliberately no
+ * fallback -- a Card derived from the identity registry would need an identifier, this site would
+ * mint one, and the day a real profile Card appeared the published identity would change underneath
+ * everybody who had saved it.
  *
  * @param Axismundi_Actor $actor Actor.
  * @return array<string,mixed>|WP_Error
  */
 function axismundi_actors_jscontact_card( Axismundi_Actor $actor ) {
-	$kind = axismundi_actors_jscontact_kind( $actor->get_type() );
-	if ( '' === $kind ) {
+	if ( ! function_exists( 'axismundi_contacts_jscontact_card' ) ) {
 		return new WP_Error(
-			'ax_actors_jscontact_kind',
-			__( 'There is no contact kind for that sort of Actor.', 'axismundi-actors' ),
+			'ax_actors_jscontact_owner',
+			__( 'Contact cards need Axismundi Contacts.', 'axismundi-actors' ),
 			array( 'status' => 404 )
 		);
 	}
-	$card = array(
-		'@type'   => 'Card',
-		'version' => '2.0',
-		'kind'    => $kind,
-	);
-	$uid = axismundi_actors_jscontact_uid( $actor );
-	if ( '' !== $uid ) {
-		$card['uid'] = $uid;
-	}
-
-	$language = axismundi_actors_normalize_language_tag( (string) $actor->get_default_language() );
-	if ( '' !== $language ) {
-		$card['language'] = $language;
-	}
-
-	$names = 'Person' === $actor->get_type() ? axismundi_actors_person_names( $actor->get_identity_id() ) : array();
-	$name  = isset( $names[ $language ] ) ? axismundi_actors_jscontact_name( $names[ $language ] ) : null;
-	if ( null === $name ) {
-		// Whatever this Actor is already called. An Organization has a name and no components, and so
-		// does a person who never filled any in.
-		$display = trim( $actor->get_display_name() );
-		$name    = '' !== $display ? array( '@type' => 'Name', 'full' => $display ) : null;
-	}
-	if ( null !== $name ) {
-		$card['name'] = $name;
-	}
-
-	/*
-	 * The other languages, as JSContact keeps them: a patch per tag rather than a second Card. Only
-	 * the name is localized here, because it is the only thing this slice stores per language.
-	 */
-	$localizations = array();
-	foreach ( $names as $tag => $row ) {
-		if ( $tag === $language ) {
-			continue;
-		}
-		$localized = axismundi_actors_jscontact_name( $row );
-		if ( null !== $localized ) {
-			$localizations[ $tag ] = array( 'name' => $localized );
-		}
-	}
-	if ( array() !== $localizations ) {
-		$card['localizations'] = $localizations;
-	}
-	/**
-	 * Let a domain add what it owns.
-	 *
-	 * Calendars, and later places and typed contact facts, are other plugins' knowledge. An identity
-	 * registry that assembled them would be holding a second copy of facts it does not own -- so it
-	 * builds the identity half and asks.
-	 *
-	 * Anything added here is going into a public document: contributors must add only what the Actor
-	 * has published.
-	 *
-	 * @param array<string,mixed> $card  Card so far.
-	 * @param Axismundi_Actor     $actor Actor being described.
-	 */
-	return (array) apply_filters( 'axismundi_actors_jscontact_card', $card, $actor );
+	return axismundi_contacts_jscontact_card( $actor );
 }
-
-/** @return array<string,string> */
-function axismundi_actors_jscontact_rewrite_rules() : array {
-	return array( '^@([^/]+)\.jscontact$' => 'index.php?ax_actor_jscontact=$matches[1]' );
-}
-
-/** @return void */
-function axismundi_actors_register_jscontact_routes() : void {
-	foreach ( axismundi_actors_jscontact_rewrite_rules() as $regex => $query ) {
-		add_rewrite_rule( $regex, $query, 'top' );
-	}
-}
-add_action( 'init', 'axismundi_actors_register_jscontact_routes', 7 );
-
-/**
- * @param string[] $vars Query vars.
- * @return string[]
- */
-function axismundi_actors_jscontact_query_vars( array $vars ) : array {
-	$vars[] = 'ax_actor_jscontact';
-	return $vars;
-}
-add_filter( 'query_vars', 'axismundi_actors_jscontact_query_vars' );
-
-/**
- * Serve one Actor's Card.
- *
- * Public profiles only, through the same predicate the profile hub uses. A Card is a document
- * strangers fetch, and an Actor whose profile is not published has not agreed to be one.
- *
- * @return void
- */
-function axismundi_actors_serve_jscontact() : void {
-	$handle = (string) get_query_var( 'ax_actor_jscontact' );
-	if ( '' === $handle ) {
-		return;
-	}
-	$actor = axismundi_actors_get_by_handle( $handle );
-	$card  = $actor instanceof Axismundi_Actor && axismundi_actors_is_public_profile( $actor )
-		? axismundi_actors_jscontact_card( $actor )
-		: new WP_Error( 'ax_actors_jscontact_missing', 'not_found' );
-	if ( is_wp_error( $card ) ) {
-		status_header( 404 );
-		header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );
-		echo wp_json_encode( array( 'error' => 'not_found' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON response.
-		exit;
-	}
-	status_header( 200 );
-	header( 'Content-Type: ' . AXISMUNDI_ACTORS_JSCONTACT_MEDIA_TYPE . '; charset=' . get_option( 'blog_charset' ) );
-	header( 'X-Content-Type-Options: nosniff' );
-	header( 'Access-Control-Allow-Origin: *' );
-	echo wp_json_encode( $card ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON response.
-	exit;
-}
-add_action( 'template_redirect', 'axismundi_actors_serve_jscontact', 4 );

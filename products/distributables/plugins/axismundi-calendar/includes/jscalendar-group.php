@@ -210,8 +210,9 @@ add_action( 'template_redirect', 'axismundi_cal_serve_jscalendar_group', 4 );
 /**
  * Put an Actor's own public calendar on their contact card.
  *
- * Contributed from here rather than assembled in Actors: the calendar is this plugin's fact, and an
- * identity registry that knew how to address one would be holding a second copy of that knowledge.
+ * Contributed from here rather than assembled by whoever renders the card: the calendar is this
+ * plugin's fact, and a renderer that knew how to address one would be holding a second copy of that
+ * knowledge. Contacts owns the card and asks; this adds a calendar and touches nothing else.
  *
  * Only a published calendar. A card is a public document, and naming a private address on one turns
  * a contact card into directions around the sharing rules.
@@ -243,4 +244,4 @@ function axismundi_cal_jscontact_calendars( array $card, Axismundi_Actor $actor 
 	);
 	return $card;
 }
-add_filter( 'axismundi_actors_jscontact_card', 'axismundi_cal_jscontact_calendars', 10, 2 );
+add_filter( 'axismundi_contacts_jscontact_card', 'axismundi_cal_jscontact_calendars', 10, 2 );

@@ -60,6 +60,8 @@ require_once __DIR__ . '/includes/taxonomy.php';
 require_once __DIR__ . '/includes/taxonomy-migration.php';
 require_once __DIR__ . '/includes/templates.php';
 require_once __DIR__ . '/includes/meta.php';
+require_once __DIR__ . '/includes/countries.php';
+require_once __DIR__ . '/includes/subdivisions.php';
 require_once __DIR__ . '/includes/place-types.php';
 require_once __DIR__ . '/includes/place-id.php';
 require_once __DIR__ . '/includes/lookup.php';

@@ -33,17 +33,40 @@ try {
 
 	$uid = (int) wp_insert_user( array( 'user_login' => 'ax_text_alice', 'user_pass' => wp_generate_password(), 'display_name' => 'Live Alice', 'description' => 'Live bio', 'role' => 'author' ) );
 	$ax_text_users[] = $uid;
+	update_user_meta( $uid, 'locale', 'ko_KR' );
 	$actor = axismundi_actors_ensure_for_user( $uid );
 	$ax_text_ids[] = $actor->get_identity_id();
 
-	ax_text_assert( $ax_text_results, 'new local actors default to the normalized site language without copying WP_User text', axismundi_actors_site_language() === $actor->get_default_language() && array() === axismundi_actors_get_text_map( $actor->get_identity_id() ) );
+	ax_text_assert( $ax_text_results, 'a new user Person inherits the normalized WordPress profile language once, without copying profile text', 'ko-KR' === $actor->get_default_language() && array() === axismundi_actors_get_text_map( $actor->get_identity_id() ) );
 	ax_text_assert( $ax_text_results, 'language tags normalize to BCP-47 case and invalid tags are rejected', 'ko-KR' === axismundi_actors_normalize_language_tag( 'ko_KR' ) && 'zh-Hant-TW' === axismundi_actors_normalize_language_tag( 'ZH_hant_tw' ) && '' === axismundi_actors_normalize_language_tag( 'bad tag!' ) );
+	$ax_text_profile_options = axismundi_actors_profile_language_options( array( 'qaa' ) );
+	ax_text_assert(
+		$ax_text_results,
+		'the Actor profile selector shares the post editor BCP-47 choices while retaining an existing custom tag',
+		isset( $ax_text_profile_options['ko-KR'], $ax_text_profile_options['qaa'] )
+	);
 
 	$set_name = axismundi_actors_set_text( $actor->get_identity_id(), 'name', 'ko_KR', '앨리스' );
 	$set_bio  = axismundi_actors_set_text( $actor->get_identity_id(), 'summary', 'en_US', '<strong>English bio</strong><script>bad()</script>' );
 	$set_long = axismundi_actors_set_text( $actor->get_identity_id(), 'content', 'en', '<p>Long about</p>' );
 	$map      = axismundi_actors_get_text_map( $actor->get_identity_id() );
 	ax_text_assert( $ax_text_results, 'explicit name, summary, and content translations upsert and sanitize', true === $set_name && true === $set_bio && true === $set_long && '앨리스' === $map['ko-KR']['name'] && false === strpos( $map['en-US']['summary'], '<script>' ) && '<p>Long about</p>' === $map['en']['content'] );
+	axismundi_actors_set_text( $actor->get_identity_id(), 'name', 'fr', 'Alice Francaise' );
+	axismundi_actors_set_text( $actor->get_identity_id(), 'summary', 'fr', '<p>Profil francais</p>' );
+	$rename_profile = axismundi_actors_rename_text_language( $actor->get_identity_id(), 'fr', 'fr-CA' );
+	axismundi_actors_set_text( $actor->get_identity_id(), 'name', 'de', 'Alice Deutsch' );
+	$rename_collision = axismundi_actors_rename_text_language( $actor->get_identity_id(), 'fr-CA', 'de' );
+	$map = axismundi_actors_get_text_map( $actor->get_identity_id() );
+	ax_text_assert(
+		$ax_text_results,
+		'changing a profile language moves its complete map entry and refuses to overwrite another profile',
+		true === $rename_profile
+			&& ! isset( $map['fr'] )
+			&& 'Alice Francaise' === (string) ( $map['fr-CA']['name'] ?? '' )
+			&& '<p>Profil francais</p>' === (string) ( $map['fr-CA']['summary'] ?? '' )
+			&& is_wp_error( $rename_collision )
+			&& 'Alice Deutsch' === (string) ( $map['de']['name'] ?? '' )
+	);
 	update_user_meta( $uid, 'locale', 'ko_KR' );
 	ax_text_assert( $ax_text_results, 'a local Person HTML profile prefers an authored translation matching their WordPress profile language', 'ko-KR' === axismundi_actors_profile_language( $actor ) && '앨리스' === axismundi_actors_resolve_text( $actor, 'name', axismundi_actors_profile_language( $actor ) ) );
 
@@ -55,8 +78,11 @@ try {
 	axismundi_actors_set_text( $actor->get_identity_id(), 'name', 'ko-KR', '' );
 	$map = axismundi_actors_get_text_map( $actor->get_identity_id() );
 	ax_text_assert( $ax_text_results, 'empty text deletes the row instead of storing an empty translation', ! isset( $map['ko-KR']['name'] ) );
-	axismundi_actors_set_text( $actor->get_identity_id(), 'summary', 'en-US', '' );
-	ax_text_assert( $ax_text_results, 'missing translations fall back to live WP_User values', 'Live Alice' === axismundi_actors_resolve_text( $actor, 'name', 'fr-FR' ) && 'Live bio' === axismundi_actors_resolve_text( $actor, 'summary', 'fr-FR' ) );
+	foreach ( array_keys( axismundi_actors_get_text_map( $actor->get_identity_id() ) ) as $language ) {
+		axismundi_actors_set_text( $actor->get_identity_id(), 'name', (string) $language, '' );
+		axismundi_actors_set_text( $actor->get_identity_id(), 'summary', (string) $language, '' );
+	}
+	ax_text_assert( $ax_text_results, 'missing translations fall back to live WP_User values', 'Live Alice' === axismundi_actors_resolve_text( $actor, 'name', 'es-MX' ) && 'Live bio' === axismundi_actors_resolve_text( $actor, 'summary', 'es-MX' ) );
 
 	$invalid = axismundi_actors_set_text( $actor->get_identity_id(), 'unknown', 'en', 'x' );
 	ax_text_assert( $ax_text_results, 'invalid fields are rejected without creating rows', is_wp_error( $invalid ) );

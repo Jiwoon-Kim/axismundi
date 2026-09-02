@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Axismundi Object Projections
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-object-projections
- * Description:       Projects WordPress objects, Actors, and collections into ActivityStreams JSON-LD through a transformer registry and a single renderer. It owns representation and public read routes, not Activity state, Inbox writes, signatures, or delivery.
+ * Description:       Projects WordPress objects, Actors, and collections into ActivityStreams JSON-LD through a transformer registry and a single renderer. Requires Axismundi Actors. It owns representation and public read routes, not Activity state, Inbox writes, signatures, or delivery.
  * Version:           0.1.0
  * Requires at least: 6.7
  * Requires PHP:      8.1
@@ -18,6 +18,10 @@
  * implemented. Public representation routes include collections and noindex cached Object
  * views, but there is deliberately no Activity store, Inbox write handling, signature
  * handling, or delivery.
+ *
+ * Outbound requests are reads and there are two kinds: one an administrator asks for, from
+ * Tools > Remote Objects, and one an inbound public Announce triggers for the single URI it
+ * names. Neither fans out, and neither downloads media. readme.txt says so publicly.
  */
 
 defined( 'ABSPATH' ) || exit;

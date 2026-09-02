@@ -1,0 +1,987 @@
+/**
+ * The Card editor.
+ *
+ * Plain admin controls arranged into sections. Nothing here decides what a Card says; it decides
+ * whether somebody can see the parts of a name they are dragging.
+ */
+
+.ax-ce__main {
+	max-width: 46em;
+}
+
+.ax-ce-section {
+	margin: 0 0 1.5em;
+	padding: 0 0 1em;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.ax-ce-section h2 {
+	margin: 0 0 .5em;
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.ax-ce-section h3 {
+	margin: 0 0 .5em;
+	font-size: 16px;
+	font-weight: 600;
+}
+
+/* RFC 9553 describes name, nicknames, organizations, speakToAs and titles as one family. */
+.ax-ce-cluster {
+	margin: 0 0 1.5em;
+	padding: 0 0 1em;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.ax-ce-cluster > h2 {
+	margin: 0 0 .75em;
+	font-size: 18px;
+	font-weight: 600;
+}
+
+.ax-ce-cluster > .ax-ce-section {
+	margin: 0 0 1em;
+	padding: 0;
+	border: 0;
+}
+
+.ax-ce-cluster > .ax-ce-section:last-child {
+	margin-bottom: 0;
+}
+
+.ax-ce-label {
+	display: inline-block;
+	min-width: 10em;
+}
+
+.ax-ce-parts {
+	margin: 0 0 .5em;
+	padding: 0;
+	list-style: none;
+}
+
+.ax-ce-part {
+	display: flex;
+	gap: .5em;
+	align-items: center;
+	margin: 0 0 .25em;
+	padding: .35em .5em;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 3px;
+	cursor: grab;
+}
+
+/* The order of the parts is the reading order, so it has to look like something you can move. */
+.ax-ce-parts.is-dragging .ax-ce-part {
+	border-style: dashed;
+}
+
+.ax-ce-part__grip {
+	color: #787c82;
+	cursor: grab;
+}
+
+.ax-ce-part input[type="text"] {
+	flex: 1 1 auto;
+}
+
+.ax-ce-entry {
+	display: flex;
+	gap: .5em;
+	align-items: center;
+}
+
+.ax-ce-entry__id {
+	min-width: 8em;
+	color: #787c82;
+	font-size: 13px;
+}
+
+.ax-ce-json {
+	width: 100%;
+	font-family: Menlo, Consolas, monospace;
+	font-size: 13px;
+}
+
+.ax-ce-error {
+	margin: .25em 0 0;
+	color: #b32d2e;
+}
+
+.ax-ce__actions {
+	position: sticky;
+	bottom: 0;
+	margin: 0;
+	padding: 1em 0;
+	background: #f0f0f1;
+}
+
+.ax-ce__status {
+	margin-left: .75em;
+	color: #50575e;
+}
+
+/* -- the rows the fields sit in -------------------------------------------------------------- */
+
+/*
+ * A row is a grip, what kind of thing it is, the value, and a way to remove it. The value takes the
+ * space that is left, because that is the part somebody is reading.
+ */
+.ax-ce-part {
+	align-items: flex-start;
+	padding: .5em;
+}
+
+.ax-ce-part__kind {
+	margin-top: 8px;
+}
+
+.ax-ce-part__value,
+.ax-ce-entry__value {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.ax-ce-part__grip svg {
+	width: 24px;
+	height: 24px;
+	margin-top: 16px;
+	fill: currentColor;
+}
+
+.ax-ce-entry {
+	display: flex;
+	gap: .5em;
+	align-items: flex-start;
+	margin: 0 0 .5em;
+}
+
+.ax-ce-entry__label {
+	flex: 0 0 12em;
+}
+
+.ax-ce-part .ax-icon-button,
+.ax-ce-entry .ax-icon-button {
+	margin-top: 8px;
+}
+
+/*
+ * An anniversary is a kind and a date, and the date is three boxes that belong together. They wrap
+ * as a group rather than one at a time, because a year that has drifted onto its own line stops
+ * reading as part of the date beside it.
+ */
+.ax-ce-anniversary {
+	flex-wrap: wrap;
+}
+
+.ax-ce-anniversary__kind {
+	flex: 1 1 14em;
+	min-width: 0;
+}
+
+.ax-ce-anniversary__date {
+	display: flex;
+	gap: .5em;
+	flex: 2 1 20em;
+	min-width: 0;
+}
+
+/* Wide enough for what goes in it. Three equal boxes would say a day needs four digits. */
+.ax-ce-anniversary__year {
+	flex: 1 1 8em;
+	min-width: 0;
+}
+
+.ax-ce-anniversary__month,
+.ax-ce-anniversary__day {
+	flex: 1 1 5em;
+	min-width: 0;
+}
+
+/* Two shapes of one fact, so the choice sits on its own line above both. */
+.ax-ce-anniversary__shape {
+	flex: 1 0 100%;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	display: flex;
+	gap: 1em;
+	align-items: baseline;
+}
+
+.ax-ce-anniversary__shape legend {
+	float: left;
+	padding: 0 .75em 0 0;
+	color: #50575e;
+}
+
+.ax-ce-anniversary__shape label {
+	display: inline-flex;
+	align-items: baseline;
+	gap: .25em;
+}
+
+.ax-ce-anniversary__moment {
+	display: flex;
+	flex-direction: column;
+	flex: 2 1 20em;
+	min-width: 0;
+}
+
+/* The instant is the fact; this is the sentence somebody checks it against. */
+.ax-ce-anniversary__reads {
+	margin: .25em 0 0;
+	color: #50575e;
+}
+
+.ax-ce-anniversary__scale,
+.ax-ce-anniversary__zone,
+.ax-ce-anniversary__country {
+	flex: 1 1 12em;
+	min-width: 0;
+}
+
+/* Written out, so it gets the room a sentence needs rather than the room a field does. */
+.ax-ce-anniversary__place {
+	flex: 2 1 20em;
+	min-width: 0;
+}
+
+.ax-ce-anniversary__more {
+	flex: 1 0 100%;
+	margin: 0;
+	color: #50575e;
+}
+
+/* Under the row it is about, where the eye is already looking. */
+.ax-ce-anniversary__problem {
+	flex: 1 0 100%;
+	margin: 0;
+	color: #b32d2e;
+}
+
+/* The card itself is a document, so it gets the width of one. */
+.ax-ce-json .text-field__input {
+	font-family: Menlo, Consolas, monospace;
+	font-size: 13px;
+}
+
+/* -- the other languages --------------------------------------------------------------------- */
+
+.ax-ce-localization {
+	margin: 0 0 1em;
+	padding: .75em;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+}
+
+.ax-ce-localization__head {
+	display: flex;
+	gap: .5em;
+	align-items: center;
+	justify-content: space-between;
+	margin: 0 0 .5em;
+}
+
+/*
+ * The tag and the path are real levels in the Card outline, not helper text.
+ * WordPress's default h4/h5 scale makes both read like field labels, which loses
+ * the boundary between one language and the property it changes.
+ */
+.ax-ce-localization__head h4 {
+	margin: 0;
+	font-family: Menlo, Consolas, monospace;
+	font-size: 18px;
+	font-weight: 600;
+	line-height: 1.4;
+}
+
+.ax-ce-localization__name > h5 {
+	margin: 1em 0 .5em;
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 1.4;
+}
+
+.ax-ce-localization__add {
+	display: flex;
+	gap: .5em;
+	align-items: flex-start;
+}
+
+.ax-ce-localization__add .text-field,
+.ax-ce-localization__add .ax-combobox {
+	flex: 1 1 auto;
+}
+
+.ax-ce-localization__add .button {
+	margin-top: 8px;
+}
+
+.ax-ce-preview {
+	max-height: 18em;
+	overflow: auto;
+	font-size: 13px;
+}
+
+/* The list a combobox offers, over whatever is below it. */
+.ax-combobox {
+	position: relative;
+}
+
+.ax-combobox__list {
+	position: absolute;
+	z-index: 10;
+	right: 0;
+	left: 0;
+	max-height: 16em;
+	margin: 0;
+	overflow: auto;
+	list-style: none;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	box-shadow: 0 2px 6px rgba( 0, 0, 0, .12 );
+}
+
+.ax-combobox__option {
+	margin: 0;
+	padding: .4em .75em;
+	font-family: Menlo, Consolas, monospace;
+	font-size: 13px;
+	cursor: pointer;
+}
+
+.ax-combobox__option.is-active,
+.ax-combobox__option:hover {
+	background: #f0f0f1;
+}
+
+.ax-combobox__empty {
+	margin: 0;
+	padding: .4em .75em;
+	color: #787c82;
+}
+
+/*
+ * A question rather than a warning: something is about to be lost and this says what, so the answer
+ * is somebody's rather than the editor's.
+ */
+.ax-ce-blocked {
+	margin: 0 0 1em;
+	padding: .75em;
+	border-left: 4px solid #b3261e;
+	background: #fcf0f0;
+}
+
+.ax-ce-blocked ul {
+	margin: .5em 0;
+	font-family: Menlo, Consolas, monospace;
+	font-size: 13px;
+}
+
+/* -- what this card is ----------------------------------------------------------------------- */
+
+.ax-ce-kinds {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1em;
+}
+
+.ax-ce-kind {
+	display: inline-flex;
+	gap: .35em;
+	align-items: center;
+}
+
+/* Decided rather than disabled: it still says what the answer is. */
+.ax-ce-kind.is-locked {
+	opacity: .7;
+}
+
+.ax-ce-sortas {
+	display: flex;
+	gap: .5em;
+}
+
+.ax-ce-sortas .text-field {
+	flex: 1 1 0;
+}
+
+/*
+ * One account: the grip, the four things it says, and the way to remove it. The fields wrap rather
+ * than scroll, because a narrow screen is a smaller version of the same row and not a different one.
+ */
+.ax-ce-service {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	padding: 12px 0;
+	border-block-end: 1px solid var( --wpds-color-border-secondary, #e0e0e0 );
+}
+
+.ax-ce-service__fields {
+	display: grid;
+	flex: 1;
+	grid-template-columns: repeat( auto-fit, minmax( 220px, 1fr ) );
+	gap: 12px;
+}
+
+/* What a row publishes, said before the address that proves which row it is. */
+.ax-ce-published__row label {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.ax-ce-published__label {
+	font-weight: 600;
+}
+
+.ax-ce-published__detail {
+	color: var( --wpds-color-content-secondary, #50575e );
+	font-size: 13px;
+	overflow-wrap: anywhere;
+}
+
+/*
+ * The JSON box, one fold away. It reads as a heading rather than a control, because what it opens is
+ * a section like the others -- the fold is there so it does not compete with the fields, not to hide
+ * it from anybody who needs it.
+ */
+.ax-ce-json-section > summary {
+	margin: 0 0 .5em;
+	font-size: 15px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+/* -- adding a part of a name ----------------------------------------------------------------- */
+
+.ax-ce-addpart__row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .5em;
+	margin: .5em 0;
+}
+
+.ax-ce-addpart {
+	display: inline-flex;
+	gap: .25em;
+	align-items: center;
+}
+
+.ax-ce-addpart svg {
+	width: 16px;
+	height: 16px;
+	fill: currentColor;
+}
+
+/* The gap between two parts, which is where something goes between them. */
+.ax-ce-gap {
+	display: flex;
+	justify-content: center;
+	margin: 0;
+	padding: 0;
+	line-height: 1;
+}
+
+.ax-ce-gap__add {
+	padding: 0 .5em;
+	color: #787c82;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.ax-ce-gap__add:hover {
+	color: #2271b1;
+}
+
+/* Said, rather than assumed: a name whose parts arrived without a reading order. */
+.ax-ce-unordered {
+	margin: .5em 0;
+	padding: .75em;
+	background: #f6f7f7;
+	border-left: 4px solid #dcdcde;
+}
+
+.ax-ce-unordered p {
+	margin: 0 0 .5em;
+}
+
+/* What the parts above are said as, which belongs to the whole name. */
+.ax-ce-phonetic {
+	display: flex;
+	gap: .5em;
+	margin: .5em 0;
+}
+
+.ax-ce-phonetic .ax-combobox {
+	flex: 1 1 0;
+}
+
+.ax-ce-part__phonetic {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+/* -- the name, as a stack of fields ---------------------------------------------------------- */
+
+/*
+ * The fields and the way to open the rest of them. The control sits beside the stack rather than
+ * under it, so the two lines somebody usually types stay the top of the section.
+ */
+.ax-ce-name {
+	display: flex;
+	gap: .5em;
+	align-items: flex-start;
+}
+
+.ax-ce-name__slots {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.ax-ce-name__more {
+	margin-top: 12px;
+	padding: 0 .5em;
+	color: #2271b1;
+	font-size: 16px;
+	line-height: 32px;
+	background: none;
+	border: 0;
+	border-radius: 50%;
+	cursor: pointer;
+}
+
+.ax-ce-name__more:hover,
+.ax-ce-name__more:focus-visible {
+	background: #f0f0f1;
+}
+
+.ax-ce-slot {
+	display: flex;
+	gap: .5em;
+	align-items: flex-start;
+}
+
+.ax-ce-slot__value {
+	flex: 2 1 0;
+	min-width: 0;
+}
+
+.ax-ce-slot__phonetic {
+	flex: 1 1 0;
+	min-width: 0;
+}
+
+/* Everything a name can say that filling one in does not ask about. */
+.ax-ce-name__advanced {
+	margin-top: 1em;
+}
+
+.ax-ce-name__advanced > summary {
+	color: #2271b1;
+	cursor: pointer;
+}
+
+/* -- the document beside the fields ---------------------------------------------------------- */
+
+/*
+ * One draft, two views of it. A grid rather than two floats, because the handle between them has to
+ * be a track of its own for the drag to mean anything -- and the widths are set inline from where
+ * somebody last put it.
+ */
+.ax-ce.is-split {
+	display: grid;
+	align-items: start;
+	gap: 0;
+}
+
+.ax-ce.is-split .ax-ce__main {
+	max-width: none;
+	min-width: 0;
+	padding-right: 1em;
+}
+
+.ax-ce__view {
+	margin: 0 0 1em;
+}
+
+.ax-ce-split__handle {
+	align-self: stretch;
+	min-height: 12em;
+	background: #dcdcde;
+	border-radius: 2px;
+	cursor: col-resize;
+	touch-action: none;
+}
+
+.ax-ce-split__handle:hover,
+.ax-ce-split__handle:focus-visible {
+	background: #2271b1;
+}
+
+/* While the handle is moving, nothing under the pointer should be selecting text. */
+.ax-ce.is-sliding {
+	user-select: none;
+}
+
+.ax-ce-json-pane {
+	min-width: 0;
+	padding-left: 1em;
+	position: sticky;
+	top: 32px;
+}
+
+.ax-ce-json-pane h2 {
+	margin: 0 0 .5em;
+	font-size: 15px;
+	font-weight: 600;
+}
+
+/* Narrow enough and there is no beside: the document goes back under the fields. */
+@media ( max-width: 960px ) {
+	.ax-ce.is-split {
+		display: block;
+	}
+
+	.ax-ce-json-pane {
+		position: static;
+		padding-left: 0;
+	}
+
+	.ax-ce-split__handle {
+		display: none;
+	}
+}
+
+/* -- what a section is about, drawn once beside it ------------------------------------------- */
+
+/*
+ * The mark and the stack, side by side, with the mark on the first line rather than centred against
+ * the whole column: a section that grows downwards should not move its own icon.
+ */
+.ax-ce-section__content.is-marked {
+	display: flex;
+	gap: 1em;
+	align-items: flex-start;
+}
+
+.ax-ce-section__mark {
+	flex: 0 0 24px;
+	margin-top: 16px;
+	color: #50575e;
+}
+
+.ax-ce-section__mark svg {
+	display: block;
+	width: 24px;
+	height: 24px;
+	fill: currentColor;
+}
+
+.ax-ce-section__body {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+/* The chevron is the same glyph either way; which way it points is which way it opens. */
+.ax-ce-name__more svg {
+	display: block;
+	width: 24px;
+	height: 24px;
+	fill: currentColor;
+	transition: transform .15s ease;
+}
+
+.ax-ce-name__more.is-open svg {
+	transform: rotate( 180deg );
+}
+
+/* A line of the name can be picked up when it holds one; an empty line keeps the column, not a grip. */
+.ax-ce-slot__grip {
+	flex: 0 0 24px;
+	margin-top: 16px;
+	color: #787c82;
+}
+
+.ax-ce-slot__grip svg {
+	display: block;
+	width: 24px;
+	height: 24px;
+	fill: currentColor;
+}
+
+.ax-ce-slot.is-movable {
+	cursor: grab;
+}
+
+/* An empty line keeps the width its delete button would have had, so the column does not jog. */
+.ax-ce-slot__spacer {
+	flex: 0 0 40px;
+}
+
+/* Adding the parts a line each does not keep open. */
+.ax-ce-name__add {
+	display: flex;
+	gap: .5em;
+	align-items: center;
+	margin: .5em 0 0 32px;
+}
+
+.ax-ce-name__add-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .5em;
+}
+
+/* -- where somebody belongs, and what they are there ----------------------------------------- */
+
+.ax-ce-org {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	padding: 12px 0;
+	border-block-end: 1px solid var( --wpds-color-border-secondary, #e0e0e0 );
+}
+
+.ax-ce-org__fields {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.ax-ce-org__name {
+	max-width: 42em;
+	min-width: 0;
+}
+
+.ax-ce-org__units {
+	margin: 8px 0 0 2em;
+}
+
+.ax-ce-org__unit {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+	margin: 8px 0;
+}
+
+.ax-ce-org__unit-name {
+	flex: 2 1 14em;
+	min-width: 0;
+}
+
+.ax-ce-org__advanced {
+	margin: 12px 0 0;
+}
+
+.ax-ce-org__advanced > summary {
+	color: #2271b1;
+	cursor: pointer;
+}
+
+.ax-ce-org__advanced > .ax-ce-field {
+	margin-top: 8px;
+}
+
+.ax-ce-title {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+	margin: 0 0 8px;
+}
+
+.ax-ce-title__name {
+	flex: 2 1 0;
+	min-width: 0;
+}
+
+.ax-ce-title__kind,
+.ax-ce-title__where {
+	flex: 1 1 0;
+	min-width: 0;
+}
+
+/* -- a phone number, and where to read it from ----------------------------------------------- */
+
+.ax-ce-phone {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+	margin: 0 0 8px;
+	flex-wrap: wrap;
+}
+
+.ax-ce-phone__region {
+	flex: 1 1 12em;
+	min-width: 0;
+}
+
+.ax-ce-phone__number {
+	flex: 2 1 14em;
+	min-width: 0;
+}
+
+.ax-ce-phone__preset,
+.ax-ce-phone__label {
+	flex: 1 1 10em;
+	min-width: 0;
+}
+
+/* -- a language somebody would rather be written to in ---------------------------------------- */
+
+.ax-ce-lang {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+	margin: 0 0 8px;
+}
+
+.ax-ce-lang.is-movable {
+	cursor: grab;
+}
+
+.ax-ce-lang__grip {
+	flex: 0 0 24px;
+	margin-top: 16px;
+	color: #787c82;
+}
+
+.ax-ce-lang__grip svg {
+	display: block;
+	width: 24px;
+	height: 24px;
+	fill: currentColor;
+}
+
+.ax-ce-lang__language {
+	flex: 2 1 0;
+	min-width: 0;
+}
+
+.ax-ce-lang__context {
+	flex: 1 1 0;
+	min-width: 0;
+}
+
+/* -- an email address ------------------------------------------------------------------------ */
+
+.ax-ce-email {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+	margin: 0 0 8px;
+	flex-wrap: wrap;
+}
+
+.ax-ce-email__address {
+	flex: 2 1 16em;
+	min-width: 0;
+}
+
+.ax-ce-email__preset,
+.ax-ce-email__label {
+	flex: 1 1 10em;
+	min-width: 0;
+}
+
+/* -- where somebody is ------------------------------------------------------------------------ */
+
+.ax-ce-address {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+	padding: 12px 0;
+	border-block-end: 1px solid var( --wpds-color-border-secondary, #e0e0e0 );
+}
+
+.ax-ce-address__fields {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.ax-ce-address__country,
+.ax-ce-address__preset,
+.ax-ce-address__label {
+	flex: 1 1 12em;
+	min-width: 0;
+}
+
+.ax-ce-address__full {
+	flex: 1 1 100%;
+	min-width: 0;
+}
+
+/*
+ * The account this site answers for. Read as a stated fact rather than drawn as a field nobody may
+ * fill in: a disabled input still looks like somewhere to type.
+ */
+.ax-ce-service--system .ax-ce-service__system-name {
+	margin: 0;
+	font-weight: 600;
+}
+
+.ax-ce-service--system .ax-ce-service__system-uri {
+	margin: 2px 0 0;
+}
+
+/* One part of an address: a grip, what it says, and a way to take it away. */
+.ax-ce-part-row {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+}
+
+.ax-ce-part-row.is-movable {
+	cursor: grab;
+}
+
+.ax-ce-part-row__grip {
+	flex: 0 0 24px;
+	margin-top: 16px;
+	color: #787c82;
+}
+
+.ax-ce-part-row__grip svg {
+	display: block;
+	width: 24px;
+	height: 24px;
+	fill: currentColor;
+}
+
+.ax-ce-part-row__value {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+/* What this address is for, which can be more than one thing, asked as one question. */
+.ax-ce-address__contexts {
+	margin: .5em 0;
+	padding: .5em .75em;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+}
+
+.ax-ce-address__contexts legend {
+	padding: 0 .35em;
+	color: #50575e;
+	font-size: 13px;
+}
+
+.ax-ce-address__contexts label {
+	display: inline-flex;
+	gap: .35em;
+	align-items: center;
+	margin-right: 1em;
+}
+
+.ax-ce-address__fields {
+	display: block;
+}

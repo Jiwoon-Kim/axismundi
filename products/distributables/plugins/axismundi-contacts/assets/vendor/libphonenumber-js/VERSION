@@ -1,0 +1,12 @@
+libphonenumber-js 1.13.11
+https://github.com/catamphetamine/libphonenumber-js
+
+The file beside this is the project's own browser build, `bundle/libphonenumber-min.js`,
+taken from the published package and renamed. Nothing about it has been edited.
+
+The library is MIT (see LICENSE). The number rules it carries are generated from Google's
+libphonenumber, which is Apache-2.0:
+https://github.com/google/libphonenumber
+
+Those rules change -- countries add prefixes, ranges open, a trunk prefix stops meaning what
+it meant. Update this file with a release rather than silently, and record the version here.

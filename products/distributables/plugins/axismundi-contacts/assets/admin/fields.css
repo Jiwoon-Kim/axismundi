@@ -1,0 +1,289 @@
+/**
+ * The fields the contacts screens are built from.
+ *
+ * Three things meet here and each owns a different question.
+ *
+ * WordPress owns the colours. The `wp-theme` stylesheet supplies `--wpds-*`, so a field is the same
+ * neutral, the same focus blue and the same error red as everything else in wp-admin, and it follows
+ * an admin colour scheme without this file knowing one exists. It is asked for by handle rather than
+ * by URL: Gutenberg replaces that handle's source with its own build, and a plugin that had hard-
+ * coded either path would break the moment the other one was in charge.
+ *
+ * Material 3 owns the shape and the states -- a 1px outline that becomes 3px on focus, a label that
+ * floats when the field has something in it, disabled at 38% with a 12% outline.
+ *
+ * The lab pattern owns the markup: `text-field > __container > input + label`, the floating label
+ * driven by `:placeholder-shown` rather than by script, and `__supporting` tied to the input with
+ * `aria-describedby`.
+ *
+ * Every colour is named once, at the top, with an M3 baseline behind it. A screen that loads without
+ * `--wpds-*` -- an older WordPress, a context that does not enqueue it -- still draws a field
+ * somebody can use, rather than black text on a black outline.
+ */
+
+.ax-contacts-fields {
+	/* WordPress first, Material 3 baseline behind it. */
+	--ax-field-outline: var( --wpds-color-stroke-interactive-neutral, #79747e );
+	--ax-field-outline-hover: var( --wpds-color-stroke-interactive-neutral-strong, #1d1b20 );
+	--ax-field-outline-focus: var( --wpds-color-stroke-focus, #6750a4 );
+	--ax-field-text: var( --wpds-color-foreground-content-neutral, #1d1b20 );
+	--ax-field-label: var( --wpds-color-foreground-content-neutral-weak, #49454f );
+	/* Said quietly, still read: the admin's own secondary text, which clears AA on the surface. */
+	--ax-field-support: var( --wpds-color-foreground-content-neutral-weak, #50575e );
+	--ax-field-error: var( --wpds-color-foreground-content-error, #b3261e );
+	--ax-field-error-outline: var( --wpds-color-stroke-interactive-error, #b3261e );
+	--ax-field-surface: var( --wpds-color-background-surface-neutral-strong, #fff );
+	--ax-field-radius: var( --wpds-border-radius-md, 4px );
+
+	/* M3 has no counterpart in the admin tokens for these, so they are stated here. */
+	--ax-field-outline-width: 1px;
+	--ax-field-outline-width-focus: 3px;
+	/*
+	 * How thick the outline is *now*. Focus changes this one value, and everything that has to give
+	 * way to it -- the padding inside, where the label sits -- is written in terms of it. Written the
+	 * other way round, each of those would be a second place to remember when the width changed, and
+	 * the field would grow by two pixels the first time somebody forgot one.
+	 */
+	--ax-field-border: var( --ax-field-outline-width );
+	--ax-field-inline: 16px;
+	--ax-field-height: 56px;
+	--ax-field-label-size: 16px;
+	/*
+	 * Material's floated label and supporting text are 12px, which is calibrated for a phone held at
+	 * arm's length. This runs inside the WordPress admin, where 13px is the size everything else is
+	 * read at, and a label a pixel smaller than the page around it reads as an afterthought rather
+	 * than as the name of the field somebody is typing in.
+	 */
+	--ax-field-label-size-floated: 13px;
+	--ax-field-support-size: 13px;
+	--ax-field-disabled-opacity: 0.38;
+	--ax-field-disabled-outline-opacity: 0.12;
+}
+
+/* -- the field ------------------------------------------------------------------------------- */
+
+.ax-contacts-fields .text-field {
+	display: block;
+	margin: 0 0 4px;
+}
+
+.ax-contacts-fields .text-field__container {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	/*
+	 * Stated rather than inherited. `min-height` has to count the outline, or thickening it on focus
+	 * makes the field two pixels taller and pushes everything below it down the page. wp-admin happens
+	 * to set this globally today; a field that relied on that would break the first time one was drawn
+	 * anywhere else.
+	 */
+	box-sizing: border-box;
+	min-height: var( --ax-field-height );
+	padding: 0 calc( var( --ax-field-inline ) - var( --ax-field-border ) );
+	background: var( --ax-field-surface );
+	border: var( --ax-field-border ) solid var( --ax-field-outline );
+	border-radius: var( --ax-field-radius );
+}
+
+.ax-contacts-fields .text-field__container:hover {
+	border-color: var( --ax-field-outline-hover );
+}
+
+/*
+ * The outline thickens on focus rather than a ring being drawn outside it, which is what M3
+ * specifies and what keeps the field from moving as it is focused.
+ */
+.ax-contacts-fields .text-field__container:focus-within {
+	--ax-field-border: var( --ax-field-outline-width-focus );
+	border-color: var( --ax-field-outline-focus );
+}
+
+.ax-contacts-fields .text-field__input {
+	flex: 1 1 auto;
+	width: 100%;
+	min-width: 0;
+	margin: 0;
+	/*
+	 * The height of a field is its content plus its outline, and `min-height` is a floor rather than a
+	 * ceiling -- so the padding has to give the outline its two pixels back or the field grows as it is
+	 * focused and pushes the page down. 16 - border, twice, plus a 24px line, is 56 whatever the
+	 * outline is doing.
+	 */
+	padding: calc( 16px - var( --ax-field-border ) ) 0;
+	color: var( --ax-field-text );
+	font-size: 16px;
+	line-height: 24px;
+	background: none;
+	border: 0;
+	box-shadow: none;
+	outline: none;
+}
+
+/* wp-admin styles inputs globally; this is the field saying it draws its own. */
+.ax-contacts-fields .text-field__input:focus {
+	border: 0;
+	box-shadow: none;
+	outline: none;
+}
+
+.ax-contacts-fields textarea.text-field__input {
+	padding: calc( 16px - var( --ax-field-border ) ) 0;
+	line-height: 24px;
+	resize: vertical;
+}
+
+/* -- the label ------------------------------------------------------------------------------- */
+
+/*
+ * Floated by `:placeholder-shown` rather than by script, which is why every input carries
+ * `placeholder=" "`. A field knows whether it is empty; asking JavaScript to tell it would mean the
+ * label was wrong for as long as the script took to load.
+ */
+.ax-contacts-fields .text-field__label {
+	position: absolute;
+	top: 50%;
+	/* Absolute children sit against the padding box, so this is measured from inside the outline. */
+	left: calc( var( --ax-field-inline ) - var( --ax-field-border ) );
+	padding: 0 4px;
+	color: var( --ax-field-label );
+	font-size: var( --ax-field-label-size );
+	line-height: 24px;
+	white-space: nowrap;
+	background: var( --ax-field-surface );
+	transform: translateY( -50% );
+	transition: top .1s ease, font-size .1s ease;
+	pointer-events: none;
+}
+
+.ax-contacts-fields .text-field__input:not( :placeholder-shown ) + .text-field__label,
+.ax-contacts-fields .text-field__input:focus + .text-field__label {
+	top: 0;
+	font-size: var( --ax-field-label-size-floated );
+	line-height: 16px;
+}
+
+/* A select never has a placeholder, so its label is a legend from the first paint. */
+.ax-contacts-fields .text-field--select .text-field__label {
+	top: 0;
+	font-size: var( --ax-field-label-size-floated );
+	line-height: 16px;
+}
+
+.ax-contacts-fields select.text-field__input {
+	appearance: auto;
+	cursor: pointer;
+	/*
+	 * The one line a select will not take. Chrome's own sheet sets `line-height: normal !important` on
+	 * it, so the 24px line every other field is built from cannot be given to this one and it lands a
+	 * pixel short of the rest. The line is stated as a box instead, which browsers do honour.
+	 */
+	height: calc( 24px + 2 * ( 16px - var( --ax-field-border ) ) );
+}
+
+.ax-contacts-fields .text-field__container:focus-within .text-field__label {
+	color: var( --ax-field-outline-focus );
+}
+
+/* -- what it is saying ----------------------------------------------------------------------- */
+
+.ax-contacts-fields .text-field__bottom {
+	padding: 4px var( --ax-field-inline ) 0;
+}
+
+.ax-contacts-fields .text-field__supporting {
+	display: block;
+	color: var( --ax-field-support );
+	font-size: var( --ax-field-support-size );
+	line-height: 18px;
+}
+
+.ax-contacts-fields .text-field.is-error .text-field__container {
+	border-color: var( --ax-field-error-outline );
+}
+
+.ax-contacts-fields .text-field.is-error .text-field__label,
+.ax-contacts-fields .text-field.is-error .text-field__supporting {
+	color: var( --ax-field-error );
+}
+
+/* -- and when it cannot be used -------------------------------------------------------------- */
+
+.ax-contacts-fields .text-field__input:disabled {
+	opacity: var( --ax-field-disabled-opacity );
+}
+
+.ax-contacts-fields .text-field:has( .text-field__input:disabled ) .text-field__container {
+	border-color: color-mix( in srgb, var( --ax-field-text ) 12%, transparent );
+}
+
+.ax-contacts-fields .text-field:has( .text-field__input:disabled ) .text-field__label {
+	opacity: var( --ax-field-disabled-opacity );
+}
+
+/* -- the actions beside a field -------------------------------------------------------------- */
+
+/*
+ * An icon button is a target with a picture in it. The picture is 24px because that is the size the
+ * icons were drawn at; the target is 40px because a 24px one is too small to hit.
+ */
+.ax-contacts-fields .ax-icon-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	padding: 0;
+	color: var( --ax-field-label );
+	background: none;
+	border: 0;
+	border-radius: 50%;
+	cursor: pointer;
+}
+
+.ax-contacts-fields .ax-icon-button:hover {
+	color: var( --ax-field-text );
+	background: color-mix( in srgb, var( --ax-field-text ) 8%, transparent );
+}
+
+.ax-contacts-fields .ax-icon-button:focus-visible {
+	outline: var( --ax-field-outline-width-focus ) solid var( --ax-field-outline-focus );
+	outline-offset: -1px;
+}
+
+.ax-contacts-fields .ax-icon-button[disabled] {
+	opacity: var( --ax-field-disabled-opacity );
+	cursor: default;
+}
+
+.ax-contacts-fields .ax-icon-button svg {
+	width: 24px;
+	height: 24px;
+	fill: currentColor;
+}
+
+/* A destructive action says so before it is pressed, not after. */
+.ax-contacts-fields .ax-icon-button--danger:hover {
+	color: var( --ax-field-error );
+	background: color-mix( in srgb, var( --ax-field-error ) 8%, transparent );
+}
+
+/* -- what the browser filled in ---------------------------------------------------------------- */
+
+/*
+ * Autofill writes the value straight into the DOM and fires nothing a script can listen for, so a
+ * field goes yellow while the document behind it still holds what was there before. The one signal
+ * that does arrive is this: a rule that starts an animation when the browser fills a field, which
+ * the field adapter listens for and reads the value from.
+ *
+ * The animation itself does nothing. It exists to be noticed.
+ */
+@keyframes ax-contacts-autofill {
+	from { /* noop */ }
+	to { /* noop */ }
+}
+
+.ax-contacts-fields .text-field__input:-webkit-autofill {
+	animation-name: ax-contacts-autofill;
+	animation-duration: 1ms;
+}

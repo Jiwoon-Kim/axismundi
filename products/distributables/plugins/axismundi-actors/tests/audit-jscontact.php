@@ -2,11 +2,13 @@
 /**
  * An Actor as a contact card (dev-only; dist-excluded).
  *
- * The second representation of the same Actor, and the first that is not ActivityStreams -- which is
- * the point: if the projection layer only ever spoke one vocabulary, the separation between owning a
- * fact and rendering it was theoretical. What is checked here is that the vocabulary is used
- * correctly rather than approximately, and that nothing is minted for identities this site does not
- * own.
+ * The Card belongs to Contacts. What is checked here is the half Actors still owns -- which JSContact
+ * kind an Actor type suggests, how a stored name is read in parts, and the names and dates it
+ * contributes to somebody else's document -- and, just as importantly, what it no longer does.
+ *
+ * Actors used to build a Card of its own and mint a `uid` from the Actor's UUID. Two plugins each
+ * publishing a Card for one Actor under different identifiers meant anybody who saved both kept the
+ * same person twice, so that is gone and nothing here may bring it back.
  *
  * @package AxismundiActors
  */
@@ -43,6 +45,18 @@ try {
 
 	// -- what a Card is ---------------------------------------------------------------------------------
 
+	/*
+	 * An Actor publishes a Card once Contacts holds one for it. Until then there is none, and Actors
+	 * does not derive a stand-in: a derived Card would need an identifier, this site would mint one,
+	 * and the day a real Card appeared the published identity would change under everybody who had
+	 * saved it.
+	 */
+	ax_jc_assert(
+		$ax_jc_results,
+		'an Actor with no contact card publishes none, rather than having one derived from the registry',
+		is_wp_error( axismundi_actors_jscontact_card( $ax_jc_person ) )
+	);
+	axismundi_contacts_book_for_actor( (int) $ax_jc_id );
 	$ax_jc_card = axismundi_actors_jscontact_card( $ax_jc_person );
 	/*
 	 * `@type` is always Card; the sort of thing it describes is `kind`. `{"@type":"Person"}` would be
@@ -53,10 +67,16 @@ try {
 		'a Card says it is a Card, and what it describes is its kind',
 		is_array( $ax_jc_card ) && 'Card' === $ax_jc_card['@type'] && 'individual' === $ax_jc_card['kind']
 	);
+	/*
+	 * The identifier is the Card's, not the Actor's. An Actor UUID names an agent in the identity
+	 * registry; a `uid` names a contact card in an address book, and deriving one from the other is
+	 * how two identities for one person came to exist.
+	 */
 	ax_jc_assert(
 		$ax_jc_results,
-		'and a local identity carries the uuid this site actually owns',
-		'urn:uuid:' . $ax_jc_person->get_uuid() === (string) $ax_jc_card['uid']
+		'the identifier belongs to the card and is never derived from the Actor uuid',
+		'' !== (string) ( $ax_jc_card['uid'] ?? '' )
+			&& 'urn:uuid:' . $ax_jc_person->get_uuid() !== (string) $ax_jc_card['uid']
 	);
 	ax_jc_assert(
 		$ax_jc_results,
@@ -66,36 +86,35 @@ try {
 			&& '' === axismundi_actors_jscontact_kind( 'Service' )
 	);
 
-	// -- a name in parts, in the order it is read -------------------------------------------------------
+	// -- what Actors no longer puts on somebody's card ------------------------------------------------------
 
-	axismundi_actors_set_person_name( $ax_jc_id, 'ko-KR', array( 'last_name' => '김', 'first_name' => '지운', 'display_order' => 'family-given' ) );
-	axismundi_actors_set_person_name( $ax_jc_id, 'en', array( 'last_name' => 'Kim', 'first_name' => 'Jiwoon', 'display_order' => 'given-family' ) );
-	$ax_jc_card = axismundi_actors_jscontact_card( axismundi_actors_get_by_identity( $ax_jc_id ) );
 	/*
-	 * Order belongs to the person, not to the language: the same components read one way in Korean and
-	 * the other in English, and a consumer told `isOrdered` must not reassemble them its own way.
+	 * It used to add the Actor's other languages and the anniversaries it kept. That meant a public
+	 * contact document carrying facts assembled from the identity registry -- published because the
+	 * plugin was installed rather than because the person said they could be.
+	 *
+	 * The Card is the ledger and Contacts serves the part of it its owner selected. So Actors
+	 * contributes nothing to that document, and the Actor's own texts stay what they always were:
+	 * what `name` and `nameMap` publish.
 	 */
+	axismundi_actors_set_default_language( $ax_jc_id, 'ko-KR' );
+	axismundi_actors_set_text( $ax_jc_id, 'name', 'ko-KR', '김지운' );
+	axismundi_actors_set_text( $ax_jc_id, 'name', 'en', 'Jiwoon Kim' );
+	$ax_jc_card = axismundi_actors_jscontact_card( axismundi_actors_get_by_identity( $ax_jc_id ) );
 	ax_jc_assert(
 		$ax_jc_results,
-		'the components are given in the order they are read, and said to be ordered',
-		'김지운' === (string) $ax_jc_card['name']['full']
-			&& true === $ax_jc_card['name']['isOrdered']
-			&& 'surname' === (string) $ax_jc_card['name']['components'][0]['kind']
-			&& 'given' === (string) $ax_jc_card['name']['components'][1]['kind']
+		'nothing here writes into the card that somebody else authored and publishes',
+		! function_exists( 'axismundi_actors_jscontact_contribute' )
+			&& false === has_filter( 'axismundi_contacts_jscontact_card', 'axismundi_actors_jscontact_contribute' )
+			&& ! isset( $ax_jc_card['anniversaries'] )
+			&& ! isset( $ax_jc_card['localizations'] )
 	);
 	ax_jc_assert(
 		$ax_jc_results,
-		'another language is a localization of the same Card rather than a second Card',
-		isset( $ax_jc_card['localizations']['en']['name'] )
-			&& 'Jiwoon Kim' === (string) $ax_jc_card['localizations']['en']['name']['full']
-			&& 'given' === (string) $ax_jc_card['localizations']['en']['name']['components'][0]['kind']
-	);
-	// The display name follows the parts without either being derived from the other in storage.
-	ax_jc_assert(
-		$ax_jc_results,
-		'and the same facts answer for the display name in each language',
+		'and the Actor still answers in each language from its own store, which no card decides',
 		'김지운' === axismundi_actors_person_display_name( axismundi_actors_get_by_identity( $ax_jc_id ), 'ko-KR' )
 			&& 'Jiwoon Kim' === axismundi_actors_person_display_name( axismundi_actors_get_by_identity( $ax_jc_id ), 'en' )
+			&& ! function_exists( 'axismundi_actors_jscontact_name' )
 	);
 
 	// -- names that have no parts -------------------------------------------------------------------------
@@ -106,18 +125,13 @@ try {
 	 * was already written stands.
 	 */
 	$ax_jc_plain = ax_jc_person( $ax_jc_users );
+	axismundi_contacts_book_for_actor( (int) $ax_jc_plain->get_identity_id() );
 	$ax_jc_pcard = axismundi_actors_jscontact_card( $ax_jc_plain );
 	ax_jc_assert(
 		$ax_jc_results,
 		'somebody who filled in no parts still has a name, and no components are invented for them',
 		! isset( $ax_jc_pcard['name']['components'] )
 			&& ( ! isset( $ax_jc_pcard['name'] ) || '' !== (string) ( $ax_jc_pcard['name']['full'] ?? '' ) )
-	);
-	// A Group is not a person and has no table row inviting one to be given a surname.
-	ax_jc_assert(
-		$ax_jc_results,
-		'a Group cannot be given a given name',
-		is_wp_error( axismundi_actors_set_person_name( $ax_jc_id + 100000, 'en', array( 'first_name' => 'Nope' ) ) )
 	);
 
 	// -- what is not ours to mint ---------------------------------------------------------------------------
@@ -142,9 +156,24 @@ try {
 	// Asserted rather than skipped: a fixture that quietly fails takes its check with it.
 	ax_jc_assert(
 		$ax_jc_results,
-		'a cached remote Actor gets no uid invented from our own snapshot id',
-		is_array( $ax_jc_rcard ) && ! isset( $ax_jc_rcard['uid'] )
+		'a cached remote Actor publishes nothing of ours: no card, and so no invented uid either',
+		$ax_jc_remote instanceof Axismundi_Actor && is_wp_error( $ax_jc_rcard )
 	);
+	// -- neither owned nor contributed ----------------------------------------------------------------------
+
+	/*
+	 * Actors serves no contact document and adds nothing to the one Contacts serves. What is left is a
+	 * caller-facing name that hands the question over, so that a card built here again -- for any
+	 * reason -- would be the second card this inversion removed.
+	 */
+	ax_jc_assert(
+		$ax_jc_results,
+		'Actors renders no card of its own and writes into nobody else’s',
+		! function_exists( 'axismundi_actors_jscontact_uid' )
+			&& ! has_action( 'template_redirect', 'axismundi_actors_serve_jscontact' )
+			&& function_exists( 'axismundi_actors_jscontact_card' )
+	);
+
 } finally {
 	foreach ( $ax_jc_users as $ax_jc_user_id ) {
 		wp_delete_user( (int) $ax_jc_user_id );

@@ -57,13 +57,13 @@ function axismundi_geodata_term_fields( string $taxonomy = '' ) : array {
 		);
 		$fields['ax_geo_country_code'] = array(
 			'label' => __( 'Country code', 'axismundi-geodata' ),
-			'type'  => 'text',
+			'type'  => 'country',
 			'help'  => __( 'ISO 3166-1 alpha-2, e.g. KR (schema.org addressCountry). Set it on the Country term; descendants inherit it through the hierarchy.', 'axismundi-geodata' ),
 		);
 		$fields['ax_geo_iso_3166_2']   = array(
 			'label' => __( 'ISO 3166-2', 'axismundi-geodata' ),
-			'type'  => 'text',
-			'help'  => __( 'The ISO 3166-2 subdivision code where one exists, e.g. KR-26, US-CA, US-DC (schema.org addressRegion). Not limited to first-order divisions.', 'axismundi-geodata' ),
+			'type'  => 'subdivision',
+			'help'  => __( 'The subdivision code where one exists (schema.org addressRegion). The choices belong to the Country inherited from this term’s Geo Area parent.', 'axismundi-geodata' ),
 		);
 	}
 
@@ -90,12 +90,20 @@ function axismundi_geodata_term_fields( string $taxonomy = '' ) : array {
  * @param string $key      Meta key / field name.
  * @param array  $field    Field config from axismundi_geodata_term_fields().
  * @param string $value    Current value.
- * @param string $taxonomy Taxonomy being edited.
+ * @param string       $taxonomy Taxonomy being edited.
+ * @param WP_Term|null $term     Existing term on edit screens.
  * @return string Escaped control markup.
  */
-function axismundi_geodata_term_control( string $key, array $field, string $value, string $taxonomy ) : string {
+function axismundi_geodata_term_control( string $key, array $field, string $value, string $taxonomy, ?WP_Term $term = null ) : string {
 	if ( 'select' === $field['type'] ) {
 		return axismundi_geodata_place_type_select( $taxonomy, $key, $value );
+	}
+	if ( 'country' === $field['type'] ) {
+		return axismundi_geodata_country_code_select( $key, $value );
+	}
+	if ( 'subdivision' === $field['type'] ) {
+		$country = $term instanceof WP_Term ? axismundi_geodata_lookup_country_code( $term ) : '';
+		return axismundi_geodata_subdivision_code_select( $key, $value, $country );
 	}
 
 	$attrs = 'number' === $field['type'] ? ' step="any"' : '';
@@ -111,6 +119,89 @@ function axismundi_geodata_term_control( string $key, array $field, string $valu
 		$attrs, // $attrs is built from static literals above.
 		esc_attr( $value )
 	);
+}
+
+/**
+ * The country-code control for a Country area.
+ *
+ * The code is what is stored; the reference name is just enough to find it in a long native
+ * WordPress select. It is deliberately not a second translation table -- a browser-facing picker
+ * can use Intl.DisplayNames, while this server-rendered admin control has the versioned registry's
+ * English fallback. An unknown existing value remains selected, so opening an imported term and
+ * changing another field does not erase it.
+ *
+ * @param string $key Meta key.
+ * @param string $value Selected value.
+ * @return string Escaped select markup.
+ */
+function axismundi_geodata_country_code_select( string $key, string $value ) : string {
+	$countries = axismundi_geodata_countries();
+	$value     = strtoupper( trim( $value ) );
+
+	uksort(
+		$countries,
+		static function ( string $left, string $right ) use ( $countries ) : int {
+			return strnatcasecmp( $countries[ $left ]['name'], $countries[ $right ]['name'] );
+		}
+	);
+
+	$options = '<option value="">' . esc_html__( 'Select a country', 'axismundi-geodata' ) . '</option>';
+	if ( '' !== $value && ! isset( $countries[ $value ] ) ) {
+		/* Translators: %s: an imported, unknown two-letter country code. */
+		$options .= sprintf( '<option value="%1$s" selected="selected">%2$s</option>', esc_attr( $value ), esc_html( sprintf( __( '%s (not in this registry)', 'axismundi-geodata' ), $value ) ) );
+	}
+	foreach ( $countries as $code => $country ) {
+		$options .= sprintf(
+			'<option value="%1$s"%2$s>%3$s</option>',
+			esc_attr( $code ),
+			selected( $value, $code, false ),
+			esc_html( sprintf( '%1$s (%2$s)', $country['name'], $code ) )
+		);
+	}
+
+	return sprintf( '<select name="%1$s" id="%1$s">%2$s</select>', esc_attr( $key ), $options );
+}
+
+/**
+ * The ISO 3166-2 control for one Geo Area term.
+ *
+ * A subdivision is not a second country fact to copy down the tree. Its possible codes are derived
+ * from the Country term the editor already inherits. There is deliberately no worldwide 5,000-item
+ * control here. An existing out-of-registry or wrong-country import stays selected so an unrelated
+ * update cannot erase it; it simply is not offered as a new answer.
+ *
+ * @param string $key     Meta key.
+ * @param string $value   Current subdivision code.
+ * @param string $country Inherited ISO 3166-1 alpha-2 country code.
+ * @return string Escaped select markup.
+ */
+function axismundi_geodata_subdivision_code_select( string $key, string $value, string $country ) : string {
+	$value   = strtoupper( trim( $value ) );
+	$country = strtoupper( trim( $country ) );
+	$codes   = $country ? axismundi_geodata_subdivisions_for_country( $country ) : array();
+
+	if ( ! $country ) {
+		return sprintf(
+			'<select name="%1$s" id="%1$s" disabled="disabled"><option value="">%2$s</option></select>',
+			esc_attr( $key ),
+			esc_html__( 'Choose a Country parent first', 'axismundi-geodata' )
+		);
+	}
+
+	$options = '<option value="">' . esc_html__( 'No subdivision code', 'axismundi-geodata' ) . '</option>';
+	if ( '' !== $value && ! isset( $codes[ $value ] ) ) {
+		/* Translators: 1: existing ISO 3166-2 code, 2: inherited country code. */
+		$options .= sprintf( '<option value="%1$s" selected="selected">%2$s</option>', esc_attr( $value ), esc_html( sprintf( __( '%1$s (not assigned to %2$s)', 'axismundi-geodata' ), $value, $country ) ) );
+	}
+	foreach ( array_keys( $codes ) as $code ) {
+		$options .= sprintf(
+			'<option value="%1$s"%2$s>%1$s</option>',
+			esc_attr( $code ),
+			selected( $value, $code, false )
+		);
+	}
+
+	return sprintf( '<select name="%1$s" id="%1$s">%2$s</select>', esc_attr( $key ), $options );
 }
 
 /**
@@ -225,7 +316,7 @@ function axismundi_geodata_render_term_controls( array $keys, array $fields, str
 		$value = $term instanceof WP_Term
 			? ( 'ax_geo_place_id' === $key ? axismundi_geodata_canonical_place_id( $term->term_id ) : (string) get_term_meta( $term->term_id, $key, true ) )
 			: '';
-		$control = axismundi_geodata_term_control( $key, $field, $value, $taxonomy );
+		$control = axismundi_geodata_term_control( $key, $field, $value, $taxonomy, $term );
 		if ( 'edit' === $context ) {
 			printf(
 				'<tr class="form-field"><th scope="row"><label for="%1$s">%2$s</label></th><td>%3$s<p class="description">%4$s</p></td></tr>',
@@ -307,6 +398,25 @@ function axismundi_geodata_term_save( int $term_id ) : void {
 			$values['ax_geo_place_id'] = $parsed['source'] . ':' . $parsed['id'];
 		} else {
 			unset( $values['ax_geo_place_id'] );
+		}
+	}
+
+	/*
+	 * A subdivision code is its own term's fact, but it has to belong to the Country that contains
+	 * that term. The select makes a mismatched new answer unavailable; this check keeps a crafted
+	 * POST from creating one. A pre-existing imported exception is left alone when its own unchanged
+	 * value is submitted, so editing a coordinate never turns into an unrelated data-loss operation.
+	 */
+	if ( isset( $values['ax_geo_iso_3166_2'] ) ) {
+		$requested = strtoupper( trim( $values['ax_geo_iso_3166_2'] ) );
+		$values['ax_geo_iso_3166_2'] = $requested;
+		$country = strtoupper( trim( (string) ( $values['ax_geo_country_code'] ?? '' ) ) );
+		if ( '' === $country && $term instanceof WP_Term ) {
+			$country = axismundi_geodata_lookup_country_code( $term );
+		}
+		$current = $term instanceof WP_Term ? strtoupper( trim( (string) get_term_meta( $term_id, 'ax_geo_iso_3166_2', true ) ) ) : '';
+		if ( '' !== $requested && '' !== $country && ! axismundi_geodata_subdivision_belongs_to_country( $requested, $country ) && $requested !== $current ) {
+			unset( $values['ax_geo_iso_3166_2'] );
 		}
 	}
 

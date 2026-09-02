@@ -71,10 +71,25 @@ function axismundi_cal_can_manage_calendar( ?array $calendar ) : bool {
 }
 
 /**
- * The Actor URI of the current user, when this site has Actors at all.
+ * The Actor this user is acting as, which is whose calendars these are.
  *
- * Optional by design: the calendar engine works without Object Projections or Actors installed, so
- * ownership degrades to unset rather than blocking the screen.
+ * The acting Actor and not the account's own Person. Somebody who manages an Organization and has
+ * switched to it is looking at that Organization's calendar list, subscribing as it, and publishing
+ * events as it -- and the switch is meant to be the one place that decision is made. Resolving the
+ * account's Person here instead made the switcher decorative on this screen.
+ *
+ * It also used to resolve through the *author* projection, which answers a different question. That
+ * resolver requires a public profile and falls back to the site Actor, because it exists to decide
+ * who a rendered post is attributed to. Neither belongs here: a private person still has calendars,
+ * and a calendar owned by the instance Actor is not a thing anybody asked for.
+ *
+ * A preference, never authority. `axismundi_actors_acting_actor()` re-checks eligibility on every
+ * read, so a revoked manager stops owning as that Organization on the next request and falls back to
+ * their own Person rather than being locked out. Callers still pass the WordPress user separately;
+ * switching identity is not switching account, and the capability checks stay with the account.
+ *
+ * Optional by design: the calendar engine works without Actors installed, so ownership degrades to
+ * unset rather than blocking the screen.
  *
  * @return string
  */
@@ -85,7 +100,8 @@ function axismundi_cal_current_actor_uri() : string {
 	if ( $user_id <= 0 || ! axismundi_cal_federation_ready() ) {
 		return '';
 	}
-	return (string) axismundi_op_local_author_actor_uri( $user_id );
+	$acting = axismundi_actors_acting_actor( $user_id );
+	return $acting instanceof Axismundi_Actor ? (string) $acting->get_uri() : '';
 }
 
 /**

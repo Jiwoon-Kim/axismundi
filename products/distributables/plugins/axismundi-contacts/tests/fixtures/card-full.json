@@ -1,0 +1,166 @@
+{
+  "@type": "Card",
+  "version": "2.0",
+  "uid": "urn:uuid:7f9e8b42-63ad-4f87-98d1-4b2d4e7b91a6",
+  "kind": "individual",
+  "created": "2026-08-20T10:03:00Z",
+  "updated": "2026-08-20T10:03:00Z",
+  "language": "ko-KR",
+  "prodId": "Axismundi Contacts 0.1.0",
+  "name": {
+    "components": [
+      { "kind": "surname", "value": "김", "phonetic": "/kim/" },
+      { "kind": "given", "value": "지운", "phonetic": "/tɕi.un/" }
+    ],
+    "sortAs": { "surname": "김", "given": "지운" },
+    "phoneticSystem": "ipa",
+    "defaultSeparator": "",
+    "isOrdered": true,
+    "full": "김지운"
+  },
+  "localizations": {
+    "ko-Hani": {
+      "name/components/0/value": "金",
+      "name/components/1/value": "知運",
+      "name/defaultSeparator": ""
+    },
+    "en": {
+      "name": {
+        "components": [
+          { "kind": "given", "value": "Jiwoon" },
+          { "kind": "surname", "value": "Kim" }
+        ],
+        "sortAs": { "surname": "Kim", "given": "Jiwoon" },
+        "isOrdered": true
+      },
+      "titles/siteOwner": { "name": "Site Owner" },
+      "titles/projectLeader": { "name": "Project Leader" },
+      "organizations/axismundi": { "name": "Axismundi" },
+      "addresses/home/components": [
+        { "kind": "district", "value": "Nam-gu" },
+        { "kind": "region", "value": "Busan" },
+        { "kind": "country", "value": "Republic of Korea" }
+      ],
+      "addresses/home/defaultSeparator": ", "
+    },
+    "ja-Kana": {
+      "name": {
+        "components": [
+          { "kind": "surname", "value": "キム" },
+          { "kind": "separator", "value": "・" },
+          { "kind": "given", "value": "ジウン" }
+        ],
+        "isOrdered": true
+      }
+    },
+    "zh-Hant-TW": {
+      "name/components/0/value": "金",
+      "name/components/1/value": "知運",
+      "name/defaultSeparator": "",
+      "name/phoneticSystem": "piny",
+      "name/phoneticScript": "Latn",
+      "name/components/0/phonetic": "Jīn",
+      "name/components/1/phonetic": "Zhīyùn"
+    }
+  },
+  "speakToAs": {
+    "grammaticalGender": "masculine",
+    "pronouns": { "p1": { "pronouns": "he/him" } }
+  },
+  "organizations": {
+    "o1": {
+      "name": "Axismundi",
+      "units": [ { "name": "Development" } ],
+      "sortAs": "axismundi"
+    }
+  },
+  "titles": {
+    "siteOwner": { "kind": "title", "name": "사이트 오너" },
+    "projectLeader": { "kind": "role", "name": "프로젝트 리더", "organizationId": "o1" }
+  },
+  "emails": {
+    "e1": { "contexts": { "private": true }, "address": "one@example.invalid", "pref": 1, "label": "Personal" },
+    "e2": { "address": "two@example.invalid", "contexts": { "private": true }, "pref": 2, "label": "Other" }
+  },
+  "phones": {
+    "tel0": {
+      "contexts": { "private": true },
+      "features": { "voice": true, "text": true },
+      "number": "tel:+15550100",
+      "pref": 1,
+      "label": "Mobile"
+    }
+  },
+  "preferredLanguages": {
+    "ko": { "language": "ko", "pref": 1 },
+    "en": { "language": "en", "pref": 2 }
+  },
+  "addresses": {
+    "home": {
+      "contexts": { "private": true },
+      "components": [
+        { "kind": "country", "value": "대한민국" },
+        { "kind": "region", "value": "부산광역시" },
+        { "kind": "locality", "value": "남구" }
+      ],
+      "defaultSeparator": " ",
+      "countryCode": "KR",
+      "isOrdered": true,
+      "timeZone": "Asia/Seoul",
+      "pref": 1
+    }
+  },
+  "onlineServices": {
+    "x1": {
+      "service": "ActivityPub",
+      "user": "@someone@example.invalid",
+      "uri": "https://example.invalid/actors/313024ad-c8c1-45aa-9a44-a491c308b7d4",
+      "pref": 1,
+      "label": "Axismundi"
+    },
+    "x2": {
+      "service": "Mastodon",
+      "user": "@someone@mastodon.invalid",
+      "uri": "https://mastodon.invalid/users/someone",
+      "pref": 2,
+      "label": "Mastodon"
+    }
+  },
+  "links": {
+    "website": { "uri": "https://example.invalid/", "pref": 1, "label": "Website" },
+    "gravatar": { "uri": "https://gravatar.invalid/someone", "label": "Gravatar" }
+  },
+  "media": {
+    "icon": { "kind": "photo", "uri": "https://example.invalid/avatar.jpg", "mediaType": "image/jpeg", "pref": 1 },
+    "image": { "kind": "photo", "uri": "https://example.invalid/header.jpg", "mediaType": "image/jpeg" }
+  },
+  "calendars": {
+    "primary": { "kind": "calendar", "uri": "https://example.invalid/calendar", "pref": 1, "label": "Primary calendar" },
+    "freeBusy": { "kind": "freeBusy", "uri": "https://example.invalid/freebusy", "label": "Free/Busy" }
+  },
+  "schedulingAddresses": {
+    "primary": { "uri": "mailto:scheduling@example.invalid", "pref": 1, "label": "Primary scheduling address" }
+  },
+  "keywords": { "Axismundi": true, "WordPress": true, "ActivityPub": true, "JSContact": true },
+  "personalInfo": {
+    "wordpress": { "kind": "expertise", "value": "WordPress", "level": "high", "listAs": 1 },
+    "activitypub": { "kind": "interest", "value": "ActivityPub", "level": "high", "listAs": 2 },
+    "design": { "kind": "expertise", "value": "Design", "level": "high", "listAs": 3 }
+  },
+  "anniversaries": {
+    "birth": {
+      "kind": "birth",
+      "date": { "year": 1996, "month": 11, "day": 20 },
+      "place": { "full": "부산광역시 수영구\n대한민국" }
+    }
+  },
+  "notes": {
+    "profile": {
+      "note": "Site owner and project leader.",
+      "created": "2026-08-20T10:03:00Z",
+      "author": { "name": "김지운", "uri": "https://example.invalid/actors/313024ad-c8c1-45aa-9a44-a491c308b7d4" }
+    },
+    "n1": { "note": "University classmate. Lives in Busan." }
+  },
+  "example.com:favouriteColour": { "value": "teal", "rank": 3, "flags": [ "a", "b" ] }
+}

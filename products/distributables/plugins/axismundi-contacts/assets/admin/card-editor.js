@@ -1,0 +1,5469 @@
+/**
+ * The Card editor.
+ *
+ * One draft, three ways of looking at it. The fields, the parts of a name and the JSON box are views
+ * of the same object in memory, so a value this editor has no field for is still there when the JSON
+ * box is opened and still there when it is saved. That is the whole reason the draft is one object
+ * rather than a form: a Card carries `contexts`, `personalInfo`, a vendor's own property, and an
+ * editor that rebuilt the document from its inputs would drop every one of them.
+ *
+ * It saves through the draft route and nowhere else. The revision it was read at goes back with it,
+ * so a save written against a version somebody else has replaced is refused rather than merged, and
+ * what comes back is what is stored -- read from the database rather than echoed, in the order it is
+ * stored in.
+ *
+ * No JSX, no build -- plain wp.element.createElement, as the calendar workspace does.
+ */
+( function ( wp, config ) {
+	'use strict';
+
+	var root = document.getElementById( 'ax-contacts-card-editor' );
+	if ( ! wp || ! wp.element || ! root || ! config ) {
+		return;
+	}
+
+	var el = wp.element.createElement;
+	var Fragment = wp.element.Fragment;
+	// The field primitives, which own the markup and the states so this file can own the Card.
+	var fields = window.axismundiContactsFields || {};
+	var TextField = fields.TextField;
+	var Textarea = fields.Textarea;
+	var IconButton = fields.IconButton;
+	var Combobox = fields.Combobox;
+	var TimeZonePicker = fields.TimeZonePicker;
+	var useState = wp.element.useState;
+	var useCallback = wp.element.useCallback;
+	var useRef = wp.element.useRef;
+	var apiFetch = wp.apiFetch;
+	var __ = wp.i18n.__;
+	var sprintf = wp.i18n.sprintf;
+
+	/** How many lines this screen has opened, so each of them can be told from the others. */
+	var rows = 0;
+
+	/** One icon's markup, from the registry this plugin fills. */
+	function icon( name ) {
+		return ( window.axismundiContactsIcons || {} )[ name ] || '';
+	}
+
+	/**
+	 * What each kind of card looks like at a glance.
+	 *
+	 * Beside the name rather than beside the word "Name", because what sits there is what this card is
+	 * about: a person, a company, a building, a machine. An icon of a person on a card describing an
+	 * office would be the screen saying something the card does not, and the radio at the top is
+	 * exactly where somebody changes their mind about that -- so this follows it.
+	 *
+	 * A kind nothing here recognises gets the address-book mark rather than a guess. Somebody else's
+	 * vendor value is a real answer and drawing a person for it would be inventing one.
+	 */
+	var KIND_ICONS = {
+		individual: 'person',
+		org: 'domain',
+		group: 'group',
+		location: 'location-on',
+		application: 'apps',
+		device: 'devices'
+	};
+
+	function kindIcon( kind ) {
+		return KIND_ICONS[ kind || 'individual' ] || 'contacts';
+	}
+
+	/**
+	 * A section, with what it is about drawn once beside it.
+	 *
+	 * Once, and not on every row. Six rows of email addresses do not each need telling that they are
+	 * email addresses, and an icon repeated down a column is a column of noise -- so it sits at the
+	 * top of the stack, on the first line, where a heading would be.
+	 */
+	function Section( props ) {
+		var Heading = props.headingTag || 'h2';
+		var showHeading = props.title || props.showHeading;
+		return el(
+			'section',
+			{ className: 'ax-ce-section' + ( props.className ? ' ' + props.className : '' ) },
+			showHeading ? el( Heading, null, props.title || props.label ) : el( Heading, { className: 'screen-reader-text' }, props.label ),
+			el(
+				'div',
+				{ className: 'ax-ce-section__content is-marked' },
+				el(
+					'div',
+					{ className: 'ax-ce-section__mark', 'aria-hidden': 'true', dangerouslySetInnerHTML: { __html: icon( props.icon ) } }
+				),
+				el(
+					'div',
+					{ className: 'ax-ce-section__body' },
+					props.children
+				)
+			)
+		);
+	}
+
+	/** A group of sibling JSContact properties that the specification describes together. */
+	function PropertyCluster( props ) {
+		return el(
+			'section',
+			{ className: 'ax-ce-cluster' },
+			el( 'h2', null, props.title ),
+			props.children
+		);
+	}
+
+	/**
+	 * Properties this draws rows for, and what each entry's value is called.
+	 *
+	 * `prefix` is what a new entry's address starts with. It says which collection the entry belongs
+	 * to and nothing else -- not what it is called, not what kind it is -- so a number that moves from
+	 * `Mobile` to `Work` keeps the address its provenance and its publishing consent were written
+	 * against. Three letters, because a stored document is read: `tel-`, beside `"number": "tel:+82…"`,
+	 * says what the entry is at a glance.
+	 */
+	var ENTRY_FIELDS = [
+		/*
+		 * `cluster` is which of the standard's groups the property belongs to. Links and media are
+		 * resources -- things this contact is reachable through or represented by -- and a note is
+		 * not one of those; the standard files it under what is left over. They sit next to each
+		 * other in this list because they are built the same way, which is not a reason to show them
+		 * under one heading.
+		 */
+		{ key: 'links', prefix: 'lnk', cluster: 'resource', label: __( 'Links', 'axismundi-contacts' ), value: 'uri', type: 'url', icon: 'link' },
+		{ key: 'media', prefix: 'med', cluster: 'resource', label: __( 'Media', 'axismundi-contacts' ), value: 'uri', type: 'url', icon: 'image' },
+		{ key: 'notes', prefix: 'not', cluster: 'additional', label: __( 'Notes', 'axismundi-contacts' ), value: 'note', icon: 'notes' }
+	];
+
+	/*
+	 * The kinds of day the standard names. Offered rather than enforced: RFC 9553 registers these
+	 * three and lets a vendor add its own, so this is a combobox and not a menu -- somebody keeping
+	 * `첫만남` or a company's founding day is not making a mistake this screen should refuse.
+	 */
+	var ANNIVERSARY_KINDS = [
+		{ value: 'birth', label: __( 'Birthday', 'axismundi-contacts' ) },
+		{ value: 'death', label: __( 'Date of death', 'axismundi-contacts' ) },
+		{ value: 'wedding', label: __( 'Wedding anniversary', 'axismundi-contacts' ) }
+	];
+
+	/*
+	 * The calendars a day can be counted in, named the way CLDR names them. Offered rather than
+	 * enforced, for the same reason as the kinds: this list is the common ones, and a plugin refusing
+	 * a calendar somebody actually keeps would be deciding which calendars people are allowed.
+	 *
+	 * What this never changes is the numbers. RFC 9553 is explicit that `year`, `month` and `day` stay
+	 * Gregorian whatever is named here -- so a birthday kept on the Korean lunisolar calendar is
+	 * stored as the Gregorian day it fell on, with this saying which calendar the family was counting
+	 * in. Which month of which year that becomes in a later year is a question for a calendar, not for
+	 * an address book.
+	 */
+	var CALENDAR_SCALES = [
+		{ value: 'gregory', label: __( 'Gregorian', 'axismundi-contacts' ) },
+		{ value: 'dangi', label: __( 'Korean lunisolar', 'axismundi-contacts' ) },
+		{ value: 'chinese', label: __( 'Chinese lunisolar', 'axismundi-contacts' ) },
+		{ value: 'hebrew', label: __( 'Hebrew', 'axismundi-contacts' ) },
+		{ value: 'islamic', label: __( 'Islamic', 'axismundi-contacts' ) },
+		{ value: 'islamic-umalqura', label: __( 'Islamic (Umm al-Qura)', 'axismundi-contacts' ) },
+		{ value: 'persian', label: __( 'Persian', 'axismundi-contacts' ) },
+		{ value: 'indian', label: __( 'Indian national', 'axismundi-contacts' ) },
+		{ value: 'buddhist', label: __( 'Buddhist', 'axismundi-contacts' ) },
+		{ value: 'ethiopic', label: __( 'Ethiopic', 'axismundi-contacts' ) },
+		{ value: 'coptic', label: __( 'Coptic', 'axismundi-contacts' ) },
+		{ value: 'japanese', label: __( 'Japanese', 'axismundi-contacts' ) },
+		{ value: 'roc', label: __( 'Minguo', 'axismundi-contacts' ) }
+	];
+
+	/**
+	 * Whether a moment is written the one way the standard writes moments.
+	 *
+	 * Narrower than a date and a time: upper case throughout, the offset written as `Z`, and a
+	 * fraction of a second only when it is not zero and with no trailing zeros. `.000` is a valid
+	 * RFC 3339 timestamp and not a valid one here, because two documents saying the same instant
+	 * differently is what a canonical form exists to prevent.
+	 */
+	function isUtcMoment( value ) {
+		if ( ! /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test( value ) ) {
+			return false;
+		}
+		var fraction = value.match( /\.(\d+)Z$/ );
+		if ( fraction && /0$/.test( fraction[ 1 ] ) ) {
+			return false;
+		}
+		var day = new Date( value.slice( 0, 10 ) + 'T00:00:00Z' );
+		if ( isNaN( day.getTime() ) || day.toISOString().slice( 0, 10 ) !== value.slice( 0, 10 ) ) {
+			return false;
+		}
+		// 24:00 is a real reading and 25:00 is not; a leap second lands on 60.
+		return parseInt( value.slice( 11, 13 ), 10 ) <= 24
+			&& parseInt( value.slice( 14, 16 ), 10 ) <= 59
+			&& parseInt( value.slice( 17, 19 ), 10 ) <= 60;
+	}
+
+	/**
+	 * What one instant reads as on the clock of one place, for showing back rather than for storing.
+	 *
+	 * The stored fact is the instant. This is the check somebody needs to see before they trust it:
+	 * `1996-11-20T03:15:00Z` is a number, and `1996년 11월 20일 12:15, Asia/Seoul` is the thing they
+	 * actually remember.
+	 */
+	function momentReadsAs( value, zone ) {
+		if ( ! zone || ! isUtcMoment( value ) ) {
+			return '';
+		}
+		try {
+			return new Intl.DateTimeFormat( undefined, {
+				timeZone: zone,
+				dateStyle: 'long',
+				timeStyle: 'short'
+			} ).format( new Date( value ) );
+		} catch ( error ) {
+			// An unknown zone is the picker's problem to report, not a reason to stop drawing the row.
+			return '';
+		}
+	}
+
+	/**
+	 * Whether this date is an instant rather than a day on a calendar.
+	 *
+	 * The standard allows both. A birthday is a calendar date and almost never an instant -- storing
+	 * `1990-03-24` as a moment in a time zone moves it across midnight for readers far enough east --
+	 * so this screen writes calendar dates only. An instant that arrived some other way is shown as
+	 * what it is and edited through the JSON, because turning it into a calendar date would be this
+	 * screen deciding which day somebody's record meant.
+	 */
+	function isInstant( date ) {
+		return !! date && ( 'Timestamp' === date['@type'] || 'string' === typeof date.utc );
+	}
+
+	/**
+	 * What is wrong with one anniversary, in a sentence, or nothing when it is a date.
+	 *
+	 * The same rules the store keeps, asked here so that they are answered before a save rather than
+	 * by one. A partial date is partial in named ways: a month with neither a year nor a day beside
+	 * it, and a day with no month, name nothing that could be put on a calendar.
+	 */
+	function anniversaryProblem( entry ) {
+		if ( ! ( entry.kind || '' ).trim() ) {
+			return __( 'An anniversary says what kind of day it is.', 'axismundi-contacts' );
+		}
+		var date = entry.date || {};
+		if ( isInstant( date ) ) {
+			if ( ! ( date.utc || '' ).trim() ) {
+				return __( 'A recorded moment needs its time.', 'axismundi-contacts' );
+			}
+			return isUtcMoment( date.utc )
+				? ''
+				: __( 'A moment is written in UTC, ending in Z, such as 1996-11-20T03:15:00Z.', 'axismundi-contacts' );
+		}
+		var year = date.year;
+		var month = date.month;
+		var day = date.day;
+		if ( undefined === year && undefined === month && undefined === day ) {
+			return __( 'An anniversary needs a date.', 'axismundi-contacts' );
+		}
+		if ( undefined !== month && ( month < 1 || month > 12 ) ) {
+			return __( 'A year has twelve months.', 'axismundi-contacts' );
+		}
+		if ( undefined !== year && year < 1 ) {
+			return __( 'A year is a whole number above zero.', 'axismundi-contacts' );
+		}
+		if ( undefined !== day && undefined === month ) {
+			return __( 'A day belongs to a month. Say which month.', 'axismundi-contacts' );
+		}
+		if ( undefined !== month && undefined === year && undefined === day ) {
+			return __( 'A month on its own says nothing. Add a year or a day.', 'axismundi-contacts' );
+		}
+		if ( undefined !== day ) {
+			/*
+			 * The 29th of February is a real birthday and an impossible date in most years, so a date
+			 * that does not name its year is asked whether the day exists in any year at all.
+			 */
+			var against = undefined === year ? 2000 : year;
+			var last = new Date( Date.UTC( against, month, 0 ) ).getUTCDate();
+			if ( day < 1 || day > last ) {
+				return __( 'That month has no such day.', 'axismundi-contacts' );
+			}
+		}
+		return '';
+	}
+
+	/** Every anniversary that is not yet a date, by the id it is filed under. */
+	function anniversaryProblems( card ) {
+		var entries = card.anniversaries || {};
+		return Object.keys( entries ).map( function ( id ) {
+			return { id: id, problem: anniversaryProblem( entries[ id ] || {} ) };
+		} ).filter( function ( row ) {
+			return !! row.problem;
+		} );
+	}
+
+	/** The component kinds a name is made of, plus the separator that goes between them. */
+	var COMPONENT_KINDS = [ 'title', 'given', 'given2', 'surname', 'surname2', 'credential', 'separator' ];
+
+	/**
+	 * Read what a name says, the way RFC 9553 leaves to whoever shows it.
+	 *
+	 * The written-out form when there is one, and the parts joined when there is not. Worked out here
+	 * for display only: nothing this returns is written into the draft unless somebody asks for it.
+	 */
+	function nameText( name ) {
+		if ( ! name ) {
+			return '';
+		}
+		if ( name.full && name.full.trim() ) {
+			return name.full;
+		}
+		var parts = name.components || [];
+		var separator = typeof name.defaultSeparator === 'string' ? name.defaultSeparator : ' ';
+		var out = '';
+		var pending = '';
+		var written = false;
+		parts.forEach( function ( part ) {
+			if ( ! part ) {
+				return;
+			}
+			if ( 'separator' === part.kind ) {
+				pending = part.value || '';
+				return;
+			}
+			var value = ( part.value || '' ).trim();
+			if ( ! value ) {
+				return;
+			}
+			if ( written ) {
+				out += pending;
+			}
+			out += value;
+			pending = separator;
+			written = true;
+		} );
+		return out;
+	}
+
+	/** A copy of an object with one key set, or removed when the value is empty. */
+	function withKey( object, key, value ) {
+		var next = Object.assign( {}, object || {} );
+		if ( '' === value || undefined === value || null === value ) {
+			delete next[ key ];
+		} else {
+			next[ key ] = value;
+		}
+		return next;
+	}
+
+	/**
+	 * The languages this site offers, wherever somebody names one.
+	 *
+	 * Not a list of this plugin's own. A Note's language, an Actor's `nameMap` and a Card all name
+	 * the same languages, and a second list invented here would be a second answer to a question the
+	 * site has already answered -- the kind nobody notices until the two disagree.
+	 *
+	 * Anything may still be typed. BCP 47 has far more tags than belong in a menu -- `ko-Latn` is
+	 * Korean written in Latin letters and `ja-Kana` is Japanese in kana, both ordinary answers and
+	 * neither in any short list -- and what is typed is written down the way the Actor registry
+	 * writes tags, by the store rather than by the screen.
+	 */
+	var LANGUAGES = config.languages || [];
+
+	/**
+	 * What kind of thing this Card describes.
+	 *
+	 * First, because it decides what the rest of the card is for: a person has a given name, an
+	 * organisation has units, a group has members. Asking it after somebody has filled the card in is
+	 * asking them to reconsider what they have already written.
+	 *
+	 * On the Card an Actor publishes about itself it is not a question at all. That Actor is a Person,
+	 * a Group or an Organization in a registry that federates, and a Card claiming otherwise would say
+	 * one thing to a reader and the Actor document another. Shown, and shown as decided.
+	 */
+	function KindField( props ) {
+		var locked = props.locked;
+		var Heading = props.headingTag || 'h2';
+		return el(
+			'section',
+			{ className: 'ax-ce-section' },
+			el( Heading, null, __( 'Type', 'axismundi-contacts' ) ),
+			el(
+				'div',
+				{ className: 'ax-ce-kinds', role: 'radiogroup', 'aria-label': __( 'What this card describes', 'axismundi-contacts' ) },
+				config.kinds.map( function ( kind ) {
+					return el(
+						'label',
+						{ key: kind.value, className: 'ax-ce-kind' + ( locked ? ' is-locked' : '' ) },
+						el( 'input', {
+							type: 'radio',
+							name: 'ax-ce-kind',
+							value: kind.value,
+							checked: ( props.value || 'individual' ) === kind.value,
+							disabled: !! locked,
+							onChange: function () {
+								props.onChange( kind.value );
+							}
+						} ),
+						' ',
+						kind.label
+					);
+				} )
+			),
+			locked
+				? el(
+					'p',
+					{ className: 'description' },
+					__( 'This is the card an Actor publishes about itself, so what it describes is what that Actor is.', 'axismundi-contacts' )
+				)
+				: null
+		);
+	}
+
+	/**
+	 * The language this card is written in.
+	 *
+	 * Not the languages this person prefers to be written to in -- that is `preferredLanguages`, a
+	 * ranked list further down, and the two are asked with the same control because they are the same
+	 * kind of answer, never from the same value because they are different questions. This one says
+	 * what the card above says it in, and what every localization is a translation *of*.
+	 */
+	function CardLanguage( props ) {
+		return el( Combobox, {
+			label: __( 'Language', 'axismundi-contacts' ),
+			hideLabel: true,
+			value: props.value || '',
+			options: LANGUAGES,
+			allowFree: true,
+			supporting: __( 'What the card above says it in. Anything BCP 47 allows, whether it is on the list or not.', 'axismundi-contacts' ),
+			onChange: props.onChange
+		} );
+	}
+
+	/** What each part of a name is called where somebody reads it. */
+	function componentLabel( kind ) {
+		var labels = {
+			title: __( 'Title', 'axismundi-contacts' ),
+			given: __( 'Given name', 'axismundi-contacts' ),
+			given2: __( 'Given name 2', 'axismundi-contacts' ),
+			surname: __( 'Surname', 'axismundi-contacts' ),
+			surname2: __( 'Surname 2', 'axismundi-contacts' ),
+			credential: __( 'Credential', 'axismundi-contacts' ),
+			separator: __( 'Separator', 'axismundi-contacts' )
+		};
+		return labels[ kind ] || kind;
+	}
+
+	/** Whether a name already has a part of some kind. */
+	function hasKind( components, kind ) {
+		return ( components || [] ).some( function ( part ) {
+			return part && kind === part.kind;
+		} );
+	}
+
+	/**
+	 * The parts a name is filled in as, in the order they are read down the screen.
+	 *
+	 * Not the JSContact model with a form around it. Somebody writing down a person's name is filling
+	 * in a name, and the shape of the document that results -- that each of these is an object in an
+	 * ordered list, that the list may hold two of some of them, that a separator is one of them -- is
+	 * true and is not what they came to do. So the ordinary way in is a stack of fields, and the
+	 * document underneath it is reached by asking for it.
+	 */
+	var NAME_SLOTS = [ 'title', 'given', 'given2', 'surname', 'surname2', 'credential' ];
+
+	/** The two a name usually is, which is what is open before anybody asks for more. */
+	var BASIC_SLOTS = [ 'given', 'surname' ];
+
+	/**
+	 * The lines that stay where they are.
+	 *
+	 * A title opens a name and letters after it close one. Neither is somewhere in the middle of how
+	 * a name is read, so neither is something to drag: the two are drawn at the ends and the parts
+	 * between them are what has an order worth arranging.
+	 */
+	var FIXED_FIRST = 'title';
+	var FIXED_LAST = 'credential';
+	var MIDDLE_SLOTS = [ 'given', 'given2', 'surname', 'surname2' ];
+
+	/**
+	 * The parts somebody adds themselves, which are the ones there is a point in removing.
+	 *
+	 * A separator among them. It is a line like the others -- added at the end and dragged where it
+	 * belongs, the same as a second middle name -- rather than a control hidden in the space between
+	 * two rows, which put a button between every pair of lines to serve the one card in fifty that
+	 * wants one.
+	 */
+	var ADDABLE = [ 'given2', 'surname2', 'separator' ];
+
+	/**
+	 * The lines to draw for a set of kinds: what the name has, in the order it has it, then a line
+	 * for each one it does not.
+	 *
+	 * An empty line is a place to type and nothing else. It is not a part of the name, it is not in
+	 * the document, and opening the screen it appears on does not put it there -- which is the whole
+	 * difference between a field and a record.
+	 */
+	function slotRows( components, kinds, pending, everything ) {
+		var seen = {};
+		var rows = [];
+		( components || [] ).forEach( function ( part, index ) {
+			if ( ! part ) {
+				return;
+			}
+			/*
+			 * Everything the middle of a name holds, not only the kinds that have a line of their own.
+			 * A separator, a second middle name, a kind out of some other system's export: each is a
+			 * part of somebody's name and each gets a row. A screen that could only draw six kinds had
+			 * to turn into a different screen when it met a seventh, and turning into a different
+			 * screen is not something an editor should do to somebody mid-name.
+			 */
+			var mine = everything
+				? -1 === NAME_SLOTS.indexOf( part.kind ) || -1 !== kinds.indexOf( part.kind )
+				: -1 !== kinds.indexOf( part.kind );
+			if ( ! mine ) {
+				return;
+			}
+			/*
+			 * Which one of its kind this is, counted down the document. That is the row's name for as
+			 * long as it is on screen -- not the kind alone, because a name may have two middle names
+			 * and two rows called `given2` are one row as far as React is concerned: editing the
+			 * second would change the first.
+			 */
+			seen[ part.kind ] = ( seen[ part.kind ] || 0 ) + 1;
+			rows.push( {
+				key: part.kind + '#' + ( seen[ part.kind ] - 1 ),
+				kind: part.kind,
+				part: part,
+				index: index
+			} );
+		} );
+		kinds.forEach( function ( kind ) {
+			if ( ! seen[ kind ] ) {
+				rows.push( { key: kind + '#0', kind: kind, part: null } );
+			}
+		} );
+		rows.forEach( function ( row ) {
+			// Which one of its kind it is, so a line that is one of several knows whether it is the
+			// first -- the first `given` is the section, and a second is something somebody added.
+			row.occurrence = Number( row.key.split( '#' )[ 1 ] );
+		} );
+		/*
+		 * And the rows somebody asked for that the document has nothing for yet. A row is a place to
+		 * type: it becomes a part of the name when somebody types in it, and it keeps its name when it
+		 * does -- the second `given2` a person adds is `given2#1` before and after they fill it in, so
+		 * the field they are typing into is not replaced under them.
+		 */
+		( pending || [] ).forEach( function ( row ) {
+			// The same rule the parts follow: a kind with no line of its own still belongs somewhere.
+			var mine = everything
+				? -1 === NAME_SLOTS.indexOf( row.kind ) || -1 !== kinds.indexOf( row.kind )
+				: -1 !== kinds.indexOf( row.kind );
+			if ( ! mine ) {
+				return;
+			}
+			seen[ row.kind ] = ( seen[ row.kind ] || 0 ) + 1;
+			rows.push( {
+				key: row.kind + '#' + ( seen[ row.kind ] - 1 ),
+				kind: row.kind,
+				part: null,
+				pendingId: row.id
+			} );
+		} );
+		return rows;
+	}
+
+	/**
+	 * The parts, with the two that belong at the ends put back at the ends.
+	 *
+	 * Applied after anything that moves a part. A name whose letters after it ended up in the middle
+	 * is a name somebody has to tidy up after every drag, and the standard's reading order is exactly
+	 * what the list is for.
+	 */
+	function endsFirstAndLast( components ) {
+		var first = [];
+		var middle = [];
+		var last = [];
+		( components || [] ).forEach( function ( part ) {
+			if ( part && FIXED_FIRST === part.kind ) {
+				first.push( part );
+			} else if ( part && FIXED_LAST === part.kind ) {
+				last.push( part );
+			} else {
+				middle.push( part );
+			}
+		} );
+		return first.concat( middle, last );
+	}
+
+	/**
+	 * The parts a pronunciation belongs to.
+	 *
+	 * A separator is `-` or `・`; a title is `Dr`. Neither is somebody's name being said, so neither
+	 * gets a column for how it sounds.
+	 */
+	var PHONETIC_SLOTS = [ 'given', 'given2', 'surname', 'surname2' ];
+
+	/** Where the first part of some kind sits, or -1. */
+	function slotIndex( components, kind ) {
+		return ( components || [] ).findIndex( function ( part ) {
+			return part && kind === part.kind;
+		} );
+	}
+
+	/** Whether any part of this name says how it is said. */
+	function hasPhonetic( components ) {
+		return ( components || [] ).some( function ( part ) {
+			return part && part.phonetic && String( part.phonetic ).trim();
+		} );
+	}
+
+	/** Where a part of some kind goes, so the parts stay in the order the fields are read in. */
+	function slotInsertion( components, kind ) {
+		var list = components || [];
+		/*
+		 * Next to the part it extends, where there is one. A second middle name belongs after the
+		 * first given name and a second surname after the first surname -- and which of those comes
+		 * first is the name's own business: `김 지운` is stored surname first, and a rule that only
+		 * knew the order the fields are drawn in would file a middle name in front of the surname.
+		 */
+		var anchor = { given2: 'given', surname2: 'surname' }[ kind ] || kind;
+		var after = -1;
+		list.forEach( function ( part, index ) {
+			if ( part && ( part.kind === anchor || part.kind === kind ) ) {
+				after = index;
+			}
+		} );
+		if ( -1 !== after ) {
+			return after + 1;
+		}
+		// Nothing to sit beside, so the order the lines are drawn in is the best answer there is.
+		var rank = NAME_SLOTS.indexOf( kind );
+		if ( -1 === rank ) {
+			// And a kind with no line of its own joins the end, rather than sorting before them all.
+			return list.length;
+		}
+		var at = list.findIndex( function ( part ) {
+			var other = NAME_SLOTS.indexOf( part && part.kind );
+			return -1 !== other && other > rank;
+		} );
+		return -1 === at ? list.length : at;
+	}
+
+	/**
+	 * One line of the name.
+	 *
+	 * What it says, and -- when somebody has asked for it, and only for the parts that are somebody's
+	 * name rather than punctuation around it -- how it is said. The two sit beside each other because
+	 * that is what they are: one part of a name, written and spoken.
+	 */
+	function NameSlot( props ) {
+		var part = props.part || {};
+		// Only a line holding something, of a kind that sits between the ends, is somewhere to move.
+		// Anything but the two that belong at the ends, which is where they always are.
+		var movable = !! props.part && props.ordered
+			&& FIXED_FIRST !== props.kind && FIXED_LAST !== props.kind;
+		var at = props.row.index;
+		return el(
+			'div',
+			{
+				className: 'ax-ce-slot' + ( movable ? ' is-movable' : '' ),
+				draggable: movable,
+				onDragStart: function () {
+					if ( movable ) {
+						props.onDragStart( at );
+					}
+				},
+				onDragOver: function ( event ) {
+					if ( movable ) {
+						event.preventDefault();
+					}
+				},
+				onDrop: function () {
+					if ( movable ) {
+						props.onDrop( at );
+					}
+				}
+			},
+			el(
+				'span',
+				{
+					className: 'ax-ce-slot__grip',
+					'aria-hidden': 'true',
+					dangerouslySetInnerHTML: { __html: movable ? icon( 'drag-indicator' ) : '' }
+				}
+			),
+			el( TextField, {
+				label: componentLabel( props.kind ),
+				className: 'ax-ce-slot__value',
+				value: part.value || '',
+				onChange: function ( value ) {
+					props.onChange( props.row, 'value', value );
+				}
+			} ),
+			props.phonetic && -1 !== PHONETIC_SLOTS.indexOf( props.kind )
+				? el( TextField, {
+					label: __( 'Pronunciation', 'axismundi-contacts' ),
+					className: 'ax-ce-slot__phonetic',
+					value: part.phonetic || '',
+					onChange: function ( value ) {
+						props.onChange( props.row, 'phonetic', value );
+					}
+				} )
+				: null,
+			/*
+			 * Removed only where removing means something. A given name and a surname are the two
+			 * lines the section is, and a title and letters after it are where they always are: those
+			 * four are emptied rather than taken away, and the line stays to be typed into again. A
+			 * second middle name is something somebody added, so it is something they can take back.
+			 */
+			( props.part || props.row.pendingId )
+				&& (
+					-1 !== ADDABLE.indexOf( props.kind )
+					// A kind with no line of its own, and any part past the first of its kind, is
+					// something somebody put there rather than a line the section is made of.
+					|| -1 === NAME_SLOTS.indexOf( props.kind )
+					|| props.row.occurrence > 0
+				)
+				? el( IconButton, {
+					icon: 'delete',
+					variant: 'danger',
+					label: sprintf(
+						/* translators: %s: which part of the name, such as Surname 2. */
+						__( 'Remove %s', 'axismundi-contacts' ),
+						componentLabel( props.kind )
+					),
+					onClick: function () {
+						props.onRemove( props.row );
+					}
+				} )
+				: el( 'span', { className: 'ax-ce-slot__spacer', 'aria-hidden': 'true' } )
+		);
+	}
+
+	/**
+	 * The name.
+	 *
+	 * Two fields and a way to open the rest. A person has a given name and a surname far more often
+	 * than they have a credential or a second middle name, and a screen that shows every part a name
+	 * could have is a screen that asks everybody to read past what they do not need on the way to the
+	 * two things they came to type.
+	 *
+	 * Everything else the standard allows is still reachable and nothing is decided on anybody's
+	 * behalf: the written-out form, the reading order and the separators inside it, and how the name
+	 * files are each asked for rather than offered. A name that already carries one of them opens
+	 * with it in view, because what is stored is what a screen has to be able to show.
+	 *
+	 * A card about an organisation, a place or a machine has no given name. That name is the name --
+	 * `full` and nothing else -- and the parts are there for the rare card that wants them.
+	 */
+	function NameEditor( props ) {
+		var name = props.name || {};
+		var components = name.components || [];
+		var dragging = props.dragging;
+		var blocked = props.blocked;
+		var ordered = true === name.isOrdered;
+		var personal = 'individual' === ( props.kind || 'individual' );
+		/*
+		 * The name as it stands, not as it stood when this render began. Everything that changes it
+		 * moves this forward, so two changes before the screen is drawn again build on each other --
+		 * and a drag rebuilds from the list that exists rather than from one missing whatever was
+		 * typed a moment ago.
+		 */
+		var latest = useRef( name );
+		latest.current = name;
+
+		/*
+		 * What is open. Screen state, all of it: a name that arrived with a middle name opens showing
+		 * it, and closing the fields never takes anything away.
+		 */
+		var [ expanded, setExpanded ] = useState(
+			components.some( function ( part ) {
+				return part && -1 === BASIC_SLOTS.indexOf( part.kind );
+			} )
+		);
+		var [ phonetic, setPhonetic ] = useState( hasPhonetic( components ) );
+		/*
+		 * The full name, which a person's card does not lead with. It is asked for, or shown because
+		 * the card arrived with one and nothing else -- a name somebody wrote down and never took
+		 * apart, which there is nowhere else to put.
+		 */
+		var [ written, setWritten ] = useState( ! components.length && undefined !== name.full );
+		var [ asking, setAsking ] = useState( '' );
+		var [ adding, setAdding ] = useState( false );
+		/*
+		 * Lines somebody asked for that the document has nothing for yet. Screen state, like every
+		 * other line that is empty -- the difference is only that these were asked for rather than
+		 * always drawn.
+		 */
+		var [ pending, setPending ] = useState( [] );
+
+		function setName( next ) {
+			// A name with nothing in it is not a name, so the property goes rather than sitting empty.
+			var keys = Object.keys( next ).filter( function ( key ) {
+				return '@type' !== key;
+			} );
+			latest.current = next;
+			props.onChange( keys.length ? next : undefined );
+		}
+
+		function setComponents( list, extra ) {
+			var next = Object.assign( {}, latest.current, extra || {} );
+			if ( list.length ) {
+				next.components = list;
+			} else {
+				delete next.components;
+				delete next.isOrdered;
+				delete next.defaultSeparator;
+				delete next.sortAs;
+				delete next.phoneticSystem;
+				delete next.phoneticScript;
+			}
+			setName( next );
+		}
+
+		/*
+		 * Adding opens a line, and nothing more. The document gets a part when somebody types in that
+		 * line -- the same rule as every other line on the screen, and the reason a card does not
+		 * collect empty parts from people who clicked a button and thought better of it.
+		 */
+		function addPart( kind ) {
+			rows += 1;
+			setPending( pending.concat( [ { id: 'row-' + rows, kind: kind } ] ) );
+		}
+
+		/**
+		 * One field of the stack, writing through to the part it stands for.
+		 *
+		 * The part is made when there is something to put in it and never before, which is what keeps
+		 * an untouched field out of the document. It is not taken away again when somebody empties it:
+		 * a name half-retyped is not a name being deleted, and what is left empty is dropped on the way
+		 * out rather than mid-keystroke.
+		 */
+		function writeSlot( row, key, value ) {
+			var at = row.index;
+			if ( undefined === at ) {
+				if ( ! value ) {
+					return;
+				}
+				var made = { kind: row.kind, value: '' };
+				made[ key ] = value;
+				var list = ( latest.current.components || [] ).slice();
+				list.splice( slotInsertion( components, row.kind ), 0, made );
+				if ( row.pendingId ) {
+					// The line is the document's now, so it stops being one this screen is holding.
+					setPending( pending.filter( function ( each ) {
+						return each.id !== row.pendingId;
+					} ) );
+				}
+				/*
+				 * A name this editor builds is a name whose order it knows: the lines somebody is
+				 * filling in are read down the screen in the order they are read aloud. So the first
+				 * part written here says so.
+				 *
+				 * A name that arrived saying otherwise is left saying it. An import that did not know
+				 * the reading order is not made to claim one because somebody opened it.
+				 */
+				setComponents( endsFirstAndLast( list ), components.length ? {} : { isOrdered: true } );
+				return;
+			}
+			var part = Object.assign( {}, ( latest.current.components || [] )[ at ] );
+			if ( '' === value && 'phonetic' === key ) {
+				delete part.phonetic;
+			} else {
+				part[ key ] = value;
+			}
+			/*
+			 * A line emptied of everything is a part of the name that is no longer there. The line
+			 * itself stays -- it is a place to type, not a record -- but the document stops carrying a
+			 * part with nothing in it, which is the difference the screen has to keep straight.
+			 *
+			 * Unless another language says something about it. Taking it away would leave those
+			 * patches pointing at nothing, which the server refuses, so the ones affected are named
+			 * and somebody decides.
+			 */
+			var emptied = ! String( part.value || '' ).trim() && ! String( part.phonetic || '' ).trim();
+			if ( emptied ) {
+				var affected = patchesUnder( props.localizations, 'name/components/' + at );
+				if ( affected.length ) {
+					props.onBlocked( at, affected );
+					return;
+				}
+				setComponents( components.filter( function ( ignored, i ) {
+					return i !== at;
+				} ) );
+				return;
+			}
+			var next = ( latest.current.components || [] ).slice();
+			next[ at ] = part;
+			setComponents( next );
+		}
+
+		/** Take a line away outright, which is only offered for the lines somebody added. */
+		function removePart( row ) {
+			if ( undefined === row.index ) {
+				setPending( pending.filter( function ( each ) {
+					return each.id !== row.pendingId;
+				} ) );
+				return;
+			}
+			var at = row.index;
+			var affected = patchesUnder( props.localizations, 'name/components/' + at );
+			if ( affected.length ) {
+				props.onBlocked( at, affected );
+				return;
+			}
+			setComponents( ( latest.current.components || [] ).filter( function ( ignored, i ) {
+				return i !== at;
+			} ) );
+		}
+
+		/*
+		 * The lines. Collapsed, the two a name usually is; open, a title above them and letters after
+		 * the name below, both where they always are. In between, what the name has in the order it
+		 * has it, and then a line for each part it does not -- which is a place to type and not a part
+		 * of anything until somebody types in it.
+		 */
+		function line( row ) {
+			return el( NameSlot, {
+				key: row.key,
+				row: row,
+				kind: row.kind,
+				part: row.part,
+				ordered: ordered,
+				phonetic: phonetic,
+				onChange: writeSlot,
+				onRemove: removePart,
+				onDragStart: props.onDragStart,
+				onDrop: function ( at ) {
+					var list = ( latest.current.components || [] ).slice();
+					if ( null === dragging || dragging === at || undefined === list[ dragging ] ) {
+						return;
+					}
+					var moved = list.splice( dragging, 1 )[ 0 ];
+					list.splice( at, 0, moved );
+					// And whatever the drag did, a title opens the name and a credential closes it.
+					setComponents( endsFirstAndLast( list ) );
+					props.onDragStart( null );
+				}
+			} );
+		}
+
+		var slots = expanded
+			? slotRows( components, [ FIXED_FIRST ] ).map( line )
+				.concat( slotRows( components, MIDDLE_SLOTS, pending, true ).map( line ) )
+				.concat( slotRows( components, [ FIXED_LAST ] ).map( line ) )
+			: slotRows( components, BASIC_SLOTS ).map( line );
+
+		return el(
+			Section,
+			{ icon: kindIcon( props.kind ), label: __( 'Name', 'axismundi-contacts' ), headingTag: props.headingTag, showHeading: props.showHeading },
+			/*
+			 * The written-out name. Not offered to somebody filling in a person's name, and never
+			 * built from the parts -- how a name reads is a question the standard leaves to whoever
+			 * shows it. It is here when the card already carries one, which is what an import of a
+			 * name nobody took apart brings, and when a card is about something that has one name
+			 * rather than parts.
+			 */
+			written || ! personal
+				? el( TextField, {
+					/*
+					 * `Full name` rather than `Written out`. The property is `full` and the standard
+					 * calls it the full name; "written out" reads in English as the opposite of an
+					 * abbreviation -- `J. Kim` written out, `Dr.` written out -- which is a different
+					 * question from the one this field asks.
+					 */
+					label: __( 'Full name', 'axismundi-contacts' ),
+					value: name.full || '',
+					supporting: personal
+						? sprintf(
+							/* translators: %s: what the name reads as. */
+							__( 'Reads as: %s', 'axismundi-contacts' ),
+							nameText( name ) || __( '(nothing yet)', 'axismundi-contacts' )
+						)
+						: __( 'The name this is known by.', 'axismundi-contacts' ),
+					onChange: function ( value ) {
+						setName( withKey( name, 'full', value ) );
+					}
+				} )
+				: null,
+			// The parts, as a stack of fields, whenever a stack of fields can say what they say.
+			personal || expanded
+				? el(
+					'div',
+					{ className: 'ax-ce-name' },
+					el( 'div', { className: 'ax-ce-name__slots' }, slots ),
+					el( IconButton, {
+						icon: 'keyboard-arrow-down',
+						className: 'ax-ce-name__more' + ( expanded ? ' is-open' : '' ),
+						label: expanded
+							? __( 'Fewer parts of the name', 'axismundi-contacts' )
+							: __( 'More parts of the name', 'axismundi-contacts' ),
+						onClick: function () {
+							setExpanded( ! expanded );
+						}
+					} )
+				)
+				: null,
+			/*
+			 * A second middle name, a second surname, something written between two parts. Each of
+			 * these is a real part of somebody's name and none of them is a line worth keeping open on
+			 * every card, so they are added rather than offered -- and a name that ends up with two of
+			 * a kind is one the lines cannot hold, so it opens as the list below.
+			 */
+			expanded
+				? el(
+					'div',
+					{ className: 'ax-ce-name__add' },
+					el( IconButton, {
+						icon: 'add',
+						label: __( 'Add a part of the name', 'axismundi-contacts' ),
+						onClick: function () {
+							setAdding( ! adding );
+						}
+					} ),
+					adding
+						? el(
+							'span',
+							{ className: 'ax-ce-name__add-list' },
+							ADDABLE.map( function ( kind ) {
+								return el(
+									'button',
+									{
+										key: kind,
+										type: 'button',
+										className: 'button',
+										/*
+										 * Offered only when every line of that kind already holds
+										 * something. A card with an empty `Given name 2` on screen
+										 * does not need a second empty one, and offering it is how
+										 * somebody ends up with two lines and one name.
+										 */
+										disabled: (
+											// A line of that kind is already open and empty.
+											( -1 !== NAME_SLOTS.indexOf( kind ) && -1 === slotIndex( components, kind ) )
+											|| pending.some( function ( each ) {
+												return each.kind === kind;
+											} )
+										),
+										onClick: function () {
+											setAdding( false );
+											addPart( kind );
+										}
+									},
+									componentLabel( kind )
+								);
+							} )
+						)
+						: null
+				)
+				: null,
+			blocked
+				? el(
+					'div',
+					{ className: 'ax-ce-blocked', role: 'alert' },
+					el(
+						'p',
+						null,
+						__( 'Other languages say something about this part of the name. Removing it would leave them pointing at nothing.', 'axismundi-contacts' )
+					),
+					el(
+						'ul',
+						null,
+						blocked.affected.map( function ( each ) {
+							return el( 'li', { key: each.tag + each.path }, each.tag + ' — ' + each.path );
+						} )
+					),
+					el(
+						'p',
+						null,
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									props.onResolve( blocked );
+								}
+							},
+							__( 'Remove them and the part', 'axismundi-contacts' )
+						),
+						' ',
+						el(
+							'button',
+							{ type: 'button', className: 'button', onClick: props.onCancel },
+							__( 'Keep everything', 'axismundi-contacts' )
+						)
+					)
+				)
+				: null,
+			/*
+			 * How it is said, asked for rather than shown. Turning it off folds the column away and
+			 * leaves every pronunciation exactly where it was: a screen being tidied is not somebody
+			 * deleting how their name sounds.
+			 */
+			expanded
+				? el(
+					'p',
+					null,
+					el(
+						'label',
+						null,
+						el( 'input', {
+							type: 'checkbox',
+							checked: phonetic,
+							onChange: function ( event ) {
+								setPhonetic( event.target.checked );
+							}
+						} ),
+						' ',
+						__( 'Add pronunciation', 'axismundi-contacts' )
+					)
+				)
+				: null,
+			/*
+			 * And what those pronunciations are written in, which belongs to the name rather than to
+			 * any one part of it. Shown as soon as there is a pronunciation to read, because until
+			 * then there is nothing to say it about -- and required from that moment, because sounds
+			 * in an unstated alphabet are sounds nobody can read: `Jīn` is Pinyin, `キム` is kana, and
+			 * the standard will not store one without the other.
+			 */
+			/*
+			 * Asked as soon as somebody says they are writing pronunciations down, rather than after
+			 * they have written one. The standard requires one of these two the moment any part
+			 * carries a sound, so a screen that waited for the value would be letting somebody fill in
+			 * a name and then refusing to save it.
+			 */
+			phonetic && expanded
+				? el(
+					'div',
+					{ className: 'ax-ce-phonetic' },
+					el( Combobox, {
+						label: __( 'Pronunciation system', 'axismundi-contacts' ),
+						value: name.phoneticSystem || '',
+						options: PHONETIC_SYSTEMS,
+						allowFree: true,
+						supporting: __( 'How the sounds are spelled: IPA, Jyutping or Pinyin.', 'axismundi-contacts' ),
+						onChange: function ( value ) {
+							setName( withKey( name, 'phoneticSystem', value ) );
+						}
+					} ),
+					/*
+					 * The other way of answering the same requirement, and the one that fits a
+					 * pronunciation written in an alphabet rather than a notation: `キム` is not a
+					 * system, it is kana. Either will do, which is why neither is asked for twice.
+					 */
+					el( Combobox, {
+						label: __( 'Pronunciation script', 'axismundi-contacts' ),
+						value: name.phoneticScript || '',
+						options: PHONETIC_SCRIPTS,
+						allowFree: true,
+						supporting: __( 'Or the script they are written in, like Kana. One of the two is required.', 'axismundi-contacts' ),
+						onChange: function ( value ) {
+							setName( withKey( name, 'phoneticScript', value ) );
+						}
+					} )
+				)
+				: null,
+			/*
+			 * Everything a name can say that filling one in does not ask about. Each of these is a
+			 * real answer somebody may need and none of them is a question to put in front of
+			 * somebody typing a surname.
+			 */
+			el(
+				'details',
+				{ className: 'ax-ce-name__advanced' },
+				el( 'summary', null, __( 'More about this name', 'axismundi-contacts' ) ),
+				personal
+					? el(
+						'p',
+						null,
+						el(
+							'label',
+							null,
+							el( 'input', {
+								type: 'checkbox',
+								checked: written,
+								onChange: function ( event ) {
+									if ( event.target.checked ) {
+										setWritten( true );
+										return;
+									}
+									if ( name.full ) {
+										setAsking( 'written' );
+										return;
+									}
+									setWritten( false );
+								}
+							} ),
+							' ',
+							__( 'Full name', 'axismundi-contacts' )
+						)
+					)
+					: null,
+				/*
+				 * A name that arrived without saying its parts are in the order they are read. Nothing
+				 * here decides that on its behalf -- the parts may have come from a vCard that recorded
+				 * what they were and not how they are said -- so the order is offered as something to
+				 * state rather than assumed by opening the screen.
+				 */
+				components.length && ! ordered
+					? el(
+						'div',
+						{ className: 'ax-ce-unordered' },
+						el(
+							'p',
+							null,
+							__( 'These parts are stored without a reading order, so they cannot be rearranged and nothing can go between them.', 'axismundi-contacts' )
+						),
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									setComponents( components, { isOrdered: true } );
+								}
+							},
+							__( 'Say they are in the order they are read', 'axismundi-contacts' )
+						)
+					)
+					: null,
+				/*
+				 * The separator between the parts, which exists only for a name whose parts are in
+				 * order -- the standard says as much, and a separator between parts nobody has put in
+				 * order would be joining them in an order that means nothing.
+				 *
+				 * The checkbox is whether the card answers at all. Unticked there is no property and a
+				 * reader uses a space; ticked and empty says `""`, which is how a name written without
+				 * spaces is said. Turning it off throws an answer away, so when there is one to lose it
+				 * asks first.
+				 */
+				ordered && components.length
+					? el(
+						Fragment,
+						null,
+						el(
+							'p',
+							null,
+							el(
+								'label',
+								null,
+								el( 'input', {
+									type: 'checkbox',
+									checked: undefined !== name.defaultSeparator,
+									onChange: function ( event ) {
+										if ( event.target.checked ) {
+											setName( Object.assign( {}, name, { defaultSeparator: '' } ) );
+											return;
+										}
+										if ( name.defaultSeparator ) {
+											setAsking( 'separator' );
+											return;
+										}
+										var next = Object.assign( {}, name );
+										delete next.defaultSeparator;
+										setName( next );
+									}
+								} ),
+								' ',
+								__( 'Default separator', 'axismundi-contacts' )
+							)
+						),
+						undefined !== name.defaultSeparator
+							? el( TextField, {
+								label: __( 'Default separator', 'axismundi-contacts' ),
+								className: 'ax-ce-separator',
+								value: name.defaultSeparator,
+								supporting: __( 'What goes between the parts. Empty for names written without spaces.', 'axismundi-contacts' ),
+								onChange: function ( value ) {
+									// Empty is a value here, so it is written rather than treated as nothing.
+									setName( Object.assign( {}, name, { defaultSeparator: value } ) );
+								}
+							} )
+							: null
+					)
+					: null,
+				/*
+				 * How it files, which is a third answer rather than a consequence of the other two.
+				 * Left alone, a directory reads the parts themselves -- so this is here for the name
+				 * whose filing does not follow from them: RFC 9553 files `Pau Shou Chang` under a
+				 * surname whose value is `Shou Chang`, because the `given2` belongs with the surname
+				 * when sorting and nowhere else. Two keys, because a directory has two columns.
+				 */
+				components.length
+					? el(
+						Fragment,
+						null,
+						el(
+							'p',
+							null,
+							el(
+								'label',
+								null,
+								el( 'input', {
+									type: 'checkbox',
+									checked: undefined !== name.sortAs,
+									onChange: function ( event ) {
+										if ( event.target.checked ) {
+											setName( Object.assign( {}, name, { sortAs: {} } ) );
+											return;
+										}
+										if ( Object.keys( name.sortAs || {} ).length ) {
+											setAsking( 'sorting' );
+											return;
+										}
+										var next = Object.assign( {}, name );
+										delete next.sortAs;
+										setName( next );
+									}
+								} ),
+								' ',
+								__( 'Custom sorting', 'axismundi-contacts' )
+							)
+						),
+						undefined !== name.sortAs
+							? el(
+								'div',
+								{ className: 'ax-ce-sortas' },
+								SORT_KEYS.filter( function ( kind ) {
+									return hasKind( components, kind );
+								} ).map( function ( kind ) {
+									return el( TextField, {
+										key: kind,
+										label: sprintf(
+											/* translators: %s: which part of the name, such as Surname. */
+											__( 'File %s under', 'axismundi-contacts' ),
+											componentLabel( kind )
+										),
+										value: ( name.sortAs || {} )[ kind ] || '',
+										onChange: function ( value ) {
+											var sortAs = withKey( name.sortAs || {}, kind, value );
+											setName( Object.assign( {}, name, { sortAs: sortAs } ) );
+										}
+									} );
+								} )
+							)
+							: null
+					)
+					: null
+			),
+			asking
+				? el(
+					'div',
+					{ className: 'ax-ce-blocked', role: 'alert' },
+					el(
+						'p',
+						null,
+						'separator' === asking
+							? __( 'Turning this off removes the separator this name is written with.', 'axismundi-contacts' )
+							: 'sorting' === asking
+								? __( 'Turning this off removes the way this name is filed.', 'axismundi-contacts' )
+								: __( 'Turning this off removes the full name.', 'axismundi-contacts' )
+					),
+					el(
+						'p',
+						null,
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									if ( 'written' === asking ) {
+										var without = Object.assign( {}, name );
+										delete without.full;
+										setWritten( false );
+										setAsking( '' );
+										setName( without );
+										return;
+									}
+									var next = Object.assign( {}, name );
+									delete next[ 'separator' === asking ? 'defaultSeparator' : 'sortAs' ];
+									setAsking( '' );
+									setName( next );
+								}
+							},
+							__( 'Remove it', 'axismundi-contacts' )
+						),
+						' ',
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									setAsking( '' );
+								}
+							},
+							__( 'Keep it', 'axismundi-contacts' )
+						)
+					)
+				)
+				: null
+		);
+	}
+
+	/**
+	 * The phonetic systems the standard registers, and the scripts a pronunciation is usually in.
+	 *
+	 * The systems are a closed list in RFC 9553 and the scripts are not, so both are typed into: a
+	 * pronunciation written in a script nobody listed is still a pronunciation, and refusing it would
+	 * be this editor deciding which alphabets exist.
+	 */
+	var PHONETIC_SYSTEMS = [ 'ipa', 'jyut', 'piny' ];
+	var PHONETIC_SCRIPTS = [ 'Latn', 'Kana', 'Hira', 'Hang', 'Hani', 'Cyrl', 'Arab', 'Grek' ];
+
+	/**
+	 * The columns a directory files a name in.
+	 *
+	 * Two, because that is what a directory has. A name with three given names still files under one
+	 * given sort key, and RFC 9553's own example writes a `given2` into the surname key rather than
+	 * inventing a column for it.
+	 */
+	var SORT_KEYS = [ 'given', 'surname' ];
+
+	/** One repeating property, as rows keyed by the id the rest of the system addresses them by. */
+	function EntryField( props ) {
+		var entries = props.entries || {};
+		var ids = Object.keys( entries );
+
+		function setEntries( next ) {
+			props.onChange( Object.keys( next ).length ? next : undefined );
+		}
+
+		return el(
+			Section,
+			{
+				icon: props.field.icon,
+				label: props.field.label,
+				headingTag: props.headingTag,
+				showHeading: props.showHeading
+			},
+			ids.map( function ( id ) {
+				var entry = entries[ id ] || {};
+				return el(
+					'div',
+					{ key: id, className: 'ax-ce-entry' },
+					el( TextField, {
+						label: props.field.label,
+						type: props.field.type,
+						className: 'ax-ce-entry__value',
+						value: entry[ props.field.value ] || '',
+						// The id is the address a published pointer and a provenance row name, so it is
+						// shown rather than hidden: somebody choosing what to publish is choosing by it.
+						supporting: id,
+						onChange: function ( value ) {
+							var next = Object.assign( {}, entries );
+							next[ id ] = withKey( entry, props.field.value, value );
+							setEntries( next );
+						}
+					} ),
+					el( TextField, {
+						label: __( 'Label', 'axismundi-contacts' ),
+						className: 'ax-ce-entry__label',
+						value: entry.label || '',
+						onChange: function ( value ) {
+							var next = Object.assign( {}, entries );
+							next[ id ] = withKey( entry, 'label', value );
+							setEntries( next );
+						}
+					} ),
+					el( IconButton, {
+						icon: 'delete',
+						variant: 'danger',
+						label: __( 'Remove this entry', 'axismundi-contacts' ),
+						onClick: function () {
+							var next = Object.assign( {}, entries );
+							delete next[ id ];
+							setEntries( next );
+						}
+					} )
+				);
+			} ),
+			el(
+				'p',
+				null,
+				el(
+					'button',
+					{
+						type: 'button',
+						className: 'button',
+						onClick: function () {
+							/*
+							 * A new id, never a reused one. An entry id is the address a published
+							 * pointer and a provenance row name, so handing a fresh value the id of one
+							 * that was removed would hand it that value's publishing consent too.
+							 */
+							var id = newEntryId( props.field.prefix, entries );
+							var next = Object.assign( {}, entries );
+							next[ id ] = {};
+							next[ id ][ props.field.value ] = '';
+							setEntries( next );
+						}
+					},
+					sprintf(
+						/* translators: %s: what kind of thing is being added. */
+						__( 'Add %s', 'axismundi-contacts' ),
+						props.field.label.toLowerCase()
+					)
+				)
+			)
+		);
+	}
+
+	/**
+	 * The days a card remembers.
+	 *
+	 * A birthday is the one almost every card has, so a new row starts as one -- and starts with no
+	 * date at all. A screen that filled it in with today would be answering, in somebody's stored
+	 * record, a question only they can answer.
+	 */
+	function Anniversaries( props ) {
+		var entries = props.entries || {};
+		var ids = Object.keys( entries );
+		var countries = addressCountries();
+		/*
+		 * The shape a row is not currently in, kept here and never in the Card. Somebody who typed a
+		 * birthday, switched to an exact moment to see what it looked like, and switched back would
+		 * otherwise find the birthday gone -- so the other half waits in this screen's memory, where
+		 * it is nobody's stored record until they choose it again.
+		 */
+		var [ shadow, setShadow ] = useState( {} );
+
+		function setEntries( next ) {
+			props.onChange( Object.keys( next ).length ? next : undefined );
+		}
+
+		function setEntry( id, entry ) {
+			var next = Object.assign( {}, entries );
+			next[ id ] = entry;
+			setEntries( next );
+		}
+
+		/** Write one key of the date, or take it away when it is emptied. */
+		function setDateKey( id, entry, key, value ) {
+			var date = Object.assign( {}, entry.date || {} );
+			if ( '' === value || undefined === value || null === value ) {
+				delete date[ key ];
+			} else {
+				date[ key ] = value;
+			}
+			var next = Object.assign( {}, entry );
+			if ( Object.keys( date ).length ) {
+				next.date = date;
+			} else {
+				delete next.date;
+			}
+			setEntry( id, next );
+		}
+
+		/**
+		 * Where it happened, which is also where the standard keeps how its day should be read.
+		 *
+		 * Everything this does not ask about is copied forward untouched. A place that arrived with
+		 * street components or coordinates keeps them while somebody corrects the time zone: this
+		 * screen asks three questions about a place and is not entitled to answer the rest by
+		 * omission.
+		 */
+		function setPlaceKey( id, entry, key, value ) {
+			var place = Object.assign( {}, entry.place || {} );
+			if ( value ) {
+				place[ key ] = value;
+			} else {
+				delete place[ key ];
+			}
+			var next = Object.assign( {}, entry );
+			if ( Object.keys( place ).length ) {
+				next.place = place;
+			} else {
+				// A place that said only one thing says nothing once that thing is gone.
+				delete next.place;
+			}
+			setEntry( id, next );
+		}
+
+		/** Move a row between the two shapes, putting the one being left aside rather than dropping it. */
+		function setShape( id, entry, wantInstant ) {
+			var date = entry.date || {};
+			var kept = Object.assign( {}, shadow );
+			kept[ id ] = Object.assign( {}, kept[ id ] || {} );
+			kept[ id ][ isInstant( date ) ? 'instant' : 'partial' ] = date;
+			setShadow( kept );
+			var back = ( kept[ id ] || {} )[ wantInstant ? 'instant' : 'partial' ];
+			var next = Object.assign( {}, entry );
+			if ( back && Object.keys( back ).length ) {
+				next.date = back;
+			} else if ( wantInstant ) {
+				// Announced as a moment from the start, so the row draws as one before it has a value.
+				next.date = { '@type': 'Timestamp', utc: '' };
+			} else {
+				delete next.date;
+			}
+			setEntry( id, next );
+		}
+
+		/** One part of a partial date, written as a whole number or taken away entirely. */
+		function DatePart( row ) {
+			return el( TextField, {
+				label: row.label,
+				type: 'number',
+				className: 'ax-ce-anniversary__' + row.part,
+				value: undefined === row.date[ row.part ] ? '' : String( row.date[ row.part ] ),
+				supporting: row.supporting,
+				onChange: function ( value ) {
+					var number = parseInt( value, 10 );
+					// Cleared, rather than set to nothing: an absent year is what "I do not know the
+					// year" looks like in a partial date, and `0` would be a claim.
+					setDateKey( row.id, row.entry, row.part, '' === value.trim() || isNaN( number ) ? '' : number );
+				}
+			} );
+		}
+
+		return el(
+			Section,
+			{
+				icon: 'celebration',
+				label: __( 'Anniversaries', 'axismundi-contacts' ),
+				headingTag: props.headingTag,
+				showHeading: true
+			},
+			ids.map( function ( id ) {
+				var entry = entries[ id ] || {};
+				var date = entry.date || {};
+				var instant = isInstant( date );
+				var place = entry.place || {};
+				var zone = place.timeZone || '';
+				var placeHasMore = undefined !== place.components || undefined !== place.coordinates;
+				var problem = anniversaryProblem( entry );
+				var reads = instant ? momentReadsAs( date.utc || '', zone ) : '';
+				return el(
+					'div',
+					{ key: id, className: 'ax-ce-entry ax-ce-anniversary' },
+					el( Combobox, {
+						label: __( 'What day this is', 'axismundi-contacts' ),
+						className: 'ax-ce-anniversary__kind',
+						value: entry.kind || '',
+						options: ANNIVERSARY_KINDS,
+						// The three the standard registers are offered; anything else somebody keeps
+						// a day for is theirs to name, so the field does not refuse it.
+						allowFree: true,
+						// The id is the address a published pointer and a provenance row name.
+						supporting: id,
+						onChange: function ( value ) {
+							setEntry( id, withKey( entry, 'kind', value ) );
+						}
+					} ),
+					/*
+					 * A day, or a moment. Two different facts rather than two precisions of one: a day
+					 * is counted on a calendar and can be kept every year, while a moment is a point on
+					 * the line that no calendar counts and that only a time zone turns back into a day.
+					 */
+					el(
+						'fieldset',
+						{ className: 'ax-ce-anniversary__shape' },
+						el( 'legend', null, __( 'Recorded as', 'axismundi-contacts' ) ),
+						[
+							{ instant: false, label: __( 'A day', 'axismundi-contacts' ) },
+							{ instant: true, label: __( 'An exact moment', 'axismundi-contacts' ) }
+						].map( function ( choice ) {
+							return el(
+								'label',
+								{ key: choice.label },
+								el( 'input', {
+									type: 'radio',
+									name: 'ax-ce-shape-' + id,
+									checked: instant === choice.instant,
+									onChange: function () {
+										setShape( id, entry, choice.instant );
+									}
+								} ),
+								' ',
+								choice.label
+							);
+						} )
+					),
+					instant
+						? el(
+							'div',
+							{ className: 'ax-ce-anniversary__moment' },
+							el( TextField, {
+								label: __( 'The moment, in UTC', 'axismundi-contacts' ),
+								className: 'ax-ce-anniversary__utc',
+								value: date.utc || '',
+								supporting: __( 'Written one way only, ending in Z: 1996-11-20T03:15:00Z.', 'axismundi-contacts' ),
+								onChange: function ( value ) {
+									var next = Object.assign( {}, entry );
+									next.date = { '@type': 'Timestamp', utc: value.trim() };
+									setEntry( id, next );
+								}
+							} ),
+							/*
+							 * What that instant reads as where it happened. Shown and never stored: the
+							 * fact is the moment, and this is the sentence somebody actually remembers,
+							 * so that a wrong instant is caught by the person who knows.
+							 */
+							reads ? el( 'p', { className: 'ax-ce-anniversary__reads' }, reads ) : null
+						)
+						: el(
+							'div',
+							{ className: 'ax-ce-anniversary__date' },
+							DatePart( {
+								id: id,
+								entry: entry,
+								date: date,
+								part: 'year',
+								label: __( 'Year', 'axismundi-contacts' ),
+								supporting: __( 'Leave this empty if you do not know it.', 'axismundi-contacts' )
+							} ),
+							DatePart( { id: id, entry: entry, date: date, part: 'month', label: __( 'Month', 'axismundi-contacts' ) } ),
+							DatePart( { id: id, entry: entry, date: date, part: 'day', label: __( 'Day', 'axismundi-contacts' ) } ),
+							/*
+							 * Which calendar the day was counted in -- shown only when the Card already
+							 * says, and never asked of somebody writing one down.
+							 *
+							 * It reads like the way to keep a lunisolar birthday and it is not. The
+							 * numbers beside it stay Gregorian whatever it says, because the standard
+							 * requires that, so it never changes which day this is; it is a note about
+							 * where the day came from. Whether a birth is kept every year on the
+							 * Gregorian calendar, the lunisolar one, or both is a question about how
+							 * somebody is celebrated rather than when they were born -- one birth, and
+							 * as many observances as they keep -- so it belongs to the calendar that
+							 * draws the occurrences and not to the ledger that records the day.
+							 *
+							 * What it is for is arriving from somewhere else: a JSContact Card imported
+							 * with a scale keeps it, and can be corrected or cleared here.
+							 */
+							undefined === date.calendarScale ? null : el( Combobox, {
+								label: __( 'Counted in', 'axismundi-contacts' ),
+								className: 'ax-ce-anniversary__scale',
+								value: date.calendarScale || '',
+								options: CALENDAR_SCALES,
+								allowFree: true,
+								supporting: __( 'Kept from wherever this card came from. The date above stays Gregorian, and how this day is celebrated each year is a calendar setting.', 'axismundi-contacts' ),
+								onChange: function ( value ) {
+									setDateKey( id, entry, 'calendarScale', value );
+								}
+							} )
+						),
+					/*
+					 * Where it happened. Written out rather than taken apart: a birthplace is the scene
+					 * of something and not somewhere post is delivered, so `부산광역시 수영구 자모병원`
+					 * is the whole answer and asking for a street, a district and a postcode would be
+					 * this screen insisting on a form nobody filled in.
+					 */
+					el( TextField, {
+						label: __( 'Place', 'axismundi-contacts' ),
+						className: 'ax-ce-anniversary__place',
+						value: place.full || '',
+						supporting: __( 'Where it happened, written the way you would say it.', 'axismundi-contacts' ),
+						onChange: function ( value ) {
+							setPlaceKey( id, entry, 'full', value );
+						}
+					} ),
+					countries.length
+						? el( Combobox, {
+							label: __( 'Country', 'axismundi-contacts' ),
+							className: 'ax-ce-anniversary__country',
+							value: place.countryCode || '',
+							/*
+							 * The list and nothing else, with a way back out of it. What is stored here
+							 * is an ISO code and what is shown is a country's name, so text typed and
+							 * kept would be a name sitting where a code belongs -- `대한민국` where the
+							 * store expects `KR`, refused on save by a screen that had accepted it.
+							 * Typing still narrows the list; it just does not become the answer.
+							 */
+							options: [ { value: '', label: __( 'Not said', 'axismundi-contacts' ) } ].concat( countries ),
+							// This box shows a country's name and stores its code, so a browser filling
+							// it in would be writing into a field whose displayed value it cannot see.
+							inputProps: { autoComplete: 'off' },
+							onChange: function ( value ) {
+								setPlaceKey( id, entry, 'countryCode', value );
+							}
+						} )
+						: null,
+					/*
+					 * And which clock the day is counted on. A country is not enough to work this out:
+					 * the United States, Russia and Australia each keep several, so the zone is asked
+					 * rather than inferred from the country beside it. A day is a day somewhere -- an
+					 * instant near midnight is one date in Seoul and the day before in New York.
+					 */
+					el( TimeZonePicker, {
+						label: __( 'Read in', 'axismundi-contacts' ),
+						className: 'ax-ce-anniversary__zone',
+						value: zone,
+						options: config.timeZoneOptions,
+						supporting: __( 'Which clock this day is counted on. Leave it empty if you do not know.', 'axismundi-contacts' ),
+						onChange: function ( value ) {
+							setPlaceKey( id, entry, 'timeZone', value );
+						}
+					} ),
+					/*
+					 * A place that arrived with more than this asks about says so, rather than looking
+					 * like a place with three fields. It is left exactly as it came.
+					 */
+					placeHasMore
+						? el(
+							'p',
+							{ className: 'ax-ce-anniversary__more' },
+							__( 'This place also records an address or coordinates, which stay as they are and are edited through the JSON.', 'axismundi-contacts' )
+						)
+						: null,
+					problem ? el( 'p', { className: 'ax-ce-anniversary__problem' }, problem ) : null,
+					el( IconButton, {
+						icon: 'delete',
+						variant: 'danger',
+						label: __( 'Remove this anniversary', 'axismundi-contacts' ),
+						onClick: function () {
+							var next = Object.assign( {}, entries );
+							delete next[ id ];
+							setEntries( next );
+						}
+					} )
+				);
+			} ),
+			el(
+				'p',
+				null,
+				el(
+					'button',
+					{
+						type: 'button',
+						className: 'button',
+						onClick: function () {
+							var id = newEntryId( 'ann', entries );
+							var next = Object.assign( {}, entries );
+							// A birthday, because that is what nearly every one of these is, and no
+							// date, because that is the part nobody else can supply.
+							next[ id ] = { kind: 'birth' };
+							setEntries( next );
+						}
+					},
+					__( 'Add anniversary', 'axismundi-contacts' )
+				)
+			)
+		);
+	}
+
+	/**
+	 * An id for a new entry, which is never one that has been used before.
+	 *
+	 * An entry id is an address. `phones/p1` is what a provenance row is written against and what a
+	 * published pointer names, so counting up from `p1` hands a deleted number's address to the next
+	 * one somebody types -- along with where that old value came from and whoever had agreed it could
+	 * be published. Nothing counts: an id is drawn, and drawn again if the card already has it.
+	 *
+	 * @param {string} prefix  A short word saying what kind of entry it is, for reading a diff.
+	 * @param {Object} entries The entries this card already holds.
+	 */
+	function newEntryId( prefix, entries ) {
+		var id = '';
+		do {
+			id = prefix + '-' + uniqueId();
+		} while ( Object.prototype.hasOwnProperty.call( entries || {}, id ) );
+		return id;
+	}
+
+	/**
+	 * Something nothing has been called before.
+	 *
+	 * A whole uuid rather than a few characters of one. Checking against the ids this Card holds says
+	 * nothing about the ids it used to hold: a deleted `phones/pho-a1b2c3` is still the address a
+	 * provenance row and somebody's agreement to publish were written against, and six characters of
+	 * base36 come round often enough to hand one of those to a number typed months later. The id is
+	 * never shown, so its length costs nobody anything.
+	 */
+	function uniqueId() {
+		if ( window.crypto && window.crypto.randomUUID ) {
+			return window.crypto.randomUUID();
+		}
+		if ( window.crypto && window.crypto.getRandomValues ) {
+			// The same 122 bits, drawn by hand where `randomUUID` is not offered -- it needs a secure
+			// context, and an admin screen served over plain http on somebody's network is not one.
+			var bytes = window.crypto.getRandomValues( new Uint8Array( 16 ) );
+			bytes[ 6 ] = ( bytes[ 6 ] & 0x0f ) | 0x40;
+			bytes[ 8 ] = ( bytes[ 8 ] & 0x3f ) | 0x80;
+			var hex = Array.prototype.map.call( bytes, function ( byte ) {
+				return ( '0' + byte.toString( 16 ) ).slice( -2 );
+			} ).join( '' );
+			return [ hex.slice( 0, 8 ), hex.slice( 8, 12 ), hex.slice( 12, 16 ), hex.slice( 16, 20 ), hex.slice( 20 ) ].join( '-' );
+		}
+		// Nothing to draw from. Long enough that the birthday problem is somebody else's.
+		return Date.now().toString( 36 ) + '-' + Math.random().toString( 36 ).slice( 2, 14 ) + Math.random().toString( 36 ).slice( 2, 14 );
+	}
+
+	/**
+	 * The rows of one repeating property, and the difference between a row and an entry.
+	 *
+	 * Every collection on this screen works the same way and learned it the same way, one defect at a
+	 * time: a row is a place to type and an entry is something the card says. Opening a row writes
+	 * nothing. What somebody answers about a row waits on the row until the thing that makes it an
+	 * entry arrives -- picking `Work` before typing the address means both, and the screen that
+	 * dropped the first because the second came second was forgetting what it was told. Emptying the
+	 * thing that made it an entry takes the entry away and leaves the row, holding everything else it
+	 * said. And an entry a language says something about is not removed by a keystroke: what would be
+	 * left pointing at nothing is named, and somebody decides.
+	 *
+	 * Written once because it was got wrong once per collection.
+	 *
+	 * @param {Object} props   The section's own props: `value`, `card`, `onChange`, `onResolve`.
+	 * @param {Object} options `prefix` for new addresses, `required` key, `property` for patch paths.
+	 */
+	function useEntryRows( props, options ) {
+		var entries = props.value || {};
+		var [ pending, setPending ] = useState( [] );
+		var [ asking, setAsking ] = useState( null );
+		/*
+		 * What the collection holds now, rather than what it held when this render began. A browser
+		 * filling in an address fills several boxes at once, and each of them would otherwise work out
+		 * what to store from the same stale copy -- so the postcode would land and the region it
+		 * arrived with would be gone, which is worse than autofill not working at all.
+		 *
+		 * Reset on every render, so it follows the card, and moved forward on every write, so two
+		 * writes in one tick build on each other.
+		 */
+		var latest = useRef( entries );
+		latest.current = entries;
+		/*
+		 * Rows that have already become entries, by the id they had while they were rows. Several
+		 * fields can be filled in before the screen is drawn again, and without this the second one
+		 * would find the row still looking like a row and make a second entry from it -- three filled
+		 * boxes, three addresses, each holding a bit more than the last.
+		 */
+		var adopted = useRef( {} );
+
+		function setEntries( next ) {
+			latest.current = next;
+			props.onChange( Object.keys( next ).length ? next : undefined );
+		}
+
+		/** Everything a language says about one entry, which removing it would leave pointing at nothing. */
+		function dependsOn( id ) {
+			return patchesUnder( ( props.card || {} ).localizations, options.property + '/' + id ).map( function ( each ) {
+				return { kind: 'patch', tag: each.tag, path: each.path, label: each.tag + ' — ' + each.path };
+			} );
+		}
+
+		function write( row, change ) {
+			if ( row.pending && adopted.current[ row.pending ] ) {
+				// It became one a moment ago; this is the same row, writing into what it became.
+				var became = adopted.current[ row.pending ];
+				row = { key: row.key, id: became, entry: latest.current[ became ] || {} };
+			}
+			if ( row.pending ) {
+				var made = change( row.entry );
+				/*
+				 * What turns a row into an entry is not always one field. An address is an address if
+				 * it says where it is at all -- parts, a country, coordinates -- and a browser filling
+				 * in the parts of a new one would otherwise leave every one of them on a row that
+				 * never became anything, which is a screen quietly eating what somebody was given.
+				 */
+				var enough = ( options.makes || [ options.required ] ).some( function ( key ) {
+					var held = made[ key ];
+					return held && ( 'string' !== typeof held ? true : held.trim() );
+				} );
+				if ( ! enough ) {
+					setPending( pending.map( function ( each ) {
+						return each.id === row.pending ? { id: each.id, entry: made } : each;
+					} ) );
+					return;
+				}
+				var next = Object.assign( {}, latest.current );
+				var made_id = newEntryId( options.prefix, latest.current );
+				next[ made_id ] = made;
+				adopted.current[ row.pending ] = made_id;
+				setPending( pending.filter( function ( each ) {
+					return each.id !== row.pending;
+				} ) );
+				setEntries( next );
+				return;
+			}
+			var written = change( latest.current[ row.id ] || {} );
+			/*
+			 * What makes a new entry is not always the only thing that makes an existing one worth
+			 * keeping. An address imported from somewhere that took it apart may carry `components`
+			 * and no `full`: rubbing out the line somebody was reading would then throw away a
+			 * structure this screen never showed them, which is the worst kind of loss -- silent, and
+			 * of something they did not know was there.
+			 */
+			var keeps = ( options.keeps || [] ).some( function ( key ) {
+				return undefined !== written[ key ] && null !== written[ key ];
+			} );
+			if ( ! keeps && ! String( written[ options.required ] || '' ).trim() ) {
+				var affected = dependsOn( row.id );
+				if ( affected.length ) {
+					setAsking( { id: row.id, depends: affected } );
+					return;
+				}
+				var without = Object.assign( {}, latest.current );
+				delete without[ row.id ];
+				delete written[ options.required ];
+				setPending( pending.concat( [ { id: newEntryId( 'row', {} ), entry: written } ] ) );
+				setEntries( without );
+				return;
+			}
+			var updated = Object.assign( {}, latest.current );
+			updated[ row.id ] = written;
+			setEntries( updated );
+		}
+
+		function remove( row ) {
+			if ( row.pending ) {
+				setPending( pending.filter( function ( each ) {
+					return each.id !== row.pending;
+				} ) );
+				return;
+			}
+			var affected = dependsOn( row.id );
+			if ( affected.length ) {
+				setAsking( { id: row.id, depends: affected } );
+				return;
+			}
+			var next = Object.assign( {}, entries );
+			delete next[ row.id ];
+			setEntries( next );
+		}
+
+		function open() {
+			setPending( pending.concat( [ { id: newEntryId( 'row', {} ), entry: {} } ] ) );
+		}
+
+		/** The question, when there is one to ask. */
+		function question( notice, action ) {
+			if ( ! asking ) {
+				return null;
+			}
+			return el(
+				'div',
+				{ className: 'ax-ce-blocked', role: 'alert' },
+				el( 'p', null, notice ),
+				el(
+					'ul',
+					null,
+					asking.depends.map( function ( each ) {
+						return el( 'li', { key: each.tag + each.path }, each.label );
+					} )
+				),
+				el(
+					'p',
+					null,
+					el(
+						'button',
+						{
+							type: 'button',
+							className: 'button',
+							onClick: function () {
+								props.onResolve( asking );
+								setAsking( null );
+							}
+						},
+						action
+					),
+					' ',
+					el(
+						'button',
+						{
+							type: 'button',
+							className: 'button',
+							onClick: function () {
+								setAsking( null );
+							}
+						},
+						__( 'Keep everything', 'axismundi-contacts' )
+					)
+				)
+			);
+		}
+
+		/*
+		 * Most preferred first, for every collection rather than for accounts alone. `pref` is the
+		 * standard's answer to which of these comes first, and the stored document is now written in
+		 * that order too -- so the fields and the JSON beside them read the same way down.
+		 */
+		var rows = orderedByPreference( entries ).map( function ( id ) {
+			return { key: id, id: id, entry: entries[ id ] || {} };
+		} ).concat( pending.map( function ( each ) {
+			return { key: each.id, pending: each.id, entry: each.entry };
+		} ) );
+
+		return { entries: entries, rows: rows, write: write, remove: remove, open: open, question: question };
+	}
+
+	/**
+	 * Letting go of one entry and everything a language said about it.
+	 *
+	 * The card's own answer to the question the rows ask, which is the same answer for every
+	 * collection: the entry goes, and the patches that named it go with it, because either alone is a
+	 * document the store refuses.
+	 */
+	function resolveEntryRemoval( card, property, question, update ) {
+		var next = Object.assign( {}, card );
+		var entries = Object.assign( {}, next[ property ] );
+		delete entries[ question.id ];
+		if ( Object.keys( entries ).length ) {
+			next[ property ] = entries;
+		} else {
+			delete next[ property ];
+		}
+		var localizations = withoutPatches( next.localizations, question.depends );
+		if ( Object.keys( localizations ).length ) {
+			next.localizations = localizations;
+		} else {
+			delete next.localizations;
+		}
+		update( next );
+	}
+
+	/**
+	 * Google's phone number rules, when they loaded.
+	 *
+	 * Everything below works without them: the country control disappears, what somebody types is
+	 * stored as they typed it, and a number that already says its country still reads back. A phone
+	 * field that stopped working because a script did not arrive would be worse than one that stops
+	 * helping.
+	 */
+	var phoneRules = window.libphonenumber || null;
+
+	/**
+	 * The countries, named the way this browser names them.
+	 *
+	 * The codes are ISO 3166-1 alpha-2, enumerated from the phone rules because a browser can name a
+	 * region from a code and cannot list them: there is no `Intl` call that hands over the set. That
+	 * list is every region with a numbering plan, which is ISO 3166-1 short of a few places nobody
+	 * has an address in either -- and anything missing can still be typed, because both fields that
+	 * use this take what they are given.
+	 *
+	 * @param {boolean} calling Whether to say the calling code, which only a phone row wants.
+	 */
+	function regionOptions( calling ) {
+		// The places with a telephone numbering plan, which is what a phone row is asking about.
+		if ( ! phoneRules ) {
+			return [];
+		}
+		var names = null;
+		try {
+			names = new Intl.DisplayNames( undefined, { type: 'region' } );
+		} catch ( error ) {
+			names = null;
+		}
+		return phoneRules.getCountries().map( function ( region ) {
+			var name = region;
+			try {
+				name = names ? names.of( region ) : region;
+			} catch ( error ) {
+				name = region;
+			}
+			return {
+				value: region,
+				label: calling ? name + ' (+' + phoneRules.getCountryCallingCode( region ) + ')' : name
+			};
+		} ).sort( function ( a, b ) {
+			return a.label.localeCompare( b.label );
+		} );
+	}
+
+	/** What a stored number says, when it says enough to be read. */
+	function readNumber( value ) {
+		if ( ! phoneRules || ! value ) {
+			return null;
+		}
+		try {
+			return phoneRules.parsePhoneNumberFromString( String( value ) ) || null;
+		} catch ( error ) {
+			return null;
+		}
+	}
+
+	/**
+	 * What to show in the box.
+	 *
+	 * A number that says its own country is shown the way that country writes it, which is how
+	 * somebody recognises their own number. Anything else -- an extension, a short code, a note
+	 * somebody imported from a phone that let them type anything -- is shown exactly as it is stored.
+	 */
+	function showNumber( value, region ) {
+		var read = readNumber( value );
+		if ( ! read ) {
+			return String( value || '' );
+		}
+		return read.country === region ? read.formatNational() : read.formatInternational();
+	}
+
+	/**
+	 * What to store for what somebody typed.
+	 *
+	 * `tel:+82…` when it can be read, and what they typed when it cannot. A number this cannot parse
+	 * is not a number this gets to refuse: extensions, short codes, an internal four-digit line, and
+	 * whatever an import brought are all real entries in somebody's address book, and a card that
+	 * dropped them would be a worse record than the phone it came from.
+	 */
+	function storeNumber( text, region ) {
+		var typed = String( text || '' ).trim();
+		if ( ! phoneRules || ! typed ) {
+			return typed;
+		}
+		try {
+			var read = phoneRules.parsePhoneNumberFromString( typed, region || undefined );
+			/*
+			 * Valid, not merely possible. `isPossible` asks whether the digits are the right length,
+			 * which a Korean number typed into a row that says United States passes -- and settling it
+			 * into `tel:+102…` would be this screen inventing a number nobody has. When it cannot be
+			 * sure, what somebody typed stays exactly as they typed it.
+			 */
+			return read && read.isValid() ? read.getURI() : typed;
+		} catch ( error ) {
+			return typed;
+		}
+	}
+
+	/**
+	 * Which of the offered labels an entry reads as, or `custom` when it reads as none.
+	 *
+	 * Derived every time rather than stored beside the values it set: an entry from another client has
+	 * no preset to store, and a second record of the same fact is one that eventually disagrees. The
+	 * table is the server's -- it decides the same question when the row is drawn anywhere else.
+	 */
+	function presetOf( entry, presets ) {
+		var contexts = Object.keys( ( entry || {} ).contexts || {} ).filter( function ( key ) {
+			return entry.contexts[ key ];
+		} ).sort().join( ',' );
+		var features = Object.keys( ( entry || {} ).features || {} ).filter( function ( key ) {
+			return entry.features[ key ];
+		} ).sort().join( ',' );
+		// A label somebody typed is the fact, and outranks whatever the axes happen to say.
+		if ( String( ( entry || {} ).label || '' ).trim() ) {
+			return 'custom';
+		}
+		var found = ( presets || [] ).filter( function ( preset ) {
+			return 'custom' !== preset.value
+				&& contexts === ( preset.contexts || [] ).slice().sort().join( ',' )
+				&& features === ( preset.features || [] ).slice().sort().join( ',' );
+		} );
+		return found.length ? found[ 0 ].value : 'custom';
+	}
+
+	/**
+	 * One entry with a label applied, or with somebody's own word for it.
+	 *
+	 * The two are exclusive. An entry saying both `work` and `Google Voice` is claiming two different
+	 * answers to one question, and whoever reads it has to pick.
+	 */
+	function withPreset( entry, key, presets, label ) {
+		var next = Object.assign( {}, entry );
+		delete next.contexts;
+		delete next.features;
+		delete next.label;
+		if ( 'custom' === key ) {
+			return String( label || '' ).trim() ? Object.assign( next, { label: String( label ).trim() } ) : next;
+		}
+		var preset = ( presets || [] ).filter( function ( each ) {
+			return each.value === key;
+		} )[ 0 ];
+		if ( ! preset ) {
+			return next;
+		}
+		[ 'contexts', 'features' ].forEach( function ( axis ) {
+			if ( ( preset[ axis ] || [] ).length ) {
+				// JSContact says these as sets: a map of value => true, not a list.
+				next[ axis ] = {};
+				preset[ axis ].forEach( function ( value ) {
+					next[ axis ][ value ] = true;
+				} );
+			}
+		} );
+		return next;
+	}
+
+	/**
+	 * The phone numbers.
+	 *
+	 * A country, a number, and what to call it. The country is a hint for reading what somebody
+	 * types and is never written down: the card keeps `tel:+821027421672`, which says Korea itself,
+	 * and a second field saying `KR` beside it would be the same answer twice with nothing keeping
+	 * the two in step.
+	 *
+	 * What is typed stays as typed until the box is left. Somebody writing `010-2742-1672` is writing
+	 * the number the way they know it, and a field that rewrote it into `+82 10…` under their hands
+	 * mid-keystroke would be arguing with them about their own phone number.
+	 */
+	function Phones( props ) {
+		var presets = ( config.presets || {} ).phones || [];
+		var regions = regionOptions( true );
+		var [ hints, setHints ] = useState( {} );
+		var rows = useEntryRows( props, { prefix: 'tel', required: 'number', property: 'phones' } );
+
+		function regionFor( id, entry ) {
+			if ( hints[ id ] ) {
+				return hints[ id ];
+			}
+			var read = readNumber( ( entry || {} ).number );
+			return read && read.country ? read.country : ( config.region || '' );
+		}
+
+		return el(
+			Section,
+			{ icon: 'call', label: __( 'Phone', 'axismundi-contacts' ), headingTag: props.headingTag, showHeading: props.showHeading },
+			rows.rows.map( function ( row ) {
+				var entry = row.entry;
+				var region = regionFor( row.key, entry );
+				var preset = presetOf( entry, presets );
+				return el(
+					'div',
+					{ key: row.key, className: 'ax-ce-phone' },
+					regions.length
+						? el( Combobox, {
+							label: __( 'Country', 'axismundi-contacts' ),
+							className: 'ax-ce-phone__region',
+							value: region,
+							options: regions,
+							onChange: function ( value ) {
+								var next = Object.assign( {}, hints );
+								next[ row.key ] = value;
+								setHints( next );
+								/*
+								 * The country somebody picked is how the number they already typed
+								 * should be read, so it is read again -- but only for a number that
+								 * has not been settled into one already.
+								 */
+								if ( entry.number && ! readNumber( entry.number ) ) {
+									rows.write( row, function ( each ) {
+										return withKey( each, 'number', storeNumber( each.number, value ) );
+									} );
+								}
+							}
+						} )
+						: null,
+					el( TextField, {
+						label: __( 'Phone', 'axismundi-contacts' ),
+						className: 'ax-ce-phone__number',
+						type: 'tel',
+						value: showNumber( entry.number, region ),
+						onChange: function ( value ) {
+							rows.write( row, function ( each ) {
+								return withKey( each, 'number', value );
+							} );
+						},
+						inputProps: {
+							onBlur: function ( event ) {
+								// Settled when the box is left, and not one keystroke sooner.
+								var settled = storeNumber( event.target.value, region );
+								if ( settled !== entry.number ) {
+									rows.write( row, function ( each ) {
+										return withKey( each, 'number', settled );
+									} );
+								}
+							}
+						}
+					} ),
+					el( Combobox, {
+						label: __( 'What it is', 'axismundi-contacts' ),
+						className: 'ax-ce-phone__preset',
+						value: preset,
+						options: presets,
+						onChange: function ( value ) {
+							rows.write( row, function ( each ) {
+								return withPreset( each, value, presets, each.label );
+							} );
+						}
+					} ),
+					'custom' === preset
+						? el( TextField, {
+							label: __( 'Label', 'axismundi-contacts' ),
+							className: 'ax-ce-phone__label',
+							value: entry.label || '',
+							onChange: function ( value ) {
+								rows.write( row, function ( each ) {
+									return withKey( each, 'label', value );
+								} );
+							}
+						} )
+						: null,
+					el( IconButton, {
+						icon: 'delete',
+						variant: 'danger',
+						label: __( 'Remove this number', 'axismundi-contacts' ),
+						onClick: function () {
+							rows.remove( row );
+						}
+					} )
+				);
+			} ),
+			rows.question(
+				__( 'Other languages say something about this number. Removing it would leave them saying it about nothing.', 'axismundi-contacts' ),
+				__( 'Remove them and the number', 'axismundi-contacts' )
+			),
+			el(
+				'p',
+				null,
+				el(
+					'button',
+					{ type: 'button', className: 'button', onClick: rows.open },
+					__( 'Add a phone number', 'axismundi-contacts' )
+				)
+			)
+		);
+	}
+
+	/**
+	 * The email addresses.
+	 *
+	 * One axis rather than two. A phone can be a fax and a mobile at once, which is why it says both
+	 * what it is for and where it belongs; an address is only ever somewhere in somebody's life, so
+	 * the row asks that and nothing else. Anything the three answers cannot say is somebody's own
+	 * word for it, which the standard stores as a label.
+	 */
+	function Emails( props ) {
+		var presets = ( config.presets || {} ).emails || [];
+		var rows = useEntryRows( props, { prefix: 'eml', required: 'address', property: 'emails' } );
+
+		return el(
+			Section,
+			{ icon: 'mail', label: __( 'Email', 'axismundi-contacts' ), headingTag: props.headingTag, showHeading: props.showHeading },
+			rows.rows.map( function ( row ) {
+				var entry = row.entry;
+				var preset = presetOf( entry, presets );
+				return el(
+					'div',
+					{ key: row.key, className: 'ax-ce-email' },
+					el( TextField, {
+						label: __( 'Email', 'axismundi-contacts' ),
+						className: 'ax-ce-email__address',
+						type: 'email',
+						value: entry.address || '',
+						onChange: function ( value ) {
+							rows.write( row, function ( each ) {
+								return withKey( each, 'address', value );
+							} );
+						}
+					} ),
+					el( Combobox, {
+						label: __( 'What it is', 'axismundi-contacts' ),
+						className: 'ax-ce-email__preset',
+						value: preset,
+						options: presets,
+						onChange: function ( value ) {
+							rows.write( row, function ( each ) {
+								return withPreset( each, value, presets, each.label );
+							} );
+						}
+					} ),
+					'custom' === preset
+						? el( TextField, {
+							label: __( 'Label', 'axismundi-contacts' ),
+							className: 'ax-ce-email__label',
+							value: entry.label || '',
+							onChange: function ( value ) {
+								rows.write( row, function ( each ) {
+									return withKey( each, 'label', value );
+								} );
+							}
+						} )
+						: null,
+					el( IconButton, {
+						icon: 'delete',
+						variant: 'danger',
+						label: __( 'Remove this address', 'axismundi-contacts' ),
+						onClick: function () {
+							rows.remove( row );
+						}
+					} )
+				);
+			} ),
+			rows.question(
+				__( 'Other languages say something about this address. Removing it would leave them saying it about nothing.', 'axismundi-contacts' ),
+				__( 'Remove them and the address', 'axismundi-contacts' )
+			),
+			el(
+				'p',
+				null,
+				el(
+					'button',
+					{ type: 'button', className: 'button', onClick: rows.open },
+					__( 'Add an email address', 'axismundi-contacts' )
+				)
+			)
+		);
+	}
+
+	/**
+	 * The countries an address may be in.
+	 *
+	 * From the plugin whose subject that is, named by the browser in whatever language the person
+	 * reading is in. What it is not is the list of places with a telephone numbering plan, which is
+	 * where this came from and which leaves out Antarctica, Pitcairn and everywhere else nobody dials
+	 * -- and which would have taken the country picker with it the day the phone rules were removed.
+	 *
+	 * Empty when nothing supplies one. The field still takes what is typed; it just stops suggesting.
+	 */
+	function addressCountries() {
+		var names = null;
+		try {
+			names = new Intl.DisplayNames( undefined, { type: 'region' } );
+		} catch ( error ) {
+			names = null;
+		}
+		return ( config.countries || [] ).map( function ( country ) {
+			var name = country.label;
+			try {
+				name = names ? names.of( country.value ) : country.label;
+			} catch ( error ) {
+				name = country.label;
+			}
+			return { value: country.value, label: name };
+		} ).sort( function ( a, b ) {
+			return a.label.localeCompare( b.label );
+		} );
+	}
+
+	/**
+	 * The parts of an address a screen keeps a line open for.
+	 *
+	 * Seven, because they are the ones nearly every address has somewhere in it. Their order down the
+	 * screen is not a claim about any country: the order an address is read in is the order its own
+	 * components are in, which is why they can be dragged. This is only where an empty line for each
+	 * one sits until somebody types in it.
+	 */
+	var ADDRESS_SLOTS = [ 'number', 'name', 'district', 'locality', 'region', 'postcode', 'country' ];
+
+	/**
+	 * And the parts that are asked for rather than offered.
+	 *
+	 * A floor, a landmark, a post office box: each is a real part of somebody's address and none is a
+	 * line worth keeping open on every card. `separator` is here too -- between two parts is where it
+	 * goes, and it is dragged there like anything else.
+	 */
+	var ADDRESS_EXTRAS = [ 'room', 'apartment', 'floor', 'building', 'block', 'subdistrict', 'direction', 'landmark', 'postOfficeBox', 'separator' ];
+
+	/** What each part of an address is called where somebody reads it. */
+	function addressLabel( kind ) {
+		var labels = {
+			number: __( 'Number', 'axismundi-contacts' ),
+			name: __( 'Street', 'axismundi-contacts' ),
+			district: __( 'District', 'axismundi-contacts' ),
+			locality: __( 'City or town', 'axismundi-contacts' ),
+			region: __( 'Region', 'axismundi-contacts' ),
+			postcode: __( 'Postcode', 'axismundi-contacts' ),
+			country: __( 'Country', 'axismundi-contacts' ),
+			room: __( 'Room', 'axismundi-contacts' ),
+			apartment: __( 'Apartment', 'axismundi-contacts' ),
+			floor: __( 'Floor', 'axismundi-contacts' ),
+			building: __( 'Building', 'axismundi-contacts' ),
+			block: __( 'Block', 'axismundi-contacts' ),
+			subdistrict: __( 'Subdistrict', 'axismundi-contacts' ),
+			direction: __( 'Direction', 'axismundi-contacts' ),
+			landmark: __( 'Landmark', 'axismundi-contacts' ),
+			postOfficeBox: __( 'Post office box', 'axismundi-contacts' ),
+			separator: __( 'Separator', 'axismundi-contacts' )
+		};
+		return labels[ kind ] || kind;
+	}
+
+	/**
+	 * What a browser may fill a part in from.
+	 *
+	 * The autofill tokens the platform defines, so that somebody who has told their own browser where
+	 * they live can hand it over themselves. Nothing is sent anywhere: the browser holds the addresses
+	 * and the person chooses, which is the difference between this and asking a service.
+	 */
+	function addressAutofill( kind ) {
+		/*
+		 * Only the parts a browser can hand over whole. A browser's idea of the first line is
+		 * `123 Oak St` -- the number and the street together -- and these are separate parts here, so
+		 * asking for it would put a house number inside a street name and call the address structured.
+		 * The line as a whole has its own field, which is where that token belongs.
+		 */
+		var tokens = {
+			district: 'address-level3',
+			locality: 'address-level2',
+			region: 'address-level1',
+			postcode: 'postal-code',
+			country: 'country-name'
+		};
+		return tokens[ kind ] || 'off';
+	}
+
+	/** The contexts an address can be in, which are more than the two a phone has. */
+	var ADDRESS_CONTEXTS = [
+		{ value: 'private', label: __( 'Personal', 'axismundi-contacts' ) },
+		{ value: 'work', label: __( 'Work', 'axismundi-contacts' ) },
+		{ value: 'billing', label: __( 'Billing', 'axismundi-contacts' ) },
+		{ value: 'delivery', label: __( 'Delivery', 'axismundi-contacts' ) }
+	];
+
+	/** One part of one address. */
+	function AddressPart( props ) {
+		var part = props.part || {};
+		var movable = !! props.row.part && props.ordered;
+		var at = props.row.index;
+		return el(
+			'div',
+			{
+				className: 'ax-ce-part-row' + ( movable ? ' is-movable' : '' ),
+				draggable: movable,
+				onDragStart: function () {
+					if ( movable ) {
+						props.onDragStart( at );
+					}
+				},
+				onDragOver: function ( event ) {
+					if ( movable ) {
+						event.preventDefault();
+					}
+				},
+				onDrop: function () {
+					if ( movable ) {
+						props.onDrop( at );
+					}
+				}
+			},
+			el(
+				'span',
+				{
+					className: 'ax-ce-part-row__grip',
+					'aria-hidden': 'true',
+					dangerouslySetInnerHTML: { __html: movable ? icon( 'drag-indicator' ) : '' }
+				}
+			),
+			el( TextField, {
+				label: addressLabel( props.row.kind ),
+				className: 'ax-ce-part-row__value',
+				value: part.value || '',
+				supporting: 'separator' === props.row.kind ? __( 'What goes between the parts either side of it.', 'axismundi-contacts' ) : undefined,
+				inputProps: { autoComplete: addressAutofill( props.row.kind ) },
+				onChange: function ( value ) {
+					props.onChange( props.row, value );
+				}
+			} ),
+			props.row.part || props.row.pendingId
+				? el( IconButton, {
+					icon: 'delete',
+					variant: 'danger',
+					label: sprintf(
+						/* translators: %s: which part of an address, such as Postcode. */
+						__( 'Remove %s', 'axismundi-contacts' ),
+						addressLabel( props.row.kind )
+					),
+					onClick: function () {
+						props.onRemove( props.row );
+					}
+				} )
+				: el( 'span', { className: 'ax-ce-slot__spacer', 'aria-hidden': 'true' } )
+		);
+	}
+
+	/**
+	 * The parts of one address.
+	 *
+	 * The same shape as the parts of a name and for the same reason: what is stored is an ordered
+	 * list, a line is a place to type, and the order somebody puts them in is the order the address
+	 * is read in. What differs is which parts there are, and that none of them belongs at an end --
+	 * a Korean address opens with the region and an American one closes with it, so nothing here
+	 * decides where anything goes.
+	 */
+	function AddressParts( props ) {
+		var address = props.address || {};
+		var components = address.components || [];
+		var ordered = true === address.isOrdered;
+		var [ pending, setPending ] = useState( [] );
+		var [ adding, setAdding ] = useState( false );
+		var [ dragging, setDragging ] = useState( null );
+		// The same reason as the rows above: a browser fills several parts of an address at once.
+		var latest = useRef( address );
+		latest.current = address;
+
+		function setParts( list, extra ) {
+			var next = Object.assign( {}, latest.current, extra || {} );
+			if ( list.length ) {
+				next.components = list;
+			} else {
+				delete next.components;
+				delete next.isOrdered;
+				delete next.defaultSeparator;
+			}
+			latest.current = next;
+			props.onChange( next );
+		}
+
+		function write( row, value ) {
+			if ( undefined === row.index ) {
+				if ( ! String( value ).trim() ) {
+					return;
+				}
+				/*
+				 * An address this editor builds is one whose order it knows: the lines somebody is
+				 * filling in are read down the screen in the order they wrote them. So the first part
+				 * written here says so, and an import that said otherwise is left saying it.
+				 */
+				var list = ( latest.current.components || [] ).concat( [ { kind: row.kind, value: value } ] );
+				if ( row.pendingId ) {
+					setPending( pending.filter( function ( each ) {
+						return each.id !== row.pendingId;
+					} ) );
+				}
+				setParts( list, components.length ? {} : { isOrdered: true } );
+				return;
+			}
+			var next = ( latest.current.components || [] ).slice();
+			if ( ! String( value ).trim() && 'separator' !== row.kind ) {
+				// A part rubbed out is a part removed; the line stays to be typed into again.
+				next.splice( row.index, 1 );
+				setParts( next );
+				return;
+			}
+			next[ row.index ] = Object.assign( {}, next[ row.index ], { value: value } );
+			setParts( next );
+		}
+
+		function remove( row ) {
+			if ( undefined === row.index ) {
+				setPending( pending.filter( function ( each ) {
+					return each.id !== row.pendingId;
+				} ) );
+				return;
+			}
+			setParts( components.filter( function ( ignored, i ) {
+				return i !== row.index;
+			} ) );
+		}
+
+		var rows = slotRows( components, ADDRESS_SLOTS, pending, true );
+
+		return el(
+			Fragment,
+			null,
+			/*
+			 * The address written out as one line, above the parts for the reason the name's is: it
+			 * is how somebody would write the address down, so it is the first thing to read and the
+			 * parts are what it is taken apart into. Whether it is asked at all is a question about
+			 * this address rather than an answer to it, which is why the tick that turns it on lives
+			 * in the fold and this does not.
+			 *
+			 * The standard asks for any one of the parts, the line, a country code, coordinates or a
+			 * time zone, so `{"full": "부산광역시 남구 동명로 26"}` is a whole address on its own and
+			 * nothing here needs the parts to exist before the line can be written. It is never built
+			 * from them and never replaced by them.
+			 */
+			props.written
+				? el( TextField, {
+					label: __( 'Full address', 'axismundi-contacts' ),
+					className: 'ax-ce-address__full',
+					/*
+					 * One line, and shown as one. A line that arrived with a break in it cannot be put
+					 * into a single-line box as it stands -- the box drops the break and runs the words
+					 * either side of it together, which is how `남구\n동명로` would read as
+					 * `남구동명로`. So the break is shown as the space it stands for. What is stored keeps
+					 * its break until somebody edits the line, and then they write what they can see.
+					 */
+					value: ( address.full || '' ).replace( /[\r\n]+/g, ' ' ),
+					supporting: props.fullSupporting || __( 'The whole address written out as one string, kept as written -- never built from the parts above, and never replaced by them.', 'axismundi-contacts' ),
+					inputProps: props.fullInputProps,
+					onChange: function ( value ) {
+						props.onChange( withKey( latest.current, 'full', value ) );
+					}
+				} )
+				: null,
+			rows.map( function ( row ) {
+				return el( AddressPart, {
+					key: row.key,
+					row: row,
+					part: row.part,
+					ordered: ordered,
+					onChange: write,
+					onRemove: remove,
+					onDragStart: setDragging,
+					onDrop: function ( at ) {
+						/*
+						 * Moved within the list as it stands, not as it stood when this row was drawn.
+						 * A part added a moment ago is in one and not the other, and rebuilding from
+						 * the older copy drops it -- which is a drag that quietly deletes something
+						 * somebody typed.
+						 */
+						var list = ( latest.current.components || [] ).slice();
+						if ( null === dragging || dragging === at || undefined === list[ dragging ] ) {
+							return;
+						}
+						var moved = list.splice( dragging, 1 )[ 0 ];
+						list.splice( at, 0, moved );
+						setDragging( null );
+						setParts( list );
+					}
+				} );
+			} ),
+			el(
+				'div',
+				{ className: 'ax-ce-name__add' },
+				el( IconButton, {
+					icon: 'add',
+					label: __( 'Add a part of the address', 'axismundi-contacts' ),
+					onClick: function () {
+						setAdding( ! adding );
+					}
+				} ),
+				adding
+					? el(
+						'span',
+						{ className: 'ax-ce-name__add-list' },
+						ADDRESS_EXTRAS.map( function ( kind ) {
+							return el(
+								'button',
+								{
+									key: kind,
+									type: 'button',
+									className: 'button',
+									/*
+									 * A separator joins two parts in an order, so it needs one to join
+									 * them in. Nothing else is refused: an address may want three
+									 * separators and two of them may be waiting to be typed at once,
+									 * and a button that goes grey without saying why reads as "you
+									 * cannot have another one of those".
+									 */
+									disabled: 'separator' === kind && ! ordered,
+									onClick: function () {
+										setAdding( false );
+										setPending( pending.concat( [ { id: newEntryId( 'part', {} ), kind: kind } ] ) );
+									}
+								},
+								addressLabel( kind )
+							);
+						} )
+					)
+					: null
+			),
+			/*
+			 * An address that arrived without saying its parts are in the order they are read. Nothing
+			 * decides that for it -- they may have come from something that recorded what they were and
+			 * not how they are written -- so it is offered as something to state.
+			 */
+			components.length && ! ordered
+				? el(
+					'div',
+					{ className: 'ax-ce-unordered' },
+					el(
+						'p',
+						null,
+						__( 'These parts are stored without a reading order, so they cannot be rearranged and nothing can go between them.', 'axismundi-contacts' )
+					),
+					el(
+						'button',
+						{
+							type: 'button',
+							className: 'button',
+							onClick: function () {
+								setParts( components, { isOrdered: true } );
+							}
+						},
+						__( 'Say they are in the order they are read', 'axismundi-contacts' )
+					)
+				)
+				: null,
+			/*
+			 * What goes between the parts when nothing says otherwise. The standard will not store one
+			 * for an address whose parts are in no order, which is the same rule the name follows.
+			 */
+			ordered && components.length
+				? el(
+					Fragment,
+					null,
+					el(
+						'p',
+						null,
+						el(
+							'label',
+							null,
+							el( 'input', {
+								type: 'checkbox',
+								checked: undefined !== address.defaultSeparator,
+								onChange: function ( event ) {
+									var next = Object.assign( {}, address );
+									if ( event.target.checked ) {
+										next.defaultSeparator = ', ';
+									} else {
+										delete next.defaultSeparator;
+									}
+									props.onChange( next );
+								}
+							} ),
+							' ',
+							__( 'Default separator', 'axismundi-contacts' )
+						)
+					),
+					undefined !== address.defaultSeparator
+						? el( TextField, {
+							label: __( 'Default separator', 'axismundi-contacts' ),
+							className: 'ax-ce-separator',
+							value: address.defaultSeparator,
+							supporting: __( 'What goes between the parts. Empty for addresses written without spaces.', 'axismundi-contacts' ),
+							onChange: function ( value ) {
+								props.onChange( Object.assign( {}, address, { defaultSeparator: value } ) );
+							}
+						} )
+						: null
+				)
+				: null
+		);
+	}
+
+	/**
+	 * Whether an address answers with a written-out line as well.
+	 *
+	 * Its own component because the tick and the field it turns on are no longer next to each other:
+	 * the line is read first, above the parts, and the question of whether to ask for one at all sits
+	 * in the fold with the other things about this address rather than in the middle of it. The name
+	 * is arranged the same way and for the same reason.
+	 *
+	 * Ticked and empty stores nothing -- somebody is about to write one -- so what is ticked is held
+	 * by whoever draws the row rather than read back from the value, which would untick itself under
+	 * the cursor. Turning it off throws an answer away, so when there is one to lose it asks first.
+	 */
+	function FullAddressToggle( props ) {
+		var [ asking, setAsking ] = useState( false );
+		return el(
+			Fragment,
+			null,
+			el(
+				'p',
+				null,
+				el(
+					'label',
+					null,
+					el( 'input', {
+						type: 'checkbox',
+						checked: props.written,
+						onChange: function ( event ) {
+							if ( event.target.checked ) {
+								props.onWritten( true );
+								return;
+							}
+							if ( props.hasLine ) {
+								setAsking( true );
+								return;
+							}
+							props.onWritten( false );
+						}
+					} ),
+					' ',
+					__( 'Full address', 'axismundi-contacts' )
+				)
+			),
+			asking
+				? el(
+					'div',
+					{ className: 'ax-ce-blocked', role: 'alert' },
+					el( 'p', null, __( 'Turning this off removes the address as it was written out.', 'axismundi-contacts' ) ),
+					el(
+						'p',
+						null,
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									setAsking( false );
+									props.onRemove();
+								}
+							},
+							__( 'Remove it', 'axismundi-contacts' )
+						),
+						' ',
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									setAsking( false );
+								}
+							},
+							__( 'Keep it', 'axismundi-contacts' )
+						)
+					)
+				)
+				: null
+		);
+	}
+
+	/* An optional address fact is only asked when its checkbox is on. */
+	function AddressPropertyToggle( props ) {
+		var [ asking, setAsking ] = useState( false );
+		return el(
+			Fragment,
+			null,
+			el(
+				'p',
+				null,
+				el(
+					'label',
+					null,
+					el( 'input', {
+						type: 'checkbox',
+						checked: props.enabled,
+						onChange: function ( event ) {
+							if ( event.target.checked ) {
+								props.onEnabled( true );
+								return;
+							}
+							if ( props.hasValue ) {
+								setAsking( true );
+								return;
+							}
+							props.onEnabled( false );
+						}
+					} ),
+					' ',
+					props.label
+				)
+			),
+			asking
+				? el(
+					'div',
+					{ className: 'ax-ce-blocked', role: 'alert' },
+					el( 'p', null, props.removeMessage ),
+					el(
+						'p',
+						null,
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									setAsking( false );
+									props.onRemove();
+								}
+							},
+							__( 'Remove it', 'axismundi-contacts' )
+						),
+						' ',
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									setAsking( false );
+								}
+							},
+							__( 'Keep it', 'axismundi-contacts' )
+						)
+					)
+				)
+				: null
+		);
+	}
+
+	/**
+	 * Where somebody is.
+	 *
+	 * An address is written two ways and a Card may hold both: the parts it is made of, and the line
+	 * it is written as. Neither is built from the other. A Tokyo address in the standard's own
+	 * examples carries components, a `full`, and a Japanese localization of both -- the parts are how
+	 * a machine reads it, the line is how a person writes it, and a screen deriving either would be
+	 * throwing away whichever one somebody actually typed.
+	 *
+	 * `countryCode` sits beside them because it is the one part every address has and the one a
+	 * reader needs in order to know how to read the rest. It is not the `country` component and does
+	 * not write one: `US` is the code, `USA` is what somebody put in the address, and the standard's
+	 * example carries both.
+	 *
+	 * Nothing here sends an address anywhere to be completed or checked. The fields carry the
+	 * platform's own autofill tokens, so somebody who has told their browser where they live can hand
+	 * it over themselves -- which is the opposite of a screen asking a service on their behalf.
+	 */
+	function Addresses( props ) {
+		var countries = addressCountries();
+		var rows = useEntryRows( props, {
+			prefix: 'adr',
+			required: 'full',
+			property: 'addresses',
+			// The standard needs one of these and not `full` in particular, so any of them makes one.
+			makes: [ 'full', 'components', 'countryCode', 'coordinates', 'timeZone' ],
+			// An address is whatever it holds. The standard needs one of these and not `full` in
+			// particular, so any of them keeps an entry that has it.
+			keeps: [ 'components', 'coordinates', 'countryCode', 'timeZone' ]
+		} );
+		/*
+		 * Which rows are answering with a written-out line. Kept for the whole section rather than by
+		 * each row, because the rows are drawn in a loop and a loop cannot hold state of its own. A
+		 * row that has said nothing about it is read from the address: one that arrived with a line
+		 * is already answering with one.
+		 */
+		var [ lines, setLines ] = useState( {} );
+		var [ optional, setOptional ] = useState( {} );
+
+		function writesALine( row ) {
+			return undefined === lines[ row.key ] ? undefined !== row.entry.full : lines[ row.key ];
+		}
+
+		function setWritesALine( row, on ) {
+			var next = Object.assign( {}, lines );
+			next[ row.key ] = on;
+			setLines( next );
+		}
+
+		function optionalKey( row, property ) {
+			return row.key + ':' + property;
+		}
+
+		function writesOptional( row, property ) {
+			var key = optionalKey( row, property );
+			return undefined === optional[ key ] ? undefined !== row.entry[ property ] : optional[ key ];
+		}
+
+		function setWritesOptional( row, property, on ) {
+			var next = Object.assign( {}, optional );
+			next[ optionalKey( row, property ) ] = on;
+			setOptional( next );
+		}
+
+		return el(
+			Section,
+			{
+				icon: 'location-on',
+				label: __( 'Addresses', 'axismundi-contacts' ),
+				headingTag: props.headingTag,
+				showHeading: props.showHeading
+			},
+			rows.rows.map( function ( row ) {
+				var entry = row.entry;
+				var contexts = entry.contexts || {};
+				return el(
+					'div',
+					{ key: row.key, className: 'ax-ce-address' },
+					el(
+						'div',
+						{ className: 'ax-ce-address__fields' },
+						/*
+						 * Asked outright, and deliberately not behind a checkbox like the written-out
+						 * line beneath it. `countryCode` is optional in the same way the line is --
+						 * the standard asks for any one of the parts, the line, a country code,
+						 * coordinates or a time zone -- but the two are not the same kind of optional
+						 * to somebody filling this in. Which country an address is read in is a
+						 * question almost every address has an answer to, and asking it is how the
+						 * rest of the address gets read; a line written out is a second way of saying
+						 * what the parts already say, which most addresses never need. A checkbox in
+						 * front of a question somebody can nearly always answer is a step between
+						 * them and the answer.
+						 *
+						 * Nothing requires it. Left empty there is no `countryCode`, and no screen
+						 * here marks it required or fills one in -- a country nobody stated is a
+						 * country nobody knows, which is a fact about the address rather than a gap
+						 * to close. It is also not the `country` component, which is separately
+						 * optional and says what somebody wrote in the address itself.
+						 *
+						 * If the parts alone should ever become the whole of what this asks by
+						 * default, this moves into `More about this address` as the optional picker
+						 * it already is -- not behind a tickbox.
+						 */
+						countries.length
+							? el( Combobox, {
+								label: __( 'Country', 'axismundi-contacts' ),
+								className: 'ax-ce-address__country',
+								value: entry.countryCode || '',
+								/*
+								 * The list and nothing else, with a way back out of it. What is shown
+								 * here is a country's name and what is stored is its code, so text
+								 * typed and kept would be `대한민국` coming to rest where `KR` belongs
+								 * -- a value no other reader can match, written by a screen that had
+								 * accepted it. Typing still narrows the list; it does not become the
+								 * answer.
+								 */
+								options: [ { value: '', label: __( 'Not said', 'axismundi-contacts' ) } ].concat( countries ),
+								/*
+								 * Not filled in by the browser. This box shows a country's name and
+								 * stores its code, and a browser handing over either one would be
+								 * writing into a field whose displayed value it cannot see.
+								 */
+								inputProps: { autoComplete: 'off' },
+								supporting: __( 'Which country reads this address. Not the country written in it.', 'axismundi-contacts' ),
+								onChange: function ( value ) {
+									rows.write( row, function ( each ) {
+										return withKey( each, 'countryCode', value );
+									} );
+								}
+							} )
+							: null,
+						el( AddressParts, {
+							address: entry,
+							written: writesALine( row ),
+							// The line is one field a browser can fill, and the only one it fills whole.
+							fullInputProps: { autoComplete: 'street-address' },
+							onChange: function ( next ) {
+								rows.write( row, function () {
+									return next;
+								} );
+							}
+						} ),
+						/*
+						 * Where it belongs, which for an address is more than one answer: a work
+						 * address may also be where things are delivered, and the standard says both
+						 * with two contexts rather than making somebody choose.
+						 */
+						el(
+							'fieldset',
+							{ className: 'ax-ce-address__contexts' },
+							el( 'legend', null, __( 'Use this address for', 'axismundi-contacts' ) ),
+							ADDRESS_CONTEXTS.map( function ( context ) {
+								return el(
+									'label',
+									{ key: context.value },
+									el( 'input', {
+										type: 'checkbox',
+										checked: true === contexts[ context.value ],
+										onChange: function ( event ) {
+											rows.write( row, function ( each ) {
+												var next = Object.assign( {}, each );
+												var held = Object.assign( {}, next.contexts );
+												if ( event.target.checked ) {
+													held[ context.value ] = true;
+												} else {
+													delete held[ context.value ];
+												}
+												if ( Object.keys( held ).length ) {
+													next.contexts = held;
+												} else {
+													delete next.contexts;
+												}
+												return next;
+											} );
+										}
+									} ),
+									' ',
+									context.label
+								);
+							} )
+						),
+						el( TextField, {
+							label: __( 'Label', 'axismundi-contacts' ),
+							className: 'ax-ce-address__label',
+							value: entry.label || '',
+							supporting: __( 'Optional. What this place is called between you: Parents’ home, the Busan office, the warehouse.', 'axismundi-contacts' ),
+							onChange: function ( value ) {
+								rows.write( row, function ( each ) {
+									return withKey( each, 'label', value );
+								} );
+							}
+						} ),
+						/*
+						 * The two facts about where this address is that a machine wants and a person
+						 * rarely does. The written-out line used to be here too and is not any more:
+						 * it is one of the ways an address says where it is, so it is offered beside
+						 * the parts rather than behind a fold.
+						 */
+						el(
+							'details',
+							{ className: 'ax-ce-name__advanced' },
+							el( 'summary', null, __( 'More about this address', 'axismundi-contacts' ) ),
+							/*
+							 * Whether this address is written out at all, asked here rather than beside
+							 * the line itself: it is a question about the address and not one of its
+							 * answers, and most addresses answer with their parts and never with a line.
+							 */
+							el( FullAddressToggle, {
+								written: writesALine( row ),
+								hasLine: undefined !== entry.full,
+								onWritten: function ( on ) {
+									setWritesALine( row, on );
+								},
+								onRemove: function () {
+									setWritesALine( row, false );
+									rows.write( row, function ( each ) {
+										var without = Object.assign( {}, each );
+										delete without.full;
+										return without;
+									} );
+								}
+							} ),
+							el( AddressPropertyToggle, {
+								label: __( 'Coordinates', 'axismundi-contacts' ),
+								enabled: writesOptional( row, 'coordinates' ),
+								hasValue: undefined !== entry.coordinates,
+								removeMessage: __( 'Turning this off removes the coordinates for this address.', 'axismundi-contacts' ),
+								onEnabled: function ( on ) {
+									setWritesOptional( row, 'coordinates', on );
+								},
+								onRemove: function () {
+									setWritesOptional( row, 'coordinates', false );
+									rows.write( row, function ( each ) {
+										return withKey( each, 'coordinates', '' );
+									} );
+								}
+							} ),
+							writesOptional( row, 'coordinates' )
+								? el( TextField, {
+									label: __( 'Coordinates', 'axismundi-contacts' ),
+									value: entry.coordinates || '',
+									supporting: __( 'A geo: URI, like geo:37.386,-122.084.', 'axismundi-contacts' ),
+									onChange: function ( value ) {
+										rows.write( row, function ( each ) {
+											return withKey( each, 'coordinates', value );
+										} );
+									}
+								} )
+								: null,
+							el( AddressPropertyToggle, {
+								label: __( 'Time zone', 'axismundi-contacts' ),
+								enabled: writesOptional( row, 'timeZone' ),
+								hasValue: undefined !== entry.timeZone,
+								removeMessage: __( 'Turning this off removes the time zone for this address.', 'axismundi-contacts' ),
+								onEnabled: function ( on ) {
+									setWritesOptional( row, 'timeZone', on );
+								},
+								onRemove: function () {
+									setWritesOptional( row, 'timeZone', false );
+									rows.write( row, function ( each ) {
+										return withKey( each, 'timeZone', '' );
+									} );
+								}
+							} ),
+							writesOptional( row, 'timeZone' )
+								? el( TimeZonePicker, {
+									label: __( 'Time zone', 'axismundi-contacts' ),
+									value: entry.timeZone || '',
+									options: config.timeZoneOptions,
+									supporting: __( 'The IANA time zone where this address is located.', 'axismundi-contacts' ),
+									onChange: function ( value ) {
+										rows.write( row, function ( each ) {
+											return withKey( each, 'timeZone', value );
+										} );
+									}
+								} )
+								: null
+						)
+					),
+					el( IconButton, {
+						icon: 'delete',
+						variant: 'danger',
+						label: __( 'Remove this address', 'axismundi-contacts' ),
+						onClick: function () {
+							rows.remove( row );
+						}
+					} )
+				);
+			} ),
+			rows.question(
+				__( 'Other languages say something about this address. Removing it would leave them saying it about nothing.', 'axismundi-contacts' ),
+				__( 'Remove them and the address', 'axismundi-contacts' )
+			),
+			el(
+				'p',
+				null,
+				el(
+					'button',
+					{ type: 'button', className: 'button', onClick: rows.open },
+					__( 'Add an address', 'axismundi-contacts' )
+				)
+			)
+		);
+	}
+
+	/**
+	 * What points at one organization, and would be pointing at nothing without it.
+	 *
+	 * A title names its employer by entry id, and a language may translate that organization's name.
+	 * Removing the entry leaves both saying something about a thing the card no longer holds -- which
+	 * the server refuses on the way in, so the screen has to ask before it gets there.
+	 */
+	function dependsOnOrganization( card, id ) {
+		var found = [];
+		Object.keys( ( card || {} ).titles || {} ).forEach( function ( key ) {
+			if ( id === ( card.titles[ key ] || {} ).organizationId ) {
+				found.push( { kind: 'title', id: key, label: ( card.titles[ key ] || {} ).name || key } );
+			}
+		} );
+		patchesUnder( ( card || {} ).localizations, 'organizations/' + id ).forEach( function ( each ) {
+			found.push( { kind: 'patch', tag: each.tag, path: each.path, label: each.tag + ' — ' + each.path } );
+		} );
+		/*
+		 * And a language that says where a title is held. It says it in one of two shapes -- the
+		 * whole title, or just the line naming its employer -- and both name this organization by the
+		 * id being taken away. Looking only under `organizations/` found neither: they are written
+		 * under `titles/`, about a different property, and they would have gone on pointing here.
+		 */
+		var localizations = ( card || {} ).localizations || {};
+		Object.keys( localizations ).forEach( function ( tag ) {
+			Object.keys( localizations[ tag ] || {} ).forEach( function ( path ) {
+				var value = localizations[ tag ][ path ];
+				var names = /^titles\/[^/]+\/organizationId$/.test( path ) && id === value;
+				var holds = /^titles\/[^/]+$/.test( path ) && value && 'object' === typeof value && id === value.organizationId;
+				if ( names || holds ) {
+					found.push( {
+						kind: holds ? 'inside' : 'patch',
+						tag: tag,
+						path: path,
+						label: tag + ' — ' + path
+					} );
+				}
+			} );
+		} );
+		return found;
+	}
+
+	/**
+	 * A localization with some of it taken away.
+	 *
+	 * A patch removed outright when it was only about the thing that is going, and emptied of one key
+	 * when it was about more than that: a language giving a whole title still gives the title after
+	 * the organization it named is gone, so what goes is the line naming it and nothing else.
+	 */
+	function withoutPatches( localizations, going ) {
+		var out = Object.assign( {}, localizations || {} );
+		going.forEach( function ( each ) {
+			if ( ! each.tag || ! out[ each.tag ] ) {
+				return;
+			}
+			var patch = Object.assign( {}, out[ each.tag ] );
+			if ( 'inside' === each.kind ) {
+				var value = Object.assign( {}, patch[ each.path ] );
+				delete value.organizationId;
+				patch[ each.path ] = value;
+			} else {
+				delete patch[ each.path ];
+			}
+			if ( Object.keys( patch ).length ) {
+				out[ each.tag ] = patch;
+			} else {
+				delete out[ each.tag ];
+			}
+		} );
+		return out;
+	}
+
+	/**
+	 * The places somebody belongs, and what they are there.
+	 *
+	 * Two properties rather than one, because the standard keeps them apart and so does life: an
+	 * organization is a place with a name, and a title is what somebody is called inside one. A person
+	 * has two titles at one company far more often than they have two companies, and a card that
+	 * folded the two together would have to invent a rule for which title belonged to which employer.
+	 * `organizationId` is that rule, and it is the standard's.
+	 *
+	 * A row is a place to type, the same as every line of the name: the document gets an entry when
+	 * somebody types in one, not when they open one.
+	 */
+	function organizationHasContent( entry ) {
+		if ( String( ( entry || {} ).name || '' ).trim() ) {
+			return true;
+		}
+		return ( ( entry || {} ).units || [] ).some( function ( unit ) {
+			return String( ( unit || {} ).name || '' ).trim();
+		} );
+	}
+
+	function Organizations( props ) {
+		var entries = props.value || {};
+		var [ pending, setPending ] = useState( [] );
+		var [ asking, setAsking ] = useState( null );
+		// Parts somebody has opened a line for, by the row they were opened on.
+		var [ openUnits, setOpenUnits ] = useState( {} );
+
+		function openUnit( key ) {
+			var next = Object.assign( {}, openUnits );
+			next[ key ] = ( next[ key ] || [] ).concat( [ 'unit-' + Math.random().toString( 36 ).slice( 2, 8 ) ] );
+			setOpenUnits( next );
+		}
+
+		function closeUnit( key, unit ) {
+			var next = Object.assign( {}, openUnits );
+			next[ key ] = ( next[ key ] || [] ).filter( function ( each ) {
+				return each !== unit;
+			} );
+			setOpenUnits( next );
+		}
+
+		function setEntries( next ) {
+			props.onChange( Object.keys( next ).length ? next : undefined );
+		}
+
+		function freeId() {
+			return newEntryId( 'org', entries );
+		}
+
+		function pendingId() {
+			return 'pending-org-' + Math.random().toString( 36 ).slice( 2, 8 );
+		}
+
+		function setPendingEntry( id, entry ) {
+			setPending( pending.map( function ( each ) {
+				return each.id === id ? { id: each.id, entry: entry } : each;
+			} ) );
+		}
+
+		function moveToPending( row, entry ) {
+			if ( row.pending ) {
+				setPendingEntry( row.pending, entry );
+				return;
+			}
+			var depends = dependsOnOrganization( props.card, row.id );
+			if ( depends.length ) {
+				setAsking( { id: row.id, depends: depends, held: entry } );
+				return;
+			}
+			var next = Object.assign( {}, entries );
+			delete next[ row.id ];
+			setEntries( next );
+			setPending( pending.concat( [ { id: pendingId(), entry: entry } ] ) );
+		}
+
+		/** Write through to an entry, making it when there is something to put in it. */
+		function write( row, change ) {
+			if ( row.pending ) {
+				var made = change( row.entry );
+				if ( ! organizationHasContent( made ) ) {
+					// `sortAs` and `contexts` answer real questions, but do not make an organization.
+					setPendingEntry( row.pending, made );
+					return;
+				}
+				var next = Object.assign( {}, entries );
+				next[ freeId() ] = made;
+				setPending( pending.filter( function ( each ) {
+					return each.id !== row.pending;
+				} ) );
+				setEntries( next );
+				return;
+			}
+			var updated = Object.assign( {}, entries );
+			var changed = change( entries[ row.id ] || {} );
+			if ( ! organizationHasContent( changed ) ) {
+				moveToPending( row, changed );
+				return;
+			}
+			updated[ row.id ] = changed;
+			setEntries( updated );
+		}
+
+		function remove( row ) {
+			if ( row.pending ) {
+				setPending( pending.filter( function ( each ) {
+					return each.id !== row.pending;
+				} ) );
+				return;
+			}
+			var depends = dependsOnOrganization( props.card, row.id );
+			if ( depends.length ) {
+				setAsking( { id: row.id, depends: depends } );
+				return;
+			}
+			var next = Object.assign( {}, entries );
+			delete next[ row.id ];
+			setEntries( next );
+		}
+
+		var rows = Object.keys( entries ).map( function ( id ) {
+			return { key: id, id: id, entry: entries[ id ] || {} };
+		} ).concat( pending.map( function ( each ) {
+			return { key: each.id, pending: each.id, entry: each.entry };
+		} ) );
+
+		return el(
+			Section,
+			{ icon: 'domain', label: __( 'Organizations', 'axismundi-contacts' ), headingTag: props.headingTag, showHeading: props.showHeading },
+			rows.map( function ( row ) {
+				var entry = row.entry;
+				var units = entry.units || [];
+				return el(
+					'div',
+					{ key: row.key, className: 'ax-ce-org' },
+					el(
+						'div',
+						{ className: 'ax-ce-org__fields' },
+						el( TextField, {
+							label: __( 'Organization', 'axismundi-contacts' ),
+							className: 'ax-ce-org__name',
+							value: entry.name || '',
+							onChange: function ( value ) {
+								write( row, function ( each ) {
+									return withKey( each, 'name', value );
+								} );
+							}
+						} ),
+						el(
+							'div',
+							{ className: 'ax-ce-org__units' },
+						/*
+						 * The parts of it somebody belongs to, from the outside in: a faculty inside a
+						 * university, a team inside a department. A list, because the order is what
+						 * says which contains which -- and a list that exists only once something is
+						 * in it, because `units: []` is a property saying nothing.
+						 */
+						units.map( function ( unit, at ) {
+							return el(
+								'div',
+								{ key: at, className: 'ax-ce-org__unit' },
+								el( TextField, {
+									label: __( 'Department', 'axismundi-contacts' ),
+									className: 'ax-ce-org__unit-name',
+									value: ( unit || {} ).name || '',
+									onChange: function ( value ) {
+										write( row, function ( each ) {
+											var list = ( each.units || [] ).slice();
+											if ( String( value ).trim() ) {
+												list[ at ] = Object.assign( {}, list[ at ] || {}, { name: value } );
+											} else {
+												list.splice( at, 1 );
+											}
+											return withKey( each, 'units', list.length ? list : '' );
+										} );
+									}
+								} ),
+								el( IconButton, {
+									icon: 'delete',
+									variant: 'danger',
+									label: __( 'Remove this part', 'axismundi-contacts' ),
+									onClick: function () {
+										write( row, function ( each ) {
+											var list = ( each.units || [] ).filter( function ( ignored, i ) {
+												return i !== at;
+											} );
+											return withKey( each, 'units', list.length ? list : '' );
+										} );
+									}
+								} )
+							);
+						} ),
+						/*
+						 * And a part somebody has opened but not named. A row, like everything else on
+						 * this screen: `units: [{ "name": "" }]` is a list saying that an organization
+						 * contains something nobody can name, which is not a thing anybody meant.
+						 */
+						( openUnits[ row.key ] || [] ).map( function ( unit ) {
+							return el(
+								'div',
+								{ key: unit, className: 'ax-ce-org__unit' },
+								el( TextField, {
+									label: __( 'Department', 'axismundi-contacts' ),
+									className: 'ax-ce-org__unit-name',
+									value: '',
+									onChange: function ( value ) {
+										if ( ! String( value ).trim() ) {
+											return;
+										}
+										closeUnit( row.key, unit );
+										write( row, function ( each ) {
+											return withKey( each, 'units', ( each.units || [] ).concat( [ { name: value } ] ) );
+										} );
+									}
+								} ),
+								el( IconButton, {
+									icon: 'delete',
+									variant: 'danger',
+									label: __( 'Remove this part', 'axismundi-contacts' ),
+									onClick: function () {
+										closeUnit( row.key, unit );
+									}
+								} )
+							);
+						} ),
+						el(
+								'p',
+								null,
+								el(
+									'button',
+									{
+										type: 'button',
+										className: 'button',
+										onClick: function () {
+											openUnit( row.key );
+										}
+									},
+									__( 'Add a department', 'axismundi-contacts' )
+								)
+							)
+						),
+						el(
+							'details',
+							{
+								className: 'ax-ce-org__advanced',
+								open: !! entry.sortAs || 'anywhere' !== contextOf( entry )
+							},
+							el( 'summary', null, __( 'More about this organization', 'axismundi-contacts' ) ),
+							el( TextField, {
+								label: __( 'Sort this organization as', 'axismundi-contacts' ),
+								value: entry.sortAs || '',
+								onChange: function ( value ) {
+									write( row, function ( each ) {
+										return withKey( each, 'sortAs', value );
+									} );
+								}
+							} ),
+							el( Combobox, {
+								label: __( 'Use this organization for', 'axismundi-contacts' ),
+								value: contextOf( entry ),
+								options: CONTEXT_CHOICES,
+								onChange: function ( value ) {
+									write( row, function ( each ) {
+										return withContext( each, value );
+									} );
+								}
+							} )
+						)
+					),
+					el( IconButton, {
+						icon: 'delete',
+						variant: 'danger',
+						label: __( 'Remove this organization', 'axismundi-contacts' ),
+						onClick: function () {
+							remove( row );
+						}
+					} )
+				);
+			} ),
+			asking
+				? el(
+					'div',
+					{ className: 'ax-ce-blocked', role: 'alert' },
+					el(
+						'p',
+						null,
+						__( 'Other parts of this card point at this organization. Removing it would leave them pointing at nothing.', 'axismundi-contacts' )
+					),
+					el(
+						'ul',
+						null,
+						asking.depends.map( function ( each ) {
+							return el( 'li', { key: each.kind + each.id }, each.label );
+						} )
+					),
+					el(
+						'p',
+						null,
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									props.onResolve( asking );
+									if ( asking.held ) {
+										setPending( pending.concat( [ { id: pendingId(), entry: asking.held } ] ) );
+									}
+									setAsking( null );
+								}
+							},
+							__( 'Remove them and the organization', 'axismundi-contacts' )
+						),
+						' ',
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									setAsking( null );
+								}
+							},
+							__( 'Keep everything', 'axismundi-contacts' )
+						)
+					)
+				)
+				: null,
+			el(
+				'p',
+				null,
+				el(
+					'button',
+					{
+						type: 'button',
+						className: 'button',
+						onClick: function () {
+							setPending( pending.concat( [ { id: pendingId(), entry: {} } ] ) );
+						}
+					},
+					__( 'Add an organization', 'axismundi-contacts' )
+				)
+			)
+		);
+	}
+
+	/** A formal job title or an assignment somebody carries out. */
+	var TITLE_KINDS = [
+		{ value: 'title', label: __( 'Job title', 'axismundi-contacts' ) },
+		{ value: 'role', label: __( 'Role', 'axismundi-contacts' ) }
+	];
+
+	/**
+	 * What somebody is called where they work.
+	 *
+	 * Which employer a title belongs to is `organizationId`, which names an entry in the section
+	 * above rather than repeating its name -- so renaming the company renames it once. A title with
+	 * no organization is a title somebody holds on their own, which is an ordinary thing to be.
+	 */
+	function Titles( props ) {
+		var entries = props.value || {};
+		/*
+		 * Rows somebody has opened, each holding whatever they have answered so far. A title is a
+		 * title because it has a name -- the standard requires one -- so a row where somebody has
+		 * picked the kind and the employer but not yet typed the name is a row and not a title. It
+		 * keeps those answers itself until the name arrives, rather than writing a document the
+		 * server would refuse.
+		 */
+		var [ pending, setPending ] = useState( [] );
+		var [ asking, setAsking ] = useState( null );
+		var organizations = props.organizations || {};
+		var employers = Object.keys( organizations ).map( function ( id ) {
+			return { value: id, label: ( organizations[ id ] || {} ).name || id };
+		} );
+
+		function setEntries( next ) {
+			props.onChange( Object.keys( next ).length ? next : undefined );
+		}
+
+		function write( row, key, value ) {
+			if ( row.pending ) {
+				var held = withKey( row.entry, key, value );
+				if ( ! String( held.name || '' ).trim() ) {
+					// Still only a row: what has been answered waits here for the name.
+					setPending( pending.map( function ( each ) {
+						return each.id === row.pending ? { id: each.id, entry: held } : each;
+					} ) );
+					return;
+				}
+				var next = Object.assign( {}, entries );
+				next[ newEntryId( 'ttl', entries ) ] = held;
+				setPending( pending.filter( function ( each ) {
+					return each.id !== row.pending;
+				} ) );
+				setEntries( next );
+				return;
+			}
+			var updated = Object.assign( {}, entries );
+			updated[ row.id ] = withKey( entries[ row.id ] || {}, key, value );
+			setEntries( updated );
+		}
+
+		function remove( row ) {
+			if ( row.pending ) {
+				setPending( pending.filter( function ( each ) {
+					return each.id !== row.pending;
+				} ) );
+				return;
+			}
+			/*
+			 * A language may say this title in its own words. Taking the title away would leave those
+			 * patches naming a property the card no longer has, which the server refuses -- so they
+			 * are named and somebody decides, the same as removing a part of a name.
+			 */
+			var affected = patchesUnder( ( props.card || {} ).localizations, 'titles/' + row.id );
+			if ( affected.length ) {
+				setAsking( { id: row.id, depends: affected.map( function ( each ) {
+					return { kind: 'patch', tag: each.tag, path: each.path, label: each.tag + ' — ' + each.path };
+				} ) } );
+				return;
+			}
+			var next = Object.assign( {}, entries );
+			delete next[ row.id ];
+			setEntries( next );
+		}
+
+		var rows = Object.keys( entries ).map( function ( id ) {
+			return { key: id, id: id, entry: entries[ id ] || {} };
+		} ).concat( pending.map( function ( each ) {
+			return { key: each.id, pending: each.id, entry: each.entry };
+		} ) );
+
+		return el(
+			Section,
+			{ icon: 'person-text', label: __( 'Positions', 'axismundi-contacts' ), headingTag: props.headingTag, showHeading: props.showHeading },
+			rows.map( function ( row ) {
+				var entry = row.entry;
+				return el(
+					'div',
+					{ key: row.key, className: 'ax-ce-title' },
+					el( TextField, {
+						label: __( 'Position or role', 'axismundi-contacts' ),
+						className: 'ax-ce-title__name',
+						value: entry.name || '',
+						onChange: function ( value ) {
+							write( row, 'name', value );
+						}
+					} ),
+					el( Combobox, {
+						label: __( 'Type', 'axismundi-contacts' ),
+						className: 'ax-ce-title__kind',
+						value: entry.kind || '',
+						options: TITLE_KINDS,
+						onChange: function ( value ) {
+							write( row, 'kind', value );
+						}
+					} ),
+					employers.length
+						? el( Combobox, {
+							label: __( 'Organization', 'axismundi-contacts' ),
+							className: 'ax-ce-title__where',
+							value: entry.organizationId || '',
+							options: employers,
+							supporting: __( 'One of the organizations above.', 'axismundi-contacts' ),
+							onChange: function ( value ) {
+								write( row, 'organizationId', value );
+							}
+						} )
+						: null,
+					el( IconButton, {
+						icon: 'delete',
+						variant: 'danger',
+						label: __( 'Remove this position', 'axismundi-contacts' ),
+						onClick: function () {
+							remove( row );
+						}
+					} )
+				);
+			} ),
+			asking
+				? el(
+					'div',
+					{ className: 'ax-ce-blocked', role: 'alert' },
+					el(
+						'p',
+						null,
+						__( 'Other languages give this position in their own words. Removing it would leave them saying it about nothing.', 'axismundi-contacts' )
+					),
+					el(
+						'ul',
+						null,
+						asking.depends.map( function ( each ) {
+							return el( 'li', { key: each.tag + each.path }, each.label );
+						} )
+					),
+					el(
+						'p',
+						null,
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									props.onResolve( asking );
+									setAsking( null );
+								}
+							},
+							__( 'Remove them and the position', 'axismundi-contacts' )
+						),
+						' ',
+						el(
+							'button',
+							{
+								type: 'button',
+								className: 'button',
+								onClick: function () {
+									setAsking( null );
+								}
+							},
+							__( 'Keep everything', 'axismundi-contacts' )
+						)
+					)
+				)
+				: null,
+			el(
+				'p',
+				null,
+				el(
+					'button',
+					{
+						type: 'button',
+						className: 'button',
+						onClick: function () {
+							setPending( pending.concat( [ { id: 'title-' + Math.random().toString( 36 ).slice( 2, 8 ), entry: {} } ] ) );
+						}
+					},
+					__( 'Add a position', 'axismundi-contacts' )
+				)
+			)
+		);
+	}
+
+	/**
+	 * One account on some service.
+	 *
+	 * Four answers rather than a URI: what the service is called, what somebody is called there, the
+	 * address that identifies them, and where the account sits among the others. A row showing only
+	 * its URI is a row nobody can read -- `Mastodon · @pfefferle@mastodon.social` says in two words
+	 * what a link says in forty characters, and it is what the Published list has to show for a
+	 * checkbox beside it to mean anything.
+	 *
+	 * The key each row is stored under is not on screen. It is an address -- what a published pointer
+	 * names and what a provenance row is written against -- and showing it invites somebody to want
+	 * it to say `mastodon`, which would tie their consent to publish to a word they can rename.
+	 */
+	function OnlineService( props ) {
+		var entry = props.entry;
+		/*
+		 * The account that says which Actor this profile is, shown rather than offered. The server
+		 * refuses every change to it -- the address, the handle, the service name, its place at the
+		 * top -- so a field here would be a box somebody types into and a save that answers 409. It
+		 * is read like a fact because that is what it is: this site's answer to whose profile this is.
+		 *
+		 * Only on the Card an Actor publishes about itself. The same key on a contact somebody keeps
+		 * is an ordinary account, and theirs to correct.
+		 */
+		if ( props.system ) {
+			var named = [ entry.service, entry.user ].filter( function ( part ) {
+				return part && String( part ).trim();
+			} );
+			return el(
+				'div',
+				{ className: 'ax-ce-service ax-ce-service--system' },
+				el(
+					'div',
+					{ className: 'ax-ce-service__fields' },
+					el( 'p', { className: 'ax-ce-service__system-name' }, named.join( ' · ' ) ),
+					entry.uri
+						? el( 'p', { className: 'ax-ce-service__system-uri' }, el( 'code', null, entry.uri ) )
+						: null,
+					el(
+						'p',
+						{ className: 'description' },
+						__( 'This is the account this site publishes as, so it is kept in step with your Actor rather than edited here.', 'axismundi-contacts' )
+					)
+				)
+			);
+		}
+		return el(
+			'div',
+			{ className: 'ax-ce-service' },
+			el(
+				'div',
+				{ className: 'ax-ce-service__fields' },
+				el( TextField, {
+					label: __( 'Service', 'axismundi-contacts' ),
+					value: entry.service || '',
+					supporting: __( 'What the service is called, such as Mastodon.', 'axismundi-contacts' ),
+					onChange: function ( value ) {
+						props.onChange( withKey( entry, 'service', value ) );
+					}
+				} ),
+				el( TextField, {
+					label: __( 'Username', 'axismundi-contacts' ),
+					value: entry.user || '',
+					supporting: __( 'What they are called there, such as @name@host.', 'axismundi-contacts' ),
+					onChange: function ( value ) {
+						props.onChange( withKey( entry, 'user', value ) );
+					}
+				} ),
+				el( TextField, {
+					label: __( 'Address', 'axismundi-contacts' ),
+					type: 'url',
+					value: entry.uri || '',
+					supporting: __( 'The profile or Actor this account is.', 'axismundi-contacts' ),
+					onChange: function ( value ) {
+						props.onChange( withKey( entry, 'uri', value ) );
+					}
+				} )
+			),
+			el( IconButton, {
+				icon: 'delete',
+				variant: 'danger',
+				label: __( 'Remove this account', 'axismundi-contacts' ),
+				onClick: props.onRemove
+			} )
+		);
+	}
+
+	/**
+	 * The accounts, in the order they are preferred.
+	 *
+	 * `pref` is that order and the only thing recording it: 1 is the account this person leads with,
+	 * which is the one a reader shows and the one a face is taken from. What the list shows, what a
+	 * reader shows and what the document says are one answer because all three read that number.
+	 *
+	 * Not dragged. This is a map keyed by id, where the order of the members means nothing to JSON --
+	 * so a row dragged into place would either be storing an order the format cannot keep, or
+	 * renumbering `pref` behind somebody's back and calling it a reorder. The number is the thing
+	 * being decided, so it is the thing to edit.
+	 */
+	function OnlineServices( props ) {
+		var entries = props.value || {};
+		var ordered = orderedByPreference( entries );
+		// The accounts as they stand, for the same reason every other collection keeps one.
+		var latest = useRef( entries );
+		latest.current = entries;
+
+		function setEntries( next ) {
+			latest.current = next;
+			props.onChange( Object.keys( next ).length ? next : undefined );
+		}
+
+		return el(
+			Section,
+			{ icon: 'alternate-email', label: __( 'Online accounts', 'axismundi-contacts' ), headingTag: props.headingTag, showHeading: props.showHeading },
+			el(
+				'p',
+				{ className: 'description' },
+				__( 'Most preferred first. The one at the top is the account this contact leads with.', 'axismundi-contacts' )
+			),
+			ordered.map( function ( id, index ) {
+				return el( OnlineService, {
+					key: id,
+					index: index,
+					entry: entries[ id ] || {},
+					// The one row this site answers for, on the Card an Actor publishes about itself.
+					system: '' !== config.systemOnlineService && id === config.systemOnlineService,
+					onChange: function ( next ) {
+						var updated = Object.assign( {}, entries );
+						updated[ id ] = next;
+						setEntries( updated );
+					},
+					onRemove: function () {
+						var updated = Object.assign( {}, entries );
+						delete updated[ id ];
+						setEntries( updated );
+					}
+				} );
+			} ),
+			el(
+				'p',
+				null,
+				el(
+					'button',
+					{
+						type: 'button',
+						className: 'button',
+						onClick: function () {
+							var updated = Object.assign( {}, entries );
+							/*
+							 * No `pref` invented for it. Numbering a new row would be this screen
+							 * deciding, on somebody's behalf, that the account they just added is
+							 * their fourth preference -- a statement about how they want to be
+							 * reached, made by a form. An entry that says nothing has no preference,
+							 * and sorts after the ones that do.
+							 */
+							updated[ newEntryId( 'onl', entries ) ] = { service: '', user: '', uri: '' };
+							setEntries( updated );
+						}
+					},
+					__( 'Add an account', 'axismundi-contacts' )
+				)
+			)
+		);
+	}
+
+	/**
+	 * Entry ids in the order they are preferred.
+	 *
+	 * By `pref`, with the order they sit in the document breaking ties, which is what the server does
+	 * when it decides which account leads. An entry with no preference is not unranked and last: it is
+	 * unranked, which is behind everything that said where it goes.
+	 *
+	 * Two collections read this way -- the accounts somebody leads with and the languages they would
+	 * rather be written to in -- and `pref` means the same thing in both, so it is asked once.
+	 */
+	function orderedByPreference( entries ) {
+		var ids = Object.keys( entries || {} );
+		return ids.slice().sort( function ( a, b ) {
+			var pa = entries[ a ] && 'number' === typeof entries[ a ].pref ? entries[ a ].pref : Infinity;
+			var pb = entries[ b ] && 'number' === typeof entries[ b ].pref ? entries[ b ].pref : Infinity;
+			return pa === pb ? ids.indexOf( a ) - ids.indexOf( b ) : pa - pb;
+		} );
+	}
+
+	/**
+	 * What a Card is when read in one language.
+	 *
+	 * The same walk the server does, for showing rather than for storing: a patch names a path and a
+	 * value to put there, and `null` takes one away. Nothing here is written back -- this answers
+	 * "what would somebody reading in Japanese see", which is a question the editor has to be able to
+	 * show before somebody saves.
+	 */
+	function applyPatch( card, patch ) {
+		var out = JSON.parse( JSON.stringify( card || {} ) );
+		Object.keys( patch || {} ).forEach( function ( path ) {
+			var segments = path.split( '/' );
+			var last = segments.pop();
+			var at = out;
+			for ( var i = 0; i < segments.length; i += 1 ) {
+				var step = segments[ i ];
+				if ( ! at || 'object' !== typeof at[ step ] ) {
+					return;
+				}
+				at = at[ step ];
+			}
+			if ( ! at || 'object' !== typeof at ) {
+				return;
+			}
+			if ( null === patch[ path ] ) {
+				if ( Array.isArray( at ) ) {
+					at.splice( Number( last ), 1 );
+				} else {
+					delete at[ last ];
+				}
+				return;
+			}
+			at[ last ] = patch[ path ];
+		} );
+		return out;
+	}
+
+	/**
+	 * The paths a localization may be offered, which is narrower than what is valid.
+	 *
+	 * Only values the Card already has, and nothing that is about the document rather than about the
+	 * person. Setting a property the base Card does not carry is something the standard advises a
+	 * writer against, so the picker does not offer it -- while a document that arrived with one is
+	 * still stored, because that is a rule for writers and not a reason to refuse.
+	 */
+	var NOT_TRANSLATED = [ '@type', 'version', 'uid', 'created', 'updated', 'prodId', 'localizations' ];
+
+	function patchablePaths( value, prefix ) {
+		var paths = [];
+		Object.keys( value || {} ).forEach( function ( key ) {
+			var path = prefix ? prefix + '/' + key : key;
+			if ( ! prefix && -1 !== NOT_TRANSLATED.indexOf( key ) ) {
+				return;
+			}
+			paths.push( path );
+			if ( value[ key ] && 'object' === typeof value[ key ] ) {
+				paths = paths.concat( patchablePaths( value[ key ], path ) );
+			}
+		} );
+		return paths;
+	}
+
+	/** What a card says at one path, for a screen that wants to start from it. */
+	function valueAt( card, path ) {
+		var at = card;
+		var segments = String( path ).split( '/' );
+		for ( var i = 0; i < segments.length; i += 1 ) {
+			if ( ! at || 'object' !== typeof at ) {
+				return undefined;
+			}
+			at = at[ segments[ i ] ];
+		}
+		return at;
+	}
+
+	/** Every localization path that goes through one place in the Card. */
+	function patchesUnder( localizations, path ) {
+		var found = [];
+		Object.keys( localizations || {} ).forEach( function ( tag ) {
+			Object.keys( localizations[ tag ] || {} ).forEach( function ( patch ) {
+				if ( patch === path || 0 === patch.indexOf( path + '/' ) ) {
+					found.push( { tag: tag, path: patch } );
+				}
+			} );
+		} );
+		return found;
+	}
+
+	/**
+	 * One language's patch, and what the Card reads as with it applied.
+	 *
+	 * The paths are offered from the base Card rather than typed, because a patch that names something
+	 * the Card does not have is one the server refuses -- so a picker that allowed it would be handing
+	 * somebody a save that fails. Anything the list cannot express is written in the JSON below, which
+	 * is why that box is here rather than only at the bottom of the screen.
+	 */
+	function Localization( props ) {
+		var patch = props.patch || {};
+		var paths = props.paths;
+		var [ adding, setAdding ] = useState( '' );
+		var [ dragging, setDragging ] = useState( null );
+		var [ blocked, setBlocked ] = useState( null );
+		// Which translated addresses are answering with a line, for the reason the section above has it.
+		var [ lines, setLines ] = useState( {} );
+		var applied = applyPatch( props.card, patch );
+
+		function setPatch( next ) {
+			props.onChange( next );
+		}
+
+		function setPath( path, value ) {
+			var updated = Object.assign( {}, patch );
+			if ( undefined === value ) {
+				delete updated[ path ];
+			} else {
+				updated[ path ] = value;
+			}
+			setPatch( updated );
+		}
+
+		return el(
+			'div',
+			{ className: 'ax-ce-localization' },
+			el(
+				'div',
+				{ className: 'ax-ce-localization__head' },
+				/*
+				 * Under the heading that lists the languages, not beside it. The cluster is a level,
+				 * the section inside it is a level, and a language is a level below that -- a page
+				 * whose headings skip or repeat a level reads, to anything navigating by them, as one
+				 * long flat list of equals.
+				 */
+				el( 'h4', null, props.tag ),
+				el( IconButton, {
+					icon: 'delete',
+					variant: 'danger',
+					label: sprintf(
+						/* translators: %s: a language tag. */
+						__( 'Remove everything written for %s', 'axismundi-contacts' ),
+						props.tag
+					),
+					onClick: props.onRemove
+				} )
+			),
+			Object.keys( patch ).map( function ( path ) {
+				var value = patch[ path ];
+				var isText = 'string' === typeof value;
+				/*
+				 * A language that gives the whole name gets the whole name editor. `Kim Jiwoon` in
+				 * English is a name, with parts and an order and a way of being said, and asking
+				 * somebody to type `{"components":[{"kind":"given",...}]}` into a box is asking them
+				 * to be a serializer. It is the same editor as above because it is the same question.
+				 */
+				var isObject = value && 'object' === typeof value && ! Array.isArray( value );
+				/*
+				 * A language that gives a whole address gets the address editor, for the same reason
+				 * the name does: `〒100-8994東京都千代田区丸ノ内2-7-2` is an address, with parts and an
+				 * order and a separator, and the standard's own Tokyo example writes it exactly that
+				 * way. Asking somebody to type the components array into a box would be asking them
+				 * to be a serializer.
+				 */
+				if ( isObject && /^addresses\/[^/]+$/.test( path ) ) {
+					return el(
+						'div',
+						{ key: path, className: 'ax-ce-localization__name' },
+						el( 'h5', null, path ),
+						el( AddressParts, {
+							address: value,
+							written: undefined === lines[ path ] ? undefined !== value.full : lines[ path ],
+							fullSupporting: __( 'The whole address written out in this language, kept as written.', 'axismundi-contacts' ),
+							/*
+							 * And no autofill hint here. A browser fills in where somebody lives, which
+							 * is an answer in their own language and never a translation of it.
+							 */
+							onChange: function ( next ) {
+								setPath( path, next );
+							}
+						} ),
+						/*
+						 * The same question, asked in the open. There is no fold here to put it in --
+						 * this whole screen is the fold -- and a translated address is one somebody
+						 * came here to write out, so it is not a question to hide from them.
+						 */
+						el( FullAddressToggle, {
+							written: undefined === lines[ path ] ? undefined !== value.full : lines[ path ],
+							hasLine: undefined !== value.full,
+							onWritten: function ( on ) {
+								var next = Object.assign( {}, lines );
+								next[ path ] = on;
+								setLines( next );
+							},
+							onRemove: function () {
+								var next = Object.assign( {}, lines );
+								next[ path ] = false;
+								setLines( next );
+								var without = Object.assign( {}, value );
+								delete without.full;
+								setPath( path, without );
+							}
+						} ),
+						el(
+							'p',
+							null,
+							el(
+								'button',
+								{
+									type: 'button',
+									className: 'button',
+									onClick: function () {
+										setPath( path, undefined );
+									}
+								},
+								sprintf(
+									/* translators: %s: a language tag. */
+									__( 'Stop giving this address in %s', 'axismundi-contacts' ),
+									props.tag
+								)
+							)
+						)
+					);
+				}
+				if ( 'name' === path && isObject ) {
+					return el(
+						'div',
+						{ key: path, className: 'ax-ce-localization__name' },
+						// Which path this is, as every other patch says: the name is not the exception.
+						el( 'h5', null, path ),
+						el( NameEditor, {
+							name: value,
+							kind: props.kind,
+							// Named for a screen reader at the level it sits at, which is under the path.
+							headingTag: 'h6',
+							dragging: dragging,
+							onDragStart: setDragging,
+							// A localization holds no localizations of its own, so nothing patches into this.
+							localizations: {},
+							blocked: blocked,
+							onBlocked: function ( at, affected ) {
+								setBlocked( { at: at, affected: affected } );
+							},
+							onCancel: function () {
+								setBlocked( null );
+							},
+							onResolve: function () {
+								setBlocked( null );
+							},
+							onChange: function ( next ) {
+								setPath( path, next );
+							}
+						} ),
+						el(
+							'p',
+							null,
+							el(
+								'button',
+								{
+									type: 'button',
+									className: 'button',
+									onClick: function () {
+										setPath( path, undefined );
+									}
+								},
+								sprintf(
+									/* translators: %s: a language tag. */
+									__( 'Stop giving the name in %s', 'axismundi-contacts' ),
+									props.tag
+								)
+							)
+						)
+					);
+				}
+				return el(
+					'div',
+					{ key: path, className: 'ax-ce-entry' },
+					isText
+						? el( TextField, {
+							label: path,
+							className: 'ax-ce-entry__value',
+							value: value,
+							onChange: function ( next ) {
+								var updated = Object.assign( {}, patch );
+								updated[ path ] = next;
+								setPatch( updated );
+							}
+						} )
+						: el( TextField, {
+							label: path,
+							className: 'ax-ce-entry__value',
+							value: JSON.stringify( value ),
+							readOnly: true,
+							// A patch may set a whole object; this screen edits the strings and says so.
+							supporting: __( 'Written below, in the JSON, because it is not a single value.', 'axismundi-contacts' ),
+							onChange: function () {}
+						} ),
+					el( IconButton, {
+						icon: 'delete',
+						variant: 'danger',
+						label: sprintf(
+							/* translators: %s: a path inside the card. */
+							__( 'Stop translating %s', 'axismundi-contacts' ),
+							path
+						),
+						onClick: function () {
+							var updated = Object.assign( {}, patch );
+							delete updated[ path ];
+							setPatch( updated );
+						}
+					} )
+				);
+			} ),
+			el(
+				'div',
+				{ className: 'ax-ce-localization__add' },
+				el( Combobox, {
+					label: __( 'Translate something else', 'axismundi-contacts' ),
+					value: adding,
+					options: paths.filter( function ( path ) {
+						return ! Object.prototype.hasOwnProperty.call( patch, path );
+					} ),
+					supporting: __( 'Only what the card already says. Anything else goes in the JSON below.', 'axismundi-contacts' ),
+					onChange: function ( path ) {
+						/*
+						 * Started from what the card already says there. Translating a name means
+						 * changing one, and handing somebody an empty box for a structure they are
+						 * about to rebuild by hand is handing them the serializer's job.
+						 */
+						var updated = Object.assign( {}, patch );
+						var from = valueAt( props.card, path );
+						updated[ path ] = null !== from && 'object' === typeof from
+							? JSON.parse( JSON.stringify( from ) )
+							: '';
+						setAdding( '' );
+						setPatch( updated );
+					}
+				} )
+			),
+			el(
+				'details',
+				{ className: 'ax-ce-localization__raw' },
+				el( 'summary', null, __( 'What this language reads as', 'axismundi-contacts' ) ),
+				el(
+					'pre',
+					{ className: 'ax-ce-preview' },
+					formatJson( applied )
+				)
+			)
+		);
+	}
+
+	/**
+	 * Every language this Card is written in.
+	 *
+	 * At the bottom of the screen because that is what it is: a set of changes applied over everything
+	 * above it. It is not part of the name, however much of it is usually about one -- a localization
+	 * can patch a title, an address component or a note just as well.
+	 */
+	function Localizations( props ) {
+		var localizations = props.card.localizations || {};
+		var [ tag, setTag ] = useState( '' );
+		var paths = patchablePaths( props.card, '' );
+
+		function setLocalizations( next ) {
+			props.onChange( Object.keys( next ).length ? next : undefined );
+		}
+
+		return el(
+			Section,
+			{
+				icon: 'language-international',
+				title: __( 'Other languages', 'axismundi-contacts' ),
+				headingTag: props.headingTag
+			},
+			el(
+				'p',
+				{ className: 'description' },
+				__( 'Each one says what to put where when the card is read in that language. Everything above is what it says otherwise.', 'axismundi-contacts' )
+			),
+			Object.keys( localizations ).map( function ( each ) {
+				return el( Localization, {
+					key: each,
+					tag: each,
+					patch: localizations[ each ],
+					card: props.card,
+					kind: props.card.kind,
+					paths: paths,
+					onChange: function ( next ) {
+						var updated = Object.assign( {}, localizations );
+						if ( next && Object.keys( next ).length ) {
+							updated[ each ] = next;
+						} else {
+							// A language with nothing written for it is a language nobody chose.
+							delete updated[ each ];
+						}
+						setLocalizations( updated );
+					},
+					onRemove: function () {
+						var updated = Object.assign( {}, localizations );
+						delete updated[ each ];
+						setLocalizations( updated );
+					}
+				} );
+			} ),
+			el(
+				'div',
+				{ className: 'ax-ce-localization__add' },
+				el( Combobox, {
+					label: __( 'Add a language', 'axismundi-contacts' ),
+					value: tag,
+					options: LANGUAGES,
+					allowFree: true,
+					supporting: __( 'Often the same language in another script, like ko-Latn or ja-Kana, which are typed rather than listed.', 'axismundi-contacts' ),
+					onChange: setTag
+				} ),
+				el(
+					'button',
+					{
+						type: 'button',
+						className: 'button',
+						disabled: ! tag.trim() || Object.prototype.hasOwnProperty.call( localizations, tag.trim() ),
+						onClick: function () {
+							var updated = Object.assign( {}, localizations );
+							updated[ tag.trim() ] = {};
+							setTag( '' );
+							setLocalizations( updated );
+						}
+					},
+					__( 'Add', 'axismundi-contacts' )
+				)
+			)
+		);
+	}
+
+	/**
+	 * Which half of somebody's life an entry belongs to.
+	 *
+	 * The standard's `contexts`, as the four answers a person actually gives. Both is a real answer
+	 * and so is neither: a language somebody would rather be written to in full stop is not the same
+	 * as one they want at work, and a card that could only say the second would be putting words in
+	 * their mouth.
+	 */
+	var CONTEXT_CHOICES = [
+		{ value: '', label: __( 'Anywhere', 'axismundi-contacts' ), contexts: [] },
+		{ value: 'private', label: __( 'Personal', 'axismundi-contacts' ), contexts: [ 'private' ] },
+		{ value: 'work', label: __( 'Work', 'axismundi-contacts' ), contexts: [ 'work' ] },
+		{ value: 'private+work', label: __( 'Personal and work', 'axismundi-contacts' ), contexts: [ 'private', 'work' ] }
+	];
+
+	/** Which of those an entry reads as. */
+	function contextOf( entry ) {
+		return Object.keys( ( entry || {} ).contexts || {} ).filter( function ( key ) {
+			return entry.contexts[ key ];
+		} ).sort().join( '+' );
+	}
+
+	/** One entry with that answer written into it, or with the property gone when there is none. */
+	function withContext( entry, choice ) {
+		var next = Object.assign( {}, entry );
+		delete next.contexts;
+		if ( ! choice ) {
+			return next;
+		}
+		next.contexts = {};
+		choice.split( '+' ).forEach( function ( value ) {
+			next.contexts[ value ] = true;
+		} );
+		return next;
+	}
+
+	/**
+	 * The languages this contact would rather be written to in.
+	 *
+	 * The same control as the card's own language and never the same value. One says what the card
+	 * above is written in; this says what somebody would like to receive -- a person whose card is in
+	 * Korean may ask to be written to in English, and a card that conflated the two would have no way
+	 * to say so.
+	 *
+	 * A language may appear twice, because the answer is not only which language: French at work and
+	 * French with friends are two things somebody can prefer, and the standard's own example says
+	 * exactly that. So the row is a language and where it applies, and two rows differing only in the
+	 * second are two different answers rather than a mistake.
+	 *
+	 * Order is `pref`, which is what the standard reads: 1 is the one they would rather have. It is
+	 * written by dragging, because dragging is somebody stating an order -- a row nobody has put
+	 * anywhere carries no `pref` at all rather than a number this invented for it.
+	 */
+	function PreferredLanguages( props ) {
+		var entries = props.value || {};
+		var [ pending, setPending ] = useState( [] );
+
+		function setEntries( next ) {
+			props.onChange( Object.keys( next ).length ? next : undefined );
+		}
+
+		function write( row, change ) {
+			if ( row.pending ) {
+				var made = change( row.entry );
+				if ( ! String( made.language || '' ).trim() ) {
+					// A preference is a language. Until there is one, this is a line and what has been
+					// answered about it waits on the line.
+					setPending( pending.map( function ( each ) {
+						return each.id === row.pending ? { id: each.id, entry: made } : each;
+					} ) );
+					return;
+				}
+				var next = Object.assign( {}, entries );
+				next[ newEntryId( 'lng', entries ) ] = made;
+				setPending( pending.filter( function ( each ) {
+					return each.id !== row.pending;
+				} ) );
+				setEntries( next );
+				return;
+			}
+			var updated = Object.assign( {}, entries );
+			updated[ row.id ] = change( entries[ row.id ] || {} );
+			setEntries( updated );
+		}
+
+		var rows = orderedByPreference( entries ).map( function ( id ) {
+			return { key: id, id: id, entry: entries[ id ] || {} };
+		} ).concat( pending.map( function ( each ) {
+			return { key: each.id, pending: each.id, entry: each.entry };
+		} ) );
+
+		return el(
+			Section,
+			{ icon: 'language', title: __( 'Preferred languages', 'axismundi-contacts' ), headingTag: props.headingTag },
+			el(
+				'p',
+				{ className: 'description' },
+				__( 'What this contact would rather be written to in. Not the language the card is written in, and a language may appear twice if they want it in one part of their life and not another.', 'axismundi-contacts' )
+			),
+			rows.map( function ( row ) {
+				var entry = row.entry;
+				return el(
+					'div',
+					{ key: row.key, className: 'ax-ce-lang' },
+					el( Combobox, {
+						label: __( 'Language', 'axismundi-contacts' ),
+						className: 'ax-ce-lang__language',
+						value: entry.language || '',
+						options: LANGUAGES,
+						allowFree: true,
+						onChange: function ( value ) {
+							write( row, function ( each ) {
+								return withKey( each, 'language', value );
+							} );
+						}
+					} ),
+					el( Combobox, {
+						label: __( 'Where', 'axismundi-contacts' ),
+						className: 'ax-ce-lang__context',
+						value: contextOf( entry ),
+						options: CONTEXT_CHOICES,
+						onChange: function ( value ) {
+							write( row, function ( each ) {
+								return withContext( each, value );
+							} );
+						}
+					} ),
+					el( IconButton, {
+						icon: 'delete',
+						variant: 'danger',
+						label: __( 'Remove this language', 'axismundi-contacts' ),
+						onClick: function () {
+							if ( row.pending ) {
+								setPending( pending.filter( function ( each ) {
+									return each.id !== row.pending;
+								} ) );
+								return;
+							}
+							var next = Object.assign( {}, entries );
+							delete next[ row.id ];
+							setEntries( next );
+						}
+					} )
+				);
+			} ),
+			el(
+				'p',
+				null,
+				el(
+					'button',
+					{
+						type: 'button',
+						className: 'button',
+						onClick: function () {
+							setPending( pending.concat( [ { id: newEntryId( 'row', {} ), entry: {} } ] ) );
+						}
+					},
+					__( 'Add a preferred language', 'axismundi-contacts' )
+				)
+			)
+		);
+	}
+
+	/**
+	 * Which record this is.
+	 *
+	 * A uid is not a name and not a URL: it is what somebody holding a copy of this Card finds it by,
+	 * so that a second copy arriving later is recognised as the same contact rather than kept as a
+	 * second person. Once a Card has been published under one it stops being editable -- changing it
+	 * would leave everybody who saved the first holding a record they can no longer match -- so it is
+	 * shown as what it is rather than hidden in the JSON.
+	 *
+	 * Cards about other people usually have none, and that is normal. A uid somebody can quote should
+	 * come from the person it describes; minting one here for every contact in a private address book
+	 * would put this site's invented identifiers into other people's exports.
+	 */
+	function Identity( props ) {
+		var minted = !! props.value;
+		var Heading = props.headingTag || 'h2';
+		return el(
+			'section',
+			{ className: 'ax-ce-section' },
+			el( Heading, null, __( 'Identity', 'axismundi-contacts' ) ),
+			el( TextField, {
+				label: __( 'Unique identifier', 'axismundi-contacts' ),
+				value: props.value || '',
+				disabled: minted,
+				supporting: minted
+					? __( 'What anybody holding a copy of this card finds it by. It does not change.', 'axismundi-contacts' )
+					: __( 'Optional. If this contact published one, it belongs here, so a copy arriving later is recognised as the same person.', 'axismundi-contacts' ),
+				onChange: props.onChange
+			} )
+		);
+	}
+
+	/**
+	 * The ledger itself, folded away.
+	 *
+	 * Everything the fields above do not show is here, and stays here: this reads and writes the same
+	 * draft they do rather than a copy of it, so a property with no field survives being edited beside
+	 * one that has. Closed by default, because open it reads as a second screen competing with the
+	 * first -- and the fields are where a Card is meant to be written. What it is for is the property
+	 * this editor has no field for yet, which is why it is one fold away rather than gone.
+	 */
+	function AdvancedJson( props ) {
+		var box = el( Textarea, {
+			label: __( 'JSContact', 'axismundi-contacts' ),
+			className: 'ax-ce-json',
+			rows: props.beside ? 30 : 18,
+			spellCheck: false,
+			value: props.text,
+			error: !! props.error,
+			supporting: props.error || undefined,
+			onChange: props.onChange
+		} );
+		var explains = __( 'Everything beside this, and everything this editor has no field for. Edits here and edits there are the same document, so this is a way to reach what has no field yet rather than a second way to fill in the fields that have one.', 'axismundi-contacts' );
+		/*
+		 * Beside the fields it is not a section of the form: it is the same draft, seen the other way,
+		 * and it scrolls with itself so that reading the document does not mean losing the field being
+		 * typed into.
+		 */
+		if ( props.beside ) {
+			return el(
+				'div',
+				{ className: 'ax-ce-json-pane' },
+				el( 'h2', null, __( 'JSContact', 'axismundi-contacts' ) ),
+				el( 'p', { className: 'description' }, explains ),
+				box
+			);
+		}
+		return el(
+			'details',
+			{ className: 'ax-ce-section ax-ce-json-section' },
+			el( 'summary', null, __( 'Advanced JSON', 'axismundi-contacts' ) ),
+			el( 'p', { className: 'description' }, explains ),
+			box
+		);
+	}
+
+	/** Where the split sits, as a share of the screen given to the fields. */
+	var SPLIT_KEY = 'axismundiContactsSplit';
+	var SPLIT_DEFAULT = 40;
+
+	/**
+	 * The handle between the two.
+	 *
+	 * Dragged with the mouse and moved with the arrow keys, because a divider that can only be
+	 * dragged is a divider some people cannot move at all.
+	 */
+	function SplitHandle( props ) {
+		function fromPointer( event ) {
+			var host = event.currentTarget.parentNode;
+			var box = host.getBoundingClientRect();
+			if ( ! box.width ) {
+				return;
+			}
+			props.onChange( ( ( event.clientX - box.left ) / box.width ) * 100 );
+		}
+		return el( 'div', {
+			className: 'ax-ce-split__handle',
+			role: 'separator',
+			tabIndex: 0,
+			'aria-orientation': 'vertical',
+			'aria-label': __( 'How much of the screen the fields take', 'axismundi-contacts' ),
+			'aria-valuenow': Math.round( props.value ),
+			'aria-valuemin': 20,
+			'aria-valuemax': 80,
+			onKeyDown: function ( event ) {
+				if ( 'ArrowLeft' === event.key ) {
+					props.onChange( props.value - 2 );
+				} else if ( 'ArrowRight' === event.key ) {
+					props.onChange( props.value + 2 );
+				} else {
+					return;
+				}
+				event.preventDefault();
+			},
+			onPointerDown: function ( event ) {
+				event.currentTarget.setPointerCapture( event.pointerId );
+				props.onDragging( true );
+			},
+			onPointerMove: function ( event ) {
+				if ( event.currentTarget.hasPointerCapture( event.pointerId ) ) {
+					fromPointer( event );
+				}
+			},
+			onPointerUp: function ( event ) {
+				event.currentTarget.releasePointerCapture( event.pointerId );
+				props.onDragging( false );
+			}
+		} );
+	}
+
+	/**
+	 * The draft, as it is worth storing.
+	 *
+	 * A part of a name that was added and never filled in is somebody who clicked a button and
+	 * changed their mind, not a part of their name that is blank. It is dropped on the way out rather
+	 * than written down, which is why the buttons above can add a row without asking first.
+	 *
+	 * A separator keeps its empty value: that one is an answer -- it is how a name written with
+	 * nothing between its parts is said.
+	 *
+	 * Left alone entirely when a language patches into the parts. Dropping one there would move every
+	 * part after it up a place while the patches still name the old positions, and a patch pointing
+	 * at the wrong part is worse than a row nobody filled in.
+	 */
+	function prepare( card ) {
+		var parts = ( card.name || {} ).components;
+		if ( ! parts || patchesUnder( card.localizations, 'name/components' ).length ) {
+			return card;
+		}
+		var kept = parts.filter( function ( part ) {
+			return part && (
+				'separator' === part.kind
+					|| ( part.value && String( part.value ).trim() )
+					|| ( part.phonetic && String( part.phonetic ).trim() )
+			);
+		} );
+		if ( kept.length === parts.length ) {
+			return card;
+		}
+		var next = Object.assign( {}, card );
+		var name = Object.assign( {}, next.name );
+		if ( kept.length ) {
+			name.components = kept;
+		} else {
+			delete name.components;
+			delete name.isOrdered;
+			delete name.defaultSeparator;
+			delete name.sortAs;
+		}
+		if ( Object.keys( name ).length ) {
+			next.name = name;
+		} else {
+			delete next.name;
+		}
+		return next;
+	}
+
+	/**
+	 * The draft, in the order a stored Card is written in.
+	 *
+	 * A property assigned to a JavaScript object lands at the end of it, so a card that gained a
+	 * `language` showed it below `localizations` until a save moved it -- and the JSON somebody is
+	 * reading while they type is exactly the one that looked wrong. The order is the server's own,
+	 * handed over rather than written here again, so the two cannot drift.
+	 */
+	function ordered( card ) {
+		var out = {};
+		( config.order || [] ).forEach( function ( key ) {
+			if ( Object.prototype.hasOwnProperty.call( card, key ) ) {
+				out[ key ] = card[ key ];
+			}
+		} );
+		Object.keys( card ).sort().forEach( function ( key ) {
+			// Anything the list does not name -- a vendor's own property, a newer revision's -- after it.
+			if ( ! Object.prototype.hasOwnProperty.call( out, key ) ) {
+				out[ key ] = card[ key ];
+			}
+		} );
+		return out;
+	}
+
+	/**
+	 * Keep a repeated, short object on one line in the inspector.
+	 *
+	 * The Card remains ordinary JSON and is still parsed with JSON.parse(). This is only how the
+	 * editor lays it out for a person reading it: `{ "name": "Contacts" }` should not take five
+	 * lines merely because it is an item in a list.
+	 */
+	function formatJson( value ) {
+		function indent( depth ) {
+			return '  '.repeat( depth );
+		}
+
+		function inlineObject( each ) {
+			if ( ! each || 'object' !== typeof each || Array.isArray( each ) ) {
+				return false;
+			}
+			var keys = Object.keys( each );
+			return keys.length > 0
+				&& keys.every( function ( key ) {
+					return undefined !== each[ key ] && ( null === each[ key ] || 'object' !== typeof each[ key ] );
+				} )
+				&& JSON.stringify( each ).length <= 96;
+		}
+
+		function writeInlineObject( each ) {
+			return '{ ' + Object.keys( each ).map( function ( key ) {
+				return JSON.stringify( key ) + ': ' + JSON.stringify( each[ key ] );
+			} ).join( ', ' ) + ' }';
+		}
+
+		function write( each, depth ) {
+			if ( null === each || 'object' !== typeof each ) {
+				return JSON.stringify( each );
+			}
+			if ( Array.isArray( each ) ) {
+				if ( ! each.length ) {
+					return '[]';
+				}
+				return '[\n' + each.map( function ( item ) {
+					return indent( depth + 1 ) + ( inlineObject( item ) ? writeInlineObject( item ) : write( item, depth + 1 ) );
+				} ).join( ',\n' ) + '\n' + indent( depth ) + ']';
+			}
+			var keys = Object.keys( each );
+			if ( ! keys.length ) {
+				return '{}';
+			}
+			return '{\n' + keys.map( function ( key ) {
+				return indent( depth + 1 ) + JSON.stringify( key ) + ': ' + write( each[ key ], depth + 1 );
+			} ).join( ',\n' ) + '\n' + indent( depth ) + '}';
+		}
+
+		return write( value, 0 );
+	}
+
+	/** The whole screen. */
+	function Editor() {
+		var [ card, setCard ] = useState( config.card );
+		var [ revision, setRevision ] = useState( config.revision );
+		/*
+		 * What this profile publishes beyond its identity. There is no field for it on this screen any
+		 * more -- choosing among a card's values one at a time is a settings page, not a question to
+		 * put beside the name -- but the answer is still carried through every save, because deleting
+		 * somebody's selection as a side effect of taking away the form that showed it would be
+		 * throwing away a decision they made.
+		 */
+		var [ published, setPublished ] = useState( config.published );
+		var [ json, setJson ] = useState( formatJson( config.card ) );
+		var [ jsonError, setJsonError ] = useState( '' );
+		var [ dragging, setDragging ] = useState( null );
+		var [ blocked, setBlocked ] = useState( null );
+
+		// A locked kind is the Actor's answer, so the card says it whatever it said before.
+		if ( config.lockedKind && card.kind !== config.lockedKind ) {
+			window.setTimeout( function () {
+				setProperty( 'kind', config.lockedKind );
+			}, 0 );
+		}
+		var [ status, setStatus ] = useState( '' );
+		var [ saving, setSaving ] = useState( false );
+		/*
+		 * Whether the document stands beside the fields. Useful while the fields are being built --
+		 * type on the left, watch what it writes on the right -- and noise for somebody writing down
+		 * a phone number, so it is remembered per person rather than decided for everybody.
+		 */
+		var [ beside, setBeside ] = useState( 'true' === window.localStorage.getItem( SPLIT_KEY + 'Open' ) );
+		var [ split, setSplitAt ] = useState( Number( window.localStorage.getItem( SPLIT_KEY ) ) || SPLIT_DEFAULT );
+		var [ sliding, setSliding ] = useState( false );
+
+		function setSplit( value ) {
+			var next = Math.min( 80, Math.max( 20, value ) );
+			window.localStorage.setItem( SPLIT_KEY, String( Math.round( next ) ) );
+			setSplitAt( next );
+		}
+
+		/*
+		 * What the draft is now. Two properties can be written in one tick -- a browser filling an
+		 * address writes several boxes before anything renders -- and each of them working from the
+		 * copy this render started with would mean the last one wins and the rest are lost.
+		 */
+		var latest = useRef( card );
+		latest.current = card;
+
+		// One draft. Every view writes through here, so the JSON box and the fields never diverge.
+		var update = useCallback( function ( next ) {
+			var written = ordered( next );
+			latest.current = written;
+			setCard( written );
+			setJson( formatJson( written ) );
+			setJsonError( '' );
+		}, [] );
+
+		function setProperty( key, value ) {
+			var next = Object.assign( {}, latest.current );
+			if ( undefined === value ) {
+				delete next[ key ];
+			} else {
+				next[ key ] = value;
+			}
+			update( next );
+		}
+
+		/*
+		 * The simple collections belonging to one of the standard's groups. They are built from one
+		 * list because they are built the same way, and drawn from it in pieces because being built
+		 * the same way is not what decides which heading a property is read under.
+		 */
+		function entryFieldsIn( cluster ) {
+			return ENTRY_FIELDS.filter( function ( field ) {
+				return cluster === field.cluster;
+			} ).map( function ( field ) {
+				return el( EntryField, {
+					key: field.key,
+					field: field,
+					entries: card[ field.key ],
+					headingTag: 'h3',
+					showHeading: true,
+					onChange: function ( value ) {
+						setProperty( field.key, value );
+					}
+				} );
+			} );
+		}
+
+		function onJson( text ) {
+			setJson( text );
+			try {
+				var parsed = JSON.parse( text );
+				if ( ! parsed || 'object' !== typeof parsed || Array.isArray( parsed ) ) {
+					throw new Error( __( 'A card is an object.', 'axismundi-contacts' ) );
+				}
+				// Not reordered: this is somebody typing, and tidying it would move the cursor out
+				// from under them. What is stored is ordered on save, and read back that way.
+				setCard( parsed );
+				setJsonError( '' );
+			} catch ( error ) {
+				// Kept as typed. Reformatting somebody's half-finished JSON while they are in the middle
+				// of it is how an editor moves the cursor out from under them.
+				setJsonError( error.message );
+			}
+		}
+
+		function save() {
+			if ( jsonError ) {
+				setStatus( __( 'The JSON has an error, so nothing was saved.', 'axismundi-contacts' ) );
+				return;
+			}
+			/*
+			 * A half-written date stops the save rather than being quietly dropped. The store refuses
+			 * it either way, and a row somebody typed is not this screen's to throw away on their
+			 * behalf -- so it is named, and stays on screen where they can finish it.
+			 */
+			var unfinished = anniversaryProblems( card );
+			if ( unfinished.length ) {
+				setStatus( sprintf(
+					/* translators: 1: the entry id, such as ann-4f2. 2: what is wrong with it. */
+					__( 'Nothing was saved: %1$s is not a date yet. %2$s', 'axismundi-contacts' ),
+					unfinished[ 0 ].id,
+					unfinished[ 0 ].problem
+				) );
+				return;
+			}
+			setSaving( true );
+			setStatus( '' );
+			var body = { revision: revision, card: prepare( card ) };
+			if ( config.isProfile ) {
+				body.publishedPointers = published;
+			}
+			apiFetch( { path: config.draftPath, method: 'PUT', data: body } )
+				.then( function ( response ) {
+					// What comes back is what is stored, in the order it is stored in.
+					setRevision( response.revision );
+					update( response.card );
+					if ( response.publishedPointers ) {
+						setPublished( response.publishedPointers );
+					}
+					setStatus( __( 'Saved.', 'axismundi-contacts' ) );
+				} )
+				.catch( function ( error ) {
+					setStatus( error && error.message ? error.message : __( 'That could not be saved.', 'axismundi-contacts' ) );
+				} )
+				.finally( function () {
+					setSaving( false );
+				} );
+		}
+
+		return el(
+			Fragment,
+			null,
+			el(
+				'p',
+				{ className: 'ax-ce__view' },
+				el(
+					'label',
+					null,
+					el( 'input', {
+						type: 'checkbox',
+						checked: beside,
+						onChange: function ( event ) {
+							window.localStorage.setItem( SPLIT_KEY + 'Open', event.target.checked ? 'true' : 'false' );
+							setBeside( event.target.checked );
+						}
+					} ),
+					' ',
+					__( 'Show the JSContact beside the fields', 'axismundi-contacts' )
+				)
+			),
+			el(
+				'div',
+				{
+					className: 'ax-ce' + ( beside ? ' is-split' : '' ) + ( sliding ? ' is-sliding' : '' ),
+					style: beside ? { gridTemplateColumns: split + '% 8px 1fr' } : undefined
+				},
+				el(
+					'div',
+					{ className: 'ax-ce__main' },
+					el(
+						PropertyCluster,
+						{ title: __( 'Metadata', 'axismundi-contacts' ) },
+						el( KindField, {
+							value: card.kind,
+							locked: config.lockedKind,
+							headingTag: 'h3',
+							onChange: function ( value ) {
+								setProperty( 'kind', value );
+							}
+						} ),
+						el(
+							Section,
+							{ icon: 'language', title: __( 'Language', 'axismundi-contacts' ), headingTag: 'h3' },
+							el( CardLanguage, {
+								value: card.language,
+								onChange: function ( value ) {
+									setProperty( 'language', value );
+								}
+							} )
+						),
+						el( Identity, {
+							value: card.uid,
+							headingTag: 'h3',
+							onChange: function ( value ) {
+								setProperty( 'uid', value );
+							}
+						} )
+					),
+					el(
+						PropertyCluster,
+						{ title: __( 'Name and organization', 'axismundi-contacts' ) },
+						el( NameEditor, {
+						name: card.name,
+						// What the card describes decides what a name is: an organisation has no surname.
+						kind: card.kind,
+						headingTag: 'h3',
+						showHeading: true,
+						dragging: dragging,
+						onDragStart: setDragging,
+						localizations: card.localizations,
+						blocked: blocked,
+						onBlocked: function ( at, affected ) {
+							setBlocked( { at: at, affected: affected } );
+						},
+						onCancel: function () {
+							setBlocked( null );
+						},
+						onResolve: function ( question ) {
+							/*
+							 * Both at once, because either alone is a Card the server refuses: the part
+							 * without its translations is what somebody asked for, and the translations
+							 * without their part is a patch pointing at nothing.
+							 */
+							var next = Object.assign( {}, card );
+							var parts = ( ( next.name || {} ).components || [] ).filter( function ( ignored, i ) {
+								return i !== question.at;
+							} );
+							next.name = Object.assign( {}, next.name );
+							if ( parts.length ) {
+								next.name.components = parts;
+							} else {
+								delete next.name.components;
+								delete next.name.isOrdered;
+								delete next.name.defaultSeparator;
+							}
+							var localizations = Object.assign( {}, next.localizations );
+							question.affected.forEach( function ( each ) {
+								var patch = Object.assign( {}, localizations[ each.tag ] );
+								delete patch[ each.path ];
+								if ( Object.keys( patch ).length ) {
+									localizations[ each.tag ] = patch;
+								} else {
+									delete localizations[ each.tag ];
+								}
+							} );
+							if ( Object.keys( localizations ).length ) {
+								next.localizations = localizations;
+							} else {
+								delete next.localizations;
+							}
+							setBlocked( null );
+							update( next );
+						},
+						onChange: function ( value ) {
+							setProperty( 'name', value );
+						}
+						} ),
+						/* `nicknames` and `speakToAs` join this group in RFC 9553 order when their editors exist. */
+						el( Organizations, {
+						value: card.organizations,
+						headingTag: 'h3',
+						showHeading: true,
+						card: card,
+						onChange: function ( value ) {
+							setProperty( 'organizations', value );
+						},
+						/*
+						 * Both at once, because either alone is a Card the server refuses: an
+						 * organization removed on its own leaves a title whose employer nothing can
+						 * resolve, and a language still translating a name that is no longer there.
+						 */
+						onResolve: function ( question ) {
+							var next = Object.assign( {}, card );
+							var organizations = Object.assign( {}, next.organizations );
+							delete organizations[ question.id ];
+							if ( Object.keys( organizations ).length ) {
+								next.organizations = organizations;
+							} else {
+								delete next.organizations;
+							}
+							var titles = Object.assign( {}, next.titles );
+							Object.keys( titles ).forEach( function ( key ) {
+								if ( question.id === ( titles[ key ] || {} ).organizationId ) {
+									// The title stays; what it said about where it was held does not.
+									titles[ key ] = withKey( titles[ key ], 'organizationId', '' );
+								}
+							} );
+							if ( Object.keys( titles ).length ) {
+								next.titles = titles;
+							}
+							var localizations = withoutPatches( next.localizations, question.depends.filter( function ( each ) {
+								return each.tag;
+							} ) );
+							if ( Object.keys( localizations ).length ) {
+								next.localizations = localizations;
+							} else {
+								delete next.localizations;
+							}
+							update( next );
+						}
+						} ),
+						el( Titles, {
+						value: card.titles,
+						headingTag: 'h3',
+						showHeading: true,
+						organizations: card.organizations,
+						card: card,
+						onChange: function ( value ) {
+							setProperty( 'titles', value );
+						},
+						/*
+						 * Both at once, because either alone is a Card the server refuses: the title
+						 * gone without its translations leaves them saying something about a property
+						 * the card no longer has.
+						 */
+						onResolve: function ( question ) {
+							var next = Object.assign( {}, card );
+							var titles = Object.assign( {}, next.titles );
+							delete titles[ question.id ];
+							if ( Object.keys( titles ).length ) {
+								next.titles = titles;
+							} else {
+								delete next.titles;
+							}
+							var localizations = withoutPatches( next.localizations, question.depends );
+							if ( Object.keys( localizations ).length ) {
+								next.localizations = localizations;
+							} else {
+								delete next.localizations;
+							}
+							update( next );
+							}
+						} )
+					),
+					el(
+						PropertyCluster,
+						{ title: __( 'Contact properties', 'axismundi-contacts' ) },
+						el( OnlineServices, {
+							value: card.onlineServices,
+							headingTag: 'h3',
+							showHeading: true,
+							onChange: function ( value ) {
+								setProperty( 'onlineServices', value );
+							}
+						} ),
+						el( Emails, {
+							value: card.emails,
+							card: card,
+							headingTag: 'h3',
+							showHeading: true,
+							onChange: function ( value ) {
+								setProperty( 'emails', value );
+							},
+							onResolve: function ( question ) {
+								resolveEntryRemoval( card, 'emails', question, update );
+							}
+						} ),
+						el( Phones, {
+							value: card.phones,
+							card: card,
+							headingTag: 'h3',
+							showHeading: true,
+							onChange: function ( value ) {
+								setProperty( 'phones', value );
+							},
+							onResolve: function ( question ) {
+								resolveEntryRemoval( card, 'phones', question, update );
+							}
+						} ),
+						el( PreferredLanguages, {
+							value: card.preferredLanguages,
+							headingTag: 'h3',
+							onChange: function ( value ) {
+								setProperty( 'preferredLanguages', value );
+							}
+						} )
+					),
+					el(
+						PropertyCluster,
+						{ title: __( 'Address and location properties', 'axismundi-contacts' ) },
+						el( Addresses, {
+							value: card.addresses,
+							card: card,
+							headingTag: 'h3',
+							showHeading: true,
+							onChange: function ( value ) {
+								setProperty( 'addresses', value );
+							},
+							onResolve: function ( question ) {
+								resolveEntryRemoval( card, 'addresses', question, update );
+							}
+						} )
+					),
+					/*
+					 * What this contact is reachable through or represented by. The standard's own
+					 * group holds cryptographic keys and directory entries as well; neither has a
+					 * field here yet, and an empty section is a promise a screen cannot keep, so they
+					 * are reached through the JSON until they do.
+					 */
+					el(
+						PropertyCluster,
+						{ title: __( 'Resource properties', 'axismundi-contacts' ) },
+						entryFieldsIn( 'resource' )
+					),
+					el(
+						PropertyCluster,
+						{ title: __( 'Multilingual properties', 'axismundi-contacts' ) },
+						el( Localizations, {
+							card: card,
+							headingTag: 'h3',
+							onChange: function ( value ) {
+								setProperty( 'localizations', value );
+							}
+						} )
+					),
+					/*
+					 * And what the standard files under everything else: anniversaries, keywords,
+					 * notes and personal information. The group reads last because that is where the
+					 * standard puts it -- after the languages a card is written in, not before them --
+					 * and within it, in the standard's own order.
+					 */
+					el(
+						PropertyCluster,
+						{ title: __( 'Additional properties', 'axismundi-contacts' ) },
+						el( Anniversaries, {
+							entries: card.anniversaries,
+							headingTag: 'h3',
+							onChange: function ( value ) {
+								setProperty( 'anniversaries', value );
+							}
+						} ),
+						entryFieldsIn( 'additional' )
+					),
+					beside ? null : el( AdvancedJson, { text: json, error: jsonError, onChange: onJson } )
+				),
+				beside ? el( SplitHandle, { value: split, onChange: setSplit, onDragging: setSliding } ) : null,
+				beside ? el( AdvancedJson, { text: json, error: jsonError, onChange: onJson, beside: true } ) : null
+			),
+			el(
+				'p',
+				{ className: 'ax-ce__actions' },
+				el(
+					'button',
+					{ type: 'button', className: 'button button-primary', disabled: saving, onClick: save },
+					saving ? __( 'Saving…', 'axismundi-contacts' ) : __( 'Save', 'axismundi-contacts' )
+				),
+				' ',
+				el( 'a', { className: 'button', href: config.backUrl }, __( 'Done', 'axismundi-contacts' ) ),
+				status ? el( 'span', { className: 'ax-ce__status' }, status ) : null
+			)
+		);
+	}
+
+	wp.element.createRoot
+		? wp.element.createRoot( root ).render( el( Editor ) )
+		: wp.element.render( el( Editor ), root );
+}( window.wp, window.axismundiContactsCardEditor ) );

@@ -1,5 +1,5 @@
 {
-  "core": "WordPress/WordPress#7.0",
+  "core": "WordPress/WordPress#7.1",
   "testsEnvironment": false,
   "themes": [
     "./products/distributables/themes/omphalos",
@@ -9,6 +9,8 @@
   "plugins": [
     "https://downloads.wordpress.org/plugin/theme-check.zip",
     "https://downloads.wordpress.org/plugin/create-block-theme.zip",
+    "https://downloads.wordpress.org/plugin/plugin-check.zip",
+    "https://downloads.wordpress.org/plugin/gutenberg.23.7.1.zip",
     "./products/distributables/plugins/axismundi-theme-switcher",
     "./products/distributables/plugins/axismundi-korean-font-provider",
     "./products/distributables/plugins/axismundi-japanese-font-provider",
@@ -21,6 +23,7 @@
     "./products/distributables/plugins/axismundi-media-library",
     "./products/distributables/plugins/axismundi-note",
     "./products/distributables/plugins/axismundi-actors",
+    "./products/distributables/plugins/axismundi-contacts",
     "./products/distributables/plugins/axismundi-forum",
     "./products/distributables/plugins/axismundi-emoji",
     "./products/distributables/plugins/axismundi-object-projections",

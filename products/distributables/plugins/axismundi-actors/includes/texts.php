@@ -43,6 +43,35 @@ function axismundi_actors_site_language() : string {
 }
 
 /**
+ * Profile-language choices for Actor authoring surfaces.
+ *
+ * The post editor's list is BCP 47, not WordPress's installed-locale list. Reusing it keeps the
+ * two authoring surfaces familiar while the input remains open to a profile language WordPress has
+ * no translation pack for. Existing profile languages are always retained as candidates.
+ *
+ * @param string[] $included Tags that must be selectable even when outside the shared list.
+ * @return array<string,string> BCP 47 tag => display label.
+ */
+function axismundi_actors_profile_language_options( array $included = array() ) : array {
+	$options = array();
+	if ( function_exists( 'axismundi_op_language_options' ) ) {
+		foreach ( axismundi_op_language_options() as $option ) {
+			$tag = axismundi_actors_normalize_language_tag( (string) ( $option['value'] ?? '' ) );
+			if ( '' !== $tag ) {
+				$options[ $tag ] = (string) ( $option['label'] ?? $tag );
+			}
+		}
+	}
+	foreach ( array_merge( get_available_languages(), array( get_locale() ), $included ) as $locale ) {
+		$tag = axismundi_actors_normalize_language_tag( (string) $locale );
+		if ( '' !== $tag && ! isset( $options[ $tag ] ) ) {
+			$options[ $tag ] = $tag;
+		}
+	}
+	return $options;
+}
+
+/**
  * Preferred language for the human-facing HTML profile. A local Person uses their
  * WordPress profile language when an authored translation exists; this does not
  * change the Actor's serialization default_language.
@@ -127,11 +156,142 @@ function axismundi_actors_set_text( int $identity_id, string $field, string $lan
 			'language_tag' => $language,
 			'value'        => $value,
 			'media_type'   => 'name' === $field ? null : 'text/html',
+			/*
+			 * Typed here, so it follows nothing. Somebody who wrote this value chose it, and a later
+			 * change to whatever it once resembled is not a reason to overwrite what they wrote.
+			 * `axismundi_actors_bind_text()` is how a value that does follow something is written.
+			 */
+			'source'       => 'custom',
+			'source_tag'   => '',
 			'updated_at'   => current_time( 'mysql', true ),
 		),
-		array( '%d', '%s', '%s', '%s', '%s', '%s' )
+		array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 	);
 	return false === $result ? new WP_Error( 'ax_actors_text_save', __( 'Could not save the profile translation.', 'axismundi-actors' ) ) : true;
+}
+
+/**
+ * Write a text and record what it follows.
+ *
+ * The difference between this and `axismundi_actors_set_text()` is the whole point of the binding:
+ * one records a value somebody typed, the other records a value taken from somewhere that may change
+ * again. Keeping both in one function would mean guessing which had happened.
+ *
+ * What is published stays a plain string -- ActivityStreams receives `nameMap` and nothing about
+ * where each entry came from. The binding is local editing metadata.
+ *
+ * @param int    $identity_id Actor identity.
+ * @param string $field       name | summary | content.
+ * @param string $language    BCP-47 language tag this is shown for.
+ * @param string $value       Resolved value.
+ * @param string $source      What kind of thing it follows.
+ * @param string $source_tag  Which one, in that source's own vocabulary.
+ * @return true|WP_Error
+ */
+function axismundi_actors_bind_text( int $identity_id, string $field, string $language, string $value, string $source, string $source_tag = '' ) {
+	global $wpdb;
+	$written = axismundi_actors_set_text( $identity_id, $field, $language, $value );
+	if ( is_wp_error( $written ) ) {
+		return $written;
+	}
+	$language = axismundi_actors_normalize_language_tag( $language );
+	if ( '' === trim( $value ) ) {
+		// The row was deleted rather than written, so there is nothing left to explain.
+		return true;
+	}
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- actor text custom table.
+	$wpdb->update(
+		axismundi_actors_texts_table(),
+		array( 'source' => sanitize_key( $source ), 'source_tag' => sanitize_text_field( $source_tag ) ),
+		array( 'identity_id' => $identity_id, 'field_name' => $field, 'language_tag' => $language ),
+		array( '%s', '%s' ),
+		array( '%d', '%s', '%s' )
+	);
+	return true;
+}
+
+/**
+ * What one text follows, if anything.
+ *
+ * @param int    $identity_id Actor identity.
+ * @param string $field       name | summary | content.
+ * @param string $language    BCP-47 language tag.
+ * @return array{source:string,source_tag:string}
+ */
+function axismundi_actors_text_binding( int $identity_id, string $field, string $language ) : array {
+	global $wpdb;
+	$language = axismundi_actors_normalize_language_tag( $language );
+	$table    = axismundi_actors_texts_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+	$row = $wpdb->get_row(
+		$wpdb->prepare( "SELECT source, source_tag FROM {$table} WHERE identity_id = %d AND field_name = %s AND language_tag = %s", $identity_id, $field, $language ),
+		ARRAY_A
+	);
+	return array(
+		'source'     => (string) ( $row['source'] ?? '' ),
+		'source_tag' => (string) ( $row['source_tag'] ?? '' ),
+	);
+}
+
+/**
+ * Every language this Actor's texts are bound for, with what each follows.
+ *
+ * @param int    $identity_id Actor identity.
+ * @param string $source      Only bindings of this kind.
+ * @param string $field       name | summary | content.
+ * @return array<string,string> Language tag => source tag.
+ */
+function axismundi_actors_bound_texts( int $identity_id, string $source, string $field = 'name' ) : array {
+	global $wpdb;
+	$table = axismundi_actors_texts_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
+	$rows = (array) $wpdb->get_results(
+		$wpdb->prepare( "SELECT language_tag, source_tag FROM {$table} WHERE identity_id = %d AND field_name = %s AND source = %s", $identity_id, $field, $source ),
+		ARRAY_A
+	);
+	$bound = array();
+	foreach ( $rows as $row ) {
+		$bound[ (string) $row['language_tag'] ] = (string) $row['source_tag'];
+	}
+	return $bound;
+}
+
+/**
+ * Move every authored field in one localized profile to another BCP 47 tag.
+ *
+ * A profile is a name/summary/content bundle. Moving fields independently would leave a name in one
+ * language and its summary in another, so a target profile must be empty before the bundle moves.
+ *
+ * @param int    $identity_id Actor identity id.
+ * @param string $from        Existing BCP 47 language tag.
+ * @param string $to          Replacement BCP 47 language tag.
+ * @return true|WP_Error
+ */
+function axismundi_actors_rename_text_language( int $identity_id, string $from, string $to ) {
+	global $wpdb;
+	$from = axismundi_actors_normalize_language_tag( $from );
+	$to   = axismundi_actors_normalize_language_tag( $to );
+	if ( $identity_id <= 0 || '' === $from || '' === $to ) {
+		return new WP_Error( 'ax_actors_text_language', __( 'Enter a valid profile language.', 'axismundi-actors' ) );
+	}
+	if ( $from === $to ) {
+		return true;
+	}
+	$table = axismundi_actors_texts_table();
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- conflict check for this plugin's own table.
+	$exists = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE identity_id = %d AND language_tag = %s", $identity_id, $to ) );
+	if ( $exists > 0 ) {
+		return new WP_Error( 'ax_actors_text_language_exists', __( 'A profile already uses that language.', 'axismundi-actors' ) );
+	}
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- moving one logical profile bundle in this plugin's own table.
+	$updated = $wpdb->update(
+		$table,
+		array( 'language_tag' => $to, 'updated_at' => current_time( 'mysql', true ) ),
+		array( 'identity_id' => $identity_id, 'language_tag' => $from ),
+		array( '%s', '%s' ),
+		array( '%d', '%s' )
+	);
+	return false === $updated ? new WP_Error( 'ax_actors_text_language_save', __( 'Could not change the profile language.', 'axismundi-actors' ) ) : true;
 }
 
 /**
@@ -220,16 +380,7 @@ function axismundi_actors_resolve_text( Axismundi_Actor $actor, string $field, s
 	if ( ! in_array( $field, array( 'name', 'summary', 'content' ), true ) ) {
 		return '';
 	}
-	/*
-	 * A Person's name comes from the structured name when there is one, in the same language the
-	 * fallback chain would have chosen. Two stores held a name per language before this, and the
-	 * contact card read one while the Actor document read the other -- one person with two names,
-	 * from one site, the moment anybody filled the structured one in.
-	 *
-	 * Overlaid rather than substituted: an Actor with no structured name in this language, or none at
-	 * all, keeps the text store and the live fallback exactly as before.
-	 */
-	$map = axismundi_actors_name_map( $actor );
+	$map = axismundi_actors_get_text_map( $actor->get_identity_id() );
 	foreach ( axismundi_actors_language_fallbacks( $actor, $requested ) as $language ) {
 		if ( isset( $map[ $language ][ $field ] ) && '' !== trim( $map[ $language ][ $field ] ) ) {
 			return $map[ $language ][ $field ];
@@ -255,18 +406,54 @@ function axismundi_actors_resolve_text( Axismundi_Actor $actor, string $field, s
  * @return array<string,array<string,string>>
  */
 function axismundi_actors_name_map( Axismundi_Actor $actor ) : array {
-	$map = axismundi_actors_get_text_map( $actor->get_identity_id() );
-	if ( 'Person' !== $actor->get_type() || ! function_exists( 'axismundi_actors_person_names' ) ) {
-		return $map;
-	}
-	foreach ( axismundi_actors_person_names( $actor->get_identity_id() ) as $language => $row ) {
-		$assembled = axismundi_actors_assemble_person_name( $row );
-		if ( '' !== $assembled ) {
-			$map[ (string) $language ]['name'] = $assembled;
-		}
-	}
-	return $map;
+	/*
+	 * Nothing to overlay any more. A Person's components are written out into their own language's
+	 * `name` as they are saved, so the map is already the whole answer -- and the scalar and the map
+	 * cannot disagree, because there is only one place either could come from.
+	 */
+	return axismundi_actors_get_text_map( $actor->get_identity_id() );
 }
+
+/** Keep the local Actor's inexpensive list/search name aligned with its primary text. */
+function axismundi_actors_refresh_display_name( int $identity_id ) : void {
+	global $wpdb;
+	$actor = axismundi_actors_get_by_identity( $identity_id );
+	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() ) {
+		return;
+	}
+	$primary = axismundi_actors_serialization_language( $actor );
+	$name    = trim( (string) ( axismundi_actors_get_text_map( $identity_id )[ $primary ]['name'] ?? '' ) );
+	if ( '' === $name ) {
+		return;
+	}
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own cache column.
+	$wpdb->update(
+		axismundi_actors_actors_table(),
+		array( 'display_name' => $name, 'updated_at' => current_time( 'mysql', true ) ),
+		array( 'identity_id' => $identity_id ),
+		array( '%s', '%s' ),
+		array( '%d' )
+	);
+}
+
+/** Make an authored Actor profile language the scalar ActivityStreams name. */
+function axismundi_actors_make_profile_primary( int $identity_id, string $language ) {
+	$actor    = axismundi_actors_get_by_identity( $identity_id );
+	$language = axismundi_actors_normalize_language_tag( $language );
+	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || '' === $language ) {
+		return new WP_Error( 'ax_actors_primary_language', __( 'Enter a valid local profile language.', 'axismundi-actors' ) );
+	}
+	$name = trim( (string) ( axismundi_actors_get_text_map( $identity_id )[ $language ]['name'] ?? '' ) );
+	if ( '' === $name ) {
+		return new WP_Error( 'ax_actors_primary_name', __( 'Write a name for this profile before making it primary.', 'axismundi-actors' ) );
+	}
+	$result = axismundi_actors_set_default_language( $identity_id, $language );
+	if ( ! is_wp_error( $result ) ) {
+		axismundi_actors_refresh_display_name( $identity_id );
+	}
+	return $result;
+}
+
 
 /** Remove child text rows when an Actor identity is explicitly deleted. */
 function axismundi_actors_delete_texts( int $identity_id ) : void {

@@ -1,404 +1,123 @@
 === Axismundi Activities ===
 Contributors: kimjiwoon
 Requires at least: 6.7
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 8.1
-Requires Plugins: axismundi-actors
 Stable tag: 0.1.0
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
 
-Records ActivityStreams activities and derives social relationship state without owning
-network transport, notifications, or delivery.
+Records ActivityStreams activities and derives social relationship state, without owning network transport or delivery.
 
 == Description ==
 
-Axismundi Activities is the URI-first activity ledger and social relationship layer for
-Axismundi. Actors owns identities, Object Projections owns object representations and remote
-object cache retention, Notifications will own read state and recipient presentation, and
-Federation will own HTTP inbox/outbox transport, signatures, and remote delivery.
+Axismundi Activities is the **ledger**: an append-only, URI-keyed record of things that
+happened -- somebody followed somebody, liked something, announced something, replied,
+withdrew one of those -- and the relationship state derived from reading it back.
 
-Axismundi Actors is a required dependency and remains the authority for every actor URI.
+It is deliberately not the thing that talks to other servers. There is no HTTP inbox here,
+no outbox transport, no signatures, and no delivery queue. Those are somebody else's job,
+which is what lets this one be a plain, auditable record: an Activity is written once and
+never edited, and undoing something is a new Activity rather than a deletion.
 
-Version 0.0.18 implements the immutable URI-keyed Activity ledger, Follow/Block relation
-state, local and cached-remote Follow controls, URI-keyed Like/Undo and Announce/Undo,
-FEP-044f QuoteRequest decisions, and read-only administrator inspection. It
-also records one local outbound Create when a projectable Core Post is first published.
-It creates no public Activity route, cron event, network request, inbox, notification, or
-delivery queue. Media upload remains intentionally silent.
+= What it needs =
 
-It also exposes a public-safe Outbox query contract for representation plugins. The
-authoritative payload remains lossless while blind recipients and non-public Activities are
-excluded from public projections.
+* **Axismundi Actors** is required. Every Activity names an actor by URI, and that registry
+  is the authority for those URIs.
+* **Axismundi Object Projections** is required in practice. Anything an Activity is *about*
+  -- a post, an object, a cached remote document -- is identified and represented by that
+  plugin, so without it a Follow between two actors would still be recorded and almost
+  nothing else would.
+* Axismundi Emoji and Axismundi Dialogs are optional. Emoji reactions and the anonymous
+  remote-follow dialog use them where they are present.
+
+= What this version does =
+
+* An **immutable, URI-keyed Activity ledger** with a read-only administrator log.
+* **Follow and Block** relation state, for local actors and for cached remote ones, with
+  the accepted inverse edge tracked separately from the outgoing one.
+* **Like, Dislike, emoji reactions, Announce, Reply and votes**, each with its Undo, and
+  each keyed by the URI of the thing it is about rather than by a local row id.
+* **FEP-044f QuoteRequest** decisions, so a quote of somebody's post is something they
+  agreed to rather than something that happened to them.
+* **Object lifecycle recording**: one Create when a projectable post is first published,
+  and a Delete from its stable identity when it goes.
+* **Feed blocks** -- feed, loop, item template, tabs, filters, pagination, a density
+  switch -- plus follow, interaction and reaction-bar blocks.
+* A **public-safe outbox query** for representation plugins: the stored payload stays
+  lossless while blind recipients and non-public Activities are kept out of anything
+  public.
+
+= What this version does not do =
+
+No inbox, no outbox transport, no HTTP signatures, no delivery queue, and no scheduled
+tasks of any kind. It also does not own notifications or read state -- who gets told about
+an Activity, and whether they have seen it, belongs elsewhere. Uploading media stays
+deliberately silent: putting a file in the library is not an announcement.
+
+= What is kept, and for how long =
+
+The ledger is append-only. An Undo is recorded as its own Activity pointing at the one it
+withdraws; nothing is rewritten, because a record that can be edited afterwards is not
+evidence of anything. State like "does A follow B" is read back from that history rather
+than stored as a fact that could drift from it.
+
+An Activity therefore outlives the actor it names. When an Actor is tombstoned, it stops
+being something anybody can follow or react to, and the record that somebody once did stays
+where it is -- deleting an identity does not un-happen what it did.
+
+== Installation ==
+
+1. Install and activate **Axismundi Actors**, then **Axismundi Object Projections**. This
+   plugin records activity about the objects that one projects.
+2. Upload this plugin folder to `/wp-content/plugins/`, or install it through
+   **Plugins > Add New**, then activate it.
+3. Place the follow, interaction, reaction or feed blocks where you want them. There is
+   nothing to configure first.
+4. The ledger is readable, read-only, from the administrator log.
+
+Activation creates this plugin's own database tables. Nothing is contacted on the internet
+during installation, and no scheduled task is added.
+
+== External services ==
+
+**This plugin makes no network request of its own.** There is no HTTP client in it at all:
+no inbox to receive from, no outbox to send from, nothing signed, nothing delivered. Where
+Axismundi federates, it is the ActivityPub transport plugin that does it, and that plugin
+discloses what it sends.
+
+There is exactly one place where using this plugin causes a request to leave your site, and
+it is worth naming because a visitor rather than an administrator sets it off:
+
+* **Following from another server.** Somebody who is not a member of your site can press
+  Follow on a profile here and type their own Fediverse handle (`@you@example.com`). To
+  send them back to their own server to finish the follow, this asks **Axismundi Actors** to
+  look that handle up -- a WebFinger request to the host in the handle they typed, made by
+  that plugin under its own disclosure. What comes back is the address of their server's
+  follow page, which they are then redirected to. The handle is not stored and no account is
+  created here. To keep the endpoint from being used to make your site probe arbitrary
+  hosts, attempts are limited to ten a minute per visitor address; that address is used only
+  as the key of a one-minute counter and is not otherwise recorded.
+
+Nothing else here reaches outside this site.
 
 == Changelog ==
 
 = 0.1.0 =
-* Adds Invite: a host may now ask somebody to come, as an Activity with its own
-  withdrawal rather than as a row somewhere.
-* Renames the managed-actor functions for what they make, and makes a request
-  say which Actor it is about instead of calling it "current" -- the acting
-  Actor and the Actor being acted on are different questions.
-
-= 0.0.47 =
-* Adds Dislike as a first-class ActivityStreams interaction with its own state,
-  REST mutation, count, cache lease, and editor/feed controls.
-* Keeps Like and Dislike independent outside communities while letting Forum
-  compose the pair as its community-vote policy.
-* Gives the community vote its own connected up-score-down presentation without
-  taking button shape away from the active theme.
-
-= 0.0.46 =
-* Lets a context-owning product substitute an authored interaction type at render
-  time, so one saved card can show a community vote or an ordinary Like per Object.
-* Makes the Interaction block's editor preview render both directions and the score
-  for a community vote.
-
-= 0.0.45 =
-* Lets Group Activity profiles use the shared countable Activity ledger, including
-  one-hop Group Announces that wrap a submitted Create activity.
-
-= 0.0.44 =
-* A selected Like, Repost, or Vote keeps its state-layer background after the
-  pointer leaves, making the reader's existing action visible at a glance.
-
-= 0.0.43 =
-* Version feed block styles from their files so a plugin replacement cannot
-  leave a cached prior stylesheet active.
-
-= 0.0.42 =
-* Ship the Activity feed's native filter-switch styling with the block instead
-  of relying on a theme component stylesheet.
-
-= 0.0.41 =
-* Keep the feed-filter disclosure caret hidden even when a theme's global
-  Material Symbols utility supplies a display value.
-
-= 0.0.40 =
-* Turns the profile timeline into a client-rendered island inside the
-  server-rendered page. The header, tabs, and first page are ordinary HTML;
-  Load more fetches exactly one further page from
-  `axismundi/v1/actor-feed` and appends it once, so each step costs the same as
-  the first.
-* Load more is a real cursor link before it is anything else, so the whole feed
-  stays reachable without script and by a crawler.
-* The follow control takes its words from the kind of Actor it points at:
-  Subscribe for a community, Follow for a person. The activity sent and the
-  relation stored are unchanged.
-* Paginates by cursor rather than offset: the ledger grows at the head, so
-  offset paging would show a reader rows they had already passed.
-* Interaction ownership now follows the surface. In a feed every card renders
-  its controls as presentation and the region dispatches their clicks --
-  uniformly, whether the card arrived with the document or was appended -- so
-  there is no second handler to race. On an Object's own page the control is
-  the interaction and keeps owning itself. The feed variant omits the
-  interactive directives rather than guarding them, because markup that is not
-  there cannot fire twice.
-* Splits the timeline into filters -- posts, posts and boosts, posts and
-  replies, all activity -- presented as two native switches with a derived
-  label. A profile opens with boosts shown and replies hidden: a reply is half
-  of a conversation and reads as a fragment away from its thread, while a boost
-  is something the Actor chose to put on their own page.
-* Those switches are a reading preference rather than a destination, so they
-  live in the reader's browser instead of the URL. Everyone opening the same
-  profile link sees the same list, and one reader's choice to hide boosts is
-  not baked into every link they share. The server renders the default and the
-  runtime reconciles a stored preference by refetching the first page.
-* The community surface's slices stay in the URL, because Topics and Replies
-  are different collections rather than a way of reading one.
-* The switches are native checkboxes with `role="switch"` inside a popover, the
-  same trigger-and-dialog shape the Add reaction picker uses, closing on Escape
-  and on a click outside. The plugin emits the semantics; how a switch looks is
-  a theme component.
-* Every theme design token in this plugin's CSS now carries a fallback, so it
-  renders sensibly under any theme rather than only under Axismundi -- the
-  filter popover had no surface at all under a third-party theme until this.
-  Verified under Twenty Twenty-Five.
-* Removes reference-implementation class names from shipped markup. `ax-menu`
-  and `ax-text-field` exist only in the Axismundi Lab, so elements carrying
-  them depended on styles that are in no release -- the filter popover shipped
-  `ax-menu` and had no surface at all until it was given one. An audit now
-  fails if any of those names reappears in this plugin's markup.
-* Adds a profile surface registry. A Person is one Actor with one identity URI
-  and one outbox, so a surface is a way of reading that Actor rather than a
-  second profile; products register their own through
-  `axismundi_act_actor_profile_surfaces`.
-* `axismundi_act_actor_feed_activity_visible` now receives the surface being
-  rendered, so an entry can belong on one surface and not another without two
-  rules that can drift apart.
-* Feed ordering uses the same tie-break as the query it came from. Two entries
-  sharing a timestamp could otherwise swap places depending on where a page
-  boundary fell.
-* A personalised feed response is `private, no-store`; an anonymous one stays
-  cacheable, which is the point of splitting the feed out of the profile shell.
-
-= 0.0.39 =
-* Adds a complete per-Actor latest-vote projection for consumers that impose
-  mutually exclusive votes. The immutable ledger still records Like and Dislike
-  independently; a Forum score can now count one deterministic current verb per Actor.
-
-= 0.0.38 =
-* Records `Dislike` and its `Undo`. A community downvote arrives whether or not any
-  discussion feature is installed, and `Dislike` was not a supported Activity type at all,
-  so those votes were dropped at the ledger boundary and the record of them was lost.
-* Like and Dislike now share one implementation rather than two copies of the same queries,
-  so a later fix to convergence, cycle keys, or the guard that keeps emoji reactions out of
-  vote counts cannot be applied to one verb and missed on the other. The Like API is
-  unchanged for callers.
-* The ledger does not make the two verbs cancel each other. ActivityStreams does not define
-  them as opposites, and "one vote per person" is a community rule, so exclusive voting
-  belongs to whichever product owns that community.
-
-= 0.0.37 =
-* Embed the original Follow Activity in outbound Accept and Reject decisions so peers can
-  correlate a membership decision without dereferencing the Follow URL.
-
-= 0.0.36 =
-* Let a product that owns an Actor's community replace that Actor's profile feed. A Group's
-  profile is its community rather than a chronology of the Group's own Activities, and
-  Activities offers the slot without knowing what fills it.
-
-= 0.0.35 =
-* Allow a local Person to follow a local managed Group, which membership in a Group is
-  expressed as, and leave the Accept to whichever product governs that Group rather than
-  auto-accepting on its behalf.
-* Add a paged, read-only reader for every relation aimed at one Actor, so a consumer can
-  rebuild a projection from the ledger without truncating it.
-
-= 0.0.34 =
-* Add FEP-c0e0 EmojiReact storage, normalized Unicode and custom-emoji reaction keys,
-  idempotent Like/Undo handling, public reaction collections, and authenticated reaction
-  summary and mutation endpoints.
-* Add the Reaction Bar and Add Reaction blocks with a custom-emoji picker, an RGI Unicode
-  catalogue for the later Unicode UI, and immediate client-side reaction feedback.
-
-= 0.0.33 =
-* Record a public local Actor profile edit as an outbound Update with the complete Actor document, deduplicated until its representation changes.
-
-= 0.0.32 =
-* Add accepted Following counts and stable Followers/Following page queries for Actor profile collections.
-
-= 0.0.30 =
-* Keep a public Create or Announce visible in an Actor timeline when its remote Object has not been cached, delegating a safe external-reference fallback to Object Projections while its bounded background acquisition is pending.
-
-= 0.0.29 =
-* Complete the Actor profile Activity feed. Selection is now a dedicated ledger
-  query for effective, public, outbound Create and Announce rows: an Update never
-  becomes its own row (the card reads the object's latest state), and an undone
-  Announce drops out. Each row's object is resolved and rendered by Object
-  Projections, so a boosted local or cached-remote object renders the same card as
-  an authored one, framed with a "Boosted" label; a Create still requires the
-  object's author to be the profile owner. Deleted, tombstoned, or unresolvable
-  objects hide their row.
-
-= 0.0.28 =
-* Restyle `like-button` and `announce-button` (and the unused `boost-button`) from a
-  40px circular icon to the theme's Material 3 text-button shape: transparent pill,
-  label-large type, and the count moved inside the button instead of a sibling span.
-  The count inherits the button's `color`, so it recolors with the icon together on
-  hover, focus, and the liked/announced state instead of staying a fixed neutral tone.
-* Reverse the Announce/Boost rotation to counter-clockwise (`rotate(-180deg)`) per
-  design feedback; the prior clockwise `rotate(180deg)` reached the same resting
-  orientation but animated the wrong direction.
-
-= 0.0.27 =
-* Bring the legacy `boost-button` block's markup and stylesheet in line with `like-button`/`announce-button`: Material Symbols instead of Dashicons, the count moved outside the button, and a matching 40px circular button so all three reaction controls share one visual contract.
-
-= 0.0.26 =
-
-* Open anonymous Follow requests in an accessible native dialog when Axismundi
-  Dialogs is active. Visitors can copy the target handle, enter their own
-  Fediverse handle, and continue on their home server through its WebFinger
-  Follow/intent endpoint; the local login path remains available.
-
-= 0.0.25 =
-* Add the Interactivity API `axismundi/follow-button` block. It derives Follow,
-  Follow back, Requested, Following, and Mutual directly from the activity-backed
-  relation ledger and exposes the same state shape to future notification views.
-* Add nonce-protected Follow REST mutations for an activated local Person Actor.
-  The existing local/remote Follow state machines, undo semantics, and Bridge
-  delivery remain authoritative; the block adds no parallel relationship store.
-* Anonymous profiles remain cacheable and show local-login plus Fediverse-server
-  guidance. Logged-in profile controls opt out of shared caching before a nonce or
-  personal relationship state is rendered.
-
-= 0.0.24 =
-* Let an object-owning product render a public ledger entry through its own
-  canonical view-model path. Activities continues to select only public
-  outbound Activity rows and has no dependency on a particular object product.
-
-= 0.0.23 =
-* Add the server-rendered `axismundi/actor-activity-feed` block. It projects
-  only public outbound ledger entries for a public local Actor, never a second
-  content archive or a disclosure of blind recipients.
-
-= 0.0.22 =
-* Allow consumers to resolve one exact outbound QuoteRequest generation while
-  retaining the latest-request lookup for reconciliation and inspection.
-
-= 0.0.21 =
-* Record idempotent outbound and local FEP-044f QuoteRequests with finalized inline
-  instruments, and reconcile the immutable first valid Accept or Reject from the ledger.
-* Expose an exact request lookup and wake-up signal so held authored Objects can resume
-  after approval without treating the signal as authority.
-
-= 0.0.20 =
-* Add one shared, fail-closed audience resolver for public, quiet-public, followers,
-  and mentioned-only Objects, and snapshot the resolved to/cc members onto Core Post Create.
-* Wait for block-editor REST metadata before recording the immutable initial Create.
-* Add a domain-neutral lifecycle recorder that converges duplicate callbacks while recording
-  embedded-object Create and Update Activities plus audience-preserving URI-only Delete.
-
-= 0.0.19 =
-* Embed the minimal FEP-044f QuoteRequest object in Accept and Reject decisions instead of
-  reducing the protocol object to its URI.
-
-= 0.0.18 =
-* Revoke a standing QuoteAuthorization without deleting its identity and record one durable,
-  idempotent outbound Delete addressed to the quote author.
-* Keep the Delete privacy-minimal: its object is only the authorization URI, and neither the
-  quoting Object nor quoted Object is embedded in the revocation Activity.
-* Retry the same ledger projection on repeated or racing revocation calls without firing the
-  authorization lifecycle hook or delivery queue twice.
-
-= 0.0.17 =
-* Store and process FEP-044f QuoteRequest Activities after their inbound ledger commit.
-* Resolve the quoted local Object and its explicit policy through Object Projections, while
-  keeping the Activities state machine independent of WordPress Post metadata.
-* Accept `anyone` and accepted followers, reject `me`, non-followers, and unset policy for
-  remote requesters, and preserve the first decision across replay or later policy changes.
-* Issue one QuoteAuthorization for an accepted request and return its URI in `Accept.result`;
-  denied requests produce an addressed Reject and no authorization.
-* Reject contradictory inlined quote-post attribution or target claims without erasing the
-  immutable inbound request.
-
-= 0.0.16 =
-* Expose a public-safe accepted-follower count derived from the relationship ledger,
-  using the URI hash and exact URI together without exposing follower identities.
-
-= 0.0.15 =
-* DB v6 — add the FEP-044f QuoteAuthorization store. Consent state belongs to this ledger and
-  is deliberately separate from the observed fact that one Object quotes another: withholding,
-  rejecting, or revoking an authorization never erases a quote that exists.
-* Mint each authorization its own immutable identity at /?ax_quote_authorization={uuid}. A
-  query URI rather than a path, so proving consent never depends on permalink state. Object
-  Projections owns the representation and route.
-* One QuoteRequest issues at most one authorization: a re-delivered request returns the
-  decision already made instead of minting a second identity for the same consent.
-* Revocation withdraws the authorization and keeps the row, so a URI a peer already holds
-  resolves to "revoked" rather than to nothing, and its UUID is never reassigned. Replaying
-  the original request does not re-grant it; a new grant needs a new request.
-* Verify the table, its unique indexes, and the engine before recording the schema version.
-
-= 0.0.14 =
-* DB v5 — store the ActivityStreams `instrument` member as an indexed URI and hash. This is
-  a general member rather than a Quote alias: a FEP-044f QuoteRequest names the quoted
-  Object in `object` and the independent Object doing the quoting in `instrument`, and
-  `target` keeps its collection destination meaning for Add, Remove, and Move.
-* Reduce an embedded instrument to its canonical id while keeping the original in the
-  immutable payload, and treat a source event whose replay names a different instrument as a
-  conflict rather than the same Activity.
-* Verify the new column and index before recording the schema version, so a site whose
-  migration failed retries instead of recording a version it never reached.
-
-= 0.0.13 =
-* Add idempotent personal Announce and matching Undo cycles. Announce references the canonical
-  Object URI; Undo references the Announce Activity URI.
-* Fail closed unless Object Projections proves public or quiet-public visibility from a local
-  projection or cached observation, without a render-time network request.
-* Address public Announces to Public and the original author so the origin server can apply
-  the ActivityPub shares side effect, while the Bridge expands Public to follower inboxes.
-* Add a nonce-protected Interactivity API Boost block and interaction-lease synchronization.
-* Expose a count-only Object shares OrderedCollection without enumerating Actors or Activities.
-
-= 0.0.12 =
-* Add idempotent Like and Undo workflows keyed by canonical object URI. Undo always targets
-  the Like Activity URI and preserves its explicit remote audience for transport adapters.
-* Derive authoritative Like state and distinct-Actor counts from the immutable ledger, with
-  no second counter store, and expose a public-safe query for Object Projections.
-* Add a nonce-protected `axismundi/like-button` block using the WordPress Interactivity API.
-  Optimistic UI state rolls back on failure and accepts the server response as final.
-  Logged-in renders set a page-cache bypass before exposing user state or a REST nonce.
-* Acquire and release Object Projections `interaction` leases for cached remote objects.
-
-= 0.0.11 =
-* Disambiguate remote relationships as `@handle@instance` while keeping local handles short.
-* Add Follow back, Unfollow, and Activity-backed follower removal controls to the Follows screen.
-* Replace imported outbound snapshots through an explicit Re-follow Activity instead of
-  fabricating an Undo for unavailable legacy history.
-* Let a newly received Follow URI supersede an accepted cycle and Accept that exact Activity.
-
-= 0.0.10 =
-* Auto-accept verified inbound remote Follow Activities when the local Actor does not
-  require approval, recording an outbound Accept addressed to the remote Actor.
-* Derive remote response direction from the committed inbound relation instead of requiring
-  a second remote Actor cache lookup.
-* Let a new inbound Follow supersede an imported legacy snapshot before auto-accepting it.
-
-= 0.0.9 =
-* Add outbound Follow and Undo controls for cached remote Actors on their cached profile
-  and administrator detail screen.
-* Address remote Follow, Accept, and Reject Activities explicitly to the remote Actor so a
-  transport adapter can resolve its inbox without adding HTTP to this plugin.
-* Keep imported legacy Follow snapshots read-only when their original Activity URI is not
-  available, rather than inventing an invalid Undo.
-
-= 0.0.8 =
-* Add DB v4 relation provenance for accepted and pending legacy Follow snapshots without
-  inventing Activity rows.
-* Keep `legacy_pending` outside following projections and let real Follow/Accept/Reject/Undo
-  Activities take permanent precedence over imported snapshots.
-* Expose an idempotent snapshot import API for compatibility adapters.
-
-= 0.0.7 =
-* Add public-safe Actor Outbox queries for Object Projections without adding an HTTP route.
-* Recognize full and compact ActivityStreams Public audience forms, exclude non-outbound or
-  ineffective rows, and strip bto/bcc only from projection copies.
-* Keep the authoritative immutable Activity payload unchanged.
-
-= 0.0.6 =
-* Add verified DB v3 source-event identities so retries and concurrent WordPress save
-  requests converge on one immutable Activity.
-* Consume Object Projections Core Post publish candidates and record one URI-referenced
-  outbound Create. Publish edits and unpublish/re-publish do not duplicate Create; a later
-  effective Delete begins a new lifecycle generation.
-* Keep password posts and media uploads silent, perform no transport, and defer Reply until
-  the Axismundi Notes CPT establishes the canonical local Note model.
-
-= 0.0.5 =
-* Require Contributor-level `edit_posts` access for local Follow controls and management.
-  Subscribers remain read-only even if an older Actor record exists.
-* Add nonce-protected local Follow state and actions to the administrator Users table.
-  Keep cached remote Actors display-only until an official ActivityPub transport adapter exists.
-* Show pending Follow requests sent by the current Actor with a cancellation action.
-
-= 0.0.4 =
-* Add local-only Follow, request cancellation, Unfollow, Accept, and Reject workflows for
-  activated public Person actors. Auto-accept undeclared policies by default while honoring
-  an Actor's explicit `manually_approves_followers` policy.
-* Add Follow controls to local Actor profiles and a self-service `Follows` admin screen
-  for approval policy, pending requests, followers, and following.
-* Keep every workflow offline, reject remote Actors, and add an Actors-owned policy setter
-  instead of writing the identity repository directly.
-
-= 0.0.3 =
-* Add verified DB v2 `wp_ax_activity_relations` materialization for Follow, Accept, Reject,
-  Undo, and Block in the same transaction as the immutable Activity ledger.
-* Derive followers/following from accepted Follow edges, enforce transition Actor authority,
-  and reconcile an Accept or Reject that arrives before its Follow.
-* Add the read-only `Tools > Activity Log` administrator inspector for recent Activities,
-  immutable payloads, and current social relation state.
-
-= 0.0.2 =
-* Add the verified InnoDB `wp_ax_activities` repository with UUID local Activity URIs,
-  exact URI/hash identity, bounded immutable payloads, normalized audience, and Actor/Object
-  reverse lookups. Keep prefix tenancy and omit `blog_id`.
-* Require every Actor URI to resolve through Axismundi Actors and reject direction/origin
-  conflicts. Preserve remote inbound Activity ids exactly.
-* Add idempotent replay, payload identity-conflict protection, post-commit recorded hooks,
-  and same-Actor Undo effectiveness including out-of-order and Undo-of-Undo reconciliation.
-
-= 0.0.1 =
-* Lock Activity, relation, lifecycle, logical collection, media no-Create, lease, and
-  prefix-tenancy contracts in docs without creating runtime state.
+* First release.
+* An immutable, URI-keyed Activity ledger with a read-only administrator log, and social
+  relationship state derived by reading it rather than stored alongside it.
+* Follow and Block for local and cached remote actors, tracking the accepted inverse edge
+  apart from the outgoing one.
+* Like, Dislike, emoji reactions, Announce, Reply and votes, each with its Undo recorded as
+  a further Activity rather than as a deletion.
+* FEP-044f QuoteRequest decisions.
+* One Create recorded when a projectable post is first published, and a Delete from its
+  stable identity when it goes.
+* Feed blocks -- feed, loop, item template, tabs, filters, pagination, density switch --
+  and follow, interaction and reaction-bar blocks.
+* A public-safe outbox query for representation plugins: the stored payload stays lossless
+  while blind recipients and non-public Activities stay out of public projections.
+* Anonymous remote follow, which sends a visitor to their own server to finish rather than
+  asking them for an account here.

@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '20.0';
+const AXISMUNDI_ACTORS_DB_VERSION = '32.0';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -124,8 +124,11 @@ function axismundi_actors_install() : void {
 	$actors     = axismundi_actors_actors_table();
 	$texts      = axismundi_actors_texts_table();
 	$profile_fields = axismundi_actors_profile_fields_table();
-	$person_names   = axismundi_actors_person_names_table();
+	// Named here and nowhere else: the only thing left to do with this table is get rid of it.
+	$person_names   = $wpdb->prefix . 'ax_actor_person_names';
 	$alternate_names = axismundi_actors_alternate_names_table();
+	$profile         = $wpdb->prefix . 'ax_actor_profile';
+	$anniversaries   = $wpdb->prefix . 'ax_actor_anniversaries';
 
 	dbDelta(
 		"CREATE TABLE {$identities} (
@@ -169,7 +172,6 @@ function axismundi_actors_install() : void {
 			followers_total bigint(20) unsigned DEFAULT NULL,
 			following_total bigint(20) unsigned DEFAULT NULL,
 			follow_counts_fetched_at datetime DEFAULT NULL,
-			person_name_edited_at datetime DEFAULT NULL,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (identity_id),
@@ -188,6 +190,8 @@ function axismundi_actors_install() : void {
 			language_tag varchar(35) NOT NULL,
 			value longtext NOT NULL,
 			media_type varchar(64) DEFAULT NULL,
+			source varchar(32) NOT NULL default '',
+			source_tag varchar(35) NOT NULL default '',
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY identity_field_language (identity_id, field_name, language_tag),
@@ -196,64 +200,31 @@ function axismundi_actors_install() : void {
 	);
 
 	/*
-	 * A person's name in parts, per language. Stored beside the display name rather than replacing it:
-	 * a mononym or an organisation has no parts, and the order the parts read in belongs to the person
-	 * rather than to the language tag.
-	 *
-	 * The phonetic columns say how the parts are said, per part, because that is how both standards
-	 * model it -- JSContact hangs `phonetic` off each name component and vCard puts PHONETIC on the
-	 * property. The system and script are stored once for the whole name and are what make the values
-	 * readable: `jee-WOON` is not IPA, and a phonetic value with nothing saying which notation it is
-	 * written in cannot be pronounced correctly by anybody who did not write it.
+	 * The per-language structured name table is gone rather than kept empty. It held the parts of a
+	 * person's name once, before the base profile and then before the contact card; nothing has read
+	 * it since, and a table of `first_name` and `honorific_prefix` columns sitting in the schema is
+	 * the kind of thing somebody finds in a year and has to work out from scratch.
 	 */
-	dbDelta(
-		"CREATE TABLE {$person_names} (
-			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-			identity_id bigint(20) unsigned NOT NULL,
-			language_tag varchar(35) NOT NULL,
-			first_name varchar(191) NOT NULL default '',
-			middle_name varchar(191) NOT NULL default '',
-			last_name varchar(191) NOT NULL default '',
-			honorific_prefix varchar(64) NOT NULL default '',
-			honorific_suffix varchar(64) NOT NULL default '',
-			phonetic_first varchar(191) NOT NULL default '',
-			phonetic_middle varchar(191) NOT NULL default '',
-			phonetic_last varchar(191) NOT NULL default '',
-			phonetic_system varchar(16) NOT NULL default '',
-			phonetic_script varchar(8) NOT NULL default '',
-			display_order varchar(16) NOT NULL default 'given-family',
-			display_name varchar(191) NOT NULL default '',
-			updated_at datetime NOT NULL,
-			PRIMARY KEY  (id),
-			UNIQUE KEY identity_language (identity_id, language_tag)
-		) ENGINE=InnoDB {$charset};"
-	);
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed internal identifier.
+	$wpdb->query( "DROP TABLE IF EXISTS {$person_names}" );
 
-	/*
-	 * DB v20 uses WordPress-shaped first/last names plus the Actor-only middle name. dbDelta adds the
-	 * new columns but deliberately does not remove old ones, so copy each value before dropping the
-	 * obsolete vocabulary. A half-complete migration keeps the version unstamped and is retried.
-	 */
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time custom-table migration.
-	$person_name_columns_before = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$person_names}" );
-	$person_name_renames        = array(
-		'given_name'          => 'first_name',
-		'additional_name'     => 'middle_name',
-		'family_name'         => 'last_name',
-		'phonetic_given'      => 'phonetic_first',
-		'phonetic_additional' => 'phonetic_middle',
-		'phonetic_family'     => 'phonetic_last',
-	);
-	foreach ( $person_name_renames as $old_column => $new_column ) {
-		if ( ! in_array( $old_column, $person_name_columns_before, true ) || ! in_array( $new_column, $person_name_columns_before, true ) ) {
-			continue;
-		}
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed internal identifiers only.
-		$wpdb->query( "UPDATE {$person_names} SET {$new_column} = {$old_column} WHERE {$new_column} = ''" );
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed internal identifiers only.
-		$wpdb->query( "ALTER TABLE {$person_names} DROP COLUMN {$old_column}" );
+	/* Structured names and pronunciations are authored only on the Contacts self Card. */
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed retired internal table.
+	$wpdb->query( "DROP TABLE IF EXISTS {$profile}" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema migration of a retired cache marker.
+	$actor_columns_before = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$actors}" );
+	if ( in_array( 'person_name_edited_at', $actor_columns_before, true ) ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed retired column.
+		$wpdb->query( "ALTER TABLE {$actors} DROP COLUMN person_name_edited_at" );
 	}
 
+	/*
+	 * Anniversaries belong to the contact Card.  Actors used to keep a parallel JSContact collection,
+	 * which made profile and address-book facts compete. This retired store is intentionally
+	 * discarded rather than migrated: a future Contacts anniversaries UI is the sole authoring path.
+	 */
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed retired internal table.
+	$wpdb->query( "DROP TABLE IF EXISTS {$anniversaries}" );
 	/*
 	 * The other names a person goes by, which are not the same question as the same name written in
 	 * another script -- that is a localization of one name and lives in the table above. A nickname, a
@@ -660,10 +631,11 @@ function axismundi_actors_install() : void {
 	 * migration that half-applied and still stamped the version is a site that reports itself current
 	 * while the editor writing to those columns fails on every save.
 	 */
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$person_name_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$person_names}" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.
+	$person_names_dropped = $person_names !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $person_names ) );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$alternate_name_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$alternate_names}" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$alternate_name_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$alternate_names} WHERE Key_name = 'identity_kind_position'" );
 	/*
@@ -671,9 +643,6 @@ function axismundi_actors_install() : void {
 	 * value once into `first_name`: rendering must not write data, and repeating this migration would
 	 * resurrect a structured name a person deliberately removed later.
 	 */
-	if ( '1' !== (string) get_option( 'ax_actors_person_name_text_migrated', '' ) && function_exists( 'axismundi_actors_migrate_person_name_texts' ) ) {
-		axismundi_actors_migrate_person_name_texts();
-	}
 	if (
 		in_array( 'avatar_attachment_id', $columns, true )
 		&& in_array( 'header_attachment_id', $columns, true )
@@ -712,19 +681,13 @@ function axismundi_actors_install() : void {
 		&& $transactional_engines
 		&& $migrated
 		&& $relations_migrated
-		&& in_array( 'first_name', $person_name_columns, true )
-		&& in_array( 'middle_name', $person_name_columns, true )
-		&& in_array( 'last_name', $person_name_columns, true )
-		&& in_array( 'phonetic_first', $person_name_columns, true )
-		&& in_array( 'phonetic_middle', $person_name_columns, true )
-		&& in_array( 'phonetic_last', $person_name_columns, true )
-		&& in_array( 'phonetic_system', $person_name_columns, true )
-		&& in_array( 'phonetic_script', $person_name_columns, true )
-		&& in_array( 'person_name_edited_at', $final_actor_columns, true )
+		&& ! in_array( 'person_name_edited_at', $final_actor_columns, true )
+		&& $profile !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $profile ) )
+		&& $person_names_dropped
+		&& $anniversaries !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $anniversaries ) )
 		&& in_array( 'name_kind', $alternate_name_columns, true )
 		&& in_array( 'value', $alternate_name_columns, true )
 		&& ! empty( $alternate_name_indexes )
-		&& array() === array_intersect( array_keys( $person_name_renames ), $person_name_columns )
 	) {
 		update_option( 'ax_actors_db_version', AXISMUNDI_ACTORS_DB_VERSION, false );
 	}
@@ -899,12 +862,26 @@ final class Axismundi_Actor {
 		if ( $this->is_local() && 'site' === $this->get_scope() ) {
 			return (string) get_bloginfo( 'name' );
 		}
+		/*
+		 * What this Actor is called, when it has been given a name of its own.
+		 *
+		 * The column is written by exactly two things: a local Actor's profile being saved, and a remote
+		 * Actor being fetched. So a stored value is always somebody's decision about this Actor, and it
+		 * has to win over the WordPress account underneath -- reading the account live would mean
+		 * editing a byline silently renames a federated identity, which is the boundary this whole
+		 * model exists to draw.
+		 */
+		$stored = trim( (string) ( $this->row['display_name'] ?? '' ) );
+		if ( '' !== $stored ) {
+			return $stored;
+		}
+		// Nobody has named it yet, so the account still answers -- as a fallback, not as a source.
 		$uid = $this->get_local_user_id();
 		if ( $this->is_local() && $uid ) {
 			$name = (string) get_the_author_meta( 'display_name', $uid );
 			return '' !== $name ? $name : (string) get_the_author_meta( 'user_login', $uid );
 		}
-		return (string) ( $this->row['display_name'] ?? $this->get_preferred_username() );
+		return $this->get_preferred_username();
 	}
 }
 
@@ -994,9 +971,16 @@ function axismundi_actors_create_local( array $args ) {
 	$uri    = home_url( '/actors/' . $uuid );
 	$hash   = hash( 'sha256', $uri );
 	$now    = current_time( 'mysql', true );
+	/*
+	 * A user-scoped Person starts in the language the person selected for WordPress. This is a seed,
+	 * not a live binding: changing the dashboard language later does not rewrite an Actor's published
+	 * primary profile language. Site and managed Actors have no such person, so they start at the site
+	 * locale instead.
+	 */
+	$locale = $uid > 0 ? get_user_locale( $uid ) : get_locale();
 	$language = function_exists( 'axismundi_actors_normalize_language_tag' )
-		? axismundi_actors_normalize_language_tag( get_locale() )
-		: str_replace( '_', '-', (string) get_locale() );
+		? axismundi_actors_normalize_language_tag( $locale )
+		: str_replace( '_', '-', (string) $locale );
 
 	// A handle is OPTIONAL at creation. When one is given (e.g. the site actor
 	// seed) it is uniquified, stored as the alias == routing key, and locked. A
@@ -1085,6 +1069,129 @@ function axismundi_actors_query_one( string $where, ...$args ) : ?Axismundi_Acto
 	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- $where is a caller-fixed clause; args are prepared.
 	$row = $wpdb->get_row( $args ? $wpdb->prepare( $sql, ...$args ) : $sql, ARRAY_A );
 	return $row ? Axismundi_Actor::from_row( $row ) : null;
+}
+
+/**
+ * Reduce a web address to the form two spellings of the same page share.
+ *
+ * Lowercased scheme and host, a default port dropped, one trailing slash gone -- and the query
+ * kept, because a plain-permalink profile lives entirely in its query string.
+ *
+ * This is a comparison form and not a canonical one: it says whether two addresses are the same
+ * address, and nothing about which of them anybody should be handed.
+ *
+ * @param string $url Candidate address.
+ * @return string Empty when the candidate is not an absolute web address.
+ */
+function axismundi_actors_normalize_web_url( string $url ) : string {
+	$parts  = wp_parse_url( $url );
+	$scheme = strtolower( (string) ( $parts['scheme'] ?? '' ) );
+	$host   = strtolower( (string) ( $parts['host'] ?? '' ) );
+	if ( ! in_array( $scheme, array( 'http', 'https' ), true ) || '' === $host ) {
+		return '';
+	}
+	$port      = isset( $parts['port'] ) ? (int) $parts['port'] : 0;
+	$authority = $host . ( $port > 0 && ! ( ( 'http' === $scheme && 80 === $port ) || ( 'https' === $scheme && 443 === $port ) ) ? ':' . $port : '' );
+	$path      = '/' . ltrim( (string) ( $parts['path'] ?? '' ), '/' );
+	if ( '/' !== $path ) {
+		$path = untrailingslashit( $path );
+	}
+	return $scheme . '://' . $authority . $path . ( isset( $parts['query'] ) && '' !== $parts['query'] ? '?' . $parts['query'] : '' );
+}
+
+/**
+ * Resolve one Actor from the human-readable profile address it is reached at.
+ *
+ * The page somebody opens, which is a different string from the Actor's canonical id and often the
+ * only one they ever see: `https://mastodon.social/@alice` rather than the id underneath it. A
+ * caller holding an address a person wrote down has this and not the id.
+ *
+ * A lookup and only a lookup. Nothing here discovers, fetches, or refreshes a cache: an address
+ * arriving from outside must never be able to make this server go knocking, and an Actor this site
+ * has not already cached simply is not here.
+ *
+ * Locally the profile address is derived from the handle rather than stored, so a local address is
+ * read for the handle it contains and the Actor found is then asked for its own address back. That
+ * confirmation is what makes the answer safe: whatever this reads out of a URL, only an Actor that
+ * answers with the same address is returned.
+ *
+ * Two Actors matching means no answer, on the same ground as an acct shared by a Person and a
+ * Group: `first cached` is not an identity, and differs from site to site.
+ *
+ * @param string $url Profile address.
+ * @return Axismundi_Actor|null
+ */
+function axismundi_actors_get_by_profile_url( string $url ) : ?Axismundi_Actor {
+	$wanted = axismundi_actors_normalize_web_url( $url );
+	if ( '' === $wanted ) {
+		return null;
+	}
+	static $memo = array();
+	if ( array_key_exists( $wanted, $memo ) ) {
+		return $memo[ $wanted ];
+	}
+	$found = axismundi_actors_local_actor_at_url( $wanted ) ?? axismundi_actors_remote_actor_at_url( $wanted );
+	/*
+	 * Whatever route found it, the Actor has to agree that this is where it lives. A handle read out
+	 * of a path is a guess until the Actor says the same thing back.
+	 */
+	if ( $found instanceof Axismundi_Actor && $wanted !== axismundi_actors_normalize_web_url( $found->get_profile_url() ) ) {
+		$found = null;
+	}
+	$memo[ $wanted ] = $found;
+	return $found;
+}
+
+/**
+ * The local Actor a profile address on this site names, by the handle the address carries.
+ *
+ * @param string $wanted Normalized address.
+ * @return Axismundi_Actor|null
+ */
+function axismundi_actors_local_actor_at_url( string $wanted ) : ?Axismundi_Actor {
+	$here = (string) wp_parse_url( axismundi_actors_normalize_web_url( home_url( '/' ) ), PHP_URL_HOST );
+	if ( '' === $here || strtolower( (string) wp_parse_url( $wanted, PHP_URL_HOST ) ) !== strtolower( $here ) ) {
+		return null;
+	}
+	// Pretty: `/@handle`, or `/group/@handle` where a Group keeps its own namespace.
+	$path   = rawurldecode( (string) wp_parse_url( $wanted, PHP_URL_PATH ) );
+	$handle = '';
+	if ( 1 === preg_match( '#(?:^|/)(?:group/)?@([^/]+)$#', $path, $matched ) ) {
+		$handle = $matched[1];
+	} else {
+		// Plain permalinks put the whole profile in the query string.
+		$query = array();
+		wp_parse_str( (string) wp_parse_url( $wanted, PHP_URL_QUERY ), $query );
+		$handle = (string) ( $query['ax_actor_handle'] ?? '' );
+	}
+	return '' !== $handle ? axismundi_actors_get_by_handle( $handle ) : null;
+}
+
+/**
+ * The cached remote Actor whose stored profile address is this one.
+ *
+ * Matched as stored rather than by a scan of near-misses: a cached address written in some other
+ * spelling is a miss here, and a miss costs a caller the answer it hoped for -- never somebody
+ * else's Actor, which is the only outcome worth avoiding.
+ *
+ * @param string $wanted Normalized address.
+ * @return Axismundi_Actor|null
+ */
+function axismundi_actors_remote_actor_at_url( string $wanted ) : ?Axismundi_Actor {
+	global $wpdb;
+	$identities = axismundi_actors_identities_table();
+	$actors     = axismundi_actors_actors_table();
+	$variants   = array_values( array_unique( array( $wanted, $wanted . '/' ) ) );
+	$slots      = implode( ', ', array_fill( 0, count( $variants ), '%s' ) );
+	$ids        = (array) $wpdb->get_col(
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- table names are ours; every value is prepared and the placeholders are generated from a counted array.
+		$wpdb->prepare(
+			"SELECT DISTINCT i.id FROM {$identities} i INNER JOIN {$actors} a ON a.identity_id = i.id WHERE i.origin = %s AND a.profile_url IN ({$slots}) LIMIT 2",
+			'remote',
+			...$variants
+		)
+	);
+	return 1 === count( $ids ) ? axismundi_actors_get_by_identity( (int) $ids[0] ) : null;
 }
 
 /**

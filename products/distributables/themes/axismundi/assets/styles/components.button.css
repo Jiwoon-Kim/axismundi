@@ -10,13 +10,22 @@
  * pressed shape morph and the state-layer colour change continuously instead
  * of jumping. True M3 spring physics (damping/stiffness, interruptible) would
  * need JS/Web Animations; a CSS transition is the right weight here.
+ *
+ * The duration approximates the button's own spring rather than borrowing a
+ * system one. M3 gives Button Small `damping 0.9, stiffness 1400`, which peaks
+ * at 1.0015 -- it barely overshoots -- and settles in 137ms. The system
+ * `fast-spatial` spring is `0.6 / 800`: it peaks at 1.09 over 350ms, sixty
+ * times the overshoot and more than twice the time, so the shape tokens' own
+ * curve would be wrong here. Fitting candidates against the button spring puts
+ * `easing-standard` at 200ms closest (RMS 0.031, against 0.086 at 150ms and
+ * 0.050 for fast-spatial), so this uses `short4`.
  */
 
 .wp-element-button {
 	box-sizing: border-box;
 	transition:
-		border-radius var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard),
-		background-color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
+		border-radius var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+		background-color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
 }
 
 @media (prefers-reduced-motion: reduce) {

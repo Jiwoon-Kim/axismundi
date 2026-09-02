@@ -2379,6 +2379,50 @@ Close evidence:
 - **Known delta until then**: §1a renders with the global block gap instead of
   spacing 25. No theme change pending.
 
+### 50. Decide whether the published plugins should support Playground preview
+
+- **Bucket**: release / wp.org presentation. Not a defect.
+- **Source**: 2026-09-02 wp.org Advanced view, noticed while checking release
+  history for the changelog split. Observed on `axismundi-media-library` and
+  `axismundi-geodata`; no plugin in this repo ships a blueprint, so it applies to
+  all nine published plugins.
+- **Observed**: the Advanced view reports
+
+  > The Live Preview link to Playground is currently disabled.
+  > **Note:** Missing or invalid blueprint.json file.
+
+- **Decision to make**:
+
+  ```
+  Media Library wp.org Live Preview is unavailable:
+  "Missing or invalid blueprint.json file".
+
+  Decide whether the plugin should support Playground preview. If yes, add and
+  verify a minimal blueprint; if not, document the intentional absence.
+  ```
+
+  Deliberately not pre-decided. Adding a blueprint just to light up the button
+  is not the goal.
+- **What the handbook says** (verified 2026-09-03,
+  <https://developer.wordpress.org/plugins/wordpress-org/previews-and-blueprints/>):
+  - The file goes to SVN as `assets/blueprints/blueprint.json` -- the assets
+    folder, not the plugin folder, so it never ships in the plugin zip.
+  - Two independent gates. A valid blueprint alone shows the button **to
+    committers only**, labelled "Test Preview". The public button additionally
+    requires setting the preview to "public" in the Advanced view.
+  - wp.org offers an auto-generated blueprint to download and edit as a start.
+  - A blueprint can install other plugins, set options, and run PHP, so a
+    demo can arrive with data already in place.
+- **Consequence for the decision**: it can be evaluated without exposing
+  anything. Commit a blueprint, test it as a committer, and only flip it public
+  if the demo is worth showing. That intermediate state is the cheap way to find
+  out whether these plugins demo well at all.
+- **Known obstacle**: several of these plugins show nothing useful on bare
+  activation. Geodata looks like an empty taxonomy plugin until places exist;
+  Media Library needs attachments. A preview worth enabling has to seed its own
+  content, which is the real work here -- not the JSON file.
+- **Target**: TBD. Low priority, and entirely separate from the changelog work.
+
 ### v3.6.10 Wave 2B-1 Form close evidence
 
 v3.6.10 closed the first Wave 2B slice by implementing Route B, Form Controls

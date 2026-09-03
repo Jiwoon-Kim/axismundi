@@ -2423,6 +2423,61 @@ Close evidence:
   content, which is the real work here -- not the JSON file.
 - **Target**: TBD. Low priority, and entirely separate from the changelog work.
 
+### 51. Button group selected-width morph
+
+- **Bucket**: component boundary. Deliberately not implemented.
+- **Source**: 2026-09-03, reading M3's Button group spec while setting the
+  `core/buttons` default gap. Every size (xsmall through large) carries
+  `pressed width multiplier 15%` with spring `damping 0.9, stiffness 1400`.
+
+> **Button group selected-width morph**
+> M3 standard Button group의 선택 세그먼트는 `flex-grow: 1.15`로 넓어진다. 이는
+> radio/`aria-pressed` 선택 계약과 `flex: 1 1 0`인 균등 세그먼트 집합을 요구한다.
+> `core/buttons` variation에는 적용하지 않는다. 필요해질 경우 상태를 소유하는
+> 별도 segmented-control 컴포넌트에서 구현한다.
+
+- **Not `:active`.** The name in the M3 table says "pressed", but the Lab
+  baseline applies it to the *selected* segment, not a transient press:
+
+  ```css
+  .ax-button-group .ax-button-group__input:checked + .ax-button,
+  .ax-button-group .ax-button[aria-pressed="true"],
+  .ax-button-group .ax-button.is-selected { flex-grow: 1.15; }
+  ```
+
+- **Why it cannot ride on `core/buttons`**: the baseline's own note records that
+  `flex: 1 1 auto` made the widen almost invisible, because a content-width basis
+  left `flex-grow` redistributing only leftover space. It needs `flex: 1 1 0`,
+  which equalises every button's width. On an arbitrary CTA row that changes the
+  layout before any morph is visible -- and `core/buttons` has no selection state
+  to key on, and mixes `<a>` with `<button>`.
+- **Where it belongs**: a component that owns the selection contract -- a
+  radio-backed segmented control, or an `aria-pressed` toggle group, as a custom
+  block. Adding it as a `core/buttons` CSS variation would copy M3's shape and
+  drop its state model, which is the part that matters.
+- **Reference**: `axismundi-lab/modules/button-group/`, baseline
+  `components.css` §28.3 / §5.6.
+- **Target**: TBD.
+
+### 52. Lab button group animates on `fast-spatial`, not the component spring
+
+- **Bucket**: reference implementation, motion fidelity. Lab only.
+- **Source**: 2026-09-03, spotted while writing #51.
+- **Issue**: `components.css` §28.3 transitions `flex-grow`, `border-radius` and
+  colour on `--md-sys-motion-curve-fast-spatial`. M3 gives both Button Small's
+  shape morph and Button group's pressed morph their own spring,
+  `damping 0.9, stiffness 1400`, which peaks at 1.0015 and settles in 137ms.
+  `fast-spatial` is `0.6 / 800`: peak 1.092 over 350ms -- sixty times the
+  overshoot and more than twice the duration.
+- **Open question**: whether this was a deliberate Lab choice or an
+  approximation made before the component springs were published. Decide before
+  changing anything.
+- **No theme impact.** Lab is not distributed, and the theme's button was moved
+  to `short4` (200ms, RMS 0.031 against the component spring) at `ca4ba6f`.
+- **Deliberately filed apart from #51** so that implementing the selected-width
+  morph does not drag a motion re-audit along with it.
+- **Target**: TBD.
+
 ### v3.6.10 Wave 2B-1 Form close evidence
 
 v3.6.10 closed the first Wave 2B slice by implementing Route B, Form Controls

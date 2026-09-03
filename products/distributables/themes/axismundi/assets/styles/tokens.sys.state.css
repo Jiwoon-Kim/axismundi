@@ -3,6 +3,13 @@
  *
  * State layer opacity tokens are shared by buttons, icon buttons, navigation,
  * menus, lists, chips, and other interactive surfaces.
+ *
+ * Not one of M3's seven Styles axes -- these come from Foundations > Interaction
+ * > State layers, and cut across every interactive component. WordPress has no
+ * preset model to publish them through, so CSS is their only home.
+ *
+ * Consume as a percentage: color-mix(in srgb, <role>
+ * calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), <container>).
  */
 
 :root {
@@ -10,4 +17,7 @@
 	--md-sys-state-focus-state-layer-opacity: 0.10;
 	--md-sys-state-pressed-state-layer-opacity: 0.10;
 	--md-sys-state-dragged-state-layer-opacity: 0.16;
+
+	/* Disabled is a flat opacity on the content, not a layer over a container. */
+	--md-sys-state-disabled-state-layer-opacity: 0.38;
 }

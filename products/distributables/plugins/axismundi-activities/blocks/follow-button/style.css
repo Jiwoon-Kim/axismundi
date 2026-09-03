@@ -41,7 +41,7 @@
 .axismundi-follow-button__button:disabled {
 	cursor: wait;
 	background-color: color-mix(in srgb, var(--wp--preset--color--on-surface, #1d1b20) 12%, transparent);
-	color: color-mix(in srgb, var(--wp--preset--color--on-surface, #1d1b20) 38%, transparent);
+	color: color-mix(in srgb, var(--wp--preset--color--on-surface, #1d1b20) calc(var(--md-sys-state-disabled-state-layer-opacity, 0.38) * 100%), transparent);
 }
 
 .axismundi-follow-button__remote {

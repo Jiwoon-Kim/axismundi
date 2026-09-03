@@ -180,7 +180,7 @@
 }
 
 .axismundi-switch__input:disabled ~ .axismundi-switch__track::after {
-	background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface) calc(var(--md-sys-state-disabled-state-layer-opacity) * 100%), transparent);
 }
 
 .axismundi-switch__input:disabled:checked ~ .axismundi-switch__track {
@@ -209,7 +209,7 @@
 }
 
 .axismundi-switch__input:disabled ~ .axismundi-switch__label {
-	color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+	color: color-mix(in srgb, var(--md-sys-color-on-surface) calc(var(--md-sys-state-disabled-state-layer-opacity) * 100%), transparent);
 }
 
 /*

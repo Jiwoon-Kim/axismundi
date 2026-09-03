@@ -193,7 +193,7 @@
 }
 
 .axismundi-interaction .axismundi-interaction__button:disabled {
-	color: color-mix(in srgb, var(--wp--preset--color--on-surface, #1d1b20) 38%, transparent);
+	color: color-mix(in srgb, var(--wp--preset--color--on-surface, #1d1b20) calc(var(--md-sys-state-disabled-state-layer-opacity, 0.38) * 100%), transparent);
 	cursor: not-allowed;
 }
 
@@ -246,7 +246,7 @@
 }
 
 .axismundi-announce-menu__action:disabled {
-	color: color-mix(in srgb, var(--wp--preset--color--on-surface, CanvasText) 38%, transparent);
+	color: color-mix(in srgb, var(--wp--preset--color--on-surface, CanvasText) calc(var(--md-sys-state-disabled-state-layer-opacity, 0.38) * 100%), transparent);
 	cursor: wait;
 }
 

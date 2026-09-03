@@ -377,11 +377,11 @@
 	cursor: not-allowed;
 }
 .ax-checkbox__input:disabled ~ .ax-checkbox__visual {
-	border-color: color-mix(in srgb, var(--md-sys-color-on-surface, CanvasText) 38%, transparent);
+	border-color: color-mix(in srgb, var(--md-sys-color-on-surface, CanvasText) calc(var(--md-sys-state-disabled-state-layer-opacity, 0.38) * 100%), transparent);
 }
 .ax-checkbox__input:disabled:checked ~ .ax-checkbox__visual,
 .ax-checkbox__input:disabled:indeterminate ~ .ax-checkbox__visual {
-	background-color: color-mix(in srgb, var(--md-sys-color-on-surface, CanvasText) 38%, transparent);
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface, CanvasText) calc(var(--md-sys-state-disabled-state-layer-opacity, 0.38) * 100%), transparent);
 	border-color: transparent;
 }
 .ax-checkbox__input:disabled:checked ~ .ax-checkbox__visual .ax-checkbox__check {
@@ -403,7 +403,7 @@
 	color: var(--md-sys-color-on-surface, CanvasText);
 }
 .ax-checkbox__input:disabled ~ .ax-checkbox__label {
-	color: color-mix(in srgb, var(--md-sys-color-on-surface, CanvasText) 38%, transparent);
+	color: color-mix(in srgb, var(--md-sys-color-on-surface, CanvasText) calc(var(--md-sys-state-disabled-state-layer-opacity, 0.38) * 100%), transparent);
 }
 
 /* Radio primitive copied from axismundi-lab/modules/radio. */
@@ -524,10 +524,10 @@
 	cursor: not-allowed;
 }
 .ax-radio__input:disabled ~ .ax-radio__visual {
-	border-color: color-mix(in srgb, var(--md-sys-color-on-surface, CanvasText) 38%, transparent);
+	border-color: color-mix(in srgb, var(--md-sys-color-on-surface, CanvasText) calc(var(--md-sys-state-disabled-state-layer-opacity, 0.38) * 100%), transparent);
 }
 .ax-radio__input:disabled:checked ~ .ax-radio__visual::after {
-	background-color: color-mix(in srgb, var(--md-sys-color-on-surface, CanvasText) 38%, transparent);
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface, CanvasText) calc(var(--md-sys-state-disabled-state-layer-opacity, 0.38) * 100%), transparent);
 }
 .ax-radio__input:disabled ~ .ax-radio__visual::before {
 	display: none;
@@ -545,7 +545,7 @@
 .ax-radio__input:disabled ~ .ax-radio__label {
 	/* Per M3 §25.4 — disabled radio's adjacent label keeps on-surface (full).
 	 * But for accessibility cue we still soften slightly. Author can override. */
-	color: color-mix(in srgb, var(--md-sys-color-on-surface, CanvasText) 38%, transparent);
+	color: color-mix(in srgb, var(--md-sys-color-on-surface, CanvasText) calc(var(--md-sys-state-disabled-state-layer-opacity, 0.38) * 100%), transparent);
 }
 
 .axismundi-question__choices > li:has(.ax-radio__input:checked) {

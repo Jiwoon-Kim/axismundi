@@ -14,7 +14,7 @@
 	padding-inline: var(--wp--preset--spacing--200, 1rem);
 	color: inherit;
 	background: var(--wp--preset--color--surface-container-low, #f7f2fa);
-	border-radius: var(--wp--custom--shape--corner--medium, 12px);
+	border-radius: var(--md-sys-shape-corner-medium, 12px);
 	text-decoration: none;
 }
 

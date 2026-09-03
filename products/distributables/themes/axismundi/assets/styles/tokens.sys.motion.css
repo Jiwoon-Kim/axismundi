@@ -1,36 +1,17 @@
 /**
  * Axismundi — Material Design 3 motion tokens.
  *
- * Three independent families. Do not mix them up:
+ * M3's Expressive components use the motion physics system, which is springs.
+ * CSS cannot run a spring, so the theme uses the conversion M3 publishes for the
+ * web: each `curve-*` below is a spring already turned into a cubic-bezier and a
+ * duration. The two halves are one value -- use them together.
  *
- *   duration-*   the M3 duration scale, on its own.
- *   easing-*     the M3 easing set, on its own. Pair with any duration.
- *   curve-*      a spring, already converted to a curve *and* its duration.
- *                Use the pair together; the duration is part of the spring.
+ * Split by axis. Spatial is geometry: position, size, shape, rotation. Effects
+ * is paint: colour, opacity. Spatial curves overshoot and effects curves do not.
  *
- * The curves are M3 Expressive. Expressive and Standard publish identical
- * effects curves, so the choice only shows in spatial motion.
- *
- * Spatial covers geometry -- position, size, and shape. A shape morph is a
- * spatial change, so `border-radius` takes a spatial curve; effects is for
- * colour, opacity and other non-geometric properties.
- *
- * Spatial curves overshoot, by less than their control points suggest. The
- * peak progress each one actually reaches:
- *
- *   Expressive fast     1.092   Expressive default  1.014
- *   Expressive slow     1.019   Standard (any)      1.001
- *
- * So a 20px -> 8px morph on fast spatial dips to 6.9px before settling, not
- * below zero. A radius only clamps at 0 when the target is under about 8% of
- * the start, which this scale does not do except when morphing to `none`.
- *
- * The `standard` easing stays defined -- components.button.css depends on it
- * with no fallback -- and equals M3's Standard easing unchanged. "Expressive
- * only" applies to the spring conversions, which are the family that has two
- * variants; the easing set is one table in M3, not two.
- *
- * Legacy (Material 2) easings are omitted; nothing here targets M2.
+ * The original easing and duration tokens are still available to use as a
+ * fallback, and are currently used for animating transitions -- a looping
+ * keyframe animation cannot take a curve whose duration is part of its value.
  */
 
 :root {
@@ -52,13 +33,7 @@
 	--md-sys-motion-duration-extra-long3: 900ms;
 	--md-sys-motion-duration-extra-long4: 1000ms;
 
-	/*
-	 * Easing set, and the duration scale above it, are the pre-Expressive
-	 * system. M3 keeps them for transitions and for teams not yet migrated,
-	 * but states they are no longer maintained -- components moved to the
-	 * motion physics system. Kept defined because plugins still name them as
-	 * fallbacks; new theme work uses the curves below.
-	 */
+	/* Easing set. Pair with any duration. */
 	--md-sys-motion-easing-linear: cubic-bezier(0, 0, 1, 1);
 	--md-sys-motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
 	--md-sys-motion-easing-standard-accelerate: cubic-bezier(0.3, 0, 1, 1);
@@ -67,14 +42,7 @@
 	--md-sys-motion-easing-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
 	--md-sys-motion-easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
 
-	/*
-	 * Springs converted for the web (M3 Expressive). Each curve carries its own
-	 * duration -- use them as a pair, and do not substitute one from the scale
-	 * above.
-	 *
-	 * Spatial moves position and size, and overshoots. Effects changes colour,
-	 * opacity and other non-geometric properties, and does not.
-	 */
+	/* Springs converted for the web (M3 Expressive). */
 	--md-sys-motion-curve-fast-spatial: cubic-bezier(0.42, 1.67, 0.21, 0.9);
 	--md-sys-motion-curve-fast-spatial-duration: 350ms;
 	--md-sys-motion-curve-default-spatial: cubic-bezier(0.38, 1.21, 0.22, 1);

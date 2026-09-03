@@ -35,7 +35,7 @@
 	z-index: 0;
 	border-radius: 50%;
 	background: transparent;
-	transition: background-color 150ms var( --md-sys-motion-easing-standard, cubic-bezier( 0.2, 0, 0, 1 ) );
+	transition: background-color var( --md-sys-motion-curve-fast-effects-duration, 150ms ) var( --md-sys-motion-curve-fast-effects, cubic-bezier(0.31, 0.94, 0.34, 1) );
 }
 
 .ax-dialog-close:hover::before {

@@ -50,8 +50,8 @@
 	font-size: var(--md-sys-typescale-body-small-size, 12px);
 	line-height: var(--md-sys-typescale-body-small-line-height, 16px);
 	text-decoration: none;
-	transition: background-color var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1)),
-		color var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1));
+	transition: background-color var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, cubic-bezier(0.31, 0.94, 0.34, 1)),
+		color var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, cubic-bezier(0.31, 0.94, 0.34, 1));
 }
 
 .ax-toc__link:hover {
@@ -129,7 +129,7 @@
 	font-size: 24px;
 	line-height: 1;
 	color: var(--md-sys-color-on-surface-variant, #49454f);
-	transition: transform var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1));
+	transition: transform var(--md-sys-motion-curve-fast-spatial-duration, 350ms) var(--md-sys-motion-curve-fast-spatial, cubic-bezier(0.42, 1.67, 0.21, 0.9));
 }
 .ax-toc--disclosure[open] .ax-toc__summary::after {
 	transform: rotate(180deg);

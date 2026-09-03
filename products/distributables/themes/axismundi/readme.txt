@@ -1,9 +1,9 @@
 === Axismundi ===
 Contributors: kimjiwoon
 Requires at least: 7.0
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.13
+Stable tag: 0.1.14
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: block-patterns, custom-colors, custom-logo, editor-style
@@ -33,6 +33,47 @@ page. home.html then renders the posts index (the reader feed) on the Posts
 page. With "Your latest posts" selected instead, home.html serves the front.
 Category, tag, and date archives share the axismundi/query-feed feed body via
 archive.html.
+
+== Companion Plugins ==
+
+Axismundi is a complete block theme on its own. These optional plugins, all
+hosted on WordPress.org, extend particular surfaces and share the theme's
+Material Design 3 tokens, so they inherit its colour, shape, and motion rather
+than carrying a second visual system.
+
+* Axismundi Theme Switcher — a light/dark/auto control. The theme reads the same
+  attribute in the editor canvas and on the front end.
+  https://wordpress.org/plugins/axismundi-theme-switcher/
+
+* Axismundi Navigation Icons — Material Symbols on Navigation items, with the
+  icon-beside-label and icon-above-label layouts the theme styles.
+  https://wordpress.org/plugins/axismundi-navigation-icons/
+
+* Axismundi Dialogs — Dialog and Sheet blocks. The theme ships their editable
+  template parts and lets its button styles apply to their triggers.
+  https://wordpress.org/plugins/axismundi-dialogs/
+
+* Axismundi Table of Contents — a table of contents for long-form posts, styled
+  as a Material disclosure.
+  https://wordpress.org/plugins/axismundi-table-of-contents/
+
+* Axismundi Media Library — attachments as independent media objects with
+  folders, rights, and visibility.
+  https://wordpress.org/plugins/axismundi-media-library/
+
+* Axismundi Geodata — geographic taxonomies. The theme's geo_area and geotag
+  archive templates are delegated to this plugin when it is active.
+  https://wordpress.org/plugins/axismundi-geodata/
+
+* Axismundi Map — map views for those geographic archives.
+  https://wordpress.org/plugins/axismundi-map/
+
+* Axismundi Korean Font Provider — fills the theme's locale-aware CJK font slot
+  for Korean documents.
+  https://wordpress.org/plugins/axismundi-korean-font-provider/
+
+* Axismundi Japanese Font Provider — the same slot, for Japanese documents.
+  https://wordpress.org/plugins/axismundi-japanese-font-provider/
 
 == Changelog ==
 

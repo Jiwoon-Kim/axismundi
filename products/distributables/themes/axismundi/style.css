@@ -3,7 +3,7 @@ Theme Name:        Axismundi
 Theme URI:         https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/themes/axismundi
 Author:            KIM JIWOON
 Author URI:        https://designbusan.ai.kr
-Description:       Axismundi is a standalone Material Design 3 block theme for WordPress. It binds native WordPress core blocks to a Material-token design language (color, typography, shape, motion, elevation) and is built toward an ActivityPub-based social CMS.
+Description:       A Material Design 3 block theme built on WordPress core blocks rather than around them. The Material token system -- color roles, type scale, corner shape, motion, elevation, and state layers -- is declared in theme.json and Global Styles, so the editor offers the same palette, sizes, and block styles the front end renders, and your changes stay in the design system. Ships templates and patterns for posts, archives, search, comments, and a magazine front page, with light and dark colour schemes and bundled Roboto Flex, Roboto Serif, Roboto Mono, and Material Symbols. Optional Axismundi companion plugins on WordPress.org extend navigation icons, dialogs, media, and more; the theme is complete without them.
 Requires at least: 7.0
 Tested up to:      7.1
 Requires PHP:      8.1

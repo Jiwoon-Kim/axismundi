@@ -52,7 +52,13 @@
 	--md-sys-motion-duration-extra-long3: 900ms;
 	--md-sys-motion-duration-extra-long4: 1000ms;
 
-	/* Easing set. Pair with any duration. */
+	/*
+	 * Easing set, and the duration scale above it, are the pre-Expressive
+	 * system. M3 keeps them for transitions and for teams not yet migrated,
+	 * but states they are no longer maintained -- components moved to the
+	 * motion physics system. Kept defined because plugins still name them as
+	 * fallbacks; new theme work uses the curves below.
+	 */
 	--md-sys-motion-easing-linear: cubic-bezier(0, 0, 1, 1);
 	--md-sys-motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
 	--md-sys-motion-easing-standard-accelerate: cubic-bezier(0.3, 0, 1, 1);

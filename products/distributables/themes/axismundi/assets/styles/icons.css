@@ -62,7 +62,7 @@
 		"wght" var(--md-icon-wght, 400),
 		"GRAD" var(--md-icon-grad, 0),
 		"opsz" var(--md-icon-opsz, 24);
-	transition: --md-icon-fill var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1));
+	transition: --md-icon-fill var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, cubic-bezier(0.31, 0.94, 0.34, 1));
 }
 
 /* The utility supplies an inline-flex box, but must not resurrect an icon hidden by state. */

@@ -36,78 +36,20 @@ archive.html.
 
 == Changelog ==
 
-= 0.1.13 =
-* Repackage the current theme submission after the WordPress.org version check.
+= 0.1.14 =
+* Adopt the Material 3 corner radius scale as theme tokens, shared with
+  companion plugins.
+* Move animation onto Material 3's Expressive motion curves, which the
+  specification publishes as the web conversion of its spring physics.
+* Complete the state layer set with the disabled opacity, replacing repeated
+  literal values across the theme and its companion plugins.
+* Give a Buttons block the 12px gap Material 3 specifies for a standard button
+  group, while leaving Block Spacing free to override it.
+* Apply the Tonal, Text and Elevated button styles to the Dialogs plugin's
+  Sheet and Dialog blocks, and add an Outlined style they can share.
+* Declare the Material 3 breakpoints as theme.json viewport bands.
 
-= 0.1.12 =
-* Use WordPress's supported Uncategorized template-part area for the Dialogs companion plugin's Sheet and Dialog defaults.
-
-= 0.1.11 =
-* Remove hard-coded geographic taxonomy blocks and taxonomy-specific presentation rules. The Axismundi Geodata plugin owns opt-in geographic term presentation.
-
-= 0.1.10 =
-* Keep the Dialogs companion plugin's Sheet and Dialog defaults as editable
-  theme template parts, while moving their entries to WordPress's supported
-  General template-part area.
-
-= 0.1.9 =
-* Delegate the complete geo_area and geotag archive templates to the Geodata plugin while retaining the theme's taxonomy presentation styles.
-
-= 0.1.8 =
-* Add the posts-index home template with Post Quick View actions and restore its footer template part.
-* Add reusable reader-feed and static front-page magazine patterns.
-
-= 0.1.7 =
-* Load the bundled Material Symbols font explicitly when WordPress omits its unused font-family preset from generated global styles.
-
-= 0.1.6 =
-* Add editable Sheet and Dialog template parts for the Axismundi Dialogs companion plugin.
-* Provide Material 3 layouts for side sheets, bottom sheets, basic dialogs, list dialogs, and full-screen dialogs.
-* Hide disclosure icons in always-expanded Side Sheet navigation.
-
-= 0.1.5 =
-* Redesign the navigation overlay and header: a full-screen drawer whose layout, surface, and close control are owned by core and block markup.
-* Remove the dedicated overlay stylesheet now that the drawer is delegated to core.
-* Render the Navigation bar/rail/menu skin in the block-editor canvas, where core outputs the block as a div rather than a nav.
-* Stop the vertical rail state layer from leaking into a nested overlay navigation, and drop the redundant rail container background that clipped neighbouring block shadows.
-* Mark an exact same-site custom Navigation Link as the current page.
-
-= 0.1.4 =
-* Keep responsive navigation controls visible while long menus scroll.
-* Let Page List inherit Navigation typography and isolate always-open submenu row states from their inline sublists.
-* Remove promotional links from the default footer.
-* Add a post-with-sidebar template and refine single-post article spacing.
-
-= 0.1.3 =
-* Replace the hard-coded Korean font fallback with locale-aware CJK sans/serif
-  slots that independent regional font plugins can fill.
-* Add dedicated geo_area and geotag archive templates with Query Map View
-  integration when the companion Geodata and Map plugins are active.
-* Add location-marked taxonomy chips and refine archive/query patterns with
-  enhanced pagination and clearer result layouts.
-* Add an opt-in Feed header style for the core RSS block, showing the feed icon,
-  linked title, and description above the existing Material collection cards.
-
-= 0.1.2 =
-* Add Search, Archive, Page, and 404 block templates and refine the footer.
-* Add Material 3 styling for post navigation, pagination, taxonomy blocks, and
-  taxonomy/archive dropdown selects.
-* Add progressive enhancement for customizable select pickers while preserving
-  native mobile and unsupported-browser behavior.
-* Refine card patterns, raw media alignment, and comment thread connectors.
-
-= 0.1.1 =
-* Document the source URL, copyright, license, and license URL for every bundled
-  font and icon asset.
-* Document the source and license for screenshot.png.
-* Synchronize the public theme and runtime asset versions.
-
-= 0.1.0 =
-* Initial release of the Material Design 3 block theme and token system.
-* Global Styles, block styles, patterns, responsive navigation, navigation
-  overlay, single-post layouts, comments, post navigation, and local font assets.
-* Light, dark, and automatic color-scheme support when used with a compatible
-  switcher.
+Earlier releases are listed in changelog.txt.
 
 == Copyright ==
 

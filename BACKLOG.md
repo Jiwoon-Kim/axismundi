@@ -2478,6 +2478,43 @@ Close evidence:
   morph does not drag a motion re-audit along with it.
 - **Target**: TBD.
 
+### 53. Rename the shape token file when packaging the theme, until theme-check#504 lands
+
+- **Bucket**: release procedure. Recurs every theme release.
+- **Source**: 2026-09-03, WordPress.org rejected the 0.1.14 upload.
+- **The rejection**:
+
+  > REQUIRED: `tokens.sys.shape.css` Shell script file found. This file must not
+  > be in the production version of the theme.
+
+  The automated scan is a hard gate on upload, not a reviewer's judgement, so
+  this blocks submission outright.
+- **Cause**: `checks/class-file-check.php` matches its blocklist with
+  `preg_grep( '/' . $file . '/', $filenames )` -- no anchors -- against patterns
+  meant to be extensions. `'\.sh'` therefore matches `.shape`. Filed upstream as
+  <https://github.com/WordPress/theme-check/issues/504>, which also documents the
+  same fault in `'\.dat'`, `'\.sql'` and `'\.wie'`.
+- **Workaround, per release, until the issue is fixed**:
+
+  1. `git mv assets/styles/tokens.sys.shape.css assets/styles/tokens.sys.corner.css`
+  2. Replace the four `tokens.sys.shape.css` occurrences in `functions.php`
+     (three lines; one line carries it twice).
+  3. `scripts/build-zip.ps1`
+  4. Submit `products/distributables/_dist/axismundi.zip`.
+  5. Revert both changes. Nothing is committed -- the repository keeps the
+     `shape` name, and `_dist` is gitignored.
+
+- **Why the file is not simply renamed**: `shape` is M3's own axis name and the
+  `tokens.sys.<axis>.css` convention rests on it. The token names
+  (`--md-sys-shape-corner-*`) are untouched by the workaround either way; only
+  the filename differs, and only inside the uploaded package.
+- **Consequence to accept**: the package on WordPress.org and the tag in this
+  repository differ by that filename at the same version. 0.1.14 was released
+  this way deliberately.
+- **Close this item** when theme-check ships the anchored patterns; verify by
+  building without the rename and running Theme Check on the package.
+- **Target**: follows upstream.
+
 ### v3.6.10 Wave 2B-1 Form close evidence
 
 v3.6.10 closed the first Wave 2B slice by implementing Route B, Form Controls

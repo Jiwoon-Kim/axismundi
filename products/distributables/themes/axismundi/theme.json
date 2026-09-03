@@ -3,6 +3,10 @@
 	"version": 3,
 	"settings": {
 		"appearanceTools": true,
+		"viewport": {
+			"mobile": "599px",
+			"tablet": "839px"
+		},
 		"color": {
 			"defaultPalette": false,
 			"palette": [

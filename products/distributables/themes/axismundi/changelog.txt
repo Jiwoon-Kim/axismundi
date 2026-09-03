@@ -1,6 +1,19 @@
 == Changelog ==
 
-Releases before 0.1.14. The current release is in readme.txt.
+Releases before 0.1.15. The current release is in readme.txt.
+
+= 0.1.14 =
+* Adopt the Material 3 corner radius scale as theme tokens, shared with
+  companion plugins.
+* Move animation onto Material 3's Expressive motion curves, which the
+  specification publishes as the web conversion of its spring physics.
+* Complete the state layer set with the disabled opacity, replacing repeated
+  literal values across the theme and its companion plugins.
+* Give a Buttons block the 12px gap Material 3 specifies for a standard button
+  group, while leaving Block Spacing free to override it.
+* Apply the Tonal, Text and Elevated button styles to the Dialogs plugin's
+  Sheet and Dialog blocks, and add an Outlined style they can share.
+* Declare the Material 3 breakpoints as theme.json viewport bands.
 
 = 0.1.13 =
 * Repackage the current theme submission after the WordPress.org version check.

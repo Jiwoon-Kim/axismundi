@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.14
+Stable tag: 0.1.15
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: block-patterns, block-styles, blog, custom-colors, custom-logo, custom-menu, editor-style, featured-images, full-site-editing, full-width-template, template-editing, threaded-comments, translation-ready, wide-blocks
@@ -77,18 +77,12 @@ than carrying a second visual system.
 
 == Changelog ==
 
-= 0.1.14 =
-* Adopt the Material 3 corner radius scale as theme tokens, shared with
-  companion plugins.
-* Move animation onto Material 3's Expressive motion curves, which the
-  specification publishes as the web conversion of its spring physics.
-* Complete the state layer set with the disabled opacity, replacing repeated
-  literal values across the theme and its companion plugins.
-* Give a Buttons block the 12px gap Material 3 specifies for a standard button
-  group, while leaving Block Spacing free to override it.
-* Apply the Tonal, Text and Elevated button styles to the Dialogs plugin's
-  Sheet and Dialog blocks, and add an Outlined style they can share.
-* Declare the Material 3 breakpoints as theme.json viewport bands.
+= 0.1.15 =
+* Describe the theme accurately on its directory page, and declare the features
+  it has: block styles, full site editing, threaded comments, wide blocks,
+  translation readiness, and the rest.
+* List the optional Axismundi companion plugins and the theme surface each one
+  extends.
 
 Earlier releases are listed in changelog.txt.
 

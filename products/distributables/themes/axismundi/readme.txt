@@ -6,7 +6,7 @@ Requires PHP: 8.1
 Stable tag: 0.1.14
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
-Tags: block-patterns, custom-colors, custom-logo, editor-style
+Tags: block-patterns, block-styles, blog, custom-colors, custom-logo, custom-menu, editor-style, featured-images, full-site-editing, full-width-template, template-editing, threaded-comments, translation-ready, wide-blocks
 
 Axismundi is a Material Design 3 block theme that binds native WordPress core
 blocks to a Material-token design language.

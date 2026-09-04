@@ -206,6 +206,25 @@
 	gap: 0.5rem;
 }
 
+/* Justification, mapped from the class rather than read from the per-container
+ * CSS the server generates. core/buttons ships the same four rules in its own
+ * stylesheet for the same reason: the generated CSS exists on the front end and
+ * not in the editor canvas, where the layout support hands its class names to
+ * the inner-blocks wrapper this block does not have. edit.js writes the class,
+ * these give it a value, and both sides agree. */
+.wp-block-axismundi-theme-switcher.is-content-justification-left {
+	justify-content: flex-start;
+}
+.wp-block-axismundi-theme-switcher.is-content-justification-center {
+	justify-content: center;
+}
+.wp-block-axismundi-theme-switcher.is-content-justification-right {
+	justify-content: flex-end;
+}
+.wp-block-axismundi-theme-switcher.is-content-justification-space-between {
+	justify-content: space-between;
+}
+
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__button {
 	display: inline-flex;
 	align-items: center;

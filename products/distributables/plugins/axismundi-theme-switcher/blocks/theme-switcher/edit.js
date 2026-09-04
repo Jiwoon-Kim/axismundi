@@ -142,6 +142,31 @@
 			if ( hasCycle && standard ) {
 				wrapperAttrs[ 'data-cycle-standard' ] = 'true';
 			}
+			/*
+			 * The layout classes, written here rather than received.
+			 *
+			 * `layout` support reaches the editor through the inner-blocks
+			 * wrapper -- it is built for container blocks, and the class names it
+			 * computes are handed to `useInnerBlocksProps`. This block has no
+			 * inner blocks, so nothing collected them and the canvas ignored
+			 * Justification while the front end honoured it:
+			 * `get_block_wrapper_attributes()` adds them there regardless.
+			 *
+			 * So the same names are put on directly. They are the ones the
+			 * server emits, minus its per-container hash, and style.css maps the
+			 * justification class to a value the way core/buttons' own
+			 * stylesheet does -- which is also why the two agree now without
+			 * depending on generated CSS that only exists on one side.
+			 */
+			var layout = ( props.attributes && props.attributes.layout ) || {};
+			wrapperAttrs.className = [
+				'is-layout-flex',
+				'wp-block-axismundi-theme-switcher-is-layout-flex',
+				layout.justifyContent
+					? 'is-content-justification-' + layout.justifyContent
+					: '',
+			].filter( Boolean ).join( ' ' );
+
 			var blockProps = useBlockProps( wrapperAttrs );
 
 			/*

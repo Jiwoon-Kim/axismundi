@@ -76,6 +76,39 @@ $axismundi_theme_switcher_label_class = $axismundi_theme_switcher_show_labels
 	? 'axismundi-theme-switcher__label'
 	: 'axismundi-theme-switcher__label screen-reader-text';
 
+/*
+ * Server state for the Interactivity directives below.
+ *
+ * `data-wp-bind` and `data-wp-text` are processed on the server too, and a
+ * binding the server cannot resolve REMOVES the attribute instead of leaving
+ * the authored value alone. With no state registered the delivered page carried
+ * a cycle button with no icon, no accessible name and no scheme, and segments
+ * with no `aria-pressed` -- all of it appearing only once the module hydrated.
+ * Registering the same shape view.js exposes makes the first paint correct and
+ * leaves hydration with nothing to correct.
+ *
+ * `isActive` is derived per segment, so it is a closure: the processor calls it
+ * once per button and it reads that button's own `data-wp-context`.
+ */
+wp_interactivity_state(
+	'axismundi/theme-switcher',
+	array(
+		'currentScheme'  => $axismundi_theme_switcher_current,
+		'currentIcon'    => $axismundi_theme_switcher_modes[ $axismundi_theme_switcher_current ]['icon'],
+		'currentLabel'   => $axismundi_theme_switcher_modes[ $axismundi_theme_switcher_current ]['label'],
+		'cycleAriaLabel' => sprintf(
+			/* translators: %s: current colour scheme. */
+			__( 'Color scheme: %s. Activate to cycle.', 'axismundi-theme-switcher' ),
+			$axismundi_theme_switcher_modes[ $axismundi_theme_switcher_current ]['label']
+		),
+		'isActive'       => static function () use ( $axismundi_theme_switcher_current ) {
+			$axismundi_theme_switcher_context = wp_interactivity_get_context();
+			return isset( $axismundi_theme_switcher_context['mode'] )
+				&& $axismundi_theme_switcher_context['mode'] === $axismundi_theme_switcher_current;
+		},
+	)
+);
+
 $axismundi_theme_switcher_wrapper_attrs = array(
 	'role'                     => 'group',
 	'aria-label'               => __( 'Color scheme', 'axismundi-theme-switcher' ),
@@ -98,6 +131,16 @@ $axismundi_theme_switcher_wrapper = get_block_wrapper_attributes( $axismundi_the
 			type="button"
 			class="axismundi-theme-switcher__button axismundi-theme-switcher__cycle"
 			data-theme-cycle="true"
+			<?php
+			/*
+			 * The current scheme as a data attribute, so the treatment can colour
+			 * `auto` as unselected and an explicit light or dark as selected. Not
+			 * `aria-pressed`: the button advances through three values rather than
+			 * toggling one, and the accessible name below already says which.
+			 */
+			?>
+			data-theme-scheme="<?php echo esc_attr( $axismundi_theme_switcher_current ); ?>"
+			data-wp-bind--data-theme-scheme="state.currentScheme"
 			data-wp-on--click="actions.cycleScheme"
 			data-wp-bind--aria-label="state.cycleAriaLabel"
 			aria-label="<?php echo esc_attr( sprintf( /* translators: %s: current colour scheme. */ __( 'Color scheme: %s. Activate to cycle.', 'axismundi-theme-switcher' ), $axismundi_theme_switcher_modes[ $axismundi_theme_switcher_current ]['label'] ) ); ?>"

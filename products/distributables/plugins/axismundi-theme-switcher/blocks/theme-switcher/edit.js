@@ -177,6 +177,9 @@
 								type: 'button',
 								className: 'axismundi-theme-switcher__button axismundi-theme-switcher__cycle',
 								'data-theme-cycle': 'true',
+								// See style.css: `auto` follows the system and reads as
+								// unselected, an explicit light or dark as selected.
+								'data-theme-scheme': normalize( current ),
 								'aria-label': 'Color scheme: ' + currentMode.label + '. Activate to cycle.',
 								onClick: function ( event ) {
 									var index = MODES.map( function ( m ) { return m.mode; } ).indexOf( normalize( current ) );

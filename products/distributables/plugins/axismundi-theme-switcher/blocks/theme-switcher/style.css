@@ -9,9 +9,8 @@
  * not a block style, because the two surfaces are different controls -- three
  * buttons that select, or one that advances -- with different keyboard models.
  *
- * - .axismundi-theme-switcher__cycle  -> a single M3 STANDARD icon button.
- * - .axismundi-theme-switcher__group  -> an M3 segmented control (connected is a
- *                                        later pass).
+ * - .axismundi-theme-switcher__cycle  -> a single M3 icon button.
+ * - .axismundi-theme-switcher__group  -> an M3 connected button group.
  *
  * At `mobile` both are rendered and the media query the plugin prints from the
  * theme's `settings.viewport` hides one. Layout below sizes each surface; the
@@ -163,30 +162,41 @@
  * on the connected group, which Material tells you to avoid, so the three the
  * two components share are the three on offer.
  *
- * Both surfaces read the same four variables, so a treatment is written once
- * and the group and the cycle button each apply it to their own anatomy.
+ * Roles are read as `--md-sys-color-*` directly, with Material's own baseline
+ * hex behind each. `--wp--preset--color--*` is deliberately not in the chain:
+ * that name is a theme.json slug contract, the bridge to WordPress's colour UI
+ * and to core blocks, whereas the sys token is the Material contract itself.
+ * Reading the latter is what lets any theme publishing the M3 roles carry this
+ * plugin unchanged, and it keeps one canonical source per role instead of two.
+ *
+ * The four `--ax-ts-*` names below are not renames of a role -- an alias for
+ * `--md-sys-color-primary` would only add private vocabulary. They are the
+ * slots a treatment fills: `selected-bg` is primary under filled, secondary
+ * under tonal and inverse-surface under outlined, which no direct reference can
+ * express. So a treatment is written once and the group and the cycle button
+ * each apply it to their own anatomy.
  * Filled is the default: it is registered `isDefault`, which selects it in the
  * picker without writing a class, so the values live on the block itself.
  * -------------------------------------------------------------------------- */
 .wp-block-axismundi-theme-switcher {
-	--ax-ts-unselected-bg: var(--wp--preset--color--surface-container, var(--md-sys-color-surface-container, #f3edf7));
-	--ax-ts-unselected-fg: var(--wp--preset--color--on-surface-variant, var(--md-sys-color-on-surface-variant, #49454f));
-	--ax-ts-selected-bg: var(--wp--preset--color--primary, var(--md-sys-color-primary, #6750a4));
-	--ax-ts-selected-fg: var(--wp--preset--color--on-primary, var(--md-sys-color-on-primary, #fff));
+	--ax-ts-unselected-bg: var(--md-sys-color-surface-container, #f3edf7);
+	--ax-ts-unselected-fg: var(--md-sys-color-on-surface-variant, #49454f);
+	--ax-ts-selected-bg: var(--md-sys-color-primary, #6750a4);
+	--ax-ts-selected-fg: var(--md-sys-color-on-primary, #fff);
 	--ax-ts-outline-color: transparent;
 }
 .wp-block-axismundi-theme-switcher.is-style-tonal {
-	--ax-ts-unselected-bg: var(--wp--preset--color--secondary-container, var(--md-sys-color-secondary-container, #e8def8));
-	--ax-ts-unselected-fg: var(--wp--preset--color--on-secondary-container, var(--md-sys-color-on-secondary-container, #4a4458));
-	--ax-ts-selected-bg: var(--wp--preset--color--secondary, var(--md-sys-color-secondary, #625b71));
-	--ax-ts-selected-fg: var(--wp--preset--color--on-secondary, var(--md-sys-color-on-secondary, #fff));
+	--ax-ts-unselected-bg: var(--md-sys-color-secondary-container, #e8def8);
+	--ax-ts-unselected-fg: var(--md-sys-color-on-secondary-container, #4a4458);
+	--ax-ts-selected-bg: var(--md-sys-color-secondary, #625b71);
+	--ax-ts-selected-fg: var(--md-sys-color-on-secondary, #fff);
 }
 .wp-block-axismundi-theme-switcher.is-style-outlined {
 	--ax-ts-unselected-bg: transparent;
-	--ax-ts-unselected-fg: var(--wp--preset--color--on-surface-variant, var(--md-sys-color-on-surface-variant, #49454f));
-	--ax-ts-selected-bg: var(--wp--preset--color--inverse-surface, var(--md-sys-color-inverse-surface, #322f35));
-	--ax-ts-selected-fg: var(--wp--preset--color--inverse-on-surface, var(--md-sys-color-inverse-on-surface, #f5eff7));
-	--ax-ts-outline-color: var(--wp--preset--color--outline-variant, var(--md-sys-color-outline-variant, #cac4d0));
+	--ax-ts-unselected-fg: var(--md-sys-color-on-surface-variant, #49454f);
+	--ax-ts-selected-bg: var(--md-sys-color-inverse-surface, #322f35);
+	--ax-ts-selected-fg: var(--md-sys-color-inverse-on-surface, #f5eff7);
+	--ax-ts-outline-color: var(--md-sys-color-outline-variant, #cac4d0);
 }
 
 .wp-block-axismundi-theme-switcher {
@@ -261,6 +271,45 @@
 	.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle {
 		transition: none;
 	}
+}
+
+/* ----------------------------------------------------------------------------
+ * The cycle button's selected state. `auto` means no explicit choice has been
+ * made -- the page follows the operating system -- so it takes the unselected
+ * colours above; `light` and `dark` are a scheme the reader chose, and take the
+ * selected pair. That is the same unselected/selected pair every treatment
+ * already declares for the group's segments, so this needs no colours of its
+ * own and works under filled, tonal and outlined alike.
+ *
+ * It is a data attribute and not `aria-pressed`. The control is still one
+ * command that advances through three values, not a toggle with an on and an
+ * off; announcing it as pressed would describe a state the button does not
+ * have. The accessible name already carries the scheme. render.php writes the
+ * attribute from the cookie and the Interactivity store rebinds it on click, so
+ * the colour follows the same signal `aria-pressed` follows in the group.
+ * -------------------------------------------------------------------------- */
+.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="light"],
+.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="dark"] {
+	background-color: var(--ax-ts-selected-bg);
+	color: var(--ax-ts-selected-fg);
+	border-color: transparent;
+}
+.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="light"] .material-symbols-outlined,
+.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="dark"] .material-symbols-outlined {
+	--md-icon-fill: 1;
+}
+.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="light"]:hover,
+.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="dark"]:hover {
+	background-color: color-mix(in srgb, var(--ax-ts-selected-fg) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--ax-ts-selected-bg));
+}
+.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="light"]:focus,
+.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="dark"]:focus {
+	background-color: color-mix(in srgb, var(--ax-ts-selected-fg) calc(var(--md-sys-state-focus-state-layer-opacity, 0.1) * 100%), var(--ax-ts-selected-bg));
+}
+.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="light"]:active,
+.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="dark"]:active {
+	background-color: color-mix(in srgb, var(--ax-ts-selected-fg) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), var(--ax-ts-selected-bg));
+	border-radius: var(--ax-ts-icon-pressed-morph);
 }
 
 /* Visually hidden, still in the accessibility tree. Used by the cycle button's

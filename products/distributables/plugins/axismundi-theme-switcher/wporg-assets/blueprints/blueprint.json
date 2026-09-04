@@ -13,22 +13,22 @@
         },
         {
             "step": "installTheme",
-            "themeZipFile": {
-                "resource": "wordpress.org/themes",
-                "slug": "axismundi"
-            },
             "options": {
                 "activate": true
+            },
+            "themeData": {
+                "resource": "wordpress.org/themes",
+                "slug": "axismundi"
             }
         },
         {
             "step": "installPlugin",
-            "pluginZipFile": {
-                "resource": "wordpress.org/plugins",
-                "slug": "axismundi-theme-switcher"
-            },
             "options": {
                 "activate": true
+            },
+            "pluginData": {
+                "resource": "wordpress.org/plugins",
+                "slug": "axismundi-theme-switcher"
             }
         },
         {

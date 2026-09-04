@@ -25,6 +25,15 @@ Three things about it are easy to get wrong.
 The handbook's own example carries an `installPlugin` step for the plugin being
 previewed, alongside its dependencies, and this file does the same.
 
+**But not in the handbook's spelling.** That example is older than the schema:
+it passes the files as `pluginZipFile` and `themeZipFile`, which are now marked
+deprecated in favour of `pluginData` and `themeData` -- and the step definitions
+require the new names, so the old ones fail validation outright. Playground's
+runtime still accepts either, which is the trap: a blueprint written from the
+handbook runs perfectly when you test it by hand and is rejected by
+WordPress.org, whose only report is "Missing or invalid blueprint.json file".
+Validate against the schema before committing, not just by running it.
+
 **So it previews the released version, not this working tree.** The step pulls
 `axismundi-theme-switcher` from wordpress.org, which serves whatever `Stable tag`
 points at. A demo written against attributes that only exist here renders as
@@ -41,8 +50,18 @@ needs no WXR, no images and no network beyond the two directory downloads.
 
 ## Verifying a change
 
-1. `python -c "import json; json.load(open('blueprints/blueprint.json'))"` — it
-   has to be valid JSON before anything else is worth trying.
+1. Validate it against the published schema, which catches more than a JSON
+   parse and is what WordPress.org checks:
+
+   ```
+   pip install jsonschema
+   curl -sO https://playground.wordpress.net/blueprint-schema.json
+   python -c "import json,jsonschema; s=json.load(open('blueprint-schema.json')); jsonschema.validators.validator_for(s)(s).validate(json.load(open('blueprints/blueprint.json')))"
+   ```
+
+   Skip `check_schema`: the published schema does not itself meta-validate (a
+   `deprecated` key on the virtualize step holds a string where a boolean is
+   expected), so a strict check fails on Playground's file rather than ours.
 2. Load it in Playground with the URL **WordPress.org** serves it from:
 
    ```

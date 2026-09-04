@@ -197,23 +197,29 @@
 				el(
 					'div',
 					blockProps,
-					MODES.map( function ( m ) {
-						return el(
-							'button',
-							{
-								key: m.mode,
-								type: 'button',
-								className: 'axismundi-theme-switcher__button wp-element-button',
-								'data-theme-mode': m.mode,
-								'aria-pressed': m.mode === current ? 'true' : 'false',
-								onClick: function ( event ) {
-									applyMode( m.mode, event );
+					// Same structure render.php builds: the segments live in their
+					// own element, which is what the connected rules are scoped to.
+					el(
+						'div',
+						{ className: 'axismundi-theme-switcher__group' },
+						MODES.map( function ( m ) {
+							return el(
+								'button',
+								{
+									key: m.mode,
+									type: 'button',
+									className: 'axismundi-theme-switcher__button wp-element-button',
+									'data-theme-mode': m.mode,
+									'aria-pressed': m.mode === current ? 'true' : 'false',
+									onClick: function ( event ) {
+										applyMode( m.mode, event );
+									},
 								},
-							},
-							el( 'span', { className: 'material-symbols-outlined', 'aria-hidden': 'true' }, m.icon ),
-							el( 'span', { className: labelClass }, m.label )
-						);
-					} )
+								el( 'span', { className: 'material-symbols-outlined', 'aria-hidden': 'true' }, m.icon ),
+								el( 'span', { className: labelClass }, m.label )
+							);
+						} )
+					)
 				)
 			);
 		},

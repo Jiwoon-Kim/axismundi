@@ -19,31 +19,47 @@
  */
 
 /* ----------------------------------------------------------------------------
- * Size. M3 publishes two tables -- Icon button and Button group connected --
- * that agree on container height and on nothing else, so one setting picks the
- * height and each surface reads the rest from its own column here.
+ * Size. Two Material tables apply here, and they are not the same table.
  *
- *   height            32   40   56   96  136   (both tables)
- *   icon size         20   24   24   32   40   (icon button)
- *   default spacing    6    8   16   32   48   (icon button, leading/trailing)
- *   pressed morph      8    8   12   16   16   (icon button)
- *   inner corner       8    8    8   16   20   (group)
- *   pressed inner      4    4    4   12   16   (group)
+ * The cycle button is an Icon button. The group's segments are Buttons -- an
+ * icon-only segment is still a Button with no label, not an Icon button, which
+ * is why the Lab's content matrix lists label-only, icon+label and icon-only as
+ * three ways to fill one component.
  *
- * The group's inner-corner values are published here but not yet consumed: the
- * current group is the segmented control, whose segments are divided by a rule
- * rather than separated, so it has no inner corners to round. They are declared
- * now so the connected pass reads them rather than deriving them again.
+ *              height   btn icon   btn space   btn gap   btn morph | icon icon  icon space  icon morph
+ *   xsmall        32       20         12          4          8     |    20         6            8
+ *   small         40       20         16          8          8     |    24         8            8
+ *   medium        56       24         24          8         12     |    24        16           12
+ *   large         96       32         48         12         16     |    32        32           16
+ *   xlarge       136       40         64         16         16     |    40        48           16
+ *
+ * Height is the one column they share, which is what makes a single Size
+ * setting legitimate. Everything else is per component.
+ *
+ * The group's inner-corner values are declared but not yet consumed by the
+ * segmented path they came from; the connected group reads them.
  * -------------------------------------------------------------------------- */
 .wp-block-axismundi-theme-switcher {
 	--ax-ts-height: 40px;
+
+	/* Button (group segments) */
+	--ax-ts-btn-icon-size: 20px;
+	--ax-ts-btn-space: 16px;
+	--ax-ts-btn-gap: 8px;
+	--ax-ts-btn-pressed-morph: 8px;
+	--ax-ts-label-size: 14px;
+	--ax-ts-label-line: 20px;
+	--ax-ts-label-weight: 500;
+	--ax-ts-label-tracking: 0.1px;
+
+	/* Icon button (cycle) */
 	--ax-ts-icon-size: 24px;
-	--ax-ts-icon-space: 8px;
-	--ax-ts-pressed-morph: 8px;
+	--ax-ts-icon-pressed-morph: 8px;
+
+	/* Connected group geometry */
 	--ax-ts-inner-corner: 8px;
 	--ax-ts-pressed-inner-corner: 4px;
 	--ax-ts-segment-space: 2px;
-	--ax-ts-label-size: 14px;
 
 	/*
 	 * Half the height, not a large constant. A radius past half the box is
@@ -55,39 +71,63 @@
 }
 .wp-block-axismundi-theme-switcher[data-size="xsmall"] {
 	--ax-ts-height: 32px;
+	--ax-ts-btn-icon-size: 20px;
+	--ax-ts-btn-space: 12px;
+	--ax-ts-btn-gap: 4px;
+	--ax-ts-btn-pressed-morph: 8px;
+	--ax-ts-label-size: 14px;
+	--ax-ts-label-line: 20px;
+	--ax-ts-label-weight: 500;
+	--ax-ts-label-tracking: 0.1px;
 	--ax-ts-icon-size: 20px;
-	--ax-ts-icon-space: 6px;
-	--ax-ts-pressed-morph: 8px;
+	--ax-ts-icon-pressed-morph: 8px;
 	--ax-ts-inner-corner: 8px;
 	--ax-ts-pressed-inner-corner: 4px;
-	--ax-ts-label-size: 12px;
 }
 .wp-block-axismundi-theme-switcher[data-size="medium"] {
 	--ax-ts-height: 56px;
+	--ax-ts-btn-icon-size: 24px;
+	--ax-ts-btn-space: 24px;
+	--ax-ts-btn-gap: 8px;
+	--ax-ts-btn-pressed-morph: 12px;
+	--ax-ts-label-size: 16px;
+	--ax-ts-label-line: 24px;
+	--ax-ts-label-weight: 500;
+	--ax-ts-label-tracking: 0.15px;
 	--ax-ts-icon-size: 24px;
-	--ax-ts-icon-space: 16px;
-	--ax-ts-pressed-morph: 12px;
+	--ax-ts-icon-pressed-morph: 12px;
 	--ax-ts-inner-corner: 8px;
 	--ax-ts-pressed-inner-corner: 4px;
-	--ax-ts-label-size: 16px;
 }
 .wp-block-axismundi-theme-switcher[data-size="large"] {
 	--ax-ts-height: 96px;
+	--ax-ts-btn-icon-size: 32px;
+	--ax-ts-btn-space: 48px;
+	--ax-ts-btn-gap: 12px;
+	--ax-ts-btn-pressed-morph: 16px;
+	--ax-ts-label-size: 24px;
+	--ax-ts-label-line: 32px;
+	--ax-ts-label-weight: 400;
+	--ax-ts-label-tracking: 0;
 	--ax-ts-icon-size: 32px;
-	--ax-ts-icon-space: 32px;
-	--ax-ts-pressed-morph: 16px;
+	--ax-ts-icon-pressed-morph: 16px;
 	--ax-ts-inner-corner: 16px;
 	--ax-ts-pressed-inner-corner: 12px;
-	--ax-ts-label-size: 22px;
 }
 .wp-block-axismundi-theme-switcher[data-size="xlarge"] {
 	--ax-ts-height: 136px;
+	--ax-ts-btn-icon-size: 40px;
+	--ax-ts-btn-space: 64px;
+	--ax-ts-btn-gap: 16px;
+	--ax-ts-btn-pressed-morph: 16px;
+	--ax-ts-label-size: 32px;
+	--ax-ts-label-line: 40px;
+	--ax-ts-label-weight: 400;
+	--ax-ts-label-tracking: 0;
 	--ax-ts-icon-size: 40px;
-	--ax-ts-icon-space: 48px;
-	--ax-ts-pressed-morph: 16px;
+	--ax-ts-icon-pressed-morph: 16px;
 	--ax-ts-inner-corner: 20px;
 	--ax-ts-pressed-inner-corner: 16px;
-	--ax-ts-label-size: 28px;
 }
 
 .wp-block-axismundi-theme-switcher {
@@ -149,7 +189,7 @@
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:active {
 	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant, #49454f) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), transparent);
-	border-radius: var(--ax-ts-pressed-morph);
+	border-radius: var(--ax-ts-icon-pressed-morph);
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:focus-visible {
 	outline: 3px solid var(--md-sys-color-secondary, #625b71);
@@ -207,13 +247,18 @@
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button {
 	box-sizing: border-box;
+	/* The theme fixes .wp-element-button at 40px via theme.json dimensions.height.
+	 * A segment is that element, so every size was pinned to 40 and the larger
+	 * ones only grew because their content overflowed. Release the height and set
+	 * it from the size. */
+	block-size: auto;
 	min-block-size: var(--ax-ts-height);
 	margin: 0;
 	border: 0;
 	border-radius: var(--ax-ts-inner-corner);
 	padding-block: 0;
-	padding-inline: var(--ax-ts-icon-space);
-	gap: 0.4rem;
+	padding-inline: var(--ax-ts-btn-space);
+	gap: var(--ax-ts-btn-gap);
 	justify-content: center;
 	/* Every segment carries its own container. In the segmented control the
 	 * group drew one outline around all three and the segments were
@@ -223,16 +268,20 @@
 	background-color: var(--md-sys-color-surface-container, #f3edf7);
 	color: var(--md-sys-color-on-surface-variant, #49454f);
 	font-size: var(--ax-ts-label-size);
-	line-height: 1.43;
-	font-weight: 500;
-	letter-spacing: 0.1px;
+	line-height: var(--ax-ts-label-line);
+	font-weight: var(--ax-ts-label-weight);
+	letter-spacing: var(--ax-ts-label-tracking);
 	cursor: pointer;
+	/* The Button spring is damping 0.9, stiffness 1400 -- tighter than the system
+	 * fast-spatial the cycle button uses, and the same spring core/button has.
+	 * CSS cannot run a spring; the closest pair among the published curves is
+	 * the standard easing at 200ms, which is what the theme's button uses. */
 	transition:
-		border-radius var(--md-sys-motion-curve-fast-spatial-duration, 350ms) var(--md-sys-motion-curve-fast-spatial, cubic-bezier(0.42, 1.67, 0.21, 0.9)),
+		border-radius var(--md-sys-motion-duration-short4, 200ms) var(--md-sys-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1)),
 		background-color var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, cubic-bezier(0.31, 0.94, 0.34, 1));
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button .material-symbols-outlined {
-	font-size: var(--ax-ts-icon-size);
+	font-size: var(--ax-ts-btn-icon-size);
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button[aria-pressed="true"] .material-symbols-outlined {
 	--md-icon-fill: 1;

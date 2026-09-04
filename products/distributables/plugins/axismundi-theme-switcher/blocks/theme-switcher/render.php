@@ -44,14 +44,31 @@ if ( '' === $axismundi_theme_switcher_component ) {
 
 $axismundi_theme_switcher_is_cycle = 'icon' === $axismundi_theme_switcher_component;
 
-$axismundi_theme_switcher_wrapper = get_block_wrapper_attributes(
-	array(
-		'role'                => 'group',
-		'aria-label'          => __( 'Color scheme', 'axismundi-theme-switcher' ),
-		'data-component'      => $axismundi_theme_switcher_component,
-		'data-wp-interactive' => 'axismundi/theme-switcher',
-	)
+/*
+ * Group segments can drop their visible label. The label text is still rendered,
+ * as screen-reader text, so it stays each button's accessible name and there is
+ * one source for the string. core/navigation does the same thing the other way
+ * round: its toggle carries an `aria-label` only when the visible text is
+ * replaced by an icon.
+ */
+$axismundi_theme_switcher_show_labels = ! isset( $attributes['showLabels'] ) || (bool) $attributes['showLabels'];
+$axismundi_theme_switcher_label_class = $axismundi_theme_switcher_show_labels
+	? 'axismundi-theme-switcher__label'
+	: 'axismundi-theme-switcher__label screen-reader-text';
+
+$axismundi_theme_switcher_wrapper_attrs = array(
+	'role'                => 'group',
+	'aria-label'          => __( 'Color scheme', 'axismundi-theme-switcher' ),
+	'data-component'      => $axismundi_theme_switcher_component,
+	'data-wp-interactive' => 'axismundi/theme-switcher',
 );
+
+// Only the group has a label to show or hide, so only the group says so.
+if ( ! $axismundi_theme_switcher_is_cycle ) {
+	$axismundi_theme_switcher_wrapper_attrs['data-labels'] = $axismundi_theme_switcher_show_labels ? 'visible' : 'hidden';
+}
+
+$axismundi_theme_switcher_wrapper = get_block_wrapper_attributes( $axismundi_theme_switcher_wrapper_attrs );
 ?>
 <div <?php echo $axismundi_theme_switcher_wrapper; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 	<?php if ( $axismundi_theme_switcher_is_cycle ) : ?>
@@ -78,7 +95,7 @@ $axismundi_theme_switcher_wrapper = get_block_wrapper_attributes(
 				aria-pressed="<?php echo $axismundi_theme_switcher_mode === $axismundi_theme_switcher_current ? 'true' : 'false'; ?>"
 			>
 				<span class="material-symbols-outlined notranslate" translate="no" aria-hidden="true" draggable="false"><?php echo esc_html( $axismundi_theme_switcher_m['icon'] ); ?></span>
-				<span class="axismundi-theme-switcher__label"><?php echo esc_html( $axismundi_theme_switcher_m['label'] ); ?></span>
+				<span class="<?php echo esc_attr( $axismundi_theme_switcher_label_class ); ?>"><?php echo esc_html( $axismundi_theme_switcher_m['label'] ); ?></span>
 			</button>
 		<?php endforeach; ?>
 	<?php endif; ?>

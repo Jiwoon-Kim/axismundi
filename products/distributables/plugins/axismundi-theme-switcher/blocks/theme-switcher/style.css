@@ -83,8 +83,11 @@
 	}
 }
 
+/* Visually hidden, still in the accessibility tree. Used by the cycle button's
+ * live label and by group segments when their label is turned off, so the text
+ * stays the button's accessible name either way. */
 .wp-block-axismundi-theme-switcher[data-component="icon"] .axismundi-theme-switcher__label,
-.wp-block-axismundi-theme-switcher[data-component="icon"] .screen-reader-text {
+.wp-block-axismundi-theme-switcher .screen-reader-text {
 	position: absolute;
 	inline-size: 1px;
 	block-size: 1px;

@@ -55,12 +55,25 @@
 				component = ( ' ' + className + ' ' ).indexOf( ' is-style-theme-cycle ' ) !== -1 ? 'icon' : 'group';
 			}
 			var isCycle = 'icon' === component;
+			// Group segments keep their label text when it is hidden; it becomes
+			// screen-reader text so it is still each button's accessible name.
+			var showLabels = ! props.attributes || undefined === props.attributes.showLabels
+				? true
+				: !! props.attributes.showLabels;
+			var labelClass = showLabels
+				? 'axismundi-theme-switcher__label'
+				: 'axismundi-theme-switcher__label screen-reader-text';
 			var currentMode = modeData( current );
-			var blockProps = useBlockProps( {
+			// Only the group has a label to show or hide, so only the group says so.
+			var wrapperAttrs = {
 				role: 'group',
 				'aria-label': 'Color scheme',
 				'data-component': component,
-			} );
+			};
+			if ( ! isCycle ) {
+				wrapperAttrs[ 'data-labels' ] = showLabels ? 'visible' : 'hidden';
+			}
+			var blockProps = useBlockProps( wrapperAttrs );
 
 			var inspector = el(
 				blockEditor.InspectorControls,
@@ -83,7 +96,21 @@
 						},
 						__next40pxDefaultSize: true,
 						__nextHasNoMarginBottom: true,
-					} )
+					} ),
+					// Only the group has visible labels to turn off; the cycle
+					// button never shows one.
+					! isCycle &&
+						el( components.ToggleControl, {
+							label: 'Show labels',
+							checked: showLabels,
+							help: showLabels
+								? 'Each mode shows its name beside the icon.'
+								: 'Icon only. The name is still read by screen readers.',
+							onChange: function ( value ) {
+								props.setAttributes( { showLabels: !! value } );
+							},
+							__nextHasNoMarginBottom: true,
+						} )
 				)
 			);
 
@@ -147,7 +174,7 @@
 								},
 							},
 							el( 'span', { className: 'material-symbols-outlined', 'aria-hidden': 'true' }, m.icon ),
-							el( 'span', { className: 'axismundi-theme-switcher__label' }, m.label )
+							el( 'span', { className: labelClass }, m.label )
 						);
 					} )
 				)

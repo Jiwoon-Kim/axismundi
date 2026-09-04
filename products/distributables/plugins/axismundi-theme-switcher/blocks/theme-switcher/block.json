@@ -13,6 +13,10 @@
 		"component": {
 			"type": "string",
 			"default": ""
+		},
+		"showLabels": {
+			"type": "boolean",
+			"default": true
 		}
 	},
 	"example": {

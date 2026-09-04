@@ -44,6 +44,8 @@ color-scheme change depends on a theme or stylesheet that consumes
   block's settings rather than through a block style. They are different
   controls -- three buttons or one -- so the choice belongs where the block's
   other settings are. Existing content keeps rendering as it did.
+* Add a Show labels setting for the button group, so its three modes can show
+  icons alone. The names stay available to screen readers either way.
 
 Earlier releases are listed in changelog.txt.
 

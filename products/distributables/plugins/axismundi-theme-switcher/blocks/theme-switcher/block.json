@@ -26,6 +26,11 @@
 	"example": {
 		"attributes": {}
 	},
+	"styles": [
+		{ "name": "filled", "label": "Filled", "isDefault": true },
+		{ "name": "tonal", "label": "Tonal" },
+		{ "name": "outlined", "label": "Outlined" }
+	],
 	"supports": {
 		"html": false,
 		"align": false,

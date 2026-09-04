@@ -51,6 +51,7 @@
 	--ax-ts-label-line: 20px;
 	--ax-ts-label-weight: 500;
 	--ax-ts-label-tracking: 0.1px;
+	--ax-ts-outline-width: 1px;
 
 	/* Icon button (cycle) */
 	--ax-ts-icon-size: 24px;
@@ -83,6 +84,7 @@
 	--ax-ts-icon-pressed-morph: 8px;
 	--ax-ts-inner-corner: 8px;
 	--ax-ts-pressed-inner-corner: 4px;
+	--ax-ts-outline-width: 1px;
 }
 .wp-block-axismundi-theme-switcher[data-size="medium"] {
 	--ax-ts-height: 56px;
@@ -98,6 +100,7 @@
 	--ax-ts-icon-pressed-morph: 12px;
 	--ax-ts-inner-corner: 8px;
 	--ax-ts-pressed-inner-corner: 4px;
+	--ax-ts-outline-width: 1px;
 }
 .wp-block-axismundi-theme-switcher[data-size="large"] {
 	--ax-ts-height: 96px;
@@ -113,6 +116,7 @@
 	--ax-ts-icon-pressed-morph: 16px;
 	--ax-ts-inner-corner: 16px;
 	--ax-ts-pressed-inner-corner: 12px;
+	--ax-ts-outline-width: 2px;
 }
 .wp-block-axismundi-theme-switcher[data-size="xlarge"] {
 	--ax-ts-height: 136px;
@@ -128,6 +132,56 @@
 	--ax-ts-icon-pressed-morph: 16px;
 	--ax-ts-inner-corner: 20px;
 	--ax-ts-pressed-inner-corner: 16px;
+	--ax-ts-outline-width: 3px;
+}
+
+
+/* ----------------------------------------------------------------------------
+ * Colour treatment. Material publishes these as four named colour sets, each
+ * giving a container and a foreground twice over -- once for a toggle's
+ * unselected state and once for its selected state. That second pair is why
+ * these are the plugin's own block styles rather than the theme's core/button
+ * variations: a core button has no selected state to colour.
+ *
+ * The values are Material's, read through this theme's roles rather than copied
+ * as hex, so a site with a different palette gets its own colours:
+ *
+ *   filled      unselected surface-container / on-surface-variant
+ *               selected   primary / on-primary
+ *   tonal       unselected secondary-container / on-secondary-container
+ *               selected   secondary / on-secondary
+ *   outlined    unselected an outline, no container / on-surface-variant
+ *               selected   inverse-surface / inverse-on-surface
+ *
+ * Material lists a fourth, Standard, but only for the Icon button; the Button
+ * has no such colour set. Offering it here would put a containerless treatment
+ * on the connected group, which Material tells you to avoid, so the three the
+ * two components share are the three on offer.
+ *
+ * Both surfaces read the same four variables, so a treatment is written once
+ * and the group and the cycle button each apply it to their own anatomy.
+ * Filled is the default: it is registered `isDefault`, which selects it in the
+ * picker without writing a class, so the values live on the block itself.
+ * -------------------------------------------------------------------------- */
+.wp-block-axismundi-theme-switcher {
+	--ax-ts-unselected-bg: var(--wp--preset--color--surface-container, var(--md-sys-color-surface-container, #f3edf7));
+	--ax-ts-unselected-fg: var(--wp--preset--color--on-surface-variant, var(--md-sys-color-on-surface-variant, #49454f));
+	--ax-ts-selected-bg: var(--wp--preset--color--primary, var(--md-sys-color-primary, #6750a4));
+	--ax-ts-selected-fg: var(--wp--preset--color--on-primary, var(--md-sys-color-on-primary, #fff));
+	--ax-ts-outline-color: transparent;
+}
+.wp-block-axismundi-theme-switcher.is-style-tonal {
+	--ax-ts-unselected-bg: var(--wp--preset--color--secondary-container, var(--md-sys-color-secondary-container, #e8def8));
+	--ax-ts-unselected-fg: var(--wp--preset--color--on-secondary-container, var(--md-sys-color-on-secondary-container, #4a4458));
+	--ax-ts-selected-bg: var(--wp--preset--color--secondary, var(--md-sys-color-secondary, #625b71));
+	--ax-ts-selected-fg: var(--wp--preset--color--on-secondary, var(--md-sys-color-on-secondary, #fff));
+}
+.wp-block-axismundi-theme-switcher.is-style-outlined {
+	--ax-ts-unselected-bg: transparent;
+	--ax-ts-unselected-fg: var(--wp--preset--color--on-surface-variant, var(--md-sys-color-on-surface-variant, #49454f));
+	--ax-ts-selected-bg: var(--wp--preset--color--inverse-surface, var(--md-sys-color-inverse-surface, #322f35));
+	--ax-ts-selected-fg: var(--wp--preset--color--inverse-on-surface, var(--md-sys-color-inverse-on-surface, #f5eff7));
+	--ax-ts-outline-color: var(--wp--preset--color--outline-variant, var(--md-sys-color-outline-variant, #cac4d0));
 }
 
 .wp-block-axismundi-theme-switcher {
@@ -160,14 +214,14 @@
 	block-size: var(--ax-ts-height);
 	justify-content: center;
 	padding: 0;
-	border: 0;
 	/* Half the height, so the pressed morph actually interpolates. See the size
 	 * block above: a radius past half the box is clamped when painted but not
 	 * when animated, so 9999px would hold still and then jump to the pressed
 	 * value. Visually identical at rest -- both are a circle on a square box. */
+	border: var(--ax-ts-outline-width) solid var(--ax-ts-outline-color);
 	border-radius: var(--ax-ts-pill);
-	background-color: transparent;
-	color: var(--md-sys-color-on-surface-variant, #49454f);
+	background-color: var(--ax-ts-unselected-bg);
+	color: var(--ax-ts-unselected-fg);
 	cursor: pointer;
 	transition:
 		border-radius var(--md-sys-motion-curve-fast-spatial-duration, 350ms) var(--md-sys-motion-curve-fast-spatial, cubic-bezier(0.42, 1.67, 0.21, 0.9)),
@@ -182,13 +236,13 @@
 	--md-icon-fill: 1;
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:hover {
-	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant, #49454f) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), transparent);
+	background-color: color-mix(in srgb, var(--ax-ts-unselected-fg) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--ax-ts-unselected-bg));
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:focus {
-	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant, #49454f) calc(var(--md-sys-state-focus-state-layer-opacity, 0.1) * 100%), transparent);
+	background-color: color-mix(in srgb, var(--ax-ts-unselected-fg) calc(var(--md-sys-state-focus-state-layer-opacity, 0.1) * 100%), var(--ax-ts-unselected-bg));
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:active {
-	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant, #49454f) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), transparent);
+	background-color: color-mix(in srgb, var(--ax-ts-unselected-fg) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), var(--ax-ts-unselected-bg));
 	border-radius: var(--ax-ts-icon-pressed-morph);
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:focus-visible {
@@ -254,7 +308,7 @@
 	block-size: auto;
 	min-block-size: var(--ax-ts-height);
 	margin: 0;
-	border: 0;
+	border: var(--ax-ts-outline-width) solid var(--ax-ts-outline-color);
 	border-radius: var(--ax-ts-inner-corner);
 	padding-block: 0;
 	padding-inline: var(--ax-ts-btn-space);
@@ -265,8 +319,8 @@
 	 * transparent; connected has no such frame, so a transparent segment would
 	 * be loose text on the page. Unselected sits on surface-container and the
 	 * selected one takes the accent, which is M3's tonal treatment. */
-	background-color: var(--md-sys-color-surface-container, #f3edf7);
-	color: var(--md-sys-color-on-surface-variant, #49454f);
+	background-color: var(--ax-ts-unselected-bg);
+	color: var(--ax-ts-unselected-fg);
 	font-size: var(--ax-ts-label-size);
 	line-height: var(--ax-ts-label-line);
 	font-weight: var(--ax-ts-label-weight);
@@ -326,20 +380,21 @@
 	border-end-end-radius: var(--ax-ts-pill);
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button:hover {
-	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant, #49454f) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--md-sys-color-surface-container, #f3edf7));
+	background-color: color-mix(in srgb, var(--ax-ts-unselected-fg) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--ax-ts-unselected-bg));
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button:active {
-	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant, #49454f) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), var(--md-sys-color-surface-container, #f3edf7));
+	background-color: color-mix(in srgb, var(--ax-ts-unselected-fg) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), var(--ax-ts-unselected-bg));
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button[aria-pressed="true"] {
-	background-color: var(--md-sys-color-secondary-container, #e8def8);
-	color: var(--md-sys-color-on-secondary-container, #1d192b);
+	background-color: var(--ax-ts-selected-bg);
+	color: var(--ax-ts-selected-fg);
+	border-color: transparent;
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button[aria-pressed="true"]:hover {
-	background-color: color-mix(in srgb, var(--md-sys-color-on-secondary-container, #1d192b) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--md-sys-color-secondary-container, #e8def8));
+	background-color: color-mix(in srgb, var(--ax-ts-selected-fg) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--ax-ts-selected-bg));
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button[aria-pressed="true"]:active {
-	background-color: color-mix(in srgb, var(--md-sys-color-on-secondary-container, #1d192b) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), var(--md-sys-color-secondary-container, #e8def8));
+	background-color: color-mix(in srgb, var(--ax-ts-selected-fg) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), var(--ax-ts-selected-bg));
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button:focus-visible {
 	outline: 3px solid var(--md-sys-color-secondary, #625b71);

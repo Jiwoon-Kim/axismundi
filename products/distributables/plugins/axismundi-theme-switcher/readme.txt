@@ -54,6 +54,8 @@ color-scheme change depends on a theme or stylesheet that consumes
 * Rebuild the button group as Material Design's connected group: separate
   segments with rounded ends, an inner corner that shrinks while pressed, and a
   fully rounded segment for the mode in use.
+* Add Filled, Tonal and Outlined block styles, which colour the mode in use
+  differently from the rest. Colours come from the active theme's palette.
 * Version the block's editor script by its own file, so an updated editor is
   never served from a stale cache.
 

@@ -25,13 +25,30 @@ if ( isset( $_COOKIE['axismundi_theme'] ) ) {
 	}
 }
 
-$axismundi_theme_switcher_class_name = isset( $attributes['className'] ) ? (string) $attributes['className'] : '';
-$axismundi_theme_switcher_is_cycle   = false !== strpos( ' ' . $axismundi_theme_switcher_class_name . ' ', ' is-style-theme-cycle ' );
+/*
+ * Which component to render. `icon` is one button cycling through the modes;
+ * `group` is three. That is a different control, not a restyle -- a different
+ * number of buttons with a different keyboard model -- so it is an attribute
+ * rather than a block style.
+ *
+ * Before 0.1.7 the choice rode on the `is-style-theme-cycle` class and this file
+ * matched the string. Content saved then still carries that class and no
+ * attribute, so it is still honoured when `component` is unset.
+ */
+$axismundi_theme_switcher_component = isset( $attributes['component'] ) ? (string) $attributes['component'] : '';
+
+if ( '' === $axismundi_theme_switcher_component ) {
+	$axismundi_theme_switcher_class_name = isset( $attributes['className'] ) ? (string) $attributes['className'] : '';
+	$axismundi_theme_switcher_component  = false !== strpos( ' ' . $axismundi_theme_switcher_class_name . ' ', ' is-style-theme-cycle ' ) ? 'icon' : 'group';
+}
+
+$axismundi_theme_switcher_is_cycle = 'icon' === $axismundi_theme_switcher_component;
 
 $axismundi_theme_switcher_wrapper = get_block_wrapper_attributes(
 	array(
 		'role'                => 'group',
 		'aria-label'          => __( 'Color scheme', 'axismundi-theme-switcher' ),
+		'data-component'      => $axismundi_theme_switcher_component,
 		'data-wp-interactive' => 'axismundi/theme-switcher',
 	)
 );

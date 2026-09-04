@@ -4,8 +4,13 @@
  * (--md-sys-color-*, --md-sys-state-*). Each token carries an M3 baseline
  * fallback so the control degrades gracefully under a non-Axismundi theme.
  *
- * - is-style-theme-cycle  -> a single M3 STANDARD icon button (the header default).
- * - default (3 buttons)   -> an M3 segmented control (styled in a later pass).
+ * The `component` attribute selects the control, not a style: `icon` is one
+ * button cycling the modes, `group` is three. Different button counts and
+ * keyboard models, so it is an attribute and this file hooks the data attribute
+ * the block renders rather than a style class.
+ *
+ * - [data-component="icon"]   -> a single M3 STANDARD icon button.
+ * - [data-component="group"]  -> an M3 segmented control (connected is a later pass).
  */
 
 .wp-block-axismundi-theme-switcher {
@@ -32,7 +37,7 @@
  * State layer (hover/focus/pressed), keyboard-only focus ring, and the pressed
  * shape morph mirror the theme's .wp-element-button contract.
  * -------------------------------------------------------------------------- */
-.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button {
+.wp-block-axismundi-theme-switcher[data-component="icon"] .axismundi-theme-switcher__button {
 	box-sizing: border-box;
 	inline-size: 40px;
 	block-size: 40px;
@@ -47,39 +52,39 @@
 		border-radius var(--md-sys-motion-curve-fast-spatial-duration, 350ms) var(--md-sys-motion-curve-fast-spatial, cubic-bezier(0.42, 1.67, 0.21, 0.9)),
 		background-color var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, cubic-bezier(0.31, 0.94, 0.34, 1));
 }
-.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button .material-symbols-outlined {
+.wp-block-axismundi-theme-switcher[data-component="icon"] .axismundi-theme-switcher__button .material-symbols-outlined {
 	font-size: 24px;
 }
-.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button:hover .material-symbols-outlined,
-.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button:focus-visible .material-symbols-outlined,
-.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button:active .material-symbols-outlined {
+.wp-block-axismundi-theme-switcher[data-component="icon"] .axismundi-theme-switcher__button:hover .material-symbols-outlined,
+.wp-block-axismundi-theme-switcher[data-component="icon"] .axismundi-theme-switcher__button:focus-visible .material-symbols-outlined,
+.wp-block-axismundi-theme-switcher[data-component="icon"] .axismundi-theme-switcher__button:active .material-symbols-outlined {
 	--md-icon-fill: 1;
 }
-.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button:hover {
+.wp-block-axismundi-theme-switcher[data-component="icon"] .axismundi-theme-switcher__button:hover {
 	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant, #49454f) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), transparent);
 }
-.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button:focus {
+.wp-block-axismundi-theme-switcher[data-component="icon"] .axismundi-theme-switcher__button:focus {
 	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant, #49454f) calc(var(--md-sys-state-focus-state-layer-opacity, 0.1) * 100%), transparent);
 }
-.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button:active {
+.wp-block-axismundi-theme-switcher[data-component="icon"] .axismundi-theme-switcher__button:active {
 	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant, #49454f) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), transparent);
 	border-radius: 8px;
 }
-.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button:focus-visible {
+.wp-block-axismundi-theme-switcher[data-component="icon"] .axismundi-theme-switcher__button:focus-visible {
 	outline: 3px solid var(--md-sys-color-secondary, #625b71);
 	outline-offset: 2px;
 }
-.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button:focus:not(:focus-visible) {
+.wp-block-axismundi-theme-switcher[data-component="icon"] .axismundi-theme-switcher__button:focus:not(:focus-visible) {
 	outline: none;
 }
 @media (prefers-reduced-motion: reduce) {
-	.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button {
+	.wp-block-axismundi-theme-switcher[data-component="icon"] .axismundi-theme-switcher__button {
 		transition: none;
 	}
 }
 
-.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__label,
-.wp-block-axismundi-theme-switcher.is-style-theme-cycle .screen-reader-text {
+.wp-block-axismundi-theme-switcher[data-component="icon"] .axismundi-theme-switcher__label,
+.wp-block-axismundi-theme-switcher[data-component="icon"] .screen-reader-text {
 	position: absolute;
 	inline-size: 1px;
 	block-size: 1px;
@@ -92,20 +97,20 @@
 }
 
 /* ----------------------------------------------------------------------------
- * Default (no is-style-theme-cycle) = M3 segmented button control.
+ * [data-component="group"] = M3 segmented button control.
  * The three mode buttons (.wp-element-button) become a single connected,
  * outlined control; the active mode (aria-pressed=true) is the selected
  * segment. Plugin selectors (0,3,0) out-specify the theme's filled
  * .wp-element-button base (:where 0,1,0), incl. its pressed-radius morph.
  * -------------------------------------------------------------------------- */
-.wp-block-axismundi-theme-switcher:not(.is-style-theme-cycle) {
+.wp-block-axismundi-theme-switcher[data-component="group"] {
 	gap: 0;
 	inline-size: fit-content;
 	max-inline-size: 100%;
 	border: 1px solid var(--md-sys-color-outline, #79747e);
 	border-radius: 9999px;
 }
-.wp-block-axismundi-theme-switcher:not(.is-style-theme-cycle) .axismundi-theme-switcher__button {
+.wp-block-axismundi-theme-switcher[data-component="group"] .axismundi-theme-switcher__button {
 	box-sizing: border-box;
 	min-block-size: 40px;
 	margin: 0;
@@ -124,48 +129,48 @@
 	cursor: pointer;
 	transition: background-color var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, cubic-bezier(0.31, 0.94, 0.34, 1));
 }
-.wp-block-axismundi-theme-switcher:not(.is-style-theme-cycle) .axismundi-theme-switcher__button .material-symbols-outlined {
+.wp-block-axismundi-theme-switcher[data-component="group"] .axismundi-theme-switcher__button .material-symbols-outlined {
 	font-size: 18px;
 }
-.wp-block-axismundi-theme-switcher:not(.is-style-theme-cycle) .axismundi-theme-switcher__button[aria-pressed="true"] .material-symbols-outlined {
+.wp-block-axismundi-theme-switcher[data-component="group"] .axismundi-theme-switcher__button[aria-pressed="true"] .material-symbols-outlined {
 	--md-icon-fill: 1;
 }
-.wp-block-axismundi-theme-switcher:not(.is-style-theme-cycle) .axismundi-theme-switcher__button + .axismundi-theme-switcher__button {
+.wp-block-axismundi-theme-switcher[data-component="group"] .axismundi-theme-switcher__button + .axismundi-theme-switcher__button {
 	border-inline-start: 1px solid var(--md-sys-color-outline, #79747e);
 }
-.wp-block-axismundi-theme-switcher:not(.is-style-theme-cycle) .axismundi-theme-switcher__button:first-child {
+.wp-block-axismundi-theme-switcher[data-component="group"] .axismundi-theme-switcher__button:first-child {
 	border-start-start-radius: 9999px;
 	border-end-start-radius: 9999px;
 }
-.wp-block-axismundi-theme-switcher:not(.is-style-theme-cycle) .axismundi-theme-switcher__button:last-child {
+.wp-block-axismundi-theme-switcher[data-component="group"] .axismundi-theme-switcher__button:last-child {
 	border-start-end-radius: 9999px;
 	border-end-end-radius: 9999px;
 }
-.wp-block-axismundi-theme-switcher:not(.is-style-theme-cycle) .axismundi-theme-switcher__button:hover {
+.wp-block-axismundi-theme-switcher[data-component="group"] .axismundi-theme-switcher__button:hover {
 	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant, #49454f) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), transparent);
 }
-.wp-block-axismundi-theme-switcher:not(.is-style-theme-cycle) .axismundi-theme-switcher__button:active {
+.wp-block-axismundi-theme-switcher[data-component="group"] .axismundi-theme-switcher__button:active {
 	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant, #49454f) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), transparent);
 }
-.wp-block-axismundi-theme-switcher:not(.is-style-theme-cycle) .axismundi-theme-switcher__button[aria-pressed="true"] {
+.wp-block-axismundi-theme-switcher[data-component="group"] .axismundi-theme-switcher__button[aria-pressed="true"] {
 	background-color: var(--md-sys-color-secondary-container, #e8def8);
 	color: var(--md-sys-color-on-secondary-container, #1d192b);
 }
-.wp-block-axismundi-theme-switcher:not(.is-style-theme-cycle) .axismundi-theme-switcher__button[aria-pressed="true"]:hover {
+.wp-block-axismundi-theme-switcher[data-component="group"] .axismundi-theme-switcher__button[aria-pressed="true"]:hover {
 	background-color: color-mix(in srgb, var(--md-sys-color-on-secondary-container, #1d192b) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--md-sys-color-secondary-container, #e8def8));
 }
-.wp-block-axismundi-theme-switcher:not(.is-style-theme-cycle) .axismundi-theme-switcher__button[aria-pressed="true"]:active {
+.wp-block-axismundi-theme-switcher[data-component="group"] .axismundi-theme-switcher__button[aria-pressed="true"]:active {
 	background-color: color-mix(in srgb, var(--md-sys-color-on-secondary-container, #1d192b) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), var(--md-sys-color-secondary-container, #e8def8));
 }
-.wp-block-axismundi-theme-switcher:not(.is-style-theme-cycle) .axismundi-theme-switcher__button:focus-visible {
+.wp-block-axismundi-theme-switcher[data-component="group"] .axismundi-theme-switcher__button:focus-visible {
 	outline: 3px solid var(--md-sys-color-secondary, #625b71);
 	outline-offset: -3px;
 }
-.wp-block-axismundi-theme-switcher:not(.is-style-theme-cycle) .axismundi-theme-switcher__button:focus:not(:focus-visible) {
+.wp-block-axismundi-theme-switcher[data-component="group"] .axismundi-theme-switcher__button:focus:not(:focus-visible) {
 	outline: none;
 }
 @media (prefers-reduced-motion: reduce) {
-	.wp-block-axismundi-theme-switcher:not(.is-style-theme-cycle) .axismundi-theme-switcher__button {
+	.wp-block-axismundi-theme-switcher[data-component="group"] .axismundi-theme-switcher__button {
 		transition: none;
 	}
 }

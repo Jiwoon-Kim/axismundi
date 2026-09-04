@@ -1,6 +1,13 @@
 == Changelog ==
 
-Releases before 0.1.6. The current release is in readme.txt.
+Releases before 0.1.7. The current release is in readme.txt.
+
+= 0.1.6 =
+* Removes reference-implementation class names from the markup this plugin
+  ships. `ax-icon-button`, `ax-menu`, and `ax-text-field` exist only in the
+  Axismundi Lab, so every element carrying one was depending on styles that are
+  not part of any release; the components' own classes were already doing the
+  work. Rendering is unchanged.
 
 = 0.1.5 =
 

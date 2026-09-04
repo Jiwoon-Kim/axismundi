@@ -44,6 +44,14 @@
 	--ax-ts-pressed-inner-corner: 4px;
 	--ax-ts-segment-space: 2px;
 	--ax-ts-label-size: 14px;
+
+	/*
+	 * Half the height, not a large constant. A radius past half the box is
+	 * clamped when painted but not when interpolated, so a morph from 9999px
+	 * would hold still and then jump. Derived rather than listed, so it follows
+	 * the height for every size.
+	 */
+	--ax-ts-pill: calc(var(--ax-ts-height) / 2);
 }
 .wp-block-axismundi-theme-switcher[data-size="xsmall"] {
 	--ax-ts-height: 32px;
@@ -113,7 +121,11 @@
 	justify-content: center;
 	padding: 0;
 	border: 0;
-	border-radius: 9999px;
+	/* Half the height, so the pressed morph actually interpolates. See the size
+	 * block above: a radius past half the box is clamped when painted but not
+	 * when animated, so 9999px would hold still and then jump to the pressed
+	 * value. Visually identical at rest -- both are a circle on a square box. */
+	border-radius: var(--ax-ts-pill);
 	background-color: transparent;
 	color: var(--md-sys-color-on-surface-variant, #49454f);
 	cursor: pointer;
@@ -169,39 +181,55 @@
 }
 
 /* ----------------------------------------------------------------------------
- * .axismundi-theme-switcher__group = M3 segmented button control.
- * The three mode buttons (.wp-element-button) become a single connected,
- * outlined control; the active mode (aria-pressed=true) is the selected
- * segment. Plugin selectors (0,3,0) out-specify the theme's filled
- * .wp-element-button base (:where 0,1,0), incl. its pressed-radius morph.
+ * .axismundi-theme-switcher__group = M3 connected button group.
+ *
+ * Segments are separated by a 2dp gap rather than joined by a divider, and each
+ * carries its own container. The group's outer ends are fully round; the corners
+ * facing a neighbour take the size's inner-corner value, shrink further while
+ * pressed, and go fully round while selected. The active mode
+ * (aria-pressed=true) is the selected segment.
+ *
+ * The pill radius is half the control's height, not a large constant. A radius
+ * past half the box is clamped for painting but not for interpolation, so
+ * animating from 9999px would sit still and then jump -- the same reason
+ * tokens.sys.shape.css keeps `corner-full` out of the corner-value scale. The
+ * Lab reached this in v3.5.9 and the value here is derived the same way.
+ *
+ * Plugin selectors (0,3,0) out-specify the theme's filled .wp-element-button
+ * base (:where 0,1,0), incl. its pressed-radius morph.
  * -------------------------------------------------------------------------- */
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group {
 	display: flex;
 	align-items: center;
-	gap: 0;
+	gap: var(--ax-ts-segment-space);
 	inline-size: fit-content;
 	max-inline-size: 100%;
-	border: 1px solid var(--md-sys-color-outline, #79747e);
-	border-radius: 9999px;
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button {
 	box-sizing: border-box;
 	min-block-size: var(--ax-ts-height);
 	margin: 0;
 	border: 0;
-	border-radius: 0;
+	border-radius: var(--ax-ts-inner-corner);
 	padding-block: 0;
 	padding-inline: var(--ax-ts-icon-space);
 	gap: 0.4rem;
 	justify-content: center;
-	background-color: transparent;
+	/* Every segment carries its own container. In the segmented control the
+	 * group drew one outline around all three and the segments were
+	 * transparent; connected has no such frame, so a transparent segment would
+	 * be loose text on the page. Unselected sits on surface-container and the
+	 * selected one takes the accent, which is M3's tonal treatment. */
+	background-color: var(--md-sys-color-surface-container, #f3edf7);
 	color: var(--md-sys-color-on-surface-variant, #49454f);
 	font-size: var(--ax-ts-label-size);
 	line-height: 1.43;
 	font-weight: 500;
 	letter-spacing: 0.1px;
 	cursor: pointer;
-	transition: background-color var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, cubic-bezier(0.31, 0.94, 0.34, 1));
+	transition:
+		border-radius var(--md-sys-motion-curve-fast-spatial-duration, 350ms) var(--md-sys-motion-curve-fast-spatial, cubic-bezier(0.42, 1.67, 0.21, 0.9)),
+		background-color var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, cubic-bezier(0.31, 0.94, 0.34, 1));
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button .material-symbols-outlined {
 	font-size: var(--ax-ts-icon-size);
@@ -209,22 +237,50 @@
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button[aria-pressed="true"] .material-symbols-outlined {
 	--md-icon-fill: 1;
 }
-.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button + .axismundi-theme-switcher__button {
-	border-inline-start: 1px solid var(--md-sys-color-outline, #79747e);
-}
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button:first-child {
-	border-start-start-radius: 9999px;
-	border-end-start-radius: 9999px;
+	border-start-start-radius: var(--ax-ts-pill);
+	border-end-start-radius: var(--ax-ts-pill);
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button:last-child {
-	border-start-end-radius: 9999px;
-	border-end-end-radius: 9999px;
+	border-start-end-radius: var(--ax-ts-pill);
+	border-end-end-radius: var(--ax-ts-pill);
+}
+
+/* Pressed: inner corners shrink, the outer ends stay round. */
+.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button:active {
+	border-radius: var(--ax-ts-pressed-inner-corner);
+}
+.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button:first-child:active {
+	border-start-start-radius: var(--ax-ts-pill);
+	border-end-start-radius: var(--ax-ts-pill);
+}
+.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button:last-child:active {
+	border-start-end-radius: var(--ax-ts-pill);
+	border-end-end-radius: var(--ax-ts-pill);
+}
+
+/* Selected: fully round. M3 gives the selected segment a 50% inner corner. */
+.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button[aria-pressed="true"] {
+	border-radius: var(--ax-ts-pill);
+}
+
+/* Selected and pressed at once: the pressed corner wins, ends still round. */
+.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button[aria-pressed="true"]:active {
+	border-radius: var(--ax-ts-pressed-inner-corner);
+}
+.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button[aria-pressed="true"]:first-child:active {
+	border-start-start-radius: var(--ax-ts-pill);
+	border-end-start-radius: var(--ax-ts-pill);
+}
+.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button[aria-pressed="true"]:last-child:active {
+	border-start-end-radius: var(--ax-ts-pill);
+	border-end-end-radius: var(--ax-ts-pill);
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button:hover {
-	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant, #49454f) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), transparent);
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant, #49454f) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--md-sys-color-surface-container, #f3edf7));
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button:active {
-	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant, #49454f) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), transparent);
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant, #49454f) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), var(--md-sys-color-surface-container, #f3edf7));
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button[aria-pressed="true"] {
 	background-color: var(--md-sys-color-secondary-container, #e8def8);
@@ -238,7 +294,7 @@
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button:focus-visible {
 	outline: 3px solid var(--md-sys-color-secondary, #625b71);
-	outline-offset: -3px;
+	outline-offset: 2px;
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button:focus:not(:focus-visible) {
 	outline: none;

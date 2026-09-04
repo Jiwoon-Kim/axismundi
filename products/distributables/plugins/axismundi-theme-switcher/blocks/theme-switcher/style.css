@@ -245,6 +245,32 @@
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle .material-symbols-outlined {
 	font-size: var(--ax-ts-icon-size);
 }
+/* ----------------------------------------------------------------------------
+ * Standard, Material's fourth colour set. No container in either state: the
+ * symbol carries all of it, on-surface-variant while unselected and primary
+ * once a scheme is chosen.
+ *
+ * It reaches only the cycle button, and it is a setting rather than a block
+ * style for that reason -- Material publishes Standard for the Icon button and
+ * gives the Button no equivalent, so a style, which colours both surfaces at
+ * once, could not express it. Redeclaring the four treatment variables here is
+ * all it takes: they are already read at this element, so the closer
+ * declaration wins and every rule below -- state layers, pressed morph, the
+ * selected pair -- keeps working unchanged. The group keeps whichever of
+ * filled, tonal or outlined the block carries.
+ *
+ * A transparent container is also what makes the state layers read correctly:
+ * mixing the foreground into `transparent` leaves exactly the layer's opacity,
+ * which is how Material draws them on a containerless button.
+ * -------------------------------------------------------------------------- */
+.wp-block-axismundi-theme-switcher[data-cycle-standard="true"] .axismundi-theme-switcher__cycle {
+	--ax-ts-unselected-bg: transparent;
+	--ax-ts-unselected-fg: var(--md-sys-color-on-surface-variant, #49454f);
+	--ax-ts-selected-bg: transparent;
+	--ax-ts-selected-fg: var(--md-sys-color-primary, #6750a4);
+	--ax-ts-outline-color: transparent;
+}
+
 /* Here fill says selected and nothing else. It used to fill on hover, focus and
  * press too, which was a flourish from when the button had no selected state to
  * claim the axis. It has one now, and this button stands alone: with no

@@ -71,6 +71,21 @@ if ( ! in_array( $axismundi_theme_switcher_size, array( 'xsmall', 'small', 'medi
  * round: its toggle carries an `aria-label` only when the visible text is
  * replaced by an icon.
  */
+/*
+ * Material's fourth colour set, Standard: no container at all, the symbol
+ * carrying the whole of the state -- on-surface-variant while the scheme is
+ * `auto`, primary once one is chosen.
+ *
+ * It is a setting rather than a fourth block style because Material publishes it
+ * for the Icon button only; the Button has no such set, and a block style
+ * reaches both surfaces. Offering it as a style would put a containerless
+ * treatment on the connected group, which Material tells you to avoid. As a
+ * setting it lands where it belongs -- on the one surface that has it -- and
+ * only where that surface exists, so it is offered with `mobile` and `always`
+ * and not with `off`.
+ */
+$axismundi_theme_switcher_standard = isset( $attributes['cycleButtonStandard'] ) && $attributes['cycleButtonStandard'];
+
 $axismundi_theme_switcher_show_labels = ! isset( $attributes['showLabels'] ) || (bool) $attributes['showLabels'];
 $axismundi_theme_switcher_label_class = $axismundi_theme_switcher_show_labels
 	? 'axismundi-theme-switcher__label'
@@ -120,6 +135,11 @@ $axismundi_theme_switcher_wrapper_attrs = array(
 // Only the group has a label to show or hide, so only the group says so.
 if ( $axismundi_theme_switcher_has_group ) {
 	$axismundi_theme_switcher_wrapper_attrs['data-labels'] = $axismundi_theme_switcher_show_labels ? 'visible' : 'hidden';
+}
+
+// Likewise: the treatment it replaces belongs to the cycle button alone.
+if ( $axismundi_theme_switcher_has_cycle && $axismundi_theme_switcher_standard ) {
+	$axismundi_theme_switcher_wrapper_attrs['data-cycle-standard'] = 'true';
 }
 
 $axismundi_theme_switcher_wrapper = get_block_wrapper_attributes( $axismundi_theme_switcher_wrapper_attrs );

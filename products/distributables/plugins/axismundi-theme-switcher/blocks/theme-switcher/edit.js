@@ -99,6 +99,7 @@
 				visibility = ( ' ' + className + ' ' ).indexOf( ' is-style-theme-cycle ' ) !== -1 ? 'always' : 'off';
 			}
 			var hasGroup = 'always' !== visibility;
+			var hasCycle = 'off' !== visibility;
 			var SIZES = [ 'xsmall', 'small', 'medium', 'large', 'xlarge' ];
 			var size = ( props.attributes && props.attributes.size ) || 'small';
 			if ( SIZES.indexOf( size ) === -1 ) {
@@ -112,6 +113,10 @@
 			var showLabels = ! props.attributes || undefined === props.attributes.showLabels
 				? true
 				: !! props.attributes.showLabels;
+			// Material's Standard colour set, which exists for the Icon button and
+			// not for the Button -- so it is a setting on the cycle button, not a
+			// fourth block style that would colour the group too. See style.css.
+			var standard = !! ( props.attributes && props.attributes.cycleButtonStandard );
 			var labelClass = showLabels
 				? 'axismundi-theme-switcher__label'
 				: 'axismundi-theme-switcher__label screen-reader-text';
@@ -125,6 +130,9 @@
 			};
 			if ( hasGroup ) {
 				wrapperAttrs[ 'data-labels' ] = showLabels ? 'visible' : 'hidden';
+			}
+			if ( isCycle && standard ) {
+				wrapperAttrs[ 'data-cycle-standard' ] = 'true';
 			}
 			var blockProps = useBlockProps( wrapperAttrs );
 
@@ -165,6 +173,7 @@
 								size: undefined,
 								cycleButtonVisibility: 'off',
 								showLabels: true,
+								cycleButtonStandard: false,
 							} );
 						},
 					},
@@ -251,6 +260,34 @@
 							el( ToggleGroupControlOption, { value: 'always', label: 'Always' } )
 						)
 					),
+					// The treatment it replaces is the cycle button's, so the item
+					// appears only where that button does -- `mobile` and `always`.
+					hasCycle &&
+						el(
+							ToolsPanelItem,
+							{
+								label: 'Standard icon button',
+								panelId: props.clientId,
+								isShownByDefault: true,
+								hasValue: function () {
+									return standard;
+								},
+								onDeselect: function () {
+									props.setAttributes( { cycleButtonStandard: false } );
+								},
+							},
+							el( components.ToggleControl, {
+								label: 'Standard icon button',
+								checked: standard,
+								help: standard
+									? 'No container. The symbol alone carries the scheme.'
+									: 'The cycle button takes the block\'s colour treatment.',
+								onChange: function ( value ) {
+									props.setAttributes( { cycleButtonStandard: !! value } );
+								},
+								__nextHasNoMarginBottom: true,
+							} )
+						),
 					// Only the group has visible labels to turn off; the cycle button
 					// never shows one, so with `always` the item is not offered at all.
 					hasGroup &&

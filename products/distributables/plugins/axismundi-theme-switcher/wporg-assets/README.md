@@ -43,10 +43,21 @@ needs no WXR, no images and no network beyond the two directory downloads.
 
 1. `python -c "import json; json.load(open('blueprints/blueprint.json'))"` — it
    has to be valid JSON before anything else is worth trying.
-2. Load it in Playground:
-   `https://playground.wordpress.net/?blueprint-url=<raw url>`. A step that fails
-   leaves the site running with that step skipped, so read the console rather
-   than trusting the page.
+2. Load it in Playground with the URL **WordPress.org** serves it from:
+
+   ```
+   https://playground.wordpress.net/?blueprint-url=https://wordpress.org/plugins/wp-json/plugins/v1/plugin/axismundi-theme-switcher/blueprint.json
+   ```
+
+   Not the raw SVN path. `plugins.svn.wordpress.org` answers 200 to curl but
+   sends no `Access-Control-Allow-Origin`, so the browser cannot read it and
+   Playground reports "Blueprint could not be downloaded" -- a CORS failure that
+   says nothing about the file. The REST endpoint above is the one the Directory
+   itself uses, and it sends the header; it returns `no_blueprint` until
+   WordPress.org has picked the commit up, which takes a few minutes.
+
+   A step that fails leaves the site running with that step skipped, so read the
+   console rather than trusting the page.
 3. Check the demo itself: the theme is active, the front page is the demo page,
    picking a scheme repaints the site, and narrowing the window past 600px
    collapses the last switcher to one button.

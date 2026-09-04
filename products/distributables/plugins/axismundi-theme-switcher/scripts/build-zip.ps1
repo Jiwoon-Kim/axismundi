@@ -14,7 +14,9 @@ if (Test-Path $stageRoot) {
 New-Item -ItemType Directory -Path $stagePlugin | Out-Null
 New-Item -ItemType Directory -Path $distRoot -Force | Out-Null
 
-$excludeDirs = @('scripts')
+# Never shipped: 'scripts' builds the zip, 'wporg-assets' is committed to the
+# WordPress.org SVN assets folder instead, where the Plugin Directory reads it.
+$excludeDirs = @('scripts', 'wporg-assets')
 $excludeFiles = @('.distignore')
 
 Get-ChildItem -LiteralPath $pluginRoot -Force | ForEach-Object {

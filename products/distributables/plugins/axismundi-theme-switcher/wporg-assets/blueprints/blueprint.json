@@ -1,0 +1,39 @@
+{
+    "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+    "landingPage": "/",
+    "preferredVersions": {
+        "php": "8.3",
+        "wp": "latest"
+    },
+    "steps": [
+        {
+            "step": "login",
+            "username": "admin",
+            "password": "password"
+        },
+        {
+            "step": "installTheme",
+            "themeZipFile": {
+                "resource": "wordpress.org/themes",
+                "slug": "axismundi"
+            },
+            "options": {
+                "activate": true
+            }
+        },
+        {
+            "step": "installPlugin",
+            "pluginZipFile": {
+                "resource": "wordpress.org/plugins",
+                "slug": "axismundi-theme-switcher"
+            },
+            "options": {
+                "activate": true
+            }
+        },
+        {
+            "step": "runPHP",
+            "code": "<?php\nrequire_once 'wordpress/wp-load.php';\n\n$content = implode( \"\\n\", array(\n        '<!-- wp:heading -->',\n        '<h2 class=\"wp-block-heading\">Pick a colour scheme</h2>',\n        '<!-- /wp:heading -->',\n        '',\n        '<!-- wp:paragraph -->',\n        '<p>Each control below switches this whole site between Auto, Light and Dark. They are one block wearing the Material 3 treatments and settings it offers. Try one, then scroll: the page follows immediately, and the choice is remembered.</p>',\n        '<!-- /wp:paragraph -->',\n        '',\n        '<!-- wp:heading {\"level\":3} -->',\n        '<h3 class=\"wp-block-heading\">Filled</h3>',\n        '<!-- /wp:heading -->',\n        '',\n        '<!-- wp:axismundi/theme-switcher /-->',\n        '',\n        '<!-- wp:heading {\"level\":3} -->',\n        '<h3 class=\"wp-block-heading\">Tonal, icons only</h3>',\n        '<!-- /wp:heading -->',\n        '',\n        '<!-- wp:paragraph -->',\n        '<p>With the labels off, each segment carries a tooltip instead. Hover one, or hold it on a touchscreen. Screen readers get the name either way.</p>',\n        '<!-- /wp:paragraph -->',\n        '',\n        '<!-- wp:axismundi/theme-switcher {\"showLabels\":false,\"className\":\"is-style-tonal\"} /-->',\n        '',\n        '<!-- wp:heading {\"level\":3} -->',\n        '<h3 class=\"wp-block-heading\">Outlined</h3>',\n        '<!-- /wp:heading -->',\n        '',\n        '<!-- wp:axismundi/theme-switcher {\"className\":\"is-style-outlined\"} /-->',\n        '',\n        '<!-- wp:heading {\"level\":3} -->',\n        '<h3 class=\"wp-block-heading\">One button that cycles</h3>',\n        '<!-- /wp:heading -->',\n        '',\n        '<!-- wp:paragraph -->',\n        '<p>The same three schemes, advanced one press at a time. This one is a standard icon button: no container, the symbol carrying the state.</p>',\n        '<!-- /wp:paragraph -->',\n        '',\n        '<!-- wp:axismundi/theme-switcher {\"cycleButtonVisibility\":\"always\",\"cycleButtonStandard\":true} /-->',\n        '',\n        '<!-- wp:heading {\"level\":3} -->',\n        '<h3 class=\"wp-block-heading\">Group on wide screens, one button on narrow</h3>',\n        '<!-- /wp:heading -->',\n        '',\n        '<!-- wp:paragraph -->',\n        '<p>Narrow the window past 600 pixels to watch this one compress. Only one of the two is ever in the page, so only one is ever announced.</p>',\n        '<!-- /wp:paragraph -->',\n        '',\n        '<!-- wp:axismundi/theme-switcher {\"cycleButtonVisibility\":\"mobile\"} /-->',\n) );\n\n$page = wp_insert_post( array(\n    'post_title'   => 'Pick a colour scheme',\n    'post_name'    => 'theme-switcher-demo',\n    'post_type'    => 'page',\n    'post_status'  => 'publish',\n    'post_content' => $content,\n) );\n\nif ( $page && ! is_wp_error( $page ) ) {\n    update_option( 'show_on_front', 'page' );\n    update_option( 'page_on_front', $page );\n}\n"
+        }
+    ]
+}

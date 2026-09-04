@@ -51,6 +51,31 @@ In one commit, when releasing a plugin:
 4. If the repository publishes a GitHub release for this plugin, copy that new
    `readme.txt` entry into the release body.
 
+## Where WordPress.org assets live
+
+**EN** — SVN has a third folder beside `trunk/` and `tags/`: `assets/`. It holds
+the banner, icon, screenshots and `blueprints/blueprint.json`, and none of it
+ships in the plugin zip. In this repository those files live in the plugin's
+`wporg-assets/`, mirroring the SVN path below it, and `build-zip.ps1` excludes
+that directory.
+
+**KO** — SVN에는 `trunk/`·`tags/` 옆에 `assets/`가 있다. 배너·아이콘·스크린샷과
+`blueprints/blueprint.json`이 여기 들어가며 플러그인 zip에는 포함되지 않는다.
+이 저장소에서는 플러그인의 `wporg-assets/`가 그 경로를 그대로 반영하고,
+`build-zip.ps1`이 해당 디렉터리를 제외한다.
+
+```
+svn/assets/blueprints/blueprint.json   =  wporg-assets/blueprints/blueprint.json
+```
+
+A blueprint previews the **released** version: its `installPlugin` step downloads
+from wordpress.org, so a demo written against unreleased attributes renders as
+whatever `Stable tag` currently serves. Release first, then enable the preview.
+
+블루프린트는 **배포된** 버전을 미리보기한다. `installPlugin`이 wordpress.org에서
+내려받으므로, 미출시 속성에 기대어 쓴 데모는 현재 `Stable tag`가 제공하는 버전이
+해석하는 대로만 렌더된다. 릴리스가 먼저다.
+
 ## Why the readme stays short
 
 `readme.txt` is parsed into the GlotPress projects **Stable Readme** and

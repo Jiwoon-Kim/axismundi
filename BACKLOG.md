@@ -2421,6 +2421,24 @@ Close evidence:
   activation. Geodata looks like an empty taxonomy plugin until places exist;
   Media Library needs attachments. A preview worth enabling has to seed its own
   content, which is the real work here -- not the JSON file.
+- **Correction** (2026-09-05): an earlier reading of this item assumed the
+  preview environment installs the plugin under preview, so a blueprint would
+  not name itself. The handbook's advanced example disproves it -- it carries an
+  `installPlugin` step for `my-imaginary-plugin` alongside its dependency. A
+  blueprint installs the plugin it previews, from wordpress.org, which is also
+  why it can only ever demo the released version.
+- **First one written** (2026-09-05): `axismundi-theme-switcher`, at
+  `wporg-assets/blueprints/blueprint.json`. It installs the `axismundi` theme
+  and the plugin from the directories, then builds a five-surface demo page with
+  `runPHP` and sets it as the front page -- no WXR, no images, no network beyond
+  the two downloads. Chosen first because it is the one plugin here that demos
+  itself on activation: the whole point of it is visible on the front page.
+  Blocked on releasing 0.1.7, since the published 0.1.6 predates
+  `cycleButtonVisibility`, `size`, `showTooltips` and `cycleButtonStandard` and
+  would ignore every attribute the demo sets.
+- **Still open for the other eight**, and the known obstacle above is unchanged:
+  a preview is only worth enabling where the plugin can seed something to look
+  at. Theme Switcher answers that trivially; Geodata and Media Library do not.
 - **Target**: TBD. Low priority, and entirely separate from the changelog work.
 
 ### 51. Button group selected-width morph

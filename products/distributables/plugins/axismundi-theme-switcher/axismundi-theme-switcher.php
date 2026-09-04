@@ -4,7 +4,7 @@
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-theme-switcher
  * Description:       Light / dark / auto theme switcher block and color-scheme bridge for Axismundi.
  * Version:           0.1.7
- * Requires at least: 6.7
+ * Requires at least: 7.1
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
  * Author URI:        https://designbusan.ai.kr
@@ -39,15 +39,15 @@ add_action( 'init', 'axismundi_theme_switcher_register_block' );
  *
  * `cycleButtonVisibility: "mobile"` renders both surfaces and hides one with a
  * media query. A media query cannot read a custom property, so the breakpoint
- * has to be a literal -- but it does not have to be *our* literal. WordPress 7.1
- * lets a theme declare `settings.viewport`, and the same helper core/navigation
- * uses turns it into the query string, so under a theme that declares one this
- * switches exactly where that theme's own responsive values do.
+ * has to be a literal -- but it does not have to be *our* literal. A theme
+ * declares `settings.viewport`, and the same helper core/navigation uses turns
+ * it into the query string, so the switcher compresses exactly where that
+ * theme's own responsive values do. With no declaration the helper still
+ * answers, with WordPress's own default.
  *
- * The helper answers even when no theme declares a viewport -- it returns
- * WordPress's own default of 480px -- so the literal below is only reached on
- * WordPress 6.7 to 7.0, which have no helper at all. It repeats that same 480px
- * so the switcher compresses at the same width whichever version is running.
+ * A theme can declare `tablet` alone, in which case there is no mobile
+ * breakpoint to switch at and nothing is printed: the group then shows at every
+ * width, which is what `off` does. Inventing a width here would be worse.
  *
  * @return void
  */
@@ -56,29 +56,20 @@ function axismundi_theme_switcher_enqueue_breakpoint_style() : void {
 		return;
 	}
 
-	$axismundi_theme_switcher_query = '';
+	$axismundi_theme_switcher_settings = wp_get_global_settings();
+	$axismundi_theme_switcher_viewport = $axismundi_theme_switcher_settings['viewport'] ?? null;
 
-	if ( function_exists( 'wp_get_global_settings' ) ) {
-		$axismundi_theme_switcher_settings = wp_get_global_settings();
-		$axismundi_theme_switcher_viewport = $axismundi_theme_switcher_settings['viewport'] ?? null;
+	// Gutenberg first, as core/navigation does: the plugin can carry a newer
+	// implementation than the WordPress release it runs on.
+	$axismundi_theme_switcher_queries = method_exists( 'WP_Theme_JSON_Gutenberg', 'get_viewport_media_queries' )
+		? WP_Theme_JSON_Gutenberg::get_viewport_media_queries( $axismundi_theme_switcher_viewport )
+		: WP_Theme_JSON::get_viewport_media_queries( $axismundi_theme_switcher_viewport );
 
-		$axismundi_theme_switcher_queries = array();
-		if ( method_exists( 'WP_Theme_JSON_Gutenberg', 'get_viewport_media_queries' ) ) {
-			$axismundi_theme_switcher_queries = WP_Theme_JSON_Gutenberg::get_viewport_media_queries( $axismundi_theme_switcher_viewport );
-		} elseif ( method_exists( 'WP_Theme_JSON', 'get_viewport_media_queries' ) ) {
-			$axismundi_theme_switcher_queries = WP_Theme_JSON::get_viewport_media_queries( $axismundi_theme_switcher_viewport );
-		}
-
-		if ( isset( $axismundi_theme_switcher_queries['@mobile'] ) ) {
-			$axismundi_theme_switcher_query = (string) $axismundi_theme_switcher_queries['@mobile'];
-		}
+	if ( empty( $axismundi_theme_switcher_queries['@mobile'] ) ) {
+		return;
 	}
 
-	if ( '' === $axismundi_theme_switcher_query ) {
-		$axismundi_theme_switcher_query = '@media (width <= 480px)';
-	}
-
-	$axismundi_theme_switcher_css = $axismundi_theme_switcher_query . '{'
+	$axismundi_theme_switcher_css = $axismundi_theme_switcher_queries['@mobile'] . '{'
 		. '.wp-block-axismundi-theme-switcher[data-cycle-visibility="mobile"] .axismundi-theme-switcher__cycle{display:inline-flex;}'
 		. '.wp-block-axismundi-theme-switcher[data-cycle-visibility="mobile"] .axismundi-theme-switcher__group{display:none;}'
 		. '}';

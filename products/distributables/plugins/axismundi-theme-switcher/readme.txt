@@ -1,8 +1,8 @@
 === Axismundi Theme Switcher ===
 Contributors: kimjiwoon
 Tags: dark-mode, block, appearance, editor, color-scheme
-Requires at least: 6.7
-Tested up to: 7.0
+Requires at least: 7.1
+Tested up to: 7.1
 Requires PHP: 8.1
 Stable tag: 0.1.7
 License: GPL-3.0-or-later
@@ -44,8 +44,9 @@ color-scheme change depends on a theme or stylesheet that consumes
   switcher can show its three-button group on wide screens and compress to a
   single cycling button on narrow ones. It replaces the block style that used to
   make that choice; existing content keeps rendering as it did.
-* On mobile, switch at the breakpoint the active theme declares, falling back to
-  the WordPress default.
+* On mobile, switch at the breakpoint the active theme declares, or WordPress's
+  own default where a theme declares none.
+* Require WordPress 7.1, which is where a theme can declare that breakpoint.
 * Add a Show labels setting for the button group, so its three modes can show
   icons alone. The names stay available to screen readers either way.
 

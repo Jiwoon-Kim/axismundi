@@ -512,3 +512,73 @@
 .wp-block-axismundi-theme-switcher[data-cycle-visibility="mobile"] .axismundi-theme-switcher__cycle {
 	display: none;
 }
+
+/* ----------------------------------------------------------------------------
+ * Plain tooltip (M3 §34.2), placed by tooltip.js.
+ *
+ * Inverse surface on inverse-on-surface, 24dp tall, 4dp corner: Material's
+ * table, read through this theme's roles rather than copied as hex. The type
+ * is the exception -- it comes from the theme.json preset scale, because the
+ * theme publishes no `--md-sys-typescale-*` layer. Colour has a Material
+ * contract here and type does not, so each is read from the one source that
+ * exists. Material's 8dp padding is its left/right value; the block is 24dp
+ * tall, which 4dp top and bottom around a 16dp line gives.
+ *
+ * `position: fixed` on a <body> child, so no ancestor's `overflow` or stacking
+ * context can clip it. 99999 puts it above the page and below the layer the
+ * Navigation overlay and the dialogs plugin share at 100000 -- a tooltip
+ * should not cover a dialog. Inside an open Navigation overlay tooltip.js
+ * reparents it into that overlay instead of raising this number.
+ *
+ * `pointer-events: none` so it can never take a hover or swallow a click; it
+ * sits over the very control that summoned it.
+ * -------------------------------------------------------------------------- */
+.axismundi-theme-switcher__tooltip {
+	position: fixed;
+	inset-block-start: 0;
+	inset-inline-start: 0;
+	z-index: 99999;
+	pointer-events: none;
+
+	display: flex;
+	align-items: center;
+	/* Material's table gives the container 24dp and the padding 8dp, and its
+	 * supporting text a 16dp line. Those only agree if 24 is the whole box:
+	 * 16 + 4 + 4. Without border-box the padding would be added to the 24 and
+	 * the tooltip would stand 32 tall. 8dp is the left/right value. */
+	box-sizing: border-box;
+	min-block-size: 24px;
+	padding: 4px 8px;
+	max-inline-size: 240px;
+	white-space: nowrap;
+
+	background-color: var(--md-sys-color-inverse-surface, #322f35);
+	color: var(--md-sys-color-inverse-on-surface, #f5eff7);
+	border-radius: var(--md-sys-shape-corner-value-extra-small, 4px);
+
+	/* No font-family: it inherits the document's, which is this theme's body
+	 * face where Material would name Roboto. */
+	font-size: var(--wp--preset--font-size--body-small, 12px);
+	line-height: 16px;
+	font-weight: 400;
+	letter-spacing: 0.4px;
+
+	visibility: hidden;
+	opacity: 0;
+	transition:
+		opacity var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, cubic-bezier(0.31, 0.94, 0.34, 1)),
+		visibility 0s linear var(--md-sys-motion-curve-fast-effects-duration, 150ms);
+}
+.axismundi-theme-switcher__tooltip.is-open {
+	visibility: visible;
+	opacity: 1;
+	transition:
+		opacity var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, cubic-bezier(0.31, 0.94, 0.34, 1)),
+		visibility 0s linear 0s;
+}
+@media (prefers-reduced-motion: reduce) {
+	.axismundi-theme-switcher__tooltip,
+	.axismundi-theme-switcher__tooltip.is-open {
+		transition: none;
+	}
+}

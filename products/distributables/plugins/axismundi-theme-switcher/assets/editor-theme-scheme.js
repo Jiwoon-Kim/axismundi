@@ -59,6 +59,36 @@
 		}
 	}
 
+	/*
+	 * The tooltip runtime, attached to each preview document.
+	 *
+	 * It has to happen there and not here: listeners on this document never see
+	 * events inside the canvas, and the tooltip element belongs beside the
+	 * block it labels rather than in the editor's chrome.
+	 *
+	 * Deliberately not folded into the scheme pass. That one runs when the
+	 * scheme changes or the document mutates, and the canvas can finish loading
+	 * after the last of those -- a page opened and left alone never got the
+	 * runtime. This runs on the same poll that watches for a scheme changed in
+	 * another tab, so a canvas is bound within a second of being ready.
+	 * attach() is idempotent, so the cost of that is a flag read per frame.
+	 */
+	function attachTooltips() {
+		if ( ! window.axismundiThemeSwitcher || ! window.axismundiThemeSwitcher.tooltip ) {
+			return;
+		}
+
+		document.querySelectorAll( 'iframe' ).forEach( function ( iframe ) {
+			try {
+				if ( isPreviewDocument( iframe.contentDocument ) ) {
+					window.axismundiThemeSwitcher.tooltip.attach( iframe.contentDocument );
+				}
+			} catch ( error ) {
+				// Ignore transient or cross-origin frames.
+			}
+		} );
+	}
+
 	function apply() {
 		current = readScheme();
 		/*
@@ -73,6 +103,7 @@
 		 * normal there so the admin chrome keeps its own native controls.
 		 */
 		applyToDocument( document, current );
+		attachTooltips();
 		document.querySelectorAll( 'iframe' ).forEach( function ( iframe ) {
 			applyToIframe( iframe, current );
 			if ( ! iframe.dataset.axismundiThemeSchemeBound ) {
@@ -85,6 +116,8 @@
 	}
 
 	function applyIfChanged() {
+		attachTooltips();
+
 		var next = readScheme();
 		if ( next === current ) {
 			return;

@@ -110,6 +110,17 @@
 			var showLabels = ! props.attributes || undefined === props.attributes.showLabels
 				? true
 				: !! props.attributes.showLabels;
+			/*
+			 * A plain tooltip only where a control shows no text of its own:
+			 * the cycle button, always, and segments whose labels are off. A
+			 * group showing its labels needs none, so the setting is not
+			 * offered when that is the whole block.
+			 */
+			var showTooltips = ! props.attributes || undefined === props.attributes.showTooltips
+				? true
+				: !! props.attributes.showTooltips;
+			var segmentTooltip = showTooltips && ! showLabels;
+			var canTooltip = hasCycle || ( hasGroup && ! showLabels );
 			// Material's Standard colour set, which exists for the Icon button and
 			// not for the Button -- so it is a setting on the cycle button, not a
 			// fourth block style that would colour the group too. See style.css.
@@ -170,6 +181,7 @@
 								size: undefined,
 								cycleButtonVisibility: 'off',
 								showLabels: true,
+								showTooltips: true,
 								cycleButtonStandard: false,
 							} );
 						},
@@ -312,6 +324,34 @@
 								},
 								__nextHasNoMarginBottom: true,
 							} )
+						),
+					// Last, because whether it has anywhere to appear depends on the
+					// two settings above.
+					canTooltip &&
+						el(
+							ToolsPanelItem,
+							{
+								label: 'Show tooltips',
+								panelId: props.clientId,
+								isShownByDefault: true,
+								hasValue: function () {
+									return ! showTooltips;
+								},
+								onDeselect: function () {
+									props.setAttributes( { showTooltips: true } );
+								},
+							},
+							el( components.ToggleControl, {
+								label: 'Show tooltips',
+								checked: showTooltips,
+								help: showTooltips
+									? 'Buttons with no visible name show it on hover.'
+									: 'No tooltips. Screen readers still read the name.',
+								onChange: function ( value ) {
+									props.setAttributes( { showTooltips: !! value } );
+								},
+								__nextHasNoMarginBottom: true,
+							} )
 						)
 				)
 			);
@@ -346,6 +386,7 @@
 					type: 'button',
 					className: 'axismundi-theme-switcher__button axismundi-theme-switcher__cycle',
 					'data-theme-cycle': 'true',
+					'data-ax-ts-tooltip': showTooltips ? 'true' : undefined,
 					// See style.css: `auto` follows the system and reads as
 					// unselected, an explicit light or dark as selected.
 					'data-theme-scheme': normalize( current ),
@@ -372,6 +413,7 @@
 							type: 'button',
 							className: 'axismundi-theme-switcher__button wp-element-button',
 							'data-theme-mode': m.mode,
+							'data-ax-ts-tooltip': segmentTooltip ? 'true' : undefined,
 							'aria-pressed': m.mode === current ? 'true' : 'false',
 							onClick: function ( event ) {
 								applyMode( m.mode, event );

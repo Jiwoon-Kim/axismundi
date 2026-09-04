@@ -124,6 +124,19 @@ wp_interactivity_state(
 	)
 );
 
+/*
+ * A plain tooltip for a control that shows no text of its own -- Material's use
+ * for the pattern, and the only case here. So it is offered on the cycle
+ * button, which is always icon-only, and on group segments whose labels are
+ * turned off; a group showing its labels gets none, because it needs none.
+ *
+ * The runtime is tooltip.js. It reads each trigger's `.screen-reader-text` at
+ * open time, which is where the accessible name already lives, so nothing has
+ * to be written into the markup twice.
+ */
+$axismundi_theme_switcher_show_tooltips = ! isset( $attributes['showTooltips'] ) || (bool) $attributes['showTooltips'];
+$axismundi_theme_switcher_segment_tooltip = $axismundi_theme_switcher_show_tooltips && ! $axismundi_theme_switcher_show_labels;
+
 $axismundi_theme_switcher_wrapper_attrs = array(
 	'role'                     => 'group',
 	'aria-label'               => __( 'Color scheme', 'axismundi-theme-switcher' ),
@@ -159,6 +172,7 @@ $axismundi_theme_switcher_wrapper = get_block_wrapper_attributes( $axismundi_the
 			 * toggling one, and the accessible name below already says which.
 			 */
 			?>
+			<?php echo $axismundi_theme_switcher_show_tooltips ? 'data-ax-ts-tooltip="true"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 			data-theme-scheme="<?php echo esc_attr( $axismundi_theme_switcher_current ); ?>"
 			data-wp-bind--data-theme-scheme="state.currentScheme"
 			data-wp-on--click="actions.cycleScheme"
@@ -176,6 +190,7 @@ $axismundi_theme_switcher_wrapper = get_block_wrapper_attributes( $axismundi_the
 					type="button"
 					class="axismundi-theme-switcher__button wp-element-button"
 					data-theme-mode="<?php echo esc_attr( $axismundi_theme_switcher_mode ); ?>"
+					<?php echo $axismundi_theme_switcher_segment_tooltip ? 'data-ax-ts-tooltip="true"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 					<?php echo wp_interactivity_data_wp_context( array( 'mode' => $axismundi_theme_switcher_mode ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 					data-wp-on--click="actions.setScheme"
 					data-wp-bind--aria-pressed="state.isActive"

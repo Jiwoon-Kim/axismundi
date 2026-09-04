@@ -171,6 +171,27 @@ add_action( 'wp_head', 'axismundi_theme_switcher_head_script', 0 );
  * @return void
  */
 function axismundi_theme_switcher_enqueue_editor_bridge() : void {
+	/*
+	 * The tooltip runtime, which the block registers as a viewScript for the
+	 * front end. The editor needs it too, and needs it here rather than in the
+	 * canvas: the bridge below runs in this document and reaches into each
+	 * preview iframe to attach it. Loading it first is what lets the bridge
+	 * find it.
+	 */
+	$axismundi_theme_switcher_tooltip = __DIR__ . '/blocks/theme-switcher/tooltip.js';
+	$axismundi_theme_switcher_deps    = array();
+
+	if ( file_exists( $axismundi_theme_switcher_tooltip ) ) {
+		wp_enqueue_script(
+			'axismundi-theme-switcher-tooltip',
+			plugins_url( 'blocks/theme-switcher/tooltip.js', __FILE__ ),
+			array(),
+			(string) filemtime( $axismundi_theme_switcher_tooltip ),
+			true
+		);
+		$axismundi_theme_switcher_deps[] = 'axismundi-theme-switcher-tooltip';
+	}
+
 	$path = __DIR__ . '/assets/editor-theme-scheme.js';
 	if ( ! file_exists( $path ) ) {
 		return;
@@ -179,7 +200,7 @@ function axismundi_theme_switcher_enqueue_editor_bridge() : void {
 	wp_enqueue_script(
 		'axismundi-theme-switcher-editor-scheme',
 		plugins_url( 'assets/editor-theme-scheme.js', __FILE__ ),
-		array(),
+		$axismundi_theme_switcher_deps,
 		(string) filemtime( $path ),
 		true
 	);

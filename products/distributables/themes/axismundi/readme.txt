@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.15
+Stable tag: 0.1.16
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: block-patterns, block-styles, blog, custom-colors, custom-logo, custom-menu, editor-style, featured-images, full-site-editing, full-width-template, template-editing, threaded-comments, translation-ready, wide-blocks
@@ -77,12 +77,12 @@ than carrying a second visual system.
 
 == Changelog ==
 
-= 0.1.15 =
-* Describe the theme accurately on its directory page, and declare the features
-  it has: block styles, full site editing, threaded comments, wide blocks,
-  translation readiness, and the rest.
-* List the optional Axismundi companion plugins and the theme surface each one
-  extends.
+= 0.1.16 =
+* Fix the Latest Posts grid, whose items were sized as a fraction of their own
+  column rather than of the list after WordPress 7.1 gave the block a real grid.
+* Fix the spacing between Latest Posts entries and between Accordion panels,
+  where the theme's spacing was being added to WordPress's own.
+* Stop a closed Accordion panel from leaving an empty strip below its heading.
 
 Earlier releases are listed in changelog.txt.
 

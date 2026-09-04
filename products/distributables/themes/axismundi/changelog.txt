@@ -1,6 +1,13 @@
 == Changelog ==
 
-Releases before 0.1.15. The current release is in readme.txt.
+Releases before 0.1.16. The current release is in readme.txt.
+
+= 0.1.15 =
+* Describe the theme accurately on its directory page, and declare the features
+  it has: block styles, full site editing, threaded comments, wide blocks,
+  translation readiness, and the rest.
+* List the optional Axismundi companion plugins and the theme surface each one
+  extends.
 
 = 0.1.14 =
 * Adopt the Material 3 corner radius scale as theme tokens, shared with

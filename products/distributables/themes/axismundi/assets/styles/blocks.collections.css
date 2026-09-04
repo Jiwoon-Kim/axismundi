@@ -7,12 +7,14 @@
  * LIST, which reads better as ONE grouped feed card with row dividers than as a
  * stack of separate cards for a dense feed.
  *
- * What core already does in WP 7.0 (verified, so NOT redone here): the item <ul>
- * is already list-style:none with no list indent, and the grid is core's own
- * responsive flex (is-grid is display:flex; columns-N widths apply at >=600px;
- * single column below). Core's margin-based gaps leave a trailing gutter,
- * especially for RSS and mobile. Replace those margins with one tokenised flex
- * gap and recompute widths so rows fill exactly.
+ * What core already does (verified, so NOT redone here): the item <ul> is already
+ * list-style:none with no list indent. The two blocks no longer share a grid
+ * implementation, though. WordPress 7.1 gave core/latest-posts `supports.layout`,
+ * so its grid is real CSS Grid tracks; core/rss has no layout support and is
+ * still core's responsive flex (is-grid is display:flex, columns-N widths apply
+ * at >=600px, single column below). Core's margin-based gaps leave a trailing
+ * gutter either way, so both get one tokenised gap, and only RSS needs its item
+ * widths recomputed.
  *
  * theme.json cannot reach the per-<li> card surface (it styles the block, not its
  * items), which is why this lives in CSS. Enqueued on the front (functions.php)
@@ -112,24 +114,23 @@ ul.wp-block-rss.is-grid > li {
 	margin: 0;
 	inline-size: 100%;
 }
+/* RSS only. WordPress 7.1 gave core/latest-posts `supports.layout`, so its grid
+ * is real CSS Grid tracks and each item already fills its track: dividing 100%
+ * again would divide the track, not the list. core/rss has no layout support and
+ * is still core's responsive flex, so it keeps the computed widths. */
 @media (min-width: 600px) {
-	ul.wp-block-latest-posts.is-grid.columns-2 > li,
 	ul.wp-block-rss.is-grid.columns-2 > li {
 		inline-size: calc((100% - var(--wp--preset--spacing--200)) / 2);
 	}
-	ul.wp-block-latest-posts.is-grid.columns-3 > li,
 	ul.wp-block-rss.is-grid.columns-3 > li {
 		inline-size: calc((100% - 2 * var(--wp--preset--spacing--200)) / 3);
 	}
-	ul.wp-block-latest-posts.is-grid.columns-4 > li,
 	ul.wp-block-rss.is-grid.columns-4 > li {
 		inline-size: calc((100% - 3 * var(--wp--preset--spacing--200)) / 4);
 	}
-	ul.wp-block-latest-posts.is-grid.columns-5 > li,
 	ul.wp-block-rss.is-grid.columns-5 > li {
 		inline-size: calc((100% - 4 * var(--wp--preset--spacing--200)) / 5);
 	}
-	ul.wp-block-latest-posts.is-grid.columns-6 > li,
 	ul.wp-block-rss.is-grid.columns-6 > li {
 		inline-size: calc((100% - 5 * var(--wp--preset--spacing--200)) / 6);
 	}

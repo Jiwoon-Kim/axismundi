@@ -245,12 +245,15 @@
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle .material-symbols-outlined {
 	font-size: var(--ax-ts-icon-size);
 }
-/* Fill says selected, and nothing else. It used to fill on hover, focus and
- * press as well, which was a flourish when the button had no selected state to
- * claim the axis. It has one now, and a filled symbol under the cursor on an
- * unselected `auto` button reads as "this is the active scheme" a moment before
- * it is not. Hover, focus and press are the state layer's job below, which is
- * also all Material gives them; the group has always drawn fill this way. */
+/* Here fill says selected and nothing else. It used to fill on hover, focus and
+ * press too, which was a flourish from when the button had no selected state to
+ * claim the axis. It has one now, and this button stands alone: with no
+ * neighbour to compare against, fill is the whole of that state, so a filled
+ * symbol under the cursor on an unselected `auto` button would announce the
+ * active scheme a moment before it is one. Hover, focus and press keep the
+ * state layer below, which is what Material gives them. The group's segments do
+ * fill on hover, because there the container already answers which is
+ * selected -- see the note above that rule. */
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:hover {
 	background-color: color-mix(in srgb, var(--ax-ts-unselected-fg) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--ax-ts-unselected-bg));
 }
@@ -392,6 +395,15 @@
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button .material-symbols-outlined {
 	font-size: var(--ax-ts-btn-icon-size);
 }
+/* Fill on hover as well as on selection, which the theme animates: the FILL axis
+ * is registered with @property, so it interpolates rather than snapping. A
+ * segment can afford this where the cycle button cannot. Selection here is
+ * already carried by the container -- the selected one is the only accent among
+ * three -- so a filling symbol under the cursor reads as the invitation it is,
+ * with the answer to "which is selected" sitting right beside it. The cycle
+ * button stands alone with nothing to compare against, so there fill is the
+ * whole of the selected state and stays reserved for it. */
+.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button:hover .material-symbols-outlined,
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button[aria-pressed="true"] .material-symbols-outlined {
 	--md-icon-fill: 1;
 }

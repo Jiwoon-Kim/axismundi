@@ -17,12 +17,12 @@
  * (add_editor_style) so the computed result is identical in both.
  */
 
-/* Wrapper — a stack of separated expansion panels. */
+/* Wrapper — a stack of separated expansion panels. Core owns the stacking:
+ * core/accordion has layout support, so its flow layout spaces the items with
+ * the blockGap theme.json declares for the block. Adding a flex gap here as
+ * well would apply both. */
 .wp-block-accordion {
 	box-sizing: border-box;
-	display: flex;
-	flex-direction: column;
-	gap: var(--wp--preset--spacing--50);
 }
 
 /* Item — enforce the per-panel outline/radius/surface in both front and editor. */

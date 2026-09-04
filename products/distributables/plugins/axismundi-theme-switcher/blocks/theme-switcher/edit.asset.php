@@ -16,7 +16,7 @@
 $axismundi_theme_switcher_edit_js = __DIR__ . '/edit.js';
 
 return array(
-	'dependencies' => array( 'wp-blocks', 'wp-block-editor', 'wp-components', 'wp-element' ),
+	'dependencies' => array( 'wp-blocks', 'wp-block-editor', 'wp-components', 'wp-element', 'wp-compose' ),
 	'version'      => file_exists( $axismundi_theme_switcher_edit_js )
 		? (string) filemtime( $axismundi_theme_switcher_edit_js )
 		: '0.1.7',

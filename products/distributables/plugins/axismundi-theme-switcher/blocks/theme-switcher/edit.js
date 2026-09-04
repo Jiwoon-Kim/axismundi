@@ -7,7 +7,7 @@
  * without adding a second persistence channel. save() returns null — this is a
  * dynamic block rendered by render.php on the front end.
  */
-( function ( blocks, blockEditor, element, components ) {
+( function ( blocks, blockEditor, element, components, compose ) {
 	var el = element.createElement;
 	var useState = element.useState;
 	var useEffect = element.useEffect;
@@ -78,6 +78,17 @@
 		icon: { src: 'admin-appearance', foreground: '#6750A4' },
 		edit: function ( props ) {
 			var current = useScheme();
+			/*
+			 * The panel's options menu opens beside the sidebar rather than over it,
+			 * except on a narrow screen where there is nowhere to put it. Core
+			 * computes this in useToolsPanelDropdownMenuProps(), which is private to
+			 * the block library; the offset is that function's own arithmetic --
+			 * sidebar 248 - button 24 - border 1 + padding 16 + spacing 20.
+			 */
+			var isNarrow = compose.useViewportMatch( 'medium', '<' );
+			var dropdownMenuProps = isNarrow
+				? {}
+				: { popoverProps: { placement: 'left-start', offset: 259 } };
 			// See render.php. `cycleButtonVisibility` says how far the control
 			// compresses -- off, mobile, always -- rather than which component to
 			// use, the same question core/navigation asks with `overlayMenu`. An
@@ -118,19 +129,25 @@
 			var blockProps = useBlockProps( wrapperAttrs );
 
 			/*
-			 * The visibility control is a ToggleGroupControl, mirroring the one
-			 * core/navigation gives `overlayMenu` -- same three answers to the same
-			 * question about how far a control compresses, so the same control. A
-			 * dropdown hides two of the three choices behind a click; here all three
-			 * are visible and the help line under them says what the current one
-			 * does.
+			 * A ToolsPanel, not a PanelBody: every control here is optional and has a
+			 * default, which is what the panel's options menu and Reset all are for.
+			 * Someone who has changed two things can put them back without having to
+			 * remember what they were, and someone who never touches a control can
+			 * hide it. core/navigation's Display panel is the same panel under the
+			 * same name.
+			 *
+			 * The visibility control inside it is a ToggleGroupControl, mirroring the
+			 * one core/navigation gives `overlayMenu` -- same three answers to the
+			 * same question about how far a control compresses, so the same control.
 			 *
 			 * Size comes first. It applies whatever the visibility is, while
 			 * visibility decides which surfaces a reader ever sees -- the narrower
-			 * question belongs after the one that always applies. It also puts
-			 * Size's help line, which names the surfaces currently sized, directly
-			 * above the control that determines them.
+			 * question belongs after the one that always applies. It also puts Size's
+			 * help line, which names the surfaces currently sized, directly above the
+			 * control that determines them.
 			 */
+			var ToolsPanel = components.__experimentalToolsPanel;
+			var ToolsPanelItem = components.__experimentalToolsPanelItem;
 			var ToggleGroupControl = components.__experimentalToggleGroupControl;
 			var ToggleGroupControlOption = components.__experimentalToggleGroupControlOption;
 
@@ -138,68 +155,130 @@
 				blockEditor.InspectorControls,
 				{ key: 'inspector' },
 				el(
-					components.PanelBody,
-					{ title: 'Display' },
-					el( components.SelectControl, {
-						label: 'Size',
-						value: size,
-						options: [
-							{ label: 'Extra small', value: 'xsmall' },
-							{ label: 'Small', value: 'small' },
-							{ label: 'Medium', value: 'medium' },
-							{ label: 'Large', value: 'large' },
-							{ label: 'Extra large', value: 'xlarge' },
-						],
-						// The label stays put and the help says what it currently
-						// sizes, since which surfaces exist depends on the setting
-						// below.
-						help: {
-							off: 'Sets the height of the button group.',
-							mobile: 'Sets the height of the group and the cycle button.',
-							always: 'Sets the height of the cycle button.',
-						}[ visibility ],
-						onChange: function ( value ) {
-							props.setAttributes( { size: value } );
+					ToolsPanel,
+					{
+						label: 'Display',
+						panelId: props.clientId,
+						dropdownMenuProps: dropdownMenuProps,
+						resetAll: function () {
+							props.setAttributes( {
+								size: undefined,
+								cycleButtonVisibility: 'off',
+								showLabels: true,
+							} );
 						},
-						__next40pxDefaultSize: true,
-						__nextHasNoMarginBottom: true,
-					} ),
+					},
 					el(
-						ToggleGroupControl,
+						ToolsPanelItem,
 						{
-							label: 'Cycle button visibility',
-							'aria-label': 'Configure cycle button visibility',
-							value: visibility,
+							label: 'Size',
+							panelId: props.clientId,
+							isShownByDefault: true,
+							hasValue: function () {
+								return size !== 'small';
+							},
+							// The attribute has a real default, so clearing it is the
+							// reset -- nothing needs writing back.
+							onDeselect: function () {
+								props.setAttributes( { size: undefined } );
+							},
+						},
+						el( components.SelectControl, {
+							label: 'Size',
+							value: size,
+							options: [
+								{ label: 'Extra small', value: 'xsmall' },
+								{ label: 'Small', value: 'small' },
+								{ label: 'Medium', value: 'medium' },
+								{ label: 'Large', value: 'large' },
+								{ label: 'Extra large', value: 'xlarge' },
+							],
+							// The label stays put and the help says what it currently
+							// sizes, since which surfaces exist depends on the setting
+							// below.
 							help: {
-								off: 'The button group at every viewport.',
-								mobile: 'One cycling button on small screens, the group above them.',
-								always: 'One button that cycles through Auto, Light and Dark.',
+								off: 'Sets the height of the button group.',
+								mobile: 'Sets the height of the group and the cycle button.',
+								always: 'Sets the height of the cycle button.',
 							}[ visibility ],
 							onChange: function ( value ) {
-								props.setAttributes( { cycleButtonVisibility: value } );
+								props.setAttributes( { size: value } );
 							},
-							isBlock: true,
 							__next40pxDefaultSize: true,
 							__nextHasNoMarginBottom: true,
-						},
-						el( ToggleGroupControlOption, { value: 'off', label: 'Off' } ),
-						el( ToggleGroupControlOption, { value: 'mobile', label: 'Mobile' } ),
-						el( ToggleGroupControlOption, { value: 'always', label: 'Always' } )
-					),
-					// Only the group has visible labels to turn off; the cycle
-					// button never shows one.
-					hasGroup &&
-						el( components.ToggleControl, {
-							label: 'Show labels',
-							checked: showLabels,
-							help: showLabels
-								? 'Each mode shows its name beside the icon.'
-								: 'Icon only. The name is still read by screen readers.',
-							onChange: function ( value ) {
-								props.setAttributes( { showLabels: !! value } );
-							},
-							__nextHasNoMarginBottom: true,
 						} )
+					),
+					el(
+						ToolsPanelItem,
+						{
+							label: 'Cycle button visibility',
+							panelId: props.clientId,
+							isShownByDefault: true,
+							hasValue: function () {
+								return visibility !== 'off';
+							},
+							/*
+							 * Written, not cleared. Clearing the attribute lets the
+							 * pre-0.1.7 `is-style-theme-cycle` class resolve again, so
+							 * content saved back then would reset to `always` -- the
+							 * value being reset away from. `off` is the default, and it
+							 * is what the control was showing.
+							 */
+							onDeselect: function () {
+								props.setAttributes( { cycleButtonVisibility: 'off' } );
+							},
+						},
+						el(
+							ToggleGroupControl,
+							{
+								label: 'Cycle button visibility',
+								'aria-label': 'Configure cycle button visibility',
+								value: visibility,
+								help: {
+									off: 'The button group at every viewport.',
+									mobile: 'One cycling button on small screens, the group above them.',
+									always: 'One button that cycles through Auto, Light and Dark.',
+								}[ visibility ],
+								onChange: function ( value ) {
+									props.setAttributes( { cycleButtonVisibility: value } );
+								},
+								isBlock: true,
+								__next40pxDefaultSize: true,
+								__nextHasNoMarginBottom: true,
+							},
+							el( ToggleGroupControlOption, { value: 'off', label: 'Off' } ),
+							el( ToggleGroupControlOption, { value: 'mobile', label: 'Mobile' } ),
+							el( ToggleGroupControlOption, { value: 'always', label: 'Always' } )
+						)
+					),
+					// Only the group has visible labels to turn off; the cycle button
+					// never shows one, so with `always` the item is not offered at all.
+					hasGroup &&
+						el(
+							ToolsPanelItem,
+							{
+								label: 'Show labels',
+								panelId: props.clientId,
+								isShownByDefault: true,
+								hasValue: function () {
+									return ! showLabels;
+								},
+								onDeselect: function () {
+									props.setAttributes( { showLabels: true } );
+								},
+							},
+							el( components.ToggleControl, {
+								label: 'Show labels',
+								checked: showLabels,
+								help: showLabels
+									? 'Each mode shows its name beside the icon.'
+									: 'Icon only. The name is still read by screen readers.',
+								onChange: function ( value ) {
+									props.setAttributes( { showLabels: !! value } );
+								},
+								__nextHasNoMarginBottom: true,
+							} )
+						)
 				)
 			);
 
@@ -283,4 +362,4 @@
 			return null;
 		},
 	} );
-} )( window.wp.blocks, window.wp.blockEditor, window.wp.element, window.wp.components );
+} )( window.wp.blocks, window.wp.blockEditor, window.wp.element, window.wp.components, window.wp.compose );

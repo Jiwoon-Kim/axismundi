@@ -294,36 +294,15 @@
 							el( ToggleGroupControlOption, { value: 'always', label: 'Always' } )
 						)
 					),
-					// The treatment it replaces is the cycle button's, so the item
-					// appears only where that button does -- `mobile` and `always`.
-					hasCycle &&
-						el(
-							ToolsPanelItem,
-							{
-								label: 'Standard icon button',
-								panelId: props.clientId,
-								isShownByDefault: true,
-								hasValue: function () {
-									return standard;
-								},
-								onDeselect: function () {
-									props.setAttributes( { cycleButtonStandard: false } );
-								},
-							},
-							el( components.ToggleControl, {
-								label: 'Standard icon button',
-								checked: standard,
-								help: standard
-									? 'No container. The symbol alone carries the scheme.'
-									: 'The cycle button takes the block\'s colour treatment.',
-								onChange: function ( value ) {
-									props.setAttributes( { cycleButtonStandard: !! value } );
-								},
-								__nextHasNoMarginBottom: true,
-							} )
-						),
-					// Only the group has visible labels to turn off; the cycle button
-					// never shows one, so with `always` the item is not offered at all.
+					/*
+					 * The three below read in the order the visibility setting above
+					 * puts them: what the group does, then what both surfaces do, then
+					 * what the cycle button does. So `off` offers one item, `always`
+					 * two and `mobile` all three, each list a prefix of the next.
+					 *
+					 * First, then: only the group has visible labels to turn off. The
+					 * cycle button never shows one, so with `always` this is absent.
+					 */
 					hasGroup &&
 						el(
 							ToolsPanelItem,
@@ -350,8 +329,9 @@
 								__nextHasNoMarginBottom: true,
 							} )
 						),
-					// Last, because whether it has anywhere to appear depends on the
-					// two settings above.
+					// Second: tooltips are the one setting both surfaces share, and
+					// whether either has anywhere to show one depends on the labels
+					// above and the visibility above that.
 					canTooltip &&
 						el(
 							ToolsPanelItem,
@@ -374,6 +354,34 @@
 									: 'No tooltips. Screen readers still read the name.',
 								onChange: function ( value ) {
 									props.setAttributes( { showTooltips: !! value } );
+								},
+								__nextHasNoMarginBottom: true,
+							} )
+						),
+					// Last: the treatment it replaces is the cycle button's, so the
+					// item appears only where that button does.
+					hasCycle &&
+						el(
+							ToolsPanelItem,
+							{
+								label: 'Standard icon button',
+								panelId: props.clientId,
+								isShownByDefault: true,
+								hasValue: function () {
+									return standard;
+								},
+								onDeselect: function () {
+									props.setAttributes( { cycleButtonStandard: false } );
+								},
+							},
+							el( components.ToggleControl, {
+								label: 'Standard icon button',
+								checked: standard,
+								help: standard
+									? 'No container. The symbol alone carries the scheme.'
+									: 'The cycle button takes the block\'s colour treatment.',
+								onChange: function ( value ) {
+									props.setAttributes( { cycleButtonStandard: !! value } );
 								},
 								__nextHasNoMarginBottom: true,
 							} )

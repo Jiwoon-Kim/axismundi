@@ -33,9 +33,12 @@ first-party cookie named `axismundi_theme`.
 
 = Can this plugin be used without the Axismundi theme? =
 
-The block still renders and toggles the `data-theme` attribute, but the visual
-color-scheme change depends on a theme or stylesheet that consumes
-`html[data-theme]` selectors.
+Yes. The block reads its colors, corner sizes and motion from the Material
+Design system custom properties -- `--md-sys-color-*` and the shape and motion
+scales beside it -- so it looks as intended under any theme that publishes them.
+Under a theme that publishes none it falls back to Material's own baseline
+colors, and it still renders and still toggles the `data-theme` attribute; the
+site around it changes only if something consumes `html[data-theme]`.
 
 == Changelog ==
 
@@ -47,15 +50,34 @@ color-scheme change depends on a theme or stylesheet that consumes
 * On mobile, switch at the breakpoint the active theme declares, or WordPress's
   own default where a theme declares none.
 * Require WordPress 7.1, which is where a theme can declare that breakpoint.
-* Add a Show labels setting for the button group, so its three modes can show
-  icons alone. The names stay available to screen readers either way.
 * Add a Size setting with the five Material Design sizes, from extra small to
   extra large.
+* Add a Show labels setting for the button group, so its three modes can show
+  icons alone. The names stay available to screen readers either way.
+* Add a Show tooltips setting. A button with no visible name shows one on hover,
+  on keyboard focus, or on a press and hold on a touchscreen.
+* Add a Standard icon button setting for the cycling button, which drops its
+  container so the symbol alone carries the color scheme.
+* Add alignment and justification, so the control can sit wide, full width, or
+  to one side of the space it is given.
 * Rebuild the button group as Material Design's connected group: separate
   segments with rounded ends, an inner corner that shrinks while pressed, and a
   fully rounded segment for the mode in use.
-* Add Filled, Tonal and Outlined block styles, which colour the mode in use
-  differently from the rest. Colours come from the active theme's palette.
+* Add Filled, Tonal and Outlined block styles, which color the mode in use
+  differently from the rest.
+* Take colors, corner sizes and motion from the Material Design system
+  properties directly, so the block looks right under any theme that publishes
+  them rather than only under one palette. The border radius control is gone
+  from the sidebar with them: the corners now follow the theme's shape scale.
+* Show the cycling button as unselected while the color scheme is Auto, and as
+  selected once a reader chooses Light or Dark. A filled symbol now means
+  selected on both surfaces, and a group segment fills its symbol on hover.
+* Gather the settings into a Display panel with an options menu and Reset all,
+  so a changed setting can be put back without remembering what it was.
+* Send the switcher already carrying its icon, its name and the current scheme,
+  instead of leaving them blank until scripts run.
+* Fix several switchers on one screen disagreeing in the editor, and the block
+  appearing empty in the editor's mobile preview.
 * Version the block's editor script by its own file, so an updated editor is
   never served from a stale cache.
 

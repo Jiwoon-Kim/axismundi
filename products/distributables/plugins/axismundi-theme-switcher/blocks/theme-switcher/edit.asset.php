@@ -13,6 +13,8 @@
  * @package Axismundi
  */
 
+defined( 'ABSPATH' ) || exit;
+
 $axismundi_theme_switcher_edit_js = __DIR__ . '/edit.js';
 
 return array(

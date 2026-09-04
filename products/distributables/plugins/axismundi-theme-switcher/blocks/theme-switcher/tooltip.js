@@ -32,7 +32,8 @@
 	var WRAPPER = '.wp-block-axismundi-theme-switcher';
 	// The Navigation block's overlay, which core gives z-index 100000 to clear
 	// the admin bar. A tooltip parked on <body> at 99999 would sit behind it.
-	var OVERLAY = '.wp-block-navigation__responsive-container.is-menu-open';
+	var OVERLAY = '.wp-block-navigation__responsive-container';
+	var OVERLAY_OPEN = 'is-menu-open';
 
 	// M3 places a plain tooltip above its target, 4dp away when the target has
 	// a visual boundary -- every trigger here is a button, so always 4.
@@ -43,6 +44,12 @@
 	// Auto -> Light -> Dark should read as one gesture, not three waits.
 	var DELAY = 700;
 	var WARM = 400;
+	// M3: a tooltip is transient, and goes 1.5s after the pointer leaves its
+	// target. Long enough to glance back at, short enough not to linger.
+	var LINGER = 1500;
+	// M3 opens a tooltip on touch by tap and hold, which has to be told apart
+	// from a tap that means to press the button.
+	var HOLD = 500;
 
 	var states = new WeakMap();
 
@@ -52,7 +59,11 @@
 			state = {
 				element: null,
 				trigger: null,
-				timer: 0,
+				showTimer: 0,
+				closeTimer: 0,
+				holdTimer: 0,
+				held: null,
+				overlay: null,
 				warmUntil: 0,
 				warmWrapper: null,
 				suppressed: null,
@@ -62,8 +73,15 @@
 		return state;
 	}
 
+	function stop( doc, state, name ) {
+		if ( state[ name ] ) {
+			doc.defaultView.clearTimeout( state[ name ] );
+			state[ name ] = 0;
+		}
+	}
+
 	function element( doc, state ) {
-		if ( ! state.element || ! state.element.ownerDocument ) {
+		if ( ! state.element ) {
 			state.element = doc.createElement( 'div' );
 			state.element.className = 'axismundi-theme-switcher__tooltip';
 			state.element.setAttribute( 'aria-hidden', 'true' );
@@ -84,8 +102,9 @@
 	 * out-number it. That keeps it under the dialog layer, which also sits at
 	 * 100000 and should stay on top.
 	 */
-	function hostFor( doc, trigger ) {
-		return trigger.closest( OVERLAY ) || doc.body;
+	function overlayFor( trigger ) {
+		var overlay = trigger.closest( OVERLAY );
+		return overlay && overlay.classList.contains( OVERLAY_OPEN ) ? overlay : null;
 	}
 
 	function place( element, trigger ) {
@@ -112,10 +131,16 @@
 		element.style.left = Math.round( left ) + 'px';
 	}
 
-	function hide( doc ) {
+	function close( doc ) {
 		var state = stateFor( doc );
-		doc.defaultView.clearTimeout( state.timer );
-		state.timer = 0;
+
+		stop( doc, state, 'showTimer' );
+		stop( doc, state, 'closeTimer' );
+
+		if ( state.overlay ) {
+			state.overlay.disconnect();
+			state.overlay = null;
+		}
 
 		if ( ! state.trigger ) {
 			return;
@@ -127,7 +152,28 @@
 
 		if ( state.element ) {
 			state.element.classList.remove( 'is-open' );
+			// Back to <body>, so a tooltip that opened inside a Navigation
+			// overlay is never left parented in one that has since closed.
+			if ( doc.body && state.element.parentElement !== doc.body ) {
+				doc.body.appendChild( state.element );
+			}
 		}
+	}
+
+	// M3 keeps a tooltip up for 1.5s after the pointer leaves its target.
+	function scheduleClose( doc ) {
+		var state = stateFor( doc );
+
+		// Nothing is showing, but something may be about to: drop that.
+		if ( ! state.trigger ) {
+			stop( doc, state, 'showTimer' );
+			return;
+		}
+
+		stop( doc, state, 'closeTimer' );
+		state.closeTimer = doc.defaultView.setTimeout( function () {
+			close( doc );
+		}, LINGER );
 	}
 
 	function open( doc, trigger ) {
@@ -137,24 +183,56 @@
 		}
 
 		var state = stateFor( doc );
+
+		// Whatever else was queued or showing loses: M3 says a new tooltip
+		// closes any open one, and a pending one for a trigger the reader has
+		// already left must not surface behind it.
+		stop( doc, state, 'showTimer' );
+		stop( doc, state, 'closeTimer' );
+		if ( state.overlay ) {
+			state.overlay.disconnect();
+			state.overlay = null;
+		}
+
 		var el = element( doc, state );
+		var overlay = overlayFor( trigger );
 
 		el.textContent = text;
-		hostFor( doc, trigger ).appendChild( el );
+		( overlay || doc.body ).appendChild( el );
 		state.trigger = trigger;
 		place( el, trigger );
 		el.classList.add( 'is-open' );
+
+		/*
+		 * An overlay can close while its tooltip is up -- the menu's own close
+		 * button is a trigger's neighbour. Watch the class that opened it and
+		 * go when it does, rather than leaving a tooltip inside something
+		 * hidden.
+		 */
+		if ( overlay ) {
+			state.overlay = new doc.defaultView.MutationObserver( function () {
+				if ( ! overlay.classList.contains( OVERLAY_OPEN ) ) {
+					close( doc );
+				}
+			} );
+			state.overlay.observe( overlay, { attributes: true, attributeFilter: [ 'class' ] } );
+		}
 	}
 
 	function show( doc, trigger ) {
 		var state = stateFor( doc );
+
+		// Back on a trigger whose tooltip is still lingering: keep it.
+		stop( doc, state, 'closeTimer' );
+
 		if ( state.trigger === trigger ) {
 			return;
 		}
 
-		doc.defaultView.clearTimeout( state.timer );
+		stop( doc, state, 'showTimer' );
 
-		// Still warm from the last one, and in the same switcher: no wait.
+		// Already showing, or still warm from the last one in the same
+		// switcher: no wait.
 		var warm = Date.now() < state.warmUntil &&
 			state.warmWrapper &&
 			state.warmWrapper === trigger.closest( WRAPPER );
@@ -164,9 +242,26 @@
 			return;
 		}
 
-		state.timer = doc.defaultView.setTimeout( function () {
+		state.showTimer = doc.defaultView.setTimeout( function () {
 			open( doc, trigger );
 		}, DELAY );
+	}
+
+	/*
+	 * A hold that showed a tooltip was not a tap, so the press it would
+	 * otherwise be must not reach the button. One shot, in capture, and dropped
+	 * on the next turn if no click follows.
+	 */
+	function swallowClick( doc ) {
+		function once( event ) {
+			event.preventDefault();
+			event.stopPropagation();
+			doc.removeEventListener( 'click', once, true );
+		}
+		doc.addEventListener( 'click', once, true );
+		doc.defaultView.setTimeout( function () {
+			doc.removeEventListener( 'click', once, true );
+		}, 0 );
 	}
 
 	function attach( doc ) {
@@ -178,24 +273,24 @@
 		}
 		doc.documentElement.dataset.axTsTooltip = 'bound';
 
+		function triggerFrom( event ) {
+			return event.target.closest ? event.target.closest( TRIGGER ) : null;
+		}
+
 		doc.addEventListener( 'pointerover', function ( event ) {
-			// Not on touch. Material says not to expect a tooltip there, and a
-			// tap would only flash it on the way to activating the button.
+			// Touch has its own way in, below.
 			if ( 'touch' === event.pointerType ) {
 				return;
 			}
-			var trigger = event.target.closest && event.target.closest( TRIGGER );
-			if ( ! trigger ) {
-				return;
-			}
-			if ( stateFor( doc ).suppressed === trigger ) {
+			var trigger = triggerFrom( event );
+			if ( ! trigger || stateFor( doc ).suppressed === trigger ) {
 				return;
 			}
 			show( doc, trigger );
 		} );
 
 		doc.addEventListener( 'pointerout', function ( event ) {
-			var trigger = event.target.closest && event.target.closest( TRIGGER );
+			var trigger = triggerFrom( event );
 			if ( ! trigger ) {
 				return;
 			}
@@ -207,23 +302,55 @@
 			if ( state.suppressed === trigger ) {
 				state.suppressed = null;
 			}
-			hide( doc );
+			scheduleClose( doc );
 		} );
 
-		/*
-		 * A press dismisses it. The button is about to do something, and a
-		 * label describing what is already under the pointer stops being
-		 * useful. It stays dismissed until the pointer leaves, so it does not
-		 * reappear over a button that was just clicked.
-		 */
 		doc.addEventListener( 'pointerdown', function ( event ) {
-			var trigger = event.target.closest && event.target.closest( TRIGGER );
+			var trigger = triggerFrom( event );
 			if ( ! trigger ) {
 				return;
 			}
-			stateFor( doc ).suppressed = trigger;
-			hide( doc );
+			var state = stateFor( doc );
+
+			/*
+			 * Touch: tap and hold shows it, which is M3's gesture there. The
+			 * hold has to outlast a tap, or every press would flash a label on
+			 * its way to activating the button.
+			 */
+			if ( 'touch' === event.pointerType ) {
+				stop( doc, state, 'holdTimer' );
+				state.held = null;
+				state.holdTimer = doc.defaultView.setTimeout( function () {
+					state.held = trigger;
+					open( doc, trigger );
+				}, HOLD );
+				return;
+			}
+
+			/*
+			 * Pointer: a press dismisses it. The button is about to do
+			 * something, and a label describing what is already under the
+			 * pointer stops being useful. It stays dismissed until the pointer
+			 * leaves, so it does not reappear over a button just clicked.
+			 */
+			state.suppressed = trigger;
+			close( doc );
 		}, true );
+
+		function endHold( event ) {
+			var state = stateFor( doc );
+			stop( doc, state, 'holdTimer' );
+			if ( ! state.held ) {
+				return;
+			}
+			state.held = null;
+			if ( 'pointerup' === event.type ) {
+				swallowClick( doc );
+			}
+			scheduleClose( doc );
+		}
+		doc.addEventListener( 'pointerup', endHold, true );
+		doc.addEventListener( 'pointercancel', endHold, true );
 
 		/*
 		 * Keyboard focus shows it at once. The delay exists so a pointer
@@ -232,7 +359,7 @@
 		 * firing after a mouse click, which focuses the button too.
 		 */
 		doc.addEventListener( 'focusin', function ( event ) {
-			var trigger = event.target.closest && event.target.closest( TRIGGER );
+			var trigger = triggerFrom( event );
 			if ( ! trigger || ! trigger.matches( ':focus-visible' ) ) {
 				return;
 			}
@@ -240,24 +367,24 @@
 		} );
 
 		doc.addEventListener( 'focusout', function ( event ) {
-			if ( event.target.closest && event.target.closest( TRIGGER ) ) {
-				hide( doc );
+			if ( triggerFrom( event ) ) {
+				scheduleClose( doc );
 			}
 		} );
 
 		doc.addEventListener( 'keydown', function ( event ) {
 			if ( 'Escape' === event.key ) {
-				hide( doc );
+				close( doc );
 			}
 		} );
 
-		// Anything that moves the trigger out from under it closes it rather
-		// than chasing it.
+		// Anything that moves the trigger out from under it closes it at once
+		// rather than chasing it.
 		doc.addEventListener( 'scroll', function () {
-			hide( doc );
+			close( doc );
 		}, true );
 		doc.defaultView.addEventListener( 'resize', function () {
-			hide( doc );
+			close( doc );
 		} );
 	}
 

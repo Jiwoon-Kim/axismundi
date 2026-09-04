@@ -92,12 +92,58 @@
 <!-- /wp:buttons -->
 
 <!-- wp:heading {"level":3} -->
-<h3 class="wp-block-heading">1b. Theme switcher (plugin) — segmented / cycle</h3>
+<h3 class="wp-block-heading">1b. Theme switcher (plugin) — surfaces</h3>
 <!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Defaults, then the two settings that change which control renders. The third
+sits at the breakpoint: above it a connected group, below it one cycling button.
+Narrow the window to see it swap.</p>
+<!-- /wp:paragraph -->
 
 <!-- wp:axismundi/theme-switcher /-->
 
-<!-- wp:axismundi/theme-switcher {"className":"is-style-theme-cycle"} /-->
+<!-- wp:axismundi/theme-switcher {"cycleButtonVisibility":"always"} /-->
+
+<!-- wp:axismundi/theme-switcher {"cycleButtonVisibility":"mobile"} /-->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">1c. Theme switcher — treatments</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Filled, tonal and outlined, on both surfaces. Standard is a setting rather
+than a treatment, because Material publishes it for the icon button only: the
+last row is the same block with it on, so the cycle button sheds its container
+while the group keeps the treatment.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:axismundi/theme-switcher {"cycleButtonVisibility":"always"} /-->
+
+<!-- wp:axismundi/theme-switcher {"cycleButtonVisibility":"always","className":"is-style-tonal"} /-->
+
+<!-- wp:axismundi/theme-switcher {"cycleButtonVisibility":"always","className":"is-style-outlined"} /-->
+
+<!-- wp:axismundi/theme-switcher {"cycleButtonVisibility":"mobile","cycleButtonStandard":true,"className":"is-style-outlined"} /-->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">1d. Theme switcher — size and labels</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Size picks a container height the two surfaces share; everything else comes
+from each one's own Material table. Turning labels off leaves icon-only
+segments, which is what tooltips are for — hover one, or hold it on a
+touchscreen. The name stays in the accessibility tree either way.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:axismundi/theme-switcher {"size":"xsmall"} /-->
+
+<!-- wp:axismundi/theme-switcher {"size":"medium"} /-->
+
+<!-- wp:axismundi/theme-switcher {"size":"large","showLabels":false} /-->
+
+<!-- wp:axismundi/theme-switcher {"size":"medium","showLabels":false,"showTooltips":false} /-->
 
 <!-- wp:heading -->
 <h2 class="wp-block-heading">2. Columns</h2>

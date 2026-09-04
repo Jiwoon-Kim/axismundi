@@ -93,6 +93,20 @@
 	-webkit-tap-highlight-color: transparent;
 }
 
+/*
+ * The label. Its type comes from the theme's global typography -- Body Large,
+ * declared once in theme.json -- so only the colour is stated here, and it is
+ * stated because nothing else would: the surrounding text may sit on a
+ * different role. Until now the Axismundi theme carried a generic
+ * `.axismundi-switch` skin that supplied this one declaration; that skin loaded
+ * on every page of every site running the theme for the sake of one plugin's
+ * markup, so it is gone and the rule it still contributed lives here, with the
+ * component that emits the markup.
+ */
+.axismundi-activity-feed__switch .axismundi-switch__label {
+	color: var(--md-sys-color-on-surface, CanvasText);
+}
+
 .axismundi-activity-feed__switch .axismundi-switch__input {
 	position: absolute;
 	inset: 0;

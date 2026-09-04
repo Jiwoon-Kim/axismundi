@@ -41,9 +41,6 @@
 		},
 		"spacing": {
 			"padding": true
-		},
-		"__experimentalBorder": {
-			"radius": true
 		}
 	},
 	"editorScript": "file:./edit.js",

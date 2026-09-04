@@ -36,6 +36,11 @@
  * Height is the one column they share, which is what makes a single Size
  * setting legitimate. Everything else is per component.
  *
+ * Every corner value names a token from the theme's corner-value scale rather
+ * than repeating the number: those are the same finite lengths, and a morph
+ * endpoint has to come from that scale rather than from `corner-full`. The px
+ * behind each is the fallback for a site without the theme.
+ *
  * The group's inner-corner values are declared but not yet consumed by the
  * segmented path they came from; the connected group reads them.
  * -------------------------------------------------------------------------- */
@@ -46,7 +51,7 @@
 	--ax-ts-btn-icon-size: 20px;
 	--ax-ts-btn-space: 16px;
 	--ax-ts-btn-gap: 8px;
-	--ax-ts-btn-pressed-morph: 8px;
+	--ax-ts-btn-pressed-morph: var(--md-sys-shape-corner-value-small, 8px);
 	--ax-ts-label-size: 14px;
 	--ax-ts-label-line: 20px;
 	--ax-ts-label-weight: 500;
@@ -55,11 +60,11 @@
 
 	/* Icon button (cycle) */
 	--ax-ts-icon-size: 24px;
-	--ax-ts-icon-pressed-morph: 8px;
+	--ax-ts-icon-pressed-morph: var(--md-sys-shape-corner-value-small, 8px);
 
 	/* Connected group geometry */
-	--ax-ts-inner-corner: 8px;
-	--ax-ts-pressed-inner-corner: 4px;
+	--ax-ts-inner-corner: var(--md-sys-shape-corner-value-small, 8px);
+	--ax-ts-pressed-inner-corner: var(--md-sys-shape-corner-value-extra-small, 4px);
 	--ax-ts-segment-space: 2px;
 
 	/*
@@ -75,15 +80,15 @@
 	--ax-ts-btn-icon-size: 20px;
 	--ax-ts-btn-space: 12px;
 	--ax-ts-btn-gap: 4px;
-	--ax-ts-btn-pressed-morph: 8px;
+	--ax-ts-btn-pressed-morph: var(--md-sys-shape-corner-value-small, 8px);
 	--ax-ts-label-size: 14px;
 	--ax-ts-label-line: 20px;
 	--ax-ts-label-weight: 500;
 	--ax-ts-label-tracking: 0.1px;
 	--ax-ts-icon-size: 20px;
-	--ax-ts-icon-pressed-morph: 8px;
-	--ax-ts-inner-corner: 8px;
-	--ax-ts-pressed-inner-corner: 4px;
+	--ax-ts-icon-pressed-morph: var(--md-sys-shape-corner-value-small, 8px);
+	--ax-ts-inner-corner: var(--md-sys-shape-corner-value-small, 8px);
+	--ax-ts-pressed-inner-corner: var(--md-sys-shape-corner-value-extra-small, 4px);
 	--ax-ts-outline-width: 1px;
 }
 .wp-block-axismundi-theme-switcher[data-size="medium"] {
@@ -91,15 +96,15 @@
 	--ax-ts-btn-icon-size: 24px;
 	--ax-ts-btn-space: 24px;
 	--ax-ts-btn-gap: 8px;
-	--ax-ts-btn-pressed-morph: 12px;
+	--ax-ts-btn-pressed-morph: var(--md-sys-shape-corner-value-medium, 12px);
 	--ax-ts-label-size: 16px;
 	--ax-ts-label-line: 24px;
 	--ax-ts-label-weight: 500;
 	--ax-ts-label-tracking: 0.15px;
 	--ax-ts-icon-size: 24px;
-	--ax-ts-icon-pressed-morph: 12px;
-	--ax-ts-inner-corner: 8px;
-	--ax-ts-pressed-inner-corner: 4px;
+	--ax-ts-icon-pressed-morph: var(--md-sys-shape-corner-value-medium, 12px);
+	--ax-ts-inner-corner: var(--md-sys-shape-corner-value-small, 8px);
+	--ax-ts-pressed-inner-corner: var(--md-sys-shape-corner-value-extra-small, 4px);
 	--ax-ts-outline-width: 1px;
 }
 .wp-block-axismundi-theme-switcher[data-size="large"] {
@@ -107,15 +112,15 @@
 	--ax-ts-btn-icon-size: 32px;
 	--ax-ts-btn-space: 48px;
 	--ax-ts-btn-gap: 12px;
-	--ax-ts-btn-pressed-morph: 16px;
+	--ax-ts-btn-pressed-morph: var(--md-sys-shape-corner-value-large, 16px);
 	--ax-ts-label-size: 24px;
 	--ax-ts-label-line: 32px;
 	--ax-ts-label-weight: 400;
 	--ax-ts-label-tracking: 0;
 	--ax-ts-icon-size: 32px;
-	--ax-ts-icon-pressed-morph: 16px;
-	--ax-ts-inner-corner: 16px;
-	--ax-ts-pressed-inner-corner: 12px;
+	--ax-ts-icon-pressed-morph: var(--md-sys-shape-corner-value-large, 16px);
+	--ax-ts-inner-corner: var(--md-sys-shape-corner-value-large, 16px);
+	--ax-ts-pressed-inner-corner: var(--md-sys-shape-corner-value-medium, 12px);
 	--ax-ts-outline-width: 2px;
 }
 .wp-block-axismundi-theme-switcher[data-size="xlarge"] {
@@ -123,15 +128,15 @@
 	--ax-ts-btn-icon-size: 40px;
 	--ax-ts-btn-space: 64px;
 	--ax-ts-btn-gap: 16px;
-	--ax-ts-btn-pressed-morph: 16px;
+	--ax-ts-btn-pressed-morph: var(--md-sys-shape-corner-value-large, 16px);
 	--ax-ts-label-size: 32px;
 	--ax-ts-label-line: 40px;
 	--ax-ts-label-weight: 400;
 	--ax-ts-label-tracking: 0;
 	--ax-ts-icon-size: 40px;
-	--ax-ts-icon-pressed-morph: 16px;
-	--ax-ts-inner-corner: 20px;
-	--ax-ts-pressed-inner-corner: 16px;
+	--ax-ts-icon-pressed-morph: var(--md-sys-shape-corner-value-large, 16px);
+	--ax-ts-inner-corner: var(--md-sys-shape-corner-value-large-increased, 20px);
+	--ax-ts-pressed-inner-corner: var(--md-sys-shape-corner-value-large, 16px);
 	--ax-ts-outline-width: 3px;
 }
 

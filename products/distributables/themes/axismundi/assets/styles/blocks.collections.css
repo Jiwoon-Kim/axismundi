@@ -32,11 +32,6 @@
 	box-shadow: none;
 }
 
-/* Latest Posts list = a single-column stack of cards. */
-.wp-block-latest-posts:not(.is-grid) {
-	display: grid;
-	gap: var(--wp--preset--spacing--200);
-}
 
 /* RSS list = ONE grouped feed card; rows split by dividers. A dense feed reads
  * better grouped than as separate cards. */
@@ -105,7 +100,6 @@
 /* Grid — keep core's flex/grid class contract, but replace its margin gutter
  * with a real gap. Resetting margin here must be scoped to .is-grid so list
  * views keep their own rhythm. */
-ul.wp-block-latest-posts.is-grid,
 ul.wp-block-rss.is-grid {
 	gap: var(--wp--preset--spacing--200);
 }

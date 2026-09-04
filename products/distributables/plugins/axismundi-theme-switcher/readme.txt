@@ -51,6 +51,8 @@ color-scheme change depends on a theme or stylesheet that consumes
   icons alone. The names stay available to screen readers either way.
 * Add a Size setting with the five Material Design sizes, from extra small to
   extra large.
+* Version the block's editor script by its own file, so an updated editor is
+  never served from a stale cache.
 
 Earlier releases are listed in changelog.txt.
 

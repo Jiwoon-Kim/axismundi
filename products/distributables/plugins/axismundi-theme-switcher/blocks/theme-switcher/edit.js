@@ -10,6 +10,7 @@
 ( function ( blocks, blockEditor, element, components ) {
 	var el = element.createElement;
 	var useState = element.useState;
+	var useEffect = element.useEffect;
 	var useBlockProps = blockEditor.useBlockProps;
 	var COOKIE = 'axismundi_theme';
 
@@ -36,6 +37,39 @@
 		return MODES.filter( function ( m ) { return m.mode === normalize( mode ); } )[ 0 ] || MODES[ 0 ];
 	}
 
+	/*
+	 * One scheme, however many switchers are on the page.
+	 *
+	 * Each edit() is its own React component, so per-block state made every
+	 * instance believe the cookie still said what it said when that instance
+	 * mounted: clicking Light in a group left a cycle button beside it painted
+	 * as unselected. The scheme is document state, not block state, so every
+	 * instance subscribes to the same change event the front-end store and the
+	 * editor bridge already broadcast. Nothing here writes it -- applyMode does,
+	 * and the event comes straight back to all of us, the clicked block
+	 * included.
+	 */
+	function useScheme() {
+		var state = useState( readCookie );
+		var scheme = state[ 0 ];
+		var setScheme = state[ 1 ];
+
+		useEffect( function () {
+			function onChange( event ) {
+				setScheme( normalize( event.detail && event.detail.mode ) );
+			}
+
+			// A cookie written by another tab, or before this block mounted.
+			setScheme( readCookie() );
+			window.addEventListener( 'axismundi-theme-scheme-change', onChange );
+			return function () {
+				window.removeEventListener( 'axismundi-theme-scheme-change', onChange );
+			};
+		}, [] );
+
+		return scheme;
+	}
+
 	blocks.registerBlockType( 'axismundi/theme-switcher', {
 		// Tint the inserter/toolbar icon with the brand primary so this
 		// theme-owned control reads distinctly from generic core blocks. (Icon
@@ -43,9 +77,7 @@
 		// A literal hex is required here: the editor chrome has no theme tokens.)
 		icon: { src: 'admin-appearance', foreground: '#6750A4' },
 		edit: function ( props ) {
-			var currentState = useState( readCookie );
-			var current = currentState[ 0 ];
-			var setCurrent = currentState[ 1 ];
+			var current = useScheme();
 			// See render.php. `cycleButtonVisibility` says how far the control
 			// compresses -- off, mobile, always -- rather than which component to
 			// use, the same question core/navigation asks with `overlayMenu`. An
@@ -154,8 +186,9 @@
 			function applyMode( nextMode, event ) {
 				var next = normalize( nextMode );
 				writeCookie( next );
-				setCurrent( next );
 				event.currentTarget.ownerDocument.documentElement.dataset.theme = next;
+				// Dispatched, not assigned: useScheme above listens, so this
+				// block and every other one re-render from the same signal.
 				window.dispatchEvent(
 					new CustomEvent( 'axismundi-theme-scheme-change', {
 						detail: { mode: next },

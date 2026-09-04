@@ -4,6 +4,16 @@
  * Front-end pages receive an early head script from the plugin. The block/site
  * editor uses separate preview documents, so mirror the same axismundi_theme
  * cookie onto the editor document and same-origin preview iframes.
+ *
+ * That mirroring is the whole job. This file used to reach into the rendered
+ * switchers as well -- rewriting each cycle button's icon, label and
+ * accessible name, and each segment's `aria-pressed` -- which is markup edit.js
+ * owns and React re-renders from its own state. The two paths could not stay in
+ * step: a scheme attribute added to edit.js was not added here, so a cycle
+ * button ended up wearing the new icon this file had written and the colour of
+ * the old scheme React still believed in. edit.js now listens for the event
+ * below, so every switcher in the editor re-renders from one signal and nothing
+ * needs patching behind it.
  */
 ( function () {
 	var VALID = [ 'auto', 'light', 'dark' ];
@@ -26,35 +36,6 @@
 		}
 
 		doc.documentElement.dataset.theme = scheme;
-		syncButtons( doc, scheme );
-	}
-
-	function syncButtons( doc, scheme ) {
-		if ( ! doc.querySelectorAll ) {
-			return;
-		}
-
-		doc.querySelectorAll( '.wp-block-axismundi-theme-switcher [data-theme-mode]' ).forEach( function ( button ) {
-			button.setAttribute( 'aria-pressed', button.getAttribute( 'data-theme-mode' ) === scheme ? 'true' : 'false' );
-		} );
-
-		doc.querySelectorAll( '.wp-block-axismundi-theme-switcher [data-theme-cycle]' ).forEach( function ( button ) {
-			var icon = button.querySelector( '.material-symbols-outlined' );
-			var label = button.querySelector( '.screen-reader-text' );
-			var meta = {
-				auto: { icon: 'contrast', label: 'Auto' },
-				light: { icon: 'light_mode', label: 'Light' },
-				dark: { icon: 'dark_mode', label: 'Dark' },
-			}[ scheme ];
-
-			button.setAttribute( 'aria-label', 'Color scheme: ' + meta.label + '. Activate to cycle.' );
-			if ( icon ) {
-				icon.textContent = meta.icon;
-			}
-			if ( label ) {
-				label.textContent = meta.label;
-			}
-		} );
 	}
 
 	function isPreviewDocument( doc ) {

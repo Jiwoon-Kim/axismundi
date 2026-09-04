@@ -18,6 +18,70 @@
  * two never style each other.
  */
 
+/* ----------------------------------------------------------------------------
+ * Size. M3 publishes two tables -- Icon button and Button group connected --
+ * that agree on container height and on nothing else, so one setting picks the
+ * height and each surface reads the rest from its own column here.
+ *
+ *   height            32   40   56   96  136   (both tables)
+ *   icon size         20   24   24   32   40   (icon button)
+ *   default spacing    6    8   16   32   48   (icon button, leading/trailing)
+ *   pressed morph      8    8   12   16   16   (icon button)
+ *   inner corner       8    8    8   16   20   (group)
+ *   pressed inner      4    4    4   12   16   (group)
+ *
+ * The group's inner-corner values are published here but not yet consumed: the
+ * current group is the segmented control, whose segments are divided by a rule
+ * rather than separated, so it has no inner corners to round. They are declared
+ * now so the connected pass reads them rather than deriving them again.
+ * -------------------------------------------------------------------------- */
+.wp-block-axismundi-theme-switcher {
+	--ax-ts-height: 40px;
+	--ax-ts-icon-size: 24px;
+	--ax-ts-icon-space: 8px;
+	--ax-ts-pressed-morph: 8px;
+	--ax-ts-inner-corner: 8px;
+	--ax-ts-pressed-inner-corner: 4px;
+	--ax-ts-segment-space: 2px;
+	--ax-ts-label-size: 14px;
+}
+.wp-block-axismundi-theme-switcher[data-size="xsmall"] {
+	--ax-ts-height: 32px;
+	--ax-ts-icon-size: 20px;
+	--ax-ts-icon-space: 6px;
+	--ax-ts-pressed-morph: 8px;
+	--ax-ts-inner-corner: 8px;
+	--ax-ts-pressed-inner-corner: 4px;
+	--ax-ts-label-size: 12px;
+}
+.wp-block-axismundi-theme-switcher[data-size="medium"] {
+	--ax-ts-height: 56px;
+	--ax-ts-icon-size: 24px;
+	--ax-ts-icon-space: 16px;
+	--ax-ts-pressed-morph: 12px;
+	--ax-ts-inner-corner: 8px;
+	--ax-ts-pressed-inner-corner: 4px;
+	--ax-ts-label-size: 16px;
+}
+.wp-block-axismundi-theme-switcher[data-size="large"] {
+	--ax-ts-height: 96px;
+	--ax-ts-icon-size: 32px;
+	--ax-ts-icon-space: 32px;
+	--ax-ts-pressed-morph: 16px;
+	--ax-ts-inner-corner: 16px;
+	--ax-ts-pressed-inner-corner: 12px;
+	--ax-ts-label-size: 22px;
+}
+.wp-block-axismundi-theme-switcher[data-size="xlarge"] {
+	--ax-ts-height: 136px;
+	--ax-ts-icon-size: 40px;
+	--ax-ts-icon-space: 48px;
+	--ax-ts-pressed-morph: 16px;
+	--ax-ts-inner-corner: 20px;
+	--ax-ts-pressed-inner-corner: 16px;
+	--ax-ts-label-size: 28px;
+}
+
 .wp-block-axismundi-theme-switcher {
 	display: flex;
 	flex-wrap: wrap;
@@ -44,8 +108,8 @@
  * -------------------------------------------------------------------------- */
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle {
 	box-sizing: border-box;
-	inline-size: 40px;
-	block-size: 40px;
+	inline-size: var(--ax-ts-height);
+	block-size: var(--ax-ts-height);
 	justify-content: center;
 	padding: 0;
 	border: 0;
@@ -58,7 +122,7 @@
 		background-color var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, cubic-bezier(0.31, 0.94, 0.34, 1));
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle .material-symbols-outlined {
-	font-size: 24px;
+	font-size: var(--ax-ts-icon-size);
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:hover .material-symbols-outlined,
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:focus-visible .material-symbols-outlined,
@@ -73,7 +137,7 @@
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:active {
 	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant, #49454f) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), transparent);
-	border-radius: 8px;
+	border-radius: var(--ax-ts-pressed-morph);
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:focus-visible {
 	outline: 3px solid var(--md-sys-color-secondary, #625b71);
@@ -122,25 +186,25 @@
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button {
 	box-sizing: border-box;
-	min-block-size: 40px;
+	min-block-size: var(--ax-ts-height);
 	margin: 0;
 	border: 0;
 	border-radius: 0;
 	padding-block: 0;
-	padding-inline: 16px;
+	padding-inline: var(--ax-ts-icon-space);
 	gap: 0.4rem;
 	justify-content: center;
 	background-color: transparent;
 	color: var(--md-sys-color-on-surface-variant, #49454f);
-	font-size: 14px;
-	line-height: 20px;
+	font-size: var(--ax-ts-label-size);
+	line-height: 1.43;
 	font-weight: 500;
 	letter-spacing: 0.1px;
 	cursor: pointer;
 	transition: background-color var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, cubic-bezier(0.31, 0.94, 0.34, 1));
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button .material-symbols-outlined {
-	font-size: 18px;
+	font-size: var(--ax-ts-icon-size);
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button[aria-pressed="true"] .material-symbols-outlined {
 	--md-icon-fill: 1;

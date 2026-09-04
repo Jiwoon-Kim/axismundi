@@ -56,6 +56,11 @@
 				visibility = ( ' ' + className + ' ' ).indexOf( ' is-style-theme-cycle ' ) !== -1 ? 'always' : 'off';
 			}
 			var hasGroup = 'always' !== visibility;
+			var SIZES = [ 'xsmall', 'small', 'medium', 'large', 'xlarge' ];
+			var size = ( props.attributes && props.attributes.size ) || 'small';
+			if ( SIZES.indexOf( size ) === -1 ) {
+				size = 'small';
+			}
 			// The canvas has no viewport to respond to, so `mobile` previews the
 			// group -- what a desktop reader sees.
 			var isCycle = ! hasGroup;
@@ -73,6 +78,7 @@
 				role: 'group',
 				'aria-label': 'Color scheme',
 				'data-cycle-visibility': visibility,
+				'data-size': size,
 			};
 			if ( hasGroup ) {
 				wrapperAttrs[ 'data-labels' ] = showLabels ? 'visible' : 'hidden';
@@ -100,6 +106,30 @@
 						}[ visibility ],
 						onChange: function ( value ) {
 							props.setAttributes( { cycleButtonVisibility: value } );
+						},
+						__next40pxDefaultSize: true,
+						__nextHasNoMarginBottom: true,
+					} ),
+					el( components.SelectControl, {
+						label: 'Size',
+						value: size,
+						options: [
+							{ label: 'Extra small', value: 'xsmall' },
+							{ label: 'Small', value: 'small' },
+							{ label: 'Medium', value: 'medium' },
+							{ label: 'Large', value: 'large' },
+							{ label: 'Extra large', value: 'xlarge' },
+						],
+						// The label stays put and the help says what it currently
+						// sizes, since which surfaces exist depends on the setting
+						// above.
+						help: {
+							off: 'Sets the height of the button group.',
+							mobile: 'Sets the height of the group and the cycle button.',
+							always: 'Sets the height of the cycle button.',
+						}[ visibility ],
+						onChange: function ( value ) {
+							props.setAttributes( { size: value } );
 						},
 						__next40pxDefaultSize: true,
 						__nextHasNoMarginBottom: true,

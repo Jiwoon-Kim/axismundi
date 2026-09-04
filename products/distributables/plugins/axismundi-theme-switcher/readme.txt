@@ -49,6 +49,8 @@ color-scheme change depends on a theme or stylesheet that consumes
 * Require WordPress 7.1, which is where a theme can declare that breakpoint.
 * Add a Show labels setting for the button group, so its three modes can show
   icons alone. The names stay available to screen readers either way.
+* Add a Size setting with the five Material Design sizes, from extra small to
+  extra large.
 
 Earlier releases are listed in changelog.txt.
 

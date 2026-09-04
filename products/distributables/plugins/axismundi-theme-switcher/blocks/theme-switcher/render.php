@@ -54,6 +54,17 @@ $axismundi_theme_switcher_has_group = 'always' !== $axismundi_theme_switcher_vis
 $axismundi_theme_switcher_has_cycle = 'off' !== $axismundi_theme_switcher_visibility;
 
 /*
+ * M3 gives the icon button and the connected button group separate size tables,
+ * but the two agree on container height: 32, 40, 56, 96 and 136dp. That shared
+ * axis is what makes one setting legitimate -- it picks a height, and each
+ * surface takes the rest of its dimensions from its own table.
+ */
+$axismundi_theme_switcher_size = isset( $attributes['size'] ) ? (string) $attributes['size'] : 'small';
+if ( ! in_array( $axismundi_theme_switcher_size, array( 'xsmall', 'small', 'medium', 'large', 'xlarge' ), true ) ) {
+	$axismundi_theme_switcher_size = 'small';
+}
+
+/*
  * Group segments can drop their visible label. The label text is still rendered,
  * as screen-reader text, so it stays each button's accessible name and there is
  * one source for the string. core/navigation does the same thing the other way
@@ -69,6 +80,7 @@ $axismundi_theme_switcher_wrapper_attrs = array(
 	'role'                     => 'group',
 	'aria-label'               => __( 'Color scheme', 'axismundi-theme-switcher' ),
 	'data-cycle-visibility'    => $axismundi_theme_switcher_visibility,
+	'data-size'                => $axismundi_theme_switcher_size,
 	'data-wp-interactive'      => 'axismundi/theme-switcher',
 );
 

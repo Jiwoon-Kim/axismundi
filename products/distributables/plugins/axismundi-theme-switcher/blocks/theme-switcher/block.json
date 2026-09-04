@@ -17,6 +17,10 @@
 		"showLabels": {
 			"type": "boolean",
 			"default": true
+		},
+		"size": {
+			"type": "string",
+			"default": "small"
 		}
 	},
 	"example": {

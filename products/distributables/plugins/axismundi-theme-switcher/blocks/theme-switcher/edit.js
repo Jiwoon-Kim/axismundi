@@ -105,9 +105,6 @@
 			if ( SIZES.indexOf( size ) === -1 ) {
 				size = 'small';
 			}
-			// The canvas has no viewport to respond to, so `mobile` previews the
-			// group -- what a desktop reader sees.
-			var isCycle = ! hasGroup;
 			// Group segments keep their label text when it is hidden; it becomes
 			// screen-reader text so it is still each button's accessible name.
 			var showLabels = ! props.attributes || undefined === props.attributes.showLabels
@@ -131,7 +128,7 @@
 			if ( hasGroup ) {
 				wrapperAttrs[ 'data-labels' ] = showLabels ? 'visible' : 'hidden';
 			}
-			if ( isCycle && standard ) {
+			if ( hasCycle && standard ) {
 				wrapperAttrs[ 'data-cycle-standard' ] = 'true';
 			}
 			var blockProps = useBlockProps( wrapperAttrs );
@@ -332,35 +329,59 @@
 				);
 			}
 
-			if ( isCycle ) {
-				return el(
-					element.Fragment,
-					null,
-					inspector,
-					el(
-						'div',
-						blockProps,
-						el(
-							'button',
-							{
-								type: 'button',
-								className: 'axismundi-theme-switcher__button axismundi-theme-switcher__cycle',
-								'data-theme-cycle': 'true',
-								// See style.css: `auto` follows the system and reads as
-								// unselected, an explicit light or dark as selected.
-								'data-theme-scheme': normalize( current ),
-								'aria-label': 'Color scheme: ' + currentMode.label + '. Activate to cycle.',
-								onClick: function ( event ) {
-									var index = MODES.map( function ( m ) { return m.mode; } ).indexOf( normalize( current ) );
-									applyMode( MODES[ ( index + 1 ) % MODES.length ].mode, event );
-								},
+			/*
+			 * Both surfaces, the way render.php builds them, and for the same
+			 * reason: at `mobile` the plugin prints a media query from the theme's
+			 * settings.viewport that shows one and hides the other, and it prints it
+			 * into the editor as well (enqueue_block_assets). Rendering only the
+			 * group here made the block vanish under 7.1's Mobile device preview --
+			 * the canvas is an iframe that really is that width, so the query fired,
+			 * hid the group, and there was no cycle button for it to show. The canvas
+			 * does have a viewport to respond to; it just had nothing to respond
+			 * with. Now the preview shows what a reader at that width sees.
+			 */
+			var cycleButton = el(
+				'button',
+				{
+					type: 'button',
+					className: 'axismundi-theme-switcher__button axismundi-theme-switcher__cycle',
+					'data-theme-cycle': 'true',
+					// See style.css: `auto` follows the system and reads as
+					// unselected, an explicit light or dark as selected.
+					'data-theme-scheme': normalize( current ),
+					'aria-label': 'Color scheme: ' + currentMode.label + '. Activate to cycle.',
+					onClick: function ( event ) {
+						var index = MODES.map( function ( m ) { return m.mode; } ).indexOf( normalize( current ) );
+						applyMode( MODES[ ( index + 1 ) % MODES.length ].mode, event );
+					},
+				},
+				el( 'span', { className: 'material-symbols-outlined', 'aria-hidden': 'true' }, currentMode.icon ),
+				el( 'span', { className: 'screen-reader-text' }, currentMode.label )
+			);
+
+			// The segments live in their own element, which is what the connected
+			// rules are scoped to.
+			var buttonGroup = el(
+				'div',
+				{ className: 'axismundi-theme-switcher__group' },
+				MODES.map( function ( m ) {
+					return el(
+						'button',
+						{
+							key: m.mode,
+							type: 'button',
+							className: 'axismundi-theme-switcher__button wp-element-button',
+							'data-theme-mode': m.mode,
+							'aria-pressed': m.mode === current ? 'true' : 'false',
+							onClick: function ( event ) {
+								applyMode( m.mode, event );
 							},
-							el( 'span', { className: 'material-symbols-outlined', 'aria-hidden': 'true' }, currentMode.icon ),
-							el( 'span', { className: 'screen-reader-text' }, currentMode.label )
-						)
-					)
-				);
-			}
+						},
+						el( 'span', { className: 'material-symbols-outlined', 'aria-hidden': 'true' }, m.icon ),
+						el( 'span', { className: labelClass }, m.label )
+					);
+				} )
+			);
 
 			return el(
 				element.Fragment,
@@ -369,29 +390,8 @@
 				el(
 					'div',
 					blockProps,
-					// Same structure render.php builds: the segments live in their
-					// own element, which is what the connected rules are scoped to.
-					el(
-						'div',
-						{ className: 'axismundi-theme-switcher__group' },
-						MODES.map( function ( m ) {
-							return el(
-								'button',
-								{
-									key: m.mode,
-									type: 'button',
-									className: 'axismundi-theme-switcher__button wp-element-button',
-									'data-theme-mode': m.mode,
-									'aria-pressed': m.mode === current ? 'true' : 'false',
-									onClick: function ( event ) {
-										applyMode( m.mode, event );
-									},
-								},
-								el( 'span', { className: 'material-symbols-outlined', 'aria-hidden': 'true' }, m.icon ),
-								el( 'span', { className: labelClass }, m.label )
-							);
-						} )
-					)
+					hasCycle && cycleButton,
+					hasGroup && buttonGroup
 				)
 			);
 		},

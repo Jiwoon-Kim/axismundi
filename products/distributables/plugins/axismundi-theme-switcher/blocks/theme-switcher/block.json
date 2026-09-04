@@ -48,7 +48,6 @@
 		}
 	},
 	"editorScript": "file:./edit.js",
-	"editorStyle": "file:./style.css",
 	"style": "file:./style.css",
 	"render": "file:./render.php",
 	"viewScriptModule": "file:./view.js"

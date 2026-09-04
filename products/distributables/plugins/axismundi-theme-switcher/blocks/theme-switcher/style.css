@@ -245,11 +245,12 @@
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle .material-symbols-outlined {
 	font-size: var(--ax-ts-icon-size);
 }
-.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:hover .material-symbols-outlined,
-.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:focus-visible .material-symbols-outlined,
-.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:active .material-symbols-outlined {
-	--md-icon-fill: 1;
-}
+/* Fill says selected, and nothing else. It used to fill on hover, focus and
+ * press as well, which was a flourish when the button had no selected state to
+ * claim the axis. It has one now, and a filled symbol under the cursor on an
+ * unselected `auto` button reads as "this is the active scheme" a moment before
+ * it is not. Hover, focus and press are the state layer's job below, which is
+ * also all Material gives them; the group has always drawn fill this way. */
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:hover {
 	background-color: color-mix(in srgb, var(--ax-ts-unselected-fg) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--ax-ts-unselected-bg));
 }

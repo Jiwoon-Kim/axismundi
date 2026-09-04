@@ -117,31 +117,29 @@
 			}
 			var blockProps = useBlockProps( wrapperAttrs );
 
+			/*
+			 * The visibility control is a ToggleGroupControl, mirroring the one
+			 * core/navigation gives `overlayMenu` -- same three answers to the same
+			 * question about how far a control compresses, so the same control. A
+			 * dropdown hides two of the three choices behind a click; here all three
+			 * are visible and the help line under them says what the current one
+			 * does.
+			 *
+			 * Size comes first. It applies whatever the visibility is, while
+			 * visibility decides which surfaces a reader ever sees -- the narrower
+			 * question belongs after the one that always applies. It also puts
+			 * Size's help line, which names the surfaces currently sized, directly
+			 * above the control that determines them.
+			 */
+			var ToggleGroupControl = components.__experimentalToggleGroupControl;
+			var ToggleGroupControlOption = components.__experimentalToggleGroupControlOption;
+
 			var inspector = el(
 				blockEditor.InspectorControls,
 				{ key: 'inspector' },
 				el(
 					components.PanelBody,
-					{ title: 'Settings' },
-					el( components.SelectControl, {
-						label: 'Cycle button visibility',
-						value: visibility,
-						options: [
-							{ label: 'Off', value: 'off' },
-							{ label: 'Mobile', value: 'mobile' },
-							{ label: 'Always', value: 'always' },
-						],
-						help: {
-							off: 'The button group at every viewport.',
-							mobile: 'One cycling button on small screens, the group above them.',
-							always: 'One button that cycles through Auto, Light and Dark.',
-						}[ visibility ],
-						onChange: function ( value ) {
-							props.setAttributes( { cycleButtonVisibility: value } );
-						},
-						__next40pxDefaultSize: true,
-						__nextHasNoMarginBottom: true,
-					} ),
+					{ title: 'Display' },
 					el( components.SelectControl, {
 						label: 'Size',
 						value: size,
@@ -154,7 +152,7 @@
 						],
 						// The label stays put and the help says what it currently
 						// sizes, since which surfaces exist depends on the setting
-						// above.
+						// below.
 						help: {
 							off: 'Sets the height of the button group.',
 							mobile: 'Sets the height of the group and the cycle button.',
@@ -166,6 +164,28 @@
 						__next40pxDefaultSize: true,
 						__nextHasNoMarginBottom: true,
 					} ),
+					el(
+						ToggleGroupControl,
+						{
+							label: 'Cycle button visibility',
+							'aria-label': 'Configure cycle button visibility',
+							value: visibility,
+							help: {
+								off: 'The button group at every viewport.',
+								mobile: 'One cycling button on small screens, the group above them.',
+								always: 'One button that cycles through Auto, Light and Dark.',
+							}[ visibility ],
+							onChange: function ( value ) {
+								props.setAttributes( { cycleButtonVisibility: value } );
+							},
+							isBlock: true,
+							__next40pxDefaultSize: true,
+							__nextHasNoMarginBottom: true,
+						},
+						el( ToggleGroupControlOption, { value: 'off', label: 'Off' } ),
+						el( ToggleGroupControlOption, { value: 'mobile', label: 'Mobile' } ),
+						el( ToggleGroupControlOption, { value: 'always', label: 'Always' } )
+					),
 					// Only the group has visible labels to turn off; the cycle
 					// button never shows one.
 					hasGroup &&

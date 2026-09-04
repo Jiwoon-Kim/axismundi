@@ -35,6 +35,60 @@ function axismundi_theme_switcher_register_block() : void {
 add_action( 'init', 'axismundi_theme_switcher_register_block' );
 
 /**
+ * Print the breakpoint the `mobile` compression switches at.
+ *
+ * `cycleButtonVisibility: "mobile"` renders both surfaces and hides one with a
+ * media query. A media query cannot read a custom property, so the breakpoint
+ * has to be a literal -- but it does not have to be *our* literal. WordPress 7.1
+ * lets a theme declare `settings.viewport`, and the same helper core/navigation
+ * uses turns it into the query string, so under a theme that declares one this
+ * switches exactly where that theme's own responsive values do.
+ *
+ * The helper answers even when no theme declares a viewport -- it returns
+ * WordPress's own default of 480px -- so the literal below is only reached on
+ * WordPress 6.7 to 7.0, which have no helper at all. It repeats that same 480px
+ * so the switcher compresses at the same width whichever version is running.
+ *
+ * @return void
+ */
+function axismundi_theme_switcher_enqueue_breakpoint_style() : void {
+	if ( ! wp_style_is( 'axismundi-theme-switcher-style', 'registered' ) ) {
+		return;
+	}
+
+	$axismundi_theme_switcher_query = '';
+
+	if ( function_exists( 'wp_get_global_settings' ) ) {
+		$axismundi_theme_switcher_settings = wp_get_global_settings();
+		$axismundi_theme_switcher_viewport = $axismundi_theme_switcher_settings['viewport'] ?? null;
+
+		$axismundi_theme_switcher_queries = array();
+		if ( method_exists( 'WP_Theme_JSON_Gutenberg', 'get_viewport_media_queries' ) ) {
+			$axismundi_theme_switcher_queries = WP_Theme_JSON_Gutenberg::get_viewport_media_queries( $axismundi_theme_switcher_viewport );
+		} elseif ( method_exists( 'WP_Theme_JSON', 'get_viewport_media_queries' ) ) {
+			$axismundi_theme_switcher_queries = WP_Theme_JSON::get_viewport_media_queries( $axismundi_theme_switcher_viewport );
+		}
+
+		if ( isset( $axismundi_theme_switcher_queries['@mobile'] ) ) {
+			$axismundi_theme_switcher_query = (string) $axismundi_theme_switcher_queries['@mobile'];
+		}
+	}
+
+	if ( '' === $axismundi_theme_switcher_query ) {
+		$axismundi_theme_switcher_query = '@media (width <= 480px)';
+	}
+
+	$axismundi_theme_switcher_css = $axismundi_theme_switcher_query . '{'
+		. '.wp-block-axismundi-theme-switcher[data-cycle-visibility="mobile"] .axismundi-theme-switcher__cycle{display:inline-flex;}'
+		. '.wp-block-axismundi-theme-switcher[data-cycle-visibility="mobile"] .axismundi-theme-switcher__group{display:none;}'
+		. '}';
+
+	wp_add_inline_style( 'axismundi-theme-switcher-style', $axismundi_theme_switcher_css );
+}
+add_action( 'wp_enqueue_scripts', 'axismundi_theme_switcher_enqueue_breakpoint_style', 20 );
+add_action( 'enqueue_block_assets', 'axismundi_theme_switcher_enqueue_breakpoint_style', 20 );
+
+/**
  * Hook the switcher after the header Navigation block.
  *
  * This keeps the Axismundi theme distributable standalone: the theme contains no

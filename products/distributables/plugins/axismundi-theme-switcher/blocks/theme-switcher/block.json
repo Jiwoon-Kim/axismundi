@@ -10,7 +10,7 @@
 	"keywords": [ "theme", "dark mode", "color scheme", "appearance", "light", "dark" ],
 	"textdomain": "axismundi-theme-switcher",
 	"attributes": {
-		"component": {
+		"cycleButtonVisibility": {
 			"type": "string",
 			"default": ""
 		},

@@ -40,10 +40,12 @@ color-scheme change depends on a theme or stylesheet that consumes
 == Changelog ==
 
 = 0.1.7 =
-* Choose between the button group and the single cycling icon button in the
-  block's settings rather than through a block style. They are different
-  controls -- three buttons or one -- so the choice belongs where the block's
-  other settings are. Existing content keeps rendering as it did.
+* Add a Cycle button visibility setting -- off, mobile or always -- so the
+  switcher can show its three-button group on wide screens and compress to a
+  single cycling button on narrow ones. It replaces the block style that used to
+  make that choice; existing content keeps rendering as it did.
+* On mobile, switch at the breakpoint the active theme declares, falling back to
+  the WordPress default.
 * Add a Show labels setting for the button group, so its three modes can show
   icons alone. The names stay available to screen readers either way.
 

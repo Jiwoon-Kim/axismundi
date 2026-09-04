@@ -46,15 +46,19 @@
 			var currentState = useState( readCookie );
 			var current = currentState[ 0 ];
 			var setCurrent = currentState[ 1 ];
-			// See render.php: `component` is an attribute because icon and group are
-			// different controls, not two looks. An unset value falls back to the
-			// pre-0.1.7 class so existing content keeps rendering as it did.
+			// See render.php. `cycleButtonVisibility` says how far the control
+			// compresses -- off, mobile, always -- rather than which component to
+			// use, the same question core/navigation asks with `overlayMenu`. An
+			// unrecognised value falls back to the pre-0.1.7 class.
 			var className = ( props.attributes && props.attributes.className ) || '';
-			var component = ( props.attributes && props.attributes.component ) || '';
-			if ( ! component ) {
-				component = ( ' ' + className + ' ' ).indexOf( ' is-style-theme-cycle ' ) !== -1 ? 'icon' : 'group';
+			var visibility = ( props.attributes && props.attributes.cycleButtonVisibility ) || '';
+			if ( [ 'off', 'mobile', 'always' ].indexOf( visibility ) === -1 ) {
+				visibility = ( ' ' + className + ' ' ).indexOf( ' is-style-theme-cycle ' ) !== -1 ? 'always' : 'off';
 			}
-			var isCycle = 'icon' === component;
+			var hasGroup = 'always' !== visibility;
+			// The canvas has no viewport to respond to, so `mobile` previews the
+			// group -- what a desktop reader sees.
+			var isCycle = ! hasGroup;
 			// Group segments keep their label text when it is hidden; it becomes
 			// screen-reader text so it is still each button's accessible name.
 			var showLabels = ! props.attributes || undefined === props.attributes.showLabels
@@ -68,9 +72,9 @@
 			var wrapperAttrs = {
 				role: 'group',
 				'aria-label': 'Color scheme',
-				'data-component': component,
+				'data-cycle-visibility': visibility,
 			};
-			if ( ! isCycle ) {
+			if ( hasGroup ) {
 				wrapperAttrs[ 'data-labels' ] = showLabels ? 'visible' : 'hidden';
 			}
 			var blockProps = useBlockProps( wrapperAttrs );
@@ -82,24 +86,27 @@
 					components.PanelBody,
 					{ title: 'Settings' },
 					el( components.SelectControl, {
-						label: 'Component',
-						value: component,
+						label: 'Cycle button visibility',
+						value: visibility,
 						options: [
-							{ label: 'Connected button group', value: 'group' },
-							{ label: 'Icon button', value: 'icon' },
+							{ label: 'Off', value: 'off' },
+							{ label: 'Mobile', value: 'mobile' },
+							{ label: 'Always', value: 'always' },
 						],
-						help: isCycle
-							? 'One button that cycles through Auto, Light and Dark.'
-							: 'Three buttons, one per mode.',
+						help: {
+							off: 'The button group at every viewport.',
+							mobile: 'One cycling button on small screens, the group above them.',
+							always: 'One button that cycles through Auto, Light and Dark.',
+						}[ visibility ],
 						onChange: function ( value ) {
-							props.setAttributes( { component: value } );
+							props.setAttributes( { cycleButtonVisibility: value } );
 						},
 						__next40pxDefaultSize: true,
 						__nextHasNoMarginBottom: true,
 					} ),
 					// Only the group has visible labels to turn off; the cycle
 					// button never shows one.
-					! isCycle &&
+					hasGroup &&
 						el( components.ToggleControl, {
 							label: 'Show labels',
 							checked: showLabels,

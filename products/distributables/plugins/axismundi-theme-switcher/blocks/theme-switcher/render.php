@@ -26,23 +26,32 @@ if ( isset( $_COOKIE['axismundi_theme'] ) ) {
 }
 
 /*
- * Which component to render. `icon` is one button cycling through the modes;
- * `group` is three. That is a different control, not a restyle -- a different
- * number of buttons with a different keyboard model -- so it is an attribute
- * rather than a block style.
+ * How far to compress the control, not which component to use -- the same
+ * question core/navigation asks with `overlayMenu`, and the same three answers.
  *
- * Before 0.1.7 the choice rode on the `is-style-theme-cycle` class and this file
- * matched the string. Content saved then still carries that class and no
- * attribute, so it is still honoured when `component` is unset.
+ *   off     the connected group at every viewport
+ *   mobile  the cycle button on small screens, the group above them
+ *   always  the cycle button at every viewport
+ *
+ * The group and the cycle button are different controls, not two looks at one:
+ * three buttons that select versus one that advances, with different keyboard
+ * models. `mobile` therefore renders both and lets a media query show one, the
+ * way the Navigation block renders its overlay alongside the inline menu. The
+ * hidden one is `display: none`, so it leaves the accessibility tree too and the
+ * two contracts never overlap.
+ *
+ * Before 0.1.7 the choice rode on the `is-style-theme-cycle` class. Content
+ * saved then carries no attribute, so that class still resolves, to `always`.
  */
-$axismundi_theme_switcher_component = isset( $attributes['component'] ) ? (string) $attributes['component'] : '';
+$axismundi_theme_switcher_visibility = isset( $attributes['cycleButtonVisibility'] ) ? (string) $attributes['cycleButtonVisibility'] : '';
 
-if ( '' === $axismundi_theme_switcher_component ) {
+if ( ! in_array( $axismundi_theme_switcher_visibility, array( 'off', 'mobile', 'always' ), true ) ) {
 	$axismundi_theme_switcher_class_name = isset( $attributes['className'] ) ? (string) $attributes['className'] : '';
-	$axismundi_theme_switcher_component  = false !== strpos( ' ' . $axismundi_theme_switcher_class_name . ' ', ' is-style-theme-cycle ' ) ? 'icon' : 'group';
+	$axismundi_theme_switcher_visibility = false !== strpos( ' ' . $axismundi_theme_switcher_class_name . ' ', ' is-style-theme-cycle ' ) ? 'always' : 'off';
 }
 
-$axismundi_theme_switcher_is_cycle = 'icon' === $axismundi_theme_switcher_component;
+$axismundi_theme_switcher_has_group = 'always' !== $axismundi_theme_switcher_visibility;
+$axismundi_theme_switcher_has_cycle = 'off' !== $axismundi_theme_switcher_visibility;
 
 /*
  * Group segments can drop their visible label. The label text is still rendered,
@@ -57,21 +66,22 @@ $axismundi_theme_switcher_label_class = $axismundi_theme_switcher_show_labels
 	: 'axismundi-theme-switcher__label screen-reader-text';
 
 $axismundi_theme_switcher_wrapper_attrs = array(
-	'role'                => 'group',
-	'aria-label'          => __( 'Color scheme', 'axismundi-theme-switcher' ),
-	'data-component'      => $axismundi_theme_switcher_component,
-	'data-wp-interactive' => 'axismundi/theme-switcher',
+	'role'                     => 'group',
+	'aria-label'               => __( 'Color scheme', 'axismundi-theme-switcher' ),
+	'data-cycle-visibility'    => $axismundi_theme_switcher_visibility,
+	'data-wp-interactive'      => 'axismundi/theme-switcher',
 );
 
 // Only the group has a label to show or hide, so only the group says so.
-if ( ! $axismundi_theme_switcher_is_cycle ) {
+if ( $axismundi_theme_switcher_has_group ) {
 	$axismundi_theme_switcher_wrapper_attrs['data-labels'] = $axismundi_theme_switcher_show_labels ? 'visible' : 'hidden';
 }
 
 $axismundi_theme_switcher_wrapper = get_block_wrapper_attributes( $axismundi_theme_switcher_wrapper_attrs );
 ?>
+
 <div <?php echo $axismundi_theme_switcher_wrapper; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
-	<?php if ( $axismundi_theme_switcher_is_cycle ) : ?>
+	<?php if ( $axismundi_theme_switcher_has_cycle ) : ?>
 		<button
 			type="button"
 			class="axismundi-theme-switcher__button axismundi-theme-switcher__cycle"
@@ -83,20 +93,23 @@ $axismundi_theme_switcher_wrapper = get_block_wrapper_attributes( $axismundi_the
 			<span class="material-symbols-outlined notranslate" translate="no" aria-hidden="true" draggable="false" data-wp-text="state.currentIcon"><?php echo esc_html( $axismundi_theme_switcher_modes[ $axismundi_theme_switcher_current ]['icon'] ); ?></span>
 			<span class="screen-reader-text" data-wp-text="state.currentLabel"><?php echo esc_html( $axismundi_theme_switcher_modes[ $axismundi_theme_switcher_current ]['label'] ); ?></span>
 		</button>
-	<?php else : ?>
-		<?php foreach ( $axismundi_theme_switcher_modes as $axismundi_theme_switcher_mode => $axismundi_theme_switcher_m ) : ?>
-			<button
-				type="button"
-				class="axismundi-theme-switcher__button wp-element-button"
-				data-theme-mode="<?php echo esc_attr( $axismundi_theme_switcher_mode ); ?>"
-				<?php echo wp_interactivity_data_wp_context( array( 'mode' => $axismundi_theme_switcher_mode ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-				data-wp-on--click="actions.setScheme"
-				data-wp-bind--aria-pressed="state.isActive"
-				aria-pressed="<?php echo $axismundi_theme_switcher_mode === $axismundi_theme_switcher_current ? 'true' : 'false'; ?>"
-			>
-				<span class="material-symbols-outlined notranslate" translate="no" aria-hidden="true" draggable="false"><?php echo esc_html( $axismundi_theme_switcher_m['icon'] ); ?></span>
-				<span class="<?php echo esc_attr( $axismundi_theme_switcher_label_class ); ?>"><?php echo esc_html( $axismundi_theme_switcher_m['label'] ); ?></span>
-			</button>
-		<?php endforeach; ?>
+	<?php endif; ?>
+	<?php if ( $axismundi_theme_switcher_has_group ) : ?>
+		<div class="axismundi-theme-switcher__group">
+			<?php foreach ( $axismundi_theme_switcher_modes as $axismundi_theme_switcher_mode => $axismundi_theme_switcher_m ) : ?>
+				<button
+					type="button"
+					class="axismundi-theme-switcher__button wp-element-button"
+					data-theme-mode="<?php echo esc_attr( $axismundi_theme_switcher_mode ); ?>"
+					<?php echo wp_interactivity_data_wp_context( array( 'mode' => $axismundi_theme_switcher_mode ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+					data-wp-on--click="actions.setScheme"
+					data-wp-bind--aria-pressed="state.isActive"
+					aria-pressed="<?php echo $axismundi_theme_switcher_mode === $axismundi_theme_switcher_current ? 'true' : 'false'; ?>"
+				>
+					<span class="material-symbols-outlined notranslate" translate="no" aria-hidden="true" draggable="false"><?php echo esc_html( $axismundi_theme_switcher_m['icon'] ); ?></span>
+					<span class="<?php echo esc_attr( $axismundi_theme_switcher_label_class ); ?>"><?php echo esc_html( $axismundi_theme_switcher_m['label'] ); ?></span>
+				</button>
+			<?php endforeach; ?>
+		</div>
 	<?php endif; ?>
 </div>

@@ -308,16 +308,20 @@
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:hover {
 	background-color: color-mix(in srgb, var(--ax-ts-unselected-fg) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--ax-ts-unselected-bg));
 }
-.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:focus {
+/* Keyboard focus, not any focus. A tap focuses the button too, so `:focus` left
+ * a state layer sitting on it after the finger lifted, until something else took
+ * focus. Material draws that layer for the focus a keyboard gives; a touch is
+ * answered by the pressed layer and then it is over. The group's segments never
+ * had a `:focus` layer, so this also makes the two surfaces agree. */
+.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:focus-visible {
 	background-color: color-mix(in srgb, var(--ax-ts-unselected-fg) calc(var(--md-sys-state-focus-state-layer-opacity, 0.1) * 100%), var(--ax-ts-unselected-bg));
+	outline: 3px solid var(--md-sys-color-secondary, #625b71);
+	outline-offset: 2px;
 }
+/* After the focus layer, so a press still reads as pressed on a focused button. */
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:active {
 	background-color: color-mix(in srgb, var(--ax-ts-unselected-fg) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), var(--ax-ts-unselected-bg));
 	border-radius: var(--ax-ts-icon-pressed-morph);
-}
-.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:focus-visible {
-	outline: 3px solid var(--md-sys-color-secondary, #625b71);
-	outline-offset: 2px;
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:focus:not(:focus-visible) {
 	outline: none;
@@ -357,8 +361,8 @@
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="dark"]:hover {
 	background-color: color-mix(in srgb, var(--ax-ts-selected-fg) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--ax-ts-selected-bg));
 }
-.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="light"]:focus,
-.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="dark"]:focus {
+.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="light"]:focus-visible,
+.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="dark"]:focus-visible {
 	background-color: color-mix(in srgb, var(--ax-ts-selected-fg) calc(var(--md-sys-state-focus-state-layer-opacity, 0.1) * 100%), var(--ax-ts-selected-bg));
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="light"]:active,

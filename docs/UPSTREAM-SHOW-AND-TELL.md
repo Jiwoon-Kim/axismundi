@@ -23,12 +23,16 @@ now in the Block Directory with a Playground preview, so it can be opened rather
 than described:
 
 - Plugin: <https://wordpress.org/plugins/axismundi-theme-switcher/>
-- Live preview: the **Live Preview** button on that page boots a Playground site
-  with the companion theme and a demo page already built.
+- [Live preview in Playground](https://playground.wordpress.net/?plugin=axismundi-theme-switcher&blueprint-url=https%3A%2F%2Fwordpress.org%2Fplugins%2Fwp-json%2Fplugins%2Fv1%2Fplugin%2Faxismundi-theme-switcher%2Fblueprint.json%3Frev%3D3683073%26lang%3Den_US)
+  — boots with the companion theme installed and a demo page already built,
+  showing the treatments, both surfaces and the breakpoint switch.
 
-I am posting it here because the interesting part turned out not to be the
-feature. It is that almost every decision in it had a Core precedent to copy,
-and copying them well is most of what the block is.
+The feature itself is well-trodden ground — the developer blog has covered both
+[styling light and dark in block themes](https://developer.wordpress.org/news/2024/12/mastering-light-and-dark-mode-styling-in-block-themes/)
+and [building a toggle with the Interactivity API](https://developer.wordpress.org/news/2025/09/building-a-light-dark-toggle-with-the-interactivity-api/).
+I am posting this one because the interesting part turned out not to be the
+feature at all. It is that almost every decision in it had a Core precedent to
+copy, and copying them well is most of what the block is.
 
 ### What it does
 
@@ -70,16 +74,30 @@ nothing gets WordPress's own default. The block never names a pixel value.
 ### The settings, and why there are only five
 
 `cycleButtonVisibility`, `size`, `showLabels`, `showTooltips`,
-`cycleButtonStandard`. They sit in one ToolsPanel, and each appears only where it
-can do something — with `off` there is no cycling button, so its two settings are
-absent; with labels shown there is nothing for a tooltip to say, so that one is
-absent too. The list is a prefix of the next as the visibility widens, which
-turned out to be a nice property to aim for.
+`cycleButtonStandard`. They sit in one ToolsPanel, and each appears only where
+it has something to act on:
 
-`size` covers Material's five container heights. The two surfaces share only that
-height — an icon button and a button with no label are different components with
-different padding, icon sizes and corner values — so one setting picks the height
-and each surface takes the rest from its own table.
+```
+off      Size · Cycle button visibility · Show labels
+always   Size · Cycle button visibility · Show tooltips · Standard icon button
+mobile   Size · Cycle button visibility · Show labels · Show tooltips · Standard icon button
+```
+
+Labels belong to the group, so they are absent at `always`. Standard belongs to
+the cycling button, so it is absent at `off`. Tooltips appear wherever some
+control has no visible name, which is any time the cycling button exists, and a
+group whose labels are off — so at `off` with labels shown there is nothing to
+put one on, and at `always` there always is. `mobile` renders both surfaces and
+therefore offers the union rather than either list.
+
+`size` covers the five container heights Material gives these components. The two
+surfaces share only that height: Material specifies
+[buttons](https://m3.material.io/components/buttons/overview),
+[button groups](https://m3.material.io/components/button-groups/overview) and
+[icon buttons](https://m3.material.io/components/icon-buttons/overview)
+separately, and an icon-only *button* is still a button rather than an icon
+button — different padding, icon sizes and corner values. So one setting picks
+the height and each surface takes the rest from its own table.
 
 ### Tooltips, which were the hardest part
 
@@ -94,10 +112,11 @@ tooltip says. Its text is read from the trigger's screen-reader text at open
 time, so there is one source for the string and the cycling button's tooltip
 follows the live scheme without holding any state.
 
-The behaviour is Material's: 700ms before the first one, none for the next one in
-the same switcher, 1.5s of linger after the pointer leaves, and — the part I had
-missed — **tap and hold** on touch, with the click that would otherwise follow
-swallowed, because a hold is not a tap.
+The behaviour follows [Material's tooltip
+guidelines](https://m3.material.io/components/tooltips/guidelines): 700ms before
+the first one, none for the next one in the same switcher, 1.5s of linger after
+the pointer leaves, and — the part I had missed — **tap and hold** on touch, with
+the click that would otherwise follow swallowed, because a hold is not a tap.
 
 ### Three things I got wrong, in case they are useful
 

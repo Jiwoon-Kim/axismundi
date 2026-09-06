@@ -305,8 +305,14 @@
  * state layer below, which is what Material gives them. The group's segments do
  * fill on hover, because there the container already answers which is
  * selected -- see the note above that rule. */
-.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:hover {
-	background-color: color-mix(in srgb, var(--ax-ts-unselected-fg) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--ax-ts-unselected-bg));
+/* Only where a pointer can hover. A touch leaves the hover state on the last
+ * thing tapped until something else is tapped, so on a phone this layer sat
+ * under the finger and then stayed there -- the pressed state answers the
+ * touch, and this one has nothing left to say. */
+@media (hover: hover) {
+	.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle:hover {
+		background-color: color-mix(in srgb, var(--ax-ts-unselected-fg) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--ax-ts-unselected-bg));
+	}
 }
 /* Keyboard focus, not any focus. A tap focuses the button too, so `:focus` left
  * a state layer sitting on it after the finger lifted, until something else took
@@ -357,9 +363,12 @@
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="dark"] .material-symbols-outlined {
 	--md-icon-fill: 1;
 }
-.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="light"]:hover,
-.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="dark"]:hover {
-	background-color: color-mix(in srgb, var(--ax-ts-selected-fg) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--ax-ts-selected-bg));
+/* Pointer only. See the note on the first hover rule. */
+@media (hover: hover) {
+	.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="light"]:hover,
+	.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="dark"]:hover {
+		background-color: color-mix(in srgb, var(--ax-ts-selected-fg) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--ax-ts-selected-bg));
+	}
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="light"]:focus-visible,
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__cycle[data-theme-scheme="dark"]:focus-visible {
@@ -458,9 +467,16 @@
  * with the answer to "which is selected" sitting right beside it. The cycle
  * button stands alone with nothing to compare against, so there fill is the
  * whole of the selected state and stays reserved for it. */
-.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button:hover .material-symbols-outlined,
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button[aria-pressed="true"] .material-symbols-outlined {
 	--md-icon-fill: 1;
+}
+/* The hover half only, and only where a pointer hovers. Selected has to stay
+ * unconditional: gating both would leave the chosen segment unfilled on a
+ * touchscreen, which is the one place the fill is doing real work. */
+@media (hover: hover) {
+	.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button:hover .material-symbols-outlined {
+		--md-icon-fill: 1;
+	}
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button:first-child {
 	border-start-start-radius: var(--ax-ts-pill);
@@ -501,8 +517,11 @@
 	border-start-end-radius: var(--ax-ts-pill);
 	border-end-end-radius: var(--ax-ts-pill);
 }
-.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button:hover {
-	background-color: color-mix(in srgb, var(--ax-ts-unselected-fg) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--ax-ts-unselected-bg));
+/* Pointer only. See the note on the first hover rule. */
+@media (hover: hover) {
+	.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button:hover {
+		background-color: color-mix(in srgb, var(--ax-ts-unselected-fg) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--ax-ts-unselected-bg));
+	}
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button:active {
 	background-color: color-mix(in srgb, var(--ax-ts-unselected-fg) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), var(--ax-ts-unselected-bg));
@@ -512,8 +531,11 @@
 	color: var(--ax-ts-selected-fg);
 	border-color: transparent;
 }
-.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button[aria-pressed="true"]:hover {
-	background-color: color-mix(in srgb, var(--ax-ts-selected-fg) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--ax-ts-selected-bg));
+/* Pointer only. See the note on the first hover rule. */
+@media (hover: hover) {
+	.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button[aria-pressed="true"]:hover {
+		background-color: color-mix(in srgb, var(--ax-ts-selected-fg) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--ax-ts-selected-bg));
+	}
 }
 .wp-block-axismundi-theme-switcher .axismundi-theme-switcher__group .axismundi-theme-switcher__button[aria-pressed="true"]:active {
 	background-color: color-mix(in srgb, var(--ax-ts-selected-fg) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), var(--ax-ts-selected-bg));

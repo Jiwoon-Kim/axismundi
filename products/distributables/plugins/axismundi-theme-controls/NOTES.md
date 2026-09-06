@@ -107,6 +107,36 @@ across the shipped set — and how much of the page the accent roles touch.
   the shape wants; at 800px it goes to two lines. Fine for a proof, and the
   first thing to change if this becomes something a site ships.
 
+## Published or computed, per family
+
+The rule, and it is not a preference: **where M3 publishes a table, the table
+is used verbatim, because generating it does not reproduce it.**
+
+The primary family of every scheme comes straight out of the published static
+palette. Regenerating it from its own tone 40 drifts far past rounding —
+measured at only the tones a scheme consumes, Yellow is 124 off at tone 80,
+generated `#FFB77C` against the published `#FCBD00`: a pale orange where M3
+publishes a vivid amber. Cyan 38, Green 34, Blue variant 31, Pink 23, Purple
+22, Red 21. The static palettes hold much more chroma through the light tones
+than a tonal palette built at the seed's own hue and chroma does. They are
+tuned, not derived, and an earlier version of this plugin shipped the generated
+versions as though they were the published ones.
+
+Every other family is computed, because there is nothing to copy: M3 publishes
+no secondary for Orange, and no tertiary at Orange's hue plus sixty.
+
+**Thirteen stops is not a limit.** A static table publishes 100, 98, 95, 90,
+80, 70, 60, 50, 40, 30, 20, 10, 0 — and a scheme needs neutral at 4, 6, 12, 17,
+22, 24, 87, 92, 94 and 96, none of which are there. It does not matter: only
+tone 40 is read as the seed, and a tonal palette computes any tone
+continuously. The published stops are a catalogue to choose a colour from, not
+the materials list.
+
+The baseline palettes behave differently, and that is worth knowing before
+assuming the rule is about all published values. Regenerated from their own
+tone 40 they land within 1 to 5 — rounding — except error at 24. So the
+baseline is broadly reproducible and the static palettes are not.
+
 ## The clamp
 
 M3's TonalSpot constants assume a saturated seed. Applied to a near-neutral one

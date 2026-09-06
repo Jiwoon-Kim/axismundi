@@ -83,7 +83,29 @@ const CONSUMED = {
 	'neutral-variant': [ 30, 50, 60, 80, 90 ],
 };
 
-function scheme( seed ) {
+/**
+ * Build a scheme, optionally taking the primary family from a published table.
+ *
+ * Generating the primary family from its own tone 40 does NOT reproduce the
+ * published palette, and not by a rounding margin. Measured across the twelve
+ * static palettes at only the tones a scheme consumes, the worst case is Yellow
+ * at tone 80: generated #FFB77C against the published #FCBD00, a pale orange
+ * where M3 publishes a vivid amber. Cyan is 38 off at tone 80, Green 34, Blue
+ * variant 31, Pink 23, Purple 22, Red 21.
+ *
+ * M3's static palettes hold far more chroma through the light tones than a
+ * plain tonal palette built at the seed's hue and chroma does. They are tuned,
+ * not derived. So where a published table exists it is used verbatim, and every
+ * consumed tone (20, 30, 40, 80, 90, 100) is present in all eleven of them.
+ *
+ * The other families have no published counterpart at these hues -- M3 does not
+ * publish a secondary for Orange -- so those stay generated, which is the only
+ * honest option for them.
+ *
+ * @param {string}      seed      Source colour.
+ * @param {Object|null} publishedPrimary Published tone table for the primary family.
+ */
+function scheme( seed, publishedPrimary = null ) {
 	const source = Hct.fromInt( argb( seed ) );
 	const palettes = { primary: TonalPalette.fromInt( argb( seed ) ) };
 
@@ -112,7 +134,13 @@ function scheme( seed ) {
 
 	for ( const [ family, tones ] of Object.entries( CONSUMED ) ) {
 		for ( const tone of tones ) {
-			tokens.push( [ `--md-ref-palette-${ family }-${ tone }`, hex( palettes[ family ].tone( tone ) ) ] );
+			const fromTable =
+				family === 'primary' && publishedPrimary ? publishedPrimary[ String( tone ) ] : null;
+
+			tokens.push( [
+				`--md-ref-palette-${ family }-${ tone }`,
+				fromTable ?? hex( palettes[ family ].tone( tone ) ),
+			] );
 		}
 	}
 
@@ -186,17 +214,41 @@ if ( args[ 0 ] === '--verify' ) {
  */
 const cssFlag = args.indexOf( '--css' );
 const slug = cssFlag === -1 ? null : args[ cssFlag + 1 ];
-const positional = args.filter( ( _, i ) => i !== cssFlag && i !== cssFlag + 1 );
 
-const [ title, seed ] = positional;
+const publishedFlag = args.indexOf( '--published' );
+const publishedName = publishedFlag === -1 ? null : args[ publishedFlag + 1 ];
+
+const consumedByFlags = new Set( [ cssFlag, cssFlag + 1, publishedFlag, publishedFlag + 1 ] );
+const positional = args.filter( ( _, i ) => ! consumedByFlags.has( i ) );
+
+const staticPalettes = JSON.parse(
+	readFileSync( join( here, '..', 'data/m3-palettes.json' ), 'utf8' )
+).static;
+
+let [ title, seed ] = positional;
+
+if ( publishedName ) {
+	const table = staticPalettes[ publishedName ];
+
+	if ( ! table ) {
+		console.error( `unknown published palette: ${ publishedName }` );
+		console.error( `known: ${ Object.keys( staticPalettes ).join( ', ' ) }` );
+		process.exit( 2 );
+	}
+
+	// The seed is the table's own tone 40, so it never has to be typed twice
+	// and can never disagree with the table it is supposed to describe.
+	seed = seed || table[ '40' ];
+}
 
 if ( ! title || ! seed ) {
 	console.error( 'usage: generate-scheme.mjs <Title> <#seed> [--css <slug>]' );
+	console.error( '       generate-scheme.mjs <Title> --published <palette> [--css <slug>]' );
 	console.error( '       generate-scheme.mjs --verify' );
 	process.exit( 2 );
 }
 
-const { source, tokens } = scheme( seed );
+const { source, tokens } = scheme( seed, publishedName ? staticPalettes[ publishedName ] : null );
 
 /*
  * The scheme is carried as styles.css, not as settings.color.palette.

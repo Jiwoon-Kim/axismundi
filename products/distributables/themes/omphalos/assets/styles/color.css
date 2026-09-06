@@ -26,9 +26,18 @@
 /* ==========================================================================
  * 1. Error, on M3's static Red
  *
- * The parent ships the older baseline error palette. This is the current
- * static Red, which differs throughout -- #B3251E against #B3261E at tone 40,
- * #FFDADC against #F9DEDC at 90 -- and reads warmer and more saturated.
+ * The parent ships the baseline Error palette; this is M3's static Red. An
+ * earlier version of this comment called it "warmer and more saturated", which
+ * measurement contradicts. scripts/hct-compare.mjs puts both through HCT:
+ *
+ *   the hue is the same, ~25 degrees, within 1.5 degrees at every tone that
+ *   matters, and slightly COOLER in the light half, not warmer;
+ *   the difference is chroma, and only in the light half -- +13.8 at tone 60,
+ *   +12.7 at 70, +7.4 at 80, +4.3 at 90, while tone 50 and below match within 1.
+ *
+ * So this is the same red with a more saturated light half, and the hex-level
+ * differences at tone 40 (#B3251E against #B3261E) are a rounding step, not a
+ * change of colour. Worth knowing before treating the swap as significant.
  *
  * Given as literal values rather than generated, because M3 publishes this
  * table and a published table beats a recomputed one. The generator in

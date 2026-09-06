@@ -12,7 +12,9 @@
     "cli": "wp-env run cli wp",
     "build:zip": "pwsh -NoProfile -File scripts/build-zip.ps1",
     "check:palettes": "node scripts/check-palettes.mjs",
-    "verify:mcu": "node scripts/generate-palette.mjs --verify"
+    "verify:mcu": "node scripts/generate-palette.mjs --verify",
+    "verify:scheme": "node scripts/generate-scheme.mjs --verify",
+    "report:hct": "node scripts/hct-report.mjs"
   },
   "devDependencies": {
     "@material/material-color-utilities": "^0.4.0",

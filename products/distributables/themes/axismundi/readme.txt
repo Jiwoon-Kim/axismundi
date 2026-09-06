@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.16
+Stable tag: 0.1.17
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: block-patterns, block-styles, blog, custom-colors, custom-logo, custom-menu, editor-style, featured-images, full-site-editing, full-width-template, template-editing, threaded-comments, translation-ready, wide-blocks
@@ -77,12 +77,17 @@ than carrying a second visual system.
 
 == Changelog ==
 
-= 0.1.16 =
-* Fix the Latest Posts grid, whose items were sized as a fraction of their own
-  column rather than of the list after WordPress 7.1 gave the block a real grid.
-* Fix the spacing between Latest Posts entries and between Accordion panels,
-  where the theme's spacing was being added to WordPress's own.
-* Stop a closed Accordion panel from leaving an empty strip below its heading.
+= 0.1.17 =
+* Stop loading a switch component stylesheet on every page and in the editor.
+  No theme markup used it, and the one plugin that draws a switch already ships
+  its own.
+* Set the header and navigation overlay switchers through the Theme Switcher
+  plugin's own settings rather than a block style class it now reads only as a
+  fallback. The overlay shows the connected Auto / Light / Dark group at wider
+  widths and a single cycling button on narrow screens; the header keeps one
+  cycling button at every width.
+* Remove two block-hook opt-outs that named a hook the Theme Switcher plugin no
+  longer registers.
 
 Earlier releases are listed in changelog.txt.
 

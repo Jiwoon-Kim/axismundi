@@ -142,6 +142,38 @@ try {
 			&& false === strpos( $route_rendered, 'ax-actor-biography__website' )
 			&& false === strpos( $route_rendered, 'ax_ah_alice-private@example.test' )
 	);
+	$ax_ah_display_name_filter = static function ( string $name_html ) : string {
+		return $name_html . '<img class="ax-emoji" src="https://example.test/emoji.png" alt=":actor:" onerror="alert(\'unsafe\')"><script>alert("unsafe")</script>';
+	};
+	$ax_ah_summary_filter = static function ( string $summary_html ) : string {
+		return $summary_html . '<em>Decorated summary</em><script>alert("unsafe")</script>';
+	};
+	add_filter( 'axismundi_actors_display_name_html', $ax_ah_display_name_filter, 10, 2 );
+	add_filter( 'axismundi_actors_summary_html', $ax_ah_summary_filter, 10, 2 );
+	try {
+		$filtered_identity = do_blocks( '<!-- wp:axismundi/actor-identity /-->' );
+		$filtered_name     = do_blocks( '<!-- wp:axismundi/actor-name /-->' );
+		$filtered_bio      = do_blocks( '<!-- wp:axismundi/actor-biography /-->' );
+	} finally {
+		remove_filter( 'axismundi_actors_display_name_html', $ax_ah_display_name_filter, 10 );
+		remove_filter( 'axismundi_actors_summary_html', $ax_ah_summary_filter, 10 );
+	}
+	ax_ah_assert(
+		$ax_ah_results,
+		'Actor name filters preserve allowed emoji markup and remove unsafe scripts after filtering',
+		false !== strpos( $filtered_identity, 'class="ax-emoji"' )
+			&& false !== strpos( $filtered_name, 'class="ax-emoji"' )
+			&& false === strpos( $filtered_identity, '<script' )
+			&& false === strpos( $filtered_name, '<script' )
+			&& false === strpos( $filtered_identity, 'onerror=' )
+			&& false === strpos( $filtered_name, 'onerror=' )
+	);
+	ax_ah_assert(
+		$ax_ah_results,
+		'Actor biography filters preserve allowed markup and remove unsafe scripts after filtering',
+		false !== strpos( $filtered_bio, '<em>Decorated summary</em>' )
+			&& false === strpos( $filtered_bio, '<script' )
+	);
 	$header_cover = do_blocks( '<!-- wp:axismundi/object-featured-image {"showPlaceholder":true} /-->' );
 	ax_ah_assert(
 		$ax_ah_results,

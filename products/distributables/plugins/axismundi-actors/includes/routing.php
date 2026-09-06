@@ -445,7 +445,7 @@ function axismundi_actors_redirect_identity_trailing_slash() : void {
 	if ( ! $actor instanceof Axismundi_Actor ) {
 		return;
 	}
-	$request_path  = wp_parse_url( (string) wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ), PHP_URL_PATH );
+	$request_path  = wp_parse_url( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ) ), PHP_URL_PATH );
 	$identity_path = wp_parse_url( $actor->get_uri(), PHP_URL_PATH );
 	if ( ! is_string( $request_path ) || ! is_string( $identity_path ) || '/' !== substr( $request_path, -1 )
 		|| untrailingslashit( rawurldecode( $request_path ) ) !== $identity_path
@@ -494,7 +494,7 @@ function axismundi_actors_redirect_handle_alias_trailing_slash() : void {
 	if ( ! $actor instanceof Axismundi_Actor ) {
 		return;
 	}
-	$request_path = wp_parse_url( (string) wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ), PHP_URL_PATH );
+	$request_path = wp_parse_url( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ) ), PHP_URL_PATH );
 	$profile_url  = axismundi_actors_profile_hub_url( $actor );
 	$profile_path = wp_parse_url( $profile_url, PHP_URL_PATH );
 	if ( ! is_string( $request_path ) || ! is_string( $profile_path ) || '/' !== substr( $request_path, -1 ) || untrailingslashit( rawurldecode( $request_path ) ) !== $profile_path ) {
@@ -563,7 +563,7 @@ function axismundi_actors_resolve_unrouted_actor_request( WP $wp ) : void {
 	if ( ! empty( $wp->query_vars['ax_actor_handle'] ) || ! empty( $wp->query_vars['ax_actor'] ) ) {
 		return; // The rewrite table did its job.
 	}
-	$path = wp_parse_url( (string) wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ), PHP_URL_PATH );
+	$path = wp_parse_url( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ) ), PHP_URL_PATH );
 	if ( ! is_string( $path ) || '' === $path ) {
 		return;
 	}
@@ -622,7 +622,7 @@ function axismundi_actors_redirect_follow_collection_trailing_slash() : void {
 	if ( ! $actor instanceof Axismundi_Actor || ! in_array( $collection, array( 'followers', 'following' ), true ) || ! isset( $_SERVER['REQUEST_URI'] ) ) {
 		return;
 	}
-	$request_path = wp_parse_url( (string) wp_unslash( $_SERVER['REQUEST_URI'] ), PHP_URL_PATH );
+	$request_path = wp_parse_url( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ), PHP_URL_PATH );
 	$target_path  = wp_parse_url( axismundi_actors_follow_collection_url( $actor, $collection ), PHP_URL_PATH );
 	if ( is_string( $request_path ) && is_string( $target_path ) && '/' === substr( $request_path, -1 ) && untrailingslashit( rawurldecode( $request_path ) ) === $target_path ) {
 		wp_safe_redirect( axismundi_actors_follow_collection_url( $actor, $collection ), 301 );

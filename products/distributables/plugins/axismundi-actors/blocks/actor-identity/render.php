@@ -28,7 +28,7 @@ $axismundi_actor_identity_show_type   = isset( $attributes['showTypeBadge'] ) &&
 $axismundi_actor_identity_wrapper     = get_block_wrapper_attributes( array( 'class' => 'is-' . $axismundi_actor_identity_variant ) );
 
 /**
- * The display name as HTML, after escaping.
+ * The display name as safe HTML.
  *
  * A federated display name can carry custom-emoji shortcodes — `:mastodon: 김지운` is a
  * real one this site receives — and turning those into images is a decoration of the
@@ -37,23 +37,25 @@ $axismundi_actor_identity_wrapper     = get_block_wrapper_attributes( array( 'cl
  * document title, OpenGraph, feeds, and the admin all publish it as-is, and Mastodon
  * does the same with its own profiles.
  *
- * @param string              $name_html Escaped display name.
+ * @param string              $name_html Escaped display name. Filtered output is sanitized before rendering.
  * @param array<string,mixed> $subject   Resolved block subject, including the Actor when known.
  */
-$axismundi_actor_identity_name_display = (string) apply_filters(
-	'axismundi_actors_display_name_html',
-	esc_html( $axismundi_actor_identity_name ),
-	$axismundi_actor_identity_subject
+$axismundi_actor_identity_name_display = wp_kses_post(
+	(string) apply_filters(
+		'axismundi_actors_display_name_html',
+		esc_html( $axismundi_actor_identity_name ),
+		$axismundi_actor_identity_subject
+	)
 );
 ?>
 <div <?php echo $axismundi_actor_identity_wrapper; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated block wrapper attributes. ?>>
 	<?php if ( 'compact' === $axismundi_actor_identity_variant ) : ?>
 		<?php $axismundi_actor_identity_name_html = '<span class="ax-actor-identity__name">' . $axismundi_actor_identity_name_display . '</span>'; ?>
-		<?php echo '' !== $axismundi_actor_identity_url ? '<a href="' . esc_url( $axismundi_actor_identity_url ) . '" rel="author">' . $axismundi_actor_identity_name_html . '</a>' : $axismundi_actor_identity_name_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Values escaped above. ?>
+		<?php echo '' !== $axismundi_actor_identity_url ? '<a href="' . esc_url( $axismundi_actor_identity_url ) . '" rel="author">' . $axismundi_actor_identity_name_html . '</a>' : $axismundi_actor_identity_name_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Filter output is sanitized above. ?>
 		<?php if ( $axismundi_actor_identity_show_user && '' !== $axismundi_actor_identity_username ) : ?><span class="ax-actor-identity__preferred-username">@<?php echo esc_html( $axismundi_actor_identity_username ); ?></span><?php endif; ?>
 		<?php if ( $axismundi_actor_identity_show_handle && '' !== $axismundi_actor_identity_handle && '@' . $axismundi_actor_identity_username !== $axismundi_actor_identity_handle ) : ?><span class="ax-actor-identity__handle"><?php echo esc_html( $axismundi_actor_identity_handle ); ?></span><?php endif; ?>
 	<?php else : ?>
-		<h1 class="wp-block-heading ax-actor-identity__name"><?php echo $axismundi_actor_identity_name_display; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped above, then decorated with emoji markup. ?></h1>
+		<h1 class="wp-block-heading ax-actor-identity__name"><?php echo $axismundi_actor_identity_name_display; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Filter output is sanitized above. ?></h1>
 	<?php endif; ?>
 	<?php if ( 'profile' === $axismundi_actor_identity_variant && ( $axismundi_actor_identity_show_handle || $axismundi_actor_identity_show_type ) ) : ?>
 		<p class="ax-actor-identity__meta">

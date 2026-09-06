@@ -27,10 +27,12 @@ $axismundi_actor_name_link  = ! isset( $attributes['isLink'] ) || (bool) $attrib
 // The Core-generated `wp-block-axismundi-actor-name` wrapper is the stable hook; a hand-written
 // alias beside it named the same element twice and was styled by nothing.
 $axismundi_actor_name_class = 'span' === $axismundi_actor_name_tag ? '' : 'wp-block-heading';
-$axismundi_actor_name_inner = (string) apply_filters(
-	'axismundi_actors_display_name_html',
-	esc_html( $axismundi_actor_name_value ),
-	$axismundi_actor_name_subject
+$axismundi_actor_name_inner = wp_kses_post(
+	(string) apply_filters(
+		'axismundi_actors_display_name_html',
+		esc_html( $axismundi_actor_name_value ),
+		$axismundi_actor_name_subject
+	)
 );
 if ( $axismundi_actor_name_link && '' !== $axismundi_actor_name_url ) {
 	$axismundi_actor_name_inner = '<a href="' . esc_url( $axismundi_actor_name_url ) . '" rel="author">' . $axismundi_actor_name_inner . '</a>';
@@ -39,5 +41,5 @@ printf(
 	'<%1$s %2$s>%3$s</%1$s>',
 	esc_attr( $axismundi_actor_name_tag ),
 	get_block_wrapper_attributes( array( 'class' => $axismundi_actor_name_class ) ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated block wrapper attributes.
-	$axismundi_actor_name_inner // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped above, then decorated with emoji markup.
+	$axismundi_actor_name_inner // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Filter output is sanitized above.
 );

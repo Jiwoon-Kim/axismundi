@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.0
+Stable tag: 0.1.1
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -107,6 +107,10 @@ not done here. Where another plugin performs that federation, it discloses it it
 section covers only what this plugin's own code requests.
 
 == Changelog ==
+
+= 0.1.1 =
+* Sanitize filtered Actor display names and biographies immediately before rendering.
+* Harden route parsing and align Group Directory render-template variable prefixes.
 
 = 0.1.0 =
 * First release.

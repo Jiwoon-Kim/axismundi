@@ -229,6 +229,12 @@
 	display: inline-flex;
 	align-items: center;
 	gap: 0.25rem;
+	/* No blue flash on tap. The browser paints that rectangle over the control
+	 * before any of our own feedback lands, and it is the wrong shape and the
+	 * wrong colour for a pill. Nothing is lost by removing it: the pressed state
+	 * layer answers the touch, and `:focus-visible` still draws a ring for the
+	 * keyboard, which is the part that matters for access. */
+	-webkit-tap-highlight-color: transparent;
 }
 
 /* The Material Symbols rendering contract (1em box, overflow clip, ligatures,

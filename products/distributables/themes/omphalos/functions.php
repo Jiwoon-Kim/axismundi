@@ -31,7 +31,7 @@ defined( 'ABSPATH' ) || exit;
  */
 function omphalos_layout_styles() : array {
 	return array(
-		'omphalos-parts-vertical-header' => 'assets/styles/parts.vertical-header.css',
+		'omphalos-scaffold' => 'assets/styles/scaffold.css',
 	);
 }
 

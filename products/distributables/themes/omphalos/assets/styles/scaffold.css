@@ -1,0 +1,245 @@
+/**
+ * Scaffold — Material Design 3 bars, rails and panes, as a CSS contract.
+ *
+ * https://m3.material.io/foundations/layout/scaffold/overview
+ * https://m3.material.io/foundations/layout/breakpoints
+ *
+ * M3 structures every adaptive layout into three region kinds: bars frame the
+ * screen, rails fill the perimeter around panes, and panes hold the content.
+ * A layout has one to three panes, at least one of them flexible, and the count
+ * and the navigation component both change with the breakpoint:
+ *
+ *   Compact      < 600     1 pane    navigation bar
+ *   Medium       600-839   1 pane    collapsed navigation rail
+ *   Expanded     840-1199  2 panes   collapsed navigation rail
+ *   Large        1200-1599 2 panes   expanded navigation rail
+ *   Extra-large  1600+     2 panes   expanded navigation rail   (3 allowed)
+ *
+ * That is five states with a reverse transform in the middle -- the navigation
+ * moves from a horizontal bar to a vertical rail as the window WIDENS, and the
+ * rail then grows labels. The block editor's responsive model is a single
+ * desktop/mobile stack and cannot express it, so the shell lives here and the
+ * template markup carries only semantic structure: a Group shell, a Group for
+ * the panes, and main + aside inside it. Not a Columns block.
+ *
+ * Grid, not flex. Learned expensively on the previous attempt: with a flex or
+ * Columns shell the rail width fights between flex-basis, content-size and
+ * selfStretch, and sticky is finicky. As a grid the rail width is simply a
+ * track, and sticky works natively because a grid item stretches to the row
+ * height and so is tall enough for its sticky inner to travel.
+ *
+ * The two 2-pane shapes M3 names are split-pane (both flexible, 50/50) and
+ * fixed-and-flexible. This is the second: the supporting pane is fixed and the
+ * primary pane takes the rest, which is what M3 calls common for expanded and
+ * larger. Below 840 the supporting pane is not hidden -- it reflows underneath,
+ * which is M3's own strategy for a vertical arrangement and keeps the content
+ * reachable instead of dropping it.
+ *
+ * Widths: M3 publishes its rail measurements only as images, and Material Web
+ * has no navigation rail component to read tokens out of, so the two rail
+ * widths below are chosen here rather than sourced. The pane widths are not:
+ * 360px is one of M3's two recommended snap widths, and 412px is its
+ * recommended fixed-pane width at the extra-large breakpoint.
+ */
+
+.ax-scaffold {
+	--ax-rail-collapsed: 88px;
+	--ax-rail-expanded: 320px;
+	--ax-pane-supporting: 360px;
+	--ax-scaffold-gap: var(--wp--preset--spacing--600);
+}
+
+/* ==========================================================================
+ * Compact (< 600px) — one pane, and the rail is a bar.
+ *
+ * The base state, so it needs no query. The shell and the panes are in normal
+ * flow: the supporting pane lands under the primary one by reflow.
+ * ========================================================================== */
+
+.ax-vertical-header {
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--wp--preset--spacing--300);
+	padding: var(--wp--preset--spacing--250);
+
+	/* The part markup declares sticky so the rail can travel at rail widths.
+	 * As a bar it scrolls away like an app bar instead. */
+	position: static;
+}
+
+/* The part is a default-layout Group, so core gives its second child the global
+ * block gap as margin-block-start. In a row that vertical stack gap would push
+ * the menu button below the title; row spacing is the flex gap above. */
+.ax-vertical-header > .ax-vertical-header__nav {
+	margin-block-start: 0;
+}
+
+.ax-vertical-header__nav {
+	display: flex;
+	align-items: center;
+}
+
+.ax-scaffold__panes > * + * {
+	margin-block-start: var(--ax-scaffold-gap);
+}
+
+/* ==========================================================================
+ * Medium (>= 600px) — one pane, collapsed navigation rail.
+ *
+ * The reverse transform: the bar becomes a vertical rail on the leading side.
+ * The rail is narrow, so the identity collapses to the logo and the navigation
+ * stays collapsed to its menu button.
+ * ========================================================================== */
+
+@media (min-width: 600px) {
+	.ax-scaffold {
+		display: grid;
+		grid-template-columns: var(--ax-rail-collapsed) minmax(0, 1fr);
+	}
+
+	.ax-vertical-header {
+		position: sticky;
+		top: 0;
+		flex-direction: column;
+		align-items: center;
+		justify-content: flex-start;
+		gap: var(--wp--preset--spacing--200);
+		block-size: 100dvh;
+	}
+
+	/* Site title and tagline do not fit a collapsed rail. The logo stays as the
+	 * home affordance, so nothing becomes unreachable. */
+	.ax-vertical-header__copy {
+		display: none;
+	}
+
+	.ax-vertical-header__nav {
+		inline-size: 100%;
+		justify-content: center;
+	}
+
+}
+
+/* Hold the navigation collapsed while the rail is collapsed -- 600 to 1199.
+ *
+ * Core hides the menu button and shows the inline container from
+ * @media (min-width: 600px). A collapsed rail is exactly where that must not
+ * happen yet, so both rules are re-asserted at higher specificity, and the
+ * upper bound is what hands the navigation back to core at the Large
+ * breakpoint where the rail expands and the labels are wanted.
+ *
+ * The bound is load-bearing and easy to lose: written as an open-ended
+ * min-width these rules keep applying at every larger size, and the expanded
+ * rail ends up 320px wide holding nothing but a menu button.
+ *
+ * Only WHERE the navigation collapses moves. The button still opens the
+ * overlay through core's own JS at any width, which is why the block keeps
+ * overlayMenu "mobile" -- "always" would put the items in a fixed modal and
+ * there would be no inline list left to become the rail.
+ */
+@media (min-width: 600px) and (max-width: 1199px) {
+	.ax-vertical-header__nav .wp-block-navigation__responsive-container-open:not(.always-shown) {
+		display: flex;
+	}
+
+	.ax-vertical-header__nav .wp-block-navigation__responsive-container:not(.hidden-by-default):not(.is-menu-open) {
+		display: none;
+	}
+}
+
+/* ==========================================================================
+ * Expanded (>= 840px) — the second pane arrives.
+ *
+ * Fixed-and-flexible: the supporting pane is a fixed track, the primary pane
+ * takes what is left. M3 asks for at least one flexible pane; this is it.
+ * ========================================================================== */
+
+@media (min-width: 840px) {
+	.ax-scaffold__panes {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) var(--ax-pane-supporting);
+		column-gap: var(--ax-scaffold-gap);
+		align-items: start;
+	}
+
+	/* Reflow spacing belongs to the stacked state only. */
+	.ax-scaffold__panes > * + * {
+		margin-block-start: 0;
+	}
+
+	.ax-scaffold__pane--supporting {
+		position: sticky;
+		top: var(--wp--preset--spacing--250);
+	}
+}
+
+/* ==========================================================================
+ * Large (>= 1200px) — the rail expands and grows labels.
+ *
+ * The collapse re-assertion above ends at 1199, so core's own rules take the
+ * navigation back here: the inline list returns and the menu button hides.
+ * Nothing in this block has to undo anything.
+ * ========================================================================== */
+
+@media (min-width: 1200px) {
+	.ax-scaffold {
+		grid-template-columns: var(--ax-rail-expanded) minmax(0, 1fr);
+	}
+
+	.ax-vertical-header {
+		align-items: stretch;
+	}
+
+	.ax-vertical-header__copy {
+		display: block;
+	}
+
+	.ax-vertical-header__nav {
+		justify-content: flex-start;
+	}
+
+	/* M3: "The navigation item's target area always spans the full width of the
+	 * nav rail, even if the item container hugs its contents."
+	 *
+	 * Getting there means unpicking a chain, not setting one width. Core builds
+	 * a vertical Navigation out of nested flex columns that centre their
+	 * children, so measured inside a 320px rail the boxes ran
+	 * 280 -> 157 -> 91 -> 59 -> 27: every level hugged, and a width on the
+	 * anchor alone did nothing because its parents had already collapsed.
+	 * Each level has to stretch before the next one can.
+	 *
+	 * The two innermost spans are the Navigation Icons plugin's markup, not the
+	 * theme's. Stretching them here is the lab taking a shortcut: the plugin
+	 * owns how an item lays out internally, so if this rail graduates, a
+	 * full-width target is a contract to agree with that plugin rather than a
+	 * rule to copy across. */
+	.ax-vertical-header__nav,
+	.ax-vertical-header__nav .wp-block-navigation__container {
+		align-items: stretch;
+	}
+
+	.ax-vertical-header__nav .wp-block-page-list,
+	.ax-vertical-header__nav .wp-block-navigation-item,
+	.ax-vertical-header__nav .ax-nav-item-trigger,
+	.ax-vertical-header__nav .ax-nav-item-body {
+		inline-size: 100%;
+	}
+
+	.ax-vertical-header__nav .wp-block-navigation-item__content {
+		display: block;
+		inline-size: 100%;
+	}
+}
+
+/* ==========================================================================
+ * Extra-large (>= 1600px) — the fixed pane takes M3's wider recommendation.
+ * ========================================================================== */
+
+@media (min-width: 1600px) {
+	.ax-scaffold {
+		--ax-pane-supporting: 412px;
+	}
+}

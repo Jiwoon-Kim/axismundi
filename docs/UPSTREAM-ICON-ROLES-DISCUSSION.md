@@ -68,6 +68,47 @@ Site administrator   uploadable and selectable icon assets — a separate,
                      later problem
 ```
 
+### How the layers resolve against each other
+
+Settled in conversation, 2026-09-06. Deliberately **not** in the #82229 comment:
+it belongs to the layer that comment declines to design, and raising it there
+would undo the narrowing.
+
+The precedence does not need inventing — WordPress already runs this cascade for
+design data, and matching it is a stronger argument upstream than arguing it is
+sensible. Read from the running 7.1:
+
+```
+WP_Theme_JSON::VALID_ORIGINS      default < blocks < theme < custom
+resolver merge order              core -> blocks -> theme -> user
+```
+
+which is `core < plugin < theme < user/admin` under different names.
+
+Two things about icons do not map onto it cleanly.
+
+**A block's own bundled SVG is the floor, not a bid.** There are two plugin
+roles here that theme.json's single `blocks` origin does not separate: the
+plugin whose block *needs* a symbol, and an icon-pack plugin that *offers*
+representations. If both sit on the same rung, an icon pack can silently
+restyle a control whose meaning rides on the glyph. So the block's bundled icons
+are what happens when nobody answers, underneath the cascade rather than in it:
+
+```
+floor        the block's own icons, used only when nothing answers
+cascade      core baseline  <  icon-pack plugin  <  theme  <  site admin
+```
+
+**Within one origin, the narrower mapping wins.** A theme declaring a global
+icon language should lose to an explicit mapping for `axismundi/theme-switcher`'s
+`light`, the way a per-block `settings.blocks[...]` beats a global one in
+theme.json and the way specificity settles it in CSS. Origin first, scope
+second.
+
+The admin rung does not exist yet — uploadable, selectable icon assets are the
+separate later problem named above. Today the live cascade is
+`core < plugin < theme`, with that rung reserved rather than proposed.
+
 ## Measured background
 
 Not in the comment; it belongs to the layer the comment declines to design.

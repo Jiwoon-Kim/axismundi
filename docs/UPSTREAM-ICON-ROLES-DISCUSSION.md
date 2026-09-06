@@ -1,6 +1,10 @@
 # Draft — reply to Gutenberg discussion #82229, comment 18243970
 
-> Status: draft, not posted. Threaded reply under @meyshad's comment.
+> Status: **posted** 2026-09-06 as a threaded reply under @meyshad's comment.
+> <https://github.com/WordPress/gutenberg/discussions/82229#discussioncomment-18314084>
+>
+> The plugin link was left out on purpose: the Show and tell entry carries it,
+> and a comment narrowing an API question reads better without one.
 
 ## What this draft stopped trying to do
 
@@ -49,9 +53,7 @@ A future block-to-theme contract for fixed semantic UI symbols may be a
 separate layer above icon references, but it seems useful not to foreclose it.
 ```
 
-The only change worth considering before posting is linking the plugin on the
-first mention, since it is a Block Directory entry with a one-click preview and
-costs a reader nothing to check.
+Posted without the plugin link, as above.
 
 ## The role split this rests on
 

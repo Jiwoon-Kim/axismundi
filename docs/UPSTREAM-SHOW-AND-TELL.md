@@ -1,7 +1,7 @@
 # Draft — Gutenberg Discussion, Show and tell
 
-> Status: draft, not posted. Category **Show and tell** ("Show off something
-> you've made").
+> Status: **posted** 2026-09-06 as discussion #82501, category Show and tell.
+> <https://github.com/WordPress/gutenberg/discussions/82501>
 >
 > Rule for this one: it shows a thing and says what building it taught. It makes
 > no API proposal — the two API-shaped questions already have threads, and this

@@ -130,7 +130,7 @@ Read from a running WordPress 7.1 in wp-env on 2026-09-05.
 
 ## Later, separately
 
-A **Show and tell** entry for the Theme Switcher itself: a Block Directory
-plugin with a Playground preview, and how it composes what `core/button`,
-`core/buttons`, Navigation's overlay visibility, Social Links and the Icon block
-each do a piece of. No API proposal there — link #82228 and #82229 instead.
+Posted: [#82501](https://github.com/WordPress/gutenberg/discussions/82501),
+Show and tell. Shows the block and what composing it out of five Core blocks'
+habits taught me, and hands the two API-shaped questions to #82228 and #82229
+rather than restating them. Drafted in `UPSTREAM-SHOW-AND-TELL.md`.

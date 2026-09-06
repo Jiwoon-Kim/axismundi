@@ -13,6 +13,7 @@
     "build:zip": "pwsh -NoProfile -File scripts/build-zip.ps1"
   },
   "devDependencies": {
+    "@material/material-color-utilities": "^0.4.0",
     "@wordpress/env": "^10.0.0"
   }
 }

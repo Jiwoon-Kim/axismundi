@@ -31,6 +31,7 @@ defined( 'ABSPATH' ) || exit;
  */
 function omphalos_layout_styles() : array {
 	return array(
+		'omphalos-color'    => 'assets/styles/color.css',
 		'omphalos-scaffold' => 'assets/styles/scaffold.css',
 	);
 }

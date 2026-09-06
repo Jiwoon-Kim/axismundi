@@ -154,10 +154,27 @@ if ( args[ 0 ] === '--verify' ) {
 	verify();
 }
 
-const [ title, seed ] = args;
+/*
+ * --css <slug> emits the scheme gated behind an attribute rather than as a
+ * variation file. That is what the Theme Controls plugin ships, and it is a
+ * better mechanism than the variation this script was written for.
+ *
+ * `:root[data-ax-scheme="blue"]` is specificity (0,2,0) against the parent's
+ * bare `:root` at (0,1,0), so it wins on specificity and never on order.
+ * Measured: a stylesheet inserted FIRST in head, ahead of every one of the
+ * theme's own, still takes effect the moment the attribute is set. That is why
+ * a pre-generated scheme needs no adoptedStyleSheets, no late enqueue and no
+ * colour library on the page -- setting one attribute is the entire runtime,
+ * which is also what lets it happen before first paint.
+ */
+const cssFlag = args.indexOf( '--css' );
+const slug = cssFlag === -1 ? null : args[ cssFlag + 1 ];
+const positional = args.filter( ( _, i ) => i !== cssFlag && i !== cssFlag + 1 );
+
+const [ title, seed ] = positional;
 
 if ( ! title || ! seed ) {
-	console.error( 'usage: generate-scheme.mjs <Title> <#seed> > styles/<slug>.json' );
+	console.error( 'usage: generate-scheme.mjs <Title> <#seed> [--css <slug>]' );
 	console.error( '       generate-scheme.mjs --verify' );
 	process.exit( 2 );
 }
@@ -183,15 +200,25 @@ const css =
 	tokens.map( ( [ name, value ] ) => `${ name }:${ value };` ).join( '' ) +
 	'}';
 
-console.log(
-	JSON.stringify(
-		{
-			$schema: 'https://schemas.wp.org/wp/7.1/theme.json',
-			version: 3,
-			title,
-			styles: { css },
-		},
-		null,
-		'\t'
-	)
-);
+if ( slug ) {
+	console.log(
+		`/* ${ title } -- generated from ${ seed.toUpperCase() }, ` +
+			`hue ${ source.hue.toFixed( 1 ) } chroma ${ source.chroma.toFixed( 1 ) }. */`
+	);
+	console.log( `:root[data-ax-scheme="${ slug }"] {` );
+	tokens.forEach( ( [ name, value ] ) => console.log( `\t${ ( name + ':' ).padEnd( 34 ) } ${ value };` ) );
+	console.log( '}' );
+} else {
+	console.log(
+		JSON.stringify(
+			{
+				$schema: 'https://schemas.wp.org/wp/7.1/theme.json',
+				version: 3,
+				title,
+				styles: { css },
+			},
+			null,
+			'\t'
+		)
+	);
+}

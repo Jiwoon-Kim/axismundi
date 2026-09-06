@@ -1,98 +1,93 @@
 # Draft — reply to Gutenberg discussion #82229, comment 18243970
 
-> Status: draft, not posted. Threaded reply under @meyshad's comment, which is
-> what it refines. Measured against WordPress 7.1 in wp-env on 2026-09-05; the
-> numbers were read from a running install.
->
-> Earlier draft of this file proposed a separate discussion. It is not one:
-> #82229 already owns "what does an icon reference resolve to", and @meyshad's
-> reply already proposes the provider shape. This narrows one part of that
-> model instead of restating it.
+> Status: draft, not posted. Threaded reply under @meyshad's comment.
 
----
+## What this draft stopped trying to do
 
-That separation is the right one, and `search_callback` as optional discovery
-rather than registration is the part I would have got wrong.
+Two earlier versions of this file overreached and were cut back.
 
-One boundary in the stored shape I would draw differently, from having built a
-block that hits it.
+The first proposed a separate discussion. It was not one: #82228 owns how an
+icon-only control gets its accessible name, #82229 owns what an icon reference
+resolves to, and @meyshad had already replied there with the provider shape.
 
-`provider` in the persisted reference makes the block choose the site's icon
-language. For a block distributed on its own that is the wrong owner: it does
-not know what the active theme uses, and whatever it picks becomes something a
-theme has to override rather than something it can simply answer. A portable
-block knows something narrower and more stable — *which symbol, in which state* —
-and would be better persisting only that:
+The second stayed in #82229 but proposed a new contract — `IconRequirement`,
+a block-scoped semantic slot, and `state` carried in the reference. That is a
+layer above the question being asked, and it argued against this block's own
+implementation. Checked in the source: `render.php` stores one glyph name per
+mode (`'light' => 'light_mode'`) and `style.css` expresses selection by setting
+`--md-icon-fill: 1` on `[aria-pressed="true"]`. There is no second stored
+reference for the selected state anywhere in the block. So the claim that state
+must live in the reference came from a hypothetical SVG provider's cost, not
+from anything this block has hit — and it collided with @meyshad's boundary
+("variable-font state stays CSS/control state unless it represents a real named
+variant") for no gain.
 
-```ts
-type IconRequirement = {
-	name: string;               // meaning, block-scoped: "light", "dark", "auto"
-	state?: string;             // "default" | "selected"
-};
+What survives is narrower and is only about the question #82229 actually asks.
+
+## The comment
+
+```
+This makes me think there are two distinct cases.
+
+When an author chooses a pictogram, an opaque `provider` / `name` / optional
+`variant` reference is the right shape.
+
+A fixed UI control is different. A light/dark/auto switcher does not ask an
+author to choose its sun or moon; the block owns the action, state, and
+accessible name, while the active theme owns the icon language and its visual
+state. A theme can already provide that through an icon font, with selection
+expressed through CSS rather than a second stored icon reference.
+
+That is the model used by my Theme Switcher block. It works with its companion
+theme today; the portability problem is that the block must currently know the
+theme's font class and ligature names. I do not think that implies a semantic
+slot API should be designed in this thread. It does reinforce the narrower
+question here: a provider-based Icon Registry should not require SVG markup or
+enumeration as the only way for a theme-provided icon language to participate.
+
+A future block-to-theme contract for fixed semantic UI symbols may be a
+separate layer above icon references, but it seems useful not to foreclose it.
 ```
 
-with the site binding requirement to provider, and `IconReference` remaining
-exactly as you describe it for the case where an author *has* picked an icon —
-`core/icon`, a Social Link, anything where choosing the picture is the point.
-Those are two different authoring acts and I think they want two shapes.
+The only change worth considering before posting is linking the plugin on the
+first mention, since it is a Block Directory entry with a one-click preview and
+costs a reader nothing to check.
 
-## Why the state belongs in the declaration rather than in CSS
+## The role split this rests on
 
-Your last boundary says variable-font state stays CSS/control state unless it is
-a real named variant, and for fill and weight as decoration I agree. The case
-that does not fit is a toggle, where filled-versus-outlined is not styling — it
-is how the control says which option is active.
+Not part of the comment. Recorded because it is the frame the later Show and
+tell entry should follow.
 
-That distinction costs the two provider kinds very different amounts. A block
-with three symbols in two states is three strings plus one axis to a font
-provider, and up to six separate resources to an SVG provider. If the state is
-not in the reference, the SVG provider has no way to be asked for the second
-one; if it is, each provider can satisfy it the way its medium allows, which I
-think is the same argument you are already making one level down.
-
-## What is measurable today
-
-I checked these against 7.1 rather than assuming, because they change how much
-of this is theoretical:
-
-- The `core` collection registers **88 icons**, and none of them is a sun, moon,
-  brightness or contrast symbol. The nearest are `core/desktop`, `core/mobile`,
-  `core/tablet`. A colour-scheme control has no `core/*` name to fall back to at
-  all — so "register your own collection" is the common case, not the exception.
-- There are **two** filled/unfilled pairs in those 88: `star-empty` /
-  `star-filled` / `star-half`, and `symbol` / `symbol-filled`. Selected-versus-
-  unselected has no systematic expression in the set yet.
-- `wp_register_icon()` **refuses a name that is already registered**
-  (`_doing_it_wrong`, returns `false`). `wp_unregister_icon()` followed by
-  `wp_register_icon()` does replace the content — I confirmed that — but it is
-  global and last-writer-wins. There is no way today for a theme to say "this
-  symbol, in this block", only "this name, everywhere, and whoever ran last
-  decides".
-- Of the block PHP in `wp-includes/blocks`, exactly one file calls
-  `wp_get_icon()`: `icon.php`.
-
-The third one is why I think the binding layer matters more than it looks. Even
-with providers, if the only substitution mechanism stays name-global, a theme
-that wants its own light/dark symbols has to unregister something to get them.
-
-## The case this came from
-
-`axismundi/theme-switcher` is an Auto / Light / Dark control in the Block
-Directory. It renders its symbols as ligature text against an icon font the
-companion theme loads:
-
-```html
-<span class="material-symbols-outlined">light_mode</span>
+```
+Core                 a safe icon resource registry, and the provider /
+                     resolution groundwork above it
+Theme                the icon language: font loading, glyph and axis choice,
+                     visual state
+Block plugin         behaviour, semantic state, the accessible name, markup
+Site administrator   uploadable and selectable icon assets — a separate,
+                     later problem
 ```
 
-Under that theme it is a sun. Under any other theme it is the literal string
-`light_mode`, because nothing else loads the font. That is the only portability
-defect left in the block — its colours, corner sizes and motion already read
-`--md-sys-*` custom properties with baseline fallbacks, so a foreign theme
-degrades those gracefully and breaks only here.
+## Measured background
 
-Worth saying plainly, though: a theme shipping an icon font that a block
-consumes already *is* a theme-provided icon registry, without any Core API. What
-is missing is not the ability — it is a way for the block to express what it
-needs without naming that font, and for the theme to answer without unregistering
-anything.
+Not in the comment; it belongs to the layer the comment declines to design.
+Read from a running WordPress 7.1 in wp-env on 2026-09-05.
+
+- The `core` collection registers 88 icons, none of them a sun, moon, brightness
+  or contrast symbol. The nearest are `core/desktop`, `core/mobile`,
+  `core/tablet`.
+- Two filled/unfilled pairs exist in those 88: `star-empty` / `star-filled` /
+  `star-half`, and `symbol` / `symbol-filled`.
+- `wp_register_icon()` refuses a name that is already registered
+  (`_doing_it_wrong`, returns `false`). `wp_unregister_icon()` then
+  `wp_register_icon()` does replace the content, but globally and
+  last-writer-wins: there is no way to scope a substitution to one block.
+- Of the block PHP in `wp-includes/blocks`, one file calls `wp_get_icon()`:
+  `icon.php`.
+
+## Later, separately
+
+A **Show and tell** entry for the Theme Switcher itself: a Block Directory
+plugin with a Playground preview, and how it composes what `core/button`,
+`core/buttons`, Navigation's overlay visibility, Social Links and the Icon block
+each do a piece of. No API proposal there — link #82228 and #82229 instead.

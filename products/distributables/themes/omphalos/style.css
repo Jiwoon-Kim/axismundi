@@ -3,22 +3,25 @@ Theme Name:        Omphalos
 Theme URI:         https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/themes/omphalos
 Author:            KIM JIWOON
 Author URI:        https://designbusan.ai.kr
-Description:       Omphalos is a Twenty Twenty-Five child theme — the first grounding point of the Axismundi design language on WordPress. It layers Axismundi's Material Design 3 tokens, typography, and block styles onto a stable native block theme as a compatibility pilot.
-Template:          twentytwentyfive
-Version:           0.1.4
-Requires at least: 6.7
+Description:       A layout laboratory for the Axismundi design system. Omphalos is an Axismundi child theme that exists to try Material Design 3's layout and scaffold work against real WordPress block templates, where breaking things costs nothing. It contributes no design language of its own: colour, type, shape, motion, elevation, state and every core block style come from the parent. Not intended as a general-purpose theme.
+Template:          axismundi
+Version:           0.2.0
+Requires at least: 7.0
 Tested up to:      7.1
 Requires PHP:      8.1
 License:           GPL-3.0-or-later
 License URI:       https://www.gnu.org/licenses/gpl-3.0.html
 Text Domain:       omphalos
-Tags:              block-patterns, custom-colors, custom-logo, editor-style
+Tags:              block-patterns, full-site-editing, template-editing
 */
 
 /*
- * Omphalos v0.1 — Twenty Twenty-Five child theme.
+ * Required by WordPress to register the theme. Deliberately carries no rules.
  *
- * This stylesheet header is required by WordPress to register the child theme.
- * Runtime styles are enqueued from assets/styles/ by functions.php; this file
- * intentionally carries no rules so the cascade order stays explicit.
+ * Every token and every core block style arrives from Axismundi, whose
+ * functions.php addresses its own assets through get_template_directory() and
+ * therefore keeps resolving them to the parent while this child is active.
+ * Anything written here is a layout experiment that has not yet earned its way
+ * into the parent -- and if it turns out to be about representation rather than
+ * layout, it belongs in the parent instead of here.
  */

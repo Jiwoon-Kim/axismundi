@@ -1,51 +1,54 @@
 # Omphalos
 
-**Omphalos는 Axismundi 디자인 시스템을 Twenty Twenty-Five 위에 처음으로 착지시키는 차일드테마입니다.**
+**Omphalos는 Axismundi의 레이아웃 실험실입니다.** 망가져도 되는 쪽이고, Axismundi는
+오염되면 안 되는 쪽입니다.
 
-Omphalos is a Twenty Twenty-Five child theme that acts as the first grounding
-point of the Axismundi design system for WordPress. It layers Axismundi's
-Material Design 3 tokens, typography, and core block styling onto a stable
-native block theme as a compatibility pilot.
+Omphalos is an Axismundi child theme kept as a laboratory for Material Design 3
+layout work — [Layout](https://m3.material.io/foundations/layout/layout-overview/overview)
+and [Scaffold](https://m3.material.io/foundations/layout/scaffold/overview) —
+tried against real WordPress block templates. It is not a general-purpose theme
+and is not a design system of its own.
 
-- **Omphalos** = TT5 호환 기본형 / 브릿지 / 중심석 (this theme)
-- **Axismundi** = TT5 호환 갭을 제거한 순수 Material-token 기반 독립 블록테마 (future)
+## What it does not carry
 
-## Scope
+Nothing about representation. Colour roles, the type scale, corner shape,
+motion, elevation, state layers, the focus ring, every core block style, the
+block style variations and the bundled fonts all come from Axismundi. The
+parent addresses its own assets through `get_template_directory()` — verified,
+23 call sites, and no `get_stylesheet_directory()` anywhere — so they keep
+resolving to the parent while this child is active.
 
-Consumes (pilot from `axismundi-pilot`):
+That is the whole point of the split. A layout idea can be tried here without
+touching the parent, and only what survives moves.
 
-- Material 3 `tokens.ref` / `tokens.sys` color + core scale layer
-- bundled Roboto / Noto fonts + Material Symbols icon font (Font Library)
-- dynamic attachment media object templates
-- 3-state (light / dark / auto) theme switcher (Interactivity API)
-- a light / dark / auto scheme application layer. The inserter block lives in
-  the companion `omphalos-theme-switcher` plugin.
+## Where a change belongs
 
-Does **not** implement:
+| | |
+| --- | --- |
+| Composition — shells, rails, panes, scaffold regions, template parts | here |
+| Responsive rules that reposition a layout across the theme's viewport bands | the parent |
+| Layout tokens — rail width, shell gap, pane sizes | the parent |
+| Anything about colour, type, shape, motion, elevation or state | the parent |
 
-- the full Axismundi component system
-- editor toolkit / HCT runtime / ActivityPub UI
+The second and third rows are the traps. Building them here means moving them
+later, because they are contracts the parent's own templates need.
 
-## Develop with wp-env
+## Its previous life
 
-Docker Desktop must be running.
+Until 0.2.0 this was a Twenty Twenty-Five child theme: the first landing of the
+Axismundi design language on a stable native block theme, carrying its own
+token layers, block styles and VQA specimens. Axismundi absorbed all of it and
+went further, so 0.2.0 empties the theme and re-points it at the parent. The
+history is in git; nothing was archived here.
 
-```powershell
-npm install
-npm run start                      # boots wp-env on http://localhost:8884
-npm run cli theme activate omphalos
+## Local site
+
+```bash
+npm start        # wp-env on http://localhost:8894, WordPress 7.1
+npm run cli      # wp-cli inside it
 ```
 
-The `.wp-env.json` maps this folder as a theme, maps the local Twenty
-Twenty-Five copy as the parent, and installs the Create Block Theme plugin
-(dev-only export/inspect helper).
-
-| URL | Purpose |
-| --- | --- |
-| http://localhost:8884 | front-end |
-| http://localhost:8884/wp-admin | admin (admin / password) |
-
-## Parent theme
-
-Requires **Twenty Twenty-Five**. The dev environment maps a local copy; for a
-distributed release the parent is the WordPress.org theme `twentytwentyfive`.
+Both themes and the Theme Switcher plugin are mounted, and `afterStart`
+installs the site and activates Omphalos. The repository root also runs an
+env on port 8884 with both themes mounted; this one exists so the lab can be
+broken without disturbing it.

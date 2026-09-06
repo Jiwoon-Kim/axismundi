@@ -1,8 +1,8 @@
 {
   "name": "omphalos",
   "private": true,
-  "version": "0.1.3",
-  "description": "Omphalos — a Twenty Twenty-Five child theme grounding the Axismundi design language on WordPress.",
+  "version": "0.2.0",
+  "description": "Omphalos — an Axismundi child theme kept as a laboratory for Material Design 3 layout work.",
   "scripts": {
     "wp-env": "wp-env",
     "prestart": "node scripts/seed-wp-env-cache.cjs",

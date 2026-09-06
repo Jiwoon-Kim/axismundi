@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Theme Switcher
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-theme-switcher
  * Description:       A light, dark, and auto color-scheme switcher block that remembers what the reader picked.
- * Version:           0.1.8
+ * Version:           0.1.9
  * Requires at least: 7.1
  * Requires PHP:      8.1
  * Author:            KIM JIWOON

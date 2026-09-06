@@ -1,6 +1,12 @@
 == Changelog ==
 
-Releases before 0.1.8. The current release is in readme.txt.
+Releases before 0.1.9. The current release is in readme.txt.
+
+= 0.1.8 =
+* Stop inserting a switcher into the theme header automatically. The block now
+  goes only where it is placed, and a theme that wants one in its header can put
+  it in the header template. Headers that already show one are unaffected: the
+  Axismundi theme places it itself.
 
 = 0.1.7 =
 * Add a Cycle button visibility setting -- off, mobile or always -- so the

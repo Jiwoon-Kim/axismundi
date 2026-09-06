@@ -4,7 +4,7 @@ Tags: dark-mode, block, appearance, editor, color-scheme
 Requires at least: 7.1
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.8
+Stable tag: 0.1.9
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -49,11 +49,12 @@ site around it changes only if something consumes `html[data-theme]`.
 
 == Changelog ==
 
-= 0.1.8 =
-* Stop inserting a switcher into the theme header automatically. The block now
-  goes only where it is placed, and a theme that wants one in its header can put
-  it in the header template. Headers that already show one are unaffected: the
-  Axismundi theme places it itself.
+= 0.1.9 =
+* Stop the browser painting its own highlight over a button when a finger lands
+  on it. The control answers a touch with its pressed state and nothing else.
+* Show the focus state layer only for keyboard focus. A tap focuses a button
+  too, so the layer used to stay on the cycling button after the finger lifted,
+  until something else was touched.
 
 Earlier releases are listed in changelog.txt.
 

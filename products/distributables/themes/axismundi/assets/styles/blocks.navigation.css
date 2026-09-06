@@ -113,8 +113,8 @@
 
 	/* Keyboard focus ring — M3 focus indicator (secondary, 3px) offset off the pill. */
 	& .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item) > a.wp-block-navigation-item__content:focus-visible {
-		outline: 3px solid var(--wp--preset--color--secondary);
-		outline-offset: 2px;
+		outline: var(--md-focus-ring-width) solid var(--wp--preset--color--secondary);
+		outline-offset: var(--md-focus-ring-outward-offset);
 	}
 
 }
@@ -213,8 +213,8 @@
 	}
 
 	& .wp-block-navigation-item:not(.wp-block-navigation-item.has-child:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item) > a.wp-block-navigation-item__content:focus-visible {
-		outline: 3px solid var(--wp--preset--color--secondary);
-		outline-offset: 2px;
+		outline: var(--md-focus-ring-width) solid var(--wp--preset--color--secondary);
+		outline-offset: var(--md-focus-ring-outward-offset);
 	}
 
 	/* Open-always inline submenu = a continuation of the rail: match the rail's row
@@ -518,8 +518,8 @@ nav.wp-block-navigation button.wp-block-navigation__responsive-container-open:ha
 
 nav.wp-block-navigation button.wp-block-navigation__responsive-container-open:has(svg path[d="M5 5v1.5h14V5H5z"]):focus-visible {
 	background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
-	outline: 3px solid var(--wp--preset--color--secondary);
-	outline-offset: 2px;
+	outline: var(--md-focus-ring-width) solid var(--wp--preset--color--secondary);
+	outline-offset: var(--md-focus-ring-outward-offset);
 }
 
 nav.wp-block-navigation button.wp-block-navigation__responsive-container-open:has(svg path[d="M5 5v1.5h14V5H5z"]):active {

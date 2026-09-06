@@ -299,8 +299,8 @@ iframe {
 }
 .wp-lightbox-overlay :where(.wp-lightbox-close-button, .wp-lightbox-navigation-button):focus {
 	background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent) !important;
-	outline: 3px solid currentColor;
-	outline-offset: 2px;
+	outline: var(--md-focus-ring-width) solid currentColor;
+	outline-offset: var(--md-focus-ring-outward-offset);
 }
 .wp-lightbox-overlay :where(.wp-lightbox-close-button, .wp-lightbox-navigation-button):active {
 	border-radius: 8px;

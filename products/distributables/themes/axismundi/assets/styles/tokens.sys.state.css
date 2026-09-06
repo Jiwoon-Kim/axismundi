@@ -1,12 +1,14 @@
 /**
- * Axismundi — Material Design 3 state tokens.
+ * Axismundi — Material Design 3 interaction tokens.
  *
- * State layer opacity tokens are shared by buttons, icon buttons, navigation,
- * menus, lists, chips, and other interactive surfaces.
+ * Two separate mechanics, both from Foundations > Interaction, both cutting
+ * across every interactive component, and neither one of M3's seven Styles
+ * axes: the state layer an element wears, and the focus ring drawn around it.
+ * A focused control has both at once. WordPress has no preset model to publish
+ * either through, so CSS is their only home.
  *
- * Not one of M3's seven Styles axes -- these come from Foundations > Interaction
- * > State layers, and cut across every interactive component. WordPress has no
- * preset model to publish them through, so CSS is their only home.
+ * State layer opacities are shared by buttons, icon buttons, navigation, menus,
+ * lists, chips, and other interactive surfaces.
  *
  * Consume as a percentage: color-mix(in srgb, <role>
  * calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), <container>).
@@ -20,4 +22,28 @@
 
 	/* Disabled is a flat opacity on the content, not a layer over a container. */
 	--md-sys-state-disabled-state-layer-opacity: 0.38;
+
+	/*
+	 * Focus ring. Values are md-comp-focus-ring's own, read from Material Web's
+	 * token source rather than transcribed:
+	 * https://github.com/material-components/material-web/blob/main/tokens/_md-comp-focus-ring.scss
+	 *
+	 * Material Web draws the ring as a separate element -- outward is
+	 * `inset: -2px` with a 3px outline, inward is `inset: 0` with a 3px border.
+	 * Drawn as an `outline` on the component itself instead, outward is the
+	 * offset as published, and inward has to subtract the width so the ring
+	 * lands inside the edge rather than outside it. Hence the calc at the one
+	 * inward site, which keeps both numbers here identical to M3's.
+	 *
+	 * The colour is not a token: M3 names `secondary`, and every site but the
+	 * lightbox uses it. The lightbox floats over arbitrary media, where a fixed
+	 * role cannot be trusted to contrast, so it rings in currentColor.
+	 *
+	 * Not carried over: `active-width: 8px` over `duration-long4`, the ring's
+	 * entrance animation. It needs per-site keyframes and a reduced-motion
+	 * guard, which is a change of a different size than this one.
+	 */
+	--md-focus-ring-width: 3px;
+	--md-focus-ring-outward-offset: 2px;
+	--md-focus-ring-inward-offset: 0px;
 }

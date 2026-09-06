@@ -78,8 +78,8 @@
 
 .wp-block-categories-dropdown select:focus-visible,
 .wp-block-archives-dropdown select:focus-visible {
-	outline: 2px solid var(--wp--preset--color--secondary);
-	outline-offset: 2px;
+	outline: var(--md-focus-ring-width) solid var(--wp--preset--color--secondary);
+	outline-offset: var(--md-focus-ring-outward-offset);
 }
 
 /* Trailing arrow_drop_down, anchored to the select's 48px band (not the wrapper

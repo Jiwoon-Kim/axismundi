@@ -45,8 +45,8 @@
 	background-color: color-mix(in srgb, var(--wp--preset--color--on-surface) 8%, var(--wp--preset--color--surface-container));
 }
 .wp-block-post-terms.is-style-tags > a:focus-visible {
-	outline: 2px solid var(--wp--preset--color--secondary);
-	outline-offset: 2px;
+	outline: var(--md-focus-ring-width) solid var(--wp--preset--color--secondary);
+	outline-offset: var(--md-focus-ring-outward-offset);
 }
 .wp-block-post-terms.is-style-tags .wp-block-post-terms__separator {
 	display: none;
@@ -225,8 +225,8 @@
 }
 .wp-block-categories.is-style-row li > a:focus-visible,
 .wp-block-archives.is-style-row li > a:focus-visible {
-	outline: 2px solid var(--wp--preset--color--secondary);
-	outline-offset: 2px;
+	outline: var(--md-focus-ring-width) solid var(--wp--preset--color--secondary);
+	outline-offset: var(--md-focus-ring-outward-offset);
 	border-radius: 4px;
 }
 /* Hierarchy — the nested <ul class="children"> spans the full row width below

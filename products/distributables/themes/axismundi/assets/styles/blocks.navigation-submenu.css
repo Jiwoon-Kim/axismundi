@@ -117,8 +117,9 @@
 		white-space: nowrap;
 	}
 	& .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item > :is(a.wp-block-navigation-item__content, button.wp-block-navigation-item__content.wp-block-navigation-submenu__toggle):focus-visible {
-		outline: 3px solid var(--wp--preset--color--secondary);
-		outline-offset: -3px;
+		outline: var(--md-focus-ring-width) solid var(--wp--preset--color--secondary);
+		/* Inward: the ring sits inside the edge, so the width comes off the offset. */
+		outline-offset: calc(var(--md-focus-ring-inward-offset) - var(--md-focus-ring-width));
 	}
 
 	/* Supporting text (core/navigation-link description) — core hides it; opt in as

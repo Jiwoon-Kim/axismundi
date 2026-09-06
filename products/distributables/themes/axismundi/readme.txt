@@ -84,8 +84,9 @@ than carrying a second visual system.
 * Set the header and navigation overlay switchers through the Theme Switcher
   plugin's own settings rather than a block style class it now reads only as a
   fallback. The overlay shows the connected Auto / Light / Dark group at wider
-  widths and a single cycling button on narrow screens; the header keeps one
-  cycling button at every width.
+  widths and a single cycling button on narrow screens, centred with the logo
+  and site title above it; the header keeps one cycling button at every width,
+  in the Standard icon button style that suits a bar of icon controls.
 * Remove two block-hook opt-outs that named a hook the Theme Switcher plugin no
   longer registers.
 

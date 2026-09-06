@@ -77,11 +77,18 @@ const AXISMUNDI_THEME_CONTROLS_COOKIE = 'axismundi_scheme';
  */
 function axismundi_theme_controls_schemes() : array {
 	return array(
-		'baseline' => __( 'Baseline', 'axismundi-theme-controls' ),
-		'blue'     => __( 'Blue', 'axismundi-theme-controls' ),
-		'cyan'     => __( 'Cyan', 'axismundi-theme-controls' ),
-		'green'    => __( 'Green', 'axismundi-theme-controls' ),
-		'orange'   => __( 'Orange', 'axismundi-theme-controls' ),
+		'baseline'     => __( 'Baseline', 'axismundi-theme-controls' ),
+		'red'          => __( 'Red', 'axismundi-theme-controls' ),
+		'orange'       => __( 'Orange', 'axismundi-theme-controls' ),
+		'yellow'       => __( 'Yellow', 'axismundi-theme-controls' ),
+		'green'        => __( 'Green', 'axismundi-theme-controls' ),
+		'cyan'         => __( 'Cyan', 'axismundi-theme-controls' ),
+		'blue-variant' => __( 'Blue variant', 'axismundi-theme-controls' ),
+		'blue'         => __( 'Blue', 'axismundi-theme-controls' ),
+		'purple'       => __( 'Purple', 'axismundi-theme-controls' ),
+		'pink'         => __( 'Pink', 'axismundi-theme-controls' ),
+		'grey'         => __( 'Grey', 'axismundi-theme-controls' ),
+		'grey-variant' => __( 'Grey variant', 'axismundi-theme-controls' ),
 	);
 }
 
@@ -97,7 +104,23 @@ function axismundi_theme_controls_schemes() : array {
  * @return void
  */
 function axismundi_theme_controls_head_script() : void {
-	$slugs = implode( '|', array_diff( array_keys( axismundi_theme_controls_schemes() ), array( 'baseline' ) ) );
+	$slugs = array_values( array_diff( array_keys( axismundi_theme_controls_schemes() ), array( 'baseline' ) ) );
+
+	/*
+	 * Longest first, and this matters rather than being tidy. Regex alternation
+	 * takes the first branch that matches, so with `grey` ahead of
+	 * `grey-variant` the cookie "grey-variant" matches "grey" and the page
+	 * loads the wrong scheme. Sorting by length here means the display order
+	 * above stays free to be whatever reads best.
+	 */
+	usort(
+		$slugs,
+		static function ( string $a, string $b ) : int {
+			return strlen( $b ) <=> strlen( $a );
+		}
+	);
+
+	$slugs = implode( '|', $slugs );
 
 	printf(
 		'<script>(function(){try{var m=document.cookie.match(/(?:^|;\s*)%1$s=(%2$s)/);if(m){document.documentElement.setAttribute("data-ax-scheme",m[1]);}}catch(e){}})();</script>' . "\n",

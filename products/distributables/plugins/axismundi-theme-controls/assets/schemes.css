@@ -13,8 +13,18 @@
  * neutral-variant at chroma 8. Applied to M3's own baseline seed those
  * constraints reproduce the published baseline within one step per channel.
  *
+ * No family is ever derived more chromatic than its own seed. M3's constants
+ * assume a saturated source; applied to a near-neutral one they invert the
+ * scheme. Measured on the published static Grey, whose tone 40 has chroma 1.6,
+ * the raw constants produce a secondary at 16 and a tertiary at 24 -- both far
+ * more colourful than the primary they sit under, which is not what asking for
+ * Grey means. Clamping to the seed's chroma touches only Grey and Grey variant;
+ * every other static palette has a tone-40 chroma between 35.9 and 81.1.
+ *
  * Error is deliberately absent from every scheme. M3 holds it at a fixed hue
- * across schemes, so it stays whatever the active theme says.
+ * across schemes, so it stays whatever the active theme says. Note what that
+ * means for the Red scheme: its primary sits at the same hue as error, so the
+ * two stop being distinguishable by colour alone.
  *
  * The attribute gate is the whole mechanism. :root[data-ax-scheme="blue"] is
  * specificity (0,2,0) against a theme's bare :root at (0,1,0), so it wins on
@@ -67,6 +77,50 @@
 	--md-ref-palette-neutral-variant-60: #8F909A;
 	--md-ref-palette-neutral-variant-80: #C5C6D0;
 	--md-ref-palette-neutral-variant-90: #E1E2EC;
+}
+
+/* Blue variant -- generated from #006788, hue 231.5 chroma 38.5. */
+:root[data-ax-scheme="blue-variant"] {
+	--md-ref-palette-primary-20:       #003548;
+	--md-ref-palette-primary-30:       #004D66;
+	--md-ref-palette-primary-40:       #006687;
+	--md-ref-palette-primary-80:       #86D0F5;
+	--md-ref-palette-primary-90:       #C1E8FF;
+	--md-ref-palette-primary-100:      #FFFFFF;
+	--md-ref-palette-secondary-20:     #1F333D;
+	--md-ref-palette-secondary-30:     #364954;
+	--md-ref-palette-secondary-40:     #4D616C;
+	--md-ref-palette-secondary-80:     #B5CAD6;
+	--md-ref-palette-secondary-90:     #D0E6F3;
+	--md-ref-palette-secondary-100:    #FFFFFF;
+	--md-ref-palette-tertiary-20:      #302C4C;
+	--md-ref-palette-tertiary-30:      #474364;
+	--md-ref-palette-tertiary-40:      #5F5A7D;
+	--md-ref-palette-tertiary-80:      #C8C2EA;
+	--md-ref-palette-tertiary-90:      #E5DEFF;
+	--md-ref-palette-tertiary-100:     #FFFFFF;
+	--md-ref-palette-neutral-0:        #000000;
+	--md-ref-palette-neutral-4:        #0A0F12;
+	--md-ref-palette-neutral-6:        #0F1417;
+	--md-ref-palette-neutral-10:       #171C1F;
+	--md-ref-palette-neutral-12:       #1B2023;
+	--md-ref-palette-neutral-17:       #262B2E;
+	--md-ref-palette-neutral-20:       #2C3134;
+	--md-ref-palette-neutral-22:       #313539;
+	--md-ref-palette-neutral-24:       #353A3D;
+	--md-ref-palette-neutral-87:       #D6DADE;
+	--md-ref-palette-neutral-90:       #DFE3E7;
+	--md-ref-palette-neutral-92:       #E4E9ED;
+	--md-ref-palette-neutral-94:       #EAEEF2;
+	--md-ref-palette-neutral-95:       #EDF1F5;
+	--md-ref-palette-neutral-96:       #F0F4F8;
+	--md-ref-palette-neutral-98:       #F6FAFE;
+	--md-ref-palette-neutral-100:      #FFFFFF;
+	--md-ref-palette-neutral-variant-30: #40484C;
+	--md-ref-palette-neutral-variant-50: #71787D;
+	--md-ref-palette-neutral-variant-60: #8A9297;
+	--md-ref-palette-neutral-variant-80: #C0C7CD;
+	--md-ref-palette-neutral-variant-90: #DCE3E9;
 }
 
 /* Cyan -- generated from #00687C, hue 218.9 chroma 35.9. */
@@ -157,6 +211,94 @@
 	--md-ref-palette-neutral-variant-90: #DDE5DA;
 }
 
+/* Grey -- generated from #5E5E5E, hue 209.5 chroma 1.6. */
+:root[data-ax-scheme="grey"] {
+	--md-ref-palette-primary-20:       #303030;
+	--md-ref-palette-primary-30:       #464747;
+	--md-ref-palette-primary-40:       #5E5E5E;
+	--md-ref-palette-primary-80:       #C7C6C6;
+	--md-ref-palette-primary-90:       #E4E2E2;
+	--md-ref-palette-primary-100:      #FFFFFF;
+	--md-ref-palette-secondary-20:     #303030;
+	--md-ref-palette-secondary-30:     #464747;
+	--md-ref-palette-secondary-40:     #5E5E5E;
+	--md-ref-palette-secondary-80:     #C7C6C6;
+	--md-ref-palette-secondary-90:     #E4E2E2;
+	--md-ref-palette-secondary-100:    #FFFFFF;
+	--md-ref-palette-tertiary-20:      #313031;
+	--md-ref-palette-tertiary-30:      #474647;
+	--md-ref-palette-tertiary-40:      #5F5E5F;
+	--md-ref-palette-tertiary-80:      #C8C6C7;
+	--md-ref-palette-tertiary-90:      #E5E2E3;
+	--md-ref-palette-tertiary-100:     #FFFFFF;
+	--md-ref-palette-neutral-0:        #000000;
+	--md-ref-palette-neutral-4:        #0D0E0E;
+	--md-ref-palette-neutral-6:        #131314;
+	--md-ref-palette-neutral-10:       #1B1C1C;
+	--md-ref-palette-neutral-12:       #1F2020;
+	--md-ref-palette-neutral-17:       #292A2A;
+	--md-ref-palette-neutral-20:       #303030;
+	--md-ref-palette-neutral-22:       #343535;
+	--md-ref-palette-neutral-24:       #393939;
+	--md-ref-palette-neutral-87:       #DBDAD9;
+	--md-ref-palette-neutral-90:       #E4E2E2;
+	--md-ref-palette-neutral-92:       #E9E8E7;
+	--md-ref-palette-neutral-94:       #EFEDED;
+	--md-ref-palette-neutral-95:       #F2F0F0;
+	--md-ref-palette-neutral-96:       #F5F3F3;
+	--md-ref-palette-neutral-98:       #FBF9F8;
+	--md-ref-palette-neutral-100:      #FFFFFF;
+	--md-ref-palette-neutral-variant-30: #464747;
+	--md-ref-palette-neutral-variant-50: #777777;
+	--md-ref-palette-neutral-variant-60: #919090;
+	--md-ref-palette-neutral-variant-80: #C7C6C6;
+	--md-ref-palette-neutral-variant-90: #E4E2E2;
+}
+
+/* Grey variant -- generated from #5C5F5E, hue 187.9 chroma 3.6. */
+:root[data-ax-scheme="grey-variant"] {
+	--md-ref-palette-primary-20:       #2E3130;
+	--md-ref-palette-primary-30:       #444746;
+	--md-ref-palette-primary-40:       #5C5F5E;
+	--md-ref-palette-primary-80:       #C5C7C5;
+	--md-ref-palette-primary-90:       #E1E3E1;
+	--md-ref-palette-primary-100:      #FFFFFF;
+	--md-ref-palette-secondary-20:     #2E3130;
+	--md-ref-palette-secondary-30:     #444746;
+	--md-ref-palette-secondary-40:     #5C5F5E;
+	--md-ref-palette-secondary-80:     #C5C7C5;
+	--md-ref-palette-secondary-90:     #E1E3E1;
+	--md-ref-palette-secondary-100:    #FFFFFF;
+	--md-ref-palette-tertiary-20:      #2F3033;
+	--md-ref-palette-tertiary-30:      #454749;
+	--md-ref-palette-tertiary-40:      #5D5E61;
+	--md-ref-palette-tertiary-80:      #C6C6C9;
+	--md-ref-palette-tertiary-90:      #E2E2E5;
+	--md-ref-palette-tertiary-100:     #FFFFFF;
+	--md-ref-palette-neutral-0:        #000000;
+	--md-ref-palette-neutral-4:        #0C0F0E;
+	--md-ref-palette-neutral-6:        #111413;
+	--md-ref-palette-neutral-10:       #191C1C;
+	--md-ref-palette-neutral-12:       #1D2020;
+	--md-ref-palette-neutral-17:       #272B2A;
+	--md-ref-palette-neutral-20:       #2E3130;
+	--md-ref-palette-neutral-22:       #323535;
+	--md-ref-palette-neutral-24:       #373A39;
+	--md-ref-palette-neutral-87:       #D8DAD9;
+	--md-ref-palette-neutral-90:       #E1E3E1;
+	--md-ref-palette-neutral-92:       #E7E9E7;
+	--md-ref-palette-neutral-94:       #ECEEED;
+	--md-ref-palette-neutral-95:       #EFF1EF;
+	--md-ref-palette-neutral-96:       #F2F4F2;
+	--md-ref-palette-neutral-98:       #F8FAF8;
+	--md-ref-palette-neutral-100:      #FFFFFF;
+	--md-ref-palette-neutral-variant-30: #444746;
+	--md-ref-palette-neutral-variant-50: #757876;
+	--md-ref-palette-neutral-variant-60: #8F9190;
+	--md-ref-palette-neutral-variant-80: #C5C7C5;
+	--md-ref-palette-neutral-variant-90: #E1E3E1;
+}
+
 /* Orange -- generated from #9A4600, hue 49.1 chroma 52.3. */
 :root[data-ax-scheme="orange"] {
 	--md-ref-palette-primary-20:       #532200;
@@ -199,5 +341,181 @@
 	--md-ref-palette-neutral-variant-60: #9F8D84;
 	--md-ref-palette-neutral-variant-80: #D7C2B8;
 	--md-ref-palette-neutral-variant-90: #F4DED4;
+}
+
+/* Pink -- generated from #B60D6E, hue 356.0 chroma 81.1. */
+:root[data-ax-scheme="pink"] {
+	--md-ref-palette-primary-20:       #640039;
+	--md-ref-palette-primary-30:       #8C0053;
+	--md-ref-palette-primary-40:       #B50C6E;
+	--md-ref-palette-primary-80:       #FFB0CD;
+	--md-ref-palette-primary-90:       #FFD9E4;
+	--md-ref-palette-primary-100:      #FFFFFF;
+	--md-ref-palette-secondary-20:     #412932;
+	--md-ref-palette-secondary-30:     #5A3F49;
+	--md-ref-palette-secondary-40:     #735760;
+	--md-ref-palette-secondary-80:     #E1BDC8;
+	--md-ref-palette-secondary-90:     #FFD9E4;
+	--md-ref-palette-secondary-100:    #FFFFFF;
+	--md-ref-palette-tertiary-20:      #49290E;
+	--md-ref-palette-tertiary-30:      #633E22;
+	--md-ref-palette-tertiary-40:      #7E5537;
+	--md-ref-palette-tertiary-80:      #F0BC96;
+	--md-ref-palette-tertiary-90:      #FFDCC4;
+	--md-ref-palette-tertiary-100:     #FFFFFF;
+	--md-ref-palette-neutral-0:        #000000;
+	--md-ref-palette-neutral-4:        #130C0F;
+	--md-ref-palette-neutral-6:        #191114;
+	--md-ref-palette-neutral-10:       #21191C;
+	--md-ref-palette-neutral-12:       #261D20;
+	--md-ref-palette-neutral-17:       #30282A;
+	--md-ref-palette-neutral-20:       #372E31;
+	--md-ref-palette-neutral-22:       #3C3235;
+	--md-ref-palette-neutral-24:       #40373A;
+	--md-ref-palette-neutral-87:       #E6D6DA;
+	--md-ref-palette-neutral-90:       #EEDFE2;
+	--md-ref-palette-neutral-92:       #F4E4E8;
+	--md-ref-palette-neutral-94:       #FAEAED;
+	--md-ref-palette-neutral-95:       #FDEDF0;
+	--md-ref-palette-neutral-96:       #FFF0F3;
+	--md-ref-palette-neutral-98:       #FFF8F8;
+	--md-ref-palette-neutral-100:      #FFFFFF;
+	--md-ref-palette-neutral-variant-30: #514347;
+	--md-ref-palette-neutral-variant-50: #837378;
+	--md-ref-palette-neutral-variant-60: #9D8C91;
+	--md-ref-palette-neutral-variant-80: #D5C2C7;
+	--md-ref-palette-neutral-variant-90: #F2DEE2;
+}
+
+/* Purple -- generated from #7438D2, hue 303.4 chroma 72.1. */
+:root[data-ax-scheme="purple"] {
+	--md-ref-palette-primary-20:       #41008B;
+	--md-ref-palette-primary-30:       #5C13B9;
+	--md-ref-palette-primary-40:       #7438D2;
+	--md-ref-palette-primary-80:       #D4BBFF;
+	--md-ref-palette-primary-90:       #EBDCFF;
+	--md-ref-palette-primary-100:      #FFFFFF;
+	--md-ref-palette-secondary-20:     #342D40;
+	--md-ref-palette-secondary-30:     #4B4358;
+	--md-ref-palette-secondary-40:     #635B70;
+	--md-ref-palette-secondary-80:     #CDC2DB;
+	--md-ref-palette-secondary-90:     #EADEF7;
+	--md-ref-palette-secondary-100:    #FFFFFF;
+	--md-ref-palette-tertiary-20:      #4A252F;
+	--md-ref-palette-tertiary-30:      #643B45;
+	--md-ref-palette-tertiary-40:      #7F525D;
+	--md-ref-palette-tertiary-80:      #F1B7C4;
+	--md-ref-palette-tertiary-90:      #FFD9E0;
+	--md-ref-palette-tertiary-100:     #FFFFFF;
+	--md-ref-palette-neutral-0:        #000000;
+	--md-ref-palette-neutral-4:        #0F0D13;
+	--md-ref-palette-neutral-6:        #151218;
+	--md-ref-palette-neutral-10:       #1D1B20;
+	--md-ref-palette-neutral-12:       #211F24;
+	--md-ref-palette-neutral-17:       #2C292F;
+	--md-ref-palette-neutral-20:       #322F35;
+	--md-ref-palette-neutral-22:       #37343A;
+	--md-ref-palette-neutral-24:       #3B383E;
+	--md-ref-palette-neutral-87:       #DED8E0;
+	--md-ref-palette-neutral-90:       #E7E0E8;
+	--md-ref-palette-neutral-92:       #EDE6EE;
+	--md-ref-palette-neutral-94:       #F2ECF4;
+	--md-ref-palette-neutral-95:       #F5EFF7;
+	--md-ref-palette-neutral-96:       #F8F1FA;
+	--md-ref-palette-neutral-98:       #FEF7FF;
+	--md-ref-palette-neutral-100:      #FFFFFF;
+	--md-ref-palette-neutral-variant-30: #49454E;
+	--md-ref-palette-neutral-variant-50: #7A757F;
+	--md-ref-palette-neutral-variant-60: #948F99;
+	--md-ref-palette-neutral-variant-80: #CBC4CF;
+	--md-ref-palette-neutral-variant-90: #E7E0EB;
+}
+
+/* Red -- generated from #B3251E, hue 25.8 chroma 76.8. */
+:root[data-ax-scheme="red"] {
+	--md-ref-palette-primary-20:       #690003;
+	--md-ref-palette-primary-30:       #920609;
+	--md-ref-palette-primary-40:       #B4261F;
+	--md-ref-palette-primary-80:       #FFB4AA;
+	--md-ref-palette-primary-90:       #FFDAD5;
+	--md-ref-palette-primary-100:      #FFFFFF;
+	--md-ref-palette-secondary-20:     #442926;
+	--md-ref-palette-secondary-30:     #5D3F3B;
+	--md-ref-palette-secondary-40:     #775652;
+	--md-ref-palette-secondary-80:     #E7BDB7;
+	--md-ref-palette-secondary-90:     #FFDAD5;
+	--md-ref-palette-secondary-100:    #FFFFFF;
+	--md-ref-palette-tertiary-20:      #3F2E04;
+	--md-ref-palette-tertiary-30:      #574419;
+	--md-ref-palette-tertiary-40:      #715C2E;
+	--md-ref-palette-tertiary-80:      #DFC38C;
+	--md-ref-palette-tertiary-90:      #FCDFA6;
+	--md-ref-palette-tertiary-100:     #FFFFFF;
+	--md-ref-palette-neutral-0:        #000000;
+	--md-ref-palette-neutral-4:        #140C0B;
+	--md-ref-palette-neutral-6:        #1A1110;
+	--md-ref-palette-neutral-10:       #231918;
+	--md-ref-palette-neutral-12:       #271D1C;
+	--md-ref-palette-neutral-17:       #322826;
+	--md-ref-palette-neutral-20:       #392E2C;
+	--md-ref-palette-neutral-22:       #3D3231;
+	--md-ref-palette-neutral-24:       #423735;
+	--md-ref-palette-neutral-87:       #E8D6D4;
+	--md-ref-palette-neutral-90:       #F1DEDC;
+	--md-ref-palette-neutral-92:       #F7E4E2;
+	--md-ref-palette-neutral-94:       #FCEAE7;
+	--md-ref-palette-neutral-95:       #FFEDEA;
+	--md-ref-palette-neutral-96:       #FFF0EE;
+	--md-ref-palette-neutral-98:       #FFF8F7;
+	--md-ref-palette-neutral-100:      #FFFFFF;
+	--md-ref-palette-neutral-variant-30: #534341;
+	--md-ref-palette-neutral-variant-50: #857370;
+	--md-ref-palette-neutral-variant-60: #A08C8A;
+	--md-ref-palette-neutral-variant-80: #D8C2BE;
+	--md-ref-palette-neutral-variant-90: #F5DDDA;
+}
+
+/* Yellow -- generated from #8F4E06, hue 58.6 chroma 43.9. */
+:root[data-ax-scheme="yellow"] {
+	--md-ref-palette-primary-20:       #4D2600;
+	--md-ref-palette-primary-30:       #6D3900;
+	--md-ref-palette-primary-40:       #8F4E06;
+	--md-ref-palette-primary-80:       #FFB77C;
+	--md-ref-palette-primary-90:       #FFDCC2;
+	--md-ref-palette-primary-100:      #FFFFFF;
+	--md-ref-palette-secondary-20:     #412C1A;
+	--md-ref-palette-secondary-30:     #5A422E;
+	--md-ref-palette-secondary-40:     #745944;
+	--md-ref-palette-secondary-80:     #E3C0A6;
+	--md-ref-palette-secondary-90:     #FFDCC2;
+	--md-ref-palette-secondary-100:    #FFFFFF;
+	--md-ref-palette-tertiary-20:      #2E330D;
+	--md-ref-palette-tertiary-30:      #444A21;
+	--md-ref-palette-tertiary-40:      #5C6237;
+	--md-ref-palette-tertiary-80:      #C4CB96;
+	--md-ref-palette-tertiary-90:      #E1E7B1;
+	--md-ref-palette-tertiary-100:     #FFFFFF;
+	--md-ref-palette-neutral-0:        #000000;
+	--md-ref-palette-neutral-4:        #140D08;
+	--md-ref-palette-neutral-6:        #19120C;
+	--md-ref-palette-neutral-10:       #221A14;
+	--md-ref-palette-neutral-12:       #261E18;
+	--md-ref-palette-neutral-17:       #312822;
+	--md-ref-palette-neutral-20:       #382F28;
+	--md-ref-palette-neutral-22:       #3C332C;
+	--md-ref-palette-neutral-24:       #413731;
+	--md-ref-palette-neutral-87:       #E7D7CD;
+	--md-ref-palette-neutral-90:       #EFE0D6;
+	--md-ref-palette-neutral-92:       #F5E5DB;
+	--md-ref-palette-neutral-94:       #FBEBE1;
+	--md-ref-palette-neutral-95:       #FEEEE4;
+	--md-ref-palette-neutral-96:       #FFF1E9;
+	--md-ref-palette-neutral-98:       #FFF8F5;
+	--md-ref-palette-neutral-100:      #FFFFFF;
+	--md-ref-palette-neutral-variant-30: #51443B;
+	--md-ref-palette-neutral-variant-50: #847469;
+	--md-ref-palette-neutral-variant-60: #9E8E82;
+	--md-ref-palette-neutral-variant-80: #D6C3B6;
+	--md-ref-palette-neutral-variant-90: #F3DFD2;
 }
 

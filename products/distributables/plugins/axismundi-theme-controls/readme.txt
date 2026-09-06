@@ -17,11 +17,11 @@ A reader picks a colour scheme and the whole site follows: brand colours,
 surfaces, outlines. The choice is kept in a first-party cookie and applied
 before the next page paints, so returning does not flash the previous scheme.
 
-Four schemes ship — Blue, Cyan, Green and Orange — alongside whatever the
-active theme's own scheme is. Every one is a complete Material Design 3 tonal
-scheme rather than a recolouring: the primary, secondary, tertiary, neutral and
-neutral-variant families are all derived together, so the surfaces shift with
-the accents instead of staying behind.
+Eleven schemes ship — one for each of Material Design 3's published static
+palettes — alongside whatever the active theme's own scheme is. Every one is a
+complete tonal scheme rather than a recolouring: the primary, secondary,
+tertiary, neutral and neutral-variant families are all derived together, so the
+surfaces shift with the accents instead of staying behind.
 
 The error colour never changes. Material Design holds it at a fixed hue across
 schemes so a warning still reads as a warning.
@@ -60,8 +60,8 @@ No. Until someone picks a scheme, the theme's own colours show.
 == Changelog ==
 
 = 0.1.0 =
-* First version. Four Material Design 3 schemes, a scheme control on the front
-  end, and the choice remembered between visits.
+* First version. Eleven Material Design 3 schemes, a scheme control on the
+  front end, and the choice remembered between visits.
 
 == Copyright ==
 

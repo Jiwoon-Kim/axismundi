@@ -76,11 +76,23 @@ to serve as tertiary. That is why generation is needed at all.
 
 ## What to expect visually
 
-Less than you would think, and this is not a bug. The surfaces carry chroma 6,
-so a scheme swap moves them from one faint tint to another —
-`#F3EDF7` to `#EEEDF4` at `surface-container`. What reads clearly is the
-accents: links, filled buttons, the active state. A scheme swap looks dramatic
-only where the accent roles have surface area.
+It varies far more than one look suggests, and an earlier version of this note
+got it wrong by generalising from a single measurement.
+
+On the dark home page with the Blue scheme the change is subtle. The surfaces
+carry chroma 6, so they move from one faint tint to another — `#F3EDF7` to
+`#EEEDF4` at `surface-container` — and only links and filled buttons clearly
+shift. That was measured, and then written up as though it were the general
+case.
+
+On a light page, with a high-chroma seed, on a layout that gives the accent
+roles surface area, the same mechanism is unmistakable: the Pink scheme
+(tone-40 chroma 81) over the scaffold single-post template turns the surfaces,
+the tag chips, the links and the supporting pane pink together.
+
+So three things decide how visible a swap is, and none of them is this plugin:
+whether the page is light or dark, how chromatic the seed is — 35.9 to 81.1
+across the shipped set — and how much of the page the accent roles touch.
 
 ## Deliberately not done
 
@@ -88,7 +100,27 @@ only where the accent roles have surface area.
   several releases to get there. One control in the footer proves the mechanism.
 - **No settings screen**, no scheme CRUD, no per-scheme light/dark pairing.
 - **No arbitrary colour.** See the library cost above.
-- **`error` untouched by every scheme**, on purpose.
+- **`error` untouched by every scheme**, on purpose. Worth knowing what that
+  costs the Red scheme: its primary sits at error's hue, so the two stop being
+  distinguishable by colour alone.
+- **A control that wraps.** Twelve options in a fixed corner row is more than
+  the shape wants; at 800px it goes to two lines. Fine for a proof, and the
+  first thing to change if this becomes something a site ships.
+
+## The clamp
+
+M3's TonalSpot constants assume a saturated seed. Applied to a near-neutral one
+they invert the scheme: on the published static Grey, tone-40 chroma 1.6, the
+raw constants give a secondary at chroma 16 and a tertiary at 24 — both far
+more colourful than the primary they are meant to sit under. Grey variant does
+the same at 3.6.
+
+So no family is derived more chromatic than its own seed. A neutral seed gives
+a neutral scheme, which is what asking for Grey means, and the clamp reaches
+nothing else: every other static palette has a tone-40 chroma between 35.9 and
+81.1, above the largest constant. Verified after the change that the
+constraints still reproduce M3's published baseline within one step per
+channel.
 
 ## Unexplained
 

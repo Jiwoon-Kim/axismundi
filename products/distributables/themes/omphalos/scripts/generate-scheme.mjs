@@ -88,7 +88,24 @@ function scheme( seed ) {
 	const palettes = { primary: TonalPalette.fromInt( argb( seed ) ) };
 
 	for ( const [ family, rule ] of Object.entries( FAMILIES ) ) {
-		palettes[ family ] = TonalPalette.fromHueAndChroma( source.hue + rule.hueShift, rule.chroma );
+		/*
+		 * Never derive a family more chromatic than the seed.
+		 *
+		 * M3's constants assume a saturated source. Applied to a near-neutral
+		 * one they invert the scheme: measured on the published static Grey,
+		 * whose tone 40 has chroma 1.6, the constants produce a secondary at 16
+		 * and a tertiary at 24 -- both far more colourful than the primary they
+		 * are supposed to sit under. Static Grey variant does the same at 3.6.
+		 *
+		 * Clamping to the seed's own chroma makes a neutral seed give a neutral
+		 * scheme, which is what asking for Grey means. It touches nothing else:
+		 * every other published static palette has a tone-40 chroma between
+		 * 35.9 and 81.1, all above the largest constant here.
+		 */
+		palettes[ family ] = TonalPalette.fromHueAndChroma(
+			source.hue + rule.hueShift,
+			Math.min( rule.chroma, source.chroma )
+		);
 	}
 
 	const tokens = [];

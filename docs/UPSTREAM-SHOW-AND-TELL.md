@@ -54,7 +54,7 @@ It renders one of two surfaces:
 | `core/navigation` | `overlayMenu`'s three answers — `off` / `mobile` / `always` — as the shape for "how far does this control compress" |
 | `core/buttons` | a flex layout with justification, and `align: wide, full` |
 | `core/button` | block style variations as the colour axis: Filled, Tonal, Outlined |
-| `core/social-links` | an icon-only control whose accessible name is a visually hidden text node rather than an `aria-label` |
+| `core/social-links` | the `showLabels` and `size` attributes, by name; and an icon-only control whose accessible name is a visually hidden text node rather than an `aria-label` |
 | `core/icon` | the question of where a symbol comes from at all |
 
 The `core/navigation` one is the borrowing I am most glad about. My first
@@ -70,6 +70,15 @@ The breakpoint for that query comes from the active theme:
 `wp_get_global_settings()['viewport']` through
 `WP_Theme_JSON::get_viewport_media_queries()`, new in 7.1. A theme that declares
 nothing gets WordPress's own default. The block never names a pixel value.
+
+`core/social-links` gave more than I went looking for. `showLabels` and `size`
+are its attribute names, kept rather than renamed: it is the Core block that
+already faced the two questions a row of icon controls raises — whether the
+labels show, and how big these are — and it is the only one that did.
+`core/buttons` declares no attributes at all, so there was nothing to borrow
+there for either. Its inspector calls them Show text and Icon size; I kept the
+attribute names and gave the controls labels that read better on something with
+three modes.
 
 ### The settings, and why there are only five
 

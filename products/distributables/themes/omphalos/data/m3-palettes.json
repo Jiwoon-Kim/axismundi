@@ -1,0 +1,137 @@
+{
+	"_comment": [
+		"M3's published tonal palettes, transcribed from material.io.",
+		"",
+		"These are tables Google publishes, not values computed here. That matters:",
+		"material-color-utilities recomputes the same tones and rounds them",
+		"differently -- measured against baseline primary, the seed tone lands",
+		"exactly and every other tone drifts, up to two steps per channel at tone",
+		"50 (#8069BF against the published #7F67BE). So where a published table",
+		"exists it wins, and scripts/generate-palette.mjs is for seeds that have",
+		"none.",
+		"",
+		"baseline: the six palettes the scheme is built from. The parent theme",
+		"already ships these in tokens.ref.css; they are here to check against and",
+		"to diff a transformation, NOT to be re-declared in this child.",
+		"",
+		"static: M3 Expressive's static palettes. These are the ones worth reaching",
+		"for -- a semantic colour a product needs that the scheme does not carry.",
+		"Note their tone stops differ from baseline's: 98/95/90/80... with no 99,",
+		"and no intermediate neutral stops.",
+		"",
+		"Static Red is not the same palette as baseline Error. Red 40 is #B3251E",
+		"against Error 40 #B3261E, Red 90 is #FFDADC against #F9DEDC. Warmer and",
+		"more saturated throughout."
+	],
+
+	"baseline": {
+		"primary": {
+			"100": "#FFFFFF", "99": "#FFFBFE", "98": "#FEF7FF", "95": "#F6EDFF",
+			"90": "#EADDFF", "80": "#D0BCFF", "70": "#B69DF8", "60": "#9A82DB",
+			"50": "#7F67BE", "40": "#6750A4", "30": "#4F378B", "20": "#381E72",
+			"10": "#21005D", "0": "#000000"
+		},
+		"secondary": {
+			"100": "#FFFFFF", "99": "#FFFBFE", "98": "#FEF7FF", "95": "#F6EDFF",
+			"90": "#E8DEF8", "80": "#CCC2DC", "70": "#B0A7C0", "60": "#958DA5",
+			"50": "#7A7289", "40": "#625B71", "30": "#4A4458", "20": "#332D41",
+			"10": "#1D192B", "0": "#000000"
+		},
+		"tertiary": {
+			"100": "#FFFFFF", "99": "#FFFBFA", "98": "#FFF8F8", "95": "#FFECF1",
+			"90": "#FFD8E4", "80": "#EFB8C8", "70": "#D29DAC", "60": "#B58392",
+			"50": "#986977", "40": "#7D5260", "30": "#633B48", "20": "#492532",
+			"10": "#31111D", "0": "#000000"
+		},
+		"error": {
+			"100": "#FFFFFF", "99": "#FFFBF9", "98": "#FFF8F7", "95": "#FCEEEE",
+			"90": "#F9DEDC", "80": "#F2B8B5", "70": "#EC928E", "60": "#E46962",
+			"50": "#DC362E", "40": "#B3261E", "30": "#8C1D18", "20": "#601410",
+			"10": "#410E0B", "0": "#000000"
+		},
+		"neutral": {
+			"100": "#FFFFFF", "99": "#FFFBFF", "98": "#FEF7FF", "96": "#F7F2FA",
+			"95": "#F5EFF7", "94": "#F3EDF7", "92": "#ECE6F0", "90": "#E6E0E9",
+			"87": "#DED8E1", "80": "#CAC5CD", "70": "#AEA9B1", "60": "#938F96",
+			"50": "#79767D", "40": "#605D64", "30": "#48464C", "24": "#3B383E",
+			"22": "#36343B", "20": "#322F35", "17": "#2B2930", "12": "#211F26",
+			"10": "#1D1B20", "6": "#141218", "4": "#0F0D13", "0": "#000000"
+		},
+		"neutral-variant": {
+			"100": "#FFFFFF", "99": "#FFFBFE", "98": "#FDF7FF", "95": "#F5EEFA",
+			"90": "#E7E0EC", "80": "#CAC4D0", "70": "#AEA9B4", "60": "#938F99",
+			"50": "#79747E", "40": "#605D66", "30": "#49454F", "20": "#322F37",
+			"10": "#1D1A22", "0": "#000000"
+		}
+	},
+
+	"static": {
+		"black-white": { "100": "#FFFFFF", "0": "#000000" },
+		"blue": {
+			"100": "#FFFFFF", "98": "#F5FAFF", "95": "#E7F2FF", "90": "#D0E4FF",
+			"80": "#A1C9FF", "70": "#76ACFF", "60": "#4E8FF8", "50": "#3271EA",
+			"40": "#1157CE", "30": "#04409F", "20": "#012C6F", "10": "#001944",
+			"0": "#000000"
+		},
+		"blue-variant": {
+			"100": "#FFFFFF", "98": "#F4FAFF", "95": "#E0F4FF", "90": "#BDE9FF",
+			"80": "#67D4FF", "70": "#00BBEA", "60": "#009DC9", "50": "#0081A8",
+			"40": "#006788", "30": "#004D68", "20": "#003549", "10": "#001F2D",
+			"0": "#000000"
+		},
+		"cyan": {
+			"100": "#FFFFFF", "98": "#F0FBFF", "95": "#D8F6FF", "90": "#ACEDFF",
+			"80": "#60D5F3", "70": "#00BBDF", "60": "#009EBB", "50": "#00839B",
+			"40": "#00687C", "30": "#004E5D", "20": "#003641", "10": "#001F26",
+			"0": "#000000"
+		},
+		"green": {
+			"100": "#FFFFFF", "98": "#F2FCEF", "95": "#DDF8D8", "90": "#BEEFBB",
+			"80": "#80DA88", "70": "#44C265", "60": "#1AA64A", "50": "#128937",
+			"40": "#006C35", "30": "#00522C", "20": "#00381F", "10": "#002110",
+			"0": "#000000"
+		},
+		"grey": {
+			"100": "#FFFFFF", "98": "#F9F9F9", "95": "#F2F2F2", "90": "#E3E3E3",
+			"80": "#C7C7C7", "70": "#ABABAB", "60": "#919191", "50": "#777777",
+			"40": "#5E5E5E", "30": "#474747", "20": "#303030", "10": "#1B1B1C",
+			"0": "#000000"
+		},
+		"grey-variant": {
+			"100": "#FFFFFF", "98": "#F7FAF7", "95": "#EFF2EF", "90": "#E1E3E1",
+			"80": "#C4C7C5", "70": "#A9ACAA", "60": "#8E918F", "50": "#747775",
+			"40": "#5C5F5E", "30": "#444746", "20": "#2D312F", "10": "#191D1C",
+			"0": "#000000"
+		},
+		"orange": {
+			"100": "#FFFFFF", "98": "#FFF8F4", "95": "#FFEDE1", "90": "#FFDCC3",
+			"80": "#FFB683", "70": "#FF8D41", "60": "#E86E00", "50": "#C05A01",
+			"40": "#9A4600", "30": "#753403", "20": "#522302", "10": "#321200",
+			"0": "#000000"
+		},
+		"pink": {
+			"100": "#FFFFFF", "98": "#FFF7FC", "95": "#FFECF6", "90": "#FFD8EF",
+			"80": "#FFAEE4", "70": "#FF7DD2", "60": "#F94AAB", "50": "#DC258D",
+			"40": "#B60D6E", "30": "#8D0053", "20": "#620438", "10": "#3D0023",
+			"0": "#000000"
+		},
+		"purple": {
+			"100": "#FFFFFF", "98": "#FDF8FF", "95": "#F7ECFE", "90": "#EEDCFE",
+			"80": "#D9BAFD", "70": "#C597FF", "60": "#AD72FF", "50": "#9254EA",
+			"40": "#7438D2", "30": "#5629A4", "20": "#400B84", "10": "#280255",
+			"0": "#000000"
+		},
+		"red": {
+			"100": "#FFFFFF", "98": "#FFF8F8", "95": "#FFECEE", "90": "#FFDADC",
+			"80": "#FFB3AE", "70": "#FF8983", "60": "#F55E57", "50": "#DB372D",
+			"40": "#B3251E", "30": "#8A1A16", "20": "#60150F", "10": "#3A0907",
+			"0": "#000000"
+		},
+		"yellow": {
+			"100": "#FFFFFF", "98": "#FFFADE", "95": "#FFF2B4", "90": "#FFE07C",
+			"80": "#FCBD00", "70": "#EF9800", "60": "#D37B00", "50": "#B16300",
+			"40": "#8F4E06", "30": "#6D3A01", "20": "#4D2600", "10": "#2F1400",
+			"0": "#000000"
+		}
+	}
+}

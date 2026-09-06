@@ -10,7 +10,9 @@
     "stop": "wp-env stop",
     "destroy": "wp-env destroy",
     "cli": "wp-env run cli wp",
-    "build:zip": "pwsh -NoProfile -File scripts/build-zip.ps1"
+    "build:zip": "pwsh -NoProfile -File scripts/build-zip.ps1",
+    "check:palettes": "node scripts/check-palettes.mjs",
+    "verify:mcu": "node scripts/generate-palette.mjs --verify"
   },
   "devDependencies": {
     "@material/material-color-utilities": "^0.4.0",

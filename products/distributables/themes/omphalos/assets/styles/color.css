@@ -76,11 +76,15 @@
  * use. Reusing them is the point -- a static colour that picked its own tones
  * would not sit at the same visual depth as the roles beside it.
  *
- * The palette is generated, not chosen: M3 publishes no table for this hue, and
- * its tones are points in HCT rather than a lightness ramp, so hand-picking
- * them would produce an invented palette wearing M3's token names. The seed
- * #2E7D32 is a pick and the one thing here worth arguing with; change it and
- * regenerate rather than editing tones individually.
+ * The palette is M3's published Static Green, transcribed into
+ * data/m3-palettes.json, not a generated one. An earlier version of this file
+ * generated it from a seed of my own picking and landed on #1B6D24 at tone 40
+ * where the published table says #006C35 -- a different green, defensible only
+ * as far as the seed was. The published table settles it, and the rule this
+ * file already stated now applies to its own contents: where M3 publishes,
+ * generating is the worse answer.
+ *
+ * scripts/generate-palette.mjs stays for hues M3 has not published.
  *
  * Not done: harmonisation. M3 can shift a static colour's hue toward primary
  * so it sits with the scheme. That is a function of both colours and belongs
@@ -92,13 +96,13 @@
  * ========================================================================== */
 
 :root {
-	/* success, generated from #2E7D32 */
-	--md-ref-palette-success-10:  #002204;
-	--md-ref-palette-success-20:  #003909;
-	--md-ref-palette-success-30:  #005312;
-	--md-ref-palette-success-40:  #1B6D24;
-	--md-ref-palette-success-80:  #88D982;
-	--md-ref-palette-success-90:  #A3F69C;
+	/* M3 Static Green, as published. Full table in data/m3-palettes.json. */
+	--md-ref-palette-success-10:  #002110;
+	--md-ref-palette-success-20:  #00381F;
+	--md-ref-palette-success-30:  #00522C;
+	--md-ref-palette-success-40:  #006C35;
+	--md-ref-palette-success-80:  #80DA88;
+	--md-ref-palette-success-90:  #BEEFBB;
 	--md-ref-palette-success-100: #FFFFFF;
 
 	--md-sys-color-success: var(--md-ref-palette-success-40);

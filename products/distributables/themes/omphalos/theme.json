@@ -1,4 +1,11 @@
 {
 	"$schema": "https://schemas.wp.org/wp/7.1/theme.json",
-	"version": 3
+	"version": 3,
+	"templateParts": [
+		{
+			"area": "header",
+			"name": "vertical-header",
+			"title": "Vertical Header"
+		}
+	]
 }

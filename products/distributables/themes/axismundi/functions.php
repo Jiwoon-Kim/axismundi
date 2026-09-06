@@ -115,7 +115,6 @@ function axismundi_setup() : void {
 					file_exists( get_template_directory() . '/assets/styles/blocks.taxonomy.css' ) ? 'assets/styles/blocks.taxonomy.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.navigation.css' ) ? 'assets/styles/blocks.navigation.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.navigation-submenu.css' ) ? 'assets/styles/blocks.navigation-submenu.css' : null,
-					file_exists( get_template_directory() . '/assets/styles/parts.vertical-header.css' ) ? 'assets/styles/parts.vertical-header.css' : null,
 				)
 			)
 		)
@@ -296,7 +295,6 @@ function axismundi_enqueue_assets() : void {
 		'axismundi-blocks-navigation'         => array( 'assets/styles/blocks.navigation.css', array( 'axismundi-blocks-collections' ) ),
 		'axismundi-blocks-navigation-submenu' => array( 'assets/styles/blocks.navigation-submenu.css', array( 'axismundi-blocks-navigation' ) ),
 		// Single-post shell — CSS Grid layout + reverse-responsive contract (editor can't express it).
-		'axismundi-parts-vertical-header'     => array( 'assets/styles/parts.vertical-header.css', array( 'axismundi-blocks-navigation-submenu' ) ),
 	);
 
 	if ( is_attachment() ) {

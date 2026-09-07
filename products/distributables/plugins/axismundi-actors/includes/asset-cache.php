@@ -77,7 +77,7 @@ function axismundi_actors_get_asset_cache_row( int $identity_id, string $role ) 
 	}
 	$table = axismundi_actors_asset_cache_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom cache table.
-	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE identity_id = %d AND asset_role = %s", $identity_id, $role ), ARRAY_A );
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM %i WHERE identity_id = %d AND asset_role = %s", $table, $identity_id, $role ), ARRAY_A );
 	return is_array( $row ) ? $row : null;
 }
 
@@ -96,7 +96,7 @@ function axismundi_actors_asset_due_count() : int {
 	$table = axismundi_actors_asset_cache_table();
 	$now   = current_time( 'mysql', true );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed queue-health query on a fixed custom table.
-	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE next_refresh_at IS NOT NULL AND next_refresh_at <= %s AND fetch_status IN ('pending','stale','error')", $now ) );
+	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE next_refresh_at IS NOT NULL AND next_refresh_at <= %s AND fetch_status IN ('pending','stale','error')", $table, $now ) );
 }
 
 /** Remove legacy timer deadlines from successful rows once per refresh-policy version. */
@@ -107,7 +107,7 @@ function axismundi_actors_normalize_asset_refresh_policy() : void {
 	}
 	$table = axismundi_actors_asset_cache_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration of the fixed custom cache table.
-	$updated = $wpdb->query( "UPDATE {$table} SET expires_at = NULL, next_refresh_at = NULL WHERE fetch_status = 'ready'" );
+	$updated = $wpdb->query( $wpdb->prepare( "UPDATE %i SET expires_at = NULL, next_refresh_at = NULL WHERE fetch_status = 'ready'", $table ) );
 	if ( false !== $updated ) {
 		update_option( 'ax_actors_asset_refresh_policy_version', 2, false );
 	}
@@ -213,7 +213,7 @@ function axismundi_actors_asset_backfill_batch() : void {
 	$identities = axismundi_actors_identities_table();
 	$actors     = axismundi_actors_actors_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom tables; paged migration.
-	$ids = (array) $wpdb->get_col( $wpdb->prepare( "SELECT i.id FROM {$identities} i INNER JOIN {$actors} a ON a.identity_id = i.id WHERE i.origin = 'remote' AND i.id > %d ORDER BY i.id ASC LIMIT 50", $cursor ) );
+	$ids = (array) $wpdb->get_col( $wpdb->prepare( "SELECT i.id FROM %i i INNER JOIN %i a ON a.identity_id = i.id WHERE i.origin = 'remote' AND i.id > %d ORDER BY i.id ASC LIMIT 50", $identities, $actors, $cursor ) );
 	foreach ( $ids as $identity_id ) {
 		$actor = axismundi_actors_get_by_identity( (int) $identity_id );
 		if ( $actor ) {
@@ -569,12 +569,12 @@ function axismundi_actors_process_asset_batch() : void {
 	$table = axismundi_actors_asset_cache_table();
 	$now   = current_time( 'mysql', true );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded due-cache queue.
-	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT identity_id, asset_role FROM {$table} WHERE next_refresh_at IS NOT NULL AND next_refresh_at <= %s AND fetch_status IN ('pending','stale','error') ORDER BY next_refresh_at ASC LIMIT %d", $now, AXISMUNDI_ACTORS_ASSET_BATCH_SIZE ), ARRAY_A );
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT identity_id, asset_role FROM %i WHERE next_refresh_at IS NOT NULL AND next_refresh_at <= %s AND fetch_status IN ('pending','stale','error') ORDER BY next_refresh_at ASC LIMIT %d", $table, $now, AXISMUNDI_ACTORS_ASSET_BATCH_SIZE ), ARRAY_A );
 	foreach ( $rows as $row ) {
 		axismundi_actors_fetch_remote_asset( (int) $row['identity_id'], (string) $row['asset_role'] );
 	}
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- determine whether another bounded batch is due.
-	$remaining = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE next_refresh_at IS NOT NULL AND next_refresh_at <= %s AND fetch_status IN ('pending','stale','error')", $now ) );
+	$remaining = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE next_refresh_at IS NOT NULL AND next_refresh_at <= %s AND fetch_status IN ('pending','stale','error')", $table, $now ) );
 	if ( $remaining > 0 ) {
 		axismundi_actors_queue_asset_worker( 30 );
 	}
@@ -673,7 +673,7 @@ function axismundi_actors_asset_gc( bool $dry_run = true, int $grace_seconds = 6
 		foreach ( (array) glob( $pattern, GLOB_ONLYDIR ) as $directory ) {
 			$hash = basename( $directory );
 			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- GC reference check on custom table.
-			$references = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE content_hash = %s AND processor_version = %d", $hash, $processor ) );
+			$references = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE content_hash = %s AND processor_version = %d", $table, $hash, $processor ) );
 			if ( $references > 0 || filemtime( $directory ) > time() - max( 0, $grace_seconds ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_filemtime -- cache GC age.
 				continue;
 			}
@@ -705,7 +705,7 @@ function axismundi_actors_asset_scope_rows( string $scope, string $value = '' ) 
 	$table = axismundi_actors_asset_cache_table();
 	if ( 'actor' === $scope ) {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom cache table.
-		return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE identity_id = %d", (int) $value ), ARRAY_A );
+		return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM %i WHERE identity_id = %d", $table, (int) $value ), ARRAY_A );
 	}
 	if ( 'instance' === $scope ) {
 		$authority = axismundi_actors_webfinger_authority_from_url( 'https://' . strtolower( trim( $value ) ) . '/' );
@@ -715,11 +715,11 @@ function axismundi_actors_asset_scope_rows( string $scope, string $value = '' ) 
 		$identities = axismundi_actors_identities_table();
 		$prefix     = $wpdb->esc_like( 'https://' . $authority . '/' ) . '%';
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom cache/identity tables; rare admin scope operation.
-		return (array) $wpdb->get_results( $wpdb->prepare( "SELECT c.* FROM {$table} c INNER JOIN {$identities} i ON i.id = c.identity_id WHERE i.origin = 'remote' AND i.canonical_uri LIKE %s", $prefix ), ARRAY_A );
+		return (array) $wpdb->get_results( $wpdb->prepare( "SELECT c.* FROM %i c INNER JOIN %i i ON i.id = c.identity_id WHERE i.origin = 'remote' AND i.canonical_uri LIKE %s", $table, $identities, $prefix ), ARRAY_A );
 	}
 	if ( 'all' === $scope ) {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom cache table; explicit admin operation.
-		return (array) $wpdb->get_results( "SELECT * FROM {$table}", ARRAY_A );
+		return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM %i", $table ), ARRAY_A );
 	}
 	return array();
 }
@@ -751,7 +751,7 @@ function axismundi_actors_purge_asset_cache( string $scope, string $value = '', 
 	}
 	foreach ( $hashes as [ $hash, $processor ] ) {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- post-purge reference check.
-		$references = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE content_hash = %s AND processor_version = %d", $hash, $processor ) );
+		$references = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE content_hash = %s AND processor_version = %d", $table, $hash, $processor ) );
 		if ( $references > 0 ) {
 			continue;
 		}
@@ -799,7 +799,7 @@ function axismundi_actors_set_asset_webp_enabled( bool $enabled ) : int {
 	$table = axismundi_actors_asset_cache_table();
 	$now   = current_time( 'mysql', true );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- explicit global cache rebuild after an administrator setting change.
-	$updated = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET fetch_status = IF(content_hash IS NULL, 'pending', 'stale'), source_etag = NULL, source_last_modified = NULL, next_refresh_at = %s, updated_at = %s", $now, $now ) );
+	$updated = $wpdb->query( $wpdb->prepare( "UPDATE %i SET fetch_status = IF(content_hash IS NULL, 'pending', 'stale'), source_etag = NULL, source_last_modified = NULL, next_refresh_at = %s, updated_at = %s", $table, $now, $now ) );
 	if ( false !== $updated && $updated > 0 ) {
 		axismundi_actors_queue_asset_worker( 1 );
 	}

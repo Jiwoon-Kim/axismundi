@@ -32,11 +32,31 @@ function axismundi_actors_can_manage( Axismundi_Actor $actor, ?int $viewer = nul
 	if ( $actor->is_managed() ) {
 		return axismundi_actors_managed_actor_can_manage( $actor->get_identity_id(), $viewer );
 	}
+	return axismundi_actors_can_manage_user_actor( (int) $actor->get_local_user_id(), $viewer );
+}
+
+/**
+ * Whether a viewer could manage the user-scope actor belonging to a user.
+ *
+ * The same rule `axismundi_actors_can_manage()` applies to a Person actor, but
+ * expressed against the user rather than the actor object, so it can be asked
+ * BEFORE the actor exists. The management screen needs exactly that: it must
+ * decide whether to show the activation wizard without creating anything, and
+ * the actor is created later by the nonce-checked POST the wizard submits.
+ *
+ * @param int      $user_id Owner.
+ * @param int|null $viewer  Viewer; defaults to current user.
+ * @return bool
+ */
+function axismundi_actors_can_manage_user_actor( int $user_id, ?int $viewer = null ) : bool {
+	$viewer = null === $viewer ? get_current_user_id() : $viewer;
+	if ( $viewer <= 0 || $user_id <= 0 ) {
+		return false;
+	}
 	if ( user_can( $viewer, 'manage_options' ) ) {
 		return true;
 	}
-	$uid = $actor->get_local_user_id();
-	return null !== $uid && $uid === $viewer && user_can( $viewer, 'edit_posts' );
+	return $user_id === $viewer && user_can( $viewer, 'edit_posts' );
 }
 
 /** @return string The Actor Profile admin screen URL, optionally for a user. */
@@ -637,22 +657,41 @@ function axismundi_actors_admin_target_user() : int {
 }
 
 /** @return void */
+/**
+ * Render the management screen.
+ *
+ * Reads only. This used to call `axismundi_actors_ensure_for_user()`, which
+ * creates an actor when none exists -- a database write reachable by GET, and
+ * with `user_id` coming off the query string, one an administrator could be
+ * made to perform for an arbitrary user by following a link. The capability
+ * check did not prevent that: it decides who is *able* to act, and CSRF is
+ * about making someone able act without meaning to.
+ *
+ * Nothing is created here now. The wizard never used the actor object, only the
+ * user id, so an absent actor is simply the un-activated state, and creation
+ * happens in the activation POST, which carries a nonce.
+ *
+ * @return void
+ */
 function axismundi_actors_render_admin_page() : void {
 	$user_id = axismundi_actors_admin_target_user();
 	if ( $user_id <= 0 ) {
 		return;
 	}
-	$actor = axismundi_actors_ensure_for_user( $user_id );
-	if ( is_wp_error( $actor ) || ! axismundi_actors_can_manage( $actor ) ) {
+	$actor = axismundi_actors_get_for_user( $user_id );
+	$allowed = $actor instanceof Axismundi_Actor
+		? axismundi_actors_can_manage( $actor )
+		: axismundi_actors_can_manage_user_actor( $user_id );
+	if ( ! $allowed ) {
 		wp_die( esc_html__( 'You cannot manage this actor profile.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
 	}
 	echo '<div class="wrap">';
 	echo '<h1>' . esc_html__( 'Actor Profile', 'axismundi-actors' ) . '</h1>';
 	axismundi_actors_admin_notice();
-	if ( $actor->is_handle_locked() ) {
+	if ( $actor instanceof Axismundi_Actor && $actor->is_handle_locked() ) {
 		axismundi_actors_render_management( $actor, $user_id );
 	} else {
-		axismundi_actors_render_wizard( $actor, $user_id );
+		axismundi_actors_render_wizard( $user_id );
 	}
 	echo '</div>';
 }
@@ -687,7 +726,7 @@ function axismundi_actors_plain_permalink_notice() : void {
 	}
 	global $wpdb;
 	$identities = axismundi_actors_identities_table();
-	$issued     = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$identities}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bundled custom table, a settings-screen warning, and no user input.
+	$issued     = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i", $identities ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bundled custom table, a settings-screen warning, and no user input.
 	if ( $issued <= 0 ) {
 		return;
 	}
@@ -703,7 +742,7 @@ add_action( 'admin_notices', 'axismundi_actors_plain_permalink_notice' );
  * @param int             $user_id Target user.
  * @return void
  */
-function axismundi_actors_render_wizard( Axismundi_Actor $actor, int $user_id ) : void {
+function axismundi_actors_render_wizard( int $user_id ) : void {
 	$candidates = axismundi_actors_handle_candidates( $user_id );
 	$default    = $candidates[0] ?? '';
 	?>
@@ -1356,17 +1395,43 @@ function axismundi_actors_handle_set_profile_fields() : void {
 	if ( ! $actor instanceof Axismundi_Actor || ! axismundi_actors_can_manage( $actor ) ) {
 		wp_die( esc_html__( 'You cannot manage this actor profile.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
 	}
-	$names  = isset( $_POST['profile_field_name'] ) && is_array( $_POST['profile_field_name'] ) ? wp_unslash( $_POST['profile_field_name'] ) : array();
-	$urls   = isset( $_POST['profile_field_url'] ) && is_array( $_POST['profile_field_url'] ) ? wp_unslash( $_POST['profile_field_url'] ) : array();
+	/*
+	 * Sanitize where the input is read.
+	 *
+	 * axismundi_actors_normalize_profile_fields() already applies exactly these
+	 * two functions and then validates the scheme and host, so nothing unsafe
+	 * was ever stored. It is still wrong to read $_POST without sanitizing at
+	 * the boundary: that is where a reader checks, and the normaliser's own
+	 * pass has to stay regardless because other callers reach it directly.
+	 */
+	$names = isset( $_POST['profile_field_name'] ) && is_array( $_POST['profile_field_name'] )
+		? array_map( 'sanitize_text_field', wp_unslash( $_POST['profile_field_name'] ) )
+		: array();
+	$urls  = isset( $_POST['profile_field_url'] ) && is_array( $_POST['profile_field_url'] )
+		? array_map( 'esc_url_raw', wp_unslash( $_POST['profile_field_url'] ) )
+		: array();
+
 	$fields = array();
 	foreach ( array_values( $names ) as $position => $name ) {
-		$fields[] = array( 'name' => is_scalar( $name ) ? (string) $name : '', 'url' => isset( $urls[ $position ] ) && is_scalar( $urls[ $position ] ) ? (string) $urls[ $position ] : '' );
+		$fields[] = array(
+			'name' => is_scalar( $name ) ? (string) $name : '',
+			'url'  => isset( $urls[ $position ] ) && is_scalar( $urls[ $position ] ) ? (string) $urls[ $position ] : '',
+		);
 	}
+
 	$result = axismundi_actors_save_profile_fields( $actor, $fields );
 	$saved  = ! is_wp_error( $result );
-	if ( $saved && isset( $_POST['verify_profile_field_url'] ) && is_scalar( $_POST['verify_profile_field_url'] ) ) {
-		$verify_url = esc_url_raw( trim( (string) wp_unslash( $_POST['verify_profile_field_url'] ) ) );
-		$result     = axismundi_actors_verify_profile_field( $actor, $verify_url );
+
+	/*
+	 * Sanitized in the same expression as the read, which is the shape a reader
+	 * and a scanner can both confirm at a glance. sanitize_text_field() returns
+	 * '' for an array, so a form posting one under this name yields no URL
+	 * rather than a string cast, and esc_url_raw() then decides what survives.
+	 */
+	$verify_url = esc_url_raw( trim( sanitize_text_field( wp_unslash( $_POST['verify_profile_field_url'] ?? '' ) ) ) );
+
+	if ( $saved && '' !== $verify_url ) {
+		$result = axismundi_actors_verify_profile_field( $actor, $verify_url );
 	}
 	if ( $saved ) {
 		axismundi_actors_profile_updated( $identity_id );

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.1
+Stable tag: 0.1.2
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -107,6 +107,16 @@ not done here. Where another plugin performs that federation, it discloses it it
 section covers only what this plugin's own code requests.
 
 == Changelog ==
+
+= 0.1.2 =
+* Stop the actor management screen from creating an actor while rendering. It read a
+  user id from the query string and created a record for it, so a link could make an
+  administrator perform that write; the screen now only reads, and creation happens in
+  the activation form, which carries a nonce.
+* Sanitize profile-link names and addresses where the form is read, not only where they
+  are saved.
+* Pass every custom table name to the database through a prepared identifier placeholder
+  rather than interpolating it into the query text.
 
 = 0.1.1 =
 * Sanitize filtered Actor display names and biographies immediately before rendering.

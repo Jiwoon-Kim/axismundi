@@ -206,16 +206,16 @@ function axismundi_actors_install() : void {
 	 * the kind of thing somebody finds in a year and has to work out from scratch.
 	 */
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed internal identifier.
-	$wpdb->query( "DROP TABLE IF EXISTS {$person_names}" );
+	$wpdb->query( $wpdb->prepare( "DROP TABLE IF EXISTS %i", $person_names ) );
 
 	/* Structured names and pronunciations are authored only on the Contacts self Card. */
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed retired internal table.
-	$wpdb->query( "DROP TABLE IF EXISTS {$profile}" );
+	$wpdb->query( $wpdb->prepare( "DROP TABLE IF EXISTS %i", $profile ) );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema migration of a retired cache marker.
-	$actor_columns_before = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$actors}" );
+	$actor_columns_before = (array) $wpdb->get_col( $wpdb->prepare( "SHOW COLUMNS FROM %i", $actors ) );
 	if ( in_array( 'person_name_edited_at', $actor_columns_before, true ) ) {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed retired column.
-		$wpdb->query( "ALTER TABLE {$actors} DROP COLUMN person_name_edited_at" );
+		$wpdb->query( $wpdb->prepare( "ALTER TABLE %i DROP COLUMN person_name_edited_at", $actors ) );
 	}
 
 	/*
@@ -224,7 +224,7 @@ function axismundi_actors_install() : void {
 	 * discarded rather than migrated: a future Contacts anniversaries UI is the sole authoring path.
 	 */
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed retired internal table.
-	$wpdb->query( "DROP TABLE IF EXISTS {$anniversaries}" );
+	$wpdb->query( $wpdb->prepare( "DROP TABLE IF EXISTS %i", $anniversaries ) );
 	/*
 	 * The other names a person goes by, which are not the same question as the same name written in
 	 * another script -- that is a localization of one name and lives in the table above. A nickname, a
@@ -451,12 +451,12 @@ function axismundi_actors_install() : void {
 	$transactional_engines = true;
 	foreach ( array( $identities, $actors, $endpoints, $keys, $identity_relations, $profile_fields, $managers ) as $transactional_table ) {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table name, schema inspection.
-		$engine = (string) $wpdb->get_var( "SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$transactional_table}'" );
+		$engine = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s', $transactional_table ) );
 		if ( 'InnoDB' !== $engine ) {
 			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off custom-table engine upgrade.
-			$wpdb->query( "ALTER TABLE {$transactional_table} ENGINE=InnoDB" );
+			$wpdb->query( $wpdb->prepare( "ALTER TABLE %i ENGINE=InnoDB", $transactional_table ) );
 			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- verify the one-off engine upgrade.
-			$engine = (string) $wpdb->get_var( "SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$transactional_table}'" );
+			$engine = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s', $transactional_table ) );
 		}
 		$transactional_engines = $transactional_engines && 'InnoDB' === $engine;
 	}
@@ -465,12 +465,12 @@ function axismundi_actors_install() : void {
 	// nullable, so do that explicitly (idempotent — a no-op on a fresh install where
 	// CREATE TABLE already made it nullable). Handle-less actors need a NULL handle.
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off schema upgrade on a custom table.
-	$wpdb->query( "ALTER TABLE {$actors} MODIFY preferred_username varchar(191) DEFAULT NULL" );
+	$wpdb->query( $wpdb->prepare( "ALTER TABLE %i MODIFY preferred_username varchar(191) DEFAULT NULL", $actors ) );
 
 	// Backfill: any local actor that already carries a handle key predates the
 	// immutability contract, so lock it (a handle key means it was assigned).
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off upgrade backfill on a custom table.
-	$wpdb->query( "UPDATE {$actors} SET handle_locked_at = updated_at WHERE local_handle_key IS NOT NULL AND handle_locked_at IS NULL" );
+	$wpdb->query( $wpdb->prepare( "UPDATE %i SET handle_locked_at = updated_at WHERE local_handle_key IS NOT NULL AND handle_locked_at IS NULL", $actors ) );
 
 	// Existing local actors receive the site language as their scalar/map default,
 	// but no translated text rows are synthesized from WP_User or site data.
@@ -479,14 +479,14 @@ function axismundi_actors_install() : void {
 		: str_replace( '_', '-', (string) get_locale() );
 	if ( '' !== $site_language ) {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off schema upgrade backfill on a custom table.
-		$wpdb->query( $wpdb->prepare( "UPDATE {$actors} SET default_language = %s WHERE default_language IS NULL AND actor_scope IN ('site','user')", $site_language ) );
+		$wpdb->query( $wpdb->prepare( "UPDATE %i SET default_language = %s WHERE default_language IS NULL AND actor_scope IN ('site','user')", $actors, $site_language ) );
 	}
 
 	// Backfill: every local actor that already has a handle gets a `primary`
 	// `local_handle` address row (the routing ledger). Idempotent — keyed on the
 	// namespaced address hash.
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off backfill on a custom table.
-	$handled = (array) $wpdb->get_results( "SELECT identity_id, local_handle_key FROM {$actors} WHERE local_handle_key IS NOT NULL", ARRAY_A );
+	$handled = (array) $wpdb->get_results( $wpdb->prepare( "SELECT identity_id, local_handle_key FROM %i WHERE local_handle_key IS NOT NULL", $actors ), ARRAY_A );
 	foreach ( $handled as $row ) {
 		axismundi_actors_record_handle_address( (int) $row['identity_id'], (string) $row['local_handle_key'], 'primary' );
 	}
@@ -496,16 +496,29 @@ function axismundi_actors_install() : void {
 	// value can be read back from the new table. This makes the destructive part
 	// fail closed and retryable.
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema migration inspection.
-	$legacy_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$actors}" );
+	$legacy_columns = (array) $wpdb->get_col( $wpdb->prepare( "SHOW COLUMNS FROM %i", $actors ) );
 	$has_inbox      = in_array( 'inbox_uri', $legacy_columns, true );
 	$has_outbox     = in_array( 'outbox_uri', $legacy_columns, true );
 	$migrated       = true;
 	if ( $has_inbox || $has_outbox ) {
-		$select = 'identity_id, payload_json';
-		$select .= $has_inbox ? ', inbox_uri' : '';
-		$select .= $has_outbox ? ', outbox_uri' : '';
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table and column names.
-		$legacy_rows = (array) $wpdb->get_results( "SELECT {$select} FROM {$actors}", ARRAY_A );
+		/*
+		 * A column list cannot be a single %i -- the identifier would be
+		 * backtick-quoted whole, commas included. One %i per column instead,
+		 * with the run generated from the count so the two stay in step.
+		 */
+		$columns = array( 'identity_id', 'payload_json' );
+		if ( $has_inbox ) {
+			$columns[] = 'inbox_uri';
+		}
+		if ( $has_outbox ) {
+			$columns[] = 'outbox_uri';
+		}
+		$select = implode( ', ', array_fill( 0, count( $columns ), '%i' ) );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- generated %i run; every identifier is prepared.
+		$legacy_rows = (array) $wpdb->get_results(
+			$wpdb->prepare( "SELECT {$select} FROM %i", ...array_merge( $columns, array( $actors ) ) ),
+			ARRAY_A
+		);
 		foreach ( $legacy_rows as $row ) {
 			$payload = json_decode( (string) ( $row['payload_json'] ?? '' ), true );
 			$map     = axismundi_actors_extract_endpoints_from_payload(
@@ -538,11 +551,11 @@ function axismundi_actors_install() : void {
 		if ( $migrated ) {
 			if ( $has_inbox ) {
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- verified one-off schema migration.
-				$migrated = false !== $wpdb->query( "ALTER TABLE {$actors} DROP COLUMN inbox_uri" );
+				$migrated = false !== $wpdb->query( $wpdb->prepare( "ALTER TABLE %i DROP COLUMN inbox_uri", $actors ) );
 			}
 			if ( $migrated && $has_outbox ) {
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- verified one-off schema migration.
-				$migrated = false !== $wpdb->query( "ALTER TABLE {$actors} DROP COLUMN outbox_uri" );
+				$migrated = false !== $wpdb->query( $wpdb->prepare( "ALTER TABLE %i DROP COLUMN outbox_uri", $actors ) );
 			}
 		}
 	}
@@ -553,7 +566,7 @@ function axismundi_actors_install() : void {
 	$relations_migrated = true;
 	if ( function_exists( 'axismundi_actors_extract_identity_relations_from_payload' ) ) {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off custom-table backfill.
-		$remote_rows = (array) $wpdb->get_results( "SELECT a.identity_id, a.payload_json, i.canonical_uri FROM {$actors} a INNER JOIN {$identities} i ON i.id = a.identity_id WHERE i.origin = 'remote' AND a.payload_json IS NOT NULL", ARRAY_A );
+		$remote_rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT a.identity_id, a.payload_json, i.canonical_uri FROM %i a INNER JOIN %i i ON i.id = a.identity_id WHERE i.origin = 'remote' AND a.payload_json IS NOT NULL", $actors, $identities ), ARRAY_A );
 		foreach ( $remote_rows as $row ) {
 			$payload = json_decode( (string) $row['payload_json'], true );
 			if ( ! is_array( $payload ) ) {
@@ -570,15 +583,15 @@ function axismundi_actors_install() : void {
 	// Only record the schema version once the new columns/tables/indexes actually
 	// exist, so a failed upgrade retries next load rather than being marked done.
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$columns      = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$actors}" );
+	$columns      = (array) $wpdb->get_col( $wpdb->prepare( "SHOW COLUMNS FROM %i", $actors ) );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$text_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$texts}" );
+	$text_columns = (array) $wpdb->get_col( $wpdb->prepare( "SHOW COLUMNS FROM %i", $texts ) );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$text_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$texts} WHERE Key_name = 'identity_field_language'" );
+	$text_indexes = (array) $wpdb->get_col( $wpdb->prepare( "SHOW INDEX FROM %i WHERE Key_name = 'identity_field_language'", $texts ) );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$profile_field_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$profile_fields} WHERE Key_name = 'identity_position'" );
+	$profile_field_indexes = (array) $wpdb->get_col( $wpdb->prepare( "SHOW INDEX FROM %i WHERE Key_name = 'identity_position'", $profile_fields ) );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$profile_field_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profile_fields}" );
+	$profile_field_columns = (array) $wpdb->get_col( $wpdb->prepare( "SHOW COLUMNS FROM %i", $profile_fields ) );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	/*
 	 * Replace the global acct uniqueness with per-kind uniqueness.
@@ -587,45 +600,45 @@ function axismundi_actors_install() : void {
 	 * explicit. The backfill runs first: rows written before this migration carry no kind, and
 	 * an index built over an empty kind would collapse every one of them onto a single slot.
 	 */
-	$address_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$addresses}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$address_columns = (array) $wpdb->get_col( $wpdb->prepare( "SHOW COLUMNS FROM %i", $addresses ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	if ( in_array( 'actor_kind', $address_columns, true ) ) {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time backfill on a custom table.
-		$wpdb->query( "UPDATE {$addresses} ad INNER JOIN {$actors} ac ON ac.identity_id = ad.identity_id SET ad.actor_kind = ac.actor_type WHERE ad.actor_kind = ''" );
+		$wpdb->query( $wpdb->prepare( "UPDATE %i ad INNER JOIN %i ac ON ac.identity_id = ad.identity_id SET ad.actor_kind = ac.actor_type WHERE ad.actor_kind = ''", $addresses, $actors ) );
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-		$legacy_unique = (array) $wpdb->get_col( "SHOW INDEX FROM {$addresses} WHERE Key_name = 'address_hash'" );
+		$legacy_unique = (array) $wpdb->get_col( $wpdb->prepare( "SHOW INDEX FROM %i WHERE Key_name = 'address_hash'", $addresses ) );
 		if ( ! empty( $legacy_unique ) ) {
-			$wpdb->query( "ALTER TABLE {$addresses} DROP INDEX address_hash" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time index swap.
+			$wpdb->query( $wpdb->prepare( "ALTER TABLE %i DROP INDEX address_hash", $addresses ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time index swap.
 		}
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-		$kind_unique = (array) $wpdb->get_col( "SHOW INDEX FROM {$addresses} WHERE Key_name = 'address_kind'" );
+		$kind_unique = (array) $wpdb->get_col( $wpdb->prepare( "SHOW INDEX FROM %i WHERE Key_name = 'address_kind'", $addresses ) );
 		if ( empty( $kind_unique ) ) {
-			$wpdb->query( "ALTER TABLE {$addresses} ADD UNIQUE KEY address_kind (address_hash, actor_kind)" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time index swap.
+			$wpdb->query( $wpdb->prepare( "ALTER TABLE %i ADD UNIQUE KEY address_kind (address_hash, actor_kind)", $addresses ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time index swap.
 		}
 	}
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$address_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$addresses} WHERE Key_name = 'address_kind'" );
+	$address_indexes = (array) $wpdb->get_col( $wpdb->prepare( "SHOW INDEX FROM %i WHERE Key_name = 'address_kind'", $addresses ) );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$instance_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$instances} WHERE Key_name = 'host_hash'" );
+	$instance_indexes = (array) $wpdb->get_col( $wpdb->prepare( "SHOW INDEX FROM %i WHERE Key_name = 'host_hash'", $instances ) );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$endpoint_identity_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$endpoints} WHERE Key_name = 'identity_endpoint'" );
+	$endpoint_identity_indexes = (array) $wpdb->get_col( $wpdb->prepare( "SHOW INDEX FROM %i WHERE Key_name = 'identity_endpoint'", $endpoints ) );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$endpoint_hash_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$endpoints} WHERE Key_name = 'endpoint_uri_hash'" );
+	$endpoint_hash_indexes = (array) $wpdb->get_col( $wpdb->prepare( "SHOW INDEX FROM %i WHERE Key_name = 'endpoint_uri_hash'", $endpoints ) );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$asset_identity_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$asset_cache} WHERE Key_name = 'identity_asset'" );
+	$asset_identity_indexes = (array) $wpdb->get_col( $wpdb->prepare( "SHOW INDEX FROM %i WHERE Key_name = 'identity_asset'", $asset_cache ) );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$asset_content_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$asset_cache} WHERE Key_name = 'content_processor'" );
+	$asset_content_indexes = (array) $wpdb->get_col( $wpdb->prepare( "SHOW INDEX FROM %i WHERE Key_name = 'content_processor'", $asset_cache ) );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$asset_refresh_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$asset_cache} WHERE Key_name = 'refresh_status'" );
+	$asset_refresh_indexes = (array) $wpdb->get_col( $wpdb->prepare( "SHOW INDEX FROM %i WHERE Key_name = 'refresh_status'", $asset_cache ) );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$key_uri_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$keys} WHERE Key_name = 'key_uri_hash'" );
+	$key_uri_indexes = (array) $wpdb->get_col( $wpdb->prepare( "SHOW INDEX FROM %i WHERE Key_name = 'key_uri_hash'", $keys ) );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$identity_relation_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$identity_relations} WHERE Key_name = 'identity_relation'" );
+	$identity_relation_indexes = (array) $wpdb->get_col( $wpdb->prepare( "SHOW INDEX FROM %i WHERE Key_name = 'identity_relation'", $identity_relations ) );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$fetch_state_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$fetch_state}" );
+	$fetch_state_columns = (array) $wpdb->get_col( $wpdb->prepare( "SHOW COLUMNS FROM %i", $fetch_state ) );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- final legacy-column check.
-	$final_actor_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$actors}" );
+	$final_actor_columns = (array) $wpdb->get_col( $wpdb->prepare( "SHOW COLUMNS FROM %i", $actors ) );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$manager_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$managers}" );
+	$manager_columns = (array) $wpdb->get_col( $wpdb->prepare( "SHOW COLUMNS FROM %i", $managers ) );
 	/*
 	 * The name columns and the other-names table are checked like every other addition here: a
 	 * migration that half-applied and still stamped the version is a site that reports itself current
@@ -634,10 +647,10 @@ function axismundi_actors_install() : void {
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.
 	$person_names_dropped = $person_names !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $person_names ) );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$alternate_name_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$alternate_names}" );
+	$alternate_name_columns = (array) $wpdb->get_col( $wpdb->prepare( "SHOW COLUMNS FROM %i", $alternate_names ) );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$alternate_name_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$alternate_names} WHERE Key_name = 'identity_kind_position'" );
+	$alternate_name_indexes = (array) $wpdb->get_col( $wpdb->prepare( "SHOW INDEX FROM %i WHERE Key_name = 'identity_kind_position'", $alternate_names ) );
 	/*
 	 * The old Profile languages screen stored one Person name as localized text. Promote that historical
 	 * value once into `first_name`: rendering must not write data, and repeating this migration would
@@ -947,7 +960,7 @@ function axismundi_actors_unique_local_handle( string $base ) : string {
 	$candidate = $key;
 	$i         = 2;
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table existence probe.
-	while ( (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$actors} WHERE local_handle_key = %s", $candidate ) ) > 0 ) {
+	while ( (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE local_handle_key = %s", $actors, $candidate ) ) > 0 ) {
 		$candidate = substr( $key, 0, 27 ) . '_' . $i;
 		++$i;
 	}
@@ -1065,9 +1078,19 @@ function axismundi_actors_query_one( string $where, ...$args ) : ?Axismundi_Acto
 	global $wpdb;
 	$identities = axismundi_actors_identities_table();
 	$actors     = axismundi_actors_actors_table();
-	$sql        = "SELECT i.*, a.* FROM {$identities} i INNER JOIN {$actors} a ON a.identity_id = i.id WHERE {$where} LIMIT 1";
-	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- $where is a caller-fixed clause; args are prepared.
-	$row = $wpdb->get_row( $args ? $wpdb->prepare( $sql, ...$args ) : $sql, ARRAY_A );
+	/*
+	 * `$where` stays interpolated -- a clause fixed by the caller, carrying its
+	 * own placeholders that $args fills. The joined tables are %i and precede
+	 * the clause, so binding them first leaves every caller argument in the
+	 * position it already expected.
+	 *
+	 * prepare() runs unconditionally now: skipping it with no arguments was
+	 * fine while the tables were interpolated, and is not now that they are
+	 * bound.
+	 */
+	$sql = "SELECT i.*, a.* FROM %i i INNER JOIN %i a ON a.identity_id = i.id WHERE {$where} LIMIT 1";
+	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- caller-fixed clause; the tables and every argument are prepared.
+	$row = $wpdb->get_row( $wpdb->prepare( $sql, $identities, $actors, ...$args ), ARRAY_A );
 	return $row ? Axismundi_Actor::from_row( $row ) : null;
 }
 
@@ -1186,7 +1209,15 @@ function axismundi_actors_remote_actor_at_url( string $wanted ) : ?Axismundi_Act
 	$ids        = (array) $wpdb->get_col(
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- table names are ours; every value is prepared and the placeholders are generated from a counted array.
 		$wpdb->prepare(
-			"SELECT DISTINCT i.id FROM {$identities} i INNER JOIN {$actors} a ON a.identity_id = i.id WHERE i.origin = %s AND a.profile_url IN ({$slots}) LIMIT 2",
+			/*
+			 * `$slots` stays interpolated: it is a generated run of "%s, %s"
+			 * sized to the variant list, neither a value nor an identifier, so
+			 * no placeholder can carry it. It is built from a count, never from
+			 * input. The tables are %i and every value is prepared.
+			 */
+			"SELECT DISTINCT i.id FROM %i i INNER JOIN %i a ON a.identity_id = i.id WHERE i.origin = %s AND a.profile_url IN ({$slots}) LIMIT 2",
+			$identities,
+			$actors,
 			'remote',
 			...$variants
 		)
@@ -1252,8 +1283,9 @@ function axismundi_actors_get_by_remote_acct( string $acct, string $kind = '' ) 
 		return null;
 	}
 	return axismundi_actors_query_one(
-		"i.origin = %s AND EXISTS (SELECT 1 FROM {$addresses} ad WHERE ad.identity_id = i.id AND ad.address_type = %s AND ad.address_hash = %s AND ad.actor_kind = %s AND ad.status = %s)",
+		'i.origin = %s AND EXISTS (SELECT 1 FROM %i ad WHERE ad.identity_id = i.id AND ad.address_type = %s AND ad.address_hash = %s AND ad.actor_kind = %s AND ad.status = %s)',
 		'remote',
+		$addresses,
 		'acct',
 		$hash,
 		$kind,
@@ -1317,16 +1349,19 @@ function axismundi_actors_get_remote_actors( int $limit = 50, int $offset = 0, s
 	if ( '' !== $search ) {
 		$like = '%' . $wpdb->esc_like( ltrim( $search, '@' ) ) . '%';
 		$sql  = $wpdb->prepare(
-			"SELECT i.*, a.* FROM {$identities} i INNER JOIN {$actors} a ON a.identity_id = i.id WHERE i.origin = 'remote' AND (a.preferred_username LIKE %s OR a.display_name LIKE %s OR i.canonical_uri LIKE %s OR EXISTS (SELECT 1 FROM {$addresses} ad WHERE ad.identity_id = i.id AND ad.address LIKE %s)) ORDER BY i.updated_at DESC LIMIT %d OFFSET %d",
+			"SELECT i.*, a.* FROM %i i INNER JOIN %i a ON a.identity_id = i.id WHERE i.origin = 'remote' AND (a.preferred_username LIKE %s OR a.display_name LIKE %s OR i.canonical_uri LIKE %s OR EXISTS (SELECT 1 FROM %i ad WHERE ad.identity_id = i.id AND ad.address LIKE %s)) ORDER BY i.updated_at DESC LIMIT %d OFFSET %d",
+			$identities,
+			$actors,
 			$like,
 			$like,
 			$like,
+			$addresses,
 			$like,
 			$limit,
 			$offset
 		);
 	} else {
-		$sql = $wpdb->prepare( "SELECT i.*, a.* FROM {$identities} i INNER JOIN {$actors} a ON a.identity_id = i.id WHERE i.origin = 'remote' ORDER BY i.updated_at DESC LIMIT %d OFFSET %d", $limit, $offset );
+		$sql = $wpdb->prepare( "SELECT i.*, a.* FROM %i i INNER JOIN %i a ON a.identity_id = i.id WHERE i.origin = 'remote' ORDER BY i.updated_at DESC LIMIT %d OFFSET %d", $identities, $actors, $limit, $offset );
 	}
 	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table names; values, limit, and offset prepared above.
 	$rows = (array) $wpdb->get_results( $sql, ARRAY_A );
@@ -1343,16 +1378,19 @@ function axismundi_actors_count_remote_actors( string $search = '' ) : int {
 	if ( '' !== $search ) {
 		$like = '%' . $wpdb->esc_like( ltrim( $search, '@' ) ) . '%';
 		$sql  = $wpdb->prepare(
-			"SELECT COUNT(*) FROM {$identities} i INNER JOIN {$actors} a ON a.identity_id = i.id WHERE i.origin = 'remote' AND (a.preferred_username LIKE %s OR a.display_name LIKE %s OR i.canonical_uri LIKE %s OR EXISTS (SELECT 1 FROM {$addresses} ad WHERE ad.identity_id = i.id AND ad.address LIKE %s))",
+			"SELECT COUNT(*) FROM %i i INNER JOIN %i a ON a.identity_id = i.id WHERE i.origin = 'remote' AND (a.preferred_username LIKE %s OR a.display_name LIKE %s OR i.canonical_uri LIKE %s OR EXISTS (SELECT 1 FROM %i ad WHERE ad.identity_id = i.id AND ad.address LIKE %s))",
+			$identities,
+			$actors,
 			$like,
 			$like,
 			$like,
+			$addresses,
 			$like
 		);
 	} else {
-		$sql = "SELECT COUNT(*) FROM {$identities} i INNER JOIN {$actors} a ON a.identity_id = i.id WHERE i.origin = 'remote'";
+		$sql = $wpdb->prepare( 'SELECT COUNT(*) FROM %i i INNER JOIN %i a ON a.identity_id = i.id WHERE i.origin = %s', $identities, $actors, 'remote' );
 	}
-	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table names; optional values prepared above.
+	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- both branches are prepared above.
 	return (int) $wpdb->get_var( $sql );
 }
 
@@ -1366,7 +1404,7 @@ function axismundi_actors_get_remote_payload( int $identity_id ) : array {
 	global $wpdb;
 	$actors = axismundi_actors_actors_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table name.
-	$json = (string) $wpdb->get_var( $wpdb->prepare( "SELECT payload_json FROM {$actors} WHERE identity_id = %d", $identity_id ) );
+	$json = (string) $wpdb->get_var( $wpdb->prepare( "SELECT payload_json FROM %i WHERE identity_id = %d", $actors, $identity_id ) );
 	$data = json_decode( $json, true );
 	return is_array( $data ) ? $data : array();
 }
@@ -1513,7 +1551,7 @@ function axismundi_actors_get_endpoints( $actor ) : array {
 	}
 	$table = axismundi_actors_endpoints_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table name.
-	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT endpoint_type, endpoint_uri FROM {$table} WHERE identity_id = %d", $identity_id ), ARRAY_A );
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT endpoint_type, endpoint_uri FROM %i WHERE identity_id = %d", $table, $identity_id ), ARRAY_A );
 	$map  = array();
 	foreach ( $rows as $row ) {
 		$map[ (string) $row['endpoint_type'] ] = (string) $row['endpoint_uri'];
@@ -1583,7 +1621,7 @@ function axismundi_actors_write_keys( int $identity_id, array $keys ) : bool {
 			continue;
 		}
 		$seen[] = $key['key_uri_hash'];
-		$exists = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE key_uri_hash = %s", $key['key_uri_hash'] ) ); // phpcs:ignore WordPress.DB
+		$exists = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM %i WHERE key_uri_hash = %s", $table, $key['key_uri_hash'] ) ); // phpcs:ignore WordPress.DB
 		if ( $exists > 0 ) {
 			$done = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom keyring table.
 				$table,
@@ -1605,8 +1643,14 @@ function axismundi_actors_write_keys( int $identity_id, array $keys ) : bool {
 	}
 	$placeholders = implode( ',', array_fill( 0, count( $seen ), '%s' ) );
 	$params       = array_merge( array( $now, $identity_id ), $seen );
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- placeholders are all %s.
-	$retired = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET status = 'retired', updated_at = %s WHERE identity_id = %d AND status = 'active' AND key_uri_hash NOT IN ({$placeholders})", $params ) );
+	/*
+	 * `$placeholders` stays interpolated on purpose: it is a generated run of
+	 * "%s,%s,..." sized to the IN list, not a value and not an identifier, so
+	 * neither %s nor %i can carry it. It is built from a count and never from
+	 * input. The table is %i and the values are prepared as before.
+	 */
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- generated %s run; every value is prepared.
+	$retired = $wpdb->query( $wpdb->prepare( "UPDATE %i SET status = 'retired', updated_at = %s WHERE identity_id = %d AND status = 'active' AND key_uri_hash NOT IN ({$placeholders})", array_merge( array( $table ), $params ) ) );
 	return false !== $retired;
 }
 
@@ -1619,9 +1663,9 @@ function axismundi_actors_get_keys( int $identity_id, string $status = '' ) : ar
 	global $wpdb;
 	$table = axismundi_actors_keys_table();
 	if ( '' !== $status ) {
-		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE identity_id = %d AND status = %s ORDER BY updated_at DESC", $identity_id, $status ), ARRAY_A ); // phpcs:ignore WordPress.DB
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM %i WHERE identity_id = %d AND status = %s ORDER BY updated_at DESC", $table, $identity_id, $status ), ARRAY_A ); // phpcs:ignore WordPress.DB
 	} else {
-		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE identity_id = %d ORDER BY status ASC, updated_at DESC", $identity_id ), ARRAY_A ); // phpcs:ignore WordPress.DB
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM %i WHERE identity_id = %d ORDER BY status ASC, updated_at DESC", $table, $identity_id ), ARRAY_A ); // phpcs:ignore WordPress.DB
 	}
 	return is_array( $rows ) ? $rows : array();
 }
@@ -1664,7 +1708,7 @@ function axismundi_actors_record_fetch_failure( int $identity_id, string $error_
 	global $wpdb;
 	$table   = axismundi_actors_fetch_state_table();
 	$now     = current_time( 'mysql', true );
-	$current = (int) $wpdb->get_var( $wpdb->prepare( "SELECT failure_count FROM {$table} WHERE identity_id = %d", $identity_id ) ); // phpcs:ignore WordPress.DB
+	$current = (int) $wpdb->get_var( $wpdb->prepare( "SELECT failure_count FROM %i WHERE identity_id = %d", $table, $identity_id ) ); // phpcs:ignore WordPress.DB
 	$count   = $current + 1;
 	$backoff = min( DAY_IN_SECONDS * 7, HOUR_IN_SECONDS * ( 2 ** min( $count, 8 ) ) );
 	axismundi_actors_upsert_fetch_state(
@@ -1690,7 +1734,7 @@ function axismundi_actors_upsert_fetch_state( int $identity_id, array $fields ) 
 	global $wpdb;
 	$table    = axismundi_actors_fetch_state_table();
 	$now      = current_time( 'mysql', true );
-	$existing = (int) $wpdb->get_var( $wpdb->prepare( "SELECT identity_id FROM {$table} WHERE identity_id = %d", $identity_id ) ); // phpcs:ignore WordPress.DB
+	$existing = (int) $wpdb->get_var( $wpdb->prepare( "SELECT identity_id FROM %i WHERE identity_id = %d", $table, $identity_id ) ); // phpcs:ignore WordPress.DB
 	if ( $existing > 0 ) {
 		$wpdb->update( $table, $fields, array( 'identity_id' => $identity_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom fetch-state table.
 		return;
@@ -1710,7 +1754,7 @@ function axismundi_actors_upsert_fetch_state( int $identity_id, array $fields ) 
 function axismundi_actors_get_fetch_state( int $identity_id ) : ?array {
 	global $wpdb;
 	$table = axismundi_actors_fetch_state_table();
-	$row   = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE identity_id = %d", $identity_id ), ARRAY_A ); // phpcs:ignore WordPress.DB
+	$row   = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM %i WHERE identity_id = %d", $table, $identity_id ), ARRAY_A ); // phpcs:ignore WordPress.DB
 	return is_array( $row ) ? $row : null;
 }
 
@@ -1761,7 +1805,7 @@ function axismundi_actors_write_identity_relations( int $identity_id, array $rel
 		}
 		$id = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom relation ledger.
 			$wpdb->prepare(
-				"SELECT id FROM {$table} WHERE identity_id = %d AND relation_type = %s AND target_uri_hash = %s",
+				"SELECT id FROM %i WHERE identity_id = %d AND relation_type = %s AND target_uri_hash = %s", $table,
 				$identity_id,
 				$relation['relation_type'],
 				$relation['target_uri_hash']
@@ -1808,9 +1852,9 @@ function axismundi_actors_get_identity_relations( int $identity_id, string $rela
 	global $wpdb;
 	$table = axismundi_actors_identity_relations_table();
 	if ( in_array( $relation_type, array( 'also_known_as', 'moved_to' ), true ) ) {
-		return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE identity_id = %d AND relation_type = %s ORDER BY id ASC", $identity_id, $relation_type ), ARRAY_A ); // phpcs:ignore WordPress.DB
+		return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM %i WHERE identity_id = %d AND relation_type = %s ORDER BY id ASC", $table, $identity_id, $relation_type ), ARRAY_A ); // phpcs:ignore WordPress.DB
 	}
-	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE identity_id = %d ORDER BY id ASC", $identity_id ), ARRAY_A ); // phpcs:ignore WordPress.DB
+	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM %i WHERE identity_id = %d ORDER BY id ASC", $table, $identity_id ), ARRAY_A ); // phpcs:ignore WordPress.DB
 }
 
 /**
@@ -2066,9 +2110,9 @@ function axismundi_actors_clear_deleted_attachment( int $post_id ) : void {
 	global $wpdb;
 	$actors = axismundi_actors_actors_table();
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
-	$wpdb->query( $wpdb->prepare( "UPDATE {$actors} SET avatar_attachment_id = NULL WHERE avatar_attachment_id = %d", $post_id ) );
+	$wpdb->query( $wpdb->prepare( "UPDATE %i SET avatar_attachment_id = NULL WHERE avatar_attachment_id = %d", $actors, $post_id ) );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
-	$wpdb->query( $wpdb->prepare( "UPDATE {$actors} SET header_attachment_id = NULL WHERE header_attachment_id = %d", $post_id ) );
+	$wpdb->query( $wpdb->prepare( "UPDATE %i SET header_attachment_id = NULL WHERE header_attachment_id = %d", $actors, $post_id ) );
 }
 add_action( 'delete_attachment', 'axismundi_actors_clear_deleted_attachment' );
 
@@ -2156,7 +2200,7 @@ function axismundi_actors_handle_owner( string $handle_key ) : int {
 	$addresses = axismundi_actors_addresses_table();
 	$hash      = axismundi_actors_address_hash( 'local_handle', $handle_key );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
-	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT identity_id FROM {$addresses} WHERE address_hash = %s AND status IN ('primary','reserved','redirect') LIMIT 1", $hash ) );
+	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT identity_id FROM %i WHERE address_hash = %s AND status IN ('primary','reserved','redirect') LIMIT 1", $addresses, $hash ) );
 }
 
 /**
@@ -2172,7 +2216,7 @@ function axismundi_actors_record_handle_address( int $identity_id, string $handl
 	$addresses = axismundi_actors_addresses_table();
 	$hash      = axismundi_actors_address_hash( 'local_handle', $handle_key );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
-	$existing = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$addresses} WHERE address_hash = %s", $hash ) );
+	$existing = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM %i WHERE address_hash = %s", $addresses, $hash ) );
 	$type     = 'primary' === $status ? 'local_handle' : 'former_handle';
 	if ( $existing > 0 ) {
 		$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -2231,7 +2275,7 @@ function axismundi_actors_get_addresses( int $identity_id ) : array {
 	global $wpdb;
 	$addresses = axismundi_actors_addresses_table();
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
-	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$addresses} WHERE identity_id = %d", $identity_id ), ARRAY_A );
+	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM %i WHERE identity_id = %d", $addresses, $identity_id ), ARRAY_A );
 }
 
 /** @return string Primary verified acct address, or ''. */
@@ -2267,14 +2311,14 @@ function axismundi_actors_record_verified_acct_address( int $identity_id, string
 	 * The address belongs to an acct *and a kind of Actor*. A Person and a Group on the same
 	 * host may legitimately share a handle, and the row is scoped so each can own its own.
 	 */
-	$kind = (string) $wpdb->get_var( $wpdb->prepare( "SELECT actor_type FROM {$actors} WHERE identity_id = %d", $identity_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom actor ledger.
+	$kind = (string) $wpdb->get_var( $wpdb->prepare( "SELECT actor_type FROM %i WHERE identity_id = %d", $actors, $identity_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom actor ledger.
 	if ( '' === $kind ) {
 		return false;
 	}
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom address ledger.
-	$existing = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$addresses} WHERE address_hash = %s AND actor_kind = %s", $hash, $kind ) );
+	$existing = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM %i WHERE address_hash = %s AND actor_kind = %s", $addresses, $hash, $kind ) );
 	if ( $existing > 0 ) {
-		$owner = (int) $wpdb->get_var( $wpdb->prepare( "SELECT identity_id FROM {$addresses} WHERE id = %d", $existing ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom address ledger.
+		$owner = (int) $wpdb->get_var( $wpdb->prepare( "SELECT identity_id FROM %i WHERE id = %d", $addresses, $existing ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom address ledger.
 		// Two Actors of the same kind claiming one acct is still a genuine conflict, and the
 		// first verified owner keeps it.
 		if ( $owner !== $identity_id ) {
@@ -2321,7 +2365,7 @@ function axismundi_actors_register_handle( int $identity_id, string $handle ) {
 	global $wpdb;
 	$actors = axismundi_actors_actors_table();
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
-	$locked = $wpdb->get_var( $wpdb->prepare( "SELECT handle_locked_at FROM {$actors} WHERE identity_id = %d", $identity_id ) );
+	$locked = $wpdb->get_var( $wpdb->prepare( "SELECT handle_locked_at FROM %i WHERE identity_id = %d", $actors, $identity_id ) );
 	if ( ! empty( $locked ) ) {
 		return new WP_Error( 'ax_actors_handle_locked', __( 'This handle is already set and cannot be changed.', 'axismundi-actors' ) );
 	}
@@ -2335,7 +2379,7 @@ function axismundi_actors_register_handle( int $identity_id, string $handle ) {
 		return new WP_Error( 'ax_actors_handle_reserved', __( 'That handle is reserved.', 'axismundi-actors' ) );
 	}
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
-	$taken = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$actors} WHERE local_handle_key = %s AND identity_id <> %d", $key, $identity_id ) );
+	$taken = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE local_handle_key = %s AND identity_id <> %d", $actors, $key, $identity_id ) );
 	if ( $taken > 0 ) {
 		return new WP_Error( 'ax_actors_handle_taken', __( 'That handle is already in use.', 'axismundi-actors' ) );
 	}
@@ -2370,7 +2414,7 @@ function axismundi_actors_get_instance( string $host ) : ?array {
 	global $wpdb;
 	$instances = axismundi_actors_instances_table();
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
-	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$instances} WHERE host_hash = %s", axismundi_actors_host_hash( $host ) ), ARRAY_A );
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM %i WHERE host_hash = %s", $instances, axismundi_actors_host_hash( $host ) ), ARRAY_A );
 	return $row ?: null;
 }
 
@@ -2385,7 +2429,7 @@ function axismundi_actors_get_instances( int $limit = 50 ) : array {
 	$limit     = max( 1, min( 200, $limit ) );
 	$instances = axismundi_actors_instances_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table name; numeric limit is prepared.
-	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$instances} ORDER BY updated_at DESC LIMIT %d", $limit ), ARRAY_A );
+	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM %i ORDER BY updated_at DESC LIMIT %d", $instances, $limit ), ARRAY_A );
 }
 
 /**
@@ -2407,7 +2451,7 @@ function axismundi_actors_upsert_instance( string $host, array $fields ) : void 
 	$data['fetched_at'] = $now;
 	$data['updated_at'] = $now;
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
-	$existing = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$instances} WHERE host_hash = %s", $hash ) );
+	$existing = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM %i WHERE host_hash = %s", $instances, $hash ) );
 	if ( $existing > 0 ) {
 		$wpdb->update( $instances, $data, array( 'id' => $existing ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return;

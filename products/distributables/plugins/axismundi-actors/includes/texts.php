@@ -224,7 +224,7 @@ function axismundi_actors_text_binding( int $identity_id, string $field, string 
 	$table    = axismundi_actors_texts_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
 	$row = $wpdb->get_row(
-		$wpdb->prepare( "SELECT source, source_tag FROM {$table} WHERE identity_id = %d AND field_name = %s AND language_tag = %s", $identity_id, $field, $language ),
+		$wpdb->prepare( "SELECT source, source_tag FROM %i WHERE identity_id = %d AND field_name = %s AND language_tag = %s", $table, $identity_id, $field, $language ),
 		ARRAY_A
 	);
 	return array(
@@ -246,7 +246,7 @@ function axismundi_actors_bound_texts( int $identity_id, string $source, string 
 	$table = axismundi_actors_texts_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
 	$rows = (array) $wpdb->get_results(
-		$wpdb->prepare( "SELECT language_tag, source_tag FROM {$table} WHERE identity_id = %d AND field_name = %s AND source = %s", $identity_id, $field, $source ),
+		$wpdb->prepare( "SELECT language_tag, source_tag FROM %i WHERE identity_id = %d AND field_name = %s AND source = %s", $table, $identity_id, $field, $source ),
 		ARRAY_A
 	);
 	$bound = array();
@@ -279,7 +279,7 @@ function axismundi_actors_rename_text_language( int $identity_id, string $from, 
 	}
 	$table = axismundi_actors_texts_table();
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- conflict check for this plugin's own table.
-	$exists = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE identity_id = %d AND language_tag = %s", $identity_id, $to ) );
+	$exists = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE identity_id = %d AND language_tag = %s", $table, $identity_id, $to ) );
 	if ( $exists > 0 ) {
 		return new WP_Error( 'ax_actors_text_language_exists', __( 'A profile already uses that language.', 'axismundi-actors' ) );
 	}
@@ -307,7 +307,7 @@ function axismundi_actors_get_text_map( int $identity_id ) : array {
 	}
 	$table = axismundi_actors_texts_table();
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- actor text custom table.
-	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT field_name, language_tag, value FROM {$table} WHERE identity_id = %d ORDER BY language_tag, field_name", $identity_id ), ARRAY_A );
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT field_name, language_tag, value FROM %i WHERE identity_id = %d ORDER BY language_tag, field_name", $table, $identity_id ), ARRAY_A );
 	$map  = array();
 	foreach ( $rows as $row ) {
 		$language = (string) $row['language_tag'];

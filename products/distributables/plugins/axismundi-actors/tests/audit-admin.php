@@ -65,6 +65,45 @@ try {
 	}
 	ax_admin_assert( $ax_admin_results, 'a Subscriber cannot manage or activate even its own retained Actor row', $subscriber_actor instanceof Axismundi_Actor && ! axismundi_actors_can_manage( $subscriber_actor, $subscriber ) );
 
+	/*
+	 * The management screen must not create anything.
+	 *
+	 * It used to call ensure_for_user(), which creates an actor when none
+	 * exists: a database write reachable by GET, with the target coming off the
+	 * query string, so an administrator could be made to perform it for an
+	 * arbitrary user by following a link. Reported by the WordPress.org plugin
+	 * review, 2026-09-07.
+	 *
+	 * Rendering is a read now, and creation happens in the nonce-checked
+	 * activation POST. This asserts the read: a user with no actor still has
+	 * none after the screen renders for them.
+	 */
+	$ax_csrf_user = (int) wp_insert_user( array( 'user_login' => 'ax_admin_fresh', 'user_pass' => wp_generate_password(), 'role' => 'author' ) );
+	$ax_admin_users[] = $ax_csrf_user;
+	ax_admin_assert( $ax_admin_results, 'a fresh user starts with no actor', null === axismundi_actors_get_for_user( $ax_csrf_user ) );
+
+	wp_set_current_user( $admin );
+	$_GET['user_id'] = $ax_csrf_user;
+	ax_admin_assert( $ax_admin_results, 'GET routing resolves the requested user for an administrator', $ax_csrf_user === axismundi_actors_admin_target_user() );
+
+	ob_start();
+	axismundi_actors_render_admin_page();
+	$ax_csrf_markup = (string) ob_get_clean();
+	unset( $_GET['user_id'] );
+
+	ax_admin_assert( $ax_admin_results, 'rendering the screen creates no actor', null === axismundi_actors_get_for_user( $ax_csrf_user ) );
+	ax_admin_assert( $ax_admin_results, 'the un-activated screen still offers the activation wizard', false !== strpos( $ax_csrf_markup, 'axismundi_actors_activate' ) );
+	ax_admin_assert( $ax_admin_results, 'and that wizard carries a nonce, which is where creation happens', false !== strpos( $ax_csrf_markup, '_wpnonce' ) );
+
+	wp_set_current_user( $other );
+	$_GET['user_id'] = $ax_csrf_user;
+	ax_admin_assert( $ax_admin_results, 'a non-admin cannot route to another user and is given their own id', $other === axismundi_actors_admin_target_user() );
+	unset( $_GET['user_id'] );
+	wp_set_current_user( $admin );
+
+	ax_admin_assert( $ax_admin_results, 'the pre-creation capability rule matches the actor rule for an owner', axismundi_actors_can_manage_user_actor( $uid, $uid ) );
+	ax_admin_assert( $ax_admin_results, 'and refuses a stranger', ! axismundi_actors_can_manage_user_actor( $uid, $other ) );
+
 	// Activation transition: register handle (internal) then publish.
 	axismundi_actors_register_handle( $actor->get_identity_id(), 'alice_admin' );
 	axismundi_actors_set_status( $actor->get_identity_id(), 'internal' );

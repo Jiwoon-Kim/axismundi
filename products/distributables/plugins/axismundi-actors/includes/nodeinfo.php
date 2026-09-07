@@ -39,7 +39,7 @@ function axismundi_actors_nodeinfo_user_count() : int {
 	$identities = axismundi_actors_identities_table();
 	$actors     = axismundi_actors_actors_table();
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom-table live count for NodeInfo usage.
-	return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$actors} a INNER JOIN {$identities} i ON i.id = a.identity_id WHERE i.origin = 'local' AND i.status = 'public' AND a.local_handle_key IS NOT NULL AND a.handle_locked_at IS NOT NULL" );
+	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i a INNER JOIN %i i ON i.id = a.identity_id WHERE i.origin = 'local' AND i.status = 'public' AND a.local_handle_key IS NOT NULL AND a.handle_locked_at IS NOT NULL", $actors, $identities ) );
 }
 
 /**

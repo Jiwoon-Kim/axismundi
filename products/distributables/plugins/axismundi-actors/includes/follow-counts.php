@@ -133,9 +133,9 @@ function axismundi_actors_refresh_stale_follow_counts() : void {
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Actors repository owns these custom tables.
 	$ids = (array) $wpdb->get_col(
 		$wpdb->prepare(
-			"SELECT a.identity_id FROM {$actors} a INNER JOIN {$identities} i ON i.id = a.identity_id
+			"SELECT a.identity_id FROM %i a INNER JOIN %i i ON i.id = a.identity_id
 			 WHERE i.origin = 'remote' AND ( a.follow_counts_fetched_at IS NULL OR a.follow_counts_fetched_at < %s )
-			 ORDER BY a.follow_counts_fetched_at IS NOT NULL, a.follow_counts_fetched_at ASC LIMIT %d",
+			 ORDER BY a.follow_counts_fetched_at IS NOT NULL, a.follow_counts_fetched_at ASC LIMIT %d", $actors, $identities,
 			$cutoff,
 			AXISMUNDI_ACTORS_FOLLOW_COUNTS_BATCH
 		)

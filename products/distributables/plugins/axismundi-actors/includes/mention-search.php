@@ -15,16 +15,27 @@ function axismundi_actors_search_mentionable( string $search, int $limit = 10 ) 
 	$identities = axismundi_actors_identities_table();
 	$actors     = axismundi_actors_actors_table();
 	$addresses  = axismundi_actors_addresses_table();
-	$where      = "i.status = 'public' AND (i.origin = 'remote' OR (a.local_handle_key IS NOT NULL AND a.handle_locked_at IS NOT NULL))";
-	$args       = array();
+	/*
+	 * `$where` stays interpolated -- it is assembled here, not from input, and
+	 * carries its own placeholders. Everything it names is bound: the two joined
+	 * tables as %i before the clause, and the address table as %i inside it.
+	 *
+	 * `$args` is built in statement order rather than grouped by kind, because
+	 * prepare() binds positionally. The address table sits between the third
+	 * and fourth LIKE, so its argument does too. Appending identifiers at the
+	 * front instead would swap a table name with a search term -- which is a
+	 * query that still runs.
+	 */
+	$where = "i.status = 'public' AND (i.origin = 'remote' OR (a.local_handle_key IS NOT NULL AND a.handle_locked_at IS NOT NULL))";
+	$args  = array( $identities, $actors );
 	if ( '' !== $search ) {
 		$like   = '%' . $wpdb->esc_like( ltrim( $search, '@' ) ) . '%';
-		$where .= " AND (a.preferred_username LIKE %s OR a.display_name LIKE %s OR i.canonical_uri LIKE %s OR EXISTS (SELECT 1 FROM {$addresses} ad WHERE ad.identity_id = i.id AND ad.address LIKE %s))";
-		$args   = array( $like, $like, $like, $like );
+		$where .= ' AND (a.preferred_username LIKE %s OR a.display_name LIKE %s OR i.canonical_uri LIKE %s OR EXISTS (SELECT 1 FROM %i ad WHERE ad.identity_id = i.id AND ad.address LIKE %s))';
+		array_push( $args, $like, $like, $like, $addresses, $like );
 	}
-	$sql    = "SELECT i.*, a.* FROM {$identities} i INNER JOIN {$actors} a ON a.identity_id = i.id WHERE {$where} ORDER BY CASE WHEN i.origin = 'local' THEN 0 ELSE 1 END, a.display_name ASC, a.preferred_username ASC LIMIT %d";
+	$sql    = "SELECT i.*, a.* FROM %i i INNER JOIN %i a ON a.identity_id = i.id WHERE {$where} ORDER BY CASE WHEN i.origin = 'local' THEN 0 ELSE 1 END, a.display_name ASC, a.preferred_username ASC LIMIT %d";
 	$args[] = $limit;
-	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom tables and clause; all values are prepared.
+	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- assembled clause; every table and value is prepared.
 	$rows = (array) $wpdb->get_results( $wpdb->prepare( $sql, ...$args ), ARRAY_A );
 	return array_map( static fn( array $row ) : Axismundi_Actor => Axismundi_Actor::from_row( $row ), $rows );
 }

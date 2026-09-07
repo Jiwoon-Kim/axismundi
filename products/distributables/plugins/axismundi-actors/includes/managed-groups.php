@@ -109,7 +109,7 @@ function axismundi_actors_managed_actor_can_manage( int $identity_id, int $user_
 	global $wpdb;
 	$table = axismundi_actors_managers_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- composite-PK exact lookup on a custom table.
-	$role = (string) $wpdb->get_var( $wpdb->prepare( "SELECT role FROM {$table} WHERE identity_id = %d AND user_id = %d", $identity_id, $user_id ) );
+	$role = (string) $wpdb->get_var( $wpdb->prepare( "SELECT role FROM %i WHERE identity_id = %d AND user_id = %d", $table, $identity_id, $user_id ) );
 	if ( '' === $role ) {
 		return false;
 	}
@@ -130,7 +130,7 @@ function axismundi_actors_group_managers( int $identity_id ) : array {
 	global $wpdb;
 	$table = axismundi_actors_managers_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed lookup on a custom table.
-	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT user_id, role, created_at, updated_at FROM {$table} WHERE identity_id = %d", $identity_id ), ARRAY_A );
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT user_id, role, created_at, updated_at FROM %i WHERE identity_id = %d", $table, $identity_id ), ARRAY_A );
 	usort(
 		$rows,
 		static fn( array $a, array $b ) : int => axismundi_actors_manager_role_rank( (string) $b['role'] ) <=> axismundi_actors_manager_role_rank( (string) $a['role'] )
@@ -164,7 +164,7 @@ function axismundi_actors_list_manageable_actors( int $user_id, ?string $min_rol
 	global $wpdb;
 	$table = axismundi_actors_managers_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- KEY(user_id, role) lookup on a custom table.
-	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT identity_id, role FROM {$table} WHERE user_id = %d", $user_id ), ARRAY_A );
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT identity_id, role FROM %i WHERE user_id = %d", $table, $user_id ), ARRAY_A );
 	$min_rank = null === $min_role ? 0 : axismundi_actors_manager_role_rank( $min_role );
 	$actors   = array();
 	foreach ( $rows as $row ) {
@@ -184,7 +184,7 @@ function axismundi_actors_list_all_managed_actors() : array {
 	global $wpdb;
 	$table = axismundi_actors_actors_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- site-admin recovery list of local managed identities.
-	$ids = (array) $wpdb->get_col( "SELECT identity_id FROM {$table} WHERE actor_scope = 'managed' ORDER BY identity_id ASC" );
+	$ids = (array) $wpdb->get_col( $wpdb->prepare( "SELECT identity_id FROM %i WHERE actor_scope = 'managed' ORDER BY identity_id ASC", $table ) );
 	$groups = array();
 	foreach ( $ids as $identity_id ) {
 		$actor = axismundi_actors_get_by_identity( (int) $identity_id );
@@ -215,10 +215,10 @@ function axismundi_actors_get_public_managed_actors( int $limit = 50, int $offse
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed table names; pagination values prepared.
 	$rows = (array) $wpdb->get_results(
 		$wpdb->prepare(
-			"SELECT i.*, a.* FROM {$identities} i INNER JOIN {$actors} a ON a.identity_id = i.id
+			"SELECT i.*, a.* FROM %i i INNER JOIN %i a ON a.identity_id = i.id
 			 WHERE a.actor_type = 'Group' AND i.status = 'public'
 			 AND ( i.origin = 'remote' OR ( i.origin = 'local' AND a.actor_scope = 'managed' AND a.handle_locked_at IS NOT NULL ) )
-			 ORDER BY COALESCE( NULLIF( a.display_name, '' ), a.preferred_username, i.canonical_uri ) ASC, i.id ASC LIMIT %d OFFSET %d",
+			 ORDER BY COALESCE( NULLIF( a.display_name, '' ), a.preferred_username, i.canonical_uri ) ASC, i.id ASC LIMIT %d OFFSET %d", $identities, $actors,
 			$limit,
 			$offset
 		),
@@ -242,16 +242,22 @@ function axismundi_actors_search_public_groups( string $search, int $limit = 20 
 	$identities = axismundi_actors_identities_table();
 	$actors     = axismundi_actors_actors_table();
 	$addresses  = axismundi_actors_addresses_table();
-	$where      = "a.actor_type = 'Group' AND i.status = 'public' AND ( i.origin = 'remote' OR ( i.origin = 'local' AND a.actor_scope = 'managed' AND a.handle_locked_at IS NOT NULL ) )";
-	$args       = array();
+	/*
+	 * `$where` is assembled here and carries its own placeholders; everything it
+	 * names is bound. `$args` is built in statement order because prepare()
+	 * binds positionally -- the address table sits between the third and fourth
+	 * LIKE, so its argument does too.
+	 */
+	$where = "a.actor_type = 'Group' AND i.status = 'public' AND ( i.origin = 'remote' OR ( i.origin = 'local' AND a.actor_scope = 'managed' AND a.handle_locked_at IS NOT NULL ) )";
+	$args  = array( $identities, $actors );
 	if ( '' !== $search ) {
 		$like   = '%' . $wpdb->esc_like( ltrim( $search, '@' ) ) . '%';
-		$where .= " AND ( a.preferred_username LIKE %s OR a.display_name LIKE %s OR i.canonical_uri LIKE %s OR EXISTS ( SELECT 1 FROM {$addresses} ad WHERE ad.identity_id = i.id AND ad.address LIKE %s ) )";
-		$args   = array( $like, $like, $like, $like );
+		$where .= ' AND ( a.preferred_username LIKE %s OR a.display_name LIKE %s OR i.canonical_uri LIKE %s OR EXISTS ( SELECT 1 FROM %i ad WHERE ad.identity_id = i.id AND ad.address LIKE %s ) )';
+		array_push( $args, $like, $like, $like, $addresses, $like );
 	}
-	$sql    = "SELECT i.*, a.* FROM {$identities} i INNER JOIN {$actors} a ON a.identity_id = i.id WHERE {$where} ORDER BY CASE WHEN i.origin = 'local' THEN 0 ELSE 1 END, COALESCE( NULLIF( a.display_name, '' ), a.preferred_username, i.canonical_uri ) ASC, i.id ASC LIMIT %d";
+	$sql    = "SELECT i.*, a.* FROM %i i INNER JOIN %i a ON a.identity_id = i.id WHERE {$where} ORDER BY CASE WHEN i.origin = 'local' THEN 0 ELSE 1 END, COALESCE( NULLIF( a.display_name, '' ), a.preferred_username, i.canonical_uri ) ASC, i.id ASC LIMIT %d";
 	$args[] = $limit;
-	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom tables and prepared search values.
+	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- assembled clause; every table and value is prepared.
 	$rows = (array) $wpdb->get_results( $wpdb->prepare( $sql, ...$args ), ARRAY_A );
 	return array_map( static fn( array $row ) : Axismundi_Actor => Axismundi_Actor::from_row( $row ), $rows );
 }
@@ -263,9 +269,9 @@ function axismundi_actors_count_public_groups() : int {
 	$actors     = axismundi_actors_actors_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed table names and constant predicates.
 	return (int) $wpdb->get_var(
-		"SELECT COUNT(*) FROM {$identities} i INNER JOIN {$actors} a ON a.identity_id = i.id
+		$wpdb->prepare( "SELECT COUNT(*) FROM %i i INNER JOIN %i a ON a.identity_id = i.id
 		 WHERE a.actor_type = 'Group' AND i.status = 'public'
-		 AND ( i.origin = 'remote' OR ( i.origin = 'local' AND a.actor_scope = 'managed' AND a.handle_locked_at IS NOT NULL ) )"
+		 AND ( i.origin = 'remote' OR ( i.origin = 'local' AND a.actor_scope = 'managed' AND a.handle_locked_at IS NOT NULL ) )", $identities, $actors )
 	);
 }
 
@@ -274,7 +280,7 @@ function axismundi_actors_managed_owner_count( int $identity_id ) : int {
 	global $wpdb;
 	$table = axismundi_actors_managers_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed count on a custom table.
-	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE identity_id = %d AND role = 'owner'", $identity_id ) );
+	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE identity_id = %d AND role = 'owner'", $table, $identity_id ) );
 }
 
 /** Insert or update one manager row (no invariant checks; internal seam). */
@@ -288,9 +294,9 @@ function axismundi_actors_write_manager_row( int $identity_id, int $user_id, str
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- upsert on a composite-PK custom table.
 	$ok = $wpdb->query(
 		$wpdb->prepare(
-			"INSERT INTO {$table} (identity_id, user_id, role, created_at, updated_at)
+			"INSERT INTO %i (identity_id, user_id, role, created_at, updated_at)
 			 VALUES (%d, %d, %s, %s, %s)
-			 ON DUPLICATE KEY UPDATE role = VALUES(role), updated_at = VALUES(updated_at)",
+			 ON DUPLICATE KEY UPDATE role = VALUES(role), updated_at = VALUES(updated_at)", $table,
 			$identity_id,
 			$user_id,
 			$role,

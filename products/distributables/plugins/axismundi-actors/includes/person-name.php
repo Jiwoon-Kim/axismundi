@@ -177,15 +177,15 @@ function axismundi_actors_alternate_names( int $identity_id, string $kind = '' )
 	/*
 	 * Written out twice rather than assembled. A query built in a variable and handed to `prepare()`
 	 * is prepared, but nothing reading the code can see that it is -- not a static analyser and not a
-	 * reviewer -- and the only way to say so is a suppression comment that reads the same whether the
-	 * query is safe or not. Two literal statements say it by being literal.
+	 * reviewer. Two literal statements say it by being literal, and now that the table is a %i
+	 * placeholder rather than an interpolation, neither needs a suppression comment either.
 	 */
 	if ( '' !== $kind ) {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
 		return (array) $wpdb->get_results(
 			$wpdb->prepare(
-				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- the table name is this plugin's own, from its own function.
-				"SELECT * FROM {$table} WHERE identity_id = %d AND name_kind = %s ORDER BY name_kind ASC, position ASC, id ASC",
+				'SELECT * FROM %i WHERE identity_id = %d AND name_kind = %s ORDER BY name_kind ASC, position ASC, id ASC',
+				$table,
 				$identity_id,
 				$kind
 			),
@@ -195,8 +195,8 @@ function axismundi_actors_alternate_names( int $identity_id, string $kind = '' )
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
 	return (array) $wpdb->get_results(
 		$wpdb->prepare(
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- the table name is this plugin's own, from its own function.
-			"SELECT * FROM {$table} WHERE identity_id = %d ORDER BY name_kind ASC, position ASC, id ASC",
+			'SELECT * FROM %i WHERE identity_id = %d ORDER BY name_kind ASC, position ASC, id ASC',
+			$table,
 			$identity_id
 		),
 		ARRAY_A

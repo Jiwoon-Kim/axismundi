@@ -15,7 +15,7 @@ function axismundi_actors_get_profile_fields( int $identity_id ) : array {
 	}
 	$table = axismundi_actors_profile_fields_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table name.
-	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, field_name, field_value, position, verification_status, verified_at, checked_at, verification_error FROM {$table} WHERE identity_id = %d ORDER BY position ASC, id ASC", $identity_id ), ARRAY_A );
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, field_name, field_value, position, verification_status, verified_at, checked_at, verification_error FROM %i WHERE identity_id = %d ORDER BY position ASC, id ASC", $table, $identity_id ), ARRAY_A );
 	return array_map(
 		static fn( array $row ) : array => array(
 			'id'       => (int) $row['id'],

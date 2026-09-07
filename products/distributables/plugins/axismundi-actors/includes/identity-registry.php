@@ -45,9 +45,19 @@ function axismundi_actors_identity_kinds() : array {
 function axismundi_actors_query_identity( string $where, ...$args ) : ?array {
 	global $wpdb;
 	$table = axismundi_actors_identities_table();
-	$sql   = "SELECT * FROM {$table} WHERE {$where} LIMIT 1";
-	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- $where is a caller-fixed clause; args are prepared.
-	$row = $wpdb->get_row( $args ? $wpdb->prepare( $sql, ...$args ) : $sql, ARRAY_A );
+	/*
+	 * `$where` stays interpolated: it is a clause fixed by the caller, carrying
+	 * its own %s/%d placeholders which $args fills. The table is %i, and it
+	 * comes first in the statement, so binding it first keeps every later
+	 * placeholder in the position its argument expects.
+	 *
+	 * prepare() now runs unconditionally. It used to be skipped when there were
+	 * no arguments, which was fine while the table was interpolated and is not
+	 * fine now that it has to be bound.
+	 */
+	$sql = "SELECT * FROM %i WHERE {$where} LIMIT 1";
+	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- caller-fixed clause; the table and every argument are prepared.
+	$row = $wpdb->get_row( $wpdb->prepare( $sql, $table, ...$args ), ARRAY_A );
 	if ( ! is_array( $row ) ) {
 		return null;
 	}

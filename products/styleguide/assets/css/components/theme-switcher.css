@@ -121,6 +121,18 @@
 	color: var(--md-sys-color-primary);
 }
 
+/* FILL is the other half of that, and on this surface it is the whole of the
+ * selected state: a cycle button stands alone with nothing to compare against,
+ * so filling on hover as well would spend the only signal it has. That is why
+ * there is no hover rule here and there is one on the segments below.
+ *
+ * The axis interpolates rather than snapping, because icons.css registers
+ * --md-icon-fill with @property and transitions it. */
+.ax-ts__cycle[data-theme-scheme="light"] .material-symbols-outlined,
+.ax-ts__cycle[data-theme-scheme="dark"] .material-symbols-outlined {
+	--md-icon-fill: 1;
+}
+
 /* --- Group: M3 connected button group ------------------------- */
 
 .ax-ts__group {
@@ -154,6 +166,23 @@
 .ax-ts__segment[aria-pressed="true"] {
 	background-color: var(--ax-ts-selected-bg);
 	color: var(--ax-ts-selected-fg);
+}
+
+/* Unconditional, unlike the hover rule below. Gating this one behind a pointer
+ * would leave the chosen segment unfilled on a touchscreen, which is the one
+ * place the fill is doing real work. */
+.ax-ts__segment[aria-pressed="true"] .material-symbols-outlined {
+	--md-icon-fill: 1;
+}
+
+/* A segment can afford to fill under the cursor where the cycle button cannot:
+ * selection here is already carried by the container - the selected one is the
+ * only accent among three - so a filling symbol reads as the invitation it is,
+ * with the answer to "which is selected" sitting right beside it. */
+@media (hover: hover) {
+	.ax-ts__segment:hover .material-symbols-outlined {
+		--md-icon-fill: 1;
+	}
 }
 
 @media (hover: hover) {

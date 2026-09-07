@@ -18,9 +18,10 @@ $ErrorActionPreference = 'Stop'
 
 $themeDir = Split-Path -Parent $PSScriptRoot            # scripts/ -> theme root
 $slug     = 'axismundi'
-$distRoot = Join-Path $themeDir '..\..\_dist'
-$staging  = Join-Path $distRoot $slug
-$zipPath  = Join-Path $distRoot "$slug.zip"
+$distRoot  = Join-Path $themeDir '..\..\_dist'
+$stageRoot = Join-Path $distRoot "_stage-$slug"
+$staging   = Join-Path $stageRoot $slug
+$zipPath   = Join-Path $distRoot "$slug.zip"
 
 # --- parse .distignore into robocopy exclude lists ---
 $excludeDirs  = New-Object System.Collections.Generic.List[string]
@@ -39,7 +40,7 @@ foreach ($raw in Get-Content (Join-Path $themeDir '.distignore')) {
 }
 
 # --- clean + recreate output ---
-if (Test-Path -LiteralPath $staging) { Remove-Item -LiteralPath $staging -Recurse -Force }
+if (Test-Path -LiteralPath $stageRoot) { Remove-Item -LiteralPath $stageRoot -Recurse -Force }
 if (Test-Path -LiteralPath $zipPath) { Remove-Item -LiteralPath $zipPath -Force }
 New-Item -ItemType Directory -Force -Path $staging | Out-Null
 
@@ -64,6 +65,9 @@ try {
     }
 } finally { $archive.Dispose() }
 
-$sizeMB = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
+$sizeMB    = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
 $fileCount = (Get-ChildItem -Recurse -File -LiteralPath $staging).Count
+
+Remove-Item -LiteralPath $stageRoot -Recurse -Force
+
 Write-Host "Built $zipPath  ($sizeMB MB, $fileCount files)"

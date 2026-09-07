@@ -31,13 +31,10 @@
   --sg-gap-lg: 2rem;
   --sg-radius: 12px;
 
-  /* The theme's own stacks, not a stack chosen for this site. Latin comes from
-   * Roboto; the CJK slot is filled by whichever regional font provider is
-   * present, under :lang(). fonts.css (generated) supplies both. Without it
-   * the slot falls back to system-ui, exactly as a site with no provider
-   * plugin installed would. */
-  --sg-font: "Roboto Flex", var(--axismundi-cjk-sans, system-ui), sans-serif;
-  --sg-font-mono: "Roboto Mono", monospace;
+  /* Families come from tokens.ref.typeface.css, loaded before this file. The
+   * chrome asks for a role, not a font. */
+  --sg-font: var(--sg-ref-typeface-plain);
+  --sg-font-mono: var(--sg-ref-typeface-mono);
 }
 
 @media (prefers-color-scheme: dark) {

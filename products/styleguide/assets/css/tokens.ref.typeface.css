@@ -1,0 +1,52 @@
+/* ============================================================
+ * Style guide — typeface reference layer
+ *
+ * Which typeface families this site uses. Committed, unlike fonts.css next to
+ * it, which is generated and carries the @font-face rules and file paths.
+ *
+ *   fonts.css                  which files exist, and where
+ *   tokens.ref.typeface.css    which families a role may ask for
+ *
+ * The `--sg-` prefix is deliberate. These are the documentation site's own
+ * tokens, and a component specimen page will one day load the theme's real
+ * token CSS to render against; if this file claimed `--md-ref-typeface-*`,
+ * the site chrome and the specimen would fight over the same names and the
+ * documentation would be corrupting the thing it documents.
+ *
+ * The names are isolated. The behaviour is not: each stack leaves the CJK slot
+ * as `var(--axismundi-cjk-sans, …)`, the same contract the theme uses, so a
+ * regional font provider fills it under `:lang()` exactly as it would on a
+ * WordPress site. No concrete CJK family is written here — swapping the
+ * document language to Japanese picks up the JP provider with no change to
+ * this file.
+ *
+ * Source of the stacks: products/wordpress/themes/axismundi/theme.json,
+ * settings.typography.fontFamilies.
+ *
+ * Note for whoever reconciles this later: axismundi-lab's tokens.ref.css still
+ * declares `--md-ref-typeface-brand: 'Roboto Flex', 'Noto Sans KR', …` with
+ * Korean hardcoded into the stack. That predates the provider seam and is the
+ * older arrangement, not a second opinion.
+ * ============================================================ */
+
+:root {
+	/* Body and UI. The theme calls this family roboto-flex and uses it for
+	 * both brand and plain roles; they are kept separate here so a future
+	 * display face can differ without touching body text. */
+	--sg-ref-typeface-brand: "Roboto Flex", var(--axismundi-cjk-sans, system-ui), sans-serif;
+	--sg-ref-typeface-plain: "Roboto Flex", var(--axismundi-cjk-sans, system-ui), sans-serif;
+
+	/* Not yet synced by sync_styleguide_fonts.py: no page sets a serif face,
+	 * so this resolves to the CJK serif slot or Georgia until Roboto Serif is
+	 * added to THEME_FAMILIES. Declared now so a page that wants it fails
+	 * visibly rather than silently inheriting the sans stack. */
+	--sg-ref-typeface-serif: "Roboto Serif", var(--axismundi-cjk-serif, Georgia), serif;
+
+	--sg-ref-typeface-mono: "Roboto Mono", monospace;
+
+	/* Roboto Flex is variable across 100-1000; these are the three stops the
+	 * theme's type scale actually uses. */
+	--sg-ref-typeface-weight-regular: 400;
+	--sg-ref-typeface-weight-medium: 500;
+	--sg-ref-typeface-weight-bold: 700;
+}

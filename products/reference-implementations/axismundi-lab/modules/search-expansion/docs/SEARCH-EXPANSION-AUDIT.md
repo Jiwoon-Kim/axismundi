@@ -105,7 +105,7 @@ absolutely do not belong in a theme.
 
 This boundary is enforced by where the code lives: anything that
 queries a backend, persists state, or implements federation logic
-must live in a plugin package under `products/distributables/plugins/`,
+must live in a plugin package under `products/wordpress/plugins/`,
 never inside theme runtime.
 
 ## Lineage

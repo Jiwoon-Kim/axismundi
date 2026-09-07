@@ -31,7 +31,7 @@ explicitly enables them in runtime CSS.
 |---|---|
 | `products/reference-implementations/axismundi-lab/` (active) | `../../../core/design-systems/material3/assets/...` |
 | `products/_archive/axismundi-prototype/` (legacy) | `../../../core/design-systems/material3/assets/...` (or its archived copy) |
-| `products/distributables/themes/axismundi/` (future) | Theme bundles a copy at build time |
+| `products/wordpress/themes/axismundi/` (future) | Theme bundles a copy at build time |
 | Root `/styleguide/` (publish mirror of lab) | `../core/design-systems/material3/assets/...` |
 
 ## License compliance

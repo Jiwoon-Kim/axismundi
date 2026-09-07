@@ -37,7 +37,7 @@ The icon font MUST be scoped to **theme chrome zones only**. It MUST NOT be appl
 - Navigation blocks
 - Theme-level UI: theme switcher, pagination, search form, breadcrumb
 - Editor inspector panels (when wrapped in plugin block UI)
-- Custom blocks in `products/distributables/plugins/` (with explicit plugin context check)
+- Custom blocks in `products/wordpress/plugins/` (with explicit plugin context check)
 
 ## Forbidden zones
 
@@ -76,7 +76,7 @@ Both translate attributes are required because not all translation tools respect
 
 ## Block editor UX implication
 
-Authors should NOT be able to insert Material Symbols ligatures directly into post content. The block editor variation/picker UI (planned: `products/distributables/plugins/axismundi-icon-picker/`) MUST:
+Authors should NOT be able to insert Material Symbols ligatures directly into post content. The block editor variation/picker UI (planned: `products/wordpress/plugins/axismundi-icon-picker/`) MUST:
 
 1. Check block context — only available in theme template parts and navigation blocks, not in post content area
 2. Use the appropriate variable axes (FILL, GRAD, opsz, wght) via inspector controls

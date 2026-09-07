@@ -105,7 +105,7 @@ belong in `components.css` / `interactions.js` / theme runtime.
 This boundary is enforced by where the code lives, not just by review:
 anything that touches block registration, inspector controls, REST endpoints,
 or CPT definitions cannot ship inside a theme — it must live in a plugin
-package under `products/distributables/plugins/`.
+package under `products/wordpress/plugins/`.
 
 ## Mapping to existing binding-map schema
 

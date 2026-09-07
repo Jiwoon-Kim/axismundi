@@ -76,7 +76,7 @@ Theme stylesheets enforce the policy mechanically. If an icon class accidentally
 
 For author-friendly icon insertion in **ALLOWED zones only**, future plugin work is planned:
 
-- **`products/distributables/plugins/axismundi-icon-picker/`** (v3.3+) — a block variation or sidebar panel that lets authors:
+- **`products/wordpress/plugins/axismundi-icon-picker/`** (v3.3+) — a block variation or sidebar panel that lets authors:
   - Pick from Material Symbols catalog (Outlined / Rounded / Sharp)
   - Adjust 4 axes (FILL, GRAD, opsz, wght) per icon
   - Insert into **template parts and theme blocks only** (block context check)

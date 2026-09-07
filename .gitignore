@@ -5,7 +5,7 @@ playwright-report/
 tmp/
 
 # Distributable theme/plugin build output (transient ZIP artifacts)
-products/distributables/_dist/
+products/wordpress/_dist/
 
 docs/**/*-qa.png
 docs/**/qa-*.png

@@ -869,7 +869,7 @@ the activity. Never identify or aggregate a reaction by image URL.
 
 ## 11. Phases
 
-Fixtures live in `products/distributables/plugins/axismundi-emoji/tests/fixtures/`
+Fixtures live in `products/wordpress/plugins/axismundi-emoji/tests/fixtures/`
 with their own README. Two rules hold there:
 
 - The 1.92 MiB Misskey APNG is **not committed** — it is large and its own licence

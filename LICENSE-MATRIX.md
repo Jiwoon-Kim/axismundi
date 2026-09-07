@@ -35,7 +35,7 @@ unless a file-level notice says otherwise.
 | Field | Value |
 |---|---|
 | Current source path | `products/reference-implementations/axismundi-lab/` |
-| Future distributable path | `products/distributables/themes/axismundi/` |
+| Future distributable path | `products/wordpress/themes/axismundi/` |
 | License | GPL-3.0-or-later |
 | Root license file | `LICENSE` |
 | Rationale | GPL-compatible WordPress theme direction; compatible with Apache-2.0 Material Symbols; aligned with WordPress.org theme expectations |

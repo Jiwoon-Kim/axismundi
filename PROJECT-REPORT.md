@@ -494,7 +494,7 @@ distributable  →  not yet authored; future home of clean rebuild
 
 **After lab cleanup stabilizes (v3.3.1) → pilot probe (v3.3.2)**: `axismundi-pilot/` block theme probe. Minimal block theme constructed from clean lab styleguide + ontology to verify core block mapping extension viability. Not a distributable — a probe.
 
-**After pilot probe succeeds (v3.4.0+)**: distributable theme construction at `products/distributables/themes/axismundi/`. This is the clean rebuild that the prototype was demoted for — it draws from lab QA findings + pilot probe + selective prototype archeology.
+**After pilot probe succeeds (v3.4.0+)**: distributable theme construction at `products/wordpress/themes/axismundi/`. This is the clean rebuild that the prototype was demoted for — it draws from lab QA findings + pilot probe + selective prototype archeology.
 
 ### Phase 9 anti-patterns (carried forward from Phase 8 closure)
 

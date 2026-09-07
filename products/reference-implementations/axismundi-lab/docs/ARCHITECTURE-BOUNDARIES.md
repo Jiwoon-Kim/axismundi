@@ -77,7 +77,7 @@ post content, and degrade cleanly when the runtime fails.
 Anything that needs to register a durable custom block, host editor UI
 (toolbar items, sidebar inspectors, pickers), persist non-WordPress data
 schema, or speak to external protocols (ActivityPub, REST, federation).
-Plugins live under `products/distributables/plugins/<name>/` when they
+Plugins live under `products/wordpress/plugins/<name>/` when they
 exist.
 
 ## §2 — Theme state vs theme control

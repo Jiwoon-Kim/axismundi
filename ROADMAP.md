@@ -447,7 +447,7 @@ release planning cycle.
   - Clarified Material Symbols storage vs runtime registration policy, stale `Opus/Ogg` wording, Pilot product-local copy posture, brand source vs release-seal derivatives, and per-file media provenance.
   - Verified `php -l`, `npm test` Axis A-G all 1.000, `build_pilot_specimen_wall`, `validate:specimen-wall`, `validate:computed`, and `git diff --check`; validator-generated report churn was restored.
 - **v3.6.20** ← **Pilot vs Distributable Bootstrap** ✓ DONE (2026-05-24)
-  - Closed a no-code boundary decision: `axismundi-pilot` remains a probe/reference implementation, while future distributables must live under `products/distributables/themes/<slug>/`.
+  - Closed a no-code boundary decision: `axismundi-pilot` remains a probe/reference implementation, while future distributables must live under `products/wordpress/themes/<slug>/`.
   - Recorded `axismundi` as the default first-distributable slug candidate pending explicit user slug / product-name GO; `axismundi-microblog` is stale as first-distributable guidance and deferred as a possible future ActivityPub/microblog product.
   - Classified Pilot `readme.txt` and `screenshot.png` as probe artifacts, kept release-seal derivatives blocked until product context exists, and routed Theme Switcher Contract / Core Block Catalog split / asset-copy policy forward.
   - Verified `php -l`, `npm test` Axis A-G all 1.000, `build_pilot_specimen_wall`, `validate:specimen-wall`, `validate:computed`, and `git diff --check`; validator-generated report churn was restored.
@@ -519,7 +519,7 @@ Pilot is NOT a distributable — it's a probe for core block mapping validation.
 
 First distributable plugin. Replaces WP's hex color picker with M3 HCT (Hue/Chroma/Tone) panel.
 
-- `products/distributables/plugins/hct-color-panel/`
+- `products/wordpress/plugins/hct-color-panel/`
 - WordPress block editor sidebar/inspector integration
 - Demonstrates: "WP inspector GUI limit → plugin layer replacement" doctrine in practice
 
@@ -543,7 +543,7 @@ Demonstrate that the architecture supports interchangeable design systems by add
 
 After v3.1/v3.2/v3.3/v3.4 prove the architecture:
 
-- `products/distributables/themes/axismundi/` promoted from RC
+- `products/wordpress/themes/axismundi/` promoted from RC
 - Plugin suite: HCT panel + typography inspector + dynamic palette + theme switcher
 - ActivityPub federation working end-to-end
 - Public documentation and license finalized

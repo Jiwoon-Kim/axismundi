@@ -548,7 +548,7 @@ Closed by v3.6.20:
 - Pilot vs Distributable Bootstrap boundary decision.
 - `axismundi-pilot` remains a probe / reference implementation.
 - Future distributables must live under
-  `products/distributables/themes/<slug>/`.
+  `products/wordpress/themes/<slug>/`.
 - `axismundi` is the default first-distributable slug candidate pending user
   slug / product-name GO.
 

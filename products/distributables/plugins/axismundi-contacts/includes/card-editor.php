@@ -285,7 +285,7 @@ function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
 		'revision'            => (int) $draft['revision'],
 		'isProfile'           => array_key_exists( 'publishedPointers', $draft ),
 		'published'           => (array) ( $draft['publishedPointers'] ?? array() ),
-		'backUrl'             => axismundi_contacts_screen_url( $card_id, $group ),
+		'backUrl'             => axismundi_contacts_directory_return_url( axismundi_contacts_screen_url( $card_id, $group ) ),
 	);
 	/*
 	 * `wp_add_inline_script()` rather than `wp_localize_script()`, which casts every value to a
@@ -312,8 +312,11 @@ add_action( 'admin_enqueue_scripts', 'axismundi_contacts_enqueue_card_editor' );
  * @return void
  */
 function axismundi_contacts_card_editor_screen( int $card_id, int $group_id ) : void {
-	$row = axismundi_contacts_get_card( $card_id );
-	if ( array() === $row ) {
+	$row      = axismundi_contacts_get_card( $card_id );
+	$acting   = function_exists( 'axismundi_actors_acting_actor' ) ? axismundi_actors_acting_actor() : null;
+	$actor_id = $acting instanceof Axismundi_Actor ? (int) $acting->get_identity_id() : 0;
+	// The PHP heading discloses contact data too; refusing the JavaScript bootstrap is not enough.
+	if ( array() === $row || (int) $row['owner_actor_id'] !== $actor_id || ! axismundi_contacts_can_use_book( $actor_id, get_current_user_id() ) ) {
 		echo '<h1>' . esc_html__( 'Edit contact', 'axismundi-contacts' ) . '</h1>';
 		echo '<p>' . esc_html__( 'That contact does not exist.', 'axismundi-contacts' ) . '</p>';
 		return;
@@ -321,7 +324,7 @@ function axismundi_contacts_card_editor_screen( int $card_id, int $group_id ) : 
 	$card = axismundi_contacts_card_document( $card_id );
 	$name = trim( axismundi_contacts_name_text( is_array( $card['name'] ?? null ) ? $card['name'] : array() ) );
 	?>
-	<p><a href="<?php echo esc_url( axismundi_contacts_screen_url( $card_id, $group_id ) ); ?>">&larr; <?php esc_html_e( 'Back to the contact', 'axismundi-contacts' ); ?></a></p>
+	<p><a href="<?php echo esc_url( axismundi_contacts_directory_return_url( axismundi_contacts_screen_url( $card_id, $group_id ) ) ); ?>">&larr; <?php esc_html_e( 'Back to the contact', 'axismundi-contacts' ); ?></a></p>
 	<h1><?php echo esc_html( '' !== $name ? $name : __( '(no name)', 'axismundi-contacts' ) ); ?></h1>
 	<?php if ( axismundi_contacts_is_profile_card( $row ) ) : ?>
 		<p class="description">

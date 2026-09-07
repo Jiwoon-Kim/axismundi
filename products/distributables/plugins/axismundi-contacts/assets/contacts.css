@@ -14,6 +14,93 @@
 	min-width: 0;
 }
 
+/* Reuse the editor's M3 field tokens, supplied by WordPress's wp-theme bridge. */
+.ax-contacts-fields .ax-contacts-list {
+	border: 1px solid var(--ax-field-outline);
+	border-radius: var(--ax-field-radius);
+	background: var(--ax-field-surface);
+	color: var(--ax-field-text);
+	table-layout: fixed;
+}
+
+.ax-contacts-list .check-column {
+	width: 2.5rem;
+	padding: 1rem 0.5rem;
+}
+
+.ax-contacts-list td { vertical-align: middle; }
+.ax-contacts-list tbody tr + tr td,
+.ax-contacts-list tbody tr + tr th { border-top: 1px solid var(--ax-field-outline); }
+.ax-contacts-list tbody tr:focus-within,
+.ax-contacts-list tbody tr.is-selected { background: var(--wpds-color-background-surface-neutral-weak, #f0f0f1); }
+.ax-contacts-list__endpoint { display: block; overflow-wrap: anywhere; }
+
+.ax-contacts-label {
+	display: inline-block;
+	padding: 0.2rem 0.6rem;
+	margin: 0.15rem 0;
+	border: 1px solid var(--ax-field-outline);
+	border-radius: var(--ax-field-radius);
+	color: var(--ax-field-text);
+	text-decoration: none;
+	overflow-wrap: anywhere;
+}
+
+.ax-contacts-label-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: end;
+	gap: 0.75rem;
+	margin: 1rem 0;
+}
+.ax-contacts-label-actions > p { flex-basis: 100%; margin: 0; }
+.ax-contacts-label-actions label { display: grid; gap: 0.25rem; min-width: 0; }
+.ax-contacts-label-actions select { max-width: 100%; }
+.ax-contacts-label-management { margin-top: 1rem; }
+.ax-contacts-label-management summary { cursor: pointer; padding: 0.5rem 0; }
+.ax-contacts-label-management form { margin-top: 1rem; }
+.ax-contacts-label-management input[type="text"] { width: 100%; box-sizing: border-box; margin: 0.4rem 0; }
+.ax-contacts-detail__labels { border-top: 1px solid var(--ax-field-outline); margin-top: 1rem; }
+
+@media (max-width: 600px) {
+	.ax-contacts-list thead th { display: none; }
+	.ax-contacts-list tbody tr { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); border-top: 1px solid var(--ax-field-outline); }
+	.ax-contacts-list tbody .check-column { grid-column: 1; grid-row: 1 / span 3; width: auto; }
+	.ax-contacts-list tbody td { grid-column: 2; padding: 0.5rem; }
+	.ax-contacts-list tbody tr + tr td,
+	.ax-contacts-list tbody tr + tr th { border-top: 0; }
+	.ax-contacts-label-actions { align-items: stretch; }
+	.ax-contacts-label-actions label { flex: 1 1 100%; }
+}
+
+.ax-contacts-search,
+.ax-contacts-pages {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+	margin: 1rem 0;
+}
+
+.ax-contacts-search label,
+.ax-contacts-search .description {
+	flex-basis: 100%;
+}
+
+.ax-contacts-search label {
+	font-weight: 600;
+}
+
+.ax-contacts-search input[type="search"] {
+	flex: 1 1 16rem;
+	min-width: 0;
+	max-width: 32rem;
+}
+
+.ax-contacts-browser__content td {
+	overflow-wrap: anywhere;
+}
+
 .ax-contacts-groups h2 {
 	font-size: 0.875rem;
 	margin: 1.5rem 0 0.4rem;

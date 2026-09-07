@@ -154,7 +154,7 @@ function axismundi_contacts_detail_row( array $entry, string $property, bool $pu
  */
 function axismundi_contacts_card_detail( int $card_id, int $group_id, int $self_id, int $actor_id ) : void {
 	$row = axismundi_contacts_get_card( $card_id );
-	if ( array() === $row ) {
+	if ( array() === $row || (int) $row['owner_actor_id'] !== $actor_id || ! axismundi_contacts_can_use_book( $actor_id, get_current_user_id() ) ) {
 		echo '<h1>' . esc_html__( 'Contact', 'axismundi-contacts' ) . '</h1>';
 		echo '<p>' . esc_html__( 'That contact does not exist.', 'axismundi-contacts' ) . '</p>';
 		return;
@@ -162,15 +162,20 @@ function axismundi_contacts_card_detail( int $card_id, int $group_id, int $self_
 	$card      = axismundi_contacts_card_document( $card_id );
 	$is_self   = $card_id === $self_id && $card_id > 0;
 	$published = $is_self ? axismundi_contacts_published_pointers( $actor_id ) : array();
-	$name      = trim( (string) ( $card['name']['full'] ?? '' ) );
+	// The list already uses this projection, which also handles structured-only names.
+	$name      = trim( (string) ( $row['display_name'] ?? '' ) );
 	?>
-	<p><a href="<?php echo esc_url( axismundi_contacts_screen_url( -1, $group_id ) ); ?>">&larr; <?php esc_html_e( 'Back to contacts', 'axismundi-contacts' ); ?></a></p>
+	<p><a href="<?php echo esc_url( axismundi_contacts_directory_return_url( axismundi_contacts_screen_url( -1, $group_id ) ) ); ?>">&larr; <?php esc_html_e( 'Back to contacts', 'axismundi-contacts' ); ?></a></p>
 	<h1 class="wp-heading-inline"><?php echo esc_html( '' !== $name ? $name : __( '(no name)', 'axismundi-contacts' ) ); ?></h1>
-	<a class="page-title-action" href="<?php echo esc_url( axismundi_contacts_edit_url( $card_id, $group_id ) ); ?>"><?php esc_html_e( 'Edit', 'axismundi-contacts' ); ?></a>
+	<a class="page-title-action" href="<?php echo esc_url( axismundi_contacts_directory_return_url( axismundi_contacts_edit_url( $card_id, $group_id ) ) ); ?>"><?php esc_html_e( 'Edit', 'axismundi-contacts' ); ?></a>
 	<hr class="wp-header-end">
 
 	<div class="ax-contacts-detail">
 		<section class="ax-contacts-detail__facts">
+			<h2><?php esc_html_e( 'Contact details', 'axismundi-contacts' ); ?></h2>
+			<?php if ( ! array_filter( array_intersect_key( $card, axismundi_contacts_detail_sections() ) ) ) : ?>
+			<p><?php esc_html_e( 'No contact details yet. Choose Edit to add an email, phone number or other details.', 'axismundi-contacts' ); ?></p>
+			<?php endif; ?>
 			<?php
 			/*
 			 * One list for the whole card rather than one per property. A property with several
@@ -199,6 +204,7 @@ function axismundi_contacts_card_detail( int $card_id, int $group_id, int $self_
 			<?php endforeach; ?>
 			</dl>
 		</section>
+		<?php if ( ! $is_self ) { axismundi_contacts_detail_labels( $card_id, $actor_id, $group_id ); } ?>
 
 	</div>
 	<?php

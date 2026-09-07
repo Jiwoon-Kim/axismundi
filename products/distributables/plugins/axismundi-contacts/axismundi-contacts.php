@@ -53,6 +53,8 @@ require_once __DIR__ . '/includes/public-projection.php';
 require_once __DIR__ . '/includes/jscontact.php';
 require_once __DIR__ . '/includes/rest-draft.php';
 require_once __DIR__ . '/includes/lookup.php';
+require_once __DIR__ . '/includes/directory.php';
+require_once __DIR__ . '/includes/labels.php';
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/card-detail.php';
 	require_once __DIR__ . '/includes/card-editor.php';

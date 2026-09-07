@@ -1275,11 +1275,13 @@ try {
 	$ax_ct_sidebar = (string) ob_get_clean();
 	ax_ct_assert(
 		$ax_ct_results,
-		'AddressBooks render as private contact groups in the sidebar, not as group Cards or Group Actors',
+		'AddressBooks render as private labels in the sidebar, not as group Cards or Group Actors',
 		str_contains( $ax_ct_sidebar, '>All contacts<' )
 			&& str_contains( $ax_ct_sidebar, '>Work<' )
 			&& str_contains( $ax_ct_sidebar, 'group=' . (int) $ax_ct_second )
-			&& str_contains( $ax_ct_sidebar, 'axismundi_contacts_create_group' )
+			&& str_contains( $ax_ct_sidebar, 'axismundi_contacts_labels' )
+			&& str_contains( $ax_ct_sidebar, 'name="operation" value="create"' )
+			&& str_contains( $ax_ct_sidebar, '>Labels<' )
 			&& ! str_contains( $ax_ct_sidebar, 'kind="group"' )
 	);
 	ax_ct_assert(

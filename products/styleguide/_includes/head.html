@@ -3,10 +3,11 @@
 <title>{% if page.title and page.url != "/" %}{{ page.title }} — {{ site.title }}{% else %}{{ site.title }}{% endif %}</title>
 <meta name="description" content="{{ page.description | default: site.description }}" />
 {%- comment -%}
-  Cascade order. Everything under product/ is copied verbatim from the theme by
-  sync_styleguide_assets.py and is not committed; see README.md. The site is
-  meant to render in what the products actually ship, so the layers arrive in
-  the order the theme declares them.
+  Cascade order. Half of these are copied verbatim from the theme by
+  sync_styleguide_assets.py and are not committed; .gitignore says which, and
+  the sync fails if that list falls out of date. They sit at the same depth the
+  theme keeps them at, which is why nothing has to be rewritten on the way in
+  and why the cascade reads here as one sequence rather than two.
 
     ref       the literal palette
     color     roles onto it, per scheme
@@ -19,15 +20,15 @@
 
   Then this site's own two layers, and the chrome that consumes all of it.
 {%- endcomment %}
-<link rel="stylesheet" href="{{ '/assets/css/product/tokens.ref.css' | relative_url }}" />
-<link rel="stylesheet" href="{{ '/assets/css/product/tokens.sys.color.light.css' | relative_url }}" />
-<link rel="stylesheet" href="{{ '/assets/css/product/tokens.sys.color.dark.css' | relative_url }}" />
-<link rel="stylesheet" href="{{ '/assets/css/product/tokens.sys.shape.css' | relative_url }}" />
-<link rel="stylesheet" href="{{ '/assets/css/product/tokens.sys.motion.css' | relative_url }}" />
-<link rel="stylesheet" href="{{ '/assets/css/product/tokens.sys.elevation.css' | relative_url }}" />
-<link rel="stylesheet" href="{{ '/assets/css/product/tokens.sys.state.css' | relative_url }}" />
+<link rel="stylesheet" href="{{ '/assets/css/tokens.ref.css' | relative_url }}" />
+<link rel="stylesheet" href="{{ '/assets/css/tokens.sys.color.light.css' | relative_url }}" />
+<link rel="stylesheet" href="{{ '/assets/css/tokens.sys.color.dark.css' | relative_url }}" />
+<link rel="stylesheet" href="{{ '/assets/css/tokens.sys.shape.css' | relative_url }}" />
+<link rel="stylesheet" href="{{ '/assets/css/tokens.sys.motion.css' | relative_url }}" />
+<link rel="stylesheet" href="{{ '/assets/css/tokens.sys.elevation.css' | relative_url }}" />
+<link rel="stylesheet" href="{{ '/assets/css/tokens.sys.state.css' | relative_url }}" />
 <link rel="stylesheet" href="{{ '/assets/css/fonts.css' | relative_url }}" />
-<link rel="stylesheet" href="{{ '/assets/css/product/icons.css' | relative_url }}" />
+<link rel="stylesheet" href="{{ '/assets/css/icons.css' | relative_url }}" />
 <link rel="stylesheet" href="{{ '/assets/css/tokens.ref.typeface.css' | relative_url }}" />
 <link rel="stylesheet" href="{{ '/assets/css/tokens.sys.typography.css' | relative_url }}" />
 <link rel="stylesheet" href="{{ '/assets/css/styleguide.css' | relative_url }}" />

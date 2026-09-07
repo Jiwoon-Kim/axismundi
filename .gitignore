@@ -37,7 +37,17 @@ products/styleguide/.jekyll-metadata
 products/styleguide/Gemfile.lock
 products/styleguide/vendor/
 
-# Synced from the products by tools/generators/sync_styleguide_assets.py
+# Synced from the products by tools/generators/sync_styleguide_assets.py.
+# These sit beside the stylesheets this product authors, at the same depth the
+# theme keeps them, so nothing about the directory says which are copies. The
+# sync script fails if any of them is missing from this list.
 products/styleguide/assets/fonts/
 products/styleguide/assets/css/fonts.css
-products/styleguide/assets/css/product/
+products/styleguide/assets/css/tokens.ref.css
+products/styleguide/assets/css/tokens.sys.color.light.css
+products/styleguide/assets/css/tokens.sys.color.dark.css
+products/styleguide/assets/css/tokens.sys.shape.css
+products/styleguide/assets/css/tokens.sys.motion.css
+products/styleguide/assets/css/tokens.sys.elevation.css
+products/styleguide/assets/css/tokens.sys.state.css
+products/styleguide/assets/css/icons.css

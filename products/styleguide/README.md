@@ -71,14 +71,23 @@ themes/axismundi/assets/styles/
   tokens.sys.elevation.css       shadow 공식 + shadow/scrim role
   tokens.sys.state.css           state-layer opacity · focus ring
   icons.css                      Material Symbols face + 유틸리티
-        ↓ sync_styleguide_assets.py (바이트 그대로)
-assets/css/product/              Git 제외
+        ↓ sync_styleguide_assets.py (여덟 개 전부 바이트 동일)
+assets/css/                      Git 제외 (이 제품이 쓴 파일 옆)
 ```
 
-`icons.css`만 예외로 한 줄을 재작성합니다. 테마에서는 `../fonts/`로 폰트에
-닿는데 사본은 한 단계 깊은 곳에 있어서 `../../fonts/`가 됩니다. 재작성 대상
-문자열이 사라지면 스크립트가 **조용히 넘어가지 않고 멈춥니다** — 사본이 없는
-파일을 가리키게 두느니 빌드가 실패하는 편이 낫습니다.
+**같은 깊이에 둡니다.** 테마의 `assets/styles/`와 이곳의 `assets/css/`가 같은
+깊이라, `icons.css`의 `../fonts/`가 양쪽에서 똑같이 `assets/fonts/`에 닿습니다.
+경로 재작성이 아예 필요 없습니다.
+
+`product/` 같은 하위 디렉터리로 나누지 않는 이유는, 소비하는 쪽에서 이건 **하나의
+순서 있는 캐스케이드**이기 때문입니다. `tokens.ref.css`(팔레트)와
+`tokens.ref.typeface.css`(서체)는 같은 ref 층의 두 절반인데, 출처가 다르다는
+이유로 깊이를 나누면 없는 범주를 만듭니다.
+
+출처는 `.gitignore`와 각 파일의 헤더가 말합니다. 그래서 목록이 낡을 위험이
+있는데, **동기화 스크립트가 자기가 쓴 파일이 전부 ignore되는지 검사하고 아니면
+멈춥니다.** 사본이 커밋되어 테마를 따라가지 않게 되는 것보다 빌드가 실패하는
+편이 낫습니다.
 
 아이콘 폰트는 `THEME_FAMILIES`에 넣지 않습니다. `icons.css`가 자기
 `@font-face`를 선언하므로 같은 family가 두 번 선언됩니다. 대신 `TOKEN_FONTS`로

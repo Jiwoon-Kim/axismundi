@@ -31,10 +31,10 @@ be documenting something nobody ships. The four files are self-contained: no
 WordPress selectors, no external references, and their dark blocks already
 cover a root with no data-theme attribute, so they work here unchanged.
 
-Output (all git-ignored):
+Output (all git-ignored, and the script refuses to finish if any of it is not):
   products/styleguide/assets/fonts/<family>/<file>.woff2
   products/styleguide/assets/css/fonts.css
-  products/styleguide/assets/css/product/<token file>.css
+  products/styleguide/assets/css/<token file>.css
 
 Run before `jekyll build` or `jekyll serve`.
 """
@@ -44,6 +44,7 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -60,7 +61,11 @@ STYLEGUIDE = ROOT / "products/styleguide"
 
 FONT_OUT = STYLEGUIDE / "assets/fonts"
 CSS_OUT = STYLEGUIDE / "assets/css/fonts.css"
-TOKEN_OUT = STYLEGUIDE / "assets/css/product"
+# The same depth the theme keeps them at: assets/styles/ there, assets/css/
+# here. That is not only tidiness - it is why every file copies byte for byte.
+# icons.css reaches its font with ../fonts/, which lands on assets/fonts/ from
+# either location, so nothing has to be rewritten on the way in.
+TOKEN_OUT = STYLEGUIDE / "assets/css"
 
 # The theme's token layers, copied verbatim and in cascade order. tokens.ref.css
 # holds the literal palette; the colour files map roles onto it; elevation
@@ -71,6 +76,12 @@ TOKEN_OUT = STYLEGUIDE / "assets/css/product"
 # icons.css is here rather than with the fonts because it declares its own
 # @font-face. Adding Material Symbols to THEME_FAMILIES as well would emit a
 # second, competing declaration for the same family.
+#
+# These land beside the files this product authors, because at the point of use
+# they are one ordered cascade and splitting them by where they came from would
+# invent a category the consumer does not have. tokens.ref.css and
+# tokens.ref.typeface.css are two halves of the same layer. Provenance is
+# carried by .gitignore, by each file's own header, and by the check below.
 PRODUCT_TOKENS = (
     "tokens.ref.css",
     "tokens.sys.color.light.css",
@@ -81,13 +92,6 @@ PRODUCT_TOKENS = (
     "tokens.sys.state.css",
     "icons.css",
 )
-
-# Path rewrites for copies whose relative depth changes. In the theme,
-# assets/styles/icons.css reaches the font with ../fonts/; the copy sits one
-# level deeper, at assets/css/product/, so it needs one more step up.
-TOKEN_REWRITES = {
-    "icons.css": (('url( "../fonts/', 'url( "../../fonts/'),),
-}
 
 # Fonts a copied stylesheet asks for, rather than one theme.json declares.
 TOKEN_FONTS = (
@@ -220,11 +224,55 @@ def korean_provider() -> tuple[list[str], int, int]:
     return [lang_block, face], 1, src.stat().st_size
 
 
+def assert_ignored(paths: list[Path]) -> None:
+    """Refuse to leave a synced copy where git would pick it up.
+
+    These files sit beside the ones this product authors, so nothing about the
+    directory says which are copies. That is fine while .gitignore knows, and a
+    quiet disaster the day someone adds an entry to PRODUCT_TOKENS and forgets
+    to. Checking here turns that into a failed build instead of a committed
+    second copy that stops following the theme.
+    """
+    # NUL-separated in and out. Text mode would translate the separators to
+    # \r\n on Windows, git would read the \r as part of the last path segment,
+    # and every rule that names a file rather than a directory would miss - a
+    # guard that fails builds it should pass.
+    payload = b"\0".join(p.as_posix().encode(UTF8) for p in paths)
+    try:
+        result = subprocess.run(
+            ["git", "check-ignore", "-z", "--stdin"],
+            input=payload,
+            capture_output=True,
+            cwd=ROOT,
+        )
+    except FileNotFoundError:
+        print("  (git not available - skipped the ignore check)")
+        return
+
+    ignored = {chunk.decode(UTF8) for chunk in result.stdout.split(b"\0") if chunk}
+    missing = [p for p in paths if p.as_posix() not in ignored]
+    if missing:
+        listing = "\n".join(f"    {p.relative_to(ROOT).as_posix()}" for p in missing)
+        raise SystemExit(
+            "these synced copies are not git-ignored, and would be committed as a\n"
+            "second source of truth:\n" + listing + "\n"
+            "  Add them to .gitignore."
+        )
+
+
 def product_tokens() -> tuple[int, int, int, int]:
-    """Copy the theme's token layers in, verbatim except for asset paths."""
-    if TOKEN_OUT.exists():
-        shutil.rmtree(TOKEN_OUT)
+    """Copy the theme's token layers in, verbatim.
+
+    Written beside this product's own stylesheets rather than into a
+    subdirectory, so the cascade reads as one sequence and every file keeps the
+    relative depth it has in the theme. Only the known copies are removed first;
+    the directory also holds committed files.
+    """
     TOKEN_OUT.mkdir(parents=True, exist_ok=True)
+    for name in PRODUCT_TOKENS:
+        stale = TOKEN_OUT / name
+        if stale.exists():
+            stale.unlink()
 
     copied = 0
     total_bytes = 0
@@ -232,21 +280,7 @@ def product_tokens() -> tuple[int, int, int, int]:
         src = THEME / "assets/styles" / name
         if not src.is_file():
             raise SystemExit(f"theme is missing {name}; expected at {src.relative_to(ROOT).as_posix()}")
-
-        rewrites = TOKEN_REWRITES.get(name)
-        if rewrites:
-            text = src.read_text(encoding=UTF8)
-            for old, new in rewrites:
-                if old not in text:
-                    raise SystemExit(
-                        f"{name}: expected to rewrite {old!r} but the theme no longer "
-                        f"contains it; the copy would point at a missing file"
-                    )
-                text = text.replace(old, new)
-            (TOKEN_OUT / name).write_text(text, encoding=UTF8, newline="\n")
-        else:
-            shutil.copy2(src, TOKEN_OUT / name)
-
+        shutil.copy2(src, TOKEN_OUT / name)
         copied += 1
         total_bytes += src.stat().st_size
 
@@ -299,6 +333,12 @@ def main() -> int:
     )
 
     token_count, token_bytes, icon_fonts, icon_bytes = product_tokens()
+
+    assert_ignored(
+        [CSS_OUT]
+        + [TOKEN_OUT / name for name in PRODUCT_TOKENS]
+        + sorted(FONT_OUT.rglob("*.woff2"))
+    )
 
     total = (theme_bytes + korean_bytes + icon_bytes) / 1024 / 1024
     print(f"  fonts    theme {theme_count} face file(s) {theme_bytes / 1024 / 1024:.1f} MB, "

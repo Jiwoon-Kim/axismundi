@@ -1,0 +1,274 @@
+/* ============================================================
+ * Axismundi Style Guide — site chrome
+ *
+ * These are documentation-site variables, deliberately prefixed `--sg-`.
+ * They are NOT the design system. The design system this site documents
+ * (`--md-ref-*`, `--md-sys-*`, `--wp--preset--*`) is not loaded here yet:
+ * choosing how it gets in — vendored into this product's assets, or pulled
+ * from the theme at build time — is an open decision, and inventing a
+ * parallel set of names in the meantime is exactly how a style guide turns
+ * into a second design system.
+ *
+ * When those tokens do arrive they keep their own names, so a specimen on
+ * this site reads the same custom properties a WordPress page would.
+ * ============================================================ */
+
+:root {
+  color-scheme: light dark;
+
+  --sg-surface: #fbfbfd;
+  --sg-surface-raised: #ffffff;
+  --sg-on-surface: #1a1c1e;
+  --sg-on-surface-muted: #44474d;
+  --sg-outline: #c5c7cd;
+  --sg-outline-faint: #e4e6eb;
+  --sg-accent: #38608f;
+  --sg-accent-quiet: #d6e3f7;
+
+  --sg-measure: 68ch;
+  --sg-rail: 15rem;
+  --sg-gap: 1rem;
+  --sg-gap-lg: 2rem;
+  --sg-radius: 12px;
+
+  --sg-font: "Noto Sans KR", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --sg-font-mono: "Roboto Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sg-surface: #111316;
+    --sg-surface-raised: #1a1c1e;
+    --sg-on-surface: #e3e2e6;
+    --sg-on-surface-muted: #c3c6cd;
+    --sg-outline: #5c5f65;
+    --sg-outline-faint: #2c2f33;
+    --sg-accent: #a2c9fe;
+    --sg-accent-quiet: #1f314a;
+  }
+}
+
+:root[data-theme="dark"] {
+  --sg-surface: #111316;
+  --sg-surface-raised: #1a1c1e;
+  --sg-on-surface: #e3e2e6;
+  --sg-on-surface-muted: #c3c6cd;
+  --sg-outline: #5c5f65;
+  --sg-outline-faint: #2c2f33;
+  --sg-accent: #a2c9fe;
+  --sg-accent-quiet: #1f314a;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+.sg-body {
+  margin: 0;
+  background: var(--sg-surface);
+  color: var(--sg-on-surface);
+  font-family: var(--sg-font);
+  font-size: 1rem;
+  line-height: 1.7;
+  display: grid;
+  grid-template-columns: var(--sg-rail) minmax(0, 1fr);
+  grid-template-areas:
+    "nav main"
+    "nav footer";
+  align-items: start;
+  min-block-size: 100dvh;
+}
+
+@media (max-width: 899px) {
+  .sg-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "nav"
+      "main"
+      "footer";
+  }
+}
+
+/* --- Skip link ------------------------------------------------ */
+
+.sg-skip {
+  position: absolute;
+  inset-inline-start: -9999px;
+  z-index: 10;
+}
+
+.sg-skip:focus {
+  inset-inline-start: var(--sg-gap);
+  inset-block-start: var(--sg-gap);
+  padding: 0.5rem 0.75rem;
+  background: var(--sg-surface-raised);
+  border-radius: var(--sg-radius);
+  outline: 3px solid var(--sg-accent);
+}
+
+/* --- Navigation ----------------------------------------------- */
+
+.sg-nav {
+  grid-area: nav;
+  padding: var(--sg-gap-lg) var(--sg-gap);
+  border-inline-end: 1px solid var(--sg-outline-faint);
+  position: sticky;
+  inset-block-start: 0;
+  max-block-size: 100dvh;
+  overflow-y: auto;
+}
+
+@media (max-width: 899px) {
+  .sg-nav {
+    position: static;
+    max-block-size: none;
+    border-inline-end: 0;
+    border-block-end: 1px solid var(--sg-outline-faint);
+  }
+}
+
+.sg-nav__home {
+  display: block;
+  font-weight: 600;
+  color: inherit;
+  text-decoration: none;
+  margin-block-end: var(--sg-gap-lg);
+}
+
+.sg-nav__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sg-gap);
+}
+
+.sg-nav__link {
+  color: inherit;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.sg-nav__link:hover,
+.sg-nav__link:focus-visible {
+  text-decoration: underline;
+}
+
+.sg-nav__link.is-current {
+  color: var(--sg-accent);
+}
+
+.sg-nav__summary {
+  display: block;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--sg-on-surface-muted);
+}
+
+/* --- Page ----------------------------------------------------- */
+
+.sg-main {
+  grid-area: main;
+  padding: var(--sg-gap-lg) var(--sg-gap-lg) 0;
+  max-inline-size: var(--sg-measure);
+}
+
+.sg-page-title {
+  font-size: clamp(1.75rem, 1.2rem + 2vw, 2.5rem);
+  line-height: 1.2;
+  margin: 0;
+}
+
+.sg-page-description {
+  color: var(--sg-on-surface-muted);
+  margin-block: 0.5rem 0;
+}
+
+.sg-page-head {
+  margin-block-end: var(--sg-gap-lg);
+  padding-block-end: var(--sg-gap);
+  border-block-end: 1px solid var(--sg-outline-faint);
+}
+
+.sg-prose h2 {
+  margin-block-start: var(--sg-gap-lg);
+  line-height: 1.3;
+}
+
+.sg-prose h3 {
+  margin-block-start: var(--sg-gap-lg);
+  line-height: 1.35;
+}
+
+.sg-prose a {
+  color: var(--sg-accent);
+}
+
+.sg-prose code {
+  font-family: var(--sg-font-mono);
+  font-size: 0.9em;
+  background: var(--sg-accent-quiet);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
+.sg-prose pre {
+  background: var(--sg-surface-raised);
+  border: 1px solid var(--sg-outline-faint);
+  border-radius: var(--sg-radius);
+  padding: var(--sg-gap);
+  overflow-x: auto;
+}
+
+.sg-prose pre code {
+  background: none;
+  padding: 0;
+}
+
+.sg-prose table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+}
+
+.sg-prose th,
+.sg-prose td {
+  text-align: start;
+  padding: 0.5rem 0.75rem;
+  border-block-end: 1px solid var(--sg-outline-faint);
+  vertical-align: top;
+}
+
+.sg-prose blockquote {
+  margin-inline: 0;
+  padding-inline-start: var(--sg-gap);
+  border-inline-start: 3px solid var(--sg-outline);
+  color: var(--sg-on-surface-muted);
+}
+
+/* --- Footer --------------------------------------------------- */
+
+.sg-footer {
+  grid-area: footer;
+  padding: var(--sg-gap-lg);
+  margin-block-start: var(--sg-gap-lg);
+  border-block-start: 1px solid var(--sg-outline-faint);
+  color: var(--sg-on-surface-muted);
+  font-size: 0.875rem;
+  max-inline-size: var(--sg-measure);
+}
+
+.sg-footer__line {
+  margin-block: 0 0.5rem;
+}
+
+.sg-footer__meta {
+  margin-block: var(--sg-gap) 0;
+}
+
+.sg-footer a {
+  color: var(--sg-accent);
+}

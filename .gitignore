@@ -29,3 +29,10 @@ __pycache__/
 # of them, which is the whole point of the split.
 .wp-env.override.json
 .svn-deploy-*/
+
+# Jekyll build output for products/styleguide (CI artifact, never committed)
+products/styleguide/_site/
+products/styleguide/.jekyll-cache/
+products/styleguide/.jekyll-metadata
+products/styleguide/Gemfile.lock
+products/styleguide/vendor/

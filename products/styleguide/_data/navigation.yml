@@ -1,0 +1,22 @@
+# Site navigation.
+#
+# Slugs and section keys stay English so URLs and anchors are stable and
+# searchable; the visible label is whatever reads best in the site language.
+#
+# A section with no pages yet is still listed, so the intended shape of the
+# site is visible while it fills in.
+
+- section: foundations
+  label: Foundations
+  url: /foundations/
+  summary: 토큰, 색, 타이포그래피, 모양, 상태
+
+- section: components
+  label: Components
+  url: /components/
+  summary: 컴포넌트별 Material 사양과 구현 기준
+
+- section: wordpress
+  label: WordPress Bindings
+  url: /wordpress/
+  summary: core 블록과 Material 컴포넌트의 대응 관계

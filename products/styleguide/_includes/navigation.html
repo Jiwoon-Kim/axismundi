@@ -1,0 +1,13 @@
+<nav class="sg-nav" aria-label="Style guide sections">
+  <a class="sg-nav__home" href="{{ '/' | relative_url }}">{{ site.title }}</a>
+  <ul class="sg-nav__list">
+    {%- for item in site.data.navigation %}
+    <li class="sg-nav__item">
+      <a class="sg-nav__link{% if page.section == item.section %} is-current{% endif %}"
+         href="{{ item.url | relative_url }}"
+         {% if page.section == item.section %}aria-current="page"{% endif %}>{{ item.label }}</a>
+      {%- if item.summary %}<span class="sg-nav__summary">{{ item.summary }}</span>{% endif %}
+    </li>
+    {%- endfor %}
+  </ul>
+</nav>

@@ -1,0 +1,64 @@
+# Axismundi Style Guide — Jekyll configuration
+#
+# Source of truth for this site lives here, at products/styleguide/.
+# GitHub Pages serves the built output from /styleguide/, so baseurl carries
+# both the repository path and the publish subdirectory.
+
+title: Axismundi Style Guide
+description: Material 3를 WordPress 블록 테마에 바인딩하는 방식에 대한 설계 문서
+lang: ko
+
+url: "https://jiwoon-kim.github.io"
+baseurl: "/axismundi/styleguide"
+
+repository: Jiwoon-Kim/axismundi
+repository_url: "https://github.com/Jiwoon-Kim/axismundi"
+
+markdown: kramdown
+highlighter: rouge
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+  auto_ids: true
+
+# No gem theme. Layouts and includes in this directory are the whole site.
+plugins: []
+
+collections:
+  foundations:
+    output: true
+    permalink: /foundations/:name/
+  components:
+    output: true
+    permalink: /components/:name/
+  wordpress:
+    output: true
+    permalink: /wordpress/:name/
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+      lang: ko
+  - scope:
+      path: ""
+      type: foundations
+    values:
+      section: foundations
+  - scope:
+      path: ""
+      type: components
+    values:
+      section: components
+  - scope:
+      path: ""
+      type: wordpress
+    values:
+      section: wordpress
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - README.md
+  - vendor

@@ -1,0 +1,13 @@
+# Axismundi Style Guide — Jekyll build dependencies.
+#
+# Pinned so the GitHub Actions build and a local `bundle exec jekyll serve`
+# produce the same output. This site uses no gem theme and no plugins; the
+# layouts and includes in this directory are the whole site.
+
+source "https://rubygems.org"
+
+gem "jekyll", "~> 4.3"
+gem "kramdown-parser-gfm", "~> 1.1"
+
+# Windows and JRuby do not include zoneinfo files.
+gem "tzinfo-data", platforms: [:mingw, :x64_mingw, :mswin, :jruby]

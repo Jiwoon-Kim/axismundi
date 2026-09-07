@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="{{ page.lang | default: site.lang | default: 'ko' }}">
+<head>
+{%- include head.html %}
+</head>
+<body class="sg-body">
+  <a class="sg-skip" href="#main">본문으로 건너뛰기</a>
+  {%- include navigation.html %}
+  <main class="sg-main" id="main">
+    {%- if page.title %}
+    <header class="sg-page-head">
+      <h1 class="sg-page-title">{{ page.title }}</h1>
+      {%- if page.description %}
+      <p class="sg-page-description">{{ page.description }}</p>
+      {%- endif %}
+    </header>
+    {%- endif %}
+    <div class="sg-prose">
+      {{ content }}
+    </div>
+  </main>
+  {%- include footer.html %}
+</body>
+</html>

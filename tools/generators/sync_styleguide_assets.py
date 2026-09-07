@@ -62,15 +62,36 @@ FONT_OUT = STYLEGUIDE / "assets/fonts"
 CSS_OUT = STYLEGUIDE / "assets/css/fonts.css"
 TOKEN_OUT = STYLEGUIDE / "assets/css/product"
 
-# The theme's colour and elevation layers, copied verbatim and in cascade order.
-# tokens.ref.css holds the literal palette; the colour files map roles onto it;
-# elevation carries the shadow formulas plus the two scheme-neutral colour roles
-# (shadow, scrim) that deliberately do not live in the light/dark files.
+# The theme's token layers, copied verbatim and in cascade order. tokens.ref.css
+# holds the literal palette; the colour files map roles onto it; elevation
+# carries the shadow formulas plus the two scheme-neutral colour roles (shadow,
+# scrim) that deliberately do not live in the light/dark files. shape, motion
+# and state are single :root blocks with nothing else in them.
+#
+# icons.css is here rather than with the fonts because it declares its own
+# @font-face. Adding Material Symbols to THEME_FAMILIES as well would emit a
+# second, competing declaration for the same family.
 PRODUCT_TOKENS = (
     "tokens.ref.css",
     "tokens.sys.color.light.css",
     "tokens.sys.color.dark.css",
+    "tokens.sys.shape.css",
+    "tokens.sys.motion.css",
     "tokens.sys.elevation.css",
+    "tokens.sys.state.css",
+    "icons.css",
+)
+
+# Path rewrites for copies whose relative depth changes. In the theme,
+# assets/styles/icons.css reaches the font with ../fonts/; the copy sits one
+# level deeper, at assets/css/product/, so it needs one more step up.
+TOKEN_REWRITES = {
+    "icons.css": (('url( "../fonts/', 'url( "../../fonts/'),),
+}
+
+# Fonts a copied stylesheet asks for, rather than one theme.json declares.
+TOKEN_FONTS = (
+    "assets/fonts/material-symbols-outlined/material-symbols-outlined.woff2",
 )
 
 # Which of the theme's families the style guide actually uses.
@@ -199,8 +220,8 @@ def korean_provider() -> tuple[list[str], int, int]:
     return [lang_block, face], 1, src.stat().st_size
 
 
-def product_tokens() -> tuple[int, int]:
-    """Copy the theme's colour and elevation layers in, verbatim."""
+def product_tokens() -> tuple[int, int, int, int]:
+    """Copy the theme's token layers in, verbatim except for asset paths."""
     if TOKEN_OUT.exists():
         shutil.rmtree(TOKEN_OUT)
     TOKEN_OUT.mkdir(parents=True, exist_ok=True)
@@ -211,10 +232,35 @@ def product_tokens() -> tuple[int, int]:
         src = THEME / "assets/styles" / name
         if not src.is_file():
             raise SystemExit(f"theme is missing {name}; expected at {src.relative_to(ROOT).as_posix()}")
-        shutil.copy2(src, TOKEN_OUT / name)
+
+        rewrites = TOKEN_REWRITES.get(name)
+        if rewrites:
+            text = src.read_text(encoding=UTF8)
+            for old, new in rewrites:
+                if old not in text:
+                    raise SystemExit(
+                        f"{name}: expected to rewrite {old!r} but the theme no longer "
+                        f"contains it; the copy would point at a missing file"
+                    )
+                text = text.replace(old, new)
+            (TOKEN_OUT / name).write_text(text, encoding=UTF8, newline="\n")
+        else:
+            shutil.copy2(src, TOKEN_OUT / name)
+
         copied += 1
         total_bytes += src.stat().st_size
-    return copied, total_bytes
+
+    fonts = 0
+    font_bytes = 0
+    for rel in TOKEN_FONTS:
+        src = THEME / rel
+        if not src.is_file():
+            raise SystemExit(f"theme is missing {rel}; a copied stylesheet references it")
+        copy_font(src, Path(rel).parent.name)
+        fonts += 1
+        font_bytes += src.stat().st_size
+
+    return copied, total_bytes, fonts, font_bytes
 
 
 def main() -> int:
@@ -252,11 +298,12 @@ def main() -> int:
         newline="\n",
     )
 
-    token_count, token_bytes = product_tokens()
+    token_count, token_bytes, icon_fonts, icon_bytes = product_tokens()
 
-    total = (theme_bytes + korean_bytes) / 1024 / 1024
+    total = (theme_bytes + korean_bytes + icon_bytes) / 1024 / 1024
     print(f"  fonts    theme {theme_count} face file(s) {theme_bytes / 1024 / 1024:.1f} MB, "
-          f"korean {korean_count} ({korean_bytes / 1024 / 1024:.1f} MB)")
+          f"korean {korean_count} ({korean_bytes / 1024 / 1024:.1f} MB), "
+          f"icons {icon_fonts} ({icon_bytes / 1024 / 1024:.1f} MB)")
     print(f"           -> {FONT_OUT.relative_to(ROOT).as_posix()} ({total:.1f} MB)")
     print(f"           -> {CSS_OUT.relative_to(ROOT).as_posix()}")
     print(f"  tokens   {token_count} file(s) from the theme, {token_bytes / 1024:.1f} KB")

@@ -66,10 +66,23 @@ themes/axismundi/assets/styles/
   tokens.ref.css                 리터럴 팔레트 (94개)
   tokens.sys.color.light.css     역할 32개 → ref
   tokens.sys.color.dark.css      같은 32개, 다크 매핑
+  tokens.sys.shape.css           corner scale
+  tokens.sys.motion.css          duration · easing
   tokens.sys.elevation.css       shadow 공식 + shadow/scrim role
+  tokens.sys.state.css           state-layer opacity · focus ring
+  icons.css                      Material Symbols face + 유틸리티
         ↓ sync_styleguide_assets.py (바이트 그대로)
 assets/css/product/              Git 제외
 ```
+
+`icons.css`만 예외로 한 줄을 재작성합니다. 테마에서는 `../fonts/`로 폰트에
+닿는데 사본은 한 단계 깊은 곳에 있어서 `../../fonts/`가 됩니다. 재작성 대상
+문자열이 사라지면 스크립트가 **조용히 넘어가지 않고 멈춥니다** — 사본이 없는
+파일을 가리키게 두느니 빌드가 실패하는 편이 낫습니다.
+
+아이콘 폰트는 `THEME_FAMILIES`에 넣지 않습니다. `icons.css`가 자기
+`@font-face`를 선언하므로 같은 family가 두 번 선언됩니다. 대신 `TOKEN_FONTS`로
+따로 옮깁니다. 3.7MB이고, 이것 때문에 사이트 자산이 2.1MB에서 5.8MB가 됩니다.
 
 typeface는 배포 테마에 아예 없어서 스펙을 옮겨 적었지만, **색은 테마에 최신
 상태로 있습니다.** 스타일가이드가 따로 옮겨 적은 팔레트를 문서화하면 아무도

@@ -13,6 +13,7 @@ on:
       - "products/wordpress/themes/axismundi/theme.json"
       - "products/wordpress/themes/axismundi/assets/fonts/**"
       - "products/wordpress/themes/axismundi/assets/styles/tokens.*.css"
+      - "products/wordpress/themes/axismundi/assets/styles/icons.css"
       - "products/wordpress/plugins/axismundi-korean-font-provider/assets/**"
       - ".github/workflows/styleguide.yml"
   push:
@@ -26,6 +27,7 @@ on:
       - "products/wordpress/themes/axismundi/theme.json"
       - "products/wordpress/themes/axismundi/assets/fonts/**"
       - "products/wordpress/themes/axismundi/assets/styles/tokens.*.css"
+      - "products/wordpress/themes/axismundi/assets/styles/icons.css"
       - "products/wordpress/plugins/axismundi-korean-font-provider/assets/**"
       - ".github/workflows/styleguide.yml"
   workflow_dispatch:

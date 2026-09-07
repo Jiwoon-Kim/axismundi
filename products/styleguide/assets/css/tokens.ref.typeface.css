@@ -33,20 +33,22 @@
 	/* Body and UI. The theme calls this family roboto-flex and uses it for
 	 * both brand and plain roles; they are kept separate here so a future
 	 * display face can differ without touching body text. */
-	--sg-ref-typeface-brand: "Roboto Flex", var(--axismundi-cjk-sans, system-ui), sans-serif;
-	--sg-ref-typeface-plain: "Roboto Flex", var(--axismundi-cjk-sans, system-ui), sans-serif;
+	--md-ref-typeface-brand: "Roboto Flex", var(--axismundi-cjk-sans, system-ui), sans-serif;
+	--md-ref-typeface-plain: "Roboto Flex", var(--axismundi-cjk-sans, system-ui), sans-serif;
 
 	/* Not yet synced by sync_styleguide_fonts.py: no page sets a serif face,
 	 * so this resolves to the CJK serif slot or Georgia until Roboto Serif is
 	 * added to THEME_FAMILIES. Declared now so a page that wants it fails
 	 * visibly rather than silently inheriting the sans stack. */
-	--sg-ref-typeface-serif: "Roboto Serif", var(--axismundi-cjk-serif, Georgia), serif;
+	--md-ref-typeface-serif: "Roboto Serif", var(--axismundi-cjk-serif, Georgia), serif;
 
-	--sg-ref-typeface-mono: "Roboto Mono", monospace;
+	--md-ref-typeface-mono: "Roboto Mono", monospace;
 
-	/* Roboto Flex is variable across 100-1000; these are the three stops the
-	 * theme's type scale actually uses. */
-	--sg-ref-typeface-weight-regular: 400;
-	--sg-ref-typeface-weight-medium: 500;
-	--sg-ref-typeface-weight-bold: 700;
+	/* Roboto Flex is variable across 100-1000. These are the four stops M3's
+	 * "Fonts & weights" table names; semi-bold is what the emphasized title
+	 * and label styles actually render at. */
+	--md-ref-typeface-weight-regular: 400;
+	--md-ref-typeface-weight-medium: 500;
+	--md-ref-typeface-weight-semibold: 600;
+	--md-ref-typeface-weight-bold: 700;
 }

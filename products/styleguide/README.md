@@ -33,10 +33,35 @@ bundle exec jekyll serve
 Lab으로 링크합니다. 같은 컴포넌트를 두 번 구현하기 시작하면 둘은 반드시
 어긋납니다.
 
-디자인 토큰도 여기서 정의하지 않습니다. `assets/css/styleguide.css`의 `--sg-*`는
-문서 사이트의 크롬(레이아웃, 내비게이션, 여백)일 뿐입니다. 색과 타입스케일
-(`--md-ref-*`, `--md-sys-*`, `--wp--preset--*`)은 아직 들어오지 않았고, 그 전까지
-비슷한 이름을 새로 만들지 않습니다.
+색은 아직 여기서 정의하지 않습니다. `assets/css/styleguide.css`의 `--sg-*`는
+문서 사이트의 크롬(레이아웃, 여백, 임시 색)일 뿐이고, M3 팔레트가 들어오기 전까지
+`--md-sys-color-*`를 가리는 이름을 새로 만들지 않습니다.
+
+## 타이포그래피
+
+세 층입니다. 크기 값은 한 군데에만 나옵니다.
+
+```
+tokens.ref.typeface.css     --md-ref-typeface-*     어떤 계열
+tokens.sys.typography.css   --md-sys-typescale-*    15역할 × 크기·굵기·자간·행간
+styleguide.css              역할을 요청 (크기를 쓰지 않음)
+```
+
+M3 정식 이름을 씁니다. 프로젝트 전체에 개념당 이름 하나가 `--sg-` 병렬 집합보다
+낫다는 판단입니다. 대신 specimen 페이지가 테마나 Lab의 토큰 CSS를 함께 로드하면
+정의가 둘이 되므로, 그때는 specimen을 스코프로 격리해야 합니다.
+
+이 사이트의 위계는 문서용이라 `display`(57px)를 쓰지 않습니다.
+
+```
+h1  headline-large    h3    title-large     nav       label-large
+h2  headline-small     본문  body-large      캡션·푸터  body-small / body-medium
+```
+
+**행간은 문서 언어를 따릅니다.** M3는 세로 공간이 더 필요한 문자 체계를 위해
+행간 세트를 네 개 발행합니다. 레이아웃이 `lang`을 보고 `data-language-height`를
+정하며, 한국어·일본어·중국어는 `medium`, 나머지는 baseline입니다. 한국어 본문
+행간이 24px 대신 27px가 되는 게 그 결과입니다.
 
 ## 폰트
 

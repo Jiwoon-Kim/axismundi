@@ -1,5 +1,15 @@
 <!DOCTYPE html>
-<html lang="{{ page.lang | default: site.lang | default: 'ko' }}">
+{%- assign doc_lang = page.lang | default: site.lang | default: "ko" -%}
+{%- comment -%}
+  M3 publishes four line-height sets and raises them for scripts that need more
+  vertical room. Korean, Japanese and Chinese take the medium set; everything
+  else stays on the baseline. Set here rather than in CSS because it follows
+  the document language, which only the page knows.
+{%- endcomment -%}
+{%- assign tall_scripts = "ko,ja,zh,zh-Hant,zh-Hans" | split: "," -%}
+{%- if tall_scripts contains doc_lang -%}{%- assign lang_height = "medium" -%}
+{%- else -%}{%- assign lang_height = "small" -%}{%- endif -%}
+<html lang="{{ doc_lang }}" data-language-height="{{ lang_height }}">
 <head>
 {%- include head.html %}
 </head>

@@ -1,0 +1,204 @@
+/* ============================================================
+ * Style guide — type scale
+ *
+ * The M3 baseline type scale, transcribed from
+ *   https://m3.material.io/styles/typography/type-scale-tokens
+ *
+ * The tokens carry M3's canonical names. One name per concept across the
+ * project beats a parallel `--sg-` set, at the cost that a specimen page which
+ * also loads the theme's or the lab's token CSS will have two definitions in
+ * play; scope the specimen when that day comes.
+ *
+ * Units. The spec publishes pt; the web mapping in the same document is
+ * 1sp = 0.0625rem, so every size and line height below is the published value
+ * divided by 16. Tracking follows the spec's web rule as well: the published
+ * tracking in px over a 16px root, which makes it an absolute offset rather
+ * than one that scales with the element. Every number here was computed from
+ * the published value, not typed.
+ *
+ * Optical size. The spec assigns each role an `opsz` equal to its font size.
+ * That is what `font-optical-sizing: auto` already does with a variable font,
+ * so no role emits font-variation-settings. Every other axis the spec lists
+ * (GRAD 0, wdth 100, ROND 0, CRSV 0, slnt 0, FILL 0, HEXP 0) is constant
+ * across roles and already the @font-face default.
+ *
+ * Emphasized styles differ from their baseline role in weight only, so only
+ * the weight is emitted; font, size, tracking and line height are shared.
+ *
+ * Line height is not in the block below with the rest of each role. M3 gives
+ * it four values per role, one per language height set, so it is declared in
+ * those blocks instead - the role token is the same either way.
+ *
+ * One inconsistency in the source, recorded rather than smoothed over: five
+ * emphasized roles (title-medium, title-small, and all three labels) publish
+ * `weight 700` beside `'wght' 600`. The same document's "Fonts & weights"
+ * table lists semi bold as 600 and bold as 700, and every role whose weight is
+ * 500 agrees with its axis. Since this site renders Roboto Flex, the variable
+ * axis is what takes effect, so those five use 600. On a static Roboto they
+ * would be 700.
+ * ============================================================ */
+
+:root {
+	/* Display */
+	--md-sys-typescale-display-large-font: var(--md-ref-typeface-brand);
+	--md-sys-typescale-display-large-size: 3.5625rem;
+	--md-sys-typescale-display-large-weight: var(--md-ref-typeface-weight-regular);
+	--md-sys-typescale-display-large-tracking: -0.015625rem;
+	--md-sys-typescale-display-medium-font: var(--md-ref-typeface-brand);
+	--md-sys-typescale-display-medium-size: 2.8125rem;
+	--md-sys-typescale-display-medium-weight: var(--md-ref-typeface-weight-regular);
+	--md-sys-typescale-display-medium-tracking: 0;
+	--md-sys-typescale-display-small-font: var(--md-ref-typeface-brand);
+	--md-sys-typescale-display-small-size: 2.25rem;
+	--md-sys-typescale-display-small-weight: var(--md-ref-typeface-weight-regular);
+	--md-sys-typescale-display-small-tracking: 0;
+
+	/* Headline */
+	--md-sys-typescale-headline-large-font: var(--md-ref-typeface-brand);
+	--md-sys-typescale-headline-large-size: 2rem;
+	--md-sys-typescale-headline-large-weight: var(--md-ref-typeface-weight-regular);
+	--md-sys-typescale-headline-large-tracking: 0;
+	--md-sys-typescale-headline-medium-font: var(--md-ref-typeface-brand);
+	--md-sys-typescale-headline-medium-size: 1.75rem;
+	--md-sys-typescale-headline-medium-weight: var(--md-ref-typeface-weight-regular);
+	--md-sys-typescale-headline-medium-tracking: 0;
+	--md-sys-typescale-headline-small-font: var(--md-ref-typeface-brand);
+	--md-sys-typescale-headline-small-size: 1.5rem;
+	--md-sys-typescale-headline-small-weight: var(--md-ref-typeface-weight-regular);
+	--md-sys-typescale-headline-small-tracking: 0;
+
+	/* Title */
+	--md-sys-typescale-title-large-font: var(--md-ref-typeface-plain);
+	--md-sys-typescale-title-large-size: 1.375rem;
+	--md-sys-typescale-title-large-weight: var(--md-ref-typeface-weight-regular);
+	--md-sys-typescale-title-large-tracking: 0;
+	--md-sys-typescale-title-medium-font: var(--md-ref-typeface-plain);
+	--md-sys-typescale-title-medium-size: 1rem;
+	--md-sys-typescale-title-medium-weight: var(--md-ref-typeface-weight-medium);
+	--md-sys-typescale-title-medium-tracking: 0.009375rem;
+	--md-sys-typescale-title-small-font: var(--md-ref-typeface-plain);
+	--md-sys-typescale-title-small-size: 0.875rem;
+	--md-sys-typescale-title-small-weight: var(--md-ref-typeface-weight-medium);
+	--md-sys-typescale-title-small-tracking: 0.00625rem;
+
+	/* Body */
+	--md-sys-typescale-body-large-font: var(--md-ref-typeface-plain);
+	--md-sys-typescale-body-large-size: 1rem;
+	--md-sys-typescale-body-large-weight: var(--md-ref-typeface-weight-regular);
+	--md-sys-typescale-body-large-tracking: 0.03125rem;
+	--md-sys-typescale-body-medium-font: var(--md-ref-typeface-plain);
+	--md-sys-typescale-body-medium-size: 0.875rem;
+	--md-sys-typescale-body-medium-weight: var(--md-ref-typeface-weight-regular);
+	--md-sys-typescale-body-medium-tracking: 0.015625rem;
+	--md-sys-typescale-body-small-font: var(--md-ref-typeface-plain);
+	--md-sys-typescale-body-small-size: 0.75rem;
+	--md-sys-typescale-body-small-weight: var(--md-ref-typeface-weight-regular);
+	--md-sys-typescale-body-small-tracking: 0.025rem;
+
+	/* Label */
+	--md-sys-typescale-label-large-font: var(--md-ref-typeface-plain);
+	--md-sys-typescale-label-large-size: 0.875rem;
+	--md-sys-typescale-label-large-weight: var(--md-ref-typeface-weight-medium);
+	--md-sys-typescale-label-large-tracking: 0.00625rem;
+	--md-sys-typescale-label-medium-font: var(--md-ref-typeface-plain);
+	--md-sys-typescale-label-medium-size: 0.75rem;
+	--md-sys-typescale-label-medium-weight: var(--md-ref-typeface-weight-medium);
+	--md-sys-typescale-label-medium-tracking: 0.03125rem;
+	--md-sys-typescale-label-small-font: var(--md-ref-typeface-plain);
+	--md-sys-typescale-label-small-size: 0.6875rem;
+	--md-sys-typescale-label-small-weight: var(--md-ref-typeface-weight-medium);
+	--md-sys-typescale-label-small-tracking: 0.03125rem;
+
+	/* Emphasized — weight only; everything else is the baseline role's. */
+	--md-sys-typescale-display-large-emphasized-weight: var(--md-ref-typeface-weight-medium);
+	--md-sys-typescale-display-medium-emphasized-weight: var(--md-ref-typeface-weight-medium);
+	--md-sys-typescale-display-small-emphasized-weight: var(--md-ref-typeface-weight-medium);
+	--md-sys-typescale-headline-large-emphasized-weight: var(--md-ref-typeface-weight-medium);
+	--md-sys-typescale-headline-medium-emphasized-weight: var(--md-ref-typeface-weight-medium);
+	--md-sys-typescale-headline-small-emphasized-weight: var(--md-ref-typeface-weight-medium);
+	--md-sys-typescale-title-large-emphasized-weight: var(--md-ref-typeface-weight-medium);
+	--md-sys-typescale-title-medium-emphasized-weight: var(--md-ref-typeface-weight-semibold);  /* spec also publishes weight 700 for static Roboto */
+	--md-sys-typescale-title-small-emphasized-weight: var(--md-ref-typeface-weight-semibold);  /* spec also publishes weight 700 for static Roboto */
+	--md-sys-typescale-body-large-emphasized-weight: var(--md-ref-typeface-weight-medium);
+	--md-sys-typescale-body-medium-emphasized-weight: var(--md-ref-typeface-weight-medium);
+	--md-sys-typescale-body-small-emphasized-weight: var(--md-ref-typeface-weight-medium);
+	--md-sys-typescale-label-large-emphasized-weight: var(--md-ref-typeface-weight-semibold);  /* spec also publishes weight 700 for static Roboto */
+	--md-sys-typescale-label-medium-emphasized-weight: var(--md-ref-typeface-weight-semibold);  /* spec also publishes weight 700 for static Roboto */
+	--md-sys-typescale-label-small-emphasized-weight: var(--md-ref-typeface-weight-semibold);  /* spec also publishes weight 700 for static Roboto */
+}
+
+/* Language height sets. M3 raises line height for scripts that need more
+ * vertical room; Korean is one of them. `small` is the baseline the roles
+ * above default to. Switch by setting data-language-height on the root. */
+:root,
+:root[data-language-height="small"] {
+	--md-sys-typescale-display-large-line-height: 4rem;
+	--md-sys-typescale-display-medium-line-height: 3.25rem;
+	--md-sys-typescale-display-small-line-height: 2.75rem;
+	--md-sys-typescale-headline-large-line-height: 2.5rem;
+	--md-sys-typescale-headline-medium-line-height: 2.25rem;
+	--md-sys-typescale-headline-small-line-height: 2rem;
+	--md-sys-typescale-title-large-line-height: 1.75rem;
+	--md-sys-typescale-title-medium-line-height: 1.5rem;
+	--md-sys-typescale-title-small-line-height: 1.25rem;
+	--md-sys-typescale-body-large-line-height: 1.5rem;
+	--md-sys-typescale-body-medium-line-height: 1.25rem;
+	--md-sys-typescale-body-small-line-height: 1rem;
+	--md-sys-typescale-label-large-line-height: 1.25rem;
+	--md-sys-typescale-label-medium-line-height: 1rem;
+	--md-sys-typescale-label-small-line-height: 1rem;
+}
+
+:root[data-language-height="medium"] {
+	--md-sys-typescale-display-large-line-height: 4.5625rem;
+	--md-sys-typescale-display-medium-line-height: 3.5rem;
+	--md-sys-typescale-display-small-line-height: 2.9375rem;
+	--md-sys-typescale-headline-large-line-height: 2.625rem;
+	--md-sys-typescale-headline-medium-line-height: 2.375rem;
+	--md-sys-typescale-headline-small-line-height: 2.1875rem;
+	--md-sys-typescale-title-large-line-height: 1.9375rem;
+	--md-sys-typescale-title-medium-line-height: 1.6875rem;
+	--md-sys-typescale-title-small-line-height: 1.4375rem;
+	--md-sys-typescale-body-large-line-height: 1.6875rem;
+	--md-sys-typescale-body-medium-line-height: 1.4375rem;
+	--md-sys-typescale-body-small-line-height: 1.125rem;
+	--md-sys-typescale-label-large-line-height: 1.4375rem;
+	--md-sys-typescale-label-medium-line-height: 1.125rem;
+	--md-sys-typescale-label-small-line-height: 1.125rem;
+}
+
+:root[data-language-height="large"] {
+	--md-sys-typescale-display-large-line-height: 5.5625rem;
+	--md-sys-typescale-display-medium-line-height: 4.4375rem;
+	--md-sys-typescale-display-small-line-height: 3.5625rem;
+	--md-sys-typescale-headline-large-line-height: 3.125rem;
+	--md-sys-typescale-headline-medium-line-height: 2.8125rem;
+	--md-sys-typescale-headline-small-line-height: 2.5625rem;
+	--md-sys-typescale-title-large-line-height: 2.25rem;
+	--md-sys-typescale-title-medium-line-height: 1.9375rem;
+	--md-sys-typescale-title-small-line-height: 1.625rem;
+	--md-sys-typescale-body-large-line-height: 1.9375rem;
+	--md-sys-typescale-body-medium-line-height: 1.625rem;
+	--md-sys-typescale-body-small-line-height: 1.3125rem;
+	--md-sys-typescale-label-large-line-height: 1.625rem;
+	--md-sys-typescale-label-medium-line-height: 1.3125rem;
+	--md-sys-typescale-label-small-line-height: 1.3125rem;
+}
+
+:root[data-language-height="extra-large"] {
+	--md-sys-typescale-display-large-line-height: 7.5rem;
+	--md-sys-typescale-display-medium-line-height: 6.1875rem;
+	--md-sys-typescale-display-small-line-height: 5rem;
+	--md-sys-typescale-headline-large-line-height: 4.6875rem;
+	--md-sys-typescale-headline-medium-line-height: 4.125rem;
+	--md-sys-typescale-headline-small-line-height: 3.6875rem;
+	--md-sys-typescale-title-large-line-height: 3.3125rem;
+	--md-sys-typescale-title-medium-line-height: 2.625rem;
+	--md-sys-typescale-title-small-line-height: 2.25rem;
+	--md-sys-typescale-body-large-line-height: 2.5625rem;
+	--md-sys-typescale-body-medium-line-height: 2.1875rem;
+	--md-sys-typescale-body-small-line-height: 1.875rem;
+	--md-sys-typescale-label-large-line-height: 2.25rem;
+	--md-sys-typescale-label-medium-line-height: 1.875rem;
+	--md-sys-typescale-label-small-line-height: 1.8125rem;
+}

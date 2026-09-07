@@ -1,16 +1,15 @@
 /* ============================================================
  * Axismundi Style Guide — site chrome
  *
- * These are documentation-site variables, deliberately prefixed `--sg-`.
- * They are NOT the design system. The design system this site documents
- * (`--md-ref-*`, `--md-sys-*`, `--wp--preset--*`) is not loaded here yet:
- * choosing how it gets in — vendored into this product's assets, or pulled
- * from the theme at build time — is an open decision, and inventing a
- * parallel set of names in the meantime is exactly how a style guide turns
- * into a second design system.
+ * Layout, colour and spacing for the documentation site itself. Typography
+ * is not here: the chrome asks for a type role from tokens.sys.typography.css
+ * and a family from tokens.ref.typeface.css, so a size only ever appears in
+ * one place.
  *
- * When those tokens do arrive they keep their own names, so a specimen on
- * this site reads the same custom properties a WordPress page would.
+ * Colour is still ad-hoc. The M3 palette has not been brought into this site
+ * yet, and until it is, inventing `--sg-` names that shadow `--md-sys-color-*`
+ * would be how a style guide turns into a second design system. These few
+ * values are chrome, not a palette.
  * ============================================================ */
 
 :root {
@@ -30,11 +29,6 @@
   --sg-gap: 1rem;
   --sg-gap-lg: 2rem;
   --sg-radius: 12px;
-
-  /* Families come from tokens.ref.typeface.css, loaded before this file. The
-   * chrome asks for a role, not a font. */
-  --sg-font: var(--sg-ref-typeface-plain);
-  --sg-font-mono: var(--sg-ref-typeface-mono);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -71,9 +65,14 @@
   margin: 0;
   background: var(--sg-surface);
   color: var(--sg-on-surface);
-  font-family: var(--sg-font);
-  font-size: 1rem;
-  line-height: 1.7;
+  font-family: var(--md-sys-typescale-body-large-font);
+  font-size: var(--md-sys-typescale-body-large-size);
+  font-weight: var(--md-sys-typescale-body-large-weight);
+  letter-spacing: var(--md-sys-typescale-body-large-tracking);
+  line-height: var(--md-sys-typescale-body-large-line-height);
+  /* The spec gives every role an opsz equal to its font size; on a variable
+   * font this does exactly that, so no role emits font-variation-settings. */
+  font-optical-sizing: auto;
   display: grid;
   grid-template-columns: var(--sg-rail) minmax(0, 1fr);
   grid-template-areas:
@@ -133,7 +132,11 @@
 
 .sg-nav__home {
   display: block;
-  font-weight: 600;
+  font-family: var(--md-sys-typescale-title-medium-font);
+  font-size: var(--md-sys-typescale-title-medium-size);
+  font-weight: var(--md-sys-typescale-title-medium-emphasized-weight);
+  letter-spacing: var(--md-sys-typescale-title-medium-tracking);
+  line-height: var(--md-sys-typescale-title-medium-line-height);
   color: inherit;
   text-decoration: none;
   margin-block-end: var(--sg-gap-lg);
@@ -148,9 +151,13 @@
 }
 
 .sg-nav__link {
+  font-family: var(--md-sys-typescale-label-large-font);
+  font-size: var(--md-sys-typescale-label-large-size);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
+  line-height: var(--md-sys-typescale-label-large-line-height);
   color: inherit;
   text-decoration: none;
-  font-weight: 500;
 }
 
 .sg-nav__link:hover,
@@ -164,8 +171,10 @@
 
 .sg-nav__summary {
   display: block;
-  font-size: 0.8125rem;
-  line-height: 1.5;
+  font-family: var(--md-sys-typescale-body-small-font);
+  font-size: var(--md-sys-typescale-body-small-size);
+  letter-spacing: var(--md-sys-typescale-body-small-tracking);
+  line-height: var(--md-sys-typescale-body-small-line-height);
   color: var(--sg-on-surface-muted);
 }
 
@@ -178,12 +187,18 @@
 }
 
 .sg-page-title {
-  font-size: clamp(1.75rem, 1.2rem + 2vw, 2.5rem);
-  line-height: 1.2;
+  font-family: var(--md-sys-typescale-headline-large-font);
+  font-size: var(--md-sys-typescale-headline-large-size);
+  font-weight: var(--md-sys-typescale-headline-large-weight);
+  letter-spacing: var(--md-sys-typescale-headline-large-tracking);
+  line-height: var(--md-sys-typescale-headline-large-line-height);
   margin: 0;
 }
 
 .sg-page-description {
+  font-size: var(--md-sys-typescale-body-large-size);
+  letter-spacing: var(--md-sys-typescale-body-large-tracking);
+  line-height: var(--md-sys-typescale-body-large-line-height);
   color: var(--sg-on-surface-muted);
   margin-block: 0.5rem 0;
 }
@@ -196,12 +211,20 @@
 
 .sg-prose h2 {
   margin-block-start: var(--sg-gap-lg);
-  line-height: 1.3;
+  font-family: var(--md-sys-typescale-headline-small-font);
+  font-size: var(--md-sys-typescale-headline-small-size);
+  font-weight: var(--md-sys-typescale-headline-small-weight);
+  letter-spacing: var(--md-sys-typescale-headline-small-tracking);
+  line-height: var(--md-sys-typescale-headline-small-line-height);
 }
 
 .sg-prose h3 {
   margin-block-start: var(--sg-gap-lg);
-  line-height: 1.35;
+  font-family: var(--md-sys-typescale-title-large-font);
+  font-size: var(--md-sys-typescale-title-large-size);
+  font-weight: var(--md-sys-typescale-title-large-weight);
+  letter-spacing: var(--md-sys-typescale-title-large-tracking);
+  line-height: var(--md-sys-typescale-title-large-line-height);
 }
 
 .sg-prose a {
@@ -209,7 +232,7 @@
 }
 
 .sg-prose code {
-  font-family: var(--sg-font-mono);
+  font-family: var(--md-ref-typeface-mono);
   font-size: 0.9em;
   background: var(--sg-accent-quiet);
   padding: 0.1em 0.35em;
@@ -236,6 +259,19 @@
   overflow-x: auto;
 }
 
+.sg-prose th {
+  font-size: var(--md-sys-typescale-title-small-size);
+  font-weight: var(--md-sys-typescale-title-small-weight);
+  letter-spacing: var(--md-sys-typescale-title-small-tracking);
+  line-height: var(--md-sys-typescale-title-small-line-height);
+}
+
+.sg-prose td {
+  font-size: var(--md-sys-typescale-body-medium-size);
+  letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+  line-height: var(--md-sys-typescale-body-medium-line-height);
+}
+
 .sg-prose th,
 .sg-prose td {
   text-align: start;
@@ -259,7 +295,9 @@
   margin-block-start: var(--sg-gap-lg);
   border-block-start: 1px solid var(--sg-outline-faint);
   color: var(--sg-on-surface-muted);
-  font-size: 0.875rem;
+  font-size: var(--md-sys-typescale-body-medium-size);
+  letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+  line-height: var(--md-sys-typescale-body-medium-line-height);
   max-inline-size: var(--sg-measure);
 }
 

@@ -36,6 +36,33 @@ function axismundi_actors_can_manage( Axismundi_Actor $actor, ?int $viewer = nul
 }
 
 /**
+ * Sanitize a posted list of profile-link URLs.
+ *
+ * Extracted so the audit can call the expression the handler actually runs. It
+ * was written inline first and the regression test re-typed an equivalent one
+ * beside it; within a single commit the two had diverged, and the test went on
+ * passing while testing nothing that shipped.
+ *
+ * `esc_url_raw()` is not array-safe -- given one it reaches `ltrim()` and throws
+ * -- so `profile_field_url[0][]=` would be a fatal on a form any browser can
+ * send. Dropping non-scalars first means it only ever sees strings, and
+ * `array_filter()` preserves keys, so a dropped element leaves a hole rather
+ * than shifting the rest out of step with the names the caller reads by
+ * position.
+ *
+ * Not `sanitize_text_field()`, which is array-safe and looks like the obvious
+ * partner to the names beside it: it strips percent encoding, so
+ * `https://example.test/%ED%95%9C` becomes `https://example.test/` and every
+ * non-ASCII path breaks silently.
+ *
+ * @param array<int|string,mixed> $values Unslashed posted values.
+ * @return array<int|string,string>
+ */
+function axismundi_actors_sanitize_url_list( array $values ) : array {
+	return array_map( 'esc_url_raw', array_map( 'trim', array_filter( $values, 'is_scalar' ) ) );
+}
+
+/**
  * Authorize first, then create -- the only place that does both.
  *
  * Creating an actor is a write, so it must not happen until the caller is known
@@ -1445,39 +1472,9 @@ function axismundi_actors_handle_set_profile_fields() : void {
 	$names = isset( $_POST['profile_field_name'] ) && is_array( $_POST['profile_field_name'] )
 		? array_map( 'sanitize_text_field', wp_unslash( $_POST['profile_field_name'] ) )
 		: array();
-	/*
-	 * The shape is filtered before the sanitizer runs, because esc_url_raw() is
-	 * not array-safe: given one it reaches ltrim() and throws, so mapping it
-	 * straight over posted input makes profile_field_url[0][]= a fatal. Dropping
-	 * non-scalars first means it only ever sees strings.
-	 *
-	 * esc_url_raw() and not sanitize_text_field(): the latter is array-safe and
-	 * looks like the obvious pair for the names above, but it strips percent
-	 * encoding -- https://example.test/%ED%95%9C becomes https://example.test/ --
-	 * so running it over a URL silently breaks every non-ASCII path.
-	 *
-	 * array_filter() preserves keys, so a dropped element leaves a hole rather
-	 * than shifting the rest out of step with the names; the loop below reads by
-	 * position and treats a missing key as no URL.
-	 *
-	 * The suppression below is the honest end of a search, not a shortcut. Plugin
-	 * Check recognises a sanitizer only when it wraps the superglobal access
-	 * itself, and every arrangement that satisfies it is worse:
-	 *
-	 *   array_map( 'esc_url_raw', $_POST[...] )        fatal on a nested array
-	 *   array_map( 'sanitize_text_field', ... ) first  strips percent encoding,
-	 *                                                  so /%ED%95%9C becomes /
-	 *   map_deep( ..., 'esc_url_raw' )                 safe, but unrecognised
-	 *
-	 * Measured on this input -- "  https://a.test/x  ", array( "nested" ),
-	 * "https://a.test/%ED%95%9C" -- the expression below throws nothing, trims
-	 * to https://a.test/x rather than encoding the spaces, keeps the percent
-	 * encoding intact, and drops the nested element's key so that position ends
-	 * up with no URL.
-	 */
 	$urls  = isset( $_POST['profile_field_url'] ) && is_array( $_POST['profile_field_url'] )
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- esc_url_raw() on this line is the sanitizer; the scanner recognises it only when it wraps the access directly, which is the fatal this shape exists to avoid.
-		? array_map( 'esc_url_raw', array_map( 'trim', array_filter( wp_unslash( $_POST['profile_field_url'] ), 'is_scalar' ) ) )
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitized by axismundi_actors_sanitize_url_list(), which the scanner cannot follow; every arrangement it does recognise is either a fatal or a data loss, both recorded there.
+		? axismundi_actors_sanitize_url_list( wp_unslash( $_POST['profile_field_url'] ) )
 		: array();
 
 	$fields = array();

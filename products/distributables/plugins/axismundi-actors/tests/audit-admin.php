@@ -144,9 +144,22 @@ try {
 	 * browser can send. sanitize_text_field() returns '' for an array, which is
 	 * what made the pair look interchangeable when it is not.
 	 */
-	ax_admin_assert( $ax_admin_results, 'a nested URL array does not reach esc_url_raw and so does not throw', array( array( 'https://example.test' ) ) === map_deep( map_deep( array( array( 'https://example.test' ) ), 'trim' ), 'esc_url_raw' ) );
-	ax_admin_assert( $ax_admin_results, 'a real URL survives with its surrounding space trimmed rather than encoded', array( 'https://example.test/x' ) === map_deep( map_deep( array( '  https://example.test/x  ' ), 'trim' ), 'esc_url_raw' ) );
-	ax_admin_assert( $ax_admin_results, 'array_map over the same nested input would have been fatal', ( static function () { try { array_map( 'esc_url_raw', array( array( 'x' ) ) ); return false; } catch ( Throwable $e ) { return true; } } )() );
+	/*
+	 * Call the function the handler calls, with the shapes a form can post.
+	 *
+	 * An earlier version of this block re-typed an equivalent expression instead.
+	 * Production then changed and the copy did not, so within one commit the test
+	 * was asserting on map_deep() while the handler ran array_filter() and
+	 * array_map() -- passing, and testing nothing that shipped. The expression
+	 * lives in one place now so it cannot happen again.
+	 */
+	$ax_urls = axismundi_actors_sanitize_url_list( array( '  https://example.test/x  ', array( 'nested' ), 'https://example.test/%ED%95%9C' ) );
+	ax_admin_assert( $ax_admin_results, 'a nested URL element is dropped rather than reaching esc_url_raw and throwing', ! isset( $ax_urls[1] ) );
+	ax_admin_assert( $ax_admin_results, 'surrounding space is trimmed rather than encoded as %20', 'https://example.test/x' === ( $ax_urls[0] ?? '' ) );
+	ax_admin_assert( $ax_admin_results, 'percent encoding survives, so a non-ASCII path is not silently emptied', 'https://example.test/%ED%95%9C' === ( $ax_urls[2] ?? '' ) );
+	ax_admin_assert( $ax_admin_results, 'keys are preserved, so a dropped element does not shift the rest out of step with the names', array( 0, 2 ) === array_keys( $ax_urls ) );
+	ax_admin_assert( $ax_admin_results, 'and the array_map form it replaced really was fatal on that input', ( static function () { try { array_map( 'esc_url_raw', array( array( 'x' ) ) ); return false; } catch ( Throwable $e ) { return true; } } )() );
+	ax_admin_assert( $ax_admin_results, 'the sanitize_text_field pairing it replaced really does strip percent encoding', 'https://example.test/' === sanitize_text_field( 'https://example.test/%ED%95%9C' ) );
 
 	// Activation transition: register handle (internal) then publish.
 	axismundi_actors_register_handle( $actor->get_identity_id(), 'alice_admin' );

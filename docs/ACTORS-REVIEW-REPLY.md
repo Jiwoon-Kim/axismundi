@@ -23,9 +23,11 @@ could mint a nonce for the action in their own session and leave a record for
 someone else behind a 403. Since this plugin tombstones an identity rather than
 deleting it, that record would have been permanent.
 
-Authorization and creation now happen in one function, in that order, and both
-paths call it. Regression tests cover the ordering rather than the screens,
-since having the rule in two places is how it came to be applied in only one.
+The activation POST now authorizes and only then creates, both in one function.
+The render path does not call it at all: a screen should not create anything, so
+it looks the actor up and treats an absent one as the un-activated state.
+Regression tests cover that shared decision rather than either screen, since
+having the rule in two places is how it came to be applied in only one.
 
 On the SQL: every custom table name now reaches the database through a prepared
 identifier placeholder (%i) instead of being interpolated into the query text.
@@ -70,10 +72,14 @@ the sender's own session; it says nothing about permission, and any logged-in
 user can create a nonce for any action string. Confirmed against a Subscriber
 targeting another user: the actor row was created and the 403 followed it.
 
-Both now call `axismundi_actors_authorize_user_actor()`, which returns the
+The POST now calls `axismundi_actors_authorize_user_actor()`, which returns the
 existing actor if the caller may manage it, creates one only if the caller may
 manage that user's actor, and otherwise returns an error without touching the
 database.
+
+The render path deliberately does NOT call it, because it would create. It uses
+`get_for_user()` and the same capability rule, and an absent actor simply means
+un-activated -- the wizard it then shows is what posts to the handler above.
 
 **Why `%i` and not `esc_sql()`.** `%i` is WordPress 6.2+, emits a
 backtick-quoted identifier, and keeps the whole statement inside `prepare()`.

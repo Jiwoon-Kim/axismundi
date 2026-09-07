@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-sync_styleguide_fonts.py — put the products' own web fonts into the style guide.
+sync_styleguide_assets.py — bring the products' design system into the site.
 
 The style guide does not keep its own copy of these files in git. They already
 exist under products/wordpress/, and a committed third copy (after core/ and
@@ -23,9 +23,18 @@ regional plugin fills that slot under `:lang()`. Reproducing both here means
 the style guide renders in the same fonts a site running these products does,
 rather than a stack invented for the documentation.
 
-Output (both git-ignored):
+Colour comes in the same way, but by copy rather than by generation. Unlike the
+typeface layer - which the shipped theme does not carry at all - the theme's
+colour token CSS is current, correct, and the actual palette these products
+render in. A style guide that documented a separately transcribed palette would
+be documenting something nobody ships. The four files are self-contained: no
+WordPress selectors, no external references, and their dark blocks already
+cover a root with no data-theme attribute, so they work here unchanged.
+
+Output (all git-ignored):
   products/styleguide/assets/fonts/<family>/<file>.woff2
   products/styleguide/assets/css/fonts.css
+  products/styleguide/assets/css/product/<token file>.css
 
 Run before `jekyll build` or `jekyll serve`.
 """
@@ -51,6 +60,18 @@ STYLEGUIDE = ROOT / "products/styleguide"
 
 FONT_OUT = STYLEGUIDE / "assets/fonts"
 CSS_OUT = STYLEGUIDE / "assets/css/fonts.css"
+TOKEN_OUT = STYLEGUIDE / "assets/css/product"
+
+# The theme's colour and elevation layers, copied verbatim and in cascade order.
+# tokens.ref.css holds the literal palette; the colour files map roles onto it;
+# elevation carries the shadow formulas plus the two scheme-neutral colour roles
+# (shadow, scrim) that deliberately do not live in the light/dark files.
+PRODUCT_TOKENS = (
+    "tokens.ref.css",
+    "tokens.sys.color.light.css",
+    "tokens.sys.color.dark.css",
+    "tokens.sys.elevation.css",
+)
 
 # Which of the theme's families the style guide actually uses.
 #
@@ -178,6 +199,24 @@ def korean_provider() -> tuple[list[str], int, int]:
     return [lang_block, face], 1, src.stat().st_size
 
 
+def product_tokens() -> tuple[int, int]:
+    """Copy the theme's colour and elevation layers in, verbatim."""
+    if TOKEN_OUT.exists():
+        shutil.rmtree(TOKEN_OUT)
+    TOKEN_OUT.mkdir(parents=True, exist_ok=True)
+
+    copied = 0
+    total_bytes = 0
+    for name in PRODUCT_TOKENS:
+        src = THEME / "assets/styles" / name
+        if not src.is_file():
+            raise SystemExit(f"theme is missing {name}; expected at {src.relative_to(ROOT).as_posix()}")
+        shutil.copy2(src, TOKEN_OUT / name)
+        copied += 1
+        total_bytes += src.stat().st_size
+    return copied, total_bytes
+
+
 def main() -> int:
     for required in (THEME / "theme.json", KOREAN / "assets/styles/fonts.css"):
         if not required.is_file():
@@ -194,7 +233,7 @@ def main() -> int:
         "/* ============================================================\n"
         " * GENERATED - do not edit.\n"
         " *\n"
-        " * Written by tools/generators/sync_styleguide_fonts.py from the\n"
+        " * Written by tools/generators/sync_styleguide_assets.py from the\n"
         " * declarations the products ship:\n"
         " *\n"
         " *   products/wordpress/themes/axismundi/theme.json\n"
@@ -213,11 +252,15 @@ def main() -> int:
         newline="\n",
     )
 
+    token_count, token_bytes = product_tokens()
+
     total = (theme_bytes + korean_bytes) / 1024 / 1024
-    print(f"  theme    {theme_count} face file(s)  {theme_bytes / 1024 / 1024:.1f} MB")
-    print(f"  korean   {korean_count} face file(s)  {korean_bytes / 1024 / 1024:.1f} MB")
-    print(f"  wrote    {CSS_OUT.relative_to(ROOT).as_posix()}")
-    print(f"  total    {total:.1f} MB into {FONT_OUT.relative_to(ROOT).as_posix()}")
+    print(f"  fonts    theme {theme_count} face file(s) {theme_bytes / 1024 / 1024:.1f} MB, "
+          f"korean {korean_count} ({korean_bytes / 1024 / 1024:.1f} MB)")
+    print(f"           -> {FONT_OUT.relative_to(ROOT).as_posix()} ({total:.1f} MB)")
+    print(f"           -> {CSS_OUT.relative_to(ROOT).as_posix()}")
+    print(f"  tokens   {token_count} file(s) from the theme, {token_bytes / 1024:.1f} KB")
+    print(f"           -> {TOKEN_OUT.relative_to(ROOT).as_posix()}")
     return 0
 
 

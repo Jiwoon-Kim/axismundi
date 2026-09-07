@@ -6,53 +6,25 @@
  * and a family from tokens.ref.typeface.css, so a size only ever appears in
  * one place.
  *
- * Colour is still ad-hoc. The M3 palette has not been brought into this site
- * yet, and until it is, inventing `--sg-` names that shadow `--md-sys-color-*`
- * would be how a style guide turns into a second design system. These few
- * values are chrome, not a palette.
+ * Colour is not here either. The site renders in the theme's own palette,
+ * synced from the products, so what a reader sees on this page is what the
+ * products render. The `--sg-` names that remain are layout measurements, and
+ * the two that name a colour role are aliases chosen for this site's chrome,
+ * not new colours.
  * ============================================================ */
 
 :root {
-  color-scheme: light dark;
-
-  --sg-surface: #fbfbfd;
-  --sg-surface-raised: #ffffff;
-  --sg-on-surface: #1a1c1e;
-  --sg-on-surface-muted: #44474d;
-  --sg-outline: #c5c7cd;
-  --sg-outline-faint: #e4e6eb;
-  --sg-accent: #38608f;
-  --sg-accent-quiet: #d6e3f7;
+  /* Which surface role each part of the chrome sits on. The roles come from
+   * the theme; these two say where this site puts its raised surfaces, which
+   * is a documentation-layout decision rather than a colour one. */
+  --sg-surface-raised: var(--md-sys-color-surface-container-low);
+  --sg-surface-quiet: var(--md-sys-color-surface-container-high);
 
   --sg-measure: 68ch;
   --sg-rail: 15rem;
   --sg-gap: 1rem;
   --sg-gap-lg: 2rem;
   --sg-radius: 12px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --sg-surface: #111316;
-    --sg-surface-raised: #1a1c1e;
-    --sg-on-surface: #e3e2e6;
-    --sg-on-surface-muted: #c3c6cd;
-    --sg-outline: #5c5f65;
-    --sg-outline-faint: #2c2f33;
-    --sg-accent: #a2c9fe;
-    --sg-accent-quiet: #1f314a;
-  }
-}
-
-:root[data-theme="dark"] {
-  --sg-surface: #111316;
-  --sg-surface-raised: #1a1c1e;
-  --sg-on-surface: #e3e2e6;
-  --sg-on-surface-muted: #c3c6cd;
-  --sg-outline: #5c5f65;
-  --sg-outline-faint: #2c2f33;
-  --sg-accent: #a2c9fe;
-  --sg-accent-quiet: #1f314a;
 }
 
 *,
@@ -63,8 +35,8 @@
 
 .sg-body {
   margin: 0;
-  background: var(--sg-surface);
-  color: var(--sg-on-surface);
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
   font-family: var(--md-sys-typescale-body-large-font);
   font-size: var(--md-sys-typescale-body-large-size);
   font-weight: var(--md-sys-typescale-body-large-weight);
@@ -106,7 +78,7 @@
   padding: 0.5rem 0.75rem;
   background: var(--sg-surface-raised);
   border-radius: var(--sg-radius);
-  outline: 3px solid var(--sg-accent);
+  outline: 3px solid var(--md-sys-color-primary);
 }
 
 /* --- Navigation ----------------------------------------------- */
@@ -114,7 +86,7 @@
 .sg-nav {
   grid-area: nav;
   padding: var(--sg-gap-lg) var(--sg-gap);
-  border-inline-end: 1px solid var(--sg-outline-faint);
+  border-inline-end: 1px solid var(--md-sys-color-outline-variant);
   position: sticky;
   inset-block-start: 0;
   max-block-size: 100dvh;
@@ -126,7 +98,7 @@
     position: static;
     max-block-size: none;
     border-inline-end: 0;
-    border-block-end: 1px solid var(--sg-outline-faint);
+    border-block-end: 1px solid var(--md-sys-color-outline-variant);
   }
 }
 
@@ -166,7 +138,7 @@
 }
 
 .sg-nav__link.is-current {
-  color: var(--sg-accent);
+  color: var(--md-sys-color-primary);
 }
 
 .sg-nav__summary {
@@ -175,7 +147,7 @@
   font-size: var(--md-sys-typescale-body-small-size);
   letter-spacing: var(--md-sys-typescale-body-small-tracking);
   line-height: var(--md-sys-typescale-body-small-line-height);
-  color: var(--sg-on-surface-muted);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 /* --- Page ----------------------------------------------------- */
@@ -199,14 +171,14 @@
   font-size: var(--md-sys-typescale-body-large-size);
   letter-spacing: var(--md-sys-typescale-body-large-tracking);
   line-height: var(--md-sys-typescale-body-large-line-height);
-  color: var(--sg-on-surface-muted);
+  color: var(--md-sys-color-on-surface-variant);
   margin-block: 0.5rem 0;
 }
 
 .sg-page-head {
   margin-block-end: var(--sg-gap-lg);
   padding-block-end: var(--sg-gap);
-  border-block-end: 1px solid var(--sg-outline-faint);
+  border-block-end: 1px solid var(--md-sys-color-outline-variant);
 }
 
 .sg-prose h2 {
@@ -228,23 +200,28 @@
 }
 
 .sg-prose a {
-  color: var(--sg-accent);
+  color: var(--md-sys-color-primary);
 }
 
 .sg-prose code {
   font-family: var(--md-ref-typeface-mono);
   font-size: 0.9em;
-  background: var(--sg-accent-quiet);
+  background: var(--sg-surface-quiet);
   padding: 0.1em 0.35em;
   border-radius: 4px;
 }
 
 .sg-prose pre {
   background: var(--sg-surface-raised);
-  border: 1px solid var(--sg-outline-faint);
+  border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: var(--sg-radius);
   padding: var(--sg-gap);
   overflow-x: auto;
+  /* The one place this site raises a surface. In light the theme's formula
+   * draws a shadow; in dark it resolves to none, because M3 reads elevation
+   * from tonal surface difference there instead. Both come from the theme, so
+   * the behaviour on this page is the behaviour a WordPress page would get. */
+  box-shadow: var(--md-sys-elevation-shadow-level1);
 }
 
 .sg-prose pre code {
@@ -276,15 +253,15 @@
 .sg-prose td {
   text-align: start;
   padding: 0.5rem 0.75rem;
-  border-block-end: 1px solid var(--sg-outline-faint);
+  border-block-end: 1px solid var(--md-sys-color-outline-variant);
   vertical-align: top;
 }
 
 .sg-prose blockquote {
   margin-inline: 0;
   padding-inline-start: var(--sg-gap);
-  border-inline-start: 3px solid var(--sg-outline);
-  color: var(--sg-on-surface-muted);
+  border-inline-start: 3px solid var(--md-sys-color-outline);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 /* --- Footer --------------------------------------------------- */
@@ -293,8 +270,8 @@
   grid-area: footer;
   padding: var(--sg-gap-lg);
   margin-block-start: var(--sg-gap-lg);
-  border-block-start: 1px solid var(--sg-outline-faint);
-  color: var(--sg-on-surface-muted);
+  border-block-start: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface-variant);
   font-size: var(--md-sys-typescale-body-medium-size);
   letter-spacing: var(--md-sys-typescale-body-medium-tracking);
   line-height: var(--md-sys-typescale-body-medium-line-height);
@@ -310,5 +287,5 @@
 }
 
 .sg-footer a {
-  color: var(--sg-accent);
+  color: var(--md-sys-color-primary);
 }

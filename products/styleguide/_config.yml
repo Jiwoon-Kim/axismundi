@@ -62,3 +62,6 @@ exclude:
   - Gemfile.lock
   - README.md
   - vendor
+  # Build tooling, not site content. Jekyll copies anything it is not told to
+  # leave out, and bin/build.py was being published with the site.
+  - bin

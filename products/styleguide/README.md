@@ -53,9 +53,42 @@ bin/build.py
 Lab으로 링크합니다. 같은 컴포넌트를 두 번 구현하기 시작하면 둘은 반드시
 어긋납니다.
 
-색은 아직 여기서 정의하지 않습니다. `assets/css/styleguide.css`의 `--sg-*`는
-문서 사이트의 크롬(레이아웃, 여백, 임시 색)일 뿐이고, M3 팔레트가 들어오기 전까지
-`--md-sys-color-*`를 가리는 이름을 새로 만들지 않습니다.
+색도 여기서 정의하지 않습니다. 이 사이트는 **테마의 팔레트 그대로** 렌더됩니다.
+`styleguide.css`에 리터럴 색은 0개이고, 남은 `--sg-*`는 레이아웃 치수와
+"이 표면은 어느 role에 앉는가"를 정하는 별칭 둘뿐입니다.
+
+## 색과 elevation
+
+타이포그래피와 반대 방향입니다. 여기서는 **베끼지 않고 가져옵니다.**
+
+```
+themes/axismundi/assets/styles/
+  tokens.ref.css                 리터럴 팔레트 (94개)
+  tokens.sys.color.light.css     역할 32개 → ref
+  tokens.sys.color.dark.css      같은 32개, 다크 매핑
+  tokens.sys.elevation.css       shadow 공식 + shadow/scrim role
+        ↓ sync_styleguide_assets.py (바이트 그대로)
+assets/css/product/              Git 제외
+```
+
+typeface는 배포 테마에 아예 없어서 스펙을 옮겨 적었지만, **색은 테마에 최신
+상태로 있습니다.** 스타일가이드가 따로 옮겨 적은 팔레트를 문서화하면 아무도
+배포하지 않는 색을 설명하게 됩니다.
+
+네 파일은 자족적입니다 — WordPress 선택자도, 외부 참조도 없고, dark 블록이
+`:root:not([data-theme])`까지 덮으므로 이 사이트에서 손대지 않고 동작합니다.
+실측 결과:
+
+```
+OS dark (속성 없음)   primary #D0BCFF   surface #141218   shadow none
+data-theme="light"    primary #6750A4   surface #FEF7FF   shadow 2겹
+data-theme="dark"     primary #D0BCFF   surface #141218   shadow none
+```
+
+다크에서 그림자가 사라지는 건 버그가 아니라 M3입니다. 그쪽에서는 elevation을
+물리적 그림자가 아니라 **tonal surface 차이**로 읽습니다. 이 사이트에서
+`<pre>` 하나가 `--md-sys-elevation-shadow-level1`을 쓰므로 그 동작을 직접 볼 수
+있습니다.
 
 ## 타이포그래피
 
@@ -99,7 +132,7 @@ h2  headline-small     본문  body-large      캡션·푸터  body-small / body
 ```
 themes/axismundi                    Roboto Flex / Mono   (theme.json)
 plugins/…korean-font-provider       Noto Sans KR         (provider CSS)
-        ↓ tools/generators/sync_styleguide_fonts.py
+        ↓ tools/generators/sync_styleguide_assets.py
 assets/fonts/                       복사본 (Git 제외)
 assets/css/fonts.css                생성됨 (Git 제외)
 ```

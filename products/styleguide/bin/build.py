@@ -9,18 +9,18 @@ build.py — everything that has to happen before Jekyll runs.
 
 The order matters and is the same locally and in CI:
 
-    1. sync fonts       copy the products' web fonts in and write fonts.css
+    1. sync assets      copy the products' fonts and colour tokens in
     2. generate         build tokens.sys.typography.css from _data/typography.yml
     3. check            the CSS equals what the generator produces
     4. validate         its values equal the published spec
     5. jekyll           build or serve
 
-Steps 1 and 2 exist because two of this site's inputs are not committed: the
-font files and fonts.css are copies of what the products ship, and would go
-stale as a third copy in git. A clean checkout therefore needs step 1 before
-Jekyll, or the page renders in a system font instead of the product's. That is
-the whole reason this script exists rather than a line in the README that
-someone forgets.
+Step 1 exists because several of this site's inputs are deliberately not
+committed: the font files, fonts.css, and the theme's colour token CSS are
+copies of what the products ship, and would go stale as a second copy in git. A
+clean checkout therefore needs it before Jekyll, or the page renders in a
+system font with no palette at all. That is the whole reason this script exists
+rather than a line in the README that someone forgets.
 
 Steps 3 and 4 answer different questions. The first asks whether the committed
 CSS is what the generator produces, catching a hand-edit or a data change that
@@ -77,7 +77,7 @@ def main() -> int:
 
     py = sys.executable
     steps: list[tuple[str, list[str], Path]] = [
-        ("sync fonts", [py, "tools/generators/sync_styleguide_fonts.py"], ROOT),
+        ("sync assets", [py, "tools/generators/sync_styleguide_assets.py"], ROOT),
     ]
 
     if args.verify:

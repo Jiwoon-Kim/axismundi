@@ -7,11 +7,12 @@ on:
   pull_request:
     paths:
       - "products/styleguide/**"
-      - "tools/generators/sync_styleguide_fonts.py"
+      - "tools/generators/sync_styleguide_assets.py"
       - "tools/generators/generate_styleguide_typography.py"
       - "tools/validators/validate_styleguide_typography.py"
       - "products/wordpress/themes/axismundi/theme.json"
       - "products/wordpress/themes/axismundi/assets/fonts/**"
+      - "products/wordpress/themes/axismundi/assets/styles/tokens.*.css"
       - "products/wordpress/plugins/axismundi-korean-font-provider/assets/**"
       - ".github/workflows/styleguide.yml"
   push:
@@ -19,11 +20,12 @@ on:
       - main
     paths:
       - "products/styleguide/**"
-      - "tools/generators/sync_styleguide_fonts.py"
+      - "tools/generators/sync_styleguide_assets.py"
       - "tools/generators/generate_styleguide_typography.py"
       - "tools/validators/validate_styleguide_typography.py"
       - "products/wordpress/themes/axismundi/theme.json"
       - "products/wordpress/themes/axismundi/assets/fonts/**"
+      - "products/wordpress/themes/axismundi/assets/styles/tokens.*.css"
       - "products/wordpress/plugins/axismundi-korean-font-provider/assets/**"
       - ".github/workflows/styleguide.yml"
   workflow_dispatch:

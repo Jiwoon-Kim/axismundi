@@ -1,0 +1,12 @@
+{%- comment -%}
+  Blocking, and first in <head> on purpose: it has to write data-theme before
+  the token stylesheets paint, or a reader who chose dark gets a flash of light.
+  The plugin does the same thing at wp_head priority 0.
+
+  Always writes a value, "auto" when there is nothing stored and "auto" again if
+  storage throws, so the attribute is never absent and the theme's selectors
+  never have to guess.
+{%- endcomment -%}
+<script id="axismundi-theme-scheme">
+(function(){try{var m=localStorage.getItem("axismundi_theme");document.documentElement.dataset.theme=(m==="light"||m==="dark"||m==="auto")?m:"auto"}catch(e){document.documentElement.dataset.theme="auto"}})();
+</script>

@@ -1,0 +1,31 @@
+{%- comment -%}
+  Group surface. Three segments in an M3 connected button group, one pressed.
+
+  Unlike the cycle button these are a genuine set of toggles, so aria-pressed
+  says which is on. Both surfaces drive the same controller and listen to the
+  same event, so a page rendering both keeps them in step without either
+  knowing the other exists.
+
+  Labels are always in the markup. `labels: false` moves them to screen-reader
+  text rather than dropping them, so the accessible name has one source whether
+  or not it is visible - the same thing the plugin does.
+{%- endcomment -%}
+{%- assign show_labels = include.labels | default: true -%}
+{%- assign label_class = "ax-ts__label" -%}
+{%- unless show_labels -%}{%- assign label_class = "ax-ts__sr" -%}{%- endunless -%}
+<div class="ax-ts" data-ax-ts role="group" aria-label="Color scheme">
+  <div class="ax-ts__group">
+    <button type="button" class="ax-ts__button ax-ts__segment" data-ax-ts-mode="auto" aria-pressed="true">
+      <span class="material-symbols-outlined notranslate" translate="no" aria-hidden="true" draggable="false">contrast</span>
+      <span class="{{ label_class }}">Auto</span>
+    </button>
+    <button type="button" class="ax-ts__button ax-ts__segment" data-ax-ts-mode="light" aria-pressed="false">
+      <span class="material-symbols-outlined notranslate" translate="no" aria-hidden="true" draggable="false">light_mode</span>
+      <span class="{{ label_class }}">Light</span>
+    </button>
+    <button type="button" class="ax-ts__button ax-ts__segment" data-ax-ts-mode="dark" aria-pressed="false">
+      <span class="material-symbols-outlined notranslate" translate="no" aria-hidden="true" draggable="false">dark_mode</span>
+      <span class="{{ label_class }}">Dark</span>
+    </button>
+  </div>
+</div>

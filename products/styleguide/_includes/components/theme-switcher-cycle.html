@@ -1,0 +1,27 @@
+{%- comment -%}
+  Cycle surface. One icon button that advances auto -> light -> dark.
+
+  No aria-pressed: the attribute is binary and this control has three states, so
+  it would have to misreport one of them. The accessible name carries the state
+  instead, and theme-switcher.js rewrites it on every change.
+
+  The icon and the label are both rendered server-side with the default mode, so
+  the markup is complete before any script runs; the bootstrap has already set
+  data-theme by then, and the controller corrects both on init.
+
+  The Material Symbols rendering contract - 1em box, ligatures, axes,
+  user-select - belongs to the theme's icons.css, which this site syncs. The
+  component only names the icon and sets a font size.
+{%- endcomment -%}
+<div class="ax-ts" data-ax-ts role="group" aria-label="Color scheme">
+  <button
+    type="button"
+    class="ax-ts__button ax-ts__cycle"
+    data-ax-ts-cycle
+    data-theme-scheme="auto"
+    aria-label="Color scheme: Auto. Activate to cycle."
+  >
+    <span class="material-symbols-outlined notranslate" translate="no" aria-hidden="true" draggable="false">contrast</span>
+    <span class="ax-ts__sr" data-ax-ts-label>Auto</span>
+  </button>
+</div>

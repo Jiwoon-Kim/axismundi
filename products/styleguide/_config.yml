@@ -31,6 +31,11 @@ collections:
   components:
     output: true
     permalink: /components/:name/
+    # Two kinds live here, and the difference matters. `material` is a Material
+    # component bound to a WordPress block - axismundi-lab holds the measured
+    # baseline for those. `axismundi` is a compound control this project owns:
+    # it uses Material components but its behaviour, state and persistence are
+    # ours, and no Material spec describes it.
   wordpress:
     output: true
     permalink: /wordpress/:name/

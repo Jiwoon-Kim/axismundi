@@ -11,6 +11,7 @@
 {%- else -%}{%- assign lang_height = "small" -%}{%- endif -%}
 <html lang="{{ doc_lang }}" data-language-height="{{ lang_height }}">
 <head>
+{%- include theme-bootstrap.html %}
 {%- include head.html %}
 </head>
 <body class="sg-body">
@@ -30,5 +31,6 @@
     </div>
   </main>
   {%- include footer.html %}
+  <script src="{{ '/assets/js/theme-switcher.js' | relative_url }}" defer></script>
 </body>
 </html>

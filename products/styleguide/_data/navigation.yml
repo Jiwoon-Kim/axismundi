@@ -14,7 +14,7 @@
 - section: components
   label: Components
   url: /components/
-  summary: 컴포넌트별 Material 사양과 구현 기준
+  summary: Material bindings와 Axismundi controls
 
 - section: wordpress
   label: WordPress Bindings

@@ -1,5 +1,8 @@
 <nav class="sg-nav" aria-label="Style guide sections">
-  <a class="sg-nav__home" href="{{ '/' | relative_url }}">{{ site.title }}</a>
+  <div class="sg-nav__head">
+    <a class="sg-nav__home" href="{{ '/' | relative_url }}">{{ site.title }}</a>
+    {%- include components/theme-switcher-cycle.html %}
+  </div>
   <ul class="sg-nav__list">
     {%- for item in site.data.navigation %}
     <li class="sg-nav__item">

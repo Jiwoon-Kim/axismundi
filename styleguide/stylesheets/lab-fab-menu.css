@@ -1,0 +1,77 @@
+/*
+ * v3.6.13 - FAB menu lab module
+ * Lab-scoped page scaffolding only. Baseline authority remains components.css
+ * Chunk H1. This file does not redefine unscoped .ax-fab-menu selectors.
+ */
+
+.lab-fab-menu-demo {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 32px 20px 56px;
+  color: var(--md-sys-color-on-surface);
+}
+
+.lab-fab-menu-header,
+.lab-fab-menu-section {
+  margin-block: 28px;
+}
+
+.lab-fab-menu-header {
+  display: grid;
+  gap: 8px;
+}
+
+.lab-fab-menu-caption {
+  max-width: 72ch;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.lab-fab-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 20px;
+  align-items: stretch;
+}
+
+.lab-fab-menu-card {
+  display: grid;
+  gap: 16px;
+  min-height: 360px;
+  padding: 20px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container-low);
+}
+
+.lab-fab-menu-stage {
+  display: flex;
+  min-height: 240px;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 20px;
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container);
+}
+
+.lab-fab-menu-status {
+  min-height: 24px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.lab-fab-menu-demo .ax-fab-menu__close .material-symbols-rounded {
+  font-size: 20px;
+}
+
+.lab-fab-menu-demo .ax-fab-menu__item-icon .material-symbols-rounded {
+  font-size: 24px;
+}
+
+@media (max-width: 520px) {
+  .lab-fab-menu-demo {
+    padding-inline: 16px;
+  }
+
+  .lab-fab-menu-card {
+    min-height: 320px;
+  }
+}

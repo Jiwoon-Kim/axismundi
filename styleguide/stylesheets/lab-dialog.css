@@ -1,0 +1,71 @@
+/*
+ * Axismundi - lab-dialog.css
+ * v3.6.11 - Dialog #26 Interaction Runtime module
+ *
+ * Lab-scoped page scaffolding only. Baseline authority remains
+ * components.css §12. This file does not redefine .dialog,
+ * .dialog--basic, .dialog--full-screen, or .modal-scrim.
+ */
+
+.lab-dialog-demo {
+  max-inline-size: min(100%, 1120px);
+  margin-inline: auto;
+  padding: var(--space-lg) var(--space-md);
+  display: grid;
+  gap: var(--space-xl);
+}
+
+.lab-dialog-header,
+.lab-dialog-section {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.lab-dialog-header {
+  padding-block-end: var(--space-md);
+  border-block-end: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.lab-dialog-caption {
+  max-inline-size: 76ch;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.lab-dialog-grid {
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  align-items: start;
+}
+
+.lab-dialog-card {
+  display: grid;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background-color: var(--md-sys-color-surface-container-low);
+}
+
+.lab-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.lab-dialog-note {
+  padding: var(--space-sm) var(--space-md);
+  border-inline-start: 4px solid var(--md-sys-color-primary);
+  border-radius: var(--md-sys-shape-corner-small);
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.lab-dialog-demo .modal-scrim {
+  z-index: 40;
+}
+
+.lab-dialog-demo .dialog {
+  z-index: 50;
+}

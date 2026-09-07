@@ -1,0 +1,65 @@
+/*
+ * Axismundi - lab-checkbox.css
+ * v3.6.10 - Checkbox #18 Full-Spec module
+ *
+ * Lab-scoped page scaffolding only. Baseline authority remains
+ * components.css §22. This file does not redefine .ax-checkbox,
+ * .ax-checkbox__input, .ax-checkbox__visual, or token mappings.
+ */
+
+.lab-checkbox-demo {
+  max-inline-size: min(100%, 1040px);
+  margin-inline: auto;
+  padding: var(--space-lg) var(--space-md);
+  display: grid;
+  gap: var(--space-xl);
+}
+
+.lab-checkbox-header,
+.lab-checkbox-section {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.lab-checkbox-header {
+  padding-block-end: var(--space-md);
+  border-block-end: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.lab-checkbox-caption {
+  max-inline-size: 76ch;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.lab-checkbox-grid {
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  align-items: start;
+}
+
+.lab-checkbox-card {
+  display: grid;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background-color: var(--md-sys-color-surface-container-low);
+}
+
+.lab-checkbox-stack {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.lab-checkbox-card--wide {
+  grid-column: 1 / -1;
+}
+
+.lab-checkbox-note {
+  padding: var(--space-sm) var(--space-md);
+  border-inline-start: 4px solid var(--md-sys-color-primary);
+  border-radius: var(--md-sys-shape-corner-small);
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}

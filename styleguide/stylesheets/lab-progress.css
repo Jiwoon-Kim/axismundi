@@ -1,0 +1,78 @@
+/*
+ * v3.6.14 - Progress lab module
+ * Lab-scoped page scaffolding only. Baseline authority remains components.css
+ * section 27. This file does not redefine unscoped .ax-progress selectors.
+ */
+
+.lab-progress-demo {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 32px 20px 56px;
+  color: var(--md-sys-color-on-surface);
+}
+
+.lab-progress-header,
+.lab-progress-section {
+  margin-block: 28px;
+}
+
+.lab-progress-header {
+  display: grid;
+  gap: 8px;
+}
+
+.lab-progress-caption {
+  max-width: 72ch;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.lab-progress-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.lab-progress-card {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container-low);
+}
+
+.lab-progress-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.lab-progress-stage {
+  display: grid;
+  gap: 18px;
+  padding: 16px;
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container);
+}
+
+.lab-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.lab-progress-note {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+@media (max-width: 760px) {
+  .lab-progress-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .lab-progress-demo {
+    padding-inline: 16px;
+  }
+}

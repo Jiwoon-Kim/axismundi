@@ -1,0 +1,95 @@
+/*
+ * Axismundi - lab-menu.css
+ * v3.6.9 Wave 2A-2 Menu / Popover Consumer
+ *
+ * Lab-scoped validation layout only. Baseline .ax-menu rules remain in
+ * stylesheets/components.css and are not overridden here.
+ */
+
+.lab-menu-demo {
+  color: var(--md-sys-color-on-surface);
+  background: var(--md-sys-color-surface);
+  min-height: 100vh;
+  padding: 32px;
+  --md-sys-z-popover: 50;
+}
+
+.lab-menu-demo code {
+  font-size: inherit;
+}
+
+.lab-menu-demo .lab-menu-header,
+.lab-menu-demo .lab-menu-section {
+  max-width: 1120px;
+  margin: 0 auto 32px;
+}
+
+.lab-menu-demo .lab-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.lab-menu-demo .lab-menu-card {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-surface-container-low);
+}
+
+.lab-menu-demo .lab-menu-card__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.lab-menu-demo .lab-menu-caption {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.lab-menu-demo .lab-menu-static {
+  display: grid;
+  gap: 12px;
+  align-items: start;
+}
+
+.lab-menu-demo .lab-menu-static .ax-menu {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  position: static;
+}
+
+.lab-menu-demo .lab-menu-item--danger {
+  color: var(--md-sys-color-error);
+}
+
+.lab-menu-demo .lab-menu-item--danger .ax-menu__item-leading,
+.lab-menu-demo .lab-menu-item--danger .ax-menu__item-trailing {
+  color: var(--md-sys-color-error);
+}
+
+.lab-menu-demo .lab-menu-deferred-note {
+  padding: 12px;
+  border: 1px dashed var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container);
+}
+
+.lab-menu-demo .lab-menu-forbidden {
+  padding: 12px;
+  border: 1px dashed var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container);
+}
+
+@media (max-width: 720px) {
+  .lab-menu-demo {
+    padding: 16px;
+  }
+}

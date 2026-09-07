@@ -1,0 +1,63 @@
+/*
+ * Axismundi — lab-tabs.css
+ * v3.6.8 Wave 2A-1 Navigation Core
+ *
+ * Lab-scoped validation layout only. Baseline .tabs rules remain in
+ * components.css and are not overridden here.
+ */
+
+.lab-tabs-demo {
+  color: var(--md-sys-color-on-surface);
+  background: var(--md-sys-color-surface);
+  min-height: 100vh;
+  padding: 32px;
+}
+
+.lab-tabs-demo code {
+  font-size: inherit;
+}
+
+.lab-tabs-demo .lab-tabs-header,
+.lab-tabs-demo .lab-tabs-section {
+  max-width: 1120px;
+  margin: 0 auto 32px;
+}
+
+.lab-tabs-demo .lab-tabs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.lab-tabs-demo .lab-tabs-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-surface-container-low);
+}
+
+.lab-tabs-demo .lab-tabs-panel {
+  min-height: 120px;
+  padding: 16px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface);
+}
+
+.lab-tabs-demo .lab-tabs-panel[hidden] {
+  display: none;
+}
+
+.lab-tabs-demo .lab-tabs-caption {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+@media (max-width: 720px) {
+  .lab-tabs-demo {
+    padding: 16px;
+  }
+}

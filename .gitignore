@@ -36,3 +36,7 @@ products/styleguide/.jekyll-cache/
 products/styleguide/.jekyll-metadata
 products/styleguide/Gemfile.lock
 products/styleguide/vendor/
+
+# Synced from the products by tools/generators/sync_styleguide_fonts.py
+products/styleguide/assets/fonts/
+products/styleguide/assets/css/fonts.css

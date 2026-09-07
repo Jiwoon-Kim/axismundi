@@ -15,12 +15,16 @@ Git에 들어가지 않습니다.
 ## 로컬 실행
 
 ```bash
+python ../../tools/generators/sync_styleguide_fonts.py
 bundle install
 bundle exec jekyll serve
 ```
 
 `baseurl`이 `/axismundi/styleguide`라서 로컬 주소는
 `http://localhost:4000/axismundi/styleguide/`입니다.
+
+첫 줄을 건너뛰면 사이트는 뜨지만 웹폰트 없이 시스템 폰트로 렌더됩니다. 폰트
+파일과 `assets/css/fonts.css`는 Git에 없고 이 스크립트가 만듭니다.
 
 ## 이 사이트가 하지 않는 것
 
@@ -30,10 +34,39 @@ Lab으로 링크합니다. 같은 컴포넌트를 두 번 구현하기 시작하
 어긋납니다.
 
 디자인 토큰도 여기서 정의하지 않습니다. `assets/css/styleguide.css`의 `--sg-*`는
-문서 사이트의 크롬(레이아웃, 내비게이션, 본문 서체)일 뿐입니다. 설명 대상인
-디자인 시스템(`--md-ref-*`, `--md-sys-*`, `--wp--preset--*`)을 어떻게 들여올지는
-아직 정하지 않았습니다 — 이 제품의 assets에 넣을지, 빌드 때 테마에서 가져올지.
-그 전까지 비슷한 이름을 새로 만들지 않습니다.
+문서 사이트의 크롬(레이아웃, 내비게이션, 여백)일 뿐입니다. 색과 타입스케일
+(`--md-ref-*`, `--md-sys-*`, `--wp--preset--*`)은 아직 들어오지 않았고, 그 전까지
+비슷한 이름을 새로 만들지 않습니다.
+
+## 폰트
+
+폰트는 이미 정해졌습니다. 제품이 배포하는 파일을 빌드 때 가져옵니다.
+
+```
+themes/axismundi                    Roboto Flex / Mono   (theme.json)
+plugins/…korean-font-provider       Noto Sans KR         (provider CSS)
+        ↓ sync_styleguide_fonts.py
+products/styleguide/assets/fonts/   복사본 (Git 제외)
+products/styleguide/assets/css/fonts.css  생성됨 (Git 제외)
+```
+
+사본을 커밋하면 core 원본·제품 서브셋에 이어 **세 번째 사본**이 되고, 테마가
+폰트를 다시 서브셋할 때 사이트만 조용히 옛것을 보여줍니다.
+
+폰트 스택도 이 사이트가 지어내지 않습니다. 테마가 쓰는 그대로입니다.
+
+```css
+"Roboto Flex", var(--axismundi-cjk-sans, system-ui), sans-serif
+```
+
+라틴은 Roboto가 맡고 CJK 자리는 비워둡니다. 그 변수는 지역별 provider
+플러그인이 `:lang()` 아래에서 채우고, `unicode-range` 덕분에 한글만 Noto로
+갑니다. provider가 없으면 `system-ui`로 떨어지는데, 그건 provider 플러그인을
+설치하지 않은 사이트가 실제로 보이는 모습입니다.
+
+Roboto Serif와 Material Symbols는 아직 가져오지 않습니다. 세리프 면을 쓰는
+페이지가 없고, Symbols는 3.8MB인데 아이콘을 다루는 문서가 아직 없습니다. 둘 다
+스크립트에 한 줄이면 들어옵니다.
 
 ## 현재 상태
 

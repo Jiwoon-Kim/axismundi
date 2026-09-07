@@ -31,8 +31,13 @@
   --sg-gap-lg: 2rem;
   --sg-radius: 12px;
 
-  --sg-font: "Noto Sans KR", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --sg-font-mono: "Roboto Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  /* The theme's own stacks, not a stack chosen for this site. Latin comes from
+   * Roboto; the CJK slot is filled by whichever regional font provider is
+   * present, under :lang(). fonts.css (generated) supplies both. Without it
+   * the slot falls back to system-ui, exactly as a site with no provider
+   * plugin installed would. */
+  --sg-font: "Roboto Flex", var(--axismundi-cjk-sans, system-ui), sans-serif;
+  --sg-font-mono: "Roboto Mono", monospace;
 }
 
 @media (prefers-color-scheme: dark) {

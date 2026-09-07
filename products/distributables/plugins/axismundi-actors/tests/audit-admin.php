@@ -104,6 +104,50 @@ try {
 	ax_admin_assert( $ax_admin_results, 'the pre-creation capability rule matches the actor rule for an owner', axismundi_actors_can_manage_user_actor( $uid, $uid ) );
 	ax_admin_assert( $ax_admin_results, 'and refuses a stranger', ! axismundi_actors_can_manage_user_actor( $uid, $other ) );
 
+	/*
+	 * Authorization has to come before the write, on every path.
+	 *
+	 * The render path was fixed first and the activation POST was not: it called
+	 * ensure_for_user() and only then can_manage(), so any logged-in user could
+	 * mint a nonce for ax_actors_activate_<id> in their own session, POST it,
+	 * and leave an empty actor row for someone else behind a 403. A nonce proves
+	 * the request came from this session; it says nothing about permission.
+	 *
+	 * The check below is on the shared decision rather than the handler, because
+	 * the handler wp_die()s and exit()s. What matters is the ordering invariant,
+	 * and that lives in one function now precisely so it cannot be fixed in one
+	 * caller and missed in the other.
+	 */
+	$ax_target = (int) wp_insert_user( array( 'user_login' => 'ax_admin_target', 'user_pass' => wp_generate_password(), 'role' => 'author' ) );
+	$ax_admin_users[] = $ax_target;
+
+	wp_set_current_user( $subscriber );
+	$ax_refused = axismundi_actors_authorize_user_actor( $ax_target );
+	ax_admin_assert( $ax_admin_results, 'an unprivileged user is refused before anything is created', is_wp_error( $ax_refused ) );
+	ax_admin_assert( $ax_admin_results, 'and the refusal leaves no actor row behind', null === axismundi_actors_get_for_user( $ax_target ) );
+
+	wp_set_current_user( $other );
+	ax_admin_assert( $ax_admin_results, 'another author cannot reach a stranger actor either', is_wp_error( axismundi_actors_authorize_user_actor( $ax_target ) ) );
+	ax_admin_assert( $ax_admin_results, 'still nothing created', null === axismundi_actors_get_for_user( $ax_target ) );
+
+	wp_set_current_user( $ax_target );
+	$ax_own = axismundi_actors_authorize_user_actor( $ax_target );
+	ax_admin_assert( $ax_admin_results, 'the owner is allowed and the actor is created then', $ax_own instanceof Axismundi_Actor );
+	if ( $ax_own instanceof Axismundi_Actor ) {
+		$ax_admin_ids[] = $ax_own->get_identity_id();
+	}
+	wp_set_current_user( $admin );
+
+	/*
+	 * esc_url_raw() is not array-safe. array_map()ing it over posted input made
+	 * profile_field_url[0][]= a TypeError inside ltrim(), a fatal on a form any
+	 * browser can send. sanitize_text_field() returns '' for an array, which is
+	 * what made the pair look interchangeable when it is not.
+	 */
+	ax_admin_assert( $ax_admin_results, 'a nested URL array does not reach esc_url_raw and so does not throw', array( array( 'https://example.test' ) ) === map_deep( map_deep( array( array( 'https://example.test' ) ), 'trim' ), 'esc_url_raw' ) );
+	ax_admin_assert( $ax_admin_results, 'a real URL survives with its surrounding space trimmed rather than encoded', array( 'https://example.test/x' ) === map_deep( map_deep( array( '  https://example.test/x  ' ), 'trim' ), 'esc_url_raw' ) );
+	ax_admin_assert( $ax_admin_results, 'array_map over the same nested input would have been fatal', ( static function () { try { array_map( 'esc_url_raw', array( array( 'x' ) ) ); return false; } catch ( Throwable $e ) { return true; } } )() );
+
 	// Activation transition: register handle (internal) then publish.
 	axismundi_actors_register_handle( $actor->get_identity_id(), 'alice_admin' );
 	axismundi_actors_set_status( $actor->get_identity_id(), 'internal' );

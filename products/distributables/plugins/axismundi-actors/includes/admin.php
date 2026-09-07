@@ -36,6 +36,44 @@ function axismundi_actors_can_manage( Axismundi_Actor $actor, ?int $viewer = nul
 }
 
 /**
+ * Authorize first, then create -- the only place that does both.
+ *
+ * Creating an actor is a write, so it must not happen until the caller is known
+ * to be allowed. A nonce does not establish that: any logged-in user can mint a
+ * nonce for any action string, so `check_admin_referer()` proves the request
+ * came from this user's own session and nothing about whether they may act on
+ * the target. That is the whole distinction, and having it in two places is how
+ * it came to be applied in one of them: the render path was fixed while the
+ * activation POST kept creating before checking, leaving an empty actor row for
+ * an arbitrary user behind a 403.
+ *
+ * Returns the existing actor, a newly created one, or a WP_Error the caller
+ * turns into whatever refusal fits its surface.
+ *
+ * @param int $user_id Owner.
+ * @return Axismundi_Actor|WP_Error
+ */
+function axismundi_actors_authorize_user_actor( int $user_id ) {
+	$refused = new WP_Error( 'ax_actors_cannot_manage', __( 'You cannot manage this actor profile.', 'axismundi-actors' ) );
+
+	if ( $user_id <= 0 ) {
+		return $refused;
+	}
+
+	$actor = axismundi_actors_get_for_user( $user_id );
+
+	if ( $actor instanceof Axismundi_Actor ) {
+		return axismundi_actors_can_manage( $actor ) ? $actor : $refused;
+	}
+
+	if ( ! axismundi_actors_can_manage_user_actor( $user_id ) ) {
+		return $refused;
+	}
+
+	return axismundi_actors_ensure_for_user( $user_id );
+}
+
+/**
  * Whether a viewer could manage the user-scope actor belonging to a user.
  *
  * The same rule `axismundi_actors_can_manage()` applies to a Person actor, but
@@ -678,7 +716,7 @@ function axismundi_actors_render_admin_page() : void {
 	if ( $user_id <= 0 ) {
 		return;
 	}
-	$actor = axismundi_actors_get_for_user( $user_id );
+	$actor   = axismundi_actors_get_for_user( $user_id );
 	$allowed = $actor instanceof Axismundi_Actor
 		? axismundi_actors_can_manage( $actor )
 		: axismundi_actors_can_manage_user_actor( $user_id );
@@ -1117,8 +1155,8 @@ function axismundi_actors_redirect_result( string $url, $result ) : void {
 function axismundi_actors_handle_activate() : void {
 	$user_id = isset( $_POST['user_id'] ) ? absint( $_POST['user_id'] ) : 0;
 	check_admin_referer( 'ax_actors_activate_' . $user_id );
-	$actor = $user_id > 0 ? axismundi_actors_ensure_for_user( $user_id ) : new WP_Error( 'ax_actors_no_user', __( 'No such user.', 'axismundi-actors' ) );
-	if ( is_wp_error( $actor ) || ! axismundi_actors_can_manage( $actor ) ) {
+	$actor = axismundi_actors_authorize_user_actor( $user_id );
+	if ( is_wp_error( $actor ) ) {
 		wp_die( esc_html__( 'You cannot manage this actor profile.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
 	}
 	$back = axismundi_actors_admin_url( get_current_user_id() === $user_id ? 0 : $user_id );
@@ -1407,8 +1445,39 @@ function axismundi_actors_handle_set_profile_fields() : void {
 	$names = isset( $_POST['profile_field_name'] ) && is_array( $_POST['profile_field_name'] )
 		? array_map( 'sanitize_text_field', wp_unslash( $_POST['profile_field_name'] ) )
 		: array();
+	/*
+	 * The shape is filtered before the sanitizer runs, because esc_url_raw() is
+	 * not array-safe: given one it reaches ltrim() and throws, so mapping it
+	 * straight over posted input makes profile_field_url[0][]= a fatal. Dropping
+	 * non-scalars first means it only ever sees strings.
+	 *
+	 * esc_url_raw() and not sanitize_text_field(): the latter is array-safe and
+	 * looks like the obvious pair for the names above, but it strips percent
+	 * encoding -- https://example.test/%ED%95%9C becomes https://example.test/ --
+	 * so running it over a URL silently breaks every non-ASCII path.
+	 *
+	 * array_filter() preserves keys, so a dropped element leaves a hole rather
+	 * than shifting the rest out of step with the names; the loop below reads by
+	 * position and treats a missing key as no URL.
+	 *
+	 * The suppression below is the honest end of a search, not a shortcut. Plugin
+	 * Check recognises a sanitizer only when it wraps the superglobal access
+	 * itself, and every arrangement that satisfies it is worse:
+	 *
+	 *   array_map( 'esc_url_raw', $_POST[...] )        fatal on a nested array
+	 *   array_map( 'sanitize_text_field', ... ) first  strips percent encoding,
+	 *                                                  so /%ED%95%9C becomes /
+	 *   map_deep( ..., 'esc_url_raw' )                 safe, but unrecognised
+	 *
+	 * Measured on this input -- "  https://a.test/x  ", array( "nested" ),
+	 * "https://a.test/%ED%95%9C" -- the expression below throws nothing, trims
+	 * to https://a.test/x rather than encoding the spaces, keeps the percent
+	 * encoding intact, and drops the nested element's key so that position ends
+	 * up with no URL.
+	 */
 	$urls  = isset( $_POST['profile_field_url'] ) && is_array( $_POST['profile_field_url'] )
-		? array_map( 'esc_url_raw', wp_unslash( $_POST['profile_field_url'] ) )
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- esc_url_raw() on this line is the sanitizer; the scanner recognises it only when it wraps the access directly, which is the fatal this shape exists to avoid.
+		? array_map( 'esc_url_raw', array_map( 'trim', array_filter( wp_unslash( $_POST['profile_field_url'] ), 'is_scalar' ) ) )
 		: array();
 
 	$fields = array();

@@ -405,3 +405,148 @@
 .sg-emphasis {
   font-weight: var(--md-sys-typescale-body-large-emphasized-weight);
 }
+
+/* Motion figures.
+ *
+ * The dot travels on the very tokens the row documents, so a curve that is
+ * retuned in the theme is retuned here. That rules out SMIL, which cannot read
+ * a custom property, and rules out an animation that loops: a reference page
+ * should move when the reader asks, not forever. */
+
+.sg-motion {
+  margin-block: 0.5rem 1rem;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.sg-motion__row {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.sg-motion__track {
+  position: relative;
+  display: block;
+  block-size: 1.5rem;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container);
+}
+
+.sg-motion__dot {
+  position: absolute;
+  inset-block-start: 0.25rem;
+  inset-inline-start: 0.25rem;
+  inline-size: 1rem;
+  block-size: 1rem;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-primary);
+  transition: translate var(--sg-motion-duration) var(--sg-motion-curve);
+}
+
+/* Travel is set on the track so the distance follows the figure's width. */
+.sg-motion.is-playing .sg-motion__dot {
+  translate: calc(100cqi - 1.5rem) 0;
+}
+
+.sg-motion__track {
+  container-type: inline-size;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sg-motion__dot {
+    transition: none;
+  }
+}
+
+.sg-play {
+  font-family: var(--md-sys-typescale-label-large-font);
+  font-size: var(--md-sys-typescale-label-large-size);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
+  block-size: 40px;
+  padding-inline: 1rem;
+  border: 0;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  cursor: pointer;
+}
+
+.sg-play:focus-visible {
+  outline: var(--md-focus-ring-width) solid var(--md-sys-color-secondary);
+  outline-offset: var(--md-focus-ring-outward-offset);
+}
+
+/* Shape figures. */
+
+.sg-shapes {
+  display: grid;
+  gap: var(--sg-gap);
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  margin-block: 0.5rem 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.sg-shape__box {
+  display: grid;
+  place-items: center;
+  block-size: 5rem;
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  font-size: var(--md-sys-typescale-label-medium-size);
+}
+
+.sg-shape__name {
+  display: block;
+  margin-block-start: 0.25rem;
+  font-family: var(--md-ref-typeface-mono);
+  font-size: var(--md-sys-typescale-body-small-size);
+  color: var(--md-sys-color-on-surface-variant);
+  word-break: break-all;
+}
+
+/* State-layer figures. */
+
+.sg-states {
+  display: grid;
+  gap: var(--sg-gap);
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  margin-block: 0.5rem 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.sg-state__swatch {
+  display: grid;
+  place-items: center;
+  block-size: 4rem;
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: color-mix(in srgb, var(--md-sys-color-on-surface) calc(var(--sg-state-opacity) * 100%), var(--md-sys-color-surface-container));
+  color: var(--md-sys-color-on-surface);
+  font-size: var(--md-sys-typescale-label-medium-size);
+}
+
+/* Elevation figures. */
+
+.sg-elevations {
+  display: grid;
+  gap: var(--sg-gap-lg);
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  margin-block: 1rem 2rem;
+  padding: 0;
+  list-style: none;
+}
+
+.sg-elevation__box {
+  display: grid;
+  place-items: center;
+  block-size: 4.5rem;
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container-low);
+  color: var(--md-sys-color-on-surface);
+  font-size: var(--md-sys-typescale-label-medium-size);
+  box-shadow: var(--sg-elevation-shadow);
+}

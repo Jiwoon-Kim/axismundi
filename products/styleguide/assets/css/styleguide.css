@@ -296,3 +296,71 @@
 .sg-footer a {
   color: var(--md-sys-color-primary);
 }
+
+/* --- Documentation figures ------------------------------------
+ *
+ * Swatches read their colour from the token they are documenting, so a figure
+ * on this site shows the live value in the live scheme rather than a
+ * screenshot of what it was. Switching the theme repaints them.
+ * -------------------------------------------------------------- */
+
+.sg-tones {
+  display: grid;
+  gap: 2px;
+  grid-template-columns: repeat(auto-fit, minmax(2.5rem, 1fr));
+  margin-block: 0.5rem 1.5rem;
+}
+
+.sg-tone {
+  display: grid;
+  place-items: center;
+  min-block-size: 3rem;
+  border-radius: 4px;
+  font-size: var(--md-sys-typescale-label-small-size);
+  line-height: var(--md-sys-typescale-label-small-line-height);
+  /* The tone number has to stay readable on its own tone. `contrast-color()`
+   * would answer this exactly, but it is new enough that most readers would
+   * get no label at all, and on a reference page the number is the point. A
+   * tonal ramp is ordered by lightness by definition, so the template picks
+   * the label colour from the tone itself - dark up to 50, light from 60 -
+   * which needs no browser support and cannot be wrong on these ramps. */
+  color: var(--sg-tone-ink);
+}
+
+.sg-roles {
+  display: grid;
+  gap: var(--sg-gap);
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  margin-block: 0.5rem 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.sg-role {
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium, 12px);
+  overflow: hidden;
+}
+
+.sg-role__swatch {
+  display: block;
+  block-size: 3.5rem;
+}
+
+.sg-role__meta {
+  padding: 0.5rem 0.75rem;
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+}
+
+.sg-role__name {
+  display: block;
+  font-family: var(--md-ref-typeface-mono);
+  color: var(--md-sys-color-on-surface);
+  word-break: break-all;
+}
+
+.sg-role__map {
+  display: block;
+  color: var(--md-sys-color-on-surface-variant);
+}

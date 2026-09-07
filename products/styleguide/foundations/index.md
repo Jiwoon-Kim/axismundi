@@ -12,10 +12,9 @@ lang: ko
   <li><a href="{{ doc.url | relative_url }}">{{ doc.title }}</a>{% if doc.description %} — {{ doc.description }}{% endif %}</li>
 {%- endfor %}
 </ul>
+
+이 구역의 문서는 값을 옮겨 적지 않습니다. 색 스와치도 타입 표본도 이 페이지가
+로드한 토큰에서 직접 읽으므로, 테마가 바뀌면 문서가 따라옵니다.
 {%- else -%}
 아직 문서가 없습니다.
-
-먼저 들어올 것은 토큰 층입니다. `--md-ref-*`(원시 팔레트)와 `--md-sys-*`(역할)의
-관계, `--md-sys-*`가 리터럴 값을 가질 수 없는 이유, 그리고 그 규칙을 CI에서
-검사하는 방식을 다룹니다.
 {%- endif %}

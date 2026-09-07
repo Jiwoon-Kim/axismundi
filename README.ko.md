@@ -81,7 +81,7 @@ npm install
 검증 실행:
 
 ```powershell
-python .\tools\validators\validate_theme_pilot.py
+python .\tools\validators\validate_token_layering.py
 ```
 
 styleguide publish mirror 재생성:
@@ -93,17 +93,16 @@ python .\tools\generators\publish_styleguide.py
 기대 결과:
 
 ```txt
-Overall: 1.000 (PASS)
-A schema:  1.000
-B theme:   1.000
-C css:     1.000
-D runtime: 1.000
+  E token layering : 1.000  PASS
+  F bridge layering: 1.000  PASS
+
+PASS - token layering holds.
 ```
 
 ## WordPress / 블록 테마 / 플러그인 경계
 
-WordPress 바인딩은 `bindings/wordpress-material3/`에 있습니다. 현재 검증 대상은
-`products/reference-implementations/ontology-theme-pilot/`입니다.
+WordPress 바인딩은 `bindings/wordpress-material3/`에 있습니다. 이를 소비하는 것은
+`products/wordpress/`의 배포 테마와 플러그인입니다.
 
 테마가 할 수 있는 일:
 

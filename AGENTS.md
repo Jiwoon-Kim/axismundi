@@ -25,7 +25,7 @@ Codex in this repo is a **plan-first executor / reviewer**. It is NOT the ontolo
 - Plan-first work on any task in `NEXT-SESSION.md` Codex queue (C1–C4)
 - Reading any repo file for context
 - Drafting audit doc bodies inside approved skeletons (e.g., `lab/modules/button/docs/BUTTON-*.md`)
-- Running validators and reporting results: `python3 tools/validators/validate_theme_pilot.py`
+- Running validators and reporting results: `python tools/validators/validate_token_layering.py`
 - Running publish: `python3 tools/generators/publish_styleguide.py`
 - Cross-reference checks across docs
 - Small, focused diffs with clear scope
@@ -40,7 +40,6 @@ Codex in this repo is a **plan-first executor / reviewer**. It is NOT the ontolo
 - Naming sweeps (e.g., `.snackbar → .ax-snackbar` — BACKLOG #18)
 - `theme.json` edits (BACKLOG #20/#22)
 - `data-theme="auto"` implementation
-- Pilot theme generation (`products/reference-implementations/ontology-theme-pilot/` major edits)
 - Ripple v2 implementation (scheduled v3.5.x amendment; NOT v3.5.1)
 - Button module implementation (CSS/JS/pattern HTML — that's Phase 2, NOT Phase 1)
 - Matrix amendments (consumer-state column, row #36 correction — DEFERRED)
@@ -112,10 +111,10 @@ computed value, not just selector presence. Source-rule existence is not proof;
 computed styles in the front end and editor-facing surfaces are the acceptance
 gate.
 
-When a Pilot consumes generated or copied assets, regenerate the asset bridge
-after source CSS edits and use a fresh browser context or hard reload during
-visual QA. Browser cache and source/consumer drift can make a fixed source look
-stale on the front end.
+When a surface consumes generated or copied assets, regenerate them after
+source CSS edits and use a fresh browser context or hard reload during visual
+QA. Browser cache and source/consumer drift can make a fixed source look stale
+on the front end.
 
 ### Token architecture locks
 
@@ -128,14 +127,14 @@ md-ref -> md-sys -> wp-preset / wp-custom / comp -> consumers
 For WordPress theme work, `settings.custom.axismundi.*` is a downstream
 projection. Every leaf must be `var(--comp-*)`, `var(--md-sys-*)`, or
 `var(--md-ref-*)`. Literal hex, rgb, px, and number values are forbidden in
-that namespace. The permanent guard is
-`tools/validators/validate_theme_pilot.py` Axis G.
+that namespace. This rule has no automated guard: it was Axis G of the removed
+pilot validator, and no shipped product declares `settings.custom`.
 
 For color roles, every `--md-sys-color-*` entry must be defined as
 `var(--md-ref-palette-*)`. Literal hex, rgb, and hsl values are forbidden in the
 md-sys color layer. Dark mode swaps sys -> ref mappings only; it does not
 rewrite ref primitives or inject theme.json color literals. The permanent guard
-is `tools/validators/validate_theme_pilot.py` Axis E.
+is `tools/validators/validate_token_layering.py` Axis E.
 
 ### Semantic bridge locks
 
@@ -182,8 +181,8 @@ Assumptions made:
   - ...
 
 Validation:
-  - Command: python3 tools/validators/validate_theme_pilot.py
-  - Result: 1.000 / 1.000 / 1.000 / 1.000 PASS (or actual numbers)
+  - Command: python tools/validators/validate_token_layering.py
+  - Result: PASS (or the actual axis scores)
 
 Remaining risks / open questions:
   - ...

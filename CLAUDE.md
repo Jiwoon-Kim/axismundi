@@ -36,7 +36,6 @@ Forbidden without explicit user authorization:
 - Naming sweeps (e.g., `.snackbar → .ax-snackbar`)
 - `theme.json` edits
 - `data-theme="auto"` implementation
-- Pilot theme generation
 - Ripple v2 implementation (scheduled, not in v3.5.1 Phase 1)
 - Button module CSS / JS / pattern HTML (scheduled for Phase 2, not Phase 1)
 
@@ -48,14 +47,14 @@ Forbidden without explicit user authorization:
 2. **Phase boundaries are real.** The current phase in `CURRENT-STATE.md` defines what's allowed *this* session. Cross-phase work needs explicit authorization.
 3. **DISTINCT but COUPLED.** Infrastructure providers (`ripple/`, `icon-system/`, `popover/`) and their consumers stay separate modules with explicit contracts. Don't collapse boundaries.
 4. **Bilingual policy text.** EN + KO together for any policy statement (matches v3.5.0 docs convention).
-5. **Validator gate.** Every implementation phase must end with `python3 tools/validators/validate_theme_pilot.py` at 1.000 / 1.000 / 1.000 / 1.000 PASS. Phase doesn't close without it.
+5. **Validator gate.** Every implementation phase must end with `python tools/validators/validate_token_layering.py` passing (axes E and F at 1.000). It exits non-zero on failure. Phase doesn't close without it.
 6. **Small diffs.** Even when authorized to edit broadly, prefer targeted edits with clear scope.
 7. **Provenance.** When a decision comes from an external source (M3 spec, WAI-ARIA APG, Material Web), cite it inline.
 8. **User Request Log.** Do not abstract concrete user requests into generic phase lanes. Preserve them as explicit acceptance criteria and verify them before close.
 9. **Portal / overlay smoke.** Shell or runtime-trigger changes require trigger + runtime + host + open/close contract verification, with console/page errors checked.
 10. **WordPress block bridge is reverse-direction work.** For block themes, start from Markdown / HTML defaults and WordPress core block output, reset core defaults, then map to M3. Do not assume Axismundi component selectors are enough. Computed front-end/editor values are the acceptance gate; selector presence is not proof.
-11. **Generated Pilot assets must be refreshed.** After source CSS edits that feed `axismundi-pilot`, rerun the asset bridge and use a fresh browser context or hard reload. Browser cache and copied-asset drift can hide or fake a WordPress/M3 mapping result.
-12. **Token architecture is downstream-only.** `settings.custom.axismundi.*` leaves must be `var(--comp-*)`, `var(--md-sys-*)`, or `var(--md-ref-*)`; literal hex/rgb/px/number values are forbidden there. `--md-sys-color-*` entries must map to `var(--md-ref-palette-*)`; literal hex/rgb/hsl values are forbidden in the md-sys color layer. Axis G and Axis E in `tools/validators/validate_theme_pilot.py` are the permanent guards.
+11. **Generated assets must be refreshed.** When a surface consumes copied or generated CSS, regenerate it after source edits and use a fresh browser context or hard reload. Browser cache and source/consumer drift can hide or fake a result. (The `axismundi-pilot` asset bridge this rule was written for was removed once the shipped theme stopped deriving from it.)
+12. **Token architecture is downstream-only.** `settings.custom.axismundi.*` leaves must be `var(--comp-*)`, `var(--md-sys-*)`, or `var(--md-ref-*)`; literal hex/rgb/px/number values are forbidden there. `--md-sys-color-*` entries must map to `var(--md-ref-palette-*)`; literal hex/rgb/hsl values are forbidden in the md-sys color layer. Axis E in `tools/validators/validate_token_layering.py` is the permanent guard for the md-sys color layer. The `settings.custom.axismundi` half was Axis G, which needed a `theme.json` carrying that namespace; no shipped product declares one, so the rule now stands without an automated check.
 13. **core/button needs a semantic route before visual cleanup.** A `core/button` anchor with `href` is navigation and may receive an M3 button visual bridge. Action behavior, form submission, AJAX, federation actions, and durable custom schemas are plugin/custom-block territory.
 14. **Semantic mismatches must be routed.** When a WordPress core block visually maps to M3 but carries divergent markup, interaction, or accessibility semantics, route the mismatch as theme-owned semantic-decision or plugin/custom-block territory before accepting a visual fix. Do not silently collapse distinct core block structures into one generic CSS patch.
 15. **Diagnostic-first is a lock.** For plan-first cycles where the route, failure mode, or boundary risk is not already known, Phase 1 diagnostic inventory is mandatory before Phase 2 implementation. Diagnose source inputs, baseline / provider / semantic boundaries, route buckets, selected and rejected routes, write scope, fences, and validation plan before patching. If diagnosis shows provider, baseline, WordPress, plugin, or lock-file changes are needed, stop and return for review before implementation. Tiny mechanical edits with explicit scope and no boundary risk may skip the full report only when the shortcut is recorded as safe.

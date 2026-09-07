@@ -60,6 +60,26 @@ v3.6.26  TT5 Docs + Codebase Audit Phase 0                                ✓ DO
 v3.6.27  Pilot TT5 Structural Transplant                                  ✓ DONE
 ```
 
+## Status of this board (2026-09-07)
+
+The phase board below is frozen at v3.6.27 (2026-05-25). The v3.x phase
+machinery has not run since; work moved to `products/wordpress/`, tracked by
+git history and each product's own changelog rather than by this board.
+
+Two facts below are no longer true:
+
+- The two theme pilots (`axismundi-pilot`, `ontology-theme-pilot`) were
+  removed. Every "Pilot" entry below is history.
+- `validate_theme_pilot.py` was reduced to
+  `tools/validators/validate_token_layering.py`, which keeps axes E and F
+  (token and bridge layering over the lab stylesheets) and drops axes A-D
+  and G with their pilot targets.
+
+Read this board as a record of how the project got here, not as the current
+permission surface.
+
+---
+
 ## Current Phase
 
 ```txt

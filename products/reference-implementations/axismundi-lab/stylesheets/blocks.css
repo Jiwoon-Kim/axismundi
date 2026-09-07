@@ -1711,8 +1711,8 @@
  * instance before marking mobile navigation PASS.
  *
  * TT5 uses overlayBackgroundColor:"base" / overlayTextColor:"contrast".
- * Those slugs are not in axismundi-pilot/theme.json, so the overlay uses
- * explicit MD3 sys tokens below.
+ * Those slugs were not in the pilot theme.json (theme since removed), so the
+ * overlay uses explicit MD3 sys tokens below.
  * ============================================================ */
 .wp-block-navigation-item__content {
   display: inline-flex;

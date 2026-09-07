@@ -18,12 +18,15 @@ Lab assets are **not validated for production use** even if they appear to work.
 
 ## Relationship to other reference implementations
 
-| | axismundi-prototype (`_archive/`) | axismundi-lab | ontology-theme-pilot |
-|---|---|---|---|
-| **Role** | (DEMOTED in v3.3.0 — archived) | **Active visual authority + visual QA + promotion candidates** | Ontology validation target |
-| **Stability** | Frozen at archive snapshot | Active; both stable styleguide AND volatile experiments | Frozen until ontology updates |
-| **Promotes to** | (none — archive) | `axismundi-pilot/` (v3.3.1+) then `distributables/themes/axismundi/` | Not applicable |
-| **Origin** | User-authored | Beer CSS-inspired + M3 Material You experiments | Ontology emitter output |
+| | axismundi-prototype (`_archive/`) | axismundi-lab |
+|---|---|---|
+| **Role** | (DEMOTED in v3.3.0 — archived) | **Active visual authority + visual QA + promotion candidates** |
+| **Stability** | Frozen at archive snapshot | Active; both stable styleguide AND volatile experiments |
+| **Promotes to** | (none — archive) | `products/wordpress/themes/axismundi/` |
+| **Origin** | User-authored | Beer CSS-inspired + M3 Material You experiments |
+
+The `axismundi-pilot` and `ontology-theme-pilot` columns were dropped when
+those pilots were removed; the shipped theme no longer derives from either.
 
 ## Promotion criteria (lab → prototype)
 

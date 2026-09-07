@@ -82,7 +82,7 @@ npm install
 Run the validator:
 
 ```powershell
-python .\tools\validators\validate_theme_pilot.py
+python .\tools\validators\validate_token_layering.py
 ```
 
 Regenerate the styleguide publish mirror:
@@ -94,11 +94,10 @@ python .\tools\generators\publish_styleguide.py
 Expected validator result:
 
 ```txt
-Overall: 1.000 (PASS)
-A schema:  1.000
-B theme:   1.000
-C css:     1.000
-D runtime: 1.000
+  E token layering : 1.000  PASS
+  F bridge layering: 1.000  PASS
+
+PASS - token layering holds.
 ```
 
 ## Repository Map
@@ -120,18 +119,20 @@ axismundi/
 ├── bindings/
 │   └── wordpress-material3/
 ├── products/
-│   └── reference-implementations/
-│       ├── axismundi-lab/
-│       └── ontology-theme-pilot/
+│   ├── reference-implementations/
+│   │   └── axismundi-lab/
+│   └── wordpress/
+│       ├── plugins/
+│       └── themes/
 └── tools/
     ├── generators/
     └── validators/
 ```
 
-## WordPress Binding And Pilot
+## WordPress Binding
 
-The WordPress binding lives in `bindings/wordpress-material3/`. The current
-validation target is `products/reference-implementations/ontology-theme-pilot/`.
+The WordPress binding lives in `bindings/wordpress-material3/`. It is consumed
+by the shipped themes and plugins under `products/wordpress/`.
 
 Theme territory:
 
@@ -153,7 +154,7 @@ Plugin territory:
 - Wave 1 public-surface component audits are complete.
 - Lab module pattern HTML files are validation surfaces, not public API by
   default.
-- `styleguide/` is derived and can be regenerated.
+- `styleguide/` is derived from `axismundi-lab/` and can be regenerated.
 - GitHub repository creation and GitHub Pages activation are planned for
   v3.5.15.
 - The WordPress.org submission package is not yet assembled.

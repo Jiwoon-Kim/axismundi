@@ -94,7 +94,7 @@ def main():
                 "../../../../core/design-systems/material3/assets/",
                 "../../core/design-systems/material3/assets/"
             )
-            (dst_css / src_file.name).write_text(text, encoding=UTF8)
+            (dst_css / src_file.name).write_text(text, encoding=UTF8, newline="\n")
             css_count += 1
 
     # 1b. Module stylesheets — flatten lab/modules/<name>/lab-*.css into
@@ -121,7 +121,7 @@ def main():
                     "../../../../core/design-systems/material3/assets/",
                     "../../core/design-systems/material3/assets/"
                 )
-                (dst_css / src_file.name).write_text(text, encoding=UTF8)
+                (dst_css / src_file.name).write_text(text, encoding=UTF8, newline="\n")
                 css_count += 1
 
     print(f"  ✓ stylesheets/ ({css_count} files, paths rewritten)")
@@ -188,7 +188,7 @@ def main():
             )
             # Insert banner right after <!DOCTYPE html>
             html = html.replace("<!DOCTYPE html>", "<!DOCTYPE html>\n" + banner, 1)
-            dst.write_text(html, encoding=UTF8)
+            dst.write_text(html, encoding=UTF8, newline="\n")
             print(f"  ✓ {src_name} → {dst_name}")
 
     # 4. Add publish surface README
@@ -208,7 +208,7 @@ python3 tools/generators/publish_styleguide.py
 
 Per Constitution Article 12: publishing surfaces are mirrors, not authorities.
 """
-    (PUBLISH / "README.md").write_text(readme, encoding=UTF8)
+    (PUBLISH / "README.md").write_text(readme, encoding=UTF8, newline="\n")
     print(f"  ✓ README.md (publish-mirror notice)")
 
     print(f"\n  Total in publish surface: {len(list(PUBLISH.rglob('*')))} files")

@@ -9,7 +9,7 @@ on:
 
 jobs:
   validate:
-    name: Theme pilot validator
+    name: Token layering validator
     runs-on: ubuntu-latest
 
     steps:
@@ -22,4 +22,4 @@ jobs:
           python-version: "3.12"
 
       - name: Run validator
-        run: python tools/validators/validate_theme_pilot.py
+        run: python tools/validators/validate_token_layering.py

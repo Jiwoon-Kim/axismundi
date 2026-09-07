@@ -1,41 +1,32 @@
 /* ============================================================
  * Style guide — type scale
  *
- * The M3 baseline type scale, transcribed from
- *   https://m3.material.io/styles/typography/type-scale-tokens
+ * GENERATED from _data/typography.yml. Do not edit.
+ *   build   python tools/generators/generate_styleguide_typography.py
+ *   verify  python tools/validators/validate_styleguide_typography.py
  *
- * The tokens carry M3's canonical names. One name per concept across the
- * project beats a parallel `--sg-` set, at the cost that a specimen page which
- * also loads the theme's or the lab's token CSS will have two definitions in
- * play; scope the specimen when that day comes.
+ * Committed on purpose: a pull request should show the typography change, not
+ * a data diff the reader has to compile in their head. The generator's --check
+ * mode is what keeps this file honest.
  *
- * Units. The spec publishes pt; the web mapping in the same document is
- * 1sp = 0.0625rem, so every size and line height below is the published value
- * divided by 16. Tracking follows the spec's web rule as well: the published
- * tracking in px over a 16px root, which makes it an absolute offset rather
- * than one that scales with the element. Every number here was computed from
- * the published value, not typed.
+ * The tokens carry M3's canonical names rather than a parallel `--sg-` set, so
+ * there is one name per concept across the project. The cost is that a
+ * specimen page which also loads the theme's or the lab's token CSS will have
+ * two definitions in play; scope the specimen when that day comes.
  *
- * Optical size. The spec assigns each role an `opsz` equal to its font size.
- * That is what `font-optical-sizing: auto` already does with a variable font,
- * so no role emits font-variation-settings. Every other axis the spec lists
- * (GRAD 0, wdth 100, ROND 0, CRSV 0, slnt 0, FILL 0, HEXP 0) is constant
- * across roles and already the @font-face default.
+ * No role emits font-variation-settings. The spec assigns each an `opsz` equal
+ * to its font size, which `font-optical-sizing: auto` already does on a
+ * variable font, and every other axis it lists (GRAD 0, wdth 100, ROND 0,
+ * CRSV 0, slnt 0, FILL 0, HEXP 0) is constant across roles and already the
+ * @font-face default.
  *
- * Emphasized styles differ from their baseline role in weight only, so only
+ * Emphasized styles differ from their baseline role in weight alone, so only
  * the weight is emitted; font, size, tracking and line height are shared.
  *
- * Line height is not in the block below with the rest of each role. M3 gives
- * it four values per role, one per language height set, so it is declared in
- * those blocks instead - the role token is the same either way.
- *
- * One inconsistency in the source, recorded rather than smoothed over: five
- * emphasized roles (title-medium, title-small, and all three labels) publish
- * `weight 700` beside `'wght' 600`. The same document's "Fonts & weights"
- * table lists semi bold as 600 and bold as 700, and every role whose weight is
- * 500 agrees with its axis. Since this site renders Roboto Flex, the variable
- * axis is what takes effect, so those five use 600. On a static Roboto they
- * would be 700.
+ * Line height is declared in the language-height blocks below rather than
+ * beside the rest of each role, because M3 publishes four values per role -
+ * one per set - and raises them for scripts that need more vertical room. The
+ * layout picks the set from the document language.
  * ============================================================ */
 
 :root {
@@ -127,9 +118,8 @@
 	--md-sys-typescale-label-small-emphasized-weight: var(--md-ref-typeface-weight-semibold);  /* spec also publishes weight 700 for static Roboto */
 }
 
-/* Language height sets. M3 raises line height for scripts that need more
- * vertical room; Korean is one of them. `small` is the baseline the roles
- * above default to. Switch by setting data-language-height on the root. */
+/* Language height sets. `small` is the baseline every role falls back to;
+ * set data-language-height on the root to pick another. */
 :root,
 :root[data-language-height="small"] {
 	--md-sys-typescale-display-large-line-height: 4rem;

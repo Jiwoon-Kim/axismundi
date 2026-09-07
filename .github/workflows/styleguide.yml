@@ -1,0 +1,87 @@
+name: Style guide
+
+# Only the style guide and the things it reads. A plugin commit should not
+# rebuild this site, and the products' fonts and theme.json are inputs here,
+# so a change to those does need to.
+on:
+  pull_request:
+    paths:
+      - "products/styleguide/**"
+      - "tools/generators/sync_styleguide_fonts.py"
+      - "tools/generators/generate_styleguide_typography.py"
+      - "tools/validators/validate_styleguide_typography.py"
+      - "products/wordpress/themes/axismundi/theme.json"
+      - "products/wordpress/themes/axismundi/assets/fonts/**"
+      - "products/wordpress/plugins/axismundi-korean-font-provider/assets/**"
+      - ".github/workflows/styleguide.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "products/styleguide/**"
+      - "tools/generators/sync_styleguide_fonts.py"
+      - "tools/generators/generate_styleguide_typography.py"
+      - "tools/validators/validate_styleguide_typography.py"
+      - "products/wordpress/themes/axismundi/theme.json"
+      - "products/wordpress/themes/axismundi/assets/fonts/**"
+      - "products/wordpress/plugins/axismundi-korean-font-provider/assets/**"
+      - ".github/workflows/styleguide.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build and verify
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: pip install pyyaml
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: products/styleguide
+
+      # --verify rather than a plain build: it refuses to regenerate the
+      # committed typography CSS, so a hand-edit or an un-rebuilt data change
+      # fails here instead of being quietly papered over by CI.
+      - name: Prepare and verify
+        working-directory: products/styleguide
+        run: python bin/build.py --verify
+
+      - name: Build site
+        working-directory: products/styleguide
+        run: bundle exec jekyll build
+
+      # The site is served from /styleguide/, so the artifact carries it in a
+      # subdirectory of the Pages root rather than at the root itself.
+      - name: Stage the Pages artifact
+        run: |
+          mkdir -p _site/styleguide
+          cp -r products/styleguide/_site/. _site/styleguide/
+          touch _site/.nojekyll
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: styleguide-site
+          path: _site
+          retention-days: 7
+
+      # No deploy step yet, on purpose. GitHub Pages still serves the whole
+      # repository from main, which is how the generated styleguide/ mirror
+      # reaches /styleguide/. Switching the Pages source to Actions would hand
+      # that URL to this site, and it has one page so far. When it has
+      # something to show: change the Pages source to GitHub Actions, add the
+      # configure-pages / deploy-pages pair here, then delete the root mirror
+      # and tools/generators/publish_styleguide.py in the same commit.

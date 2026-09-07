@@ -12,19 +12,39 @@ Jekyll 기반 공개 문서 사이트. **이 디렉터리가 정본입니다** �
 artifact의 `styleguide/` 아래에 놓습니다. `_site/`는 그 과정의 중간 산출물이고
 Git에 들어가지 않습니다.
 
-## 로컬 실행
+## 빌드
 
 ```bash
-python ../../tools/generators/sync_styleguide_fonts.py
 bundle install
-bundle exec jekyll serve
+python bin/build.py --serve
 ```
 
 `baseurl`이 `/axismundi/styleguide`라서 로컬 주소는
 `http://localhost:4000/axismundi/styleguide/`입니다.
 
-첫 줄을 건너뛰면 사이트는 뜨지만 웹폰트 없이 시스템 폰트로 렌더됩니다. 폰트
-파일과 `assets/css/fonts.css`는 Git에 없고 이 스크립트가 만듭니다.
+`jekyll`을 직접 부르지 않는 이유가 있습니다. 이 사이트의 입력 두 가지가 Git에
+없어서, 깨끗한 checkout에서 Jekyll만 돌리면 **폰트 없이 시스템 폰트로**
+렌더됩니다. 실제로 확인한 결과입니다.
+
+```
+bin/build.py
+  1. 폰트 동기화    제품의 woff2 복사 + fonts.css 생성
+  2. 타이포그래피    _data/typography.yml → tokens.sys.typography.css
+  3. check          생성 CSS가 생성기 출력과 일치하는가
+  4. validate       그 값이 발행된 스펙과 일치하는가
+  5. jekyll         build 또는 serve
+```
+
+```
+--prepare   1-2 만
+--verify    1·3·4 (아무것도 새로 쓰지 않음). CI가 쓰는 모드
+--serve     5를 serve로
+```
+
+3과 4는 다른 질문에 답합니다. **check**는 파일이 생성기 출력과 같은지 묻고
+손편집·미갱신을 잡습니다. **validate**는 그 값이 스펙과 같은지 묻고 생성기
+자체의 버그를 잡습니다 — 그건 check가 통과시킵니다. 실제로 생성기에 오차를
+주입해 확인했습니다: `check=0 validate=1`.
 
 ## 이 사이트가 하지 않는 것
 
@@ -42,10 +62,19 @@ Lab으로 링크합니다. 같은 컴포넌트를 두 번 구현하기 시작하
 세 층입니다. 크기 값은 한 군데에만 나옵니다.
 
 ```
-tokens.ref.typeface.css     --md-ref-typeface-*     어떤 계열
-tokens.sys.typography.css   --md-sys-typescale-*    15역할 × 크기·굵기·자간·행간
+_data/typography.yml        발행된 M3 스펙의 정본 데이터   ← 여기를 고칩니다
+        ↓ tools/generators/generate_styleguide_typography.py
+tokens.sys.typography.css   --md-sys-typescale-*   생성물, 직접 편집 금지
+tokens.ref.typeface.css     --md-ref-typeface-*    어떤 계열 (손으로 씀)
 styleguide.css              역할을 요청 (크기를 쓰지 않음)
 ```
+
+`tokens.sys.typography.css`는 생성물이지만 **커밋합니다.** PR에서 타이포그래피
+변경을 데이터 diff가 아니라 그대로 읽을 수 있어야 하니까요. 대신 `--check`가
+손편집을 막습니다.
+
+Jekyll도 `_data/typography.yml`을 `site.data.typography`로 읽으므로, 나중에
+타입스케일을 문서화하는 페이지가 CSS를 만든 것과 같은 숫자를 렌더할 수 있습니다.
 
 M3 정식 이름을 씁니다. 프로젝트 전체에 개념당 이름 하나가 `--sg-` 병렬 집합보다
 낫다는 판단입니다. 대신 specimen 페이지가 테마나 Lab의 토큰 CSS를 함께 로드하면
@@ -70,9 +99,9 @@ h2  headline-small     본문  body-large      캡션·푸터  body-small / body
 ```
 themes/axismundi                    Roboto Flex / Mono   (theme.json)
 plugins/…korean-font-provider       Noto Sans KR         (provider CSS)
-        ↓ sync_styleguide_fonts.py
-products/styleguide/assets/fonts/   복사본 (Git 제외)
-products/styleguide/assets/css/fonts.css  생성됨 (Git 제외)
+        ↓ tools/generators/sync_styleguide_fonts.py
+assets/fonts/                       복사본 (Git 제외)
+assets/css/fonts.css                생성됨 (Git 제외)
 ```
 
 사본을 커밋하면 core 원본·제품 서브셋에 이어 **세 번째 사본**이 되고, 테마가

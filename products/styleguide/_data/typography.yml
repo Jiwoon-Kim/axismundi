@@ -1,0 +1,236 @@
+# M3 type scale — canonical data for this site's typography.
+#
+# Transcribed from https://m3.material.io/styles/typography/type-scale-tokens
+# Values are as published, in pt.
+#
+# This file is the source. assets/css/tokens.sys.typography.css is generated
+# from it by tools/generators/generate_styleguide_typography.py and checked
+# against it by tools/validators/validate_styleguide_typography.py. Edit here,
+# never there.
+#
+# Jekyll also loads this as site.data.typography, so a page documenting the
+# scale can render the same numbers the CSS was built from.
+
+meta:
+  source: https://m3.material.io/styles/typography/type-scale-tokens
+  unit: pt
+  # The spec's own web mapping: 1sp = 0.0625rem. Tracking uses the same
+  # divisor, which makes it an absolute offset at a 16px root rather than one
+  # that scales with the element.
+  rem_divisor: 16
+
+# M3's "Fonts & weights" table.
+weights:
+  regular: 400
+  medium: 500
+  semibold: 600
+  bold: 700
+
+# M3 raises line height for scripts needing more vertical room. `small` is the
+# baseline; the layout picks a set from the document language.
+language_height_sets:
+  - small
+  - medium
+  - large
+  - extra-large
+
+roles:
+  display-large:
+    typeface: brand
+    size: 57
+    weight: 400
+    tracking: -0.25
+    emphasized_weight: 500
+    line_height:
+      small: 64
+      medium: 73
+      large: 89
+      extra-large: 120
+
+  display-medium:
+    typeface: brand
+    size: 45
+    weight: 400
+    tracking: 0
+    emphasized_weight: 500
+    line_height:
+      small: 52
+      medium: 56
+      large: 71
+      extra-large: 99
+
+  display-small:
+    typeface: brand
+    size: 36
+    weight: 400
+    tracking: 0
+    emphasized_weight: 500
+    line_height:
+      small: 44
+      medium: 47
+      large: 57
+      extra-large: 80
+
+  headline-large:
+    typeface: brand
+    size: 32
+    weight: 400
+    tracking: 0
+    emphasized_weight: 500
+    line_height:
+      small: 40
+      medium: 42
+      large: 50
+      extra-large: 75
+
+  headline-medium:
+    typeface: brand
+    size: 28
+    weight: 400
+    tracking: 0
+    emphasized_weight: 500
+    line_height:
+      small: 36
+      medium: 38
+      large: 45
+      extra-large: 66
+
+  headline-small:
+    typeface: brand
+    size: 24
+    weight: 400
+    tracking: 0
+    emphasized_weight: 500
+    line_height:
+      small: 32
+      medium: 35
+      large: 41
+      extra-large: 59
+
+  title-large:
+    typeface: plain
+    size: 22
+    weight: 400
+    tracking: 0
+    emphasized_weight: 500
+    line_height:
+      small: 28
+      medium: 31
+      large: 36
+      extra-large: 53
+
+  title-medium:
+    typeface: plain
+    size: 16
+    weight: 500
+    tracking: 0.15
+    emphasized_weight: 600
+    # The spec publishes `weight 700` here beside `'wght' 600`.
+    # Roboto Flex is variable, so the axis is what renders; 700 is the
+    # static-Roboto equivalent, kept for anyone shipping a static face.
+    emphasized_weight_static: 700
+    line_height:
+      small: 24
+      medium: 27
+      large: 31
+      extra-large: 42
+
+  title-small:
+    typeface: plain
+    size: 14
+    weight: 500
+    tracking: 0.1
+    emphasized_weight: 600
+    # The spec publishes `weight 700` here beside `'wght' 600`.
+    # Roboto Flex is variable, so the axis is what renders; 700 is the
+    # static-Roboto equivalent, kept for anyone shipping a static face.
+    emphasized_weight_static: 700
+    line_height:
+      small: 20
+      medium: 23
+      large: 26
+      extra-large: 36
+
+  body-large:
+    typeface: plain
+    size: 16
+    weight: 400
+    tracking: 0.5
+    emphasized_weight: 500
+    line_height:
+      small: 24
+      medium: 27
+      large: 31
+      extra-large: 41
+
+  body-medium:
+    typeface: plain
+    size: 14
+    weight: 400
+    tracking: 0.25
+    emphasized_weight: 500
+    line_height:
+      small: 20
+      medium: 23
+      large: 26
+      extra-large: 35
+
+  body-small:
+    typeface: plain
+    size: 12
+    weight: 400
+    tracking: 0.4
+    emphasized_weight: 500
+    line_height:
+      small: 16
+      medium: 18
+      large: 21
+      extra-large: 30
+
+  label-large:
+    typeface: plain
+    size: 14
+    weight: 500
+    tracking: 0.1
+    emphasized_weight: 600
+    # The spec publishes `weight 700` here beside `'wght' 600`.
+    # Roboto Flex is variable, so the axis is what renders; 700 is the
+    # static-Roboto equivalent, kept for anyone shipping a static face.
+    emphasized_weight_static: 700
+    line_height:
+      small: 20
+      medium: 23
+      large: 26
+      extra-large: 36
+
+  label-medium:
+    typeface: plain
+    size: 12
+    weight: 500
+    tracking: 0.5
+    emphasized_weight: 600
+    # The spec publishes `weight 700` here beside `'wght' 600`.
+    # Roboto Flex is variable, so the axis is what renders; 700 is the
+    # static-Roboto equivalent, kept for anyone shipping a static face.
+    emphasized_weight_static: 700
+    line_height:
+      small: 16
+      medium: 18
+      large: 21
+      extra-large: 30
+
+  label-small:
+    typeface: plain
+    size: 11
+    weight: 500
+    tracking: 0.5
+    emphasized_weight: 600
+    # The spec publishes `weight 700` here beside `'wght' 600`.
+    # Roboto Flex is variable, so the axis is what renders; 700 is the
+    # static-Roboto equivalent, kept for anyone shipping a static face.
+    emphasized_weight_static: 700
+    line_height:
+      small: 16
+      medium: 18
+      large: 21
+      extra-large: 29

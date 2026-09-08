@@ -67,6 +67,14 @@
 		background-color var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects);
 }
 
+/* A Button link may sit inside prose, whose generic link colour is deliberately
+ * more specific than a bare class selector. The editor always emits this
+ * parent-child pair, so use the real DOM relationship to keep a Filled CTA's
+ * on-primary label from inheriting prose's primary link colour. */
+.wp-block-button > .wp-block-button__link {
+	color: var(--ax-button-content);
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.wp-block-button__link {
 		transition: none;

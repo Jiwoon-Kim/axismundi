@@ -109,6 +109,16 @@ def main() -> int:
             report.check(declaration(control, name) == want,
                          f"adapter base {name} differs from M3 Small ({want})")
 
+    # Prose gives ordinary links a primary colour. The block editor's real
+    # parent-child relationship must therefore restate the Button label colour
+    # so an anchor Button can still render on-primary for the Filled default.
+    linked_control = block(css, ".wp-block-button > .wp-block-button__link")
+    report.check(linked_control is not None,
+                 "adapter has no WordPress DOM-specific Button label rule")
+    if linked_control is not None:
+        report.check(declaration(linked_control, "color") == "var(--ax-button-content)",
+                     "anchor Button label does not preserve its style content role")
+
     # Each published colour style must agree in the spec data, static adapter,
     # and theme.json/registered partial that delivers it to the editor.
     for color in data["colors"]:

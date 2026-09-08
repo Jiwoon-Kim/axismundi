@@ -195,6 +195,10 @@
   background: var(--sg-surface-quiet);
   padding: 0.1em 0.35em;
   border-radius: 4px;
+	/* Paths and token names are meaningful inline documentation, not code
+	 * samples. Let an unbroken one wrap on a narrow window; preformatted
+	 * examples below retain their deliberate horizontal scroll. */
+	overflow-wrap: anywhere;
 }
 
 .sg-prose pre {

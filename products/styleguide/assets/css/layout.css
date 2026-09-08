@@ -64,6 +64,10 @@
  * makes list-detail and supporting-pane layouts describable later. */
 .ax-scaffold {
 	display: grid;
+	/* Without an explicit minmax track, a long unbreakable descendant can turn
+	 * the implicit compact column into its max-content width and overflow the
+	 * viewport. The expanded scaffold already uses this track explicitly. */
+	grid-template-columns: minmax(0, 1fr);
 	grid-template-areas:
 		"rail"
 		"focus"

@@ -140,6 +140,16 @@ def main() -> int:
         report.check(got == as_px(pane["width"]),
                      f"{pane['name']} pane: css {got} != spec {as_px(pane['width'])}")
 
+    for rail in layout.get("rails") or []:
+        prefix = "md" if rail["source"] == "m3" else "ax"
+        token = f"--{prefix}-sys-layout-rail-{rail['name']}"
+        got = l_root.get(token)
+        if got is None:
+            report.fail(f"{rail['name']} rail: no token {token}")
+            continue
+        report.check(got == as_px(rail["width"]),
+                     f"{rail['name']} rail: css {got} != spec {as_px(rail['width'])}")
+
     widths = layout["content_widths"]
     for key, token in (("content", "--ax-sys-layout-content-max"),
                        ("wide", "--ax-sys-layout-wide-max")):

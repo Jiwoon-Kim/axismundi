@@ -27,6 +27,7 @@
 	--md-sys-layout-breakpoint-extra-large: 1600px;
 
 	--md-sys-layout-pane-supporting: 360px;
+	--ax-sys-layout-rail-navigation: 240px;
 
 	/* WordPress's own axis, not a breakpoint. */
 	--ax-sys-layout-content-max: 760px;

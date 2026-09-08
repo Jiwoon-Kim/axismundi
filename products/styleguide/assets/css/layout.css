@@ -71,11 +71,12 @@
 	min-block-size: 100dvh;
 }
 
-/* M3 puts a single pane at compact and allows a second from medium, so the
- * supporting pane sits below the focus pane until there is room beside it. */
+/* Expanded is where M3 puts a standard expanded navigation rail beside the
+ * pane; compact and medium get a navigation bar or a modal rail instead, so
+ * below this the rail stacks above the pane rather than sitting next to it. */
 @media (min-width: 840px) {
 	.ax-scaffold {
-		grid-template-columns: auto minmax(0, 1fr);
+		grid-template-columns: var(--ax-sys-layout-rail-navigation) minmax(0, 1fr);
 		grid-template-areas:
 			"rail focus"
 			"rail supporting";
@@ -83,7 +84,10 @@
 
 	/* Fixed at expanded and above - the one pane width M3 publishes. */
 	.ax-scaffold--supporting-beside {
-		grid-template-columns: auto minmax(0, 1fr) var(--md-sys-layout-pane-supporting);
+		grid-template-columns:
+			var(--ax-sys-layout-rail-navigation)
+			minmax(0, 1fr)
+			var(--md-sys-layout-pane-supporting);
 		grid-template-areas: "rail focus supporting";
 	}
 }

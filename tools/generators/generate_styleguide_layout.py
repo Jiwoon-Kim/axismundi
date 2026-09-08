@@ -125,6 +125,9 @@ def render_layout(data: dict) -> str:
     for pane in data["panes"]:
         prefix = "md" if pane["source"] == "m3" else "ax"
         lines.append(f"\t--{prefix}-sys-layout-pane-{pane['name']}: {px(pane['width'])};")
+    for rail in data.get("rails") or []:
+        prefix = "md" if rail["source"] == "m3" else "ax"
+        lines.append(f"\t--{prefix}-sys-layout-rail-{rail['name']}: {px(rail['width'])};")
     lines.append("")
 
     lines.append("\t/* WordPress's own axis, not a breakpoint. */")

@@ -14,23 +14,31 @@
 {%- include theme-bootstrap.html %}
 {%- include head.html %}
 </head>
-<body class="sg-body">
+<body class="sg-body ax-scaffold">
   <a class="sg-skip" href="#main">본문으로 건너뛰기</a>
   {%- include navigation.html %}
-  <main class="sg-main" id="main">
+  {%- comment -%}
+    The rail and one focus pane, which is what M3 gives a single-pane layout.
+    The footer sits inside the focus column rather than in a third grid area:
+    it is part of the pane, not a supporting pane, and calling it one would
+    misuse the word the layout pages define.
+  {%- endcomment %}
+  <div class="ax-scaffold__focus">
+    <main class="sg-main ax-content" id="main">
     {%- if page.title %}
-    <header class="sg-page-head">
+      <header class="sg-page-head">
       <h1 class="sg-page-title">{{ page.title }}</h1>
       {%- if page.description %}
       <p class="sg-page-description">{{ page.description }}</p>
       {%- endif %}
     </header>
     {%- endif %}
-    <div class="sg-prose">
-      {{ content }}
-    </div>
-  </main>
-  {%- include footer.html %}
+      <div class="sg-prose">
+        {{ content }}
+      </div>
+    </main>
+    {%- include footer.html %}
+  </div>
   <script src="{{ '/assets/js/theme-switcher.js' | relative_url }}" defer></script>
   {%- if page.url contains "/motion/" %}
   <script src="{{ '/assets/js/motion-demo.js' | relative_url }}" defer></script>

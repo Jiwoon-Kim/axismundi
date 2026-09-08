@@ -62,6 +62,15 @@ panes:
     width: 360
     note: Fixed at expanded and above; below the focus pane, flexible, at compact and medium.
 
+# The rail is the perimeter space that holds navigation, not the navigation
+# itself - M3's glossary keeps those apart and so does this. M3 names a
+# collapsed and a standard expanded navigation rail per breakpoint but publishes
+# no width for either, so this one is ours.
+rails:
+  - name: navigation
+    source: axismundi
+    width: 240
+
 # Column counts and the space around and between them are not in the published
 # breakpoint or grid tables, so they are this project's choice. 4/8/12 is the
 # long-standing Material grid; large and extra-large hold at 12 and spend the

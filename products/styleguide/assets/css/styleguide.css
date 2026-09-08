@@ -1,16 +1,16 @@
 /* ============================================================
  * Axismundi Style Guide — site chrome
  *
- * Layout, colour and spacing for the documentation site itself. Typography
- * is not here: the chrome asks for a type role from tokens.sys.typography.css
- * and a family from tokens.ref.typeface.css, so a size only ever appears in
- * one place.
+ * Decoration and typesetting for the documentation site itself. Nothing here
+ * decides a value: type comes from the typescale, colour from the theme's
+ * palette, spacing from the measurement scale, and the shell's geometry from
+ * the layout tokens. This site is the first implementation of its own
+ * Foundations pages, so a number invented here would be a number those pages
+ * do not describe.
  *
- * Colour is not here either. The site renders in the theme's own palette,
- * synced from the products, so what a reader sees on this page is what the
- * products render. The `--sg-` names that remain are layout measurements, and
- * the two that name a colour role are aliases chosen for this site's chrome,
- * not new colours.
+ * Two `--sg-` names survive, and both name a surface role rather than a value:
+ * where this site puts its raised and its quiet surfaces is a documentation
+ * decision, not a colour one.
  * ============================================================ */
 
 :root {
@@ -20,11 +20,6 @@
   --sg-surface-raised: var(--md-sys-color-surface-container-low);
   --sg-surface-quiet: var(--md-sys-color-surface-container-high);
 
-  --sg-measure: 68ch;
-  --sg-rail: 15rem;
-  --sg-gap: 1rem;
-  --sg-gap-lg: 2rem;
-  --sg-radius: 12px;
 }
 
 *,
@@ -45,23 +40,6 @@
   /* The spec gives every role an opsz equal to its font size; on a variable
    * font this does exactly that, so no role emits font-variation-settings. */
   font-optical-sizing: auto;
-  display: grid;
-  grid-template-columns: var(--sg-rail) minmax(0, 1fr);
-  grid-template-areas:
-    "nav main"
-    "nav footer";
-  align-items: start;
-  min-block-size: 100dvh;
-}
-
-@media (max-width: 899px) {
-  .sg-body {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "nav"
-      "main"
-      "footer";
-  }
 }
 
 /* --- Skip link ------------------------------------------------ */
@@ -73,19 +51,18 @@
 }
 
 .sg-skip:focus {
-  inset-inline-start: var(--sg-gap);
-  inset-block-start: var(--sg-gap);
+  inset-inline-start: var(--md-sys-measurement-space200);
+  inset-block-start: var(--md-sys-measurement-space200);
   padding: 0.5rem 0.75rem;
   background: var(--sg-surface-raised);
-  border-radius: var(--sg-radius);
+  border-radius: var(--md-sys-shape-corner-value-medium);
   outline: 3px solid var(--md-sys-color-primary);
 }
 
 /* --- Navigation ----------------------------------------------- */
 
 .sg-nav {
-  grid-area: nav;
-  padding: var(--sg-gap-lg) var(--sg-gap);
+  padding: var(--md-sys-measurement-space400) var(--md-sys-measurement-space200);
   border-inline-end: 1px solid var(--md-sys-color-outline-variant);
   position: sticky;
   inset-block-start: 0;
@@ -93,7 +70,11 @@
   overflow-y: auto;
 }
 
-@media (max-width: 899px) {
+/* Below expanded the rail is not beside the pane, so it stops being sticky and
+ * its edge moves from the side to the bottom. The breakpoint is M3's: a
+ * standard expanded navigation rail is what expanded and up gets, and compact
+ * and medium get a navigation bar or a modal rail instead. */
+@media (max-width: 839px) {
   .sg-nav {
     position: static;
     max-block-size: none;
@@ -106,8 +87,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--sg-gap);
-  margin-block-end: var(--sg-gap-lg);
+  gap: var(--md-sys-measurement-space200);
+  margin-block-end: var(--md-sys-measurement-space400);
 }
 
 .sg-nav__home {
@@ -126,7 +107,7 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: var(--sg-gap);
+  gap: var(--md-sys-measurement-space200);
 }
 
 .sg-nav__link {
@@ -160,9 +141,7 @@
 /* --- Page ----------------------------------------------------- */
 
 .sg-main {
-  grid-area: main;
-  padding: var(--sg-gap-lg) var(--sg-gap-lg) 0;
-  max-inline-size: var(--sg-measure);
+  padding-block: var(--md-sys-measurement-space400) 0;
 }
 
 .sg-page-title {
@@ -183,13 +162,13 @@
 }
 
 .sg-page-head {
-  margin-block-end: var(--sg-gap-lg);
-  padding-block-end: var(--sg-gap);
+  margin-block-end: var(--md-sys-measurement-space400);
+  padding-block-end: var(--md-sys-measurement-space200);
   border-block-end: 1px solid var(--md-sys-color-outline-variant);
 }
 
 .sg-prose h2 {
-  margin-block-start: var(--sg-gap-lg);
+  margin-block-start: var(--md-sys-measurement-space400);
   font-family: var(--md-sys-typescale-headline-small-font);
   font-size: var(--md-sys-typescale-headline-small-size);
   font-weight: var(--md-sys-typescale-headline-small-weight);
@@ -198,7 +177,7 @@
 }
 
 .sg-prose h3 {
-  margin-block-start: var(--sg-gap-lg);
+  margin-block-start: var(--md-sys-measurement-space400);
   font-family: var(--md-sys-typescale-title-large-font);
   font-size: var(--md-sys-typescale-title-large-size);
   font-weight: var(--md-sys-typescale-title-large-weight);
@@ -221,8 +200,8 @@
 .sg-prose pre {
   background: var(--sg-surface-raised);
   border: 1px solid var(--md-sys-color-outline-variant);
-  border-radius: var(--sg-radius);
-  padding: var(--sg-gap);
+  border-radius: var(--md-sys-shape-corner-value-medium);
+  padding: var(--md-sys-measurement-space200);
   overflow-x: auto;
   /* The one place this site raises a surface. In light the theme's formula
    * draws a shadow; in dark it resolves to none, because M3 reads elevation
@@ -266,7 +245,7 @@
 
 .sg-prose blockquote {
   margin-inline: 0;
-  padding-inline-start: var(--sg-gap);
+  padding-inline-start: var(--md-sys-measurement-space200);
   border-inline-start: 3px solid var(--md-sys-color-outline);
   color: var(--md-sys-color-on-surface-variant);
 }
@@ -274,15 +253,14 @@
 /* --- Footer --------------------------------------------------- */
 
 .sg-footer {
-  grid-area: footer;
-  padding: var(--sg-gap-lg);
-  margin-block-start: var(--sg-gap-lg);
+  padding-block: var(--md-sys-measurement-space400);
+  margin-block-start: var(--md-sys-measurement-space400);
   border-block-start: 1px solid var(--md-sys-color-outline-variant);
   color: var(--md-sys-color-on-surface-variant);
   font-size: var(--md-sys-typescale-body-medium-size);
   letter-spacing: var(--md-sys-typescale-body-medium-tracking);
   line-height: var(--md-sys-typescale-body-medium-line-height);
-  max-inline-size: var(--sg-measure);
+  
 }
 
 .sg-footer__line {
@@ -290,7 +268,7 @@
 }
 
 .sg-footer__meta {
-  margin-block: var(--sg-gap) 0;
+  margin-block: var(--md-sys-measurement-space200) 0;
 }
 
 .sg-footer a {
@@ -329,7 +307,7 @@
 
 .sg-roles {
   display: grid;
-  gap: var(--sg-gap);
+  gap: var(--md-sys-measurement-space200);
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
   margin-block: 0.5rem 1.5rem;
   padding: 0;
@@ -483,7 +461,7 @@
 
 .sg-shapes {
   display: grid;
-  gap: var(--sg-gap);
+  gap: var(--md-sys-measurement-space200);
   grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
   margin-block: 0.5rem 1.5rem;
   padding: 0;
@@ -512,7 +490,7 @@
 
 .sg-states {
   display: grid;
-  gap: var(--sg-gap);
+  gap: var(--md-sys-measurement-space200);
   grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
   margin-block: 0.5rem 1.5rem;
   padding: 0;
@@ -533,7 +511,7 @@
 
 .sg-elevations {
   display: grid;
-  gap: var(--sg-gap-lg);
+  gap: var(--md-sys-measurement-space400);
   grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
   margin-block: 1rem 2rem;
   padding: 0;

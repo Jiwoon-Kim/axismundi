@@ -145,11 +145,27 @@ wideSize      {{ site.data.layout.content_widths.wide }}px
 뺄셈이 하는 일이 있습니다 — 최대 폭에 못 미치는 좁은 화면에서는 요소가 가장자리에
 붙는 대신 **margin을 돌려줍니다.**
 
-## 아직 안 한 것
+## 이 사이트가 그 구현체입니다
 
-이 문서 사이트의 shell은 아직 scaffold로 재단장되지 않았습니다. 지금 내비게이션
-레일은 고정 `15rem`이고 본문은 `68ch`인데, 둘 다 이 페이지가 서술하는 토큰이
-아닙니다.
+지금 보고 계신 shell이 위 primitive 위에 올라가 있습니다. 좌측 레일은
+`--ax-sys-layout-rail-navigation`, 본문 폭은 `.ax-content`, 여백은 measurement
+스케일이고, 레일이 위로 접히는 지점은 **840px** — M3가 expanded부터 standard
+expanded navigation rail을 두라고 하는 그 경계입니다.
 
-토큰과 primitive가 먼저 있어야 그 위에서 갈아끼울 수 있어서 순서를 이렇게
-잡았습니다. 재단장하면 이 사이트 자체가 자기 문서의 첫 구현체가 됩니다.
+실측입니다.
+
+| 뷰포트 | 구간 | 레이아웃 |
+|---|---|---|
+| 620px | compact | 단일 열, margin 16px |
+| 800px | medium | 레일이 위로 쌓임, margin 24px |
+| 900px | expanded | `240px` + pane, 레일 sticky |
+| 1400px | large | `240px` + pane, 본문 760px 중앙 |
+
+**본문 한 줄이 한글 50자 / 라틴 80자입니다.** 한글 쪽은 편안한 범위의 위쪽,
+라틴 쪽은 권장 45–75자를 조금 넘습니다. 이 사이트가 `contentSize`를 그대로
+쓰기 때문에 나오는 숫자이고, 줄이려면 스타일가이드가 아니라 테마의
+`theme.json`을 고쳐야 합니다 — 여기서만 좁히면 이 사이트가 제품을 보여주지
+않게 되니까요.
+
+footer는 세 번째 grid 영역이 아니라 focus pane 안에 있습니다. supporting pane이
+아니니 그렇게 부르면 위 용어표를 어기게 됩니다.

@@ -154,8 +154,10 @@ is-style-outline    core 등록 · theme.json styles.blocks.core/button.variatio
 is-style-outlined   테마 등록 · styles/blocks/button-outlined.json
 ```
 
-실제로 쓰이는 것은 전부 `is-style-outline`입니다 — 패턴, 플러그인, Lab, 그리고
-core가 기본으로 제공하는 것. `is-style-outlined`를 쓰는 곳은 저장소에 없습니다.
+`is-style-outline`가 core/button의 canonical variation입니다. 반면
+`is-style-outlined`는 Dialog·Sheet를 포함한 multi-block partial의 slug이고, 이미
+저장된 콘텐츠에도 존재할 수 있는 legacy class입니다. 두 이름을 같은 것으로
+취급하거나 무심코 하나를 지우면 안 됩니다.
 
 `button-outlined.json`이 그래도 지워지지 않은 이유는 `blockTypes`에 있습니다.
 
@@ -166,21 +168,21 @@ core가 기본으로 제공하는 것. `is-style-outlined`를 쓰는 곳은 저�
 core의 `outline`은 `core/button`에만 등록되므로, dialog와 sheet의 열기 버튼에
 Outlined를 주는 곳은 이 partial뿐입니다. 즉 **`core/button` 쪽만 중복**입니다.
 
-그리고 이 partial은 에디터에서 Filled로 보입니다. 테마의
-`assets/styles/components.button.css`가 그 이유를 이미 적어 두었습니다 — partial의
-`styles.elements.button`이 에디터 캔버스에서 잘못된 **후손 선택자**로 나옵니다.
+partial의 `styles.elements.button`은 프런트와 에디터에서 잘못된 **후손 선택자**로
+나옵니다.
 
 ```
 .is-style-X .wp-block-button__link .wp-element-button
 ```
 
 실제 마크업은 `<a class="wp-block-button__link wp-element-button">` 하나이므로 이
-선택자는 아무것도 잡지 못하고 기본 Filled가 남습니다. 테마는 tonal·elevated·text
-세 개에 대해 공개 클래스 규칙으로 이를 우회하고 있는데, **outlined는 그 목록에
-없습니다.** `core/button`에서는 아무도 `is-style-outlined`를 쓰지 않아 표면화되지
-않았을 뿐이고, 스타일 목록에는 계속 보입니다.
+선택자는 아무것도 잡지 못하고 기본 Filled가 남습니다. 테마는 tonal·elevated·text에
+이어 `is-style-outlined`에도 공개 클래스 규칙을 둡니다. 따라서 legacy class는
+프런트와 에디터 모두에서 Outlined 표면으로 렌더됩니다.
 
-정리하면 세 가지 선택지가 있고, 아직 고르지 않았습니다.
+장기적으로는 core/button에서 `is-style-outlined`를 노출하지 않고
+`is-style-outline`로 저장 콘텐츠를 마이그레이션하는 편이 낫습니다. 다만 Dialog와
+Sheet는 같은 partial을 계속 쓰므로, migration 전에 이 shim을 지우면 안 됩니다.
 
 ```
 A  outlined shim 추가        3줄. 에디터 미리보기만 고침, 중복은 남음

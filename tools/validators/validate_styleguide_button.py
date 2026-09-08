@@ -21,6 +21,7 @@ THEME = ROOT / "products/wordpress/themes/axismundi"
 DATA = STYLEGUIDE / "_data/button.yml"
 ADAPTER = STYLEGUIDE / "assets/css/components/button.css"
 THEME_JSON = THEME / "theme.json"
+THEME_COMPONENT_CSS = THEME / "assets/styles/components.button.css"
 PARTIALS = {
 	"connected": THEME / "styles/blocks/buttons-connected.json",
 	"elevated": THEME / "styles/blocks/button-elevated.json",
@@ -63,7 +64,7 @@ def theme_button(style: dict) -> dict:
 
 
 def main() -> int:
-    required = [DATA, ADAPTER, THEME_JSON, *PARTIALS.values()]
+    required = [DATA, ADAPTER, THEME_JSON, THEME_COMPONENT_CSS, *PARTIALS.values()]
     missing = [path.relative_to(ROOT).as_posix() for path in required if not path.is_file()]
     if missing:
         print("missing:")
@@ -72,6 +73,7 @@ def main() -> int:
 
     data = yaml.safe_load(DATA.read_text(encoding="utf-8"))
     css = ADAPTER.read_text(encoding="utf-8")
+    theme_component_css = THEME_COMPONENT_CSS.read_text(encoding="utf-8")
     theme = json.loads(THEME_JSON.read_text(encoding="utf-8"))
     partials = {
         name: json.loads(path.read_text(encoding="utf-8"))
@@ -217,6 +219,42 @@ def main() -> int:
     ):
         report.check(source in connected_theme_css,
                      f"theme Connected Buttons variation no longer contains {source}")
+
+    # `is-style-outline` is core/button's canonical variation. The theme still
+    # has a multi-block `outlined` partial for Dialog and Sheet, and old posts
+    # may carry that legacy class. Core emits its element rule as an impossible
+    # descendant selector, so the direct public-class shim is a front-end as
+    # well as editor-parity contract.
+    legacy_outline = block(
+        theme_component_css,
+        ".wp-block-button.is-style-outlined .wp-block-button__link:not(.has-background)",
+    )
+    report.check(legacy_outline is not None,
+                 "theme has no legacy is-style-outlined compatibility shim")
+    if legacy_outline is not None:
+        expected_legacy_outline = {
+            "background-color": "transparent",
+            "background-image": "none",
+            "border": "1px solid var(--wp--preset--color--outline-variant)",
+            "color": "var(--wp--preset--color--on-surface-variant)",
+        }
+        for name, want in expected_legacy_outline.items():
+            report.check(declaration(legacy_outline, name) == want,
+                         f"legacy is-style-outlined {name} differs from core outline")
+    for state, opacity in (("hover", "hover"), ("focus", "focus"), ("active", "pressed")):
+        state_rule = block(
+            theme_component_css,
+            f".wp-block-button.is-style-outlined .wp-block-button__link:{state}",
+        )
+        report.check(state_rule is not None,
+                     f"theme legacy is-style-outlined has no {state} state rule")
+        if state_rule is not None:
+            expected = (
+                "color-mix(in srgb, var(--wp--preset--color--on-surface-variant) "
+                f"calc(var(--md-sys-state-{opacity}-state-layer-opacity) * 100%), transparent)"
+            )
+            report.check(declaration(state_rule, "background-color") == expected,
+                         f"legacy is-style-outlined {state} state differs from core outline")
 
     print(f"  checked {report.checked} button contracts")
     if report.problems:

@@ -18,6 +18,7 @@ on:
       - "products/wordpress/themes/axismundi/assets/styles/tokens.*.css"
       - "products/wordpress/themes/axismundi/assets/styles/icons.css"
       - "products/wordpress/plugins/axismundi-korean-font-provider/assets/**"
+      - "index.html"
       - ".github/workflows/styleguide.yml"
   push:
     branches:
@@ -35,6 +36,7 @@ on:
       - "products/wordpress/themes/axismundi/assets/styles/tokens.*.css"
       - "products/wordpress/themes/axismundi/assets/styles/icons.css"
       - "products/wordpress/plugins/axismundi-korean-font-provider/assets/**"
+      - "index.html"
       - ".github/workflows/styleguide.yml"
   workflow_dispatch:
 
@@ -46,6 +48,9 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -73,25 +78,48 @@ jobs:
         working-directory: products/styleguide
         run: bundle exec jekyll build
 
-      # The site is served from /styleguide/, so the artifact carries it in a
-      # subdirectory of the Pages root rather than at the root itself.
+      # The artifact is the whole public site, not a copy of the repository.
+      # Pages used to serve every tracked file from main, which put the corpus,
+      # the atlas and the docs tree online as a side effect of how the build
+      # worked rather than as a decision. Only what is built here is published.
       - name: Stage the Pages artifact
         run: |
-          mkdir -p _site/styleguide
-          cp -r products/styleguide/_site/. _site/styleguide/
+          mkdir -p _site
+          cp index.html _site/index.html
+          cp -r products/styleguide/_site _site/styleguide
           touch _site/.nojekyll
 
-      - name: Upload artifact
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: styleguide-site
           path: _site
           retention-days: 7
 
-      # No deploy step yet, on purpose. GitHub Pages still serves the whole
-      # repository from main, which is how the generated styleguide/ mirror
-      # reaches /styleguide/. Switching the Pages source to Actions would hand
-      # that URL to this site, and it has one page so far. When it has
-      # something to show: change the Pages source to GitHub Actions, add the
-      # configure-pages / deploy-pages pair here, then delete the root mirror
-      # and tools/generators/publish_styleguide.py in the same commit.
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  # Separate job because deploy-pages claims the github-pages environment, and
+  # a pull request must never claim it: the build above still runs on a PR, so
+  # a broken site fails review rather than reaching the URL.
+  deploy:
+    name: Deploy to Pages
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

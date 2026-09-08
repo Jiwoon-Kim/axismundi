@@ -65,10 +65,12 @@ Publishing surface는 authority가 아니라 mirror입니다. 원본을 고친 �
 | Surface | 상태 | Source authority |
 |---|---|---|
 | `index.html` | 프로젝트 landing | README / project docs |
-| `styleguide/` | 생성된 component styleguide mirror | `products/reference-implementations/axismundi-lab/style-guide*.html` |
+| `styleguide/` | CI가 빌드·배포하는 스타일가이드 | `products/styleguide/` |
 | `templates/` | 예정된 page-layout / template preview route | 향후 `products/reference-implementations/axismundi-lab/templates/` |
 
-`styleguide/`는 생성물입니다. 직접 편집하지 않습니다.
+`styleguide/`는 `.github/workflows/styleguide.yml`이 빌드해 Pages Actions
+아티팩트로 서빙합니다. 저장소 안의 디렉터리가 아니므로 `products/styleguide/`를
+편집합니다.
 
 ## 실행 방법
 
@@ -84,10 +86,10 @@ npm install
 python .\tools\validators\validate_token_layering.py
 ```
 
-styleguide publish mirror 재생성:
+스타일가이드 빌드와 검증:
 
 ```powershell
-python .\tools\generators\publish_styleguide.py
+python .\products\styleguide\bin\build.py --verify
 ```
 
 기대 결과:
@@ -123,7 +125,7 @@ WordPress 바인딩은 `bindings/wordpress-material3/`에 있습니다. 이를 �
 
 - Wave 1 public-surface component audit는 완료되었습니다.
 - Lab module pattern HTML은 기본적으로 public API가 아니라 검증 표면입니다.
-- `styleguide/`는 생성된 mirror라서 재생성할 수 있습니다.
+- 공개되는 스타일가이드는 CI가 `products/styleguide/`에서 빌드합니다.
 - GitHub 저장소 생성과 GitHub Pages 활성화는 v3.5.15 범위입니다.
 - WordPress.org 제출 패키지는 아직 구성되지 않았습니다.
 

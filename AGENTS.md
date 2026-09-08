@@ -26,7 +26,7 @@ Codex in this repo is a **plan-first executor / reviewer**. It is NOT the ontolo
 - Reading any repo file for context
 - Drafting audit doc bodies inside approved skeletons (e.g., `lab/modules/button/docs/BUTTON-*.md`)
 - Running validators and reporting results: `python tools/validators/validate_token_layering.py`
-- Running publish: `python3 tools/generators/publish_styleguide.py`
+- Building the style guide: `python3 products/styleguide/bin/build.py --verify`
 - Cross-reference checks across docs
 - Small, focused diffs with clear scope
 
@@ -36,7 +36,7 @@ Codex in this repo is a **plan-first executor / reviewer**. It is NOT the ontolo
 - Baseline mutations:
   - `products/reference-implementations/axismundi-lab/stylesheets/components.css` §0–§34 baseline sections
   - `products/reference-implementations/axismundi-lab/style-guide.html` `#components-*` anchors
-  - Published mirror: `styleguide/` (regenerated only by `publish_styleguide.py`)
+  - Published site: built from `products/styleguide/` by `.github/workflows/styleguide.yml`
 - Naming sweeps (e.g., `.snackbar → .ax-snackbar` — BACKLOG #18)
 - `theme.json` edits (BACKLOG #20/#22)
 - `data-theme="auto"` implementation

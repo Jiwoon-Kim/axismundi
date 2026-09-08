@@ -66,10 +66,12 @@ generator.
 | Surface | Status | Source authority |
 |---|---|---|
 | `index.html` | Project landing | README / project docs |
-| `styleguide/` | Generated component styleguide mirror | `products/reference-implementations/axismundi-lab/style-guide*.html` |
+| `styleguide/` | Style guide, built and deployed by CI | `products/styleguide/` |
 | `templates/` | Planned page-layout / template preview route | Future `products/reference-implementations/axismundi-lab/templates/` |
 
-`styleguide/` is generated output. Do not edit it directly.
+`styleguide/` is built by `.github/workflows/styleguide.yml` and served from a
+Pages Actions artifact. It is not a directory in this repository; edit
+`products/styleguide/`.
 
 ## Quick Start
 
@@ -85,10 +87,10 @@ Run the validator:
 python .\tools\validators\validate_token_layering.py
 ```
 
-Regenerate the styleguide publish mirror:
+Build and verify the style guide:
 
 ```powershell
-python .\tools\generators\publish_styleguide.py
+python .\products\styleguide\bin\build.py --verify
 ```
 
 Expected validator result:
@@ -105,7 +107,6 @@ PASS - token layering holds.
 ```txt
 axismundi/
 ├── index.html
-├── styleguide/                  generated publish mirror
 ├── CONSTITUTION.md
 ├── LICENSE-MATRIX.md
 ├── NOTICE.md
@@ -154,7 +155,7 @@ Plugin territory:
 - Wave 1 public-surface component audits are complete.
 - Lab module pattern HTML files are validation surfaces, not public API by
   default.
-- `styleguide/` is derived from `axismundi-lab/` and can be regenerated.
+- The published style guide is built from `products/styleguide/` by CI.
 - GitHub repository creation and GitHub Pages activation are planned for
   v3.5.15.
 - The WordPress.org submission package is not yet assembled.

@@ -22,13 +22,12 @@
  *   2 the button         size
  *   3 the button         colour style
  *   4 the container      layout only
- *   5 the group          size, shape and colour for every segment
+ *   5 connected buttons  connected geometry only
  *
- * Sections 2 and 3 sit on .wp-block-button, section 5 on
- * .wp-block-buttons.is-style-connected > .wp-block-button. Those two carry the
- * same specificity, so the group wins because it is written last — which is
- * exactly the rule M3 states: a member of a button group is a segment, not an
- * independent button, and the group decides for it.
+ * core/buttons is an action container, not an M3 Button group. Its Connected
+ * variation only joins neighbouring button shapes; child buttons keep their
+ * own size and colour decisions. A real M3 Button group owns state and segment
+ * configuration as a separate component, as axismundi-theme-switcher does.
  *
  * Colour is named in --md-sys-color-* here. WordPress publishes the same roles
  * as --wp--preset--color--*, generated from theme.json settings at runtime;
@@ -256,12 +255,12 @@
 	list-style: none;
 }
 
-/* --- 5. Except as a group, where it decides everything -------- */
+/* --- 5. Connected Buttons only join geometry ------------------- */
 
-/* is-style-connected is what turns the container into M3's Button group. The
- * declarations below sit on the same elements sections 2 and 3 write on, at
- * the same specificity, and later — so the group's decision wins. A segment
- * that carries its own is-style-tonal is overruled here on purpose. */
+/* This is the core/buttons Connected variation from the deployed theme. It is
+ * still an action container: a card may pair a Filled "Get tickets" action
+ * with an Outlined "Learn more" action. The variation changes only adjacency
+ * geometry, never a child's size or colour style. */
 .wp-block-buttons.is-style-connected {
 	flex-wrap: nowrap;
 	gap: var(--md-sys-measurement-space25);
@@ -269,11 +268,6 @@
 
 .wp-block-buttons.is-style-connected > .wp-block-button {
 	margin: 0;
-	--ax-button-container: var(--md-sys-color-secondary-container);
-	--ax-button-content: var(--md-sys-color-on-secondary-container);
-	--ax-button-state-role: var(--md-sys-color-on-secondary-container);
-	--ax-button-shape: var(--md-sys-shape-corner-value-small);
-	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-extra-small);
 }
 
 /* Only the two ends of the group are pills; the seams between segments stay
@@ -289,12 +283,4 @@
 .wp-block-buttons.is-style-connected > .wp-block-button:last-child > .wp-block-button__link:active {
 	border-start-end-radius: var(--md-sys-shape-corner-value-large-increased);
 	border-end-end-radius: var(--md-sys-shape-corner-value-large-increased);
-}
-
-/* A selected segment. aria-pressed is the state, so the selector reads it
- * rather than a class: the accessible name and the paint cannot disagree. */
-.wp-block-buttons.is-style-connected > .wp-block-button > .wp-block-button__link[aria-pressed="true"] {
-	--ax-button-container: var(--md-sys-color-secondary);
-	--ax-button-content: var(--md-sys-color-on-secondary);
-	--ax-button-state-role: var(--md-sys-color-on-secondary);
 }

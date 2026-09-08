@@ -22,7 +22,8 @@ DATA = STYLEGUIDE / "_data/button.yml"
 ADAPTER = STYLEGUIDE / "assets/css/components/button.css"
 THEME_JSON = THEME / "theme.json"
 PARTIALS = {
-    "elevated": THEME / "styles/blocks/button-elevated.json",
+	"connected": THEME / "styles/blocks/buttons-connected.json",
+	"elevated": THEME / "styles/blocks/button-elevated.json",
     "tonal": THEME / "styles/blocks/button-tonal.json",
     "text": THEME / "styles/blocks/button-text.json",
 }
@@ -162,15 +163,32 @@ def main() -> int:
     ):
         report.check(token in css, f"adapter does not consume {token}")
 
-    connected = block(css, ".wp-block-buttons.is-style-connected > .wp-block-button")
-    report.check(connected is not None, "adapter has no connected group contract")
-    if connected is not None:
-        report.check(declaration(connected, "--ax-button-container") == "var(--md-sys-color-secondary-container)",
-                     "connected group does not own its segment container")
-        report.check(declaration(connected, "--ax-button-shape") == "var(--md-sys-shape-corner-value-small)",
-                     "connected group does not own its segment shape")
-    report.check('[aria-pressed="true"]' in css,
-                 "connected group does not derive selected paint from aria-pressed")
+    # core/buttons Connected is a visual variation, not an M3 Button group. It
+    # joins child geometry but preserves every child's independent size and style.
+    connected_container = block(css, ".wp-block-buttons.is-style-connected")
+    connected_child = block(css, ".wp-block-buttons.is-style-connected > .wp-block-button")
+    report.check(connected_container is not None, "adapter has no Connected Buttons container rule")
+    if connected_container is not None:
+        report.check(declaration(connected_container, "flex-wrap") == "nowrap",
+                     "Connected Buttons must remain on one visual row")
+        report.check(declaration(connected_container, "gap") == "var(--md-sys-measurement-space25)",
+                     "Connected Buttons gap differs from the theme variation")
+    report.check(connected_child is not None, "adapter has no Connected Buttons child rule")
+    if connected_child is not None:
+        report.check(declaration(connected_child, "margin") == "0",
+                     "Connected Buttons child margin differs from the theme variation")
+        for name in ("--ax-button-container", "--ax-button-content", "--ax-button-state-role", "--ax-button-height"):
+            report.check(declaration(connected_child, name) is None,
+                         f"Connected Buttons must not override child {name}")
+
+    connected_theme_css = partials["connected"]["styles"]["css"]
+    for source in (
+        "&{flex-wrap:nowrap;}",
+        "& > .wp-block-button{margin:0;}",
+        "& > .wp-block-button > .wp-block-button__link{border-radius:8px;}",
+    ):
+        report.check(source in connected_theme_css,
+                     f"theme Connected Buttons variation no longer contains {source}")
 
     print(f"  checked {report.checked} button contracts")
     if report.problems:

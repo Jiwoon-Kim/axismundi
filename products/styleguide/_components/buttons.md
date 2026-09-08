@@ -184,7 +184,11 @@ stiffness {{ site.data.button.meta.spring_stiffness }}로 다섯 크기가 모�
 
 ## 결정 지점
 
-**하나의 button에서는 button이 크기와 스타일을 정합니다.** 하나의 group에서는
-group이 정합니다 — group의 구성원은 독립된 button이 아니라 **segment**이기 때문입니다.
+**하나의 button에서는 button이 크기와 스타일을 정합니다.** `core/buttons`는 그런
+button을 배치하는 action container입니다. 상태를 공유하는 진짜 M3 Button group에서만
+group이 크기·스타일과 선택 상태를 정합니다 — 구성원이 독립된 button이 아니라
+**segment**이기 때문입니다.
 
-이 규칙이 CSS와 블록 마크업에서 실제로 어떻게 성립하는지는 바인딩 페이지에 있습니다.
+`core/buttons.is-style-connected`는 Button group 그 자체가 아니라 연결된 외형을 주는
+WordPress variation입니다. 이 경계가 CSS와 블록 마크업에서 어떻게 성립하는지는
+바인딩 페이지에 있습니다.

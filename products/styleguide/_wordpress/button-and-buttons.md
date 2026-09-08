@@ -6,77 +6,80 @@ lang: ko
 ---
 
 ```
-M3 Button / Button group
+M3 Button / connected Buttons / Button group
         ↓
 core/button / core/buttons
         ↓
 Axismundi theme.json + component CSS
 ```
 
-세 층을 잇는 규칙은 하나입니다.
+세 층을 잇는 규칙은 세 갈래입니다.
 
-> **하나의 button에서는 button이 크기와 스타일을 정한다.
-> 하나의 group에서는 group이 정한다.**
+> **하나의 button에서는 button이 크기와 스타일을 정한다.**
+> **`core/buttons`는 그런 button들을 배치한다.**
+> **진짜 M3 Button group에서만 group이 segment의 구성을 정한다.**
 
-group의 구성원은 독립된 button이 아니라 **segment**입니다. segment가 자기 색을
-고르면 그건 group이 아니라 그냥 버튼 몇 개입니다.
+마지막 줄의 group 구성원은 독립된 button이 아니라 **segment**입니다. segment가
+자기 색을 고르면 그건 group이 아니라 그냥 버튼 몇 개입니다. 하지만
+`core/buttons`의 자식은 바로 그 “버튼 몇 개”가 맞습니다.
 
-## core/buttons는 두 가지입니다
+## `core/buttons`는 Button group이 아닙니다
 
 이 구분이 이 페이지 전체의 축입니다.
 
 | | 무엇인가 | 무엇을 정하는가 |
 |---|---|---|
-| `core/buttons` | 레이아웃 컨테이너 | 배치와 `blockGap`. 그게 전부 |
-| `core/buttons.is-style-connected` | M3 Button group | 모든 segment의 크기·모양·색 |
+| `core/buttons` | action container | 배치와 `blockGap`. 자식 button이 크기·스타일을 정함 |
+| `core/buttons.is-style-connected` | Connected Buttons variation | 연결 모양과 gap. 자식 button의 결정은 유지 |
+| M3 Button group | 상태를 가진 별도 컴포넌트 | 모든 segment의 크기·모양·색, 선택 상태 |
 
-WordPress에서 `core/buttons`는 원래 flex 컨테이너입니다 — M3의 Button group과
-같은 것이 아닙니다. **`is-style-connected`가 컨테이너를 컴포넌트로 바꾸는
-지점**이고, 그 순간 결정권이 자식에서 부모로 넘어갑니다.
+WordPress에서 `core/buttons`는 원래 flex 컨테이너입니다. 테마의
+`is-style-connected`는 그 컨테이너에 인접한 모서리와 좁은 gap을 주는 **실제
+스타일 variation**입니다. 구현해 둔 것은 맞지만, 그것만으로 컨테이너가 M3의
+Button group이 되지는 않습니다. `aria-pressed`, 선택 규칙, 공통 상태가 없고,
+무엇보다 자식의 색과 크기를 재정의하지 않기 때문입니다.
 
 <div class="sg-demo sg-demo--stack">
   <div class="wp-block-buttons">
-    <div class="wp-block-button is-style-tonal"><button type="button" class="wp-block-button__link wp-element-button">Tonal</button></div>
-    <div class="wp-block-button is-style-outline"><button type="button" class="wp-block-button__link wp-element-button">Outlined</button></div>
-    <div class="wp-block-button is-style-text"><button type="button" class="wp-block-button__link wp-element-button">Text</button></div>
+    <div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="#">Get tickets</a></div>
+    <div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="#">Learn more</a></div>
   </div>
   <div class="wp-block-buttons is-style-connected">
-    <div class="wp-block-button is-style-tonal"><button type="button" class="wp-block-button__link wp-element-button" aria-pressed="true">Day</button></div>
-    <div class="wp-block-button is-style-outline"><button type="button" class="wp-block-button__link wp-element-button" aria-pressed="false">Week</button></div>
-    <div class="wp-block-button is-style-text"><button type="button" class="wp-block-button__link wp-element-button" aria-pressed="false">Month</button></div>
+    <div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="#">Get tickets</a></div>
+    <div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="#">Learn more</a></div>
   </div>
 </div>
 
-**두 줄의 마크업은 클래스 하나만 다릅니다.** 자식 셋은 위아래가 완전히 같고
-각자 `is-style-tonal`, `is-style-outline`, `is-style-text`를 달고 있습니다.
-아래에서는 그 셋이 전부 무시됩니다 — group이 정했기 때문입니다.
+**두 줄의 마크업은 컨테이너 클래스 하나만 다릅니다.** 아래줄은 Button의 색
+스타일을 무시하지 않습니다. Filled `Get tickets`와 Outlined `Learn more`가 그대로
+남고, 인접한 모서리와 gap만 연결됩니다. card의 actions처럼 서로 다른 목적의
+행동을 함께 놓는 것이 `core/buttons`의 본래 역할입니다.
 
-## 그 규칙을 CSS가 지키는 방법
+## Connected는 CSS가 어디까지 바꾸는가
 
-특별한 장치가 없습니다. **선언 순서**입니다.
+테마와 정적 어댑터 모두 container에 다음만 적용합니다.
 
 ```css
-/* 3. button이 정한다 */
-.wp-block-button.is-style-tonal { --ax-button-container: ...; }
-
-/* 5. group이 정한다 — 같은 특정도, 나중에 선언 */
-.wp-block-buttons.is-style-connected > .wp-block-button { --ax-button-container: ...; }
+.wp-block-buttons.is-style-connected {
+  flex-wrap: nowrap;
+  gap: var(--md-sys-measurement-space25);
+}
 ```
 
-두 선택자는 특정도가 같습니다(클래스 둘). 같으면 나중 것이 이깁니다. 그래서
-`assets/css/components/button.css`는 다섯 구획을 **순서 자체가 계약이 되도록**
-배열합니다.
+자식에 색·크기 custom property를 쓰지 않습니다. `assets/css/components/button.css`의
+순서는 다음 계약을 보존합니다.
 
 ```
 1 the control     커스텀 프로퍼티에서 읽는 기하
 2 the button      크기
 3 the button      색 스타일
 4 the container   배치만
-5 the group       모든 segment의 크기·모양·색
+5 connected buttons  연결 모양만
 ```
 
-여기서 무언가를 위로 옮기면 규칙이 조용히 뒤집힙니다. 그게 이 목록이 파일 맨 위
-주석에 다시 적혀 있는 이유입니다.
+M3 Button group은 Theme Switcher처럼 컴포넌트가 상태와 segment를 직접 소유할 때
+구현합니다. `core/buttons`에 시각 스타일 하나를 더했다고 그 의미까지 생기지는
+않습니다.
 
 ## 크기는 왜 `is-style-*`이 아닌가
 
@@ -126,6 +129,7 @@ label-large 서체, pill 반지름 20px, 눌린 8px, state layer, focus ring. Sm
 | Round 모양 + 눌림 morph | 바인딩됨 | — |
 | XS · M · L · XL | 없음 | `elements.button`이 크기를 하나로 못박고 있음 |
 | Square 모양 | 없음 | 위와 같음 |
+| M3 Button group | 없음 | `core/buttons`는 action container이며 선택 상태를 저장하지 않음 |
 | Toggle button | 없음 | 선택 상태를 저장할 곳이 core/button에 없음 |
 | Disabled | 없음 | `theme.json` element 모델에 `:disabled`가 없음 |
 | Icon slot | 없음 | core/button은 라벨만 가짐 |
@@ -215,5 +219,6 @@ python tools/validators/validate_styleguide_button.py
 ```
 
 높이, 좌우 여백, pill 반지름, 눌린 반지름, 다섯 스타일의 container·content 역할,
-state layer 불투명도, focus ring, connected group의 모서리 — `theme.json`과 partial이
-발행하는 값을 어댑터 CSS에서 다시 읽어 비교합니다. 한쪽만 고치면 빌드가 실패합니다.
+state layer 불투명도, focus ring, Connected Buttons variation의 gap·모서리 —
+`theme.json`과 partial이 발행하는 값을 어댑터 CSS에서 다시 읽어 비교합니다. 한쪽만
+고치면 빌드가 실패합니다.

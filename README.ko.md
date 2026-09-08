@@ -1,137 +1,128 @@
 # Axismundi
 
-Axismundi는 WordPress 바인딩과 파일럿 테마 경로를 가진, 온톨로지 기반
-Material 3 디자인 시스템입니다.
+**독립적이고 연합된 발행을 위한 WordPress 제품군.**
 
-현재 상태는 공개 준비 단계입니다. Wave 1 컴포넌트 커버리지는 닫혔고,
-검증 파이프라인은 통과하며, 다음 단계는 GitHub 저장소 생성과 GitHub Pages
-공개입니다.
+Material 3 블록 테마와, 정체성·주소록·활동·장소·일정·미디어·공개 웹 발행을 다루는
+동반 플러그인들입니다.
 
-- 작성자 및 최종 결정권자: KIM JIWOON (designbusan.ai.kr) — Busan, Korea. [AUTHORSHIP.md](AUTHORSHIP.md)를 참고하세요.
+- 제품 목록과 상태: [README.md](README.md)
+- 스타일가이드: <https://jiwoon-kim.github.io/axismundi/styleguide/>
 - 아키텍처 기준: [CONSTITUTION.md](CONSTITUTION.md)
-- 현재 진행 상태: [CURRENT-STATE.md](CURRENT-STATE.md), [ROADMAP.md](ROADMAP.md)
-- English README: [README.md](README.md)
+- 작성자 및 최종 결정권자: KIM JIWOON (designbusan.ai.kr) — Busan, Korea. [AUTHORSHIP.md](AUTHORSHIP.md)
 
-## 현재 상태
+영문 README가 바깥쪽 입구이고, 이 문서는 **저장소를 몇 달 뒤에 다시 열었을 때 필요한
+맥락**을 적습니다. 코드를 읽어서는 복원되지 않는 것들입니다.
 
-```txt
-v3.5.12  Wave 1 컴포넌트 완료        9 / 9
-v3.5.13  Wave 1 cleanup 완료         #32 / #33 / records
-v3.5.14  공개 준비                   진행 중
-v3.5.15  GitHub 저장소 + Pages        다음 단계
-v3.6.0   Ontology Theme Pilot         예정
+## 언어 정책
+
+경계는 영어, 설명은 한국어입니다.
+
+```
+영어    URL · 파일명 · 슬러그
+        토큰명 · CSS 변수 · 블록명
+        컴포넌트명 · 표준 용어
+        코드 예시와 API
+한국어  설명 · 결정 이유 · 사용 기준
 ```
 
-Wave 1은 Button, Icon button, FAB family, Button group, Card, Text field,
-Search bar, List, Carousel을 포함합니다. Matrix state, Ripple v2, pill radius,
-size variants, List token 정리 같은 기반 보정도 닫힌 상태입니다.
+플러그인과 테마의 **코드 주석은 영어**입니다. wp.org 제출 대상이고 저장소 바깥
+사람이 읽을 코드이기 때문입니다. 반대로 저장소 안쪽 설계 문서는 한국어가 낫습니다 —
+번역을 거치면서 결정의 뉘앙스가 먼저 사라집니다.
 
-## 이 저장소의 목적
+## 왜 이렇게 쪼개져 있나
 
-Axismundi는 단순한 WordPress 테마가 아닙니다. 플랫폼 온톨로지, 디자인 시스템
-토큰, 컴포넌트 계약, 공개 가능한 reference implementation을 연결하는 구조입니다.
+플러그인이 20개가 넘는 것은 기능을 잘게 나눠서가 아니라, **소유권 경계를 지키려면
+그렇게 되기 때문**입니다.
 
-현재 디자인 시스템은 Material Design 3이고, 현재 플랫폼 바인딩은 WordPress입니다.
-하지만 구조 자체는 다른 디자인 시스템이나 다른 플랫폼 바인딩으로 확장될 수 있도록
-분리되어 있습니다.
+**Actors가 먼저입니다.** 정체성 레지스트리가 URI를 소유하고, 나머지 도메인
+플러그인은 자기 아카이브를 거기에 연결합니다. 정체성을 각 도메인이 따로 들고 있으면
+같은 사람이 도메인 수만큼 생깁니다.
 
-## 구조
+**Object Projections는 표현만 소유합니다.** WordPress 객체를 ActivityStreams
+JSON-LD로 투영하는 transformer registry와 renderer 하나. 상태를 갖지 않습니다.
 
-저장소는 여섯 개 레이어를 가집니다.
+**Activities는 원장이고 배달은 하지 않습니다.** HTTP inbox·서명·배달 큐를 직접
+구현하지 않고 공식 ActivityPub 플러그인을 S2S transport로 씁니다. 그 경계를 잇는 것이
+ActivityPub Bridge입니다. **연합 프로토콜을 재구현하지 않는다**는 것이 이 프로젝트의
+가장 큰 범위 결정입니다.
 
-| Layer | Directory | 역할 |
-|---|---|---|
-| A. Corpus | `corpus/` | 원문과 정제된 근거 문서 |
-| B. Atlas | `atlas/` | 규칙 기반 지식과 감사 기록 |
-| C. Core | `core/` | 플랫폼 / 디자인 시스템 온톨로지 |
-| D. Bindings | `bindings/` | 온톨로지 간 번역 |
-| E. Products | `products/` | reference implementation과 향후 배포물 |
-| F. Tools | `tools/` | 빌더, 생성기, 검증기 |
+**Notifications는 원장에서 투영됩니다.** 각 전이를 소유한 도메인이 투영하고, 알림함은
+그것을 모읍니다. 알림이 자기 상태를 따로 쌓지 않습니다.
 
-Public surface는 네 tier로 다룹니다.
+같은 이유로 **테마는 표현만** 가집니다. 지속되는 커스텀 블록, 에디터 UI, 외부 프로토콜
+연동, 데이터 저장은 전부 플러그인 territory입니다.
 
-| Tier | 의미 |
-|---|---|
-| Baseline | 안정된 시각 primitive: `components.css`, `tokens.css`, styleguide source |
-| Lab | 모듈 검증 표면: audit, pattern page, runtime experiment |
-| Public | downstream consumer가 의존할 수 있는 안정 표면 |
-| Plugin | editor UI, custom block, federation, 외부 데이터, 통합 동작 |
+## 토큰이 흐르는 방향
 
-Publishing surface는 authority가 아니라 mirror입니다. 원본을 고친 뒤 generator를
-실행해야 합니다.
+```
+--md-ref-palette-*        리터럴 팔레트. 값이 여기에만 있음
+    ↓
+--md-sys-color-*          역할. 반드시 var(--md-ref-palette-*)
+    ↓
+--wp--preset--color--*    WordPress가 theme.json에서 런타임 생성
+```
 
-## 공개 표면
+이 방향은 검증기가 강제합니다. `--md-sys-color-*`에 리터럴 hex을 쓰면 실패합니다.
+색을 한 군데서만 바꿀 수 있게 하려는 것이고, 런타임 팔레트 교체(Theme Controls)가
+성립하는 이유이기도 합니다.
 
-| Surface | 상태 | Source authority |
-|---|---|---|
-| `index.html` | 프로젝트 landing | README / project docs |
-| `styleguide/` | CI가 빌드·배포하는 스타일가이드 | `products/styleguide/` |
-| `templates/` | 예정된 page-layout / template preview route | 향후 `products/reference-implementations/axismundi-lab/templates/` |
+**CJK 폰트는 이음매로 남겨져 있습니다.** 테마는 `var(--axismundi-cjk-sans, system-ui)`를
+선언만 하고, 지역별 폰트 제공 플러그인이 `:lang()` 아래에서 그 슬롯을 채웁니다.
+`unicode-range`로 Noto의 적용 범위를 한글에 한정합니다. 테마 하나에 CJK 폰트를 전부
+넣으면 쓰지 않는 언어의 폰트까지 내려받게 됩니다.
 
-`styleguide/`는 `.github/workflows/styleguide.yml`이 빌드해 Pages Actions
-아티팩트로 서빙합니다. 저장소 안의 디렉터리가 아니므로 `products/styleguide/`를
-편집합니다.
+## 세 개의 표면을 헷갈리지 말 것
 
-## 실행 방법
+```
+products/wordpress/                   출하되는 정본
+products/styleguide/                  공개 디자인 시스템 문서 (Jekyll, CI 배포)
+products/reference-implementations/   손코딩 검증 작업대 (비공개)
+```
 
-개발 의존성 설치:
+**스타일가이드는 제품에서 읽어옵니다.** 빌드 시점에 테마의 토큰 CSS와 `theme.json`을
+가져와 문서를 만듭니다. 팔레트나 타입 스케일을 따로 옮겨 적지 않는다는 뜻이고, 그래야
+문서가 "제품이 실제로 렌더하는 것"을 보여줍니다. 옮겨 적은 사본은 반드시 어긋납니다 —
+이 저장소에 그렇게 어긋났던 자산 브리지가 있었고, 그래서 지웠습니다.
+
+**Lab은 남아 있습니다.** 컴포넌트를 테마·플러그인 코드로 만들기 전에 손으로 구현해
+측정하는 자리입니다. 스타일가이드가 결과를 설명하고, Lab이 근거를 보관합니다. 둘을
+합치면 "측정한 것"과 "설명한 것"의 구분이 사라집니다.
+
+Lab은 더 이상 공개 배포되지 않습니다. GitHub Pages가 Actions 아티팩트로 바뀌면서
+저장소 전체를 서빙하지 않게 됐고, Lab 페이지는 파일 시스템에서 바로 열면 됩니다.
+
+## 사본에는 검증기를 붙인다
+
+이 저장소의 규칙 하나. **두 번째 사본을 만들었으면 검증기를 함께 만듭니다.**
+
+생성물은 커밋하고, 생성기는 `--check`로 손편집을 거부하며, 검증기는 생성기가 옳은지와
+별개의 질문에 답합니다. 예를 들어 스타일가이드 레이아웃은
+
+- 생성기 `--check` — 커밋된 CSS가 생성기 출력과 같은가
+- 검증기 — 그 값이 사양·`theme.json`과 같은가
+
+두 질문이 다르기 때문에 둘 다 필요합니다. **버그 있는 생성기는 첫 질문을 늘
+통과합니다.**
+
+미디어쿼리가 `var()`를 읽지 못한다는 것이 이 파이프라인의 출발점이었습니다.
+브레이크포인트 값은 빌드 때 CSS 텍스트에 리터럴로 박혀야 하고, 그러면 문서의 표와
+실제 쿼리가 갈라질 수 있으므로, 한 소스에서 둘 다 내보내고 검증기가 대조합니다.
+
+## 개발
+
+의존성 설치, 스타일가이드 빌드·검증, 토큰 층 검증 순입니다.
 
 ```powershell
 npm install
-```
-
-검증 실행:
-
-```powershell
+python .\products\styleguide\bin\build.py --verify
 python .\tools\validators\validate_token_layering.py
 ```
 
-스타일가이드 빌드와 검증:
-
-```powershell
-python .\products\styleguide\bin\build.py --verify
-```
-
-기대 결과:
-
-```txt
-  E token layering : 1.000  PASS
-  F bridge layering: 1.000  PASS
-
-PASS - token layering holds.
-```
-
-## WordPress / 블록 테마 / 플러그인 경계
-
-WordPress 바인딩은 `bindings/wordpress-material3/`에 있습니다. 이를 소비하는 것은
-`products/wordpress/`의 배포 테마와 플러그인입니다.
-
-테마가 할 수 있는 일:
-
-- core block 스타일링,
-- block style variation 등록,
-- template part와 layout slot 제공,
-- progressive interaction CSS/JS enqueue.
-
-플러그인이 해야 하는 일:
-
-- durable custom block,
-- editor UI,
-- icon picker registry,
-- ActivityPub 같은 외부 프로토콜 연동,
-- 콘텐츠 파싱과 데이터 저장.
-
-## 안정성 메모
-
-- Wave 1 public-surface component audit는 완료되었습니다.
-- Lab module pattern HTML은 기본적으로 public API가 아니라 검증 표면입니다.
-- 공개되는 스타일가이드는 CI가 `products/styleguide/`에서 빌드합니다.
-- GitHub 저장소 생성과 GitHub Pages 활성화는 v3.5.15 범위입니다.
-- WordPress.org 제출 패키지는 아직 구성되지 않았습니다.
+테마와 플러그인은 `wp-env`로 개발합니다. 각 제품 디렉터리에 자체 실행 메모가 있습니다.
 
 ## 라이선스
 
-Axismundi는 표면별 multi-license 구조를 사용합니다.
+표면별 multi-license입니다.
 
 - code / theme / tooling: GPL-3.0-or-later
 - documentation: CC BY-SA 4.0
@@ -140,3 +131,7 @@ Axismundi는 표면별 multi-license 구조를 사용합니다.
 
 [LICENSE](LICENSE), [LICENSE-CC-BY-SA-4.0.md](LICENSE-CC-BY-SA-4.0.md),
 [LICENSE-MATRIX.md](LICENSE-MATRIX.md), [NOTICE.md](NOTICE.md)를 참고하세요.
+
+## 후원
+
+[GitHub Sponsors](https://github.com/sponsors/Jiwoon-Kim)에서 후원할 수 있습니다.

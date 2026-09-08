@@ -156,9 +156,19 @@
 /* Size is not an is-style-* variation, and that is a decision rather than an
  * omission. M3 makes size and colour independent configurations; the editor's
  * Styles panel is single-select, so spending it on size would make "medium"
- * and "tonal" mutually exclusive. A named block attribute must render as
- * data-size, as axismundi/theme-switcher already does. Small needs no
- * attribute: it is the fallback set above.
+ * and "tonal" mutually exclusive.
+ *
+ * data-size is this project's answer, not WordPress's. Core solves the same
+ * problem on core/social-links with a second class namespace - .is-style-* and
+ * .has-large-icon-size sit on one element without colliding - and emits a
+ * presentational data-* attribute in only two places, neither of them a design
+ * axis. Specificity buys nothing either way: .a and [data-a] are both (0,1,0).
+ * The attribute wins on cardinality alone. Size is exactly one of five, a class
+ * list cannot say so, and two size classes on one element are resolved silently
+ * by declaration order. axismundi/theme-switcher already renders data-size for
+ * the same reason. The binding page records what this costs if core ever ships
+ * a button size axis of its own. Small needs no attribute: it is the fallback
+ * set above.
  *
  * The round shape is half the height in every size, which is what M3 means by
  * a full corner on a fixed-height control. */

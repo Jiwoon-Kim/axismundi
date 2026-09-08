@@ -105,6 +105,51 @@ Filled Medium과 Outlined Large를 동시에 표현할 수 있습니다.
 `size: "small"`은 기본값이라 저장하지 않아도 됩니다. 프런트는 attribute가 없을 때
 Small로 렌더합니다.
 
+### 다만 코어의 관례는 클래스입니다
+
+이 결정이 코어와 갈라지는 지점이라 여기에 적어 둡니다. **`core/social-links`가 같은
+문제를 이미 풀어 두었고, 답이 달랐습니다.**
+
+```
+.wp-block-social-links.is-style-pill-shape     스타일 축
+.wp-block-social-links.has-large-icon-size     크기 축
+```
+
+한 요소에서 **두 축이 클래스로 공존합니다.** 그러니 "단일 선택 축을 크기가
+잡아먹는다"는 문제는 참이지만, 그 해법이 반드시 attribute인 것은 아닙니다 —
+네임스페이스가 다른 클래스면 충분합니다.
+
+코어가 표현용 `data-*`를 내보내는 곳은 WP 7.1 기준 둘뿐이고
+(`core/cover`의 `data-object-fit`, `core/gallery`의 `data-id`) **둘 다 디자인 축이
+아닙니다.** 즉 `data-size`는 워드프레스 관례가 아니라 이 프로젝트의 선택입니다.
+
+두 형태를 정직하게 비교하면 이렇습니다.
+
+| | class | data-* |
+|---|---|---|
+| 카디널리티 | 집합 — 여러 개 동시 가능 | 단일 값 |
+| 특정도 | (0,1,0) | (0,1,0) — **동일** |
+| 네임스페이스 | Additional CSS class·플러그인과 공유 | 분리 |
+| 코어 생태계 | preset·theme.json·block supports 전부 | 사실상 없음 |
+
+**특정도 이득은 없습니다.** `.a`와 `[data-a]`는 같은 (0,1,0)이라, 이건 cascade를
+사고 파는 선택이 아닙니다.
+
+`data-*`를 고른 이유는 하나뿐입니다 — **크기는 5중 택1인데 클래스 목록은 배타성을
+표현하지 못합니다.** `has-small-icon-size`와 `has-huge-icon-size`가 동시에 붙는 것을
+막는 장치가 없고, 그때는 CSS 선언 순서가 조용히 결정합니다. attribute는 두 값을
+가질 수 없습니다. 같은 이유로 `axismundi/theme-switcher`가 이미 `data-size`를 쓰고
+있고, 우리 블록이라 코어와 협상할 일도 없습니다.
+
+**대신 치르는 값**: 코어가 언젠가 `core/button`에 크기 축을 붙인다면 십중팔구
+`has-*` 클래스일 것이고, 그때 이 페이지는 다시 봐야 합니다. 그 시점을 알아볼 수
+있도록 근거를 여기 남겨 둡니다.
+
+저장 형태는 어느 쪽을 고르든 하나입니다. social-links는 attribute에 **클래스 문자열
+전체**를 담지만(`"size":"has-large-icon-size"`) 그건 저장과 표현을 묶은 흠입니다.
+저장하는 것은 슬러그(`"size":"medium"`)여야 하고, 클래스든 attribute든 렌더가
+조립합니다.
+
 ## 테마가 실제로 쓰는 두 경로
 
 같은 결과를 내는 두 개의 등록 방식이 있고, 테마는 둘 다 씁니다.

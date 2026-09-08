@@ -191,11 +191,29 @@ def main() -> int:
             report.check(declaration(connected_child, name) is None,
                          f"Connected Buttons must not override child {name}")
 
+    connected_link = block(
+        css,
+        ".wp-block-buttons.is-style-connected > .wp-block-button > .wp-block-button__link",
+    )
+    connected_active_link = block(
+        css,
+        ".wp-block-buttons.is-style-connected > .wp-block-button > .wp-block-button__link:active",
+    )
+    report.check(connected_link is not None, "adapter has no Connected Buttons inner-corner rule")
+    if connected_link is not None:
+        report.check(declaration(connected_link, "border-radius") == "var(--md-sys-shape-corner-value-small)",
+                     "Connected Buttons resting inner corners differ from the theme variation")
+    report.check(connected_active_link is not None, "adapter has no Connected Buttons pressed inner-corner rule")
+    if connected_active_link is not None:
+        report.check(declaration(connected_active_link, "border-radius") == "var(--md-sys-shape-corner-value-extra-small)",
+                     "Connected Buttons pressed inner corners differ from the theme variation")
+
     connected_theme_css = partials["connected"]["styles"]["css"]
     for source in (
         "&{flex-wrap:nowrap;}",
         "& > .wp-block-button{margin:0;}",
         "& > .wp-block-button > .wp-block-button__link{border-radius:8px;}",
+        "& > .wp-block-button > .wp-block-button__link:active{border-radius:4px;}",
     ):
         report.check(source in connected_theme_css,
                      f"theme Connected Buttons variation no longer contains {source}")

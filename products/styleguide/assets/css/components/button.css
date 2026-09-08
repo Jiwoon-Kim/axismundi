@@ -278,6 +278,17 @@
 	margin: 0;
 }
 
+/* Reset every adjacent corner before restoring only the two outer ends. This
+ * mirrors buttons-connected.json: without the reset, each child retains its
+ * standalone pill and the Connected variation is visually indistinguishable. */
+.wp-block-buttons.is-style-connected > .wp-block-button > .wp-block-button__link {
+	border-radius: var(--md-sys-shape-corner-value-small);
+}
+
+.wp-block-buttons.is-style-connected > .wp-block-button > .wp-block-button__link:active {
+	border-radius: var(--md-sys-shape-corner-value-extra-small);
+}
+
 /* Only the two ends of the group are pills; the seams between segments stay
  * square. Logical longhands, because a group reverses in RTL and a radius
  * shorthand cannot. */

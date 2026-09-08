@@ -57,7 +57,7 @@ Button group이 되지는 않습니다. `aria-pressed`, 선택 규칙, 공통 �
 
 ## Connected는 CSS가 어디까지 바꾸는가
 
-테마와 정적 어댑터 모두 container에 다음만 적용합니다.
+테마와 정적 어댑터 모두 container와 인접한 Button의 기하에 다음만 적용합니다.
 
 ```css
 .wp-block-buttons.is-style-connected {

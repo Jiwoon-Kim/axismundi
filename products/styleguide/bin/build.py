@@ -93,7 +93,8 @@ def main() -> int:
             steps.append((f"generate {label}", [py, f"tools/generators/{script}"], ROOT))
 
     for label, script in (("typography", "validate_styleguide_typography.py"),
-                          ("layout", "validate_styleguide_layout.py")):
+                          ("layout", "validate_styleguide_layout.py"),
+                          ("button", "validate_styleguide_button.py")):
         steps.append((f"validate {label}", [py, f"tools/validators/{script}"], ROOT))
 
     for label, argv, cwd in steps:

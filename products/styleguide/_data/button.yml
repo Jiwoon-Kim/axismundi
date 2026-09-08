@@ -1,0 +1,155 @@
+# Material 3 Button — the published specification.
+#
+# Source: https://m3.material.io/components/buttons/specs
+#
+# Two axes that M3 keeps orthogonal, and this file keeps orthogonal too:
+# `sizes` carries geometry and type, `colors` carries the five colour styles.
+# A button chooses one of each; neither list constrains the other. That is the
+# whole reason they are two mappings rather than one matrix.
+#
+# `bound` says whether the Axismundi theme implements the row today. It is
+# documentation of the gap, not a wish: a row marked false is described on the
+# page as unbound, and the WordPress binding page says what implementing it
+# would take.
+
+meta:
+  # Every size shares these. M3 publishes a per-component spring that is
+  # tighter than the system one, but no equivalent web curve, which is why the
+  # theme animates the morph with the published fast-spatial conversion instead.
+  spring_damping: 0.9
+  spring_stiffness: 1400
+  # M3 Expressive replaces the legacy 24dp side space on Small with 16dp.
+  small_space_legacy: 24
+
+sizes:
+  - name: xsmall
+    label: XS
+    bound: false
+    height: 32
+    outline_width: 1
+    space: 12
+    icon: 20
+    icon_gap: 4
+    type: { size: 14, weight: 500, tracking: 0.1, line_height: 20 }
+    shape_square: 12
+    pressed_morph: 8
+    selected_round: 12
+  - name: small
+    label: S
+    bound: true
+    height: 40
+    outline_width: 1
+    space: 16
+    icon: 20
+    icon_gap: 8
+    type: { size: 14, weight: 500, tracking: 0.1, line_height: 20 }
+    shape_square: 12
+    pressed_morph: 8
+    selected_round: 12
+  - name: medium
+    label: M
+    bound: false
+    height: 56
+    outline_width: 1
+    space: 24
+    icon: 24
+    icon_gap: 8
+    type: { size: 16, weight: 500, tracking: 0.15, line_height: 24 }
+    shape_square: 16
+    pressed_morph: 12
+    selected_round: 16
+  - name: large
+    label: L
+    bound: false
+    height: 96
+    outline_width: 2
+    space: 48
+    icon: 32
+    icon_gap: 12
+    type: { size: 24, weight: 400, tracking: 0, line_height: 32 }
+    shape_square: 28
+    pressed_morph: 16
+    selected_round: 28
+  - name: xlarge
+    label: XL
+    bound: false
+    height: 136
+    outline_width: 3
+    space: 64
+    icon: 40
+    icon_gap: 16
+    type: { size: 32, weight: 400, tracking: 0, line_height: 40 }
+    shape_square: 28
+    pressed_morph: 16
+    selected_round: 28
+
+# Colour roles, not colour values. `container` names the filled surface except
+# on outlined, where the container is invisible at rest and the role names the
+# outline instead; text has no container at all.
+colors:
+  - name: filled
+    title: Filled
+    bound: true
+    wp_style: "(default)"
+    container: primary
+    content: on-primary
+    toggle_unselected: { container: surface-container, content: on-surface-variant }
+    toggle_selected: { container: primary, content: on-primary }
+  - name: elevated
+    title: Elevated
+    bound: true
+    wp_style: is-style-elevated
+    container: surface-container-low
+    content: primary
+    elevation: 1
+    toggle_unselected: { container: surface-container-low, content: primary }
+    toggle_selected: { container: primary, content: on-primary }
+  - name: tonal
+    title: Tonal
+    bound: true
+    wp_style: is-style-tonal
+    container: secondary-container
+    content: on-secondary-container
+    toggle_unselected: { container: secondary-container, content: on-secondary-container }
+    toggle_selected: { container: secondary, content: on-secondary }
+  - name: outlined
+    title: Outlined
+    bound: true
+    wp_style: is-style-outline
+    container: outline-variant
+    container_is_outline: true
+    content: on-surface-variant
+    toggle_unselected: { container: outline-variant, content: on-surface-variant }
+    toggle_selected: { container: inverse-surface, content: inverse-on-surface }
+  - name: text
+    title: Text
+    bound: true
+    wp_style: is-style-text
+    container: null
+    content: primary
+    # M3: there is no toggle text button.
+    toggle_unselected: null
+    toggle_selected: null
+
+# What each configuration costs in M3 versus M3 Expressive.
+availability:
+  - configuration: Size
+    option: Small (default)
+    m3: true
+    expressive: true
+  - configuration: Size
+    option: XS, M, L, XL
+    m3: false
+    expressive: true
+  - configuration: Shape
+    option: Round (default)
+    m3: true
+    expressive: true
+  - configuration: Shape
+    option: Square
+    m3: false
+    expressive: true
+  - configuration: Color
+    option: Elevated, filled (default), tonal, outlined, text
+    m3: true
+    expressive: true

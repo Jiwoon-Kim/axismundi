@@ -1,0 +1,300 @@
+/* ============================================================
+ * Button — static adapter for core/button and core/buttons.
+ *
+ * The markup this styles is the markup the WordPress block editor writes.
+ * Nothing here invents a class: .wp-block-buttons, .wp-block-button,
+ * .wp-block-button__link and the is-style-* variations are what core emits, so
+ * a specimen on this site is the same DOM a post carries. That is deliberate.
+ * A style guide whose demo markup only resembles the product cannot be used to
+ * check the product.
+ *
+ * The theme owns the real surface in theme.json (styles.elements.button plus
+ * styles.blocks.core/button.variations.outline) and in the auto-registered
+ * partials under styles/blocks/. This file is the static restatement of that
+ * contract for a site with no WordPress in it, the way the theme switcher CSS
+ * beside it restates its plugin. tools/validators/validate_styleguide_button.py
+ * pins the values that must stay equal to theme.json, so the two cannot drift
+ * quietly.
+ *
+ * ORDER IS THE CONTRACT
+ *
+ *   1 the control        geometry read from custom properties
+ *   2 the button         size
+ *   3 the button         colour style
+ *   4 the container      layout only
+ *   5 the group          size, shape and colour for every segment
+ *
+ * Sections 2 and 3 sit on .wp-block-button, section 5 on
+ * .wp-block-buttons.is-style-connected > .wp-block-button. Those two carry the
+ * same specificity, so the group wins because it is written last — which is
+ * exactly the rule M3 states: a member of a button group is a segment, not an
+ * independent button, and the group decides for it.
+ *
+ * Colour is named in --md-sys-color-* here. WordPress publishes the same roles
+ * as --wp--preset--color--*, generated from theme.json settings at runtime;
+ * they are one set of roles with two spellings, and which spelling appears is
+ * the only difference between this file and the theme's.
+ * ============================================================ */
+
+/* --- 1. The control ------------------------------------------ */
+
+/* Every measurement is a custom property with the Small default inlined as its
+ * fallback, so a button with no size class is a Small button and a size class
+ * is a set of declarations rather than a second copy of this rule. */
+.wp-block-button__link {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	gap: var(--ax-button-icon-gap, var(--md-sys-measurement-space100));
+	block-size: var(--ax-button-height, 40px);
+	padding-inline: var(--ax-button-space, var(--md-sys-measurement-space200));
+	border: 0;
+	border-radius: var(--ax-button-shape, 20px);
+	background-color: var(--ax-button-container);
+	color: var(--ax-button-content);
+	font-family: var(--md-ref-typeface-brand);
+	font-size: var(--ax-button-label-size, 14px);
+	font-weight: var(--ax-button-label-weight, 500);
+	letter-spacing: var(--ax-button-label-tracking, 0.1px);
+	line-height: var(--ax-button-label-line-height, 20px);
+	text-decoration: none;
+	cursor: pointer;
+	/* The blue tap rectangle is the wrong shape and the wrong colour for a
+	 * pill, and nothing is lost: the pressed state layer answers the touch. */
+	-webkit-tap-highlight-color: transparent;
+	transition:
+		border-radius var(--md-sys-motion-curve-fast-spatial-duration) var(--md-sys-motion-curve-fast-spatial),
+		background-color var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wp-block-button__link {
+		transition: none;
+	}
+}
+
+/* Pressed shape morph. Both endpoints are corner-value lengths: a browser
+ * scales any radius past half the box down to fit, so animating from a pill
+ * literal would look unchanged and then snap. */
+.wp-block-button__link:active {
+	border-radius: var(--ax-button-pressed-shape, var(--md-sys-shape-corner-value-small));
+}
+
+/* M3's focus ring. Keyboard only — theme.json can emit no better than a plain
+ * :focus, so the theme suppresses the ring for pointer focus in its component
+ * CSS; here :focus-visible says it directly. The focus state layer still
+ * applies to both, because that is a state and not an affordance. */
+.wp-block-button__link:focus-visible {
+	outline: var(--md-focus-ring-width) solid var(--md-sys-color-secondary);
+	outline-offset: var(--md-focus-ring-outward-offset);
+}
+
+/* Disabled is a flat opacity on content over a dimmed container, not a state
+ * layer. WordPress has no :disabled in theme.json's element model, so the
+ * theme cannot express this and the binding page records it as unbound. */
+.wp-block-button__link[aria-disabled="true"],
+.wp-block-button__link:disabled {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 10%, transparent);
+	border-color: color-mix(in srgb, var(--md-sys-color-on-surface) 12%, transparent);
+	color: color-mix(in srgb, var(--md-sys-color-on-surface) calc(var(--md-sys-state-disabled-state-layer-opacity) * 100%), transparent);
+	box-shadow: none;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
+/* --- 2. The button decides size ------------------------------ */
+
+/* Size is not an is-style-* variation, and that is a decision rather than an
+ * omission. M3 makes size and colour independent configurations; the editor's
+ * Styles panel is single-select, so spending it on size would make "medium"
+ * and "tonal" mutually exclusive. A plain class keeps the two axes orthogonal
+ * and is reachable from the editor today through Advanced > Additional CSS
+ * class. Small needs no class: it is the fallback set above.
+ *
+ * The round shape is half the height in every size, which is what M3 means by
+ * a full corner on a fixed-height control. */
+
+.wp-block-button.is-size-xsmall {
+	--ax-button-height: 32px;
+	--ax-button-space: var(--md-sys-measurement-space150);
+	--ax-button-icon-gap: var(--md-sys-measurement-space50);
+	--ax-button-shape: 16px;
+	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-small);
+	--ax-button-outline-width: 1px;
+	--ax-button-label-size: 14px;
+	--ax-button-label-weight: 500;
+	--ax-button-label-tracking: 0.1px;
+	--ax-button-label-line-height: 20px;
+}
+
+.wp-block-button.is-size-medium {
+	--ax-button-height: 56px;
+	--ax-button-space: var(--md-sys-measurement-space300);
+	--ax-button-icon-gap: var(--md-sys-measurement-space100);
+	--ax-button-shape: 28px;
+	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-medium);
+	--ax-button-outline-width: 1px;
+	--ax-button-label-size: 16px;
+	--ax-button-label-weight: 500;
+	--ax-button-label-tracking: 0.15px;
+	--ax-button-label-line-height: 24px;
+}
+
+.wp-block-button.is-size-large {
+	--ax-button-height: 96px;
+	--ax-button-space: var(--md-sys-measurement-space600);
+	--ax-button-icon-gap: var(--md-sys-measurement-space150);
+	--ax-button-shape: 48px;
+	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-large);
+	--ax-button-outline-width: 2px;
+	--ax-button-label-size: 24px;
+	--ax-button-label-weight: 400;
+	--ax-button-label-tracking: 0;
+	--ax-button-label-line-height: 32px;
+}
+
+.wp-block-button.is-size-xlarge {
+	--ax-button-height: 136px;
+	--ax-button-space: var(--md-sys-measurement-space800);
+	--ax-button-icon-gap: var(--md-sys-measurement-space200);
+	--ax-button-shape: 68px;
+	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-large);
+	--ax-button-outline-width: 3px;
+	--ax-button-label-size: 32px;
+	--ax-button-label-weight: 400;
+	--ax-button-label-tracking: 0;
+	--ax-button-label-line-height: 40px;
+}
+
+/* Square is the other Expressive shape configuration. Round and square share
+ * one pressed shape, so only the resting corner changes. */
+.wp-block-button.is-shape-square {
+	--ax-button-shape: var(--md-sys-shape-corner-value-medium);
+}
+
+.wp-block-button.is-size-medium.is-shape-square {
+	--ax-button-shape: var(--md-sys-shape-corner-value-large);
+}
+
+.wp-block-button.is-size-large.is-shape-square,
+.wp-block-button.is-size-xlarge.is-shape-square {
+	--ax-button-shape: var(--md-sys-shape-corner-value-extra-large);
+}
+
+/* --- 3. The button decides colour style ---------------------- */
+
+/* Filled, the default. No class: an unstyled core/button is already this. */
+.wp-block-button {
+	--ax-button-container: var(--md-sys-color-primary);
+	--ax-button-content: var(--md-sys-color-on-primary);
+	/* The role mixed over the container at each state opacity. Naming it once
+	 * means a variant sets two roles and inherits four states. */
+	--ax-button-state-role: var(--md-sys-color-on-primary);
+}
+
+.wp-block-button.is-style-elevated {
+	--ax-button-container: var(--md-sys-color-surface-container-low);
+	--ax-button-content: var(--md-sys-color-primary);
+	--ax-button-state-role: var(--md-sys-color-primary);
+}
+
+.wp-block-button.is-style-elevated .wp-block-button__link {
+	box-shadow: var(--md-sys-elevation-shadow-level1);
+}
+
+.wp-block-button.is-style-tonal {
+	--ax-button-container: var(--md-sys-color-secondary-container);
+	--ax-button-content: var(--md-sys-color-on-secondary-container);
+	--ax-button-state-role: var(--md-sys-color-on-secondary-container);
+}
+
+/* Outlined and text share an invisible container. Their state layers mix over
+ * transparent, which is why they read as a tint of whatever is behind them and
+ * why both work on any surface. */
+.wp-block-button.is-style-outline {
+	--ax-button-container: transparent;
+	--ax-button-content: var(--md-sys-color-on-surface-variant);
+	--ax-button-state-role: var(--md-sys-color-on-surface-variant);
+}
+
+.wp-block-button.is-style-outline .wp-block-button__link {
+	border: var(--ax-button-outline-width, 1px) solid var(--md-sys-color-outline-variant);
+}
+
+.wp-block-button.is-style-text {
+	--ax-button-container: transparent;
+	--ax-button-content: var(--md-sys-color-primary);
+	--ax-button-state-role: var(--md-sys-color-primary);
+}
+
+/* One state layer for every style, mixed from the two properties above. */
+.wp-block-button .wp-block-button__link:hover {
+	background-color: color-mix(in srgb, var(--ax-button-state-role) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--ax-button-container));
+}
+
+.wp-block-button .wp-block-button__link:focus {
+	background-color: color-mix(in srgb, var(--ax-button-state-role) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--ax-button-container));
+}
+
+.wp-block-button .wp-block-button__link:active {
+	background-color: color-mix(in srgb, var(--ax-button-state-role) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--ax-button-container));
+}
+
+/* --- 4. The container decides nothing ------------------------ */
+
+/* core/buttons on its own is a layout box. It owns how its children are placed
+ * and nothing about what they are, which is why a row of buttons can mix
+ * styles and sizes freely. Only the blockGap is its own. */
+.wp-block-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--md-sys-measurement-space150);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+/* --- 5. Except as a group, where it decides everything -------- */
+
+/* is-style-connected is what turns the container into M3's Button group. The
+ * declarations below sit on the same elements sections 2 and 3 write on, at
+ * the same specificity, and later — so the group's decision wins. A segment
+ * that carries its own is-style-tonal is overruled here on purpose. */
+.wp-block-buttons.is-style-connected {
+	flex-wrap: nowrap;
+	gap: var(--md-sys-measurement-space25);
+}
+
+.wp-block-buttons.is-style-connected > .wp-block-button {
+	margin: 0;
+	--ax-button-container: var(--md-sys-color-secondary-container);
+	--ax-button-content: var(--md-sys-color-on-secondary-container);
+	--ax-button-state-role: var(--md-sys-color-on-secondary-container);
+	--ax-button-shape: var(--md-sys-shape-corner-value-small);
+	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-extra-small);
+}
+
+/* Only the two ends of the group are pills; the seams between segments stay
+ * square. Logical longhands, because a group reverses in RTL and a radius
+ * shorthand cannot. */
+.wp-block-buttons.is-style-connected > .wp-block-button:first-child > .wp-block-button__link,
+.wp-block-buttons.is-style-connected > .wp-block-button:first-child > .wp-block-button__link:active {
+	border-start-start-radius: var(--md-sys-shape-corner-value-large-increased);
+	border-end-start-radius: var(--md-sys-shape-corner-value-large-increased);
+}
+
+.wp-block-buttons.is-style-connected > .wp-block-button:last-child > .wp-block-button__link,
+.wp-block-buttons.is-style-connected > .wp-block-button:last-child > .wp-block-button__link:active {
+	border-start-end-radius: var(--md-sys-shape-corner-value-large-increased);
+	border-end-end-radius: var(--md-sys-shape-corner-value-large-increased);
+}
+
+/* A selected segment. aria-pressed is the state, so the selector reads it
+ * rather than a class: the accessible name and the paint cannot disagree. */
+.wp-block-buttons.is-style-connected > .wp-block-button > .wp-block-button__link[aria-pressed="true"] {
+	--ax-button-container: var(--md-sys-color-secondary);
+	--ax-button-content: var(--md-sys-color-on-secondary);
+	--ax-button-state-role: var(--md-sys-color-on-secondary);
+}

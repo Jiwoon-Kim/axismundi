@@ -10,9 +10,10 @@ build.py — everything that has to happen before Jekyll runs.
 The order matters and is the same locally and in CI:
 
     1. sync assets      copy the products' fonts and colour tokens in
-    2. generate         build tokens.sys.typography.css from _data/typography.yml
+    2. generate         build the typography and layout CSS from _data/
     3. check            the CSS equals what the generator produces
-    4. validate         its values equal the published spec
+    4. validate         its values equal the published spec, and where a value
+                        is also the theme's, that the two still agree
     5. jekyll           build or serve
 
 Step 1 exists because several of this site's inputs are deliberately not
@@ -80,21 +81,20 @@ def main() -> int:
         ("sync assets", [py, "tools/generators/sync_styleguide_assets.py"], ROOT),
     ]
 
-    if args.verify:
-        steps.append(
-            ("check generated CSS",
-             [py, "tools/generators/generate_styleguide_typography.py", "--check"], ROOT)
-        )
-    else:
-        steps.append(
-            ("generate typography",
-             [py, "tools/generators/generate_styleguide_typography.py"], ROOT)
-        )
+    generators = [
+        ("typography", "generate_styleguide_typography.py"),
+        ("layout", "generate_styleguide_layout.py"),
+    ]
+    for label, script in generators:
+        if args.verify:
+            steps.append((f"check generated {label} CSS",
+                          [py, f"tools/generators/{script}", "--check"], ROOT))
+        else:
+            steps.append((f"generate {label}", [py, f"tools/generators/{script}"], ROOT))
 
-    steps.append(
-        ("validate typography",
-         [py, "tools/validators/validate_styleguide_typography.py"], ROOT)
-    )
+    for label, script in (("typography", "validate_styleguide_typography.py"),
+                          ("layout", "validate_styleguide_layout.py")):
+        steps.append((f"validate {label}", [py, f"tools/validators/{script}"], ROOT))
 
     for label, argv, cwd in steps:
         if not run(label, argv, cwd):

@@ -1,0 +1,75 @@
+/* ============================================================
+ * Style guide — layout
+ *
+ * GENERATED from _data/layout.yml. Do not edit.
+ *   build   python tools/generators/generate_styleguide_layout.py
+ *   verify  python tools/validators/validate_styleguide_layout.py
+ *
+ * Breakpoint values appear twice on purpose. A media query cannot evaluate
+ * var(), so each one is written as a literal in the query and again as a
+ * custom property for anything that can read one. Both come from the same
+ * data, so the query and the number a page prints cannot disagree.
+ *
+ * --md-sys-* is M3's: the breakpoints and the 360dp supporting pane.
+ * --ax-sys-* is this project's: column counts, the margin and gap around and
+ * between them, and WordPress's content and wide widths - which are a separate
+ * axis from the breakpoints, since one decides how panes are arranged and the
+ * other how wide a line of text is allowed to get.
+ * ============================================================ */
+
+:root {
+	/* Breakpoint minima. Readable by script; the queries below
+	 * carry the same numbers as literals because they must. */
+	--md-sys-layout-breakpoint-compact: 0;
+	--md-sys-layout-breakpoint-medium: 600px;
+	--md-sys-layout-breakpoint-expanded: 840px;
+	--md-sys-layout-breakpoint-large: 1200px;
+	--md-sys-layout-breakpoint-extra-large: 1600px;
+
+	--md-sys-layout-pane-supporting: 360px;
+
+	/* WordPress's own axis, not a breakpoint. */
+	--ax-sys-layout-content-max: 760px;
+	--ax-sys-layout-wide-max: 1280px;
+
+	/* Grid, at compact. Each query below restates all three. */
+	--ax-sys-layout-columns: 4;
+	--ax-sys-layout-margin: var(--md-sys-measurement-space200);
+	--ax-sys-layout-gap: var(--md-sys-measurement-space200);
+}
+
+/* medium — 600dp and up */
+@media (min-width: 600px) {
+	:root {
+		--ax-sys-layout-columns: 8;
+		--ax-sys-layout-margin: var(--md-sys-measurement-space300);
+		--ax-sys-layout-gap: var(--md-sys-measurement-space300);
+	}
+}
+
+/* expanded — 840dp and up */
+@media (min-width: 840px) {
+	:root {
+		--ax-sys-layout-columns: 12;
+		--ax-sys-layout-margin: var(--md-sys-measurement-space300);
+		--ax-sys-layout-gap: var(--md-sys-measurement-space300);
+	}
+}
+
+/* large — 1200dp and up */
+@media (min-width: 1200px) {
+	:root {
+		--ax-sys-layout-columns: 12;
+		--ax-sys-layout-margin: var(--md-sys-measurement-space400);
+		--ax-sys-layout-gap: var(--md-sys-measurement-space300);
+	}
+}
+
+/* extra-large — 1600dp and up */
+@media (min-width: 1600px) {
+	:root {
+		--ax-sys-layout-columns: 12;
+		--ax-sys-layout-margin: var(--md-sys-measurement-space400);
+		--ax-sys-layout-gap: var(--md-sys-measurement-space300);
+	}
+}

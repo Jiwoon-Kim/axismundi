@@ -1,0 +1,43 @@
+# M3 system spacing — canonical data.
+#
+# Transcribed from https://m3.material.io/styles/spacing/tokens
+# Values are as published, in dp. On the web 1dp is 1px.
+#
+# This file is the source. assets/css/tokens.sys.measurement.css is generated
+# from it and checked against it. Edit here, never there.
+#
+# The theme's theme.json already carries this exact scale as its spacingSizes -
+# same slugs, same values, missing only space0, which WordPress has no use for
+# as a preset. So this is not an Axismundi policy that happens to resemble M3;
+# it is M3's published scale, already shipped, and previously written down
+# nowhere. The validator checks the two against each other.
+
+meta:
+  source: https://m3.material.io/styles/spacing/tokens
+  unit: dp
+  # M3 calls space100 the base unit of measurement.
+  base: 100
+  # Values that are not multiples of 8 - 2, 4, 6, 10, 14 - are M3's "nested
+  # units". It publishes only the most recommended ones rather than every
+  # sub-8 step.
+  nested: [25, 50, 75, 125, 175]
+
+scale:
+  0: 0
+  25: 2
+  50: 4
+  75: 6
+  100: 8
+  125: 10
+  150: 12
+  175: 14
+  200: 16
+  250: 20
+  300: 24
+  400: 32
+  450: 36
+  500: 40
+  600: 48
+  700: 56
+  800: 64
+  900: 72

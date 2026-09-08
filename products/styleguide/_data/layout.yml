@@ -1,0 +1,102 @@
+# Layout — canonical data.
+#
+# Two kinds of value live here and they are labelled, because the difference
+# decides the token prefix:
+#
+#   source: m3          M3 publishes this value. Token is --md-sys-*.
+#   source: axismundi   This project decided it. Token is --ax-sys-*.
+#
+# assets/css/tokens.sys.layout.css is generated from this file. Breakpoints in
+# particular have to be generated rather than read from a custom property at
+# runtime: a media query cannot evaluate var(). Measured, not assumed - at a
+# 900px viewport, `@media (min-width: 600px)` applied and
+# `@media (min-width: var(--bp))` did not, while CSS.supports() answered true
+# for both, so it is not a usable check either.
+
+meta:
+  breakpoints_source: https://m3.material.io/foundations/layout/breakpoints/overview
+  panes_source: https://m3.material.io/foundations/layout/canonical-examples/supporting-pane
+  unit: dp
+
+# M3 renamed these from "window size classes" to "breakpoints". The old name
+# still appears in older material; this file uses the current one.
+breakpoints:
+  source: m3
+  classes:
+    - name: compact
+      min: 0
+      max: 599
+      panes: "1"
+      navigation: Navigation bar, modal expanded navigation rail
+      devices: Phone in portrait
+    - name: medium
+      min: 600
+      max: 839
+      panes: "1 (recommended) or 2"
+      navigation: Navigation bar, modal expanded navigation rail
+      devices: Tablet in portrait, foldable in portrait (unfolded)
+    - name: expanded
+      min: 840
+      max: 1199
+      panes: "1 or 2 (recommended)"
+      navigation: Modal or standard expanded navigation rail
+      devices: Phone in landscape, tablet in landscape, desktop
+    - name: large
+      min: 1200
+      max: 1599
+      panes: "1 or 2 (recommended)"
+      navigation: Modal or standard expanded navigation rail
+      devices: Desktop
+    - name: extra-large
+      min: 1600
+      max: null
+      panes: "1 to 3 (recommended)"
+      navigation: Modal or standard expanded navigation rail
+      devices: Desktop, ultra-wide monitors
+
+panes:
+  # Published: the supporting pane is a fixed 360dp at expanded, and sits below
+  # the focus pane at compact and medium where its width is flexible.
+  - name: supporting
+    source: m3
+    width: 360
+    note: Fixed at expanded and above; below the focus pane, flexible, at compact and medium.
+
+# Column counts and the space around and between them are not in the published
+# breakpoint or grid tables, so they are this project's choice. 4/8/12 is the
+# long-standing Material grid; large and extra-large hold at 12 and spend the
+# extra width on margin rather than on more columns.
+grid:
+  source: axismundi
+  columns:
+    compact: 4
+    medium: 8
+    expanded: 12
+    large: 12
+    extra-large: 12
+  # M3's glossary separates these, and the separation is worth keeping:
+  #   margin - between the edge of the screen and anything inside it
+  #   gap    - between components or elements within a container
+  # Both are drawn from the measurement scale rather than invented.
+  margin:
+    compact: 200
+    medium: 300
+    expanded: 300
+    large: 400
+    extra-large: 400
+  gap:
+    compact: 200
+    medium: 300
+    expanded: 300
+    large: 300
+    extra-large: 300
+
+# WordPress's own axis, and deliberately not tied to a breakpoint. Breakpoints
+# decide how rails and panes are arranged; these decide how wide a run of text
+# or a block is allowed to get. The values are the theme's, read from
+# theme.json settings.layout, and the validator checks they still match.
+content_widths:
+  source: axismundi
+  from: products/wordpress/themes/axismundi/theme.json
+  content: 760
+  wide: 1280

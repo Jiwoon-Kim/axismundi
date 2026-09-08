@@ -1,0 +1,37 @@
+/* ============================================================
+ * Style guide — spacing scale
+ *
+ * GENERATED from _data/measurement.yml. Do not edit.
+ *   build   python tools/generators/generate_styleguide_layout.py
+ *   verify  python tools/validators/validate_styleguide_layout.py
+ *
+ * M3's md.sys.measurement.space* scale, published in dp and written here in
+ * px, which is the same number on the web.
+ *
+ * The theme already ships this exact scale as theme.json spacingSizes, down to
+ * the slugs, so nothing here is a parallel invention - it is the published
+ * scale, finally written where CSS can reach it. WordPress generates
+ * --wp--preset--spacing--* from those settings at runtime, which is why the
+ * theme has no spacing stylesheet to copy and this file exists at all.
+ * ============================================================ */
+
+:root {
+	--md-sys-measurement-space0: 0;
+	--md-sys-measurement-space25: 2px;  /* nested unit */
+	--md-sys-measurement-space50: 4px;  /* nested unit */
+	--md-sys-measurement-space75: 6px;  /* nested unit */
+	--md-sys-measurement-space100: 8px;
+	--md-sys-measurement-space125: 10px;  /* nested unit */
+	--md-sys-measurement-space150: 12px;
+	--md-sys-measurement-space175: 14px;  /* nested unit */
+	--md-sys-measurement-space200: 16px;
+	--md-sys-measurement-space250: 20px;
+	--md-sys-measurement-space300: 24px;
+	--md-sys-measurement-space400: 32px;
+	--md-sys-measurement-space450: 36px;
+	--md-sys-measurement-space500: 40px;
+	--md-sys-measurement-space600: 48px;
+	--md-sys-measurement-space700: 56px;
+	--md-sys-measurement-space800: 64px;
+	--md-sys-measurement-space900: 72px;
+}

@@ -1,0 +1,101 @@
+/* ============================================================
+ * Style guide — layout primitives
+ *
+ * Authored, unlike tokens.sys.layout.css beside it, which is generated. This
+ * file decides how the tokens are spent; that one decides what they are.
+ *
+ * Two axes, kept apart on purpose:
+ *
+ *   breakpoints        how panes and rails are arranged
+ *   content / wide     how wide a run of text or a block may get
+ *
+ * They are close enough to look like one - wideSize is 1280px and the large
+ * breakpoint is 1200px - and treating them as one would turn that coincidence
+ * into a rule. WordPress makes the same separation, which is why .ax-content
+ * and .ax-wide answer to a max width rather than to a media query.
+ * ============================================================ */
+
+/* --- Content widths ------------------------------------------ */
+
+/* The subtraction is what keeps the margin honest on a narrow screen: below
+ * the max width the element gives back the screen margin instead of touching
+ * the edge, and above it the margin is simply not reached. */
+.ax-content {
+	inline-size: min(
+		calc(100% - 2 * var(--ax-sys-layout-margin)),
+		var(--ax-sys-layout-content-max)
+	);
+	margin-inline: auto;
+}
+
+.ax-wide {
+	inline-size: min(
+		calc(100% - 2 * var(--ax-sys-layout-margin)),
+		var(--ax-sys-layout-wide-max)
+	);
+	margin-inline: auto;
+}
+
+/* Edge to edge. No margin: that is the point of it. */
+.ax-full {
+	inline-size: 100%;
+}
+
+/* --- Grid ---------------------------------------------------- */
+
+/* The column count is a custom property rather than a media query here,
+ * because the query already happened - tokens.sys.layout.css swapped the value
+ * at each breakpoint, so this rule is written once. */
+.ax-grid {
+	display: grid;
+	grid-template-columns: repeat(var(--ax-sys-layout-columns), minmax(0, 1fr));
+	gap: var(--ax-sys-layout-gap);
+}
+
+/* --- Scaffold ------------------------------------------------ */
+
+/* M3's scaffold is a safety region, bars, panes and rails. This is the web
+ * subset the site needs: a navigation rail beside a focus pane, collapsing to
+ * one column where M3 says a compact window carries a single pane.
+ *
+ * The rail is not the navigation pane. M3's glossary calls the rail the
+ * perimeter space that holds navigation, toolbars and pane controls, and a
+ * navigation rail is what sits in it; keeping the two names apart is what
+ * makes list-detail and supporting-pane layouts describable later. */
+.ax-scaffold {
+	display: grid;
+	grid-template-areas:
+		"rail"
+		"focus"
+		"supporting";
+	min-block-size: 100dvh;
+}
+
+/* M3 puts a single pane at compact and allows a second from medium, so the
+ * supporting pane sits below the focus pane until there is room beside it. */
+@media (min-width: 840px) {
+	.ax-scaffold {
+		grid-template-columns: auto minmax(0, 1fr);
+		grid-template-areas:
+			"rail focus"
+			"rail supporting";
+	}
+
+	/* Fixed at expanded and above - the one pane width M3 publishes. */
+	.ax-scaffold--supporting-beside {
+		grid-template-columns: auto minmax(0, 1fr) var(--md-sys-layout-pane-supporting);
+		grid-template-areas: "rail focus supporting";
+	}
+}
+
+.ax-scaffold__rail {
+	grid-area: rail;
+}
+
+.ax-scaffold__focus {
+	grid-area: focus;
+}
+
+.ax-scaffold__supporting {
+	grid-area: supporting;
+}

@@ -550,3 +550,53 @@
   font-size: var(--md-sys-typescale-label-medium-size);
   box-shadow: var(--sg-elevation-shadow);
 }
+
+/* Spacing figures. The bar's length is the token it names. */
+
+.sg-spacings {
+  margin-block: 0.5rem 1.5rem;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--md-sys-measurement-space50);
+}
+
+.sg-spacing {
+  display: grid;
+  grid-template-columns: minmax(0, 5rem) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--md-sys-measurement-space200);
+}
+
+.sg-spacing__bar {
+  block-size: var(--md-sys-measurement-space150);
+  min-inline-size: 1px;
+  border-radius: var(--md-sys-shape-corner-value-extra-small);
+  background: var(--md-sys-color-primary);
+}
+
+.sg-spacing__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* Grid figure. Reads the same --ax-sys-layout-columns the site's own grid
+ * does, so narrowing the window reflows it exactly as the table says. */
+
+.sg-gridprobe {
+  margin-block: 0.5rem 1.5rem;
+}
+
+.sg-gridprobe__col {
+  display: grid;
+  place-items: center;
+  min-block-size: 3rem;
+  border-radius: var(--md-sys-shape-corner-value-extra-small);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  font-size: var(--md-sys-typescale-label-medium-size);
+}

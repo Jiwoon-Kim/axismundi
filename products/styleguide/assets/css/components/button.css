@@ -2,11 +2,11 @@
  * Button — static adapter for core/button and core/buttons.
  *
  * The markup this styles is the markup the WordPress block editor writes.
- * Nothing here invents a class: .wp-block-buttons, .wp-block-button,
- * .wp-block-button__link and the is-style-* variations are what core emits, so
- * a specimen on this site is the same DOM a post carries. That is deliberate.
- * A style guide whose demo markup only resembles the product cannot be used to
- * check the product.
+ * The container and control DOM (.wp-block-buttons, .wp-block-button and
+ * .wp-block-button__link) plus the is-style-* colour variations are what core
+ * emits. data-size is intentionally different: it is the static rendering
+ * contract for a future editor-facing Button size attribute. It must never
+ * consume WordPress's single block-style variation axis.
  *
  * The theme owns the real surface in theme.json (styles.elements.button plus
  * styles.blocks.core/button.variations.outline) and in the auto-registered
@@ -38,8 +38,9 @@
 /* --- 1. The control ------------------------------------------ */
 
 /* Every measurement is a custom property with the Small default inlined as its
- * fallback, so a button with no size class is a Small button and a size class
- * is a set of declarations rather than a second copy of this rule. */
+ * fallback, so a button with no size attribute is a Small button and an
+ * explicit size is a set of declarations rather than a second copy of this
+ * rule. */
 .wp-block-button__link {
 	display: inline-flex;
 	align-items: center;
@@ -65,6 +66,32 @@
 	transition:
 		border-radius var(--md-sys-motion-curve-fast-spatial-duration) var(--md-sys-motion-curve-fast-spatial),
 		background-color var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects);
+}
+
+/* The icon slot. Its class is the contract; what fills it is not.
+ *
+ * WordPress 7.1 made the icon registry public (wp_register_icon_collection /
+ * wp_register_icon), and a reference resolved through it arrives as an <svg>.
+ * A name typed as text - the way axismundi/dialog's triggerIcon works today -
+ * arrives as a Material Symbols ligature instead. Both are direct children of
+ * the link, so this rule sizes the box and lets whatever is inside fill it,
+ * and neither source needs its own geometry.
+ *
+ * The box cannot shrink beside a long label: an icon that reflows with the
+ * text is no longer the fixed leading affordance M3 measures. Leading and
+ * trailing are the same element in different document order. */
+.wp-block-button__link > .wp-block-button__icon {
+	flex: 0 0 var(--ax-button-icon-size, 20px);
+	inline-size: var(--ax-button-icon-size, 20px);
+	block-size: var(--ax-button-icon-size, 20px);
+	font-size: var(--ax-button-icon-size, 20px);
+	line-height: 1;
+}
+
+.wp-block-button__link > .wp-block-button__icon > svg {
+	inline-size: 100%;
+	block-size: 100%;
+	fill: currentColor;
 }
 
 /* A Button link may sit inside prose, whose generic link colour is deliberately
@@ -115,17 +142,18 @@
 /* Size is not an is-style-* variation, and that is a decision rather than an
  * omission. M3 makes size and colour independent configurations; the editor's
  * Styles panel is single-select, so spending it on size would make "medium"
- * and "tonal" mutually exclusive. A plain class keeps the two axes orthogonal
- * and is reachable from the editor today through Advanced > Additional CSS
- * class. Small needs no class: it is the fallback set above.
+ * and "tonal" mutually exclusive. A named block attribute must render as
+ * data-size, as axismundi/theme-switcher already does. Small needs no
+ * attribute: it is the fallback set above.
  *
  * The round shape is half the height in every size, which is what M3 means by
  * a full corner on a fixed-height control. */
 
-.wp-block-button.is-size-xsmall {
+.wp-block-button[data-size="xsmall"] {
 	--ax-button-height: 32px;
 	--ax-button-space: var(--md-sys-measurement-space150);
 	--ax-button-icon-gap: var(--md-sys-measurement-space50);
+	--ax-button-icon-size: 20px;
 	--ax-button-shape: 16px;
 	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-small);
 	--ax-button-outline-width: 1px;
@@ -135,10 +163,11 @@
 	--ax-button-label-line-height: 20px;
 }
 
-.wp-block-button.is-size-medium {
+.wp-block-button[data-size="medium"] {
 	--ax-button-height: 56px;
 	--ax-button-space: var(--md-sys-measurement-space300);
 	--ax-button-icon-gap: var(--md-sys-measurement-space100);
+	--ax-button-icon-size: 24px;
 	--ax-button-shape: 28px;
 	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-medium);
 	--ax-button-outline-width: 1px;
@@ -148,10 +177,11 @@
 	--ax-button-label-line-height: 24px;
 }
 
-.wp-block-button.is-size-large {
+.wp-block-button[data-size="large"] {
 	--ax-button-height: 96px;
 	--ax-button-space: var(--md-sys-measurement-space600);
 	--ax-button-icon-gap: var(--md-sys-measurement-space150);
+	--ax-button-icon-size: 32px;
 	--ax-button-shape: 48px;
 	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-large);
 	--ax-button-outline-width: 2px;
@@ -161,10 +191,11 @@
 	--ax-button-label-line-height: 32px;
 }
 
-.wp-block-button.is-size-xlarge {
+.wp-block-button[data-size="xlarge"] {
 	--ax-button-height: 136px;
 	--ax-button-space: var(--md-sys-measurement-space800);
 	--ax-button-icon-gap: var(--md-sys-measurement-space200);
+	--ax-button-icon-size: 40px;
 	--ax-button-shape: 68px;
 	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-large);
 	--ax-button-outline-width: 3px;
@@ -174,18 +205,20 @@
 	--ax-button-label-line-height: 40px;
 }
 
-/* Square is the other Expressive shape configuration. Round and square share
- * one pressed shape, so only the resting corner changes. */
-.wp-block-button.is-shape-square {
+/* Square is the other Expressive shape configuration, and it is an attribute
+ * for the same reason size is: it is orthogonal to colour, so it cannot spend
+ * the single is-style-* axis. Round and square share one pressed shape, so
+ * only the resting corner changes. */
+.wp-block-button[data-shape="square"] {
 	--ax-button-shape: var(--md-sys-shape-corner-value-medium);
 }
 
-.wp-block-button.is-size-medium.is-shape-square {
+.wp-block-button[data-size="medium"][data-shape="square"] {
 	--ax-button-shape: var(--md-sys-shape-corner-value-large);
 }
 
-.wp-block-button.is-size-large.is-shape-square,
-.wp-block-button.is-size-xlarge.is-shape-square {
+.wp-block-button[data-size="large"][data-shape="square"],
+.wp-block-button[data-size="xlarge"][data-shape="square"] {
 	--ax-button-shape: var(--md-sys-shape-corner-value-extra-large);
 }
 

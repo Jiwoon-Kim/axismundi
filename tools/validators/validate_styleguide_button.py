@@ -101,6 +101,7 @@ def main() -> int:
     report.check(control is not None, "adapter has no base button control rule")
     if control is not None:
         expected = {
+            "gap": "var(--ax-button-icon-gap, var(--md-sys-measurement-space100))",
             "block-size": f"var(--ax-button-height, {small['height']}px)",
             "padding-inline": "var(--ax-button-space, var(--md-sys-measurement-space200))",
             "border-radius": "var(--ax-button-shape, 20px)",
@@ -110,6 +111,65 @@ def main() -> int:
         for name, want in expected.items():
             report.check(declaration(control, name) == want,
                          f"adapter base {name} differs from M3 Small ({want})")
+
+    # The slot class is the contract, not what fills it: a 7.1 icon-registry
+    # reference arrives as <svg>, a typed Material Symbols name as a ligature.
+    # Keying the geometry on the glyph font would bind the rule to one source.
+    icon = block(css, ".wp-block-button__link > .wp-block-button__icon")
+    report.check(icon is not None, "adapter has no Button icon geometry rule")
+    report.check(".wp-block-button__link > .material-symbols-outlined" not in css,
+                 "Button icon geometry must not key on the glyph font")
+    svg = block(css, ".wp-block-button__link > .wp-block-button__icon > svg")
+    report.check(svg is not None,
+                 "adapter has no rule sizing a registry <svg> to the icon slot")
+    if svg is not None:
+        for name, want in {"inline-size": "100%", "block-size": "100%",
+                           "fill": "currentColor"}.items():
+            report.check(declaration(svg, name) == want,
+                         f"adapter icon svg {name} does not fill the slot")
+    # The Small default belongs in the var() fallback, never as a declaration on
+    # the link. Declared there it is the icon's own value and outranks the one
+    # inherited from .wp-block-button[data-size], so every size renders a 20px
+    # glyph while its height, padding and gap scale correctly - which is exactly
+    # how this was found, by measuring the rendered page rather than reading it.
+    if control is not None:
+        report.check(declaration(control, "--ax-button-icon-size") is None,
+                     "icon size must not be declared on the link: it would "
+                     "outrank the per-size value inherited from the button")
+    if icon is not None:
+        for name, want in {
+            "flex": f"0 0 var(--ax-button-icon-size, {small['icon']}px)",
+            "inline-size": f"var(--ax-button-icon-size, {small['icon']}px)",
+            "block-size": f"var(--ax-button-icon-size, {small['icon']}px)",
+            "font-size": f"var(--ax-button-icon-size, {small['icon']}px)",
+            "line-height": "1",
+        }.items():
+            report.check(declaration(icon, name) == want,
+                         f"adapter Button icon {name} differs from the size contract")
+
+    # Colour is the one WordPress block-style axis. Size is a distinct block
+    # attribute rendered as data-size, so selecting Tonal does not erase Medium.
+    report.check(not re.search(r"\.is-style-(?:xsmall|small|medium|large|xlarge)\b", css),
+                 "Button size must not consume the is-style-* variation axis")
+    report.check(".is-size-" not in css,
+                 "Button size must not use an additional CSS class")
+    # Shape is orthogonal to colour for the same reason size is.
+    report.check(".is-shape-" not in css,
+                 "Button shape must not use an additional CSS class")
+    report.check('[data-shape="square"]' in css,
+                 "adapter has no data-shape square rule")
+    for size in data["sizes"]:
+        if size["name"] == "small":
+            continue
+        size_rule = block(css, f'.wp-block-button[data-size="{size["name"]}"]')
+        report.check(size_rule is not None,
+                     f"adapter has no {size['name']} data-size rule")
+        if size_rule is not None:
+            report.check(declaration(size_rule, "--ax-button-icon-size") == f"{size['icon']}px",
+                         f"adapter {size['name']} icon size differs from button.yml")
+            report.check(declaration(size_rule, "--ax-button-icon-gap") ==
+                         f"var(--md-sys-measurement-space{int(size['icon_gap'] * 12.5)})",
+                         f"adapter {size['name']} icon gap differs from button.yml")
 
     # Prose gives ordinary links a primary colour. The block editor's real
     # parent-child relationship must therefore restate the Button label colour

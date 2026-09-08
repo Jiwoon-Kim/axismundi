@@ -8,12 +8,15 @@ lang: ko
 
 M3의 button은 **두 개의 독립 축**을 가집니다. 색 스타일이 크기를 정하지 않고,
 크기가 색 스타일을 정하지 않습니다. 이 페이지의 표가 하나의 행렬이 아니라 두 개의
-목록인 이유이고, [WordPress 바인딩]({{ '/wordpress/button-and-buttons/' | relative_url }})
-쪽에서 크기를 `is-style-*`로 만들지 않은 이유이기도 합니다.
+목록인 이유입니다. WordPress의 단일 `is-style-*` variation 축은 색에만 남기고,
+크기와 모양은 독립 attribute가 렌더한 `data-size`·`data-shape`가 맡습니다.
+`core/button`에는 아직 이 attribute들이 없으므로, 여기의 크기 표본은 그 editor contract를 앞서 보여주는
+정적 어댑터입니다.
 
-이 페이지의 모든 버튼은 실제로 동작합니다. 마크업은 블록 에디터가 쓰는 것과 같은
+이 페이지의 모든 버튼은 실제로 동작합니다. 기본 마크업은 블록 에디터가 쓰는 것과 같은
 `.wp-block-button > .wp-block-button__link`이고, CSS는 테마의 계약을 정적으로
-재진술한 것입니다.
+재진술한 것입니다. 아래 icon 표본만은 현재 `core/button`에 없는 slot을 문서화한
+Material reference입니다.
 
 ## Anatomy
 
@@ -22,6 +25,53 @@ Container      필수. outlined·text에서는 쉬는 상태에 보이지 않음
 Label text     필수
 Icon           선택
 ```
+
+Icon은 label의 의미를 반복하지 않는 장식이며 `aria-hidden`입니다. leading과 trailing은
+같은 크기·간격 계약을 공유하고, **label은 언제나 남습니다** — 아이콘만 남는 것은
+button이 아니라 icon button입니다.
+
+<div class="sg-demo">
+  <div class="wp-block-buttons">
+    <div class="wp-block-button"><button type="button" class="wp-block-button__link wp-element-button"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true" draggable="false">search</span>Search</button></div>
+    <div class="wp-block-button is-style-outline"><button type="button" class="wp-block-button__link wp-element-button">Learn more<span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true" draggable="false">arrow_forward</span></button></div>
+  </div>
+</div>
+
+### Icon은 값이 아니라 참조입니다
+
+블록이 저장하는 것은 glyph가 아니라 **참조**이고, 그 참조를 푸는 방법이 둘입니다.
+
+```
+icon: "core/search"     Icon Registry 참조
+icon: "arrow_forward"   이름을 직접 입력
+```
+
+첫째는 WordPress 7.1이 공개한 icon registry입니다 — `wp_register_icon_collection()`과
+`wp_register_icon()`이 실제로 존재하고, 이 저장소에도 이미 쓰는 곳이 있습니다
+([`axismundi-contacts/includes/icons.php`]({{ site.repository_url }}/blob/main/products/wordpress/plugins/axismundi-contacts/includes/icons.php)가
+자기 컬렉션을 등록하고 `function_exists` 가드로 구버전을 폴백합니다).
+
+둘째는 이미 우리 제품이 하고 있는 방식입니다. `axismundi/dialog`의 `triggerIcon`은
+`TextControl`에 Material Symbols 이름을 그대로 받고, 서버가 그것을 ligature로
+렌더합니다. **registry에 없는 아이콘을 위한 탈출구**이고, 이게 필요한 이유는
+구체적입니다 — 코어 컬렉션 88개에 **light/dark/contrast 계열이 하나도 없습니다.**
+색 구성표 스위처조차 registry만으로는 그릴 수 없습니다.
+
+두 경로가 만나는 지점이 slot의 클래스입니다.
+
+```html
+<span class="wp-block-button__icon" aria-hidden="true"> … </span>
+```
+
+**클래스가 계약이고, 안에 무엇이 들어가는지는 계약이 아닙니다.** registry 참조는
+`<svg>`로, 입력한 이름은 ligature로 도착하며, 크기 규칙은 상자만 정하고 내용물이
+그 상자를 채우게 둡니다. 그래서 소스마다 별도 CSS가 필요 없습니다.
+
+위 표본은 WordPress 런타임이 없는 정적 사이트이므로 둘 다 ligature로 그려집니다.
+
+**`core/button`에는 아직 이 slot이 없습니다.** registry를 소비하는 코어 블록은
+`core/icon` 하나뿐이라, 이 절은 바인딩이 아니라 **그 slot이 생겼을 때의 저장·렌더
+계약을 미리 적어 둔 것**입니다.
 
 ## 두 변형
 
@@ -119,7 +169,7 @@ pill 반지름은 길이가 아니라서 전환의 끝점이 될 수 없습니�
 <div class="sg-demo">
   <div class="wp-block-buttons">
     <div class="wp-block-button is-style-tonal"><button type="button" class="wp-block-button__link wp-element-button">눌러 보세요</button></div>
-    <div class="wp-block-button is-style-tonal is-shape-square"><button type="button" class="wp-block-button__link wp-element-button">Square</button></div>
+    <div class="wp-block-button is-style-tonal" data-shape="square"><button type="button" class="wp-block-button__link wp-element-button">Square</button></div>
   </div>
 </div>
 
@@ -158,7 +208,7 @@ stiffness {{ site.data.button.meta.spring_stiffness }}로 다섯 크기가 모�
 <div class="sg-demo sg-demo--wrap">
   <div class="wp-block-buttons">
 {%- for s in sizes %}
-    <div class="wp-block-button{% unless s.name == 'small' %} is-size-{{ s.name }}{% endunless %}"><button type="button" class="wp-block-button__link wp-element-button">{{ s.label }}</button></div>
+    <div class="wp-block-button"{% unless s.name == 'small' %} data-size="{{ s.name }}"{% endunless %}><button type="button" class="wp-block-button__link wp-element-button"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true" draggable="false">add</span>{{ s.label }}</button></div>
 {%- endfor %}
   </div>
 </div>

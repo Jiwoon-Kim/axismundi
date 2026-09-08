@@ -88,19 +88,22 @@ Styles 패널은 **단일 선택**입니다. 크기를 `is-style-*`에 태우면
 `is-style-medium`과 `is-style-tonal`이 서로 배타적이 되고, M3가 직교로 정의한 두
 축이 하나로 접힙니다.
 
-그래서 크기는 평범한 클래스입니다.
-
 ```
 스타일   is-style-*        Styles 패널에서 고름
-크기     is-size-*         Advanced > Additional CSS class
-모양     is-shape-square   같음
+크기     size attribute    별도 Inspector control (아직 Core에 없음)
+모양     shape attribute   별도 Inspector control (아직 Core에 없음)
+아이콘   icon attribute    registry 참조 또는 입력한 이름 (아직 Core에 없음)
 ```
 
-셋 다 에디터에서 지금 바로 도달 가능하고, 서로 조합됩니다. 나중에 플러그인이
-`registerBlockVariation`으로 크기 선택 UI를 붙이더라도 클래스 계약은 그대로입니다.
+`registerBlockVariation`은 색 variation에만 씁니다. 크기와 모양은 block attribute로
+저장하고, 프런트에서는 각각 `data-size`와 `data-shape`로 렌더해야 합니다. 그래야
+Filled Medium과 Outlined Large를 동시에 표현할 수 있습니다.
 
-`is-size-small`은 없습니다. Small이 기본값이고, 기본값에 클래스를 요구하면 M3가
-"Small (default)"이라고 쓴 것과 어긋납니다.
+현재 Core Button은 색 variation만 지원합니다. 따라서 크기와 모양은 아직 editor에서
+선택할 수 없고, 이 표는 그 지원이 생겼을 때의 저장·렌더 계약을 기록합니다.
+
+`size: "small"`은 기본값이라 저장하지 않아도 됩니다. 프런트는 attribute가 없을 때
+Small로 렌더합니다.
 
 ## 테마가 실제로 쓰는 두 경로
 
@@ -132,7 +135,7 @@ label-large 서체, pill 반지름 20px, 눌린 8px, state layer, focus ring. Sm
 | M3 Button group | 없음 | `core/buttons`는 action container이며 선택 상태를 저장하지 않음 |
 | Toggle button | 없음 | 선택 상태를 저장할 곳이 core/button에 없음 |
 | Disabled | 없음 | `theme.json` element 모델에 `:disabled`가 없음 |
-| Icon slot | 없음 | core/button은 라벨만 가짐 |
+| Icon slot | 없음 | registry는 7.1에 공개됐지만 `core/button`이 소비하지 않음 |
 | Target area 48dp | 없음 | XS·S에서 시각 크기와 타깃 크기가 갈라짐 |
 
 **Toggle이 가장 깊은 항목입니다.** 나머지는 CSS 문제이지만 토글은 상태 문제입니다.
@@ -210,6 +213,41 @@ C  partial 삭제 + dialog·sheet를 다른 방식으로   가장 깨끗하지�
 탐색이고, 동작을 실행하는 것은 `<button>`입니다. 둘을 같은 CSS로 칠하는 것은
 맞지만 **같은 것으로 취급하면 안 됩니다** — 키보드 동작도 스크린 리더가 읽는
 역할도 다릅니다.
+
+### 크기·모양·아이콘이 붙으면
+
+아직 Core에 없는 세 attribute까지 가정한 형태입니다. 여기서 저장되는 것과
+렌더되는 것을 구분해서 읽어야 합니다.
+
+```html
+<!-- wp:button {"tagName":"button","size":"medium","icon":"core/search"} -->
+<div class="wp-block-button" data-size="medium"><button type="button" class="wp-block-button__link wp-element-button">
+  <span class="wp-block-button__icon" aria-hidden="true"><svg …></svg></span>
+  Search
+</button></div>
+<!-- /wp:button -->
+```
+
+```
+저장   size / shape / icon        attribute. 색은 className에만 남음
+렌더   data-size / data-shape     CSS가 읽는 표면
+       .wp-block-button__icon     소스와 무관한 slot
+```
+
+**색만 `className`에 실립니다.** `is-style-*` 축은 단일 선택이므로 크기·모양·아이콘이
+그 축에 올라타는 순간 Filled Medium 같은 조합이 표현 불가능해집니다. 이 분리가
+`axismundi/theme-switcher`가 이미 하고 있는 것이기도 합니다 — `size`는 attribute이고
+프런트에서 `data-size`로 나옵니다.
+
+`icon`은 참조입니다. WordPress 7.1이 `wp_register_icon_collection()`과
+`wp_register_icon()`을 공개했으므로 `core/search` 같은 registry 참조가 첫 경로이고,
+`axismundi/dialog`의 `triggerIcon`처럼 이름을 직접 입력하는 것이 두 번째 경로입니다.
+registry에 light/dark 계열이 없어 두 번째가 실제로 필요합니다. 자세한 것은
+[Buttons]({{ '/components/buttons/' | relative_url }})에 있습니다.
+
+registry가 공개됐다는 것과 `core/button`이 그것을 쓴다는 것은 다른 이야기입니다.
+지금 registry를 소비하는 코어 블록은 `core/icon` 하나뿐이고, 그래서 이 절은
+바인딩이 아니라 **바인딩이 생겼을 때의 계약**입니다.
 
 ## 드리프트 방지
 

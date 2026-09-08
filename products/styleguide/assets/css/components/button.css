@@ -59,6 +59,14 @@
 	letter-spacing: var(--ax-button-label-tracking, 0.1px);
 	line-height: var(--ax-button-label-line-height, 20px);
 	text-decoration: none;
+	/* M3: a button's width adjusts to its label, and a width narrower than
+	 * the label is the documented Don't. Left to wrap, a label breaks lines
+	 * inside a container whose height is fixed per size, so the second line
+	 * is clipped rather than visibly wrong - measured at a 110px container,
+	 * where the button shrank from 134px and swallowed half its label.
+	 * nowrap makes min-content the whole label, which is what stops a flex
+	 * parent squeezing it. */
+	white-space: nowrap;
 	cursor: pointer;
 	/* The blue tap rectangle is the wrong shape and the wrong colour for a
 	 * pill, and nothing is lost: the pressed state layer answers the touch. */
@@ -78,8 +86,14 @@
  * and neither source needs its own geometry.
  *
  * The box cannot shrink beside a long label: an icon that reflows with the
- * text is no longer the fixed leading affordance M3 measures. Leading and
- * trailing are the same element in different document order. */
+ * text is no longer the fixed leading affordance M3 measures.
+ *
+ * Leading is the only position M3's guidelines describe. They give it in
+ * physical terms - left of the label in LTR, right of it in RTL - which is one
+ * logical rule written twice, so nothing here implements it: the slot is a
+ * flex child placed by document order, and a row flips with the writing
+ * direction on its own. There is no trailing rule because M3 specifies no
+ * trailing icon, and no second slot because it says not to use two. */
 .wp-block-button__link > .wp-block-button__icon {
 	flex: 0 0 var(--ax-button-icon-size, 20px);
 	inline-size: var(--ax-button-icon-size, 20px);

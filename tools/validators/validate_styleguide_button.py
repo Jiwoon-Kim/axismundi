@@ -112,6 +112,18 @@ def main() -> int:
             report.check(declaration(control, name) == want,
                          f"adapter base {name} differs from M3 Small ({want})")
 
+        # M3 guidelines: the width follows the label, and a width narrower than
+        # the label is the documented Don't. Declaring no width is not enough -
+        # core/buttons is a flex parent whose children shrink by default, and a
+        # squeezed label wraps into a container whose height is fixed per size,
+        # so the overflow is clipped instead of visible. nowrap makes the label
+        # the min-content floor, which is what actually holds the width.
+        report.check(declaration(control, "white-space") == "nowrap",
+                     "Button label must not wrap: its width follows the label")
+        for name in ("width", "inline-size", "min-inline-size", "max-inline-size"):
+            report.check(declaration(control, name) is None,
+                         f"Button must not declare {name}: the label sets the width")
+
     # The slot class is the contract, not what fills it: a 7.1 icon-registry
     # reference arrives as <svg>, a typed Material Symbols name as a ligature.
     # Keying the geometry on the glyph font would bind the rule to one source.

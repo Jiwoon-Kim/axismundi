@@ -26,16 +26,53 @@ Label text     필수
 Icon           선택
 ```
 
-Icon은 label의 의미를 반복하지 않는 장식이며 `aria-hidden`입니다. leading과 trailing은
-같은 크기·간격 계약을 공유하고, **label은 언제나 남습니다** — 아이콘만 남는 것은
-button이 아니라 icon button입니다.
+Icon은 label의 의미를 반복하지 않는 장식이며 `aria-hidden`입니다. **label은 언제나
+남습니다** — 아이콘만 남는 것은 button이 아니라 icon button입니다.
 
 <div class="sg-demo">
   <div class="wp-block-buttons">
     <div class="wp-block-button"><button type="button" class="wp-block-button__link wp-element-button"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true" draggable="false">search</span>Search</button></div>
-    <div class="wp-block-button is-style-outline"><button type="button" class="wp-block-button__link wp-element-button">Learn more<span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true" draggable="false">arrow_forward</span></button></div>
+    <div class="wp-block-button is-style-outline"><button type="button" class="wp-block-button__link wp-element-button"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true" draggable="false">edit</span>Edit playlist</button></div>
   </div>
 </div>
+
+### 폭은 label이 정합니다
+
+M3가 Do/Don't로 명시한 것입니다.
+
+```
+Do     버튼 폭이 label에 맞춰 늘어난다
+Don't  label보다 좁은 고정 폭을 주지 않는다
+```
+
+그래서 이 어댑터는 링크에 폭을 선언하지 않습니다. 하지만 그것만으로는 부족했습니다 —
+**측정해 보니 컨테이너가 110px일 때 버튼이 134px에서 110px로 눌렸습니다.** `core/buttons`가
+flex이고 자식의 `flex-shrink`가 1이라, 고정 폭을 주지 않아도 눌립니다. 눌린 label은
+줄바꿈되고, 컨테이너 높이는 크기마다 고정이므로 **둘째 줄이 잘려서 보이지도 않습니다.**
+
+`white-space: nowrap` 한 줄이 이걸 막습니다. 줄바꿈이 없으면 min-content가 label 전체가
+되고, flex는 min-content 아래로 자식을 줄이지 않습니다. 폭을 금지해서가 아니라
+**최소 폭을 label로 만들어서** 규칙이 성립합니다.
+
+### 아이콘은 leading side입니다
+
+M3 가이드라인이 아이콘에 대해 말하는 것은 다음이 전부입니다.
+
+```
+Do     label 앞, leading side에 둔다
+Do     의미가 분명한 아이콘을 쓴다
+Don't  아이콘과 텍스트를 세로 가운데로 쌓지 않는다
+Don't  한 버튼에 아이콘 두 개를 쓰지 않는다
+```
+
+"LTR에서는 label 왼쪽, RTL에서는 오른쪽"이라고 쓰여 있지만 **이건 두 규칙이 아니라
+하나를 물리 방향으로 두 번 쓴 것**입니다. leading은 논리 개념이라 구현할 것이 없습니다 —
+slot은 문서 순서대로 놓이는 flex 자식이고, row는 쓰기 방향을 따라 저절로 뒤집힙니다.
+
+**trailing icon은 M3가 서술하지 않습니다.** 없다고 쓰여 있는 게 아니라 다루지 않습니다.
+그래서 이 페이지는 leading만 보여주고, trailing이 필요해지면 그건 Material의 결정이
+아니라 Axismundi의 결정으로 기록되어야 합니다. 아이콘이 하나뿐인 것은 명시된
+Don't이므로 slot도 하나뿐입니다.
 
 ### Icon은 값이 아니라 참조입니다
 
@@ -43,7 +80,7 @@ button이 아니라 icon button입니다.
 
 ```
 icon: "core/search"     Icon Registry 참조
-icon: "arrow_forward"   이름을 직접 입력
+icon: "contrast"        이름을 직접 입력
 ```
 
 첫째는 WordPress 7.1이 공개한 icon registry입니다 — `wp_register_icon_collection()`과

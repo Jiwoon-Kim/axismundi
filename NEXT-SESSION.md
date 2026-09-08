@@ -1,5 +1,9 @@
 # NEXT-SESSION.md - Post-v3.6.27 Handoff
 
+> **Historical.** This describes a phase model the project has moved past.
+> Current authority is `products/wordpress/` and `products/styleguide/`;
+> see `AGENTS.md`. Kept as a record, not as instructions.
+
 > **Status**: v3.6.0-v3.6.27 are closed. The latest closed cycle is v3.6.27
 > Pilot TT5 Structural Transplant, which used TT5 1.5 as structural evidence
 > for the Axismundi Pilot without importing TT5 visual/content values.

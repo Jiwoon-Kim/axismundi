@@ -1,5 +1,9 @@
 # PROJECT-CONTEXT.md — Axismundi long-horizon architecture
 
+> **Historical.** This describes a phase model the project has moved past.
+> Current authority is `products/wordpress/` and `products/styleguide/`;
+> see `AGENTS.md`. Kept as a record, not as instructions.
+
 > **Purpose**: stable architectural reference. Read once per session. Should change rarely.
 > **For volatile state** (current release / phase / next action): see `CURRENT-STATE.md`.
 > **For canonical authority**: `CONSTITUTION.md` (12 articles) — this file is a digest, not the authority.

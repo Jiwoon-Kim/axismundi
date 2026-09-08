@@ -10,8 +10,9 @@ Checks that the Axismundi design-system stylesheets keep their layering:
      `--wp--custom--axismundi--*` is defined as a `var()` pointing at a token
      that actually exists upstream, never as a literal.
 
-These are the two axes CLAUDE.md calls the permanent guards on token
-architecture. They read the design-system stylesheets only.
+Axis E reads the shipped theme and the lab. Axis F reads the lab only: it
+audits hand-written WordPress bridge CSS, and the theme has none because
+WordPress generates --wp--preset--* from theme.json at runtime.
 
 History: this file is the surviving half of `validate_theme_pilot.py`, which
 also carried axes A-D and G. Those read the two pilot themes
@@ -33,18 +34,32 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding=UTF8)
 
-# Design-system stylesheets under audit. This path moves when the lab is
-# promoted to products/styleguide/; it is the only path this script knows.
-STYLES = Path("products/reference-implementations/axismundi-lab/stylesheets")
+LAB = Path("products/reference-implementations/axismundi-lab/stylesheets")
+THEME = Path("products/wordpress/themes/axismundi/assets/styles")
+
+# Axis E runs against both, and the shipped theme is the one that matters.
+# Until now this script read the lab only, which meant the invariant everyone
+# treats as the hard gate was guarding the workbench and not the product. The
+# theme happened to comply -- 96 declarations, no literals -- but nothing was
+# checking, so it held by habit rather than by rule.
+#
+# The two carry the same tokens under different file names: the lab splits its
+# scheme files by mode, the theme by mode within the colour layer.
+E_SOURCES = (
+    ("lab", LAB, ("tokens.sys.light.css", "tokens.sys.dark.css")),
+    ("theme", THEME, ("tokens.sys.color.light.css", "tokens.sys.color.dark.css")),
+)
+
+# Axis F stays lab-only, and that is not an omission. It audits the CSS bridge
+# files the lab hand-writes; the theme has no equivalent, because WordPress
+# generates --wp--preset--* from theme.json settings at runtime and there is no
+# stylesheet to read.
 
 
-def axis_e_token_layering(styles_dir):
+def axis_e_token_layering(styles_dir, sys_filenames):
     """E. Token layering axis — md-sys color tokens must consume md-ref."""
     findings = {}
-    sys_files = [
-        styles_dir / "tokens.sys.light.css",
-        styles_dir / "tokens.sys.dark.css",
-    ]
+    sys_files = [styles_dir / name for name in sys_filenames]
 
     sys_color_def_pattern = re.compile(r"^\s*(--md-sys-color-[a-z0-9-]+)\s*:\s*([^;]+);", re.MULTILINE)
     direct_hex_pattern = re.compile(r"^\s*(--md-sys-color-[a-z0-9-]+)\s*:\s*(#[0-9A-Fa-f]{3,8})\b", re.MULTILINE)
@@ -177,18 +192,27 @@ def report(name, findings, score):
 
 
 def main():
-    if not STYLES.is_dir():
-        print(f"stylesheets directory not found: {STYLES}")
-        return 1
+    for _, styles_dir, _ in E_SOURCES:
+        if not styles_dir.is_dir():
+            print(f"stylesheets directory not found: {styles_dir}")
+            return 1
 
-    print(f"=== Token layering audit ===\n  source: {STYLES}\n")
-    findings_e, score_e = axis_e_token_layering(STYLES)
-    findings_f, score_f = axis_f_bridge_layering(STYLES)
+    print("=== Token layering audit ===")
+    scored = []
+    for label, styles_dir, sys_filenames in E_SOURCES:
+        print(f"  E source: {styles_dir}")
+        findings, score = axis_e_token_layering(styles_dir, sys_filenames)
+        scored.append((f"E {label}", findings, score))
+    print(f"  F source: {LAB}\n")
 
-    report("E token layering ", findings_e, score_e)
+    findings_f, score_f = axis_f_bridge_layering(LAB)
+
+    for name, findings, score in scored:
+        report(f"{name} token layering".ljust(17), findings, score)
     report("F bridge layering", findings_f, score_f)
 
-    failed = [n for n, s in (("E", score_e), ("F", score_f)) if s != 1.0]
+    failed = [n for n, _, s in scored if s != 1.0]
+    failed += ["F"] if score_f != 1.0 else []
     print()
     if failed:
         print(f"FAIL — axes {', '.join(failed)} did not pass.")

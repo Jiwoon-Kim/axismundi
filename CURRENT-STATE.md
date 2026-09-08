@@ -1,5 +1,9 @@
 # CURRENT-STATE.md — Release / Phase Status Board
 
+> **Historical.** This describes a phase model the project has moved past.
+> Current authority is `products/wordpress/` and `products/styleguide/`;
+> see `AGENTS.md`. Kept as a record, not as instructions.
+
 > **Purpose**: volatile release state. Update only at real phase or release
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.

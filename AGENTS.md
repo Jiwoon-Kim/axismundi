@@ -1,221 +1,152 @@
-# AGENTS.md — Codex / repo-level executor rules
+# AGENTS.md
 
-> **Audience**: OpenAI Codex (or any coding-agent that uses `AGENTS.md` as repo-level guidance). Read this first before any edit.
-> **Sibling file**: `CLAUDE.md` (Anthropic Claude Code rules). Both files coexist; pick the one matching your runtime.
-> **Last updated**: 2026-05-22 (v3.6.10 Phase 5 - diagnostic-first lock promotion)
+Rules for any AI coding agent working in this repository. `CLAUDE.md` imports
+this file; there is no second copy.
 
----
+## Read the nearest file, not all of them
 
-## Required reading order (every session)
+Each surface has its own `AGENTS.md`. Open the one closest to what you are
+changing; this file holds only what is true everywhere.
 
-1. `AGENTS.md` — this file
-2. `CURRENT-STATE.md` — current release / phase / next allowed action
-3. `PROJECT-CONTEXT.md` — stable architecture summary (A–F layers, v3.5.0 framework)
-4. `NEXT-SESSION.md` — next-session execution plan, forbidden surfaces, Codex task queue (C1–C4)
-5. Then, only as needed for the active task: `docs/v3.5.0/*`, `docs/v3.5.1/*`, `CONSTITUTION.md`.
-
----
-
-## Role
-
-Codex in this repo is a **plan-first executor / reviewer**. It is NOT the ontology decision-maker. The Axismundi project is ontology-heavy (37-entry matrix, 3-axis ontology, DISTINCT but COUPLED dependency principle). Architectural / category / boundary decisions are made by the project owner (Ji-woon), reviewed by GPT/Claude, and routed to executors only after approval.
-
-### Allowed
-
-- Plan-first work on any task in `NEXT-SESSION.md` Codex queue (C1–C4)
-- Reading any repo file for context
-- Drafting audit doc bodies inside approved skeletons (e.g., `lab/modules/button/docs/BUTTON-*.md`)
-- Running validators and reporting results: `python tools/validators/validate_token_layering.py`
-- Building the style guide: `python3 products/styleguide/bin/build.py --verify`
-- Cross-reference checks across docs
-- Small, focused diffs with clear scope
-
-### Forbidden without explicit user authorization
-
-- Architectural / category / boundary / ontology decisions
-- Baseline mutations:
-  - `products/reference-implementations/axismundi-lab/stylesheets/components.css` §0–§34 baseline sections
-  - `products/reference-implementations/axismundi-lab/style-guide.html` `#components-*` anchors
-  - Published site: built from `products/styleguide/` by `.github/workflows/styleguide.yml`
-- Naming sweeps (e.g., `.snackbar → .ax-snackbar` — BACKLOG #18)
-- `theme.json` edits (BACKLOG #20/#22)
-- `data-theme="auto"` implementation
-- Ripple v2 implementation (scheduled v3.5.x amendment; NOT v3.5.1)
-- Button module implementation (CSS/JS/pattern HTML — that's Phase 2, NOT Phase 1)
-- Matrix amendments (consumer-state column, row #36 correction — DEFERRED)
-- Plugin / editor integration runtime work
-- ActivityPub / social CMS runtime work
-
----
-
-## Plan-first protocol
-
-For any multi-file or ambiguous task, **do not edit immediately**. Produce a plan first. The plan must include:
-
-1. **Files to read** (with reason)
-2. **Files to create / modify** (with reason)
-3. **Dependency assumptions** (what infrastructure / baseline / runtime is being touched)
-4. **Applicable G1–G26 gates** (from `docs/v3.5.0/PROMOTION-CRITERIA.md`)
-5. **Validation commands** (what you'll run, what should pass)
-6. **Explicit non-goals** (what you will NOT do this round)
-7. **Risks** (anything that might break the validator, baseline, or contract)
-
-Wait for user approval before transitioning from plan to execution.
-
-### User Request Log — Do Not Abstract Away
-
-When the user gives concrete UX, behavior, or acceptance requirements, preserve
-them as a `User Request Log` in the plan. Do not compress them into generic lane
-titles. Phase close is blocked until those explicit requests are verified or
-the user explicitly defers them.
-
-### Cross-agent relay discipline
-
-When Codex and Opus/Claude are both involved, the repo remains the source of
-truth. Chat is a relay channel, not authority. Do not rely on chat memory.
-
-Default ownership:
-
-- Codex writes implementation files and phase plan/report docs.
-- Opus/Claude writes review findings only, preferably as user-relayed text or
-  `docs/<cycle>/*-review.md` when repo-based handoff is requested.
-- Both may read all repo docs and implementation files.
-
-### Global portal / overlay smoke test
-
-If a change touches page shell, publish mirror, global runtime, trigger buttons,
-overlays, portals, dialogs, sheets, drawers, popovers, menus, tooltips, or
-snackbars, Phase 3 QA must verify:
-
-1. trigger exists;
-2. runtime handler attaches;
-3. host / portal element exists;
-4. open and visible state works;
-5. close / dismiss path works;
-6. console and page errors are absent.
-
-### WordPress block bridge discipline
-
-For WordPress block-theme work, do not start from Axismundi component selectors
-alone. WordPress core blocks are not neutral. Phase 0 / Phase 1 must preserve
-the reverse build direction explicitly:
-
-```txt
-Markdown / HTML defaults -> WordPress core block -> core reset -> bridge -> M3 mapping
-```
-
-Before mapping a core block to M3, inventory and reset WordPress core styles
-that would otherwise leak through (`fill` / `outline`, table stripes, default
-borders, inline code, separator, search button, etc.). Then verify the rendered
-computed value, not just selector presence. Source-rule existence is not proof;
-computed styles in the front end and editor-facing surfaces are the acceptance
-gate.
-
-When a surface consumes generated or copied assets, regenerate them after
-source CSS edits and use a fresh browser context or hard reload during visual
-QA. Browser cache and source/consumer drift can make a fixed source look stale
-on the front end.
-
-### Token architecture locks
-
-Strict M3 token flow is downstream-only:
-
-```txt
-md-ref -> md-sys -> wp-preset / wp-custom / comp -> consumers
-```
-
-For WordPress theme work, `settings.custom.axismundi.*` is a downstream
-projection. Every leaf must be `var(--comp-*)`, `var(--md-sys-*)`, or
-`var(--md-ref-*)`. Literal hex, rgb, px, and number values are forbidden in
-that namespace. This rule has no automated guard: it was Axis G of the removed
-pilot validator, and no shipped product declares `settings.custom`.
-
-For color roles, every `--md-sys-color-*` entry must be defined as
-`var(--md-ref-palette-*)`. Literal hex, rgb, and hsl values are forbidden in the
-md-sys color layer. Dark mode swaps sys -> ref mappings only; it does not
-rewrite ref primitives or inject theme.json color literals. The permanent guard
-is `tools/validators/validate_token_layering.py` Axis E.
-
-### Semantic bridge locks
-
-For `core/button`, name the semantic route before accepting visual cleanup for
-link affordances. A `core/button` anchor with `href` is navigation and may
-receive an M3 button visual bridge. A real action, form behavior, AJAX flow,
-federation action, or durable custom schema must be routed to
-plugin/custom-block territory, not implemented in the theme bridge.
-
-When a WordPress core block visually maps to M3 but carries divergent markup,
-interaction, or accessibility semantics, route the mismatch as either
-theme-owned semantic-decision or plugin/custom-block territory before accepting
-a visual fix. Do not silently ignore the mismatch and do not collapse distinct
-core block structures into one generic CSS patch.
-
-### Diagnostic-first lock
-
-For plan-first cycles where the route, failure mode, or boundary risk is not
-already known, Phase 1 diagnostic inventory is mandatory before Phase 2
-implementation. The diagnostic must identify source inputs, relevant baseline /
-provider / semantic boundaries, route buckets, the selected route, rejected
-routes, write scope, fences, and validation plan.
-
-Do not patch first and backfill the route later. If diagnosis shows that
-provider, baseline, WordPress, plugin, or lock-file changes are needed, stop and
-return for review before implementation.
-
-This lock does not require a full diagnostic report for tiny mechanical edits
-with explicit scope and no boundary risk. If a shortcut is taken, record why it
-is safe.
-
----
-
-## Reporting protocol
-
-After every change, output:
-
-```
-Changed files:
-  - path/to/file.md (created | edited | deleted)
-  - ...
-
-Assumptions made:
-  - ...
-
-Validation:
-  - Command: python tools/validators/validate_token_layering.py
-  - Result: PASS (or the actual axis scores)
-
-Remaining risks / open questions:
-  - ...
-
-Non-goals confirmed (not done):
-  - ...
-```
-
----
-
-## Operating principles
-
-1. **Plan before edit.** Default mode is read + plan. Ask for approval to execute.
-2. **Small diffs.** Even when scope is wide, prefer targeted edits.
-3. **Preserve contracts.** If a doc says "DISTINCT but COUPLED", don't collapse it. If a section is marked baseline, don't mutate it.
-4. **Cite canonical docs.** Reference v3.5.0 / v3.5.1 docs by path, not by paraphrase.
-5. **Validator gate is hard.** Phase doesn't close without 1.000 PASS.
-6. **Bilingual policy text.** Where the existing docs use EN + KO together, preserve that.
-
----
-
-## Quick reference
-
-| Need to know | Read |
+| Working in | Also read |
 |---|---|
-| What's allowed *right now* | `CURRENT-STATE.md` + `NEXT-SESSION.md` |
-| Layer authorities | `CONSTITUTION.md` Article 1 |
-| Component matrix | `docs/v3.5.0/MODULE-STATUS-MATRIX.md` |
-| Promotion gates | `docs/v3.5.0/PROMOTION-CRITERIA.md` |
-| Tier architecture | `docs/v3.5.0/PUBLIC-SURFACE-CHARTER.md` |
-| Button Phase 0 findings | `docs/v3.5.1/BUTTON-PHASE-0-REPORT.md` |
-| Reference audit template | `products/reference-implementations/axismundi-lab/modules/chip/docs/CHIP-*-AUDIT.md` |
+| `products/wordpress/` | `products/wordpress/AGENTS.md` |
+| `products/styleguide/` | `products/styleguide/AGENTS.md` |
+| `products/reference-implementations/axismundi-lab/` | that directory's `AGENTS.md` |
+| `tools/` | `tools/AGENTS.md` |
 
----
+Read what the task needs. Do not read the repository to orient yourself.
 
-End of file. Now read `CURRENT-STATE.md`.
+## Rules and enforcement
+
+**A prompt rule explains intent. A validator, test, or CI check enforces it.
+Do not describe an invariant as enforced unless its enforcement command is
+named and maintained.**
+
+Everything in these files is one of two kinds, and each hard rule below says
+which:
+
+- **enforced** — a named command fails when it is broken.
+- **convention** — nobody checks. It holds only because you follow it.
+
+What is enforced today:
+
+| Invariant | Command | Runs |
+|---|---|---|
+| `--md-sys-color-*` resolves to `var(--md-ref-palette-*)`, in the theme and the lab | `tools/validators/validate_token_layering.py` | `.github/workflows/validator.yml`, every PR and push |
+| `--wp--preset--color--*` bridges point at a token that exists, in the lab | same command, axis F | same |
+| Style-guide tokens match spec, `theme.json`, and their generators | `products/styleguide/bin/build.py --verify` | `.github/workflows/styleguide.yml`, on style-guide paths |
+
+`tools/validators/validate_line_endings.py` exists but is wired to no workflow.
+Treat it as a convention until it is.
+
+Nothing else in this repository is enforced by CI. If you find yourself writing
+"must never" about something with no command beside it, either write the
+command or call it a convention.
+
+## What is current, and what is not
+
+```txt
+products/wordpress/       shipped theme and plugins        source of record
+products/styleguide/      published design-system docs     source of record
+axismundi-lab/            local implementation workbench   evidence, not product
+corpus/ atlas/ core/ bindings/    research and provenance  NOT current authority
+```
+
+### Upstream is the source of truth for upstream
+
+For anything about how WordPress or Gutenberg actually behaves, read the
+Gutenberg repository, WordPress core, or the official documentation. Do not
+answer from `corpus/`, and do not try to keep a copy of upstream current here —
+that is not a maintainable goal and the attempt is what produced the stale
+snapshot.
+
+### Frozen research
+
+`corpus/`, `atlas/`, `core/`, and `bindings/` are the investigation that built
+this project's understanding in early 2026. Keep them, cite them for history,
+and do not use them to decide a current implementation. Two verified examples
+of how they mislead:
+
+- `bindings/wordpress-material3/binding_map.json` specifies Button Filled as
+  `is-style-filled` and Outlined as `is-style-outlined`. What ships is an
+  unclassed Filled default, core's `is-style-outline`, and `is-style-outlined`
+  only as a legacy compatibility shim.
+- The same file says there is no M3 spacing scale and no spacing token. There
+  is: `md.sys.measurement.space*`, and `theme.json` carries every value
+  WordPress can express.
+
+`CURRENT-STATE.md`, `NEXT-SESSION.md`, `PROJECT-CONTEXT.md` and `docs/v3.5.x/`
+describe a phase model the project has moved past. They are history. Nothing
+requires you to read them.
+
+To make a slice of the frozen material usable again, verify it against current
+code and write the result beside the product. Do not promote it by citing it.
+
+## Measure; do not infer
+
+The rule that has changed the answer most often here. Read the computed value,
+run the checker, load the page and take the number off it. A selector existing
+is not proof that it applies, and source that reads correctly can behave
+wrongly. Recent cases, each of which looked right in the file: an icon that
+stayed 20px at every size, a label clipped by a fixed height, a CI job whose
+`main()` returned `None` and so passed on every input.
+
+When something looks fixed but behaves broken, suspect the copy before the
+code: output that was not regenerated, a cached stylesheet, a mirror that is
+not the file you edited.
+
+## Generated files
+
+Generated output is committed, its generator takes `--check`, and a separate
+validator asks a different question:
+
+- `--check` — is the committed file what the generator writes?
+- validator — is that value what the spec and `theme.json` say?
+
+Both, because a buggy generator passes its own check every time. If you add a
+second copy of anything, add the checker with it — otherwise it is a
+convention, and conventions drift. Do not hand-edit a file whose header says it
+is generated.
+
+## Safety — convention unless noted
+
+- Preserve existing behaviour. A change that looks like cleanup but removes a
+  deliberate deviation has cost real functionality here; mark deviations
+  `NON-STANDARD` with the reason rather than deleting them.
+- Do not rename a public CSS class, block name, or token without asking. Saved
+  content carries them.
+- Do not change what a published URL serves without asking.
+- Do not delete or rewrite `corpus/`, `atlas/`, `core/`, `bindings/`. Frozen is
+  not disposable.
+- Commit or push only when asked. Never force-push, never skip hooks.
+- Ontology, category, and layer-boundary decisions belong to the project owner.
+
+## Language
+
+English at the boundaries, Korean for reasoning.
+
+```txt
+English   URL, filename, slug, token name, CSS variable, block name,
+          standard terms, code samples, and all code comments
+Korean    explanation, rationale, criteria for use, in internal design docs
+```
+
+Shipped code is read by people outside this repository, so its comments are
+English. Internal design documents lose their reasoning in translation.
+
+## This machine
+
+Windows, Git Bash, native Windows Python. Each of these has cost real time.
+
+- **Heredocs mangle backslashes.** `\\n` arrives as `\n`, and `\b` becomes a
+  literal backspace in the file you wrote. Use a file-editing tool for content
+  containing a backslash.
+- **Python needs Windows paths.** `/c/Users/...` works in `ls` and `grep` and
+  raises `FileNotFoundError` in Python. Use `C:/Users/...`.
+- **`Path.write_text()` writes CRLF.** Pass `newline="\n"`.
+- **`git check-ignore --stdin` needs `-z` and bytes.** In text mode `\r` joins
+  the path and file-name rules silently miss.
+- **A hidden browser pane reports a 0x0 viewport and never fires
+  `requestAnimationFrame`.** Transitions freeze at their start value and widths
+  read 0. Do not fix CSS from those numbers.

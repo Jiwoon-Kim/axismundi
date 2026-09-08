@@ -14,8 +14,30 @@ changing; this file holds only what is true everywhere.
 | `products/styleguide/` | `products/styleguide/AGENTS.md` |
 | `products/reference-implementations/axismundi-lab/` | that directory's `AGENTS.md` |
 | `tools/` | `tools/AGENTS.md` |
+| `core/` | `core/AGENTS.md` |
 
 Read what the task needs. Do not read the repository to orient yourself.
+
+## Owner-protected source roots
+
+Unless the current task explicitly names them, treat these as read-only source
+material. Structural cleanup elsewhere in the repository must not pull them
+into a move, rename, rewrite, or generated-output sweep:
+
+```txt
+products/
+assets/
+core/design-systems/material3/
+```
+
+They may be read to establish an input or a product contract. A task that does
+explicitly name one of these paths sets its own scope; do not infer permission
+from a related change.
+
+Protection is not implementation authority. Within
+`core/design-systems/material3/`, only `assets/` is a current source input;
+`specs/` is reference material to verify against current M3 guidance, and
+`runtime/` plus `token_ontology.jsonld` are historical prototype material.
 
 ## Rules and enforcement
 
@@ -50,7 +72,18 @@ command or call it a convention.
 products/wordpress/       shipped theme and plugins        source of record
 products/styleguide/      published design-system docs     source of record
 axismundi-lab/            local implementation workbench   evidence, not product
-corpus/ atlas/ core/ bindings/    research and provenance  NOT current authority
+assets/ and core/design-systems/material3/  protected source inputs
+corpus/ atlas/ bindings/ core/ (except material3)  research and provenance
+```
+
+Within the protected Material 3 directory, the useful distinction is:
+
+```txt
+assets/                          protected font and icon source material
+specs/                           M3 reference; verify before implementing
+runtime/tokens.css               historical; do not import into products
+runtime/base.css                 historical runtime policy; not product CSS
+token_ontology.jsonld            provenance, not a published vocabulary
 ```
 
 ### Upstream is the source of truth for upstream
@@ -63,10 +96,11 @@ snapshot.
 
 ### Frozen research
 
-`corpus/`, `atlas/`, `core/`, and `bindings/` are the investigation that built
-this project's understanding in early 2026. Keep them, cite them for history,
-and do not use them to decide a current implementation. Two verified examples
-of how they mislead:
+`corpus/`, `atlas/`, `bindings/`, and `core/` outside
+`core/design-systems/material3/` are the investigation that built this
+project's understanding in early 2026. Keep them, cite them for history, and
+do not use them to decide a current implementation. Two verified examples of
+how they mislead:
 
 - `bindings/wordpress-material3/binding_map.json` specifies Button Filled as
   `is-style-filled` and Outlined as `is-style-outlined`. What ships is an
@@ -117,8 +151,8 @@ is generated.
 - Do not rename a public CSS class, block name, or token without asking. Saved
   content carries them.
 - Do not change what a published URL serves without asking.
-- Do not delete or rewrite `corpus/`, `atlas/`, `core/`, `bindings/`. Frozen is
-  not disposable.
+- Do not delete or rewrite `corpus/`, `atlas/`, `bindings/`, or research parts
+  of `core/`. Frozen is not disposable.
 - Commit or push only when asked. Never force-push, never skip hooks.
 - Ontology, category, and layer-boundary decisions belong to the project owner.
 

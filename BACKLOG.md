@@ -2805,6 +2805,33 @@ item is closed, only the summary row is preserved here.)
 
 ## See also
 
+### 53. Backlog items that still plan work on `publish_styleguide.py`
+
+- **Bucket**: D / build pipeline
+- **Status**: Open — bookkeeping, not a defect.
+- **Source**: the GitHub Pages migration to an Actions artifact (2026-09-09).
+  `tools/generators/publish_styleguide.py` and the root `styleguide/` mirror it
+  produced were deleted in that commit. Pages now serves only what
+  `.github/workflows/styleguide.yml` builds: `products/styleguide/` at
+  `/styleguide/`, plus a root page that hands the URL to it.
+- **Why this entry exists**: three open items above still name that script in
+  their scope, so read as written they plan edits to a file that is gone.
+  - #11-adjacent lab affordance work ("Read ... and `publish_styleguide.py`")
+  - the module-first rename item ("Rewrite `publish_styleguide.py` around the
+    new source structure")
+  - the mirror-stability constraint ("Mirror generation must not break ...
+    output paths remain stable for any existing GitHub Pages links")
+- **What actually changed**: there is no mirror to keep stable. The lab's
+  published URLs under `/products/reference-implementations/axismundi-lab/`
+  stopped being served, which was the decision made when the artifact was
+  scoped; the lab opens from the file system. Anything those items wanted from
+  the publish step is now a question about the Jekyll site instead.
+- **Not in scope here**: rewriting those items. They are dated records of what
+  was decided when, and the entry that supersedes them should be the one that
+  picks them up.
+- **Target**: TBD — whenever the item that owns each of those is next touched.
+
+
 - `CHANGELOG.md` — per-release record
 - `ROADMAP.md` — sequence of planned releases
 - `lab/docs/ARCHITECTURE-BOUNDARIES.md` — charter clauses cited above

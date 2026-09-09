@@ -228,11 +228,16 @@
  *   pressed   pressed inner  4 / 4 / 4 / 12 / 16
  *   selected  50%
  *
- * Selected is a percentage on purpose. 50% of the segment's own box is a pill
- * at any height, so the square-to-round morph reads as a change of shape and
- * not a change of size - which a fixed length could not promise across a 32dp
- * and a 136dp container. It is also why this cannot come from the corner-value
- * scale: that scale holds lengths.
+ * M3's 50% means half the height - a capsule. CSS's `border-radius: 50%` does
+ * not mean that: it takes 50% of the width horizontally and 50% of the height
+ * vertically, which on a segment three times wider than it is tall draws an
+ * ellipse. Written that way it rendered exactly that.
+ *
+ * So the capsule is a computed length, half the container height, which is the
+ * same translation axismundi-lab arrived at (`--_button-group-pill-radius`,
+ * components.css §28.9, whose comment reads "§5.4 inner = 50%"). A length also
+ * keeps the morph animatable, which `--md-sys-shape-corner-full` would not:
+ * 9999px scales down to fit and reads as an unchanged pill until it snaps.
  *
  * Both selection attributes are read. The two shipping consumers disagree on
  * which one they use and both are right: a toggle is pressed, a link to the
@@ -244,7 +249,15 @@
 
 .wp-block-axismundi-button-group > .wp-block-axismundi-button-group__item[aria-pressed="true"],
 .wp-block-axismundi-button-group > .wp-block-axismundi-button-group__item[aria-current="page"] {
-	border-radius: var(--ax-group-selected-corner, 50%);
+	border-radius: var(--ax-group-selected-corner, calc(var(--ax-button-height, 40px) / 2));
+}
+
+/* Pressing a segment that is already selected: M3 gives the pressed shape
+ * precedence, and equal specificity plus source order gave it to selected.
+ * The lab hit this too and fixed it the same way, with an explicit rule. */
+.wp-block-axismundi-button-group[data-variant="connected"] > .wp-block-axismundi-button-group__item[aria-pressed="true"]:active,
+.wp-block-axismundi-button-group[data-variant="connected"] > .wp-block-axismundi-button-group__item[aria-current="page"]:active {
+	border-radius: var(--ax-group-pressed-inner-corner, var(--md-sys-shape-corner-value-extra-small));
 }
 
 .wp-block-axismundi-button-group__item:hover {

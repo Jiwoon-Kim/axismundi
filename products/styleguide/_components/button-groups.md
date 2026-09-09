@@ -54,29 +54,85 @@ guidelines의 문장도 같은 방향입니다 — "selected **or activated**", 
 선택 컨트롤    토글 세그먼트, 단일/다중 선택
 ```
 
-<div class="sg-demo sg-demo--stack">
-  <div class="wp-block-axismundi-button-group" data-variant="standard" data-size="small" data-shape="round" role="group" aria-label="Standard 예시">
+### 1. Standard, 선택 없는 액션 그룹
+
+미디어 플레이어 예시입니다. 크기와 색이 다르고, **선택 상태가 없습니다.** 그리고
+마크업이 `core/buttons`입니다 — 새 블록을 가정하지 않았습니다.
+
+<div class="sg-demo">
+  <div class="wp-block-buttons">
+    <div class="wp-block-button is-style-outline"><button type="button" class="wp-block-button__link wp-element-button" aria-label="Previous"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">skip_previous</span></button></div>
+    <div class="wp-block-button is-style-tonal" data-size="medium"><button type="button" class="wp-block-button__link wp-element-button">Play</button></div>
+    <div class="wp-block-button is-style-outline"><button type="button" class="wp-block-button__link wp-element-button" aria-label="Next"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">skip_next</span></button></div>
+  </div>
+</div>
+
+**이게 이 페이지의 결론을 화면으로 증명합니다.** 강조는 size·color·shape로 만들고,
+셋 다 버튼의 속성입니다. 컨테이너는 배치만 합니다.
+
+### 2. Standard, single-select
+
+`List / Grid / Map`. 눌러 보세요 — 하나만 선택되고, **선택된 것을 다시 누르면
+해제됩니다.**
+
+<div class="sg-demo">
+  <div class="wp-block-axismundi-button-group" data-variant="standard" data-size="small" data-selection="single" role="group" aria-label="View mode">
     <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">List</button>
     <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true">Grid</button>
     <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">Map</button>
   </div>
-  <div class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" data-shape="round" role="group" aria-label="Connected 예시">
+</div>
+
+### 3. Standard, multi-select
+
+`Photos / Notes / Links`. 몇 개든 켤 수 있고, 전부 끌 수도 있습니다.
+
+<div class="sg-demo">
+  <div class="wp-block-axismundi-button-group" data-variant="standard" data-size="small" data-selection="multiple" role="group" aria-label="Filter">
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true">Photos</button>
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">Notes</button>
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true">Links</button>
+  </div>
+</div>
+
+### 4. Connected, single-select-required
+
+정확히 하나가 항상 선택됩니다. **선택된 것을 다시 눌러도 꺼지지 않습니다** — Theme
+Switcher와 같은 모드입니다.
+
+<div class="sg-demo">
+  <div class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" data-selection="single" data-required="true" role="group" aria-label="Range">
     <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">Day</button>
     <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true">Week</button>
     <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">Month</button>
   </div>
 </div>
 
-실측입니다. 760px 부모 안에서 **standard는 199px로 버튼을 감싸고, connected는 760px를
-전부 채웁니다.** 두 그룹의 안쪽 여백은 12dp와 2dp이고, 양쪽 다 선택된 세그먼트만
-모서리가 8px로 바뀝니다.
+**모서리가 움직이는 것이 shape morph입니다.** 쉬는 세그먼트는 안쪽 8px, 선택된 것은
+50%, 누르는 동안은 4px입니다. 세 값이 전부 M3가 따로 발행한 것입니다.
+
+### 5. Connected, 내비게이션
+
+밀도 전환이 실제로 쓰는 모양입니다. 세그먼트가 링크이고 선택 표시가
+`aria-current="page"`입니다. **클릭해도 여기서는 바뀌지 않습니다** — 링크의 현재
+상태는 서버의 답이지 클릭 핸들러의 것이 아니라서, 정적으로 둡니다.
+
+<div class="sg-demo">
+  <nav class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" aria-label="Entry density">
+    <a class="wp-block-axismundi-button-group__item wp-element-button" href="#1">Card</a>
+    <a class="wp-block-axismundi-button-group__item wp-element-button" href="#2" aria-current="page">List</a>
+    <a class="wp-block-axismundi-button-group__item wp-element-button" href="#3">Compact</a>
+  </nav>
+</div>
+
+실측입니다. 760px 부모 안에서 **standard는 내용을 감싸고, connected는 760px를 전부
+채웁니다.** 안쪽 여백은 12dp와 2dp입니다.
 
 **폭 변화는 구현하지 않았습니다.** M3의 standard 확장은 그룹 총폭을 유지한 채
-재분배하는 것 — 선택된 버튼이 약 15% 커지고 옆 버튼이 그만큼 줄어듭니다. 내용을
-감싸는 컨테이너에서 `flex-grow`로는 표현되지 않습니다. 실제로 걸어보니 남는 공간을
-전부 가져가 **선택 세그먼트가 이웃의 11.3배**가 됐습니다. 제대로 하려면 쉬는 상태의
-폭을 먼저 재야 하고, 그건 스타일시트가 아니라 스크립트입니다. 근사치를 그리는 대신
-없는 채로 두고 여기에 적습니다.
+재분배하는 것 — 선택된 버튼이 15% 커지고 옆 버튼이 그만큼 줄어듭니다. 내용을 감싸는
+컨테이너에서 `flex-grow`로는 표현되지 않습니다. 실제로 걸어보니 남는 공간을 전부
+가져가 **선택 세그먼트가 이웃의 11.3배**가 됐습니다. 제대로 하려면 쉬는 상태의 폭을
+먼저 재야 하고, 그건 스타일시트가 아니라 스크립트입니다.
 
 ## Measurements
 
@@ -88,10 +144,29 @@ inner padding이 이 컴포넌트에서 유일하게 **그룹이 소유해야만
 
 | | {% for s in sizes %}{{ s.label }} | {% endfor %}
 |---|{% for s in sizes %}---|{% endfor %}
-| Standard 안쪽 여백 | {% for s in sizes %}{{ s.standard_padding }}dp | {% endfor %}
-| Connected 안쪽 여백 | {% for s in sizes %}{{ s.connected_padding }}dp | {% endfor %}
-| Connected 안쪽 모서리 | {% for s in sizes %}{{ s.connected_inner_corner }}dp | {% endfor %}
+| Container height | {% for s in sizes %}{{ s.height }}dp | {% endfor %}
+| Standard between space | {% for s in sizes %}{{ s.standard_between }}dp | {% endfor %}
+| Connected between space | {% for s in sizes %}{{ s.connected_between }}dp | {% endfor %}
+| Connected inner corner | {% for s in sizes %}{{ s.connected_inner_corner }}dp | {% endfor %}
+| Connected pressed inner | {% for s in sizes %}{{ s.connected_pressed_inner_corner }}dp | {% endfor %}
+| Connected selected inner | {% for s in sizes %}{{ site.data.button_group.connected_selected_inner_corner }} | {% endfor %}
 | 최소 폭 | {% for s in sizes %}{% if s.min_width %}{{ s.min_width }}dp{% else %}—{% endif %} | {% endfor %}
+
+Standard의 spring은 다섯 크기가 전부 damping {{ site.data.button_group.meta.spring_damping }},
+stiffness {{ site.data.button_group.meta.spring_stiffness }}이고, 눌림 폭 배수는
+{{ site.data.button_group.meta.pressed_width_multiplier | times: 100 }}%입니다. Button과 같은 값이고
+같은 문제를 가집니다 — M3가 spring을 주고 웹 커브는 주지 않아서, 어댑터는 발행된
+`fast-spatial` 변환을 씁니다.
+
+**XS의 standard between space 18dp는 spacing scale에 없습니다.** 스케일은 14, 16, 20으로
+갑니다. 컴포넌트 측정값이고, XS·S가 32dp·40dp 컨테이너에서 48dp 타깃을 지키도록
+일부러 넉넉하게 잡힌 값입니다.
+
+{% assign d = site.data.button_group.discrepancies[0] -%}
+그리고 **두 문서가 한 값에서 어긋납니다.** measurements 산문은 connected XS 안쪽
+모서리를 {{ d.prose }}dp라고 하고, 토큰 표는 {{ d.tokens }}dp라고 합니다. 토큰 표가 더
+잘게 나뉘어 있어서 — rest·pressed·selected를 따로 발행합니다 — 이 사이트는 토큰 표를
+따릅니다. 산문의 {{ d.prose }}dp는 토큰 표의 pressed 값과 같습니다.
 
 Connected는 다섯 크기가 전부 2dp입니다. 파생값이 아니라 **일관성 규칙**입니다 —
 "For all connected button groups, use 2dp padding. This provides visual

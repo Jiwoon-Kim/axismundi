@@ -1,31 +1,54 @@
 # Material 3 Button groups — the published specification.
 #
-# Source: https://m3.material.io/components/button-groups/specs
-#         https://m3.material.io/components/button-groups/guidelines
-#         https://m3.material.io/components/button-groups/accessibility
+# Sources: https://m3.material.io/components/button-groups/specs
+#          https://m3.material.io/components/button-groups/guidelines
+#          https://m3.material.io/components/button-groups/accessibility
 #
 # A button group has no colour of its own. M3 states it plainly: "Button groups
 # have no color properties." Colour belongs to the buttons inside, and the
 # group's only colour rule is a prohibition - do not mix styles in a connected
 # group. That is why there is no colour axis in this file.
+#
+# The values below come from M3's design-token tables rather than the prose
+# measurements list, which disagrees with them once. See `discrepancies`.
 
 meta:
   # Connected replaces the segmented button, which the Expressive update
-  # deprecates. The Selection row below still reads "available as segmented
-  # button" in the M3 column for that reason.
+  # deprecates. The Selection row still reads "available as segmented button"
+  # in the M3 column for that reason.
   replaces: segmented button
-  # Both variants: XS and S need a 48dp target regardless of container height.
+  # XS and S need a 48dp target whatever the container height says.
   min_target: 48
+  # Published per size, and identical at every size. Same figures as Button, and
+  # the same problem: M3 gives a spring, not a web curve, so the adapter spends
+  # the published fast-spatial conversion instead.
+  spring_damping: 0.9
+  spring_stiffness: 1400
+  # Standard only. The pressed button widens by this much and its neighbours
+  # compress to pay for it.
+  pressed_width_multiplier: 0.15
+
+discrepancies:
+  - token: connected xsmall inner corner
+    prose: 4
+    tokens: 8
+    note: >-
+      The measurements prose lists the connected inner corner as 4dp at XS; the
+      token table gives 8dp, and puts 4dp on the separate pressed inner corner.
+      The token table is the finer of the two - it distinguishes rest, pressed
+      and selected - so it is what this file carries.
 
 variants:
   - name: standard
     title: Standard
     m3: false
     expressive: true
-    # Selecting a button changes its width, shape and padding, and the buttons
-    # next to it move and change width in response.
+    # Selecting or activating a button changes its width, shape and padding,
+    # and the buttons next to it move and change width in response.
     adjacent_interaction: true
-    selected_widen: 1.15
+    # M3 publishes no shape tokens for the standard group: the shape is the
+    # buttons' own.
+    owns_shape: false
   - name: connected
     title: Connected
     m3: as segmented button
@@ -34,41 +57,54 @@ variants:
     # selected or activated. They only affect the shape of the button being
     # selected or activated."
     adjacent_interaction: false
-    selected_widen: null
+    owns_shape: true
 
-# Inner padding is the group's own measurement, and it is the one thing that
-# forces the group to know its size: a container cannot read its children.
 sizes:
   - name: xsmall
     label: XS
-    standard_padding: 18
-    connected_padding: 2
-    connected_inner_corner: 4
+    height: 32
+    standard_between: 18
+    connected_between: 2
+    connected_inner_corner: 8
+    connected_pressed_inner_corner: 4
     min_width: 48
   - name: small
     label: S
-    standard_padding: 12
-    connected_padding: 2
+    height: 40
+    standard_between: 12
+    connected_between: 2
     connected_inner_corner: 8
+    connected_pressed_inner_corner: 4
     min_width: 48
   - name: medium
     label: M
-    standard_padding: 8
-    connected_padding: 2
+    height: 56
+    standard_between: 8
+    connected_between: 2
     connected_inner_corner: 8
+    connected_pressed_inner_corner: 4
     min_width: null
   - name: large
     label: L
-    standard_padding: 8
-    connected_padding: 2
+    height: 96
+    standard_between: 8
+    connected_between: 2
     connected_inner_corner: 16
+    connected_pressed_inner_corner: 12
     min_width: null
   - name: xlarge
     label: XL
-    standard_padding: 8
-    connected_padding: 2
+    height: 136
+    standard_between: 8
+    connected_between: 2
     connected_inner_corner: 20
+    connected_pressed_inner_corner: 16
     min_width: null
+
+# Selected is a percentage, not a length, and that is the whole point: 50% of
+# the segment's own box is a pill at any height, which is what makes the
+# square-to-round morph read as a morph rather than a size change.
+connected_selected_inner_corner: 50%
 
 configurations:
   - category: Size

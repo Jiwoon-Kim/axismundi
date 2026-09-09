@@ -43,5 +43,8 @@
   {%- if page.url contains "/motion/" %}
   <script src="{{ '/assets/js/motion-demo.js' | relative_url }}" defer></script>
   {%- endif %}
+  {%- if page.url contains "/button-groups/" %}
+  <script src="{{ '/assets/js/button-group.js' | relative_url }}" defer></script>
+  {%- endif %}
 </body>
 </html>

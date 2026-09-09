@@ -42,8 +42,13 @@
  * size, and segments inherit it through the same --ax-button-* properties a
  * standalone button reads. */
 .wp-block-axismundi-button-group[data-size="xsmall"] {
-	--ax-group-padding: var(--md-sys-measurement-space250);
-	--ax-group-inner-corner: var(--md-sys-shape-corner-value-extra-small);
+	/* 18dp, and there is no 18 on the M3 spacing scale - it runs 14, 16, 20.
+	 * M3 publishes this as a component measurement, and it is deliberately
+	 * generous: XS and S carry the larger between-space so the 48dp target
+	 * survives a 32dp container. */
+	--ax-group-padding: 18px;
+	--ax-group-inner-corner: var(--md-sys-shape-corner-value-small);
+	--ax-group-pressed-inner-corner: var(--md-sys-shape-corner-value-extra-small);
 	--ax-button-height: 32px;
 	--ax-button-space: var(--md-sys-measurement-space150);
 	--ax-button-icon-size: 20px;
@@ -57,11 +62,13 @@
 .wp-block-axismundi-button-group[data-size="small"] {
 	--ax-group-padding: var(--md-sys-measurement-space150);
 	--ax-group-inner-corner: var(--md-sys-shape-corner-value-small);
+	--ax-group-pressed-inner-corner: var(--md-sys-shape-corner-value-extra-small);
 }
 
 .wp-block-axismundi-button-group[data-size="medium"] {
 	--ax-group-padding: var(--md-sys-measurement-space100);
 	--ax-group-inner-corner: var(--md-sys-shape-corner-value-small);
+	--ax-group-pressed-inner-corner: var(--md-sys-shape-corner-value-extra-small);
 	--ax-button-height: 56px;
 	--ax-button-space: var(--md-sys-measurement-space300);
 	--ax-button-icon-size: 24px;
@@ -75,6 +82,7 @@
 .wp-block-axismundi-button-group[data-size="large"] {
 	--ax-group-padding: var(--md-sys-measurement-space100);
 	--ax-group-inner-corner: var(--md-sys-shape-corner-value-large);
+	--ax-group-pressed-inner-corner: var(--md-sys-shape-corner-value-medium);
 	--ax-button-height: 96px;
 	--ax-button-space: var(--md-sys-measurement-space600);
 	--ax-button-icon-size: 32px;
@@ -89,6 +97,7 @@
 .wp-block-axismundi-button-group[data-size="xlarge"] {
 	--ax-group-padding: var(--md-sys-measurement-space100);
 	--ax-group-inner-corner: var(--md-sys-shape-corner-value-large-increased);
+	--ax-group-pressed-inner-corner: var(--md-sys-shape-corner-value-large);
 	--ax-button-height: 136px;
 	--ax-button-space: var(--md-sys-measurement-space800);
 	--ax-button-icon-size: 40px;
@@ -114,6 +123,13 @@
 .wp-block-axismundi-button-group[data-variant="connected"] > .wp-block-axismundi-button-group__item {
 	flex: 1 1 0;
 	border-radius: var(--ax-group-inner-corner, var(--md-sys-shape-corner-value-small));
+}
+
+/* Standard segments keep the button's own shape; only connected hands its
+ * segments a group-owned corner. M3 publishes no shape token for the standard
+ * group for exactly that reason. */
+.wp-block-axismundi-button-group[data-variant="standard"] > .wp-block-axismundi-button-group__item {
+	--ax-group-selected-corner: var(--ax-button-pressed-shape, var(--md-sys-shape-corner-value-small));
 }
 
 /* Only the two ends are pills. Logical longhands: a group reverses in RTL and
@@ -206,11 +222,29 @@
 	color: var(--md-sys-color-on-secondary);
 }
 
-/* Selected segments morph between round and square — M3 gives the rule as a
- * contrast, not a direction: round becomes square, and a square resting shape
- * becomes round when selected. */
-.wp-block-axismundi-button-group[data-shape="round"] > .wp-block-axismundi-button-group__item[aria-pressed="true"] {
-	border-radius: var(--ax-button-pressed-shape, var(--md-sys-shape-corner-value-small));
+/* Shape morph, and the three states are three different published values:
+ *
+ *   rest      inner corner   8 / 8 / 8 / 16 / 20 by size
+ *   pressed   pressed inner  4 / 4 / 4 / 12 / 16
+ *   selected  50%
+ *
+ * Selected is a percentage on purpose. 50% of the segment's own box is a pill
+ * at any height, so the square-to-round morph reads as a change of shape and
+ * not a change of size - which a fixed length could not promise across a 32dp
+ * and a 136dp container. It is also why this cannot come from the corner-value
+ * scale: that scale holds lengths.
+ *
+ * Both selection attributes are read. The two shipping consumers disagree on
+ * which one they use and both are right: a toggle is pressed, a link to the
+ * view you are on is current. Colour already read both; shape did not, which
+ * left the feed density switch with the right colour and the wrong corners. */
+.wp-block-axismundi-button-group[data-variant="connected"] > .wp-block-axismundi-button-group__item:active {
+	border-radius: var(--ax-group-pressed-inner-corner, var(--md-sys-shape-corner-value-extra-small));
+}
+
+.wp-block-axismundi-button-group > .wp-block-axismundi-button-group__item[aria-pressed="true"],
+.wp-block-axismundi-button-group > .wp-block-axismundi-button-group__item[aria-current="page"] {
+	border-radius: var(--ax-group-selected-corner, 50%);
 }
 
 .wp-block-axismundi-button-group__item:hover {

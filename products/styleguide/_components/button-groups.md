@@ -377,6 +377,91 @@ consistency at scale."
 XS와 S의 큰 standard 여백은 장식이 아니라 **48dp 타깃을 만들기 위한 것**이고,
 M3는 이 두 크기에서 여백을 줄이지 말라고 명시합니다.
 
+## 아이콘과 라벨의 극성이 뒤집혀 있습니다
+
+Figma의 Button 프로퍼티는 이렇습니다.
+
+```
+Label text     Label            항상 있음
+Show icon      boolean          선택
+Icon           stars_filled
+```
+
+**버튼은 라벨이 필수이고 아이콘이 선택입니다.** 아이콘만 남는 것은 Button이 아니라
+Icon button이니까요.
+
+그룹은 반대입니다. 세그먼트가 아이콘을 지니고, **라벨을 보일지는 그룹이 정합니다.**
+`axismundi/theme-switcher`가 이미 그 모양입니다.
+
+```
+Button        labelText  +  showIcon      버튼마다
+Button group  icon       +  showLabels    그룹 전체
+```
+
+단수와 복수가 그 차이를 그대로 말합니다 — `showIcon`은 한 버튼의 것이고,
+`showLabels`는 그룹의 밀도 결정이라 한 번에 전부에 걸립니다.
+
+**라벨 요소는 사라지지 않습니다.** 플러그인이 하는 일은 클래스를 하나 더하는 것뿐이고,
+그래서 접근 가능한 이름의 출처가 보이든 안 보이든 하나입니다.
+
+```php
+$label_class = $show_labels
+    ? 'axismundi-theme-switcher__label'
+    : 'axismundi-theme-switcher__label screen-reader-text';
+```
+
+<div class="sg-demo sg-demo--stack">
+  <div class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" data-selection="single" data-required="true" role="group" aria-label="Labels visible">
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">contrast</span>Auto</button>
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">light_mode</span>Light</button>
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">dark_mode</span>Dark</button>
+  </div>
+  <div class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" data-labels="hidden" data-selection="single" data-required="true" role="group" aria-label="Labels hidden">
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">contrast</span><span class="screen-reader-text">Auto</span></button>
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">light_mode</span><span class="screen-reader-text">Light</span></button>
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">dark_mode</span><span class="screen-reader-text">Dark</span></button>
+  </div>
+</div>
+
+같은 세 세그먼트이고 라벨의 클래스 하나만 다릅니다. 아래 줄에서도 `Auto`·`Light`·
+`Dark`는 DOM에 그대로 있습니다.
+
+라벨이 없어지면 좌우 여백도 할 일이 없어집니다. 다만 그 자리를 무엇이 채우는지는
+variant마다 다릅니다 — **connected는 계속 늘어납니다.** "span the width of the page or
+surface it's placed on"이니 라벨 유무와 무관합니다. 실측 252×40으로 변하지 않습니다.
+
+standard는 줄어듭니다. 다만 **정사각형이 되지는 않습니다 — 실측 48×40입니다.** 높이에서
+끌어온 40px보다 48dp 타깃 하한이 먼저 이기기 때문입니다. 이건 규칙이 제 일을 한 것이고,
+동시에 남은 문제를 드러냅니다. **높이 40px은 그대로라 48×48이 아닙니다.** 시각 상자를
+넓히는 것만으로는 타깃이 완성되지 않고, 타깃을 상자 밖으로 확장하는 별도 처리가
+필요합니다. 지금은 없습니다.
+
+<div class="sg-demo">
+  <div class="wp-block-axismundi-button-group" data-variant="standard" data-size="small" data-labels="hidden" data-selection="single" role="group" aria-label="Standard icon-only">
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">format_bold</span><span class="screen-reader-text">Bold</span></button>
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">format_italic</span><span class="screen-reader-text">Italic</span></button>
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">format_underlined</span><span class="screen-reader-text">Underline</span></button>
+  </div>
+</div>
+
+## Figma 프로퍼티를 그대로 블록 속성으로 옮길 수 없습니다
+
+Button의 프로퍼티 전체를 보면 셋이 서로 다른 성질입니다.
+
+| Figma 프로퍼티 | 블록에서 | 왜 |
+|---|---|---|
+| `Type` · `Size` · `Icon` · `Show icon` | attribute | 문서가 저장하는 선택 |
+| `Label text` | content | 저장하지만 attribute가 아니라 편집 가능한 내용 |
+| `State: Hovered / Focused / Pressed` | **없음** | 브라우저가 만드는 것. `:hover`·`:focus-visible`·`:active` |
+| `Show focus indicator` | **없음** | 포커스 링을 그릴지는 저작 결정이 아님 |
+| `State: Disabled` | attribute | 이 하나만 저장됨 |
+
+**정적 파일은 모든 상태를 그려 두어야 하니 State가 프로퍼티입니다.** 문서는 한 상태만
+저장하고 나머지는 런타임이 만듭니다. `Show focus indicator`가 특히 분명합니다 — 그건
+Figma가 링을 보여주기 위한 스위치이지 저장할 값이 아닙니다.
+
+Disabled만 양쪽에 걸칩니다. 비활성 버튼은 **저작되는 것**이고, hover는 아닙니다.
+
 ## 그룹 크기와 버튼 크기가 겹칩니다
 
 M3는 양쪽에 size를 발행합니다 — Button에 다섯, Button group에도 다섯. 컨테이너가

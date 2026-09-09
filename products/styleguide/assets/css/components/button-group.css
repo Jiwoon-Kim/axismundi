@@ -193,6 +193,45 @@
 	--ax-button-label-line-height: 40px;
 }
 
+/* --- Icon and label are inverted here -------------------------- */
+
+/* Button and Button group hold the pair the opposite way round, and the Figma
+ * properties say so: Button has `Label text` plus a `Show icon` boolean, while
+ * a group segment carries the icon and the group decides whether labels show.
+ * axismundi/theme-switcher already ships that shape - `showLabels` on the
+ * block, `data-labels` on the wrapper.
+ *
+ * The label element is always rendered. Hiding it moves it out of sight and
+ * leaves it in the accessibility tree, which is what makes an icon-only
+ * segment safe: its accessible name has one source whether or not you can see
+ * it. The plugin adds this class server-side, so the specimens carry it in the
+ * markup rather than having the group hide the span with a selector. */
+.wp-block-axismundi-button-group__item .screen-reader-text {
+	position: absolute;
+	inline-size: 1px;
+	block-size: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+}
+
+/* With no label there is nothing for the side space to make room for, so it
+ * goes. What replaces it depends on the variant, and only standard gets a
+ * square: a connected group is supposed to "span the width of the page or
+ * surface it's placed on, increasing the button widths inside", so its
+ * segments keep stretching whether or not they carry text. Scoping this to
+ * standard says that rather than leaving an inline-size that flex overrules. */
+.wp-block-axismundi-button-group[data-labels="hidden"] > .wp-block-axismundi-button-group__item {
+	padding-inline: 0;
+}
+
+.wp-block-axismundi-button-group[data-variant="standard"][data-labels="hidden"] > .wp-block-axismundi-button-group__item {
+	inline-size: var(--ax-button-height, 40px);
+}
+
 /* --- Connected: 2dp at every size ----------------------------- */
 
 /* One padding for all five sizes, which M3 gives as a consistency rule rather

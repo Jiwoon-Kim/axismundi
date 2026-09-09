@@ -1,0 +1,155 @@
+# Material 3 Icon button — the published specification.
+#
+# Sources: https://m3.material.io/components/icon-buttons/overview
+#          https://m3.material.io/components/icon-buttons/specs
+#
+# Close to Button and not the same, which is the reason this file exists rather
+# than a flag on button.yml. Four differences carry real consequences and each
+# is marked where it appears:
+#
+#   1. The anatomy has no label. Icon and container, and nothing else, so the
+#      accessible name has to come from somewhere the eye does not see.
+#   2. Small takes a 24dp icon, where Button's Small takes 20dp.
+#   3. The spring is 0.6 / 800, where Button's is 0.9 / 1400.
+#   4. There is a width axis, and it is the only component here that has one.
+#
+# The colour styles are also four rather than five: Text and Elevated are gone,
+# Standard arrives. Standard is the one with no container at rest.
+
+meta:
+  # Shared by all five sizes, and softer and slower than Button's 0.9 / 1400.
+  # A smaller control can afford more overshoot.
+  spring_damping: 0.6
+  spring_stiffness: 800
+  # XS and S must reach this whatever the container measures - and at default
+  # width neither does, which is the point of the rule.
+  min_target: 48
+  # "On web, display a tooltip describing the action while hovering."
+  tooltip_required: true
+
+variants:
+  - name: default
+    title: Default
+    m3: true
+    expressive: true
+  - name: toggle
+    title: Toggle
+    m3: true
+    expressive: true
+
+configurations:
+  - category: Size
+    option: Small (default)
+    m3: true
+    expressive: true
+  - category: Size
+    option: XS, M, L, XL
+    m3: false
+    expressive: true
+  - category: Shape
+    option: Round (default)
+    m3: true
+    expressive: true
+  - category: Shape
+    option: Square
+    m3: false
+    expressive: true
+  - category: Color
+    option: Filled (default), tonal, outlined, standard
+    m3: true
+    expressive: true
+  - category: Width
+    option: Default
+    m3: true
+    expressive: true
+  - category: Width
+    option: Narrow, wide
+    m3: false
+    expressive: true
+
+# Width changes the space either side of the icon, never the icon itself, and
+# the default width always equals the container height - which is what makes a
+# default round icon button a circle rather than a lozenge.
+sizes:
+  - name: xsmall
+    label: XS
+    height: 32
+    icon: 20
+    space: { narrow: 4, default: 6, wide: 10 }
+    outline_width: 1
+    shape_square: 12
+    pressed_morph: 8
+    selected_round: 12
+  - name: small
+    label: S
+    height: 40
+    # 24dp, where Button's Small icon is 20dp. Not a transcription slip.
+    icon: 24
+    space: { narrow: 4, default: 8, wide: 14 }
+    outline_width: 1
+    shape_square: 12
+    pressed_morph: 8
+    selected_round: 12
+  - name: medium
+    label: M
+    height: 56
+    icon: 24
+    space: { narrow: 12, default: 16, wide: 24 }
+    outline_width: 1
+    shape_square: 16
+    pressed_morph: 12
+    selected_round: 16
+  - name: large
+    label: L
+    height: 96
+    icon: 32
+    space: { narrow: 16, default: 32, wide: 48 }
+    outline_width: 2
+    shape_square: 28
+    pressed_morph: 16
+    selected_round: 28
+  - name: xlarge
+    label: XL
+    height: 136
+    icon: 40
+    space: { narrow: 32, default: 48, wide: 72 }
+    outline_width: 3
+    shape_square: 28
+    pressed_morph: 16
+    selected_round: 28
+
+# Colour roles, not colour values. `container` names the filled surface except
+# on outlined, where the role names the outline, and on standard, which has no
+# container at rest at all.
+colors:
+  - name: filled
+    title: Filled
+    wp_style: "(default)"
+    container: primary
+    content: on-primary
+    toggle_unselected: { container: surface-container, content: on-surface-variant }
+    toggle_selected: { container: primary, content: on-primary }
+  - name: tonal
+    title: Tonal
+    wp_style: is-style-tonal
+    container: secondary-container
+    content: on-secondary-container
+    toggle_unselected: { container: secondary-container, content: on-secondary-container }
+    toggle_selected: { container: secondary, content: on-secondary }
+  - name: outlined
+    title: Outlined
+    wp_style: is-style-outline
+    container: outline-variant
+    container_is_outline: true
+    content: on-surface-variant
+    toggle_unselected: { container: outline-variant, content: on-surface-variant }
+    toggle_selected: { container: inverse-surface, content: inverse-on-surface }
+  - name: standard
+    title: Standard
+    wp_style: is-style-standard
+    # No container at rest. The state layer is the only thing that ever paints
+    # one, which is also why M3 tells you not to put this style in a group.
+    container: null
+    content: on-surface-variant
+    toggle_unselected: { container: null, content: on-surface-variant }
+    toggle_selected: { container: null, content: primary }

@@ -572,11 +572,15 @@ $label_class = $show_labels
 variant마다 다릅니다 — **connected는 계속 늘어납니다.** "span the width of the page or
 surface it's placed on"이니 라벨 유무와 무관합니다. 실측 252×40으로 변하지 않습니다.
 
-standard는 줄어듭니다. 다만 **정사각형이 되지는 않습니다 — 실측 48×40입니다.** 높이에서
-끌어온 40px보다 48dp 타깃 하한이 먼저 이기기 때문입니다. 이건 규칙이 제 일을 한 것이고,
-동시에 남은 문제를 드러냅니다. **높이 40px은 그대로라 48×48이 아닙니다.** 시각 상자를
-넓히는 것만으로는 타깃이 완성되지 않고, 타깃을 상자 밖으로 확장하는 별도 처리가
-필요합니다. 지금은 없습니다.
+standard는 줄어들어 **정사각형이 됩니다.**
+
+한동안 48×40이었는데, 48dp 타깃을 `min-inline-size`로 만들었기 때문입니다. 그건 틀린
+구현이었습니다 — **target size는 container size가 아닙니다.** 상자를 넓히면 M3가
+발행한 치수를 어기게 되고, [Icon buttons]({{ '/components/icon-buttons/' | relative_url }})에서는
+그것이 width 축을 통째로 지워 버리기까지 했습니다.
+
+지금은 자리를 차지하지 않는 오버레이가 타깃을 맡습니다. 상자는 발행된 크기 그대로이고,
+타깃만 48×48입니다.
 
 <div class="sg-demo">
   <div class="wp-block-axismundi-button-group" data-variant="standard" data-size="small" data-selection="single" role="group" aria-label="Standard icon-only">

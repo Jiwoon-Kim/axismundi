@@ -30,11 +30,7 @@
 	justify-content: center;
 	box-sizing: border-box;
 	block-size: var(--ax-icon-button-height, 40px);
-	/* 48px, not auto: Small is the default size and carries no attribute, so a
-	 * floor hung on [data-size="small"] never reached the control it was for.
-	 * Measured at 40x40 before this, against the 48dp target M3 requires. It is
-	 * harmless from Medium up, where the container already exceeds it. */
-	min-inline-size: var(--ax-icon-button-min-width, 48px);
+	position: relative;
 	padding-inline: var(--ax-icon-button-space, var(--md-sys-measurement-space100));
 	border: 0;
 	border-radius: var(--ax-icon-button-shape, 20px);
@@ -94,6 +90,31 @@
 	pointer-events: none;
 }
 
+/* --- The 48dp target ------------------------------------------- */
+
+/* M3 asks for a target size, not a container size: "Extra small and small icon
+ * buttons must have a target size of 48x48dp or larger." The container keeps
+ * its published measurements and the hit area is what grows.
+ *
+ * Growing the box instead was wrong twice over. It contradicts the spec, which
+ * draws XS at 32dp wide, and it erased the one axis this component has that no
+ * other does - at XS a 48px floor swallowed narrow, default and wide alike,
+ * 28, 32 and 40 all rendering 48, and at S it took two of the three.
+ *
+ * An absolutely positioned overlay takes no space, so nothing in the layout
+ * moves, and it centres on the control it belongs to. max() means the rule can
+ * apply to every size: from Medium up the container is already larger and the
+ * overlay simply matches it. */
+.wp-block-axismundi-icon-button::after {
+	content: "";
+	position: absolute;
+	inset-inline-start: 50%;
+	inset-block-start: 50%;
+	inline-size: max(100%, 48px);
+	block-size: max(100%, 48px);
+	translate: -50% -50%;
+}
+
 /* --- Size: height, icon, corners ------------------------------- */
 
 /* Small is the fallback above and needs no block. XS and S also carry the 48dp
@@ -107,7 +128,6 @@
 	--ax-icon-button-pressed-shape: var(--md-sys-shape-corner-value-small);
 	--ax-icon-button-selected-shape: var(--md-sys-shape-corner-value-medium);
 	--ax-icon-button-outline-width: 1px;
-	--ax-icon-button-min-width: 48px;
 }
 
 .wp-block-axismundi-icon-button[data-size="medium"] {

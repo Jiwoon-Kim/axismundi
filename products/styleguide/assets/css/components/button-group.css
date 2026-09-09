@@ -471,7 +471,7 @@
 	justify-content: center;
 	box-sizing: border-box;
 	gap: var(--ax-button-icon-gap, var(--md-sys-measurement-space100));
-	min-inline-size: var(--ax-group-min-width, auto);
+	position: relative;
 	block-size: var(--ax-button-height, 40px);
 	padding-inline: var(--ax-button-space, var(--md-sys-measurement-space200));
 	border: 0;
@@ -520,12 +520,19 @@
 	}
 }
 
-/* XS and S carry a 48dp target whatever the container height says. M3 is
- * explicit that the larger inner padding at those sizes exists for this, and
- * that it must not be reduced. */
-.wp-block-axismundi-button-group[data-size="xsmall"],
-.wp-block-axismundi-button-group[data-size="small"] {
-	--ax-group-min-width: 48px;
+/* XS and S carry a 48dp target whatever the container measures, and a target is
+ * not a container: widening the box would contradict the sizes M3 publishes.
+ * The same overlay the Icon button page arrived at, for the same reason - it
+ * takes no space, so nothing in the row moves, and max() lets one rule serve
+ * every size because from Medium up the segment already exceeds 48. */
+.wp-block-axismundi-button-group__item::after {
+	content: "";
+	position: absolute;
+	inset-inline-start: 50%;
+	inset-block-start: 50%;
+	inline-size: max(100%, 48px);
+	block-size: max(100%, 48px);
+	translate: -50% -50%;
 }
 
 .wp-block-axismundi-button-group__item > .wp-block-button__icon {

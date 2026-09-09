@@ -208,21 +208,67 @@ Connected Segment가 쓰는 계약과 같습니다.
 M3에 없는 토글이 조용히 그려집니다.
 
 선택은 색만으로 알리지 않습니다. **쉬는 shape도 바뀝니다** — round는 각지고, 각진
-것은 둥글어집니다. M3는 방향이 아니라 대비로 규정합니다.
+것은 둥글어집니다. M3는 방향이 아니라 대비로 규정합니다. round의 값은 높이의 절반이라
+square에서 선택될 때도 `--ax-button-shape`가 아니라 `calc(height / 2)`를 씁니다.
+square가 그 변수를 이미 덮어썼기 때문입니다.
+
+### Icon(selected)는 두 번째 아이콘이 아닙니다
+
+Figma의 Toggle button 프로퍼티에는 아이콘이 둘입니다.
+
+```
+Icon            {{ site.data.button.variants[1].icon }}
+Icon(selected)  {{ site.data.button.variants[1].icon_selected }}
+```
+
+정적 파일은 채워진 아이콘을 보이려면 기호를 바꿔 끼우는 수밖에 없으니 그렇게 적혀
+있습니다. **`stars_filled`는 Material Icons의 이름이고 Material Symbols로 넘어오면서
+없어졌습니다.** 가변 폰트에는 `FILL` 축이 있으므로 웹은 글리프가 아니라 축을 바꿉니다 —
+`icons.css`가 `@property`로 등록해 두어 스냅이 아니라 보간됩니다. 마크업의 아이콘
+이름은 하나, 그려지는 상태는 둘입니다.
+
+> In toggle buttons, use the outlined style of an icon for the unselected
+> state, and the filled style for the selected state.
+
+축을 **글리프 폰트가 아니라 slot에** 씁니다. geometry 규칙이 그러는 이유와 같습니다 —
+7.1 아이콘 레지스트리 참조는 `<svg>`로 오고, `<svg>`에는 FILL 축이 없어 변수를 잘못
+읽는 대신 그냥 무시합니다.
+
+Figma가 `Show icon`의 기본값을 **true**로 두는 것도 그래서입니다. 평범한 button에서
+아이콘은 선택 사항이지만, 토글에서는 fill이 선택을 알리는 일을 합니다.
 
 <div class="sg-demo sg-demo--stack">
+{% assign toggle = site.data.button.variants[1] -%}
 {% for c in site.data.button.colors -%}
 {% if c.toggle_selected -%}
   <div class="wp-block-buttons">
-    <div class="wp-block-button{% unless c.name == 'filled' %} {{ c.wp_style }}{% endunless %}"><button type="button" class="wp-block-button__link wp-element-button" aria-pressed="false">{{ c.title }} unselected</button></div>
-    <div class="wp-block-button{% unless c.name == 'filled' %} {{ c.wp_style }}{% endunless %}"><button type="button" class="wp-block-button__link wp-element-button" aria-pressed="true">{{ c.title }} selected</button></div>
+    <div class="wp-block-button{% unless c.name == 'filled' %} {{ c.wp_style }}{% endunless %}"><button type="button" class="wp-block-button__link wp-element-button" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">{{ toggle.icon }}</span><span>{{ c.title }} unselected</span></button></div>
+    <div class="wp-block-button{% unless c.name == 'filled' %} {{ c.wp_style }}{% endunless %}"><button type="button" class="wp-block-button__link wp-element-button" aria-pressed="true"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">{{ toggle.icon }}</span><span>{{ c.title }} selected</span></button></div>
   </div>
 {% endif -%}
 {% endfor -%}
 </div>
 
+두 줄의 아이콘 이름은 `{{ toggle.icon }}` 하나입니다. 선택된 쪽만 채워집니다.
+
 Text가 이 목록에 없는 것이 위 문장의 증거입니다. 표본은 `button.yml`의
-`toggle_selected`가 있는 스타일만 그립니다.
+`toggle_selected`가 있는 스타일만 그립니다. 어댑터도 같은 이유로 `is-style-text`를
+색과 shape **양쪽** 토글 규칙에서 제외합니다. 한쪽만 제외하면 색은 그대로인데 모서리만
+바뀌는 반쪽 토글이 그려집니다 — 실제로 그랬습니다.
+
+### Show focus indicator
+
+Figma에 이 프로퍼티가 있는 이유는 정적 파일이 링을 직접 그려야 보여줄 수 있기
+때문입니다. 실제 링은 브라우저가 소유하고 `:focus-visible`은 키보드 포커스에만
+반응하는데, 페이지를 읽는 사람은 그러고 있지 않습니다. 그래서 표본은 같은 링을
+강제합니다 — 이 클래스 뒤에는 저장되는 블록 속성이 **없습니다.**
+
+<div class="sg-demo">
+  <div class="wp-block-buttons">
+    <div class="wp-block-button is-forced-focus"><button type="button" class="wp-block-button__link wp-element-button">Focused</button></div>
+    <div class="wp-block-button is-forced-focus"><button type="button" class="wp-block-button__link wp-element-button" aria-pressed="true"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">{{ toggle.icon }}</span><span>Focused selected</span></button></div>
+  </div>
+</div>
 
 ## Configurations
 

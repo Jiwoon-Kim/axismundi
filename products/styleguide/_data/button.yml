@@ -34,6 +34,17 @@ variants:
     title: Toggle (selection)
     m3: false
     expressive: true
+    # Figma's Toggle button defaults Show icon to true, where the default
+    # button leaves the icon optional. The fill is a selection cue, so the icon
+    # is doing work here it does not do on a plain button.
+    show_icon_default: true
+    # Two icon properties in Figma, one glyph on the web. `stars_filled` was a
+    # Material Icons name and did not survive the move to Material Symbols; the
+    # variable font carries FILL as an axis, so the adapter changes the axis
+    # rather than the glyph. Recorded as published, implemented as FILL.
+    icon: stars
+    icon_selected: stars_filled
+    icon_selected_axis: FILL 1
 
 sizes:
   - name: xsmall

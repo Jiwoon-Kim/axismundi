@@ -338,6 +338,43 @@ def main() -> int:
                 == CORNER[size["selected_round"]],
                 f"adapter {size['name']} selected shape differs from button.yml")
 
+    # Icon(selected) is the FILL axis, not a second glyph. Figma names
+    # stars_filled, which was a Material Icons glyph and did not survive the
+    # move to Material Symbols; the variable font carries FILL as an axis.
+    if "toggle" in variants:
+        report.check(variants["toggle"].get("show_icon_default") is True,
+                     "Figma's Toggle button defaults Show icon to true")
+        report.check(variants["toggle"].get("icon_selected_axis") == "FILL 1",
+                     "button.yml must record Icon(selected) as a FILL axis value")
+    fill_rule = block(
+        css,
+        ".wp-block-button:not(.is-style-text) > "
+        '.wp-block-button__link[aria-pressed="true"] > .wp-block-button__icon',
+    )
+    report.check(fill_rule is not None,
+                 "adapter has no Icon(selected) FILL rule for the Button toggle")
+    if fill_rule is not None:
+        report.check(declaration(fill_rule, "--md-icon-fill") == "1",
+                     "selected Button icon must set the FILL axis")
+    # On the slot, for the same reason the geometry rule is: a registry <svg>
+    # has no FILL axis and must ignore the variable rather than mis-read it.
+    report.check(
+        '.wp-block-button__link[aria-pressed="true"] > .material-symbols-outlined' not in css,
+        "Icon(selected) must key on the icon slot, not the glyph font")
+
+    # Figma's Show focus indicator. The one class here with no attribute behind
+    # it: :focus-visible fires only for keyboard focus, which a reader is not
+    # using, so a specimen has to force the ring to show it.
+    forced = block(css, ".wp-block-button.is-forced-focus > .wp-block-button__link")
+    report.check(forced is not None, "adapter has no forced focus-ring rule")
+    if forced is not None:
+        for name, want in {
+            "outline": "var(--md-focus-ring-width) solid var(--md-sys-color-secondary)",
+            "outline-offset": "var(--md-focus-ring-outward-offset)",
+        }.items():
+            report.check(declaration(forced, name) == want,
+                         f"forced focus ring {name} differs from the real one")
+
     # A square button selected becomes round, and round is half the height.
     # Reading --ax-button-shape back would return the square corner, because
     # [data-shape="square"] overwrites it - measured 12px where Small round is

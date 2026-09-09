@@ -86,8 +86,9 @@
 	}
 
 	// The panel is the block a reader would save, so it has to show what the
-	// children actually became. Printing a count was fine while every child was
-	// identical and became a lie the moment one could be edited on its own.
+	// children actually became - including which block each one is. A standard
+	// group holds Buttons and Icon buttons side by side, and those are two
+	// block names, not one block with a flag.
 	function standardMarkup( host, group ) {
 		var output = host.querySelector( "[data-group-markup]" );
 		var nl = String.fromCharCode( 10 );
@@ -101,56 +102,102 @@
 		output.textContent = '<div class="wp-block-buttons"' +
 			( group.dataset.color ? ' data-color="' + group.dataset.color + '"' : "" ) +
 			">" + nl +
-			children.map( function ( child ) {
-				var link = child.querySelector( ".wp-block-button__link" );
-				var label = child.querySelector( "[data-group-label]" );
-				var style = Array.prototype.slice.call( child.classList ).filter( function ( name ) {
-					return name.indexOf( "is-style-" ) === 0;
-				} )[ 0 ];
-				var attributes = [];
-				if ( style ) {
-					attributes.push( 'className:"' + style + '"' );
-				}
-				if ( child.dataset.size ) {
-					attributes.push( 'size:"' + child.dataset.size + '"' );
-				}
-				if ( child.dataset.shape ) {
-					attributes.push( 'shape:"' + child.dataset.shape + '"' );
-				}
-				// Figma keeps Show icon and Icon as two properties, and a block
-				// would store them the same way: turning the icon off does not
-				// forget which one it was. The DOM does drop the element,
-				// because it is aria-hidden decoration and an invisible empty
-				// span is worth nothing - unlike the label, which is the
-				// accessible name and has to stay in the tree whether or not
-				// it is visible. That asymmetry is the difference between
-				// content and ornament, and the panel should show the stored
-				// name either way.
-				if ( ! child.querySelector( ".wp-block-button__icon" ) ) {
-					attributes.push( "showIcon:false" );
-				}
-				if ( child.dataset.icon ) {
-					attributes.push( 'icon:"' + child.dataset.icon + '"' );
-				}
-				if ( link && link.disabled ) {
-					attributes.push( "disabled:true" );
-				}
-				return "  <!-- wp:button" +
-					( attributes.length ? " {" + attributes.join( "," ) + "}" : "" ) +
-					" -->" + ( label ? "  " + label.textContent : "" );
-			} ).join( nl ) +
+			children.map( childMarkup ).join( nl ) +
 			nl + "</div>";
 	}
 
-	// Icon-only is a label decision, not an icon one: the icon is present in
-	// both kinds and the label is what moves out of sight. Keeping it in one
-	// place means the group control and the insertion path cannot disagree.
+	function styleOf( element ) {
+		return Array.prototype.slice.call( element.classList ).filter( function ( name ) {
+			return name.indexOf( "is-style-" ) === 0;
+		} )[ 0 ] || "";
+	}
+
+	function childMarkup( child ) {
+		var attributes = [];
+		var style = styleOf( child );
+		var isIcon = childKind( child ) === "icon";
+		var name = childName( child );
+		if ( style ) {
+			attributes.push( 'className:"' + style + '"' );
+		}
+		if ( child.dataset.size ) {
+			attributes.push( 'size:"' + child.dataset.size + '"' );
+		}
+		// Width is the icon button's own axis and the only component here that
+		// has one, so it never appears on a Button.
+		if ( isIcon && child.dataset.width ) {
+			attributes.push( 'width:"' + child.dataset.width + '"' );
+		}
+		if ( child.dataset.shape ) {
+			attributes.push( 'shape:"' + child.dataset.shape + '"' );
+		}
+		// Figma keeps Show icon and Icon as two properties, and a block would
+		// store them the same way: turning the icon off does not forget which
+		// one it was. The DOM does drop the element, because it is aria-hidden
+		// decoration and an invisible empty span is worth nothing - unlike the
+		// name, which is what a screen reader announces and has to stay in the
+		// tree. That asymmetry is the difference between content and ornament.
+		// An icon button has no such switch: the icon is its entire anatomy.
+		if ( ! isIcon && ! child.querySelector( ".wp-block-button__icon" ) ) {
+			attributes.push( "showIcon:false" );
+		}
+		if ( child.dataset.icon ) {
+			attributes.push( 'icon:"' + child.dataset.icon + '"' );
+		}
+		if ( isIcon && child.hasAttribute( "aria-pressed" ) ) {
+			attributes.push( "selected:" + ( child.getAttribute( "aria-pressed" ) === "true" ) );
+		}
+		if ( childControl( child ).disabled ) {
+			attributes.push( "disabled:true" );
+		}
+		return "  <!-- wp:" + ( isIcon ? "axismundi/icon-button" : "button" ) +
+			( attributes.length ? " {" + attributes.join( "," ) + "}" : "" ) +
+			" -->" + ( name ? "  " + name.textContent : "" );
+	}
+
+	// --- Two kinds of child ---------------------------------------------
+	//
+	// A standard group is a container for independent buttons, and M3 names
+	// both kinds when it rules one of them out: "Avoid using standard icon
+	// buttons or text buttons, as they have no container treatment." Only
+	// three of the four icon-button styles are excluded from that sentence,
+	// which is the guidelines saying icon buttons belong in a group.
+	//
+	// So icon-only here is a different block, not a Button with its label
+	// pushed out of sight. This page states the rule further down: a control
+	// with an icon and no label is not a Button, it is an Icon button. The
+	// demo used to model it the other way, and it contradicted its own page.
+
+	function childKind( child ) {
+		return child.classList.contains( "wp-block-axismundi-icon-button" ) ? "icon" : "button";
+	}
+
+	// The accessible name, wherever the kind keeps it. A Button's is a visible
+	// label that may retreat; an Icon button's is only ever out of sight.
+	function childName( child ) {
+		return child.querySelector( "[data-group-label], .screen-reader-text" );
+	}
+
+	// The element carrying `disabled`. An icon button is its own control; a
+	// Button keeps one inside its wrapper.
+	function childControl( child ) {
+		return childKind( child ) === "icon"
+			? child
+			: child.querySelector( ".wp-block-button__link" );
+	}
+
 	// The name lives on the child, not on the element that renders it, so
 	// removing the icon does not throw the choice away with it. Toggling Show
 	// icon off and on used to hand every button the same default back.
-	function makeIcon( child ) {
+	//
+	// The class differs by kind, and not decoratively: a Button's icon is a slot
+	// in the label flow and carries the block's own class, while an Icon
+	// button's icon is the whole content and is sized by the component itself.
+	function makeIcon( child, kind ) {
 		var icon = document.createElement( "span" );
-		icon.className = "wp-block-button__icon material-symbols-outlined notranslate";
+		icon.className = kind === "icon"
+			? "material-symbols-outlined notranslate"
+			: "wp-block-button__icon material-symbols-outlined notranslate";
 		icon.setAttribute( "translate", "no" );
 		icon.setAttribute( "aria-hidden", "true" );
 		icon.textContent = child.dataset.icon || "add";
@@ -158,70 +205,105 @@
 	}
 
 	function rememberIcon( child ) {
-		var icon = child.querySelector( ".wp-block-button__icon" );
+		var icon = child.querySelector( ".material-symbols-outlined" );
 		if ( icon && ! child.dataset.icon ) {
 			child.dataset.icon = icon.textContent.trim();
 		}
 	}
 
-	function setChildKind( child, iconOnly ) {
-		var link = child.querySelector( ".wp-block-button__link" );
-		var label = child.querySelector( "[data-group-label]" );
-		var icon = child.querySelector( ".wp-block-button__icon" );
-		if ( ! link ) {
-			return;
+	function makeChild( kind, state ) {
+		var name = document.createElement( "span" );
+		var child;
+		var link;
+		if ( kind === "icon" ) {
+			child = document.createElement( "button" );
+			child.type = "button";
+			child.className = "wp-block-axismundi-icon-button";
+			child.dataset.groupChild = "";
+			child.dataset.icon = state.icon;
+			name.className = "screen-reader-text";
+			name.textContent = state.name;
+			child.append( makeIcon( child, "icon" ), name );
+			return child;
 		}
-		if ( iconOnly && ! icon ) {
-			link.prepend( makeIcon( child ) );
-		}
-		// Coming back out of icon-only, honour whatever the child had asked
-		// for. Forcing the icon on is a consequence of hiding the label, not a
-		// new preference, so it should not outlive the state that required it.
-		if ( ! iconOnly && icon && child.dataset.wantIcon === "false" ) {
-			icon.remove();
-		}
-		if ( label ) {
-			label.classList.toggle( "screen-reader-text", !! iconOnly );
-		}
-	}
-
-	function addStandardChild( host, group, iconOnly ) {
-		var controls = host.querySelectorAll( "[data-group-control]" );
-		var values = {};
-		var child = document.createElement( "div" );
-		var button = document.createElement( "button" );
-		var icon = document.createElement( "span" );
-		var label = document.createElement( "span" );
-		var number = group.querySelectorAll( "[data-group-child]" ).length + 1;
-
-		controls.forEach( function ( control ) {
-			values[ control.dataset.groupControl ] = control.value;
-		} );
+		child = document.createElement( "div" );
+		link = document.createElement( "button" );
 		child.className = "wp-block-button";
 		child.dataset.groupChild = "";
+		child.dataset.icon = state.icon;
+		link.type = "button";
+		link.className = "wp-block-button__link wp-element-button";
+		// The name element always exists and is never `hidden`: that would drop
+		// it from the accessibility tree and force a second, separate aria-label,
+		// which is two sources for one name.
+		name.dataset.groupLabel = "";
+		name.textContent = state.name;
+		link.append( makeIcon( child ), name );
+		child.append( link );
+		return child;
+	}
+
+	// Changing kind is a block transform, so it carries across what both blocks
+	// store and drops what only one of them does. Elevated and Text have no
+	// icon-button counterpart, Standard has no Button one, and Width belongs to
+	// the icon button alone. Losing a property the target cannot express is the
+	// transform being honest rather than inventing a value.
+	var SHARED_STYLES = { tonal: true, outline: true };
+
+	function convertChild( child, kind ) {
+		var was = childKind( child );
+		var name = childName( child );
+		var style = styleOf( child ).replace( "is-style-", "" );
+		var disabled = childControl( child ).disabled;
+		var replacement;
+		var icon;
+		if ( was === kind ) {
+			return child;
+		}
+		replacement = makeChild( kind, {
+			icon: child.dataset.icon || "add",
+			name: name ? name.textContent : ""
+		} );
+		if ( SHARED_STYLES[ style ] ) {
+			replacement.classList.add( "is-style-" + style );
+		}
+		[ "size", "shape", "ownSize", "ownShape", "ownKind", "wantIcon", "groupSelected" ]
+			.forEach( function ( key ) {
+				if ( child.dataset[ key ] ) {
+					replacement.dataset[ key ] = child.dataset[ key ];
+				}
+			} );
+		// A Button that had asked for no icon keeps that answer on the way back.
+		if ( kind === "button" && replacement.dataset.wantIcon === "false" ) {
+			icon = replacement.querySelector( ".wp-block-button__icon" );
+			if ( icon ) {
+				icon.remove();
+			}
+		}
+		childControl( replacement ).disabled = disabled;
+		child.replaceWith( replacement );
+		return replacement;
+	}
+
+	function addStandardChild( host, group, kind ) {
+		var values = {};
+		var number = group.querySelectorAll( "[data-group-child]" ).length + 1;
+		var child;
+		host.querySelectorAll( "[data-group-control]" ).forEach( function ( control ) {
+			values[ control.dataset.groupControl ] = control.value;
+		} );
+		child = makeChild( kind, {
+			icon: "add",
+			name: ( kind === "icon" ? "Icon button " : "Button " ) + number
+		} );
 		if ( values.shape === "square" ) {
 			child.dataset.shape = "square";
 		}
 		if ( values.size !== "small" ) {
 			child.dataset.size = values.size;
 		}
-		button.type = "button";
-		button.className = "wp-block-button__link wp-element-button";
-		icon.className = "wp-block-button__icon material-symbols-outlined notranslate";
-		icon.setAttribute( "translate", "no" );
-		icon.setAttribute( "aria-hidden", "true" );
-		icon.textContent = "add";
-		child.dataset.icon = "add";
-		label.dataset.groupLabel = "";
-		label.textContent = iconOnly ? "Icon button " + number : "Button " + number;
-		// The label element always exists and moves out of sight rather than
-		// being hidden: `hidden` would drop it from the accessibility tree and
-		// force a second, separate aria-label, which is two sources for one
-		// name. The plugin that ships this pattern adds a class for the same
-		// reason.
-		child.append( button );
-		setChildKind( child, iconOnly );
 		group.append( child );
+		return child;
 	}
 
 	function connectedMarkup( host, group ) {
@@ -421,13 +503,16 @@
 			}
 			if ( control.dataset.groupControl === "button-type" ) {
 				// Figma puts this on the group, and its plates show whole rows
-				// of icon-only groups and whole rows of label ones - so it
-				// governs the children, not only the next insertion. The mixed
-				// example proves a child may still differ, which makes it the
-				// same kind of control as Size and Color: a default that passes
-				// over anyone who has chosen.
-				inheriting( "Labels" ).forEach( function ( child ) {
-					setChildKind( child, control.value === "icon" );
+				// of icon buttons and whole rows of label ones - so it governs
+				// the children, not only the next insertion. The mixed example
+				// proves a child may still differ, which makes it the same kind
+				// of control as Size and Color: a default that passes over
+				// anyone who has chosen.
+				inheriting( "Kind" ).forEach( function ( child ) {
+					var replaced = convertChild( child, control.value );
+					if ( replaced.dataset.groupSelected ) {
+						syncChildPanel( host, replaced );
+					}
 				} );
 			}
 			if ( control.dataset.groupControl === "color" ) {
@@ -445,12 +530,10 @@
 				return;
 			}
 			if ( action.dataset.groupAction === "add" ) {
-				// Figma's Button type is a property on the group because a
-				// static file assembles its children by swapping instances.
-				// Here it decides what the next child is, which is the same
-				// choice a block editor makes at the moment of insertion.
+				// The group's Button type is also the insertion default, which is
+				// the choice a block editor makes at the moment of insertion.
 				var kind = host.querySelector( '[data-group-control="button-type"]' );
-				addStandardChild( host, group, kind && kind.value === "icon" );
+				addStandardChild( host, group, kind ? kind.value : "button" );
 			}
 			if ( action.dataset.groupAction === "remove-last" ) {
 				var children = group.querySelectorAll( "[data-group-child]" );
@@ -475,22 +558,26 @@
 	// its choice - because both halves have to be reachable to see one lose.
 
 	function childSummary( child ) {
-		var icon = child.querySelector( ".wp-block-button__icon" );
-		var label = child.querySelector( "[data-group-label]" );
-		var style = Array.prototype.slice.call( child.classList ).filter( function ( name ) {
-			return name.indexOf( "is-style-" ) === 0;
-		} )[ 0 ];
+		var kind = childKind( child );
 		return {
-			icon: !! icon,
-			label: label,
-			style: style ? style.replace( "is-style-", "" ) : "",
+			kind: kind,
+			// An icon button always has its icon: it is the whole anatomy, and
+			// there is nothing left to look at without it.
+			icon: kind === "icon" || !! child.querySelector( ".wp-block-button__icon" ),
+			name: childName( child ),
+			style: styleOf( child ).replace( "is-style-", "" ),
 			size: child.dataset.size || "small",
-			shape: child.dataset.shape || "round"
+			shape: child.dataset.shape || "round",
+			width: child.dataset.width || "default",
+			togglable: child.hasAttribute( "aria-pressed" ),
+			selected: child.getAttribute( "aria-pressed" ) === "true",
+			disabled: !! childControl( child ).disabled
 		};
 	}
 
 	function syncChildPanel( host, child ) {
 		var panel = host.querySelector( "[data-group-child-panel]" );
+		var state;
 		if ( ! panel ) {
 			return;
 		}
@@ -498,28 +585,29 @@
 		if ( ! child ) {
 			return;
 		}
-		var state = childSummary( child );
+		state = childSummary( child );
+		// The panel shows the settings of the block that is selected, so rows
+		// belonging to the other block are not there at all - the same thing a
+		// block editor's inspector does. Width and Selected have no meaning on a
+		// Button; Show icon has none on an Icon button.
+		panel.querySelectorAll( "[data-child-kind]" ).forEach( function ( row ) {
+			row.hidden = row.dataset.childKind !== state.kind;
+		} );
 		panel.querySelectorAll( "[data-child-control]" ).forEach( function ( control ) {
 			var key = control.dataset.childControl;
 			if ( key === "show-icon" ) {
 				control.checked = state.icon;
-				// With the label out of sight the icon is the only thing left
-				// to see, so it stops being optional. Locking the control says
-				// so; silently switching it back on, which is what happened
-				// before, overrode a choice the reader had just made.
-				control.disabled = !! state.label
-					&& state.label.classList.contains( "screen-reader-text" );
-			} else if ( key === "label" ) {
-				control.value = state.label ? state.label.textContent : "";
-				control.disabled = ! state.label;
+			} else if ( key === "name" ) {
+				control.value = state.name ? state.name.textContent : "";
 			} else if ( key === "icon" ) {
 				control.value = child.dataset.icon || "";
-			} else if ( key === "show-label" ) {
-				control.checked = !! state.label && ! state.label.classList.contains( "screen-reader-text" );
+			} else if ( key === "togglable" ) {
+				control.checked = state.togglable;
+			} else if ( key === "selected" ) {
+				control.checked = state.selected;
+				control.disabled = ! state.togglable;
 			} else if ( key === "disabled" ) {
-				control.checked = child.querySelector( ".wp-block-button__link" ).disabled;
-			} else if ( key === "style" ) {
-				control.value = state.style;
+				control.checked = state.disabled;
 			} else {
 				control.value = state[ key ];
 			}
@@ -556,12 +644,23 @@
 		function apply( event ) {
 			var control = event.target.closest( "[data-child-control]" );
 			var child = group.querySelector( '[data-group-selected="true"]' );
+			var key;
+			var name;
+			var icon;
 			if ( ! control || ! child ) {
 				return;
 			}
-			var link = child.querySelector( ".wp-block-button__link" );
-			var key = control.dataset.childControl;
+			key = control.dataset.childControl;
 
+			// Each of these marks the child as having chosen, which is what takes
+			// it out of the group's default for that property. Without the mark
+			// the group would stamp every child and "the child overrules" would
+			// be a claim with nothing behind it.
+			if ( key === "kind" ) {
+				child.dataset.ownKind = "true";
+				child = convertChild( child, control.value );
+				syncChildPanel( host, child );
+			}
 			if ( key === "size" ) {
 				child.dataset.ownSize = "true";
 				if ( control.value === "small" ) {
@@ -578,27 +677,36 @@
 					delete child.dataset.shape;
 				}
 			}
+			// Width has no group default to escape: only the icon button has the
+			// axis, and the group publishes no value for it.
+			if ( key === "width" ) {
+				if ( control.value === "default" ) {
+					delete child.dataset.width;
+				} else {
+					child.dataset.width = control.value;
+				}
+			}
 			if ( key === "style" ) {
-				Array.prototype.slice.call( child.classList ).forEach( function ( name ) {
-					if ( name.indexOf( "is-style-" ) === 0 ) {
-						child.classList.remove( name );
+				Array.prototype.slice.call( child.classList ).forEach( function ( className ) {
+					if ( className.indexOf( "is-style-" ) === 0 ) {
+						child.classList.remove( className );
 					}
 				} );
 				if ( control.value ) {
 					child.classList.add( "is-style-" + control.value );
 				}
 			}
-			if ( key === "label" ) {
-				var label = child.querySelector( "[data-group-label]" );
-				if ( label ) {
-					label.textContent = control.value;
+			if ( key === "name" ) {
+				name = childName( child );
+				if ( name ) {
+					name.textContent = control.value;
 				}
 			}
 			if ( key === "show-icon" ) {
 				child.dataset.wantIcon = String( control.checked );
-				var icon = child.querySelector( ".wp-block-button__icon" );
+				icon = child.querySelector( ".wp-block-button__icon" );
 				if ( control.checked && ! icon ) {
-					link.prepend( makeIcon( child ) );
+					childControl( child ).prepend( makeIcon( child ) );
 				}
 				if ( ! control.checked && icon ) {
 					icon.remove();
@@ -606,21 +714,27 @@
 			}
 			if ( key === "icon" ) {
 				child.dataset.icon = control.value;
-				var live = child.querySelector( ".wp-block-button__icon" );
-				if ( live ) {
-					live.textContent = control.value;
+				icon = child.querySelector( ".material-symbols-outlined" );
+				if ( icon ) {
+					icon.textContent = control.value;
 				}
 			}
-			if ( key === "show-label" ) {
-				// Choosing here is what takes this child out of the group's
-				// Button type, the same way choosing a size takes it out of
-				// the group's Size.
-				child.dataset.ownLabels = "true";
-				setChildKind( child, ! control.checked );
+			// Togglable is a different component in Figma, not a state of this
+			// one, and aria-pressed is what says so in the DOM: present makes it
+			// a toggle and brings M3's separate colour table with it.
+			if ( key === "togglable" ) {
+				if ( control.checked ) {
+					child.setAttribute( "aria-pressed", "false" );
+				} else {
+					child.removeAttribute( "aria-pressed" );
+				}
 				syncChildPanel( host, child );
 			}
+			if ( key === "selected" && child.hasAttribute( "aria-pressed" ) ) {
+				child.setAttribute( "aria-pressed", String( control.checked ) );
+			}
 			if ( key === "disabled" ) {
-				link.disabled = control.checked;
+				childControl( child ).disabled = control.checked;
 			}
 			standardMarkup( host, group );
 		}

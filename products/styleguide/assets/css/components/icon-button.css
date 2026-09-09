@@ -202,10 +202,16 @@
 
 /* --- Colour: four styles, and one of them has no container ----- */
 
+/* Written as a fallback, not a value, because a standard button group hands a
+ * Color down to the children that have not chosen one. A value declared on the
+ * element would outrank the group's inherited variable - the same cascade trap
+ * that pinned every button's icon at 20px. `is-style-*` below is the child
+ * choosing, and it wins on specificity, which is Figma's worked example: a
+ * group set to Filled holding a tonal icon button. */
 .wp-block-axismundi-icon-button {
-	--ax-icon-button-container: var(--md-sys-color-primary);
-	--ax-icon-button-content: var(--md-sys-color-on-primary);
-	--ax-icon-button-state-role: var(--md-sys-color-on-primary);
+	--ax-icon-button-container: var(--ax-group-color-container, var(--md-sys-color-primary));
+	--ax-icon-button-content: var(--ax-group-color-content, var(--md-sys-color-on-primary));
+	--ax-icon-button-state-role: var(--ax-group-color-content, var(--md-sys-color-on-primary));
 }
 
 .wp-block-axismundi-icon-button.is-style-tonal {
@@ -235,15 +241,15 @@
 /* The published toggle table, which differs from the default one for every
  * style: unselected is quieter and selected is louder. */
 .wp-block-axismundi-icon-button[aria-pressed] {
-	--ax-icon-button-container: var(--md-sys-color-surface-container);
-	--ax-icon-button-content: var(--md-sys-color-on-surface-variant);
-	--ax-icon-button-state-role: var(--md-sys-color-on-surface-variant);
+	--ax-icon-button-container: var(--ax-button-toggle-unselected-container, var(--md-sys-color-surface-container));
+	--ax-icon-button-content: var(--ax-button-toggle-unselected-content, var(--md-sys-color-on-surface-variant));
+	--ax-icon-button-state-role: var(--ax-button-toggle-unselected-content, var(--md-sys-color-on-surface-variant));
 }
 
 .wp-block-axismundi-icon-button[aria-pressed="true"] {
-	--ax-icon-button-container: var(--md-sys-color-primary);
-	--ax-icon-button-content: var(--md-sys-color-on-primary);
-	--ax-icon-button-state-role: var(--md-sys-color-on-primary);
+	--ax-icon-button-container: var(--ax-button-toggle-selected-container, var(--md-sys-color-primary));
+	--ax-icon-button-content: var(--ax-button-toggle-selected-content, var(--md-sys-color-on-primary));
+	--ax-icon-button-state-role: var(--ax-button-toggle-selected-content, var(--md-sys-color-on-primary));
 }
 
 .wp-block-axismundi-icon-button.is-style-tonal[aria-pressed="false"] {

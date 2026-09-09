@@ -327,6 +327,38 @@
 	border: var(--ax-button-outline-width, 1px) solid var(--md-sys-color-outline-variant);
 }
 
+/* A standard group may also hold Icon buttons, and M3 says so itself when it
+ * rules one of them out: "Avoid using standard icon buttons ... as they have
+ * no container treatment." Figma's own standard child is an "Icon button
+ * togglable - tonal". Two consequences follow.
+ *
+ * First, a toggle reads M3's published toggle pair rather than the plain
+ * roles, so the group has to declare both. Setting only the plain pair left
+ * every togglable child filled inside a tonal group - the same mistake the
+ * connected split already fixed once, and the reason to state it twice.
+ *
+ * Second, outlined needs its outline drawn on the child, and the icon button
+ * has its own width token: 1px at XS/S, 2px at L, 3px at XL. Scoped to
+ * children that have not chosen a style, so a tonal icon button in an outlined
+ * group does not gain a border it never asked for. */
+.wp-block-buttons[data-color="tonal"] {
+	--ax-button-toggle-unselected-container: var(--md-sys-color-secondary-container);
+	--ax-button-toggle-unselected-content: var(--md-sys-color-on-secondary-container);
+	--ax-button-toggle-selected-container: var(--md-sys-color-secondary);
+	--ax-button-toggle-selected-content: var(--md-sys-color-on-secondary);
+}
+
+.wp-block-buttons[data-color="outlined"] {
+	--ax-button-toggle-unselected-container: transparent;
+	--ax-button-toggle-unselected-content: var(--md-sys-color-on-surface-variant);
+	--ax-button-toggle-selected-container: var(--md-sys-color-inverse-surface);
+	--ax-button-toggle-selected-content: var(--md-sys-color-inverse-on-surface);
+}
+
+.wp-block-buttons[data-color="outlined"] > .wp-block-axismundi-icon-button:not([class*="is-style-"]) {
+	border: var(--ax-icon-button-outline-width, 1px) solid var(--md-sys-color-outline-variant);
+}
+
 /* Connected: the toggle pair, which is M3's own table for a selected and an
  * unselected segment. Filled is the default and needs no rule. */
 .wp-block-axismundi-button-group[data-color="tonal"] {
@@ -351,9 +383,22 @@
 
 /* --- The selected child ---------------------------------------- */
 
-.wp-block-button[data-group-selected="true"] {
+/* The demo's selection ring, on whichever kind of child is selected. An icon
+ * button is its own flex item and has no `.wp-block-button` wrapper, because a
+ * sibling block renders its own root - so the ring cannot key off the wrapper
+ * class the way it did while every child was a Button. */
+[data-group-child][data-group-selected="true"] {
 	outline: 2px solid var(--md-sys-color-primary);
 	outline-offset: 3px;
+}
+
+/* The radius belongs to the wrapper alone. A `.wp-block-button` is a plain
+ * box, so without one the ring is a rectangle around a rounded control. An
+ * icon button IS the control, and the same declaration overwrote the shape the
+ * component publishes - measured 8px where Small round is 20px, and the
+ * selected morph gone with it. A demo affordance must not repaint the
+ * specimen it points at. */
+.wp-block-button[data-group-selected="true"] {
 	border-radius: var(--md-sys-shape-corner-value-small);
 }
 

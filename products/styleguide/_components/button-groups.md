@@ -67,31 +67,59 @@ Button/Icon button을 담는 컨테이너이고, Connected는 고정된 Segment�
 `Color`와 `Size`는 아직 자기 값을 고르지 않은 자식에게 주는 기본값입니다. Tonal
 Preview처럼 자기 variation을 고른 Button은 그 값을 유지합니다.
 
-`Button type`도 같은 종류의 기본값입니다. Figma의 판을 보면 **행 전체가 icon-only이거나
+`Button type`도 같은 종류의 기본값입니다. Figma의 판을 보면 **행 전체가 icon button이거나
 행 전체가 label**이고, 그러면서도 예시 하나는 자식이 섞여 있습니다. 그룹이 정하고 자식이
 덮는다는 뜻이라, Size·Color와 같은 자리입니다.
 
-바꾸는 것은 아이콘이 아니라 **라벨**입니다. 아이콘은 양쪽 다 있고, icon-only는 라벨이
-`screen-reader-text`로 물러난 상태입니다 — 이름은 그대로 남습니다.
+**다만 바뀌는 것은 라벨이 아니라 블록입니다.** 이 페이지가 아래에서 말하는 그대로입니다 —
+아이콘만 남는 것은 Button이 아니라 Icon button입니다. M3 Button의 anatomy에 icon-only
+구성은 없고, 라벨을 `screen-reader-text`로 물러나게 한 Button은 M3에 존재하지 않는
+물건입니다. 이전 데모가 그렇게 만들고 있었고, 자기 페이지와 모순이었습니다.
 
-`Show label`과 `Show icon`이 DOM에서 다르게 동작하는 것도 그래서입니다.
+M3 가이드라인도 그룹 안에 icon button이 있다고 전제합니다. 금지 문장이 그 증거입니다 —
+**standard** icon button을 쓰지 말라는 말은 나머지 셋은 들어간다는 뜻입니다.
+
+그래서 `Button type`은 자식의 **블록 이름**을 정합니다.
 
 ```
-Show label 해제   라벨 요소가 남고 screen-reader-text로 물러남
-Show icon  해제   아이콘 요소가 사라짐
+Button type: Button        <!-- wp:button -->
+Button type: Icon button   <!-- wp:axismundi/icon-button -->
 ```
 
-**비대칭이 맞습니다.** 라벨은 접근 가능한 이름이라 보이지 않아도 트리에 있어야 하고,
+자식 패널의 `Block`도 같은 일을 자식 하나에 합니다. **블록 변환**이라, 양쪽이 저장하는
+것은 옮기고 한쪽만 저장하는 것은 버립니다.
+
+```
+옮김   icon · 접근 가능한 이름 · size · shape · disabled · tonal/outline
+버림   Elevated·Text  (icon button에 없음)
+       Standard       (Button에 없음)
+       Width          (icon button만 가진 축)
+```
+
+버리는 것이 변환이 정직한 것입니다. 없는 값을 지어내는 쪽이 버그입니다.
+
+`Show icon`은 이제 Button 자식에만 있습니다. Icon button에게 아이콘은 선택이 아니라
+anatomy 전체라 끌 수 있는 스위치가 아닙니다. Button에서는 여전히 라벨과 다르게
+동작합니다.
+
+```
+Show icon 해제   아이콘 요소가 사라짐
+이름             어느 쪽 블록이든 트리에 남음
+```
+
+**비대칭이 맞습니다.** 이름은 접근 가능한 이름이라 보이지 않아도 트리에 있어야 하고,
 아이콘은 `aria-hidden` 장식이라 없어져도 잃는 의미가 없습니다 — 보이지 않는 빈 span은
-아무 값어치가 없습니다. 콘텐츠와 장식의 차이입니다.
+아무 값어치가 없습니다. 콘텐츠와 장식의 차이입니다. 라벨을 감추는 쪽의 이야기는
+Connected Segment에 있습니다. 거기서는 M3가 실제로 그 축을 발행합니다.
 
 다만 **이름은 잃지 않습니다.** Figma가 `Show icon`과 `Icon`을 별개 프로퍼티로 두는 것과
 같이, 꺼도 어느 아이콘이었는지는 남습니다. 아래 markup 패널이 그걸 그대로 보여줍니다 —
 `showIcon:false`와 `icon:"save"`가 함께 나옵니다.
 
-**둘을 동시에 끌 수는 없습니다.** 라벨이 물러나면 아이콘이 그 시각적 자리를 대신하므로
-아이콘이 필수가 되고, 그러면 `Show icon`이 잠깁니다. 잠그지 않으면 라벨을 끄는 순간
-아이콘이 조용히 되살아나 방금 한 선택을 덮어씁니다 — 실제로 그랬습니다.
+`Togglable`은 Icon button 자식에만 있습니다. Figma에서 별도 컴포넌트이고, DOM에서
+그렇다고 말하는 것이 `aria-pressed`입니다 — 있으면 toggle이고, M3가 따로 발행한 색
+테이블이 함께 옵니다. 그래서 그룹 `Color`가 두 벌을 내려보냅니다. 평범한 roles만
+내려보냈을 때는 tonal 그룹 안의 togglable 자식이 filled로 남았습니다.
 
 `Show fifth / sixth / seventh button`도 같은 종류의 Figma 편의라, 고정 슬롯 대신
 실제 InnerBlocks를 삽입하고 제거합니다.
@@ -103,6 +131,7 @@ Show icon  해제   아이콘 요소가 사라짐
       <div class="wp-block-button is-style-tonal" data-group-child><button type="button" class="wp-block-button__link wp-element-button"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">visibility</span><span data-group-label>Preview</span></button></div>
       <div class="wp-block-button" data-group-child><button type="button" class="wp-block-button__link wp-element-button"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">share</span><span data-group-label>Share</span></button></div>
       <div class="wp-block-button" data-group-child><button type="button" class="wp-block-button__link wp-element-button"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">download</span><span data-group-label>Download</span></button></div>
+      <button type="button" class="wp-block-axismundi-icon-button is-style-tonal" data-group-child data-own-kind="true" aria-pressed="false"><span class="material-symbols-outlined notranslate" translate="no" aria-hidden="true">star</span><span class="screen-reader-text">Favourite</span></button>
     </div>
     <pre class="sg-button-group-playground__markup" data-group-markup></pre>
   </div>
@@ -110,20 +139,25 @@ Show icon  해제   아이콘 요소가 사라짐
     <label>Type <select data-group-control="shape"><option value="round" selected>Round</option><option value="square">Square</option></select></label>
     <label>Size <select data-group-control="size"><option value="xsmall">XSmall</option><option value="small" selected>Small</option><option value="medium">Medium</option><option value="large">Large</option><option value="xlarge">XLarge</option></select></label>
     <label>Color <select data-group-control="color"><option value="filled" selected>Filled</option><option value="tonal">Tonal</option><option value="outlined">Outlined</option></select></label>
-    <label>Button type <select data-group-control="button-type"><option value="label" selected>Label</option><option value="icon">Icon</option></select></label>
+    <label>Button type <select data-group-control="button-type"><option value="button" selected>Button</option><option value="icon">Icon button</option></select></label>
     <div class="sg-button-group-playground__actions" role="group" aria-label="Standard button group children">
       <button type="button" data-group-action="add">Add button</button>
       <button type="button" data-group-action="remove-last">Remove last</button>
     </div>
     <fieldset class="sg-button-group-playground__child" data-group-child-panel>
       <legend>Selected button</legend>
+      <label>Block <select data-child-control="kind"><option value="button">Button</option><option value="icon">Icon button</option></select></label>
       <label>Type <select data-child-control="shape"><option value="round">Round</option><option value="square">Square</option></select></label>
       <label>Size <select data-child-control="size"><option value="xsmall">XSmall</option><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option><option value="xlarge">XLarge</option></select></label>
-      <label>Style <select data-child-control="style"><option value="">Inherit group</option><option value="tonal">Tonal</option><option value="outline">Outline</option><option value="elevated">Elevated</option><option value="text">Text</option></select></label>
-      <label>Label text <input type="text" data-child-control="label" /></label>
+      <label data-child-kind="icon">Width <select data-child-control="width"><option value="narrow">Narrow</option><option value="default">Default</option><option value="wide">Wide</option></select></label>
+      <label data-child-kind="button">Style <select data-child-control="style"><option value="">Inherit group</option><option value="tonal">Tonal</option><option value="outline">Outline</option><option value="elevated">Elevated</option><option value="text">Text</option></select></label>
+      <label data-child-kind="icon">Style <select data-child-control="style"><option value="">Inherit group</option><option value="tonal">Tonal</option><option value="outline">Outline</option><option value="standard">Standard</option></select></label>
+      <label data-child-kind="button">Label text <input type="text" data-child-control="name" /></label>
+      <label data-child-kind="icon">Accessible name <input type="text" data-child-control="name" /></label>
       <label>Icon <input type="text" list="group-icon-options" data-child-control="icon" /></label>
-      <label class="sg-button-group-playground__inline"><input type="checkbox" data-child-control="show-icon" /> Show icon</label>
-      <label class="sg-button-group-playground__inline"><input type="checkbox" data-child-control="show-label" /> Show label</label>
+      <label class="sg-button-group-playground__inline" data-child-kind="button"><input type="checkbox" data-child-control="show-icon" /> Show icon</label>
+      <label class="sg-button-group-playground__inline" data-child-kind="icon"><input type="checkbox" data-child-control="togglable" /> Togglable</label>
+      <label class="sg-button-group-playground__inline" data-child-kind="icon"><input type="checkbox" data-child-control="selected" /> Selected</label>
       <label class="sg-button-group-playground__inline"><input type="checkbox" data-child-control="disabled" /> Disabled</label>
     </fieldset>
   </div>

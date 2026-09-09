@@ -271,6 +271,38 @@
 	inline-size: auto;
 }
 
+/* --- The group declares a colour its members may overrule ------ */
+
+/* Figma's standard group carries Color alongside Type and Size, and its worked
+ * example is a group set to Filled holding a tonal icon button - the child
+ * overruling the group, exactly as it overrules size. The enum is Filled,
+ * Tonal and Outline; Elevated is not offered here, and Text cannot be, having
+ * no container to treat.
+ *
+ * These set --ax-group-color-*, which components/button.css reads as the
+ * fallback behind --ax-button-*. So they inherit into any member that has not
+ * declared its own style, and lose to any member that has. */
+.wp-block-buttons[data-color="tonal"],
+.wp-block-axismundi-button-group[data-color="tonal"] {
+	--ax-group-color-container: var(--md-sys-color-secondary-container);
+	--ax-group-color-content: var(--md-sys-color-on-secondary-container);
+}
+
+.wp-block-buttons[data-color="outlined"],
+.wp-block-axismundi-button-group[data-color="outlined"] {
+	--ax-group-color-container: transparent;
+	--ax-group-color-content: var(--md-sys-color-on-surface-variant);
+}
+
+/* Outlined is the one enum value that is not only a pair of roles: it also
+ * needs the outline drawn. Scoped to members that have not chosen a style of
+ * their own, so a tonal child inside an outlined group does not gain a border
+ * it never asked for. */
+.wp-block-buttons[data-color="outlined"] > .wp-block-button:not([class*="is-style-"]) > .wp-block-button__link,
+.wp-block-axismundi-button-group[data-color="outlined"] > .wp-block-axismundi-button-group__item:not([class*="is-style-"]) {
+	border: var(--ax-button-outline-width, 1px) solid var(--md-sys-color-outline-variant);
+}
+
 /* --- Connected: 2dp at every size ----------------------------- */
 
 /* One padding for all five sizes, which M3 gives as a consistency rule rather

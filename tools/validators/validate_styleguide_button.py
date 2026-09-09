@@ -222,10 +222,30 @@ def main() -> int:
                 if color.get("container_is_outline")
                 else css_role(color["container"])
             )
-            report.check(declaration(adapter_style, "--ax-button-container") == adapter_container,
-                         f"adapter {name} container differs from button.yml")
-            report.check(declaration(adapter_style, "--ax-button-content") == css_role(color["content"]),
-                         f"adapter {name} content differs from button.yml")
+            # Filled is written as a fallback rather than a value, so that a
+            # group can declare a colour its members overrule: an unstyled
+            # child resolves to --ax-group-color-*, a styled one sets the role
+            # on itself and wins. The contract is still that the default
+            # resolves to the published role, so accept either spelling and
+            # require the group hook exactly where it belongs.
+            def resolves_to(declared, role_value, hook):
+                if declared == role_value:
+                    return True
+                return declared == f"var({hook}, {role_value})"
+
+            report.check(
+                resolves_to(declaration(adapter_style, "--ax-button-container"),
+                            adapter_container, "--ax-group-color-container"),
+                f"adapter {name} container differs from button.yml")
+            report.check(
+                resolves_to(declaration(adapter_style, "--ax-button-content"),
+                            css_role(color["content"]), "--ax-group-color-content"),
+                f"adapter {name} content differs from button.yml")
+            if name == "filled":
+                report.check(
+                    declaration(adapter_style, "--ax-button-container")
+                    == f"var(--ax-group-color-container, {adapter_container})",
+                    "Filled must read the group colour first, or a group can never set one")
 
         if name == "filled":
             source = theme_button_style

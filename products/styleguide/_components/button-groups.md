@@ -6,15 +6,39 @@ order: 30
 lang: ko
 ---
 
-Button group은 **색 속성이 없습니다.** M3가 그렇게 씁니다 — "Button groups have
-no color properties." 그렇다고 색을 생략한다는 뜻은 아닙니다. 색은 안에 든
-**Button의 스펙**에서 옵니다. Standard는 실제 Button/Icon button 자식을 담으므로
-`Filled`·`Tonal`·`Outlined`·`Elevated`가 자식의 속성입니다. Connected는 Figma에 색
-프로퍼티가 없고, Segment가 독립 Button 스타일을 갖지 않습니다.
+> Button groups have **no color properties**.
 
-따라서 그룹 자체의 축은 variant, size, selection이고, 색은 Standard 자식의 Button
-계약입니다. Connected의 기본 선택 색은 Button의 Filled toggle 역할을 소비할 뿐,
-사용자가 고르는 Connected 색 축이 아닙니다.
+M3의 이 문장은 **그룹이 칠할 것이 없다**는 뜻입니다. 컨테이너 자체가 보이지 않으니
+container treatment가 없고, 그래서 배경도 테두리도 없습니다.
+
+**자식에게 색을 내려주지 못한다는 뜻이 아닙니다.** Figma의 Standard button group에는
+`Color`가 Type·Size와 나란히 있고, 그 예시가 결정적입니다 — 그룹이 `Filled`인데
+자식1은 tonal입니다.
+
+```
+Standard button group   type round · size large · color filled · button type label
+  자식1  Icon button - tonal    type round · size large · width narrow
+  자식2  Button                 type round · size large · label text: get started
+```
+
+**size와 같은 모양입니다. 그룹이 선언하고 자식이 덮습니다.** 열거는
+`Filled · Tonal · Outline` 셋이고, Elevated는 여기 없으며 Text는 container가 없어서
+들어올 수 없습니다.
+
+상속만으로는 안 됩니다. `.wp-block-button`에 값을 걸면 요소 자신의 것이라 컨테이너에서
+상속된 값을 언제나 이깁니다 — 그룹이 늘 집니다. 그래서 기본값을 **값이 아니라 폴백**으로
+씁니다.
+
+```css
+.wp-block-button { --ax-button-container: var(--ax-group-color-container, primary); }
+.wp-block-button.is-style-tonal { --ax-button-container: secondary-container; }
+```
+
+스타일을 고르지 않은 자식은 그룹 값으로 해석되고, 고른 자식은 자기 것을 요소에 걸어
+이깁니다. 그룹이 없으면 폴백이 Filled입니다.
+
+따라서 그룹의 축은 **variant · size · shape · color · selection**이고, color만 성격이
+다릅니다 — 그리는 것이 아니라 **내려주는 것**입니다.
 
 같은 문단이 **쓰지 말아야 할 것 둘**도 지정합니다.
 
@@ -136,7 +160,22 @@ guidelines의 문장도 같은 방향입니다 — "selected **or activated**", 
 **이게 이 페이지의 결론을 화면으로 증명합니다.** 강조는 size·color·shape로 만들고,
 셋 다 버튼의 속성입니다. 컨테이너는 배치만 합니다.
 
-### Button 색 스타일은 standard에서 자식마다 고른다
+### 그룹이 색을 선언하면 스타일을 안 고른 자식만 따라옵니다
+
+Figma 예시 그대로입니다 — 그룹은 `filled`인데 자식 하나가 tonal입니다.
+
+<div class="sg-demo sg-demo--stack">
+  <div class="wp-block-buttons" data-color="outlined" aria-label="Group declares outlined">
+    <div class="wp-block-button"><button type="button" class="wp-block-button__link wp-element-button">Inherits</button></div>
+    <div class="wp-block-button"><button type="button" class="wp-block-button__link wp-element-button">Inherits</button></div>
+    <div class="wp-block-button is-style-tonal"><button type="button" class="wp-block-button__link wp-element-button">Overrules</button></div>
+  </div>
+</div>
+
+앞의 둘은 클래스가 없어 그룹의 outlined를 받고, 셋째는 `is-style-tonal`을 자기 요소에
+걸어 이깁니다. **그룹은 아무것도 칠하지 않습니다** — 내려줄 뿐입니다.
+
+### 자식이 각자 고를 수도 있습니다
 
 아래 네 개는 [Buttons]({{ '/components/buttons/' | relative_url }})와 같은 Button
 스펙을 그대로 씁니다. Filled는 기본값이라 클래스가 없고, 나머지는 WordPress가

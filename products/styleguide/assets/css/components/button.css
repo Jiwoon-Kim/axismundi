@@ -250,17 +250,26 @@
 
 /* Filled, the default. No class: an unstyled core/button is already this.
  *
- * A connected Button group has no independent colour API. It uses the Filled
- * toggle roles as its fixed default; Figma exposes no group colour property.
- * Standard groups instead contain actual Button and Icon button children,
- * whose independent Button styles are defined below. */
+ * The default is written as a fallback rather than a value, and that is what
+ * lets a group declare a colour for its members. M3's "Button groups have no
+ * color properties" means the container paints nothing of its own - it is
+ * invisible - not that it cannot carry a default; Figma gives the standard
+ * group a Color property, and its worked example sets the group to Filled with
+ * a tonal child. Same shape as size: the group declares, the child overrules.
+ *
+ * Inheritance alone could not do it. A value set on .wp-block-button sits on
+ * the element and beats anything inherited from the container, so the group
+ * would always lose. Reading --ax-group-color-* first inverts that: an
+ * unstyled child resolves to whatever the group set, an is-style-* child sets
+ * the role on itself and wins, and with no group at all the fallback is
+ * Filled. */
 .wp-block-button,
 .wp-block-axismundi-button-group {
-	--ax-button-container: var(--md-sys-color-primary);
-	--ax-button-content: var(--md-sys-color-on-primary);
+	--ax-button-container: var(--ax-group-color-container, var(--md-sys-color-primary));
+	--ax-button-content: var(--ax-group-color-content, var(--md-sys-color-on-primary));
 	/* The role mixed over the container at each state opacity. Naming it once
 	 * means a variant sets two roles and inherits four states. */
-	--ax-button-state-role: var(--md-sys-color-on-primary);
+	--ax-button-state-role: var(--ax-group-color-content, var(--md-sys-color-on-primary));
 	--ax-button-toggle-unselected-container: var(--md-sys-color-surface-container);
 	--ax-button-toggle-unselected-content: var(--md-sys-color-on-surface-variant);
 	--ax-button-toggle-unselected-state-role: var(--md-sys-color-on-surface-variant);

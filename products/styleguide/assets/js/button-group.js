@@ -102,9 +102,20 @@
 				if ( child.dataset.shape ) {
 					attributes.push( 'shape:"' + child.dataset.shape + '"' );
 				}
-				var liveIcon = child.querySelector( ".wp-block-button__icon" );
-				if ( liveIcon ) {
-					attributes.push( 'icon:"' + liveIcon.textContent.trim() + '"' );
+				// Figma keeps Show icon and Icon as two properties, and a block
+				// would store them the same way: turning the icon off does not
+				// forget which one it was. The DOM does drop the element,
+				// because it is aria-hidden decoration and an invisible empty
+				// span is worth nothing - unlike the label, which is the
+				// accessible name and has to stay in the tree whether or not
+				// it is visible. That asymmetry is the difference between
+				// content and ornament, and the panel should show the stored
+				// name either way.
+				if ( ! child.querySelector( ".wp-block-button__icon" ) ) {
+					attributes.push( "showIcon:false" );
+				}
+				if ( child.dataset.icon ) {
+					attributes.push( 'icon:"' + child.dataset.icon + '"' );
 				}
 				if ( link && link.disabled ) {
 					attributes.push( "disabled:true" );
@@ -147,6 +158,12 @@
 		}
 		if ( iconOnly && ! icon ) {
 			link.prepend( makeIcon( child ) );
+		}
+		// Coming back out of icon-only, honour whatever the child had asked
+		// for. Forcing the icon on is a consequence of hiding the label, not a
+		// new preference, so it should not outlive the state that required it.
+		if ( ! iconOnly && icon && child.dataset.wantIcon === "false" ) {
+			icon.remove();
 		}
 		if ( label ) {
 			label.classList.toggle( "screen-reader-text", !! iconOnly );
@@ -325,6 +342,12 @@
 			var key = control.dataset.childControl;
 			if ( key === "show-icon" ) {
 				control.checked = state.icon;
+				// With the label out of sight the icon is the only thing left
+				// to see, so it stops being optional. Locking the control says
+				// so; silently switching it back on, which is what happened
+				// before, overrode a choice the reader had just made.
+				control.disabled = !! state.label
+					&& state.label.classList.contains( "screen-reader-text" );
 			} else if ( key === "label" ) {
 				control.value = state.label ? state.label.textContent : "";
 				control.disabled = ! state.label;
@@ -411,6 +434,7 @@
 				}
 			}
 			if ( key === "show-icon" ) {
+				child.dataset.wantIcon = String( control.checked );
 				var icon = child.querySelector( ".wp-block-button__icon" );
 				if ( control.checked && ! icon ) {
 					link.prepend( makeIcon( child ) );
@@ -432,6 +456,7 @@
 				// the group's Size.
 				child.dataset.ownLabels = "true";
 				setChildKind( child, ! control.checked );
+				syncChildPanel( host, child );
 			}
 			if ( key === "disabled" ) {
 				link.disabled = control.checked;

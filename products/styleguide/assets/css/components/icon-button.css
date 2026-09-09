@@ -30,7 +30,11 @@
 	justify-content: center;
 	box-sizing: border-box;
 	block-size: var(--ax-icon-button-height, 40px);
-	min-inline-size: var(--ax-icon-button-min-width, auto);
+	/* 48px, not auto: Small is the default size and carries no attribute, so a
+	 * floor hung on [data-size="small"] never reached the control it was for.
+	 * Measured at 40x40 before this, against the 48dp target M3 requires. It is
+	 * harmless from Medium up, where the container already exceeds it. */
+	min-inline-size: var(--ax-icon-button-min-width, 48px);
 	padding-inline: var(--ax-icon-button-space, var(--md-sys-measurement-space100));
 	border: 0;
 	border-radius: var(--ax-icon-button-shape, 20px);
@@ -103,10 +107,6 @@
 	--ax-icon-button-pressed-shape: var(--md-sys-shape-corner-value-small);
 	--ax-icon-button-selected-shape: var(--md-sys-shape-corner-value-medium);
 	--ax-icon-button-outline-width: 1px;
-	--ax-icon-button-min-width: 48px;
-}
-
-.wp-block-axismundi-icon-button[data-size="small"] {
 	--ax-icon-button-min-width: 48px;
 }
 
@@ -256,6 +256,27 @@
 	--ax-icon-button-container: transparent;
 	--ax-icon-button-content: var(--md-sys-color-primary);
 	--ax-icon-button-state-role: var(--md-sys-color-primary);
+}
+
+/* The playground stage is a grid, and a grid stretches its items, so the
+ * specimen was rendering 438px wide however the width control was set - the
+ * one axis the demo exists to show. Icon buttons size themselves; they must
+ * not be stretched to a track. */
+.sg-button-group-playground__stage > .wp-block-axismundi-icon-button {
+	justify-self: start;
+}
+
+/* --- Forced focus ring, for looking at ------------------------- */
+
+/* Figma has a Show focus indicator property because a static file has to draw
+ * the ring to show it. The browser owns the real one and :focus-visible only
+ * fires for keyboard focus, which a reader inspecting a page is not doing, so
+ * the demo forces the same ring rather than describing it. It stores nothing:
+ * this is the one control on that panel with no attribute behind it. */
+.wp-block-axismundi-icon-button.is-forced-focus {
+	outline: var(--md-focus-ring-width) solid var(--md-sys-color-secondary);
+	outline-offset: var(--md-focus-ring-outward-offset);
+	background-color: color-mix(in srgb, var(--ax-icon-button-state-role) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--ax-icon-button-container));
 }
 
 /* --- State layers and the FILL axis ---------------------------- */

@@ -17,6 +17,76 @@ Icon button  Container · Icon
 있어야 하고**, M3가 웹에 툴팁을 요구하는 것도, 아이콘이 "명확한 의미"를 가져야 한다고
 못박는 것도 같은 이유입니다.
 
+## Interactive demos
+
+Figma가 컴포넌트를 둘로 나눠 두었고 여기서도 둘입니다. **togglable 쪽에만 `Selected`와
+`Icon(selected)`가 있습니다** — 하나로 합치면 기본 아이콘 버튼에 없는 컨트롤을 만드는
+셈이 됩니다.
+
+프로퍼티 목록에서 눈에 띄는 것이 하나 더 있습니다. **두 컴포넌트 어디에도 `Color`가
+없습니다.** 색은 프로퍼티가 아니라 **컴포넌트 이름**에 들어가 있습니다 —
+`Icon button togglable - tonal`, `- outline`, `- standard` 식입니다.
+
+Figma에서는 그게 자연스럽습니다. 색마다 상태가 다섯씩 딸려 오니 한 컴포넌트에 색과
+상태를 곱으로 넣으면 판이 감당하지 못합니다. **웹에서는 반대**입니다 — 상태는 브라우저가
+만들고 색은 클래스 하나라, 축으로 두는 편이 자연스럽습니다. 아래 데모가 그쪽입니다.
+
+### Default
+
+<section class="sg-button-group-playground" data-icon-playground="default" aria-label="Icon button interactive demo">
+  <div class="sg-button-group-playground__stage">
+    <button type="button" class="wp-block-axismundi-icon-button"><span class="material-symbols-outlined notranslate" translate="no" aria-hidden="true">star</span><span class="screen-reader-text">Star</span></button>
+    <pre class="sg-button-group-playground__markup" data-icon-markup></pre>
+  </div>
+  <div class="sg-button-group-playground__controls">
+    <label>Type <select data-icon-control="shape"><option value="round">Round</option><option value="square">Square</option></select></label>
+    <label>Size <select data-icon-control="size"><option value="xsmall">XSmall</option><option value="small" selected>Small</option><option value="medium">Medium</option><option value="large">Large</option><option value="xlarge">XLarge</option></select></label>
+    <label>Width <select data-icon-control="width"><option value="narrow">Narrow</option><option value="default" selected>Default</option><option value="wide">Wide</option></select></label>
+    <label>Color <select data-icon-control="color"><option value="">Filled</option><option value="tonal">Tonal</option><option value="outline">Outlined</option><option value="standard">Standard</option></select></label>
+    <label>Icon <input type="text" list="icon-button-options" value="star" data-icon-control="icon" /></label>
+    <label class="sg-button-group-playground__inline"><input type="checkbox" data-icon-control="disabled" /> Disabled</label>
+    <label class="sg-button-group-playground__inline"><input type="checkbox" data-icon-control="focusRing" /> Show focus indicator</label>
+  </div>
+</section>
+
+### Togglable
+
+<section class="sg-button-group-playground" data-icon-playground="toggle" aria-label="Toggle icon button interactive demo">
+  <div class="sg-button-group-playground__stage">
+    <button type="button" class="wp-block-axismundi-icon-button" aria-pressed="false"><span class="material-symbols-outlined notranslate" translate="no" aria-hidden="true">star</span><span class="screen-reader-text">Favourite</span></button>
+    <pre class="sg-button-group-playground__markup" data-icon-markup></pre>
+  </div>
+  <div class="sg-button-group-playground__controls">
+    <label>Type <select data-icon-control="shape"><option value="round">Round</option><option value="square">Square</option></select></label>
+    <label>Size <select data-icon-control="size"><option value="xsmall">XSmall</option><option value="small" selected>Small</option><option value="medium">Medium</option><option value="large">Large</option><option value="xlarge">XLarge</option></select></label>
+    <label>Width <select data-icon-control="width"><option value="narrow">Narrow</option><option value="default" selected>Default</option><option value="wide">Wide</option></select></label>
+    <label>Color <select data-icon-control="color"><option value="">Filled</option><option value="tonal">Tonal</option><option value="outline">Outlined</option><option value="standard">Standard</option></select></label>
+    <label>Icon <input type="text" list="icon-button-options" value="star" data-icon-control="icon" /></label>
+    <label class="sg-button-group-playground__inline"><input type="checkbox" data-icon-control="selected" /> Selected</label>
+    <label class="sg-button-group-playground__inline"><input type="checkbox" data-icon-control="disabled" /> Disabled</label>
+    <label class="sg-button-group-playground__inline"><input type="checkbox" data-icon-control="focusRing" /> Show focus indicator</label>
+  </div>
+</section>
+
+<datalist id="icon-button-options">
+  <option value="star">star</option>
+  <option value="favorite">favorite</option>
+  <option value="bookmark">bookmark</option>
+  <option value="settings">settings</option>
+  <option value="more_vert">more_vert</option>
+</datalist>
+
+`Icon(selected)`는 축입니다. Figma는 `stars`와 `stars_filled` 두 아이콘을 두는데,
+**`stars_filled`는 Material Icons에 있던 것이고 Material Symbols로 넘어오면서
+사라졌습니다.** 가변 폰트에는 `FILL` 축이 있으니 글리프를 바꿀 이유가 없습니다 —
+togglable 데모에서 `Selected`를 켜면 같은 `star`가 채워지는 것이 그것입니다.
+
+`State`와 `Show focus indicator`는 성격이 다릅니다. **`Disabled`만 저장되는 값**이고,
+hover·focus·pressed는 표본을 실제로 가리키거나 탭하거나 누르면 나옵니다 — 브라우저가
+만드는 것이라 저장할 것이 없습니다. `Show focus indicator`는 그중에서도 정적 파일이
+링을 그려 보이기 위한 스위치라, 여기서는 **들여다보라고 켜 두는 용도**이고 저장하는
+속성이 아닙니다.
+
 ## Button과 다른 네 지점
 
 같은 이름의 축이 많아서 오히려 놓치기 쉬운 것들입니다.

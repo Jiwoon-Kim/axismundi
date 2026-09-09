@@ -42,6 +42,15 @@ class Report:
             self.problems.append(message)
 
 
+# M3 shape corner tokens by value, so a published dp figure can be compared
+# with the token the adapter actually spends.
+CORNER = {
+    12: "var(--md-sys-shape-corner-value-medium)",
+    16: "var(--md-sys-shape-corner-value-large)",
+    28: "var(--md-sys-shape-corner-value-extra-large)",
+}
+
+
 def role(value: str | None) -> str:
     return "transparent" if value is None else f"var:preset|color|{value}"
 
@@ -266,6 +275,85 @@ def main() -> int:
                          f"theme {name} container differs from button.yml")
         report.check(colors.get("text") == role(color["content"]),
                      f"theme {name} content differs from button.yml")
+
+    # --- The Toggle variant -------------------------------------------
+    #
+    # M3 publishes Default and Toggle, and Toggle is Expressive only. Every
+    # style already declared a toggle table; what was missing was the rule that
+    # spends it on a Button, so the variant sat in the data and on the page and
+    # never in the adapter. These contracts exist so it cannot go missing again.
+    variants = {row["name"]: row for row in data.get("variants", [])}
+    report.check("default" in variants and "toggle" in variants,
+                 "button.yml must publish both M3 variants")
+    if "toggle" in variants:
+        report.check(variants["toggle"]["m3"] is False
+                     and variants["toggle"]["expressive"] is True,
+                     "Toggle is an M3 Expressive variant only")
+
+    for state in ("unselected", "selected"):
+        toggle_rule = block(
+            css,
+            ".wp-block-button:not(.is-style-text) > .wp-block-button__link"
+            + ('[aria-pressed="true"]' if state == "selected" else "[aria-pressed]"),
+        )
+        report.check(toggle_rule is not None,
+                     f"adapter has no Button toggle {state} rule")
+        if toggle_rule is not None:
+            for name in ("container", "content", "state-role"):
+                report.check(
+                    declaration(toggle_rule, f"--ax-button-{name}")
+                    == f"var(--ax-button-toggle-{state}-{name})",
+                    f"Button toggle {state} {name} does not spend the published toggle role")
+
+    # Text is excluded rather than left to fall through: it declares no toggle
+    # pair, so it would inherit Filled's from the base rule and paint a toggle
+    # M3 says does not exist.
+    text_color = next(color for color in data["colors"] if color["name"] == "text")
+    report.check(text_color["toggle_selected"] is None,
+                 "button.yml must record that there is no toggle text button")
+    report.check(".wp-block-button:not(.is-style-text) > .wp-block-button__link[aria-pressed]" in css,
+                 "the Button toggle rule must exclude is-style-text")
+
+    # Selection is legible without colour: the resting shape morphs too.
+    # Text is excluded from the shape morph as well as the colour. Half a
+    # toggle - a shape change with no colour change - is a state M3 does not
+    # publish, and it rendered exactly that before this line.
+    selected_shape = block(
+        css,
+        '.wp-block-button:not(.is-style-text) > .wp-block-button__link[aria-pressed="true"]',
+    )
+    report.check(selected_shape is not None, "adapter has no Button selected shape rule")
+    if selected_shape is not None:
+        report.check(
+            declaration(selected_shape, "border-radius")
+            == f"var(--ax-button-selected-shape, {CORNER[small['selected_round']]})",
+            "Button selected shape differs from button.yml")
+    for size in data["sizes"]:
+        if size["name"] == "small":
+            continue
+        size_rule = block(css, f'.wp-block-button[data-size="{size["name"]}"]')
+        if size_rule is not None:
+            report.check(
+                declaration(size_rule, "--ax-button-selected-shape")
+                == CORNER[size["selected_round"]],
+                f"adapter {size['name']} selected shape differs from button.yml")
+
+    # A square button selected becomes round, and round is half the height.
+    # Reading --ax-button-shape back would return the square corner, because
+    # [data-shape="square"] overwrites it - measured 12px where Small round is
+    # 20px, a morph that did nothing.
+    square_selected = block(
+        css,
+        '.wp-block-button:not(.is-style-text)[data-shape="square"] > '
+        '.wp-block-button__link[aria-pressed="true"]',
+    )
+    report.check(square_selected is not None,
+                 "adapter has no square-selected Button shape rule")
+    if square_selected is not None:
+        report.check(
+            declaration(square_selected, "border-radius")
+            == "calc(var(--ax-button-height, 40px) / 2)",
+            "square-selected Button must morph to half its height, not to --ax-button-shape")
 
     # Connected is composed from Segments, not independently styled Buttons.
     # Figma exposes no colour property for it, so it takes the Filled toggle

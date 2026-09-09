@@ -180,6 +180,7 @@
 	--ax-button-icon-size: 20px;
 	--ax-button-shape: 16px;
 	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-small);
+	--ax-button-selected-shape: var(--md-sys-shape-corner-value-medium);
 	--ax-button-outline-width: 1px;
 	--ax-button-label-size: 14px;
 	--ax-button-label-weight: 500;
@@ -194,6 +195,7 @@
 	--ax-button-icon-size: 24px;
 	--ax-button-shape: 28px;
 	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-medium);
+	--ax-button-selected-shape: var(--md-sys-shape-corner-value-large);
 	--ax-button-outline-width: 1px;
 	--ax-button-label-size: 16px;
 	--ax-button-label-weight: 500;
@@ -208,6 +210,7 @@
 	--ax-button-icon-size: 32px;
 	--ax-button-shape: 48px;
 	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-large);
+	--ax-button-selected-shape: var(--md-sys-shape-corner-value-extra-large);
 	--ax-button-outline-width: 2px;
 	--ax-button-label-size: 24px;
 	--ax-button-label-weight: 400;
@@ -222,6 +225,7 @@
 	--ax-button-icon-size: 40px;
 	--ax-button-shape: 68px;
 	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-large);
+	--ax-button-selected-shape: var(--md-sys-shape-corner-value-extra-large);
 	--ax-button-outline-width: 3px;
 	--ax-button-label-size: 32px;
 	--ax-button-label-weight: 400;
@@ -244,6 +248,56 @@
 .wp-block-button[data-size="large"][data-shape="square"],
 .wp-block-button[data-size="xlarge"][data-shape="square"] {
 	--ax-button-shape: var(--md-sys-shape-corner-value-extra-large);
+}
+
+/* --- 2b. Toggle: the second variant --------------------------- */
+
+/* M3 publishes two variants, Default and Toggle, and Toggle is Expressive
+ * only. Every colour style above already declares both tables. What was
+ * missing here was the rule that spends them on a Button: the connected
+ * segment read --ax-button-toggle-* directly, so the variant lived in the
+ * data and on the page and never in the adapter.
+ *
+ * `aria-pressed` is the switch, and it has to be an attribute rather than a
+ * class: a toggle is a control with a selected state, and that state has to
+ * reach assistive technology. Present alone means unselected, "true" means
+ * selected - the same contract the icon button and the connected segment use.
+ *
+ * Text is excluded rather than left to fall through. It declares no toggle
+ * pair, so it would silently inherit Filled's from the base rule and render a
+ * toggle M3 says does not exist. */
+.wp-block-button:not(.is-style-text) > .wp-block-button__link[aria-pressed] {
+	--ax-button-container: var(--ax-button-toggle-unselected-container);
+	--ax-button-content: var(--ax-button-toggle-unselected-content);
+	--ax-button-state-role: var(--ax-button-toggle-unselected-state-role);
+}
+
+/* Selected is one rule, because it is one state. Besides the colour pair it
+ * changes the resting shape, and M3 gives that as a contrast rather than a
+ * direction: round becomes square, and a square resting shape becomes round.
+ * Same figures as the icon button, and the same reason - the selection has to
+ * be legible without colour.
+ *
+ * Text is excluded from the shape too, not only the colour. Half a toggle - a
+ * shape change with no colour change - is a state M3 does not publish, and
+ * that is exactly what rendered while the exclusion sat on one of the two. */
+.wp-block-button:not(.is-style-text) > .wp-block-button__link[aria-pressed="true"] {
+	--ax-button-container: var(--ax-button-toggle-selected-container);
+	--ax-button-content: var(--ax-button-toggle-selected-content);
+	--ax-button-state-role: var(--ax-button-toggle-selected-state-role);
+	border-radius: var(--ax-button-selected-shape, var(--md-sys-shape-corner-value-medium));
+}
+
+/* The square resting shape becomes round, and round is half the height at
+ * every size - which is what M3 means by a full corner on a fixed-height
+ * control, and what the comment above the size blocks already says.
+ *
+ * Not --ax-button-shape: [data-shape="square"] overwrites that variable, so
+ * reading it back here returned the square corner and the morph did nothing.
+ * Measured 12px where Small round is 20px. The height is the one source that
+ * square does not touch. */
+.wp-block-button:not(.is-style-text)[data-shape="square"] > .wp-block-button__link[aria-pressed="true"] {
+	border-radius: calc(var(--ax-button-height, 40px) / 2);
 }
 
 /* --- 3. The button decides colour style ---------------------- */

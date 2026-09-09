@@ -185,8 +185,44 @@ icon: "contrast"        이름을 직접 입력
 **Default button**과 **Toggle button**입니다. 같은 컴포넌트의 두 모드가 아니라
 **색이 서로 다른 두 변형**입니다 — 아래 색 표의 열이 셋인 이유입니다.
 
+| Variant | M3 | M3 Expressive |
+|---|---|---|
+{% for v in site.data.button.variants -%}
+| {{ v.title }} | {% if v.m3 %}있음{% else %}—{% endif %} | {% if v.expressive %}있음{% else %}—{% endif %} |
+{% endfor %}
+Toggle은 **Expressive에만 있습니다.** Size·Shape의 확장과 같은 자리입니다.
+
+상태를 나르는 것은 클래스가 아니라 **`aria-pressed`**입니다. 토글은 선택 상태를 가진
+컨트롤이고, 그 상태는 보조기술에 닿아야 합니다. 속성이 있으면 비선택, `"true"`면
+선택입니다 — [Icon buttons]({{ '/components/icon-buttons/' | relative_url }})와
+Connected Segment가 쓰는 계약과 같습니다.
+
+```html
+<button class="wp-block-button__link wp-element-button" aria-pressed="false">Bold</button>
+<button class="wp-block-button__link wp-element-button" aria-pressed="true">Italic</button>
+```
+
 토글에는 **text 스타일이 없습니다.** 선택 상태를 알릴 container가 없으니
-선택/비선택을 색으로 구분할 방법이 사라집니다.
+선택/비선택을 색으로 구분할 방법이 사라집니다. 어댑터는 그래서 `is-style-text`를
+토글 규칙에서 **제외합니다.** 그냥 두면 기본 규칙의 Filled 토글 표를 물려받아,
+M3에 없는 토글이 조용히 그려집니다.
+
+선택은 색만으로 알리지 않습니다. **쉬는 shape도 바뀝니다** — round는 각지고, 각진
+것은 둥글어집니다. M3는 방향이 아니라 대비로 규정합니다.
+
+<div class="sg-demo sg-demo--stack">
+{% for c in site.data.button.colors -%}
+{% if c.toggle_selected -%}
+  <div class="wp-block-buttons">
+    <div class="wp-block-button{% unless c.name == 'filled' %} {{ c.wp_style }}{% endunless %}"><button type="button" class="wp-block-button__link wp-element-button" aria-pressed="false">{{ c.title }} unselected</button></div>
+    <div class="wp-block-button{% unless c.name == 'filled' %} {{ c.wp_style }}{% endunless %}"><button type="button" class="wp-block-button__link wp-element-button" aria-pressed="true">{{ c.title }} selected</button></div>
+  </div>
+{% endif -%}
+{% endfor -%}
+</div>
+
+Text가 이 목록에 없는 것이 위 문장의 증거입니다. 표본은 `button.yml`의
+`toggle_selected`가 있는 스타일만 그립니다.
 
 ## Configurations
 

@@ -21,6 +21,20 @@ meta:
   # M3 Expressive replaces the legacy 24dp side space on Small with 16dp.
   small_space_legacy: 24
 
+# M3 publishes two variants, and Toggle is Expressive only. They are not two
+# modes of one component: each carries its own colour table, which is why
+# `colors` below has three columns rather than one. Text has no toggle row -
+# with no container there is nothing to tell selected from unselected.
+variants:
+  - name: default
+    title: Default
+    m3: true
+    expressive: true
+  - name: toggle
+    title: Toggle (selection)
+    m3: false
+    expressive: true
+
 sizes:
   - name: xsmall
     label: XS
@@ -133,6 +147,14 @@ colors:
 
 # What each configuration costs in M3 versus M3 Expressive.
 availability:
+  - configuration: Variant
+    option: Default
+    m3: true
+    expressive: true
+  - configuration: Variant
+    option: Toggle (selection)
+    m3: false
+    expressive: true
   - configuration: Size
     option: Small (default)
     m3: true

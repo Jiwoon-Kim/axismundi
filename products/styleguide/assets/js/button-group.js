@@ -144,8 +144,9 @@
 		if ( child.dataset.icon ) {
 			attributes.push( 'icon:"' + child.dataset.icon + '"' );
 		}
-		if ( isIcon && child.hasAttribute( "aria-pressed" ) ) {
-			attributes.push( "selected:" + ( child.getAttribute( "aria-pressed" ) === "true" ) );
+		if ( childControl( child ).hasAttribute( "aria-pressed" ) ) {
+			attributes.push( "selected:" +
+				( childControl( child ).getAttribute( "aria-pressed" ) === "true" ) );
 		}
 		if ( childControl( child ).disabled ) {
 			attributes.push( "disabled:true" );
@@ -255,6 +256,7 @@
 		var name = childName( child );
 		var style = styleOf( child ).replace( "is-style-", "" );
 		var disabled = childControl( child ).disabled;
+		var pressed = childControl( child ).getAttribute( "aria-pressed" );
 		var replacement;
 		var icon;
 		if ( was === kind ) {
@@ -279,6 +281,12 @@
 			if ( icon ) {
 				icon.remove();
 			}
+		}
+		// Both blocks have the Toggle variant, so the state survives the
+		// transform. Only Text has no toggle, and it has no icon-button
+		// counterpart either, so it cannot reach this branch carrying one.
+		if ( pressed !== null ) {
+			childControl( replacement ).setAttribute( "aria-pressed", pressed );
 		}
 		childControl( replacement ).disabled = disabled;
 		child.replaceWith( replacement );
@@ -569,8 +577,8 @@
 			size: child.dataset.size || "small",
 			shape: child.dataset.shape || "round",
 			width: child.dataset.width || "default",
-			togglable: child.hasAttribute( "aria-pressed" ),
-			selected: child.getAttribute( "aria-pressed" ) === "true",
+			togglable: childControl( child ).hasAttribute( "aria-pressed" ),
+			selected: childControl( child ).getAttribute( "aria-pressed" ) === "true",
 			disabled: !! childControl( child ).disabled
 		};
 	}
@@ -724,14 +732,14 @@
 			// a toggle and brings M3's separate colour table with it.
 			if ( key === "togglable" ) {
 				if ( control.checked ) {
-					child.setAttribute( "aria-pressed", "false" );
+					childControl( child ).setAttribute( "aria-pressed", "false" );
 				} else {
-					child.removeAttribute( "aria-pressed" );
+					childControl( child ).removeAttribute( "aria-pressed" );
 				}
 				syncChildPanel( host, child );
 			}
-			if ( key === "selected" && child.hasAttribute( "aria-pressed" ) ) {
-				child.setAttribute( "aria-pressed", String( control.checked ) );
+			if ( key === "selected" && childControl( child ).hasAttribute( "aria-pressed" ) ) {
+				childControl( child ).setAttribute( "aria-pressed", String( control.checked ) );
 			}
 			if ( key === "disabled" ) {
 				childControl( child ).disabled = control.checked;

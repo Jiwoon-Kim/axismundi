@@ -116,10 +116,16 @@ Connected Segment에 있습니다. 거기서는 M3가 실제로 그 축을 발�
 같이, 꺼도 어느 아이콘이었는지는 남습니다. 아래 markup 패널이 그걸 그대로 보여줍니다 —
 `showIcon:false`와 `icon:"save"`가 함께 나옵니다.
 
-`Togglable`은 Icon button 자식에만 있습니다. Figma에서 별도 컴포넌트이고, DOM에서
-그렇다고 말하는 것이 `aria-pressed`입니다 — 있으면 toggle이고, M3가 따로 발행한 색
-테이블이 함께 옵니다. 그래서 그룹 `Color`가 두 벌을 내려보냅니다. 평범한 roles만
-내려보냈을 때는 tonal 그룹 안의 togglable 자식이 filled로 남았습니다.
+`Togglable`은 양쪽 블록에 다 있습니다. **Button에도 Toggle 변형이 있습니다** —
+M3 Expressive에만 있고, [Buttons]({{ '/components/buttons/' | relative_url }})가
+그 표를 싣습니다. DOM에서 그렇다고 말하는 것이 `aria-pressed`이고, 있으면 M3가 따로
+발행한 색 테이블이 함께 옵니다.
+
+그래서 그룹 `Color`가 두 벌을 내려보냅니다. 평범한 roles만 내려보냈을 때는 tonal 그룹
+안의 togglable 자식이 filled로 남았습니다.
+
+Text 스타일 자식은 토글되지 않습니다. container가 없어 선택을 알릴 수단이 없고,
+어댑터가 `is-style-text`를 토글 규칙에서 제외합니다.
 
 `Show fifth / sixth / seventh button`도 같은 종류의 Figma 편의라, 고정 슬롯 대신
 실제 InnerBlocks를 삽입하고 제거합니다.
@@ -156,8 +162,8 @@ Connected Segment에 있습니다. 거기서는 M3가 실제로 그 축을 발�
       <label data-child-kind="icon">Accessible name <input type="text" data-child-control="name" /></label>
       <label>Icon <input type="text" list="group-icon-options" data-child-control="icon" /></label>
       <label class="sg-button-group-playground__inline" data-child-kind="button"><input type="checkbox" data-child-control="show-icon" /> Show icon</label>
-      <label class="sg-button-group-playground__inline" data-child-kind="icon"><input type="checkbox" data-child-control="togglable" /> Togglable</label>
-      <label class="sg-button-group-playground__inline" data-child-kind="icon"><input type="checkbox" data-child-control="selected" /> Selected</label>
+      <label class="sg-button-group-playground__inline"><input type="checkbox" data-child-control="togglable" /> Togglable</label>
+      <label class="sg-button-group-playground__inline"><input type="checkbox" data-child-control="selected" /> Selected</label>
       <label class="sg-button-group-playground__inline"><input type="checkbox" data-child-control="disabled" /> Disabled</label>
     </fieldset>
   </div>

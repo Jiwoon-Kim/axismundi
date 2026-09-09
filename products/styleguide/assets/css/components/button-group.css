@@ -403,12 +403,14 @@
 
 /* Only the two ends are pills. Logical longhands: a group reverses in RTL and
  * a radius shorthand cannot. */
-.wp-block-axismundi-button-group[data-variant="connected"] > .wp-block-axismundi-button-group__item:first-of-type {
+.wp-block-axismundi-button-group[data-variant="connected"]:not([data-connected-edges]) > .wp-block-axismundi-button-group__item:first-of-type,
+.wp-block-axismundi-button-group[data-variant="connected"][data-connected-edges] > .wp-block-axismundi-button-group__item[data-connected-edge="first"] {
 	border-start-start-radius: var(--ax-button-shape, 20px);
 	border-end-start-radius: var(--ax-button-shape, 20px);
 }
 
-.wp-block-axismundi-button-group[data-variant="connected"] > .wp-block-axismundi-button-group__item:last-of-type {
+.wp-block-axismundi-button-group[data-variant="connected"]:not([data-connected-edges]) > .wp-block-axismundi-button-group__item:last-of-type,
+.wp-block-axismundi-button-group[data-variant="connected"][data-connected-edges] > .wp-block-axismundi-button-group__item[data-connected-edge="last"] {
 	border-start-end-radius: var(--ax-button-shape, 20px);
 	border-end-end-radius: var(--ax-button-shape, 20px);
 }
@@ -431,12 +433,14 @@
 
 /* Pressed state changes only the inner corners. The outer edge remains a
  * capsule, including when the first or last segment is already selected. */
-.wp-block-axismundi-button-group[data-variant="connected"] > .wp-block-axismundi-button-group__item:first-of-type:active {
+.wp-block-axismundi-button-group[data-variant="connected"]:not([data-connected-edges]) > .wp-block-axismundi-button-group__item:first-of-type:active,
+.wp-block-axismundi-button-group[data-variant="connected"][data-connected-edges] > .wp-block-axismundi-button-group__item[data-connected-edge="first"]:active {
 	border-start-start-radius: calc(var(--ax-button-height, 40px) / 2);
 	border-end-start-radius: calc(var(--ax-button-height, 40px) / 2);
 }
 
-.wp-block-axismundi-button-group[data-variant="connected"] > .wp-block-axismundi-button-group__item:last-of-type:active {
+.wp-block-axismundi-button-group[data-variant="connected"]:not([data-connected-edges]) > .wp-block-axismundi-button-group__item:last-of-type:active,
+.wp-block-axismundi-button-group[data-variant="connected"][data-connected-edges] > .wp-block-axismundi-button-group__item[data-connected-edge="last"]:active {
 	border-start-end-radius: calc(var(--ax-button-height, 40px) / 2);
 	border-end-end-radius: calc(var(--ax-button-height, 40px) / 2);
 }
@@ -487,6 +491,13 @@
 		border-radius var(--md-sys-motion-curve-fast-spatial-duration) var(--md-sys-motion-curve-fast-spatial),
 		flex-grow var(--md-sys-motion-curve-fast-spatial-duration) var(--md-sys-motion-curve-fast-spatial),
 		background-color var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects);
+}
+
+/* `hidden` is structural state in the Connected editor model. The component
+ * sets display for visible segments, so state must explicitly win over the
+ * author rule instead of relying on the user-agent stylesheet. */
+.wp-block-axismundi-button-group__item[hidden] {
+	display: none !important;
 }
 
 /* Pattern A keeps native radio semantics. The visible label is its sibling,

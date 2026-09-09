@@ -16,6 +16,21 @@
 		);
 	}
 
+	// `:last-of-type` follows DOM order, not the Connected model's visible
+	// segment list. Keep the visual endpoints explicit whenever an optional
+	// third, fourth, or fifth segment changes structural visibility.
+	function syncConnectedEdges( group ) {
+		var segments = visibleSegments( group );
+		group.dataset.connectedEdges = "";
+		group.querySelectorAll( SEGMENT ).forEach( function ( segment ) {
+			delete segment.dataset.connectedEdge;
+		} );
+		if ( segments.length ) {
+			segments[ 0 ].dataset.connectedEdge = "first";
+			segments[ segments.length - 1 ].dataset.connectedEdge = "last";
+		}
+	}
+
 	function normaliseConnected( group ) {
 		var segments = visibleSegments( group );
 		var selected;
@@ -211,14 +226,160 @@
 
 	function connectedMarkup( host, group ) {
 		var output = host.querySelector( "[data-group-markup]" );
+		var nl = String.fromCharCode( 10 );
+		var segments;
 		if ( output ) {
+			segments = visibleSegments( group );
 			output.textContent = '<div class="wp-block-axismundi-button-group"\n' +
 				'  data-variant="connected"\n' +
 				'  data-size="' + group.dataset.size + '"\n' +
 				'  data-selection="' + group.dataset.selection + '"' +
 				( group.dataset.required === "true" ? '\n  data-required="true"' : "" ) +
 				( group.dataset.shape ? '\n  data-shape="' + group.dataset.shape + '"' : "" ) +
-				">\n  Segments: " + visibleSegments( group ).length + "\n</div>";
+				">" + nl + segments.map( function ( segment ) {
+					var attributes = [
+						'selected:' + ( segment.getAttribute( "aria-pressed" ) === "true" ),
+						'icon:"' + ( segment.dataset.icon || "" ) + '"'
+					];
+					if ( ! segment.querySelector( ".wp-block-button__icon" ) ) {
+						attributes.push( "showIcon:false" );
+					}
+					if ( segment.dataset.labels === "hidden" ) {
+						attributes.push( "showLabelText:false" );
+					}
+					if ( segment.disabled ) {
+						attributes.push( "disabled:true" );
+					}
+					return "  <!-- axismundi/segment {" + attributes.join( "," ) +
+						"} --> " + segment.querySelector( "[data-segment-label]" ).textContent;
+				} ).join( nl ) + nl + "</div>";
+		}
+	}
+
+	function setSegmentIcon( segment, visible ) {
+		var icon = segment.querySelector( ".wp-block-button__icon" );
+		if ( visible && ! icon ) {
+			segment.prepend( makeIcon( segment ) );
+		}
+		if ( ! visible && icon ) {
+			icon.remove();
+		}
+	}
+
+	function setSegmentLabel( segment, visible ) {
+		var label = segment.querySelector( "[data-segment-label]" );
+		if ( ! label ) {
+			return;
+		}
+		label.classList.toggle( "screen-reader-text", ! visible );
+		if ( visible ) {
+			delete segment.dataset.labels;
+			if ( segment.dataset.wantIcon === "false" ) {
+				setSegmentIcon( segment, false );
+			}
+		} else {
+			segment.dataset.labels = "hidden";
+			setSegmentIcon( segment, true );
+		}
+	}
+
+	function syncSegmentPanel( host, segment ) {
+		var panel = host.querySelector( "[data-segment-panel]" );
+		var label;
+		if ( ! panel ) {
+			return;
+		}
+		panel.hidden = ! segment;
+		if ( ! segment ) {
+			return;
+		}
+		label = segment.querySelector( "[data-segment-label]" );
+		panel.querySelectorAll( "[data-segment-control]" ).forEach( function ( control ) {
+			var key = control.dataset.segmentControl;
+			if ( key === "selected" ) {
+				control.checked = segment.getAttribute( "aria-pressed" ) === "true";
+			} else if ( key === "show-icon" ) {
+				control.checked = !! segment.querySelector( ".wp-block-button__icon" );
+				control.disabled = label.classList.contains( "screen-reader-text" );
+			} else if ( key === "show-label" ) {
+				control.checked = ! label.classList.contains( "screen-reader-text" );
+			} else if ( key === "label" ) {
+				control.value = label.textContent;
+			} else if ( key === "icon" ) {
+				control.value = segment.dataset.icon || "";
+			} else if ( key === "disabled" ) {
+				control.checked = segment.disabled;
+			}
+		} );
+	}
+
+	function selectConnectedSegment( host, group, segment ) {
+		group.querySelectorAll( SEGMENT ).forEach( function ( node ) {
+			delete node.dataset.segmentSelected;
+		} );
+		if ( segment ) {
+			segment.dataset.segmentSelected = "true";
+		}
+		syncSegmentPanel( host, segment );
+	}
+
+	function bindConnectedPanel( host, group ) {
+		var panel = host.querySelector( "[data-segment-panel]" );
+		if ( ! panel ) {
+			return;
+		}
+		group.addEventListener( "click", function ( event ) {
+			var segment = event.target.closest( SEGMENT );
+			if ( segment && group.contains( segment ) && ! segment.hidden ) {
+				selectConnectedSegment( host, group, segment );
+				connectedMarkup( host, group );
+			}
+		} );
+		panel.addEventListener( "input", apply );
+		panel.addEventListener( "change", apply );
+
+		function apply( event ) {
+			var control = event.target.closest( "[data-segment-control]" );
+			var segment = group.querySelector( '[data-segment-selected="true"]' );
+			var label;
+			if ( ! control || ! segment ) {
+				return;
+			}
+			if ( control.dataset.segmentControl === "selected" ) {
+				if ( control.checked && group.dataset.selection !== "multiple" ) {
+					visibleSegments( group ).forEach( function ( node ) {
+						node.setAttribute( "aria-pressed", "false" );
+					} );
+				}
+				segment.setAttribute( "aria-pressed", String( control.checked ) );
+			}
+			if ( control.dataset.segmentControl === "show-icon" ) {
+				segment.dataset.wantIcon = String( control.checked );
+				setSegmentIcon( segment, control.checked );
+			}
+			if ( control.dataset.segmentControl === "show-label" ) {
+				setSegmentLabel( segment, control.checked );
+			}
+			if ( control.dataset.segmentControl === "icon" ) {
+				segment.dataset.icon = control.value;
+				var icon = segment.querySelector( ".wp-block-button__icon" );
+				if ( icon ) {
+					icon.textContent = control.value;
+				}
+			}
+			if ( control.dataset.segmentControl === "label" ) {
+				label = segment.querySelector( "[data-segment-label]" );
+				if ( label ) {
+					label.textContent = control.value;
+				}
+			}
+			if ( control.dataset.segmentControl === "disabled" ) {
+				segment.disabled = control.checked;
+			}
+			normaliseConnected( group );
+			syncConnectedEdges( group );
+			syncSegmentPanel( host, segment );
+			connectedMarkup( host, group );
 		}
 	}
 
@@ -471,6 +632,7 @@
 			return;
 		}
 		bindSelection( group );
+		bindConnectedPanel( host, group );
 		host.addEventListener( "change", function ( event ) {
 			var control = event.target.closest( "[data-group-control]" );
 			var number;
@@ -496,8 +658,11 @@
 				group.querySelector( '[data-segment="' + number + '"]' ).hidden = ! control.checked;
 			}
 			normaliseConnected( group );
+			syncConnectedEdges( group );
 			connectedMarkup( host, group );
 		} );
+		syncConnectedEdges( group );
+		selectConnectedSegment( host, group, group.querySelector( SEGMENT + ':not([hidden])' ) );
 		connectedMarkup( host, group );
 	}
 

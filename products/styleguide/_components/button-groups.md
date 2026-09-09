@@ -156,11 +156,11 @@ Segment는 선택 여부·아이콘·라벨을 가집니다. 표시할 Segment �
 <section class="sg-button-group-playground" data-group-playground="connected" aria-label="Connected button group interactive demo">
   <div class="sg-button-group-playground__stage">
     <div class="wp-block-axismundi-button-group" data-group-stage data-variant="connected" data-size="small" data-selection="single" data-required="true" role="group" aria-label="View mode">
-      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" data-segment="1" aria-pressed="true"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">view_list</span><span>List</span></button>
-      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" data-segment="2" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">grid_view</span><span>Grid</span></button>
-      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" data-segment="3" aria-pressed="false" hidden><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">view_agenda</span><span>Cards</span></button>
-      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" data-segment="4" aria-pressed="false" hidden><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">view_compact</span><span>Compact</span></button>
-      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" data-segment="5" aria-pressed="false" hidden><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">tune</span><span>Custom</span></button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" data-segment="1" data-icon="view_list" aria-pressed="true"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">view_list</span><span data-segment-label>List</span></button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" data-segment="2" data-icon="grid_view" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">grid_view</span><span data-segment-label>Grid</span></button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" data-segment="3" data-icon="view_agenda" aria-pressed="false" hidden><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">view_agenda</span><span data-segment-label>Cards</span></button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" data-segment="4" data-icon="view_compact" aria-pressed="false" hidden><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">view_compact</span><span data-segment-label>Compact</span></button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" data-segment="5" data-icon="tune" aria-pressed="false" hidden><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">tune</span><span data-segment-label>Custom</span></button>
     </div>
     <pre class="sg-button-group-playground__markup" data-group-markup></pre>
   </div>
@@ -171,6 +171,15 @@ Segment는 선택 여부·아이콘·라벨을 가집니다. 표시할 Segment �
     <label class="sg-button-group-playground__checkbox"><input type="checkbox" data-group-control="showThird" /> Show third segment</label>
     <label class="sg-button-group-playground__checkbox"><input type="checkbox" data-group-control="showFourth" /> Show fourth segment</label>
     <label class="sg-button-group-playground__checkbox"><input type="checkbox" data-group-control="showFifth" /> Show fifth segment</label>
+    <fieldset class="sg-button-group-playground__child" data-segment-panel>
+      <legend>Selected segment</legend>
+      <label>Label text <input type="text" data-segment-control="label" /></label>
+      <label>Icon <input type="text" list="group-icon-options" data-segment-control="icon" /></label>
+      <label class="sg-button-group-playground__inline"><input type="checkbox" data-segment-control="selected" /> Selected</label>
+      <label class="sg-button-group-playground__inline"><input type="checkbox" data-segment-control="show-icon" /> Show icon</label>
+      <label class="sg-button-group-playground__inline"><input type="checkbox" data-segment-control="show-label" /> Show label</label>
+      <label class="sg-button-group-playground__inline"><input type="checkbox" data-segment-control="disabled" /> Disabled</label>
+    </fieldset>
   </div>
 </section>
 

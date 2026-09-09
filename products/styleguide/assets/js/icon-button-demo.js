@@ -115,6 +115,17 @@
 		if ( ! button ) {
 			return;
 		}
+		// The specimen is a real toggle, so pressing it should toggle. The click
+		// drives the control rather than the attribute: one path sets
+		// aria-pressed, and the panel cannot drift from the thing it describes.
+		var selected = host.querySelector( '[data-icon-control="selected"]' );
+		if ( selected ) {
+			button.addEventListener( "click", function () {
+				selected.checked = ! selected.checked;
+				selected.dispatchEvent( new Event( "change", { bubbles: true } ) );
+			} );
+		}
+
 		host.addEventListener( "input", function () {
 			apply( host, button );
 		} );

@@ -95,8 +95,26 @@ Preview처럼 자기 variation을 고른 Button은 그 값을 유지합니다.
       <button type="button" data-group-action="add">Add button</button>
       <button type="button" data-group-action="remove-last">Remove last</button>
     </div>
+    <fieldset class="sg-button-group-playground__child" data-group-child-panel>
+      <legend>Selected button</legend>
+      <label>Type <select data-child-control="shape"><option value="round">Round</option><option value="square">Square</option></select></label>
+      <label>Size <select data-child-control="size"><option value="xsmall">XSmall</option><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option><option value="xlarge">XLarge</option></select></label>
+      <label>Style <select data-child-control="style"><option value="">Inherit group</option><option value="tonal">Tonal</option><option value="outline">Outline</option><option value="elevated">Elevated</option><option value="text">Text</option></select></label>
+      <label>Label text <input type="text" data-child-control="label" /></label>
+      <label class="sg-button-group-playground__inline"><input type="checkbox" data-child-control="show-icon" /> Show icon</label>
+      <label class="sg-button-group-playground__inline"><input type="checkbox" data-child-control="disabled" /> Disabled</label>
+    </fieldset>
   </div>
 </section>
+
+**스테이지의 버튼을 눌러 고르면** 아래 패널이 그 자식의 설정으로 바뀝니다. 블록
+에디터가 하는 것과 같습니다 — 컨테이너를 고르면 컨테이너 설정, 자식을 고르면 자식
+설정입니다.
+
+여기서 페이지의 논지가 실제로 보입니다. **자식에서 Size나 Type을 한 번 바꾸면, 그
+뒤로 그룹 컨트롤을 움직여도 그 자식은 따라오지 않습니다.** 그룹 값은 아직 스스로
+고르지 않은 자식에게만 갑니다. 자식 패널을 붙이기 전에는 그룹이 모든 자식에 값을 찍고
+있었고, 그러면 "자식이 덮는다"는 근거 없는 주장으로 남습니다.
 
 ### Connected button group
 

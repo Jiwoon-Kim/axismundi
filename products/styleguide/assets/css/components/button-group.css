@@ -349,6 +349,35 @@
 	box-shadow: inset 0 0 0 var(--ax-button-outline-width, 1px) var(--md-sys-color-outline-variant);
 }
 
+/* --- The selected child ---------------------------------------- */
+
+.wp-block-button[data-group-selected="true"] {
+	outline: 2px solid var(--md-sys-color-primary);
+	outline-offset: 3px;
+	border-radius: var(--md-sys-shape-corner-value-small);
+}
+
+.sg-button-group-playground__child {
+	display: grid;
+	gap: var(--md-sys-measurement-space150);
+	margin: 0;
+	padding: var(--md-sys-measurement-space200);
+	border: 1px solid var(--md-sys-color-outline-variant);
+	border-radius: var(--md-sys-shape-corner-value-small);
+}
+
+.sg-button-group-playground__child legend {
+	padding-inline: var(--md-sys-measurement-space100);
+	font-size: var(--md-sys-typescale-label-medium-size);
+	color: var(--md-sys-color-on-surface-variant);
+}
+
+.sg-button-group-playground__inline {
+	display: flex;
+	gap: var(--md-sys-measurement-space100);
+	align-items: center;
+}
+
 /* --- Connected: 2dp at every size ----------------------------- */
 
 /* One padding for all five sizes, which M3 gives as a consistency rule rather

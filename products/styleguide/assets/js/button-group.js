@@ -70,14 +70,49 @@
 		} );
 	}
 
+	// The panel is the block a reader would save, so it has to show what the
+	// children actually became. Printing a count was fine while every child was
+	// identical and became a lie the moment one could be edited on its own.
 	function standardMarkup( host, group ) {
 		var output = host.querySelector( "[data-group-markup]" );
-		var count = group.querySelectorAll( "[data-group-child]:not([hidden])" ).length;
-		if ( output ) {
-			output.textContent = '<div class="wp-block-buttons"' +
-				( group.dataset.color ? ' data-color="' + group.dataset.color + '"' : "" ) +
-				">\n  InnerBlocks: core/button x " + count + "\n</div>";
+		var nl = String.fromCharCode( 10 );
+		var children;
+		if ( ! output ) {
+			return;
 		}
+		children = Array.prototype.slice.call(
+			group.querySelectorAll( "[data-group-child]:not([hidden])" )
+		);
+		output.textContent = '<div class="wp-block-buttons"' +
+			( group.dataset.color ? ' data-color="' + group.dataset.color + '"' : "" ) +
+			">" + nl +
+			children.map( function ( child ) {
+				var link = child.querySelector( ".wp-block-button__link" );
+				var label = child.querySelector( "[data-group-label]" );
+				var style = Array.prototype.slice.call( child.classList ).filter( function ( name ) {
+					return name.indexOf( "is-style-" ) === 0;
+				} )[ 0 ];
+				var attributes = [];
+				if ( style ) {
+					attributes.push( 'className:"' + style + '"' );
+				}
+				if ( child.dataset.size ) {
+					attributes.push( 'size:"' + child.dataset.size + '"' );
+				}
+				if ( child.dataset.shape ) {
+					attributes.push( 'shape:"' + child.dataset.shape + '"' );
+				}
+				if ( child.querySelector( ".wp-block-button__icon" ) ) {
+					attributes.push( 'icon:"add"' );
+				}
+				if ( link && link.disabled ) {
+					attributes.push( "disabled:true" );
+				}
+				return "  <!-- wp:button" +
+					( attributes.length ? " {" + attributes.join( "," ) + "}" : "" ) +
+					" -->" + ( label ? "  " + label.textContent : "" );
+			} ).join( nl ) +
+			nl + "</div>";
 	}
 
 	function addStandardChild( host, group, iconOnly ) {
@@ -152,11 +187,23 @@
 				return;
 			}
 			children = Array.prototype.slice.call( group.querySelectorAll( "[data-group-child]" ) );
+
+			// A group control is a default, so it passes over any child that
+			// has set the same property for itself. That is the rule the whole
+			// page argues, and it only becomes visible once a child can be
+			// edited: without the skip, the group would stamp every child and
+			// "the child overrules" would be a claim with nothing behind it.
+			function inheriting( property ) {
+				return children.filter( function ( child ) {
+					return child.dataset[ "own" + property ] !== "true";
+				} );
+			}
+
 			if ( control.dataset.groupControl === "shape" ) {
-				setShape( children, control.value );
+				setShape( inheriting( "Shape" ), control.value );
 			}
 			if ( control.dataset.groupControl === "size" ) {
-				children.forEach( function ( child ) {
+				inheriting( "Size" ).forEach( function ( child ) {
 					if ( control.value === "small" ) {
 						delete child.dataset.size;
 					} else {
@@ -200,7 +247,148 @@
 			}
 			standardMarkup( host, group );
 		} );
+		bindChildPanel( host, group );
+		selectChild( host, group, group.querySelector( "[data-group-child]" ) );
 		standardMarkup( host, group );
+	}
+
+	// --- The child panel -----------------------------------------------
+	//
+	// A block editor shows the settings of whatever is selected: the container
+	// when you click the container, the child when you click the child. The
+	// second panel is that, and it is the only way to demonstrate the rule the
+	// page states - a group hands down a default, a child that has chosen keeps
+	// its choice - because both halves have to be reachable to see one lose.
+
+	function childSummary( child ) {
+		var icon = child.querySelector( ".wp-block-button__icon" );
+		var label = child.querySelector( "[data-group-label]" );
+		var style = Array.prototype.slice.call( child.classList ).filter( function ( name ) {
+			return name.indexOf( "is-style-" ) === 0;
+		} )[ 0 ];
+		return {
+			icon: !! icon,
+			label: label,
+			style: style ? style.replace( "is-style-", "" ) : "",
+			size: child.dataset.size || "small",
+			shape: child.dataset.shape || "round"
+		};
+	}
+
+	function syncChildPanel( host, child ) {
+		var panel = host.querySelector( "[data-group-child-panel]" );
+		if ( ! panel ) {
+			return;
+		}
+		panel.hidden = ! child;
+		if ( ! child ) {
+			return;
+		}
+		var state = childSummary( child );
+		panel.querySelectorAll( "[data-child-control]" ).forEach( function ( control ) {
+			var key = control.dataset.childControl;
+			if ( key === "show-icon" ) {
+				control.checked = state.icon;
+			} else if ( key === "label" ) {
+				control.value = state.label ? state.label.textContent : "";
+				control.disabled = ! state.label;
+			} else if ( key === "disabled" ) {
+				control.checked = child.querySelector( ".wp-block-button__link" ).disabled;
+			} else if ( key === "style" ) {
+				control.value = state.style;
+			} else {
+				control.value = state[ key ];
+			}
+		} );
+	}
+
+	function selectChild( host, group, child ) {
+		group.querySelectorAll( "[data-group-child]" ).forEach( function ( node ) {
+			delete node.dataset.groupSelected;
+		} );
+		if ( child ) {
+			child.dataset.groupSelected = "true";
+		}
+		syncChildPanel( host, child );
+	}
+
+	function bindChildPanel( host, group ) {
+		var panel = host.querySelector( "[data-group-child-panel]" );
+		if ( ! panel ) {
+			return;
+		}
+
+		group.addEventListener( "click", function ( event ) {
+			var child = event.target.closest( "[data-group-child]" );
+			if ( child && group.contains( child ) ) {
+				event.preventDefault();
+				selectChild( host, group, child );
+			}
+		} );
+
+		panel.addEventListener( "input", apply );
+		panel.addEventListener( "change", apply );
+
+		function apply( event ) {
+			var control = event.target.closest( "[data-child-control]" );
+			var child = group.querySelector( '[data-group-selected="true"]' );
+			if ( ! control || ! child ) {
+				return;
+			}
+			var link = child.querySelector( ".wp-block-button__link" );
+			var key = control.dataset.childControl;
+
+			if ( key === "size" ) {
+				child.dataset.ownSize = "true";
+				if ( control.value === "small" ) {
+					delete child.dataset.size;
+				} else {
+					child.dataset.size = control.value;
+				}
+			}
+			if ( key === "shape" ) {
+				child.dataset.ownShape = "true";
+				if ( control.value === "square" ) {
+					child.dataset.shape = "square";
+				} else {
+					delete child.dataset.shape;
+				}
+			}
+			if ( key === "style" ) {
+				Array.prototype.slice.call( child.classList ).forEach( function ( name ) {
+					if ( name.indexOf( "is-style-" ) === 0 ) {
+						child.classList.remove( name );
+					}
+				} );
+				if ( control.value ) {
+					child.classList.add( "is-style-" + control.value );
+				}
+			}
+			if ( key === "label" ) {
+				var label = child.querySelector( "[data-group-label]" );
+				if ( label ) {
+					label.textContent = control.value;
+				}
+			}
+			if ( key === "show-icon" ) {
+				var icon = child.querySelector( ".wp-block-button__icon" );
+				if ( control.checked && ! icon ) {
+					icon = document.createElement( "span" );
+					icon.className = "wp-block-button__icon material-symbols-outlined notranslate";
+					icon.setAttribute( "translate", "no" );
+					icon.setAttribute( "aria-hidden", "true" );
+					icon.textContent = "add";
+					link.prepend( icon );
+				}
+				if ( ! control.checked && icon ) {
+					icon.remove();
+				}
+			}
+			if ( key === "disabled" ) {
+				link.disabled = control.checked;
+			}
+			standardMarkup( host, group );
+		}
 	}
 
 	function bindConnectedDemo( host ) {

@@ -399,3 +399,106 @@
 	border-start-end-radius: var(--md-sys-shape-corner-value-large-increased);
 	border-end-end-radius: var(--md-sys-shape-corner-value-large-increased);
 }
+
+/* --- Documentation-only interactive demo --------------------- */
+
+/* The control uses the same WordPress Button DOM above. These rules only lay
+ * out the documentation tool around it; they do not change the component
+ * contract being demonstrated. */
+.sg-button-playground {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(13rem, 17rem);
+	margin-block: var(--md-sys-measurement-space300);
+	border: 1px solid var(--md-sys-color-outline-variant);
+	border-radius: var(--md-sys-shape-corner-value-medium);
+	background: var(--md-sys-color-surface-container-low);
+	overflow: hidden;
+}
+
+.sg-button-playground__stage,
+.sg-button-playground__controls {
+	padding: var(--md-sys-measurement-space300);
+}
+
+.sg-button-playground__stage {
+	display: grid;
+	align-content: center;
+	gap: var(--md-sys-measurement-space300);
+	min-block-size: 18rem;
+}
+
+.sg-button-playground__controls {
+	display: grid;
+	align-content: start;
+	gap: var(--md-sys-measurement-space200);
+	margin: 0;
+	border: 0;
+	border-inline-start: 1px solid var(--md-sys-color-outline-variant);
+	background: var(--md-sys-color-surface-container);
+}
+
+.sg-button-playground__eyebrow {
+	margin: 0;
+	font-family: var(--md-sys-typescale-title-small-font);
+	font-size: var(--md-sys-typescale-title-small-size);
+	font-weight: var(--md-sys-typescale-title-small-weight);
+	letter-spacing: var(--md-sys-typescale-title-small-tracking);
+	line-height: var(--md-sys-typescale-title-small-line-height);
+}
+
+.sg-button-playground__control {
+	display: grid;
+	gap: var(--md-sys-measurement-space50);
+	font-size: var(--md-sys-typescale-body-medium-size);
+	line-height: var(--md-sys-typescale-body-medium-line-height);
+}
+
+.sg-button-playground__control input,
+.sg-button-playground__control select {
+	inline-size: 100%;
+	min-block-size: 2.5rem;
+	padding-inline: var(--md-sys-measurement-space100);
+	border: 1px solid var(--md-sys-color-outline);
+	border-radius: var(--md-sys-shape-corner-value-extra-small);
+	background: var(--md-sys-color-surface-container-highest);
+	color: var(--md-sys-color-on-surface);
+	font: inherit;
+}
+
+.sg-button-playground__check {
+	display: flex;
+	align-items: center;
+	gap: var(--md-sys-measurement-space100);
+	min-block-size: 2.5rem;
+	font-size: var(--md-sys-typescale-body-medium-size);
+	line-height: var(--md-sys-typescale-body-medium-line-height);
+}
+
+.sg-button-playground__check input {
+	inline-size: 1.125rem;
+	block-size: 1.125rem;
+	accent-color: var(--md-sys-color-primary);
+}
+
+.sg-button-playground__markup {
+	margin: 0;
+	max-inline-size: 100%;
+	min-block-size: 4.5rem;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+@media (max-width: 599px) {
+	.sg-button-playground {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.sg-button-playground__stage {
+		min-block-size: 14rem;
+	}
+
+	.sg-button-playground__controls {
+		border-inline-start: 0;
+		border-block-start: 1px solid var(--md-sys-color-outline-variant);
+	}
+}

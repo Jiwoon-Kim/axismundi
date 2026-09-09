@@ -56,6 +56,75 @@ Standard button group   type round · size large · color filled · button type 
 Elevated 표본을 남겨 두는 것은 **자식이 Button이라 기술적으로 가능하다는 사실**을
 보이기 위해서이고, 권장한다는 뜻이 아닙니다.
 
+## Interactive demos
+
+두 데모를 하나의 `Variant` 드롭다운으로 합치지 않았습니다. Standard는 독립적인
+Button/Icon button을 담는 컨테이너이고, Connected는 고정된 Segment로 이루어진 선택
+컨트롤입니다. 한쪽에서 다른 쪽으로 전환할 수 있는 같은 블록 상태가 아닙니다.
+
+### Standard button group
+
+`Color`와 `Size`는 아직 자기 값을 고르지 않은 자식에게 주는 기본값입니다. Tonal
+Preview처럼 자기 variation을 고른 Button은 그 값을 유지합니다.
+
+`Button type`은 성격이 다릅니다. **이미 놓인 자식을 바꾸지 않고, 다음에 넣을 자식이
+무엇인지를 정합니다.** Figma에서 이게 그룹의 프로퍼티인 이유는 정적 파일이 인스턴스를
+바꿔 끼워 자식을 조립하기 때문이고, 블록 에디터에서 같은 선택은 **삽입하는 순간**에
+일어납니다. 그래서 여기서도 `Add button`이 이 값을 읽습니다 — 이미 넣은 블록을 나중에
+다른 타입으로 바꾸지 않는 것과 같습니다.
+
+`Show fifth / sixth / seventh button`도 같은 종류의 Figma 편의라, 고정 슬롯 대신
+실제 InnerBlocks를 삽입하고 제거합니다.
+
+<section class="sg-button-group-playground" data-group-playground="standard" aria-label="Standard button group interactive demo">
+  <div class="sg-button-group-playground__stage">
+    <div class="wp-block-buttons" data-group-stage>
+      <div class="wp-block-button" data-group-child><button type="button" class="wp-block-button__link wp-element-button"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">save</span><span data-group-label>Save</span></button></div>
+      <div class="wp-block-button is-style-tonal" data-group-child><button type="button" class="wp-block-button__link wp-element-button"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">visibility</span><span data-group-label>Preview</span></button></div>
+      <div class="wp-block-button" data-group-child><button type="button" class="wp-block-button__link wp-element-button"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">share</span><span data-group-label>Share</span></button></div>
+      <div class="wp-block-button" data-group-child><button type="button" class="wp-block-button__link wp-element-button"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">download</span><span data-group-label>Download</span></button></div>
+    </div>
+    <pre class="sg-button-group-playground__markup" data-group-markup></pre>
+  </div>
+  <div class="sg-button-group-playground__controls">
+    <label>Type <select data-group-control="shape"><option value="round" selected>Round</option><option value="square">Square</option></select></label>
+    <label>Size <select data-group-control="size"><option value="xsmall">XSmall</option><option value="small" selected>Small</option><option value="medium">Medium</option><option value="large">Large</option><option value="xlarge">XLarge</option></select></label>
+    <label>Color <select data-group-control="color"><option value="filled" selected>Filled</option><option value="tonal">Tonal</option><option value="outlined">Outlined</option></select></label>
+    <label>Button type <select data-group-control="button-type"><option value="label" selected>Label</option><option value="icon">Icon</option></select></label>
+    <div class="sg-button-group-playground__actions" role="group" aria-label="Standard button group children">
+      <button type="button" data-group-action="add">Add button</button>
+      <button type="button" data-group-action="remove-last">Remove last</button>
+    </div>
+  </div>
+</section>
+
+### Connected button group
+
+Connected에는 Color나 Button type이 없습니다. 그룹이 Type과 Size를 소유하고,
+Segment는 선택 여부·아이콘·라벨을 가집니다. 표시할 Segment 수와 선택 규칙을 바꿔
+실제 `aria-pressed` 상호작용과 선택 shape morph를 확인할 수 있습니다.
+
+<section class="sg-button-group-playground" data-group-playground="connected" aria-label="Connected button group interactive demo">
+  <div class="sg-button-group-playground__stage">
+    <div class="wp-block-axismundi-button-group" data-group-stage data-variant="connected" data-size="small" data-selection="single" data-required="true" role="group" aria-label="View mode">
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" data-segment="1" aria-pressed="true"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">view_list</span><span>List</span></button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" data-segment="2" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">grid_view</span><span>Grid</span></button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" data-segment="3" aria-pressed="false" hidden><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">view_agenda</span><span>Cards</span></button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" data-segment="4" aria-pressed="false" hidden><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">view_compact</span><span>Compact</span></button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" data-segment="5" aria-pressed="false" hidden><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">tune</span><span>Custom</span></button>
+    </div>
+    <pre class="sg-button-group-playground__markup" data-group-markup></pre>
+  </div>
+  <div class="sg-button-group-playground__controls">
+    <label>Type <select data-group-control="shape"><option value="round" selected>Round</option><option value="square">Square</option></select></label>
+    <label>Size <select data-group-control="size"><option value="xsmall">XSmall</option><option value="small" selected>Small</option><option value="medium">Medium</option><option value="large">Large</option><option value="xlarge">XLarge</option></select></label>
+    <label>Selection <select data-group-control="selection"><option value="single-required" selected>Single, required</option><option value="single">Single</option><option value="multiple">Multiple</option></select></label>
+    <label class="sg-button-group-playground__checkbox"><input type="checkbox" data-group-control="showThird" /> Show third segment</label>
+    <label class="sg-button-group-playground__checkbox"><input type="checkbox" data-group-control="showFourth" /> Show fourth segment</label>
+    <label class="sg-button-group-playground__checkbox"><input type="checkbox" data-group-control="showFifth" /> Show fifth segment</label>
+  </div>
+</section>
+
 ## 자식이 무엇인지가 두 variant를 가릅니다
 
 논증할 필요가 없었습니다. **Figma 프로퍼티 집합이 그대로 증거입니다.**
@@ -323,66 +392,6 @@ or sort elements"를 들면서, 동시에 토글이 아니면 쓰지 말라고 �
   </nav>
 </div>
 
-## 조작해 보기
-
-아래 컨트롤은 데모 엔진이 아니라 **블록 Inspector를 HTML로 쓴 것**입니다. 각 컨트롤이
-어댑터가 이미 읽는 `data-*`를 하나씩 씁니다. 바꿀 때마다 아래에 **블록이 저장할 속성**이
-그대로 나옵니다.
-
-<div class="sg-bg-playground">
-  <div class="sg-bg-playground__controls">
-    <label class="sg-bg-playground__control">Variant
-      <select data-controls="variant">
-        <option value="connected">Connected</option>
-        <option value="standard">Standard</option>
-      </select>
-    </label>
-    <label class="sg-bg-playground__control">Size
-      <select data-controls="size">
-        <option value="xsmall">XS</option>
-        <option value="small" selected>Small</option>
-        <option value="medium">Medium</option>
-        <option value="large">Large</option>
-        <option value="xlarge">XL</option>
-      </select>
-    </label>
-    <label class="sg-bg-playground__control">Color
-      <select data-controls="color">
-        <option value="">Filled</option>
-        <option value="tonal">Tonal</option>
-        <option value="outlined">Outlined</option>
-      </select>
-    </label>
-    <label class="sg-bg-playground__control">Selection
-      <select data-controls="selection">
-        <option value="single-required" selected>Single, required</option>
-        <option value="single">Single</option>
-        <option value="multiple">Multiple</option>
-      </select>
-    </label>
-    <label class="sg-bg-playground__control sg-bg-playground__control--inline">
-      <input type="checkbox" data-controls="labels" value="hidden" /> Hide labels
-    </label>
-  </div>
-  <div class="sg-bg-playground__stage">
-    <div class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" data-selection="single" data-required="true" role="group" aria-label="Playground">
-      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">star</span><span>One</span></button>
-      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">star</span><span>Two</span></button>
-      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">star</span><span>Three</span></button>
-    </div>
-  </div>
-  <pre class="sg-bg-playground__markup" data-playground-markup></pre>
-</div>
-
-**iframe은 쓰지 않았습니다.** 표본이 이미 실제 DOM이고 실제 스타일시트 아래에
-있어서 격리할 것이 없습니다. iframe을 넣으면 토큰 계층 사본을 하나 더 맞춰 줘야
-하고, 얻는 것은 자기 뷰포트뿐인데 여기 어떤 컨트롤도 그것을 필요로 하지 않습니다.
-
-뷰포트가 필요한 경우는 따로 있습니다 — **`@media`를 실제로 태우려면** 폭이 다른
-문서가 있어야 합니다. `.sg-button-group-mobile-shell`은 390px 상자일 뿐이라 페이지의
-미디어쿼리는 여전히 진짜 뷰포트로 평가됩니다. 그건 container query로 옮기는 편이
-iframe보다 가볍고, 지금 그걸 절실히 요구하는 표본은 없습니다.
-
 ## 이걸 블록 UI로 옮기면
 
 `Color` 드롭다운이 특히 코어에 선례가 있습니다.
@@ -399,8 +408,7 @@ core/social-links size          string                        → 자식에게 �
 없앱니다.
 
 M3와도 어긋나지 않습니다. 그룹은 여전히 아무것도 칠하지 않고 **기본값만 내려주며**,
-자식이 자기 variation을 고르면 그쪽이 이깁니다 — 위 playground에서 Color를 바꿔도
-`is-style-*`를 가진 자식은 따라오지 않는 것과 같은 규칙입니다.
+위 Standard demo의 Tonal Preview처럼 자식이 자기 variation을 고르면 그쪽이 이깁니다.
 
 ## 그룹 크기와 버튼 크기가 겹칩니다
 

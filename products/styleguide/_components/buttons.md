@@ -13,6 +13,76 @@ M3의 button은 **두 개의 독립 축**을 가집니다. 색 스타일이 크�
 `core/button`에는 아직 이 attribute들이 없으므로, 여기의 크기 표본은 그 editor contract를 앞서 보여주는
 정적 어댑터입니다.
 
+## Interactive demo
+
+아래는 별도 구현을 흉내 내는 미리보기가 아닙니다. WordPress가 저장하는
+`.wp-block-button > .wp-block-button__link` 마크업 하나에, 이 페이지가 문서화하는
+style variation과 정적 adapter attribute를 직접 적용합니다. 값은 inspector에서 바꾸고,
+결과는 같은 DOM에서 바로 확인합니다.
+
+<section class="sg-button-playground" data-button-playground aria-label="Button interactive demo">
+  <div class="sg-button-playground__stage" aria-label="Result">
+    <p class="sg-button-playground__eyebrow">Result</p>
+    <div class="wp-block-buttons">
+      <div class="wp-block-button" data-playground-button>
+        <button type="button" class="wp-block-button__link wp-element-button">
+          <span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true" draggable="false" data-playground-icon>stars</span><span data-playground-label>Label</span>
+        </button>
+      </div>
+    </div>
+    <pre class="sg-button-playground__markup" data-playground-markup aria-label="Proposed block markup"></pre>
+  </div>
+  <form class="sg-button-playground__controls" aria-label="Button controls">
+    <p class="sg-button-playground__eyebrow">Controls</p>
+    <label class="sg-button-playground__control">Label text
+      <input type="text" value="Label" data-button-control="label" />
+    </label>
+    <label class="sg-button-playground__control">Style
+      <select data-button-control="style">
+        <option value="filled">Filled</option>
+        <option value="tonal">Tonal</option>
+        <option value="outlined">Outlined</option>
+        <option value="elevated">Elevated</option>
+        <option value="text">Text</option>
+      </select>
+    </label>
+    <label class="sg-button-playground__control">Size
+      <select data-button-control="size">
+        <option value="xsmall">Extra small</option>
+        <option value="small" selected>Small</option>
+        <option value="medium">Medium</option>
+        <option value="large">Large</option>
+        <option value="xlarge">Extra large</option>
+      </select>
+    </label>
+    <label class="sg-button-playground__control">Shape
+      <select data-button-control="shape">
+        <option value="round">Round</option>
+        <option value="square">Square</option>
+      </select>
+    </label>
+    <label class="sg-button-playground__control">Icon
+      <input type="text" list="button-icon-options" value="stars" data-button-control="icon" />
+    </label>
+    <label class="sg-button-playground__check">
+      <input type="checkbox" checked data-button-control="showIcon" /> Show icon
+    </label>
+    <label class="sg-button-playground__check">
+      <input type="checkbox" data-button-control="disabled" /> Disabled
+    </label>
+    <label class="sg-button-playground__check">
+      <input type="checkbox" data-button-control="softDisabled" /> Soft disabled
+    </label>
+  </form>
+</section>
+<datalist id="button-icon-options">
+  <option value="stars">stars</option>
+  <option value="add">add</option>
+  <option value="edit">edit</option>
+  <option value="search">search</option>
+  <option value="arrow_forward">arrow_forward</option>
+</datalist>
+
 이 페이지의 모든 버튼은 실제로 동작합니다. 기본 마크업은 블록 에디터가 쓰는 것과 같은
 `.wp-block-button > .wp-block-button__link`이고, CSS는 테마의 계약을 정적으로
 재진술한 것입니다. 아래 icon 표본만은 현재 `core/button`에 없는 slot을 문서화한

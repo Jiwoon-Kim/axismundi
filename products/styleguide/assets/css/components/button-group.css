@@ -213,7 +213,8 @@
  * segment safe: its accessible name has one source whether or not you can see
  * it. The plugin adds this class server-side, so the specimens carry it in the
  * markup rather than having the group hide the span with a selector. */
-.wp-block-axismundi-button-group__item .screen-reader-text {
+.wp-block-axismundi-button-group__item .screen-reader-text,
+.wp-block-button__link .screen-reader-text {
 	position: absolute;
 	inline-size: 1px;
 	block-size: 1px;
@@ -381,6 +382,22 @@
 .wp-block-axismundi-button-group[data-variant="connected"] > .wp-block-axismundi-button-group__item:last-of-type {
 	border-start-end-radius: var(--ax-button-shape, 20px);
 	border-end-end-radius: var(--ax-button-shape, 20px);
+}
+
+/* Figma's square type changes the group-owned outer corners. The mapping is
+ * the same Button contract: XS/S medium, M large, L/XL extra-large. */
+.wp-block-axismundi-button-group[data-variant="connected"][data-shape="square"][data-size="xsmall"],
+.wp-block-axismundi-button-group[data-variant="connected"][data-shape="square"][data-size="small"] {
+	--ax-button-shape: var(--md-sys-shape-corner-value-medium);
+}
+
+.wp-block-axismundi-button-group[data-variant="connected"][data-shape="square"][data-size="medium"] {
+	--ax-button-shape: var(--md-sys-shape-corner-value-large);
+}
+
+.wp-block-axismundi-button-group[data-variant="connected"][data-shape="square"][data-size="large"],
+.wp-block-axismundi-button-group[data-variant="connected"][data-shape="square"][data-size="xlarge"] {
+	--ax-button-shape: var(--md-sys-shape-corner-value-extra-large);
 }
 
 /* Pressed state changes only the inner corners. The outer edge remains a
@@ -599,4 +616,117 @@
 .sg-button-group-stack {
 	display: grid;
 	gap: var(--md-sys-measurement-space200);
+}
+
+/* --- Documentation-only interactive demos -------------------- */
+
+/* These panels deliberately mirror the Button page's Result + Controls layout.
+ * They are two panels, not a variant switch: Standard contains independently
+ * authored Buttons; Connected owns its fixed Segment collection. */
+.sg-button-group-playground {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(13rem, 17rem);
+	margin-block: var(--md-sys-measurement-space300);
+	border: 1px solid var(--md-sys-color-outline-variant);
+	border-radius: var(--md-sys-shape-corner-value-medium);
+	background: var(--md-sys-color-surface-container-low);
+	overflow: hidden;
+}
+
+.sg-button-group-playground__stage,
+.sg-button-group-playground__controls {
+	padding: var(--md-sys-measurement-space300);
+}
+
+.sg-button-group-playground__stage {
+	display: grid;
+	align-content: center;
+	gap: var(--md-sys-measurement-space300);
+	min-block-size: 18rem;
+	min-inline-size: 0;
+	overflow-x: auto;
+}
+
+.sg-button-group-playground__controls {
+	display: grid;
+	align-content: start;
+	gap: var(--md-sys-measurement-space200);
+	border-inline-start: 1px solid var(--md-sys-color-outline-variant);
+	background: var(--md-sys-color-surface-container);
+}
+
+.sg-button-group-playground__controls label {
+	display: grid;
+	gap: var(--md-sys-measurement-space50);
+	font-size: var(--md-sys-typescale-body-medium-size);
+	line-height: var(--md-sys-typescale-body-medium-line-height);
+}
+
+.sg-button-group-playground__controls select {
+	inline-size: 100%;
+	min-block-size: 2.5rem;
+	padding-inline: var(--md-sys-measurement-space100);
+	border: 1px solid var(--md-sys-color-outline);
+	border-radius: var(--md-sys-shape-corner-value-extra-small);
+	background: var(--md-sys-color-surface-container-highest);
+	color: var(--md-sys-color-on-surface);
+	font: inherit;
+}
+
+.sg-button-group-playground__controls .sg-button-group-playground__checkbox {
+	display: flex;
+	align-items: center;
+	gap: var(--md-sys-measurement-space100);
+	min-block-size: 2.5rem;
+}
+
+.sg-button-group-playground__actions {
+	display: grid;
+	gap: var(--md-sys-measurement-space100);
+}
+
+.sg-button-group-playground__actions button {
+	min-block-size: 2.5rem;
+	padding-inline: var(--md-sys-measurement-space150);
+	border: 1px solid var(--md-sys-color-outline);
+	border-radius: var(--md-sys-shape-corner-value-extra-small);
+	background: transparent;
+	color: var(--md-sys-color-primary);
+	font: inherit;
+	text-align: start;
+	cursor: pointer;
+}
+
+.sg-button-group-playground__actions button:hover {
+	background: color-mix(in srgb, var(--md-sys-color-primary) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
+}
+
+.sg-button-group-playground__checkbox input {
+	inline-size: 1.125rem;
+	block-size: 1.125rem;
+	margin: 0;
+	accent-color: var(--md-sys-color-primary);
+}
+
+.sg-button-group-playground__markup {
+	max-inline-size: 100%;
+	min-block-size: 4.5rem;
+	margin: 0;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+@media (max-width: 599px) {
+	.sg-button-group-playground {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.sg-button-group-playground__stage {
+		min-block-size: 14rem;
+	}
+
+	.sg-button-group-playground__controls {
+		border-block-start: 1px solid var(--md-sys-color-outline-variant);
+		border-inline-start: 0;
+	}
 }

@@ -83,7 +83,9 @@
  * own, which no control here needs.
  */
 ( function () {
-	var GROUP = ".wp-block-axismundi-button-group";
+	// Both the proposed group and the real core/buttons, because the same
+	// control drives both: a container attribute its members read.
+	var GROUP = ".wp-block-axismundi-button-group, .wp-block-buttons";
 
 	function normalise( group ) {
 		var mode = group.dataset.selection;

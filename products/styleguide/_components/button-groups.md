@@ -162,18 +162,39 @@ guidelines의 문장도 같은 방향입니다 — "selected **or activated**", 
 
 ### 그룹이 색을 선언하면 스타일을 안 고른 자식만 따라옵니다
 
-Figma 예시 그대로입니다 — 그룹은 `filled`인데 자식 하나가 tonal입니다.
+`core/tag-cloud`의 설정이 taxonomy를 드롭다운으로 보여주듯, `core/buttons`의 자식
+기본 스타일도 **버튼 variation 드롭다운**으로 표현할 수 있습니다. 아래가 그것이고,
+목록은 테마가 `core/button`에 실제로 등록한 다섯 개입니다.
 
-<div class="sg-demo sg-demo--stack">
-  <div class="wp-block-buttons" data-color="outlined" aria-label="Group declares outlined">
-    <div class="wp-block-button"><button type="button" class="wp-block-button__link wp-element-button">Inherits</button></div>
-    <div class="wp-block-button"><button type="button" class="wp-block-button__link wp-element-button">Inherits</button></div>
-    <div class="wp-block-button is-style-tonal"><button type="button" class="wp-block-button__link wp-element-button">Overrules</button></div>
+<div class="sg-bg-playground">
+  <div class="sg-bg-playground__controls">
+    <label class="sg-bg-playground__control">Button style
+      <select data-controls="color">
+        <option value="">Fill</option>
+        <option value="tonal">Tonal</option>
+        <option value="outlined" selected>Outline</option>
+        <option value="elevated">Elevated — M3 그룹 열거 밖</option>
+        <option value="text">Text — container 없음</option>
+      </select>
+    </label>
   </div>
+  <div class="sg-bg-playground__stage">
+    <div class="wp-block-buttons" data-color="outlined">
+      <div class="wp-block-button"><button type="button" class="wp-block-button__link wp-element-button">Inherits</button></div>
+      <div class="wp-block-button"><button type="button" class="wp-block-button__link wp-element-button">Inherits</button></div>
+      <div class="wp-block-button is-style-tonal"><button type="button" class="wp-block-button__link wp-element-button">Overrules</button></div>
+    </div>
+  </div>
+  <pre class="sg-bg-playground__markup" data-playground-markup></pre>
 </div>
 
-앞의 둘은 클래스가 없어 그룹의 outlined를 받고, 셋째는 `is-style-tonal`을 자기 요소에
-걸어 이깁니다. **그룹은 아무것도 칠하지 않습니다** — 내려줄 뿐입니다.
+앞의 둘은 클래스가 없어 그룹 값을 받고, 셋째는 `is-style-tonal`을 자기 요소에 걸어
+이깁니다. **그룹은 아무것도 칠하지 않습니다** — 내려줄 뿐입니다.
+
+드롭다운이 다섯을 다 보여주는 것은 **에디터가 그럴 것이기 때문**입니다. 등록된
+variation 목록이지 그룹이 골라도 되는 목록이 아닙니다. 뒤의 둘을 골라 보면 차이가
+보입니다 — Elevated는 M3의 그룹 열거에 없고, Text는 **container가 없어서** 그룹이
+이음매와 선택을 칠할 자리를 잃습니다. 감추는 대신 고를 수 있게 두고 옆에 적었습니다.
 
 ### 자식이 각자 고를 수도 있습니다
 

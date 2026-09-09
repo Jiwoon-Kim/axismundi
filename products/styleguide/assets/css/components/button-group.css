@@ -298,6 +298,26 @@
 	--ax-group-color-content: var(--md-sys-color-on-surface-variant);
 }
 
+/* Elevated and Text are outside M3's group enum, and the editor would still
+ * offer them: the dropdown lists what the theme registers for core/button, not
+ * what a group should pick. Implemented so the specimen can show what happens,
+ * with the constraint stated beside it rather than hidden by omission - Text in
+ * particular has no container, which is the thing a group needs to paint a
+ * seam and a selection on. */
+.wp-block-buttons[data-color="elevated"] {
+	--ax-group-color-container: var(--md-sys-color-surface-container-low);
+	--ax-group-color-content: var(--md-sys-color-primary);
+}
+
+.wp-block-buttons[data-color="elevated"] > .wp-block-button:not([class*="is-style-"]) > .wp-block-button__link {
+	box-shadow: var(--md-sys-elevation-shadow-level1);
+}
+
+.wp-block-buttons[data-color="text"] {
+	--ax-group-color-container: transparent;
+	--ax-group-color-content: var(--md-sys-color-primary);
+}
+
 /* Outlined is the one enum value that is not only a pair of roles: it also
  * needs the outline drawn. Scoped to members that have not chosen a style of
  * their own, so a tonal child inside an outlined group does not gain a border

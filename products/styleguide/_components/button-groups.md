@@ -26,8 +26,32 @@ no color properties." 색은 안에 든 버튼의 것이고, 그룹이 색에 �
 두 variant의 차이는 기하가 아니라 **인접 버튼이 반응하는가**입니다.
 
 ```
-standard    선택된 버튼의 폭·모양·패딩이 바뀌고, 옆 버튼이 밀리며 폭이 바뀜
+standard    선택되거나 활성화된 버튼의 폭·모양·패딩이 바뀌고, 옆 버튼이 밀리며 폭이 바뀜
 connected   선택된 버튼의 모양만 바뀜. 옆은 그대로
+```
+
+### standard는 선택 컨트롤만이 아닙니다
+
+M3의 Buttons 쪽 설명이 이걸 분명히 합니다.
+
+> A button group is a collection of buttons that relate to each other and can
+> respond to one another. Both buttons and **icon buttons** can be used inside a
+> button group. … Buttons with primary actions should have a higher visual
+> emphasis through **size, color, or shape**.
+
+예시가 미디어 플레이어입니다 — 작은 outlined 아이콘 버튼, 크고 넓은 tonal `Play`,
+다시 작은 아이콘 버튼. **선택 상태가 없습니다.** 액션 셋이고, 크기와 색이 강조를
+만듭니다.
+
+guidelines의 문장도 같은 방향입니다 — "selected **or activated**", 그리고
+"A selected **toggle** button also changes color". 토글이 아닌 버튼도 standard
+안에 있고, 그건 활성화될 때 폭과 모양만 바뀝니다.
+
+그래서 standard는 두 경우를 덮습니다.
+
+```
+액션 그룹      독립 버튼 N개, 크기·색으로 강조. 선택 없음   ← 미디어 플레이어
+선택 컨트롤    토글 세그먼트, 단일/다중 선택
 ```
 
 <div class="sg-demo sg-demo--stack">
@@ -194,6 +218,34 @@ axismundi/button-group
 만들 시점입니다. 그 전까지 이 페이지는 **계약 초안**이고, 제품에 급히 등록하지
 않습니다.
 
-`core/buttons`는 이 이야기에 들어오지 않습니다. 선택 상태가 없는 독립 action
-컨테이너이고, 그건 [Button and Buttons]({{ '/wordpress/button-and-buttons/' | relative_url }})가
-다룹니다.
+## `core/buttons`가 이미 standard의 절반입니다
+
+앞 절의 액션 그룹은 **저작 모델이 `core/buttons`와 같습니다.** 독립 버튼이 각자
+색과 크기를 가지고 나란히 서는 것 — 그게 `core/buttons`의 정의입니다. 이 페이지가
+처음에 standard 전체를 선택 컨트롤로 단정했던 것은 Lab의 radio fieldset 구현 하나를
+보고 내린 판단이었고, 좁았습니다.
+
+지금 `core/buttons`에 없는 것을 세어보면 이렇습니다.
+
+| standard가 요구하는 것 | `core/buttons` | 무엇이 필요한가 |
+|---|---|---|
+| 독립 버튼, 각자 색 | 있음 | — |
+| 강조를 위한 크기 혼합 | 없음 | `core/button`의 size attribute |
+| 아이콘 버튼 동거 | 없음 | `allowedBlocks`가 `core/button`뿐 — 코어 변경 |
+| 크기별 안쪽 여백 | 없음 | 컨테이너의 size 축 |
+| 활성화 시 폭 재분배 | 없음 | 스크립트 |
+| 토글 구성원 | 없음 | `aria-pressed`를 저장할 자식 |
+
+**앞의 다섯은 `core/buttons`에 더하는 것이고, 마지막 하나만 다른 자식 블록을
+요구합니다.** 그리고 그 마지막은 standard에서 선택 사항입니다.
+
+그래서 경계가 여기서 갈립니다.
+
+```
+선택이 없는 standard   core/buttons + variation + 스크립트
+선택이 있는 standard   axismundi/button-group + item
+connected              항상 선택 컨트롤 — 도메인 블록이거나 위와 같은 쌍
+```
+
+`core/buttons` 쪽 세부는
+[Button and Buttons]({{ '/wordpress/button-and-buttons/' | relative_url }})가 다룹니다.

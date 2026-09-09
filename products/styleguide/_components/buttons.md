@@ -223,18 +223,83 @@ Icon(selected)  {{ site.data.button.variants[1].icon_selected }}
 
 정적 파일은 채워진 아이콘을 보이려면 기호를 바꿔 끼우는 수밖에 없으니 그렇게 적혀
 있습니다. **`stars_filled`는 Material Icons의 이름이고 Material Symbols로 넘어오면서
-없어졌습니다.** 가변 폰트에는 `FILL` 축이 있으므로 웹은 글리프가 아니라 축을 바꿉니다 —
-`icons.css`가 `@property`로 등록해 두어 스냅이 아니라 보간됩니다. 마크업의 아이콘
-이름은 하나, 그려지는 상태는 둘입니다.
+없어졌습니다.**
 
 > In toggle buttons, use the outlined style of an icon for the unselected
 > state, and the filled style for the selected state.
 
-축을 **글리프 폰트가 아니라 slot에** 씁니다. geometry 규칙이 그러는 이유와 같습니다 —
-7.1 아이콘 레지스트리 참조는 `<svg>`로 오고, `<svg>`에는 FILL 축이 없어 변수를 잘못
-읽는 대신 그냥 무시합니다.
+**하지만 "축 하나면 된다"는 가변 폰트에서만 참입니다.** 위 [Icon은 값이 아니라
+참조입니다](#icon은-값이-아니라-참조입니다)에서 소스가 둘 이상이라고 적어 두었으니,
+Icon(selected)도 소스마다 다르게 풀립니다. 프로퍼티는 하나, 구현은 셋입니다.
 
-Figma가 `Show icon`의 기본값을 **true**로 두는 것도 그래서입니다. 평범한 button에서
+| Source | 어떻게 채워지나 | 블록이 저장하는 것 | 보간 |
+|---|---|---|---|
+{% for r in site.data.button.variants[1].icon_selected_by_source -%}
+| {{ r.source }} | {{ r.mechanism }} | `{{ r.stores }}` | {% if r.interpolates %}됨{% else %}안 됨{% endif %} |
+{% endfor %}
+**아래 두 줄에는 움직일 축이 없습니다.** `<svg>`에도, 정적 폰트 face에도 `FILL`이
+없습니다. 그래서 한 요소의 속성을 바꾸는 방식으로는 불가능하고, **마크업이 두 상태를
+모두 지니고 CSS가 고르는** 수밖에 없습니다. 즉 **블록이 두 번째 이름을 저장해야
+합니다** — Figma에 `Icon(selected)` 프로퍼티가 있는 이유가 바로 이것입니다. 가변
+폰트만 보고 "축으로 대체 가능"이라고 적으면 레지스트리에서 선택 상태가 그냥 안 그려집니다.
+
+레지스트리가 그 갈림길을 강제합니다. `WP_Icons_Registry::register()`가 받는 키는
+정확히 셋이고, 나머지는 `_doing_it_wrong`입니다.
+
+```php
+$allowed_keys = array_fill_keys( array( 'label', 'content', 'file_path' ), 1 );
+```
+
+**아이콘 하나가 에셋 하나**입니다. 변형 축도, 상태 쌍도 없습니다. 채워진 별은
+`stars`의 다른 상태가 아니라 **따로 등록된 다른 아이콘**입니다.
+
+메커니즘은 컴포넌트가 아니라 **아이콘 층**에 있습니다 — Button·Icon button·Connected
+segment가 모두 `aria-pressed`를 이미 지니므로, `icon-state.css`의 규칙 셋이면 셋 다
+덮습니다. 어댑터마다 복사하면 셋을 맞춰 두어야 할 것이 되고, validator가 그 복사를
+막습니다.
+
+**`icons.css`에는 쓰지 않았습니다.** 그 파일은 배포 테마에서 동기화되는 사본이라
+편집이 다음 빌드에 조용히 사라지고(실제로 그랬습니다), 무엇보다 `core/button`에는
+아직 아이콘 slot 자체가 없습니다. 바인딩할 블록이 생기기 전까지 이건 **제안**입니다.
+
+```css
+[data-icon-state="selected"]                        { display: none; }
+[aria-pressed="true"] [data-icon-state="rest"]      { display: none; }
+[aria-pressed="true"] [data-icon-state="selected"]  { display: revert; }
+```
+
+```html
+<span class="wp-block-button__icon" aria-hidden="true">
+  <span data-icon-state="rest">     <!-- wp:icon {name:"axismundi/stars"} -->
+  <span data-icon-state="selected"> <!-- wp:icon {name:"axismundi/stars-filled"} -->
+</span>
+```
+
+자식은 그 상태를 그리는 것이면 무엇이든 됩니다 — 레지스트리 `<svg>`든, 채워진 정적
+face를 쓰는 span이든. 그래서 소스가 늘어도 규칙은 그대로입니다.
+
+가변 폰트 경로에서는 자식이 하나도 필요 없습니다. 축을 **글리프 폰트가 아니라 slot에**
+씁니다. geometry 규칙이 그러는 이유와 같습니다 — `<svg>`에는 FILL 축이 없어 변수를
+잘못 읽는 대신 그냥 무시합니다.
+
+<div class="sg-demo sg-demo--stack">
+  <div class="wp-block-buttons">
+    <div class="wp-block-button"><button type="button" class="wp-block-button__link wp-element-button" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">stars</span><span>가변 폰트 unselected</span></button></div>
+    <div class="wp-block-button"><button type="button" class="wp-block-button__link wp-element-button" aria-pressed="true"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">stars</span><span>가변 폰트 selected</span></button></div>
+  </div>
+  <div class="wp-block-buttons">
+    <div class="wp-block-button"><button type="button" class="wp-block-button__link wp-element-button" aria-pressed="false"><span class="wp-block-button__icon" aria-hidden="true"><span data-icon-state="rest">{% include icons/stars-outlined.svg %}</span><span data-icon-state="selected">{% include icons/stars-filled.svg %}</span></span><span>레지스트리 unselected</span></button></div>
+    <div class="wp-block-button"><button type="button" class="wp-block-button__link wp-element-button" aria-pressed="true"><span class="wp-block-button__icon" aria-hidden="true"><span data-icon-state="rest">{% include icons/stars-outlined.svg %}</span><span data-icon-state="selected">{% include icons/stars-filled.svg %}</span></span><span>레지스트리 selected</span></button></div>
+  </div>
+</div>
+
+윗줄은 `stars` 이름 하나에 축이 움직이고, 아랫줄은 `<svg>` 둘 중 하나가 그려집니다.
+**같은 글자입니다** — 아래 두 SVG는 같은 가변 폰트에서 `FILL 0`과 `FILL 1`로 뽑은
+같은 글리프이므로, 두 줄이 다르게 보인다면 그건 소스 차이가 아니라 버그입니다.
+
+윗줄만 보간됩니다. 아랫줄은 전환이 즉시 일어나고, 그것이 이 표의 마지막 열입니다.
+
+Figma가 `Show icon`의 기본값을 **true**로 두는 것도 이래서입니다. 평범한 button에서
 아이콘은 선택 사항이지만, 토글에서는 fill이 선택을 알리는 일을 합니다.
 
 <div class="sg-demo sg-demo--stack">

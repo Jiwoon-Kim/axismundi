@@ -1,0 +1,62 @@
+/* ============================================================
+ * Icon(selected) — one Figma property, three mechanisms.
+ *
+ * Every M3 toggle in this system has two icon properties, `Icon` and
+ * `Icon(selected)`: the Button, the icon button and the connected segment.
+ * Whether that is one asset or two is decided by the ICON SOURCE, not by the
+ * component, which is why this file is not part of any one adapter.
+ *
+ *   variable font   FILL 0 -> 1 on one glyph. The axis interpolates, because
+ *                   icons.css registers --md-icon-fill with @property. The
+ *                   block stores one name and this file does nothing.
+ *   static font     No axis: the filled set is a different face, so the two
+ *                   states are two elements carrying two font-families.
+ *   icon registry   No axis either. WP_Icons_Registry::register() accepts
+ *                   exactly `label`, `content` and `file_path`, and anything
+ *                   else is _doing_it_wrong - one icon is one SVG. A filled
+ *                   counterpart is a second REGISTERED ICON, so the block has
+ *                   to store its name.
+ *
+ * The last two cannot be done by changing a property on one element: nothing
+ * about an <svg> or a static face moves. The markup carries both states and
+ * CSS chooses. That is the whole of this file, and reading Icon(selected) as
+ * "the axis replaces it" - which the FILL rule alone implies - leaves the
+ * registry path with a selected state that never draws.
+ *
+ * Keyed on an ancestor's aria-pressed, which every toggle here already
+ * carries, so one rule set covers all three components and there is nothing to
+ * keep in step.
+ *
+ * PROPOSAL, not shipped behaviour. core/button has no icon slot yet and the
+ * theme's icons.css is synced from the product, so this lives with the style
+ * guide until there is a block to bind it to.
+ * ============================================================ */
+
+.wp-block-button__icon > [data-icon-state="selected"],
+.material-symbols-outlined > [data-icon-state="selected"] {
+	display: none;
+}
+
+[aria-pressed="true"] [data-icon-state="rest"] {
+	display: none;
+}
+
+[aria-pressed="true"] [data-icon-state="selected"] {
+	display: revert;
+}
+
+/* An <svg> fills the slot the way a ligature does: the adapter's slot rule
+ * sizes the box and the contents fill it, so no per-source CSS is needed. */
+[data-icon-state] > svg {
+	display: block;
+	inline-size: 100%;
+	block-size: 100%;
+	fill: currentColor;
+}
+
+/* A slot holding two children is still one icon box. Without this the two
+ * states stack and the box is twice as tall as the glyph it draws. */
+.wp-block-button__icon:has( > [data-icon-state] ) {
+	display: grid;
+	place-items: center;
+}

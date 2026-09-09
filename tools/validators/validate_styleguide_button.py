@@ -21,6 +21,9 @@ THEME = ROOT / "products/wordpress/themes/axismundi"
 DATA = STYLEGUIDE / "_data/button.yml"
 ADAPTER = STYLEGUIDE / "assets/css/components/button.css"
 GROUP_ADAPTER = STYLEGUIDE / "assets/css/components/button-group.css"
+ICON_BUTTON_ADAPTER = STYLEGUIDE / "assets/css/components/icon-button.css"
+ICONS_CSS = STYLEGUIDE / "assets/css/icons.css"
+ICON_STATE = STYLEGUIDE / "assets/css/components/icon-state.css"
 THEME_JSON = THEME / "theme.json"
 THEME_COMPONENT_CSS = THEME / "assets/styles/components.button.css"
 PARTIALS = {
@@ -82,7 +85,8 @@ def theme_button(style: dict) -> dict:
 
 
 def main() -> int:
-    required = [DATA, ADAPTER, GROUP_ADAPTER, THEME_JSON, THEME_COMPONENT_CSS, *PARTIALS.values()]
+    required = [DATA, ADAPTER, GROUP_ADAPTER, ICON_BUTTON_ADAPTER, ICONS_CSS, ICON_STATE,
+                THEME_JSON, THEME_COMPONENT_CSS, *PARTIALS.values()]
     missing = [path.relative_to(ROOT).as_posix() for path in required if not path.is_file()]
     if missing:
         print("missing:")
@@ -344,8 +348,23 @@ def main() -> int:
     if "toggle" in variants:
         report.check(variants["toggle"].get("show_icon_default") is True,
                      "Figma's Toggle button defaults Show icon to true")
-        report.check(variants["toggle"].get("icon_selected_axis") == "FILL 1",
-                     "button.yml must record Icon(selected) as a FILL axis value")
+        # Icon(selected) is one Figma property with three implementations, and
+        # only one of them can move an axis. Recording just the FILL answer -
+        # which this file did - reads as "the web does not need the second
+        # name", and on the registry path the selected state then never draws.
+        sources = variants["toggle"].get("icon_selected_by_source") or []
+        report.check(len(sources) == 3,
+                     "button.yml must record all three icon sources for Icon(selected)")
+        by_source = {row["source"]: row for row in sources}
+        report.check(
+            by_source.get("Variable font", {}).get("interpolates") is True,
+            "only the variable font can interpolate Icon(selected)")
+        for name in ("Static font", "Icon registry"):
+            row = by_source.get(name, {})
+            report.check(row.get("interpolates") is False,
+                         f"{name} has no axis to move and cannot interpolate")
+            report.check(row.get("stores") == "icon + iconSelected",
+                         f"{name} must store a second icon name")
     fill_rule = block(
         css,
         ".wp-block-button:not(.is-style-text) > "
@@ -361,6 +380,39 @@ def main() -> int:
     report.check(
         '.wp-block-button__link[aria-pressed="true"] > .material-symbols-outlined' not in css,
         "Icon(selected) must key on the icon slot, not the glyph font")
+
+    # The two-element mechanism lives in the icon layer, not in an adapter:
+    # every toggle in this system carries aria-pressed, so one rule set covers
+    # the Button, the icon button and the connected segment. Component-specific
+    # copies would be three things to keep in step.
+    icons_css = ICONS_CSS.read_text(encoding="utf-8")
+    icon_state = ICON_STATE.read_text(encoding="utf-8")
+    for selector, want in (
+        ('.wp-block-button__icon > [data-icon-state="selected"]', "none"),
+        ('[aria-pressed="true"] [data-icon-state="rest"]', "none"),
+        ('[aria-pressed="true"] [data-icon-state="selected"]', "revert"),
+    ):
+        rule = block(icon_state, selector)
+        report.check(rule is not None,
+                     f"icon-state.css has no Icon(selected) rule for {selector}")
+        if rule is not None:
+            report.check(declaration(rule, "display") == want,
+                         f"Icon(selected) rule {selector} must set display: {want}")
+    # The variable-font path is the other half, and it needs the registration
+    # or it snaps between the two ends instead of interpolating.
+    report.check("@property --md-icon-fill" in icons_css,
+                 "--md-icon-fill must be registered, or the variable-font path snaps")
+    # icons.css is synced from the shipped theme, so the proposal must not be
+    # written into it: the sync would silently drop the edit, and core/button
+    # has no icon slot for it to bind to yet.
+    report.check("data-icon-state" not in icons_css,
+                 "icon-state is a style-guide proposal and must not edit the synced icons.css")
+    # The mechanism must not be restated per component, or it drifts.
+    for name, adapter in (("button", css),
+                          ("button-group", GROUP_ADAPTER.read_text(encoding="utf-8")),
+                          ("icon-button", ICON_BUTTON_ADAPTER.read_text(encoding="utf-8"))):
+        report.check("data-icon-state" not in adapter,
+                     f"Icon(selected) state switching must not be copied into {name}.css")
 
     # Figma's Show focus indicator. The one class here with no attribute behind
     # it: :focus-visible fires only for keyboard focus, which a reader is not

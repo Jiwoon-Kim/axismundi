@@ -38,13 +38,28 @@ variants:
     # button leaves the icon optional. The fill is a selection cue, so the icon
     # is doing work here it does not do on a plain button.
     show_icon_default: true
-    # Two icon properties in Figma, one glyph on the web. `stars_filled` was a
-    # Material Icons name and did not survive the move to Material Symbols; the
-    # variable font carries FILL as an axis, so the adapter changes the axis
-    # rather than the glyph. Recorded as published, implemented as FILL.
+    # Two icon properties in Figma. `stars_filled` was a Material Icons name
+    # and did not survive the move to Material Symbols, so the published pair
+    # is recorded here as published and resolved below.
     icon: stars
     icon_selected: stars_filled
-    icon_selected_axis: FILL 1
+    # Whether Icon(selected) is one asset or two is decided by the icon source,
+    # not by the component. Only the variable font can move an axis; the other
+    # two have to carry both states in the markup, which means the block has to
+    # store the second name. That is why the property exists at all.
+    icon_selected_by_source:
+      - source: Variable font
+        mechanism: FILL 0 → 1 on one glyph
+        stores: icon
+        interpolates: true
+      - source: Static font
+        mechanism: a second element in the filled face
+        stores: icon + iconSelected
+        interpolates: false
+      - source: Icon registry
+        mechanism: a second registered icon
+        stores: icon + iconSelected
+        interpolates: false
 
 sizes:
   - name: xsmall

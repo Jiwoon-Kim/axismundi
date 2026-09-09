@@ -655,6 +655,11 @@ Icon(selected)  stars_filled
 마크업의 아이콘 이름은 하나이고, 렌더되는 상태가 둘입니다. `axismundi/theme-switcher`가
 이미 이렇게 합니다.
 
+**다만 그건 가변 폰트에서만 참입니다.** 아이콘 소스가 WordPress 아이콘 레지스트리나
+정적 폰트라면 움직일 축이 없어서, `Icon(selected)`는 Figma가 적어 둔 그대로 **저장해야
+하는 두 번째 이름**이 됩니다. 세 소스와 그 구조는
+[Buttons]({{ '/components/buttons/' | relative_url }})에 있습니다.
+
 hover도 채웁니다. 단 **포인터가 있을 때만**이고, 선택 쪽은 조건 없이 채웁니다 — 둘 다
 게이팅하면 터치스크린에서 선택된 세그먼트가 안 채워지는데, 거기가 fill이 실제로 일을
 하는 유일한 자리입니다.

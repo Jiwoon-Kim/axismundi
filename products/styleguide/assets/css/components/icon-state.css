@@ -27,9 +27,15 @@
  * carries, so one rule set covers all three components and there is nothing to
  * keep in step.
  *
- * PROPOSAL, not shipped behaviour. core/button has no icon slot yet and the
- * theme's icons.css is synced from the product, so this lives with the style
- * guide until there is a block to bind it to.
+ * NOT in icons.css, and the reason is ownership rather than mechanics. That
+ * file is the icon utility: it says how a glyph is drawn, and it has no notion
+ * of a control that can be chosen. Which icon a selected control shows is the
+ * BUTTON BLOCK's decision, so it belongs beside the button adapters. (The
+ * synced copy would also have swallowed the edit, which is how this was found,
+ * but that is a symptom of putting it in the wrong place.)
+ *
+ * PROPOSAL, not shipped behaviour: core/button has no icon slot yet, so this
+ * lives with the style guide until there is a block to bind it to.
  * ============================================================ */
 
 .wp-block-button__icon > [data-icon-state="selected"],

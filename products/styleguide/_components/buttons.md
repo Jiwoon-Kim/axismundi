@@ -68,6 +68,12 @@ style variation과 정적 adapter attribute를 직접 적용합니다. 값은 in
       <input type="checkbox" checked data-button-control="showIcon" /> Show icon
     </label>
     <label class="sg-button-playground__check">
+      <input type="checkbox" data-button-control="togglable" /> Togglable
+    </label>
+    <label class="sg-button-playground__check">
+      <input type="checkbox" data-button-control="selected" /> Selected
+    </label>
+    <label class="sg-button-playground__check">
       <input type="checkbox" data-button-control="disabled" /> Disabled
     </label>
     <label class="sg-button-playground__check">
@@ -82,6 +88,10 @@ style variation과 정적 adapter attribute를 직접 적용합니다. 값은 in
   <option value="search">search</option>
   <option value="arrow_forward">arrow_forward</option>
 </datalist>
+
+`Togglable`을 켜면 표본이 실제 토글이 됩니다 — 눌러 보면 선택됩니다. 색과 shape가
+함께 바뀌고, 아이콘은 `FILL` 축으로 채워집니다. Style이 **Text이면 잠깁니다**: M3에
+toggle text button이 없고, container가 없으니 선택을 알릴 방법도 없습니다.
 
 이 페이지의 모든 버튼은 실제로 동작합니다. 기본 마크업은 블록 에디터가 쓰는 것과 같은
 `.wp-block-button > .wp-block-button__link`이고, CSS는 테마의 계약을 정적으로

@@ -13,6 +13,7 @@
 
 	function attributes( button, link, icon, showIcon ) {
 		var attrs = [];
+		var pressed = link.getAttribute( "aria-pressed" );
 		if ( button.dataset.size ) {
 			attrs.push( 'data-size="' + button.dataset.size + '"' );
 		}
@@ -23,6 +24,7 @@
 		return '<div class="' + button.className.trim() + '"'
 			+ ( attrs.length ? " " + attrs.join( " " ) : "" ) + ">\n"
 			+ '  <button type="button" class="wp-block-button__link wp-element-button"'
+			+ ( pressed === null ? "" : ' aria-pressed="' + pressed + '"' )
 			+ ( link.disabled ? " disabled" : "" )
 			+ ( link.getAttribute( "aria-disabled" ) === "true" ? ' aria-disabled="true"' : "" )
 			+ ">\n"
@@ -67,6 +69,24 @@
 			if ( ! button.dataset.shape ) {
 				delete button.dataset.shape;
 			}
+			// Toggle is the second M3 variant, and aria-pressed is the whole of
+			// it in the DOM: present means unselected, "true" means selected.
+			// Text has no toggle - no container, so nothing can carry the
+			// selection - and the adapter excludes it, so the control says so
+			// here rather than letting a reader tick a box that does nothing.
+			if ( controls.style.value === "text" ) {
+				controls.togglable.checked = false;
+				controls.togglable.disabled = true;
+			} else {
+				controls.togglable.disabled = false;
+			}
+			controls.selected.disabled = ! controls.togglable.checked;
+			if ( controls.togglable.checked ) {
+				link.setAttribute( "aria-pressed", controls.selected.checked ? "true" : "false" );
+			} else {
+				controls.selected.checked = false;
+				link.removeAttribute( "aria-pressed" );
+			}
 			label.textContent = controls.label.value || "Label";
 			icon.textContent = controls.icon.value;
 			icon.hidden = ! showIcon;
@@ -78,6 +98,17 @@
 			}
 			markup.textContent = attributes( button, link, icon, showIcon );
 		}
+
+		// A toggle that cannot be pressed is not a toggle. The click drives the
+		// control rather than the attribute, so one path writes aria-pressed
+		// and the markup panel cannot drift from the button it describes.
+		link.addEventListener( "click", function () {
+			if ( ! controls.togglable.checked ) {
+				return;
+			}
+			controls.selected.checked = ! controls.selected.checked;
+			render();
+		} );
 
 		host.addEventListener( "input", render );
 		host.addEventListener( "change", function ( event ) {

@@ -114,12 +114,19 @@
 
 /* --- A segment may overrule the group's size -------------------- */
 
-/* M3 says the group declares and the members follow - "By default, all buttons
- * in a standard group should be the same size" - and then leaves room for the
- * exception: "Only use multiple sizes in a group for hero moments." So the
- * group's size is a default that inherits, and a segment that declares its own
- * wins, because a custom property set on the element beats one inherited from
- * its parent. That is the whole mechanism; there is no cascade trick in it.
+/* Standard only, and the Figma property sets are why. A standard group's
+ * children are instances of Button and Icon button - components that exist on
+ * their own - and each carries its own Type, Size, Width and State. A connected
+ * group's children are Segments, which carry Selected, State, Show icon, Icon,
+ * Icon(selected), Show label text and Label text, and no Type, Size or Color at
+ * all. The group owns those. So a segment cannot overrule a size it does not
+ * have, and this override is scoped to standard.
+ *
+ * Within standard, M3 says the members follow by default - "all buttons in a
+ * standard group should be the same size" - and leaves the exception open:
+ * "Only use multiple sizes in a group for hero moments." A custom property set
+ * on the element beats one inherited from its parent, which is the whole
+ * mechanism; there is no cascade trick in it.
  *
  * The container height needs no rule at all. The group is a flex row with
  * align-items: center, so it is already as tall as its tallest member - which
@@ -134,7 +141,7 @@
  * declared M and it gets M's 8dp neighbours, so the target the larger padding
  * was buying is gone. Mixing down is the case to check; mixing up is free. */
 
-.wp-block-axismundi-button-group__item[data-size="xsmall"] {
+.wp-block-axismundi-button-group[data-variant="standard"] > .wp-block-axismundi-button-group__item[data-size="xsmall"] {
 	--ax-button-height: 32px;
 	--ax-button-space: var(--md-sys-measurement-space150);
 	--ax-button-icon-size: 20px;
@@ -146,7 +153,7 @@
 	--ax-button-label-line-height: 20px;
 }
 
-.wp-block-axismundi-button-group__item[data-size="small"] {
+.wp-block-axismundi-button-group[data-variant="standard"] > .wp-block-axismundi-button-group__item[data-size="small"] {
 	--ax-button-height: 40px;
 	--ax-button-space: var(--md-sys-measurement-space200);
 	--ax-button-icon-size: 20px;
@@ -158,7 +165,7 @@
 	--ax-button-label-line-height: 20px;
 }
 
-.wp-block-axismundi-button-group__item[data-size="medium"] {
+.wp-block-axismundi-button-group[data-variant="standard"] > .wp-block-axismundi-button-group__item[data-size="medium"] {
 	--ax-button-height: 56px;
 	--ax-button-space: var(--md-sys-measurement-space300);
 	--ax-button-icon-size: 24px;
@@ -170,7 +177,7 @@
 	--ax-button-label-line-height: 24px;
 }
 
-.wp-block-axismundi-button-group__item[data-size="large"] {
+.wp-block-axismundi-button-group[data-variant="standard"] > .wp-block-axismundi-button-group__item[data-size="large"] {
 	--ax-button-height: 96px;
 	--ax-button-space: var(--md-sys-measurement-space600);
 	--ax-button-icon-size: 32px;
@@ -182,7 +189,7 @@
 	--ax-button-label-line-height: 32px;
 }
 
-.wp-block-axismundi-button-group__item[data-size="xlarge"] {
+.wp-block-axismundi-button-group[data-variant="standard"] > .wp-block-axismundi-button-group__item[data-size="xlarge"] {
 	--ax-button-height: 136px;
 	--ax-button-space: var(--md-sys-measurement-space800);
 	--ax-button-icon-size: 40px;

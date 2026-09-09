@@ -554,6 +554,52 @@ Figma가 링을 보여주기 위한 스위치이지 저장할 값이 아닙니�
 
 Disabled만 양쪽에 걸칩니다. 비활성 버튼은 **저작되는 것**이고, hover는 아닙니다.
 
+## 자식이 무엇인지가 두 variant를 가릅니다
+
+논증할 필요가 없었습니다. **Figma 프로퍼티 집합이 그대로 증거입니다.**
+
+```
+Standard button group          Connected button group
+  type · size · color            type · size
+  button type: icon | label      show 3rd segment
+  show 5th button                └─ Segment 1
+  └─ Icon button (togglable)     └─ Segment 2
+  └─ Button                      └─ End segment
+```
+
+**Standard의 자식은 Button과 Icon button입니다** — 다른 곳에도 혼자 존재하는
+컴포넌트이고, 각자 자기 프로퍼티를 전부 가집니다.
+
+```
+자식1  Icon button   type round · size large · width narrow · state enabled · icon
+자식2  Button        type round · size large · state enabled · label text · show icon
+```
+
+**Connected의 자식은 Segment입니다.** 이 컴포넌트의 부품이지 독립 컴포넌트가
+아니고, 프로퍼티가 다릅니다.
+
+```
+Segment   selected · state · show icon · icon · icon(selected) · show label text · label text
+```
+
+**Segment에는 type도 size도 color도 없습니다.** 그룹이 가집니다. 반대로 Standard의
+자식은 그것들을 자기가 가집니다.
+
+이 한 장의 대조가 앞의 논쟁을 끝냅니다.
+
+| | 자식이 무엇인가 | type·size·color 소유 | 블록에서 |
+|---|---|---|---|
+| Standard | Button · Icon button 인스턴스 | 자식 | `allowedBlocks`로 기존 블록 재사용 |
+| Connected | Segment | 그룹 | 이 그룹 전용 자식 |
+
+그래서 **connected 세그먼트는 `core/button`이 될 수 없습니다.** 크기와 색을 가지면
+안 되는데 `core/button`은 가집니다. 반대로 standard의 자식은 `core/button`이어야
+합니다 — 이미 그 프로퍼티를 가진 블록이 있는데 새로 만들 이유가 없습니다.
+
+`button type: icon | label`과 `show 5th button`은 런타임 속성이 아니라 **어떤 자식을
+꽂을지 고르는 Figma의 저작 편의**입니다. 블록에서는 자식을 삽입하는 행위 자체가
+그것입니다.
+
 ## 그룹 크기와 버튼 크기가 겹칩니다
 
 M3는 양쪽에 size를 발행합니다 — Button에 다섯, Button group에도 다섯. 컨테이너가
@@ -569,6 +615,9 @@ M3는 양쪽에 size를 발행합니다 — Button에 다섯, Button group에도
 
 **그룹 크기는 기본값이고, 선언한 버튼이 이깁니다.** 컨테이너 높이는 정해지는 값이
 아니라 안에 든 것을 따라가는 값입니다.
+
+**단, standard에서만입니다.** connected의 Segment에는 size 프로퍼티가 없으니 덮을
+것도 없습니다 — 위 대조표가 그 이야기입니다.
 
 CSS에서는 장치가 필요 없습니다. 그룹이 자기 자신에 `--ax-button-*`를 걸면 상속되고,
 세그먼트가 자기 것을 선언하면 요소 자신에 걸린 쪽이 이깁니다. 높이도 규칙이 필요

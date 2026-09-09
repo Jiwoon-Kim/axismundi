@@ -121,11 +121,24 @@ Switcher와 같은 모드입니다.
 [Shape]({{ '/foundations/shape/' | relative_url }})가 경고한 그대로 됩니다 —
 브라우저가 상자에 맞춰 줄이므로 전환 내내 pill로 보이다가 끝에서 튑니다.
 
-### 5. Connected, 내비게이션
+### 5. Connected 기하를 쓴 내비게이션 — M3가 피하라는 경우
 
-밀도 전환이 실제로 쓰는 모양입니다. 세그먼트가 링크이고 선택 표시가
-`aria-current="page"`입니다. **클릭해도 여기서는 바뀌지 않습니다** — 링크의 현재
-상태는 서버의 답이지 클릭 핸들러의 것이 아니라서, 정적으로 둡니다.
+**이건 모범이 아니라 현재 상태입니다.** 밀도 전환이 실제로 이 모양이고, M3는 이걸
+하지 말라고 씁니다.
+
+> Avoid using a connected group when none of the buttons can be toggled
+
+세그먼트가 `<a href>` 링크입니다. 토글이 아니라 서버 내비게이션이고, 선택 표시가
+`aria-current="page"`인 것도 그래서입니다 — 링크의 현재 상태는 서버의 답이지 클릭
+핸들러의 것이 아닙니다. **클릭해도 여기서는 바뀌지 않습니다.**
+
+M3 안에서도 긴장이 있습니다. connected의 용도로 "select options, **switch views**,
+or sort elements"를 들면서, 동시에 토글이 아니면 쓰지 말라고 합니다. 뷰 전환을
+클라이언트 토글로 구현한다는 전제이고, 서버 렌더링을 다루지 않습니다.
+
+색은 섞고 있지 않습니다 — 세그먼트가 전부 `is-style-outline` 하나이고, 현재 항목만
+`secondary-container`가 됩니다. 그건 M3가 규정한 선택 상태 색입니다. 어긋나는 것은
+색이 아니라 **토글이 아니라는 점** 하나입니다.
 
 <div class="sg-demo">
   <nav class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" aria-label="Entry density">
@@ -233,17 +246,17 @@ toggle button입니다.
 **의미가 서로 다릅니다.**
 
 ```
-axismundi/theme-switcher     role="group" + button[aria-pressed]    클라이언트 토글
-axismundi-activities         <nav> + a[aria-current="page"]         서버 내비게이션
+axismundi/theme-switcher     role="group" + button[aria-pressed]    M3 정합
+axismundi-activities         <nav> + a[aria-current="page"]         기하만 차용
    feed density switch
 ```
 
-두 번째가 특히 배울 점입니다. 밀도 전환은 **URL 파라미터**라 세그먼트가 링크이고,
-선택 표시가 `aria-pressed`가 아니라 `aria-current="page"`입니다. 그게 맞습니다 —
-누르는 토글이 아니라 현재 보고 있는 뷰니까요. M3도 connected의 용도로 "select
-options, **switch views**, or sort elements"를 듭니다.
+**둘의 지위가 다릅니다.** Theme Switcher는 토글 세그먼트를 가진 진짜 connected
+group입니다. 밀도 전환은 connected의 기하를 쓰지만 세그먼트가 링크라, M3 기준으로는
+connected를 쓰지 말아야 할 경우입니다 — 위 5번이 그 이야기입니다.
 
-그래서 이 어댑터는 두 속성을 모두 읽습니다.
+그래도 어댑터는 두 속성을 모두 읽습니다. 링크의 현재 상태를 `aria-current`로 쓰는
+것 자체는 옳고, 그 마크업이 이미 출하 중이기 때문입니다.
 
 ```css
 .wp-block-axismundi-button-group__item[aria-pressed="true"],

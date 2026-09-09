@@ -115,6 +115,29 @@
 			nl + "</div>";
 	}
 
+	// Icon-only is a label decision, not an icon one: the icon is present in
+	// both kinds and the label is what moves out of sight. Keeping it in one
+	// place means the group control and the insertion path cannot disagree.
+	function setChildKind( child, iconOnly ) {
+		var link = child.querySelector( ".wp-block-button__link" );
+		var label = child.querySelector( "[data-group-label]" );
+		var icon = child.querySelector( ".wp-block-button__icon" );
+		if ( ! link ) {
+			return;
+		}
+		if ( iconOnly && ! icon ) {
+			icon = document.createElement( "span" );
+			icon.className = "wp-block-button__icon material-symbols-outlined notranslate";
+			icon.setAttribute( "translate", "no" );
+			icon.setAttribute( "aria-hidden", "true" );
+			icon.textContent = "add";
+			link.prepend( icon );
+		}
+		if ( label ) {
+			label.classList.toggle( "screen-reader-text", !! iconOnly );
+		}
+	}
+
 	function addStandardChild( host, group, iconOnly ) {
 		var controls = host.querySelectorAll( "[data-group-control]" );
 		var values = {};
@@ -143,22 +166,13 @@
 		icon.textContent = "add";
 		label.dataset.groupLabel = "";
 		label.textContent = iconOnly ? "Icon button " + number : "Button " + number;
-		if ( iconOnly ) {
-			// The label element stays and moves out of sight rather than being
-			// hidden: `hidden` would drop it from the accessibility tree and
-			// force a second, separate aria-label, which is two sources for one
-			// name. The plugin that ships this pattern adds a class for exactly
-			// this reason.
-			label.className = "screen-reader-text";
-			button.append( icon, label );
-		} else {
-			// Button's anatomy makes the icon optional and the label required,
-			// and Figma says the same with `Show icon: boolean`. A label button
-			// added here takes no icon, which is what the worked example does:
-			// "label text: get started, show icon: false".
-			button.append( label );
-		}
+		// The label element always exists and moves out of sight rather than
+		// being hidden: `hidden` would drop it from the accessibility tree and
+		// force a second, separate aria-label, which is two sources for one
+		// name. The plugin that ships this pattern adds a class for the same
+		// reason.
 		child.append( button );
+		setChildKind( child, iconOnly );
 		group.append( child );
 	}
 
@@ -212,10 +226,15 @@
 				} );
 			}
 			if ( control.dataset.groupControl === "button-type" ) {
-				// Nothing to re-render: it governs the next insertion, not the
-				// children already placed. A block editor does not retype an
-				// inserted block either.
-				return;
+				// Figma puts this on the group, and its plates show whole rows
+				// of icon-only groups and whole rows of label ones - so it
+				// governs the children, not only the next insertion. The mixed
+				// example proves a child may still differ, which makes it the
+				// same kind of control as Size and Color: a default that passes
+				// over anyone who has chosen.
+				inheriting( "Labels" ).forEach( function ( child ) {
+					setChildKind( child, control.value === "icon" );
+				} );
 			}
 			if ( control.dataset.groupControl === "color" ) {
 				if ( control.value === "filled" ) {
@@ -292,6 +311,8 @@
 			} else if ( key === "label" ) {
 				control.value = state.label ? state.label.textContent : "";
 				control.disabled = ! state.label;
+			} else if ( key === "show-label" ) {
+				control.checked = !! state.label && ! state.label.classList.contains( "screen-reader-text" );
 			} else if ( key === "disabled" ) {
 				control.checked = child.querySelector( ".wp-block-button__link" ).disabled;
 			} else if ( key === "style" ) {
@@ -383,6 +404,13 @@
 				if ( ! control.checked && icon ) {
 					icon.remove();
 				}
+			}
+			if ( key === "show-label" ) {
+				// Choosing here is what takes this child out of the group's
+				// Button type, the same way choosing a size takes it out of
+				// the group's Size.
+				child.dataset.ownLabels = "true";
+				setChildKind( child, ! control.checked );
 			}
 			if ( key === "disabled" ) {
 				link.disabled = control.checked;

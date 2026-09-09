@@ -67,11 +67,12 @@ Button/Icon button을 담는 컨테이너이고, Connected는 고정된 Segment�
 `Color`와 `Size`는 아직 자기 값을 고르지 않은 자식에게 주는 기본값입니다. Tonal
 Preview처럼 자기 variation을 고른 Button은 그 값을 유지합니다.
 
-`Button type`은 성격이 다릅니다. **이미 놓인 자식을 바꾸지 않고, 다음에 넣을 자식이
-무엇인지를 정합니다.** Figma에서 이게 그룹의 프로퍼티인 이유는 정적 파일이 인스턴스를
-바꿔 끼워 자식을 조립하기 때문이고, 블록 에디터에서 같은 선택은 **삽입하는 순간**에
-일어납니다. 그래서 여기서도 `Add button`이 이 값을 읽습니다 — 이미 넣은 블록을 나중에
-다른 타입으로 바꾸지 않는 것과 같습니다.
+`Button type`도 같은 종류의 기본값입니다. Figma의 판을 보면 **행 전체가 icon-only이거나
+행 전체가 label**이고, 그러면서도 예시 하나는 자식이 섞여 있습니다. 그룹이 정하고 자식이
+덮는다는 뜻이라, Size·Color와 같은 자리입니다.
+
+바꾸는 것은 아이콘이 아니라 **라벨**입니다. 아이콘은 양쪽 다 있고, icon-only는 라벨이
+`screen-reader-text`로 물러난 상태입니다 — 이름은 그대로 남습니다.
 
 `Show fifth / sixth / seventh button`도 같은 종류의 Figma 편의라, 고정 슬롯 대신
 실제 InnerBlocks를 삽입하고 제거합니다.
@@ -102,6 +103,7 @@ Preview처럼 자기 variation을 고른 Button은 그 값을 유지합니다.
       <label>Style <select data-child-control="style"><option value="">Inherit group</option><option value="tonal">Tonal</option><option value="outline">Outline</option><option value="elevated">Elevated</option><option value="text">Text</option></select></label>
       <label>Label text <input type="text" data-child-control="label" /></label>
       <label class="sg-button-group-playground__inline"><input type="checkbox" data-child-control="show-icon" /> Show icon</label>
+      <label class="sg-button-group-playground__inline"><input type="checkbox" data-child-control="show-label" /> Show label</label>
       <label class="sg-button-group-playground__inline"><input type="checkbox" data-child-control="disabled" /> Disabled</label>
     </fieldset>
   </div>

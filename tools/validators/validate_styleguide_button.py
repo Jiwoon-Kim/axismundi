@@ -20,6 +20,7 @@ STYLEGUIDE = ROOT / "products/styleguide"
 THEME = ROOT / "products/wordpress/themes/axismundi"
 DATA = STYLEGUIDE / "_data/button.yml"
 ADAPTER = STYLEGUIDE / "assets/css/components/button.css"
+GROUP_ADAPTER = STYLEGUIDE / "assets/css/components/button-group.css"
 THEME_JSON = THEME / "theme.json"
 THEME_COMPONENT_CSS = THEME / "assets/styles/components.button.css"
 PARTIALS = {
@@ -50,8 +51,16 @@ def css_role(value: str | None) -> str:
 
 
 def block(css: str, selector: str) -> str | None:
-    match = re.search(re.escape(selector) + r"\s*\{(.*?)\n\}", css, re.S)
-    return match.group(1) if match else None
+    # A style rule may serve core/button and the proposed Button group adapter
+    # through a comma-separated selector list. Match selectors structurally
+    # rather than requiring the requested selector to stand immediately before
+    # the opening brace, otherwise valid shared contracts look absent.
+    stylesheet = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+    for match in re.finditer(r"([^{}]+)\{([^{}]*)\}", stylesheet, re.S):
+        selectors = [part.strip() for part in match.group(1).split(",")]
+        if selector in selectors:
+            return match.group(2)
+    return None
 
 
 def declaration(css: str, name: str) -> str | None:
@@ -64,7 +73,7 @@ def theme_button(style: dict) -> dict:
 
 
 def main() -> int:
-    required = [DATA, ADAPTER, THEME_JSON, THEME_COMPONENT_CSS, *PARTIALS.values()]
+    required = [DATA, ADAPTER, GROUP_ADAPTER, THEME_JSON, THEME_COMPONENT_CSS, *PARTIALS.values()]
     missing = [path.relative_to(ROOT).as_posix() for path in required if not path.is_file()]
     if missing:
         print("missing:")
@@ -73,6 +82,7 @@ def main() -> int:
 
     data = yaml.safe_load(DATA.read_text(encoding="utf-8"))
     css = ADAPTER.read_text(encoding="utf-8")
+    group_css = GROUP_ADAPTER.read_text(encoding="utf-8")
     theme_component_css = THEME_COMPONENT_CSS.read_text(encoding="utf-8")
     theme = json.loads(THEME_JSON.read_text(encoding="utf-8"))
     partials = {
@@ -217,6 +227,32 @@ def main() -> int:
             report.check(declaration(adapter_style, "--ax-button-content") == css_role(color["content"]),
                          f"adapter {name} content differs from button.yml")
 
+        # Connected Button groups do not choose a separate palette. Their
+        # wrapper consumes this same Button style, then segments read the
+        # published toggle colours for resting and selected states. Text has
+        # no toggle form in M3, so it deliberately has no group counterpart.
+        if color["toggle_unselected"] is not None:
+            group_selector = (
+                ".wp-block-axismundi-button-group"
+                if name == "filled"
+                else f".wp-block-axismundi-button-group.{color['wp_style']}"
+            )
+            group_style = block(css, group_selector)
+            report.check(group_style is not None,
+                         f"adapter has no {name} Button group style rule")
+            if group_style is not None:
+                for state in ("unselected", "selected"):
+                    toggle = color[f"toggle_{state}"]
+                    for role_name, role_value in toggle.items():
+                        property_name = f"--ax-button-toggle-{state}-{role_name}"
+                        expected_value = (
+                            "transparent"
+                            if color.get("container_is_outline") and state == "unselected" and role_name == "container"
+                            else css_role(role_value)
+                        )
+                        report.check(declaration(group_style, property_name) == expected_value,
+                                     f"Button group {name} {state} {role_name} differs from button.yml")
+
         if name == "filled":
             source = theme_button_style
         elif name == "outlined":
@@ -246,6 +282,32 @@ def main() -> int:
         "--md-focus-ring-outward-offset",
     ):
         report.check(token in css, f"adapter does not consume {token}")
+
+    group_item = block(group_css, ".wp-block-axismundi-button-group__item")
+    report.check(group_item is not None, "Button group adapter has no segment rule")
+    if group_item is not None:
+        expected_group_surface = {
+            "background-color": "var(--ax-button-toggle-unselected-container)",
+            "color": "var(--ax-button-toggle-unselected-content)",
+        }
+        for name, want in expected_group_surface.items():
+            report.check(declaration(group_item, name) == want,
+                         f"Button group segment {name} does not consume Button toggle roles")
+
+    selected_group = block(
+        group_css,
+        ".wp-block-axismundi-button-group__item[aria-pressed=\"true\"]",
+    )
+    report.check(selected_group is not None,
+                 "Button group adapter has no selected segment rule")
+    if selected_group is not None:
+        expected_selected_surface = {
+            "background-color": "var(--ax-button-toggle-selected-container)",
+            "color": "var(--ax-button-toggle-selected-content)",
+        }
+        for name, want in expected_selected_surface.items():
+            report.check(declaration(selected_group, name) == want,
+                         f"Button group selected segment {name} does not consume Button toggle roles")
 
     # core/buttons Connected is a visual variation, not an M3 Button group. It
     # joins child geometry but preserves every child's independent size and style.

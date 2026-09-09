@@ -12,9 +12,10 @@
  * the point: the group owns geometry and selection arrangement, and whatever
  * control uses it owns what selection means.
  *
- * Colour is deliberately absent. M3: "Button groups have no color properties."
- * A segment takes the same --ax-button-* contract a button does, so this file
- * sets geometry and lets components/button.css own the surface.
+ * M3: "Button groups have no color properties." That means the group does not
+ * invent colours. A segment takes the Button contract from components/button.css:
+ * standard groups may mix child Button styles, while a connected group carries
+ * one inherited Button style so its segments cannot mix colours.
  * ============================================================ */
 
 /* --- The group ----------------------------------------------- */
@@ -232,6 +233,56 @@
 	inline-size: var(--ax-button-height, 40px);
 }
 
+/* --- Icon(selected): the FILL axis, not a second icon ---------- */
+
+/* Figma gives a segment two icon properties, `Icon` and `Icon(selected)` -
+ * stars and stars_filled. That is Figma describing the result, because a static
+ * file has to swap one symbol for another to show a filled one.
+ *
+ * Material Symbols is a variable font and FILL is one of its axes, so the web
+ * changes the axis instead of the glyph. The theme registers it with @property
+ * (icons.css), which is what lets it interpolate rather than snap, and
+ * axismundi/theme-switcher already drives it exactly this way. One icon name in
+ * the markup, two rendered states.
+ *
+ * Hover fills as well as selected, and only where a pointer hovers. Selected
+ * stays ungated: gating both would leave the chosen segment unfilled on a
+ * touchscreen, which is the one place the fill is doing real work. */
+.wp-block-axismundi-button-group__item[aria-pressed="true"] .material-symbols-outlined,
+.wp-block-axismundi-button-group__item[aria-current="page"] .material-symbols-outlined {
+	--md-icon-fill: 1;
+}
+
+@media (hover: hover) {
+	.wp-block-axismundi-button-group__item:hover .material-symbols-outlined {
+		--md-icon-fill: 1;
+	}
+}
+
+/* --- A segment may overrule the group's labels ------------------ */
+
+/* Figma puts `Show label text` on each segment, and it has no choice: component
+ * properties there are per-instance. M3's own layout list shows the mixed case
+ * too - "Label buttons and icon buttons" is one group holding both.
+ *
+ * So the property belongs to the segment, and the group carries a default -
+ * which is what core/social-links does with providesContext: showLabels, and
+ * what axismundi/theme-switcher offers as one control because all three of its
+ * segments are alike. Same shape as size: the group declares, the segment may
+ * overrule. */
+.wp-block-axismundi-button-group__item[data-labels="hidden"] {
+	padding-inline: 0;
+}
+
+.wp-block-axismundi-button-group[data-variant="standard"] > .wp-block-axismundi-button-group__item[data-labels="hidden"] {
+	inline-size: var(--ax-button-height, 40px);
+}
+
+.wp-block-axismundi-button-group__item[data-labels="visible"] {
+	padding-inline: var(--ax-button-space, var(--md-sys-measurement-space200));
+	inline-size: auto;
+}
+
 /* --- Connected: 2dp at every size ----------------------------- */
 
 /* One padding for all five sizes, which M3 gives as a consistency rule rather
@@ -296,8 +347,9 @@
 /* --- The segment --------------------------------------------- */
 
 /* Reads the same --ax-button-* contract components/button.css defines, so a
- * segment and a standalone button cannot drift apart in height, type or
- * spacing. What it does not read is colour: the group sets that once. */
+ * segment and a standalone button cannot drift apart in height, type, spacing,
+ * or colour roles. In a connected group, the wrapper supplies one Button style
+ * to every segment; individual segments have no colour selector. */
 .wp-block-axismundi-button-group__item {
 	display: inline-flex;
 	align-items: center;
@@ -309,8 +361,8 @@
 	padding-inline: var(--ax-button-space, var(--md-sys-measurement-space200));
 	border: 0;
 	border-radius: var(--ax-button-shape, 20px);
-	background-color: var(--md-sys-color-secondary-container);
-	color: var(--md-sys-color-on-secondary-container);
+	background-color: var(--ax-button-toggle-unselected-container);
+	color: var(--ax-button-toggle-unselected-content);
 	font-family: var(--md-ref-typeface-brand);
 	font-size: var(--ax-button-label-size, 14px);
 	font-weight: var(--ax-button-label-weight, 500);
@@ -368,8 +420,22 @@
 .wp-block-axismundi-button-group__item[aria-pressed="true"],
 .wp-block-axismundi-button-group__item[aria-current="page"],
 .wp-block-axismundi-button-group__input:checked + .wp-block-axismundi-button-group__item {
-	background-color: var(--md-sys-color-secondary);
-	color: var(--md-sys-color-on-secondary);
+	background-color: var(--ax-button-toggle-selected-container);
+	color: var(--ax-button-toggle-selected-content);
+}
+
+.wp-block-axismundi-button-group.is-style-outline > .wp-block-axismundi-button-group__item {
+	border: var(--ax-button-outline-width, 1px) solid var(--md-sys-color-outline-variant);
+}
+
+.wp-block-axismundi-button-group.is-style-outline > .wp-block-axismundi-button-group__item[aria-pressed="true"],
+.wp-block-axismundi-button-group.is-style-outline > .wp-block-axismundi-button-group__item[aria-current="page"],
+.wp-block-axismundi-button-group.is-style-outline > .wp-block-axismundi-button-group__input:checked + .wp-block-axismundi-button-group__item {
+	border-color: var(--ax-button-toggle-selected-container);
+}
+
+.wp-block-axismundi-button-group.is-style-elevated > .wp-block-axismundi-button-group__item {
+	box-shadow: var(--md-sys-elevation-shadow-level1);
 }
 
 /* Shape morph, and the three states are three different published values:
@@ -413,7 +479,13 @@
 }
 
 .wp-block-axismundi-button-group__item:hover {
-	background-color: color-mix(in srgb, var(--md-sys-color-on-secondary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--md-sys-color-secondary-container));
+	background-color: color-mix(in srgb, var(--ax-button-toggle-unselected-state-role) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--ax-button-toggle-unselected-container));
+}
+
+.wp-block-axismundi-button-group__item[aria-pressed="true"]:hover,
+.wp-block-axismundi-button-group__item[aria-current="page"]:hover,
+.wp-block-axismundi-button-group__input:checked + .wp-block-axismundi-button-group__item:hover {
+	background-color: color-mix(in srgb, var(--ax-button-toggle-selected-state-role) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--ax-button-toggle-selected-container));
 }
 
 .wp-block-axismundi-button-group__item:focus-visible {

@@ -248,45 +248,79 @@
 
 /* --- 3. The button decides colour style ---------------------- */
 
-/* Filled, the default. No class: an unstyled core/button is already this. */
-.wp-block-button {
+/* Filled, the default. No class: an unstyled core/button is already this.
+ *
+ * A Button group has no independent colour API. Its segments do, however,
+ * need the Button specification's toggle surfaces. The proposed group adapter
+ * takes these variables from its wrapper, which keeps the Button colours in
+ * one place while allowing a connected group to apply one style uniformly. */
+.wp-block-button,
+.wp-block-axismundi-button-group {
 	--ax-button-container: var(--md-sys-color-primary);
 	--ax-button-content: var(--md-sys-color-on-primary);
 	/* The role mixed over the container at each state opacity. Naming it once
 	 * means a variant sets two roles and inherits four states. */
 	--ax-button-state-role: var(--md-sys-color-on-primary);
+	--ax-button-toggle-unselected-container: var(--md-sys-color-surface-container);
+	--ax-button-toggle-unselected-content: var(--md-sys-color-on-surface-variant);
+	--ax-button-toggle-unselected-state-role: var(--md-sys-color-on-surface-variant);
+	--ax-button-toggle-selected-container: var(--md-sys-color-primary);
+	--ax-button-toggle-selected-content: var(--md-sys-color-on-primary);
+	--ax-button-toggle-selected-state-role: var(--md-sys-color-on-primary);
 }
 
-.wp-block-button.is-style-elevated {
+.wp-block-button.is-style-elevated,
+.wp-block-axismundi-button-group.is-style-elevated {
 	--ax-button-container: var(--md-sys-color-surface-container-low);
 	--ax-button-content: var(--md-sys-color-primary);
 	--ax-button-state-role: var(--md-sys-color-primary);
+	--ax-button-toggle-unselected-container: var(--md-sys-color-surface-container-low);
+	--ax-button-toggle-unselected-content: var(--md-sys-color-primary);
+	--ax-button-toggle-unselected-state-role: var(--md-sys-color-primary);
+	--ax-button-toggle-selected-container: var(--md-sys-color-primary);
+	--ax-button-toggle-selected-content: var(--md-sys-color-on-primary);
+	--ax-button-toggle-selected-state-role: var(--md-sys-color-on-primary);
 }
 
 .wp-block-button.is-style-elevated .wp-block-button__link {
 	box-shadow: var(--md-sys-elevation-shadow-level1);
 }
 
-.wp-block-button.is-style-tonal {
+.wp-block-button.is-style-tonal,
+.wp-block-axismundi-button-group.is-style-tonal {
 	--ax-button-container: var(--md-sys-color-secondary-container);
 	--ax-button-content: var(--md-sys-color-on-secondary-container);
 	--ax-button-state-role: var(--md-sys-color-on-secondary-container);
+	--ax-button-toggle-unselected-container: var(--md-sys-color-secondary-container);
+	--ax-button-toggle-unselected-content: var(--md-sys-color-on-secondary-container);
+	--ax-button-toggle-unselected-state-role: var(--md-sys-color-on-secondary-container);
+	--ax-button-toggle-selected-container: var(--md-sys-color-secondary);
+	--ax-button-toggle-selected-content: var(--md-sys-color-on-secondary);
+	--ax-button-toggle-selected-state-role: var(--md-sys-color-on-secondary);
 }
 
 /* Outlined and text share an invisible container. Their state layers mix over
  * transparent, which is why they read as a tint of whatever is behind them and
  * why both work on any surface. */
-.wp-block-button.is-style-outline {
+.wp-block-button.is-style-outline,
+.wp-block-axismundi-button-group.is-style-outline {
 	--ax-button-container: transparent;
 	--ax-button-content: var(--md-sys-color-on-surface-variant);
 	--ax-button-state-role: var(--md-sys-color-on-surface-variant);
+	--ax-button-toggle-unselected-container: transparent;
+	--ax-button-toggle-unselected-content: var(--md-sys-color-on-surface-variant);
+	--ax-button-toggle-unselected-state-role: var(--md-sys-color-on-surface-variant);
+	--ax-button-toggle-selected-container: var(--md-sys-color-inverse-surface);
+	--ax-button-toggle-selected-content: var(--md-sys-color-inverse-on-surface);
+	--ax-button-toggle-selected-state-role: var(--md-sys-color-inverse-on-surface);
 }
 
 .wp-block-button.is-style-outline .wp-block-button__link {
 	border: var(--ax-button-outline-width, 1px) solid var(--md-sys-color-outline-variant);
 }
 
-.wp-block-button.is-style-text {
+.wp-block-button.is-style-text,
+.wp-block-axismundi-button-group.is-style-text {
 	--ax-button-container: transparent;
 	--ax-button-content: var(--md-sys-color-primary);
 	--ax-button-state-role: var(--md-sys-color-primary);

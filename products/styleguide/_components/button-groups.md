@@ -7,10 +7,13 @@ lang: ko
 ---
 
 Button group은 **색 속성이 없습니다.** M3가 그렇게 씁니다 — "Button groups have
-no color properties." 색은 안에 든 버튼의 것이고, 그룹이 색에 대해 가진 규칙은
-금지 하나뿐입니다: **connected에서 색을 섞지 말 것.**
+no color properties." 그렇다고 색을 생략한다는 뜻은 아닙니다. 색은 안에 든
+**Button의 스펙**에서 오고, 그룹이 지키는 규칙은 하나입니다: **connected에서는
+Button 색 스타일을 섞지 말 것.**
 
-그래서 이 페이지에는 색 축이 없습니다. 축은 셋입니다 — variant, size, selection.
+그래서 standard는 각 자식 Button이 `Filled`·`Tonal`·`Outlined`·`Elevated`를 고를 수
+있고, connected는 한 Button 스타일을 모든 세그먼트에 공유합니다. 그룹 자체의 축은
+variant, size, selection이고, 색은 그 아래 Button 계약입니다.
 
 ## 두 variant
 
@@ -70,6 +73,24 @@ guidelines의 문장도 같은 방향입니다 — "selected **or activated**", 
 **이게 이 페이지의 결론을 화면으로 증명합니다.** 강조는 size·color·shape로 만들고,
 셋 다 버튼의 속성입니다. 컨테이너는 배치만 합니다.
 
+### Button 색 스타일은 standard에서 자식마다 고른다
+
+아래 네 개는 [Buttons]({{ '/components/buttons/' | relative_url }})와 같은 Button
+스펙을 그대로 씁니다. Filled는 기본값이라 클래스가 없고, 나머지는 WordPress가
+내보내는 `is-style-*` variation입니다. **standard에서는 이 조합이 허용됩니다.**
+
+<div class="sg-demo">
+  <div class="wp-block-buttons">
+    <div class="wp-block-button"><button type="button" class="wp-block-button__link wp-element-button">Filled</button></div>
+    <div class="wp-block-button is-style-tonal"><button type="button" class="wp-block-button__link wp-element-button">Tonal</button></div>
+    <div class="wp-block-button is-style-outline"><button type="button" class="wp-block-button__link wp-element-button">Outlined</button></div>
+    <div class="wp-block-button is-style-elevated"><button type="button" class="wp-block-button__link wp-element-button">Elevated</button></div>
+  </div>
+</div>
+
+Text는 빠집니다. Button에는 Text가 있지만 **toggle Text Button은 M3에 없으므로** 선택
+그룹의 색 스타일이 될 수 없습니다.
+
 ### 2. Standard, single-select
 
 `List / Grid / Map`. 눌러 보세요 — 하나만 선택되고, **선택된 것을 다시 누르면
@@ -115,6 +136,20 @@ Lab의 Pattern A도 함께 남깁니다. 이쪽은 버튼을 흉내 내는 radio
 
 정확히 하나가 항상 선택됩니다. **선택된 것을 다시 눌러도 꺼지지 않습니다** — Theme
 Switcher와 같은 모드입니다.
+
+#### Connected는 Button 스타일 하나를 공유한다
+
+connected의 네 표본은 모두 같은 선택 모델이지만, 각 줄이 Button의 색 스타일 하나를
+공유합니다. 한 줄 안에서 Filled와 Outlined를 섞지 않습니다. 선택 전·후 색도 별도
+그룹 팔레트가 아니라 [Button 스펙]({{ '/components/buttons/' | relative_url }})의
+`toggle_unselected`와 `toggle_selected` 역할을 직접 읽습니다.
+
+<div class="sg-button-group-grid">
+  <div class="sg-button-group-specimen"><p class="sg-button-group-caption">Filled</p><div class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" data-selection="single" data-required="true" role="group" aria-label="Filled connected buttons"><button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true">Day</button><button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">Week</button><button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">Month</button></div></div>
+  <div class="sg-button-group-specimen"><p class="sg-button-group-caption">Tonal</p><div class="wp-block-axismundi-button-group is-style-tonal" data-variant="connected" data-size="small" data-selection="single" data-required="true" role="group" aria-label="Tonal connected buttons"><button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true">Day</button><button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">Week</button><button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">Month</button></div></div>
+  <div class="sg-button-group-specimen"><p class="sg-button-group-caption">Outlined</p><div class="wp-block-axismundi-button-group is-style-outline" data-variant="connected" data-size="small" data-selection="single" data-required="true" role="group" aria-label="Outlined connected buttons"><button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true">Day</button><button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">Week</button><button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">Month</button></div></div>
+  <div class="sg-button-group-specimen"><p class="sg-button-group-caption">Elevated</p><div class="wp-block-axismundi-button-group is-style-elevated" data-variant="connected" data-size="small" data-selection="single" data-required="true" role="group" aria-label="Elevated connected buttons"><button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true">Day</button><button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">Week</button><button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">Month</button></div></div>
+</div>
 
 <div class="sg-demo">
   <div class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" data-selection="single" data-required="true" role="group" aria-label="Range">
@@ -168,11 +203,11 @@ or sort elements"를 들면서, 동시에 토글이 아니면 쓰지 말라고 �
 클라이언트 토글로 구현한다는 전제이고, 서버 렌더링을 다루지 않습니다.
 
 색은 섞고 있지 않습니다 — 세그먼트가 전부 `is-style-outline` 하나이고, 현재 항목만
-`secondary-container`가 됩니다. 그건 M3가 규정한 선택 상태 색입니다. 어긋나는 것은
-색이 아니라 **토글이 아니라는 점** 하나입니다.
+Outlined Button의 `inverse-surface` 선택 상태가 됩니다. 어긋나는 것은 색이 아니라
+**토글이 아니라는 점** 하나입니다.
 
 <div class="sg-demo">
-  <nav class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" aria-label="Entry density">
+  <nav class="wp-block-axismundi-button-group is-style-outline" data-variant="connected" data-size="small" aria-label="Entry density">
     <a class="wp-block-axismundi-button-group__item wp-element-button" href="#1">Card</a>
     <a class="wp-block-axismundi-button-group__item wp-element-button" href="#2" aria-current="page">List</a>
     <a class="wp-block-axismundi-button-group__item wp-element-button" href="#3">Compact</a>
@@ -401,6 +436,23 @@ Button group  icon       +  showLabels    그룹 전체
 단수와 복수가 그 차이를 그대로 말합니다 — `showIcon`은 한 버튼의 것이고,
 `showLabels`는 그룹의 밀도 결정이라 한 번에 전부에 걸립니다.
 
+다만 **그룹이 유일한 소유자는 아닙니다.** Connected group의 Figma 프로퍼티를 보면
+`Show label text`가 세그먼트마다 있습니다.
+
+```
+Segment 1 / Segment 2 / End segment
+  Selected · State · Show icon · Icon · Icon(selected) · Show label text · Label text
+```
+
+Figma는 그럴 수밖에 없습니다 — 컴포넌트 프로퍼티는 인스턴스마다입니다. 그런데 M3의
+layout 목록에도 섞인 경우가 있습니다: **"Label buttons and icon buttons"**는 한 그룹이
+둘을 함께 담은 것입니다.
+
+그래서 **속성은 세그먼트의 것이고, 그룹은 기본값을 내려줍니다.** `core/social-links`가
+`providesContext: showLabels`로 하는 일이고, 테마스위처가 컨트롤 하나로 제공하는 이유는
+세 세그먼트가 모두 같기 때문입니다. size와 같은 모양입니다 — 그룹이 선언하고 세그먼트가
+덮습니다.
+
 **라벨 요소는 사라지지 않습니다.** 플러그인이 하는 일은 클래스를 하나 더하는 것뿐이고,
 그래서 접근 가능한 이름의 출처가 보이든 안 보이든 하나입니다.
 
@@ -443,6 +495,46 @@ standard는 줄어듭니다. 다만 **정사각형이 되지는 않습니다 —
     <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">format_underlined</span><span class="screen-reader-text">Underline</span></button>
   </div>
 </div>
+
+## Icon(selected)는 두 번째 아이콘이 아닙니다
+
+세그먼트 프로퍼티에 아이콘이 둘 있습니다.
+
+```
+Icon            stars
+Icon(selected)  stars_filled
+```
+
+**Figma는 결과를 서술한 것입니다.** 정적 파일에서 채워진 심볼을 보이려면 다른 글리프로
+바꾸는 수밖에 없습니다.
+
+웹에서는 글리프를 바꾸지 않습니다. Material Symbols는 가변 폰트이고 `FILL`이 그 축
+중 하나라, **축 값을 바꿉니다.** 테마가 그 축을 `@property`로 등록해 두었기 때문에
+스냅이 아니라 보간됩니다.
+
+```css
+@property --md-icon-fill { syntax: "<number>"; inherits: true; initial-value: 0; }
+
+.…__item[aria-pressed="true"] .material-symbols-outlined { --md-icon-fill: 1; }
+```
+
+마크업의 아이콘 이름은 하나이고, 렌더되는 상태가 둘입니다. `axismundi/theme-switcher`가
+이미 이렇게 합니다.
+
+hover도 채웁니다. 단 **포인터가 있을 때만**이고, 선택 쪽은 조건 없이 채웁니다 — 둘 다
+게이팅하면 터치스크린에서 선택된 세그먼트가 안 채워지는데, 거기가 fill이 실제로 일을
+하는 유일한 자리입니다.
+
+<div class="sg-demo">
+  <div class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" data-selection="single" data-required="true" role="group" aria-label="Icon fill">
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">star</span>One</button>
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">star</span>Two</button>
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">star</span>Three</button>
+  </div>
+</div>
+
+세 세그먼트의 아이콘 이름이 전부 `star`입니다. 선택된 것만 채워져 있고, 눌러 옮기면
+채움이 따라옵니다.
 
 ## Figma 프로퍼티를 그대로 블록 속성으로 옮길 수 없습니다
 

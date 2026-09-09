@@ -1,0 +1,93 @@
+# Material 3 Button groups — the published specification.
+#
+# Source: https://m3.material.io/components/button-groups/specs
+#         https://m3.material.io/components/button-groups/guidelines
+#         https://m3.material.io/components/button-groups/accessibility
+#
+# A button group has no colour of its own. M3 states it plainly: "Button groups
+# have no color properties." Colour belongs to the buttons inside, and the
+# group's only colour rule is a prohibition - do not mix styles in a connected
+# group. That is why there is no colour axis in this file.
+
+meta:
+  # Connected replaces the segmented button, which the Expressive update
+  # deprecates. The Selection row below still reads "available as segmented
+  # button" in the M3 column for that reason.
+  replaces: segmented button
+  # Both variants: XS and S need a 48dp target regardless of container height.
+  min_target: 48
+
+variants:
+  - name: standard
+    title: Standard
+    m3: false
+    expressive: true
+    # Selecting a button changes its width, shape and padding, and the buttons
+    # next to it move and change width in response.
+    adjacent_interaction: true
+    selected_widen: 1.15
+  - name: connected
+    title: Connected
+    m3: as segmented button
+    expressive: true
+    # "Connected button groups don't add any interaction between buttons when
+    # selected or activated. They only affect the shape of the button being
+    # selected or activated."
+    adjacent_interaction: false
+    selected_widen: null
+
+# Inner padding is the group's own measurement, and it is the one thing that
+# forces the group to know its size: a container cannot read its children.
+sizes:
+  - name: xsmall
+    label: XS
+    standard_padding: 18
+    connected_padding: 2
+    connected_inner_corner: 4
+    min_width: 48
+  - name: small
+    label: S
+    standard_padding: 12
+    connected_padding: 2
+    connected_inner_corner: 8
+    min_width: 48
+  - name: medium
+    label: M
+    standard_padding: 8
+    connected_padding: 2
+    connected_inner_corner: 8
+    min_width: null
+  - name: large
+    label: L
+    standard_padding: 8
+    connected_padding: 2
+    connected_inner_corner: 16
+    min_width: null
+  - name: xlarge
+    label: XL
+    standard_padding: 8
+    connected_padding: 2
+    connected_inner_corner: 20
+    min_width: null
+
+configurations:
+  - category: Size
+    option: XS, S, M, L, XL
+    m3: false
+    expressive: true
+  - category: Default shape
+    option: Round, square
+    m3: false
+    expressive: true
+  - category: Selection
+    option: Single-select, multi-select, selection-required
+    m3: as segmented button
+    expressive: true
+
+# M3's keyboard table, which is the source of the tension this page documents:
+# it describes toggle-button interaction, not a native radiogroup.
+keyboard:
+  - keys: Tab
+    action: Navigates to the next button
+  - keys: Space or Enter
+    action: Activates the focused button

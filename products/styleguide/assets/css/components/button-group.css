@@ -1,0 +1,223 @@
+/* ============================================================
+ * Button group — static adapter for the proposed axismundi/button-group.
+ *
+ * No such block exists yet, and this file does not pretend otherwise. What it
+ * renders is the contract a block would have to emit, drawn from the two
+ * connected groups this repository already ships:
+ *
+ *   axismundi/theme-switcher   role="group" + button[aria-pressed]   toggle
+ *   axismundi-activities       <nav> + a[aria-current="page"]        navigation
+ *
+ * Both wear connected geometry; neither is the other's semantics. That split is
+ * the point: the group owns geometry and selection arrangement, and whatever
+ * control uses it owns what selection means.
+ *
+ * Colour is deliberately absent. M3: "Button groups have no color properties."
+ * A segment takes the same --ax-button-* contract a button does, so this file
+ * sets geometry and lets components/button.css own the surface.
+ * ============================================================ */
+
+/* --- The group ----------------------------------------------- */
+
+/* Standard hugs its buttons; connected spans its container and stretches the
+ * segments to fill it. That is M3's own distinction, and it is why only the
+ * connected rule below touches flex-grow on a segment. */
+.wp-block-axismundi-button-group {
+	/* inline-flex, because M3 says the standard group "hugs the width of the
+	 * buttons inside". Connected overrides this below: it is the variant that
+	 * spans its container. */
+	display: inline-flex;
+	flex-wrap: nowrap;
+	align-items: center;
+	gap: var(--ax-group-padding, var(--md-sys-measurement-space150));
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+/* --- Size: the one axis a group cannot infer ------------------ */
+
+/* Inner padding is a group measurement that varies by button size, and CSS
+ * gives a container no way to read its children. So the group declares the
+ * size, and segments inherit it through the same --ax-button-* properties a
+ * standalone button reads. */
+.wp-block-axismundi-button-group[data-size="xsmall"] {
+	--ax-group-padding: var(--md-sys-measurement-space250);
+	--ax-group-inner-corner: var(--md-sys-shape-corner-value-extra-small);
+	--ax-button-height: 32px;
+	--ax-button-space: var(--md-sys-measurement-space150);
+	--ax-button-icon-size: 20px;
+	--ax-button-icon-gap: var(--md-sys-measurement-space50);
+	--ax-button-shape: 16px;
+	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-small);
+	--ax-button-label-size: 14px;
+	--ax-button-label-line-height: 20px;
+}
+
+.wp-block-axismundi-button-group[data-size="small"] {
+	--ax-group-padding: var(--md-sys-measurement-space150);
+	--ax-group-inner-corner: var(--md-sys-shape-corner-value-small);
+}
+
+.wp-block-axismundi-button-group[data-size="medium"] {
+	--ax-group-padding: var(--md-sys-measurement-space100);
+	--ax-group-inner-corner: var(--md-sys-shape-corner-value-small);
+	--ax-button-height: 56px;
+	--ax-button-space: var(--md-sys-measurement-space300);
+	--ax-button-icon-size: 24px;
+	--ax-button-icon-gap: var(--md-sys-measurement-space100);
+	--ax-button-shape: 28px;
+	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-medium);
+	--ax-button-label-size: 16px;
+	--ax-button-label-line-height: 24px;
+}
+
+.wp-block-axismundi-button-group[data-size="large"] {
+	--ax-group-padding: var(--md-sys-measurement-space100);
+	--ax-group-inner-corner: var(--md-sys-shape-corner-value-large);
+	--ax-button-height: 96px;
+	--ax-button-space: var(--md-sys-measurement-space600);
+	--ax-button-icon-size: 32px;
+	--ax-button-icon-gap: var(--md-sys-measurement-space150);
+	--ax-button-shape: 48px;
+	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-large);
+	--ax-button-label-size: 24px;
+	--ax-button-label-weight: 400;
+	--ax-button-label-line-height: 32px;
+}
+
+.wp-block-axismundi-button-group[data-size="xlarge"] {
+	--ax-group-padding: var(--md-sys-measurement-space100);
+	--ax-group-inner-corner: var(--md-sys-shape-corner-value-large-increased);
+	--ax-button-height: 136px;
+	--ax-button-space: var(--md-sys-measurement-space800);
+	--ax-button-icon-size: 40px;
+	--ax-button-icon-gap: var(--md-sys-measurement-space200);
+	--ax-button-shape: 68px;
+	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-large);
+	--ax-button-label-size: 32px;
+	--ax-button-label-weight: 400;
+	--ax-button-label-line-height: 40px;
+}
+
+/* --- Connected: 2dp at every size ----------------------------- */
+
+/* One padding for all five sizes, which M3 gives as a consistency rule rather
+ * than a derived value: "For all connected button groups, use 2dp padding.
+ * This provides visual consistency at scale." */
+.wp-block-axismundi-button-group[data-variant="connected"] {
+	--ax-group-padding: var(--md-sys-measurement-space25);
+	display: flex;
+	inline-size: 100%;
+}
+
+.wp-block-axismundi-button-group[data-variant="connected"] > .wp-block-axismundi-button-group__item {
+	flex: 1 1 0;
+	border-radius: var(--ax-group-inner-corner, var(--md-sys-shape-corner-value-small));
+}
+
+/* Only the two ends are pills. Logical longhands: a group reverses in RTL and
+ * a radius shorthand cannot. */
+.wp-block-axismundi-button-group[data-variant="connected"] > .wp-block-axismundi-button-group__item:first-child {
+	border-start-start-radius: var(--ax-button-shape, 20px);
+	border-end-start-radius: var(--ax-button-shape, 20px);
+}
+
+.wp-block-axismundi-button-group[data-variant="connected"] > .wp-block-axismundi-button-group__item:last-child {
+	border-start-end-radius: var(--ax-button-shape, 20px);
+	border-end-end-radius: var(--ax-button-shape, 20px);
+}
+
+/* --- Standard: adjacent buttons respond ----------------------- */
+
+/* M3 gives this to standard only: "Connected button groups don't add any
+ * interaction between buttons when selected or activated."
+ *
+ * What is implemented here is the shape morph. The width half is not, and the
+ * reason is worth recording. M3's widen keeps the group's total width and
+ * redistributes it - the selected button grows about 15% and its neighbours
+ * compress to pay for it. flex-grow cannot express that against a container
+ * that hugs its content: measured, `flex-grow: 1.15` on a hugging group handed
+ * the selected segment every spare pixel and rendered it 11.3x its neighbours.
+ * Doing it faithfully means measuring the rest widths first, which is a
+ * script, not a stylesheet. The page says so rather than approximating. */
+
+/* --- The segment --------------------------------------------- */
+
+/* Reads the same --ax-button-* contract components/button.css defines, so a
+ * segment and a standalone button cannot drift apart in height, type or
+ * spacing. What it does not read is colour: the group sets that once. */
+.wp-block-axismundi-button-group__item {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	gap: var(--ax-button-icon-gap, var(--md-sys-measurement-space100));
+	min-inline-size: var(--ax-group-min-width, auto);
+	block-size: var(--ax-button-height, 40px);
+	padding-inline: var(--ax-button-space, var(--md-sys-measurement-space200));
+	border: 0;
+	border-radius: var(--ax-button-shape, 20px);
+	background-color: var(--md-sys-color-secondary-container);
+	color: var(--md-sys-color-on-secondary-container);
+	font-family: var(--md-ref-typeface-brand);
+	font-size: var(--ax-button-label-size, 14px);
+	font-weight: var(--ax-button-label-weight, 500);
+	letter-spacing: var(--ax-button-label-tracking, 0.1px);
+	line-height: var(--ax-button-label-line-height, 20px);
+	white-space: nowrap;
+	text-decoration: none;
+	cursor: pointer;
+	-webkit-tap-highlight-color: transparent;
+	transition:
+		border-radius var(--md-sys-motion-curve-fast-spatial-duration) var(--md-sys-motion-curve-fast-spatial),
+		flex-grow var(--md-sys-motion-curve-fast-spatial-duration) var(--md-sys-motion-curve-fast-spatial),
+		background-color var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wp-block-axismundi-button-group__item {
+		transition: none;
+	}
+}
+
+/* XS and S carry a 48dp target whatever the container height says. M3 is
+ * explicit that the larger inner padding at those sizes exists for this, and
+ * that it must not be reduced. */
+.wp-block-axismundi-button-group[data-size="xsmall"],
+.wp-block-axismundi-button-group[data-size="small"] {
+	--ax-group-min-width: 48px;
+}
+
+.wp-block-axismundi-button-group__item > .wp-block-button__icon {
+	flex: 0 0 var(--ax-button-icon-size, 20px);
+	inline-size: var(--ax-button-icon-size, 20px);
+	block-size: var(--ax-button-icon-size, 20px);
+	font-size: var(--ax-button-icon-size, 20px);
+	line-height: 1;
+}
+
+/* Selected. aria-pressed and aria-current are both read, because the two
+ * shipping consumers use different ones and both are correct: a toggle is
+ * pressed, a link to the current view is current. */
+.wp-block-axismundi-button-group__item[aria-pressed="true"],
+.wp-block-axismundi-button-group__item[aria-current="page"] {
+	background-color: var(--md-sys-color-secondary);
+	color: var(--md-sys-color-on-secondary);
+}
+
+/* Selected segments morph between round and square — M3 gives the rule as a
+ * contrast, not a direction: round becomes square, and a square resting shape
+ * becomes round when selected. */
+.wp-block-axismundi-button-group[data-shape="round"] > .wp-block-axismundi-button-group__item[aria-pressed="true"] {
+	border-radius: var(--ax-button-pressed-shape, var(--md-sys-shape-corner-value-small));
+}
+
+.wp-block-axismundi-button-group__item:hover {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-secondary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--md-sys-color-secondary-container));
+}
+
+.wp-block-axismundi-button-group__item:focus-visible {
+	outline: var(--md-focus-ring-width) solid var(--md-sys-color-secondary);
+	outline-offset: var(--md-focus-ring-outward-offset);
+}

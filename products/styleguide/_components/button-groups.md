@@ -1,0 +1,199 @@
+---
+title: Button groups
+description: 색이 없는 컨테이너, 선택을 소유하는 컨트롤, 그리고 스펙 두 문서가 서로 다른 말을 하는 지점
+kind: material
+order: 30
+lang: ko
+---
+
+Button group은 **색 속성이 없습니다.** M3가 그렇게 씁니다 — "Button groups have
+no color properties." 색은 안에 든 버튼의 것이고, 그룹이 색에 대해 가진 규칙은
+금지 하나뿐입니다: **connected에서 색을 섞지 말 것.**
+
+그래서 이 페이지에는 색 축이 없습니다. 축은 셋입니다 — variant, size, selection.
+
+## 두 variant
+
+| Variant | M3 | M3 Expressive | 인접 버튼 |
+|---|---|---|---|
+{% for v in site.data.button_group.variants -%}
+| **{{ v.title }}** | {% if v.m3 == false %}—{% else %}{{ v.m3 }}{% endif %} | {% if v.expressive %}있음{% else %}—{% endif %} | {% if v.adjacent_interaction %}선택 시 폭·모양이 반응{% else %}반응 없음{% endif %} |
+{% endfor %}
+
+**Connected는 segmented button의 후신입니다.** Expressive가 segmented를 폐기하면서
+그 자리를 가져갔고, 위 표의 M3 열이 "as segmented button"인 이유입니다.
+
+두 variant의 차이는 기하가 아니라 **인접 버튼이 반응하는가**입니다.
+
+```
+standard    선택된 버튼의 폭·모양·패딩이 바뀌고, 옆 버튼이 밀리며 폭이 바뀜
+connected   선택된 버튼의 모양만 바뀜. 옆은 그대로
+```
+
+<div class="sg-demo sg-demo--stack">
+  <div class="wp-block-axismundi-button-group" data-variant="standard" data-size="small" data-shape="round" role="group" aria-label="Standard 예시">
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">List</button>
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true">Grid</button>
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">Map</button>
+  </div>
+  <div class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" data-shape="round" role="group" aria-label="Connected 예시">
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">Day</button>
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true">Week</button>
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">Month</button>
+  </div>
+</div>
+
+실측입니다. 760px 부모 안에서 **standard는 199px로 버튼을 감싸고, connected는 760px를
+전부 채웁니다.** 두 그룹의 안쪽 여백은 12dp와 2dp이고, 양쪽 다 선택된 세그먼트만
+모서리가 8px로 바뀝니다.
+
+**폭 변화는 구현하지 않았습니다.** M3의 standard 확장은 그룹 총폭을 유지한 채
+재분배하는 것 — 선택된 버튼이 약 15% 커지고 옆 버튼이 그만큼 줄어듭니다. 내용을
+감싸는 컨테이너에서 `flex-grow`로는 표현되지 않습니다. 실제로 걸어보니 남는 공간을
+전부 가져가 **선택 세그먼트가 이웃의 11.3배**가 됐습니다. 제대로 하려면 쉬는 상태의
+폭을 먼저 재야 하고, 그건 스타일시트가 아니라 스크립트입니다. 근사치를 그리는 대신
+없는 채로 두고 여기에 적습니다.
+
+## Measurements
+
+inner padding이 이 컴포넌트에서 유일하게 **그룹이 소유해야만 하는 값**입니다.
+버튼 크기에 따라 달라지는데, CSS에서 컨테이너가 자식을 읽는 방향은 없습니다.
+그래서 그룹이 size를 선언하고 세그먼트가 상속합니다.
+
+{% assign sizes = site.data.button_group.sizes -%}
+
+| | {% for s in sizes %}{{ s.label }} | {% endfor %}
+|---|{% for s in sizes %}---|{% endfor %}
+| Standard 안쪽 여백 | {% for s in sizes %}{{ s.standard_padding }}dp | {% endfor %}
+| Connected 안쪽 여백 | {% for s in sizes %}{{ s.connected_padding }}dp | {% endfor %}
+| Connected 안쪽 모서리 | {% for s in sizes %}{{ s.connected_inner_corner }}dp | {% endfor %}
+| 최소 폭 | {% for s in sizes %}{% if s.min_width %}{{ s.min_width }}dp{% else %}—{% endif %} | {% endfor %}
+
+Connected는 다섯 크기가 전부 2dp입니다. 파생값이 아니라 **일관성 규칙**입니다 —
+"For all connected button groups, use 2dp padding. This provides visual
+consistency at scale."
+
+XS와 S의 큰 standard 여백은 장식이 아니라 **48dp 타깃을 만들기 위한 것**이고,
+M3는 이 두 크기에서 여백을 줄이지 말라고 명시합니다.
+
+## 선택 모델이 두 문서에서 어긋납니다
+
+이 페이지가 존재하는 진짜 이유입니다.
+
+**Specs**는 selection을 radio/checkbox 언어로 씁니다.
+
+| Category | Option | M3 | M3 Expressive |
+|---|---|---|---|
+{% for c in site.data.button_group.configurations -%}
+| {{ c.category }} | {{ c.option }} | {% if c.m3 == false %}—{% else %}{{ c.m3 }}{% endif %} | {% if c.expressive %}있음{% else %}—{% endif %} |
+{% endfor %}
+
+**Accessibility**는 키보드를 이렇게 규정합니다.
+
+| Keys | Action |
+|---|---|
+{% for k in site.data.button_group.keyboard -%}
+| `{{ k.keys }}` | {{ k.action }} |
+{% endfor %}
+
+**세그먼트마다 탭 스톱이 하나씩입니다.** 그건 radiogroup이 아닙니다 — 네이티브
+radio 그룹은 탭 스톱이 하나이고 그 안에서 화살표로 이동합니다. M3가 서술한 것은
+toggle button입니다.
+
+세 모드가 한 요소로 떨어지지 않습니다.
+
+| 모드 | 네이티브 | ARIA | M3 키보드 표와 |
+|---|---|---|---|
+| multi-select | `input[type=checkbox]` | `button[aria-pressed]` | 일치 |
+| single-select + required | `input[type=radio]` | `radio` in `radiogroup` | **불일치** |
+| single-select, 해제 가능 | **없음** | `button[aria-pressed]` | 일치 |
+
+세 번째에 주목할 값어치가 있습니다. **네이티브 radio는 사용자가 해제할 수
+없습니다** — 다른 것을 고를 수만 있습니다. "single-select이되 required가 아닌"
+모드는 HTML에 대응 요소가 없고 반드시 `aria-pressed`입니다.
+
+**이 사이트는 M3 접근성 쪽을 따릅니다.** 기본이 `button[aria-pressed]`이고,
+`radio`/`checkbox`는 네이티브 의미가 더 나은 경우의 선택지입니다. 대가는 적어
+둡니다 — 스크린 리더가 radiogroup에서는 "3개 중 1개"를 알려주고 toggle button
+집합에서는 알려주지 않습니다. 실제 리더로 확인한 것이 아니라 ARIA 규격에서 나오는
+추론입니다.
+
+## 이미 두 개가 출하 중입니다
+
+가상의 컴포넌트가 아닙니다. connected 기하를 쓰는 컨트롤이 이 저장소에 둘 있고,
+**의미가 서로 다릅니다.**
+
+```
+axismundi/theme-switcher     role="group" + button[aria-pressed]    클라이언트 토글
+axismundi-activities         <nav> + a[aria-current="page"]         서버 내비게이션
+   feed density switch
+```
+
+두 번째가 특히 배울 점입니다. 밀도 전환은 **URL 파라미터**라 세그먼트가 링크이고,
+선택 표시가 `aria-pressed`가 아니라 `aria-current="page"`입니다. 그게 맞습니다 —
+누르는 토글이 아니라 현재 보고 있는 뷰니까요. M3도 connected의 용도로 "select
+options, **switch views**, or sort elements"를 듭니다.
+
+그래서 이 어댑터는 두 속성을 모두 읽습니다.
+
+```css
+.wp-block-axismundi-button-group__item[aria-pressed="true"],
+.wp-block-axismundi-button-group__item[aria-current="page"] { … }
+```
+
+**그룹은 기하와 배치를 소유하고, 그것을 쓰는 컨트롤이 선택의 의미를 소유합니다.**
+
+## 블록 계약
+
+`axismundi/button-group` 블록은 **아직 없습니다.** 아래는 만든다면 가져야 할
+형태이고, 코어 선례에서 끌어왔습니다.
+
+```
+axismundi/button-group
+└─ axismundi/button-group-item × N
+```
+
+**두 variant 모두 nested입니다.** connected를 flat `items[]`로 하자는 안을
+검토했지만, 코어가 이 모양을 어떻게 푸는지 읽고 접었습니다.
+
+| 코어 | 무엇을 증명하나 |
+|---|---|
+| `core/accordion.autoclose` | 단일/다중 선택을 **부모 boolean**으로, 자식은 nested |
+| `core/tabs.activeTabIndex` | 선택 상태를 부모가 소유, 자식은 nested |
+| `core/tab-list.tabs` | `source: "query"` — 마크업에서 **파생된 거울**이지 저장된 배열이 아님 |
+| `core/social-links` | `providesContext` → `core/social-link`의 `usesContext` |
+
+**코어에 flat `items[]` 선례가 없습니다.** 배열 뷰가 필요하면 nested 자식에서
+파생시킵니다. 그리고 "connected에서 색을 섞지 못하게" 하는 데에 평탄화가 필요하지도
+않습니다 — 자식이 **색 컨트롤을 렌더하지 않으면** 됩니다. 부모 context가 connected일
+때 InspectorControls를 숨기는 쪽이고, 그러면 variant를 바꿔도 자식이 사라지지
+않습니다. 저장된 값은 남고 존중되지 않을 뿐이라 되돌릴 수 있습니다.
+
+축은 이렇게 나뉩니다.
+
+| 축 | 어디 | 왜 |
+|---|---|---|
+| `variant` | 부모 attribute | 기하와 인접 상호작용. 자식은 알 필요 없음 |
+| `selection` · `required` | 부모 attribute | `core/accordion.autoclose`와 같은 자리 |
+| `size` · `shape` | 부모 → context | 세그먼트 표면이 소비. 그룹만 안쪽 여백을 계산할 수 있음 |
+| `element` | 부모 attribute | radio는 공유 `name`이 필요하고, 그 값은 그룹만 앎 |
+| label · icon · value | 자식 attribute | 세그먼트가 소유 |
+
+`element`가 `radio | checkbox | button`인 것은 `core/button`의
+`tagName: a | button` 선례를 따릅니다. 다만 **기본은 `button`**이고, radio는
+`<fieldset>`·`<legend>`·공유 `name`·화살표 키 규칙을 한 묶음으로 데려오므로 단순한
+태그 선택보다 큰 계약입니다. 실제 사용처가 생길 때 엽니다.
+
+## 왜 아직 만들지 않는가
+
+**두 소비자가 이미 각자의 집을 가지고 있기 때문입니다.** Theme Switcher는 색
+구성표 상태를 소유하고, 밀도 전환은 URL을 소유합니다. 둘 다 도메인 블록이지
+범용 그룹이 아닙니다.
+
+토글도 아니고 내비게이션도 아닌 세 번째 선택 UI가 나타날 때, 그때가 이 블록을
+만들 시점입니다. 그 전까지 이 페이지는 **계약 초안**이고, 제품에 급히 등록하지
+않습니다.
+
+`core/buttons`는 이 이야기에 들어오지 않습니다. 선택 상태가 없는 독립 action
+컨테이너이고, 그건 [Button and Buttons]({{ '/wordpress/button-and-buttons/' | relative_url }})가
+다룹니다.

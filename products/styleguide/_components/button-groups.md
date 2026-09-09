@@ -102,12 +102,22 @@ Preview처럼 자기 variation을 고른 Button은 그 값을 유지합니다.
       <label>Size <select data-child-control="size"><option value="xsmall">XSmall</option><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option><option value="xlarge">XLarge</option></select></label>
       <label>Style <select data-child-control="style"><option value="">Inherit group</option><option value="tonal">Tonal</option><option value="outline">Outline</option><option value="elevated">Elevated</option><option value="text">Text</option></select></label>
       <label>Label text <input type="text" data-child-control="label" /></label>
+      <label>Icon <input type="text" list="group-icon-options" data-child-control="icon" /></label>
       <label class="sg-button-group-playground__inline"><input type="checkbox" data-child-control="show-icon" /> Show icon</label>
       <label class="sg-button-group-playground__inline"><input type="checkbox" data-child-control="show-label" /> Show label</label>
       <label class="sg-button-group-playground__inline"><input type="checkbox" data-child-control="disabled" /> Disabled</label>
     </fieldset>
   </div>
 </section>
+
+<datalist id="group-icon-options">
+  <option value="save">save</option>
+  <option value="visibility">visibility</option>
+  <option value="share">share</option>
+  <option value="download">download</option>
+  <option value="add">add</option>
+  <option value="stars">stars</option>
+</datalist>
 
 **스테이지의 버튼을 눌러 고르면** 아래 패널이 그 자식의 설정으로 바뀝니다. 블록
 에디터가 하는 것과 같습니다 — 컨테이너를 고르면 컨테이너 설정, 자식을 고르면 자식

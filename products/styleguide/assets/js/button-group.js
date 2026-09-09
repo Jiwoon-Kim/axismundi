@@ -102,8 +102,9 @@
 				if ( child.dataset.shape ) {
 					attributes.push( 'shape:"' + child.dataset.shape + '"' );
 				}
-				if ( child.querySelector( ".wp-block-button__icon" ) ) {
-					attributes.push( 'icon:"add"' );
+				var liveIcon = child.querySelector( ".wp-block-button__icon" );
+				if ( liveIcon ) {
+					attributes.push( 'icon:"' + liveIcon.textContent.trim() + '"' );
 				}
 				if ( link && link.disabled ) {
 					attributes.push( "disabled:true" );
@@ -118,6 +119,25 @@
 	// Icon-only is a label decision, not an icon one: the icon is present in
 	// both kinds and the label is what moves out of sight. Keeping it in one
 	// place means the group control and the insertion path cannot disagree.
+	// The name lives on the child, not on the element that renders it, so
+	// removing the icon does not throw the choice away with it. Toggling Show
+	// icon off and on used to hand every button the same default back.
+	function makeIcon( child ) {
+		var icon = document.createElement( "span" );
+		icon.className = "wp-block-button__icon material-symbols-outlined notranslate";
+		icon.setAttribute( "translate", "no" );
+		icon.setAttribute( "aria-hidden", "true" );
+		icon.textContent = child.dataset.icon || "add";
+		return icon;
+	}
+
+	function rememberIcon( child ) {
+		var icon = child.querySelector( ".wp-block-button__icon" );
+		if ( icon && ! child.dataset.icon ) {
+			child.dataset.icon = icon.textContent.trim();
+		}
+	}
+
 	function setChildKind( child, iconOnly ) {
 		var link = child.querySelector( ".wp-block-button__link" );
 		var label = child.querySelector( "[data-group-label]" );
@@ -126,12 +146,7 @@
 			return;
 		}
 		if ( iconOnly && ! icon ) {
-			icon = document.createElement( "span" );
-			icon.className = "wp-block-button__icon material-symbols-outlined notranslate";
-			icon.setAttribute( "translate", "no" );
-			icon.setAttribute( "aria-hidden", "true" );
-			icon.textContent = "add";
-			link.prepend( icon );
+			link.prepend( makeIcon( child ) );
 		}
 		if ( label ) {
 			label.classList.toggle( "screen-reader-text", !! iconOnly );
@@ -164,6 +179,7 @@
 		icon.setAttribute( "translate", "no" );
 		icon.setAttribute( "aria-hidden", "true" );
 		icon.textContent = "add";
+		child.dataset.icon = "add";
 		label.dataset.groupLabel = "";
 		label.textContent = iconOnly ? "Icon button " + number : "Button " + number;
 		// The label element always exists and moves out of sight rather than
@@ -267,6 +283,7 @@
 			standardMarkup( host, group );
 		} );
 		bindChildPanel( host, group );
+		group.querySelectorAll( "[data-group-child]" ).forEach( rememberIcon );
 		selectChild( host, group, group.querySelector( "[data-group-child]" ) );
 		standardMarkup( host, group );
 	}
@@ -311,6 +328,8 @@
 			} else if ( key === "label" ) {
 				control.value = state.label ? state.label.textContent : "";
 				control.disabled = ! state.label;
+			} else if ( key === "icon" ) {
+				control.value = child.dataset.icon || "";
 			} else if ( key === "show-label" ) {
 				control.checked = !! state.label && ! state.label.classList.contains( "screen-reader-text" );
 			} else if ( key === "disabled" ) {
@@ -394,15 +413,17 @@
 			if ( key === "show-icon" ) {
 				var icon = child.querySelector( ".wp-block-button__icon" );
 				if ( control.checked && ! icon ) {
-					icon = document.createElement( "span" );
-					icon.className = "wp-block-button__icon material-symbols-outlined notranslate";
-					icon.setAttribute( "translate", "no" );
-					icon.setAttribute( "aria-hidden", "true" );
-					icon.textContent = "add";
-					link.prepend( icon );
+					link.prepend( makeIcon( child ) );
 				}
 				if ( ! control.checked && icon ) {
 					icon.remove();
+				}
+			}
+			if ( key === "icon" ) {
+				child.dataset.icon = control.value;
+				var live = child.querySelector( ".wp-block-button__icon" );
+				if ( live ) {
+					live.textContent = control.value;
 				}
 			}
 			if ( key === "show-label" ) {

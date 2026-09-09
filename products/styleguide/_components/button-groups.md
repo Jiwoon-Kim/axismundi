@@ -302,6 +302,85 @@ or sort elements"를 들면서, 동시에 토글이 아니면 쓰지 말라고 �
   </nav>
 </div>
 
+## 조작해 보기
+
+아래 컨트롤은 데모 엔진이 아니라 **블록 Inspector를 HTML로 쓴 것**입니다. 각 컨트롤이
+어댑터가 이미 읽는 `data-*`를 하나씩 씁니다. 바꿀 때마다 아래에 **블록이 저장할 속성**이
+그대로 나옵니다.
+
+<div class="sg-bg-playground">
+  <div class="sg-bg-playground__controls">
+    <label class="sg-bg-playground__control">Variant
+      <select data-controls="variant">
+        <option value="connected">Connected</option>
+        <option value="standard">Standard</option>
+      </select>
+    </label>
+    <label class="sg-bg-playground__control">Size
+      <select data-controls="size">
+        <option value="xsmall">XS</option>
+        <option value="small" selected>Small</option>
+        <option value="medium">Medium</option>
+        <option value="large">Large</option>
+        <option value="xlarge">XL</option>
+      </select>
+    </label>
+    <label class="sg-bg-playground__control">Color
+      <select data-controls="color">
+        <option value="">Filled</option>
+        <option value="tonal">Tonal</option>
+        <option value="outlined">Outlined</option>
+      </select>
+    </label>
+    <label class="sg-bg-playground__control">Selection
+      <select data-controls="selection">
+        <option value="single-required" selected>Single, required</option>
+        <option value="single">Single</option>
+        <option value="multiple">Multiple</option>
+      </select>
+    </label>
+    <label class="sg-bg-playground__control sg-bg-playground__control--inline">
+      <input type="checkbox" data-controls="labels" value="hidden" /> Hide labels
+    </label>
+  </div>
+  <div class="sg-bg-playground__stage">
+    <div class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" data-selection="single" data-required="true" role="group" aria-label="Playground">
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">star</span><span>One</span></button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">star</span><span>Two</span></button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">star</span><span>Three</span></button>
+    </div>
+  </div>
+  <pre class="sg-bg-playground__markup" data-playground-markup></pre>
+</div>
+
+**iframe은 쓰지 않았습니다.** 표본이 이미 실제 DOM이고 실제 스타일시트 아래에
+있어서 격리할 것이 없습니다. iframe을 넣으면 토큰 계층 사본을 하나 더 맞춰 줘야
+하고, 얻는 것은 자기 뷰포트뿐인데 여기 어떤 컨트롤도 그것을 필요로 하지 않습니다.
+
+뷰포트가 필요한 경우는 따로 있습니다 — **`@media`를 실제로 태우려면** 폭이 다른
+문서가 있어야 합니다. `.sg-button-group-mobile-shell`은 390px 상자일 뿐이라 페이지의
+미디어쿼리는 여전히 진짜 뷰포트로 평가됩니다. 그건 container query로 옮기는 편이
+iframe보다 가볍고, 지금 그걸 절실히 요구하는 표본은 없습니다.
+
+## 이걸 블록 UI로 옮기면
+
+`Color` 드롭다운이 특히 코어에 선례가 있습니다.
+
+```
+core/tag-cloud    taxonomy      string, default "post_tag"   → SelectControl
+core/social-links size          string                        → 자식에게 전달
+                  showLabels    boolean                       → providesContext
+```
+
+`core/social-links`가 더 가까운 선례입니다 — **컨테이너의 컨트롤 하나가 자식 전체를
+결정**하고, `providesContext`로 내려보냅니다. `core/buttons`에 Button style 드롭다운을
+붙이자는 제안이 정확히 그 모양이고, 버튼 다섯 개를 하나씩 Outlined로 바꾸는 수고를
+없앱니다.
+
+M3와도 어긋나지 않습니다. 그룹은 여전히 아무것도 칠하지 않고 **기본값만 내려주며**,
+자식이 자기 variation을 고르면 그쪽이 이깁니다 — 위 playground에서 Color를 바꿔도
+`is-style-*`를 가진 자식은 따라오지 않는 것과 같은 규칙입니다.
+
 ## 그룹 크기와 버튼 크기가 겹칩니다
 
 M3는 양쪽에 size를 발행합니다 — Button에 다섯, Button group에도 다섯. 컨테이너가

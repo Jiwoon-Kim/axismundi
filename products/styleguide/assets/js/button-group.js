@@ -67,3 +67,99 @@
 		.querySelectorAll( ".wp-block-axismundi-button-group[data-selection]" )
 		.forEach( bind );
 } )();
+
+/**
+ * The playground.
+ *
+ * Every control here writes one of the data-* attributes the adapter already
+ * reads, which is the point: this is not a simulator, it is the block's
+ * Inspector expressed as HTML. A reader changing "Color" is doing what an
+ * author would do in the sidebar, and the specimen under it is the markup the
+ * block would save.
+ *
+ * No iframe. The specimens are already the real DOM under the real stylesheet,
+ * so there is nothing to isolate; an iframe would only add a second copy of the
+ * token layers to keep in step. The one thing it would buy is a viewport of its
+ * own, which no control here needs.
+ */
+( function () {
+	var GROUP = ".wp-block-axismundi-button-group";
+
+	function normalise( group ) {
+		var mode = group.dataset.selection;
+		var required = group.dataset.required === "true";
+		var segments = Array.prototype.slice.call(
+			group.querySelectorAll( ".wp-block-axismundi-button-group__item[aria-pressed]" )
+		);
+		if ( ! segments.length ) {
+			return;
+		}
+		var on = segments.filter( function ( s ) {
+			return s.getAttribute( "aria-pressed" ) === "true";
+		} );
+
+		// Switching modes can leave a state the new mode forbids: two pressed
+		// under single, none pressed under required. Fix it on the way in
+		// rather than letting the invariant break silently.
+		if ( mode === "multiple" ) {
+			return;
+		}
+		if ( on.length > 1 ) {
+			on.slice( 1 ).forEach( function ( s ) {
+				s.setAttribute( "aria-pressed", "false" );
+			} );
+			on = on.slice( 0, 1 );
+		}
+		if ( required && on.length === 0 ) {
+			segments[ 0 ].setAttribute( "aria-pressed", "true" );
+		}
+	}
+
+	document.querySelectorAll( ".sg-bg-playground" ).forEach( function ( host ) {
+		var group = host.querySelector( GROUP );
+		if ( ! group ) {
+			return;
+		}
+
+		host.addEventListener( "change", function ( event ) {
+			var control = event.target.closest( "[data-controls]" );
+			if ( ! control ) {
+				return;
+			}
+			var key = control.dataset.controls;
+			var value = control.type === "checkbox"
+				? ( control.checked ? control.value : "" )
+				: control.value;
+
+			if ( value === "" ) {
+				delete group.dataset[ key ];
+			} else {
+				group.dataset[ key ] = value;
+			}
+
+			// required is a second attribute, not a fourth selection value.
+			if ( key === "selection" ) {
+				if ( value === "single-required" ) {
+					group.dataset.selection = "single";
+					group.dataset.required = "true";
+				} else {
+					delete group.dataset.required;
+				}
+				normalise( group );
+			}
+
+			var out = host.querySelector( "[data-playground-markup]" );
+			if ( out ) {
+				out.textContent = Object.keys( group.dataset )
+					.map( function ( k ) {
+						return "data-" + k.replace( /[A-Z]/g, function ( m ) {
+							return "-" + m.toLowerCase();
+						} ) + '="' + group.dataset[ k ] + '"';
+					} )
+					.join( String.fromCharCode( 10 ) );
+			}
+		} );
+
+		host.dispatchEvent( new Event( "change", { bubbles: false } ) );
+	} );
+} )();

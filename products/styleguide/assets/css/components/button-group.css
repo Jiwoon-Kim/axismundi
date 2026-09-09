@@ -279,17 +279,21 @@
  * Tonal and Outline; Elevated is not offered here, and Text cannot be, having
  * no container to treat.
  *
- * These set --ax-group-color-*, which components/button.css reads as the
- * fallback behind --ax-button-*. So they inherit into any member that has not
- * declared its own style, and lose to any member that has. */
-.wp-block-buttons[data-color="tonal"],
-.wp-block-axismundi-button-group[data-color="tonal"] {
+ * The two variants need different variables, and the reason is what each child
+ * is. A standard group holds real Buttons, which read --ax-button-container.
+ * A connected group holds Segments, which are toggles and read the published
+ * toggle pair - so setting the plain roles there changed a variable nothing
+ * was looking at, and the segments kept their default colour. Measured before
+ * the split: --ax-button-container resolved to transparent on every segment
+ * while the painted background stayed surface-container.
+ *
+ * Standard: the plain roles, read as a fallback by components/button.css. */
+.wp-block-buttons[data-color="tonal"] {
 	--ax-group-color-container: var(--md-sys-color-secondary-container);
 	--ax-group-color-content: var(--md-sys-color-on-secondary-container);
 }
 
-.wp-block-buttons[data-color="outlined"],
-.wp-block-axismundi-button-group[data-color="outlined"] {
+.wp-block-buttons[data-color="outlined"] {
 	--ax-group-color-container: transparent;
 	--ax-group-color-content: var(--md-sys-color-on-surface-variant);
 }
@@ -298,9 +302,30 @@
  * needs the outline drawn. Scoped to members that have not chosen a style of
  * their own, so a tonal child inside an outlined group does not gain a border
  * it never asked for. */
-.wp-block-buttons[data-color="outlined"] > .wp-block-button:not([class*="is-style-"]) > .wp-block-button__link,
-.wp-block-axismundi-button-group[data-color="outlined"] > .wp-block-axismundi-button-group__item:not([class*="is-style-"]) {
+.wp-block-buttons[data-color="outlined"] > .wp-block-button:not([class*="is-style-"]) > .wp-block-button__link {
 	border: var(--ax-button-outline-width, 1px) solid var(--md-sys-color-outline-variant);
+}
+
+/* Connected: the toggle pair, which is M3's own table for a selected and an
+ * unselected segment. Filled is the default and needs no rule. */
+.wp-block-axismundi-button-group[data-color="tonal"] {
+	--ax-button-toggle-unselected-container: var(--md-sys-color-secondary-container);
+	--ax-button-toggle-unselected-content: var(--md-sys-color-on-secondary-container);
+	--ax-button-toggle-selected-container: var(--md-sys-color-secondary);
+	--ax-button-toggle-selected-content: var(--md-sys-color-on-secondary);
+}
+
+/* Outlined's unselected container is invisible - M3 names outline-variant for
+ * the outline, not for a fill - and its selected pair inverts the surface. */
+.wp-block-axismundi-button-group[data-color="outlined"] {
+	--ax-button-toggle-unselected-container: transparent;
+	--ax-button-toggle-unselected-content: var(--md-sys-color-on-surface-variant);
+	--ax-button-toggle-selected-container: var(--md-sys-color-inverse-surface);
+	--ax-button-toggle-selected-content: var(--md-sys-color-inverse-on-surface);
+}
+
+.wp-block-axismundi-button-group[data-color="outlined"] > .wp-block-axismundi-button-group__item:not([aria-pressed="true"]):not([aria-current="page"]) {
+	box-shadow: inset 0 0 0 var(--ax-button-outline-width, 1px) var(--md-sys-color-outline-variant);
 }
 
 /* --- Connected: 2dp at every size ----------------------------- */

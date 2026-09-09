@@ -227,32 +227,6 @@ def main() -> int:
             report.check(declaration(adapter_style, "--ax-button-content") == css_role(color["content"]),
                          f"adapter {name} content differs from button.yml")
 
-        # Connected Button groups do not choose a separate palette. Their
-        # wrapper consumes this same Button style, then segments read the
-        # published toggle colours for resting and selected states. Text has
-        # no toggle form in M3, so it deliberately has no group counterpart.
-        if color["toggle_unselected"] is not None:
-            group_selector = (
-                ".wp-block-axismundi-button-group"
-                if name == "filled"
-                else f".wp-block-axismundi-button-group.{color['wp_style']}"
-            )
-            group_style = block(css, group_selector)
-            report.check(group_style is not None,
-                         f"adapter has no {name} Button group style rule")
-            if group_style is not None:
-                for state in ("unselected", "selected"):
-                    toggle = color[f"toggle_{state}"]
-                    for role_name, role_value in toggle.items():
-                        property_name = f"--ax-button-toggle-{state}-{role_name}"
-                        expected_value = (
-                            "transparent"
-                            if color.get("container_is_outline") and state == "unselected" and role_name == "container"
-                            else css_role(role_value)
-                        )
-                        report.check(declaration(group_style, property_name) == expected_value,
-                                     f"Button group {name} {state} {role_name} differs from button.yml")
-
         if name == "filled":
             source = theme_button_style
         elif name == "outlined":
@@ -272,6 +246,21 @@ def main() -> int:
                          f"theme {name} container differs from button.yml")
         report.check(colors.get("text") == role(color["content"]),
                      f"theme {name} content differs from button.yml")
+
+    # Connected is composed from Segments, not independently styled Buttons.
+    # Figma exposes no colour property for it, so it takes the Filled toggle
+    # roles as its fixed default rather than pretending every Button variation
+    # is a connected-group configuration.
+    filled = next(color for color in data["colors"] if color["name"] == "filled")
+    group_style = block(css, ".wp-block-axismundi-button-group")
+    report.check(group_style is not None, "adapter has no Connected group default rule")
+    if group_style is not None:
+        for state in ("unselected", "selected"):
+            toggle = filled[f"toggle_{state}"]
+            for role_name, role_value in toggle.items():
+                property_name = f"--ax-button-toggle-{state}-{role_name}"
+                report.check(declaration(group_style, property_name) == css_role(role_value),
+                             f"Connected default {state} {role_name} differs from Button Filled")
 
     # These are shared contracts, not colour-style decisions.
     for token in (

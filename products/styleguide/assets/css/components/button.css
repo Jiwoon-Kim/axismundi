@@ -250,10 +250,10 @@
 
 /* Filled, the default. No class: an unstyled core/button is already this.
  *
- * A Button group has no independent colour API. Its segments do, however,
- * need the Button specification's toggle surfaces. The proposed group adapter
- * takes these variables from its wrapper, which keeps the Button colours in
- * one place while allowing a connected group to apply one style uniformly. */
+ * A connected Button group has no independent colour API. It uses the Filled
+ * toggle roles as its fixed default; Figma exposes no group colour property.
+ * Standard groups instead contain actual Button and Icon button children,
+ * whose independent Button styles are defined below. */
 .wp-block-button,
 .wp-block-axismundi-button-group {
 	--ax-button-container: var(--md-sys-color-primary);
@@ -269,8 +269,7 @@
 	--ax-button-toggle-selected-state-role: var(--md-sys-color-on-primary);
 }
 
-.wp-block-button.is-style-elevated,
-.wp-block-axismundi-button-group.is-style-elevated {
+.wp-block-button.is-style-elevated {
 	--ax-button-container: var(--md-sys-color-surface-container-low);
 	--ax-button-content: var(--md-sys-color-primary);
 	--ax-button-state-role: var(--md-sys-color-primary);
@@ -286,8 +285,7 @@
 	box-shadow: var(--md-sys-elevation-shadow-level1);
 }
 
-.wp-block-button.is-style-tonal,
-.wp-block-axismundi-button-group.is-style-tonal {
+.wp-block-button.is-style-tonal {
 	--ax-button-container: var(--md-sys-color-secondary-container);
 	--ax-button-content: var(--md-sys-color-on-secondary-container);
 	--ax-button-state-role: var(--md-sys-color-on-secondary-container);
@@ -302,8 +300,7 @@
 /* Outlined and text share an invisible container. Their state layers mix over
  * transparent, which is why they read as a tint of whatever is behind them and
  * why both work on any surface. */
-.wp-block-button.is-style-outline,
-.wp-block-axismundi-button-group.is-style-outline {
+.wp-block-button.is-style-outline {
 	--ax-button-container: transparent;
 	--ax-button-content: var(--md-sys-color-on-surface-variant);
 	--ax-button-state-role: var(--md-sys-color-on-surface-variant);
@@ -319,8 +316,7 @@
 	border: var(--ax-button-outline-width, 1px) solid var(--md-sys-color-outline-variant);
 }
 
-.wp-block-button.is-style-text,
-.wp-block-axismundi-button-group.is-style-text {
+.wp-block-button.is-style-text {
 	--ax-button-container: transparent;
 	--ax-button-content: var(--md-sys-color-primary);
 	--ax-button-state-role: var(--md-sys-color-primary);

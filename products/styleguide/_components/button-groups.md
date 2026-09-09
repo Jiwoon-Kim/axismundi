@@ -83,6 +83,22 @@ guidelines의 문장도 같은 방향입니다 — "selected **or activated**", 
   </div>
 </div>
 
+Lab의 Pattern A도 함께 남깁니다. 이쪽은 버튼을 흉내 내는 radio가 아니라, 실제
+`input[type="radio"]`와 label입니다. 브라우저가 상호배타, 화살표 키, form reset을
+소유합니다.
+
+<div class="sg-demo">
+  <fieldset class="wp-block-axismundi-button-group" data-variant="standard" data-size="small" aria-label="Native view mode">
+    <legend class="screen-reader-text">Native view mode</legend>
+    <input class="wp-block-axismundi-button-group__input" type="radio" name="standard-native-view" id="standard-native-list" />
+    <label class="wp-block-axismundi-button-group__item wp-element-button" for="standard-native-list">List</label>
+    <input class="wp-block-axismundi-button-group__input" type="radio" name="standard-native-view" id="standard-native-grid" checked />
+    <label class="wp-block-axismundi-button-group__item wp-element-button" for="standard-native-grid">Grid</label>
+    <input class="wp-block-axismundi-button-group__input" type="radio" name="standard-native-view" id="standard-native-map" />
+    <label class="wp-block-axismundi-button-group__item wp-element-button" for="standard-native-map">Map</label>
+  </fieldset>
+</div>
+
 ### 3. Standard, multi-select
 
 `Photos / Notes / Links`. 몇 개든 켤 수 있고, 전부 끌 수도 있습니다.
@@ -106,6 +122,21 @@ Switcher와 같은 모드입니다.
     <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true">Week</button>
     <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">Month</button>
   </div>
+</div>
+
+Lab의 Connected Pattern A는 같은 상태를 native radio로도 보여줍니다. 여기서는
+`name`을 공유하는 실제 radio가 required single-select를 보장합니다.
+
+<div class="sg-demo">
+  <fieldset class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" aria-label="Native density">
+    <legend class="screen-reader-text">Native density</legend>
+    <input class="wp-block-axismundi-button-group__input" type="radio" name="connected-native-density" id="connected-native-compact" />
+    <label class="wp-block-axismundi-button-group__item wp-element-button" for="connected-native-compact">Compact</label>
+    <input class="wp-block-axismundi-button-group__input" type="radio" name="connected-native-density" id="connected-native-comfort" checked />
+    <label class="wp-block-axismundi-button-group__item wp-element-button" for="connected-native-comfort">Comfort</label>
+    <input class="wp-block-axismundi-button-group__input" type="radio" name="connected-native-density" id="connected-native-spacious" />
+    <label class="wp-block-axismundi-button-group__item wp-element-button" for="connected-native-spacious">Spacious</label>
+  </fieldset>
 </div>
 
 **모서리가 움직이는 것이 shape morph입니다.** 쉬는 세그먼트는 안쪽 8px, 선택된 것은
@@ -147,6 +178,154 @@ or sort elements"를 들면서, 동시에 토글이 아니면 쓰지 말라고 �
     <a class="wp-block-axismundi-button-group__item wp-element-button" href="#3">Compact</a>
   </nav>
 </div>
+
+## Lab specimen matrix
+
+Lab의 Button group 모듈에 있는 모든 표본 유형을 아래에 보존합니다. 이 페이지는
+현재 제품이 아닌 계약을 보여 주므로, 표본은 `wp-block-axismundi-button-group`이라는
+정적 어댑터를 사용합니다. `core/buttons`가 이 선택 상태를 이미 지원한다고 암시하지
+않습니다.
+
+### Connected, multi-select toolbar
+
+Lab Pattern B입니다. 각 버튼이 독립 토글이므로 radio가 아니라
+`button[aria-pressed]`를 씁니다.
+
+<div class="sg-button-group-grid">
+  <div class="sg-button-group-specimen">
+    <div class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" data-selection="multiple" role="toolbar" aria-label="Text formatting">
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true">Bold</button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">Italic</button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">Underline</button>
+    </div>
+    <p class="sg-button-group-caption">Multiple selection. Any number of formatting toggles may be on.</p>
+  </div>
+  <div class="sg-button-group-specimen">
+    <div class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" data-selection="multiple" role="toolbar" aria-label="Paragraph alignment">
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-label="Align left" aria-pressed="true"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">format_align_left</span></button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-label="Align center" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">format_align_center</span></button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-label="Align right" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">format_align_right</span></button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-label="Justify" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">format_align_justify</span></button>
+    </div>
+    <p class="sg-button-group-caption">Four icon-only segments. Every icon-only button has an accessible name.</p>
+  </div>
+</div>
+
+### Segment count and content
+
+The Lab matrix checks 2, 3, 4, and 5 segments, then label-only, leading icon +
+label, and icon-only content. These are separate axes: a segment count is
+not a content type.
+
+<div class="sg-button-group-grid">
+  <div class="sg-button-group-specimen">
+    <fieldset class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" aria-label="Billing cycle">
+      <legend class="screen-reader-text">Billing cycle</legend>
+      <input class="wp-block-axismundi-button-group__input" type="radio" name="billing-cycle" id="billing-monthly" checked />
+      <label class="wp-block-axismundi-button-group__item wp-element-button" for="billing-monthly">Monthly</label>
+      <input class="wp-block-axismundi-button-group__input" type="radio" name="billing-cycle" id="billing-yearly" />
+      <label class="wp-block-axismundi-button-group__item wp-element-button" for="billing-yearly">Yearly</label>
+    </fieldset>
+    <p class="sg-button-group-caption">2 segments, label-only.</p>
+  </div>
+  <div class="sg-button-group-specimen">
+    <div class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" data-selection="single" data-required="true" role="group" aria-label="View controls">
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">view_list</span>List</button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">grid_view</span>Grid</button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">map</span>Map</button>
+    </div>
+    <p class="sg-button-group-caption">3 segments, leading icon + label.</p>
+  </div>
+  <div class="sg-button-group-specimen">
+    <div class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" data-selection="single" data-required="true" role="group" aria-label="Editor mode">
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-label="Edit mode" aria-pressed="true"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">edit</span></button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-label="Preview mode" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">visibility</span></button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-label="Publish mode" aria-pressed="false"><span class="wp-block-button__icon material-symbols-outlined notranslate" translate="no" aria-hidden="true">rocket_launch</span></button>
+    </div>
+    <p class="sg-button-group-caption">3 segments, icon-only.</p>
+  </div>
+  <div class="sg-button-group-specimen">
+    <div class="sg-button-group-mobile-shell">
+      <fieldset class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" aria-label="Priority">
+        <legend class="screen-reader-text">Priority</legend>
+        <input class="wp-block-axismundi-button-group__input" type="radio" name="priority" id="priority-p0" />
+        <label class="wp-block-axismundi-button-group__item wp-element-button" for="priority-p0">P0</label>
+        <input class="wp-block-axismundi-button-group__input" type="radio" name="priority" id="priority-p1" checked />
+        <label class="wp-block-axismundi-button-group__item wp-element-button" for="priority-p1">P1</label>
+        <input class="wp-block-axismundi-button-group__input" type="radio" name="priority" id="priority-p2" />
+        <label class="wp-block-axismundi-button-group__item wp-element-button" for="priority-p2">P2</label>
+        <input class="wp-block-axismundi-button-group__input" type="radio" name="priority" id="priority-p3" />
+        <label class="wp-block-axismundi-button-group__item wp-element-button" for="priority-p3">P3</label>
+        <input class="wp-block-axismundi-button-group__input" type="radio" name="priority" id="priority-p4" />
+        <label class="wp-block-axismundi-button-group__item wp-element-button" for="priority-p4">P4</label>
+      </fieldset>
+    </div>
+    <p class="sg-button-group-caption">5 segments in the Lab's 390px mobile QA shell.</p>
+  </div>
+</div>
+
+### Size matrix
+
+The Lab originally had partial size hooks. This style guide uses the current
+five-size Button contract, so each row below changes height, label treatment,
+gap, and connected inner corners together.
+
+<div class="sg-button-group-stack">
+  <div class="sg-button-group-specimen"><div class="wp-block-axismundi-button-group" data-variant="connected" data-size="xsmall" data-selection="single" data-required="true" role="group" aria-label="Extra small"><button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true">XS A</button><button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">XS B</button></div><p class="sg-button-group-caption">Xsmall, 32dp container and 48dp minimum segment width.</p></div>
+  <div class="sg-button-group-specimen"><div class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" data-selection="single" data-required="true" role="group" aria-label="Small"><button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true">S A</button><button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">S B</button></div><p class="sg-button-group-caption">Small, 40dp container and 48dp minimum segment width.</p></div>
+  <div class="sg-button-group-specimen"><div class="wp-block-axismundi-button-group" data-variant="connected" data-size="medium" data-selection="single" data-required="true" role="group" aria-label="Medium"><button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true">M A</button><button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">M B</button></div><p class="sg-button-group-caption">Medium, 56dp container.</p></div>
+  <div class="sg-button-group-specimen"><div class="wp-block-axismundi-button-group" data-variant="connected" data-size="large" data-selection="single" data-required="true" role="group" aria-label="Large"><button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true">L A</button><button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">L B</button></div><p class="sg-button-group-caption">Large, 96dp container and 16dp resting inner corner.</p></div>
+  <div class="sg-button-group-specimen"><div class="wp-block-axismundi-button-group" data-variant="connected" data-size="xlarge" data-selection="single" data-required="true" role="group" aria-label="Extra large"><button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true">XL A</button><button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">XL B</button></div><p class="sg-button-group-caption">Extra large, 136dp container and 20dp resting inner corner.</p></div>
+</div>
+
+### Disabled and bounded ripple
+
+Lab separates native disabled inputs, native disabled buttons, and plugin-managed
+`aria-disabled`. The first two are demonstrated here. `aria-disabled` stays
+focusable in real products, so the owner must suppress activation and explain
+why it is unavailable; this static adapter suppresses it only for safety.
+
+<div class="sg-button-group-grid">
+  <div class="sg-button-group-specimen">
+    <fieldset class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" aria-label="Native disabled radio">
+      <legend class="screen-reader-text">Native disabled radio</legend>
+      <input class="wp-block-axismundi-button-group__input" type="radio" name="disabled-radio" id="disabled-radio-open" checked />
+      <label class="wp-block-axismundi-button-group__item wp-element-button" for="disabled-radio-open">Open</label>
+      <input class="wp-block-axismundi-button-group__input" type="radio" name="disabled-radio" id="disabled-radio-locked" disabled />
+      <label class="wp-block-axismundi-button-group__item wp-element-button" for="disabled-radio-locked">Locked</label>
+      <input class="wp-block-axismundi-button-group__input" type="radio" name="disabled-radio" id="disabled-radio-later" />
+      <label class="wp-block-axismundi-button-group__item wp-element-button" for="disabled-radio-later">Later</label>
+    </fieldset>
+    <p class="sg-button-group-caption">Disabled is native to the input.</p>
+  </div>
+  <div class="sg-button-group-specimen">
+    <div class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" data-selection="multiple" role="toolbar" aria-label="Disabled buttons">
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="true">Ready</button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false" disabled>Disabled</button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">Next</button>
+    </div>
+    <p class="sg-button-group-caption">Disabled is native to the button.</p>
+  </div>
+  <div class="sg-button-group-specimen">
+    <div class="wp-block-axismundi-button-group" data-variant="connected" data-size="small" data-selection="multiple" role="toolbar" aria-label="Managed disabled buttons">
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">Free</button>
+      <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false" aria-disabled="true">Pro</button>
+    </div>
+    <p class="sg-button-group-caption">`aria-disabled` is owned by plugin behavior, not CSS alone.</p>
+  </div>
+</div>
+
+Lab's ripple result also stands: attach bounded ripple to each visible segment,
+never the group container. This site does not load a product ripple runtime, so
+it intentionally does not counterfeit that effect here. The static examples
+verify geometry, semantics, and state; [the Lab module](https://github.com/Jiwoon-Kim/axismundi/tree/main/products/reference-implementations/axismundi-lab/modules/button-group) retains ripple evidence.
+
+### WordPress approximation
+
+This is the current `core/buttons` boundary: it is a row of independent
+actions, not a connected selection control. It can model the action-group
+example above but cannot emit radio inputs, persist `aria-pressed`, or own the
+selection model without a block or plugin.
 
 실측입니다. 760px 부모 안에서 **standard는 내용을 감싸고, connected는 760px를 전부
 채웁니다.** 안쪽 여백은 12dp와 2dp입니다.
@@ -197,6 +376,43 @@ consistency at scale."
 
 XS와 S의 큰 standard 여백은 장식이 아니라 **48dp 타깃을 만들기 위한 것**이고,
 M3는 이 두 크기에서 여백을 줄이지 말라고 명시합니다.
+
+## 그룹 크기와 버튼 크기가 겹칩니다
+
+M3는 양쪽에 size를 발행합니다 — Button에 다섯, Button group에도 다섯. 컨테이너가
+자기 크기를 갖는데 개별 버튼도 크기를 가지면, 그룹 크기는 무엇인가.
+
+스펙이 세 문장으로 답합니다.
+
+```
+"By default, all buttons in a standard group should be the same size"
+"Only use multiple sizes in a group for hero moments"
+"Button groups adapt to the height of the buttons inside"
+```
+
+**그룹 크기는 기본값이고, 선언한 버튼이 이깁니다.** 컨테이너 높이는 정해지는 값이
+아니라 안에 든 것을 따라가는 값입니다.
+
+CSS에서는 장치가 필요 없습니다. 그룹이 자기 자신에 `--ax-button-*`를 걸면 상속되고,
+세그먼트가 자기 것을 선언하면 요소 자신에 걸린 쪽이 이깁니다. 높이도 규칙이 필요
+없습니다 — flex 행이라 이미 가장 큰 자식만큼 높습니다.
+
+<div class="sg-demo">
+  <div class="wp-block-axismundi-button-group" data-variant="standard" data-size="small" data-selection="single" role="group" aria-label="Hero size">
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" aria-pressed="false">Cancel</button>
+    <button type="button" class="wp-block-axismundi-button-group__item wp-element-button" data-size="medium" aria-pressed="true">Continue</button>
+  </div>
+</div>
+
+그룹은 small인데 `Continue`만 medium입니다. 실측 40 / 56이고 그룹 높이는 56입니다.
+
+**between space는 따라가지 않습니다.** 그룹의 값으로 남습니다 — 그룹 토큰이고, hero
+버튼은 그룹 안의 예외이지 새 그룹 크기가 아니기 때문입니다.
+
+여기에 대가가 하나 있고 M3가 답하지 않습니다. **XS와 S의 넉넉한 between space는
+48dp 타깃을 사기 위한 것**이고, M3는 그 여백을 줄이지 말라고 합니다. 그런데 M으로
+선언한 그룹에 XS 세그먼트를 넣으면 그 버튼은 M의 8dp 이웃을 받습니다. 큰 여백이 사던
+타깃이 사라집니다. **작은 쪽으로 섞을 때만 문제이고, 큰 쪽으로 섞는 것은 무료입니다.**
 
 ## 선택 모델이 두 문서에서 어긋납니다
 

@@ -32,6 +32,7 @@
 	gap: var(--ax-group-padding, var(--md-sys-measurement-space150));
 	margin: 0;
 	padding: 0;
+	border: 0;
 	list-style: none;
 }
 
@@ -109,6 +110,89 @@
 	--ax-button-label-line-height: 40px;
 }
 
+
+/* --- A segment may overrule the group's size -------------------- */
+
+/* M3 says the group declares and the members follow - "By default, all buttons
+ * in a standard group should be the same size" - and then leaves room for the
+ * exception: "Only use multiple sizes in a group for hero moments." So the
+ * group's size is a default that inherits, and a segment that declares its own
+ * wins, because a custom property set on the element beats one inherited from
+ * its parent. That is the whole mechanism; there is no cascade trick in it.
+ *
+ * The container height needs no rule at all. The group is a flex row with
+ * align-items: center, so it is already as tall as its tallest member - which
+ * is what M3 means by "Button groups adapt to the height of the buttons
+ * inside".
+ *
+ * Between-space does NOT follow the override. It stays the group's, because it
+ * is a group token and because a hero button is an exception inside a group
+ * rather than a new group size. That has a cost worth knowing: XS and S carry a
+ * larger between-space precisely so their 48dp target survives a 32dp
+ * container, and M3 says not to reduce it. Drop an XS segment into a group
+ * declared M and it gets M's 8dp neighbours, so the target the larger padding
+ * was buying is gone. Mixing down is the case to check; mixing up is free. */
+
+.wp-block-axismundi-button-group__item[data-size="xsmall"] {
+	--ax-button-height: 32px;
+	--ax-button-space: var(--md-sys-measurement-space150);
+	--ax-button-icon-size: 20px;
+	--ax-button-icon-gap: var(--md-sys-measurement-space50);
+	--ax-button-shape: 16px;
+	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-small);
+	--ax-button-label-size: 14px;
+	--ax-button-label-weight: 500;
+	--ax-button-label-line-height: 20px;
+}
+
+.wp-block-axismundi-button-group__item[data-size="small"] {
+	--ax-button-height: 40px;
+	--ax-button-space: var(--md-sys-measurement-space200);
+	--ax-button-icon-size: 20px;
+	--ax-button-icon-gap: var(--md-sys-measurement-space100);
+	--ax-button-shape: 20px;
+	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-small);
+	--ax-button-label-size: 14px;
+	--ax-button-label-weight: 500;
+	--ax-button-label-line-height: 20px;
+}
+
+.wp-block-axismundi-button-group__item[data-size="medium"] {
+	--ax-button-height: 56px;
+	--ax-button-space: var(--md-sys-measurement-space300);
+	--ax-button-icon-size: 24px;
+	--ax-button-icon-gap: var(--md-sys-measurement-space100);
+	--ax-button-shape: 28px;
+	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-medium);
+	--ax-button-label-size: 16px;
+	--ax-button-label-weight: 500;
+	--ax-button-label-line-height: 24px;
+}
+
+.wp-block-axismundi-button-group__item[data-size="large"] {
+	--ax-button-height: 96px;
+	--ax-button-space: var(--md-sys-measurement-space600);
+	--ax-button-icon-size: 32px;
+	--ax-button-icon-gap: var(--md-sys-measurement-space150);
+	--ax-button-shape: 48px;
+	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-large);
+	--ax-button-label-size: 24px;
+	--ax-button-label-weight: 400;
+	--ax-button-label-line-height: 32px;
+}
+
+.wp-block-axismundi-button-group__item[data-size="xlarge"] {
+	--ax-button-height: 136px;
+	--ax-button-space: var(--md-sys-measurement-space800);
+	--ax-button-icon-size: 40px;
+	--ax-button-icon-gap: var(--md-sys-measurement-space200);
+	--ax-button-shape: 68px;
+	--ax-button-pressed-shape: var(--md-sys-shape-corner-value-large);
+	--ax-button-label-size: 32px;
+	--ax-button-label-weight: 400;
+	--ax-button-label-line-height: 40px;
+}
+
 /* --- Connected: 2dp at every size ----------------------------- */
 
 /* One padding for all five sizes, which M3 gives as a consistency rule rather
@@ -134,14 +218,26 @@
 
 /* Only the two ends are pills. Logical longhands: a group reverses in RTL and
  * a radius shorthand cannot. */
-.wp-block-axismundi-button-group[data-variant="connected"] > .wp-block-axismundi-button-group__item:first-child {
+.wp-block-axismundi-button-group[data-variant="connected"] > .wp-block-axismundi-button-group__item:first-of-type {
 	border-start-start-radius: var(--ax-button-shape, 20px);
 	border-end-start-radius: var(--ax-button-shape, 20px);
 }
 
-.wp-block-axismundi-button-group[data-variant="connected"] > .wp-block-axismundi-button-group__item:last-child {
+.wp-block-axismundi-button-group[data-variant="connected"] > .wp-block-axismundi-button-group__item:last-of-type {
 	border-start-end-radius: var(--ax-button-shape, 20px);
 	border-end-end-radius: var(--ax-button-shape, 20px);
+}
+
+/* Pressed state changes only the inner corners. The outer edge remains a
+ * capsule, including when the first or last segment is already selected. */
+.wp-block-axismundi-button-group[data-variant="connected"] > .wp-block-axismundi-button-group__item:first-of-type:active {
+	border-start-start-radius: calc(var(--ax-button-height, 40px) / 2);
+	border-end-start-radius: calc(var(--ax-button-height, 40px) / 2);
+}
+
+.wp-block-axismundi-button-group[data-variant="connected"] > .wp-block-axismundi-button-group__item:last-of-type:active {
+	border-start-end-radius: calc(var(--ax-button-height, 40px) / 2);
+	border-end-end-radius: calc(var(--ax-button-height, 40px) / 2);
 }
 
 /* --- Standard: adjacent buttons respond ----------------------- */
@@ -191,6 +287,20 @@
 		background-color var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects);
 }
 
+/* Pattern A keeps native radio semantics. The visible label is its sibling,
+ * never a replacement element: this preserves arrow-key selection, form
+ * reset, and the shared name contract without a specimen-only controller. */
+.wp-block-axismundi-button-group__input {
+	position: absolute;
+	inline-size: 1px;
+	block-size: 1px;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.wp-block-axismundi-button-group__item {
 		transition: none;
@@ -217,7 +327,8 @@
  * shipping consumers use different ones and both are correct: a toggle is
  * pressed, a link to the current view is current. */
 .wp-block-axismundi-button-group__item[aria-pressed="true"],
-.wp-block-axismundi-button-group__item[aria-current="page"] {
+.wp-block-axismundi-button-group__item[aria-current="page"],
+.wp-block-axismundi-button-group__input:checked + .wp-block-axismundi-button-group__item {
 	background-color: var(--md-sys-color-secondary);
 	color: var(--md-sys-color-on-secondary);
 }
@@ -248,7 +359,8 @@
 }
 
 .wp-block-axismundi-button-group > .wp-block-axismundi-button-group__item[aria-pressed="true"],
-.wp-block-axismundi-button-group > .wp-block-axismundi-button-group__item[aria-current="page"] {
+.wp-block-axismundi-button-group > .wp-block-axismundi-button-group__item[aria-current="page"],
+.wp-block-axismundi-button-group > .wp-block-axismundi-button-group__input:checked + .wp-block-axismundi-button-group__item {
 	border-radius: var(--ax-group-selected-corner, calc(var(--ax-button-height, 40px) / 2));
 }
 
@@ -256,7 +368,8 @@
  * precedence, and equal specificity plus source order gave it to selected.
  * The lab hit this too and fixed it the same way, with an explicit rule. */
 .wp-block-axismundi-button-group[data-variant="connected"] > .wp-block-axismundi-button-group__item[aria-pressed="true"]:active,
-.wp-block-axismundi-button-group[data-variant="connected"] > .wp-block-axismundi-button-group__item[aria-current="page"]:active {
+.wp-block-axismundi-button-group[data-variant="connected"] > .wp-block-axismundi-button-group__item[aria-current="page"]:active,
+.wp-block-axismundi-button-group[data-variant="connected"] > .wp-block-axismundi-button-group__input:checked + .wp-block-axismundi-button-group__item:active {
 	border-radius: var(--ax-group-pressed-inner-corner, var(--md-sys-shape-corner-value-extra-small));
 }
 
@@ -267,4 +380,61 @@
 .wp-block-axismundi-button-group__item:focus-visible {
 	outline: var(--md-focus-ring-width) solid var(--md-sys-color-secondary);
 	outline-offset: var(--md-focus-ring-outward-offset);
+}
+
+.wp-block-axismundi-button-group__input:focus-visible + .wp-block-axismundi-button-group__item {
+	outline: var(--md-focus-ring-width) solid var(--md-sys-color-secondary);
+	outline-offset: var(--md-focus-ring-outward-offset);
+}
+
+.wp-block-axismundi-button-group__item:disabled,
+.wp-block-axismundi-button-group__item[aria-disabled="true"],
+.wp-block-axismundi-button-group__input:disabled + .wp-block-axismundi-button-group__item {
+	opacity: 0.38;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
+/* Documentation-only specimen layout. Component measurements above remain
+ * independent from the way the reference page arranges its examples. */
+.sg-button-group-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+	gap: var(--md-sys-measurement-space300);
+	margin-block: var(--md-sys-measurement-space300);
+}
+
+.sg-button-group-specimen {
+	display: grid;
+	gap: var(--md-sys-measurement-space150);
+	align-content: start;
+	padding: var(--md-sys-measurement-space200);
+	border: 1px solid var(--md-sys-color-outline-variant);
+	border-radius: var(--md-sys-shape-corner-value-medium);
+	background: var(--md-sys-color-surface-container-low);
+	overflow-x: auto;
+}
+
+.sg-button-group-specimen > :first-child {
+	max-inline-size: 100%;
+}
+
+.sg-button-group-caption {
+	margin: 0;
+	color: var(--md-sys-color-on-surface-variant);
+	font-size: var(--md-sys-typescale-body-small-size);
+	line-height: var(--md-sys-typescale-body-small-line-height);
+}
+
+.sg-button-group-mobile-shell {
+	inline-size: min(100%, 390px);
+	padding: var(--md-sys-measurement-space100);
+	border: 1px solid var(--md-sys-color-outline-variant);
+	border-radius: var(--md-sys-shape-corner-value-medium);
+	overflow-x: auto;
+}
+
+.sg-button-group-stack {
+	display: grid;
+	gap: var(--md-sys-measurement-space200);
 }

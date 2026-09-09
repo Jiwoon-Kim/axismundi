@@ -36,6 +36,10 @@
 				return;
 			}
 
+			if ( target.disabled || target.getAttribute( "aria-disabled" ) === "true" ) {
+				return;
+			}
+
 			var pressed = target.getAttribute( "aria-pressed" ) === "true";
 
 			if ( mode === "multiple" ) {

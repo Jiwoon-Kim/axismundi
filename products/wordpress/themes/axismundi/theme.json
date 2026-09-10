@@ -345,6 +345,7 @@
 							"fontFamily": "Material Symbols Outlined",
 							"fontStyle": "normal",
 							"fontWeight": "100 700",
+							"fontVariationSettings": "\"FILL\" 0, \"wght\" 400, \"GRAD\" 0, \"opsz\" 24",
 							"fontDisplay": "block",
 							"src": [
 								"file:./assets/fonts/material-symbols-outlined/material-symbols-outlined.woff2"

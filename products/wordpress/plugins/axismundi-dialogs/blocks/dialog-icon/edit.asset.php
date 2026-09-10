@@ -1,11 +1,1 @@
-<?php
-/**
- * Dependency manifest for edit.js (no build step).
- *
- * @package AxismundiDialogs
- */
-
-return array(
-	'dependencies' => array( 'wp-blocks', 'wp-block-editor', 'wp-element', 'wp-components', 'wp-i18n' ),
-	'version'      => '0.1.0',
-);
+<?php return array('dependencies' => array('react-jsx-runtime', 'wp-block-editor', 'wp-blocks', 'wp-components', 'wp-core-data', 'wp-data', 'wp-dom', 'wp-element', 'wp-i18n', 'wp-primitives'), 'version' => '01eb2def4ab33b1cced6');

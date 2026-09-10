@@ -14,8 +14,10 @@ if (Test-Path $stageRoot) {
 New-Item -ItemType Directory -Path $stagePlugin | Out-Null
 New-Item -ItemType Directory -Path $distRoot -Force | Out-Null
 
+# Ship the readable `src/` source alongside compiled assets for wp.org review.
+# These paths are development-only and must never enter the release ZIP.
 $excludeDirs = @('scripts', 'tests', 'node_modules', '.git', '.github')
-$excludeFiles = @('.distignore')
+$excludeFiles = @('.distignore', '.gitignore', 'package-lock.json')
 
 Get-ChildItem -LiteralPath $pluginRoot -Force | ForEach-Object {
 	if ($_.PSIsContainer -and $excludeDirs -contains $_.Name) {

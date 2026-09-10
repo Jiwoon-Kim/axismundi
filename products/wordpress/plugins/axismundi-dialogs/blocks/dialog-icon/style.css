@@ -6,3 +6,177 @@
 	line-height: 1;
 	color: var( --wp--preset--color--secondary, currentColor );
 }
+
+/* Registry source. The wrapper keeps the font-size as the one size source, and
+ * the SVG follows it at 1em - wp_get_icon() is called with size => null for
+ * that reason.
+ *
+ * fill has to be set here: sanitisation strips the fill="currentColor" that
+ * @wordpress/icons declares, so a registry SVG otherwise renders in its own
+ * black and ignores the textColor the template sets. core/icon does the same on
+ * `.wp-block-icon svg`.
+ *
+ * Keyed on the element, not a class passed to wp_get_icon(): in the editor the
+ * SVG arrives from the REST icon record, which carries no class of ours, so a
+ * class-based rule would leave the preview black while the front end was
+ * correct. */
+.ax-dialog-icon--registry {
+	display: inline-flex;
+}
+
+.ax-dialog-icon--registry > svg {
+	display: block;
+	inline-size: 1em;
+	block-size: 1em;
+	fill: currentColor;
+}
+
+/* Core's Dimensions support writes the chosen width to the SVG. The editor
+ * preview has a wrapper around REST markup, so let that wrapper own the width
+ * and let its SVG fill it with its intrinsic aspect ratio. */
+.ax-dialog-icon--registry.ax-dialog-icon--has-width > svg {
+	inline-size: 100%;
+	block-size: auto;
+}
+
+.ax-dialog-icon--registry.is-flip-horizontal > svg {
+	transform: scaleX(-1);
+}
+
+.ax-dialog-icon--registry.is-flip-vertical > svg {
+	transform: scaleY(-1);
+}
+
+.ax-dialog-icon--registry.is-flip-horizontal.is-flip-vertical > svg {
+	transform: scaleX(-1) scaleY(-1);
+}
+
+/* Editor-only empty state, matching core/icon's placeholder. The icon is
+ * absent or not registered. The Inspector carries the invalid-name message. */
+.ax-dialog-icon--empty {
+	display: inline-flex;
+}
+
+.ax-dialog-icon__placeholder {
+	backdrop-filter: blur(100px);
+	block-size: 1em;
+	display: block;
+	inline-size: 1em;
+}
+
+/* Neutralise vector-effect="non-scaling-stroke" so stroked icons scale their
+ * strokes with the icon, as core/icon does for the same reason. */
+.ax-dialog-icon--registry > svg :where(path, rect, circle, ellipse, line, polygon, polyline) {
+	vector-effect: none;
+}
+
+/* The registry browser uses the same public entities as core/icon's internal
+ * Icon Library. It is scoped to dialog-icon because that internal modal is not
+ * a reusable package API. */
+.ax-dialog-icon__library .components-modal__content {
+	padding: 0;
+}
+
+.ax-dialog-icon__library-layout {
+	display: grid;
+	grid-template-columns: minmax(15rem, 20rem) minmax(0, 1fr);
+	min-block-size: 100%;
+}
+
+.ax-dialog-icon__library-sidebar {
+	border-inline-end: 1px solid #ddd;
+	overflow: auto;
+	padding: 24px;
+}
+
+.ax-dialog-icon__library-collections {
+	display: grid;
+	gap: 4px;
+	margin-block-start: 24px;
+}
+
+.ax-dialog-icon__library-collection {
+	appearance: none;
+	background: transparent;
+	border: 0;
+	border-radius: 4px;
+	color: inherit;
+	cursor: pointer;
+	font: inherit;
+	min-block-size: 40px;
+	padding: 8px 12px;
+	text-align: start;
+}
+
+.ax-dialog-icon__library-collection:hover,
+.ax-dialog-icon__library-collection.is-active {
+	background: #f0f0f0;
+}
+
+.ax-dialog-icon__library-collection:focus-visible {
+	outline: 2px solid var(--wp-admin-theme-color, #3858e9);
+	outline-offset: 2px;
+}
+
+.ax-dialog-icon__library-panel {
+	overflow: auto;
+	padding: 24px;
+}
+
+.ax-dialog-icon__library-loading,
+.ax-dialog-icon__library-empty {
+	display: grid;
+	min-block-size: 12rem;
+	place-items: center;
+}
+
+.ax-dialog-icon__library-grid {
+	display: grid;
+	gap: 8px;
+	grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+}
+
+.ax-dialog-icon__library-item.components-button {
+	align-items: center;
+	block-size: 104px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	justify-content: center;
+	padding: 8px;
+	white-space: normal;
+}
+
+.ax-dialog-icon__library-item-icon {
+	display: inline-flex;
+	inline-size: 24px;
+	block-size: 24px;
+}
+
+.ax-dialog-icon__library-item-icon > svg {
+	block-size: 100%;
+	fill: currentColor;
+	inline-size: 100%;
+}
+
+.ax-dialog-icon__library-item-label {
+	overflow-wrap: anywhere;
+	text-align: center;
+}
+
+@media (max-width: 782px) {
+	.ax-dialog-icon__library-layout {
+		grid-template-columns: 1fr;
+	}
+
+	.ax-dialog-icon__library-sidebar {
+		border-block-end: 1px solid #ddd;
+		border-inline-end: 0;
+	}
+
+	.ax-dialog-icon__library-collections {
+		grid-auto-columns: max-content;
+		grid-auto-flow: column;
+		overflow-x: auto;
+	}
+}

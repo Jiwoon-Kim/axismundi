@@ -2,7 +2,7 @@
 Contributors: kimjiwoon
 Tags: sheet, drawer, dialog, offcanvas, block
 Requires at least: 6.7
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 8.1
 Stable tag: 0.2.4
 License: GPL-3.0-or-later
@@ -73,4 +73,3 @@ part from the Site Editor's Uncategorized area.
   work. Rendering is unchanged.
 
 Earlier releases are listed in changelog.txt.
-

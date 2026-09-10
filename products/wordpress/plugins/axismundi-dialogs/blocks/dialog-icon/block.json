@@ -2,7 +2,7 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "axismundi/dialog-icon",
-	"version": "0.1.0",
+	"version": "0.2.3",
 	"title": "Dialog Icon",
 	"category": "theme",
 	"icon": "star-filled",
@@ -10,17 +10,75 @@
 	"keywords": [ "dialog", "icon", "hero" ],
 	"textdomain": "axismundi-dialogs",
 	"attributes": {
-		"icon": { "type": "string", "default": "info" }
+		"iconSource": {
+			"type": "string",
+			"enum": [ "font", "registry" ]
+		},
+		"icon": { "type": "string" },
+		"iconClass": { "type": "string", "default": "material-symbols-outlined" },
+		"tagName": {
+			"type": "string",
+			"enum": [ "span", "div" ],
+			"default": "span"
+		},
+		"flipHorizontal": { "type": "boolean", "default": false },
+		"flipVertical": { "type": "boolean", "default": false },
+		"rotation": { "type": "number", "default": 0 }
 	},
+	"variations": [
+		{
+			"name": "default",
+			"isDefault": true,
+			"attributes": {
+				"iconSource": "font",
+				"icon": "info",
+				"iconClass": "material-symbols-outlined",
+				"tagName": "span",
+				"style": {
+					"typography": {
+						"fontVariationSettings": [ { "FILL": "0" }, { "wght": "400" }, { "GRAD": "0" }, { "opsz": "24" } ]
+					}
+				}
+			}
+		}
+	],
 	"supports": {
+		"align": [ "left", "center", "right" ],
+		"ariaLabel": {
+			"__experimentalSkipSerialization": true
+		},
 		"html": false,
-		"align": false,
 		"color": {
+			"__experimentalSkipSerialization": true,
 			"text": true,
-			"background": false
+			"background": true
+		},
+		"typography": {
+			"fontSize": true,
+			"__experimentalSkipSerialization": [ "fontSize" ]
+		},
+		"__experimentalBorder": {
+			"color": true,
+			"radius": true,
+			"style": true,
+			"width": true,
+			"__experimentalSkipSerialization": true
 		},
 		"spacing": {
-			"margin": true
+			"padding": true,
+			"margin": true,
+			"__experimentalSkipSerialization": [ "padding" ]
+		},
+		"dimensions": {
+			"width": true,
+			"__experimentalSkipSerialization": [ "width" ]
+		}
+	},
+	"selectors": {
+		"root": ".wp-block-axismundi-dialog-icon svg",
+		"css": ".wp-block-axismundi-dialog-icon",
+		"spacing": {
+			"margin": ".wp-block-axismundi-dialog-icon"
 		}
 	},
 	"example": {

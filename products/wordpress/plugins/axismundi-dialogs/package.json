@@ -1,0 +1,11 @@
+{
+	"name": "axismundi-dialogs-editor",
+	"private": true,
+	"scripts": {
+		"build": "wp-scripts build --config webpack.config.js"
+	},
+	"devDependencies": {
+		"@wordpress/icons": "^16.0.0",
+		"@wordpress/scripts": "^35.0.0"
+	}
+}

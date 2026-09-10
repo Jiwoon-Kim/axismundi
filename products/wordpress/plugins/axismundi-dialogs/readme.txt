@@ -1,10 +1,10 @@
 === Axismundi Dialogs ===
 Contributors: kimjiwoon
 Tags: sheet, drawer, dialog, offcanvas, block
-Requires at least: 6.7
+Requires at least: 7.1
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.2.4
+Stable tag: 0.2.5
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -63,13 +63,19 @@ part from the Site Editor's Uncategorized area.
 
 == Changelog ==
 
-= 0.2.4 =
-* Adds the Object Media Dialog block: one reusable per-page native dialog for
-  viewing an object's attached media at full size.
-* Removes reference-implementation class names from the markup this plugin
-  ships. `ax-icon-button`, `ax-menu`, and `ax-text-field` exist only in the
-  Axismundi Lab, so every element carrying one was depending on styles that are
-  not part of any release; the components' own classes were already doing the
-  work. Rendering is unchanged.
+= 0.2.5 =
+* Dialog Icon can now take its icon from the theme's icon font (a Material
+  Symbols name such as `info`) or from the WordPress Icon Registry (a
+  registered icon such as `core/info`). The block stores which one it means.
+  Existing Dialog Icon blocks keep rendering exactly as before.
+* Icon Registry icons: choose from an Icon library in the toolbar, flip or
+  rotate them, and set their width, colour, border and padding.
+* Icon font icons: choose the icon font, set the font size, and adjust the
+  Fill, Weight, Grade and Optical size axes, each resettable on its own.
+* Dialog Icon can be used in posts and pages, not only inside a Dialog
+  template part.
+* Requires WordPress 7.1, which provides the Icon Registry.
+* The editor script is now built from `src/`; the readable source ships with
+  the plugin.
 
 Earlier releases are listed in changelog.txt.

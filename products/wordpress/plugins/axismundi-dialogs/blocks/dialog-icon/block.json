@@ -6,7 +6,7 @@
 	"title": "Dialog Icon",
 	"category": "theme",
 	"icon": "star-filled",
-	"description": "An optional leading icon for a basic dialog header. Placed in a Dialog template part.",
+	"description": "An icon from the theme's icon font or the WordPress Icon Registry. Also the leading icon of a basic dialog header.",
 	"keywords": [ "dialog", "icon", "hero" ],
 	"textdomain": "axismundi-dialogs",
 	"attributes": {

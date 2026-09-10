@@ -3,8 +3,8 @@
  * Plugin Name:       Axismundi Dialogs
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/wordpress/plugins/axismundi-dialogs
  * Description:       Accessible Material Design 3 side / bottom sheet and dialog blocks for Axismundi. The blocks own native dialog behavior; theme template parts own default content and layout.
- * Version:           0.2.4
- * Requires at least: 6.7
+ * Version:           0.2.5
+ * Requires at least: 7.1
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
  * Author URI:        https://designbusan.ai.kr
@@ -57,9 +57,15 @@ add_action( 'init', 'axismundi_dialogs_register_blocks' );
 /**
  * Keep part-only Dialogs blocks out of the post/page inserter.
  *
- * The close, title, and icon blocks only have a meaningful role inside the
- * referenced template part. Keep those building blocks available in the Site
- * Editor, but do not offer them in ordinary post content.
+ * The close and title blocks only have a meaningful role inside the
+ * referenced template part: one dismisses the dialog around it, the other
+ * names it. Keep them available in the Site Editor, but do not offer them in
+ * ordinary post content.
+ *
+ * The icon block is not on the list. It began as the dialog header's leading
+ * icon, but it renders a complete, standalone icon from either source (icon
+ * font or Icon Registry) and needs no dialog around it - which is also what
+ * lets a demo page place it.
  *
  * @param bool|array<int,string>        $allowed Allowed block names, or true for all.
  * @param WP_Block_Editor_Context|mixed $context Current editor context.
@@ -77,7 +83,7 @@ function axismundi_dialogs_restrict_close_block( $allowed, $context ) {
 		$allowed = array_keys( WP_Block_Type_Registry::get_instance()->get_all_registered() );
 	}
 
-	return array_values( array_diff( (array) $allowed, array( 'axismundi/dialog-close', 'axismundi/dialog-title', 'axismundi/dialog-icon' ) ) );
+	return array_values( array_diff( (array) $allowed, array( 'axismundi/dialog-close', 'axismundi/dialog-title' ) ) );
 }
 add_filter( 'allowed_block_types_all', 'axismundi_dialogs_restrict_close_block', 10, 2 );
 

@@ -1,6 +1,16 @@
 == Changelog ==
 
-Releases before 0.2.4. The current release is in readme.txt.
+Releases before 0.2.5. The current release is in readme.txt.
+
+= 0.2.4 =
+
+* Adds the Object Media Dialog block: one reusable per-page native dialog for
+  viewing an object's attached media at full size.
+* Removes reference-implementation class names from the markup this plugin
+  ships. `ax-icon-button`, `ax-menu`, and `ax-text-field` exist only in the
+  Axismundi Lab, so every element carrying one was depending on styles that are
+  not part of any release; the components' own classes were already doing the
+  work. Rendering is unchanged.
 
 = 0.2.3 =
 

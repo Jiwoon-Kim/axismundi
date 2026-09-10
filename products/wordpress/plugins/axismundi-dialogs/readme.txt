@@ -74,6 +74,13 @@ part from the Site Editor's Uncategorized area.
   Fill, Weight, Grade and Optical size axes, each resettable on its own.
 * Dialog Icon can be used in posts and pages, not only inside a Dialog
   template part.
+* The Sheet and Dialog open button now takes its size, shape, colour and
+  states from the theme's button styles (`wp-element-button`) instead of
+  drawing its own filled Material 3 button. On a theme that styles WordPress
+  buttons it matches that theme's buttons; on one that does not, it is a plain
+  button.
+* The close button's hover transition uses the Material 3 Expressive motion
+  curve.
 * Requires WordPress 7.1, which provides the Icon Registry.
 * The editor script is now built from `src/`; the readable source ships with
   the plugin.

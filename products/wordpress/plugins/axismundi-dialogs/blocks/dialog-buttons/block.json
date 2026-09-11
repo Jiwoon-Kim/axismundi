@@ -1,0 +1,65 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/dialog-buttons",
+	"title": "Dialog Buttons",
+	"category": "design",
+	"allowedBlocks": [ "axismundi/dialog-button", "axismundi/dialog-icon-button" ],
+	"description": "A standard group of action buttons for a dialog or sheet.",
+	"keywords": [ "dialog", "buttons", "actions" ],
+	"textdomain": "axismundi-dialogs",
+	"attributes": {
+		"size": {
+			"type": "string",
+			"enum": [ "xsmall", "small", "medium", "large", "xlarge" ]
+		},
+		"shape": {
+			"type": "string",
+			"enum": [ "round", "square" ]
+		},
+		"togglable": {
+			"type": "boolean"
+		},
+		"selection": {
+			"type": "string",
+			"enum": [ "single", "multiple" ]
+		},
+		"selectionRequired": {
+			"type": "boolean"
+		}
+	},
+	"providesContext": {
+		"axismundi/togglable": "togglable",
+		"axismundi/selection": "selection",
+		"axismundi/selectionRequired": "selectionRequired"
+	},
+	"variations": [
+		{
+			"name": "default",
+			"isDefault": true,
+			"attributes": {
+				"size": "small",
+				"shape": "round"
+			}
+		}
+	],
+	"supports": {
+		"align": [ "wide", "full" ],
+		"html": false,
+		"spacing": {
+			"blockGap": [ "horizontal", "vertical" ],
+			"margin": [ "top", "bottom" ]
+		},
+		"layout": {
+			"allowSwitching": false,
+			"allowInheriting": false,
+			"default": {
+				"type": "flex"
+			}
+		},
+		"listView": true,
+		"interactivity": true
+	},
+	"editorScript": "file:./edit.js",
+	"viewScriptModule": "file:./view.js"
+}

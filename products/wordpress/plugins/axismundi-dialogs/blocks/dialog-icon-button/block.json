@@ -1,0 +1,118 @@
+{
+	"apiVersion": 3,
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"name": "axismundi/dialog-icon-button",
+	"title": "Dialog Icon Button",
+	"category": "design",
+	"description": "An icon-only action button for a Dialog Buttons group.",
+	"keywords": [
+		"dialog",
+		"icon",
+		"button",
+		"action"
+	],
+	"textdomain": "axismundi-dialogs",
+	"parent": [
+		"axismundi/dialog-buttons"
+	],
+	"attributes": {
+		"tagName": {
+			"type": "string",
+			"enum": [
+				"a",
+				"button"
+			],
+			"default": "button"
+		},
+		"type": {
+			"type": "string",
+			"default": "button"
+		},
+		"size": {
+			"type": "string",
+			"enum": [
+				"xsmall",
+				"small",
+				"medium",
+				"large",
+				"xlarge"
+			]
+		},
+		"shape": {
+			"type": "string",
+			"enum": [
+				"round",
+				"square"
+			]
+		},
+		"width": {
+			"type": "string",
+			"enum": [
+				"narrow",
+				"wide"
+			]
+		},
+		"standard": {
+			"type": "boolean"
+		},
+		"togglable": {
+			"type": "boolean"
+		},
+		"selected": {
+			"type": "boolean"
+		},
+		"url": {
+			"type": "string",
+			"role": "content"
+		},
+		"text": {
+			"type": "string",
+			"role": "content"
+		},
+		"linkTarget": {
+			"type": "string",
+			"role": "content"
+		},
+		"rel": {
+			"type": "string",
+			"role": "content"
+		},
+		"iconSource": {
+			"type": "string",
+			"enum": [
+				"font",
+				"registry"
+			]
+		},
+		"icon": {
+			"type": "string",
+			"role": "content"
+		},
+		"selectedIcon": {
+			"type": "string",
+			"role": "content"
+		},
+		"iconClass": {
+			"type": "string",
+			"default": "material-symbols-outlined"
+		}
+	},
+	"usesContext": [
+		"axismundi/togglable",
+		"axismundi/selection",
+		"axismundi/selectionRequired"
+	],
+	"supports": {
+		"html": false,
+		"reusable": false
+	},
+	"styles": [
+		{
+			"name": "fill",
+			"label": "Fill",
+			"isDefault": true
+		}
+	],
+	"editorScript": "file:./edit.js",
+	"render": "file:./render.php"
+}

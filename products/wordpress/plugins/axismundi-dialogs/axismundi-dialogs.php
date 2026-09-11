@@ -59,7 +59,7 @@ function axismundi_dialogs_register_blocks() : void {
 		(string) filemtime( __DIR__ . '/blocks/dialog-icon/editor.css' )
 	);
 
-	foreach ( array( 'dialogs', 'sheet', 'dialog', 'dialog-close', 'dialog-title', 'dialog-icon', 'post-quick-view-trigger', 'post-quick-view', 'object-media-dialog' ) as $axismundi_dialogs_block ) {
+	foreach ( array( 'dialogs', 'sheet', 'dialog', 'dialog-close', 'dialog-title', 'dialog-icon', 'dialog-buttons', 'dialog-button', 'dialog-icon-button', 'post-quick-view-trigger', 'post-quick-view', 'object-media-dialog' ) as $axismundi_dialogs_block ) {
 		$axismundi_dialogs_dir = __DIR__ . '/blocks/' . $axismundi_dialogs_block;
 		if ( file_exists( $axismundi_dialogs_dir . '/block.json' ) ) {
 			register_block_type( $axismundi_dialogs_dir );
@@ -81,8 +81,191 @@ function axismundi_dialogs_register_blocks() : void {
 	// and its runtime toggles the shared `ax-dialog-scroll-locked` class — which does
 	// nothing unless this stylesheet is on the page.
 	wp_enqueue_block_style( 'axismundi/object-media-dialog', $axismundi_dialogs_shared );
+
+	// M3 button size and shape, and the toggle colours, for both button blocks:
+	// the icon button is the button's shell, so all of it applies to both.
+	$axismundi_dialogs_button = array(
+		'handle' => 'axismundi-dialogs-button',
+		'src'    => plugins_url( 'assets/button.css', __FILE__ ),
+		'path'   => __DIR__ . '/assets/button.css',
+		'ver'    => (string) filemtime( __DIR__ . '/assets/button.css' ),
+	);
+	wp_enqueue_block_style( 'axismundi/dialog-button', $axismundi_dialogs_button );
+	wp_enqueue_block_style( 'axismundi/dialog-icon-button', $axismundi_dialogs_button );
+
+	// The icon button's own: what it has that a button does not. After the
+	// shell's stylesheet, and with the icon primitive's, which draws its icon.
+	wp_enqueue_block_style(
+		'axismundi/dialog-icon-button',
+		array(
+			'handle' => 'axismundi-dialogs-icon-button',
+			'src'    => plugins_url( 'assets/icon-button.css', __FILE__ ),
+			'path'   => __DIR__ . '/assets/icon-button.css',
+			'ver'    => (string) filemtime( __DIR__ . '/assets/icon-button.css' ),
+			'deps'   => array( 'axismundi-dialogs-button', 'axismundi-dialogs-icon' ),
+		)
+	);
 }
 add_action( 'init', 'axismundi_dialogs_register_blocks' );
+
+/**
+ * Give a sized Dialog Buttons group its M3 between-space, unless it has a gap
+ * of its own.
+ *
+ * The rule cannot live in the stylesheet. The layout support writes the
+ * default flex gap and an explicit block gap at the same specificity, and this
+ * plugin's stylesheet loads before both, so a rule there either loses to the
+ * default or beats the gap the author set. The attributes know which case it
+ * is, so the choice is made here; the value itself stays a CSS token
+ * (--ax-button-group-between, set per size in assets/button.css), so no spec
+ * number is written into the page. The editor applies the same rule.
+ *
+ * @param string               $block_content Rendered block.
+ * @param array<string, mixed> $block         Parsed block.
+ * @return string
+ */
+function axismundi_dialogs_buttons_size_gap( string $block_content, array $block ) : string {
+	$attributes = $block['attrs'] ?? array();
+	if ( empty( $attributes['size'] ) ) {
+		return $block_content;
+	}
+	$gap = $attributes['style']['spacing']['blockGap'] ?? null;
+	if ( ( is_string( $gap ) && '' !== $gap ) || ( is_array( $gap ) && ( ! empty( $gap['top'] ) || ! empty( $gap['left'] ) ) ) ) {
+		return $block_content;
+	}
+
+	$processor = new WP_HTML_Tag_Processor( $block_content );
+	if ( ! $processor->next_tag() ) {
+		return $block_content;
+	}
+	$style = $processor->get_attribute( 'style' );
+	$style = is_string( $style ) ? rtrim( trim( $style ), ';' ) : '';
+	$processor->set_attribute( 'style', ( '' !== $style ? $style . ';' : '' ) . 'gap:var(--ax-button-group-between)' );
+	return $processor->get_updated_html();
+}
+add_filter( 'render_block_axismundi/dialog-buttons', 'axismundi_dialogs_buttons_size_gap', 10, 2 );
+
+/**
+ * Render the toggles of a Dialog Buttons group as toggle buttons.
+ *
+ * `aria-pressed` is added here rather than saved, because whether a button is
+ * a toggle is partly its group's to say: the group's Togglable is the default
+ * a button follows unless it says otherwise, and a button's save() sees only
+ * its own attributes. A button that stops being a toggle keeps its `selected`
+ * value (so turning it back restores it) without rendering it.
+ *
+ * It is done on the group, not on each button, because the rule spans the
+ * buttons: the editor keeps them inside it as they are edited, but not on
+ * load, so content saved outside it - two selected in a single group, none in
+ * a required one - is repaired here the way src/shared/selection.js would.
+ *
+ * The value is the author's initial state; the visitor's current selection is
+ * runtime state, owned by the Interactivity store set up below. A link is left
+ * out: a link cannot be a toggle, and the editor turns one into a <button>
+ * when the group starts selecting.
+ *
+ * @param string               $block_content Rendered block.
+ * @param array<string, mixed> $block         Parsed block.
+ * @return string
+ */
+function axismundi_dialogs_buttons_selection( string $block_content, array $block ) : string {
+	$attributes      = $block['attrs'] ?? array();
+	$group_togglable = ! empty( $attributes['togglable'] );
+
+	// The buttons, in order: whether each is a toggle (its own choice, else
+	// the group's default) and whether it starts selected. allowedBlocks keeps
+	// them direct children, so the n-th button block is the n-th
+	// `.wp-block-button__link` in the markup.
+	$buttons = array();
+	foreach ( $block['innerBlocks'] ?? array() as $inner ) {
+		if ( in_array( $inner['blockName'] ?? '', array( 'axismundi/dialog-button', 'axismundi/dialog-icon-button' ), true ) ) {
+			$buttons[] = array(
+				'togglable' => isset( $inner['attrs']['togglable'] ) ? (bool) $inner['attrs']['togglable'] : $group_togglable,
+				'selected'  => ! empty( $inner['attrs']['selected'] ),
+			);
+		}
+	}
+	if ( ! in_array( true, array_column( $buttons, 'togglable' ), true ) ) {
+		return $block_content;
+	}
+
+	// Two passes, one to read and one to write: the rule needs every toggle
+	// before it can set any, and bookmarks would cap a group at ten buttons.
+	$processor = new WP_HTML_Tag_Processor( $block_content );
+	$toggles   = array();
+	foreach ( $buttons as $button ) {
+		if ( ! $processor->next_tag( array( 'class_name' => 'wp-block-button__link' ) ) ) {
+			break;
+		}
+		if ( $button['togglable'] && 'BUTTON' === $processor->get_tag() ) {
+			$toggles[] = $button['selected'];
+		}
+	}
+
+	// Multiple is the fallback: toggles that do not constrain each other.
+	if ( 'single' === ( $attributes['selection'] ?? 'multiple' ) ) {
+		$first = array_search( true, $toggles, true );
+		foreach ( $toggles as $index => $is_pressed ) {
+			$toggles[ $index ] = $index === $first;
+		}
+	}
+	if ( ! $toggles ) {
+		return $block_content;
+	}
+	$selection_required = ! empty( $attributes['selectionRequired'] );
+	if ( $selection_required && ! in_array( true, $toggles, true ) ) {
+		$toggles[0] = true;
+	}
+
+	// The runtime (blocks/dialog-buttons/view.js) takes over from here: the
+	// group's context carries every toggle's state, each toggle its position.
+	// The derived state is given on the server too, because directives are
+	// processed after this filter and a bind the server cannot resolve would
+	// drop the aria-pressed written below. Same shape as core/accordion.
+	wp_interactivity_state(
+		'axismundi/dialog-buttons',
+		array(
+			'isPressed' => static function () {
+				$context = wp_interactivity_get_context();
+				return ! empty( $context['pressed'][ $context['index'] ?? -1 ] );
+			},
+		)
+	);
+
+	$processor = new WP_HTML_Tag_Processor( $block_content );
+	if ( ! $processor->next_tag() ) {
+		return $block_content;
+	}
+	$processor->set_attribute( 'data-wp-interactive', 'axismundi/dialog-buttons' );
+	$processor->set_attribute(
+		'data-wp-context',
+		wp_json_encode(
+			array(
+				'selection' => 'single' === ( $attributes['selection'] ?? 'multiple' ) ? 'single' : 'multiple',
+				'required'  => $selection_required,
+				'pressed'   => $toggles,
+			)
+		)
+	);
+
+	$index = 0;
+	foreach ( $buttons as $button ) {
+		if ( ! $processor->next_tag( array( 'class_name' => 'wp-block-button__link' ) ) ) {
+			break;
+		}
+		if ( $button['togglable'] && 'BUTTON' === $processor->get_tag() ) {
+			// Written as well as bound, so the state is in the markup even where
+			// directive processing is switched off.
+			$processor->set_attribute( 'aria-pressed', $toggles[ $index ] ? 'true' : 'false' );
+			$processor->set_attribute( 'data-wp-context', wp_json_encode( array( 'index' => $index ) ) );
+			$processor->set_attribute( 'data-wp-bind--aria-pressed', 'state.isPressed' );
+			$processor->set_attribute( 'data-wp-on--click', 'actions.toggle' );
+			++$index;
+		}
+	}
+	return $processor->get_updated_html();
+}
+add_filter( 'render_block_axismundi/dialog-buttons', 'axismundi_dialogs_buttons_selection', 10, 2 );
 
 /**
  * Keep part-only Dialogs blocks out of the post/page inserter.

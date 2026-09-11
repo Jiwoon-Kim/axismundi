@@ -1,0 +1,132 @@
+/**
+ * axismundi/dialog-icon - editor-only styles, as core/icon's editor.scss: the
+ * empty-state placeholder and the Icon library modal.
+ */
+
+/* core/icon's placeholder is the block's own <svg>, sized by the width the
+ * icon would have (theme.json's 24px, or the block's Width) with its height
+ * set to auto so the 60x60 viewBox keeps it square. Here it takes the same
+ * size token the icon would (style.css); a chosen Width arrives inline, as
+ * core's does, and wins. */
+.ax-dialog-icon__placeholder {
+	backdrop-filter: blur(100px);
+	block-size: auto;
+	display: block;
+	inline-size: var( --md-icon-size, 24px );
+}
+
+/* The registry browser uses the same public entities as core/icon's internal
+ * Icon Library. It is scoped to dialog-icon because that internal modal is not
+ * a reusable package API. */
+.ax-dialog-icon__library .components-modal__content {
+	padding: 0;
+}
+
+.ax-dialog-icon__library-layout {
+	display: grid;
+	grid-template-columns: minmax(15rem, 20rem) minmax(0, 1fr);
+	min-block-size: 100%;
+}
+
+.ax-dialog-icon__library-sidebar {
+	border-inline-end: 1px solid #ddd;
+	overflow: auto;
+	padding: 24px;
+}
+
+.ax-dialog-icon__library-collections {
+	display: grid;
+	gap: 4px;
+	margin-block-start: 24px;
+}
+
+.ax-dialog-icon__library-collection {
+	appearance: none;
+	background: transparent;
+	border: 0;
+	border-radius: 4px;
+	color: inherit;
+	cursor: pointer;
+	font: inherit;
+	min-block-size: 40px;
+	padding: 8px 12px;
+	text-align: start;
+}
+
+.ax-dialog-icon__library-collection:hover,
+.ax-dialog-icon__library-collection.is-active {
+	background: #f0f0f0;
+}
+
+.ax-dialog-icon__library-collection:focus-visible {
+	outline: 2px solid var(--wp-admin-theme-color, #3858e9);
+	outline-offset: 2px;
+}
+
+.ax-dialog-icon__library-panel {
+	overflow: auto;
+	padding: 24px;
+}
+
+.ax-dialog-icon__library-loading,
+.ax-dialog-icon__library-empty {
+	display: grid;
+	min-block-size: 12rem;
+	place-items: center;
+}
+
+.ax-dialog-icon__library-grid {
+	display: grid;
+	gap: 8px;
+	grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+}
+
+.ax-dialog-icon__library-item.components-button {
+	align-items: center;
+	block-size: 104px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	justify-content: center;
+	padding: 8px;
+	white-space: normal;
+}
+
+.ax-dialog-icon__library-item-icon {
+	display: inline-flex;
+	inline-size: 24px;
+	block-size: 24px;
+}
+
+.ax-dialog-icon__library-item-icon > svg {
+	block-size: 100%;
+	fill: currentColor;
+	inline-size: 100%;
+}
+
+.ax-dialog-icon__library-item-label {
+	overflow-wrap: anywhere;
+	text-align: center;
+}
+
+@media (max-width: 782px) {
+	.ax-dialog-icon__library-layout {
+		grid-template-columns: 1fr;
+	}
+
+	.ax-dialog-icon__library-sidebar {
+		border-block-end: 1px solid #ddd;
+		border-inline-end: 0;
+	}
+
+	.ax-dialog-icon__library-collections {
+		grid-auto-columns: max-content;
+		grid-auto-flow: column;
+		overflow-x: auto;
+	}
+}
+
+/* core/icon's .wp-block-icon__toolbar-content: the content-only Label field. */
+.ax-dialog-icon__toolbar-content {
+	width: 250px;
+}

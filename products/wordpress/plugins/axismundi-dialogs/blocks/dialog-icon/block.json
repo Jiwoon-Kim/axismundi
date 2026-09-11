@@ -1,77 +1,92 @@
 {
-	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
+	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"name": "axismundi/dialog-icon",
-	"version": "0.2.3",
 	"title": "Dialog Icon",
-	"category": "theme",
-	"icon": "star-filled",
+	"category": "media",
 	"description": "An icon from the theme's icon font or the WordPress Icon Registry. Also the leading icon of a basic dialog header.",
-	"keywords": [ "dialog", "icon", "hero" ],
+	"keywords": [ "icon", "svg", "dialog" ],
 	"textdomain": "axismundi-dialogs",
 	"attributes": {
+		"icon": {
+			"type": "string",
+			"role": "content"
+		},
+		"flipHorizontal": {
+			"type": "boolean",
+			"default": false
+		},
+		"flipVertical": {
+			"type": "boolean",
+			"default": false
+		},
+		"rotation": {
+			"type": "number",
+			"default": 0
+		},
 		"iconSource": {
 			"type": "string",
 			"enum": [ "font", "registry" ]
 		},
-		"icon": { "type": "string" },
-		"iconClass": { "type": "string", "default": "material-symbols-outlined" },
+		"iconClass": {
+			"type": "string",
+			"default": "material-symbols-outlined"
+		},
 		"tagName": {
 			"type": "string",
 			"enum": [ "span", "div" ],
 			"default": "span"
-		},
-		"flipHorizontal": { "type": "boolean", "default": false },
-		"flipVertical": { "type": "boolean", "default": false },
-		"rotation": { "type": "number", "default": 0 }
-	},
-	"variations": [
-		{
-			"name": "default",
-			"isDefault": true,
-			"attributes": {
-				"iconSource": "font",
-				"icon": "info",
-				"iconClass": "material-symbols-outlined",
-				"tagName": "span",
-				"style": {
-					"typography": {
-						"fontVariationSettings": [ { "FILL": "0" }, { "wght": "400" }, { "GRAD": "0" }, { "opsz": "24" } ]
-					}
-				}
-			}
 		}
-	],
+	},
 	"supports": {
-		"align": [ "left", "center", "right" ],
+		"anchor": true,
 		"ariaLabel": {
 			"__experimentalSkipSerialization": true
 		},
+		"align": [ "left", "center", "right" ],
 		"html": false,
 		"color": {
 			"__experimentalSkipSerialization": true,
-			"text": true,
-			"background": true
+			"__experimentalDefaultControls": {
+				"background": true,
+				"text": true
+			}
 		},
 		"typography": {
 			"fontSize": true,
 			"__experimentalSkipSerialization": [ "fontSize" ]
+		},
+		"interactivity": {
+			"clientNavigation": true
 		},
 		"__experimentalBorder": {
 			"color": true,
 			"radius": true,
 			"style": true,
 			"width": true,
-			"__experimentalSkipSerialization": true
+			"__experimentalSkipSerialization": true,
+			"__experimentalDefaultControls": {
+				"color": false,
+				"radius": false,
+				"style": false,
+				"width": false
+			}
 		},
 		"spacing": {
 			"padding": true,
 			"margin": true,
-			"__experimentalSkipSerialization": [ "padding" ]
+			"__experimentalSkipSerialization": [ "padding" ],
+			"__experimentalDefaultControls": {
+				"margin": false,
+				"padding": false
+			}
 		},
 		"dimensions": {
 			"width": true,
-			"__experimentalSkipSerialization": [ "width" ]
+			"__experimentalSkipSerialization": [ "width" ],
+			"__experimentalDefaultControls": {
+				"width": true
+			}
 		}
 	},
 	"selectors": {
@@ -81,11 +96,8 @@
 			"margin": ".wp-block-axismundi-dialog-icon"
 		}
 	},
-	"example": {
-		"attributes": {}
-	},
 	"editorScript": "file:./edit.js",
-	"editorStyle": "file:./style.css",
-	"style": "file:./style.css",
+	"style": "axismundi-dialog-icon",
+	"editorStyle": "axismundi-dialog-icon-editor",
 	"render": "file:./render.php"
 }

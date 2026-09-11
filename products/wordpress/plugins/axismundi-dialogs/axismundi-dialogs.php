@@ -18,6 +18,7 @@
 defined( 'ABSPATH' ) || exit;
 
 require_once __DIR__ . '/includes/interaction-dialog.php';
+require_once __DIR__ . '/includes/icon.php';
 
 /**
  * Register the Sheet collection, host, and close blocks.
@@ -29,6 +30,35 @@ require_once __DIR__ . '/includes/interaction-dialog.php';
  * @return void
  */
 function axismundi_dialogs_register_blocks() : void {
+	// The icon primitive's own stylesheet (includes/icon.php draws what it
+	// styles). A dependency of every block style that draws an icon, so it
+	// arrives wherever one does, in the editor and on the page.
+	wp_register_style(
+		'axismundi-dialogs-icon',
+		plugins_url( 'assets/icon.css', __FILE__ ),
+		array(),
+		(string) filemtime( __DIR__ . '/assets/icon.css' )
+	);
+	wp_style_add_data( 'axismundi-dialogs-icon', 'path', __DIR__ . '/assets/icon.css' );
+
+	// dialog-icon names its styles by handle, as core/icon does ("wp-block-icon",
+	// "wp-block-icon-editor"), so it can carry no block version: a `file:` style
+	// is versioned by that field alone, and a fixed one leaves an edited
+	// stylesheet cached. Registered before the block so the handles resolve.
+	wp_register_style(
+		'axismundi-dialog-icon',
+		plugins_url( 'blocks/dialog-icon/style.css', __FILE__ ),
+		array( 'axismundi-dialogs-icon' ),
+		(string) filemtime( __DIR__ . '/blocks/dialog-icon/style.css' )
+	);
+	wp_style_add_data( 'axismundi-dialog-icon', 'path', __DIR__ . '/blocks/dialog-icon/style.css' );
+	wp_register_style(
+		'axismundi-dialog-icon-editor',
+		plugins_url( 'blocks/dialog-icon/editor.css', __FILE__ ),
+		array(),
+		(string) filemtime( __DIR__ . '/blocks/dialog-icon/editor.css' )
+	);
+
 	foreach ( array( 'dialogs', 'sheet', 'dialog', 'dialog-close', 'dialog-title', 'dialog-icon', 'post-quick-view-trigger', 'post-quick-view', 'object-media-dialog' ) as $axismundi_dialogs_block ) {
 		$axismundi_dialogs_dir = __DIR__ . '/blocks/' . $axismundi_dialogs_block;
 		if ( file_exists( $axismundi_dialogs_dir . '/block.json' ) ) {

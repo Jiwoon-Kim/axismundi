@@ -1,0 +1,70 @@
+/**
+ * The icon primitive, shared by every block that draws an icon through
+ * includes/icon.php. The painted element is always a <span class="ax-icon">:
+ * the glyph itself, or the box a registry SVG sits in (span>svg), on the page
+ * and in the editor alike.
+ *
+ * A glyph's box and axes come from the icon font's own utility class (the
+ * theme's icons.css). A registry icon's box is set here, from the same size
+ * token, so the two sources are the same size with nothing else in common.
+ */
+
+/* Registry source: the span is the box, sized from the token as the glyph is,
+ * and the SVG fills it. A chosen Width (core/icon's size control) arrives on
+ * the span inline and wins; the height then follows the viewBox.
+ *
+ * fill has to be set: sanitisation strips the fill="currentColor" that
+ * @wordpress/icons declares, so a registry SVG otherwise renders in its own
+ * black and ignores the colour around it. core/icon does the same on
+ * `.wp-block-icon svg`. Keyed on the element, since wp_get_icon() and the REST
+ * record give the SVG no class of ours. */
+.ax-icon--svg {
+	display: inline-flex;
+	inline-size: var( --md-icon-size, 24px );
+	block-size: var( --md-icon-size, 24px );
+}
+
+.ax-icon--svg > svg {
+	display: block;
+	inline-size: 100%;
+	block-size: 100%;
+	fill: currentColor;
+}
+
+.ax-icon--svg.ax-icon--has-width,
+.ax-icon--svg.ax-icon--has-width > svg {
+	block-size: auto;
+}
+
+/* Neutralise vector-effect="non-scaling-stroke" so stroked icons scale their
+ * strokes with the icon, as core/icon does for the same reason. */
+.ax-icon--svg > svg :where(path, rect, circle, ellipse, line, polygon, polyline) {
+	vector-effect: none;
+}
+
+/**
+ * Transforms.
+ *
+ * The stored transforms use the individual transform properties, `rotate` and
+ * `scale`, and leave `transform` alone. The three compose - the browser applies
+ * rotate, then scale, then transform - so `transform` stays free for state: a
+ * button can turn its icon on hover with `.wp-block-button:hover .ax-icon {
+ * transform: rotate(180deg) }`, and an icon stored at 90deg ends at 270deg
+ * with its flip intact. Writing the flip as `transform: scaleX(-1)`, as this
+ * block and core/icon did, made any state transform replace it.
+ *
+ * Rotation is inline (`rotate: 90deg`), written by the renderer. The flip is a
+ * class, as core/icon's is, and the same for both sources: a glyph turns as
+ * well as an SVG.
+ */
+.ax-icon.is-flip-horizontal {
+	scale: -1 1;
+}
+
+.ax-icon.is-flip-vertical {
+	scale: 1 -1;
+}
+
+.ax-icon.is-flip-horizontal.is-flip-vertical {
+	scale: -1 -1;
+}

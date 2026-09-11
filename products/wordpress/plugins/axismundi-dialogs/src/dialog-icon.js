@@ -7,10 +7,22 @@ import * as blocks from '@wordpress/blocks';
 import * as blockEditor from '@wordpress/block-editor';
 import * as element from '@wordpress/element';
 import * as components from '@wordpress/components';
-import * as data from '@wordpress/data';
-import * as coreData from '@wordpress/core-data';
-import * as dom from '@wordpress/dom';
 import * as i18n from '@wordpress/i18n';
+import * as primitives from '@wordpress/primitives';
+import {
+	IconElement,
+	IconPlaceholder,
+	flipClasses,
+	glyphName,
+	rotationStyle,
+	useIconRecord,
+} from './shared/icon';
+import {
+	DEFAULT_ICONS,
+	IconLibraryModal,
+	IconReferenceControls,
+	fontFamilyOptions,
+} from './shared/icon-controls';
 
 /**
  * axismundi/dialog-icon — editor registration.
@@ -39,49 +51,12 @@ var TextControl = components.TextControl;
 var RangeControl = components.RangeControl;
 var ToggleControl = components.ToggleControl;
 var ToolbarButton = components.ToolbarButton;
-var Modal = components.Modal;
-var SearchControl = components.SearchControl;
-var Spinner = components.Spinner;
-var Button = components.Button;
+var DropdownMenu = components.DropdownMenu;
 var ToolsPanel = components.__experimentalToolsPanel;
 var ToolsPanelItem = components.__experimentalToolsPanelItem;
-var useSelect = data.useSelect;
-var coreStore = coreData.store;
 var __ = i18n.__;
 
-// Each source's default is the same "info" icon, so switching source keeps
-// what the dialog is saying and only changes where the drawing comes from.
-// Carrying the old value across would always be wrong: the two value spaces
-// do not overlap, and "info" is not a registry name any more than
-// "core/info" is a glyph.
-var DEFAULTS = { font: 'info', registry: 'core/info' };
 var AXIS_DEFAULTS = { FILL: '0', wght: '400', GRAD: '0', opsz: '24' };
-
-// `typography.fontFamilies` comes back from useSettings keyed by origin -
-// `{ theme: [...], custom: [...] }` - not as one array. Unlike fontSizes and
-// the colour palette it is not in PATHS_WITH_OVERRIDE, so getBlockSettings
-// does not collapse the origins for it. Treating it as an array threw on the
-// first render and took the whole block down. Core flattens it the same way in
-// global-styles/typography-utils.js; the array branch covers a filter or an
-// older editor that hands back a flat list.
-//
-// De-duplicated by slug because a Font Library font and a theme font can
-// share one, and a select needs one option per stored value. The later origin
-// wins, which is the order global styles resolves them in.
-function fontFamilyOptions( setting ) {
-	var families = Array.isArray( setting )
-		? setting
-		: [ 'default', 'theme', 'custom' ].reduce( function ( all, origin ) {
-			return all.concat( ( setting && setting[ origin ] ) || [] );
-		}, [] );
-	var bySlug = {};
-	families.forEach( function ( font ) {
-		if ( font && font.slug ) {
-			bySlug[ font.slug ] = { label: font.name || font.slug, value: font.slug };
-		}
-	} );
-	return Object.keys( bySlug ).map( function ( slug ) { return bySlug[ slug ]; } );
-}
 
 function clampWeight( value ) {
 	var weight = Number( value );
@@ -185,121 +160,38 @@ function fontAxisOverrides( attributes, typography, axes, size, values ) {
 	return style;
 }
 
-function normalizeIconSearch( value ) {
-	return String( value || '' ).toLowerCase().replace( /[\s_-]+/g, '' );
-}
+// core/icon's block icon (icon.js).
+var blockIcon = el( primitives.SVG, { xmlns: 'http://www.w3.org/2000/svg', width: '24', height: '24', fill: 'none' },
+	el( primitives.Path, { d: 'M6 9.5h3.5V6H6v3.5Zm5 .5a1 1 0 0 1-.898.995L10 11H5.5l-.103-.005a1 1 0 0 1-.892-.893L4.5 10V5.5a1 1 0 0 1 1-1H10a1 1 0 0 1 1 1V10ZM18.25 7.75a2 2 0 1 0-4 0 2 2 0 0 0 4 0Zm1.5 0a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0ZM6.88 13.535a1 1 0 0 1 1.74 0l2.534 4.472a1 1 0 0 1-.87 1.493H5.216a1 1 0 0 1-.87-1.493l2.534-4.472ZM6.074 18h3.352L7.75 15.041l-1.676 2.96ZM14.952 13h2.596a1 1 0 0 1 .866.5l1.298 2.25a1 1 0 0 1 0 1L18.414 19l-.074.11a1 1 0 0 1-.792.39h-2.596a1 1 0 0 1-.792-.39l-.074-.11-1.298-2.25a1.001 1.001 0 0 1 0-1l1.298-2.25a1 1 0 0 1 .866-.5Zm-.72 3.25 1.01 1.75h2.017l1.009-1.75-1.01-1.75h-2.017l-1.01 1.75Z' } )
+);
 
-// core/icon's Icon Library modal is internal to block-library, but the two
-// entities it reads are public. Keep this implementation on those entities so
-// dialog-icon can browse the same registry without importing a private module.
-function IconLibraryModal( props ) {
-	var searchState = element.useState( '' );
-	var searchInput = searchState[ 0 ];
-	var setSearchInput = searchState[ 1 ];
-	var collectionState = element.useState( null );
-	var currentCollection = collectionState[ 0 ];
-	var setCurrentCollection = collectionState[ 1 ];
-	var collections = useSelect( function ( select ) {
-		return select( coreStore ).getEntityRecords( 'root', 'iconCollection' );
-	}, [] );
-	var selectedCollection = props.value ? props.value.split( '/' )[ 0 ] : '';
-	var collectionSlug = currentCollection !== null
-		? currentCollection
-		: ( collections && collections.some( function ( collection ) {
-			return collection.slug === selectedCollection;
-		} ) ? selectedCollection : ( collections && collections[ 0 ] ? collections[ 0 ].slug : null ) );
-	var iconResults = useSelect( function ( select ) {
-		if ( collectionSlug === null ) {
-			return { icons: null, resolved: false };
-		}
-		var query = collectionSlug === '' ? {} : { collection: collectionSlug };
-		var store = select( coreStore );
-		return {
-			icons: store.getEntityRecords( 'root', 'icon', query ),
-			resolved: store.hasFinishedResolution( 'getEntityRecords', [ 'root', 'icon', query ] ),
-		};
-	}, [ collectionSlug ] );
-	var search = normalizeIconSearch( searchInput );
-	var icons = ( iconResults.icons || [] ).filter( function ( registryIcon ) {
-		return ! search || normalizeIconSearch( registryIcon.name ).indexOf( search ) !== -1 ||
-			normalizeIconSearch( registryIcon.label ).indexOf( search ) !== -1;
-	} );
-
-	return el( Modal, {
-		className: 'ax-dialog-icon__library',
-		title: __( 'Icon library', 'axismundi-dialogs' ),
-		onRequestClose: props.onClose,
-		isFullScreen: true,
-	}, el( 'div', { className: 'ax-dialog-icon__library-layout' },
-		el( 'aside', { className: 'ax-dialog-icon__library-sidebar' },
-			el( SearchControl, {
-				label: __( 'Search icons', 'axismundi-dialogs' ),
-				value: searchInput,
-				onChange: setSearchInput,
-			} ),
-			el( 'div', { className: 'ax-dialog-icon__library-collections', role: 'tablist', 'aria-label': __( 'Icon collections', 'axismundi-dialogs' ) },
-				[ { slug: '', label: __( 'All', 'axismundi-dialogs' ) } ].concat( collections || [] ).map( function ( collection ) {
-					return el( 'button', {
-						key: collection.slug,
-						type: 'button',
-						role: 'tab',
-						'aria-selected': collection.slug === collectionSlug,
-						className: 'ax-dialog-icon__library-collection' + ( collection.slug === collectionSlug ? ' is-active' : '' ),
-						onClick: function () { setCurrentCollection( collection.slug ); },
-					}, collection.label );
-				} )
-			)
-		),
-		el( 'section', { className: 'ax-dialog-icon__library-panel', role: 'tabpanel' },
-			! iconResults.resolved
-				? el( 'div', { className: 'ax-dialog-icon__library-loading', role: 'status', 'aria-label': __( 'Loading icons', 'axismundi-dialogs' ) }, el( Spinner ) )
-				: ! icons.length
-					? el( 'p', { className: 'ax-dialog-icon__library-empty' }, __( 'No results found.', 'axismundi-dialogs' ) )
-					: el( 'div', { className: 'ax-dialog-icon__library-grid', 'aria-label': __( 'Icon library', 'axismundi-dialogs' ) },
-						icons.map( function ( registryIcon ) {
-							var isSelected = registryIcon.name === props.value;
-							return el( Button, {
-								key: registryIcon.name,
-								className: 'ax-dialog-icon__library-item',
-								variant: isSelected ? 'primary' : undefined,
-								label: registryIcon.label || registryIcon.name,
-								onClick: function () { props.onChange( registryIcon.name ); },
-								__next40pxDefaultSize: true,
-							},
-								el( 'span', {
-									className: 'ax-dialog-icon__library-item-icon',
-									dangerouslySetInnerHTML: { __html: dom.safeHTML( registryIcon.content || '' ) },
-								} ),
-								el( 'span', { className: 'ax-dialog-icon__library-item-label' }, registryIcon.label || registryIcon.name )
-							);
-						} )
-					)
-		)
-	) );
-}
-
-// Mirrors core/icon's editor-only empty state. This is deliberately distinct
-// from a non-empty, unregistered registry name, which remains an error state.
-function IconPlaceholder( props ) {
-	return el( 'svg', Object.assign( {
-		xmlns: 'http://www.w3.org/2000/svg',
-		viewBox: '0 0 60 60',
-		preserveAspectRatio: 'none',
-		fill: 'none',
-		'aria-hidden': 'true',
-		className: 'ax-dialog-icon__placeholder',
-	}, props ),
-		el( 'rect', { width: '60', height: '60', fill: 'currentColor', fillOpacity: '0.1' } ),
-		el( 'path', {
-			vectorEffect: 'non-scaling-stroke',
-			stroke: 'currentColor',
-			strokeOpacity: '0.25',
-			d: 'M60 60 0 0',
-		} )
-	);
-}
+// core/icon keeps its default in variations.js rather than block.json, and so
+// does this block. The default is written in full so every inserted icon
+// stores its source and axes - see render.php for why the source is explicit.
+var DEFAULT_ATTRIBUTES = {
+	iconSource: 'font',
+	icon: 'info',
+	iconClass: 'material-symbols-outlined',
+	tagName: 'span',
+	style: {
+		typography: {
+			fontVariationSettings: [ { FILL: '0' }, { wght: '400' }, { GRAD: '0' }, { opsz: '24' } ],
+		},
+	},
+};
 
 blocks.registerBlockType( 'axismundi/dialog-icon', {
+	icon: blockIcon,
+	example: {
+		attributes: DEFAULT_ATTRIBUTES,
+	},
+	variations: [
+		{
+			name: 'default',
+			isDefault: true,
+			attributes: DEFAULT_ATTRIBUTES,
+		},
+	],
 		edit: function ( props ) {
 		var a = props.attributes;
 		var set = props.setAttributes;
@@ -308,13 +200,16 @@ blocks.registerBlockType( 'axismundi/dialog-icon', {
 		var setLibraryOpen = libraryState[ 1 ];
 		var source = a.iconSource === 'registry' ? 'registry' : 'font';
 		var isRegistry = source === 'registry';
+		var isContentOnlyMode = blockEditor.useBlockEditingMode() === 'contentOnly';
 		// An absent attribute is legacy content and receives the variation's
 		// default. An explicitly empty string is a deliberate "no icon" value
 		// and must stay empty in the controlled input.
 		var icon = Object.prototype.hasOwnProperty.call( a, 'icon' )
 			? a.icon
-			: DEFAULTS[ source ];
-		var isEmptyIcon = icon === '';
+			: DEFAULT_ICONS[ source ];
+		// Empty as the page sees it: a glyph name with nothing renderable left
+		// after sanitising draws nothing there, so it is empty here too.
+		var isEmptyIcon = isRegistry ? icon === '' : glyphName( icon ) === '';
 		var tagName = a.tagName === 'div' ? 'div' : 'span';
 		var iconClass = a.iconClass || 'material-symbols-outlined';
 		var typography = ( a.style && a.style.typography ) || {};
@@ -329,10 +224,6 @@ blocks.registerBlockType( 'axismundi/dialog-icon', {
 		var iconFontSize = cssFontSize(
 			a.fontSize ? 'var:preset|font-size|' + a.fontSize : typography.fontSize
 		);
-		if ( ! fontOptions.some( function ( option ) { return option.value === iconClass; } ) ) {
-			fontOptions.unshift( { label: iconClass, value: iconClass } );
-		}
-		var rotationStyle = a.rotation ? { rotate: String( a.rotation ) + 'deg' } : {};
 		var dimensionsProps = useDimensionsProps( a );
 		var colorProps = useColorProps( a );
 		var borderProps = useBorderProps( a );
@@ -353,65 +244,85 @@ blocks.registerBlockType( 'axismundi/dialog-icon', {
 			grade: iconGrade,
 			opticalSize: iconOpticalSize,
 		} );
-		var registryStyle = Object.assign( {}, boxStyle, dimensionsProps.style || {}, rotationStyle );
+		// The one size token, for either source (style.css). Written only when
+		// the author chose a size; otherwise the container's value or 24px.
+		var sizeStyle = a.fontSize || typography.fontSize ? { '--md-icon-size': iconFontSize } : {};
 		var hasRegistryWidth = !!( dimensionsProps.style && dimensionsProps.style.width );
 
-			// The same entity core/icon previews from, so the editor draws exactly
-			// the SVG the server will render for that name.
-			var record = useSelect( function ( select ) {
-			if ( ! isRegistry || ! icon ) {
-				return { content: '', resolved: true };
-			}
-			var store = select( coreStore );
-			var registryIcon = store.getEntityRecord( 'root', 'icon', icon );
-			return {
-				content: registryIcon && registryIcon.content ? registryIcon.content : '',
-				resolved: store.hasFinishedResolution( 'getEntityRecord', [ 'root', 'icon', icon ] ),
-			};
-		}, [ isRegistry, icon ] );
+		// The icon reference, as the server renderer takes it (includes/icon.php).
+		var iconRef = {
+			source: source,
+			name: icon,
+			'class': iconClass,
+			flipHorizontal: !! a.flipHorizontal,
+			flipVertical: !! a.flipVertical,
+			rotation: Number( a.rotation ) || 0,
+		};
+		var record = useIconRecord( iconRef );
 
 		var isRegistryPlaceholder = isRegistry && !record.content;
-		var className = isRegistry
-			? 'ax-dialog-icon ax-dialog-icon--registry'
-			: 'ax-dialog-icon ' + iconClass;
-			var blockProps = useBlockProps( Object.assign(
-				{ className: className },
-				isRegistry && a.ariaLabel
-					? { 'aria-label': a.ariaLabel }
-					: { 'aria-hidden': 'true' }
-			) );
+		// The block box, as render.php outputs it: margin and alignment, and the
+		// element a parent layout sizes. The painted element sits inside it.
+		// No aria here, as core/icon's editor wrapper has none: the editor's
+		// block wrapper is a focusable region with a name of its own ("Block:
+		// Dialog Icon"), which aria-label replaced and aria-hidden took out of
+		// the accessibility tree. The icon's semantics sit on the painted
+		// element, as on the page.
+		var blockProps = useBlockProps( {
+			className: 'ax-dialog-icon ' +
+				( isRegistry ? 'ax-dialog-icon--registry' : 'ax-dialog-icon--font' ) +
+				( isEmptyIcon || isRegistryPlaceholder ? ' ax-dialog-icon--empty' : '' ),
+		} );
 
-			var preview = isEmptyIcon || isRegistryPlaceholder
-				? el( tagName, Object.assign( {}, blockProps, {
-					className: blockProps.className +
-						( boxClassName ? ' ' + boxClassName : '' ) +
-						( isRegistry && dimensionsProps.className ? ' ' + dimensionsProps.className : '' ) +
-						' ax-dialog-icon--empty',
-					style: isRegistry
-						? registryStyle
-						: Object.assign( {}, blockProps.style, boxStyle, fontAxisStyle ),
-				} ), el( IconPlaceholder, {
-					style: isRegistry && hasRegistryWidth ? { inlineSize: '100%', blockSize: 'auto' } : undefined,
-				} ) )
-				: isRegistry
-		? el( tagName, Object.assign( {}, blockProps, {
-				className: blockProps.className +
-					( boxClassName ? ' ' + boxClassName : '' ) +
-					( dimensionsProps.className ? ' ' + dimensionsProps.className : '' ) +
-					( hasRegistryWidth ? ' ax-dialog-icon--has-width' : '' ) +
-					( a.flipHorizontal ? ' is-flip-horizontal' : '' ) +
-					( a.flipVertical ? ' is-flip-vertical' : '' ),
-				style: registryStyle,
-					// The REST record is sanitised by the registry; safeHTML is the
-					// same second pass core/icon applies before rendering it.
-					dangerouslySetInnerHTML: { __html: dom.safeHTML( record.content ) },
-				} ) )
-		: el( tagName, Object.assign( {}, blockProps, {
-				className: blockProps.className + ( boxClassName ? ' ' + boxClassName : '' ),
-				style: Object.assign( {}, blockProps.style, boxStyle, fontAxisStyle ),
-			} ), icon );
+		function joinClasses() {
+			return Array.prototype.filter.call( arguments, Boolean ).join( ' ' );
+		}
 
-			var transformControls = isRegistry && record.content
+		// The painted element comes from the shared renderer (shared/icon.js),
+		// with this block's paint: colour, border and padding on both sources,
+		// the Width on a registry icon, the font axes on a glyph. Null means
+		// nothing to draw, and the placeholder takes its place.
+		var painted = el( IconElement, {
+			icon: iconRef,
+			record: record,
+			label: a.ariaLabel,
+			className: isRegistry
+				? joinClasses( boxClassName, dimensionsProps.className, hasRegistryWidth && 'ax-icon--has-width' )
+				: boxClassName,
+			style: isRegistry
+				? Object.assign( {}, boxStyle, sizeStyle, dimensionsProps.style || {} )
+				: Object.assign( {}, boxStyle, fontAxisStyle ),
+		} );
+		if ( isEmptyIcon || isRegistryPlaceholder ) {
+			// As core/icon: the placeholder takes the icon's place directly, with
+			// border, padding, width and the transforms, and not its colours -
+			// an empty box painted in a chosen background would read as an icon.
+			// Width is a registry setting, as it is for a drawn icon here; the
+			// transforms belong to both sources.
+			painted = el( IconPlaceholder, {
+				className: joinClasses(
+					borderProps.className,
+					spacingProps.className,
+					isRegistry && dimensionsProps.className,
+					flipClasses( iconRef )
+				),
+				style: Object.assign(
+					{},
+					borderProps.style,
+					spacingProps.style,
+					sizeStyle,
+					isRegistry ? dimensionsProps.style : {},
+					rotationStyle( iconRef ),
+					{ height: 'auto' }
+				),
+			} );
+		}
+
+		var preview = el( tagName, blockProps, painted );
+
+			// Offered whenever there is an icon, on either source, as core/icon
+			// offers them whenever `icon` is set.
+			var transformControls = ! isEmptyIcon
 				? el( BlockControls, { group: 'block' },
 					el( ToolbarButton, {
 						icon: flipHorizontalIcon,
@@ -440,33 +351,6 @@ blocks.registerBlockType( 'axismundi/dialog-icon', {
 					}, icon ? __( 'Replace', 'axismundi-dialogs' ) : __( 'Choose icon', 'axismundi-dialogs' ) )
 				)
 				: null;
-
-			var sourceControl = el( SelectControl, {
-				label: __( 'Icon source', 'axismundi-dialogs' ),
-				value: source,
-				options: [
-					{ label: __( 'Icon font', 'axismundi-dialogs' ), value: 'font' },
-					{ label: __( 'Icon library', 'axismundi-dialogs' ), value: 'registry' },
-				],
-				onChange: function ( next ) {
-					setLibraryOpen( false );
-					set( { iconSource: next, icon: DEFAULTS[ next ] } );
-				},
-				__next40pxDefaultSize: true,
-				__nextHasNoMarginBottom: true,
-			} );
-
-		var fontControl = ! isRegistry
-			? el( SelectControl, {
-				label: __( 'Icon font', 'axismundi-dialogs' ),
-				value: iconClass,
-				options: fontOptions,
-				onChange: function ( value ) { set( { iconClass: value } ); },
-				help: __( 'Lists active Font Library families. Until WordPress identifies icon fonts, text fonts may appear here but cannot render icon names.', 'axismundi-dialogs' ),
-				__next40pxDefaultSize: true,
-				__nextHasNoMarginBottom: true,
-			} )
-			: null;
 
 		var weightControl = ! isRegistry
 			? el( RangeControl, {
@@ -538,35 +422,50 @@ blocks.registerBlockType( 'axismundi/dialog-icon', {
 			} )
 			: null;
 
-		var valueControl = isRegistry
-			? el( TextControl, {
-					label: __( 'Icon', 'axismundi-dialogs' ),
-					value: icon,
-					onChange: function ( v ) { set( { icon: v } ); },
-					help: record.resolved && ! record.content && icon
-						? __( 'No registered icon has this name. Nothing will render on the front end.', 'axismundi-dialogs' )
-						: __( 'A registered icon name in collection/icon form, e.g. core/info.', 'axismundi-dialogs' ),
-					__next40pxDefaultSize: true,
-					__nextHasNoMarginBottom: true,
-				} )
-				: el( TextControl, {
-					label: __( 'Icon', 'axismundi-dialogs' ),
-					value: icon,
-					onChange: function ( v ) { set( { icon: v } ); },
-					help: __( 'Material Symbols name, e.g. info, warning, delete.', 'axismundi-dialogs' ),
-					__next40pxDefaultSize: true,
-				__nextHasNoMarginBottom: true,
-			} );
+		// Source, font and name, shared with dialog-icon-button.
+		var referenceControls = el( IconReferenceControls, {
+			source: source,
+			icon: icon,
+			iconClass: iconClass,
+			fontOptions: fontOptions,
+			record: record,
+			onChange: set,
+			onSourceChange: function () { setLibraryOpen( false ); },
+		} );
 
-		var labelControl = isRegistry
-			? el( TextControl, {
-				label: __( 'Label', 'axismundi-dialogs' ),
-				help: __( 'Briefly describe the icon for screen reader users. Leave blank for a decorative icon.', 'axismundi-dialogs' ),
-				value: a.ariaLabel || '',
-				onChange: function ( value ) { set( { ariaLabel: value || undefined } ); },
-				__next40pxDefaultSize: true,
-				__nextHasNoMarginBottom: true,
-			} )
+		// Both sources: a labelled glyph is an image with a name, as a labelled
+		// SVG is (includes/icon.php). core/icon's wording.
+		var labelHelp = __( 'Briefly describe the icon to help screen reader users. Leave blank for decorative icons.', 'axismundi-dialogs' );
+		var labelControl = el( TextControl, {
+			label: __( 'Label', 'axismundi-dialogs' ),
+			help: labelHelp,
+			value: a.ariaLabel || '',
+			onChange: function ( value ) { set( { ariaLabel: value || undefined } ); },
+			__next40pxDefaultSize: true,
+			__nextHasNoMarginBottom: true,
+		} );
+
+		// core/icon: with content-only editing the inspector is hidden, so the
+		// label - content, not design - is offered from the toolbar instead.
+		var contentOnlyLabelControl = isContentOnlyMode && ! isEmptyIcon
+			? el( BlockControls, { group: 'other' },
+				el( DropdownMenu, {
+					icon: '',
+					toggleProps: { as: ToolbarButton },
+					popoverProps: { className: 'is-alternate' },
+					text: __( 'Label', 'axismundi-dialogs' ),
+				}, function () {
+					return el( TextControl, {
+						className: 'ax-dialog-icon__toolbar-content',
+						label: __( 'Label', 'axismundi-dialogs' ),
+						value: a.ariaLabel || '',
+						onChange: function ( value ) { set( { ariaLabel: value || undefined } ); },
+						help: labelHelp,
+						__next40pxDefaultSize: true,
+						__nextHasNoMarginBottom: true,
+					} );
+				} )
+			)
 			: null;
 
 		var resetAxis = function ( axis ) {
@@ -629,9 +528,10 @@ blocks.registerBlockType( 'axismundi/dialog-icon', {
 		return el( Fragment, null,
 			transformControls,
 			libraryControl,
+			contentOnlyLabelControl,
 			el( InspectorControls, null,
 				el( PanelBody, { title: __( 'Dialog icon', 'axismundi-dialogs' ), initialOpen: true },
-					el( 'div', { style: { display: 'grid', gap: '16px' } }, sourceControl, fontControl, valueControl, labelControl )
+					el( 'div', { style: { display: 'grid', gap: '16px' } }, referenceControls, labelControl )
 				)
 			),
 			fontAxesPanel,

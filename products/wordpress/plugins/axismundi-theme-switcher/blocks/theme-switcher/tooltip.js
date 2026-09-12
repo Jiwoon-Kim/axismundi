@@ -268,10 +268,15 @@
 		if ( ! doc || ! doc.documentElement || ! doc.body ) {
 			return;
 		}
-		if ( doc.documentElement.dataset.axTsTooltip ) {
+		// NOT `axTsTooltip`: that writes data-ax-ts-tooltip on <html>, which is
+		// the trigger selector, so every closest() in the document finds the
+		// root. The whole page becomes one trigger and hovering anywhere shows
+		// the first .screen-reader-text on it - the theme's skip link. Measured
+		// on a page with the switcher in its header.
+		if ( doc.documentElement.dataset.axTsTooltipBound ) {
 			return;
 		}
-		doc.documentElement.dataset.axTsTooltip = 'bound';
+		doc.documentElement.dataset.axTsTooltipBound = 'bound';
 
 		function triggerFrom( event ) {
 			return event.target.closest ? event.target.closest( TRIGGER ) : null;

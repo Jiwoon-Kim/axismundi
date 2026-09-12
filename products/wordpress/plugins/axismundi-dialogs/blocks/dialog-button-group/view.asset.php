@@ -9,6 +9,8 @@
  * @package Axismundi_Dialogs
  */
 
+defined( 'ABSPATH' ) || exit;
+
 return array(
 	'dependencies' => array(
 		array(

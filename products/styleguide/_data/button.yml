@@ -61,6 +61,22 @@ variants:
         stores: icon + iconSelected
         interpolates: false
 
+# Disabled. M3 §0.8 "Disabled rule", Pattern A - the pattern that names button
+# and icon-button (core/design-systems/material3/specs/M3-COMPONENT-SPECS.md).
+#
+# One pair for every colour style, not a per-style table: a disabled button is
+# the same whatever it carries, which is why this sits beside `colors` rather
+# than inside it. The container is replaced, not faded - `on-surface` at 0.1 is
+# a colour, not an opacity applied to whatever was there.
+disabled:
+  container:
+    token: on-surface
+    opacity: 0.1
+  content:
+    token: on-surface
+    opacity: 0.38
+  elevation: level0
+
 sizes:
   - name: xsmall
     label: XS

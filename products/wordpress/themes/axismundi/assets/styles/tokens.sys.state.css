@@ -20,7 +20,22 @@
 	--md-sys-state-pressed-state-layer-opacity: 0.10;
 	--md-sys-state-dragged-state-layer-opacity: 0.16;
 
-	/* Disabled is a flat opacity on the content, not a layer over a container. */
+	/* Disabled is not a state layer. M3 §0.8 "Disabled rule", Pattern A - the
+	 * one that names button, icon button, FAB, chip, list item and the rest of
+	 * the interactive content - replaces both colours instead:
+	 *
+	 *   container     on-surface @ 0.1
+	 *   label / icon  on-surface @ 0.38
+	 *   elevation     level0
+	 *
+	 * This token is the content half. The container has no token of its own
+	 * because it is a colour, not a layer over what was already there; a
+	 * component writes it with color-mix. Published in the style guide's
+	 * `_data/button.yml` under `disabled`.
+	 *
+	 * Corrected 2026-09-12: this said disabled was "a flat opacity on the
+	 * content, not a layer over a container", which left the container painted
+	 * at full strength and disagreed with the spec above. */
 	--md-sys-state-disabled-state-layer-opacity: 0.38;
 
 	/*

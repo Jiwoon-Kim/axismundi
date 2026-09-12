@@ -22,64 +22,50 @@
 
 defined( 'ABSPATH' ) || exit;
 
-$axismundi_dialogs_ib_source = 'registry' === ( $attributes['iconSource'] ?? 'font' ) ? 'registry' : 'font';
-$axismundi_dialogs_ib_class  = (string) ( $attributes['iconClass'] ?? 'material-symbols-outlined' );
-$axismundi_dialogs_ib_icon   = axismundi_dialogs_get_icon(
-	array(
-		'source' => $axismundi_dialogs_ib_source,
-		'name'   => (string) ( $attributes['icon'] ?? '' ),
-		'class'  => $axismundi_dialogs_ib_class,
-	)
+$axismundi_dialogs_ib_icon = axismundi_dialogs_get_button_icon(
+	$attributes,
+	axismundi_dialogs_is_button_togglable( $attributes, $block )
 );
-
-// Icon(selected): a second reference, for a source with no state axis - a
-// static font or the registry, where the filled star is another icon. A
-// variable font needs none: selected fills the same glyph (assets/button.css).
-//
-// Selection is the visitor's, at runtime, so the server cannot pick one icon.
-// A toggle with a selected icon carries both, and aria-pressed shows one
-// (assets/button.css). Whether this button is a toggle is its own choice, else
-// its group's - the rule in src/shared/selection.js.
-$axismundi_dialogs_ib_togglable = isset( $attributes['togglable'] )
-	? (bool) $attributes['togglable']
-	: ! empty( $block->context['axismundi/togglable'] );
-$axismundi_dialogs_ib_selected_name = trim( (string) ( $attributes['selectedIcon'] ?? '' ) );
-if ( $axismundi_dialogs_ib_togglable && '' !== $axismundi_dialogs_ib_selected_name && '' !== $axismundi_dialogs_ib_icon ) {
-	$axismundi_dialogs_ib_selected = axismundi_dialogs_get_icon(
-		array(
-			'source' => $axismundi_dialogs_ib_source,
-			'name'   => $axismundi_dialogs_ib_selected_name,
-			'class'  => $axismundi_dialogs_ib_class,
-		),
-		array( 'class' => 'ax-icon--selected' )
-	);
-	if ( '' !== $axismundi_dialogs_ib_selected ) {
-		$axismundi_dialogs_ib_icon = axismundi_dialogs_get_icon(
-			array(
-				'source' => $axismundi_dialogs_ib_source,
-				'name'   => (string) ( $attributes['icon'] ?? '' ),
-				'class'  => $axismundi_dialogs_ib_class,
-			),
-			array( 'class' => 'ax-icon--unselected' )
-		) . $axismundi_dialogs_ib_selected;
-	}
-}
 
 // The name, as plain text: a converted button can bring formatted rich text,
 // and none of it can be seen here.
 $axismundi_dialogs_ib_name = trim( wp_strip_all_tags( (string) ( $attributes['text'] ?? '' ) ) );
 
+// A plain tooltip (M3 34.2) - the visual label for a control that shows no text
+// of its own, which is every icon button. Required by M3, so absence means on;
+// only a deliberate "off" is stored. The runtime (assets/tooltip.js) reads the
+// name out of .screen-reader-text, so a button with no name gets none: there
+// would be nothing to show.
+$axismundi_dialogs_ib_tooltip = ( ! isset( $attributes['showTooltips'] ) || $attributes['showTooltips'] )
+	&& '' !== $axismundi_dialogs_ib_name
+	? ' data-ax-tooltip="true"'
+	: '';
+
+/*
+ * Disabled. A <button> has the attribute; a link has no such thing, so the
+ * href goes instead - an <a> without one is not a link, is not focusable, and
+ * cannot be followed - and `aria-disabled` says why it is still there.
+ *
+ * Nothing else is needed to stop a toggle: a disabled button fires no click, so
+ * the Interactivity directive never runs.
+ */
+$axismundi_dialogs_ib_disabled = ! empty( $attributes['disabled'] );
+
 $axismundi_dialogs_ib_is_link = 'a' === ( $attributes['tagName'] ?? 'button' );
 $axismundi_dialogs_ib_control = $axismundi_dialogs_ib_is_link
 	? sprintf(
-		'<a class="wp-block-button__link wp-element-button"%1$s%2$s%3$s>',
-		! empty( $attributes['url'] ) ? ' href="' . esc_url( $attributes['url'] ) . '"' : '',
+		'<a class="wp-block-button__link wp-element-button"%1$s%2$s%3$s%4$s%5$s>',
+		! empty( $attributes['url'] ) && ! $axismundi_dialogs_ib_disabled ? ' href="' . esc_url( $attributes['url'] ) . '"' : '',
 		! empty( $attributes['linkTarget'] ) ? ' target="' . esc_attr( $attributes['linkTarget'] ) . '"' : '',
-		! empty( $attributes['rel'] ) ? ' rel="' . esc_attr( $attributes['rel'] ) . '"' : ''
+		! empty( $attributes['rel'] ) ? ' rel="' . esc_attr( $attributes['rel'] ) . '"' : '',
+		$axismundi_dialogs_ib_tooltip,
+		$axismundi_dialogs_ib_disabled ? ' aria-disabled="true"' : ''
 	)
 	: sprintf(
-		'<button type="%s" class="wp-block-button__link wp-element-button">',
-		esc_attr( in_array( $attributes['type'] ?? 'button', array( 'button', 'submit', 'reset' ), true ) ? $attributes['type'] ?? 'button' : 'button' )
+		'<button type="%1$s" class="wp-block-button__link wp-element-button"%2$s%3$s>',
+		esc_attr( in_array( $attributes['type'] ?? 'button', array( 'button', 'submit', 'reset' ), true ) ? $attributes['type'] ?? 'button' : 'button' ),
+		$axismundi_dialogs_ib_tooltip,
+		$axismundi_dialogs_ib_disabled ? ' disabled' : ''
 	);
 
 // The shell's attributes, as dialog-button saves them, plus this block's own:
@@ -91,15 +77,28 @@ foreach ( array( 'size', 'shape', 'width' ) as $axismundi_dialogs_ib_axis ) {
 		$axismundi_dialogs_ib_wrapper[ 'data-' . $axismundi_dialogs_ib_axis ] = (string) $attributes[ $axismundi_dialogs_ib_axis ];
 	}
 }
+
+// Absence is on: M3 fills a selected toggle's icon. Only a deliberate
+// "off" is stored, and the stylesheet keys on it (assets/button.css).
+if ( isset( $attributes['fillOnSelect'] ) && ! $attributes['fillOnSelect'] ) {
+	$axismundi_dialogs_ib_wrapper['data-fill-on-select'] = 'false';
+}
 if ( ! empty( $attributes['standard'] ) ) {
 	$axismundi_dialogs_ib_wrapper['data-standard'] = 'true';
 }
 
+// An empty name is an unnamed control, not an empty span: the editor fills the
+// Label in from the icon when an icon is chosen (src/dialog-icon-button.js), so
+// this is only reached when the author emptied it.
+$axismundi_dialogs_ib_label = '' !== $axismundi_dialogs_ib_name
+	? '<span class="screen-reader-text">' . esc_html( $axismundi_dialogs_ib_name ) . '</span>'
+	: '';
+
 printf(
-	'<div %1$s>%2$s%3$s<span class="screen-reader-text">%4$s</span></%5$s></div>',
+	'<div %1$s>%2$s%3$s%4$s</%5$s></div>',
 	get_block_wrapper_attributes( $axismundi_dialogs_ib_wrapper ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped by core.
 	$axismundi_dialogs_ib_control, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped above.
 	$axismundi_dialogs_ib_icon, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped/sanitised by the renderer.
-	esc_html( $axismundi_dialogs_ib_name ),
+	$axismundi_dialogs_ib_label, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped above.
 	$axismundi_dialogs_ib_is_link ? 'a' : 'button'
 );

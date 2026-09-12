@@ -192,3 +192,79 @@ function axismundi_dialogs_icon_rotation_css( array $icon ): string {
 	$rotation = isset( $icon['rotation'] ) ? (int) $icon['rotation'] : 0;
 	return $rotation ? 'rotate: ' . $rotation . 'deg;' : '';
 }
+
+/**
+ * A button's icon, as the two button blocks draw it.
+ *
+ * Both of them hold the same four attributes - iconSource, icon, selectedIcon,
+ * iconClass - and the same rule for the second one, so the rule lives here
+ * rather than twice in two render.php files.
+ *
+ * Selection is the visitor's, at runtime, so the server cannot pick one icon. A
+ * toggle with a selected icon that resolves carries BOTH, marked
+ * `ax-icon--unselected` and `ax-icon--selected`, and aria-pressed shows one
+ * (assets/button.css). Icon(selected) is for a source with no state axis - a
+ * static font, or the registry, where the filled star is another icon. A
+ * variable font needs none: selected fills the same glyph.
+ *
+ * @param array $attributes Block attributes.
+ * @param bool  $togglable  Whether the button is a toggle.
+ * @return string Icon markup, or '' when there is no icon.
+ */
+function axismundi_dialogs_get_button_icon( array $attributes, bool $togglable ): string {
+	$source = 'registry' === ( $attributes['iconSource'] ?? 'font' ) ? 'registry' : 'font';
+	$class  = (string) ( $attributes['iconClass'] ?? 'material-symbols-outlined' );
+	$name   = (string) ( $attributes['icon'] ?? '' );
+
+	$icon = axismundi_dialogs_get_icon(
+		array(
+			'source' => $source,
+			'name'   => $name,
+			'class'  => $class,
+		)
+	);
+	if ( '' === $icon ) {
+		return '';
+	}
+
+	$selected_name = trim( (string) ( $attributes['selectedIcon'] ?? '' ) );
+	if ( ! $togglable || '' === $selected_name ) {
+		return $icon;
+	}
+
+	$selected = axismundi_dialogs_get_icon(
+		array(
+			'source' => $source,
+			'name'   => $selected_name,
+			'class'  => $class,
+		),
+		array( 'class' => 'ax-icon--selected' )
+	);
+	if ( '' === $selected ) {
+		return $icon;
+	}
+
+	return axismundi_dialogs_get_icon(
+		array(
+			'source' => $source,
+			'name'   => $name,
+			'class'  => $class,
+		),
+		array( 'class' => 'ax-icon--unselected' )
+	) . $selected;
+}
+
+/**
+ * Whether a button is a toggle: its own choice, else its group's default.
+ * Mirrors isTogglable() in src/shared/selection.js.
+ *
+ * @param array         $attributes Block attributes.
+ * @param WP_Block|null $block      The block, for its group context.
+ * @return bool Whether the button is a toggle.
+ */
+function axismundi_dialogs_is_button_togglable( array $attributes, $block ): bool {
+	if ( isset( $attributes['togglable'] ) ) {
+		return (bool) $attributes['togglable'];
+	}
+	return $block instanceof WP_Block && ! empty( $block->context['axismundi/togglable'] );
+}

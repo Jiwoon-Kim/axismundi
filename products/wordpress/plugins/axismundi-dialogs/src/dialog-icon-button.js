@@ -36,6 +36,7 @@ import { starEmpty } from '@wordpress/icons';
 import metadata from '../blocks/dialog-icon-button/block.json';
 import { ButtonEdit } from './shared/button';
 import { isTogglable } from './shared/selection';
+import { BUTTON, toButton } from './shared/button-transforms';
 import { IconElement, IconPlaceholder, glyphName, useIconRecord } from './shared/icon';
 import { IconLibraryModal, IconReferenceControls, fontFamilyOptions } from './shared/icon-controls';
 
@@ -46,6 +47,25 @@ const WIDTH_OPTIONS = [
 	{ label: __( 'Narrow', 'axismundi-dialogs' ), value: 'narrow' },
 	{ label: __( 'Wide', 'axismundi-dialogs' ), value: 'wide' },
 ];
+
+/*
+ * The name, from the icon's name, when there is nothing else.
+ *
+ * An icon button has no visible label, so `text` is the only name it has, and
+ * an empty one leaves a control screen readers cannot announce. M3 says as
+ * much. `arrow_back` -> "Arrow back": the icon's name is what the icon means,
+ * which is what the button does often enough to be a good start.
+ *
+ * A starting value, not a fallback: written into `text`, so it shows in the
+ * Label field where the author can see it, change it, and have it translated
+ * with the rest of the page. A label the author never sees would be worse than
+ * none - it would look named while announcing a glyph's identifier. So this
+ * only ever fills an empty Label, and only when an icon is chosen.
+ */
+function labelFromIcon( name ) {
+	const text = String( name || '' ).replace( /[_-]+/g, ' ' ).trim();
+	return text ? text.charAt( 0 ).toUpperCase() + text.slice( 1 ) : undefined;
+}
 
 function styleOf( className ) {
 	return ( className || '' ).match( /(?:^|\s)is-style-([^\s]+)/ )?.[ 1 ];
@@ -101,7 +121,17 @@ function useStandardExclusion( attributes, setAttributes ) {
 
 function IconButtonEdit( props ) {
 	const { attributes, setAttributes } = props;
-	const { icon = '', iconClass, iconSource, selectedIcon = '', standard, text, width } = attributes;
+	const {
+		fillOnSelect,
+		icon = '',
+		iconClass,
+		iconSource,
+		selectedIcon = '',
+		showTooltips,
+		standard,
+		text,
+		width,
+	} = attributes;
 	const source = iconSource === 'registry' ? 'registry' : 'font';
 	const isRegistry = source === 'registry';
 	const iconRef = { source, name: icon, class: iconClass };
@@ -113,6 +143,16 @@ function IconButtonEdit( props ) {
 	const isToggle = isTogglable( attributes, props.context[ 'axismundi/togglable' ] );
 	const fontOptions = fontFamilyOptions( useSettings( 'typography.fontFamilies' )[ 0 ] );
 	const setStandard = useStandardExclusion( attributes, setAttributes );
+	// Every way an icon is chosen goes through here, so the name follows it.
+	// One change, so one undo takes the icon and the label it brought.
+	const setIconAttributes = ( changes ) => {
+		const next =
+			'iconSource' in changes ? { ...changes, selectedIcon: undefined } : { ...changes };
+		if ( changes.icon && ! text ) {
+			next.text = labelFromIcon( changes.icon );
+		}
+		setAttributes( next );
+	};
 	const isEmpty = isRegistry ? ! record.content : ! glyphName( icon );
 	// Both icons, as render.php draws them, only for a toggle with a selected
 	// icon that resolves; data-pressed shows one (assets/button.css).
@@ -120,7 +160,13 @@ function IconButtonEdit( props ) {
 		isToggle && ! isEmpty && ( isRegistry ? !! selectedRecord.content : !! glyphName( selectedIcon ) );
 
 	const renderContent = () => (
-		<div className="wp-block-button__link wp-element-button">
+		<div
+			className="wp-block-button__link wp-element-button"
+			// The tooltip runtime reads the name out of .screen-reader-text
+			// below, the same as on the page; the editor bridge attaches it to
+			// the canvas (assets/editor-tooltip.js).
+			data-ax-tooltip={ showTooltips !== false && text ? 'true' : undefined }
+		>
 			{ isEmpty && <IconPlaceholder style={ { height: 'auto' } } /> }
 			{ ! isEmpty && (
 				<IconElement
@@ -132,7 +178,7 @@ function IconButtonEdit( props ) {
 			{ hasSelectedIcon && (
 				<IconElement icon={ selectedRef } record={ selectedRecord } className="ax-icon--selected" />
 			) }
-			<span className="screen-reader-text">{ text }</span>
+			{ !! text && <span className="screen-reader-text">{ text }</span> }
 		</div>
 	);
 
@@ -151,6 +197,43 @@ function IconButtonEdit( props ) {
 					value={ width ?? '' }
 					options={ WIDTH_OPTIONS }
 					onChange={ ( value ) => setAttributes( { width: value || undefined } ) }
+				/>
+			</ToolsPanelItem>
+			<ToolsPanelItem
+				isShownByDefault
+				label={ __( 'Label', 'axismundi-dialogs' ) }
+				hasValue={ () => !! text }
+				onDeselect={ () => setAttributes( { text: undefined } ) }
+			>
+				<TextControl
+					__next40pxDefaultSize
+					__nextHasNoMarginBottom
+					label={ __( 'Label', 'axismundi-dialogs' ) }
+					help={
+						text
+							? __( 'The button’s name: read by screen readers, and shown as the tooltip.', 'axismundi-dialogs' )
+							: __( 'An icon button has no visible label, so it needs this name. Without it, screen readers have nothing to announce and there is no tooltip to show.', 'axismundi-dialogs' )
+					}
+					value={ text || '' }
+					onChange={ ( value ) => setAttributes( { text: value || undefined } ) }
+				/>
+			</ToolsPanelItem>
+			<ToolsPanelItem
+				isShownByDefault
+				label={ __( 'Show tooltips', 'axismundi-dialogs' ) }
+				hasValue={ () => showTooltips === false }
+				onDeselect={ () => setAttributes( { showTooltips: undefined } ) }
+			>
+				<ToggleControl
+					__nextHasNoMarginBottom
+					label={ __( 'Show tooltips', 'axismundi-dialogs' ) }
+					checked={ showTooltips !== false }
+					help={
+						showTooltips !== false
+							? __( 'The label appears on hover and on keyboard focus, including in the editor.', 'axismundi-dialogs' )
+							: __( 'No tooltip. Screen readers still read the label.', 'axismundi-dialogs' )
+					}
+					onChange={ ( value ) => setAttributes( { showTooltips: value ? undefined : false } ) }
 				/>
 			</ToolsPanelItem>
 		</>
@@ -199,15 +282,26 @@ function IconButtonEdit( props ) {
 							record={ record }
 							// A new source resets both references: the two value
 							// spaces do not overlap (shared/icon-controls.js).
-							onChange={ ( changes ) =>
-								setAttributes(
-									'iconSource' in changes ? { ...changes, selectedIcon: undefined } : changes
-								)
-							}
+							onChange={ setIconAttributes }
 							onSourceChange={ () => setLibraryTarget( null ) }
 						/>
-						{ isToggle && (
+					{ isToggle && (
 							<div>
+								{ /* A font axis: the registry has no fill to move, and a filled
+								     icon there is a different icon - Icon(selected) below. */ }
+								{ ! isRegistry && (
+									<ToggleControl
+										__nextHasNoMarginBottom
+										label={ __( 'Fill icon when selected', 'axismundi-dialogs' ) }
+										checked={ fillOnSelect !== false }
+										help={
+											fillOnSelect !== false
+												? __( 'M3’s selection cue: a variable icon font fills the icon. A font with no fill axis is unaffected - use Selected icon there.', 'axismundi-dialogs' )
+												: __( 'The icon stays as it is; colour and shape carry the selection.', 'axismundi-dialogs' )
+										}
+										onChange={ ( value ) => setAttributes( { fillOnSelect: value ? undefined : false } ) }
+									/>
+								) }
 								<TextControl
 									__next40pxDefaultSize
 									__nextHasNoMarginBottom
@@ -233,18 +327,6 @@ function IconButtonEdit( props ) {
 								) }
 							</div>
 						) }
-						<TextControl
-							__next40pxDefaultSize
-							__nextHasNoMarginBottom
-							label={ __( 'Label', 'axismundi-dialogs' ) }
-							help={
-								text
-									? __( 'The button’s name: read by screen readers, never shown.', 'axismundi-dialogs' )
-									: __( 'An icon button has no visible label, so it needs this name. Without it, screen readers have nothing to announce.', 'axismundi-dialogs' )
-							}
-							value={ text || '' }
-							onChange={ ( value ) => setAttributes( { text: value || undefined } ) }
-						/>
 					</div>
 				</PanelBody>
 			</InspectorControls>
@@ -253,7 +335,7 @@ function IconButtonEdit( props ) {
 					value={ libraryTarget === 'selectedIcon' ? selectedIcon : icon }
 					onClose={ () => setLibraryTarget( null ) }
 					onChange={ ( next ) => {
-						setAttributes( { [ libraryTarget ]: next } );
+						setIconAttributes( { [ libraryTarget ]: next } );
 						setLibraryTarget( null );
 					} }
 				/>
@@ -269,10 +351,11 @@ function IconButtonEdit( props ) {
 			settingsItems={ settingsItems }
 			settingsItemsAfter={ settingsItemsAfter }
 			inspector={ inspector }
-			resetAttributes={ { width: undefined, standard: undefined } }
+			resetAttributes={ { width: undefined, standard: undefined, showTooltips: undefined } }
 			extraBlockProps={ {
 				'data-width': width || undefined,
 				'data-standard': standard ? 'true' : undefined,
+				'data-fill-on-select': fillOnSelect === false ? 'false' : undefined,
 			} }
 		/>
 	);
@@ -280,6 +363,15 @@ function IconButtonEdit( props ) {
 
 registerBlockType( metadata, {
 	icon: starEmpty,
+	transforms: {
+		to: [
+			{
+				type: 'block',
+				blocks: [ BUTTON ],
+				transform: toButton,
+			},
+		],
+	},
 	example: {
 		attributes: { iconSource: 'font', icon: 'star', text: __( 'Favourite', 'axismundi-dialogs' ) },
 	},
@@ -287,7 +379,9 @@ registerBlockType( metadata, {
 		{
 			name: 'default',
 			isDefault: true,
-			attributes: { iconSource: 'font', icon: 'star' },
+			// With the name the Label field would have been given: an icon
+			// button inserted and left alone is still announced.
+			attributes: { iconSource: 'font', icon: 'star', text: __( 'Star', 'axismundi-dialogs' ) },
 		},
 	],
 	edit: IconButtonEdit,

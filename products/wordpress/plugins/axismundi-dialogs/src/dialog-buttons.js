@@ -50,6 +50,31 @@ const DEFAULT_BLOCK = {
 	attributesToCopy: [ 'className' ],
 };
 
+const ICON_DEFAULT_BLOCK = {
+	name: 'axismundi/dialog-icon-button',
+	attributesToCopy: [ 'className' ],
+};
+
+/*
+ * M3's "Button type: Icon | Label" on the Standard button group, adapted.
+ *
+ * In Figma it is a variant of the whole component, so every button in the group
+ * changes at once - there is no way to express a group holding one of each.
+ * Here the buttons are real blocks, and a mixed group is both expressible and
+ * useful: an icon button beside two labelled ones is a normal toolbar. So this
+ * sets WHICH BLOCK IS ADDED NEXT and leaves the buttons already there alone.
+ * Switching it is then never destructive, which matters because the two blocks
+ * do not hold the same things - `width`, `standard` and `showTooltips` exist
+ * only on the icon button and would be dropped by a conversion.
+ *
+ * To convert the buttons that are already there, the block transforms do it one
+ * at a time and say what they drop (shared/button-transforms.js).
+ */
+const BUTTON_TYPE_OPTIONS = [
+	{ label: __( 'Label', 'axismundi-dialogs' ), value: '' },
+	{ label: __( 'Icon', 'axismundi-dialogs' ), value: 'icon' },
+];
+
 const SIZE_OPTIONS = [
 	{ label: __( 'Extra small', 'axismundi-dialogs' ), value: 'xsmall' },
 	{ label: __( 'Small (default)', 'axismundi-dialogs' ), value: 'small' },
@@ -133,7 +158,8 @@ function sizeGapStyle( attributes ) {
 }
 
 function Edit( { attributes, setAttributes, clientId } ) {
-	const { layout, selection, selectionRequired, shape, size, togglable } = attributes;
+	const { buttonType, layout, selection, selectionRequired, shape, size, togglable } =
+		attributes;
 	const buttons = useSelect(
 		( select ) => select( blockEditorStore ).getBlocks( clientId ),
 		[ clientId ]
@@ -144,6 +170,7 @@ function Edit( { attributes, setAttributes, clientId } ) {
 	const hasToggles = buttons.some( ( { attributes: button } ) =>
 		isTogglable( button, togglable )
 	);
+	const isIconType = 'icon' === buttonType;
 	const blockProps = useBlockProps( {
 		className: 'wp-block-buttons',
 		'data-size': size || undefined,
@@ -151,8 +178,8 @@ function Edit( { attributes, setAttributes, clientId } ) {
 		style: sizeGapStyle( attributes ),
 	} );
 	const innerBlocksProps = useInnerBlocksProps( blockProps, {
-		defaultBlock: DEFAULT_BLOCK,
-		template: [ [ 'axismundi/dialog-button' ] ],
+		defaultBlock: isIconType ? ICON_DEFAULT_BLOCK : DEFAULT_BLOCK,
+		template: [ [ isIconType ? 'axismundi/dialog-icon-button' : 'axismundi/dialog-button' ] ],
 		templateInsertUpdatesSelection: true,
 		orientation: layout?.orientation ?? 'horizontal',
 	} );
@@ -166,7 +193,8 @@ function Edit( { attributes, setAttributes, clientId } ) {
 						setAttributes( {
 							size: 'small',
 							shape: 'round',
-							togglable: undefined,
+							buttonType: undefined,
+				togglable: undefined,
 							selection: undefined,
 							selectionRequired: undefined,
 						} )
@@ -204,6 +232,22 @@ function Edit( { attributes, setAttributes, clientId } ) {
 							onChange={ ( value ) => setAttributes( { shape: value } ) }
 						/>
 					</ToolsPanelItem>
+			<ToolsPanelItem
+				isShownByDefault
+				label={ __( 'Button type', 'axismundi-dialogs' ) }
+				hasValue={ () => !! buttonType }
+				onDeselect={ () => setAttributes( { buttonType: undefined } ) }
+			>
+				<SelectControl
+					__next40pxDefaultSize
+					__nextHasNoMarginBottom
+					label={ __( 'Button type', 'axismundi-dialogs' ) }
+					value={ buttonType ?? '' }
+					options={ BUTTON_TYPE_OPTIONS }
+					help={ __( 'The button a new group starts with, and the one the editor adds where it adds a default. The + button asks instead. Buttons already here do not change — convert one with Transform to.', 'axismundi-dialogs' ) }
+					onChange={ ( value ) => setAttributes( { buttonType: value || undefined } ) }
+				/>
+			</ToolsPanelItem>
 					<ToolsPanelItem
 						isShownByDefault
 						label={ __( 'Togglable', 'axismundi-dialogs' ) }

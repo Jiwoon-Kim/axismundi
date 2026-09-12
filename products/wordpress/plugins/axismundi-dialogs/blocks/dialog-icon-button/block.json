@@ -55,10 +55,16 @@
 		"standard": {
 			"type": "boolean"
 		},
+		"showTooltips": {
+			"type": "boolean"
+		},
 		"togglable": {
 			"type": "boolean"
 		},
 		"selected": {
+			"type": "boolean"
+		},
+		"disabled": {
 			"type": "boolean"
 		},
 		"url": {
@@ -92,6 +98,9 @@
 			"type": "string",
 			"role": "content"
 		},
+		"fillOnSelect": {
+			"type": "boolean"
+		},
 		"iconClass": {
 			"type": "string",
 			"default": "material-symbols-outlined"
@@ -102,6 +111,16 @@
 		"axismundi/selection",
 		"axismundi/selectionRequired"
 	],
+	"selectors": {
+		"root": ".wp-block-button .wp-block-button__link",
+		"typography": {
+			"writingMode": ".wp-block-button"
+		},
+		"dimensions": {
+			"root": ".wp-block-button",
+			"width": ".wp-block-button"
+		}
+	},
 	"supports": {
 		"html": false,
 		"reusable": false
@@ -114,5 +133,6 @@
 		}
 	],
 	"editorScript": "file:./edit.js",
+	"viewScript": "axismundi-dialogs-tooltip",
 	"render": "file:./render.php"
 }

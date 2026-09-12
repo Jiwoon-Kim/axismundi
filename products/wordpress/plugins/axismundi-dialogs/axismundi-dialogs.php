@@ -59,6 +59,44 @@ function axismundi_dialogs_register_blocks() : void {
 		(string) filemtime( __DIR__ . '/blocks/dialog-icon/editor.css' )
 	);
 
+	// The plain tooltip, for a control whose name is only in the accessibility
+	// tree - the icon button. Registered by handle so block.json can name it as
+	// a viewScript, which loads it only on a page that has one. Deliberately not
+	// shared with the theme switcher's tooltip: that plugin has to work without
+	// this one (see assets/tooltip.js).
+	wp_register_script(
+		'axismundi-dialogs-tooltip',
+		plugins_url( 'assets/tooltip.js', __FILE__ ),
+		array(),
+		(string) filemtime( __DIR__ . '/assets/tooltip.js' ),
+		array( 'strategy' => 'defer' )
+	);
+
+	// The same tooltip in the editor. The runtime attaches itself to the
+	// document it loads in, and the blocks are in the canvas iframe - another
+	// document - so the bridge hands each canvas to it. Show tooltips has no
+	// other visible effect, so without this the setting cannot be judged until
+	// the post is published.
+	add_action(
+		'enqueue_block_editor_assets',
+		static function () {
+			wp_enqueue_script(
+				'axismundi-dialogs-tooltip',
+				plugins_url( 'assets/tooltip.js', __FILE__ ),
+				array(),
+				(string) filemtime( __DIR__ . '/assets/tooltip.js' ),
+				true
+			);
+			wp_enqueue_script(
+				'axismundi-dialogs-editor-tooltip',
+				plugins_url( 'assets/editor-tooltip.js', __FILE__ ),
+				array( 'axismundi-dialogs-tooltip' ),
+				(string) filemtime( __DIR__ . '/assets/editor-tooltip.js' ),
+				true
+			);
+		}
+	);
+
 	foreach ( array( 'dialogs', 'sheet', 'dialog', 'dialog-close', 'dialog-title', 'dialog-icon', 'dialog-buttons', 'dialog-button', 'dialog-icon-button', 'post-quick-view-trigger', 'post-quick-view', 'object-media-dialog' ) as $axismundi_dialogs_block ) {
 		$axismundi_dialogs_dir = __DIR__ . '/blocks/' . $axismundi_dialogs_block;
 		if ( file_exists( $axismundi_dialogs_dir . '/block.json' ) ) {
@@ -89,6 +127,11 @@ function axismundi_dialogs_register_blocks() : void {
 		'src'    => plugins_url( 'assets/button.css', __FILE__ ),
 		'path'   => __DIR__ . '/assets/button.css',
 		'ver'    => (string) filemtime( __DIR__ . '/assets/button.css' ),
+		// Both button blocks can draw an icon now, so the primitive's
+		// stylesheet has to arrive with them. Without it a page whose only
+		// icons are inside buttons got no .ax-icon--svg box at all, and a
+		// registry icon fell back to the SVG's own width - measured.
+		'deps'   => array( 'axismundi-dialogs-icon' ),
 	);
 	wp_enqueue_block_style( 'axismundi/dialog-button', $axismundi_dialogs_button );
 	wp_enqueue_block_style( 'axismundi/dialog-icon-button', $axismundi_dialogs_button );
@@ -103,6 +146,19 @@ function axismundi_dialogs_register_blocks() : void {
 			'path'   => __DIR__ . '/assets/icon-button.css',
 			'ver'    => (string) filemtime( __DIR__ . '/assets/icon-button.css' ),
 			'deps'   => array( 'axismundi-dialogs-button', 'axismundi-dialogs-icon' ),
+		)
+	);
+
+	// The tooltip's box. Its element is not inside the block - it is in the top
+	// layer - so this cannot be a block style with a path; it rides with the
+	// block's other stylesheets instead.
+	wp_enqueue_block_style(
+		'axismundi/dialog-icon-button',
+		array(
+			'handle' => 'axismundi-dialogs-tooltip',
+			'src'    => plugins_url( 'assets/tooltip.css', __FILE__ ),
+			'path'   => __DIR__ . '/assets/tooltip.css',
+			'ver'    => (string) filemtime( __DIR__ . '/assets/tooltip.css' ),
 		)
 	);
 }

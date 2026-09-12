@@ -42,9 +42,10 @@ export function isTogglable( attributes, groupTogglable ) {
  * The attribute changes that bring a group's toggles back inside its rule.
  *
  * Keeps the first selected toggle in single mode and selects the first toggle
- * when a selection is required and none is. A link cannot be a toggle, so a
- * toggle stored as `<a>` becomes a `<button>`. Buttons that are not toggles
- * are left alone, `selected` included.
+ * when a selection is required and none is. A link cannot be a toggle: one the
+ * group's default reached stops being a toggle, one the author made a toggle
+ * becomes a `<button>`. Buttons that are not toggles are left alone, `selected`
+ * included.
  *
  * @param {Array}  buttons Inner blocks, in order.
  * @param {Object} group   Group attributes.
@@ -55,15 +56,38 @@ export function selectionChanges( buttons, group ) {
 	const change = ( clientId, attributes ) => {
 		changes[ clientId ] = { ...changes[ clientId ], ...attributes };
 	};
-	const toggles = buttons.filter( ( { attributes } ) =>
-		isTogglable( attributes, group.togglable )
-	);
-
-	toggles.forEach( ( { clientId, attributes } ) => {
-		if ( attributes.tagName === 'a' ) {
+	/*
+	 * A link cannot be a toggle - it goes somewhere, it does not hold a state -
+	 * and the server agrees: the runtime's directives are only ever written on
+	 * a <button> (axismundi_dialogs_buttons_selection). Which of the two gives
+	 * way depends on who said the button was a toggle:
+	 *
+	 *   inherited  the group's default reached a link that was already there.
+	 *              The link stays a link and opts out, which is what
+	 *              `togglable` on a button is for - a group of toggles holding
+	 *              one plain action. Turning it into a <button> instead would
+	 *              silently stop an existing link from going anywhere, with
+	 *              its URL still stored and no longer used.
+	 *   explicit   the author turned this button's own Togglable on, knowing
+	 *              what it is. That is a request, so the link becomes a button.
+	 */
+	const optedOut = new Set();
+	buttons.forEach( ( { clientId, attributes } ) => {
+		if ( 'a' !== attributes.tagName || ! isTogglable( attributes, group.togglable ) ) {
+			return;
+		}
+		if ( attributes.togglable ) {
 			change( clientId, { tagName: 'button' } );
+		} else {
+			change( clientId, { togglable: false } );
+			optedOut.add( clientId );
 		}
 	} );
+
+	const toggles = buttons.filter(
+		( { clientId, attributes } ) =>
+			! optedOut.has( clientId ) && isTogglable( attributes, group.togglable )
+	);
 
 	const selected = toggles.filter( ( { attributes } ) => attributes.selected );
 	if ( group.selection === 'single' ) {

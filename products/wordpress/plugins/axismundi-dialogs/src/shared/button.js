@@ -245,6 +245,12 @@ function useSelectedToggle( clientId, selected, group ) {
  * @param {Object}   props                 Block edit props, plus:
  * @param {Function} props.renderContent   Draws the control's contents instead
  *                                         of the editable label.
+ * @param {string}   props.togglableNotice Why this button cannot be a toggle.
+ *                                         Set, the Togglable control is disabled
+ *                                         and says so.
+ * @param {Element}  props.iconSlot        Drawn inside the control, before the
+ *                                         editable label, which is then wrapped
+ *                                         in a span of its own.
  * @param {Element}  props.settingsItems   Extra Settings items, after Shape.
  * @param {Element}  props.settingsItemsAfter Extra Settings items, last.
  * @param {Element}  props.inspector       Extra inspector panels.
@@ -263,6 +269,8 @@ export function ButtonEdit( props ) {
 		clientId,
 		context,
 		renderContent,
+		iconSlot,
+		togglableNotice,
 		settingsItems,
 		inspector,
 		extraBlockProps,
@@ -272,6 +280,7 @@ export function ButtonEdit( props ) {
 	} = props;
 	const {
 		tagName,
+		disabled,
 		linkTarget,
 		placeholder,
 		rel,
@@ -311,6 +320,9 @@ export function ButtonEdit( props ) {
 		// Absent when unset, so the editor draws exactly what save() writes.
 		'data-size': size || undefined,
 		'data-shape': shape || undefined,
+		// The editor's stand-in: the control is a div there, so it is neither
+		// :disabled nor a link without an href.
+		'data-disabled': disabled ? 'true' : undefined,
 		// Editor-only stand-in for the front end's aria-pressed, which the
 		// contenteditable label cannot carry. Never saved; see assets/button.css.
 		'data-pressed': isToggle ? String( !! selected ) : undefined,
@@ -397,6 +409,44 @@ export function ButtonEdit( props ) {
 	const useEnterRef = useEnter( clientId );
 	const mergedRef = useMergeRefs( [ useEnterRef, richTextRef ] );
 
+	/*
+	 * The editable label. With an icon beside it, it becomes a span inside the
+	 * control rather than being the control itself - the control has to hold two
+	 * things, and an icon inside editable text would be editable text. Without an
+	 * icon it is the control, which is the markup core/button saves and what
+	 * render.php writes back (blocks/dialog-button/render.php).
+	 */
+	const label = (
+		<RichText
+			ref={ mergedRef }
+			/* A div by default, as core edits in; as the label beside an icon
+			   it has to be the span render.php writes, or editor and page
+			   differ in structure. */
+			tagName={ iconSlot ? 'span' : undefined }
+			aria-label={ __( 'Button text', 'axismundi-dialogs' ) }
+			placeholder={ placeholder || __( 'Add text…', 'axismundi-dialogs' ) }
+			value={ text }
+			onChange={ ( value ) => setAttributes( { text: removeAnchorTag( value ) } ) }
+			withoutInteractiveFormatting
+			className={
+				iconSlot
+					? 'wp-block-button__label'
+					: `wp-block-button__link ${ ELEMENT_BUTTON_CLASS }`
+			}
+			onReplace={ onReplace }
+			onMerge={ mergeBlocks }
+			identifier="text"
+		/>
+	);
+	const content = iconSlot ? (
+		<div className={ `wp-block-button__link ${ ELEMENT_BUTTON_CLASS }` }>
+			{ iconSlot }
+			{ label }
+		</div>
+	) : (
+		label
+	);
+
 	const hasNonContentControls = blockEditingMode === 'default';
 	const hasBlockControls = hasNonContentControls || ( isLinkTag && ! lockUrlControls );
 
@@ -405,18 +455,7 @@ export function ButtonEdit( props ) {
 			<div { ...blockProps }>
 				{ /* Edits in a div, as core does: a contenteditable <button>
 				   swallows typing, and tagName only decides the saved element. */ }
-				{ renderContent ? renderContent() : <RichText
-					ref={ mergedRef }
-					aria-label={ __( 'Button text', 'axismundi-dialogs' ) }
-					placeholder={ placeholder || __( 'Add text…', 'axismundi-dialogs' ) }
-					value={ text }
-					onChange={ ( value ) => setAttributes( { text: removeAnchorTag( value ) } ) }
-					withoutInteractiveFormatting
-					className={ `wp-block-button__link ${ ELEMENT_BUTTON_CLASS }` }
-					onReplace={ onReplace }
-					onMerge={ mergeBlocks }
-					identifier="text"
-				/> }
+				{ renderContent ? renderContent() : content }
 			</div>
 			{ hasBlockControls && (
 				<BlockControls group="block">
@@ -492,6 +531,7 @@ export function ButtonEdit( props ) {
 							size: undefined,
 							shape: undefined,
 							togglable: undefined,
+					disabled: undefined,
 							...resetAttributes,
 						} )
 					}
@@ -541,13 +581,33 @@ export function ButtonEdit( props ) {
 							__next40pxDefaultSize
 							__nextHasNoMarginBottom
 							label={ __( 'Togglable', 'axismundi-dialogs' ) }
-							value={ togglable === undefined ? '' : ( togglable ? 'on' : 'off' ) }
+							disabled={ !! togglableNotice }
+							help={ togglableNotice || undefined }
+							value={ togglableNotice ? 'off' : ( togglable === undefined ? '' : ( togglable ? 'on' : 'off' ) ) }
 							options={ TOGGLABLE_OPTIONS }
 							onChange={ ( value ) =>
 								setAttributes( {
 									togglable: value === '' ? undefined : value === 'on',
 								} )
 							}
+						/>
+					</ToolsPanelItem>
+					<ToolsPanelItem
+						isShownByDefault
+						label={ __( 'Disabled', 'axismundi-dialogs' ) }
+						hasValue={ () => !! disabled }
+						onDeselect={ () => setAttributes( { disabled: undefined } ) }
+					>
+						<ToggleControl
+							__nextHasNoMarginBottom
+							label={ __( 'Disabled', 'axismundi-dialogs' ) }
+							checked={ !! disabled }
+							help={
+								disabled
+									? __( 'Shown, but cannot be pressed or followed.', 'axismundi-dialogs' )
+									: __( 'The button works normally.', 'axismundi-dialogs' )
+							}
+							onChange={ ( value ) => setAttributes( { disabled: value || undefined } ) }
 						/>
 					</ToolsPanelItem>
 					{ /* Selected belongs to a toggle, so it is shown only on one.

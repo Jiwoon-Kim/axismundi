@@ -30,6 +30,8 @@
 .wp-block-axismundi-dialog-buttons[data-size="xsmall"] {
 	--ax-button-height: 32px;
 	--ax-button-space: var( --md-sys-measurement-space150, 12px );
+	--ax-button-icon-size: 20px;
+	--ax-button-icon-gap: var( --md-sys-measurement-space50, 4px );
 	--ax-button-round-shape: 16px;
 	--ax-button-square-shape: var( --md-sys-shape-corner-value-medium, 12px );
 	--ax-button-pressed-shape: var( --md-sys-shape-corner-value-small, 8px );
@@ -44,6 +46,8 @@
 .wp-block-axismundi-dialog-buttons[data-size="small"] {
 	--ax-button-height: 40px;
 	--ax-button-space: var( --md-sys-measurement-space200, 16px );
+	--ax-button-icon-size: 20px;
+	--ax-button-icon-gap: var( --md-sys-measurement-space100, 8px );
 	--ax-button-round-shape: 20px;
 	--ax-button-square-shape: var( --md-sys-shape-corner-value-medium, 12px );
 	--ax-button-pressed-shape: var( --md-sys-shape-corner-value-small, 8px );
@@ -58,6 +62,8 @@
 .wp-block-axismundi-dialog-buttons[data-size="medium"] {
 	--ax-button-height: 56px;
 	--ax-button-space: var( --md-sys-measurement-space300, 24px );
+	--ax-button-icon-size: 24px;
+	--ax-button-icon-gap: var( --md-sys-measurement-space100, 8px );
 	--ax-button-round-shape: 28px;
 	--ax-button-square-shape: var( --md-sys-shape-corner-value-large, 16px );
 	--ax-button-pressed-shape: var( --md-sys-shape-corner-value-medium, 12px );
@@ -72,6 +78,8 @@
 .wp-block-axismundi-dialog-buttons[data-size="large"] {
 	--ax-button-height: 96px;
 	--ax-button-space: var( --md-sys-measurement-space600, 48px );
+	--ax-button-icon-size: 32px;
+	--ax-button-icon-gap: var( --md-sys-measurement-space150, 12px );
 	--ax-button-round-shape: 48px;
 	--ax-button-square-shape: var( --md-sys-shape-corner-value-extra-large, 28px );
 	--ax-button-pressed-shape: var( --md-sys-shape-corner-value-large, 16px );
@@ -86,6 +94,8 @@
 .wp-block-axismundi-dialog-buttons[data-size="xlarge"] {
 	--ax-button-height: 136px;
 	--ax-button-space: var( --md-sys-measurement-space800, 64px );
+	--ax-button-icon-size: 40px;
+	--ax-button-icon-gap: var( --md-sys-measurement-space200, 16px );
 	--ax-button-round-shape: 68px;
 	--ax-button-square-shape: var( --md-sys-shape-corner-value-extra-large, 28px );
 	--ax-button-pressed-shape: var( --md-sys-shape-corner-value-large, 16px );
@@ -199,10 +209,26 @@
  *   Outlined   transparent / on-surface-var    = normal     NEW
  *   Text       no toggle - M3 publishes none
  *
- * These blocks register Fill only for now, so the one state to draw is Filled
- * unselected: surface-container under on-surface-variant. Selected is the
- * theme's own Filled button, untouched. The other styles arrive with the colour
- * axis, and bring their selected pair with them.
+ * Read the table and only two of the eight cells need drawing per style: the
+ * one that differs from what the style already paints.
+ *
+ *   Filled     unselected differs - surface-container under on-surface-variant.
+ *              Selected IS the theme's Filled button, so it is left alone.
+ *   Tonal      unselected is the style itself; selected differs.
+ *   Outlined   unselected is the style itself; selected differs.
+ *   Elevated   unselected is the style itself; selected differs.
+ *
+ * WHY THIS IS HERE AND NOT IN THE THEME, which owns the five colour styles:
+ * `aria-pressed` cannot be expressed in theme.json at all - its pseudo-state
+ * list is :hover, :focus, :focus-visible and :active - so the rules would have
+ * to be raw CSS in a style-variation partial that core/button, Dialog and Sheet
+ * also use, where they would be dead forever. And a selected colour is not a
+ * transformation of its unselected one (Tonal: secondary-container becomes
+ * secondary, not a shade of it), so nothing is lost by keeping them apart: a
+ * theme that redefines Tonal has nothing here to inherit.
+ *
+ * The cost is naming: this file has to know the theme's `is-style-*` names.
+ * That is already true above (`:not(.is-style-text)`), and the names are M3's.
  *
  * `aria-pressed="false"` is the front end's signal; the group's render filter
  * writes it. The editor cannot use it - the label is a contenteditable box
@@ -237,6 +263,89 @@
 	background-color: color-mix(in srgb, var(--ax-button-toggle-content) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), var(--ax-button-toggle-container));
 }
 
+/* --- Toggle: the selected colour, per style -------------------------------- */
+
+/* `:not(.has-background)` on the three base rules is not only about respecting
+ * an author's own colour. The theme's legacy Outlined shim is
+ * `.wp-block-button.is-style-outlined .wp-block-button__link:not(.has-background)`,
+ * which is the same specificity as this rule without the guard - and it loads
+ * after this file, so it won. Measured: Outlined selected stayed transparent
+ * while Tonal and Elevated changed, their shims being one class shorter. */
+
+/* Tonal selected: secondary under on-secondary. */
+.wp-block-button.is-style-tonal > .wp-block-button__link[aria-pressed="true"]:not(.has-background),
+.wp-block-button.is-style-tonal[data-pressed="true"] > .wp-block-button__link:not(.has-background) {
+	--ax-button-toggle-container: var(--md-sys-color-secondary, var(--wp--preset--color--secondary, #625b71));
+	--ax-button-toggle-content: var(--md-sys-color-on-secondary, var(--wp--preset--color--on-secondary, #ffffff));
+	background-color: var(--ax-button-toggle-container);
+	color: var(--ax-button-toggle-content);
+}
+
+.wp-block-button.is-style-tonal > .wp-block-button__link[aria-pressed="true"]:hover,
+.wp-block-button.is-style-tonal[data-pressed="true"] > .wp-block-button__link:hover {
+	background-color: color-mix(in srgb, var(--ax-button-toggle-content) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--ax-button-toggle-container));
+}
+
+.wp-block-button.is-style-tonal > .wp-block-button__link[aria-pressed="true"]:focus,
+.wp-block-button.is-style-tonal[data-pressed="true"] > .wp-block-button__link:focus {
+	background-color: color-mix(in srgb, var(--ax-button-toggle-content) calc(var(--md-sys-state-focus-state-layer-opacity, 0.1) * 100%), var(--ax-button-toggle-container));
+}
+
+.wp-block-button.is-style-tonal > .wp-block-button__link[aria-pressed="true"]:active,
+.wp-block-button.is-style-tonal[data-pressed="true"] > .wp-block-button__link:active {
+	background-color: color-mix(in srgb, var(--ax-button-toggle-content) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), var(--ax-button-toggle-container));
+}
+
+/* Outlined selected: inverse-surface under inverse-on-surface.
+   The outline goes: a filled container does not need one, and M3 draws none. */
+.wp-block-button.is-style-outlined > .wp-block-button__link[aria-pressed="true"]:not(.has-background),
+.wp-block-button.is-style-outlined[data-pressed="true"] > .wp-block-button__link:not(.has-background) {
+	--ax-button-toggle-container: var(--md-sys-color-inverse-surface, var(--wp--preset--color--inverse-surface, #322f35));
+	--ax-button-toggle-content: var(--md-sys-color-inverse-on-surface, var(--wp--preset--color--inverse-on-surface, #f5eff7));
+	background-color: var(--ax-button-toggle-container);
+	color: var(--ax-button-toggle-content);
+	border-color: transparent;
+}
+
+.wp-block-button.is-style-outlined > .wp-block-button__link[aria-pressed="true"]:hover,
+.wp-block-button.is-style-outlined[data-pressed="true"] > .wp-block-button__link:hover {
+	background-color: color-mix(in srgb, var(--ax-button-toggle-content) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--ax-button-toggle-container));
+}
+
+.wp-block-button.is-style-outlined > .wp-block-button__link[aria-pressed="true"]:focus,
+.wp-block-button.is-style-outlined[data-pressed="true"] > .wp-block-button__link:focus {
+	background-color: color-mix(in srgb, var(--ax-button-toggle-content) calc(var(--md-sys-state-focus-state-layer-opacity, 0.1) * 100%), var(--ax-button-toggle-container));
+}
+
+.wp-block-button.is-style-outlined > .wp-block-button__link[aria-pressed="true"]:active,
+.wp-block-button.is-style-outlined[data-pressed="true"] > .wp-block-button__link:active {
+	background-color: color-mix(in srgb, var(--ax-button-toggle-content) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), var(--ax-button-toggle-container));
+}
+
+/* Elevated selected: primary under on-primary. */
+.wp-block-button.is-style-elevated > .wp-block-button__link[aria-pressed="true"]:not(.has-background),
+.wp-block-button.is-style-elevated[data-pressed="true"] > .wp-block-button__link:not(.has-background) {
+	--ax-button-toggle-container: var(--md-sys-color-primary, var(--wp--preset--color--primary, #6750a4));
+	--ax-button-toggle-content: var(--md-sys-color-on-primary, var(--wp--preset--color--on-primary, #ffffff));
+	background-color: var(--ax-button-toggle-container);
+	color: var(--ax-button-toggle-content);
+}
+
+.wp-block-button.is-style-elevated > .wp-block-button__link[aria-pressed="true"]:hover,
+.wp-block-button.is-style-elevated[data-pressed="true"] > .wp-block-button__link:hover {
+	background-color: color-mix(in srgb, var(--ax-button-toggle-content) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--ax-button-toggle-container));
+}
+
+.wp-block-button.is-style-elevated > .wp-block-button__link[aria-pressed="true"]:focus,
+.wp-block-button.is-style-elevated[data-pressed="true"] > .wp-block-button__link:focus {
+	background-color: color-mix(in srgb, var(--ax-button-toggle-content) calc(var(--md-sys-state-focus-state-layer-opacity, 0.1) * 100%), var(--ax-button-toggle-container));
+}
+
+.wp-block-button.is-style-elevated > .wp-block-button__link[aria-pressed="true"]:active,
+.wp-block-button.is-style-elevated[data-pressed="true"] > .wp-block-button__link:active {
+	background-color: color-mix(in srgb, var(--ax-button-toggle-content) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), var(--ax-button-toggle-container));
+}
+
 /* --- Toggle: Icon(selected) ------------------------------------------------ */
 
 /* "In toggle buttons, use the outlined style of an icon for the unselected
@@ -253,9 +362,15 @@
  *   registry       button renders both and the state shows one.
  *
  * Both arrive as .ax-icon, so neither rule needs to know which source drew the
- * icon. `aria-pressed` is the page's state and `data-pressed` the editor's. */
-.wp-block-button > .wp-block-button__link[aria-pressed="true"] .ax-icon,
-.wp-block-button[data-pressed="true"] > .wp-block-button__link .ax-icon {
+ * icon. `aria-pressed` is the page's state and `data-pressed` the editor's.
+ *
+ * A setting, not a law: M3 uses fill as the selection cue, so it is on unless
+ * turned off, and only an "off" is stored. Off leaves the icon alone and lets
+ * the button's colour and shape carry the state on their own - or lets
+ * Icon(selected) do it, which is a separate axis: a second icon is a different
+ * icon, where this is the same one with its FILL axis moved. */
+.wp-block-button:not( [data-fill-on-select="false"] ) > .wp-block-button__link[aria-pressed="true"] .ax-icon,
+.wp-block-button:not( [data-fill-on-select="false"] )[data-pressed="true"] > .wp-block-button__link .ax-icon {
 	--md-icon-fill: 1;
 }
 
@@ -305,4 +420,74 @@
 .wp-block-axismundi-dialog-buttons[data-size] > .wp-block-button > .wp-block-button__link:active,
 .wp-block-axismundi-dialog-buttons[data-shape] > .wp-block-button > .wp-block-button__link:active {
 	border-radius: var( --ax-button-pressed-shape, var( --md-sys-shape-corner-value-small, 8px ) );
+}
+
+/* --- The leading icon ---------------------------------------------------- */
+
+/* M3 puts one icon before the label, and the button's size decides both how big
+ * it is and how far it sits from the label (products/styleguide/_data/button.yml,
+ * `icon` and `icon_gap`). The icon button is NOT this: its icon table differs at
+ * Small - 24dp against a button's 20 - which is why this is scoped to the block
+ * rather than to any button holding an icon.
+ *
+ * `:has()` rather than the sized control rule above, because the icon has to
+ * work on an unsized button too: that one is left to the theme's button, which
+ * is already M3 Small, and this adds only what an icon needs. The fallbacks are
+ * Small's, for the same reason.
+ *
+ * The size is handed to the icon primitive as its own token; the primitive does
+ * the rest for either source (assets/icon.css, includes/icon.php). */
+.wp-block-button.wp-block-axismundi-dialog-button > .wp-block-button__link:has( > .ax-icon ) {
+	--md-icon-size: var( --ax-button-icon-size, 20px );
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var( --ax-button-icon-gap, var( --md-sys-measurement-space100, 8px ) );
+}
+
+/* --- Disabled ------------------------------------------------------------ */
+
+/* M3 §0.8 "Disabled rule", Pattern A - which names button and icon-button:
+ *
+ *   Container    on-surface @ 0.1
+ *   Label / icon on-surface @ 0.38
+ *   Elevation    level0
+ *
+ * So a disabled button looks the same whatever colour style it carries, which
+ * is why this replaces the container rather than fading it: Filled, Tonal,
+ * Outlined and Elevated all land on the same pair.
+ *
+ * NON-STANDARD, recorded rather than silently followed: the theme's own token
+ * comment beside --md-sys-state-disabled-state-layer-opacity says disabled is
+ * "a flat opacity on the content, not a layer over a container". That predates
+ * this rule being read from the spec and disagrees with it. The spec is
+ * followed here; the theme's note is the one to reconcile.
+ *
+ * Scoped to the two blocks by class, which is also what carries the rule over
+ * the theme's legacy Outlined shim - that one is
+ * `.wp-block-button.is-style-outlined .wp-block-button__link:not(.has-background)`,
+ * the same weight as this rule without the block class, and it loads later.
+ * Measured: Outlined alone kept its own colours while the other three faded.
+ *
+ * Both blocks and both elements: a disabled <button> is `:disabled`, a disabled
+ * link has no href and says `aria-disabled` instead, and `[data-disabled]` is
+ * the editor's stand-in where the control is neither. */
+.wp-block-button:is(.wp-block-axismundi-dialog-button, .wp-block-axismundi-dialog-icon-button) > .wp-block-button__link.wp-element-button:disabled,
+.wp-block-button:is(.wp-block-axismundi-dialog-button, .wp-block-axismundi-dialog-icon-button) > .wp-block-button__link.wp-element-button[aria-disabled="true"],
+.wp-block-button:is(.wp-block-axismundi-dialog-button, .wp-block-axismundi-dialog-icon-button)[data-disabled="true"] > .wp-block-button__link.wp-element-button {
+	--ax-button-disabled-on: var(--md-sys-color-on-surface, var(--wp--preset--color--on-surface, #1d1b20));
+	background-color: color-mix(in srgb, var(--ax-button-disabled-on) 10%, transparent);
+	background-image: none;
+	color: color-mix(in srgb, var(--ax-button-disabled-on) 38%, transparent);
+	border-color: transparent;
+	box-shadow: none;
+	cursor: default;
+	/* Also what keeps the state layers off. Hover, focus and pressed colours are
+	 * the theme's, on selectors this stylesheet does not own, so they cannot be
+	 * turned off one by one from here - and a button that lights up under the
+	 * pointer while refusing to act is worse than one that ignores it. It takes
+	 * the tooltip with it on an icon button, which is the right answer anyway: a
+	 * disabled control should not advertise. */
+	pointer-events: none;
 }

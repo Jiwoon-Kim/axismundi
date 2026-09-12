@@ -1,0 +1,71 @@
+/**
+ * Plain tooltip (M3 34.2), placed by assets/tooltip.js.
+ *
+ * The box only. Where it goes is the script's, since a tooltip follows a
+ * trigger the stylesheet knows nothing about.
+ *
+ * As a popover this is in the top layer, above an open `<dialog>` - which is
+ * the reason it is one (see tooltip.js). The UA gives a popover a border, a
+ * background and padding of its own, so those are reset here rather than
+ * inherited into M3's container.
+ */
+
+.ax-tooltip {
+	position: fixed;
+	inset-block-start: 0;
+	inset-inline-start: 0;
+	/* Only reached without popover support, where the tooltip sits on <body>.
+	 * Under the 100000 the Navigation overlay and the dialog surface share: a
+	 * tooltip should not cover a dialog. */
+	z-index: 99999;
+	margin: 0;
+	border: 0;
+	overflow: visible;
+	pointer-events: none;
+
+	display: flex;
+	align-items: center;
+	/* Material's table gives the container 24dp and the padding 8dp, and its
+	 * supporting text a 16dp line. Those only agree if 24 is the whole box:
+	 * 16 + 4 + 4. Without border-box the padding would be added to the 24 and
+	 * the tooltip would stand 32 tall. 8dp is the left/right value. */
+	box-sizing: border-box;
+	min-block-size: 24px;
+	padding: 4px 8px;
+	max-inline-size: 240px;
+	white-space: nowrap;
+
+	background-color: var( --md-sys-color-inverse-surface, #322f35 );
+	color: var( --md-sys-color-inverse-on-surface, #f5eff7 );
+	border-radius: var( --md-sys-shape-corner-value-extra-small, 4px );
+
+	/* No font-family: it inherits the document's, which is the theme's body
+	 * face where Material would name Roboto. */
+	font-size: var( --wp--preset--font-size--body-small, 12px );
+	line-height: 16px;
+	font-weight: 400;
+	letter-spacing: 0.4px;
+
+	/* A popover in the top layer is already displayed; `is-open` is what fades
+	 * it in, so the two states have to be expressible without `display`. */
+	visibility: hidden;
+	opacity: 0;
+	transition:
+		opacity var( --md-sys-motion-curve-fast-effects-duration, 150ms ) var( --md-sys-motion-curve-fast-effects, cubic-bezier( 0.31, 0.94, 0.34, 1 ) ),
+		visibility 0s linear var( --md-sys-motion-curve-fast-effects-duration, 150ms );
+}
+
+.ax-tooltip.is-open {
+	visibility: visible;
+	opacity: 1;
+	transition:
+		opacity var( --md-sys-motion-curve-fast-effects-duration, 150ms ) var( --md-sys-motion-curve-fast-effects, cubic-bezier( 0.31, 0.94, 0.34, 1 ) ),
+		visibility 0s linear 0s;
+}
+
+@media ( prefers-reduced-motion: reduce ) {
+	.ax-tooltip,
+	.ax-tooltip.is-open {
+		transition: none;
+	}
+}

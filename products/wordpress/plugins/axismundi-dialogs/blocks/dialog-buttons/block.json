@@ -4,25 +4,51 @@
 	"name": "axismundi/dialog-buttons",
 	"title": "Dialog Buttons",
 	"category": "design",
-	"allowedBlocks": [ "axismundi/dialog-button", "axismundi/dialog-icon-button" ],
+	"allowedBlocks": [
+		"axismundi/dialog-button",
+		"axismundi/dialog-icon-button"
+	],
 	"description": "A standard group of action buttons for a dialog or sheet.",
-	"keywords": [ "dialog", "buttons", "actions" ],
+	"keywords": [
+		"dialog",
+		"buttons",
+		"actions"
+	],
 	"textdomain": "axismundi-dialogs",
 	"attributes": {
 		"size": {
 			"type": "string",
-			"enum": [ "xsmall", "small", "medium", "large", "xlarge" ]
+			"enum": [
+				"xsmall",
+				"small",
+				"medium",
+				"large",
+				"xlarge"
+			]
 		},
 		"shape": {
 			"type": "string",
-			"enum": [ "round", "square" ]
+			"enum": [
+				"round",
+				"square"
+			]
+		},
+		"buttonType": {
+			"type": "string",
+			"enum": [
+				"label",
+				"icon"
+			]
 		},
 		"togglable": {
 			"type": "boolean"
 		},
 		"selection": {
 			"type": "string",
-			"enum": [ "single", "multiple" ]
+			"enum": [
+				"single",
+				"multiple"
+			]
 		},
 		"selectionRequired": {
 			"type": "boolean"
@@ -44,11 +70,20 @@
 		}
 	],
 	"supports": {
-		"align": [ "wide", "full" ],
+		"align": [
+			"wide",
+			"full"
+		],
 		"html": false,
 		"spacing": {
-			"blockGap": [ "horizontal", "vertical" ],
-			"margin": [ "top", "bottom" ]
+			"blockGap": [
+				"horizontal",
+				"vertical"
+			],
+			"margin": [
+				"top",
+				"bottom"
+			]
 		},
 		"layout": {
 			"allowSwitching": false,

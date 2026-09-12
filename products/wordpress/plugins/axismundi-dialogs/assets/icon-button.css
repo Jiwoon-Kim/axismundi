@@ -142,7 +142,11 @@
  * `aria-pressed` is the page's toggle state and `data-pressed` the editor's
  * stand-in (assets/button.css). As a toggle, Standard keeps no container
  * either way: unselected is on-surface-variant, selected is primary. */
-.wp-block-button.wp-block-axismundi-dialog-icon-button[data-standard="true"] > .wp-block-button__link.wp-element-button {
+/* Not while disabled. Disabled is a state and Standard is a colour mode, so
+ * the state wins - but the two selectors weigh the same and this file loads
+ * after the one with the disabled rule, so without this guard Standard kept
+ * its colours on a disabled button. Measured. */
+.wp-block-button.wp-block-axismundi-dialog-icon-button[data-standard="true"]:not([data-disabled="true"]) > .wp-block-button__link.wp-element-button:not(:disabled):not([aria-disabled="true"]) {
 	--ax-icon-button-content: var( --md-sys-color-on-surface-variant, var( --wp--preset--color--on-surface-variant, #49454f ) );
 	background-color: transparent;
 	color: var( --ax-icon-button-content );

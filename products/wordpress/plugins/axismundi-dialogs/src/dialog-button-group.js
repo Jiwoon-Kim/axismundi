@@ -284,7 +284,7 @@ function Edit( { attributes, setAttributes, clientId } ) {
 					options={ DISTRIBUTION_OPTIONS }
 					help={
 						distribution === 'fill'
-							? __( 'The group fills the width and its buttons share it equally. A selected toggle then widens and its neighbours give way, which M3 asks of a standard group.', 'axismundi-dialogs' )
+							? __( 'The group fills the width and its buttons share it equally. Where the buttons are toggles, the selected one widens and its neighbours give way. Too narrow to share, and they stack at full width.', 'axismundi-dialogs' )
 							: __( 'Each button is as wide as its own label.', 'axismundi-dialogs' )
 					}
 					onChange={ ( value ) => setAttributes( { distribution: value || undefined } ) }

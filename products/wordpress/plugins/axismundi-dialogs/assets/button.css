@@ -556,6 +556,13 @@
  * stretch across the page or make its buttons equal. Turning this on is the
  * author saying the group is the segmented kind M3 describes.
  *
+ * Narrow containers need no rule of their own: core's flex layout wraps, so
+ * once the equal share falls under a button's own `min-inline-size` the row
+ * breaks and each button takes the full width. Measured at 760/480/360/280 -
+ * one, two, three, three lines, and nothing overflows. The 15% stops meaning
+ * anything once a line holds a single button, which is the right way for it to
+ * go: the group has become a stack.
+ *
  * `flex-basis: 0` rather than `auto` is the whole trick, and the reference
  * implementation records getting it wrong first (axismundi-lab
  * stylesheets/components.css §28.3): with `auto` each button starts at content

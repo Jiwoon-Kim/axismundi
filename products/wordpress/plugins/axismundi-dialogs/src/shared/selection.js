@@ -1,5 +1,5 @@
 /**
- * Toggle and selection rules for a Dialog Buttons group (M3 Standard button
+ * Toggle and selection rules for a Dialog Button Group (M3 Standard button
  * group). Three separate ideas, each owned where it belongs:
  *
  *   Togglable  whether a button is a toggle - takes part in selection at all.
@@ -24,7 +24,7 @@
  * so it is allowed for both; narrow it here if the M3 original restricts it.
  *
  * What a visitor selects afterwards is runtime state and never written back to
- * the block. Mirrored in PHP (axismundi_dialogs_buttons_selection).
+ * the block. Mirrored in PHP (axismundi_dialogs_button_group_selection).
  */
 
 /**
@@ -59,7 +59,7 @@ export function selectionChanges( buttons, group ) {
 	/*
 	 * A link cannot be a toggle - it goes somewhere, it does not hold a state -
 	 * and the server agrees: the runtime's directives are only ever written on
-	 * a <button> (axismundi_dialogs_buttons_selection). Which of the two gives
+	 * a <button> (axismundi_dialogs_button_group_selection). Which of the two gives
 	 * way depends on who said the button was a toggle:
 	 *
 	 *   inherited  the group's default reached a link that was already there.

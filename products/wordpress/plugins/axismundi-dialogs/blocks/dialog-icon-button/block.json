@@ -4,7 +4,7 @@
 	"name": "axismundi/dialog-icon-button",
 	"title": "Dialog Icon Button",
 	"category": "design",
-	"description": "An icon-only action button for a Dialog Buttons group.",
+	"description": "An icon-only action button for a Dialog Button Group.",
 	"keywords": [
 		"dialog",
 		"icon",
@@ -13,7 +13,7 @@
 	],
 	"textdomain": "axismundi-dialogs",
 	"parent": [
-		"axismundi/dialog-buttons"
+		"axismundi/dialog-button-group"
 	],
 	"attributes": {
 		"tagName": {

@@ -1,8 +1,8 @@
 {
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
-	"name": "axismundi/dialog-buttons",
-	"title": "Dialog Buttons",
+	"name": "axismundi/dialog-button-group",
+	"title": "Dialog Button Group",
 	"category": "design",
 	"allowedBlocks": [
 		"axismundi/dialog-button",
@@ -38,6 +38,12 @@
 			"enum": [
 				"label",
 				"icon"
+			]
+		},
+		"distribution": {
+			"type": "string",
+			"enum": [
+				"fill"
 			]
 		},
 		"togglable": {

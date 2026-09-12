@@ -66,7 +66,7 @@ import { prependHTTPS } from '@wordpress/url';
 import { isTogglable } from './selection';
 
 // M3 button sizes. "Default" stores nothing: the button inherits the size of
-// its Dialog Buttons group, and falls back to Small. An explicit size - Small
+// its Dialog Button Group, and falls back to Small. An explicit size - Small
 // included - holds that size against the group. The two must stay separate
 // options, since inheriting Medium and holding Small are different choices.
 const SIZE_OPTIONS = [
@@ -191,7 +191,7 @@ function useEnter( clientId ) {
 // single mode turns the other toggles off, and the last selected toggle cannot
 // be turned off while a selection is required. Buttons that are not toggles
 // are not counted and not touched. The group repairs anything else (see
-// useSelectionInvariant in dialog-buttons.js).
+// useSelectionInvariant in dialog-button-group.js).
 function useSelectedToggle( clientId, selected, group ) {
 	const { updateBlockAttributes } = useDispatch( blockEditorStore );
 	const { getBlockAttributes, getBlockOrder, getBlockRootClientId } =

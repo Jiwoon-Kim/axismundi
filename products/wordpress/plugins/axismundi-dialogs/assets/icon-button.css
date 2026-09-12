@@ -23,7 +23,7 @@
  * on, so size publishes all three spaces and width only picks one, the way
  * shape picks a radius from the candidates size supplies. */
 .wp-block-button[data-size="xsmall"],
-.wp-block-axismundi-dialog-buttons[data-size="xsmall"] {
+.wp-block-axismundi-dialog-button-group[data-size="xsmall"] {
 	--ax-icon-button-icon: 20px;
 	--ax-icon-button-space-narrow: var( --md-sys-measurement-space50, 4px );
 	--ax-icon-button-space-default: var( --md-sys-measurement-space75, 6px );
@@ -31,7 +31,7 @@
 }
 
 .wp-block-button[data-size="small"],
-.wp-block-axismundi-dialog-buttons[data-size="small"] {
+.wp-block-axismundi-dialog-button-group[data-size="small"] {
 	--ax-icon-button-icon: 24px;
 	--ax-icon-button-space-narrow: var( --md-sys-measurement-space50, 4px );
 	--ax-icon-button-space-default: var( --md-sys-measurement-space100, 8px );
@@ -39,7 +39,7 @@
 }
 
 .wp-block-button[data-size="medium"],
-.wp-block-axismundi-dialog-buttons[data-size="medium"] {
+.wp-block-axismundi-dialog-button-group[data-size="medium"] {
 	--ax-icon-button-icon: 24px;
 	--ax-icon-button-space-narrow: var( --md-sys-measurement-space150, 12px );
 	--ax-icon-button-space-default: var( --md-sys-measurement-space200, 16px );
@@ -47,7 +47,7 @@
 }
 
 .wp-block-button[data-size="large"],
-.wp-block-axismundi-dialog-buttons[data-size="large"] {
+.wp-block-axismundi-dialog-button-group[data-size="large"] {
 	--ax-icon-button-icon: 32px;
 	--ax-icon-button-space-narrow: var( --md-sys-measurement-space200, 16px );
 	--ax-icon-button-space-default: var( --md-sys-measurement-space400, 32px );
@@ -55,7 +55,7 @@
 }
 
 .wp-block-button[data-size="xlarge"],
-.wp-block-axismundi-dialog-buttons[data-size="xlarge"] {
+.wp-block-axismundi-dialog-button-group[data-size="xlarge"] {
 	--ax-icon-button-icon: 40px;
 	--ax-icon-button-space-narrow: var( --md-sys-measurement-space400, 32px );
 	--ax-icon-button-space-default: var( --md-sys-measurement-space600, 48px );

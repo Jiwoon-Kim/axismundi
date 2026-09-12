@@ -59,7 +59,7 @@ import {
  * The control is disabled and says why (shared/button.js).
  *
  * Only in answer to an edit, never on load - see useSelectionInvariant in
- * dialog-buttons.js for what a fix made on load does to undo - and folded into
+ * dialog-button-group.js for what a fix made on load does to undo - and folded into
  * the change that caused it so one undo takes both.
  */
 function useTextNotTogglable( attributes, setAttributes, groupTogglable ) {

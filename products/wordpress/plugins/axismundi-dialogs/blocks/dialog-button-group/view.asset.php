@@ -1,6 +1,6 @@
 <?php
 /**
- * Asset metadata for the Dialog Buttons view module.
+ * Asset metadata for the Dialog Button Group view module.
  *
  * Hand-written, as view.js is not built. The dependency is what puts
  * @wordpress/interactivity in the page's import map: without it the module

@@ -1,5 +1,5 @@
 /**
- * axismundi/dialog-buttons - front-end Interactivity store.
+ * axismundi/dialog-button-group - front-end Interactivity store.
  *
  * Runs the group's selection rule when a visitor presses a toggle. The shape
  * follows core/accordion, which solves the same problem (one open item, or
@@ -11,7 +11,7 @@
  *
  * One context per group, so two groups on a page never share a selection. The
  * initial `pressed` is the author's `selected`, already put inside the rule by
- * the server (axismundi_dialogs_buttons_selection); from then on the store owns
+ * the server (axismundi_dialogs_button_group_selection); from then on the store owns
  * the current state and nothing is written back to the block. Keeping it is the
  * integrator's business.
  *
@@ -23,7 +23,7 @@
  */
 import { getContext, store } from '@wordpress/interactivity';
 
-store( 'axismundi/dialog-buttons', {
+store( 'axismundi/dialog-button-group', {
 	state: {
 		get isPressed() {
 			const { index, pressed } = getContext();

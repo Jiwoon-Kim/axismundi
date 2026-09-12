@@ -97,7 +97,7 @@ function useStandardExclusion( attributes, setAttributes ) {
 
 	// A style picked in the Styles panel turns Standard off - but only as an
 	// answer to that change, never on load (see useSelectionInvariant in
-	// dialog-buttons.js for what a fix made on load does to undo). Folded into
+	// dialog-button-group.js for what a fix made on load does to undo). Folded into
 	// the style change, so one undo takes both back: recorded on its own, undo
 	// reverted the fix alone and left Standard on beside the style (measured).
 	const { __unstableMarkNextChangeAsNotPersistent } = useDispatch( blockEditorStore );

@@ -27,7 +27,7 @@
 /* --- Tokens, per size, on the wrapper ------------------------------------ */
 
 .wp-block-button[data-size="xsmall"],
-.wp-block-axismundi-dialog-buttons[data-size="xsmall"] {
+.wp-block-axismundi-dialog-button-group[data-size="xsmall"] {
 	--ax-button-height: 32px;
 	--ax-button-space: var( --md-sys-measurement-space150, 12px );
 	--ax-button-icon-size: 20px;
@@ -43,7 +43,7 @@
 }
 
 .wp-block-button[data-size="small"],
-.wp-block-axismundi-dialog-buttons[data-size="small"] {
+.wp-block-axismundi-dialog-button-group[data-size="small"] {
 	--ax-button-height: 40px;
 	--ax-button-space: var( --md-sys-measurement-space200, 16px );
 	--ax-button-icon-size: 20px;
@@ -59,7 +59,7 @@
 }
 
 .wp-block-button[data-size="medium"],
-.wp-block-axismundi-dialog-buttons[data-size="medium"] {
+.wp-block-axismundi-dialog-button-group[data-size="medium"] {
 	--ax-button-height: 56px;
 	--ax-button-space: var( --md-sys-measurement-space300, 24px );
 	--ax-button-icon-size: 24px;
@@ -75,7 +75,7 @@
 }
 
 .wp-block-button[data-size="large"],
-.wp-block-axismundi-dialog-buttons[data-size="large"] {
+.wp-block-axismundi-dialog-button-group[data-size="large"] {
 	--ax-button-height: 96px;
 	--ax-button-space: var( --md-sys-measurement-space600, 48px );
 	--ax-button-icon-size: 32px;
@@ -91,7 +91,7 @@
 }
 
 .wp-block-button[data-size="xlarge"],
-.wp-block-axismundi-dialog-buttons[data-size="xlarge"] {
+.wp-block-axismundi-dialog-button-group[data-size="xlarge"] {
 	--ax-button-height: 136px;
 	--ax-button-space: var( --md-sys-measurement-space800, 64px );
 	--ax-button-icon-size: 40px;
@@ -115,20 +115,20 @@
  * larger group is the case to check.
  *
  * Only the token is set here. Whether it applies is decided where the block's
- * attributes are known - see axismundi_dialogs_buttons_size_gap(). */
-.wp-block-axismundi-dialog-buttons[data-size="xsmall"] {
+ * attributes are known - see axismundi_dialogs_button_group_size_gap(). */
+.wp-block-axismundi-dialog-button-group[data-size="xsmall"] {
 	/* 18dp. There is no 18 on the M3 spacing scale (14, 16, 20); M3 publishes it
 	 * as a component measurement. */
 	--ax-button-group-between: 18px;
 }
 
-.wp-block-axismundi-dialog-buttons[data-size="small"] {
+.wp-block-axismundi-dialog-button-group[data-size="small"] {
 	--ax-button-group-between: var( --md-sys-measurement-space150, 12px );
 }
 
-.wp-block-axismundi-dialog-buttons[data-size="medium"],
-.wp-block-axismundi-dialog-buttons[data-size="large"],
-.wp-block-axismundi-dialog-buttons[data-size="xlarge"] {
+.wp-block-axismundi-dialog-button-group[data-size="medium"],
+.wp-block-axismundi-dialog-button-group[data-size="large"],
+.wp-block-axismundi-dialog-button-group[data-size="xlarge"] {
 	--ax-button-group-between: var( --md-sys-measurement-space100, 8px );
 }
 
@@ -138,7 +138,7 @@
  * only has to supply the tokens. The round shape is half the height at every
  * size, which is what M3 means by a circular corner on a fixed-height control. */
 .wp-block-button[data-size] > .wp-block-button__link,
-.wp-block-axismundi-dialog-buttons[data-size] > .wp-block-button > .wp-block-button__link {
+.wp-block-axismundi-dialog-button-group[data-size] > .wp-block-button > .wp-block-button__link {
 	box-sizing: border-box;
 	display: inline-flex;
 	align-items: center;
@@ -176,12 +176,12 @@
  * overrides a Square group back to round. With no attribute nothing is
  * declared, and Round exists only as the fallback where the radius is read. */
 .wp-block-button[data-shape="square"],
-.wp-block-axismundi-dialog-buttons[data-shape="square"] {
+.wp-block-axismundi-dialog-button-group[data-shape="square"] {
 	--ax-button-squareness: 1;
 }
 
 .wp-block-button[data-shape="round"],
-.wp-block-axismundi-dialog-buttons[data-shape="round"] {
+.wp-block-axismundi-dialog-button-group[data-shape="round"] {
 	--ax-button-squareness: 0;
 }
 
@@ -189,8 +189,8 @@
  * theme's metrics and changes only its corners. */
 .wp-block-button[data-size] > .wp-block-button__link,
 .wp-block-button[data-shape] > .wp-block-button__link,
-.wp-block-axismundi-dialog-buttons[data-size] > .wp-block-button > .wp-block-button__link,
-.wp-block-axismundi-dialog-buttons[data-shape] > .wp-block-button > .wp-block-button__link {
+.wp-block-axismundi-dialog-button-group[data-size] > .wp-block-button > .wp-block-button__link,
+.wp-block-axismundi-dialog-button-group[data-shape] > .wp-block-button > .wp-block-button__link {
 	border-radius: calc(
 		var( --ax-button-round-shape, 20px ) * ( 1 - var( --ax-button-squareness, 0 ) ) +
 		var( --ax-button-square-shape, 12px ) * var( --ax-button-squareness, 0 )
@@ -417,8 +417,8 @@
  * corners while pressed, since that rule outranks the theme's :active radius. */
 .wp-block-button[data-size] > .wp-block-button__link:active,
 .wp-block-button[data-shape] > .wp-block-button__link:active,
-.wp-block-axismundi-dialog-buttons[data-size] > .wp-block-button > .wp-block-button__link:active,
-.wp-block-axismundi-dialog-buttons[data-shape] > .wp-block-button > .wp-block-button__link:active {
+.wp-block-axismundi-dialog-button-group[data-size] > .wp-block-button > .wp-block-button__link:active,
+.wp-block-axismundi-dialog-button-group[data-shape] > .wp-block-button > .wp-block-button__link:active {
 	border-radius: var( --ax-button-pressed-shape, var( --md-sys-shape-corner-value-small, 8px ) );
 }
 
@@ -490,4 +490,55 @@
 	 * the tooltip with it on an icon button, which is the right answer anyway: a
 	 * disabled control should not advertise. */
 	pointer-events: none;
+}
+
+/* --- Adjacent interaction (Standard button group) ------------------------- */
+
+/* M3: "Standard button groups add interaction between adjacent buttons so they
+ * respond to each other... The selected button changes shape and width /
+ * Adjacent buttons move and temporarily change width." The amount is published
+ * as `pressed_width_multiplier: 0.15` (products/styleguide/_data/button_group.yml).
+ *
+ * WHY THIS IS A SETTING AND NOT THE DEFAULT. A neighbour can only compress if
+ * there is room to take from it, which means the group needs a width larger
+ * than its content. Measured: with `width: fit-content` the container sizes to
+ * the buttons and `flex-grow` has nothing to distribute - the 15% does exactly
+ * nothing (250px container, 60/73/101 buttons, identical whichever is
+ * selected). At a definite width it works (420px container, 135/135/135
+ * becoming 144/130/130).
+ *
+ * So the effect and a content-width group are mutually exclusive, and a Dialog
+ * Button Group is a general action row - Cancel / Accept - that should not
+ * stretch across the page or make its buttons equal. Turning this on is the
+ * author saying the group is the segmented kind M3 describes.
+ *
+ * `flex-basis: 0` rather than `auto` is the whole trick, and the reference
+ * implementation records getting it wrong first (axismundi-lab
+ * stylesheets/components.css §28.3): with `auto` each button starts at content
+ * width and the grow ratio only splits the leftover, so a long label swamps
+ * the 15%. `min-inline-size: max-content` then stops the compressed neighbours
+ * from wrapping their text. */
+.wp-block-axismundi-dialog-button-group[data-distribution="fill"] {
+	inline-size: 100%;
+}
+
+.wp-block-axismundi-dialog-button-group[data-distribution="fill"] > .wp-block-button {
+	flex: 1 1 0;
+	min-inline-size: max-content;
+	transition: flex-grow var( --md-sys-motion-curve-fast-spatial-duration, 350ms )
+		var( --md-sys-motion-curve-fast-spatial, cubic-bezier( 0.42, 1.67, 0.21, 0.9 ) );
+}
+
+/* The selected button takes the extra, and the ones beside it pay for it.
+ * `aria-pressed` is the page's state and `data-pressed` the editor's, the same
+ * pair the colour and shape rules use. */
+.wp-block-axismundi-dialog-button-group[data-distribution="fill"] > .wp-block-button:has( > .wp-block-button__link[aria-pressed="true"] ),
+.wp-block-axismundi-dialog-button-group[data-distribution="fill"] > .wp-block-button[data-pressed="true"] {
+	flex-grow: 1.15;
+}
+
+@media ( prefers-reduced-motion: reduce ) {
+	.wp-block-axismundi-dialog-button-group[data-distribution="fill"] > .wp-block-button {
+		transition: none;
+	}
 }

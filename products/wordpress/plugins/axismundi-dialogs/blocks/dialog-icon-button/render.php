@@ -6,7 +6,7 @@
  * (M3 Icon button). The shell is the same markup - `.wp-block-button` around
  * `.wp-block-button__link` - so everything written for the button reaches this
  * one too: the size and shape tokens (assets/button.css), and the group's
- * selection rule and runtime (axismundi_dialogs_buttons_selection).
+ * selection rule and runtime (axismundi_dialogs_button_group_selection).
  *
  * The icon comes from the shared renderer (includes/icon.php), the same
  * primitive dialog-icon draws with. It is always decorative here: an icon

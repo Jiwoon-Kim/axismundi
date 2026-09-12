@@ -97,7 +97,7 @@ function axismundi_dialogs_register_blocks() : void {
 		}
 	);
 
-	foreach ( array( 'dialogs', 'sheet', 'dialog', 'dialog-close', 'dialog-title', 'dialog-icon', 'dialog-buttons', 'dialog-button', 'dialog-icon-button', 'post-quick-view-trigger', 'post-quick-view', 'object-media-dialog' ) as $axismundi_dialogs_block ) {
+	foreach ( array( 'dialogs', 'sheet', 'dialog', 'dialog-close', 'dialog-title', 'dialog-icon', 'dialog-button-group', 'dialog-button', 'dialog-icon-button', 'post-quick-view-trigger', 'post-quick-view', 'object-media-dialog' ) as $axismundi_dialogs_block ) {
 		$axismundi_dialogs_dir = __DIR__ . '/blocks/' . $axismundi_dialogs_block;
 		if ( file_exists( $axismundi_dialogs_dir . '/block.json' ) ) {
 			register_block_type( $axismundi_dialogs_dir );
@@ -165,7 +165,7 @@ function axismundi_dialogs_register_blocks() : void {
 add_action( 'init', 'axismundi_dialogs_register_blocks' );
 
 /**
- * Give a sized Dialog Buttons group its M3 between-space, unless it has a gap
+ * Give a sized Dialog Button Group its M3 between-space, unless it has a gap
  * of its own.
  *
  * The rule cannot live in the stylesheet. The layout support writes the
@@ -180,7 +180,7 @@ add_action( 'init', 'axismundi_dialogs_register_blocks' );
  * @param array<string, mixed> $block         Parsed block.
  * @return string
  */
-function axismundi_dialogs_buttons_size_gap( string $block_content, array $block ) : string {
+function axismundi_dialogs_button_group_size_gap( string $block_content, array $block ) : string {
 	$attributes = $block['attrs'] ?? array();
 	if ( empty( $attributes['size'] ) ) {
 		return $block_content;
@@ -199,10 +199,10 @@ function axismundi_dialogs_buttons_size_gap( string $block_content, array $block
 	$processor->set_attribute( 'style', ( '' !== $style ? $style . ';' : '' ) . 'gap:var(--ax-button-group-between)' );
 	return $processor->get_updated_html();
 }
-add_filter( 'render_block_axismundi/dialog-buttons', 'axismundi_dialogs_buttons_size_gap', 10, 2 );
+add_filter( 'render_block_axismundi/dialog-button-group', 'axismundi_dialogs_button_group_size_gap', 10, 2 );
 
 /**
- * Render the toggles of a Dialog Buttons group as toggle buttons.
+ * Render the toggles of a Dialog Button Group as toggle buttons.
  *
  * `aria-pressed` is added here rather than saved, because whether a button is
  * a toggle is partly its group's to say: the group's Togglable is the default
@@ -224,7 +224,7 @@ add_filter( 'render_block_axismundi/dialog-buttons', 'axismundi_dialogs_buttons_
  * @param array<string, mixed> $block         Parsed block.
  * @return string
  */
-function axismundi_dialogs_buttons_selection( string $block_content, array $block ) : string {
+function axismundi_dialogs_button_group_selection( string $block_content, array $block ) : string {
 	$attributes      = $block['attrs'] ?? array();
 	$group_togglable = ! empty( $attributes['togglable'] );
 
@@ -273,13 +273,13 @@ function axismundi_dialogs_buttons_selection( string $block_content, array $bloc
 		$toggles[0] = true;
 	}
 
-	// The runtime (blocks/dialog-buttons/view.js) takes over from here: the
+	// The runtime (blocks/dialog-button-group/view.js) takes over from here: the
 	// group's context carries every toggle's state, each toggle its position.
 	// The derived state is given on the server too, because directives are
 	// processed after this filter and a bind the server cannot resolve would
 	// drop the aria-pressed written below. Same shape as core/accordion.
 	wp_interactivity_state(
-		'axismundi/dialog-buttons',
+		'axismundi/dialog-button-group',
 		array(
 			'isPressed' => static function () {
 				$context = wp_interactivity_get_context();
@@ -292,7 +292,7 @@ function axismundi_dialogs_buttons_selection( string $block_content, array $bloc
 	if ( ! $processor->next_tag() ) {
 		return $block_content;
 	}
-	$processor->set_attribute( 'data-wp-interactive', 'axismundi/dialog-buttons' );
+	$processor->set_attribute( 'data-wp-interactive', 'axismundi/dialog-button-group' );
 	$processor->set_attribute(
 		'data-wp-context',
 		wp_json_encode(
@@ -321,7 +321,7 @@ function axismundi_dialogs_buttons_selection( string $block_content, array $bloc
 	}
 	return $processor->get_updated_html();
 }
-add_filter( 'render_block_axismundi/dialog-buttons', 'axismundi_dialogs_buttons_selection', 10, 2 );
+add_filter( 'render_block_axismundi/dialog-button-group', 'axismundi_dialogs_button_group_selection', 10, 2 );
 
 /**
  * Keep part-only Dialogs blocks out of the post/page inserter.

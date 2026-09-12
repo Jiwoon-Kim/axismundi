@@ -5,9 +5,9 @@
 	"title": "Dialog Button",
 	"category": "design",
 	"parent": [
-		"axismundi/dialog-buttons"
+		"axismundi/dialog-button-group"
 	],
-	"description": "An action button for a Dialog Buttons group.",
+	"description": "An action button for a Dialog Button Group.",
 	"keywords": [
 		"dialog",
 		"button",

@@ -1,5 +1,5 @@
 /**
- * axismundi/dialog-buttons - core/buttons copy, as WordPress 7.1 ships it.
+ * axismundi/dialog-button-group - core/buttons copy, as WordPress 7.1 ships it.
  *
  * Copied from the wp/7.1 branch of Gutenberg, not trunk, because 7.1 is what
  * runs this block. The two differ here: 7.1 passes the template to
@@ -37,7 +37,7 @@ import {
 import { useDispatch, useSelect } from '@wordpress/data';
 import { useEffect, useRef } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
-import metadata from '../blocks/dialog-buttons/block.json';
+import metadata from '../blocks/dialog-button-group/block.json';
 import { isTogglable, selectionChanges } from './shared/selection';
 
 // core 7.1 copies these onto a button added after another. Only className (the
@@ -70,6 +70,18 @@ const ICON_DEFAULT_BLOCK = {
  * To convert the buttons that are already there, the block transforms do it one
  * at a time and say what they drop (shared/button-transforms.js).
  */
+/*
+ * M3's adjacent interaction, which only exists where there is room for it: a
+ * neighbour can compress only if the group is wider than its content. Measured
+ * both ways - see the note in assets/button.css - so this is a choice rather
+ * than the default, because a Dialog Button Group is also the plain action row
+ * that should stay at content width.
+ */
+const DISTRIBUTION_OPTIONS = [
+	{ label: __( 'Content width', 'axismundi-dialogs' ), value: '' },
+	{ label: __( 'Fill the width', 'axismundi-dialogs' ), value: 'fill' },
+];
+
 const BUTTON_TYPE_OPTIONS = [
 	{ label: __( 'Label', 'axismundi-dialogs' ), value: '' },
 	{ label: __( 'Icon', 'axismundi-dialogs' ), value: 'icon' },
@@ -150,7 +162,7 @@ function hasBlockGap( style ) {
 // explicit one at the same specificity, and this plugin's stylesheet loads
 // before both, so a rule here either loses to the default or beats the user's
 // own gap. The attributes know which case it is; the value stays a CSS token.
-// Mirrored in PHP (axismundi_dialogs_buttons_size_gap) for the front end.
+// Mirrored in PHP (axismundi_dialogs_button_group_size_gap) for the front end.
 function sizeGapStyle( attributes ) {
 	return attributes.size && ! hasBlockGap( attributes.style )
 		? { gap: 'var(--ax-button-group-between)' }
@@ -158,8 +170,16 @@ function sizeGapStyle( attributes ) {
 }
 
 function Edit( { attributes, setAttributes, clientId } ) {
-	const { buttonType, layout, selection, selectionRequired, shape, size, togglable } =
-		attributes;
+	const {
+		buttonType,
+		distribution,
+		layout,
+		selection,
+		selectionRequired,
+		shape,
+		size,
+		togglable,
+	} = attributes;
 	const buttons = useSelect(
 		( select ) => select( blockEditorStore ).getBlocks( clientId ),
 		[ clientId ]
@@ -175,6 +195,7 @@ function Edit( { attributes, setAttributes, clientId } ) {
 		className: 'wp-block-buttons',
 		'data-size': size || undefined,
 		'data-shape': shape || undefined,
+		'data-distribution': distribution || undefined,
 		style: sizeGapStyle( attributes ),
 	} );
 	const innerBlocksProps = useInnerBlocksProps( blockProps, {
@@ -194,6 +215,7 @@ function Edit( { attributes, setAttributes, clientId } ) {
 							size: 'small',
 							shape: 'round',
 							buttonType: undefined,
+				distribution: undefined,
 				togglable: undefined,
 							selection: undefined,
 							selectionRequired: undefined,
@@ -246,6 +268,26 @@ function Edit( { attributes, setAttributes, clientId } ) {
 					options={ BUTTON_TYPE_OPTIONS }
 					help={ __( 'The button a new group starts with, and the one the editor adds where it adds a default. The + button asks instead. Buttons already here do not change — convert one with Transform to.', 'axismundi-dialogs' ) }
 					onChange={ ( value ) => setAttributes( { buttonType: value || undefined } ) }
+				/>
+			</ToolsPanelItem>
+			<ToolsPanelItem
+				isShownByDefault
+				label={ __( 'Distribution', 'axismundi-dialogs' ) }
+				hasValue={ () => !! distribution }
+				onDeselect={ () => setAttributes( { distribution: undefined } ) }
+			>
+				<SelectControl
+					__next40pxDefaultSize
+					__nextHasNoMarginBottom
+					label={ __( 'Distribution', 'axismundi-dialogs' ) }
+					value={ distribution ?? '' }
+					options={ DISTRIBUTION_OPTIONS }
+					help={
+						distribution === 'fill'
+							? __( 'The group fills the width and its buttons share it equally. A selected toggle then widens and its neighbours give way, which M3 asks of a standard group.', 'axismundi-dialogs' )
+							: __( 'Each button is as wide as its own label.', 'axismundi-dialogs' )
+					}
+					onChange={ ( value ) => setAttributes( { distribution: value || undefined } ) }
 				/>
 			</ToolsPanelItem>
 					<ToolsPanelItem
@@ -313,11 +355,12 @@ function Edit( { attributes, setAttributes, clientId } ) {
 // The between-space is not saved: static markup would carry it forever, and
 // the render_block filter adds it on the front end from the same rule.
 function save( { attributes } ) {
-	const { shape, size } = attributes;
+	const { distribution, shape, size } = attributes;
 	const blockProps = useBlockProps.save( {
 		className: 'wp-block-buttons',
 		'data-size': size || undefined,
 		'data-shape': shape || undefined,
+		'data-distribution': distribution || undefined,
 	} );
 	const innerBlocksProps = useInnerBlocksProps.save( blockProps );
 	return <div { ...innerBlocksProps } />;

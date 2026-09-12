@@ -1,0 +1,56 @@
+/**
+ * Navigation overlay - core's mechanism, re-implemented.
+ *
+ * A `div` shown by class, not a native `<dialog>`, because this surface is a
+ * copy of core's Navigation overlay and should behave like it. The plugin's own
+ * dialogs stay native (assets/shared.css): there the element's top layer,
+ * `::backdrop`, Escape and inert background are worth having, and nothing has
+ * to match core.
+ *
+ * The cost of a div is paid in this file and in assets/overlay.js: no top
+ * layer, so a z-index; no `::backdrop`, so a background of its own; no Escape
+ * or focus trap, so JS. Core pays the same price - its overlay sits at
+ * z-index 100000 for the same reason.
+ */
+
+.ax-overlay {
+	display: none;
+	position: fixed;
+	inset: 0;
+	/* Core's own layer for this surface, so the two stack predictably when a
+	 * page carries both. Above the admin bar, below nothing of ours. */
+	z-index: 100000;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	background: var( --md-sys-color-surface, var( --wp--preset--color--surface, #fef7ff ) );
+	color: var( --md-sys-color-on-surface, var( --wp--preset--color--on-surface, #1d1b20 ) );
+}
+
+.ax-overlay.is-open {
+	display: block;
+}
+
+/* The scroll lock is core's class on the root, because the page behind this
+ * surface is core's page and a second name for one state would be one too
+ * many. Re-stated here so the overlay works without core's Navigation on the
+ * page at all. */
+html.has-modal-open {
+	overflow: hidden;
+}
+
+.ax-overlay__content {
+	min-block-size: 100%;
+}
+
+@media ( prefers-reduced-motion: no-preference ) {
+	.ax-overlay.is-open {
+		animation: ax-overlay-in var( --md-sys-motion-curve-fast-effects-duration, 150ms )
+			var( --md-sys-motion-curve-fast-effects, cubic-bezier( 0.31, 0.94, 0.34, 1 ) );
+	}
+
+	@keyframes ax-overlay-in {
+		from {
+			opacity: 0;
+		}
+	}
+}

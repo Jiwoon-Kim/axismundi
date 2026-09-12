@@ -1,0 +1,24 @@
+/**
+ * Dialog Icon Button - editor only.
+ *
+ * The overlay preview in the Trigger panel. A template part is a whole surface,
+ * so at full height it pushes every control below it off the screen - the panel
+ * becomes a page of its own. Core has the same problem with the same content
+ * and answers it the same way, in a box that scrolls
+ * (packages/block-library/src/navigation/editor.scss,
+ * `.wp-block-navigation__overlay-preview`): a 200px window, a hairline border
+ * and its own scrollbar.
+ *
+ * The values are core's, so the two previews look like the same idea when an
+ * author meets them in the same session.
+ */
+
+.axismundi-trigger__preview {
+	max-height: 200px;
+	overflow-y: auto;
+	border: 1px solid #ddd;
+	border-radius: 2px;
+	/* The part is drawn on the theme's own ground, which can be dark; without
+	 * this the gaps around it would be the inspector's white. */
+	background: var( --md-sys-color-surface, #fff );
+}

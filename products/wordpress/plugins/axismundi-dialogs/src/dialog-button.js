@@ -19,13 +19,7 @@
  */
 import { __ } from '@wordpress/i18n';
 import { registerBlockType } from '@wordpress/blocks';
-import {
-	BlockControls,
-	InspectorControls,
-	store as blockEditorStore,
-	useSettings,
-} from '@wordpress/block-editor';
-import { useDispatch } from '@wordpress/data';
+import { BlockControls, InspectorControls, useSettings } from '@wordpress/block-editor';
 import {
 	Button,
 	PanelBody,
@@ -33,7 +27,7 @@ import {
 	ToggleControl,
 	ToolbarButton,
 } from '@wordpress/components';
-import { useEffect, useRef, useState } from '@wordpress/element';
+import { useState } from '@wordpress/element';
 import { button as icon } from '@wordpress/icons';
 import metadata from '../blocks/dialog-button/block.json';
 import { ButtonEdit, buttonSave, mergeButtons } from './shared/button';
@@ -46,38 +40,6 @@ import {
 	IconReferenceControls,
 	fontFamilyOptions,
 } from './shared/icon-controls';
-
-/*
- * M3: "Toggle buttons don't use the text style", and the colour table gives Text
- * no toggle columns at all - a Text toggle has no container, so selected and
- * unselected would look the same.
- *
- * The style wins over the toggle, not the other way round. Taking away a style
- * the author picked in order to grant a toggle they may have inherited from the
- * group would be the more surprising of the two, so a Text button opts out of
- * the group's default instead, which is what `togglable` on a button is for.
- * The control is disabled and says why (shared/button.js).
- *
- * Only in answer to an edit, never on load - see useSelectionInvariant in
- * dialog-button-group.js for what a fix made on load does to undo - and folded into
- * the change that caused it so one undo takes both.
- */
-function useTextNotTogglable( attributes, setAttributes, groupTogglable ) {
-	const { className, togglable } = attributes;
-	const isText = /(?:^|\s)is-style-text(?:\s|$)/.test( className || '' );
-	const { __unstableMarkNextChangeAsNotPersistent } = useDispatch( blockEditorStore );
-	const last = useRef();
-	useEffect( () => {
-		const input = JSON.stringify( [ isText, togglable, !! groupTogglable ] );
-		const isEdit = last.current !== undefined && last.current !== input;
-		last.current = input;
-		if ( isEdit && isText && isTogglable( attributes, groupTogglable ) ) {
-			__unstableMarkNextChangeAsNotPersistent();
-			setAttributes( { togglable: false } );
-		}
-	}, [ isText, togglable, groupTogglable ] );
-	return isText;
-}
 
 function DialogButtonEdit( props ) {
 	const { attributes, setAttributes } = props;
@@ -99,11 +61,6 @@ function DialogButtonEdit( props ) {
 	const [ libraryTarget, setLibraryTarget ] = useState( null );
 	const isToggle = isTogglable( attributes, props.context[ 'axismundi/togglable' ] );
 	const fontOptions = fontFamilyOptions( useSettings( 'typography.fontFamilies' )[ 0 ] );
-	const isText = useTextNotTogglable(
-		attributes,
-		setAttributes,
-		props.context[ 'axismundi/togglable' ]
-	);
 
 	/*
 	 * The icon is a setting of its own - M3: "Can contain an optional leading
@@ -260,11 +217,6 @@ function DialogButtonEdit( props ) {
 		<ButtonEdit
 			{ ...props }
 			iconSlot={ iconSlot }
-			togglableNotice={
-				isText
-					? __( 'The Text style has no container, so a toggle would look the same selected or not. M3 gives it no toggle.', 'axismundi-dialogs' )
-					: undefined
-			}
 			inspector={ inspector }
 			extraBlockProps={ {
 				'data-fill-on-select': fillOnSelect === false ? 'false' : undefined,

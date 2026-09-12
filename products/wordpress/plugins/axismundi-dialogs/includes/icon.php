@@ -268,3 +268,36 @@ function axismundi_dialogs_is_button_togglable( array $attributes, $block ): boo
 	}
 	return $block instanceof WP_Block && ! empty( $block->context['axismundi/togglable'] );
 }
+
+/**
+ * Wire the overlay's close controls to this plugin's runtime.
+ *
+ * `core/navigation-overlay-close` renders a bare <button>: it carries no
+ * directive of its own, and core's Navigation block injects one afterwards
+ * while it renders the overlay
+ * (block_core_navigation_add_directives_to_overlay_close). A part rendered by
+ * anything else - this plugin, for one - therefore arrives with a close button
+ * that does nothing.
+ *
+ * So the same injection is done here, with this plugin's action instead of
+ * core's. The part stays exactly as the author built it in the Site Editor; it
+ * simply closes the surface it is actually inside.
+ *
+ * @param string $html Rendered template-part markup.
+ * @return string The markup with close directives attached.
+ */
+function axismundi_dialogs_wire_overlay_close( string $html ): string {
+	if ( ! str_contains( $html, 'wp-block-navigation-overlay-close' ) ) {
+		return $html;
+	}
+	$tags = new WP_HTML_Tag_Processor( $html );
+	while ( $tags->next_tag(
+		array(
+			'tag_name'   => 'BUTTON',
+			'class_name' => 'wp-block-navigation-overlay-close',
+		)
+	) ) {
+		$tags->set_attribute( 'data-wp-on--click', 'actions.close' );
+	}
+	return $tags->get_updated_html();
+}

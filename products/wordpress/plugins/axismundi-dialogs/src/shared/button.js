@@ -32,6 +32,7 @@ import {
 	createInterpolateElement,
 } from '@wordpress/element';
 import {
+	BaseControl,
 	ExternalLink,
 	Popover,
 	SelectControl,
@@ -64,6 +65,7 @@ import { useMergeRefs, useRefEffect } from '@wordpress/compose';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { prependHTTPS } from '@wordpress/url';
 import { isTogglable } from './selection';
+import { actionMarkup } from './action-controls';
 
 // M3 button sizes. "Default" stores nothing: the button inherits the size of
 // its Dialog Button Group, and falls back to Small. An explicit size - Small
@@ -245,9 +247,6 @@ function useSelectedToggle( clientId, selected, group ) {
  * @param {Object}   props                 Block edit props, plus:
  * @param {Function} props.renderContent   Draws the control's contents instead
  *                                         of the editable label.
- * @param {string}   props.togglableNotice Why this button cannot be a toggle.
- *                                         Set, the Togglable control is disabled
- *                                         and says so.
  * @param {Element}  props.iconSlot        Drawn inside the control, before the
  *                                         editable label, which is then wrapped
  *                                         in a span of its own.
@@ -270,7 +269,6 @@ export function ButtonEdit( props ) {
 		context,
 		renderContent,
 		iconSlot,
-		togglableNotice,
 		settingsItems,
 		inspector,
 		extraBlockProps,
@@ -581,9 +579,7 @@ export function ButtonEdit( props ) {
 							__next40pxDefaultSize
 							__nextHasNoMarginBottom
 							label={ __( 'Togglable', 'axismundi-dialogs' ) }
-							disabled={ !! togglableNotice }
-							help={ togglableNotice || undefined }
-							value={ togglableNotice ? 'off' : ( togglable === undefined ? '' : ( togglable ? 'on' : 'off' ) ) }
+							value={ togglable === undefined ? '' : ( togglable ? 'on' : 'off' ) }
 							options={ TOGGLABLE_OPTIONS }
 							onChange={ ( value ) =>
 								setAttributes( {
@@ -638,6 +634,15 @@ export function ButtonEdit( props ) {
 				</ToolsPanel>
 			</InspectorControls>
 			<InspectorControls group="advanced">
+				<BaseControl
+					__nextHasNoMarginBottom
+					label={ __( 'Rendered element', 'axismundi-dialogs' ) }
+					help={ __( 'What the settings above produce. Set by the Action, not edited here.', 'axismundi-dialogs' ) }
+				>
+					<code className="axismundi-button__markup">
+						{ actionMarkup( attributes, TagName ) }
+					</code>
+				</BaseControl>
 				<SelectControl
 					__next40pxDefaultSize
 					__nextHasNoMarginBottom

@@ -115,6 +115,18 @@ function axismundi_dialogs_register_blocks() : void {
 	wp_enqueue_block_style( 'axismundi/sheet', $axismundi_dialogs_shared );
 	wp_enqueue_block_style( 'axismundi/dialog', $axismundi_dialogs_shared );
 	wp_enqueue_block_style( 'axismundi/post-quick-view', $axismundi_dialogs_shared );
+	// The overlay surface. Its own stylesheet, not the Dialog block's: an
+	// overlay is a surface that covers the viewport, where a Dialog is an M3
+	// component with an anatomy of its own (assets/overlay.css).
+	wp_enqueue_block_style(
+		'axismundi/dialog-icon-button',
+		array(
+			'handle' => 'axismundi-dialogs-overlay',
+			'src'    => plugins_url( 'assets/overlay.css', __FILE__ ),
+			'path'   => __DIR__ . '/assets/overlay.css',
+			'ver'    => (string) filemtime( __DIR__ . '/assets/overlay.css' ),
+		)
+	);
 	// The media dialog uses the same `ax-dialog` surface, scrim, and scroll-lock contract,
 	// and its runtime toggles the shared `ax-dialog-scroll-locked` class — which does
 	// nothing unless this stylesheet is on the page.

@@ -37,6 +37,8 @@ import { isTogglable } from './shared/selection';
 import { BUTTON, toButton } from './shared/button-transforms';
 import { IconElement, IconPlaceholder, glyphName, useIconRecord } from './shared/icon';
 import { IconLibraryModal, IconReferenceControls, fontFamilyOptions } from './shared/icon-controls';
+import { ACTION_OPTIONS, actionAttributes } from './shared/action-controls';
+import { ActionTargetControls } from './shared/action-targets';
 
 // M3's Width: the space either side of the icon, never the icon. "Default"
 // stores nothing, and equals the container's height - a circle.
@@ -90,6 +92,8 @@ function IconButtonEdit( props ) {
 		selectedIcon = '',
 		showTooltips,
 		text,
+		action,
+		actionTarget,
 		width,
 	} = attributes;
 	const source = iconSource === 'registry' ? 'registry' : 'font';
@@ -263,6 +267,24 @@ function IconButtonEdit( props ) {
 								) }
 							</div>
 						) }
+					</div>
+				</PanelBody>
+				<PanelBody title={ __( 'Action', 'axismundi-dialogs' ) } initialOpen={ !! action }>
+					<div style={ { display: 'grid', gap: '16px' } }>
+						<SelectControl
+							__next40pxDefaultSize
+							__nextHasNoMarginBottom
+							label={ __( 'Does', 'axismundi-dialogs' ) }
+							value={ action ?? '' }
+							options={ ACTION_OPTIONS }
+							help={ __( 'What the button is for. Its type and ARIA follow from this — see Advanced.', 'axismundi-dialogs' ) }
+							onChange={ ( value ) => setAttributes( actionAttributes( value ) ) }
+						/>
+						<ActionTargetControls
+							action={ action }
+							value={ actionTarget }
+							onChange={ ( value ) => setAttributes( { actionTarget: value } ) }
+						/>
 					</div>
 				</PanelBody>
 			</InspectorControls>

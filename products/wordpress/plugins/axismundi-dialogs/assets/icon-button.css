@@ -153,7 +153,7 @@
 	color: var( --ax-icon-button-content );
 }
 
-.wp-block-button.wp-block-axismundi-dialog-icon-button.is-style-standard:not([data-disabled="true"]) > .wp-block-button__link.wp-element-button:not(:disabled):not([aria-disabled="true"])[aria-pressed="true"],
+.wp-block-button.wp-block-axismundi-dialog-icon-button.is-style-standard:not([data-disabled="true"]) > .wp-block-button__link.wp-element-button:not(:disabled):not([aria-disabled="true"]):is([aria-pressed="true"], [aria-expanded="true"]),
 .wp-block-button.wp-block-axismundi-dialog-icon-button.is-style-standard:not([data-disabled="true"])[data-pressed="true"] > .wp-block-button__link.wp-element-button:not(:disabled):not([aria-disabled="true"]) {
 	--ax-icon-button-content: var( --md-sys-color-primary, var( --wp--preset--color--primary, #6750a4 ) );
 }

@@ -492,21 +492,18 @@
 	pointer-events: none;
 }
 
-/* Containerless styles keep no container while disabled either.
+/* Standard is the one style that stays containerless while disabled.
  *
- * §0.8's container row applies where there is a container to dim. Two styles
- * have none at rest - the published spec says so in as many words, `container:
- * None` for icon button/standard and button/text - so dimming "the container"
- * there would invent one: a disabled Standard icon button would grow a box it
- * never has when enabled. Only the content fades.
+ * Its token list has no container row at all - "Icon button disabled icon
+ * color / opacity" and nothing else - where every other style, Text included,
+ * names `on-surface` at 0.1. Text has no container at rest either, but it does
+ * gain one when disabled; that is the published behaviour, not an oversight,
+ * and it was the one cell this file first got wrong in the other direction.
  *
  * Weighs one class more than the rule above, which is what puts it after. */
 .wp-block-button.wp-block-axismundi-dialog-icon-button.is-style-standard > .wp-block-button__link.wp-element-button:disabled,
 .wp-block-button.wp-block-axismundi-dialog-icon-button.is-style-standard > .wp-block-button__link.wp-element-button[aria-disabled="true"],
-.wp-block-button.wp-block-axismundi-dialog-icon-button.is-style-standard[data-disabled="true"] > .wp-block-button__link.wp-element-button,
-.wp-block-button.wp-block-axismundi-dialog-button.is-style-text > .wp-block-button__link.wp-element-button:disabled,
-.wp-block-button.wp-block-axismundi-dialog-button.is-style-text > .wp-block-button__link.wp-element-button[aria-disabled="true"],
-.wp-block-button.wp-block-axismundi-dialog-button.is-style-text[data-disabled="true"] > .wp-block-button__link.wp-element-button {
+.wp-block-button.wp-block-axismundi-dialog-icon-button.is-style-standard[data-disabled="true"] > .wp-block-button__link.wp-element-button {
 	background-color: transparent;
 }
 

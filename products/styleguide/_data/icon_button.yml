@@ -70,6 +70,33 @@ configurations:
 # Width changes the space either side of the icon, never the icon itself, and
 # the default width always equals the container height - which is what makes a
 # default round icon button a circle rather than a lozenge.
+# Disabled. M3 §0.8 "Disabled rule", Pattern A, with the per-style exceptions
+# read off the published token lists. Same shape as Button's, and the same
+# values where the two components share a style.
+disabled:
+  container:
+    token: on-surface
+    opacity: 0.1
+  content:
+    token: on-surface
+    opacity: 0.38
+  elevation: level0
+  exceptions:
+    outlined:
+      note: >-
+        As on Button: the outline stays at outline-variant and the container
+        appears only on a selected toggle.
+      outline:
+        token: outline-variant
+      container_selected:
+        token: on-surface
+        opacity: 0.1
+    standard:
+      note: >-
+        The only style with no container in any state. Its token list names an
+        icon colour and an opacity and nothing else.
+      container: none
+
 sizes:
   - name: xsmall
     label: XS

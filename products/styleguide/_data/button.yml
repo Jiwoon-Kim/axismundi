@@ -76,6 +76,24 @@ disabled:
     token: on-surface
     opacity: 0.38
   elevation: level0
+  # Exceptions, read off the published per-style token lists. Text is the one
+  # worth naming twice: it has no container at rest and gains one when
+  # disabled, which is easy to get backwards.
+  exceptions:
+    outlined:
+      note: >-
+        The outline survives at full strength - the token is outline-variant,
+        not a faded on-surface - and no container arrives except on a selected
+        toggle, the only row the list gives one.
+      outline:
+        token: outline-variant
+      container_selected:
+        token: on-surface
+        opacity: 0.1
+    text:
+      note: >-
+        No container at rest, but `on-surface` at 0.1 when disabled, like every
+        other style with a container. Only Standard (icon button) has none.
 
 sizes:
   - name: xsmall

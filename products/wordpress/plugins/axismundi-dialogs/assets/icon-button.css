@@ -135,9 +135,8 @@
 
 /* Standard has no container at rest; the state layer is the only thing that
  * ever paints one. It is a setting, not a block style (see
- * src/dialog-icon-button.js), and it wins over whatever style the button or
- * its group carries - the colour roles are replaced, the style is left alone,
- * so turning Standard off brings the style back.
+ * src/dialog-icon-button.js). One block style at a time, which the Styles
+ * panel already enforces, so nothing here has to keep it apart from the others.
  *
  * `aria-pressed` is the page's toggle state and `data-pressed` the editor's
  * stand-in (assets/button.css). As a toggle, Standard keeps no container
@@ -148,28 +147,28 @@
  * outrank the selected pair below, which then lost its primary. Measured: an
  * enabled selected Standard toggle went back to on-surface-variant. The guard
  * belongs to the whole set or to none of it. */
-.wp-block-button.wp-block-axismundi-dialog-icon-button[data-standard="true"]:not([data-disabled="true"]) > .wp-block-button__link.wp-element-button:not(:disabled):not([aria-disabled="true"]) {
+.wp-block-button.wp-block-axismundi-dialog-icon-button.is-style-standard:not([data-disabled="true"]) > .wp-block-button__link.wp-element-button:not(:disabled):not([aria-disabled="true"]) {
 	--ax-icon-button-content: var( --md-sys-color-on-surface-variant, var( --wp--preset--color--on-surface-variant, #49454f ) );
 	background-color: transparent;
 	color: var( --ax-icon-button-content );
 }
 
-.wp-block-button.wp-block-axismundi-dialog-icon-button[data-standard="true"]:not([data-disabled="true"]) > .wp-block-button__link.wp-element-button:not(:disabled):not([aria-disabled="true"])[aria-pressed="true"],
-.wp-block-button.wp-block-axismundi-dialog-icon-button[data-standard="true"]:not([data-disabled="true"])[data-pressed="true"] > .wp-block-button__link.wp-element-button:not(:disabled):not([aria-disabled="true"]) {
+.wp-block-button.wp-block-axismundi-dialog-icon-button.is-style-standard:not([data-disabled="true"]) > .wp-block-button__link.wp-element-button:not(:disabled):not([aria-disabled="true"])[aria-pressed="true"],
+.wp-block-button.wp-block-axismundi-dialog-icon-button.is-style-standard:not([data-disabled="true"])[data-pressed="true"] > .wp-block-button__link.wp-element-button:not(:disabled):not([aria-disabled="true"]) {
 	--ax-icon-button-content: var( --md-sys-color-primary, var( --wp--preset--color--primary, #6750a4 ) );
 }
 
 /* The state layers, mixed over transparent: that leaves exactly the layer's
  * opacity, which is how M3 draws them on a containerless button. All three,
  * because the theme paints Filled's own on each. */
-.wp-block-button.wp-block-axismundi-dialog-icon-button[data-standard="true"]:not([data-disabled="true"]) > .wp-block-button__link.wp-element-button:not(:disabled):not([aria-disabled="true"]):hover {
+.wp-block-button.wp-block-axismundi-dialog-icon-button.is-style-standard:not([data-disabled="true"]) > .wp-block-button__link.wp-element-button:not(:disabled):not([aria-disabled="true"]):hover {
 	background-color: color-mix( in srgb, var( --ax-icon-button-content ) calc( var( --md-sys-state-hover-state-layer-opacity, 0.08 ) * 100% ), transparent );
 }
 
-.wp-block-button.wp-block-axismundi-dialog-icon-button[data-standard="true"]:not([data-disabled="true"]) > .wp-block-button__link.wp-element-button:not(:disabled):not([aria-disabled="true"]):focus {
+.wp-block-button.wp-block-axismundi-dialog-icon-button.is-style-standard:not([data-disabled="true"]) > .wp-block-button__link.wp-element-button:not(:disabled):not([aria-disabled="true"]):focus {
 	background-color: color-mix( in srgb, var( --ax-icon-button-content ) calc( var( --md-sys-state-focus-state-layer-opacity, 0.1 ) * 100% ), transparent );
 }
 
-.wp-block-button.wp-block-axismundi-dialog-icon-button[data-standard="true"]:not([data-disabled="true"]) > .wp-block-button__link.wp-element-button:not(:disabled):not([aria-disabled="true"]):active {
+.wp-block-button.wp-block-axismundi-dialog-icon-button.is-style-standard:not([data-disabled="true"]) > .wp-block-button__link.wp-element-button:not(:disabled):not([aria-disabled="true"]):active {
 	background-color: color-mix( in srgb, var( --ax-icon-button-content ) calc( var( --md-sys-state-pressed-state-layer-opacity, 0.1 ) * 100% ), transparent );
 }

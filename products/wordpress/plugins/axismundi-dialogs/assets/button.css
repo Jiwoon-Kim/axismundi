@@ -501,9 +501,9 @@
  * never has when enabled. Only the content fades.
  *
  * Weighs one class more than the rule above, which is what puts it after. */
-.wp-block-button.wp-block-axismundi-dialog-icon-button[data-standard="true"] > .wp-block-button__link.wp-element-button:disabled,
-.wp-block-button.wp-block-axismundi-dialog-icon-button[data-standard="true"] > .wp-block-button__link.wp-element-button[aria-disabled="true"],
-.wp-block-button.wp-block-axismundi-dialog-icon-button[data-standard="true"][data-disabled="true"] > .wp-block-button__link.wp-element-button,
+.wp-block-button.wp-block-axismundi-dialog-icon-button.is-style-standard > .wp-block-button__link.wp-element-button:disabled,
+.wp-block-button.wp-block-axismundi-dialog-icon-button.is-style-standard > .wp-block-button__link.wp-element-button[aria-disabled="true"],
+.wp-block-button.wp-block-axismundi-dialog-icon-button.is-style-standard[data-disabled="true"] > .wp-block-button__link.wp-element-button,
 .wp-block-button.wp-block-axismundi-dialog-button.is-style-text > .wp-block-button__link.wp-element-button:disabled,
 .wp-block-button.wp-block-axismundi-dialog-button.is-style-text > .wp-block-button__link.wp-element-button[aria-disabled="true"],
 .wp-block-button.wp-block-axismundi-dialog-button.is-style-text[data-disabled="true"] > .wp-block-button__link.wp-element-button {

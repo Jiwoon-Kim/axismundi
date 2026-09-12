@@ -5,9 +5,9 @@
  * Everything the two share is dialog-button's own editor (shared/button.js):
  * the wrapper, link editing, Size, Shape, Togglable, Selected and the advanced
  * controls. This file fills the slots that differ - the contents, the Icon
- * panel above Display, and Width and Standard in it - so the two cannot drift apart. Their attribute
- * names match for the same reason: converting one into the other keeps
- * everything they have in common.
+ * panel above Display and Width in it - so the two cannot drift apart. Their
+ * attribute names match for the same reason: converting one into the other
+ * keeps everything they have in common.
  *
  * The icon is the shared primitive (shared/icon.js, includes/icon.php), always
  * decorative here: an icon button's name is the button's, from `text`, as text
@@ -18,7 +18,6 @@ import { registerBlockType } from '@wordpress/blocks';
 import {
 	BlockControls,
 	InspectorControls,
-	store as blockEditorStore,
 	useSettings,
 } from '@wordpress/block-editor';
 import {
@@ -30,8 +29,7 @@ import {
 	ToolbarButton,
 	__experimentalToolsPanelItem as ToolsPanelItem,
 } from '@wordpress/components';
-import { useDispatch } from '@wordpress/data';
-import { useEffect, useRef, useState } from '@wordpress/element';
+import { useState } from '@wordpress/element';
 import { starEmpty } from '@wordpress/icons';
 import metadata from '../blocks/dialog-icon-button/block.json';
 import { ButtonEdit } from './shared/button';
@@ -67,57 +65,20 @@ function labelFromIcon( name ) {
 	return text ? text.charAt( 0 ).toUpperCase() + text.slice( 1 ) : undefined;
 }
 
-function styleOf( className ) {
-	return ( className || '' ).match( /(?:^|\s)is-style-([^\s]+)/ )?.[ 1 ];
-}
-
-function withoutStyles( className ) {
-	return ( className || '' ).replace( /(?:^|\s)is-style-[^\s]+/g, ' ' ).trim().replace( /\s+/g, ' ' ) || undefined;
-}
-
 /*
- * Colour is one axis in M3 - Filled, Tonal, Outlined, Standard - and two
- * mechanisms here. Filled, Tonal and Outlined are block styles, shared with
- * Button. Standard is an icon-button setting, `standard`, as the theme
- * switcher's cycle button has it: Button has no Standard, so as a block style
- * it would ride along in className when a Standard icon button became a
- * button, and land as a style that does not exist there. As an attribute it is
- * simply not carried over.
+ * Colour is one axis in M3 - Filled, Tonal, Outlined, Standard - and all four
+ * are block styles. Standard is registered on this block alone (block.json),
+ * which is what the published spec says its WordPress form is:
+ * `wp_style: is-style-standard` in _data/icon_button.yml.
  *
- * The two must not be on at once. A local style and Standard exclude each
- * other: turning Standard on drops the local style, choosing a style turns
- * Standard off. The group's style is different - it is a default, and Standard
- * overrides it without touching it, so turning Standard off brings the group's
- * colour back. The effective colour is:
- *
- *   standard ? Standard : ( local style ?? group style ?? Filled )
+ * It was an attribute first, to stop `is-style-standard` riding along in
+ * className when a Standard icon button became a Button, which has no such
+ * style. The conversion now filters `is-style-*` against what the target block
+ * registers (shared/button-transforms.js), so that reason is gone - and being a
+ * style again buys the mutual exclusion for free: the Styles panel already
+ * allows one at a time, where an attribute needed a hook to keep the two from
+ * both being on.
  */
-function useStandardExclusion( attributes, setAttributes ) {
-	const { className, standard } = attributes;
-
-	// A style picked in the Styles panel turns Standard off - but only as an
-	// answer to that change, never on load (see useSelectionInvariant in
-	// dialog-button-group.js for what a fix made on load does to undo). Folded into
-	// the style change, so one undo takes both back: recorded on its own, undo
-	// reverted the fix alone and left Standard on beside the style (measured).
-	const { __unstableMarkNextChangeAsNotPersistent } = useDispatch( blockEditorStore );
-	const lastClassName = useRef( className );
-	useEffect( () => {
-		const changed = lastClassName.current !== className;
-		lastClassName.current = className;
-		if ( changed && standard && styleOf( className ) ) {
-			__unstableMarkNextChangeAsNotPersistent();
-			setAttributes( { standard: undefined } );
-		}
-	}, [ className ] );
-
-	return ( value ) =>
-		setAttributes(
-			value
-				? { standard: true, className: withoutStyles( className ) }
-				: { standard: undefined }
-		);
-}
 
 function IconButtonEdit( props ) {
 	const { attributes, setAttributes } = props;
@@ -128,7 +89,6 @@ function IconButtonEdit( props ) {
 		iconSource,
 		selectedIcon = '',
 		showTooltips,
-		standard,
 		text,
 		width,
 	} = attributes;
@@ -142,7 +102,6 @@ function IconButtonEdit( props ) {
 	const [ libraryTarget, setLibraryTarget ] = useState( null );
 	const isToggle = isTogglable( attributes, props.context[ 'axismundi/togglable' ] );
 	const fontOptions = fontFamilyOptions( useSettings( 'typography.fontFamilies' )[ 0 ] );
-	const setStandard = useStandardExclusion( attributes, setAttributes );
 	// Every way an icon is chosen goes through here, so the name follows it.
 	// One change, so one undo takes the icon and the label it brought.
 	const setIconAttributes = ( changes ) => {
@@ -239,29 +198,6 @@ function IconButtonEdit( props ) {
 		</>
 	);
 
-	// Last, as in the theme switcher's Display panel: it replaces the colour
-	// the rest of the panel's setting do not touch.
-	const settingsItemsAfter = (
-		<ToolsPanelItem
-			isShownByDefault
-			label={ __( 'Standard icon button', 'axismundi-dialogs' ) }
-			hasValue={ () => !! standard }
-			onDeselect={ () => setStandard( false ) }
-		>
-			<ToggleControl
-				__nextHasNoMarginBottom
-				label={ __( 'Standard icon button', 'axismundi-dialogs' ) }
-				checked={ !! standard }
-				help={
-					standard
-						? __( 'No container. The icon alone carries the button.', 'axismundi-dialogs' )
-						: __( 'The button takes the block’s colour treatment.', 'axismundi-dialogs' )
-				}
-				onChange={ setStandard }
-			/>
-		</ToolsPanelItem>
-	);
-
 	const inspector = (
 		<>
 			<BlockControls group="other">
@@ -349,12 +285,10 @@ function IconButtonEdit( props ) {
 			renderContent={ renderContent }
 			settingsLabel={ __( 'Display', 'axismundi-dialogs' ) }
 			settingsItems={ settingsItems }
-			settingsItemsAfter={ settingsItemsAfter }
 			inspector={ inspector }
-			resetAttributes={ { width: undefined, standard: undefined, showTooltips: undefined } }
+			resetAttributes={ { width: undefined, showTooltips: undefined } }
 			extraBlockProps={ {
 				'data-width': width || undefined,
-				'data-standard': standard ? 'true' : undefined,
 				'data-fill-on-select': fillOnSelect === false ? 'false' : undefined,
 			} }
 		/>

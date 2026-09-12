@@ -115,9 +115,11 @@ export function toButton( attributes ) {
 	if ( out.icon ) {
 		out.showIcon = true;
 	}
-	// `width`, `standard` and `showTooltips` stay behind. Width is the space
-	// around an icon with no label beside it; Standard is a colour mode Button
-	// does not have; tooltips exist because an icon button has no visible name,
-	// and this one now has one.
+	// `width` and `showTooltips` stay behind: width is the space around an icon
+	// with no label beside it, and tooltips exist because an icon button has no
+	// visible name, which this one now has. Standard needs no mention - it is a
+	// block style registered on the icon button alone, so the className filter
+	// above drops it for the same reason it drops any other style the target
+	// does not register.
 	return createBlock( BUTTON, out );
 }

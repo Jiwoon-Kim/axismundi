@@ -83,10 +83,6 @@ foreach ( array( 'size', 'shape', 'width' ) as $axismundi_dialogs_ib_axis ) {
 if ( isset( $attributes['fillOnSelect'] ) && ! $attributes['fillOnSelect'] ) {
 	$axismundi_dialogs_ib_wrapper['data-fill-on-select'] = 'false';
 }
-if ( ! empty( $attributes['standard'] ) ) {
-	$axismundi_dialogs_ib_wrapper['data-standard'] = 'true';
-}
-
 // An empty name is an unnamed control, not an empty span: the editor fills the
 // Label in from the icon when an icon is chosen (src/dialog-icon-button.js), so
 // this is only reached when the author emptied it.

@@ -100,6 +100,11 @@ if ( '' === trim( wp_strip_all_tags( $axismundi_dialogs_b_label ) ) && '' === $a
  */
 $axismundi_dialogs_b_disabled = ! empty( $attributes['disabled'] );
 
+// What this button does (includes/action.php). The same axis the icon button
+// carries: the two are one button with two anatomies, so what it is FOR cannot
+// depend on whether it shows a label.
+$axismundi_dialogs_b_act = axismundi_dialogs_button_action( $attributes );
+
 $axismundi_dialogs_b_is_link = 'a' === ( $attributes['tagName'] ?? 'button' );
 $axismundi_dialogs_b_control = $axismundi_dialogs_b_is_link
 	? sprintf(
@@ -110,14 +115,18 @@ $axismundi_dialogs_b_control = $axismundi_dialogs_b_is_link
 		$axismundi_dialogs_b_disabled ? ' aria-disabled="true"' : ''
 	)
 	: sprintf(
-		'<button type="%1$s" class="wp-block-button__link wp-element-button"%2$s>',
+		'<button type="%1$s" class="wp-block-button__link wp-element-button"%2$s%3$s>',
 		esc_attr( in_array( $attributes['type'] ?? 'button', array( 'button', 'submit', 'reset' ), true ) ? $attributes['type'] ?? 'button' : 'button' ),
-		$axismundi_dialogs_b_disabled ? ' disabled' : ''
+		$axismundi_dialogs_b_disabled ? ' disabled' : '',
+		$axismundi_dialogs_b_act['attrs']
 	);
 
 // data-size and data-shape only when stored: an unsized button is the theme's,
 // which is already M3 Small (assets/button.css).
 $axismundi_dialogs_b_wrapper = array( 'class' => 'wp-block-button' );
+if ( $axismundi_dialogs_b_act['interactive'] ) {
+	$axismundi_dialogs_b_wrapper['data-wp-interactive'] = 'axismundi/overlay';
+}
 foreach ( array( 'size', 'shape' ) as $axismundi_dialogs_b_axis ) {
 	if ( ! empty( $attributes[ $axismundi_dialogs_b_axis ] ) ) {
 		$axismundi_dialogs_b_wrapper[ 'data-' . $axismundi_dialogs_b_axis ] = (string) $attributes[ $axismundi_dialogs_b_axis ];
@@ -131,10 +140,12 @@ if ( isset( $attributes['fillOnSelect'] ) && ! $attributes['fillOnSelect'] ) {
 }
 
 printf(
-	'<div %1$s>%2$s%3$s%4$s</%5$s></div>',
+	'<div %1$s%6$s>%2$s%3$s%4$s</%5$s>%7$s</div>',
 	get_block_wrapper_attributes( $axismundi_dialogs_b_wrapper ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped by core.
 	$axismundi_dialogs_b_control, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped above.
 	$axismundi_dialogs_b_icon, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped/sanitised by the renderer.
 	$axismundi_dialogs_b_label, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_kses_post above.
-	$axismundi_dialogs_b_is_link ? 'a' : 'button'
+	$axismundi_dialogs_b_is_link ? 'a' : 'button',
+	$axismundi_dialogs_b_act['interactive'] ? axismundi_dialogs_action_context() : '',
+	$axismundi_dialogs_b_act['surface'] // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- do_blocks() output.
 );

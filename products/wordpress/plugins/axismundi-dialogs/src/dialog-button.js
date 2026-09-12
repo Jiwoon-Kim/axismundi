@@ -23,6 +23,7 @@ import { BlockControls, InspectorControls, useSettings } from '@wordpress/block-
 import {
 	Button,
 	PanelBody,
+	SelectControl,
 	TextControl,
 	ToggleControl,
 	ToolbarButton,
@@ -34,6 +35,8 @@ import { ButtonEdit, buttonSave, mergeButtons } from './shared/button';
 import { isTogglable } from './shared/selection';
 import { ICON_BUTTON, toIconButton } from './shared/button-transforms';
 import { IconElement, glyphName, useIconRecord } from './shared/icon';
+import { ACTION_OPTIONS, actionAttributes } from './shared/action-controls';
+import { ActionTargetControls } from './shared/action-targets';
 import {
 	DEFAULT_ICONS,
 	IconLibraryModal,
@@ -44,6 +47,8 @@ import {
 function DialogButtonEdit( props ) {
 	const { attributes, setAttributes } = props;
 	const {
+		action,
+		actionTarget,
 		fillOnSelect,
 		icon: iconName = '',
 		iconClass,
@@ -197,6 +202,24 @@ function DialogButtonEdit( props ) {
 								) }
 							</>
 						) }
+					</div>
+				</PanelBody>
+				<PanelBody title={ __( 'Action', 'axismundi-dialogs' ) } initialOpen={ !! action }>
+					<div style={ { display: 'grid', gap: '16px' } }>
+						<SelectControl
+							__next40pxDefaultSize
+							__nextHasNoMarginBottom
+							label={ __( 'Does', 'axismundi-dialogs' ) }
+							value={ action ?? '' }
+							options={ ACTION_OPTIONS }
+							help={ __( 'What the button is for. Its type and ARIA follow from this — see Advanced.', 'axismundi-dialogs' ) }
+							onChange={ ( value ) => setAttributes( actionAttributes( value ) ) }
+						/>
+						<ActionTargetControls
+							action={ action }
+							value={ actionTarget }
+							onChange={ ( value ) => setAttributes( { actionTarget: value } ) }
+						/>
 					</div>
 				</PanelBody>
 			</InspectorControls>

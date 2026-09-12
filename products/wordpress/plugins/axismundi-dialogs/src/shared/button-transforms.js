@@ -29,6 +29,8 @@ export const ICON_BUTTON = 'axismundi/dialog-icon-button';
 const SHARED = [
 	'tagName',
 	'type',
+	'action',
+	'actionTarget',
 	'size',
 	'shape',
 	'togglable',

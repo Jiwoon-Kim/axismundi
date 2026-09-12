@@ -6,7 +6,8 @@
 	"blockTypes": [
 		"core/button",
 		"axismundi/dialog",
-		"axismundi/sheet"
+		"axismundi/sheet",
+		"axismundi/dialog-button"
 	],
 	"styles": {
 		"elements": {

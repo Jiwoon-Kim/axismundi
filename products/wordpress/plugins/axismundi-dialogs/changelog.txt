@@ -1,6 +1,28 @@
 == Changelog ==
 
-Releases before 0.2.5. The current release is in readme.txt.
+Releases before 0.3.0. The current release is in readme.txt.
+
+= 0.2.5 =
+* Dialog Icon can now take its icon from the theme's icon font (a Material
+  Symbols name such as `info`) or from the WordPress Icon Registry (a
+  registered icon such as `core/info`). The block stores which one it means.
+  Existing Dialog Icon blocks keep rendering exactly as before.
+* Icon Registry icons: choose from an Icon library in the toolbar, flip or
+  rotate them, and set their width, colour, border and padding.
+* Icon font icons: choose the icon font, set the font size, and adjust the
+  Fill, Weight, Grade and Optical size axes, each resettable on its own.
+* Dialog Icon can be used in posts and pages, not only inside a Dialog
+  template part.
+* The Sheet and Dialog open button now takes its size, shape, colour and
+  states from the theme's button styles (`wp-element-button`) instead of
+  drawing its own filled Material 3 button. On a theme that styles WordPress
+  buttons it matches that theme's buttons; on one that does not, it is a plain
+  button.
+* The close button's hover transition uses the Material 3 Expressive motion
+  curve.
+* Requires WordPress 7.1, which provides the Icon Registry.
+* The editor script is now built from `src/`; the readable source ships with
+  the plugin.
 
 = 0.2.4 =
 

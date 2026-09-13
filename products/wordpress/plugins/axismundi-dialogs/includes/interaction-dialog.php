@@ -23,7 +23,7 @@ function axismundi_dialogs_enqueue_interaction_dialog_assets() : void {
 		wp_register_style( $shared_handle, plugins_url( 'assets/shared.css', dirname( __DIR__ ) . '/axismundi-dialogs.php' ), array(), (string) filemtime( dirname( __DIR__ ) . '/assets/shared.css' ) );
 	}
 	if ( ! wp_style_is( $basic_handle, 'registered' ) ) {
-		wp_register_style( $basic_handle, plugins_url( 'blocks/dialog/style.css', dirname( __DIR__ ) . '/axismundi-dialogs.php' ), array( $shared_handle ), (string) filemtime( dirname( __DIR__ ) . '/blocks/dialog/style.css' ) );
+		wp_register_style( $basic_handle, plugins_url( 'blocks/dialog-legacy/style.css', dirname( __DIR__ ) . '/axismundi-dialogs.php' ), array( $shared_handle ), (string) filemtime( dirname( __DIR__ ) . '/blocks/dialog-legacy/style.css' ) );
 	}
 	// The close button wears `ax-dialog-close`, whose rules live in the legacy
 	// Close block's stylesheet. That block is no longer registered, so its

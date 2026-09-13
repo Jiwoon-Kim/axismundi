@@ -1,12 +1,1 @@
-<?php
-/**
- * Dependency manifest for edit.js (no build step). WordPress reads this sibling
- * file to enqueue edit.js with the right script handles + version.
- *
- * @package AxismundiDialogs
- */
-
-return array(
-	'dependencies' => array( 'wp-blocks', 'wp-block-editor', 'wp-element', 'wp-components', 'wp-data', 'wp-i18n' ),
-	'version'      => '0.2.3',
-);
+<?php return array('dependencies' => array('react-jsx-runtime', 'wp-block-editor', 'wp-blocks', 'wp-components', 'wp-i18n', 'wp-primitives'), 'version' => '884e282c2c42a6acbd24');

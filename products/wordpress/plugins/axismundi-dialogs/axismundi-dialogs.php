@@ -20,6 +20,7 @@ defined( 'ABSPATH' ) || exit;
 require_once __DIR__ . '/includes/interaction-dialog.php';
 require_once __DIR__ . '/includes/icon.php';
 require_once __DIR__ . '/includes/action.php';
+require_once __DIR__ . '/includes/surface.php';
 
 /**
  * Register the plugin's blocks and their shared stylesheets.
@@ -100,7 +101,7 @@ function axismundi_dialogs_register_blocks() : void {
 
 	/*
 	 * The legacy dialog blocks are no longer registered: the Sheets collection,
-	 * Sheet and Dialog hosts (blocks/dialogs, blocks/sheet, blocks/dialog), and the
+	 * Sheet and Dialog hosts (blocks/dialogs, blocks/sheet, blocks/dialog-legacy), and the
 	 * Close and Title blocks their template parts used (blocks/dialog-close,
 	 * blocks/dialog-title). They are retired in favour of the Surface contract,
 	 * where a dialog is a template part the Site Editor manages rather than a
@@ -108,7 +109,7 @@ function axismundi_dialogs_register_blocks() : void {
 	 * the plugin as implementation reference only.
 	 *
 	 * Two files outside those blocks still read legacy stylesheets by path:
-	 * includes/interaction-dialog.php loads blocks/dialog/style.css and
+	 * includes/interaction-dialog.php loads blocks/dialog-legacy/style.css and
 	 * blocks/dialog-close/style.css. Deleting the legacy sources means moving
 	 * those rules first.
 	 *
@@ -120,7 +121,7 @@ function axismundi_dialogs_register_blocks() : void {
 	 * action its markup and its trigger call in its own view.js, and Object Media
 	 * Dialog imports no module; both enqueue shared.css for themselves below.
 	 */
-	foreach ( array( 'dialog-icon', 'dialog-button-group', 'dialog-button', 'dialog-icon-button', 'post-quick-view-trigger', 'post-quick-view', 'object-media-dialog' ) as $axismundi_dialogs_block ) {
+	foreach ( array( 'dialog', 'dialog-icon', 'dialog-button-group', 'dialog-button', 'dialog-icon-button', 'post-quick-view-trigger', 'post-quick-view', 'object-media-dialog' ) as $axismundi_dialogs_block ) {
 		$axismundi_dialogs_dir = __DIR__ . '/blocks/' . $axismundi_dialogs_block;
 		if ( file_exists( $axismundi_dialogs_dir . '/block.json' ) ) {
 			register_block_type( $axismundi_dialogs_dir );

@@ -1,13 +1,16 @@
 /**
- * axismundi/sheet — editor canvas preview. The real dialog never opens here;
- * the child occupies exactly the same single trigger row as core/button.
+ * axismundi/dialog - editor canvas.
+ *
+ * The editor shows the surface as a div (see src/dialog.js), so it needs
+ * a visible edge to be found and selected in a part that is otherwise just its
+ * content.
  */
-.ax-dialog-host-edit {
-	display: inline-flex;
-	align-items: center;
-	max-inline-size: 100%;
+
+.editor-styles-wrapper .wp-block-axismundi-dialog {
+	outline: 1px dashed currentColor;
+	outline-offset: 4px;
 }
 
-.ax-dialog-host-edit .ax-dialog__open-button-label {
-	min-inline-size: 3ch;
+.editor-styles-wrapper .wp-block-axismundi-dialog__container {
+	min-block-size: 3rem;
 }

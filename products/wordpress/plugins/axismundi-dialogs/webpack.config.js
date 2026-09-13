@@ -8,6 +8,7 @@ module.exports = {
 		'dialog-button-group/edit': path.resolve( __dirname, 'src/dialog-button-group.js' ),
 		'dialog-button/edit': path.resolve( __dirname, 'src/dialog-button.js' ),
 		'dialog-icon-button/edit': path.resolve( __dirname, 'src/dialog-icon-button.js' ),
+		'dialog/edit': path.resolve( __dirname, 'src/dialog.js' ),
 	},
 	output: {
 		...defaultConfig.output,

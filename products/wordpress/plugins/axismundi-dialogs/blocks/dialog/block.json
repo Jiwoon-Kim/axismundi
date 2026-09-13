@@ -2,38 +2,47 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "axismundi/dialog",
-	"version": "0.1.7",
 	"title": "Dialog",
 	"category": "theme",
-	"icon": "admin-page",
-	"description": "An open button that opens a Material Design 3 basic or full-screen dialog. The content is a Dialog template part.",
-	"keywords": [ "dialog", "modal", "popup", "basic", "full-screen" ],
+	"description": "The HTML dialog at the root of a Dialog Surface template part. Choose how it presents - a basic or full-screen dialog, a bottom or side sheet - and build its content inside.",
+	"keywords": [ "dialog", "sheet", "modal", "drawer", "surface" ],
 	"textdomain": "axismundi-dialogs",
-	"parent": [ "axismundi/dialogs" ],
 	"attributes": {
-		"templatePart": { "type": "string", "default": "" },
-		"title": { "type": "string", "default": "" },
-		"variant": { "type": "string", "default": "basic" },
-		"width": { "type": "string", "default": "medium" },
-		"triggerIcon": { "type": "string", "default": "open_in_new" },
-		"triggerLabel": { "type": "string", "default": "", "role": "content" },
-		"label": { "type": "string", "default": "" },
-		"closeOnBackdrop": { "type": "boolean", "default": true }
+		"presentation": {
+			"type": "string",
+			"enum": [ "dialog-basic", "dialog-full-screen", "sheet-bottom", "sheet-side" ],
+			"default": "dialog-basic"
+		},
+		"modality": {
+			"type": "string",
+			"enum": [ "modal", "standard" ],
+			"default": "modal"
+		},
+		"attachment": {
+			"type": "string",
+			"enum": [ "docked", "detached" ],
+			"default": "docked"
+		},
+		"edge": {
+			"type": "string",
+			"enum": [ "start", "end" ],
+			"default": "end"
+		},
+		"dismissal": {
+			"type": "string",
+			"enum": [ "any", "closerequest", "none" ],
+			"default": "any"
+		},
+		"label": {
+			"type": "string"
+		}
 	},
 	"supports": {
 		"html": false,
-		"interactivity": true,
-		"spacing": {
-			"margin": true,
-			"padding": true
-		}
-	},
-	"example": {
-		"attributes": {}
+		"reusable": false
 	},
 	"editorScript": "file:./edit.js",
 	"editorStyle": "file:./editor.css",
 	"style": "file:./style.css",
-	"render": "file:./render.php",
-	"viewScriptModule": "file:./view.js"
+	"render": "file:./render.php"
 }

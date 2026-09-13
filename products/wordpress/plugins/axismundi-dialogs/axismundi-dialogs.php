@@ -22,11 +22,11 @@ require_once __DIR__ . '/includes/icon.php';
 require_once __DIR__ . '/includes/action.php';
 
 /**
- * Register the Sheet collection, host, and close blocks.
+ * Register the plugin's blocks and their shared stylesheets.
  *
- * The host block renders a trigger button plus a native <dialog>; the close block
- * is a small affordance a Sheet template part places wherever it wants a dismiss
- * control (mirrors core's navigation-overlay-close for the Navigation overlay).
+ * The button blocks, the icon primitive, and the two dynamic hubs (Post Quick
+ * View, Object Media Dialog). The legacy dialog blocks are not registered; see
+ * the note above the registration loop.
  *
  * @return void
  */
@@ -98,23 +98,43 @@ function axismundi_dialogs_register_blocks() : void {
 		}
 	);
 
-	foreach ( array( 'dialogs', 'sheet', 'dialog', 'dialog-close', 'dialog-title', 'dialog-icon', 'dialog-button-group', 'dialog-button', 'dialog-icon-button', 'post-quick-view-trigger', 'post-quick-view', 'object-media-dialog' ) as $axismundi_dialogs_block ) {
+	/*
+	 * The legacy dialog blocks are no longer registered: the Sheets collection,
+	 * Sheet and Dialog hosts (blocks/dialogs, blocks/sheet, blocks/dialog), and the
+	 * Close and Title blocks their template parts used (blocks/dialog-close,
+	 * blocks/dialog-title). They are retired in favour of the Surface contract,
+	 * where a dialog is a template part the Site Editor manages rather than a
+	 * block in a post (products/styleguide, Surface page). Their source stays in
+	 * the plugin as implementation reference only.
+	 *
+	 * Two files outside those blocks still read legacy stylesheets by path:
+	 * includes/interaction-dialog.php loads blocks/dialog/style.css and
+	 * blocks/dialog-close/style.css. Deleting the legacy sources means moving
+	 * those rules first.
+	 *
+	 * Unregistering them first also frees the names: the new host block takes
+	 * axismundi/dialog, and the legacy Dialog block's wrapper already carries
+	 * core's default class for that name, wp-block-axismundi-dialog.
+	 *
+	 * Nothing still registered depends on them. Post Quick View defines every
+	 * action its markup and its trigger call in its own view.js, and Object Media
+	 * Dialog imports no module; both enqueue shared.css for themselves below.
+	 */
+	foreach ( array( 'dialog-icon', 'dialog-button-group', 'dialog-button', 'dialog-icon-button', 'post-quick-view-trigger', 'post-quick-view', 'object-media-dialog' ) as $axismundi_dialogs_block ) {
 		$axismundi_dialogs_dir = __DIR__ . '/blocks/' . $axismundi_dialogs_block;
 		if ( file_exists( $axismundi_dialogs_dir . '/block.json' ) ) {
 			register_block_type( $axismundi_dialogs_dir );
 		}
 	}
 
-	// Shared runtime surface (open button, <dialog> box, template-part contract,
-	// scrim, scroll lock) enqueued for both the Sheet and the Dialog host blocks.
+	// Shared runtime surface (<dialog> box, scrim, scroll lock) for the two
+	// dynamic hubs. It once also served the legacy Sheet and Dialog host blocks.
 	$axismundi_dialogs_shared = array(
 		'handle' => 'axismundi-dialogs-shared',
 		'src'    => plugins_url( 'assets/shared.css', __FILE__ ),
 		'path'   => __DIR__ . '/assets/shared.css',
 		'ver'    => (string) filemtime( __DIR__ . '/assets/shared.css' ),
 	);
-	wp_enqueue_block_style( 'axismundi/sheet', $axismundi_dialogs_shared );
-	wp_enqueue_block_style( 'axismundi/dialog', $axismundi_dialogs_shared );
 	wp_enqueue_block_style( 'axismundi/post-quick-view', $axismundi_dialogs_shared );
 	// The overlay surface. Its own stylesheet, not the Dialog block's: an
 	// overlay is a surface that covers the viewport, where a Dialog is an M3
@@ -337,39 +357,6 @@ function axismundi_dialogs_button_group_selection( string $block_content, array 
 	return $processor->get_updated_html();
 }
 add_filter( 'render_block_axismundi/dialog-button-group', 'axismundi_dialogs_button_group_selection', 10, 2 );
-
-/**
- * Keep part-only Dialogs blocks out of the post/page inserter.
- *
- * The close and title blocks only have a meaningful role inside the
- * referenced template part: one dismisses the dialog around it, the other
- * names it. Keep them available in the Site Editor, but do not offer them in
- * ordinary post content.
- *
- * The icon block is not on the list. It began as the dialog header's leading
- * icon, but it renders a complete, standalone icon from either source (icon
- * font or Icon Registry) and needs no dialog around it - which is also what
- * lets a demo page place it.
- *
- * @param bool|array<int,string>        $allowed Allowed block names, or true for all.
- * @param WP_Block_Editor_Context|mixed $context Current editor context.
- * @return bool|array<int,string>
- */
-function axismundi_dialogs_restrict_close_block( $allowed, $context ) {
-	if ( ! ( isset( $context->post ) && $context->post instanceof WP_Post ) ) {
-		return $allowed;
-	}
-	if ( 'wp_template_part' === $context->post->post_type ) {
-		return $allowed;
-	}
-
-	if ( true === $allowed ) {
-		$allowed = array_keys( WP_Block_Type_Registry::get_instance()->get_all_registered() );
-	}
-
-	return array_values( array_diff( (array) $allowed, array( 'axismundi/dialog-close', 'axismundi/dialog-title' ) ) );
-}
-add_filter( 'allowed_block_types_all', 'axismundi_dialogs_restrict_close_block', 10, 2 );
 
 /**
  * Register the post quick-view REST route.

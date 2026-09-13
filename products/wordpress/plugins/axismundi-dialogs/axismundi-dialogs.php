@@ -247,8 +247,11 @@ function axismundi_dialogs_button_group_selection( string $block_content, array 
 	$buttons = array();
 	foreach ( $block['innerBlocks'] ?? array() as $inner ) {
 		if ( in_array( $inner['blockName'] ?? '', array( 'axismundi/dialog-button', 'axismundi/dialog-icon-button' ), true ) ) {
+			// An action that runs its own click is never a toggle: writing
+			// actions.toggle here would replace its open or close directive.
 			$buttons[] = array(
-				'togglable' => isset( $inner['attrs']['togglable'] ) ? (bool) $inner['attrs']['togglable'] : $group_togglable,
+				'togglable' => ! axismundi_dialogs_action_owns_click( $inner['attrs'] ?? array() )
+					&& ( isset( $inner['attrs']['togglable'] ) ? (bool) $inner['attrs']['togglable'] : $group_togglable ),
 				'selected'  => ! empty( $inner['attrs']['selected'] ),
 			);
 		}

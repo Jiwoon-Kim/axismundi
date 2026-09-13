@@ -29,6 +29,35 @@ function axismundi_dialogs_action_areas(): array {
 }
 
 /**
+ * Whether an action runs its own click.
+ *
+ * Opening and closing are the button's click, so the button cannot also be a
+ * toggle: the group would write `actions.toggle` over this action's directive.
+ * It still wears the selected look while open, through `aria-expanded`
+ * (assets/button.css). Mirrors actionOwnsClick() in
+ * src/shared/action-controls.js.
+ *
+ * @param array $attributes Block attributes.
+ * @return bool Whether the action owns the click.
+ */
+function axismundi_dialogs_action_owns_click( array $attributes ): bool {
+	return in_array( (string) ( $attributes['action'] ?? '' ), array( 'overlay', 'overlay-close' ), true );
+}
+
+/**
+ * Whether a button renders as a link.
+ *
+ * Only a Command can be an `<a>`: a link cannot submit, reset, open or close
+ * anything, so a stored `tagName` of `a` gives way to the Action.
+ *
+ * @param array $attributes Block attributes.
+ * @return bool Whether to render an `<a>`.
+ */
+function axismundi_dialogs_button_is_link( array $attributes ): bool {
+	return 'a' === ( $attributes['tagName'] ?? 'button' ) && '' === (string) ( $attributes['action'] ?? '' );
+}
+
+/**
  * Wire an overlay's close controls to this plugin's runtime.
  *
  * `core/navigation-overlay-close` renders a bare <button>: it carries no

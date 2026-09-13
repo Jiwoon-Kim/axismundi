@@ -45,6 +45,22 @@ export const ACTION_AREAS = {
 };
 
 /**
+ * Whether an action runs its own click.
+ *
+ * Opening and closing are the button's click, so the button cannot also be a
+ * toggle: the group would write its own click directive over this one. Such a
+ * button still wears the selected look while its surface is open, through
+ * `aria-expanded` (assets/button.css) - semantics and appearance stay separate.
+ * Mirrors axismundi_dialogs_action_owns_click() in includes/action.php.
+ *
+ * @param {string} action The stored action.
+ * @return {boolean} Whether the action owns the click.
+ */
+export function actionOwnsClick( action ) {
+	return action === 'overlay' || action === 'overlay-close';
+}
+
+/**
  * The attribute changes an action choice makes.
  *
  * `type` carries submit and reset because that is where core/button keeps them
@@ -60,6 +76,9 @@ export function actionAttributes( value ) {
 		// A new action draws its targets from a different area, so the old
 		// target cannot travel with it.
 		actionTarget: undefined,
+		// Every action but Command is a <button>'s: a link cannot submit, reset,
+		// open or close anything. Choosing Command leaves the element alone.
+		...( value ? { tagName: undefined } : {} ),
 	};
 }
 
@@ -84,9 +103,11 @@ export function actionMarkup( attributes, tag = 'button' ) {
 	}
 
 	if ( action === 'overlay' ) {
-		parts.push( 'aria-haspopup="dialog"' );
-		parts.push( actionTarget ? 'aria-controls="…"' : 'aria-controls (no template chosen)' );
-		parts.push( 'aria-expanded="false"' );
+		// Without a template the server renders a plain button rather than
+		// announce a popup that is not there, so this says the same.
+		if ( actionTarget ) {
+			parts.push( 'aria-haspopup="dialog"', 'aria-controls="…"', 'aria-expanded="false"' );
+		}
 	} else if ( action === 'overlay-close' ) {
 		// Nothing to add: closing is a command, and the surface it closes is
 		// the one it sits in.

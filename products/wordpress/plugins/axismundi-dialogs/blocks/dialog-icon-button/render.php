@@ -55,7 +55,7 @@ $axismundi_dialogs_ib_tooltip = ( ! isset( $attributes['showTooltips'] ) || $att
  */
 $axismundi_dialogs_ib_disabled = ! empty( $attributes['disabled'] );
 
-$axismundi_dialogs_ib_is_link = 'a' === ( $attributes['tagName'] ?? 'button' );
+$axismundi_dialogs_ib_is_link = axismundi_dialogs_button_is_link( $attributes );
 $axismundi_dialogs_ib_control = $axismundi_dialogs_ib_is_link
 	? sprintf(
 		'<a class="wp-block-button__link wp-element-button"%1$s%2$s%3$s%4$s%5$s>',

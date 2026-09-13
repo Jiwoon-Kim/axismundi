@@ -263,6 +263,9 @@ function axismundi_dialogs_get_button_icon( array $attributes, bool $togglable )
  * @return bool Whether the button is a toggle.
  */
 function axismundi_dialogs_is_button_togglable( array $attributes, $block ): bool {
+	if ( axismundi_dialogs_action_owns_click( $attributes ) ) {
+		return false;
+	}
 	if ( isset( $attributes['togglable'] ) ) {
 		return (bool) $attributes['togglable'];
 	}

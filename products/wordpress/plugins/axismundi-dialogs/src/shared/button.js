@@ -298,7 +298,8 @@ export function ButtonEdit( props ) {
 	const isToggle = isTogglable( attributes, group.togglable );
 	const { isLocked, setSelected } = useSelectedToggle( clientId, selected, group );
 
-	const TagName = tagName || 'button';
+	// An action is a <button>'s whatever was stored (src/shared/action-controls.js).
+	const TagName = attributes.action ? 'button' : tagName || 'button';
 
 	function onKeyDown( event ) {
 		if ( isKeyboardEvent.primary( event, 'k' ) ) {
@@ -640,7 +641,7 @@ export function ButtonEdit( props ) {
 					help={ __( 'What the settings above produce. Set by the Action, not edited here.', 'axismundi-dialogs' ) }
 				>
 					<code className="axismundi-button__markup">
-						{ actionMarkup( attributes, TagName ) }
+						{ actionMarkup( { ...attributes, togglable: isToggle }, TagName ) }
 					</code>
 				</BaseControl>
 				<SelectControl
@@ -648,11 +649,12 @@ export function ButtonEdit( props ) {
 					__nextHasNoMarginBottom
 					label={ __( 'HTML element', 'axismundi-dialogs' ) }
 					value={ TagName }
-					// A link cannot be a toggle, so <a> is not offered on one; the
-					// group turns an existing one into a <button>.
+					// A link cannot be a toggle, and cannot carry an Action, so <a>
+					// is offered on neither; the group turns an existing toggle
+					// link into a <button>, and choosing an Action does the same.
 					options={ [
 						{ label: __( 'Default (<button>)', 'axismundi-dialogs' ), value: 'button' },
-						...( isToggle ? [] : [ { label: '<a>', value: 'a' } ] ),
+						...( isToggle || attributes.action ? [] : [ { label: '<a>', value: 'a' } ] ),
 					] }
 					onChange={ ( value ) => setAttributes( { tagName: value } ) }
 				/>

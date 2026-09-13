@@ -26,15 +26,20 @@
  * What a visitor selects afterwards is runtime state and never written back to
  * the block. Mirrored in PHP (axismundi_dialogs_button_group_selection).
  */
+import { actionOwnsClick } from './action-controls';
 
 /**
- * Whether a button is a toggle: its own choice, else the group's default.
+ * Whether a button is a toggle: its own choice, else the group's default -
+ * unless its Action runs the click, which a toggle's click would replace.
  *
  * @param {Object}  attributes     Button attributes.
  * @param {boolean} groupTogglable The group's default.
  * @return {boolean} Whether the button is a toggle.
  */
 export function isTogglable( attributes, groupTogglable ) {
+	if ( actionOwnsClick( attributes.action ) ) {
+		return false;
+	}
 	return attributes.togglable ?? !! groupTogglable;
 }
 

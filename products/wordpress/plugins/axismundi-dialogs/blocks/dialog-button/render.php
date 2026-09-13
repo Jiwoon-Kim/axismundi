@@ -105,7 +105,7 @@ $axismundi_dialogs_b_disabled = ! empty( $attributes['disabled'] );
 // depend on whether it shows a label.
 $axismundi_dialogs_b_act = axismundi_dialogs_button_action( $attributes );
 
-$axismundi_dialogs_b_is_link = 'a' === ( $attributes['tagName'] ?? 'button' );
+$axismundi_dialogs_b_is_link = axismundi_dialogs_button_is_link( $attributes );
 $axismundi_dialogs_b_control = $axismundi_dialogs_b_is_link
 	? sprintf(
 		'<a class="wp-block-button__link wp-element-button"%1$s%2$s%3$s%4$s>',

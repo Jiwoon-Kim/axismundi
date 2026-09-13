@@ -94,7 +94,8 @@ def main() -> int:
 
     for label, script in (("typography", "validate_styleguide_typography.py"),
                           ("layout", "validate_styleguide_layout.py"),
-                          ("button", "validate_styleguide_button.py")):
+                          ("button", "validate_styleguide_button.py"),
+                          ("surface", "validate_styleguide_surface.py")):
         steps.append((f"validate {label}", [py, f"tools/validators/{script}"], ROOT))
 
     for label, argv, cwd in steps:

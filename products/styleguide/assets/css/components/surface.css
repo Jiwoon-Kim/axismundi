@@ -1,0 +1,351 @@
+/**
+ * Surface - static adapter for the proposed Surface contract.
+ *
+ * NOT what any block renders today. axismundi-dialogs 0.3.0 still renders its
+ * `ax-dialog` markup; this file styles the markup the Surface page proposes,
+ * so the proposal can be looked at before it is built. Values come from
+ * _data/surface.yml and tools/validators/validate_styleguide_surface.py checks
+ * the ones that matter against it. Each checked rule has a single selector:
+ * folding one into a comma list makes the validator report it missing.
+ *
+ * Two layers, kept apart:
+ *
+ *   contract   what the block would ship: the host, the container, each
+ *              presentation's geometry, and the ::backdrop scrim.
+ *   specimen   what this page needs to show an open surface inside a mock
+ *              window. A static <dialog open> is not in the top layer, so it
+ *              has no ::backdrop and cannot be position: fixed to a frame;
+ *              the specimen draws the scrim as an element and positions the
+ *              host absolutely instead.
+ */
+
+/* ---- Contract: host ------------------------------------------------------ */
+
+.wp-block-axismundi-dialog {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--md-sys-color-on-surface);
+	max-block-size: 100%;
+	overflow: visible;
+}
+
+.wp-block-axismundi-dialog::backdrop {
+	background: color-mix(in srgb, var(--md-sys-color-scrim) 32%, transparent);
+}
+
+/* The container holds the template part. Header and footer are auto rows and
+ * the body is the only row that scrolls: M3 pins a dialog's headline and
+ * actions while its content scrolls, and the same grid gives a sheet its
+ * header and bottom actions. */
+.wp-block-axismundi-dialog__container {
+	box-sizing: border-box;
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr) auto;
+	block-size: 100%;
+	max-block-size: inherit;
+	overflow: hidden;
+}
+
+.wp-block-axismundi-dialog__container > :not(header, footer) {
+	min-block-size: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
+.wp-block-axismundi-dialog__container > * {
+	margin: 0;
+}
+
+.wp-block-axismundi-dialog__container h2 {
+	margin: 0;
+}
+
+.wp-block-axismundi-dialog__container p {
+	margin: 0;
+}
+
+.wp-block-axismundi-dialog__container footer .wp-block-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: var(--md-sys-measurement-space100, 8px);
+}
+
+/* ---- Contract: dialog-basic ---------------------------------------------- */
+
+.wp-block-axismundi-dialog[data-presentation="dialog-basic"] {
+	inline-size: fit-content;
+	min-inline-size: 280px;
+	max-inline-size: 560px;
+	margin: auto;
+}
+
+.wp-block-axismundi-dialog[data-presentation="dialog-basic"] > .wp-block-axismundi-dialog__container {
+	padding: 24px;
+	background: var(--md-sys-color-surface-container-high);
+	box-shadow: var(--md-sys-elevation-shadow-level3);
+	border-radius: var(--md-sys-shape-corner-value-extra-large);
+}
+
+.wp-block-axismundi-dialog[data-presentation="dialog-basic"] header h2 {
+	color: var(--md-sys-color-on-surface);
+	font-family: var(--md-sys-typescale-headline-small-font);
+	font-size: var(--md-sys-typescale-headline-small-size);
+	font-weight: var(--md-sys-typescale-headline-small-weight);
+	letter-spacing: var(--md-sys-typescale-headline-small-tracking);
+	line-height: var(--md-sys-typescale-headline-small-line-height);
+}
+
+.wp-block-axismundi-dialog[data-presentation="dialog-basic"] header + * {
+	margin-block-start: 16px;
+	color: var(--md-sys-color-on-surface-variant);
+	font-size: var(--md-sys-typescale-body-medium-size);
+	letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+	line-height: var(--md-sys-typescale-body-medium-line-height);
+}
+
+.wp-block-axismundi-dialog[data-presentation="dialog-basic"] footer {
+	margin-block-start: 24px;
+}
+
+/* ---- Contract: dialog-full-screen ---------------------------------------- */
+
+.wp-block-axismundi-dialog[data-presentation="dialog-full-screen"] {
+	inline-size: 100%;
+	max-inline-size: 100%;
+	block-size: 100%;
+}
+
+.wp-block-axismundi-dialog[data-presentation="dialog-full-screen"] > .wp-block-axismundi-dialog__container {
+	background: var(--md-sys-color-surface);
+	box-shadow: var(--md-sys-elevation-shadow-level0);
+	border-radius: var(--md-sys-shape-corner-value-none);
+}
+
+.wp-block-axismundi-dialog[data-presentation="dialog-full-screen"] header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	block-size: 56px;
+	padding-inline: 8px 24px;
+}
+
+.wp-block-axismundi-dialog[data-presentation="dialog-full-screen"] header h2 {
+	flex: 1 1 auto;
+	color: var(--md-sys-color-on-surface);
+	font-family: var(--md-sys-typescale-title-large-font);
+	font-size: var(--md-sys-typescale-title-large-size);
+	font-weight: var(--md-sys-typescale-title-large-weight);
+	letter-spacing: var(--md-sys-typescale-title-large-tracking);
+	line-height: var(--md-sys-typescale-title-large-line-height);
+}
+
+.wp-block-axismundi-dialog[data-presentation="dialog-full-screen"] header + * {
+	padding: 24px 24px 0;
+}
+
+/* ---- Contract: sheet-bottom ---------------------------------------------- */
+
+.wp-block-axismundi-dialog[data-presentation="sheet-bottom"] {
+	inline-size: 100%;
+	max-inline-size: 640px;
+	margin-inline: auto;
+	margin-block: auto 0;
+	max-block-size: calc(100% - 72px);
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-bottom"] > .wp-block-axismundi-dialog__container {
+	background: var(--md-sys-color-surface-container-low);
+	box-shadow: var(--md-sys-elevation-shadow-level1);
+	border-start-start-radius: var(--md-sys-shape-corner-value-extra-large);
+	border-start-end-radius: var(--md-sys-shape-corner-value-extra-large);
+	grid-template-rows: auto auto minmax(0, 1fr) auto;
+	padding-block-end: 24px;
+}
+
+/* Wider than 640dp: M3 gives the sheet a 56dp top margin and 56dp side margins.
+ * A literal, because a media query cannot read var() (styleguide AGENTS.md). */
+@media (width > 640px) {
+	.wp-block-axismundi-dialog[data-presentation="sheet-bottom"]:modal {
+		max-block-size: calc(100% - 56px);
+		max-inline-size: min(640px, 100% - 112px);
+	}
+}
+
+/* Only rendered when the sheet has preset heights to cycle - a handle that
+ * does nothing is a false affordance. It is a real button, labelled, in the
+ * tab order, as M3's bottom sheet accessibility page requires. */
+.wp-block-axismundi-dialog__drag-handle {
+	justify-self: center;
+	box-sizing: content-box;
+	inline-size: 32px;
+	block-size: 4px;
+	padding: 22px 8px;
+	border: 0;
+	background: var(--md-sys-color-on-surface-variant);
+	background-clip: content-box;
+	border-radius: var(--md-sys-shape-corner-full);
+	cursor: pointer;
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-bottom"] header,
+.wp-block-axismundi-dialog[data-presentation="sheet-bottom"] header + *,
+.wp-block-axismundi-dialog[data-presentation="sheet-bottom"] footer {
+	padding-inline: 24px;
+}
+
+/* ---- Contract: sheet-side ------------------------------------------------ */
+
+.wp-block-axismundi-dialog[data-presentation="sheet-side"] {
+	inline-size: 256px;
+	max-inline-size: 400px;
+	block-size: 100%;
+	margin: 0;
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-modality="modal"] > .wp-block-axismundi-dialog__container {
+	background: var(--md-sys-color-surface-container-low);
+	box-shadow: var(--md-sys-elevation-shadow-level1);
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-modality="standard"] > .wp-block-axismundi-dialog__container {
+	background: var(--md-sys-color-surface);
+	box-shadow: var(--md-sys-elevation-shadow-level0);
+}
+
+/* The rounded corners are the ones that face the page: an end-edge sheet rounds
+ * its start corners. Logical properties keep that true in RTL. */
+.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-modality="modal"][data-edge="end"] > .wp-block-axismundi-dialog__container {
+	border-start-start-radius: var(--md-sys-shape-corner-value-large);
+	border-end-start-radius: var(--md-sys-shape-corner-value-large);
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-modality="modal"][data-edge="start"] > .wp-block-axismundi-dialog__container {
+	border-start-end-radius: var(--md-sys-shape-corner-value-large);
+	border-end-end-radius: var(--md-sys-shape-corner-value-large);
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-attachment="detached"] {
+	block-size: calc(100% - 32px);
+	margin: 16px;
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-attachment="detached"] > .wp-block-axismundi-dialog__container {
+	border-radius: var(--md-sys-shape-corner-value-large);
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-side"] header {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 12px 12px 12px 24px;
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-side"] header h2 {
+	flex: 1 1 auto;
+	color: var(--md-sys-color-on-surface-variant);
+	font-family: var(--md-sys-typescale-title-large-font);
+	font-size: var(--md-sys-typescale-title-large-size);
+	font-weight: var(--md-sys-typescale-title-large-weight);
+	letter-spacing: var(--md-sys-typescale-title-large-tracking);
+	line-height: var(--md-sys-typescale-title-large-line-height);
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-side"] header + * {
+	padding-inline: 24px;
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-side"] footer {
+	display: flex;
+	align-items: center;
+	block-size: 72px;
+	box-sizing: border-box;
+	padding: 16px 24px 24px;
+	border-block-start: 1px solid var(--md-sys-color-outline);
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-side"] footer .wp-block-buttons {
+	justify-content: flex-start;
+}
+
+/* ---- Specimen ------------------------------------------------------------ */
+
+.sg-surface-specimens {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+	gap: 1.5rem;
+	margin-block: 1rem 2rem;
+}
+
+.sg-surface-specimen {
+	margin: 0;
+}
+
+.sg-surface-specimen--wide {
+	grid-column: 1 / -1;
+}
+
+.sg-surface-specimen figcaption {
+	margin-block-start: 0.5rem;
+	font-size: var(--md-sys-typescale-body-small-size);
+	line-height: var(--md-sys-typescale-body-small-line-height);
+	color: var(--md-sys-color-on-surface-variant);
+}
+
+/* A mock window. Its width stands for a breakpoint, so a compact frame is
+ * phone-narrow whatever the page's own width. */
+.sg-surface-frame {
+	position: relative;
+	display: flex;
+	block-size: 440px;
+	overflow: hidden;
+	border: 1px solid var(--md-sys-color-outline-variant);
+	border-radius: var(--md-sys-shape-corner-value-medium);
+	background: var(--md-sys-color-surface-container-lowest, var(--md-sys-color-surface));
+}
+
+.sg-surface-frame--compact {
+	max-inline-size: 360px;
+}
+
+.sg-surface-frame__page {
+	flex: 1 1 auto;
+	padding: 16px;
+	display: grid;
+	align-content: start;
+	gap: 12px;
+}
+
+.sg-surface-frame__page::before,
+.sg-surface-frame__page::after {
+	content: "";
+	display: block;
+	block-size: 72px;
+	border-radius: var(--md-sys-shape-corner-value-medium);
+	background: var(--md-sys-color-surface-container);
+}
+
+.sg-surface-frame__scrim {
+	position: absolute;
+	inset: 0;
+	background: color-mix(in srgb, var(--md-sys-color-scrim) 32%, transparent);
+}
+
+.sg-surface-frame > .wp-block-axismundi-dialog {
+	position: absolute;
+	inset: 0;
+}
+
+/* A standard side sheet is not an overlay: it takes its width from the page,
+ * which is the guidelines' "the body area shrinks". */
+.sg-surface-frame > .wp-block-axismundi-dialog[data-modality="standard"] {
+	position: static;
+	flex: 0 0 auto;
+	border-inline-start: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.sg-surface-frame > .wp-block-axismundi-dialog[data-presentation="sheet-side"][data-edge="end"]:not([data-modality="standard"]) {
+	inset-inline-start: auto;
+}

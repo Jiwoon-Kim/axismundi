@@ -1,0 +1,710 @@
+# Surface - one contract for Dialog and Sheet.
+#
+# Sources, each a set of pages M3 publishes:
+#   https://m3.material.io/components/dialogs/{overview,specs,guidelines,accessibility}
+#   https://m3.material.io/components/bottom-sheets/{overview,specs,guidelines,accessibility}
+#   https://m3.material.io/components/side-sheets/{overview,specs,guidelines,accessibility}
+#   https://material-web.dev/components/dialog/  (M3's web implementation)
+#
+# WHY ONE FILE. M3 publishes dialogs and sheets as separate components, and
+# this file keeps their tables separate. What it adds is the axis they share:
+# each is a surface a trigger opens, holding content, with a modality, a scrim,
+# a size and a placement. `presentations` are the rows of that axis. Converting
+# a Dialog into a Sheet is choosing another row, the way converting a Button
+# into an Icon button is choosing another anatomy on the same <button>.
+#
+# Content is not part of a presentation. A template part, inner blocks, or a
+# fragment fetched for a post is the surface's content source, and any of them
+# can sit in any row. That is why nothing here describes header, body or footer
+# markup beyond what M3 itself names.
+#
+# KINDS OF VALUE, kept apart so the page can say which it is showing:
+#
+#   spec          the published token table. `hex` is the baseline value M3
+#                 prints beside the token; validate_styleguide_surface.py checks
+#                 that each `role` still resolves to that hex through the
+#                 theme's light tokens.
+#   measurements  the published measurements table on the specs page.
+#   legacy        what axismundi-dialogs renders today, read from its source.
+#                 The legacy sheet and dialog blocks are to be retired and are
+#                 kept as implementation reference; `legacy` is the gap, not
+#                 the target.
+#   conflicts     places where M3's own pages disagree. Recorded with both
+#                 sides; nothing is resolved by picking one silently.
+#
+# Every value that used to come from the repository's M3 reference
+# (M3-COMPONENT-SPECS.md) is now confirmed by a published page, so that kind is
+# gone.
+#
+# Elevation is stored as the M3 level and the dp M3 prints for it. The theme
+# implements levels as shadows and deliberately defines no dp token
+# (tokens.sys.elevation.css), so the level is the value that binds.
+#
+# Android-only behaviour - predictive back, system-drawn scrims - is left out:
+# a web page has no equivalent to bind.
+
+meta:
+  sources:
+    dialog: https://m3.material.io/components/dialogs/specs
+    dialog_guidelines: https://m3.material.io/components/dialogs/guidelines
+    dialog_accessibility: https://m3.material.io/components/dialogs/accessibility
+    dialog_web: https://material-web.dev/components/dialog/
+    bottom_sheet: https://m3.material.io/components/bottom-sheets/specs
+    bottom_sheet_guidelines: https://m3.material.io/components/bottom-sheets/guidelines
+    bottom_sheet_accessibility: https://m3.material.io/components/bottom-sheets/accessibility
+    side_sheet: https://m3.material.io/components/side-sheets/specs
+    side_sheet_guidelines: https://m3.material.io/components/side-sheets/guidelines
+    side_sheet_accessibility: https://m3.material.io/components/side-sheets/accessibility
+
+# The host, and where a surface lives. A surface is not a block in a post: it
+# is a template part the Site Editor manages, the way core keeps the
+# Navigation block and its overlay part apart. The root block of that part is
+# the HTML <dialog>; M3's dialogs and sheets are presentations it takes.
+host:
+  block: axismundi/dialog
+  element: dialog
+  class: wp-block-axismundi-dialog
+  area:
+    slug: dialog-surface
+    label: Dialog surface
+    description: Content shown in a dialog layer - dialogs, bottom sheets and side sheets.
+    registered_by: the plugin, through the default_wp_template_part_areas filter
+    # Why not `dialog`: it would hide that sheets live here too. Why not
+    # `surface`: M3 already uses the word for a family of colour roles.
+    starter_content: plugin patterns with blockTypes core/template-part/dialog-surface
+    theme_override: a theme may ship its own parts in the area
+    inserter: hidden from the general inserter by the plugin
+  identity:
+    id: dialog-surface-{part slug}
+    note: >-
+      Stable across renders, so any number of triggers can name one surface.
+      Never wp_unique_id(), which changes with render order.
+  render: once per page, at the end of the page, when something on the page names it
+  trigger:
+    action: dialog
+    markup: commandfor names the surface id; command is show-modal, or runtime for a standard sheet
+  legacy_names:
+    reclaim: [axismundi/dialog]
+    retire: [axismundi/dialogs, axismundi/sheet, axismundi/dialog]
+    class_collision: >-
+      The legacy dialog block's wrapper already carries wp-block-axismundi-dialog,
+      core's default class name for the block, so the legacy registration comes
+      down before the new block ships.
+  # WordPress 7.1, read from core's code; the Site Editor UI was not opened.
+  measured:
+    starter_patterns: >-
+      The part-creation Design list offers a pattern when its blockTypes include
+      core/template-part/ plus the area slug and its source is not in
+      EXCLUDED_PATTERN_SOURCES ["core", "pattern-directory/core",
+      "pattern-directory/featured"] (editor.min.js, patterns.min.js). A plugin
+      pattern's source is `plugin`, so it passes. Core's own patterns are
+      excluded except navigation-overlay's, which are allowed by name.
+    inserter: >-
+      blocks/template-part.php hides navigation-overlay parts from the inserter
+      by name (lines 183 and 241). A plugin area gets no such exception; the
+      get_block_type_variations filter (since 6.5) can clear the scope of its
+      core/template-part variations instead.
+    plugin_templates: >-
+      register_block_template() registers wp_template only; the registry sets
+      the type to wp_template and block-template-utils.php consults it for that
+      type alone. It cannot supply template parts.
+
+# Shared by every modal row. M3 §0.12: modal surfaces render a scrim, and a
+# click on it dismisses unless the surface requires an action. Full-screen
+# dialogs and standard sheets have none.
+scrim:
+  role: scrim
+  hex: "#000000"
+  opacity: 0.32
+  dismisses: unless an action is required
+  legacy:
+    value: scrim at 32% (assets/shared.css, ::backdrop)
+    bound: true
+
+# The axes a surface instance chooses. Presentation and modality are M3's;
+# the others are what every row exposes, named once here so a block and a
+# style variation can use the same words.
+axes:
+  - name: presentation
+    values: [dialog-basic, dialog-full-screen, sheet-bottom, sheet-side]
+  - name: modality
+    values: [modal, standard]
+    note: >-
+      A basic dialog is always modal and a full-screen dialog replaces the
+      screen, so only sheets offer both. Standard means no scrim and the page
+      stays usable.
+  - name: attachment
+    values: [docked, detached]
+    applies_to: [sheet-side]
+  - name: edge
+    values: [start, end]
+    applies_to: [sheet-side]
+    default: end
+    note: >-
+      Logical. M3 puts side sheets on the right so they stay clear of
+      navigation on the left, and on the left in RTL - which is `end` in both.
+
+# Presentation is not one value per instance: M3 lets a surface swap rows as
+# the window grows. A surface therefore stores a presentation per breakpoint,
+# falling back to the next smaller one. Breakpoint names are layout.yml's.
+adaptive:
+  - presentation: dialog-full-screen
+    breakpoints: [compact]
+    becomes: dialog-basic
+    from: medium
+    source: dialog_guidelines
+  - presentation: dialog-basic
+    position:
+      default: center
+      custom_from: medium
+      edge_margin: 56
+      edge_margin_from: expanded
+    source: dialog_guidelines
+  - presentation: sheet-bottom
+    breakpoints: [compact, medium]
+    becomes: sheet-side
+    from: expanded
+    source: bottom_sheet_guidelines
+    note: >-
+      "Can be swapped" at expanded, not must. Modal bottom sheets are compact
+      and medium only.
+  - presentation: sheet-side
+    modality: standard
+    breakpoints: [compact]
+    becomes: modal
+    source: side_sheet_guidelines
+    note: >-
+      Standard side sheets are mostly medium and expanded; modal ones are
+      preferred on compact. The legacy sheet block already falls back this way.
+
+presentations:
+  - name: dialog-basic
+    title: Basic dialog
+    component: dialog
+    modal: true
+    scrim: true
+    anatomy: [container, icon, headline, supporting-text, divider, button-label-text, scrim]
+    optional: [icon, headline, divider]
+    color_roles: [surface-container-high, secondary, on-surface, on-surface-variant, primary, scrim]
+    spec:
+      container: { role: surface-container-high, hex: "#ECE6F0" }
+      elevation: { level: level3, dp: 6 }
+      shape: 28
+      icon: { role: secondary, hex: "#625B71", size: 24 }
+      headline:
+        role: on-surface
+        hex: "#1D1B20"
+        type: { size: 24, weight: 400, tracking: 0, line_height: 32 }
+      supporting_text:
+        role: on-surface-variant
+        hex: "#49454F"
+        type: { size: 14, weight: 400, tracking: 0.25, line_height: 20 }
+      action_label:
+        role: primary
+        hex: "#6750A4"
+        type: { size: 14, weight: 500, tracking: 0.1, line_height: 20 }
+      action_state_layer:
+        role: primary
+        hex: "#6750A4"
+        hovered: 0.08
+        focused: 0.1
+        pressed: 0.1
+    measurements:
+      shape: 28
+      height: dynamic
+      width: { min: 280, max: 560 }
+      divider_height: 1
+      icon: 24
+      alignment: { with_icon: center, without_icon: start }
+      padding: 24
+      between_buttons: 8
+      headline_to_body: 16
+      icon_to_headline: 16
+      body_to_actions: 24
+    legacy:
+      bound: false
+      container: surface-container
+      elevation: preset shadow elevation-1
+      shape: 28
+      width: 280 / 400 / 560 presets, clamped to 280-560
+      gap: >-
+        Container one tone low (surface-container, not -high) and elevation two
+        levels low (level1, not level3). Shape and width already match.
+    figma:
+      - component: Basic dialog
+        properties:
+          icon: [true, false]
+          show_divider: { type: boolean, default: false }
+          title: Basic dialog title
+          supporting_text: true
+          content: 2 items
+          nested_instances: [secondary button, primary button]
+      - component: List dialog
+        properties:
+          icon: [false, true]
+          title: Dialog title
+          supporting_text: true
+          content: 2 items
+          nested_instances: [secondary button, primary button]
+      - component: Scrollable list dialog
+        properties:
+          icon: [false, true]
+          title: Dialog title
+          supporting_text: true
+          content: 2 items
+          nested_instances: [secondary button, primary button]
+        # List and Scrollable list are Basic dialog with list content, not
+        # rows of their own: the token table is the Basic table, and the
+        # guidelines name lists, date pickers and time pickers as layouts a
+        # basic dialog takes. Scrolling is the content's behaviour.
+
+  - name: dialog-full-screen
+    title: Full-screen dialog
+    component: dialog
+    modal: true
+    scrim: false
+    anatomy: [container, header, icon, headline, text-button, divider]
+    optional: [headline, divider]
+    # Five roles in the order the specs page numbers them.
+    color_roles: [surface-container-high, on-surface, on-surface, primary, on-surface-variant]
+    spec:
+      container: { role: surface, hex: "#FEF7FF" }
+      container_on_scroll: { role: surface-container, hex: "#F3EDF7" }
+      elevation: { level: level0, dp: 0 }
+      shape: 0
+      header:
+        height: 56
+        container: { role: surface, hex: "#FEF7FF" }
+        elevation: { level: level0, dp: 0 }
+        elevation_on_scroll: { level: level2, dp: 3 }
+      icon: { role: on-surface, hex: "#1D1B20", size: 24 }
+      headline:
+        role: on-surface
+        hex: "#1D1B20"
+        type: { size: 22, weight: 400, tracking: 0, line_height: 28 }
+      action_label:
+        role: primary
+        hex: "#6750A4"
+        type: { size: 14, weight: 500, tracking: 0.1, line_height: 20 }
+      action_state_layer:
+        role: primary
+        hex: "#6750A4"
+        hovered: 0.08
+        focused: 0.1
+        pressed: 0.1
+    measurements:
+      shape: 0
+      height: dynamic
+      width: { max: 560 }
+      header: { height: 56, width: container }
+      headline_alignment: start
+      divider_height: 1
+      icon: 24
+      bottom_action_bar: { height: 56, width: container }
+      padding: { top: 24, inline: 24 }
+      between_elements: 8
+    legacy:
+      bound: false
+      shape: 0
+      elevation: none
+      gap: >-
+        Shape and elevation match. Container colour and the on-scroll change of
+        container and header elevation are not measured yet.
+
+  - name: sheet-bottom
+    title: Bottom sheet
+    component: sheet
+    # Both variants share every spec; only the scrim differs.
+    modality: [modal, standard]
+    scrim: { modal: true, standard: false }
+    anatomy: [container, drag-handle, scrim]
+    optional: [drag-handle]
+    modal_only: [scrim]
+    color_roles: [scrim, on-surface-variant, surface-container-low]
+    spec:
+      container: { role: surface-container-low, hex: "#F7F2FA" }
+      elevation:
+        modal: { level: level1, dp: 1 }
+        standard: { level: level1, dp: 1 }
+      shape: { start_start: 28, start_end: 28, end_end: 0, end_start: 0 }
+      shape_minimized: 0
+      drag_handle:
+        role: on-surface-variant
+        hex: "#49454F"
+        width: 32
+        height: 4
+      focus_indicator:
+        role: secondary
+        hex: "#625B71"
+        thickness: 3
+        offset: 2
+    measurements:
+      width: { max: 640, below_max: full window width }
+      height: variable
+      drag_handle: { alignment: center, padding_block: 22 }
+      top_margin: 72
+      # Once the window is wider than 640dp.
+      wide_window: { above: 640, top_margin: 56, inline_margin: 56 }
+    legacy:
+      bound: false
+      max_height: calc(100dvh - 72px), 56px on wider windows
+      drag_handle: <div aria-hidden="true">, described in the editor as decorative
+      gap: >-
+        Top margins match. The drag handle is a picture of one: not focusable,
+        not labelled, and there are no preset heights for it to cycle. The
+        initial height is not capped at half the window. Container, shape and
+        focus indicator are not measured yet.
+    figma:
+      - component: Bottom sheet
+        properties:
+          modal: [false, true]
+          show_drag_handle: { type: boolean, default: true }
+          content: 2 items
+
+  - name: sheet-side
+    title: Side sheet
+    component: sheet
+    modality: [modal, standard]
+    scrim: { modal: true, standard: false }
+    anatomy:
+      standard: [divider, headline, container, close-icon-button]
+      modal: [back-icon-button, headline, container, close-icon-button, divider, action-buttons, scrim]
+    optional:
+      standard: [divider]
+      modal: [back-icon-button, divider, action-buttons]
+    # In the order each specs page numbers them.
+    color_roles:
+      standard: [outline-variant, on-surface-variant, surface, on-surface-variant]
+      modal: [on-surface-variant, on-surface-variant, surface-container-low, on-surface-variant]
+    spec:
+      container:
+        modal: { role: surface-container-low, hex: "#F7F2FA" }
+        standard: { role: surface, hex: "#FEF7FF" }
+      elevation:
+        modal: { level: level1, dp: 1 }
+        standard: { level: level0, dp: 0 }
+      height: 100%
+      width: 256
+      shape:
+        docked: 0
+        # Published as "16dp 0 0 16dp": the corners that face the page. On an
+        # end-edge sheet in LTR those are the left corners.
+        docked_modal: { facing_page: 16, facing_edge: 0 }
+        detached: 16
+      headline:
+        role: on-surface-variant
+        hex: "#49454F"
+        type: { size: 22, weight: 400, tracking: 0, line_height: 28 }
+      divider: { role: outline, hex: "#79747E" }
+      action_state_layer:
+        role: primary
+        hex: "#6750A4"
+        hovered: 0.08
+        focused: 0.1
+        pressed: 0.1
+      focus_indicator:
+        role: secondary
+        hex: "#625B71"
+        thickness: 3
+        offset: 2
+    measurements:
+      # 256 is the token table's width; the measurements give the ceiling the
+      # guidelines' "can be resized depending on the layout" works under.
+      width: { default: 256, max: 400 }
+      height: spans the window
+      padding_inline: 24
+      padding_start_with_icon: 16
+      between_top_elements: 12
+      bottom_actions: { height: 72, padding_top: 16, padding_bottom: 24, alignment: start }
+      detached_margin: 16
+    legacy:
+      bound: false
+      width: 256 / 320 / 400 presets, default 320
+      push: standard sheets on windows 840px and wider pad the page by the sheet's width
+      gap: >-
+        Width presets sit inside the published range (256 default, 400 max), so
+        they can stay; only the default differs, 320 against 256. The page push
+        is the guidelines' "the body area shrinks", already bound. The close
+        affordance lives in the template part, so nothing guarantees one.
+    figma:
+      - component: Side Sheet
+        properties:
+          type: [Standard, Modal]
+          show_back: [false, true]
+          show_actions: { type: boolean, default: true }
+          headline_text: Title
+          content: 4 items
+          nested_instances: [content]
+
+# What the guidelines and accessibility pages decide, as rules a block or a
+# validator can hold to. Paraphrased; the page carries the explanation.
+components:
+  dialog:
+    purpose: >-
+      A modal window for critical information or a decision. It blocks the app
+      until the task is confirmed, dismissed or completed, so it is used
+      sparingly and for one task.
+    importance: high
+    alternatives:
+      - component: snackbar
+        when: low or medium importance; may have no action and may disappear
+      - component: menu
+        when: options that should not interrupt
+    headline:
+      - A brief statement or question; no apology, alarm or ambiguous question.
+      - May wrap to a second line.
+      - In a full-screen dialog a long or variable-length headline moves from
+        the app bar into the content area.
+    actions:
+      max: 2
+      single: acknowledgement only
+      pair: one confirming, one dismissing
+      order: the confirming action sits nearest the trailing edge, mirrored in RTL
+      stacked: confirming above dismissing
+      disabled:
+        basic: the confirming action may stay disabled until a choice is made
+        full_screen: the confirming action is never disabled
+        dismissing: never disabled
+      third_action: not recommended; use inline expansion instead
+    scrolling:
+      - Headline pinned at the top, actions pinned at the bottom.
+      - The page behind does not scroll with the dialog.
+    stacking: >-
+      Only a full-screen dialog may have another dialog above it - typically a
+      basic dialog confirming that unsaved changes are discarded.
+    full_screen:
+      navigation: the close icon button is the only navigation in the app bar
+      save: Save saves; the close icon or a dismissive action closes
+      confirm: names what happens next (Send, Create), never Done, OK or Close
+      dismiss_with_changes: a basic dialog confirms discarding
+      errors: field errors inline; a general failure appears in a basic dialog
+    motion:
+      enter_exit: the enter and exit transition pattern
+      from_fab: container transform into a full-screen dialog
+    accessibility:
+      use_cases:
+        - Open and close the dialog.
+        - Provide and submit inputs when the dialog is interactive.
+        - Scroll to all of the dialog's content.
+      initial_focus: the first interactive element
+      keyboard:
+        - { keys: Tab, action: next interactive element, wrapping to the first }
+        - { keys: Shift + Tab, action: previous interactive element, wrapping to the last }
+        - { keys: Space or Enter, action: triggers the focused element }
+        - { keys: Escape, action: closes the dialog }
+      label: the dialog's headline
+      role:
+        basic: alertdialog
+      text_resize: >-
+        Concise strings, so 200% text does not truncate. M3 states the rule for
+        Android (a headline fits in four lines); the web counterpart is WCAG
+        1.4.4 Resize text, which is this project's mapping, not M3's.
+    # material-web: M3's own web component, on the native <dialog>.
+    web:
+      host: native <dialog>
+      close_by_form: <form method="dialog">
+      return_value: the value of the button that closed it
+      events: [open, opened, close, closed, cancel]
+      cancel: fired by a scrim click or Escape
+      focus_trap: on by default; turning it off is discouraged
+      initial_focus_override: autofocus on a child
+      alert: type="alert", opt-in
+
+  bottom_sheet:
+    purpose: >-
+      Supplementary content and actions on a small window. Never the page's
+      main content, and dismissible to get back to it.
+    breakpoints: [compact, medium]
+    content: >-
+      Only the container is required. Lists, dividers, thumbnails, images and
+      video are all optional content, not anatomy.
+    standard:
+      - Coexists with the page; both stay usable, as with an audio player.
+      - May rest at preset heights, from a preview up to full height.
+      - At full height, an app bar carries a collapse icon back to the start.
+    modal:
+      - Blocks the page like a dialog until acted on or dismissed.
+      - An alternative to a menu or a simple dialog on small windows,
+        especially for long lists or items with descriptions and icons.
+      - Opens no higher than half the window; taller content is pulled up to
+        full height and scrolls inside.
+      - A full-height modal sheet shows a close affordance.
+    dismiss:
+      - Choosing an item or an action inside it.
+      - Selecting the scrim, which always closes.
+      - Swiping it down.
+      - A close affordance in its app bar.
+    heights:
+      - Selecting the drag handle cycles through preset heights or closes.
+      - Heights must be reachable without dragging.
+      - Without a usable drag handle, a separate control changes the height.
+      - The sheet may offer a collapsed and an expanded state.
+    wide_windows: >-
+      The 640dp max-width is a default that may be overridden. For longer
+      tasks, consider a side sheet or another non-transient surface.
+    scrolling: >-
+      Scrolls inside once its content outgrows the initial height, independent
+      of the page.
+    accessibility:
+      use_cases:
+        - Resize without touch gestures.
+      touch_target: the top 48dp resizes, when resizing and a drag handle exist
+      drag_alternative: every drag action has a single-pointer alternative
+      initial_focus: the drag handle is in the tab order
+      keyboard:
+        - { keys: Tab, action: focuses the drag handle }
+        - { keys: Space or Enter, action: cycles the available heights }
+      label: the drag handle only
+      drag_handle_role: button
+
+  side_sheet:
+    purpose: >-
+      Optional content and actions beside the main content, without
+      interrupting it. People may navigate to another region inside the sheet.
+    standard:
+      breakpoints: [medium, expanded]
+      notes:
+        - Stays visible while people use the page; filters, details, supplements.
+        - Opening it shrinks the page's body by its width, keeping a margin on
+          the body's trailing edge.
+    modal:
+      breakpoints: [compact]
+      notes:
+        - Preferred on small windows. Must be dismissed to reach the page.
+    placement:
+      - Along a window edge, usually the right; the left in RTL, with every
+        element mirrored.
+      - May be inset by 16dp. Not further - it hides the page and blurs whether
+        the sheet scrolls.
+      - Fixed width, usually the full window height, set by how the layout is
+        divided into regions.
+    elements:
+      back_icon_button: a way out or onward; the page stays visible, so a way back matters
+      close_icon_button: the consistent way to dismiss
+      action_buttons: e.g. Save, Edit, Download; emphasis by elevation, fill and tone
+      divider: separates actions from content, or user content from system content
+    scrolling:
+      - Scrolls vertically, independent of the page; both keep their position.
+      - Never scrolls horizontally, and is never laid out to look as if it does.
+    accessibility:
+      use_cases:
+        - Dismiss the sheet with assistive technology.
+      close_affordance: always present
+      focus_order: [headline, close, cancel, save]
+      keyboard:
+        - { keys: Tab, action: focuses the next enabled icon button }
+        - { keys: Space or Enter, action: activates the focused icon button }
+      role: dialog
+
+# Where a surface's content comes from. Only the first is part of the demo.
+# A dynamic provider is a use of the surface, not a presentation of it: a quick
+# view is still a basic or full-screen dialog.
+content_providers:
+  values: [template-part, dynamic]
+  default: template-part
+  demo: template-part only
+  proposal: >-
+    The provider is an attribute of the host block, and the region a dynamic
+    provider fills is a slot block locked with lock.remove. A part is edited in
+    the Site Editor, so anything written as plain markup could be deleted there
+    and break the provider.
+  dynamic:
+    - name: post-quick-view
+      status: early implementation; open to restructuring
+      today: >-
+        One fixed-id dialog per page (ax-post-quick-view, supports.multiple
+        false). Triggers name it with aria-controls. Fetches a post fragment on
+        open and posts comments to wp/v2/comments. Closes any other open
+        dialog first.
+    - name: object-media
+      status: early implementation; open to restructuring
+      today: >-
+        One fixed-id dialog per page (ax-object-media-dialog), variant basic or
+        fullscreen. Triggers are Object Attachments blocks from another plugin,
+        which find it through a HUB_ID constant. Clones the block's figures
+        into a carousel and a template's content into a side panel. Closes any
+        other open dialog first.
+  open:
+    - >-
+      Render demand for triggers that are not this plugin's buttons, such as
+      Object Attachments: the provider registers demand when it renders, or
+      the site places the surface once in a footer part.
+
+conflicts:
+  - subject: full-screen dialog container colour
+    token_table: surface (surface-container on scroll)
+    color_roles_list: surface-container-high
+    note: >-
+      The specs page's numbered colour-role list names surface-container-high
+      as role 1; the same page's token table names surface. `spec` records the
+      token table because it is the one with values.
+  - subject: full-screen dialog width
+    measurements: max 560dp
+    guidelines: fills the entire screen, compact breakpoints only
+    note: >-
+      Compact runs to 599dp, so a 560dp cap leaves a gap at the top of the
+      range. Unresolved.
+  - subject: basic dialog role on the web
+    accessibility_page: every basic dialog is an alertdialog
+    material_web: role dialog by default; type="alert" opts in
+    note: >-
+      An alertdialog announces an urgent interruption. A basic dialog holding
+      a list or a date picker is not one, so role is a per-instance choice
+      here, not a property of the row.
+  - subject: dialog stacking
+    guidelines: a basic dialog may appear above a full-screen dialog
+    legacy: one open dialog at a time, in the legacy blocks and in both dynamic hubs
+    note: >-
+      Every current implementation closes other dialogs before opening, which
+      blocks the discard-changes pattern. The new host allows stacking.
+  - subject: side sheet divider colour
+    token_table: outline
+    color_roles_list: outline-variant (standard, role 1)
+    note: >-
+      The token table and the standard sheet's numbered list name different
+      roles for the same divider. `spec` keeps the token table.
+  - subject: side sheet close button
+    guidelines: optional in the anatomy, "highly recommended"
+    accessibility_page: always present
+    note: >-
+      Accessibility is the stricter page and the one this project follows: a
+      side sheet ships with a close affordance.
+  - subject: bottom sheet scroll direction
+    bottom_sheet_guidelines: can be scrolled horizontally, independent of the page
+    same_page: scrolls when content exceeds the initial viewable height
+    side_sheet_guidelines: never scrolls horizontally
+    note: >-
+      The horizontal wording contradicts the sentence under it, which only
+      makes sense vertically. Read as vertical until M3 says otherwise.
+  - subject: bottom sheet labelling
+    accessibility_page: label only the drag handle
+    web_platform: a modal dialog needs an accessible name (WAI-ARIA dialog)
+    note: >-
+      M3 is saying not to label the decorative parts. A modal bottom sheet on
+      the web is still a dialog, so it takes a name as any dialog does.
+
+# Published in Figma, outside the web's scope. Recorded so the omission is a
+# decision rather than an oversight: XR elevation is a choice between two
+# container tones, which a flat page has no use for.
+out_of_scope:
+  - component: XR/XR Dialog
+    reason: XR spatial surface; no web presentation.
+    properties:
+      elevation: [surface-container-high, surface-container-highest]
+      show_icon: [true, false]
+      icon: mobile check
+      headline_text: Basic dialog title
+      supporting_text: true
+      show_secondary_action: { type: boolean, default: true }
+      show_divider: { type: boolean, default: false }
+      content: 4 items
+      nested_instances: [secondary button, primary button]
+  - component: Predictive back (bottom and side sheets)
+    reason: Android system gesture; no web equivalent.
+
+# Figma's content slots are "slot swap" components: a placeholder to replace
+# with a locally built subcomponent. That is the same idea as a surface's
+# content source, which is why content stays outside `presentations`.
+slots:
+  mechanism: slot swap
+  note: Replace this subcomponent in the variant properties with one built locally.

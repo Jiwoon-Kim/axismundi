@@ -32,7 +32,9 @@ except ImportError:  # pragma: no cover
 ROOT = Path(__file__).resolve().parent.parent.parent
 DATA = ROOT / "products/styleguide/_data/surface.yml"
 LAYOUT = ROOT / "products/styleguide/_data/layout.yml"
-ADAPTER = ROOT / "products/styleguide/assets/css/components/surface.css"
+# The contract's only authored copy. The style guide wears a synced copy of it
+# (tools/generators/sync_styleguide_assets.py), so the product file is checked.
+ADAPTER = ROOT / "products/wordpress/plugins/axismundi-dialogs/blocks/dialog/style.css"
 STYLES = ROOT / "products/wordpress/themes/axismundi/assets/styles"
 REF = STYLES / "tokens.ref.css"
 LIGHT = STYLES / "tokens.sys.color.light.css"
@@ -113,7 +115,7 @@ def declared(body: str | None, name: str) -> str | None:
 
 
 def check_adapter(data: dict, report: Report) -> None:
-    """The static adapter in assets/css/components/surface.css spends the data.
+    """The Dialog block's stylesheet (the contract's only authored copy) spends the data.
 
     Each checked rule is written with a single selector, so a rule that moves
     into a comma list is reported as missing rather than silently skipped.
@@ -132,10 +134,10 @@ def check_adapter(data: dict, report: Report) -> None:
 
     def expect(selector: str, name: str, want: str) -> None:
         body = rule(css, selector)
-        report.check(body is not None, f"surface.css has no rule for {selector}")
+        report.check(body is not None, f"dialog style.css has no rule for {selector}")
         if body is not None:
             got = declared(body, name)
-            report.check(got == want, f"surface.css {selector} {name}: {got!r}, want {want!r}")
+            report.check(got == want, f"dialog style.css {selector} {name}: {got!r}, want {want!r}")
 
     basic = rows["dialog-basic"]
     expect(container("dialog-basic"), "background", f"var(--md-sys-color-{basic['spec']['container']['role']})")
@@ -165,7 +167,7 @@ def check_adapter(data: dict, report: Report) -> None:
 
     report.check(
         f"color-mix(in srgb, var(--md-sys-color-{data['scrim']['role']}) {round(data['scrim']['opacity'] * 100)}%, transparent)" in css,
-        "surface.css does not paint the scrim from the scrim role at the published opacity",
+        "dialog style.css does not paint the scrim from the scrim role at the published opacity",
     )
 
 

@@ -1,11 +1,318 @@
 /**
- * axismundi/dialog - front-end baseline.
+ * axismundi/dialog - the Surface contract's stylesheet.
  *
- * Deliberately small. The Surface contract's geometry, colour and scrim
- * (products/styleguide/assets/css/components/surface.css) arrive with the
- * starter patterns, together with a check that keeps the two copies equal.
+ * The only authored copy. tools/generators/sync_styleguide_assets.py copies it
+ * byte for byte into the style guide (assets/css/components/dialog.css), where
+ * the Surface page's specimens wear it, and
+ * tools/validators/validate_styleguide_surface.py checks its values against
+ * products/styleguide/_data/surface.yml. Each checked rule has a single
+ * selector: folding one into a comma list makes the validator report it
+ * missing.
+ *
+ * Rules about where a real <dialog> sits - on its edge, fixed to the viewport,
+ * locking the page - are written for `dialog.` so the editor's stand-in div
+ * (src/dialog.js) stays in the canvas.
+ *
+ * The host is rendered once at the end of the page, outside every layout
+ * container, and these rules assume it. Placed inside one, WordPress layout
+ * wins over them - measured: in a constrained Post Content the side sheets
+ * were centred by `margin-inline: auto !important`, a basic dialog lost its
+ * vertical centring to the first-child margin reset, and a full-screen dialog
+ * moved down by the block gap. At the end of <body> every presentation sat
+ * where this file puts it.
  */
 
-dialog.wp-block-axismundi-dialog:not( [open] ) {
+/* ---- Contract: host ------------------------------------------------------ */
+
+.wp-block-axismundi-dialog {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--md-sys-color-on-surface);
+	max-block-size: 100%;
+	overflow: visible;
+}
+
+.wp-block-axismundi-dialog::backdrop {
+	background: color-mix(in srgb, var(--md-sys-color-scrim) 32%, transparent);
+}
+
+/* The container holds the template part. Header and footer are auto rows and
+ * the body is the only row that scrolls: M3 pins a dialog's headline and
+ * actions while its content scrolls, and the same grid gives a sheet its
+ * header and bottom actions. */
+.wp-block-axismundi-dialog__container {
+	box-sizing: border-box;
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr) auto;
+	block-size: 100%;
+	max-block-size: inherit;
+	overflow: hidden;
+}
+
+.wp-block-axismundi-dialog__container > :not(header, footer) {
+	min-block-size: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
+.wp-block-axismundi-dialog__container > * {
+	margin: 0;
+}
+
+.wp-block-axismundi-dialog__container h2 {
+	margin: 0;
+}
+
+.wp-block-axismundi-dialog__container p {
+	margin: 0;
+}
+
+.wp-block-axismundi-dialog__container footer .wp-block-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: var(--md-sys-measurement-space100, 8px);
+}
+
+/* ---- Contract: dialog-basic ---------------------------------------------- */
+
+.wp-block-axismundi-dialog[data-presentation="dialog-basic"] {
+	inline-size: fit-content;
+	min-inline-size: 280px;
+	max-inline-size: 560px;
+	margin: auto;
+}
+
+.wp-block-axismundi-dialog[data-presentation="dialog-basic"] > .wp-block-axismundi-dialog__container {
+	padding: 24px;
+	background: var(--md-sys-color-surface-container-high);
+	box-shadow: var(--md-sys-elevation-shadow-level3);
+	border-radius: var(--md-sys-shape-corner-value-extra-large);
+}
+
+.wp-block-axismundi-dialog[data-presentation="dialog-basic"] header h2 {
+	color: var(--md-sys-color-on-surface);
+	font-family: var(--md-sys-typescale-headline-small-font);
+	font-size: var(--md-sys-typescale-headline-small-size);
+	font-weight: var(--md-sys-typescale-headline-small-weight);
+	letter-spacing: var(--md-sys-typescale-headline-small-tracking);
+	line-height: var(--md-sys-typescale-headline-small-line-height);
+}
+
+.wp-block-axismundi-dialog[data-presentation="dialog-basic"] header + * {
+	margin-block-start: 16px;
+	color: var(--md-sys-color-on-surface-variant);
+	font-size: var(--md-sys-typescale-body-medium-size);
+	letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+	line-height: var(--md-sys-typescale-body-medium-line-height);
+}
+
+.wp-block-axismundi-dialog[data-presentation="dialog-basic"] footer {
+	margin-block-start: 24px;
+}
+
+/* ---- Contract: dialog-full-screen ---------------------------------------- */
+
+.wp-block-axismundi-dialog[data-presentation="dialog-full-screen"] {
+	inline-size: 100%;
+	max-inline-size: 100%;
+	block-size: 100%;
+}
+
+.wp-block-axismundi-dialog[data-presentation="dialog-full-screen"] > .wp-block-axismundi-dialog__container {
+	background: var(--md-sys-color-surface);
+	box-shadow: var(--md-sys-elevation-shadow-level0);
+	border-radius: var(--md-sys-shape-corner-value-none);
+}
+
+.wp-block-axismundi-dialog[data-presentation="dialog-full-screen"] header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	block-size: 56px;
+	padding-inline: 8px 24px;
+}
+
+.wp-block-axismundi-dialog[data-presentation="dialog-full-screen"] header h2 {
+	flex: 1 1 auto;
+	color: var(--md-sys-color-on-surface);
+	font-family: var(--md-sys-typescale-title-large-font);
+	font-size: var(--md-sys-typescale-title-large-size);
+	font-weight: var(--md-sys-typescale-title-large-weight);
+	letter-spacing: var(--md-sys-typescale-title-large-tracking);
+	line-height: var(--md-sys-typescale-title-large-line-height);
+}
+
+.wp-block-axismundi-dialog[data-presentation="dialog-full-screen"] header + * {
+	padding: 24px 24px 0;
+}
+
+/* ---- Contract: sheet-bottom ---------------------------------------------- */
+
+.wp-block-axismundi-dialog[data-presentation="sheet-bottom"] {
+	inline-size: 100%;
+	max-inline-size: 640px;
+	margin-inline: auto;
+	margin-block: auto 0;
+	max-block-size: calc(100% - 72px);
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-bottom"] > .wp-block-axismundi-dialog__container {
+	background: var(--md-sys-color-surface-container-low);
+	box-shadow: var(--md-sys-elevation-shadow-level1);
+	border-start-start-radius: var(--md-sys-shape-corner-value-extra-large);
+	border-start-end-radius: var(--md-sys-shape-corner-value-extra-large);
+	grid-template-rows: auto auto minmax(0, 1fr) auto;
+	padding-block-end: 24px;
+}
+
+/* Wider than 640dp: M3 gives the sheet a 56dp top margin and 56dp side margins.
+ * A literal, because a media query cannot read var() (styleguide AGENTS.md). */
+@media (width > 640px) {
+	.wp-block-axismundi-dialog[data-presentation="sheet-bottom"]:modal {
+		max-block-size: calc(100% - 56px);
+		max-inline-size: min(640px, 100% - 112px);
+	}
+}
+
+/* Only rendered when the sheet has preset heights to cycle - a handle that
+ * does nothing is a false affordance. It is a real button, labelled, in the
+ * tab order, as M3's bottom sheet accessibility page requires. */
+.wp-block-axismundi-dialog__drag-handle {
+	justify-self: center;
+	box-sizing: content-box;
+	inline-size: 32px;
+	block-size: 4px;
+	padding: 22px 8px;
+	border: 0;
+	background: var(--md-sys-color-on-surface-variant);
+	background-clip: content-box;
+	border-radius: var(--md-sys-shape-corner-full);
+	cursor: pointer;
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-bottom"] header,
+.wp-block-axismundi-dialog[data-presentation="sheet-bottom"] header + *,
+.wp-block-axismundi-dialog[data-presentation="sheet-bottom"] footer {
+	padding-inline: 24px;
+}
+
+/* ---- Contract: sheet-side ------------------------------------------------ */
+
+.wp-block-axismundi-dialog[data-presentation="sheet-side"] {
+	inline-size: 256px;
+	max-inline-size: 400px;
+	block-size: 100%;
+	margin: 0;
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-modality="modal"] > .wp-block-axismundi-dialog__container {
+	background: var(--md-sys-color-surface-container-low);
+	box-shadow: var(--md-sys-elevation-shadow-level1);
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-modality="standard"] > .wp-block-axismundi-dialog__container {
+	background: var(--md-sys-color-surface);
+	box-shadow: var(--md-sys-elevation-shadow-level0);
+}
+
+/* The rounded corners are the ones that face the page: an end-edge sheet rounds
+ * its start corners. Logical properties keep that true in RTL. */
+.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-modality="modal"][data-edge="end"] > .wp-block-axismundi-dialog__container {
+	border-start-start-radius: var(--md-sys-shape-corner-value-large);
+	border-end-start-radius: var(--md-sys-shape-corner-value-large);
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-modality="modal"][data-edge="start"] > .wp-block-axismundi-dialog__container {
+	border-start-end-radius: var(--md-sys-shape-corner-value-large);
+	border-end-end-radius: var(--md-sys-shape-corner-value-large);
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-attachment="detached"] {
+	block-size: calc(100% - 32px);
+	margin: 16px;
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-attachment="detached"] > .wp-block-axismundi-dialog__container {
+	border-radius: var(--md-sys-shape-corner-value-large);
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-side"] header {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 12px 12px 12px 24px;
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-side"] header h2 {
+	flex: 1 1 auto;
+	color: var(--md-sys-color-on-surface-variant);
+	font-family: var(--md-sys-typescale-title-large-font);
+	font-size: var(--md-sys-typescale-title-large-size);
+	font-weight: var(--md-sys-typescale-title-large-weight);
+	letter-spacing: var(--md-sys-typescale-title-large-tracking);
+	line-height: var(--md-sys-typescale-title-large-line-height);
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-side"] header + * {
+	padding-inline: 24px;
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-side"] footer {
+	display: flex;
+	align-items: center;
+	block-size: 72px;
+	box-sizing: border-box;
+	padding: 16px 24px 24px;
+	border-block-start: 1px solid var(--md-sys-color-outline);
+}
+
+.wp-block-axismundi-dialog[data-presentation="sheet-side"] footer .wp-block-buttons {
+	justify-content: flex-start;
+}
+
+/* ---- A real <dialog> ----------------------------------------------------- */
+
+dialog.wp-block-axismundi-dialog:not([open]) {
 	display: none;
+}
+
+/* A modal <dialog> is already fixed to the viewport with inset: 0 and centred
+ * by auto margins; the presentations above replace the UA's maximum size with
+ * their own. A side sheet sits on its edge instead of in the middle. */
+dialog.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-edge="end"] {
+	margin-inline-start: auto;
+}
+
+dialog.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-edge="start"] {
+	margin-inline-end: auto;
+}
+
+dialog.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-attachment="detached"][data-edge="end"] {
+	margin-block: 16px;
+	margin-inline: auto 16px;
+}
+
+dialog.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-attachment="detached"][data-edge="start"] {
+	margin-block: 16px;
+	margin-inline: 16px auto;
+}
+
+/* A standard sheet opens with show(), outside the top layer, where the UA makes
+ * a dialog position: absolute and centres it in the document. It belongs on
+ * the viewport's edge like a modal one, above the page it shares. z-index is
+ * the legacy sheet's 100000, one above the admin bar; whether a standard sheet
+ * covers, clears or pushes the admin bar is decided with the page push. */
+dialog.wp-block-axismundi-dialog[data-render-mode="standard-sheet"] {
+	position: fixed;
+	inset: 0;
+	z-index: 100000;
+}
+
+/* M3: the page behind a modal surface does not scroll with it. The native
+ * dialog makes the page inert but leaves it scrollable, so the lock is here. */
+html:has(dialog.wp-block-axismundi-dialog:modal) {
+	overflow: hidden;
 }

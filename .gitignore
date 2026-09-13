@@ -51,4 +51,5 @@ products/styleguide/assets/css/tokens.sys.motion.css
 products/styleguide/assets/css/tokens.sys.elevation.css
 products/styleguide/assets/css/tokens.sys.state.css
 products/styleguide/assets/css/icons.css
+products/styleguide/assets/css/components/dialog.css
 products/styleguide/_data/color.yml

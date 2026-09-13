@@ -31,10 +31,16 @@ be documenting something nobody ships. The four files are self-contained: no
 WordPress selectors, no external references, and their dark blocks already
 cover a root with no data-theme attribute, so they work here unchanged.
 
+Component stylesheets come in the same way when a product owns the contract a
+page documents. The Surface page's specimens wear the Dialog block's own
+stylesheet rather than a restatement of it; a second authored copy is exactly
+what drifted before.
+
 Output (all git-ignored, and the script refuses to finish if any of it is not):
   products/styleguide/assets/fonts/<family>/<file>.woff2
   products/styleguide/assets/css/fonts.css
   products/styleguide/assets/css/<token file>.css
+  products/styleguide/assets/css/components/dialog.css
 
 Run before `jekyll build` or `jekyll serve`.
 """
@@ -57,6 +63,7 @@ if hasattr(sys.stderr, "reconfigure"):
 ROOT = Path(__file__).resolve().parent.parent.parent
 THEME = ROOT / "products/wordpress/themes/axismundi"
 KOREAN = ROOT / "products/wordpress/plugins/axismundi-korean-font-provider"
+DIALOGS = ROOT / "products/wordpress/plugins/axismundi-dialogs"
 STYLEGUIDE = ROOT / "products/styleguide"
 
 FONT_OUT = STYLEGUIDE / "assets/fonts"
@@ -66,6 +73,12 @@ CSS_OUT = STYLEGUIDE / "assets/css/fonts.css"
 # icons.css reaches its font with ../fonts/, which lands on assets/fonts/ from
 # either location, so nothing has to be rewritten on the way in.
 TOKEN_OUT = STYLEGUIDE / "assets/css"
+
+# Product stylesheets a style-guide page documents, copied verbatim. Source to
+# destination; neither side references another file, so nothing is rewritten.
+PLUGIN_STYLES = (
+    (DIALOGS / "blocks/dialog/style.css", STYLEGUIDE / "assets/css/components/dialog.css"),
+)
 
 # The theme's token layers, copied verbatim and in cascade order. tokens.ref.css
 # holds the literal palette; the colour files map roles onto it; elevation
@@ -392,6 +405,20 @@ def product_tokens() -> tuple[int, int, int, int]:
     return copied, total_bytes, fonts, font_bytes
 
 
+def plugin_styles() -> tuple[int, int]:
+    """Copy the product component stylesheets in, verbatim."""
+    copied = 0
+    total_bytes = 0
+    for src, dst in PLUGIN_STYLES:
+        if not src.is_file():
+            raise SystemExit(f"plugin is missing {src.relative_to(ROOT).as_posix()}")
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+        copied += 1
+        total_bytes += src.stat().st_size
+    return copied, total_bytes
+
+
 def main() -> int:
     for required in (THEME / "theme.json", KOREAN / "assets/styles/fonts.css"):
         if not required.is_file():
@@ -428,11 +455,13 @@ def main() -> int:
     )
 
     token_count, token_bytes, icon_fonts, icon_bytes = product_tokens()
+    style_count, style_bytes = plugin_styles()
     color_data, family_count, role_count = color_index()
 
     assert_ignored(
         [CSS_OUT, color_data]
         + [TOKEN_OUT / name for name in PRODUCT_TOKENS]
+        + [dst for _, dst in PLUGIN_STYLES]
         + sorted(FONT_OUT.rglob("*.woff2"))
     )
 
@@ -444,6 +473,9 @@ def main() -> int:
     print(f"           -> {CSS_OUT.relative_to(ROOT).as_posix()}")
     print(f"  tokens   {token_count} file(s) from the theme, {token_bytes / 1024:.1f} KB")
     print(f"           -> {TOKEN_OUT.relative_to(ROOT).as_posix()}")
+    print(f"  styles   {style_count} component file(s) from the plugins, {style_bytes / 1024:.1f} KB")
+    for _, dst in PLUGIN_STYLES:
+        print(f"           -> {dst.relative_to(ROOT).as_posix()}")
     print(f"  colour   {family_count} ref families, {role_count} sys roles indexed")
     print(f"           -> {color_data.relative_to(ROOT).as_posix()}")
     return 0

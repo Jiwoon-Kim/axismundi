@@ -13,16 +13,18 @@ Material 컴포넌트 하나가 아닙니다. M3의 **Dialog**, **Bottom sheet**
 다룹니다. Button과 Icon button이 같은 `<button>` 위의 두 anatomy인 것처럼, Dialog와
 Sheet는 같은 `<dialog>` 호스트 위의 다른 presentation입니다.
 
-> **제안 계약입니다.** 이 페이지의 마크업을 내보내는 블록은 아직 없습니다.
-> [`axismundi-dialogs`]({{ site.repository_url }}/tree/main/products/wordpress/plugins/axismundi-dialogs)
-> 0.3.0의 `axismundi/dialogs`·`axismundi/sheet`·`axismundi/dialog`는 **폐기 대상 레거시**이고
-> 구현 참조로만 남겨둔 것입니다. Post Quick View와 Object Media Dialog는 초기 구현
-> 그대로라 구조를 바꿀 수 있습니다. 아래 표본은 제안된 마크업을 정적 어댑터로 그린
-> 것입니다. 인터랙티브 데모는 나중에 추가합니다.
+> **구현 중인 계약입니다.** [`axismundi-dialogs`]({{ site.repository_url }}/tree/main/products/wordpress/plugins/axismundi-dialogs)에
+> `dialog-surface` area와 `axismundi/dialog` 호스트 블록이 들어갔고, 아래 표본은 그 블록의
+> 실제 stylesheet를 입습니다. 트리거로 여는 동작과 페이지 끝 렌더, 시작 패턴은 아직입니다.
+> 레거시 `axismundi/dialogs`·`axismundi/sheet`·`axismundi/dialog`(현재 `blocks/dialog-legacy`)는
+> 등록을 내린 폐기 대상이고 구현 참조로만 남겨둔 것입니다. Post Quick View와 Object Media
+> Dialog는 초기 구현 그대로라 구조를 바꿀 수 있습니다. 인터랙티브 데모는 나중에 추가합니다.
 
 값은 전부 [`_data/surface.yml`]({{ site.repository_url }}/blob/main/products/styleguide/_data/surface.yml)에서
-옵니다. 그 파일의 색 역할·elevation·표본 CSS는
-`tools/validators/validate_styleguide_surface.py`가 테마 토큰과 대조합니다.
+옵니다. 계약 CSS는 Dialog 블록의
+[`style.css`]({{ site.repository_url }}/blob/main/products/wordpress/plugins/axismundi-dialogs/blocks/dialog/style.css)
+하나뿐이고, 이 사이트는 빌드할 때 그 파일을 그대로 복사해 씁니다(`sync_styleguide_assets.py`).
+그 CSS와 데이터의 색 역할·elevation은 `tools/validators/validate_styleguide_surface.py`가 테마 토큰과 대조합니다.
 
 ## 한 계약, 네 가지 presentation
 

@@ -8,6 +8,10 @@
 	"keywords": [ "dialog", "sheet", "modal", "drawer", "surface" ],
 	"textdomain": "axismundi-dialogs",
 	"attributes": {
+		"templateLock": {
+			"type": [ "string", "boolean" ],
+			"enum": [ "all", "insert", "contentOnly", false ]
+		},
 		"presentation": {
 			"type": "string",
 			"enum": [ "dialog-basic", "dialog-full-screen", "sheet-bottom", "sheet-side" ],
@@ -33,16 +37,86 @@
 			"enum": [ "any", "closerequest", "none" ],
 			"default": "any"
 		},
-		"label": {
-			"type": "string"
+		"showDragHandle": {
+			"type": "boolean",
+			"default": true
+		},
+		"pageShare": {
+			"type": "string",
+			"enum": [ "resize", "move" ],
+			"default": "resize"
 		}
 	},
 	"supports": {
 		"html": false,
-		"reusable": false
+		"reusable": false,
+		"ariaLabel": true,
+		"color": {
+			"gradients": true,
+			"heading": true,
+			"button": true,
+			"link": true,
+			"__experimentalDefaultControls": {
+				"background": true,
+				"text": true
+			}
+		},
+		"shadow": true,
+		"spacing": {
+			"padding": true,
+			"blockGap": true,
+			"__experimentalSkipSerialization": [ "blockGap" ],
+			"__experimentalDefaultControls": {
+				"padding": true,
+				"blockGap": true
+			}
+		},
+		"dimensions": {
+			"width": true,
+			"minWidth": true,
+			"minHeight": true
+		},
+		"layout": {
+			"default": {
+				"type": "flex",
+				"orientation": "vertical",
+				"flexWrap": "nowrap",
+				"justifyContent": "stretch"
+			},
+			"allowSwitching": false,
+			"allowOrientation": false,
+			"allowSizingOnChildren": true
+		},
+		"__experimentalBorder": {
+			"color": true,
+			"radius": true,
+			"style": true,
+			"width": true,
+			"__experimentalDefaultControls": {
+				"color": true,
+				"radius": true,
+				"style": true,
+				"width": true
+			}
+		},
+		"typography": {
+			"fontSize": true,
+			"lineHeight": true,
+			"__experimentalFontFamily": true,
+			"__experimentalFontWeight": true,
+			"__experimentalFontStyle": true,
+			"__experimentalTextTransform": true,
+			"__experimentalTextDecoration": true,
+			"__experimentalLetterSpacing": true,
+			"__experimentalDefaultControls": {
+				"fontSize": true
+			}
+		},
+		"allowedBlocks": true
 	},
 	"editorScript": "file:./edit.js",
 	"editorStyle": "file:./editor.css",
 	"style": "file:./style.css",
+	"viewScriptModule": "file:./view.js",
 	"render": "file:./render.php"
 }

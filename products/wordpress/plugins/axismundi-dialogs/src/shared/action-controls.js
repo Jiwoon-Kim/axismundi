@@ -35,6 +35,10 @@ export const ACTION_OPTIONS = [
 	// links and can be toggled open and closed."
 	{ label: __( 'Open Overlay template', 'axismundi-dialogs' ), value: 'overlay' },
 	{ label: __( 'Navigation overlay close', 'axismundi-dialogs' ), value: 'overlay-close' },
+	// A part in the dialog-surface area, rendered once at the end of the page
+	// and opened natively (includes/surface.php).
+	{ label: __( 'Open dialog surface', 'axismundi-dialogs' ), value: 'dialog-surface' },
+	{ label: __( 'Dialog surface close', 'axismundi-dialogs' ), value: 'dialog-surface-close' },
 ];
 
 // Actions that open something, and the template-part area their targets live
@@ -42,6 +46,7 @@ export const ACTION_OPTIONS = [
 // is why the action can name one.
 export const ACTION_AREAS = {
 	overlay: 'navigation-overlay',
+	'dialog-surface': 'dialog-surface',
 };
 
 /**
@@ -57,7 +62,7 @@ export const ACTION_AREAS = {
  * @return {boolean} Whether the action owns the click.
  */
 export function actionOwnsClick( action ) {
-	return action === 'overlay' || action === 'overlay-close';
+	return [ 'overlay', 'overlay-close', 'dialog-surface', 'dialog-surface-close' ].includes( action );
 }
 
 /**
@@ -108,6 +113,17 @@ export function actionMarkup( attributes, tag = 'button' ) {
 		if ( actionTarget ) {
 			parts.push( 'aria-haspopup="dialog"', 'aria-controls="…"', 'aria-expanded="false"' );
 		}
+	} else if ( action === 'dialog-surface' ) {
+		// Invoker commands: the browser opens the <dialog> the id names. A
+		// standard sheet's trigger carries the custom `--toggle` instead, which
+		// the dialog's script opens and closes (includes/surface.php).
+		if ( actionTarget ) {
+			parts.push( 'commandfor="dialog-surface-…"', 'command="show-modal"', 'aria-haspopup="dialog"', 'aria-expanded="false"' );
+		}
+	} else if ( action === 'dialog-surface-close' ) {
+		// The surface it closes is the one it sits in; the id is filled in when
+		// that surface renders at the end of the page.
+		parts.push( 'commandfor="dialog-surface-…"', 'command="close"' );
 	} else if ( action === 'overlay-close' ) {
 		// Nothing to add: closing is a command, and the surface it closes is
 		// the one it sits in.

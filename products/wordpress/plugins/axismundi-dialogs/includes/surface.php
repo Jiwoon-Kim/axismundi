@@ -57,6 +57,156 @@ function axismundi_dialogs_register_dialog_surface_area( $areas ): array {
 add_filter( 'default_wp_template_part_areas', 'axismundi_dialogs_register_dialog_surface_area' );
 
 /**
+ * Register the dialog-surface starter patterns.
+ *
+ * The design a new part starts from, as core's navigation-overlay patterns are
+ * for that area: offered in the Site Editor's Design list when a part is
+ * created in dialog-surface (blockTypes core/template-part/dialog-surface). A
+ * pattern is code and is not edited; the part made from it is. No part is
+ * created here - a site holds a dialog-surface part only once someone makes
+ * one.
+ *
+ * Loaded in a fixed order, the order M3 introduces them, as core loads its
+ * own. No `source` is set: the editor offers a pattern for an area unless its
+ * source is one of core's or the pattern directory's.
+ *
+ * @return void
+ */
+function axismundi_dialogs_register_dialog_surface_patterns(): void {
+	register_block_pattern_category(
+		'dialog-surface',
+		array(
+			'label'       => _x( 'Dialog Surface', 'Block pattern category', 'axismundi-dialogs' ),
+			'description' => __( 'Starting designs for dialogs, bottom sheets and side sheets.', 'axismundi-dialogs' ),
+		)
+	);
+
+	$directory = dirname( __DIR__ ) . '/patterns/';
+	foreach ( array( 'basic', 'basic-icon', 'list', 'full-screen', 'bottom-sheet', 'side-sheet-modal', 'side-sheet-standard' ) as $name ) {
+		$file = $directory . 'dialog-surface-' . $name . '.php';
+		if ( ! is_file( $file ) ) {
+			continue;
+		}
+		$pattern = require $file;
+		if ( is_array( $pattern ) ) {
+			register_block_pattern( 'axismundi-dialogs/dialog-surface-' . $name, $pattern );
+		}
+	}
+}
+add_action( 'init', 'axismundi_dialogs_register_dialog_surface_patterns' );
+
+/**
+ * The dialog-surface parts this page's triggers name, each once, rendered.
+ *
+ * A part is rendered when its first trigger renders, not when it is printed.
+ * Block supports - a group's flex direction, a container's gap - write their
+ * CSS into a store that core prints once; measured: rendered in wp_footer, a
+ * part's layout rules were generated after that store had been printed, and a
+ * vertical group inside the dialog laid out as a row. Rendered here, while the
+ * template renders, the rules join the store in time. Only the printing waits
+ * for the end of the page (axismundi_dialogs_render_dialog_surfaces()).
+ *
+ * The part's close controls are wired here too, where the <dialog>'s id is
+ * known. A part with no Dialog block at its root has nothing a trigger can
+ * open, so it is stored as nothing to print.
+ *
+ * @param WP_Block_Template|null $template A part to add, or null to read.
+ * @return array<string, string> Rendered surfaces, by template id.
+ */
+function axismundi_dialogs_queue_dialog_surface( ?WP_Block_Template $template = null ): array {
+	static $queued = array();
+	if ( ! $template instanceof WP_Block_Template || isset( $queued[ $template->id ] ) ) {
+		return $queued;
+	}
+
+	// Claimed before rendering, so a trigger inside the part naming the same part
+	// does not render it again.
+	$queued[ $template->id ] = '';
+
+	$id   = axismundi_dialogs_dialog_surface_id( $template );
+	$tags = new WP_HTML_Tag_Processor( do_blocks( (string) $template->content ) );
+	if ( ! $tags->next_tag(
+		array(
+			'tag_name'   => 'DIALOG',
+			'class_name' => 'wp-block-axismundi-dialog',
+		)
+	) ) {
+		return $queued;
+	}
+	$tags->set_attribute( 'id', $id );
+	while ( $tags->next_tag( 'BUTTON' ) ) {
+		if ( null !== $tags->get_attribute( 'data-axismundi-dialog-close' ) ) {
+			$tags->set_attribute( 'commandfor', $id );
+			$tags->set_attribute( 'command', 'close' );
+		}
+	}
+	$queued[ $template->id ] = $tags->get_updated_html();
+	return $queued;
+}
+
+/**
+ * The id a part's <dialog> carries, so any trigger on the page can name it.
+ *
+ * Stable - built from the part's slug, not counted - so every trigger that
+ * names the part names the same element.
+ *
+ * @param WP_Block_Template $template The part.
+ * @return string The element id.
+ */
+function axismundi_dialogs_dialog_surface_id( WP_Block_Template $template ): string {
+	return 'dialog-surface-' . sanitize_html_class( $template->slug );
+}
+
+/**
+ * The invoker command that opens a part's <dialog>.
+ *
+ * Read from the part's host block: a standard sheet has no scrim and opens
+ * with show(); every other surface opens with showModal(). The same derivation
+ * as blocks/dialog/render.php's render mode.
+ *
+ * `show-modal` is a built-in invoker command. A non-modal show is not - the
+ * built-in dialog commands are show-modal, close and request-close - and,
+ * measured in Chrome, `command="show"` did nothing and dispatched no event. So a
+ * standard sheet's trigger carries the custom command `--toggle`, which reaches
+ * the dialog as a `command` event: blocks/dialog/view.js opens the sheet, and
+ * closes it when it is already open. A standard sheet leaves the page usable,
+ * its trigger included, so the trigger is its toggle. It needs that script; a
+ * modal surface does not, and its scrim covers the trigger anyway.
+ *
+ * @param WP_Block_Template $template The part.
+ * @return string `--toggle` or `show-modal`.
+ */
+function axismundi_dialogs_dialog_surface_command( WP_Block_Template $template ): string {
+	foreach ( parse_blocks( (string) $template->content ) as $block ) {
+		if ( 'axismundi/dialog' !== ( $block['blockName'] ?? '' ) ) {
+			continue;
+		}
+		$presentation = (string) ( $block['attrs']['presentation'] ?? '' );
+		return str_starts_with( $presentation, 'sheet-' ) && 'standard' === ( $block['attrs']['modality'] ?? '' )
+			? '--toggle'
+			: 'show-modal';
+	}
+	return 'show-modal';
+}
+
+/**
+ * Print the queued dialog surfaces at the end of the page.
+ *
+ * Once per part, however many triggers name it, and at the end of <body> -
+ * measured: inside a layout container WordPress layout rules move a surface
+ * off its place (blocks/dialog/style.css). Already rendered when queued
+ * (axismundi_dialogs_queue_dialog_surface()); only printed here.
+ *
+ * @return void
+ */
+function axismundi_dialogs_render_dialog_surfaces(): void {
+	foreach ( axismundi_dialogs_queue_dialog_surface() as $html ) {
+		echo $html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- do_blocks() output, wired in axismundi_dialogs_queue_dialog_surface().
+	}
+}
+add_action( 'wp_footer', 'axismundi_dialogs_render_dialog_surfaces', 0 );
+
+/**
  * Keep dialog-surface parts out of the general inserter.
  *
  * Mirrors what core does for navigation-overlay in

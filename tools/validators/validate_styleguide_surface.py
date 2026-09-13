@@ -18,6 +18,7 @@ the theme actually defines it:
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -114,6 +115,125 @@ def declared(body: str | None, name: str) -> str | None:
     return match.group(1).strip() if match else None
 
 
+PATTERNS = ROOT / "products/wordpress/plugins/axismundi-dialogs/patterns"
+
+
+def pattern_blocks(path: Path) -> list[tuple[str, dict]]:
+    """Block name and attributes for every opening block comment in a pattern.
+
+    The patterns are PHP, so they are read as text. The group comments are
+    literal JSON; only the button and icon comments are built with
+    wp_json_encode(), and they carry no spacing, so skipping the ones that do
+    not parse loses nothing checked here.
+    """
+    blocks = []
+    for name, raw in re.findall(r"<!-- wp:([a-z0-9/-]+) (\{.*?\}) /?-->", path.read_text(encoding="utf-8")):
+        try:
+            blocks.append((name, json.loads(raw)))
+        except ValueError:
+            continue
+    return blocks
+
+
+def check_patterns(data: dict, report: Report) -> None:
+    """The starter patterns carry the published section spacing.
+
+    The Material 3 Design Kit puts padding on a dialog's sections rather than
+    its container, so the patterns do too, as core/group attributes; each group
+    is found by its metadata name.
+    """
+    rows = {row["name"]: row for row in data.get("presentations", [])}
+    basic = rows["dialog-basic"]["measurements"]
+    side = rows["sheet-side"]["measurements"]
+
+    def px(value: int | float) -> str:
+        return f"{value}px"
+
+    def group(pattern: str, name: str) -> dict | None:
+        path = PATTERNS / f"dialog-surface-{pattern}.php"
+        report.check(path.is_file(), f"missing pattern {path.name}")
+        if not path.is_file():
+            return None
+        for block, attrs in pattern_blocks(path):
+            if block == "group" and attrs.get("metadata", {}).get("name") == name:
+                return attrs
+        report.check(False, f"{path.name} has no group named {name!r}")
+        return None
+
+    def spacing(attrs: dict | None) -> dict:
+        return (attrs or {}).get("style", {}).get("spacing", {})
+
+    def expect_padding(pattern: str, name: str, side_name: str, want: str) -> None:
+        attrs = group(pattern, name)
+        if attrs is None:
+            return
+        got = spacing(attrs).get("padding", {}).get(side_name)
+        report.check(got == want, f"dialog-surface-{pattern}.php {name} padding-{side_name}: {got!r}, want {want!r}")
+
+    def button_gap(pattern: str, want: str) -> None:
+        path = PATTERNS / f"dialog-surface-{pattern}.php"
+        gaps = [spacing(attrs).get("blockGap") for block, attrs in pattern_blocks(path) if block == "axismundi/dialog-button-group" and attrs.get("buttonType") != "icon"]
+        report.check(bool(gaps) and all(gap == want for gap in gaps), f"dialog-surface-{pattern}.php button group gaps {gaps}, want {want!r}")
+
+    full = rows["dialog-full-screen"]["measurements"]
+    bottom = rows["sheet-bottom"]["measurements"]
+    all_sides = ("top", "right", "bottom", "left")
+
+    def expect_gap(pattern: str, name: str, want: str) -> None:
+        attrs = group(pattern, name)
+        if attrs is None:
+            return
+        got = spacing(attrs).get("blockGap")
+        report.check(got == want, f"dialog-surface-{pattern}.php {name} gap: {got!r}, want {want!r}")
+
+    # The slot model: every pattern is Header / Content / Actions groups, and
+    # every Content slot starts at the theme's content width.
+    for pattern in ("basic", "basic-icon", "list", "full-screen", "bottom-sheet", "side-sheet-modal", "side-sheet-standard"):
+        attrs = group(pattern, "Content")
+        if attrs is not None:
+            got = attrs.get("layout", {}).get("type")
+            report.check(got == "constrained", f"dialog-surface-{pattern}.php Content layout: {got!r}, want 'constrained'")
+
+    # Basic dialog, and its icon version: Content 24 at top and sides with 16
+    # headline to body; Actions 24 around, which is also body to actions; 8
+    # between buttons.
+    for pattern in ("basic", "basic-icon"):
+        for side_name in ("top", "right", "left"):
+            expect_padding(pattern, "Content", side_name, px(basic["padding"]))
+        expect_gap(pattern, "Content", px(basic["headline_to_body"]))
+        expect_padding(pattern, "Actions", "top", px(basic["body_to_actions"]))
+        for side_name in ("right", "bottom", "left"):
+            expect_padding(pattern, "Actions", side_name, px(basic["padding"]))
+        button_gap(pattern, px(basic["between_buttons"]))
+    expect_gap("basic-icon", "Headline", px(basic["icon_to_headline"]))
+
+    # List dialog: the Header carries 24 all round and the list, as Content,
+    # none - it runs to the dialog's edges.
+    for side_name in all_sides:
+        expect_padding("list", "Header", side_name, px(basic["padding"]))
+        expect_padding("list", "Content", side_name, "0")
+    expect_gap("list", "Header", px(basic["headline_to_body"]))
+    button_gap("list", px(basic["between_buttons"]))
+
+    # Full-screen dialog: Content 24 at top and sides.
+    expect_padding("full-screen", "Content", "top", px(full["padding"]["top"]))
+    for side_name in ("right", "left"):
+        expect_padding("full-screen", "Content", side_name, px(full["padding"]["inline"]))
+
+    # Bottom sheet: Content owns every edge, handle or not.
+    for side_name in all_sides:
+        expect_padding("bottom-sheet", "Content", side_name, px(bottom["content_padding"]))
+
+    # Side sheets: 24 at the start, 12 between top elements, actions 16 above and 24 below.
+    for pattern in ("side-sheet-modal", "side-sheet-standard"):
+        expect_padding(pattern, "Header", "left", px(side["padding_inline"]))
+        header = group(pattern, "Header")
+        report.check(spacing(header).get("blockGap") == px(side["between_top_elements"]), f"dialog-surface-{pattern}.php Header gap: {spacing(header).get('blockGap')!r}, want {px(side['between_top_elements'])!r}")
+        expect_padding(pattern, "Content", "left", px(side["padding_inline"]))
+    expect_padding("side-sheet-modal", "Actions", "top", px(side["bottom_actions"]["padding_top"]))
+    expect_padding("side-sheet-modal", "Actions", "bottom", px(side["bottom_actions"]["padding_bottom"]))
+
+
 def check_adapter(data: dict, report: Report) -> None:
     """The Dialog block's stylesheet (the contract's only authored copy) spends the data.
 
@@ -129,8 +249,12 @@ def check_adapter(data: dict, report: Report) -> None:
     def host(presentation: str, modality: str | None = None) -> str:
         return f'{SURFACE}[data-presentation="{presentation}"]' + (f'[data-modality="{modality}"]' if modality else "")
 
+    # The dialog is its own container, as a Group is. Its changeable defaults -
+    # background, elevation, corner radius - sit at zero specificity so block
+    # supports and Global Styles replace them, which is why they are checked in
+    # the :where() rule rather than the geometry rule.
     def container(presentation: str, modality: str | None = None) -> str:
-        return f"{host(presentation, modality)} > {SURFACE}__container"
+        return f":where({host(presentation, modality)})"
 
     def expect(selector: str, name: str, want: str) -> None:
         body = rule(css, selector)
@@ -158,12 +282,64 @@ def check_adapter(data: dict, report: Report) -> None:
     expect(container("sheet-bottom"), "border-start-end-radius", CORNER[bottom["spec"]["shape"]["start_end"]])
     expect(host("sheet-bottom"), "max-inline-size", f"{bottom['measurements']['width']['max']}px")
 
+    # The drag handle: its bar, the padding that makes its 48dp target, and the
+    # bottom sheet's focus indicator.
+    handle = f"{SURFACE}__drag-handle"
+    bar = bottom["spec"]["drag_handle"]
+    expect(handle, "inline-size", f"{bar['width']}px")
+    expect(handle, "block-size", f"{bar['height']}px")
+    # The bar is the handle's ::before: on the button's own background it would
+    # take the 48dp target's corner radius and render as a lens.
+    expect(f"{handle}::before", "background", f"var(--md-sys-color-{bar['role']})")
+    expect(f"{handle}::before", "border-radius", "var(--md-sys-shape-corner-full)")
+    expect(f"{handle}::before", "inset", f"{bottom['measurements']['drag_handle']['padding_block']}px 8px")
+    expect(handle, "padding", f"{bottom['measurements']['drag_handle']['padding_block']}px 8px")
+    ring = bottom["spec"]["focus_indicator"]
+    expect(f"{handle}:focus-visible", "outline", f"{ring['thickness']}px solid var(--md-sys-color-{ring['role']})")
+    expect(f"{handle}:focus-visible", "outline-offset", f"{ring['offset']}px")
+
     side = rows["sheet-side"]
     for modality in ("modal", "standard"):
         expect(container("sheet-side", modality), "background", f"var(--md-sys-color-{side['spec']['container'][modality]['role']})")
         expect(container("sheet-side", modality), "box-shadow", f"var(--md-sys-elevation-shadow-{side['spec']['elevation'][modality]['level']})")
     expect(host("sheet-side"), "inline-size", f"{side['measurements']['width']['default']}px")
     expect(host("sheet-side"), "max-inline-size", f"{side['measurements']['width']['max']}px")
+
+    # Typography. The WordPress theme ships no --md-sys-typescale-* tokens, so
+    # every declaration falls back to the theme's font-size preset and to the
+    # published line height, weight and tracking. The fallbacks restate the
+    # spec, so they are held to it, and the preset they name must carry the
+    # published size in theme.json.
+    import json
+
+    theme_json = ROOT / "products/wordpress/themes/axismundi/theme.json"
+    report.check(theme_json.is_file(), f"missing {theme_json.as_posix()}")
+    theme_sizes = {}
+    if theme_json.is_file():
+        theme_sizes = {
+            size["slug"]: size.get("size")
+            for size in json.loads(theme_json.read_text(encoding="utf-8"))["settings"]["typography"]["fontSizes"]
+        }
+
+    def tracking(value: float) -> str:
+        return "0" if value == 0 else f"{value}px"
+
+    def typescale(selector: str, scale: str, spec: dict) -> None:
+        expect(selector, "font-size", f"var(--md-sys-typescale-{scale}-size, var(--wp--preset--font-size--{scale}))")
+        expect(selector, "line-height", f"var(--md-sys-typescale-{scale}-line-height, {spec['line_height']}px)")
+        expect(selector, "font-weight", f"var(--md-sys-typescale-{scale}-weight, {spec['weight']})")
+        expect(selector, "letter-spacing", f"var(--md-sys-typescale-{scale}-tracking, {tracking(spec['tracking'])})")
+        report.check(
+            theme_sizes.get(scale) == f"{spec['size']}px",
+            f"theme.json font-size preset {scale} is {theme_sizes.get(scale)!r}, the spec gives {spec['size']}px",
+        )
+
+    typescale(f"{host('dialog-basic')} h2", "headline-small", basic["spec"]["headline"]["type"])
+    typescale(f"{host('dialog-basic')} > :not(header, footer)", "body-medium", basic["spec"]["supporting_text"]["type"])
+
+    check_patterns(data, report)
+    typescale(f"{host('dialog-full-screen')} header h2", "title-large", full["spec"]["headline"]["type"])
+    typescale(f"{host('sheet-side')} header h2", "title-large", side["spec"]["headline"]["type"])
 
     report.check(
         f"color-mix(in srgb, var(--md-sys-color-{data['scrim']['role']}) {round(data['scrim']['opacity'] * 100)}%, transparent)" in css,

@@ -76,13 +76,14 @@ export function ActionTargetControls( { action, value, onChange } ) {
 		return <Spinner />;
 	}
 
+	const isDialogSurface = action === 'dialog-surface';
+
 	if ( ! parts.length ) {
 		return (
 			<Notice status="warning" isDismissible={ false }>
-				{ __(
-					'This theme has no overlay template part yet. Add one in the Site Editor and it will appear here.',
-					'axismundi-dialogs'
-				) }
+				{ isDialogSurface
+					? __( 'This theme has no Dialog Surface template part yet. Add one in the Site Editor and it will appear here.', 'axismundi-dialogs' )
+					: __( 'This theme has no overlay template part yet. Add one in the Site Editor and it will appear here.', 'axismundi-dialogs' ) }
 			</Notice>
 		);
 	}
@@ -92,7 +93,7 @@ export function ActionTargetControls( { action, value, onChange } ) {
 			<SelectControl
 				__next40pxDefaultSize
 				__nextHasNoMarginBottom
-				label={ __( 'Overlay template', 'axismundi-dialogs' ) }
+				label={ isDialogSurface ? __( 'Dialog surface', 'axismundi-dialogs' ) : __( 'Overlay template', 'axismundi-dialogs' ) }
 				value={ value ?? '' }
 				options={ [
 					{ label: __( 'Choose…', 'axismundi-dialogs' ), value: '' },

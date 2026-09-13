@@ -9,6 +9,25 @@
  * selector: folding one into a comma list makes the validator report it
  * missing.
  *
+ * Like a Group, the dialog is its own container: the inner blocks are its
+ * children and the block supports - background, padding, border, shadow -
+ * land on the <dialog> itself. Two strengths of rule follow from that:
+ *
+ *   :where(...)  the defaults an author may change - background, padding,
+ *                corner radius, elevation, text colour. Zero specificity, so
+ *                the block's own controls and Global Styles (Styles > Blocks >
+ *                Dialog) replace them. The token table is the default, not a
+ *                lock.
+ *   plain        structure and geometry the presentation depends on - the
+ *                header/body/footer column, sizes, placement, headline type.
+ *
+ * Spacing is not here. The Material 3 Design Kit gives the dialog container no
+ * padding and gives each section its own - which is what lets a list run to a
+ * List dialog's edges - so the sections are core/group blocks in the starter
+ * patterns (patterns/dialog-surface-*.php), each carrying its padding and gap
+ * as block attributes an author can change. The validator reads the patterns
+ * for those values.
+ *
  * Rules about where a real <dialog> sits - on its edge, fixed to the viewport,
  * locking the page - are written for `dialog.` so the editor's stand-in div
  * (src/dialog.js) stays in the canvas.
@@ -22,58 +41,108 @@
  * where this file puts it.
  */
 
+/* Typography reads the M3 typescale tokens first and falls back to the theme's
+ * font-size presets and the published line height, weight and tracking. The
+ * style guide generates --md-sys-typescale-*; the WordPress theme does not ship
+ * them, and a var() with no fallback is invalid there - measured: every
+ * headline rendered at the inherited 16px/24px. The theme's presets carry the
+ * same sizes (headline-small 24px, title-large 22px, body-medium 14px).
+ */
+
 /* ---- Contract: host ------------------------------------------------------ */
 
+/* A vertical flex column, as the block's layout support declares it
+ * (block.json: flex, vertical, nowrap, stretch - and no switching). Header,
+ * footer and drag handle keep their size; the body takes what is left and is
+ * the only part that scrolls: M3 pins a dialog's headline and actions while its
+ * content scrolls, and the same column gives a sheet its header and bottom
+ * actions. Declared here as well as by the layout support, so the column holds
+ * where no layout classes are written - the style guide's specimens. */
 .wp-block-axismundi-dialog {
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	flex-wrap: nowrap;
 	margin: 0;
+	max-block-size: 100%;
+	overflow: hidden;
+}
+
+/* The default gap is none: the slots - Header, Content, Actions - own their
+ * spacing as padding and Block spacing in the patterns, not one host gap.
+ * This has to beat the theme's global flex gap
+ * (`:root :where(.is-layout-flex)`, printed after this file at the same
+ * specificity), hence the second class. An author's Block
+ * spacing is written inline (render.php) and beats this in turn. */
+.wp-block-axismundi-dialog.is-layout-flex {
+	gap: 0;
+}
+
+:where(.wp-block-axismundi-dialog) {
 	padding: 0;
 	border: 0;
 	background: transparent;
 	color: var(--md-sys-color-on-surface);
-	max-block-size: 100%;
-	overflow: visible;
+}
+
+/* Motion, read by view.js when a dialog opens and closes. Four values, so a
+ * theme changes a surface's speed in one place: the entering curve and its
+ * duration (the slots' fades follow that duration), and the exiting curve and
+ * its duration. They point at the theme's motion tokens
+ * (tokens.sys.motion.css), the curve and duration of one pair taken together.
+ *
+ *   dialog-basic        default spatial   - a partial-screen surface
+ *   dialog-full-screen  slow spatial      - a full-screen one
+ *   sheets              emphasized decelerate: a sheet enters from its edge,
+ *                       and a spring's overshoot would pull it off that edge
+ *                       and show a gap
+ *
+ * Written for a real <dialog>, and at zero specificity, so a theme's own value
+ * wins. Without the theme's tokens view.js falls back to the same values. */
+:where(dialog.wp-block-axismundi-dialog) {
+	--axismundi-dialog-motion-enter: var(--md-sys-motion-curve-default-spatial);
+	--axismundi-dialog-motion-enter-duration: var(--md-sys-motion-curve-default-spatial-duration);
+	--axismundi-dialog-motion-exit: var(--md-sys-motion-easing-emphasized-accelerate);
+	--axismundi-dialog-motion-exit-duration: var(--md-sys-motion-duration-short3);
+}
+
+:where(dialog.wp-block-axismundi-dialog[data-presentation="dialog-full-screen"]) {
+	--axismundi-dialog-motion-enter: var(--md-sys-motion-curve-slow-spatial);
+	--axismundi-dialog-motion-enter-duration: var(--md-sys-motion-curve-slow-spatial-duration);
+	--axismundi-dialog-motion-exit-duration: var(--md-sys-motion-duration-short4);
+}
+
+:where(dialog.wp-block-axismundi-dialog[data-presentation^="sheet-"]) {
+	--axismundi-dialog-motion-enter: var(--md-sys-motion-easing-emphasized-decelerate);
+	--axismundi-dialog-motion-enter-duration: var(--md-sys-motion-duration-long2);
+	--axismundi-dialog-motion-exit-duration: var(--md-sys-motion-duration-short4);
 }
 
 .wp-block-axismundi-dialog::backdrop {
 	background: color-mix(in srgb, var(--md-sys-color-scrim) 32%, transparent);
 }
 
-/* The container holds the template part. Header and footer are auto rows and
- * the body is the only row that scrolls: M3 pins a dialog's headline and
- * actions while its content scrolls, and the same grid gives a sheet its
- * header and bottom actions. */
-.wp-block-axismundi-dialog__container {
-	box-sizing: border-box;
-	display: grid;
-	grid-template-rows: auto minmax(0, 1fr) auto;
-	block-size: 100%;
-	max-block-size: inherit;
-	overflow: hidden;
+.wp-block-axismundi-dialog > * {
+	flex: 0 0 auto;
+	margin: 0;
 }
 
-.wp-block-axismundi-dialog__container > :not(header, footer) {
+.wp-block-axismundi-dialog > :not(header, footer) {
+	flex: 1 1 auto;
 	min-block-size: 0;
 	overflow-y: auto;
 	overscroll-behavior: contain;
 }
 
-.wp-block-axismundi-dialog__container > * {
+/* Zero specificity: these only clear the browser's heading and paragraph
+ * margins. A Content group's Block spacing is core's layout gap, written as
+ * margins between its children, and has to win over them. */
+:where(.wp-block-axismundi-dialog h2) {
 	margin: 0;
 }
 
-.wp-block-axismundi-dialog__container h2 {
+:where(.wp-block-axismundi-dialog p) {
 	margin: 0;
-}
-
-.wp-block-axismundi-dialog__container p {
-	margin: 0;
-}
-
-.wp-block-axismundi-dialog__container footer .wp-block-buttons {
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: flex-end;
-	gap: var(--md-sys-measurement-space100, 8px);
 }
 
 /* ---- Contract: dialog-basic ---------------------------------------------- */
@@ -85,32 +154,30 @@
 	margin: auto;
 }
 
-.wp-block-axismundi-dialog[data-presentation="dialog-basic"] > .wp-block-axismundi-dialog__container {
-	padding: 24px;
+:where(.wp-block-axismundi-dialog[data-presentation="dialog-basic"]) {
 	background: var(--md-sys-color-surface-container-high);
 	box-shadow: var(--md-sys-elevation-shadow-level3);
 	border-radius: var(--md-sys-shape-corner-value-extra-large);
 }
 
-.wp-block-axismundi-dialog[data-presentation="dialog-basic"] header h2 {
+/* The headline sits in Content in a basic dialog and in Header in a list
+ * dialog, so it is matched wherever it is. */
+.wp-block-axismundi-dialog[data-presentation="dialog-basic"] h2 {
 	color: var(--md-sys-color-on-surface);
-	font-family: var(--md-sys-typescale-headline-small-font);
-	font-size: var(--md-sys-typescale-headline-small-size);
-	font-weight: var(--md-sys-typescale-headline-small-weight);
-	letter-spacing: var(--md-sys-typescale-headline-small-tracking);
-	line-height: var(--md-sys-typescale-headline-small-line-height);
+	font-family: var(--md-sys-typescale-headline-small-font, inherit);
+	font-size: var(--md-sys-typescale-headline-small-size, var(--wp--preset--font-size--headline-small));
+	font-weight: var(--md-sys-typescale-headline-small-weight, 400);
+	letter-spacing: var(--md-sys-typescale-headline-small-tracking, 0);
+	line-height: var(--md-sys-typescale-headline-small-line-height, 32px);
 }
 
-.wp-block-axismundi-dialog[data-presentation="dialog-basic"] header + * {
-	margin-block-start: 16px;
+/* The supporting text, and whatever else the scrolling region holds. */
+.wp-block-axismundi-dialog[data-presentation="dialog-basic"] > :not(header, footer) {
 	color: var(--md-sys-color-on-surface-variant);
-	font-size: var(--md-sys-typescale-body-medium-size);
-	letter-spacing: var(--md-sys-typescale-body-medium-tracking);
-	line-height: var(--md-sys-typescale-body-medium-line-height);
-}
-
-.wp-block-axismundi-dialog[data-presentation="dialog-basic"] footer {
-	margin-block-start: 24px;
+	font-size: var(--md-sys-typescale-body-medium-size, var(--wp--preset--font-size--body-medium));
+	font-weight: var(--md-sys-typescale-body-medium-weight, 400);
+	letter-spacing: var(--md-sys-typescale-body-medium-tracking, 0.25px);
+	line-height: var(--md-sys-typescale-body-medium-line-height, 20px);
 }
 
 /* ---- Contract: dialog-full-screen ---------------------------------------- */
@@ -121,32 +188,68 @@
 	block-size: 100%;
 }
 
-.wp-block-axismundi-dialog[data-presentation="dialog-full-screen"] > .wp-block-axismundi-dialog__container {
+:where(.wp-block-axismundi-dialog[data-presentation="dialog-full-screen"]) {
 	background: var(--md-sys-color-surface);
 	box-shadow: var(--md-sys-elevation-shadow-level0);
 	border-radius: var(--md-sys-shape-corner-value-none);
 }
 
-.wp-block-axismundi-dialog[data-presentation="dialog-full-screen"] header {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	block-size: 56px;
-	padding-inline: 8px 24px;
-}
-
 .wp-block-axismundi-dialog[data-presentation="dialog-full-screen"] header h2 {
-	flex: 1 1 auto;
 	color: var(--md-sys-color-on-surface);
-	font-family: var(--md-sys-typescale-title-large-font);
-	font-size: var(--md-sys-typescale-title-large-size);
-	font-weight: var(--md-sys-typescale-title-large-weight);
-	letter-spacing: var(--md-sys-typescale-title-large-tracking);
-	line-height: var(--md-sys-typescale-title-large-line-height);
+	font-family: var(--md-sys-typescale-title-large-font, inherit);
+	font-size: var(--md-sys-typescale-title-large-size, var(--wp--preset--font-size--title-large));
+	font-weight: var(--md-sys-typescale-title-large-weight, 400);
+	letter-spacing: var(--md-sys-typescale-title-large-tracking, 0);
+	line-height: var(--md-sys-typescale-title-large-line-height, 28px);
 }
 
-.wp-block-axismundi-dialog[data-presentation="dialog-full-screen"] header + * {
-	padding: 24px 24px 0;
+/* ---- Dialogs and the window ---------------------------------------------- */
+
+/* A basic dialog never reaches the window's edges: 560dp is its widest, and on
+ * a narrow window it keeps 24px on each side. The margin is the Material Web
+ * dialog's, measured in Chrome (`max-width: min(560px, 100% - 48px)`). Written
+ * for a real <dialog>, so the contract's 560px above stays the spec value. */
+dialog.wp-block-axismundi-dialog[data-presentation="dialog-basic"] {
+	max-inline-size: min(560px, 100% - 48px);
+}
+
+/* M3 uses a full-screen dialog on a compact window only; from medium up the
+ * same dialog is a basic one (surface.yml, adaptive). So from 600px - M3's
+ * medium window, layout.yml; a literal, since a media query cannot read var() -
+ * it takes the basic dialog's size, surface, headline and speed. Its content
+ * is unchanged: the header keeps its close button and its action. Written for
+ * a real <dialog>, so the editor still shows the full-screen layout. */
+@media (width >= 600px) {
+
+	dialog.wp-block-axismundi-dialog[data-presentation="dialog-full-screen"] {
+		inline-size: fit-content;
+		min-inline-size: 280px;
+		max-inline-size: min(560px, 100% - 48px);
+
+		/* fit-content, as a modal <dialog> is by default: it is fixed with
+		 * inset 0, so `auto` stretches it to the window's height - measured,
+		 * 752px of an 800px window for a short dialog. */
+		block-size: fit-content;
+		max-block-size: calc(100% - 48px);
+		margin: auto;
+	}
+
+	:where(dialog.wp-block-axismundi-dialog[data-presentation="dialog-full-screen"]) {
+		background: var(--md-sys-color-surface-container-high);
+		box-shadow: var(--md-sys-elevation-shadow-level3);
+		border-radius: var(--md-sys-shape-corner-value-extra-large);
+		--axismundi-dialog-motion-enter: var(--md-sys-motion-curve-default-spatial);
+		--axismundi-dialog-motion-enter-duration: var(--md-sys-motion-curve-default-spatial-duration);
+		--axismundi-dialog-motion-exit-duration: var(--md-sys-motion-duration-short3);
+	}
+
+	dialog.wp-block-axismundi-dialog[data-presentation="dialog-full-screen"] header h2 {
+		font-family: var(--md-sys-typescale-headline-small-font, inherit);
+		font-size: var(--md-sys-typescale-headline-small-size, var(--wp--preset--font-size--headline-small));
+		font-weight: var(--md-sys-typescale-headline-small-weight, 400);
+		letter-spacing: var(--md-sys-typescale-headline-small-tracking, 0);
+		line-height: var(--md-sys-typescale-headline-small-line-height, 32px);
+	}
 }
 
 /* ---- Contract: sheet-bottom ---------------------------------------------- */
@@ -159,44 +262,89 @@
 	max-block-size: calc(100% - 72px);
 }
 
-.wp-block-axismundi-dialog[data-presentation="sheet-bottom"] > .wp-block-axismundi-dialog__container {
+:where(.wp-block-axismundi-dialog[data-presentation="sheet-bottom"]) {
 	background: var(--md-sys-color-surface-container-low);
 	box-shadow: var(--md-sys-elevation-shadow-level1);
 	border-start-start-radius: var(--md-sys-shape-corner-value-extra-large);
 	border-start-end-radius: var(--md-sys-shape-corner-value-extra-large);
-	grid-template-rows: auto auto minmax(0, 1fr) auto;
-	padding-block-end: 24px;
 }
 
 /* Wider than 640dp: M3 gives the sheet a 56dp top margin and 56dp side margins.
  * A literal, because a media query cannot read var() (styleguide AGENTS.md). */
 @media (width > 640px) {
+
 	.wp-block-axismundi-dialog[data-presentation="sheet-bottom"]:modal {
 		max-block-size: calc(100% - 56px);
 		max-inline-size: min(640px, 100% - 112px);
 	}
 }
 
+/* The Header the drag handle switch renders (render.php): the kit's Header >
+ * Drag handle layer. It is a <header>, so it stays pinned while Content
+ * scrolls. */
+.wp-block-axismundi-dialog__header {
+	display: flex;
+	justify-content: center;
+}
+
 /* Only rendered when the sheet has preset heights to cycle - a handle that
  * does nothing is a false affordance. It is a real button, labelled, in the
  * tab order, as M3's bottom sheet accessibility page requires. */
 .wp-block-axismundi-dialog__drag-handle {
-	justify-self: center;
+	position: relative;
 	box-sizing: content-box;
 	inline-size: 32px;
 	block-size: 4px;
 	padding: 22px 8px;
 	border: 0;
-	background: var(--md-sys-color-on-surface-variant);
-	background-clip: content-box;
+	background: transparent;
 	border-radius: var(--md-sys-shape-corner-full);
 	cursor: pointer;
+
+	/* Dragged vertically (view.js): a touch on it moves the sheet, not the
+	 * page. */
+	touch-action: none;
 }
 
-.wp-block-axismundi-dialog[data-presentation="sheet-bottom"] header,
-.wp-block-axismundi-dialog[data-presentation="sheet-bottom"] header + *,
-.wp-block-axismundi-dialog[data-presentation="sheet-bottom"] footer {
-	padding-inline: 24px;
+/* The 32x4 bar is its own box. Painted as the button's content-box background
+ * it took the 48dp target's corner radius, less the padding - 16 across, 2 down
+ * - and rendered as a lens rather than a bar with round ends. */
+.wp-block-axismundi-dialog__drag-handle::before {
+	content: "";
+	position: absolute;
+	inset: 22px 8px;
+	background: var(--md-sys-color-on-surface-variant);
+	border-radius: var(--md-sys-shape-corner-full);
+}
+
+/* M3 bottom sheet focus indicator: secondary, 3dp, 2dp outside the target.
+ * The target is the 48dp box the padding makes, not the 32x4 bar. */
+.wp-block-axismundi-dialog__drag-handle:focus-visible {
+	outline: 3px solid var(--md-sys-color-secondary);
+	outline-offset: 2px;
+}
+
+/* M3: a bottom sheet opens no higher than half the window, and its drag handle
+ * raises it to full height (view.js sets data-sheet-height). A sheet without a
+ * handle has no way to be raised, so it is not capped. Written for a real
+ * <dialog>, so the editor's preview is not clipped to half its canvas. */
+dialog.wp-block-axismundi-dialog[data-presentation="sheet-bottom"]:has(> .wp-block-axismundi-dialog__header > .wp-block-axismundi-dialog__drag-handle):not([data-sheet-height="expanded"]) {
+	max-block-size: 50%;
+}
+
+/* Expanded fills the window. NON-STANDARD: M3 keeps a 72dp top margin (56dp on
+ * a wider window) on a bottom sheet at any height; raised all the way, this
+ * one takes the whole height - a project decision. */
+dialog.wp-block-axismundi-dialog[data-presentation="sheet-bottom"][data-sheet-height="expanded"] {
+	block-size: 100%;
+	max-block-size: 100%;
+}
+
+/* A standard sheet sits under the admin bar (see its render mode below), so
+ * it stretches between its insets rather than taking the window's height. */
+dialog.wp-block-axismundi-dialog[data-render-mode="standard-sheet"][data-presentation="sheet-bottom"][data-sheet-height="expanded"] {
+	block-size: auto;
+	margin-block-start: 0;
 }
 
 /* ---- Contract: sheet-side ------------------------------------------------ */
@@ -208,24 +356,24 @@
 	margin: 0;
 }
 
-.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-modality="modal"] > .wp-block-axismundi-dialog__container {
+:where(.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-modality="modal"]) {
 	background: var(--md-sys-color-surface-container-low);
 	box-shadow: var(--md-sys-elevation-shadow-level1);
 }
 
-.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-modality="standard"] > .wp-block-axismundi-dialog__container {
+:where(.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-modality="standard"]) {
 	background: var(--md-sys-color-surface);
 	box-shadow: var(--md-sys-elevation-shadow-level0);
 }
 
 /* The rounded corners are the ones that face the page: an end-edge sheet rounds
  * its start corners. Logical properties keep that true in RTL. */
-.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-modality="modal"][data-edge="end"] > .wp-block-axismundi-dialog__container {
+:where(.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-modality="modal"][data-edge="end"]) {
 	border-start-start-radius: var(--md-sys-shape-corner-value-large);
 	border-end-start-radius: var(--md-sys-shape-corner-value-large);
 }
 
-.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-modality="modal"][data-edge="start"] > .wp-block-axismundi-dialog__container {
+:where(.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-modality="modal"][data-edge="start"]) {
 	border-start-end-radius: var(--md-sys-shape-corner-value-large);
 	border-end-end-radius: var(--md-sys-shape-corner-value-large);
 }
@@ -235,42 +383,17 @@
 	margin: 16px;
 }
 
-.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-attachment="detached"] > .wp-block-axismundi-dialog__container {
+:where(.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-attachment="detached"]) {
 	border-radius: var(--md-sys-shape-corner-value-large);
 }
 
-.wp-block-axismundi-dialog[data-presentation="sheet-side"] header {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	padding: 12px 12px 12px 24px;
-}
-
 .wp-block-axismundi-dialog[data-presentation="sheet-side"] header h2 {
-	flex: 1 1 auto;
 	color: var(--md-sys-color-on-surface-variant);
-	font-family: var(--md-sys-typescale-title-large-font);
-	font-size: var(--md-sys-typescale-title-large-size);
-	font-weight: var(--md-sys-typescale-title-large-weight);
-	letter-spacing: var(--md-sys-typescale-title-large-tracking);
-	line-height: var(--md-sys-typescale-title-large-line-height);
-}
-
-.wp-block-axismundi-dialog[data-presentation="sheet-side"] header + * {
-	padding-inline: 24px;
-}
-
-.wp-block-axismundi-dialog[data-presentation="sheet-side"] footer {
-	display: flex;
-	align-items: center;
-	block-size: 72px;
-	box-sizing: border-box;
-	padding: 16px 24px 24px;
-	border-block-start: 1px solid var(--md-sys-color-outline);
-}
-
-.wp-block-axismundi-dialog[data-presentation="sheet-side"] footer .wp-block-buttons {
-	justify-content: flex-start;
+	font-family: var(--md-sys-typescale-title-large-font, inherit);
+	font-size: var(--md-sys-typescale-title-large-size, var(--wp--preset--font-size--title-large));
+	font-weight: var(--md-sys-typescale-title-large-weight, 400);
+	letter-spacing: var(--md-sys-typescale-title-large-tracking, 0);
+	line-height: var(--md-sys-typescale-title-large-line-height, 28px);
 }
 
 /* ---- A real <dialog> ----------------------------------------------------- */
@@ -302,13 +425,68 @@ dialog.wp-block-axismundi-dialog[data-presentation="sheet-side"][data-attachment
 
 /* A standard sheet opens with show(), outside the top layer, where the UA makes
  * a dialog position: absolute and centres it in the document. It belongs on
- * the viewport's edge like a modal one, above the page it shares. z-index is
- * the legacy sheet's 100000, one above the admin bar; whether a standard sheet
- * covers, clears or pushes the admin bar is decided with the page push. */
+ * the viewport's edge like a modal one, over the page, which stays usable.
+ *
+ * Below the admin bar, not over it: the page stays usable, so the admin bar
+ * does too, and a sheet covering it would hide working controls. The height is
+ * core's own variable, the one the editors use for the same reason
+ * (--wp-admin--admin-bar--height, 0 without an admin bar). Below 600px core
+ * scrolls the admin bar away with the page, but a standard side sheet opens as
+ * a modal there, so only a standard bottom sheet keeps the offset. z-index is
+ * the legacy sheet's 100000. */
 dialog.wp-block-axismundi-dialog[data-render-mode="standard-sheet"] {
 	position: fixed;
-	inset: 0;
+	inset: var(--wp-admin--admin-bar--height, 0px) 0 0;
 	z-index: 100000;
+}
+
+/* The side sheet's full height is the space under the admin bar. `auto` with
+ * both insets set stretches to it; 100% would be the whole viewport. */
+dialog.wp-block-axismundi-dialog[data-render-mode="standard-sheet"][data-presentation="sheet-side"] {
+	block-size: auto;
+}
+
+/* A docked standard side sheet shares the page: while it is open the page gives
+ * up the sheet's width on that edge, so the content moves over instead of being
+ * covered. view.js measures the sheet, sets --axismundi-dialog-push on <html>
+ * with the class for its edge, and moves the padding with the sheet's own
+ * motion. `.wp-site-blocks` is the block theme's root, the one element holding
+ * the whole page. Logical padding keeps the edge right in RTL.
+ *
+ * Only from M3's medium window (600px) up, and only docked: on a compact window
+ * the sheet opens as a modal (surface.yml, adaptive), and a detached sheet
+ * floats over the page. Fixed elements - an open navigation overlay, say - are
+ * outside the root and stay where they are. */
+html.axismundi-dialog-pushed-start .wp-site-blocks {
+	box-sizing: border-box;
+	padding-inline-start: var(--axismundi-dialog-push, 0px);
+}
+
+html.axismundi-dialog-pushed-end .wp-site-blocks {
+	box-sizing: border-box;
+	padding-inline-end: var(--axismundi-dialog-push, 0px);
+}
+
+/* The same sheet set to move the page instead (the block's Page setting,
+ * data-page-share="move"): the whole page slides past the far edge by the
+ * sheet's width and keeps its own width, as a mobile off-canvas drawer does.
+ * Part of the page leaves the window while the sheet is open. `translate` is
+ * physical, so view.js sets the signed distance for the sheet's side. This mode
+ * also applies on a compact window, which is what it is for. The moved page is
+ * clipped rather than given a horizontal scrollbar. */
+html.axismundi-dialog-moved {
+	overflow-x: clip;
+}
+
+html.axismundi-dialog-moved .wp-site-blocks {
+	translate: var(--axismundi-dialog-move, 0px) 0;
+}
+
+/* The dialog itself takes focus when it opens (view.js, on `toggle`), so the
+ * first button does not light up as focused. The surface is not a control, so
+ * it draws no ring of its own; Tab moves into it from there. */
+dialog.wp-block-axismundi-dialog:focus-visible {
+	outline: none;
 }
 
 /* M3: the page behind a modal surface does not scroll with it. The native

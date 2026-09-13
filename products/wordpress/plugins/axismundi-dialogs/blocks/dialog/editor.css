@@ -1,16 +1,39 @@
 /**
  * axismundi/dialog - editor canvas.
  *
- * The editor shows the surface as a div (see src/dialog.js), so it needs
- * a visible edge to be found and selected in a part that is otherwise just its
- * content.
+ * The editor shows the surface as a div (see src/dialog.js) holding the inner
+ * blocks directly, as the front end's <dialog> does. It needs a visible edge to
+ * be found and selected in a part that is otherwise just its content.
  */
 
 .editor-styles-wrapper .wp-block-axismundi-dialog {
-	outline: 1px dashed currentColor;
+	outline: 1px dashed currentcolor;
 	outline-offset: 4px;
+	min-block-size: 3rem;
 }
 
-.editor-styles-wrapper .wp-block-axismundi-dialog__container {
-	min-block-size: 3rem;
+/*
+ * A side sheet sits on its edge in the canvas too, so Edge and Attachment can
+ * be seen while they are chosen. The front end places a real <dialog> with
+ * auto margins (style.css); in the Site Editor the part's root is a
+ * constrained layout, which centres every child with
+ * `margin-inline: auto !important`.
+ *
+ * NON-STANDARD: !important, because that is the only way to override core's
+ * constrained-layout rule, which is itself !important. Editor canvas only.
+ */
+.editor-styles-wrapper .wp-block-axismundi-dialog[data-presentation="sheet-side"][data-edge="end"] {
+	margin-inline: auto 0 !important;
+}
+
+.editor-styles-wrapper .wp-block-axismundi-dialog[data-presentation="sheet-side"][data-edge="start"] {
+	margin-inline: 0 auto !important;
+}
+
+.editor-styles-wrapper .wp-block-axismundi-dialog[data-presentation="sheet-side"][data-attachment="detached"][data-edge="end"] {
+	margin-inline: auto 16px !important;
+}
+
+.editor-styles-wrapper .wp-block-axismundi-dialog[data-presentation="sheet-side"][data-attachment="detached"][data-edge="start"] {
+	margin-inline: 16px auto !important;
 }

@@ -342,6 +342,10 @@ presentations:
       width: { max: 640, below_max: full window width }
       height: variable
       drag_handle: { alignment: center, padding_block: 22 }
+      # Not an M3 value: M3 publishes no content padding for a bottom sheet.
+      # This project's default, so the Content slot owns every edge whether or
+      # not the drag handle's Header sits above it.
+      content_padding: 24
       top_margin: 72
       # Once the window is wider than 640dp.
       wide_window: { above: 640, top_margin: 56, inline_margin: 56 }
@@ -682,6 +686,14 @@ conflicts:
     note: >-
       M3 is saying not to label the decorative parts. A modal bottom sheet on
       the web is still a dialog, so it takes a name as any dialog does.
+
+  - subject: bottom sheet drag handle spacing
+    measurements: 22dp above and below the handle
+    figma: a 36dp Header frame with the 32x4 handle 16dp from its top and bottom (Material 3 Design Kit, Bottom sheet)
+    note: >-
+      The published measurement is used. It is also what makes the handle's
+      48dp touch target - 22 + 4 + 22 - which the accessibility page asks for
+      when the sheet can be resized.
 
 # Published in Figma, outside the web's scope. Recorded so the omission is a
 # decision rather than an oversight: XR elevation is a choice between two

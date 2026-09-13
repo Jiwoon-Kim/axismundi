@@ -65,7 +65,7 @@ import { useMergeRefs, useRefEffect } from '@wordpress/compose';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { prependHTTPS } from '@wordpress/url';
 import { isTogglable } from './selection';
-import { actionMarkup } from './action-controls';
+import { actionMarkup, actionOwnsClick } from './action-controls';
 
 // M3 button sizes. "Default" stores nothing: the button inherits the size of
 // its Dialog Button Group, and falls back to Small. An explicit size - Small
@@ -582,6 +582,15 @@ export function ButtonEdit( props ) {
 							label={ __( 'Togglable', 'axismundi-dialogs' ) }
 							value={ togglable === undefined ? '' : ( togglable ? 'on' : 'off' ) }
 							options={ TOGGLABLE_OPTIONS }
+							// An Action that runs the click cannot also toggle
+							// (src/shared/selection.js); the stored value is kept,
+							// so choosing Command again restores it.
+							disabled={ actionOwnsClick( attributes.action ) }
+							help={
+								actionOwnsClick( attributes.action )
+									? __( 'This Action runs the click, so the button is not a toggle. It shows the selected look while what it opens is open.', 'axismundi-dialogs' )
+									: undefined
+							}
 							onChange={ ( value ) =>
 								setAttributes( {
 									togglable: value === '' ? undefined : value === 'on',

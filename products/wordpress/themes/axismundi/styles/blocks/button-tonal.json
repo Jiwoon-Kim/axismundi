@@ -5,8 +5,6 @@
 	"slug": "tonal",
 	"blockTypes": [
 		"core/button",
-		"axismundi/dialog",
-		"axismundi/sheet",
 		"axismundi/dialog-button",
 		"axismundi/dialog-icon-button"
 	],

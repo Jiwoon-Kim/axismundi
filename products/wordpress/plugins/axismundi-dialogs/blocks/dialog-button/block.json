@@ -59,7 +59,9 @@
 				"submit",
 				"reset",
 				"overlay",
-				"overlay-close"
+				"overlay-close",
+				"dialog-surface",
+				"dialog-surface-close"
 			]
 		},
 		"actionTarget": {

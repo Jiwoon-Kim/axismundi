@@ -24,7 +24,8 @@ defined( 'ABSPATH' ) || exit;
  */
 function axismundi_dialogs_action_areas(): array {
 	return array(
-		'overlay' => 'navigation-overlay',
+		'overlay'        => 'navigation-overlay',
+		'dialog-surface' => 'dialog-surface',
 	);
 }
 
@@ -41,7 +42,7 @@ function axismundi_dialogs_action_areas(): array {
  * @return bool Whether the action owns the click.
  */
 function axismundi_dialogs_action_owns_click( array $attributes ): bool {
-	return in_array( (string) ( $attributes['action'] ?? '' ), array( 'overlay', 'overlay-close' ), true );
+	return in_array( (string) ( $attributes['action'] ?? '' ), array( 'overlay', 'overlay-close', 'dialog-surface', 'dialog-surface-close' ), true );
 }
 
 /**
@@ -127,6 +128,17 @@ function axismundi_dialogs_button_action( array $attributes ): array {
 		);
 	}
 
+	// Closing a dialog surface: a marker the page-end render turns into
+	// command="close" for the <dialog> it sits in, whose id is only known there
+	// (axismundi_dialogs_render_dialog_surfaces()).
+	if ( 'dialog-surface-close' === $action ) {
+		return array(
+			'attrs'       => ' data-axismundi-dialog-close',
+			'surface'     => '',
+			'interactive' => false,
+		);
+	}
+
 	$areas = axismundi_dialogs_action_areas();
 	if ( ! isset( $areas[ $action ] ) ) {
 		return $none;
@@ -141,6 +153,27 @@ function axismundi_dialogs_button_action( array $attributes ): array {
 	$template = get_block_template( $part_id, 'wp_template_part' );
 	if ( ! $template instanceof WP_Block_Template ) {
 		return $none;
+	}
+
+	/*
+	 * A dialog surface is not rendered beside its trigger. The part is queued to
+	 * render once at the end of the page, outside every layout container, and
+	 * the button names its <dialog> with invoker commands: the browser opens it,
+	 * and gives it the modal or standard behaviour the part's host declares.
+	 */
+	if ( 'dialog-surface' === $action ) {
+		axismundi_dialogs_queue_dialog_surface( $template );
+		return array(
+			'attrs'       => sprintf(
+				// aria-expanded starts closed; blocks/dialog/view.js keeps it in
+				// step with the <dialog>, since the browser does not.
+				' commandfor="%1$s" command="%2$s" aria-haspopup="dialog" aria-expanded="false"',
+				esc_attr( axismundi_dialogs_dialog_surface_id( $template ) ),
+				esc_attr( axismundi_dialogs_dialog_surface_command( $template ) )
+			),
+			'surface'     => '',
+			'interactive' => false,
+		);
 	}
 
 	$id = wp_unique_id( 'ax-overlay-' );

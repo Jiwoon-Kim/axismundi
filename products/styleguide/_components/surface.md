@@ -14,8 +14,10 @@ Material 컴포넌트 하나가 아닙니다. M3의 **Dialog**, **Bottom sheet**
 Sheet는 같은 `<dialog>` 호스트 위의 다른 presentation입니다.
 
 > **구현 중인 계약입니다.** [`axismundi-dialogs`]({{ site.repository_url }}/tree/main/products/wordpress/plugins/axismundi-dialogs)에
-> `dialog-surface` area와 `axismundi/dialog` 호스트 블록이 들어갔고, 아래 표본은 그 블록의
-> 실제 stylesheet를 입습니다. 트리거로 여는 동작과 페이지 끝 렌더, 시작 패턴은 아직입니다.
+> `dialog-surface` area, 시작 패턴 5개, `axismundi/dialog` 호스트 블록이 들어갔고, 아래 표본은 그 블록의
+> 실제 stylesheet를 입습니다. 호스트는 `core/group`을 복제해 요소를 `<dialog>`로 고정한 블록이라,
+> 배경·여백·모서리·그림자 같은 기본값을 블록 설정이나 Site Editor의 스타일에서 바꿀 수 있습니다.
+> 트리거로 여는 동작과 페이지 끝 렌더는 아직입니다.
 > 레거시 `axismundi/dialogs`·`axismundi/sheet`·`axismundi/dialog`(현재 `blocks/dialog-legacy`)는
 > 등록을 내린 폐기 대상이고 구현 참조로만 남겨둔 것입니다. Post Quick View와 Object Media
 > Dialog는 초기 구현 그대로라 구조를 바꿀 수 있습니다. 인터랙티브 데모는 나중에 추가합니다.
@@ -72,11 +74,8 @@ basic dialog가 담는 레이아웃으로 설명합니다. 스크롤은 콘텐�
 <div class="sg-surface-frame__page" aria-hidden="true"></div>
 <div class="sg-surface-frame__scrim"></div>
 <dialog open class="wp-block-axismundi-dialog" id="sg-surface-basic" data-presentation="dialog-basic" role="alertdialog" aria-labelledby="sg-surface-basic-headline">
-<div class="wp-block-axismundi-dialog__container">
-<header class="wp-block-group"><h2 class="wp-block-heading" id="sg-surface-basic-headline">초안을 삭제할까요?</h2></header>
-<div class="wp-block-group"><p>삭제한 초안은 휴지통으로 가지 않고 바로 사라집니다.</p></div>
-<footer class="wp-block-group"><div class="wp-block-buttons"><div class="wp-block-button is-style-text"><button type="button" class="wp-block-button__link wp-element-button">취소</button></div><div class="wp-block-button is-style-text"><button type="button" class="wp-block-button__link wp-element-button">삭제</button></div></div></footer>
-</div>
+<div class="wp-block-group" style="display:flex;flex-direction:column;gap:16px;padding:24px 24px 0"><h2 class="wp-block-heading" id="sg-surface-basic-headline">초안을 삭제할까요?</h2><p>삭제한 초안은 휴지통으로 가지 않고 바로 사라집니다.</p></div>
+<footer class="wp-block-group" style="padding:24px"><div class="wp-block-buttons" style="display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px"><div class="wp-block-button is-style-text"><button type="button" class="wp-block-button__link wp-element-button">취소</button></div><div class="wp-block-button is-style-text"><button type="button" class="wp-block-button__link wp-element-button">삭제</button></div></div></footer>
 </dialog>
 </div>
 <figcaption><code>dialog-basic</code> · <code>role="alertdialog"</code> · 확인 동작이 끝쪽 가장자리에 옵니다.</figcaption>
@@ -85,11 +84,8 @@ basic dialog가 담는 레이아웃으로 설명합니다. 스크롤은 콘텐�
 <div class="sg-surface-frame sg-surface-frame--compact" inert>
 <div class="sg-surface-frame__page" aria-hidden="true"></div>
 <dialog open class="wp-block-axismundi-dialog" id="sg-surface-full" data-presentation="dialog-full-screen" aria-labelledby="sg-surface-full-headline">
-<div class="wp-block-axismundi-dialog__container">
-<header class="wp-block-group"><button type="button" class="wp-block-axismundi-icon-button is-style-standard"><span class="material-symbols-outlined notranslate" translate="no" aria-hidden="true">close</span><span class="screen-reader-text">닫기</span></button><h2 class="wp-block-heading" id="sg-surface-full-headline">새 일정</h2><div class="wp-block-buttons"><div class="wp-block-button is-style-text"><button type="button" class="wp-block-button__link wp-element-button">저장</button></div></div></header>
-<div class="wp-block-group"><p>제목, 날짜, 장소, 시간처럼 여러 단계를 거치는 작업을 담습니다.</p></div>
-<footer class="wp-block-group"></footer>
-</div>
+<header class="wp-block-group" style="display:flex;align-items:center;gap:8px;min-height:56px;padding:0 24px 0 8px"><button type="button" class="wp-block-axismundi-icon-button is-style-standard"><span class="material-symbols-outlined notranslate" translate="no" aria-hidden="true">close</span><span class="screen-reader-text">닫기</span></button><h2 class="wp-block-heading" id="sg-surface-full-headline" style="flex:1 1 auto">새 일정</h2><div class="wp-block-buttons"><div class="wp-block-button is-style-text"><button type="button" class="wp-block-button__link wp-element-button">저장</button></div></div></header>
+<div class="wp-block-group" style="padding:24px"><p>제목, 날짜, 장소, 시간처럼 여러 단계를 거치는 작업을 담습니다.</p></div>
 </dialog>
 </div>
 <figcaption><code>dialog-full-screen</code> · compact 전용 · 스크림 없음 · 앱 바의 탐색은 닫기 하나뿐입니다.</figcaption>
@@ -99,12 +95,8 @@ basic dialog가 담는 레이아웃으로 설명합니다. 스크롤은 콘텐�
 <div class="sg-surface-frame__page" aria-hidden="true"></div>
 <div class="sg-surface-frame__scrim"></div>
 <dialog open class="wp-block-axismundi-dialog" id="sg-surface-bottom" data-presentation="sheet-bottom" data-modality="modal" aria-labelledby="sg-surface-bottom-headline">
-<div class="wp-block-axismundi-dialog__container">
-<button type="button" class="wp-block-axismundi-dialog__drag-handle" aria-label="시트 높이 바꾸기"></button>
-<header class="wp-block-group"><h2 class="wp-block-heading" id="sg-surface-bottom-headline">공유</h2></header>
-<div class="wp-block-group"><p>링크를 복사하거나 공개 범위를 바꿉니다. 첫 높이는 창의 절반을 넘지 않습니다.</p></div>
-<footer class="wp-block-group"></footer>
-</div>
+<header class="wp-block-axismundi-dialog__header"><button type="button" class="wp-block-axismundi-dialog__drag-handle" aria-label="시트 높이 바꾸기"></button></header>
+<div class="wp-block-group" style="padding:24px"><h2 class="wp-block-heading" id="sg-surface-bottom-headline">공유</h2><p>링크를 복사하거나 공개 범위를 바꿉니다. 첫 높이는 창의 절반을 넘지 않습니다.</p></div>
 </dialog>
 </div>
 <figcaption><code>sheet-bottom</code> · modal · drag handle은 높이 단계가 있을 때만 버튼으로 렌더합니다.</figcaption>
@@ -114,11 +106,9 @@ basic dialog가 담는 레이아웃으로 설명합니다. 스크롤은 콘텐�
 <div class="sg-surface-frame__page" aria-hidden="true"></div>
 <div class="sg-surface-frame__scrim"></div>
 <dialog open class="wp-block-axismundi-dialog" id="sg-surface-side-modal" data-presentation="sheet-side" data-modality="modal" data-attachment="docked" data-edge="end" aria-labelledby="sg-surface-side-modal-headline">
-<div class="wp-block-axismundi-dialog__container">
-<header class="wp-block-group"><h2 class="wp-block-heading" id="sg-surface-side-modal-headline">필터</h2><button type="button" class="wp-block-axismundi-icon-button is-style-standard"><span class="material-symbols-outlined notranslate" translate="no" aria-hidden="true">close</span><span class="screen-reader-text">닫기</span></button></header>
-<div class="wp-block-group"><p>초안 포함, 작성자, 기간.</p></div>
-<footer class="wp-block-group"><div class="wp-block-buttons"><div class="wp-block-button"><button type="button" class="wp-block-button__link wp-element-button">적용</button></div><div class="wp-block-button is-style-outline"><button type="button" class="wp-block-button__link wp-element-button">취소</button></div></div></footer>
-</div>
+<header class="wp-block-group" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 12px 12px 24px"><h2 class="wp-block-heading" id="sg-surface-side-modal-headline">필터</h2><button type="button" class="wp-block-axismundi-icon-button is-style-standard"><span class="material-symbols-outlined notranslate" translate="no" aria-hidden="true">close</span><span class="screen-reader-text">닫기</span></button></header>
+<div class="wp-block-group" style="padding:0 24px"><p>초안 포함, 작성자, 기간.</p></div>
+<footer class="wp-block-group" style="padding:16px 24px 24px"><div class="wp-block-buttons" style="display:flex;flex-wrap:wrap;justify-content:flex-start;gap:8px"><div class="wp-block-button"><button type="button" class="wp-block-button__link wp-element-button">적용</button></div><div class="wp-block-button is-style-outline"><button type="button" class="wp-block-button__link wp-element-button">취소</button></div></div></footer>
 </dialog>
 </div>
 <figcaption><code>sheet-side</code> · modal · docked · <code>edge="end"</code> · 페이지를 향한 모서리만 둥글게 처리합니다.</figcaption>
@@ -127,11 +117,8 @@ basic dialog가 담는 레이아웃으로 설명합니다. 스크롤은 콘텐�
 <div class="sg-surface-frame" inert>
 <div class="sg-surface-frame__page" aria-hidden="true"></div>
 <dialog open class="wp-block-axismundi-dialog" id="sg-surface-side-standard" data-presentation="sheet-side" data-modality="standard" data-attachment="docked" data-edge="end" aria-labelledby="sg-surface-side-standard-headline">
-<div class="wp-block-axismundi-dialog__container">
-<header class="wp-block-group"><h2 class="wp-block-heading" id="sg-surface-side-standard-headline">사진 정보</h2><button type="button" class="wp-block-axismundi-icon-button is-style-standard"><span class="material-symbols-outlined notranslate" translate="no" aria-hidden="true">close</span><span class="screen-reader-text">닫기</span></button></header>
-<div class="wp-block-group"><p>촬영일, 카메라, 위치.</p></div>
-<footer class="wp-block-group"></footer>
-</div>
+<header class="wp-block-group" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 12px 12px 24px"><h2 class="wp-block-heading" id="sg-surface-side-standard-headline">사진 정보</h2><button type="button" class="wp-block-axismundi-icon-button is-style-standard"><span class="material-symbols-outlined notranslate" translate="no" aria-hidden="true">close</span><span class="screen-reader-text">닫기</span></button></header>
+<div class="wp-block-group" style="padding:0 24px 24px"><p>촬영일, 카메라, 위치.</p></div>
 </dialog>
 </div>
 <figcaption><code>sheet-side</code> · standard · 스크림 없음 · 페이지 본문이 시트 폭만큼 줄어듭니다.</figcaption>
@@ -204,28 +191,32 @@ Basic dialog는 기본으로 가운데에 놓이고, {{ basic_position.position.
 ### 표면 (템플릿 파트)
 
 `dialog-surface` area의 파트입니다. 최상위 블록이 `<dialog>` 호스트이고, 머리·본문·
-꼬리는 새 클래스가 아니라 `core/group`의 `tagName`입니다. 파트는 Site Editor에서
+꼬리는 새 클래스가 아니라 `core/group`의 `tagName`입니다. 여백은 호스트가 아니라 각
+그룹이 블록 속성으로 가집니다. Material 3 Design Kit이 컨테이너 대신 구역마다 여백을
+두는 구조를 따른 것이고, 그래서 List dialog의 목록이 가장자리까지 닿을 수 있습니다.
+슬롯은 Header, Content, Actions 세 가지이고, presentation마다 필요한 슬롯만 씁니다. Basic은
+Content와 Actions, List dialog는 Header·Content·Actions, bottom sheet는 Content에 핸들을
+켜면 호스트가 Header를 더하고, side sheet는 Header·Content·Actions, full-screen은
+Header와 Content입니다. Content는 모두 `Inner blocks use content width`를 켠 채로
+시작합니다. 좁은 표면에서는 차이가 없고, 표면이 넓어지면 읽기 좋은 폭으로 제한됩니다. 파트는 Site Editor에서
 편집하고, 테마는 같은 이름의 파트 파일로 덮어쓸 수 있습니다.
 
 {% raw %}
 ```html
 <!-- wp:axismundi/dialog {"presentation":"dialog-basic","role":"alertdialog","dismissal":"closerequest"} -->
 
-  <!-- wp:group {"tagName":"header"} -->
-  <header class="wp-block-group">
+  <!-- wp:group {"metadata":{"name":"Content"},"style":{"spacing":{"padding":{"top":"24px","right":"24px","bottom":"0","left":"24px"},"blockGap":"16px"}},"layout":{"type":"constrained"}} -->
+  <div class="wp-block-group" style="padding-top:24px;padding-right:24px;padding-bottom:0;padding-left:24px">
     <!-- wp:heading {"anchor":"discard-draft-headline"} -->
     <h2 class="wp-block-heading" id="discard-draft-headline">초안을 삭제할까요?</h2>
     <!-- /wp:heading -->
-  </header>
+    <!-- wp:paragraph --><p>…</p><!-- /wp:paragraph -->
+  </div>
   <!-- /wp:group -->
 
-  <!-- wp:group -->
-  <div class="wp-block-group"><!-- wp:paragraph --><p>…</p><!-- /wp:paragraph --></div>
-  <!-- /wp:group -->
-
-  <!-- wp:group {"tagName":"footer"} -->
-  <footer class="wp-block-group">
-    <!-- wp:axismundi/dialog-button-group -->
+  <!-- wp:group {"tagName":"footer","metadata":{"name":"Actions"},"style":{"spacing":{"padding":{"top":"24px","right":"24px","bottom":"24px","left":"24px"}}}} -->
+  <footer class="wp-block-group" style="padding-top:24px;padding-right:24px;padding-bottom:24px;padding-left:24px">
+    <!-- wp:axismundi/dialog-button-group {"style":{"spacing":{"blockGap":"8px"}},"layout":{"type":"flex","justifyContent":"right"}} -->
     <div class="wp-block-axismundi-dialog-button-group wp-block-buttons">
       <!-- wp:axismundi/dialog-button {"action":"surface-close","text":"취소","className":"is-style-text"} /-->
       <!-- wp:axismundi/dialog-button {"action":"surface-close","text":"삭제","className":"is-style-text"} /-->
@@ -250,11 +241,8 @@ Basic dialog는 기본으로 가운데에 놓이고, {{ basic_position.position.
         role="alertdialog"
         aria-labelledby="discard-draft-headline"
         closedby="closerequest">
-  <div class="wp-block-axismundi-dialog__container">
-    <header class="wp-block-group">…</header>
-    <div class="wp-block-group">…</div>
-    <footer class="wp-block-group">…</footer>
-  </div>
+  <div class="wp-block-group">…</div>
+  <footer class="wp-block-group">…</footer>
 </dialog>
 ```
 {% endraw %}

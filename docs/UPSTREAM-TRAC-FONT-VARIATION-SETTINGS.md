@@ -5,7 +5,10 @@
 > 올릴 곳: **Core Trac** 새 티켓 <https://core.trac.wordpress.org/newticket> (wordpress.org 계정 로그인 필요 — 사용자가 직접 등록).
 > Gutenberg에는 `WP_Font_Face` 사본이 없다(`lib/`에 폰트 파일은 `lib/compat/plugin/fonts.php`뿐, trunk 확인) → 고칠 곳은 코어뿐.
 > wordpress-develop PR은 **Trac 티켓 링크 필수**, GitHub에서 머지하지 않고 리뷰용, **AI 도구 사용 범위 공개 필수**(PR 템플릿).
-> 다음 단계: #66103을 링크한 `wordpress-develop` PR(수정과 단위 테스트)을 준비한다. PR은 로컬 포크 없이 GitHub 웹 편집기로도 가능.
+> PR: [WordPress/wordpress-develop#13514](https://github.com/WordPress/wordpress-develop/pull/13514) (2026-09-14, 브랜치
+> `fix/66103-font-variation-settings`, 커밋 `682f2cb`). 수정 + 데이터셋 케이스 2개(문자열·배열). 수정 전 배열 케이스 실패
+> (`slnt 0wght 400`), 수정 후 `phpunit --group fonts` 232 tests/930 assertions 통과, `phpcs` 0.
+> 남은 일: Trac #66103에 PR 링크와 `has-patch has-unit-tests` 키워드 추가(사용자, Trac 로그인 필요).
 >
 > 확인한 사실(2026-09-14):
 > - `src/wp-includes/fonts/class-wp-font-face.php` trunk 328-331: `font-variation-settings`가 배열이면 `compile_variations()` 호출.

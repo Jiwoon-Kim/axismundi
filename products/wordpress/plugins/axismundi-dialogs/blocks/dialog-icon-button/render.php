@@ -91,6 +91,18 @@ foreach ( array( 'size', 'shape', 'width' ) as $axismundi_dialogs_ib_axis ) {
 if ( isset( $attributes['fillOnSelect'] ) && ! $attributes['fillOnSelect'] ) {
 	$axismundi_dialogs_ib_wrapper['data-fill-on-select'] = 'false';
 }
+
+// How the icon moves between its states (assets/button.css). Absent is none;
+// a rotation is written only where it differs from the 180deg default.
+if ( in_array( $attributes['iconTransition'] ?? '', array( 'fade', 'rotate', 'scale' ), true ) ) {
+	$axismundi_dialogs_ib_wrapper['data-icon-transition'] = $attributes['iconTransition'];
+	if ( 'rotate' === $attributes['iconTransition'] && in_array( (int) ( $attributes['selectedRotation'] ?? 180 ), array( 45, 90 ), true ) ) {
+		$axismundi_dialogs_ib_wrapper['data-selected-rotation'] = (string) (int) $attributes['selectedRotation'];
+	}
+}
+if ( ! empty( $attributes['iconPreviewOnHover'] ) ) {
+	$axismundi_dialogs_ib_wrapper['data-icon-preview'] = 'hover';
+}
 // An empty name is an unnamed control, not an empty span: the editor fills the
 // Label in from the icon when an icon is chosen (src/dialog-icon-button.js), so
 // this is only reached when the author emptied it.

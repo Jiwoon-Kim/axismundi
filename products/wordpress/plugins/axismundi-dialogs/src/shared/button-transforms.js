@@ -44,6 +44,9 @@ const SHARED = [
 	'icon',
 	'selectedIcon',
 	'fillOnSelect',
+	'iconTransition',
+	'selectedRotation',
+	'iconPreviewOnHover',
 	'iconClass',
 ];
 

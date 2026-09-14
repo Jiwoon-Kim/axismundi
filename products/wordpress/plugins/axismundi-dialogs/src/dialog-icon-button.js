@@ -37,6 +37,7 @@ import { isTogglable } from './shared/selection';
 import { BUTTON, toButton } from './shared/button-transforms';
 import { IconElement, IconPlaceholder, glyphName, useIconRecord } from './shared/icon';
 import { IconLibraryModal, IconReferenceControls, fontFamilyOptions } from './shared/icon-controls';
+import { IconTransitionControls, iconTransitionProps } from './shared/icon-transition';
 import { ACTION_OPTIONS, actionAttributes } from './shared/action-controls';
 import { ActionTargetControls } from './shared/action-targets';
 
@@ -89,7 +90,9 @@ function IconButtonEdit( props ) {
 		icon = '',
 		iconClass,
 		iconSource,
+		iconTransition,
 		selectedIcon = '',
+		selectedRotation,
 		showTooltips,
 		text,
 		action,
@@ -105,6 +108,9 @@ function IconButtonEdit( props ) {
 	// Which reference the Icon library is choosing for, or null when closed.
 	const [ libraryTarget, setLibraryTarget ] = useState( null );
 	const isToggle = isTogglable( attributes, props.context[ 'axismundi/togglable' ] );
+	// A button that opens a surface is selected while it is open (aria-expanded),
+	// though it is not a toggle, so it has a selected icon too (includes/icon.php).
+	const hasState = isToggle || [ 'overlay', 'dialog-surface' ].includes( action );
 	const fontOptions = fontFamilyOptions( useSettings( 'typography.fontFamilies' )[ 0 ] );
 	// Every way an icon is chosen goes through here, so the name follows it.
 	// One change, so one undo takes the icon and the label it brought.
@@ -120,7 +126,15 @@ function IconButtonEdit( props ) {
 	// Both icons, as render.php draws them, only for a toggle with a selected
 	// icon that resolves; data-pressed shows one (assets/button.css).
 	const hasSelectedIcon =
-		isToggle && ! isEmpty && ( isRegistry ? !! selectedRecord.content : !! glyphName( selectedIcon ) );
+		hasState && ! isEmpty && ( isRegistry ? !! selectedRecord.content : !! glyphName( selectedIcon ) );
+
+	// Stateless buttons fill only under Preview on hover; the label says which.
+	let fillHelp = __( 'The icon stays as it is; colour and shape carry the selection.', 'axismundi-dialogs' );
+	if ( ! hasState ) {
+		fillHelp = __( 'A variable icon font fills the icon while Preview on hover shows it.', 'axismundi-dialogs' );
+	} else if ( fillOnSelect !== false ) {
+		fillHelp = __( 'M3’s selection cue: a variable icon font fills the icon. A font with no fill axis is unaffected - use Selected icon there.', 'axismundi-dialogs' );
+	}
 
 	const renderContent = () => (
 		<div
@@ -131,15 +145,13 @@ function IconButtonEdit( props ) {
 			data-ax-tooltip={ showTooltips !== false && text ? 'true' : undefined }
 		>
 			{ isEmpty && <IconPlaceholder style={ { height: 'auto' } } /> }
-			{ ! isEmpty && (
-				<IconElement
-					icon={ iconRef }
-					record={ record }
-					className={ hasSelectedIcon ? 'ax-icon--unselected' : undefined }
-				/>
-			) }
+			{ ! isEmpty && ! hasSelectedIcon && <IconElement icon={ iconRef } record={ record } /> }
 			{ hasSelectedIcon && (
-				<IconElement icon={ selectedRef } record={ selectedRecord } className="ax-icon--selected" />
+				// Both icons in one cell, as includes/icon.php wraps them.
+				<span className="ax-icon-swap">
+					<IconElement icon={ iconRef } record={ record } className="ax-icon--unselected" />
+					<IconElement icon={ selectedRef } record={ selectedRecord } className="ax-icon--selected" />
+				</span>
 			) }
 			{ !! text && <span className="screen-reader-text">{ text }</span> }
 		</div>
@@ -225,23 +237,24 @@ function IconButtonEdit( props ) {
 							onChange={ setIconAttributes }
 							onSourceChange={ () => setLibraryTarget( null ) }
 						/>
-					{ isToggle && (
-							<div>
+					{ ! isEmpty && (
+							<div style={ { display: 'grid', gap: '16px' } }>
 								{ /* A font axis: the registry has no fill to move, and a filled
 								     icon there is a different icon - Icon(selected) below. */ }
 								{ ! isRegistry && (
 									<ToggleControl
 										__nextHasNoMarginBottom
-										label={ __( 'Fill icon when selected', 'axismundi-dialogs' ) }
-										checked={ fillOnSelect !== false }
-										help={
-											fillOnSelect !== false
-												? __( 'M3’s selection cue: a variable icon font fills the icon. A font with no fill axis is unaffected - use Selected icon there.', 'axismundi-dialogs' )
-												: __( 'The icon stays as it is; colour and shape carry the selection.', 'axismundi-dialogs' )
+										label={
+											hasState
+												? __( 'Fill icon when selected', 'axismundi-dialogs' )
+												: __( 'Fill icon on preview', 'axismundi-dialogs' )
 										}
+										checked={ fillOnSelect !== false }
+										help={ fillHelp }
 										onChange={ ( value ) => setAttributes( { fillOnSelect: value ? undefined : false } ) }
 									/>
 								) }
+								{ hasState && (
 								<TextControl
 									__next40pxDefaultSize
 									__nextHasNoMarginBottom
@@ -254,7 +267,8 @@ function IconButtonEdit( props ) {
 									value={ selectedIcon }
 									onChange={ ( value ) => setAttributes( { selectedIcon: value || undefined } ) }
 								/>
-								{ isRegistry && (
+								) }
+								{ hasState && isRegistry && (
 									<Button
 										__next40pxDefaultSize
 										variant="secondary"
@@ -265,6 +279,14 @@ function IconButtonEdit( props ) {
 											: __( 'Choose selected icon', 'axismundi-dialogs' ) }
 									</Button>
 								) }
+								<IconTransitionControls
+									iconTransition={ iconTransition }
+									selectedRotation={ selectedRotation }
+									iconPreviewOnHover={ attributes.iconPreviewOnHover }
+									hasState={ hasState }
+									hasSelectedIcon={ hasSelectedIcon }
+									setAttributes={ setAttributes }
+								/>
 							</div>
 						) }
 					</div>
@@ -312,6 +334,7 @@ function IconButtonEdit( props ) {
 			extraBlockProps={ {
 				'data-width': width || undefined,
 				'data-fill-on-select': fillOnSelect === false ? 'false' : undefined,
+				...iconTransitionProps( attributes ),
 			} }
 		/>
 	);

@@ -107,6 +107,25 @@
 		"fillOnSelect": {
 			"type": "boolean"
 		},
+		"iconTransition": {
+			"type": "string",
+			"enum": [
+				"fade",
+				"rotate",
+				"scale"
+			]
+		},
+		"selectedRotation": {
+			"type": "integer",
+			"enum": [
+				45,
+				90,
+				180
+			]
+		},
+		"iconPreviewOnHover": {
+			"type": "boolean"
+		},
 		"iconClass": {
 			"type": "string",
 			"default": "material-symbols-outlined"

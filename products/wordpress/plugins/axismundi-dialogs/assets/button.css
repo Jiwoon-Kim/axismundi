@@ -374,11 +374,129 @@
 	--md-icon-fill: 1;
 }
 
-.wp-block-button > :is(button, a).wp-block-button__link:not(:is([aria-pressed="true"], [aria-expanded="true"])) > .ax-icon--selected,
-.wp-block-button > :is(button, a).wp-block-button__link:is([aria-pressed="true"], [aria-expanded="true"]) > .ax-icon--unselected,
-.wp-block-button:not([data-pressed="true"]) > div.wp-block-button__link > .ax-icon--selected,
-.wp-block-button[data-pressed="true"] > div.wp-block-button__link > .ax-icon--unselected {
-	display: none;
+/* --- Icon(selected) and the icon's transition --------------------------- */
+
+/* A button with a selected icon carries both icons (includes/icon.php), wrapped
+ * so they share one grid cell: the button keeps one icon's width whichever is
+ * showing, and the two can move in place. */
+.ax-icon-swap {
+	display: inline-grid;
+	place-items: center;
+}
+
+.ax-icon-swap > .ax-icon {
+	grid-area: 1 / 1;
+}
+
+/* The state shows one. Hidden rather than removed, so the cell keeps its size
+ * and a transition has something to move; `visibility` also takes the hidden
+ * icon out of hit testing. `aria-pressed` is a toggle's state, `aria-expanded`
+ * a button's that opens a surface, and `data-pressed` the editor's. */
+.wp-block-button > :is(button, a).wp-block-button__link:not(:is([aria-pressed="true"], [aria-expanded="true"])) .ax-icon--selected,
+.wp-block-button > :is(button, a).wp-block-button__link:is([aria-pressed="true"], [aria-expanded="true"]) .ax-icon--unselected,
+.wp-block-button:not([data-pressed="true"]) > div.wp-block-button__link .ax-icon--selected,
+.wp-block-button[data-pressed="true"] > div.wp-block-button__link .ax-icon--unselected {
+	opacity: 0;
+	visibility: hidden;
+}
+
+/* Icon transition, the block's setting (data-icon-transition). Absent, the icon
+ * changes at once. Every preset cross-fades a selected icon; Rotate and Scale
+ * add movement, and Rotate also turns a lone icon - a plus becoming a close at
+ * 45deg, a chevron flipping at 180deg - when no selected icon is set. The fade
+ * is an effect and the movement is spatial, so each takes its own pair of
+ * motion tokens (tokens.sys.motion.css). */
+.wp-block-button[data-icon-transition] .ax-icon {
+	transition:
+		opacity var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, cubic-bezier(0.31, 0.94, 0.34, 1)),
+		visibility var(--md-sys-motion-curve-fast-effects-duration, 150ms),
+		rotate var(--md-sys-motion-curve-fast-spatial-duration, 350ms) var(--md-sys-motion-curve-fast-spatial, cubic-bezier(0.42, 1.67, 0.21, 0.9)),
+		scale var(--md-sys-motion-curve-fast-spatial-duration, 350ms) var(--md-sys-motion-curve-fast-spatial, cubic-bezier(0.42, 1.67, 0.21, 0.9));
+}
+
+.wp-block-button[data-icon-transition="rotate"] {
+	--ax-icon-turn: 180deg;
+}
+
+.wp-block-button[data-icon-transition="rotate"][data-selected-rotation="45"] {
+	--ax-icon-turn: 45deg;
+}
+
+.wp-block-button[data-icon-transition="rotate"][data-selected-rotation="90"] {
+	--ax-icon-turn: 90deg;
+}
+
+/* Rotate, two icons: the outgoing icon turns on as it fades, and the incoming
+ * one arrives from a turn back. */
+.wp-block-button[data-icon-transition="rotate"] > :is(button, a).wp-block-button__link:is([aria-pressed="true"], [aria-expanded="true"]) .ax-icon--unselected,
+.wp-block-button[data-icon-transition="rotate"][data-pressed="true"] > div.wp-block-button__link .ax-icon--unselected {
+	rotate: var(--ax-icon-turn);
+}
+
+.wp-block-button[data-icon-transition="rotate"] > :is(button, a).wp-block-button__link:not(:is([aria-pressed="true"], [aria-expanded="true"])) .ax-icon--selected,
+.wp-block-button[data-icon-transition="rotate"]:not([data-pressed="true"]) > div.wp-block-button__link .ax-icon--selected {
+	rotate: calc(-1 * var(--ax-icon-turn));
+}
+
+/* Rotate, one icon: it turns while the button is selected. A lone icon is the
+ * link's own child; two icons sit inside .ax-icon-swap and are handled
+ * above. */
+.wp-block-button[data-icon-transition="rotate"] > :is(button, a).wp-block-button__link:is([aria-pressed="true"], [aria-expanded="true"]) > .ax-icon,
+.wp-block-button[data-icon-transition="rotate"][data-pressed="true"] > div.wp-block-button__link > .ax-icon {
+	rotate: var(--ax-icon-turn);
+}
+
+/* Scale: the hidden icon shrinks as it fades, and grows back as it returns. */
+.wp-block-button[data-icon-transition="scale"] > :is(button, a).wp-block-button__link:not(:is([aria-pressed="true"], [aria-expanded="true"])) .ax-icon--selected,
+.wp-block-button[data-icon-transition="scale"] > :is(button, a).wp-block-button__link:is([aria-pressed="true"], [aria-expanded="true"]) .ax-icon--unselected,
+.wp-block-button[data-icon-transition="scale"]:not([data-pressed="true"]) > div.wp-block-button__link .ax-icon--selected,
+.wp-block-button[data-icon-transition="scale"][data-pressed="true"] > div.wp-block-button__link .ax-icon--unselected {
+	scale: 0.5;
+}
+
+/* Preview on hover, the block's setting (data-icon-preview): hover and keyboard
+ * focus show the selected icon state - the fill, the turn, the selected icon -
+ * before the button is chosen, the way a Like fills its heart and a Repost
+ * turns its arrows. A selected button already shows that state, so nothing
+ * reverses. On a button with no state this is the only time the state shows.
+ *
+ * Hover only where a pointer can hover: on touch, :hover sticks after a tap and
+ * would leave the preview on. A disabled control previews nothing it cannot do.
+ * The fill interpolates on its own - the theme's icons.css transitions
+ * --md-icon-fill - and the rest move under data-icon-transition above. */
+@media (hover: hover) {
+
+	.wp-block-button[data-icon-preview="hover"]:not([data-fill-on-select="false"]) > .wp-block-button__link:is(:hover, :focus-visible):not(:disabled, [aria-disabled="true"]) .ax-icon {
+		--md-icon-fill: 1;
+	}
+
+	.wp-block-button[data-icon-preview="hover"] > .wp-block-button__link:is(:hover, :focus-visible):not(:disabled, [aria-disabled="true"]) .ax-icon--selected {
+		opacity: 1;
+		visibility: visible;
+		rotate: 0deg;
+		scale: 1;
+	}
+
+	.wp-block-button[data-icon-preview="hover"] > .wp-block-button__link:is(:hover, :focus-visible):not(:disabled, [aria-disabled="true"]) .ax-icon--unselected {
+		opacity: 0;
+		visibility: hidden;
+	}
+
+	.wp-block-button[data-icon-preview="hover"][data-icon-transition="rotate"] > .wp-block-button__link:is(:hover, :focus-visible):not(:disabled, [aria-disabled="true"]) .ax-icon--unselected,
+	.wp-block-button[data-icon-preview="hover"][data-icon-transition="rotate"] > .wp-block-button__link:is(:hover, :focus-visible):not(:disabled, [aria-disabled="true"]) > .ax-icon {
+		rotate: var(--ax-icon-turn);
+	}
+
+	.wp-block-button[data-icon-preview="hover"][data-icon-transition="scale"] > .wp-block-button__link:is(:hover, :focus-visible):not(:disabled, [aria-disabled="true"]) .ax-icon--unselected {
+		scale: 0.5;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+	.wp-block-button[data-icon-transition] .ax-icon {
+		transition: none;
+	}
 }
 
 /* --- Toggle: selected shape ------------------------------------------------ */
@@ -437,7 +555,7 @@
  *
  * The size is handed to the icon primitive as its own token; the primitive does
  * the rest for either source (assets/icon.css, includes/icon.php). */
-.wp-block-button.wp-block-axismundi-dialog-button > .wp-block-button__link:has( > .ax-icon ) {
+.wp-block-button.wp-block-axismundi-dialog-button > .wp-block-button__link:has( > :is(.ax-icon, .ax-icon-swap) ) {
 	--md-icon-size: var( --ax-button-icon-size, 20px );
 	box-sizing: border-box;
 	display: inline-flex;

@@ -201,17 +201,26 @@ function axismundi_dialogs_icon_rotation_css( array $icon ): string {
  * rather than twice in two render.php files.
  *
  * Selection is the visitor's, at runtime, so the server cannot pick one icon. A
- * toggle with a selected icon that resolves carries BOTH, marked
- * `ax-icon--unselected` and `ax-icon--selected`, and aria-pressed shows one
- * (assets/button.css). Icon(selected) is for a source with no state axis - a
- * static font, or the registry, where the filled star is another icon. A
- * variable font needs none: selected fills the same glyph.
+ * button with a selected state and a selected icon that resolves carries BOTH,
+ * marked `ax-icon--unselected` and `ax-icon--selected`, and the state shows one
+ * (assets/button.css). They are wrapped in `ax-icon-swap`, which stacks them in
+ * one cell: the button keeps one icon's width whichever is showing, and the
+ * Icon transition setting can move them in place.
+ *
+ * A selected state is a toggle's aria-pressed, or aria-expanded on a button
+ * whose Action opens a surface - not a toggle, but selected while what it opens
+ * is open, like a menu button that becomes a close button.
+ *
+ * Icon(selected) is for a source with no state axis - a static font, or the
+ * registry, where the filled star is another icon. A variable font needs none:
+ * selected fills the same glyph.
  *
  * @param array $attributes Block attributes.
  * @param bool  $togglable  Whether the button is a toggle.
  * @return string Icon markup, or '' when there is no icon.
  */
 function axismundi_dialogs_get_button_icon( array $attributes, bool $togglable ): string {
+	$stateful = $togglable || in_array( (string) ( $attributes['action'] ?? '' ), array( 'overlay', 'dialog-surface' ), true );
 	$source = 'registry' === ( $attributes['iconSource'] ?? 'font' ) ? 'registry' : 'font';
 	$class  = (string) ( $attributes['iconClass'] ?? 'material-symbols-outlined' );
 	$name   = (string) ( $attributes['icon'] ?? '' );
@@ -228,7 +237,7 @@ function axismundi_dialogs_get_button_icon( array $attributes, bool $togglable )
 	}
 
 	$selected_name = trim( (string) ( $attributes['selectedIcon'] ?? '' ) );
-	if ( ! $togglable || '' === $selected_name ) {
+	if ( ! $stateful || '' === $selected_name ) {
 		return $icon;
 	}
 
@@ -244,14 +253,14 @@ function axismundi_dialogs_get_button_icon( array $attributes, bool $togglable )
 		return $icon;
 	}
 
-	return axismundi_dialogs_get_icon(
+	return '<span class="ax-icon-swap">' . axismundi_dialogs_get_icon(
 		array(
 			'source' => $source,
 			'name'   => $name,
 			'class'  => $class,
 		),
 		array( 'class' => 'ax-icon--unselected' )
-	) . $selected;
+	) . $selected . '</span>';
 }
 
 /**

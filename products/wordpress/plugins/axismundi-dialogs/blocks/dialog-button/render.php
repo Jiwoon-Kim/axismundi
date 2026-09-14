@@ -139,6 +139,18 @@ if ( isset( $attributes['fillOnSelect'] ) && ! $attributes['fillOnSelect'] ) {
 	$axismundi_dialogs_b_wrapper['data-fill-on-select'] = 'false';
 }
 
+// How the icon moves between its states (assets/button.css). Absent is none;
+// a rotation is written only where it differs from the 180deg default.
+if ( in_array( $attributes['iconTransition'] ?? '', array( 'fade', 'rotate', 'scale' ), true ) ) {
+	$axismundi_dialogs_b_wrapper['data-icon-transition'] = $attributes['iconTransition'];
+	if ( 'rotate' === $attributes['iconTransition'] && in_array( (int) ( $attributes['selectedRotation'] ?? 180 ), array( 45, 90 ), true ) ) {
+		$axismundi_dialogs_b_wrapper['data-selected-rotation'] = (string) (int) $attributes['selectedRotation'];
+	}
+}
+if ( ! empty( $attributes['iconPreviewOnHover'] ) ) {
+	$axismundi_dialogs_b_wrapper['data-icon-preview'] = 'hover';
+}
+
 printf(
 	'<div %1$s%6$s>%2$s%3$s%4$s</%5$s>%7$s</div>',
 	get_block_wrapper_attributes( $axismundi_dialogs_b_wrapper ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped by core.

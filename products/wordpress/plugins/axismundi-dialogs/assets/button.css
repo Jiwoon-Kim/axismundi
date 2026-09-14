@@ -698,6 +698,14 @@
 		var( --md-sys-motion-curve-fast-spatial, cubic-bezier( 0.42, 1.67, 0.21, 0.9 ) );
 }
 
+/* The grow goes to the wrapper, so the control has to fill it. On the page the
+ * control is an inline-flex <a> or <button> and keeps its own width, which left
+ * each one at the start of a wider slot; in the editor it is a block-level
+ * <div> and filled the slot already, so only the page showed it. Measured. */
+.wp-block-axismundi-dialog-button-group[data-distribution="fill"] > .wp-block-button > .wp-block-button__link {
+	inline-size: 100%;
+}
+
 /* The selected button takes the extra, and the ones beside it pay for it.
  * `aria-pressed` is the page's state and `data-pressed` the editor's, the same
  * pair the colour and shape rules use. */

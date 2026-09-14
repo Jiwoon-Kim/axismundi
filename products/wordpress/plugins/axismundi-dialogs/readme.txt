@@ -4,7 +4,7 @@ Tags: dialog, bottom sheet, side sheet, button group, material design
 Requires at least: 7.1
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.3.0
+Stable tag: 0.3.1
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -101,71 +101,12 @@ changelog.
 
 == Changelog ==
 
-= 0.3.0 =
+= 0.3.1 =
 
-* Dialogs and sheets are now **Dialog Surface** template parts. The plugin
-  registers the Dialog Surface area, and its **Dialog** block is the native
-  `<dialog>` at the part's root, presented as a basic or full-screen dialog, a
-  bottom sheet or a side sheet.
-* A part is opened by a button whose Action names it, rendered once at the end
-  of the page however many buttons open it, and closed by a button, Escape or
-  the scrim as its settings allow.
-* Seven starting designs for new parts, laid out in Header, Content and Actions
-  groups with Material 3 spacing.
-* Material 3 motion for opening and closing each presentation, with reduced
-  motion respected.
-* Full-screen dialogs become basic dialogs from 600px up.
-* Bottom sheets: a drag handle that expands and collapses the sheet by click,
-  keyboard, drag or fling, keeping Material 3's top margin when expanded.
-* Standard side sheets open below the admin bar and resize or move the page to
-  make room; on compact screens they open as modals.
-* **Removed:** the Sheets, Sheet, Dialog (0.2), Dialog Close and Dialog Title
-  blocks, and the theme template parts they used. Content saved with them
-  renders nothing; rebuild it as a Dialog Surface part opened by a Dialog
-  Button.
-* Adds three blocks that build a Material 3 button group: **Dialog Button
-  Group**, **Dialog Button** and **Dialog Icon Button**. The group owns the
-  shape of the set - size, shape, distribution, and whether its buttons behave
-  as a selection - and each button carries what only it can know.
-* The buttons render as `.wp-block-button` around `.wp-block-button__link
-  .wp-element-button`, so a theme that styles WordPress buttons styles these,
-  and the theme's button style variations (Tonal, Outlined, Text, Elevated)
-  appear on them.
-* Size (Extra small to Extra large) and Shape (Round or Square) come from the
-  Material 3 button tables, each with its own corner morph on press.
-* Togglable buttons: a group can require a selection, allow one or several, and
-  a selected button reports `aria-pressed`. A group of links opts out instead of
-  being silently rewritten into buttons.
-* Disabled is available on every button, with the Material 3 disabled treatment
-  for each colour style.
-* Distribution spreads a group's buttons across the available width, widening
-  the selected one as the specification does.
-* Dialog Button can show an icon beside its label, and either button can swap
-  to a different icon while it is selected and fill the icon font's `FILL`
-  axis. Both icon sources are supported - the theme's icon font and the
-  WordPress Icon Registry.
-* Icon transition moves a button's icon between its states with a fade,
-  rotation or scale; rotation alone can turn a single icon, such as a plus into
-  a close. Preview on hover shows the selected state under hover and keyboard
-  focus.
-* Dialog Icon Button shows a Material 3 plain tooltip on hover and focus,
-  carrying the accessible name it already has. The tooltip is a popover, so it
-  paints above a dialog, and it is shown in the editor as well.
-* Buttons convert between the three blocks, and to and from `core/button`,
-  keeping everything both sides understand.
-* **Action** says what a button is for, and the markup follows from it: a plain
-  command, a form submit or reset, opening or closing a **Dialog Surface**, or
-  opening or closing a **Navigation Overlay**. Advanced shows the element the
-  choice produces, read-only.
-* Opening a Navigation Overlay renders the chosen `navigation-overlay` template
-  part the way core's Navigation overlay does - a `div` with `role="dialog"`,
-  `html.has-modal-open`, a focus trap, Escape, and close on leaving the page -
-  so the two behave alike on one page. The plugin's own dialogs stay native
-  `<dialog>` elements.
-* Dialog Icon is now a shared icon primitive aligned with `core/icon`: one
-  renderer for both sources, in the editor and on the page. A preset Font size
-  now reaches the page, flip and rotation apply to icon-font glyphs, and a Label
-  makes either source `role="img"` while an unlabelled icon is hidden from
-  assistive technology.
+* Distribution: Fill now fills on the page. The group widened each button's
+  slot, but the button kept its own width at the start of it, so a filled
+  group looked scattered on the front end while it looked right in the editor.
+* Remove a development file (`package-lock.json`) that the 0.3.0 package on
+  WordPress.org included by mistake, doubling the plugin's installed size.
 
 Earlier releases are listed in changelog.txt.

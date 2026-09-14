@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Axismundi Dialogs
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/wordpress/plugins/axismundi-dialogs
- * Description:       Accessible Material Design 3 side / bottom sheet and dialog blocks for Axismundi. The blocks own native dialog behavior; theme template parts own default content and layout.
+ * Description:       Material Design 3 dialogs, bottom sheets and side sheets kept as template parts, opened by accessible button groups.
  * Version:           0.3.0
  * Requires at least: 7.1
  * Requires PHP:      8.1

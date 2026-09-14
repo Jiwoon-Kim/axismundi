@@ -117,6 +117,6 @@ printf(
 	$axismundi_dialogs_ib_icon, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped/sanitised by the renderer.
 	$axismundi_dialogs_ib_label, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped above.
 	$axismundi_dialogs_ib_is_link ? 'a' : 'button',
-	$axismundi_dialogs_ib_act['interactive'] ? axismundi_dialogs_action_context() : '',
+	$axismundi_dialogs_ib_act['interactive'] ? axismundi_dialogs_action_context() : '', // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_interactivity_data_wp_context() escapes.
 	$axismundi_dialogs_ib_act['surface'] // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- do_blocks() output.
 );

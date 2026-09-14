@@ -2,6 +2,12 @@
 
 > 상태: **게시됨** 2026-09-14, [WordPress/gutenberg#82848](https://github.com/WordPress/gutenberg/issues/82848) — 제목을 "Allow Font Library font families to declare their intended use"로 바꾸고, 필드 모양은 열어두고, 이모지는 후속 소비자(해결 조건 아님)로, #57980을 Related에 추가한 본문(4,350자). API로 올려 라벨 없음.
 >
+> 후속(2026-09-14):
+> - #82830에 위치 안내 한 줄 댓글(discussioncomment-18434756).
+> - #82848 본문 수정 2회: Core Trac #66103을 전체 URL 링크로(맨 번호는 Gutenberg #66103으로 자동 링크됨), Default를 "no declared use"로.
+> - #82848 찫 댓글 = 추천안([issuecomment-5665034061](https://github.com/WordPress/gutenberg/issues/82848#issuecomment-5665034061)): 필드 `usage`(추천: `role`은 ARIA로 읽힘, `purpose`는 주관적), 선택적 문자열 enum, 첫 값 `"icon"`만, 미선언 = declared use 없음, 동작 변화 없음, `emoji`는 #66104 이후 별도 결정, 합의되면 schema·sanitization PR.
+> - 추가 키가 지워지는 곳은 **네 곳**(본문 표는 1번 누락 → 댓글에서 보완): ① `WP_Font_Collection` 정리 스키마 + `WP_Font_Utils::sanitize_from_schema()`(스키마에 없는 키 unset) ② REST `font_family_settings` ③ `FONT_FAMILY_SCHEMA`(Core `class-wp-theme-json.php`, Gutenberg `lib/class-wp-theme-json-gutenberg.php`) ④ `schemas/json/theme.json`·`schemas/json/font-collection.json`. Gutenberg에는 REST 사본 없음(Core만).
+>
 > 올릴 곳: WordPress/gutenberg › Issues › **Feature request** (`[Type] Enhancement`). 라벨 후보(유지관리자 몫):
 > `[Feature] Font Library`, `[Feature] Typography`. #82830의 로우레벨 하위 작업 — 게시 뒤 #82830에 "font family
 > metadata is tracked in #xxxxx" 한 줄 링크(새 논지 아님, 위치 안내).

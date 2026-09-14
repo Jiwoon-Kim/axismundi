@@ -14,13 +14,14 @@ Material 컴포넌트 하나가 아닙니다. M3의 **Dialog**, **Bottom sheet**
 Sheet는 같은 `<dialog>` 호스트 위의 다른 presentation입니다.
 
 > **구현 중인 계약입니다.** [`axismundi-dialogs`]({{ site.repository_url }}/tree/main/products/wordpress/plugins/axismundi-dialogs)에
-> `dialog-surface` area, 시작 패턴 5개, `axismundi/dialog` 호스트 블록이 들어갔고, 아래 표본은 그 블록의
+> `dialog-surface` area, 시작 패턴 7개, `axismundi/dialog` 호스트 블록이 들어갔고, 아래 표본은 그 블록의
 > 실제 stylesheet를 입습니다. 호스트는 `core/group`을 복제해 요소를 `<dialog>`로 고정한 블록이라,
 > 배경·여백·모서리·그림자 같은 기본값을 블록 설정이나 Site Editor의 스타일에서 바꿀 수 있습니다.
-> 트리거로 여는 동작과 페이지 끝 렌더는 아직입니다.
-> 레거시 `axismundi/dialogs`·`axismundi/sheet`·`axismundi/dialog`(현재 `blocks/dialog-legacy`)는
-> 등록을 내린 폐기 대상이고 구현 참조로만 남겨둔 것입니다. Post Quick View와 Object Media
-> Dialog는 초기 구현 그대로라 구조를 바꿀 수 있습니다. 인터랙티브 데모는 나중에 추가합니다.
+> 버튼의 `Open dialog surface` Action이 파트를 페이지 끝에 한 번 렌더하고 여는 것까지 들어갔습니다.
+> 모션, standard 시트의 페이지 밀기, 바텀시트 핸들 제스처는 이 페이지에 아직 반영하지 않았습니다.
+> 레거시 `axismundi/dialogs`·`axismundi/sheet`·Close·Title 블록과 옛 `axismundi/dialog`는 소스까지
+> 지웠습니다. Post Quick View와 Object Media Dialog는 초기 구현 그대로라 구조를 바꿀 수 있습니다.
+> 인터랙티브 데모는 나중에 추가합니다.
 
 값은 전부 [`_data/surface.yml`]({{ site.repository_url }}/blob/main/products/styleguide/_data/surface.yml)에서
 옵니다. 계약 CSS는 Dialog 블록의

@@ -15,30 +15,19 @@ defined( 'ABSPATH' ) || exit;
 /** Enqueue the shared native-dialog surface for a dynamic interaction. */
 function axismundi_dialogs_enqueue_interaction_dialog_assets() : void {
 	$shared_handle = 'axismundi-dialogs-interaction-shared';
-	$basic_handle  = 'axismundi-dialogs-interaction-basic';
-	$close_handle  = 'axismundi-dialogs-interaction-close';
 	$modal_handle  = 'axismundi-dialogs-interaction-modal';
 
 	if ( ! wp_style_is( $shared_handle, 'registered' ) ) {
 		wp_register_style( $shared_handle, plugins_url( 'assets/shared.css', dirname( __DIR__ ) . '/axismundi-dialogs.php' ), array(), (string) filemtime( dirname( __DIR__ ) . '/assets/shared.css' ) );
 	}
-	if ( ! wp_style_is( $basic_handle, 'registered' ) ) {
-		wp_register_style( $basic_handle, plugins_url( 'blocks/dialog-legacy/style.css', dirname( __DIR__ ) . '/axismundi-dialogs.php' ), array( $shared_handle ), (string) filemtime( dirname( __DIR__ ) . '/blocks/dialog-legacy/style.css' ) );
-	}
-	// The close button wears `ax-dialog-close`, whose rules live in the legacy
-	// Close block's stylesheet. That block is no longer registered, so its
-	// stylesheet no longer arrives on its own; load it by path, as the Dialog
-	// block's geometry already is above.
-	if ( ! wp_style_is( $close_handle, 'registered' ) ) {
-		wp_register_style( $close_handle, plugins_url( 'blocks/dialog-close/style.css', dirname( __DIR__ ) . '/axismundi-dialogs.php' ), array(), (string) filemtime( dirname( __DIR__ ) . '/blocks/dialog-close/style.css' ) );
-	}
+	// The dialog's own chrome, and the basic dialog geometry and close button it
+	// wears - moved here from the retired Dialog and Close blocks, which this
+	// dialog was the last to load.
 	if ( ! wp_style_is( $modal_handle, 'registered' ) ) {
-		wp_register_style( $modal_handle, plugins_url( 'assets/interaction-dialog.css', dirname( __DIR__ ) . '/axismundi-dialogs.php' ), array( $basic_handle, $close_handle ), (string) filemtime( dirname( __DIR__ ) . '/assets/interaction-dialog.css' ) );
+		wp_register_style( $modal_handle, plugins_url( 'assets/interaction-dialog.css', dirname( __DIR__ ) . '/axismundi-dialogs.php' ), array( $shared_handle ), (string) filemtime( dirname( __DIR__ ) . '/assets/interaction-dialog.css' ) );
 	}
 
 	wp_enqueue_style( $shared_handle );
-	wp_enqueue_style( $basic_handle );
-	wp_enqueue_style( $close_handle );
 	wp_enqueue_style( $modal_handle );
 }
 

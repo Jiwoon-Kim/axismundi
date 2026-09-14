@@ -1250,36 +1250,6 @@
 			"area": "navigation-overlay",
 			"name": "navigation-overlay",
 			"title": "Navigation Overlay"
-		},
-		{
-			"area": "uncategorized",
-			"name": "sheet-navigation",
-			"title": "Side Sheet"
-		},
-		{
-			"area": "uncategorized",
-			"name": "sheet-table-of-contents",
-			"title": "Table of Contents Sheet"
-		},
-		{
-			"area": "uncategorized",
-			"name": "sheet-generic",
-			"title": "Generic Sheet"
-		},
-		{
-			"area": "uncategorized",
-			"name": "dialog-basic",
-			"title": "Basic Dialog"
-		},
-		{
-			"area": "uncategorized",
-			"name": "dialog-list",
-			"title": "List Dialog"
-		},
-		{
-			"area": "uncategorized",
-			"name": "dialog-fullscreen",
-			"title": "Full-screen Dialog"
 		}
 	]
 }

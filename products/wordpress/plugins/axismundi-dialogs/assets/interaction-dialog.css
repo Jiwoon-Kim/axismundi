@@ -20,5 +20,109 @@
 	padding: 0.5rem 1.5rem 1.5rem;
 }
 
-.ax-interaction-dialog__body > :first-child { margin-block-start: 0; }
-.ax-interaction-dialog__body > :last-child { margin-block-end: 0; }
+.ax-interaction-dialog__body > :first-child {
+	margin-block-start: 0;
+}
+
+.ax-interaction-dialog__body > :last-child {
+	margin-block-end: 0;
+}
+
+/* ---- Basic dialog --------------------------------------------------------- *
+ * Moved here from the retired Dialog block (blocks/dialog-legacy/style.css),
+ * which this dialog was the last to load. Only what an interaction dialog
+ * wears: the basic variant at medium width. M3: 280-560px wide, 28dp radius,
+ * centred; the shared surface, scrim and scroll lock come from
+ * assets/shared.css. */
+dialog.ax-dialog--basic {
+	--ax-dialog-basic-width: 400px;
+	--ax-dialog-container-color: var(--wp--preset--color--surface-container-high, #ece6f0);
+	--ax-dialog-shape: 28px;
+	--ax-dialog-elevation: var(--wp--preset--shadow--elevation-3, 0 8px 24px rgba(0, 0, 0, 0.24));
+
+	inset: 0;
+	margin: auto;
+	inline-size: min(calc(100vw - 2 * var(--wp--preset--spacing--300, 24px)), var(--ax-dialog-basic-width));
+	min-inline-size: min(280px, calc(100vw - 2 * var(--wp--preset--spacing--300, 24px)));
+	max-inline-size: 560px;
+	max-block-size: calc(100dvh - 2 * var(--wp--preset--spacing--300, 24px));
+}
+
+dialog.ax-dialog--basic .ax-dialog__surface {
+	border-radius: var(--ax-dialog-shape);
+}
+
+@media ( prefers-reduced-motion: no-preference ) {
+
+	dialog.ax-dialog--basic:not([open]) {
+		scale: 0.9;
+	}
+
+	dialog.ax-dialog--basic.is-closing {
+		scale: 0.9;
+	}
+
+	@starting-style {
+
+		dialog.ax-dialog--basic[open] {
+			scale: 0.9;
+			opacity: 0;
+		}
+	}
+}
+
+/* ---- Close button --------------------------------------------------------- *
+ * Moved here from the retired Close block (blocks/dialog-close/style.css).
+ * The button footprint is the 24dp icon; the 40dp state layer is an
+ * overflowing ::before, so the resting size stays icon-sized while hover,
+ * focus and press still show a full-size state layer. */
+.ax-dialog-close {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 24px;
+	block-size: 24px;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	cursor: pointer;
+	line-height: 0;
+}
+
+.ax-dialog-close .material-symbols-outlined {
+	position: relative;
+	z-index: 1;
+	font-size: 24px;
+	line-height: 1;
+}
+
+/* 40dp state layer, centred on the 24dp icon (inset -8 => 24 + 16). */
+.ax-dialog-close::before {
+	content: "";
+	position: absolute;
+	inset: -8px;
+	z-index: 0;
+	border-radius: 50%;
+	background: transparent;
+	transition: background-color var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, cubic-bezier(0.31, 0.94, 0.34, 1));
+}
+
+.ax-dialog-close:hover::before {
+	background: color-mix(in srgb, var(--wp--preset--color--on-surface-variant, currentColor) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), transparent);
+}
+
+.ax-dialog-close:focus-visible::before {
+	background: color-mix(in srgb, var(--wp--preset--color--on-surface-variant, currentColor) calc(var(--md-sys-state-focus-state-layer-opacity, 0.1) * 100%), transparent);
+}
+
+.ax-dialog-close:active::before {
+	background: color-mix(in srgb, var(--wp--preset--color--on-surface-variant, currentColor) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), transparent);
+}
+
+.ax-dialog-close:focus-visible {
+	outline: 2px solid var(--wp--preset--color--secondary, currentColor);
+	outline-offset: 8px;
+	border-radius: 50%;
+}

@@ -42,6 +42,6 @@
 				}
 			}
 		},
-		"css": "& .wp-block-button__link:not(.has-background){background-color:initial;background-image:none;} & .ax-dialog__open-button{background-color:transparent;}"
+		"css": "& .wp-block-button__link:not(.has-background){background-color:initial;background-image:none;}"
 	}
 }

@@ -1,11 +1,13 @@
 /**
  * Axismundi Dialogs — shared dialog runtime surface.
  *
- * Enqueued for both axismundi/sheet and axismundi/dialog (wp_enqueue_block_style).
- * Owns the open button, the native <dialog> box, the ::backdrop scrim, the
- * template-part contract (section > header / body / footer), scroll lock,
- * standard (non-modal) fixing, and the shared motion. Sheet- and dialog-specific
- * geometry lives in each block's own style.css.
+ * Enqueued for the dynamic hubs - Post Quick View and Object Media Dialog
+ * (wp_enqueue_block_style) - and for the interaction dialog
+ * (includes/interaction-dialog.php). It once also served the retired Sheet and
+ * Dialog blocks; the Dialog block's Surface contract does not use it. Owns the
+ * native <dialog> box, the ::backdrop scrim, the section > header / body /
+ * footer contract, scroll lock, standard (non-modal) fixing, and the shared
+ * motion. Each surface's own geometry lives in its own stylesheet.
  *
  * Style contract (override via CSS custom properties or WordPress presets):
  *   --ax-dialog-container-color    surface of the panel

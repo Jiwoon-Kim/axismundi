@@ -100,26 +100,18 @@ function axismundi_dialogs_register_blocks() : void {
 	);
 
 	/*
-	 * The legacy dialog blocks are no longer registered: the Sheets collection,
-	 * Sheet and Dialog hosts (blocks/dialogs, blocks/sheet, blocks/dialog-legacy), and the
-	 * Close and Title blocks their template parts used (blocks/dialog-close,
-	 * blocks/dialog-title). They are retired in favour of the Surface contract,
-	 * where a dialog is a template part the Site Editor manages rather than a
-	 * block in a post (products/styleguide, Surface page). Their source stays in
-	 * the plugin as implementation reference only.
+	 * The legacy dialog blocks - the Sheets collection, the Sheet and Dialog
+	 * hosts, and the Close and Title blocks their template parts used - are
+	 * gone, retired in favour of the Surface contract, where a dialog is a
+	 * dialog-surface template part the Site Editor manages (includes/surface.php,
+	 * products/styleguide Surface page). The new host took the name
+	 * axismundi/dialog; saved content from the retired block of that name renders
+	 * nothing (blocks/dialog/render.php). The basic dialog geometry and close
+	 * button the interaction dialog still wears moved to
+	 * assets/interaction-dialog.css.
 	 *
-	 * Two files outside those blocks still read legacy stylesheets by path:
-	 * includes/interaction-dialog.php loads blocks/dialog-legacy/style.css and
-	 * blocks/dialog-close/style.css. Deleting the legacy sources means moving
-	 * those rules first.
-	 *
-	 * Unregistering them first also frees the names: the new host block takes
-	 * axismundi/dialog, and the legacy Dialog block's wrapper already carries
-	 * core's default class for that name, wp-block-axismundi-dialog.
-	 *
-	 * Nothing still registered depends on them. Post Quick View defines every
-	 * action its markup and its trigger call in its own view.js, and Object Media
-	 * Dialog imports no module; both enqueue shared.css for themselves below.
+	 * Post Quick View and Object Media Dialog define their own runtime and
+	 * enqueue shared.css for themselves below.
 	 */
 	foreach ( array( 'dialog', 'dialog-icon', 'dialog-button-group', 'dialog-button', 'dialog-icon-button', 'post-quick-view-trigger', 'post-quick-view', 'object-media-dialog' ) as $axismundi_dialogs_block ) {
 		$axismundi_dialogs_dir = __DIR__ . '/blocks/' . $axismundi_dialogs_block;

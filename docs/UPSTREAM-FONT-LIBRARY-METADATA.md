@@ -1,6 +1,6 @@
 # Draft — Gutenberg issue: font families cannot say what they are for
 
-> 상태: **초안, 미게시** (2026-09-14)
+> 상태: **게시됨** 2026-09-14, [WordPress/gutenberg#82848](https://github.com/WordPress/gutenberg/issues/82848) — 제목을 "Allow Font Library font families to declare their intended use"로 바꾸고, 필드 모양은 열어두고, 이모지는 후속 소비자(해결 조건 아님)로, #57980을 Related에 추가한 본문(4,350자). API로 올려 라벨 없음.
 >
 > 올릴 곳: WordPress/gutenberg › Issues › **Feature request** (`[Type] Enhancement`). 라벨 후보(유지관리자 몫):
 > `[Feature] Font Library`, `[Feature] Typography`. #82830의 로우레벨 하위 작업 — 게시 뒤 #82830에 "font family
@@ -51,7 +51,7 @@
 
 ## Title
 
-Font families have no way to declare what they are for, and extra keys are dropped along the way
+Allow Font Library font families to declare their intended use
 
 ## What problem does this address?
 
@@ -77,17 +77,17 @@ Other specialised fonts exist — mathematical fonts, for example — but they d
 
 ## What is your proposed solution?
 
-Let a font family declare, in one small field, which kind of use it is intended for, and carry that field through the whole pipeline: the Font Library REST schema and Font Collection schema, the theme.json JSON schema and `FONT_FAMILY_SCHEMA`, and the editor settings. With that in place, each consumer decides for itself what to do:
+Add a schema-supported, family-level metadata field that lets a font family declare its intended use, and carry it through the whole pipeline: the Font Library REST schema and Font Collection schema, the theme.json JSON schema and `FONT_FAMILY_SCHEMA`, and the editor settings. With that in place, each consumer decides for itself what to do:
 
 - an icon picker or icon provider can offer icon fonts, while they stay available as fonts;
-- the emoji loader could consider a local emoji font for a capability it already knows is missing.
+- later, the emoji loader could consider a local emoji font for a capability it already knows is missing. That is a follow-up consumer the field would make possible, not a condition of this issue.
 
 This issue is only about the metadata and its path, not about those consumers. Open questions:
 
-- **Shape.** A single string (for example `usage: "icon"`), or a boolean per kind (`icon: true`)? A string extends without a schema break; a boolean is the smallest change. Coverage should not need a new key, since `fontFace` already has `unicodeRange`.
-- **Default.** Absent means a text font, so existing fonts and themes are unchanged.
+- **Shape.** The field's name and values are open for discussion: a single string naming the use, a boolean per kind, or something else. A string extends without a schema break; a boolean is the smallest change. Coverage should not need a new key, since `fontFace` already has `unicodeRange`.
+- **Default.** Absent means no declared use: existing fonts and themes behave exactly as they do today.
 - **Scope of values.** Starting with the two consumers above, or naming a value only when a consumer lands.
 
-Out of scope here: whether Core should bundle an emoji font, changes to the emoji loader, and variable-font axis controls (tracked with #82830; a related `font-variation-settings` compilation bug is Core Trac #66103).
+Out of scope here: whether Core should bundle an emoji font, changes to the emoji loader, and variable-font axis controls (tracked with #82830; a related `font-variation-settings` compilation bug is [Core Trac #66103](https://core.trac.wordpress.org/ticket/66103)).
 
-Related: #82830, #82229, #73694 (another piece of family-level information the Font Library cannot express — a generic fallback).
+Related: #82830, #82229, #73694 (another piece of family-level information the Font Library cannot express — a generic fallback), #57980 (Font Collections list font family definitions in theme.json `fontFamily` format, the shape this field would extend).

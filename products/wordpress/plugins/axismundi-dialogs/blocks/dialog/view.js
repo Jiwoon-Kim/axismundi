@@ -771,8 +771,9 @@ document.addEventListener(
 
 /*
  * A bottom sheet opens no higher than half the window (M3 bottom sheet
- * guidelines); its drag handle raises it to the window's full height and
- * lowers it again, and dragging it down closes it.
+ * guidelines); its drag handle raises it to its full height - 72dp below the
+ * window's top, M3's limit - and lowers it again, and dragging it down closes
+ * it.
  *
  *   fling     a quick flick decides by direction, however short: up raises the
  *             sheet to full height, down takes it one step down from where the
@@ -780,8 +781,8 @@ document.addEventListener(
  *             than 0.5px per millisecond over the last 100ms before release.
  *   drag      otherwise the release position decides. The sheet's height
  *             follows the pointer; released below 30% of the window it closes,
- *             above 70% it fills the window, in between it returns to its
- *             initial height - moving there from where the pointer left it.
+ *             above 70% it rises to full height, in between it returns to
+ *             its initial height - moving there from where the pointer left it.
  *   click     the handle is a <button>, so a click, Enter and Space all arrive
  *             as one click and toggle the two heights: the single-pointer and
  *             keyboard alternative to dragging that M3's accessibility page

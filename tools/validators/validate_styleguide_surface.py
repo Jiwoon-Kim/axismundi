@@ -13,7 +13,12 @@ the theme actually defines it:
   - every role in a row's numbered `color_roles` list is defined by the theme;
   - every `adaptive` rule names a real presentation, real layout.yml
     breakpoints, and a `becomes` that is a presentation or a modality;
-  - the scrim's opacity is M3's 0.32.
+  - the scrim's opacity is M3's 0.32;
+  - motion, windows and the bottom sheet's behaviour: each presentation's
+    motion properties name defined theme motion tokens, the runtime plays the
+    recorded dialog choreography, and the stylesheet and runtime use the
+    recorded window margin, breakpoints, admin bar offset, page share and
+    handle thresholds.
 """
 
 from __future__ import annotations
@@ -40,6 +45,11 @@ STYLES = ROOT / "products/wordpress/themes/axismundi/assets/styles"
 REF = STYLES / "tokens.ref.css"
 LIGHT = STYLES / "tokens.sys.color.light.css"
 ELEVATION = STYLES / "tokens.sys.elevation.css"
+MOTION = STYLES / "tokens.sys.motion.css"
+# The Dialog block's runtime: motion, trigger state and the bottom sheet handle.
+RUNTIME = ADAPTER.parent / "view.js"
+SURFACE_PHP = ROOT / "products/wordpress/plugins/axismundi-dialogs/includes/surface.php"
+BUTTON_BLOCK = ROOT / "products/wordpress/plugins/axismundi-dialogs/blocks/dialog-button/block.json"
 
 # M3 elevation levels and the dp each is published as. The theme defines no dp
 # token on purpose, so this table is the only place the pairing can be checked.
@@ -347,6 +357,121 @@ def check_adapter(data: dict, report: Report) -> None:
     )
 
 
+def check_runtime(data: dict, report: Report) -> None:
+    """Motion, the window and the page, and the bottom sheet's behaviour.
+
+    surface.yml restates these as this project's choices; the stylesheet, the
+    runtime and the theme's motion tokens are what ship them.
+    """
+    sources = (ADAPTER, RUNTIME, MOTION, LAYOUT, SURFACE_PHP, BUTTON_BLOCK)
+    for path in sources:
+        report.check(path.is_file(), f"missing {path.as_posix()}")
+    if not all(path.is_file() for path in sources):
+        return
+    css = ADAPTER.read_text(encoding="utf-8")
+    js = RUNTIME.read_text(encoding="utf-8")
+    tokens = set(re.findall(r"(--md-sys-motion-[a-z0-9-]+)\s*:", MOTION.read_text(encoding="utf-8")))
+    classes = {c["name"]: c for c in yaml.safe_load(LAYOUT.read_text(encoding="utf-8"))["breakpoints"]["classes"]}
+    rows = {row["name"]: row for row in data.get("presentations", [])}
+    host = "dialog.wp-block-axismundi-dialog"
+
+    def expect(selector: str, name: str, want: str) -> None:
+        body = rule(css, selector)
+        report.check(body is not None, f"dialog style.css has no rule for {selector}")
+        if body is not None:
+            got = declared(body, name)
+            report.check(got == want, f"dialog style.css {selector} {name}: {got!r}, want {want!r}")
+
+    # Motion: each presentation's four properties name theme tokens that exist.
+    # A presentation that does not redeclare a property inherits the base rule's.
+    motion = data["motion"]
+    selectors = {
+        "dialog-basic": f":where({host})",
+        "dialog-full-screen": f':where({host}[data-presentation="dialog-full-screen"])',
+        "sheet": f':where({host}[data-presentation^="sheet-"])',
+    }
+    base = rule(css, selectors["dialog-basic"])
+    for key, selector in selectors.items():
+        body = rule(css, selector)
+        report.check(body is not None, f"dialog style.css has no rule for {selector}")
+        for field, prop in motion["properties"].items():
+            token = f"--{motion['presentations'][key][field]}"
+            report.check(token in tokens, f"motion.presentations.{key}.{field}: {token} is not defined in tokens.sys.motion.css")
+            got = declared(body, prop)
+            if got is None and key != "dialog-basic":
+                got = declared(base, prop)
+            report.check(got == f"var({token})", f"dialog style.css {selector} {prop}: {got!r}, want 'var({token})'")
+
+    # The dialog choreography the runtime plays.
+    choreography = motion["dialog"]
+    report.check(js.count(f"translate: '0 -{choreography['translate']}px'") >= 2,
+                 f"view.js does not move a dialog {choreography['translate']}px on opening and closing")
+    report.check(f"inset(0px 0px {100 - choreography['folded_height']}% 0px" in js,
+                 f"view.js does not fold the container to {choreography['folded_height']}% of its height")
+    for slot, call in (("content", "fadeIn( slot, {hold}, enterDuration * {share} )"), ("actions", "fadeIn( slot, {hold}, enterDuration * {share} )")):
+        want = call.format(hold=choreography[slot]["hold"], share=choreography[slot]["share_of_enter"])
+        report.check(want in js, f"view.js does not fade {slot} as recorded: {want}")
+    report.check(choreography["exit_slot_fade"] == "2/3" and "( exitDuration * 2 ) / 3" in js,
+                 "view.js does not fade slots out over the recorded share of the exit duration")
+    report.check("'(prefers-reduced-motion: reduce)'" in js, "view.js does not read prefers-reduced-motion")
+
+    # The window: the basic dialog's margin, and full-screen becoming basic.
+    windows = data["windows"]
+    basic_max = rows["dialog-basic"]["measurements"]["width"]["max"]
+    margin = windows["basic_dialog_margin"]["value"]
+    window_width = f"min({basic_max}px, 100% - {2 * margin}px)"
+    expect(f'{host}[data-presentation="dialog-basic"]', "max-inline-size", window_width)
+    adaptive = next((r for r in data.get("adaptive", []) if r.get("presentation") == "dialog-full-screen"), {})
+    report.check(windows["basic_from"] == adaptive.get("from"), "windows.basic_from differs from the full-screen dialog's adaptive rule")
+    medium = classes[windows["basic_from"]]["min"]
+    query = f"@media (width >= {medium}px)"
+    report.check(query in css, f"dialog style.css has no {query} for the full-screen dialog's switch")
+    inside = css.split(query, 1)[1] if query in css else ""
+    report.check(
+        re.search(re.escape(f'{host}[data-presentation="dialog-full-screen"]') + r"\s*\{[^}]*max-inline-size:\s*" + re.escape(window_width), inside) is not None,
+        f"dialog style.css does not give the full-screen dialog the basic dialog's {window_width} inside {query}",
+    )
+
+    # The page: the admin bar and the standard side sheet's page share.
+    expect(f'{host}[data-render-mode="standard-sheet"]', "inset", "var(--wp-admin--admin-bar--height, 0px) 0 0")
+    expect("html.axismundi-dialog-pushed-start .wp-site-blocks", "padding-inline-start", "var(--axismundi-dialog-push, 0px)")
+    expect("html.axismundi-dialog-pushed-end .wp-site-blocks", "padding-inline-end", "var(--axismundi-dialog-push, 0px)")
+    expect("html.axismundi-dialog-moved .wp-site-blocks", "translate", "var(--axismundi-dialog-move, 0px) 0")
+    compact = classes[windows["full_screen_until"]]["max"]
+    report.check(f"'(max-width: {compact}px)'" in js, f"view.js does not switch at the compact window's {compact}px")
+    report.check(set(windows["page_share"]["values"]) == {"resize", "move"} and "'move'" in js,
+                 "windows.page_share values differ from the runtime's")
+
+    # The bottom sheet's heights and handle.
+    bottom = rows["sheet-bottom"]
+    behaviour = bottom["behaviour"]
+    cap = (f'{host}[data-presentation="sheet-bottom"]:has(> .wp-block-axismundi-dialog__header > '
+           '.wp-block-axismundi-dialog__drag-handle):not([data-sheet-height="expanded"])')
+    expect(cap, "max-block-size", f"{behaviour['initial_height_cap']}%")
+    top = bottom["measurements"][behaviour["expanded"]]
+    expanded = f'{host}[data-presentation="sheet-bottom"][data-sheet-height="expanded"]'
+    expect(expanded, "block-size", f"calc(100% - {top}px)")
+    expect(expanded, "max-block-size", f"calc(100% - {top}px)")
+    wide = bottom["measurements"]["wide_window"]
+    report.check(
+        re.search(re.escape(f"@media (width > {wide['above']}px)") + r"\s*\{\s*" + re.escape(f"{expanded}:modal") + r"\s*\{[^}]*block-size:\s*" + re.escape(f"calc(100% - {wide['top_margin']}px)"), css) is not None,
+        f"dialog style.css does not keep {wide['top_margin']}px above an expanded modal sheet wider than {wide['above']}px",
+    )
+    drag = behaviour["handle"]["drag"]
+    for constant, key in (("DRAG_SLOP", "slop"), ("CLOSE_BELOW", "close_below"), ("EXPAND_ABOVE", "expand_above"), ("FLING_SPEED", "fling_speed"), ("FLING_WINDOW", "fling_window")):
+        match = re.search(rf"^const {constant} = ([0-9.]+);", js, re.M)
+        report.check(match is not None and float(match.group(1)) == float(drag[key]),
+                     f"view.js {constant} is {match.group(1) if match else 'missing'}, surface.yml gives {drag[key]}")
+
+    # The trigger: the actions exist, and a standard sheet's command is the custom one.
+    trigger = data["host"]["trigger"]
+    enum = json.loads(BUTTON_BLOCK.read_text(encoding="utf-8"))["attributes"]["action"]["enum"]
+    for key in ("open_action", "close_action"):
+        report.check(trigger[key] in enum, f"host.trigger.{key} '{trigger[key]}' is not in the Dialog Button's action enum")
+    report.check("'--toggle'" in SURFACE_PHP.read_text(encoding="utf-8") and "'--toggle'" in js,
+                 "a standard sheet's trigger command is not --toggle in both includes/surface.php and view.js")
+
+
 def main() -> int:
     missing = [p.relative_to(ROOT).as_posix() for p in (DATA, LAYOUT, REF, LIGHT, ELEVATION) if not p.is_file()]
     if missing:
@@ -411,6 +536,7 @@ def main() -> int:
     report.check(data.get("scrim", {}).get("opacity") == 0.32, "scrim: opacity differs from M3's 0.32 (§0.12)")
 
     check_adapter(data, report)
+    check_runtime(data, report)
 
     names = [row.get("name") for row in data.get("presentations", [])]
     axis = next((a for a in data.get("axes", []) if a.get("name") == "presentation"), {})

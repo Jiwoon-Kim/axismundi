@@ -25,10 +25,14 @@
 #                 that each `role` still resolves to that hex through the
 #                 theme's light tokens.
 #   measurements  the published measurements table on the specs page.
-#   legacy        what axismundi-dialogs renders today, read from its source.
-#                 The legacy sheet and dialog blocks are to be retired and are
-#                 kept as implementation reference; `legacy` is the gap, not
-#                 the target.
+#   legacy        what the retired sheet and dialog blocks rendered, read from
+#                 their source before it was removed (2026-09-15). Kept as the
+#                 record of what the contract replaced; nothing ships it.
+#   motion,       this project's choices where M3 publishes a rule without
+#   windows,      numbers: which motion token each presentation takes, how a
+#   behaviour     surface meets the window and the page, and the bottom sheet
+#                 handle's thresholds. validate_styleguide_surface.py holds
+#                 each to the stylesheet and the runtime that ship it.
 #   conflicts     places where M3's own pages disagree. Recorded with both
 #                 sides; nothing is resolved by picking one silently.
 #
@@ -79,17 +83,34 @@ host:
     note: >-
       Stable across renders, so any number of triggers can name one surface.
       Never wp_unique_id(), which changes with render order.
-  render: once per page, at the end of the page, when something on the page names it
+  render: >-
+    Once per page, at the end of the page, when a trigger on the page names it.
+    The part is rendered when its first trigger renders and printed in
+    wp_footer - measured: rendered in wp_footer, a part lost the layout CSS its
+    groups generate, which core had already printed.
   trigger:
-    action: dialog
-    markup: commandfor names the surface id; command is show-modal, or runtime for a standard sheet
+    open_action: dialog-surface
+    close_action: dialog-surface-close
+    modal: commandfor names the surface id, command="show-modal", aria-haspopup="dialog", aria-expanded
+    standard_sheet: >-
+      command="--toggle". The browser has no non-modal show command - measured
+      in Chrome, command="show" did nothing and fired no event - so a custom
+      command reaches the dialog as a command event, and the block's runtime
+      opens the sheet, or closes it when it is already open.
+    expanded: the runtime mirrors the dialog's open state onto every trigger's aria-expanded
+    close: >-
+      A button with the close action gets command="close" and the id of the
+      surface it sits in when the part renders.
+  initial_focus: >-
+    The dialog itself (tabindex -1), not its first control, so a button does
+    not open wearing its focus state. An author's autofocus inside is kept.
+    Measured in Chrome: autofocus on the <dialog> did not take focus.
   legacy_names:
-    reclaim: [axismundi/dialog]
-    retire: [axismundi/dialogs, axismundi/sheet, axismundi/dialog]
-    class_collision: >-
-      The legacy dialog block's wrapper already carries wp-block-axismundi-dialog,
-      core's default class name for the block, so the legacy registration comes
-      down before the new block ships.
+    reclaimed: [axismundi/dialog]
+    removed: [axismundi/dialogs, axismundi/sheet, axismundi/dialog-close, axismundi/dialog-title]
+    saved_content: >-
+      Saved content of the retired block that was also named axismundi/dialog
+      carries its old attributes and renders nothing (blocks/dialog/render.php).
   # WordPress 7.1, read from core's code; the Site Editor UI was not opened.
   measured:
     starter_patterns: >-
@@ -120,6 +141,95 @@ scrim:
   legacy:
     value: scrim at 32% (assets/shared.css, ::backdrop)
     bound: true
+
+# Motion. M3's dialog guidelines name "the enter and exit transition pattern"
+# and publish no timeline, so the choreography is material-web's
+# (dialog/internal/animations.ts) and the curves and durations are the theme's
+# motion tokens (themes/axismundi/assets/styles/tokens.sys.motion.css). Which
+# token each presentation takes is this project's choice. The block reads four
+# custom properties per surface (blocks/dialog/style.css), so a theme changes a
+# surface's speed in one place; the runtime (blocks/dialog/view.js) plays them
+# through the Web Animations API.
+motion:
+  api: Web Animations API
+  properties:
+    enter: --axismundi-dialog-motion-enter
+    enter_duration: --axismundi-dialog-motion-enter-duration
+    exit: --axismundi-dialog-motion-exit
+    exit_duration: --axismundi-dialog-motion-exit-duration
+  presentations:
+    dialog-basic:
+      enter: md-sys-motion-curve-default-spatial
+      enter_duration: md-sys-motion-curve-default-spatial-duration
+      exit: md-sys-motion-easing-emphasized-accelerate
+      exit_duration: md-sys-motion-duration-short3
+      reason: a partial-screen surface, the default spatial spring
+    dialog-full-screen:
+      enter: md-sys-motion-curve-slow-spatial
+      enter_duration: md-sys-motion-curve-slow-spatial-duration
+      exit: md-sys-motion-easing-emphasized-accelerate
+      exit_duration: md-sys-motion-duration-short4
+      reason: a full-screen surface, the slow spatial spring; from medium it moves as a basic dialog
+    sheet:
+      enter: md-sys-motion-easing-emphasized-decelerate
+      enter_duration: md-sys-motion-duration-long2
+      exit: md-sys-motion-easing-emphasized-accelerate
+      exit_duration: md-sys-motion-duration-short4
+      reason: >-
+        A sheet enters from its edge; a spring's overshoot would pull it off
+        that edge and show a gap, so its curve does not overshoot.
+  dialog:
+    source: dialog_web
+    # px: from above on opening, and back up on closing.
+    translate: 50
+    # %: the container's clipped height when opening starts.
+    folded_height: 35
+    # Shares of the slot's own fade spent at 0, and the fade's share of the
+    # enter duration - material-web's 250 and 300 of 500ms.
+    content: { hold: 0.2, share_of_enter: 0.5 }
+    actions: { hold: 0.5, share_of_enter: 0.6 }
+    exit_slot_fade: 2/3
+    container: >-
+      material-web animates an inner container's height; this dialog has none -
+      the inner blocks are its own children - so the container is a clip-path.
+  sheet: slides in from the edge it sits on and back out to it; a modal sheet's scrim fades with it
+  closing: >-
+    The close command and the cancel event (Escape, a scrim click) are held
+    with preventDefault(), the motion runs, then close(). Measured in Chrome:
+    both events are cancelable, and a ::backdrop takes a WAAPI animation.
+  reduced_motion: every surface opens and closes at once
+
+# How a surface meets the window, and the page it opens over or beside.
+windows:
+  basic_dialog_margin:
+    # px from each window edge: max-inline-size min(560px, 100% - 48px).
+    value: 24
+    source: dialog_web
+    note: Measured on the material-web dialog in Chrome; M3's specs publish no window margin.
+  # A full-screen dialog takes the basic dialog's look from this breakpoint
+  # (adaptive). CSS alone: the content and the header are unchanged.
+  full_screen_until: compact
+  basic_from: medium
+  admin_bar:
+    standard_sheet: below
+    modal: above
+    note: >-
+      A standard sheet leaves the page usable, admin bar included, so it starts
+      below it (--wp-admin--admin-bar--height). A modal surface is in the top
+      layer, above the admin bar, and the page behind it is inert anyway.
+  page_share:
+    applies_to: docked standard side sheet
+    values: [resize, move]
+    default: resize
+    resize: >-
+      From medium up, the page's root (.wp-site-blocks) takes the sheet's
+      measured width as padding on the sheet's edge, so the content narrows -
+      the guidelines' "the body area shrinks". On a compact window the sheet
+      opens as a modal instead, and it closes if the window crosses that
+      boundary while open.
+    move: >-
+      A project option: the whole page slides past the far edge by the sheet's
+      width and keeps its own width, as a mobile drawer does, on every window.
 
 # The axes a surface instance chooses. Presentation and modality are M3's;
 # the others are what every row exposes, named once here so a block and a
@@ -153,6 +263,7 @@ adaptive:
     becomes: dialog-basic
     from: medium
     source: dialog_guidelines
+    implemented: the block's stylesheet, a literal media query at medium's lower bound
   - presentation: dialog-basic
     position:
       default: center
@@ -175,7 +286,11 @@ adaptive:
     source: side_sheet_guidelines
     note: >-
       Standard side sheets are mostly medium and expanded; modal ones are
-      preferred on compact. The legacy sheet block already falls back this way.
+      preferred on compact.
+    implemented: >-
+      The runtime opens a standard side sheet as a modal on a compact window
+      and restores it when it closes. A sheet set to move the page stays
+      standard on every window.
 
 presentations:
   - name: dialog-basic
@@ -349,6 +464,26 @@ presentations:
       top_margin: 72
       # Once the window is wider than 640dp.
       wide_window: { above: 640, top_margin: 56, inline_margin: 56 }
+    # The published rules (components.bottom_sheet: opens no higher than half
+    # the window, heights reachable without dragging) with this project's
+    # numbers. M3 publishes no drag thresholds.
+    behaviour:
+      # %: the modal initial height's cap, M3's "no higher than half".
+      initial_height_cap: 50
+      # Raised all the way, the sheet keeps M3's top margin (measurements).
+      expanded: top_margin
+      handle:
+        click: toggles the initial height and full height; Enter and Space arrive as the same click
+        drag:
+          # px: a press that moves less is a click.
+          slop: 4
+          # Shares of the window's height at release, for a slow drag.
+          close_below: 0.3
+          expand_above: 0.7
+          # px per ms over the last fling_window ms: faster decides by direction.
+          fling_speed: 0.5
+          fling_window: 100
+          fling: up raises to full height; down takes one step down from where the drag began
     legacy:
       bound: false
       max_height: calc(100dvh - 72px), 56px on wider windows
@@ -646,8 +781,8 @@ conflicts:
     measurements: max 560dp
     guidelines: fills the entire screen, compact breakpoints only
     note: >-
-      Compact runs to 599dp, so a 560dp cap leaves a gap at the top of the
-      range. Unresolved.
+      Resolved by the adaptive rule: on a compact window the dialog fills it,
+      and from medium it is a basic dialog, 560dp at most.
   - subject: basic dialog role on the web
     accessibility_page: every basic dialog is an alertdialog
     material_web: role dialog by default; type="alert" opts in

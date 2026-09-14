@@ -13,21 +13,21 @@ Material 컴포넌트 하나가 아닙니다. M3의 **Dialog**, **Bottom sheet**
 다룹니다. Button과 Icon button이 같은 `<button>` 위의 두 anatomy인 것처럼, Dialog와
 Sheet는 같은 `<dialog>` 호스트 위의 다른 presentation입니다.
 
-> **구현 중인 계약입니다.** [`axismundi-dialogs`]({{ site.repository_url }}/tree/main/products/wordpress/plugins/axismundi-dialogs)에
-> `dialog-surface` area, 시작 패턴 7개, `axismundi/dialog` 호스트 블록이 들어갔고, 아래 표본은 그 블록의
+> **구현된 계약입니다.** [`axismundi-dialogs`]({{ site.repository_url }}/tree/main/products/wordpress/plugins/axismundi-dialogs)에
+> `dialog-surface` area, 시작 패턴 7개, `axismundi/dialog` 호스트 블록이 있고, 아래 표본은 그 블록의
 > 실제 stylesheet를 입습니다. 호스트는 `core/group`을 복제해 요소를 `<dialog>`로 고정한 블록이라,
 > 배경·여백·모서리·그림자 같은 기본값을 블록 설정이나 Site Editor의 스타일에서 바꿀 수 있습니다.
-> 버튼의 `Open dialog surface` Action이 파트를 페이지 끝에 한 번 렌더하고 여는 것까지 들어갔습니다.
-> 모션, standard 시트의 페이지 밀기, 바텀시트 핸들 제스처는 이 페이지에 아직 반영하지 않았습니다.
-> 레거시 `axismundi/dialogs`·`axismundi/sheet`·Close·Title 블록과 옛 `axismundi/dialog`는 소스까지
-> 지웠습니다. Post Quick View와 Object Media Dialog는 초기 구현 그대로라 구조를 바꿀 수 있습니다.
-> 인터랙티브 데모는 나중에 추가합니다.
+> 버튼의 `Open dialog surface` Action이 파트를 페이지 끝에 한 번 렌더해 열고, 여닫기는 모션과 함께
+> 움직이며, standard side sheet는 페이지와 공간을 나누고, 바텀시트는 핸들로 끌어 높이를 바꿉니다.
+> 레거시 Sheets·Sheet·Dialog·Close·Title 블록은 소스까지 지웠습니다. Post Quick View와 Object
+> Media Dialog는 초기 구현 그대로라 구조를 바꿀 수 있습니다. 인터랙티브 데모는 나중에 추가합니다.
 
 값은 전부 [`_data/surface.yml`]({{ site.repository_url }}/blob/main/products/styleguide/_data/surface.yml)에서
 옵니다. 계약 CSS는 Dialog 블록의
 [`style.css`]({{ site.repository_url }}/blob/main/products/wordpress/plugins/axismundi-dialogs/blocks/dialog/style.css)
 하나뿐이고, 이 사이트는 빌드할 때 그 파일을 그대로 복사해 씁니다(`sync_styleguide_assets.py`).
-그 CSS와 데이터의 색 역할·elevation은 `tools/validators/validate_styleguide_surface.py`가 테마 토큰과 대조합니다.
+그 CSS와 데이터의 색 역할·elevation은 `tools/validators/validate_styleguide_surface.py`가 테마 토큰과 대조하고,
+모션·창 여백·페이지 밀기·핸들 수치는 같은 검증기가 stylesheet와 런타임(`view.js`)에 대조합니다.
 
 ## 한 계약, 네 가지 presentation
 
@@ -36,6 +36,7 @@ Surface 계약        공통 모델: 열림, 닫힘, focus, scrim, layout, conte
 
 글·템플릿           Dialog Button · Dialog Icon Button
                     Action: Open dialog surface → 파트를 이름으로 가리킴
+                    Action: Dialog surface close → 자기가 든 표면을 닫음
 
 Site Editor         템플릿 파트 (area: {{ site.data.surface.host.area.slug }})
   └─ {{ site.data.surface.host.block }}   HTML <dialog> 호스트
@@ -43,10 +44,12 @@ Site Editor         템플릿 파트 (area: {{ site.data.surface.host.area.slug 
        modality       modal | standard            (sheet만 선택)
        attachment     docked | detached           (side sheet만)
        edge           start | end                 (side sheet만)
+       page           resize | move               (docked standard side sheet만)
+       drag handle    켬 | 끔                     (bottom sheet만)
        dismissal      closedby: any | closerequest | none
-       role           dialog | alertdialog
+       label          aria-label (없으면 첫 헤딩이 이름)
        content        template-part (기본) | dynamic
-     └─ core/group header · 본문 · footer
+     └─ core/group Header · Content · Actions
 
 Global Styles       컨테이너 색, 모서리, 스크림 등 기본 토큰
 ```
@@ -143,28 +146,25 @@ basic dialog가 담는 레이아웃으로 설명합니다. 스크롤은 콘텐�
 {% endif -%}
 {% endfor %}
 
-{% assign basic_position = site.data.surface.adaptive | where: "presentation", "dialog-basic" | first -%}
-Basic dialog는 기본으로 가운데에 놓이고, {{ basic_position.position.custom_from }}부터
-위치를 옮길 수 있으며, {{ basic_position.position.edge_margin_from }}에서는 창 가장자리에서
-{{ basic_position.position.edge_margin }}dp를 떼어야 합니다.
+**구현된 전환은 두 가지입니다.**
 
-마크업에서는 breakpoint마다 데이터 속성 하나입니다. 기본값은 가장 작은 창의 값이고,
-큰 breakpoint는 바뀔 때만 적습니다.
+- **Full-screen dialog → basic dialog** ({{ site.data.surface.windows.basic_from }}부터).
+  블록의 CSS가 리터럴 미디어 쿼리로 맡습니다. 같은 dialog가 basic의 크기·표면·헤드라인·속도를
+  쓰고, 내용과 헤더의 닫기·액션은 그대로입니다. 실제 `<dialog>`에만 걸려서 에디터에서는
+  full-screen 모양으로 편집됩니다.
+- **Standard side sheet → modal** (compact). 모달 여부는 CSS만으로 바꿀 수 없어서 런타임이
+  창 크기를 보고 `showModal()`로 열고, 닫으면 standard로 되돌립니다. 열린 채 경계를 넘으면
+  닫습니다. 페이지를 `move`로 나누는 시트는 모든 창에서 standard로 남습니다.
 
-{% raw %}
-```html
-<dialog class="wp-block-axismundi-dialog"
-        data-presentation="dialog-full-screen"
-        data-presentation-medium="dialog-basic">
-```
-{% endraw %}
+**아직 구현하지 않은 것.** expanded에서 bottom sheet를 side sheet로 바꾸는 전환(M3는
+"바꿀 수 있다"고만 합니다)과, medium부터 basic dialog 위치를 옮기는 설정입니다.
+presentation을 breakpoint마다 저장하는 방식(`data-presentation-medium` 같은 속성)도 제안으로만
+남아 있습니다.
 
 **theme.json으로는 이 전환을 저작할 수 없습니다.** WordPress 7.1의
 `settings.viewport`는 `@mobile`(기본 480px)과 `@tablet`(기본 782px) 두 상한 구간뿐이고,
 가장 큰 구간 위(`min-width`)는 표현하지 못합니다. M3 경계는 600dp와 840dp라서 값도
-맞지 않습니다. 그래서 전환은 블록의 CSS가 리터럴 미디어 쿼리로 맡고, 모달 여부가
-바뀌는 전환(standard → modal)은 CSS만으로 되지 않으므로 런타임이 창 크기를 보고
-`show()`와 `showModal()`을 다시 고릅니다.
+맞지 않습니다.
 
 ## 마크업
 
@@ -173,21 +173,29 @@ Basic dialog는 기본으로 가운데에 놓이고, {{ basic_position.position.
 
 ### 트리거
 
-버튼의 **Action** 축에 `Open dialog surface`가 추가됩니다. navigation overlay 때와
-달리 트리거가 표면을 렌더하지 않고, 파트 slug에서 만든 안정적인 id로 표면을
-가리킵니다. 트리거가 여럿이어도 표면은 하나입니다.
+버튼의 **Action** 축에 `Open dialog surface`(`{{ site.data.surface.host.trigger.open_action }}`)가
+있습니다. navigation overlay 때와 달리 트리거가 표면을 렌더하지 않고, 파트 slug에서 만든
+안정적인 id로 표면을 가리킵니다. 트리거가 여럿이어도 표면은 하나입니다. 런타임이 표면의
+열림 상태를 모든 트리거의 `aria-expanded`에 맞춰, 버튼이 선택된 모양을 입습니다.
 
 {% raw %}
 ```html
-<!-- wp:axismundi/dialog-button {"action":"dialog","actionTarget":"discard-draft","text":"삭제"} /-->
+<!-- wp:axismundi/dialog-button {"action":"dialog-surface","actionTarget":"discard-draft","text":"삭제"} /-->
 
 <div class="wp-block-button wp-block-axismundi-dialog-button">
   <button type="button" class="wp-block-button__link wp-element-button"
           commandfor="dialog-surface-discard-draft" command="show-modal"
-          aria-haspopup="dialog">삭제</button>
+          aria-haspopup="dialog" aria-expanded="false">삭제</button>
 </div>
 ```
 {% endraw %}
+
+**Standard sheet의 트리거는 `command="--toggle"`입니다.** 브라우저에 모달이 아닌 열기
+명령이 없어서입니다. 크롬에서 `command="show"`는 아무 일도 하지 않았고 이벤트도
+보내지 않았습니다. `--`로 시작하는 사용자 정의 명령은 dialog에 `command` 이벤트로만
+도착하므로, 런타임이 시트를 열고 이미 열려 있으면 닫습니다. 페이지가 계속 쓰이는 시트라
+연 버튼이 곧 닫는 버튼입니다. 모달 표면은 스크립트 없이도 열리지만, standard sheet는
+런타임이 있어야 열립니다.
 
 ### 표면 (템플릿 파트)
 
@@ -204,7 +212,7 @@ Header와 Content입니다. Content는 모두 `Inner blocks use content width`�
 
 {% raw %}
 ```html
-<!-- wp:axismundi/dialog {"presentation":"dialog-basic","role":"alertdialog","dismissal":"closerequest"} -->
+<!-- wp:axismundi/dialog {"presentation":"dialog-basic","dismissal":"closerequest"} -->
 
   <!-- wp:group {"metadata":{"name":"Content"},"style":{"spacing":{"padding":{"top":"24px","right":"24px","bottom":"0","left":"24px"},"blockGap":"16px"}},"layout":{"type":"constrained"}} -->
   <div class="wp-block-group" style="padding-top:24px;padding-right:24px;padding-bottom:0;padding-left:24px">
@@ -219,8 +227,8 @@ Header와 Content입니다. Content는 모두 `Inner blocks use content width`�
   <footer class="wp-block-group" style="padding-top:24px;padding-right:24px;padding-bottom:24px;padding-left:24px">
     <!-- wp:axismundi/dialog-button-group {"style":{"spacing":{"blockGap":"8px"}},"layout":{"type":"flex","justifyContent":"right"}} -->
     <div class="wp-block-axismundi-dialog-button-group wp-block-buttons">
-      <!-- wp:axismundi/dialog-button {"action":"surface-close","text":"취소","className":"is-style-text"} /-->
-      <!-- wp:axismundi/dialog-button {"action":"surface-close","text":"삭제","className":"is-style-text"} /-->
+      <!-- wp:axismundi/dialog-button {"action":"dialog-surface-close","text":"취소","className":"is-style-text"} /-->
+      <!-- wp:axismundi/dialog-button {"text":"삭제","className":"is-style-text"} /-->
     </div>
     <!-- /wp:axismundi/dialog-button-group -->
   </footer>
@@ -232,21 +240,109 @@ Header와 Content입니다. Content는 모두 `Inner blocks use content width`�
 
 ### 렌더 (페이지 끝에 한 번)
 
-페이지의 무언가가 이 표면을 가리키면, 플러그인이 페이지 끝에서 파트를 한 번
-렌더합니다. 가리키는 것이 없으면 렌더하지 않습니다.
+페이지의 트리거가 이 표면을 가리키면, 플러그인이 파트를 한 번 렌더해 두었다가 페이지 끝에
+출력합니다. 가리키는 것이 없으면 렌더하지 않습니다. 렌더는 첫 트리거가 렌더될 때
+합니다. 크롬에서 `wp_footer`에서 렌더했더니 그룹의 레이아웃 CSS가 이미 출력된 뒤라
+빠졌기 때문입니다. 닫기 Action을 가진 버튼은 이때 자기가 든 표면의 id로
+`command="close"`를 받습니다.
 
 {% raw %}
 ```html
 <dialog id="dialog-surface-discard-draft" class="wp-block-axismundi-dialog"
-        data-presentation="dialog-basic"
-        role="alertdialog"
-        aria-labelledby="discard-draft-headline"
-        closedby="closerequest">
+        data-presentation="dialog-basic" data-render-mode="modal-dialog"
+        closedby="closerequest" tabindex="-1"
+        aria-labelledby="dialog-surface-headline-1">
   <div class="wp-block-group">…</div>
-  <footer class="wp-block-group">…</footer>
+  <footer class="wp-block-group">
+    … <button command="close" commandfor="dialog-surface-discard-draft" …>취소</button> …
+  </footer>
 </dialog>
 ```
 {% endraw %}
+
+**처음 포커스는 dialog 자체입니다**(`tabindex="-1"`). 첫 버튼으로 포커스가 가면 그 버튼이
+선택된 것처럼 상태 레이어를 입기 때문입니다. 작성자가 안에 `autofocus`를 둔 요소는
+존중합니다. 크롬에서 `<dialog autofocus>`는 포커스를 가져가지 않아서 런타임이
+옮깁니다. 이름은 Label(`aria-label`)이 있으면 그것, 없으면 첫 헤딩입니다.
+
+## 모션
+
+M3 dialog guidelines는 모션을 "enter and exit transition pattern"이라고만 적고 시간표를
+발행하지 않습니다. 그래서 순서는 M3의 웹 구현인 material-web dialog(`animations.ts`)를 따르고,
+곡선과 시간은 테마의 모션 토큰(`tokens.sys.motion.css`)을 씁니다. presentation마다 어떤
+토큰을 쓸지는 이 프로젝트의 선택입니다. 런타임은 Web Animations API로 재생합니다.
+
+| Presentation | 열기 곡선 | 열기 시간 | 닫기 곡선 | 닫기 시간 | 이유 |
+|---|---|---|---|---|---|
+{% for m in site.data.surface.motion.presentations -%}
+| `{{ m[0] }}` | `{{ m[1].enter }}` | `{{ m[1].enter_duration }}` | `{{ m[1].exit }}` | `{{ m[1].exit_duration }}` | {{ m[1].reason }} |
+{% endfor %}
+
+표면은 이 값을 커스텀 속성 네 개로 받습니다(`{{ site.data.surface.motion.properties.enter }}`,
+`-enter-duration`, `-exit`, `-exit-duration`). 테마가 이 넷만 덮으면 표면의 속도가 한꺼번에
+바뀌고, 내용 fade 시간은 열기 시간에 비례하므로 따라옵니다.
+
+{% assign choreography = site.data.surface.motion.dialog -%}
+**Dialog의 순서.** 열 때 dialog가 위 {{ choreography.translate }}px에서 내려오고, 컨테이너는
+높이 {{ choreography.folded_height }}%에서 펼쳐지며, 스크림이 같은 시간 동안 나타납니다. 내용은
+자기 fade의 {{ choreography.content.hold }}만큼 멈췄다가 열기 시간의 {{ choreography.content.share_of_enter }}배 동안,
+액션은 {{ choreography.actions.hold }}만큼 멈췄다가 {{ choreography.actions.share_of_enter }}배 동안 나타납니다.
+닫을 때는 위로 올라가며 접히고, 내용은 닫기 시간의 {{ choreography.exit_slot_fade }} 동안 사라집니다.
+material-web은 안쪽 컨테이너의 높이를 줄이지만 이 dialog에는 안쪽 컨테이너가 없어서
+clip-path로 펼칩니다.
+
+**Sheet**는 붙은 가장자리 밖에서 밀려 들어오고 같은 길로 빠집니다. 모달이면 스크림도
+함께 나타나고 사라집니다. M3가 sheet 모션도 발행하지 않아서 가장 단순한 형태로 두었습니다.
+
+**닫기를 잠시 붙잡습니다.** 브라우저의 닫기는 표면을 바로 숨기므로, 런타임이 `close` 명령과
+`cancel` 이벤트(Escape, 스크림 클릭)를 `preventDefault()`로 붙잡고 모션이 끝난 뒤
+`close()`를 부릅니다. 크롬에서 두 이벤트 모두 취소할 수 있었고, `::backdrop`에도 WAAPI
+애니메이션이 걸렸습니다. 두 번째 Escape처럼 취소할 수 없는 요청은 바로 닫습니다.
+
+**모션 줄이기**(`prefers-reduced-motion: reduce`)에서는 모든 표면이 바로 열리고 닫힙니다.
+
+## 창과 페이지
+
+{% assign windows = site.data.surface.windows -%}
+- **Basic dialog의 창 여백.** 가장 넓어도 560dp이고, 좁은 창에서는 가장자리마다
+  {{ windows.basic_dialog_margin.value }}px를 남깁니다. M3 specs에는 창 여백 값이 없어서
+  material-web dialog를 크롬에서 잰 값을 씁니다.
+- **어드민바.** standard sheet는 어드민바 아래에서 시작합니다(코어의
+  `--wp-admin--admin-bar--height`). 페이지가 계속 쓰이는 표면이라 어드민바도 쓸 수 있어야
+  합니다. 모달 표면은 top layer라 어드민바 위에 올라오고, 그동안 페이지는 어차피 조작할 수
+  없습니다.
+
+**Standard side sheet는 페이지와 공간을 나눕니다.** docked standard side sheet에만 있는
+**Page** 설정입니다.
+
+| 값 | 동작 |
+|---|---|
+| `resize` (기본) | {{ windows.basic_from }}부터 페이지 루트(`.wp-site-blocks`)가 시트 폭만큼 padding을 받아 본문이 좁아집니다. M3 guidelines의 "본문 영역이 줄어든다"입니다. compact에서는 시트가 모달로 열립니다. |
+| `move` | 페이지 폭은 그대로 두고 화면 전체가 시트 폭만큼 반대편으로 밀려납니다. 모바일 서랍 같은 이 프로젝트의 선택지이고, 모든 창에서 이렇게 동작합니다. |
+
+폭은 열 때 시트를 재서 정하고, 열린 동안 시트 폭이 바뀌면 따라갑니다. 페이지도 시트와 같은
+곡선·시간으로 움직입니다. detached 시트는 페이지 위에 떠 있으므로 공간을 나누지 않습니다.
+
+## 바텀시트 높이와 핸들
+
+{% assign bottom = site.data.surface.presentations | where: "name", "sheet-bottom" | first -%}
+{% assign drag = bottom.behaviour.handle.drag -%}
+M3는 모달 바텀시트가 창의 절반보다 높게 열리지 않고, 높이는 드래그 없이도 바꿀 수 있어야
+한다고 합니다. 드래그 기준 수치는 발행하지 않아서 아래 값은 이 프로젝트의 선택입니다.
+
+- **높이 두 단계.** 처음 높이는 창의 {{ bottom.behaviour.initial_height_cap }}%를 넘지 않고,
+  끝까지 펼쳐도 창 위에서 {{ bottom.measurements.top_margin }}dp를 남깁니다(640dp보다 넓은 창의
+  모달은 {{ bottom.measurements.wide_window.top_margin }}dp). 위에 스크림이 보여야 페이지 위에 뜬
+  레이어로 읽히고 그곳을 눌러 닫을 수 있습니다. 창 전체가 필요한 내용은 full-screen dialog가
+  맡습니다.
+- **클릭, Enter, Space**는 두 높이를 전환합니다. 핸들이 `<button>`이라 셋 다 클릭으로 들어오고,
+  드래그의 대안이라 없앨 수 없습니다(M3 접근성, WCAG 2.5.7).
+- **빠르게 튕기기.** 손을 떼기 전 {{ drag.fling_window }}ms 동안 {{ drag.fling_speed }}px/ms보다
+  빠르면 방향으로 정합니다. 위로는 전체 높이, 아래로는 드래그를 시작한 단계에서 한 단계
+  내립니다(전체 → 처음, 처음 → 닫힘).
+- **천천히 끌기.** 놓은 위치로 정합니다. 창 높이의 {{ drag.close_below }} 미만이면 닫고,
+  {{ drag.expand_above }} 초과면 전체 높이, 그 사이면 처음 높이로 돌아갑니다.
+- {{ drag.slop }}px보다 덜 움직인 누름은 클릭이고, 방금 끝난 드래그 뒤의 클릭은 무시합니다.
 
 ## 설계 결정
 
@@ -339,12 +435,12 @@ M3 접근성 페이지는 웹의 basic dialog를 모두 `alertdialog`로 봅니�
 
 Side sheet에는 닫기 수단이 항상 있어야 합니다. 표면이 닫기 버튼을 직접 렌더하면
 작성자가 위치를 정할 수 없고, 파트에만 맡기면 빠질 수 있습니다. 그래서 navigation
-overlay close를 우리 버튼의 Action으로 옮긴 것처럼 `surface-close` Action을 두고,
+overlay close를 우리 버튼의 Action으로 옮긴 것처럼 `dialog-surface-close` Action을 두고,
 기본 파트에서는 그 버튼을 `"lock":{"remove":true}`로 잠급니다.
 
 {% raw %}
 ```html
-<!-- wp:axismundi/dialog-icon-button {"action":"surface-close","icon":"close","text":"닫기","lock":{"remove":true},"className":"is-style-standard"} /-->
+<!-- wp:axismundi/dialog-icon-button {"action":"dialog-surface-close","icon":"close","text":"닫기","lock":{"remove":true},"className":"is-style-standard"} /-->
 ```
 {% endraw %}
 
@@ -352,7 +448,8 @@ overlay close를 우리 버튼의 Action으로 옮긴 것처럼 `surface-close` 
 
 M3의 drag handle은 장식이 아니라 버튼입니다. 포커스를 받고, 라벨이 있고,
 Space/Enter로 높이를 바꿉니다. 바꿀 높이가 없는데 손잡이만 보이면 사용자를 속이는
-모양이 됩니다.
+모양이 됩니다. 켜면 호스트가 Header를 만들어 그 안에 버튼을 두고, 끄면 Header도
+없습니다. 드래그와 높이 규칙은 [바텀시트 높이와 핸들](#바텀시트-높이와-핸들)에 있습니다.
 
 ### 10. full-screen dialog 위에는 dialog가 올라올 수 있습니다
 
@@ -400,10 +497,11 @@ quick view도 결국 basic dialog나 full-screen dialog로 보입니다. 다른 
 | 항목 | Dialog | Bottom sheet | Side sheet |
 |---|---|---|---|
 | role | `dialog` 또는 `alertdialog` (결정 7) | `dialog` | `dialog` |
-| 이름 | 헤드라인 (`aria-labelledby`) | 헤드라인. drag handle에도 별도 라벨 | 헤드라인 |
-| 첫 포커스 | 첫 인터랙티브 요소, `autofocus`로 지정 가능 | drag handle이 탭 순서에 있음 | 헤드라인, 닫기, 동작 순 |
-| 키보드 | Tab·Shift+Tab 순환, Space·Enter 실행, Escape 닫기 | Tab으로 handle, Space·Enter로 높이 단계 | Tab으로 아이콘 버튼, Space·Enter 실행 |
-| 닫기 | `closedby`, 동작 버튼 | 항목 선택, 스크림, 아래로 밀기, 닫기 버튼 | 닫기 버튼 **항상** |
+| 이름 | Label, 없으면 첫 헤딩 (`aria-labelledby`) | 같음. drag handle에도 별도 라벨 | 같음 |
+| 트리거 | `aria-haspopup="dialog"`, `aria-expanded`가 열림 상태를 따름 | 같음. standard는 다시 누르면 닫힘 | 같음. standard는 다시 누르면 닫힘 |
+| 첫 포커스 | dialog 자체. 안에 둔 `autofocus`는 존중 | dialog 자체, Tab으로 drag handle | dialog 자체, Tab으로 닫기·동작 |
+| 키보드 | Tab·Shift+Tab 순환, Space·Enter 실행, Escape 닫기 | Tab으로 handle, Space·Enter로 두 높이 전환 | Tab으로 아이콘 버튼, Space·Enter 실행 |
+| 닫기 | `closedby`, 닫기 Action 버튼 | 스크림, 아래로 튕기거나 끌기, 닫기 버튼 | 닫기 버튼 **항상** |
 
 드래그로 할 수 있는 모든 동작에는 한 번 누르는 대안이 있어야 합니다. 텍스트를
 200%로 키웠을 때 헤드라인이 잘리지 않도록 짧게 씁니다(M3는 Android 기준으로 적었고,
@@ -430,7 +528,8 @@ M3의 페이지끼리 어긋나는 곳이 {{ site.data.surface.conflicts.size }}
 - **Full-screen dialog 컨테이너 색** — 토큰 표는 `surface`, 같은 페이지의 색 역할
   목록은 `surface-container-high`. 값이 있는 토큰 표를 기본값으로 씁니다.
 - **Full-screen dialog 폭** — 측정표는 최대 560dp, guidelines는 화면 전체이고
-  compact 전용. compact는 599dp까지라 560dp 제한이면 빈틈이 생깁니다. 미해결.
+  compact 전용. 적응 전환으로 풀었습니다. compact에서는 창을 채우고, medium부터는 최대
+  560dp인 basic dialog가 됩니다.
 - **Basic dialog의 웹 role** — 결정 7.
 - **Dialog 겹침** — 결정 10.
 - **Side sheet divider 색** — 토큰 표는 `outline`, standard 색 역할 목록은
@@ -443,10 +542,11 @@ M3의 페이지끼리 어긋나는 곳이 {{ site.data.surface.conflicts.size }}
 
 ## 레거시와의 차이
 
-레거시 블록은 폐기 대상이지만, 이미 검증된 동작을 잃지 않도록 차이를 기록합니다.
-레거시 `axismundi/dialog` 블록의 감싸는 요소에는 이미 코어 기본 클래스
-`wp-block-axismundi-dialog`가 붙습니다. 새 호스트와 클래스가 같으므로, 새 블록이 이
-이름을 가져가기 전에 레거시 등록을 내려야 합니다.
+레거시 Sheets·Sheet·Dialog·Close·Title 블록은 소스까지 지웠습니다. 아래는 지우기 전에
+기록한 차이이고, 새 계약이 무엇을 대신했는지 남기려고 둡니다. 옛 Dialog 블록과 새 호스트는
+이름이 같아서(`axismundi/dialog`), 저장된 옛 콘텐츠는 옛 속성을 알아보고 아무것도 렌더하지
+않습니다. Interaction dialog가 입던 basic dialog와 닫기 버튼 스타일은
+`assets/interaction-dialog.css`로 옮겼습니다.
 
 
 {% for p in site.data.surface.presentations -%}
@@ -466,7 +566,11 @@ M3의 페이지끼리 어긋나는 곳이 {{ site.data.surface.conflicts.size }}
 - 테마가 플러그인 area의 파트 파일을 실을 때 테마 검사가 문제 삼는지 (0.2.2에서
   자체 area를 걷어낸 이력).
 - 폼 블록 (결정 11).
-- `command`/`commandfor`와 `closedby`의 Chrome 외 브라우저 지원.
-- Full-screen dialog의 560dp 제한.
-- compact에서 basic dialog의 좌우 여백 — M3가 발행하지 않았습니다.
+- `command`/`commandfor`와 `closedby`의 Chrome 외 브라우저 지원. 명령을 모르는 브라우저를 위한
+  런타임 대체 경로는 있지만 다른 브라우저에서 재지 않았습니다.
+- Sheet 모션의 근거 — M3가 발행하지 않아 곡선·시간을 이 프로젝트가 정했습니다.
+- 스크림 클릭 닫기의 `cancel` 이벤트 — 합성 이벤트로는 흉내 낼 수 없어 실제 클릭으로
+  재지 않았습니다.
+- expanded에서 bottom sheet → side sheet 전환, medium부터 basic dialog 위치 옮기기.
+- role 설정 (결정 7) — 아직 블록 설정이 없고, 모든 표면이 `dialog`입니다.
 

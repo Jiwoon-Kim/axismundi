@@ -16,8 +16,9 @@ New-Item -ItemType Directory -Path $distRoot -Force | Out-Null
 
 # Ship the readable `src/` source alongside compiled assets for wp.org review.
 # These paths are development-only and must never enter the release ZIP.
-# `docs` holds internal design memos, not user documentation.
-$excludeDirs = @('scripts', 'tests', 'docs', 'node_modules', '.git', '.github')
+# `docs` holds internal design memos, not user documentation; `wporg-assets` is
+# committed to the plugin directory's SVN assets/ folder, not the plugin.
+$excludeDirs = @('scripts', 'tests', 'docs', 'wporg-assets', 'node_modules', '.git', '.github')
 $excludeFiles = @('.distignore', '.gitignore', 'package-lock.json')
 
 Get-ChildItem -LiteralPath $pluginRoot -Force | ForEach-Object {

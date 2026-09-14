@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.17
+Stable tag: 0.1.18
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: block-patterns, block-styles, blog, custom-colors, custom-logo, custom-menu, editor-style, featured-images, full-site-editing, full-width-template, template-editing, threaded-comments, translation-ready, wide-blocks
@@ -49,8 +49,9 @@ than carrying a second visual system.
   icon-beside-label and icon-above-label layouts the theme styles.
   https://wordpress.org/plugins/axismundi-navigation-icons/
 
-* Axismundi Dialogs — Dialog and Sheet blocks. The theme ships their editable
-  template parts and lets its button styles apply to their triggers.
+* Axismundi Dialogs — Material 3 buttons, icon buttons and button groups, and
+  dialogs and sheets kept as template parts. The theme's button styles apply to
+  its buttons.
   https://wordpress.org/plugins/axismundi-dialogs/
 
 * Axismundi Table of Contents — a table of contents for long-form posts, styled
@@ -77,18 +78,17 @@ than carrying a second visual system.
 
 == Changelog ==
 
-= 0.1.17 =
-* Stop loading a switch component stylesheet on every page and in the editor.
-  No theme markup used it, and the one plugin that draws a switch already ships
-  its own.
-* Set the header and navigation overlay switchers through the Theme Switcher
-  plugin's own settings rather than a block style class it now reads only as a
-  fallback. The overlay shows the connected Auto / Light / Dark group at wider
-  widths and a single cycling button on narrow screens, centred with the logo
-  and site title above it; the header keeps one cycling button at every width,
-  in the Standard icon button style that suits a bar of icon controls.
-* Remove two block-hook opt-outs that named a hook the Theme Switcher plugin no
-  longer registers.
+= 0.1.18 =
+* Remove the six Sheet and Dialog template parts. The Axismundi Dialogs plugin
+  retired the blocks they were built from; its dialogs and sheets are now
+  template parts started from the plugin's own patterns.
+* Offer the Tonal, Outlined, Text and Elevated button styles to the Dialogs
+  plugin's Dialog Button block, and Tonal and Outlined to its Dialog Icon
+  Button, instead of to the retired Dialog and Sheet blocks.
+* Keep buttons saved with the older Outlined style class drawn as outlined
+  buttons.
+* Give the bundled Material Symbols font its default variation settings: fill,
+  weight, grade and optical size.
 
 Earlier releases are listed in changelog.txt.
 

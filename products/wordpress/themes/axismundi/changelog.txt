@@ -1,6 +1,19 @@
 == Changelog ==
 
-Releases before 0.1.17. The current release is in readme.txt.
+Releases before 0.1.18. The current release is in readme.txt.
+
+= 0.1.17 =
+* Stop loading a switch component stylesheet on every page and in the editor.
+  No theme markup used it, and the one plugin that draws a switch already ships
+  its own.
+* Set the header and navigation overlay switchers through the Theme Switcher
+  plugin's own settings rather than a block style class it now reads only as a
+  fallback. The overlay shows the connected Auto / Light / Dark group at wider
+  widths and a single cycling button on narrow screens, centred with the logo
+  and site title above it; the header keeps one cycling button at every width,
+  in the Standard icon button style that suits a bar of icon controls.
+* Remove two block-hook opt-outs that named a hook the Theme Switcher plugin no
+  longer registers.
 
 = 0.1.16 =
 * Fix the Latest Posts grid, whose items were sized as a fraction of their own

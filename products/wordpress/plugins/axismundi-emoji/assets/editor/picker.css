@@ -1,44 +1,253 @@
 /*
- * Custom emoji picker.
+ * Emoji picker for editing surfaces.
  *
- * Sized so a tile is comfortably clickable without the popover growing taller than the
- * editor viewport; the grid scrolls rather than the page.
+ * Laid out like the reaction picker in Axismundi Activities (assets/reactions.css): the same
+ * geometry — a 24rem panel no taller than 26rem, a search field joined to the top edge, a
+ * 48px strip of icon jumps with a 3px active indicator, and one scrolling page of sections
+ * with 2.5rem tiles. The colours are wp-admin's rather than the theme's, because the editor
+ * chrome is wp-admin's; the front-end picker keeps the theme's Material 3 tokens.
+ */
+/*
+ * No gap between search, strip and page: the strip's own divider separates them, and a gap
+ * left an empty band between that divider and a stuck category heading (reviewed 2026-09-16).
  */
 .axismundi-emoji-picker {
-	inline-size: 20rem;
-	max-block-size: 24rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+	inline-size: min( 24rem, calc( 100vw - 2rem ) );
+	max-block-size: min( 26rem, calc( 100vh - 6rem ) );
+	padding: 0.5rem;
+	box-sizing: border-box;
+}
+
+/*
+ * A filter inside a popover, not a form control on a page: quiet, joined to the panel's top
+ * edge, square where it meets the strip. `position: relative` for the activity bar on its
+ * bottom edge.
+ */
+.axismundi-emoji-picker__search {
+	position: relative;
+	display: grid;
+	grid-template-columns: auto 1fr;
+	align-items: center;
+	gap: 0.375rem;
+	padding: 0.375rem 0.75rem;
+	margin: -0.5rem -0.5rem 0;
+	background: color-mix( in srgb, currentColor 6%, transparent );
+}
+
+.axismundi-emoji-picker__search .dashicon {
+	color: #757575;
+}
+
+/*
+ * wp-admin styles every `input[type="search"]` as a bordered white box with a focus ring, at a
+ * higher specificity than one class. The field belongs to the panel's surface, so the reset is
+ * scoped under the panel to win (measured in the editor, 2026-09-16).
+ */
+.axismundi-emoji-picker .axismundi-emoji-picker__input,
+.axismundi-emoji-picker .axismundi-emoji-picker__input[type="search"] {
+	min-inline-size: 0;
+	min-block-size: 0;
+	margin: 0;
+	padding-block: 0.25rem;
+	padding-inline: 0;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+}
+
+.axismundi-emoji-picker .axismundi-emoji-picker__input:focus,
+.axismundi-emoji-picker .axismundi-emoji-picker__input[type="search"]:focus {
+	border: 0;
+	outline: none;
+	box-shadow: none;
+}
+
+/* Along the field's bottom edge, positioned so appearing never moves the strip below it. */
+.axismundi-emoji-picker__loading {
+	position: absolute;
+	inset-inline: 0;
+	inset-block-end: 0;
+	block-size: 2px;
+	background: linear-gradient( 90deg, transparent, var( --wp-admin-theme-color, #3858e9 ), transparent );
+	background-size: 50% 100%;
+	background-repeat: no-repeat;
+	animation: axismundi-emoji-picker-progress 1s linear infinite;
+}
+
+@keyframes axismundi-emoji-picker-progress {
+	from { background-position: -50% 0; }
+	to { background-position: 150% 0; }
+}
+
+/*
+ * The jump strip. Navigation, not tabs: nothing it does hides content. `flex: 1 1 0` with no
+ * minimum so eleven jumps divide the row instead of scrolling it.
+ */
+.axismundi-emoji-picker__strip {
+	display: flex;
+	flex: 0 0 auto;
+	overflow-x: auto;
+	scrollbar-width: thin;
+	border-block-end: 1px solid #e0e0e0;
+}
+
+.axismundi-emoji-picker__jump {
+	position: relative;
+	flex: 1 1 0;
+	min-inline-size: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	block-size: 48px;
+	padding: 0 0.25rem;
+	border: 0;
+	border-radius: 0;
+	background: none;
+	color: #757575;
+	cursor: pointer;
+}
+
+.axismundi-emoji-picker__jump::after {
+	content: "";
+	position: absolute;
+	inset-inline: 0;
+	inset-block-end: 0;
+	block-size: 3px;
+	border-start-start-radius: 3px;
+	border-start-end-radius: 3px;
+	background-color: transparent;
+}
+
+.axismundi-emoji-picker__jump.is-active {
+	color: var( --wp-admin-theme-color, #3858e9 );
+}
+
+.axismundi-emoji-picker__jump.is-active::after {
+	background-color: var( --wp-admin-theme-color, #3858e9 );
+}
+
+.axismundi-emoji-picker__jump:hover {
+	background-color: color-mix( in srgb, currentColor 8%, transparent );
+}
+
+.axismundi-emoji-picker__jump:focus-visible {
+	outline: 2px solid var( --wp-admin-theme-color, #3858e9 );
+	outline-offset: -2px;
+}
+
+/*
+ * Vertical only. When the popover is narrower than 24rem the grid reflows to fewer columns, and
+ * anything wider than that is a bug to fix rather than a reason to scroll sideways — a second,
+ * horizontal scrollbar appeared in a short, narrow editor window (measured 2026-09-16).
+ */
+.axismundi-emoji-picker__scroll {
+	flex: 1 1 auto;
+	min-block-size: 0;
+	min-inline-size: 0;
+	overflow-x: hidden;
 	overflow-y: auto;
-	padding: 8px;
+	/*
+	 * No top padding: padding scrolls with the content, so a heading stuck at `top: 0` would
+	 * leave a row of grid showing above it. The reaction picker learned the same thing.
+	 */
+	padding-block-start: 0;
 }
 
-.axismundi-emoji-picker__status {
-	margin: 12px 0;
-	text-align: center;
-	color: var(--wp-admin-theme-color, #3858e9);
+.axismundi-emoji-picker__section + .axismundi-emoji-picker__section {
+	margin-block-start: 0.75rem;
 }
 
-.axismundi-emoji-picker__heading {
-	margin: 12px 0 4px;
+.axismundi-emoji-picker__category,
+.axismundi-emoji-picker__subcategory {
+	margin: 0 0 0.25rem;
 	font-size: 11px;
 	font-weight: 600;
+	line-height: 1.6;
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
 	color: #757575;
 }
 
-.axismundi-emoji-picker__grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
-	gap: 2px;
+.axismundi-emoji-picker__subcategory {
+	text-transform: none;
+	letter-spacing: 0;
 }
 
+/*
+ * A category heading stays put while its own grid scrolls past, as in the reaction picker.
+ * Without it, a scrolled grid ran straight up to the strip's divider with a half-cut row and no
+ * name, which read as the grid sliding under the strip (reported 2026-09-16). The heading lives
+ * inside its section, so it leaves with that section rather than piling up.
+ *
+ * Opaque, on the popover's own surface: a see-through sticky heading shows emoji sliding under
+ * the words. Only top-level categories stick; a custom subcategory scrolls with its grid.
+ */
+.axismundi-emoji-picker__category {
+	position: sticky;
+	inset-block-start: 0;
+	z-index: 1;
+	padding-block: 0.25rem;
+	background-color: var( --wp-components-color-background, #fff );
+}
+
+/* The category name carries the grouping; a divider as well would say it twice. */
+.axismundi-emoji-picker__category-toggle {
+	inline-size: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	letter-spacing: inherit;
+	text-transform: inherit;
+	text-align: start;
+	cursor: pointer;
+}
+
+/* A nudge, not an indent: the smaller type already carries the nesting. */
+.axismundi-emoji-picker__subcategory .axismundi-emoji-picker__category-toggle {
+	padding-inline-start: 8px;
+}
+
+.axismundi-emoji-picker__chevron {
+	font-size: 16px;
+	inline-size: 16px;
+	block-size: 16px;
+	transition: transform 120ms ease;
+}
+
+.axismundi-emoji-picker__category-toggle[aria-expanded="true"] .axismundi-emoji-picker__chevron {
+	transform: rotate( 180deg );
+}
+
+.axismundi-emoji-picker__category-toggle:focus-visible {
+	outline: 2px solid var( --wp-admin-theme-color, #3858e9 );
+	outline-offset: 2px;
+}
+
+.axismundi-emoji-picker__grid {
+	display: grid;
+	grid-template-columns: repeat( auto-fill, minmax( 2.5rem, 1fr ) );
+	gap: 0.125rem;
+}
+
+/* Fixed-size native buttons: a picker tile is a control. */
 .axismundi-emoji-picker__tile {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	inline-size: 40px;
-	block-size: 40px;
-	padding: 0;
+	inline-size: 2.5rem;
+	block-size: 2.5rem;
+	padding: 0.375rem;
 	border: 0;
 	border-radius: 4px;
 	background: transparent;
@@ -47,11 +256,11 @@
 
 .axismundi-emoji-picker__tile:hover,
 .axismundi-emoji-picker__tile:focus-visible {
-	background: rgba(0, 0, 0, 0.06);
+	background: rgba( 0, 0, 0, 0.06 );
 }
 
 .axismundi-emoji-picker__tile:focus-visible {
-	outline: 2px solid var(--wp-admin-theme-color, #3858e9);
+	outline: 2px solid var( --wp-admin-theme-color, #3858e9 );
 	outline-offset: -2px;
 }
 
@@ -62,18 +271,62 @@
 	object-fit: contain;
 }
 
-@media (prefers-color-scheme: dark) {
+/*
+ * The glyph keeps the tile's size whichever font draws it. A glyph drawn by the emoji font
+ * (`.ax-unicode-emoji`) gets its family from the adapter's stylesheet; nothing here names a
+ * font, so a browser with native support keeps its own.
+ */
+.axismundi-emoji-picker__glyph {
+	display: block;
+	font-size: 1.375rem;
+	font-style: normal;
+	font-weight: 400;
+	line-height: 1;
+}
+
+.axismundi-emoji-picker__empty {
+	margin: 0.5rem 0;
+	font-size: 13px;
+	color: #757575;
+}
+
+@media ( prefers-color-scheme: dark ) {
 	.axismundi-emoji-picker__tile:hover,
 	.axismundi-emoji-picker__tile:focus-visible {
-		background: rgba(255, 255, 255, 0.1);
+		background: rgba( 255, 255, 255, 0.1 );
+	}
+}
+
+@media ( prefers-reduced-motion: reduce ) {
+	.axismundi-emoji-picker__chevron,
+	.axismundi-emoji-picker__loading {
+		transition: none;
+		animation: none;
 	}
 }
 
 /*
- * The popover renders through a portal, outside the block it belongs to, so the sizing
- * above cannot reach it by inheritance. Anchoring is handled by `useAnchor` in the
- * script; this only keeps the panel from collapsing to its content width.
+ * The popover renders through a portal, outside the block it belongs to, so the sizing above
+ * cannot reach it by inheritance. Anchoring is handled by `useAnchor` in the script; this only
+ * keeps the panel from collapsing to its content width and lets the page, not the popover,
+ * scroll.
  */
 .axismundi-emoji-picker__popover .components-popover__content {
-	min-inline-size: 20rem;
+	min-inline-size: min( 24rem, calc( 100vw - 2rem ) );
+	display: flex;
+	flex-direction: column;
+	overflow: hidden !important;
+}
+
+/*
+ * The popover caps its content at the space available below (or above) the caret. With the
+ * content a column flex box, the panel shrinks to that cap instead of overflowing it, so there
+ * is one scroll region — the page of sections — and the search field and strip stay put. Before
+ * this a short window gave the popover a scrollbar of its own, and a jump scrolled the whole
+ * panel, strip and search included, out of view. `!important` because the popover writes its
+ * overflow inline.
+ */
+.axismundi-emoji-picker__popover .axismundi-emoji-picker {
+	flex: 1 1 auto;
+	min-block-size: 0;
 }

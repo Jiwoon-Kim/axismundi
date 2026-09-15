@@ -37,6 +37,28 @@ function axismundi_emoji_tokenize( string $text ) : array {
 		return array();
 	}
 	/*
+	 * An emoji this plugin already rendered is still a use of its shortcode.
+	 *
+	 * Callers pass whatever text they publish, and several pass `the_content` output
+	 * (Object Projections' Article, Note). Since this plugin decorates `the_content`, that
+	 * output holds `<img class="ax-emoji" alt=":name:">` where the author wrote `:name:`, and
+	 * stripping tags below would throw the use away — the outbound `tag[]` then silently lost
+	 * the declaration (measured 2026-09-16 on an Article: `[":wordpress:"]` became `[]`). So
+	 * our own images are turned back into the shortcode they stand for first. Only the bare
+	 * `:name:` form in our own class counts; a qualified `:name@host:` alt is a remote emoji
+	 * and the boundary pattern below never matches it.
+	 */
+	if ( false !== stripos( $text, 'ax-emoji' ) ) {
+		$text = (string) preg_replace_callback(
+			'/<img\b[^>]*\bclass=(["\'])(?:[^"\']*\s)?ax-emoji(?:\s[^"\']*)?\1[^>]*>/i',
+			static function ( array $m ) : string {
+				return 1 === preg_match( '/\balt=(["\'])(:[a-zA-Z0-9_]{2,}:)\1/', $m[0], $alt ) ? ' ' . $alt[2] . ' ' : $m[0];
+			},
+			$text
+		);
+	}
+
+	/*
 	 * Tags are stripped rather than walked. Unlike the renderer — which must not touch
 	 * `<code>` — the question here is only "does this document use the emoji", and a
 	 * shortcode written inside a code sample is still a shortcode a reader sees. What must

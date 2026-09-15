@@ -1,0 +1,38 @@
+{
+	"schema": 1,
+	"generatedBy": "scripts/build-unicode-font-manifest.py",
+	"family": "Noto Color Emoji",
+	"source": {
+		"project": "https://github.com/googlefonts/noto-emoji",
+		"version": "v2.051",
+		"commit": "8998f5dd683424a73e2314a8c1f1e359c19e8742",
+		"license": "OFL-1.1"
+	},
+	"files": {
+		"assets/fonts/noto-color-emoji/axismundi-noto-colrv1-flags.woff2": {
+			"alias": "Axismundi Emoji Flags",
+			"bytes": 716080,
+			"sha256": "e75981a2f2c74dae6c2538fc9adda92c3033aabe27763b15c89fbe4c04204562"
+		},
+		"assets/fonts/noto-color-emoji/axismundi-noto-colrv1.woff2": {
+			"alias": "Axismundi Emoji Full",
+			"bytes": 1976040,
+			"sha256": "cac0e9358d0d1f036ac4160321d7bf73aa85b51bcf88a75a1ea078f0a480657d"
+		}
+	},
+	"collectionFile": "assets/fonts/noto-color-emoji/axismundi-noto-colrv1.woff2",
+	"profiles": {
+		"flags-country": {
+			"file": "assets/fonts/noto-color-emoji/axismundi-noto-colrv1-flags.woff2",
+			"unicodeRange": "U+1F1E6-1F1FF"
+		},
+		"flags-subdivision": {
+			"file": "assets/fonts/noto-color-emoji/axismundi-noto-colrv1-flags.woff2",
+			"unicodeRange": "U+1F3F4, U+E0020-E007F"
+		},
+		"emoji": {
+			"file": "assets/fonts/noto-color-emoji/axismundi-noto-colrv1.woff2",
+			"unicodeRange": ""
+		}
+	}
+}

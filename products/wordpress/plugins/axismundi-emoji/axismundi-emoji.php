@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       Axismundi Emoji
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/wordpress/plugins/axismundi-emoji
- * Description:       Custom emoji for Axismundi. Registry, admission review, and per-authority binary cache for FEP-9098 emoji observed in federated Objects, Actors, and reactions, plus local emoji registration and a block-editor picker.
- * Version:           0.2.0
+ * Description:       Custom emoji and Unicode emoji for WordPress. A custom emoji registry with review and per-authority caching for FEP-9098 emoji, local emoji registration, a self-hosted Noto Color Emoji font fallback for Unicode emoji, and one block-editor picker.
+ * Version:           0.3.0
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -25,7 +25,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_EMOJI_VERSION = '0.2.0';
+const AXISMUNDI_EMOJI_VERSION = '0.3.0';
 
 /**
  * Cap on emoji declared by a single Object or Actor.
@@ -131,11 +131,15 @@ require_once __DIR__ . '/includes/local.php';
 require_once __DIR__ . '/includes/catalogue.php';
 require_once __DIR__ . '/includes/outbound.php';
 require_once __DIR__ . '/includes/renderer.php';
+require_once __DIR__ . '/includes/content.php';
 require_once __DIR__ . '/includes/integrations/actors.php';
 require_once __DIR__ . '/includes/integrations/activities.php';
 require_once __DIR__ . '/includes/integrations/object-projections.php';
 require_once __DIR__ . '/includes/admin.php';
 require_once __DIR__ . '/includes/editor.php';
+require_once __DIR__ . '/includes/unicode.php';
+require_once __DIR__ . '/includes/unicode-catalogue.php';
+require_once __DIR__ . '/includes/settings.php';
 
 /**
  * Load the inline emoji typography contract wherever custom emoji can render.

@@ -1,0 +1,15 @@
+Source: https://github.com/googlefonts/noto-emoji
+Version: v2.051
+Commit: 8998f5dd683424a73e2314a8c1f1e359c19e8742
+Input: fonts/Noto-COLRv1.ttf
+Processing: pyftsubset with all glyphs, names, and OpenType layout features retained; WOFF2 conversion only. No Unicode subsetting.
+Input SHA-256: 0AE57FE58645638523BA35F388D93739D292539A9ACB84DF5700C81B1E1A28D2
+Output SHA-256: CAC0E9358D0D1F036AC4160321D7BF73AA85B51BCF88A75A1EA078F0A480657D
+License: SIL Open Font License 1.1; see OFL.txt.
+
+File: axismundi-noto-colrv1-flags.woff2
+Input: axismundi-noto-colrv1.woff2 (above; Output SHA-256 CAC0E9358D0D1F036AC4160321D7BF73AA85B51BCF88A75A1EA078F0A480657D)
+Selection: 262 fully-qualified RGI flag sequences (country pairs and subdivision tag sequences) from Unicode emoji-test.txt 17.0, dated 2025-08-04, SHA-256 1D8A944F88D7952F7EF7C5167FEF3C67995BCAE24543949710231B03A201ACDA
+Processing: scripts/build-noto-color-emoji-flags.py -- pyftsubset with the selected text, all layout features and names, notdef glyph, WOFF2; every selected sequence verified to shape to one glyph with HarfBuzz
+Output SHA-256: E75981A2F2C74DAE6C2538FC9ADDA92C3033AABE27763B15C89FBE4C04204562
+License: SIL Open Font License 1.1; see OFL.txt. The internal family remains Noto Color Emoji.

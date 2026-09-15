@@ -84,8 +84,28 @@ try {
 	 */
 	ax_pick_assert( $ax_pick_results, 'it asks only for emoji this site may publish', str_contains( $ax_pick_js, 'federated: true' ) );
 
-	// Unicode is the operating system's job, and never enters `tag[]` regardless.
-	ax_pick_assert( $ax_pick_results, 'no Unicode emoji data is bundled, because the OS picker already does that well', ! str_contains( $ax_pick_js, 'emoji-mart' ) && ! str_contains( $ax_pick_js, 'unicodeEmoji' ) );
+	/*
+	 * Changed deliberately (docs/AXISMUNDI-EMOJI-UNICODE.md §12.5). Until v0.2 this asserted
+	 * that no Unicode data existed here at all, on the grounds that the OS picker covers it;
+	 * it does not cover flags on Windows. What still holds: no third-party picker, no
+	 * catalogue inlined into the script, and a grapheme is inserted as plain text.
+	 */
+	ax_pick_assert( $ax_pick_results, 'Unicode data is fetched from this plugin\'s catalogue, not bundled into the script or a third-party picker', ! str_contains( $ax_pick_js, 'emoji-mart' ) && str_contains( $ax_pick_js, 'window.axismundiEmojiUnicodeSource' ) && str_contains( $ax_pick_js, "'/axismundi/v1/emoji/unicode'" ) && strlen( $ax_pick_js ) < 60000 );
+	ax_pick_assert( $ax_pick_results, 'a Unicode choice inserts the grapheme as text, unpadded and without markup', str_contains( $ax_pick_js, 'props.onChange( wp.richText.insert( props.value, text ) );' ) );
+	ax_pick_assert( $ax_pick_results, 'the picker never rewraps editor text itself; it only classes its own tiles', ! str_contains( $ax_pick_js, 'protect(' ) && str_contains( $ax_pick_js, "attributes.className += ' ax-unicode-emoji';" ) );
+
+	/*
+	 * Laid out like the front-end reaction picker (Activities): one scrolling page, a jump
+	 * strip that navigates rather than filters, and collapsible sections. Tabs were tried and
+	 * rejected — they hide what an author is comparing against.
+	 */
+	ax_pick_assert( $ax_pick_results, 'one scrolling page, not tabs', ! str_contains( $ax_pick_js, 'TabPanel' ) && str_contains( $ax_pick_js, "'axismundi-emoji-picker__scroll'" ) );
+	ax_pick_assert( $ax_pick_results, 'the category strip is a toolbar of jumps that marks the current section with aria-current', str_contains( $ax_pick_js, "role: 'toolbar'" ) && str_contains( $ax_pick_js, "'aria-current': isActive ? 'true' : undefined" ) );
+	ax_pick_assert( $ax_pick_results, 'sections collapse, and a closed section mounts no tiles', str_contains( $ax_pick_js, "'aria-expanded': props.expanded ? 'true' : 'false'" ) && str_contains( $ax_pick_js, '! props.collapsible || props.expanded ? props.children : null' ) );
+	ax_pick_assert( $ax_pick_results, 'Recent and Custom come before the Unicode groups', (int) strpos( $ax_pick_js, "jumpButton( 'recent'" ) < (int) strpos( $ax_pick_js, "jumpButton( 'custom'" ) && (int) strpos( $ax_pick_js, "jumpButton( 'custom'" ) < (int) strpos( $ax_pick_js, "jumpButton( 'uni:'" ) );
+	ax_pick_assert( $ax_pick_results, 'a Unicode group fetches its file only when it first opens', str_contains( $ax_pick_js, "loadGroup( source.groups[ id.slice( 4 ) ] )" ) && ! str_contains( $ax_pick_js, 'rgi-17.0.json' ) );
+	ax_pick_assert( $ax_pick_results, 'icons are Dashicons, which wp-admin always has, not the theme\'s Material Symbols', str_contains( $ax_pick_js, 'C.Dashicon' ) && ! str_contains( $ax_pick_js, 'material-symbols' ) );
+	ax_pick_assert( $ax_pick_results, 'and the geometry matches the reaction picker: 24rem panel, 48px strip, 2.5rem tiles', str_contains( $ax_pick_css, 'inline-size: min( 24rem' ) && str_contains( $ax_pick_css, 'block-size: 48px;' ) && str_contains( $ax_pick_css, 'minmax( 2.5rem, 1fr )' ) );
 
 	// -- Registration ownership --------------------------------------------------------------
 

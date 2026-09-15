@@ -66,6 +66,26 @@ function axismundi_emoji_enqueue_picker() : bool {
 	if ( ! wp_script_is( AXISMUNDI_EMOJI_PICKER_HANDLE, 'registered' ) ) {
 		return false;
 	}
+	static $unicode_passed = false;
+	/*
+	 * The Unicode tab reads group files by URL. Ten URLs, not the catalogue: the data itself
+	 * is fetched when the tab opens, one group at a time, so an editor load carries none of
+	 * the 1.7 MB.
+	 */
+	if ( ! $unicode_passed && function_exists( 'axismundi_emoji_unicode_picker_source' ) ) {
+		$source = axismundi_emoji_unicode_picker_source();
+		if ( array() !== $source['groups'] ) {
+			wp_add_inline_script(
+				AXISMUNDI_EMOJI_PICKER_HANDLE,
+				'window.axismundiEmojiUnicodeSource = ' . wp_json_encode( array( 'groups' => (object) $source['groups'] ), JSON_HEX_TAG | JSON_UNESCAPED_SLASHES ) . ';',
+				'before'
+			);
+		}
+		$unicode_passed = true;
+	}
+	if ( function_exists( 'axismundi_emoji_unicode_enqueue_passive' ) ) {
+		axismundi_emoji_unicode_enqueue_passive();
+	}
 	wp_enqueue_script( AXISMUNDI_EMOJI_PICKER_HANDLE );
 	if ( wp_style_is( AXISMUNDI_EMOJI_PICKER_HANDLE, 'registered' ) ) {
 		wp_enqueue_style( AXISMUNDI_EMOJI_PICKER_HANDLE );

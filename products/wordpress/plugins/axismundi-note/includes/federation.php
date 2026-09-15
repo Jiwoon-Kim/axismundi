@@ -484,12 +484,16 @@ function axismundi_note_transform_source( Axismundi_Note_Source $source ) {
 	 * explains it. Guarded like the others, so Note works with Emoji absent — the text
 	 * simply travels as a shortcode, which is what a receiver shows anyway when it has no
 	 * declaration to resolve.
+	 *
+	 * The authored post content goes in alongside the rendered one: rendering runs
+	 * `the_content`, where Emoji turns shortcodes into images, and a declaration must come
+	 * from what the author wrote rather than depend on what a filter left behind.
 	 */
 	$tags = array_merge(
 		axismundi_note_mention_tags( $post, false ),
 		function_exists( 'axismundi_op_post_hashtag_tags' ) ? axismundi_op_post_hashtag_tags( $post ) : array(),
 		function_exists( 'axismundi_emoji_outbound_tags' )
-			? axismundi_emoji_outbound_tags( array( $content, $object['name'] ?? '', $object['summary'] ?? '' ) )
+			? axismundi_emoji_outbound_tags( array( (string) $post->post_content, $content, $object['name'] ?? '', $object['summary'] ?? '' ) )
 			: array()
 	);
 	if ( ! empty( $tags ) ) {

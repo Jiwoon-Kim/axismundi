@@ -542,9 +542,15 @@ function axismundi_op_post_to_article( WP_Post $post ) {
 	 * Taken over the title as well as the body, since a shortcode in a heading needs the
 	 * same declaration as one in a paragraph. Guarded, so Object Projections keeps working
 	 * with Emoji absent.
+	 *
+	 * The authored source goes in alongside the rendered body. A declaration belongs to what
+	 * the author wrote; the rendered body can already have had its shortcodes turned into
+	 * images by a `the_content` filter (Emoji's own decorator does exactly that), and a
+	 * declaration read only from it went missing (measured 2026-09-16). The rendered body
+	 * stays in the list for text only rendering produces, such as a dynamic block.
 	 */
 	$emoji = function_exists( 'axismundi_emoji_outbound_tags' )
-		? axismundi_emoji_outbound_tags( array( $content, $name ) )
+		? axismundi_emoji_outbound_tags( array( (string) $sections['content'], $content, $name ) )
 		: array();
 	$tags  = array_merge( $mentions, $hashtags, $emoji );
 	if ( ! empty( $tags ) ) {

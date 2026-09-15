@@ -211,6 +211,17 @@ function positionPicker( trigger, picker ) {
 
 /** Fetch one custom-emojis page. The unfiltered page is the local category source. */
 function* loadCustomCatalogue( search = '' ) {
+	// Without Axismundi Emoji there is no custom emoji catalogue to ask. An empty endpoint
+	// used to fetch the page itself and report a catalogue error; no catalogue is simply empty.
+	if ( ! state.catalogueEndpoint ) {
+		if ( '' === search ) {
+			state.catalogue = [];
+			state.catalogueLoaded = true;
+		} else {
+			state.customSearch = [];
+		}
+		return;
+	}
 	state.isSearching = true;
 	try {
 		const url = state.catalogueEndpoint + ( search ? '&search=' + encodeURIComponent( search ) : '' );

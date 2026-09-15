@@ -20,33 +20,28 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Where the picker gets the Unicode set, and how it is divided.
  *
- * The bundled `emoji-test.txt` extract rather than the REST route: the route pages at 100
- * and the picker wants the whole list, so it would take forty round trips to fill one
- * panel. The file is static, versioned by its own name, and public, which makes it exactly
- * the thing an HTTP cache is for — the REST route stays useful for consumers that want to
- * search or page.
+ * From Axismundi Emoji, which owns the Unicode RGI catalogue. This plugin used to bundle
+ * its own copy; the data is about emoji rather than reactions, and Emoji ships without
+ * Activities, so there is one catalogue and it lives there.
  *
- * Groups come from the same file through the catalogue helper, so the strip cannot list a
- * heading the data does not contain.
+ * Without Emoji the answer is empty and the picker shows no Unicode sections, the same way
+ * its custom emoji section already depends on Emoji. Receiving, storing and sending a
+ * Unicode reaction never consulted the catalogue (see axismundi_act_normalize_reaction()),
+ * so that keeps working.
  *
  * @return array{index_url:string,groups:array<string,string>}
  */
 function axismundi_act_unicode_picker_source() : array {
-	$base = dirname( __DIR__ ) . '/axismundi-activities.php';
-	$file = dirname( __DIR__ ) . '/assets/unicode-rgi-17.0.json';
-	$root = dirname( __DIR__ ) . '/assets/unicode-rgi-17.0';
-	$urls = array();
-	foreach ( function_exists( 'axismundi_act_unicode_emoji_groups' ) ? axismundi_act_unicode_emoji_groups() : array() as $group ) {
-		$slug = strtolower( str_replace( '&', 'and', (string) $group ) );
-		$slug = trim( (string) preg_replace( '/[^a-z0-9]+/', '-', $slug ), '-' );
-		$file = $root . '/' . $slug . '.json';
-		if ( is_readable( $file ) ) {
-			$urls[ (string) $group ] = plugins_url( 'assets/unicode-rgi-17.0/' . $slug . '.json', $base );
-		}
+	if ( ! function_exists( 'axismundi_emoji_unicode_picker_source' ) ) {
+		return array(
+			'index_url' => '',
+			'groups'    => array(),
+		);
 	}
+	$source = axismundi_emoji_unicode_picker_source();
 	return array(
-		'index_url' => is_readable( dirname( __DIR__ ) . '/assets/unicode-rgi-17.0.json' ) ? plugins_url( 'assets/unicode-rgi-17.0.json', $base ) : '',
-		'groups'    => $urls,
+		'index_url' => is_string( $source['index_url'] ?? null ) ? $source['index_url'] : '',
+		'groups'    => is_array( $source['groups'] ?? null ) ? $source['groups'] : array(),
 	);
 }
 
@@ -117,7 +112,9 @@ function axismundi_act_seed_reaction_state( string $object_uri, ?array $summary 
 				// this site withholds from publication. Those are usable at home, and the
 				// send path is what declines to let one travel -- so the picker shows them
 				// and marks them, rather than pretending they do not exist.
-				'catalogueEndpoint' => rest_url( 'axismundi/v1/emoji/local' ) . '?federated=false&per_page=' . AXISMUNDI_EMOJI_CATALOGUE_MAX_PER_PAGE,
+				// Empty without Emoji: an undefined constant here was a fatal error on every page
+				// carrying a reaction block, and the picker treats an empty endpoint as no catalogue.
+				'catalogueEndpoint' => defined( 'AXISMUNDI_EMOJI_CATALOGUE_MAX_PER_PAGE' ) ? rest_url( 'axismundi/v1/emoji/local' ) . '?federated=false&per_page=' . AXISMUNDI_EMOJI_CATALOGUE_MAX_PER_PAGE : '',
 				/*
 				 * So the client can compute the reaction key an emoji of ours will get before
 				 * the server answers. Without it an optimistic chip has to invent a

@@ -46,8 +46,9 @@ function axismundi_emoji_search_local( array $args = array() ) : array {
 	 * missing would offer the user an emoji that renders as a broken image the moment
 	 * they pick it, which is worse than not offering it.
 	 */
-	$where  = array( "scope = 'local'", 'picker_visible = 1', "COALESCE(cached_path, '') <> ''" );
-	$params = array();
+	$where  = array( 'scope = %s', 'picker_visible = 1', "COALESCE(cached_path, '') <> ''" );
+	// Always at least one value, so every query below goes through prepare().
+	$params = array( 'local' );
 
 	/*
 	 * Federated by default, because almost everything here is.
@@ -87,9 +88,7 @@ function axismundi_emoji_search_local( array $args = array() ) : array {
 
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- plugin-owned table; values prepared.
 	$total = (int) $wpdb->get_var(
-		array() === $params
-			? "SELECT COUNT(*) FROM {$table} WHERE {$condition}"
-			: $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE {$condition}", $params )
+		$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE {$condition}", $params )
 	);
 	if ( 0 === $total ) {
 		return $empty;

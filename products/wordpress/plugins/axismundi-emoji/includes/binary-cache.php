@@ -574,10 +574,11 @@ function axismundi_emoji_cache_row( array $row ) : bool {
 	 * already claims the hash sends an orphan through admission exactly like new bytes,
 	 * while still keeping a genuine second claimant free.
 	 */
+	$emoji_table = axismundi_emoji_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- plugin-owned table; values prepared.
 	$already_counted = (int) $wpdb->get_var(
 		$wpdb->prepare(
-			'SELECT COUNT(*) FROM ' . axismundi_emoji_table() . " WHERE content_hash = %s AND cached_path IS NOT NULL AND cached_path <> '' AND id <> %d",
+			"SELECT COUNT(*) FROM {$emoji_table} WHERE content_hash = %s AND cached_path IS NOT NULL AND cached_path <> '' AND id <> %d",
 			$hash,
 			$emoji_id
 		)
@@ -639,7 +640,7 @@ function axismundi_emoji_cache_row( array $row ) : bool {
 					axismundi_emoji_mark_download_failure( $emoji_id, 'write' );
 					return false;
 				}
-				if ( ! rename( $staging, $absolute ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rename -- atomic publish within one directory.
+				if ( ! rename( $staging, $absolute ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- atomic publish within one directory; WP_Filesystem::move() gives no atomicity guarantee.
 					wp_delete_file( $staging );
 					axismundi_emoji_mark_download_failure( $emoji_id, 'publish' );
 					return false;
@@ -678,7 +679,7 @@ function axismundi_emoji_cache_row( array $row ) : bool {
 				axismundi_emoji_mark_download_failure( $emoji_id, 'static' );
 				return false;
 			}
-			if ( ! rename( $static_written, $static_absolute ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rename -- atomic publish within one directory.
+			if ( ! rename( $static_written, $static_absolute ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- atomic publish within one directory; WP_Filesystem::move() gives no atomicity guarantee.
 				wp_delete_file( $static_written );
 				axismundi_emoji_mark_download_failure( $emoji_id, 'publish' );
 				return false;

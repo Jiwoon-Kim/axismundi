@@ -236,7 +236,7 @@ function axismundi_emoji_register_local( string $bytes, string $shortcode, array
 			return new WP_Error( 'ax_emoji_store', __( 'The emoji file could not be written.', 'axismundi-emoji' ) );
 		}
 		// Publish by rename so a reader never sees a partial file at the final path.
-		if ( ! rename( $staging, $absolute ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rename -- atomic publish within one directory.
+		if ( ! rename( $staging, $absolute ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- atomic publish within one directory; WP_Filesystem::move() gives no atomicity guarantee.
 			wp_delete_file( $staging );
 			return new WP_Error( 'ax_emoji_store', __( 'The emoji file could not be published.', 'axismundi-emoji' ) );
 		}
@@ -248,7 +248,7 @@ function axismundi_emoji_register_local( string $bytes, string $shortcode, array
 		$static_absolute = axismundi_emoji_blob_dir() . '/' . $static_relative;
 		if ( ! file_exists( $static_absolute ) ) {
 			$written = axismundi_emoji_write_static_rendition( $absolute, axismundi_emoji_blob_dir() . '/' . axismundi_emoji_cache_relative_path( $hash, 'png', '-static.staging' . wp_generate_password( 8, false ) ) );
-			if ( '' === $written || ! rename( $written, $static_absolute ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rename -- atomic publish within one directory.
+			if ( '' === $written || ! rename( $written, $static_absolute ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- atomic publish within one directory; WP_Filesystem::move() gives no atomicity guarantee.
 				if ( '' !== $written ) {
 					wp_delete_file( $written );
 				}
@@ -757,7 +757,7 @@ function axismundi_emoji_restore_bundled_blob() : bool {
 		if ( false === file_put_contents( $staging, $bytes ) ) {
 			continue;
 		}
-		if ( ! rename( $staging, $absolute ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rename -- atomic publish within one directory.
+		if ( ! rename( $staging, $absolute ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- atomic publish within one directory; WP_Filesystem::move() gives no atomicity guarantee.
 			wp_delete_file( $staging );
 			continue;
 		}

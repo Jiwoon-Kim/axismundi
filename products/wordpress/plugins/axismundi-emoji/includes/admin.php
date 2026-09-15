@@ -66,13 +66,13 @@ function axismundi_emoji_render_admin_page() : void {
 		<h1><?php esc_html_e( 'Emojis', 'axismundi-emoji' ); ?></h1>
 		<p><?php esc_html_e( 'Review observed remote emoji before their bytes are cached or rendered. This screen never loads remote images.', 'axismundi-emoji' ); ?></p>
 		<?php if ( '' !== $authority ) : ?>
-			<p><strong><?php echo esc_html( sprintf( __( 'Authority: %s', 'axismundi-emoji' ), $authority ) ); ?></strong> <a href="<?php echo esc_url( axismundi_emoji_admin_url() ); ?>"><?php esc_html_e( 'Show all', 'axismundi-emoji' ); ?></a></p>
+			<p><strong><?php echo esc_html( sprintf( /* translators: %s: host name of an emoji authority, such as example.social. */ __( 'Authority: %s', 'axismundi-emoji' ), $authority ) ); ?></strong> <a href="<?php echo esc_url( axismundi_emoji_admin_url() ); ?>"><?php esc_html_e( 'Show all', 'axismundi-emoji' ); ?></a></p>
 		<?php endif; ?>
 
 		<?php if ( 'approve_pending' === $done ) : ?>
 			<?php $swept = isset( $_GET['ax_emoji_count'] ) ? absint( $_GET['ax_emoji_count'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- redirect notice only. ?>
 			<div class="notice notice-success is-dismissible"><p>
-				<?php echo esc_html( sprintf( _n( '%s waiting emoji approved.', '%s waiting emoji approved.', $swept, 'axismundi-emoji' ), number_format_i18n( $swept ) ) ); ?>
+				<?php echo esc_html( sprintf( /* translators: %s: number of waiting emoji that were approved. */ _n( '%s waiting emoji approved.', '%s waiting emoji approved.', $swept, 'axismundi-emoji' ), number_format_i18n( $swept ) ) ); ?>
 				<?php esc_html_e( 'Emoji that are still unverified, or whose licence forbids reuse, stay in the queue for a person to decide.', 'axismundi-emoji' ); ?>
 			</p></div>
 		<?php elseif ( 'uploaded' === $done ) : ?>
@@ -352,12 +352,12 @@ function axismundi_emoji_render_authorities_tab() : void {
 			$unbatched_approved = function_exists( 'axismundi_emoji_unbatched_approved_count' ) ? axismundi_emoji_unbatched_approved_count( $host ) : 0;
 			$restricted = (int) ( $row['restricted'] ?? 0 );
 			$counts     = array(
-				sprintf( __( '%s total', 'axismundi-emoji' ), number_format_i18n( (int) ( $row['total'] ?? 0 ) ) ),
-				sprintf( __( '%s approved', 'axismundi-emoji' ), number_format_i18n( (int) ( $row['approved'] ?? 0 ) ) ),
-				sprintf( __( '%s pending', 'axismundi-emoji' ), number_format_i18n( $pending ) ),
+				sprintf( /* translators: %s: number of emoji from this authority. */ __( '%s total', 'axismundi-emoji' ), number_format_i18n( (int) ( $row['total'] ?? 0 ) ) ),
+				sprintf( /* translators: %s: number of approved emoji. */ __( '%s approved', 'axismundi-emoji' ), number_format_i18n( (int) ( $row['approved'] ?? 0 ) ) ),
+				sprintf( /* translators: %s: number of emoji waiting for review. */ __( '%s pending', 'axismundi-emoji' ), number_format_i18n( $pending ) ),
 			);
 			if ( $restricted > 0 ) {
-				$counts[] = sprintf( __( '%s licence-restricted', 'axismundi-emoji' ), number_format_i18n( $restricted ) );
+				$counts[] = sprintf( /* translators: %s: number of emoji whose licence restricts reuse. */ __( '%s licence-restricted', 'axismundi-emoji' ), number_format_i18n( $restricted ) );
 			}
 			?>
 			<tr>
@@ -370,7 +370,7 @@ function axismundi_emoji_render_authorities_tab() : void {
 						<input type="hidden" name="action" value="axismundi_emoji_authority">
 						<input type="hidden" name="authority" value="<?php echo esc_attr( $host ); ?>">
 						<?php wp_nonce_field( 'axismundi_emoji_authority_' . $host ); ?>
-						<label class="screen-reader-text" for="ax-emoji-default-<?php echo esc_attr( md5( $host ) ); ?>"><?php echo esc_html( sprintf( __( 'Default for %s', 'axismundi-emoji' ), $host ) ); ?></label>
+						<label class="screen-reader-text" for="ax-emoji-default-<?php echo esc_attr( md5( $host ) ); ?>"><?php echo esc_html( sprintf( /* translators: %s: host name of an emoji authority. */ __( 'Default for %s', 'axismundi-emoji' ), $host ) ); ?></label>
 						<select id="ax-emoji-default-<?php echo esc_attr( md5( $host ) ); ?>" name="review_default">
 							<?php foreach ( $defaults as $value => $label ) : ?>
 								<option value="<?php echo esc_attr( $value ); ?>"<?php selected( $current, $value ); ?>><?php echo esc_html( $label ); ?></option>
@@ -382,15 +382,15 @@ function axismundi_emoji_render_authorities_tab() : void {
 						<?php endif; ?>
 						<?php if ( is_array( $latest_batch ) ) : ?>
 							<input type="hidden" name="approval_batch" value="<?php echo esc_attr( (string) $latest_batch['batch'] ); ?>">
-							<?php submit_button( sprintf( _n( 'Undo latest bulk approval (%s emoji)', 'Undo latest bulk approval (%s emoji)', (int) $latest_batch['count'], 'axismundi-emoji' ), number_format_i18n( (int) $latest_batch['count'] ) ), 'secondary small', 'undo_batch', false, array( 'onclick' => "return confirm('" . esc_attr__( 'Move only the emoji approved by this bulk action back to review and release their cached files?', 'axismundi-emoji' ) . "');" ) ); ?>
+							<?php submit_button( sprintf( /* translators: %s: number of emoji in the latest bulk approval. */ _n( 'Undo latest bulk approval (%s emoji)', 'Undo latest bulk approval (%s emoji)', (int) $latest_batch['count'], 'axismundi-emoji' ), number_format_i18n( (int) $latest_batch['count'] ) ), 'secondary small', 'undo_batch', false, array( 'onclick' => "return confirm('" . esc_attr__( 'Move only the emoji approved by this bulk action back to review and release their cached files?', 'axismundi-emoji' ) . "');" ) ); ?>
 						<?php endif; ?>
 						<?php if ( $unbatched_approved > 0 ) : ?>
-							<span class="description"><?php printf( wp_kses_post( _n( '%1$s approved emoji is not part of a reversible bulk batch. <a href="%2$s">Review it individually.</a>', '%1$s approved emoji are not part of a reversible bulk batch. <a href="%2$s">Review them individually.</a>', $unbatched_approved, 'axismundi-emoji' ) ), number_format_i18n( $unbatched_approved ), esc_url( axismundi_emoji_admin_url( array( 'bucket' => 'approved', 'authority' => $host ) ) ) ); ?></span>
+							<span class="description"><?php printf( wp_kses_post( /* translators: 1: number of approved emoji, 2: URL of the list of approved emoji from this authority. */ _n( '%1$s approved emoji is not part of a reversible bulk batch. <a href="%2$s">Review it individually.</a>', '%1$s approved emoji are not part of a reversible bulk batch. <a href="%2$s">Review them individually.</a>', $unbatched_approved, 'axismundi-emoji' ) ), esc_html( number_format_i18n( $unbatched_approved ) ), esc_url( axismundi_emoji_admin_url( array( 'bucket' => 'approved', 'authority' => $host ) ) ) ); ?></span>
 						<?php endif; ?>
 					</form>
 				</td>
 				<td>
-					<label class="screen-reader-text" for="ax-emoji-fallback-<?php echo esc_attr( md5( $host ) ); ?>"><?php echo esc_html( sprintf( __( 'Fallback priority for %s', 'axismundi-emoji' ), $host ) ); ?></label>
+					<label class="screen-reader-text" for="ax-emoji-fallback-<?php echo esc_attr( md5( $host ) ); ?>"><?php echo esc_html( sprintf( /* translators: %s: host name of an emoji authority. */ __( 'Fallback priority for %s', 'axismundi-emoji' ), $host ) ); ?></label>
 					<input form="ax-emoji-authority-<?php echo esc_attr( md5( $host ) ); ?>" type="number" min="0" max="999" step="1" id="ax-emoji-fallback-<?php echo esc_attr( md5( $host ) ); ?>" name="fallback_priority" value="<?php echo esc_attr( (string) $fallback_priority ); ?>">
 				</td>
 			</tr>
@@ -445,7 +445,7 @@ function axismundi_emoji_render_review_row( array $row, string $bucket ) : void 
 	<td><?php axismundi_emoji_render_authority_link( (string) ( $row['emoji_authority'] ?? '' ) ); ?></td>
 		<td><strong><?php echo esc_html( ucfirst( $bucket ) ); ?></strong><?php if ( '' !== (string) ( $row['review_reason'] ?? '' ) ) : ?><br><span class="description"><?php echo esc_html( (string) $row['review_reason'] ); ?></span><?php endif; ?></td>
 		<td><?php echo esc_html( implode( ' · ', $metadata ) ); ?><?php if ( ! empty( $links ) ) : ?><br><?php echo wp_kses_post( implode( ' · ', $links ) ); ?><?php endif; ?></td>
-		<td><?php echo esc_html( sprintf( _n( '%s reference', '%s references', $references, 'axismundi-emoji' ), number_format_i18n( $references ) ) ); ?><br><span class="description"><?php echo esc_html( (string) ( $row['last_seen_at'] ?? '' ) ); ?></span></td>
+		<td><?php echo esc_html( sprintf( /* translators: %s: number of posts and profiles that use this emoji. */ _n( '%s reference', '%s references', $references, 'axismundi-emoji' ), number_format_i18n( $references ) ) ); ?><br><span class="description"><?php echo esc_html( (string) ( $row['last_seen_at'] ?? '' ) ); ?></span></td>
 		<td>
 			<?php foreach ( $commands as $action => $label ) : ?>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block; margin:0 4px 4px 0;">

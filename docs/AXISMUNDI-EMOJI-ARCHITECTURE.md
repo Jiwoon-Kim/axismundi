@@ -3,6 +3,11 @@
 > Status: **E1–E3 closed — receiving, sending, and block-editor insertion work end to end.**
 > Plugin: `axismundi-emoji` v0.1.0. E4 (reactions) remains.
 >
+> **v0.3.0:** Unicode emoji rendering (a self-hosted font fallback), the Unicode RGI
+> catalogue (moved from Activities), and custom emoji in ordinary posts and comments joined
+> this plugin. Their design is `docs/AXISMUNDI-EMOJI-UNICODE.md`. Where this document says
+> Unicode is out of scope, read it as the v0.2 scope; the custom emoji design below is unchanged.
+>
 > Two findings from implementation are recorded inline below rather than only here,
 > because both changed a decision: `sensitive` is **not** on the ActivityPub wire at all
 > (§3 predicted this; `:blobcat_hip:` confirmed it), and the same picture re-encoded by
@@ -47,7 +52,7 @@ look like a custom-emoji CDN and are not — they are Core's Unicode fallback.
 
 | Layer | Looks like | Owner | This plugin |
 | --- | --- | --- | --- |
-| Unicode | `🇰🇷` | the OS font, with Core's `wp-emoji` swapping in Twemoji images where support is missing | never touched |
+| Unicode | `🇰🇷` | the OS font; since v0.3 this plugin's bundled emoji font where the site chooses; Core's `wp-emoji` images as the last resort | drawn with a font, never rewritten or turned into an image (v0.2: never touched) |
 | Legacy smilies | `:cool:` `:mrgreen:` | Core `convert_smilies()`, serving `wp-includes/images/smilies` | undeclared names passed through untouched |
 | Custom emoji | `:misskey:` `:blobcat:` | FEP-9098, declared per Object in `tag[]` | substituted after approval and caching |
 
@@ -65,8 +70,9 @@ a problem it does not have.
 
 ### Explicitly out of scope
 
-**Unicode emoji and their image substitutions.** Three separate layers already do
-this and none of them is ours:
+**Unicode emoji and their image substitutions** *(v0.2 scope — superseded in v0.3, see
+`AXISMUNDI-EMOJI-UNICODE.md`).* Three separate layers already do this and none of them is
+ours:
 
 | Layer | What it does |
 | --- | --- |
@@ -75,8 +81,9 @@ this and none of them is ours:
 | Misskey | serves its own, e.g. `misskey.io/twemoji/1f973.svg` |
 
 Those URLs look like custom emoji and are not. A Unicode grapheme is stored and
-federated as the grapheme; this plugin never touches it. The only place Unicode
-appears here is as a picker tab that inserts the literal character (§9).
+federated as the grapheme, and that still holds: since v0.3 this plugin draws a grapheme
+with a bundled font where the site chooses to, but never rewrites it and never replaces it
+with an image. Image substitution remains WordPress core's.
 
 **Emoji reactions.** Deferred to E4 (§10), owned by Activities, not by this plugin.
 
@@ -816,11 +823,12 @@ Inserts **plain `:shortcode:` text**, never image HTML. The image is a reader-si
 rendering result; keeping the authored document as text lets direct typing, paste, and
 picker insertion all rebuild the same outbound `tag[]` declaration.
 
-**Unicode is deliberately outside this picker.** The operating system already provides
-it (`Win + .`, macOS palette, mobile keyboards), and a Unicode grapheme needs neither a
-registry entry nor an ActivityPub `Emoji` tag. Reaction UI can offer a Unicode quick set
-later under Activities (§10) without making the block editor ship or maintain a second
-general-purpose Unicode catalogue.
+**Unicode joined this picker in v0.3.** Until v0.2 it was left to the operating system's
+picker (`Win + .`, macOS palette, mobile keyboards), which does not draw flags on Windows.
+The picker now offers the Unicode 17.0 RGI catalogue this plugin owns — moved from
+Activities, which reads it from here, so there is still one catalogue — and inserts the
+literal grapheme. A grapheme still needs neither a registry entry nor an ActivityPub `Emoji`
+tag. The layout follows the reaction picker; see `AXISMUNDI-EMOJI-UNICODE.md` §12.5 and §12.9.
 
 Offers **locally registered, federatable emoji only.** Observed remote emoji are
 evidence for faithfully rendering received content, not assets to reuse in new

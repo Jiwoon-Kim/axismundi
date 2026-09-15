@@ -86,7 +86,8 @@ function axismundi_emoji_search_local( array $args = array() ) : array {
 	$table     = axismundi_emoji_table();
 	$condition = implode( ' AND ', $where );
 
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- plugin-owned table; values prepared.
+	// Placeholders live in $condition, one per value in $params; the sniffs cannot count them.
+	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- plugin-owned table; values prepared.
 	$total = (int) $wpdb->get_var(
 		$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE {$condition}", $params )
 	);
@@ -95,14 +96,14 @@ function axismundi_emoji_search_local( array $args = array() ) : array {
 	}
 
 	$paged = array_merge( $params, array( $per_page, ( $page - 1 ) * $per_page ) );
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- plugin-owned table; values prepared.
-	$rows = (array) $wpdb->get_results(
+	$rows  = (array) $wpdb->get_results(
 		$wpdb->prepare(
 			"SELECT * FROM {$table} WHERE {$condition} ORDER BY category IS NULL, category ASC, shortcode_key ASC LIMIT %d OFFSET %d",
 			$paged
 		),
 		ARRAY_A
 	);
+	// phpcs:enable
 
 	return array(
 		'items' => array_map( 'axismundi_emoji_catalogue_item', $rows ),

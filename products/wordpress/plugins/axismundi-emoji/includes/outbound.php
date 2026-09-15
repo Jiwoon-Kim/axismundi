@@ -170,7 +170,7 @@ function axismundi_emoji_outbound_tags( array $texts ) : array {
 	 * renders at home; the shortcode simply travels alone, which is what Misskey does with
 	 * its own `localOnly` emoji.
 	 */
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- plugin-owned table; values prepared.
+	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- plugin-owned table; $placeholders has one %s per key.
 	$rows = (array) $wpdb->get_results(
 		$wpdb->prepare(
 			"SELECT * FROM {$table}
@@ -184,6 +184,7 @@ function axismundi_emoji_outbound_tags( array $texts ) : array {
 		),
 		ARRAY_A
 	);
+	// phpcs:enable
 
 	$tags = array();
 	foreach ( $rows as $row ) {
@@ -208,7 +209,8 @@ function axismundi_emoji_outbound_tags( array $texts ) : array {
 function axismundi_emoji_serve_route( WP $wp ) : void {
 	$key = (string) ( $wp->query_vars['ax_emoji'] ?? '' );
 	if ( '' === $key ) {
-		$path = (string) wp_parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotValidated -- matched against a strict pattern below.
+		$uri  = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+		$path = (string) wp_parse_url( $uri, PHP_URL_PATH );
 		if ( ! preg_match( '#/' . AXISMUNDI_EMOJI_ROUTE_BASE . '/([a-zA-Z0-9_]{2,})/?$#', $path, $matches ) ) {
 			return;
 		}

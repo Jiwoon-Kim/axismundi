@@ -417,7 +417,7 @@ function axismundi_emoji_undo_approval_batch( string $authority, string $batch, 
 	$ids = array_map( static fn( array $row ) : int => (int) $row['id'], $rows );
 	$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
 	$args = array_merge( array( current_time( 'mysql', true ), $user_id ), $ids );
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- plugin-owned table; fixed placeholder list is generated from integer ids.
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- plugin-owned table; $args holds the two SET values, then one integer id per %d generated in $placeholders.
 	$updated = (int) $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET review_status = 'pending', review_reason = NULL, reviewed_at = %s, reviewed_by = %d, cached_path = NULL, static_path = NULL, approval_batch = NULL WHERE id IN ({$placeholders})", ...$args ) );
 	if ( $updated < 1 ) {
 		return 0;

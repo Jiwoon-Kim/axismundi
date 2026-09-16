@@ -32,7 +32,14 @@
 	grid-template-columns: auto 1fr;
 	align-items: center;
 	gap: 0.375rem;
-	padding: 0.375rem 0.75rem;
+	/*
+	 * A fixed row height that the column never shrinks: a line-height of `normal` left the row
+	 * at 38.198px, and flex shrinking squeezed a fixed one to 28px (see Pixel grid).
+	 */
+	flex: 0 0 auto;
+	block-size: 40px;
+	box-sizing: border-box;
+	padding: 0 0.75rem;
 	margin: -0.5rem -0.5rem 0;
 	background: color-mix( in srgb, currentColor 6%, transparent );
 }
@@ -59,6 +66,7 @@
 	background: transparent;
 	color: inherit;
 	font: inherit;
+	line-height: 20px;
 }
 
 .axismundi-emoji-picker .axismundi-emoji-picker__input:focus,
@@ -86,26 +94,40 @@
 }
 
 /*
- * The jump strip. Navigation, not tabs: nothing it does hides content. `flex: 1 1 0` with no
- * minimum so eleven jumps divide the row instead of scrolling it.
+ * Pixel grid. Every size and offset in the panel is a whole CSS pixel, so nothing lands between
+ * device pixels on a fractional display (measured at devicePixelRatio 1.5, 2026-09-16: 104 of
+ * 104 panel elements were fractional). Things that divide space instead of taking a size
+ * produced the fractions: eleven jumps sharing 368px, `1fr` columns sharing a width that a
+ * scrollbar had already made fractional, a 1px border drawn as 0.667px, and `normal` or
+ * unitless line-heights.
+ */
+
+/*
+ * The jump strip. Navigation, not tabs: nothing it does hides content. Jumps are a fixed 32px,
+ * centred: eleven fill the 368px row less 8px each side, and any other count still leaves a
+ * whole-pixel offset, since 368 - 32n is a multiple of 16. The divider is a 1px background
+ * band in the strip's own padding, because a 1px border is drawn at 0.667px when the device
+ * pixel ratio is 1.5.
  */
 .axismundi-emoji-picker__strip {
 	display: flex;
 	flex: 0 0 auto;
+	justify-content: center;
 	overflow-x: auto;
 	scrollbar-width: thin;
-	border-block-end: 1px solid #e0e0e0;
+	padding-block-end: 1px;
+	background: linear-gradient( #e0e0e0, #e0e0e0 ) left bottom / 100% 1px no-repeat;
 }
 
 .axismundi-emoji-picker__jump {
 	position: relative;
-	flex: 1 1 0;
+	flex: 0 0 32px;
 	min-inline-size: 0;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	block-size: 48px;
-	padding: 0 0.25rem;
+	padding: 0;
 	border: 0;
 	border-radius: 0;
 	background: none;
@@ -159,6 +181,15 @@
 	padding-block-start: 0;
 }
 
+/*
+ * The scrollbar takes a width the platform chooses (15.333px at devicePixelRatio 1.5), which
+ * left every section 352.667px wide and the right-aligned chevrons half a device pixel off.
+ * Rounded down to a whole pixel; a browser without CSS `round()` keeps the full width.
+ */
+.axismundi-emoji-picker__section {
+	inline-size: round( down, 100%, 1px );
+}
+
 .axismundi-emoji-picker__section + .axismundi-emoji-picker__section {
 	margin-block-start: 0.75rem;
 }
@@ -168,7 +199,7 @@
 	margin: 0 0 0.25rem;
 	font-size: 11px;
 	font-weight: 600;
-	line-height: 1.6;
+	line-height: 16px;
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
 	color: #757575;
@@ -236,8 +267,12 @@
 
 .axismundi-emoji-picker__grid {
 	display: grid;
-	grid-template-columns: repeat( auto-fill, minmax( 2.5rem, 1fr ) );
-	gap: 0.125rem;
+	/*
+	 * Fixed columns packed to the start: `1fr` shared out a width that the scrollbar had
+	 * already made fractional (42.333px). A 4px gap keeps the spacing the stretched columns had.
+	 */
+	grid-template-columns: repeat( auto-fill, 40px );
+	gap: 4px;
 }
 
 /* Fixed-size native buttons: a picker tile is a control. */
@@ -278,15 +313,36 @@
  */
 .axismundi-emoji-picker__glyph {
 	display: block;
+	/*
+	 * A 28px box like a custom emoji's image, with the glyph centred inside it. Sized by its
+	 * text, the box took each glyph's own advance width (27.396px, 30.208px) and was centred
+	 * in the tile at a fractional offset.
+	 */
+	inline-size: 28px;
+	block-size: 28px;
+	overflow: visible;
 	font-size: 1.375rem;
 	font-style: normal;
 	font-weight: 400;
-	line-height: 1;
+	line-height: 28px;
+	text-align: center;
+	white-space: nowrap;
 }
 
 .axismundi-emoji-picker__empty {
 	margin: 0.5rem 0;
 	font-size: 13px;
+	line-height: 20px;
+}
+
+/*
+ * The loading state is a spinner in the same row. An inline 16px spinner with its own top margin
+ * sat on the text baseline and made the row 25.667px; as a block with no margin the row is the
+ * spinner's own 16px.
+ */
+.axismundi-emoji-picker__empty .components-spinner {
+	display: block;
+	margin: 0;
 	color: #757575;
 }
 

@@ -105,7 +105,16 @@ try {
 	ax_pick_assert( $ax_pick_results, 'Recent and Custom come before the Unicode groups', (int) strpos( $ax_pick_js, "jumpButton( 'recent'" ) < (int) strpos( $ax_pick_js, "jumpButton( 'custom'" ) && (int) strpos( $ax_pick_js, "jumpButton( 'custom'" ) < (int) strpos( $ax_pick_js, "jumpButton( 'uni:'" ) );
 	ax_pick_assert( $ax_pick_results, 'a Unicode group fetches its file only when it first opens', str_contains( $ax_pick_js, "loadGroup( source.groups[ id.slice( 4 ) ] )" ) && ! str_contains( $ax_pick_js, 'rgi-17.0.json' ) );
 	ax_pick_assert( $ax_pick_results, 'icons are Dashicons, which wp-admin always has, not the theme\'s Material Symbols', str_contains( $ax_pick_js, 'C.Dashicon' ) && ! str_contains( $ax_pick_js, 'material-symbols' ) );
-	ax_pick_assert( $ax_pick_results, 'and the geometry matches the reaction picker: 24rem panel, 48px strip, 2.5rem tiles', str_contains( $ax_pick_css, 'inline-size: min( 24rem' ) && str_contains( $ax_pick_css, 'block-size: 48px;' ) && str_contains( $ax_pick_css, 'minmax( 2.5rem, 1fr )' ) );
+	ax_pick_assert( $ax_pick_results, 'and the geometry matches the reaction picker: 24rem panel, 48px strip, 2.5rem tiles', str_contains( $ax_pick_css, 'inline-size: min( 24rem' ) && str_contains( $ax_pick_css, 'block-size: 48px;' ) && str_contains( $ax_pick_css, 'inline-size: 2.5rem;' ) );
+
+	/*
+	 * Pixel grid (measured at devicePixelRatio 1.5, 2026-09-16). Every rule here replaced one
+	 * that divided space into fractions; a return of any of them brings the fractions back.
+	 */
+	ax_pick_assert( $ax_pick_results, 'pixel grid: tiles sit in fixed 40px columns, not stretched 1fr ones', str_contains( $ax_pick_css, 'grid-template-columns: repeat( auto-fill, 40px );' ) && ! str_contains( $ax_pick_css, 'minmax(' ) );
+	ax_pick_assert( $ax_pick_results, 'pixel grid: jumps are a fixed 32px, centred, and the divider is not a 1px border', str_contains( $ax_pick_css, 'flex: 0 0 32px;' ) && str_contains( $ax_pick_css, 'justify-content: center;' ) && ! str_contains( $ax_pick_css, 'border-block-end: 1px' ) );
+	ax_pick_assert( $ax_pick_results, 'pixel grid: headings, search and empty rows have pixel line-heights, sections a rounded width', str_contains( $ax_pick_css, 'line-height: 16px;' ) && str_contains( $ax_pick_css, 'line-height: 20px;' ) && str_contains( $ax_pick_css, 'block-size: 40px;' ) && str_contains( $ax_pick_css, 'inline-size: round( down, 100%, 1px );' ) );
+	ax_pick_assert( $ax_pick_results, 'pixel grid: the popover\'s measured max-height is rounded down', str_contains( $ax_pick_js, "closest( '.components-popover__content' )" ) && str_contains( $ax_pick_js, "Math.floor( value ) + 'px'" ) );
 
 	// -- Registration ownership --------------------------------------------------------------
 

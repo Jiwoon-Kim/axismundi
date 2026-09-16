@@ -334,6 +334,32 @@
 			}
 		}, [] );
 
+		/*
+		 * Keep the popover's height on the pixel grid. The popover writes a `max-height` measured
+		 * from the caret, which is usually fractional (347.562px at devicePixelRatio 1.5), and the
+		 * scrolling page takes whatever is left, so the fraction ends up in every row below it.
+		 * CSS cannot round an inline value, so round it down whenever the popover rewrites it;
+		 * the rounded value is whole, so the second callback changes nothing and the loop ends.
+		 */
+		useEffect( function () {
+			var content = searchRef.current && searchRef.current.closest( '.components-popover__content' );
+			if ( ! content || 'undefined' === typeof MutationObserver ) {
+				return undefined;
+			}
+			function snap() {
+				var value = parseFloat( content.style.maxHeight );
+				if ( value > 0 && value !== Math.floor( value ) ) {
+					content.style.maxHeight = Math.floor( value ) + 'px';
+				}
+			}
+			var observer = new MutationObserver( snap );
+			observer.observe( content, { attributes: true, attributeFilter: [ 'style' ] } );
+			snap();
+			return function () {
+				observer.disconnect();
+			};
+		}, [] );
+
 		// The site's publishable custom emoji, once. Every category starts open, as on the front end.
 		useEffect( function () {
 			var cancelled = false;

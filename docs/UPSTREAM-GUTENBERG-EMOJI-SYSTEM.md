@@ -1,6 +1,6 @@
 # Draft — Gutenberg Discussion (Ideas): emoji picker, support detection and fallback as one system
 
-> 상태: **게시됨** 2026-09-17, [WordPress/gutenberg#83032](https://github.com/WordPress/gutenberg/discussions/83032) (Ideas). API(`createDiscussion`)로 게시, 되읽은 본문이 초안과 일치(`--posted`, SHA-256 `b87f0676…`).
+> 상태: **게시됨** 2026-09-17, [WordPress/gutenberg#83032](https://github.com/WordPress/gutenberg/discussions/83032) (Ideas). API(`createDiscussion`)로 게시. 2026-09-17 본문 수정(`updateDiscussion`): 데모를 0.3.1 릴리스(Emoji 단독에서도 에디터 picker가 뜨는 첫 릴리스)와 커밋 `caeff33` 고정 링크로 교체, 되읽은 본문이 초안과 일치(`--posted`, SHA-256 `b87f0676…`).
 >
 > 올릴 곳: WordPress/gutenberg › [Discussions › Ideas](https://github.com/WordPress/gutenberg/discussions/new?category=ideas) (사용자와 결정 2026-09-16).
 > 이유: 글의 목적이 계층 경계에 대한 열린 질문 3개라 바로 처리할 작업 단위가 없다(이슈로 열면 "무슨 변경이냐"로 분류가 막힘).
@@ -76,11 +76,11 @@ Not a plugin to merge. I'd like to discuss where the boundaries should be, using
 | Detection | Results per kind of sequence (country flags, subdivision flags, single code points, ZWJ and skin-tone sequences) instead of two booleans, available to scripts that need them. |
 | Fallback | An ordered chain: the browser's own font, then a color emoji font, then images. A font keeps the emoji as text, so copying, search, and screen readers see the characters. |
 
-### Working reference: Axismundi Emoji 0.3.0
+### Working reference: Axismundi Emoji 0.3.1
 
-[Axismundi Emoji](https://github.com/Jiwoon-Kim/axismundi/releases/tag/emoji-v0.3.0) is under review for the Plugin Directory, so here is a Playground that installs the release ZIP and opens a demo page:
+[Axismundi Emoji](https://github.com/Jiwoon-Kim/axismundi/releases/tag/emoji-v0.3.1) is under review for the Plugin Directory, so here is a Playground that installs the release ZIP and opens a demo page:
 
-**[Open the demo in Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/Jiwoon-Kim/axismundi/6ebc3a05ef2d400c142b1e2f0c8c1ab4f46b002a/products/wordpress/plugins/axismundi-emoji/wporg-assets/blueprints/release.json)**
+**[Open the demo in Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/Jiwoon-Kim/axismundi/caeff33fac115d809a073c671a9136d145830b5a/products/wordpress/plugins/axismundi-emoji/wporg-assets/blueprints/release.json)**
 
 The page lists 11 Unicode sequences and the two bundled custom emoji and, after load, says what drew each row: the browser's font, the bundled font, a WordPress.org image, or the site's own image. A panel shows the plugin's mode and WordPress's own test results. In Chromium on Windows with the latest WordPress, WordPress reported `flag: no, emoji: no` ([Core Trac #66104](https://core.trac.wordpress.org/ticket/66104)); the plugin drew the three flags with its font and the other eight became images.
 

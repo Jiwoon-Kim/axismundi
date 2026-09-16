@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Emoji
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/wordpress/plugins/axismundi-emoji
  * Description:       Custom emoji and Unicode emoji for WordPress. A custom emoji registry with review and per-authority caching for FEP-9098 emoji, local emoji registration, a self-hosted Noto Color Emoji font fallback for Unicode emoji, and one block-editor picker.
- * Version:           0.3.0
+ * Version:           0.3.1
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -25,7 +25,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_EMOJI_VERSION = '0.3.0';
+const AXISMUNDI_EMOJI_VERSION = '0.3.1';
 
 /**
  * Cap on emoji declared by a single Object or Actor.

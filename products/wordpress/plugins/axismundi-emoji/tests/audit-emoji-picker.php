@@ -157,6 +157,13 @@ try {
 	do_action( 'enqueue_block_editor_assets' );
 	ax_pick_assert( $ax_pick_results, 'a consumer enqueuing on enqueue_block_editor_assets actually gets it', wp_script_is( AXISMUNDI_EMOJI_PICKER_HANDLE, 'enqueued' ) );
 	ax_pick_assert( $ax_pick_results, 'its stylesheet travels with it', wp_style_is( AXISMUNDI_EMOJI_PICKER_HANDLE, 'enqueued' ) );
+	/*
+	 * Emoji offers the picker itself. With only consumers asking, a site running Emoji alone
+	 * had no button (Playground demo, 2026-09-17), and the check above still passed because
+	 * Object Projections was active here. Run this file with
+	 * `--skip-plugins=axismundi-note,axismundi-object-projections` to prove it at runtime.
+	 */
+	ax_pick_assert( $ax_pick_results, 'Emoji hooks the block editor itself, so it needs no consumer', false !== has_action( 'enqueue_block_editor_assets', 'axismundi_emoji_enqueue_block_editor_picker' ) );
 
 	$ax_pick_note = (string) file_get_contents( WP_PLUGIN_DIR . '/axismundi-note/includes/editor.php' );
 	$ax_pick_art  = (string) file_get_contents( WP_PLUGIN_DIR . '/axismundi-object-projections/includes/post-settings.php' );

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.3.0
+Stable tag: 0.3.1
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -59,27 +59,23 @@ The plugin's own Unicode fallback makes no external requests: the fonts and the 
 
 == Changelog ==
 
-= 0.3.0 =
-* Unicode emoji rendering: a self-hosted Noto Color Emoji font fallback that keeps emoji as text, with three modes under Emojis › Settings — Automatic fallback (flags subset only where the browser needs it), Use Noto Color Emoji (the complete font for every emoji), and WordPress fallback only.
-* A switch for WordPress's own emoji image fallback, so a site can make no emoji image requests to WordPress.org.
-* Bundles Noto Color Emoji COLRv1 v2.051 as WOFF2 (complete font and RGI flags subset), also offered as a Font Library collection.
-* The Unicode 17.0 RGI emoji catalogue moved here from Axismundi Activities; its REST route is now `axismundi/v1/emoji/unicode`.
-* The editor picker adds Unicode emoji and follows the reaction picker's layout: search, a category jump strip, and one scrolling page of collapsible sections.
-* Custom emoji now render in ordinary posts and comments, not only in federated Objects and Actor profiles. Only this site's own emoji are matched.
-* A post's outbound emoji declaration no longer goes missing when its content has already been rendered with emoji images.
+= 0.3.1 =
+* The emoji picker now appears in the block editor with Axismundi Emoji alone. In 0.3.0 it appeared only where another Axismundi plugin asked for it.
+* Picker sizes and positions stay on whole pixels, so tiles and the category strip stay sharp at fractional display scaling.
+* Corrects the Bundled emoji section: the plugin ships two emoji, not one.
 
 Earlier releases are listed in changelog.txt.
 
 == Bundled emoji ==
 
-The plugin ships one emoji of its own, `:axismundi:` at `emoji/axismundi.webp` — a
-200x200 WebP derived from the project's brand symbol, 5.6 KB, transparency intact.
-Its project-owned brand-asset provenance and GPL-3.0-or-later release are recorded beside
-the file in `emoji/LICENSE.txt`.
+The plugin ships two emoji. Their terms differ; `emoji/LICENSE.txt` records both.
+
+* `:axismundi:` at `emoji/axismundi.webp` — a 200x200 WebP derived from the project's brand symbol, 5.6 KB, transparency intact, released under GPL-3.0-or-later by its copyright holder.
+* `:wordpress:` at `emoji/wordpress.webp` — the WordPress W Mark, recoloured and scaled to 200x200. It is a trademark of the WordPress Foundation and is not licensed under the GPL; it is included only to refer to WordPress the software, as the Foundation's trademark policy permits. An operator can delete it under Emojis › Local.
 
 One size, because FEP-9098 gives an Emoji exactly one `icon.url`: there is no srcset
 in the emoji contract, so a second file would federate nothing. 200px is generous
 enough for a picker tile and scales down cleanly to the ~1.2em inline case.
 
-It also serves as the outbound conformance fixture, so the test suite never depends
+`:axismundi:` also serves as the outbound conformance fixture, so the test suite never depends
 on another instance's restricted asset.

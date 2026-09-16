@@ -1,12 +1,13 @@
 <?php
 /**
- * Editor assets for the custom emoji picker (docs §9).
+ * Editor assets for the emoji picker (docs §9).
  *
- * Registered here, enqueued by the consumer. This plugin has no business knowing which
- * screens Note, Object Projections, or a future profile editor consider theirs, and a
- * list of other people's screens kept here would need editing every time one of them
- * grew a new surface. The same reasoning that makes every cross-plugin call sit behind
- * `function_exists()` applies to assets.
+ * The block editor gets the picker from this plugin, because since 0.3.0 custom emoji
+ * render in any post and the plugin must work on its own: the picker had only appeared
+ * where Note or Object Projections asked for it, so a site with Emoji alone had no button
+ * (found in the Playground demo, 2026-09-17). Other editing surfaces, such as a profile
+ * form, still ask for it through `axismundi_emoji_enqueue_picker()`; this plugin keeps no
+ * list of other plugins' screens. Asking twice is harmless.
  *
  * @package AxismundiEmoji
  */
@@ -92,3 +93,16 @@ function axismundi_emoji_enqueue_picker() : bool {
 	}
 	return true;
 }
+
+/**
+ * Offer the picker in every block editor.
+ *
+ * `enqueue_block_editor_assets` fires for the post, site and widget editors alike. The
+ * picker is a rich-text format button, so it appears wherever rich text does.
+ *
+ * @return void
+ */
+function axismundi_emoji_enqueue_block_editor_picker() : void {
+	axismundi_emoji_enqueue_picker();
+}
+add_action( 'enqueue_block_editor_assets', 'axismundi_emoji_enqueue_block_editor_picker' );

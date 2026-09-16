@@ -23,6 +23,9 @@ $ax_rs_actors  = array();
 $ax_rs_posts   = array();
 $ax_rs_users   = array();
 $ax_rs_ids     = array();
+// The :unreviewed: reaction makes Emoji observe an example.com row. Remove it afterwards
+// unless it was already there: a leftover row breaks other audits' per-host counts.
+$ax_rs_emoji_fixture = false;
 
 /** @param bool[] $results Results. */
 function ax_rs_assert( array &$results, string $label, bool $condition ) : void {
@@ -162,7 +165,8 @@ try {
 	ax_rs_assert( $ax_rs_results, 'a Unicode chip is text and carries no image', null === $ax_rs_by_key['unicode:U+2764']['image'] );
 	ax_rs_assert( $ax_rs_results, 'and is labelled with the emoji its sender wrote', '❤' === (string) $ax_rs_by_key['unicode:U+2764']['label'] );
 
-	$ax_rs_carol = ax_rs_remote_actor( $ax_rs_actors );
+	$ax_rs_carol         = ax_rs_remote_actor( $ax_rs_actors );
+	$ax_rs_emoji_fixture = function_exists( 'axismundi_emoji_get' ) && ! is_array( axismundi_emoji_get( 'example.com', 'unreviewed' ) );
 	$ax_rs_react(
 		$ax_rs_carol,
 		':unreviewed:',
@@ -234,6 +238,11 @@ try {
 	}
 	foreach ( array_unique( $ax_rs_users ) as $ax_rs_user_id ) {
 		wp_delete_user( (int) $ax_rs_user_id );
+	}
+	$ax_rs_emoji_row = $ax_rs_emoji_fixture ? axismundi_emoji_get( 'example.com', 'unreviewed' ) : null;
+	if ( is_array( $ax_rs_emoji_row ) ) {
+		$wpdb->delete( axismundi_emoji_references_table(), array( 'emoji_id' => (int) $ax_rs_emoji_row['id'] ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->delete( axismundi_emoji_table(), array( 'id' => (int) $ax_rs_emoji_row['id'] ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	}
 }
 

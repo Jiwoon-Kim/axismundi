@@ -22,6 +22,7 @@
 > ## 근거 (확인일 2026-09-16)
 >
 > - 번호·상태: `gh api`(Gutenberg #1678 closed, #75144 open, PR #76767 open, PR #78176 open·trunk 미반영, picker 위치 `packages/editor/src/components/collab-sidebar/`), Core Trac 쿼리(#49885 closed wontfix, #44001 Awaiting Review has-patch, #64638 7.2, #66104 7.2 reviewing `has-patch commit`, #63451 Awaiting Review `close`, #52219 6.2 fixed [55186], #58663 Future Release), wordpress-develop PR #12252 open.
+> - 첫 문장: #75144 본문 89행 "Codebase exploration found no existing emoji picker component in Gutenberg."을 인용. "Gutenberg"가 아니라 "WordPress has no shared emoji system"으로 쓴 이유 = 감지·대체는 Core 코드.
 > - #78176 내용: PR 본문(Emojibase 28 locale, same-origin lazy fetch, `Composite`, `speak()`, 피부색 listbox, 자주 쓴 이모지, 소문자 hex 저장 키·`FE0F` 제거, Frimousse 철회 이유).
 > - Core 동작: [UPSTREAM-TRAC-CANDIDATES.md](UPSTREAM-TRAC-CANDIDATES.md) C1–C5(C2·C3·C5 재현, C1·C4 소스 판독), 6.8.1 Emoji 15.1 / 6.8.2 Emoji 16.0 검사(wordpress-develop 태그).
 > - #63451의 "저절로 해결" 원인은 **추정**(당시 Windows의 Emoji 16 지원을 측정하지 않음) — 본문에서도 "likely"로 표기.
@@ -44,7 +45,7 @@ Emoji: treat the picker, support detection, and fallback rendering as one system
 
 ## The problem
 
-WordPress handles emoji in three places that were built at different times and do not share a model:
+While planning reactions for Notes, #75144 found no existing emoji picker component in Gutenberg. The gap is wider than the picker: WordPress has no shared emoji system. It handles emoji in three places that were built at different times and do not share a model:
 
 1. **Input.** There is no reusable emoji picker in the editor today. A character map was requested in #1678 (2017), and an emoji button in [Core Trac #49885](https://core.trac.wordpress.org/ticket/49885) (2020, closed as `wontfix` because operating systems ship their own). Notes reactions are adding one now: #75144, #76767, and the full searchable picker in #78176, which lives in `packages/editor/src/components/collab-sidebar/`.
 2. **Support detection.** `wp-emoji-loader.js` runs two tests on a canvas: `flag` (the transgender flag, the Sark flag, and the England flag; any failure fails it) and `emoji` (the centre pixel of U+1FAC8). The result becomes `everything` or `everythingExceptFlag`. It runs on the front end only; the block editor does not load it.

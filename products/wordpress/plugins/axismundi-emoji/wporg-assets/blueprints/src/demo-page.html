@@ -1,0 +1,143 @@
+<!-- wp:paragraph -->
+<p>Each row below is plain Unicode text in the post. Once the page has loaded, the last column says what drew it: the browser's own emoji font, the Noto Color Emoji font bundled with Axismundi Emoji, or a WordPress.org image (WordPress's own fallback). Custom emoji are this site's images.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:html -->
+<style>
+.ax-emoji-demo { overflow-x: auto; }
+.ax-emoji-demo table { border-collapse: collapse; width: 100%; font-size: 0.9em; }
+.ax-emoji-demo th, .ax-emoji-demo td { border-bottom: 1px solid color-mix( in srgb, currentColor 20%, transparent ); padding: 0.5em 0.75em; text-align: start; vertical-align: middle; }
+.ax-emoji-demo__glyph { font-size: 2em; line-height: 1.2; white-space: nowrap; }
+.ax-emoji-demo__glyph img { width: 1em !important; height: 1em !important; }
+.ax-emoji-demo__by { font-weight: 600; }
+.ax-emoji-demo__status { padding: 0.75em 1em; border-radius: 8px; background: color-mix( in srgb, currentColor 8%, transparent ); }
+.ax-emoji-demo__status dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.25em 1em; margin: 0; }
+.ax-emoji-demo__status dt { font-weight: 600; }
+.ax-emoji-demo__status dd { margin: 0; }
+</style>
+<div class="ax-emoji-demo">
+<div class="ax-emoji-demo__status" id="ax-emoji-demo-status"><p>Checking this browser&hellip;</p></div>
+<table>
+<thead><tr><th>Sample</th><th>Case</th><th>Code points</th><th>Drawn by</th></tr></thead>
+<tbody>
+<tr><td class="ax-emoji-demo__glyph">&#x1F600;</td><td>Basic emoji</td><td><code>1F600</code></td><td class="ax-emoji-demo__by">&hellip;</td></tr>
+<tr><td class="ax-emoji-demo__glyph">&#x1FAC8;</td><td>Emoji 17.0, one code point (the one WordPress tests)</td><td><code>1FAC8</code></td><td class="ax-emoji-demo__by">&hellip;</td></tr>
+<tr><td class="ax-emoji-demo__glyph">&#x1F9D1;&#x200D;&#x1FA70;</td><td>Emoji 17.0 ZWJ sequence</td><td><code>1F9D1 200D 1FA70</code></td><td class="ax-emoji-demo__by">&hellip;</td></tr>
+<tr><td class="ax-emoji-demo__glyph">&#x1F1F0;&#x1F1F7;</td><td>Country flag</td><td><code>1F1F0 1F1F7</code></td><td class="ax-emoji-demo__by">&hellip;</td></tr>
+<tr><td class="ax-emoji-demo__glyph">&#x1F1E8;&#x1F1F6;</td><td>Country flag, newer (Sark)</td><td><code>1F1E8 1F1F6</code></td><td class="ax-emoji-demo__by">&hellip;</td></tr>
+<tr><td class="ax-emoji-demo__glyph">&#x1F3F4;&#xE0067;&#xE0062;&#xE0065;&#xE006E;&#xE0067;&#xE007F;</td><td>Subdivision flag (England), a tag sequence</td><td><code>1F3F4 E0067 E0062 E0065 E006E E0067 E007F</code></td><td class="ax-emoji-demo__by">&hellip;</td></tr>
+<tr><td class="ax-emoji-demo__glyph">&#x1F3F3;&#xFE0F;&#x200D;&#x26A7;&#xFE0F;</td><td>ZWJ flag (transgender)</td><td><code>1F3F3 FE0F 200D 26A7 FE0F</code></td><td class="ax-emoji-demo__by">&hellip;</td></tr>
+<tr><td class="ax-emoji-demo__glyph">&#x1F3F4;&#x200D;&#x2620;&#xFE0F;</td><td>ZWJ flag (pirate)</td><td><code>1F3F4 200D 2620 FE0F</code></td><td class="ax-emoji-demo__by">&hellip;</td></tr>
+<tr><td class="ax-emoji-demo__glyph">&#x1F469;&#x1F3FD;&#x200D;&#x1F4BB;</td><td>Skin tone and ZWJ</td><td><code>1F469 1F3FD 200D 1F4BB</code></td><td class="ax-emoji-demo__by">&hellip;</td></tr>
+<tr><td class="ax-emoji-demo__glyph">&#x1F468;&#x200D;&#x1F469;&#x200D;&#x1F467;&#x200D;&#x1F466;</td><td>Family, three joiners</td><td><code>1F468 200D 1F469 200D 1F467 200D 1F466</code></td><td class="ax-emoji-demo__by">&hellip;</td></tr>
+<tr><td class="ax-emoji-demo__glyph">&#x2764;&#xFE0F;</td><td>Emoji presentation selector</td><td><code>2764 FE0F</code></td><td class="ax-emoji-demo__by">&hellip;</td></tr>
+<tr><td class="ax-emoji-demo__glyph">:wordpress: :axismundi:</td><td>Custom emoji bundled with the plugin</td><td><code>:wordpress: :axismundi:</code></td><td class="ax-emoji-demo__by">&hellip;</td></tr>
+</tbody>
+</table>
+</div>
+<script>
+( function () {
+	var root = document.querySelector( '.ax-emoji-demo' );
+	if ( ! root ) {
+		return;
+	}
+
+	function drawnBy( cell ) {
+		if ( cell.querySelector( 'img.ax-emoji' ) ) {
+			return 'Custom emoji (this site’s image)';
+		}
+		if ( cell.querySelector( 'img.emoji' ) ) {
+			return 'WordPress.org image';
+		}
+		var wrapper = cell.querySelector( '.ax-unicode-emoji' );
+		if ( wrapper ) {
+			return 'Noto Color Emoji (' + wrapper.getAttribute( 'data-ax-emoji-profile' ) + ')';
+		}
+		return 'Browser’s own font';
+	}
+
+	function coreSupports() {
+		try {
+			var stored = JSON.parse( sessionStorage.getItem( 'wpEmojiSettingsSupports' ) || 'null' );
+			var tests = stored && stored.supportTests;
+			if ( ! tests ) {
+				return 'not run on this page';
+			}
+			return Object.keys( tests ).map( function ( key ) {
+				return key + ': ' + ( tests[ key ] ? 'yes' : 'no' );
+			} ).join( ', ' );
+		} catch ( e ) {
+			return 'unavailable';
+		}
+	}
+
+	function row( term, value ) {
+		var dt = document.createElement( 'dt' );
+		var dd = document.createElement( 'dd' );
+		dt.textContent = term;
+		dd.textContent = value;
+		return [ dt, dd ];
+	}
+
+	function render() {
+		root.querySelectorAll( 'tbody tr' ).forEach( function ( tr ) {
+			tr.querySelector( '.ax-emoji-demo__by' ).textContent = drawnBy( tr.querySelector( '.ax-emoji-demo__glyph' ) );
+		} );
+
+		// The front end prints the adapter's settings as JSON, as the adapter itself reads them.
+		var config = null;
+		var configNode = document.getElementById( 'axismundi-emoji-unicode-config' );
+		try {
+			config = configNode ? JSON.parse( configNode.textContent ) : null;
+		} catch ( e ) {
+			config = null;
+		}
+		var api = window.axismundiEmojiUnicode || null;
+		var decisions = api ? api.decisions() : {};
+		var used = Object.keys( decisions ).filter( function ( id ) {
+			return decisions[ id ];
+		} );
+		var dl = document.createElement( 'dl' );
+		[
+			row( 'Axismundi rendering mode', config ? config.mode : 'WordPress fallback only (the plugin adds nothing to this page)' ),
+			row( 'Noto Color Emoji used for', config ? ( used.length ? used.join( ', ' ) : 'nothing — this browser draws every profile itself' ) : '—' ),
+			row( 'WordPress image fallback', document.getElementById( 'wp-emoji-settings' ) ? 'loaded' : 'switched off in Emojis › Settings' ),
+			row( 'WordPress support tests', coreSupports() )
+		].forEach( function ( pair ) {
+			dl.appendChild( pair[ 0 ] );
+			dl.appendChild( pair[ 1 ] );
+		} );
+		var status = document.getElementById( 'ax-emoji-demo-status' );
+		status.replaceChildren( dl );
+	}
+
+	var timer = 0;
+	function schedule() {
+		clearTimeout( timer );
+		timer = setTimeout( render, 300 );
+	}
+	new MutationObserver( schedule ).observe( root.querySelector( 'tbody' ), { childList: true, subtree: true, attributes: true } );
+	window.addEventListener( 'load', function () {
+		setTimeout( render, 1500 );
+	} );
+} )();
+</script>
+<!-- /wp:html -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Try it</h2>
+<!-- /wp:heading -->
+
+<!-- wp:list -->
+<ul class="wp-block-list"><!-- wp:list-item -->
+<li>Switch between the three rendering modes in <a href="{{SETTINGS_URL}}">Emojis › Settings</a>, reload this page and compare the last column. <em>WordPress fallback only</em> shows what WordPress does without the plugin.</li>
+<!-- /wp:list-item -->
+
+<!-- wp:list-item -->
+<li>Open <a href="{{EDIT_URL}}">this page in the editor</a>, select some text, and choose <em>Emoji</em> from the toolbar's <em>More</em> menu. Unicode and custom emoji share one searchable picker.</li>
+<!-- /wp:list-item -->
+
+<!-- wp:list-item -->
+<li>Copy any row: the flag or emoji is copied as text, because the font draws it without replacing it.</li>
+<!-- /wp:list-item --></ul>
+<!-- /wp:list -->

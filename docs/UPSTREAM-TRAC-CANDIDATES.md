@@ -8,11 +8,42 @@ Axismundi Emoji의 Unicode fallback 설계 중 발견한 Core 결함 후보. 아
 
 | # | 후보 | 상태 | 기존 티켓 |
 |---|---|---|---|
-| C1 | 감지 캐시 만료 단위 혼동 | source-read | 미검색 |
-| C2 | `wp-exclude-emoji`가 MutationObserver 경로에서 무시됨 | **reproduced** (2026-09-15) | 미검색 |
-| C3 | `everythingExceptFlag`일 때 subdivision flag가 치환 대상에서 빠짐 | **reproduced** (잉글랜드) | 미검색 |
-| C4 | `emoji` 감지가 단일 코드포인트만 검사 | 설계 한계(결함 아닐 수 있음) | #66104과 구분 |
-| C5 | `WP_Font_Face`가 query string 붙은 src를 버림 | **reproduced** (2026-09-16) | 미검색 |
+| C1 | 감지 캐시 만료 단위 혼동 | source-read | [#58663](https://core.trac.wordpress.org/ticket/58663) 관련(단위 버그는 미언급) → 댓글 |
+| C2 | `wp-exclude-emoji`가 MutationObserver 경로에서 무시됨 | **reproduced** (2026-09-15) | [#52219](https://core.trac.wordpress.org/ticket/52219)(6.2 fixed)의 남은 경우 → 새 티켓 |
+| C3 | `everythingExceptFlag`일 때 subdivision flag가 치환 대상에서 빠짐 | **reproduced** (잉글랜드) | [#63451](https://core.trac.wordpress.org/ticket/63451)(사용자 본인 티켓, `close` 키워드) → 원인 댓글 |
+| C4 | `emoji` 감지가 단일 코드포인트만 검사 | 설계 한계(결함 아닐 수 있음) | 직접 티켓 없음. #66104과 구분, [#61806](https://core.trac.wordpress.org/ticket/61806) 맥락 |
+| C5 | `WP_Font_Face`가 query string 붙은 src를 버림 | **reproduced** (2026-09-16) | 없음 → 새 티켓 |
+
+### 기존 티켓 검색 (2026-09-16)
+
+방법: Core Trac은 curl에 봇 확인 페이지를 돌려주므로 앱 내 브라우저에서 열고(자동 확인 통과, 체크박스 없음) 같은 세션에서 쿼리를 CSV로 받았다.
+- Emoji 컴포넌트 전체 120건(열림·닫힘) 제목 검토.
+- 설명 검색(`description=~`): `pathinfo`, `order_src`, `WP_Font_Face`, `wp_print_font_faces`, `604800`, `wp-exclude-emoji`, `everythingExceptFlag`, `subdivision`.
+- 전체 검색(댓글·changeset 포함): `pathinfo font`, `font query string src`, `font-face ver query`, `wp-exclude-emoji`, `doNotParse`, `wpEmojiSettingsSupports timestamp`, `emoji flag tag sequence`, `England flag emoji`, `emoji zwj sequence support test`.
+- GitHub: Gutenberg 이슈 `font face query string`, `pathinfo font`, `wp-exclude-emoji`와 wordpress-develop PR `pathinfo font` — 관련 없음.
+
+읽은 티켓:
+- **#58663** (열림, Future Release, trivial) "Consider eliminating expiry-based invalidation of wpEmojiSettingsSupports sessionStorage cache". 캐시가 **1주** 유지된다는 전제로 만료 제거를 검토한다. 실제로는 단위 버그로 약 10분이라는 점은 티켓·댓글 어디에도 없다. C1은 새 티켓보다 여기에 댓글로 사실을 더하는 편이 맞다.
+- **#52219** (6.2 fixed, [55186]) "wp-emoji.js should always skip nodes with the `wp-exclude-emoji` CSS class". Twemoji에 `doNotParse()` 콜백을 넣어 해결. C2는 그 수정이 root 요소를 검사하지 않아 남은 경우다. 닫힌 지 오래된 티켓은 다시 열지 않고 새 티켓에서 #52219·[55186]을 참조한다.
+- **#63451** (열림, Awaiting Review, `close` 키워드) "Flag emoji rendering issue on Windows environment" — **사용자 본인 티켓**. 잉글랜드·스코틀랜드·웨일스 깃발이 Windows에서 검은 깃발. peterwilsoncc(Chrome 139, Windows 10)는 재현 못 함(Twemoji로 치환됨), 사용자는 이후 "해결된 것 같다", swissspidy가 `close` 키워드. **C3이 원인 설명이다.** `flag` 검사가 실패해도 `emoji` 검사가 통과하면(`everythingExceptFlag`) 치환 정규식이 국가 깃발·무지개·해적 깃발만 잡아서 태그 시퀀스 깃발은 남는다. `emoji`가 실패하면 모든 이모지를 치환하므로 깃발도 이미지가 된다.
+  - 감지 문자열 이력(wordpress-develop 태그): 6.8.1은 Emoji 15.1(불사조), 6.8.2는 Emoji 16.0(물 튀김) 검사. 사용자가 "해결됐다"고 한 시점(2025-08)은 6.8.2 뒤다. **추정**: 당시 Windows가 Emoji 16을 그리지 못해 `emoji`가 실패 → 전부 치환 → 깃발도 이미지. 6.9부터는 #66104의 잘못된 문자열 때문에 `emoji`가 늘 실패해 같은 효과가 유지. 그러면 **#66104가 고쳐지는 순간 Emoji 17을 그리는 Windows에서 #63451이 다시 나타난다.** 이 기기 하네스(#66104 브랜치)에서 잉글랜드 `img` 0으로 이미 관찰됨. 당시 Windows의 Emoji 15.1/16 지원 여부는 측정하지 않았으므로 댓글에서는 추정으로 표기할 것.
+  - 이 연결은 #66104 PR(#13515) 리뷰에도 필요한 정보다(수정의 부작용).
+- **#61806** (열림, accepted) "twemoji is always loaded on Windows devices". Windows는 국가 깃발을 못 그려 `flag`가 늘 실패 → Twemoji 스크립트가 항상 로드되는 것은 설계상 결과라는 논의. C4의 profile 단위 감지 제안과 폰트 fallback 제안의 배경.
+- **#64222** (열림) Twemoji 업그레이드 절차 개선 — `twemoji.js`의 WP 수정분(=`doNotParse`) 보존을 언급하는 정도. C2 수정 시 이 절차에 영향.
+- **#63569** (열림) 외부 src로 폰트 등록 — 빈 src 처리 문제로 C5와 원인이 다름. C5 티켓에서 "src가 없는 @font-face" 결과가 같다는 점만 참고.
+- **#66103**(사용자 등록) — C5와 같은 `WP_Font_Face` 클래스. 티켓은 분리 유지.
+
+**결정(사용자, 2026-09-16):** Trac 티켓마다 댓글을 달지 않는다. 위 내용은 Gutenberg 이슈 하나에 모은다 — Axismundi Emoji 구현과 Core를 비교하고, GitHub 릴리스를 설치하는 Playground 데모(`axismundi-emoji/wporg-assets/blueprints/release.json`)와 관련 이슈·티켓을 모두 링크한다. wp.org 승인이나 SVN 블루프린트를 기다리지 않는다. C2·C5 개별 티켓은 그 이슈 뒤에 필요하면 연다.
+
+같은 이슈에 넣을 Gutenberg·Core 맥락(번호·상태 확인 2026-09-16):
+- Gutenberg #1678 (closed) Reimplement character map — 2017.
+- Core #49885 (closed, wontfix, Editor) Introduce an option to add emoji when writing a post — OS 이모지 입력기가 있다는 이유.
+- Gutenberg #75144 (open) Add emoji reactions as a first class comment type — Notes.
+- Gutenberg PR #76767 (open) 제한된 반응 5개, PR #78176 (open, stacked) 전체 검색 picker: Emojibase 28개 locale 데이터를 같은 origin에서 lazy fetch, `Composite` 키보드 탐색, `speak()` 검색 결과 안내, 피부색 listbox, 자주 쓴 이모지(preferences), 저장 키 = 소문자 hex 코드포인트(`FE0F` 제거). picker는 `packages/editor/src/components/collab-sidebar/` 안(아직 범용 컴포넌트 아님), trunk 미반영.
+- Core #64638 (7.2, gutenberg-merge) Register emoji reactions comment meta for Notes.
+- Core #66104 (7.2, reviewing, `has-patch commit`) — 사용자 티켓.
+- Core #44001 (Awaiting Review, has-patch, Privacy) oEmbed two click / local emoji scripts, wordpress-develop PR #12252 (open) "Emoji: serve image assets locally by default".
+- Playground 데모 관찰(앱 내 Chromium, WordPress latest): Core 검사 `emoji: false, flag: false`(#66104) → 국가·subdivision 깃발은 Noto 폰트, 나머지는 WordPress 이미지.
 
 ### 재현 하네스 (C2·C3 공통)
 

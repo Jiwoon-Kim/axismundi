@@ -15,7 +15,7 @@
             "step": "installPlugin",
             "pluginData": {
                 "resource": "url",
-                "url": "https://github.com/Jiwoon-Kim/axismundi/releases/download/emoji-v0.3.0/axismundi-emoji.zip"
+                "url": "https://github.com/Jiwoon-Kim/axismundi/releases/download/emoji-v0.3.1/axismundi-emoji.zip"
             },
             "options": {
                 "activate": true

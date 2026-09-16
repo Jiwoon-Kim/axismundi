@@ -21,7 +21,7 @@ SRC = Path(__file__).resolve().parent
 OUT = SRC.parent
 MARKER = "/* demo-page.html */"
 PLUGIN = "axismundi-emoji"
-RELEASE_TAG = "emoji-v0.3.0"
+RELEASE_TAG = "emoji-v0.3.1"
 RELEASE_ZIP = f"https://github.com/Jiwoon-Kim/axismundi/releases/download/{RELEASE_TAG}/{PLUGIN}.zip"
 
 

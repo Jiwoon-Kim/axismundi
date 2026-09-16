@@ -1,6 +1,6 @@
 # Draft — Gutenberg Discussion (Ideas): emoji picker, support detection and fallback as one system
 
-> 상태: **게시됨** 2026-09-17, [WordPress/gutenberg#83032](https://github.com/WordPress/gutenberg/discussions/83032) (Ideas). API(`createDiscussion`)로 게시. 2026-09-17 본문 수정(`updateDiscussion`): 데모를 0.3.1 릴리스(Emoji 단독에서도 에디터 picker가 뜨는 첫 릴리스)와 커밋 `caeff33` 고정 링크로 교체, 되읽은 본문이 초안과 일치(`--posted`, SHA-256 `b87f0676…`).
+> 상태: **게시됨** 2026-09-17, [WordPress/gutenberg#83032](https://github.com/WordPress/gutenberg/discussions/83032) (Ideas). API(`createDiscussion`)로 게시. 2026-09-17 본문 수정(`updateDiscussion`): 데모를 0.3.1 릴리스(Emoji 단독에서도 에디터 picker가 뜨는 첫 릴리스)와 커밋 `caeff33` 고정 링크로 교체. 같은 날 두 번째 수정: C2·C5 문장과 Related에 새 티켓 #66120·#66119 링크 추가, 되읽은 본문이 초안과 일치(`--posted`, SHA-256 `b87f0676…`).
 >
 > 올릴 곳: WordPress/gutenberg › [Discussions › Ideas](https://github.com/WordPress/gutenberg/discussions/new?category=ideas) (사용자와 결정 2026-09-16).
 > 이유: 글의 목적이 계층 경계에 대한 열린 질문 3개라 바로 처리할 작업 단위가 없다(이슈로 열면 "무슨 변경이냐"로 분류가 막힘).
@@ -61,9 +61,9 @@ Because the three parts do not know about each other, a small mistake in one cha
 
 - [Core Trac #66104](https://core.trac.wordpress.org/ticket/66104): the Emoji 17 test string is malformed, so `emoji` is always false and every emoji is replaced by an image, including in browsers that draw Emoji 17 (now in 7.2 with `commit`).
 - When `flag` fails and `emoji` passes, only regional-indicator pairs and the rainbow and pirate flags are replaced. Two of the flags the `flag` test draws are not on that list: England (with Scotland and Wales, a tag sequence) stays as a plain black flag, and the transgender flag, a ZWJ sequence, is left as well. That is [Core Trac #63451](https://core.trac.wordpress.org/ticket/63451). It likely stopped reproducing because the `emoji` test began to fail (Emoji 16 in 6.8.2, then [Core Trac #66104](https://core.trac.wordpress.org/ticket/66104)), which makes WordPress replace everything. With the [Core Trac #66104](https://core.trac.wordpress.org/ticket/66104) patch applied, a local test page in Chromium on Windows left the England flag unreplaced again.
-- `.wp-exclude-emoji` is skipped only when it is below the element being parsed. If the excluded element is itself inserted later, or its own text changes, it becomes the parse root and its emoji are replaced. A follow-up to [Core Trac #52219](https://core.trac.wordpress.org/ticket/52219).
+- `.wp-exclude-emoji` is skipped only when it is below the element being parsed. If the excluded element is itself inserted later, or its own text changes, it becomes the parse root and its emoji are replaced. A follow-up to [Core Trac #52219](https://core.trac.wordpress.org/ticket/52219), now [Core Trac #66120](https://core.trac.wordpress.org/ticket/66120).
 - The `emoji` test checks a single code point. A system that draws U+1FAC8 but not the new Emoji 17 ZWJ sequences counts as supporting Emoji 17.
-- Smaller findings from the same work: the detection cache expires after about ten minutes rather than the week [Core Trac #58663](https://core.trac.wordpress.org/ticket/58663) assumes, and `WP_Font_Face` drops a font `src` that carries a query string such as `?ver=`.
+- Smaller findings from the same work: the detection cache expires after about ten minutes rather than the week [Core Trac #58663](https://core.trac.wordpress.org/ticket/58663) assumes, and `WP_Font_Face` drops a font `src` that carries a query string such as `?ver=` ([Core Trac #66119](https://core.trac.wordpress.org/ticket/66119)).
 
 ## What I'd like to discuss
 
@@ -119,5 +119,5 @@ Known costs of the font approach: the download (the flags subset in automatic mo
 ### Related
 
 - Gutenberg: #1678, #75144, #76767, #78176, #82848
-- Core Trac: [#44001](https://core.trac.wordpress.org/ticket/44001), [#49885](https://core.trac.wordpress.org/ticket/49885), [#52219](https://core.trac.wordpress.org/ticket/52219), [#58663](https://core.trac.wordpress.org/ticket/58663), [#63451](https://core.trac.wordpress.org/ticket/63451), [#64638](https://core.trac.wordpress.org/ticket/64638), [#66104](https://core.trac.wordpress.org/ticket/66104)
+- Core Trac: [#44001](https://core.trac.wordpress.org/ticket/44001), [#49885](https://core.trac.wordpress.org/ticket/49885), [#52219](https://core.trac.wordpress.org/ticket/52219), [#58663](https://core.trac.wordpress.org/ticket/58663), [#63451](https://core.trac.wordpress.org/ticket/63451), [#64638](https://core.trac.wordpress.org/ticket/64638), [#66104](https://core.trac.wordpress.org/ticket/66104), [#66119](https://core.trac.wordpress.org/ticket/66119), [#66120](https://core.trac.wordpress.org/ticket/66120)
 - wordpress-develop: [#12252](https://github.com/WordPress/wordpress-develop/pull/12252)

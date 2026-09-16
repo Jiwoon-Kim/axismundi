@@ -1,6 +1,6 @@
 # Upstream Trac candidates (emoji)
 
-Axismundi Emoji의 Unicode fallback 설계 중 발견한 Core 결함 후보. 아직 티켓 아님.
+Axismundi Emoji의 Unicode fallback 설계 중 발견한 Core 결함 후보. 처리 결과는 아래 표(댓글·티켓 원문: [UPSTREAM-TRAC-EMOJI-COMMENTS.md](UPSTREAM-TRAC-EMOJI-COMMENTS.md), [UPSTREAM-TRAC-NEW-TICKETS-C2-C5.md](UPSTREAM-TRAC-NEW-TICKETS-C2-C5.md)).
 각 항목은 **재현 전에는 올리지 않는다** — "source-read"는 코드를 읽고 추론한 단계, "reproduced"는 브라우저에서 확인한 단계.
 재현되면 이 파일에서 개별 초안(`UPSTREAM-TRAC-*.md`)으로 분리하고, 여건이 되면 wordpress-develop PR까지 이어간다.
 
@@ -8,11 +8,11 @@ Axismundi Emoji의 Unicode fallback 설계 중 발견한 Core 결함 후보. 아
 
 | # | 후보 | 상태 | 기존 티켓 |
 |---|---|---|---|
-| C1 | 감지 캐시 만료 단위 혼동 | source-read | [#58663](https://core.trac.wordpress.org/ticket/58663) 관련(단위 버그는 미언급) → 댓글 |
-| C2 | `wp-exclude-emoji`가 MutationObserver 경로에서 무시됨 | **reproduced** (2026-09-15) | [#52219](https://core.trac.wordpress.org/ticket/52219)(6.2 fixed)의 남은 경우 → 새 티켓 |
-| C3 | `everythingExceptFlag`일 때 subdivision flag가 치환 대상에서 빠짐 | **reproduced** (잉글랜드) | [#63451](https://core.trac.wordpress.org/ticket/63451)(사용자 본인 티켓, `close` 키워드) → 원인 댓글 |
+| C1 | 감지 캐시 만료 단위 혼동 | source-read | [#58663](https://core.trac.wordpress.org/ticket/58663) — [comment:5](https://core.trac.wordpress.org/ticket/58663#comment:5) 게시 |
+| C2 | `wp-exclude-emoji`가 MutationObserver 경로에서 무시됨 | **reproduced** (2026-09-15) | [#52219](https://core.trac.wordpress.org/ticket/52219)(6.2 fixed)의 남은 경우 → **[#66120](https://core.trac.wordpress.org/ticket/66120)** 등록(2026-09-17) |
+| C3 | `everythingExceptFlag`일 때 subdivision flag가 치환 대상에서 빠짐 | **reproduced** (잉글랜드) | [#63451](https://core.trac.wordpress.org/ticket/63451) — [comment:10](https://core.trac.wordpress.org/ticket/63451#comment:10) 게시 |
 | C4 | `emoji` 감지가 단일 코드포인트만 검사 | 설계 한계(결함 아닐 수 있음) | 직접 티켓 없음. #66104과 구분, [#61806](https://core.trac.wordpress.org/ticket/61806) 맥락 |
-| C5 | `WP_Font_Face`가 query string 붙은 src를 버림 | **reproduced** (2026-09-16) | 없음 → 새 티켓 |
+| C5 | `WP_Font_Face`가 query string 붙은 src를 버림 | **reproduced** (2026-09-16) | **[#66119](https://core.trac.wordpress.org/ticket/66119)** 등록(2026-09-17) |
 
 ### 기존 티켓 검색 (2026-09-16)
 

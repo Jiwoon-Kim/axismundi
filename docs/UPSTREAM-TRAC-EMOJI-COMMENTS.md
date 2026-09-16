@@ -1,6 +1,6 @@
 # Draft — Core Trac comments for C1 (#58663) and C3 (#63451)
 
-> 상태: **초안, 게시 안 함** (2026-09-17). Trac은 로그인이 필요해 사용자가 게시한다.
+> 상태: **게시됨** 2026-09-16(Trac 시각), 사용자 게시 — [#58663 comment:5](https://core.trac.wordpress.org/ticket/58663#comment:5) 15:36:48, [#63451 comment:10](https://core.trac.wordpress.org/ticket/63451#comment:10) 15:37:13. 2026-09-17 Trac 화면 텍스트를 초안(위키 문법 제거)과 대조해 일치 확인.
 >
 > 결정(사용자, 2026-09-17): Gutenberg #83032를 연 뒤, 기존 티켓이 있는 후보에는 댓글을 단다.
 > - C1 → #58663(열림): 만료가 1주라는 전제가 실제로는 약 10분이라는 사실 보강.

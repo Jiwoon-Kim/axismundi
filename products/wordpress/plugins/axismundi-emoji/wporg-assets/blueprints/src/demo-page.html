@@ -57,6 +57,10 @@
 	}
 
 	function coreSupports() {
+		// A result in sessionStorage may be left from an earlier page that did load the test.
+		if ( ! document.getElementById( 'wp-emoji-settings' ) ) {
+			return 'not run on this page';
+		}
 		try {
 			var stored = JSON.parse( sessionStorage.getItem( 'wpEmojiSettingsSupports' ) || 'null' );
 			var tests = stored && stored.supportTests;

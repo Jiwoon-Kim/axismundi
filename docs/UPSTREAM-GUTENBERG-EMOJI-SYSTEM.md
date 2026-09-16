@@ -1,6 +1,6 @@
 # Draft — Gutenberg Discussion (Ideas): emoji picker, support detection and fallback as one system
 
-> 상태: **초안, 게시 안 함** (2026-09-16).
+> 상태: **게시됨** 2026-09-17, [WordPress/gutenberg#83032](https://github.com/WordPress/gutenberg/discussions/83032) (Ideas). API(`createDiscussion`)로 게시, 되읽은 본문이 초안과 일치(`--posted`, SHA-256 `b87f0676…`).
 >
 > 올릴 곳: WordPress/gutenberg › [Discussions › Ideas](https://github.com/WordPress/gutenberg/discussions/new?category=ideas) (사용자와 결정 2026-09-16).
 > 이유: 글의 목적이 계층 경계에 대한 열린 질문 3개라 바로 처리할 작업 단위가 없다(이슈로 열면 "무슨 변경이냐"로 분류가 막힘).
@@ -36,6 +36,12 @@
 >
 > - "상위호환"류 비교. picker는 #78176이 앞선 부분이 있고, 이 글의 요점은 계층 경계다.
 > - Safari 등 특정 브라우저의 COLRv1 지원 단정 — 측정하지 않음. 폰트 probe 실패 시 물러난다는 동작만 적음.
+
+## Pointer comment on #78176 (GitHub Markdown — paste as is)
+
+> 게시됨 2026-09-17: [#78176 issuecomment-5699776917](https://github.com/WordPress/gutenberg/pull/78176#issuecomment-5699776917), `--github` 되읽기 일치. 위치 안내만(새 논지 없음), 한 곳에만.
+
+I opened #83032 about emoji across WordPress as a whole: the picker, support detection, and fallback rendering. The picker and the reaction key in this PR are part of that picture, so I'm linking it here for anyone following. It doesn't ask for any change in this PR.
 
 ## Title
 

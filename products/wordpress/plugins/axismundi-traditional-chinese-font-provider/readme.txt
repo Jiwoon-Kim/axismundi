@@ -2,9 +2,9 @@
 Contributors: kimjiwoon
 Tags: fonts, chinese, typography, font-library
 Requires at least: 6.7
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.0
+Stable tag: 0.1.1
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -25,9 +25,11 @@ Two roles:
   the theme's `--axismundi-cjk-sans` slot. Latin keeps
   rendering in Roboto Flex / Roboto Serif because the theme lists Roboto ahead of
   the slot.
-* **Font Library collection.** The family is registered as the
-  "Axismundi Traditional Chinese Font Provider" collection, so they can be
-  browsed, installed, and selected from Site Editor > Styles > Typography.
+* **Font Library collection.** The family is also registered as the
+  "Axismundi Traditional Chinese Font Provider" collection. The Traditional Chinese fallback above works
+  without installing anything. Installing from the collection adds a separate
+  font limited to the same Traditional Chinese character range, for places where you choose
+  it; it does not recreate the theme's Roboto Flex fallback stack.
 
 Because the slot is keyed on the Traditional Chinese language tags, this plugin
 coexists with the Korean, Japanese (and future Simplified Chinese) regional
@@ -75,11 +77,18 @@ Traditional glyph forms. The files are correspondingly large.
 
 == Changelog ==
 
-= 0.1.0 =
+= 0.1.1 =
 
-* Initial release: `@font-face` provider (front + editor) for Noto Sans TC,
-  filling Axismundi's locale-aware sans-serif CJK fallback slot for
-  Traditional Chinese language tags, plus a Font Library collection registration.
+* The Font Library collection now declares the same `unicode-range` as the
+  automatic fallback, so a family installed from it takes only Traditional Chinese text
+  and other characters fall through to the next font in its stack. The collection and readme say that
+  installing is optional and does not recreate the theme's fallback stack.
+* The Traditional Chinese font is rebuilt from a pinned upstream file
+  (google/fonts commit a54f744) by scripts/build-noto-cjk.py, with a generated
+  manifest. Coverage is unchanged.
+* Tested up to WordPress 7.1.
+
+Earlier releases are listed in changelog.txt.
 
 == Copyright ==
 

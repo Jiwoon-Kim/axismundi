@@ -1,0 +1,9 @@
+== Changelog ==
+
+Releases before 0.1.1. The current release is in readme.txt.
+
+= 0.1.0 =
+
+* Initial release: `@font-face` provider (front + editor) for Noto Sans JP and
+  Noto Serif JP, filling Axismundi's locale-aware CJK fallback slot for
+  `:lang(ja)`, plus a Font Library collection registration.

@@ -1,5 +1,8 @@
-Source: https://github.com/google/fonts/tree/main/ofl/notosanstc
-Original file: NotoSansTC-VariableFont_wght.ttf
-Processing: pyftsubset (fontTools) → WOFF2 with Traditional Chinese subset (Bopomofo + CJK punctuation/compatibility + CJK Unified Ideographs incl. Extension A and Compatibility Ideographs; wght axis preserved)
-Conversion date: 2026-06-29
-License: SIL Open Font License 1.1
+Source: https://github.com/google/fonts/blob/a54f7446f84a1125ef6bf08baa46f3639e8905e0/ofl/notosanstc/NotoSansTC%5Bwght%5D.ttf
+Upstream commit: a54f7446f84a1125ef6bf08baa46f3639e8905e0
+Input: NotoSansTC[wght].ttf (11941968 bytes, SHA-256 864727d210d54f2537bbe23b3a839436c3992af72de9322af5270897246bd44f)
+Font version: Version 2.004-H2;hotconv 1.0.118;makeotfexe 2.5.65603
+Processing: scripts/build-noto-cjk.py (brotli 1.2.0, fontTools 4.63.0) - subset to the unicode-range below, all layout features and names kept, variation axes kept, WOFF2.
+unicode-range: U+3000-303F, U+3100-312F, U+31A0-31BF, U+3200-32FF, U+3300-33FF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF
+Output: assets/fonts/noto-sans-tc/axismundi-noto-sans-tc.woff2 (4637124 bytes, SHA-256 4d1d392c75d4666095d6b724bcd13a9d024081813bfdb14d505b26aceefdaa4f, 16901 codepoints)
+License: SIL Open Font License 1.1; see OFL.txt.

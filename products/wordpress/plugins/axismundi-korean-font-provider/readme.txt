@@ -2,9 +2,9 @@
 Contributors: kimjiwoon
 Tags: fonts, korean, typography, font-library
 Requires at least: 6.7
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.3
+Stable tag: 0.1.4
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -22,9 +22,11 @@ Two roles:
   and block editor) for the two families. On a Korean document it sets the
   theme's `--axismundi-cjk-sans` / `--axismundi-cjk-serif` slots. The fonts are
   scoped to Hangul, so Latin keeps rendering in Roboto Flex / Roboto Serif.
-* **Font Library collection.** The families are registered as the
-  "Axismundi Korean Font Provider" collection, so they can be browsed,
-  installed, and selected from Site Editor > Styles > Typography.
+* **Font Library collection.** The families are also registered as the
+  "Axismundi Korean Font Provider" collection. The Korean fallback above works
+  without installing anything. Installing from the collection adds a separate
+  font limited to the same Korean character range, for places where you choose
+  it; it does not recreate the theme's Roboto Flex / Roboto Serif fallback stack.
 
 Without the plugin the Axismundi theme falls back to the operating system's CJK
 font. Separate regional plugins can fill the same slot for Japanese or Chinese
@@ -68,12 +70,17 @@ regional Hanja subset is provided.
 
 == Changelog ==
 
-= 0.1.3 =
+= 0.1.4 =
 
-* Fill Axismundi's locale-aware CJK fallback slot only for Korean documents, so
-  other regional font plugins can coexist without a fixed family-order conflict.
-* Clarify that user-profile language controls admin UI translation, not the
-  published document's regional glyph forms.
+* The Font Library collection now declares the same `unicode-range` as the
+  automatic fallback, so a family installed from it takes only Korean text
+  and other characters fall through to the next font in its stack. The collection and readme say that
+  installing is optional and does not recreate the theme's fallback stack.
+* The Korean fonts are rebuilt from pinned upstream files (google/fonts commit
+  a54f744) by scripts/build-noto-cjk.py, with a generated manifest. They now
+  carry only the Korean range, dropping unused Latin glyphs: Noto Sans KR is
+  1.17 MB (was 1.25 MB) and Noto Serif KR 2.06 MB (was 2.16 MB).
+* Tested up to WordPress 7.1.
 
 Earlier releases are listed in changelog.txt.
 

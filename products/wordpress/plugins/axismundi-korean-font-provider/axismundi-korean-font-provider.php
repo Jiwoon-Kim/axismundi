@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Korean Font Provider
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/wordpress/plugins/axismundi-korean-font-provider
  * Description:       Optional Korean web-font provider for the Axismundi theme — supplies Noto Sans KR and Noto Serif KR, fills the theme's CJK fallback slot for Korean documents, and registers them as a Font Library collection.
- * Version:           0.1.3
+ * Version:           0.1.4
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -18,8 +18,18 @@
 defined( 'ABSPATH' ) || exit;
 
 if ( ! defined( 'AXISMUNDI_KOREAN_FONT_PROVIDER_VERSION' ) ) {
-	define( 'AXISMUNDI_KOREAN_FONT_PROVIDER_VERSION', '0.1.3' );
+	define( 'AXISMUNDI_KOREAN_FONT_PROVIDER_VERSION', '0.1.4' );
 }
+
+/**
+ * The Korean range the bundled faces cover, as declared in assets/styles/fonts.css.
+ *
+ * The Font Library collection declares the same range, so a family installed from it
+ * takes only Korean text, as the automatic fallback does. The files contain other glyphs
+ * too; this is the site's choice of what the face is used for, not the file's coverage.
+ * tests/audit-collection.php checks that the two stay identical.
+ */
+const AXISMUNDI_KOREAN_FONT_PROVIDER_UNICODE_RANGE = 'U+AC00-D7A3, U+1100-11FF, U+3130-318F, U+A960-A97F, U+D7B0-D7FF';
 
 /**
  * Enqueue the @font-face provider on the front end and in the block editor.
@@ -44,8 +54,9 @@ add_action( 'enqueue_block_assets', 'axismundi_korean_font_provider_enqueue' );
  *
  * Discovery / management surface in Site Editor > Styles > Typography > Manage
  * fonts. The @font-face provider above is what actually renders the theme's
- * stacks; this collection lets users browse and explicitly install/select the
- * families. Available since WordPress 6.5.
+ * stacks, without installing anything. Installing a family from this collection
+ * adds a separate font limited to the same Korean range; it does not recreate the
+ * theme's fallback stack. Available since WordPress 6.5.
  */
 function axismundi_korean_font_provider_collection() : void {
 	if ( ! function_exists( 'wp_register_font_collection' ) ) {
@@ -59,7 +70,7 @@ function axismundi_korean_font_provider_collection() : void {
 		'axismundi-korean-font-provider',
 		array(
 			'name'          => __( 'Axismundi Korean Font Provider', 'axismundi-korean-font-provider' ),
-			'description'   => __( 'Noto Sans KR and Noto Serif KR for the Axismundi theme.', 'axismundi-korean-font-provider' ),
+			'description'   => __( 'Noto Sans KR and Noto Serif KR for the Axismundi theme. Automatic Korean fallback works without installing anything; installing adds a separate font limited to the same Korean range and does not recreate the fallback stack of the theme.', 'axismundi-korean-font-provider' ),
 			'categories'    => array(
 				array(
 					'name' => __( 'Korean', 'axismundi-korean-font-provider' ),
@@ -75,11 +86,12 @@ function axismundi_korean_font_provider_collection() : void {
 						'fontFamily' => '"Noto Sans KR", sans-serif',
 						'fontFace'   => array(
 							array(
-								'fontFamily'  => 'Noto Sans KR',
-								'fontStyle'   => 'normal',
-								'fontWeight'  => '100 900',
-								'fontDisplay' => 'swap',
-								'src'         => $sans_src,
+								'fontFamily'   => 'Noto Sans KR',
+								'fontStyle'    => 'normal',
+								'fontWeight'   => '100 900',
+								'fontDisplay'  => 'swap',
+								'src'          => $sans_src,
+								'unicodeRange' => AXISMUNDI_KOREAN_FONT_PROVIDER_UNICODE_RANGE,
 							),
 						),
 					),
@@ -92,11 +104,12 @@ function axismundi_korean_font_provider_collection() : void {
 						'fontFamily' => '"Noto Serif KR", serif',
 						'fontFace'   => array(
 							array(
-								'fontFamily'  => 'Noto Serif KR',
-								'fontStyle'   => 'normal',
-								'fontWeight'  => '100 900',
-								'fontDisplay' => 'swap',
-								'src'         => $serif_src,
+								'fontFamily'   => 'Noto Serif KR',
+								'fontStyle'    => 'normal',
+								'fontWeight'   => '100 900',
+								'fontDisplay'  => 'swap',
+								'src'          => $serif_src,
+								'unicodeRange' => AXISMUNDI_KOREAN_FONT_PROVIDER_UNICODE_RANGE,
 							),
 						),
 					),

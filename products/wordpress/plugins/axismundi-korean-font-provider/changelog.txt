@@ -1,6 +1,13 @@
 == Changelog ==
 
-Releases before 0.1.3. The current release is in readme.txt.
+Releases before 0.1.4. The current release is in readme.txt.
+
+= 0.1.3 =
+
+* Fill Axismundi's locale-aware CJK fallback slot only for Korean documents, so
+  other regional font plugins can coexist without a fixed family-order conflict.
+* Clarify that user-profile language controls admin UI translation, not the
+  published document's regional glyph forms.
 
 = 0.1.2 =
 

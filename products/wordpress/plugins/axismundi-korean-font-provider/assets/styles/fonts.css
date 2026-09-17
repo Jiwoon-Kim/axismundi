@@ -25,7 +25,7 @@
 	font-weight: 100 900;
 	font-display: swap;
 	unicode-range: U+AC00-D7A3, U+1100-11FF, U+3130-318F, U+A960-A97F, U+D7B0-D7FF;
-	src: url("../fonts/noto-sans-kr/axismundi-noto-sans-kr.woff2") format("woff2");
+	src: url("../fonts/noto-sans-kr/axismundi-noto-sans-kr.woff2?ver=397fa92ff1d2") format("woff2");
 }
 
 @font-face {
@@ -34,5 +34,5 @@
 	font-weight: 100 900;
 	font-display: swap;
 	unicode-range: U+AC00-D7A3, U+1100-11FF, U+3130-318F, U+A960-A97F, U+D7B0-D7FF;
-	src: url("../fonts/noto-serif-kr/axismundi-noto-serif-kr.woff2") format("woff2");
+	src: url("../fonts/noto-serif-kr/axismundi-noto-serif-kr.woff2?ver=b78640584616") format("woff2");
 }

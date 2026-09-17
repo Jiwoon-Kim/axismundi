@@ -1,5 +1,8 @@
-Source: https://github.com/google/fonts/tree/main/ofl/notoserifkr
-Original file: NotoSerifKR-VariableFont_wght.ttf
-Processing: pyftsubset → WOFF2 with Korean (Hangul Syllables + Jamo + Latin) subset (wght axis preserved)
-Conversion date: 2026-05-13
-License: SIL Open Font License 1.1
+Source: https://github.com/google/fonts/blob/a54f7446f84a1125ef6bf08baa46f3639e8905e0/ofl/notoserifkr/NotoSerifKR%5Bwght%5D.ttf
+Upstream commit: a54f7446f84a1125ef6bf08baa46f3639e8905e0
+Input: NotoSerifKR[wght].ttf (23795420 bytes, SHA-256 11f8d5de6f1b79195efba3828aaa2ec95c1178f5ae976fb23c8d53250a9938f3)
+Font version: Version 2.003-H1;hotconv 1.1.1;makeotfexe 2.6.0
+Processing: scripts/build-noto-cjk.py (brotli 1.2.0, fontTools 4.63.0) - subset to the unicode-range below, all layout features and names kept, variation axes kept, WOFF2.
+unicode-range: U+AC00-D7A3, U+1100-11FF, U+3130-318F, U+A960-A97F, U+D7B0-D7FF
+Output: assets/fonts/noto-serif-kr/axismundi-noto-serif-kr.woff2 (2057712 bytes, SHA-256 b786405846166c9a235a07fc26a913dffc17fbae51f1e47a1556ef85b441f2a2, 11623 codepoints)
+License: SIL Open Font License 1.1; see OFL.txt.

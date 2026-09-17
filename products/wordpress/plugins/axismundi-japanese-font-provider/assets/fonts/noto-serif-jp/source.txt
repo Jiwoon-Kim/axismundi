@@ -1,5 +1,8 @@
-Source: https://github.com/google/fonts/tree/main/ofl/notoserifjp
-Original file: NotoSerifJP-VariableFont_wght.ttf
-Processing: pyftsubset (fontTools) → WOFF2 with Japanese subset (Kana + CJK punctuation/compatibility + CJK Unified Ideographs and Compatibility Ideographs; wght axis preserved)
-Conversion date: 2026-06-29
-License: SIL Open Font License 1.1
+Source: https://github.com/google/fonts/blob/a54f7446f84a1125ef6bf08baa46f3639e8905e0/ofl/notoserifjp/NotoSerifJP%5Bwght%5D.ttf
+Upstream commit: a54f7446f84a1125ef6bf08baa46f3639e8905e0
+Input: NotoSerifJP[wght].ttf (13574352 bytes, SHA-256 2fd527ba12b6a44ec30d796d633360da0aeba6c5d4af1304ce12bb4dc15a7dfc)
+Font version: Version 2.003-H1;hotconv 1.1.1;makeotfexe 2.6.0
+Processing: scripts/build-noto-cjk.py (brotli 1.2.0, fontTools 4.63.0) - subset to the unicode-range below, all layout features and names kept, variation axes kept, WOFF2.
+unicode-range: U+3000-303F, U+3040-309F, U+30A0-30FF, U+3190-319F, U+31F0-31FF, U+3200-32FF, U+3300-33FF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF
+Output: assets/fonts/noto-serif-jp/axismundi-noto-serif-jp.woff2 (5296760 bytes, SHA-256 89810c1743ef2be8d58882a32242f7e63d2c3b28fc2c7cadce30572dffbf4522, 14125 codepoints)
+License: SIL Open Font License 1.1; see OFL.txt.

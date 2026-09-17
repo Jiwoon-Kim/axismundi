@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Traditional Chinese Font Provider
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/wordpress/plugins/axismundi-traditional-chinese-font-provider
  * Description:       Optional Traditional Chinese web-font provider for the Axismundi theme — supplies Noto Sans TC, fills the theme's sans-serif CJK fallback slot for Traditional Chinese documents, and registers it as a Font Library collection.
- * Version:           0.1.0
+ * Version:           0.1.1
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -18,8 +18,18 @@
 defined( 'ABSPATH' ) || exit;
 
 if ( ! defined( 'AXISMUNDI_TRADITIONAL_CHINESE_FONT_PROVIDER_VERSION' ) ) {
-	define( 'AXISMUNDI_TRADITIONAL_CHINESE_FONT_PROVIDER_VERSION', '0.1.0' );
+	define( 'AXISMUNDI_TRADITIONAL_CHINESE_FONT_PROVIDER_VERSION', '0.1.1' );
 }
+
+/**
+ * The Traditional Chinese range the bundled faces cover, as declared in assets/styles/fonts.css.
+ *
+ * The Font Library collection declares the same range, so a family installed from it
+ * takes only Traditional Chinese text, as the automatic fallback does. The files contain other glyphs
+ * too; this is the site's choice of what the face is used for, not the file's coverage.
+ * tests/audit-collection.php checks that the two stay identical.
+ */
+const AXISMUNDI_TRADITIONAL_CHINESE_FONT_PROVIDER_UNICODE_RANGE = 'U+3000-303F, U+3100-312F, U+31A0-31BF, U+3200-32FF, U+3300-33FF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF';
 
 /**
  * Enqueue the @font-face provider on the front end and in the block editor.
@@ -44,8 +54,9 @@ add_action( 'enqueue_block_assets', 'axismundi_traditional_chinese_font_provider
  *
  * Discovery / management surface in Site Editor > Styles > Typography > Manage
  * fonts. The @font-face provider above is what actually renders the theme's
- * stacks; this collection lets users browse and explicitly install/select the
- * families. Available since WordPress 6.5.
+ * stacks, without installing anything. Installing a family from this collection
+ * adds a separate font limited to the same Traditional Chinese range; it does not recreate the
+ * theme's fallback stack. Available since WordPress 6.5.
  */
 function axismundi_traditional_chinese_font_provider_collection() : void {
 	if ( ! function_exists( 'wp_register_font_collection' ) ) {
@@ -57,7 +68,7 @@ function axismundi_traditional_chinese_font_provider_collection() : void {
 		'axismundi-traditional-chinese-font-provider',
 		array(
 			'name'          => __( 'Axismundi Traditional Chinese Font Provider', 'axismundi-traditional-chinese-font-provider' ),
-			'description'   => __( 'Noto Sans TC for the Axismundi theme.', 'axismundi-traditional-chinese-font-provider' ),
+			'description'   => __( 'Noto Sans TC for the Axismundi theme. Automatic Traditional Chinese fallback works without installing anything; installing adds a separate font limited to the same Traditional Chinese range and does not recreate the fallback stack of the theme.', 'axismundi-traditional-chinese-font-provider' ),
 			'categories'    => array(
 				array(
 					'name' => __( 'Traditional Chinese', 'axismundi-traditional-chinese-font-provider' ),
@@ -73,11 +84,12 @@ function axismundi_traditional_chinese_font_provider_collection() : void {
 						'fontFamily' => '"Noto Sans TC", sans-serif',
 						'fontFace'   => array(
 							array(
-								'fontFamily'  => 'Noto Sans TC',
-								'fontStyle'   => 'normal',
-								'fontWeight'  => '100 900',
-								'fontDisplay' => 'swap',
-								'src'         => $sans_src,
+								'fontFamily'   => 'Noto Sans TC',
+								'fontStyle'    => 'normal',
+								'fontWeight'   => '100 900',
+								'fontDisplay'  => 'swap',
+								'src'          => $sans_src,
+								'unicodeRange' => AXISMUNDI_TRADITIONAL_CHINESE_FONT_PROVIDER_UNICODE_RANGE,
 							),
 						),
 					),

@@ -38,3 +38,6 @@ The font sits inside `demo-plugin/` so that installing that one directory brings
 ## Playground
 
 Gutenberg itself comes from the pull request's CI build ZIP: Playground cannot build a Gutenberg source branch. This directory is installed with a `git:directory` resource pinned to a commit SHA, so later changes here do not change a published demo.
+
+The [blueprint](blueprint.json) installs the fixture. Load it with the target
+Gutenberg PR through Playground's `gutenberg-pr` query parameter.

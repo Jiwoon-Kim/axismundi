@@ -1,0 +1,25 @@
+{
+	"$schema": "https://playground.wordpress.net/blueprint-schema.json",
+	"landingPage": "/wp-admin/?font-variations-demo",
+	"features": {
+		"networking": true
+	},
+	"steps": [
+		{
+			"step": "login",
+			"username": "admin"
+		},
+		{
+			"step": "installPlugin",
+			"pluginData": {
+				"resource": "git:directory",
+				"url": "https://github.com/Jiwoon-Kim/axismundi.git",
+				"ref": "7f02a89",
+				"path": "demos/gutenberg-font-variations/demo-plugin"
+			},
+			"options": {
+				"activate": true
+			}
+		}
+	]
+}

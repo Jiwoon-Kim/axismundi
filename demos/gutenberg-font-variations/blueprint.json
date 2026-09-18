@@ -14,7 +14,7 @@
 			"pluginData": {
 				"resource": "git:directory",
 				"url": "https://github.com/Jiwoon-Kim/axismundi.git",
-				"ref": "7f02a89",
+        "ref": "7f02a89aae326486f68906408e15ed55f4f3199a",
 				"path": "demos/gutenberg-font-variations/demo-plugin"
 			},
 			"options": {

@@ -43,6 +43,14 @@ Axismundi는 Font Library에 올릴 수 있는 특수 목적 폰트를 세 종�
 ```
 
   이 모델이면 세 경우가 한 규칙으로 정리된다: CJK는 배정이라서 숨고, 자동 이모지 provider도 배정이라서 숨고, 아이콘 폰트는 `usage.icon`이라 Typography 선택기의 소비자가 아니다. `usage`는 소비자 필터이고, 숨김은 배정의 결과다. 둘을 하나의 `hidden` 플래그로 묶으면 Noto를 본문 글꼴로도 쓰려는 경우가 깨진다.
+- **대체 배정은 프로바이더가 소유한다. 사용자 권한으로 일반화하지 않는다.** 대체를 조립하려면 언어별 유니코드 블록, 파일의 실제 `cmap` 커버리지, 스택 안의 위치와 범위(잘못 잡으면 불필요한 다운로드나 Latin 가로채기)를 알아야 한다. 사이트 운영 판단이 아니라 폰트 엔지니어링이다. 그래서 파일·언어·`unicodeRange`·삽입 위치는 프로바이더가 함께 책임지고, 사용자는 켜고 끈다(지금은 플러그인 활성화). 선택이 필요해져도 "한국어 대체: Noto Sans KR / 끔" 같은 언어 단위까지다. Typography에 사용자가 폴백을 조립하는 UI는 두지 않는다.
+- **플러그인 폰트의 두 경로를 나눈다.** 사용자가 설치해 볼 글꼴은 기존 컬렉션(`wp_register_font_collection`) 그대로다. CJK 대체·이모지·아이콘처럼 플러그인이 지금 적용 중인 런타임 제공자는 별도 선언 경로가 필요하다. 업스트림에 요구할 최소 계약:
+  1. 활성 플러그인이 현재 적용 중인 face와 배정을 선언할 수 있다.
+  2. Font Library가 이를 `PLUGIN` 출처로 읽기 전용 표시한다(비활성화하면 사라진다).
+  3. 자동 대체 배정은 Typography 선택지를 만들지 않는다.
+  4. 실제 범위와 우선순위는 플러그인이 소유한다.
+
+  이것은 옛 Fonts API의 등록·강제 활성화를 되살리는 것이 아니라, 그때 "Library 안에서 하라"며 비워 둔 통합을 역할과 배정까지 포함해 채우는 것이다(§8 이력). 순서는 플러그인에서 작동을 보이고 → 선언 형식을 굳히고 → 그 형식을 Core 등록 경로로 제안한다.
 - **`fontVariationSettings`는 string과 object를 모두 받는다.** 새 UI의 기준 형태는 object(`{"FILL":1,"wght":400}`), CSS 경계에서만 `"FILL" 1, "wght" 400`으로 직렬화한다. string은 계속 허용한다(기존 theme.json). \[63653\]이 PHP 연관 배열 직렬화를 고쳤으므로 Core에 구조화된 경로가 이미 있다는 근거가 된다. string을 깨도 된다는 근거는 아니다.
 
 ## 3. 네 층: 선언 / 파일에서 읽는 값 / 검증 / 런타임
@@ -170,6 +178,26 @@ REST로 family → face(`unicodeRange` 포함) 생성, UI와 같은 방식으로
 ## 8. 열린 질문
 
 - provider가 "자동 적용 중"을 선언하는 등록 방법(Core에 없음). `wp_theme_json_data_theme` 필터로 주입하면 선택 가능한 프리셋이 되어 대체 관계를 표현하지 못한다.
-- 대체 배정을 어디에 둘지: Typography 설정(프리셋의 fallback), provider 등록, 둘 다. 배정이 선택지를 만들지 않는다는 규칙은 그대로 두고, 저장 위치만 정하면 된다.
+- ~~대체 배정을 어디에 둘지~~ → provider 등록으로 결정(§2). Typography 설정에 두지 않는다.
 - 파일에서 읽는 값(축 목록)을 저장할지, 쓸 때마다 읽을지. 컬렉션 설치 경로에서 채울 수 있는지.
 - JP·TW 선언 범위를 파일 커버리지로 좁힐지.
+- 플러그인 출처가 없다. Library는 활성 폰트를 출처로 묶는데 출처가 `theme`과 `custom` 두 개뿐이다(`installed-fonts.tsx`). 그래서 테마 폰트는 이미 있는 폰트로 Library에 나오고, 플러그인이 제공하는 폰트는 컬렉션 탭에 Install 대상으로만 나온다. 필터로 주입하면 THEME 아래에 테마 폰트처럼 섞인다. KR 프로바이더의 자동 폴백은 이미 작동하는데 UI는 설치를 권하는 것도 이 때문이다. `plugin`(provider) 출처가 생기면 Library에 THEME 옆 묶음이 되고, 컬렉션 탭은 추가로 받을 폰트에만 쓰인다.
+  - 경로마다 보여 줄 수 있는 것이 다르다. 모든 폰트를 업로드 파일처럼 다루지 않고, 각 경로가 가진 선언을 그대로 보여 준다.
+
+    | 경로 | 파일 | Library에 보여 줄 것 |
+    |---|---|---|
+    | 활성 테마 | 테마 폴더(디스크) | theme.json `typography` 선언, 읽기 전용 |
+    | 활성 플러그인 | 플러그인 폴더 | 플러그인 선언, `PLUGIN` 출처, 읽기 전용 — **선언 경로가 없음** |
+    | 업로드·컬렉션 설치 | `wp-content/fonts`(서버를 거침) | 설치 메타데이터: 크기, 형식, `fvar` 축, `cmap` 범위 |
+    | 컬렉션(미설치) | 없음 | 카탈로그. 여기만 Install |
+
+    가변 축도 같다. 선언 화면은 `fontWeight: "100 900"` 같은 CSS 적용 범위를, 설치 파일 화면만 `fvar`의 실제 축 목록을 보여 준다. 두 값을 한 필드에 합치지 않는다.
+  - 이력(2026-09-18 확인). Gutenberg 플러그인의 Fonts API(`wp_register_fonts()`, `wp_enqueue_fonts()`, 옛 `wp_register_font_provider()`)는 Core에 들어간 적이 없다. 2023-06-19 범위 변경([#41479 코멘트](https://github.com/WordPress/gutenberg/issues/41479#issuecomment-1597915077), [#51769](https://github.com/WordPress/gutenberg/issues/51769))으로 Font Face(theme.json 병합 데이터를 읽기만 해서 `@font-face` 출력)가 대체했고, 16.3에서 기능 제거([#52485](https://github.com/WordPress/gutenberg/pull/52485)), 파일 삭제([#57972](https://github.com/WordPress/gutenberg/pull/57972)), BC 스텁 제거([#82813](https://github.com/WordPress/gutenberg/pull/82813), 2026-09-12). 그 코멘트의 약속과 공백:
+    - "Plugins will no longer interact with the Fonts API. Instead, they will integrate directly into the Font Library (once that capability exists)."
+    - 사용자에게 권하는 폰트("register their fonts for user consideration")는 Stage 2([#53307](https://github.com/WordPress/gutenberg/issues/53307))에서 컬렉션 API로 구현됐다. 의도된 설계다.
+    - 강제 활성화는 저수준 API가 아니라 Library "안에서" 하라고 했고, Library를 건너뛰면 사용자가 폰트를 보지도 관리하지도 못한다고 경고했다. 그 기능은 만들어지지 않았다(Stage 3 [#53926](https://github.com/WordPress/gutenberg/issues/53926) 2023-10 Not planned). KR 폴백과 Emoji가 지금 그 경고 상태다.
+    - 당시 모델은 모든 폰트가 선택지에 나온다고 전제했다. 선택지에 나오면 안 되는 폰트(대체·이모지·아이콘)는 범위 밖이었다. 업스트림 제안에는 usage/activation 구분의 근거가 함께 가야 한다.
+    - 이름: 옛 `wp_register_font_provider()`는 전달 방식(local/Google) 개념이었고 #51769에서 불필요로 정리됐다. 같은 이름을 쓰면 폐기된 모델의 부활로 읽힌다. 다른 이름을 쓴다.
+- 축 지원 범위와 CSS 선언을 분리한다. `fontVariationSettings`는 값을 정할 뿐 지원 범위를 선언하지 않는다(`"wght" 400`은 400에 고정). 등록 축은 CSS 범위 descriptor가 있다: wght→`fontWeight` `"100 900"`, wdth→`fontStretch` `"75% 125%"`, slnt→`fontStyle` `"oblique 0deg 10deg"`. GRAD·FILL 같은 사용자 정의 축은 지원을 선언할 CSS 수단이 없다. 파일이 실제로 무엇을 지원하는지는 `fvar`에만 있는데, 업로드는 wght만 읽어 `fontWeight` 문자열로 바꾸고 나머지를 버린다(Roboto Flex 13축 → "1 variant"). 안: `axes: [{ tag, min, default, max }]`를 파일에서 읽은 층(§3)에 두고 CSS로는 출력하지 않는다. UI는 `axes`로 컨트롤을 만들고, 고른 값은 등록 축 속성이나 `fontVariationSettings`(object, #82830)로 쓴다. `fontWeight` 범위도 `axes`의 wght와 대조해 검증 층에서 확인할 수 있다.
+- 정적 face 식별 키가 weight + style뿐이다(`mergeFontFaces`, `checkFontFaceInstalled`, `fonts-outline`). stretch만 다른 face는 병합 때 서로 덮어쓰고, 같은 family의 가변 face(`"100 700"`)와 정적 인스턴스(`"400"`)는 서로를 모른다(Google Fonts 탭에서 테마의 Roboto Mono가 미설치로 보임).
+- 설치는 face 단위, 삭제는 family 단위다. 컬렉션에서 Roboto 400 normal과 700을 따로 설치할 수 있지만, Library의 Delete는 `uninstallFontFamily`로 family 전체를 지운다. face 하나를 빼려면 체크 해제(비활성)뿐이고, 파일과 `wp_font_face` 글은 남는다. REST에는 `DELETE /wp/v2/font-families/<id>/font-faces/<id>`가 있으나 UI가 쓰지 않는다. 관련 기존 이슈는 찾지 못했다(2026-09-18 검색).

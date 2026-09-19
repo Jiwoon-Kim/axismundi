@@ -5,7 +5,7 @@ Playground fixture for the Gutenberg `font-variation-settings` prototype (issue 
 ## What it sets up
 
 - **Capability:** Roboto Flex, with every axis of its `fvar` table in the face `axes` list.
-- **Policy:** `settings.typography.fontVariations` exposes `GRAD` (−200 to 150) and `opsz` for Roboto Flex. Heading also exposes `XTRA`, named "Counter width". The policy also lists `wght` and `FILL`, which are never offered: `wght` has its own property, and the file has no `FILL` axis.
+- **Policy:** `settings.typography.fontVariations`, keyed by font family slug and then by axis tag, exposes `GRAD` (−200 to 150) and `opsz` for Roboto Flex. Heading also exposes `XTRA`, named "Counter width"; block settings replace the site's for that block, so Heading lists `GRAD` and `opsz` again. The policy also lists `wght` and `FILL`, which are never offered: `wght` has its own property, and the file has no `FILL` axis.
 - **Styles:** Roboto Flex as the site font.
 - **Content:** a "Font variations demo" post with a Heading, two Paragraphs and a List. `/wp-admin/?font-variations-demo` opens it in the editor.
 

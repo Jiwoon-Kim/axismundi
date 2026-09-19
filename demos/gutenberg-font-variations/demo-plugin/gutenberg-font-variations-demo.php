@@ -66,16 +66,16 @@ add_filter(
 			),
 		);
 
+		// Keyed by axis tag, so that theme.json origins merge it per axis.
 		$policy = array(
-			array(
-				'tag' => 'GRAD',
+			'GRAD' => array(
 				'min' => -200,
 				'max' => 150,
 			),
-			array( 'tag' => 'opsz' ),
+			'opsz' => array(),
 			// Never offered: `wght` has its own property, and the file has no FILL axis.
-			array( 'tag' => 'wght' ),
-			array( 'tag' => 'FILL' ),
+			'wght' => array(),
+			'FILL' => array(),
 		);
 
 		return $theme_json->update_with(
@@ -90,14 +90,12 @@ add_filter(
 						'core/heading' => array(
 							'typography' => array(
 								'fontVariations' => array(
-									'roboto-flex' => array_merge(
-										array_slice( $policy, 0, 2 ),
-										array(
-											array(
-												'tag'  => 'XTRA',
-												'name' => 'Counter width',
-											),
-										)
+									// Block settings replace the site's for this block,
+									// so the axes it shares are listed again.
+									'roboto-flex' => array(
+										'GRAD' => $policy['GRAD'],
+										'opsz' => array(),
+										'XTRA' => array( 'name' => 'Counter width' ),
 									),
 								),
 							),

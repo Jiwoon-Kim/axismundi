@@ -53,16 +53,24 @@ $axismundi_dialogs_typography  = $attributes['style']['typography'] ?? array();
 $axismundi_dialogs_variation_settings = $axismundi_dialogs_typography['fontVariationSettings'] ?? array();
 $axismundi_dialogs_axes = array();
 
+// `fontVariationSettings` is an object keyed by axis tag, the shape proposed
+// upstream (WordPress/gutenberg#83148): `{ "FILL": 1, "GRAD": 0, "opsz": 24 }`,
+// with the weight in `fontWeight`. Content saved before 0.4 holds a list of
+// one-axis objects, `[ { "FILL": "0" }, { "wght": "400" }, ... ]`, and renders
+// as it did.
 if ( is_array( $axismundi_dialogs_variation_settings ) ) {
-	foreach ( $axismundi_dialogs_variation_settings as $axismundi_dialogs_setting ) {
-		if ( is_array( $axismundi_dialogs_setting ) ) {
-			$axismundi_dialogs_axes = array_merge( $axismundi_dialogs_axes, $axismundi_dialogs_setting );
+	if ( array_is_list( $axismundi_dialogs_variation_settings ) ) {
+		foreach ( $axismundi_dialogs_variation_settings as $axismundi_dialogs_setting ) {
+			if ( is_array( $axismundi_dialogs_setting ) ) {
+				$axismundi_dialogs_axes = array_merge( $axismundi_dialogs_axes, $axismundi_dialogs_setting );
+			}
 		}
+	} else {
+		$axismundi_dialogs_axes = $axismundi_dialogs_variation_settings;
 	}
 }
 
-// `fontVariationSettings` is dialog-icon's forward-compatible block-style
-// contract. The two fallback forms keep content saved by the pre-contract
+// The two fallback forms below keep content saved by the pre-contract
 // experiment rendering unchanged.
 $axismundi_dialogs_icon_weight = (int) ( $axismundi_dialogs_axes['wght'] ?? $axismundi_dialogs_typography['wght'] ?? $attributes['iconWeight'] ?? $axismundi_dialogs_typography['fontWeight'] ?? 400 );
 $axismundi_dialogs_icon_weight = min( 700, max( 100, $axismundi_dialogs_icon_weight ?: 400 ) );

@@ -30,7 +30,12 @@ return array(
 			'textColor'  => 'secondary',
 			'style'      => array(
 				'typography' => array(
-					'fontVariationSettings' => array( array( 'FILL' => '0' ), array( 'wght' => '400' ), array( 'GRAD' => '0' ), array( 'opsz' => '24' ) ),
+					'fontVariationSettings' => array(
+						'FILL' => 0,
+						'GRAD' => 0,
+						'opsz' => 24,
+					),
+					'fontWeight'            => '400',
 				),
 			),
 		)

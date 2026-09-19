@@ -57,6 +57,8 @@ var ToolsPanelItem = components.__experimentalToolsPanelItem;
 var __ = i18n.__;
 
 var AXIS_DEFAULTS = { FILL: '0', wght: '400', GRAD: '0', opsz: '24' };
+// The axes stored in fontVariationSettings; wght is stored as fontWeight.
+var VARIATION_DEFAULTS = { FILL: 0, GRAD: 0, opsz: 24 };
 
 function clampWeight( value ) {
 	var weight = Number( value );
@@ -85,9 +87,15 @@ function cssFontSize( value ) {
 	return 'var(--wp--preset--font-size--' + slug + ')';
 }
 
-// This is deliberately the proposed block-style shape, rather than a custom
-// top-level attribute. Gutenberg currently has no Typography support key for
-// arbitrary OpenType axes, so dialog-icon owns this adapter for now.
+// The block-style shape proposed upstream (WordPress/gutenberg#83148): an
+// object keyed by axis tag, `{ FILL: 1, GRAD: 0, opsz: 24 }`. `wght` is not
+// in it: a registered axis with its own property, it is stored as
+// `typography.fontWeight`. Gutenberg has no support key for these axes yet,
+// so dialog-icon owns this adapter and render.php translates the values.
+//
+// Content saved before 0.4 holds a list of one-axis objects,
+// `[ { FILL: '0' }, { wght: '400' }, ... ]`, and is read as it is. It is
+// written in the new shape the first time an axis changes.
 function variationAxes( typography ) {
 	var settings = typography.fontVariationSettings;
 	if ( Array.isArray( settings ) ) {
@@ -100,35 +108,39 @@ function variationAxes( typography ) {
 	return settings && typeof settings === 'object' ? settings : {};
 }
 
-function setVariationAxis( typography, axis, value ) {
-	var settings = Array.isArray( typography.fontVariationSettings )
-		? typography.fontVariationSettings.map( function ( setting ) {
-			return setting && typeof setting === 'object' ? Object.assign( {}, setting ) : setting;
-		} )
-		: [];
-	var updated = false;
-
-	settings = settings.map( function ( setting ) {
-		if ( setting && typeof setting === 'object' && Object.prototype.hasOwnProperty.call( setting, axis ) ) {
-			updated = true;
-			return Object.assign( {}, setting, { [ axis ]: String( value ) } );
+// Returns the typography object with one axis changed, in the object shape.
+// `weight` is the weight the icon renders with now (undefined when nothing
+// sets one): writing it to `fontWeight`, and dropping the older places a
+// weight was kept, leaves the rendered weight as it was.
+function setVariationAxis( typography, axis, value, weight ) {
+	var axes = {};
+	var source = variationAxes( typography );
+	Object.keys( source ).forEach( function ( tag ) {
+		var number = Number( source[ tag ] );
+		if ( tag !== 'wght' && Number.isFinite( number ) ) {
+			axes[ tag ] = number;
 		}
-		return setting;
 	} );
-
-	if ( ! updated ) {
-		settings.push( { [ axis ]: String( value ) } );
+	var next = Object.assign( {}, typography );
+	delete next.wght;
+	if ( axis === 'wght' ) {
+		next.fontWeight = String( value );
+	} else {
+		axes[ axis ] = Number( value );
+		if ( weight !== undefined ) {
+			next.fontWeight = String( weight );
+		}
 	}
-
-	return Object.assign( {}, typography, { fontVariationSettings: settings } );
+	next.fontVariationSettings = axes;
+	return next;
 }
 
 function resetVariationSettings( style ) {
 	var nextStyle = Object.assign( {}, style || {} );
 	var nextTypography = Object.assign( {}, nextStyle.typography || {} );
-	nextTypography.fontVariationSettings = Object.keys( AXIS_DEFAULTS ).map( function ( axis ) {
-		return { [ axis ]: AXIS_DEFAULTS[ axis ] };
-	} );
+	delete nextTypography.wght;
+	nextTypography.fontVariationSettings = Object.assign( {}, VARIATION_DEFAULTS );
+	nextTypography.fontWeight = AXIS_DEFAULTS.wght;
 	nextStyle.typography = nextTypography;
 
 	return nextStyle;
@@ -175,7 +187,8 @@ var DEFAULT_ATTRIBUTES = {
 	tagName: 'span',
 	style: {
 		typography: {
-			fontVariationSettings: [ { FILL: '0' }, { wght: '400' }, { GRAD: '0' }, { opsz: '24' } ],
+			fontVariationSettings: { FILL: 0, GRAD: 0, opsz: 24 },
+			fontWeight: '400',
 		},
 	},
 };
@@ -218,6 +231,16 @@ blocks.registerBlockType( 'axismundi/dialog-icon', {
 		var iconFill = String( axes.FILL || '0' ) === '1';
 		var iconGrade = clampGrade( axes.GRAD );
 		var iconOpticalSize = opticalSize( axes.opsz );
+		// Every axis change writes the object shape. The weight the icon
+		// renders with goes along as `fontWeight`, when anything sets one.
+		var hasWeight = hasOwn( axes, 'wght' ) || hasOwn( typography, 'wght' ) || hasOwn( a, 'iconWeight' ) || hasOwn( typography, 'fontWeight' );
+		var setAxis = function ( axis, value ) {
+			set( {
+				style: Object.assign( {}, a.style || {}, {
+					typography: setVariationAxis( typography, axis, value, hasWeight ? iconWeight : undefined ),
+				} ),
+			} );
+		};
 		var fontOptions = fontFamilyOptions( useSettings( 'typography.fontFamilies' )[ 0 ] );
 		// Core Typography stores a preset in the top-level `fontSize` attribute
 		// and only stores a custom value under style.typography.fontSize.
@@ -360,11 +383,7 @@ blocks.registerBlockType( 'axismundi/dialog-icon', {
 				max: 700,
 				step: 1,
 				onChange: function ( value ) {
-					set( {
-						style: Object.assign( {}, a.style || {}, {
-						typography: setVariationAxis( typography, 'wght', clampWeight( value ) ),
-						} ),
-					} );
+					setAxis( 'wght', clampWeight( value ) );
 				},
 				__nextHasNoMarginBottom: true,
 			} )
@@ -375,11 +394,7 @@ blocks.registerBlockType( 'axismundi/dialog-icon', {
 				label: __( 'Fill', 'axismundi-dialogs' ),
 				checked: iconFill,
 				onChange: function ( value ) {
-					set( {
-						style: Object.assign( {}, a.style || {}, {
-							typography: setVariationAxis( typography, 'FILL', value ? 1 : 0 ),
-						} ),
-					} );
+					setAxis( 'FILL', value ? 1 : 0 );
 				},
 				__nextHasNoMarginBottom: true,
 			} )
@@ -393,11 +408,7 @@ blocks.registerBlockType( 'axismundi/dialog-icon', {
 				max: 200,
 				step: 1,
 				onChange: function ( value ) {
-					set( {
-						style: Object.assign( {}, a.style || {}, {
-							typography: setVariationAxis( typography, 'GRAD', clampGrade( value ) ),
-						} ),
-					} );
+					setAxis( 'GRAD', clampGrade( value ) );
 				},
 				__nextHasNoMarginBottom: true,
 			} )
@@ -411,11 +422,7 @@ blocks.registerBlockType( 'axismundi/dialog-icon', {
 					return { label: String( value ), value: String( value ) };
 				} ),
 				onChange: function ( value ) {
-					set( {
-						style: Object.assign( {}, a.style || {}, {
-							typography: setVariationAxis( typography, 'opsz', opticalSize( value ) ),
-						} ),
-					} );
+					setAxis( 'opsz', opticalSize( value ) );
 				},
 				__next40pxDefaultSize: true,
 				__nextHasNoMarginBottom: true,
@@ -469,11 +476,7 @@ blocks.registerBlockType( 'axismundi/dialog-icon', {
 			: null;
 
 		var resetAxis = function ( axis ) {
-			set( {
-				style: Object.assign( {}, a.style || {}, {
-					typography: setVariationAxis( typography, axis, AXIS_DEFAULTS[ axis ] ),
-				} ),
-			} );
+			setAxis( axis, AXIS_DEFAULTS[ axis ] );
 		};
 		var fontAxesPanel = ! isRegistry
 			? el( InspectorControls, null,
@@ -496,7 +499,7 @@ blocks.registerBlockType( 'axismundi/dialog-icon', {
 					label: __( 'Weight', 'axismundi-dialogs' ),
 					isShownByDefault: true,
 					hasValue: function () {
-						return String( axes.wght || AXIS_DEFAULTS.wght ) !== AXIS_DEFAULTS.wght;
+						return String( iconWeight ) !== AXIS_DEFAULTS.wght;
 					},
 					onDeselect: function () {
 						resetAxis( 'wght' );

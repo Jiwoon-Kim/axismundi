@@ -1,6 +1,6 @@
 # Core Trac #66144 — versioned Twemoji COLRv1 font fallback
 
-> 상태: **게시됨** (2026-09-19). [Core Trac #66144](https://core.trac.wordpress.org/ticket/66144). #44001에 연결한다.
+> 상태: **게시됨** (2026-09-19). [Core Trac #66144](https://core.trac.wordpress.org/ticket/66144). 2026-09-20 [comment:2](https://core.trac.wordpress.org/ticket/66144#comment:2)로 설명 재저장: 서버 설명이 이 파일(`3d08144`) 본문과 한 곳(41행 `FE0F-spellings`) 달라서, 입력 대신 스크립트로 본문을 넣고 저장 → 로그인 세션에서 받은 CSV 설명이 본문과 완전히 일치, 표 3행 모두 4열. 주의: 익명 공개 보기는 캐시된 옛 설명을 보여 줄 수 있음(이전 확인에서 옛 판을 보고 오진). #44001에 연결한다.
 >
 > 범위(사용자 결정 2026-09-19):
 > - `#66119`(`WP_Font_Face`가 query string 든 `src`를 버리는 버그)와 분리. 이 티켓은 일반 폰트 버전 API가 아니라 **Twemoji라는 구체적 Core 자산**으로 연다.

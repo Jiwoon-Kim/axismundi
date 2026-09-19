@@ -155,6 +155,17 @@ is generated.
   of `core/`. Frozen is not disposable.
 - Commit or push only when asked. Never force-push, never skip hooks.
 - Ontology, category, and layer-boundary decisions belong to the project owner.
+- **External posts are source-bound.** Before submitting an issue, PR comment,
+  Trac comment, or discussion, prepare the exact candidate in a file and run
+  `python tools/validators/verify_upstream_comment.py` against its declared
+  source draft. Do not submit without its success output. This is a convention,
+  not CI enforcement: the tool catches reconstructed or abbreviated drafts, but
+  an agent can still choose to bypass it.
+  - When escape notation or other exact literals are the point of the post, list
+    them in a file and pass `--require-file`: a draft altered while it was saved
+    still matches its own copy byte for byte.
+  - After submitting, read the post back with `--github <url>` (or `--posted`
+    for text copied from Trac) and fix it at once if it differs.
 
 ## Language
 

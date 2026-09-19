@@ -1,6 +1,6 @@
-# Draft — Core Trac new ticket: versioned Twemoji COLRv1 font fallback
+# Core Trac #66144 — versioned Twemoji COLRv1 font fallback
 
-> 상태: **초안, 미게시** (2026-09-19). 올릴 곳: Core Trac 새 티켓(사용자, Trac 로그인 필요). #44001에 연결한다.
+> 상태: **게시됨** (2026-09-19). [Core Trac #66144](https://core.trac.wordpress.org/ticket/66144). #44001에 연결한다.
 >
 > 범위(사용자 결정 2026-09-19):
 > - `#66119`(`WP_Font_Face`가 query string 든 `src`를 버리는 버그)와 분리. 이 티켓은 일반 폰트 버전 API가 아니라 **Twemoji라는 구체적 Core 자산**으로 연다.
@@ -11,11 +11,10 @@
 >
 > 근거: `docs/AXISMUNDI-EMOJI-UNICODE.md` §13(특히 §13.6), `research/twemoji-colrv1/`(커밋 `1dec590`).
 >
-> 게시 전:
-> - axismundi `1dec590`이 푸시되어 있어야 research 링크가 열린다(현재 미푸시).
-> - end-to-end 데모(감지 결과·wrapper 대상·원문/selection 결과)를 끝내고 결과·스크린샷을 "Evidence"에 넣을지 결정.
-> - 티켓 번호가 없으니 Summary·Component·Type 필드는 양식에 따로 입력.
-> - `verify_upstream_comment.py`로 본문 대조, 게시 후 `--posted`로 되읽기.
+> 게시 기록:
+> - research commit `1dec590`과 이 문서 commit `2cc6f01`은 게시 전에 GitHub에 푸시됐다.
+> - 원문은 Trac 미리보기에서 확인하고, Summary·Component·Type과 함께 제출했다.
+> - end-to-end 데모(감지 결과·wrapper 대상·원문/selection 결과)는 이후 Evidence 보강 후보로 남긴다.
 
 ## Fields
 

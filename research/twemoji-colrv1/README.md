@@ -26,7 +26,7 @@ A first Core change can ship the 17.0.3 font without updating the existing 17.0.
 | `build-twemoji-colrv1.py` | Downloads the pinned Twemoji archive, checks it, builds with nanoemoji (`glyf_colr_1`), writes the attribution into the name table, compresses to WOFF2, measures coverage, writes the manifest. `--verify` builds again and requires identical bytes. |
 | `sources.json` | Per version: tag commit, commit date, archive SHA-256, SHA-256 of the SVG set, SVG count. Also Unicode's `emoji-test.txt` 17.0 and its SHA-256. |
 | `Dockerfile`, `requirements.in`, `requirements.lock` | The build environment: a base image pinned by digest, and every Python package pinned. |
-| `out/<version>/` | The build writes `twemoji-colrv1.woff2`, `manifest.json`, `source.txt`, `LICENSE-GRAPHICS` and `aliases.txt`. This repository keeps everything but the WOFF2 for `v17.0.3`, and only `manifest.json` for the `v17.0.2` comparison build: the font belongs in the adopting project as a release asset, and the manifest records its SHA-256, so a rebuild can be checked against it. |
+| `out/<version>/` | The build writes `twemoji-colrv1.woff2`, `twemoji-colrv1-flags.woff2`, `manifest.json`, `source.txt`, `LICENSE-GRAPHICS` and `aliases.txt`. This repository keeps everything but the WOFF2 for `v17.0.3`, and only `manifest.json` for the `v17.0.2` comparison build: the font belongs in the adopting project as a release asset, and the manifest records its SHA-256, so a rebuild can be checked against it. |
 | `vqa/index.html` | The browser rendering check. |
 | `demo/index.html` | End to end: Core's emoji detection (`emoji-loader.js` from wordpress-develop at [63755], the #66104 fix, fetched next to the page) reports capability profiles; RGI graphemes in an unsupported profile are wrapped and given the font. It shows the detection result, the wrapped graphemes, and that the text and selection are unchanged, with no images. `?simulate=noemoji` treats every profile as unsupported. |
 
@@ -51,6 +51,14 @@ The font is accepted on rendering in a browser, not on shaping:
 
 HarfBuzz shaping is supporting evidence only. The first build, without aliases, shaped all 3,944 fully-qualified sequences to one visible glyph in HarfBuzz, yet in Edge (Chromium) 960 of them rendered split: every sequence whose Twemoji SVG name includes FE0F. In Chromium, the GSUB mappings that include FE0F did not apply to them.
 
+## Flags subset
+
+`twemoji-colrv1-flags.woff2` is cut from the full font with the fontTools subsetter, never built separately, so it has the same artwork, aliases and license. It keeps the code points in `FLAGS_CODEPOINTS` (regional indicators, the white and black flags, tag characters, and ZWJ, VS16, rainbow, transgender symbol and skull and crossbones), and a ligature stays when all of its components do. Subsets are declared in `SUBSETS` in the build script, each with its file, the code points it asks for and the sequences its coverage is measured on; another profile, such as every emoji except the flags, would be one more entry.
+
+It covers the flag profile: country flags, subdivision flags such as England, Scotland and Wales, and the rainbow, transgender and pirate flags, in every spelling in `emoji-test.txt`. That is the range the asset supports; which flags Core replaces is decided by its detection and renderer. It is for browsers that draw other emoji but not flags, such as Chromium on Windows, and is about a sixth of the full font.
+
+Browser results are recorded in `sources.json` after a build, for each output's SHA-256, and the build copies them into `manifest.json` only for outputs with the same SHA-256.
+
 ## Normalization
 
 The build changes its input in two recorded ways. Neither is part of Twemoji; `manifest.json` and `source.txt` record the rules and hashes.
@@ -70,9 +78,11 @@ From `out/*/manifest.json` and the Edge VQA (Edge 153 on Windows):
 | | `v17.0.3` | `v17.0.2` |
 |-|-|-|
 | WOFF2 | 657,364 bytes | 657,128 bytes |
+| Flags subset WOFF2 | 108,888 bytes | — |
 | Rebuild | byte-identical | — |
 | Edge: fully-qualified RGI | 3,944 / 3,944 | 3,944 / 3,944 |
 | Edge: minimally-qualified, unqualified, component | 1,029, 243, 9 of 1,029, 243, 9 | same |
+| Edge: flag profile with the flags subset | 265 / 265 fully-qualified, 2 / 2 minimally-qualified, 3 / 3 unqualified | — |
 
 The two releases have byte-identical SVG sets; v17.0.3 changed only the JavaScript parser. For comparison, the v17.0.2 image sets are 4,009 PNG files (4,248,486 bytes) and 4,009 SVG files (10,121,593 bytes).
 

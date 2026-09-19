@@ -41,6 +41,21 @@
 		cases.push( { cps, status, str: String.fromCodePoint( ...cps ) } );
 	}
 
+	// ?only=flags keeps the flag profile: what Core replaces when only its
+	// flag test fails (country, subdivision, rainbow, transgender and pirate
+	// flags), in every spelling emoji-test.txt lists.
+	if ( params.get( 'only' ) === 'flags' ) {
+		const ri = ( c ) => c >= 0x1f1e6 && c <= 0x1f1ff;
+		const zwjFlags = [ '1f3f3 200d 1f308', '1f3f3 200d 26a7', '1f3f4 200d 2620' ];
+		const isFlagProfile = ( cps ) => {
+			if ( cps.length === 2 && cps.every( ri ) ) return true;
+			if ( cps[ 0 ] === 0x1f3f4 && cps[ cps.length - 1 ] === 0xe007f && cps.slice( 1, -1 ).every( ( c ) => c >= 0xe0020 && c <= 0xe007e ) ) return true;
+			const stripped = cps.filter( ( c ) => c !== 0xfe0f ).map( ( c ) => c.toString( 16 ) ).join( ' ' );
+			return zwjFlags.includes( stripped );
+		};
+		cases.splice( 0, cases.length, ...cases.filter( ( c ) => isFlagProfile( c.cps ) ) );
+	}
+
 	const size = 48;
 	const canvas = document.createElement( 'canvas' );
 	canvas.width = size * 3;

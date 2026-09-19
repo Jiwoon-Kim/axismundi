@@ -1,5 +1,8 @@
 # Draft — Gutenberg issue: variable font axes (capability, policy, value)
 
+> 2026-09-19: 정책 형태를 list → 축 태그 keyed object로 변경(사용자 확정, 측정 근거: `array_replace_recursive`가 list를 인덱스로 병합 — 부모 [GRAD −50~50, opsz] + 자식 [XTRA] → XTRA가 GRAD 범위를 물려받음). Open question에서 "shape" 제거. 삭제 semantics(`null`)는 넣지 않음(사용자 결정, 별도 합의). **게시됨**(Playground `90bc650` 확인 후 `gh issue edit`, `--github` 일치).
+> 2026-09-19: dialog-icon을 별도 문단에서 완료 체크 항목으로 변경(사용자 결정: 추적성, 항목 안에 Gutenberg 구현 아님을 명시).
+> 2026-09-19: 본문 끝에 Progress 체크리스트 추가 — **게시됨**(axismundi `23431ba` 푸시 후 `gh issue edit`, `--github` 되읽기 일치, SHA-256 `47343ef2…`). 구현 PR은 모두 미머지라 미체크, dialog-icon은 체크 항목이 아니라 "second consumer / local reference implementation" 문단(사용자 결정).
 > 상태: **게시됨** 2026-09-19 — [WordPress/gutenberg#83148](https://github.com/WordPress/gutenberg/issues/83148). 사용자 Chrome에서 Feature request 양식으로 게시(`[Type] Enhancement` 자동), `--github` 되읽기 일치(SHA-256 `5e66f6f0…`). 연결: #83141 본문에 링크 추가, #82830에 안내 댓글(discussioncomment-18505721).
 >
 > 근거: [AXISMUNDI-FONT-LIBRARY-ROLES.md](AXISMUNDI-FONT-LIBRARY-ROLES.md) §7 B·§8. 관련: #83141(가변 `wght`, draft), #83128(범위 파싱), #83127(font provider, draft), #82848(font family usage), Discussion #82830(아이콘 토론의 축 댓글).
@@ -84,19 +87,19 @@ This corrects the object example in my earlier comment on #82830, which put `wgh
 
 (Shortened: Roboto Flex has thirteen axes.) `axes` is a list because it describes the file, and it is what controls read ranges from, including a manual `opsz`. The existing descriptors stay as they are for rendering and face selection: `fontWeight: "100 1000"` is still what the browser matches on.
 
-**Policy — which axes the site offers.** `settings.typography` names the axes a theme exposes for a family, optionally narrowing their range. Like other settings it can differ per block through `settings.blocks`, for example a grade that only buttons expose.
+**Policy — which axes the site offers.** `settings.typography` names the axes a theme exposes for a family, keyed by axis tag, optionally narrowing their range. Like other settings it can differ per block through `settings.blocks`, for example a grade that only buttons expose.
 
 ```json
 "settings": {
 	"typography": {
 		"fontVariations": {
-			"roboto-flex": [ { "tag": "GRAD", "min": -50, "max": 50 } ]
+			"roboto-flex": { "GRAD": { "min": -50, "max": 50 } }
 		}
 	}
 }
 ```
 
-The control's range is the intersection of capability and policy. An axis in the policy that the file does not have is ignored.
+The control's range is the intersection of capability and policy. An axis in the policy that the file does not have is ignored. The policy is keyed by tag, rather than a list like `axes`, because theme.json merges origins with `array_replace_recursive`: a list is merged by index, so a child theme adding an axis would replace one of the parent's and take its range. `axes` describes one file and is not merged that way.
 
 **Value — what the user chose.** `styles.typography.fontVariationSettings` is an object keyed by tag, serialized at the style engine boundary.
 
@@ -114,9 +117,18 @@ As a starting policy, the text panel would not offer `FILL`, which is how icon f
 
 ### Open questions
 
-- The name and shape of the policy setting.
+- The name of the policy setting.
 - Whether uploads should store `axes` read from `fvar`, and whether collections can provide them.
 - Linking axes across a component: a button's label and icon sharing `GRAD`, as Material 3 suggests, seems better expressed as a component-level value both refer to than as one global grade for all text and icons.
+
+### Progress
+
+- [ ] Weight ranges read correctly for the Appearance control — #83128
+- [ ] Any weight in a variable font's range, stored in `fontWeight` — #83141 (draft, builds on #83128)
+- [ ] Capability, policy and value, with a Font variations panel — #83159 (draft, a design experiment for this issue, with a Playground demo)
+- [ ] `fontStretch` for `wdth`
+- [ ] `axes` read from a font file's `fvar` table when it is uploaded or installed
+- [x] Local reference consumer, outside Gutenberg: the Axismundi Dialogs icon block, an experiment toward `core/icon` v2, stores `FILL`, `GRAD` and `opsz` as a `fontVariationSettings` object, with `wght` in `fontWeight` — [Jiwoon-Kim/axismundi@23431ba](https://github.com/Jiwoon-Kim/axismundi/commit/23431ba709599ffaa370dbd815e871d581343242)
 
 Related: #83141, #82848, #82830, [Core Trac #66103](https://core.trac.wordpress.org/ticket/66103) (the PHP array path for `font-variation-settings` in `WP_Font_Face`, fixed in [changeset 63653](https://core.trac.wordpress.org/changeset/63653) for 7.2).
 <!-- end of body -->

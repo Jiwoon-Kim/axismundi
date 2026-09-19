@@ -1,5 +1,6 @@
 # Draft — Gutenberg draft PR: fontVariationSettings prototype for #83148
 
+> 2026-09-19: 정책을 축 태그 keyed object로(`58b0b56bc8`), fixture `fcfbce2`·blueprint `90bc650`으로 재고정, 본문의 정책 예시·데모 링크 갱신 — **게시됨**(Playground `90bc650`에서 Heading 3축·Paragraph 2축·List 패널 없음 확인 후 `gh pr edit`, `--github` 일치). 발견: PHP가 빈 정책 `{}`를 `[]`로 인코딩해 에디터에 `"opsz": []`로 도착 → **`ae737db01a`에서 수정**(사용자 결정: 계약 모양이 무너지는 사례라 기록으로 넘기지 않음). `gutenberg_prepare_font_variations_for_json()`를 JSON 경계 4곳(에디터 `__experimentalFeatures`, Global Styles REST 사용자 항목·테마 항목·테마 변형)에 적용, PHP 회귀 테스트 3개(수정 없이 3개 모두 실패 확인), JS의 `[]` 허용은 구 서버 호환 방어로만 주석·테스트.
 > 상태: **draft 게시됨** 2026-09-19 — [WordPress/gutenberg#83159](https://github.com/WordPress/gutenberg/pull/83159), head `61ec6d56a2`, `--github` 되읽기 일치(SHA-256 `0881e5db…`). 이슈 [WordPress/gutenberg#83148](https://github.com/WordPress/gutenberg/issues/83148)의 축 모델(capability·policy·value)을 합의 전에 동작하는 구현으로 보여주는 **설계 실험 draft**. `Ready for review` 전환 기준(사용자 결정 2026-09-19): policy가 여러 face를 어떻게 해석하는지, unsupported block의 UI/출력 일치, 저장값 보존 정책이 이슈에서 정해진 뒤.
 >
 > 브랜치: `C:/Users/thaum/dev/gutenberg` `add/font-variation-settings`, upstream/trunk `3b5792e714` 위 5커밋: `362d9b44fe`(style 값·스키마·style engine) → `9208bf8c0d`(block support) → `66f75f6f8c`(패널 UI) → `92a89406b1`(리뷰 반영: support 검사·face 선택·family 변경 초기화·number 전용·Global Styles 설정 allowlist) → `61ec6d56a2`(blocks selector 기대값).
@@ -13,7 +14,7 @@
 > - 키보드(데모 글): Grade 슬라이더 ←← 150→148, Tab → Grade 숫자 칸, 입력 5 → `GRAD: 5`, 옵션 메뉴에 값 없는 축(Optical size) 추가 항목, Reset all → 값 제거. 콘솔 오류 0.
 > - VQA 중 발견·수정: Global Styles `getSetting('')`가 `VALID_SETTINGS` allowlist로 설정을 조립해 `typography.fontVariations`가 빠져 있었음(`global-styles-engine/src/settings/get-setting.ts`).
 > - 정적 블록(Paragraph·Heading)은 `style` 속성이 글 HTML에 저장되므로, 서버에서 출력 단계로 거르는 것은 구조적으로 불가(블록 서포트 PHP는 동적 블록에만 적용). 경계 계약상 거르지도 않는다.
-> - Playground: Gutenberg는 PR CI 빌드 ZIP, fixture는 axismundi `demos/gutenberg-font-variations/demo-plugin`을 `git:directory` + 커밋 SHA로 고정. [데모](https://playground.wordpress.net/?gutenberg-pr=83159&blueprint-url=https%3A%2F%2Fraw.githubusercontent.com%2FJiwoon-Kim%2Faxismundi%2F93d994a%2Fdemos%2Fgutenberg-font-variations%2Fblueprint.json&storage=temp)는 fixture 설치 뒤 데모 글 편집 화면까지 재확인했고, PR 본문과 #83148 follow-up에 링크했다.
+> - Playground: Gutenberg는 PR CI 빌드 ZIP, fixture는 axismundi `demos/gutenberg-font-variations/demo-plugin`을 `git:directory` + 커밋 SHA로 고정. [데모](https://playground.wordpress.net/?gutenberg-pr=83159&blueprint-url=https%3A%2F%2Fraw.githubusercontent.com%2FJiwoon-Kim%2Faxismundi%2F90bc650%2Fdemos%2Fgutenberg-font-variations%2Fblueprint.json&storage=temp)는 fixture 설치 뒤 데모 글 편집 화면까지 재확인했고, PR 본문과 #83148 follow-up에 링크했다.
 >
 > 게시 전 검증:
 >
@@ -38,7 +39,7 @@ This is a design experiment for #83148, opened as a draft so the model can be tr
 A working version of the three layers proposed in #83148:
 
 - **Value:** `styles.typography.fontVariationSettings`, an object keyed by axis tag (`{ "GRAD": 50 }`), serialized to `font-variation-settings` by the style engine in PHP and JS. `wght`, `wdth`, `slnt` and `ital` are dropped, since they belong to `font-weight`, `font-stretch` and `font-style`; `opsz` is kept for a manual optical size.
-- **Policy:** `settings.typography.fontVariations`, the axes a theme exposes per font family slug, optionally with a narrower range. It can differ per block through `settings.blocks`.
+- **Policy:** `settings.typography.fontVariations`, the axes a theme exposes per font family slug, keyed by axis tag, optionally with a narrower range: `{ "roboto-flex": { "GRAD": { "min": -50, "max": 50 }, "opsz": {} } }`. Keyed by tag so that theme.json origins merge it per axis; a list would be merged by index. It can differ per block through `settings.blocks`.
 - **Capability:** a face `axes` list, for the axes a font file has, with their ranges and defaults.
 - A `typography.fontVariationSettings` block support, enabled on Paragraph and Heading.
 - A **Font variations** panel below Typography, in the block inspector and in Global Styles. It shows one slider and number field per axis, only for axes that are both in the policy and in the faces.
@@ -64,14 +65,14 @@ Open questions, for #83148:
 
 ## Testing Instructions
 
-Try the prepared [WordPress Playground demo](https://playground.wordpress.net/?gutenberg-pr=83159&blueprint-url=https%3A%2F%2Fraw.githubusercontent.com%2FJiwoon-Kim%2Faxismundi%2F93d994a%2Fdemos%2Fgutenberg-font-variations%2Fblueprint.json&storage=temp). It installs this PR's build and the [pinned fixture](https://github.com/Jiwoon-Kim/axismundi/tree/7f02a89aae326486f68906408e15ed55f4f3199a/demos/gutenberg-font-variations/demo-plugin), then opens the demo post in the editor.
+Try the prepared [WordPress Playground demo](https://playground.wordpress.net/?gutenberg-pr=83159&blueprint-url=https%3A%2F%2Fraw.githubusercontent.com%2FJiwoon-Kim%2Faxismundi%2F90bc650%2Fdemos%2Fgutenberg-font-variations%2Fblueprint.json&storage=temp). It installs this PR's build and the [pinned fixture](https://github.com/Jiwoon-Kim/axismundi/tree/fcfbce254c7de820209cf200400f00d1c76089e9/demos/gutenberg-font-variations/demo-plugin), then opens the demo post in the editor.
 
 1. Add a variable font family to the active theme with a face `axes` list and a policy, for example Roboto Flex:
    ```json
    "fontFace": [ { "fontFamily": "Roboto Flex", "fontWeight": "100 1000", "src": [ "…" ],
      "axes": [ { "tag": "opsz", "min": 8, "default": 14, "max": 144 }, { "tag": "GRAD", "min": -200, "default": 0, "max": 150 }, { "tag": "XTRA", "min": 323, "default": 468, "max": 603 } ] } ]
    ```
-   with `"settings": { "typography": { "fontVariations": { "roboto-flex": [ { "tag": "GRAD" }, { "tag": "opsz" } ] } } }`, and `XTRA` added under `settings.blocks["core/heading"]`. Set Roboto Flex as the site font.
+   with `"settings": { "typography": { "fontVariations": { "roboto-flex": { "GRAD": {}, "opsz": {} } } } }`, and `XTRA` added under `settings.blocks["core/heading"]`. Set Roboto Flex as the site font.
 2. In the editor, select a paragraph: Styles shows a Font variations panel with Grade and Optical size. Set Grade to 150: the paragraph gets `font-variation-settings: "GRAD" 150`, in the editor and on the front end, and bold text inside it is still bolder.
 3. Select a heading: the panel also shows `XTRA`.
 4. Select a list: there is no Font variations panel, as the block has no support.

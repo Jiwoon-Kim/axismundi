@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Twemoji COLRv1 rendering check</title>
+<style>
+	@font-face {
+		font-family: "TwemojiVQA";
+		src: url("../out/v17.0.3/twemoji-colrv1.woff2") format("woff2");
+	}
+	body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; }
+	.samples { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+	.sample { border: 1px solid #ccc; padding: 8px; }
+	.sample .glyph { font: 48px/1 "TwemojiVQA"; }
+	.sample code { display: block; font-size: 11px; word-break: break-all; }
+</style>
+</head>
+<body>
+<h1>Twemoji COLRv1 rendering check</h1>
+<p>Each sequence is drawn on a canvas in the Twemoji font and in the system emoji font. It passes when the Twemoji drawing is one glyph wide, is not plain black ink, and differs from the system font's drawing (so the browser did not fall back). <code>?font=</code> and <code>?emojiTest=</code> set the font and emoji-test.txt URLs.</p>
+<pre id="summary">Running…</pre>
+<div class="samples" id="samples"></div>
+<script>
+( async () => {
+	const params = new URLSearchParams( location.search );
+	const fontUrl = params.get( 'font' );
+	if ( fontUrl ) {
+		const face = new FontFace( 'TwemojiVQA', `url(${ fontUrl })` );
+		document.fonts.add( face );
+	}
+	await document.fonts.load( '48px "TwemojiVQA"', '\u{1F600}' );
+	await document.fonts.ready;
+
+	const text = await ( await fetch( params.get( 'emojiTest' ) || 'emoji-test.txt' ) ).text();
+	const cases = [];
+	for ( const raw of text.split( '\n' ) ) {
+		const line = raw.split( '#' )[ 0 ].trim();
+		if ( ! line.includes( ';' ) ) continue;
+		const [ codes, status ] = line.split( ';' ).map( ( s ) => s.trim() );
+		const cps = codes.split( /\s+/ ).map( ( c ) => parseInt( c, 16 ) );
+		cases.push( { cps, status, str: String.fromCodePoint( ...cps ) } );
+	}
+
+	const size = 48;
+	const canvas = document.createElement( 'canvas' );
+	canvas.width = size * 3;
+	canvas.height = size * 2;
+	const ctx = canvas.getContext( '2d', { willReadFrequently: true } );
+	const draw = ( str, family ) => {
+		ctx.clearRect( 0, 0, canvas.width, canvas.height );
+		ctx.font = `${ size }px ${ family }`;
+		ctx.textBaseline = 'top';
+		ctx.fillStyle = '#000';
+		ctx.fillText( str, 0, 0 );
+		const width = ctx.measureText( str ).width;
+		const data = ctx.getImageData( 0, 0, canvas.width, canvas.height ).data;
+		let colored = 0;
+		for ( let i = 0; i < data.length; i += 4 ) {
+			const [ r, g, b, a ] = [ data[ i ], data[ i + 1 ], data[ i + 2 ], data[ i + 3 ] ];
+			// Anything but black ink: a monochrome fallback draws in the fill
+			// colour (#000), a colour font draws its own palette, greys included.
+			if ( a > 64 && r + g + b > 90 ) colored++;
+		}
+		return { width, colored, pixels: data };
+	};
+	const same = ( a, b ) => {
+		for ( let i = 0; i < a.length; i++ ) if ( a[ i ] !== b[ i ] ) return false;
+		return true;
+	};
+
+	const result = { byStatus: {}, failures: [] };
+	for ( const c of cases ) {
+		const tw = draw( c.str, '"TwemojiVQA"' );
+		const sys = draw( c.str, '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji"' );
+		const oneGlyph = tw.width <= size * 1.3;
+		const hasColor = tw.colored > 20;
+		const fromFont = ! same( tw.pixels, sys.pixels );
+		const ok = oneGlyph && hasColor && fromFont;
+		const s = ( result.byStatus[ c.status ] ??= { total: 0, pass: 0 } );
+		s.total++;
+		if ( ok ) s.pass++;
+		else result.failures.push( { status: c.status, seq: c.cps.map( ( n ) => n.toString( 16 ).toUpperCase() ).join( ' ' ), oneGlyph, hasColor, fromFont, width: Math.round( tw.width ) } );
+	}
+	window.__result = result;
+	document.getElementById( 'summary' ).textContent = JSON.stringify( { byStatus: result.byStatus, failures: result.failures.length }, null, 1 );
+
+	const samples = [
+		[ 'Flag KR', [ 0x1F1F0, 0x1F1F7 ] ],
+		[ 'Flag UA', [ 0x1F1FA, 0x1F1E6 ] ],
+		[ 'England (tag)', [ 0x1F3F4, 0xE0067, 0xE0062, 0xE0065, 0xE006E, 0xE0067, 0xE007F ] ],
+		[ 'Scotland (tag)', [ 0x1F3F4, 0xE0067, 0xE0062, 0xE0073, 0xE0063, 0xE0074, 0xE007F ] ],
+		[ 'Rainbow flag (FQ)', [ 0x1F3F3, 0xFE0F, 0x200D, 0x1F308 ] ],
+		[ 'Rainbow flag (no FE0F)', [ 0x1F3F3, 0x200D, 0x1F308 ] ],
+		[ 'Heart on fire (FQ)', [ 0x2764, 0xFE0F, 0x200D, 0x1F525 ] ],
+		[ 'Heart on fire (no FE0F)', [ 0x2764, 0x200D, 0x1F525 ] ],
+		[ 'Heart (FQ)', [ 0x2764, 0xFE0F ] ],
+		[ 'Heart (no FE0F)', [ 0x2764 ] ],
+		[ 'Keycap # (FQ)', [ 0x23, 0xFE0F, 0x20E3 ] ],
+		[ 'Keycap # (no FE0F)', [ 0x23, 0x20E3 ] ],
+		[ 'Technologist', [ 0x1F9D1, 0x200D, 0x1F4BB ] ],
+		[ 'Couple, skin tones', [ 0x1F9D1, 0x1F3FB, 0x200D, 0x1F91D, 0x200D, 0x1F9D1, 0x1F3FF ] ],
+		[ 'Thumbs up, medium', [ 0x1F44D, 0x1F3FD ] ],
+		[ 'Emoji 17: hairy creature', [ 0x1FAC8 ] ],
+	];
+	const box = document.getElementById( 'samples' );
+	for ( const [ label, cps ] of samples ) {
+		const div = document.createElement( 'div' );
+		div.className = 'sample';
+		div.innerHTML = `<div class="glyph"></div><strong></strong><code></code>`;
+		div.querySelector( '.glyph' ).textContent = String.fromCodePoint( ...cps );
+		div.querySelector( 'strong' ).textContent = label;
+		div.querySelector( 'code' ).textContent = cps.map( ( n ) => n.toString( 16 ).toUpperCase() ).join( ' ' );
+		box.append( div );
+	}
+	document.body.dataset.done = '1';
+} )();
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+# Inputs copied in for a local VQA run.
+vqa/emoji-test.txt
+vqa/*.woff2
+# The font is a release asset of whoever adopts it, not a file in this
+# research repository. The manifest records its SHA-256.
+out/*/*.woff2
+# v17.0.2 is a comparison build: only its manifest is kept.
+out/v17.0.2/*
+!out/v17.0.2/manifest.json

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Twemoji COLRv1 fallback — end to end</title>
+<!--
+	Core's emoji detection, unchanged: the settings block and the loader that
+	_print_emoji_detection_script() prints. `source` is empty, so the loader
+	only detects and loads no image fallback.
+	emoji-loader.js is wordpress-develop src/js/_enqueues/lib/emoji-loader.js
+	at 8c008ff3c7 ([63755], the #66104 fix); fetch it next to this file.
+-->
+<script id="wp-emoji-settings" type="application/json">{"baseUrl":"","ext":".png","svgUrl":"","svgExt":".svg","source":{}}</script>
+<script type="module" src="emoji-loader.js"></script>
+<style>
+	@font-face {
+		font-family: "WP Twemoji";
+		src: url("../out/v17.0.3/twemoji-colrv1.woff2") format("woff2");
+	}
+	/* The renderer applies the font to the wrapper only. */
+	.wp-emoji-font { font-family: "WP Twemoji"; }
+	body { font: 16px/1.5 system-ui, sans-serif; margin: 16px; max-width: 860px; }
+	#content { font-size: 28px; line-height: 1.6; border: 1px solid #ccc; padding: 12px; }
+	#content .wp-emoji-font { outline: 1px dashed #d63638; }
+	pre { background: #f6f7f7; padding: 8px; white-space: pre-wrap; font-size: 13px; }
+</style>
+</head>
+<body>
+<h1>Twemoji COLRv1 fallback — end to end</h1>
+<p>Core's detection reports capability profiles, not support for individual emoji. This demo wraps the RGI graphemes belonging to each unsupported profile in a span with the font (outlined), and leaves the text as it is. <code>?simulate=noemoji</code> treats every profile as unsupported.</p>
+<p id="content">Team 🇰🇷 and 🇺🇦, 🏴󠁧󠁢󠁥󠁮󠁧󠁿 fans: 👩🏿‍🫯‍👩🏾 ❤️‍🔥 🫈 😀 👍🏽 #️⃣. Plain text stays text: © 2026, 3 × 4 = 12, ↔ and #1.</p>
+<h2>Detection</h2>
+<pre id="detection">Waiting for emoji-loader…</pre>
+<h2>Wrapped graphemes</h2>
+<pre id="wrapped"></pre>
+<h2>Text</h2>
+<pre id="text"></pre>
+<script type="module">
+const content = document.getElementById( 'content' );
+const original = content.textContent;
+const params = new URLSearchParams( location.search );
+
+// emoji-loader.js sets window._wpemojiSettings.supports once its tests have
+// run, and caches the tests in sessionStorage; wait for that.
+async function detection() {
+	for ( let i = 0; i < 200; i++ ) {
+		const s = window._wpemojiSettings && window._wpemojiSettings.supports;
+		if ( s && 'flag' in s && 'emoji' in s ) {
+			return { ...s };
+		}
+		await new Promise( ( r ) => setTimeout( r, 50 ) );
+	}
+	throw new Error( 'emoji-loader did not report' );
+}
+
+const isFlag = ( g ) => /^(\p{Regional_Indicator}{2}|\u{1F3F4}[\u{E0061}-\u{E007A}]+\u{E007F})$/u.test( g );
+const isEmoji = ( g ) => /^\p{RGI_Emoji}$/v.test( g );
+
+function wrap( root, needsFallback ) {
+	const segmenter = new Intl.Segmenter( undefined, { granularity: 'grapheme' } );
+	const walker = document.createTreeWalker( root, NodeFilter.SHOW_TEXT );
+	const nodes = [];
+	while ( walker.nextNode() ) nodes.push( walker.currentNode );
+	const wrapped = [];
+	for ( const node of nodes ) {
+		const parts = [ ...segmenter.segment( node.data ) ].map( ( s ) => s.segment );
+		if ( ! parts.some( needsFallback ) ) continue;
+		const frag = document.createDocumentFragment();
+		let text = '';
+		for ( const g of parts ) {
+			if ( needsFallback( g ) ) {
+				if ( text ) frag.append( text );
+				text = '';
+				const span = document.createElement( 'span' );
+				span.className = 'wp-emoji-font';
+				span.textContent = g;
+				frag.append( span );
+				wrapped.push( g );
+			} else {
+				text += g;
+			}
+		}
+		if ( text ) frag.append( text );
+		node.replaceWith( frag );
+	}
+	return wrapped;
+}
+
+const supports = await detection();
+const simulate = params.get( 'simulate' ) === 'noemoji';
+const effective = simulate ? { ...supports, emoji: false, flag: false } : supports;
+const needsFallback = ( g ) => ( ! effective.flag && isFlag( g ) ) || ( ! effective.emoji && isEmoji( g ) );
+const wrapped = wrap( content, needsFallback );
+await document.fonts.load( '28px "WP Twemoji"', wrapped.join( '' ) || '\u{1F600}' );
+await document.fonts.ready;
+
+const hex = ( g ) => [ ...g ].map( ( c ) => c.codePointAt( 0 ).toString( 16 ).toUpperCase() ).join( ' ' );
+const range = document.createRange();
+range.selectNodeContents( content );
+const selection = getSelection();
+selection.removeAllRanges();
+selection.addRange( range );
+const selected = selection.toString();
+selection.removeAllRanges();
+
+const result = {
+	supports,
+	simulated: simulate,
+	wrapped: wrapped.map( ( g ) => ( { grapheme: g, codepoints: hex( g ) } ) ),
+	fontLoaded: document.fonts.check( '28px "WP Twemoji"', wrapped.join( '' ) || '\u{1F600}' ),
+	images: document.querySelectorAll( 'img' ).length,
+	textUnchanged: content.textContent === original,
+	selectionMatches: selected === original,
+};
+window.__demo = result;
+document.getElementById( 'detection' ).textContent = JSON.stringify( { supports, simulated: simulate }, null, 1 );
+document.getElementById( 'wrapped' ).textContent = result.wrapped.map( ( w ) => `${ w.grapheme }  ${ w.codepoints }` ).join( '\n' ) || '(none)';
+document.getElementById( 'text' ).textContent = JSON.stringify( { images: result.images, fontLoaded: result.fontLoaded, textUnchanged: result.textUnchanged, selectionMatches: result.selectionMatches, text: content.textContent }, null, 1 );
+document.body.dataset.done = '1';
+</script>
+</body>
+</html>

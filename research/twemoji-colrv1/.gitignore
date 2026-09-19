@@ -7,3 +7,5 @@ out/*/*.woff2
 # v17.0.2 is a comparison build: only its manifest is kept.
 out/v17.0.2/*
 !out/v17.0.2/manifest.json
+# Core's emoji-loader.js for the demo, fetched from wordpress-develop at a pinned commit.
+demo/emoji-loader.js

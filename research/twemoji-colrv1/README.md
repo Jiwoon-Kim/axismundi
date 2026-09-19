@@ -17,7 +17,7 @@ The script and its pins are a supply-chain record: they show where the font came
 | `v17.0.3` | The target. The font, manifest, coverage, sizes and license notes are built from it. |
 | `v17.0.2` | What WordPress Core serves today (`s.w.org/images/core/emoji/17.0.2/`) and what #12252 bundles. Built once to compare with the image set. |
 
-A Core change that ships a 17.0.3 font should update the image fallback to 17.0.3 too. Otherwise the font and the images draw different designs and cover different sequences.
+A first Core change can ship the 17.0.3 font without updating the existing 17.0.2 image fallback: their SVG inputs are byte-identical, so the artwork already matches. Updating Core's image/parser release is separate work.
 
 ## Files
 
@@ -28,6 +28,7 @@ A Core change that ships a 17.0.3 font should update the image fallback to 17.0.
 | `Dockerfile`, `requirements.in`, `requirements.lock` | The build environment: a base image pinned by digest, and every Python package pinned. |
 | `out/<version>/` | The build writes `twemoji-colrv1.woff2`, `manifest.json`, `source.txt`, `LICENSE-GRAPHICS` and `aliases.txt`. This repository keeps everything but the WOFF2 for `v17.0.3`, and only `manifest.json` for the `v17.0.2` comparison build: the font belongs in the adopting project as a release asset, and the manifest records its SHA-256, so a rebuild can be checked against it. |
 | `vqa/index.html` | The browser rendering check. |
+| `demo/index.html` | End to end: Core's emoji detection (`emoji-loader.js` from wordpress-develop at [63755], the #66104 fix, fetched next to the page) reports capability profiles; RGI graphemes in an unsupported profile are wrapped and given the font. It shows the detection result, the wrapped graphemes, and that the text and selection are unchanged, with no images. `?simulate=noemoji` treats every profile as unsupported. |
 
 ## Build
 

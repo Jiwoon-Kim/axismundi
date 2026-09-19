@@ -493,8 +493,10 @@ picker 데이터 로딩은 Activities reaction picker의 그룹별 지연 로드
 |---|---:|---|
 | Noto Color Emoji full COLRv1 WOFF2 (`axismundi-noto-colrv1.woff2`, v2.051, RGI 3,944개 전부 합성) | 1,976,040 B (1.88 MiB), 파일 1개 | 직접 측정 |
 | flags subset WOFF2 (`axismundi-noto-colrv1-flags.woff2`, RGI 국기 262개) | 716,080 B (699 KiB), 파일 1개 | 직접 측정 |
-| Twemoji 17.0.2 72×72 PNG (WordPress 7.1이 가리키는 버전) | 4,009개, 4.25 MB (4.05 MiB) | Codex 측정, [jdecked/twemoji v17.0.2 assets](https://github.com/jdecked/twemoji/tree/v17.0.2/assets) |
-| Twemoji 17.0.2 SVG | 4,009개, 10.12 MB (9.65 MiB) | 같음 |
+| Twemoji 17.0.3 COLRv1 WOFF2 (`research/twemoji-colrv1`, alias·수박 정규화 포함) | 657,364 B (642 KiB), 파일 1개 | 직접 빌드·측정(2026-09-19, §13.6) |
+| Twemoji 17.0.2 COLRv1 WOFF2 (같은 파이프라인, 비교용) | 657,128 B (642 KiB), 파일 1개 | 같음 |
+| Twemoji 17.0.2 72×72 PNG (WordPress 7.1이 가리키는 버전) | 4,009개, 4,248,486 B (4.05 MiB) | Codex 측정, 2026-09-19 아카이브에서 재측정 일치, [jdecked/twemoji v17.0.2 assets](https://github.com/jdecked/twemoji/tree/v17.0.2/assets) |
+| Twemoji 17.0.2 SVG | 4,009개, 10,121,593 B (9.65 MiB) | 같음 |
 | PNG + SVG를 함께 번들할 경우 | 8,018개, 약 13.7 MiB | 위 두 줄의 합 |
 | Korean Font Provider — Noto Sans KR | 1,247,668 B (1.19 MiB) | 직접 측정 |
 | Korean Font Provider — Noto Serif KR | 2,157,104 B (2.06 MiB) | 직접 측정 |
@@ -535,7 +537,33 @@ picker 데이터 로딩은 Activities reaction picker의 그룹별 지연 로드
 
 ### 13.5 #44001에 대한 함의
 
-"self-hosted fallback = 이미지 전체 번들"이라는 전제는 성립하지 않는다. 같은 3,944개 RGI를 PNG+SVG 8,018개(13.7 MiB) 대신 COLRv1 WOFF2 한 파일(1.88 MiB)로 제공할 수 있고, 국기만 보완하면 699 KiB다. Axismundi Emoji는 두 경로(`auto`: 필요한 profile만 보완, `font`: 사이트가 전체 제공)를 실제 WordPress에서 보여주는 구현 근거가 된다(§12.2–12.7).
+"self-hosted fallback = 이미지 전체 번들"이라는 전제는 성립하지 않는다. 같은 3,944개 RGI를 PNG+SVG 8,018개(13.7 MiB) 대신 COLRv1 WOFF2 한 파일로 제공할 수 있다: Core의 현재 디자인 그대로 Twemoji면 642 KiB(§13.6), Noto면 1.88 MiB, 국기만 보완하면 Noto flags 699 KiB. Axismundi Emoji는 두 경로(`auto`: 필요한 profile만 보완, `font`: 사이트가 전체 제공)를 실제 WordPress에서 보여주는 구현 근거가 된다(§12.2–12.7).
+
+### 13.6 Twemoji COLRv1 빌드 (2026-09-19, `research/twemoji-colrv1`, 커밋 `1dec590`)
+
+Core가 소유할 수 있는 형태의 재현 빌드: Twemoji 릴리스를 commit·archive·SVG 집합 SHA-256으로 고정, digest 고정 Docker 이미지 + 22개 파이썬 패키지 lock, nanoemoji `glyf_colr_1`, name table에 CC-BY 표기, manifest, `--verify`(재빌드 byte-identical). 사이트는 빌드하지 않고 산출물만 서빙한다. WOFF2는 연구 저장소에 커밋하지 않음(채택하는 쪽의 release asset, manifest가 SHA-256 기록).
+
+**게이트 3개 통과(사용자 기준):**
+
+| 게이트 | 결과 |
+|---|---|
+| alias·수박 정규화 포함 산출물의 재빌드 | byte-identical |
+| Edge 153(Windows) fully-qualified RGI | 3,944 / 3,944 single-glyph-width·폰트 색·시스템 폴백 아님(minimally 1,029, unqualified 243, component 9 전부 통과) |
+| 같은 파이프라인의 17.0.2 비교 빌드 | 657,128 B, Edge 3,944 / 3,944 |
+
+- **17.0.2와 17.0.3의 SVG 4,009개는 바이트 단위로 동일.** 17.0.3의 변경은 JS parser뿐(대각선 방향 화살표 U+2196–2199를 VS16 없이 치환하지 않음, upstream #157). 이미지 fallback(17.0.2)과 폰트(17.0.3) 사이에 디자인·coverage 차이는 생기지 않는다.
+- **HarfBuzz는 합격 기준이 아니다.** alias 없는 첫 빌드는 HarfBuzz(기본 무시 문자 숨김)로 3,944개 모두 한 glyph였지만 Edge VQA에서는 SVG 이름에 FE0F가 들어간 fully-qualified 시퀀스 960개가 분리 렌더링됐다. 원인은 확정하지 않는다. Edge에서 fully-qualified RGI를 정상 렌더링하려면 FE0F-less alias가 필요했다는 관찰만 이 빌드 계약에 둔다.
+
+**빌드 정규화 2개 (Twemoji 입력이 아님, manifest·`source.txt`에 규칙·해시):**
+
+1. **FE0F-less alias 1,052개**: 각 fully-qualified 시퀀스의 FE0F 전부 제거 표기 + emoji-test의 minimally/unqualified 표기에 fully-qualified SVG 사본. Edge VQA에서 fully-qualified RGI 3,944개를 정상 렌더링하는 데 필요했다. **소유: WordPress의 폰트 빌드 계약.** Twemoji는 SVG/JS 저장소라 GSUB alias를 배포하지 않는다. nanoemoji와 Chromium에는 별도 재현 보고 후보가 있다.
+2. **수박 `1f349.svg` viewBox를 가운데 정렬 정사각형으로**: `0 0 36 25.22` → advance 1713(나머지 1275). non-square viewBox가 nanoemoji 산출물 advance와 맞지 않는 후보 사례. **소유: upstream이 원칙** — [jdecked/twemoji#133](https://github.com/jdecked/twemoji/issues/133)(열림)에 17.0.3·advance 측정을 댓글로 보탬([comment](https://github.com/jdecked/twemoji/issues/133#issuecomment-5742131079)), 고치는 PR [#102](https://github.com/jdecked/twemoji/pull/102)(열림). 해결되면 WordPress 쪽 예외 제거. 그 외 non-square viewBox가 나오면 빌드가 멈춘다.
+
+**Noto와의 차이 (Chrome, 실제 WOFF2 표본 측정, 2026-09-19):** Axismundi 번들 Noto COLRv1에서 `🧑🏽‍🐰‍🧑🏼`·`👩🏿‍🫯‍👩🏾`·`🍉`·`🏳️‍🌈`/`🏳‍🌈`·`❤️‍🔥`/`❤‍🔥`는 모두 advance 59.765625(48px), 시스템 폰트 픽셀과도 달랐다. 이 표본에서는 FE0F 포함/생략 표기와 metrics가 안정적이었다. 이는 Twemoji가 나쁘다는 뜻이 아니라, SVG 자산 → 폰트 변환 경로에는 alias 정규화가 필요할 수 있다는 뜻이다.
+
+**설계 결론 — wrapper 전용 renderer:** 이 폰트의 cmap에는 `#`·`*`·`0`–`9`(keycap base, advance 0), 공백(advance 1275), `©`·`®`·`™`·`↔`·`↗`·`❤`·`☺` 같은 text-presentation 기본 문자가 들어 있다(keycap ligature 입력에 필요해서 뺄 수 없음). 일반 `font-family` 스택 앞에 두거나 넓은 `unicode-range`로 걸면 본문 숫자가 사라지고 공백이 넓어진다. 텍스트 폰트 뒤 fallback slot에 두면 숫자·공백은 안전하지만, 텍스트 폰트에 없는 text-default 문자(화살표 등)가 컬러로 바뀐다(upstream #157과 같은 문제). → 감지한 emoji grapheme만 wrapper로 감싸 적용하는 renderer여야 한다. 테마 fallback slot은 핵심 계약이 될 수 없다.
+
+**Core 제안의 선택지:** 첫 PR은 Twemoji(현재 Core 자산·디자인 계보, 642 KiB). Noto(flags 699 KiB, full 1.88 MiB, OFL)는 유지 비용이 더 싼 대안으로 Trac 설계 문서에 남긴다. 국기 보완이 1차 목표라면 Noto flags가 Twemoji 전체보다 약 57 KiB 클 뿐이다.
 
 ### 12.8 설정 서브메뉴: 세 렌더링 모드 + WordPress 이미지 스위치 (2026-09-16)
 

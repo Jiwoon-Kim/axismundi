@@ -50,7 +50,7 @@ The font must not be placed in a general `font-family` stack. To shape keycaps, 
 
 The build is at [https://github.com/Jiwoon-Kim/axismundi/tree/1dec590/research/twemoji-colrv1 research/twemoji-colrv1] (Dockerfile, lock file, build script, manifests).
 
-||= Twemoji =||= WOFF2 =||= Rebuild =||= Edge 153: fully-qualified RGI =||
+|| '''Twemoji''' || '''WOFF2''' || '''Rebuild''' || '''Edge 153: fully-qualified RGI''' ||
 || 17.0.3 || 657,364 bytes || byte-identical || 3,944 / 3,944 ||
 || 17.0.2 (what Core serves today) || 657,128 bytes || — || 3,944 / 3,944 ||
 

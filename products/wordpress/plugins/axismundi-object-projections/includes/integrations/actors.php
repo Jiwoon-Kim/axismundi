@@ -177,15 +177,16 @@ function axismundi_op_actor_transform( Axismundi_Actor $actor ) : array {
 			$object['tag'] = array_merge( (array) ( $object['tag'] ?? array() ), $emoji_tags );
 		}
 	}
-	if ( function_exists( 'axismundi_act_get_public_outbox' ) ) {
-		$object['outbox'] = axismundi_op_actor_outbox_url( $actor );
-	}
-	if ( function_exists( 'axismundi_act_get_follower_count' ) ) {
-		$object['followers'] = axismundi_op_actor_followers_url( $actor );
-	}
-	if ( function_exists( 'axismundi_act_get_following_count' ) ) {
-		$object['following'] = axismundi_op_actor_follow_collection_url( $actor, 'following' );
-	}
+	/*
+	 * The collection addresses belong to the Actor document, not to whichever plugin
+	 * fills them. ActivityPub requires an actor to name its `outbox`, and a reader that
+	 * follows the address is answered by this plugin's own routes. Without Activities
+	 * those collections are empty rather than absent — an empty OrderedCollection is a
+	 * true statement, while a missing `outbox` makes the document not an actor at all.
+	 */
+	$object['outbox']    = axismundi_op_actor_outbox_url( $actor );
+	$object['followers'] = axismundi_op_actor_followers_url( $actor );
+	$object['following'] = axismundi_op_actor_follow_collection_url( $actor, 'following' );
 	/**
 	 * Let an Actor domain add public representation fields without owning the Actor document.
 	 *
@@ -210,26 +211,35 @@ function axismundi_op_actor_transform( Axismundi_Actor $actor ) : array {
 
 /** Public visibility gate for an Actor Outbox. */
 function axismundi_op_actor_outbox_visible( Axismundi_OP_Actor_Outbox $source ) : bool {
-	return axismundi_op_actor_visible( $source->get_actor() )
-		&& function_exists( 'axismundi_act_get_public_outbox' );
+	return axismundi_op_actor_visible( $source->get_actor() );
 }
 
-/** Project one Actor's public Activity ledger into an OrderedCollection. */
+/**
+ * Project one Actor's public Activity ledger into an OrderedCollection.
+ *
+ * The ledger is Activities' to own. When it is absent the collection is served empty:
+ * the Actor document advertises this address, and an advertised address that 404s is a
+ * broken document. "No Activities recorded here" and "no ledger installed" look the
+ * same from outside, which is the honest answer in both cases.
+ */
 function axismundi_op_actor_outbox_transform( Axismundi_OP_Actor_Outbox $source ) : array {
 	$actor = $source->get_actor();
+	$items = function_exists( 'axismundi_act_get_public_outbox' )
+		? axismundi_act_get_public_outbox( $actor->get_uri(), 200 )
+		: array();
 	return array(
 		'id'           => axismundi_op_actor_outbox_url( $actor ),
 		'type'         => 'OrderedCollection',
 		'attributedTo' => $actor->get_uri(),
 		'url'          => $actor->get_profile_url(),
-		'orderedItems' => axismundi_act_get_public_outbox( $actor->get_uri(), 200 ),
+		'totalItems'   => count( $items ),
+		'orderedItems' => $items,
 	);
 }
 
 /** Public disclosure gate for an Actor Followers collection. */
 function axismundi_op_actor_followers_visible( Axismundi_OP_Actor_Followers $source ) : bool {
-	$actor = $source->get_actor();
-	return axismundi_op_actor_visible( $actor ) && function_exists( 'axismundi_act_get_follow_collection_page' );
+	return axismundi_op_actor_visible( $source->get_actor() );
 }
 
 /**
@@ -256,6 +266,15 @@ function axismundi_op_actor_followers_transform( Axismundi_OP_Actor_Followers $s
 	$policy = function_exists( 'axismundi_actors_follow_collections_policy' )
 		? axismundi_actors_follow_collections_policy( $actor )
 		: 'private';
+	/*
+	 * Relation state is Activities'. Without it this collection cannot be counted, so it
+	 * is served as `private` is: the address answers, and it makes no claim. Sending
+	 * `totalItems: 0` instead would assert that the Actor has no followers, which is a
+	 * different statement from "this site cannot tell you".
+	 */
+	if ( ! function_exists( 'axismundi_act_get_follow_collection_page' ) ) {
+		$policy = 'private';
+	}
 	$public = 'public' === $policy;
 	$url    = axismundi_op_actor_follow_collection_url( $actor, $kind );
 	$data   = $public || 'count-only' === $policy
@@ -335,7 +354,9 @@ add_action( 'axismundi_op_register_transformers', 'axismundi_op_register_actor_t
 
 /** Register the representation-owned public Outbox route. */
 function axismundi_op_register_actor_outbox_route() : void {
-	if ( ! class_exists( 'Axismundi_Actor' ) || ! function_exists( 'axismundi_actors_get_by_uuid' ) || ! function_exists( 'axismundi_act_get_public_outbox' ) ) {
+	// The route exists whenever Actors does, because the Actor document names it. The
+	// ledger only decides whether the collection has anything in it.
+	if ( ! class_exists( 'Axismundi_Actor' ) || ! function_exists( 'axismundi_actors_get_by_uuid' ) ) {
 		return;
 	}
 	register_rest_route(
@@ -355,7 +376,9 @@ add_action( 'rest_api_init', 'axismundi_op_register_actor_outbox_route' );
 
 /** Register the representation-owned Followers route. */
 function axismundi_op_register_actor_followers_route() : void {
-	if ( ! class_exists( 'Axismundi_Actor' ) || ! function_exists( 'axismundi_actors_get_by_uuid' ) || ! function_exists( 'axismundi_act_get_follow_collection_page' ) ) {
+	// Registered with Actors alone for the same reason as the Outbox: the document
+	// advertises the address. Without relation state it answers without a count.
+	if ( ! class_exists( 'Axismundi_Actor' ) || ! function_exists( 'axismundi_actors_get_by_uuid' ) ) {
 		return;
 	}
 	register_rest_route(

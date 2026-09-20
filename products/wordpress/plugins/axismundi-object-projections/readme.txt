@@ -73,7 +73,10 @@ addressed publicly, and only as a courtesy view beside the remote original.
 2. Upload this plugin folder to `/wp-content/plugins/`, or install it through
    **Plugins > Add New**, then activate it.
 3. Nothing else is required. A published post is projected as soon as its author has a
-   public Actor; ask its URL for `application/activity+json` to see the result.
+   public Actor; ask its URL for `application/activity+json` to see the result. Add
+   **Axismundi Activities** for the four authored visibility levels and an Actor outbox
+   with activities in it, and the official **ActivityPub** plugin with **Axismundi
+   ActivityPub Bridge** to send and receive.
 4. Remote observations, where there are any, are listed under **Tools > Remote Objects**.
 
 Activation creates this plugin's own database tables. Nothing is contacted on the internet

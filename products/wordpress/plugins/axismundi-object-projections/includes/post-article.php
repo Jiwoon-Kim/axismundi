@@ -145,7 +145,56 @@ function axismundi_op_post_article_mention_tags( WP_Post $post, bool $strict = t
 }
 
 /**
- * Resolve the authored Article audience through the Activities policy owner.
+ * The public audience collection every ActivityStreams reader recognises.
+ *
+ * Declared here as well as in Activities because representation must not depend on
+ * the ledger: a published post is projected whether or not Activities is installed.
+ */
+function axismundi_op_public_audience_uri() : string {
+	return function_exists( 'axismundi_act_public_audience_uri' )
+		? axismundi_act_public_audience_uri()
+		: 'https://www.w3.org/ns/activitystreams#Public';
+}
+
+/**
+ * The addressing a published post carries when no visibility policy owner is installed.
+ *
+ * Representation and policy are different layers. Object Projections' own default is
+ * "published means public", and that default has to hold on its own: Actors plus this
+ * plugin are enough for another server to fetch a post as ActivityStreams, with no
+ * Activity ledger and no transport. Activities, when present, owns the four authored
+ * visibility levels and overrides this entirely.
+ *
+ * Only the default is resolved here. A post whose stored visibility is anything other
+ * than `public` is *not* projected without Activities: guessing at a non-public
+ * intention is the one mistake this layer must not make.
+ *
+ * @param Axismundi_Actor $actor        Attributed Actor.
+ * @param string[]        $mention_uris Explicitly mentioned Actor URIs.
+ * @return array{visibility:string,to:string[],cc:string[],public:bool}
+ */
+function axismundi_op_default_public_audience( Axismundi_Actor $actor, array $mention_uris = array() ) : array {
+	$cc        = array();
+	$followers = axismundi_op_actor_followers_url( $actor );
+	if ( '' !== $followers ) {
+		$cc[] = $followers;
+	}
+	foreach ( $mention_uris as $uri ) {
+		$uri = is_string( $uri ) ? trim( $uri ) : '';
+		if ( '' !== $uri && ! in_array( $uri, $cc, true ) ) {
+			$cc[] = $uri;
+		}
+	}
+	return array(
+		'visibility' => 'public',
+		'to'         => array( axismundi_op_public_audience_uri() ),
+		'cc'         => $cc,
+		'public'     => true,
+	);
+}
+
+/**
+ * Resolve the authored Article audience, through the Activities policy owner when it exists.
  *
  * Omitting `$mention_uris` is the strict authoring boundary. Live projections
  * pass their already-sanitized stored URI snapshot so stale Actor cache state
@@ -154,7 +203,7 @@ function axismundi_op_post_article_mention_tags( WP_Post $post, bool $strict = t
 function axismundi_op_post_article_audience( WP_Post $post, ?array $mention_uris = null ) {
 	$actor_uri = axismundi_op_post_actor_uri( $post );
 	$actor     = '' !== $actor_uri && function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $actor_uri ) : null;
-	if ( ! $actor instanceof Axismundi_Actor || ! function_exists( 'axismundi_act_resolve_audience' ) ) {
+	if ( ! $actor instanceof Axismundi_Actor ) {
 		return new WP_Error( 'ax_op_post_audience', __( 'The post audience cannot be resolved.', 'axismundi-object-projections' ) );
 	}
 	if ( null === $mention_uris ) {
@@ -164,7 +213,13 @@ function axismundi_op_post_article_audience( WP_Post $post, ?array $mention_uris
 		}
 		$mention_uris = array_column( $mention_tags, 'href' );
 	}
-	return axismundi_act_resolve_audience( $actor, axismundi_op_post_visibility( $post ), $mention_uris );
+	$visibility = axismundi_op_post_visibility( $post );
+	if ( ! function_exists( 'axismundi_act_resolve_audience' ) ) {
+		return 'public' === $visibility
+			? axismundi_op_default_public_audience( $actor, $mention_uris )
+			: new WP_Error( 'ax_op_post_audience_policy', __( 'A non-public visibility needs Axismundi Activities to resolve its audience.', 'axismundi-object-projections' ) );
+	}
+	return axismundi_act_resolve_audience( $actor, $visibility, $mention_uris );
 }
 
 /** Whether anonymous ActivityStreams negotiation may disclose this Article. */

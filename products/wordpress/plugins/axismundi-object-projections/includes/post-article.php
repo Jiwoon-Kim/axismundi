@@ -149,6 +149,8 @@ function axismundi_op_post_article_mention_tags( WP_Post $post, bool $strict = t
  *
  * Declared here as well as in Activities because representation must not depend on
  * the ledger: a published post is projected whether or not Activities is installed.
+ *
+ * @internal Local constant resolver. Activities owns the audience vocabulary.
  */
 function axismundi_op_public_audience_uri() : string {
 	return function_exists( 'axismundi_act_public_audience_uri' )
@@ -172,6 +174,8 @@ function axismundi_op_public_audience_uri() : string {
  * @param Axismundi_Actor $actor        Attributed Actor.
  * @param string[]        $mention_uris Explicitly mentioned Actor URIs.
  * @return array{visibility:string,to:string[],cc:string[],public:bool}
+ *
+ * @internal Resolved through axismundi_op_post_article_audience(); not called directly.
  */
 function axismundi_op_default_public_audience( Axismundi_Actor $actor, array $mention_uris = array() ) : array {
 	$cc        = array();
@@ -506,6 +510,8 @@ function axismundi_op_post_article_generator() : ?array {
  * @param string $policy Policy resolved so far.
  * @param mixed  $source Domain object.
  * @return string
+ *
+ * @internal Filter callback answering the Activities policy lookup.
  */
 function axismundi_op_supply_post_quote_policy( string $policy, $source ) : string {
 	return $source instanceof WP_Post && metadata_exists( 'post', (int) $source->ID, AXISMUNDI_OP_POST_QUOTE_POLICY_META )
@@ -601,6 +607,8 @@ function axismundi_op_post_media_ids( WP_Post $post ) : array {
  *
  * @param array<int,array<string,mixed>> $blocks Parsed blocks.
  * @return int[]
+ *
+ * @internal Assembly helper for axismundi_op_post_media_ids(). Not a public seam.
  */
 function axismundi_op_collect_block_media_ids( array $blocks ) : array {
 	$ids   = array();
@@ -638,6 +646,8 @@ function axismundi_op_collect_block_media_ids( array $blocks ) : array {
  *
  * @param int $attachment_id Attachment id.
  * @return array<string,mixed>|null
+ *
+ * @internal Assembly helper. A product that publishes its own media builds its own descriptors.
  */
 function axismundi_op_attachment_descriptor( int $attachment_id ) : ?array {
 	$attachment = get_post( $attachment_id );
@@ -676,6 +686,8 @@ function axismundi_op_attachment_descriptor( int $attachment_id ) : ?array {
  *
  * @param WP_Post $post Post.
  * @return array{attachment:array<int,array<string,mixed>>,image:array<string,mixed>|null}
+ *
+ * @internal Assembly helper used by the Article transformer.
  */
 function axismundi_op_post_media_members( WP_Post $post ) : array {
 	$attachments = array();

@@ -25,14 +25,24 @@ speaks ActivityStreams.
 **This plugin needs Axismundi Actors.** Every projected object is attributed to an Actor,
 and without that registry there is nobody to attribute anything to.
 
+**Axismundi Activities is optional, and adds three things.** Without it a published post is
+public and is projected as such, which is this plugin's own default. With it, the four
+authored visibility levels decide who a post is addressed to, an Actor's outbox and follow
+collections have contents rather than being empty, and an object states who may quote it.
+Nothing here breaks when it is absent; less is said.
+
 = What this version does =
 
 * **Content negotiation on the URL a post already has.** Ask for
   `application/activity+json` and the same address answers with JSON-LD instead of HTML.
 * A **Core Post to Article transformer**, and an optional adapter for Axismundi Media
   Library attachments.
-* **Collections**: a shared media folder at a stable UUID route, a replies collection, and
-  the representation of an Actor's outbox where Axismundi Activities supplies one.
+* **A post's own media**, listed as attachments so a reader can fetch what the body shows:
+  the featured image and the media blocks the author placed. Only media this site holds --
+  a hotlinked image is left in the text, because its type and size cannot be stated.
+* **Collections**: an Actor's outbox, followers and following, a shared media folder at a
+  stable UUID route, and a replies collection. An Actor document always names them; without
+  an Activity ledger they answer empty rather than 404.
 * The **relations that make a document readable in context** -- hashtags, mentions, thread
   edges, reply context, and quote context -- kept as their own records rather than parsed
   out of content each time.

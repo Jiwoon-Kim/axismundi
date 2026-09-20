@@ -995,6 +995,51 @@ FEP-1311의 `MUST` 둘(`type`, `url`)을 지키고, `SHOULD` 넷 중 둘(`name`,
 **OP 기본과 ML 승격의 경계는 이 FEP와 충돌하지 않는다.** FEP가 요구하는 최소치는 기본이 이미
 만족하고, 그 위는 전부 선택 사항이기 때문이다.
 
+## 8c. OP 제출 준비 — 공개 API 경계 확정
+
+제출하면 공개 함수 이름이 계약이 된다. 그래서 readme보다 **경계를 먼저** 정했다. 판정은 이
+저장소의 기존 기준을 그대로 쓴다. 다른 플러그인이 호출하거나, 필터 콜백으로 등록하거나,
+REST·블록·라우팅으로 진입하거나, 문서·감사가 외부 계약으로 명시한 것만 공개 seam이다.
+
+이번 세션에 생긴 함수들의 **외부 소비를 실측**했다.
+
+| 함수 | 외부 호출 | 판정 |
+|---|---|---|
+| `axismundi_op_post_to_article( $post, $claimed )` | 3곳(Forum) | **공개 seam** |
+| `axismundi_op_post_media_ids` (필터) | 제품이 대체하는 자리 | **공개 seam** |
+| `axismundi_op_post_media_members` | 0 | internal |
+| `axismundi_op_attachment_descriptor` | 0 | internal |
+| `axismundi_op_collect_block_media_ids` | 0 | internal |
+| `axismundi_op_default_public_audience` | 0 | internal |
+| `axismundi_op_public_audience_uri` | 0 | internal |
+| `axismundi_op_supply_post_quote_policy` | 0 | internal(필터 콜백) |
+
+internal 여섯에는 `@internal`을 달고 이유를 한 줄씩 적었다. 공개 둘은
+`docs/TRANSFORMERS.md`에 계약으로 문서화했다 — `$claimed`가 받는 세 키와 각각이 존재하는
+이유, 미디어 필터가 "추론을 기록으로 대체하는 자리"라는 것, 상한이 없는 이유.
+
+**의존 선언**: 헤더는 실제 최소 의존인 `Requires Plugins: axismundi-actors`만 적는다. Activities는
+readme가 설명하는 **선택 의존**이다. 없으면 published = 공개가 되고, 있으면 저작 가시성 4단계와
+outbox·follow 컬렉션 내용과 인용 정책이 더해진다. 깨지는 것이 아니라 **말하는 것이 줄어든다.**
+
+### 8c.1 준비 상태 (2026-09-21)
+
+| 항목 | 상태 |
+|---|---|
+| 공개 API 경계 | 확정. 공개 2, internal 6(`@internal` 표기), 계약은 `docs/TRANSFORMERS.md` |
+| 헤더 | `Requires Plugins: axismundi-actors` 추가. Description은 기존 문장이 여전히 정확 |
+| readme 설명 정합 | Activities 선택 의존 문단 추가, 새 기능 2줄(미디어 첨부, 빈 컬렉션 응답) 반영 |
+| 외부 통신 고지 | 기존 `== External services ==` 유효. 실제 요청 코드는 `remote-fetch.php`·`remote-collections.php` 둘뿐이고 문단이 그것을 설명한다 |
+| Installation | 이미 정확. Activities·Bridge가 무엇을 더하는지도 적혀 있다 |
+| Changelog | `= 0.1.0 =` 하나. 이번 세션 변경은 아직 미출시분이라 그 항목에 흡수된다 |
+| Plugin Check | **ERROR 0.** WARNING은 house DirectDB 패턴과 `$$key` 가변 변수 오탐 3건 |
+| ZIP | `_dist/axismundi-object-projections.zip`, 128파일 0.27MB, tests·scripts 제외 확인 |
+
+**제출 자체는 하지 않았다.** 준비 결과를 보고 결정한다. 제출 시 확인할 것 하나: 이번 세션에
+공개 표면이 늘었으므로(`$claimed`, 미디어 필터), 그 계약이 굳는다는 것을 받아들이고 보낼지.
+
+
+
 ## 9. E축 — 상호운용 프로파일 (측정 대기)
 
 Mastodon·Misskey·Lemmy·GoToSocial에서 실제로 겪은 차이를 A~D축 항목에 귀속시킨다.

@@ -211,3 +211,55 @@ Activity members. Both use `OrderedCollection` for Axismundi representation cons
 Mastodon's corresponding ActivityPub endpoints use unordered `Collection`, and the
 ActivityPub vocabulary permits either. Human-facing liker and booster lists are separate
 local UI/API projections, not members synchronized through S2S federation.
+
+## Claimed Article projection (0.1.1)
+
+A product that owns a post's context does not write a second Article. It claims the one
+this plugin builds:
+
+```php
+axismundi_op_post_to_article( WP_Post $post, array $claimed = array() );
+```
+
+`$claimed` accepts exactly three keys, and each one exists because the product, not this
+plugin, is the authority for it:
+
+| key | meaning |
+|---|---|
+| `id` | the object URI the product's own routing serves |
+| `attributedTo` | the Actor it resolved under its own rules |
+| `addressing` | `{to: string[], cc: string[]}`, when the product addresses the object rather than the authored visibility policy doing it |
+
+Everything else -- body, language decision, tags, media, summary, preview, sensitivity,
+interaction policy -- stays here, so a change in how this site describes a post reaches
+every product that publishes one. The return value is the projection, and the product
+overlays only the members it owns. Axismundi Forum publishes a Topic this way: it claims
+the three, then adds `audience`, `context`, `updated` and `commentsEnabled`.
+
+This is a public seam. Its Forum-side contract is pinned by
+`axismundi-forum/tests/audit-forum-topic-inherits-article.php`, which asserts that a Topic
+carries every member a core Post Article carries and adds only the Group context ones.
+
+## Media a post publishes (0.1.1)
+
+FEP-1311 places media in `attachment`, and FEP-b2b8 asks that media embedded in the content
+appear there too. This plugin answers from what the author placed: the featured image, then
+the attachment ids the editor stores on its own media blocks, in reading order. Rendered
+markup is never read, and only media this site holds is published -- a hotlinked image has
+no attachment id, so its media type and dimensions cannot be stated truthfully.
+
+```php
+apply_filters( 'axismundi_op_post_media_ids', int[] $ids, WP_Post $post );
+```
+
+This is the public seam for media. A product that **records** what a post uses replaces the
+list rather than having it inferred; Axismundi Media Library does exactly that through its
+usage relations, and its recorded fact beats a reading of the post's own blocks.
+
+The list is deliberately uncapped. Publishing fewer media than the article holds would
+understate the document, and how many to display or pre-fetch is the receiving server's
+policy. A product that wants a shorter list trims it in this filter.
+
+Descriptors are anonymous: `{type, url, mediaType, width, height, name?}` with no `id`,
+because an embedded attachment belongs to the document carrying it. Promoting an attachment
+to an object with its own id, renditions and rights is the Media Library's work.

@@ -279,7 +279,8 @@ threadiverse 방식이고, 수신 쪽도 `axismundi_op_unwrap_inbound_group_anno
 | 그 호스트로 배달하지 않음 | Bridge |
 | fetch·discover 하지 않음 | Actors(원격 발견), OP(원격 객체 fetch) |
 | 저장된 콘텐츠를 공개 표면에서 감춤 | OP(렌더), 제품 플러그인 |
-| 보관·삭제 | Actors, OP |
+| 그 authority의 커스텀 이모지를 더 관측하지 않음 | Emoji(반응 Activity·원격 Actor·원격 객체의 세 관측 지점) |
+| 보관·삭제 | Actors, OP, Emoji(`ax_emoji_authorities`) |
 
 그래서 **Bridge가 목록을 소유하면 안 된다.** Bridge 없이도 OP는 원격 객체를 가져오고 Actors는
 원격 Actor를 발견한다. 전송만 막히고 나머지가 샌다.
@@ -300,6 +301,23 @@ Activities가 혼자 갖고 모두가 부르는 것과 같은 패턴이다.
 
 Follow가 원장에 기록되고 관계 상태가 파생되는 것과 같은 모양이다. **원장은 사건, Actors는
 상태.** §5.7의 "수신 ban은 권한 확인 없이 적용하지 않는다"가 여기에 들어간다.
+
+**이모지 캐시가 조회 지점 하나를 더 만든다.** 커스텀 이모지 반응은 세 층으로 나뉜다.
+
+```text
+수신 EmojiReact / Like(content)
+  → Activities  사실과 키: unicode:U+1F44D 또는 custom:<authority>:<key>
+                authority 없는 커스텀 반응은 받지 않는다 — 선언이 증거다
+  → Emoji       그림·선언·출처를 캐시(ax_emoji_authorities / ax_emojis / ax_emoji_references)
+  → OP          반응 컬렉션 표현
+  → Actors      authority가 되는 인스턴스
+```
+
+커스텀 반응의 선언은 반응 대상 객체가 아니라 **Activity에 실려 온다.** 그런데 참조는 대상 객체에
+붙여 저장한다. 레지스트리의 참조 모델이 객체·Actor 범위여서, Activity 봉투만을 위한 세 번째
+수명주기를 만들지 않으려는 선택이고, 보존 기간이 눈에 보이는 반응 표면과 함께 간다.
+
+따라서 한 호스트를 `suspend`하면 그 authority의 새 관측도 멈춰야 한다. **지금은 그 연결이 없다.**
 
 사용자 개인의 도메인 차단은 또 다른 층이다. 그것은 표시 정책이므로 mute/ignore와 같은 자리에
 두고, 원장에도 instance 정책에도 넣지 않는다.

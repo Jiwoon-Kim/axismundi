@@ -424,7 +424,7 @@ if ( 'und' === $language ) {
 }
 ```
 
-Actor는 또 세 번째 정책이다. 스칼라와 맵을 **둘 다** 내되, 맵이 스칼라와 같은 한 줄뿐이면
+Actor는 또 세 번째 정책이다. (Topic은 §6.4b 이후 Article과 같은 정책을 쓴다 — 네 번째 정책은 없다.) 스칼라와 맵을 **둘 다** 내되, 맵이 스칼라와 같은 한 줄뿐이면
 생략한다. 그 이유도 주석에 있다(Actor는 누구나 처음 해석하는 대상이라 빈 프로필은 곧 보이지
 않는 계정이 된다).
 
@@ -476,6 +476,41 @@ Lemmy의 글은 `Page`다. 우리는 그 관행을 따르지 않고 Article을 �
 
 즉 **상호운용이 허락하는 범위에서 우리 도메인 경계를 지키는 선택**이다. 표준이 `Page`를
 요구하는 것은 아니므로 비표준이 아니고, Lemmy 관행과 다르다는 사실만 기록해 둔다.
+
+### 6.4b 수정 — Topic은 core Post Article을 상속한다 (결정)
+
+**코어 기본 post의 Article 투영이 진실의 원천이다.** 제품이 자기 타입을 위해 본문 조립을 다시
+쓰면 정책이 갈라진다. 실제로 갈라져 있었다. Topic은 `name`·`content` 스칼라만 내고 있었고,
+mentions·hashtags·이모지 선언·summary·preview·sensitive·인용 정책·likes/shares/replies 컬렉션이
+전부 빠져 있었다. 그 누락은 어디에도 근거가 적혀 있지 않았다.
+
+구조를 바꿨다.
+
+```text
+OP   axismundi_op_post_to_article( $post, $claimed )
+       $claimed = id | attributedTo | addressing   ← 제품이 소유한 것만
+Forum  결과에 audience · context · updated · commentsEnabled 만 덧씌움
+```
+
+제품이 주장할 수 있는 것은 셋뿐이다. 자기 라우팅이 서비스하는 **객체 URI**, 자기 규칙으로 해석한
+**작성자**, 그리고 제출이 저작 가시성 정책이 아니라 Group을 향한다는 **주소 지정**. 본문, 언어
+결정, 태그, 정책은 전부 OP에 남는다.
+
+감사로 고정했다(`audit-forum-topic-inherits-article.php`): 같은 본문을 코어 post로 만들어 두
+투영의 멤버 집합을 비교하고, **빠진 멤버 0 / 추가 멤버는 Group 문맥 3개뿐**임을 단정한다.
+
+**따라온 wire 변화 하나.** Topic도 이제 Article의 언어 정책을 그대로 따른다. 언어가 정해진
+사이트에서는 스칼라 없이 `nameMap`/`contentMap`만 나간다(실측: `nameMap={"en-US":…}`,
+`name=null`). Lemmy로 나가는 것이 바로 이 Topic이고, §9.1의 Lemmy 측정이 스칼라 Topic이었는지
+맵-only Article이었는지는 기록에 구분돼 있지 않다.
+
+**결정(owner, 2026-09-20): 정책 통일이 우선이다.** Topic이라고 갈라지지 않는다. Lemmy 확인은
+제출 뒤 스테이징에서 하고, 결과에 따라 제출본을 갱신한다. 즉 예외를 미리 만들지 않는다.
+
+**남은 차이 하나**는 투영이 아니라 저작 표면이다. `interactionPolicy`는 저작된 인용 정책에서
+나오는데, 그 메타는 `post`에만 등록돼 있어 Topic에는 저작값 자체가 없다. 감사는 이것을 통과시키지
+않고 **원인을 단정한다**(정책이 비어 있음 + 멤버 없음). 저작 표면을 Topic까지 넓힐지는 §10의
+열린 질문이다.
 
 ### 6.5 제품 경계는 연합 프로파일을 따라 그어졌다
 
@@ -771,6 +806,9 @@ Mastodon의 sensitive 해석.
     해결(전송 플러그인 파일은 상수로 가드, 전송 단정은 없으면 침묵). 나머지 감사의 교차
     `require_once`는 같은 스택 내부(Actors·Activities)라 보류 (§8.5).
 16. 공식 Social Web 리더를 재울 것인가, 공급할 것인가, 우리 Reader로 대체할 것인가 (§5.9b).
+17. OP의 저작 설정(인용 정책·언어)을 `post` 밖의 제품 타입까지 넓힐 것인가. 넓히지 않으면
+    Topic은 `interactionPolicy` 없이 나간다 (B축 §6.4b).
+18. **제출 뒤 스테이징에서 Lemmy로 맵-only Topic 확인**, 결과에 따라 제출본 갱신 (§6.4b, §9.1).
 
 ## 11. 의도적 비표준
 

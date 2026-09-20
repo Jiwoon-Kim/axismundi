@@ -549,22 +549,41 @@ function axismundi_op_resolve_quote_request_target( $target, string $object_uri 
 add_filter( 'axismundi_act_resolve_quote_request_target', 'axismundi_op_resolve_quote_request_target', 10, 2 );
 
 /**
- * Transform a public core post into an Article.
+ * Claim one post's Article projection on behalf of a product that owns its context.
  *
- * @param WP_Post $post Post.
+ * A Forum Topic is a post with a Group around it, not a different kind of document, so it
+ * inherits this projection whole rather than rebuilding a subset of it and quietly losing
+ * mentions, hashtags, emoji declarations, summaries, previews, sensitivity or the quote
+ * policy. What a product may claim is narrow on purpose:
+ *
+ *   id           the object URI its own routing owns
+ *   attributedTo the Actor it resolved under its own rules
+ *   addressing   `to` / `cc`, when the product addresses the object rather than the
+ *                authored visibility policy doing it
+ *
+ * Everything else — the body, the language decision, the tags, the policies — stays here,
+ * so a change to how this site describes a post reaches every product that publishes one.
+ *
+ * @param WP_Post             $post    Source post.
+ * @param array<string,mixed> $claimed Optional id / attributedTo / addressing overrides.
  * @return array<string,mixed>|WP_Error
  */
-function axismundi_op_post_to_article( WP_Post $post ) {
-	$id            = axismundi_op_post_object_uri( $post );
-	$attributed_to = axismundi_op_post_actor_uri( $post );
+function axismundi_op_post_to_article( WP_Post $post, array $claimed = array() ) {
+	$id            = isset( $claimed['id'] ) ? (string) $claimed['id'] : axismundi_op_post_object_uri( $post );
+	$attributed_to = isset( $claimed['attributedTo'] ) ? (string) $claimed['attributedTo'] : axismundi_op_post_actor_uri( $post );
 	$url           = get_permalink( $post );
-	if ( ! $url || '' === $attributed_to ) {
+	if ( ! $url || '' === $attributed_to || '' === $id ) {
 		return new WP_Error( 'ax_op_post_identity', __( 'The post has no public object or Actor URI.', 'axismundi-object-projections' ) );
 	}
 	$mention_uris = axismundi_op_post_mentions( $post );
 	$mentions     = axismundi_op_post_article_mention_tags( $post, false );
 	$hashtags     = function_exists( 'axismundi_op_post_hashtag_tags' ) ? axismundi_op_post_hashtag_tags( $post ) : array();
-	$audience     = axismundi_op_post_article_audience( $post, $mention_uris );
+	$audience     = isset( $claimed['addressing'] ) && is_array( $claimed['addressing'] )
+		? array(
+			'to' => array_values( (array) ( $claimed['addressing']['to'] ?? array() ) ),
+			'cc' => array_values( (array) ( $claimed['addressing']['cc'] ?? array() ) ),
+		)
+		: axismundi_op_post_article_audience( $post, $mention_uris );
 	if ( is_wp_error( $audience ) ) {
 		return $audience;
 	}
@@ -641,15 +660,16 @@ function axismundi_op_post_to_article( WP_Post $post ) {
 	}
 
 	/**
-	 * Filter the Core Post → Article projection before renderer validation.
+	 * Filter the Post → Article projection before renderer validation.
 	 *
 	 * The callback must not add @context or change id away from the declared URI.
 	 *
 	 * @since 0.0.2
 	 * @param array<string,mixed> $article Projection.
 	 * @param WP_Post            $post    Source post.
+	 * @param array<string,mixed> $claimed Identity and addressing claimed by a product, if any.
 	 */
-	return apply_filters( 'axismundi_op_post_article', $article, $post );
+	return apply_filters( 'axismundi_op_post_article', $article, $post, $claimed );
 }
 
 /**

@@ -1010,23 +1010,41 @@ function axismundi_forum_topic_to_article( WP_Post $topic ) {
 			$cc[] = $followers;
 		}
 	}
-	return array(
-		'id'              => $object_uri,
-		'type'            => 'Article',
-		'attributedTo'    => $author_uri,
-		'audience'        => $group->get_uri(),
-		'context'         => axismundi_forum_topic_context_uri( $topic ),
-		'url'             => array( 'type' => 'Link', 'href' => get_permalink( $topic ), 'mediaType' => 'text/html' ),
-		'name'            => get_the_title( $topic ),
-		'content'         => axismundi_op_render_post_content( $topic ),
-		'mediaType'       => 'text/html',
-		'published'       => get_post_time( DATE_W3C, true, $topic ),
-		'updated'         => axismundi_forum_topic_content_modified_time( $topic ),
-		// A Topic is submitted to its Group. The Group's Announce, not the author's Create,
-		// is the distribution event, so this never addresses the author's followers.
-		'to'              => array( $group->get_uri() ),
-		'cc'              => $cc,
-		'commentsEnabled' => ! is_array( $entry ) || empty( $entry['locked_at'] ),
+	/*
+	 * A Topic is one of this site's Articles with a Group around it, so it inherits the
+	 * Article projection whole rather than restating a subset of it. Rebuilding the body
+	 * here is how a Topic quietly lost mentions, hashtags, emoji declarations, summaries
+	 * and sensitivity while a Post kept them. Forum claims only what it owns: the object
+	 * URI its own routing serves, the author it resolved under its own membership rules,
+	 * and the addressing, because a submission is addressed to its Group rather than by
+	 * the authored visibility policy.
+	 */
+	$article = axismundi_op_post_to_article(
+		$topic,
+		array(
+			'id'           => $object_uri,
+			'attributedTo' => $author_uri,
+			// A Topic is submitted to its Group. The Group's Announce, not the author's
+			// Create, is the distribution event, so this never addresses the author's
+			// followers.
+			'addressing'   => array( 'to' => array( $group->get_uri() ), 'cc' => $cc ),
+		)
+	);
+	if ( is_wp_error( $article ) ) {
+		return $article;
+	}
+	return array_merge(
+		$article,
+		array(
+			// `audience` is the Group the post belongs to; `context` is the thread it
+			// belongs to. Distinct questions, per FEP-1b12 and FEP-7888.
+			'audience'        => $group->get_uri(),
+			'context'         => axismundi_forum_topic_context_uri( $topic ),
+			// A Topic's edit time is its content's, not the row's: membership and review
+			// state change the row without changing what anyone reads.
+			'updated'         => axismundi_forum_topic_content_modified_time( $topic ),
+			'commentsEnabled' => ! is_array( $entry ) || empty( $entry['locked_at'] ),
+		)
 	);
 }
 

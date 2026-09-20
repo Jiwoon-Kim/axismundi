@@ -497,36 +497,36 @@ function axismundi_op_post_article_generator() : ?array {
 }
 
 /**
- * Project an explicitly authored FEP-044f canQuote policy.
+ * Answer the interaction-policy lookup for the posts this plugin stores settings for.
  *
- * The declaration is advisory and never fabricates QuoteAuthorization evidence.
+ * Activities owns the vocabulary and the meaning; this plugin owns where a post keeps what
+ * its author wrote. A source it does not store for is returned untouched, so the next
+ * domain can answer.
+ *
+ * @param string $policy Policy resolved so far.
+ * @param mixed  $source Domain object.
+ * @return string
+ */
+function axismundi_op_supply_post_quote_policy( string $policy, $source ) : string {
+	return $source instanceof WP_Post && metadata_exists( 'post', (int) $source->ID, AXISMUNDI_OP_POST_QUOTE_POLICY_META )
+		? axismundi_op_post_quote_policy( $source )
+		: $policy;
+}
+add_filter( 'axismundi_act_object_quote_policy', 'axismundi_op_supply_post_quote_policy', 10, 2 );
+
+/**
+ * Project the FEP-044f canQuote policy Activities resolved for one post.
+ *
+ * The declaration is advisory and never fabricates QuoteAuthorization evidence. Without
+ * Activities there is no policy owner, so nothing is declared rather than a second reading
+ * of the same setting being invented here.
  *
  * @return array<string,mixed>|null
  */
 function axismundi_op_post_quote_interaction_policy( WP_Post $post, string $actor_uri ) : ?array {
-	$policy = axismundi_op_post_quote_policy( $post );
-	if ( '' === $policy ) {
-		return null;
-	}
-	$automatic = '';
-	if ( 'anyone' === $policy ) {
-		$automatic = 'https://www.w3.org/ns/activitystreams#Public';
-	} elseif ( 'me' === $policy ) {
-		$automatic = $actor_uri;
-	} elseif ( 'followers' === $policy && function_exists( 'axismundi_actors_get_by_uri' ) && function_exists( 'axismundi_op_actor_followers_url' ) ) {
-		$actor = axismundi_actors_get_by_uri( $actor_uri );
-		if ( $actor instanceof Axismundi_Actor && $actor->is_local() ) {
-			$automatic = axismundi_op_actor_followers_url( $actor );
-		}
-	}
-	if ( '' === $automatic ) {
-		return null;
-	}
-	return array(
-		'canQuote' => array(
-			'automaticApproval' => $automatic,
-		),
-	);
+	return function_exists( 'axismundi_act_object_interaction_policy' )
+		? axismundi_act_object_interaction_policy( $post, $actor_uri )
+		: null;
 }
 
 /** Supply Activities with one local Post's explicit Quote policy and author. */

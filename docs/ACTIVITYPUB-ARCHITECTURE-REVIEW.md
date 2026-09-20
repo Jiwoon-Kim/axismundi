@@ -368,6 +368,46 @@ Bridge의 composition은 Router·스케줄러·mailer·mention을 재우지만 �
    내부 모델을 소유하지 않는다"는 계약과 충돌한다.
 3. 우리 Reader를 만든다. 그 경우 이 앱이 **빌드 컨셉의 레퍼런스**가 된다.
 
+### 5.9c 수정 — `interactionPolicy`는 Activities가 소유한다 (결정)
+
+`interactionPolicy`는 표현 필드처럼 보이지만 말하는 내용은 **이 객체가 어떤 Activity를
+받아들이는가**다. 그것은 문서 타입의 속성이 아니라 이 패키지의 질문이므로, Article·Note·
+Question·Topic과 그 각각의 Quote에 같은 의미로 적용돼야 한다.
+
+**바꾸기 전 상태**: 같은 계약이 세 번 구현돼 있었다. 어휘(`anyone|followers|me`)가 OP와 Note에
+각각 정의돼 있었고, `canQuote.automaticApproval` 조립도 각각 있었으며, Topic에는 아무것도
+없었다. 지금은 우연히 같았지만 한쪽에 값이 추가되면 조용히 갈라진다.
+
+**층**
+
+| 관심사 | 소유자 |
+|---|---|
+| 어휘, 검증, 객체별 조회, 집행(QuoteRequest/Authorization) | **Activities** (`includes/interaction-policy.php`) |
+| 저작된 값의 저장과 조회 응답 | 객체의 도메인 (post 메타 / Note envelope / Topic) |
+| 결과의 직렬화 | OP |
+
+도메인은 `axismundi_act_object_quote_policy` 필터에 자기 소스에 대해서만 답하고, 나머지는 받은
+값을 그대로 돌려준다. **문맥을 부과하는 제품은 나중 우선순위에서 좁히기만 한다.**
+
+**Forum의 계약**: `effective = Group ceiling ∩ Topic override`. 커뮤니티가 구성원이 발행하는
+규칙을 정하고, 작성자는 그 안에서 더 좁힐 수만 있다. 느슨하게 만들 수 있으면 커뮤니티 규칙이
+권고가 되고, 그것은 §8의 "권한 확인 없이 moderation을 적용하는" 구멍과 같은 종류다.
+
+정책 비교가 가능하려면 어휘에 순서가 있어야 하므로, `axismundi_act_quote_policies()`가
+열린 것부터 닫힌 것 순으로 목록을 정의하고 `axismundi_act_narrower_quote_policy()`가 그
+순서로 좁은 쪽을 고른다. 측정:
+
+```text
+커뮤니티 (없음)  + 작성자 anyone     → anyone
+커뮤니티 followers + 작성자 anyone   → followers   (좁혀짐)
+커뮤니티 followers + 작성자 me       → me          (더 좁게는 가능)
+커뮤니티 followers + 작성자 (없음)   → followers
+```
+
+**남은 저장 작업**: 커뮤니티 ceiling은 지금 필터 seam으로만 존재한다
+(`axismundi_forum_community_quote_ceiling`). 컬럼과 관리 화면을 주는 것은 후속이며, 규칙 자체는
+그 전에도 성립한다. Topic 작성자 override도 저작 UI 없이 메타만 읽는다(§10의 17번).
+
 ### 5.10 C축 결론
 
 AP §6이 정의하는 부작용 중 **`Add`/`Remove`를 뺀 전부가 모델에 자리를 갖고 있다.** 특히
@@ -806,8 +846,8 @@ Mastodon의 sensitive 해석.
     해결(전송 플러그인 파일은 상수로 가드, 전송 단정은 없으면 침묵). 나머지 감사의 교차
     `require_once`는 같은 스택 내부(Actors·Activities)라 보류 (§8.5).
 16. 공식 Social Web 리더를 재울 것인가, 공급할 것인가, 우리 Reader로 대체할 것인가 (§5.9b).
-17. OP의 저작 설정(인용 정책·언어)을 `post` 밖의 제품 타입까지 넓힐 것인가. 넓히지 않으면
-    Topic은 `interactionPolicy` 없이 나간다 (B축 §6.4b).
+17. 인용 정책의 **저작 UI**: 커뮤니티 ceiling에 컬럼과 화면을 주고, Topic override를 에디터에
+    노출할 것인가 (C축 §5.9c). 계약과 집행은 이미 Activities에 있다.
 18. **제출 뒤 스테이징에서 Lemmy로 맵-only Topic 확인**, 결과에 따라 제출본 갱신 (§6.4b, §9.1).
 
 ## 11. 의도적 비표준

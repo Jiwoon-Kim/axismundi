@@ -117,6 +117,40 @@ try {
 		'a submission is addressed to its Group rather than by the authored visibility policy',
 		array( (string) ( $ax_tia_article['audience'] ?? '' ) ) === (array) ( $ax_tia_article['to'] ?? array() )
 	);
+	/*
+	 * Who may quote a Topic is settled by two parties: the community sets the rule its
+	 * members publish under, and the author may be stricter inside it. The effective policy
+	 * is the narrower of the two, never the looser, or the community rule would be advisory.
+	 */
+	if ( function_exists( 'axismundi_act_object_quote_policy' ) ) {
+		$ax_tia_ceiling = static fn() : string => 'followers';
+		update_post_meta( (int) $ax_tia_topic->ID, AXISMUNDI_OP_POST_QUOTE_POLICY_META, 'anyone' );
+		ax_tia_assert(
+			$ax_tia_results,
+			'an authored Topic policy applies when its community sets no rule',
+			'anyone' === axismundi_act_object_quote_policy( $ax_tia_topic )
+		);
+		add_filter( 'axismundi_forum_community_quote_ceiling', $ax_tia_ceiling );
+		ax_tia_assert(
+			$ax_tia_results,
+			'a Topic cannot be quoted more widely than its community allows',
+			'followers' === axismundi_act_object_quote_policy( $ax_tia_topic )
+		);
+		update_post_meta( (int) $ax_tia_topic->ID, AXISMUNDI_OP_POST_QUOTE_POLICY_META, 'me' );
+		ax_tia_assert(
+			$ax_tia_results,
+			'a Topic may be stricter than its community',
+			'me' === axismundi_act_object_quote_policy( $ax_tia_topic )
+		);
+		delete_post_meta( (int) $ax_tia_topic->ID, AXISMUNDI_OP_POST_QUOTE_POLICY_META );
+		ax_tia_assert(
+			$ax_tia_results,
+			'the community rule stands on its own when nobody authored one',
+			'followers' === axismundi_act_object_quote_policy( $ax_tia_topic )
+		);
+		remove_filter( 'axismundi_forum_community_quote_ceiling', $ax_tia_ceiling );
+	}
+
 } finally {
 	foreach ( $ax_tia_posts as $ax_tia_post_id ) {
 		if ( $ax_tia_post_id && ! is_wp_error( $ax_tia_post_id ) ) {

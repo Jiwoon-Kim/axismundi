@@ -1112,3 +1112,44 @@ function axismundi_forum_register_topic_page_transformer() : void {
 	);
 }
 add_action( 'axismundi_op_register_transformers', 'axismundi_forum_register_topic_page_transformer' );
+
+/**
+ * Answer the interaction-policy lookup for a Topic, under its community's ceiling.
+ *
+ * A Topic is submitted into a community, so two parties have a say in who may quote it: the
+ * community, which sets the rule its members publish under, and the author, who may be
+ * stricter inside it. The effective policy is therefore the narrower of the two. It is never
+ * the looser one -- a member who could relax the community's rule by authoring a Topic would
+ * make that rule advisory, which is the same hole as accepting moderation without checking
+ * who sent it.
+ *
+ * Storage today is the author's side only: the same meta key a post uses, when one is set.
+ * The community ceiling is read through a filter so the rule holds from the moment a
+ * community can express one; giving it a stored setting and a screen is follow-up work.
+ *
+ * @param string $policy Policy resolved so far.
+ * @param mixed  $source Domain object.
+ * @return string
+ */
+function axismundi_forum_supply_topic_quote_policy( string $policy, $source ) : string {
+	if ( ! $source instanceof WP_Post || ! axismundi_forum_topic_article_supports( $source ) || ! function_exists( 'axismundi_act_narrower_quote_policy' ) ) {
+		return $policy;
+	}
+	$entry    = axismundi_forum_get_topic_entry( $source->ID );
+	$group_id = is_array( $entry ) ? (int) $entry['group_identity_id'] : 0;
+	$override = defined( 'AXISMUNDI_OP_POST_QUOTE_POLICY_META' ) && metadata_exists( 'post', (int) $source->ID, AXISMUNDI_OP_POST_QUOTE_POLICY_META )
+		? (string) get_post_meta( (int) $source->ID, AXISMUNDI_OP_POST_QUOTE_POLICY_META, true )
+		: '';
+	/**
+	 * The quote policy a community publishes under, which its Topics may narrow but not relax.
+	 *
+	 * @since 0.10.1
+	 * @param string $ceiling  Community ceiling, '' when it sets none.
+	 * @param int    $group_id Community Group identity id.
+	 * @param WP_Post $topic   Topic.
+	 */
+	$ceiling = (string) apply_filters( 'axismundi_forum_community_quote_ceiling', '', $group_id, $source );
+
+	return axismundi_act_narrower_quote_policy( $ceiling, $override );
+}
+add_filter( 'axismundi_act_object_quote_policy', 'axismundi_forum_supply_topic_quote_policy', 20, 2 );

@@ -367,25 +367,28 @@ function axismundi_note_actor_feed_card_renderable( bool $renderable, $source, a
 }
 add_filter( 'axismundi_op_object_card_renderable', 'axismundi_note_actor_feed_card_renderable', 20, 3 );
 
-/** Project an explicitly authored Quote policy without inventing approval evidence. */
+/**
+ * Answer the interaction-policy lookup with what a Note's author wrote.
+ *
+ * Notes and Questions keep the policy on their envelope; the vocabulary and the meaning of
+ * each word belong to Activities, so only storage is answered here.
+ *
+ * @param string $policy Policy resolved so far.
+ * @param mixed  $source Domain object.
+ * @return string
+ */
+function axismundi_note_supply_quote_policy( string $policy, $source ) : string {
+	return is_array( $source ) && isset( $source['quote_policy'], $source['actor_uri'] )
+		? (string) $source['quote_policy']
+		: $policy;
+}
+add_filter( 'axismundi_act_object_quote_policy', 'axismundi_note_supply_quote_policy', 10, 2 );
+
+/** Project the Quote policy Activities resolved, without inventing approval evidence. */
 function axismundi_note_quote_interaction_policy( array $envelope ) : ?array {
-	$policy = (string) ( $envelope['quote_policy'] ?? '' );
-	if ( ! in_array( $policy, array( 'anyone', 'followers', 'me' ), true ) ) {
-		return null;
-	}
-	$actor_uri = axismundi_note_sanitize_uri( $envelope['actor_uri'] ?? '' );
-	$automatic = '';
-	if ( 'anyone' === $policy ) {
-		$automatic = 'https://www.w3.org/ns/activitystreams#Public';
-	} elseif ( 'me' === $policy ) {
-		$automatic = $actor_uri;
-	} elseif ( function_exists( 'axismundi_actors_get_by_uri' ) && function_exists( 'axismundi_op_actor_followers_url' ) ) {
-		$actor = axismundi_actors_get_by_uri( $actor_uri );
-		if ( $actor instanceof Axismundi_Actor && $actor->is_local() ) {
-			$automatic = axismundi_op_actor_followers_url( $actor );
-		}
-	}
-	return '' === $automatic ? null : array( 'canQuote' => array( 'automaticApproval' => $automatic ) );
+	return function_exists( 'axismundi_act_object_interaction_policy' )
+		? axismundi_act_object_interaction_policy( $envelope, axismundi_note_sanitize_uri( $envelope['actor_uri'] ?? '' ) )
+		: null;
 }
 
 /**

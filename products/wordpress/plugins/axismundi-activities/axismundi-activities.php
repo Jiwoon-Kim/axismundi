@@ -38,6 +38,7 @@ require_once __DIR__ . '/includes/audience.php';
 require_once __DIR__ . '/includes/object-lifecycle.php';
 require_once __DIR__ . '/includes/actor-lifecycle.php';
 require_once __DIR__ . '/includes/relations.php';
+require_once __DIR__ . '/includes/interaction-policy.php';
 require_once __DIR__ . '/includes/quote-authorizations.php';
 require_once __DIR__ . '/includes/quote-requests.php';
 require_once __DIR__ . '/includes/quote-outbound.php';

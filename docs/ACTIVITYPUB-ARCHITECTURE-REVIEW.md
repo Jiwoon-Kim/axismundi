@@ -794,7 +794,7 @@ endpoint·key는 이미 Actors가 자기 테이블에 저장**하면서 로컬 a
 | e232 | Object Links | **FINAL** | OP 인용 정규화(`quoteUri`/`quoteUrl`/`_misskey_quote`와 함께) | `quoteUri`, 레거시 `quoteUrl`, `_misskey_quote` | Misskey, Mastodon | 본문 대조 대기 |
 | 9098 | Custom emojis | DRAFT | Emoji 전체, Activities 반응 태그 | `tag` 안의 `Emoji` + `icon`, 256 KB 상한 | Mastodon(`toot:Emoji`), Misskey | 본문 대조 대기 |
 | c0e0 | Emoji reactions | DRAFT | Activities `reactions.php`, `reaction-summary.php` | `EmojiReact`, Fedibird 반응 컬렉션 IRI | Misskey(확인됨), Mastodon 계열 | 본문 대조 대기 |
-| 1311 | Media Attachments | DRAFT | Media Library `federation.php`, OP `renderer.php` | `renditions`(+ `url`/`width`/`height`) | Mastodon, Misskey | 본문 대조 대기 |
+| 1311 | Media Attachments | DRAFT | Media Library `federation.php`, OP `post-article.php`·`integrations/media-library.php` | 내장=스칼라 `url`, 독립 객체=`Link` 배열(`href`·`mediaType`·`width`·`height`·`size`) | Mastodon, Misskey | **대조 완료 §8b** |
 | b2b8 | Long-form Text | DRAFT | OP `object-view-model.php`, `object-blocks.php` | `image`의 in-stream 대표 이미지 해석, 요약/경고 3줄 규칙 | Mastodon, Lemmy | 본문 대조 대기 |
 | 1b12 | Group federation | **FINAL** | Forum `distribution.php`, `outbound-topics.php`, Activities `audience.php` | Group `Announce`, `audience`, `attributedTo` | **Lemmy(핵심)** | 본문 대조 대기 |
 | 7888 | Demystifying the context property | DRAFT | Forum `thread-context.php`, `topics.php` | `context` | Lemmy, Mastodon | 본문 대조 대기 |
@@ -936,6 +936,65 @@ FEP-1b12의 발신 쪽 규범은 전부 담고 있다. `MUST` 두 개(Announce �
 위반이다. 전송을 보는 항목은 전송 플러그인 쪽 감사에 두거나, 파일을 읽는 대신 함수 존재를
 확인하고 건너뛰어야 한다. 정리 대상으로 기록한다.
 
+## 8b. FEP-1311 본문 대조 (Media Attachments, DRAFT)
+
+두 번째로 읽은 FEP. 방금 OP에 기본 미디어 표현이 생겼고(§6.4c), Media Library는 렌디션과 승격을
+소유하므로, 두 층의 계약을 제출 전에 이 FEP 문장과 맞춘다.
+
+### 8b.1 판정
+
+| FEP-1311이 말하는 것 | 우리 | 판정 |
+|---|---|---|
+| 미디어는 `attachment` 배열에 둔다 | 양쪽 다 그렇다 | 담고 있음 |
+| 첨부는 **MUST** `type`을 갖고, 그것은 `Audio`·`Image`·`Video` | mime으로 셋을 고른다. 그 밖(PDF 등)은 `Document`이며 이 FEP의 범위 밖이다 | 담고 있음 |
+| 첨부는 **MUST** `url`을 갖는다 | 기본은 스칼라 URL, 독립 객체는 `Link` 배열 | 담고 있음 |
+| `name`으로 대체 텍스트를 **SHOULD** | 저작된 alt가 있을 때만 싣는다. 없으면 생략 | 담고 있음 |
+| `mediaType`·`size`·`digestMultibase`를 **SHOULD** | `mediaType`은 양쪽 다. `size`는 렌디션 `Link`에만. **`digestMultibase`는 없다** | 부분적 |
+| 여러 렌디션은 `Link` 배열로, 각기 다른 크기·화질 | ML이 정확히 그 형태로 낸다. `type: Link`, `href`, `mediaType`, `width`, `height`, `size` | 담고 있음 |
+| `width`·`height` | 양쪽 다 | 담고 있음 |
+| Mastodon 확장 `blurHash`·`focalPoint` | 없다 | 공백(선택) |
+
+### 8b.2 두 층의 경계가 이 FEP에서 선명해진다
+
+측정한 실제 출력이 경계를 그대로 보여 준다.
+
+```text
+글에 실린 첨부(OP 기본, ML 없음)
+  {type: Image, url: <파일>, mediaType, width, height, name?}
+
+글에 실린 첨부(ML 있음)
+  위에 id·sensitive가 붙고, url은 여전히 스칼라
+
+독립 미디어 객체(ML만)
+  id, attributedTo, name, published/updated, sensitive,
+  url: [ Link(원본·파생 3종, size 포함), Link(text/html 페이지) ],
+  usedIn, likes, shares, emojiReactions
+```
+
+즉 **렌디션은 승격된 객체의 속성이지 내장 첨부의 속성이 아니다.** FEP는 `url` 배열을 허용하지만
+요구하지 않고, 우리는 내장 자리에서 일부러 스칼라를 쓴다.
+
+### 8b.3 의도적 비표준 — 내장 첨부의 `url`은 스칼라
+
+Misskey가 `url` 배열을 읽지 못한다는 측정이 이 선택의 근거였다(메모리 기록). FEP-1311은 스칼라를
+명시적으로 허용하므로 **이것은 비표준이 아니라 허용된 두 형태 중 보수적인 쪽**이다. 다만 이유가
+상호운용이라는 사실은 남겨 둔다. 상대가 배열을 읽게 되면 내장 자리에서도 렌디션을 줄 수 있고,
+그때 이 선택을 다시 본다(§9.2 재측정 항목).
+
+### 8b.4 공백 — `digestMultibase`
+
+FEP가 `SHOULD`로 요구하는 셋 중 하나가 빠져 있다. 파일 해시는 수신 측이 **같은 파일인지 확인**하고
+중복 저장을 피하는 근거다. 우리는 이미 `size`를 계산하므로 같은 자리에서 해시도 얻을 수 있지만,
+렌디션마다 파일을 읽어 해시해야 하므로 비용이 있다. 공유 폴더가 원격 미디어 복제를 다루기
+시작하면(§10의 20번) 이 값이 **있어야 하는 쪽**이 된다. 그 설계와 함께 결정한다.
+
+### 8b.5 판정 요약
+
+FEP-1311의 `MUST` 둘(`type`, `url`)을 지키고, `SHOULD` 넷 중 둘(`name`, `mediaType`)을 지키며,
+`size`는 렌디션에만, `digestMultibase`는 없다. 렌디션 모델 자체는 FEP가 그리는 그림과 같다.
+**OP 기본과 ML 승격의 경계는 이 FEP와 충돌하지 않는다.** FEP가 요구하는 최소치는 기본이 이미
+만족하고, 그 위는 전부 선택 사항이기 때문이다.
+
 ## 9. E축 — 상호운용 프로파일 (측정 대기)
 
 Mastodon·Misskey·Lemmy·GoToSocial에서 실제로 겪은 차이를 A~D축 항목에 귀속시킨다.
@@ -967,6 +1026,7 @@ Mastodon의 sensitive 해석.
 | Misskey는 `contentMap`만 있는 Note를 읽지 못한다 | 코드 주석의 기록 | 미상 | Note 정책의 근거. 측정일이 없다는 것 자체가 약점이다 |
 | Mastodon은 `interactionPolicy` 중 `canQuote`만 읽고 쓴다 | owner 측정(로컬 체크아웃) | 2026-09-20 | `canReply` 지원이 생기면 §5.9d의 결정을 다시 본다 |
 | Misskey에는 `interactionPolicy` 관련 코드가 없다 | owner 측정(로컬 체크아웃) | 2026-09-20 | 같음 |
+| Misskey는 내장 첨부의 `url` 배열을 읽지 못한다 | 이전 측정(메모리 기록) | 미상 | 읽게 되면 내장 자리에서도 렌디션을 줄 수 있다(§8b.3) |
 
 ## 10. 열린 질문
 
@@ -1001,7 +1061,8 @@ Mastodon의 sensitive 해석.
 19. **제출 뒤 스테이징에서 Lemmy로 맵-only Topic 확인**, 결과에 따라 제출본 갱신 (§6.4b, §9.1).
 20. 공유 폴더의 원격 미디어가 들어오면 "이 사이트가 가진 것만 싣는다"는 규칙이 어떻게 되는가
     (B축 §6.4c).
-21. 코어 `page`는 투영 대상이 아니다 — 상점·홈페이지를 연합할 이유가 없다는 판단. 필요해지면
+21. `digestMultibase`를 언제 넣을 것인가 — 공유 폴더의 원격 미디어 복제 설계와 함께 (§8b.4).
+22. 코어 `page`는 투영 대상이 아니다 — 상점·홈페이지를 연합할 이유가 없다는 판단. 필요해지면
     타입(`Article`인가 `Page`인가)부터 정한다.
 
 ## 11. 의도적 비표준
@@ -1009,3 +1070,7 @@ Mastodon의 sensitive 해석.
 축별 대조에서 발견되는 대로 여기에 모은다. 이미 알려진 것:
 
 - Tombstone은 AP 경로에서 410, 사람용 HTML에서 404. 의도된 차이이며 되돌리지 않는다.
+- 내장 첨부의 `url`은 스칼라다(§8b.3). FEP-1311이 허용하는 두 형태 중 보수적인 쪽이며, 근거는
+  Misskey가 배열을 읽지 못한 측정이다. 비표준은 아니지만 이유가 상호운용이라는 사실을 남긴다.
+- `interactionPolicy` 어휘 자체가 W3C 표준이 아니다(§5.9d). `canQuote`만 쓰고 `canReply`·
+  `canLike`는 일부러 내보내지 않는다.

@@ -349,6 +349,25 @@ HTML이 돌아왔다.
 방식으로 per-source 양도를 한다. 업스트림 제안 후보: **presentation router를 actor와 object로
 나누고 각각에 필터를 두는 것.**
 
+### 5.9b 공백 — 공식 9.2의 Social Web 리더는 우리 환경에서 빈 화면이다
+
+공식 플러그인 9.2.2가 관리자 리더 앱을 추가했다. `admin.php?page=activitypub-social-web`,
+대시보드 하위, 옵션 `activitypub_reader_ui`로 켜진다. WordPress 7.0의 admin app 부팅 스택
+위에 올린 SPA다 — Script Modules, 코어 `@wordpress/boot` 모듈, `@wordpress/route`, 마운트
+`activitypub-app-root`. 지원 판정을 `version_compare`가 아니라 capability 감지로 하는 이유까지
+주석에 적혀 있다.
+
+그런데 그 앱이 읽는 것은 공식 `ap_inbox` CPT이고, **우리는 `activitypub_skip_inbox_storage`로
+그 저장을 막고 원장에 기록한다.** 측정: `ap_inbox` 글 0개. 메뉴는 살아 있고 데이터는 없다.
+
+Bridge의 composition은 Router·스케줄러·mailer·mention을 재우지만 이 표면은 목록에 없다.
+9.2에서 새로 생겼기 때문이다. 선택지는 셋이고, 지금은 **어느 것도 아닌 상태**다.
+
+1. Bridge가 그 메뉴(또는 옵션)를 재운다. 단순하고, 공식 UI를 포기한다.
+2. 원장을 공식 형식으로 공급한다. 그쪽 내부 모델에 의존하게 되어 Bridge의 "공식 플러그인의
+   내부 모델을 소유하지 않는다"는 계약과 충돌한다.
+3. 우리 Reader를 만든다. 그 경우 이 앱이 **빌드 컨셉의 레퍼런스**가 된다.
+
 ### 5.10 C축 결론
 
 AP §6이 정의하는 부작용 중 **`Add`/`Remove`를 뺀 전부가 모델에 자리를 갖고 있다.** 특히
@@ -747,6 +766,7 @@ Mastodon의 sensitive 해석.
 14. 원격 Group의 moderation을 수신할 때의 두 겹 검증(actor가 `attributedTo`에 있는가, Group의
     `Announce`로 왔는가)을 언제 구현할 것인가 (§8).
 15. 다른 플러그인의 `includes/`를 `require_once` 하는 감사 파일 정리 (§8.5).
+16. 공식 Social Web 리더를 재울 것인가, 공급할 것인가, 우리 Reader로 대체할 것인가 (§5.9b).
 
 ## 11. 의도적 비표준
 

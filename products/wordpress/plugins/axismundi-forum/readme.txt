@@ -32,6 +32,14 @@ Not in this plugin: identity, handles, Group lifecycle, or manager delegation
 (Axismundi Actors); the activity ledger and social relations (Axismundi Activities);
 object rendering (Axismundi Object Projections); Note replies (Axismundi Note).
 
+== Frequently Asked Questions ==
+
+= Does moderation from a remote community apply here? =
+
+No. A community you federate with moderates its own copy; a moderation activity arriving
+from it changes nothing on this site. Moderation of a community hosted here is done here,
+by the people listed as its moderators.
+
 == Changelog ==
 
 = 0.10.0 =

@@ -9,7 +9,15 @@ require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/repository.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/relations.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/local-social.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/audience.php';
-require_once WP_PLUGIN_DIR . '/axismundi-activitypub-bridge/includes/transport.php';
+/*
+ * Transport is another plugin's, and this audit only borrows one of its predicates. Reading
+ * the file directly would fatal on a site running the local stack alone, where the bridge is
+ * not loaded and its own functions are undefined -- and the local stack standing on its own
+ * is exactly what the rest of this suite exists to prove.
+ */
+if ( defined( 'AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION' ) ) {
+	require_once WP_PLUGIN_DIR . '/axismundi-activitypub-bridge/includes/transport.php';
+}
 require_once __DIR__ . '/../includes/repository.php';
 require_once __DIR__ . '/../includes/topics.php';
 require_once __DIR__ . '/../includes/memberships.php';
@@ -158,7 +166,8 @@ try {
 			&& ! axismundi_act_feed_item_in_group_context( (array) axismundi_act_actor_feed_item( $create ), 'out' )
 			&& axismundi_act_feed_item_in_group_context( (array) axismundi_act_actor_feed_item( $create ), 'in' )
 			&& ! in_array( $create->get_uri(), $author_outbox_ids, true )
-			&& function_exists( 'axismundi_activitypub_bridge_is_direct_group_submission' ) && axismundi_activitypub_bridge_is_direct_group_submission( $create )
+			// Asserted when transport is present; silent, not failed, when it is not.
+			&& ( ! function_exists( 'axismundi_activitypub_bridge_is_direct_group_submission' ) || axismundi_activitypub_bridge_is_direct_group_submission( $create ) )
 			&& 1 === count( axismundi_forum_pending_topic_entries( $group_id ) )
 	);
 	$cc_addressed_create = $create instanceof Axismundi_Activity && $group instanceof Axismundi_Actor

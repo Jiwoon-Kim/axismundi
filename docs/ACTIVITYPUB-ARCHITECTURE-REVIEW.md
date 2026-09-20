@@ -680,7 +680,9 @@ FEP의 모델과 일치한다.
 
 우리가 원격 커뮤니티에 참여하기 시작하면(우리 사용자가 Lemmy 커뮤니티에 글을 쓰고 그쪽
 모더레이터가 지우는 경우) 바로 필요해진다. **구현 전에는 "원격 모더레이션을 따르지 않는다"가
-현재의 정직한 상태**다.
+현재의 정직한 상태**이며, 이제 그렇게 명시돼 있다 — `docs/AXISMUNDI-FORUM-ARCHITECTURE.md`의
+Moderation Boundary와 플러그인 readme의 FAQ. 구현할 때는 두 검증을 **함께** 넣고, ban의 범위도
+`target`으로 읽는다(커뮤니티 ban과 사이트 ban은 다른 권위의 다른 주장이다).
 
 ### 판정
 
@@ -765,7 +767,9 @@ Mastodon의 sensitive 해석.
 13. 공식 플러그인의 presentation router를 actor/object로 나누는 업스트림 제안 (C축 §5.9).
 14. 원격 Group의 moderation을 수신할 때의 두 겹 검증(actor가 `attributedTo`에 있는가, Group의
     `Announce`로 왔는가)을 언제 구현할 것인가 (§8).
-15. 다른 플러그인의 `includes/`를 `require_once` 하는 감사 파일 정리 (§8.5).
+15. ~~다른 플러그인의 `includes/`를 `require_once` 하는 감사 파일 정리~~ → `audit-forum-moderation`
+    해결(전송 플러그인 파일은 상수로 가드, 전송 단정은 없으면 침묵). 나머지 감사의 교차
+    `require_once`는 같은 스택 내부(Actors·Activities)라 보류 (§8.5).
 16. 공식 Social Web 리더를 재울 것인가, 공급할 것인가, 우리 Reader로 대체할 것인가 (§5.9b).
 
 ## 11. 의도적 비표준

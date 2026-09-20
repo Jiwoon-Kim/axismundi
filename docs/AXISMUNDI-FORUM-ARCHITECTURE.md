@@ -78,6 +78,28 @@ projection from the Activities ledger without emitting federation traffic.
 produce Join relations, so enabling that requires relation and Accept/Reject support
 there first.
 
+## Moderation Boundary
+
+A local Group moderates its own community. Moderators are published through the Group's
+`attributedTo` collection, as FEP-1b12 asks, and every local moderation decision passes
+the Actors permission kernel.
+
+**Remote Group moderation is not supported.** A moderation activity that arrives from a
+remote community changes nothing here: there is no receiving path for it, and this is a
+stated boundary rather than an oversight. A site that joins a remote community therefore
+keeps showing what its own copy holds, whatever that community's moderators decide.
+
+Supporting it means implementing both checks FEP-1b12 requires, together:
+
+1. the activity's `actor` is listed in that Group's `attributedTo` collection, and
+2. the activity arrived inside the Group's own `Announce`.
+
+Neither check is optional. Applying a received ban without verifying the authority behind
+it is the failure Lemmy published a security advisory about. The same rule holds for the
+scope of a ban: a community ban and a site ban are different claims by different
+authorities, so a receiving implementation has to read `target` rather than treat every
+`Block` alike.
+
 ## Development Reset and Uninstall
 
 Forum is pre-release. Its schema is Group-keyed from the beginning, with no upgrade

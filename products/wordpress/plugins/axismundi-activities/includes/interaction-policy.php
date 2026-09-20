@@ -18,6 +18,26 @@
  * a later priority -- it may only narrow, because a context whose members could relax it
  * would not be a rule.
  *
+ * Only quoting is settled here, and the reason is not symmetry but evidence.
+ *
+ * NON-STANDARD: `interactionPolicy` is not in ActivityPub. The specification defines the
+ * `Like` activity, `inReplyTo`, and each server's right to accept or refuse what arrives,
+ * but no field by which an Object states who may interact with it. The property comes from
+ * the GoToSocial lineage; FEP-044f borrows the shape for `canQuote` alone and gives it the
+ * QuoteRequest and QuoteAuthorization procedure that makes consent checkable.
+ *
+ * `canLike` and `canReply` are deliberately absent. Their failure direction is the opposite
+ * of quoting's: a quote without a policy must not be read as consent, while a Like or a
+ * reply arriving without one is how the rest of the network has always worked, so silence
+ * there means yes. Copying this file's rule onto them would delete ordinary replies. They
+ * are also unread where it would matter -- measured 2026-09-20, Mastodon serializes and
+ * parses `canQuote` only, and Misskey has no `interactionPolicy` code at all -- so
+ * publishing them would advertise a rule nobody enforces but us.
+ *
+ * When a reply policy does arrive, it starts at the Inbox and not on the wire: a `Create`
+ * with `inReplyTo` that the policy refuses has to be judged on arrival. A declaration that
+ * only the sender can honour is not a boundary.
+ *
  * @package AxismundiActivities
  */
 

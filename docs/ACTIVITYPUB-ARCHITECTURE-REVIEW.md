@@ -408,6 +408,49 @@ Question·Topic과 그 각각의 Quote에 같은 의미로 적용돼야 한다.
 (`axismundi_forum_community_quote_ceiling`). 컬럼과 관리 화면을 주는 것은 후속이며, 규칙 자체는
 그 전에도 성립한다. Topic 작성자 override도 저작 UI 없이 메타만 읽는다(§10의 17번).
 
+### 5.9d `canReply`·`canLike`는 구현하지 않는다 (결정)
+
+`interactionPolicy`를 Activities로 올리고 나면 "그럼 답글과 Like도 같은 계약으로"가 자연스러워
+보인다. 그렇게 하지 않기로 했다. 셋의 사정이 다르기 때문이다.
+
+**첫째, wire 어휘의 출신이 다르다.** ActivityPub 본체에는 객체가 "누가 나를 Like/Reply할 수
+있는가"를 선언하는 필드가 **없다.** 표준이 정의하는 것은 `Like` Activity, `inReplyTo` 표현,
+Inbox 수신과 서버의 승인·거부 권한까지다. `interactionPolicy`와 `canLike`·`canReply`는
+GoToSocial 계열 확장 어휘이고, FEP-044f는 그 패턴을 빌려 **`canQuote`만** 정의하면서 거기에
+`QuoteRequest`·`QuoteAuthorization`이라는 동의 절차를 규범으로 붙였다.
+
+**둘째, 실패 방향이 반대다.**
+
+| | 정책이 없을 때 |
+|---|---|
+| Quote | 자동 허용으로 간주하면 **안 된다**. 동의 모델이 있는 행위다 |
+| Like / Reply | 기존 Fediverse에서는 그냥 오는 것이 기본이다. 원격 객체에 선언이 없으면 **허용으로 읽어야** 한다 |
+
+Quote의 fail-closed 규칙을 Like/Reply에 복사하면 멀쩡한 답글이 사라진다.
+
+**셋째, 상대가 읽지 않는다.** owner 측정(2026-09-20, 로컬 체크아웃):
+
+- Mastodon `main`: `interactionPolicy`를 지원하지만 직렬화도 파싱도 **`canQuote`만** 다룬다.
+- Misskey `develop`: `interactionPolicy`·`canReply`·`canLike`·GoToSocial 네임스페이스·
+  `QuoteRequest`/`QuoteAuthorization`에 대한 코드 참조가 없다. 받아도 모르는 필드로 지나간다.
+
+따라서 `canReply`를 내보내도 Mastodon·Misskey의 답글 버튼은 그대로다. 광고는 집행이 아니다.
+
+**그래서 지금의 경계**
+
+```text
+Quote          공통 interactionPolicy 계약(§5.9c)
+Forum 댓글     Group 정책(comment_posting_policy·comment_approval_policy)과 commentsEnabled
+일반 Reply     미구현. 열린 설계 질문
+Like           대상 유효성과 로컬 Actor 조건만
+```
+
+**원칙 하나가 이 결정을 지탱한다.** wire에 실린 정책은 힌트이고, 상대가 무시해도 우리 권한
+경계가 무너지면 안 된다. 그러므로 Reply 정책을 구현할 때의 **첫 작업은 광고가 아니라 수신
+집행**이다. 허용하지 않은 원격 `Create` + `inReplyTo`를 우리 Inbox에서 판정해 거부하거나
+보류하는 쪽이 먼저다. 그 계약이 없는 상태로 필드만 내보내면, 정책이 있다고 믿으면서 실제로는
+아무것도 막지 못한다.
+
 ### 5.10 C축 결론
 
 AP §6이 정의하는 부작용 중 **`Add`/`Remove`를 뺀 전부가 모델에 자리를 갖고 있다.** 특히
@@ -819,6 +862,8 @@ Mastodon의 sensitive 해석.
 | Mastodon은 `contentMap`만으로 읽는다 | owner 측정 | 2026-09-20 기록 | 렌더링 경로 변경 시 |
 | Lemmy는 우리 Article을 수신한다 | owner 측정 | 2026-09-20 기록 | Forum 기본 타입의 전제(§6.4). Lemmy가 Page 외 타입 처리를 바꾸면 다시 본다 |
 | Misskey는 `contentMap`만 있는 Note를 읽지 못한다 | 코드 주석의 기록 | 미상 | Note 정책의 근거. 측정일이 없다는 것 자체가 약점이다 |
+| Mastodon은 `interactionPolicy` 중 `canQuote`만 읽고 쓴다 | owner 측정(로컬 체크아웃) | 2026-09-20 | `canReply` 지원이 생기면 §5.9d의 결정을 다시 본다 |
+| Misskey에는 `interactionPolicy` 관련 코드가 없다 | owner 측정(로컬 체크아웃) | 2026-09-20 | 같음 |
 
 ## 10. 열린 질문
 
@@ -846,9 +891,11 @@ Mastodon의 sensitive 해석.
     해결(전송 플러그인 파일은 상수로 가드, 전송 단정은 없으면 침묵). 나머지 감사의 교차
     `require_once`는 같은 스택 내부(Actors·Activities)라 보류 (§8.5).
 16. 공식 Social Web 리더를 재울 것인가, 공급할 것인가, 우리 Reader로 대체할 것인가 (§5.9b).
-17. 인용 정책의 **저작 UI**: 커뮤니티 ceiling에 컬럼과 화면을 주고, Topic override를 에디터에
+17. 일반 Article·Note·Question의 Reply 정책을 언제 시작할 것인가. 시작한다면 **수신 집행이
+    먼저**이고 광고는 그다음이다 (C축 §5.9d).
+18. 인용 정책의 **저작 UI**: 커뮤니티 ceiling에 컬럼과 화면을 주고, Topic override를 에디터에
     노출할 것인가 (C축 §5.9c). 계약과 집행은 이미 Activities에 있다.
-18. **제출 뒤 스테이징에서 Lemmy로 맵-only Topic 확인**, 결과에 따라 제출본 갱신 (§6.4b, §9.1).
+19. **제출 뒤 스테이징에서 Lemmy로 맵-only Topic 확인**, 결과에 따라 제출본 갱신 (§6.4b, §9.1).
 
 ## 11. 의도적 비표준
 

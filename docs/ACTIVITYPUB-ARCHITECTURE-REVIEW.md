@@ -595,6 +595,52 @@ Forum  결과에 audience · context · updated · commentsEnabled 만 덧씌움
 않고 **원인을 단정한다**(정책이 비어 있음 + 멤버 없음). 저작 표면을 Topic까지 넓힐지는 §10의
 열린 질문이다.
 
+### 6.4c 수정 — 본문 미디어는 `attachment`에도 실린다 (결정)
+
+FEP-b2b8은 이렇게 적는다.
+
+> Any embedded media like images, video or audio in the content property **should also be
+> listed in the attachment property** so that consumers can pre-fetch the media.
+
+우리는 이 FEP를 이미 인용하고 있고 Article이 long-form의 주 타입인데, `attachment` 배열을
+만드는 코드가 **Media Library 통합에만** 있었다. 그래서 ML 없이 Actors + OP만 있는 사이트는
+이미지가 붙은 글을 **텍스트만** 연합했다. 본문 HTML의 `<img>`는 대부분의 수신 구현이 걷어낸다.
+
+**무엇을 근거로 목록을 만드는가**가 이 결정의 핵심이다. 코어에는 "이 글의 첨부 목록"이라는
+저작된 사실이 없다. 있는 것은 셋이다.
+
+| 근거 | 성격 |
+|---|---|
+| 대표 이미지(`_thumbnail_id`) | 코어가 에디터에서 지원하는 저작된 사실 |
+| 블록 속성의 첨부 id(`core/image`·`video`·`audio`·`gallery`·`cover`·`media-text`·`file`) | 저작된 사실. 작성자가 고른 미디어다 |
+| 본문 HTML `<img src>` | **추정.** 읽지 않는다 |
+
+공식 ActivityPub 플러그인도 같은 순서를 쓴다(대표 이미지 → enclosure → 블록 → 클래식이면 HTML
+폴백). 우리는 **HTML 폴백을 넣지 않는다.**
+
+**규칙: 이 사이트가 가진 미디어만 싣는다.** 외부 핫링크는 첨부 id가 없어 `mediaType`도 크기도
+참으로 말할 수 없고, ML 주석에 기록된 측정대로 그런 서술자는 **Mastodon이 깨진 미디어로 보고
+Misskey는 무시**한다. 못 담는 것은 담지 않는 쪽이 정직하다. 그림은 본문에 그대로 남는다.
+공유 폴더가 들어오면 원격 미디어가 이 규칙의 예외가 될지 다시 본다(§10의 20번).
+
+**상한은 두지 않는다.** 한때 8로 잘랐다가 뺐다. 목록을 자르면 문서가 자기 내용을 실제보다
+적게 말하게 되고, 애초에 이 목록을 싣는 이유가 "본문에 있는 것을 받아 갈 수 있게"이기 때문이다.
+몇 개를 보여 주고 몇 개를 미리 받을지는 **수신 서버의 정책**이며 Mastodon은 이미 스스로 정한다.
+목록을 줄이고 싶은 제품은 `axismundi_op_post_media_ids` 필터로 줄인다.
+
+**서술자는 익명이다.** 내장 첨부는 그것을 실은 문서의 일부이지 독립 식별 객체가 아니다.
+attachment를 자기 `id`·렌디션·권리를 가진 객체로 **승격**하는 것은 Media Library의 헌장이고,
+ML이 설치되면 기록된 사용 관계로 이 목록을 **교체**한다. 기록된 사실이 블록 읽기보다 낫다.
+
+측정(ML 비활성, Actors + OP만):
+
+```text
+대표 이미지 + core/image 블록 + 본문 핫링크 1개
+  → attachment 2개(대표 이미지가 먼저), 핫링크 없음
+  → 각 서술자: type/url/mediaType/width/height, id 없음
+  → image: 대표 이미지
+```
+
 ### 6.5 제품 경계는 연합 프로파일을 따라 그어졌다
 
 타입 선택이 제품 경계와 같은 결정이다. owner 확인(2026-09-20):
@@ -896,6 +942,10 @@ Mastodon의 sensitive 해석.
 18. 인용 정책의 **저작 UI**: 커뮤니티 ceiling에 컬럼과 화면을 주고, Topic override를 에디터에
     노출할 것인가 (C축 §5.9c). 계약과 집행은 이미 Activities에 있다.
 19. **제출 뒤 스테이징에서 Lemmy로 맵-only Topic 확인**, 결과에 따라 제출본 갱신 (§6.4b, §9.1).
+20. 공유 폴더의 원격 미디어가 들어오면 "이 사이트가 가진 것만 싣는다"는 규칙이 어떻게 되는가
+    (B축 §6.4c).
+21. 코어 `page`는 투영 대상이 아니다 — 상점·홈페이지를 연합할 이유가 없다는 판단. 필요해지면
+    타입(`Article`인가 `Page`인가)부터 정한다.
 
 ## 11. 의도적 비표준
 

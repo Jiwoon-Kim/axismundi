@@ -549,6 +549,147 @@ function axismundi_op_resolve_quote_request_target( $target, string $object_uri 
 add_filter( 'axismundi_act_resolve_quote_request_target', 'axismundi_op_resolve_quote_request_target', 10, 2 );
 
 /**
+ * The attachment ids a post's own blocks say it uses, featured image first.
+ *
+ * FEP-b2b8 asks that media embedded in `content` also appear in `attachment`, so a reader
+ * can fetch it without parsing HTML. The list is therefore taken from what the author
+ * actually placed: the featured image, and the attachment ids the editor stores on its own
+ * media blocks. Nothing is read out of the rendered markup.
+ *
+ * Only media this site holds is listed. An image hotlinked from somewhere else has no
+ * attachment id, and so no mediaType and no dimensions that can be stated truthfully -- and
+ * a descriptor missing those reads as broken media on Mastodon and is ignored by Misskey.
+ * Saying less is the honest option; the body still carries the picture.
+ *
+ * @param WP_Post $post Post.
+ * @return int[] Attachment ids, in reading order, without duplicates.
+ */
+function axismundi_op_post_media_ids( WP_Post $post ) : array {
+	$ids = array();
+	if ( has_post_thumbnail( $post ) ) {
+		$ids[] = (int) get_post_thumbnail_id( $post );
+	}
+	foreach ( axismundi_op_collect_block_media_ids( parse_blocks( (string) $post->post_content ) ) as $id ) {
+		$ids[] = $id;
+	}
+	/**
+	 * Filter the attachment ids a post publishes as media.
+	 *
+	 * A product that records what a post uses, rather than inferring it, replaces this list.
+	 *
+	 * @since 0.1.1
+	 * @param int[]   $ids  Attachment ids in reading order.
+	 * @param WP_Post $post Post.
+	 */
+	$ids = (array) apply_filters( 'axismundi_op_post_media_ids', $ids, $post );
+
+	/*
+	 * Deliberately uncapped. A limit here would publish a document that understates what the
+	 * article contains, and the reason for listing embedded media at all is that a reader can
+	 * fetch what is in the body. How many of them to show, and how many to pre-fetch, is the
+	 * receiving server's own policy -- Mastodon already decides that for itself. A product
+	 * that wants a shorter list trims it through the filter above.
+	 */
+	return array_values( array_unique( array_filter( array_map( 'absint', $ids ) ) ) );
+}
+
+/**
+ * Walk parsed blocks for the attachment ids the editor stored on media blocks.
+ *
+ * Reading the block attribute is reading what the author chose. Inner blocks are walked
+ * because a gallery, a column or a group holds its images one level down.
+ *
+ * @param array<int,array<string,mixed>> $blocks Parsed blocks.
+ * @return int[]
+ */
+function axismundi_op_collect_block_media_ids( array $blocks ) : array {
+	$ids   = array();
+	$named = array( 'core/image', 'core/video', 'core/audio', 'core/cover', 'core/media-text', 'core/file' );
+	foreach ( $blocks as $block ) {
+		$name = (string) ( $block['blockName'] ?? '' );
+		$attrs = (array) ( $block['attrs'] ?? array() );
+		if ( in_array( $name, $named, true ) && ! empty( $attrs['id'] ) ) {
+			$ids[] = (int) $attrs['id'];
+		}
+		if ( 'core/media-text' === $name && ! empty( $attrs['mediaId'] ) ) {
+			$ids[] = (int) $attrs['mediaId'];
+		}
+		if ( 'core/gallery' === $name ) {
+			foreach ( (array) ( $attrs['ids'] ?? array() ) as $gallery_id ) {
+				$ids[] = (int) $gallery_id;
+			}
+		}
+		if ( ! empty( $block['innerBlocks'] ) ) {
+			foreach ( axismundi_op_collect_block_media_ids( (array) $block['innerBlocks'] ) as $inner_id ) {
+				$ids[] = $inner_id;
+			}
+		}
+	}
+	return $ids;
+}
+
+/**
+ * Describe one local attachment as an ActivityStreams media object.
+ *
+ * Anonymous on purpose: an embedded attachment is part of the document that carries it, not
+ * an independently identified object. Promoting an attachment to an object with its own id,
+ * renditions and rights is Axismundi Media Library's work, and it replaces this list when
+ * it is installed.
+ *
+ * @param int $attachment_id Attachment id.
+ * @return array<string,mixed>|null
+ */
+function axismundi_op_attachment_descriptor( int $attachment_id ) : ?array {
+	$attachment = get_post( $attachment_id );
+	if ( ! $attachment instanceof WP_Post || 'attachment' !== $attachment->post_type ) {
+		return null;
+	}
+	$url = wp_get_attachment_url( $attachment_id );
+	$mime = (string) get_post_mime_type( $attachment_id );
+	if ( ! $url || '' === $mime ) {
+		return null;
+	}
+	$type = 'Document';
+	if ( str_starts_with( $mime, 'image/' ) ) {
+		$type = 'Image';
+	} elseif ( str_starts_with( $mime, 'video/' ) ) {
+		$type = 'Video';
+	} elseif ( str_starts_with( $mime, 'audio/' ) ) {
+		$type = 'Audio';
+	}
+	$descriptor = array( 'type' => $type, 'url' => (string) $url, 'mediaType' => $mime );
+	$meta       = wp_get_attachment_metadata( $attachment_id );
+	foreach ( array( 'width', 'height' ) as $dimension ) {
+		if ( is_array( $meta ) && (int) ( $meta[ $dimension ] ?? 0 ) > 0 ) {
+			$descriptor[ $dimension ] = (int) $meta[ $dimension ];
+		}
+	}
+	$alt = trim( (string) get_post_meta( $attachment_id, '_wp_attachment_image_alt', true ) );
+	if ( '' !== $alt ) {
+		$descriptor['name'] = sanitize_text_field( wp_strip_all_tags( $alt ) );
+	}
+	return $descriptor;
+}
+
+/**
+ * The media members of one post: `attachment`, and `image` for its featured image.
+ *
+ * @param WP_Post $post Post.
+ * @return array{attachment:array<int,array<string,mixed>>,image:array<string,mixed>|null}
+ */
+function axismundi_op_post_media_members( WP_Post $post ) : array {
+	$attachments = array();
+	foreach ( axismundi_op_post_media_ids( $post ) as $attachment_id ) {
+		$descriptor = axismundi_op_attachment_descriptor( $attachment_id );
+		if ( null !== $descriptor ) {
+			$attachments[] = $descriptor;
+		}
+	}
+	$featured = has_post_thumbnail( $post ) ? axismundi_op_attachment_descriptor( (int) get_post_thumbnail_id( $post ) ) : null;
+	return array( 'attachment' => $attachments, 'image' => $featured );
+}
+
+/**
  * Claim one post's Article projection on behalf of a product that owns its context.
  *
  * A Forum Topic is a post with a Group around it, not a different kind of document, so it
@@ -657,6 +798,19 @@ function axismundi_op_post_to_article( WP_Post $post, array $claimed = array() )
 	$interaction_policy = axismundi_op_post_quote_interaction_policy( $post, $attributed_to );
 	if ( null !== $interaction_policy ) {
 		$article['interactionPolicy'] = $interaction_policy;
+	}
+	/*
+	 * FEP-b2b8: media embedded in the content is listed here as well, so a reader can fetch
+	 * it without parsing the markup. Axismundi Media Library replaces both members from its
+	 * recorded usage relations when it is installed, because a recorded fact beats a reading
+	 * of the post's own blocks.
+	 */
+	$media = axismundi_op_post_media_members( $post );
+	if ( ! empty( $media['attachment'] ) ) {
+		$article['attachment'] = $media['attachment'];
+	}
+	if ( is_array( $media['image'] ) ) {
+		$article['image'] = $media['image'];
 	}
 
 	/**

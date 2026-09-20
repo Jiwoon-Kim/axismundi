@@ -97,13 +97,16 @@ handle / preferredUsername   ← 사람용 이름, 식별자가 아님
 기반은 잘 잡혀 있다. WP 계정 / DB id / uuid / canonical URI / 사람용 handle의 다섯 층이
 실제로 분리돼 있고, 키 없는 actor를 외부에 캐시시키지 않으려는 fail-closed 경계가 있다.
 
+A축의 남은 항목은 이제 Migration 하나다.
+
 **명시적 후속 계약은 하나다.** uuid가 살아 있어도 **도메인 이전 뒤 기존 actor URI를 이어 주는 일은
 자동으로 풀리지 않는다.** `Move` 발신, 이전 URI의 redirect/보존 정책, 상호 검증은 연합 단계의
 별도 설계 항목으로 남긴다. 이는 숨은 공백이 아니라 문서에도 future로 적힌 것이다.
 
-### 4.3b 수정 — 로컬 Actor의 endpoint와 키를 Actors가 소유한다
+### 4.3b 수정 — MUST의 **광고 판단**을 Actors로 옮긴다
 
-A축이 남긴 유일한 MUST 공백이었다. `inbox`·`sharedInbox`·`publicKey`를 Bridge가 OP의 필터로
+공백을 메운 것이 아니라 소유자를 옮긴 것이다. `inbox`가 존재하는지는 여전히 전송 capability에
+달려 있고, 바뀐 것은 **무엇을 광고할지 누가 정하는가**다. `inbox`·`sharedInbox`·`publicKey`를 Bridge가 OP의 필터로
 주입하고 있었고, 그래서 **Bridge가 없으면 actor 문서가 AP 규격에 미달**했다. 같은 개념을 방향에
 따라 다르게 소유하던 것도 문제였다. 원격 Actor의 endpoint와 키는 이미 Actors의
 `wp_ax_actor_endpoints`·`wp_ax_actor_keys`에 저장되는데, 로컬 Actor만 전송 플러그인 소유였다.
@@ -138,8 +141,22 @@ Bridge 없음 federatable=no → 전송 멤버 0개, 읽기 컬렉션만 남음,
 키만 없음   전송 멤버 0개, WebFinger self 없음 (fail-closed 유지)
 ```
 
-Bridge 없이 `inbox`가 없는 것은 **여전히 규격 미달이지만 이제 의도된 상태**다. 받을 수 없는
-주소를 광고하지 않는 쪽이 옳고, 그 판단을 정체성 층이 내린다.
+그래서 상태는 **세 단계**이며, 로컬 완결성과 "외부 AP actor 규격 완결"은 의도적으로 다른
+상태다.
+
+```text
+Actors + Activities + OP     로컬 사회 모델이 완결된다
+Actors + OP                  공개 Object·Actor 표현과 읽기 컬렉션
++ Bridge + 공식 AP의 키·전송  inbox·publicKey·WebFinger self를 광고하는 완전한 federated actor
+```
+
+Bridge 없이 `inbox`를 내지 않는 것은 미완성이 아니라 판단이다. **받을 수 없는 endpoint를 actor
+문서에 광고하는 쪽이 더 위험하다.**
+
+**로컬 키는 복제 저장하지 않는다 (결정).** `wp_ax_actor_keys`는 원격 Actor 관측용으로 남긴다.
+개인키와 회전을 실제로 소유하는 것은 공식 플러그인이고, Actors가 공개키 사본을 들고 있으면
+회전 시점과 광고 중인 키가 갈라진다. Actors는 **번들의 유효성과 공개 여부**를 소유하고 Bridge가
+**현행 값**을 공급하는 지금 구조가 가장 덜 위험하다.
 
 ### 4.4 NodeInfo와 인스턴스 정보의 소유 (결정)
 

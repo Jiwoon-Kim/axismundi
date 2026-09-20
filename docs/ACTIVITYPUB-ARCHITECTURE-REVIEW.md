@@ -790,8 +790,8 @@ endpoint·key는 이미 Actors가 자기 테이블에 저장**하면서 로컬 a
 
 | FEP | 제목 (인덱스 원문) | 상태 | 우리 인용 위치 | 실제 wire 필드 | 구현체 확인 대상 | 판정 |
 |---|---|---|---|---|---|---|
-| 044f | Consent-respecting quote posts | DRAFT | Activities `quote-authorizations.php`, `quote-outbound.php`, `quote-requests.php` | `QuoteRequest`, `quoteAuthorization`, `interactionPolicy.canQuote` | Mastodon(인용 승인), Misskey | 본문 대조 대기 |
-| e232 | Object Links | **FINAL** | OP 인용 정규화(`quoteUri`/`quoteUrl`/`_misskey_quote`와 함께) | `quoteUri`, 레거시 `quoteUrl`, `_misskey_quote` | Misskey, Mastodon | 본문 대조 대기 |
+| 044f | Consent-respecting quote posts | DRAFT | Activities `quote-authorizations.php`, `quote-outbound.php`, `quote-requests.php` | `QuoteRequest`(actor·object·instrument), `QuoteAuthorization`(4멤버), `quoteAuthorization`, `interactionPolicy.canQuote` | Mastodon(인용 승인), Misskey | **대조 완료 §8d.1** |
+| e232 | Object Links | **FINAL** | OP 인용 정규화 | 수신만: `tag`의 `Link`+Misskey `rel`. 발신은 `quote`·`quoteUrl`·`_misskey_quote` 스칼라 | Misskey, Mastodon | **대조 완료 §8d.2** |
 | 9098 | Custom emojis | DRAFT | Emoji 전체, Activities 반응 태그 | `tag` 안의 `Emoji` + `icon`, 256 KB 상한 | Mastodon(`toot:Emoji`), Misskey | 본문 대조 대기 |
 | c0e0 | Emoji reactions | DRAFT | Activities `reactions.php`, `reaction-summary.php` | `EmojiReact`, Fedibird 반응 컬렉션 IRI | Misskey(확인됨), Mastodon 계열 | 본문 대조 대기 |
 | 1311 | Media Attachments | DRAFT | Media Library `federation.php`, OP `post-article.php`·`integrations/media-library.php` | 내장=스칼라 `url`, 독립 객체=`Link` 배열(`href`·`mediaType`·`width`·`height`·`size`) | Mastodon, Misskey | **대조 완료 §8b** |
@@ -995,6 +995,62 @@ FEP-1311의 `MUST` 둘(`type`, `url`)을 지키고, `SHOULD` 넷 중 둘(`name`,
 **OP 기본과 ML 승격의 경계는 이 FEP와 충돌하지 않는다.** FEP가 요구하는 최소치는 기본이 이미
 만족하고, 그 위는 전부 선택 사항이기 때문이다.
 
+## 8d. FEP-044f · FEP-e232 본문 대조 (인용)
+
+§5.9c에서 인용 정책을 Activities로 옮겼으므로, 그 계약이 FEP 문장과 맞는지 본다. 044f는 DRAFT,
+e232는 **FINAL**이다.
+
+### 8d.1 FEP-044f (Consent-respecting quote posts)
+
+| FEP가 말하는 것 | 우리 | 판정 |
+|---|---|---|
+| `QuoteRequest`는 `actor`(인용하는 사람) · `object`(인용당하는 글) · `instrument`(인용 글) | `quote-requests.php:104`, `quote-outbound.php:58` 이 세 멤버로 조립하고, 원장도 `instrument_uri`를 따로 인덱싱한다 | 담고 있음 |
+| `QuoteAuthorization`은 `type` · `attributedTo`(인용당한 글의 작성자) · `interactionTarget`(인용당한 객체) · `interactingObject`(인용 글) | OP `quote-authorizations.php:32-35`가 정확히 네 멤버를 낸다 | 담고 있음 |
+| 수락은 **MUST** `Accept`이고 `result`에 `QuoteAuthorization`을 담는다 | `quote-requests.php:184`가 `result`에 authorization URI를 넣는다 | 담고 있음 |
+| 거절은 `Reject` | 같은 경로에서 `Reject` | 담고 있음 |
+| `automaticApproval`은 묻지 않고 승인되는 대상, `manualApproval`은 검토 대상, 나머지는 승인되지 않음 | `automaticApproval`만 낸다(§5.9c). `manualApproval`은 없다 | 부분적 |
+| 인용 글은 `quoteAuthorization`으로 승인을 가리킨다 | 발신·수신 양쪽에서 그 property를 쓴다 | 담고 있음 |
+| 승인은 도장을 `Delete`해서 철회할 수 있고, 수신자는 그 뒤 미승인으로 본다 | `axismundi_act_ensure_quote_authorization_delete()`와 OP의 `observe_quote_authorization_delete`가 검증된 Delete를 이미 검증된 인용 매핑에 적용한다 | 담고 있음 |
+| 수신자는 **MUST** 미승인으로 취급한다. 예외는 (a) 인용 글과 원 글의 작성자가 같거나 (b) `quoteAuthorization`을 역참조해 유효한 `QuoteAuthorization`으로 확인한 경우 | `axismundi_op_verify_quote_consent()`의 주석이 이 규범을 그대로 구현한다: **"객체가 `quoteAuthorization`을 선언한 것만으로는 이 API를 호출하지 않는다."** 승인은 검증 뒤에만 기록된다 | 담고 있음 |
+| 같은 작성자 예외 | **수신 쪽에 없다**(확인함). 발신은 문제없다 — 자기 글 인용도 `QuoteRequest`를 만들고 `me` 정책이 자동 승인해 authorization이 실제로 생긴다. 수신은 `quoteAuthorization`이 없으면 `legacy_unverified`로 남아, 남이 **자기 글을 자기가 인용한** 경우가 미승인으로 보인다 | 공백 |
+
+**판정**: 발신·철회·검증의 규범을 지킨다. 수신에 공백 하나가 있다.
+
+**같은 작성자 예외(확인함).** 수신 인용의 상태는 `ambiguous` / `legacy_unverified` /
+검증된 `approved`·`rejected`·`revoked` 중 하나이고, `axismundi_op_verify_quote_consent()`는
+**검증된 authorization이 있을 때만** 호출된다. 규범이 허용하는 다른 하나, 즉 "인용 글과 원 글의
+작성자가 같다"는 경로가 없다. 그래서 Mastodon 사용자가 **자기 글을 자기가 인용**하면 우리 쪽에서
+미승인으로 보인다. 고칠 자리는 `axismundi_op_index_quote_relations()`이며, 거기에는 이미
+인용 글의 `attributed_to_uri`가 있고 대상 글의 작성자는 원격 객체 캐시에서 읽을 수 있다.
+**대상 작성자를 확인할 수 없을 때는 승인으로 올리지 않는다** — 추측으로 승인 상태를 만들면
+이 검증 전체가 무의미해진다.
+
+`manualApproval`도 없다. 정책 어휘가 `anyone`·`followers`·`me` 셋이라 "검토 후 승인"이라는
+상태 자체가 표현되지 않는다.
+
+### 8d.2 FEP-e232 (Object Links, FINAL)
+
+| FEP가 말하는 것 | 우리 | 판정 |
+|---|---|---|
+| 객체 링크는 `tag` 안의 `Link`, `type`은 **MUST** `Link` | 수신은 `tag`의 `Link`를 읽는다(`object-relations.php:104`) | 부분적 — **발신에 없다** |
+| `mediaType`은 **MUST** `application/ld+json; profile="…activitystreams"` | 수신 시 요구하지 않고, 발신하지 않는다 | 공백 |
+| `href`는 **MUST** 대상 URI | 수신 시 읽는다 | 담고 있음(수신) |
+| `name`은 본문의 microsyntax와 맞추는 것이 SHOULD, `rel`은 용도 표시 | Misskey의 `rel` 값(`https://misskey-hub.net/ns/#_misskey_quote`)을 인식한다 | 부분적 |
+
+**우리가 실제로 내보내는 인용 표기**는 `quote`, `_misskey_quote`, `quoteUrl` 세 스칼라와
+(승인이 있으면) `quoteAuthorization`이다(`note/includes/quote.php:205`). e232의 `tag` `Link`는
+**읽기만 하고 쓰지는 않는다.**
+
+FEP-e232는 FINAL이고 Mastodon·Misskey 계열이 실제로 읽는 형태이기도 하므로, 발신에 `tag` `Link`를
+더하는 것은 값이 있다. 다만 지금 세 스칼라를 읽는 피어들이 있으므로 **교체가 아니라 추가**여야
+한다. 비용은 작고 위험은 "같은 사실을 네 군데로 말한다"는 중복뿐이다.
+
+### 8d.3 후속 (§10)
+
+1. 수신 인용의 같은 작성자 예외를 구현한다. 대상 작성자를 알 수 없으면 승인으로 올리지 않는다.
+2. `manualApproval`을 표현할 것인가 — 지금 어휘에는 "검토 후 승인" 상태가 없다.
+3. 발신 인용에 FEP-e232 `tag` `Link`를 **추가**할 것인가.
+
 ## 8c. OP 제출 준비 — 공개 API 경계 확정
 
 제출하면 공개 함수 이름이 계약이 된다. 그래서 readme보다 **경계를 먼저** 정했다. 판정은 이
@@ -1107,7 +1163,11 @@ Mastodon의 sensitive 해석.
 20. 공유 폴더의 원격 미디어가 들어오면 "이 사이트가 가진 것만 싣는다"는 규칙이 어떻게 되는가
     (B축 §6.4c).
 21. `digestMultibase`를 언제 넣을 것인가 — 공유 폴더의 원격 미디어 복제 설계와 함께 (§8b.4).
-22. 코어 `page`는 투영 대상이 아니다 — 상점·홈페이지를 연합할 이유가 없다는 판단. 필요해지면
+22. 수신 인용의 **같은 작성자 예외** 구현 — 지금은 남이 자기 글을 인용해도 미승인으로 보인다
+    (§8d.1).
+23. `manualApproval`을 어휘에 넣을 것인가 (§8d.1).
+24. 발신 인용에 FEP-e232 `tag` `Link`를 추가할 것인가 — 교체가 아니라 추가 (§8d.2).
+25. 코어 `page`는 투영 대상이 아니다 — 상점·홈페이지를 연합할 이유가 없다는 판단. 필요해지면
     타입(`Article`인가 `Page`인가)부터 정한다.
 
 ## 11. 의도적 비표준

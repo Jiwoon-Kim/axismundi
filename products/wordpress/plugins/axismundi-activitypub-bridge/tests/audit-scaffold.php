@@ -46,6 +46,15 @@ add_action( 'axismundi_activitypub_bridge_ready', static function () : void { $G
 axismundi_activitypub_bridge_boot();
 ax_bridge_assert( $ax_bridge_results, 'the ready event is observable without persistence or network behavior', true === $GLOBALS['ax_bridge_ready_seen'] );
 
+/*
+ * Representation and transport are separate claims. Losing the ledger must not hand the
+ * public Actor and Object surfaces back to the official plugin, whose Actors are other
+ * identities at other URIs; losing it must still stop Inbox consumption and delivery.
+ */
+ax_bridge_assert( $ax_bridge_results, 'the representation claim needs Actors and Object Projections, not the ledger', axismundi_activitypub_bridge_representation_ready() );
+ax_bridge_assert( $ax_bridge_results, 'the transport claim is the representation claim plus the ledger', axismundi_activitypub_bridge_ready() === ( axismundi_activitypub_bridge_representation_ready() && function_exists( 'axismundi_act_record_activity' ) ) );
+ax_bridge_assert( $ax_bridge_results, 'the NodeInfo document declares ActivityPub once transport is available', in_array( 'activitypub', (array) apply_filters( 'axismundi_actors_nodeinfo_protocols', array() ), true ) );
+
 $ax_bridge_failures = count( array_filter( $ax_bridge_results, static fn( bool $result ) : bool => ! $result ) );
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
 printf( "\n== %d checks, %d failed ==\n", count( $ax_bridge_results ), $ax_bridge_failures );

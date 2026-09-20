@@ -68,14 +68,33 @@ function axismundi_activitypub_bridge_deactivate() : void {
 }
 register_deactivation_hook( __FILE__, 'axismundi_activitypub_bridge_deactivate' );
 
-/** Whether every required runtime surface is available. */
-function axismundi_activitypub_bridge_ready() : bool {
+/**
+ * Whether Axismundi owns the public representation of Actors and Objects here.
+ *
+ * Representation and transport are different claims and they are not ready at the same
+ * time. This one needs the identity registry and the projection layer, because those are
+ * what answer a reader: an Actor document, an Object, the collections they name. It is
+ * deliberately independent of the Activity ledger — a site that records no Activities
+ * still publishes Actors and Objects, and must not hand those surfaces back to the
+ * official plugin, whose Actors are different identities with different URIs.
+ */
+function axismundi_activitypub_bridge_representation_ready() : bool {
 	return defined( 'ACTIVITYPUB_PLUGIN_VERSION' )
 		&& defined( 'AXISMUNDI_ACTORS_VERSION' )
 		&& defined( 'AXISMUNDI_OP_VERSION' )
-		&& defined( 'AXISMUNDI_ACTIVITIES_VERSION' )
 		&& function_exists( 'axismundi_actors_get_by_uri' )
-		&& function_exists( 'axismundi_op_transform_object' )
+		&& function_exists( 'axismundi_op_transform_object' );
+}
+
+/**
+ * Whether every runtime surface this bridge needs to move traffic is available.
+ *
+ * Transport additionally needs the ledger: an Inbox Activity is recorded before anything
+ * is derived from it, and an outbound delivery is queued from a committed Activity.
+ */
+function axismundi_activitypub_bridge_ready() : bool {
+	return axismundi_activitypub_bridge_representation_ready()
+		&& defined( 'AXISMUNDI_ACTIVITIES_VERSION' )
 		&& function_exists( 'axismundi_act_record_activity' );
 }
 
@@ -89,7 +108,7 @@ add_filter( 'axismundi_op_post_lifecycle_owner', 'axismundi_activitypub_bridge_l
 
 /** Let Object Projections own canonical-URL content negotiation. */
 function axismundi_activitypub_bridge_projection_router( bool $enabled ) : bool {
-	return axismundi_activitypub_bridge_ready() ? true : $enabled;
+	return axismundi_activitypub_bridge_representation_ready() ? true : $enabled;
 }
 add_filter( 'axismundi_op_standalone_router_enabled', 'axismundi_activitypub_bridge_projection_router', 100 );
 

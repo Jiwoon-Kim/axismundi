@@ -237,3 +237,27 @@ function axismundi_activitypub_bridge_queue_outbound( Axismundi_Activity $activi
 	axismundi_activitypub_bridge_enqueue_delivery( $payload, axismundi_activitypub_bridge_sender( $actor ), $inboxes );
 }
 add_action( 'axismundi_act_activity_recorded', 'axismundi_activitypub_bridge_queue_outbound' );
+
+/**
+ * Declare ActivityPub in this site's NodeInfo document once it can actually speak it.
+ *
+ * The document belongs to Axismundi Actors, which knows who lives here and how much they
+ * post. Whether the host federates is not something the identity registry can know: it is
+ * a transport fact, so the plugin that moves traffic states it. An empty `protocols` list
+ * reads as "this host does not federate", which is the correct answer while this bridge is
+ * unavailable and the wrong one once it is.
+ *
+ * Gated on the transport claim, not the representation claim, because publishing readable
+ * documents is not the same as being able to send and receive.
+ *
+ * @param string[] $protocols Declared protocols.
+ * @return string[]
+ */
+function axismundi_activitypub_bridge_nodeinfo_protocols( array $protocols ) : array {
+	if ( ! axismundi_activitypub_bridge_ready() || in_array( 'activitypub', $protocols, true ) ) {
+		return $protocols;
+	}
+	$protocols[] = 'activitypub';
+	return $protocols;
+}
+add_filter( 'axismundi_actors_nodeinfo_protocols', 'axismundi_activitypub_bridge_nodeinfo_protocols' );

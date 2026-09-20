@@ -67,7 +67,7 @@ add_action( 'activitypub_register_handlers', 'axismundi_activitypub_bridge_unreg
 
 /** Unhook official publication schedulers while Axismundi owns local lifecycle state. */
 function axismundi_activitypub_bridge_unregister_domain_schedulers() : void {
-	if ( ! axismundi_activitypub_bridge_ready() ) {
+	if ( ! axismundi_activitypub_bridge_representation_ready() ) {
 		return;
 	}
 
@@ -137,7 +137,7 @@ add_action( 'init', 'axismundi_activitypub_bridge_unregister_mailer_handlers', 1
  * localization path; ordinary WordPress content is covered here as well.
  */
 function axismundi_activitypub_bridge_unregister_mention_presentation() : void {
-	if ( ! axismundi_activitypub_bridge_ready() ) {
+	if ( ! axismundi_activitypub_bridge_representation_ready() ) {
 		return;
 	}
 
@@ -151,7 +151,7 @@ add_action( 'wp_loaded', 'axismundi_activitypub_bridge_unregister_mention_presen
  * This runs after Router::init() but before its priority-11 rewrite callback.
  */
 function axismundi_activitypub_bridge_unregister_presentation_router() : void {
-	if ( ! axismundi_activitypub_bridge_ready() ) {
+	if ( ! axismundi_activitypub_bridge_representation_ready() ) {
 		return;
 	}
 
@@ -173,7 +173,7 @@ add_action( 'init', 'axismundi_activitypub_bridge_unregister_presentation_router
 
 /** Disable the two pre-init surfaces that do not expose a behavior registration seam. */
 function axismundi_activitypub_bridge_disable_pre_init_conflicts() : void {
-	if ( ! axismundi_activitypub_bridge_ready() ) {
+	if ( ! axismundi_activitypub_bridge_representation_ready() ) {
 		return;
 	}
 

@@ -1,6 +1,6 @@
 # Draft — Gutenberg Discussion (Ideas): emoji picker, support detection and fallback as one system
 
-> 상태: **게시됨** 2026-09-17, [WordPress/gutenberg#83032](https://github.com/WordPress/gutenberg/discussions/83032) (Ideas). API(`createDiscussion`)로 게시. 2026-09-17 본문 수정(`updateDiscussion`): 데모를 0.3.1 릴리스(Emoji 단독에서도 에디터 picker가 뜨는 첫 릴리스)와 커밋 `caeff33` 고정 링크로 교체. 같은 날 두 번째 수정: C2·C5 문장과 Related에 새 티켓 #66120·#66119 링크 추가, 되읽은 본문이 초안과 일치(`--posted`, SHA-256 `b87f0676…`).
+> 상태: **게시됨** 2026-09-17, [WordPress/gutenberg#83032](https://github.com/WordPress/gutenberg/discussions/83032) (Ideas). API(`createDiscussion`)로 게시. 2026-09-17 본문 수정(`updateDiscussion`): 데모를 0.3.1 릴리스(Emoji 단독에서도 에디터 picker가 뜨는 첫 릴리스)와 커밋 `caeff33` 고정 링크로 교체. 같은 날 두 번째 수정: C2·C5 문장과 Related에 새 티켓 #66120·#66119 링크 추가, 되읽은 본문이 초안과 일치(`--posted`, SHA-256 `b87f0676…`). 2026-09-20 세 번째 수정(사용자 허락): #66104 줄의 채우지 않은 `commit` 자리를 changeset 63755 링크로, 데모를 Plugin Directory 페이지와 Live Preview(`?preview=1`, 공개 blueprint가 wp.org에서 설치 → `/emoji-demo/`)로 교체 — 0.3.1 공개(2026-09-18). #66144·#13618 등 새 내용은 본문이 아니라 첫 댓글(지도) 몫. 수정 전 라이브 본문 = 이전 초안 확인, `updateDiscussion` 뒤 되읽기 일치(`--posted`, SHA-256 `1de9de01…`).
 >
 > 올릴 곳: WordPress/gutenberg › [Discussions › Ideas](https://github.com/WordPress/gutenberg/discussions/new?category=ideas) (사용자와 결정 2026-09-16).
 > 이유: 글의 목적이 계층 경계에 대한 열린 질문 3개라 바로 처리할 작업 단위가 없다(이슈로 열면 "무슨 변경이냐"로 분류가 막힘).
@@ -59,7 +59,7 @@ While planning reactions for Notes, #75144 found no existing emoji picker compon
 
 Because the three parts do not know about each other, a small mistake in one changes what every site shows, and the picker has to choose its data and storage format without a shared answer to "which sequences does WordPress treat as emoji, and which can this browser draw?". Things I reproduced or read in the source while building a plugin across all three:
 
-- [Core Trac #66104](https://core.trac.wordpress.org/ticket/66104): the Emoji 17 test string is malformed, so `emoji` is always false and every emoji is replaced by an image, including in browsers that draw Emoji 17 (now in 7.2 with `commit`).
+- [Core Trac #66104](https://core.trac.wordpress.org/ticket/66104): the Emoji 17 test string is malformed, so `emoji` is always false and every emoji is replaced by an image, including in browsers that draw Emoji 17 (fixed in trunk for 7.2 in [changeset 63755](https://core.trac.wordpress.org/changeset/63755)).
 - When `flag` fails and `emoji` passes, only regional-indicator pairs and the rainbow and pirate flags are replaced. Two of the flags the `flag` test draws are not on that list: England (with Scotland and Wales, a tag sequence) stays as a plain black flag, and the transgender flag, a ZWJ sequence, is left as well. That is [Core Trac #63451](https://core.trac.wordpress.org/ticket/63451). It likely stopped reproducing because the `emoji` test began to fail (Emoji 16 in 6.8.2, then [Core Trac #66104](https://core.trac.wordpress.org/ticket/66104)), which makes WordPress replace everything. With the [Core Trac #66104](https://core.trac.wordpress.org/ticket/66104) patch applied, a local test page in Chromium on Windows left the England flag unreplaced again.
 - `.wp-exclude-emoji` is skipped only when it is below the element being parsed. If the excluded element is itself inserted later, or its own text changes, it becomes the parse root and its emoji are replaced. A follow-up to [Core Trac #52219](https://core.trac.wordpress.org/ticket/52219), now [Core Trac #66120](https://core.trac.wordpress.org/ticket/66120).
 - The `emoji` test checks a single code point. A system that draws U+1FAC8 but not the new Emoji 17 ZWJ sequences counts as supporting Emoji 17.
@@ -78,9 +78,9 @@ Not a plugin to merge. I'd like to discuss where the boundaries should be, using
 
 ### Working reference: Axismundi Emoji 0.3.1
 
-[Axismundi Emoji](https://github.com/Jiwoon-Kim/axismundi/releases/tag/emoji-v0.3.1) is under review for the Plugin Directory, so here is a Playground that installs the release ZIP and opens a demo page:
+[Axismundi Emoji](https://wordpress.org/plugins/axismundi-emoji/) is in the Plugin Directory, and its Live Preview installs it and opens a demo page:
 
-**[Open the demo in Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/Jiwoon-Kim/axismundi/caeff33fac115d809a073c671a9136d145830b5a/products/wordpress/plugins/axismundi-emoji/wporg-assets/blueprints/release.json)**
+**[Open the Live Preview](https://wordpress.org/plugins/axismundi-emoji/?preview=1)**
 
 The page lists 11 Unicode sequences and the two bundled custom emoji and, after load, says what drew each row: the browser's font, the bundled font, a WordPress.org image, or the site's own image. A panel shows the plugin's mode and WordPress's own test results. In Chromium on Windows with the latest WordPress, WordPress reported `flag: no, emoji: no` ([Core Trac #66104](https://core.trac.wordpress.org/ticket/66104)); the plugin drew the three flags with its font and the other eight became images.
 

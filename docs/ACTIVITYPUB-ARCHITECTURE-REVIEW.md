@@ -86,7 +86,7 @@ handle / preferredUsername   ← 사람용 이름, 식별자가 아님
 | Discovery | WebFinger `acct:` → actor `id` | Actors가 WebFinger를 소유하고 Bridge가 `rel=self`를 추가 | 담고 있음 |
 | Local name | `preferredUsername`은 표시 이름이지 식별자가 아님 | handle과 `actor_uri`가 독립. `repository.php:903`이 로컬 handle 규칙과 AS `preferredUsername`(문자 규칙 없음)을 일부러 분리한다고 적고 있음 | 담고 있음 |
 | Actor type | Person / Group / Organization / Service / Application | 로컬 Person·Site, managed Group·Organization. 원격은 허용 타입 검사 후 저장 | 담고 있음 |
-| Keys | 공개키 노출, 소유자 확인, 회전 | Bridge가 `inbox` + `endpoints.sharedInbox` + `publicKey`를 **원자 묶음**으로만 주입(`transport.php:93`). 키를 못 만들면 셋 다 생략. WebFinger `rel=self`도 같은 게이트(`transport.php:120`) — 키 없는 actor를 남이 캐시하지 못하게 fail-closed. 키 자체는 공식 플러그인 저장소 소유 | 담고 있음 |
+| Keys | 공개키 노출, 소유자 확인, 회전 | **Actors가 소유**(§4.3b). `axismundi_actors_transport_members()`가 `inbox`+`endpoints.sharedInbox`+`publicKey`를 원자 묶음으로 내고, 키가 없으면 셋 다와 WebFinger `rel=self`까지 withhold. 값은 전송 플러그인이 공급하고 개인키는 공식 저장소에 남음 | 담고 있음 |
 | Dereferencing | actor `id` GET이 AS 표현을 내야 함 | OP가 Actor JSON-LD를 소유하고 URL 하나에서 content negotiation. 전송 필드는 `axismundi_op_actor_transport_fields` 필터로 Bridge가 주입. Actors + OP만으로도 표현이 성립한다(§5.9) | 담고 있음 |
 | Aliases | `url`, 프로필 URL, handle의 구분 | 사람용 handle URL과 canonical `actor_uri`가 분리돼 있음 | 담고 있음 |
 | 원격 actor 수용 | payload `id`와 발견 경로의 일치 | WebFinger self URI = payload `id`, HTTPS endpoint, 허용 타입, key owner 확인 후 저장 | 담고 있음 |
@@ -100,6 +100,46 @@ handle / preferredUsername   ← 사람용 이름, 식별자가 아님
 **명시적 후속 계약은 하나다.** uuid가 살아 있어도 **도메인 이전 뒤 기존 actor URI를 이어 주는 일은
 자동으로 풀리지 않는다.** `Move` 발신, 이전 URI의 redirect/보존 정책, 상호 검증은 연합 단계의
 별도 설계 항목으로 남긴다. 이는 숨은 공백이 아니라 문서에도 future로 적힌 것이다.
+
+### 4.3b 수정 — 로컬 Actor의 endpoint와 키를 Actors가 소유한다
+
+A축이 남긴 유일한 MUST 공백이었다. `inbox`·`sharedInbox`·`publicKey`를 Bridge가 OP의 필터로
+주입하고 있었고, 그래서 **Bridge가 없으면 actor 문서가 AP 규격에 미달**했다. 같은 개념을 방향에
+따라 다르게 소유하던 것도 문제였다. 원격 Actor의 endpoint와 키는 이미 Actors의
+`wp_ax_actor_endpoints`·`wp_ax_actor_keys`에 저장되는데, 로컬 Actor만 전송 플러그인 소유였다.
+
+**지금**
+
+| 관심사 | 소유자 |
+|---|---|
+| 이 Actor가 무엇을 광고하는가, 광고해도 되는가 | **Actors** (`includes/local-endpoints.php`) |
+| 어느 주소를 실제로 서비스하고 어느 키로 서명할 수 있는가 | 전송 플러그인 (Bridge가 필터 두 개로 공급) |
+| 그 결과의 직렬화 | OP |
+
+`axismundi_actors_transport_members()`가 한 묶음을 만들고, `axismundi_actors_is_federatable()`이
+판정하며, WebFinger `rel=self`도 **Actors가** 같은 조건으로 건다. 게이트의 근거가 "Bridge가
+있는가"에서 **"키가 있는가"**로 바뀌었다.
+
+두 가지를 설계에 못 박았다.
+
+- **원자성**: 번들을 만들 때 endpoint와 키를 **각각 한 번만** 읽는다. 두 번 물으면 그 사이에
+  회전이 끼어들어 맞지 않는 키와 Inbox를 함께 광고할 수 있다.
+- **주소의 소유**: 로컬 endpoint는 원격과 달리 HTTPS를 요구하지 않는다. 우리 자신의 주소는 이
+  사이트가 실제로 도달 가능한 주소이고, 개발·스테이징이 HTTP라는 이유로 Inbox 없는 Actor를
+  광고하게 둘 수는 없다. 대신 **home URL 아래인지**를 검사한다. 전송 플러그인이 남의 호스트를
+  자기 endpoint라고 주장할 수 없다.
+
+측정:
+
+```text
+전체 활성   inbox·endpoints.sharedInbox·publicKey + outbox·followers·following,
+            WebFinger rel=self 있음
+Bridge 없음 federatable=no → 전송 멤버 0개, 읽기 컬렉션만 남음, WebFinger self 없음
+키만 없음   전송 멤버 0개, WebFinger self 없음 (fail-closed 유지)
+```
+
+Bridge 없이 `inbox`가 없는 것은 **여전히 규격 미달이지만 이제 의도된 상태**다. 받을 수 없는
+주소를 광고하지 않는 쪽이 옳고, 그 판단을 정체성 층이 내린다.
 
 ### 4.4 NodeInfo와 인스턴스 정보의 소유 (결정)
 

@@ -69,68 +69,51 @@ function axismundi_activitypub_bridge_private_key( Axismundi_Actor $actor ) : st
 }
 
 /**
- * Whether one local public Actor may be advertised for federation right now.
+ * Supply the Inbox addresses this bridge serves for one local Actor.
  *
- * An Actor is federatable only when its
- * signing public key can be projected. Advertising an Inbox, endpoints, or a
- * WebFinger self link without the matching key lets a remote server cache a
- * keyless Actor that then rejects our signed traffic until its cache goes stale
- * (Mastodon holds a fetched Actor for roughly one day). The local HTML Actor
- * representation is unaffected; only new federation discovery is withheld.
+ * Which addresses exist is a transport fact; whether an Actor may be advertised at all is
+ * the identity registry's decision, and it withholds the whole bundle when no key can be
+ * projected.
+ *
+ * @param array<string,string> $endpoints Endpoints resolved so far.
+ * @param Axismundi_Actor      $actor     Local Actor.
+ * @return array<string,string>
  */
-function axismundi_activitypub_bridge_actor_federatable( Axismundi_Actor $actor ) : bool {
-	return axismundi_activitypub_bridge_ready()
-		&& $actor->is_local()
-		&& 'public' === $actor->get_status()
-		&& '' !== axismundi_activitypub_bridge_public_key( $actor );
+function axismundi_activitypub_bridge_local_endpoints( array $endpoints, Axismundi_Actor $actor ) : array {
+	if ( ! axismundi_activitypub_bridge_ready() || 'public' !== $actor->get_status() ) {
+		return $endpoints;
+	}
+	$endpoints['inbox']        = axismundi_activitypub_bridge_inbox_url( $actor );
+	$endpoints['shared_inbox'] = axismundi_activitypub_bridge_shared_inbox_url();
+	return $endpoints;
 }
+add_filter( 'axismundi_actors_local_endpoints', 'axismundi_activitypub_bridge_local_endpoints', 10, 2 );
 
 /**
- * Add transport-owned fields to the Object Projections-owned Actor document.
+ * Supply the signing key descriptor the official plugin holds for one local Actor.
  *
- * The Inbox, endpoints, and publicKey advertise together as one atomic bundle:
- * when the key cannot be projected none of them are emitted, so a remote server
- * never caches a half-Actor that advertises an Inbox without a verifiable key.
+ * The private half never leaves that store; this is the half remote servers verify with.
+ *
+ * @param array|null      $key   Descriptor resolved so far.
+ * @param Axismundi_Actor $actor Local Actor.
+ * @return array|null
  */
-function axismundi_activitypub_bridge_actor_transport_fields( array $fields, Axismundi_Actor $actor ) : array {
-	if ( ! axismundi_activitypub_bridge_ready() || ! $actor->is_local() || 'public' !== $actor->get_status() ) {
-		return $fields;
+function axismundi_activitypub_bridge_local_public_key( $key, Axismundi_Actor $actor ) {
+	if ( ! axismundi_activitypub_bridge_ready() || 'public' !== $actor->get_status() ) {
+		return $key;
 	}
-	$key = axismundi_activitypub_bridge_public_key( $actor );
-	if ( '' === $key ) {
-		return $fields;
+	$pem = axismundi_activitypub_bridge_public_key( $actor );
+	if ( '' === $pem ) {
+		return $key;
 	}
 	$sender = axismundi_activitypub_bridge_sender( $actor );
-	return array_merge(
-		$fields,
-		array(
-			'inbox'     => axismundi_activitypub_bridge_inbox_url( $actor ),
-			'endpoints' => array( 'sharedInbox' => axismundi_activitypub_bridge_shared_inbox_url() ),
-			'publicKey' => array(
-				'id'           => $sender['key_id'],
-				'owner'        => $actor->get_uri(),
-				'publicKeyPem' => $key,
-			),
-		)
+	return array(
+		'id'           => (string) $sender['key_id'],
+		'owner'        => $actor->get_uri(),
+		'publicKeyPem' => $pem,
 	);
 }
-add_filter( 'axismundi_op_actor_transport_fields', 'axismundi_activitypub_bridge_actor_transport_fields', 10, 2 );
-
-/** Advertise the canonical ActivityStreams Actor document through WebFinger. */
-function axismundi_activitypub_bridge_webfinger_links( array $links, Axismundi_Actor $actor ) : array {
-	// Discovery fail-closed: withhold the ActivityStreams self link while the
-	// Actor cannot project its signing key, so no remote resolves a keyless Actor.
-	if ( ! axismundi_activitypub_bridge_actor_federatable( $actor ) ) {
-		return $links;
-	}
-	$links[] = array(
-		'rel'  => 'self',
-		'type' => 'application/activity+json',
-		'href' => $actor->get_uri(),
-	);
-	return $links;
-}
-add_filter( 'axismundi_actors_webfinger_links', 'axismundi_activitypub_bridge_webfinger_links', 10, 2 );
+add_filter( 'axismundi_actors_local_public_key', 'axismundi_activitypub_bridge_local_public_key', 10, 2 );
 
 /**
  * Supply Axismundi local Actors through the official WebFinger controller.

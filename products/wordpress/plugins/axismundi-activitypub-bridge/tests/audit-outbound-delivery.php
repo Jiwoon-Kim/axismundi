@@ -68,7 +68,8 @@ try {
 	$bridge_public_uris = array_map( static fn( Axismundi_Actor $actor ) : string => $actor->get_uri(), axismundi_activitypub_bridge_public_actors() );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the transport inspector includes a published managed Group alongside site and Person Actors', $managed_group instanceof Axismundi_Actor && in_array( $managed_group->get_uri(), $bridge_public_uris, true ) );
 
-	$fields = $local instanceof Axismundi_Actor ? axismundi_activitypub_bridge_actor_transport_fields( array(), $local ) : array();
+	// Bridge supplies the addresses and the key; Actors decides what is advertised.
+	$fields = $local instanceof Axismundi_Actor ? axismundi_actors_transport_members( $local ) : array();
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'Bridge supplies Inbox, sharedInbox, and publicKey but does not own Outbox representation', isset( $fields['inbox'], $fields['endpoints']['sharedInbox'], $fields['publicKey']['publicKeyPem'] ) && ! isset( $fields['outbox'] ) );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'publicKey owner and id use the Axismundi Actor identity', $local instanceof Axismundi_Actor && $local->get_uri() === $fields['publicKey']['owner'] && $local->get_uri() . '#main-key' === $fields['publicKey']['id'] );
 
@@ -83,9 +84,11 @@ try {
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'non-Axismundi WebFinger resources retain their existing provider result', $sentinel === axismundi_activitypub_bridge_webfinger_data( $sentinel, 'acct:remote@example.com' ) );
 
 	add_filter( 'axismundi_activitypub_bridge_actor_public_key', '__return_empty_string', 99 );
-	$keyless_federatable = $local instanceof Axismundi_Actor && axismundi_activitypub_bridge_actor_federatable( $local );
-	$keyless_fields      = $local instanceof Axismundi_Actor ? axismundi_activitypub_bridge_actor_transport_fields( array( 'existing' => true ), $local ) : array();
-	$keyless_links       = $local instanceof Axismundi_Actor ? axismundi_activitypub_bridge_webfinger_links( array(), $local ) : array( array( 'rel' => 'self' ) );
+	// The fail-closed rule moved to the identity registry, which owns what an Actor
+	// advertises; this bridge now only supplies the addresses and the key it can prove.
+	$keyless_federatable = $local instanceof Axismundi_Actor && axismundi_actors_is_federatable( $local );
+	$keyless_fields      = $local instanceof Axismundi_Actor ? array_merge( array( 'existing' => true ), axismundi_actors_transport_members( $local ) ) : array();
+	$keyless_links       = $local instanceof Axismundi_Actor ? axismundi_actors_webfinger_self_link( array(), $local ) : array( array( 'rel' => 'self' ) );
 	remove_filter( 'axismundi_activitypub_bridge_actor_public_key', '__return_empty_string', 99 );
 	$keyless_self = array_values( array_filter( $keyless_links, static fn( array $link ) : bool => 'self' === ( $link['rel'] ?? '' ) ) );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'a keyless Actor advertises no Inbox, endpoints, publicKey, or WebFinger self link while preserving existing fields (atomic fail-closed)', ! $keyless_federatable && true === ( $keyless_fields['existing'] ?? null ) && ! isset( $keyless_fields['inbox'], $keyless_fields['endpoints'], $keyless_fields['publicKey'] ) && array() === $keyless_self );
@@ -95,7 +98,7 @@ try {
 		return 1 === $key_reads ? $key : '';
 	};
 	add_filter( 'axismundi_activitypub_bridge_actor_public_key', $one_shot_key, 99 );
-	$atomic_fields = $local instanceof Axismundi_Actor ? axismundi_activitypub_bridge_actor_transport_fields( array(), $local ) : array();
+	$atomic_fields = $local instanceof Axismundi_Actor ? axismundi_actors_transport_members( $local ) : array();
 	remove_filter( 'axismundi_activitypub_bridge_actor_public_key', $one_shot_key, 99 );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the atomic transport bundle resolves one stable public-key snapshot', 1 === $key_reads && ! empty( $atomic_fields['publicKey']['publicKeyPem'] ) && isset( $atomic_fields['inbox'], $atomic_fields['endpoints'] ) );
 

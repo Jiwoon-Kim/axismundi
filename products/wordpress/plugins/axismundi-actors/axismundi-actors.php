@@ -38,6 +38,7 @@ require_once __DIR__ . '/includes/profile-fields.php';
 require_once __DIR__ . '/includes/follow-vocabulary.php';
 require_once __DIR__ . '/includes/routing.php';
 require_once __DIR__ . '/includes/acting-actor.php';
+require_once __DIR__ . '/includes/local-endpoints.php';
 require_once __DIR__ . '/includes/webfinger.php';
 require_once __DIR__ . '/includes/nodeinfo.php';
 require_once __DIR__ . '/includes/remote-discovery.php';

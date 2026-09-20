@@ -204,8 +204,11 @@ function axismundi_op_actor_transform( Axismundi_Actor $actor ) : array {
 	 * @param array<string,mixed> $fields inbox/publicKey/endpoints/etc.
 	 * @param Axismundi_Actor     $actor  Local Actor.
 	 */
-	$fields  = (array) apply_filters( 'axismundi_op_actor_transport_fields', array(), $actor );
-	$allowed = array_intersect_key( $fields, array_flip( array( 'inbox', 'endpoints', 'publicKey' ) ) );
+	$transport = function_exists( 'axismundi_actors_transport_members' )
+		? axismundi_actors_transport_members( $actor )
+		: array();
+	$fields    = (array) apply_filters( 'axismundi_op_actor_transport_fields', $transport, $actor );
+	$allowed   = array_intersect_key( $fields, array_flip( array( 'inbox', 'endpoints', 'publicKey' ) ) );
 	return array_merge( $object, $allowed );
 }
 

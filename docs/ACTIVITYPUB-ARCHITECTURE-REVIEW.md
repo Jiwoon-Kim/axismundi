@@ -433,7 +433,7 @@ Article이 여기에 해당한다.
    이유로 Note에 맞춰 바꾸기 쉽다. 같은 형식의 주석을 다는 것이 후속 작업이다.
 2. **근거가 시간에 의존한다.** "Misskey가 Article을 수신하지 못한다"는 상대 구현체의 현재
    상태다. 다만 지원이 추가되는 것만으로는 정책이 바뀌지 않는다. **Misskey가 Article을 받고,
-   그때 맵만으로 읽지 못해야** 스칼라를 되살릴 이유가 생긴다. 재측정 조건을 그렇게 적는다(§8.2).
+   그때 맵만으로 읽지 못해야** 스칼라를 되살릴 이유가 생긴다. 재측정 조건을 그렇게 적는다(§9.2).
 
 ### 6.3 발견 — 응답 `Content-Type`이 요청 프로파일을 따라가지 않는다
 
@@ -526,7 +526,7 @@ GET …/outbox
 `inbox`가 없는 것은 남은 공백이다. AP가 actor에 MUST로 요구하는 필드이고, **원격 actor의
 endpoint·key는 이미 Actors가 자기 테이블에 저장**하면서 로컬 actor에 대해서만 Bridge가 주입한다.
 같은 개념을 방향에 따라 다르게 소유하고 있으므로, 로컬 endpoints·keys도 Actors가 소유하도록
-옮기는 것이 다음 작업이다(§9의 12번).
+옮기는 것이 다음 작업이다(§10의 12번).
 
 ### 6.7 B축 결론
 
@@ -618,13 +618,89 @@ Emoji와 Activities에, 일정 계열(400e, 8a8e)이 Calendar에 모여 있다. 
 셋이다. **1b12**(Lemmy 상호운용의 핵심이자 FINAL), **044f/e232**(인용, 이미 Mastodon·Misskey와
 접점), **1311**(미디어, Photon 갭 이후 계약이 바뀐 적 있음).
 
-## 8. E축 — 상호운용 프로파일 (측정 대기)
+## 8. FEP-1b12 본문 대조 (Group federation, FINAL)
+
+규범 문장은 Codeberg 원문에서 읽었다(2026-09-20). 우선순위 1번으로 고른 이유는 Lemmy
+상호운용의 핵심이고 상태가 FINAL이기 때문이다.
+
+| FEP-1b12가 말하는 것 | 우리 구현 | 판정 |
+|---|---|---|
+| Group은 `audience`로 콘텐츠 귀속을 밝힌다. Lemmy·Friendica·lotide는 호환을 위해 `to`에 Group을 넣는다 | Topic 투영이 `audience = Group URI`, `to = [Group]`을 함께 낸다(`topics.php:1013`). 권고와 현실 관행을 둘 다 만족 | 담고 있음 |
+| 유효한 제출이 오면 Group은 **MUST** 그것을 `Announce`로 감싼다. 원 Activity를 object로 | `axismundi_forum_record_group_announce()`가 `Announce{actor: Group, object: <원 Create/Update>}`를 기록 | 담고 있음 |
+| 감싼 Activity는 **MUST** 받은 그대로 보존한다. 속성을 바꾸거나 빼지 않는다 | `'object' => $submission->get_payload()` — 객체 URI가 아니라 원 Activity 페이로드 전체. 주석이 이 규범 문장을 직접 인용한다 | 담고 있음 |
+| 공개 Group은 `Follow`–`Accept`를 **SHOULD** 지원하고, 수락하면 followers에 추가한다 | 멤버십 정책(`membership_policies`)으로 자동/승인 대기를 고르고, Activities의 Follow 관계와 별도로 Forum이 가입을 소유한다. 자동 수락은 Activities가 Group을 만나면 멈추고 제품에 넘긴다(§5.2) | 담고 있음 |
+| 모더레이터는 Group의 `attributedTo` 컬렉션에 실린다 | `axismundi_forum_moderator_collection_url()`을 `attributedTo`로 싣고, 로컬 public community Group에만 붙인다(`moderators.php:209`) | 담고 있음 |
+| 모더레이션 Activity의 actor는 **MUST** `attributedTo`에 있어야 한다 | 로컬 발신 쪽은 권한 커널을 지난다. **수신 쪽 검증이 없다** | **공백** |
+| 팔로워는 그 모더레이션이 **Group이 Announce한 것인지 추가로 검증해야 한다** | 같음 — 수신 모더레이션 경로 자체가 없다 | **공백** |
+| 어떤 Activity 타입이든 Announce할 수 있다. 사적인 것은 전달하지 않아도 된다 | 배포 대상은 `Create`/`Update`/`Delete`로 좁혀져 있다(`distribution.php:421`). 좁은 쪽이라 위반은 아니다 | 담고 있음(보수적) |
+
+### 배포 주소 지정
+
+`axismundi_forum_distribution_audience()`가 공개 범위와 멤버 전용을 나눈다.
+
+```text
+public  : to = [Public],     cc = [Group followers]
+members : to = [followers],  cc = []
+```
+
+제출은 반대다. 작성자의 `Create`는 Group inbox로 **직접** 가고 `to = [Group]`이며, 공개
+라우팅 신호로 `cc`에 Public이 붙는다(`topics.php:1002`). Bridge는 이것을 직접 제출로 알아보고
+작성자의 팔로워에게 뿌리지 않는다. **배포 사건은 작성자의 Create가 아니라 Group의 Announce**라는
+FEP의 모델과 일치한다.
+
+### 공백 하나 — 수신 모더레이션
+
+로컬 Group이 자기 커뮤니티를 모더레이션하는 경로는 있다. 없는 것은 **원격 Group의 모더레이션을
+받아들이는 경로**다. `inbound-topics.php`에 모더레이터나 `attributedTo` 검증이 한 줄도 없다.
+
+이는 §5.7에서 적은 Lemmy 보안 권고와 같은 자리다. 받은 moderation을 권한 확인 없이 적용하면
+안 되고, FEP-1b12는 그 검증을 두 겹으로 요구한다.
+
+1. actor가 그 Group의 `attributedTo`에 있는가
+2. 그 Activity가 Group의 `Announce`로 왔는가
+
+우리가 원격 커뮤니티에 참여하기 시작하면(우리 사용자가 Lemmy 커뮤니티에 글을 쓰고 그쪽
+모더레이터가 지우는 경우) 바로 필요해진다. **구현 전에는 "원격 모더레이션을 따르지 않는다"가
+현재의 정직한 상태**다.
+
+### 판정
+
+FEP-1b12의 발신 쪽 규범은 전부 담고 있다. `MUST` 두 개(Announce 래핑, 원문 보존)를 정확히
+지키고, `audience` 권고와 `to` 관행을 동시에 만족한다. 공백은 수신 모더레이션 하나이며,
+이는 §5.5(`Add`/`Remove` 수신 계약)와 같은 계열의 문제다. **우리가 보내는 것은 맞고, 남이
+보내는 moderation을 아직 읽지 않는다.**
+
+### 8.5 로컬 완결성 측정 (2026-09-20)
+
+계약은 **공식 AP 플러그인과 Bridge 없이 Actors · Object Projections · Activities가 로컬에서
+완전히 동작한다**는 것이다. 그 조건에서 감사를 돌렸다.
+
+| 플러그인 | 결과 |
+|---|---|
+| Actors | 12종 통과 (account-header, acting-actor, addresses, admin, asset-cache, avatar, endpoints, follow-collections, follow-vocabulary, identity-registry, identity-relations, instances) |
+| Activities | 14종 통과 — local-social 25, actor-feed 85, emoji-reactions 39, reaction-summary 27, repository 21, audience 19, relations 14, reactions 14, post-create 13, follow-button 13, quote-requests 10, announces 8, votes 7, public-outbox 4 |
+| Object Projections | standalone-projection 8/8, router 9, view-model 29, replies 5 |
+| Forum | topics 12, memberships 12, votes 14, person-community 10, thread-context 17/18 |
+
+즉 팔로우·좋아요·이모지 반응·인용·피드·스레드·커뮤니티 가입과 투표가 전송 계층 없이 성립한다.
+
+**감사 두 개는 전송 계층을 전제한다.** `audit-forum-moderation`은 Bridge의 `transport.php`를
+`require_once`로 직접 읽어 Bridge가 꺼져 있으면 치명적 오류가 나고,
+`audit-forum-thread-context`의 한 항목은 "원격 Lemmy 댓글에 대한 답글이 커뮤니티 inbox만
+큐에 넣는지"를 본다. 둘 다 **전송을 검증하는 항목**이므로 로컬 완결성의 반례가 아니다. 전부
+활성인 상태에서 26/26, 18/18로 통과한다.
+
+다만 감사 파일이 다른 플러그인의 `includes/`를 직접 `require_once` 하는 것은 그 자체로 경계
+위반이다. 전송을 보는 항목은 전송 플러그인 쪽 감사에 두거나, 파일을 읽는 대신 함수 존재를
+확인하고 건너뛰어야 한다. 정리 대상으로 기록한다.
+
+## 9. E축 — 상호운용 프로파일 (측정 대기)
 
 Mastodon·Misskey·Lemmy·GoToSocial에서 실제로 겪은 차이를 A~D축 항목에 귀속시킨다.
 이미 측정된 것: Misskey의 embedded url scalar, Lemmy의 공개 라우팅과 collection-moderation,
 Mastodon의 sensitive 해석.
 
-### 8.1 종결 — `contentMap`만 있는 Article (측정됨)
+### 9.1 종결 — `contentMap`만 있는 Article (측정됨)
 
 한때 이 검토의 첫 테스트였다. owner 측정으로 세 구현체가 모두 답을 갖고 있어 종결한다.
 
@@ -636,7 +712,7 @@ Mastodon의 sensitive 해석.
 
 결론: Article의 맵 단독 정책은 유지한다. 남은 작업은 **근거 주석**(§6.2)뿐이다.
 
-### 8.2 재측정이 필요한 전제
+### 9.2 재측정이 필요한 전제
 
 상대 구현체의 현재 상태에 기댄 결정은 시간이 지나면 흔들린다. 측정일과 함께 관리한다.
 **전제가 무너지는 조건을 함께 적는다** — "언젠가 바뀔 수 있다"는 관리 항목이 되지 못한다.
@@ -648,7 +724,7 @@ Mastodon의 sensitive 해석.
 | Lemmy는 우리 Article을 수신한다 | owner 측정 | 2026-09-20 기록 | Forum 기본 타입의 전제(§6.4). Lemmy가 Page 외 타입 처리를 바꾸면 다시 본다 |
 | Misskey는 `contentMap`만 있는 Note를 읽지 못한다 | 코드 주석의 기록 | 미상 | Note 정책의 근거. 측정일이 없다는 것 자체가 약점이다 |
 
-## 9. 열린 질문
+## 10. 열린 질문
 
 1. 도메인 이전 뒤 이전 actor URI를 무엇이 계속 응답하는가 (A축).
 2. ~~NodeInfo의 장기 소유자~~ → 결정됨: Actors가 문서를 소유하고 능력 소유자가 선언한다. 분리 조건은 §4.4.
@@ -668,8 +744,11 @@ Mastodon의 sensitive 해석.
     테이블(`wp_ax_actor_endpoints`, `wp_ax_actor_keys`)은 이미 있고 원격 Actor에만 쓰인다.
     게이트의 근거도 "Bridge가 있는가"에서 "키가 있는가"로 바뀐다 (B축 §6.7).
 13. 공식 플러그인의 presentation router를 actor/object로 나누는 업스트림 제안 (C축 §5.9).
+14. 원격 Group의 moderation을 수신할 때의 두 겹 검증(actor가 `attributedTo`에 있는가, Group의
+    `Announce`로 왔는가)을 언제 구현할 것인가 (§8).
+15. 다른 플러그인의 `includes/`를 `require_once` 하는 감사 파일 정리 (§8.5).
 
-## 10. 의도적 비표준
+## 11. 의도적 비표준
 
 축별 대조에서 발견되는 대로 여기에 모은다. 이미 알려진 것:
 

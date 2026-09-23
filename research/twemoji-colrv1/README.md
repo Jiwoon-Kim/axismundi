@@ -86,6 +86,26 @@ From `out/*/manifest.json` and the Edge VQA (Edge 153 on Windows):
 
 The two releases have byte-identical SVG sets; v17.0.3 changed only the JavaScript parser. For comparison, the v17.0.2 image sets are 4,009 PNG files (4,248,486 bytes) and 4,009 SVG files (10,121,593 bytes).
 
+### Why the Noto flags subset is 6.6x larger
+
+The Axismundi Emoji plugin ships a Noto Color Emoji flags subset of 716,080 bytes against this
+font's 108,888. The difference is not subsetting: both cover about the same flags (290 and 301
+colour base glyphs). It is how densely each one is drawn. Measured with fontTools 4.63.0:
+
+| | Twemoji flags | Noto flags |
+|-|-|-|
+| Layers per flag | 6.5 | 79.0 |
+| Outline points per flag | 220 | 1,903 |
+| Gradients | none, every layer a solid fill | 491 linear gradients |
+
+Twemoji simplifies an emblem into a few flat shapes; Noto draws it. At emoji size the
+simplification costs little, which is what makes the small subset a real option.
+
+A service worker does not remove that weight, it moves it: precaching pays the bytes at install
+instead of on the first page that needs them, and the install size and the storage it occupies
+stay as they are. So loading a flags subset only when the flag profile fails is worth keeping
+even behind a PWA.
+
 The font maps `#`, `*`, `0`-`9` (zero advance, as keycap bases), the space, and characters that default to text presentation such as `©` and `↔`. It has to be applied only to emoji a renderer has detected and wrapped, not placed in a general `font-family` stack.
 
 ## Pins

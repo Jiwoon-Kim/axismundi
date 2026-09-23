@@ -7,16 +7,19 @@
 > 도움이 될 맥락만.
 >
 > 슬러그 변경 요청 없음 — `axismundi-object-projections` 유지.
+>
+> 문구 교정(2026-09-23, 사용자): "꺼져 있으면 외부 요청을 전혀 하지 않는다"는 너무 넓다.
+> 관리자가 Tools 화면에서 주소를 직접 조회하는 경로는 그대로 있다. 따라서 범위를 **자동
+> fetch의 예약·실행**과 **애널리틱스·텔레메트리 없음**으로 좁혀 쓴다.
 
 ## Body (paste as is)
 
 Thanks — 0.1.1 is uploaded.
 
-On the phoning home report: background acquisition is now a setting under Tools > Remote
-Objects, off by default. While it is off the plugin makes no outbound request on its own;
-the only remote requests are the ones an administrator starts on that screen. Turning the
-setting off also clears anything already queued, and a queued job re-checks the setting
-before it would reach the network. No analytics, no telemetry, and nothing is sent to our
+On the phoning home report: background acquisition is now opt-in and disabled by default.
+When disabled, the plugin does not schedule or perform automatic remote-object fetches; it
+does not send analytics or telemetry. Disabling it also clears anything already queued, and
+a queued job re-checks the setting before it would reach the network. Nothing is sent to our
 own servers in any configuration.
 
 The remote requests this plugin can make are fetches of an ActivityStreams document at an

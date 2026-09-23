@@ -1386,7 +1386,31 @@ function axismundi_op_render_object_card_body_block() : string {
 	 * @param array<string,mixed> $model    Active Object view model.
 	 */
 	$template = (string) apply_filters( 'axismundi_op_object_card_body_template', $template, $type, $model );
-	return do_blocks( $template );
+	return do_blocks( axismundi_op_block_template_only( $template ) );
+}
+
+/**
+ * Keep only registered block markup in a filtered template.
+ *
+ * The filter above names which blocks build a card body, and that is all it may do. Raw HTML
+ * reaching `do_blocks()` would be emitted as written, so a filter could put anything on the
+ * page; parsing the template and re-serializing only the blocks WordPress knows removes that
+ * possibility without escaping markup that blocks render for themselves.
+ *
+ * @param string $template Block markup.
+ * @return string
+ */
+function axismundi_op_block_template_only( string $template ) : string {
+	$blocks = array();
+	foreach ( parse_blocks( $template ) as $block ) {
+		$name = (string) ( $block['blockName'] ?? '' );
+		// A freeform chunk has no block name: that is the raw HTML this guard exists for.
+		if ( '' === $name || ! WP_Block_Type_Registry::get_instance()->is_registered( $name ) ) {
+			continue;
+		}
+		$blocks[] = $block;
+	}
+	return serialize_blocks( $blocks );
 }
 
 /**
@@ -1716,18 +1740,20 @@ add_action( 'init', 'axismundi_op_register_object_block_assets', 5 );
 /** Register the shared pattern and its small dynamic block vocabulary. */
 function axismundi_op_register_object_blocks() : void {
 	$blocks = array(
-		'object-status'       => array( 'Object Status', 'axismundi_op_render_object_status_block' ),
-		'object-tombstone'    => array( 'Object Tombstone', 'axismundi_op_render_object_tombstone_block' ),
-		'object-avatar'       => array( 'Legacy Object Actor Avatar', 'axismundi_op_render_object_avatar_block' ),
-		'object-identity'     => array( 'Legacy Object Actor Identity', 'axismundi_op_render_object_identity_block' ),
-		'object-meta'         => array( 'Object Metadata', 'axismundi_op_render_object_meta_block' ),
+		'object-status'       => array( __( 'Object Status', 'axismundi-object-projections' ), 'axismundi_op_render_object_status_block' ),
+		'object-tombstone'    => array( __( 'Object Tombstone', 'axismundi-object-projections' ), 'axismundi_op_render_object_tombstone_block' ),
+		'object-avatar'       => array( __( 'Legacy Object Actor Avatar', 'axismundi-object-projections' ), 'axismundi_op_render_object_avatar_block' ),
+		'object-identity'     => array( __( 'Legacy Object Actor Identity', 'axismundi-object-projections' ), 'axismundi_op_render_object_identity_block' ),
+		'object-meta'         => array( __( 'Object Metadata', 'axismundi-object-projections' ), 'axismundi_op_render_object_meta_block' ),
 	);
 	foreach ( $blocks as $slug => $definition ) {
 		register_block_type(
 			'axismundi/' . $slug,
 			array(
 				'api_version'     => 3,
-				'title'           => __( $definition[0], 'axismundi-object-projections' ), // phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText -- Fixed internal registration map.
+				// Translated in the map above, as literals, so the string parser can read them
+				// without executing this registration loop.
+				'title'           => $definition[0],
 				'category'        => 'theme',
 				'editor_script'   => 'axismundi-op-object-blocks',
 				'style'           => 'axismundi-op-object-view',

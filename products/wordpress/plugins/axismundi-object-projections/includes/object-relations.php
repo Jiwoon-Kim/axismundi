@@ -145,6 +145,18 @@ function axismundi_op_index_quote_relations( array $row ) : bool {
 		$verified       = ! $ambiguous && in_array( $prior_status, array( 'approved', 'rejected', 'revoked' ), true );
 		$relation_auth  = $verified ? axismundi_op_relation_uri( $prior['authorization_uri'] ?? '' ) : $authorization;
 		$consent_status = $ambiguous ? 'ambiguous' : ( $verified ? $prior_status : 'legacy_unverified' );
+		/*
+		 * FEP-044f states two ways a recipient may treat a quote as approved: a dereferenced
+		 * QuoteAuthorization, or the quote and the quoted post sharing an author. Only the
+		 * first was implemented, so somebody quoting their own post read as unapproved here.
+		 *
+		 * Both authors have to be known for this. An unknown target author is left alone:
+		 * assuming they are the same actor would manufacture the consent this whole path
+		 * exists to verify.
+		 */
+		if ( ! $ambiguous && ! $verified && '' !== $actor && axismundi_op_quote_shares_author( $actor, (string) $target ) ) {
+			$consent_status = 'self';
+		}
 		$ok = $wpdb->insert(
 			$table,
 			array(
@@ -279,6 +291,36 @@ function axismundi_op_get_quote_count( string $target_uri ) : int {
 		$counted[ hash( 'sha256', $source ) . ':' . $source ] = true;
 	}
 	return count( $counted );
+}
+
+/**
+ * Whether one Actor is demonstrably the author of the Object being quoted.
+ *
+ * Answered only from what this site already holds: a local Object's attribution, or a
+ * cached remote Object's. An address this site has never seen is not an argument that the
+ * authors match, so it returns false and the quote stays unapproved.
+ *
+ * @param string $actor_uri  Author of the quoting Object.
+ * @param string $target_uri Object being quoted.
+ * @return bool
+ */
+function axismundi_op_quote_shares_author( string $actor_uri, string $target_uri ) : bool {
+	$actor_uri  = axismundi_op_relation_uri( $actor_uri );
+	$target_uri = axismundi_op_relation_uri( $target_uri );
+	if ( '' === $actor_uri || '' === $target_uri ) {
+		return false;
+	}
+	$remote = axismundi_op_get_remote_object( $target_uri );
+	if ( is_array( $remote ) ) {
+		$attributed = axismundi_op_relation_uri( (string) ( $remote['attributed_to_uri'] ?? '' ) );
+		return '' !== $attributed && hash_equals( $attributed, $actor_uri );
+	}
+	$source = function_exists( 'axismundi_op_local_source_from_object_uri' ) ? axismundi_op_local_source_from_object_uri( $target_uri ) : null;
+	if ( ! $source instanceof WP_Post || ! function_exists( 'axismundi_op_post_actor_uri' ) ) {
+		return false;
+	}
+	$attributed = axismundi_op_relation_uri( axismundi_op_post_actor_uri( $source ) );
+	return '' !== $attributed && hash_equals( $attributed, $actor_uri );
 }
 
 /**

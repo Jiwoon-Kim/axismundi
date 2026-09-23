@@ -97,7 +97,7 @@ function axismundi_op_quote_authorization_template_redirect() : void {
 	header( 'Access-Control-Allow-Methods: GET, HEAD' );
 	header( 'X-Content-Type-Options: nosniff' );
 	if ( 'HEAD' !== $method ) {
-		echo wp_json_encode( $object, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON encoded response.
+		echo wp_json_encode( $object ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_json_encode() escapes the document; no flags weaken it.
 	}
 	exit;
 }

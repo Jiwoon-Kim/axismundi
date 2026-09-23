@@ -97,12 +97,40 @@ try {
 			&& empty( $GLOBALS['ax_fetch_args']['cookies'] )
 	);
 	ax_fetch_assert( $ax_fetch_results, 'a valid response stores text metadata, tri-state sensitivity, validators, and expiry', is_array( $stored ) && 'Note' === $stored['object_type'] && 1 === (int) $stored['is_sensitive'] && '"ax-phase-4b"' === $stored['etag'] && ! empty( $stored['expires_at'] ) );
+	/*
+	 * Reaching a remote host on our own initiative is the site owner's decision, so the
+	 * automatic paths stay shut until somebody opts in. Storing an Object must not queue
+	 * anything while the setting is off, and must queue exactly one deferred Actor lookup --
+	 * never a synchronous fan-out -- once it is on.
+	 */
 	ax_fetch_assert(
 		$ax_fetch_results,
-		'object storage schedules only deferred primary-Actor discovery instead of synchronous HTTP fan-out',
-		false !== wp_next_scheduled( 'axismundi_op_discover_remote_actor', array( $ax_fetch_actor ) )
+		'nothing is queued while background acquisition is off, which is the default',
+		! axismundi_op_background_acquisition_enabled()
+			&& false === wp_next_scheduled( 'axismundi_op_discover_remote_actor', array( $ax_fetch_actor ) )
 			&& array( $ax_fetch_url ) === $GLOBALS['ax_fetch_urls']
 	);
+
+	update_option( AXISMUNDI_OP_BACKGROUND_ACQUISITION_OPTION, '1', false );
+	axismundi_op_schedule_remote_actor_discovery( $ax_fetch_actor );
+	$ax_fetch_queued = wp_next_scheduled( 'axismundi_op_discover_remote_actor', array( $ax_fetch_actor ) );
+	update_option( AXISMUNDI_OP_BACKGROUND_ACQUISITION_OPTION, '0', false );
+	wp_clear_scheduled_hook( 'axismundi_op_discover_remote_actor', array( $ax_fetch_actor ) );
+	ax_fetch_assert(
+		$ax_fetch_results,
+		'once opted in, storage schedules deferred primary-Actor discovery instead of synchronous HTTP fan-out',
+		false !== $ax_fetch_queued && array( $ax_fetch_url ) === $GLOBALS['ax_fetch_urls']
+	);
+
+	// A job queued under the old answer must not reach the network after the setting is off.
+	$GLOBALS['ax_fetch_urls'] = array();
+	axismundi_op_fetch_announced_object( 'https://remote.example/objects/announced-while-off' );
+	ax_fetch_assert(
+		$ax_fetch_results,
+		'a queued job checks again on the way out and makes no request while the setting is off',
+		array() === $GLOBALS['ax_fetch_urls']
+	);
+	$GLOBALS['ax_fetch_urls'] = array( $ax_fetch_url );
 
 	$GLOBALS['ax_fetch_mode'] = 'not-modified';
 	$not_modified             = axismundi_op_remote_object_fetch( $ax_fetch_url );

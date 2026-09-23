@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.0
+Stable tag: 0.1.1
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -115,13 +115,19 @@ Requests happen for two reasons, and the second is worth being clear about.
 
 **Because something arrived here naming an address.**
 
-* When a publicly addressed `Announce` reaches this site's inbox carrying only the URI of
-  the object it announces, that one address is queued for a single background fetch, so
-  that the announcement can be shown as something rather than as a link. The object's
-  author is looked up the same way if this site does not already know them.
+* **Only if you switch it on.** Under **Tools > Remote Objects** there is a setting called
+  *Background acquisition*, and it is **off** unless an administrator turns it on. While it
+  is off this site contacts a remote server only when you ask it to on that screen.
+* With it on: when a publicly addressed `Announce` reaches this site's inbox carrying only
+  the URI of the object it announces, that one address is queued for a single background
+  fetch, so that the announcement can be shown as something rather than as a link. The
+  object's author is looked up the same way if this site does not already know them.
+* Either way the request tells the remote host that this site exists, including its address
+  and its IP, which is why the decision is the site owner's and not a stranger's.
 * This is deliberately bounded. It never runs while a page is being rendered, it does not
   fan out to the mentions or the audience named in the document, an address already known
-  is not fetched again, and only `https` addresses are considered.
+  is not fetched again, and only `https` addresses are considered. Turning the setting off
+  also clears anything already queued.
 
 Which servers are contacted therefore depends on which addresses your administrators enter
 and which sites send things to your inbox. This plugin has no service of its own and sends
@@ -129,6 +135,21 @@ nothing to its author. Each server contacted is somebody else's, run under its o
 service and privacy policy.
 
 == Changelog ==
+
+= 0.1.1 =
+* Background acquisition is now a setting, off by default. While it is off this site
+  contacts a remote server only when an administrator asks it to under Tools > Remote
+  Objects. Turning it off also clears anything already queued.
+* A post publishes its own media as attachments: the featured image and the media blocks
+  the author placed, and only media this site holds.
+* A published post is projected with Axismundi Actors alone; an Actor document always names
+  its outbox, followers and following, which answer empty without an Activity ledger.
+* A product can claim this projection for an object whose context it owns, instead of
+  rebuilding it. Axismundi Forum publishes its Topics that way.
+* A quote of the author's own post is recognised as approved, as FEP-044f allows, when both
+  authors are known here.
+* Filtered card templates and interaction controls are now named blocks rather than markup,
+  so what reaches the page is always something a registered block rendered.
 
 = 0.1.0 =
 * First release.

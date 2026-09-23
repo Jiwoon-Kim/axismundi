@@ -18,6 +18,24 @@ function axismundi_op_remote_fetch_error( string $url, string $code, string $mes
 	return new WP_Error( $code, $message );
 }
 
+/** Option storing whether this site may acquire remote documents on its own. */
+const AXISMUNDI_OP_BACKGROUND_ACQUISITION_OPTION = 'ax_op_background_acquisition';
+
+/**
+ * Whether this site may fetch a remote document without an administrator asking for it.
+ *
+ * Off unless switched on. Reaching a remote host tells that host this site exists: the
+ * request carries the site's address and its IP. Doing that because a stranger's Announce
+ * arrived would make the decision theirs rather than the site owner's, so the automatic
+ * paths stay closed until somebody opts in. Inspecting one address from Tools > Remote
+ * Objects is unaffected -- an administrator asking for an address is the consent.
+ *
+ * @return bool
+ */
+function axismundi_op_background_acquisition_enabled() : bool {
+	return '1' === (string) get_option( AXISMUNDI_OP_BACKGROUND_ACQUISITION_OPTION, '0' );
+}
+
 /**
  * Schedule best-effort discovery of one attributed Actor without extending fetch latency.
  *
@@ -26,6 +44,9 @@ function axismundi_op_remote_fetch_error( string $url, string $code, string $mes
  */
 function axismundi_op_schedule_remote_actor_discovery( string $actor_uri ) : bool {
 	$actor_uri = trim( $actor_uri );
+	if ( ! axismundi_op_background_acquisition_enabled() ) {
+		return false;
+	}
 	if ( '' === $actor_uri || ! function_exists( 'axismundi_actors_get_by_uri' ) || ! function_exists( 'axismundi_actors_discover_remote_actor_uri' ) ) {
 		return false;
 	}
@@ -41,6 +62,11 @@ function axismundi_op_schedule_remote_actor_discovery( string $actor_uri ) : boo
 
 /** Run one deferred Actor discovery request. */
 function axismundi_op_discover_remote_actor( string $actor_uri ) : void {
+	// Checked again on the way out: a job queued before the setting was switched off must
+	// not reach the network afterwards.
+	if ( ! axismundi_op_background_acquisition_enabled() ) {
+		return;
+	}
 	if ( ! function_exists( 'axismundi_actors_get_by_uri' ) || ! function_exists( 'axismundi_actors_discover_remote_actor_uri' ) ) {
 		return;
 	}
@@ -59,6 +85,9 @@ add_action( 'axismundi_op_discover_remote_actor', 'axismundi_op_discover_remote_
  */
 function axismundi_op_schedule_announced_object_fetch( string $object_uri ) : bool {
 	$object_uri = trim( $object_uri );
+	if ( ! axismundi_op_background_acquisition_enabled() ) {
+		return false;
+	}
 	if ( 'https' !== strtolower( (string) wp_parse_url( $object_uri, PHP_URL_SCHEME ) ) || '' === (string) wp_parse_url( $object_uri, PHP_URL_HOST ) ) {
 		return false;
 	}
@@ -74,6 +103,9 @@ function axismundi_op_schedule_announced_object_fetch( string $object_uri ) : bo
 
 /** Run one deferred Announce target acquisition. */
 function axismundi_op_fetch_announced_object( string $object_uri ) : void {
+	if ( ! axismundi_op_background_acquisition_enabled() ) {
+		return;
+	}
 	if ( ! is_array( axismundi_op_get_remote_object( $object_uri ) ) ) {
 		axismundi_op_remote_object_fetch( $object_uri );
 	}

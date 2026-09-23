@@ -11,6 +11,7 @@ $ax_or_source        = 'https://remote.example/notes/' . $ax_or_suffix;
 $ax_or_conflict      = $ax_or_source . '-conflict';
 $ax_or_private       = $ax_or_source . '-private';
 $ax_or_tombstone     = $ax_or_source . '-gone';
+$ax_or_self_fixtures = array();
 $ax_or_authorization = 'https://origin.example/quote-authorizations/' . $ax_or_suffix;
 $ax_or_real_prefix   = $wpdb->prefix;
 $ax_or_shadow_prefix = '';
@@ -43,6 +44,60 @@ try {
 	$relations = axismundi_op_quote_relations_for_target( $ax_or_target );
 	ax_or_assert( $ax_or_results, 'equivalent FEP and compatibility aliases collapse to one strongest-evidence relation', 1 === count( $relations ) && 'fep044f' === $relations[0]['evidence_type'] );
 	ax_or_assert( $ax_or_results, 'a declared quoteAuthorization is retained but never treated as approval evidence', 'legacy_unverified' === $relations[0]['consent_status'] && $ax_or_authorization === $relations[0]['authorization_uri'] && null === axismundi_op_quote_relation_for_authorization( $ax_or_authorization ) );
+
+	/*
+	 * FEP-044f's other approved case: the quote and the quoted post share an author. Both
+	 * authors must be known here -- an unknown target author is not evidence that they match,
+	 * and assuming it would manufacture the consent this path exists to verify.
+	 */
+	$ax_or_self_author = 'https://remote.example/users/selfquoter';
+	$ax_or_self_target = 'https://remote.example/notes/' . $ax_or_suffix . '-self-target';
+	$ax_or_self_source = 'https://remote.example/notes/' . $ax_or_suffix . '-self-quote';
+	$ax_or_unknown     = 'https://remote.example/notes/' . $ax_or_suffix . '-never-seen';
+	axismundi_op_store_remote_object(
+		array(
+			'id'           => $ax_or_self_target,
+			'type'         => 'Note',
+			'attributedTo' => $ax_or_self_author,
+			'to'           => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+		)
+	);
+	axismundi_op_store_remote_object(
+		array(
+			'id'           => $ax_or_self_source,
+			'type'         => 'Note',
+			'attributedTo' => $ax_or_self_author,
+			'to'           => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'quote'        => $ax_or_self_target,
+		)
+	);
+	$ax_or_self_rows = axismundi_op_quote_relations_for_target( $ax_or_self_target );
+	ax_or_assert(
+		$ax_or_results,
+		'a quote of the same author\'s own post is approved without an authorization',
+		1 === count( $ax_or_self_rows ) && 'self' === (string) $ax_or_self_rows[0]['consent_status']
+	);
+	ax_or_assert(
+		$ax_or_results,
+		'the same-author state renders as an embed, like a verified approval',
+		'embed' === ( axismundi_op_normalize_quote_display_state( 'self' )['display_state'] ?? '' )
+	);
+
+	axismundi_op_store_remote_object(
+		array(
+			'id'           => $ax_or_self_source . '-unknown',
+			'type'         => 'Note',
+			'attributedTo' => $ax_or_self_author,
+			'to'           => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'quote'        => $ax_or_unknown,
+		)
+	);
+	$ax_or_unknown_rows = axismundi_op_quote_relations_for_target( $ax_or_unknown );
+	ax_or_assert(
+		$ax_or_results,
+		'an unknown target author is not read as the same author',
+		1 === count( $ax_or_unknown_rows ) && 'legacy_unverified' === (string) $ax_or_unknown_rows[0]['consent_status']
+	);
 
 	$verified = axismundi_op_verify_quote_consent( $ax_or_source, $ax_or_target, $ax_or_authorization, 'approved' );
 	axismundi_op_store_remote_object( $public );

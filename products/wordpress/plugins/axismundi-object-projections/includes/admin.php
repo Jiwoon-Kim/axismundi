@@ -13,6 +13,30 @@ function axismundi_op_remote_admin_url( string $object_uri = '' ) : string {
 	return '' === $object_uri ? $url : add_query_arg( 'object_uri', $object_uri, $url );
 }
 
+/**
+ * Store the administrator's answer to "may this site fetch on its own?".
+ *
+ * The setting exists because the alternative is deciding for them. A background fetch tells
+ * the remote host this site exists, and an Announce from a stranger is not consent to do
+ * that. Off is the default; inspecting one address by hand needs no setting.
+ */
+function axismundi_op_save_background_acquisition() : void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'You cannot change this setting.', 'axismundi-object-projections' ), '', array( 'response' => 403 ) );
+	}
+	check_admin_referer( 'ax_op_background_acquisition' );
+	$enabled = isset( $_POST['ax_op_background_acquisition'] ) ? '1' : '0';
+	update_option( AXISMUNDI_OP_BACKGROUND_ACQUISITION_OPTION, $enabled, false );
+	if ( '0' === $enabled ) {
+		// Nothing queued under the old answer may still reach the network.
+		wp_clear_scheduled_hook( 'axismundi_op_discover_remote_actor' );
+		wp_clear_scheduled_hook( 'axismundi_op_fetch_announced_object' );
+	}
+	wp_safe_redirect( add_query_arg( 'ax_op_saved', '1' === $enabled ? 'on' : 'off', axismundi_op_remote_admin_url() ) );
+	exit;
+}
+add_action( 'admin_post_axismundi_op_background_acquisition', 'axismundi_op_save_background_acquisition' );
+
 /** Register the admin-only inspector. */
 function axismundi_op_register_admin_page() : void {
 	add_management_page(
@@ -344,6 +368,18 @@ function axismundi_op_render_remote_admin_page() : void {
 			<label class="screen-reader-text" for="ax-op-remote-object"><?php esc_html_e( 'Remote object URL', 'axismundi-object-projections' ); ?></label>
 			<input id="ax-op-remote-object" type="url" name="remote_object" class="large-text" placeholder="https://example.social/users/alice/statuses/123" required>
 			<?php submit_button( __( 'Fetch object metadata', 'axismundi-object-projections' ), 'primary', 'submit', false ); ?>
+		</form>
+
+		<h2><?php esc_html_e( 'Background acquisition', 'axismundi-object-projections' ); ?></h2>
+		<p><?php esc_html_e( 'Off by default. While it is off, this site contacts a remote server only when you ask it to on this screen. Switching it on lets a publicly addressed Announce that arrives here queue one background fetch of the address it names, so an announcement can be shown as something rather than as a link. That request tells the remote host this site exists, including its address and IP.', 'axismundi-object-projections' ); ?></p>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="axismundi_op_background_acquisition">
+			<?php wp_nonce_field( 'ax_op_background_acquisition' ); ?>
+			<label for="ax-op-background-acquisition">
+				<input id="ax-op-background-acquisition" type="checkbox" name="ax_op_background_acquisition" value="1" <?php checked( axismundi_op_background_acquisition_enabled() ); ?>>
+				<?php esc_html_e( 'Allow this site to fetch announced objects and their authors in the background', 'axismundi-object-projections' ); ?>
+			</label>
+			<?php submit_button( __( 'Save setting', 'axismundi-object-projections' ), 'secondary', 'submit', false ); ?>
 		</form>
 
 		<h2><?php esc_html_e( 'Remote Collections', 'axismundi-object-projections' ); ?></h2>

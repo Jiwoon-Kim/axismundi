@@ -548,6 +548,47 @@ function axismundi_op_object_view_attachment( array $descriptor ) : string {
 }
 
 /**
+ * Render the interaction controls a product asks for on one Object view.
+ *
+ * A product names blocks; this renders them. It used to accept finished HTML, which meant a
+ * filter could put anything on the page and nothing here could tell markup a block escaped
+ * from markup nobody did. Naming a block keeps the escaping where the block is, and an
+ * unregistered name simply renders nothing.
+ *
+ * @param array<string,mixed> $model Active Object view model.
+ * @return string
+ */
+function axismundi_op_object_view_interactions_html( array $model ) : string {
+	/**
+	 * Filter the interaction blocks rendered beneath one Object view.
+	 *
+	 * Each entry is a block array: `blockName` plus its `attrs`.
+	 *
+	 * @since 0.1.1
+	 * @param array<int,array<string,mixed>> $blocks Blocks to render.
+	 * @param array<string,mixed>            $model  Active Object view model.
+	 */
+	$blocks = (array) apply_filters( 'axismundi_op_object_view_interaction_blocks', array(), $model );
+	$html   = '';
+	foreach ( $blocks as $block ) {
+		$name = is_array( $block ) ? (string) ( $block['blockName'] ?? '' ) : '';
+		if ( '' === $name || ! WP_Block_Type_Registry::get_instance()->is_registered( $name ) ) {
+			continue;
+		}
+		$html .= render_block(
+			array(
+				'blockName'    => $name,
+				'attrs'        => (array) ( $block['attrs'] ?? array() ),
+				'innerBlocks'  => array(),
+				'innerHTML'    => '',
+				'innerContent' => array(),
+			)
+		);
+	}
+	return $html;
+}
+
+/**
  * Render the request's current object view model.
  *
  * A Tombstone renders a minimal deleted notice with no author, content, or
@@ -618,9 +659,10 @@ function axismundi_op_render_object_view_block( array $attributes = array(), str
 	 * @param string               $html  Interaction markup (empty by default).
 	 * @param array<string,mixed>  $model The active object view model.
 	 */
-	$interactions = $interactions_enabled ? (string) apply_filters( 'axismundi_op_object_view_interactions', '', $model ) : '';
+	$interactions = $interactions_enabled ? axismundi_op_object_view_interactions_html( $model ) : '';
 	if ( '' !== $interactions ) {
-		$parts[] = '<div class="axismundi-object__interactions">' . $interactions . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Interaction consumer owns escaping.
+		// Block output, rendered here from the block list a product asked for. See below.
+		$parts[] = '<div class="axismundi-object__interactions">' . $interactions . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- render_block() output; each block escapes its own.
 	}
 
 	$type_class = sanitize_html_class( strtolower( (string) ( $model['type'] ?? 'object' ) ), 'object' );

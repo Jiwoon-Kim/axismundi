@@ -199,7 +199,7 @@ function axismundi_op_template_redirect() : void {
 		header( 'Link: <' . esc_url_raw( $html_url ) . '>; rel="alternate"; type="text/html"', false );
 	}
 	if ( 'HEAD' !== strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) ) ) ) {
-		echo wp_json_encode( $object, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON encoded response.
+		echo wp_json_encode( $object ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_json_encode() escapes the document; no flags weaken it.
 	}
 	exit;
 }

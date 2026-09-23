@@ -126,8 +126,10 @@ As a starting policy, the text panel would not offer `FILL`, which is how icon f
 - [ ] Weight ranges read correctly for the Appearance control — #83128
 - [ ] Any weight in a variable font's range, stored in `fontWeight` — #83141 (draft, builds on #83128)
 - [ ] Capability, policy and value, with a Font variations panel — #83159 (draft, a design experiment for this issue, with a Playground demo)
+- [ ] A `slnt` range read as face capability rather than a style to select — #83456 (draft, for #83455: a two-angle `font-style` descriptor is offered as an Appearance value the property discards)
 - [ ] `fontStretch` for `wdth`
 - [ ] `axes` read from a font file's `fvar` table when it is uploaded or installed
+- [ ] The family a block's text is drawn in resolved before its faces are looked up — #83462 (draft prototype, for #83459: the Blocks screen offers the built-in weights to a block that inherits its font)
 - [x] Local reference consumer, outside Gutenberg: the Axismundi Dialogs icon block, an experiment toward `core/icon` v2, stores `FILL`, `GRAD` and `opsz` as a `fontVariationSettings` object, with `wght` in `fontWeight` — [Jiwoon-Kim/axismundi@23431ba](https://github.com/Jiwoon-Kim/axismundi/commit/23431ba709599ffaa370dbd815e871d581343242)
 
 Related: #83141, #82848, #82830, [Core Trac #66103](https://core.trac.wordpress.org/ticket/66103) (the PHP array path for `font-variation-settings` in `WP_Font_Face`, fixed in [changeset 63653](https://core.trac.wordpress.org/changeset/63653) for 7.2).

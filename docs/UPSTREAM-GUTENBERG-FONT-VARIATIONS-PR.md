@@ -1,5 +1,6 @@
 # Draft — Gutenberg draft PR: any weight in a variable font's range
 
+> 2026-09-26: #83128 머지 후 정리. 브랜치를 trunk `ad5b19d2c3` 위로 리베이스(`--force-with-lease`, 사용자 1회 승인)하여 범위 수정 커밋을 없애고 두 커밋만 남겼다 — `a9e305c9d2`(기능) + `fa3a8dcb12`(`parseFontWeightValue()` 공용 모듈). 본문에서 "Depends on #83128 … 앞선 커밋을 제거하겠다" 첫 줄 삭제, How?에 공용 파서·`"normal 900"` 보완 추가, Testing Instructions 8단계 추가, "Not in this PR"의 축 모델 설명을 #83148의 boolean availability와 #83159 프로토타입에 맞춤. VQA(8889, 리베이스 빌드): Keyword Range `normal 900` → `Regular (400)`–`Black (900)`, Range Test `250 750` → `Light (300)`–`Bold (700)`, Wide Range `100 1000` → `Thin (100)`–`Extra Black (1000)`, Static Test → Appearance 그대로.
 > 2026-09-19: "Not in this PR" 문단에 축 모델 이슈 #83148 링크 추가.
 > 상태: **draft 게시됨** — [WordPress/gutenberg#83141](https://github.com/WordPress/gutenberg/pull/83141). #83128(범위 파싱)에 의존한다. upstream에서 fork 브랜치를 base로 하는 stacked PR은 불가능하므로 `trunk` 기준 draft로 열었고, #83128이 머지되면 그 변경을 제거한다.
 >
@@ -35,8 +36,6 @@ Typography: Let variable fonts use any weight in their range
 
 ## Body (GitHub Markdown — paste as is)
 
-Depends on #83128. Review begins at `134888279d`; I will remove the preceding range-fix commits after #83128 merges.
-
 ## What?
 
 When the selected font family is variable, the **Appearance** control splits into a Style select, with the choices it already offers, and a Weight control. As with the font size, the weight is picked from a list, here the hundreds inside the font's range shown with their numbers (`Light (300)`), and a toggle next to the Weight label switches to a slider and a number field for any value in the range. Static fonts keep the combined style and weight list.
@@ -50,13 +49,14 @@ Appearance offers fixed combinations such as "Bold Italic". That matches static 
 ## How?
 
 - `getFontWeightRange()` reads the weight range that a family's faces declare. A family with a range is treated as variable; no new flag is needed.
+- Both ends of a range are read by `parseFontWeightValue()`, a module the appearance list and this control share, so a face declaring `"normal 900"` is the range 400 to 900 in both. Before, the two had a parser each: #83128 taught the appearance list the keywords `@font-face` accepts, and the weight range kept its `parseInt`, which read `normal` as nothing and left the control with no range to offer. `lighter` and `bolder` are relative to a parent, so `@font-face` does not take them and a range naming one is still left alone rather than guessed at.
 - `VariableFontAppearanceControl` renders the Style select and a Weight control. The Weight control follows the font size picker: a select with the hundreds inside the range, and a toggle beside the label for a slider and a number field. The number field is separate from the slider because `RangeControl`'s own input clamps the value it shows.
 - A saved weight that is not a preset opens in the direct input and shows as `Custom (178)` in the select. A saved weight outside the font's range is kept and shown as it is, with a short note; it only changes when the user sets another. The slider only moves within the range.
 - Style keeps the options and the behaviour of Appearance, including italic for fonts without an italic face.
 - When the font family changes, a weight inside the new variable font's range is kept. Before, a weight that was not one of the listed hundreds was replaced by the nearest one.
 - The weight stays in `fontWeight` rather than in `font-variation-settings`. `font-variation-settings` is inherited and applied after `font-weight`, so with `'wght' 300` on a paragraph, a `<strong>` inside it also renders at 300. It also only reaches fonts that have a `wght` axis: a fallback without one, such as a system font drawing a script the web font does not cover, stays at the element's `font-weight`, and faux bold is decided from `font-weight` as well.
 
-Not in this PR: other axes. Slant (`fontStyle: oblique <angle>`) and width (`fontStretch`) map to CSS properties and could join Appearance later; axes without one, such as `GRAD`, would be stored in a `fontVariationSettings` style property and shown in a separate Font variations panel, only for the axes a theme chooses to expose. That model is proposed in #83148. Also open: whether italic should be offered when a font has no italic face.
+Not in this PR: other axes. Slant (`fontStyle: oblique <angle>`) and width (`fontStretch`) map to CSS properties and could join Appearance later; axes without one, such as `GRAD`, would be stored in a `fontVariationSettings` style property and shown in a separate Font variations panel, which a theme can turn on. That model is proposed in #83148 and prototyped in #83159. Also open: whether italic should be offered when a font has no italic face.
 
 ## Testing Instructions
 
@@ -67,6 +67,7 @@ Not in this PR: other axes. Slant (`fontStyle: oblique <angle>`) and width (`fon
 5. Save a paragraph with `fontStyle: normal` and `fontWeight: 200` in that family, for example from the code editor, then select it. The Weight control opens with 200 in the number field, the slider at 250, and a note that 200 is outside the range (250–750). The value stays 200 until another weight is chosen.
 6. Set a paragraph to a variable family with a range of 100–1000 and weight 420, then change its font to the 250–750 family: the weight stays 420.
 7. Set the font to the static family: the Appearance control is shown as before.
+8. Add a third family with a face whose `fontWeight` is `"normal 900"`, and set a paragraph to it: the Weight select lists `Regular (400)` to `Black (900)`, and the slider runs from 400 to 900.
 
 ### Testing Instructions for Keyboard
 

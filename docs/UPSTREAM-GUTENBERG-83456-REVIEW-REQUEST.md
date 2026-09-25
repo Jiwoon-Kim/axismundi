@@ -1,6 +1,6 @@
 # Draft — Gutenberg #83456 review request
 
-> 상태: **초안.** 올릴 곳: [WordPress/gutenberg#83456](https://github.com/WordPress/gutenberg/pull/83456) 댓글.
+> 상태: **게시됨** 2026-09-25 — [issuecomment-5831551437](https://github.com/WordPress/gutenberg/pull/83456#issuecomment-5831551437). `--github` 되읽기 일치(SHA-256 `408be9f2…`, 2026-09-26 확인).
 >
 > 맥락: #83128이 `139e47158c`로 trunk에 머지됨(2026-09-24). 그 머지로 생긴 충돌은 GitHub 웹
 > Resolve conflicts로 해소(`087e7fb69f`), 체크 **77 pass / 0 fail**, `mergeable: MERGEABLE`.

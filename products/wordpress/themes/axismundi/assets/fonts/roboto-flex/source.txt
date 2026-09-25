@@ -15,6 +15,20 @@ axis runs -10 to 0, and `font-style: oblique <angle>` takes the angle with the
 sign flipped. Declared the other way round, every oblique request clamps back
 to upright and the font never slants through `font-style`.
 
-Neither face declares slnt in fontVariationSettings: that would pin the axis a
-style request is meant to drive. The custom-axis defaults are the same on both,
-so choosing a style does not also change the grade or the x-height.
+Neither face declares slnt in fontVariationSettings: that axis is what the
+fontStyle descriptor drives, and pinning it there would fix what a style
+request is meant to move. The custom axes stay, with the same values on both
+faces, so choosing a style does not also change the grade or the x-height. They
+hold the face's starting instance; an element or a block still overrides any of
+them, which is how a future axis control would edit them.
+
+Registering the oblique face takes nothing away. Measured with synthesis off:
+an element's own `font-variation-settings: "slnt"` still reaches the axis, and
+still wins over `font-style: oblique <angle>` when both are set on the same
+element. Without the oblique face that low-level path is the only one that
+works, since `font-style: oblique` then finds no face to match and leaves the
+text upright.
+
+Note that Safari does not support the font-variation-settings descriptor, so
+these are a starting point rather than a guarantee. They currently repeat the
+fvar defaults, which is why removing them changed nothing when it was tried.

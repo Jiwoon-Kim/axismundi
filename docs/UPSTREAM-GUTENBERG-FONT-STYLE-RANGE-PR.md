@@ -11,6 +11,13 @@
 > **범위:** faux italic 정책, Paragraph 패널의 상속 결손, `font-synthesis-*`는 전부 제외.
 > 범위 디스크립터를 유효한 값으로 정규화하는 것까지만.
 >
+> **정정(2026-09-25): 부호.** `oblique -10deg 0deg`를 "바이너리를 정확히 옮긴" 것으로 쓴
+> 문장은 틀렸다. CSS는 `slnt` 좌표의 부호를 뒤집으므로 `slnt -10..0`인 face는
+> `oblique 0deg 10deg`로 선언한다. 음수 범위로 선언하면 어떤 oblique 요청도 기울지 않는다
+> (Chromium 실측). 수정 코드는 부호와 무관하다 — 어느 쪽이든 upright에 가장 가까운 끝이
+> `0deg`이므로 테스트 기대값도 그대로다. 커밋 `cb86e418ca`에서 CHANGELOG 예시와 테스트
+> 주석을 함께 고쳤다.
+>
 > 게시 전 검증:
 >
 > ```powershell
@@ -31,17 +38,17 @@ A `@font-face` may declare `font-style` as a two-angle oblique range. The Appear
 
 ## Why?
 
-A variable font with a `slnt` axis declares the slant requests its face can match. Roboto Flex has `slnt` from `-10` to `0` and declares `font-style: oblique -10deg 0deg`, which is an accurate description of the binary.
+A variable font with a `slnt` axis declares the slant requests its face can match. Roboto Flex has `slnt` from `-10` to `0`, and `font-style: oblique` takes the angle with the sign flipped, so its face declares `font-style: oblique 0deg 10deg`.
 
-`getFontStylesAndWeights()` passed that descriptor through as a style value, so it became both the label and the stored value of an appearance option. With Roboto Flex selected the list holds twenty options, ten of them `Thin oblique -10deg 0deg` through `Extra Black oblique -10deg 0deg` and ten synthetic italics, and none upright: the range has taken the place of `normal`.
+`getFontStylesAndWeights()` passed that descriptor through as a style value, so it became both the label and the stored value of an appearance option. With Roboto Flex selected the list holds twenty options, ten of them `Thin oblique 0deg 10deg` through `Extra Black oblique 0deg 10deg` and ten synthetic italics, and none upright: the range has taken the place of `normal`.
 
 The two-angle form belongs to the descriptor. The property takes at most one angle, so the declaration is dropped:
 
 ```js
-CSS.supports( 'font-style', 'oblique -10deg 0deg' ); // false
+CSS.supports( 'font-style', 'oblique 0deg 10deg' ); // false
 
 const el = document.createElement( 'div' );
-el.style.fontStyle = 'oblique -10deg 0deg';
+el.style.fontStyle = 'oblique 0deg 10deg';
 el.style.fontStyle; // "" — not kept
 ```
 
@@ -52,7 +59,7 @@ Selecting one of those options therefore saves a declaration that does nothing, 
 Read the descriptor as a value the property accepts before formatting it:
 
 - `normal`, `italic`, `oblique`, and a single-angle `oblique 40deg` are styles an element can use and are kept as declared.
-- A two-angle range resolves to the end nearest upright, which is the slant the face gives a `normal` request. `oblique -10deg 0deg` becomes `normal`; a range that excludes upright, such as `oblique 5deg 20deg`, becomes `oblique 5deg`.
+- A two-angle range resolves to the end nearest upright, which is the slant the face gives a `normal` request. `oblique 0deg 10deg` becomes `normal`; a range that excludes upright, such as `oblique 5deg 20deg`, becomes `oblique 5deg`.
 
 This follows up on the capability-based Appearance list introduced in #61915 for #49090: a `font-style` descriptor range describes matching capability, not a discrete style value that can be stored on an element.
 
@@ -60,10 +67,10 @@ This is the style-side counterpart of the weight range parsing in #83128, and it
 
 ## Testing Instructions
 
-1. In the active theme's `theme.json`, register a variable font with a `slnt` axis and declare its range, for example Roboto Flex with `"fontStyle": "oblique -10deg 0deg"` and `"fontWeight": "100 1000"`.
+1. In the active theme's `theme.json`, register a variable font with a `slnt` axis and declare its range, for example Roboto Flex with `"fontStyle": "oblique 0deg 10deg"` and `"fontWeight": "100 1000"`.
 2. Open **Styles → Typography → Text** in the site editor, select that family, and open **Appearance**.
-3. On trunk every option carries the raw range, such as `Black oblique -10deg 0deg`, and there is no upright option. With this change the list starts at `Thin` through `Extra Black`, and `Regular` is selectable.
-4. Choose `Regular` and confirm the front end prints `font-style:normal`. On trunk, choosing `Regular oblique -10deg 0deg` prints a declaration the browser drops, leaving the text upright with no indication that the setting had no effect.
+3. On trunk every option carries the raw range, such as `Black oblique 0deg 10deg`, and there is no upright option. With this change the list starts at `Thin` through `Extra Black`, and `Regular` is selectable.
+4. Choose `Regular` and confirm the front end prints `font-style:normal`. On trunk, choosing `Regular oblique 0deg 10deg` prints a declaration the browser drops, leaving the text upright with no indication that the setting had no effect.
 
 A panel where no family is resolved, such as **Styles → Blocks → Paragraph** with its font left at Default, falls back to the built-in lists and shows neither behaviour. Select the family in the panel being tested.
 

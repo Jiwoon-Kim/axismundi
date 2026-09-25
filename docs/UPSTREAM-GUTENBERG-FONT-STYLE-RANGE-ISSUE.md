@@ -38,6 +38,16 @@
 >   (`el.style.fontStyle === ""`), computed는 `normal`, `CSS.supports()`는 `false`.
 >   단일 각도와 각도 없는 형태는 모두 유효.
 >
+> **정정(2026-09-25): 부호.** 위 기록의 `oblique -10deg 0deg`가 "바이너리를 정확히 옮긴
+> 디스크립터"라는 판단은 **틀렸다.** `font-style: oblique <angle>`은 `slnt` 좌표의 부호를
+> 뒤집어 매핑하므로, `slnt -10..0`인 face의 올바른 선언은 `oblique 0deg 10deg`다.
+> 측정(Chromium, 같은 woff2를 두 부호로 각각 등록): 음수 범위로 선언하면 **어떤 oblique
+> 요청도 기울지 않는다**(범위 밖이라 0으로 클램프). 양수 범위에서만 `oblique 10deg`·`oblique 5deg`가
+> 기운다. 결함 자체는 부호와 무관하다 — 두 부호 모두 `CSS.supports` false, computed `normal`,
+> CSSOM 미보존. 게시본은 예시·표·스니펫을 양수로 고쳤고, 에디터 라벨도 VQA 환경에서
+> `Thin oblique 0deg 10deg` … `Extra Black oblique 0deg 10deg`로 재확인했다(upright 옵션 없음).
+> axismundi 테마의 Roboto Flex도 같은 오류라 별도 수정 대상.
+>
 > 게시 전 검증:
 >
 > ```powershell
@@ -52,7 +62,7 @@
 
 ### Description
 
-`getFontStylesAndWeights()` treats an `@font-face` `font-style` descriptor as a discrete appearance value. When a variable font declares a range, such as `oblique -10deg 0deg`, that raw descriptor becomes both the label and the stored value of an Appearance option, and the value it stores is not valid for the `font-style` property.
+`getFontStylesAndWeights()` treats an `@font-face` `font-style` descriptor as a discrete appearance value. When a variable font declares a range, such as `oblique 0deg 10deg`, that raw descriptor becomes both the label and the stored value of an Appearance option, and the value it stores is not valid for the `font-style` property.
 
 This is the style-side counterpart of the `font-weight` range handling fixed in #83128. The difference is that a weight range reduces reasonably to a discrete list of hundreds, while a slant range is a continuous angle and has no comparable discrete reduction.
 
@@ -60,12 +70,12 @@ Single-valued descriptors are not affected. A static face declaring `font-style:
 
 ### Step-by-step reproduction instructions
 
-1. Register a variable font whose `@font-face` declares a `font-style` range. Roboto Flex is the reference case, since its `fvar` table carries `slnt` from `-10` to `0` with a default of `0`, so the range descriptor is an accurate description of the binary:
+1. Register a variable font whose `@font-face` declares a `font-style` range. Roboto Flex is the reference case: its `fvar` table carries `slnt` from `-10` to `0`, and `font-style: oblique` takes the angle with the sign flipped, so the face declares `0deg` to `10deg`:
 
 ```json
 {
 	"fontFamily": "Roboto Flex",
-	"fontStyle": "oblique -10deg 0deg",
+	"fontStyle": "oblique 0deg 10deg",
 	"fontWeight": "100 1000",
 	"fontStretch": "25% 151%",
 	"src": [ "file:./assets/fonts/roboto-flex.woff2" ]
@@ -83,14 +93,14 @@ Appearance should not offer the descriptor range as a selectable value. Whatever
 
 ### Actual results
 
-Every weight is offered combined with the raw descriptor. For Roboto Flex the list holds twenty options, ten of them `Thin oblique -10deg 0deg` through `Extra Black oblique -10deg 0deg`, and ten synthetic italics. None of them is upright: the range has taken the place of `normal`, so this family cannot be set to `Regular` at all.
+Every weight is offered combined with the raw descriptor. For Roboto Flex the list holds twenty options, ten of them `Thin oblique 0deg 10deg` through `Extra Black oblique 0deg 10deg`, and ten synthetic italics. None of them is upright: the range has taken the place of `normal`, so this family cannot be set to `Regular` at all.
 
-Selecting one stores `fontStyle: "oblique -10deg 0deg"`, which the `font-style` property does not accept. The two-angle form is allowed in the `@font-face` descriptor only. Measured in Chromium:
+Selecting one stores `fontStyle: "oblique 0deg 10deg"`, which the `font-style` property does not accept. The two-angle form is allowed in the `@font-face` descriptor only. Measured in Chromium:
 
 | Value | Kept in CSSOM | Computed | `CSS.supports()` |
 | --- | --- | --- | --- |
-| `oblique -10deg 0deg` | *(dropped)* | `normal` | `false` |
-| `oblique -10deg` | `oblique -10deg` | `oblique -10deg` | `true` |
+| `oblique 0deg 10deg` | *(dropped)* | `normal` | `false` |
+| `oblique 10deg` | `oblique 10deg` | `oblique 10deg` | `true` |
 | `oblique` | `oblique` | `oblique` | — |
 
 So the option is selectable and persists in the saved styles, but the declaration is discarded by the browser and the text does not slant. The failure is silent.
@@ -103,7 +113,7 @@ Whether the combined weight-and-style dropdown should remain the default for sta
 
 ### A note on the fix
 
-Normalising the range to a bare `oblique` would not be equivalent. An angle-less `oblique` requests `oblique 14deg`, outside the `-10deg` to `0deg` the face advertises, so it would select a different coordinate than the descriptor describes.
+Normalising the range to a bare `oblique` would not be equivalent. An angle-less `oblique` requests `oblique 14deg`, outside the `0deg` to `10deg` the face advertises, so it would select a different coordinate than the descriptor describes.
 
 The smaller change is to resolve the range to the end nearest upright, which is the slant the face gives a `normal` request, so this family offers `Regular`. That keeps Appearance from storing a declaration the property discards without inventing a control for the rest of the range, which belongs to the axis discussion.
 
@@ -112,11 +122,11 @@ The smaller change is to resolve the range to the end nearest upright, which is 
 The measurement above, as a snippet to paste into a console:
 
 ```js
-CSS.supports( 'font-style', 'oblique -10deg 0deg' ); // false
-CSS.supports( 'font-style', 'oblique -10deg' ); // true
+CSS.supports( 'font-style', 'oblique 0deg 10deg' ); // false
+CSS.supports( 'font-style', 'oblique 10deg' ); // true
 
 const el = document.createElement( 'div' );
-el.style.fontStyle = 'oblique -10deg 0deg';
+el.style.fontStyle = 'oblique 0deg 10deg';
 el.style.fontStyle; // "" — the declaration was not kept
 ```
 

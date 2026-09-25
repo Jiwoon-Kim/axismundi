@@ -4,3 +4,17 @@ Processing: pyftsubset → WOFF2 (format conversion only, no glyph subset)
 All variable axes preserved.
 Conversion date: 2026-05-13
 License: SIL Open Font License 1.1
+
+Registration in theme.json:
+One variable binary is registered as normal and oblique faces. The shared
+source is fetched once; normal preserves upright matching, while the oblique
+descriptor maps CSS oblique requests to slnt.
+
+The descriptor reads `oblique 0deg 10deg`, not `-10deg 0deg`: the fvar slnt
+axis runs -10 to 0, and `font-style: oblique <angle>` takes the angle with the
+sign flipped. Declared the other way round, every oblique request clamps back
+to upright and the font never slants through `font-style`.
+
+Neither face declares slnt in fontVariationSettings: that would pin the axis a
+style request is meant to drive. The custom-axis defaults are the same on both,
+so choosing a style does not also change the grade or the x-height.

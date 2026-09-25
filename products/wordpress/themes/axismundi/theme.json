@@ -283,6 +283,17 @@
 					"fontFace": [
 						{
 							"fontFamily": "Roboto Flex",
+							"fontStyle": "normal",
+							"fontWeight": "100 1000",
+							"fontStretch": "25% 151%",
+							"fontDisplay": "swap",
+							"src": [
+								"file:./assets/fonts/roboto-flex/axismundi-roboto-flex.woff2"
+							],
+							"fontVariationSettings": "\"GRAD\" 0, \"XOPQ\" 96, \"XTRA\" 468, \"YOPQ\" 79, \"YTAS\" 750, \"YTDE\" -203, \"YTFI\" 738, \"YTLC\" 514, \"YTUC\" 712"
+						},
+						{
+							"fontFamily": "Roboto Flex",
 							"fontStyle": "oblique 0deg 10deg",
 							"fontWeight": "100 1000",
 							"fontStretch": "25% 151%",

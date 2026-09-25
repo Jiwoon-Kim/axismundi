@@ -46,6 +46,9 @@
  * NO unicode-range — this is the base layer; all non-CJK chars
  * resolve here. CJK chars fall through to Noto Sans KR below.
  * ------------------------------------------------------------ */
+/* One binary, two faces: normal keeps upright matching, oblique maps a CSS
+ * oblique request to slnt. The shared URL is fetched once.
+ * slnt runs -10..0; font-style: oblique flips the sign, so 0deg..10deg. */
 @font-face {
   font-family: 'Roboto Flex';
   src: url('../../../../core/design-systems/material3/assets/fonts/roboto-flex/axismundi-roboto-flex.woff2')
@@ -54,7 +57,18 @@
        format('woff2');
   font-weight: 100 1000;
   font-stretch: 25% 151%;
-  /* slnt runs -10..0; font-style: oblique flips the sign, so 0deg..10deg. */
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Roboto Flex';
+  src: url('../../../../core/design-systems/material3/assets/fonts/roboto-flex/axismundi-roboto-flex.woff2')
+       format('woff2-variations'),
+       url('../../../../core/design-systems/material3/assets/fonts/roboto-flex/axismundi-roboto-flex.woff2')
+       format('woff2');
+  font-weight: 100 1000;
+  font-stretch: 25% 151%;
   font-style: oblique 0deg 10deg;
   font-display: swap;
 }

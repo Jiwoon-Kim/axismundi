@@ -36,6 +36,14 @@
 > 본문에 넣지 않은 것: `<em>`이 실제 `slnt`로 렌더된다는 측정. 브라우저 face-matching 세부라
 > 이 이슈에서는 보조 설명이고, Axismundi 테마 쪽 근거로만 남긴다(사용자 판단).
 >
+> **보강(2026-09-26): 저수준 override 근거.** 등록축을 값 객체에서 빼는 이유를 실측으로 적었다.
+> `font-style: oblique 10deg` + `font-variation-settings: "slnt" 0` → **직립**(Chromium,
+> 합성 끔, 아무 스타일도 안 준 것과 구분 불가). 즉 저수준이 나중에 적용돼 해당 축을
+> 고수준 컨트롤에서 떼어낸다. "고수준 속성을 선호해서"가 아니라 이것이 근거다.
+> Open question에 `opsz`의 Auto/Manual 함정을 따로 추가했다 — 슬라이더만 주면
+> `font-optical-sizing: auto`가 조용히 꺼진다.
+> 대응 테스트는 #83159 커밋 `6bcadcaf78`(다섯 축을 모두 선언한 face에 대해 커스텀축만 남는지).
+>
 > 게시 전 검증:
 >
 > ```powershell
@@ -123,7 +131,7 @@ Measured in the prototype: the boolean reaches root and block settings, a block 
 "styles": { "typography": { "fontVariationSettings": { "GRAD": 20 } } }
 ```
 
-An object also lets origins merge per axis. `font-variation-settings` replaces the whole list, so setting one axis on a nested element otherwise means repeating every other custom axis. In this new structured value, `wght`, `wdth`, `slnt` and `ital` would be moved to their properties or rejected by the schema, the UI and the style engine; `opsz` is allowed, since nothing else takes a coordinate for it. The existing string form of the face descriptor and CSS written by hand stay as they are, as an escape hatch; `@font-face` defaults set there are not reliable across browsers anyway (Safari does not support the descriptor), so values belong in styles.
+An object also lets origins merge per axis. `font-variation-settings` replaces the whole list, so setting one axis on a nested element otherwise means repeating every other custom axis. In this new structured value, `wght`, `wdth`, `slnt` and `ital` would be moved to their properties or rejected by the schema, the UI and the style engine; `opsz` is allowed, since nothing else takes a coordinate for it. `font-variation-settings` is the low-level control, applied after the properties that map to the same axis, so a coordinate written here takes that axis away from the control that owns it: `font-style: oblique 10deg` with `"slnt" 0` on the same element renders upright, indistinguishable from no style at all. That is what keeps the registered axes out of this value and out of the panel, rather than a preference for the high-level properties. The existing string form of the face descriptor and CSS written by hand stay as they are, as an escape hatch; `@font-face` defaults set there are not reliable across browsers anyway (Safari does not support the descriptor), so values belong in styles.
 
 ### 3. A separate Font variations panel
 
@@ -135,6 +143,7 @@ To start with, the text panel would not offer `FILL`, which is how icon fonts su
 
 - The name of the availability setting.
 - What offers the registered axes this panel leaves alone. A style control has to be one mutually exclusive choice, and `opsz` has no property that takes a coordinate, so a manual optical size would write the same value this panel writes.
+- Whether `opsz` needs a switch of its own. `font-optical-sizing` is `auto`, so the browser already follows the font size; a bare slider would turn that off without saying so, which argues for offering the choice as auto or a value rather than a value alone.
 - Whether uploads should store `axes` read from `fvar`, and whether collections can provide them.
 - Linking axes across a component: a button's label and icon sharing `GRAD`, as Material 3 suggests, seems better expressed as a component-level value both refer to than as one global grade for all text and icons.
 

@@ -283,7 +283,7 @@
 					"fontFace": [
 						{
 							"fontFamily": "Roboto Flex",
-							"fontStyle": "oblique -10deg 0deg",
+							"fontStyle": "oblique 0deg 10deg",
 							"fontWeight": "100 1000",
 							"fontStretch": "25% 151%",
 							"fontDisplay": "swap",

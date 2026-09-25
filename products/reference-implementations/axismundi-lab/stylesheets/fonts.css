@@ -54,7 +54,8 @@
        format('woff2');
   font-weight: 100 1000;
   font-stretch: 25% 151%;
-  font-style: oblique -10deg 0deg;
+  /* slnt runs -10..0; font-style: oblique flips the sign, so 0deg..10deg. */
+  font-style: oblique 0deg 10deg;
   font-display: swap;
 }
 

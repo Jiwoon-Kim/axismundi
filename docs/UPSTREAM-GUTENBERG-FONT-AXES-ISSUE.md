@@ -1,4 +1,4 @@
-# Draft — Gutenberg issue: variable font axes (capability, policy, value)
+# Draft — Gutenberg issue: variable font axes (capability, availability, value)
 
 > 2026-09-19: 정책 형태를 list → 축 태그 keyed object로 변경(사용자 확정, 측정 근거: `array_replace_recursive`가 list를 인덱스로 병합 — 부모 [GRAD −50~50, opsz] + 자식 [XTRA] → XTRA가 GRAD 범위를 물려받음). Open question에서 "shape" 제거. 삭제 semantics(`null`)는 넣지 않음(사용자 결정, 별도 합의). **게시됨**(Playground `90bc650` 확인 후 `gh issue edit`, `--github` 일치).
 > 2026-09-19: dialog-icon을 별도 문단에서 완료 체크 항목으로 변경(사용자 결정: 추적성, 항목 안에 Gutenberg 구현 아님을 명시).
@@ -18,6 +18,23 @@
 > - Roboto Flex, `font-variation-settings:'GRAD' 150`인 문단 안의 `<strong>`: 400 고정과 다름(굵어짐), grade 없는 굵은 글자와 다름(grade 적용), `<strong>`에 GRAD 150을 직접 준 것과 픽셀 동일.
 > - `<em>`과 `"ital" 0`은 측정하지 않음(같은 규칙의 추론으로 본문에 표기).
 > - `@font-face`의 `font-variation-settings` descriptor: Safari 미지원, Chrome 140+, Firefox 62+ (MDN browser-compat-data 8.1.2).
+>
+> **재작성(2026-09-26): 정책 → 가용성.** §2의 `Policy` 층을 boolean 가용성으로 교체했다.
+> 근거는 #83159 프로토타입 실측(로컬 wp-env 8889): boolean이 루트·블록 설정에 실리고,
+> `false`인 블록은 폰트를 골라도 패널이 없으며, 축과 범위는 어느 쪽이든 face에서 온다.
+> 축별 min/max는 폰트 선언을 복제해 어긋나고 실제 제약도 아니어서 버렸다.
+> `array_replace_recursive` 리스트 병합 논거도 함께 사라졌다(boolean은 치환 병합).
+>
+> §1에 CSS Fonts 4의 규범 문장 두 개를 인용했다 — "must apply at most one value due to
+> the font-style property; both `ital` and `slnt` values must not be set together",
+> "The ital axis is not used to satisfy an oblique request." (w3.org/TR/css-fonts-4 원문 확인).
+> Style UI가 상호배타 선택이어야 하는 근거다.
+>
+> §3은 패널 조건을 "테마가 켰고 face가 선언한 축 중 등록축 제외"로, 컨트롤 기본 숨김을 명시.
+> Open questions에 "등록축은 어디서 제공하는가"를 추가하고 정책 이름 질문을 가용성으로 옮겼다.
+>
+> 본문에 넣지 않은 것: `<em>`이 실제 `slnt`로 렌더된다는 측정. 브라우저 face-matching 세부라
+> 이 이슈에서는 보조 설명이고, Axismundi 테마 쪽 근거로만 남긴다(사용자 판단).
 >
 > 게시 전 검증:
 >
@@ -57,7 +74,7 @@ A variable font can have many axes. OpenType registers five (`wght`, `wdth`, `op
 | `opsz` | nothing by default; a manual value in `fontVariationSettings` | `font-optical-sizing: auto` already follows the font size; `"opsz" <n>` when set |
 | custom axes (`GRAD`, `XTRA`, …) | `fontVariationSettings` | `font-variation-settings` |
 
-`opsz` is the exception: its only high-level property is the `auto`/`none` switch, so a chosen size has to go through `font-variation-settings`. For the other registered axes, CSS Fonts 4 asks for the high-level properties, and the difference is visible:
+`opsz` is the exception: its only high-level property is the `auto`/`none` switch, so a chosen size has to go through `font-variation-settings`. For the other registered axes, CSS Fonts 4 asks for the high-level properties, and for `ital` and `slnt` it goes further: "User agents must apply at most one value due to the font-style property; both `ital` and `slnt` values must not be set together", and "The ital axis is not used to satisfy an oblique request." A style control is therefore one mutually exclusive choice — normal, italic, or oblique with an angle — not an italic switch beside a slant slider. The difference from `font-variation-settings` is visible:
 
 - `font-variation-settings` is inherited and applied after `font-weight`, so with `"wght" 300` on a paragraph, a `<strong>` inside it also renders at 300. By the same rule, `"ital" 0` on a paragraph would keep an `<em>` inside it upright in a font with an `ital` axis.
 - It only reaches fonts that have the axis. With `font-weight: 400; font-variation-settings: "wght" 800`, Latin in Roboto Flex and Hangul in a variable Noto Sans KR rendered bold, but Kana drawn by a system font stayed at 400.
@@ -67,7 +84,7 @@ Custom axes have no high-level property and don't interact with `<strong>` or `<
 
 This corrects the object example in my earlier comment on #82830, which put `wght` and `opsz` in `fontVariationSettings`.
 
-### 2. Three layers: capability, policy, value
+### 2. Three layers: capability, availability, value
 
 **Capability — which axes a face has.** A face gets an `axes` list: every axis in the file's `fvar` table, registered or custom, with its range and default. Fonts uploaded or installed through the Font Library can have it read from the file; a theme declares it for the fonts it ships.
 
@@ -87,19 +104,18 @@ This corrects the object example in my earlier comment on #82830, which put `wgh
 
 (Shortened: Roboto Flex has thirteen axes.) `axes` is a list because it describes the file, and it is what controls read ranges from, including a manual `opsz`. The existing descriptors stay as they are for rendering and face selection: `fontWeight: "100 1000"` is still what the browser matches on.
 
-**Policy — which axes the site offers.** `settings.typography` names the axes a theme exposes for a family, keyed by axis tag, optionally narrowing their range. Like other settings it can differ per block through `settings.blocks`, for example a grade that only buttons expose.
+**Availability — whether the site offers this editing.** `settings.typography.fontVariations` is a boolean, and like other settings a block can differ through `settings.blocks`, for example an icon block that offers a fill where running text does not.
 
 ```json
 "settings": {
-	"typography": {
-		"fontVariations": {
-			"roboto-flex": { "GRAD": { "min": -50, "max": 50 } }
-		}
-	}
+	"typography": { "fontVariations": true },
+	"blocks": { "core/quote": { "typography": { "fontVariations": false } } }
 }
 ```
 
-The control's range is the intersection of capability and policy. An axis in the policy that the file does not have is ignored. The policy is keyed by tag, rather than a list like `axes`, because theme.json merges origins with `array_replace_recursive`: a list is merged by index, so a child theme adding an axis would replace one of the parent's and take its range. `axes` describes one file and is not merged that way.
+An earlier revision of this proposal had the theme name the axes instead, per family and per tag, each with an optional narrower range. Building it changed my mind. That list restates what the font already declares, so replacing the file leaves the two disagreeing, and it constrains nothing: a narrower slider does not stop a value reaching `styles` or hand-written CSS. What a site genuinely decides is whether this editing appears at all, which is the shape other opt-in features already use, and a boolean merges across origins without the keying a list needed.
+
+Measured in the prototype: the boolean reaches root and block settings, a block that sets it false shows no panel even with the family selected, and the axes and their ranges come from the faces either way.
 
 **Value — what the user chose.** `styles.typography.fontVariationSettings` is an object keyed by tag, serialized at the style engine boundary.
 
@@ -107,17 +123,18 @@ The control's range is the intersection of capability and policy. An axis in the
 "styles": { "typography": { "fontVariationSettings": { "GRAD": 20 } } }
 ```
 
-An object also lets origins merge per axis. `font-variation-settings` replaces the whole list, so setting one axis on a nested element otherwise means repeating every other custom axis. In this new structured value, `wght`, `wdth`, `slnt` and `ital` would be moved to their properties or rejected by the schema, the UI and the style engine; `opsz` is allowed. The existing string form of the face descriptor and CSS written by hand stay as they are, as an escape hatch; `@font-face` defaults set there are not reliable across browsers anyway (Safari does not support the descriptor), so values belong in styles.
+An object also lets origins merge per axis. `font-variation-settings` replaces the whole list, so setting one axis on a nested element otherwise means repeating every other custom axis. In this new structured value, `wght`, `wdth`, `slnt` and `ital` would be moved to their properties or rejected by the schema, the UI and the style engine; `opsz` is allowed, since nothing else takes a coordinate for it. The existing string form of the face descriptor and CSS written by hand stay as they are, as an escape hatch; `@font-face` defaults set there are not reliable across browsers anyway (Safari does not support the descriptor), so values belong in styles.
 
 ### 3. A separate Font variations panel
 
-Axes stored in `fontVariationSettings` get their own panel in the block inspector and in Global Styles, separate from Appearance, which keeps weight and style for static and variable fonts alike. The panel only appears when the selected family has policy-exposed axes, shows one row per axis (slider and number field), and lets the user add or remove axes through the ToolsPanel menu.
+Axes stored in `fontVariationSettings` get their own panel in the block inspector and in Global Styles, separate from Appearance, which keeps weight and style for static and variable fonts alike. The panel appears where the theme has turned it on, and offers the axes the faces in use declare, minus the ones OpenType registers. Its controls start hidden, as padding and margin do in Dimensions, and are added through the ToolsPanel menu or by already having a value; a font can declare a great many axes, and Roboto Flex alone leaves nine.
 
-As a starting policy, the text panel would not offer `FILL`, which is how icon fonts such as Material Symbols express a filled glyph; a consumer of icon fonts (#82848 would let a family declare that use), such as an icon block, would show it in its own axes panel. The data model itself doesn't need to restrict the tag.
+To start with, the text panel would not offer `FILL`, which is how icon fonts such as Material Symbols express a filled glyph; a consumer of icon fonts (#82848 would let a family declare that use), such as an icon block, would show it in its own axes panel. The data model itself doesn't need to restrict the tag.
 
 ### Open questions
 
-- The name of the policy setting.
+- The name of the availability setting.
+- What offers the registered axes this panel leaves alone. A style control has to be one mutually exclusive choice, and `opsz` has no property that takes a coordinate, so a manual optical size would write the same value this panel writes.
 - Whether uploads should store `axes` read from `fvar`, and whether collections can provide them.
 - Linking axes across a component: a button's label and icon sharing `GRAD`, as Material 3 suggests, seems better expressed as a component-level value both refer to than as one global grade for all text and icons.
 
@@ -125,7 +142,7 @@ As a starting policy, the text panel would not offer `FILL`, which is how icon f
 
 - [ ] Weight ranges read correctly for the Appearance control — #83128
 - [ ] Any weight in a variable font's range, stored in `fontWeight` — #83141 (draft, builds on #83128)
-- [ ] Capability, policy and value, with a Font variations panel — #83159 (draft, a design experiment for this issue, with a Playground demo)
+- [ ] Capability, availability and value, with a Font variations panel — #83159 (draft, a design experiment for this issue)
 - [ ] A `slnt` range read as face capability rather than a style to select — #83456 (draft, for #83455: a two-angle `font-style` descriptor is offered as an Appearance value the property discards)
 - [ ] `fontStretch` for `wdth`
 - [ ] `axes` read from a font file's `fvar` table when it is uploaded or installed

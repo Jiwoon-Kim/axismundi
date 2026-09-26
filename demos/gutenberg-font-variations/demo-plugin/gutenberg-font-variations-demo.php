@@ -1,12 +1,16 @@
 <?php
 /**
  * Plugin Name: Gutenberg Font Variations Demo
- * Description: Fixture for the Gutenberg font-variation-settings prototype. Adds Roboto Flex with its full fvar table as face `axes`, a policy that exposes GRAD and opsz (Heading adds XTRA), and a demo post.
- * Version: 0.1.0
+ * Description: Fixture for the Gutenberg font-variation-settings prototype. Adds Roboto Flex with its full fvar table as face `axes`, turns the Font variations panel on for the site and off for Heading, and adds a demo post.
+ * Version: 0.2.0
  * Requires at least: 7.0
  * License: GPL-2.0-or-later
  *
  * Roboto Flex is licensed under the SIL Open Font License 1.1: see assets/OFL.txt.
+ *
+ * The panel shows the axes a face declares, minus the ones with a CSS property
+ * of their own, so there is no per-axis list here: `settings.typography
+ * .fontVariations` is a boolean, and a block turns it off by setting it false.
  *
  * @package gutenberg-font-variations-demo
  */
@@ -14,8 +18,10 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Roboto Flex fvar table: tag, min, default, max.
- * Read from assets/RobotoFlex.woff2 with fontTools.
+ * Roboto Flex fvar table, read from assets/RobotoFlex.woff2 with fontTools:
+ * tag, min, default, max.
+ *
+ * @return array Axes in the `fontFace` shape.
  */
 function gutenberg_font_variations_demo_axes() {
 	$axes = array();
@@ -54,6 +60,14 @@ add_filter(
 			'name'       => 'Roboto Flex',
 			'slug'       => 'roboto-flex',
 			'fontFamily' => '"Roboto Flex", sans-serif',
+			/*
+			 * One binary, two faces: normal keeps upright matching, and the
+			 * oblique descriptor maps a CSS oblique request onto `slnt`. The
+			 * shared URL is fetched once. The range reads 0deg to 10deg, not
+			 * -10deg to 0deg: `font-style: oblique <angle>` takes the angle with
+			 * the sign flipped, and declared the other way round no oblique
+			 * request slants the text at all.
+			 */
 			'fontFace'   => array(
 				array(
 					'fontFamily'  => 'Roboto Flex',
@@ -63,19 +77,15 @@ add_filter(
 					'src'         => array( plugins_url( 'assets/RobotoFlex.woff2', __FILE__ ) ),
 					'axes'        => gutenberg_font_variations_demo_axes(),
 				),
+				array(
+					'fontFamily'  => 'Roboto Flex',
+					'fontStyle'   => 'oblique 0deg 10deg',
+					'fontWeight'  => '100 1000',
+					'fontStretch' => '25% 151%',
+					'src'         => array( plugins_url( 'assets/RobotoFlex.woff2', __FILE__ ) ),
+					'axes'        => gutenberg_font_variations_demo_axes(),
+				),
 			),
-		);
-
-		// Keyed by axis tag, so that theme.json origins merge it per axis.
-		$policy = array(
-			'GRAD' => array(
-				'min' => -200,
-				'max' => 150,
-			),
-			'opsz' => array(),
-			// Never offered: `wght` has its own property, and the file has no FILL axis.
-			'wght' => array(),
-			'FILL' => array(),
 		);
 
 		return $theme_json->update_with(
@@ -84,20 +94,15 @@ add_filter(
 				'settings' => array(
 					'typography' => array(
 						'fontFamilies'   => $families,
-						'fontVariations' => array( 'roboto-flex' => $policy ),
+						// Whether the panel is offered at all. Not a list of axes:
+						// the faces already declare those.
+						'fontVariations' => true,
 					),
 					'blocks'     => array(
+						// The same font, with the panel turned off for this block.
 						'core/heading' => array(
 							'typography' => array(
-								'fontVariations' => array(
-									// Block settings replace the site's for this block,
-									// so the axes it shares are listed again.
-									'roboto-flex' => array(
-										'GRAD' => $policy['GRAD'],
-										'opsz' => array(),
-										'XTRA' => array( 'name' => 'Counter width' ),
-									),
-								),
+								'fontVariations' => false,
 							),
 						),
 					),
@@ -118,10 +123,10 @@ add_filter(
  * @return int Post ID.
  */
 function gutenberg_font_variations_demo_post() {
-	$content  = '<!-- wp:heading --><h2 class="wp-block-heading">Heading: Grade, Optical size and Counter width</h2><!-- /wp:heading -->';
-	$content .= '<!-- wp:paragraph --><p>Paragraph: Grade and Optical size, with <strong>bold text</strong>.</p><!-- /wp:paragraph -->';
-	$content .= '<!-- wp:paragraph --><p>Paragraph to switch to another font: its axis values are cleared.</p><!-- /wp:paragraph -->';
-	$content .= '<!-- wp:list --><ul class="wp-block-list"><!-- wp:list-item --><li>List: no Font variations support, no panel.</li><!-- /wp:list-item --></ul><!-- /wp:list -->';
+	$content  = '<!-- wp:heading --><h2 class="wp-block-heading">Heading: the panel is turned off for this block.</h2><!-- /wp:heading -->';
+	$content .= '<!-- wp:paragraph --><p>Paragraph in Roboto Flex: Grade and the other custom axes. Weight, width, slant and optical size are registered axes and stay out of this panel.</p><!-- /wp:paragraph -->';
+	$content .= '<!-- wp:paragraph --><p>Paragraph to switch to another font: the axis values on this block are cleared with it.</p><!-- /wp:paragraph -->';
+	$content .= '<!-- wp:list --><ul class="wp-block-list"><!-- wp:list-item --><li>List: no font variation settings support, so no panel.</li><!-- /wp:list-item --></ul><!-- /wp:list -->';
 
 	$existing = get_page_by_path( 'font-variations-demo', OBJECT, 'post' );
 	if ( $existing ) {

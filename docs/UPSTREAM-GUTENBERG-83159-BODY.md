@@ -1,16 +1,27 @@
 # Draft — Gutenberg #83159 body, rewritten for the boolean model
 
-> 상태: **초안.** 올릴 곳: [WordPress/gutenberg#83159](https://github.com/WordPress/gutenberg/pull/83159) 본문 교체.
+> 상태: **게시됨** 2026-09-26 — [WordPress/gutenberg#83159](https://github.com/WordPress/gutenberg/pull/83159) 본문 교체 완료. `--github` 되읽기 일치(SHA-256 `eaf7a700…`). draft 유지(ready 전환은 이슈에서 open questions가 정리된 뒤).
 >
 > **왜 다시 쓰나:** 게시본은 정책이 `slug → tag → {name,min,max}` 중첩 객체이던 시절의 설명이다.
 > 커밋 `fcfc51dc54`(정책→boolean)와 `0e6006c2b2`(`opsz` 제외 + 컨트롤 기본 숨김) 이후로 본문의
 > Policy 항목, 패널 설명, Testing Instructions, Open questions가 모두 사실과 다르다.
 >
-> **제목도 바꾼다.** `theme-exposed axes` → 테마가 고르는 건 축이 아니라 패널이다.
+> **제목은 이미 바뀌어 있다**(확인 2026-09-26): `Typography: Prototype fontVariationSettings with a theme-enabled panel`. 테마가 고르는 건 축이 아니라 패널이다.
 >
-> **Playground 데모 링크는 뺀다.** `Jiwoon-Kim/axismundi@fcfbce25`의 fixture가 옛 정책 객체를
-> 주입한다. 그 객체는 truthy라 패널이 켜지기는 하지만, 설명과 어긋나는 데이터를 보여주게 된다.
-> axismundi demos를 boolean으로 갱신하고 다시 핀한 뒤 복구하는 편이 맞다(별도 작업, 미승인).
+> **Playground 데모 링크는 복구한다(2026-09-26).** `fcfbce25`의 fixture가 옛 정책 객체를 주입하던
+> 문제를 해결했다: axismundi `demos/`를 boolean으로 갱신(`bd0cbf37`), blueprint를 그 SHA에 핀
+> (`dfe4fe7c`), README에 포함/미포함 표와 스크린샷 추가(`deae5b66`). Playground를 실제로 부팅해
+> `/wp-admin/?font-variations-demo` 랜딩과 새 fixture 본문(아이콘 문단 없음)을 확인했다.
+> **PR 본문에는 스크린샷을 한 장만 넣는다(사용자 결정)** — `panel-custom-axes.png`. Material Symbols
+> `FILL` 이미지는 fixture에 없는 폰트라 본문에 크게 넣으면 "이 PR이 아이콘 폰트를 포함하나"로
+>읽힌다. 전체 그림은 README에서만 보인다.
+>
+> **스크린샷 캡처(2026-09-26)**: `computer screenshot`은 파일로 저장되지 않아 리포지토리 Playwright
+> 1.63.0 + 설치된 Chrome(`channel: 'chrome'`, `deviceScaleFactor: 2`)으로 찍었다. 축 메뉴는
+> 사이드바 밖 팝오버라 두 사각형의 합집합을 `clip`으로 잡아야 한다. 스크립트 출력이 곧 측정:
+> `axes offered: Grade, XOPQ, YOPQ, XTRA, YTUC, YTLC, YTAS, YTDE, YTFI` /
+> `heading panels: Styles, Typography, Background, Dimensions, Borders, Elements`(Font variations 없음) /
+> `fill 0 value: null` → `fill 1 value: {"FILL":1}`.
 >
 > **실측(2026-09-25~26, 로컬 Gutenberg wp-env 8889, 이 브랜치 빌드):**
 > - `root=true / core/quote=false / core/paragraph=true` — boolean이 루트와 블록 양쪽에 실림
@@ -75,6 +86,16 @@ Open questions, for #83148:
 - The names `fontVariations` (availability) and `axes` (capability), and whether uploads and collections should provide `axes` read from the file's `fvar` table.
 - Whether a panel-level slot group is the right way to place the panel.
 - What offers the registered axes this panel leaves alone. `opsz` in particular: `font-optical-sizing` is `auto`, so a slider here pinned what the browser was choosing from the font size, and the panel is the wrong place to ask for it. The value still carries `opsz`, so a manual optical size in typography would write the same style.
+
+## Demo
+
+[Open this branch in Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/Jiwoon-Kim/axismundi/dfe4fe7c30e659c2b3900270fc787b3a7ccb1e85/demos/gutenberg-font-variations/blueprint.json&gutenberg-pr=83159), with a fixture that registers Roboto Flex as the two faces one binary can serve, each carrying its whole `fvar` table as `axes`, turns the panel on for the site and off for Heading, and adds a post to try it on.
+
+The fixture covers this pull request and nothing else, and [its README says so in a table](https://github.com/Jiwoon-Kim/axismundi/blob/deae5b669808364ffbdc388d07fccdcf360675a5/demos/gutenberg-font-variations/README.md#what-this-demo-is-and-is-not): it runs on trunk, so the Appearance control there is trunk's, and the two-angle `oblique` range that control lists is #83456's subject rather than this one's. The fixture also carries no icon font, since Playground would download it to show what a screenshot shows as well.
+
+What the panel offers for that font, and what it leaves to typography:
+
+![The block inspector with a Font variations panel whose menu lists Grade, XOPQ, YOPQ, XTRA, YTUC, YTLC, YTAS, YTDE and YTFI, and none of the registered axes](https://raw.githubusercontent.com/Jiwoon-Kim/axismundi/deae5b669808364ffbdc388d07fccdcf360675a5/demos/gutenberg-font-variations/screenshots/panel-custom-axes.png)
 
 ## Testing Instructions
 

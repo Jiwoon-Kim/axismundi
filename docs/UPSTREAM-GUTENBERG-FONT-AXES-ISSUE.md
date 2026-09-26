@@ -160,3 +160,80 @@ To start with, the text panel would not offer `FILL`, which is how icon fonts su
 
 Related: #83141, #82848, #82830, [Core Trac #66103](https://core.trac.wordpress.org/ticket/66103) (the PHP array path for `font-variation-settings` in `WP_Font_Face`, fixed in [changeset 63653](https://core.trac.wordpress.org/changeset/63653) for 7.2).
 <!-- end of body -->
+
+## Width implementation slice (내부 계획 — 게시하지 않음, 브랜치 없음)
+
+2026-09-26. Progress의 `fontStretch` for `wdth` 항목을 실제로 열 때 쓸 계획. **지금 브랜치를 만들지 않기로 했다**(사용자 결정): 기술적으로는 독립이어도 리뷰어에게는 Appearance 해체의 반쪽으로 보이고, #83159와 건드리는 파일이 겹친다. 세 번째 draft를 더하면 같은 부담이 반복된다.
+
+### 결정
+
+- CSS 출력은 `font-stretch`, theme.json 키도 `fontStretch`. 같은 파일의 face 디스크립터가 이미 그 이름이다(`schemas/json/theme.json:867`).
+- **`fontWidth`는 넣지 않는다.** 실측(Chromium 152): `CSS.supports('font-stretch','100%')` true, `('font-stretch','condensed')` true, `('font-width','100%')` **false**. 같은 뜻의 키가 둘이면 "둘 다 있으면 뭐가 이기나"라는 병합 질문만 새로 생긴다. `font-stretch`는 CSS Fonts 4에서 legacy alias로 유지되므로 갇히지 않는다. 이 이슈의 2026-09-23 댓글이 정한 "UI는 Width, 키는 구현 시점에" 선을 그대로 지킨다.
+- raw `wdth`가 아니라 고수준 속성. `fontVariationSettings`는 계속 `wdth`를 거른다.
+- `__experimental` 접두사 없음. #83159의 `fontVariationSettings`와 같은 평범한 키(Gutenberg AGENTS.md).
+- 이 단계에는 **UI가 없다.** 저장·직렬화 경로만.
+
+### 실측 근거 (2026-09-26, 로컬 8889, Roboto Flex `wdth 25..151`, 64px "Hamburgefonstiv")
+
+| 선언 | 렌더 폭 |
+|---|---|
+| `font-stretch: 25%` / `'wdth' 25` | 218.43 / **218.43** |
+| `font-stretch: 151%` / `'wdth' 151` | 555.75 / **555.75** |
+| `font-stretch: condensed` / `'wdth' 75` | 347.54 / **347.54** |
+
+고수준 속성이 축에 그대로 닿는다 → 값 객체가 아니라 속성이 맞다. 그리고 `font-synthesis-width`·`font-synthesis-stretch`는 **없다**(`font-synthesis-weight`/`-style`/`-small-caps`만 true) → 없는 폭은 합성되지 않으므로 이 축은 capability-only가 자연스럽다.
+
+### 변경 범위 (위치는 2026-09-26 확인)
+
+```text
+lib/class-wp-theme-json-gutenberg.php
+  :293  PROPERTIES_METADATA   'font-stretch' => array( 'typography', 'fontStretch' )
+  :605  VALID_STYLES          typography.fontStretch
+  :492  VALID_SETTINGS        typography.fontStretch      (나중 컨트롤의 on/off 자리)
+
+schemas/json/theme.json         styles/settings 양쪽에 fontStretch
+schemas/json/block.json         typography 서포트 플래그
+
+packages/style-engine/src/
+  styles/typography/index.ts    fontStretch 정의 + 배열 등록
+  types.ts                      Style 타입
+  class-wp-style-engine.php     'fontStretch' => 'font-stretch'
+
+lib/block-supports/typography.php
+  서포트 플래그 · skip-serialization · 값 직렬화
+
+packages/blocks/src/api/constants.ts
+packages/block-editor/src/hooks/{typography,style,utils}.jsx
+packages/block-library/src/{paragraph,heading}/block.json + README
+```
+
+`lib/compat/wordpress-7.1/kses.php:79`에 `font-stretch`가 **이미 있다** — `unfiltered_html` 없는 경로는 추가 작업 없음.
+
+### 테스트
+
+- `phpunit/class-wp-theme-json-test.php` — styles에서 CSS 생성
+- `phpunit/block-supports/typography-test.php` — 서포트 on/off, skip-serialization
+- `phpunit/style-engine/style-engine-test.php` + `packages/style-engine/src/test/index.js` — 두 엔진 같은 출력
+- 정적 face(`condensed`)와 가변 range(`25% 151%`) 양쪽에 같은 스타일 값이 적용되는 케이스
+
+### 충돌 주의
+
+`style-engine/styles/typography/index.ts`, `class-wp-style-engine.php`, `block-supports/typography.php`, `schemas/json/theme.json` 네 파일은 #83159가 이미 건드린다. 먼저 머지되는 쪽에 나머지를 맞춘다.
+
+### 언제, 어떤 덩어리로
+
+#83159·#83148에 반응이 온 뒤 둘 중 하나를 고른다.
+
+- **A.** `fontStretch` 기반만 독립 PR
+- **B.** `fontStretch` + Appearance 해체의 Width 항목을 함께 (리뷰어가 "왜 지금 이 속성인가"를 다시 묻지 않아도 됨)
+
+브랜치는 포크에 스택으로 쌓되 **PR 객체는 업스트림에 낼 것만** 만든다. 포크 내부 PR도 열 수는 있지만(같은 저장소 안에서는 임의 브랜치를 base로 가능) 리뷰어가 보지 않는 곳이라 얻는 게 단계별 diff뿐이고, 그건 `git diff parent...child`로 이미 된다. 업스트림 PR은 base가 반드시 `WordPress/gutenberg`의 브랜치여야 해서 포크 브랜치를 base로 둘 수 없다(#83141에서 확인).
+
+```text
+trunk
+└─ typography-width-foundation      A 또는 B의 기반
+   └─ typography-axis-controls      Appearance 해체: Style / Weight / Width 항목
+      └─ typography-style-slant     Style 안의 Oblique + angle
+```
+
+Style/Slant 단계 주의: 각도 슬라이더의 범위는 face의 `oblique 0deg 10deg` 디스크립터에서 와야 하는데, #83456의 `parseFontStyleValue()`는 두 각도를 단일 값으로 해소한다. 원본은 face에 남으므로 `fontFamilyFaces`를 직접 읽거나, 그 헬퍼가 해소값과 원본 범위를 함께 돌려주도록 넓혀야 한다.

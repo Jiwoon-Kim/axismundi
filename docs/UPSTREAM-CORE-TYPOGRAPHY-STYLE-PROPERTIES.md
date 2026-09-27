@@ -22,7 +22,20 @@
 > 그건 Gutenberg 쪽 결정이 먼저다.
 >
 > **준비된 브랜치:** `wordpress-develop` `add/typography-font-stretch-and-variation-settings`
-> (`upstream/trunk` 기준). 8파일. `@ticket TRAC_TICKET` 플레이스홀더 6곳 — 번호가 나오면 일괄 치환한다.
+> (`upstream/trunk` `95ea25e816` 기준), 커밋 `cd54c9142e`, 8파일 +563 −61. 미푸시.
+> `@ticket TRAC_TICKET` 플레이스홀더 6곳 — 번호가 나오면 일괄 치환한다.
+>
+> **검증(2026-09-28):** phpcs 8파일 전부 통과. `npm run test:php --filter
+> 'Typography|Theme_JSON|Style_Engine|StyleEngine|ThemeJson|font_stretch'` → **516 tests,
+> 933 assertions, OK**. Gutenberg 쪽 같은 스위트는 456 tests, 816 assertions, OK.
+>
+> **실측으로 교정한 추측 1건:** Core의 `get_settings()`도 `settings.typography.fontFamilies`를
+> origin으로 키를 쓴다 → `['theme'][0]`. Core는 평평할 거라 보고 `[0]`으로 썼다가
+> `Undefined array key 0`으로 깨졌다. Gutenberg와 동일하다.
+>
+> **로컬 환경 주의:** wordpress-develop `.env`의 `LOCAL_PORT=8889`가 Gutenberg wp-env과 충돌한다.
+> `LOCAL_PORT=8899 npm run env:start && ... env:install && ... test:php`로 오버라이드할 것
+> (추적 파일이라 `.env`를 고치면 커밋에 섞인다).
 >
 > 게시 전 검증:
 >

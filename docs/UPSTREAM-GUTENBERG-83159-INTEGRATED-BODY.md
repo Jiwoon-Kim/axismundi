@@ -16,6 +16,20 @@
 > 무너진다. **권고: 그대로 두고 본문에 명시한다.** #83462가 trunk에 들어가면 rebase 시
 > 같은 패치라 자동으로 사라진다.
 >
+> **VQA(2026-09-27, 머지본 빌드 `02a87c926b`): 5/5 통과.** Style `Default·Normal·Oblique`(Italic 없음)
+> → `oblique 10deg`, Slant `0–10 value=10`; Width 슬라이더·숫자 칸 `25–151`, `200`→`151%` `5`→`25%`,
+> preset에서 `Ultra Expanded` 제외; Static Widths `Condensed·Normal`뿐 custom 토글 DOM에 없음;
+> Material Symbols는 옵션 메뉴에 Width 자체가 없음; Font variations는 별도 패널. 콘솔 오류 0.
+>
+> **VQA가 잡은 모순 1건(수정함, `7d2300318b`):** 게시된 #83148 본문은 패널이 `wght·wdth·ital·slnt`
+> 넷만 거른다고 쓰는데 코드는 `opsz`까지 다섯을 걸렀다. 스타일 엔진은 이미 넷이라 값은 통과하는데
+> 컨트롤이 없던 상태. 상수도 `REGISTERED_AXES` → `AXES_A_PROPERTY_OWNS`로 개명(등록 여부가 아니라
+> 소유 속성 유무가 기준). 테스트 기대 3건 수정.
+>
+> **산문 교정(에이전트 지적):** 축 항목은 기본 노출이 아니라 옵션 메뉴로 추가한다 / Static Widths는
+> `Condensed → Normal` 폭 오름차순 / `Size` 항목 안의 컨트롤 라벨은 `Font size` / Weight 자리표시자가
+> `Light (300)`으로 보이는 건 상속값으로 추정, **미확인**.
+>
 > 게시 전 검증:
 >
 > ```powershell
@@ -89,11 +103,11 @@ A value already saved outside a range is kept and explained rather than moved: a
 ## Testing Instructions
 
 1. Register a variable family declaring `"fontWeight": "100 1000"`, `"fontStretch": "25% 151%"` and two faces, one `normal` and one `"oblique 0deg 10deg"`, with its `fvar` axes as `axes`. Set it as the site font.
-2. Select a paragraph. Typography reads Color, Font, Style, Weight, Width, Size. Style offers Normal and Oblique and no italic; choosing Oblique saves `oblique 10deg`, since 14deg is past what the axis has, and opens a Slant control bounded 0 to 10.
+2. Select a paragraph and add Style, Weight and Width from the Typography options menu, as any control a block does not show by default is added. They sit in that order, after the font and before the size. Style offers Normal and Oblique and no italic; choosing Oblique saves `oblique 10deg`, since 14deg is past what the axis has, and opens a Slant control bounded 0 to 10.
 3. Weight and Width each offer the values inside their ranges, with a toggle to a slider and a field. Type 200 into the width: it stops at 151.
-4. Register a static family with a `normal` face and a `condensed` face. Its Width offers Normal and Condensed and nothing else, with no way to type a width between them.
-5. Register a family whose faces declare no `fontStretch`. It has no Width item at all.
-6. Font variations is its own panel below Typography, listing the axes no property owns. It is absent for a family that declares none.
+4. Register a static family with a `normal` face and a `condensed` face. Its Width offers Condensed and Normal, in that order, and nothing else: there is no toggle to a slider, and no width to type between them.
+5. Register a family whose faces declare no `fontStretch`. Width is not in the Typography options menu for it at all, so there is nothing to add.
+6. Font variations is its own panel below Typography, listing the axes no property owns: the custom ones a file declares, and the optical size, which `font-optical-sizing` can only switch rather than set. It is absent for a family that declares none, and its own options menu adds its axes the same way.
 
 ### Testing Instructions for Keyboard
 

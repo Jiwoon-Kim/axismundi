@@ -27,8 +27,15 @@
 > 소유 속성 유무가 기준). 테스트 기대 3건 수정.
 >
 > **산문 교정(에이전트 지적):** 축 항목은 기본 노출이 아니라 옵션 메뉴로 추가한다 / Static Widths는
-> `Condensed → Normal` 폭 오름차순 / `Size` 항목 안의 컨트롤 라벨은 `Font size` / Weight 자리표시자가
-> `Light (300)`으로 보이는 건 상속값으로 추정, **미확인**.
+> `Condensed → Normal` 폭 오름차순 / `Size` 항목 안의 컨트롤 라벨은 `Font size`.
+>
+> **Weight 자리표시자 `Light (300)` — 확인 완료(2026-09-27), 버그 아님.** 블록에 값이 없고
+> (`blockAttrs: null`) 문단이 실제로 `font-weight: 300`으로 렌더된다. 즉 상속값 표시이고, Style·Width가
+> `Default`인 건 루트가 그 둘을 선언하지 않기 때문. Global Styles의 root·paragraph에도 weight가 없으니
+> 테마 stylesheet에서 온다. 세 경우 측정: 미지정 → `Light (300)`(렌더 300), 블록 700 → `Bold (700)`,
+> family를 Material Symbols(`100 700`)로 교체 → 선택지가 `Thin (100)…Bold (700)`로 즉시 갱신.
+>
+> **상수명 정리:** `AXES_A_PROPERTY_OWNS` → `PROPERTY_OWNED_AXES` (`56dc0db58c`).
 >
 > 게시 전 검증:
 >

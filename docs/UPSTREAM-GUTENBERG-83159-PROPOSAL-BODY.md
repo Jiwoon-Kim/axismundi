@@ -7,21 +7,14 @@
 > 끝났고 Core 짝 PR까지 준비되니, 같은 내용을 mergeable proposal로 다시 쓴다. 톤만 바뀌는 게 아니라
 > **무엇이 이 PR이고 무엇이 아닌지**를 목록으로 못박아 메가 PR의 리뷰 부담을 줄이는 게 목적이다.
 >
-> **플레이스홀더 2개** — 번호가 나오면 일괄 치환한다:
+> **게시 순서 — ①②③ 완료(2026-09-28):**
 >
 > ```txt
-> TRAC_TICKET   Core Trac 티켓 번호 (사용자가 생성)
-> CORE_PR       wordpress-develop PR 번호
-> ```
->
-> **게시 순서 (이것 자체가 잠금이다):**
->
-> ```txt
-> ① 사용자가 Trac 티켓 생성            → TRAC_TICKET
-> ② wordpress-develop draft PR 생성    → CORE_PR
-> ③ Gutenberg 브랜치에 backport-changelog/7.2/CORE_PR.md 추가 + push
+> ① Trac 티켓            core.trac.wordpress.org/ticket/66198   사용자가 생성
+> ② Core draft PR        wordpress-develop#13789                8파일, body 검증 통과
+> ③ backport-changelog   backport-changelog/7.2/13789.md        9e5e67f54b, push 완료
 > ④ 이 본문으로 #83159 교체
-> ⑤ 진행 중 체크 종료 확인 후 Open 전환
+> ⑤ 체크 종료 확인 후 Open 전환
 > ```
 >
 > ③ 없이 ⑤로 가면 `Check for a Core backport changelog entry`가 빨간 채로 Open이 된다.
@@ -97,7 +90,7 @@ A value already saved outside a range is kept and explained rather than moved: a
 
 ```text
 this PR        the capability resolver, and the Style, Weight, Width and Font variations controls
-Trac TRAC_TICKET / wordpress-develop CORE_PR   the Core side: the two style properties, the
+Trac 66198 / wordpress-develop 13789   the Core side: the two style properties, the
                settings, a face's axes, safe CSS, and the PHP tests
 #83141         the weight work, carried here so the panel can be read whole
 #83462         the family a block's text is actually drawn in, under review on its own

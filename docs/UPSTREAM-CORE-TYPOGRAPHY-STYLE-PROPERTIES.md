@@ -1,10 +1,19 @@
 # Draft — Core Trac 티켓 + wordpress-develop PR (typography style properties)
 
-> 상태: **초안, 미게시.** 두 곳에 올린다.
+> 상태: **①② 완료(2026-09-28).** 티켓 [#66198](https://core.trac.wordpress.org/ticket/66198)은 사용자가 생성,
+> draft PR [wordpress-develop#13789](https://github.com/WordPress/wordpress-develop/pull/13789)은 8파일로
+> 열림(`7e4e549f9c`). 본문 게시 후 `--github` 재검증 통과. 상호 링크 완료 —
+> Core PR 본문이 #83159·#83148을, #83159 본문이 #66198·#13789를 가리킨다.
+> Gutenberg 쪽 `backport-changelog/7.2/13789.md`(`9e5e67f54b`) 푸시 후
+> `Check for a Core backport changelog entry`가 **pass**로 바뀌었다.
 >
-> 1. [Core Trac](https://core.trac.wordpress.org/newticket) 새 티켓 — **사용자가 직접 생성해야 한다.** Trac은
->    WordPress.org 로그인이 필요하고, 에이전트는 자격증명 입력·계정 생성을 하지 않는다.
-> 2. `WordPress/wordpress-develop` PR (draft) — 티켓 번호가 나온 뒤 제목에 넣는다.
+> 티켓은 소유자가 제목을 다듬었다: `Typography: Accept a font width and font variation settings as styles`
+> → `Typography: Add font-stretch and font-variation-settings support to Theme JSON styles`. **PR 제목은
+> 티켓 제목을 따른다.** 티켓 필드: Component `Editor`, Type `enhancement`, Focuses `css, rest-api`.
+>
+> **알려진 흠(사용자 판단 대기):** 티켓 본문의 `[83148](https://…)`가 Markdown 문법이라 Trac에서
+> 링크로 렌더되지 않고 문자 그대로 보인다. Trac WikiFormatting은 `[url label]`(공백 구분)이다.
+> 고치려면 소유자가 Trac에서 본문을 편집해야 한다.
 >
 > **왜 티켓이 먼저인가:** Core의 GitHub PR은 코드리뷰용 미러이고 작업 단위·최종 추적은 Trac이 맡는다.
 > [Core handbook](https://make.wordpress.org/core/handbook/tutorials/trac/submitting-a-patch/)이 PR 제목에 Trac
@@ -98,9 +107,9 @@ A tag must be four letters or digits, which is what OpenType allows and also kee
 
 <!-- end of trac body -->
 
-## PR title (fill in the ticket number)
+## PR title
 
-Typography: Accept a font width and font variation settings as styles.
+Typography: Add font-stretch and font-variation-settings support to Theme JSON styles.
 
 ## PR body (paste as is)
 
@@ -108,7 +117,7 @@ Typography: Accept a font width and font variation settings as styles.
 
 Two typography style properties have no way to reach CSS today, and a variable font needs both. `font-stretch` is the one axis with a CSS property that a browser will not synthesize — there is no `font-synthesis-width` — so a width a font declares cannot be used at all without it. `font-variation-settings` is what the axes with no property of their own have, and there is no style property for it.
 
-This is the Core half of editor work happening in Gutenberg. It carries the contract only: what may be stored, what is written, and what is refused.
+This is the Core half of editor work happening in Gutenberg: [WordPress/gutenberg#83159](https://github.com/WordPress/gutenberg/pull/83159) is the editor side, and [WordPress/gutenberg#83148](https://github.com/WordPress/gutenberg/issues/83148) is the design discussion behind it. This carries the contract only: what may be stored, what is written, and what is refused.
 
 ## What
 
@@ -129,12 +138,24 @@ The block support's two lists of variables are regenerated rather than patched, 
 
 ## Testing Instructions
 
-1. `npm run test:php -- --filter 'Typography|Theme_JSON|Style_Engine'`.
-2. In a theme's `theme.json`, set `styles.typography.fontStretch` to `"75%"` and `styles.typography.fontVariationSettings` to `{ "GRAD": 50, "wght": 700 }`. The stylesheet carries `font-stretch: 75%` and `font-variation-settings: "GRAD" 50`; the weight is left to `font-weight`, so a `<strong>` still renders bolder.
+1. `npm run test:php -- --filter 'Typography|Theme_JSON|Style_Engine|StyleEngine|ThemeJson|font_stretch'`. 516 tests pass here.
+2. In a theme's `theme.json`, set `styles.typography.fontStretch` to `"75%"` and `styles.typography.fontVariationSettings` to `{ "GRAD": 50, "wght": 700 }`. The stylesheet carries `font-stretch: 75%` and `font-variation-settings: "GRAD" 50`; the weight is left to `font-weight`, so a `<strong>` inside still renders bolder.
 3. As a user without `unfiltered_html`, save Global Styles with `fontVariationSettings` set to `{ "GRAD": 20, "wght": 700, "XTRA": "500; color: red" }`. Only `GRAD` is stored.
 
 ## Not included
 
 The editor controls and the reading of a family's faces that decides what they offer, which stay in Gutenberg; which blocks opt in, since the supports here are off everywhere; and reading `axes` from a font file's `fvar` table when it is uploaded.
+
+Trac ticket: https://core.trac.wordpress.org/ticket/66198
+
+## Use of AI Tools
+
+AI assistance: Yes
+Tool(s): Claude Code
+Model(s): Claude Opus 5
+Used for: Porting the implementation and tests from the Gutenberg prototype, and running the test suites. I reviewed the changes and the results, and one wrong assumption the port made was found by the tests rather than by reading: Core keys the font families setting by origin, as the plugin does.
+
+---
+**This Pull Request is for code review only. Please keep all other discussion in the Trac ticket. Do not merge this Pull Request. See [GitHub Pull Requests for Code Review](https://make.wordpress.org/core/handbook/contribute/git/github-pull-requests-for-code-review/) in the Core Handbook for more details.**
 
 <!-- end of pr body -->

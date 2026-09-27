@@ -127,3 +127,31 @@ Report:
 
 Do not push `add/font-variation-settings` or mutate GitHub without explicit
 user approval after this report.
+
+## Execution record (2026-09-27)
+
+Carried out in the Claude Code session that built the prototype, not by a
+separate agent: the merge, the checks and the body draft were done with the
+context already in hand.
+
+```text
+merge     02a87c926b   add/font-variation-settings <- try/typography-axis-controls
+                       normal merge, no conflicts, no force-push, not pushed
+size      27 commits / 70 files / +4140 -222 against trunk
+checks    typecheck 0, lint:js 0, 766 tests across 63 files
+body      docs/UPSTREAM-GUTENBERG-83159-INTEGRATED-BODY.md (verified, unpublished)
+```
+
+One boundary in this handoff could not be kept. The merge carries #83462's
+commit `8d480467fd`, which preserves a font family written inline in a
+block's style. That commit was written on the prototype branch first and
+cherry-picked to #83462 afterwards, so it is an ancestor here and cannot be
+separated without rewriting the branch. Reverting it would send the
+capability lookup back to the inherited family for any block of that kind,
+which is the first four verification cases. It stays, and the proposed body
+says why; a rebase after #83462 lands drops it as the same patch.
+
+The build and the five editor cases were run afterwards in a background
+agent, with the toolchain requirement written into its instructions: both
+the portable Node directory and the npm shim must be on `PATH`, or the
+repository's `devEngines` check stops the build.

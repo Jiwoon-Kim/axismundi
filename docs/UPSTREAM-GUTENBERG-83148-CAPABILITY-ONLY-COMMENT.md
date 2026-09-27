@@ -1,6 +1,12 @@
 # Draft — Gutenberg #83148 코멘트: capability-only 목록과 기존 Appearance의 한계
 
-> 상태: **초안, 미게시.** 올릴 곳: [WordPress/gutenberg#83148](https://github.com/WordPress/gutenberg/issues/83148) 댓글.
+> 상태: **미게시로 종결(2026-09-28).** 댓글로 올리지 않았다. 논증은
+> `UPSTREAM-GUTENBERG-83148-BODY-UPDATE.md`를 통해 #83148 **본문** §3의
+> `#### What a capability list should not offer`로 흡수됐다.
+>
+> 왜 댓글이 아닌가: 그 스레드에 내 댓글이 이미 4개(9-18·19·23·26)이고 응답이 없었다. 다섯 번째를
+> 쌓는 대신, 본문이 capability 논증을 세워 놓고 결론 앞에서 멈춘 자리를 채웠다. 아래 본문은
+> 초안 기록으로 남긴다 — 실측 근거는 유효하고, 흡수된 절이 더 짧다.
 >
 > **왜 지금 쓰나:** 9-26 Appearance 해체 댓글에서 capability-only 목록(faux Bold/Italic 제거)을 **별도 결정**으로 남겨 뒀다. 9-27 prototype에서 정적 폰트 Width 버그가 나왔고, 그 원인이 "기존 구조에는 이 정책을 담을 자리가 없다"는 것이었다. 추측이 아니라 실패한 화면이 근거다.
 >

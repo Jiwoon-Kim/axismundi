@@ -11,6 +11,12 @@
 > → `Typography: Add font-stretch and font-variation-settings support to Theme JSON styles`. **PR 제목은
 > 티켓 제목을 따른다.** 티켓 필드: Component `Editor`, Type `enhancement`, Focuses `css, rest-api`.
 >
+> **Core PR에서 빼야 했던 파일 1개(빌드가 가르쳐 줬다):** `src/wp-includes/theme.json`은 Gruntfile의
+> `gutenbergVersionedFiles`에 있고 `copy:gutenberg-theme-json`이 플러그인의 `lib/theme.json`에서 복사한다
+> (`$schema`만 바꿔서). Core PR에서 직접 고치면 빌드가 되돌리고 `git diff --exit-code` 가드가
+> 4개 잡(`Core running from src/build`, Linux·MacOS)을 실패시킨다. `lib/theme.json`이 backport-changelog
+> 트리거에서 제외된 이유가 바로 이것이다 — 그 파일은 자동 동기화된다.
+>
 > **알려진 흠(사용자 판단 대기):** 티켓 본문의 `[83148](https://…)`가 Markdown 문법이라 Trac에서
 > 링크로 렌더되지 않고 문자 그대로 보인다. Trac WikiFormatting은 `[url label]`(공백 구분)이다.
 > 고치려면 소유자가 Trac에서 본문을 편집해야 한다.
@@ -126,7 +132,7 @@ This is the Core half of editor work happening in Gutenberg: [WordPress/gutenber
 | `fontStretch` | `font-stretch` |
 | `fontVariationSettings`, an object keyed by axis tag | `font-variation-settings` |
 
-Also: `settings.typography.fontStretch` beside the existing `fontStyle` and `fontWeight`, on by default; `settings.typography.fontVariations`, a boolean for whether a site offers custom-axis editing; `axes` on a font face, for the axes a file has and their ranges; `font-variation-settings` added to what `safecss_filter_attr()` allows, `font-stretch` being there already; and the two block supports.
+Also: `settings.typography.fontStretch` beside the existing `fontStyle` and `fontWeight`; `settings.typography.fontVariations`, a boolean for whether a site offers custom-axis editing; `axes` on a font face, for the axes a file has and their ranges; `font-variation-settings` added to what `safecss_filter_attr()` allows, `font-stretch` being there already; and the two block supports.
 
 ## How
 
@@ -145,6 +151,8 @@ The block support's two lists of variables are regenerated rather than patched, 
 ## Not included
 
 The editor controls and the reading of a family's faces that decides what they offer, which stay in Gutenberg; which blocks opt in, since the supports here are off everywhere; and reading `axes` from a font file's `fvar` table when it is uploaded.
+
+Nor `wp-includes/theme.json`, which turns the width setting on by default. The build copies that file from the plugin, so the default arrives with the Gutenberg pull request rather than from here; editing it in this branch was reverted by the build and caught by `git diff --exit-code`.
 
 Trac ticket: https://core.trac.wordpress.org/ticket/66198
 

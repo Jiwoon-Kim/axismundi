@@ -1,9 +1,10 @@
 # Draft — Gutenberg #83159 제목·본문 (통합 후)
 
-> 상태: **초안, 미게시.** 올릴 곳: [WordPress/gutenberg#83159](https://github.com/WordPress/gutenberg/pull/83159) 제목·본문 교체.
+> 상태: **게시됨(2026-09-27).** [WordPress/gutenberg#83159](https://github.com/WordPress/gutenberg/pull/83159)
+> 제목·본문 교체 완료, **draft 유지**. 브랜치 `add/font-variation-settings` → `56dc0db58c` push(force 아님),
+> PR head `56dc0db5`, 70파일. 게시 후 `--github` 재검증 통과(SHA-256 동일).
 >
-> 핸드오프: `UPSTREAM-GUTENBERG-83159-INTEGRATION-HANDOFF.md`. 그 문서의 Deliverable대로
-> **로컬 머지와 본문 초안까지만** 만들고 푸시·draft 해제·댓글은 하지 않는다.
+> 핸드오프: `UPSTREAM-GUTENBERG-83159-INTEGRATION-HANDOFF.md`.
 >
 > **머지 상태(2026-09-27):** `try/typography-axis-controls`(`ebd7071d7d`)를
 > `add/font-variation-settings`에 일반 머지 → `02a87c926b`. force-push 없음, 충돌 없음.

@@ -3,6 +3,16 @@
 > 2026-09-19: 정책 형태를 list → 축 태그 keyed object로 변경(사용자 확정, 측정 근거: `array_replace_recursive`가 list를 인덱스로 병합 — 부모 [GRAD −50~50, opsz] + 자식 [XTRA] → XTRA가 GRAD 범위를 물려받음). Open question에서 "shape" 제거. 삭제 semantics(`null`)는 넣지 않음(사용자 결정, 별도 합의). **게시됨**(Playground `90bc650` 확인 후 `gh issue edit`, `--github` 일치).
 > 2026-09-19: dialog-icon을 별도 문단에서 완료 체크 항목으로 변경(사용자 결정: 추적성, 항목 안에 Gutenberg 구현 아님을 명시).
 > 2026-09-19: 본문 끝에 Progress 체크리스트 추가 — **게시됨**(axismundi `23431ba` 푸시 후 `gh issue edit`, `--github` 되읽기 일치, SHA-256 `47343ef2…`). 구현 PR은 모두 미머지라 미체크, dialog-icon은 체크 항목이 아니라 "second consumer / local reference implementation" 문단(사용자 결정).
+> **2026-09-27 본문 교체.** 중심 명제를 다시 세웠다(되읽기 SHA-256 `bde00fed…`):
+> ③ 새 절 — 블록은 "텍스트 표면이 있는가"만 말하고, Style/Weight/Width가 무엇을 제시하는지는 선택된
+> family의 face가 정한다(축별 block support는 장기적으로 가시성 스위치가 아님). Text layout은 블록별 정책
+> 유지, Font variations만 예외(custom axis 편집 표면 자체의 선택). width가 가장 선명한 사례 —
+> `font-synthesis-width`가 없어 없는 폭은 흉내도 못 낸다.
+> ⑤ 새 절 — Font Library/theme.json/플러그인이 같은 경로로 모이는 방향(구현 약속 아님).
+> `opsz` → `fontOpticalSizing`(`auto|none`), 값 없으면 CSS 초기값 `auto`. `FILL`은 패널에 노출(거르는 건
+> `wght·wdth·ital·slnt` 넷뿐). `axes`에 `name`(폰트 name table/테마 보완)과 선택적 `step`(편집 힌트,
+> 폰트의 사실 아님) 추가, `axes`는 face 소유. Open questions 2개 교체, Progress 갱신.
+>
 > 상태: **게시됨** 2026-09-19 — [WordPress/gutenberg#83148](https://github.com/WordPress/gutenberg/issues/83148). 사용자 Chrome에서 Feature request 양식으로 게시(`[Type] Enhancement` 자동), `--github` 되읽기 일치(SHA-256 `5e66f6f0…`). 연결: #83141 본문에 링크 추가, #82830에 안내 댓글(discussioncomment-18505721).
 >
 > 근거: [AXISMUNDI-FONT-LIBRARY-ROLES.md](AXISMUNDI-FONT-LIBRARY-ROLES.md) §7 B·§8. 관련: #83141(가변 `wght`, draft), #83128(범위 파싱), #83127(font provider, draft), #82848(font family usage), Discussion #82830(아이콘 토론의 축 댓글).
@@ -79,10 +89,10 @@ A variable font can have many axes. OpenType registers five (`wght`, `wdth`, `op
 | `wght` | `fontWeight` | `font-weight` |
 | `ital`, `slnt` | `fontStyle` | `font-style: italic` / `oblique <angle>` |
 | `wdth` | `fontStretch` (a new style property) | `font-stretch` |
-| `opsz` | nothing by default; a manual value in `fontVariationSettings` | `font-optical-sizing: auto` already follows the font size; `"opsz" <n>` when set |
+| `opsz` | `fontOpticalSizing` (a new style property, `auto` or `none`); a manual coordinate in `fontVariationSettings` | `font-optical-sizing`; `"opsz" <n>` when a size is chosen |
 | custom axes (`GRAD`, `XTRA`, …) | `fontVariationSettings` | `font-variation-settings` |
 
-`opsz` is the exception: its only high-level property is the `auto`/`none` switch, so a chosen size has to go through `font-variation-settings`. For the other registered axes, CSS Fonts 4 asks for the high-level properties, and for `ital` and `slnt` it goes further: "User agents must apply at most one value due to the font-style property; both `ital` and `slnt` values must not be set together", and "The ital axis is not used to satisfy an oblique request." A style control is therefore one mutually exclusive choice — normal, italic, or oblique with an angle — not an italic switch beside a slant slider. The difference from `font-variation-settings` is visible:
+`opsz` is the exception: its high-level property is a switch rather than a coordinate, so a chosen size has to go through `font-variation-settings`. Nothing needs to be written for the usual case — a value absent means the CSS initial `auto`, and the browser keeps following the font size — and a coordinate written in the value layer takes over from it, as it does for any axis with a property. For the other registered axes, CSS Fonts 4 asks for the high-level properties, and for `ital` and `slnt` it goes further: "User agents must apply at most one value due to the font-style property; both `ital` and `slnt` values must not be set together", and "The ital axis is not used to satisfy an oblique request." A style control is therefore one mutually exclusive choice — normal, italic, or oblique with an angle — not an italic switch beside a slant slider. The difference from `font-variation-settings` is visible:
 
 - `font-variation-settings` is inherited and applied after `font-weight`, so with `"wght" 300` on a paragraph, a `<strong>` inside it also renders at 300. By the same rule, `"ital" 0` on a paragraph would keep an `<em>` inside it upright in a font with an `ital` axis.
 - It only reaches fonts that have the axis. With `font-weight: 400; font-variation-settings: "wght" 800`, Latin in Roboto Flex and Hangul in a variable Noto Sans KR rendered bold, but Kana drawn by a system font stayed at 400.
@@ -102,17 +112,23 @@ This corrects the object example in my earlier comment on #82830, which put `wgh
 	"src": [ "file:./assets/fonts/roboto-flex.woff2" ],
 	"fontWeight": "100 1000",
 	"axes": [
-		{ "tag": "opsz", "min": 8, "default": 14, "max": 144 },
-		{ "tag": "wght", "min": 100, "default": 400, "max": 1000 },
-		{ "tag": "GRAD", "min": -200, "default": 0, "max": 150 },
-		{ "tag": "XTRA", "min": 323, "default": 468, "max": 603 }
+		{ "tag": "opsz", "min": 8, "default": 14, "max": 144, "name": "Optical Size" },
+		{ "tag": "wght", "min": 100, "default": 400, "max": 1000, "name": "Weight" },
+		{ "tag": "GRAD", "min": -200, "default": 0, "max": 150, "name": "Grade" },
+		{ "tag": "XTRA", "min": 323, "default": 468, "max": 603, "name": "Counter Width" }
 	]
 } ]
 ```
 
 (Shortened: Roboto Flex has thirteen axes.) `axes` is a list because it describes the file, and it is what controls read ranges from, including a manual `opsz`. The existing descriptors stay as they are for rendering and face selection: `fontWeight: "100 1000"` is still what the browser matches on.
 
-**Availability — whether the site offers this editing.** `settings.typography.fontVariations` is a boolean, and like other settings a block can differ through `settings.blocks`, for example an icon block that offers a fill where running text does not.
+`tag`, `min`, `default` and `max` are the font's own. `name` is not: a file's `name` table has one for most axes, and a theme or plugin can supply one where it does not, so a control has something to label itself with other than four characters. An optional `step` may be added for the same reason — it says how finely this axis is worth editing, which the font does not say, since an axis coordinate is a continuous number. `FILL` declaring `min: 0, max: 1, step: 1` is enough for a control to be drawn as a switch without the metadata naming a control, which is a consumer's decision rather than a fact about the file.
+
+The list belongs to the face rather than the family: a normal and an italic face can carry different axes or different ranges, and what a control offers is what the faces in use share.
+
+**Availability — whether the site offers custom-axis editing.** `settings.typography.fontVariations` is a boolean, and like other settings a block can differ through `settings.blocks`.
+
+This setting is about the Font variations panel alone. It is not the model for Style, Weight and Width: those are CSS properties whose options come from the font, and the section below says where each decision belongs.
 
 ```json
 "settings": {
@@ -133,29 +149,60 @@ Measured in the prototype: the boolean reaches root and block settings, a block 
 
 An object also lets origins merge per axis. `font-variation-settings` replaces the whole list, so setting one axis on a nested element otherwise means repeating every other custom axis. In this new structured value, `wght`, `wdth`, `slnt` and `ital` would be moved to their properties or rejected by the schema, the UI and the style engine; `opsz` is allowed, since nothing else takes a coordinate for it. `font-variation-settings` is the low-level control, applied after the properties that map to the same axis, so a coordinate written here takes that axis away from the control that owns it: `font-style: oblique 10deg` with `"slnt" 0` on the same element renders upright, indistinguishable from no style at all. That is what keeps the registered axes out of this value and out of the panel, rather than a preference for the high-level properties. The existing string form of the face descriptor and CSS written by hand stay as they are, as an escape hatch; `@font-face` defaults set there are not reliable across browsers anyway (Safari does not support the descriptor), so values belong in styles.
 
-### 3. A separate Font variations panel
+### 3. Which decision belongs to the block, and which to the font
+
+Typography has two kinds of control in it, and they are decided by different things.
+
+A block can say whether it has text for a font to be applied to. It cannot say what a font is able to do. Today it says both: `fontStyle`, `fontWeight` and a width support would each be a switch a block turns on, and a block with one of them off offers nothing for that axis however the font is made. The first is a fact about the block; the second is a fact about the file, and reading it from the block means the two can disagree.
+
+```text
+block support        whether this block has a text surface font properties apply to
+font capability      which styles, weights and widths the faces in use actually have
+text layout          line height, letter spacing, indent and the rest: still per block
+```
+
+So Style, Weight and Width appear for a block that supports typography, and what each offers comes from the faces of the family the text is drawn in. A family with one upright face offers no italic and no oblique; a family with one width offers no width at all. This is easiest to see on width, because it is the one axis a browser will not stand in for: there is no `font-synthesis-width`, so a family without widths has nothing to offer and nothing to fake. Weight and style have the synthesis the other two lack, which is why a list built from them alone ends up describing a font that does not exist.
+
+Text layout stays where it is. Line height, letter spacing, indent and the rest apply whatever the font is, and whether a block offers them is a reasonable thing for that block to decide.
+
+Font variations is the exception, and the setting above is about it: custom axes have no property of their own, a file can declare a great many of them, and whether a site wants that editing surface at all is a genuine choice.
+
+### 4. A separate Font variations panel
 
 Axes stored in `fontVariationSettings` get their own panel in the block inspector and in Global Styles, separate from Appearance, which keeps weight and style for static and variable fonts alike. The panel appears where the theme has turned it on, and offers the axes the faces in use declare, minus the ones OpenType registers. Its controls start hidden, as padding and margin do in Dimensions, and are added through the ToolsPanel menu or by already having a value; a font can declare a great many axes, and Roboto Flex alone leaves nine.
 
-To start with, the text panel would not offer `FILL`, which is how icon fonts such as Material Symbols express a filled glyph; a consumer of icon fonts (#82848 would let a family declare that use), such as an icon block, would show it in its own axes panel. The data model itself doesn't need to restrict the tag.
+The panel offers every axis the faces declare except the four that belong to a property: `wght`, `wdth`, `ital` and `slnt`. `opsz` stays, since nothing else takes a coordinate for it, and so does `FILL`, which is how icon fonts such as Material Symbols express a filled glyph. Leaving `FILL` out of a text panel would take code to do and would decide for a consumer that has not asked: an icon block draws the same font through its own interface, and can read the same metadata without this panel pretending the axis is not there.
+
+### 5. Where the metadata comes from
+
+Three kinds of font end up in the same controls: the ones a theme ships, the ones a user installs through the Font Library, and the ones a plugin registers. They should reach the panel the same way rather than through three paths.
+
+```text
+Font Library / theme.json / a plugin
+    -> the active families, as settings.typography.fontFamilies
+    -> the faces of the family the text is drawn in
+    -> what Style, Weight, Width and Font variations offer
+```
+
+The Font Library already stores faces in the shape theme.json uses, so this is mostly a question of what the shape can carry rather than of a new path. Adding `axes` to it is what would let the library read a file's `fvar` table once, on upload, and have every consumer of that family see the same capability. That is a direction rather than a promise: this issue asks for the contract, and reading `fvar` at upload time is #82848's neighbour rather than part of it.
 
 ### Open questions
 
 - The name of the availability setting.
-- What offers the registered axes this panel leaves alone. A style control has to be one mutually exclusive choice, and `opsz` has no property that takes a coordinate, so a manual optical size would write the same value this panel writes.
-- Whether `opsz` needs a switch of its own. `font-optical-sizing` is `auto`, so the browser already follows the font size; a bare slider would turn that off without saying so, which argues for offering the choice as auto or a value rather than a value alone.
+- Whether the per-property typography supports should give way to one that says a block has a text surface, and what that does to blocks and themes that set them today. Values already saved stay saved either way; this is about what is offered.
+- Whether `fontOpticalSizing` should be written at all when it is `auto`, or only when a site asks for `none`. The CSS initial value is `auto`, so nothing has to be written for the usual case.
 - Whether uploads should store `axes` read from `fvar`, and whether collections can provide them.
 - Linking axes across a component: a button's label and icon sharing `GRAD`, as Material 3 suggests, seems better expressed as a component-level value both refer to than as one global grade for all text and icons.
 
 ### Progress
 
-- [ ] Weight ranges read correctly for the Appearance control — #83128
-- [ ] Any weight in a variable font's range, stored in `fontWeight` — #83141 (draft, builds on #83128)
+- [x] Weight ranges read correctly for the Appearance control — #83128
+- [ ] Any weight in a variable font's range, stored in `fontWeight` — #83141 (open, awaiting review)
 - [ ] Capability, availability and value, with a Font variations panel — #83159 (draft, a design experiment for this issue)
-- [ ] A `slnt` range read as face capability rather than a style to select — #83456 (draft, for #83455: a two-angle `font-style` descriptor is offered as an Appearance value the property discards)
-- [ ] `fontStretch` for `wdth`
+- [ ] A `slnt` range read as face capability rather than a style to select — #83456 (open, for #83455: a two-angle `font-style` descriptor is offered as an Appearance value the property discards)
+- [ ] `fontStretch` for `wdth`, and a Style control that offers only the styles a font has, with an angle for its slant — implemented in a local prototype, not yet a pull request
 - [ ] `axes` read from a font file's `fvar` table when it is uploaded or installed
-- [ ] The family a block's text is drawn in resolved before its faces are looked up — #83462 (draft prototype, for #83459: the Blocks screen offers the built-in weights to a block that inherits its font)
+- [ ] The family a block's text is drawn in resolved before its faces are looked up — #83462 (open prototype, for #83459: the Blocks screen offers the built-in weights to a block that inherits its font)
 - [x] Local reference consumer, outside Gutenberg: the Axismundi Dialogs icon block, an experiment toward `core/icon` v2, stores `FILL`, `GRAD` and `opsz` as a `fontVariationSettings` object, with `wght` in `fontWeight` — [Jiwoon-Kim/axismundi@23431ba](https://github.com/Jiwoon-Kim/axismundi/commit/23431ba709599ffaa370dbd815e871d581343242)
 
 Related: #83141, #82848, #82830, [Core Trac #66103](https://core.trac.wordpress.org/ticket/66103) (the PHP array path for `font-variation-settings` in `WP_Font_Face`, fixed in [changeset 63653](https://core.trac.wordpress.org/changeset/63653) for 7.2).

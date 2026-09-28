@@ -627,14 +627,20 @@ function axismundi_op_render_object_view_block( array $attributes = array(), str
 		}
 	}
 
+	/*
+	 * Where external HTML enters this fragment. `content_html` carries an authored local body or
+	 * a cached remote one, so it is sanitized on the way in rather than trusted because something
+	 * upstream produced it. The card's own `wp_kses()` at the end of this function is the exit
+	 * boundary; both are needed, because between them this function adds markup of its own.
+	 */
 	$body = wp_kses_post( (string) ( $model['content_html'] ?? '' ) );
 	if ( ! empty( $model['sensitive'] ) ) {
 		$warning = (string) ( $model['content_warning'] ?? '' );
 		$summary = '' !== trim( $warning ) ? esc_html( $warning ) : esc_html__( 'Sensitive content', 'axismundi-object-projections' );
 		$parts[] = '<details class="axismundi-object__sensitive"><summary>' . $summary . '</summary>'
-			. '<div class="axismundi-object__content">' . $body . '</div></details>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Body is wp_kses_post rendered by the adapter.
+			. '<div class="axismundi-object__content">' . $body . '</div></details>';
 	} else {
-		$parts[] = '<div class="axismundi-object__content">' . $body . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Body is wp_kses_post rendered by the adapter.
+		$parts[] = '<div class="axismundi-object__content">' . $body . '</div>';
 	}
 
 	$attachment_html = array();
@@ -647,7 +653,7 @@ function axismundi_op_render_object_view_block( array $attributes = array(), str
 		}
 	}
 	if ( $attachment_html ) {
-		$parts[] = '<div class="axismundi-object__attachments">' . implode( '', $attachment_html ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Children escaped by renderer.
+		$parts[] = '<div class="axismundi-object__attachments">' . implode( '', $attachment_html ) . '</div>';
 	}
 
 	/**
@@ -662,13 +668,25 @@ function axismundi_op_render_object_view_block( array $attributes = array(), str
 	$interactions = $interactions_enabled ? axismundi_op_object_view_interactions_html( $model ) : '';
 	if ( '' !== $interactions ) {
 		// Block output, rendered here from the block list a product asked for. See below.
-		$parts[] = '<div class="axismundi-object__interactions">' . $interactions . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- render_block() output; each block escapes its own.
+		$parts[] = '<div class="axismundi-object__interactions">' . $interactions . '</div>';
 	}
 
 	$type_class = sanitize_html_class( strtolower( (string) ( $model['type'] ?? 'object' ) ), 'object' );
-	return '<article class="axismundi-object axismundi-object--' . esc_attr( $type_class ) . '">'
-		. implode( '', array_filter( $parts ) )
-		. '</article>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Parts escaped above.
+
+	/*
+	 * Filtered here because this is a `render_callback`: WordPress prints what it returns, so
+	 * this is an output boundary even though the function only returns. Every part above escapes
+	 * its own values, and this is the one place that holds for the whole card rather than
+	 * per fragment -- which also spares the eight call sites downstream, in this plugin and in
+	 * Forum, from each re-filtering a card and each risking the loss measured in
+	 * `audit-block-escaping.php`.
+	 */
+	return wp_kses(
+		'<article class="axismundi-object axismundi-object--' . esc_attr( $type_class ) . '">'
+			. implode( '', array_filter( $parts ) )
+			. '</article>',
+		axismundi_op_allowed_block_html()
+	);
 }
 
 /**

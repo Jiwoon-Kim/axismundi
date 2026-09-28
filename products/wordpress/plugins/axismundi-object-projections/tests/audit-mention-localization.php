@@ -115,9 +115,9 @@ try {
 	ax_ml_assert( $ax_ml_results, 'an anchor written as the Actor URI is localized too', str_contains( $ax_ml_by_uri, 'href="' . esc_url( $ax_ml_hub ) . '"' ) );
 
 	// Rendering must not create Actors, any more than it creates hashtag terms.
-	$ax_ml_before = (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . axismundi_actors_identities_table() ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- assertion.
+	$ax_ml_before = (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . axismundi_actors_identities_table() ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- counting rows in a table this plugin names itself; no value is interpolated.
 	apply_filters( 'axismundi_op_object_content_html', wp_kses_post( $ax_ml_payload['content'] ), $ax_ml_model );
-	ax_ml_assert( $ax_ml_results, 'rendering caches no Actor, because a page view is not a discovery', (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . axismundi_actors_identities_table() ) === $ax_ml_before ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- assertion.
+	ax_ml_assert( $ax_ml_results, 'rendering caches no Actor, because a page view is not a discovery', (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . axismundi_actors_identities_table() ) === $ax_ml_before ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- counting rows in a table this plugin names itself; no value is interpolated.
 } catch ( Throwable $ax_ml_error ) {
 	ax_ml_assert( $ax_ml_results, 'the mention localization suite ran to completion: ' . $ax_ml_error->getMessage(), false );
 } finally {

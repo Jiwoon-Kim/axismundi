@@ -38,6 +38,7 @@ try {
 	$ax_mb_user = $ax_mb_user ? (int) $ax_mb_user[0]->ID : 0;
 
 	$ax_mb_content = '<!-- wp:image {"id":' . (int) $ax_mb_ids[0] . '} --><figure><img src="local" /></figure><!-- /wp:image -->'
+		// phpcs:ignore PluginCheck.CodeAnalysis.Offloading.OffloadedContent -- fixture text, not a request: this audit exists to prove a hotlinked image is left where it is rather than fetched.
 		. "\n" . '<!-- wp:paragraph --><p>text <img src="https://example.com/hotlink.jpg" /> more</p><!-- /wp:paragraph -->';
 	$ax_mb_post_id = wp_insert_post(
 		array(

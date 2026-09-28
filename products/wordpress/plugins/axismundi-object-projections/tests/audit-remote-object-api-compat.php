@@ -220,7 +220,7 @@ ksort( $ax_compat_counts );
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
 printf(
 	"\n-- %d product file(s) still call the deprecated names --\n   (excludes the aliases in remote-objects.php and this audit, which call them deliberately)\n",
-	array_sum( $ax_compat_counts )
+	absint( array_sum( $ax_compat_counts ) )
 );
 foreach ( $ax_compat_counts as $ax_compat_plugin => $ax_compat_count ) {
 	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.

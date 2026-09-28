@@ -3,5 +3,4 @@
 
 defined( 'ABSPATH' ) || exit;
 
-// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- nested blocks render their own escaped output.
-echo axismundi_op_kses_block_html( axismundi_op_render_object_card_body_block() );
+echo wp_kses( axismundi_op_render_object_card_body_block(), axismundi_op_allowed_block_html() );

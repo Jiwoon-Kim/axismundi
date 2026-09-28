@@ -66,7 +66,7 @@ try {
 
 	// Interactions on purpose: the reaction bar is what carries the Interactivity directives.
 	$rendered = axismundi_op_render_object_by_uri( $object_uri, array( 'headingTag' => 'h3', 'interactions' => true, 'viewerScoped' => true ) );
-	$filtered = axismundi_op_kses_block_html( $rendered );
+	$filtered = wp_kses( $rendered, axismundi_op_allowed_block_html() );
 
 	ax_esc_assert( $ax_esc_results, 'a card renders something to check', '' !== trim( $rendered ) && false !== strpos( $rendered, 'data-wp-interactive' ) );
 	ax_esc_assert(
@@ -90,7 +90,7 @@ try {
 
 	// And it is still a filter, not a pass-through.
 	$hostile  = '<div data-wp-interactive="x"><script>alert(1)</script><a href="javascript:alert(2)" onclick="alert(3)">x</a><iframe src="https://evil.example"></iframe></div>';
-	$defanged = axismundi_op_kses_block_html( $hostile );
+	$defanged = wp_kses( $hostile, axismundi_op_allowed_block_html() );
 	ax_esc_assert(
 		$ax_esc_results,
 		'script, javascript: URLs, event handlers and frames do not survive it',

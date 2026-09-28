@@ -136,9 +136,13 @@ function axismundi_op_clean_html( string $html ) : string {
  * wildcarded by core, which is what carries the Interactivity directives; `data-wp-*` is not a
  * pattern KSES understands, so do not narrow it that way.
  *
- * `audit-object-renderer.php` asserts that filtering a full card changes nothing, so an element
- * or attribute added to a block without being added here fails a test rather than disappearing
- * from the page.
+ * Each block sink calls `wp_kses()` with this directly rather than through a wrapper of our own,
+ * because the escaping sniff only recognises functions it knows -- a local helper reads as no
+ * escaping at all to Plugin Check, whatever this repository configures.
+ *
+ * `audit-block-escaping.php` asserts that filtering a full card changes nothing, so an element or
+ * attribute added to a block without being added here fails a test rather than disappearing from
+ * the page.
  *
  * @return array<string,array<string,bool>>
  */
@@ -179,14 +183,4 @@ function axismundi_op_allowed_block_html() : array {
 	 * @param array<string,array<string,bool>> $allowed Allowed elements and attributes.
 	 */
 	return (array) apply_filters( 'axismundi_op_allowed_block_html', $allowed );
-}
-
-/**
- * Escape one block's rendered HTML at the point it is printed.
- *
- * @param string $html Server-rendered block HTML.
- * @return string
- */
-function axismundi_op_kses_block_html( string $html ) : string {
-	return wp_kses( $html, axismundi_op_allowed_block_html() );
 }

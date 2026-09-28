@@ -3,5 +3,4 @@
 
 defined( 'ABSPATH' ) || exit;
 
-// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- renderer escapes its own output.
-echo axismundi_op_kses_block_html( axismundi_op_render_object_read_more_block( $attributes ?? array() ) );
+echo wp_kses( axismundi_op_render_object_read_more_block( $attributes ?? array() ), axismundi_op_allowed_block_html() );

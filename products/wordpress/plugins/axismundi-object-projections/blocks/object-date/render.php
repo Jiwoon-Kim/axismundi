@@ -7,5 +7,4 @@
 
 defined( 'ABSPATH' ) || exit;
 
-// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Renderer escapes the date, link, and wrapper attributes.
-echo axismundi_op_kses_block_html( axismundi_op_render_object_date_block( $attributes ) );
+echo wp_kses( axismundi_op_render_object_date_block( $attributes ), axismundi_op_allowed_block_html() );

@@ -24,6 +24,6 @@ if ( '' === $ax_op_header_content ) {
 }
 printf(
 	'<div %s>%s</div>',
-	axismundi_op_kses_block_html( get_block_wrapper_attributes( array( 'class' => 'axismundi-object-card__header' ) ) ),
-	axismundi_op_kses_block_html( $ax_op_header_content )
+	wp_kses( get_block_wrapper_attributes( array( 'class' => 'axismundi-object-card__header' ) ), axismundi_op_allowed_block_html() ),
+	wp_kses( $ax_op_header_content, axismundi_op_allowed_block_html() )
 );

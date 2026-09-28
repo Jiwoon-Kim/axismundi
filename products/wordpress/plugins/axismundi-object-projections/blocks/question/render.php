@@ -7,5 +7,4 @@
 
 defined( 'ABSPATH' ) || exit;
 
-// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Renderer escapes its own fragments.
-echo axismundi_op_kses_block_html( axismundi_op_render_question_block() );
+echo wp_kses( axismundi_op_render_question_block(), axismundi_op_allowed_block_html() );

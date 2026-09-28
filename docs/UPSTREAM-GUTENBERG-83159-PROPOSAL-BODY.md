@@ -7,6 +7,20 @@
 > 끝났고 Core 짝 PR까지 준비되니, 같은 내용을 mergeable proposal로 다시 쓴다. 톤만 바뀌는 게 아니라
 > **무엇이 이 PR이고 무엇이 아닌지**를 목록으로 못박아 메가 PR의 리뷰 부담을 줄이는 게 목적이다.
 >
+> **2차 개정(2026-09-28, ②):** 게시본이 "The faux weights are untouched"라고 쓰는데 `408c8736dc`가
+> `getFontStylesAndWeights()`(204줄)와 그 테스트(766줄)를 삭제했다 — 본문이 코드와 반대였다.
+> 실제 계약으로 교체: **face 선언이 있으면 선언된 coverage만, 없으면 기존 기본 목록 유지, 저장된
+> 범위 밖 값은 삭제하지 않음.** 두 번째 절이 대부분의 사이트를 보호하는 지점이고(시스템 폰트·
+> fontFace 없는 테마), `getFontWeightValues`가 `DEFAULT_FONT_WEIGHT_VALUES`로 떨어지는 것으로 확인.
+> Testing에 4·5단계 추가(정적 family는 선언한 것만 / 선언 없는 family는 전체 목록).
+>
+> **④ Open 전환 완료(2026-09-28).** head `7ef8196980`, CI 78 통과·12 skip·실패 0, `MERGEABLE`.
+> 전환 직후 trunk의 background-clip이 같은 두 파일에 들어와 충돌 → 양쪽 함수 모두 유지하며 해소
+> (`757a22cd01`). 그 과정에서 axis tag 규칙이 Core에만 반영돼 있던 것을 발견해 플러그인 style engine ·
+> JS style engine · schema 2곳까지 `^[A-Za-z][A-Za-z0-9]{3}$`로 맞춤(`757a22cd01`, `7ef8196980`).
+> **③ `[Type]` 라벨은 외부 기여자 권한으로 불가**(`AddLabelsToLabelable` 거부) — 메인테이너 트리아지 몫.
+> Core PR #13789도 draft 해제(2026-09-28).
+>
 > **게시 순서 — ①②③ 완료(2026-09-28):**
 >
 > ```txt
@@ -82,7 +96,7 @@ Width is also where the shape of the whole model is clearest, because it is the 
 - **Weight and Width.** A select of the values the faces cover, and a toggle beside it for a slider and a field. A preset width is stored as the keyword, which is what both kinds of font have in common; a typed one as the percentage.
 - **Shared input.** The slider, the field, the clamping and the out-of-range notice are one component. They had been written three times, and the declared range was applied to the slider in all three but to the field in only one, which is how a width could be typed to 200% and a slant past the angles its axis has. Each axis keeps what is its own: where its range is read from, its presets, its stored form, and what it says when a saved value is outside.
 - **Order.** Style, Weight and Width sit under the font that decides them, and the size moves below, since a size is a decision about the text rather than something a font provides. No control gains or loses a value, a reset or a place in the panel's menu.
-- **One rule, one place.** Which axes may be written to `font-variation-settings` is decided by the style engine, and the sanitizer asks it rather than keeping a copy. Two readings of one rule is the defect this model exists to remove, so the PHP does not reintroduce it.
+- **One rule, one place.** Which axes may be written to `font-variation-settings` is decided by the style engine, and the sanitizer asks it rather than keeping a copy. Two readings of one rule is the defect this model exists to remove, so the PHP does not reintroduce it. On the editor side the same tidying removes the legacy `getFontStylesAndWeights()` helper and its behaviour-specific tests; the resolver and control tests cover the capability contract instead. Every control now reads the faces through the resolver, so the list a control offers is no longer assembled twice by two different rules.
 
 A value already saved outside a range is kept and explained rather than moved: a font can be changed under a value that suited another one.
 
@@ -95,13 +109,13 @@ Trac 66198 / wordpress-develop 13789   the Core side: the two style properties, 
 #83141         the weight work, carried here so the panel can be read whole
 #83462         the family a block's text is actually drawn in, under review on its own
 #83456         the two-angle font-style descriptor, resolved for a different consumer
-later          a capability list that stops offering a weight or style the faces do not declare
+not here       the toolbar's bold and italic, which are formatting requests
 ```
 
 - **#83141** is here because the three controls are one decision. If it lands first, this rebases onto trunk and the duplicate diff goes.
 - **#83462**'s one-line fix rides along, because the capability lookup this PR is about reads the family that fix restores; without it a block with an inline family is looked up against the inherited font instead. It is reviewed there on its own, and a rebase after it lands drops it as the same patch.
 - **#83456** is *not* here. The Slant control reads the raw face descriptor precisely because that fix resolves the two-angle form to a single usable value for a different consumer with a different need.
-- **The faux weights** are untouched. A family whose faces stop at 500 is still offered a Bold, and the toolbar's formatting still offers an italic to a font with no italic face, which is right for a formatting request. Making the capability list stop claiming what the faces do not declare is a behaviour change worth its own decision, and #83148 now carries the argument.
+- **For families that declare faces, synthesized weights and italics are no longer added to these lists.** This is a behaviour change and the one to look at first. Where a family declares none, the list is the one it has always been, which is what keeps this from reaching most sites: a system font has no faces to read and a theme need not write them, and a family that says nothing has not said it has no bold. A value already saved outside what the faces declare is kept and explained, not removed. The argument for it is in #83148.
 - **The Blocks screen** still reads the root family without the screen's prefix, as #83462 notes.
 
 ## Testing Instructions
@@ -109,9 +123,10 @@ later          a capability list that stops offering a weight or style the faces
 1. Register a variable family declaring `"fontWeight": "100 1000"`, `"fontStretch": "25% 151%"` and two faces, one `normal` and one `"oblique 0deg 10deg"`, with its `fvar` axes as `axes`. Set it as the site font.
 2. Select a paragraph and add Style, Weight and Width from the Typography options menu, as any control a block does not show by default is added. They sit in that order, after the font and before the size. Style offers Normal and Oblique and no italic; choosing Oblique saves `oblique 10deg`, since 14deg is past what the axis has, and opens a Slant control bounded 0 to 10.
 3. Weight and Width each offer the values inside their ranges, with a toggle to a slider and a field. Type 200 into the width: it stops at 151.
-4. Register a static family with a `normal` face and a `condensed` face. Its Width offers Condensed and Normal, in that order, and nothing else: there is no toggle to a slider, and no width to type between them.
-5. Register a family whose faces declare no `fontStretch`. Width is not in the Typography options menu for it at all, so there is nothing to add.
-6. Font variations is its own panel below Typography, listing the axes no property owns: the custom ones a file declares, and the optical size, which `font-optical-sizing` can only switch rather than set. It is absent for a family that declares none, and its own options menu adds its axes the same way.
+4. Register a static family with a `normal` face and a `condensed` face, each declaring `"fontWeight": "400"`. No synthetic weight or style is offered; Width offers only Condensed and Normal, with no custom slider.
+5. Switch the paragraph to a family the theme registers without any `fontFace`, or leave it on the default font. Weight offers the full list from Thin to Extra Black and Style offers Normal and Italic, as before: nothing has been declared, so nothing has been ruled out.
+6. Register a family whose faces declare no `fontStretch`. Width is not in the Typography options menu for it at all, so there is nothing to add.
+7. Font variations is its own panel below Typography, listing the axes no property owns: the custom ones a file declares, and the optical size, which `font-optical-sizing` can only switch rather than set. It is absent for a family that declares none, and its own options menu adds its axes the same way.
 
 ### Testing Instructions for Keyboard
 

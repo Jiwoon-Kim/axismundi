@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Axismundi Activities
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/wordpress/plugins/axismundi-activities
- * Description:       ActivityStreams activity ledger and social relationship state for Axismundi. Requires Axismundi Actors and Axismundi Object Projections. It owns no HTTP inbox, signatures, delivery queue, notifications, or Web Push, and makes no network request of its own.
+ * Description:       ActivityStreams activity ledger and social relationship state for Axismundi. Requires Axismundi Actors. Axismundi Object Projections is an optional integration that adds local post lifecycle, Object representation, and Object-based interaction. It owns no HTTP inbox, signatures, delivery queue, notifications, or Web Push, and makes no network request of its own.
  * Version:           0.1.0
  * Requires at least: 6.7
  * Requires PHP:      8.1

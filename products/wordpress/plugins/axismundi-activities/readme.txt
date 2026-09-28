@@ -25,10 +25,11 @@ never edited, and undoing something is a new Activity rather than a deletion.
 
 * **Axismundi Actors** is required. Every Activity names an actor by URI, and that registry
   is the authority for those URIs.
-* **Axismundi Object Projections** is required in practice. Anything an Activity is *about*
-  -- a post, an object, a cached remote document -- is identified and represented by that
-  plugin, so without it a Follow between two actors would still be recorded and almost
-  nothing else would.
+* **Axismundi Object Projections** is an optional integration. Following, accepting,
+  blocking and undoing are relationships between actors, and the ledger and an actor's
+  outbox work without it. Install it to add what an Activity can be *about*: local post
+  lifecycle, the representation of objects and cached remote documents, and the
+  interactions that act on one.
 * Axismundi Emoji and Axismundi Dialogs are optional. Emoji reactions and the anonymous
   remote-follow dialog use them where they are present.
 
@@ -69,8 +70,8 @@ where it is -- deleting an identity does not un-happen what it did.
 
 == Installation ==
 
-1. Install and activate **Axismundi Actors**, then **Axismundi Object Projections**. This
-   plugin records activity about the objects that one projects.
+1. Install and activate **Axismundi Actors**. Add **Axismundi Object Projections** as well
+   if you want activity about local posts and objects rather than relationships alone.
 2. Upload this plugin folder to `/wp-content/plugins/`, or install it through
    **Plugins > Add New**, then activate it.
 3. Place the follow, interaction, reaction or feed blocks where you want them. There is

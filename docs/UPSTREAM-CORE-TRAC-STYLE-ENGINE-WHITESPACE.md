@@ -1,7 +1,9 @@
 # Draft — Core Trac 티켓 (Style Engine이 문자열 내부 연속 공백을 접음)
 
-> 상태: **초안, 미게시.** 올릴 곳: [Core Trac 새 티켓](https://core.trac.wordpress.org/newticket).
-> **사용자가 직접 생성해야 한다** — Trac은 WordPress.org 로그인이 필요하고 에이전트는 자격증명을 다루지 않는다.
+> 상태: **게시됨(2026-09-28).** [Trac #66199](https://core.trac.wordpress.org/ticket/66199), 사용자가 생성.
+> wiki 문법 렌더 정상(코드 블록·링크), 본문 육안 대조 일치. `--posted` 바이트 대조는 불가 —
+> Trac이 `{{{#!php`를 소비하고 `[url label]`을 링크로 바꾸므로 렌더된 출력과 소스가 다르다.
+> #13789에 링크 댓글 추가: [issuecomment-5862895786](https://github.com/WordPress/wordpress-develop/pull/13789#issuecomment-5862895786).
 >
 > ```txt
 > Type        defect (bug)

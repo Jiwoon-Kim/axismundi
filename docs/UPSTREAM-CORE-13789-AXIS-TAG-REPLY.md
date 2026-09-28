@@ -68,3 +68,8 @@ Tool(s): Claude Code
 Model(s): Claude Opus 5
 Used for: Reading the registry's syntax requirements against the implementation, writing the validator and the test cases, and running the suite. I reviewed the reasoning and the results.
 <!-- end of body -->
+
+## Follow-up comment body (paste as is)
+
+Filed the whitespace behaviour as its own ticket: [#66199](https://core.trac.wordpress.org/ticket/66199). It is not specific to this pull request — a font family named `"My  Font"` is stored with both spaces and serialized with one — so the refusal here stays a limit rather than a fix.
+<!-- end of follow-up body -->

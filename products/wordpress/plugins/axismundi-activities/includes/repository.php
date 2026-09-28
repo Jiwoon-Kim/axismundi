@@ -568,6 +568,44 @@ function axismundi_act_get_object_lifecycle( string $object_uri ) : ?Axismundi_A
 }
 
 /**
+ * The Actor one Object is attributed to, as the ledger recorded it.
+ *
+ * Not the same question as `axismundi_act_get_object_lifecycle()`, which answers what
+ * happened to the Object most recently. An Activity carries the Actor who performed it and
+ * an Object carries the Actor it is attributed to, and those diverge as soon as someone
+ * edits work that is not theirs -- a contributor updating an Organization page emits an
+ * Update whose actor is the contributor while the page stays the Organization's. Reading
+ * attribution off the latest lifecycle row would hand the page to that contributor on the
+ * next save.
+ *
+ * Attribution is therefore taken from the Create that began the current generation. A
+ * withdrawn Object has no attribution to report: a later publication starts a new
+ * generation and resolves its identity afresh.
+ *
+ * This is a projection of what the ledger holds today, where a Create's actor and its
+ * `attributedTo` are necessarily the same value. Once an Update may carry a different
+ * actor, `attributedTo` has to be stored in its own column rather than inferred here.
+ *
+ * @param string $object_uri Canonical Object URI.
+ * @return string Attributed Actor URI, or an empty string when nothing is committed.
+ */
+function axismundi_act_get_object_attribution( string $object_uri ) : string {
+	global $wpdb;
+	$uri = axismundi_act_uri( $object_uri );
+	if ( '' === $uri || AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' ) ) {
+		return '';
+	}
+	$latest = axismundi_act_get_object_lifecycle( $uri );
+	if ( ! $latest instanceof Axismundi_Activity || 'Delete' === $latest->get_type() ) {
+		return '';
+	}
+	$table = axismundi_act_activities_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- current-generation Create lookup in the custom ledger.
+	$actor = $wpdb->get_var( $wpdb->prepare( "SELECT actor_uri FROM {$table} WHERE object_uri_hash = %s AND object_uri = %s AND activity_type = 'Create' AND effective_status = 'active' ORDER BY COALESCE( published_at, received_at, created_at ) DESC, id DESC LIMIT 1", hash( 'sha256', $uri ), $uri ) );
+	return is_string( $actor ) ? $actor : '';
+}
+
+/**
  * Return the immutable recipient snapshots emitted by one local Object lifecycle.
  *
  * Each Create or Update keeps its own address list. Consumers that need to

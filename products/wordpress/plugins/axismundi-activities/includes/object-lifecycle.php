@@ -98,8 +98,15 @@ function axismundi_act_record_object_delete( string $object_uri, string $actor_u
 	if ( 'Delete' === $latest->get_type() ) {
 		return $latest;
 	}
-	if ( ! hash_equals( $latest->get_actor_uri(), $actor_uri ) ) {
-		return new WP_Error( 'ax_act_object_actor', __( 'The deleting Actor does not own the committed Object lifecycle.', 'axismundi-activities' ) );
+	/*
+	 * Ownership is the Object's attribution, not whoever performed its newest Activity.
+	 * An Update may be performed by an editor who does not own the Object -- a contributor
+	 * revising an Organization page -- and comparing against that row would refuse the owner
+	 * their own withdrawal. There is no delegation model yet, so an explicitly delegated
+	 * deletion is still refused here rather than silently permitted.
+	 */
+	if ( ! hash_equals( axismundi_act_get_object_attribution( $object_uri ), $actor_uri ) ) {
+		return new WP_Error( 'ax_act_object_actor', __( 'The deleting Actor is not the Actor the Object is attributed to.', 'axismundi-activities' ) );
 	}
 	$audience = $latest->get_audience();
 	$activity = axismundi_act_record_source_activity(

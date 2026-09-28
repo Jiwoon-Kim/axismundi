@@ -58,6 +58,8 @@ require_once __DIR__ . '/includes/announce-block.php';
 require_once __DIR__ . '/includes/reply-block.php';
 require_once __DIR__ . '/includes/actor-feed.php';
 require_once __DIR__ . '/includes/feed-patterns.php';
+require_once __DIR__ . '/includes/publish-command.php';
+require_once __DIR__ . '/includes/c2s.php';
 require_once __DIR__ . '/includes/post-lifecycle.php';
 require_once __DIR__ . '/includes/local-social-ui.php';
 if ( is_admin() ) {

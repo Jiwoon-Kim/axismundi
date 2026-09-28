@@ -50,8 +50,8 @@ function axismundi_op_register_admin_page() : void {
 add_action( 'admin_menu', 'axismundi_op_register_admin_page' );
 
 /** Text-oriented HTML allowlist: deliberately excludes every media/embed element. */
-function axismundi_op_remote_preview_html( string $html ) : string {
-	$allowed = array(
+function axismundi_op_remote_preview_allowed_html() : array {
+	return array(
 		'a'          => array( 'href' => true, 'rel' => true, 'title' => true ),
 		'blockquote' => array(),
 		'br'         => array(),
@@ -66,7 +66,19 @@ function axismundi_op_remote_preview_html( string $html ) : string {
 		'strong'     => array(),
 		'ul'         => array(),
 	);
-	return wp_kses( $html, $allowed, array( 'http', 'https' ) );
+}
+
+/**
+ * The anchor `axismundi_op_remote_admin_reference_link()` builds, as an allowlist.
+ *
+ * Passed to `wp_kses()` by each caller rather than applied inside the helper: the escaping sniff
+ * only recognises functions it knows, so a helper that escapes perfectly well still reads as
+ * unescaped output to Plugin Check, which is what the plugin review is measured against.
+ *
+ * @return array<string,array<string,bool>>
+ */
+function axismundi_op_admin_reference_allowed_html() : array {
+	return array( 'a' => array( 'href' => true, 'rel' => true, 'title' => true ) );
 }
 
 /** Render success/error query notices. */
@@ -219,7 +231,7 @@ function axismundi_op_render_remote_tags( array $payload ) : void {
 		$name = axismundi_op_remote_admin_member_name( $tag );
 		$uri  = axismundi_op_remote_admin_member_uri( $tag );
 		?>
-		<tr><td><?php echo esc_html( '' !== $type ? $type : '—' ); ?></td><td><?php echo esc_html( '' !== $name ? $name : '—' ); ?></td><td><?php echo '' !== $uri ? axismundi_op_remote_admin_reference_link( $uri, $uri, 'Mention' === $type ) : '—'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes complete anchor. ?></td></tr>
+		<tr><td><?php echo esc_html( '' !== $type ? $type : '—' ); ?></td><td><?php echo esc_html( '' !== $name ? $name : '—' ); ?></td><td><?php echo '' === $uri ? '&mdash;' : wp_kses( axismundi_op_remote_admin_reference_link( $uri, $uri, 'Mention' === $type ), axismundi_op_admin_reference_allowed_html() ); ?></td></tr>
 	<?php endforeach; ?>
 	</tbody></table>
 	<?php
@@ -243,7 +255,7 @@ function axismundi_op_render_remote_audience( array $payload ) : void {
 		$uri   = axismundi_op_remote_admin_member_uri( $row[1] );
 		$label = axismundi_op_remote_admin_member_name( $row[1] );
 		?>
-		<tr><td><code><?php echo esc_html( $row[0] ); ?></code></td><td><?php echo '' !== $uri ? axismundi_op_remote_admin_reference_link( $uri, '' !== $label ? $label : $uri, true ) : esc_html( '' !== $label ? $label : '—' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes complete anchor. ?></td></tr>
+		<tr><td><code><?php echo esc_html( $row[0] ); ?></code></td><td><?php echo '' === $uri ? esc_html( '' !== $label ? $label : '—' ) : wp_kses( axismundi_op_remote_admin_reference_link( $uri, '' !== $label ? $label : $uri, true ), axismundi_op_admin_reference_allowed_html() ); ?></td></tr>
 	<?php endforeach; ?>
 	</tbody></table>
 	<?php
@@ -266,7 +278,7 @@ function axismundi_op_render_remote_attachments( array $payload ) : void {
 		$height     = is_array( $attachment ) && isset( $attachment['height'] ) ? absint( $attachment['height'] ) : 0;
 		$uri        = axismundi_op_remote_admin_member_uri( $attachment );
 		?>
-		<tr><td><?php echo esc_html( '' !== $type ? $type : '—' ); ?></td><td><?php echo esc_html( '' !== $name ? $name : '—' ); ?></td><td><?php echo esc_html( '' !== $media_type ? $media_type : '—' ); ?></td><td><?php echo esc_html( $width || $height ? $width . ' × ' . $height : '—' ); ?></td><td><?php echo '' !== $uri ? axismundi_op_remote_admin_reference_link( $uri ) : '—'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes complete anchor. ?></td></tr>
+		<tr><td><?php echo esc_html( '' !== $type ? $type : '—' ); ?></td><td><?php echo esc_html( '' !== $name ? $name : '—' ); ?></td><td><?php echo esc_html( '' !== $media_type ? $media_type : '—' ); ?></td><td><?php echo esc_html( $width || $height ? $width . ' × ' . $height : '—' ); ?></td><td><?php echo '' === $uri ? '&mdash;' : wp_kses( axismundi_op_remote_admin_reference_link( $uri ), axismundi_op_admin_reference_allowed_html() ); ?></td></tr>
 	<?php endforeach; ?>
 	</tbody></table>
 	<?php
@@ -305,21 +317,21 @@ function axismundi_op_render_remote_object_detail( array $object ) : void {
 		<tbody>
 			<tr><th scope="row"><?php esc_html_e( 'Canonical URI', 'axismundi-object-projections' ); ?></th><td><code><?php echo esc_html( (string) $object['object_uri'] ); ?></code></td></tr>
 			<tr><th scope="row"><?php esc_html_e( 'Type / status', 'axismundi-object-projections' ); ?></th><td><?php echo esc_html( (string) $object['object_type'] . ' / ' . (string) $object['object_status'] ); ?></td></tr>
-			<tr><th scope="row"><?php esc_html_e( 'Attributed to', 'axismundi-object-projections' ); ?></th><td><?php echo empty( $object['attributed_to_uri'] ) ? '&mdash;' : wp_kses_post( axismundi_op_remote_admin_reference_link( (string) $object['attributed_to_uri'], (string) $object['attributed_to_uri'], true ) ); ?></td></tr>
+			<tr><th scope="row"><?php esc_html_e( 'Attributed to', 'axismundi-object-projections' ); ?></th><td><?php echo empty( $object['attributed_to_uri'] ) ? '&mdash;' : wp_kses( axismundi_op_remote_admin_reference_link( (string) $object['attributed_to_uri'], (string) $object['attributed_to_uri'], true ), axismundi_op_admin_reference_allowed_html() ); ?></td></tr>
 			<tr><th scope="row"><?php esc_html_e( 'Published / updated', 'axismundi-object-projections' ); ?></th><td><?php echo esc_html( (string) ( $object['published_at'] ?? '—' ) . ' / ' . (string) ( $object['remote_updated_at'] ?? '—' ) ); ?></td></tr>
 			<tr><th scope="row"><?php esc_html_e( 'Sensitive', 'axismundi-object-projections' ); ?></th><td><?php echo null === $object['is_sensitive'] ? esc_html__( 'Not declared', 'axismundi-object-projections' ) : ( (int) $object['is_sensitive'] ? esc_html__( 'Yes', 'axismundi-object-projections' ) : esc_html__( 'No', 'axismundi-object-projections' ) ); ?></td></tr>
 			<tr><th scope="row"><?php esc_html_e( 'Fetched / expires', 'axismundi-object-projections' ); ?></th><td><?php echo esc_html( (string) $object['fetched_at'] . ' / ' . (string) $object['expires_at'] ); ?></td></tr>
 			<tr><th scope="row"><?php esc_html_e( 'Source page', 'axismundi-object-projections' ); ?></th><td><?php echo empty( $object['human_url'] ) ? '—' : '<a href="' . esc_url( (string) $object['human_url'] ) . '" rel="noopener noreferrer">' . esc_html__( 'Open remote page', 'axismundi-object-projections' ) . '</a>'; ?></td></tr>
-			<tr><th scope="row"><?php esc_html_e( 'Cached view', 'axismundi-object-projections' ); ?></th><td><?php echo '' === $view_url ? '—' : '<a href="' . esc_url( $view_url ) . '">' . esc_html__( 'View', 'axismundi-object-projections' ) . '</a>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Complete anchor escaped here. ?></td></tr>
+			<tr><th scope="row"><?php esc_html_e( 'Cached view', 'axismundi-object-projections' ); ?></th><td><?php echo '' === $view_url ? '&mdash;' : wp_kses( '<a href="' . esc_url( $view_url ) . '">' . esc_html__( 'View', 'axismundi-object-projections' ) . '</a>', axismundi_op_admin_reference_allowed_html() ); ?></td></tr>
 		</tbody>
 	</table>
 	<?php if ( ! empty( $object['summary'] ) ) : ?>
 		<h3><?php esc_html_e( 'Summary', 'axismundi-object-projections' ); ?></h3>
-		<div class="ax-op-remote-summary"><?php echo axismundi_op_remote_preview_html( (string) $object['summary'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- bounded allowlist above. ?></div>
+		<div class="ax-op-remote-summary"><?php echo wp_kses( (string) $object['summary'], axismundi_op_remote_preview_allowed_html(), array( 'http', 'https' ) ); ?></div>
 	<?php endif; ?>
 	<?php if ( ! empty( $object['content'] ) ) : ?>
 		<h3><?php esc_html_e( 'Content preview', 'axismundi-object-projections' ); ?></h3>
-		<div class="ax-op-remote-content"><?php echo axismundi_op_remote_preview_html( (string) $object['content'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- bounded allowlist above. ?></div>
+		<div class="ax-op-remote-content"><?php echo wp_kses( (string) $object['content'], axismundi_op_remote_preview_allowed_html(), array( 'http', 'https' ) ); ?></div>
 	<?php endif; ?>
 	<?php axismundi_op_render_remote_tags( $payload ); ?>
 	<?php axismundi_op_render_remote_audience( $payload ); ?>

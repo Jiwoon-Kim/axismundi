@@ -241,6 +241,38 @@ The outbox is a projection of the ledger, not the ledger itself. ActivityPub §5
 of it to expose to the implementation, so it can be filtered by audience and bounded by retention
 without the stored record having to match it.
 
+### A ledger that keeps bodies is a second cache
+
+This is not a hazard to avoid in a future design; it is already happening. `ax_activities` has a
+`payload_json longtext NOT NULL`, and an inbound `Create` stores the whole activity including its
+embedded object. Measured 2026-09-28 on 86 inbound rows: the largest `Create` carries an embedded
+object with its `content` in the payload, while `EmojiReact` rows reference their object by URI and
+carry no body.
+
+`wp_ax_remote_objects` is where a remote body lives, with a retention window, leases that hold a
+row past expiry while something still refers to it, and a Delete observer that replaces the body
+with a Tombstone. None of that reaches a copy sitting in `payload_json`. Expiring the cache, or
+honouring a remote author's Delete, leaves the body, the author and the attachments in the ledger —
+which is both a retention policy that does not do what it says and a copy of somebody's deleted
+post that we keep.
+
+So the two directions store different things:
+
+```txt
+inbound    what we observed and how we handled it: activity URI, actor, type, time,
+           the object URI as a reference, the outcome
+           the body belongs to wp_ax_remote_objects and expires with it
+
+outbound   the exact serialized payload while a send is pending or retrying,
+           because the bytes have to survive a retry
+           afterwards compacted under retention; the current body is OP's projection
+```
+
+Fixing this is its own piece of work and needs a migration for the rows that already carry bodies.
+It is written here because it is the same question this section answers for local objects, and
+because a design that says "the ledger does not keep bodies" should not be read as describing what
+the code does today.
+
 ## Order of work
 
 1. C2S vertical slice: publish/update → command → ledger → OP materialization.
@@ -249,6 +281,7 @@ without the stored record having to match it.
    Update and Delete alike.
 4. Replace the body pipeline with the block serializer above.
 5. Move Note, Forum and finally Calendar onto the recorded actor.
+6. Stop the ledger keeping remote bodies, and migrate the rows that already do.
 
 Calendar goes last because it is the only one that works today.
 

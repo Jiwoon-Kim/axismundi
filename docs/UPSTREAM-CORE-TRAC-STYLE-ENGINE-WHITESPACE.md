@@ -7,7 +7,7 @@
 > Type        defect (bug)
 > Component   Editor
 > Focuses     css
-> Summary     Style Engine collapses significant whitespace inside CSS string values
+> Summary     Style Engine collapses significant whitespace inside quoted CSS strings
 > ```
 >
 > **어떻게 발견했나:** [wordpress-develop#13789](https://github.com/WordPress/wordpress-develop/pull/13789)에
@@ -50,7 +50,7 @@ $styles['declarations']['font-family'];  // "My  Font", sans-serif
 $styles['css'];                          // font-family:"My Font", sans-serif;
 }}}
 
-The stored value names one family and the CSS names another, so the font is not matched and the fallback is used. Nothing reports that the value was changed.
+The serialized CSS no longer names exactly the family that was supplied, so it may match a different family or fall back. Nothing reports that the value was changed.
 
 == Where it happens ==
 
@@ -72,7 +72,7 @@ if ( $remove_breaks ) {
 return trim( $text );
 }}}
 
-The function is named and documented for stripping tags and removing line breaks. Collapsing a run of ordinary spaces in the middle of a quoted string is a side effect of the same expression, and the Style Engine applies it to every declaration it writes.
+The helper's `$remove_breaks` parameter is documented as removing "left over line breaks and white space chars", so this behavior is consistent with its contract. It is unsafe for CSS values where whitespace inside a quoted string is data rather than formatting, and the Style Engine applies it to every declaration it writes.
 
 == How this came up ==
 

@@ -26,6 +26,12 @@
 > 실제보다 커 보인다. schema가 머지 커밋에서 빠졌다가 다음 커밋에 들어간 경위도 쓰지 않는다 —
 > 최종 head가 일치하고 커밋 이력이 설명한다.
 >
+> **`@robelsust` 멘션 주의:** 텍스트를 그대로 붙여넣기만 하면 링크되지 않아 알림이 가지 않는다.
+> 작성창에서 `@rob`까지 치고 **자동완성에서 실제 사용자를 선택**해야 한다.
+>
+> **`#core`는 두 번에 나눠 올린다:** 본문(리뷰 요청) → 그다음 스레드 답글이나 별도 메시지로 #66199.
+> 한 메시지에 붙이면 별개 버그가 마지막 인상을 가져가면서 리뷰 요청의 초점이 흐려진다.
+>
 > 게시 후 붙여넣은 텍스트를 주면 `--posted`로 대조한다.
 
 ## #core-editor body (paste as is)
@@ -48,8 +54,12 @@ Hi — <https://core.trac.wordpress.org/ticket/66198|#66198> and its PR <https:/
 
 It adds `styles.typography.fontStretch` and `styles.typography.fontVariationSettings`, the settings that go with them, `axes` on a font face, `font-variation-settings` to what `safecss_filter_attr()` allows, and the two block supports. No block opts in here. The variation settings value is an object keyed by axis tag rather than a string, so the theme.json origins can merge per axis; which tags may be written is decided in `WP_Style_Engine`, and `WP_Theme_JSON` asks it rather than keeping a second copy.
 
-Thanks to @robelsust for testing it and for spotting that the tag check refused numeric array keys. It turned out to point the other way: the OpenType registry requires an axis tag to begin with a letter, so the check was too loose rather than too strict, and it now holds the grammar instead of counting four characters.
-
-Writing those tests turned up something separate, which I've filed as <https://core.trac.wordpress.org/ticket/66199|#66199>: the Style Engine collapses runs of whitespace inside quoted CSS strings, so a font family named `"My  Font"` is stored with both spaces and serialized with one. It needs no new feature to reproduce and I'm not proposing a fix in the ticket, since the call is on the path of every declaration the engine writes.
+Thanks to @robelsust for testing it and for spotting an edge case in the axis-tag validation. Following that through tightened the implementation to the OpenType grammar and added coverage for numeric-leading and malformed tags.
 
 <!-- end of core body -->
+
+## #core follow-up body (paste as is, after the message above)
+
+The same testing also exposed a separate existing Style Engine issue: quoted CSS strings do not preserve repeated whitespace. I filed that independently as <https://core.trac.wordpress.org/ticket/66199|#66199>; `"My  Font"` is enough to reproduce it on trunk.
+
+<!-- end of core follow-up body -->

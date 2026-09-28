@@ -50,6 +50,17 @@ function axismundi_op_normalize_transformer( string $id, array $args, string $ur
 		'uri'       => $args[ $uri_key ],
 		'transform' => $args['transform'],
 		'visible'   => $args['visible'] ?? null,
+		/*
+		 * Whether this transformer speaks for a source this site authors, and may therefore
+		 * emit an Object with no `attributedTo`.
+		 *
+		 * Declared by the transformer rather than inferred from the projected value, because
+		 * "this payload happens to have no author" and "this site authored something nobody
+		 * has published" are different facts and only the second is allowed. It never reaches
+		 * the emitted JSON-LD: it is not a member of the object, it is a property of who
+		 * produced it.
+		 */
+		'local'     => ! empty( $args['local'] ),
 		'priority'  => isset( $args['priority'] ) ? (int) $args['priority'] : 10,
 	);
 }

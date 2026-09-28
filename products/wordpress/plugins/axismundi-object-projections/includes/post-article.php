@@ -46,13 +46,7 @@ function axismundi_op_post_article_supports( $source ) : bool {
  * @return string
  */
 function axismundi_op_local_author_actor_uri( int $user_id ) : string {
-	$actor = null;
-	if ( function_exists( 'axismundi_actors_get_for_user' ) ) {
-		$actor = axismundi_actors_get_for_user( $user_id );
-	}
-	if ( ( ! $actor || ! function_exists( 'axismundi_actors_is_public_profile' ) || ! axismundi_actors_is_public_profile( $actor ) ) && function_exists( 'axismundi_actors_get_site_actor' ) ) {
-		$actor = axismundi_actors_get_site_actor();
-	}
+	$actor = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( $user_id ) : null;
 
 	return $actor && function_exists( 'axismundi_actors_is_public_profile' ) && axismundi_actors_is_public_profile( $actor )
 		? (string) $actor->get_uri()
@@ -66,7 +60,24 @@ function axismundi_op_local_author_actor_uri( int $user_id ) : string {
  * @return string
  */
 function axismundi_op_post_actor_uri( WP_Post $post ) : string {
-	$uri = axismundi_op_local_author_actor_uri( (int) $post->post_author );
+	/**
+	 * Filter who a local Object is attributed to.
+	 *
+	 * The answer belongs to whatever recorded the publication, which is why the default is
+	 * empty rather than derived here: `post_author` says who may edit a post, not whose the
+	 * Object is, and the two stop agreeing the moment an account can publish as more than one
+	 * identity. Axismundi Activities answers this from its ledger. This plugin does not read
+	 * that ledger and does not depend on it.
+	 *
+	 * Returning an empty string is a real answer. An Object with no attribution is still
+	 * projected for reading; it simply was not published by anyone.
+	 *
+	 * @since 0.1.2
+	 * @param string  $uri        Attributed Actor URI, or an empty string.
+	 * @param WP_Post $post       Source post.
+	 * @param string  $object_uri Canonical Object URI.
+	 */
+	$uri = (string) apply_filters( 'axismundi_op_local_object_attribution', '', $post, axismundi_op_post_object_uri( $post ) );
 
 	/**
 	 * Filter the Actor URI attributed to one local post.
@@ -132,8 +143,7 @@ add_filter( 'axismundi_op_resolve_source_by_uri', 'axismundi_op_resolve_local_po
 function axismundi_op_post_article_visible( WP_Post $post ) : bool {
 	return 'publish' === $post->post_status
 		&& '' === (string) $post->post_password
-		&& is_post_publicly_viewable( $post )
-		&& '' !== axismundi_op_post_actor_uri( $post );
+		&& is_post_publicly_viewable( $post );
 }
 
 /**
@@ -193,9 +203,10 @@ function axismundi_op_public_audience_uri() : string {
  *
  * @internal Resolved through axismundi_op_post_article_audience(); not called directly.
  */
-function axismundi_op_default_public_audience( Axismundi_Actor $actor, array $mention_uris = array() ) : array {
+function axismundi_op_default_public_audience( ?Axismundi_Actor $actor, array $mention_uris = array() ) : array {
 	$cc        = array();
-	$followers = axismundi_op_actor_followers_url( $actor );
+	// An Object nobody published has no followers to copy; it is still public.
+	$followers = $actor instanceof Axismundi_Actor ? axismundi_op_actor_followers_url( $actor ) : '';
 	if ( '' !== $followers ) {
 		$cc[] = $followers;
 	}
@@ -220,11 +231,20 @@ function axismundi_op_default_public_audience( Axismundi_Actor $actor, array $me
  * pass their already-sanitized stored URI snapshot so stale Actor cache state
  * cannot make an existing Article unavailable.
  */
-function axismundi_op_post_article_audience( WP_Post $post, ?array $mention_uris = null ) {
-	$actor_uri = axismundi_op_post_actor_uri( $post );
+function axismundi_op_post_article_audience( WP_Post $post, ?array $mention_uris = null, string $actor_uri = '' ) {
+	// A first publication has no attribution yet -- it is what the publication is about to
+	// create -- so the caller that knows which Actor is publishing states it.
+	$actor_uri = '' !== $actor_uri ? $actor_uri : axismundi_op_post_actor_uri( $post );
 	$actor     = '' !== $actor_uri && function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $actor_uri ) : null;
+	/*
+	 * An unattributed Object can still be addressed, but only publicly. Every narrower
+	 * visibility is defined relative to an Actor -- its followers, the people it has accepted
+	 * -- so there is nobody to resolve it against and refusing is the safe direction.
+	 */
 	if ( ! $actor instanceof Axismundi_Actor ) {
-		return new WP_Error( 'ax_op_post_audience', __( 'The post audience cannot be resolved.', 'axismundi-object-projections' ) );
+		return 'public' === axismundi_op_post_visibility( $post )
+			? axismundi_op_default_public_audience( null, is_array( $mention_uris ) ? $mention_uris : array() )
+			: new WP_Error( 'ax_op_post_audience', __( 'The post audience cannot be resolved.', 'axismundi-object-projections' ) );
 	}
 	if ( null === $mention_uris ) {
 		$mention_tags = axismundi_op_post_article_mention_tags( $post, true );
@@ -754,8 +774,8 @@ function axismundi_op_post_to_article( WP_Post $post, array $claimed = array() )
 	$id            = isset( $claimed['id'] ) ? (string) $claimed['id'] : axismundi_op_post_object_uri( $post );
 	$attributed_to = isset( $claimed['attributedTo'] ) ? (string) $claimed['attributedTo'] : axismundi_op_post_actor_uri( $post );
 	$url           = get_permalink( $post );
-	if ( ! $url || '' === $attributed_to || '' === $id ) {
-		return new WP_Error( 'ax_op_post_identity', __( 'The post has no public object or Actor URI.', 'axismundi-object-projections' ) );
+	if ( ! $url || '' === $id ) {
+		return new WP_Error( 'ax_op_post_identity', __( 'The post has no public object URI.', 'axismundi-object-projections' ) );
 	}
 	$mention_uris = axismundi_op_post_mentions( $post );
 	$mentions     = axismundi_op_post_article_mention_tags( $post, false );
@@ -778,7 +798,6 @@ function axismundi_op_post_to_article( WP_Post $post, array $claimed = array() )
 	$article   = array(
 		'id'           => $id,
 		'type'         => 'Article',
-		'attributedTo' => $attributed_to,
 		'url'          => array( 'type' => 'Link', 'href' => $url, 'mediaType' => 'text/html' ),
 		'mediaType'    => 'text/html',
 		'published'    => $published,
@@ -786,6 +805,13 @@ function axismundi_op_post_to_article( WP_Post $post, array $claimed = array() )
 		'to'           => $audience['to'],
 		'cc'           => $audience['cc'],
 	);
+	/*
+	 * Omitted rather than emitted empty. An Object nobody has published is readable and has no
+	 * author, which is a different statement from one attributed to the empty string.
+	 */
+	if ( '' !== $attributed_to ) {
+		$article = array_slice( $article, 0, 2, true ) + array( 'attributedTo' => $attributed_to ) + array_slice( $article, 2, null, true );
+	}
 	if ( 'und' === $language ) {
 		$article['name']    = $name;
 		$article['content'] = $content;
@@ -981,6 +1007,9 @@ function axismundi_op_register_post_article_transformer() : void {
 			'object_uri' => 'axismundi_op_post_object_uri',
 			'transform'  => 'axismundi_op_post_to_article',
 			'visible'    => 'axismundi_op_post_article_visible',
+			// This site authors these posts, so one nobody has published is readable without
+			// an `attributedTo` rather than refused.
+			'local'      => true,
 			'priority'   => 10,
 		)
 	);

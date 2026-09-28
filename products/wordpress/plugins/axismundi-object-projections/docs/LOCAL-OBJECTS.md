@@ -1,11 +1,19 @@
 # Local Objects: who publishes, and what the body is
 
-Status: **design, not implemented.** Decided 2026-09-28. Nothing in this document describes
-current behaviour; the sections marked "today" describe what is there now and why it is wrong.
+Status: decided 2026-09-28. **The identity half is implemented; the body half is not.**
 
 This covers two decisions that turned out to be one: where a local Object's publishing identity
-comes from, and where its body comes from. Both are currently derived at projection time from the
-`WP_Post`, and both need to come from somewhere else.
+comes from, and where its body comes from. Both were derived at projection time from the
+`WP_Post`, and both needed to come from somewhere else.
+
+Identity now does. This plugin no longer derives an Actor from `post_author` and no longer falls
+back to the site Actor; it asks, through the `axismundi_op_local_object_attribution` filter it
+owns, and Axismundi Activities answers from its ledger. This plugin does not read that ledger and
+keeps working without it — an Object then simply has no attribution, which is a correct answer
+rather than a degraded one. `axismundi-activities/docs/C2S.md` has the submission side.
+
+The body half is unchanged: sections below that describe rendering `the_content` still describe
+what happens today, and still describe what is wrong with it.
 
 ## 1. `post_author` is not the author
 
@@ -275,8 +283,12 @@ the code does today.
 
 ## Order of work
 
-1. C2S vertical slice: publish/update → command → ledger → OP materialization.
-2. Remove the site Actor fallback; allow the Actor-less projection.
+1. ~~C2S vertical slice~~ — the command service exists and the editors submit into it; the
+   trigger is still a projection observing a save. `docs/C2S.md` §9 carries the rest.
+2. ~~Remove the site Actor fallback; allow the Actor-less projection.~~ Done. An unattributed
+   local Object is readable, addressed publicly, omits `attributedTo`, and earns no Create,
+   outbox entry or delivery. The permission is declared by the transformer (`local`), so an
+   unattributed *remote* payload is still refused.
 3. Make the inbound tests ask both questions — same origin, and the stored author — in Create,
    Update and Delete alike.
 4. Replace the body pipeline with the block serializer above.

@@ -57,7 +57,14 @@ try {
 	);
 	$ax_tia_posts[] = $ax_tia_post_id;
 	$ax_tia_post    = get_post( $ax_tia_post_id );
-	$ax_tia_core    = axismundi_op_post_to_article( $ax_tia_post );
+	/*
+	 * The reference is given the same attribution Forum resolved for the Topic. Object
+	 * Projections no longer derives an Actor from `post_author` -- attribution comes from
+	 * whatever recorded the publication -- so a bare fixture post has none, and comparing
+	 * against it would report `attributedTo` as something Forum invented rather than as the
+	 * member both carry.
+	 */
+	$ax_tia_core    = axismundi_op_post_to_article( $ax_tia_post, array( 'attributedTo' => (string) ( $ax_tia_article['attributedTo'] ?? '' ) ) );
 
 	ax_tia_assert( $ax_tia_results, 'the reference core Post projects', is_array( $ax_tia_core ) );
 	if ( ! is_array( $ax_tia_core ) ) {

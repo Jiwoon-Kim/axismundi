@@ -292,13 +292,20 @@ try {
 	remove_all_filters( 'axismundi_op_post_object_uri' );
 	remove_all_filters( 'axismundi_op_post_lifecycle_owner' );
 
+	/*
+	 * Attribution no longer fails a projection closed. A post nobody has published is a real
+	 * state -- readable, with no author -- and the member is omitted rather than emitted empty
+	 * or refused. `audit-local-attribution.php` covers the rest of that policy, including that
+	 * the permission is local-only and that no Create follows.
+	 */
 	remove_all_filters( 'axismundi_op_post_actor_uri' );
-	$without_actor = axismundi_op_transform_object( $post );
-	$expected_public_actor = '' !== axismundi_op_post_actor_uri( $post );
+	$without_actor  = axismundi_op_transform_object( $post );
+	$claimed_actor  = axismundi_op_post_actor_uri( $post );
+	$carries_actor  = is_array( $without_actor ) && array_key_exists( 'attributedTo', $without_actor );
 	ax_article_assert(
 		$ax_article_results,
-		'a post without a public Actor fails closed, while an existing public user/site Actor remains valid',
-		$expected_public_actor ? is_array( $without_actor ) : is_wp_error( $without_actor ) && 'ax_op_not_public' === $without_actor->get_error_code()
+		'a post projects with or without attribution, carrying the member only when something recorded one',
+		is_array( $without_actor ) && $carries_actor === ( '' !== $claimed_actor ) && ( ! $carries_actor || $claimed_actor === $without_actor['attributedTo'] )
 	);
 } finally {
 	remove_all_filters( 'axismundi_op_post_actor_uri' );

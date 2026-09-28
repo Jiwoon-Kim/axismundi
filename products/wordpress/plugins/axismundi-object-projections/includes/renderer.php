@@ -131,7 +131,7 @@ function axismundi_op_object_html_url( array $object ) : string {
  * @param string              $expected_id The transformer's declared object URI.
  * @return array<string,mixed>|WP_Error
  */
-function axismundi_op_finalize_object( array $object, string $expected_id ) {
+function axismundi_op_finalize_object( array $object, string $expected_id, bool $local_source = false ) {
 	if ( 'Tombstone' === (string) ( $object['type'] ?? '' ) ) {
 		if ( empty( $object['id'] ) || (string) $object['id'] !== $expected_id ) {
 			return new WP_Error( 'ax_op_id_mismatch', __( 'A projected object id must equal its declared object URI.', 'axismundi-object-projections' ) );
@@ -147,10 +147,17 @@ function axismundi_op_finalize_object( array $object, string $expected_id ) {
 		}
 		return array_merge( array( '@context' => axismundi_op_jsonld_context( $tombstone ) ), $tombstone );
 	}
+	/*
+	 * An Actor document is not attributed to anyone, and neither is a local Object that nobody
+	 * has published yet -- readable, with no author, and with no Create, outbox entry or
+	 * delivery. A remote payload with no author stays refused: we cannot tell an unpublished
+	 * draft from a malformed or stripped one, and the conservative reading is the safe one.
+	 */
 	$actor_types = array( 'Application', 'Group', 'Organization', 'Person', 'Service' );
-	$required    = in_array( (string) ( $object['type'] ?? '' ), $actor_types, true )
-		? array( 'id', 'type', 'url' )
-		: array( 'id', 'type', 'attributedTo', 'url' );
+	$attributable = ! $local_source && ! in_array( (string) ( $object['type'] ?? '' ), $actor_types, true );
+	$required     = $attributable
+		? array( 'id', 'type', 'attributedTo', 'url' )
+		: array( 'id', 'type', 'url' );
 	foreach ( $required as $member ) {
 		if ( ! isset( $object[ $member ] ) || '' === $object[ $member ] ) {
 			return new WP_Error( 'ax_op_invalid_object', __( 'The projected value is missing a required member.', 'axismundi-object-projections' ) );
@@ -318,5 +325,5 @@ function axismundi_op_run_transformer( array $transformer, $source ) {
 	if ( ! is_array( $result ) ) {
 		return new WP_Error( 'ax_op_transform_result', __( 'A transformer must return an array or WP_Error.', 'axismundi-object-projections' ) );
 	}
-	return axismundi_op_finalize_object( $result, $expected_id );
+	return axismundi_op_finalize_object( $result, $expected_id, ! empty( $transformer['local'] ) );
 }

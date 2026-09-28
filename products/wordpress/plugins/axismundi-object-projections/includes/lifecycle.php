@@ -51,10 +51,16 @@ function axismundi_op_emit_post_publish_candidate( int $post_id, WP_Post $post, 
 	}
 
 	$object_uri = axismundi_op_post_object_uri( $post );
-	$actor_uri  = axismundi_op_post_actor_uri( $post );
-	if ( '' === $object_uri || '' === $actor_uri ) {
+	if ( '' === $object_uri ) {
 		return;
 	}
+	/*
+	 * Deliberately not gated on attribution. A first publication has none -- it is what the
+	 * publication creates -- so requiring one here would mean no Object could ever earn its
+	 * first Create. The value passed on is whatever is already recorded, which is empty until
+	 * a consumer records something.
+	 */
+	$actor_uri = axismundi_op_post_actor_uri( $post );
 
 	/**
 	 * Fires after a public Core Post is committed and can be projected.
@@ -62,15 +68,12 @@ function axismundi_op_emit_post_publish_candidate( int $post_id, WP_Post $post, 
 	 * The event is intentionally idempotent. Consumers must derive lifecycle state
 	 * from their own ledger instead of assuming every callback is a first publish.
 	 *
-	 * NOTE: `$actor_uri` travels the wrong way, per docs/LOCAL-OBJECTS.md. Projection
-	 * settles the publishing identity here and the ledger records what it was handed,
-	 * where ActivityPub has the Activity carry the actor and the object take its
-	 * `attributedTo` from it. The intended order is Actors offering an acting Actor, a
-	 * client-to-server command carrying it, Activities verifying it with `can_act_as()`
-	 * and recording the Create or Update, and this plugin materializing the Object from
-	 * that record. Until then a post whose author has no public Actor never reaches this
-	 * event at all, which is also why an Actor-less Object cannot yet be projected for
-	 * reading alone.
+	 * NOTE: `$actor_uri` is the attribution already on record, which is empty for a post
+	 * that has never been published. It is passed for the consumers written against this
+	 * signature and is not an instruction: who a save publishes as is decided by the
+	 * submitting client and verified by Axismundi Activities, not settled here. What
+	 * remains inverted is the trigger -- this event is still a projection observing a
+	 * save rather than an intent arriving from an editor.
 	 *
 	 * @since 0.0.8
 	 * @param WP_Post      $post        Saved post.

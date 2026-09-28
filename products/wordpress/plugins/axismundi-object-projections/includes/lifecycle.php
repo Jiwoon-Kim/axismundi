@@ -62,6 +62,16 @@ function axismundi_op_emit_post_publish_candidate( int $post_id, WP_Post $post, 
 	 * The event is intentionally idempotent. Consumers must derive lifecycle state
 	 * from their own ledger instead of assuming every callback is a first publish.
 	 *
+	 * NOTE: `$actor_uri` travels the wrong way, per docs/LOCAL-OBJECTS.md. Projection
+	 * settles the publishing identity here and the ledger records what it was handed,
+	 * where ActivityPub has the Activity carry the actor and the object take its
+	 * `attributedTo` from it. The intended order is Actors offering an acting Actor, a
+	 * client-to-server command carrying it, Activities verifying it with `can_act_as()`
+	 * and recording the Create or Update, and this plugin materializing the Object from
+	 * that record. Until then a post whose author has no public Actor never reaches this
+	 * event at all, which is also why an Actor-less Object cannot yet be projected for
+	 * reading alone.
+	 *
 	 * @since 0.0.8
 	 * @param WP_Post      $post        Saved post.
 	 * @param string       $object_uri  Stable projected object URI.

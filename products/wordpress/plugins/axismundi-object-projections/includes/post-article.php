@@ -26,6 +26,22 @@ function axismundi_op_post_article_supports( $source ) : bool {
  * Actors remains the identity owner; projections never create an Actor from a render
  * request. This shared resolver is used by Core Post and first-party domain adapters.
  *
+ * NOTE: both halves of this are superseded by a decision recorded in docs/LOCAL-OBJECTS.md
+ * and not yet implemented.
+ *
+ * `post_author` says who may edit a post, not whose the Object is. Reading it here makes
+ * editing responsibility decide federated authorship, which is only harmless while every
+ * account has one Person Actor; publishing as an Organization leaves this with no answer
+ * and nothing recorded to recover one from. The publishing Actor belongs to the Activity
+ * that publishes it, and this should read what the ledger recorded rather than derive it.
+ *
+ * The site Actor is not an author. It is an Application identity — the server — and this
+ * reaches for it both when the user has no Actor and when the user's Actor is not public,
+ * so a deliberate choice to stay private is answered by publishing as the site instead.
+ * It is inert today only because the site Actor is itself non-public, which makes the
+ * final gate return '': one setting away from attributing every Actor-less user's posts
+ * to the server. An Object with no Actor should have no `attributedTo` and no `Create`.
+ *
  * @param int $user_id Local WordPress user id.
  * @return string
  */
@@ -234,6 +250,19 @@ function axismundi_op_post_article_publicly_readable( WP_Post $post ) : bool {
 
 /**
  * Render post content through WordPress's normal content pipeline.
+ *
+ * NOTE: superseded by docs/LOCAL-OBJECTS.md, not yet implemented.
+ *
+ * This follows Core's feeds, which publish `the_content`, and the summary path in this same
+ * file deliberately does not — it calls `do_blocks()`, `wptexturize()` and `wpautop()` so that
+ * sharing controls, adverts and related posts cannot run into a syndicated copy. Core carries
+ * both models: feeds render, WXR export ships `post_content`. A federated Article wants the
+ * second. Running the whole pipeline puts the web presentation into the document: custom emoji
+ * arrive as `<img>` that receiving sanitizers drop, dynamic blocks publish this server's current
+ * state so a re-fetch can differ with no `updated`, and every third-party content filter joins
+ * the trust boundary. The replacement parses `post_content` once and serializes the blocks that
+ * are document content, which also yields the attachment ids, embed intents and shortcode uses
+ * that are currently recovered from rendered HTML.
  *
  * @param WP_Post     $post    Post.
  * @param string|null $content Optional fragment; defaults to the full post content.

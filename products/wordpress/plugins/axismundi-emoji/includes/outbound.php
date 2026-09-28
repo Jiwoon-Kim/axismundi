@@ -20,6 +20,43 @@ defined( 'ABSPATH' ) || exit;
 /** Rewrite base for the AS2 representation of a local emoji. */
 const AXISMUNDI_EMOJI_ROUTE_BASE = 'emojis';
 
+/** The FEP-9098 Emoji type IRI. */
+const AXISMUNDI_EMOJI_TYPE_IRI = 'http://joinmastodon.org/ns#Emoji';
+
+/** @return array<string,string> The JSON-LD term mapping this extension owns. */
+function axismundi_emoji_type_context() : array {
+	return array( 'Emoji' => AXISMUNDI_EMOJI_TYPE_IRI );
+}
+
+/**
+ * Restore shortcodes represented by this plugin's rendered emoji images.
+ *
+ * Browser HTML is a presentation of the authored shortcode, not the value that
+ * should travel in an ActivityStreams natural-language member. Restrict the
+ * reversal to this plugin's class and an unqualified local shortcode so an
+ * unrelated image or a remote qualified emoji is never rewritten.
+ *
+ * @param string $html          Rendered HTML.
+ * @param bool   $pad_for_scan  Add token boundaries for plain-text scanning.
+ * @return string HTML with local emoji images restored to shortcodes.
+ */
+function axismundi_emoji_restore_shortcodes( string $html, bool $pad_for_scan = false ) : string {
+	if ( false === stripos( $html, 'ax-emoji' ) ) {
+		return $html;
+	}
+	$restored = preg_replace_callback(
+		'/<img\b[^>]*\bclass=(["\'])(?:[^"\']*\s)?ax-emoji(?:\s[^"\']*)?\1[^>]*>/i',
+		static function ( array $match ) use ( $pad_for_scan ) : string {
+			if ( 1 !== preg_match( '/\balt=(["\'])(:[a-zA-Z0-9_]{2,}:)\1/', $match[0], $alt ) ) {
+				return $match[0];
+			}
+			return $pad_for_scan ? ' ' . $alt[2] . ' ' : $alt[2];
+		},
+		$html
+	);
+	return is_string( $restored ) ? $restored : $html;
+}
+
 /**
  * The shortcodes a piece of local text actually uses.
  *
@@ -48,15 +85,7 @@ function axismundi_emoji_tokenize( string $text ) : array {
 	 * `:name:` form in our own class counts; a qualified `:name@host:` alt is a remote emoji
 	 * and the boundary pattern below never matches it.
 	 */
-	if ( false !== stripos( $text, 'ax-emoji' ) ) {
-		$text = (string) preg_replace_callback(
-			'/<img\b[^>]*\bclass=(["\'])(?:[^"\']*\s)?ax-emoji(?:\s[^"\']*)?\1[^>]*>/i',
-			static function ( array $m ) : string {
-				return 1 === preg_match( '/\balt=(["\'])(:[a-zA-Z0-9_]{2,}:)\1/', $m[0], $alt ) ? ' ' . $alt[2] . ' ' : $m[0];
-			},
-			$text
-		);
-	}
+	$text = axismundi_emoji_restore_shortcodes( $text, true );
 
 	/*
 	 * Tags are stripped rather than walked. Unlike the renderer — which must not touch
@@ -197,6 +226,79 @@ function axismundi_emoji_outbound_tags( array $texts ) : array {
 }
 
 /**
+ * Restore shortcodes in one projected object's HTML natural-language members.
+ *
+ * @param array<string,mixed> $object Projected ActivityStreams object.
+ * @return array<string,mixed>
+ */
+function axismundi_emoji_restore_projected_object( array $object ) : array {
+	foreach ( array( 'content', 'summary' ) as $member ) {
+		if ( isset( $object[ $member ] ) && is_string( $object[ $member ] ) ) {
+			$object[ $member ] = axismundi_emoji_restore_shortcodes( $object[ $member ] );
+		}
+	}
+	foreach ( array( 'contentMap', 'summaryMap' ) as $member ) {
+		if ( ! isset( $object[ $member ] ) || ! is_array( $object[ $member ] ) ) {
+			continue;
+		}
+		foreach ( $object[ $member ] as $language => $value ) {
+			if ( is_string( $value ) ) {
+				$object[ $member ][ $language ] = axismundi_emoji_restore_shortcodes( $value );
+			}
+		}
+	}
+	if ( isset( $object['preview'] ) && is_array( $object['preview'] ) ) {
+		$object['preview'] = axismundi_emoji_restore_projected_object( $object['preview'] );
+	}
+	return $object;
+}
+
+/**
+ * Whether a document declares at least one FEP-9098 Emoji.
+ *
+ * @param array<string,mixed> $object ActivityStreams object or Activity.
+ * @return bool
+ */
+function axismundi_emoji_document_has_declaration( array $object ) : bool {
+	foreach ( (array) ( $object['tag'] ?? array() ) as $tag ) {
+		if ( ! is_array( $tag ) ) {
+			continue;
+		}
+		$types = array_map( 'strval', (array) ( $tag['type'] ?? array() ) );
+		if ( array_intersect( array( 'Emoji', 'toot:Emoji', AXISMUNDI_EMOJI_TYPE_IRI ), $types ) ) {
+			return true;
+		}
+	}
+	return isset( $object['object'] ) && is_array( $object['object'] ) && axismundi_emoji_document_has_declaration( $object['object'] );
+}
+
+/**
+ * Add the FEP-9098 type mapping only to documents that use it.
+ *
+ * @param array<int,mixed>         $context Existing JSON-LD context.
+ * @param array<string,mixed>|null $object  Object being finalized.
+ * @return array<int,mixed>
+ */
+function axismundi_emoji_extend_jsonld_context( array $context, ?array $object = null ) : array {
+	$mapping = axismundi_emoji_type_context();
+	if ( is_array( $object ) && axismundi_emoji_document_has_declaration( $object ) && ! in_array( $mapping, $context, true ) ) {
+		$context[] = $mapping;
+	}
+	return $context;
+}
+
+/*
+ * Browser rendering may already have decorated `the_content`. Restore this
+ * extension's wire representation at the product projection boundary, then
+ * teach Object Projections' renderer-owned context about the type only when a
+ * declaration is present. All hooks remain harmless when those products are
+ * inactive.
+ */
+add_filter( 'axismundi_op_post_article', 'axismundi_emoji_restore_projected_object', 20 );
+add_filter( 'axismundi_note_project_object', 'axismundi_emoji_restore_projected_object', 20 );
+add_filter( 'axismundi_op_jsonld_context', 'axismundi_emoji_extend_jsonld_context', 10, 2 );
+
+/**
  * Serve the AS2 document for one local emoji.
  *
  * Answered from `parse_request` rather than by redirecting, for the reason the Actors
@@ -233,7 +335,15 @@ function axismundi_emoji_serve_route( WP $wp ) : void {
 		echo wp_json_encode( array( 'error' => 'Not Found' ), JSON_UNESCAPED_SLASHES );
 		exit;
 	}
-	$document = array_merge( array( '@context' => 'https://www.w3.org/ns/activitystreams' ), axismundi_emoji_as2_object( $row ) );
+	$document = array_merge(
+		array(
+			'@context' => array(
+				'https://www.w3.org/ns/activitystreams',
+				axismundi_emoji_type_context(),
+			),
+		),
+		axismundi_emoji_as2_object( $row )
+	);
 	status_header( 200 );
 	header( 'Content-Type: application/activity+json; charset=utf-8' );
 	header( 'Cache-Control: public, max-age=3600' );

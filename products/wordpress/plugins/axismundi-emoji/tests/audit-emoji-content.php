@@ -41,6 +41,7 @@ try {
 	$ax_ct_html = apply_filters( 'the_content', '<p>:wordpress: made this</p>' );
 	ax_ct_assert( $ax_ct_results, 'a local shortcode in a post becomes the emoji image', str_contains( $ax_ct_html, '<img class="ax-emoji"' ) && ! str_contains( wp_strip_all_tags( $ax_ct_html ), ':wordpress:' ) );
 	ax_ct_assert( $ax_ct_results, 'with the shortcode kept as its alt text', str_contains( $ax_ct_html, 'alt=":wordpress:"' ) );
+	ax_ct_assert( $ax_ct_results, 'the rendered image can be restored to its authored shortcode for federation', '<p>:wordpress: made this</p>' === trim( axismundi_emoji_restore_shortcodes( $ax_ct_html ) ) );
 
 	$ax_ct_code = apply_filters( 'the_content', '<pre><code>:wordpress:</code></pre>' );
 	ax_ct_assert( $ax_ct_results, 'a shortcode inside code is documentation and stays text', ! str_contains( $ax_ct_code, '<img' ) );
@@ -62,6 +63,21 @@ try {
 	ax_ct_assert( $ax_ct_results, 'a remote emoji image (qualified alt) is not counted as a local use', array() === axismundi_emoji_tokenize( '<p><img class="ax-emoji" src="x" alt=":wordpress@example.org:" /></p>' ) );
 	ax_ct_assert( $ax_ct_results, 'an unrelated image whose alt looks like a shortcode is not counted', array() === axismundi_emoji_tokenize( '<p><img class="photo" src="x" alt=":wordpress:" /></p>' ) );
 
+	$ax_ct_note = axismundi_emoji_restore_projected_object(
+		array(
+			'type'       => 'Note',
+			'content'    => $ax_ct_html,
+			'contentMap' => array( 'en' => $ax_ct_html ),
+		)
+	);
+	ax_ct_assert(
+		$ax_ct_results,
+		'a Note projection uses the same shortcode wire representation in scalar and language-map content',
+		'<p>:wordpress: made this</p>' === trim( (string) ( $ax_ct_note['content'] ?? '' ) )
+			&& '<p>:wordpress: made this</p>' === trim( (string) ( $ax_ct_note['contentMap']['en'] ?? '' ) )
+	);
+	ax_ct_assert( $ax_ct_results, 'the Note projection hook is registered without making Note a hard dependency', 20 === has_filter( 'axismundi_note_project_object', 'axismundi_emoji_restore_projected_object' ) );
+
 	if ( function_exists( 'axismundi_op_post_to_article' ) ) {
 		/*
 		 * An author with an Actor, or there is no Article at all: under WP-CLI there is no
@@ -79,10 +95,18 @@ try {
 			)
 		);
 		try {
-			$ax_ct_article = is_int( $ax_ct_post_id ) && $ax_ct_post_id > 0 ? axismundi_op_post_to_article( get_post( $ax_ct_post_id ) ) : null;
+			$ax_ct_article = is_int( $ax_ct_post_id ) && $ax_ct_post_id > 0 ? axismundi_op_transform_object( get_post( $ax_ct_post_id ) ) : null;
 			ax_ct_assert( $ax_ct_results, 'the audit post projects to an Article at all' . ( is_wp_error( $ax_ct_article ) ? ' (' . $ax_ct_article->get_error_code() . ')' : '' ), is_array( $ax_ct_article ) );
 			$ax_ct_names   = is_array( $ax_ct_article ) ? array_column( array_filter( (array) ( $ax_ct_article['tag'] ?? array() ), static fn( $t ) : bool => is_array( $t ) && in_array( 'Emoji', (array) ( $t['type'] ?? array() ), true ) ), 'name' ) : array();
 			ax_ct_assert( $ax_ct_results, 'with the_content decoration on, a projected Article still declares :wordpress: in tag[]', false !== has_filter( 'the_content', 'axismundi_emoji_decorate_site_content' ) && in_array( ':wordpress:', $ax_ct_names, true ) );
+			$ax_ct_map     = is_array( $ax_ct_article ) ? array_values( (array) ( $ax_ct_article['contentMap'] ?? array() ) ) : array();
+			$ax_ct_content = is_array( $ax_ct_article ) ? (string) ( $ax_ct_article['content'] ?? $ax_ct_map[0] ?? '' ) : '';
+			ax_ct_assert( $ax_ct_results, 'the projected Article keeps the shortcode in content instead of publishing browser image markup', str_contains( $ax_ct_content, ':wordpress:' ) && ! str_contains( $ax_ct_content, 'ax-emoji' ) );
+			$ax_ct_mapping = axismundi_emoji_type_context();
+			$ax_ct_context = is_array( $ax_ct_article ) ? (array) ( $ax_ct_article['@context'] ?? array() ) : array();
+			ax_ct_assert( $ax_ct_results, 'an Article declaring Emoji maps the extension type in its JSON-LD context', in_array( $ax_ct_mapping, $ax_ct_context, true ) );
+			$ax_ct_plain_context = (array) axismundi_op_jsonld_context( array( 'type' => 'Article', 'tag' => array() ) );
+			ax_ct_assert( $ax_ct_results, 'a document without an Emoji declaration does not advertise the extension type', ! in_array( $ax_ct_mapping, $ax_ct_plain_context, true ) );
 		} finally {
 			if ( is_int( $ax_ct_post_id ) && $ax_ct_post_id > 0 ) {
 				wp_delete_post( $ax_ct_post_id, true );

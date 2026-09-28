@@ -89,16 +89,44 @@ Decoupling `attributedTo` from `post_author` removes the hazard a lock was defen
 only way attribution changes is that somebody deliberately reassigns it, which is a legitimate
 Update.
 
-Inbound, the authority test should be the same one in every direction:
+Inbound, origin and permission are two different questions and both have to be asked.
 
 ```txt
-host( activity.actor ) === host( object.id )
+origin      host( activity.actor ) === host( object.id )     necessary, never sufficient
+permission  activity.actor relates to the object's recorded author
 ```
 
-`includes/remote-collections.php` already compares hosts this way for collection pages: lowercase,
-exact match, never a suffix test. **Today** the checks are inconsistent — Create/Update compare the
-activity's actor against the payload's own `attributedTo`, while Delete compares against the
-*stored* `attributed_to_uri`. Delete is the stricter of the two; both should become the host test.
+An earlier revision of this document proposed the host comparison **as** the authority test for
+Update and Delete. That is wrong, and it is wrong in the dangerous direction: everyone on a shared
+instance passes it, so Alice could edit or delete Bob's Object because they happen to have the same
+hostname. The host test only establishes that the activity came from the server that speaks for
+that URL. It cannot say which of that server's Actors may act on it.
+
+**Today** the checks are inconsistent, and the stricter one is the better one:
+
+| activity | test today |
+|---|---|
+| Create / Update | actor compared to the payload's own `attributedTo` |
+| Delete | actor compared to the **stored** `attributed_to_uri` |
+
+Delete asks the right question. Create and Update compare the document against itself, which a
+sender controls on both sides, so the check passes for a payload that claims a different author
+than the one already recorded. They should compare against the stored author too, and all three
+should also carry the origin test.
+
+That leaves a question this document does not answer. Our own model deliberately allows
+`Update.actor` to differ from `attributedTo` — a contributor editing an Organization's Article —
+and ActivityPub does not require them to match. A conservative inbound rule that demands
+`actor === stored attributedTo` therefore refuses exactly the case we intend to send. Accepting a
+third party's Update from the same origin needs a delegation model to say who else may act on an
+Object, and there is none yet. Until there is, the conservative rule stands and the gap is known
+rather than accidental.
+
+Reassignment of `attributedTo` is a separate motion in any case: the existing author, or a defined
+delegation, has to authorise it. It is never a side effect of an ordinary edit.
+
+`includes/remote-collections.php` already compares hosts correctly for collection pages — lowercase,
+exact match, never a suffix test — and is the implementation to reuse for the origin half.
 
 ## 4. The body is authored blocks, not rendered HTML
 
@@ -176,27 +204,49 @@ site fetches from `attachment[]` or the image URL and assigns its own.
 There is no `source` property carrying full Gutenberg serialization. The gallery hint is enough for
 WordPress-to-WordPress structure, and a document that loses the comments still shows its images.
 
-## 5. Activities is a Git-shaped ledger, not a re-render
+## 5. Two layers: a current Object, and a record of what was published
 
-A past Activity must never be rebuilt from the current `wp_post`. Themes, sanitizers, the allowlist
-and attribution all move, and a rebuilt Create would quietly become a different thing than what was
-published.
+Only two layers are decided here.
 
-So each recorded revision carries the actor, the object URI, its parent revision, the source
-WordPress revision, and a canonical snapshot of the Object as published — or a content-addressed
-hash that restores it exactly. Storage can behave like Git rather than SVN: `Create` holds a full
-snapshot, `Update` may hold a structured diff against its parent with periodic new snapshots,
-identical payloads deduplicate by hash, and old revisions squash under a retention policy that
-keeps the current snapshot and a verifiable lineage.
+```txt
+wp_post       the editable source, current
+OP            reads the current wp_post and projects the current AS2 Object, dynamically
+Activities    what was published or interacted with: actor, object URI, operation, time,
+              and the exact serialized payload for as long as delivery needs it
+```
 
-What leaves the site is always a sufficient snapshot: a receiver cannot be assumed to hold any
-earlier revision.
+What leaves the site is always a sufficient snapshot — a receiver cannot be assumed to hold any
+earlier revision, so an outgoing `Update` carries the whole Object. Keeping that payload internally
+is a different question, and the answer is "for as long as delivery needs it": while a send is
+pending or retrying, the exact bytes; afterwards, compacted or dropped under a retention policy,
+leaving at most the light facts above plus a payload hash.
+
+Deliberately **not** decided here:
+
+- Whether a reader can see a previous version of a post. That is a history feature with its own
+  design, not a side effect of how federation records things.
+- Whether old bodies are kept as snapshots, diffs, or not at all.
+- Any use of WordPress revisions as the anchor. Core revisions are an editor feature with
+  configurable retention (`wp_revisions_to_keep`), autosave semantics, and meta that is only
+  revisioned when registered as such. They are not a federation durability guarantee and tying
+  Activity records to them would make the ledger depend on an editor setting.
+
+An earlier revision of this document specified a Git-shaped revision store — parent revisions,
+periodic snapshots, structured diffs, squashing — and a link to Core revisions. That was a design
+for a history product written inside a document about federation, before anyone had decided to
+build one. Recording every Update's full body forever also grows roughly with the number of edits,
+which is a cost worth choosing on purpose rather than inheriting.
+
+The outbox is a projection of the ledger, not the ledger itself. ActivityPub §5.1 leaves how much
+of it to expose to the implementation, so it can be filtered by audience and bounded by retention
+without the stored record having to match it.
 
 ## Order of work
 
 1. C2S vertical slice: publish/update → command → ledger → OP materialization.
 2. Remove the site Actor fallback; allow the Actor-less projection.
-3. Make the inbound authority test the host comparison, in all three of Create, Update and Delete.
+3. Make the inbound tests ask both questions — same origin, and the stored author — in Create,
+   Update and Delete alike.
 4. Replace the body pipeline with the block serializer above.
 5. Move Note, Forum and finally Calendar onto the recorded actor.
 

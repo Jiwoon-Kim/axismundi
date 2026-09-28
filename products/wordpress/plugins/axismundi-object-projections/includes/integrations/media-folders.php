@@ -272,7 +272,7 @@ function axismundi_op_media_folder_template_redirect() : void {
 	header( 'X-Content-Type-Options: nosniff' );
 	header( 'Link: <' . esc_url_raw( axismundi_op_object_html_url( $collection ) ) . '>; rel="alternate"; type="text/html"', false );
 	if ( 'HEAD' !== $method ) {
-		echo wp_json_encode( $collection ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_json_encode() escapes the document; no flags weaken it.
+		echo wp_json_encode( $collection, JSON_HEX_TAG | JSON_HEX_AMP ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON body, not markup: served as application/activity+json with nosniff, and JSON_HEX_TAG|JSON_HEX_AMP leaves no <, > or & in it.
 	}
 	exit;
 }

@@ -145,7 +145,7 @@ function axismundi_op_emit_error( int $status ) : void {
 	header( 'Vary: Accept', false );
 	header( 'X-Content-Type-Options: nosniff' );
 	if ( 'HEAD' !== strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) ) ) ) {
-		echo wp_json_encode( array( 'error' => 404 === $status ? 'not_found' : 'projection_failed' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON encoded response.
+		echo wp_json_encode( array( 'error' => 404 === $status ? 'not_found' : 'projection_failed' ), JSON_HEX_TAG | JSON_HEX_AMP ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON body, not markup: served as application/activity+json with nosniff, and JSON_HEX_TAG|JSON_HEX_AMP leaves no <, > or & in it.
 	}
 	exit;
 }
@@ -199,7 +199,7 @@ function axismundi_op_template_redirect() : void {
 		header( 'Link: <' . esc_url_raw( $html_url ) . '>; rel="alternate"; type="text/html"', false );
 	}
 	if ( 'HEAD' !== strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) ) ) ) {
-		echo wp_json_encode( $object ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_json_encode() escapes the document; no flags weaken it.
+		echo wp_json_encode( $object, JSON_HEX_TAG | JSON_HEX_AMP ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON body, not markup: served as application/activity+json with nosniff, and JSON_HEX_TAG|JSON_HEX_AMP leaves no <, > or & in it.
 	}
 	exit;
 }

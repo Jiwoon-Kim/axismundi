@@ -24,6 +24,6 @@ if ( '' === $ax_op_header_content ) {
 }
 printf(
 	'<div %s>%s</div>',
-	get_block_wrapper_attributes( array( 'class' => 'axismundi-object-card__header' ) ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core escapes wrapper attributes.
-	$ax_op_header_content // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Inner blocks escape their own output.
+	axismundi_op_kses_block_html( get_block_wrapper_attributes( array( 'class' => 'axismundi-object-card__header' ) ) ),
+	axismundi_op_kses_block_html( $ax_op_header_content )
 );

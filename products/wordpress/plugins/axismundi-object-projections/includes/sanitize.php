@@ -122,3 +122,71 @@ function axismundi_op_clean_html( string $html ) : string {
 	$html     = (string) preg_replace( '@<(' . $elements . ')[^>]*?/?>@si', '', $html );
 	return wp_kses( $html, axismundi_op_allowed_html(), wp_allowed_protocols() );
 }
+
+/**
+ * The HTML one of this plugin's server-rendered blocks may emit.
+ *
+ * Escaping late is the rule, and `wp_kses_post()` is the usual answer, but measured against a
+ * rendered Object card it silently removes things these blocks depend on: the `template` element
+ * and `input` are not in the post set at all, and `srcset`, `decoding`, `draggable` and
+ * `aria-pressed` are missing from the elements that carry them. Losing those does not look like
+ * a security fix, it looks like the Interactivity API and responsive images quietly breaking.
+ *
+ * So the allowlist is the post set plus exactly what a block here renders. `data-*` is already
+ * wildcarded by core, which is what carries the Interactivity directives; `data-wp-*` is not a
+ * pattern KSES understands, so do not narrow it that way.
+ *
+ * `audit-object-renderer.php` asserts that filtering a full card changes nothing, so an element
+ * or attribute added to a block without being added here fails a test rather than disappearing
+ * from the page.
+ *
+ * @return array<string,array<string,bool>>
+ */
+function axismundi_op_allowed_block_html() : array {
+	$allowed = wp_kses_allowed_html( 'post' );
+
+	// Attributes core omits from the elements these blocks put them on.
+	$extra = array(
+		'srcset'       => true,
+		'sizes'        => true,
+		'decoding'     => true,
+		'draggable'    => true,
+		'aria-pressed' => true,
+		'aria-busy'    => true,
+		'inert'        => true,
+		'part'         => true,
+		'data-*'       => true,
+	);
+	foreach ( $allowed as $element => $attributes ) {
+		$allowed[ $element ] = is_array( $attributes ) ? array_merge( $attributes, $extra ) : $extra;
+	}
+
+	$common = array_merge(
+		array( 'class' => true, 'id' => true, 'style' => true, 'title' => true, 'role' => true, 'hidden' => true, 'tabindex' => true, 'lang' => true, 'dir' => true ),
+		$extra
+	);
+	// Elements core's post set does not carry at all.
+	$allowed['template'] = $common;
+	$allowed['input']    = array_merge(
+		$common,
+		array( 'type' => true, 'name' => true, 'value' => true, 'placeholder' => true, 'checked' => true, 'disabled' => true, 'readonly' => true, 'required' => true, 'min' => true, 'max' => true, 'step' => true, 'autocomplete' => true, 'inputmode' => true, 'maxlength' => true, 'aria-controls' => true, 'aria-describedby' => true, 'aria-expanded' => true, 'aria-label' => true, 'aria-labelledby' => true )
+	);
+
+	/**
+	 * Filter the HTML a rendered Object block may emit.
+	 *
+	 * @since 0.1.2
+	 * @param array<string,array<string,bool>> $allowed Allowed elements and attributes.
+	 */
+	return (array) apply_filters( 'axismundi_op_allowed_block_html', $allowed );
+}
+
+/**
+ * Escape one block's rendered HTML at the point it is printed.
+ *
+ * @param string $html Server-rendered block HTML.
+ * @return string
+ */
+function axismundi_op_kses_block_html( string $html ) : string {
+	return wp_kses( $html, axismundi_op_allowed_block_html() );
+}

@@ -678,7 +678,18 @@ function axismundi_op_object_body_html( array $model ) : string {
 	 * @param string              $body  Sanitized body HTML.
 	 * @param array<string,mixed> $model Object view model.
 	 */
-	return (string) apply_filters( 'axismundi_op_object_content_html', $body, $model );
+	$body = (string) apply_filters( 'axismundi_op_object_content_html', $body, $model );
+
+	/*
+	 * Sanitized again, because the filter above runs after the first pass and its result is
+	 * printed with the escaping sniff suppressed. "Hooked code must touch text nodes only" is a
+	 * convention: nothing fails when it is broken, and this is a public seam that any plugin may
+	 * hook. The decorators this ships with -- hashtag and mention link localisation, emoji
+	 * shortcode replacement -- all emit markup `wp_kses_post()` already allows, so the second
+	 * pass costs them nothing and is the only thing standing between a third-party filter and
+	 * unescaped output.
+	 */
+	return wp_kses_post( $body );
 }
 
 function axismundi_op_render_object_content_block( array $attributes = array(), bool $delegated = false ) : string {

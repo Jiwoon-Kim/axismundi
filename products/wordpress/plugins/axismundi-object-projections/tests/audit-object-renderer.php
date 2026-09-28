@@ -921,6 +921,26 @@ remove_filter( 'axismundi_op_object_visibility_marker_enabled', '__return_true' 
  * and still printed its own FAIL line, while the summary counted the checks and reported none of
  * them failed — and the exit code stayed 0, so nothing gating on this audit could see them either.
  */
+/*
+ * The body decoration seam is public, and what it returns is printed with the escaping sniff
+ * suppressed. "Hooked code must touch text nodes only" is a convention nothing enforces, so the
+ * body is sanitized again after the filter rather than trusted.
+ */
+function ax_rnd_inject_markup( string $body ) : string {
+	return $body . '<script>alert(1)</script><a href="javascript:alert(2)" onclick="alert(3)">x</a>';
+}
+add_filter( 'axismundi_op_object_content_html', 'ax_rnd_inject_markup', 50 );
+$ax_rnd_decorated = axismundi_op_object_body_html( array( 'content_html' => '<p>body</p>', 'type' => 'Note' ) );
+remove_filter( 'axismundi_op_object_content_html', 'ax_rnd_inject_markup', 50 );
+ax_rnd_assert(
+	$ax_rnd_results,
+	'a body decorator cannot smuggle script, javascript: or event-handler markup past sanitization',
+	false !== strpos( $ax_rnd_decorated, '<p>body</p>' )
+		&& false === strpos( $ax_rnd_decorated, '<script' )
+		&& false === strpos( $ax_rnd_decorated, 'javascript:' )
+		&& false === strpos( $ax_rnd_decorated, 'onclick' )
+);
+
 $ax_rnd_failures = count( array_filter( $ax_rnd_results, static fn( bool $r ) : bool => ! $r ) );
 
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.

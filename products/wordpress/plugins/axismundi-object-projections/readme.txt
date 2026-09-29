@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.1
+Stable tag: 0.1.2
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -22,14 +22,19 @@ collections are named by, and the single renderer that writes the JSON. What a t
 stays with the plugin that stores it; this decides how it is described to a reader that
 speaks ActivityStreams.
 
-**This plugin needs Axismundi Actors.** Every projected object is attributed to an Actor,
-and without that registry there is nobody to attribute anything to.
+**This plugin needs Axismundi Actors.** It resolves the identities an object names -- its
+author, the accounts it mentions, the Actor documents it serves -- and without that registry
+there is nobody for any of them to refer to.
 
-**Axismundi Activities is optional, and adds three things.** Without it a published post is
+**Axismundi Activities is optional, and adds four things.** Without it a published post is
 public and is projected as such, which is this plugin's own default. With it, the four
 authored visibility levels decide who a post is addressed to, an Actor's outbox and follow
-collections have contents rather than being empty, and an object states who may quote it.
-Nothing here breaks when it is absent; less is said.
+collections have contents rather than being empty, an object states who may quote it, and an
+object says who published it. Nothing here breaks when it is absent; less is said.
+
+That last one is worth stating plainly: who an object is attributed to is decided by whatever
+recorded its publication, not derived here from the WordPress author. An object nobody has
+published has no `attributedTo` -- it is readable, it simply was not published by anyone.
 
 = What this version does =
 
@@ -82,11 +87,12 @@ addressed publicly, and only as a courtesy view beside the remote original.
    that registry and does very little without it.
 2. Upload this plugin folder to `/wp-content/plugins/`, or install it through
    **Plugins > Add New**, then activate it.
-3. Nothing else is required. A published post is projected as soon as its author has a
-   public Actor; ask its URL for `application/activity+json` to see the result. Add
-   **Axismundi Activities** for the four authored visibility levels and an Actor outbox
-   with activities in it, and the official **ActivityPub** plugin with **Axismundi
-   ActivityPub Bridge** to send and receive.
+3. Nothing else is required. A published post is projected straight away; ask its URL for
+   `application/activity+json` to see the result. It carries no `attributedTo` until
+   something records who published it. Add **Axismundi Activities** for that, and for the
+   four authored visibility levels and an Actor outbox with activities in it, and the
+   official **ActivityPub** plugin with **Axismundi ActivityPub Bridge** to send and
+   receive.
 4. Remote observations, where there are any, are listed under **Tools > Remote Objects**.
 
 Activation creates this plugin's own database tables. Nothing is contacted on the internet
@@ -135,6 +141,20 @@ nothing to its author. Each server contacted is somebody else's, run under its o
 service and privacy policy.
 
 == Changelog ==
+
+= 0.1.2 =
+* Server-rendered block output is escaped where it is printed, with an allowlist that covers
+  what these blocks emit. The stock post allowlist removes the `template` element and the
+  Interactivity API directives, so it is not used here.
+* Body decoration filters run before sanitizing rather than after it, so nothing a filter adds
+  can reach the page unsanitized.
+* Who an object is attributed to now comes from whatever recorded its publication instead of
+  being derived from the WordPress post author. The two agree only while every account has one
+  identity, and they stop agreeing as soon as anyone publishes as an organisation.
+* A post whose author has no Actor is projected and readable, without an `attributedTo`,
+  rather than refused. It is not published to anyone.
+* The site Actor is no longer a fallback author. It is an application identity, not a person
+  who writes posts.
 
 = 0.1.1 =
 * Background acquisition is now a setting, off by default. While it is off this site

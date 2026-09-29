@@ -85,5 +85,19 @@ function axismundi_capstone_enqueue_app( string $application ) : void {
 function axismundi_capstone_admin_path() : string {
 	$path = isset( $_GET['p'] ) && is_scalar( $_GET['p'] ) ? (string) wp_unslash( $_GET['p'] ) : '/';
 	$path = '/' . trim( sanitize_text_field( $path ), '/' );
-	return in_array( $path, array( '/', '/settings', '/diagnostics', '/developer' ), true ) ? $path : '/';
+	return in_array(
+		$path,
+		array(
+			'/',
+			'/settings',
+			'/diagnostics',
+			'/design',
+			'/design/styles',
+			'/design/templates',
+			'/design/template-parts',
+			'/design/patterns',
+			'/design/components',
+		),
+		true
+	) ? $path : '/';
 }

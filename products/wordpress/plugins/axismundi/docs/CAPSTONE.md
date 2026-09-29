@@ -30,8 +30,7 @@ Axismundi
 `-- Admin application: wp-admin/admin.php?page=axismundi
     |-- Operations: federation, delivery, moderation, diagnostics
     |-- Resource views: actors, activities, objects, relationships
-    |-- Design: app templates, parts, patterns, preview
-    `-- Developer: fixtures, component inspection, frontend preview
+    `-- Design: styles, templates, template parts, patterns, components, preview
 ```
 
 The applications share domain contracts, data-client infrastructure, registry
@@ -43,11 +42,13 @@ Frontend: M3 tokens from the active Axismundi theme
 Admin:    WPDS tokens and wp-admin integration
 ```
 
-The Developer route is the intentional exception. It hosts an isolated frontend
-preview inside the admin application, analogous to the Site Editor canvas. The
-preview is an iframe of the real `/social/` document, so its runtime, M3 tokens,
-and stylesheet are identical to the public application. The surrounding admin
-application must not import theme M3 tokens.
+Design is the intentional exception to the normal Operations navigation. It is
+its own Site Editor-like workspace, with a replacement sidebar for `Styles`,
+`Templates`, `Template Parts`, `Patterns`, and `Components`. Each design asset
+can host an isolated frontend preview inside the Admin application, analogous to
+the Site Editor canvas. The preview is an iframe of the real `/social/` document,
+so its runtime, M3 tokens, and stylesheet are identical to the public
+application. The surrounding Admin application must not import theme M3 tokens.
 
 The Admin application is both an operations console and an
 application-composition environment. It is not a dashboard limited to
@@ -109,7 +110,10 @@ styles in the `wp-ui` cascade layer, so Admin establishes this order:
 Legacy wp-admin document adjustments remain deliberately unlayered in the
 Admin host stylesheet. They are limited to the host boundary, such as removing
 the legacy menu or sizing the application root; they do not restyle WPDS
-components.
+components. The Admin sidebar has one separate, scoped unlayered compatibility
+stylesheet because it deliberately uses Site Editor's legacy
+`@wordpress/components` `Item` composition, whose styles are also unlayered.
+That exception is limited to `.ax-admin-layout__sidebar-region`.
 
 ## Engines and Capstone
 
@@ -194,7 +198,7 @@ Top App Bar is an M3 component and can be registered as a template part; a Butto
 is an M3 component and can be registered as a block-like leaf.
 
 Each library item will use colocated `component.json` metadata. That metadata is
-for Capstone's registry, Developer catalogue, fixtures, and build checks. It is
+for Capstone's registry, Design component catalogue, fixtures, and build checks. It is
 not a WordPress `block.json` replacement and does not duplicate runtime props.
 
 ## Component provenance
@@ -263,7 +267,7 @@ Document authoring / Post Editor  Social authoring / Frontend Composer
 Site Editor                       Capstone admin application
 Post / block tree                 Actor or Object JSON representation
 Block theme template              React app template
-Site Editor canvas                Developer frontend preview
+Site Editor canvas                Design frontend preview
 ```
 
 Gutenberg remains the editor for WordPress documents and block-theme web

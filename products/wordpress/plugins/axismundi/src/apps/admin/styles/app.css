@@ -24,10 +24,13 @@
 	}
 
 	.ax-admin-layout__sidebar-region {
+		display: flex;
+		flex-direction: column;
 		z-index: 1;
 		inline-size: 100vw;
 		block-size: 100%;
 		flex-shrink: 0;
+		min-block-size: 0;
 	}
 
 	.ax-admin-layout__sidebar {
@@ -43,6 +46,17 @@
 		display: flex;
 		align-items: flex-start;
 		gap: 0.75rem;
+	}
+
+	.ax-admin-layout__nav-item--drilldown {
+		align-items: center;
+		display: flex;
+		justify-content: space-between;
+	}
+
+	.edit-site-sidebar-navigation-item__drilldown-indicator {
+		flex: 0 0 auto;
+		margin-inline-start: auto;
 	}
 
 	.ax-admin-layout__back {

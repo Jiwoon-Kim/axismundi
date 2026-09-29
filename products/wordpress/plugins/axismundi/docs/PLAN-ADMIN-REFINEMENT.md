@@ -67,6 +67,10 @@ sidebar, global header, preview, inspector를 한 컴포넌트 안에서 조건�
 모든 future route의 불변 영역이라는 결정은 내리지 않았다. Styles, template browser,
 component catalogue, diagnostics는 필요한 toolbar와 detail 영역이 서로 다르다.
 
+MVP에서는 global header를 route-owned content composition으로 이동한다. Inspector는
+global shell에서 제거하고, 후속 area 확장 대상으로 남긴다. MVP route contract에는
+Inspector area를 추가하지 않는다.
+
 ### 2. 현재 drilldown chevron은 아직 정보 구조와 일치하지 않는다
 
 `Templates`, `Template Parts`, `Patterns`, `Components`에는 trailing chevron이
@@ -152,6 +156,9 @@ element로 제한하지 않고, route context를 받는 resolver function도 허
 }
 ```
 
+여기서 `content`는 단순 본문 text 영역이 아니다. route가 소유하는 toolbar,
+list/detail UI, heading, action control을 포함하는 application area다.
+
 `AdminLayout`은 route의 도메인 의미를 알지 않고 area만 배치한다. route가 실제
 sidebar, toolbar/content, preview를 소유한다. 이는 Gutenberg의 private
 router/store를 복제하지 않고도 Site Editor의 composition principle을 채택하는 방법이다.
@@ -171,6 +178,11 @@ sidebar navigation state
 브라우저 history의 back/forward와 sidebar animation 방향은 항상 같은 의미가 아니다.
 따라서 route parsing과 `pushState`는 router/history layer에 두고, nested screen의
 direction과 focus restoration은 별도 sidebar navigation provider가 소유한다.
+
+nested sidebar screen은 반드시 별도 URL route일 필요가 없다. URL은 resource state를
+표현하고, sidebar는 같은 resource 안에서 presentation hierarchy를 표현할 수 있다.
+예를 들어 `/design/templates` 안에서도 template category 또는 group으로 sidebar
+drilldown을 수행할 수 있다.
 
 ## Sidebar navigation의 다음 구현 범위
 
@@ -221,6 +233,10 @@ axismundi/*
 third-party/*
 ```
 
+위 identifier는 conceptual namespace 예시다. 특히 `material-symbols/*`가 실제
+collection naming 규칙으로 허용되는지는 아직 검증되지 않았으며, registry 조사 결과에
+따라 확정한다.
+
 다만 이 부분은 아직 구현 결정이 아니다. 다음을 실제 설치된 WordPress와 Gutenberg
 source에서 검증해야 한다.
 
@@ -269,8 +285,9 @@ compatibility asset이다. icon registry 또는 aligned `@wordpress/icons` versi
    기록한다.
 2. 현재 `app.js`에서 route metadata만 독립 route definition으로 이동한다. 이 단계에서는
    UI를 다시 그리지 않는다.
-3. 세 영역만 가진 `route -> areas -> layout` contract를 도입하고, global
-   header/Inspector를 route owned area로 전환한다.
+3. 세 영역만 가진 `route -> areas -> layout` contract를 도입하고, global header는
+   route-owned content composition으로 전환한다. Inspector는 global shell에서 제거하고
+   후속 area 확장 대상으로 남긴다.
 4. 기존 화면이 시각적으로 거의 변하지 않는 상태까지 localhost에서 맞춘다.
 5. 실제 nested Design sidebar와 focus restoration을 구현한다. 완료 전에는 구현되지
    않은 drilldown chevron을 표시하지 않는다.
@@ -286,6 +303,8 @@ compatibility asset이다. icon registry 또는 aligned `@wordpress/icons` versi
 - route가 필요하지 않은 global header/inspector를 강제하지 않는다.
 - visible drilldown chevron마다 실제 nested screen, back action, focus restoration이
   존재한다.
+- keyboard-only navigation에서 drilldown, back, 원 trigger focus 복원이 안정적으로
+  동작한다.
 - navigation은 실제 URL을 제공하며 browser link behavior를 보존한다.
 - browser back/forward 후 route, active sidebar item, focus target이 일관된다.
 - page reload 후 현재 `p` route가 같은 screen으로 복원된다.

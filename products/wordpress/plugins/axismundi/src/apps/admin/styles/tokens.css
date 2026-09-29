@@ -1,0 +1,11 @@
+@layer axismundi-admin.tokens {
+	.axismundi-admin-app {
+		--ax-admin-surface: var( --wpds-color-background-surface-neutral, #fff );
+		--ax-admin-surface-subtle: var( --wpds-color-background-surface-neutral-weak, #f6f7f7 );
+		--ax-admin-on-surface: var( --wpds-color-foreground-content-neutral, #1e1e1e );
+		--ax-admin-on-surface-subtle: var( --wpds-color-foreground-content-neutral-weak, #50575e );
+		--ax-admin-outline: var( --wpds-color-stroke-surface-neutral, #dcdcde );
+		--ax-admin-radius: var( --wpds-border-radius-md, 0.25rem );
+		--ax-admin-space: 1rem;
+	}
+}

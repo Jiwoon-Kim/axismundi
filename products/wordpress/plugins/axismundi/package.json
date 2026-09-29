@@ -1,0 +1,13 @@
+{
+	"name": "axismundi",
+	"private": true,
+	"scripts": {
+		"build": "wp-scripts build frontend=src/apps/frontend/index.js admin=src/apps/admin/index.js"
+	},
+	"devDependencies": {
+		"@wordpress/admin-ui": "^2.11.0",
+		"@wordpress/scripts": "^35.0.0",
+		"@wordpress/theme": "^2.2.0",
+		"@wordpress/ui": "0.23.0"
+	}
+}

@@ -1,0 +1,11 @@
+@layer axismundi.tokens {
+	.axismundi-social {
+		--ax-social-surface: var( --md-sys-color-surface, #fffbfe );
+		--ax-social-surface-subtle: var( --md-sys-color-surface-container-low, #f7f2fa );
+		--ax-social-on-surface: var( --md-sys-color-on-surface, #1d1b20 );
+		--ax-social-on-surface-subtle: var( --md-sys-color-on-surface-variant, #49454f );
+		--ax-social-outline: var( --md-sys-color-outline, #79747e );
+		--ax-social-radius: var( --md-sys-shape-corner-medium, 0.75rem );
+		--ax-social-space: 1rem;
+	}
+}

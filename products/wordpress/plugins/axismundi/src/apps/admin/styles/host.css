@@ -1,0 +1,34 @@
+/* Intentionally unlayered host integration for the wp-admin document. */
+body.axismundi-admin #adminmenumain,
+body.axismundi-admin #wpfooter {
+	display: none;
+}
+
+body.axismundi-admin #wpcontent {
+	margin-inline-start: 0;
+	padding-inline-start: 0;
+}
+
+body.axismundi-admin #wpbody-content {
+	padding-block-end: 0;
+}
+
+body.axismundi-admin #axismundi-root {
+	block-size: calc( 100vh - var( --wp-admin--admin-bar--height, 32px ) );
+	min-block-size: calc( 100vh - var( --wp-admin--admin-bar--height, 32px ) );
+	background: var( --wpds-color-background-surface-neutral, #fff );
+}
+
+@media screen and ( min-width: 600px ) {
+	body.axismundi-admin #axismundi-root {
+		inset: var( --wp-admin--admin-bar--height, 32px ) 0 0;
+		position: fixed;
+	}
+}
+
+@media screen and ( max-width: 599px ) {
+	body.axismundi-admin #axismundi-root {
+		block-size: calc( 100vh - var( --wp-admin--admin-bar--height, 46px ) );
+		min-block-size: calc( 100vh - var( --wp-admin--admin-bar--height, 46px ) );
+	}
+}

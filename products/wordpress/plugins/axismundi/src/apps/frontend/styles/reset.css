@@ -1,0 +1,6 @@
+@layer axismundi.reset {
+	.axismundi-social,
+	.axismundi-social * {
+		box-sizing: border-box;
+	}
+}

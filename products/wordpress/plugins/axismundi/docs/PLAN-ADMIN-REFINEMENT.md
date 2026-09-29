@@ -134,29 +134,43 @@ src/apps/admin/
 `- components/
 ```
 
-각 route는 최소한 다음 선언을 제공하는 방향을 검토한다.
+첫 번째 구현은 Gutenberg의 모든 area를 재현하지 않는다. MVP route contract는
+`sidebar`, `content`, `preview` 세 영역으로 제한한다. `inspector`, mobile area,
+세부 width policy는 후속 확장으로 허용하되 지금 구현하지 않는다.
+
+각 route는 최소한 다음 선언을 제공하는 방향을 검토한다. area 값은 고정 React
+element로 제한하지 않고, route context를 받는 resolver function도 허용한다.
 
 ```js
 {
 	path: '/design/styles',
 	areas: {
-		sidebar,
-		content,
-		preview,
-		inspector,
-		mobileSidebar,
-		mobileContent,
-	},
-	widths: {
-		content,
-		preview,
+		sidebar: ( context ) => <StylesSidebar { ...context } />,
+		content: <StylesPanel />,
+		preview: ( context ) => <FrontendPreview { ...context } />,
 	},
 }
 ```
 
 `AdminLayout`은 route의 도메인 의미를 알지 않고 area만 배치한다. route가 실제
-sidebar, toolbar/content, preview, inspector를 소유한다. 이는 Gutenberg의 private
+sidebar, toolbar/content, preview를 소유한다. 이는 Gutenberg의 private
 router/store를 복제하지 않고도 Site Editor의 composition principle을 채택하는 방법이다.
+
+## Route state와 sidebar state의 분리
+
+URL route state와 sidebar interaction state는 관련되지만 같은 상태가 아니다.
+
+```text
+route/history state
+  현재 resource와 화면: /design/templates
+
+sidebar navigation state
+  forward/back direction, focus return target, transition lifecycle
+```
+
+브라우저 history의 back/forward와 sidebar animation 방향은 항상 같은 의미가 아니다.
+따라서 route parsing과 `pushState`는 router/history layer에 두고, nested screen의
+direction과 focus restoration은 별도 sidebar navigation provider가 소유한다.
 
 ## Sidebar navigation의 다음 구현 범위
 
@@ -168,6 +182,22 @@ router/store를 복제하지 않고도 Site Editor의 composition principle을 �
 - Back 후 이전 drilldown trigger로 focus 복원
 - reduced-motion을 고려한 transition
 - link 기반 navigation과 SPA enhancement
+
+SPA enhancement는 plain left click만 intercept한다. 다음 조건 중 하나라도 참이면
+브라우저의 link 기본 동작을 보존한다.
+
+```js
+if (
+	event.button !== 0 ||
+	event.metaKey ||
+	event.ctrlKey ||
+	event.shiftKey ||
+	event.altKey ||
+	event.defaultPrevented
+) {
+	return;
+}
+```
 
 ### 아직 가져오지 않을 것
 
@@ -196,6 +226,8 @@ source에서 검증해야 한다.
 
 - WordPress icon registry의 PHP registration API와 availability
 - icon collection과 icon REST endpoint의 실제 route 및 권한
+- identifier 안정성, collection ownership, collection slug uniqueness, registration
+  conflict 처리 정책
 - `core/icon` block이 registry를 읽는 실제 data contract
 - REST payload의 SVG sanitization, cache, invalidation 책임
 - wp-admin과 `/social/`에서 registry client를 사용할 때의 인증/성능 조건
@@ -232,18 +264,20 @@ compatibility asset이다. icon registry 또는 aligned `@wordpress/icons` versi
 
 ## 내일의 권장 순서
 
-1. Gutenberg `layout`, `site-editor-routes`, `sidebar` source를 파일 단위로 읽고,
-   Axismundi에 필요한 behavior와 불필요한 private coupling을 표로 기록한다.
-2. 현재 `app.js`의 route parsing을 독립 route definition으로 이동하는 최소 설계를
-   작성한다. 이 단계에서는 UI를 다시 그리지 않는다.
-3. `route -> areas -> layout` contract를 도입하고, global header/Inspector를 route
-   owned area로 전환한다.
-4. 실제 nested Design sidebar와 focus restoration을 구현한다. 완료 전에는 구현되지
+1. Gutenberg `layout`, route registry, `SidebarContent`, navigation state를 파일 단위로
+   읽고, Axismundi에 필요한 contract와 불필요한 private coupling을 한 페이지 표로
+   기록한다.
+2. 현재 `app.js`에서 route metadata만 독립 route definition으로 이동한다. 이 단계에서는
+   UI를 다시 그리지 않는다.
+3. 세 영역만 가진 `route -> areas -> layout` contract를 도입하고, global
+   header/Inspector를 route owned area로 전환한다.
+4. 기존 화면이 시각적으로 거의 변하지 않는 상태까지 localhost에서 맞춘다.
+5. 실제 nested Design sidebar와 focus restoration을 구현한다. 완료 전에는 구현되지
    않은 drilldown chevron을 표시하지 않는다.
-5. fake `Saved` footer, hardcoded admin URL, literal navigation labels를 정리한다.
-6. icon registry는 별도 조사 스파이크로 진행한다. registry API가 확인된 뒤에만
+6. fake `Saved` footer, hardcoded admin URL, literal navigation labels를 정리한다.
+7. icon registry는 별도 조사 스파이크로 진행한다. registry API가 확인된 뒤에만
    `@wordpress/icons` direct import를 대체한다.
-7. 각 단계에서 localhost의 Site Editor와 Axismundi를 desktop/mobile viewport에서
+8. 각 단계에서 localhost의 Site Editor와 Axismundi를 desktop/mobile viewport에서
    비교하고, DOM, keyboard navigation, focus 순서를 검증한다.
 
 ## 완료 기준
@@ -253,6 +287,8 @@ compatibility asset이다. icon registry 또는 aligned `@wordpress/icons` versi
 - visible drilldown chevron마다 실제 nested screen, back action, focus restoration이
   존재한다.
 - navigation은 실제 URL을 제공하며 browser link behavior를 보존한다.
+- browser back/forward 후 route, active sidebar item, focus target이 일관된다.
+- page reload 후 현재 `p` route가 같은 screen으로 복원된다.
 - 저장 상태 표시는 실제 state와 연결되거나 존재하지 않는다.
 - Admin visual ownership과 Frontend visual ownership이 섞이지 않는다.
 - icon registry 채택 여부와 API contract는 검증 기록 없이 가정하지 않는다.

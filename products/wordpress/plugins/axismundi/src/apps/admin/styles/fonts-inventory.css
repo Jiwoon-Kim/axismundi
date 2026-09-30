@@ -1,0 +1,174 @@
+@layer axismundi-admin.components {
+	.ax-admin-font-inventory {
+		display: grid;
+		gap: 2.5rem;
+		max-inline-size: 72rem;
+	}
+
+	.ax-admin-font-inventory__section-heading h3,
+	.ax-admin-font-inventory__detail h3,
+	.ax-admin-font-inventory__face h4,
+	.ax-admin-font-inventory__section-title {
+		margin: 0;
+	}
+
+	.ax-admin-font-inventory__section-heading p,
+	.ax-admin-font-inventory__collections > p,
+	.ax-admin-font-inventory__detail > p,
+	.ax-admin-font-inventory__installed > p {
+		color: #50575e;
+		line-height: 1.5;
+	}
+
+	.ax-admin-font-inventory__section-heading p {
+		margin: 0.5rem 0 0;
+	}
+
+	.ax-admin-font-inventory__workspace {
+		display: grid;
+		gap: 1.5rem;
+		grid-template-columns: minmax( 13rem, 20rem ) minmax( 0, 1fr );
+		margin-block-start: 1.5rem;
+	}
+
+	.ax-admin-font-inventory__family-list {
+		display: grid;
+		align-content: start;
+		gap: 0.5rem;
+	}
+
+	.ax-admin-font-inventory__family {
+		appearance: none;
+		background: var( --wpds-color-background-surface-neutral, #fff );
+		border: 1px solid var( --ax-admin-outline );
+		border-radius: 8px;
+		color: inherit;
+		cursor: pointer;
+		display: grid;
+		gap: 0.25rem;
+		min-block-size: 5rem;
+		padding: 1rem;
+		text-align: start;
+	}
+
+	.ax-admin-font-inventory__family[aria-pressed="true"] {
+		background: var( --wpds-color-background-interactive-brand-weak-active, #e6eaf4 );
+		border-color: var( --wpds-color-stroke-focus, #3858e9 );
+	}
+
+	.ax-admin-font-inventory__family:focus-visible {
+		outline: 2px solid var( --wpds-color-stroke-focus, #3858e9 );
+		outline-offset: 2px;
+	}
+
+	.ax-admin-font-inventory__family-name {
+		font-size: 1rem;
+		font-weight: 600;
+	}
+
+	.ax-admin-font-inventory__family-meta,
+	.ax-admin-font-inventory__eyebrow,
+	.ax-admin-font-inventory__collection-list span {
+		color: #50575e;
+		font-size: 0.8125rem;
+	}
+
+	.ax-admin-font-inventory__detail {
+		border: 1px solid var( --ax-admin-outline );
+		border-radius: 8px;
+		padding: 1.5rem;
+	}
+
+	.ax-admin-font-inventory__eyebrow {
+		font-weight: 600;
+		margin: 0 0 0.5rem;
+		text-transform: uppercase;
+	}
+
+	.ax-admin-font-inventory__definition-list {
+		display: grid;
+		gap: 0.75rem;
+		margin: 1.5rem 0 0;
+	}
+
+	.ax-admin-font-inventory__definition-list div {
+		display: grid;
+		gap: 0.25rem;
+	}
+
+	.ax-admin-font-inventory__definition-list dt {
+		color: #50575e;
+		font-size: 0.75rem;
+		font-weight: 600;
+		text-transform: uppercase;
+	}
+
+	.ax-admin-font-inventory__definition-list dd {
+		margin: 0;
+		overflow-wrap: anywhere;
+	}
+
+	.ax-admin-font-inventory__definition-list--family {
+		grid-template-columns: repeat( 3, minmax( 0, 1fr ) );
+	}
+
+	.ax-admin-font-inventory__section-title {
+		font-size: 1rem;
+		margin-block-start: 2rem;
+	}
+
+	.ax-admin-font-inventory__faces,
+	.ax-admin-font-inventory__collection-list {
+		list-style: none;
+		margin: 1rem 0 0;
+		padding: 0;
+	}
+
+	.ax-admin-font-inventory__faces {
+		display: grid;
+		gap: 0.75rem;
+	}
+
+	.ax-admin-font-inventory__face {
+		border-block-start: 1px solid var( --ax-admin-outline );
+		padding-block-start: 1rem;
+	}
+
+	.ax-admin-font-inventory__face h4 {
+		font-size: 0.9375rem;
+	}
+
+	.ax-admin-font-inventory__face .ax-admin-font-inventory__definition-list {
+		grid-template-columns: repeat( auto-fit, minmax( 10rem, 1fr ) );
+		margin-block-start: 1rem;
+	}
+
+	.ax-admin-font-inventory__collection-list {
+		display: grid;
+		gap: 0.5rem;
+		grid-template-columns: repeat( auto-fit, minmax( 14rem, 1fr ) );
+	}
+
+	.ax-admin-font-inventory__collection-list li {
+		border: 1px solid var( --ax-admin-outline );
+		border-radius: 8px;
+		display: grid;
+		gap: 0.25rem;
+		min-block-size: 4.5rem;
+		padding: 1rem;
+	}
+
+	.ax-admin-font-inventory__notice {
+		border: 1px solid var( --wpds-color-stroke-surface-error, #dab1aa );
+		border-radius: 8px;
+		color: var( --wpds-color-foreground-content-error, #470000 );
+		padding: 1rem;
+	}
+
+	@media screen and ( max-width: 781px ) {
+		.ax-admin-font-inventory__workspace,
+		.ax-admin-font-inventory__definition-list--family {
+			grid-template-columns: 1fr;
+		}
+	}
+}

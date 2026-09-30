@@ -4,6 +4,7 @@ import { layout, media, symbol, typography } from '@wordpress/icons';
 import { getAxismundiConfig } from '../../../shared/runtime/config';
 import RouteContent from '../components/route-content';
 import FrontendPreview from '../preview/frontend-preview';
+import FontsInventory from './design/assets/fonts';
 import SidebarNavigationItem from '../components/sidebar/sidebar-navigation-item';
 import SidebarNavigationScreen from '../components/sidebar/sidebar-navigation-screen';
 
@@ -285,14 +286,16 @@ function DesignContent( { route, showNavigation } ) {
 	);
 }
 
-function AssetsContent( { route, showNavigation } ) {
+function AssetsContent( { children, route, showNavigation } ) {
 	return (
 		<RouteContent
 			backLabel={ __( 'Back to navigation', 'axismundi' ) }
 			eyebrow={ __( 'Assets', 'axismundi' ) }
 			onShowNavigation={ showNavigation }
 			title={ route.label }
-		/>
+		>
+			{ children }
+		</RouteContent>
 	);
 }
 
@@ -397,7 +400,11 @@ function createAssetRoute( section ) {
 		},
 		areas: {
 			sidebar: ( context ) => <AssetsSidebar path={ path } navigate={ context.navigate } section={ section } sidebarScreen={ context.sidebarScreen } />,
-			content: ( context ) => <AssetsContent route={ { path, ...section } } showNavigation={ context.showNavigation } />,
+			content: ( context ) => (
+				<AssetsContent route={ { path, ...section } } showNavigation={ context.showNavigation }>
+					{ section.id === 'fonts' && <FontsInventory /> }
+				</AssetsContent>
+			),
 		},
 	};
 }

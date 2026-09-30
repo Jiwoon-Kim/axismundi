@@ -50,6 +50,20 @@ function axismundi_capstone_is_public_route() : bool {
 		&& AXISMUNDI_CAPSTONE_ROUTE === trim( (string) $wp->request, '/' );
 }
 
+/**
+ * Request only the Axismundi theme foundation on the standalone app route.
+ *
+ * The theme retains responsibility for resolving, versioning, and enqueueing
+ * its assets; the plugin only selects the public application asset mode.
+ *
+ * @param bool $foundation_only Current theme asset mode.
+ * @return bool
+ */
+function axismundi_capstone_use_theme_foundation_only( bool $foundation_only ) : bool {
+	return $foundation_only || axismundi_capstone_is_public_route();
+}
+add_filter( 'axismundi_theme_foundation_only', 'axismundi_capstone_use_theme_foundation_only' );
+
 /** @return void */
 function axismundi_capstone_render_public_route() : void {
 	if ( ! axismundi_capstone_is_public_route() ) {

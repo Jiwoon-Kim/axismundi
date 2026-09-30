@@ -2,11 +2,11 @@
 
 ## 상태
 
-채택됨. 2026-09-30.
+구현됨. 2026-09-30.
 
 이 문서는 Axismundi `/social/` Frontend가 Axismundi theme의 foundation stylesheet를
-어떻게 소비할지 결정한다. 아직 theme loader 분리나 `style.json` generator를 구현하지
-않는다.
+어떻게 소비할지 결정한다. 이 checkpoint는 theme loader 분리까지 구현하며,
+`style.json` generator는 구현하지 않는다.
 
 ## 문제
 
@@ -82,11 +82,10 @@ Plugin Frontend
 
 ## Contract shape
 
-Theme은 public function으로 foundation descriptor를 제공한다. 정확한 PHP signature는
-후속 구현에서 확정하지만 shape는 다음 정도를 유지한다.
+Theme은 public function으로 foundation descriptor를 제공한다.
 
 ```php
-axismundi_get_foundation_style_assets(): array
+axismundi_get_foundation_assets(): array
 ```
 
 각 descriptor는 theme-relative path와 dependency를 가진다. URI와 version은 theme
@@ -119,8 +118,11 @@ theme page
 
 Plugin이 theme function을 직접 호출해 duplicate enqueue를 만드는 방식보다, theme loader가
 public filter/contract를 통해 current document의 requested asset mode를 알아 foundation-only
-branch를 선택하는 방식이 우선이다. 그러면 URI/version/handle ownership도 theme에 남고,
-`wp_head()`의 normal lifecycle과 충돌하지 않는다.
+branch를 선택하는 방식이 우선이다. 구현은 `axismundi_theme_foundation_only` filter와
+`axismundi_capstone_use_theme_foundation_only()` callback으로 연결한다. Theme은
+`axismundi_get_foundation_assets()`, `axismundi_get_theme_assets()`,
+`axismundi_enqueue_asset_map()`으로 asset ownership을 유지한다. 그러면 URI/version/handle
+ownership도 theme에 남고, `wp_head()`의 normal lifecycle과 충돌하지 않는다.
 
 ## `style.json`과 color output
 
@@ -153,11 +155,13 @@ authoring/build input이고 runtime은 generated stylesheet를 읽는다.
 
 ## 후속 구현 checkpoint
 
-1. Theme `functions.php`에서 foundation descriptor와 block/theme descriptor를 분리한다.
-2. Theme normal front loader는 두 layer를 enqueue한다.
-3. `/social/` route일 때 public contract를 통해 foundation-only branch를 선택한다.
+1. Theme `functions.php`에서 foundation descriptor와 block/theme descriptor를 분리한다. 완료.
+2. Theme normal front loader는 두 layer를 enqueue한다. 완료.
+3. `/social/` route일 때 public contract를 통해 foundation-only branch를 선택한다. 완료.
 4. `/social/` document에서 block/component CSS가 나오지 않고 foundation + frontend bundle만
-   나오는 것을 browser network/DOM으로 검증한다.
+   나오는 것을 browser DOM으로 검증한다. 완료. `tokens.ref`, color light/dark, shape,
+   elevation, state, motion은 유지되며 `style.css`, `icons.css`, `components.*.css`,
+   `blocks.*.css`는 출력되지 않는다. 일반 theme front에서는 기존 전체 cascade가 유지된다.
 5. 이후 `style.json -> generated tokens.sys.color.*.css`를 구현한다.
 
 ## 레퍼런스

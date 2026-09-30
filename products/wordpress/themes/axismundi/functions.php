@@ -60,6 +60,135 @@ function axismundi_asset_version( string $relative_path ) : string {
 }
 
 /**
+ * Return the M3 foundation styles shared by theme and application surfaces.
+ *
+ * Color styles remain here during the style.json migration. They will become
+ * generated artifacts, but keep their stable theme-owned paths and handles.
+ *
+ * @return array<string,array{path:string,deps:string[]}>
+ */
+function axismundi_get_foundation_assets() : array {
+	return array(
+		'axismundi-tokens-ref'         => array(
+			'path' => 'assets/styles/tokens.ref.css',
+			'deps' => array(),
+		),
+		'axismundi-tokens-color-light' => array(
+			'path' => 'assets/styles/tokens.sys.color.light.css',
+			'deps' => array( 'axismundi-tokens-ref' ),
+		),
+		'axismundi-tokens-color-dark'  => array(
+			'path' => 'assets/styles/tokens.sys.color.dark.css',
+			'deps' => array( 'axismundi-tokens-color-light' ),
+		),
+		'axismundi-tokens-shape'       => array(
+			'path' => 'assets/styles/tokens.sys.shape.css',
+			'deps' => array( 'axismundi-tokens-color-dark' ),
+		),
+		'axismundi-tokens-elevation'   => array(
+			'path' => 'assets/styles/tokens.sys.elevation.css',
+			'deps' => array( 'axismundi-tokens-shape' ),
+		),
+		'axismundi-tokens-state'       => array(
+			'path' => 'assets/styles/tokens.sys.state.css',
+			'deps' => array( 'axismundi-tokens-elevation' ),
+		),
+		'axismundi-tokens-motion'      => array(
+			'path' => 'assets/styles/tokens.sys.motion.css',
+			'deps' => array( 'axismundi-tokens-state' ),
+		),
+	);
+}
+
+/**
+ * Return block-theme and component presentation styles.
+ *
+ * These styles intentionally do not belong to the public React application.
+ *
+ * @return array<string,array{path:string,deps:string[]}>
+ */
+function axismundi_get_theme_assets() : array {
+	return array(
+		// Material Symbols icon utility (the font auto-loads from theme.json).
+		'axismundi-icons'                      => array(
+			'path' => 'assets/styles/icons.css',
+			'deps' => array( 'axismundi-tokens-motion' ),
+		),
+		// Component layer — only what theme.json cannot express (e.g. motion).
+		'axismundi-button'                     => array(
+			'path' => 'assets/styles/components.button.css',
+			'deps' => array( 'axismundi-tokens-motion', 'axismundi-icons' ),
+		),
+		// core/categories + core/archives dropdown — native <select> as an M3 field.
+		'axismundi-select'                     => array(
+			'path' => 'assets/styles/components.select.css',
+			'deps' => array( 'axismundi-button' ),
+		),
+		// Core text block refinements that need pseudo-elements / specificity.
+		'axismundi-blocks-text'                => array(
+			'path' => 'assets/styles/blocks.text.css',
+			'deps' => array( 'axismundi-tokens-motion' ),
+		),
+		// Core/raw table refinements that need cell-level selectors.
+		'axismundi-blocks-table'               => array(
+			'path' => 'assets/styles/blocks.table.css',
+			'deps' => array( 'axismundi-blocks-text' ),
+		),
+		// core/accordion family — M3 contained list; cross-block state/divider CSS.
+		'axismundi-blocks-accordion'           => array(
+			'path' => 'assets/styles/blocks.accordion.css',
+			'deps' => array( 'axismundi-blocks-table' ),
+		),
+		// core/latest-posts + core/rss — M3 collection cards (per-li, list/grid).
+		'axismundi-blocks-collections'         => array(
+			'path' => 'assets/styles/blocks.collections.css',
+			'deps' => array( 'axismundi-blocks-accordion' ),
+		),
+		// core/comments — bubble thread: nested-list indent, sibling rhythm, connector overlay.
+		'axismundi-blocks-comments'            => array(
+			'path' => 'assets/styles/blocks.comments.css',
+			'deps' => array( 'axismundi-blocks-collections' ),
+		),
+		// core/query-pagination + core/comments-pagination + Page Break — M3 pill + 3-col grid.
+		'axismundi-blocks-pagination'          => array(
+			'path' => 'assets/styles/blocks.pagination.css',
+			'deps' => array( 'axismundi-blocks-comments' ),
+		),
+		// core/post-terms + core/tag-cloud + core/term-template — M3 taxonomy variations.
+		'axismundi-blocks-taxonomy'            => array(
+			'path' => 'assets/styles/blocks.taxonomy.css',
+			'deps' => array( 'axismundi-blocks-pagination' ),
+		),
+		// core/navigation family — block owns its children state; submenu owns the menu popover.
+		'axismundi-blocks-navigation'          => array(
+			'path' => 'assets/styles/blocks.navigation.css',
+			'deps' => array( 'axismundi-blocks-collections' ),
+		),
+		'axismundi-blocks-navigation-submenu'  => array(
+			'path' => 'assets/styles/blocks.navigation-submenu.css',
+			'deps' => array( 'axismundi-blocks-navigation' ),
+		),
+	);
+}
+
+/**
+ * Enqueue a theme-owned asset descriptor map.
+ *
+ * @param array<string,array{path:string,deps:string[]}> $assets Asset descriptors.
+ * @return void
+ */
+function axismundi_enqueue_asset_map( array $assets ) : void {
+	foreach ( $assets as $handle => $asset ) {
+		$uri = axismundi_asset_uri( $asset['path'] );
+		if ( null === $uri ) {
+			continue;
+		}
+
+		wp_enqueue_style( $handle, $uri, $asset['deps'], axismundi_asset_version( $asset['path'] ) );
+	}
+}
+
+/**
  * Theme setup.
  *
  * A standalone block theme is recognized via templates/index.html, but the
@@ -91,31 +220,16 @@ function axismundi_setup() : void {
 	// Mirror the runtime token + utility CSS into the editor canvas so Global Styles
 	// previews resolve the same --md-sys-* custom properties as the front end.
 	// Fonts auto-load from theme.json in both contexts.
+	$editor_paths = array( 'style.css' );
+	foreach ( array_merge( axismundi_get_foundation_assets(), axismundi_get_theme_assets() ) as $asset ) {
+		$editor_paths[] = $asset['path'];
+	}
+
 	add_editor_style(
 		array_values(
 			array_filter(
-				array(
-					'style.css',
-					file_exists( get_template_directory() . '/assets/styles/tokens.ref.css' ) ? 'assets/styles/tokens.ref.css' : null,
-					file_exists( get_template_directory() . '/assets/styles/tokens.sys.color.light.css' ) ? 'assets/styles/tokens.sys.color.light.css' : null,
-					file_exists( get_template_directory() . '/assets/styles/tokens.sys.color.dark.css' ) ? 'assets/styles/tokens.sys.color.dark.css' : null,
-					file_exists( get_template_directory() . '/assets/styles/tokens.sys.shape.css' ) ? 'assets/styles/tokens.sys.shape.css' : null,
-					file_exists( get_template_directory() . '/assets/styles/tokens.sys.elevation.css' ) ? 'assets/styles/tokens.sys.elevation.css' : null,
-					file_exists( get_template_directory() . '/assets/styles/tokens.sys.state.css' ) ? 'assets/styles/tokens.sys.state.css' : null,
-					file_exists( get_template_directory() . '/assets/styles/tokens.sys.motion.css' ) ? 'assets/styles/tokens.sys.motion.css' : null,
-					file_exists( get_template_directory() . '/assets/styles/icons.css' ) ? 'assets/styles/icons.css' : null,
-					file_exists( get_template_directory() . '/assets/styles/components.button.css' ) ? 'assets/styles/components.button.css' : null,
-					file_exists( get_template_directory() . '/assets/styles/components.select.css' ) ? 'assets/styles/components.select.css' : null,
-					file_exists( get_template_directory() . '/assets/styles/blocks.text.css' ) ? 'assets/styles/blocks.text.css' : null,
-					file_exists( get_template_directory() . '/assets/styles/blocks.table.css' ) ? 'assets/styles/blocks.table.css' : null,
-					file_exists( get_template_directory() . '/assets/styles/blocks.accordion.css' ) ? 'assets/styles/blocks.accordion.css' : null,
-					file_exists( get_template_directory() . '/assets/styles/blocks.collections.css' ) ? 'assets/styles/blocks.collections.css' : null,
-					file_exists( get_template_directory() . '/assets/styles/blocks.comments.css' ) ? 'assets/styles/blocks.comments.css' : null,
-					file_exists( get_template_directory() . '/assets/styles/blocks.pagination.css' ) ? 'assets/styles/blocks.pagination.css' : null,
-					file_exists( get_template_directory() . '/assets/styles/blocks.taxonomy.css' ) ? 'assets/styles/blocks.taxonomy.css' : null,
-					file_exists( get_template_directory() . '/assets/styles/blocks.navigation.css' ) ? 'assets/styles/blocks.navigation.css' : null,
-					file_exists( get_template_directory() . '/assets/styles/blocks.navigation-submenu.css' ) ? 'assets/styles/blocks.navigation-submenu.css' : null,
-				)
+				$editor_paths,
+				static fn( string $path ) : bool => null !== axismundi_asset_uri( $path )
 			)
 		)
 	);
@@ -255,58 +369,32 @@ add_filter( 'register_block_type_args', 'axismundi_filter_block_type_args', 10, 
  * dependency order so the cascade stays explicit.
  */
 function axismundi_enqueue_assets() : void {
+	$foundation_only = (bool) apply_filters( 'axismundi_theme_foundation_only', false );
+
+	if ( ! $foundation_only ) {
 	// Global HTML semantic glue (mark / abbr, etc.) — the theme's root style.css,
 	// enqueued explicitly (TT5-style) so standard inline elements have a baseline
 	// regardless of source. Block-scoped fixes stay in assets/styles/*.css below.
-	wp_enqueue_style( 'axismundi-style', get_stylesheet_uri(), array(), axismundi_asset_version( 'style.css' ) );
-
-	$styles = array(
-		// M3 token layers (literals in ref; downstream var() in sys), in dependency
-		// order so the cascade stays explicit: ref palette -> color roles
-		// (light, then dark override) -> shape -> elevation -> state -> utilities.
-		'axismundi-tokens-ref'         => array( 'assets/styles/tokens.ref.css', array() ),
-		'axismundi-tokens-color-light' => array( 'assets/styles/tokens.sys.color.light.css', array( 'axismundi-tokens-ref' ) ),
-		'axismundi-tokens-color-dark'  => array( 'assets/styles/tokens.sys.color.dark.css', array( 'axismundi-tokens-color-light' ) ),
-		'axismundi-tokens-shape'       => array( 'assets/styles/tokens.sys.shape.css', array( 'axismundi-tokens-color-dark' ) ),
-		'axismundi-tokens-elevation'   => array( 'assets/styles/tokens.sys.elevation.css', array( 'axismundi-tokens-shape' ) ),
-		'axismundi-tokens-state'       => array( 'assets/styles/tokens.sys.state.css', array( 'axismundi-tokens-elevation' ) ),
-		'axismundi-tokens-motion'      => array( 'assets/styles/tokens.sys.motion.css', array( 'axismundi-tokens-state' ) ),
-		// Material Symbols icon utility (the font auto-loads from theme.json).
-		'axismundi-icons'              => array( 'assets/styles/icons.css', array( 'axismundi-tokens-motion' ) ),
-		// Component layer — only what theme.json cannot express (e.g. motion).
-		'axismundi-button'             => array( 'assets/styles/components.button.css', array( 'axismundi-tokens-motion', 'axismundi-icons' ) ),
-		// core/categories + core/archives dropdown — native <select> as an M3 field.
-		'axismundi-select'             => array( 'assets/styles/components.select.css', array( 'axismundi-button' ) ),
-		// Core text block refinements that need pseudo-elements / specificity.
-		'axismundi-blocks-text'        => array( 'assets/styles/blocks.text.css', array( 'axismundi-tokens-motion' ) ),
-		// Core/raw table refinements that need cell-level selectors.
-		'axismundi-blocks-table'       => array( 'assets/styles/blocks.table.css', array( 'axismundi-blocks-text' ) ),
-		// core/accordion family — M3 contained list; cross-block state/divider CSS.
-		'axismundi-blocks-accordion'   => array( 'assets/styles/blocks.accordion.css', array( 'axismundi-blocks-table' ) ),
-		// core/latest-posts + core/rss — M3 collection cards (per-li, list/grid).
-		'axismundi-blocks-collections' => array( 'assets/styles/blocks.collections.css', array( 'axismundi-blocks-accordion' ) ),
-		// core/comments — bubble thread: nested-list indent, sibling rhythm, connector overlay.
-		'axismundi-blocks-comments'    => array( 'assets/styles/blocks.comments.css', array( 'axismundi-blocks-collections' ) ),
-		// core/query-pagination + core/comments-pagination + Page Break — M3 pill + 3-col grid.
-		'axismundi-blocks-pagination'  => array( 'assets/styles/blocks.pagination.css', array( 'axismundi-blocks-comments' ) ),
-		// core/post-terms + core/tag-cloud + core/term-template — M3 taxonomy variations.
-		'axismundi-blocks-taxonomy'    => array( 'assets/styles/blocks.taxonomy.css', array( 'axismundi-blocks-pagination' ) ),
-		// core/navigation family — block owns its children state; submenu owns the menu popover.
-		'axismundi-blocks-navigation'         => array( 'assets/styles/blocks.navigation.css', array( 'axismundi-blocks-collections' ) ),
-		'axismundi-blocks-navigation-submenu' => array( 'assets/styles/blocks.navigation-submenu.css', array( 'axismundi-blocks-navigation' ) ),
-		// Single-post shell — CSS Grid layout + reverse-responsive contract (editor can't express it).
-	);
-
-	if ( is_attachment() ) {
-		$styles['axismundi-attachment'] = array( 'assets/styles/attachment.css', array( 'axismundi-blocks-table' ) );
+		wp_enqueue_style( 'axismundi-style', get_stylesheet_uri(), array(), axismundi_asset_version( 'style.css' ) );
 	}
 
-	foreach ( $styles as $handle => $style ) {
-		$uri = axismundi_asset_uri( $style[0] );
-		if ( null === $uri ) {
-			continue;
-		}
-		wp_enqueue_style( $handle, $uri, $style[1], axismundi_asset_version( $style[0] ) );
+	axismundi_enqueue_asset_map( axismundi_get_foundation_assets() );
+
+	if ( $foundation_only ) {
+		return;
+	}
+
+	axismundi_enqueue_asset_map( axismundi_get_theme_assets() );
+
+	if ( is_attachment() ) {
+		axismundi_enqueue_asset_map(
+			array(
+				'axismundi-attachment' => array(
+					'path' => 'assets/styles/attachment.css',
+					'deps' => array( 'axismundi-blocks-table' ),
+				),
+			)
+		);
 	}
 
 	// Bubble-thread comment connectors: only where comments render (the script
@@ -337,21 +425,14 @@ add_action( 'wp_enqueue_scripts', 'axismundi_enqueue_assets' );
  */
 function axismundi_enqueue_editor_ui_assets() : void {
 	$prev = '';
-	foreach ( array(
-		'axismundi-editor-tokens-ref'         => 'assets/styles/tokens.ref.css',
-		'axismundi-editor-tokens-color-light' => 'assets/styles/tokens.sys.color.light.css',
-		'axismundi-editor-tokens-color-dark'  => 'assets/styles/tokens.sys.color.dark.css',
-		'axismundi-editor-tokens-shape'       => 'assets/styles/tokens.sys.shape.css',
-		'axismundi-editor-tokens-elevation'   => 'assets/styles/tokens.sys.elevation.css',
-		'axismundi-editor-tokens-state'       => 'assets/styles/tokens.sys.state.css',
-		'axismundi-editor-tokens-motion'      => 'assets/styles/tokens.sys.motion.css',
-	) as $handle => $rel ) {
-		$uri = axismundi_asset_uri( $rel );
+	foreach ( axismundi_get_foundation_assets() as $handle => $asset ) {
+		$editor_handle = 'axismundi-editor-' . str_replace( 'axismundi-', '', $handle );
+		$uri           = axismundi_asset_uri( $asset['path'] );
 		if ( null === $uri ) {
 			continue;
 		}
-		wp_enqueue_style( $handle, $uri, '' === $prev ? array() : array( $prev ), AXISMUNDI_VERSION );
-		$prev = $handle;
+		wp_enqueue_style( $editor_handle, $uri, '' === $prev ? array() : array( $prev ), axismundi_asset_version( $asset['path'] ) );
+		$prev = $editor_handle;
 	}
 
 	// The token CSS sets `color-scheme` on :root so the front and editor CANVAS

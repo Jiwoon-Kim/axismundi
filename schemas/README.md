@@ -13,19 +13,22 @@ schemas/
     <major>.json
 ```
 
-발행된 schema는 immutable public URL과 일대일로 대응한다.
+발행된 schema는 immutable public URL과 일대일로 대응한다. 기존 GitHub Pages artifact가
+이 디렉터리를 repository-level `/schemas/` path에 배포하므로 schema URL은 Style Guide의
+child path가 아니다.
 
 ```text
 schemas/style/1.json
-  -> https://schemas.axismundi.dev/style/1.json
+  -> https://jiwoon-kim.github.io/axismundi/schemas/style/1.json
 
 schemas/component/1.json
-  -> https://schemas.axismundi.dev/component/1.json
+  -> https://jiwoon-kim.github.io/axismundi/schemas/component/1.json
 ```
 
 `latest.json`은 나중에 browsing convenience로 발행할 수 있지만 manifest는 numbered URL을
 참조해야 한다. Product code는 이 contract를 소비하며 canonical schema 복사본을 소유하지
 않는다.
 
-이 디렉터리 setup은 schema 내용이나 hosting workflow를 정의하지 않는다. 둘 다 해당
-specification이 합의된 뒤에만 추가한다.
+이 디렉터리 setup은 schema 내용이나 custom schema domain을 정의하지 않는다. schema
+파일은 현재 Style Guide Pages workflow가 build 뒤 artifact root의 `/schemas/`에 정적 복사해
+배포한다. dedicated domain이나 routing change는 필요해질 때 별도 결정한다.

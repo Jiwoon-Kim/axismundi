@@ -15,3 +15,6 @@ specs/
 ```
 
 이 디렉터리 setup은 specification 내용을 정의하지 않는다.
+
+현재 GitHub Pages에는 schema JSON만 배포한다. specification publication은 해당 document
+surface가 실제로 필요해질 때 별도 결정한다.

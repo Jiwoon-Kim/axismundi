@@ -7,6 +7,7 @@ on:
   pull_request:
     paths:
       - "products/styleguide/**"
+      - "schemas/**"
       - "tools/generators/sync_styleguide_assets.py"
       - "tools/generators/generate_styleguide_typography.py"
       - "tools/generators/generate_styleguide_layout.py"
@@ -25,6 +26,7 @@ on:
       - main
     paths:
       - "products/styleguide/**"
+      - "schemas/**"
       - "tools/generators/sync_styleguide_assets.py"
       - "tools/generators/generate_styleguide_typography.py"
       - "tools/generators/generate_styleguide_layout.py"
@@ -87,6 +89,7 @@ jobs:
           mkdir -p _site
           cp index.html _site/index.html
           cp -r products/styleguide/_site _site/styleguide
+          cp -r schemas _site/schemas
           touch _site/.nojekyll
 
       - name: Upload build artifact

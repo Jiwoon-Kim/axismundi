@@ -189,6 +189,35 @@ style.json
 않는다. Font Library의 `wp_global_styles` activation도 Axismundi Frontend enablement와
 동일하지 않다.
 
+### Typography의 대응 층
+
+WordPress `theme.json`의 typography에는 서로 다른 두 층이 있다.
+
+```text
+settings.typography.fontFamilies / fontSizes
+    -> available font resource and preset definitions
+
+styles.typography
+    -> block-theme root typography policy
+```
+
+Axismundi `style.json`의 `styles.typography`는 후자와 같은 semantic level이다. 즉
+Frontend application root에 적용할 family, size, weight, line height, letter spacing을
+정의하는 policy이며 font size preset 자체를 정의하는 section이 아니다.
+
+```text
+theme.json.styles.typography
+    -> WordPress block-theme root policy
+
+style.json.styles.typography
+    -> Axismundi Frontend root policy
+```
+
+Font resource discovery는 별도다. Theme bundled face는
+`theme.json.settings.typography.fontFamilies`에서, Font Library-installed family는
+`postType/wp_font_family`에서 발견한다. `style.json.styles.typography`는 이 resource
+layer의 file path를 보유하지 않고 선택/usage만 선언한다.
+
 ## 제외 범위
 
 - `style.json` v1 전체 schema 확정

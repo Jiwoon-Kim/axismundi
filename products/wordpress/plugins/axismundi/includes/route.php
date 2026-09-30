@@ -64,6 +64,56 @@ function axismundi_capstone_use_theme_foundation_only( bool $foundation_only ) :
 }
 add_filter( 'axismundi_theme_foundation_only', 'axismundi_capstone_use_theme_foundation_only' );
 
+/**
+ * Remove Core and Gutenberg presentation policy from the standalone app route.
+ *
+ * Theme font faces, image auto-sizing, emoji, the admin bar, and every plugin
+ * integration remain outside this narrowly-scoped Core presentation boundary.
+ *
+ * @return void
+ */
+function axismundi_capstone_isolate_public_core_presentation() : void {
+	if ( ! axismundi_capstone_is_public_route() ) {
+		return;
+	}
+
+	// Gutenberg replaces the Core callback when its compatibility layer is active.
+	remove_action( 'wp_enqueue_scripts', 'wp_enqueue_global_styles', 10 );
+	remove_action( 'wp_footer', 'wp_enqueue_global_styles', 1 );
+	remove_action( 'wp_enqueue_scripts', 'gutenberg_enqueue_global_styles', 10 );
+	remove_action( 'wp_footer', 'gutenberg_enqueue_global_styles', 1 );
+
+}
+add_action( 'wp_enqueue_scripts', 'axismundi_capstone_isolate_public_core_presentation', 0 );
+
+/**
+ * Remove any Core presentation handles enqueued after the route setup.
+ *
+ * @return void
+ */
+function axismundi_capstone_dequeue_public_core_presentation() : void {
+	if ( ! axismundi_capstone_is_public_route() ) {
+		return;
+	}
+
+	// Cover Core versions that enqueue these presentation styles differently.
+	foreach ( array( 'global-styles', 'wp-block-library', 'wp-block-library-theme', 'core-block-supports' ) as $handle ) {
+		wp_dequeue_style( $handle );
+	}
+
+	// This is a core/navigation block presentation extension, not a Social app
+	// integration.
+	wp_dequeue_style( 'axismundi-navigation-icons' );
+	wp_dequeue_script( 'axismundi-navigation-icons-view' );
+
+	// Regional font providers currently belong to the block-theme/editor asset
+	// path. Social will opt into its own fallback policy in a later checkpoint.
+	foreach ( array( 'axismundi-korean-font-provider', 'axismundi-japanese-font-provider', 'axismundi-traditional-chinese-font-provider' ) as $handle ) {
+		wp_dequeue_style( $handle );
+	}
+}
+add_action( 'wp_enqueue_scripts', 'axismundi_capstone_dequeue_public_core_presentation', 100 );
+
 /** @return void */
 function axismundi_capstone_render_public_route() : void {
 	if ( ! axismundi_capstone_is_public_route() ) {

@@ -4,10 +4,11 @@
 		'react-jsx-runtime',
 		'wp-a11y',
 		'wp-components',
+		'wp-dom',
 		'wp-element',
 		'wp-i18n',
 		'wp-primitives',
 		'wp-theme'
 	),
-	'version' => '4dd9ea1ea746bd92c419'
+	'version' => 'b7b4720d5d88d65d60d5'
 );

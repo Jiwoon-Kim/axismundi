@@ -29,6 +29,38 @@
 	will-change: transform, opacity;
 }
 
+@keyframes ax-admin-sidebar-slide-from-right {
+	from {
+		opacity: 0;
+		transform: translateX( 50px );
+	}
+
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes ax-admin-sidebar-slide-from-left {
+	from {
+		opacity: 0;
+		transform: translateX( -50px );
+	}
+
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+.ax-admin-layout__sidebar-region .edit-site-sidebar__screen-wrapper.slide-from-left {
+	animation-name: ax-admin-sidebar-slide-from-left;
+}
+
+.ax-admin-layout__sidebar-region .edit-site-sidebar__screen-wrapper.slide-from-right {
+	animation-name: ax-admin-sidebar-slide-from-right;
+}
+
 .ax-admin-layout__sidebar-region .edit-site-sidebar__screen-wrapper::-webkit-scrollbar {
 	width: 12px;
 	height: 12px;

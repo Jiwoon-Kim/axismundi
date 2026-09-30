@@ -15,10 +15,10 @@ const OPERATION_SECTIONS = [
 
 const DESIGN_SECTIONS = [
 	{ id: 'styles', label: __( 'Styles', 'axismundi' ), icon: styles },
-	{ id: 'templates', label: __( 'Templates', 'axismundi' ), icon: layout },
-	{ id: 'template-parts', label: __( 'Template Parts', 'axismundi' ), icon: layout },
-	{ id: 'patterns', label: __( 'Patterns', 'axismundi' ), icon: symbol },
-	{ id: 'components', label: __( 'Components', 'axismundi' ), icon: blockDefault },
+	{ id: 'templates', label: __( 'Templates', 'axismundi' ), icon: layout, withChevron: true },
+	{ id: 'template-parts', label: __( 'Template Parts', 'axismundi' ), icon: layout, withChevron: true },
+	{ id: 'patterns', label: __( 'Patterns', 'axismundi' ), icon: symbol, withChevron: true },
+	{ id: 'components', label: __( 'Components', 'axismundi' ), icon: blockDefault, withChevron: true },
 ];
 
 function normalizePath( path ) {
@@ -38,7 +38,7 @@ export function getAdminRouteUrl( path ) {
 	return url.toString();
 }
 
-function createRouteLinkHandler( path, navigate ) {
+function createRouteLinkHandler( path, navigate, sidebarTransition ) {
 	return ( event ) => {
 		if (
 			event.button !== 0 ||
@@ -52,18 +52,37 @@ function createRouteLinkHandler( path, navigate ) {
 		}
 
 		event.preventDefault();
-		navigate( path );
+		navigate( path, sidebarTransition );
 	};
 }
 
-function NavigationItem( { active, children, icon, path, navigate } ) {
+function NavigationItem( {
+	active,
+	children,
+	icon,
+	path,
+	navigate,
+	screen,
+	withChevron = false,
+} ) {
+	const id = screen ? `ax-admin-sidebar-${ screen }` : undefined;
+	const sidebarTransition = screen
+		? {
+			direction: 'forward',
+			focusSelector: `#${ id }`,
+			screen,
+		}
+		: undefined;
+
 	return (
 		<SidebarNavigationItem
 			active={ active }
 			as="a"
 			href={ getAdminRouteUrl( path ) }
+			id={ id }
 			icon={ icon }
-			onClick={ createRouteLinkHandler( path, navigate ) }
+			onClick={ createRouteLinkHandler( path, navigate, sidebarTransition ) }
+			withChevron={ withChevron }
 		>
 			{ children }
 		</SidebarNavigationItem>
@@ -89,7 +108,13 @@ function OperationsSidebar( { path, navigate } ) {
 								</NavigationItem>
 							);
 						} ) }
-						<NavigationItem active={ path.startsWith( '/design' ) } path="/design/styles" navigate={ navigate }>
+						<NavigationItem
+							active={ path === '/design' }
+							path="/design"
+							navigate={ navigate }
+							screen="design-root"
+							withChevron
+						>
 							{ __( 'Design', 'axismundi' ) }
 						</NavigationItem>
 					</ItemGroup>
@@ -99,7 +124,7 @@ function OperationsSidebar( { path, navigate } ) {
 	);
 }
 
-function DesignSidebar( { path, navigate } ) {
+function DesignSidebarRoot( { path, navigate } ) {
 	return (
 		<SidebarNavigationScreen
 			title={ __( 'Design', 'axismundi' ) }
@@ -112,7 +137,15 @@ function DesignSidebar( { path, navigate } ) {
 						{ DESIGN_SECTIONS.map( ( item ) => {
 							const itemPath = `/design/${ item.id }`;
 							return (
-								<NavigationItem key={ item.id } active={ path === itemPath } icon={ item.icon } path={ itemPath } navigate={ navigate }>
+								<NavigationItem
+									key={ item.id }
+									active={ path === itemPath }
+									icon={ item.icon }
+									path={ itemPath }
+									navigate={ navigate }
+									screen={ item.id }
+									withChevron={ item.withChevron }
+								>
 									{ item.label }
 								</NavigationItem>
 							);
@@ -122,6 +155,30 @@ function DesignSidebar( { path, navigate } ) {
 			}
 		/>
 	);
+}
+
+function DesignSectionSidebar( { path, navigate, section } ) {
+	return (
+		<SidebarNavigationScreen
+			title={ section.label }
+			onBack={ () =>
+				navigate( path, {
+					direction: 'back',
+					history: false,
+					screen: 'design-root',
+				} )
+			}
+			footer={ <span className="ax-admin-layout__save-status">{ __( 'Saved', 'axismundi' ) }</span> }
+		/>
+	);
+}
+
+function DesignSidebar( { path, navigate, section, sidebarScreen } ) {
+	if ( sidebarScreen === 'design-root' ) {
+		return <DesignSidebarRoot path={ path } navigate={ navigate } />;
+	}
+
+	return <DesignSectionSidebar path={ path } navigate={ navigate } section={ section } />;
 }
 
 function OperationsContent( { route, showNavigation } ) {
@@ -154,6 +211,13 @@ function createOperationsRoute( section ) {
 		path,
 		workspace: 'operations',
 		label: section.label,
+		layout: {
+			contentLabel: section.label,
+			navigationLabel: __( 'Axismundi administration', 'axismundi' ),
+			sidebarScreen: 'operations-root',
+			sidebarShouldAnimate: false,
+			workspace: 'operations',
+		},
 		areas: {
 			sidebar: ( context ) => <OperationsSidebar path={ path } navigate={ context.navigate } />,
 			content: ( context ) => <OperationsContent route={ { path, ...section } } showNavigation={ context.showNavigation } />,
@@ -161,14 +225,44 @@ function createOperationsRoute( section ) {
 	};
 }
 
+const DESIGN_ROOT_ROUTE = {
+	path: '/design',
+	workspace: 'design',
+	label: __( 'Design', 'axismundi' ),
+	layout: {
+		contentLabel: __( 'Design', 'axismundi' ),
+		navigationLabel: __( 'Axismundi design', 'axismundi' ),
+		sidebarScreen: 'design-root',
+		sidebarShouldAnimate: true,
+		workspace: 'design',
+	},
+	areas: {
+		sidebar: ( context ) => <DesignSidebarRoot path="/design" navigate={ context.navigate } />,
+		content: ( context ) => (
+			<DesignContent
+				route={ { label: __( 'Design', 'axismundi' ), path: '/design' } }
+				showNavigation={ context.showNavigation }
+			/>
+		),
+		preview: () => <FrontendPreview label={ __( 'Design', 'axismundi' ) } />,
+	},
+};
+
 function createDesignRoute( section ) {
 	const path = `/design/${ section.id }`;
 	return {
 		path,
 		workspace: 'design',
 		label: section.label,
+		layout: {
+			contentLabel: section.label,
+			navigationLabel: __( 'Axismundi design', 'axismundi' ),
+			sidebarScreen: section.id,
+			sidebarShouldAnimate: true,
+			workspace: 'design',
+		},
 		areas: {
-			sidebar: ( context ) => <DesignSidebar path={ path } navigate={ context.navigate } />,
+			sidebar: ( context ) => <DesignSidebar path={ path } navigate={ context.navigate } section={ section } sidebarScreen={ context.sidebarScreen } />,
 			content: ( context ) => <DesignContent route={ { path, ...section } } showNavigation={ context.showNavigation } />,
 			preview: () => <FrontendPreview label={ section.label } />,
 		},
@@ -177,14 +271,12 @@ function createDesignRoute( section ) {
 
 const ROUTES = [
 	...OPERATION_SECTIONS.map( createOperationsRoute ),
+	DESIGN_ROOT_ROUTE,
 	...DESIGN_SECTIONS.map( createDesignRoute ),
 ];
 
 export function resolveAdminRoute( path = getAdminPath() ) {
 	const normalizedPath = normalizePath( path );
-	if ( normalizedPath === '/design' ) {
-		return ROUTES.find( ( route ) => route.path === '/design/styles' );
-	}
 	return ROUTES.find( ( route ) => route.path === normalizedPath ) || ROUTES[ 0 ];
 }
 

@@ -4,7 +4,7 @@ import {
 	__experimentalHeading as Heading,
 	__experimentalVStack as VStack,
 } from '@wordpress/components';
-import { isRTL } from '@wordpress/i18n';
+import { __, isRTL } from '@wordpress/i18n';
 import SidebarButton from '../sidebar-button';
 import { chevronLeft, chevronRight } from '../sidebar-icons';
 
@@ -15,6 +15,7 @@ import { chevronLeft, chevronRight } from '../sidebar-icons';
  */
 export default function SidebarNavigationScreen( {
 	actions,
+	backLabel = __( 'Back', 'axismundi' ),
 	content,
 	dashboardHref,
 	dashboardLabel = 'Go to the Dashboard',
@@ -44,7 +45,7 @@ export default function SidebarNavigationScreen( {
 						<SidebarButton
 							onClick={ onBack }
 							icon={ icon }
-							label="Back"
+							label={ backLabel }
 							showTooltip={ false }
 						/>
 					) }

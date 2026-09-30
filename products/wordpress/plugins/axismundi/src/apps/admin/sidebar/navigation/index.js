@@ -62,10 +62,10 @@ function SidebarContentWrapper( { children, screenKey, shouldAnimate } ) {
 		<div
 			ref={ wrapperRef }
 			className={ clsx(
-				'edit-site-sidebar__screen-wrapper',
+				'ax-admin-sidebar__screen',
 				shouldAnimate && {
-					'slide-from-left': animationDirection === 'back',
-					'slide-from-right': animationDirection === 'forward',
+					'ax-admin-sidebar__screen--from-left': animationDirection === 'back',
+					'ax-admin-sidebar__screen--from-right': animationDirection === 'forward',
 				}
 			) }
 		>

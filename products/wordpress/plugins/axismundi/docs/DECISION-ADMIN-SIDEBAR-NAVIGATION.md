@@ -76,9 +76,7 @@ animation은 state transition이 존재할 때만 붙는다. `slide-from-left/ri
 ## 제외 범위
 
 - template/pattern/component registry의 실제 resource 목록
-- Save state와 `Saved` placeholder 제거
 - icon registry spike와 `sidebar-icons.js` 대체
-- `edit-site-*` compatibility class의 Axismundi namespace 전환
 - mobile 전용 route areas
 
 ## 검증

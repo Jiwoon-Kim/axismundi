@@ -18,7 +18,7 @@ export default function AdminLayout( { areas, layout, mobileView, sidebarScreen 
 			<div className="ax-admin-layout__content">
 				<div className="ax-admin-layout__sidebar-region">
 					<NavigableRegion
-						className="edit-site-sidebar__content"
+						className="ax-admin-sidebar__content"
 						aria-label={ layout.navigationLabel }
 					>
 						<SidebarContent screenKey={ sidebarScreen } shouldAnimate={ layout.sidebarShouldAnimate }>

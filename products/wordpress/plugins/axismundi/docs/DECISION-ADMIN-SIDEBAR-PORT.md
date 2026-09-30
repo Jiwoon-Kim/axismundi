@@ -106,7 +106,7 @@ Site Editor를 시각적 정답으로 보되, 구현 관행 전체를 복제하�
 - `HStack`, `Stack`, `VStack` 같은 공개 WordPress layout primitive가 생성하는
   CSS custom property 기반 inline style은 허용한다. 해당 component API의 계약이다.
 - Axismundi 고유 spacing, 색상, sticky 영역, scrollbar, responsive layout은
-  `src/apps/admin/styles/sidebar-navigation-compat.css`와 Admin stylesheet가
+  `src/apps/admin/styles/sidebar.css`와 Admin stylesheet가
   소유한다.
 - Gutenberg의 private store 상태를 표현하기 위한 임시 inline style이나 DOM
   override는 추가하지 않는다.

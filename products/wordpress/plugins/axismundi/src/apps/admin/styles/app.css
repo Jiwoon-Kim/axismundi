@@ -33,14 +33,6 @@
 		min-block-size: 0;
 	}
 
-	.ax-admin-layout__save-status {
-		margin: auto 0 0;
-		padding: 1rem 0 0;
-		border-top: 1px solid var( --ax-admin-outline );
-		color: var( --ax-admin-on-surface-subtle );
-		font-size: 0.8125rem;
-	}
-
 	.ax-admin-layout__main {
 		display: flex;
 		flex: 1;

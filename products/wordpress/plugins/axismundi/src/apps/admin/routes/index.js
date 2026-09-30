@@ -4,8 +4,8 @@ import { blockDefault, layout, styles, symbol } from '@wordpress/icons';
 import { getAxismundiConfig } from '../../../shared/runtime/config';
 import RouteContent from '../components/route-content';
 import FrontendPreview from '../preview/frontend-preview';
-import SidebarNavigationItem from '../components/site-editor/sidebar-navigation-item';
-import SidebarNavigationScreen from '../components/site-editor/sidebar-navigation-screen';
+import SidebarNavigationItem from '../components/sidebar/sidebar-navigation-item';
+import SidebarNavigationScreen from '../components/sidebar/sidebar-navigation-screen';
 
 const OPERATION_SECTIONS = [
 	{ id: 'overview', label: __( 'Overview', 'axismundi' ) },
@@ -96,10 +96,9 @@ function OperationsSidebar( { path, navigate } ) {
 			description={ __( 'Manage Axismundi applications and their operating environment.', 'axismundi' ) }
 			dashboardHref={ getAxismundiConfig().adminUrl || '/wp-admin/' }
 			dashboardLabel={ __( 'Go to the Dashboard', 'axismundi' ) }
-			footer={ <span className="ax-admin-layout__save-status">{ __( 'Saved', 'axismundi' ) }</span> }
 			content={
 				<nav aria-label={ __( 'Axismundi sections', 'axismundi' ) }>
-					<ItemGroup className="edit-site-sidebar-navigation-screen-main">
+					<ItemGroup className="ax-admin-sidebar-screen-main">
 						{ OPERATION_SECTIONS.map( ( item ) => {
 							const itemPath = item.id === 'overview' ? '/' : `/${ item.id }`;
 							return (
@@ -135,10 +134,9 @@ function DesignSidebarRoot( { path, navigate } ) {
 					screen: 'operations-root',
 				} )
 			}
-			footer={ <span className="ax-admin-layout__save-status">{ __( 'Saved', 'axismundi' ) }</span> }
 			content={
 				<nav aria-label={ __( 'Design sections', 'axismundi' ) }>
-					<ItemGroup className="edit-site-sidebar-navigation-screen-main">
+					<ItemGroup className="ax-admin-sidebar-screen-main">
 						{ DESIGN_SECTIONS.map( ( item ) => {
 							const itemPath = `/design/${ item.id }`;
 							return (
@@ -173,7 +171,6 @@ function DesignSectionSidebar( { path, navigate, section } ) {
 					screen: 'design-root',
 				} )
 			}
-			footer={ <span className="ax-admin-layout__save-status">{ __( 'Saved', 'axismundi' ) }</span> }
 		/>
 	);
 }

@@ -31,9 +31,9 @@ Design
 관련 구현은 다음 위치에 있다.
 
 - `src/apps/admin/app.js`
-- `src/apps/admin/components/site-editor/`
+- `src/apps/admin/components/sidebar/`
 - `src/apps/admin/styles/app.css`
-- `src/apps/admin/styles/sidebar-navigation-compat.css`
+- `src/apps/admin/styles/sidebar.css`
 - `includes/assets.php`
 
 Design의 preview iframe은 실제 `/social/` 문서를 읽는다. 따라서 preview 안의
@@ -86,26 +86,18 @@ navigation이 없으면 chevron은 행동을 약속하지만 이행하지 않는
 
 ### 3. Site Editor의 CSS와 class 이름은 소유권을 대체하지 않는다
 
-현재 `edit-site-*` class와 scoped compatibility stylesheet는 빠른 비교와
-composition 검증을 위해 존재한다. 그러나 Axismundi가 edit-site private DOM contract를
-소유한다는 뜻이 되어서는 안 된다.
+이후 `edit-site-*` local class는 Axismundi-owned `ax-admin-sidebar-*` namespace로
+이전했다. 공개 WordPress component contract인 `components-*` class와
+`@wordpress/*` primitive는 그대로 유지한다. 분류 근거는
+`docs/RESEARCH-ADMIN-SIDEBAR-OWNERSHIP.md`에 기록한다.
 
-다음 리팩터링에서는 Site Editor 원본 CSS를 항목별로 분류한다.
-
-- 공개 WordPress component의 contract에 필요한 CSS
-- Axismundi layout metric으로 채택할 CSS
-- Site Editor navigation state가 있어야만 의미가 생기는 CSS
-- 단순한 visual artifact 또는 중복 CSS
-
-분류 이후 Axismundi 소유 class namespace로 옮길 범위와, public component class를
-그대로 둘 범위를 결정한다. class 이름만 바꾸는 기계적 rename은 하지 않는다.
+이전은 Site Editor namespace를 보존하는 기계적 rename이 아니라, local port가
+소유하는 DOM/CSS와 public WordPress contract를 분리한 cleanup이다.
 
 ### 4. 항상 표시되는 `Saved`는 실제 상태가 아니다
 
-현재 sidebar footer의 `Saved`는 save subsystem과 연결되지 않은 placeholder다.
-template, pattern, style registry가 편집 가능한 entity가 되기 전에는 제거하거나
-명확한 placeholder가 아닌 상태로 숨긴다. 추후에는 dirty, saving, saved, error를
-실제 편집 state와 연결한다.
+sidebar footer의 `Saved` placeholder는 제거했다. 추후 save subsystem은 dirty,
+saving, saved, error를 실제 편집 state와 연결한 뒤 별도 UI로 도입한다.
 
 ### 5. URL과 i18n은 shell contract의 일부다
 

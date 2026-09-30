@@ -9,9 +9,8 @@ import SidebarButton from '../sidebar-button';
 import { chevronLeft, chevronRight } from '../sidebar-icons';
 
 /*
- * Local port of packages/edit-site/src/components/sidebar-navigation-screen.
- * The edit-site store/router determines root and back state upstream; this
- * plugin supplies those integration values as explicit props.
+ * Axismundi-owned screen composition. Route/history and local sidebar
+ * navigation state are supplied through explicit props.
  */
 export default function SidebarNavigationScreen( {
 	actions,
@@ -30,7 +29,7 @@ export default function SidebarNavigationScreen( {
 	return (
 		<>
 			<VStack
-				className={ clsx( 'edit-site-sidebar-navigation-screen__main', {
+				className={ clsx( 'ax-admin-sidebar-screen__main', {
 					'has-footer': !! footer,
 				} ) }
 				spacing={ 0 }
@@ -39,7 +38,7 @@ export default function SidebarNavigationScreen( {
 				<HStack
 					spacing={ 3 }
 					alignment="flex-start"
-					className="edit-site-sidebar-navigation-screen__title-icon"
+					className="ax-admin-sidebar-screen__title-icon"
 				>
 					{ ! isRoot && onBack && (
 						<SidebarButton
@@ -57,21 +56,21 @@ export default function SidebarNavigationScreen( {
 						/>
 					) }
 					<Heading
-						className="edit-site-sidebar-navigation-screen__title"
+						className="ax-admin-sidebar-screen__title"
 						level={ 1 }
 						size={ 20 }
 					>
 						{ title }
 					</Heading>
 					{ actions && (
-						<div className="edit-site-sidebar-navigation-screen__actions">
+						<div className="ax-admin-sidebar-screen__actions">
 							{ actions }
 						</div>
 					) }
 				</HStack>
-				<div className="edit-site-sidebar-navigation-screen__content">
+				<div className="ax-admin-sidebar-screen__content">
 					{ description && (
-						<div className="edit-site-sidebar-navigation-screen__description">
+						<div className="ax-admin-sidebar-screen__description">
 							{ description }
 						</div>
 					) }
@@ -79,7 +78,7 @@ export default function SidebarNavigationScreen( {
 				</div>
 			</VStack>
 			{ footer && (
-				<footer className="edit-site-sidebar-navigation-screen__footer">
+				<footer className="ax-admin-sidebar-screen__footer">
 					{ footer }
 				</footer>
 			) }

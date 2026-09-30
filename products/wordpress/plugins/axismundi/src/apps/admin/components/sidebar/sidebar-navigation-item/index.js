@@ -5,9 +5,8 @@ import { isRTL } from '@wordpress/i18n';
 import { chevronRightSmall, chevronLeftSmall, Icon } from '@wordpress/icons';
 
 /*
- * Local port of packages/edit-site/src/components/sidebar-navigation-item.
- * edit-site's private router/context integration is supplied here by explicit
- * Axismundi click callbacks; the Item composition remains the same.
+ * Axismundi-owned sidebar item using public WordPress component primitives.
+ * Navigation behavior is supplied by the local sidebar provider.
  */
 export default function SidebarNavigationItem( {
 	isHidden = false,
@@ -32,7 +31,7 @@ function SidebarNavigationItemContent( {
 	return (
 		<Item
 			className={ clsx(
-				'edit-site-sidebar-navigation-item',
+				'ax-admin-sidebar-navigation-item',
 				{ 'with-suffix': ! withChevron && suffix },
 				className
 			) }
@@ -45,7 +44,7 @@ function SidebarNavigationItemContent( {
 				{ withChevron && (
 					<Icon
 						icon={ isRTL() ? chevronLeftSmall : chevronRightSmall }
-						className="edit-site-sidebar-navigation-item__drilldown-indicator"
+						className="ax-admin-sidebar-navigation-item__drilldown-indicator"
 						size={ 24 }
 					/>
 				) }

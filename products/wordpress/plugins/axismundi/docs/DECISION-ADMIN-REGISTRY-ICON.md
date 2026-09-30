@@ -25,14 +25,18 @@ primitive를 둔다.
 - REST content는 Core registry가 sanitize한 same-origin record만 render한다. component는
   임의의 remote SVG 또는 caller-provided markup을 받지 않는다.
 
-첫 consumer는 Design sidebar의 `Styles` resource icon이다.
+첫 consumer는 Design sidebar의 `Styles` resource icon이었다. 이후 curated Axismundi
+collection을 등록한 뒤 다음 Design resource icon도 같은 primitive로 전환했다.
 
 ```text
-Styles
-  core/styles -> RegistryIcon
+Styles       axismundi/styles
+Templates    axismundi/templates
+Patterns     axismundi/patterns
+Components   axismundi/components
 ```
 
-이는 generic control icon migration이 아니다. back, close, chevron과 현재
+이는 generic control icon migration이 아니다. `Template Parts`는 semantic glyph 후보가
+확정되지 않아 기존 static icon을 유지한다. back, close, chevron과 현재
 `sidebar-icons.js` compatibility asset은 기존 `@wordpress/icons`/local path를 유지한다.
 
 ## 원본 레퍼런스
@@ -69,3 +73,10 @@ Styles
 - authenticated `GET /wp/v2/icons/core/not-an-icon`은
   `404 rest_icon_not_found`를 반환했다.
 - browser console error 없이 `npm run build`와 `git diff --check`를 통과했다.
+
+## 후속 구현
+
+`docs/DECISION-ADMIN-ICON-LIBRARY.md`는 Axismundi-owned asset manifest, automatic
+registry registration, licence/provenance policy를 기록한다. `RegistryIcon`은 Dialog
+plugin의 editor-side convention과 같이 registry의 sanitized REST record를 `safeHTML()`로
+한 번 더 통과시켜 render한다.

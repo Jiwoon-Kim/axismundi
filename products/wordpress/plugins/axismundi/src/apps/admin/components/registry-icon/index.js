@@ -1,5 +1,6 @@
 import { useSelect } from '@wordpress/data';
 import { store as coreDataStore } from '@wordpress/core-data';
+import { safeHTML } from '@wordpress/dom';
 import { useMemo } from '@wordpress/element';
 
 function getSvgMarkup( content, label ) {
@@ -85,7 +86,8 @@ export default function RegistryIcon( {
 		<span
 			className={ classes }
 			data-state="ready"
-			dangerouslySetInnerHTML={ { __html: svg } }
+			// Core sanitizes registry records; safeHTML mirrors core/icon's second render pass.
+			dangerouslySetInnerHTML={ { __html: safeHTML( svg ) } }
 			style={ style }
 		/>
 	);

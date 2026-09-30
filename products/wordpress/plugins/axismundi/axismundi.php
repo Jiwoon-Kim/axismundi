@@ -24,6 +24,7 @@ const AXISMUNDI_CAPSTONE_ADMIN_PAGE       = 'axismundi';
 const AXISMUNDI_CAPSTONE_ADMIN_CAPABILITY = 'manage_options';
 
 require_once __DIR__ . '/includes/assets.php';
+require_once __DIR__ . '/includes/icons.php';
 require_once __DIR__ . '/includes/route.php';
 require_once __DIR__ . '/includes/admin.php';
 

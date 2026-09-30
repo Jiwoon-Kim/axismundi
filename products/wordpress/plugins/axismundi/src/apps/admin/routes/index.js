@@ -1,6 +1,6 @@
 import { __ } from '@wordpress/i18n';
 import { __experimentalItemGroup as ItemGroup } from '@wordpress/components';
-import { blockDefault, layout, symbol } from '@wordpress/icons';
+import { layout } from '@wordpress/icons';
 import { getAxismundiConfig } from '../../../shared/runtime/config';
 import RouteContent from '../components/route-content';
 import FrontendPreview from '../preview/frontend-preview';
@@ -14,11 +14,11 @@ const OPERATION_SECTIONS = [
 ];
 
 const DESIGN_SECTIONS = [
-	{ id: 'styles', label: __( 'Styles', 'axismundi' ), registryIcon: 'core/styles' },
-	{ id: 'templates', label: __( 'Templates', 'axismundi' ), icon: layout, withChevron: true },
+	{ id: 'styles', label: __( 'Styles', 'axismundi' ), registryIcon: 'axismundi/styles' },
+	{ id: 'templates', label: __( 'Templates', 'axismundi' ), registryIcon: 'axismundi/templates', withChevron: true },
 	{ id: 'template-parts', label: __( 'Template Parts', 'axismundi' ), icon: layout, withChevron: true },
-	{ id: 'patterns', label: __( 'Patterns', 'axismundi' ), icon: symbol, withChevron: true },
-	{ id: 'components', label: __( 'Components', 'axismundi' ), icon: blockDefault, withChevron: true },
+	{ id: 'patterns', label: __( 'Patterns', 'axismundi' ), registryIcon: 'axismundi/patterns', withChevron: true },
+	{ id: 'components', label: __( 'Components', 'axismundi' ), registryIcon: 'axismundi/components', withChevron: true },
 ];
 
 function normalizePath( path ) {

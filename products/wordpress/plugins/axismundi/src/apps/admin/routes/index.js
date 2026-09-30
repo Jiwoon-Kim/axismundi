@@ -129,7 +129,12 @@ function DesignSidebarRoot( { path, navigate } ) {
 		<SidebarNavigationScreen
 			title={ __( 'Design', 'axismundi' ) }
 			description={ __( "Manage the Social application's presentation system.", 'axismundi' ) }
-			onBack={ () => navigate( '/' ) }
+			onBack={ () =>
+				navigate( '/', {
+					direction: 'back',
+					screen: 'operations-root',
+				} )
+			}
 			footer={ <span className="ax-admin-layout__save-status">{ __( 'Saved', 'axismundi' ) }</span> }
 			content={
 				<nav aria-label={ __( 'Design sections', 'axismundi' ) }>

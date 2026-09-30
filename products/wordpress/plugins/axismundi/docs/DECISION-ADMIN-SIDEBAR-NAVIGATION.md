@@ -29,6 +29,7 @@ sidebar navigation state
 두 state는 연결되지만 같은 state가 아니다.
 
 - 일반 sidebar link는 resource URL을 `pushState()`로 갱신하고 필요한 경우 forward screen을 지정한다.
+- workspace root의 Back은 URL을 이전 workspace root로 갱신하고, forward trigger에 focus를 복원하는 back transition이다.
 - child screen의 Back은 URL을 새로 쓰지 않고 sidebar screen만 root로 되돌린다.
 - browser back/forward와 page reload는 route의 default screen으로 sidebar를 다시 동기화한다.
 - forward screen은 첫 tabbable control, 현재 Design resource screen에서는 Back button에 focus한다.
@@ -51,6 +52,18 @@ sidebar navigation state
 ```
 
 이로써 `/design`과 `/design/styles`는 별도 presentation state를 갖는다. route canonicalization이 필요하지 않다.
+
+Operations root에서 Design root로 들어갈 때와 Design root에서 Operations root로 돌아갈 때는 URL과 focus를 모두 전환한다.
+
+```text
+Operations Design trigger
+  forward + pushState( /design )
+    -> Design root Back button focus
+
+Design root Back
+  back + pushState( / )
+    -> Operations Design trigger focus
+```
 
 ## Chevron Rule
 

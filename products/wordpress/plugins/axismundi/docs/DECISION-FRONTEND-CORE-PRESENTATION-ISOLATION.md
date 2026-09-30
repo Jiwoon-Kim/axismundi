@@ -68,6 +68,10 @@ dequeue한다. Regional fallback은 Frontend가 독립 asset policy를 갖는 �
 
 `gutenberg_print_font_faces()`는 `wp_head` priority 50의 별도 callback이므로 제거하지
 않는다. 이 callback은 theme.json font face declaration을 `#wp-fonts-local`로 출력한다.
+`#wp-fonts-local`은 resource declaration일 뿐 typography policy는 아니다. Global Styles를
+제거한 뒤 `/social/`의 `body`는 WordPress `--wp--preset--font-family-*`를 더 이상
+소비하지 않는다. Frontend가 root font family, size, line height를 자신의 stylesheet 또는
+future `style.json` generated CSS에서 명시해야 한다.
 
 ## 경계
 
@@ -120,6 +124,11 @@ public route renderer만 enqueue한다.
     admin-bar CSS and Dashicons
     theme foundation token stylesheets
     axismundi frontend bundle
+
+  typography observation
+    #wp-fonts-local contains six theme-declared @font-face rules
+    --wp--preset--font-family--roboto-flex is absent
+    no Social-owned body typography rule exists yet
 
 normal block-theme frontend
   present

@@ -3,6 +3,7 @@ import { __experimentalItem as Item, FlexBlock } from '@wordpress/components';
 import { Stack } from '@wordpress/ui';
 import { isRTL } from '@wordpress/i18n';
 import { chevronRightSmall, chevronLeftSmall, Icon } from '@wordpress/icons';
+import RegistryIcon from '../../registry-icon';
 
 /*
  * Axismundi-owned sidebar item using public WordPress component primitives.
@@ -24,6 +25,7 @@ function SidebarNavigationItemContent( {
 	children,
 	className,
 	icon,
+	registryIcon,
 	suffix,
 	withChevron = false,
 	...props
@@ -39,7 +41,11 @@ function SidebarNavigationItemContent( {
 			{ ...props }
 		>
 			<Stack direction="row" align="center" justify="start" gap="sm">
-				{ icon && <Icon icon={ icon } size={ 24 } /> }
+				{ registryIcon ? (
+					<RegistryIcon name={ registryIcon } />
+				) : (
+					icon && <Icon icon={ icon } size={ 24 } />
+				) }
 				<FlexBlock>{ children }</FlexBlock>
 				{ withChevron && (
 					<Icon

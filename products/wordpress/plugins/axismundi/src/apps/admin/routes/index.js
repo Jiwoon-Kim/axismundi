@@ -1,6 +1,6 @@
 import { __ } from '@wordpress/i18n';
 import { __experimentalItemGroup as ItemGroup } from '@wordpress/components';
-import { blockDefault, layout, styles, symbol } from '@wordpress/icons';
+import { blockDefault, layout, symbol } from '@wordpress/icons';
 import { getAxismundiConfig } from '../../../shared/runtime/config';
 import RouteContent from '../components/route-content';
 import FrontendPreview from '../preview/frontend-preview';
@@ -14,7 +14,7 @@ const OPERATION_SECTIONS = [
 ];
 
 const DESIGN_SECTIONS = [
-	{ id: 'styles', label: __( 'Styles', 'axismundi' ), icon: styles },
+	{ id: 'styles', label: __( 'Styles', 'axismundi' ), registryIcon: 'core/styles' },
 	{ id: 'templates', label: __( 'Templates', 'axismundi' ), icon: layout, withChevron: true },
 	{ id: 'template-parts', label: __( 'Template Parts', 'axismundi' ), icon: layout, withChevron: true },
 	{ id: 'patterns', label: __( 'Patterns', 'axismundi' ), icon: symbol, withChevron: true },
@@ -60,6 +60,7 @@ function NavigationItem( {
 	active,
 	children,
 	icon,
+	registryIcon,
 	path,
 	navigate,
 	screen,
@@ -81,6 +82,7 @@ function NavigationItem( {
 			href={ getAdminRouteUrl( path ) }
 			id={ id }
 			icon={ icon }
+			registryIcon={ registryIcon }
 			onClick={ createRouteLinkHandler( path, navigate, sidebarTransition ) }
 			withChevron={ withChevron }
 		>
@@ -144,6 +146,7 @@ function DesignSidebarRoot( { path, navigate } ) {
 									key={ item.id }
 									active={ path === itemPath }
 									icon={ item.icon }
+									registryIcon={ item.registryIcon }
 									path={ itemPath }
 									navigate={ navigate }
 									screen={ item.id }

@@ -1,0 +1,20 @@
+@layer axismundi-admin.components {
+	.ax-admin-registry-icon {
+		block-size: var( --ax-admin-registry-icon-size );
+		display: inline-flex;
+		flex: 0 0 var( --ax-admin-registry-icon-size );
+		inline-size: var( --ax-admin-registry-icon-size );
+	}
+
+	.ax-admin-registry-icon[data-state="loading"] {
+		background: currentColor;
+		opacity: 0;
+	}
+
+	.ax-admin-registry-icon svg {
+		block-size: 100%;
+		display: block;
+		fill: currentColor;
+		inline-size: 100%;
+	}
+}

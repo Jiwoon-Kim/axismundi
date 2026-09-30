@@ -76,7 +76,7 @@ Components   axismundi/components
 
 ## 후속 구현
 
-`docs/DECISION-ADMIN-ICON-LIBRARY.md`는 Axismundi-owned asset manifest, automatic
+`docs/DECISION-ADMIN-ICON-LIBRARY.md`는 Core-compatible runtime manifest, automatic
 registry registration, licence/provenance policy를 기록한다. `RegistryIcon`은 Dialog
 plugin의 editor-side convention과 같이 registry의 sanitized REST record를 `safeHTML()`로
 한 번 더 통과시켜 render한다.

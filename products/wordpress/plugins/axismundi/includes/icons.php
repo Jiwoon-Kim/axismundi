@@ -2,9 +2,9 @@
 /**
  * Register Axismundi's curated Icon Registry collection from its asset manifest.
  *
- * The manifest is the catalogue source of truth: it records both the stable public identifier a
- * consumer asks for and provenance that WordPress's runtime registry does not model. The registry
- * receives only the data it needs to render an icon lazily from its SVG file.
+ * The runtime registration follows Core's `images/icon-library` plus `assets/icon-library-manifest`
+ * pattern. The manifest preserves Core's `label` and `filePath` contract, and carries Axismundi
+ * catalogue enrichment that registration deliberately ignores.
  *
  * @package Axismundi
  */
@@ -14,23 +14,20 @@ defined( 'ABSPATH' ) || exit;
 const AXISMUNDI_ICON_LIBRARY_COLLECTION = 'axismundi';
 
 /**
- * Read the local icon-library manifest.
+ * Read the local runtime icon-library manifest.
  *
  * @return array<string,mixed>|null Valid manifest, or null when it cannot safely register.
  */
 function axismundi_icon_library_manifest(): ?array {
-	$path = __DIR__ . '/images/icon-library/manifest.json';
+	$path = __DIR__ . '/assets/icon-library-manifest.php';
 	if ( ! is_readable( $path ) ) {
+		wp_trigger_error( __FUNCTION__, __( 'Axismundi icon collection manifest is missing or unreadable.', 'axismundi' ) );
 		return null;
 	}
 
-	$manifest = json_decode( (string) file_get_contents( $path ), true );
-	if (
-		! is_array( $manifest ) ||
-		! isset( $manifest['collection']['slug'], $manifest['icons'] ) ||
-		AXISMUNDI_ICON_LIBRARY_COLLECTION !== $manifest['collection']['slug'] ||
-		! is_array( $manifest['icons'] )
-	) {
+	$manifest = include $path;
+	if ( empty( $manifest ) || ! is_array( $manifest ) ) {
+		wp_trigger_error( __FUNCTION__, __( 'Axismundi icon collection manifest is empty or invalid.', 'axismundi' ) );
 		return null;
 	}
 
@@ -58,30 +55,40 @@ function axismundi_register_icon_library(): void {
 		return;
 	}
 
-	$collection = $manifest['collection'];
 	wp_register_icon_collection(
 		AXISMUNDI_ICON_LIBRARY_COLLECTION,
 		array(
-			'label'       => (string) ( $collection['label'] ?? 'Axismundi' ),
-			'description' => (string) ( $collection['description'] ?? '' ),
+			'label'       => __( 'Axismundi', 'axismundi' ),
+			'description' => __( 'Curated visual resources used by Axismundi applications.', 'axismundi' ),
 		)
 	);
 
 	$directory = __DIR__ . '/images/icon-library/';
-	foreach ( $manifest['icons'] as $name => $icon ) {
+	foreach ( $manifest as $name => $icon ) {
 		if (
 			! is_string( $name ) ||
 			! preg_match( '/^[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/', $name ) ||
 			! is_array( $icon ) ||
 			empty( $icon['label'] ) ||
-			empty( $icon['file'] )
+			empty( $icon['filePath'] ) ||
+			! is_string( $icon['filePath'] )
 		) {
-			continue;
+			_doing_it_wrong(
+				__FUNCTION__,
+				__( 'Axismundi icon collection manifest must provide a valid label and "filePath" for each icon.', 'axismundi' ),
+				AXISMUNDI_CAPSTONE_VERSION
+			);
+			return;
 		}
 
-		$file = (string) $icon['file'];
+		$file = $icon['filePath'];
 		if ( basename( $file ) !== $file || ! str_ends_with( $file, '.svg' ) || ! is_readable( $directory . $file ) ) {
-			continue;
+			_doing_it_wrong(
+				__FUNCTION__,
+				__( 'Axismundi icon collection manifest must reference a readable SVG inside its icon-library directory.', 'axismundi' ),
+				AXISMUNDI_CAPSTONE_VERSION
+			);
+			return;
 		}
 
 		wp_register_icon(

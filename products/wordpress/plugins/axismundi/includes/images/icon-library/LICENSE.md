@@ -8,8 +8,9 @@ License 2.0.
 * Licence: https://www.apache.org/licenses/LICENSE-2.0
 
 They are the `outlined` style at 24dp, `FILL 0`, `wght 400`, `GRAD 0`, `opsz 24`. The
-`manifest.json` records the original Material Symbols name and the semantic Axismundi registry
-identifier independently. The identifier is stable even if the chosen glyph changes later.
+`../../assets/icon-library-manifest.php` records the original Material Symbols name and the
+semantic Axismundi registry identifier independently. The identifier is stable even if the chosen
+glyph changes later.
 
 The checked-in files differ from their exports only in rendering attributes owned by the
 consumer:

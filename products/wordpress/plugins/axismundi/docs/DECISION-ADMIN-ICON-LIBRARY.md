@@ -16,14 +16,21 @@ Axismundi가 소유하는 정적 SVG와 catalogue metadata는 다음 경로에 �
 
 ```text
 includes/images/icon-library/
-  manifest.json
   *.svg
   LICENSE.md
+includes/assets/
+  icon-library-manifest.php
 ```
 
-`includes/icons.php`는 manifest를 읽어 `axismundi` collection과 각 `axismundi/*` icon을
-자동 등록한다. registry identifier는 UI의 의미를 표현하고, Material Symbols glyph 이름은
-manifest의 provenance metadata에 남긴다.
+`includes/icons.php`는 Core의 `images/icon-library` + `assets/icon-library-manifest.php`
+registration pattern을 따라 runtime manifest를 include하고 `axismundi` collection과 각
+`axismundi/*` icon을 자동 등록한다. registry identifier는 UI의 의미를 표현하고, Material
+Symbols glyph 이름은 manifest의 `catalogue.provenance` metadata에 남긴다.
+
+현재 plugin minimum인 WordPress 7.1에서는 top-level Core-compatible runtime fields를
+`label`, `filePath`로 제한한다. `public`처럼 7.2 이후에 추가된 Core field는 minimum
+version을 올리거나 compatibility policy를 별도로 정할 때까지 등록하지 않는다. 검색용
+`keywords`도 registry schema를 확장하지 않고 `catalogue` metadata에만 둔다.
 
 ```text
 axismundi/styles       <- Material Symbols: palette
@@ -51,7 +58,7 @@ markup을 request마다 메모리에 올리거나 inline하지 않는다.
 
 Material Symbols export의 `fill="#e3e3e3"`, `width`, `height`만 제거한다. icon의
 색상과 size는 rendering surface가 소유해야 하며, path와 `viewBox`는 바꾸지 않는다.
-세부 provenance와 Apache-2.0 licence는 같은 directory의 `LICENSE.md`와 manifest에
+세부 provenance와 Apache-2.0 licence는 같은 directory의 `LICENSE.md`와 runtime manifest에
 기록한다.
 
 ## 의도적으로 미룸

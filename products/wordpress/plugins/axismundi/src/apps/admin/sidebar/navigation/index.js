@@ -14,21 +14,39 @@ function createNavigationState() {
 	let state = {
 		direction: null,
 		focusSelector: null,
+		focusStack: [],
 	};
 
 	return {
 		get: () => state,
 		navigate: ( direction, focusSelector = null ) => {
+			if ( direction === 'forward' ) {
+				const focusStack = focusSelector
+					? [ ...state.focusStack, focusSelector ]
+					: state.focusStack;
+
+				state = { direction, focusSelector, focusStack };
+				return;
+			}
+
+			if ( direction === 'back' ) {
+				const returnFocusSelector = state.focusStack[ state.focusStack.length - 1 ] || null;
+				state = {
+					direction,
+					focusSelector: returnFocusSelector,
+					focusStack: state.focusStack.slice( 0, -1 ),
+				};
+				return;
+			}
+
 			state = {
-				direction,
-				focusSelector:
-					direction === 'forward' && focusSelector
-						? focusSelector
-						: state.focusSelector,
+				direction: null,
+				focusSelector: null,
+				focusStack: [],
 			};
 		},
 		reset: () => {
-			state = { direction: null, focusSelector: null };
+			state = { direction: null, focusSelector: null, focusStack: [] };
 		},
 	};
 }

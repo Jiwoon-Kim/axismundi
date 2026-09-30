@@ -23,7 +23,7 @@ route/history state
   URL, browser back/forward, resource route
 
 sidebar navigation state
-  current screen, direction, focus return selector
+  current screen, direction, focus return selector stack
 ```
 
 두 state는 연결되지만 같은 state가 아니다.
@@ -33,7 +33,10 @@ sidebar navigation state
 - child screen의 Back은 URL을 새로 쓰지 않고 sidebar screen만 root로 되돌린다.
 - browser back/forward와 page reload는 route의 default screen으로 sidebar를 다시 동기화한다.
 - forward screen은 첫 tabbable control, 현재 Design resource screen에서는 Back button에 focus한다.
-- Back은 forward trigger의 id로 focus를 복원한다.
+- forward navigation은 trigger id를 LIFO focus stack에 추가한다.
+- Back은 stack의 가장 최근 trigger에 focus를 복원한 뒤 그 entry를 pop한다. 따라서
+  `Design -> Assets -> Icons`처럼 두 단계 이상 내려간 뒤에도 각 Back이 바로 앞 screen의
+  trigger를 복원한다.
 
 ## Design Root
 

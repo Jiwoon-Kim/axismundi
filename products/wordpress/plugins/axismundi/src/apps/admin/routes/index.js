@@ -1,6 +1,6 @@
 import { __ } from '@wordpress/i18n';
 import { __experimentalItemGroup as ItemGroup } from '@wordpress/components';
-import { layout } from '@wordpress/icons';
+import { layout, media, symbol, typography } from '@wordpress/icons';
 import { getAxismundiConfig } from '../../../shared/runtime/config';
 import RouteContent from '../components/route-content';
 import FrontendPreview from '../preview/frontend-preview';
@@ -19,6 +19,21 @@ const DESIGN_SECTIONS = [
 	{ id: 'template-parts', label: __( 'Template Parts', 'axismundi' ), icon: layout, withChevron: true },
 	{ id: 'patterns', label: __( 'Patterns', 'axismundi' ), registryIcon: 'axismundi/patterns', withChevron: true },
 	{ id: 'components', label: __( 'Components', 'axismundi' ), registryIcon: 'axismundi/components', withChevron: true },
+];
+
+const ASSETS_SECTION = {
+	id: 'assets',
+	label: __( 'Assets', 'axismundi' ),
+	icon: media,
+	path: '/design/assets',
+	screen: 'assets-root',
+	withChevron: true,
+};
+
+const ASSET_SECTIONS = [
+	{ id: 'fonts', label: __( 'Fonts', 'axismundi' ), icon: typography },
+	{ id: 'icons', label: __( 'Icons', 'axismundi' ), registryIcon: 'axismundi/icons' },
+	{ id: 'emojis', label: __( 'Emojis', 'axismundi' ), icon: symbol },
 ];
 
 function normalizePath( path ) {
@@ -139,8 +154,8 @@ function DesignSidebarRoot( { path, navigate } ) {
 			content={
 				<nav aria-label={ __( 'Design sections', 'axismundi' ) }>
 					<ItemGroup className="ax-admin-sidebar-screen-main">
-						{ DESIGN_SECTIONS.map( ( item ) => {
-							const itemPath = `/design/${ item.id }`;
+						{ [ ...DESIGN_SECTIONS, ASSETS_SECTION ].map( ( item ) => {
+							const itemPath = item.path || `/design/${ item.id }`;
 							return (
 								<NavigationItem
 									key={ item.id }
@@ -149,8 +164,45 @@ function DesignSidebarRoot( { path, navigate } ) {
 									registryIcon={ item.registryIcon }
 									path={ itemPath }
 									navigate={ navigate }
-									screen={ item.id }
+									screen={ item.screen || item.id }
 									withChevron={ item.withChevron }
+								>
+									{ item.label }
+								</NavigationItem>
+							);
+						} ) }
+					</ItemGroup>
+				</nav>
+			}
+		/>
+	);
+}
+
+function AssetsSidebarRoot( { path, navigate } ) {
+	return (
+		<SidebarNavigationScreen
+			title={ __( 'Assets', 'axismundi' ) }
+			description={ __( 'Manage frontend presentation assets.', 'axismundi' ) }
+			onBack={ () =>
+				navigate( '/design', {
+					direction: 'back',
+					screen: 'design-root',
+				} )
+			}
+			content={
+				<nav aria-label={ __( 'Asset sections', 'axismundi' ) }>
+					<ItemGroup className="ax-admin-sidebar-screen-main">
+						{ ASSET_SECTIONS.map( ( item ) => {
+							const itemPath = `/design/assets/${ item.id }`;
+							return (
+								<NavigationItem
+									key={ item.id }
+									active={ path === itemPath }
+									icon={ item.icon }
+									registryIcon={ item.registryIcon }
+									path={ itemPath }
+									navigate={ navigate }
+									screen={ `assets-${ item.id }` }
 								>
 									{ item.label }
 								</NavigationItem>
@@ -186,6 +238,29 @@ function DesignSidebar( { path, navigate, section, sidebarScreen } ) {
 	return <DesignSectionSidebar path={ path } navigate={ navigate } section={ section } />;
 }
 
+function AssetSectionSidebar( { path, navigate, section } ) {
+	return (
+		<SidebarNavigationScreen
+			title={ section.label }
+			onBack={ () =>
+				navigate( path, {
+					direction: 'back',
+					history: false,
+					screen: 'assets-root',
+				} )
+			}
+		/>
+	);
+}
+
+function AssetsSidebar( { path, navigate, section, sidebarScreen } ) {
+	if ( sidebarScreen === 'assets-root' ) {
+		return <AssetsSidebarRoot path={ path } navigate={ navigate } />;
+	}
+
+	return <AssetSectionSidebar path={ path } navigate={ navigate } section={ section } />;
+}
+
 function OperationsContent( { route, showNavigation } ) {
 	return (
 		<RouteContent
@@ -204,6 +279,17 @@ function DesignContent( { route, showNavigation } ) {
 		<RouteContent
 			backLabel={ __( 'Back to navigation', 'axismundi' ) }
 			eyebrow={ __( 'Design', 'axismundi' ) }
+			onShowNavigation={ showNavigation }
+			title={ route.label }
+		/>
+	);
+}
+
+function AssetsContent( { route, showNavigation } ) {
+	return (
+		<RouteContent
+			backLabel={ __( 'Back to navigation', 'axismundi' ) }
+			eyebrow={ __( 'Assets', 'axismundi' ) }
 			onShowNavigation={ showNavigation }
 			title={ route.label }
 		/>
@@ -253,6 +339,28 @@ const DESIGN_ROOT_ROUTE = {
 	},
 };
 
+const ASSETS_ROOT_ROUTE = {
+	path: '/design/assets',
+	workspace: 'design',
+	label: __( 'Assets', 'axismundi' ),
+	layout: {
+		contentLabel: __( 'Assets', 'axismundi' ),
+		navigationLabel: __( 'Axismundi assets', 'axismundi' ),
+		sidebarScreen: 'assets-root',
+		sidebarShouldAnimate: true,
+		workspace: 'design',
+	},
+	areas: {
+		sidebar: ( context ) => <AssetsSidebarRoot path="/design/assets" navigate={ context.navigate } />,
+		content: ( context ) => (
+			<AssetsContent
+				route={ { label: __( 'Assets', 'axismundi' ), path: '/design/assets' } }
+				showNavigation={ context.showNavigation }
+			/>
+		),
+	},
+};
+
 function createDesignRoute( section ) {
 	const path = `/design/${ section.id }`;
 	return {
@@ -274,10 +382,32 @@ function createDesignRoute( section ) {
 	};
 }
 
+function createAssetRoute( section ) {
+	const path = `/design/assets/${ section.id }`;
+	return {
+		path,
+		workspace: 'design',
+		label: section.label,
+		layout: {
+			contentLabel: section.label,
+			navigationLabel: __( 'Axismundi assets', 'axismundi' ),
+			sidebarScreen: `assets-${ section.id }`,
+			sidebarShouldAnimate: true,
+			workspace: 'design',
+		},
+		areas: {
+			sidebar: ( context ) => <AssetsSidebar path={ path } navigate={ context.navigate } section={ section } sidebarScreen={ context.sidebarScreen } />,
+			content: ( context ) => <AssetsContent route={ { path, ...section } } showNavigation={ context.showNavigation } />,
+		},
+	};
+}
+
 const ROUTES = [
 	...OPERATION_SECTIONS.map( createOperationsRoute ),
 	DESIGN_ROOT_ROUTE,
 	...DESIGN_SECTIONS.map( createDesignRoute ),
+	ASSETS_ROOT_ROUTE,
+	...ASSET_SECTIONS.map( createAssetRoute ),
 ];
 
 export function resolveAdminRoute( path = getAdminPath() ) {

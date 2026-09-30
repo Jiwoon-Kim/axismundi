@@ -1,4 +1,4 @@
-import { NavigationSuite } from './components/material/navigation-suite';
+import { NavigationSuite } from './layouts/navigation-suite';
 
 export function FrontendApp() {
 	return (

@@ -69,6 +69,7 @@ function axismundi_capstone_enqueue_app( string $application ) : void {
 		'window.axismundiCapstone = ' . wp_json_encode(
 			array(
 				'application' => $application,
+				'adminUrl'    => admin_url(),
 				'route'       => '/' . AXISMUNDI_CAPSTONE_ROUTE . '/',
 				'path'        => 'admin' === $application ? axismundi_capstone_admin_path() : '/',
 			)

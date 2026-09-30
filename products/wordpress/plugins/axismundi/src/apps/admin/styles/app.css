@@ -33,77 +33,6 @@
 		min-block-size: 0;
 	}
 
-	.ax-admin-layout__sidebar {
-		display: flex;
-		flex-direction: column;
-		block-size: 100%;
-		min-block-size: 0;
-		padding: 2rem 1.25rem 1.25rem;
-		background: transparent;
-	}
-
-	.ax-admin-layout__sidebar-heading {
-		display: flex;
-		align-items: flex-start;
-		gap: 0.75rem;
-	}
-
-	.ax-admin-layout__nav-item--drilldown {
-		align-items: center;
-		display: flex;
-		justify-content: space-between;
-	}
-
-	.edit-site-sidebar-navigation-item__drilldown-indicator {
-		flex: 0 0 auto;
-		margin-inline-start: auto;
-	}
-
-	.ax-admin-layout__back {
-		min-inline-size: 2rem;
-		padding-inline: 0.25rem;
-	}
-
-	.ax-admin-layout__brand,
-	.ax-admin-layout__eyebrow {
-		margin: 0;
-		color: var( --ax-admin-on-surface-subtle );
-		font-size: 0.75rem;
-		font-weight: 600;
-		letter-spacing: 0;
-		text-transform: uppercase;
-	}
-
-	.ax-admin-layout__title {
-		margin: 0.5rem 0 1rem;
-		color: var( --ax-admin-on-surface );
-		font-size: 1.5rem;
-	}
-
-	.ax-admin-layout__description {
-		margin: 0 0 1.5rem;
-		color: var( --ax-admin-on-surface-subtle );
-		font-size: 0.875rem;
-		line-height: 1.5;
-	}
-
-	.ax-admin-layout__nav {
-		display: grid;
-		gap: 0.25rem;
-	}
-
-	.ax-admin-layout__nav-item {
-		justify-content: flex-start;
-		min-block-size: var( --wpds-dimension-size-md, 2.75rem );
-		padding-inline: var( --wpds-spacing-20, 0.75rem );
-		text-align: start;
-	}
-
-	.ax-admin-layout__nav-item[aria-current="page"] {
-		background: var( --wpds-color-background-interactive-neutral-weak-active, #e0e0e0 );
-		font-weight: var( --wpds-typography-font-weight-emphasis, 600 );
-	}
-
 	.ax-admin-layout__save-status {
 		margin: auto 0 0;
 		padding: 1rem 0 0;
@@ -123,8 +52,7 @@
 		color: var( --wpds-color-foreground-content-neutral, #1e1e1e );
 	}
 
-	.ax-admin-layout__header,
-	.ax-admin-layout__inspector-header {
+	.ax-admin-route-content__header {
 		display: flex;
 		align-items: center;
 		gap: 1rem;
@@ -133,19 +61,13 @@
 		background: var( --wpds-color-background-surface-neutral, #fcfcfc );
 	}
 
-	.ax-admin-layout__header h2,
-	.ax-admin-layout__inspector h2 {
+	.ax-admin-route-content__header h2 {
 		margin: 0;
 		font-size: 1.125rem;
 	}
 
-	.ax-admin-layout__content-back {
+	.ax-admin-route-content__back {
 		display: none;
-	}
-
-	.ax-admin-layout__header > button,
-	.ax-admin-layout__inspector-header > button {
-		margin-inline-start: auto;
 	}
 
 	.ax-admin-layout__area {
@@ -154,50 +76,31 @@
 		flex: 1;
 		min-block-size: 0;
 		margin: 0;
-		overflow: hidden;
+		overflow: auto;
 		background: var( --wpds-color-background-surface-neutral, #fcfcfc );
 		box-shadow: 0 0 0 1px var( --wpds-color-stroke-surface-neutral-weak, #f0f0f0 );
 	}
 
-	.ax-admin-layout__area-content {
-		flex: 1;
-		min-block-size: 0;
-		overflow: auto;
+	.ax-admin-route-content__body {
 		padding: clamp( 1.5rem, 4vw, 4rem );
 		border-top: 1px solid var( --wpds-color-stroke-surface-neutral-weak, #f0f0f0 );
 	}
 
-	.ax-admin-layout__area h3 {
+	.ax-admin-route-content__body h3 {
 		margin: 0;
 		font-size: 1.5rem;
 	}
 
-	.ax-admin-layout__area > p,
-	.ax-admin-layout__inspector > p {
+	.ax-admin-route-content__body > p {
 		line-height: 1.5;
 	}
 
-	.ax-admin-layout__inspector {
-		display: flex;
-		flex: 0 0 24rem;
-		flex-direction: column;
-		margin: 1rem 1rem 1rem 0;
-		background: var( --wpds-color-background-surface-neutral, #fcfcfc );
-		border-radius: 0.5rem;
-		overflow: hidden;
-	}
-
-	.ax-admin-layout__inspector-header {
-		border-radius: 0;
-		border-bottom: 1px solid var( --wpds-color-stroke-surface-neutral-weak, #f0f0f0 );
-	}
-
-	.ax-admin-layout__inspector > p {
-		padding: 0 1.5rem;
+	.ax-admin-layout__preview {
+		padding: 0 clamp( 1.5rem, 4vw, 4rem ) clamp( 1.5rem, 4vw, 4rem );
 	}
 
 	.ax-admin-frontend-preview {
-		margin-block-start: 2rem;
+		margin: 0;
 		border: 1px solid var( --ax-admin-outline );
 		border-radius: var( --ax-admin-radius );
 		overflow: hidden;
@@ -231,14 +134,8 @@
 			border-radius: var( --wpds-border-radius-xl, 12px );
 		}
 
-		.ax-admin-layout__header {
+		.ax-admin-route-content__header {
 			border-radius: var( --wpds-border-radius-xl, 12px ) var( --wpds-border-radius-xl, 12px ) 0 0;
-		}
-	}
-
-	@media screen and ( max-width: 960px ) {
-		.ax-admin-layout__inspector {
-			display: none;
 		}
 	}
 
@@ -248,19 +145,16 @@
 			display: none;
 		}
 
-		.ax-admin-layout__sidebar {
-			padding-block: 1.5rem;
-		}
-
-		.ax-admin-layout__content-back {
+		.ax-admin-route-content__back {
 			display: inline-flex;
 		}
 
-		.ax-admin-layout__header {
+		.ax-admin-route-content__header {
 			padding-inline: 1rem;
 		}
 
-		.ax-admin-layout__area-content {
+		.ax-admin-route-content__body,
+		.ax-admin-layout__preview {
 			padding: 1.5rem 1rem;
 		}
 	}

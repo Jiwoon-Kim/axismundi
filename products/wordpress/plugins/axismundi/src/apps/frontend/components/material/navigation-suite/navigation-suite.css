@@ -1,0 +1,48 @@
+@layer axismundi.material {
+	.md-navigation-suite {
+		min-block-size: 100dvb;
+		display: grid;
+		grid-template-areas: "content";
+		grid-template-columns: minmax( 0, 1fr );
+		background: var( --ax-social-surface );
+		color: var( --ax-social-on-surface );
+	}
+
+	.md-navigation-suite__content {
+		grid-area: content;
+		min-inline-size: 0;
+	}
+
+	.md-navigation-suite__bar,
+	.md-navigation-suite__rail {
+		display: none;
+	}
+
+	/* M3 compact: bottom navigation bar. */
+	@media ( max-width: 599px ) {
+		.md-navigation-suite:has( .md-navigation-suite__bar ) {
+			grid-template-areas:
+				"content"
+				"bar";
+			grid-template-rows: minmax( 0, 1fr ) auto;
+		}
+
+		.md-navigation-suite__bar {
+			grid-area: bar;
+			display: block;
+		}
+	}
+
+	/* M3 medium and wider: navigation rail. */
+	@media ( min-width: 600px ) {
+		.md-navigation-suite:has( .md-navigation-suite__rail ) {
+			grid-template-areas: "rail content";
+			grid-template-columns: auto minmax( 0, 1fr );
+		}
+
+		.md-navigation-suite__rail {
+			grid-area: rail;
+			display: block;
+		}
+	}
+}

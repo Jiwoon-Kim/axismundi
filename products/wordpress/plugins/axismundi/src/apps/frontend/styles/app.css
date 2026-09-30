@@ -1,16 +1,8 @@
 @layer axismundi.templates {
-	.axismundi-social {
-		max-inline-size: 72rem;
-		min-block-size: 18rem;
+	.ax-social-shell {
+		max-inline-size: 47.5rem;
 		margin-inline: auto;
-		padding: clamp( 1rem, 3vw, 2rem );
-		background: var( --ax-social-surface );
-		color: var( --ax-social-on-surface );
-	}
-
-	.ax-social-shell__header {
-		padding-block-end: var( --ax-social-space );
-		border-block-end: 1px solid var( --ax-social-outline );
+		padding: 1.5rem;
 	}
 
 	.ax-social-shell__eyebrow {
@@ -28,15 +20,10 @@
 		line-height: 1.2;
 	}
 
-	.ax-social-shell__main {
+	.ax-social-shell__message {
 		margin-block-start: var( --ax-social-space );
 		padding: var( --ax-social-space );
 		background: var( --ax-social-surface-subtle );
 		border-radius: var( --ax-social-radius );
-	}
-
-	.ax-social-shell__main p {
-		margin: 0;
-		line-height: 1.5;
 	}
 }

@@ -2,7 +2,9 @@
 	"name": "axismundi",
 	"private": true,
 	"scripts": {
-		"build": "wp-scripts build frontend=src/apps/frontend/index.js admin=src/apps/admin/index.js"
+		"build": "wp-scripts build frontend=src/apps/frontend/index.js admin=src/apps/admin/index.js",
+		"start": "wp-scripts start frontend=src/apps/frontend/index.js admin=src/apps/admin/index.js",
+		"start:hot": "wp-scripts start --hot frontend=src/apps/frontend/index.js admin=src/apps/admin/index.js"
 	},
 	"devDependencies": {
 		"@wordpress/admin-ui": "^2.11.0",

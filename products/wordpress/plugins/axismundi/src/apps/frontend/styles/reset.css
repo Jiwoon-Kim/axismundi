@@ -1,6 +1,35 @@
 @layer axismundi.reset {
+	html,
+	body.axismundi-app-document,
+	#axismundi-root {
+		min-block-size: 100%;
+	}
+
+	body.axismundi-app-document {
+		margin: 0;
+		background: var( --md-sys-color-surface, #fffbfe );
+		color: var( --md-sys-color-on-surface, #1d1b20 );
+		font-family: "Roboto Flex", var( --axismundi-cjk-sans, system-ui ), sans-serif;
+		font-size: 1rem;
+		font-weight: 400;
+		line-height: 1.5;
+		letter-spacing: 0.5px;
+	}
+
 	.axismundi-social,
 	.axismundi-social * {
 		box-sizing: border-box;
+	}
+
+	.axismundi-social :is( button, input, select, textarea ) {
+		font: inherit;
+	}
+
+	.axismundi-social :is( code, kbd, pre, samp ) {
+		font-family: "Roboto Mono", monospace;
+	}
+
+	.axismundi-social blockquote {
+		font-family: "Roboto Serif", var( --axismundi-cjk-serif, Georgia ), serif;
 	}
 }

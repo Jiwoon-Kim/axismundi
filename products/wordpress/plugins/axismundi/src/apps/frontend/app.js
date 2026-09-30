@@ -1,6 +1,19 @@
 import { NavigationSuite } from './layouts/navigation-suite';
+import { StylebookPage } from './pages/stylebook';
+
+function getFrontendView() {
+	const route = window.axismundiCapstone?.route ?? '/social/';
+	const basePath = route.replace( /\/+$/, '' );
+	const pathname = window.location.pathname.replace( /\/+$/, '' );
+
+	return pathname === `${ basePath }/stylebook` ? 'stylebook' : 'social';
+}
 
 export function FrontendApp() {
+	if ( 'stylebook' === getFrontendView() ) {
+		return <StylebookPage />;
+	}
+
 	return (
 		<NavigationSuite>
 			<section className="ax-social-shell" aria-labelledby="ax-social-shell-title">

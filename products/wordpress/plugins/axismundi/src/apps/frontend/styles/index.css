@@ -2,4 +2,5 @@
 @import url( './reset.css' );
 @import url( './tokens.css' );
 @import url( '../layouts/navigation-suite/navigation-suite.css' );
+@import url( '../pages/stylebook/stylebook.css' );
 @import url( './app.css' );

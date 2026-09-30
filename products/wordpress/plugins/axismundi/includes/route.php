@@ -10,7 +10,7 @@ defined( 'ABSPATH' ) || exit;
 /** @return void */
 function axismundi_capstone_add_rewrite_rule() : void {
 	add_rewrite_rule(
-		'^' . AXISMUNDI_CAPSTONE_ROUTE . '/?$',
+		'^' . AXISMUNDI_CAPSTONE_ROUTE . '(?:/stylebook)?/?$',
 		'index.php?' . AXISMUNDI_CAPSTONE_QUERY_VAR . '=1',
 		'top'
 	);
@@ -20,12 +20,12 @@ add_action( 'init', 'axismundi_capstone_add_rewrite_rule' );
 /** @return void */
 function axismundi_capstone_upgrade_rewrite_rules() : void {
 	$option = 'axismundi_capstone_rewrite_version';
-	if ( AXISMUNDI_CAPSTONE_VERSION === get_option( $option ) ) {
+	if ( AXISMUNDI_CAPSTONE_REWRITE_VERSION === get_option( $option ) ) {
 		return;
 	}
 
 	flush_rewrite_rules( false );
-	update_option( $option, AXISMUNDI_CAPSTONE_VERSION, false );
+	update_option( $option, AXISMUNDI_CAPSTONE_REWRITE_VERSION, false );
 }
 add_action( 'init', 'axismundi_capstone_upgrade_rewrite_rules', 20 );
 
@@ -45,9 +45,19 @@ function axismundi_capstone_is_public_route() : bool {
 
 	// A public query var is how rewrite rules enter WordPress, but it must not make
 	// `/?axismundi_capstone=1` a second, canonical-looking application URL.
-	return '1' === (string) get_query_var( AXISMUNDI_CAPSTONE_QUERY_VAR )
-		&& isset( $wp->request )
-		&& AXISMUNDI_CAPSTONE_ROUTE === trim( (string) $wp->request, '/' );
+	if ( '1' !== (string) get_query_var( AXISMUNDI_CAPSTONE_QUERY_VAR ) || ! isset( $wp->request ) ) {
+		return false;
+	}
+
+	$request = trim( (string) $wp->request, '/' );
+	return in_array(
+		$request,
+		array(
+			AXISMUNDI_CAPSTONE_ROUTE,
+			AXISMUNDI_CAPSTONE_ROUTE . '/stylebook',
+		),
+		true
+	);
 }
 
 /**

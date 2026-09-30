@@ -25,9 +25,9 @@ Axismundi Admin의 Operations와 Design은 WordPress Site Editor와 같은 종�
 
 현재 포트 위치는 다음과 같다.
 
-- `src/apps/admin/components/site-editor/sidebar-button/index.js`
-- `src/apps/admin/components/site-editor/sidebar-navigation-item/index.js`
-- `src/apps/admin/components/site-editor/sidebar-navigation-screen/index.js`
+- `src/apps/admin/components/sidebar/sidebar-button/index.js`
+- `src/apps/admin/components/sidebar/sidebar-navigation-item/index.js`
+- `src/apps/admin/components/sidebar/sidebar-navigation-screen/index.js`
 
 포트한 컴포넌트는 다음 공개 WordPress 패키지만 런타임 의존성으로 사용한다.
 
@@ -56,11 +56,11 @@ private router, edit-site store, sidebar context는 포트하지 않는다.
 `SidebarNavigationItem`은 Site Editor와 같은 공개 primitive 조합을 유지한다.
 
 ```jsx
-<Item className="edit-site-sidebar-navigation-item">
+<Item className="ax-admin-sidebar-navigation-item">
 	<Stack direction="row" align="center" justify="start" gap="sm">
 		<Icon icon={ icon } size={ 24 } />
 		<FlexBlock>{ children }</FlexBlock>
-		<Icon className="edit-site-sidebar-navigation-item__drilldown-indicator" />
+		<Icon className="ax-admin-sidebar-navigation-item__drilldown-indicator" />
 	</Stack>
 </Item>
 ```
@@ -92,12 +92,13 @@ Design 현재 항목의 icon provenance는 다음과 같다.
 - `@wordpress/edit-site` private API와 `unlock()`
 - `@wordpress/router`의 edit-site 전용 history/link/location 결합
 - `editSiteStore`와 theme preview 상태
-- `SidebarNavigationContext`의 애니메이션 방향과 focus 복원 정책
+- Gutenberg `SidebarNavigationContext` 자체와 edit-site store 결합
 - dashboard URL을 Site Editor settings store에서 읽는 동작
 
 대신 Axismundi는 URL의 `p` query parameter를 읽고, `history.pushState()`로
-자신의 화면을 전환한다. 이는 플러그인 admin screen이 WordPress core 또는
-Gutenberg 내부 store를 소유하지 않는다는 경계를 보장한다.
+자신의 화면을 전환한다. Axismundi-owned sidebar navigation provider가 forward/back
+direction과 focus restoration을 소유한다. 이는 플러그인 admin screen이 WordPress
+core 또는 Gutenberg 내부 store를 소유하지 않는다는 경계를 보장한다.
 
 ## CSS와 inline style의 경계
 
@@ -119,7 +120,7 @@ Site Editor를 시각적 정답으로 보되, 구현 관행 전체를 복제하�
 
 현재 실행 중인 local Gutenberg build의 header back chevron SVG는 설치된
 `@wordpress/icons` export와 path가 다르다. 그래서
-`src/apps/admin/components/site-editor/sidebar-icons.js`에 host build와 동일한
+`src/apps/admin/components/sidebar/sidebar-icons.js`에 host build와 동일한
 filled chevron을 compatibility asset으로 보관한다.
 
 이 파일은 새로운 디자인 시스템이 아니다. WordPress/Gutenberg 의존성 버전을
@@ -138,7 +139,7 @@ filled chevron을 compatibility asset으로 보관한다.
 - root sidebar control은 dashboard URL을 가진 `<a>`이다.
 - Design sidebar의 back control은 `<button aria-label="Back">`이다.
 - navigation item은 leading `Icon`을 출력한다.
-- drilldown item은 `edit-site-sidebar-navigation-item__drilldown-indicator`를
+- drilldown item은 `ax-admin-sidebar-navigation-item__drilldown-indicator`를
   가진 trailing `Icon`을 출력한다.
 - sidebar screen wrapper, content, item의 좌우 padding과 폭을 DevTools에서
   원본과 비교한다.

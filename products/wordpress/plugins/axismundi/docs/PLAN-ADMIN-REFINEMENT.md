@@ -225,23 +225,23 @@ axismundi/*
 third-party/*
 ```
 
-위 identifier는 conceptual namespace 예시다. 특히 `material-symbols/*`가 실제
-collection naming 규칙으로 허용되는지는 아직 검증되지 않았으며, registry 조사 결과에
-따라 확정한다.
+이 조사 항목은 `docs/RESEARCH-ICON-REGISTRY.md`로 완료했다. collection slug 문법은
+확인됐지만, Axismundi가 가져와 관리하는 Material Symbols subset은
+`material-symbols/*`가 아니라 Axismundi-owned collection인 `axismundi/*`로
+등록한다. asset provenance와 licence는 asset manifest에서 관리한다.
 
-다만 이 부분은 아직 구현 결정이 아니다. 다음을 실제 설치된 WordPress와 Gutenberg
-source에서 검증해야 한다.
+다음은 실제 설치된 WordPress와 Gutenberg source에서 검증했다.
 
-- WordPress icon registry의 PHP registration API와 availability
-- icon collection과 icon REST endpoint의 실제 route 및 권한
-- identifier 안정성, collection ownership, collection slug uniqueness, registration
-  conflict 처리 정책
-- `core/icon` block이 registry를 읽는 실제 data contract
-- REST payload의 SVG sanitization, cache, invalidation 책임
-- wp-admin과 `/social/`에서 registry client를 사용할 때의 인증/성능 조건
-- 기존 `@wordpress/icons`와 registry asset의 version/visual 차이를 처리하는 정책
+- WordPress 7.1.2 registry PHP API와 collection/name registration contract
+- REST routes, authenticated capability requirement, actual response payload
+- identifier uniqueness, collection ownership, and duplicate registration failure
+- `core/icon`의 `@wordpress/core-data` entity contract
+- file-backed SVG sanitization과 request-local cache boundary
+- Admin은 authenticated client가 될 수 있지만 `/social/`은 REST endpoint를 직접
+  소비하면 안 된다는 surface boundary
 
-검증이 끝나기 전에는 registry endpoint나 API 이름을 코드에 가정하지 않는다.
+후속 구현은 이 검증 기록을 따르며, future 7.2 `public` property에는 아직 의존하지
+않는다.
 
 ### 소유권 원칙
 
@@ -266,9 +266,9 @@ generic UI chrome인 back, close, chevron, more와 domain/resource icon인 actor
 object, federation, geo, calendar의 source policy도 registry 조사 결과와 WPDS/M3
 guidance를 보고 정한다.
 
-현재 `src/apps/admin/components/site-editor/sidebar-icons.js`의 local SVG는 temporary
-compatibility asset이다. icon registry 또는 aligned `@wordpress/icons` version을
-채택한 뒤에는 유지 여부를 다시 결정한다.
+현재 `src/apps/admin/components/sidebar/sidebar-icons.js`의 local SVG는 temporary
+compatibility asset이다. registry prototype이 실제 Admin contract를 확정한 뒤에만
+유지 여부를 다시 결정한다.
 
 ## 내일의 권장 순서
 

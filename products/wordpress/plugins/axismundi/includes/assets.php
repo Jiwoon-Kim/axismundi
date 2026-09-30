@@ -98,6 +98,10 @@ function axismundi_capstone_admin_path() : string {
 			'/design/template-parts',
 			'/design/patterns',
 			'/design/components',
+			'/design/assets',
+			'/design/assets/fonts',
+			'/design/assets/icons',
+			'/design/assets/emojis',
 		),
 		true
 	) ? $path : '/';

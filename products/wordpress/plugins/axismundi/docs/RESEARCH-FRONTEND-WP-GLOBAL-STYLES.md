@@ -64,6 +64,38 @@ effective callback은 Gutenberg implementation이다.
 `--wp--preset-*`를 참조하지만 정의하지는 않는다. 그러므로 reference를 제거하는 일과
 Core/Gutenberg preset definition을 제거하는 일은 분리해서 판단해야 한다.
 
+## Theme font-face output은 별도 경로
+
+다음 inline stylesheet는 `global-styles-inline-css`와 별개다.
+
+```html
+<style id="wp-fonts-local">@font-face { ... }</style>
+```
+
+2026-09-30 localhost `/social/`에서는 Roboto Flex 두 face, Roboto Serif, Roboto Mono 두
+face, Material Symbols Outlined를 포함한 여섯 `@font-face` rule을 확인했다.
+
+현재 Gutenberg 23.7.1 환경에서 출력 경로는 다음과 같다.
+
+```text
+wp_head priority 50
+  -> gutenberg_print_font_faces()
+  -> gutenberg_get_font_face_styles()
+  -> gutenberg_get_global_settings()
+  -> settings.typography.fontFamilies[*].fontFace[]
+  -> WP_Font_Face::generate_and_print()
+  -> #wp-fonts-local
+```
+
+`gutenberg_get_font_face_styles()`는 `theme.json`의 font-family declaration을 읽고,
+font face source의 `file:./` prefix를 `get_theme_file_uri()`로 theme URI로 바꾼다. 따라서
+theme-relative bundled font assets는 WordPress가 계속 resolve하며, Plugin은 font path나
+font resolver를 별도로 소유할 필요가 없다.
+
+`#global-styles-inline-css`에는 `@font-face`가 없다. 그러므로 `/social/`에서 global
+styles와 block-library CSS를 제거하더라도 `gutenberg_print_font_faces()`를 유지하면
+theme-declared font faces는 그대로 남길 수 있다.
+
 ## 의미
 
 `bbd2a13`의 foundation-only asset branch는 theme-owned CSS만 분리했다. 그러나 public
@@ -93,7 +125,8 @@ public route에서 WordPress global styles와 block-library styles를 conditiona
    `wp_common_block_scripts_and_styles`의 conditional exclusion 여부를 결정한다.
 3. public document DOM에서 `#global-styles-inline-css`와
    `#wp-block-library-inline-css`가 사라졌는지 검증한다.
-4. theme foundation token CSS와 plugin frontend bundle이 정상적으로 남는지 검증한다.
+4. `#wp-fonts-local`과 theme foundation token CSS, plugin frontend bundle이 정상적으로
+   남는지 검증한다.
 5. unrelated plugin stylesheet와 그 안의 `--wp--preset-*` reference는 별도 asset-policy
    checkpoint에서 다룬다.
 

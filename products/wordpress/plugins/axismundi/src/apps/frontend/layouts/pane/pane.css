@@ -1,0 +1,6 @@
+@layer axismundi.layouts {
+	.ax-pane {
+		min-block-size: 0;
+		min-inline-size: 0;
+	}
+}

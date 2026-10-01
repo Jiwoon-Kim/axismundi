@@ -192,6 +192,34 @@ This JSX is not a persisted template format. It must not be promoted to a `style
 schema, Gutenberg serialization, or user-editable instance tree before a real product need
 proves that model.
 
+### Pane primitive checkpoint
+
+The first implementation checkpoint establishes only the neutral primitives shared by later
+canonical layouts.
+
+```text
+src/apps/frontend/foundations/
+  viewport.json
+  spatial.json
+
+src/apps/frontend/layouts/
+  pane/
+  pane-group/
+
+src/apps/frontend/pages/stylebook/
+  layout-topology-fixtures.*
+```
+
+`Pane` is a minimal content-bearing Grid item. It owns neither CSS Grid tracks nor an
+accessibility-region wrapper. `PaneGroup` is a neutral Grid container with a tokenized gap;
+it owns neither a named M3 layout nor a breakpoint policy. The Stylebook fixtures exercise
+one-, two-, and three-pane tracks with those production primitives and deliberately use only
+placeholder content.
+
+This checkpoint does not implement `FeedLayout`, `SupportingPaneLayout`, or
+`ListDetailLayout`. Those canonical layouts must add their own topology/adaptive policy over
+these primitives after the raw Grid VQA is accepted.
+
 ## CSS ownership and token boundary
 
 ```text

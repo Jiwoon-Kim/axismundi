@@ -1,3 +1,5 @@
+import { LayoutTopologyFixtures } from './layout-topology-fixtures';
+
 /**
  * Social runtime verification surface.
  *
@@ -13,6 +15,7 @@ export function StylebookPage() {
 				<p className="ax-stylebook__eyebrow">Axismundi Social</p>
 				<h1 id="ax-stylebook-title" className="ax-stylebook__title">Stylebook</h1>
 			</header>
+			<LayoutTopologyFixtures />
 		</main>
 	);
 }

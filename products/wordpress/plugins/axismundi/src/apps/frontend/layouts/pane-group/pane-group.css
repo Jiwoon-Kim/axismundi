@@ -1,0 +1,7 @@
+@layer axismundi.layouts {
+	.ax-pane-group {
+		display: grid;
+		gap: var( --ax-layout-pane-gap );
+		min-inline-size: 0;
+	}
+}

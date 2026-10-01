@@ -58,22 +58,28 @@ runtime.
 
 ## File and layer boundary
 
-The future physical source is a Frontend-owned spatial token file, colocated with other global
-Frontend foundation styles. Grid and spacing belong in the same spatial foundation source
-because both vary with breakpoint and density.
+The Frontend-owned spatial contract is recorded in `foundations/spatial.json`; the native CSS
+projection is `styles/tokens/spatial.css`. The JSON is a human-readable contract, not a runtime
+dependency or CSS generator. Native media queries retain their threshold literals because CSS
+custom properties cannot provide media-query conditions.
+
+Grid and spacing belong in the same spatial foundation source because both vary with breakpoint
+and density.
 
 ```text
 src/apps/frontend/styles/
   layers.css
   tokens/
-    spatial.css                 <- future Frontend-owned source
+    spatial.css                 <- Frontend-owned CSS token source
+src/apps/frontend/foundations/
+  spatial.json                  <- Frontend-owned spatial contract
+  viewport.json                 <- Window size class contract
   layouts/
     ... layout consumers ...
 ```
 
-`spatial.css` is a proposed file boundary, not an instruction to create placeholder tokens
-before the first layout VQA. When introduced, it belongs to `axismundi.tokens`; grid placement
-rules remain in `axismundi.layouts`.
+`spatial.css` belongs to `axismundi.tokens`; grid placement rules remain in
+`axismundi.layouts`.
 
 ```text
 tokens
@@ -85,6 +91,26 @@ layouts
 
 This avoids hard-coded spatial values in layout/component selectors while also avoiding a
 second dependency on WordPress Global Styles.
+
+## Initial token projection
+
+The initial Frontend scale mirrors the already-established Axismundi spacing values without
+consuming the WordPress preset namespace. `--ax-space-25` through `--ax-space-900` map to the
+same `2px` through `72px` values declared by the theme, but are owned and consumed by Social.
+
+The first layout aliases are deliberately narrow:
+
+```text
+--ax-layout-window-margin
+  Compact: 16px
+  Medium and above: 24px
+
+--ax-layout-pane-gap
+  24px
+```
+
+Candidate fixed pane widths, ruler positions, and density values remain unpromoted until a
+canonical layout needs them and VQA establishes their product role.
 
 ## Material source constraints retained for VQA
 

@@ -1,0 +1,9 @@
+{
+	"windowSizeClasses": {
+		"compact": { "minWidth": 0, "maxWidth": 599 },
+		"medium": { "minWidth": 600, "maxWidth": 839 },
+		"expanded": { "minWidth": 840, "maxWidth": 1199 },
+		"large": { "minWidth": 1200, "maxWidth": 1599 },
+		"extraLarge": { "minWidth": 1600 }
+	}
+}

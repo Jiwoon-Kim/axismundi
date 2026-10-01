@@ -1,0 +1,43 @@
+@layer axismundi.layouts {
+	.ax-stylebook {
+		margin-inline: auto;
+		max-inline-size: 100%;
+		padding: var( --ax-layout-window-margin );
+	}
+
+	.ax-stylebook__header,
+	.ax-layout-fixture__header,
+	.ax-layout-fixture__case {
+		margin: 0;
+	}
+
+	.ax-layout-fixture {
+		display: grid;
+		gap: var( --ax-layout-pane-gap );
+		margin-block-start: var( --ax-layout-pane-gap );
+	}
+
+	.ax-layout-fixture__case {
+		display: grid;
+		gap: var( --ax-space-150 );
+	}
+
+	.ax-layout-fixture__group--one {
+		grid-template-columns: minmax( 0, 1fr );
+	}
+
+	.ax-layout-fixture__group--two {
+		grid-template-columns: repeat( 2, minmax( 0, 1fr ) );
+	}
+
+	.ax-layout-fixture__group--three {
+		grid-template-columns: repeat( 3, minmax( 0, 1fr ) );
+	}
+
+	.ax-layout-fixture__pane {
+		background: var( --md-sys-color-surface-container );
+		color: var( --md-sys-color-on-surface );
+		min-block-size: var( --ax-space-900 );
+		padding: var( --ax-space-200 );
+	}
+}

@@ -1,3 +1,5 @@
+import { Pane } from '../pane';
+
 /**
  * Places application regions without supplying navigation or supporting-pane
  * components. Those are independent Material or Axismundi components.
@@ -28,9 +30,13 @@ export function AppLayout( {
 			{ navigationRail ? (
 				<div className="ax-app-layout__rail">{ navigationRail }</div>
 			) : null }
-			<main className="ax-app-layout__main">{ children }</main>
+			<Pane as="main" className="ax-app-layout__main">
+				{ children }
+			</Pane>
 			{ supporting ? (
-				<div className="ax-app-layout__supporting">{ supporting }</div>
+				<Pane as="aside" className="ax-app-layout__supporting">
+					{ supporting }
+				</Pane>
 			) : null }
 		</div>
 	);

@@ -1,0 +1,70 @@
+@layer axismundi.layouts {
+	/*
+	 * CSS custom properties cannot define media-query conditions. These two
+	 * thresholds are the documented Frontend compact/medium/expanded contract.
+	 */
+	.ax-app-layout {
+		display: grid;
+		grid-template-areas: "main";
+		grid-template-columns: minmax( 0, 1fr );
+		min-block-size: 100dvb;
+		background: var( --md-sys-color-surface );
+		color: var( --md-sys-color-on-surface );
+	}
+
+	.ax-app-layout__main {
+		grid-area: main;
+		min-inline-size: 0;
+	}
+
+	.ax-app-layout__bar,
+	.ax-app-layout__rail,
+	.ax-app-layout__supporting {
+		display: none;
+	}
+
+	.ax-app-layout[data-has-bar] {
+		grid-template-areas:
+			"main"
+			"bar";
+		grid-template-rows: minmax( 0, 1fr ) auto;
+	}
+
+	.ax-app-layout[data-has-bar] .ax-app-layout__bar {
+		grid-area: bar;
+		display: block;
+	}
+
+	@media ( min-width: 600px ) {
+		.ax-app-layout[data-has-rail] {
+			grid-template-areas: "rail main";
+			grid-template-columns: auto minmax( 0, 1fr );
+		}
+
+		.ax-app-layout[data-has-rail] .ax-app-layout__rail {
+			grid-area: rail;
+			display: block;
+		}
+
+		.ax-app-layout[data-has-bar] .ax-app-layout__bar {
+			display: none;
+		}
+	}
+
+	@media ( min-width: 840px ) {
+		.ax-app-layout[data-has-rail][data-has-supporting] {
+			grid-template-areas: "rail main supporting";
+			grid-template-columns: auto minmax( 0, 1fr ) auto;
+		}
+
+		.ax-app-layout:not([data-has-rail])[data-has-supporting] {
+			grid-template-areas: "main supporting";
+			grid-template-columns: minmax( 0, 1fr ) auto;
+		}
+
+		.ax-app-layout[data-has-supporting] .ax-app-layout__supporting {
+			grid-area: supporting;
+			display: block;
+		}
+	}
+}

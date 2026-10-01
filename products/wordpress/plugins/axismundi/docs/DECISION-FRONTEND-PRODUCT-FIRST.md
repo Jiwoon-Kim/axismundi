@@ -19,7 +19,10 @@ Theme
 Social Frontend
   -> product/runtime truth
   -> React markup, scaffold, CSS, production components
-  -> Stylebook fixture surface
+  -> production component source
+
+Development Stylebook
+  -> fixture and verification harness for those components
 
 Admin
   -> later control plane
@@ -57,13 +60,15 @@ Theme은 resource/foundation provider다.
 
 ```text
 Theme owns
-  - --md-ref-* and --md-sys-* foundation token values
+  - --md-ref-* and shared --md-sys-* foundation token values for color, shape,
+    elevation, state, and motion
   - light/dark foundation stylesheet cascade
   - theme-declared @font-face resources
   - resource path, version, dependency resolution
 
 Social Frontend owns
   - application markup and routes
+  - its own M3 typescale token declarations and typography policy
   - root and semantic HTML element styling
   - typography/resource usage policy
   - app scaffold and component CSS
@@ -72,34 +77,44 @@ Social Frontend owns
 Social은 `--wp--preset-*`이나 block theme selector를 component API로 소비하지 않는다.
 theme-delivered Material tokens와 font resources를 Frontend CSS가 직접 사용한다.
 
-### Typography policy now
+### Typography ownership
 
-`@font-face` resource discovery/output은 theme/Core가 담당한다. Social은 global CSS에서
-실제 semantic role을 연결한다.
+`@font-face` resource discovery/output과 `theme.json` font family/font size preset은
+theme/Core가 담당한다. 그러나 theme foundation asset contract에는 typography typescale
+stylesheet가 없다. `theme.json` preset은 Social runtime의 `--md-sys-typescale-*` source가
+아니다.
 
-```css
-body {
-  font-family: "Roboto Flex", system-ui, sans-serif;
-}
+따라서 Social은 `axismundi.typography` layer에서 자체 M3 typescale token과 semantic HTML
+role mapping을 선언한다. font resource path나 `@font-face` source는 Frontend stylesheet에
+복제하지 않는다. typescale role, metric, HTML mapping은 별도 Typography contract에서
+결정한다.
 
-code,
-pre {
-  font-family: "Roboto Mono", monospace;
-}
+## Public route access policy
 
-blockquote {
-  font-family: "Roboto Serif", serif;
-}
+Social은 로그인 여부로 전체 application을 redirect하지 않는다. route와 object visibility가
+표시 surface를 결정한다.
+
+```text
+/social/
+  authenticated viewer -> home feed surface
+  guest                -> signed-out home surface and sign-in affordance
+
+/social/objects/:id
+  public object        -> direct rendering for guest or signed-in viewer
+  non-public object    -> future data layer access decision
 ```
+
+초기 bootstrap은 `viewer.authenticated` boolean만 제공한다. 개인 identity, capability, REST
+nonce, private data는 실제 authenticated data flow가 필요해질 때 별도로 제공한다.
 
 이 policy는 처음에는 Frontend stylesheet에 직접 둔다. 실제 product 요구가 확인된 뒤에만
 `style.json`과 Admin Typography surface로 승격한다. font file path나 face source는
 Frontend policy에 저장하지 않는다.
 
-## Stylebook is a production harness
+## Stylebook is a production-component harness
 
-Social Stylebook은 문서 사이트나 별도 demo component library가 아니다. Frontend runtime
-안에서 production component에 fixture data와 state를 공급하는 verification surface다.
+Stylebook은 문서 사이트나 별도 demo component library가 아니다. Frontend가 소유한
+production component에 fixture data와 state를 공급하는 development verification surface다.
 
 ```text
 one production component
@@ -118,29 +133,50 @@ Stylebook에는 동일한 `Button`, `Dialog`, `NavigationRail` 등의 implementa
 Dialog의 body copy처럼 fixture content는 draft일 수 있지만 focus trap, Escape, backdrop,
 responsive surface, restore behavior는 production Dialog가 제공해야 한다.
 
-Admin preview는 Social Stylebook의 consumer다.
+Admin preview는 Stylebook harness의 consumer가 될 수 있다. 다만 Stylebook은 Social product
+route의 일부가 아니다. Social은 사용자-facing application route만 소유하고, Stylebook은
+Axismundi Admin app-owned development surface로 별도 canvas에서 제공한다. WordPress의
+`/wp-admin/admin.php`는 Admin app을 여는 공용 front controller/URL transport일 뿐 Stylebook의
+owner가 아니다. 예를 들어 `?page=axismundi&p=/stylebook`에서 `p=/stylebook`은 Axismundi
+Admin app route를 선택한다.
 
 ```text
 Admin control pane
   -> iframe
-      -> /social/ Frontend document
-          -> Stylebook fixture or product route
+      -> Axismundi Admin app-owned Stylebook canvas
+          -> Frontend production components + fixture state
 ```
 
 Admin document에 Frontend/M3 cascade를 import해 visual copy를 만들지 않는다.
+
+### Development-only route and distribution boundary
+
+컴포넌트 개발 중에는 Stylebook harness를 route로 노출할 수 있다. 이 route는 개발과 VQA를
+위한 임시 진입점이며 Social product route나 public application feature가 아니다.
+
+컴포넌트 API와 fixture coverage가 안정된 뒤에는 다음 중 하나로 정리한다.
+
+1. development route를 제거한다.
+2. route와 bundle을 development-only build로 분리하고, deployable plugin package에서는
+   제외한다.
+
+어느 경우에도 production component source와 fixture definition은 유지할 수 있다. 배포
+artifact에서 제외하는 대상은 Stylebook host/route와 development harness이지, 검증된
+component implementation이 아니다.
 
 ## Build order
 
 Frontend의 component API는 layout context와 responsive behavior에서 결정된다. 따라서
 component catalogue보다 scaffold와 breakpoint contract를 먼저 구현한다.
 
-1. Frontend global stylesheet의 root/element typography policy
-2. App scaffold regions and breakpoint behavior
-3. Material production components
-4. Axismundi domain components
-5. Social product composition
-6. Stylebook fixtures for those same components and scenarios
-7. Admin registry/policy surfaces that consume proven product contracts
+1. Color foundation VQA
+2. App scaffold regions, breakpoint behavior, and layout VQA
+3. Typography contract, typescale layer, and typography VQA
+4. Material production components
+5. Axismundi domain components
+6. Social product composition
+7. Stylebook fixtures for those same components and scenarios
+8. Admin registry/policy surfaces that consume proven product contracts
 
 ### Scaffold and responsive vocabulary
 
@@ -158,7 +194,7 @@ extraLarge   >= 1600px
 초기 scaffold는 semantic regions를 가진다.
 
 ```text
-AppScaffold
+AppLayout
   - navigation rail or compact navigation
   - main region
   - optional supporting pane
@@ -166,6 +202,18 @@ AppScaffold
 
 각 region의 collapse, persistence, visibility는 실제 Frontend stylesheet와 React layout에서
 결정한다. 아직 layout JSON, drag/drop editor, template persistence를 만들지 않는다.
+
+### Layout implementation boundary
+
+`AppLayout` 같은 layout은 region을 배치할 뿐 Navigation Bar, Navigation Rail, supporting
+pane의 visual/component implementation을 제공하지 않는다. 각 surface는 독립 component가
+나중에 slot으로 주입한다.
+
+layout CSS는 `src/apps/frontend/layouts/`에 colocate하고 `axismundi.layouts` cascade layer에만
+둔다. layout rule은 theme-delivered `--md-sys-*` token과 structural CSS grid/logical property를
+사용한다. raw color, spacing, radius, elevation, typography metric을 layout selector에 새로
+쓰지 않는다. CSS custom property가 media-query condition을 표현할 수 없으므로, 이미 정한
+breakpoint threshold만 layout media query에 literal로 남긴다.
 
 ## Component conventions
 
@@ -205,8 +253,9 @@ component identity와 visual variant는 semantic HTML element와 독립적이다
 
 ### Cascade layers
 
-Frontend component-specific styles, parts, variants, and component states는 모두
-`components` layer에 둔다.
+Frontend typescale token declarations and semantic HTML typography mappings are owned by
+`axismundi.typography`. Component-specific styles, parts, variants, and component states are
+owned by their component layer.
 
 ```css
 @layer components {
@@ -268,6 +317,41 @@ theme/scheme selection은 Frontend runtime state다. Frontend가 선택을 Front
 persistence mechanism에 저장하면, Admin iframe은 동일 origin의 `/social/` document로서
 effective scheme과 `--md-sys-*` 값을 렌더한다.
 
+### Current theme-controls bridge
+
+The existing Theme Controls plugin is not a `theme.json` palette registry and does not
+import Site Editor custom colors. It is a pre-generated Material scheme picker.
+
+```text
+schemes.css
+  -> :root[data-ax-scheme] overrides --md-ref-palette-*
+  -> existing theme foundation resolves the effective --md-sys-color-* values
+
+pre-paint head script
+  -> restores data-ax-scheme from the axismundi_scheme cookie before first paint
+
+theme-controls JS + mount
+  -> renders the available scheme buttons
+  -> updates the cookie and data-ax-scheme
+```
+
+`/social/` does not call `wp_footer()`, because that would admit every active plugin's
+footer callback. The public route has an explicit footer allowlist instead. Theme Controls
+is presently admitted through that allowlist as a working Color VQA control; its mount and
+script are therefore live, not dead assets.
+
+The bridge can later be replaced by a Frontend-owned Material component that preserves the
+cookie and `data-ax-scheme` contract. It must not be mistaken for either:
+
+```text
+theme.json palette metadata registry
+Site Editor user/custom palette import
+```
+
+The remaining Social `<head>` and public-route assets have not yet been reduced to a final
+allowlist. Emoji, sensitive-media, PWA, discovery metadata, and Core fallback output require
+separate product-level decisions.
+
 Admin이 나중에 preview scheme을 요청해야 하는 경우에도 theme CSS나 runtime state를 직접
 소유하지 않는다.
 
@@ -311,6 +395,9 @@ or Site Editor parity를 확정하지 않는다.
 
 - `RESEARCH-GUTENBERG-STYLES-WORKSPACE-REFERENCE.md`
 - `DECISION-FRONTEND-NAVIGATION-MODEL.md`
+- `DECISION-FRONTEND-ADAPTIVE-LAYOUT.md`
+- `DECISION-FRONTEND-SPATIAL-FOUNDATION.md`
+- `REFERENCE-M3-CANONICAL-LAYOUTS.md`
 - `RESEARCH-FRONTEND-WP-GLOBAL-STYLES.md`
 - `RESEARCH-FONT-LIBRARY-WP-ADMIN.md`
 - `DECISION-FRONTEND-THEME-ASSET-CONTRACT.md`

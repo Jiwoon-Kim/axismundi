@@ -17,3 +17,6 @@
 *.otf binary
 *.zip binary
 *.pmtiles filter=lfs diff=lfs merge=lfs -text
+
+# Source transcripts retain copied whitespace where it is part of the captured material.
+products/wordpress/plugins/axismundi/docs/SOURCE-*-RAW.md whitespace=-trailing-space

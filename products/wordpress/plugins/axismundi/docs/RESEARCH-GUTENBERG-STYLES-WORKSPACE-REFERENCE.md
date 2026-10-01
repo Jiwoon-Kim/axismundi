@@ -139,8 +139,8 @@ Axismundi의 해법은 별도다.
 ```text
 Theme foundation CSS
   -> /social/ runtime receives it directly
-  -> /social/ Stylebook fixture resolves the same effective tokens
-  -> Admin embeds that Frontend document
+  -> Axismundi Admin app-owned Stylebook canvas resolves the same effective tokens
+  -> Admin can embed that development canvas
 ```
 
 ## Current Frontend-first direction
@@ -155,11 +155,13 @@ Social frontend
   -> React markup and routes
   -> app-owned global CSS
   -> scaffold, breakpoints, production components
-  -> Stylebook production-fixture route
+
+Development Stylebook
+  -> production-component fixture harness
 
 Admin
   -> later control plane and registry consumer
-  -> embeds the actual Frontend/Stylebook preview
+  -> can embed the Stylebook development canvas
 ```
 
 이 단계에서 Social global CSS는 실제 typography policy를 직접 적용할 수 있다.
@@ -174,9 +176,15 @@ font files와 `@font-face` output은 theme/Core resource layer의 책임이며, 
 semantic usage policy만 소유한다. 실제 product에서 검증된 policy만 나중에
 `style.json`/Admin surface로 승격한다.
 
-## Frontend Stylebook contract
+## Stylebook contract and distribution boundary
 
-`/social/` Stylebook은 데모 구현을 위한 별도 component library가 아니다.
+Stylebook은 데모 구현을 위한 별도 component library가 아니다. Frontend production component
+source를 import해 fixture data/state로 검증한다. 그러나 이것이 Stylebook을 `/social/` product
+route로 만든다는 뜻은 아니다.
+
+WordPress의 `/wp-admin/admin.php`는 공용 admin front controller/URL transport다. Stylebook
+route의 owner는 `?page=axismundi&p=/stylebook`으로 선택되는 Axismundi Admin app이며,
+`admin.php` 자체가 아니다.
 
 ```text
 production component implementation
@@ -186,7 +194,12 @@ production component implementation
 
 Dialog처럼 behavior가 중요한 component는 production implementation을 그대로 사용하고,
 Stylebook에는 draft fixture content를 공급한다. Stylebook은 component visual and interaction
-verification surface이며, Admin preview는 그 surface의 consumer다.
+verification surface이며, Admin preview는 그 surface의 consumer가 될 수 있다.
+
+개발 중에는 Stylebook을 임시 route로 노출할 수 있다. component API와 fixture coverage가
+안정된 뒤에는 그 route를 제거하거나, Stylebook host/bundle을 development-only build로
+분리해 deployable plugin package에서 제외한다. 계속 배포되는 것은 production component
+source이며, Stylebook route 자체가 아니다.
 
 ## Theme scheme ownership
 

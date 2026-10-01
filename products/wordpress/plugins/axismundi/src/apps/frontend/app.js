@@ -1,28 +1,78 @@
-import { NavigationSuite } from './layouts/navigation-suite';
+import { AppLayout } from './layouts/app-layout';
 import { StylebookPage } from './pages/stylebook';
 
-function getFrontendView() {
+function getFrontendRoute() {
 	const route = window.axismundiCapstone?.route ?? '/social/';
 	const basePath = route.replace( /\/+$/, '' );
 	const pathname = window.location.pathname.replace( /\/+$/, '' );
+	const relativePath = pathname.startsWith( basePath )
+		? pathname.slice( basePath.length ).replace( /^\/+/, '' )
+		: '';
 
-	return pathname === `${ basePath }/stylebook` ? 'stylebook' : 'social';
+	if ( 'stylebook' === relativePath ) {
+		return 'stylebook';
+	}
+
+	if ( /^objects\/[^/]+$/.test( relativePath ) ) {
+		return 'object';
+	}
+
+	return 'home';
+}
+
+function isAuthenticatedViewer() {
+	return true === window.axismundiCapstone?.viewer?.authenticated;
+}
+
+function HomeTemplate() {
+	const authenticated = isAuthenticatedViewer();
+
+	return (
+		<section className="ax-social-shell" aria-labelledby="ax-social-shell-title">
+			<header className="ax-social-shell__header">
+				<p className="ax-social-shell__eyebrow">Axismundi</p>
+				<h1 id="ax-social-shell-title" className="ax-social-shell__title">
+					{ authenticated ? 'Home' : 'Social' }
+				</h1>
+			</header>
+			<p className="ax-social-shell__message">
+				{ authenticated
+					? 'Your home feed will render here.'
+					: 'Sign in to view your home feed.' }
+			</p>
+			{ ! authenticated && window.axismundiCapstone?.loginUrl ? (
+				<p>
+					<a href={ window.axismundiCapstone.loginUrl }>Sign in</a>
+				</p>
+			) : null }
+		</section>
+	);
+}
+
+function PublicObjectTemplate() {
+	return (
+		<section className="ax-social-shell" aria-labelledby="ax-social-object-title">
+			<header className="ax-social-shell__header">
+				<p className="ax-social-shell__eyebrow">Axismundi</p>
+				<h1 id="ax-social-object-title" className="ax-social-shell__title">Object</h1>
+			</header>
+			<p className="ax-social-shell__message">
+				Public objects will render here without requiring a signed-in home session.
+			</p>
+		</section>
+	);
 }
 
 export function FrontendApp() {
-	if ( 'stylebook' === getFrontendView() ) {
+	const route = getFrontendRoute();
+
+	if ( 'stylebook' === route ) {
 		return <StylebookPage />;
 	}
 
 	return (
-		<NavigationSuite>
-			<section className="ax-social-shell" aria-labelledby="ax-social-shell-title">
-				<header className="ax-social-shell__header">
-					<p className="ax-social-shell__eyebrow">Axismundi</p>
-					<h1 id="ax-social-shell-title" className="ax-social-shell__title">Social</h1>
-				</header>
-				<p className="ax-social-shell__message">The Social application shell is ready. Reader data and interactions arrive in later milestones.</p>
-			</section>
-		</NavigationSuite>
+		<AppLayout>
+			{ 'object' === route ? <PublicObjectTemplate /> : <HomeTemplate /> }
+		</AppLayout>
 	);
 }

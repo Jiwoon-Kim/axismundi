@@ -64,16 +64,23 @@ function axismundi_capstone_enqueue_app( string $application ) : void {
 		$ver,
 		true
 	);
+	$config = array(
+		'application' => $application,
+		'adminUrl'    => admin_url(),
+		'route'       => '/' . AXISMUNDI_CAPSTONE_ROUTE . '/',
+		'path'        => 'admin' === $application ? axismundi_capstone_admin_path() : '/',
+	);
+
+	if ( 'frontend' === $application ) {
+		$config['viewer'] = array(
+			'authenticated' => is_user_logged_in(),
+		);
+		$config['loginUrl'] = wp_login_url( home_url( '/' . AXISMUNDI_CAPSTONE_ROUTE . '/' ) );
+	}
+
 	wp_add_inline_script(
 		$handle,
-		'window.axismundiCapstone = ' . wp_json_encode(
-			array(
-				'application' => $application,
-				'adminUrl'    => admin_url(),
-				'route'       => '/' . AXISMUNDI_CAPSTONE_ROUTE . '/',
-				'path'        => 'admin' === $application ? axismundi_capstone_admin_path() : '/',
-			)
-		) . ';',
+		'window.axismundiCapstone = ' . wp_json_encode( $config ) . ';',
 		'before'
 	);
 }

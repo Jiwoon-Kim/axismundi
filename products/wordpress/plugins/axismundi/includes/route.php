@@ -10,7 +10,7 @@ defined( 'ABSPATH' ) || exit;
 /** @return void */
 function axismundi_capstone_add_rewrite_rule() : void {
 	add_rewrite_rule(
-		'^' . AXISMUNDI_CAPSTONE_ROUTE . '(?:/stylebook)?/?$',
+		'^' . AXISMUNDI_CAPSTONE_ROUTE . '(?:/stylebook|/objects/[^/]+)?/?$',
 		'index.php?' . AXISMUNDI_CAPSTONE_QUERY_VAR . '=1',
 		'top'
 	);
@@ -50,13 +50,9 @@ function axismundi_capstone_is_public_route() : bool {
 	}
 
 	$request = trim( (string) $wp->request, '/' );
-	return in_array(
-		$request,
-		array(
-			AXISMUNDI_CAPSTONE_ROUTE,
-			AXISMUNDI_CAPSTONE_ROUTE . '/stylebook',
-		),
-		true
+	return 1 === preg_match(
+		'#^' . preg_quote( AXISMUNDI_CAPSTONE_ROUTE, '#' ) . '(?:/stylebook|/objects/[^/]+)?$#',
+		$request
 	);
 }
 
@@ -75,10 +71,26 @@ function axismundi_capstone_use_theme_foundation_only( bool $foundation_only ) :
 add_filter( 'axismundi_theme_foundation_only', 'axismundi_capstone_use_theme_foundation_only' );
 
 /**
+ * Keep the standalone application document free of WordPress admin chrome.
+ *
+ * Disabling the bar at its source suppresses its markup, stylesheet, and inline
+ * document-offset rules together. Admin and other WordPress surfaces retain the
+ * normal logged-in experience.
+ *
+ * @param bool $show Whether the admin bar should be shown.
+ * @return bool
+ */
+function axismundi_capstone_hide_public_admin_bar( bool $show ) : bool {
+	return axismundi_capstone_is_public_route() ? false : $show;
+}
+add_filter( 'show_admin_bar', 'axismundi_capstone_hide_public_admin_bar' );
+
+/**
  * Remove Core and Gutenberg presentation policy from the standalone app route.
  *
- * Theme font faces, image auto-sizing, emoji, the admin bar, and every plugin
- * integration remain outside this narrowly-scoped Core presentation boundary.
+ * Theme font faces, image auto-sizing, emoji, and plugin integrations remain
+ * outside this narrowly-scoped Core presentation boundary. The Admin Bar is
+ * removed independently because it is WordPress chrome, not application UI.
  *
  * @return void
  */
@@ -124,6 +136,21 @@ function axismundi_capstone_dequeue_public_core_presentation() : void {
 }
 add_action( 'wp_enqueue_scripts', 'axismundi_capstone_dequeue_public_core_presentation', 100 );
 
+/**
+ * Render explicitly allowed footer integrations for the standalone application.
+ *
+ * Do not call wp_footer() here: that would reopen every active plugin's footer
+ * hook. Each integration must be admitted deliberately while its Frontend
+ * ownership is evaluated.
+ *
+ * @return void
+ */
+function axismundi_capstone_render_public_footer_allowlist() : void {
+	if ( function_exists( 'axismundi_theme_controls_mount' ) ) {
+		axismundi_theme_controls_mount();
+	}
+}
+
 /** @return void */
 function axismundi_capstone_render_public_route() : void {
 	if ( ! axismundi_capstone_is_public_route() ) {
@@ -142,8 +169,9 @@ function axismundi_capstone_render_public_route() : void {
 		<meta name="robots" content="noindex,follow">
 		<?php wp_head(); ?>
 	</head>
-	<body <?php body_class( 'axismundi-app-document' ); ?>>
-		<main id="axismundi-root" data-axismundi-application="frontend"></main>
+	<body class="axismundi-app-document axismundi-social">
+		<div id="axismundi-root" data-axismundi-application="frontend"></div>
+		<?php axismundi_capstone_render_public_footer_allowlist(); ?>
 		<?php wp_print_footer_scripts(); ?>
 	</body>
 	</html>

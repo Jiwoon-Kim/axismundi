@@ -1,28 +1,33 @@
 {
-	"spacing": {
-		"25": "2px",
-		"50": "4px",
-		"75": "6px",
-		"100": "8px",
-		"125": "10px",
-		"150": "12px",
-		"175": "14px",
-		"200": "16px",
-		"250": "20px",
-		"300": "24px",
-		"400": "32px",
-		"450": "36px",
-		"500": "40px",
-		"600": "48px",
-		"700": "56px",
-		"800": "64px",
-		"900": "72px"
+	"md": {
+		"sys": {
+			"measurement": {
+				"space0": "0px",
+				"space25": "2px",
+				"space50": "4px",
+				"space75": "6px",
+				"space100": "8px",
+				"space125": "10px",
+				"space150": "12px",
+				"space175": "14px",
+				"space200": "16px",
+				"space250": "20px",
+				"space300": "24px",
+				"space400": "32px",
+				"space450": "36px",
+				"space500": "40px",
+				"space600": "48px",
+				"space700": "56px",
+				"space800": "64px",
+				"space900": "72px"
+			}
+		}
 	},
 	"layout": {
 		"margin": {
-			"compact": "{spacing.200}",
-			"mediumAndUp": "{spacing.300}"
+			"compact": "{md.sys.measurement.space200}",
+			"mediumAndUp": "{md.sys.measurement.space300}"
 		},
-		"paneGap": "{spacing.300}"
+		"paneGap": "{md.sys.measurement.space300}"
 	}
 }

@@ -1,0 +1,15 @@
+@layer axismundi.base {
+	body.axismundi-app-document {
+		background: var( --md-sys-color-surface );
+		color: var( --md-sys-color-on-surface );
+		font-family: var( --md-sys-typeface-plain );
+	}
+
+	body.axismundi-social :is( code, kbd, pre, samp ) {
+		font-family: "Roboto Mono", monospace;
+	}
+
+	body.axismundi-social blockquote {
+		font-family: "Roboto Serif", var( --axismundi-cjk-serif, Georgia ), serif;
+	}
+}

@@ -7,9 +7,6 @@
 
 	body.axismundi-app-document {
 		margin: 0;
-		background: var( --md-sys-color-surface );
-		color: var( --md-sys-color-on-surface );
-		font-family: "Roboto Flex", var( --axismundi-cjk-sans, system-ui ), sans-serif;
 	}
 
 	body.axismundi-social,
@@ -19,13 +16,5 @@
 
 	body.axismundi-social :is( button, input, select, textarea ) {
 		font: inherit;
-	}
-
-	body.axismundi-social :is( code, kbd, pre, samp ) {
-		font-family: "Roboto Mono", monospace;
-	}
-
-	body.axismundi-social blockquote {
-		font-family: "Roboto Serif", var( --axismundi-cjk-serif, Georgia ), serif;
 	}
 }

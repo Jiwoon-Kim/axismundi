@@ -19,7 +19,7 @@
 
 	.ax-layout-fixture__case {
 		display: grid;
-		gap: var( --ax-space-150 );
+		gap: var( --md-sys-measurement-space150 );
 	}
 
 	.ax-layout-fixture__group--one {
@@ -37,7 +37,7 @@
 	.ax-layout-fixture__pane {
 		background: var( --md-sys-color-surface-container );
 		color: var( --md-sys-color-on-surface );
-		min-block-size: var( --ax-space-900 );
-		padding: var( --ax-space-200 );
+		min-block-size: var( --md-sys-measurement-space900 );
+		padding: var( --md-sys-measurement-space200 );
 	}
 }

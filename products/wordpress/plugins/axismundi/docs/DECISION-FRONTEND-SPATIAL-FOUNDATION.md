@@ -78,8 +78,9 @@ src/apps/frontend/foundations/
     ... layout consumers ...
 ```
 
-`spatial.css` belongs to `axismundi.tokens`; grid placement rules remain in
-`axismundi.layouts`.
+`spatial.css` declares Foundation values on `:root` in `axismundi.tokens`; grid placement rules
+remain in `axismundi.layouts`. The Social document body consumes these tokens as its default
+surface rather than becoming their owner.
 
 ```text
 tokens
@@ -94,9 +95,11 @@ second dependency on WordPress Global Styles.
 
 ## Initial token projection
 
-The initial Frontend scale mirrors the already-established Axismundi spacing values without
-consuming the WordPress preset namespace. `--ax-space-25` through `--ax-space-900` map to the
-same `2px` through `72px` values declared by the theme, but are owned and consumed by Social.
+The initial Frontend scale uses Material system measurement names and mirrors the
+already-established Axismundi spacing values without consuming the WordPress preset namespace.
+`--md-sys-measurement-space0` through `--md-sys-measurement-space900` map to `0px` through
+`72px`; the CSS values are web projections of the corresponding Material `dp` measurements.
+They are owned and consumed by Social.
 
 The first layout aliases are deliberately narrow:
 

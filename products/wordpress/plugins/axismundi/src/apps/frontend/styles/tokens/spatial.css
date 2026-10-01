@@ -1,30 +1,31 @@
 @layer axismundi.tokens {
-	body.axismundi-social {
-		--ax-space-25: 2px;
-		--ax-space-50: 4px;
-		--ax-space-75: 6px;
-		--ax-space-100: 8px;
-		--ax-space-125: 10px;
-		--ax-space-150: 12px;
-		--ax-space-175: 14px;
-		--ax-space-200: 16px;
-		--ax-space-250: 20px;
-		--ax-space-300: 24px;
-		--ax-space-400: 32px;
-		--ax-space-450: 36px;
-		--ax-space-500: 40px;
-		--ax-space-600: 48px;
-		--ax-space-700: 56px;
-		--ax-space-800: 64px;
-		--ax-space-900: 72px;
+	:root {
+		--md-sys-measurement-space0: 0px;
+		--md-sys-measurement-space25: 2px;
+		--md-sys-measurement-space50: 4px;
+		--md-sys-measurement-space75: 6px;
+		--md-sys-measurement-space100: 8px;
+		--md-sys-measurement-space125: 10px;
+		--md-sys-measurement-space150: 12px;
+		--md-sys-measurement-space175: 14px;
+		--md-sys-measurement-space200: 16px;
+		--md-sys-measurement-space250: 20px;
+		--md-sys-measurement-space300: 24px;
+		--md-sys-measurement-space400: 32px;
+		--md-sys-measurement-space450: 36px;
+		--md-sys-measurement-space500: 40px;
+		--md-sys-measurement-space600: 48px;
+		--md-sys-measurement-space700: 56px;
+		--md-sys-measurement-space800: 64px;
+		--md-sys-measurement-space900: 72px;
 
-		--ax-layout-window-margin: var( --ax-space-200 );
-		--ax-layout-pane-gap: var( --ax-space-300 );
+		--ax-layout-window-margin: var( --md-sys-measurement-space200 );
+		--ax-layout-pane-gap: var( --md-sys-measurement-space300 );
 	}
 
 	@media ( min-width: 600px ) {
-		body.axismundi-social {
-			--ax-layout-window-margin: var( --ax-space-300 );
+		:root {
+			--ax-layout-window-margin: var( --md-sys-measurement-space300 );
 		}
 	}
 }

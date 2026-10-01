@@ -68,9 +68,9 @@
 
 		--md-sys-typescale-body-large-font: var( --md-ref-typeface-plain );
 		--md-sys-typescale-body-large-weight: var( --md-ref-typeface-weight-regular );
-		--md-sys-typescale-body-large-size: 16px;
+		--md-sys-typescale-body-large-size: 1em;
 		--md-sys-typescale-body-large-tracking: 0.5px;
-		--md-sys-typescale-body-large-line-height: 24px;
+		--md-sys-typescale-body-large-line-height: 1.5;
 
 		--md-sys-typescale-body-medium-font: var( --md-ref-typeface-plain );
 		--md-sys-typescale-body-medium-weight: var( --md-ref-typeface-weight-regular );

@@ -81,13 +81,13 @@ Material-style vocabulary다. 아직 CSS media query나 layout behavior를 생�
 Theme CSS가 token value의 source다.
 
 ```text
-assets/styles/tokens.ref.css
-assets/styles/tokens.sys.color.light.css
-assets/styles/tokens.sys.color.dark.css
-assets/styles/tokens.sys.shape.css
-assets/styles/tokens.sys.motion.css
-assets/styles/tokens.sys.state.css
-assets/styles/tokens.sys.elevation.css
+assets/styles/tokens/tokens.ref.css
+assets/styles/tokens/tokens.sys.color.light.css
+assets/styles/tokens/tokens.sys.color.dark.css
+assets/styles/tokens/tokens.sys.shape.css
+assets/styles/tokens/tokens.sys.motion.css
+assets/styles/tokens/tokens.sys.state.css
+assets/styles/tokens/tokens.sys.elevation.css
 ```
 
 `ref`는 theme source와 `--md-ref-` namespace를 기록한다. raw palette literal을 JSON에

@@ -80,6 +80,13 @@ Plugin Frontend
 
 `/social/`은 foundation만 받아야 하며 block/theme component cascade는 받지 않는다.
 
+### Deferred elevation exception
+
+`tokens.sys.elevation.css` remains a theme and block-editor asset, but the Social
+frontend will eventually exclude it and own an independent elevation primitive.
+This is a deferred implementation change; the current foundation asset contract is
+unchanged. See `DECISION-FRONTEND-ELEVATION-OWNERSHIP.md`.
+
 ## Contract shape
 
 Theme은 public function으로 foundation descriptor를 제공한다.
@@ -94,11 +101,11 @@ function이 resolve한다.
 ```php
 array(
     'tokens-ref' => array(
-        'path' => 'assets/styles/tokens.ref.css',
+        'path' => 'assets/styles/tokens/tokens.ref.css',
         'deps' => array(),
     ),
     'tokens-shape' => array(
-        'path' => 'assets/styles/tokens.sys.shape.css',
+        'path' => 'assets/styles/tokens/tokens.sys.shape.css',
         'deps' => array( 'tokens-ref' ),
     ),
 )
@@ -136,7 +143,7 @@ ordinary stylesheet처럼 소비한다.
 ```text
 style.json
   -> generator
-  -> theme assets/styles/tokens.sys.color.light.css
+  -> theme assets/styles/tokens/tokens.sys.color.light.css
   -> theme foundation asset contract
   -> /social/ and theme/editor consumers
 ```

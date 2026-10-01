@@ -70,31 +70,31 @@ function axismundi_asset_version( string $relative_path ) : string {
 function axismundi_get_foundation_assets() : array {
 	return array(
 		'axismundi-tokens-ref'         => array(
-			'path' => 'assets/styles/tokens.ref.css',
+			'path' => 'assets/styles/tokens/tokens.ref.css',
 			'deps' => array(),
 		),
 		'axismundi-tokens-color-light' => array(
-			'path' => 'assets/styles/tokens.sys.color.light.css',
+			'path' => 'assets/styles/tokens/tokens.sys.color.light.css',
 			'deps' => array( 'axismundi-tokens-ref' ),
 		),
 		'axismundi-tokens-color-dark'  => array(
-			'path' => 'assets/styles/tokens.sys.color.dark.css',
+			'path' => 'assets/styles/tokens/tokens.sys.color.dark.css',
 			'deps' => array( 'axismundi-tokens-color-light' ),
 		),
 		'axismundi-tokens-shape'       => array(
-			'path' => 'assets/styles/tokens.sys.shape.css',
+			'path' => 'assets/styles/tokens/tokens.sys.shape.css',
 			'deps' => array( 'axismundi-tokens-color-dark' ),
 		),
 		'axismundi-tokens-elevation'   => array(
-			'path' => 'assets/styles/tokens.sys.elevation.css',
+			'path' => 'assets/styles/tokens/tokens.sys.elevation.css',
 			'deps' => array( 'axismundi-tokens-shape' ),
 		),
 		'axismundi-tokens-state'       => array(
-			'path' => 'assets/styles/tokens.sys.state.css',
+			'path' => 'assets/styles/tokens/tokens.sys.state.css',
 			'deps' => array( 'axismundi-tokens-elevation' ),
 		),
 		'axismundi-tokens-motion'      => array(
-			'path' => 'assets/styles/tokens.sys.motion.css',
+			'path' => 'assets/styles/tokens/tokens.sys.motion.css',
 			'deps' => array( 'axismundi-tokens-state' ),
 		),
 	);

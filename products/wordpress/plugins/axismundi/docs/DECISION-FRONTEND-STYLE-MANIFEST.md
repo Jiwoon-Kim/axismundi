@@ -13,13 +13,13 @@ Admin editor 또는 write flow를 구현하지 않는다.
 가정한다.
 
 ```text
-assets/styles/tokens.ref.css
-assets/styles/tokens.sys.color.light.css
-assets/styles/tokens.sys.color.dark.css
-assets/styles/tokens.sys.shape.css
-assets/styles/tokens.sys.motion.css
-assets/styles/tokens.sys.state.css
-assets/styles/tokens.sys.elevation.css
+assets/styles/tokens/tokens.ref.css
+assets/styles/tokens/tokens.sys.color.light.css
+assets/styles/tokens/tokens.sys.color.dark.css
+assets/styles/tokens/tokens.sys.shape.css
+assets/styles/tokens/tokens.sys.motion.css
+assets/styles/tokens/tokens.sys.state.css
+assets/styles/tokens/tokens.sys.elevation.css
 theme.json
 ```
 
@@ -48,7 +48,7 @@ presentation authority가 섞인다.
 
 ## 관찰한 현재 theme 구조
 
-`products/wordpress/themes/axismundi/assets/styles/tokens.ref.css`는 raw/reference
+`products/wordpress/themes/axismundi/assets/styles/tokens/tokens.ref.css`는 raw/reference
 palette token을 제공한다. 예를 들면 다음 계열이다.
 
 ```css
@@ -242,8 +242,8 @@ layer의 file path를 보유하지 않고 선택/usage만 선언한다.
 ## 레퍼런스
 
 - `C:/Users/thaum/dev/axismundi/products/wordpress/themes/axismundi/theme.json`
-- `C:/Users/thaum/dev/axismundi/products/wordpress/themes/axismundi/assets/styles/tokens.ref.css`
-- `C:/Users/thaum/dev/axismundi/products/wordpress/themes/axismundi/assets/styles/tokens.sys.color.light.css`
-- `C:/Users/thaum/dev/axismundi/products/wordpress/themes/axismundi/assets/styles/tokens.sys.color.dark.css`
+- `C:/Users/thaum/dev/axismundi/products/wordpress/themes/axismundi/assets/styles/tokens/tokens.ref.css`
+- `C:/Users/thaum/dev/axismundi/products/wordpress/themes/axismundi/assets/styles/tokens/tokens.sys.color.light.css`
+- `C:/Users/thaum/dev/axismundi/products/wordpress/themes/axismundi/assets/styles/tokens/tokens.sys.color.dark.css`
 - `C:/Users/thaum/dev/axismundi/products/wordpress/plugins/axismundi/docs/DECISION-DESIGN-ASSETS-IA.md`
 - `C:/Users/thaum/dev/axismundi/products/wordpress/plugins/axismundi/docs/RESEARCH-FONT-LIBRARY-WP-ADMIN.md`

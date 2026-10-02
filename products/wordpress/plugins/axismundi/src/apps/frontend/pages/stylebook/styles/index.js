@@ -1,4 +1,5 @@
 import { Scaffold } from '../../../foundations/layout/scaffold';
+import { Elevation } from '../../../components/material/elevation';
 import { Icon, IconPlaceholder } from '../../../components/material/icon';
 import { useEffect, useRef, useState } from '@wordpress/element';
 import './styles.css';
@@ -116,6 +117,8 @@ const ICON_AXIS_SAMPLES = [
 ];
 
 const ICON_BOX_SIZES = [ 20, 24, 40, 48 ];
+
+const ELEVATION_LEVELS = [ 0, 1, 2, 3, 4, 5 ];
 
 function titleCase( value ) {
 	return value.replace( /(^|-)\w/g, ( character ) => character.toUpperCase() );
@@ -386,6 +389,55 @@ function IconReference() {
 	);
 }
 
+function ElevationSample( { level } ) {
+	const surfaceRef = useRef();
+	const [ metrics, setMetrics ] = useState();
+
+	useEffect( () => {
+		const layer = surfaceRef.current?.querySelector( '.ax-elevation' );
+		if ( ! layer ) {
+			return;
+		}
+
+		setMetrics( {
+			ambient: window.getComputedStyle( layer, '::after' ).boxShadow,
+			key: window.getComputedStyle( layer, '::before' ).boxShadow,
+		} );
+	}, [] );
+
+	return (
+		<article className="ax-stylebook-styles__elevation-surface" ref={ surfaceRef }>
+			<Elevation level={ level } />
+			<div className="ax-stylebook-styles__elevation-details">
+				<h3>{ `Level ${ level }` }</h3>
+				<p>{ level <= 3 ? 'Resting level' : 'Interaction level' }</p>
+				<p>{ metrics ? `Key: ${ metrics.key }` : 'Measuring key shadow...' }</p>
+				<p>{ metrics ? `Ambient: ${ metrics.ambient }` : 'Measuring ambient shadow...' }</p>
+			</div>
+		</article>
+	);
+}
+
+function ElevationReference() {
+	return (
+		<section className="ax-stylebook-styles__section" id="elevation" aria-labelledby="ax-stylebook-elevation-title">
+			<header className="ax-stylebook-styles__section-header">
+				<p className="ax-stylebook-styles__eyebrow">Material elevation</p>
+				<h1 id="ax-stylebook-elevation-title">Elevation levels</h1>
+			</header>
+			<section className="ax-stylebook-styles__elevation-reference" aria-label="Elevation rendering contract">
+				<header className="ax-stylebook-styles__group-header">
+					<p className="ax-stylebook-styles__group-kicker">Visual layer, not stacking order</p>
+					<h2>Shadow geometry</h2>
+				</header>
+				<div className="ax-stylebook-styles__elevation-samples">
+					{ ELEVATION_LEVELS.map( ( level ) => <ElevationSample key={ level } level={ level } /> ) }
+				</div>
+			</section>
+		</section>
+	);
+}
+
 function TypographyReference() {
 	return (
 		<section className="ax-stylebook-styles__section" id="typography" aria-labelledby="ax-stylebook-typography-title">
@@ -442,10 +494,12 @@ export function StylebookStylesPage() {
 					<a href="#typography">Typography</a>
 					<a href="#colors">Colors</a>
 					<a href="#icons">Icons</a>
+					<a href="#elevation">Elevation</a>
 				</nav>
 				<TypographyReference />
 				<ColorReference />
 				<IconReference />
+				<ElevationReference />
 			</div>
 		</Scaffold>
 	);

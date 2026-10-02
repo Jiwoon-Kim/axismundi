@@ -1,0 +1,52 @@
+@layer axismundi.material {
+	/*
+	 * Material elevation is a visual child of a positioned surface. It deliberately
+	 * does not establish a stacking scale or change the surface's tonal role.
+	 */
+	.ax-elevation,
+	.ax-elevation::before,
+	.ax-elevation::after {
+		border-radius: inherit;
+		inset: 0;
+		position: absolute;
+	}
+
+	.ax-elevation {
+		--md-elevation-level: var( --ax-elevation-resting-level, 0 );
+		--ax-elevation-shadow-color: var( --md-sys-color-shadow );
+		display: block;
+		pointer-events: none;
+		/*
+		 * `transition-duration` does not inherit, so `inherit` on the shadow layers
+		 * resolves against this element rather than the surface. Without this link the
+		 * chain stops here at the initial `0s` and a level change can never animate.
+		 */
+		transition-duration: inherit;
+		transition-timing-function: inherit;
+	}
+
+	.ax-elevation::before,
+	.ax-elevation::after {
+		content: "";
+		transition-duration: inherit;
+		transition-property: box-shadow, opacity;
+		transition-timing-function: inherit;
+	}
+
+	/* Key shadow: 30% shadow colour. */
+	.ax-elevation::before {
+		--ax-elevation-key-y: calc( 1px * ( clamp( 0, var( --md-elevation-level ), 1 ) + clamp( 0, var( --md-elevation-level ) - 3, 1 ) + 2 * clamp( 0, var( --md-elevation-level ) - 4, 1 ) ) );
+		--ax-elevation-key-blur: calc( 1px * ( 2 * clamp( 0, var( --md-elevation-level ), 1 ) + clamp( 0, var( --md-elevation-level ) - 2, 1 ) + clamp( 0, var( --md-elevation-level ) - 4, 1 ) ) );
+		box-shadow: 0 var( --ax-elevation-key-y ) var( --ax-elevation-key-blur ) var( --ax-elevation-shadow-color );
+		opacity: 0.3;
+	}
+
+	/* Ambient shadow: 15% shadow colour. */
+	.ax-elevation::after {
+		--ax-elevation-ambient-y: calc( 1px * ( clamp( 0, var( --md-elevation-level ), 1 ) + clamp( 0, var( --md-elevation-level ) - 1, 1 ) + 2 * clamp( 0, var( --md-elevation-level ) - 2, 3 ) ) );
+		--ax-elevation-ambient-blur: calc( 1px * ( 3 * clamp( 0, var( --md-elevation-level ), 2 ) + 2 * clamp( 0, var( --md-elevation-level ) - 2, 3 ) ) );
+		--ax-elevation-ambient-spread: calc( 1px * ( clamp( 0, var( --md-elevation-level ), 4 ) + 2 * clamp( 0, var( --md-elevation-level ) - 4, 1 ) ) );
+		box-shadow: 0 var( --ax-elevation-ambient-y ) var( --ax-elevation-ambient-blur ) var( --ax-elevation-ambient-spread ) var( --ax-elevation-shadow-color );
+		opacity: 0.15;
+	}
+}

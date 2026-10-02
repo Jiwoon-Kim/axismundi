@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Implementation deferred.
+Accepted. Initial frontend primitive implemented; asset-loader separation deferred.
 
 ## Current theme bridge
 
@@ -50,8 +50,13 @@ from the WordPress bridge. It must not silently depend on
   is introduced.
 - Elevation and stacking stay separate: semantic elevation never implies a
   `z-index` scale.
-- No frontend elevation component, local elevation token set, or asset-loader change
-  is introduced by this decision.
+- `components/material/elevation.js` and `styles/material/elevation.css` implement
+  the initial Social visual primitive. It follows Material Web's two-shadow geometry,
+  accepts only semantic levels `0..5`, and never suppresses shadows for dark schemes.
+- The current theme foundation-only branch still enqueues
+  `tokens.sys.elevation.css`. Social does not consume its
+  `--md-sys-elevation-shadow-level*` properties; separating that asset and relocating
+  its shadow/scrim colour tokens remain a later theme-contract change.
 
 ## References
 

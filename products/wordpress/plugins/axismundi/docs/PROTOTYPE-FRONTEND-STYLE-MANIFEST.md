@@ -2,11 +2,58 @@
 
 ## 상태
 
-탐색 중. 2026-09-30.
+탐색 중. 2026-09-30. 작동 범위를 실측으로 명시. 2026-10-02.
 
 이 문서는 Frontend 앱에 둔 [style.json](../src/apps/frontend/style.json) 초안의 현재
 의도와 검토 경계를 보존한다. 이는 JSON Schema, runtime loader, generator 또는 Admin
 editor의 명세가 아니다.
+
+### 지금 무엇이 동작하지 않는가
+
+`style.json`은 **현재 아무것도 구동하지 않는다.** JSON에는 주석을 달 수 없으므로 그 사실을
+여기에 적는다. 2026-10-02 실측:
+
+```text
+src/ 전체에서 import       0건
+build/frontend.js          colorScheme / extraLarge  0건
+build/admin.js             0건
+build/frontend.css         0건
+```
+
+webpack entry에서 도달하지 않으므로 빌드 산출물에 포함되지 않는다. 따라서 **빌드에서
+제거할 대상이 아니다** — 이미 빌드 밖에 있다.
+
+### 역할: 지금과 나중
+
+```text
+지금    future admin control schema의 prototype
+        runtime consumer 없음, generator 없음, persistence projection 없음
+        현재 frontend 구현의 authority가 아님
+
+나중    Admin control panel이 이 schema를 읽어 control surface를 만들고
+        사용자 선택을 저장하며 frontend/theme projection으로 해소
+```
+
+순서는 의도된 것이다. Frontend 구현을 먼저 완성하고, 그것을 Admin control panel로 올릴 때
+추상화를 위해 schema를 구조화한다. 그래서 지금 들어 있는 breakpoint·content/wide·namespace는
+**"나중에 조절 가능할 축"의 스케치**이지 두 번째 authority가 아니다.
+
+### authority는 다른 곳에 있다
+
+같은 값이 여러 파일에 있는 것은 중복이 아니라 역할 분담이다. 혼동을 막기 위해 적는다.
+
+| 사실 | authority | `style.json`의 지위 |
+|---|---|---|
+| window size class | `foundations/layout/breakpoints/viewport.json` + CSS media query | 스케치 |
+| spacing scale | `styles/tokens/spacing.css` (`spatial.json`은 human-readable contract) | 스케치 |
+| color semantic mapping | 현재 Axismundi theme의 `tokens.sys.color.*.css` | **미래** authoring source 후보 |
+
+`DECISION-FRONTEND-THEME-ASSET-CONTRACT.md`가 "Color semantic mapping은 `style.json`이
+single authoring source가 된다"고 적은 것은 **미래 시제**다. 현재 색상 authority는 테마다.
+
+이 파일이 canonical schema로 승격되는 시점에만 viewport/spatial/theme token과의 매핑 규칙을
+확정하고 generator 또는 checker를 붙인다. 그 전까지 checker 대상에 넣지 않는다 — runtime도
+authoring source도 아닌 파일을 검증 축에 넣으면 중복을 자동화하는 셈이 된다.
 
 ## 목적
 

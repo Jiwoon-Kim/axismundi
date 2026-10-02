@@ -16,8 +16,20 @@ Everything here about WordPress or Gutenberg was read from the Gutenberg reposit
 2026-09-29 and is quoted rather than recalled. Where this document says "verified", the quote
 is in the section.
 
-**The two applications consume two different design systems.** Admin consumes the WordPress
-design system (`--wpds-*`) directly; Social consumes Material 3 through the Axismundi theme.
+**The two applications consume two different design systems, because they sit on two different
+hosts.**
+
+```txt
+Social   a block-theme-like surface   → Material 3, shared with the Axismundi theme
+Admin    a wp-admin-like surface      → the WordPress design system, --wpds-*
+```
+
+That sentence is the architecture decision, not an analogy. Social is a theme surface and takes
+the theme's M3 foundation, adding only the axes `theme.json` cannot express. Admin is an
+administration surface and takes what every other administration screen takes. They belong to
+one ecosystem and stand on two host contracts, which is why there is no shared palette, no
+`--ax-surface` abstraction over both, and no reason to reconcile them.
+
 Neither ships token fallbacks, and that is deliberate: Axismundi is the integration plugin for
 the Axismundi ecosystem, so the WordPress design system and the Axismundi theme are premises,
 not possibilities. Behaviour under another theme is outside the support contract, and inventing
@@ -258,11 +270,28 @@ Where the division falls is worth stating per axis, because it is not symmetric:
 
 | axis | defined by | consumed by |
 |---|---|---|
-| M3 colour, shape, state, motion | theme, unlayered | Social |
-| M3 elevation | theme today; Social will own it (`DECISION-FRONTEND-ELEVATION-OWNERSHIP.md`) | — |
+| M3 colour, shape, motion | theme, unlayered | Social |
+| M3 state | theme supplies the values | Social implements the behaviour |
+| M3 icons | theme: `@font-face`, glyph box, `--md-icon-*` axes | Social wraps it in an `Icon` component |
 | M3 typescale | this plugin — the theme has no typography token asset | Social |
 | spacing, grid, ruler, density | this plugin (`DECISION-FRONTEND-SPATIAL-FOUNDATION.md`) | Social |
+| M3 elevation | **two implementations, not one owner** — see below | — |
 | `--wpds-*` | WordPress | Admin |
+
+Two rows need their nuance kept, because flattening either one produces a wrong instruction.
+
+**State is a value source, not a duplicated token set.** M3 files interaction states under
+Foundations rather than Styles, which is easy to read as "the application needs its own state
+tokens". It does not. The theme declares the opacities and colours; Social spends them
+implementing hover, focus-visible and pressed state layers. Theme supplies shared visual
+values, Social supplies application interaction behaviour.
+
+**Elevation is not an ownership transfer.** The theme keeps its WordPress shadow-preset bridge
+permanently: `theme.json` exposes `elevation-0`..`elevation-5`, because the editor and blocks
+need `box-shadow` values. Social will separately own an M3 runtime `Elevation` primitive whose
+contract is a semantic level `0..5`. These are two implementations of one Material concept at
+two layers, for two hosts — Social neither inherits nor overrides the theme's tokens, which is
+why `DECISION-FRONTEND-ELEVATION-OWNERSHIP.md` has it stop loading that stylesheet instead.
 
 `theme.json` serves the block-theme and Global Styles domain, so the axes it cannot express are
 the plugin's to own. That is why the split exists, and it is also why the website and the Social

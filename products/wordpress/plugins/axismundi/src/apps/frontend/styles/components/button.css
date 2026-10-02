@@ -209,10 +209,9 @@
 	 * new, while the other three keep their colours unselected and gain a new
 	 * selected pair.
 	 *
-	 * M3 publishes no Toggle Text button. The prop still works there -- the
-	 * state is real and `aria-pressed` carries it -- but there is no container
-	 * to recolour, so an icon's FILL axis is the only visual cue. Whether Social
-	 * allows that combination is a product decision, not one this file makes.
+	 * There is no Toggle Text row because M3 publishes none, and the component
+	 * refuses the combination rather than rendering a toggle with no container
+	 * to recolour. So every selector below is reachable.
 	 */
 	.ax-button[data-variant="filled"][aria-pressed="false"] {
 		--md-comp-button-container-color: var( --md-sys-color-surface-container );

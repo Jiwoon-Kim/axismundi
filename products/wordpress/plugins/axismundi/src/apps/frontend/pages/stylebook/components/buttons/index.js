@@ -134,8 +134,9 @@ export function StylebookButtonsPage() {
 						<p className="ax-stylebook-page__note">
 							The accessible name stays &ldquo;Favourite&rdquo; in both states. Selecting swaps
 							the resting shape rather than squaring it, so the round row squares off and the
-							square row rounds &mdash; which is why both rows are here. M3 publishes no Toggle
-							Text button, so that combination has no container to recolour.
+							square row rounds &mdash; which is why both rows are here. Text is absent because
+							M3 publishes no Toggle Text button and the component refuses the combination:
+							a toggle tells its states apart by recolouring a container, and Text has none.
 						</p>
 					</Group>
 

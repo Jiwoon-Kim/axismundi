@@ -2,7 +2,8 @@
 	'dependencies' => array(
 		'react',
 		'react-jsx-runtime',
-		'wp-element'
+		'wp-element',
+		'wp-warning'
 	),
-	'version' => '52d601590d98e56c0746'
+	'version' => '75f3f784012d0653d457'
 );

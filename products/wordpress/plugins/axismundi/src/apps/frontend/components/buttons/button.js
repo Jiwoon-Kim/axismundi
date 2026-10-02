@@ -24,6 +24,16 @@
  * label is replaced -- is deliberately not implemented here, and the two must
  * not be mixed on one button.
  *
+ * Text takes no toggle. M3 states it outright -- "toggle buttons don't use the
+ * text style" -- and the reason is structural rather than stylistic: a toggle
+ * tells selected from unselected by recolouring its container, and Text has
+ * none. The combination is refused rather than rendered without a cue, and
+ * `@wordpress/warning` says so once in development so a caller is not left
+ * wondering why `onSelectedChange` never fires. Measured: it logs on this
+ * runtime and the second identical call is swallowed. Which build of the
+ * `wp-warning` handle core serves decides whether the gate is `SCRIPT_DEBUG`
+ * or the production build step, so do not rely on one of them by name.
+ *
  * @param {Object} props Component props.
  * @param {import('@wordpress/element').ReactNode} props.children Button label.
  * @param {'filled'|'elevated'|'tonal'|'outlined'|'text'} [props.variant='filled'] M3 colour style.
@@ -40,6 +50,7 @@
  */
 
 import { useState } from '@wordpress/element';
+import warning from '@wordpress/warning';
 import { Elevation } from '../material/elevation';
 
 const VARIANTS = [ 'filled', 'elevated', 'tonal', 'outlined', 'text' ];
@@ -77,14 +88,24 @@ export function Button( {
 	const buttonSize = oneOf( size, SIZES, 'small' );
 	const buttonShape = oneOf( shape, SHAPES, 'round' );
 
+	/* M3: toggle buttons do not use the Text style, which has no container. */
+	const supportsToggle = 'text' !== colorStyle;
+	const isToggle = toggle && supportsToggle;
+
+	if ( toggle && ! supportsToggle ) {
+		warning(
+			'Button: M3 publishes no Toggle Text button, so `toggle` is ignored on variant="text".'
+		);
+	}
+
 	const [ uncontrolled, setUncontrolled ] = useState( Boolean( defaultSelected ) );
 	const isControlled = undefined !== selected;
-	const isSelected = toggle && ( isControlled ? Boolean( selected ) : uncontrolled );
+	const isSelected = isToggle && ( isControlled ? Boolean( selected ) : uncontrolled );
 
 	const restingLevel = RESTING_ELEVATION[ colorStyle ];
 
 	function handleClick( event ) {
-		if ( toggle ) {
+		if ( isToggle ) {
 			const next = ! isSelected;
 			if ( ! isControlled ) {
 				setUncontrolled( next );
@@ -97,7 +118,7 @@ export function Button( {
 	return (
 		<button
 			{ ...props }
-			aria-pressed={ toggle ? isSelected : undefined }
+			aria-pressed={ isToggle ? isSelected : undefined }
 			className={ [ 'ax-button', className ].filter( Boolean ).join( ' ' ) }
 			data-shape={ buttonShape }
 			data-size={ buttonSize }

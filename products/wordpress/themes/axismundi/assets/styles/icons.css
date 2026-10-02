@@ -11,8 +11,9 @@
  * The ligature text ("settings") is also the graceful-degradation fallback when
  * the CSS/font is stripped (federation / reader views).
  *
- * FILL / wght / GRAD / opsz are themeable via --md-icon-* custom properties
- * (defaults match the M3 baseline 24 / 400 / 0 / 0).
+ * FILL and GRAD are custom axes, exposed through --md-icon-* custom
+ * properties. Weight uses font-weight and optical sizing follows font-size
+ * through font-optical-sizing: auto. The baseline is 24px / 400 / 0 / 0.
  *
  * Contract: one `.material-symbols-outlined` element == one icon. The glyph is
  * pinned to a 1em inline-flex box with overflow clip, so the ligature/text
@@ -36,9 +37,10 @@
 
 .material-symbols-outlined {
 	font-family: "Material Symbols Outlined", sans-serif;
-	font-weight: normal;
+	font-weight: 400;
 	font-style: normal;
 	font-size: var(--md-icon-size, 24px);
+	font-optical-sizing: auto;
 	line-height: 1;
 	letter-spacing: normal;
 	text-transform: none;
@@ -59,9 +61,7 @@
 	-webkit-font-smoothing: antialiased;
 	font-variation-settings:
 		"FILL" var(--md-icon-fill, 0),
-		"wght" var(--md-icon-wght, 400),
-		"GRAD" var(--md-icon-grad, 0),
-		"opsz" var(--md-icon-opsz, 24);
+		"GRAD" var(--md-icon-grad, 0);
 	transition: --md-icon-fill var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, cubic-bezier(0.31, 0.94, 0.34, 1));
 }
 

@@ -29,8 +29,19 @@ function axismundi_capstone_asset_metadata( string $application ) : array {
 /**
  * Enqueue one isolated Axismundi application bundle.
  *
- * Frontend owns its M3 stylesheet and Admin owns its WPDS/@wordpress/ui
- * integration. Neither application receives the other's bundle or styles.
+ * The two applications consume two different design systems, and neither receives the
+ * other's bundle or styles.
+ *
+ * Admin consumes the WordPress design system directly: `--wpds-*`, from the `wp-theme`
+ * stylesheet, declared below as a dependency. Social consumes Material 3 through the
+ * Axismundi theme's foundation asset contract, which the theme itself enqueues -- this
+ * plugin does not name theme handles here, because asset location, version and order
+ * belong to the theme (DECISION-FRONTEND-THEME-ASSET-CONTRACT.md). What `theme.json`
+ * cannot express, the Social bundle carries itself.
+ *
+ * Neither application ships token fallbacks. Axismundi is an integration plugin for the
+ * Axismundi ecosystem, not a general-purpose plugin, so the WordPress design system and
+ * the Axismundi theme are premises rather than possibilities.
  *
  * @param 'frontend'|'admin' $application Application entry point.
  * @return void
@@ -51,10 +62,16 @@ function axismundi_capstone_enqueue_app( string $application ) : void {
 	$ver    = isset( $asset['version'] ) && is_scalar( $asset['version'] ) ? (string) $asset['version'] : AXISMUNDI_CAPSTONE_VERSION;
 	$handle = 'axismundi-' . $application;
 
+	/*
+	 * `wp-theme` defines every `--wpds-*` property the Admin stylesheet reads. Core does
+	 * reach it on most admin screens as a transitive dependency of `wp-commands`, so
+	 * leaving this empty appears to work -- which is the problem. The token contract would
+	 * then hold by coincidence, and lose silently if that chain ever changed.
+	 */
 	wp_enqueue_style(
 		$handle,
 		plugins_url( 'build/' . $application . '.css', dirname( __DIR__ ) . '/axismundi.php' ),
-		array(),
+		'admin' === $application ? array( 'wp-theme' ) : array(),
 		$ver
 	);
 	wp_enqueue_script(

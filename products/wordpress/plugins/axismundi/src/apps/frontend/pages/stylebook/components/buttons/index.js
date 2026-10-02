@@ -150,12 +150,16 @@ export function StylebookButtonsPage() {
 						</p>
 					</Group>
 
-					<Group kicker="Nodes, not names: the slot sizes what it holds" title="Icon slots">
+					<Group kicker="Nodes, not names: the slot sizes what it holds" title="Leading icon">
 						<div className="ax-stylebook-buttons__row">
-							<Button icon={ <Icon name="add" /> }>Leading</Button>
-							<Button trailingIcon={ <Icon name="arrow_forward" /> }>Trailing</Button>
-							<Button icon={ <Icon name="sync" /> } trailingIcon={ <Icon name="expand_more" /> }>Both</Button>
+							<Button icon={ <Icon name="add" /> }>With icon</Button>
+							<Button>Without</Button>
 						</div>
+						<p className="ax-stylebook-page__note">
+							One slot, and it is leading. M3 describes no trailing icon and names two icons
+							on one button as a Don&rsquo;t, so a trailing slot would be an Axismundi
+							decision rather than a Material one.
+						</p>
 					</Group>
 				</section>
 			</div>

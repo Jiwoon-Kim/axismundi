@@ -12,6 +12,12 @@
  * carries `showIcon`, `iconSource`, `icon`, `iconClass` and more. Here the
  * caller passes an element and CSS sizes it, so the icon keeps its own API.
  *
+ * There is one icon slot and it is leading. M3 describes no trailing icon and
+ * names two icons on one button as an explicit Don't, which the style guide
+ * already recorded (`products/styleguide/_components/buttons.md`): a trailing
+ * slot would be an Axismundi decision rather than a Material one, and would
+ * have to be written down as such before it is built.
+ *
  * Toggle follows the fixed-label contract from the Dialogs plugin's
  * `docs/BUTTON-STATE.md`: the accessible name never changes, and `aria-pressed`
  * carries the state. The second contract in that memo -- a command button whose
@@ -24,7 +30,6 @@
  * @param {'xsmall'|'small'|'medium'|'large'|'xlarge'} [props.size='small'] M3 size.
  * @param {'round'|'square'} [props.shape='round'] M3 shape.
  * @param {import('@wordpress/element').ReactNode} [props.icon] Leading icon element.
- * @param {import('@wordpress/element').ReactNode} [props.trailingIcon] Trailing icon element.
  * @param {boolean} [props.toggle=false] Opt into the fixed-label toggle contract.
  * @param {boolean} [props.selected] Selected state, for a controlled toggle.
  * @param {boolean} [props.defaultSelected=false] Initial state, for an uncontrolled toggle.
@@ -58,7 +63,6 @@ export function Button( {
 	size = 'small',
 	shape = 'round',
 	icon,
-	trailingIcon,
 	toggle = false,
 	selected,
 	defaultSelected = false,
@@ -105,7 +109,6 @@ export function Button( {
 			{ undefined !== restingLevel && <Elevation level={ restingLevel } /> }
 			{ icon && <span className="ax-button__icon">{ icon }</span> }
 			<span className="ax-button__label">{ children }</span>
-			{ trailingIcon && <span className="ax-button__icon">{ trailingIcon }</span> }
 		</button>
 	);
 }

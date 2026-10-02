@@ -35,7 +35,11 @@ if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding=UTF8)
 
 LAB = Path("products/reference-implementations/axismundi-lab/stylesheets")
-THEME = Path("products/wordpress/themes/axismundi/assets/styles")
+# The theme keeps its token stylesheets in their own directory; the lab does not.
+# This path moved on 2026-10-01 and this constant did not, so axis E reported both
+# colour files "missing" and CI stayed red for three commits. If the layout moves
+# again, that is the line to follow.
+THEME = Path("products/wordpress/themes/axismundi/assets/styles/tokens")
 
 # Axis E runs against both, and the shipped theme is the one that matters.
 # Until now this script read the lab only, which meant the invariant everyone

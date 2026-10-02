@@ -58,8 +58,8 @@ runtime.
 
 ## File and layer boundary
 
-The Frontend-owned spatial contract is recorded in `foundations/spatial.json`; the native CSS
-projection is `styles/tokens/spatial.css`. The JSON is a human-readable contract, not a runtime
+The Frontend-owned spatial contract is recorded in `foundations/layout/grids-spacing/spatial.json`; the native CSS
+projection is `styles/tokens/spacing.css`. The JSON is a human-readable contract, not a runtime
 dependency or CSS generator. Native media queries retain their threshold literals because CSS
 custom properties cannot provide media-query conditions.
 
@@ -70,15 +70,65 @@ and density.
 src/apps/frontend/styles/
   layers.css
   tokens/
-    spatial.css                 <- Frontend-owned CSS token source
+    spacing.css                 <- Frontend-owned spacing CSS token source
 src/apps/frontend/foundations/
-  spatial.json                  <- Frontend-owned spatial contract
-  viewport.json                 <- Window size class contract
-  layouts/
-    ... layout consumers ...
+  layout/
+    breakpoints/
+      viewport.json             <- Window size class contract
+    grids-spacing/
+      spatial.json              <- Frontend-owned spatial contract
+    panes/ scaffold/ canonical-examples/
+      ... layout consumers ...
 ```
 
-`spatial.css` declares Foundation values on `:root` in `axismundi.tokens`; grid placement rules
+### Contract-only is not the same as unused
+
+Three of these files have no runtime consumer, and that is three different situations rather
+than one. Recorded here because "nothing imports it" has already been read once as "delete it".
+
+| file | status |
+|---|---|
+| `styles/tokens/spacing.css` | **runtime implementation.** Bundled; the app consumes it through `var()` |
+| `foundations/layout/breakpoints/viewport.json` | **non-runtime contract.** The CSS media queries are its implementation |
+| `foundations/layout/grids-spacing/spatial.json` | **non-runtime contract.** `spacing.css` and the layout CSS are its implementation |
+| `src/apps/frontend/style.json` | **sketch.** A prototype of a future admin control schema — see `PROTOTYPE-FRONTEND-STYLE-MANIFEST.md` |
+
+A CSS custom property is an excellent implementation and a poor contract. `--ax-layout-window-margin`
+states what the margin resolves to; it does not state the spatial policy in a form that can be read,
+reviewed or reused independently of the technology that implements it. That vocabulary is what a
+later layout VQA surface, the admin control panel and component specifications take as their
+reference point, which is why the contract is kept even while nothing imports it.
+
+Measured 2026-10-02: the CSS does preserve the token *reference*, not merely the resolved value —
+`--ax-layout-window-margin: var( --md-sys-measurement-space200 )` carries the same relationship the
+JSON writes as `{md.sys.measurement.space200}`. So the duplication is real rather than a difference
+in abstraction level, and the JSON earns its place as a contract rather than as extra information.
+
+### The raw scale is a later tidy-up, not a current one
+
+`spatial.json` currently writes all eighteen `md.sys.measurement.space*` values that `spacing.css`
+also declares. That half is a pure mirror. When it is worth separating, the contract keeps the
+semantic layout policy and the raw scale lives only in the CSS token source:
+
+```json
+{
+  "layout": {
+    "windowMargin": {
+      "compact": "md.sys.measurement.space200",
+      "mediumAndUp": "md.sys.measurement.space300"
+    },
+    "paneGap": "md.sys.measurement.space300"
+  }
+}
+```
+
+Not now, and no generator or checker in the meantime. A checker here would make CI enforce
+agreement between a live file and one with no consumer, and a generator is the JSON-parsing work
+this decision explicitly declines. The file name follows that change rather than leading it: what
+remains after the raw scale leaves is layout policy, including `fixedPaneWidth`, which is a window
+dimension rather than spacing — so `spacing.json` would be the wrong name both now and then.
+
+`spacing.css` declares Foundation values on `:root` in `axismundi.tokens`; grid placement rules
 remain in `axismundi.layouts`. The Social document body consumes these tokens as its default
 surface rather than becoming their owner.
 

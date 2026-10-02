@@ -1,4 +1,5 @@
 import { CanonicalLayoutFixture } from './canonical-layout-fixtures';
+import { StylebookButtonsPage } from './components/buttons';
 import { StylebookStylesPage } from './styles';
 
 /**
@@ -9,7 +10,11 @@ import { StylebookStylesPage } from './styles';
  *
  * @return {import('@wordpress/element').ReactNode} Stylebook route content.
  */
-export function StylebookPage( { layout, styles } ) {
+export function StylebookPage( { component, layout, styles } ) {
+	if ( 'buttons' === component ) {
+		return <StylebookButtonsPage />;
+	}
+
 	if ( styles ) {
 		return <StylebookStylesPage />;
 	}
@@ -26,6 +31,7 @@ export function StylebookPage( { layout, styles } ) {
 			</header>
 			<nav className="ax-stylebook__navigation" aria-label="Layout fixtures">
 				<a href="/social/stylebook/styles">Styles</a>
+				<a href="/social/stylebook/components/buttons">Buttons</a>
 				<a href="/social/stylebook/layout/feed">Feed</a>
 				<a href="/social/stylebook/layout/list-detail">List-detail</a>
 				<a href="/social/stylebook/layout/supporting_pane">Supporting pane</a>

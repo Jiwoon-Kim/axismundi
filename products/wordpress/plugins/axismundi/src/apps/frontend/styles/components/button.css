@@ -1,0 +1,351 @@
+/*
+ * Material 3 Button.
+ *
+ * A UI component rather than a Styles primitive, so it lives in the components
+ * layer. `axismundi.material` holds the atomic pieces that correspond to M3's
+ * Styles axes -- Icon and Elevation -- which a component like this consumes.
+ *
+ * The published values come from `products/styleguide/_data/button.yml`, which
+ * `tools/validators/validate_styleguide_button.py` checks against the M3 spec.
+ * This file spends the same numbers through the Social spacing and shape
+ * foundations, with no fallbacks: the Axismundi theme is a premise here.
+ *
+ * NAMING. `--md-comp-button-*` completes the tier the project already has at
+ * `--md-ref-*` and `--md-sys-*`. The slots are per component, not per variant:
+ *
+ *   --md-comp-button-container-color
+ *   --md-comp-button-label-text-color
+ *   --md-comp-button-container-height
+ *   --md-comp-button-label-text-font
+ *
+ * That set is the Button's stable contract. `filled`, `tonal` and
+ * `secondary-container` are not slots -- they are the rule for which value
+ * lands in one. Naming a slot after a colour role would put typography under a
+ * colour (`label-text-font` does not belong to `secondary-container`), and
+ * Outlined, whose role names an outline, and Text, which has no container at
+ * all, would each need a namespace of their own.
+ *
+ * Material Web instead namespaces per variant (`md.comp.filled-button.*`).
+ * That suits five separate custom elements; a single React Button choosing a
+ * variant by prop would need an alias layer to collapse them again.
+ *
+ * The class stays `ax-button`. The tokens are Material's vocabulary; the
+ * component is ours.
+ */
+
+@layer axismundi.components {
+	/* --- Size: geometry and label type ----------------------------------- */
+
+	.ax-button[data-size="xsmall"] {
+		--md-comp-button-container-height: 32px;
+		--md-comp-button-space: var( --md-sys-measurement-space150 );
+		--md-comp-button-icon-size: 20px;
+		--md-comp-button-icon-label-space: var( --md-sys-measurement-space50 );
+		--md-comp-button-square-container-shape: var( --md-sys-shape-corner-value-medium );
+		--md-comp-button-pressed-container-shape: var( --md-sys-shape-corner-value-small );
+		--md-comp-button-outline-width: 1px;
+		--md-comp-button-label-text-size: 14px;
+		--md-comp-button-label-text-weight: 500;
+		--md-comp-button-label-text-tracking: 0.1px;
+		--md-comp-button-label-text-line-height: 20px;
+	}
+
+	.ax-button[data-size="small"] {
+		--md-comp-button-container-height: 40px;
+		--md-comp-button-space: var( --md-sys-measurement-space200 );
+		--md-comp-button-icon-size: 20px;
+		--md-comp-button-icon-label-space: var( --md-sys-measurement-space100 );
+		--md-comp-button-square-container-shape: var( --md-sys-shape-corner-value-medium );
+		--md-comp-button-pressed-container-shape: var( --md-sys-shape-corner-value-small );
+		--md-comp-button-outline-width: 1px;
+		--md-comp-button-label-text-size: 14px;
+		--md-comp-button-label-text-weight: 500;
+		--md-comp-button-label-text-tracking: 0.1px;
+		--md-comp-button-label-text-line-height: 20px;
+	}
+
+	.ax-button[data-size="medium"] {
+		--md-comp-button-container-height: 56px;
+		--md-comp-button-space: var( --md-sys-measurement-space300 );
+		--md-comp-button-icon-size: 24px;
+		--md-comp-button-icon-label-space: var( --md-sys-measurement-space100 );
+		--md-comp-button-square-container-shape: var( --md-sys-shape-corner-value-large );
+		--md-comp-button-pressed-container-shape: var( --md-sys-shape-corner-value-medium );
+		--md-comp-button-outline-width: 1px;
+		--md-comp-button-label-text-size: 16px;
+		--md-comp-button-label-text-weight: 500;
+		--md-comp-button-label-text-tracking: 0.15px;
+		--md-comp-button-label-text-line-height: 24px;
+	}
+
+	.ax-button[data-size="large"] {
+		--md-comp-button-container-height: 96px;
+		--md-comp-button-space: var( --md-sys-measurement-space600 );
+		--md-comp-button-icon-size: 32px;
+		--md-comp-button-icon-label-space: var( --md-sys-measurement-space150 );
+		--md-comp-button-square-container-shape: var( --md-sys-shape-corner-value-extra-large );
+		--md-comp-button-pressed-container-shape: var( --md-sys-shape-corner-value-large );
+		--md-comp-button-outline-width: 2px;
+		--md-comp-button-label-text-size: 24px;
+		--md-comp-button-label-text-weight: 400;
+		--md-comp-button-label-text-tracking: 0;
+		--md-comp-button-label-text-line-height: 32px;
+	}
+
+	.ax-button[data-size="xlarge"] {
+		--md-comp-button-container-height: 136px;
+		--md-comp-button-space: var( --md-sys-measurement-space800 );
+		--md-comp-button-icon-size: 40px;
+		--md-comp-button-icon-label-space: var( --md-sys-measurement-space200 );
+		--md-comp-button-square-container-shape: var( --md-sys-shape-corner-value-extra-large );
+		--md-comp-button-pressed-container-shape: var( --md-sys-shape-corner-value-large );
+		--md-comp-button-outline-width: 3px;
+		--md-comp-button-label-text-size: 32px;
+		--md-comp-button-label-text-weight: 400;
+		--md-comp-button-label-text-tracking: 0;
+		--md-comp-button-label-text-line-height: 40px;
+	}
+
+	/*
+	 * `space` is one value per side. Material Web publishes a leading and a
+	 * trailing space that differ once an icon is present (16/24 against a 24/24
+	 * base); `button.yml` records one `space` per size for the Expressive scale.
+	 * Which of those the Expressive sizes actually publish is an open question,
+	 * so the symmetric value is spent here rather than a guessed split.
+	 */
+
+	/* --- Shape -------------------------------------------------------------
+	 *
+	 * The round radius is half the height at every size, which is what M3 means
+	 * by a circular corner on a fixed-height control. The block adapters
+	 * interpolate between the two radii through a squareness flag because size
+	 * and shape can arrive on different DOM levels there -- a Square group
+	 * holding a Large button. A React component receives both props on one
+	 * element, so the radius is simply selected.
+	 */
+
+	.ax-button[data-shape="round"] {
+		--md-comp-button-container-shape: calc( var( --md-comp-button-container-height ) / 2 );
+	}
+
+	.ax-button[data-shape="square"] {
+		--md-comp-button-container-shape: var( --md-comp-button-square-container-shape );
+	}
+
+	/*
+	 * A selected toggle takes the squarer radius at every size. M3 publishes
+	 * `selected_round` equal to the square shape, so one declaration covers a
+	 * Round toggle that squares off and a Square toggle that already is.
+	 */
+	.ax-button[aria-pressed="true"] {
+		--md-comp-button-container-shape: var( --md-comp-button-square-container-shape );
+	}
+
+	/* --- Colour styles ------------------------------------------------------
+	 *
+	 * A variant decides which `--md-sys-*` role lands in which slot, and nothing
+	 * else paints. The state layers below follow whatever the slots hold, so a
+	 * toggle state is one override rather than four rule sets.
+	 */
+
+	.ax-button {
+		--md-comp-button-container-color: transparent;
+		--md-comp-button-outline-color: transparent;
+		--md-comp-button-label-text-font: var( --md-sys-typescale-label-large-font );
+	}
+
+	.ax-button[data-variant="filled"] {
+		--md-comp-button-container-color: var( --md-sys-color-primary );
+		--md-comp-button-label-text-color: var( --md-sys-color-on-primary );
+	}
+
+	.ax-button[data-variant="elevated"] {
+		--md-comp-button-container-color: var( --md-sys-color-surface-container-low );
+		--md-comp-button-label-text-color: var( --md-sys-color-primary );
+	}
+
+	.ax-button[data-variant="tonal"] {
+		--md-comp-button-container-color: var( --md-sys-color-secondary-container );
+		--md-comp-button-label-text-color: var( --md-sys-color-on-secondary-container );
+	}
+
+	/*
+	 * Outlined has no container at rest: its role names an outline and the
+	 * surface behind stays transparent. It is also the only style that spends
+	 * the outline width -- a transparent border declared on every style would
+	 * still occupy layout, putting the label one pixel further in than the
+	 * per-size space M3 publishes, and on a <button> whose UA `outset` border
+	 * survives at width 0 it has drawn a visible line before.
+	 */
+	.ax-button[data-variant="outlined"] {
+		--md-comp-button-outline-color: var( --md-sys-color-outline-variant );
+		--md-comp-button-label-text-color: var( --md-sys-color-on-surface-variant );
+		border-width: var( --md-comp-button-outline-width );
+	}
+
+	/* Text has no container and no outline: only a label colour. */
+	.ax-button[data-variant="text"] {
+		--md-comp-button-label-text-color: var( --md-sys-color-primary );
+	}
+
+	/* --- Toggle colours -----------------------------------------------------
+	 *
+	 * M3 gives every style two pairs, and which one differs from the style's own
+	 * colours depends on the style: Filled is the one whose UNSELECTED pair is
+	 * new, while the other three keep their colours unselected and gain a new
+	 * selected pair.
+	 *
+	 * M3 publishes no Toggle Text button. The prop still works there -- the
+	 * state is real and `aria-pressed` carries it -- but there is no container
+	 * to recolour, so an icon's FILL axis is the only visual cue. Whether Social
+	 * allows that combination is a product decision, not one this file makes.
+	 */
+	.ax-button[data-variant="filled"][aria-pressed="false"] {
+		--md-comp-button-container-color: var( --md-sys-color-surface-container );
+		--md-comp-button-label-text-color: var( --md-sys-color-on-surface-variant );
+	}
+
+	.ax-button[data-variant="elevated"][aria-pressed="true"] {
+		--md-comp-button-container-color: var( --md-sys-color-primary );
+		--md-comp-button-label-text-color: var( --md-sys-color-on-primary );
+	}
+
+	.ax-button[data-variant="tonal"][aria-pressed="true"] {
+		--md-comp-button-container-color: var( --md-sys-color-secondary );
+		--md-comp-button-label-text-color: var( --md-sys-color-on-secondary );
+	}
+
+	/* A filled container needs no outline, and M3 draws none. The width stays so
+	 * that the colour change does not reflow the control. */
+	.ax-button[data-variant="outlined"][aria-pressed="true"] {
+		--md-comp-button-container-color: var( --md-sys-color-inverse-surface );
+		--md-comp-button-label-text-color: var( --md-sys-color-inverse-on-surface );
+		--md-comp-button-outline-color: transparent;
+	}
+
+	/* --- The control reads the slots ---------------------------------------- */
+
+	.ax-button {
+		position: relative;
+		box-sizing: border-box;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		/*
+		 * M3's width rule: the label decides, and a width narrower than the
+		 * label is the published Don't. A flex parent shrinks its children by
+		 * default, so declaring no width is not enough.
+		 */
+		flex-shrink: 0;
+		gap: var( --md-comp-button-icon-label-space );
+		block-size: var( --md-comp-button-container-height );
+		padding-block: 0;
+		padding-inline: var( --md-comp-button-space );
+		border: 0 solid var( --md-comp-button-outline-color );
+		border-radius: var( --md-comp-button-container-shape );
+		background-color: var( --md-comp-button-container-color );
+		color: var( --md-comp-button-label-text-color );
+		font-family: var( --md-comp-button-label-text-font );
+		font-size: var( --md-comp-button-label-text-size );
+		font-weight: var( --md-comp-button-label-text-weight );
+		letter-spacing: var( --md-comp-button-label-text-tracking );
+		line-height: var( --md-comp-button-label-text-line-height );
+		white-space: nowrap;
+		cursor: pointer;
+		/*
+		 * The shape morph is spatial and the state-layer colour is an effect, so
+		 * M3 gives them different curves. This duration also reaches the
+		 * elevation layer, which inherits it rather than declaring its own.
+		 */
+		transition-property: background-color, border-radius, border-color, color;
+		transition-duration: var( --md-sys-motion-curve-fast-spatial-duration );
+		transition-timing-function: var( --md-sys-motion-curve-fast-spatial );
+	}
+
+	.ax-button__label {
+		display: block;
+	}
+
+	/*
+	 * The icon slot sizes whatever it holds rather than configuring it. An Icon
+	 * element that was given no size prop reads this, so the caller keeps the
+	 * icon's own API and the button still owns the per-size geometry.
+	 */
+	.ax-button__icon {
+		display: grid;
+		place-items: center;
+		flex-shrink: 0;
+		--md-icon-size: var( --md-comp-button-icon-size );
+	}
+
+	/* FILL interpolates because the theme registers the axis with @property. */
+	.ax-button[aria-pressed="true"] .ax-button__icon {
+		--md-icon-fill: 1;
+	}
+
+	/* --- State layers ------------------------------------------------------
+	 *
+	 * The label role mixed over the container, which is how the theme paints its
+	 * own buttons. On Text and Outlined the container is `transparent`, and
+	 * mixing into it yields the role at the state opacity -- the same result a
+	 * separate state-layer element would give, without a second box to position
+	 * against the elevation layer.
+	 */
+	.ax-button:not( :disabled ):hover {
+		background-color: color-mix( in srgb, var( --md-comp-button-label-text-color ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), var( --md-comp-button-container-color ) );
+	}
+
+	.ax-button:not( :disabled ):focus-visible {
+		background-color: color-mix( in srgb, var( --md-comp-button-label-text-color ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), var( --md-comp-button-container-color ) );
+	}
+
+	/* After focus, so a press still reads as pressed on a focused button. */
+	.ax-button:not( :disabled ):active {
+		background-color: color-mix( in srgb, var( --md-comp-button-label-text-color ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), var( --md-comp-button-container-color ) );
+		border-radius: var( --md-comp-button-pressed-container-shape );
+	}
+
+	/* Elevated is the only style with a resting shadow; M3 raises it one level
+	 * on hover and focus. */
+	.ax-button[data-variant="elevated"]:not( :disabled ):is( :hover, :focus-visible ) .ax-elevation {
+		--md-elevation-level: 2;
+	}
+
+	/* --- Disabled -----------------------------------------------------------
+	 *
+	 * One pair for every style rather than a per-style table, because a disabled
+	 * button is the same whatever it carries. The container is REPLACED:
+	 * `on-surface` at 10% is a colour, not an opacity applied to whatever the
+	 * style was painting.
+	 */
+	.ax-button:disabled {
+		--md-comp-button-container-color: color-mix( in srgb, var( --md-sys-color-on-surface ) 10%, transparent );
+		--md-comp-button-label-text-color: color-mix( in srgb, var( --md-sys-color-on-surface ) calc( var( --md-sys-state-disabled-state-layer-opacity ) * 100% ), transparent );
+		cursor: not-allowed;
+	}
+
+	/*
+	 * Outlined is the exception M3 names: the outline survives at full strength
+	 * -- the role is still `outline-variant`, not a faded `on-surface` -- and no
+	 * container arrives except on a selected toggle.
+	 */
+	.ax-button[data-variant="outlined"]:disabled {
+		--md-comp-button-container-color: transparent;
+		--md-comp-button-outline-color: var( --md-sys-color-outline-variant );
+	}
+
+	.ax-button[data-variant="outlined"][aria-pressed="true"]:disabled {
+		--md-comp-button-container-color: color-mix( in srgb, var( --md-sys-color-on-surface ) 10%, transparent );
+	}
+
+	/* A disabled control shows no elevation. */
+	.ax-button:disabled .ax-elevation {
+		--md-elevation-level: 0;
+	}
+
+	@media ( prefers-reduced-motion: reduce ) {
+		.ax-button {
+			transition: none;
+		}
+	}
+}

@@ -1,0 +1,28 @@
+@layer axismundi.patterns {
+	.ax-stylebook--buttons > .ax-scaffold__main {
+		padding: var( --ax-layout-window-margin );
+	}
+
+	.ax-stylebook-buttons__row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var( --md-sys-measurement-space200 );
+	}
+
+	/*
+	 * The size list is a grid rather than a flex row: XL is 136px tall beside a
+	 * 32px XS, and a flex row would stretch every readout to the tallest cell.
+	 */
+	.ax-stylebook-buttons__sizes {
+		display: grid;
+		gap: var( --md-sys-measurement-space300 );
+	}
+
+	.ax-stylebook-buttons__sample {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var( --md-sys-measurement-space200 );
+	}
+}

@@ -17,6 +17,14 @@ function getFrontendRoute() {
 		return { name: 'stylebook', styles: true };
 	}
 
+	const stylebookComponent = relativePath.match(
+		/^stylebook\/components\/(buttons)$/
+	);
+
+	if ( stylebookComponent ) {
+		return { name: 'stylebook', component: stylebookComponent[ 1 ] };
+	}
+
 	const stylebookLayout = relativePath.match(
 		/^stylebook\/layout\/(feed|list-detail|supporting_pane)$/
 	);
@@ -79,7 +87,7 @@ export function FrontendApp() {
 	const route = getFrontendRoute();
 
 	if ( 'stylebook' === route.name ) {
-		return <StylebookPage layout={ route.layout } styles={ route.styles } />;
+		return <StylebookPage component={ route.component } layout={ route.layout } styles={ route.styles } />;
 	}
 
 	return (

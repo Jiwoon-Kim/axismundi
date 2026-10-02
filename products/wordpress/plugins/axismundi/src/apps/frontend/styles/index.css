@@ -11,4 +11,5 @@
 @import url( '../foundations/layout/canonical-examples/list-detail/list-detail.css' );
 @import url( '../foundations/layout/canonical-examples/supporting-pane/supporting-pane.css' );
 @import url( '../pages/stylebook/layout-topology-fixtures.css' );
+@import url( './components/button.css' );
 @import url( '../pages/stylebook/styles/styles.css' );

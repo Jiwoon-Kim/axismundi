@@ -151,6 +151,76 @@ stylesheet, frontend API, or `axismundi.overrides` layer is implemented yet.
 `has-*-font-size` remains the WordPress block serialization contract and is not the
 Social frontend preset namespace.
 
+### Static theme presets are a different proposal, also deferred
+
+`ax-typescale` above is a *user-custom* registry, which is why it belongs in an
+override layer. A static projection of the sys tokens into reusable classes is a
+separate idea, benchmarked on how a block theme exposes typography presets:
+
+```css
+@layer axismundi.theme {
+  .ax--preset--typescale--display-large {
+    font-family: var(--md-sys-typescale-display-large-font);
+    font-size: var(--md-sys-typescale-display-large-size);
+    font-weight: var(--md-sys-typescale-display-large-weight);
+    letter-spacing: var(--md-sys-typescale-display-large-tracking);
+    line-height: var(--md-sys-typescale-display-large-line-height);
+  }
+}
+```
+
+Fifteen baseline roles plus fifteen emphasized would be thirty explicit classes.
+That flatness is not automatically wrong — `has-display-large-font-size` is the same
+shape and is stable and legible — but it is deferred, for a reason about consumers
+rather than about taste.
+
+Components read the sys tokens directly:
+
+```css
+.ax-button {
+  font-family: var(--md-sys-typescale-label-large-font);
+  font-size: var(--md-sys-typescale-label-large-size);
+}
+```
+
+A Button using Label Large is a component specification. Routing it through
+`.ax--preset--typescale--label-large` adds a step that obscures which M3 role the
+component chose. With components consuming tokens directly, the only consumer left
+for a static preset class is the Stylebook — and building an API for one caller
+settles its shape before the use cases exist.
+
+Repeated text slots inside a component are the case that will argue for classes, and
+the near-term shape is a component slot rather than a global preset:
+
+```css
+.ax-card__headline        { font-family: var(--md-sys-typescale-title-medium-font); }
+.ax-card__content         { font-family: var(--md-sys-typescale-body-medium-font); }
+.ax-notification-item__headline { font-family: var(--md-sys-typescale-body-large-font); }
+```
+
+A card headline and a notification headline are both "headings" and need not be the
+same M3 role — a card title may be Title Medium while an unread notification is Body
+Large Emphasized. Writing one global class over both decides that too early.
+
+Two promotion triggers, either of which is enough:
+
+```text
+the same M3 role declared identically across several components
+  -> extract a static typescale preset class, and the axismundi.theme layer with it
+
+the same text slot and states shared across several components
+  -> extract a Text / Headline React primitive instead
+```
+
+So the order is: implement `Card`, `NotificationItem`, `ListItem`, `AppBar` with each
+owning its slots, then read the repetition. The Stylebook's inline token consumption
+is correct for its own purpose meanwhile — it verifies the token, not a preset built
+on top of it, while `getComputedStyle()` still reports the resolved value.
+
+The `axismundi.theme` layer does not exist. The frontend layer order declares
+`reset, tokens, base, layouts, material, components, patterns, templates, utilities`,
+so introducing either proposal means amending that declaration first.
+
 The Social token file preserves the supplied 15 baseline and 15 emphasized roles.
 It does not yet implement variable-font axis-value application or language-height
 variants.

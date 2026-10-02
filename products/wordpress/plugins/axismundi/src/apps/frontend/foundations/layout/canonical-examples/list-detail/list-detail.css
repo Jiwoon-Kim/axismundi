@@ -1,0 +1,44 @@
+@layer axismundi.layouts {
+	.ax-list-detail-layout {
+		grid-template-columns: minmax( 0, 1fr );
+	}
+
+	.ax-list-detail-layout__detail,
+	.ax-list-detail-layout__extra {
+		display: none;
+	}
+
+	.ax-list-detail-layout[data-compact-pane="detail"] .ax-list-detail-layout__list {
+		display: none;
+	}
+
+	.ax-list-detail-layout[data-compact-pane="detail"] .ax-list-detail-layout__detail {
+		display: block;
+	}
+
+	@media ( min-width: 840px ) {
+		.ax-list-detail-layout {
+			grid-template-columns:
+				minmax( 0, var( --ax-layout-fixed-pane-width ) )
+				minmax( 0, 1fr );
+		}
+
+		.ax-list-detail-layout__list,
+		.ax-list-detail-layout__detail {
+			display: block;
+		}
+	}
+
+	@media ( min-width: 1600px ) {
+		.ax-list-detail-layout[data-has-extra] {
+			grid-template-columns:
+				minmax( 0, var( --ax-layout-fixed-pane-width ) )
+				minmax( 0, 1fr )
+				minmax( 0, var( --ax-layout-fixed-pane-width ) );
+		}
+
+		.ax-list-detail-layout[data-has-extra] .ax-list-detail-layout__extra {
+			display: block;
+		}
+	}
+}

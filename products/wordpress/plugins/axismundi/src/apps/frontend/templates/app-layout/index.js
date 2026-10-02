@@ -1,4 +1,4 @@
-import { Pane } from '../pane';
+import { Scaffold } from '../../foundations/layout/scaffold';
 
 /**
  * Places application regions without supplying navigation or supporting-pane
@@ -18,26 +18,13 @@ export function AppLayout( {
 	supporting,
 } ) {
 	return (
-		<div
+		<Scaffold
 			className="ax-app-layout"
-			data-has-bar={ navigationBar ? '' : undefined }
-			data-has-rail={ navigationRail ? '' : undefined }
-			data-has-supporting={ supporting ? '' : undefined }
+			navigationBar={ navigationBar }
+			navigationRail={ navigationRail }
+			supporting={ supporting }
 		>
-			{ navigationBar ? (
-				<div className="ax-app-layout__bar">{ navigationBar }</div>
-			) : null }
-			{ navigationRail ? (
-				<div className="ax-app-layout__rail">{ navigationRail }</div>
-			) : null }
-			<Pane as="main" className="ax-app-layout__main">
-				{ children }
-			</Pane>
-			{ supporting ? (
-				<Pane as="aside" className="ax-app-layout__supporting">
-					{ supporting }
-				</Pane>
-			) : null }
-		</div>
+			{ children }
+		</Scaffold>
 	);
 }

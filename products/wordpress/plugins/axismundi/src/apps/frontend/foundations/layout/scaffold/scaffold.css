@@ -1,9 +1,5 @@
 @layer axismundi.layouts {
-	/*
-	 * CSS custom properties cannot define media-query conditions. These two
-	 * thresholds are the documented Frontend compact/medium/expanded contract.
-	 */
-	.ax-app-layout {
+	.ax-scaffold {
 		display: grid;
 		grid-template-areas: "main";
 		grid-template-columns: minmax( 0, 1fr );
@@ -12,57 +8,57 @@
 		color: var( --md-sys-color-on-surface );
 	}
 
-	.ax-app-layout__main {
+	.ax-scaffold__main {
 		grid-area: main;
 		min-inline-size: 0;
 	}
 
-	.ax-app-layout__bar,
-	.ax-app-layout__rail,
-	.ax-app-layout__supporting {
+	.ax-scaffold__bar,
+	.ax-scaffold__rail,
+	.ax-scaffold__supporting {
 		display: none;
 	}
 
-	.ax-app-layout[data-has-bar] {
+	.ax-scaffold[data-has-bar] {
 		grid-template-areas:
 			"main"
 			"bar";
 		grid-template-rows: minmax( 0, 1fr ) auto;
 	}
 
-	.ax-app-layout[data-has-bar] .ax-app-layout__bar {
+	.ax-scaffold[data-has-bar] .ax-scaffold__bar {
 		grid-area: bar;
 		display: block;
 	}
 
 	@media ( min-width: 600px ) {
-		.ax-app-layout[data-has-rail] {
+		.ax-scaffold[data-has-rail] {
 			grid-template-areas: "rail main";
 			grid-template-columns: auto minmax( 0, 1fr );
 		}
 
-		.ax-app-layout[data-has-rail] .ax-app-layout__rail {
+		.ax-scaffold[data-has-rail] .ax-scaffold__rail {
 			grid-area: rail;
 			display: block;
 		}
 
-		.ax-app-layout[data-has-bar] .ax-app-layout__bar {
+		.ax-scaffold[data-has-bar] .ax-scaffold__bar {
 			display: none;
 		}
 	}
 
 	@media ( min-width: 840px ) {
-		.ax-app-layout[data-has-rail][data-has-supporting] {
+		.ax-scaffold[data-has-rail][data-has-supporting] {
 			grid-template-areas: "rail main supporting";
 			grid-template-columns: auto minmax( 0, 1fr ) auto;
 		}
 
-		.ax-app-layout:not([data-has-rail])[data-has-supporting] {
+		.ax-scaffold:not([data-has-rail])[data-has-supporting] {
 			grid-template-areas: "main supporting";
 			grid-template-columns: minmax( 0, 1fr ) auto;
 		}
 
-		.ax-app-layout[data-has-supporting] .ax-app-layout__supporting {
+		.ax-scaffold[data-has-supporting] .ax-scaffold__supporting {
 			grid-area: supporting;
 			display: block;
 		}

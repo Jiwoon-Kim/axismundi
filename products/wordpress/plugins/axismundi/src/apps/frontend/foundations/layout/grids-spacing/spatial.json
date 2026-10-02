@@ -28,6 +28,10 @@
 			"compact": "{md.sys.measurement.space200}",
 			"mediumAndUp": "{md.sys.measurement.space300}"
 		},
-		"paneGap": "{md.sys.measurement.space300}"
+		"paneGap": "{md.sys.measurement.space300}",
+		"fixedPaneWidth": {
+			"expanded": "360px",
+			"largeAndUp": "412px"
+		}
 	}
 }

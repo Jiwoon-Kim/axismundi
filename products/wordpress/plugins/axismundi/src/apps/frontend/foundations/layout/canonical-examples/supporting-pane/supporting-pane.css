@@ -1,0 +1,13 @@
+@layer axismundi.layouts {
+	.ax-supporting-pane-layout {
+		grid-template-columns: minmax( 0, 1fr );
+	}
+
+	@media ( min-width: 840px ) {
+		.ax-supporting-pane-layout {
+			grid-template-columns:
+				minmax( 0, 1fr )
+				minmax( 0, var( --ax-layout-fixed-pane-width ) );
+		}
+	}
+}

@@ -1,40 +1,34 @@
 @layer axismundi.layouts {
-	.ax-stylebook {
+	.ax-stylebook:not(.ax-scaffold) {
 		margin-inline: auto;
 		max-inline-size: 100%;
 		padding: var( --ax-layout-window-margin );
 	}
 
-	.ax-stylebook__header,
-	.ax-layout-fixture__header,
-	.ax-layout-fixture__case {
+	.ax-stylebook.ax-scaffold > .ax-scaffold__main {
+		display: grid;
+		padding: var( --ax-layout-window-margin );
+	}
+
+	.ax-stylebook__header {
 		margin: 0;
 	}
 
-	.ax-layout-fixture {
+	.ax-stylebook__navigation {
 		display: grid;
 		gap: var( --ax-layout-pane-gap );
 		margin-block-start: var( --ax-layout-pane-gap );
 	}
 
-	.ax-layout-fixture__case {
-		display: grid;
-		gap: var( --md-sys-measurement-space150 );
+	.ax-canonical-layout-fixture {
+		min-block-size: 0;
 	}
 
-	.ax-layout-fixture__group--one {
-		grid-template-columns: minmax( 0, 1fr );
+	.ax-canonical-layout-fixture > .ax-pane-group {
+		min-block-size: 100%;
 	}
 
-	.ax-layout-fixture__group--two {
-		grid-template-columns: repeat( 2, minmax( 0, 1fr ) );
-	}
-
-	.ax-layout-fixture__group--three {
-		grid-template-columns: repeat( 3, minmax( 0, 1fr ) );
-	}
-
-	.ax-layout-fixture__pane {
+	.ax-canonical-layout-fixture__pane {
 		background: var( --md-sys-color-surface-container );
 		color: var( --md-sys-color-on-surface );
 		min-block-size: var( --md-sys-measurement-space900 );

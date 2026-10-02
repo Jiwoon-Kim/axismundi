@@ -21,11 +21,18 @@
 
 		--ax-layout-window-margin: var( --md-sys-measurement-space200 );
 		--ax-layout-pane-gap: var( --md-sys-measurement-space300 );
+		--ax-layout-fixed-pane-width: 360px;
 	}
 
 	@media ( min-width: 600px ) {
 		:root {
 			--ax-layout-window-margin: var( --md-sys-measurement-space300 );
+		}
+	}
+
+	@media ( min-width: 1200px ) {
+		:root {
+			--ax-layout-fixed-pane-width: 412px;
 		}
 	}
 }

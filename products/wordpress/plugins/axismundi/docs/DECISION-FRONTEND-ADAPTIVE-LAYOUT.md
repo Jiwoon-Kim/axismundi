@@ -118,13 +118,13 @@ Material's canonical examples are product-layout precedents, not a new Social te
 
 ```text
 Feed
-  -> initial product reference for a Social timeline/content grid inside the main pane
+  -> initial topology for a Social timeline/content grid inside the main pane
 
 List-detail
-  -> future reference for a collection/object detail destination with a parent-child relationship
+  -> initial topology for a collection/object detail destination with a parent-child relationship
 
 Supporting pane
-  -> future reference for contextual secondary content that is meaningful only with a focus pane
+  -> initial topology for contextual secondary content that is meaningful only with a focus pane
 ```
 
 The Feed layout is not the application scaffold: it composes content inside a pane. Cards and
@@ -132,7 +132,8 @@ list items are components. Likewise, supporting-pane placement is a destination 
 not a reason for `AppLayout` to manufacture a permanent sidebar.
 
 The source references are preserved in `SOURCE-M3-CANONICAL-LAYOUTS-RAW.md` and organized for
-VQA in `REFERENCE-M3-CANONICAL-LAYOUTS.md`. No canonical layout is implemented by this record.
+VQA in `REFERENCE-M3-CANONICAL-LAYOUTS.md`. The initial implementations establish topology only;
+they do not make product-specific component or navigation decisions.
 
 ## Axismundi layout/component boundary
 
@@ -156,8 +157,9 @@ Axismundi component (`axismundi.components`)
   - feed, object card, actor header, composer, and supporting widgets
 ```
 
-`AppLayout` must not manufacture a navigation rail, navigation bar, supporting widget, or
-page-specific content. It exposes slots for independent components. Conversely, a navigation
+`Scaffold` must not manufacture a navigation rail, navigation bar, supporting widget, or
+page-specific content. It exposes slots for independent components. `AppLayout` is the Social
+product composition that currently forwards those slots to `Scaffold`. Conversely, a navigation
 component must not silently claim application grid ownership.
 
 ## Current implementation baseline
@@ -165,7 +167,7 @@ component must not silently claim application grid ownership.
 The current Frontend implementation is deliberately smaller than the full Material guidance.
 
 ```text
-src/apps/frontend/layouts/app-layout/
+src/apps/frontend/foundations/layout/scaffold/
   - compact default: one flexible main region
   - >= 600px: optional rail region may appear beside main
   - >= 840px: optional supporting region may appear beside main
@@ -206,19 +208,39 @@ src/apps/frontend/layouts/
   pane/
   pane-group/
 
+src/apps/frontend/layouts/
+  scaffold/
+  feed/
+  list-detail/
+  supporting-pane/
+
 src/apps/frontend/pages/stylebook/
-  layout-topology-fixtures.*
+  canonical-layout-fixtures.js
 ```
 
 `Pane` is a minimal content-bearing Grid item. It owns neither CSS Grid tracks nor an
 accessibility-region wrapper. `PaneGroup` is a neutral Grid container with a tokenized gap;
-it owns neither a named M3 layout nor a breakpoint policy. The Stylebook fixtures exercise
-one-, two-, and three-pane tracks with those production primitives and deliberately use only
-placeholder content.
+it owns neither a named M3 layout nor a breakpoint policy. The Stylebook canonical fixtures
+compose these production primitives with placeholder content only.
 
-This checkpoint does not implement `FeedLayout`, `SupportingPaneLayout`, or
-`ListDetailLayout`. Those canonical layouts must add their own topology/adaptive policy over
-these primitives after the raw Grid VQA is accepted.
+`Scaffold` owns only app-window placement for optional bar, rail, main, and supporting slots.
+It has no knowledge of the Material components placed in those slots.
+
+The first canonical checkpoint is now implemented with placeholder panes only:
+
+| Layout | Compact / medium | Expanded and large | Extra-large |
+| --- | --- | --- | --- |
+| `FeedLayout` | one column at compact; two from medium | three from expanded; four from large | five columns |
+| `SupportingPaneLayout` | primary and supporting panes reflow vertically | primary plus fixed supporting pane | same two-pane topology |
+| `ListDetailLayout` | one visible caller-selected pane | fixed list plus flexible detail | optional fixed extra pane appears as a third pane |
+
+Fixed pane widths are Frontend spatial tokens: `360px` at expanded and `412px` at large and
+extra-large. The route fixtures are available at `/social/stylebook/layout/feed`,
+`/social/stylebook/layout/list-detail`, and `/social/stylebook/layout/supporting_pane`.
+
+This checkpoint does not add Material components, list selection/navigation state, transitions,
+drag resizing, or a component-local container-query policy. `ListDetailLayout` receives only a
+visual `compactPane` value; the caller remains responsible for selection and back navigation.
 
 ## CSS ownership and token boundary
 

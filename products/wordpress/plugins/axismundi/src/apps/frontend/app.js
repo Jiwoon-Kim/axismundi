@@ -1,4 +1,4 @@
-import { AppLayout } from './layouts/app-layout';
+import { AppLayout } from './templates/app-layout';
 import { StylebookPage } from './pages/stylebook';
 
 function getFrontendRoute() {
@@ -10,14 +10,26 @@ function getFrontendRoute() {
 		: '';
 
 	if ( 'stylebook' === relativePath ) {
-		return 'stylebook';
+		return { name: 'stylebook' };
+	}
+
+	if ( 'stylebook/styles' === relativePath ) {
+		return { name: 'stylebook', styles: true };
+	}
+
+	const stylebookLayout = relativePath.match(
+		/^stylebook\/layout\/(feed|list-detail|supporting_pane)$/
+	);
+
+	if ( stylebookLayout ) {
+		return { name: 'stylebook', layout: stylebookLayout[ 1 ] };
 	}
 
 	if ( /^objects\/[^/]+$/.test( relativePath ) ) {
-		return 'object';
+		return { name: 'object' };
 	}
 
-	return 'home';
+	return { name: 'home' };
 }
 
 function isAuthenticatedViewer() {
@@ -66,13 +78,13 @@ function PublicObjectTemplate() {
 export function FrontendApp() {
 	const route = getFrontendRoute();
 
-	if ( 'stylebook' === route ) {
-		return <StylebookPage />;
+	if ( 'stylebook' === route.name ) {
+		return <StylebookPage layout={ route.layout } styles={ route.styles } />;
 	}
 
 	return (
 		<AppLayout>
-			{ 'object' === route ? <PublicObjectTemplate /> : <HomeTemplate /> }
+			{ 'object' === route.name ? <PublicObjectTemplate /> : <HomeTemplate /> }
 		</AppLayout>
 	);
 }

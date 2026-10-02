@@ -7,9 +7,10 @@
  * @param {import('@wordpress/element').ReactNode} props.children Pane items.
  * @return {import('@wordpress/element').ReactNode} Pane grid wrapper.
  */
-export function PaneGroup( { className, children } ) {
+export function PaneGroup( { className, children, ...props } ) {
 	return (
 		<div
+			{ ...props }
 			className={ [ 'ax-pane-group', className ]
 				.filter( Boolean )
 				.join( ' ' ) }

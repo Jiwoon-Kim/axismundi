@@ -124,8 +124,12 @@
 	 * element, so the radius is simply selected.
 	 */
 
+	.ax-button {
+		--md-comp-button-round-container-shape: calc( var( --md-comp-button-container-height ) / 2 );
+	}
+
 	.ax-button[data-shape="round"] {
-		--md-comp-button-container-shape: calc( var( --md-comp-button-container-height ) / 2 );
+		--md-comp-button-container-shape: var( --md-comp-button-round-container-shape );
 	}
 
 	.ax-button[data-shape="square"] {
@@ -133,12 +137,22 @@
 	}
 
 	/*
-	 * A selected toggle takes the squarer radius at every size. M3 publishes
-	 * `selected_round` equal to the square shape, so one declaration covers a
-	 * Round toggle that squares off and a Square toggle that already is.
+	 * Selecting a toggle swaps the resting shape rather than squaring it: M3
+	 * publishes both halves of the pair, `selected container shape round` as the
+	 * square value and `selected container shape square` as Circular, so a Round
+	 * toggle squares off and a Square one rounds.
+	 *
+	 * This was one declaration that always squared, because the reasoning ran
+	 * through `_data/button.yml`, which records `selected_round` and has no
+	 * `selected_square` beside it. A Square toggle then had no shape cue for
+	 * being selected at all. Read off the page afterwards at every size.
 	 */
-	.ax-button[aria-pressed="true"] {
+	.ax-button[data-shape="round"][aria-pressed="true"] {
 		--md-comp-button-container-shape: var( --md-comp-button-square-container-shape );
+	}
+
+	.ax-button[data-shape="square"][aria-pressed="true"] {
+		--md-comp-button-container-shape: var( --md-comp-button-round-container-shape );
 	}
 
 	/* --- Colour styles ------------------------------------------------------

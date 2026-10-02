@@ -53,7 +53,7 @@ function SizeSample( { size } ) {
 	);
 }
 
-function ToggleSample( { variant } ) {
+function ToggleSample( { shape, variant } ) {
 	const [ selected, setSelected ] = useState( false );
 
 	return (
@@ -61,6 +61,7 @@ function ToggleSample( { variant } ) {
 			icon={ <Icon name="stars" /> }
 			onSelectedChange={ setSelected }
 			selected={ selected }
+			shape={ shape }
 			toggle
 			variant={ variant }
 		>
@@ -122,12 +123,19 @@ export function StylebookButtonsPage() {
 					<Group kicker="Fixed label, aria-pressed, FILL 0 to 1" title="Toggle">
 						<div className="ax-stylebook-buttons__row">
 							{ TOGGLE_VARIANTS.map( ( variant ) => (
-								<ToggleSample key={ variant } variant={ variant } />
+								<ToggleSample key={ variant } shape="round" variant={ variant } />
+							) ) }
+						</div>
+						<div className="ax-stylebook-buttons__row">
+							{ TOGGLE_VARIANTS.map( ( variant ) => (
+								<ToggleSample key={ variant } shape="square" variant={ variant } />
 							) ) }
 						</div>
 						<p className="ax-stylebook-page__note">
-							The accessible name stays &ldquo;Favourite&rdquo; in both states. M3 publishes no
-							Toggle Text button, so that combination has no container to recolour.
+							The accessible name stays &ldquo;Favourite&rdquo; in both states. Selecting swaps
+							the resting shape rather than squaring it, so the round row squares off and the
+							square row rounds &mdash; which is why both rows are here. M3 publishes no Toggle
+							Text button, so that combination has no container to recolour.
 						</p>
 					</Group>
 

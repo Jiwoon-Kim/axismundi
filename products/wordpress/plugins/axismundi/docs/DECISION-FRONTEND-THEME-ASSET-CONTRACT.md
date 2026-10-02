@@ -37,9 +37,9 @@ foundation
   tokens.ref
   tokens.sys.color.light/dark
   tokens.sys.shape/elevation/state/motion
+  icons.css                      (2026-10-02 승격, 아래 참조)
 
 theme and block presentation
-  icons.css
   components.button.css
   components.select.css
   blocks.*.css
@@ -79,6 +79,32 @@ Plugin Frontend
 ```
 
 `/social/`은 foundation만 받아야 하며 block/theme component cascade는 받지 않는다.
+
+### Icon foundation 승격 (2026-10-02)
+
+`icons.css`는 theme presentation 집합에 있었고 `/social/`에서 제외됐다. 그 결과 Social이
+`.material-symbols-outlined`를 출력해도 glyph가 나오지 않는 상태였다. foundation으로 옮긴다.
+
+근거는 소비자 분포다. 이 클래스는 테마 chrome만 쓰는 것이 아니라 dialogs, object-projections,
+activities, actors, navigation-icons, theme-switcher 블록이 함께 쓴다(2026-10-02 실측,
+`products/wordpress` 전체에서 30개 이상 파일). 아이콘 렌더링은 한 surface의 표현이 아니라
+생태계 공유 foundation이다.
+
+반대 방향 — `icons.css`를 Social 플러그인으로 옮기는 것 — 은 불가능하다. 테마와 8개 플러그인이
+플러그인 스타일시트에 의존하게 되어 `products/wordpress/AGENTS.md`의 "Only the theme stands
+alone"을 깬다. `@font-face`의 `src`도 theme-relative이고 폰트 파일도 테마에 있다.
+
+`tokens/` 디렉터리로 물리 이동도 하지 않는다. 토큰 파일은 값을 선언하지만 이 파일은
+`@font-face`, ligature, 1em glyph box, `--md-icon-*` 축, `[hidden]` 처리를 함께 가진다.
+M3가 Icons를 Styles에 분류하는 것과 "토큰 파일로 두라"는 다른 말이다.
+
+어느 문서에나 넣어도 안전하다 — 셀렉터 셋이 전부 클래스 기반이라 클래스 없는 텍스트는 영향이
+없다. `theme.json`의 font-family preset만으로는 부족한데, WordPress가 사용되지 않은 preset의
+`@font-face` 출력을 생략할 수 있고 `/social/`은 `global-styles`를 아예 dequeue하기 때문이다.
+
+부수 효과: editor UI 문서도 foundation 집합을 enqueue하므로(`axismundi_enqueue_editor_ui_assets()`)
+`axismundi-editor-icons`가 함께 들어간다. 여러 블록의 `edit.js`가 inspector에서 이 클래스를
+렌더하므로 그동안 없던 glyph가 생긴다. editor canvas는 두 집합을 합쳐 쓰므로 변화 없다.
 
 ### Deferred elevation exception
 
@@ -167,8 +193,10 @@ authoring/build input이고 runtime은 generated stylesheet를 읽는다.
 3. `/social/` route일 때 public contract를 통해 foundation-only branch를 선택한다. 완료.
 4. `/social/` document에서 block/component CSS가 나오지 않고 foundation + frontend bundle만
    나오는 것을 browser DOM으로 검증한다. 완료. `tokens.ref`, color light/dark, shape,
-   elevation, state, motion은 유지되며 `style.css`, `icons.css`, `components.*.css`,
-   `blocks.*.css`는 출력되지 않는다. 일반 theme front에서는 기존 전체 cascade가 유지된다.
+   elevation, state, motion, 그리고 2026-10-02부터 `icons.css`가 유지되며 `style.css`,
+   `components.*.css`, `blocks.*.css`는 출력되지 않는다(재검증 2026-10-02). 일반 theme
+   front에서는 기존 전체 cascade와 순서가 그대로 유지된다 — `icons.css`는 여전히
+   `tokens.sys.motion.css` 뒤, `components.button.css` 앞이다.
 5. 이후 `style.json -> generated tokens.sys.color.*.css`를 구현한다.
 
 ## 레퍼런스

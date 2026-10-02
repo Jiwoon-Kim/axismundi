@@ -97,6 +97,27 @@ function axismundi_get_foundation_assets() : array {
 			'path' => 'assets/styles/tokens/tokens.sys.motion.css',
 			'deps' => array( 'axismundi-tokens-state' ),
 		),
+		/*
+		 * Material Symbols. A foundation rather than theme presentation, because every
+		 * surface that renders an icon needs it: the theme's own chrome, the dialog,
+		 * activity, actor, object-projection and navigation-icon blocks, and the Social
+		 * application. Promoted here so the foundation-only branch carries it too; it was
+		 * in the theme set, where `/social/` could emit the class and get no glyph.
+		 *
+		 * It is not in `tokens/` and should not move there. A token file declares values;
+		 * this declares `@font-face`, the ligature setup, the 1em glyph box, the
+		 * `--md-icon-*` axes and `[hidden]` behaviour. Material's own Styles section lists
+		 * Icons beside Color and Shape without making them the same kind of file.
+		 *
+		 * Safe to add to any document: all three selectors are class-based, so text that
+		 * does not carry the class is untouched. `theme.json` alone is not enough, since
+		 * WordPress may omit an unused font-family preset from generated global styles --
+		 * and `/social/` drops `global-styles` entirely.
+		 */
+		'axismundi-icons'              => array(
+			'path' => 'assets/styles/icons.css',
+			'deps' => array( 'axismundi-tokens-motion' ),
+		),
 	);
 }
 
@@ -109,11 +130,6 @@ function axismundi_get_foundation_assets() : array {
  */
 function axismundi_get_theme_assets() : array {
 	return array(
-		// Material Symbols icon utility (the font auto-loads from theme.json).
-		'axismundi-icons'                      => array(
-			'path' => 'assets/styles/icons.css',
-			'deps' => array( 'axismundi-tokens-motion' ),
-		),
 		// Component layer — only what theme.json cannot express (e.g. motion).
 		'axismundi-button'                     => array(
 			'path' => 'assets/styles/components.button.css',

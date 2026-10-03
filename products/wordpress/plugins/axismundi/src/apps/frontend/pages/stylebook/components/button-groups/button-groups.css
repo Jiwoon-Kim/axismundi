@@ -20,3 +20,15 @@
 		gap: var( --md-sys-measurement-space300 );
 	}
 }
+
+@layer axismundi.patterns {
+	/*
+	 * The two rows are stacked rather than placed side by side: the fill row
+	 * takes the full width by definition, and putting them in a row would give
+	 * the hug row a share of it and hide the difference the group exists to show.
+	 */
+	.ax-stylebook-button-groups__adjacent {
+		display: grid;
+		gap: var( --md-sys-measurement-space200 );
+	}
+}

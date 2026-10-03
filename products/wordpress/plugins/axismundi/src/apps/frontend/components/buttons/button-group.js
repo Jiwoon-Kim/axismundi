@@ -15,11 +15,20 @@
  * width and state, which is also what separates this from a connected group,
  * whose children are parts rather than components.
  *
- * Not implemented, and the reason it is named here rather than left as a
- * surprise: M3's defining behaviour for a standard group is that pressing or
- * selecting a button widens it by 15% and the buttons beside it move and
- * compress to pay for it. This renders the container and its spacing only. The
- * interaction needs measurement before it is written.
+ * `distribution` carries the adjacent interaction, and it is a setting rather
+ * than the default because two published rules collide. M3 says a standard group
+ * hugs the width of the buttons inside, and it also says a selected button widens
+ * by 15% while its neighbours compress to pay for it. A neighbour can only
+ * compress if there is room to take from it, so a group sized to its content has
+ * nothing to redistribute -- measured in the block adapter at 250px, where the
+ * 15% changed nothing at all, against 420px where 135/135/135 became 144/130/130.
+ *
+ * So `hug` is the container rule and `fill` is the interaction, and an author
+ * choosing `fill` is saying this group spans its surface rather than sitting in
+ * a row of actions.
+ *
+ * @param {'hug'|'fill'} [props.distribution='hug'] Whether the group sizes to its
+ * buttons or spans its surface and lets them respond to each other.
  *
  * @param {Object} props Component props.
  * @param {import('@wordpress/element').ReactNode} props.children Button and IconButton instances.
@@ -57,8 +66,16 @@ const CONTAINERLESS = [
 	{ component: IconButton, variant: 'standard', label: 'IconButton' },
 ];
 
-export function ButtonGroup( { children, size = 'small', label, className, ...props } ) {
+export function ButtonGroup( {
+	children,
+	size = 'small',
+	distribution = 'hug',
+	label,
+	className,
+	...props
+} ) {
 	const groupSize = SIZES.includes( size ) ? size : 'small';
+	const groupDistribution = 'fill' === distribution ? 'fill' : 'hug';
 
 	Children.toArray( children ).forEach( ( child ) => {
 		if ( ! isValidElement( child ) ) {
@@ -81,6 +98,7 @@ export function ButtonGroup( { children, size = 'small', label, className, ...pr
 			{ ...props }
 			aria-label={ label }
 			className={ [ 'ax-button-group', className ].filter( Boolean ).join( ' ' ) }
+			data-distribution={ groupDistribution }
 			data-size={ groupSize }
 			role={ label ? 'group' : undefined }
 		>

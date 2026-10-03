@@ -54,4 +54,52 @@
 		 */
 		inline-size: fit-content;
 	}
+
+	/* --- The adjacent interaction ---------------------------------------- */
+
+	/*
+	 * "Standard button groups add interaction between adjacent buttons so they
+	 * respond to each other... The selected button changes shape and width /
+	 * Adjacent buttons move and temporarily change width." The amount is
+	 * published as `pressed_width_multiplier: 0.15`.
+	 *
+	 * It is opt-in because it contradicts the hug above, and that is a fact
+	 * about layout rather than a preference: a neighbour can only compress if
+	 * there is room to take from it, so a group sized to its content has nothing
+	 * to redistribute. The block adapter measured it -- at 250px the 15% changed
+	 * nothing whichever button was selected, at 420px 135/135/135 became
+	 * 144/130/130. Choosing `fill` is the author saying this group spans its
+	 * surface rather than sitting in a row of actions.
+	 */
+	.ax-button-group[data-distribution="fill"] {
+		inline-size: 100%;
+	}
+
+	/*
+	 * `flex-basis: 0` rather than `auto` is the whole trick. With `auto` each
+	 * button starts at its content width and the ratio only splits what is left
+	 * over, so one long label swamps the 15%. `min-inline-size: max-content`
+	 * then keeps a compressed neighbour from wrapping its own text.
+	 */
+	.ax-button-group[data-distribution="fill"] > * {
+		flex: 1 1 0;
+		min-inline-size: max-content;
+		transition: flex-grow var( --md-sys-motion-curve-fast-spatial-duration )
+			var( --md-sys-motion-curve-fast-spatial );
+	}
+
+	/*
+	 * M3 names both triggers -- "selected or activated" -- so a press answers as
+	 * well as a selection, and the pressed button is the one that takes the
+	 * extra while the rest pay for it.
+	 */
+	.ax-button-group[data-distribution="fill"] > :is( [aria-pressed="true"], :active ) {
+		flex-grow: 1.15;
+	}
+
+	@media ( prefers-reduced-motion: reduce ) {
+		.ax-button-group[data-distribution="fill"] > * {
+			transition: none;
+		}
+	}
 }

@@ -57,6 +57,50 @@ function GapSample( { size } ) {
 	);
 }
 
+function AdjacentSample() {
+	const hostRef = useRef();
+	const [ selected, setSelected ] = useState( 'one' );
+	const [ widths, setWidths ] = useState();
+
+	useEffect( () => {
+		const read = ( group ) =>
+			[ ...( group?.children ?? [] ) ]
+				.map( ( child ) => Math.round( child.getBoundingClientRect().width ) )
+				.join( ' / ' );
+
+		const groups = hostRef.current?.querySelectorAll( '.ax-button-group' );
+		if ( groups?.length === 2 ) {
+			setWidths( { fill: read( groups[ 0 ] ), hug: read( groups[ 1 ] ) } );
+		}
+	}, [ selected ] );
+
+	const row = ( distribution ) => (
+		<ButtonGroup distribution={ distribution } size="small">
+			{ [ 'one', 'two', 'three' ].map( ( value ) => (
+				<Button
+					key={ value }
+					onSelectedChange={ () => setSelected( value ) }
+					selected={ selected === value }
+					toggle
+					variant="tonal"
+				>
+					{ `Option ${ value }` }
+				</Button>
+			) ) }
+		</ButtonGroup>
+	);
+
+	return (
+		<div className="ax-stylebook-button-groups__adjacent" ref={ hostRef }>
+			{ row( 'fill' ) }
+			{ row( 'hug' ) }
+			<p className="ax-stylebook-page__note">
+				{ widths ? `fill ${ widths.fill } · hug ${ widths.hug }` : 'Measuring...' }
+			</p>
+		</div>
+	);
+}
+
 export function StylebookButtonGroupsPage() {
 	return (
 		<Scaffold className="axismundi-social ax-stylebook ax-stylebook--button-groups">
@@ -109,16 +153,13 @@ export function StylebookButtonGroupsPage() {
 						</p>
 					</Group>
 
-					<Group kicker="Not built yet, and named so it is not mistaken for done" title="Adjacent interaction">
-						<ButtonGroup size="small">
-							<Button>Press me</Button>
-							<Button variant="tonal">Watch my width</Button>
-							<Button variant="outlined">And mine</Button>
-						</ButtonGroup>
+					<Group kicker="Opt-in, because it contradicts hugging" title="Adjacent interaction">
+						<AdjacentSample />
 						<p className="ax-stylebook-page__note">
-							M3&rsquo;s defining behaviour for a standard group is that pressing or selecting a
-							button widens it by 15% while its neighbours move and compress. These buttons do
-							not do that: the container and its spacing are implemented, the interaction is not.
+							Selecting widens the chosen button by 15% and its neighbours compress to pay for
+							it. This needs <code>distribution=&quot;fill&quot;</code>: a group sized to its
+							content has nothing to redistribute, so the same markup at the default
+							<code> hug </code>does not move at all. Both are below.
 						</p>
 					</Group>
 				</section>

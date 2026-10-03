@@ -5,6 +5,10 @@
 #          https://m3.material.io/components/cards/accessibility
 #          Material 3 Design Kit, Stacked / Horizontal card properties
 #
+# Token names and their referenced sys roles are read from the component's own
+# token table with `tools/generators/fetch_m3_component_tokens.py`, not from the
+# rendered specs table, which shows a resolved hex and never names the role.
+#
 # The container is the only required element. M3 says so in the anatomy -- "The
 # card container is the only required element of a card. All other elements are
 # optional" -- and that one sentence decides most of this file's shape. There is
@@ -134,26 +138,33 @@ discrepancies:
     prose: 6dp, no token named
     tokens: md.sys.elevation.level3
     note: >-
-      The dragged rows for Filled and Outlined give 6dp without naming a level,
-      where every other elevation row names one. 6dp is level3. Elevated's dragged
-      row does name md.sys.elevation.level4 (8dp), so the omission is in two rows
-      rather than in the scale.
+      Settled from the component's own token table rather than inferred:
+      `md.comp.filled-card.dragged.container.elevation` and the outlined
+      equivalent both reference md.sys.elevation.level3, whose value is 6dp. The
+      prose omits the level where every other elevation row names one, so this is
+      a gap in the prose and not a disagreement in the data.
   - token: elevated hover container elevation
     prose: 3dp
     tokens: md.sys.elevation.level2
     note: >-
-      Listed because the figure and the token disagree at a glance: M3's level2 is
-      3dp, so both are right. Worth recording because the elevated button's
-      hover elevation is an open inference in the Social frontend conventions
-      while the elevated card's is published outright -- these are different
-      components and one does not settle the other.
+      Not a conflict, and the token table says so outright:
+      `md.comp.elevated-card.hover.container.elevation` references
+      md.sys.elevation.level2, and that level's own value is 3dp. Kept because the
+      elevated button's hover elevation is still an open inference in the Social
+      frontend conventions while the elevated card's is published -- different
+      components, and one does not settle the other.
   - token: disabled container
     prose: >-
       Elevated: level1, opacity 0.38, container md.sys.color.surface. Filled:
       0, opacity 0.38, container #1D1B20 (on-surface). Outlined: 0, outline
       md.sys.color.outline at opacity 0.12.
-    tokens: null
+    tokens: md.sys.color.surface / md.sys.color.on-surface / md.sys.color.outline
     note: >-
+      The roles are confirmed from the token table, which is worth saying because
+      the filled one looks like a transcription error and is not: elevated's
+      disabled container references md.sys.color.surface, filled's references
+      md.sys.color.on-surface, and outlined publishes no disabled container colour
+      at all -- only `disabled.outline.color` against md.sys.color.outline at 0.12.
       Carried but not implemented, for two reasons. The anatomy and accessibility
       pages make the container the only required element and give a non-actionable
       card no role and no tab stop, so a container with no behaviour has no

@@ -10,6 +10,13 @@ only card styling in the repository today.
 There is no Social Card component and no styleguide card adapter yet. When either
 arrives it gets checked here too; until then this file answers one question --
 does what the theme ships still agree with what M3 publishes?
+
+This file carries the M3 roles and measurements the implementation consumes,
+and nothing else. Deprecated tokens are left to the specs page: the
+surface-tint layer, for instance, is deprecated in favour of using the
+container role directly, which is what `container_role` already does -- so
+recording it here would widen this file's contract without preventing a
+mistake.
 """
 
 from __future__ import annotations
@@ -185,21 +192,6 @@ def main() -> int:
     report.check(
         data["meta"]["required_elements"] == ["container"],
         "the container is the only required element of a card",
-    )
-
-    # The surface-tint layer is M3's own deprecation, and the record has to keep
-    # saying what replaced it: the container role, used directly.
-    tint = next(
-        (entry for entry in data.get("deprecated", []) if entry["token_suffix"].endswith("surface-tint-layer.color")),
-        None,
-    )
-    report.check(
-        tint is not None and tint["superseded_by"] == "container.color",
-        "card.yml must keep recording that the surface-tint layer is deprecated in favour of the container colour",
-    )
-    report.check(
-        tint is not None and sorted(tint["variants"]) == sorted(BLOCK_STYLES),
-        "all three card variants carry the deprecated surface-tint layer token",
     )
 
     print(f"card: {report.checked} checks, {len(report.problems)} failed")

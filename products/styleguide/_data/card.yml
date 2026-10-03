@@ -79,21 +79,6 @@ variants:
       pressed: 0
       dragged: 3
 
-# All three variants publish a `container.surface-tint-layer.color`, and all three
-# carry M3's own deprecation on it. Recorded because the token is still in the
-# specs page's table with a warning beside it, so a reader meeting it there needs
-# to know we did not miss it:
-#
-#   "Deprecated as part of the update from opacity based surfaces to tonal
-#    surfaces. Surfaces no longer use surface-tint layers for tinting, please use
-#    the desired surface role directly as the container color."
-#
-# Which is what `container_role` above already does.
-deprecated:
-  - token_suffix: container.surface-tint-layer.color
-    variants: [ elevated, filled, outlined ]
-    superseded_by: container.color
-
 # State layers are the same three numbers for every variant, and the same ones
 # the rest of the system already uses. They are listed to record that Card does
 # not publish its own, not to restate the values: the tokens are the authority.

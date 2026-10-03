@@ -268,6 +268,55 @@ author가 나갈 수 없고, view model 쪽은 `object-view-model.php`가 author
 **미결**: Social의 object 라우트가 서버에서 객체를 해소해 상태코드를 정할 것인가. 지금 답은
 "하지 않는다"이고(위 표), 바꾸려면 Atomic의 HTML 410 교체를 어떻게 피하는지를 먼저 답해야 한다.
 
+### A‴. 410은 AS2가 아니라 ActivityPub의 것이고, Tombstone 자체는 MAY다
+
+AS2 Vocabulary는 `Tombstone` · `formerType` · `deleted`의 **의미만** 정의하고 HTTP 상태를
+말하지 않는다. 410은 ActivityPub §6.4의 권고다.
+
+```text
+삭제된 객체를 Tombstone으로 대체하는 것          MAY
+Tombstone을 본문으로 제시하면                    410 SHOULD
+제시하지 않으면                                  404 SHOULD
+```
+
+**그래서 "Tombstone이면 반드시 410"이 아니다.** 410은 Tombstone 본문과 짝이 되는 상태코드이고,
+Tombstone을 만들지 않기로 하면 404가 권고다. OP의 federation route가 `Tombstone → 410`인 것은
+이 짝을 지키는 것이다.
+
+### A⁗. trash와 영구 삭제는 다른 상태다 — 우리 구현이 이미 나눠 놨다
+
+"로컬 글을 연합하고 지우면 무조건 인덱스에 남는가"의 답은 **아니다.**
+
+```text
+publish → trash     Delete를 기록·전달. envelope는 active 유지      원격에서 사라지고 복원 가능
+trash → publish     Delete 뒤 새 Create generation                 같은 URI의 새 공개 상태
+영구 삭제            envelope를 privacy-minimal Tombstone으로 전환   URI·스레드 참조만 보존
+```
+
+```text
+axismundi-note/includes/envelope.php:687-698
+  "pre_delete_post fires only on permanent deletion (not trash) and can
+   short-circuit it, so a failed tombstone write returns false to abort the
+   deletion rather than orphan an active envelope for a post that no longer exists."
+```
+
+행을 버리지 않는 이유도 거기 적혀 있다 — canonical UUID와 Actor snapshot이 Core Post보다
+오래 살아야 나중의 Delete Activity와 Tombstone 투영이 표현 가능하다.
+
+**상태코드 대응이 뒤집히지 않도록 적어 둔다.** trash가 404, 영구 삭제가 Tombstone + 410이다.
+반대가 아니다 — 가역적인 WordPress 편집 상태를 `410 Gone`이라 선언하면 의미가 과하고,
+영구 삭제는 Tombstone 본문이 있으니 §A‴의 짝에 따라 410이다.
+
+**FEP-4f05 준수를 주장하지 않는다.** DRAFT이고 구현체가 없으며, 그 제안의 soft deletion은
+Tombstone + 2xx다. 우리 `trash`는 그 soft-delete가 아니라 **복원 가능한 비공개 withdrawal**이다.
+이것은 FEP 준수가 아니라 **Axismundi의 WordPress lifecycle 정책**이다.
+
+**남은 틈 하나**: 스레드 resolver는 source를 해소할 수 없는 reply를 건너뛴다
+(`thread-edges.php:587-589`, `continue`). Note는 tombstone된 envelope 행을 남기므로 해소되지만,
+**envelope를 갖지 않는 다른 로컬 source는 하드 삭제 시 스레드에서 사라진다.** 필요해지면
+Activities의 최소 Delete 기록을 읽는 local thread tombstone resolver를 더하고, 그 resolver는
+URI·`Tombstone`·삭제 시각만 주며 본문·첨부·작성자 스냅샷을 다시 보관하지 않는다.
+
 ### B. 식별자
 
 `REMOTE-OBJECTS.md §1`이 row id의 공개를 금지한다. 그러면 읽기 엔드포인트의 키는 canonical

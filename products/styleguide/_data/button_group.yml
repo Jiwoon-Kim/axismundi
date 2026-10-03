@@ -122,8 +122,20 @@ configurations:
 
 # M3's keyboard table, which is the source of the tension this page documents:
 # it describes toggle-button interaction, not a native radiogroup.
+#
+# This carried only Tab and Space/Enter until 2026-10-03. The Arrow keys row was
+# missing, and the omission was load-bearing twice over: the prose below reasoned
+# from the gap, and the Social frontend's ConnectedButtonGroup was built without
+# arrow keys and had a comment citing this file for it. Two rows out of three is
+# not a smaller version of the table, it is a different one.
+#
+# Note that Tab and Arrow keys are BOTH published, which a radiogroup cannot be:
+# there, the group is one tab stop and arrows move inside it. Here every button
+# is a tab stop and arrows move as well.
 keyboard:
   - keys: Tab
-    action: Navigates to the next button
+    action: Navigate between buttons
+  - keys: Arrow keys
+    action: Navigate inside the component
   - keys: Space or Enter
-    action: Activates the focused button
+    action: Activate a focused button

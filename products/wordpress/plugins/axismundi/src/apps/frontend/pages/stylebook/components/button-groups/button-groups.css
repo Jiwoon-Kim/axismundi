@@ -1,0 +1,22 @@
+@layer axismundi.patterns {
+	.ax-stylebook--button-groups > .ax-scaffold__main {
+		padding: var( --ax-layout-window-margin );
+	}
+
+	/*
+	 * The size list is a grid for the same reason the icon-button one is: XL
+	 * stands 136px tall beside a 32px XS, and a flex row would stretch every
+	 * readout to the tallest cell.
+	 */
+	.ax-stylebook-button-groups__sizes {
+		display: grid;
+		gap: var( --md-sys-measurement-space400 );
+	}
+
+	.ax-stylebook-button-groups__sample {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var( --md-sys-measurement-space300 );
+	}
+}

@@ -1,5 +1,6 @@
 import { CanonicalLayoutFixture } from './canonical-layout-fixtures';
 import { StylebookButtonsPage } from './components/buttons';
+import { StylebookButtonGroupsPage } from './components/button-groups';
 import { StylebookIconButtonsPage } from './components/icon-buttons';
 import { StylebookStylesPage } from './styles';
 
@@ -20,6 +21,10 @@ export function StylebookPage( { component, layout, styles } ) {
 		return <StylebookIconButtonsPage />;
 	}
 
+	if ( 'button-groups' === component ) {
+		return <StylebookButtonGroupsPage />;
+	}
+
 	if ( styles ) {
 		return <StylebookStylesPage />;
 	}
@@ -38,6 +43,7 @@ export function StylebookPage( { component, layout, styles } ) {
 				<a href="/social/stylebook/styles">Styles</a>
 				<a href="/social/stylebook/components/buttons">Buttons</a>
 				<a href="/social/stylebook/components/icon-buttons">Icon buttons</a>
+				<a href="/social/stylebook/components/button-groups">Button groups</a>
 				<a href="/social/stylebook/layout/feed">Feed</a>
 				<a href="/social/stylebook/layout/list-detail">List-detail</a>
 				<a href="/social/stylebook/layout/supporting_pane">Supporting pane</a>

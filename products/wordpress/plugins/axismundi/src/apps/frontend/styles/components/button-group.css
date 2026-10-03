@@ -1,0 +1,57 @@
+/*
+ * Material 3 Standard button group.
+ *
+ * Published values from `products/styleguide/_data/button_group.yml`.
+ *
+ * The container paints nothing. It has no colour axis -- M3 states that plainly,
+ * and the data file carries no colour because of it -- and no shape tokens
+ * either, so both stay with the buttons inside.
+ *
+ * The only thing it owns is the space between buttons, and that is per size
+ * because the gap is there to keep a 48dp target reachable rather than to look
+ * even: XS and S carry the larger values so their small controls still clear
+ * that distance from their neighbours.
+ */
+
+@layer axismundi.components {
+	/*
+	 * 18dp is not on the M3 spacing scale, which runs 14, 16, 20 through this
+	 * range. M3 publishes it as a component measurement, so it is spent as a
+	 * literal rather than bent onto the nearest token.
+	 */
+	.ax-button-group[data-size="xsmall"] {
+		--md-comp-button-group-between-space: 18px;
+	}
+
+	.ax-button-group[data-size="small"] {
+		--md-comp-button-group-between-space: var( --md-sys-measurement-space150 );
+	}
+
+	.ax-button-group[data-size="medium"],
+	.ax-button-group[data-size="large"],
+	.ax-button-group[data-size="xlarge"] {
+		--md-comp-button-group-between-space: var( --md-sys-measurement-space100 );
+	}
+
+	/*
+	 * "The standard button group hugs the width of the buttons inside", and
+	 * "button groups should move through layouts together in a single line. They
+	 * shouldn't wrap to a second line." Both are published rules rather than
+	 * layout taste, so neither is left to the caller.
+	 */
+	.ax-button-group {
+		display: inline-flex;
+		align-items: center;
+		flex-wrap: nowrap;
+		gap: var( --md-comp-button-group-between-space );
+		/*
+		 * `inline-flex` alone does not survive a flex or grid parent, which
+		 * blockifies it and then stretches it to the track: measured 480px around
+		 * 209px of buttons. Hugging is the published rule rather than a default,
+		 * so it is stated in a form the surrounding layout cannot undo by
+		 * accident. A caller that wants the flexible sizing M3 also describes
+		 * overrides this one declaration.
+		 */
+		inline-size: fit-content;
+	}
+}

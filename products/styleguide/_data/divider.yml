@@ -1,0 +1,114 @@
+# Material 3 Divider — the published specification.
+#
+# Sources: https://m3.material.io/components/divider/overview
+#          https://m3.material.io/components/divider/specs
+#
+# Token names and their referenced sys roles are read from the component's own
+# token table with `tools/generators/fetch_m3_component_tokens.py`. That table has
+# exactly two rows for divider, which is the whole of its token surface:
+#
+#   md.comp.divider.color      -> md.sys.color.outline-variant
+#   md.comp.divider.thickness  = 1dp
+#
+# Everything else below is geometry from the measurements table, and the division
+# of ownership in `spacing_owned_by_consumer` is the part that matters most.
+
+meta:
+  # "A divider is a simple line." No size axis, no colour axis, no states: a
+  # divider is not interactive, so it has no hover, focus or pressed rows at all.
+  states: false
+  # "Dividers are decorative elements, which have no contrast minimums." That is
+  # a statement about colour contrast, and it is also why the default rendering is
+  # decorative rather than announced -- see `semantics` below.
+  decorative: true
+  color_token: md.comp.divider.color
+  color_role: outline-variant
+  thickness_token: md.comp.divider.thickness
+  thickness: 1
+
+# The prose and the measurements table disagree about how many there are, and the
+# table is the finer of the two. See `discrepancies`.
+variants:
+  - name: full
+    title: Full width
+    inline_size: 100%
+    inset_start: 0
+    inset_end: 0
+    # "Use full-width dividers to separate larger sections of unrelated content."
+    # Also the one that separates interactive from non-interactive areas of a
+    # container such as a card.
+    separates: unrelated sections
+  - name: inset
+    title: Inset
+    inline_size: null
+    inset_start: 16
+    inset_end: 0
+    separates: related content within a section
+  - name: middle-inset
+    title: Middle inset
+    inline_size: null
+    inset_start: 16
+    inset_end: 16
+    separates: nested content items
+
+# A vertical divider is published in the prose -- "A vertical divider can be used
+# to arrange content on a larger screen" -- with no measurements of its own. It
+# shares the colour and the 1dp thickness; its length and the space around it
+# belong to whatever is arranging the content, exactly as with the figures below.
+orientations: [ horizontal, vertical ]
+
+# PUBLISHED, BUT NOT THE DIVIDER'S. These three rows sit in the divider
+# measurements table and describe the space around a divider in a layout, not the
+# line. A Divider that shipped its own bottom margin would inject 8dp into every
+# card and list that used one, and no caller could remove it. The consumer owns
+# them: a card, a list, a menu.
+spacing_owned_by_consumer:
+  supporting_text_gap: 4
+  right_margin: 8
+  bottom_margin: 8
+
+# Decorative by default, which is a rendering decision rather than a published
+# one, so it is recorded as ours. M3 calls dividers decorative; ARIA has a real
+# `separator` role, and an `<hr>` carries it natively. Both are correct for
+# different dividers -- a line between two unrelated sections is a separator, and
+# a line splitting a card's interactive area from its content is decoration -- so
+# the caller says which, and the default is the one M3 names.
+semantics:
+  default: decorative
+  decorative_element: div
+  decorative_aria: aria-hidden
+  separator_element: hr
+
+usage:
+  # The three overview rules, verbatim in substance.
+  - make dividers visible but not bold
+  - only use dividers if items cannot be grouped with open space
+  - use dividers to group things, not to separate individual items
+  # Named here because it is the rule a specimen is most likely to break.
+  - use full-width dividers sparingly; too many make an interface look cluttered
+
+discrepancies:
+  - token: how many ways a divider is used
+    prose: >-
+      "The divider can be used in two ways: 1. Full width 2. Inset"
+    tokens: >-
+      The measurements table publishes inset and middle-inset separately, with
+      different figures: inset is 16dp start and 0dp end, middle-inset is 16dp on
+      both sides.
+    note: >-
+      Three, and the implementation exposes three. Folding middle-inset into inset
+      as a CSS option would hide a published pair of figures from any validator,
+      and the shipped theme had already reached the same conclusion -- it carries
+      `separator-inset` and `separator-middle-inset` as separate block style
+      variations.
+
+# Deliberately absent, so absence is not read as an oversight.
+not_published_here:
+  # No states exist to implement: a divider is not interactive.
+  - states
+  # The figures above belong to the consumer, and are listed there rather than
+  # turned into component slots.
+  - surrounding spacing
+  # The prose publishes a vertical divider with no measurements, so its length and
+  # placement wait for a layout that needs one.
+  - vertical divider geometry

@@ -96,6 +96,7 @@ def main() -> int:
                           ("layout", "validate_styleguide_layout.py"),
                           ("button", "validate_styleguide_button.py"),
                           ("card", "validate_styleguide_card.py"),
+                          ("divider", "validate_styleguide_divider.py"),
                           ("surface", "validate_styleguide_surface.py")):
         steps.append((f"validate {label}", [py, f"tools/validators/{script}"], ROOT))
 

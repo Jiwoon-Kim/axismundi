@@ -42,10 +42,13 @@ LAYOUT = ROOT / "products/styleguide/_data/layout.yml"
 # (tools/generators/sync_styleguide_assets.py), so the product file is checked.
 ADAPTER = ROOT / "products/wordpress/plugins/axismundi-dialogs/blocks/dialog/style.css"
 STYLES = ROOT / "products/wordpress/themes/axismundi/assets/styles"
-REF = STYLES / "tokens.ref.css"
-LIGHT = STYLES / "tokens.sys.color.light.css"
-ELEVATION = STYLES / "tokens.sys.elevation.css"
-MOTION = STYLES / "tokens.sys.motion.css"
+# The token layers sit in their own directory under STYLES; icons.css and the
+# block/component stylesheets stay beside it.
+TOKENS = STYLES / "tokens"
+REF = TOKENS / "tokens.ref.css"
+LIGHT = TOKENS / "tokens.sys.color.light.css"
+ELEVATION = TOKENS / "tokens.sys.elevation.css"
+MOTION = TOKENS / "tokens.sys.motion.css"
 # The Dialog block's runtime: motion, trigger state and the bottom sheet handle.
 RUNTIME = ADAPTER.parent / "view.js"
 SURFACE_PHP = ROOT / "products/wordpress/plugins/axismundi-dialogs/includes/surface.php"

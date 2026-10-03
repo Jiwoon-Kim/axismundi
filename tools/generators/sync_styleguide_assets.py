@@ -95,14 +95,19 @@ PLUGIN_STYLES = (
 # invent a category the consumer does not have. tokens.ref.css and
 # tokens.ref.typeface.css are two halves of the same layer. Provenance is
 # carried by .gitignore, by each file's own header, and by the check below.
+#
+# Each entry is its path under the theme's assets/styles/, because the seven
+# token layers moved into a tokens/ directory there and icons.css did not. The
+# destination still flattens: one ordered cascade beside this product's own
+# stylesheets, which is what the paragraph above is about.
 PRODUCT_TOKENS = (
-    "tokens.ref.css",
-    "tokens.sys.color.light.css",
-    "tokens.sys.color.dark.css",
-    "tokens.sys.shape.css",
-    "tokens.sys.motion.css",
-    "tokens.sys.elevation.css",
-    "tokens.sys.state.css",
+    "tokens/tokens.ref.css",
+    "tokens/tokens.sys.color.light.css",
+    "tokens/tokens.sys.color.dark.css",
+    "tokens/tokens.sys.shape.css",
+    "tokens/tokens.sys.motion.css",
+    "tokens/tokens.sys.elevation.css",
+    "tokens/tokens.sys.state.css",
     "icons.css",
 )
 
@@ -378,7 +383,7 @@ def product_tokens() -> tuple[int, int, int, int]:
     """
     TOKEN_OUT.mkdir(parents=True, exist_ok=True)
     for name in PRODUCT_TOKENS:
-        stale = TOKEN_OUT / name
+        stale = TOKEN_OUT / Path(name).name
         if stale.exists():
             stale.unlink()
 
@@ -388,7 +393,7 @@ def product_tokens() -> tuple[int, int, int, int]:
         src = THEME / "assets/styles" / name
         if not src.is_file():
             raise SystemExit(f"theme is missing {name}; expected at {src.relative_to(ROOT).as_posix()}")
-        shutil.copy2(src, TOKEN_OUT / name)
+        shutil.copy2(src, TOKEN_OUT / Path(name).name)
         copied += 1
         total_bytes += src.stat().st_size
 
@@ -460,7 +465,7 @@ def main() -> int:
 
     assert_ignored(
         [CSS_OUT, color_data]
-        + [TOKEN_OUT / name for name in PRODUCT_TOKENS]
+        + [TOKEN_OUT / Path(name).name for name in PRODUCT_TOKENS]
         + [dst for _, dst in PLUGIN_STYLES]
         + sorted(FONT_OUT.rglob("*.woff2"))
     )

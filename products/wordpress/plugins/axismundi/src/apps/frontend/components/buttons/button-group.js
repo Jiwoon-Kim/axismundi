@@ -73,6 +73,28 @@ const CONTAINERLESS = [
 	{ component: IconButton, variant: 'standard', label: 'IconButton' },
 ];
 
+/*
+ * A narrow icon button at XS or S is not supported in a group, and the reason is
+ * arithmetic rather than taste.
+ *
+ * M3's gaps are the 48dp target mechanism for a group -- the specs say so, and
+ * the figures show it: a container plus its gap clears 48 at every size (32+18,
+ * 40+12, 56+8). Two neighbouring targets stay apart when the distance between
+ * their centres reaches 48, which is `gap >= 48 - (left width + right width) / 2`.
+ *
+ * Enumerated against the measured widths, eight pairs fall short by 2 to 6px,
+ * and every one of them contains a narrow control. Without narrow the published
+ * gaps are always sufficient; at Medium and up even narrow is 48 wide and
+ * nothing falls short.
+ *
+ * Compensating per pair is possible -- `gap` is uniform, but a margin is not --
+ * and it is not worth it: the gaps inside one group would then differ from each
+ * other, 12px beside 18px in the Small case, which trades an overlap nobody can
+ * see for spacing everybody can, and abandons the published between-space while
+ * doing it.
+ */
+const NARROW_IN_GROUP = [ 'xsmall', 'small' ];
+
 export function ButtonGroup( {
 	children,
 	size = 'small',
@@ -92,6 +114,16 @@ export function ButtonGroup( {
 		const match = CONTAINERLESS.find(
 			( entry ) => child.type === entry.component && child.props?.variant === entry.variant
 		);
+
+		if (
+			child.type === IconButton &&
+			'narrow' === child.props?.width &&
+			NARROW_IN_GROUP.includes( child.props?.size ?? 'small' )
+		) {
+			warning(
+				`ButtonGroup: a narrow ${ child.props.size ?? 'small' } IconButton leaves the group's published gap short of the 48dp target, so two of them overlap where they are meant to stay apart. Use the default width in a group.`
+			);
+		}
 
 		if ( match ) {
 			warning(

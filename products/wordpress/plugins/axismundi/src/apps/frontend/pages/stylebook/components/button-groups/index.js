@@ -165,11 +165,18 @@ export function StylebookButtonGroupsPage() {
 							<Button>Filled</Button>
 							<Button variant="tonal">Tonal</Button>
 							<Button variant="outlined">Outlined</Button>
-							<IconButton icon={ <Icon name="more_vert" /> } label="More" variant="outlined" width="narrow" />
+							<IconButton icon={ <Icon name="more_vert" /> } label="More" variant="outlined" />
 						</ButtonGroup>
 						<p className="ax-stylebook-page__note">
 							Mixing colour is allowed here and is the point of a standard group. A connected
 							group is the one M3 tells you not to mix.
+						</p>
+						<p className="ax-stylebook-page__note">
+							Width is the exception. The group&rsquo;s gap is what delivers the 48dp target
+							&mdash; a container plus its gap clears 48 at every size &mdash; and a narrow XS
+							or S control is the one thing that leaves it short, by 2 to 6px depending on the
+							pair. Narrow is therefore unsupported in a group for now, and the component says
+							so in development.
 						</p>
 					</Group>
 

@@ -1,0 +1,302 @@
+/*
+ * Material 3 Icon button.
+ *
+ * Published values from `products/styleguide/_data/icon_button.yml`. Same slot
+ * discipline as Button: an unqualified slot is the contract and is all the
+ * control reads, a qualified one is a candidate that an axis resolves.
+ *
+ * Three axes rather than two, and they are genuinely independent:
+ *
+ *   size    container height, icon size, and the three candidate spaces
+ *   width   picks one of those spaces, and never touches the icon
+ *   shape   picks a radius from the candidates size supplies
+ *
+ * Default width always equals the container height -- 20+6*2=32, 24+8*2=40,
+ * 24+16*2=56, 32+32*2=96, 40+48*2=136 -- which is what makes a default round
+ * icon button a circle rather than a lozenge. Narrow is tighter than its height
+ * and wide is looser.
+ *
+ * No elevation layer: M3 gives the icon button no elevated style, and its
+ * disabled row is level 0. So `::after` is free, and the 48dp target uses it.
+ */
+
+@layer axismundi.components {
+	/* --- Size: height, icon, and the three candidate spaces -------------- */
+
+	.ax-icon-button[data-size="xsmall"] {
+		--md-comp-icon-button-container-height: 32px;
+		--md-comp-icon-button-icon-size: 20px;
+		--md-comp-icon-button-narrow-space: var( --md-sys-measurement-space50 );
+		--md-comp-icon-button-default-space: var( --md-sys-measurement-space75 );
+		--md-comp-icon-button-wide-space: var( --md-sys-measurement-space125 );
+		--md-comp-icon-button-square-container-shape: var( --md-sys-shape-corner-value-medium );
+		--md-comp-icon-button-pressed-container-shape: var( --md-sys-shape-corner-value-small );
+		--md-comp-icon-button-outline-width: 1px;
+	}
+
+	/* 24dp at Small, where Button's Small icon is 20dp. Published, not a slip. */
+	.ax-icon-button[data-size="small"] {
+		--md-comp-icon-button-container-height: 40px;
+		--md-comp-icon-button-icon-size: 24px;
+		--md-comp-icon-button-narrow-space: var( --md-sys-measurement-space50 );
+		--md-comp-icon-button-default-space: var( --md-sys-measurement-space100 );
+		--md-comp-icon-button-wide-space: var( --md-sys-measurement-space175 );
+		--md-comp-icon-button-square-container-shape: var( --md-sys-shape-corner-value-medium );
+		--md-comp-icon-button-pressed-container-shape: var( --md-sys-shape-corner-value-small );
+		--md-comp-icon-button-outline-width: 1px;
+	}
+
+	.ax-icon-button[data-size="medium"] {
+		--md-comp-icon-button-container-height: 56px;
+		--md-comp-icon-button-icon-size: 24px;
+		--md-comp-icon-button-narrow-space: var( --md-sys-measurement-space150 );
+		--md-comp-icon-button-default-space: var( --md-sys-measurement-space200 );
+		--md-comp-icon-button-wide-space: var( --md-sys-measurement-space300 );
+		--md-comp-icon-button-square-container-shape: var( --md-sys-shape-corner-value-large );
+		--md-comp-icon-button-pressed-container-shape: var( --md-sys-shape-corner-value-medium );
+		--md-comp-icon-button-outline-width: 1px;
+	}
+
+	.ax-icon-button[data-size="large"] {
+		--md-comp-icon-button-container-height: 96px;
+		--md-comp-icon-button-icon-size: 32px;
+		--md-comp-icon-button-narrow-space: var( --md-sys-measurement-space200 );
+		--md-comp-icon-button-default-space: var( --md-sys-measurement-space400 );
+		--md-comp-icon-button-wide-space: var( --md-sys-measurement-space600 );
+		--md-comp-icon-button-square-container-shape: var( --md-sys-shape-corner-value-extra-large );
+		--md-comp-icon-button-pressed-container-shape: var( --md-sys-shape-corner-value-large );
+		--md-comp-icon-button-outline-width: 2px;
+	}
+
+	.ax-icon-button[data-size="xlarge"] {
+		--md-comp-icon-button-container-height: 136px;
+		--md-comp-icon-button-icon-size: 40px;
+		--md-comp-icon-button-narrow-space: var( --md-sys-measurement-space400 );
+		--md-comp-icon-button-default-space: var( --md-sys-measurement-space600 );
+		--md-comp-icon-button-wide-space: var( --md-sys-measurement-space900 );
+		--md-comp-icon-button-square-container-shape: var( --md-sys-shape-corner-value-extra-large );
+		--md-comp-icon-button-pressed-container-shape: var( --md-sys-shape-corner-value-large );
+		--md-comp-icon-button-outline-width: 3px;
+	}
+
+	/* --- Width: which of the three spaces applies ------------------------- */
+
+	.ax-icon-button[data-width="narrow"] {
+		--md-comp-icon-button-space: var( --md-comp-icon-button-narrow-space );
+	}
+
+	.ax-icon-button[data-width="default"] {
+		--md-comp-icon-button-space: var( --md-comp-icon-button-default-space );
+	}
+
+	.ax-icon-button[data-width="wide"] {
+		--md-comp-icon-button-space: var( --md-comp-icon-button-wide-space );
+	}
+
+	/* --- Shape ------------------------------------------------------------ */
+
+	.ax-icon-button {
+		--md-comp-icon-button-round-container-shape: calc( var( --md-comp-icon-button-container-height ) / 2 );
+	}
+
+	.ax-icon-button[data-shape="round"] {
+		--md-comp-icon-button-container-shape: var( --md-comp-icon-button-round-container-shape );
+	}
+
+	.ax-icon-button[data-shape="square"] {
+		--md-comp-icon-button-container-shape: var( --md-comp-icon-button-square-container-shape );
+	}
+
+	/* Selecting exchanges the resting shape: round squares off, square rounds.
+	 * The corner table is identical to Button's, so the two line up side by
+	 * side. */
+	.ax-icon-button[data-shape="round"][aria-pressed="true"] {
+		--md-comp-icon-button-container-shape: var( --md-comp-icon-button-square-container-shape );
+	}
+
+	.ax-icon-button[data-shape="square"][aria-pressed="true"] {
+		--md-comp-icon-button-container-shape: var( --md-comp-icon-button-round-container-shape );
+	}
+
+	/* --- Colour: four styles, and one has no container ------------------- */
+
+	.ax-icon-button {
+		--md-comp-icon-button-container-color: transparent;
+		--md-comp-icon-button-outline-color: transparent;
+	}
+
+	.ax-icon-button[data-variant="filled"] {
+		--md-comp-icon-button-container-color: var( --md-sys-color-primary );
+		--md-comp-icon-button-icon-color: var( --md-sys-color-on-primary );
+	}
+
+	.ax-icon-button[data-variant="tonal"] {
+		--md-comp-icon-button-container-color: var( --md-sys-color-secondary-container );
+		--md-comp-icon-button-icon-color: var( --md-sys-color-on-secondary-container );
+	}
+
+	.ax-icon-button[data-variant="outlined"] {
+		--md-comp-icon-button-outline-color: var( --md-sys-color-outline-variant );
+		--md-comp-icon-button-icon-color: var( --md-sys-color-on-surface-variant );
+		border-width: var( --md-comp-icon-button-outline-width );
+	}
+
+	/*
+	 * Standard has no container at rest, in any state. The state layer is the
+	 * only thing that ever paints one, which is also why M3 says to keep this
+	 * style out of a button group: a segment has no box to carry its seam or
+	 * its selection.
+	 */
+	.ax-icon-button[data-variant="standard"] {
+		--md-comp-icon-button-icon-color: var( --md-sys-color-on-surface-variant );
+	}
+
+	/* --- Toggle colours --------------------------------------------------- */
+
+	.ax-icon-button[data-variant="filled"][aria-pressed="false"] {
+		--md-comp-icon-button-container-color: var( --md-sys-color-surface-container );
+		--md-comp-icon-button-icon-color: var( --md-sys-color-on-surface-variant );
+	}
+
+	.ax-icon-button[data-variant="tonal"][aria-pressed="true"] {
+		--md-comp-icon-button-container-color: var( --md-sys-color-secondary );
+		--md-comp-icon-button-icon-color: var( --md-sys-color-on-secondary );
+	}
+
+	/* A filled container needs no outline. The width stays so the colour change
+	 * does not reflow the control. */
+	.ax-icon-button[data-variant="outlined"][aria-pressed="true"] {
+		--md-comp-icon-button-container-color: var( --md-sys-color-inverse-surface );
+		--md-comp-icon-button-icon-color: var( --md-sys-color-inverse-on-surface );
+		--md-comp-icon-button-outline-color: transparent;
+	}
+
+	/* Standard selected keeps its missing container; only the icon changes. */
+	.ax-icon-button[data-variant="standard"][aria-pressed="true"] {
+		--md-comp-icon-button-icon-color: var( --md-sys-color-primary );
+	}
+
+	/* --- The control reads the slots -------------------------------------- */
+
+	.ax-icon-button {
+		position: relative;
+		box-sizing: border-box;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		block-size: var( --md-comp-icon-button-container-height );
+		padding-block: 0;
+		padding-inline: var( --md-comp-icon-button-space );
+		border: 0 solid var( --md-comp-icon-button-outline-color );
+		border-radius: var( --md-comp-icon-button-container-shape );
+		background-color: var( --md-comp-icon-button-container-color );
+		color: var( --md-comp-icon-button-icon-color );
+		cursor: pointer;
+		-webkit-tap-highlight-color: transparent;
+		transition-property: background-color, border-radius, border-color, color;
+		transition-duration: var( --md-sys-motion-curve-fast-spatial-duration );
+		transition-timing-function: var( --md-sys-motion-curve-fast-spatial );
+	}
+
+	.ax-icon-button__icon {
+		display: grid;
+		place-items: center;
+		flex-shrink: 0;
+		--md-icon-size: var( --md-comp-icon-button-icon-size );
+	}
+
+	.ax-icon-button[aria-pressed="true"] .ax-icon-button__icon {
+		--md-icon-fill: 1;
+	}
+
+	/* --- The 48dp target -------------------------------------------------- */
+
+	/*
+	 * M3 asks for a target size, not a container size: extra small and small
+	 * icon buttons must be reachable at 48x48dp. The container keeps its
+	 * published measurements and only the hit area grows.
+	 *
+	 * Growing the box instead is wrong twice, and the style guide has the
+	 * measurements from when it was tried: the spec draws XS at 32dp wide, so a
+	 * 48px floor contradicts it, and it erases the one axis this component has
+	 * that no other does -- at XS the three widths 28, 32 and 40 all render 48,
+	 * and narrow, default and wide become the same picture.
+	 *
+	 * Absolutely positioned, so it takes no space and nothing in the layout
+	 * moves; `max()` lets one rule serve every size, since from Medium up the
+	 * container is already larger and the overlay simply matches it.
+	 */
+	.ax-icon-button {
+		--md-comp-icon-button-touch-target-size: 48px;
+	}
+
+	.ax-icon-button::after {
+		content: "";
+		position: absolute;
+		inset-inline-start: 50%;
+		inset-block-start: 50%;
+		inline-size: max( 100%, var( --md-comp-icon-button-touch-target-size ) );
+		block-size: max( 100%, var( --md-comp-icon-button-touch-target-size ) );
+		translate: -50% -50%;
+	}
+
+	/* --- State layers and focus ------------------------------------------- */
+
+	/*
+	 * The icon role mixed over the container. Standard and Outlined carry no
+	 * container, and mixing into `transparent` yields the role at the state
+	 * opacity -- which is exactly the published behaviour for Standard, whose
+	 * container is invisible at rest and visible once a state layer applies.
+	 */
+	.ax-icon-button:not( :disabled ):hover {
+		background-color: color-mix( in srgb, var( --md-comp-icon-button-icon-color ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), var( --md-comp-icon-button-container-color ) );
+	}
+
+	.ax-icon-button:not( :disabled ):focus-visible {
+		background-color: color-mix( in srgb, var( --md-comp-icon-button-icon-color ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), var( --md-comp-icon-button-container-color ) );
+	}
+
+	/* After focus, so a press still reads as pressed on a focused control. */
+	.ax-icon-button:not( :disabled ):active {
+		background-color: color-mix( in srgb, var( --md-comp-icon-button-icon-color ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), var( --md-comp-icon-button-container-color ) );
+		border-radius: var( --md-comp-icon-button-pressed-container-shape );
+	}
+
+	.ax-icon-button:focus-visible {
+		outline: var( --md-focus-ring-width ) solid var( --md-sys-color-secondary );
+		outline-offset: var( --md-focus-ring-outward-offset );
+	}
+
+	/* --- Disabled ---------------------------------------------------------- */
+
+	.ax-icon-button:disabled {
+		--md-comp-icon-button-container-color: color-mix( in srgb, var( --md-sys-color-on-surface ) 10%, transparent );
+		--md-comp-icon-button-icon-color: color-mix( in srgb, var( --md-sys-color-on-surface ) calc( var( --md-sys-state-disabled-state-layer-opacity ) * 100% ), transparent );
+		cursor: not-allowed;
+	}
+
+	/* Outlined keeps its outline at full strength and gains no container except
+	 * on a selected toggle. */
+	.ax-icon-button[data-variant="outlined"]:disabled {
+		--md-comp-icon-button-container-color: transparent;
+		--md-comp-icon-button-outline-color: var( --md-sys-color-outline-variant );
+	}
+
+	.ax-icon-button[data-variant="outlined"][aria-pressed="true"]:disabled {
+		--md-comp-icon-button-container-color: color-mix( in srgb, var( --md-sys-color-on-surface ) 10%, transparent );
+	}
+
+	/* Standard is the one style with no container in any state, disabled
+	 * included: its token list names an icon colour and an opacity, nothing
+	 * else. */
+	.ax-icon-button[data-variant="standard"]:disabled {
+		--md-comp-icon-button-container-color: transparent;
+	}
+
+	@media ( prefers-reduced-motion: reduce ) {
+		.ax-icon-button {
+			transition: none;
+		}
+	}
+}

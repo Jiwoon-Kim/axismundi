@@ -1,0 +1,30 @@
+/*
+ * Visually hidden, and present in the accessibility tree.
+ *
+ * The first occupant of the utilities layer, and a utility rather than part of
+ * any component because more than one control needs it: an icon button has no
+ * label in its anatomy, so its name can only be text nobody sees.
+ *
+ * Real text rather than `aria-label`, for the reasons recorded in the Dialogs
+ * plugin's `docs/BUTTON-STATE.md`: the string lives in one place, browser
+ * translation reaches body text and misses attributes, and the visible name --
+ * when a tooltip eventually shows one -- is then the same string the
+ * accessible name is built from (WCAG 2.5.3).
+ *
+ * `clip-path: inset(50%)` rather than `display: none` or `visibility: hidden`,
+ * either of which would take the text out of the tree along with the pixels.
+ */
+
+@layer axismundi.utilities {
+	.ax-sr-only {
+		position: absolute;
+		inline-size: 1px;
+		block-size: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip-path: inset( 50% );
+		white-space: nowrap;
+		border: 0;
+	}
+}

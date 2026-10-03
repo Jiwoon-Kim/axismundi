@@ -18,7 +18,7 @@ function getFrontendRoute() {
 	}
 
 	const stylebookComponent = relativePath.match(
-		/^stylebook\/components\/(buttons)$/
+		/^stylebook\/components\/(buttons|icon-buttons)$/
 	);
 
 	if ( stylebookComponent ) {

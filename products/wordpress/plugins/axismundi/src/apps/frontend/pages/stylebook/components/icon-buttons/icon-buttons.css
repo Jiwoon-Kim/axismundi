@@ -1,0 +1,34 @@
+@layer axismundi.patterns {
+	.ax-stylebook--icon-buttons > .ax-scaffold__main {
+		padding: var( --ax-layout-window-margin );
+	}
+
+	.ax-stylebook-icon-buttons__row,
+	.ax-stylebook-icon-buttons__targets {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var( --md-sys-measurement-space300 );
+	}
+
+	/*
+	 * A grid rather than a flex row: XL stands 136px tall beside a 32px XS, and
+	 * a flex row would stretch every readout to the tallest cell.
+	 */
+	.ax-stylebook-icon-buttons__sizes {
+		display: grid;
+		gap: var( --md-sys-measurement-space300 );
+	}
+
+	/*
+	 * The three widths sit together so the shape difference is visible, and the
+	 * readout follows them rather than sitting under the row: the point of this
+	 * group is that the middle control is a circle and its neighbours are not.
+	 */
+	.ax-stylebook-icon-buttons__size-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var( --md-sys-measurement-space200 );
+	}
+}

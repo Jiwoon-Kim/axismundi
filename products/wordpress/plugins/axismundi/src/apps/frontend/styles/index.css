@@ -12,4 +12,6 @@
 @import url( '../foundations/layout/canonical-examples/supporting-pane/supporting-pane.css' );
 @import url( '../pages/stylebook/layout-topology-fixtures.css' );
 @import url( './components/button.css' );
+@import url( './components/icon-button.css' );
+@import url( './utilities/sr-only.css' );
 @import url( '../pages/stylebook/styles/styles.css' );

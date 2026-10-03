@@ -18,7 +18,7 @@
 defined( 'ABSPATH' ) || exit;
 
 const AXISMUNDI_CAPSTONE_VERSION          = '0.1.0-alpha0.1';
-const AXISMUNDI_CAPSTONE_REWRITE_VERSION  = '6';
+const AXISMUNDI_CAPSTONE_REWRITE_VERSION  = '7';
 const AXISMUNDI_CAPSTONE_QUERY_VAR        = 'axismundi_capstone';
 const AXISMUNDI_CAPSTONE_ROUTE            = 'social';
 const AXISMUNDI_CAPSTONE_ADMIN_PAGE       = 'axismundi';

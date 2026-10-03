@@ -186,6 +186,18 @@
 		justify-content: center;
 		flex-shrink: 0;
 		block-size: var( --md-comp-icon-button-container-height );
+		/*
+		 * The width is published rather than organic: M3 gives a figure for every
+		 * size and width, and the default one equals the container height, which
+		 * is what makes a default round icon button a circle. Letting it grow out
+		 * of content plus padding leaves `box-sizing` nothing to clamp, and an
+		 * outline then lands outside the published box -- measured, Small default
+		 * Outlined came out 41x40 where every other style was 40x40, so the one
+		 * style with a border was the one that stopped being a circle.
+		 */
+		inline-size: calc(
+			var( --md-comp-icon-button-icon-size ) + var( --md-comp-icon-button-space ) * 2
+		);
 		padding-block: 0;
 		padding-inline: var( --md-comp-icon-button-space );
 		border: 0 solid var( --md-comp-icon-button-outline-color );

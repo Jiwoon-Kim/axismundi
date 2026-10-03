@@ -5,5 +5,5 @@
 		'wp-element',
 		'wp-warning'
 	),
-	'version' => '8cbb2918455caf7fd29e'
+	'version' => 'b22d4264bb059458339d'
 );

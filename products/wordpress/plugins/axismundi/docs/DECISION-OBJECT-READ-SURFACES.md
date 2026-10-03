@@ -20,20 +20,32 @@ activities/docs/BOUNDARIES.md
                        logical inbox/outbox membership
 ```
 
-**조율하는 플러그인은 query를 갖지 않는다.** 두 플러그인이 각각 독립적으로 그렇게 적었다.
+두 플러그인이 **자기 경계에 대해** 같은 모양의 말을 했다. 각각이 덮는 범위를 정확히 적는다 —
+여기서 일반 법칙을 끌어내지 않는다(§1.1).
 
 ```text
 op/includes/object-view-model.php:22
   "OP never reads product storage; the adapter's supports and transform callbacks do."
+     → 덮는 것: 다른 제품의 저장소(Note CPT, Media Library)를 OP가 직접 읽지 않는다.
+     → 덮지 않는 것: OP 자신의 테이블. OP는 remote cache를 소유하고 실제로 질의한다
+       (remote-objects.php · object-relations.php · hashtags.php · hashtag-archive.php).
 
-actors/docs/PROJECTIONS.md:11-12
-  "Actors renders the actor hub /@{username}/ and a navigation of its projections;
-   it does not run the projection's query or own its content."
-
-actors/docs/PROJECTIONS.md:27-28
-  "Actors coordinates only URL, label, visibility, and order. The domain plugin
-   owns the data, the template, and the permission logic behind the link."
+actors/docs/PROJECTIONS.md:11-12, 27-28
+  "it does not run the projection's query or own its content."
+  "Actors coordinates only URL, label, visibility, and order."
+     → 덮는 것: actor hub의 projection registry — 다른 플러그인 아카이브로 가는 링크.
+     → 덮지 않는 것: 시스템 전체의 query 원칙.
 ```
+
+### 1.1 이 둘에서 일반 법칙을 끌어내지 않는다
+
+초판이 여기서 "**조율하는 플러그인은 query를 갖지 않는다**"를 확정된 일반 규칙처럼 적었고,
+그것이 틀렸다. 두 인용은 각자의 경계 선언이고, 합쳐도 그 명제가 되지 않는다. OP가 자기
+remote cache를 질의하는 것이 반례다.
+
+**저장소에 인용이 있다**와 **그 인용에서 더 넓은 시스템 법칙이 도출된다**는 다르다. 전자를
+근거로 후자를 쓰면 §7의 미결을 이미 결정된 것처럼 좁히게 되고, 실제로 그렇게 됐다 —
+초판의 선택지 표에 A4가 없었다.
 
 **원격 객체에 대해 우리는 권한이 없다.** 이 한 문장이 §4의 Admin 분리를 혼자 정당화한다.
 
@@ -79,13 +91,28 @@ canonical URI를 가지고, thread edge도 URI로 쓰여 있다. row id로 조�
 
 ## 3. Admin — local object 읽기 표면
 
-**`wp_posts`를 직접 읽지 않는다.** `article`, `note`, group context 전부 OP가 투영한 JSON을
-본다. 이유는 편의가 아니다.
+**source table을 직접 해석하지 않는다.** `article`, `note`, group context 전부 OP의 정규화된
+view model을 읽는다. 이유는 편의가 아니다.
 
 - 연합에 나가는 것이 투영 결과다. Admin이 `wp_posts`를 보면 **나가지 않는 것을 검토**하게 된다.
 - Tombstone에는 `WP_Post`가 없다. OP의 view-model 경로가 존재하는 이유가 그것이다
   (`object-view-model.php`: "a Tombstone has no `WP_Post` and must still render").
 - `post_author` ≠ 발행 Actor다. canonical author는 Actor이고, 그 해소는 투영이 한다.
+
+**"투영된 JSON"이 저장된 JSON을 뜻하지 않는다.** local 객체에 저장된 projection은 없다.
+
+```text
+op/docs/LOCAL-OBJECTS.md:220-222
+  wp_post       the editable source, current
+  OP            reads the current wp_post and projects the current AS2 Object, dynamically
+  Activities    what was published or interacted with: ... the exact serialized payload
+                for as long as delivery needs it
+```
+
+`payload_json`을 가진 것은 **remote observation 쪽뿐**이다 — 그건 수신 증거이기 때문이다.
+그래서 이 문서는 **local projection 캐시를 새로 만들라는 요구가 아니다.** Admin은 OP가 요청
+시점에 만든 view model을 읽는다. 초판 문장("OP가 투영한 JSON")이 저장된 JSON으로 읽힐 수
+있었고, 그대로 두면 아무도 원하지 않는 local JSON 캐시를 만들어야 한다는 압력이 된다.
 
 ## 4. Admin — remote object cache는 별 목록이다
 
@@ -151,16 +178,37 @@ moderation capability
 
 ### A. 목록 query 소유권
 
-`GET …/objects/{uri}` 단일 조회는 OP의 기존 adapter가 이미 하는 일이라 논쟁이 없다.
-**목록은 제품 저장소를 가로질러 질의**해야 하고, 그것이 OP가 §1에서 안 하겠다고 적은 일이다.
+**목록은 제품 저장소를 가로질러 질의**해야 하고, OP는 다른 제품의 저장소를 읽지 않는다(§1).
+그 이상은 결정되지 않았다.
 
 | | 목록 query 소유 | 대가 |
 |---|---|---|
-| A1 | OP가 query claim을 새로 가짐 | 두 파일의 경계를 되돌림. 되돌리는 이유를 적어야 함 |
-| A2 | 제품이 각자 목록, OP는 행마다 view model | 경계 유지. 소비자가 N개 엔드포인트를 합성 |
-| A3 | 교차 질의는 Activities(원장)가 소유 | `envelope=domain-owned`와 정합. OP는 렌더만 |
+| A1 | OP가 cross-product query claim을 가짐 | `object-view-model.php:22`를 되돌림. 이유를 적어야 함 |
+| A2 | 제품이 각자 목록, OP는 행마다 view model | 경계 유지. **클라이언트가** N개를 합성 |
+| A3 | 교차 질의는 Activities(원장)가 소유 | 프로필 피드 선례와 정합. Activities가 generic object catalog가 됨 |
+| A4 | 제품이 각자 query를 제공하고, `axismundi`의 read-composition API가 **공개 계약만** 조합 | 경계 유지 + 합성에 서버 측 소유자가 생김. 새 층이 하나 늘어남 |
 
-A3가 기존 기록과 가장 덜 부딪힌다 — 프로필 피드가 이미 그 모양이다. 판정은 소유자의 것.
+**A4가 초판에 없었다.** §1.1이 그 누락의 원인이다 — "조율자는 query를 갖지 않는다"를 법칙으로
+쓰면 capstone이 합성 층을 갖는 안이 애초에 후보에 오르지 못한다. A4는 A2와 다르다. 합성이
+클라이언트에서 서버로 옮겨가고 **이름 있는 소유자**를 얻는다. 두 앱을 이미 `axismundi`가
+들고 있으므로 자리로는 자연스럽고, A3처럼 Activities를 범용 객체 카탈로그로 만들 필요도 없다.
+
+판정은 소유자의 것이고, **네 안 중 어느 것도 기존 문서가 배제하지 않는다.**
+
+### A′. 단일 조회도 "논쟁 없음"이 아니다
+
+초판이 `GET …/objects/{uri}`를 "논쟁 없음"으로 적었다. 틀렸다. **lookup seam은 있고 REST
+contract는 새로 결정한다**가 정확하다.
+
+```text
+있는 것   URI에서 source를 찾는 seam. local/remote fallback 포함
+없는 것   viewer authorization · local visibility 평가 · remote cache의 공개 정책
+          · tombstone 상태를 응답에서 어떻게 말하는가 · API 버전
+```
+
+tombstone이 특히 공짜가 아니다. `REMOTE-OBJECTS.md`가 tombstone을 공개 열람 가능으로 두고,
+HTML 쪽은 410 대신 404를 주기로 한 의도적 비표준 결정이 따로 있다. REST가 어느 쪽을 말할지는
+그 둘 중 어느 것도 자동으로 정해 주지 않는다.
 
 ### B. 식별자
 
@@ -195,7 +243,7 @@ URI이거나 그 해시다. URI를 경로에 넣을지 질의 인자로 넣을�
 
 ```text
 0  §7-A 판정                                    소유자
-1  GET …/objects/{uri} 응답 계약                 논쟁 없음. OP adapter가 이미 하는 일
+1  GET …/objects/{uri} 응답 계약                 seam은 있음. 계약은 새로 정함 (§7-A′)
 2  Admin object inspector                        1의 유일한 소비자이자 검증 표면
 3  목록 + Admin DataView (local / remote 둘)     0이 풀린 뒤
 4  Social Card + scaffold                        0~3과 무관하게 병렬

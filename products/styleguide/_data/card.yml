@@ -1,0 +1,194 @@
+# Material 3 Cards — the published specification.
+#
+# Sources: https://m3.material.io/components/cards/specs
+#          https://m3.material.io/components/cards/guidelines
+#          https://m3.material.io/components/cards/accessibility
+#          Material 3 Design Kit, Stacked / Horizontal card properties
+#
+# The container is the only required element. M3 says so in the anatomy -- "The
+# card container is the only required element of a card. All other elements are
+# optional" -- and that one sentence decides most of this file's shape. There is
+# no size axis, no width axis and no label type: a card's dimensions come from
+# what it holds. Four measurements and three colour styles is the whole published
+# surface.
+#
+# Three styles with no functional difference. The guidelines are explicit: "Each
+# provides the same legibility and functionality, so the variant you use depends
+# on style alone." Unlike Button, where a variant also carries emphasis rules,
+# nothing here chooses a style for the caller.
+
+meta:
+  # Card has no size axis. Recorded because its absence is the unusual part
+  # against Button, Icon button and Button group, which all publish five.
+  sizes: false
+  # The container holds everything; its size is what the contents occupy.
+  required_elements: [ container ]
+  icon_size: 24
+  icon_color_role: primary
+
+measurements:
+  # The entire published measurement table, verbatim in count: four rows.
+  shape: 12
+  padding_inline: 16
+  # "Padding between cards | 8dp max" -- a maximum, not a value. A collection may
+  # use less; it may not use more.
+  between_cards_max: 8
+  label_text_alignment: start
+
+variants:
+  - name: elevated
+    title: Elevated
+    container_role: surface-container-low
+    outline: false
+    # Shadow is published per state, which is the axis this variant exists for.
+    elevation:
+      enabled: 1
+      hovered: 2
+      focused: 1
+      pressed: 1
+      dragged: 4
+    # The prose names the role for this one: "Elevated card color roles used for
+    # light and dark themes: 1. Surface container low".
+    role_named_by_m3: true
+  - name: filled
+    title: Filled
+    container_role: surface-container-highest
+    outline: false
+    elevation:
+      enabled: 0
+      hovered: 1
+      focused: 0
+      pressed: 0
+      dragged: 3
+    # M3's Filled card colour section names no role, only the hex #E6E0E9. That
+    # hex is `surface-container-highest` in the baseline light scheme, and the
+    # shipped theme style variation independently resolved it the same way
+    # (`themes/axismundi/styles/blocks/group-card-filled.json`). Two sources
+    # agreeing is why this is carried as a value rather than an open question --
+    # but it was read off a hex, not a token name.
+    role_named_by_m3: false
+  - name: outlined
+    title: Outlined
+    container_role: surface
+    outline:
+      width: 1
+      color_role: outline-variant
+    elevation:
+      enabled: 0
+      hovered: 1
+      focused: 0
+      pressed: 0
+      dragged: 3
+    # "Outlined card color roles used for light and dark themes: 1. Surface
+    # 2. Outline variant".
+    role_named_by_m3: true
+
+# State layers are the same three numbers for every variant, and the same ones
+# the rest of the system already uses. They are listed to record that Card does
+# not publish its own, not to restate the values: the tokens are the authority.
+state_layer:
+  color_role: on-surface
+  hover_token: md.sys.state.hover.state-layer-opacity
+  focus_token: md.sys.state.focus.state-layer-opacity
+  pressed_token: md.sys.state.pressed.state-layer-opacity
+  dragged_token: md.sys.state.dragged.state-layer-opacity
+
+# Published for the actionable card only; see `not_published` below. The theme's
+# focus ring already carries both figures (`--md-focus-ring-width: 3px`,
+# `--md-focus-ring-outward-offset: 2px`), so Card needs no values of its own.
+focus_indicator:
+  thickness: 3
+  outer_offset: 2
+  color_role: secondary
+  agrees_with_theme_focus_ring: true
+
+# M3's keyboard table for cards, in full. Two rows, and the first is conditional
+# on whether the card is actionable -- which is the distinction this component's
+# whole accessibility section turns on.
+keyboard:
+  - keys: Tab
+    action: >-
+      Move to the next actionable element. Directly actionable cards: move to the
+      next card container. Non-actionable cards with actionable elements: move to
+      the next actionable element.
+  - keys: Space or Enter
+    action: Confirm action
+
+# The accessibility page states the rule that decides our default, and it is a
+# prohibition rather than a preference: "A card can be a non-actionable container
+# that holds actions like buttons and links, or it can be directly actionable
+# without any buttons or links. This is to avoid stacking actionable elements. An
+# action shouldn't be placed on an actionable surface."
+actionable:
+  # Mutually exclusive. A card is one or the other, never both.
+  exclusive_with_nested_actions: true
+  non_actionable:
+    role: null
+    tab_stop: false
+    ripple: false
+    hover_state: false
+  directly_actionable:
+    role: button or link
+    tab_stop: true
+    ripple: true
+    hover_state: true
+
+discrepancies:
+  - token: filled / outlined dragged container elevation
+    prose: 6dp, no token named
+    tokens: md.sys.elevation.level3
+    note: >-
+      The dragged rows for Filled and Outlined give 6dp without naming a level,
+      where every other elevation row names one. 6dp is level3. Elevated's dragged
+      row does name md.sys.elevation.level4 (8dp), so the omission is in two rows
+      rather than in the scale.
+  - token: elevated hover container elevation
+    prose: 3dp
+    tokens: md.sys.elevation.level2
+    note: >-
+      Listed because the figure and the token disagree at a glance: M3's level2 is
+      3dp, so both are right. Worth recording because the elevated button's
+      hover elevation is an open inference in the Social frontend conventions
+      while the elevated card's is published outright -- these are different
+      components and one does not settle the other.
+  - token: disabled container
+    prose: >-
+      Elevated: level1, opacity 0.38, container md.sys.color.surface. Filled:
+      0, opacity 0.38, container #1D1B20 (on-surface). Outlined: 0, outline
+      md.sys.color.outline at opacity 0.12.
+    tokens: null
+    note: >-
+      Carried but not implemented, for two reasons. The anatomy and accessibility
+      pages make the container the only required element and give a non-actionable
+      card no role and no tab stop, so a container with no behaviour has no
+      disabled state -- disabled belongs to the actionable variant. And the
+      figures describe a different mechanism from the one the rest of the system
+      uses: an opacity on the container itself, which makes the whole card
+      translucent and shows the page through its contents, where Button's disabled
+      is a colour-mix on the container and the label. Filled's disabled container
+      being on-surface, which is darker than its enabled container, reads as the
+      table being written for that translucency rather than for a colour swap.
+      Measure before implementing.
+
+# Deliberately absent, so that a later reader does not read absence as an
+# oversight. Each line is a decision, not a gap in the data.
+not_published_here:
+  # Needs the mutual exclusion above enforced, and a surface that actually wants
+  # the whole card as one target. Social's object card will hold reply, favourite
+  # and overflow actions, so it is the non-actionable kind.
+  - actionable card contract
+  # A pure visual effect. The Social frontend implements every pressed state as a
+  # flat colour-mix state layer, in Button, Icon button and Connected button
+  # group, so a ripple on Card alone would make one component's feedback differ
+  # from its own siblings'. If it is ever wanted it is a cross-component change
+  # on the motion axis. `axismundi-lab/docs/INTERACTION-AUDIT.md` has already
+  # passed a ripple against all five promotion criteria if that day comes.
+  - ripple
+  # Dividers can separate regions in a card; they are not part of it. More of
+  # menu, list, app bar and sheet want one than card does.
+  - divider
+  # Swipe, pick-up-and-move, container transform, and the grid / vertical list /
+  # carousel collections. These are a collection's contract and a motion
+  # pattern's, and M3 requires a single-pointer alternative for every drag and
+  # swipe, which is a menu this project does not have yet.
+  - gestures and collections

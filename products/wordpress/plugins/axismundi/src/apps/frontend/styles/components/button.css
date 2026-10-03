@@ -264,6 +264,7 @@
 		letter-spacing: var( --md-comp-button-label-text-tracking );
 		line-height: var( --md-comp-button-label-text-line-height );
 		white-space: nowrap;
+		text-decoration: none;
 		cursor: pointer;
 		/*
 		 * The shape morph is spatial and the state-layer colour is an effect, so
@@ -304,16 +305,16 @@
 	 * separate state-layer element would give, without a second box to position
 	 * against the elevation layer.
 	 */
-	.ax-button:not( :disabled ):hover {
+	.ax-button:not( :disabled ):not( [aria-disabled="true"] ):hover {
 		background-color: color-mix( in srgb, var( --md-comp-button-label-text-color ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), var( --md-comp-button-container-color ) );
 	}
 
-	.ax-button:not( :disabled ):focus-visible {
+	.ax-button:not( :disabled ):not( [aria-disabled="true"] ):focus-visible {
 		background-color: color-mix( in srgb, var( --md-comp-button-label-text-color ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), var( --md-comp-button-container-color ) );
 	}
 
 	/* After focus, so a press still reads as pressed on a focused button. */
-	.ax-button:not( :disabled ):active {
+	.ax-button:not( :disabled ):not( [aria-disabled="true"] ):active {
 		background-color: color-mix( in srgb, var( --md-comp-button-label-text-color ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), var( --md-comp-button-container-color ) );
 		border-radius: var( --md-comp-button-pressed-container-shape );
 	}
@@ -331,7 +332,7 @@
 
 	/* Elevated is the only style with a resting shadow; M3 raises it one level
 	 * on hover and focus. */
-	.ax-button[data-variant="elevated"]:not( :disabled ):is( :hover, :focus-visible ) .ax-elevation {
+	.ax-button[data-variant="elevated"]:not( :disabled ):not( [aria-disabled="true"] ):is( :hover, :focus-visible ) .ax-elevation {
 		--md-elevation-level: 2;
 	}
 
@@ -342,7 +343,7 @@
 	 * `on-surface` at 10% is a colour, not an opacity applied to whatever the
 	 * style was painting.
 	 */
-	.ax-button:disabled {
+	.ax-button:is( :disabled, [aria-disabled="true"] ) {
 		--md-comp-button-container-color: color-mix( in srgb, var( --md-sys-color-on-surface ) 10%, transparent );
 		--md-comp-button-label-text-color: color-mix( in srgb, var( --md-sys-color-on-surface ) calc( var( --md-sys-state-disabled-state-layer-opacity ) * 100% ), transparent );
 		cursor: not-allowed;
@@ -353,17 +354,17 @@
 	 * -- the role is still `outline-variant`, not a faded `on-surface` -- and no
 	 * container arrives except on a selected toggle.
 	 */
-	.ax-button[data-variant="outlined"]:disabled {
+	.ax-button[data-variant="outlined"]:is( :disabled, [aria-disabled="true"] ) {
 		--md-comp-button-container-color: transparent;
 		--md-comp-button-outline-color: var( --md-sys-color-outline-variant );
 	}
 
-	.ax-button[data-variant="outlined"][aria-pressed="true"]:disabled {
+	.ax-button[data-variant="outlined"][aria-pressed="true"]:is( :disabled, [aria-disabled="true"] ) {
 		--md-comp-button-container-color: color-mix( in srgb, var( --md-sys-color-on-surface ) 10%, transparent );
 	}
 
 	/* A disabled control shows no elevation. */
-	.ax-button:disabled .ax-elevation {
+	.ax-button:is( :disabled, [aria-disabled="true"] ) .ax-elevation {
 		--md-elevation-level: 0;
 	}
 

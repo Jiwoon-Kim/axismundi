@@ -24,6 +24,15 @@
  * label is replaced -- is deliberately not implemented here, and the two must
  * not be mixed on one button.
  *
+ * `href` chooses the host. With one it renders an anchor, without one a button,
+ * and nothing else is offered: a general `as` would let a caller put this
+ * styling on an element with no interaction semantics at all.
+ *
+ * A disabled link is the case that needs stating. An anchor has no `disabled`
+ * attribute, and an anchor without `href` is not a link, is not focusable and is
+ * not announced as one -- which is the behaviour wanted, so the href is dropped
+ * and `aria-disabled` says why. The same answer the Dialogs blocks settled on
+ * for their own link buttons.
  * Text takes no toggle. M3 states it outright -- "toggle buttons don't use the
  * text style" -- and the reason is structural rather than stylistic: a toggle
  * tells selected from unselected by recolouring its container, and Text has
@@ -45,11 +54,12 @@
  * @param {boolean} [props.defaultSelected=false] Initial state, for an uncontrolled toggle.
  * @param {Function} [props.onSelectedChange] Called with the next selected state.
  * @param {boolean} [props.disabled=false] Disabled state.
+ * @param {string} [props.href] Renders an anchor instead of a button.
  * @param {string} [props.className] Additional component class name.
  * @return {import('@wordpress/element').ReactNode} Button control.
  */
 
-import { useState } from '@wordpress/element';
+import { forwardRef, useState } from '@wordpress/element';
 import warning from '@wordpress/warning';
 import { Elevation } from '../material/elevation';
 
@@ -68,7 +78,7 @@ function oneOf( value, allowed, fallback ) {
 	return allowed.includes( value ) ? value : fallback;
 }
 
-export function Button( {
+export const Button = forwardRef( function Button( {
 	children,
 	variant = 'filled',
 	size = 'small',
@@ -79,11 +89,12 @@ export function Button( {
 	defaultSelected = false,
 	onSelectedChange,
 	disabled = false,
+	href,
 	className,
 	type = 'button',
 	onClick,
 	...props
-} ) {
+}, ref ) {
 	const colorStyle = oneOf( variant, VARIANTS, 'filled' );
 	const buttonSize = oneOf( size, SIZES, 'small' );
 	const buttonShape = oneOf( shape, SHAPES, 'round' );
@@ -115,21 +126,34 @@ export function Button( {
 		onClick?.( event );
 	}
 
+	const isLink = undefined !== href;
+
+	if ( isLink && toggle ) {
+		warning(
+			'Button: `toggle` and `href` cannot both apply. A link goes somewhere; it has no pressed state.'
+		);
+	}
+
+	const Host = isLink ? 'a' : 'button';
+	const hostProps = isLink
+		? { href: disabled ? undefined : href, 'aria-disabled': disabled || undefined }
+		: { disabled, type };
+
 	return (
-		<button
+		<Host
 			{ ...props }
-			aria-pressed={ isToggle ? isSelected : undefined }
+			{ ...hostProps }
+			ref={ ref }
+			aria-pressed={ isToggle && ! isLink ? isSelected : undefined }
 			className={ [ 'ax-button', className ].filter( Boolean ).join( ' ' ) }
 			data-shape={ buttonShape }
 			data-size={ buttonSize }
 			data-variant={ colorStyle }
-			disabled={ disabled }
 			onClick={ handleClick }
-			type={ type }
 		>
 			{ undefined !== restingLevel && <Elevation level={ restingLevel } /> }
 			{ icon && <span className="ax-button__icon">{ icon }</span> }
 			<span className="ax-button__label">{ children }</span>
-		</button>
+		</Host>
 	);
-}
+} );

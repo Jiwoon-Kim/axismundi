@@ -111,6 +111,17 @@ cycle 버튼이 선례).
 아니라. 문자열이 한 곳에만 있고, 브라우저 자동번역이 본문은 번역하고 속성은 놓치며, 보이는
 이름과 접근 가능한 이름이 어긋나지 않는다(WCAG 2.5.3).
 
+**`href`가 host를 고른다.** 있으면 `<a>`, 없으면 `<button>`. 범용 `as`는 두지 않는다 —
+상호작용 의미가 없는 요소에 이 스타일을 얹을 수 있게 되기 때문이다. disabled 링크는 `href`를
+떼고 `aria-disabled`로 말한다. anchor에는 `disabled`가 없고, destination 없는 anchor는 링크가
+아니며 포커스도 안 받는다. (2026-10-03 정정: 이전에 `IconLink`를 따로 만들기로 적었다가
+철회했다. 둘은 하는 일이 다르지만 보이는 것은 같은 컨트롤이라, 나누면 사이즈·폭·색 규칙을
+전부 복제해야 한다.)
+
+**interactive host는 `forwardRef`로 노출한다.** React 18에서는 함수 컴포넌트가 `ref`를 그냥
+받지 못하고, 조용히 무시된다 — popover가 anchor를 잡을 때 `null`로 끝난다. ref는 래퍼가 아니라
+실제 `<button>`/`<a>`에 닿아야 한다.
+
 **잘못된 prop은 throw하지 않고 clamp하거나 거부한다.** 렌더 중 throw는 prop 오타 하나로
 앱 전체를 내린다. 거부할 때는 `@wordpress/warning`으로 개발 중에 한 번 알린다 — 조용한 거부는
 호출자가 왜 콜백이 안 오는지 모르게 만든다.
@@ -170,7 +181,6 @@ axismundi.php                AXISMUNDI_CAPSTONE_REWRITE_VERSION 증가
 구현 때 다시 보라고 남긴다. 추측으로 채우지 말 것.
 
 - `Tooltip` primitive — M3는 web에서 아이콘 버튼에 툴팁을 요구한다. `title`로 흉내내지 않는다.
-- `IconLink` — 아이콘이 이동시키면 링크다. `href` prop으로 버튼에 섞지 않는다.
 - elevated 버튼의 hover elevation `1 -> 2` — 발행 문서 셋 중 어느 것도 직접 지지하지 않는
   추론 상태.
 - `_data/icon_button.yml`의 shape 쌍 외 나머지 값 — 아직 validator가 없다.

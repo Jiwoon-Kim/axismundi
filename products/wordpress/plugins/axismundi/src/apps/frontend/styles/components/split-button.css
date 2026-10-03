@@ -149,6 +149,7 @@
 		color: var( --md-comp-split-button-label-text-color );
 		font-family: var( --md-sys-typescale-label-large-font );
 		white-space: nowrap;
+		text-decoration: none;
 		cursor: pointer;
 		transition-property: background-color, border-radius, border-color, color;
 		transition-duration: var( --md-sys-motion-curve-fast-spatial-duration );
@@ -232,12 +233,12 @@
 	 * Only the inner corners move. The outer pill is constant, which is what
 	 * keeps the pair reading as one control while one half responds.
 	 */
-	.ax-split-button__leading:not( :disabled ):is( :hover, :focus-visible, :active ) {
+	.ax-split-button__leading:not( :disabled ):not( [aria-disabled="true"] ):is( :hover, :focus-visible, :active ) {
 		border-start-end-radius: var( --md-comp-split-button-inner-corner-active );
 		border-end-end-radius: var( --md-comp-split-button-inner-corner-active );
 	}
 
-	.ax-split-button__trailing:not( :disabled ):is( :hover, :focus-visible, :active ):not( [aria-expanded="true"] ) {
+	.ax-split-button__trailing:not( :disabled ):not( [aria-disabled="true"] ):is( :hover, :focus-visible, :active ):not( [aria-expanded="true"] ) {
 		border-start-start-radius: var( --md-comp-split-button-inner-corner-active );
 		border-end-start-radius: var( --md-comp-split-button-inner-corner-active );
 	}
@@ -248,33 +249,33 @@
 	 * when selected -- only a state layer is applied", which is what separates
 	 * this from a toggle button, where the container role itself changes.
 	 */
-	.ax-split-button :is( .ax-split-button__leading, .ax-split-button__trailing ):not( :disabled ):hover {
+	.ax-split-button :is( .ax-split-button__leading, .ax-split-button__trailing ):not( :disabled ):not( [aria-disabled="true"] ):hover {
 		background-color: color-mix( in srgb, var( --md-comp-split-button-label-text-color ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), var( --md-comp-split-button-container-color ) );
 	}
 
-	.ax-split-button :is( .ax-split-button__leading, .ax-split-button__trailing ):not( :disabled ):focus-visible {
+	.ax-split-button :is( .ax-split-button__leading, .ax-split-button__trailing ):not( :disabled ):not( [aria-disabled="true"] ):focus-visible {
 		background-color: color-mix( in srgb, var( --md-comp-split-button-label-text-color ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), var( --md-comp-split-button-container-color ) );
 		outline: var( --md-focus-ring-width ) solid var( --md-sys-color-secondary );
 		outline-offset: var( --md-focus-ring-outward-offset );
 	}
 
-	.ax-split-button :is( .ax-split-button__leading, .ax-split-button__trailing ):not( :disabled ):active {
+	.ax-split-button :is( .ax-split-button__leading, .ax-split-button__trailing ):not( :disabled ):not( [aria-disabled="true"] ):active {
 		background-color: color-mix( in srgb, var( --md-comp-split-button-label-text-color ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), var( --md-comp-split-button-container-color ) );
 	}
 
 	/* --- Disabled ----------------------------------------------------------- */
 
-	.ax-split-button:has( :disabled ) {
+	.ax-split-button:has( :is( :disabled, [aria-disabled="true"] ) ) {
 		--md-comp-split-button-container-color: color-mix( in srgb, var( --md-sys-color-on-surface ) 10%, transparent );
 		--md-comp-split-button-label-text-color: color-mix( in srgb, var( --md-sys-color-on-surface ) calc( var( --md-sys-state-disabled-state-layer-opacity ) * 100% ), transparent );
 	}
 
-	.ax-split-button[data-variant="outlined"]:has( :disabled ) {
+	.ax-split-button[data-variant="outlined"]:has( :is( :disabled, [aria-disabled="true"] ) ) {
 		--md-comp-split-button-container-color: transparent;
 		--md-comp-split-button-outline-color: var( --md-sys-color-outline-variant );
 	}
 
-	.ax-split-button :is( .ax-split-button__leading, .ax-split-button__trailing ):disabled {
+	.ax-split-button :is( .ax-split-button__leading, .ax-split-button__trailing ):is( :disabled, [aria-disabled="true"] ) {
 		cursor: not-allowed;
 	}
 

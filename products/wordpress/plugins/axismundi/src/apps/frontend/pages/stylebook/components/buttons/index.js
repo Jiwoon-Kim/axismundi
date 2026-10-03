@@ -70,6 +70,35 @@ function ToggleSample( { shape, variant } ) {
 	);
 }
 
+function HostSample() {
+	const plainRef = useRef();
+	const linkRef = useRef();
+	const [ hosts, setHosts ] = useState();
+
+	useEffect( () => {
+		setHosts( {
+			link: linkRef.current?.tagName.toLowerCase() ?? 'ref did not reach the host',
+			linkHref: linkRef.current?.getAttribute( 'href' ) ?? 'none',
+			plain: plainRef.current?.tagName.toLowerCase() ?? 'ref did not reach the host',
+		} );
+	}, [] );
+
+	return (
+		<>
+			<div className="ax-stylebook-buttons__row">
+				<Button ref={ plainRef }>No href</Button>
+				<Button href="/social/stylebook" ref={ linkRef } variant="tonal">With href</Button>
+				<Button disabled href="/social/stylebook" variant="outlined">Disabled link</Button>
+			</div>
+			<p className="ax-stylebook-page__note">
+				{ hosts
+					? `hosts: ${ hosts.plain } · ${ hosts.link } (href ${ hosts.linkHref }) — refs resolved`
+					: 'Measuring...' }
+			</p>
+		</>
+	);
+}
+
 function Group( { children, kicker, title } ) {
 	return (
 		<section className="ax-stylebook-page__group" aria-label={ title }>
@@ -148,6 +177,19 @@ export function StylebookButtonsPage() {
 						</div>
 						<p className="ax-stylebook-page__note">
 							Outlined keeps its outline at full strength and gains no container.
+						</p>
+					</Group>
+
+					<Group kicker="href picks the element; the ref reaches it" title="Host and ref">
+						<HostSample />
+						<p className="ax-stylebook-page__note">
+							With an <code>href</code> this renders an anchor and without one a button, and
+							nothing else is on offer &mdash; a general <code>as</code> would let a caller put
+							this styling on an element that does not interact. The disabled link keeps no
+							<code> href </code>at all, because an anchor has no <code>disabled</code> and one
+							without a destination is not a link, is not focusable and is not announced as one;
+							<code> aria-disabled </code>says why. The ref reaches the interactive element
+							rather than a wrapper, which is what a popover will anchor to.
 						</p>
 					</Group>
 

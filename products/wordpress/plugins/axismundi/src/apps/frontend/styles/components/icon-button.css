@@ -204,6 +204,7 @@
 		border-radius: var( --md-comp-icon-button-container-shape );
 		background-color: var( --md-comp-icon-button-container-color );
 		color: var( --md-comp-icon-button-icon-color );
+		text-decoration: none;
 		cursor: pointer;
 		-webkit-tap-highlight-color: transparent;
 		transition-property: background-color, border-radius, border-color, color;
@@ -274,16 +275,16 @@
 	 * opacity -- which is exactly the published behaviour for Standard, whose
 	 * container is invisible at rest and visible once a state layer applies.
 	 */
-	.ax-icon-button:not( :disabled ):hover {
+	.ax-icon-button:not( :disabled ):not( [aria-disabled="true"] ):hover {
 		background-color: color-mix( in srgb, var( --md-comp-icon-button-icon-color ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), var( --md-comp-icon-button-container-color ) );
 	}
 
-	.ax-icon-button:not( :disabled ):focus-visible {
+	.ax-icon-button:not( :disabled ):not( [aria-disabled="true"] ):focus-visible {
 		background-color: color-mix( in srgb, var( --md-comp-icon-button-icon-color ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), var( --md-comp-icon-button-container-color ) );
 	}
 
 	/* After focus, so a press still reads as pressed on a focused control. */
-	.ax-icon-button:not( :disabled ):active {
+	.ax-icon-button:not( :disabled ):not( [aria-disabled="true"] ):active {
 		background-color: color-mix( in srgb, var( --md-comp-icon-button-icon-color ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), var( --md-comp-icon-button-container-color ) );
 		border-radius: var( --md-comp-icon-button-pressed-container-shape );
 	}
@@ -295,7 +296,7 @@
 
 	/* --- Disabled ---------------------------------------------------------- */
 
-	.ax-icon-button:disabled {
+	.ax-icon-button:is( :disabled, [aria-disabled="true"] ) {
 		--md-comp-icon-button-container-color: color-mix( in srgb, var( --md-sys-color-on-surface ) 10%, transparent );
 		--md-comp-icon-button-icon-color: color-mix( in srgb, var( --md-sys-color-on-surface ) calc( var( --md-sys-state-disabled-state-layer-opacity ) * 100% ), transparent );
 		cursor: not-allowed;
@@ -303,19 +304,19 @@
 
 	/* Outlined keeps its outline at full strength and gains no container except
 	 * on a selected toggle. */
-	.ax-icon-button[data-variant="outlined"]:disabled {
+	.ax-icon-button[data-variant="outlined"]:is( :disabled, [aria-disabled="true"] ) {
 		--md-comp-icon-button-container-color: transparent;
 		--md-comp-icon-button-outline-color: var( --md-sys-color-outline-variant );
 	}
 
-	.ax-icon-button[data-variant="outlined"][aria-pressed="true"]:disabled {
+	.ax-icon-button[data-variant="outlined"][aria-pressed="true"]:is( :disabled, [aria-disabled="true"] ) {
 		--md-comp-icon-button-container-color: color-mix( in srgb, var( --md-sys-color-on-surface ) 10%, transparent );
 	}
 
 	/* Standard is the one style with no container in any state, disabled
 	 * included: its token list names an icon colour and an opacity, nothing
 	 * else. */
-	.ax-icon-button[data-variant="standard"]:disabled {
+	.ax-icon-button[data-variant="standard"]:is( :disabled, [aria-disabled="true"] ) {
 		--md-comp-icon-button-container-color: transparent;
 	}
 

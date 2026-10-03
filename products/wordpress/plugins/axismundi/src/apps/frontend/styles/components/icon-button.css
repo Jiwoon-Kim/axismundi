@@ -238,6 +238,19 @@
 	 * Absolutely positioned, so it takes no space and nothing in the layout
 	 * moves; `max()` lets one rule serve every size, since from Medium up the
 	 * container is already larger and the overlay simply matches it.
+	 *
+	 * This is upstream's default rather than a local trick. Material Web writes
+	 * the same construct -- `.touch { position: absolute; height: max(48px, 100%);
+	 * width: max(48px, 100%) }` -- so the hit area reaching past the painted shape,
+	 * and `:hover` with it, is the accepted behaviour and not a defect to design
+	 * around. Nothing is painted out there: the state layer is the button's own
+	 * background, which stops at the published box.
+	 *
+	 * Upstream also offers `touch-target="wrapper"`, which promotes the same 48dp
+	 * to layout space with a margin. That is the shape of the answer if the group
+	 * overlap ever needs solving by geometry rather than by ruling narrow out, and
+	 * its cost is the one that ruled it out here: the published between-space stops
+	 * being what the group renders.
 	 */
 	.ax-icon-button {
 		--md-comp-icon-button-touch-target-size: 48px;

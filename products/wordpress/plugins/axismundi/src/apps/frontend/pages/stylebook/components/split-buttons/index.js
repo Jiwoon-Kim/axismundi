@@ -55,7 +55,6 @@ function SizeSample( { size } ) {
 			<SplitButton
 				icon={ <Icon name="stars" /> }
 				label={ size }
-				menuIcon={ <Icon name="arrow_drop_down" /> }
 				menuLabel={ `More ${ size } options` }
 				size={ size }
 			/>
@@ -68,22 +67,44 @@ function SizeSample( { size } ) {
 	);
 }
 
+/*
+ * `aria-expanded` has to be true of something. An earlier version of this fixture
+ * toggled it with nothing behind it, which put a button in the accessibility tree
+ * announcing an expansion that did not exist -- the specimen breaking the contract
+ * the component keeps, two paragraphs under a note saying it does not.
+ *
+ * So the fixture supplies a real disclosure: a region it controls and reveals.
+ * That is not a menu, and the component still announces none; it is the smallest
+ * honest thing that makes the attribute true.
+ */
 function ExpandedSample() {
 	const [ open, setOpen ] = useState( false );
 
 	return (
-		<div className="ax-stylebook-split-buttons__row">
-			<SplitButton
-				label="Save"
-				menuIcon={ <Icon name="arrow_drop_down" /> }
-				menuLabel="More save options"
-				trailingProps={ {
-					'aria-expanded': open,
-					onClick: () => setOpen( ( value ) => ! value ),
-				} }
-				variant="tonal"
-			/>
-		</div>
+		<>
+			<div className="ax-stylebook-split-buttons__row">
+				<SplitButton
+					label="Save"
+					menuLabel="More save options"
+					trailingProps={ {
+						'aria-controls': 'ax-stylebook-split-disclosure',
+						'aria-expanded': open,
+						onClick: () => setOpen( ( value ) => ! value ),
+					} }
+					variant="tonal"
+				/>
+			</div>
+			<div
+				className="ax-stylebook-split-buttons__disclosure"
+				hidden={ ! open }
+				id="ax-stylebook-split-disclosure"
+			>
+				<p className="ax-stylebook-page__note">
+					A real region, revealed by the trailing half. A menu will replace it and will
+					add the `aria-haspopup` this does not claim.
+				</p>
+			</div>
+		</>
 	);
 }
 
@@ -110,8 +131,7 @@ export function StylebookSplitButtonsPage() {
 								<SplitButton
 									key={ variant }
 									label={ variant }
-									menuIcon={ <Icon name="arrow_drop_down" /> }
-									menuLabel={ `More ${ variant } options` }
+														menuLabel={ `More ${ variant } options` }
 									variant={ variant }
 								/>
 							) ) }
@@ -138,8 +158,9 @@ export function StylebookSplitButtonsPage() {
 						<p className="ax-stylebook-page__note">
 							Press the trailing half. The menu icon rotates 180 degrees inward on the standard
 							motion scheme, its optical offset returns to centre, and the inner corner opens to
-							the pill. No menu exists yet, so nothing announces one: this component sets no
-							aria-haspopup and no aria-expanded of its own.
+							the pill. The component sets no aria-haspopup and no aria-expanded of its own;
+							both come from this fixture, which controls a real region so the attribute is
+							true of something. A menu will take that place and add the aria-haspopup.
 						</p>
 					</Group>
 
@@ -148,14 +169,12 @@ export function StylebookSplitButtonsPage() {
 							<SplitButton
 								disabled
 								label="Disabled"
-								menuIcon={ <Icon name="arrow_drop_down" /> }
-								menuLabel="More options"
+												menuLabel="More options"
 							/>
 							<SplitButton
 								disabled
 								label="Disabled"
-								menuIcon={ <Icon name="arrow_drop_down" /> }
-								menuLabel="More options"
+												menuLabel="More options"
 								variant="outlined"
 							/>
 						</div>

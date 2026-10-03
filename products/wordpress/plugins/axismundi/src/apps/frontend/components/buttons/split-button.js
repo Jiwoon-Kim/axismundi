@@ -17,6 +17,11 @@
  * 13 + 22 + 13. M3 gives icon buttons a 48dp target rule and gives split buttons
  * none, because the published width already is the target.
  *
+ * The menu icon is not a prop. M3: "The trailing button should always have the
+ * expand and collapse icon since it rotates when selected. Avoid modifying the
+ * icon." An opening left for a caller here is an opening to render a trailing
+ * half with the wrong icon, or none, and it would still be 48dp of button.
+ *
  * No `aria-haspopup` and no `aria-expanded`. There is no menu yet, and an
  * element that announces a popup it does not have is lying. `trailingProps` is
  * where a later Menu supplies them; the stylesheet already answers
@@ -27,7 +32,6 @@
  * @param {string} props.label Leading button label.
  * @param {string} props.menuLabel Accessible name for the trailing button.
  * @param {import('@wordpress/element').ReactNode} [props.icon] Optional leading icon.
- * @param {import('@wordpress/element').ReactNode} props.menuIcon Trailing menu icon, which M3 asks not to substitute.
  * @param {'filled'|'tonal'|'elevated'|'outlined'} [props.variant='filled'] M3 colour style.
  * @param {'xsmall'|'small'|'medium'|'large'|'xlarge'} [props.size='small'] M3 size.
  * @param {string} [props.groupLabel] Accessible name for the pair, when it needs one.
@@ -38,6 +42,7 @@
  * @return {import('@wordpress/element').ReactNode} Split button.
  */
 
+import { Icon } from '../material/icon';
 import warning from '@wordpress/warning';
 
 /* Text is absent, as on IconButton; Standard is absent, unlike IconButton. */
@@ -48,7 +53,6 @@ export function SplitButton( {
 	label,
 	menuLabel,
 	icon,
-	menuIcon,
 	variant = 'filled',
 	size = 'small',
 	groupLabel,
@@ -91,7 +95,9 @@ export function SplitButton( {
 				disabled={ disabled }
 				type="button"
 			>
-				<span className="ax-split-button__menu-icon">{ menuIcon }</span>
+				<span className="ax-split-button__menu-icon">
+					<Icon name="arrow_drop_down" />
+				</span>
 				<span className="ax-sr-only">{ menuLabel }</span>
 			</button>
 		</div>

@@ -203,12 +203,70 @@ contract는 새로 결정한다**가 정확하다.
 ```text
 있는 것   URI에서 source를 찾는 seam. local/remote fallback 포함
 없는 것   viewer authorization · local visibility 평가 · remote cache의 공개 정책
-          · tombstone 상태를 응답에서 어떻게 말하는가 · API 버전
+          · API 버전
+해소됨    tombstone 응답 (§7-A″)
 ```
 
-tombstone이 특히 공짜가 아니다. `REMOTE-OBJECTS.md`가 tombstone을 공개 열람 가능으로 두고,
-HTML 쪽은 410 대신 404를 주기로 한 의도적 비표준 결정이 따로 있다. REST가 어느 쪽을 말할지는
-그 둘 중 어느 것도 자동으로 정해 주지 않는다.
+tombstone은 §7-A″에서 해소됐다. 나머지는 미결이다.
+
+### A″. Tombstone — 404는 플랫폼 한계가 아니라 호스트 우회다
+
+이 구분이 410을 어디에 둘 수 있는지를 정하므로 먼저 적는다. **원인은 WordPress도 블록
+테마도 아니다.** WordPress.com Atomic이 **HTML** `410` 응답 본문을 자기 오류 페이지로 교체해서,
+테마의 `object-tombstone` 템플릿이 사용자에게 도달하지 않는다(OP 0.0.70).
+
+그래서 위험한 것은 **HTML 응답뿐**이고, JSON은 이미 반증이 있다.
+
+```text
+op/includes/router.php:155
+  return 'Tombstone' === (string) ( $object['type'] ?? '' ) ? 410 : 200;
+```
+
+AP 협상 요청은 **오늘 실제 410을 주고 그게 Atomic에서 동작한다.** 그 옆에서
+`object-view-route.php:134-141`이 같은 객체의 HTML을 404로 내리며 이유를 주석으로 달고 있다.
+
+**다만 Object read API가 안전하다는 것은 아직 추론이다.** 검증된 것은 negotiated
+`application/activity+json`의 410이고, 미래 REST endpoint의 `application/json` delivery가
+아니다. 같은 비-HTML 클래스라 매우 그럴듯하지만, Atomic의 교체 규칙이 content type을 보는지
+라우트를 보는지 우리는 모른다. **endpoint를 만들 때 그 호스트에서 실제 410 본문과 content
+type을 검사하는 acceptance test를 통과해야 해소다.** 그때까지는 추론으로 둔다.
+
+```text
+AP 협상 (JSON)            410   검증됨 (router.php:155)
+Object read API (JSON)     410   추론. 구현 시 호스트 acceptance test로 확인
+블록테마 사람용 HTML        404   호스트 우회. 의도적 비표준, 되돌리지 말 것
+Social shell (HTML)        200   ↓
+Social TombstoneTemplate         응답 본문으로 렌더
+```
+
+**Social shell을 410으로 만들면 안 된다.** 그 shell은 HTML이고, HTML 410이 바로 Atomic이
+바꿔치기하는 것이다. 410 문서를 만들려는 시도가 404가 존재하는 이유를 그대로 재현한다.
+프론트앱이 410을 **기반으로** 템플릿을 갖는 것은 맞고, 그 410은 **API 응답의 상태코드**이지
+문서의 상태코드가 아니다. shell의 PHP 라우트를 우리가 소유하고 있으므로 기술적으로는 가능하다는
+점이 함정이다 — 가능한 것과 안전한 것이 다르다.
+
+**세 번째 어휘를 만들지 않는다. 다만 이미 둘이 있으므로 고른다.**
+
+```text
+federation AS2        renderer.php:134-148
+  id · type: "Tombstone" · formerType? · deleted?        나머지 멤버를 전부 버림
+
+normalized ObjectView  thread-edges.php:471
+  id · type: "Tombstone" · status: "tombstone"           렌더에 필요한 최소 상태
+```
+
+**read API는 둘 중 하나를 명시적으로 고른다** — federation representation을 그대로 주고 Social이
+AS2 Tombstone을 소비하거나, normalized ObjectView를 주고 기존 `type`과 `status`를 소비한다.
+어느 쪽이든 `kind`나 `deletedAt` 같은 세 번째 이름은 만들지 않는다.
+
+**renderer의 allowlist가 ObjectView API까지 강제한다고 쓰면 안 된다.** 초판이 그렇게 적었고
+틀렸다 — 지금은 별도 경로다. federation 쪽은 `renderer.php`가 멤버를 버려서 이전 본문·media·
+author가 나갈 수 없고, view model 쪽은 `object-view-model.php`가 author·content·interaction
+없는 최소 공지를 렌더한다. **두 경로가 각자 그렇게 하고 있을 뿐, 하나가 다른 쪽을 보장하지
+않는다.** read API를 만들 때 고른 쪽의 축약을 그 경로에서 다시 보장해야 한다.
+
+**미결**: Social의 object 라우트가 서버에서 객체를 해소해 상태코드를 정할 것인가. 지금 답은
+"하지 않는다"이고(위 표), 바꾸려면 Atomic의 HTML 410 교체를 어떻게 피하는지를 먼저 답해야 한다.
 
 ### B. 식별자
 

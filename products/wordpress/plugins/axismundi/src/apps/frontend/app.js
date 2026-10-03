@@ -17,6 +17,11 @@ function getFrontendRoute() {
 		return { name: 'stylebook', styles: true };
 	}
 
+	const stylebookStyle = relativePath.match( /^stylebook\/styles\/(motion)$/ );
+	if ( stylebookStyle ) {
+		return { name: 'stylebook', style: stylebookStyle[ 1 ] };
+	}
+
 	const stylebookComponent = relativePath.match(
 		/^stylebook\/components\/(buttons|icon-buttons|button-groups|split-buttons)$/
 	);
@@ -87,7 +92,7 @@ export function FrontendApp() {
 	const route = getFrontendRoute();
 
 	if ( 'stylebook' === route.name ) {
-		return <StylebookPage component={ route.component } layout={ route.layout } styles={ route.styles } />;
+		return <StylebookPage component={ route.component } layout={ route.layout } style={ route.style } styles={ route.styles } />;
 	}
 
 	return (

@@ -4,6 +4,7 @@ import { StylebookSplitButtonsPage } from './components/split-buttons';
 import { StylebookButtonGroupsPage } from './components/button-groups';
 import { StylebookIconButtonsPage } from './components/icon-buttons';
 import { StylebookStylesPage } from './styles';
+import { StylebookMotionPage } from './styles/motion';
 
 /**
  * Social runtime verification surface.
@@ -13,7 +14,7 @@ import { StylebookStylesPage } from './styles';
  *
  * @return {import('@wordpress/element').ReactNode} Stylebook route content.
  */
-export function StylebookPage( { component, layout, styles } ) {
+export function StylebookPage( { component, layout, style, styles } ) {
 	if ( 'buttons' === component ) {
 		return <StylebookButtonsPage />;
 	}
@@ -28,6 +29,10 @@ export function StylebookPage( { component, layout, styles } ) {
 
 	if ( 'split-buttons' === component ) {
 		return <StylebookSplitButtonsPage />;
+	}
+
+	if ( 'motion' === style ) {
+		return <StylebookMotionPage />;
 	}
 
 	if ( styles ) {

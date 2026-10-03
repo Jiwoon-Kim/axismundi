@@ -1,0 +1,288 @@
+/*
+ * Material 3 Split button.
+ *
+ * Published figures and the reasoning behind this file are in
+ * `docs/REFERENCE-M3-SPLIT-BUTTON.md`. Colour, state layers and label type come
+ * from Button and are resolved here against the same `--md-sys-*` roles rather
+ * than restated as a second table.
+ *
+ * Four colour styles: Text is absent as on IconButton, Elevated is present
+ * unlike IconButton. Three components, three sets.
+ */
+
+@layer axismundi.components {
+	/* --- Size ------------------------------------------------------------- */
+
+	.ax-split-button[data-size="xsmall"] {
+		--md-comp-split-button-container-height: 32px;
+		--md-comp-split-button-inner-corner: var( --md-sys-shape-corner-value-extra-small );
+		--md-comp-split-button-inner-corner-active: var( --md-sys-shape-corner-value-small );
+		--md-comp-split-button-leading-leading-space: var( --md-sys-measurement-space150 );
+		--md-comp-split-button-leading-trailing-space: var( --md-sys-measurement-space125 );
+		--md-comp-split-button-trailing-space: 13px;
+		--md-comp-split-button-trailing-icon-size: 22px;
+		--md-comp-split-button-menu-icon-offset: -1px;
+		--md-comp-split-button-label-text-size: 14px;
+		--md-comp-split-button-label-text-weight: 500;
+		--md-comp-split-button-label-text-tracking: 0.1px;
+		--md-comp-split-button-icon-size: 20px;
+		--md-comp-split-button-icon-label-space: var( --md-sys-measurement-space50 );
+	}
+
+	.ax-split-button[data-size="small"] {
+		--md-comp-split-button-container-height: 40px;
+		--md-comp-split-button-inner-corner: var( --md-sys-shape-corner-value-extra-small );
+		--md-comp-split-button-inner-corner-active: var( --md-sys-shape-corner-value-medium );
+		--md-comp-split-button-leading-leading-space: var( --md-sys-measurement-space200 );
+		--md-comp-split-button-leading-trailing-space: var( --md-sys-measurement-space150 );
+		--md-comp-split-button-trailing-space: 13px;
+		--md-comp-split-button-trailing-icon-size: 22px;
+		--md-comp-split-button-menu-icon-offset: -1px;
+		--md-comp-split-button-label-text-size: 14px;
+		--md-comp-split-button-label-text-weight: 500;
+		--md-comp-split-button-label-text-tracking: 0.1px;
+		--md-comp-split-button-icon-size: 20px;
+		--md-comp-split-button-icon-label-space: var( --md-sys-measurement-space100 );
+	}
+
+	.ax-split-button[data-size="medium"] {
+		--md-comp-split-button-container-height: 56px;
+		--md-comp-split-button-inner-corner: var( --md-sys-shape-corner-value-extra-small );
+		--md-comp-split-button-inner-corner-active: var( --md-sys-shape-corner-value-medium );
+		--md-comp-split-button-leading-leading-space: var( --md-sys-measurement-space300 );
+		--md-comp-split-button-leading-trailing-space: var( --md-sys-measurement-space300 );
+		--md-comp-split-button-trailing-space: 15px;
+		--md-comp-split-button-trailing-icon-size: 26px;
+		--md-comp-split-button-menu-icon-offset: -2px;
+		--md-comp-split-button-label-text-size: 16px;
+		--md-comp-split-button-label-text-weight: 500;
+		--md-comp-split-button-label-text-tracking: 0.15px;
+		--md-comp-split-button-icon-size: 24px;
+		--md-comp-split-button-icon-label-space: var( --md-sys-measurement-space100 );
+	}
+
+	.ax-split-button[data-size="large"] {
+		--md-comp-split-button-container-height: 96px;
+		--md-comp-split-button-inner-corner: var( --md-sys-shape-corner-value-small );
+		--md-comp-split-button-inner-corner-active: var( --md-sys-shape-corner-value-large-increased );
+		--md-comp-split-button-leading-leading-space: var( --md-sys-measurement-space600 );
+		--md-comp-split-button-leading-trailing-space: var( --md-sys-measurement-space600 );
+		--md-comp-split-button-trailing-space: 29px;
+		--md-comp-split-button-trailing-icon-size: 38px;
+		--md-comp-split-button-menu-icon-offset: -3px;
+		--md-comp-split-button-label-text-size: 24px;
+		--md-comp-split-button-label-text-weight: 400;
+		--md-comp-split-button-label-text-tracking: 0;
+		--md-comp-split-button-icon-size: 32px;
+		--md-comp-split-button-icon-label-space: var( --md-sys-measurement-space150 );
+	}
+
+	.ax-split-button[data-size="xlarge"] {
+		--md-comp-split-button-container-height: 136px;
+		--md-comp-split-button-inner-corner: var( --md-sys-shape-corner-value-medium );
+		--md-comp-split-button-inner-corner-active: var( --md-sys-shape-corner-value-large-increased );
+		--md-comp-split-button-leading-leading-space: var( --md-sys-measurement-space800 );
+		--md-comp-split-button-leading-trailing-space: var( --md-sys-measurement-space800 );
+		--md-comp-split-button-trailing-space: 43px;
+		--md-comp-split-button-trailing-icon-size: 50px;
+		--md-comp-split-button-menu-icon-offset: -6px;
+		--md-comp-split-button-label-text-size: 32px;
+		--md-comp-split-button-label-text-weight: 400;
+		--md-comp-split-button-label-text-tracking: 0;
+		--md-comp-split-button-icon-size: 40px;
+		--md-comp-split-button-icon-label-space: var( --md-sys-measurement-space200 );
+	}
+
+	/* --- Colour, resolved against the same roles Button uses --------------- */
+
+	.ax-split-button {
+		--md-comp-split-button-container-color: transparent;
+		--md-comp-split-button-outline-color: transparent;
+		/* Published as Circular: half the height, not 50% of a non-square box. */
+		--md-comp-split-button-outer-corner: calc( var( --md-comp-split-button-container-height ) / 2 );
+		--md-comp-split-button-between-space: var( --md-sys-measurement-space25 );
+	}
+
+	.ax-split-button[data-variant="filled"] {
+		--md-comp-split-button-container-color: var( --md-sys-color-primary );
+		--md-comp-split-button-label-text-color: var( --md-sys-color-on-primary );
+	}
+
+	.ax-split-button[data-variant="tonal"] {
+		--md-comp-split-button-container-color: var( --md-sys-color-secondary-container );
+		--md-comp-split-button-label-text-color: var( --md-sys-color-on-secondary-container );
+	}
+
+	.ax-split-button[data-variant="elevated"] {
+		--md-comp-split-button-container-color: var( --md-sys-color-surface-container-low );
+		--md-comp-split-button-label-text-color: var( --md-sys-color-primary );
+	}
+
+	.ax-split-button[data-variant="outlined"] {
+		--md-comp-split-button-outline-color: var( --md-sys-color-outline-variant );
+		--md-comp-split-button-label-text-color: var( --md-sys-color-on-surface-variant );
+	}
+
+	/* --- The pair ---------------------------------------------------------- */
+
+	/*
+	 * The seam is 2dp at every size, which is the connected button group's figure
+	 * too: both are the distance between two surfaces that read as one control.
+	 */
+	.ax-split-button {
+		display: inline-flex;
+		align-items: stretch;
+		gap: var( --md-comp-split-button-between-space );
+		inline-size: fit-content;
+	}
+
+	.ax-split-button__leading,
+	.ax-split-button__trailing {
+		box-sizing: border-box;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		block-size: var( --md-comp-split-button-container-height );
+		padding-block: 0;
+		border: 0 solid var( --md-comp-split-button-outline-color );
+		background-color: var( --md-comp-split-button-container-color );
+		color: var( --md-comp-split-button-label-text-color );
+		font-family: var( --md-sys-typescale-label-large-font );
+		white-space: nowrap;
+		cursor: pointer;
+		transition-property: background-color, border-radius, border-color, color;
+		transition-duration: var( --md-sys-motion-curve-fast-spatial-duration );
+		transition-timing-function: var( --md-sys-motion-curve-fast-spatial );
+	}
+
+	.ax-split-button[data-variant="outlined"] :is( .ax-split-button__leading, .ax-split-button__trailing ) {
+		border-width: 1px;
+	}
+
+	/*
+	 * Outer corners are the pill; the two inner ones carry the seam. Logical
+	 * corner properties mean the pair mirrors in a right-to-left document without
+	 * a rule of its own, which M3 asks for.
+	 */
+	.ax-split-button__leading {
+		border-start-start-radius: var( --md-comp-split-button-outer-corner );
+		border-end-start-radius: var( --md-comp-split-button-outer-corner );
+		border-start-end-radius: var( --md-comp-split-button-inner-corner );
+		border-end-end-radius: var( --md-comp-split-button-inner-corner );
+		padding-inline: var( --md-comp-split-button-leading-leading-space )
+			var( --md-comp-split-button-leading-trailing-space );
+		gap: var( --md-comp-split-button-icon-label-space );
+		font-size: var( --md-comp-split-button-label-text-size );
+		font-weight: var( --md-comp-split-button-label-text-weight );
+		letter-spacing: var( --md-comp-split-button-label-text-tracking );
+	}
+
+	.ax-split-button__trailing {
+		border-start-end-radius: var( --md-comp-split-button-outer-corner );
+		border-end-end-radius: var( --md-comp-split-button-outer-corner );
+		border-start-start-radius: var( --md-comp-split-button-inner-corner );
+		border-end-start-radius: var( --md-comp-split-button-inner-corner );
+		padding-inline: var( --md-comp-split-button-trailing-space );
+	}
+
+	.ax-split-button__icon {
+		display: grid;
+		place-items: center;
+		flex-shrink: 0;
+		--md-icon-size: var( --md-comp-split-button-icon-size );
+	}
+
+	/*
+	 * The menu icon sits off centre while the menu is closed -- M3 publishes the
+	 * offset per size, as optical centring for an asymmetrical button -- and
+	 * returns to the true centre when it opens.
+	 */
+	.ax-split-button__menu-icon {
+		display: grid;
+		place-items: center;
+		flex-shrink: 0;
+		translate: var( --md-comp-split-button-menu-icon-offset ) 0;
+		--md-icon-size: var( --md-comp-split-button-trailing-icon-size );
+		/*
+		 * "The split button uses the standard motion scheme (not the expressive
+		 * motion scheme) when rotating the menu button."
+		 */
+		transition: rotate var( --md-sys-motion-duration-medium ) var( --md-sys-motion-easing-standard ),
+			translate var( --md-sys-motion-duration-medium ) var( --md-sys-motion-easing-standard );
+	}
+
+	/* --- Open ------------------------------------------------------------- */
+
+	/*
+	 * Driven by `aria-expanded`, which this component does not set. A menu will,
+	 * and these rules are waiting for it rather than being written then.
+	 */
+	.ax-split-button__trailing[aria-expanded="true"] .ax-split-button__menu-icon {
+		rotate: 180deg;
+		translate: 0 0;
+	}
+
+	.ax-split-button__trailing[aria-expanded="true"] {
+		border-start-start-radius: var( --md-comp-split-button-outer-corner );
+		border-end-start-radius: var( --md-comp-split-button-outer-corner );
+	}
+
+	/* --- Inner corners answer the state -------------------------------------
+	 *
+	 * Only the inner corners move. The outer pill is constant, which is what
+	 * keeps the pair reading as one control while one half responds.
+	 */
+	.ax-split-button__leading:not( :disabled ):is( :hover, :focus-visible, :active ) {
+		border-start-end-radius: var( --md-comp-split-button-inner-corner-active );
+		border-end-end-radius: var( --md-comp-split-button-inner-corner-active );
+	}
+
+	.ax-split-button__trailing:not( :disabled ):is( :hover, :focus-visible, :active ):not( [aria-expanded="true"] ) {
+		border-start-start-radius: var( --md-comp-split-button-inner-corner-active );
+		border-end-start-radius: var( --md-comp-split-button-inner-corner-active );
+	}
+
+	/* --- State layers -------------------------------------------------------
+	 *
+	 * Button's, and only a state layer: "the split button color doesn't change
+	 * when selected -- only a state layer is applied", which is what separates
+	 * this from a toggle button, where the container role itself changes.
+	 */
+	.ax-split-button :is( .ax-split-button__leading, .ax-split-button__trailing ):not( :disabled ):hover {
+		background-color: color-mix( in srgb, var( --md-comp-split-button-label-text-color ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), var( --md-comp-split-button-container-color ) );
+	}
+
+	.ax-split-button :is( .ax-split-button__leading, .ax-split-button__trailing ):not( :disabled ):focus-visible {
+		background-color: color-mix( in srgb, var( --md-comp-split-button-label-text-color ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), var( --md-comp-split-button-container-color ) );
+		outline: var( --md-focus-ring-width ) solid var( --md-sys-color-secondary );
+		outline-offset: var( --md-focus-ring-outward-offset );
+	}
+
+	.ax-split-button :is( .ax-split-button__leading, .ax-split-button__trailing ):not( :disabled ):active {
+		background-color: color-mix( in srgb, var( --md-comp-split-button-label-text-color ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), var( --md-comp-split-button-container-color ) );
+	}
+
+	/* --- Disabled ----------------------------------------------------------- */
+
+	.ax-split-button:has( :disabled ) {
+		--md-comp-split-button-container-color: color-mix( in srgb, var( --md-sys-color-on-surface ) 10%, transparent );
+		--md-comp-split-button-label-text-color: color-mix( in srgb, var( --md-sys-color-on-surface ) calc( var( --md-sys-state-disabled-state-layer-opacity ) * 100% ), transparent );
+	}
+
+	.ax-split-button[data-variant="outlined"]:has( :disabled ) {
+		--md-comp-split-button-container-color: transparent;
+		--md-comp-split-button-outline-color: var( --md-sys-color-outline-variant );
+	}
+
+	.ax-split-button :is( .ax-split-button__leading, .ax-split-button__trailing ):disabled {
+		cursor: not-allowed;
+	}
+
+	@media ( prefers-reduced-motion: reduce ) {
+		.ax-split-button__leading,
+		.ax-split-button__trailing,
+		.ax-split-button__menu-icon {
+			transition: none;
+		}
+	}
+}

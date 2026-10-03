@@ -51,3 +51,27 @@
 		gap: var( --md-sys-measurement-space100 );
 	}
 }
+
+@layer axismundi.patterns {
+	/*
+	 * Every gap here is this page's. Divider publishes a 4dp gap to supporting
+	 * text and 8dp right and bottom margins in its own measurements table, and
+	 * those belong to the consumer -- so the consumer is where they are spent.
+	 */
+	.ax-stylebook-cards__divided {
+		max-inline-size: 28rem;
+	}
+
+	.ax-stylebook-cards__divided > .ax-divider {
+		margin-block: var( --md-sys-measurement-space200 );
+	}
+
+	.ax-stylebook-cards__rows {
+		display: grid;
+		gap: var( --md-sys-measurement-space50 );
+	}
+
+	.ax-stylebook-cards__divided .ax-stylebook-cards__actions {
+		padding-block-end: var( --md-sys-measurement-space200 );
+	}
+}

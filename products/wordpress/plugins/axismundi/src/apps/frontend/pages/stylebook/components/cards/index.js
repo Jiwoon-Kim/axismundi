@@ -1,5 +1,6 @@
 import { Button } from '../../../../components/buttons/button';
 import { Card } from '../../../../components/cards/card';
+import { Divider } from '../../../../components/dividers/divider';
 import { Icon } from '../../../../components/material/icon';
 import { IconButton } from '../../../../components/buttons/icon-button';
 import { Scaffold } from '../../../../foundations/layout/scaffold';
@@ -146,6 +147,83 @@ function FocusOrderSample() {
 	);
 }
 
+/*
+ * Dividers inside a card, which is where M3 puts them: "Dividers can separate
+ * regions in cards or indicate areas of a card that can expand." Full width for
+ * the boundary between content and actions, inset for related rows.
+ *
+ * The readout checks the published figures and, more usefully, that the component
+ * contributes no margin of its own -- the one thing that would be invisible until
+ * it was everywhere.
+ */
+function DividerSample() {
+	const hostRef = useRef();
+	const [ metrics, setMetrics ] = useState();
+
+	useEffect( () => {
+		const read = ( variant ) => {
+			const line = hostRef.current?.querySelector( `.ax-divider[data-variant="${ variant }"]` );
+			if ( ! line ) {
+				return null;
+			}
+			const computed = window.getComputedStyle( line );
+			return {
+				start: Math.round( parseFloat( computed.marginInlineStart ) ),
+				end: Math.round( parseFloat( computed.marginInlineEnd ) ),
+				thickness: Math.round( parseFloat( computed.blockSize ) ),
+				block: `${ Math.round( parseFloat( computed.marginBlockStart ) ) }/${ Math.round( parseFloat( computed.marginBlockEnd ) ) }`,
+			};
+		};
+
+		const vertical = hostRef.current?.querySelector( '.ax-divider[data-orientation="vertical"]' );
+		setMetrics( {
+			full: read( 'full' ),
+			inset: read( 'inset' ),
+			middle: read( 'middle-inset' ),
+			verticalWidth: vertical ? Math.round( parseFloat( window.getComputedStyle( vertical ).inlineSize ) ) : null,
+			verticalHeight: vertical ? Math.round( vertical.getBoundingClientRect().height ) : null,
+			announced: [ ...( hostRef.current?.querySelectorAll( '.ax-divider' ) ?? [] ) ].filter(
+				( line ) => 'true' !== line.getAttribute( 'aria-hidden' )
+			).length,
+		} );
+	}, [] );
+
+	return (
+		<div ref={ hostRef }>
+			<Card className="ax-stylebook-cards__divided" variant="outlined">
+				<p className="ax-stylebook-cards__headline">Regions</p>
+				<p className="ax-stylebook-page__note">
+					Supporting text above a full-width divider, which M3 uses to separate a
+					card&rsquo;s interactive area from its content.
+				</p>
+				<Divider />
+				<div className="ax-stylebook-cards__rows">
+					<p className="ax-stylebook-page__note">Related row</p>
+					<Divider variant="inset" />
+					<p className="ax-stylebook-page__note">Related row</p>
+					<Divider variant="middle-inset" />
+					<p className="ax-stylebook-page__note">Nested item</p>
+				</div>
+				<Divider />
+				<div className="ax-stylebook-cards__actions">
+					<Button variant="text">Learn more</Button>
+					<Divider orientation="vertical" />
+					<IconButton
+						icon={ <Icon name="favorite" /> }
+						label="Favourite Regions"
+						variant="standard"
+					/>
+				</div>
+			</Card>
+			<p className="ax-stylebook-page__note">
+				{ metrics
+					? `thickness ${ metrics.full?.thickness }px (published 1dp) · full ${ metrics.full?.start }/${ metrics.full?.end } · inset ${ metrics.inset?.start }/${ metrics.inset?.end } (published 16/0) · middle-inset ${ metrics.middle?.start }/${ metrics.middle?.end } (published 16/16) · block margins on a divider this page does not style ${ metrics.inset?.block } · on one it does ${ metrics.full?.block } · vertical ${ metrics.verticalWidth }x${ metrics.verticalHeight } · announced lines ${ metrics.announced }`
+					: 'Measuring...' }
+			</p>
+		</div>
+	);
+}
+
 export function StylebookCardsPage() {
 	return (
 		<Scaffold className="axismundi-social ax-stylebook ax-stylebook--cards">
@@ -181,6 +259,24 @@ export function StylebookCardsPage() {
 							measurement table has one padding row, left/right 16dp. The vertical rhythm belongs
 							to the headline, subhead and supporting text blocks, which do not exist yet, so no
 							figure is invented for it here.
+						</p>
+					</Group>
+
+					<Group kicker="Two published tokens, three insets, and no space of its own" title="Divider, in its first consumer">
+						<DividerSample />
+						<p className="ax-stylebook-page__note">
+							M3 gives divider two tokens &mdash; a 1dp line in outline-variant &mdash; and three
+							insets, although its prose says two ways and the measurements table publishes
+							<code> inset </code>and<code> middle-inset </code>separately. The vertical rule
+							shares only the colour and the thickness; its length comes from the row it sits in.
+						</p>
+						<p className="ax-stylebook-page__note">
+							The 4dp gap to supporting text and the 8dp right and bottom margins are in
+							divider&rsquo;s own measurements table and are not divider&rsquo;s. The readout
+							proves it from both sides: a divider this page leaves alone has no block margins
+							at all, and the full-width ones have 16 because this page asked for it. A
+							component that shipped them would put space into every card using one, with no
+							way for the caller to take it back.
 						</p>
 					</Group>
 

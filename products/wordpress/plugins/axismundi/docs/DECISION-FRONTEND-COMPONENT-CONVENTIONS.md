@@ -199,6 +199,17 @@ axismundi.php                AXISMUNDI_CAPSTONE_REWRITE_VERSION 증가
   span의 박스는 그대로라서 "삐져나온 라벨 0"이 계속 나왔다. 잘려 나간 양은
   `scrollWidth - clientWidth`로 재고, **칠해진 픽셀이 상자 안에 머무는지는 스타일시트에서
   읽는 사실**이지 측정한 사실이 아니다. 표본 주석에 그렇게 구분해 적는다.
+- **컴포넌트는 자기 것이 아닌 margin을 리셋하지 않는다.** Divider에 `margin: 0`을 두었더니
+  `@layer axismundi.patterns`의 소비자 규칙이 `@layer axismundi.components`의 그 선언에 졌다.
+  선언된 레이어 순서와 반대이고, **설명하지 못했다.** 최소 재현까지 만들었다 — 같은 선택자로
+  patterns에 리터럴 shorthand·var shorthand·var longhand 셋 다 0px이고, components 쪽
+  선언을 지우면 16px이다. `var()`나 shorthand 문제가 아니다. 규칙 자체는 번들 안에서 올바른
+  레이어에 top-level로 들어가 있고(중첩 아님), 레이어 statement는 문서 전체에 하나뿐이다.
+  CSSOM은 매칭 규칙을 0개로 보고해 또 쓸모없었다.
+  **고친 방법은 원인과 무관하게 맞다**: `margin: 0`은 "주변 공간을 소유하지 않는다"고 적어둔
+  문서와 모순이고, 리셋은 소유 주장이다. `span`에는 리셋할 UA margin이 없고, UA 기본값이
+  있는 `<hr>`에만 범위를 좁혔다. 교훈은 둘이다 — 소비자가 간격을 소유하는 컴포넌트는
+  `margin`을 아예 선언하지 않는다, 그리고 **레이어가 이겨줄 것이라고 가정하지 말고 잰다.**
 - **`inline-size: 100%`는 자기 컨테이너를 넘을 수 있다.** flex/grid item의 자동 최소
   크기가 min-content이고, nowrap 라벨들의 합이 그 값이다. 240px 표면의 connected 그룹이
   347px로 측정됐다. "표면을 가득 채운다"는 **표면의 폭을 가진다**는 뜻이므로 `min-inline-size: 0`을

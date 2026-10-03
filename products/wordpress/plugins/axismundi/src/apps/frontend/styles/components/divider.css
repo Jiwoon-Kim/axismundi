@@ -1,0 +1,84 @@
+/*
+ * Material 3 Divider.
+ *
+ * Two published tokens -- a 1dp line in outline-variant -- plus the inset
+ * geometry. `products/styleguide/_data/divider.yml` carries them and
+ * `tools/validators/validate_styleguide_divider.py` checks the theme's shipped
+ * `core/separator` styling against the same figures.
+ *
+ * It owns no surrounding space. The divider measurements table also publishes a
+ * 4dp gap to supporting text and 8dp right and bottom margins, and those belong
+ * to whatever is arranging the content. A margin here would appear in every card
+ * and list that used a divider with no way to remove it.
+ *
+ * THE INSET IS A MARGIN HERE AND PADDING IN THE THEME, deliberately. The theme
+ * draws the line as a content-box-clipped background so padding can inset it,
+ * and `themes/axismundi/style.css` records why: the block editor centres each
+ * block with a max-width and `margin: auto`, which swallows a margin- or
+ * width-based inset, so the line stays full-width in the canvas. That constraint
+ * is the editor's. Social has no editor centring, so the inset is a logical
+ * margin, which is the simpler mechanism and needs no background-clip. Copying
+ * the workaround without the constraint would be cargo cult.
+ *
+ * Logical properties throughout. M3's table says "inset left margin 16dp" and
+ * "inset right margin 0dp"; spending those as `left` and `right` would put the
+ * published figure on the wrong side in RTL.
+ */
+
+@layer axismundi.components {
+	.ax-divider {
+		--md-comp-divider-color: var( --md-sys-color-outline-variant );
+		--md-comp-divider-thickness: 1px;
+		--md-comp-divider-inset-start: 0px;
+		--md-comp-divider-inset-end: 0px;
+		display: block;
+		border: 0;
+		background-color: var( --md-comp-divider-color );
+	}
+
+	.ax-divider[data-orientation="horizontal"] {
+		block-size: var( --md-comp-divider-thickness );
+		/* "Divider full-width | 100%", minus whatever the variant insets. */
+		inline-size: auto;
+		margin-inline-start: var( --md-comp-divider-inset-start );
+		margin-inline-end: var( --md-comp-divider-inset-end );
+	}
+
+	/*
+	 * A vertical divider is published in the prose with no measurements of its
+	 * own, so it shares only the colour and the thickness. Its length comes from
+	 * the row it sits in -- `align-self: stretch` rather than a height this file
+	 * invents -- and the space around it belongs to that container.
+	 */
+	.ax-divider[data-orientation="vertical"] {
+		align-self: stretch;
+		inline-size: var( --md-comp-divider-thickness );
+		min-block-size: 100%;
+	}
+
+	.ax-divider[data-variant="inset"] {
+		--md-comp-divider-inset-start: var( --md-sys-measurement-space200 );
+		--md-comp-divider-inset-end: 0px;
+	}
+
+	.ax-divider[data-variant="middle-inset"] {
+		--md-comp-divider-inset-start: var( --md-sys-measurement-space200 );
+		--md-comp-divider-inset-end: var( --md-sys-measurement-space200 );
+	}
+
+	/*
+	 * NO `margin: 0` ON THE COMPONENT. It would contradict the paragraph above:
+	 * resetting a margin is a claim on it, and a consumer spacing its own
+	 * dividers then has to win a fight it should never have had. A `span` has no
+	 * user-agent margin to reset in the first place.
+	 *
+	 * The announced form does. A UA `<hr>` arrives with block margins and a
+	 * border, and undoing a user-agent default is not the same as owning the
+	 * value -- so the reset is scoped to the element that has one, and a consumer
+	 * can still set its own.
+	 */
+	hr.ax-divider {
+		margin-block: 0;
+		color: inherit;
+	}
+}

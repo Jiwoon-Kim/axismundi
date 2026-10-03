@@ -131,6 +131,10 @@ Admin navigation editor와 persistence는 실제 Social route/component requirem
 
 ## Related decisions
 
+- `PLAN-FRONTEND-NAVIGATION-COMPONENTS.md` — component 내부 구조 아이디어 (미채택).
+  M3 Expressive가 baseline bar/rail을 폐기했고 expanded rail이 drawer를 대체한다는 점,
+  그리고 이 문서의 `md-navigation-*` 표기가 현재 컴포넌트 규약보다 앞선 표기라는 점이
+  거기 적혀 있다.
 - `DECISION-FRONTEND-PRODUCT-FIRST.md`
 - `DECISION-FRONTEND-THEME-ASSET-CONTRACT.md`
 - `RESEARCH-ADMIN-SIDEBAR-NAVIGATION.md`

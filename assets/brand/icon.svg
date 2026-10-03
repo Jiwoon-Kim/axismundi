@@ -10,9 +10,18 @@
         <dc:title>Axismundi Icon</dc:title>
         <dc:creator>Jiwoon Kim</dc:creator>
         <dc:description>The Axismundi world-tree symbol: a canopy, trunk and root system
-          on the vertical world axis, inside a cardinal ring. Static variant on a square
-          dark field, the source for icon and favicon derivatives.</dc:description>
-        <dc:rights>Copyright Jiwoon Kim. Licensed for use with the Axismundi project; see assets/LICENSES.md.</dc:rights>
+          on the vertical world axis, inside a cardinal ring, on a square dark field.
+          The icon derivative, with its halo thinned so the ring still reads as dots at
+          a 128 or 256 pixel render.</dc:description>
+        <dc:rights>Copyright (C) 2026 Jiwoon Kim. Licensed under GPL-3.0-or-later,
+          so this file may be distributed with an Axismundi plugin, including through
+          the WordPress Plugin Directory. The grant applies to this file only and does
+          not relicense the other assets in the Axismundi brand directory; see
+          assets/LICENSES.md. A copyright licence is not a trademark licence: the
+          Axismundi name and this symbol remain project marks, and nothing here grants
+          their use as part of another product, project, service, or company
+          name.</dc:rights>
+        <cc:license rdf:resource="https://www.gnu.org/licenses/gpl-3.0.html"/>
       </cc:Work>
     </rdf:RDF>
   </metadata>

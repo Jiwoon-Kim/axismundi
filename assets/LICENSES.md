@@ -9,7 +9,7 @@ This file records provenance and license treatment for assets staged under
 |---|---|---|---|
 | `brand/axismundi-symbol.svg` | Original project asset by Jiwoon Kim | Project-owned brand asset | Canonical draft symbol; not release-locked |
 | `brand/axismundi-symbol-static.svg` | Original project asset by Jiwoon Kim | Project-owned brand asset | Static symbol variant for plugin-icon derivatives |
-| `brand/icon.svg` | Original project asset by Jiwoon Kim | Project-owned brand asset; sub-license pending | Icon derivative for a WordPress.org submission. The `dc:rights` string inside the file still carries the project-only wording and has to be settled before release |
+| `brand/icon.svg` | Original project asset by Jiwoon Kim | **GPL-3.0-or-later**, this file only | Icon derivative for a WordPress.org submission. Same narrow-grant shape as the bundled `:axismundi:` emoji: the grant covers this file and does not relicense the rest of this table. A copyright licence is not a trademark licence |
 | `brand/axismundi-symbol-glow.svg` | Original project asset by Jiwoon Kim | Project-owned brand asset | Glow / presentation variant |
 | `brand/axismundi-logo.png` | Original project asset by Jiwoon Kim | Project-owned brand asset | Raster logo export; source for the bundled `:axismundi:` emoji derivative |
 

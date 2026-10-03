@@ -1,0 +1,78 @@
+/*
+ * Material 3 Card.
+ *
+ * The published surface is four measurements and three colour styles, because
+ * the container is the only required element -- `products/styleguide/_data/card.yml`
+ * carries them and `tools/validators/validate_styleguide_card.py` checks the
+ * theme's shipped `core/group` card styles against the same figures.
+ *
+ * Slots follow the tier Button established. Variant assigns sys roles into the
+ * slots; the control reads only the unqualified slot:
+ *
+ *   --md-comp-card-container-color
+ *   --md-comp-card-container-shape
+ *   --md-comp-card-outline-width / --md-comp-card-outline-color
+ *
+ * NO STATE RULES. The absence is the contract, not an omission. A non-actionable
+ * card has no role and no tab stop, so it has nothing to be hovered, focused or
+ * pressed as -- M3 publishes those rows for the actionable card. Adding a hover
+ * state here would make a container look interactive while remaining unreachable
+ * by keyboard, which is the exact failure the accessibility page is written to
+ * prevent.
+ *
+ * NO BLOCK PADDING. M3's measurement table has one padding row, "Left/right
+ * padding 16dp", and that is all that is spent here. The vertical rhythm belongs
+ * to the content blocks -- headline, subhead, supporting text -- which are not
+ * built yet, so inventing a figure now would put a number in the system that no
+ * published source supports. A caller placing raw children gets inline padding
+ * only, and that is honest rather than finished.
+ *
+ * THE CARD ICON IS NOT SET ON THE ROOT. M3 publishes an icon colour (primary)
+ * and size (24dp) per variant, and both belong to a card's own icon element, not
+ * to everything inside it. Declaring `--md-icon-size` or a primary colour on
+ * `.ax-card` would cascade into a nested Button or Icon button and repaint its
+ * icon, so the figures wait for a card icon slot to exist.
+ */
+
+@layer axismundi.components {
+	.ax-card {
+		/* Published once, not per variant: 12dp for all three. */
+		--md-comp-card-container-shape: var( --md-sys-shape-corner-value-medium );
+		--md-comp-card-padding-inline: var( --md-sys-measurement-space200 );
+		--md-comp-card-label-text-color: var( --md-sys-color-on-surface );
+		box-sizing: border-box;
+		/* The elevation layer is absolutely positioned against this box. */
+		position: relative;
+		border: 0;
+		border-radius: var( --md-comp-card-container-shape );
+		padding-inline: var( --md-comp-card-padding-inline );
+		background-color: var( --md-comp-card-container-color );
+		color: var( --md-comp-card-label-text-color );
+	}
+
+	/* --- Colour styles ---------------------------------------------------- */
+
+	.ax-card[data-variant="elevated"] {
+		--md-comp-card-container-color: var( --md-sys-color-surface-container-low );
+	}
+
+	.ax-card[data-variant="filled"] {
+		--md-comp-card-container-color: var( --md-sys-color-surface-container-highest );
+	}
+
+	.ax-card[data-variant="outlined"] {
+		--md-comp-card-container-color: var( --md-sys-color-surface );
+		--md-comp-card-outline-width: 1px;
+		--md-comp-card-outline-color: var( --md-sys-color-outline-variant );
+		border: var( --md-comp-card-outline-width ) solid var( --md-comp-card-outline-color );
+	}
+
+	/*
+	 * A list host loses its marker rather than keeping a bullet beside a card.
+	 * `list-style` is the host's, not the card's, so it is set only where the
+	 * host can carry one.
+	 */
+	li.ax-card {
+		list-style: none;
+	}
+}

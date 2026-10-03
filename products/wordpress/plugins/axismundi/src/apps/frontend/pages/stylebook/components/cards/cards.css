@@ -1,0 +1,53 @@
+@layer axismundi.patterns {
+	.ax-stylebook--cards > .ax-scaffold__main {
+		padding: var( --ax-layout-window-margin );
+	}
+
+	.ax-stylebook-cards__variants {
+		display: grid;
+		gap: var( --md-sys-measurement-space400 );
+	}
+
+	.ax-stylebook-cards__sample {
+		display: grid;
+		gap: var( --md-sys-measurement-space100 );
+		max-inline-size: 28rem;
+	}
+
+	/*
+	 * The collection's gap is the published maximum rather than a choice: "Padding
+	 * between cards | 8dp max". A collection may use less and may not use more.
+	 */
+	.ax-stylebook-cards__collection {
+		display: grid;
+		gap: var( --md-sys-measurement-space100 );
+		margin: 0;
+		padding: 0;
+		max-inline-size: 28rem;
+	}
+
+	/*
+	 * Card publishes no block padding, so a specimen that needs vertical room asks
+	 * for it here rather than in the component. Keeping it on the contents is the
+	 * point: this is what a content block will own once one exists.
+	 */
+	.ax-stylebook-cards__headline {
+		margin: 0;
+		padding-block-start: var( --md-sys-measurement-space200 );
+		font-family: var( --md-sys-typescale-title-medium-font );
+		font-size: var( --md-sys-typescale-title-medium-size );
+		line-height: var( --md-sys-typescale-title-medium-line-height );
+	}
+
+	.ax-stylebook-cards__sample .ax-card > :last-child,
+	.ax-stylebook-cards__collection .ax-card > :last-child {
+		padding-block-end: var( --md-sys-measurement-space200 );
+	}
+
+	.ax-stylebook-cards__actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var( --md-sys-measurement-space100 );
+	}
+}

@@ -12,6 +12,7 @@
 @import url( '../foundations/layout/canonical-examples/supporting-pane/supporting-pane.css' );
 @import url( '../pages/stylebook/layout-topology-fixtures.css' );
 @import url( './components/button.css' );
+@import url( './components/card.css' );
 @import url( './components/icon-button.css' );
 @import url( './components/button-group.css' );
 @import url( './components/connected-button-group.css' );

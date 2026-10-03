@@ -15,6 +15,13 @@
  * width and state, which is also what separates this from a connected group,
  * whose children are parts rather than components.
  *
+ * Which is why a child may be a different size from the group. M3 allows it --
+ * "only use multiple sizes in a group for hero moments" -- and the gap stays the
+ * group's, because a hero button is an exception inside a group rather than a new
+ * group size. The case worth checking is the opposite one: XS and S carry the
+ * wider gaps so a 32dp control still clears its neighbour by 48dp, so dropping a
+ * small button into a large group gives it the large group's narrower gap.
+ *
  * `distribution` carries the adjacent interaction, and it is a setting rather
  * than the default because two published rules collide. M3 says a standard group
  * hugs the width of the buttons inside, and it also says a selected button widens
@@ -32,7 +39,7 @@
  *
  * @param {Object} props Component props.
  * @param {import('@wordpress/element').ReactNode} props.children Button and IconButton instances.
- * @param {'xsmall'|'small'|'medium'|'large'|'xlarge'} [props.size='small'] Size of the buttons inside, which decides the gap.
+ * @param {'xsmall'|'small'|'medium'|'large'|'xlarge'} [props.size='small'] The group's size, which decides the gap between buttons.
  * @param {string} [props.label] Accessible name, when the group is itself a landmark worth naming.
  * @param {string} [props.className] Additional component class name.
  * @return {import('@wordpress/element').ReactNode} Button group container.

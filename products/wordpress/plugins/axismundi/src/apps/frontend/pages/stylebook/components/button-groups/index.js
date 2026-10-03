@@ -140,6 +140,26 @@ export function StylebookButtonGroupsPage() {
 						</p>
 					</Group>
 
+					<Group kicker="Allowed for hero moments; the gap stays the group's" title="Mixed sizes">
+						<div className="ax-stylebook-button-groups__sizes">
+							<ButtonGroup label="Playback" size="small">
+								<IconButton icon={ <Icon name="skip_previous" /> } label="Previous" variant="outlined" />
+								<Button size="medium" variant="tonal">Play</Button>
+								<IconButton icon={ <Icon name="skip_next" /> } label="Next" variant="outlined" />
+							</ButtonGroup>
+							<ButtonGroup size="large">
+								<Button size="large">Large</Button>
+								<Button size="small" variant="outlined">Small inside a large group</Button>
+							</ButtonGroup>
+						</div>
+						<p className="ax-stylebook-page__note">
+							The hero is a different size and the group&rsquo;s gap does not follow it. The
+							second row is the case worth checking: XS and S carry the wider gaps so a small
+							control still clears its neighbour, and a small button placed in a large group
+							takes the large group&rsquo;s narrower one instead.
+						</p>
+					</Group>
+
 					<Group kicker="Children keep what they chose" title="Mixed colours and widths">
 						<ButtonGroup size="small">
 							<Button>Filled</Button>

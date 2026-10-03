@@ -83,6 +83,13 @@
 	 */
 	.ax-button-group[data-distribution="fill"] > * {
 		flex: 1 1 0;
+		/*
+		 * Keeps a compressed neighbour from wrapping its own text, and it is also
+		 * the ceiling on the whole effect: once the share is already at a button's
+		 * content width there is nothing left to give, and the redistribution
+		 * quietly stops. Measured with five buttons in a 480px group, where every
+		 * share sat at 87px and selecting changed nothing.
+		 */
 		min-inline-size: max-content;
 		transition: flex-grow var( --md-sys-motion-curve-fast-spatial-duration )
 			var( --md-sys-motion-curve-fast-spatial );
@@ -90,11 +97,36 @@
 
 	/*
 	 * M3 names both triggers -- "selected or activated" -- so a press answers as
-	 * well as a selection, and the pressed button is the one that takes the
-	 * extra while the rest pay for it.
+	 * well as a selection.
 	 */
 	.ax-button-group[data-distribution="fill"] > :is( [aria-pressed="true"], :active ) {
 		flex-grow: 1.15;
+	}
+
+	/*
+	 * Only the neighbours pay. M3 is specific: the selected button's change
+	 * "adjusts the width of buttons DIRECTLY NEXT TO IT". Letting flex spread the
+	 * cost over every sibling looks identical with three buttons, where everything
+	 * is a neighbour, and wrong with four -- measured 111/111/111/111 becoming
+	 * 108/108/120/108, where the first button is nowhere near the selection and
+	 * still paid three pixels.
+	 *
+	 * The shares are arithmetic rather than taste. The selected button takes
+	 * +0.15, so its two neighbours give up 0.075 each and the total stays at one
+	 * share per button, which is what leaves the distant ones untouched.
+	 */
+	.ax-button-group[data-distribution="fill"] > :is( [aria-pressed="true"], :active ) + *,
+	.ax-button-group[data-distribution="fill"] > :has( + :is( [aria-pressed="true"], :active ) ) {
+		flex-grow: 0.925;
+	}
+
+	/*
+	 * A selection at either end has one neighbour, so that one pays the whole
+	 * 15% instead of half of it.
+	 */
+	.ax-button-group[data-distribution="fill"] > :first-child:is( [aria-pressed="true"], :active ) + *,
+	.ax-button-group[data-distribution="fill"] > :has( + :last-child:is( [aria-pressed="true"], :active ) ) {
+		flex-grow: 0.85;
 	}
 
 	@media ( prefers-reduced-motion: reduce ) {

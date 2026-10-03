@@ -1,6 +1,7 @@
 import { CanonicalLayoutFixture } from './canonical-layout-fixtures';
 import { StylebookButtonsPage } from './components/buttons';
 import { StylebookCardsPage } from './components/cards';
+import { StylebookDividersPage } from './components/dividers';
 import { StylebookSplitButtonsPage } from './components/split-buttons';
 import { StylebookButtonGroupsPage } from './components/button-groups';
 import { StylebookIconButtonsPage } from './components/icon-buttons';
@@ -26,6 +27,10 @@ export function StylebookPage( { component, layout, style, styles } ) {
 
 	if ( 'button-groups' === component ) {
 		return <StylebookButtonGroupsPage />;
+	}
+
+	if ( 'dividers' === component ) {
+		return <StylebookDividersPage />;
 	}
 
 	if ( 'cards' === component ) {

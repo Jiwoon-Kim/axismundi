@@ -1,0 +1,35 @@
+@layer axismundi.patterns {
+	.ax-stylebook--dividers > .ax-scaffold__main {
+		padding: var( --ax-layout-window-margin );
+	}
+
+	/*
+	 * Every gap here is this page's. Divider publishes a 4dp gap to supporting
+	 * text and 8dp right and bottom margins in its own measurements table, and
+	 * those belong to the consumer -- so the consumer spends them.
+	 */
+	.ax-stylebook-dividers__stack {
+		display: grid;
+		gap: var( --md-sys-measurement-space300 );
+		max-inline-size: 28rem;
+	}
+
+	.ax-stylebook-dividers__row {
+		display: grid;
+		gap: var( --md-sys-measurement-space50 );
+	}
+
+	.ax-stylebook-dividers__inline {
+		display: flex;
+		align-items: stretch;
+		gap: var( --md-sys-measurement-space200 );
+		max-inline-size: 28rem;
+		padding-block: var( --md-sys-measurement-space200 );
+	}
+
+	.ax-stylebook-dividers__inline > p {
+		flex: 1 1 0;
+		min-inline-size: 0;
+		margin: 0;
+	}
+}

@@ -234,6 +234,7 @@ export function StylebookCardsPage() {
 					<a href="/social/stylebook/components/icon-buttons">Icon buttons</a>
 					<a href="/social/stylebook/components/button-groups">Button groups</a>
 					<a href="/social/stylebook/components/split-buttons">Split buttons</a>
+					<a href="/social/stylebook/components/dividers">Dividers</a>
 				</nav>
 
 				<section className="ax-stylebook-page__section" id="cards" aria-labelledby="ax-stylebook-cards-title">

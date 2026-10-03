@@ -32,7 +32,6 @@
 
       Layer model (two semantic layers, rendered in order)
         1. symbolic-ring-layer
-             locked-outer-ring-source   hidden — canonical annulus geometry
              visible-outer-ring         rendered, root-knockout cut applied
              locked-inner-halo          46 dots, mathematically exact distribution
              locked-central-axis        spike that masks the halo top dot
@@ -85,10 +84,14 @@
         subsample, not a redraw.
 
       Outer-ring derivation rule
-        - visible-outer-ring is a DERIVED / CROPPED shape (root-knockout cut).
-        - It MUST NOT be treated as canonical geometry.
-        - If layout is recalculated, regenerate visible-outer-ring from
-          locked-outer-ring-source (the full annulus), not from itself.
+        - visible-outer-ring is a DERIVED / CROPPED shape (root-knockout cut),
+          where the roots break through the ring.
+        - It MUST NOT be treated as canonical geometry, here least of all:
+          this file is itself a derivative and carries no archival source.
+        - To recalculate the ring, go to axismundi-symbol-static.svg and
+          regenerate from its locked-outer-ring-source (the full annulus,
+          outer arc r=352 / inner arc r=344, centred 557,455) — never from
+          the cropped shape below.
 
       Node semantics (formerly grouped as "nodes-axis"; that group is dissolved)
         (557, 108)  r=20  → nodes-cardinal :: node-cardinal-north
@@ -120,18 +123,6 @@
          ring / halo / central axis / cardinal nodes
          ============================================================ -->
     <g id="symbolic-ring-layer">
-
-      <!--
-        locked-outer-ring-source: hidden archival annulus.
-        Outer arc r=352, inner arc r=344, both centered (557, 455).
-        Source of truth for outer-ring geometry; use this — NOT the cropped
-        visible-outer-ring — when re-deriving ring positions.
-      -->
-      <g id="locked-outer-ring-source" display="none">
-        <path fill="#EEEEEE" fill-rule="evenodd"
-              d="M 557 103 A 352 352 0 0 1 557 807 A 352 352 0 0 1 557 103 Z
-                 M 557 111 A 344 344 0 0 1 557 799 A 344 344 0 0 1 557 111 Z"/>
-      </g>
 
       <!--
         visible-outer-ring: derived from locked-outer-ring-source with

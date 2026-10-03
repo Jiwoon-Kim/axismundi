@@ -76,6 +76,14 @@ def main() -> int:
         border = styles.get("border", {})
         label = path.name
 
+        # Every variant has to name the M3 component token its container colour
+        # comes from. The record was wrong about Filled's role once, because that
+        # entry carried an argument instead of a citation.
+        report.check(
+            variant.get("container_color_token") == f"md.comp.{name}-card.container.color",
+            f"{name}: container_color_token {variant.get('container_color_token')!r} is not md.comp.{name}-card.container.color",
+        )
+
         # The container role is the whole colour contract of a card: M3 gives the
         # container, and everything else inside brings its own.
         report.check(
@@ -177,6 +185,21 @@ def main() -> int:
     report.check(
         data["meta"]["required_elements"] == ["container"],
         "the container is the only required element of a card",
+    )
+
+    # The surface-tint layer is M3's own deprecation, and the record has to keep
+    # saying what replaced it: the container role, used directly.
+    tint = next(
+        (entry for entry in data.get("deprecated", []) if entry["token_suffix"].endswith("surface-tint-layer.color")),
+        None,
+    )
+    report.check(
+        tint is not None and tint["superseded_by"] == "container.color",
+        "card.yml must keep recording that the surface-tint layer is deprecated in favour of the container colour",
+    )
+    report.check(
+        tint is not None and sorted(tint["variants"]) == sorted(BLOCK_STYLES),
+        "all three card variants carry the deprecated surface-tint layer token",
     )
 
     print(f"card: {report.checked} checks, {len(report.problems)} failed")

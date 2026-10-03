@@ -35,10 +35,17 @@ measurements:
   between_cards_max: 8
   label_text_alignment: start
 
+# Each variant carries the M3 component token its container colour comes from, so
+# a reader can find the row on the specs page rather than trusting this file. The
+# page's token viewer names the referenced sys role for all three; an earlier
+# revision of this file recorded Filled's as unnamed, which was wrong -- it was
+# read from a transcription of the page whose Filled section had lost its token
+# column, not from the page.
 variants:
   - name: elevated
     title: Elevated
     container_role: surface-container-low
+    container_color_token: md.comp.elevated-card.container.color
     outline: false
     # Shadow is published per state, which is the axis this variant exists for.
     elevation:
@@ -47,12 +54,10 @@ variants:
       focused: 1
       pressed: 1
       dragged: 4
-    # The prose names the role for this one: "Elevated card color roles used for
-    # light and dark themes: 1. Surface container low".
-    role_named_by_m3: true
   - name: filled
     title: Filled
     container_role: surface-container-highest
+    container_color_token: md.comp.filled-card.container.color
     outline: false
     elevation:
       enabled: 0
@@ -60,16 +65,10 @@ variants:
       focused: 0
       pressed: 0
       dragged: 3
-    # M3's Filled card colour section names no role, only the hex #E6E0E9. That
-    # hex is `surface-container-highest` in the baseline light scheme, and the
-    # shipped theme style variation independently resolved it the same way
-    # (`themes/axismundi/styles/blocks/group-card-filled.json`). Two sources
-    # agreeing is why this is carried as a value rather than an open question --
-    # but it was read off a hex, not a token name.
-    role_named_by_m3: false
   - name: outlined
     title: Outlined
     container_role: surface
+    container_color_token: md.comp.outlined-card.container.color
     outline:
       width: 1
       color_role: outline-variant
@@ -79,9 +78,21 @@ variants:
       focused: 0
       pressed: 0
       dragged: 3
-    # "Outlined card color roles used for light and dark themes: 1. Surface
-    # 2. Outline variant".
-    role_named_by_m3: true
+
+# All three variants publish a `container.surface-tint-layer.color`, and all three
+# carry M3's own deprecation on it. Recorded because the token is still in the
+# specs page's table with a warning beside it, so a reader meeting it there needs
+# to know we did not miss it:
+#
+#   "Deprecated as part of the update from opacity based surfaces to tonal
+#    surfaces. Surfaces no longer use surface-tint layers for tinting, please use
+#    the desired surface role directly as the container color."
+#
+# Which is what `container_role` above already does.
+deprecated:
+  - token_suffix: container.surface-tint-layer.color
+    variants: [ elevated, filled, outlined ]
+    superseded_by: container.color
 
 # State layers are the same three numbers for every variant, and the same ones
 # the rest of the system already uses. They are listed to record that Card does

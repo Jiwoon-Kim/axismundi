@@ -1,5 +1,20 @@
 import { AppLayout } from './templates/app-layout';
-import { StylebookPage } from './pages/stylebook';
+import { Component, Suspense, lazy } from '@wordpress/element';
+
+/*
+ * The Stylebook is a development and VQA surface, and it was a third of the
+ * CSS everyone downloaded to read a feed. It is the right first route to split
+ * because it is also the one that can fail safely: there is no offline caching
+ * yet, so a chunk that cannot be fetched is a page that does not open, and a
+ * stylebook that does not open offline is not an incident.
+ *
+ * Its CSS travels with it. Moving the import out of `styles/index.css` is what
+ * actually splits the stylesheet -- a lazy route whose CSS is still reached
+ * from the entry graph loads exactly as much CSS as before.
+ */
+const StylebookPage = lazy( () =>
+	import( './pages/stylebook' ).then( ( module ) => ( { default: module.StylebookPage } ) )
+);
 
 function getFrontendRoute() {
 	const route = window.axismundiCapstone?.route ?? '/social/';
@@ -88,11 +103,47 @@ function PublicObjectTemplate() {
 	);
 }
 
+/*
+ * A dynamic import can reject -- offline, or a chunk that 404s after a deploy
+ * replaced it. React unmounts the tree on a render error, so without a boundary
+ * the page goes blank and says nothing. This says what happened and offers the
+ * one action that can fix it.
+ */
+class ChunkBoundary extends Component {
+	constructor( props ) {
+		super( props );
+		this.state = { failed: false };
+	}
+
+	static getDerivedStateFromError() {
+		return { failed: true };
+	}
+
+	render() {
+		if ( ! this.state.failed ) {
+			return this.props.children;
+		}
+
+		return (
+			<div className="ax-route-error" role="alert">
+				<p>This page could not be loaded. It is fetched on demand, so it needs a connection the first time.</p>
+				<button onClick={ () => window.location.reload() } type="button">Try again</button>
+			</div>
+		);
+	}
+}
+
 export function FrontendApp() {
 	const route = getFrontendRoute();
 
 	if ( 'stylebook' === route.name ) {
-		return <StylebookPage component={ route.component } layout={ route.layout } style={ route.style } styles={ route.styles } />;
+		return (
+			<ChunkBoundary>
+				<Suspense fallback={ <div className="ax-route-pending" role="status">Loading…</div> }>
+					<StylebookPage component={ route.component } layout={ route.layout } style={ route.style } styles={ route.styles } />
+				</Suspense>
+			</ChunkBoundary>
+		);
 	}
 
 	return (

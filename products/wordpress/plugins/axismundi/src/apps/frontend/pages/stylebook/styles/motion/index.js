@@ -1,5 +1,6 @@
 import { Scaffold } from '../../../../foundations/layout/scaffold';
 import { useEffect, useRef, useState } from '@wordpress/element';
+import './motion.css';
 
 const DURATION_GROUPS = [
 	{ name: 'Short', tokens: [ 'short1', 'short2', 'short3', 'short4' ] },

@@ -42,7 +42,30 @@ try {
 	// Document shape: version, software, registration, usage.
 	update_option( 'users_can_register', 1 );
 	$doc = axismundi_actors_nodeinfo_document();
-	ax_ni_assert( $ax_ni_results, 'the document is NodeInfo 2.1 with our software and open registrations', '2.1' === $doc['version'] && 'axismundi' === $doc['software']['name'] && AXISMUNDI_ACTORS_VERSION === $doc['software']['version'] && true === $doc['openRegistrations'] );
+	ax_ni_assert( $ax_ni_results, 'the document is NodeInfo 2.1 with our software and open registrations', '2.1' === $doc['version'] && 'axismundi' === $doc['software']['name'] && '' !== (string) ( $doc['software']['version'] ?? '' ) && true === $doc['openRegistrations'] );
+
+	/*
+	 * `software` is an extension point, so the contract is the fallback plus the
+	 * filter -- not the fallback's value. This previously asserted
+	 * AXISMUNDI_ACTORS_VERSION against the live document, which pinned the fallback
+	 * as if it were the answer and failed the moment the Axismundi plugin supplied
+	 * the deployed product's version, which is what this file's own header asks a
+	 * later plugin to do.
+	 */
+	$ax_ni_software = $GLOBALS['wp_filter']['axismundi_actors_nodeinfo_software'] ?? null;
+	remove_all_filters( 'axismundi_actors_nodeinfo_software' );
+	$unfiltered = axismundi_actors_nodeinfo_document();
+	ax_ni_assert( $ax_ni_results, 'software falls back to this plugin when nothing supplies a product version', AXISMUNDI_ACTORS_VERSION === $unfiltered['software']['version'] );
+	add_filter( 'axismundi_actors_nodeinfo_software', static function ( array $software ) : array {
+		$software['version'] = '9.9.9-probe';
+		return $software;
+	} );
+	$overridden = axismundi_actors_nodeinfo_document();
+	ax_ni_assert( $ax_ni_results, 'a product plugin can own software.version through the filter', '9.9.9-probe' === $overridden['software']['version'] );
+	remove_all_filters( 'axismundi_actors_nodeinfo_software' );
+	if ( null !== $ax_ni_software ) {
+		$GLOBALS['wp_filter']['axismundi_actors_nodeinfo_software'] = $ax_ni_software;
+	}
 	update_option( 'users_can_register', 0 );
 	$doc2 = axismundi_actors_nodeinfo_document();
 	ax_ni_assert( $ax_ni_results, 'openRegistrations reflects the WordPress setting', false === $doc2['openRegistrations'] && isset( $doc2['usage']['localPosts'], $doc2['usage']['localComments'] ) );

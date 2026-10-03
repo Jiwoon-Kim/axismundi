@@ -97,6 +97,12 @@ disabled:
         icon colour and an opacity and nothing else.
       container: none
 
+# Selected shape is a pair, not a single value. M3: "toggle buttons also change
+# the resting shape from round (unselected) to square (selected) by default. If
+# the resting shape is square, the selected shape should be round." Recording
+# only the round half reads as "selected means square", and a square toggle then
+# has no shape cue for being selected at all -- which is the bug it caused in the
+# Social frontend Button. `full` is the round value at every size.
 sizes:
   - name: xsmall
     label: XS
@@ -107,6 +113,7 @@ sizes:
     shape_square: 12
     pressed_morph: 8
     selected_round: 12
+    selected_square: full
   - name: small
     label: S
     height: 40
@@ -117,6 +124,7 @@ sizes:
     shape_square: 12
     pressed_morph: 8
     selected_round: 12
+    selected_square: full
   - name: medium
     label: M
     height: 56
@@ -126,6 +134,7 @@ sizes:
     shape_square: 16
     pressed_morph: 12
     selected_round: 16
+    selected_square: full
   - name: large
     label: L
     height: 96
@@ -135,6 +144,7 @@ sizes:
     shape_square: 28
     pressed_morph: 16
     selected_round: 28
+    selected_square: full
   - name: xlarge
     label: XL
     height: 136
@@ -144,6 +154,7 @@ sizes:
     shape_square: 28
     pressed_morph: 16
     selected_round: 28
+    selected_square: full
 
 # Colour roles, not colour values. `container` names the filled surface except
 # on outlined, where the role names the outline, and on standard, which has no

@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 STYLEGUIDE = ROOT / "products/styleguide"
 THEME = ROOT / "products/wordpress/themes/axismundi"
 DATA = STYLEGUIDE / "_data/button.yml"
+ICON_BUTTON_DATA = STYLEGUIDE / "_data/icon_button.yml"
 ADAPTER = STYLEGUIDE / "assets/css/components/button.css"
 GROUP_ADAPTER = STYLEGUIDE / "assets/css/components/button-group.css"
 ICON_BUTTON_ADAPTER = STYLEGUIDE / "assets/css/components/icon-button.css"
@@ -85,7 +86,7 @@ def theme_button(style: dict) -> dict:
 
 
 def main() -> int:
-    required = [DATA, ADAPTER, GROUP_ADAPTER, ICON_BUTTON_ADAPTER, ICONS_CSS, ICON_STATE,
+    required = [DATA, ICON_BUTTON_DATA, ADAPTER, GROUP_ADAPTER, ICON_BUTTON_ADAPTER, ICONS_CSS, ICON_STATE,
                 THEME_JSON, THEME_COMPONENT_CSS, *PARTIALS.values()]
     missing = [path.relative_to(ROOT).as_posix() for path in required if not path.is_file()]
     if missing:
@@ -94,6 +95,7 @@ def main() -> int:
         return 1
 
     data = yaml.safe_load(DATA.read_text(encoding="utf-8"))
+    icon_button_data = yaml.safe_load(ICON_BUTTON_DATA.read_text(encoding="utf-8"))
     css = ADAPTER.read_text(encoding="utf-8")
     group_css = GROUP_ADAPTER.read_text(encoding="utf-8")
     theme_component_css = THEME_COMPONENT_CSS.read_text(encoding="utf-8")
@@ -426,6 +428,38 @@ def main() -> int:
         }.items():
             report.check(declaration(forced, name) == want,
                          f"forced focus ring {name} differs from the real one")
+
+    # Selected shape is a pair. M3 gives the rule as a contrast rather than a
+    # direction - round becomes square, and a square resting shape becomes round -
+    # so a record carrying only `selected_round` says "selected means square". Read
+    # that way, a square toggle gets no shape cue at all, which is what shipped in
+    # the Social frontend Button before the pair was written down. Both data files
+    # are checked, including icon_button.yml, which until now had no validator of
+    # any kind: it is read only by Jekyll to draw its page.
+    for data_name, data_file in (("button.yml", data), ("icon_button.yml", icon_button_data)):
+        for size in data_file["sizes"]:
+            for half in ("selected_round", "selected_square"):
+                report.check(half in size,
+                             f"{data_name} {size['name']} is missing {half}")
+            report.check(size.get("selected_square") == "full",
+                         f"{data_name} {size['name']} selected_square must be full: "
+                         "a square resting shape becomes round when selected")
+
+    # The icon-button adapter carries the same exchange, and reading its round
+    # value back is safe here where it is not on Button: [data-shape="square"]
+    # sets border-radius directly instead of overwriting --ax-icon-button-shape.
+    icon_button_css = ICON_BUTTON_ADAPTER.read_text(encoding="utf-8")
+    icon_square_selected = block(
+        icon_button_css,
+        '.wp-block-axismundi-icon-button[data-shape="square"][aria-pressed="true"]',
+    )
+    report.check(icon_square_selected is not None,
+                 "icon-button adapter has no square-selected shape rule")
+    if icon_square_selected is not None:
+        report.check(
+            declaration(icon_square_selected, "border-radius")
+            == "var(--ax-icon-button-shape, 20px)",
+            "square-selected icon button must morph back to its round shape")
 
     # A square button selected becomes round, and round is half the height.
     # Reading --ax-button-shape back would return the square corner, because

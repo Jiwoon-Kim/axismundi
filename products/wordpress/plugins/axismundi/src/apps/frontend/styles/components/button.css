@@ -318,6 +318,17 @@
 		border-radius: var( --md-comp-button-pressed-container-shape );
 	}
 
+	/*
+	 * The ring is the browser's job to trigger and M3's to draw, and the tokens
+	 * for it already reach this document from the theme. Until this rule existed
+	 * a focused Button showed only the state layer plus whatever outline the user
+	 * agent happened to paint.
+	 */
+	.ax-button:focus-visible {
+		outline: var( --md-focus-ring-width ) solid var( --md-sys-color-secondary );
+		outline-offset: var( --md-focus-ring-outward-offset );
+	}
+
 	/* Elevated is the only style with a resting shadow; M3 raises it one level
 	 * on hover and focus. */
 	.ax-button[data-variant="elevated"]:not( :disabled ):is( :hover, :focus-visible ) .ax-elevation {

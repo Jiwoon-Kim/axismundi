@@ -107,6 +107,23 @@ cycle 버튼이 선례).
 선택 shape는 **방향이 아니라 교환**이다. round는 square가 되고 square는 round가 된다. 한쪽만
 구현하면 square 토글에 선택 단서가 없다.
 
+**키보드는 발행된 표를 따르되, 표가 온전한지를 먼저 확인한다.** Connected button group의
+`keyboard:`는 세 줄이다 — `Tab` 버튼 사이 이동, **`Arrow keys` 컴포넌트 안 이동**,
+`Space or Enter` 활성화. 셋이 동시에 참이고, 그래서 roving `tabindex`를 쓰지 않는다. 그건
+두 번째 줄을 위해 첫 번째 줄을 없애는 일이다. 세그먼트는 각자 탭 스톱으로 남고 화살표가
+**더해진다.** 화살표는 포커스만 옮긴다 — 활성화가 따로 발행되어 있고, 그 분리가 radio
+거동과의 차이다.
+
+radiogroup이 아니라는 근거는 **화살표의 유무가 아니라 탭 스톱의 개수**다. 정말로
+radiogroup이어야 하면 `input[type="radio"]`로 간다.
+
+> 2026-10-03 정정: 이 자리에 "arrow key를 넣지 않은 것은 누락이 아니라 표가 두 줄뿐이기
+> 때문"이라고 적었다가 되돌렸다. 표가 두 줄이었던 것은 `_data/button_group.yml`이
+> `Arrow keys` 줄을 빠뜨렸던 것이고, 나는 그 불완전한 파일을 근거로 인용했다.
+> **저장소를 읽는 규칙이 저장소가 맞다는 보장은 아니다.** 발행 문서로 결정을 정당화할
+> 때는 인용하는 표가 원문과 같은 길이인지 본다. 같은 사고가 `_data/button.yml`의
+> `selected_square` 공백에서 이미 한 번 있었다.
+
 **이름이 보이지 않는 컨트롤은 실제 텍스트 span을 쓴다**(`.ax-sr-only`), `aria-label` 복제가
 아니라. 문자열이 한 곳에만 있고, 브라우저 자동번역이 본문은 번역하고 속성은 놓치며, 보이는
 이름과 접근 가능한 이름이 어긋나지 않는다(WCAG 2.5.3).
@@ -175,6 +192,17 @@ axismundi.php                AXISMUNDI_CAPSTONE_REWRITE_VERSION 증가
   것과 같은지 본다.
 - **새 검사는 깨뜨려서 결박을 확인한다.** 고친 것을 되돌렸을 때 예측한 그대로 실패하는지
   본 뒤에만 통과를 보고한다.
+- **React 18 상태 변화는 `.click()` 직후에 DOM에 없다.** 같은 동기 블록에서 클릭하고
+  바로 읽으면 전부 "아무 일도 안 일어났다"로 나온다. Connected 선택이 완전히 망가진 것처럼
+  보였고, 클릭 사이에 tick을 넣자 셋 다 정상이었다. 클릭마다 `await` 한 틱.
+- **`getBoundingClientRect`는 클립된 글리프를 모른다.** `overflow: hidden`을 되돌려도
+  span의 박스는 그대로라서 "삐져나온 라벨 0"이 계속 나왔다. 잘려 나간 양은
+  `scrollWidth - clientWidth`로 재고, **칠해진 픽셀이 상자 안에 머무는지는 스타일시트에서
+  읽는 사실**이지 측정한 사실이 아니다. 표본 주석에 그렇게 구분해 적는다.
+- **`inline-size: 100%`는 자기 컨테이너를 넘을 수 있다.** flex/grid item의 자동 최소
+  크기가 min-content이고, nowrap 라벨들의 합이 그 값이다. 240px 표면의 connected 그룹이
+  347px로 측정됐다. "표면을 가득 채운다"는 **표면의 폭을 가진다**는 뜻이므로 `min-inline-size: 0`을
+  함께 쓰고, 바닥은 발행된 세그먼트 최소폭(XS·S 48dp)에 맡긴다.
 
 ## 지금 비어 있는 것
 
@@ -184,6 +212,13 @@ axismundi.php                AXISMUNDI_CAPSTONE_REWRITE_VERSION 증가
 - elevated 버튼의 hover elevation `1 -> 2` — 발행 문서 셋 중 어느 것도 직접 지지하지 않는
   추론 상태.
 - `_data/icon_button.yml`의 shape 쌍 외 나머지 값 — 아직 validator가 없다.
+- Connected button group의 **square 바깥 모서리** — `button_group.yml`이 connected에
+  `owns_shape: true`를 주고 inner·pressed-inner·selected는 발행하지만 square 그룹의 바깥
+  모서리 값은 없다. Figma도 `Default shape: Round, square`로 옵션 이름만 준다. 지금은
+  Button의 `shape_square`(12·12·16·28·28)를 쓰고 CSS에 추론임을 적어 뒀다.
+- Connected 라벨 **생략(truncation)** — M3가 발행하지 않는다. M3의 답은 Segment의
+  `Show label text`(우리 `showLabel`)이고, 그것을 안 쓴 호출자에게 ellipsis를 주는 것은
+  우리 결정이다. 대안이 "이웃 세그먼트 위에 글자를 그린다"였다.
 
 ## 관련 기록
 

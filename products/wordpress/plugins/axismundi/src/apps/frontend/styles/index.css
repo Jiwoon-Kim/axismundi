@@ -14,6 +14,7 @@
 @import url( './components/button.css' );
 @import url( './components/icon-button.css' );
 @import url( './components/button-group.css' );
+@import url( './components/connected-button-group.css' );
 @import url( './components/split-button.css' );
 @import url( './utilities/sr-only.css' );
 @import url( '../pages/stylebook/styles/styles.css' );

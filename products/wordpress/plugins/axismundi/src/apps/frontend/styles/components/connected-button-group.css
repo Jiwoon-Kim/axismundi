@@ -1,0 +1,268 @@
+/*
+ * Material 3 Connected button group.
+ *
+ * Unlike Standard, Connected owns Segments instead of composing Button
+ * instances. The group therefore owns size, outer shape, the fixed Filled
+ * toggle colour pair, and the 2dp seam. There is deliberately no colour prop:
+ * M3 gives groups no colour tokens and says not to mix styles in Connected.
+ */
+
+@layer axismundi.components {
+	.ax-connected-button-group[data-size="xsmall"] {
+		--md-comp-connected-button-group-container-height: 32px;
+		--md-comp-connected-button-group-inner-corner: var( --md-sys-shape-corner-value-small );
+		--md-comp-connected-button-group-pressed-inner-corner: var( --md-sys-shape-corner-value-extra-small );
+		--md-comp-connected-button-group-segment-space: var( --md-sys-measurement-space150 );
+		--md-comp-connected-button-group-icon-size: 20px;
+		--md-comp-connected-button-group-icon-label-space: var( --md-sys-measurement-space50 );
+		--md-comp-connected-button-group-label-text-size: 14px;
+		--md-comp-connected-button-group-label-text-weight: 500;
+		--md-comp-connected-button-group-label-text-tracking: 0.1px;
+		--md-comp-connected-button-group-label-text-line-height: 20px;
+	}
+
+	.ax-connected-button-group[data-size="small"] {
+		--md-comp-connected-button-group-container-height: 40px;
+		--md-comp-connected-button-group-inner-corner: var( --md-sys-shape-corner-value-small );
+		--md-comp-connected-button-group-pressed-inner-corner: var( --md-sys-shape-corner-value-extra-small );
+		--md-comp-connected-button-group-segment-space: var( --md-sys-measurement-space200 );
+		--md-comp-connected-button-group-icon-size: 20px;
+		--md-comp-connected-button-group-icon-label-space: var( --md-sys-measurement-space100 );
+		--md-comp-connected-button-group-label-text-size: 14px;
+		--md-comp-connected-button-group-label-text-weight: 500;
+		--md-comp-connected-button-group-label-text-tracking: 0.1px;
+		--md-comp-connected-button-group-label-text-line-height: 20px;
+	}
+
+	.ax-connected-button-group[data-size="medium"] {
+		--md-comp-connected-button-group-container-height: 56px;
+		--md-comp-connected-button-group-inner-corner: var( --md-sys-shape-corner-value-small );
+		--md-comp-connected-button-group-pressed-inner-corner: var( --md-sys-shape-corner-value-extra-small );
+		--md-comp-connected-button-group-segment-space: var( --md-sys-measurement-space300 );
+		--md-comp-connected-button-group-icon-size: 24px;
+		--md-comp-connected-button-group-icon-label-space: var( --md-sys-measurement-space100 );
+		--md-comp-connected-button-group-label-text-size: 16px;
+		--md-comp-connected-button-group-label-text-weight: 500;
+		--md-comp-connected-button-group-label-text-tracking: 0.15px;
+		--md-comp-connected-button-group-label-text-line-height: 24px;
+	}
+
+	.ax-connected-button-group[data-size="large"] {
+		--md-comp-connected-button-group-container-height: 96px;
+		--md-comp-connected-button-group-inner-corner: var( --md-sys-shape-corner-value-large );
+		--md-comp-connected-button-group-pressed-inner-corner: var( --md-sys-shape-corner-value-medium );
+		--md-comp-connected-button-group-segment-space: var( --md-sys-measurement-space600 );
+		--md-comp-connected-button-group-icon-size: 32px;
+		--md-comp-connected-button-group-icon-label-space: var( --md-sys-measurement-space150 );
+		--md-comp-connected-button-group-label-text-size: 24px;
+		--md-comp-connected-button-group-label-text-weight: 400;
+		--md-comp-connected-button-group-label-text-tracking: 0;
+		--md-comp-connected-button-group-label-text-line-height: 32px;
+	}
+
+	.ax-connected-button-group[data-size="xlarge"] {
+		--md-comp-connected-button-group-container-height: 136px;
+		--md-comp-connected-button-group-inner-corner: var( --md-sys-shape-corner-value-large-increased );
+		--md-comp-connected-button-group-pressed-inner-corner: var( --md-sys-shape-corner-value-large );
+		--md-comp-connected-button-group-segment-space: var( --md-sys-measurement-space800 );
+		--md-comp-connected-button-group-icon-size: 40px;
+		--md-comp-connected-button-group-icon-label-space: var( --md-sys-measurement-space200 );
+		--md-comp-connected-button-group-label-text-size: 32px;
+		--md-comp-connected-button-group-label-text-weight: 400;
+		--md-comp-connected-button-group-label-text-tracking: 0;
+		--md-comp-connected-button-group-label-text-line-height: 40px;
+	}
+
+	.ax-connected-button-group {
+		--md-comp-connected-button-group-between-space: var( --md-sys-measurement-space25 );
+		--md-comp-connected-button-group-round-outer-corner: calc( var( --md-comp-connected-button-group-container-height ) / 2 );
+		--md-comp-connected-button-group-square-outer-corner: var( --md-sys-shape-corner-value-medium );
+		--md-comp-connected-button-group-container-color: var( --md-sys-color-surface-container );
+		--md-comp-connected-button-group-label-text-color: var( --md-sys-color-on-surface-variant );
+		display: flex;
+		inline-size: 100%;
+		/*
+		 * `inline-size: 100%` only spans the surface while something lets it. As a
+		 * flex or grid item the group's automatic minimum is its min-content, and
+		 * its min-content is the sum of its segments' nowrap labels -- so a group
+		 * in a 240px surface measured 347px wide and overflowed it, which is how
+		 * a page gets a horizontal scrollbar. Spanning a surface means taking the
+		 * surface's width, including when that is less than the labels want.
+		 *
+		 * The floor is then the segments' own published `min-inline-size`: 48dp
+		 * each at XS and S, nothing at M and up. A group narrower than
+		 * `48 * n + seam` still overflows, and should -- that figure is published.
+		 */
+		min-inline-size: 0;
+		gap: var( --md-comp-connected-button-group-between-space );
+	}
+
+	/*
+	 * The square OUTER corner is an inference, flagged as one. `button_group.yml`
+	 * gives connected `owns_shape: true` and publishes the inner, pressed-inner
+	 * and selected corners, but no figure for the outer corner of a square group;
+	 * the Figma `Default shape: Round, square` axis names the option without a
+	 * value. These spend Button's published `shape_square` per size (12 / 12 / 16
+	 * / 28 / 28), on the grounds that the outer corner of a connected group is the
+	 * corner of a button at that size. Replace it, do not re-derive it, if M3
+	 * publishes the figure.
+	 */
+	.ax-connected-button-group[data-size="medium"] {
+		--md-comp-connected-button-group-square-outer-corner: var( --md-sys-shape-corner-value-large );
+	}
+
+	.ax-connected-button-group[data-size="large"],
+	.ax-connected-button-group[data-size="xlarge"] {
+		--md-comp-connected-button-group-square-outer-corner: var( --md-sys-shape-corner-value-extra-large );
+	}
+
+	.ax-connected-button-group[data-shape="round"] {
+		--md-comp-connected-button-group-outer-corner: var( --md-comp-connected-button-group-round-outer-corner );
+	}
+
+	.ax-connected-button-group[data-shape="square"] {
+		--md-comp-connected-button-group-outer-corner: var( --md-comp-connected-button-group-square-outer-corner );
+	}
+
+	.ax-connected-button-group__segment {
+		--md-comp-connected-button-group-segment-corner: var( --md-comp-connected-button-group-inner-corner );
+		box-sizing: border-box;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		position: relative;
+		flex: 1 1 0;
+		min-inline-size: 0;
+		block-size: var( --md-comp-connected-button-group-container-height );
+		padding-block: 0;
+		padding-inline: var( --md-comp-connected-button-group-segment-space );
+		border: 0;
+		border-radius: var( --md-comp-connected-button-group-segment-corner );
+		background-color: var( --md-comp-connected-button-group-container-color );
+		color: var( --md-comp-connected-button-group-label-text-color );
+		font-family: var( --md-sys-typescale-label-large-font );
+		font-size: var( --md-comp-connected-button-group-label-text-size );
+		font-weight: var( --md-comp-connected-button-group-label-text-weight );
+		letter-spacing: var( --md-comp-connected-button-group-label-text-tracking );
+		line-height: var( --md-comp-connected-button-group-label-text-line-height );
+		white-space: nowrap;
+		cursor: pointer;
+		transition-property: background-color, border-radius, color;
+		transition-duration: var( --md-sys-motion-curve-fast-spatial-duration );
+		transition-timing-function: var( --md-sys-motion-curve-fast-spatial );
+	}
+
+	.ax-connected-button-group[data-size="xsmall"] .ax-connected-button-group__segment,
+	.ax-connected-button-group[data-size="small"] .ax-connected-button-group__segment {
+		min-inline-size: 48px;
+	}
+
+	.ax-connected-button-group__segment:first-child {
+		border-start-start-radius: var( --md-comp-connected-button-group-outer-corner );
+		border-end-start-radius: var( --md-comp-connected-button-group-outer-corner );
+	}
+
+	.ax-connected-button-group__segment:last-child {
+		border-start-end-radius: var( --md-comp-connected-button-group-outer-corner );
+		border-end-end-radius: var( --md-comp-connected-button-group-outer-corner );
+	}
+
+	.ax-connected-button-group__segment[aria-pressed="true"] {
+		--md-comp-connected-button-group-segment-corner: calc( var( --md-comp-connected-button-group-container-height ) / 2 );
+		--md-comp-connected-button-group-container-color: var( --md-sys-color-primary );
+		--md-comp-connected-button-group-label-text-color: var( --md-sys-color-on-primary );
+	}
+
+	/* Outer corners remain group-owned while the selected inner corners become pills. */
+	.ax-connected-button-group__segment:first-child[aria-pressed="true"] {
+		border-start-start-radius: var( --md-comp-connected-button-group-outer-corner );
+		border-end-start-radius: var( --md-comp-connected-button-group-outer-corner );
+	}
+
+	.ax-connected-button-group__segment:last-child[aria-pressed="true"] {
+		border-start-end-radius: var( --md-comp-connected-button-group-outer-corner );
+		border-end-end-radius: var( --md-comp-connected-button-group-outer-corner );
+	}
+
+	.ax-connected-button-group__segment:active {
+		--md-comp-connected-button-group-segment-corner: var( --md-comp-connected-button-group-pressed-inner-corner );
+	}
+
+	.ax-connected-button-group__segment:first-child:active {
+		border-start-start-radius: var( --md-comp-connected-button-group-outer-corner );
+		border-end-start-radius: var( --md-comp-connected-button-group-outer-corner );
+	}
+
+	.ax-connected-button-group__segment:last-child:active {
+		border-start-end-radius: var( --md-comp-connected-button-group-outer-corner );
+		border-end-end-radius: var( --md-comp-connected-button-group-outer-corner );
+	}
+
+	.ax-connected-button-group__segment:not( :disabled ):hover {
+		background-color: color-mix( in srgb, var( --md-comp-connected-button-group-label-text-color ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), var( --md-comp-connected-button-group-container-color ) );
+	}
+
+	.ax-connected-button-group__segment:not( :disabled ):focus-visible {
+		z-index: 1;
+		background-color: color-mix( in srgb, var( --md-comp-connected-button-group-label-text-color ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), var( --md-comp-connected-button-group-container-color ) );
+		outline: var( --md-focus-ring-width ) solid var( --md-sys-color-secondary );
+		outline-offset: var( --md-focus-ring-outward-offset );
+	}
+
+	.ax-connected-button-group__segment:not( :disabled ):active {
+		background-color: color-mix( in srgb, var( --md-comp-connected-button-group-label-text-color ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), var( --md-comp-connected-button-group-container-color ) );
+	}
+
+	.ax-connected-button-group__segment:disabled {
+		--md-comp-connected-button-group-container-color: color-mix( in srgb, var( --md-sys-color-on-surface ) 10%, transparent );
+		--md-comp-connected-button-group-label-text-color: color-mix( in srgb, var( --md-sys-color-on-surface ) calc( var( --md-sys-state-disabled-state-layer-opacity ) * 100% ), transparent );
+		cursor: not-allowed;
+	}
+
+	.ax-connected-button-group__icon {
+		display: grid;
+		place-items: center;
+		flex-shrink: 0;
+		--md-icon-size: var( --md-comp-connected-button-group-icon-size );
+	}
+
+	.ax-connected-button-group__segment[aria-pressed="true"] .ax-connected-button-group__icon {
+		--md-icon-fill: 1;
+	}
+
+	.ax-connected-button-group__segment:has( .ax-connected-button-group__label ) {
+		gap: var( --md-comp-connected-button-group-icon-label-space );
+	}
+
+	/*
+	 * The label has to be able to lose. A connected group spans its surface and
+	 * divides it evenly, so the width a segment gets is the surface divided by the
+	 * segment count -- not the width its label happens to want. `nowrap` without
+	 * this made the label its own floor: measured at a 240px group, a 140px label
+	 * in a 79px segment painted 31px of itself outside the segment and across the
+	 * 2dp seam onto its neighbour. The segment box was right and the text was
+	 * somewhere else.
+	 *
+	 * Truncation is ours, not M3's. M3 publishes no truncation rule here; its
+	 * published answer to a surface too narrow for labels is the Segment's own
+	 * `Show label text`, which this component takes as `showLabel`. But an author
+	 * who has not reached for that should get a clipped label rather than one
+	 * drawn over the next segment, and the accessible name is the full text
+	 * either way.
+	 *
+	 * The segment's `min-inline-size` stays as published -- 0, and 48px at XS and
+	 * S -- so the group's floor is still `48 * n + seam` rather than a figure the
+	 * label chose.
+	 */
+	.ax-connected-button-group__label {
+		min-inline-size: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	@media ( prefers-reduced-motion: reduce ) {
+		.ax-connected-button-group__segment {
+			transition: none;
+		}
+	}
+}

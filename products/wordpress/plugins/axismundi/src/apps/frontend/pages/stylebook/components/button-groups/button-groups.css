@@ -31,4 +31,20 @@
 		display: grid;
 		gap: var( --md-sys-measurement-space200 );
 	}
+
+	.ax-stylebook-button-groups__connected {
+		display: grid;
+		/* `min-inline-size: 0` keeps a wide sibling from setting the track width:
+		 * an auto track takes the widest item's min-content, and the narrow
+		 * specimens are only narrow if the track lets them be. */
+		grid-template-columns: minmax( 0, 1fr );
+		gap: var( --md-sys-measurement-space300 );
+		max-inline-size: 40rem;
+	}
+
+	.ax-stylebook-button-groups__narrow {
+		display: grid;
+		gap: var( --md-sys-measurement-space100 );
+		max-inline-size: 100%;
+	}
 }

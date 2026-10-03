@@ -5,16 +5,16 @@
              xmlns:dc="http://purl.org/dc/elements/1.1/"
              xmlns:cc="http://creativecommons.org/ns#">
       <cc:Work rdf:about="">
-        <dc:title>Axismundi Symbol Fallback</dc:title>
+        <dc:title>Axismundi Symbol (Static)</dc:title>
         <dc:creator>Jiwoon Kim</dc:creator>
-        <dc:description>Fallback project symbol for Axismundi.</dc:description>
+        <dc:description>Static Axismundi project symbol with a 92-node halo and pixel-aligned geometric elements for stable cross-renderer rendering.</dc:description>
         <dc:rights>Copyright Jiwoon Kim. Licensed for use with the Axismundi project; see assets/LICENSES.md.</dc:rights>
       </cc:Work>
     </rdf:RDF>
   </metadata>
   <!--
     ============================================================
-      Axismundi Icon — Design Guidelines
+      Axismundi Static Symbol — Design Guidelines
 
       Coordinate system
         viewBox: 0 0 1114 1114
@@ -85,14 +85,14 @@
       <stop offset="1" stop-color="#202024"/>
     </radialGradient>
     <clipPath id="clip">
-      <rect width="1114" height="1114" rx="232.78"/>
+      <rect width="1114" height="1114"/>
     </clipPath>
   </defs>
 
   <g clip-path="url(#clip)">
 
     <g id="locked-background">
-      <rect width="1114" height="1114" rx="232.78" fill="url(#bg)"/>
+      <rect width="1114" height="1114" fill="url(#bg)"/>
     </g>
 
     <!-- ============================================================

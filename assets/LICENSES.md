@@ -8,7 +8,7 @@ This file records provenance and license treatment for assets staged under
 | File | Source / author | License treatment | Notes |
 |---|---|---|---|
 | `brand/axismundi-symbol.svg` | Original project asset by Jiwoon Kim | Project-owned brand asset | Canonical draft symbol; not release-locked |
-| `brand/axismundi-symbol-fallback.svg` | Original project asset by Jiwoon Kim | Project-owned brand asset | Fallback variant |
+| `brand/axismundi-symbol-static.svg` | Original project asset by Jiwoon Kim | Project-owned brand asset | Static symbol variant for plugin-icon derivatives |
 | `brand/axismundi-symbol-glow.svg` | Original project asset by Jiwoon Kim | Project-owned brand asset | Glow / presentation variant |
 | `brand/axismundi-logo.png` | Original project asset by Jiwoon Kim | Project-owned brand asset | Raster logo export; source for the bundled `:axismundi:` emoji derivative |
 

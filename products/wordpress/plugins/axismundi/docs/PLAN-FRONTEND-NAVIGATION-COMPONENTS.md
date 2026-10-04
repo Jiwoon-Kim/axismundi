@@ -2,7 +2,13 @@
 
 ## 상태
 
-**아이디어 기록. 채택된 것 없음.** 2026-10-03.
+**아이디어 기록.** 2026-10-03.
+
+> 2026-10-04 갱신: 아이디어 3과 4는 판정됐다 —
+> `DECISION-FRONTEND-NAVIGATION-COMPONENT-SLICING.md`. 출하 단위는 bar + rail을 함께
+> 포함하고, route 자동생성은 붙이지 않으며 컴포넌트가 명시 `destinations` 배열을 받는다.
+> 그 문서가 두 아이디어의 **어느 내부 구조도 채택하지 않았다**는 점은 유지된다. 아이디어
+> 1·2는 여전히 미채택이다.
 
 구현에 들어갈 때 측정하면서 바뀔 것을 전제로 적는다. 여기 있는 어떤 항목도 결정이 아니며,
 결정이 되면 `DECISION-FRONTEND-NAVIGATION-MODEL.md`를 고치거나 별도 결정 기록을 만든다.
@@ -25,9 +31,22 @@ collapsed navigation rail  baseline rail을 대체
 expanded navigation rail   navigation DRAWER를 대체 (modal / non-modal)
 
 active label 색            on-surface-variant -> secondary  (bar·rail 공통)
-navigation bar elevation   그림자 없음
+navigation bar elevation   그림자 없음   ← 틀렸다. 아래 반증 참조
 active indicator           pill shape (M2의 icon weight/fill 방식이 아님)
 ```
+
+> **반증 (2026-10-04, 추출된 token table).** 위 "navigation bar elevation 그림자 없음"은
+> 틀렸다. flexible bar는 elevation과 그림자 색을 모두 발행한다:
+>
+> ```txt
+> md.comp.nav-bar.container.elevation     -> md.sys.elevation.level2
+> md.comp.nav-bar.container.shadow-color  -> md.sys.color.shadow   (폐기되지 않음)
+> md.comp.nav-rail.collapsed.container.elevation -> md.sys.elevation.level0
+> ```
+>
+> level0인 쪽은 **rail**이다. bar의 사실로 적힌 것이 rail의 사실이었다. 같은 블록의 색
+> 전사는 맞다 — bar·rail 둘 다 active label이 `md.sys.color.secondary`, inactive가
+> `on-surface-variant`다. 값은 `SOURCE-M3-NAVIGATION-RAW.md`의 token table 절에 있다.
 
 window size class 담당 범위가 **medium에서 겹친다**:
 
@@ -145,6 +164,7 @@ feature flag와는 다른 축이다.
 
 ## 관련 기록
 
+- `DECISION-FRONTEND-NAVIGATION-COMPONENT-SLICING.md` — 아이디어 3·4의 판정, 출하 순서
 - `DECISION-FRONTEND-NAVIGATION-MODEL.md` — navigation data·URL 거동 (채택됨)
 - `SOURCE-M3-NAVIGATION-RAW.md` — 1차 자료
 - `DECISION-FRONTEND-ADAPTIVE-LAYOUT.md` — window size class

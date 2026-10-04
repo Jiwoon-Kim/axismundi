@@ -1,0 +1,201 @@
+/*
+ * Material 3 Navigation rail.
+ *
+ * Published values are in `products/styleguide/_data/navigation_rail.yml`, read
+ * out of the rail's own token table and checked by
+ * `tools/validators/validate_styleguide_navigation_rail.py`.
+ *
+ * THIS IS WHERE THE ITEM'S HORIZONTAL FIGURES COME FROM, for the expanded rail.
+ * `navigation-item.css` publishes vertical candidates and no horizontal ones,
+ * because the two hosts disagree on every one: the bar supplies 40dp with
+ * space50 and label-medium, and this file supplies 56dp with space100 and
+ * label-large.
+ *
+ * THE TARGET AREA IS THE FULL WIDTH; THE INDICATOR IS NOT. "The navigation item's
+ * target area always spans the full width of the nav rail, even if the item
+ * container hugs its contents." So the item is stretched here and its indicator
+ * left content-sized. In the expanded rail that produces two insets which are
+ * both space200 and are not the same measurement -- this file's
+ * `full-width.leading-space` from the rail's edge to the pill, and the item's own
+ * indicator space from the pill to the icon, so the icon starts 32dp in. That is
+ * what the two token families say literally, and it is what a pill inset inside a
+ * drawer-width rail looks like.
+ *
+ * ELEVATION LEVEL 0 FOR BOTH SHIPPED VARIANTS, so no elevation layer is rendered
+ * at all -- `md.comp.nav-rail.collapsed.container.elevation` and the expanded
+ * standard one are both `md.sys.elevation.level0`. Only the modal configuration
+ * publishes level2, and modal is deferred. `corner.none` is the initial value, so
+ * no `border-radius` is declared either.
+ *
+ * THE GAP BETWEEN ITEMS IS AN INFERENCE. Three rows disagree -- `collapsed.item.
+ * vertical-space` space50, an unqualified `item.container.vertical-space`
+ * space75, and a removed `expanded.between-item-space` whose message says the
+ * value is 0dp. The most specifically qualified row wins, so collapsed gets
+ * space50 and expanded gets no declaration at all. See the yml's
+ * `discrepancies`; the validator pins all three rows.
+ */
+
+@layer axismundi.components {
+	.ax-nav-rail {
+		/*
+		 * md.comp.nav-rail.{collapsed,expanded}.container.color -> md.sys.color.surface.
+		 * The published default, and it is what "appears directly on the surface"
+		 * looks like; the optional fill is below.
+		 */
+		--md-comp-nav-rail-container-color: var( --md-sys-color-surface );
+		/* md.comp.nav-rail.{collapsed,expanded}.top-space = 44dp */
+		--md-comp-nav-rail-top-space: 44px;
+		/*
+		 * md.comp.nav-rail.item.header-space-minimum -> space500. A minimum, not a
+		 * fixed gap: the alignment below centres items inside what is left, which
+		 * can only make this larger.
+		 */
+		--md-comp-nav-rail-header-space-minimum: var( --md-sys-measurement-space500 );
+
+		/* The optional divider is positioned against this box. */
+		position: relative;
+		box-sizing: border-box;
+		display: flex;
+		flex-direction: column;
+		/*
+		 * "The navigation rail should always run vertically along the side of a
+		 * layout", so it takes the height its container gives it. The width is the
+		 * variant's, below.
+		 */
+		block-size: 100%;
+		padding-block-start: var( --md-comp-nav-rail-top-space );
+		background-color: var( --md-comp-nav-rail-container-color );
+	}
+
+	/*
+	 * "The container fill can be turned off so the nav rail appears directly on the
+	 * surface." Off is the published default; the role for on is the Color
+	 * section's `Surface container (optional)`, which no token carries -- an
+	 * inference recorded in the yml.
+	 */
+	.ax-nav-rail[data-filled] {
+		--md-comp-nav-rail-container-color: var( --md-sys-color-surface-container );
+	}
+
+	/* md.comp.nav-rail.collapsed.container.width = 96dp, narrow = 80dp */
+	.ax-nav-rail[data-variant="collapsed"] {
+		inline-size: 96px;
+	}
+
+	.ax-nav-rail[data-variant="collapsed"][data-narrow] {
+		inline-size: 80px;
+	}
+
+	/*
+	 * md.comp.nav-rail.expanded.container.width.{minimum,maximum} = 220dp, 360dp.
+	 * A range rather than a width, so it is written as one and the container
+	 * chooses inside it.
+	 */
+	.ax-nav-rail[data-variant="expanded"] {
+		inline-size: 100%;
+		min-inline-size: 220px;
+		max-inline-size: 360px;
+	}
+
+	/*
+	 * "The menu icon and FAB should always be top-aligned", which is why they are
+	 * outside the group that `alignment` moves.
+	 */
+	.ax-nav-rail__items {
+		display: flex;
+		flex-direction: column;
+		/* Takes the space left after the header, so alignment has something to act in. */
+		flex: 1 1 auto;
+		justify-content: flex-start;
+	}
+
+	/*
+	 * "Navigation rail items can be aligned as a group to the top or center of a
+	 * layout." Centred inside the remaining space, not inside the rail -- the
+	 * header stays where it is.
+	 */
+	.ax-nav-rail[data-alignment="center"] .ax-nav-rail__items {
+		justify-content: center;
+	}
+
+	/* The published minimum between the header and the first item. */
+	:is( .ax-nav-rail__menu, .ax-nav-rail__fab ) + .ax-nav-rail__items {
+		margin-block-start: var( --md-comp-nav-rail-header-space-minimum );
+	}
+
+	/*
+	 * md.comp.nav-rail.collapsed.item.vertical-space -> space50. The expanded rail
+	 * gets no rule: see the header.
+	 */
+	.ax-nav-rail[data-variant="collapsed"] .ax-nav-rail__items {
+		row-gap: var( --md-sys-measurement-space50 );
+	}
+
+	/*
+	 * The full-width target area. The indicator inside it stays content-sized.
+	 *
+	 * md.comp.nav-rail.item.container.height = 64dp, AS A MINIMUM. The
+	 * accessibility page asks the rail's items to "grow vertically to accommodate
+	 * larger labels while retaining the default padding", and MDC-Android
+	 * publishes the same figure as `app:itemMinHeight` / `setItemMinimumHeight`
+	 * with a changelog line reading "Item minimum height: from 60dp to 64dp". Two
+	 * independent sources call it a minimum, so it is one here.
+	 *
+	 * This was recorded in the yml and not implemented, and the items rendered at
+	 * their content height -- 52dp collapsed, and 56dp expanded, which looked like
+	 * the published `item.short.container.height` while being nothing but the
+	 * indicator's own height. A validator that only compares the data file with
+	 * the token table cannot see that, which is why the rail's validator now
+	 * asserts these figures appear in this stylesheet.
+	 */
+	.ax-nav-rail__item {
+		--md-comp-nav-rail-item-min-height: 64px;
+
+		inline-size: 100%;
+		min-inline-size: 0;
+		min-block-size: var( --md-comp-nav-rail-item-min-height );
+	}
+
+	/*
+	 * md.comp.nav-rail.item.horizontal.full-width.{leading,trailing}-space ->
+	 * space200: the inset from the rail's edge to the indicator. Horizontal only,
+	 * because a vertical item centres a fixed 56dp indicator in the rail's width
+	 * and no published figure describes that as padding -- 96dp and 80dp rails
+	 * give 20dp and 12dp, neither of which is space200.
+	 */
+	.ax-nav-rail[data-item-orientation="horizontal"] .ax-nav-rail__item {
+		justify-content: flex-start;
+		padding-inline: var( --md-sys-measurement-space200 );
+	}
+
+	/*
+	 * The figures the item refuses to default, for this host. Scoped to the
+	 * orientation that reads them.
+	 *
+	 * md.comp.nav-rail.item.horizontal.active-indicator.height  56dp
+	 * md.comp.nav-rail.item.horizontal.icon-label-space         space100
+	 * md.comp.nav-rail.item.horizontal.label-text.font          label-large
+	 */
+	.ax-nav-rail[data-item-orientation="horizontal"] {
+		--md-comp-navigation-item-horizontal-indicator-height: 56px;
+		--md-comp-navigation-item-horizontal-icon-label-space: var( --md-sys-measurement-space100 );
+		--md-comp-navigation-item-horizontal-label-text-font: var( --md-sys-typescale-label-large-font );
+		--md-comp-navigation-item-horizontal-label-text-size: var( --md-sys-typescale-label-large-size );
+		--md-comp-navigation-item-horizontal-label-text-weight: var( --md-sys-typescale-label-large-weight );
+		--md-comp-navigation-item-horizontal-label-text-tracking: var( --md-sys-typescale-label-large-tracking );
+		--md-comp-navigation-item-horizontal-label-text-line-height: var(
+			--md-sys-typescale-label-large-line-height
+		);
+	}
+
+	/*
+	 * "The divider should be positioned on the edge of the rail container that's
+	 * adjacent to the app's content area" -- the trailing edge, which follows the
+	 * writing direction rather than being pinned to the right.
+	 */
+	.ax-nav-rail__divider {
+		position: absolute;
+		inset-block: 0;
+		inset-inline-end: 0;
+	}
+}

@@ -1,0 +1,354 @@
+# Material 3 Navigation rail — the published specification.
+#
+# Sources: https://m3.material.io/components/navigation-rail/overview
+#          https://m3.material.io/components/navigation-rail/specs
+#          https://m3.material.io/components/navigation-rail/guidelines
+#          https://m3.material.io/components/navigation-rail/accessibility
+#
+# Token names and their referenced sys roles are read from the rail's own token
+# table with `tools/generators/fetch_m3_component_tokens.py`; the prose was
+# captured from the three tabs above. Both are recorded in
+# `products/wordpress/plugins/axismundi/docs/SOURCE-M3-NAVIGATION-RAW.md`.
+#
+# THIS FILE IS THE HOST, NOT THE ITEM. `navigation_item.yml` owns what the rail
+# and the bar publish identically -- colour, state, vertical geometry -- and
+# `navigation_bar.yml` is the sibling host. Read the item file first; the split is
+# the contract.
+#
+# The implementation is `md.comp.nav-rail.*`. The same table also carries the
+# deprecated baseline `md.comp.navigation-rail.*`, whose container is 80dp wide
+# with different colour roles, and nothing here reads from it.
+#
+# WHAT IS IMPLEMENTED AND WHAT IS NOT is recorded under `scope`, because this
+# component has more published axes than any other in this app and a silent gap
+# would read as a missing figure rather than a deferred decision.
+
+meta:
+  namespace: md.comp.nav-rail
+  deprecated_namespace: md.comp.navigation-rail
+  # "Only use navigation rails for medium breakpoints and larger." Compact is a
+  # prohibition: "Don't use a standard navigation rail for compact layouts."
+  window_size_classes: [ medium, expanded, large, extraLarge ]
+  # "Can contain 3-7 destinations plus an optional FAB", and the collapsed rail
+  # "should contain 3-7 navigation items".
+  destinations_minimum: 3
+  destinations_maximum: 7
+  # "If there are more than five destinations, consider using a modal expanded
+  # nav rail instead." Advice with a threshold, not a limit -- the limit above is
+  # seven.
+  modal_advised_above: 5
+  exactly_one_active: true
+  # "NEVER USE THE NAVIGATION RAIL AND NAVIGATION BAR SIMULTANEOUSLY." Recorded
+  # here because it is a constraint on the two components together, which neither
+  # can enforce alone -- it belongs to whatever places them. `scaffold.css`
+  # already satisfies it by swapping at 600px.
+  never_simultaneous_with_navigation_bar: true
+
+anatomy:
+  - container
+  - menu            # optional
+  - fab             # optional, FAB or Extended FAB
+  - icon
+  - active_indicator
+  - label_text
+  - small_badge     # optional
+  - large_badge     # optional
+
+variants:
+  collapsed:
+    # "The collapsed nav rail runs along the leading edge of the window ... It
+    # should not be hidden."
+    may_be_hidden: false
+    container:
+      color_token: md.comp.nav-rail.collapsed.container.color
+      color_role: surface
+      elevation_token: md.comp.nav-rail.collapsed.container.elevation
+      elevation_role: elevation.level0
+      shape_token: md.comp.nav-rail.collapsed.container.shape
+      shape_role: corner.none
+      width_token: md.comp.nav-rail.collapsed.container.width
+      width: 96
+      narrow_width_token: md.comp.nav-rail.collapsed.narrow.container.width
+      narrow_width: 80
+      top_space_token: md.comp.nav-rail.collapsed.top-space
+      top_space: 44
+    item_between_space_token: md.comp.nav-rail.collapsed.item.vertical-space
+    item_between_space_role: space50
+  expanded:
+    # "An expanded rail can reveal secondary destinations not visible when
+    # collapsed", and it "should always open from a menu icon".
+    opens_from_menu: true
+    may_be_hidden: true
+    container:
+      color_token: md.comp.nav-rail.expanded.container.color
+      color_role: surface
+      elevation_token: md.comp.nav-rail.expanded.container.elevation
+      elevation_role: elevation.level0
+      shape_token: md.comp.nav-rail.expanded.container.shape
+      shape_role: corner.none
+      width_minimum_token: md.comp.nav-rail.expanded.container.width.minimum
+      width_minimum: 220
+      width_maximum_token: md.comp.nav-rail.expanded.container.width.maximum
+      width_maximum: 360
+      top_space_token: md.comp.nav-rail.expanded.top-space
+      top_space: 44
+    # See `discrepancies`: no live row gives this, and the row that did was
+    # removed with "Token not needed as value is 0dp".
+    item_between_space_role: null
+    modal:
+      color_token: md.comp.nav-rail.expanded.modal.container.color
+      color_role: surface-container
+      elevation_token: md.comp.nav-rail.expanded.modal.container.elevation
+      elevation_role: elevation.level2
+      shape_token: md.comp.nav-rail.expanded.modal.container.shape
+      shape_role: corner.large
+
+# The rail's own item figures, beside the ones `navigation_item.yml` owns.
+item:
+  container_height_token: md.comp.nav-rail.item.container.height
+  container_height: 64
+  # A MINIMUM, NOT A FIXED BOX, and two independent sources say so. The
+  # accessibility page asks the rail's items to "grow vertically to accommodate
+  # larger labels while retaining the default padding", and MDC-Android publishes
+  # the same figure as `app:itemMinHeight` / `setItemMinimumHeight`, with a
+  # changelog line reading "Item minimum height: from 60dp to 64dp".
+  container_height_is_minimum: true
+  short_container_height_token: md.comp.nav-rail.item.short.container.height
+  short_container_height: 56
+  # NOT IMPLEMENTED, because nothing published says what selects it. Neither the
+  # four M3 tabs nor MDC-Android's component doc mentions a short rail item;
+  # MDC-Android's only 56dp figures are the active indicator's width and its
+  # `expandedHeight`, which are different measurements. A prop for it would be an
+  # axis we invented, so the figure is recorded and left unselectable until a
+  # source names the condition.
+  short_container_height_implemented: false
+  container_shape_token: md.comp.nav-rail.item.container.shape
+  container_shape_role: corner.none
+  # Not used; see `discrepancies`.
+  container_vertical_space_token: md.comp.nav-rail.item.container.vertical-space
+  container_vertical_space_role: space75
+  # "The menu icon and FAB should always be top-aligned", and this is the least
+  # space between them and the first navigation item.
+  header_space_minimum_token: md.comp.nav-rail.item.header-space-minimum
+  header_space_minimum_role: space500
+  # THE TARGET AREA IS THE FULL WIDTH, THE INDICATOR IS NOT. Published twice, as
+  # a rule rather than a measurement: "The navigation item's target area always
+  # spans the full width of the nav rail, even if the item container hugs its
+  # contents", and "The target area for expanded navigation rails spans the full
+  # width of the container, even though the active indicator visually hugs the
+  # content."
+  target_area_spans_full_width: true
+  horizontal:
+    indicator_height_token: md.comp.nav-rail.item.horizontal.active-indicator.height
+    indicator_height: 56
+    icon_label_space_token: md.comp.nav-rail.item.horizontal.icon-label-space
+    icon_label_space_role: space100
+    label_text_font_token: md.comp.nav-rail.item.horizontal.label-text.font
+    label_typescale: label-large
+    # The inset from the rail's edge to the indicator, for the full-width target
+    # area. Same figure as the indicator's own inline space, different thing --
+    # see `discrepancies`.
+    full_width_leading_space_token: md.comp.nav-rail.item.horizontal.full-width.leading-space
+    full_width_trailing_space_token: md.comp.nav-rail.item.horizontal.full-width.trailing-space
+    full_width_inline_space_role: space200
+
+configurations:
+  # "Navigation rail items can be aligned as a group to the top or center of a
+  # layout. On tablets, use center alignment to make it easier to reach items."
+  # The menu and the FAB are not part of the group: they "should always be
+  # top-aligned".
+  item_alignment:
+    default: top
+    values: [ top, center ]
+    applies_to: items_only
+  # "The container fill can be turned off so the nav rail appears directly on the
+  # surface. When doing this, make sure all items have a minimum of 3:1 color
+  # contrast." See `discrepancies` for which role the fill uses.
+  container_fill:
+    default: false
+    filled_color_role: surface-container
+  # "A vertical divider can help separate the rail from app content. The divider
+  # should be positioned on the edge of the rail container that's adjacent to the
+  # app's content area."
+  divider:
+    default: false
+    edge: trailing
+  expanded_layout:
+    default: standard
+    values: [ standard, modal ]
+
+semantics:
+  element: nav
+  label_required: true
+  list_wrapper: false
+  # Published as two rows, and BOTH are true at once -- the lesson the button
+  # group taught this repository. Arrows are added to the tab order, they do not
+  # replace it, so there is no roving tabindex and every item stays a tab stop.
+  keyboard:
+    - keys: Tab or Arrows
+      action: Navigate between interactive elements
+    - keys: Space or Enter
+      action: Selects an interactive element
+  arrow_keys_move_focus_only: true
+  roving_tabindex: false
+  # "Initial focus lands directly on the first interactive item, whether it's the
+  # menu, the FAB, or the first navigation item." A statement about document
+  # order, which a correctly ordered rail satisfies without taking focus.
+  initial_focus: first_interactive_element
+  focus_is_not_forced: true
+
+usage:
+  - three to seven destinations
+  - the rail runs vertically on the leading edge; never horizontally
+  - the collapsed rail is never hidden; only the expanded one may be
+  - every item requires a one word label
+  - the active indicator marks exactly one destination
+  - destinations stay fixed when the layout scrolls vertically
+  - never show a rail and a navigation bar at the same time
+
+discrepancies:
+  - token: the space between items
+    prose: >-
+      Nothing in the prose gives a figure for the gap between navigation items in
+      either variant.
+    tokens: >-
+      Three rows disagree. md.comp.nav-rail.collapsed.item.vertical-space is
+      space50, the unqualified md.comp.nav-rail.item.container.vertical-space is
+      space75, and md.comp.nav-rail.expanded.between-item-space was deprecated
+      with "Token not needed as value is 0dp". The bar publishes space75 under a
+      third spelling again, md.comp.nav-bar.item.vertical.container.between-space.
+    note: >-
+      SPACE75 IS NOT A GAP, which the Figma design kit settled: in both hosts a
+      vertical item is 104x64 with its 56x32 indicator at y=6 and its 16dp label
+      ending at y=58, so the figure is the item's own vertical padding and
+      6 + 32 + 4 + 16 + 6 comes to the published 64dp container height. It has
+      moved to `navigation_item.yml` `meta.vertical_container_space_role`,
+      because both hosts publish it. The bar had the same row under the name
+      `item.vertical.container.between-space` and it was implemented there as a
+      gap between items before being measured.
+      That leaves two rows for the gap and they do not conflict: space50 between
+      items when collapsed, and nothing when expanded. Expanded gets no
+      declaration rather than a figure cited from a deprecated row -- upstream
+      removed that token precisely because the value is zero, and declining to
+      declare is how you implement zero without reading a retired row. The
+      validator still pins all three rows, so an upstream change fails loudly.
+  - token: md.comp.nav-rail.item.active.label-text.color
+    prose: >-
+      The Color section lists the active label's role as "Secondary (vertical),
+      On secondary container (horizontal)" -- two roles, chosen by the item's
+      orientation.
+    tokens: >-
+      One row, md.comp.nav-rail.item.active.label-text.color ->
+      md.sys.color.secondary, with no orientation-qualified counterpart.
+      navigation_item.yml records `secondary` as shared by both hosts, and its
+      validator asserts the bar and the rail agree on it.
+    note: >-
+      The token is implemented, so a horizontal rail item's active label is
+      `secondary` and not `on-secondary-container`. Recorded because the prose is
+      the only place the second role appears and it would otherwise look like an
+      oversight. If upstream publishes an orientation-qualified row, the item's
+      claim that this colour is shared stops being true and both files change.
+  - token: md.comp.nav-rail.collapsed.container.color
+    prose: >-
+      The Color section lists the container as "Surface container (optional)",
+      and the Guidelines say "The container fill can be turned off so the nav
+      rail appears directly on the surface".
+    tokens: >-
+      Both variants publish `container.color -> md.sys.color.surface`. No row
+      publishes a filled alternative.
+    note: >-
+      Read as: the published default is `surface`, which is what "appears
+      directly on the surface" looks like, and the optional fill is the colour
+      list's `surface-container`. So the fill is off by default and the role for
+      turning it on comes from the prose, not from a token. INFERENCE on the
+      role; the configuration itself is published.
+  - token: item layout and variant
+    prose: >-
+      No sentence states that the collapsed rail uses vertical items and the
+      expanded one horizontal items. It is implied throughout: the active
+      indicator "hugs the label text in the expanded nav rail", and badges sit
+      "in the upper right corner of the icon" in compact rails but "next to the
+      label text" in expanded ones.
+    tokens: >-
+      The table's own menu groups the item tokens as Common, Vertical and
+      Horizontal with no variant qualification, so neither orientation is bound
+      to a variant by a token.
+    note: >-
+      Implemented as collapsed -> vertical and expanded -> horizontal, which is
+      the only reading consistent with the indicator hugging a label and with the
+      expanded width minimum of 220dp. INFERENCE, and the orientation is also
+      exposed as a prop so a caller is not stuck with it.
+  - token: label wrapping
+    prose: >-
+      The rail permits it: "Avoid wrapping long labels when possible. If
+      necessary, create a line break between words, or hyphenate longer words",
+      and "Break up longer phrases into two text lines if necessary". The bar
+      prohibits it: "Don't wrap or truncate text".
+    tokens: >-
+      No token publishes overflow behaviour for either host.
+    note: >-
+      The two hosts differ, and both prohibit truncating and shrinking. The item
+      implements no overflow handling at all, which satisfies both -- but
+      `navigation-item.css` claimed M3 "prohibits wrapping, truncating and
+      shrinking", which is the bar's rule stated as if it were the item's. The
+      claim is corrected there; the implementation did not change.
+  - token: md.comp.nav-rail.item.horizontal.full-width.{leading,trailing}-space
+    prose: >-
+      The target area spans the full width while the indicator hugs its content,
+      so the inset from the rail's edge to the indicator and the space inside the
+      indicator are two different measurements.
+    tokens: >-
+      Both are space200, as is every other leading/trailing row in either host,
+      which is why navigation_item.yml folds them into one item-owned figure.
+    note: >-
+      Implemented as the same figure in both places, because the published rows
+      agree. Recorded so that the agreement is known to be a coincidence of
+      values and not an identity: if one of them moves, the item's single
+      `indicator_leading_trailing_space_role` has to split in two.
+
+# What this slice implements, and what it deliberately does not.
+scope:
+  implemented:
+    - collapsed variant, including the narrow width
+    - expanded standard variant
+    - item alignment, top and center
+    - optional container fill
+    - optional trailing divider
+    - menu and FAB as caller-supplied slots
+    - full-width target area with a content-hugging indicator
+    - arrow keys added to the tab order
+  deferred:
+    # Needs a scrim, a focus trap and a dismiss contract, all of which belong to
+    # the Surface work (`surface.yml`) rather than to this component.
+    - expanded modal layout
+    # "Hide when collapsed", the collapsed/expanded transition, and the
+    # indicator's expand-from-centre animation. No motion token is published on
+    # these pages.
+    - hide when collapsed, and the transition between variants
+    # Android only, and only for the modal expanded rail.
+    - predictive back
+    # No FAB component exists. The slot is open; "the FAB's resting elevation
+    # should be level 0" applies to whatever the caller puts in it.
+    - fab component
+    # No Badge component exists, and the rail moves the badge next to the label
+    # when expanded while the item places it on the icon. That restructuring
+    # waits for the badge itself.
+    - badge beside the label in the expanded rail
+    # The rail's expanded state is what makes 1200 and 1600 meaningful, and which
+    # component serves which window is a layout decision the Scaffold owns.
+    - the 1200 and 1600 scaffold branches
+
+not_published_here:
+  # "Destinations in the navigation rail should remain visible and fixed when
+  # scrolling vertically." The rail does not own the scroll container.
+  - sticky behaviour on scroll
+  # "If a layout scrolls horizontally, the rail can scroll off-screen or remain
+  # fixed." Published as a choice, not a rule.
+  - behaviour when the layout scrolls horizontally
+  # "Tabs can be used alongside a navigation rail." A composition note.
+  - tabs beside the rail
+  # "The top of the rail can also be used for a logo, however avoid using logos
+  # that could be mistaken as buttons." That is the caller's content in the menu
+  # or FAB slot.
+  - logo placement
+  - badge geometry

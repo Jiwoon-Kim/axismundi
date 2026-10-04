@@ -125,6 +125,10 @@ def main() -> int:
     )
 
     meta = data["meta"]
+    item_css = (
+        ROOT
+        / "products/wordpress/plugins/axismundi/src/apps/frontend/styles/components/navigation-item.css"
+    ).read_text(encoding="utf-8")
 
     # --- what the item owns outright, because both hosts publish it identically ---
 
@@ -185,6 +189,40 @@ def main() -> int:
         report.check(
             bool(republished) == bool(data["inactive_state_layer_opacity_is_republished"]),
             f"{host}: inactive state-layer opacity rows {republished} contradict the recorded claim",
+        )
+
+    # --- the two boxes, pinned against the stylesheet and the component ---
+
+    structure = data["structure"]
+    item_js = (
+        ROOT
+        / "products/wordpress/plugins/axismundi/src/apps/frontend/components/navigations/navigation-item.js"
+    ).read_text(encoding="utf-8")
+    report.equals(structure["item_container"]["element"], "a", "the target is an anchor")
+    report.check(
+        structure["item_container"]["fills_host_item_height"] is True,
+        "the item container is recorded as hugging its contents; then part of the host's row is not a target",
+    )
+    report.equals(
+        structure["item_container"]["width_owned_by"], "host", "the container's width is the host's arithmetic"
+    )
+    # The DOM claim, checked where it is made rather than described. The label is
+    # a sibling of the indicator when vertical and a child of it when horizontal,
+    # which is why one structure cannot serve both.
+    report.check(
+        structure["label_inside_indicator"]["vertical"] is False
+        and structure["label_inside_indicator"]["horizontal"] is True,
+        "the recorded label placement no longer matches the published anatomy",
+    )
+    report.check(
+        "'horizontal' === axis ? labelSlot : null" in item_js
+        and "'vertical' === axis ? labelSlot : null" in item_js,
+        "navigation-item.js no longer places the label by orientation",
+    )
+    for box in ("item_container", "active_indicator"):
+        report.check(
+            structure[box]["class"] in item_css,
+            f"{structure[box]['class']} is not in the stylesheet; the two boxes have to stay distinguishable",
         )
 
     # --- vertical is shared; horizontal is not. The contract rests on this. ---
@@ -249,10 +287,17 @@ def main() -> int:
     report.equals(
         tables.role("md.comp.nav-bar.item.between-space"), nav_bar["item_between_space_role"], "bar item between-space"
     )
-    report.equals(
-        tables.role("md.comp.nav-bar.item.vertical.container.between-space"),
-        nav_bar["vertical_container_between_space_role"],
-        "bar vertical container between-space",
+    # THE VERTICAL CONTAINER SPACE IS THE ITEM'S PADDING, NOT A GAP. Both hosts
+    # publish the figure under different names, which is what makes it the item's
+    # -- and the bar's name ("between-space") is what got it implemented as a
+    # `column-gap` between items until the design kit was measured.
+    for token in meta["vertical_container_space_tokens"]:
+        report.equals(
+            tables.role(token), meta["vertical_container_space_role"], f"{token} vertical container space"
+        )
+    report.check(
+        len({tables.role(token) for token in meta["vertical_container_space_tokens"]}) == 1,
+        "the two hosts no longer agree on the item's vertical container space, so it stops being the item's",
     )
 
     nav_rail = host_owned["nav_rail"]
@@ -266,11 +311,6 @@ def main() -> int:
     )
     report.equals(
         tables.shape_role("md.comp.nav-rail.item.container.shape"), nav_rail["item_container_shape_role"], "rail item shape"
-    )
-    report.equals(
-        tables.role("md.comp.nav-rail.item.container.vertical-space"),
-        nav_rail["item_container_vertical_space_role"],
-        "rail item vertical space",
     )
     report.equals(
         tables.role("md.comp.nav-rail.item.header-space-minimum"),
@@ -289,6 +329,31 @@ def main() -> int:
     )
     for token in sorted(edges):
         report.equals(tables.role(token), inline_space, f"{token}")
+
+    # The padding has to reach the stylesheet. Recording a figure and not applying
+    # it is the failure the rail hit once already, and this one was worse: the
+    # figure WAS applied, as a gap between items, which is a different thing in the
+    # same number.
+    report.check(
+        "--md-comp-navigation-item-vertical-container-space: var( --md-sys-measurement-space75 );"
+        in item_css,
+        "navigation-item.css does not define the vertical container space",
+    )
+    report.check(
+        "padding-block: var( --md-comp-navigation-item-vertical-container-space );" in item_css,
+        "the vertical container space is not applied as padding on the item",
+    )
+    bar_css = (
+        ROOT / "products/wordpress/plugins/axismundi/src/apps/frontend/styles/components/nav-bar.css"
+    ).read_text(encoding="utf-8")
+    # Declarations only. The comment beside the bar's gap rule names space75 in
+    # order to say where it went, and an unscoped search fired on that -- the same
+    # mistake this file's `wght` check made.
+    bar_declarations = re.sub(r"/\*.*?\*/", "", bar_css, flags=re.S)
+    report.check(
+        "space75" not in bar_declarations,
+        "nav-bar.css declares space75 again; that figure is the item's padding, not a gap the bar owns",
+    )
 
     # --- the three recorded discrepancies are the reason for several decisions,
     #     so each one is checked as a fact rather than left as a note ---
@@ -320,6 +385,76 @@ def main() -> int:
         "md.sys.typescale.label-medium.weight.prominent",
         "the only published active-label weight is the baseline one",
     )
+
+    # THE ACTIVE LABEL'S EMPHASIS IS OURS, NOT MATERIAL'S, so it is checked
+    # against the stylesheets rather than against the table -- the table is where
+    # it is absent. What could rot: the figure drifting, the decision creeping
+    # back into the component layer, or a published token appearing upstream and
+    # making the whole policy unnecessary.
+    frontend = ROOT / "products/wordpress/plugins/axismundi/src/apps/frontend"
+    item_css = (frontend / "styles/components/navigation-item.css").read_text(encoding="utf-8")
+    typography_css = (frontend / "styles/tokens/typography.css").read_text(encoding="utf-8")
+    layers_css = (frontend / "styles/layers.css").read_text(encoding="utf-8")
+
+    report.equals(
+        colors["active_label_emphasis_source"],
+        "local-policy",
+        "the emphasis is recorded as this project's policy and not as a published figure",
+    )
+
+    # NOT TOKENISED, DELIBERATELY. It was briefly a ref token called
+    # `emphasized`, which claimed a general typography primitive where there is
+    # one axis of one typeface for one state of one component. A token by that
+    # name reappearing means the over-general version is back.
+    report.check(
+        "--md-ref-typeface-emphasized:" not in typography_css,
+        "an `--md-ref-typeface-emphasized` token is back; this figure is one component's decision, not a typography primitive",
+    )
+
+    # Applied in `axismundi.theme`, after `components`, so a reader of the
+    # component layer is not left guessing which rules came from the spec.
+    report.check(
+        "axismundi.components, axismundi.theme," in layers_css,
+        "the theme layer no longer sits immediately after the component layer",
+    )
+    theme_block = item_css.split("@layer axismundi.theme {", 1)
+    report.check(
+        2 == len(theme_block),
+        "navigation-item.css has no axismundi.theme layer; the emphasis decision has nowhere to live",
+    )
+    report.check(
+        "font-variation-settings" not in theme_block[0],
+        "the emphasis is declared in the component layer; it is a product decision and belongs in the theme layer",
+    )
+    report.check(
+        f'font-variation-settings: "{colors["active_label_emphasis_axis"]}" '
+        f'{colors["active_label_emphasis_value"]};' in theme_block[-1],
+        "the theme layer does not apply the recorded axis and figure",
+    )
+    report.check(
+        "[aria-current]" in theme_block[-1],
+        "the theme layer applies the emphasis to something other than the active item",
+    )
+    # `wght` inside `font-variation-settings` would override `font-weight` and
+    # silently drop the typescale's weight. Checked because the source this policy
+    # came from sets both.
+    # Declarations only, not prose: the comment beside the rule names `wght` in
+    # order to say it is kept out, and an unscoped substring search fired on that.
+    variation_declarations = re.findall(r"font-variation-settings:([^;]*);", item_css)
+    report.check(
+        not any("wght" in value for value in variation_declarations),
+        f"a variation-settings declaration sets `wght`, which overrides the typescale's font-weight: {variation_declarations}",
+    )
+    report.check(
+        colors["active_label_weight_applied"] is False,
+        "no active label weight is applied: label-medium already resolves to 500 here",
+    )
+    for host in HOSTS:
+        emphasis = tables.matching(rf"^md\.comp\.{re.escape(host)}\..*(grade|grad|emphasi)")
+        report.check(
+            not emphasis,
+            f"{host} now publishes an emphasis token {emphasis}; the local policy can be replaced with it",
+        )
     report.check(
         "md.sys.typescale.label-medium.weight.prominent" in tables.deprecated,
         "the sys weight that the baseline token references is still deprecated",

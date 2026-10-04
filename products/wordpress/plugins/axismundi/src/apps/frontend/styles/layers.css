@@ -1,1 +1,8 @@
-@layer axismundi.reset, axismundi.tokens, axismundi.base, axismundi.layouts, axismundi.material, axismundi.components, axismundi.patterns, axismundi.templates, axismundi.utilities;
+/*
+ * `axismundi.theme` sits between `components` and `patterns`. It is where this
+ * product's own decisions about a Material component go, so that a reader of the
+ * component layer is not left guessing which rules came from the specification.
+ * It is after `components` because that is the direction the adjustments run, and
+ * before `patterns` so a page composing components can still win over both.
+ */
+@layer axismundi.reset, axismundi.tokens, axismundi.base, axismundi.layouts, axismundi.material, axismundi.components, axismundi.theme, axismundi.patterns, axismundi.templates, axismundi.utilities;

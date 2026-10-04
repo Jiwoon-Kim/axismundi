@@ -1,6 +1,22 @@
 /*
  * Material 3 Navigation item.
  *
+ * TWO BOXES, AND KEEPING THEM APART IS THE POINT OF THIS FILE.
+ *
+ *   .ax-navigation-item              the item container: the target a person
+ *                                    presses. Carries `href`, the focus ring and
+ *                                    the hit area, and fills the host's item
+ *                                    height. Its WIDTH is the host's arithmetic.
+ *   .ax-navigation-item__indicator   the active indicator: the pill. Purely
+ *                                    visual -- it paints the selected state and
+ *                                    the state layer, and it is not the target.
+ *
+ * Calling both of them "the item" produced three errors here, each of which
+ * looked like a reasonable figure at the time: a padding read as a gap between
+ * items, a container hugged to its pill so that 24dp of a 64dp bar stopped
+ * responding to a press, and a published sentence about the container's width
+ * reassigned to the pill. `navigation_item.yml` `structure` records the split.
+ *
  * Published values are in `products/styleguide/_data/navigation_item.yml`, read
  * out of each host's own token table and checked by
  * `tools/validators/validate_styleguide_navigation_item.py`.
@@ -31,9 +47,13 @@
  * host's rows. A reset is also a claim, which is how a `margin: 0` on Divider
  * beat a consumer rule from a later layer.
  *
- * NO OVERFLOW HANDLING. M3 prohibits wrapping, truncating and shrinking the
- * label and puts the growth on the host. An `ellipsis` here would implement the
- * published Don't.
+ * NO OVERFLOW HANDLING. Both hosts prohibit truncating and shrinking the label
+ * and put the growth on the host, so an `ellipsis` here would implement a
+ * published Don't. The two hosts differ on wrapping -- the bar forbids it ("Don't
+ * wrap or truncate text"), the rail permits it as a fallback ("If necessary,
+ * create a line break between words") -- and declaring nothing satisfies both.
+ * This block previously said M3 prohibits wrapping outright, which was the bar's
+ * rule stated as the item's.
  *
  * `corner.full` has no resolved length token in this app --
  * `--md-sys-shape-corner-value-*` stops at extra-extra-large -- so the pill is
@@ -100,8 +120,28 @@
 			--md-sys-typescale-label-medium-line-height
 		);
 
+		/*
+		 * The vertical inset inside the item container, above the indicator and
+		 * below the label. Both hosts publish it, at the same figure and under
+		 * different names -- `md.comp.nav-bar.item.vertical.container.between-space`
+		 * and `md.comp.nav-rail.item.container.vertical-space`, both space75 -- so
+		 * by this file's own test it is the item's and not a host's.
+		 *
+		 * MEASURED IN THE DESIGN KIT, because the name reads like a gap between
+		 * items and was implemented as one. In the Figma kit a vertical item is
+		 * 104x64 in both hosts, with the 56x32 indicator at y=6 and the 16dp label
+		 * ending at y=58 -- 6dp above and 6dp below. 6 + 32 + 4 + 16 + 6 = 64,
+		 * which is exactly each host's published container height.
+		 *
+		 * It is padding rather than a computed centre so that it survives the case
+		 * the accessibility pages ask for: the item "should grow vertically to
+		 * accommodate larger labels while retaining the default padding".
+		 */
+		--md-comp-navigation-item-vertical-container-space: var( --md-sys-measurement-space75 );
+
 		flex-direction: column;
 		row-gap: var( --md-comp-navigation-item-icon-label-space );
+		padding-block: var( --md-comp-navigation-item-vertical-container-space );
 	}
 
 	/*
@@ -155,17 +195,18 @@
 	}
 
 	/*
-	 * ACTIVE. Colour and the indicator are the whole of what is published for the
-	 * selected state. The guidelines also ask for a bold label and a filled icon,
-	 * and neither has a live token: the flexible namespaces publish no label
-	 * weight at all, and the only one that exists sits in the deprecated baseline
-	 * namespace pointing at `md.sys.typescale.label-medium.weight.prominent`,
-	 * which the same table marks deprecated -- "Please use emphasized token
-	 * instead". So no weight is applied here. The theme's block adapter does set
-	 * `font-weight: 500` and `GRAD 125` on its current item; that is not copied,
-	 * because it is a local decision made for a different surface and the
-	 * published chain does not support it. Filling the icon is the caller's, via
-	 * the icon node.
+	 * ACTIVE. Colour and the indicator are the whole of what is published as a
+	 * token for the selected state. The guidelines also ask for a bold label and
+	 * a filled icon, and neither has a live token: the flexible namespaces
+	 * publish no label weight at all, and the only one that exists sits in the
+	 * deprecated baseline namespace pointing at
+	 * `md.sys.typescale.label-medium.weight.prominent`, which the same table
+	 * marks deprecated -- "Please use emphasized token instead". So this layer
+	 * applies no label weight.
+	 *
+	 * The emphasis the guidelines ask for is implemented, but not here: it is a
+	 * product decision about one typeface's axis, so it is in the
+	 * `axismundi.theme` layer at the foot of this file.
 	 */
 	.ax-navigation-item[aria-current] {
 		--md-comp-navigation-item-icon-color: var( --md-sys-color-on-secondary-container );
@@ -268,5 +309,35 @@
 		letter-spacing: var( --md-comp-navigation-item-label-text-tracking );
 		line-height: var( --md-comp-navigation-item-label-text-line-height );
 		color: var( --md-comp-navigation-item-label-text-color );
+	}
+}
+
+/*
+ * A product decision, which is why it is in `theme` and not in the component
+ * layer above. M3 asks for an emphasised active label in prose and publishes no
+ * live token for it: the flexible namespaces carry no label weight, and the only
+ * weight token is the deprecated baseline one pointing at a sys weight the same
+ * table also deprecates ("Please use emphasized token instead").
+ *
+ * THE FIGURE IS WRITTEN HERE RATHER THAN TOKENISED, because it is one axis of one
+ * typeface chosen for one state of one component. It was briefly a ref token
+ * named `emphasized`, which claimed far more than that -- a general typography
+ * primitive, reusable by any component in any typeface. It is not one: the two
+ * Google properties that implement this emphasis pick different axes for it
+ * because they set different typefaces. m3.material.io's own sidebar uses
+ * `GRAD 125` on its active navigation label, and the fonts.google.com rail uses
+ * `font-weight: 600` with `ROND 100`. Neither is a specification -- both are
+ * those sites' own chrome. `GRAD 125` is what our own block theme already does on
+ * its current navigation item, and Roboto Flex has `GRAD` and has no `ROND`.
+ *
+ * NO WEIGHT, MEASURED. `label-medium` in this app already resolves to 500, so the
+ * active and inactive labels compute the same weight and adding one would
+ * emphasise nothing. The axis is the whole of the difference. `wght` is also kept
+ * out of this property on purpose -- putting it here would override the
+ * `font-weight` the typescale sets.
+ */
+@layer axismundi.theme {
+	.ax-navigation-item[aria-current] .ax-navigation-item__label {
+		font-variation-settings: "GRAD" 125;
 	}
 }

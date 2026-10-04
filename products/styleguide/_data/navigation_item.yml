@@ -47,12 +47,67 @@ meta:
   # as the vertical geometry it is the item's, not the host's. It is the space
   # inside the indicator, before the icon and after the label.
   indicator_leading_trailing_space_role: space200
+  # The vertical inset inside the item container, above the indicator and below
+  # the label. Both hosts publish it at the same figure under different names, so
+  # by the same test as the vertical geometry it is the item's.
+  vertical_container_space_tokens:
+    - md.comp.nav-bar.item.vertical.container.between-space
+    - md.comp.nav-rail.item.container.vertical-space
+  vertical_container_space_role: space75
+  # MEASURED IN THE DESIGN KIT, because the bar's name for it reads like a gap
+  # between items and was implemented as one. A vertical item is 104x64 in both
+  # hosts, with the 56x32 indicator at y=6 and the 16dp label ending at y=58:
+  # 6 + 32 + 4 + 16 + 6 = 64, which is each host's published container height.
+  # It is applied as padding, not as a computed centre, because both
+  # accessibility pages ask the item to grow for larger labels "while retaining
+  # the default padding".
+  vertical_container_space_source: figma-design-kit
   # One destination is always active. Not a style rule -- the active indicator is
   # the only thing telling someone where they are.
   exactly_one_active: true
 
 # Anatomy, from the bar's Anatomy section. The rail's item carries the same parts.
 anatomy: [ container, icon, label_text, active_indicator, small_badge, large_badge ]
+
+# TWO BOXES, NOT ONE. This distinction is first in the file because losing it
+# produced three separate errors in this component, each of which read as a
+# plausible figure at the time:
+#
+#   - `item.vertical.container.between-space` was implemented as a gap BETWEEN
+#     items, when it is padding INSIDE the item container;
+#   - a horizontal item container was left at its content width, so 24dp of a
+#     64dp bar stopped responding to a press;
+#   - the Specs sentence "Horizontal navigation items have a fixed width" was
+#     read as a statement about the indicator, which conveniently removed the
+#     need for a figure nobody publishes.
+#
+# Figma names them apart -- an item instance of 116.2x64 holding an "Icon
+# container" of 92x40 -- and so does the measurements page. So does this file.
+structure:
+  item_container:
+    # The interactive target. It is the element that carries `href`, the state
+    # layer's hit area, and the focus ring.
+    role: the outer target a person presses
+    element: a
+    class: ax-navigation-item
+    # Always the host's full item height; never hugged to the indicator.
+    fills_host_item_height: true
+    # Its WIDTH is the host's arithmetic, and the hosts differ -- see
+    # `navigation_bar.yml` and `navigation_rail.yml`. Not published here.
+    width_owned_by: host
+  active_indicator:
+    # The pill. Purely visual: it paints the selected state and the state layer
+    # colour, and it is not the target.
+    role: the pill drawn inside the container
+    class: ax-navigation-item__indicator
+    # Vertical is a fixed 56x32 box; horizontal is the host's height around
+    # content width.
+    width_owned_by: item_when_vertical
+  # Which box the label sits in is the structural difference between the two
+  # orientations, and the reason they cannot share one DOM.
+  label_inside_indicator:
+    vertical: false
+    horizontal: true
 
 # OWNED BY THE ITEM. Every one of these rows matches across both hosts, role for
 # role, which is what makes a shared primitive correct rather than convenient.
@@ -68,6 +123,19 @@ colors:
   # inactive destinations." Guidance with no token of its own; the icon's fill
   # axis carries it.
   active_icon_fill: 1
+  # The active label's emphasis. OUR POLICY, NOT A PUBLISHED FIGURE -- see
+  # `discrepancies`. Written directly in the `axismundi.theme` layer rather than
+  # tokenised: it is one axis of one typeface for one state of one component, and
+  # a shared token would claim a reusable typography primitive that does not
+  # exist.
+  active_label_emphasis_axis: GRAD
+  active_label_emphasis_value: 125
+  active_label_emphasis_source: local-policy
+  active_label_emphasis_layer: axismundi.theme
+  # Measured 2026-10-05: `label-medium` resolves to 500 in this app, so the
+  # active and inactive labels compute the same weight and no weight is applied
+  # on top. The grade is the whole of the difference.
+  active_label_weight_applied: false
   # All four combinations -- active and inactive, hovered, focused and pressed --
   # reference the same role in both hosts.
   state_layer_role: on-secondary-container
@@ -140,14 +208,16 @@ orientations:
 # surrounding margins.
 owned_by_host:
   nav_bar:
+    # The gap between item boxes, which the design kit measures as zero in both
+    # orientations. `item.vertical.container.between-space` used to be listed
+    # here as a second, larger gap; it is not a gap at all, and it has moved to
+    # `meta.vertical_container_space_role` as the item's own padding.
     item_between_space_role: space0
-    vertical_container_between_space_role: space75
   nav_rail:
     # The rail gives its item a container height; the bar does not publish one.
     item_container_height: 64
     item_short_container_height: 56
     item_container_shape_role: corner.none
-    item_container_vertical_space_role: space75
     # The rail reserves a region above the first item, for a menu button or FAB.
     header_space_minimum_role: space500
 
@@ -210,10 +280,34 @@ discrepancies:
       deprecated: "No longer in user. Please use emphasized token instead."
     note: >-
       The requirement is published only in prose and its token chain is dead at
-      both ends. Any weight we apply is an inference, and the replacement
-      `emphasized` token has to be read from the typescale tables before it is
-      named here. Until then the active label is distinguished by colour and by
-      the indicator, both of which are published.
+      both ends, so the emphasis is implemented as a typeface AXIS and recorded as
+      this project's policy rather than as a published figure: GRAD 125, written
+      in the `axismundi.theme` layer of `navigation-item.css`, which sits after
+      `components` so that a reader of the component layer is not left guessing
+      which rules came from the specification. It is not tokenised -- one axis of
+      one typeface for one state of one component is not a typography primitive,
+      and naming it `emphasized` at the ref tier claimed that it was.
+      WHY NO TOKEN CAN CARRY IT. The two Google properties that implement this
+      emphasis choose different axes for it, because they set different
+      typefaces: m3.material.io's own sidebar uses font-weight 500 with "GRAD"
+      125 on its active label, and fonts.google.com's rail uses font-weight 600
+      with "ROND" 100. Neither is a specification -- both are that site's own
+      chrome, not a rendered specimen of the component -- but together they are
+      good evidence that the axis is a property of the typeface, which is exactly
+      what a component token cannot name. Ours is Roboto Flex, whose axes include
+      GRAD and do not include ROND, so ROND could not be copied even if we wanted
+      it; GRAD 125 is also what this project's own block theme already does on its
+      current navigation item.
+      WEIGHT IS NOT PART OF IT HERE. `label-medium` in this app already resolves
+      to 500, so the active and inactive labels compute the same weight and
+      declaring one would emphasise nothing. Measured 2026-10-05.
+      THE EARLIER RECORD WAS WRONG BY OMISSION, not by fact. This file and
+      `navigation-item.css` described the theme's own `500 + GRAD 125` as a local
+      decision the published chain does not support. The second half is still
+      true; the first half implied the theme had invented it, when it is the same
+      choice Google's own navigation makes. The replacement `emphasized` typescale
+      token still has to be read from the typescale tables, and if it turns out to
+      carry this emphasis it replaces the policy.
   - token: keyboard activation with Space
     prose: >-
       The accessibility table publishes two rows: "Tab -- Move between navigation

@@ -22,13 +22,20 @@
  * horizontal. One structure cannot serve both -- a label inside the indicator
  * would sit on the pill's fill, which is the opposite of "below the indicator".
  *
- * NO TRUNCATION. M3 publishes it as a prohibition: "Don't wrap or truncate text
- * as it can make the label hard to understand", "Don't shrink longer text to fit
- * on a single line", and the accessibility page puts the growth on the host --
- * it "should grow vertically to accommodate larger labels". So this component
- * neither ellipsises nor clamps, and a label that does not fit is the host's
- * problem to make room for. Note the contrast with Connected button group,
+ * NO TRUNCATION. Both hosts publish it as a prohibition -- "Don't wrap or
+ * truncate text as it can make the label hard to understand" and "Don't shrink
+ * longer text to fit on a single line" for the bar, "Don't truncate or display an
+ * ellipsis in place of label text" and "Don't reduce the type size to fit more
+ * characters" for the rail -- and both accessibility pages put the growth on the
+ * host, which "should grow vertically to accommodate larger labels". So this
+ * component neither ellipsises nor clamps, and a label that does not fit is the
+ * host's problem to make room for. Note the contrast with Connected button group,
  * where ellipsis was our decision because M3 published nothing.
+ *
+ * The two hosts do differ on WRAPPING: the bar forbids it, the rail allows it as
+ * a fallback ("If necessary, create a line break between words, or hyphenate
+ * longer words"). Declaring no overflow behaviour here satisfies both, and the
+ * difference belongs to whichever host is arranging the items.
  *
  * `href` IS REQUIRED, and the host is always an `<a>`. The usual rule in this
  * app is that `href` chooses between `<a>` and `<button>`, but a navigation

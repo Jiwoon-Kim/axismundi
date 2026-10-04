@@ -1,0 +1,262 @@
+# Material 3 Navigation item — the published specification.
+#
+# Sources: https://m3.material.io/components/navigation-bar/specs
+#          https://m3.material.io/components/navigation-bar/guidelines
+#          https://m3.material.io/components/navigation-bar/accessibility
+#          https://m3.material.io/components/navigation-rail/specs
+#
+# Token names and their referenced sys roles are read from each host's own token
+# table with `tools/generators/fetch_m3_component_tokens.py`. The full tables are
+# recorded in
+# `products/wordpress/plugins/axismundi/docs/SOURCE-M3-NAVIGATION-RAW.md`.
+#
+# WHY THIS FILE EXISTS. M3 publishes no `navigation item` component. The item's
+# tokens live inside its two hosts, `md.comp.nav-bar.item.*` and
+# `md.comp.nav-rail.item.*`, and those two sets are not the same set. The shape
+# of the difference is the contract:
+#
+#   colour and state  identical, role for role      -> the item owns them
+#   vertical geometry identical, figure for figure  -> the item owns it, as default
+#   horizontal geometry  diverges                   -> the host supplies it
+#
+# An item that hardcoded an indicator height or a label typescale would be right
+# in the bar and wrong in the rail. That is the whole reason to specify the item
+# before either host.
+#
+# Each host also publishes a deprecated baseline namespace in the same table
+# (`md.comp.navigation-bar.*`, `md.comp.navigation-rail.*`). Nothing here reads
+# from those; see `discrepancies`.
+#
+# NOT `navigation.yml`, which is this site's own chrome.
+
+meta:
+  published_as_its_own_component: false
+  hosts: [ nav-bar, nav-rail ]
+  # Identical in both hosts, so the item owns them outright.
+  icon_size_tokens:
+    - md.comp.nav-bar.item.icon.size
+    - md.comp.nav-rail.item.icon.size
+  icon_size: 24
+  indicator_shape_tokens:
+    - md.comp.nav-bar.item.active-indicator.shape
+    - md.comp.nav-rail.item.active-indicator.shape
+  indicator_shape_role: corner.full
+  # Every leading/trailing row either host publishes is space200 -- the bar's
+  # horizontal pair, the rail's unqualified pair, its vertical pair and its
+  # horizontal full-width pair. One figure across both hosts, so by the same test
+  # as the vertical geometry it is the item's, not the host's. It is the space
+  # inside the indicator, before the icon and after the label.
+  indicator_leading_trailing_space_role: space200
+  # One destination is always active. Not a style rule -- the active indicator is
+  # the only thing telling someone where they are.
+  exactly_one_active: true
+
+# Anatomy, from the bar's Anatomy section. The rail's item carries the same parts.
+anatomy: [ container, icon, label_text, active_indicator, small_badge, large_badge ]
+
+# OWNED BY THE ITEM. Every one of these rows matches across both hosts, role for
+# role, which is what makes a shared primitive correct rather than convenient.
+colors:
+  active:
+    icon_role: on-secondary-container
+    indicator_role: secondary-container
+    label_text_role: secondary
+  inactive:
+    icon_role: on-surface-variant
+    label_text_role: on-surface-variant
+  # "Use a filled icon for the active destination and outlined icons for
+  # inactive destinations." Guidance with no token of its own; the icon's fill
+  # axis carries it.
+  active_icon_fill: 1
+  # All four combinations -- active and inactive, hovered, focused and pressed --
+  # reference the same role in both hosts.
+  state_layer_role: on-secondary-container
+
+states:
+  - name: enabled
+  - name: hovered
+    opacity_token: md.sys.state.hover.state-layer-opacity
+  - name: focused
+    opacity_token: md.sys.state.focus.state-layer-opacity
+  - name: pressed
+    opacity_token: md.sys.state.pressed.state-layer-opacity
+
+# OBSERVED, NOT INVENTED. Both hosts publish the three opacity rows only under
+# `item.active.*`. The inactive rows carry a state-layer colour and no opacity of
+# their own, so the same sys opacities apply; nothing publishes a different
+# figure for the inactive state.
+inactive_state_layer_opacity_is_republished: false
+
+orientations:
+  - name: vertical
+    title: Vertical
+    # Label below the icon and the indicator. Default, and the shared case: every
+    # vertical figure below is identical in nav-bar and nav-rail.
+    shared_across_hosts: true
+    indicator_height: 32
+    indicator_width: 56
+    icon_label_space_role: space50
+    label_typescale: label-medium
+    tokens:
+      indicator_height:
+        - md.comp.nav-bar.item.vertical.active-indicator.height
+        - md.comp.nav-rail.item.vertical.active-indicator.height
+      indicator_width:
+        - md.comp.nav-bar.item.vertical.active-indicator.width
+        - md.comp.nav-rail.item.vertical.active-indicator.width
+      icon_label_space:
+        - md.comp.nav-bar.item.vertical.active-indicator.icon-label-space
+        - md.comp.nav-rail.item.vertical.icon-label-space
+      label_text_font:
+        - md.comp.nav-bar.item.vertical.label-text.font
+        - md.comp.nav-rail.item.vertical.label-text.font
+  - name: horizontal
+    title: Horizontal
+    # Icon and label beside each other inside the indicator. This is where the
+    # hosts diverge, and the figures are not close: the rail's indicator is 16dp
+    # taller and its label is a larger typescale.
+    shared_across_hosts: false
+    by_host:
+      nav-bar:
+        indicator_height: 40
+        icon_label_space_role: space50
+        label_typescale: label-medium
+        tokens:
+          indicator_height: md.comp.nav-bar.item.horizontal.active-indicator.height
+          icon_label_space: md.comp.nav-bar.item.horizontal.active-indicator.icon-label-space
+          label_text_font: md.comp.nav-bar.item.horizontal.label-text.font
+      nav-rail:
+        indicator_height: 56
+        icon_label_space_role: space100
+        label_typescale: label-large
+        tokens:
+          indicator_height: md.comp.nav-rail.item.horizontal.active-indicator.height
+          icon_label_space: md.comp.nav-rail.item.horizontal.icon-label-space
+          label_text_font: md.comp.nav-rail.item.horizontal.label-text.font
+
+# PUBLISHED, BUT NOT THE ITEM'S. These belong to whichever host is arranging the
+# items. An item that shipped them would make its own stacking and spacing rules,
+# which is the host's job -- the same ownership split `divider.yml` records for
+# surrounding margins.
+owned_by_host:
+  nav_bar:
+    item_between_space_role: space0
+    vertical_container_between_space_role: space75
+  nav_rail:
+    # The rail gives its item a container height; the bar does not publish one.
+    item_container_height: 64
+    item_short_container_height: 56
+    item_container_shape_role: corner.none
+    item_container_vertical_space_role: space75
+    # The rail reserves a region above the first item, for a menu button or FAB.
+    header_space_minimum_role: space500
+
+semantics:
+  # Each item navigates to a destination, so it is a link, not a button. The
+  # active one is current rather than pressed.
+  element: a
+  # Not a prop choice. `DECISION-FRONTEND-NAVIGATION-MODEL.md` already decided
+  # that the React app preserves a real anchor URL and that the router enhances
+  # an unmodified primary click, so there is no `onClick`-only item to build.
+  href_required: true
+  # See `discrepancies`. The published row says Space selects; an anchor does not,
+  # and this records that the divergence is a decision.
+  space_activates: false
+  active_attribute: aria-current
+  active_attribute_value: page
+  # "Initial focus lands directly on the first navigation item, since that is the
+  # first interactive element of the component."
+  initial_focus: first_item
+  # Published as Tab, not arrow keys -- so each item stays in the tab order and
+  # no roving tabindex is introduced. Recorded because the opposite was assumed
+  # once already, for the button group.
+  keyboard:
+    - keys: Tab
+      action: Move between navigation items
+    - keys: Space or Enter
+      action: Selects the focused navigation item
+
+usage:
+  - a label is required on every item, and it should be 1-2 words
+  - use a filled icon for the active destination and outlined icons for the rest
+  - do not wrap, truncate or shrink the label to fit one line
+  - use the active indicator for exactly one destination at a time
+  # Accessibility, text scaling: the host grows to fit rather than the label
+  # shrinking, and the full label must stay visible to 2x.
+  - let the host grow vertically for scaled text; wrapping inside an item is allowed
+
+discrepancies:
+  - token: md.comp.nav-bar.item.active-indicator.icon-label-space
+    prose: >-
+      The orientation-independent icon-label row reads as a single figure for the
+      item.
+    tokens: >-
+      The two hosts disagree on it. The bar publishes a literal 4dp, the rail
+      references md.sys.measurement.space100. Their orientation-qualified rows
+      agree with neither pattern: both hosts use space50 for vertical.
+    note: >-
+      So the unqualified row is host-specific, not item-specific, and the
+      orientation-qualified rows are the ones to implement. The item takes the
+      space from its host's qualified token and publishes no default of its own.
+  - token: active label weight
+    prose: >-
+      "Use a filled icon with a bold label for selected destinations. For
+      unselected destinations use an outlined icon with a medium label."
+    tokens: >-
+      Neither flexible namespace publishes a label weight at all. The only
+      weight token is md.comp.navigation-bar.active.label-text.weight in the
+      deprecated baseline namespace, and it references
+      md.sys.typescale.label-medium.weight.prominent, which the same table marks
+      deprecated: "No longer in user. Please use emphasized token instead."
+    note: >-
+      The requirement is published only in prose and its token chain is dead at
+      both ends. Any weight we apply is an inference, and the replacement
+      `emphasized` token has to be read from the typescale tables before it is
+      named here. Until then the active label is distinguished by colour and by
+      the indicator, both of which are published.
+  - token: keyboard activation with Space
+    prose: >-
+      The accessibility table publishes two rows: "Tab -- Move between navigation
+      items" and "Space / Enter -- Selects the focused navigation item".
+    tokens: >-
+      No token publishes keyboard behaviour at all; this is prose only, and the
+      table is complete -- it was read from the page rather than from a
+      transcription.
+    note: >-
+      NON-STANDARD against M3, deliberately. The item is an anchor, because
+      navigation here is link-first, and on the web an anchor is activated by
+      Enter while Space scrolls the page. The published row is true of a
+      button-like widget, which is what a navigation item is on Android, iOS and
+      Flutter. Implementing it would produce a control that announces as a link
+      and behaves as a button, and would take page scrolling away from a keyboard
+      user whose focus is in the navigation. Recorded rather than quietly
+      dropped, and pinned by the validator so it is not "fixed" by someone
+      reading the table alone.
+  - token: badge
+    prose: >-
+      Anatomy lists a small badge and a large badge with its label as optional
+      item parts.
+    tokens: >-
+      No live badge token exists in either flexible namespace; the baseline
+      namespaces carry badge.color, badge.shape, badge.size and the large-badge
+      trio, and the table marks all of them deprecated. The page says "For badge
+      color roles, go to badge specs."
+    note: >-
+      Badge is its own component. The item declares the slot and its position --
+      upper right corner of the icon -- and spends none of the badge's figures.
+
+# Deliberately absent, so absence is not read as an oversight.
+not_published_here:
+  # No token publishes it; the bar's measurements prose says vertical items
+  # divide the container equally and horizontal items take a fixed width with the
+  # slack pushed to the ends. Both are the host's arithmetic.
+  - item width
+  # Prose only: "If an icon doesn't have a filled version, apply semibold weight
+  # to the icon instead." Whether we can is a property of the icon font's axes,
+  # not of this component.
+  - icon fill and weight fallback
+  # See `discrepancies`.
+  - active label weight
+  - badge geometry
+  # The rail reserves the space; what goes in it is the rail's decision.
+  - rail header content

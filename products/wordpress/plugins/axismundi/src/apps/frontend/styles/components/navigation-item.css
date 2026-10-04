@@ -1,0 +1,272 @@
+/*
+ * Material 3 Navigation item.
+ *
+ * Published values are in `products/styleguide/_data/navigation_item.yml`, read
+ * out of each host's own token table and checked by
+ * `tools/validators/validate_styleguide_navigation_item.py`.
+ *
+ * SLOTS. The control reads only the unqualified slot; a qualified token is a
+ * candidate. Orientation is the axis that chooses:
+ *
+ *   --md-comp-navigation-item-indicator-height
+ *   --md-comp-navigation-item-indicator-width
+ *   --md-comp-navigation-item-icon-label-space
+ *   --md-comp-navigation-item-label-text-{font,size,weight,tracking,line-height}
+ *
+ * THE ITEM PUBLISHES VERTICAL CANDIDATES AND NOT HORIZONTAL ONES. Every vertical
+ * figure is identical in `md.comp.nav-bar.item.vertical.*` and
+ * `md.comp.nav-rail.item.vertical.*` -- 32dp indicator, 56dp wide, space50 to
+ * the label, label-medium -- so they are the item's own. The horizontal rows are
+ * not: the bar publishes a 40dp indicator with space50 and label-medium, the
+ * rail a 56dp indicator with space100 and label-large. There is therefore no
+ * honest default for horizontal, and this file deliberately provides no
+ * fallback. A horizontal item outside a host renders with an auto-height
+ * indicator, which is visibly unfinished rather than quietly the bar's figures
+ * in a rail. That is the Divider lesson applied to geometry: declaring a value
+ * you do not own is a claim on it.
+ *
+ * NO MARGIN, ANYWHERE. The space between items belongs to the host --
+ * `md.comp.nav-bar.item.between-space` is space0 and
+ * `md.comp.nav-rail.item.container.vertical-space` is space75, and both are the
+ * host's rows. A reset is also a claim, which is how a `margin: 0` on Divider
+ * beat a consumer rule from a later layer.
+ *
+ * NO OVERFLOW HANDLING. M3 prohibits wrapping, truncating and shrinking the
+ * label and puts the growth on the host. An `ellipsis` here would implement the
+ * published Don't.
+ *
+ * `corner.full` has no resolved length token in this app --
+ * `--md-sys-shape-corner-value-*` stops at extra-extra-large -- so the pill is
+ * `calc( height / 2 )`, which is what Icon button already does for its round
+ * shape.
+ */
+
+@layer axismundi.components {
+	.ax-navigation-item {
+		/*
+		 * Owned outright: both hosts publish these identically.
+		 * md.comp.{nav-bar,nav-rail}.item.icon.size = 24dp
+		 * md.comp.{nav-bar,nav-rail}.item.active-indicator.shape -> corner.full
+		 */
+		--md-comp-navigation-item-icon-size: 24px;
+		--md-comp-navigation-item-indicator-shape: calc(
+			var( --md-comp-navigation-item-indicator-height ) / 2
+		);
+
+		/* Vertical candidates -- identical in both hosts, so they are ours. */
+		--md-comp-navigation-item-vertical-indicator-height: 32px;
+		--md-comp-navigation-item-vertical-indicator-width: 56px;
+		--md-comp-navigation-item-vertical-icon-label-space: var( --md-sys-measurement-space50 );
+
+		/* Inactive is the resting state in both hosts. */
+		--md-comp-navigation-item-icon-color: var( --md-sys-color-on-surface-variant );
+		--md-comp-navigation-item-label-text-color: var( --md-sys-color-on-surface-variant );
+		--md-comp-navigation-item-indicator-color: transparent;
+		/*
+		 * One role for all six combinations -- active and inactive, hovered,
+		 * focused and pressed. The validator asserts that it is still one role,
+		 * because the moment upstream splits it this stops being the item's.
+		 */
+		--md-comp-navigation-item-state-layer-color: var( --md-sys-color-on-secondary-container );
+		--md-comp-navigation-item-state-layer-opacity: 0;
+
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		/* A link and a button must look the same here. */
+		border: 0;
+		background: none;
+		padding: 0;
+		text-decoration: none;
+		cursor: pointer;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.ax-navigation-item[data-orientation="vertical"] {
+		--md-comp-navigation-item-indicator-height: var(
+			--md-comp-navigation-item-vertical-indicator-height
+		);
+		--md-comp-navigation-item-indicator-width: var(
+			--md-comp-navigation-item-vertical-indicator-width
+		);
+		--md-comp-navigation-item-icon-label-space: var(
+			--md-comp-navigation-item-vertical-icon-label-space
+		);
+		--md-comp-navigation-item-label-text-font: var( --md-sys-typescale-label-medium-font );
+		--md-comp-navigation-item-label-text-size: var( --md-sys-typescale-label-medium-size );
+		--md-comp-navigation-item-label-text-weight: var( --md-sys-typescale-label-medium-weight );
+		--md-comp-navigation-item-label-text-tracking: var( --md-sys-typescale-label-medium-tracking );
+		--md-comp-navigation-item-label-text-line-height: var(
+			--md-sys-typescale-label-medium-line-height
+		);
+
+		flex-direction: column;
+		row-gap: var( --md-comp-navigation-item-icon-label-space );
+	}
+
+	/*
+	 * No candidates are published here on purpose -- see the header. The host
+	 * sets `--md-comp-navigation-item-horizontal-*` and these pass it through.
+	 */
+	.ax-navigation-item[data-orientation="horizontal"] {
+		--md-comp-navigation-item-indicator-height: var(
+			--md-comp-navigation-item-horizontal-indicator-height
+		);
+		--md-comp-navigation-item-icon-label-space: var(
+			--md-comp-navigation-item-horizontal-icon-label-space
+		);
+		--md-comp-navigation-item-label-text-font: var(
+			--md-comp-navigation-item-horizontal-label-text-font
+		);
+		--md-comp-navigation-item-label-text-size: var(
+			--md-comp-navigation-item-horizontal-label-text-size
+		);
+		--md-comp-navigation-item-label-text-weight: var(
+			--md-comp-navigation-item-horizontal-label-text-weight
+		);
+		--md-comp-navigation-item-label-text-tracking: var(
+			--md-comp-navigation-item-horizontal-label-text-tracking
+		);
+		--md-comp-navigation-item-label-text-line-height: var(
+			--md-comp-navigation-item-horizontal-label-text-line-height
+		);
+
+		flex-direction: row;
+	}
+
+	/*
+	 * The space inside the indicator, before the icon and after the label. Every
+	 * leading/trailing row either host publishes is space200 -- the bar's
+	 * horizontal pair, the rail's unqualified pair, its vertical pair and its
+	 * full-width pair -- so by the same test as the vertical geometry it is the
+	 * item's figure, not the host's.
+	 *
+	 * Scoped to horizontal rather than given a `0` fallback for vertical. The
+	 * bar publishes no inline space for a vertical item at all; it publishes a
+	 * fixed 56dp box with the icon centred in it. Writing `0` there would be a
+	 * figure we invented for the absence of one.
+	 */
+	.ax-navigation-item[data-orientation="horizontal"] .ax-navigation-item__indicator {
+		--md-comp-navigation-item-indicator-leading-space: var( --md-sys-measurement-space200 );
+		--md-comp-navigation-item-indicator-trailing-space: var( --md-sys-measurement-space200 );
+
+		padding-inline: var( --md-comp-navigation-item-indicator-leading-space )
+			var( --md-comp-navigation-item-indicator-trailing-space );
+	}
+
+	/*
+	 * ACTIVE. Colour and the indicator are the whole of what is published for the
+	 * selected state. The guidelines also ask for a bold label and a filled icon,
+	 * and neither has a live token: the flexible namespaces publish no label
+	 * weight at all, and the only one that exists sits in the deprecated baseline
+	 * namespace pointing at `md.sys.typescale.label-medium.weight.prominent`,
+	 * which the same table marks deprecated -- "Please use emphasized token
+	 * instead". So no weight is applied here. The theme's block adapter does set
+	 * `font-weight: 500` and `GRAD 125` on its current item; that is not copied,
+	 * because it is a local decision made for a different surface and the
+	 * published chain does not support it. Filling the icon is the caller's, via
+	 * the icon node.
+	 */
+	.ax-navigation-item[aria-current] {
+		--md-comp-navigation-item-icon-color: var( --md-sys-color-on-secondary-container );
+		--md-comp-navigation-item-label-text-color: var( --md-sys-color-secondary );
+		--md-comp-navigation-item-indicator-color: var( --md-sys-color-secondary-container );
+	}
+
+	/*
+	 * "Use a filled icon for the active destination and outlined icons for
+	 * inactive destinations." Published as guidance with no token of its own, and
+	 * it needs none: the icon reads an inherited `--md-icon-fill`, so setting it
+	 * here keeps `icon` a plain node rather than adding a fill prop to the API.
+	 *
+	 * The axis is interpolated because the theme registers the property and
+	 * transitions it -- which is also why reading this back right after setting it
+	 * returns the start value. Measure it with transitions disabled.
+	 */
+	.ax-navigation-item[aria-current] .ax-navigation-item__icon {
+		--md-icon-fill: 1;
+	}
+
+	/* --- State layer ------------------------------------------------------- */
+
+	.ax-navigation-item:hover {
+		--md-comp-navigation-item-state-layer-opacity: var(
+			--md-sys-state-hover-state-layer-opacity
+		);
+	}
+
+	.ax-navigation-item:focus-visible {
+		--md-comp-navigation-item-state-layer-opacity: var(
+			--md-sys-state-focus-state-layer-opacity
+		);
+		outline: var( --md-focus-ring-width ) solid var( --md-sys-color-secondary );
+		outline-offset: var( --md-focus-ring-outward-offset );
+	}
+
+	.ax-navigation-item:active {
+		--md-comp-navigation-item-state-layer-opacity: var(
+			--md-sys-state-pressed-state-layer-opacity
+		);
+	}
+
+	/* --- Parts ------------------------------------------------------------- */
+
+	.ax-navigation-item__indicator {
+		box-sizing: border-box;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: var( --md-comp-navigation-item-icon-label-space );
+		block-size: var( --md-comp-navigation-item-indicator-height );
+		/*
+		 * Vertical publishes a width; horizontal does not -- it is content-sized
+		 * between the host's leading and trailing spaces, which is why that
+		 * figure is the host's and not an `inline-size` here.
+		 */
+		inline-size: var( --md-comp-navigation-item-indicator-width, auto );
+		border-radius: var( --md-comp-navigation-item-indicator-shape );
+		/*
+		 * The state layer is the content role mixed over the container, which is
+		 * how the theme paints its own controls. Where the container rests
+		 * `transparent`, the role arrives at the state opacity's alpha -- the
+		 * published behaviour of a Standard icon button, and the same here for an
+		 * inactive item.
+		 */
+		background-color: color-mix(
+			in srgb,
+			var( --md-comp-navigation-item-state-layer-color )
+				calc( var( --md-comp-navigation-item-state-layer-opacity ) * 100% ),
+			var( --md-comp-navigation-item-indicator-color )
+		);
+	}
+
+	.ax-navigation-item__icon {
+		/* The badge is placed against this box. */
+		position: relative;
+		display: inline-flex;
+		/* Icon nodes read this, as everywhere else in this app. */
+		--md-icon-size: var( --md-comp-navigation-item-icon-size );
+		color: var( --md-comp-navigation-item-icon-color );
+	}
+
+	/*
+	 * "Navigation bars can display badges in the upper right corners of the
+	 * destination icon." Positioned from the badge's own size so that none of the
+	 * badge component's published figures are spent here.
+	 */
+	.ax-navigation-item__badge {
+		position: absolute;
+		inset-block-start: 0;
+		inset-inline-end: 0;
+		transform: translate( 50%, -50% );
+	}
+
+	.ax-navigation-item__label {
+		font-family: var( --md-comp-navigation-item-label-text-font );
+		font-size: var( --md-comp-navigation-item-label-text-size );
+		font-weight: var( --md-comp-navigation-item-label-text-weight );
+		letter-spacing: var( --md-comp-navigation-item-label-text-tracking );
+		line-height: var( --md-comp-navigation-item-label-text-line-height );
+		color: var( --md-comp-navigation-item-label-text-color );
+	}
+}

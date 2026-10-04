@@ -5,6 +5,7 @@ import { StylebookDividersPage } from './components/dividers';
 import { StylebookSplitButtonsPage } from './components/split-buttons';
 import { StylebookButtonGroupsPage } from './components/button-groups';
 import { StylebookIconButtonsPage } from './components/icon-buttons';
+import { StylebookNavigationsPage } from './components/navigations';
 import { StylebookStylesPage } from './styles';
 import './layout-topology-fixtures.css';
 import { StylebookMotionPage } from './styles/motion';
@@ -42,6 +43,10 @@ export function StylebookPage( { component, layout, style, styles } ) {
 		return <StylebookSplitButtonsPage />;
 	}
 
+	if ( 'navigations' === component ) {
+		return <StylebookNavigationsPage />;
+	}
+
 	if ( 'motion' === style ) {
 		return <StylebookMotionPage />;
 	}
@@ -66,6 +71,9 @@ export function StylebookPage( { component, layout, style, styles } ) {
 				<a href="/social/stylebook/components/icon-buttons">Icon buttons</a>
 				<a href="/social/stylebook/components/button-groups">Button groups</a>
 				<a href="/social/stylebook/components/split-buttons">Split buttons</a>
+				<a href="/social/stylebook/components/cards">Cards</a>
+				<a href="/social/stylebook/components/dividers">Dividers</a>
+				<a href="/social/stylebook/components/navigations">Navigation</a>
 				<a href="/social/stylebook/layout/feed">Feed</a>
 				<a href="/social/stylebook/layout/list-detail">List-detail</a>
 				<a href="/social/stylebook/layout/supporting_pane">Supporting pane</a>

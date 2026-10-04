@@ -10,7 +10,7 @@ defined( 'ABSPATH' ) || exit;
 /** @return void */
 function axismundi_capstone_add_rewrite_rule() : void {
 	add_rewrite_rule(
-		'^' . AXISMUNDI_CAPSTONE_ROUTE . '(?:/stylebook(?:/styles(?:/motion)?|/components/(?:buttons|icon-buttons|button-groups|split-buttons|cards|dividers)|/layout/(?:feed|list-detail|supporting_pane))?|/objects/[^/]+)?/?$',
+		'^' . AXISMUNDI_CAPSTONE_ROUTE . '(?:/stylebook(?:/styles(?:/motion)?|/components/(?:buttons|icon-buttons|button-groups|split-buttons|cards|dividers|navigations)|/layout/(?:feed|list-detail|supporting_pane))?|/objects/[^/]+)?/?$',
 		'index.php?' . AXISMUNDI_CAPSTONE_QUERY_VAR . '=1',
 		'top'
 	);
@@ -51,7 +51,7 @@ function axismundi_capstone_is_public_route() : bool {
 
 	$request = trim( (string) $wp->request, '/' );
 	return 1 === preg_match(
-		'#^' . preg_quote( AXISMUNDI_CAPSTONE_ROUTE, '#' ) . '(?:/stylebook(?:/styles(?:/motion)?|/components/(?:buttons|icon-buttons|button-groups|split-buttons|cards|dividers)|/layout/(?:feed|list-detail|supporting_pane))?|/objects/[^/]+)?$#',
+		'#^' . preg_quote( AXISMUNDI_CAPSTONE_ROUTE, '#' ) . '(?:/stylebook(?:/styles(?:/motion)?|/components/(?:buttons|icon-buttons|button-groups|split-buttons|cards|dividers|navigations)|/layout/(?:feed|list-detail|supporting_pane))?|/objects/[^/]+)?$#',
 		$request
 	);
 }

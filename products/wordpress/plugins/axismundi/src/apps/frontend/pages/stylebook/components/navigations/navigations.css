@@ -1,0 +1,36 @@
+/*
+ * Specimen layout for the Navigation page.
+ *
+ * Every gap here belongs to this page. The item publishes no margin because the
+ * space between items is the host's row -- `md.comp.nav-bar.item.between-space`
+ * is space0 and `md.comp.nav-rail.item.container.vertical-space` is space75 --
+ * and neither host exists yet, so these figures are the page's own scaffolding
+ * and not a preview of either.
+ */
+
+@layer axismundi.patterns {
+	.ax-stylebook-navigations__row {
+		display: flex;
+		align-items: flex-start;
+		gap: var( --md-sys-measurement-space200 );
+	}
+
+	.ax-stylebook-navigations__hosts {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var( --md-sys-measurement-space400 );
+	}
+
+	.ax-stylebook-navigations__host {
+		display: flex;
+		flex-direction: column;
+		gap: var( --md-sys-measurement-space100 );
+		/*
+		 * An outline, so the cell with no host supplied is readable as a cell
+		 * rather than as an item that failed to render.
+		 */
+		border: 1px dashed var( --md-sys-color-outline-variant );
+		border-radius: var( --md-sys-shape-corner-value-small );
+		padding: var( --md-sys-measurement-space200 );
+	}
+}

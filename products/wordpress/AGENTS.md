@@ -68,5 +68,26 @@ fatal error, and this has happened.
 Products are developed against `wp-env`. **Never update a mounted plugin from
 inside `wp-admin`** — it empties the mount directory and keeps no backup.
 
+**Never update WordPress core from inside `wp-admin` either.** `.wp-env.json`
+declares the core version and is the only place that decides it; a `wp-admin`
+update is drift that the next `wp-env start` silently reverts. Observed
+2026-10-04: core had moved to `7.1.2` against a declared `#7.1`, leaving
+`wp-content/upgrade-temp-backup/` behind.
+
+If `wp-env start` fails with `destination path '…/WordPress' already exists and
+is not an empty directory`, the checkout has lost its `.git`. wp-env decides
+with `checkIsRepo('root')` and falls through to `clone`, which then refuses a
+non-empty directory. **Do not delete the directory** — it holds `wp-content/uploads`.
+Re-attach the metadata in place instead: `git init`, add the
+`WordPress/WordPress` remote, shallow-fetch the declared tag, `checkout -f`. The
+same applies to `WordPress-PHPUnit` (`wordpress-develop`, sparse `tests/phpunit`,
+tag `X.Y.0` where core is `X.Y`). Both were repaired this way on 2026-10-04 with
+no loss.
+
+The Gutenberg plugin tracks **latest** deliberately (owner's decision,
+2026-10-04): adapting to upstream change is worth more here than a reproducible
+pin. Expect a measurement that held yesterday to fail today with no commit of
+ours in between, and re-measure rather than assuming a regression is ours.
+
 Pattern files under `patterns/` are not re-registered automatically with dev
 mode off; clear the pattern cache after editing one.

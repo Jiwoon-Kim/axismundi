@@ -34,3 +34,51 @@
 		padding: var( --md-sys-measurement-space200 );
 	}
 }
+
+@layer axismundi.patterns {
+	/*
+	 * A definite height and a definite surrounding width, because the rail takes
+	 * both from its container and a measurement against an auto-sized parent
+	 * reports the rail's own content back as the container -- which is how this
+	 * page's bar specimen read a passing 0/0 once. The figures are this page's
+	 * scaffolding, not a preview of any host.
+	 */
+	.ax-stylebook-navigations__rail-frame {
+		display: flex;
+		block-size: 320px;
+		inline-size: 100%;
+		border: 1px dashed var( --md-sys-color-outline-variant );
+	}
+
+	/*
+	 * A rail is a leading edge, so it can only be judged against the content it
+	 * sits beside: its width against the pane it leaves, the optional divider
+	 * against the boundary it draws. Without this the specimen reads as a column
+	 * of icons next to an empty page.
+	 */
+	.ax-stylebook-navigations__rail-content {
+		flex: 1 1 0;
+		min-inline-size: 0;
+		padding: var( --md-sys-measurement-space200 );
+		background-color: var( --md-sys-color-surface-container-lowest );
+		color: var( --md-sys-color-on-surface-variant );
+		font-family: var( --md-sys-typescale-body-small-font );
+		font-size: var( --md-sys-typescale-body-small-size );
+		line-height: var( --md-sys-typescale-body-small-line-height );
+	}
+}
+
+@layer axismundi.patterns {
+	/*
+	 * The horizontal configuration is published for medium windows only -- "In
+	 * medium windows, navigation bars should use horizontal items" -- so showing
+	 * it at the page's full width was showing it outside its own range. 720px is
+	 * inside the declared medium band (600-839) from
+	 * `foundations/layout/breakpoints/viewport.json`. This frame is the page's
+	 * scaffolding, not a figure of the bar's.
+	 */
+	.ax-stylebook-navigations__medium-window {
+		inline-size: 720px;
+		max-inline-size: 100%;
+	}
+}

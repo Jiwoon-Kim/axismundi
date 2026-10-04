@@ -187,13 +187,87 @@ moderation capability
 | A2 | 제품이 각자 목록, OP는 행마다 view model | 경계 유지. **클라이언트가** N개를 합성 |
 | A3 | 교차 질의는 Activities(원장)가 소유 | 프로필 피드 선례와 정합. Activities가 generic object catalog가 됨 |
 | A4 | 제품이 각자 query를 제공하고, `axismundi`의 read-composition API가 **공개 계약만** 조합 | 경계 유지 + 합성에 서버 측 소유자가 생김. 새 층이 하나 늘어남 |
+| A5 | 합성을 **읽을 때가 아니라 쓸 때** 한다 — 제품이 공통 `wp_ax_object_index`에 행을 쓰고, OP는 그 한 테이블만 조회 | 경계 유지 + 단일 테이블 질의. 파생 상태가 다시 생기고, 모든 제품이 모든 변경에서 index를 써야 함 (§A5) |
 
 **A4가 초판에 없었다.** §1.1이 그 누락의 원인이다 — "조율자는 query를 갖지 않는다"를 법칙으로
 쓰면 capstone이 합성 층을 갖는 안이 애초에 후보에 오르지 못한다. A4는 A2와 다르다. 합성이
 클라이언트에서 서버로 옮겨가고 **이름 있는 소유자**를 얻는다. 두 앱을 이미 `axismundi`가
 들고 있으므로 자리로는 자연스럽고, A3처럼 Activities를 범용 객체 카탈로그로 만들 필요도 없다.
 
-판정은 소유자의 것이고, **네 안 중 어느 것도 기존 문서가 배제하지 않는다.**
+판정은 소유자의 것이고, **다섯 안 중 어느 것도 기존 문서가 배제하지 않는다.**
+
+### A5. 쓸 때 합성하기 — 이미 절반 있는 테이블
+
+2026-10-04 추가. A1~A4는 모두 **읽을 때** 합성하는 네 방식이다. A5는 합성을 쓸 때로
+옮긴다 — fan-out-on-write, 즉 materialized read model이다.
+
+```text
+각 제품이 자기 객체를 투영해 index 행을 쓴다
+        ↓
+OP는 자기 index 한 테이블만 조회한다
+        ↓
+선택된 URI를 각 소유자가 hydrate해 ObjectView를 만든다
+```
+
+**이 테이블은 이미 존재한다.** `wp_ax_object_index`,
+`axismundi-object-projections/includes/remote-objects.php`. 라이브 스키마를 읽은 결과:
+
+```sql
+object_uri_hash        char(64) NOT NULL        PRIMARY KEY
+publicly_listable      tinyint(1)
+object_status          varchar(12)   -- active | tombstone
+source                 varchar(12)   -- local | remote
+attributed_to_uri_hash char(64)
+is_reply               tinyint(1)
+has_group_context      tinyint(1)
+primary_group_uri_hash char(64)
+updated_at             datetime
+KEY listing_context (publicly_listable, has_group_context)
+```
+
+원격 캐시 저장이 트랜잭션 안에서 이 index를 갱신하고, local은 각 제품이 자기 source를
+열거해 OP의 writer 하나를 부르는 backfill 구조다. 즉 OP가 Note CPT나 `wp_posts`를 직접
+join하지 않는다는 §1의 경계는 이미 지켜지고 있다.
+
+**그러나 지금 상태로는 목록 질의를 할 수 없다.** 함수 주석이 스스로 "listing state"라고
+적고 있고, 그 말이 정확하다 — 상태는 알지만 순서를 모른다.
+
+```text
+없음: 정렬 키            updated_at은 투영 갱신 시각이며 정렬에 쓰면 안 된다
+없음: object_type        Note인지 Article인지 거를 수 없다
+없음: 소유자(adapter)    어느 제품이 hydrate할지 알 수 없다
+없음: cursor용 복합 인덱스  두 인덱스 모두 시간순 페이지네이션을 받치지 못한다
+```
+
+#### A5의 대가 세 가지
+
+1. **파생 상태가 다시 생긴다.** `LOCAL-OBJECTS.md:220`이 local projection을 동적으로 둔
+   것은 아무도 원하지 않는 캐시를 피하려는 결정이었다. A5는 본문 없는 좁은 형태지만 파생
+   저장을 다시 들인다. 모든 제품이 trash · untrash · 영구 삭제 · 가시성 변경 · group 변경 ·
+   `inReplyTo` 변경마다 index를 써야 하고, 하나를 빠뜨리면 목록이 조용히 거짓말한다.
+   — 완화 요인: 코드가 이미 "rebuildable projection"을 주장하고 backfill이 있다. 드리프트는
+   복구 가능하다. 단, 모든 제품이 동작하는 backfill을 유지해야 하고 재구축이 돌릴 만큼
+   싸야 한다.
+
+2. **`publicly_listable` 불리언 하나가 authorization을 담지 못한다.** 가시성은 두 축이고
+   audience는 공용 resolver가 소유한다. 불리언은 그것을 접는다. 공개 컬렉션은 괜찮지만
+   followers-only나 group-members 목록은 index가 답할 수 없다. audience 컬럼을 늘리면
+   resolver의 일을 복제하게 되고, 늘리지 않으면 audience 범위 목록은 다른 읽기 경로가 된다.
+   **이것이 A5의 진짜 경계 질문이다.**
+
+3. **원격 `published`는 신뢰할 수 없고 단조롭지도 않다.** 스키마와 무관한 정합성 문제다.
+   원격 서버가 주는 `published`는 과거로 찍힐 수 있으므로, local과 remote를 섞은 "최신순"
+   목록에서는 새 항목이 과거에 끼어든다. Activity 원장은 로컬 수신 시각으로 정렬하므로 이
+   문제가 없다. 피드는 §5에서 이미 Activities 몫이라, 이 문제는 객체 컬렉션에만 남는다.
+
+#### 권고 (구현자의 것이며 판정이 아니다)
+
+index를 **후보 집합(membership)의 권위로** 채택하고 **순서의 권위로는 채택하지 않는 것**.
+어느 URI가 이 컬렉션에 속하는지는 index가 답하고, 사용자에게 보이는 "최신순"은 Activities의
+로컬 시각을 탄다. 그러면 대가 3이 사라지고, `published_at`을 index에 또 복제할 필요도 없다.
+
+그러므로 A5를 고를 경우 다음 판정은 "새 합성 API를 만들까"가 아니라 **"이 index를 목록 read
+model로 공식 채택하고 어떤 열 · cursor · authorization을 둘까"**가 된다.
 
 ### A′. 단일 조회도 "논쟁 없음"이 아니다
 

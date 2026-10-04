@@ -41,11 +41,15 @@ VALUE_METADATA = {"name", "revisionId", "revisionCreateTime", "state", "createTi
 
 
 def load(source: str) -> dict:
-    if source.startswith("http"):
+    # `utf-8-sig` on both paths because `json.loads` raises on a byte-order mark.
+    # No served table has carried one, but a table saved to disk from a browser or
+    # from PowerShell on this machine can, and that failure reads as a corrupt
+    # download rather than as an encoding.
+    if source.startswith(("http://", "https://")):
         request = urllib.request.Request(source, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(request, timeout=60) as response:
-            return json.loads(response.read().decode("utf-8"))
-    return json.loads(Path(source).read_text(encoding="utf-8"))
+            return json.loads(response.read().decode("utf-8-sig"))
+    return json.loads(Path(source).read_text(encoding="utf-8-sig"))
 
 
 def literal(value: dict) -> str:
@@ -111,8 +115,18 @@ def main(argv: list[str]) -> int:
 
         included.append((name, kind, " | ".join(resolved) or "(no value)"))
 
-    component = (system.get("components") or [{}])[0]
-    print(f"component: {component.get('displayName', '(unnamed)')}   dsdb {system.get('dsdbVersion', '?')}")
+    """Every table measured so far carries exactly one component, and the two
+    namespaces inside one -- `md.comp.nav-bar` beside the deprecated
+    `md.comp.navigation-bar` -- are token prefixes of that one component, not
+    extra entries. The `[prefix]` groups below are what surface them. Naming all
+    of them anyway, because printing the first of several would misname the table
+    without ever looking wrong."""
+    names = [
+        str(item.get("displayName"))
+        for item in system.get("components") or []
+        if item.get("displayName")
+    ]
+    print(f"component: {', '.join(names) or '(unnamed)'}   dsdb {system.get('dsdbVersion', '?')}")
     print(f"table revision: {system.get('revisionCreateTime', '?')}")
     print()
 

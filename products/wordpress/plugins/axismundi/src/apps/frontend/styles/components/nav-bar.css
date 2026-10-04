@@ -1,0 +1,226 @@
+/*
+ * Material 3 Navigation bar.
+ *
+ * Published values are in `products/styleguide/_data/navigation_bar.yml`, read
+ * out of the bar's own token table and checked by
+ * `tools/validators/validate_styleguide_navigation_bar.py`.
+ *
+ * THE BAR IS WHERE THE ITEM'S HORIZONTAL FIGURES COME FROM.
+ * `navigation-item.css` publishes vertical candidates and deliberately no
+ * horizontal ones, because the bar and the rail disagree on every one of them.
+ * The `--md-comp-navigation-item-horizontal-*` block below is this host keeping
+ * that bargain; an item in a bar gets 40dp and label-medium, the same item in a
+ * rail gets 56dp and label-large.
+ *
+ * HEIGHT IS A MINIMUM. The accessibility page: the bar "should grow vertically
+ * to accommodate larger labels while retaining the default padding", and "It's
+ * okay for scaled text to wrap in navigation items". A fixed 64dp box would clip
+ * exactly the case the published text asks us to carry, so the token becomes a
+ * `min-block-size`.
+ *
+ * NO WINDOW-EDGE MARGIN IS DECLARED. The Specs measurements page names one --
+ * "Margin from window edge" -- and labels it Dynamic width: it is the slack left
+ * over once the fixed-width horizontal items are centred, so it is produced
+ * rather than declared. No token publishes a figure for it in either namespace.
+ *
+ * `corner.none` IS THE INITIAL VALUE, so no `border-radius` is declared. The
+ * elevation layer reads `border-radius: inherit` and therefore follows whatever
+ * is there -- including a consumer's own radius, which is the behaviour a
+ * declared `0` would have taken away.
+ */
+
+@layer axismundi.components {
+	.ax-nav-bar {
+		/* md.comp.nav-bar.container.color -> md.sys.color.surface-container */
+		--md-comp-nav-bar-container-color: var( --md-sys-color-surface-container );
+		/* md.comp.nav-bar.container.height = 64dp, as a minimum. See the header. */
+		--md-comp-nav-bar-container-height: 64px;
+
+		/* The elevation layer is absolutely positioned against this box. */
+		position: relative;
+		box-sizing: border-box;
+		display: flex;
+		/*
+		 * "Navigation items are centered within the container." That is the inline
+		 * axis, and `justify-content` is all of it: in the vertical configuration
+		 * the segments fill the row and it changes nothing, in the horizontal one
+		 * it is what puts the leftover at both ends.
+		 *
+		 * The block axis is `stretch`, not `center`. The segment track is a flex
+		 * child here, so a percentage height on it resolves against nothing -- a
+		 * `min-block-size` is not a definite height -- and the track would collapse
+		 * to its content, taking the item containers down to the indicator's 40dp
+		 * with it. Stretching gives the track the bar's height and the containers
+		 * take it from the track.
+		 */
+		align-items: stretch;
+		justify-content: center;
+		/*
+		 * md.comp.nav-bar.item.between-space -> space0.
+		 *
+		 * This was first written as space75 for the vertical case, taking
+		 * `md.comp.nav-bar.item.vertical.container.between-space` for an
+		 * orientation-qualified override of the gap. It is not a gap: the Specs
+		 * measurements page runs 6 / 32 / 4 / 6 down a vertical item, so space75
+		 * is the item's own padding above its indicator and below its label, and
+		 * 6 + 32 + 4 + 16 + 6 comes to the published 64dp. `navigation-item.css`
+		 * applies it there now. The name is the trap -- "between-space" on a
+		 * token that measures an inset.
+		 */
+		column-gap: var( --md-sys-measurement-space0 );
+		/*
+		 * "The navigation bar container spans 100% of the window width." Paired
+		 * with `min-inline-size: 0` because a percentage width does not stop a
+		 * flex or grid item from growing to its min-content size, which is how a
+		 * 240px surface once measured a 347px control in this app.
+		 */
+		inline-size: 100%;
+		min-inline-size: 0;
+		min-block-size: var( --md-comp-nav-bar-container-height );
+		/* "The container has a color fill to provide separation from other content." */
+		background-color: var( --md-comp-nav-bar-container-color );
+	}
+
+	/*
+	 * ONLY THE VERTICAL ITEM DIVIDES THE ROW. The measurements page labels the two
+	 * cases by name: a vertical navigation item has "Dynamic width", a horizontal
+	 * one has "Fixed width", and the "Margin from window edge" beside the
+	 * horizontal row is the dynamic part. The prose says the same -- "Vertical
+	 * navigation items dynamically change width to equally fit the container.
+	 * Horizontal navigation items have a fixed width, so extra space is added to
+	 * the ends of the navigation bar instead."
+	 *
+	 * EVERY ONE OF THOSE SENTENCES IS ABOUT THE ITEM CONTAINER, not about the
+	 * indicator inside it, and the design kit's own panel settles how it behaves:
+	 * a horizontal nav item is `Fill`, and the icon container inside it is `hug`
+	 * at 92x40. So the container grows and the indicator does not, in both
+	 * configurations.
+	 *
+	 *   Navigation Bar: Horizontal items, 741x64, align center, gap auto
+	 *     3 items  140.33 Fill each  ->  row padding 160 a side
+	 *     4 items  125.25            ->  120
+	 *     5 items  116.2             ->  80
+	 *     6 items  110.17            ->  40
+	 *
+	 * WHAT SEPARATES THE TWO CONFIGURATIONS IS THE ROW'S OUTER PADDING, not the
+	 * item's growth. The kit's vertical row is 412x64 with its three items at
+	 * x = 0, 137.33 and 274.67 -- no padding at all -- while every horizontal row
+	 * has some. That padding is the "Margin from window edge" the Specs diagram
+	 * labels Dynamic width.
+	 *
+	 * `flex: 1 1 0` is equal segments rather than equal content: a basis of `auto`
+	 * would hand the longest label the widest segment, and the separation between
+	 * indicators would then vary per label.
+	 *
+	 * THE PADDING IS THE FIGURE THIS COMPONENT STILL LACKS, and the kit does not
+	 * supply it: 160, 120, 80 and 40 for three, four, five and six destinations in
+	 * a row that stays 741dp wide. A number that falls by 40 each time a
+	 * destination is added is a composition inside one frame, not a constant to
+	 * lift. No token publishes it either, so none is declared and the segments
+	 * reach the bar's edges. Recorded in the yml.
+	 */
+	.ax-nav-bar[data-item-layout="vertical"] .ax-nav-bar__item {
+		flex: 1 1 0;
+		min-inline-size: 0;
+	}
+
+	/*
+	 * A CAPPED FLUID TARGET. NOT THE PUBLISHED FIXED ONE, and the name matters
+	 * because two models were briefly mixed here. The target grows to share the
+	 * row, as the kit's `Fill` says, stops at a cap, and never falls below its own
+	 * content. The window-edge margin is what the cap leaves over, which is why it
+	 * is produced rather than declared -- in a window too narrow for the cap the
+	 * margin falls to zero by itself, where a declared padding would squeeze the
+	 * targets instead.
+	 *
+	 * WHY NOT THE FIXED TARGET THE SPECS CALL FOR. It cannot be implemented
+	 * safely. A single fixed width has to be narrower than the longest label's
+	 * indicator for some caller, and then either the indicator spills out of the
+	 * target that is supposed to hold it, or the label shrinks -- and shrinking is
+	 * a published prohibition, "Don't shrink longer text to fit on a single line".
+	 * So `min-inline-size: max-content` wins over the cap by design, CSS resolving
+	 * `min` above `max`, and the targets are equal only while no label exceeds the
+	 * cap. That covers every label M3 describes: "It should be 1-2 words."
+	 *
+	 * AXISMUNDI POLICY, NOT A PUBLISHED FIGURE. No token carries a width, and the
+	 * kit's paddings cannot be lifted: 160, 120, 80 and 40 a side for three, four,
+	 * five and six destinations, all inside a row that stays 741dp wide. As
+	 * absolute dp they break elsewhere -- 160 a side in a 600dp bar leaves 93dp a
+	 * target, narrower than the 95dp indicator it has to hold.
+	 *
+	 * 120dp is where five destinations exactly fill the narrowest window this
+	 * configuration is published for: M3 caps the bar at five and puts horizontal
+	 * items in medium windows, which start at 600dp. The derivation is from two
+	 * published bounds; choosing those bounds is still ours, so this is recorded
+	 * as policy, at the same standing as the active label's grade.
+	 */
+	.ax-nav-bar[data-item-layout="horizontal"] .ax-nav-bar__item {
+		flex: 0 0 auto;
+		/*
+		 * The space between the target's edge and the indicator it holds. space200
+		 * is the figure both hosts publish for the inline space around an
+		 * indicator, so it is already in this component's vocabulary; without it a
+		 * content-sized target is its own indicator and adjacent indicators touch.
+		 */
+		padding-inline: var( --md-sys-measurement-space200 );
+		max-inline-size: var( --ax-nav-bar-item-horizontal-max-width );
+		/*
+		 * A target always contains its own indicator. CSS resolves `min` above
+		 * `max`, so this is also why the cap above is advisory on the web: where a
+		 * label exceeds it, every way of honouring it is a published prohibition --
+		 * truncating, shrinking the type, and wrapping inside a bar item are all
+		 * Don'ts. On Android the label may wrap, so the cap binds there.
+		 */
+		min-inline-size: max-content;
+	}
+
+	.ax-nav-bar[data-item-layout="horizontal"] {
+		/*
+		 * The figures the item refuses to default. Scoped to this configuration
+		 * rather than declared on the container, because an item in the vertical
+		 * configuration never reads them and publishing them anyway would be a
+		 * claim about a case that does not exist.
+		 *
+		 * md.comp.nav-bar.item.horizontal.active-indicator.height            40dp
+		 * md.comp.nav-bar.item.horizontal.active-indicator.icon-label-space  space50
+		 * md.comp.nav-bar.item.horizontal.label-text.font                    label-medium
+		 */
+		--md-comp-navigation-item-horizontal-indicator-height: 40px;
+		--md-comp-navigation-item-horizontal-icon-label-space: var( --md-sys-measurement-space50 );
+		--md-comp-navigation-item-horizontal-label-text-font: var( --md-sys-typescale-label-medium-font );
+		--md-comp-navigation-item-horizontal-label-text-size: var( --md-sys-typescale-label-medium-size );
+		--md-comp-navigation-item-horizontal-label-text-weight: var( --md-sys-typescale-label-medium-weight );
+		--md-comp-navigation-item-horizontal-label-text-tracking: var( --md-sys-typescale-label-medium-tracking );
+		--md-comp-navigation-item-horizontal-label-text-line-height: var(
+			--md-sys-typescale-label-medium-line-height
+		);
+	}
+}
+
+/*
+ * OUR DECISION, NOT MATERIAL'S. The cap on a horizontal target's width.
+ *
+ * The model around it is published. MDC-Android's Expressive note for the
+ * navigation bar says it in one line: "Instead of being a set width based on the
+ * item count, item width is based on content with a max width." That rules out
+ * both readings this component tried before -- equal segments, and the kit's
+ * padding chosen per destination count -- and it is why the horizontal target now
+ * takes its own content's width.
+ *
+ * THE NUMBER IS NOT PUBLISHED. No live token carries it, the M3 pages give no
+ * figure, and MDC's own 96dp `design_*` dimen belongs to the baseline bar, not to
+ * the Expressive one. 120dp is where five destinations fill a 600dp window -- M3's
+ * cap on destinations, and the floor of the medium band this configuration is
+ * published for -- which is a rationale, not a source.
+ *
+ * So it is named `--ax-`, not `--md-comp-`, because a `--md-` prefix would read as
+ * a Material token; it sits in this layer, not in `components`, because that is
+ * where this product's decisions about a published component belong; and it is a
+ * variable so a consumer can change it without touching the component. If M3 ever
+ * publishes the figure, this becomes a token and the component is untouched.
+ */
+@layer axismundi.theme {
+	.ax-nav-bar {
+		--ax-nav-bar-item-horizontal-max-width: 120px;
+	}
+}

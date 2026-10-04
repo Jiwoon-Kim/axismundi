@@ -1,0 +1,329 @@
+# Material 3 Navigation bar — the published specification.
+#
+# Sources: https://m3.material.io/components/navigation-bar/overview
+#          https://m3.material.io/components/navigation-bar/specs
+#          https://m3.material.io/components/navigation-bar/guidelines
+#          https://m3.material.io/components/navigation-bar/accessibility
+#
+# Token names and their referenced sys roles are read from the bar's own token
+# table with `tools/generators/fetch_m3_component_tokens.py`; the container prose
+# below was captured from the three tabs above. Both are recorded in
+# `products/wordpress/plugins/axismundi/docs/SOURCE-M3-NAVIGATION-RAW.md`.
+#
+# THIS FILE IS THE HOST, NOT THE ITEM. `navigation_item.yml` owns everything the
+# bar and the rail publish identically -- colour, state, vertical geometry -- and
+# this file owns only what is the bar's: the container, the arithmetic that
+# arranges items in it, and the horizontal figures the item deliberately does not
+# default. Read that file first; the split is the contract.
+#
+# The implementation is `md.comp.nav-bar.*`. The same table also carries the
+# deprecated baseline `md.comp.navigation-bar.*`, which has a different container
+# height and different colour roles, and nothing here reads from it; see
+# `discrepancies`.
+
+meta:
+  namespace: md.comp.nav-bar
+  deprecated_namespace: md.comp.navigation-bar
+  # Not a style preference. "Only use navigation bars for compact and medium
+  # breakpoints", and "Don't use navigation bars for desktop layouts."
+  window_size_classes: [ compact, medium ]
+  # "Navigation bars provide access to three to five destinations." Published
+  # twice more as prohibitions at both ends, so both bounds are real.
+  destinations_minimum: 3
+  destinations_maximum: 5
+  # "One navigation destination is always active." The active indicator is the
+  # only thing telling someone where they are, so this is a requirement and not
+  # a default.
+  exactly_one_active: true
+
+anatomy: [ container, icon, label_text, active_indicator, small_badge, large_badge ]
+
+container:
+  color_token: md.comp.nav-bar.container.color
+  color_role: surface-container
+  shape_token: md.comp.nav-bar.container.shape
+  shape_role: corner.none
+  elevation_token: md.comp.nav-bar.container.elevation
+  elevation_role: elevation.level2
+  # Live in the flexible namespace, and deprecated in the baseline one with
+  # "Remove any shadows on navigation bars"; see `discrepancies`.
+  shadow_color_token: md.comp.nav-bar.container.shadow-color
+  shadow_color_role: shadow
+  height_token: md.comp.nav-bar.container.height
+  height: 64
+  # HEIGHT IS A MINIMUM, NOT A FIXED BOX. Accessibility: the bar "should grow
+  # vertically to accommodate larger labels while retaining the default
+  # padding", and "It's okay for scaled text to wrap in navigation items". A
+  # fixed 64dp would clip the case the published text asks us to support.
+  height_is_minimum: true
+  # "The navigation bar stretches the full window width", "The navigation bar
+  # container spans 100% of the window width."
+  full_window_width: true
+  # "The container should always be placed at the bottom of the product". Where
+  # the bar sits is the Scaffold's grid area, not a property of this component;
+  # recorded so the omission is not read as an oversight.
+  placement: bottom
+  placement_owned_by: scaffold
+
+# THE BAR'S OWN ARITHMETIC. No token publishes any of it -- it is prose on the
+# Specs and Guidelines tabs, and it is the whole reason the item publishes no
+# width ("item width" is in `navigation_item.yml` `not_published_here`).
+# TWO BOXES, NOT ONE. Every mistake this file has had to correct came from
+# calling them both "the item":
+#
+#   item container   the outer target a person presses. Fills the bar's height.
+#   active indicator the pill drawn inside it, around the icon (and, when the
+#                    item is horizontal, the label too).
+#
+# Figma names them the same way -- an item instance of 116.2x64 containing an
+# "Icon container" of 92x40 -- and the Specs measurements page measures both.
+# `navigation_item.yml` `structure` holds the same split for the shared part.
+layout:
+  # "Navigation items are centered within the container."
+  items_centered: true
+  # One gap between item containers, for both orientations. The
+  # orientation-qualified space75 row is an inset inside the item container, not
+  # a gap, and lives in `navigation_item.yml`.
+  between_space_token: md.comp.nav-bar.item.between-space
+  between_space_role: space0
+  # The item container is the full bar height in both orientations, with the
+  # indicator centred inside it, so the whole row is the target area. The
+  # measurements page runs 6 / 32 / 4 / 16 / 6 down a vertical item container and
+  # 12 / 40 / 12 down a horizontal one, both totalling the published 64dp.
+  item_container_height_is_bar_height: true
+  vertical_rhythm: [ 6, 32, 4, 16, 6 ]
+  horizontal_rhythm: [ 12, 40, 12 ]
+  vertical:
+    # "Vertical navigation items dynamically change width to equally fit the
+    # container", and the diagram's callout 1 reads "Dynamic width". This is the
+    # item CONTAINER's width; the indicator inside it stays 56dp.
+    item_container_width: equal_segments
+    # Dynamic, in the sense `flex-grow` means it: the containers take the bar's
+    # width between them.
+    container_grows: true
+  horizontal:
+    # The container grows here too. The design kit's panel states it directly:
+    # a horizontal nav item is `Fill` and the icon container inside it is `hug`
+    # at 92x40, in a row that is "align center, gap auto".
+    item_container_width: equal_segments
+    slack_goes_to: ends
+    # What remains open is the FIGURE, not the structure: the Specs callouts
+    # distinguish this container's "Fixed width" from the vertical container's
+    # "Dynamic width", and no live token publishes either that width or the
+    # window-edge margin. See `discrepancies`.
+    fixed_width_published: false
+    container_grows: true
+    # WHAT ACTUALLY SEPARATES THIS CONFIGURATION FROM THE VERTICAL ONE is the
+    # row's outer padding -- the "Margin from window edge" -- not the item's
+    # growth. The kit's vertical row has none and every horizontal row has some.
+    # Its figure is not published and the kit does not supply a constant: 160,
+    # 120, 80 and 40 a side for three, four, five and six destinations, in a row
+    # that stays 741dp wide.
+    # THE MODEL IS PUBLISHED, THE FIGURE IS NOT. MDC-Android's Expressive note for
+    # the navigation bar: "Instead of being a set width based on the item count,
+    # item width is based on content with a max width." That rules out both
+    # readings tried here before -- equal segments, and the kit's padding chosen
+    # per destination count -- and the leftover becomes the window-edge margin.
+    # No source gives the max: the M3 pages publish no figure, no live token
+    # carries one, and MDC's 96dp `design_*` dimen is the baseline bar's. 120dp is
+    # Axismundi's, declared in the `axismundi.theme` layer as
+    # `--ax-nav-bar-item-horizontal-max-width` so that the name does not read as a
+    # Material token. It is where five destinations fill a 600dp window: M3's cap
+    # on destinations, and the floor of the medium band.
+    # ADVISORY ON THE WEB. A target never falls below its own indicator, so where a
+    # label exceeds the cap the cap yields -- every way of honouring it is a
+    # published prohibition here (truncating, shrinking the type, and wrapping
+    # inside a bar item). On Android the label may wrap, so it binds there.
+    target_width_model: content-based-with-max
+    target_max_width: 120
+    matches_published_fixed_width: false
+    outer_padding_published: false
+    outer_padding_kit_by_count: { 3: 160, 4: 120, 5: 80, 6: 40 }
+
+# The published configuration axis. M3 Expressive added the horizontal item
+# layout; the baseline bar had only vertical.
+configurations:
+  item_layout:
+    default: vertical
+    values: [ vertical, horizontal ]
+    # "In compact windows, navigation bars use vertical items. In medium
+    # windows, navigation bars should use horizontal items." Published as the
+    # window rule, and `discrepancies` records why nothing here switches on it.
+    window_rule:
+      compact: vertical
+      medium: horizontal
+    implemented_as: prop
+    switches_on_window_size: false
+
+# The horizontal figures the item refuses to default, supplied by this host.
+# `navigation_item.yml` carries the same three under `orientations` ->
+# `horizontal` -> `by_host` -> `nav-bar`; they are repeated here because this is
+# the file that has to hand them over, and the validator asserts the two agree.
+item_horizontal:
+  indicator_height: 40
+  icon_label_space_role: space50
+  label_typescale: label-medium
+  tokens:
+    indicator_height: md.comp.nav-bar.item.horizontal.active-indicator.height
+    icon_label_space: md.comp.nav-bar.item.horizontal.active-indicator.icon-label-space
+    label_text_font: md.comp.nav-bar.item.horizontal.label-text.font
+
+semantics:
+  # No role is published. A bar is a set of links to destinations, which is what
+  # the web's navigation landmark is for, and the published keyboard row is
+  # "Tab -- Move between navigation items", which a flat landmark already gives.
+  element: nav
+  # "A navigation bar's accessibility label can incorporate its adjacent UI
+  # text." A landmark needs a name when a page has more than one, and Social
+  # will.
+  label_required: true
+  # Not published, and deliberately not invented: M3's anatomy is container plus
+  # items with no grouping element between them, so no list wrapper is added.
+  list_wrapper: false
+
+usage:
+  - three to five destinations; use tabs for fewer than three
+  - one destination is always active
+  - do not remove the labels from navigation items
+  - destinations have fixed positions; do not scroll them or reorder them
+  - do not use a navigation bar for desktop layouts
+  # Behavior: this is the host's, not the item's, and it needs a scroll
+  # container to act on.
+  - re-selecting the active destination resets the scroll position to the top
+
+discrepancies:
+  - token: md.comp.nav-bar.container.elevation and .shadow-color
+    prose: >-
+      The Differences from M2 section says "Elevation: No shadow" and "M3:
+      Taller and no drop shadow", and the baseline token
+      md.comp.navigation-bar.container.shadow-color is deprecated with "Bug:
+      should not have been created. Remove any shadows on navigation bars."
+    tokens: >-
+      The flexible namespace publishes md.comp.nav-bar.container.elevation ->
+      md.sys.elevation.level2 and a live md.comp.nav-bar.container.shadow-color
+      -> md.sys.color.shadow. Neither is deprecated.
+    note: >-
+      The shadow is implemented, and the owner confirmed it against the live
+      token table on 2026-10-05: the flexible row carries no deprecation and no
+      warning of any kind. The "no shadow" prose sits in the section comparing
+      M2 with the M3 baseline bar, and the baseline's own shadow token was
+      retired to match it; the flexible bar then published both rows fresh,
+      which reads as a deliberate Expressive change rather than the same bug
+      twice. So the deprecation message "Remove any shadows on navigation bars"
+      is read as scoped to the row it annotates, not as a standing instruction
+      that outlives the namespace it was written for. This reverses a claim this
+      repository made once from the
+      hand-transcribed overview alone -- see the correction in
+      PLAN-FRONTEND-NAVIGATION-COMPONENTS.md -- and the validator pins both rows
+      as live so the reversal is not quietly reversed again.
+  - token: md.comp.nav-bar.item.vertical.container.between-space
+    prose: >-
+      Nothing in the prose distinguishes a gap between vertical items from a gap
+      between horizontal ones.
+    tokens: >-
+      The table publishes both an unqualified md.comp.nav-bar.item.between-space
+      -> space0 and a qualified
+      md.comp.nav-bar.item.vertical.container.between-space -> space75. The
+      qualified one inserts a `container` segment the unqualified one does not
+      have, and there is no horizontal counterpart.
+    note: >-
+      RESOLVED BY MEASUREMENT, and the first reading here was wrong. It took the
+      qualified row as an orientation-specific override of the gap, and gave
+      vertical items a 6dp `column-gap`. The Figma kit shows the gap is zero in
+      both orientations -- its vertical bar divides 412dp into three items of
+      137.33 with no gap and no end inset -- and shows where the space75 actually
+      is: inside the item, 6dp above its indicator and 6dp below its label, so
+      that 6 + 32 + 4 + 16 + 6 comes to the published 64dp container height. The
+      figure has moved to `navigation_item.yml`
+      `meta.vertical_container_space_role`, because both hosts publish it, and
+      it is applied as the item's padding. The name is the trap: "between-space"
+      in a token that measures an inset.
+  - token: the horizontal item container's fixed width
+    prose: >-
+      "Horizontal navigation items have a fixed width, so extra space is added to
+      the ends of the navigation bar instead", and the measurements diagram
+      labels the horizontal navigation item "Fixed width" against the vertical
+      one's "Dynamic width".
+    tokens: >-
+      No live row publishes a width for the item container in either namespace;
+      `navigation_item.yml` records "item width" under `not_published_here` for
+      the same reason. The community Figma kit does not settle it either: it
+      composes horizontal rows by equal segments -- 741dp divided into three
+      containers of 140.33 or five of 116.2, each holding the same 92x40
+      indicator -- which is the rule the page gives to VERTICAL items.
+    note: >-
+      THE STRUCTURE IS SETTLED AND THE FIGURE IS NOT. All three sources agree
+      that the containers are equal-width and each wider than the indicator it
+      centres: the Guidelines caption says so of a horizontal row, its diagram
+      shows four equal segments around narrower indicators with a margin at
+      either end, and the kit composes the same way. That caption was already in
+      this repository's captured source and was read as describing the vertical
+      case; the diagram beside it is horizontal.
+      What no source gives is the fixed number, or the window-edge margin that
+      would absorb the difference between it and the container. Without either,
+      the segments divide the whole bar and the leftover lands inside them rather
+      than at the ends -- a known divergence from the Specs callout, not a
+      reading of it. When a figure is chosen it is Axismundi's own policy and has
+      to be recorded as one, the way the active label's grade is.
+      Two earlier readings are kept here because each produced a shipped defect.
+      Leaving the container at its content width made adjacent indicators touch
+      and lost 24dp of the bar's height to a non-target; and declaring that
+      "fixed width" meant the indicator redefined the word to avoid needing the
+      number at all.
+  - token: margin from the window edge
+    prose: >-
+      A Specs caption labels a "Margin from window edge", the Guidelines caption
+      says the bar "is divided into equal-width segments with padding from the
+      window edge", and horizontal items are "centered in the nav bar with outer
+      margins" with "the same padding at each breakpoint".
+    tokens: >-
+      No token publishes a figure for it, in either namespace.
+    note: >-
+      So no figure is applied, and the items reach the container's edges. The
+      design kit does inset them, but by 160dp with three destinations and 80dp
+      with five, inside the same 741dp row -- a number that halves when two
+      destinations are added is a composition choice in a kit frame, not a
+      specification. This is the one published sentence about the bar's layout
+      that remains unimplemented, and it is unimplemented for want of a figure
+      rather than by preference.
+  - token: item layout and window size
+    prose: >-
+      "In compact windows, navigation bars use vertical items. In medium
+      windows, navigation bars should use horizontal items."
+    tokens: >-
+      No token carries it. The Specs Configurations table publishes the axis
+      itself as a selectable configuration with Vertical as the default.
+    note: >-
+      Exposed as a prop with the published default, and nothing here observes
+      the window. Two reasons, both measured rather than assumed. The two item
+      layouts have different DOM -- the label is a child of the indicator when
+      horizontal and a sibling when vertical -- so a media query cannot switch
+      them; it needs a JS window-size observation, and the app has none
+      (`foundations/layout/breakpoints/viewport.json` declares the five classes
+      and no JavaScript reads it). And the only reachable trigger would be a
+      medium window, where `scaffold.css` hides the bar and shows the rail from
+      600px up. Building the observation now would add a foundation whose single
+      consumer the Scaffold makes unreachable. Which component serves a medium
+      window is a layout-boundary decision and M3 permits either ("Medium: Use a
+      navigation bar or navigation rail"), so it is left open rather than
+      answered here.
+
+# Deliberately absent, so absence is not read as an oversight.
+not_published_here:
+  # Prose only, and it needs a scroll container plus a screen-reader check
+  # ("Don't hide the navigation bar on scroll when a screen reader is active").
+  # The bar does not own the scroll container.
+  - hide on scroll
+  # "The floating action button (FAB) is placed above the navigation bar."
+  # There is no FAB component yet, and the bar is not its anchor -- the window
+  # is.
+  - fab placement
+  # "Navigation bars can be temporarily covered by dialogs, bottom sheets ..."
+  # That is each of those components' concern.
+  - being covered by other surfaces
+  # Behavior publishes a choice, not a rule: "Choose the behavior that best
+  # suits the product and user needs."
+  - preserve or reset destination state
+  # The top level transition pattern and the indicator's expand-from-centre
+  # animation. No motion token is published on this page.
+  - selection transition

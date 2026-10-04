@@ -10,6 +10,8 @@
 canonical identity   {home}/actors/{uuid}          → actor_uri (federation id; the immutable UUID)
   plain fallback     {home}/?ax_actor={uuid}       → same target, works without pretty permalinks
 human alias (mutable){home}/@{preferred_username}/ → profile hub
+remote proxy alias   {home}/@{handle}@{host}       → cached remote Person  (see §2.1)
+                     {home}/group/@{handle}@{host} → cached remote Group   (see §2.1)
 ```
 
 The alias is a convenience over the identity. Resolving the alias always yields the
@@ -110,17 +112,27 @@ Actor identity   /actors/{uuid}
 - Resolves the identity row by `uuid`; 404 when absent, `disabled`, `internal` (to a
   non-privileged viewer), or `tombstone` (410 once federation lands).
 - This is the stable target for federation and for any link that must survive a
-  username change. **Remote** actors are served from their own remote
-  `canonical_uri`; they are never re-served under our `/actors/{uuid}`.
+  username change.
+- **Remote** actors: their federation `id` is always their own remote `canonical_uri`,
+  and that is what we publish. But `/actors/{uuid}` does *render* a cached remote actor
+  as a local proxy view. Measured 2026-10-04:
+  `/actors/2394f52b-bc99-4a7c-8713-b0dc5aeff8de` answers `200` for the cached
+  `lemmykorea` Group, and `/actors/ac69d6bd-…` for the cached NodeBB `general` Group.
+  An earlier revision of this section stated that remote actors "are never re-served
+  under our `/actors/{uuid}`". That is false of the shipped behaviour.
+  **Open — owner's call:** either the proxy view stays and must carry a canonical
+  pointer to the remote `canonical_uri` (otherwise our domain competes for another
+  server's actor URL), or it is withdrawn. Do not cite either sentence as the contract
+  until this is settled.
 
 ## 2. Human alias — `/@{preferred_username}/`
 
 - Pretty rewrite: `^@([^/]+)/?$` → `index.php?ax_actor_handle=$matches[1]`, plus a
   plain fallback `/?ax_actor_handle={username}`.
-- Resolution: `local_handle_key → local actor → identity` (remote actors are not
-  reachable via `/@handle/`; their handles are not locally unique). Confirm the
-  canonical `actor_uri`, then render the hub. A username change moves the alias; the
-  identity URI is unchanged.
+- Resolution: `local_handle_key → local actor → identity`. A bare handle with no host
+  is always local; a handle containing `@` is a remote proxy alias and takes the
+  separate path in §2.1. Confirm the canonical `actor_uri`, then render the hub. A
+  username change moves the alias; the identity URI is unchanged.
 - Only `status = public` actors render here. `internal` / `disabled` / `tombstone`
   → 404 for non-privileged viewers (owner / `manage_options` may preview — see
   SECURITY).
@@ -130,6 +142,86 @@ The `@` prefix avoids collision with existing top-level slugs (pages, `/author/`
 another actor (`actors`, `ap`, `author`, `media`, `notes`, `feed`, `wp-*`, etc.), and
 `local_handle_key` is `UNIQUE` across local actors (DATA-MODEL §3) so a local handle
 resolves to exactly one actor, while remote actors may share a handle.
+
+## 2.1. Remote proxy aliases — `/@{handle}@{host}`, `/group/@{handle}@{host}`
+
+A handle containing `@` addresses a **cached remote** Actor. Two namespaces, because a
+handle alone does not identify an Actor: Lemmy lets a Person and a Community share one
+on a host, so answering with whichever was cached first would make the same address mean
+different things on different sites.
+
+```
+^@([^/]+)/?$                  → ax_actor_handle            (kind defaults to Person)
+^group/@([^/]+)/?$            → ax_actor_handle + kind=Group
+```
+
+### Cached is not the same as addressable
+
+This is the contract, and it is the one thing to carry away from this section:
+
+> A remote Actor is reachable by handle **only** if it holds a verified `acct` address
+> row of the matching kind. Being in the cache is not enough.
+
+Resolution requires a `wp_ax_actor_addresses` row with `address_type = 'acct'`,
+`actor_kind` equal to the namespace's kind, and `status = 'primary'`. The only writer of
+those rows is `axismundi_actors_record_verified_acct_address()`, which runs after
+WebFinger verification. So the dividing line is **how the Actor was discovered**, not
+whether it is a Person or a Group:
+
+```text
+@user@host entered      → WebFinger → acct row written  → /@h@host resolves
+canonical URL entered   → direct AS fetch, no WebFinger → no acct row → 404
+```
+
+Measured 2026-10-04:
+
+| Actor | discovered via | acct rows | `/…@host` |
+|---|---|---|---|
+| `thaumiel999@mastodon.social` (Person) | `@user@host` | 1 | `200` |
+| `lemmykorea` (Group, `lemmy.world/c/lemmykorea`) | canonical URL | 0 | `404` |
+| `general` (Group, NodeBB `/category/2/…`) | canonical URL | 0 | `404` |
+
+A Person discovered by canonical URL would 404 the same way. The asymmetry is not
+Person-versus-Group.
+
+### We do not pay for Lemmy's ambiguity
+
+Owner's decision, 2026-10-04. Lemmy publishes **two** `rel=self` links under one
+`acct:` — `/u/foo` as Person and `/c/foo` as Group — and distinguishes them only in each
+link's `properties` map. That is a defect in Lemmy: `acct:` is one address space and
+Lemmy maps two disjoint namespaces onto it, then depends on unspecified consumer
+behaviour ("the last link wins") to disambiguate.
+
+`axismundi_actors_discover_remote_actor()` takes the **first** `self` link with an
+ActivityPub media type and does not read `properties`. On a Lemmy handle collision we
+therefore resolve the Person, which is what current Mastodon and Misskey are reported to
+do. **We are not adding `properties` parsing to match Lemmy.** The cost lands on us for a
+problem Lemmy created, and the resulting address would still be ambiguous.
+
+The accepted consequence: a remote Actor discovered by canonical URL is addressable only
+at `/actors/{uuid}` (§1), never by handle.
+
+### Deferred option, if this is revisited
+
+Record an `acct` row for a direct-fetch Actor by running one WebFinger round trip under
+the **existing** first-`self` rule and accepting it only when it resolves back to the
+same Actor. A collision simply yields no `acct` row, which is correct — that address
+really is ambiguous. No type logic, one extra outbound request. This would fix
+`lemmykorea` (it has no competing Person) without taking on Lemmy's model. Not
+implemented; outbound requests carry a disclosure obligation.
+
+### Open
+
+- **`self` link normalisation.** `axismundi_actors_webfinger_self_link()` returns early
+  when any `self` is already present, so it adds one when there are none but does not
+  reduce two to one. A misbehaving filter could therefore publish the exact shape we
+  just rejected in Lemmy. The guard belongs at the end of the response: keep only the
+  `self` for the canonical actor URI, or fail the response. WebFinger output is a public
+  surface, so this needs the owner's approval before it ships.
+- Local handles cannot collide across kinds — `wp_ax_actors.local_handle_key` carries a
+  `UNIQUE` index and is independent of `actor_type` (verified against the live schema),
+  so `acct:foo@host` always means exactly one Actor here. Nothing to decide; recorded so
+  the Lemmy discussion is not reopened against us.
 
 ## 3. Hub content & projection sub-routes
 

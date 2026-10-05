@@ -41,6 +41,10 @@ foundations/layout/
     supporting-pane/ SupportingPaneLayout({primary,supporting})       840
 ```
 
+Stylebook 표본: [Feed](http://localhost:8884/social/stylebook/layout/feed),
+[List-detail](http://localhost:8884/social/stylebook/layout/list-detail),
+[Supporting pane](http://localhost:8884/social/stylebook/layout/supporting_pane).
+
 **`ListDetailLayout`이 이미 `compactPane`을 prop으로 받는다.** 상태를 소유하지 않는 올바른
 모양이 이미 있고, 빠진 것은 그것을 *누가 계산하는가*와 *창을 누가 관측하는가* 둘뿐이다.
 

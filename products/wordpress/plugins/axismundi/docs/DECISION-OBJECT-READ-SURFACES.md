@@ -334,6 +334,39 @@ join하지 않는다는 §1의 경계는 이미 지켜지고 있다.
    목록에서는 새 항목이 과거에 끼어든다. Activity 원장은 로컬 수신 시각으로 정렬하므로 이
    문제가 없다. 피드는 §5에서 이미 Activities 몫이라, 이 문제는 객체 컬렉션에만 남는다.
 
+#### 언제 채택하는가, 그리고 그때 무엇이 이것을 지지하는가
+
+**지금은 채택이 아니다.** 단일 Object detail은 A4식의 이름 있는 resolver로 해소되고, 작은
+컬렉션도 매번 합성해서 비싸지 않다.
+
+채택 trigger는 **local과 remote Object를 하나의 정렬과 cursor로 섞는 긴 목록이 실제로
+생길 때**다. 첫 후보는 Group topic directory다 — Group 안에서 local·remote topic을 한 순서로
+보여야 하고, Group 표면은 timeline(Activities)과 topic directory(Object index)를 **둘 다**
+요구하므로 두 축이 거기서 처음 만난다.
+
+그때 A5를 강하게 지지할 근거는 이것이다. **지금 채택하는 이유가 아니라, 하중이 걸렸을 때의
+근거로 적어 둔다.**
+
+- **Mastodon은 원장을 합치고도 별도의 write-time projection을 유지한다.** `statuses` 하나에
+  local 플래그와 remote `uri`를 두고도, 계정별 timeline은 Redis sorted set이다 —
+  `app/lib/feed_manager.rb`의 `push_to_home` / `push_to_list`가 계정 키에 쓰고
+  `zcard`·`zrange`로 읽으며 `MAX_ITEMS`로 자른다(2026-10-05 확인). **원장 통합만으로
+  read-heavy 목록의 비용이 사라지지 않는다**는 선례이고, 거꾸로 읽으면 우리가 원장을 합치지
+  않은 것이 인덱스 필요성을 더 만들지는 않는다는 뜻이기도 하다.
+- **read-time 합성은 page마다 source merge·dedupe·cursor 재계산을 요구한다.** 비용이 쓰는
+  사람이 아니라 **읽는 사람 수에 비례**하므로, 목록이 길어지고 읽기가 늘수록 결국
+  materialized index를 다시 발명하게 된다.
+- **A5는 원장을 합치지 않는다.** source-owned CMS와 cache는 그대로 두고 재생성 가능한
+  listing projection만 쓴다. 즉 §"왜 Actor는 합쳤는데 Object는 못 합치는가"의 비대칭을
+  유지한 채 읽기 성능만 가져온다.
+
+반대로 **지금 채택하면 §A5의 대가 세 가지는 즉시 발생하고 이득은 아직 없는 부하에 비례한다.**
+없는 부하를 근거로 있는 비용을 지불하는 것은 이 저장소가 반복해서 고쳐온 실수다.
+
+채택 시점에 확정해야 할 것은 정렬·pagination 계약이다. 공개 cursor는 offset이 아니라
+`(sort_at DESC, object_uri_hash DESC)` 같은 stable tuple이어야 하고, 내부 `source_ref`와 remote
+cache PK는 계약에 나가지 않는다.
+
 #### 권고 (구현자의 것이며 판정이 아니다)
 
 index를 **후보 집합(membership)의 권위로** 채택하고 **순서의 권위로는 채택하지 않는 것**.

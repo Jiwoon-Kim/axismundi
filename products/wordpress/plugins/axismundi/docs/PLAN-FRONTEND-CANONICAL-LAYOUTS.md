@@ -27,11 +27,12 @@ show-hide / levitate / reflow 는 "가능한 전략"이지 전부 구현하라�
 
 ## 1. 측정된 현황 — 생각보다 많이 서 있다
 
-2026-10-05 측정.
+2026-10-05 최초 측정 뒤, 1·2단계를 적용하고 3·4단계를 다시 측정했다.
 
 ```txt
 foundations/layout/
-  breakpoints/viewport.json        다섯 클래스 선언 — 읽는 JS가 0건
+  breakpoints/viewport.json        다섯 클래스 선언 — useWindowSizeClass가 읽음
+  breakpoints/validate-*.py        JSON과 owning layout stylesheet 임계값을 대조
   panes/pane, panes/pane-group     중립 grid primitive, 변경 불필요
   scaffold/                        appBar · navigationBar · navigationRail · supporting · children
   canonical-examples/
@@ -123,6 +124,32 @@ SupportingPaneLayout({ primary, supporting })                             변경
 채택된 pane 수 표와 일치한다. 현재 CSS가 이미 feed 600/840/1200/1600, list-detail 840/1600,
 supporting 840을 갖고 있으므로 2단계는 **새로 쓰는 것이 아니라 재서 표와 맞는지 확인하는
 일**이다.
+
+### 2026-10-05 fixture 실측 — 3단계 완료
+
+명시적 viewport override 뒤 매 폭에서 새로고침해 첫 render의 동기 size class와 geometry를
+함께 읽었다. pane 도구는 `matchMedia`의 `change` 이벤트를 발행하지 않으므로, 구독 경로가 아닌
+초기 계산을 검증한 측정이다.
+
+| viewport | class | Feed | List-detail |
+| --- | --- | --- | --- |
+| 400px | compact | 1열 | list 1 pane |
+| 700px | medium | 2열 | list 1 pane |
+| 1000px | expanded | 3열 | list + detail, fixed pane 360px |
+| 1300px | large | 4열 | list + detail, fixed pane 412px |
+| 1700px | extra-large | 5열 | list + detail + extra, outer panes 412px |
+
+Feed의 gap은 각 폭에서 24px로 유지됐고, List-detail의 pane은 겹치지 않았다. compact detail
+상태는 fixture가 URL을 아직 갖지 않아 `list`만 표본으로 삼았다. layout의 역할은 그 파생값을
+받는 것이므로, detail 선택의 실제 검증은 첫 route 소비자가 URL을 가질 때 한다.
+
+### 2026-10-05 wp-admin VQA — 4단계 완료, 넓은 화면만 참고
+
+`wp-admin/site-editor.php?p=%2Fpage&postId=13`의 넓은 화면은 전역 navigation, 페이지
+collection, 선택한 페이지의 editor canvas를 나란히 둔다. collection과 detail은 각각 독립적으로
+스크롤한다. 이것은 제품이 list-detail을 요구할 수 있다는 **VQA 참고**일 뿐 React primitive의
+수치·API·breakpoint 출처는 아니다. 700px에서는 WordPress site editor가 이 측정 환경에서
+완전히 렌더되지 않아 compact·medium의 제품 결론은 내리지 않았다.
 
 ### medium의 navigation surface는 전역 규칙이 아니다
 

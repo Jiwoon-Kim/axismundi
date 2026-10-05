@@ -1,0 +1,35 @@
+@layer axismundi.patterns {
+	.ax-stylebook--app-bars > .ax-scaffold__main {
+		padding: var( --ax-layout-window-margin );
+	}
+
+	.ax-stylebook-app-bars__sample {
+		display: grid;
+		gap: var( --md-sys-measurement-space100 );
+		overflow: hidden;
+		border: 1px dashed var( --md-sys-color-outline-variant );
+	}
+
+	.ax-stylebook-app-bars__sample + .ax-stylebook-app-bars__sample {
+		margin-block-start: var( --md-sys-measurement-space300 );
+	}
+
+	.ax-stylebook-app-bars__sample .ax-stylebook-page__note {
+		margin: 0;
+		padding-inline: var( --md-sys-measurement-space200 );
+		padding-block-end: var( --md-sys-measurement-space200 );
+	}
+
+	.ax-stylebook-app-bars__scaffold-frame {
+		overflow: hidden;
+		border: 1px dashed var( --md-sys-color-outline-variant );
+	}
+
+	.ax-stylebook-app-bars__scaffold-frame .ax-scaffold {
+		min-block-size: 180px;
+	}
+
+	.ax-stylebook-app-bars__scaffold-body {
+		padding: var( --md-sys-measurement-space300 );
+	}
+}

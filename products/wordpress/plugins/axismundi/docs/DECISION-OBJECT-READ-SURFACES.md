@@ -196,6 +196,74 @@ moderation capability
 
 판정은 소유자의 것이고, **다섯 안 중 어느 것도 기존 문서가 배제하지 않는다.**
 
+### 왜 Actor는 합쳤는데 Object는 못 합치는가 — 2026-10-05 추가
+
+A5를 읽기 전에 이것이 먼저다. **같은 S2S를 다룬다고 저장 모델까지 대칭일 이유는 없고**,
+모델을 가르는 것은 프로토콜이 아니라 **원본의 소유권과 수명**이다. 이 축이 머리에 없으면 왜
+같은 ActivityPub인데 Actor와 Object의 프론트 정체성이 다르고 프록시 뷰 구조가 다른지를
+설명할 수 없다.
+
+#### Actor — 정체성 도메인이라 한 원장으로 합쳐졌다
+
+로컬 Actor를 WordPress `user`만으로 표현할 수 없어서 — Person·Group·Service, 로컬 handle,
+actor UUID, federation metadata가 들어가지 않는다 — 새 원장을 만들었다. 그 결과 **원격
+Actor도 같은 "정체성" 문제로 읽히므로 같은 원장 안에 들어갈 수 있었다.**
+
+```sql
+wp_ax_identities   origin = 'local' | 'remote'      canonical_uri
+wp_ax_actors       identity_id → identities         payload_json
+```
+
+`repository.php`의 `is_local()`이 `origin` 하나로 갈리고, 주석이 그 구조를 그대로 적는다 —
+"Two vocabularies share this column, and `is_local()` decides which one applies."
+
+합칠 수 있었던 두 번째 이유는 **부풀지 않는다**는 것이다. 계정은 수명이 길고 수량이 콘텐츠처럼
+폭발하지 않는다.
+
+#### Object — 콘텐츠 도메인이라 원장이 갈린다
+
+로컬 Object의 원본은 `WP_Post`와 CMS 생명주기다. 원격 Object는 관측·inbox로 들어온
+**만료 가능한 스냅샷**이고, 그 수명은 객체 자신이 아니라 **누가 왜 붙잡고 있는가**가 정한다.
+
+```txt
+wp_ax_object_leases   "Multi-reason retention leases for URI-keyed remote object observations"
+```
+
+마지막 lease가 풀리면 행이 사라진다. **행의 존재가 객체의 존재와 무관한 테이블은 원장이 아니다.**
+
+그러므로 둘을 하나의 Object 원장으로 합치면 둘 중 하나가 반드시 깨진다 — 로컬 CMS를
+복제하거나, 원격 캐시를 권위 데이터처럼 다루거나.
+
+#### 그래서 공통 테이블은 원장이 아니라 projection이다
+
+```txt
+local WP source ─┐
+                 ├─> 재생성 가능한 read / listing projection index
+remote cache  ───┘
+```
+
+`wp_ax_object_index`가 그 첫 형태이고, A5의 논점은 **"통합 테이블을 만들까"가 아니라 "이미
+필요한 통합 읽기 projection을 어디까지 확장할까"**이다. 이 단어 차이를 놓치면 §1의 경계가
+흐려진다.
+
+같은 이유로 §7-B-1의 resolver도 **공통 원장 resolver가 아니라 `source` 컬럼을 가진
+projection-index resolver**다.
+
+#### 프록시 뷰의 차이는 여기서 필연적으로 나온다
+
+```txt
+Actor    통합된 계정 정체성
+         UUID / handle로 해소되고, local·remote가 같은 actor read surface를 쓴다
+         둘 다 프론트에 렌더된다
+
+Object   local  = WordPress의 기존 canonical URL
+         remote = 캐시된 관측에 대한 불투명한 로컬 view key
+         같은 reader surface에 섞이려면 공통 listing index를 거쳐야 한다
+```
+
+블록 테마의 프록시 뷰에서 설계 차이로 드러난 것이 이것이다. 차이는 구현의 불일치가 아니라
+**도메인의 비대칭**이고, 없앨 대상이 아니다.
+
 ### A5. 쓸 때 합성하기 — 이미 절반 있는 테이블
 
 2026-10-04 추가. A1~A4는 모두 **읽을 때** 합성하는 네 방식이다. A5는 합성을 쓸 때로

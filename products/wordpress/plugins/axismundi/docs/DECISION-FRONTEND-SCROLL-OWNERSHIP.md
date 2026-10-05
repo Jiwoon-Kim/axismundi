@@ -125,7 +125,10 @@ JSX 핀 — 각 마커가 **정확히 1회** 등장함을 먼저 단정하고, �
 
 - **독립 pane 스크롤을 언제 켜는가.** 첫 다중 pane route가 생길 때이고, 그 route가 3-3을
   충족해야 한다. 지금 다중 pane은 데모에만 있다.
-- **sticky chrome의 구현.** rail이 스크롤에 남아야 하는 것은 확정이지만, app bar만 sticky인지
+- **sticky chrome의 구현.** 2026-10-06 현재 구현된 것은 document scroll 쪽 절반뿐이고,
+  chrome persistence는 0이다 — `position: sticky`가 아직 어디에도 없다. topology 표면의
+  main이 `140dvb`라 그 페이지를 스크롤하면 바로 보이므로 숨는 결함은 아니다.
+  rail이 스크롤에 남아야 하는 것은 확정이지만, app bar만 sticky인지
   rail도 `block-size: 100dvb` + sticky인지는 측정으로 정한다. 특히 rail이 자기 내용보다 짧은
   뷰포트에서 어떻게 되는지는 재야 한다.
 
@@ -137,3 +140,5 @@ JSX 핀 — 각 마커가 **정확히 1회** 등장함을 먼저 단정하고, �
   채택되면 그 절은 canonical primitive 증명이 아니라 조합 smoke test로 낮춰 적어야 한다.
 - `_data/surface.yml` — dialog scrolling(1-4), sheet scroll 방향.
 - `_data/app_bar.yml` — on-scroll 토큰과 "scroll-container owner" 위임(3-1).
+- `DECISION-FRONTEND-LAYOUT-NAMING.md` — 같은 턴의 명명 정렬. 이름이 소유를
+  가리키므로 함께 읽는다.

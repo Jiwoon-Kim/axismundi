@@ -5,9 +5,10 @@
 		padding: var( --ax-layout-window-margin );
 	}
 
-	.ax-stylebook.ax-scaffold > .ax-scaffold__content > .ax-scaffold__body > .ax-scaffold__main {
+	.ax-stylebook.ax-scaffold {
+		--ax-scaffold-main-padding: var( --ax-layout-window-margin );
+
 		display: grid;
-		padding: var( --ax-layout-window-margin );
 	}
 
 	.ax-stylebook__header {
@@ -35,20 +36,45 @@
 		line-height: var( --md-sys-typescale-label-medium-line-height );
 	}
 
-	.ax-canonical-layout-demo {
-		block-size: calc( 100dvb - 40px );
-		min-block-size: calc( 100dvb - 40px );
-		overflow: hidden;
-	}
-
-	.ax-canonical-layout-demo > .ax-scaffold__content > .ax-scaffold__body > .ax-scaffold__main {
-		overflow: auto;
-	}
-
 	.ax-canonical-layout-demo__content {
 		display: grid;
 		gap: var( --ax-layout-pane-gap );
 		min-block-size: 0;
+	}
+
+	.ax-canonical-layout-topology .ax-scaffold__rail {
+		background: var( --md-sys-color-secondary-container );
+	}
+
+	.ax-canonical-layout-topology .ax-scaffold__app-bar {
+		background: var( --md-sys-color-tertiary-container );
+	}
+
+	.ax-canonical-layout-topology .ax-scaffold__main {
+		background: var( --md-sys-color-primary-container );
+	}
+
+	.ax-canonical-layout-topology__main {
+		display: grid;
+		align-content: start;
+		gap: var( --md-sys-measurement-space300 );
+		min-block-size: 140dvb;
+	}
+
+	.ax-canonical-layout-topology__main h1,
+	.ax-canonical-layout-topology__main p {
+		margin: 0;
+	}
+
+	.ax-canonical-layout-topology__blocks {
+		display: grid;
+		grid-template-columns: repeat( auto-fit, minmax( 10rem, 1fr ) );
+		gap: var( --ax-layout-pane-gap );
+	}
+
+	.ax-canonical-layout-topology__blocks div {
+		min-block-size: 16rem;
+		background: var( --md-sys-color-surface-container-highest );
 	}
 
 	.ax-canonical-layout-demo__heading {

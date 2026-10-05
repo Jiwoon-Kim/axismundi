@@ -79,6 +79,7 @@ export function StylebookPage( { component, layout, style, styles } ) {
 				<a href="/social/stylebook/components/dividers">Dividers</a>
 				<a href="/social/stylebook/components/navigations">Navigation</a>
 				<a href="/social/stylebook/components/app-bars">App bars</a>
+				<a href="/social/stylebook/layout/topology">Scaffold topology</a>
 				<a href="/social/stylebook/layout/feed">Feed</a>
 				<a href="/social/stylebook/layout/list-detail">List-detail</a>
 				<a href="/social/stylebook/layout/supporting_pane">Supporting pane</a>

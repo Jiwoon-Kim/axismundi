@@ -10,8 +10,13 @@ import { Card } from '../../components/cards/card';
 import { Icon } from '../../components/material/icon';
 import { NavigationBar } from '../../components/navigations/nav-bar';
 import { NavigationRail } from '../../components/navigations/nav-rail';
+import { useEffect, useRef, useState } from '@wordpress/element';
 
 const layoutDefinitions = {
+	topology: {
+		title: 'Scaffold topology',
+		description: 'The chrome and content regions are measured separately from canonical layout composition.',
+	},
 	feed: {
 		title: 'Feed',
 		description: 'An activity feed keeps individual objects scannable while its card grid reflows.',
@@ -51,7 +56,7 @@ function DemoPane( { children, className } ) {
 	return <Pane className={ [ 'ax-canonical-layout-demo__pane', className ].filter( Boolean ).join( ' ' ) }>{ children }</Pane>;
 }
 
-function DemoShell( { activeId, title, subtitle, children } ) {
+function DemoShell( { activeId, title, subtitle, children, className } ) {
 	const appBar = (
 		<AppBar
 			title={ title }
@@ -68,13 +73,78 @@ function DemoShell( { activeId, title, subtitle, children } ) {
 
 	return (
 		<Scaffold
-			className="axismundi-social ax-stylebook ax-canonical-layout-demo"
+			className={ [ 'axismundi-social', 'ax-stylebook', 'ax-canonical-layout-demo', className ].filter( Boolean ).join( ' ' ) }
 			appBar={ appBar }
 			navigationBar={ <NavigationBar destinations={ destinations } activeId={ activeId } label="Primary navigation" /> }
 			navigationRail={ <NavigationRail destinations={ destinations } activeId={ activeId } label="Primary navigation" filled divider /> }
 		>
 			{ children }
 		</Scaffold>
+	);
+}
+
+function readTopology( root ) {
+	const rail = root.querySelector( '.ax-scaffold__rail' );
+	const content = root.querySelector( '.ax-scaffold__content' );
+	const appBar = root.querySelector( '.ax-scaffold__app-bar' );
+
+	if ( ! rail || ! content || ! appBar ) {
+		return null;
+	}
+
+	const railBounds = rail.getBoundingClientRect();
+	const contentBounds = content.getBoundingClientRect();
+	const appBarBounds = appBar.getBoundingClientRect();
+	const scrollContainers = [ ...root.querySelectorAll( '*' ) ].filter( ( element ) => {
+		const { overflowY } = window.getComputedStyle( element );
+		return ( 'auto' === overflowY || 'scroll' === overflowY ) && element.scrollHeight > element.clientHeight;
+	} );
+
+	return {
+		railRight: Math.round( railBounds.right ),
+		contentLeft: Math.round( contentBounds.left ),
+		appBarLeft: Math.round( appBarBounds.left ),
+		scaffoldScrollContainers: scrollContainers.length,
+	};
+}
+
+function TopologyFixture( { sizeClass } ) {
+	const fixtureRef = useRef( null );
+	const [ topology, setTopology ] = useState( null );
+
+	useEffect( () => {
+		const measure = () => setTopology( readTopology( fixtureRef.current ) );
+
+		measure();
+		window.addEventListener( 'resize', measure );
+		return () => window.removeEventListener( 'resize', measure );
+	}, [] );
+
+	return (
+		<section ref={ fixtureRef } className="ax-canonical-layout-fixture" aria-label="Scaffold topology">
+			<p className="ax-canonical-layout-fixture__readout" data-size-class={ sizeClass }>
+				window size class: <strong>{ sizeClass }</strong> &middot; { topology
+					? `rail right ${ topology.railRight }px · content left ${ topology.contentLeft }px · app bar left ${ topology.appBarLeft }px · scaffold scroll containers ${ topology.scaffoldScrollContainers }`
+					: 'measuring topology…' }
+			</p>
+			<DemoShell
+				activeId="home"
+				className="ax-canonical-layout-topology"
+				title="Scaffold topology"
+				subtitle="Navigation and content occupy separate regions"
+			>
+				<section className="ax-canonical-layout-topology__main" aria-labelledby="topology-heading">
+					<h1 id="topology-heading">Content pane</h1>
+					<p>The navigation rail is its sibling. The app bar is the first region inside this content pane.</p>
+					<div className="ax-canonical-layout-topology__blocks" aria-hidden="true">
+						<div />
+						<div />
+						<div />
+						<div />
+					</div>
+				</section>
+			</DemoShell>
+		</section>
 	);
 }
 
@@ -209,17 +279,11 @@ function SupportingPaneFixture() {
  * each topology is composed with the application chrome it will eventually host.
  *
  * @param {Object} props Component props.
- * @param {'feed'|'list-detail'|'supporting_pane'} props.layout Canonical layout key.
+ * @param {'topology'|'feed'|'list-detail'|'supporting_pane'} props.layout Layout demonstration key.
  * @return {import('@wordpress/element').ReactNode} Canonical layout fixture.
  */
 export function CanonicalLayoutFixture( { layout } ) {
 	const definition = layoutDefinitions[ layout ];
-	const fixture = {
-		feed: <FeedFixture />,
-		'list-detail': <ListDetailFixture />,
-		supporting_pane: <SupportingPaneFixture />,
-	}[ layout ];
-
 	/*
 	 * The first consumer of the window size class, and the only way to verify the
 	 * hook at all: a signal with nobody reading it cannot be measured. It is read
@@ -227,6 +291,16 @@ export function CanonicalLayoutFixture( { layout } ) {
 	 * stays in their stylesheets, where a media query belongs.
 	 */
 	const sizeClass = useWindowSizeClass();
+	const fixture = {
+		topology: <TopologyFixture sizeClass={ sizeClass } />,
+		feed: <FeedFixture />,
+		'list-detail': <ListDetailFixture />,
+		supporting_pane: <SupportingPaneFixture />,
+	}[ layout ];
+
+	if ( 'topology' === layout ) {
+		return fixture;
+	}
 
 	return (
 		<section className="ax-canonical-layout-fixture" aria-label={ definition.title }>

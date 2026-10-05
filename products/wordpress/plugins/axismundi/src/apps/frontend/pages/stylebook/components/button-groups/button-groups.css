@@ -1,6 +1,6 @@
 @layer axismundi.patterns {
-	.ax-stylebook--button-groups > .ax-scaffold__content > .ax-scaffold__body > .ax-scaffold__main {
-		padding: var( --ax-layout-window-margin );
+	.ax-stylebook--button-groups {
+		--ax-scaffold-main-padding: var( --ax-layout-window-margin );
 	}
 
 	/*

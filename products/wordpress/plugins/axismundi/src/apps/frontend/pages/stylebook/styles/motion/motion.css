@@ -1,6 +1,6 @@
 @layer axismundi.patterns {
-	.ax-stylebook--motion > .ax-scaffold__content > .ax-scaffold__body > .ax-scaffold__main {
-		padding: var( --ax-layout-window-margin );
+	.ax-stylebook--motion {
+		--ax-scaffold-main-padding: var( --ax-layout-window-margin );
 	}
 
 	.ax-stylebook-motion,

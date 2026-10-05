@@ -32,6 +32,7 @@
 	.ax-scaffold__main {
 		grid-area: main;
 		min-inline-size: 0;
+		padding: var( --ax-scaffold-main-padding, 0 );
 	}
 
 	.ax-scaffold__bar,

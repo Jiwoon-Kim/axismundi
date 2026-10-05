@@ -1,4 +1,4 @@
-import { AppLayout } from './templates/app-layout';
+import { Scaffold } from './foundations/layout/scaffold';
 import { Component, Suspense, lazy } from '@wordpress/element';
 
 /*
@@ -46,7 +46,7 @@ function getFrontendRoute() {
 	}
 
 	const stylebookLayout = relativePath.match(
-		/^stylebook\/layout\/(feed|list-detail|supporting_pane)$/
+		/^stylebook\/layout\/(topology|feed|list-detail|supporting_pane)$/
 	);
 
 	if ( stylebookLayout ) {
@@ -147,8 +147,8 @@ export function FrontendApp() {
 	}
 
 	return (
-		<AppLayout>
+		<Scaffold>
 			{ 'object' === route.name ? <PublicObjectTemplate /> : <HomeTemplate /> }
-		</AppLayout>
+		</Scaffold>
 	);
 }

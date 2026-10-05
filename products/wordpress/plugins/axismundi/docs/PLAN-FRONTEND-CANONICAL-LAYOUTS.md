@@ -104,13 +104,18 @@ route              URL에서 파생해서 내려준다
 ## 4. 공개 API — 거의 바뀌지 않는다
 
 ```js
-Scaffold({ appBar, navigationBar, navigationRail, supporting, children })  변경 없음
+Scaffold({ appBar, navigationBar, navigationRail, supporting, children })  현재 공개 foundation
 Pane({ as, className, children })                                         변경 없음
 PaneGroup({ className, children })                                        변경 없음
 FeedLayout({ children })                                                  변경 없음 — 순수 CSS
 ListDetailLayout({ list, detail, extra, compactPane })                    변경 없음
 SupportingPaneLayout({ primary, supporting })                             변경 없음
 ```
+
+`AppLayout`은 이 앱에서 chrome 정책을 선택하지 않고 `Scaffold`에 슬롯을 그대로 전달하던
+pass-through였으므로 제거했다. 현재 `FrontendApp`이 route context를 선택하고 `Scaffold`가
+레이아웃 슬롯을 배치한다. 같은 chrome 조합이 둘 이상의 route에서 반복될 때에만 그 정책을
+소유하는 상위 composition 계층을 다시 도입한다.
 
 `SupportingPaneLayout`에 `supportingVisible`을 붙이지 않는다. 채택된 기록이 show-hide를
 "가능한 전략"으로만 두었고 현재 구현된 것은 840에서의 reflow다. 제품 요구가 생길 때 붙인다.

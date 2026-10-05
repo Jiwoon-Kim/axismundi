@@ -50,12 +50,19 @@ foundations/layout/breakpoints/use-window-size-class.js        신규
 ```
 
 ```js
-useWindowSizeClass() → 'compact' | 'medium' | 'expanded' | 'large' | 'extraLarge' | null
+useWindowSizeClass() → 'compact' | 'medium' | 'expanded' | 'large' | 'extraLarge'
 ```
 
 경계는 `viewport.json`에서 읽고 `matchMedia`로 구독한다. 그래야 그 JSON이 장식이 아니게
-된다. 마운트 전에는 `null`을 돌려주고 CSS가 레이아웃을 들고 있게 한다 — 첫 페인트에
-깜빡이면 안 된다.
+된다.
+
+**첫 render에서 동기로 계산한다. `null` 구간을 두지 않는다.** 이 문서의 초고는 마운트 전에
+`null`을 돌려주자고 적었는데 틀렸다. `null`은 서버 렌더가 답할 수 없을 때 필요한 것이고, 이
+앱에는 그런 구간이 없다 — `src/apps/frontend/index.js`가 `createRoot(...).render(...)`로
+클라이언트에서만 마운트하고 `hydrateRoot`는 어디에도 없으므로, 첫 render 시점에 `matchMedia`가
+이미 답한다. 오히려 `null`을 두면 **CSS가 대신 들어줄 수 없는 바로 그 경우**에 한 프레임짜리
+잘못된 구조가 생긴다. nav item의 orientation처럼 DOM이 갈리는 전환에서 첫 프레임이 vertical로
+그려졌다가 바뀌는 식이다. 서버 렌더가 생기면 그때 다시 논의한다.
 
 **이 훅은 스타일링용이 아니다.** 미디어 쿼리로 표현되는 것은 미디어 쿼리로 남긴다. 훅은
 **CSS가 표현할 수 없는 것**에만 쓴다. 이 경계는 nav item에서 측정으로 확인됐다 — vertical과
@@ -105,17 +112,37 @@ SupportingPaneLayout({ primary, supporting })                             변경
 
 ## 5. breakpoint × pane topology
 
-| 클래스 | Scaffold chrome | Feed | List-detail | Supporting pane |
+| 클래스 | navigation surface | Feed | List-detail | Supporting pane |
 | --- | --- | --- | --- | --- |
 | compact 0–599 | bottom bar | 1열 | **1 pane** — route가 list/detail 선택 | 세로 스택 |
-| medium 600–839 | rail | 2열 | 1 pane | 세로 스택 |
-| expanded 840–1199 | rail + supporting | 적응형 그리드, 카드 최소 240 | **2 pane** | 가로 7:3 |
-| large 1200–1599 | rail | 〃 | 2 | 〃 |
-| extra-large 1600+ | rail | 〃 | 2, `extra`가 있으면 **3** | 〃 |
+| medium 600–839 | **route가 고른다** | 2열 | 1 pane | 세로 스택 |
+| expanded 840–1199 | rail | 적응형 그리드, 카드 최소 240 | **2 pane** | 고정 **360px** |
+| large 1200–1599 | rail | 〃 | 2 | 고정 **412px** |
+| extra-large 1600+ | rail | 〃 | 2, `extra`가 있으면 **3** | 고정 412px |
 
 채택된 pane 수 표와 일치한다. 현재 CSS가 이미 feed 600/840/1200/1600, list-detail 840/1600,
 supporting 840을 갖고 있으므로 2단계는 **새로 쓰는 것이 아니라 재서 표와 맞는지 확인하는
 일**이다.
+
+### medium의 navigation surface는 전역 규칙이 아니다
+
+M3는 medium에서 bar와 rail을 **둘 다 허용**하고 "가로 공간과 세로 공간 중 무엇을 우선할지"를
+제품이 정하라고 한다. 그 사실은 `navigation_bar.yml`의 discrepancy에 이미 미결로 적혀 있다.
+현재 `scaffold.css`가 600에서 rail로 바꾸는 것은 **baseline이지 세 fixture 전체의 제품
+결정이 아니다.** 표에 `medium → rail`로 박으면 열어 둔 판정을 조용히 닫는 것이 된다.
+
+### 정정 — supporting pane은 비율이 아니라 고정 폭이다
+
+이 문서의 초고는 expanded를 `7:3`으로 적었다. **틀렸고, 출처도 잘못됐다.** 그 비율은 Android
+샘플의 legacy View 구현이고, 채택된 기록은 다른 것을 말한다 — "Fixed pane widths are Frontend
+spatial tokens: `360px` at expanded and `412px` at large and extra-large."
+(`DECISION-FRONTEND-ADAPTIVE-LAYOUT.md`)
+
+그리고 **구현은 처음부터 옳았다.** `supporting-pane.css`는 840에서
+`minmax( 0, var( --ax-layout-fixed-pane-width ) )`로 고정 폭 토큰을 쓴다. 즉 이 계획서가
+그대로 실행됐다면 맞는 코드를 틀리게 고치라고 시켰을 것이다. 샘플 구현의 수치를 계약처럼
+옮겨 적는 것은 이 저장소가 Lab·VQA·Figma kit에서 반복해 걸러낸 오류이고, 여기서 한 번 더
+났다.
 
 **1200 / 1600 Scaffold 분기는 이번에 넣지 않는다.** `DECISION-FRONTEND-NAVIGATION-COMPONENT-
 SLICING.md` §2가 "그 두 분기는 rail이 expanded 상태를 가질 때 같이 따라온다"고 적었고 rail
@@ -138,19 +165,45 @@ expanded는 아직 deferred다. 지금 넣으면 소비자 없는 분기가 된�
 
 ```txt
 1  use-window-size-class + viewport.json을 실제로 읽게 하기
-2  canonical fixture를 다섯 클래스에서 측정 — 현재 CSS가 5절 표와 맞는지
-3  스타일북 레이아웃 표본, 측정 readout 포함
-4  (rail expanded가 올 때) 1200 / 1600 분기
+2  임계값 일치 검증기 — 훅과 layout stylesheet가 같은 네 숫자를 쓰는지
+3  Feed와 List-detail을 다섯 클래스에서 측정 — 현재 CSS가 5절 표와 맞는지
+4  스타일북 레이아웃 표본, 측정 readout 포함
+5  Sheet
+6  Supporting pane 완성 — compact·medium 표현
+7  (rail expanded가 올 때) 1200 / 1600 분기
 ```
 
-Sheet·dialog는 이 다음이다. `surface.yml`이 presentation을 breakpoint에서 전환하는 것으로
-정의하므로, breakpoint 신호가 없으면 presentation을 고를 수 없다.
+### 임계값은 두 곳에 적힌다 — 그래서 검증기가 필요하다
+
+훅이 `viewport.json`을 읽어도 **CSS와 자동으로 한 출처가 되지는 않는다.** 채택된 기록이 그
+이유를 이미 적어 뒀다 — "A custom property cannot supply a media-query condition, so those
+threshold literals remain in the owning layout stylesheet." 즉 `600 / 840 / 1200 / 1600`은
+구조적으로 두 벌이다.
+
+그러므로 **둘이 같은지 비교하는 작은 검증기**가 1단계와 같이 가야 한다. 이번 세션이 보여준
+것 그대로다 — 기록만 하고 강제하지 않은 수치는 드리프트하고, 심지어 아예 구현되지 않은
+채로도 통과한다(rail의 64dp).
+
+### Feed와 List-detail이 Supporting pane보다 먼저다
+
+Supporting pane은 **양쪽 끝에서 Sheet에 묶여 있다.** 채택된 기록의 미결 목록에 "whether a
+supporting pane is co-planar, floating, docked, reflowed, or hidden"이 있고, compact·medium의
+답은 sheet 계열이다. 그리고 같은 기록이 "at extra-large, a standard side sheet may become a
+third pane"이라고 적는다.
+
+지금 서 있는 것은 840의 reflow뿐이고 그것은 이미 맞다. 그러니 Feed와 List-detail을 끝내고,
+Sheet를 세운 뒤, Supporting pane을 완성하는 순서가 된다. Sheet 자체는 breakpoint 신호를
+기다린다 — `surface.yml`이 presentation을 breakpoint에서 전환하는 것으로 정의하기 때문이다.
 
 ## 8. 미결 — 소유자 판정
 
 - 6절의 승격 기준 네 개를 이대로 둘 것인가.
-- `useWindowSizeClass`가 `null`을 돌려주는 구간(마운트 전)에 대해, 호출자가 무엇을
-  렌더해야 하는가. 지금 제안은 "CSS가 들고 있게 두고 JS는 아무 선택도 하지 않는다"이다.
+- **medium에서 어느 navigation surface를 쓸 것인가.** M3가 bar와 rail을 둘 다 허용하고
+  제품이 정하라고 한 자리다. `scaffold.css`의 현재 600 전환은 baseline이고, route마다
+  다를 수 있다. `navigation_bar.yml`에도 같은 미결이 적혀 있다.
+- 블록 테마에 이미 list-detail 모양의 페이지가 있다. 그것이 topology의 VQA 참고가 되는지,
+  아니면 React primitive와 무관한 템플릿 구성일 뿐인지. 세 층 경계상 **승격 대상은 아니지만**
+  "이 토폴로지가 제품에서 어떻게 보여야 하는가"의 참고로는 쓸 수 있다.
 - Android 예제의 `600 / 840 / 1240` 경계는 **채택하지 않는다**(예제의 구현 선택이고 현재
   Expressive 표가 아니다). m3.material.io 문서 사이트 CSS의 `600 / 960 / 1295`도 마찬가지로
   그 사이트 자신의 chrome 규칙이다. 둘 다 `viewport.json`을 바꿀 근거가 아니라는 것을

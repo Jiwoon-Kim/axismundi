@@ -400,6 +400,82 @@ URI이거나 그 해시다. URI를 경로에 넣을지 질의 인자로 넣을�
 
 버전이 3층(plugin / DB / protocol)인데 읽기 API의 `v1`이 어느 층에 묶이는가.
 
+### B-1. Social 라우트의 모양 — 2026-10-05 추가
+
+§7-B가 "키가 canonical URI인가 그 해시인가"를 미결로 남겼는데, 그 미결이 **라우트 모양과
+묶인다**는 것이 이번에 드러났다. 식별자를 먼저 정하고 라우트를 나중에 정하는 순서가 아니다.
+
+검토된 형태는 이것이다. **채택이 아니라 검토 결과이고**, A5 판정이 소유자에게 남아 있는 한
+이것도 같이 열려 있다.
+
+```text
+/social/objects/:objectKey      타입을 모르는 진입점 — resolver
+/social/notes/:objectKey        Note의 canonical view
+/social/articles/:objectKey     Article의 canonical view
+```
+
+**두 축이지 하나가 아니다.** 섞어서 한 번 틀렸으므로 적어 둔다.
+
+```text
+라우트 교정   resolver가 타입을 알아낸 뒤 올바른 typed route로 replace 이동한다.
+              typed route에 잘못된 타입이 들어와도 같은 교정을 한다.
+              `replace`인 이유는 경유지가 히스토리에 남으면 뒤로 가기가 이상해지기 때문이다.
+
+렌더러 폴백   object.type -> NoteView | ArticleView | ... -> GenericObjectView -> NotFound
+              전용 화면이 없는 타입(Question, Image …)은 generic이 받는다.
+```
+
+착상은 WordPress의 template hierarchy이고, **가져온 것은 폴백 사슬이지 "URL을 고정한다"가
+아니다.** WordPress는 서버에서 같은 주소에 다른 템플릿을 고르지만, React SPA에서는 공유
+가능한 의미를 URL에 두고 `replace`로 교정하는 편이 낫다. 이 문서의 초고 논의에서 그 둘을
+묶어 "라우트는 하나여야 한다"고 읽은 적이 있는데, 유추를 문자 그대로 적용한 오독이었다.
+
+**타입은 조회의 주키가 아니다.** URL의 `notes`/`articles`는 표현과 검증 제약이고, 조회는
+`objectKey`로 한다. 그래야 새 Object type이 들어와도 라우팅을 다시 설계하지 않는다.
+
+#### objectKey
+
+숫자 PK를 쓰지 않는다. `?p=123`은 local post id이고 remote cache의 `id=123`은 저장소 구현
+상세이며(`REMOTE-OBJECTS.md §1`이 노출을 금지한다), **둘이 같은 숫자일 수 있다.**
+
+키는 canonical Object URI에서 파생한다. 원격 캐시가 이미 URI의 SHA-256을 쓰고 있으므로
+그것을 그대로 공통 키로 삼을 수 있고, 캐시가 만료됐다 다시 관측돼도 같은 URI면 같은 키다.
+
+표현은 아직 미결이고, 길이가 공개 계약의 일부라는 점만 기록한다.
+
+```text
+hex SHA-256        64자
+base64url SHA-256  43자   같은 256비트의 다른 표현. 절단이 아니므로 충돌 위험을 더하지 않는다
+```
+
+DB는 hex를 계속 쓰고 라우트/API 경계에서만 encode·decode하는 형태가 가능하다. 어느 표현을
+택하든 resolver는 해시로 조회한 뒤 **canonical URI를 다시 검증**해야 한다.
+
+#### 원격 Object를 우리 주소에서 보이는 것은 미결이 아니다
+
+이것을 미결로 적지 않는다. **이미 채택된 전제다** — `object-view-route.php`가 캐시된 원격
+Object의 사람용 HTML 문서를 이미 SSR하고, Mastodon과 Misskey도 원격 Actor·Note를 자기
+reader surface에서 보여준다.
+
+`ROUTING.md` §2.1이 남긴 미결은 이것과 다른 질문이다. 그것은 **actors의 `/actors/{uuid}`
+라우트**가 원격 Actor를 다시 서빙할 때 canonical 포인터를 유지할지 철회할지였다. 두 미결을
+묶으면 Object 쪽의 이미 선 결정을 열어 둔 것처럼 만들게 되고, 한 번 그렇게 적은 적이 있다.
+
+대신 Social route가 **기존 SSR view의 보호 성질을 상속한다**고 적는다.
+
+```text
+cached projection만 읽는다 — 라우트 렌더 중 원격 fetch는 하지 않는다
+publicly_listable / visibility gate를 다시 적용한다
+원본 human_url 또는 canonical Object URI를 유지하고 표시한다
+Social 셸이 noindex이므로 원격 원본의 검색 정체성을 빼앗지 않는다
+```
+
+#### 이것이 A5와 묶인다
+
+위 라우트는 `objectKey` 하나로 local과 remote를 모두 해소할 수 있어야 성립하고, 그러려면
+§A5가 지적한 결손 — 정렬 키, `object_type`, 소유자 adapter — 이 메워져야 한다. **즉 라우트
+모양을 먼저 구현하면 A5를 코드로 채택하는 것이 된다.** 다섯 안의 판정이 먼저다.
+
 ### D. local과 remote의 공통 목록이 나중에 필요해지는가
 
 §4는 **지금** 합치지 않는다는 결정이다. "모든 미해소 신고" 같은 교차 목록이 필요해지면,

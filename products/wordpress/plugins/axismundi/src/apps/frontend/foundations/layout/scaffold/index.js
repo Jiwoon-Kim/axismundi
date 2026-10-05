@@ -1,8 +1,8 @@
 import { Pane } from '../panes/pane';
 
 /**
- * Places application chrome around a content region. The rail is a sibling of
- * that region; the app bar, primary pane, and optional supporting pane live
+ * Places application chrome around a content pane. The rail is a sibling of
+ * that pane; the app bar, primary pane, and optional supporting pane live
  * inside it. The scaffold owns window-level geometry only.
  *
  * @param {Object} props Component props.
@@ -36,7 +36,7 @@ export function Scaffold( {
 			{ navigationRail ? (
 				<div className="ax-scaffold__rail">{ navigationRail }</div>
 			) : null }
-			<div className="ax-scaffold__content">
+			<Pane className="ax-scaffold__content">
 				{ appBar ? (
 					<div className="ax-scaffold__app-bar">{ appBar }</div>
 				) : null }
@@ -50,7 +50,7 @@ export function Scaffold( {
 						</Pane>
 					) : null }
 				</div>
-			</div>
+			</Pane>
 		</div>
 	);
 }

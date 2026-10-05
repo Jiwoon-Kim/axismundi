@@ -229,7 +229,13 @@ wp_ax_actors       identity_id → identities         payload_json
 wp_ax_object_leases   "Multi-reason retention leases for URI-keyed remote object observations"
 ```
 
-마지막 lease가 풀리면 행이 사라진다. **행의 존재가 객체의 존재와 무관한 테이블은 원장이 아니다.**
+lease는 수명이 아니라 **삭제 방지**다. `REMOTE-OBJECTS.md` §2의 계약이 정확히 이렇다 — "An
+active lease prevents expiry maintenance from deleting the observation; releasing the final
+lease makes an already expired observation eligible again." 즉 지워지려면 **만료됐고 동시에
+아무도 붙잡고 있지 않아야** 하고, 실제 삭제는 maintenance가 한다.
+
+그래서 원격 행의 수명은 **retention policy**가 정하며, 그 정책은 원본 Object가 아직 존재하는지와
+무관하게 돌아간다. **수명이 대상의 존재와 분리된 테이블은 원장이 아니다.**
 
 그러므로 둘을 하나의 Object 원장으로 합치면 둘 중 하나가 반드시 깨진다 — 로컬 CMS를
 복제하거나, 원격 캐시를 권위 데이터처럼 다루거나.
@@ -464,10 +470,6 @@ URI·`Tombstone`·삭제 시각만 주며 본문·첨부·작성자 스냅샷을
 `REMOTE-OBJECTS.md §1`이 row id의 공개를 금지한다. 그러면 읽기 엔드포인트의 키는 canonical
 URI이거나 그 해시다. URI를 경로에 넣을지 질의 인자로 넣을지, 해시를 노출할지가 미결.
 
-### C. 버전
-
-버전이 3층(plugin / DB / protocol)인데 읽기 API의 `v1`이 어느 층에 묶이는가.
-
 ### B-1. Social 라우트의 모양 — 2026-10-05 추가
 
 §7-B가 "키가 canonical URI인가 그 해시인가"를 미결로 남겼는데, 그 미결이 **라우트 모양과
@@ -538,11 +540,51 @@ publicly_listable / visibility gate를 다시 적용한다
 Social 셸이 noindex이므로 원격 원본의 검색 정체성을 빼앗지 않는다
 ```
 
-#### 이것이 A5와 묶인다
+#### 이 라우트만으로 A5가 채택되는 것은 아니다
 
-위 라우트는 `objectKey` 하나로 local과 remote를 모두 해소할 수 있어야 성립하고, 그러려면
-§A5가 지적한 결손 — 정렬 키, `object_type`, 소유자 adapter — 이 메워져야 한다. **즉 라우트
-모양을 먼저 구현하면 A5를 코드로 채택하는 것이 된다.** 다섯 안의 판정이 먼저다.
+초고는 "라우트 모양을 먼저 구현하면 A5를 코드로 채택하는 것이 된다"고 적었다. **과했다.**
+이 라우트가 요구하는 것은 **공통 key와 이름 있는 resolver** 둘뿐이고, 그것은 A4의 서버측
+read-composition API로도 성립한다 — 같은 `objectKey`를 받아 두 source를 해소하면 된다.
+
+A5가 강하게 필요해지는 자리는 **단일 조회가 아니라 cross-source 목록**이다. local과 remote를
+하나의 정렬과 cursor로 섞어 keyset pagination하려면 A5 또는 그와 동등한 read index가 있어야
+하고, §A5가 지적한 결손 — 정렬 키, `object_type`, 소유자 adapter — 이 바로 그 자리에서
+걸린다.
+
+#### 예측 — Feed는 Activities, list pane은 Object index
+
+아직 **예측이지 채택이 아니다.** 첫 route가 정해질 때 query 소유자를 고른다.
+
+```txt
+Feed                 Activities query — 무엇이 언제 일어났는가
+                     Create · Announce · reply · group context · timeline cursor
+
+list-detail의 list   Object index query — 어떤 Object가 있고 지금 어떤 상태인가
+                     type · author · publicly_listable · is_reply · 정렬 키
+
+detail               Object resolver — objectKey 하나를 local | remote에서 hydrate
+                     typed renderer → generic renderer 폴백
+```
+
+두 축이 다른 이유가 있다. **Feed의 카드는 Activity가 기준**이라 같은 Note가 Create와
+Announce로 두 번 나타나는 것이 의미 있는 표면이다. 반면 **Object index 목록은 같은 Object를
+한 번만** 다루므로 검색·발견·작성자별·타입별 목록에 맞는다.
+
+그래서 위 절의 결론이 더 선명해진다 — **A5의 진짜 하중은 `/social/objects/:key` detail
+라우트가 아니라 list-detail의 list pane이다.** detail resolver는 A4 같은 composition API로도
+선다.
+
+첫 실제 소비자가 무엇인지도 이 축으로 갈린다.
+
+```txt
+첫 화면이 timeline이면              FeedLayout + Activities
+첫 화면이 actor의 Objects·검색·탐색이면  ListDetailLayout + Object index
+어느 쪽이든 detail은 같은 resolver와 renderer를 재사용한다
+```
+
+### C. 버전
+
+버전이 3층(plugin / DB / protocol)인데 읽기 API의 `v1`이 어느 층에 묶이는가.
 
 ### D. local과 remote의 공통 목록이 나중에 필요해지는가
 

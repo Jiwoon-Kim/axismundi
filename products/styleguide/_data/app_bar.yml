@@ -1,0 +1,86 @@
+# Material 3 Expressive app bar. Token evidence:
+# products/wordpress/plugins/axismundi/docs/m3-token-tables/SOURCE-M3-APP-BARS-RAW.md
+meta:
+  namespace: md.comp.app-bar
+  table_revision: "2026-05-27T22:44:15.009106Z"
+  variants: [ small, medium-flexible, large-flexible ]
+  configurations: [ leading, centered ]
+
+container:
+  color_token: md.comp.app-bar.container.color
+  color_role: surface
+  on_scroll_color_token: md.comp.app-bar.on-scroll.container.color
+  on_scroll_color_role: surface-container
+  on_scroll_elevation_token: md.comp.app-bar.on-scroll.container.elevation
+  on_scroll_elevation_role: elevation.level2
+  shape_token: md.comp.app-bar.container.shape
+  shape_role: corner.none
+  full_window_width: true
+  height_is_minimum: true
+
+variants:
+  small:
+    height_token: md.comp.app-bar.small.container.height
+    height: 64
+    title_typescale: title-large
+    subtitle_typescale: label-medium
+    title_wraps: false
+  medium:
+    height_token: md.comp.app-bar.medium-flexible.container.height
+    height: 112
+    subtitle_height_token: md.comp.app-bar.medium-flexible.with-subtitle.container.height
+    subtitle_height: 136
+    title_typescale: headline-medium
+    subtitle_typescale: label-large
+    title_wraps: true
+  large:
+    height_token: md.comp.app-bar.large-flexible.container.height
+    height: 120
+    subtitle_height_token: md.comp.app-bar.large-flexible.with-subtitle.container.height
+    subtitle_height: 152
+    title_typescale: display-small
+    subtitle_typescale: title-medium
+    title_wraps: true
+
+semantics:
+  element: header
+  title_is_node_slot: true
+  heading_level_owned_by: page
+  actions_are_node_slot: true
+  actions_advised_maximum: 2
+
+scope:
+  implemented:
+    - small, medium-flexible and large-flexible sizes
+    - leading and centered text alignment
+    - optional subtitle
+    - leading and trailing node slots
+    - externally supplied on-scroll state
+  deferred:
+    - search app bar: requires Search component
+    - scroll observation, sticky positioning and hide/show: scroll-container owner
+    - medium/large collapse into small: screen transition owner
+
+discrepancies:
+  - token: md.comp.app-bar.medium.container.height and md.comp.app-bar.large.container.height
+    prose: Expressive replaces baseline medium and large with medium-flexible and large-flexible.
+    note: >-
+      Baseline rows remain live in the same namespace. Medium happens to share
+      112dp with medium-flexible, but baseline large is 152dp while flexible
+      large is 120dp; implementation names the flexible rows explicitly.
+  - token: headline line count
+    prose: >-
+      Two bounds that pull against each other. "In medium flexible and large
+      flexible app bars, the headline can wrap to a second line" and "wrap the
+      headline to two lines maximum"; also "Don't truncate the headline text",
+      and "Headline text should be brief enough to easily fit in the app bar".
+    note: >-
+      NO LINE LIMIT IS APPLIED, deliberately. Clamping to two lines means hiding
+      the rest, which is the truncation the same page forbids, so the two bounds
+      cannot both be honoured by the component -- only by a caller keeping the
+      headline brief. The container is a minimum and grows instead, which is the
+      same answer the navigation item gives to a long label.
+      The cost is visible and is not a defect: at a narrow viewport a long
+      headline takes a large flexible bar past 400dp. Recorded because a reader
+      of "two lines maximum" alone would reach for `-webkit-line-clamp`, and the
+      validator fails if one appears.

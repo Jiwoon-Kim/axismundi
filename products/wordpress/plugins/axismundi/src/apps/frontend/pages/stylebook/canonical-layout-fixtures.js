@@ -4,60 +4,209 @@ import { Pane } from '../../foundations/layout/panes/pane';
 import { Scaffold } from '../../foundations/layout/scaffold';
 import { useWindowSizeClass } from '../../foundations/layout/breakpoints/use-window-size-class';
 import { SupportingPaneLayout } from '../../foundations/layout/canonical-examples/supporting-pane';
+import { AppBar } from '../../components/app-bars/app-bar';
+import { IconButton } from '../../components/buttons/icon-button';
+import { Card } from '../../components/cards/card';
+import { Icon } from '../../components/material/icon';
+import { NavigationBar } from '../../components/navigations/nav-bar';
+import { NavigationRail } from '../../components/navigations/nav-rail';
 
 const layoutDefinitions = {
 	feed: {
 		title: 'Feed',
-		description: 'A single pane whose arbitrary items reflow into a grid as space grows.',
+		description: 'An activity feed keeps individual objects scannable while its card grid reflows.',
 	},
 	'list-detail': {
 		title: 'List-detail',
-		description: 'List and detail panes are shown together from the expanded breakpoint.',
+		description: 'An object directory keeps its selected detail beside the collection when space permits.',
 	},
 	supporting_pane: {
 		title: 'Supporting pane',
-		description: 'Supporting content reflows below the primary pane before becoming co-planar.',
+		description: 'A conversation keeps its contextual people and activity close without crowding the reading pane.',
 	},
 };
 
-function FixturePane( { children } ) {
-	return <Pane className="ax-canonical-layout-fixture__pane">{ children }</Pane>;
+const destinations = [
+	{
+		id: 'home',
+		label: 'Home',
+		icon: <Icon name="home" />,
+		href: '/social/stylebook/layout/feed',
+	},
+	{
+		id: 'explore',
+		label: 'Explore',
+		icon: <Icon name="explore" />,
+		href: '/social/stylebook/layout/list-detail',
+	},
+	{
+		id: 'inbox',
+		label: 'Inbox',
+		icon: <Icon name="forum" />,
+		href: '/social/stylebook/layout/supporting_pane',
+	},
+];
+
+function DemoPane( { children, className } ) {
+	return <Pane className={ [ 'ax-canonical-layout-demo__pane', className ].filter( Boolean ).join( ' ' ) }>{ children }</Pane>;
+}
+
+function DemoShell( { activeId, title, subtitle, children } ) {
+	const appBar = (
+		<AppBar
+			title={ title }
+			subtitle={ subtitle }
+			leading={ <IconButton label="Open navigation" icon={ <Icon name="menu" /> } variant="standard" /> }
+			actions={ (
+				<>
+					<IconButton label="Search" icon={ <Icon name="search" /> } variant="standard" />
+					<IconButton label="Account" icon={ <Icon name="account_circle" /> } variant="standard" />
+				</>
+			) }
+		/>
+	);
+
+	return (
+		<Scaffold
+			className="axismundi-social ax-stylebook ax-canonical-layout-demo"
+			appBar={ appBar }
+			navigationBar={ <NavigationBar destinations={ destinations } activeId={ activeId } label="Primary navigation" /> }
+			navigationRail={ <NavigationRail destinations={ destinations } activeId={ activeId } label="Primary navigation" filled divider /> }
+		>
+			{ children }
+		</Scaffold>
+	);
 }
 
 function FeedFixture() {
+	const posts = [
+		[ 'Mina Park', 'Published a field note', 'A small set of carefully named layout primitives is easier to reuse than a shell that knows product data.' ],
+		[ 'Open Commons', 'Boosted a discussion', 'The next reader should be able to tell whether a surface is a feed, a directory, or a contextual view.' ],
+		[ 'J. Rivera', 'Shared an article', 'Reading geometry should stay stable while the page chooses the content and the URL chooses the selection.' ],
+		[ 'Design systems', 'Started a topic', 'The compact view is a route decision. The layout only receives the pane it should show.' ],
+		[ 'Community Lab', 'Added a resource', 'A supporting pane can remain useful without becoming a second primary task.' ],
+	];
+
 	return (
-		<FeedLayout>
-			<FixturePane>Feed item 1</FixturePane>
-			<FixturePane>Feed item 2</FixturePane>
-			<FixturePane>Feed item 3</FixturePane>
-			<FixturePane>Feed item 4</FixturePane>
-			<FixturePane>Feed item 5</FixturePane>
-		</FeedLayout>
+		<DemoShell activeId="home" title="Home" subtitle="Activity from people and groups you follow">
+			<section className="ax-canonical-layout-demo__content" aria-labelledby="feed-heading">
+				<div className="ax-canonical-layout-demo__heading">
+					<div>
+						<p className="ax-canonical-layout-demo__eyebrow">Following</p>
+						<h1 id="feed-heading">Activity</h1>
+					</div>
+					<IconButton label="Feed options" icon={ <Icon name="tune" /> } variant="standard" />
+				</div>
+				<FeedLayout>
+					{ posts.map( ( [ actor, action, body ] ) => (
+						<Card key={ actor } as="article" variant="filled" className="ax-canonical-layout-demo__post">
+							<header>
+								<strong>{ actor }</strong>
+								<span>{ action }</span>
+							</header>
+							<p>{ body }</p>
+							<a href="#open-post">Open post</a>
+						</Card>
+					) ) }
+				</FeedLayout>
+			</section>
+		</DemoShell>
 	);
 }
 
 function ListDetailFixture() {
 	return (
-		<ListDetailLayout
-			list={ <FixturePane>List pane</FixturePane> }
-			detail={ <FixturePane>Detail pane</FixturePane> }
-			extra={ <FixturePane>Extra pane</FixturePane> }
-		/>
+		<DemoShell activeId="explore" title="Explore" subtitle="Topics from the social web">
+			<section className="ax-canonical-layout-demo__content" aria-labelledby="explore-heading">
+				<h1 id="explore-heading" className="ax-sr-only">Explore topics</h1>
+				<ListDetailLayout
+					list={ (
+						<DemoPane className="ax-canonical-layout-demo__list">
+							<p className="ax-canonical-layout-demo__eyebrow">Topics</p>
+							<nav aria-label="Topics">
+								<a href="#open-source" aria-current="page"><strong>Open source publishing</strong><span>18 new posts</span></a>
+								<a href="#civic"><strong>Civic technology</strong><span>7 new posts</span></a>
+								<a href="#local"><strong>Local communities</strong><span>24 new posts</span></a>
+								<a href="#research"><strong>Research notes</strong><span>4 new posts</span></a>
+							</nav>
+						</DemoPane>
+					) }
+					detail={ (
+						<DemoPane className="ax-canonical-layout-demo__detail">
+							<article>
+								<p className="ax-canonical-layout-demo__eyebrow">Topic</p>
+								<h2>Open source publishing</h2>
+								<p>People are comparing ways to keep publication, discovery, and local ownership connected without making every reader carry the same data model.</p>
+								<div className="ax-canonical-layout-demo__detail-actions">
+									<IconButton label="Follow topic" icon={ <Icon name="notifications" /> } variant="tonal" />
+									<IconButton label="More topic actions" icon={ <Icon name="more_vert" /> } variant="standard" />
+								</div>
+								<h3>Recent discussion</h3>
+								<p>One source of truth for a resource does not mean one presentation. A context can add the framing a reader needs without changing the object itself.</p>
+							</article>
+						</DemoPane>
+					) }
+					extra={ (
+						<DemoPane className="ax-canonical-layout-demo__context">
+							<p className="ax-canonical-layout-demo__eyebrow">Context</p>
+							<h2>Open publishing</h2>
+							<dl>
+								<div><dt>Members</dt><dd>2,814</dd></div>
+								<div><dt>Active today</dt><dd>138</dd></div>
+								<div><dt>Visibility</dt><dd>Public</dd></div>
+							</dl>
+						</DemoPane>
+					) }
+				/>
+			</section>
+		</DemoShell>
 	);
 }
 
 function SupportingPaneFixture() {
 	return (
-		<SupportingPaneLayout
-			primary={ <FixturePane>Primary pane</FixturePane> }
-			supporting={ <FixturePane>Supporting pane</FixturePane> }
-		/>
+		<DemoShell activeId="inbox" title="Inbox" subtitle="Replies and mentions that need your attention">
+			<section className="ax-canonical-layout-demo__content" aria-labelledby="thread-heading">
+				<h1 id="thread-heading" className="ax-sr-only">Conversation</h1>
+				<SupportingPaneLayout
+					primary={ (
+						<DemoPane className="ax-canonical-layout-demo__thread">
+							<article>
+								<p className="ax-canonical-layout-demo__eyebrow">Conversation</p>
+								<h2>A better reading surface for shared objects</h2>
+								<p>Contextual links should help a reader understand why an object appears here while preserving the object’s own source and canonical identity.</p>
+								<div className="ax-canonical-layout-demo__reply">
+									<strong>Amara</strong>
+									<p>That makes the group route useful without treating it as a replacement for the object route.</p>
+								</div>
+								<div className="ax-canonical-layout-demo__reply">
+									<strong>Jun</strong>
+									<p>And the supporting pane can carry the people and context rather than forcing those details into the reading column.</p>
+								</div>
+							</article>
+						</DemoPane>
+					) }
+					supporting={ (
+						<DemoPane className="ax-canonical-layout-demo__supporting">
+							<p className="ax-canonical-layout-demo__eyebrow">In this conversation</p>
+							<h2>3 participants</h2>
+							<ul>
+								<li><Icon name="account_circle" /> Amara</li>
+								<li><Icon name="account_circle" /> Jun</li>
+								<li><Icon name="account_circle" /> Mina</li>
+							</ul>
+							<a href="#open-context">Open group context</a>
+						</DemoPane>
+					) }
+				/>
+			</section>
+		</DemoShell>
 	);
 }
 
 /**
- * Developer-only canonical layout verification. The placeholders deliberately
- * contain no Material components or product behavior.
+ * Developer-only canonical layout demonstrations. The content is static, but
+ * each topology is composed with the application chrome it will eventually host.
  *
  * @param {Object} props Component props.
  * @param {'feed'|'list-detail'|'supporting_pane'} props.layout Canonical layout key.
@@ -80,13 +229,11 @@ export function CanonicalLayoutFixture( { layout } ) {
 	const sizeClass = useWindowSizeClass();
 
 	return (
-		<Scaffold className="axismundi-social ax-stylebook">
-			<section className="ax-canonical-layout-fixture" aria-label={ definition.title }>
-				<p className="ax-canonical-layout-fixture__readout" data-size-class={ sizeClass }>
-					window size class: <strong>{ sizeClass }</strong> &middot; { window.innerWidth }px
-				</p>
-				{ fixture }
-			</section>
-		</Scaffold>
+		<section className="ax-canonical-layout-fixture" aria-label={ definition.title }>
+			<p className="ax-canonical-layout-fixture__readout" data-size-class={ sizeClass }>
+				window size class: <strong>{ sizeClass }</strong> &middot; { window.innerWidth }px
+			</p>
+			{ fixture }
+		</section>
 	);
 }

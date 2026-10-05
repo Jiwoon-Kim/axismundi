@@ -8,7 +8,6 @@ import { StylebookIconButtonsPage } from './components/icon-buttons';
 import { StylebookAppBarsPage } from './components/app-bars';
 import { StylebookNavigationsPage } from './components/navigations';
 import { StylebookStylesPage } from './styles';
-import './layout-topology-fixtures.css';
 import { StylebookMotionPage } from './styles/motion';
 
 /**

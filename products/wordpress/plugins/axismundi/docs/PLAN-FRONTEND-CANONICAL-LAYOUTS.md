@@ -167,10 +167,10 @@ expanded는 아직 deferred다. 지금 넣으면 소비자 없는 분기가 된�
 1  use-window-size-class + viewport.json을 실제로 읽게 하기
 2  임계값 일치 검증기 — 훅과 layout stylesheet가 같은 네 숫자를 쓰는지
 3  Feed와 List-detail을 다섯 클래스에서 측정 — 현재 CSS가 5절 표와 맞는지
-4  스타일북 레이아웃 표본, 측정 readout 포함
-5  Sheet
-6  Supporting pane 완성 — compact·medium 표현
-7  (rail expanded가 올 때) 1200 / 1600 분기
+4  wp-admin의 기존 list-detail 표면을 제품 VQA로 읽기
+5  첫 소비자가 필요로 하는 canonical layout을 route로 승격 — Feed가 아닐 수도 있다
+6  (compact·medium의 supporting 표현이 실제로 요구될 때) Sheet
+7  (rail expanded와 함께) 1200 / 1600의 chrome 판단
 ```
 
 ### 임계값은 두 곳에 적힌다 — 그래서 검증기가 필요하다
@@ -184,16 +184,24 @@ threshold literals remain in the owning layout stylesheet." 즉 `600 / 840 / 120
 것 그대로다 — 기록만 하고 강제하지 않은 수치는 드리프트하고, 심지어 아예 구현되지 않은
 채로도 통과한다(rail의 64dp).
 
-### Feed와 List-detail이 Supporting pane보다 먼저다
+### Sheet는 Supporting pane의 전제가 아니다 — 정정
 
-Supporting pane은 **양쪽 끝에서 Sheet에 묶여 있다.** 채택된 기록의 미결 목록에 "whether a
-supporting pane is co-planar, floating, docked, reflowed, or hidden"이 있고, compact·medium의
-답은 sheet 계열이다. 그리고 같은 기록이 "at extra-large, a standard side sheet may become a
-third pane"이라고 적는다.
+이 문서의 초고는 "Supporting pane이 양쪽 끝에서 Sheet에 묶여 있다"고 적었다. **과했다.**
+원문은 compact와 medium에서 supporting pane을 primary 아래로 **reflow**하라고 하고, bottom
+sheet는 "useful"한 선택지로 제시한다. 즉 지금 서 있는 세로 reflow는 **이미 유효한 canonical
+topology**이고, 더 할 것이 없어서 기다리는 상태가 아니다.
 
-지금 서 있는 것은 840의 reflow뿐이고 그것은 이미 맞다. 그러니 Feed와 List-detail을 끝내고,
-Sheet를 세운 뒤, Supporting pane을 완성하는 순서가 된다. Sheet 자체는 breakpoint 신호를
-기다린다 — `surface.yml`이 presentation을 breakpoint에서 전환하는 것으로 정의하기 때문이다.
+Sheet가 필요해지는 것은 그 다음 **제품 판정**이다 — compact·medium에서 supporting 정보를
+계속 co-planar로 둘 것인가, 초점을 보존하려고 docked·floating sheet로 바꿀 것인가.
+채택된 기록의 미결("co-planar, floating, docked, reflowed, or hidden")이 바로 그 질문이고,
+reflow는 그중 하나로 이미 구현돼 있다.
+
+### 첫 승격 후보는 Feed가 아닐 수도 있다
+
+Feed가 구조적으로 가장 싸고 List-detail은 URL·selection·Back 계약이 걸려 더 위험하다. 그러나
+승격 기준은 "무엇이 쉬운가"가 아니라 **"첫 소비자가 무엇을 필요로 하는가"**다(6절). 그래서
+순서가 Feed → List-detail로 고정되지 않는다. `wp-admin`에 이미 있는 list-detail 표면을 제품
+VQA로 읽어 본 뒤 정하는 편이 낫다.
 
 ## 8. 미결 — 소유자 판정
 

@@ -2,6 +2,7 @@ import { FeedLayout } from '../../foundations/layout/canonical-examples/feed';
 import { ListDetailLayout } from '../../foundations/layout/canonical-examples/list-detail';
 import { Pane } from '../../foundations/layout/panes/pane';
 import { Scaffold } from '../../foundations/layout/scaffold';
+import { useWindowSizeClass } from '../../foundations/layout/breakpoints/use-window-size-class';
 import { SupportingPaneLayout } from '../../foundations/layout/canonical-examples/supporting-pane';
 
 const layoutDefinitions = {
@@ -70,9 +71,20 @@ export function CanonicalLayoutFixture( { layout } ) {
 		supporting_pane: <SupportingPaneFixture />,
 	}[ layout ];
 
+	/*
+	 * The first consumer of the window size class, and the only way to verify the
+	 * hook at all: a signal with nobody reading it cannot be measured. It is read
+	 * here and printed, not used to choose anything -- the fixtures' own geometry
+	 * stays in their stylesheets, where a media query belongs.
+	 */
+	const sizeClass = useWindowSizeClass();
+
 	return (
 		<Scaffold className="axismundi-social ax-stylebook">
 			<section className="ax-canonical-layout-fixture" aria-label={ definition.title }>
+				<p className="ax-canonical-layout-fixture__readout" data-size-class={ sizeClass }>
+					window size class: <strong>{ sizeClass }</strong> &middot; { window.innerWidth }px
+				</p>
 				{ fixture }
 			</section>
 		</Scaffold>

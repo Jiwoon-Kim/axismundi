@@ -298,11 +298,12 @@ discrepancies:
       the window. Two reasons, both measured rather than assumed. The two item
       layouts have different DOM -- the label is a child of the indicator when
       horizontal and a sibling when vertical -- so a media query cannot switch
-      them; it needs a JS window-size observation, and the app has none
-      (`foundations/layout/breakpoints/viewport.json` declares the five classes
-      and no JavaScript reads it). And the only reachable trigger would be a
+      them; it needs a JS window-size observation. That half of the reason
+      EXPIRED on 2026-10-05: `useWindowSizeClass` now exists and reads
+      `viewport.json`, and the bar's validator caught the note going stale. What
+      still holds is the other half -- the only reachable trigger would be a
       medium window, where `scaffold.css` hides the bar and shows the rail from
-      600px up. Building the observation now would add a foundation whose single
+      600px up, so the configuration has no reachable consumer. Building the observation now would add a foundation whose single
       consumer the Scaffold makes unreachable. Which component serves a medium
       window is a layout-boundary decision and M3 permits either ("Medium: Use a
       navigation bar or navigation rail"), so it is left open rather than

@@ -587,18 +587,18 @@ def main() -> int:
     # Both halves of the reason are measured, so both are checked. If a window
     # observation appears, or the Scaffold stops hiding the bar at medium, the
     # recorded reason is no longer true and this says so.
-    # The stylebook is excluded because a specimen page measuring the viewport is
-    # not the app observing it; what matters is whether production code has a
-    # window-size signal a component could read.
-    observers = sorted(
-        path.relative_to(FRONTEND).as_posix()
-        for path in FRONTEND.rglob("*.js")
-        if "stylebook" not in path.parts
-        and re.search(r"matchMedia|useViewport|useWindowSizeClass", path.read_text(encoding="utf-8", errors="ignore"))
-    )
+    # HALF OF THE RECORDED REASON HAS EXPIRED, and this check is what noticed.
+    # The note gave two reasons for not following the published window rule: the
+    # app had no JS window-size signal, and the Scaffold made the medium window
+    # unreachable for the bar anyway. `useWindowSizeClass` now exists, so the
+    # first is gone and only the second still holds. The check therefore moved to
+    # the half that is still true -- the Scaffold swap -- and the signal's
+    # existence is asserted rather than forbidden, so that losing it would also
+    # be noticed.
+    signal = FRONTEND / "foundations/layout/breakpoints/use-window-size-class.js"
     report.check(
-        not observers,
-        f"{observers} now observe the window outside the stylebook; the item layout axis can follow the published window rule",
+        signal.exists(),
+        "the window size class signal is gone; the bar's recorded reason has to be rewritten again",
     )
     scaffold = SCAFFOLD.read_text(encoding="utf-8")
     report.check(

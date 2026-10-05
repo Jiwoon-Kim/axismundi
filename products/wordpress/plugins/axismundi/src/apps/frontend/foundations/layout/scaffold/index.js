@@ -7,6 +7,7 @@ import { Pane } from '../panes/pane';
  *
  * @param {Object} props Component props.
  * @param {import('@wordpress/element').ReactNode} props.children Primary content.
+ * @param {import('@wordpress/element').ReactNode} [props.appBar] Top application bar.
  * @param {import('@wordpress/element').ReactNode} [props.navigationBar] Compact navigation.
  * @param {import('@wordpress/element').ReactNode} [props.navigationRail] Medium-and-up navigation.
  * @param {import('@wordpress/element').ReactNode} [props.supporting] Expanded supporting content.
@@ -15,6 +16,7 @@ import { Pane } from '../panes/pane';
  */
 export function Scaffold( {
 	children,
+	appBar,
 	navigationBar,
 	navigationRail,
 	supporting,
@@ -23,10 +25,14 @@ export function Scaffold( {
 	return (
 		<div
 			className={ [ 'ax-scaffold', className ].filter( Boolean ).join( ' ' ) }
+			data-has-app-bar={ appBar ? '' : undefined }
 			data-has-bar={ navigationBar ? '' : undefined }
 			data-has-rail={ navigationRail ? '' : undefined }
 			data-has-supporting={ supporting ? '' : undefined }
 		>
+			{ appBar ? (
+				<div className="ax-scaffold__app-bar">{ appBar }</div>
+			) : null }
 			{ navigationBar ? (
 				<div className="ax-scaffold__bar">{ navigationBar }</div>
 			) : null }

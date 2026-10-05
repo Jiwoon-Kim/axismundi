@@ -32,7 +32,7 @@ show-hide / levitate / reflow 는 "가능한 전략"이지 전부 구현하라�
 ```txt
 foundations/layout/
   breakpoints/viewport.json        다섯 클래스 선언 — useWindowSizeClass가 읽음
-  breakpoints/validate-*.py        JSON과 owning layout stylesheet 임계값을 대조
+  breakpoints/use-window-size-class.js  유일한 관측 지점 (검증기는 tools/validators/)
   panes/pane, panes/pane-group     중립 grid primitive, 변경 불필요
   scaffold/                        appBar · navigationBar · navigationRail · supporting · children
   canonical-examples/

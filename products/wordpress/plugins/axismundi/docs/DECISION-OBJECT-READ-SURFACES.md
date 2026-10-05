@@ -521,6 +521,99 @@ base64url SHA-256  43자   같은 256비트의 다른 표현. 절단이 아니�
 DB는 hex를 계속 쓰고 라우트/API 경계에서만 encode·decode하는 형태가 가능하다. 어느 표현을
 택하든 resolver는 해시로 조회한 뒤 **canonical URI를 다시 검증**해야 한다.
 
+#### route family는 AS type이 아니다
+
+`object.type → route → renderer`를 1:1로 묶으면 안 된다. **화면을 나눌 이유가 없는 곳까지
+URL 계약이 갈라지기** 때문이다.
+
+`Question`은 AS type이지만 화면에서는 Note의 변형이고, quote는 대개 독립 type이 아니라
+Note에 붙는 관계·context다(`axismundi-note-thread-question`의 기록대로 vote는
+`Create(Note){name}`이고 Question은 형제 object_type이다). 이것들을 지금
+`/questions/:key`·`/quotes/:key`로 쪼개면 템플릿이 하나인데 주소가 셋이 된다.
+
+```txt
+AS object type     Note | Question | Article | Image | …
+route family       notes | articles | objects
+template family    NoteDocument | ArticleDocument | GenericObject
+feature 조합        question panel · quote context · replies · attachments
+```
+
+```txt
+Note               -> /social/notes/:key      -> NoteDocument
+Question           -> /social/notes/:key      -> NoteDocument + QuestionView
+Note + quote edge  -> /social/notes/:key      -> NoteDocument + QuoteContext
+Article            -> /social/articles/:key   -> ArticleDocument
+Image 등            -> /social/objects/:key    -> GenericObject
+```
+
+그러므로 `notes`는 "AS `Note`와 정확히 같은 타입"이 아니라 **note-like reader surface**다.
+typed route의 검증도 `object.type === 'Note'`가 아니라 **`routeFamily(object) === 'notes'`**를
+본다. 나중에 Question 전용 정보구조나 탐색 목록이 필요해지면 `/social/questions/…`를 더하면
+되지만, 그것은 **새 화면 계약이 생겼을 때**의 일이다.
+
+#### Actor 쪽은 같은 패턴이고, 한 군데가 다르다
+
+```txt
+/social/actors/:uuid        안정적인 resolver entry
+/social/@:handle            Person의 canonical view
+/social/group/@:handle      Group의 canonical view
+/social/groups              접근 가능한 Group 목록 — 컬렉션
+```
+
+Object와 같은 generic resolver → typed canonical route 패턴이고, 차이는 resolver의 뒤쪽이다.
+Actor는 **이미 통합 원장이 있으므로** uuid가 직접 해소 키가 되고, Object는 source-owned
+store들을 잇는 projection이 필요하다.
+
+**그러나 Actor의 handle 라우트는 uuid 라우트가 되는 곳에서도 404일 수 있다.** 이것이
+Object와의 진짜 비대칭이고, 2026-10-04에 측정했다.
+
+```txt
+/@thaumiel999@mastodon.social    200   원격 Person — verified acct 주소 행 있음
+/group/@lemmykorea@lemmy.world   404   원격 Group  — acct 주소 행 0개
+/actors/2394f52b-…               200   같은 Group, 캐시돼 있고 uuid로는 열린다
+```
+
+원격 Actor가 handle로 해소되려면 WebFinger 검증 뒤 쓰이는 `acct` 주소 행이 있어야 한다
+(`axismundi-actors/includes/routing.php`의 `get_by_remote_acct()`와
+`primary_acct_address()`). Object의 `objectKey`는 캐시가 있으면 **항상** 해소되지만, Actor의
+handle은 **발견 경로에 따라** 생기기도 하고 안 생기기도 한다.
+
+그러므로 `uuid → handle` 리디렉션은 **주소 지정 가능할 때만** 조건부여야 하고, uuid 라우트는
+옛 링크를 받는 별칭이 아니라 **내구성 있는 주소**다. 같은 조건이 블록 테마에 이미 구현돼
+있다 — `routing.php`의 "Redirect cached remote UUID profile hubs to their **verified** local
+acct alias."
+
+**미결:** 그러면 uuid 라우트가 두 표면에 생긴다(`/actors/{uuid}`와 `/social/actors/{uuid}`).
+`ROUTING.md` §2.1이 남긴 "그 프록시 뷰가 canonical 포인터를 유지할지 철회할지"는 이것으로
+풀리지 않고 **canonical 후보가 둘로 늘어난다.** 같이 결정해야 한다.
+
+#### 단수는 한 리소스, 복수는 컬렉션
+
+기존 라우트가 이미 그 규칙이고, 이유도 적혀 있다 — "`/@handle` is the Person surface and
+`/group/@handle` the Group one, because a handle alone …", 즉 **Person과 Group이 같은 handle을
+가질 수 있어서**다(Lemmy에서 겪은 그 문제).
+
+```txt
+group/@handle   하나의 Group        단수
+groups          Group 디렉터리      복수
+notes/:key      하나의 Object       ← 복수인데 단일 리소스다. 어긋난다
+```
+
+`notes`·`articles`가 복수인 것은 **route family 이름**이기 때문이고(위 절), 단일 리소스라는
+뜻이 아니다. 두 규칙이 한 URL 공간에 공존하므로 **어느 쪽이 어디에 적용되는지를 적어 둔다** —
+Actor는 리소스/컬렉션 규칙, Object는 family/컬렉션 규칙. 기계적으로 통일하지 않는다.
+
+`/social/groups`의 "접근 가능"은 **제품 판정으로 남는다.** 최소 세 가지가 갈린다.
+
+```txt
+known         로컬 원장에 존재하거나 관측된 Group
+discoverable  공개적으로 탐색에 노출 가능한 Group
+joined        현재 acting actor가 속했거나 팔로우한 Group
+```
+
+`joined`는 Actor 테이블만의 질의가 아니라 관계·Activity 상태를 본다. 즉 `/social/groups`는
+Actor directory지만 **기본 목록과 탭을 무엇으로 할지는 아직 정해지지 않았다.**
+
 #### 원격 Object를 우리 주소에서 보이는 것은 미결이 아니다
 
 이것을 미결로 적지 않는다. **이미 채택된 전제다** — `object-view-route.php`가 캐시된 원격

@@ -1,9 +1,9 @@
 import { Pane } from '../panes/pane';
 
 /**
- * Places application chrome slots and the primary content pane. The scaffold
- * owns window-level geometry only; callers supply the actual bar, rail, and
- * supporting components.
+ * Places application chrome around a content region. The rail is a sibling of
+ * that region; the app bar, primary pane, and optional supporting pane live
+ * inside it. The scaffold owns window-level geometry only.
  *
  * @param {Object} props Component props.
  * @param {import('@wordpress/element').ReactNode} props.children Primary content.
@@ -30,23 +30,27 @@ export function Scaffold( {
 			data-has-rail={ navigationRail ? '' : undefined }
 			data-has-supporting={ supporting ? '' : undefined }
 		>
-			{ appBar ? (
-				<div className="ax-scaffold__app-bar">{ appBar }</div>
-			) : null }
 			{ navigationBar ? (
 				<div className="ax-scaffold__bar">{ navigationBar }</div>
 			) : null }
 			{ navigationRail ? (
 				<div className="ax-scaffold__rail">{ navigationRail }</div>
 			) : null }
-			<Pane as="main" className="ax-scaffold__main">
-				{ children }
-			</Pane>
-			{ supporting ? (
-				<Pane as="aside" className="ax-scaffold__supporting">
-					{ supporting }
-				</Pane>
-			) : null }
+			<div className="ax-scaffold__content">
+				{ appBar ? (
+					<div className="ax-scaffold__app-bar">{ appBar }</div>
+				) : null }
+				<div className="ax-scaffold__body">
+					<Pane as="main" className="ax-scaffold__main">
+						{ children }
+					</Pane>
+					{ supporting ? (
+						<Pane as="aside" className="ax-scaffold__supporting">
+							{ supporting }
+						</Pane>
+					) : null }
+				</div>
+			</div>
 		</div>
 	);
 }

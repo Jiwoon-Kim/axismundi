@@ -1,11 +1,32 @@
 @layer axismundi.layouts {
 	.ax-scaffold {
 		display: grid;
-		grid-template-areas: "main";
+		grid-template-areas: "content";
 		grid-template-columns: minmax( 0, 1fr );
+		grid-template-rows: minmax( 0, 1fr );
 		min-block-size: 100dvb;
 		background: var( --md-sys-color-surface );
 		color: var( --md-sys-color-on-surface );
+	}
+
+	.ax-scaffold__content {
+		grid-area: content;
+		display: grid;
+		grid-template-areas: "body";
+		grid-template-columns: minmax( 0, 1fr );
+		grid-template-rows: minmax( 0, 1fr );
+		min-inline-size: 0;
+		min-block-size: 0;
+	}
+
+	.ax-scaffold__body {
+		grid-area: body;
+		display: grid;
+		grid-template-areas: "main";
+		grid-template-columns: minmax( 0, 1fr );
+		grid-template-rows: minmax( 0, 1fr );
+		min-inline-size: 0;
+		min-block-size: 0;
 	}
 
 	.ax-scaffold__main {
@@ -22,24 +43,16 @@
 
 	.ax-scaffold[data-has-bar] {
 		grid-template-areas:
-			"main"
+			"content"
 			"bar";
 		grid-template-rows: minmax( 0, 1fr ) auto;
 	}
 
-	.ax-scaffold[data-has-app-bar] {
+	.ax-scaffold[data-has-app-bar] .ax-scaffold__content {
 		grid-template-areas:
 			"app-bar"
-			"main";
+			"body";
 		grid-template-rows: auto minmax( 0, 1fr );
-	}
-
-	.ax-scaffold[data-has-app-bar][data-has-bar] {
-		grid-template-areas:
-			"app-bar"
-			"main"
-			"bar";
-		grid-template-rows: auto minmax( 0, 1fr ) auto;
 	}
 
 	.ax-scaffold[data-has-app-bar] .ax-scaffold__app-bar {
@@ -55,16 +68,9 @@
 
 	@media ( min-width: 600px ) {
 		.ax-scaffold[data-has-rail] {
-			grid-template-areas: "rail main";
+			grid-template-areas: "rail content";
 			grid-template-columns: auto minmax( 0, 1fr );
 			grid-template-rows: minmax( 0, 1fr );
-		}
-
-		.ax-scaffold[data-has-app-bar][data-has-rail] {
-			grid-template-areas:
-				"app-bar app-bar"
-				"rail main";
-			grid-template-rows: auto minmax( 0, 1fr );
 		}
 
 		.ax-scaffold[data-has-rail] .ax-scaffold__rail {
@@ -78,30 +84,9 @@
 	}
 
 	@media ( min-width: 840px ) {
-		.ax-scaffold[data-has-rail][data-has-supporting] {
-			grid-template-areas: "rail main supporting";
-			grid-template-columns: auto minmax( 0, 1fr ) auto;
-			grid-template-rows: minmax( 0, 1fr );
-		}
-
-		.ax-scaffold[data-has-app-bar][data-has-rail][data-has-supporting] {
-			grid-template-areas:
-				"app-bar app-bar app-bar"
-				"rail main supporting";
-			grid-template-rows: auto minmax( 0, 1fr );
-		}
-
-		.ax-scaffold:not([data-has-rail])[data-has-supporting] {
+		.ax-scaffold[data-has-supporting] .ax-scaffold__body {
 			grid-template-areas: "main supporting";
 			grid-template-columns: minmax( 0, 1fr ) auto;
-			grid-template-rows: minmax( 0, 1fr );
-		}
-
-		.ax-scaffold[data-has-app-bar]:not([data-has-rail])[data-has-supporting] {
-			grid-template-areas:
-				"app-bar app-bar"
-				"main supporting";
-			grid-template-rows: auto minmax( 0, 1fr );
 		}
 
 		.ax-scaffold[data-has-supporting] .ax-scaffold__supporting {

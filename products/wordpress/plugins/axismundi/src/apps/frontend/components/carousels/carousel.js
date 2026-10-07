@@ -346,7 +346,7 @@ export function Carousel( {
 			if (
 				0 !== event.button ||
 				'touch' === event.pointerType ||
-				! event.isPrimary
+				event.isPrimary === false
 			) {
 				return;
 			}

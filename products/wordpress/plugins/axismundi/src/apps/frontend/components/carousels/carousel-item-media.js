@@ -4,7 +4,8 @@
  * The five aspect ratios mirror the Material 3 Community Kit building blocks.
  * They describe source media, not a Carousel layout algorithm. In particular,
  * using several ratios does not silently opt a caller into Multi-aspect ratio
- * geometry; that remains an Uncontained configuration to implement separately.
+ * geometry; callers opt into that implemented Uncontained configuration on the
+ * Carousel rather than changing the meaning of an individual media block.
  *
  * @param {Object}                                 props                     Component props.
  * @param {import('@wordpress/element').ReactNode} props.children            Visual content.

@@ -261,7 +261,8 @@ def main() -> int:
     )
     check(
         "track.setPointerCapture" in carousel
-        and "track.scrollLeft = drag.startScrollLeft - distance" in carousel
+        and "track.scrollLeft =" in carousel
+        and "drag.startScrollLeft + ( rtl ? distance : -distance )" in carousel
         and "preventDraggedClick" in carousel,
         "mouse or pen drag lost capture, movement or click suppression",
     )
@@ -340,9 +341,58 @@ def main() -> int:
         "the position name is no longer injectable for localization",
     )
     check(
-        'data-layout="uncontained"' in carousel
-        and "data-scroll-behavior={ behavior }" in carousel,
-        "Carousel no longer exposes its implemented geometry and scroll behavior",
+        "data-layout={ implementedLayout }" in carousel
+        and "data-scroll-behavior={ effectiveBehavior }" in carousel,
+        "Carousel no longer exposes its geometry and scroll behavior",
+    )
+    check(
+        "const ADVANCED_LAYOUTS = [ 'multi-browse', 'hero' ]" in carousel
+        and "function keylineProfile" in carousel
+        and "KEYLINE_CONTAINER_BREAKPOINT" in carousel
+        and "new window.ResizeObserver( measureKeylines )" in carousel,
+        "Carousel lost the measured Hero/Multi-browse keyline path",
+    )
+    check(
+        "function interpolateKeylines" in carousel
+        and "function itemGeometry" in carousel
+        and "track.addEventListener( 'scroll', scheduleKeylines" in carousel
+        and "window.requestAnimationFrame" in carousel,
+        "Carousel lost scroll-position keyline interpolation",
+    )
+    check(
+        "rtl ? -track.scrollLeft : track.scrollLeft" in carousel
+        and "rtl ? distance : -distance" in carousel,
+        "Carousel morph or pointer drag no longer follows logical RTL scrolling",
+    )
+    check(
+        "const startKeylines" in carousel
+        and "const endKeylines" in carousel
+        and "startProgress" in carousel
+        and "maximumScroll - endShiftRange" in carousel
+        and "root.dataset.keylineState" in carousel,
+        "Carousel no longer shifts through start/default/end keyline states",
+    )
+    check(
+        "firstLargeIndex > 0" in carousel
+        and "keylineState = 'start'" in carousel
+        and "itemSize" in carousel,
+        "Center-aligned Hero can no longer make its first item focal",
+    )
+    check(
+        "data-alignment={ implementedAlignment }" in carousel
+        and "roles: [ 'small', 'large', 'small' ]" in carousel
+        and "innerSize - 2 * SMALL_WIDTH - 2 * gap" in carousel,
+        "Center-aligned Hero lost its measured Mobile topology",
+    )
+    check(
+        "data-multi-aspect={ implementedMultiAspect ? '' : undefined }" in carousel
+        and "multiAspect is an Uncontained configuration" in carousel,
+        "Multi-aspect ratio stopped being an explicit Uncontained configuration",
+    )
+    check(
+        "requires snap scrolling" in carousel
+        and "data-layout={ implementedLayout }" in carousel,
+        "Advanced Carousel layouts no longer force the published snap path",
     )
     check(
         "<Elevation level={ 0 } />" in carousel_item,
@@ -365,6 +415,55 @@ def main() -> int:
         figma["specimen_only_controls"] == ["Show 4th item", "Show 5th item"],
         "Figma specimen item toggles changed or became product state",
     )
+    measured = figma["measured_profiles"]
+    check(
+        measured["hero"]["mobile"]["items"]
+        == [
+            {"role": "large", "inline_size": 316, "block_size": 205},
+            {"role": "small", "inline_size": 56, "block_size": 205},
+        ]
+        and measured["multi-browse"]["mobile"]["items"]
+        == [
+            {"role": "large", "inline_size": 188, "block_size": 205},
+            {"role": "medium", "inline_size": 120, "block_size": 205},
+            {"role": "small", "inline_size": 56, "block_size": 205},
+        ],
+        "Figma Mobile Hero or Multi-browse profile drifted",
+    )
+    check(
+        measured["hero"]["tablet"]["items"]
+        == measured["multi-browse"]["tablet"]["items"]
+        == [
+            {"role": "large", "inline_size": 184, "block_size": 204},
+            {"role": "large", "inline_size": 184, "block_size": 204},
+            {"role": "medium", "inline_size": 120, "block_size": 204},
+            {"role": "small", "inline_size": 56, "block_size": 204},
+        ],
+        "Figma Tablet Hero or Multi-browse profile drifted",
+    )
+    check(
+        measured["center-aligned-hero"]["mobile"]["items"]
+        == [
+            {"role": "small", "inline_size": 56, "block_size": 205},
+            {"role": "large", "inline_size": 252, "block_size": 205},
+            {"role": "small", "inline_size": 56, "block_size": 205},
+        ]
+        and measured["center-aligned-hero"]["tablet"]["items"]
+        == measured["hero"]["tablet"]["items"],
+        "Figma Center-aligned Hero profiles drifted",
+    )
+    multi_aspect = measured["multi-aspect-ratio"]
+    check(
+        multi_aspect["ratios"] == expected_ratios
+        and multi_aspect["item_inline_sizes"]
+        == [362.22, 270.67, 204, 153.25, 116]
+        and multi_aspect["item_block_size"] == 204
+        and multi_aspect["contexts"]["mobile"]["resolved_container_block_size"]
+        == 220
+        and multi_aspect["contexts"]["tablet"]["resolved_container_block_size"]
+        == 220,
+        "Figma Multi-aspect ratio profiles drifted",
+    )
     check(
         all(f"'{ratio}'" in carousel_item_media for ratio in expected_ratios)
         and 'data-aspect-ratio={ ratio }' in carousel_item_media,
@@ -376,6 +475,11 @@ def main() -> int:
         and "ax-carousel-item-text__supporting" in carousel_item_text,
         "CarouselItemText lost its required label or optional supporting text",
     )
+    check(
+        "data-appearance={ textAppearance }" in carousel_item_text
+        and "appearance = 'stacked'" in carousel_item_text,
+        "CarouselItemText lost its explicit overlay appearance",
+    )
 
     check(
         re.search(
@@ -386,7 +490,7 @@ def main() -> int:
         "Uncontained width gained a fallback or stopped using its project property",
     )
     check(
-        1 == carousel_css.count("--ax-carousel-item-width"),
+        re.search(r"(?m)^\s*--ax-carousel-item-width\s*:", carousel_css) is None,
         "component CSS decides the unpublished Uncontained width",
     )
     check(
@@ -433,6 +537,27 @@ def main() -> int:
         "scroll-snap-type: inline mandatory;" in carousel_css,
         "Uncontained lost its optional snap path",
     )
+    check(
+        ".ax-carousel__items[data-dragging]" in carousel_css
+        and "scroll-snap-type: none !important;" in carousel_css
+        and "settleToNearestItem" in carousel
+        and "track.scrollTo" in carousel,
+        "pointer drag no longer suspends snap and settles to a reachable item",
+    )
+    check(
+        "scroll-padding-inline-start: var(--ax-carousel-padding-inline-start);"
+        in carousel_css
+        and ".ax-carousel-item:last-child" in carousel_css
+        and "scroll-snap-align: end;" in carousel_css,
+        "advanced Carousel start padding or final end snap is no longer reachable",
+    )
+    check(
+        "--ax-carousel-mask-width" in carousel_css
+        and "--ax-carousel-item-offset" in carousel_css
+        and "ax-carousel-item__content" in carousel_item
+        and "ax-carousel-item__content" in carousel_css,
+        "Carousel lost its stable slot and masked full-size content shell",
+    )
     for ratio, declaration in {
         "16:9": "aspect-ratio: 16 / 9;",
         "4:3": "aspect-ratio: 4 / 3;",
@@ -451,6 +576,67 @@ def main() -> int:
         "Carousel reduced-motion path no longer disables animated scrolling",
     )
     check(
+        'data-multi-aspect' in carousel_css
+        and "--ax-carousel-multi-aspect-item-width" in carousel_css
+        and "--ax-carousel-item-block-size" in carousel_css,
+        "Multi-aspect ratio no longer derives Uncontained item geometry from its media",
+    )
+    check(
+        re.search(
+            r"data-multi-aspect[^}]+flex-grow:\s*0;[^}]+flex-shrink:\s*0;",
+            carousel_css,
+            re.DOTALL,
+        )
+        is not None,
+        "Multi-aspect items can shrink instead of overflowing horizontally",
+    )
+    check(
+        'data-appearance="overlay"' in carousel_css
+        and "inset: 0;" in carousel_css
+        and "align-content: end;" in carousel_css
+        and "rgb(0 0 0 / 50%)" in carousel_css
+        and "--md-sys-typescale-label-small-size" in carousel_css
+        and "--md-ref-palette-neutral-100" in carousel_css,
+        "Figma Carousel text overlay styling drifted",
+    )
+    check(
+        data["figma_reference"]["optional_text_building_block"]["overlay"]["gradient_extent"]
+        == "full-item"
+        and data["figma_reference"]["optional_text_building_block"]["overlay"]["content_alignment"]
+        == "block-end",
+        "Carousel text gradient no longer covers the full item",
+    )
+    check(
+        "reducedMotion.matches" in carousel
+        and "item.style.removeProperty( '--ax-carousel-item-width' )" in carousel
+        and "item.style.removeProperty( '--ax-carousel-item-offset' )" in carousel
+        and "item.style.removeProperty( '--ax-carousel-mask-width' )" in carousel
+        and "reducedMotion.addEventListener" in carousel,
+        "Advanced Carousel layouts no longer return to uniform consumer sizing for reduced motion",
+    )
+    check(
+        data["source_boundaries"]["implementation_status"]
+        ["scroll_position_morph"]
+        == "implemented-as-local-keyline-policy"
+        and data["source_boundaries"]["implementation_status"]
+        ["scroll_position_morph_model"]
+        == "stable-unmasked-slot-plus-start-default-end-keylines",
+        "Carousel morph is no longer recorded as local start/default/end policy",
+    )
+    check(
+        data["source_boundaries"]["implementation_policy"]["container_threshold"]
+        == 600
+        and "carousel container" in data["source_boundaries"]["implementation_policy"]["container_threshold_note"],
+        "Carousel keyline threshold is no longer distinguished from window breakpoints",
+    )
+    check(
+        any(
+            discrepancy.get("subject") == "Hero tablet medium item"
+            for discrepancy in data["discrepancies"]
+        ),
+        "Tablet Hero's measured medium-item discrepancy was dropped",
+    )
+    check(
         "@import url( './components/carousel.css' );" in style_index,
         "Carousel component CSS is not in the frontend style graph",
     )
@@ -462,8 +648,40 @@ def main() -> int:
     check(
         "CarouselItemMedia" in stylebook_page
         and "CarouselItemText" in stylebook_page
-        and "FIGMA_ASPECT_RATIOS" in stylebook_page,
+        and "FIGMA_ASPECT_RATIOS" in stylebook_page
+        and "https://picsum.photos/seed/" in stylebook_page
+        and '<img alt="" draggable="false"' in stylebook_page,
         "Stylebook no longer exercises the Figma-derived building blocks",
+    )
+    check(
+        "KeylineSample" in stylebook_page
+        and 'layout="hero"' in stylebook_page
+        and 'layout="multi-browse"' in stylebook_page
+        and 'data-context="Mobile"' in stylebook_css
+        and 'data-context="Tablet"' in stylebook_css,
+        "Stylebook no longer exposes the measured Hero/Multi-browse profiles",
+    )
+    check(
+        'alignment="center"' in stylebook_page
+        and "multiAspect" in stylebook_page
+        and "--ax-carousel-multi-aspect-item-width: 362.22px" in stylebook_css
+        and "--ax-carousel-multi-aspect-item-width: 116px" in stylebook_css
+        and 'appearance="overlay"' in stylebook_page,
+        "Stylebook lost Center-aligned Hero or Multi-aspect ratio fixtures",
+    )
+    implementation_status = data["source_boundaries"]["implementation_status"]
+    check(
+        implementation_status["measured_keyline_profiles"] == "implemented"
+        and implementation_status["center_aligned_hero"] == "implemented"
+        and implementation_status["multi_aspect_ratio"]
+        == "implemented-as-uncontained-configuration"
+        and implementation_status["carousel_text_overlay"] == "implemented"
+        and implementation_status["resize_recalculation"] == "implemented"
+        and implementation_status["scroll_position_morph"]
+        == "implemented-as-local-keyline-policy"
+        and "start/default/end state"
+        in implementation_status["scroll_position_morph_note"],
+        "Carousel scroll-position morph status changed without an explicit record",
     )
     check(
         "scrollLeft" in stylebook_page,

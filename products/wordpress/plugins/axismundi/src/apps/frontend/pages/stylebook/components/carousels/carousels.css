@@ -46,6 +46,80 @@
 		padding-inline-start: var(--md-sys-measurement-space600);
 	}
 
+	.ax-stylebook-carousels__keylines {
+		display: grid;
+		gap: var(--md-sys-measurement-space400);
+	}
+
+	.ax-stylebook-carousels__keyline-stage {
+		inline-size: min(100%, 600px);
+		padding-block: var(--md-sys-measurement-space200);
+		background: var(--md-sys-color-surface-container-low);
+	}
+
+	.ax-stylebook-carousels__keyline-stage[data-context="Mobile"] {
+		inline-size: min(100%, 412px);
+	}
+
+	.ax-stylebook-carousels__keyline-stage[data-context="Tablet"] {
+		inline-size: min(100%, 600px);
+	}
+
+	.ax-stylebook-carousels__keyline-stage .ax-carousel-item__action {
+		block-size: 204px;
+	}
+
+	.ax-stylebook-carousels__keyline-stage[data-context="Mobile"]
+		.ax-carousel-item__action {
+		block-size: 205px;
+	}
+
+	.ax-stylebook-carousels__keyline-stage .ax-carousel-item-media {
+		block-size: 100%;
+		aspect-ratio: auto;
+		background: var(--md-sys-color-secondary-container);
+		color: var(--md-sys-color-on-secondary-container);
+	}
+
+	.ax-stylebook-carousels__keyline-stage[data-multi-aspect] {
+		--ax-carousel-item-block-size: 204px;
+	}
+
+	.ax-stylebook-carousels__keyline-stage[data-multi-aspect]
+		.ax-carousel-item__action {
+		block-size: 204px;
+	}
+
+	.ax-stylebook-carousels__keyline-stage[data-multi-aspect]
+		.ax-carousel-item:nth-child(1) {
+		--ax-carousel-multi-aspect-item-width: 362.22px;
+	}
+
+	.ax-stylebook-carousels__keyline-stage[data-multi-aspect]
+		.ax-carousel-item:nth-child(2) {
+		--ax-carousel-multi-aspect-item-width: 270.67px;
+	}
+
+	.ax-stylebook-carousels__keyline-stage[data-multi-aspect]
+		.ax-carousel-item:nth-child(3) {
+		--ax-carousel-multi-aspect-item-width: 204px;
+	}
+
+	.ax-stylebook-carousels__keyline-stage[data-multi-aspect]
+		.ax-carousel-item:nth-child(4) {
+		--ax-carousel-multi-aspect-item-width: 153.25px;
+	}
+
+	.ax-stylebook-carousels__keyline-stage[data-multi-aspect]
+		.ax-carousel-item:nth-child(5) {
+		--ax-carousel-multi-aspect-item-width: 116px;
+	}
+
+	.ax-stylebook-carousels__keyline-stage[data-multi-aspect]
+		.ax-carousel-item-text[data-appearance="overlay"] {
+		text-align: start;
+	}
+
 	.ax-stylebook-carousels__ratios {
 		display: grid;
 		align-items: end;

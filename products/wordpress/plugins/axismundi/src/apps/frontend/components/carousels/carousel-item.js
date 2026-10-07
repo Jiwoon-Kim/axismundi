@@ -114,7 +114,7 @@ export const CarouselItem = forwardRef( function CarouselItemComponent(
 				onKeyDown={ onNavigate }
 			>
 				<Elevation level={ 0 } />
-				{ children }
+				<span className="ax-carousel-item__content">{ children }</span>
 			</Host>
 		</div>
 	);

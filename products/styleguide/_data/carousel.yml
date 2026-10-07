@@ -238,6 +238,8 @@ behavior:
     drag_activation_threshold: 6
     drag_activation_threshold_published: false
     dragged_click_is_suppressed: true
+    snap_suspended_while_dragging: true
+    release_behavior: nearest-item-snap-for-snap-layouts
     note: >-
       The threshold is an Axismundi interaction policy, not an M3 value. Native
       touch scrolling remains the no-JavaScript path; pointer enhancement must
@@ -353,6 +355,13 @@ discrepancies:
       Android's CarouselLayoutManager and the Lab are implementation references,
       not web token sources. Any web algorithm is a project policy and must be
       measured before it is presented as M3 behavior.
+  - subject: Hero tablet medium item
+    published_anatomy: Hero names large and small items, with no medium item in its measurement table.
+    measured_figma_profile: Tablet Hero contains large, large, medium and small items.
+    implementation_choice: Preserve the measured Figma profile for the local keyline policy.
+    note: >-
+      The medium item is therefore a local measured-profile role in Tablet Hero,
+      not a claim that the published Hero anatomy has a medium item.
   - subject: ripple feedback
     prose: Tapping a carousel item changes its shape slightly and creates a ripple.
     project_policy: Ripple is deferred as a cross-component motion decision.
@@ -379,6 +388,15 @@ figma_reference:
     label: required-when-shown
     supporting_text: optional
     visibility_is_composition_owned: true
+    overlay:
+      gap: 4
+      padding: 16
+      gradient_extent: full-item
+      content_alignment: block-end
+      background: linear-white-transparent-to-black-50-percent
+      label_typescale: title-medium
+      supporting_typescale: label-small
+      foreground: md.ref.palette.neutral100
   specimen_only_controls:
     - Show 4th item
     - Show 5th item
@@ -386,6 +404,65 @@ figma_reference:
     center_aligned_hero: Hero alignment configuration
     multi_aspect_ratio: Uncontained aspect configuration
     context: specimen viewport, not a runtime breakpoint prop
+  measured_profiles:
+    provenance: Figma Community Kit inspection
+    note: >-
+      These are measured specimen profiles, not responsive breakpoint tokens.
+      They establish the exact Mobile and Tablet compositions used by the
+      reference frame; wider containers still require the strategy algorithm.
+    hero:
+      mobile:
+        item_block_size: 205
+        items:
+          - { role: large, inline_size: 316, block_size: 205 }
+          - { role: small, inline_size: 56, block_size: 205 }
+      tablet:
+        item_block_size: 204
+        items:
+          - { role: large, inline_size: 184, block_size: 204 }
+          - { role: large, inline_size: 184, block_size: 204 }
+          - { role: medium, inline_size: 120, block_size: 204 }
+          - { role: small, inline_size: 56, block_size: 204 }
+    multi-browse:
+      mobile:
+        item_block_size: 205
+        items:
+          - { role: large, inline_size: 188, block_size: 205 }
+          - { role: medium, inline_size: 120, block_size: 205 }
+          - { role: small, inline_size: 56, block_size: 205 }
+      tablet:
+        item_block_size: 204
+        items:
+          - { role: large, inline_size: 184, block_size: 204 }
+          - { role: large, inline_size: 184, block_size: 204 }
+          - { role: medium, inline_size: 120, block_size: 204 }
+          - { role: small, inline_size: 56, block_size: 204 }
+    center-aligned-hero:
+      mobile:
+        container_inline_size: 412
+        resolved_container_block_size: 221
+        items:
+          - { role: small, inline_size: 56, block_size: 205 }
+          - { role: large, inline_size: 252, block_size: 205 }
+          - { role: small, inline_size: 56, block_size: 205 }
+      tablet:
+        container_inline_size: 600
+        resolved_container_block_size: 220
+        items:
+          - { role: large, inline_size: 184, block_size: 204 }
+          - { role: large, inline_size: 184, block_size: 204 }
+          - { role: medium, inline_size: 120, block_size: 204 }
+          - { role: small, inline_size: 56, block_size: 204 }
+    multi-aspect-ratio:
+      ratios: [ "16:9", "4:3", "1:1", "3:4", "9:16" ]
+      item_inline_sizes: [ 362.22, 270.67, 204, 153.25, 116 ]
+      item_block_size: 204
+      padding_inline: 16
+      padding_block: 8
+      gap: 8
+      contexts:
+        mobile: { container_inline_size: 412, resolved_container_block_size: 220 }
+        tablet: { container_inline_size: 600, resolved_container_block_size: 220 }
 
 source_boundaries:
   published_item_tokens:
@@ -403,6 +480,43 @@ source_boundaries:
   implementation_policy:
     published_md_tokens_only: true
     prose_layout_values_use_ax_namespace: true
+    measured_keyline_layouts: [ multi-browse, hero ]
+    measured_keyline_values_are_local_policy: true
+    measured_keyline_algorithm: >-
+      Reserve the 120dp medium and 56dp small item, then distribute the
+      remaining inline space across the large items. The 184dp reference width
+      determines how many large items are placed. This reproduces the inspected
+      412dp and 600dp profiles; it is not a published M3 equation.
+    container_threshold: 600
+    container_threshold_note: >-
+      The 600dp threshold is measured against the carousel container, not the
+      window. Figma's Mobile and Tablet labels are specimen contexts, while a
+      carousel can live inside a pane whose width differs from the window.
+    boundary_state_policy: >-
+      The inspected Center-aligned Hero profile is the default interior state.
+      A finite list additionally needs shifted start and end states so its first
+      and final items can each occupy the focal large keyline. Android's
+      start/default/end KeylineStateList is the architecture reference; the web
+      interpolation and shift ranges remain local policy.
+  implementation_status:
+    measured_keyline_profiles: implemented
+    center_aligned_hero: implemented
+    multi_aspect_ratio: implemented-as-uncontained-configuration
+    carousel_text_overlay: implemented
+    resize_recalculation: implemented
+    scroll_position_morph: implemented-as-local-keyline-policy
+    scroll_position_morph_model: stable-unmasked-slot-plus-start-default-end-keylines
+    scroll_position_morph_note: >-
+      The outer item keeps the measured large width as a stable scroll and snap
+      slot. The action masks a full-size content shell, while JavaScript
+      interpolates mask size and visual offset between measured keylines. A
+      shifted start state makes the first item focal when the measured default
+      profile begins with a preview; a shifted end state does the same for the
+      final item. This follows Android's two-model and start/default/end state
+      architecture, but the web equations remain project policy because M3
+      publishes no web interpolation or parallax amount.
+    stylebook_media: picsum-seeded-images
+    stylebook_media_scope: fixture-only-not-component-data
 
 lab_reference:
   path: products/reference-implementations/axismundi-lab/modules/carousel

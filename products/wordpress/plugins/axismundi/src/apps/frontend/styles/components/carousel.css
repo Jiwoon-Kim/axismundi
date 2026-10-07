@@ -30,16 +30,29 @@
 		padding-block: var(--ax-carousel-padding-block);
 		padding-inline: var(--ax-carousel-padding-inline-start)
 			var(--ax-carousel-padding-inline-end);
+		scroll-padding-inline-start: var(--ax-carousel-padding-inline-start);
 		cursor: grab;
 		user-select: none;
 	}
 
 	.ax-carousel__items[data-dragging] {
 		cursor: grabbing;
+		scroll-behavior: auto;
+		scroll-snap-type: none !important;
 	}
 
 	.ax-carousel[data-scroll-behavior="snap"] .ax-carousel__items {
 		scroll-snap-type: inline mandatory;
+	}
+
+	.ax-carousel[data-layout="hero"] .ax-carousel__items,
+	.ax-carousel[data-layout="multi-browse"] .ax-carousel__items {
+		scroll-snap-type: inline mandatory;
+	}
+
+	.ax-carousel:is([data-layout="hero"], [data-layout="multi-browse"])
+		.ax-carousel-item:last-child {
+		scroll-snap-align: end;
 	}
 
 	.ax-carousel-item {
@@ -49,6 +62,62 @@
 		scroll-snap-align: start;
 	}
 
+	.ax-carousel[data-multi-aspect] .ax-carousel-item {
+		flex-basis: var(--ax-carousel-multi-aspect-item-width, auto);
+		flex-grow: 0;
+		flex-shrink: 0;
+	}
+
+	.ax-carousel[data-multi-aspect] .ax-carousel-item-media {
+		block-size: var(--ax-carousel-item-block-size);
+		inline-size: auto;
+	}
+
+	.ax-carousel[data-multi-aspect]
+		.ax-carousel-item:has(
+			.ax-carousel-item-media[data-aspect-ratio="16:9"]
+		) {
+		--ax-carousel-multi-aspect-item-width: calc(
+			var(--ax-carousel-item-block-size) * 16 / 9
+		);
+	}
+
+	.ax-carousel[data-multi-aspect]
+		.ax-carousel-item:has(
+			.ax-carousel-item-media[data-aspect-ratio="4:3"]
+		) {
+		--ax-carousel-multi-aspect-item-width: calc(
+			var(--ax-carousel-item-block-size) * 4 / 3
+		);
+	}
+
+	.ax-carousel[data-multi-aspect]
+		.ax-carousel-item:has(
+			.ax-carousel-item-media[data-aspect-ratio="1:1"]
+		) {
+		--ax-carousel-multi-aspect-item-width: var(
+			--ax-carousel-item-block-size
+		);
+	}
+
+	.ax-carousel[data-multi-aspect]
+		.ax-carousel-item:has(
+			.ax-carousel-item-media[data-aspect-ratio="3:4"]
+		) {
+		--ax-carousel-multi-aspect-item-width: calc(
+			var(--ax-carousel-item-block-size) * 3 / 4
+		);
+	}
+
+	.ax-carousel[data-multi-aspect]
+		.ax-carousel-item:has(
+			.ax-carousel-item-media[data-aspect-ratio="9:16"]
+		) {
+		--ax-carousel-multi-aspect-item-width: calc(
+			var(--ax-carousel-item-block-size) * 9 / 16
+		);
+	}
+
 	.ax-carousel-item__action {
 		--md-comp-carousel-item-container-color: var(--md-sys-color-surface);
 		--md-comp-carousel-item-container-shape: var(
@@ -56,7 +125,9 @@
 		);
 		box-sizing: border-box;
 		display: block;
-		inline-size: 100%;
+		inline-size: var(--ax-carousel-mask-width, 100%);
+		max-inline-size: 100%;
+		margin-inline: auto;
 		overflow: hidden;
 		position: relative;
 		border: 0;
@@ -67,10 +138,32 @@
 		font: inherit;
 		text-align: start;
 		text-decoration: none;
+		transform: translate3d(var(--ax-carousel-item-offset, 0px), 0, 0);
 	}
 
 	.ax-carousel-item[data-outlined] .ax-carousel-item__action {
 		border: 1px solid var(--md-sys-color-outline);
+	}
+
+	.ax-carousel-item__content {
+		display: block;
+		position: relative;
+		inline-size: var(--ax-carousel-item-width, 100%);
+		block-size: 100%;
+		transform: translate3d(
+			calc(
+				(
+						var(
+								--ax-carousel-mask-width,
+								var(--ax-carousel-item-width)
+							) -
+							var(--ax-carousel-item-width)
+					) /
+					2
+			),
+			0,
+			0
+		);
 	}
 
 	.ax-carousel-item__action:not(:disabled):not([aria-disabled="true"]):hover {
@@ -123,6 +216,13 @@
 		overflow: hidden;
 	}
 
+	.ax-carousel-item-media > img {
+		display: block;
+		inline-size: 100%;
+		block-size: 100%;
+		object-fit: cover;
+	}
+
 	.ax-carousel-item-media[data-aspect-ratio="16:9"] {
 		aspect-ratio: 16 / 9;
 	}
@@ -158,6 +258,26 @@
 		color: var(--md-sys-color-on-surface-variant);
 		font-size: var(--md-sys-typescale-body-medium-size);
 		line-height: var(--md-sys-typescale-body-medium-line-height);
+	}
+
+	.ax-carousel-item-text[data-appearance="overlay"] {
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		align-content: end;
+		background: linear-gradient(
+			180deg,
+			rgb(255 255 255 / 0%) 0%,
+			rgb(0 0 0 / 50%) 100%
+		);
+		color: var(--md-ref-palette-neutral-100);
+	}
+
+	.ax-carousel-item-text[data-appearance="overlay"]
+		.ax-carousel-item-text__supporting {
+		color: inherit;
+		font-size: var(--md-sys-typescale-label-small-size);
+		line-height: var(--md-sys-typescale-label-small-line-height);
 	}
 
 	@media (prefers-reduced-motion: reduce) {

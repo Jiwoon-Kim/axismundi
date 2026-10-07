@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check the Carousel source contract before an implementation exists."""
+"""Check the Carousel source contract against its implementation."""
 
 from __future__ import annotations
 
@@ -20,6 +20,43 @@ SCROLL_DECISION = ROOT / (
     "products/wordpress/plugins/axismundi/docs/"
     "DECISION-FRONTEND-SCROLL-OWNERSHIP.md"
 )
+CAROUSEL = ROOT / (
+    "products/wordpress/plugins/axismundi/src/apps/frontend/components/"
+    "carousels/carousel.js"
+)
+CAROUSEL_ITEM = ROOT / (
+    "products/wordpress/plugins/axismundi/src/apps/frontend/components/"
+    "carousels/carousel-item.js"
+)
+CAROUSEL_ITEM_MEDIA = ROOT / (
+    "products/wordpress/plugins/axismundi/src/apps/frontend/components/"
+    "carousels/carousel-item-media.js"
+)
+CAROUSEL_ITEM_TEXT = ROOT / (
+    "products/wordpress/plugins/axismundi/src/apps/frontend/components/"
+    "carousels/carousel-item-text.js"
+)
+CAROUSEL_CSS = ROOT / (
+    "products/wordpress/plugins/axismundi/src/apps/frontend/styles/components/"
+    "carousel.css"
+)
+STYLE_INDEX = ROOT / (
+    "products/wordpress/plugins/axismundi/src/apps/frontend/styles/index.css"
+)
+STYLEBOOK_INDEX = ROOT / (
+    "products/wordpress/plugins/axismundi/src/apps/frontend/pages/stylebook/index.js"
+)
+STYLEBOOK_PAGE = ROOT / (
+    "products/wordpress/plugins/axismundi/src/apps/frontend/pages/stylebook/"
+    "components/carousels/index.js"
+)
+STYLEBOOK_CSS = ROOT / (
+    "products/wordpress/plugins/axismundi/src/apps/frontend/pages/stylebook/"
+    "components/carousels/carousels.css"
+)
+APP = ROOT / "products/wordpress/plugins/axismundi/src/apps/frontend/app.js"
+ROUTE = ROOT / "products/wordpress/plugins/axismundi/includes/route.php"
+PLUGIN = ROOT / "products/wordpress/plugins/axismundi/axismundi.php"
 
 TOKEN = re.compile(r"md\.[a-z0-9.\-]+")
 ROW = re.compile(r"^  (md\.[a-z0-9.\-]+)\s+[A-Z_]+\s+(.+?)\s*$")
@@ -43,11 +80,28 @@ def strings(value: Any) -> list[str]:
     return []
 
 
+def declarations(text: str) -> str:
+    """Discard explanations so a comment cannot satisfy a CSS contract."""
+    return re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
+
+
 def main() -> int:
     data = yaml.safe_load(DATA.read_text(encoding="utf-8"))
     source = TABLE.read_text(encoding="utf-8")
     home = HOME_PLAN.read_text(encoding="utf-8")
     scroll = SCROLL_DECISION.read_text(encoding="utf-8")
+    carousel = CAROUSEL.read_text(encoding="utf-8")
+    carousel_item = CAROUSEL_ITEM.read_text(encoding="utf-8")
+    carousel_item_media = CAROUSEL_ITEM_MEDIA.read_text(encoding="utf-8")
+    carousel_item_text = CAROUSEL_ITEM_TEXT.read_text(encoding="utf-8")
+    carousel_css = declarations(CAROUSEL_CSS.read_text(encoding="utf-8"))
+    style_index = declarations(STYLE_INDEX.read_text(encoding="utf-8"))
+    stylebook_index = STYLEBOOK_INDEX.read_text(encoding="utf-8")
+    stylebook_page = STYLEBOOK_PAGE.read_text(encoding="utf-8")
+    stylebook_css = declarations(STYLEBOOK_CSS.read_text(encoding="utf-8"))
+    app = APP.read_text(encoding="utf-8")
+    route = ROUTE.read_text(encoding="utf-8")
+    plugin = PLUGIN.read_text(encoding="utf-8")
     token_rows = rows(source)
     live_source, _, skipped_source = source.partition("skipped (deprecated):")
     live_component_tokens = set(
@@ -189,19 +243,260 @@ def main() -> int:
         reduced["geometry_path"] == "uniform-uncontained",
         "reduced-motion geometry is detached from Uncontained",
     )
+    pointer_drag = data["behavior"]["pointer_drag"]
+    check(
+        pointer_drag["drag_activation_threshold"] == 6
+        and pointer_drag["drag_activation_threshold_published"] is False,
+        "the local 6px drag threshold is missing or presented as M3",
+    )
+    check(
+        pointer_drag["web_mechanism"]
+        == "native-touch-scroll-and-enhanced-mouse-or-pen-drag",
+        "pointer enhancement no longer preserves native touch scrolling",
+    )
+    check(
+        "const DRAG_THRESHOLD = 6;" in carousel
+        and "'touch' === event.pointerType" in carousel,
+        "Carousel drag no longer matches its recorded local mechanism",
+    )
+    check(
+        "track.setPointerCapture" in carousel
+        and "track.scrollLeft = drag.startScrollLeft - distance" in carousel
+        and "preventDraggedClick" in carousel,
+        "mouse or pen drag lost capture, movement or click suppression",
+    )
 
     accessibility = data["accessibility"]
     container = accessibility["container"]
     check(container["published_role_name"] == "container", "published role wording changed")
-    check(container["web_role"] == "unresolved", "web role was silently decided")
     check(
-        container["web_role"] not in {"container", "region", "group"},
-        "web role was silently mapped to a guessed ARIA role",
+        container["web_role"] == "group"
+        and container["web_role_source"] == "WAI-ARIA-APG-carousel-pattern"
+        and container["aria_roledescription"] == "carousel",
+        "web role is no longer the traceable APG group mapping",
     )
     check(
         accessibility["skip_over_items"]
-        == {"required": True, "mechanism": "unresolved-with-web-role"},
-        "skip requirement is no longer tied to the unresolved web-role mechanism",
+        == {
+            "required": True,
+            "mechanism": "ArrowUp-or-ArrowDown-focuses-adjacent-page-control",
+        },
+        "skip requirement lost its explicit keyboard mechanism",
+    )
+    check('role="group"' in carousel, "Carousel is not an ARIA group")
+    check(
+        "aria-roledescription={ roleDescription }" in carousel
+        and "roleDescription = 'carousel'" in carousel,
+        "Carousel lost its APG role description",
+    )
+    check(
+        "aria-label={ label || undefined }" in carousel,
+        "Carousel no longer requires an accessible name in the DOM",
+    )
+    check(
+        "ArrowLeft" in carousel
+        and "ArrowRight" in carousel
+        and "ArrowUp" in carousel
+        and "ArrowDown" in carousel,
+        "Carousel keyboard contract is incomplete",
+    )
+    check(
+        "tabIndex" not in carousel_item,
+        "CarouselItem introduced a roving or synthetic tab order",
+    )
+    check(
+        "aria-roledescription={ roleDescription }" in carousel_item
+        and "roleDescription = 'slide'" in carousel_item
+        and 'role="group"' in carousel_item,
+        "CarouselItem lost its non-focusable APG slide wrapper",
+    )
+    check(
+        "data-carousel-action" in carousel_item
+        and "const Host = isLink ? 'a' : 'button'" in carousel_item,
+        "CarouselItem is no longer one native action",
+    )
+    # M3 requires the current and total values in every item's name, and the
+    # wording is ours. A solidus is not: it is spoken as "slash", as "of", or
+    # not at all, which is why the default follows APG's own carousel example.
+    # The formatter is injectable so a localized name needs no fork, the same
+    # reason roleDescription is a prop.
+    check(
+        "aria-label={ positionLabel }" in carousel_item
+        and "aria-label={ label || undefined }" in carousel_item
+        and "formatPosition( position, setSize )" in carousel_item,
+        "CarouselItem label no longer includes current and total",
+    )
+    check(
+        "`${ position } of ${ setSize }`" in carousel_item,
+        "the default position name is no longer APG's spoken wording",
+    )
+    check(
+        "/${ setSize }`" not in carousel_item,
+        "the position name is punctuation again; a solidus is read inconsistently",
+    )
+    check(
+        "formatPosition = defaultPositionLabel" in carousel_item
+        and "formatPosition," in carousel,
+        "the position name is no longer injectable for localization",
+    )
+    check(
+        'data-layout="uncontained"' in carousel
+        and "data-scroll-behavior={ behavior }" in carousel,
+        "Carousel no longer exposes its implemented geometry and scroll behavior",
+    )
+    check(
+        "<Elevation level={ 0 } />" in carousel_item,
+        "CarouselItem cannot express its published hover elevation",
+    )
+
+    figma = data["figma_reference"]
+    expected_ratios = ["16:9", "4:3", "1:1", "3:4", "9:16"]
+    check(
+        figma["source_kind"]
+        == "community-kit-implementation-reference-not-token-source"
+        and figma["contexts_are_public_api"] is False,
+        "Figma context is being treated as a token source or runtime API",
+    )
+    check(
+        figma["item_aspect_ratio_building_blocks"] == expected_ratios,
+        "Figma's five item aspect-ratio building blocks drifted",
+    )
+    check(
+        figma["specimen_only_controls"] == ["Show 4th item", "Show 5th item"],
+        "Figma specimen item toggles changed or became product state",
+    )
+    check(
+        all(f"'{ratio}'" in carousel_item_media for ratio in expected_ratios)
+        and 'data-aspect-ratio={ ratio }' in carousel_item_media,
+        "CarouselItemMedia no longer implements the five recorded ratios",
+    )
+    check(
+        "supportingText" in carousel_item_text
+        and "ax-carousel-item-text__label" in carousel_item_text
+        and "ax-carousel-item-text__supporting" in carousel_item_text,
+        "CarouselItemText lost its required label or optional supporting text",
+    )
+
+    check(
+        re.search(
+            r"flex:\s*0 0 var\(\s*--ax-carousel-item-width\s*\);",
+            carousel_css,
+        )
+        is not None,
+        "Uncontained width gained a fallback or stopped using its project property",
+    )
+    check(
+        1 == carousel_css.count("--ax-carousel-item-width"),
+        "component CSS decides the unpublished Uncontained width",
+    )
+    check(
+        re.search(
+            r"--ax-carousel-padding-inline-start:\s*var\(\s*--md-sys-measurement-space200\s*\)",
+            carousel_css,
+        )
+        is not None
+        and "--ax-carousel-padding-inline-end: 0px;" in carousel_css
+        and re.search(
+            r"--ax-carousel-padding-block:\s*var\(\s*--md-sys-measurement-space100\s*\)",
+            carousel_css,
+        )
+        is not None
+        and re.search(
+            r"--ax-carousel-item-gap:\s*var\(\s*--md-sys-measurement-space100\s*\)",
+            carousel_css,
+        )
+        is not None,
+        "Uncontained 16/0 inline, 8 block or 8 gap geometry drifted",
+    )
+    check(
+        re.search(
+            r"--md-comp-carousel-item-container-shape:\s*var\(\s*--md-sys-shape-corner-value-extra-large\s*\)",
+            carousel_css,
+        )
+        is not None,
+        "CarouselItem stopped consuming the published extra-large shape token",
+    )
+    check(
+        re.search(
+            r"outline:\s*3px solid var\(\s*--md-sys-color-secondary\s*\)",
+            carousel_css,
+        )
+        is not None
+        and "outline-offset: 2px;" in carousel_css,
+        "CarouselItem focus indicator drifted from 3dp with 2dp outer offset",
+    )
+    check(
+        "opacity: 0.38;" in carousel_css,
+        "CarouselItem disabled opacity drifted from 0.38",
+    )
+    check(
+        "scroll-snap-type: inline mandatory;" in carousel_css,
+        "Uncontained lost its optional snap path",
+    )
+    for ratio, declaration in {
+        "16:9": "aspect-ratio: 16 / 9;",
+        "4:3": "aspect-ratio: 4 / 3;",
+        "1:1": "aspect-ratio: 1;",
+        "3:4": "aspect-ratio: 3 / 4;",
+        "9:16": "aspect-ratio: 9 / 16;",
+    }.items():
+        check(
+            f'data-aspect-ratio="{ratio}"' in carousel_css
+            and declaration in carousel_css,
+            f"CarouselItemMedia CSS lost the {ratio} building block",
+        )
+    check(
+        "prefers-reduced-motion: reduce" in carousel_css
+        and "scroll-behavior: auto;" in carousel_css,
+        "Carousel reduced-motion path no longer disables animated scrolling",
+    )
+    check(
+        "@import url( './components/carousel.css' );" in style_index,
+        "Carousel component CSS is not in the frontend style graph",
+    )
+    check(
+        "--ax-carousel-item-width: 280px;" in stylebook_css
+        and "local policy, not M3" in stylebook_page,
+        "Stylebook width is no longer visibly isolated as a local VQA policy",
+    )
+    check(
+        "CarouselItemMedia" in stylebook_page
+        and "CarouselItemText" in stylebook_page
+        and "FIGMA_ASPECT_RATIOS" in stylebook_page,
+        "Stylebook no longer exercises the Figma-derived building blocks",
+    )
+    check(
+        "scrollLeft" in stylebook_page,
+        "Stylebook readout no longer exposes whether drag actually scrolls",
+    )
+    check(
+        stylebook_page.index("</Carousel>")
+        < stylebook_page.index('className="ax-stylebook-carousels__show-all"'),
+        "Show all moved inside the Carousel container",
+    )
+    check(
+        'href="#all-items"' in stylebook_page
+        and 'id="all-items"' in stylebook_page,
+        "Stylebook lost the required non-horizontal Show all path",
+    )
+    check(
+        "StylebookCarouselsPage" in stylebook_index
+        and "'carousels' === component" in stylebook_index
+        and "/social/stylebook/components/carousels" in stylebook_index,
+        "Stylebook does not dispatch or link the Carousel page",
+    )
+    check(
+        app.count("carousels") == 1,
+        "frontend route parser does not name carousels exactly once",
+    )
+    check(
+        route.count("carousels") == 2,
+        "WordPress route and public-route guard do not both admit carousels",
+    )
+    rewrite = re.search(r"AXISMUNDI_CAPSTONE_REWRITE_VERSION\s+=\s+'(\d+)'", plugin)
+    check(
+        rewrite is not None and 16 <= int(rewrite.group(1)),
+        "rewrite version was not advanced for the Carousel route",
     )
     check(
         "Cross-component rule" in accessibility["items"]["nested_controls_source"]

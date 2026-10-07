@@ -1,0 +1,71 @@
+@layer axismundi.patterns {
+	.ax-stylebook--carousels {
+		--ax-scaffold-main-padding: var(--ax-layout-window-margin);
+	}
+
+	.ax-stylebook-carousels__sample {
+		display: grid;
+		gap: var(--md-sys-measurement-space100);
+		min-inline-size: 0;
+	}
+
+	/* Local VQA policy. M3 publishes no Uncontained item width. */
+	.ax-stylebook-carousels__uncontained {
+		--ax-carousel-item-width: 280px;
+	}
+
+	.ax-stylebook-carousels__visual {
+		background: var(--md-sys-color-secondary-container);
+		color: var(--md-sys-color-on-secondary-container);
+	}
+
+	.ax-stylebook-carousels__visual .ax-icon {
+		--md-icon-size: 48px;
+	}
+
+	.ax-stylebook-carousels__all-items {
+		color: var(--md-sys-color-on-surface-variant);
+		font-size: var(--md-sys-typescale-body-medium-size);
+		line-height: var(--md-sys-typescale-body-medium-line-height);
+	}
+
+	.ax-stylebook-carousels__before,
+	.ax-stylebook-carousels__show-all {
+		justify-self: start;
+		color: var(--md-sys-color-primary);
+	}
+
+	.ax-stylebook-carousels__show-all {
+		padding: 4px;
+	}
+
+	.ax-stylebook-carousels__all-items {
+		display: grid;
+		gap: var(--md-sys-measurement-space100);
+		margin: 0;
+		padding-inline-start: var(--md-sys-measurement-space600);
+	}
+
+	.ax-stylebook-carousels__ratios {
+		display: grid;
+		align-items: end;
+		grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+		gap: var(--md-sys-measurement-space200);
+	}
+
+	.ax-stylebook-carousels__ratios figure {
+		display: grid;
+		gap: var(--md-sys-measurement-space100);
+		margin: 0;
+		text-align: center;
+	}
+
+	.ax-stylebook-carousels__ratio {
+		background: var(--md-sys-color-surface-container-high);
+		color: var(--md-sys-color-on-surface-variant);
+	}
+
+	.ax-stylebook-carousels__ratio .ax-icon {
+		--md-icon-size: 32px;
+	}
+}

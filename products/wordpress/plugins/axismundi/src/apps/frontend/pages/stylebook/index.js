@@ -1,6 +1,7 @@
 import { CanonicalLayoutFixture } from './canonical-layout-fixtures';
 import { StylebookButtonsPage } from './components/buttons';
 import { StylebookCardsPage } from './components/cards';
+import { StylebookCarouselsPage } from './components/carousels';
 import { StylebookDividersPage } from './components/dividers';
 import { StylebookSplitButtonsPage } from './components/split-buttons';
 import { StylebookButtonGroupsPage } from './components/button-groups';
@@ -37,6 +38,10 @@ export function StylebookPage( { component, layout, style, styles } ) {
 
 	if ( 'cards' === component ) {
 		return <StylebookCardsPage />;
+	}
+
+	if ( 'carousels' === component ) {
+		return <StylebookCarouselsPage />;
 	}
 
 	if ( 'split-buttons' === component ) {
@@ -76,6 +81,7 @@ export function StylebookPage( { component, layout, style, styles } ) {
 				<a href="/social/stylebook/components/button-groups">Button groups</a>
 				<a href="/social/stylebook/components/split-buttons">Split buttons</a>
 				<a href="/social/stylebook/components/cards">Cards</a>
+				<a href="/social/stylebook/components/carousels">Carousels</a>
 				<a href="/social/stylebook/components/dividers">Dividers</a>
 				<a href="/social/stylebook/components/navigations">Navigation</a>
 				<a href="/social/stylebook/components/app-bars">App bars</a>

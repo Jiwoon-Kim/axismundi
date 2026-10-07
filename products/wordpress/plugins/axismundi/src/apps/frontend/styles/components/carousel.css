@@ -1,0 +1,172 @@
+/*
+ * Material 3 Carousel, Uncontained geometry.
+ *
+ * M3 publishes the container's 16dp leading padding, 8dp block padding and 8dp
+ * item gap in prose, not in a component token group. They therefore use the
+ * project namespace. The trailing zero is a traced inference recorded in
+ * `carousel.yml`, not a token claim.
+ *
+ * ITEM WIDTH IS DELIBERATELY UNRESOLVED. Uncontained items are the same size,
+ * but neither the measurements table nor the prose says what that size is. A
+ * consumer supplies `--ax-carousel-item-width`; there is no fallback here that
+ * could quietly turn one product value into an M3 value.
+ */
+
+@layer axismundi.components {
+	.ax-carousel {
+		--ax-carousel-padding-inline-start: var(--md-sys-measurement-space200);
+		--ax-carousel-padding-inline-end: 0px;
+		--ax-carousel-padding-block: var(--md-sys-measurement-space100);
+		--ax-carousel-item-gap: var(--md-sys-measurement-space100);
+		min-inline-size: 0;
+	}
+
+	.ax-carousel__items {
+		display: flex;
+		align-items: center;
+		gap: var(--ax-carousel-item-gap);
+		overflow-x: auto;
+		overscroll-behavior-inline: contain;
+		padding-block: var(--ax-carousel-padding-block);
+		padding-inline: var(--ax-carousel-padding-inline-start)
+			var(--ax-carousel-padding-inline-end);
+		cursor: grab;
+		user-select: none;
+	}
+
+	.ax-carousel__items[data-dragging] {
+		cursor: grabbing;
+	}
+
+	.ax-carousel[data-scroll-behavior="snap"] .ax-carousel__items {
+		scroll-snap-type: inline mandatory;
+	}
+
+	.ax-carousel-item {
+		box-sizing: border-box;
+		flex: 0 0 var(--ax-carousel-item-width);
+		min-inline-size: 0;
+		scroll-snap-align: start;
+	}
+
+	.ax-carousel-item__action {
+		--md-comp-carousel-item-container-color: var(--md-sys-color-surface);
+		--md-comp-carousel-item-container-shape: var(
+			--md-sys-shape-corner-value-extra-large
+		);
+		box-sizing: border-box;
+		display: block;
+		inline-size: 100%;
+		overflow: hidden;
+		position: relative;
+		border: 0;
+		border-radius: var(--md-comp-carousel-item-container-shape);
+		padding: 0;
+		background-color: var(--md-comp-carousel-item-container-color);
+		color: var(--md-sys-color-on-surface);
+		font: inherit;
+		text-align: start;
+		text-decoration: none;
+	}
+
+	.ax-carousel-item[data-outlined] .ax-carousel-item__action {
+		border: 1px solid var(--md-sys-color-outline);
+	}
+
+	.ax-carousel-item__action:not(:disabled):not([aria-disabled="true"]):hover {
+		background-color: color-mix(
+			in srgb,
+			var(--md-sys-color-on-surface)
+				calc(var(--md-sys-state-hover-state-layer-opacity) * 100%),
+			var(--md-comp-carousel-item-container-color)
+		);
+	}
+
+	.ax-carousel-item__action:not(:disabled):not(
+			[aria-disabled="true"]
+		):focus-visible {
+		background-color: color-mix(
+			in srgb,
+			var(--md-sys-color-on-surface)
+				calc(var(--md-sys-state-focus-state-layer-opacity) * 100%),
+			var(--md-comp-carousel-item-container-color)
+		);
+		outline: 3px solid var(--md-sys-color-secondary);
+		outline-offset: 2px;
+	}
+
+	.ax-carousel-item__action:not(:disabled):not(
+			[aria-disabled="true"]
+		):active {
+		background-color: color-mix(
+			in srgb,
+			var(--md-sys-color-on-surface)
+				calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%),
+			var(--md-comp-carousel-item-container-color)
+		);
+	}
+
+	.ax-carousel-item__action:is(:disabled, [aria-disabled="true"]) {
+		opacity: 0.38;
+		cursor: not-allowed;
+	}
+
+	.ax-carousel-item__action:not(:disabled):not([aria-disabled="true"]):hover
+		.ax-elevation {
+		--md-elevation-level: 1;
+	}
+
+	.ax-carousel-item-media {
+		display: grid;
+		place-items: center;
+		inline-size: 100%;
+		overflow: hidden;
+	}
+
+	.ax-carousel-item-media[data-aspect-ratio="16:9"] {
+		aspect-ratio: 16 / 9;
+	}
+
+	.ax-carousel-item-media[data-aspect-ratio="4:3"] {
+		aspect-ratio: 4 / 3;
+	}
+
+	.ax-carousel-item-media[data-aspect-ratio="1:1"] {
+		aspect-ratio: 1;
+	}
+
+	.ax-carousel-item-media[data-aspect-ratio="3:4"] {
+		aspect-ratio: 3 / 4;
+	}
+
+	.ax-carousel-item-media[data-aspect-ratio="9:16"] {
+		aspect-ratio: 9 / 16;
+	}
+
+	.ax-carousel-item-text {
+		display: grid;
+		gap: var(--md-sys-measurement-space50);
+		padding: var(--md-sys-measurement-space200);
+	}
+
+	.ax-carousel-item-text__label {
+		font-size: var(--md-sys-typescale-title-medium-size);
+		line-height: var(--md-sys-typescale-title-medium-line-height);
+	}
+
+	.ax-carousel-item-text__supporting {
+		color: var(--md-sys-color-on-surface-variant);
+		font-size: var(--md-sys-typescale-body-medium-size);
+		line-height: var(--md-sys-typescale-body-medium-line-height);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.ax-carousel__items,
+		.ax-carousel-item,
+		.ax-carousel-item__action {
+			scroll-behavior: auto;
+			animation: none;
+			transition: none;
+		}
+	}
+}

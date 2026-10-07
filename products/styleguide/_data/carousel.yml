@@ -1,0 +1,365 @@
+# Material 3 Carousel — the published specification.
+#
+# Sources: https://m3.material.io/components/carousel/overview
+#          https://m3.material.io/components/carousel/specs
+#          https://m3.material.io/components/carousel/guidelines
+#          https://m3.material.io/components/carousel/accessibility
+#          https://github.com/material-components/material-components-android/blob/master/docs/components/Carousel.md
+#
+# Token evidence:
+# products/wordpress/plugins/axismundi/docs/m3-token-tables/SOURCE-M3-CAROUSEL-RAW.md
+#
+# Four layouts are the stable API. The overview calls out six visual results,
+# while Guidelines and Android group center-aligned hero under Hero and
+# multi-aspect under Uncontained. Keeping those as constrained configurations
+# preserves both descriptions without inventing six unrelated components.
+
+meta:
+  namespace: md.comp.carousel-item
+  table_revision: "2026-05-27T22:44:15.009106Z"
+  layouts: [ multi-browse, uncontained, hero, full-screen ]
+  alignments: [ start, center ]
+  scroll_behaviors: [ default, snap ]
+  tokenized_elements: [ carousel-item ]
+  container_token_group_published: false
+  live_component_token_count: 26
+  deprecated_component_token_count: 1
+  skipped_related_system_token_count: 1
+  deprecated_tokens:
+    - token: md.comp.carousel-item.container.surface-tint-layer.color
+      reason: >-
+        Deprecated when tonal surfaces replaced surface-tint layers. The table
+        directs implementations to use the desired surface role directly, which
+        is the live container.color -> md.sys.color.surface row above.
+  excluded_related_deprecated_tokens:
+    - token: md.sys.color.surface-tint
+      reason: >-
+        This is the second skipped row in the captured table, but it is a system
+        token rather than part of the md.comp.carousel-item namespace. It is
+        counted here so the omission cannot be mistaken for a lost row.
+
+anatomy:
+  required_elements: [ container, carousel-item ]
+  item_width_roles: [ large, medium, small ]
+  item_width_is_dynamic: true
+  item_text_optional: true
+  item_text_should_be_brief: true
+
+item:
+  container_color_token: md.comp.carousel-item.container.color
+  container_color_role: surface
+  container_elevation_token: md.comp.carousel-item.container.elevation
+  container_elevation: 0
+  container_shadow_color_token: md.comp.carousel-item.container.shadow-color
+  container_shadow_color_role: shadow
+  container_shape_token: md.comp.carousel-item.container.shape
+  container_shape_role: corner.extra-large
+  # The prose resolves extra-large to 28dp. CSS must consume the published
+  # shape token rather than restating the resolved literal.
+  container_shape_resolved: 28
+  widths:
+    large:
+      dynamic: true
+      customizable_maximum: true
+    medium:
+      dynamic: true
+    small:
+      dynamic: true
+      minimum: 40
+      maximum: 56
+
+# The table publishes item state tokens only. Carousel spacing is prose-owned
+# and therefore belongs to project (--ax-*) layout properties when implemented.
+states:
+  enabled:
+    elevation: 0
+  hovered:
+    elevation_token: md.comp.carousel-item.hover.container.elevation
+    elevation: 1
+    state_layer_color_token: md.comp.carousel-item.hover.state-layer.color
+    state_layer_color_role: on-surface
+    state_layer_opacity_token: md.comp.carousel-item.hover.state-layer.opacity
+  focused:
+    elevation_token: md.comp.carousel-item.focus.container.elevation
+    elevation: 0
+    state_layer_color_token: md.comp.carousel-item.focus.state-layer.color
+    state_layer_color_role: on-surface
+    state_layer_opacity_token: md.comp.carousel-item.focus.state-layer.opacity
+    indicator_color_token: md.comp.carousel-item.focus.indicator.color
+    indicator_color_role: secondary
+    indicator_thickness_token: md.comp.carousel-item.focus.indicator.thickness
+    indicator_thickness: 3
+    indicator_outer_offset_token: md.comp.carousel-item.focus.indicator.outline.offset
+    indicator_outer_offset: 2
+  pressed:
+    elevation_token: md.comp.carousel-item.pressed.container.elevation
+    elevation: 0
+    state_layer_color_token: md.comp.carousel-item.pressed.state-layer.color
+    state_layer_color_role: on-surface
+    state_layer_opacity_token: md.comp.carousel-item.pressed.state-layer.opacity
+  disabled:
+    color_token: md.comp.carousel-item.disabled.container.color
+    color_role: surface
+    elevation_token: md.comp.carousel-item.disabled.container.elevation
+    elevation: 0
+    opacity_token: md.comp.carousel-item.disabled.container.opacity
+    opacity: 0.38
+
+optional_outline:
+  width_token: md.comp.carousel-item.with-outline.outline.width
+  width: 1
+  color_token: md.comp.carousel-item.with-outline.outline.color
+  color_role: outline
+  hover_color_token: md.comp.carousel-item.with-outline.hover.outline.color
+  hover_color_role: outline
+  focus_color_token: md.comp.carousel-item.with-outline.focus.outline.color
+  focus_color_role: on-surface
+  pressed_color_token: md.comp.carousel-item.with-outline.pressed.outline.color
+  pressed_color_role: outline
+  disabled_color_token: md.comp.carousel-item.with-outline.disabled.outline.color
+  disabled_color_role: outline
+  disabled_opacity_token: md.comp.carousel-item.with-outline.disabled.outline.opacity
+  disabled_opacity: 0.12
+
+layouts:
+  multi-browse:
+    visible_item_roles_at_minimum: [ large, medium, small ]
+    alignment: vertically-centered
+    padding_inline_leading: 16
+    padding_inline_trailing: 16
+    padding_block: 8
+    gap: 8
+    large_width: dynamic-or-user-set
+    medium_width: dynamic
+    small_width: dynamic-40-to-56
+    recommended_scroll_behavior: snap
+  uncontained:
+    visible_item_roles: [ large ]
+    alignment: vertically-centered
+    padding_inline_leading: 16
+    padding_inline_trailing: 0
+    padding_inline_trailing_published_here: false
+    padding_inline_trailing_provenance: >-
+      Inferred from multi-aspect's "only leading padding" and the guideline that
+      multi-aspect uses the same layout as Uncontained; the Uncontained
+      measurement table itself publishes only leading padding.
+    padding_block: 8
+    gap: 8
+    item_width: unresolved
+    item_width_published: false
+    item_width_owner: project-theme-layer
+    recommended_scroll_behaviors: [ default, snap ]
+    items_change_size: false
+    trailing_items_may_be_partially_visible: true
+  hero:
+    alignment: vertically-centered
+    padding_inline_leading: 16
+    padding_inline_trailing: 16
+    padding_block: 8
+    gap: 8
+    large_width: dynamic
+    small_width: dynamic-40-to-56
+    recommended_scroll_behavior: snap
+    minimum_items_by_alignment:
+      start: { large: 1, small: 1 }
+      # Center alignment changes the minimum topology, not just presentation:
+      # it adds a preview item at the leading edge.
+      center: { large: 1, small: 2 }
+  full-screen:
+    visible_item_roles: [ large ]
+    visible_item_count: 1
+    alignment: centered
+    padding_inline_leading: 0
+    padding_inline_trailing: 0
+    padding_block: 0
+    gap: 16
+    required_scroll_behavior: snap
+    required_snap_target: container-edges
+    preferred_orientation: vertical
+    compact_and_medium_orientation: portrait-only
+
+configurations:
+  alignment:
+    allowed: [ start, center ]
+    default: start
+    note: >-
+      All layouts may be centered, but center alignment is structural for Hero:
+      it adds a leading preview item and changes the minimum item topology.
+  multi-aspect:
+    allowed_layouts: [ uncontained ]
+    use_only_when_source_items_have_different_widths: true
+    minimum_aspect_ratio: "9:16"
+    maximum_aspect_ratio: "16:9"
+
+# These are constraints, not recommendations. Recording the forbidden cells is
+# necessary because the axes above are not freely composable.
+constraints:
+  - combination: { layout: full-screen, scroll_behavior: default }
+    allowed: false
+    reason: Full-screen must snap and must not stop part-way through an item.
+  - combination: { layout: multi-browse, scroll_behavior: default }
+    allowed: false
+    reason: Default free scrolling is published for Uncontained only.
+  - combination: { layout: hero, scroll_behavior: default }
+    allowed: false
+    reason: Default free scrolling is published for Uncontained only.
+  - combination: { layout: full-screen, window_size: compact-or-medium, orientation: landscape }
+    allowed: false
+    reason: Full-screen is portrait-only at compact and medium breakpoints.
+  - combination: { configuration: multi-aspect, layout: not-uncontained }
+    allowed: false
+    reason: Multi-aspect is an Uncontained configuration.
+  - combination: { window_size: compact, item_has_text: true, visible_item_count: greater-than-3 }
+    allowed: false
+    reason: Compact carousels with text show at most three items at once.
+
+behavior:
+  pressed_shape_change:
+    published: true
+    amount_published: false
+  parallax:
+    enabled_by_default: true
+    amount_published: false
+  dynamic_item_sizing:
+    enabled_by_default: true
+    algorithm_published: false
+  scrolling:
+    default:
+      stops_anywhere: true
+      allowed_layouts: [ uncontained ]
+    snap:
+      aligns_to_layout_grid: true
+      recommended_layouts: [ multi-browse, hero ]
+      required_layouts: [ full-screen ]
+  reduced_motion:
+    parallax: false
+    items_expand_in_view: false
+    all_items_same_size: true
+    items_reach_window_edges: true
+    hero_small_item_partially_visible: true
+    # This is the reusable baseline for every layout, not a separate decorative
+    # mode: all advanced layouts must be able to fall back to uniform geometry.
+    geometry_path: uniform-uncontained
+
+accessibility:
+  container:
+    focusable: false
+    accessible_name_required: true
+    published_role_name: container
+    web_role: unresolved
+  items:
+    directly_actionable: true
+    initial_focus: first-item
+    label_includes_current_and_total: true
+    nested_controls: prohibited
+    nested_controls_source: >-
+      Cross-component rule: Carousel prohibits controls inside its container;
+      Card accessibility supplies the general exclusion that a directly
+      actionable surface cannot contain another action.
+  keyboard:
+    - keys: Tab or ArrowLeft / ArrowRight
+      action: Move to the previous or next carousel item.
+    - keys: ArrowUp / ArrowDown
+      action: Leave the carousel and move to the adjacent page element.
+    - keys: Space or Enter
+      action: Activate the focused carousel item.
+  skip_over_items:
+    required: true
+    mechanism: unresolved-with-web-role
+  horizontal_scroll_alternative:
+    required_on_vertically_scrolling_pages: true
+    exception_layouts: [ full-screen ]
+    without_header:
+      control: Show all button
+      padding: 4
+      placement: below-carousel
+    with_header:
+      control: arrow icon button
+      icon_button_size: 48
+      header_alignment: leading
+      full_list_repeats_header: true
+      placement: same-row-as-header
+  controls:
+    inside_or_beside_carousel: prohibited
+    allowed_placement: above-or-below
+
+discrepancies:
+  - subject: number of layouts
+    overview: Six layouts, counting center-aligned hero and uncontained multi-aspect ratio separately.
+    guidelines_and_android: Four layouts, treating those two as configurations.
+    note: >-
+      The public model uses four layout strategies plus constrained alignment and
+      aspect configurations. This preserves the behavioral families and avoids a
+      six-value enum whose members duplicate most of their contract.
+  - subject: carousel container role
+    prose: The carousel container has the "container" role.
+    web_platform: ARIA defines no role named "container".
+    note: >-
+      The web role remains unresolved. Do not emit role="container" and do not
+      silently substitute region or group until the DOM and labeling contract is
+      reviewed against the first implementation.
+  - subject: Uncontained trailing padding
+    prose: >-
+      The Uncontained measurement table publishes leading padding only, while
+      the multi-aspect configuration says it has only leading padding and uses
+      the same layout as Uncontained.
+    recorded_value: 0
+    note: >-
+      Zero is a traceable inference, not a directly published Uncontained row.
+      Keep its provenance attached until a source publishes the trailing value.
+  - subject: Uncontained item width
+    prose: Items are a single size and do not change size while scrolling.
+    published_values: No item-width row or content-sizing rule.
+    note: >-
+      Width remains unresolved and belongs to the project theme layer. Do not
+      describe it as content-sized or as an M3 token without another source.
+  - subject: dynamic sizing and parallax algorithms
+    prose: Items resize and use parallax as they move through the carousel.
+    published_values: No keyline equations, interpolation curve or parallax amount.
+    note: >-
+      Android's CarouselLayoutManager and the Lab are implementation references,
+      not web token sources. Any web algorithm is a project policy and must be
+      measured before it is presented as M3 behavior.
+  - subject: ripple feedback
+    prose: Tapping a carousel item changes its shape slightly and creates a ripple.
+    project_policy: Ripple is deferred as a cross-component motion decision.
+    note: >-
+      Item hover, focus and pressed state layers are still published and must not
+      be removed. A carousel-only ripple would disagree with the rest of the
+      Social frontend's interaction system.
+
+source_boundaries:
+  published_item_tokens:
+    - color, elevation and extra-large shape
+    - enabled, hovered, focused, pressed and disabled states
+    - optional outline and focus indicator
+  prose_only_layout_values:
+    - 16dp inline padding
+    - 8dp block padding
+    - 8dp ordinary gap
+    - 16dp full-screen gap
+    - 40–56dp small item width range
+    - 4dp Show all button padding
+    - 48dp header arrow icon button size
+  implementation_policy:
+    published_md_tokens_only: true
+    prose_layout_values_use_ax_namespace: true
+
+lab_reference:
+  path: products/reference-implementations/axismundi-lab/modules/carousel
+  reusable:
+    - native horizontal overflow
+    - CSS scroll-snap fallback
+    - reduced-motion branch
+    - usable scrolling when JavaScript is unavailable
+  do_not_promote:
+    - focusable carousel container
+    - previous and next controls inside or beside the carousel
+    - fixed large, medium and small item classes as the production sizing model
+    - Lab interaction-state policy as current M3 evidence
+
+component_implementation_order:
+  - Carousel and CarouselItem DOM, keyboard and labeling contract
+  - Uncontained, also used as every layout's reduced-motion geometry
+  - Multi-browse keylines, masking and dynamic widths
+  - Hero and full-screen

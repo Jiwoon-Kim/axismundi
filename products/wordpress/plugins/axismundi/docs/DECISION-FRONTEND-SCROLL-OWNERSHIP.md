@@ -98,6 +98,17 @@ inner scroll로 바꾸고(3-3을 전부 위반한 상태로), 기본값 `visible
 없어질 대상이다. 그 clamp는 우리가 채택하지 않는 topology(고정 높이 + 내부 스크롤)를
 증명하고 있었다. topology 표면은 sticky chrome + 문서 스크롤을 보여야 한다.
 
+### 3-5. Carousel의 비수평 전체 목록 경로 = 표준 route에서 항상 필요
+
+M3 Carousel은 vertically scrolling page에 놓인 non-full-screen Carousel에 수평 스크롤 없이
+모든 item을 볼 수 있는 경로를 요구한다. 이 문서가 Social의 기본 scroll owner를 document로
+채택했으므로 표준 Social route는 그 조건을 항상 만족한다. 따라서 header의 48dp arrow action
+또는 Carousel 아래의 padding 4dp Show all button은 선택적 enhancement가 아니라 필수 조합이다.
+full-screen Carousel만 예외다.
+
+구체적인 Home 조합과 구현 순서는 `PLAN-FRONTEND-HOME.md`가 소유한다. 이 문서는 조건이 항상
+참이라는 scroll 측의 사실만 소유한다.
+
 ## 4. 검증 기준
 
 CSS 핀 — 가장 값싸고 가장 안 깨진다.
@@ -140,5 +151,7 @@ JSX 핀 — 각 마커가 **정확히 1회** 등장함을 먼저 단정하고, �
   채택되면 그 절은 canonical primitive 증명이 아니라 조합 smoke test로 낮춰 적어야 한다.
 - `_data/surface.yml` — dialog scrolling(1-4), sheet scroll 방향.
 - `_data/app_bar.yml` — on-scroll 토큰과 "scroll-container owner" 위임(3-1).
+- `_data/carousel.yml`과 `PLAN-FRONTEND-HOME.md` — document scroll 때문에 항상 활성화되는
+  Show all 경로(3-5).
 - `DECISION-FRONTEND-LAYOUT-NAMING.md` — 같은 턴의 명명 정렬. 이름이 소유를
   가리키므로 함께 읽는다.

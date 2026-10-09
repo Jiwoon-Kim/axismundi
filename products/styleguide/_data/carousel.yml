@@ -581,7 +581,7 @@ discrepancies:
       source, multi-aspect is a Stylebook demonstration rather than something a
       product surface can adopt. See "item aspect ratio has no source yet".
   - subject: every multi-aspect item must declare a ratio
-    status: open
+    status: implemented
     reason: >-
       The total width of a multi-aspect carousel is the leading padding, plus
       the height times each item's ratio, plus a gap between each pair, plus
@@ -593,6 +593,14 @@ discrepancies:
       rather than a second layout algorithm. Morph stays a mask over settled
       item boxes: resizing the boxes themselves would move the total width and
       the snap positions on every frame.
+    implementation: >-
+      UncontainedMultiAspectCarousel reports any item whose media declares no
+      ratio and does not accept an itemWidth, which is what the uniform wrapper
+      is for. It checks rather than defaulting, because a fallback ratio is a
+      size the caller did not choose and M3 publishes a range for these items,
+      not a value. CarouselItemMedia applies its own default internally, so the
+      default never reaches the element's props and a missing ratio is really
+      missing.
   - subject: ripple feedback
     prose: Tapping a carousel item changes its shape slightly and creates a ripple.
     project_policy: Ripple is deferred as a cross-component motion decision.

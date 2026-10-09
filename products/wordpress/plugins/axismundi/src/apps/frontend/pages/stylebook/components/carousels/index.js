@@ -5,6 +5,7 @@ import { CarouselItemMedia } from '../../../../components/carousels/carousel-ite
 import { CarouselItemText } from '../../../../components/carousels/carousel-item-text';
 import { MultiBrowseCarousel } from '../../../../components/carousels/multi-browse-carousel';
 import { UncontainedCarousel } from '../../../../components/carousels/uncontained-carousel';
+import { UncontainedMultiAspectCarousel } from '../../../../components/carousels/uncontained-multi-aspect-carousel';
 import { Icon } from '../../../../components/material/icon';
 import { Scaffold } from '../../../../foundations/layout/scaffold';
 import { useEffect, useRef, useState } from '@wordpress/element';
@@ -226,7 +227,9 @@ function KeylineSample( {
 	multiAspect = false,
 } ) {
 	let RuntimeCarousel = Carousel;
-	if ( 'center' === alignment ) {
+	if ( multiAspect ) {
+		RuntimeCarousel = UncontainedMultiAspectCarousel;
+	} else if ( 'center' === alignment ) {
 		RuntimeCarousel = CenteredHeroCarousel;
 	} else if ( 'multi-browse' === layout ) {
 		RuntimeCarousel = MultiBrowseCarousel;

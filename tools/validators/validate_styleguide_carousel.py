@@ -795,6 +795,30 @@ def main() -> int:
     # guidelines put the adaptation in the algorithm, and a width derived per
     # context holds Hero at two items and grows the large one to 1504dp at an
     # extra-large container instead of showing more of them.
+    # A multi-aspect carousel's width is the sum of its height times each
+    # item's ratio, so one item without a ratio makes the sum unknowable. The
+    # wrapper exists to require that input; it shares the Uncontained engine
+    # rather than adding a second layout, and it refuses an itemWidth, which is
+    # what the uniform wrapper is for.
+    multi_aspect_carousel = ( CAROUSEL.parent / "uncontained-multi-aspect-carousel.js" ).read_text( encoding="utf-8" )
+    multi_aspect_code = declarations( multi_aspect_carousel )
+    check(
+        "export function UncontainedMultiAspectCarousel(" in multi_aspect_code
+        and 'layout="uncontained"' in multi_aspect_code
+        and "itemWidth" not in multi_aspect_code,
+        "the multi-aspect wrapper stopped sharing the Uncontained engine",
+    )
+    check(
+        "export function declaresRatio(" in multi_aspect_carousel
+        and "undefined !== child.props.aspectRatio" in multi_aspect_carousel
+        and "warning(" in multi_aspect_carousel,
+        "multi-aspect items are no longer required to declare a ratio",
+    )
+    check(
+        "UncontainedMultiAspectCarousel" in stylebook_page,
+        "the multi-aspect specimens bypass the wrapper that holds their contract",
+    )
+
     check(
         "const PREFERRED_ITEM_WIDTH = {" in stylebook_page
         and "hero: 316," in stylebook_page

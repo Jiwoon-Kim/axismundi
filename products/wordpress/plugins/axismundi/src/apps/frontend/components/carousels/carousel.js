@@ -30,7 +30,6 @@
  * @param {import('@wordpress/element').ReactNode} props.children                      Direct CarouselItem children.
  * @param {'uncontained'|'multi-browse'|'hero'}    [props.layout='uncontained']        Implemented layouts.
  * @param {'start'|'center'}                       [props.alignment='start']           Measured Hero alignment.
- * @param {boolean}                                [props.multiAspect=false]           Uses varied-ratio Uncontained geometry.
  * @param {'default'|'snap'}                       [props.scrollBehavior='default']    Scrolling behavior.
  * @param {string}                                 [props.roleDescription='carousel']  Localized role description.
  * @param {string}                                 [props.itemRoleDescription='slide'] Localized item role description.
@@ -172,7 +171,6 @@ export function Carousel( {
 	children,
 	layout = 'uncontained',
 	alignment = 'start',
-	multiAspect = false,
 	scrollBehavior = 'default',
 	roleDescription = 'carousel',
 	itemRoleDescription = 'slide',
@@ -226,13 +224,6 @@ export function Carousel( {
 	if ( implementedAlignment !== alignment ) {
 		warning(
 			`Carousel: center alignment is implemented for Hero only; using start alignment for ${ implementedLayout }.`
-		);
-	}
-	const implementedMultiAspect =
-		'uncontained' === implementedLayout && Boolean( multiAspect );
-	if ( multiAspect && ! implementedMultiAspect ) {
-		warning(
-			'Carousel: multiAspect is an Uncontained configuration; ignoring it for this layout.'
 		);
 	}
 	const effectiveBehavior = SNAP_REQUIRED_LAYOUTS.includes(
@@ -527,18 +518,27 @@ export function Carousel( {
 			let declaredItemWidth = 0;
 			let boxes = [];
 			if ( uncontained ) {
-				if ( implementedMultiAspect ) {
+				const declared = parseFloat(
+					window
+						.getComputedStyle( root )
+						.getPropertyValue( '--ax-carousel-item-width' )
+				);
+				if ( 0 < declared ) {
+					declaredItemWidth = declared;
+					boxes = domItems.map( () => declared );
+				} else {
+					/*
+					 * No uniform width, so the items size themselves and each
+					 * one is measured. The keylines still need a single width
+					 * to be built from and it is the widest box, because the
+					 * focal position has to be able to show the largest item
+					 * whole. M3 publishes no equation for the varying-width
+					 * case, so that choice is this project's.
+					 */
 					boxes = domItems.map(
 						( item ) => item.getBoundingClientRect().width
 					);
 					declaredItemWidth = Math.max( 0, ...boxes );
-				} else {
-					declaredItemWidth = parseFloat(
-						window
-							.getComputedStyle( root )
-							.getPropertyValue( '--ax-carousel-item-width' )
-					);
-					boxes = domItems.map( () => declaredItemWidth );
 				}
 				if ( ! ( 0 < declaredItemWidth ) ) {
 					clearKeylines();
@@ -771,12 +771,7 @@ export function Carousel( {
 			);
 			geometryRef.current = undefined;
 		};
-	}, [
-		implementedAlignment,
-		implementedLayout,
-		implementedMultiAspect,
-		preferredItemWidth,
-	] );
+	}, [ implementedAlignment, implementedLayout, preferredItemWidth ] );
 
 	function moveFocus( event ) {
 		const root = rootRef.current;
@@ -859,7 +854,6 @@ export function Carousel( {
 				.join( ' ' ) }
 			data-alignment={ implementedAlignment }
 			data-layout={ implementedLayout }
-			data-multi-aspect={ implementedMultiAspect ? '' : undefined }
 			data-scroll-behavior={ effectiveBehavior }
 			role="group"
 		>

@@ -199,6 +199,13 @@ function UncontainedSample() {
 	);
 }
 
+/*
+ * `multiAspect` is a property of this specimen, not of the component: it picks
+ * which ratios the items are drawn at and what the label says. M3 describes the
+ * layout as "the same layout as the uncontained carousel but with items of
+ * various sizes", so the carousel is told nothing -- an uncontained carousel
+ * with no uniform width already lets each item be as wide as its own media.
+ */
 function KeylineSample( {
 	layout,
 	context,
@@ -228,7 +235,6 @@ function KeylineSample( {
 				label={ `${ context } ${ layout } items` }
 				layout={ layout }
 				alignment={ alignment }
-				multiAspect={ multiAspect }
 				preferredItemWidth={
 					PREFERRED_ITEM_WIDTH[
 						'center' === alignment ? 'center-hero' : layout
@@ -246,8 +252,7 @@ function KeylineSample( {
 							aspectRatio={
 								multiAspect
 									? FIGMA_ASPECT_RATIOS[
-											index %
-												FIGMA_ASPECT_RATIOS.length
+											index % FIGMA_ASPECT_RATIOS.length
 										]
 									: '1:1'
 							}

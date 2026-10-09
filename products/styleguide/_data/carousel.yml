@@ -458,6 +458,29 @@ discrepancies:
     resolution: >-
       The two paths branch. Every contained layout now paints its strategy's
       sizes exactly, with nothing overhanging the container.
+  - subject: multi-aspect as a carousel mode
+    prose: >-
+      The uncontained multi-aspect ratio carousel has the same layout as the
+      uncontained carousel but contains items of various sizes. Item widths can
+      range anywhere between 9:16 for min width size to 16:9 for max width.
+    defect: >-
+      It had been built as a boolean on the carousel, with a table of five CSS
+      rules restating each ratio as a width. The prose puts the variation in the
+      items, not the carousel, and gives a range rather than a set, so both the
+      mode and the table were inventions.
+    resolution: >-
+      The mode is gone. An uncontained carousel declaring no uniform width lets
+      each item be as wide as its own media, which is the ratio times the
+      carousel's height, in one rule for any ratio between the published bounds.
+      CarouselItemMedia takes any ratio and clamps it to 9:16 and 16:9.
+    also_fixed: >-
+      The mask had been a width on the item's action, so an item that sized
+      itself measured its own mask and collapsed to the 10dp anchor in a frame.
+      It is a clip now, which is what the Android reference does: it masks, it
+      does not resize.
+    measured: >-
+      362.67, 272, 204, 153 and 114.75 at a 204dp item height, cycling, with the
+      contained layouts unchanged.
   - subject: ripple feedback
     prose: Tapping a carousel item changes its shape slightly and creates a ripple.
     project_policy: Ripple is deferred as a cross-component motion decision.

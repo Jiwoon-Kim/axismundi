@@ -425,10 +425,15 @@ def main() -> int:
         and 'layout="hero"' in centered_hero_carousel,
         "public Carousel wrappers no longer match the Android variant contracts",
     )
+    # M3 calls multi-aspect "the same layout as the uncontained carousel but
+    # with items of various sizes": the variation is in the items, so there is
+    # nothing for the carousel to be told. An uncontained carousel with no
+    # uniform width already lets each item be as wide as its own media.
     check(
-        "data-multi-aspect={ implementedMultiAspect ? '' : undefined }" in carousel
-        and "multiAspect is an Uncontained configuration" in carousel,
-        "Multi-aspect ratio stopped being an explicit Uncontained configuration",
+        "multiAspect" not in carousel
+        and "data-multi-aspect" not in carousel
+        and "data-multi-aspect" not in carousel_css,
+        "a multi-aspect mode is back on the carousel, which the layout does not have",
     )
     check(
         "requires snap scrolling" in carousel
@@ -507,10 +512,14 @@ def main() -> int:
         == 220,
         "Figma Multi-aspect ratio profiles drifted",
     )
+    # "Item widths can range anywhere between 9:16 for min width size to 16:9
+    # for max width." The five the Community Kit draws are a sample of that
+    # range, and an earlier version accepted only those and warned on the rest.
     check(
-        all(f"'{ratio}'" in carousel_item_media for ratio in expected_ratios)
-        and 'data-aspect-ratio={ ratio }' in carousel_item_media,
-        "CarouselItemMedia no longer implements the five recorded ratios",
+        "const MINIMUM_RATIO = 9 / 16;" in carousel_item_media
+        and "const MAXIMUM_RATIO = 16 / 9;" in carousel_item_media
+        and "export function parseAspectRatio(" in carousel_item_media,
+        "CarouselItemMedia takes a fixed set of ratios again, not the published range",
     )
     check(
         "supportingText" in carousel_item_text
@@ -524,13 +533,16 @@ def main() -> int:
         "CarouselItemText lost its explicit overlay appearance",
     )
 
+    # The fallback is `auto` and says something: no uniform width means the
+    # items size themselves. A numeric fallback would be the component guessing
+    # a width M3 does not publish, which is what this used to forbid.
     check(
         re.search(
-            r"flex:\s*0 0 var\(\s*--ax-carousel-item-width\s*\);",
+            r"flex:\s*0 0 var\(\s*--ax-carousel-item-width,\s*auto\s*\);",
             carousel_css,
         )
         is not None,
-        "Uncontained width gained a fallback or stopped using its project property",
+        "the item width lost its project property or gained a numeric fallback",
     )
     check(
         re.search(r"(?m)^\s*--ax-carousel-item-width\s*:", carousel_css) is None,
@@ -601,37 +613,27 @@ def main() -> int:
         and "ax-carousel-item__content" in carousel_css,
         "Carousel lost its stable slot and masked full-size content shell",
     )
-    for ratio, declaration in {
-        "16:9": "aspect-ratio: 16 / 9;",
-        "4:3": "aspect-ratio: 4 / 3;",
-        "1:1": "aspect-ratio: 1;",
-        "3:4": "aspect-ratio: 3 / 4;",
-        "9:16": "aspect-ratio: 9 / 16;",
-    }.items():
-        check(
-            f'data-aspect-ratio="{ratio}"' in carousel_css
-            and declaration in carousel_css,
-            f"CarouselItemMedia CSS lost the {ratio} building block",
-        )
+    # The ratio is a number the component hands to CSS, so one rule covers the
+    # whole range. Five rules could only ever cover five points of it, and they
+    # restated a width the ratio already determines.
+    check(
+        "aspect-ratio: var(--ax-carousel-media-ratio, 1);" in carousel_css
+        and 'data-aspect-ratio="' not in carousel_css,
+        "the media ratio is a table of fixed values again",
+    )
     check(
         "prefers-reduced-motion: reduce" in carousel_css
         and "scroll-behavior: auto;" in carousel_css,
         "Carousel reduced-motion path no longer disables animated scrolling",
     )
     check(
-        'data-multi-aspect' in carousel_css
-        and "--ax-carousel-multi-aspect-item-width" in carousel_css
+        "var(--ax-carousel-media-ratio, 1)" in carousel_css
         and "--ax-carousel-item-block-size" in carousel_css,
-        "Multi-aspect ratio no longer derives Uncontained item geometry from its media",
+        "item width is no longer the ratio times the carousel's height",
     )
     check(
-        re.search(
-            r"data-multi-aspect[^}]+flex-grow:\s*0;[^}]+flex-shrink:\s*0;",
-            carousel_css,
-            re.DOTALL,
-        )
-        is not None,
-        "Multi-aspect items can shrink instead of overflowing horizontally",
+        re.search( r"flex:\s*0 0 ", carousel_css ) is not None,
+        "carousel items can grow or shrink instead of overflowing horizontally",
     )
     check(
         'data-appearance="overlay"' in carousel_css
@@ -799,9 +801,20 @@ def main() -> int:
         and "item.style.visibility = offStage ? 'hidden' : '';" in carousel,
         "items resting on the anchor keylines are painted in the padding again",
     )
+    # The mask is a clip now, so the forbidden one has to be named: clipping
+    # the *track* to its content box slices items on their way out.
+    track_rules = re.findall(
+        r"\.ax-carousel__items[^{]*\{[^}]*\}", carousel_css, re.DOTALL
+    )
     check(
-        "clip-path: inset(" not in carousel_css,
+        bool( track_rules )
+        and all( "clip-path" not in rule for rule in track_rules ),
         "the track clips to its content box again, which slices items on their way out",
+    )
+    check(
+        "clip-path: inset(" in carousel_css
+        and "--ax-carousel-mask-width" in carousel_css,
+        "the mask stopped being a clip, so it resizes the box it is measured from",
     )
 
     check(

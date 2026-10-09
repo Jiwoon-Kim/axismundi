@@ -79,67 +79,19 @@
 		scroll-snap-align: end;
 	}
 
+	/*
+	 * A uniform carousel declares one item width and every item takes it. A
+	 * multi-aspect one declares none, so each item is as wide as its own media,
+	 * which is the ratio times the carousel's height. That is the whole of the
+	 * difference: M3 calls multi-aspect "the same layout as the uncontained
+	 * carousel but with items of various sizes", so the variation belongs to
+	 * the items and the carousel needs no mode to be told about it.
+	 */
 	.ax-carousel-item {
 		box-sizing: border-box;
-		flex: 0 0 var(--ax-carousel-item-width);
+		flex: 0 0 var(--ax-carousel-item-width, auto);
 		min-inline-size: 0;
 		scroll-snap-align: start;
-	}
-
-	.ax-carousel[data-multi-aspect] .ax-carousel-item {
-		flex-basis: var(--ax-carousel-multi-aspect-item-width, auto);
-		flex-grow: 0;
-		flex-shrink: 0;
-	}
-
-	.ax-carousel[data-multi-aspect] .ax-carousel-item-media {
-		block-size: var(--ax-carousel-item-block-size);
-		inline-size: auto;
-	}
-
-	.ax-carousel[data-multi-aspect]
-		.ax-carousel-item:has(
-			.ax-carousel-item-media[data-aspect-ratio="16:9"]
-		) {
-		--ax-carousel-multi-aspect-item-width: calc(
-			var(--ax-carousel-item-block-size) * 16 / 9
-		);
-	}
-
-	.ax-carousel[data-multi-aspect]
-		.ax-carousel-item:has(
-			.ax-carousel-item-media[data-aspect-ratio="4:3"]
-		) {
-		--ax-carousel-multi-aspect-item-width: calc(
-			var(--ax-carousel-item-block-size) * 4 / 3
-		);
-	}
-
-	.ax-carousel[data-multi-aspect]
-		.ax-carousel-item:has(
-			.ax-carousel-item-media[data-aspect-ratio="1:1"]
-		) {
-		--ax-carousel-multi-aspect-item-width: var(
-			--ax-carousel-item-block-size
-		);
-	}
-
-	.ax-carousel[data-multi-aspect]
-		.ax-carousel-item:has(
-			.ax-carousel-item-media[data-aspect-ratio="3:4"]
-		) {
-		--ax-carousel-multi-aspect-item-width: calc(
-			var(--ax-carousel-item-block-size) * 3 / 4
-		);
-	}
-
-	.ax-carousel[data-multi-aspect]
-		.ax-carousel-item:has(
-			.ax-carousel-item-media[data-aspect-ratio="9:16"]
-		) {
-		--ax-carousel-multi-aspect-item-width: calc(
-			var(--ax-carousel-item-block-size) * 9 / 16
-		);
 	}
 
 	.ax-carousel-item__action {
@@ -147,11 +99,24 @@
 		--md-comp-carousel-item-container-shape: var(
 			--md-sys-shape-corner-value-extra-large
 		);
+		/*
+		 * THE MASK IS A CLIP, NOT A SIZE. Narrowing the action narrowed the
+		 * box it sits in, and an item that sizes itself then measured the
+		 * masked width and shrank again: the multi-aspect items collapsed to
+		 * the 10px anchor in one frame. A clip takes the same window out of a
+		 * full-width box and leaves layout alone, which is also what the
+		 * Android reference does -- it masks, it does not resize.
+		 */
 		box-sizing: border-box;
 		display: block;
-		inline-size: var(--ax-carousel-mask-width, 100%);
-		max-inline-size: 100%;
-		margin-inline: auto;
+		inline-size: 100%;
+		clip-path: inset(
+			0
+				calc(
+					(100% - min(var(--ax-carousel-mask-width, 100%), 100%)) / 2
+				)
+				round var(--md-comp-carousel-item-container-shape)
+		);
 		overflow: hidden;
 		position: relative;
 		border: 0;
@@ -172,22 +137,8 @@
 	.ax-carousel-item__content {
 		display: block;
 		position: relative;
-		inline-size: var(--ax-carousel-item-width, 100%);
+		inline-size: 100%;
 		block-size: 100%;
-		transform: translate3d(
-			calc(
-				(
-						var(
-								--ax-carousel-mask-width,
-								var(--ax-carousel-item-width)
-							) -
-							var(--ax-carousel-item-width)
-					) /
-					2
-			),
-			0,
-			0
-		);
 	}
 
 	.ax-carousel-item__action:not(:disabled):not([aria-disabled="true"]):hover {
@@ -233,11 +184,34 @@
 		--md-elevation-level: 1;
 	}
 
+	/*
+	 * One rule, not a table of five. The ratio arrives as a number, so a
+	 * carousel with no uniform width gives each item the ratio times its
+	 * height, which is M3's "anywhere between 9:16 and 16:9" rather than the
+	 * five sizes the Community Kit happens to draw at. `auto` cannot do it:
+	 * the width would come from the image's intrinsic size, which is how the
+	 * items reached 900px.
+	 */
 	.ax-carousel-item-media {
 		display: grid;
 		place-items: center;
-		inline-size: 100%;
+		aspect-ratio: var(--ax-carousel-media-ratio, 1);
+		block-size: 100%;
+		inline-size: var(
+			--ax-carousel-item-width,
+			calc(
+				var(--ax-carousel-item-block-size, 100%) *
+					var(--ax-carousel-media-ratio, 1)
+			)
+		);
 		overflow: hidden;
+	}
+
+	.ax-carousel-item-media > * {
+		display: block;
+		inline-size: 100%;
+		block-size: 100%;
+		object-fit: cover;
 	}
 
 	.ax-carousel-item-media > img {
@@ -245,26 +219,6 @@
 		inline-size: 100%;
 		block-size: 100%;
 		object-fit: cover;
-	}
-
-	.ax-carousel-item-media[data-aspect-ratio="16:9"] {
-		aspect-ratio: 16 / 9;
-	}
-
-	.ax-carousel-item-media[data-aspect-ratio="4:3"] {
-		aspect-ratio: 4 / 3;
-	}
-
-	.ax-carousel-item-media[data-aspect-ratio="1:1"] {
-		aspect-ratio: 1;
-	}
-
-	.ax-carousel-item-media[data-aspect-ratio="3:4"] {
-		aspect-ratio: 3 / 4;
-	}
-
-	.ax-carousel-item-media[data-aspect-ratio="9:16"] {
-		aspect-ratio: 9 / 16;
 	}
 
 	.ax-carousel-item-text {

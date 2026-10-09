@@ -18,7 +18,11 @@ describe( 'multi-aspect item ratio contract', () => {
 
 	test( 'an item whose media declares a ratio satisfies it', () => {
 		expect(
-			declaresRatio( item( createElement( CarouselItemMedia, { aspectRatio: '16:9' } ) ) )
+			declaresRatio(
+				item(
+					createElement( CarouselItemMedia, { aspectRatio: '16:9' } )
+				)
+			)
 		).toBe( true );
 	} );
 
@@ -31,7 +35,9 @@ describe( 'multi-aspect item ratio contract', () => {
 	test( 'an item with no media does not', () => {
 		expect( declaresRatio( item() ) ).toBe( false );
 		expect(
-			declaresRatio( item( createElement( CarouselItemText, { label: 'x' } ) ) )
+			declaresRatio(
+				item( createElement( CarouselItemText, { label: 'x' } ) )
+			)
 		).toBe( false );
 	} );
 

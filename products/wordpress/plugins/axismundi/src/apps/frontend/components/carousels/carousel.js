@@ -635,11 +635,23 @@ export function Carousel( {
 				return center;
 			} );
 
+			/*
+			 * Items of one width or of many. The keylines are built from a
+			 * single width, so their offsets describe where items sit when
+			 * every stride is the same. When the strides differ, those offsets
+			 * are not where the items are, and moving items onto them slides
+			 * them over each other and closes the gaps.
+			 */
+			const uniform = boxes.every(
+				( box ) => 0.5 > Math.abs( box - boxes[ 0 ] )
+			);
+
 			geometry = {
 				availableSpace,
 				boxSize,
 				boxes,
 				centers,
+				uniform,
 				gap,
 				itemSize,
 				items: domItems,
@@ -668,6 +680,7 @@ export function Carousel( {
 				rtl,
 				strategy,
 				stride,
+				uniform,
 			} = geometry;
 			const maximumScroll = Math.max(
 				0,
@@ -693,9 +706,18 @@ export function Carousel( {
 					keylines,
 					itemSize
 				);
+				/*
+				 * A uniform carousel moves its items onto the keylines. One
+				 * with items of various sizes leaves them where the layout put
+				 * them -- M3 calls it "the same layout as the uncontained
+				 * carousel", and the layout is the flow of their own widths --
+				 * and takes only the mask from the keylines.
+				 */
 				item.style.setProperty(
 					'--ax-carousel-item-offset',
-					`${ ( rtl ? -1 : 1 ) * ( offset - naturalCenter ) }px`
+					uniform
+						? `${ ( rtl ? -1 : 1 ) * ( offset - naturalCenter ) }px`
+						: '0px'
 				);
 				const box = geometryBoxes[ index ] ?? boxSize;
 
@@ -712,14 +734,27 @@ export function Carousel( {
 				 * that should have been whole. An item is either on stage or
 				 * not painted at all.
 				 */
+				/* Painted where it ends up, so that is where off stage is judged. */
+				const paintedCenter = uniform ? offset : naturalCenter;
+				const paintedSize = uniform ? size : box;
 				const offStage =
-					offset - size / 2 >= availableSpace - 0.5 ||
-					offset + size / 2 <= 0.5;
+					paintedCenter - paintedSize / 2 >= availableSpace - 0.5 ||
+					paintedCenter + paintedSize / 2 <= 0.5;
 				item.style.visibility = offStage ? 'hidden' : '';
 
+				/*
+				 * The mask is a clip centred in the item, which is right when
+				 * every item is the same width and has been moved onto a
+				 * keyline: the window and the box share a centre. With items
+				 * of various sizes neither holds, and a centred clip leaves
+				 * the slice floating in its own box -- measured as a 101px gap
+				 * where the carousel declares 8. Those items are cut off by
+				 * the container instead, which is what "items flow past the
+				 * edge of the screen" describes.
+				 */
 				item.style.setProperty(
 					'--ax-carousel-mask-width',
-					`${ clamp( size, 1, box ) }px`
+					`${ uniform ? clamp( size, 1, box ) : box }px`
 				);
 				item.dataset.sizeRole = sizeRole( size, box );
 			} );

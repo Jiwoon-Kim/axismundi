@@ -601,6 +601,25 @@ discrepancies:
       not a value. CarouselItemMedia applies its own default internally, so the
       default never reaches the element's props and a missing ratio is really
       missing.
+  - subject: keylines describe one stride, so varying widths take only the layout
+    defect: >-
+      Multi-aspect items were being moved onto keyline offsets and masked with
+      a clip centred in the item. The keylines are built from a single width,
+      so their offsets are where items sit when every stride is the same; with
+      strides that differ, the items slid over each other and the declared 8dp
+      gaps closed. Dropping the move alone was not enough: a centred clip then
+      left the visible slice floating in its own box, measured as a 101dp gap
+      where the carousel declares 8.
+    resolution: >-
+      A carousel whose items are all one width moves them onto the keylines and
+      masks them. One with items of various sizes does neither: they stay where
+      the layout put them and are cut off by the container, which is what
+      "items flow past the edge of the screen" describes. Measured at 8dp
+      between every pair, at rest and at four scroll positions.
+    note: >-
+      This is the same mistake twice over, both introduced by putting
+      multi-aspect through a path built for one stride. The uniform case is
+      unchanged and still verified by its own compositions.
   - subject: ripple feedback
     prose: Tapping a carousel item changes its shape slightly and creates a ripple.
     project_policy: Ripple is deferred as a cross-component motion decision.

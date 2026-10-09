@@ -13,10 +13,10 @@
  * supplied for an Uncontained multi-aspect item, the ratio plus the
  * carousel's height determines its width.
  *
- * @param {Object}                                 props                     Component props.
- * @param {import('@wordpress/element').ReactNode} props.children            Visual content.
- * @param {string|number}                          [props.aspectRatio]       Width to height, between 9:16 and 16:9.
- * @param {string}                                 [props.className]         Additional class name.
+ * @param {Object}                                 props               Component props.
+ * @param {import('@wordpress/element').ReactNode} props.children      Visual content.
+ * @param {string|number}                          [props.aspectRatio] Width to height, between 9:16 and 16:9.
+ * @param {string}                                 [props.className]   Additional class name.
  * @return {import('@wordpress/element').ReactNode} Carousel item media.
  */
 
@@ -57,7 +57,7 @@ export function CarouselItemMedia( {
 		);
 	}
 
-	let ratio = parseAspectRatio( aspectRatio );
+	const ratio = parseAspectRatio( aspectRatio );
 	if ( null === ratio ) {
 		warning(
 			`CarouselItemMedia: aspectRatio "${ aspectRatio }" is not a ratio; using the item bounds.`

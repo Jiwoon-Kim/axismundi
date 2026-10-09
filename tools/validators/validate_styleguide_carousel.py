@@ -848,6 +848,23 @@ def main() -> int:
         "nothing holds the Figma profiles to the algorithm that should produce them",
     )
 
+    # Keylines are built from one width, so their offsets and their centred
+    # mask are only right when every stride is the same. Applying either to
+    # items of various sizes slid them over each other and closed the declared
+    # gaps, and then left the visible slice floating in its own box.
+    after_offset = carousel.split( "'--ax-carousel-item-offset'," )
+    check(
+        "const uniform = boxes.every(" in carousel
+        and 2 == len( after_offset )
+        and "uniform" in after_offset[ 1 ][ :200 ],
+        "items of various sizes are moved onto keylines again, which closes their gaps",
+    )
+    check(
+        "uniform ? clamp( size, 1, box ) : box" in carousel,
+        "a centred mask is applied to items of various sizes again",
+    )
+
+
     check(
         "const offStage =" in carousel
         and "item.style.visibility = offStage ? 'hidden' : '';" in carousel,

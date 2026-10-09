@@ -760,6 +760,19 @@ def main() -> int:
     # component 15px taller than the composition it implements: 236 where
     # Compose's reference is 221, a 205dp item between 8dp of block padding.
     # Drag, wheel and keyboard all still scroll without it.
+    # A scroll container clips at its padding box, so the anchor keylines --
+    # the off-stage positions an item interpolates towards as it leaves -- were
+    # painted inside the 16px strip as 10px slivers after the small item. M3
+    # requires carousel items to be fully visible on-screen and names
+    # uncontained as the one exception, so the contained layouts clip to their
+    # content box and uncontained still bleeds past the edge.
+    check(
+        'ax-carousel:not([data-layout="uncontained"]) .ax-carousel__items'
+        in carousel_css
+        and "clip-path: inset(" in carousel_css,
+        "the contained layouts paint their anchor keylines in the padding again",
+    )
+
     check(
         "scrollbar-width: none;" in carousel_css
         and ".ax-carousel__items::-webkit-scrollbar" in carousel_css,

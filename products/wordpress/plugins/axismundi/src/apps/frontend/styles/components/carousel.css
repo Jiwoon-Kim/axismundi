@@ -57,6 +57,26 @@
 		display: none;
 	}
 
+	/*
+	 * THE PADDING IS NOT STAGE. A scroll container clips at its padding box,
+	 * so the anchor keylines -- the off-stage positions an item interpolates
+	 * towards as it leaves -- were painted inside the 16px strip as 10px
+	 * slivers after the small item. M3 says carousel items must be fully
+	 * visible on-screen, and names the uncontained layout as the one
+	 * exception, so the contained layouts clip to their content box and
+	 * uncontained keeps bleeding past the edge, which is what it is for.
+	 *
+	 * The published compositions are evidence for the same line: Hero's
+	 * 316 + 56 and Multi-browse's 184 + 184 + 120 + 56, with their gaps, come
+	 * to exactly the content box and never to a pixel more.
+	 */
+	.ax-carousel:not([data-layout="uncontained"]) .ax-carousel__items {
+		clip-path: inset(
+			0 var(--ax-carousel-padding-inline-end) 0
+				var(--ax-carousel-padding-inline-start)
+		);
+	}
+
 	.ax-carousel__items[data-dragging] {
 		cursor: grabbing;
 		scroll-behavior: auto;

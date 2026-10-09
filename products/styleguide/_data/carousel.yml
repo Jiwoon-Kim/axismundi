@@ -414,6 +414,21 @@ discrepancies:
       the same. The keylines are built from the widest box, because the focal
       position has to be able to show the largest item whole; M3 publishes no
       equation for the varying-width case, so that choice is this project's.
+  - subject: anchor keylines inside the container padding
+    prose: >-
+      Carousel items must be fully visible on-screen, except for the
+      uncontained layout.
+    defect: >-
+      A scroll container clips at its padding box, so items mapped to the
+      anchor keylines were painted in the 16dp strip as 10dp slivers past the
+      small item: one more item than the composition has.
+    resolution: >-
+      The contained layouts clip to their content box; uncontained keeps
+      bleeding past the edge, which is what the exception is for.
+    evidence: >-
+      The published compositions come to exactly the content box and never to
+      a pixel more - Hero's 316 plus 56, Multi-browse's 184, 184, 120 and 56,
+      each with its gaps.
   - subject: ripple feedback
     prose: Tapping a carousel item changes its shape slightly and creates a ripple.
     project_policy: Ripple is deferred as a cross-component motion decision.

@@ -370,30 +370,56 @@ discrepancies:
     measured: >-
       Figma's Tablet Hero, Tablet Multi-browse and Tablet Center-aligned Hero
       are all 184, 184, 120 and 56.
-    proof: >-
-      Hero's arrangement is searched with a medium count of zero, so no input
-      makes it produce the 120, and a centred hero is symmetric - small, large,
-      small - so it cannot be a four item run ending in a 56. Two of the three
-      frames are the Multi-browse composition under another label, and
-      Multi-browse is the one that was drawn.
+    interpretation: >-
+      The kit's Tablet variants converge all three layout choices onto the
+      Multi-browse profile. A static design-kit frame cannot establish whether
+      that convergence is an intentional responsive recommendation, an older
+      policy, or duplicated specimen geometry, so the record does not call the
+      Hero labels wrong.
+    upstream_difference: >-
+      AndroidX HEAD 2d794f97 read on 2026-10-10 and the pinned a0c645de
+      revision both search Hero with a medium count of zero. Their Hero adds
+      large items as maxItemWidth permits and keeps one small item, or two for
+      centred Hero; it does not switch strategy to Multi-browse at a Tablet
+      breakpoint.
     consequence: >-
-      Only the Mobile frames are usable as Hero and centred Hero references, and
-      the Stylebook draws one Tablet row rather than three. The Mobile pair is
-      reproduced exactly by the compact widths, and the Tablet Multi-browse
-      frame by a preferred width of 184, so every frame the kit actually drew is
-      an output of the algorithm.
+      The Stylebook keeps one shared Tablet Figma row and labels all three
+      variant names on it, while runtime Hero remains the AndroidX-derived Hero
+      strategy. A product that wants the kit's Tablet convergence must choose
+      MultiBrowseCarousel in its responsive composition; the Hero primitive
+      must not silently change identity by viewport.
     status: recorded, with tests
   - subject: Hero tablet medium item
     published_anatomy: Hero names large and small items, with no medium item in its measurement table.
     measured_figma_profile: Tablet Hero contains large, large, medium and small items.
-    implementation_choice: Preserve the measured Figma profile as a static regression fixture only.
+    implementation_choice: Preserve the shared Figma Tablet profile as a static regression fixture only.
     proof: >-
       Hero's arrangement is searched with a medium count of zero, so no
-      preferred width can make it produce a medium item. The frame is a
-      Multi-browse composition under a Hero label, and a test asserts the zero.
+      preferred width can make it produce a medium item. This proves that the
+      kit's Tablet convergence is not the output of the AndroidX Hero strategy;
+      it does not prove why the kit chose that convergence. A test asserts the
+      zero.
     note: >-
       The medium item is therefore a measured specimen role, not a runtime
       constant and not a claim that the published Hero anatomy has a medium item.
+  - subject: Tablet runtime small widths differ by strategy input
+    measured: >-
+      At 568dp of item space and 8dp gaps, the Stylebook runtime produces Hero
+      256 / 256 / 40, centred Hero 40 / 232 / 232 / 40, and Multi-browse
+      186 / 186 / 121 / 51. The Figma Multi-browse fixture is instead
+      184 / 184 / 120 / 56.
+    cause: >-
+      All strategies start from the same 40dp through 56dp Small range. Hero
+      has no Medium and must fit two Large items, so arrangement fitting lowers
+      Small to its 40dp floor. Multi-browse with preferredItemWidth 186 is only
+      5dp over the available space after its Medium and gaps, so fitting lowers
+      Small from 56dp to 51dp. Passing the Figma fixture's 184dp preferred Large
+      width yields its exact 184 / 184 / 120 / 56 arrangement.
+    consequence: >-
+      Neither 40dp nor 56dp is a layout-specific default. They are the lower
+      and upper bounds selected by arrangement fitting. A responsive
+      composition may pass a different preferred width, but the primitive does
+      not switch values at a Tablet breakpoint.
   - subject: Center-aligned hero large-to-small split
     status: resolved
     was: >-
@@ -512,6 +538,20 @@ discrepancies:
       attachments, so the ratio is data the caller already holds rather than
       something to detect, but nothing wires it through yet. Reading
       naturalWidth after load is the fallback, and it reflows once per image.
+  - subject: aspect ratio belongs only to ratio-bearing item compositions
+    status: resolved
+    prose: >-
+      M3 publishes no item aspect ratio for Hero or Multi-browse. It publishes
+      a 9:16 through 16:9 width range only for Uncontained multi-aspect ratio.
+    resolution: >-
+      CarouselItemMedia has no default ratio. Without an explicit ratio it
+      fills the item box, whose block size belongs to the consuming composition.
+      An explicit ratio derives width from block size only for a ratio-bearing
+      item. The former 1:1 default made a 316 by 205 Hero item contain a 316 by
+      316 image and silently clip it.
+    rejected: >-
+      Neither 1:1 nor the golden ratio is an M3 default. Small 56dp and medium
+      120dp are measured keyline outputs, not media aspect ratios.
   - subject: adaptation is by container, not by window breakpoint
     prose: >-
       As the carousel container size increases, so do the number of carousel
@@ -540,6 +580,19 @@ discrepancies:
       by hard-coded values from the Community Kit. Until the ratio has a
       source, multi-aspect is a Stylebook demonstration rather than something a
       product surface can adopt. See "item aspect ratio has no source yet".
+  - subject: every multi-aspect item must declare a ratio
+    status: open
+    reason: >-
+      The total width of a multi-aspect carousel is the leading padding, plus
+      the height times each item's ratio, plus a gap between each pair, plus
+      the trailing padding. One item without a ratio makes that sum
+      unknowable, and the renderer falls back to measuring whatever the
+      browser gave it.
+    shape: >-
+      A wrapper that shares the Uncontained engine and requires the input,
+      rather than a second layout algorithm. Morph stays a mask over settled
+      item boxes: resizing the boxes themselves would move the total width and
+      the snap positions on every frame.
   - subject: ripple feedback
     prose: Tapping a carousel item changes its shape slightly and creates a ripple.
     project_policy: Ripple is deferred as a cross-component motion decision.

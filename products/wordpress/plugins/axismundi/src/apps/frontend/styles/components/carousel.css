@@ -57,7 +57,6 @@
 		display: none;
 	}
 
-
 	.ax-carousel__items[data-dragging] {
 		cursor: grabbing;
 		scroll-behavior: auto;
@@ -111,10 +110,7 @@
 		display: block;
 		inline-size: 100%;
 		clip-path: inset(
-			0
-				calc(
-					(100% - min(var(--ax-carousel-mask-width, 100%), 100%)) / 2
-				)
+			0 calc((100% - min(var(--ax-carousel-mask-width, 100%), 100%)) / 2)
 				round var(--md-comp-carousel-item-container-shape)
 		);
 		overflow: hidden;
@@ -184,31 +180,33 @@
 		--md-elevation-level: 1;
 	}
 
-	/*
-	 * One rule, not a table of five. The ratio arrives as a number, so a
-	 * carousel with no uniform width gives each item the ratio times its
-	 * height, which is M3's "anywhere between 9:16 and 16:9" rather than the
-	 * five sizes the Community Kit happens to draw at. `auto` cannot do it:
-	 * the width would come from the image's intrinsic size, which is how the
-	 * items reached 900px.
-	 */
+	/* Regular items fill their item box; M3 publishes no aspect ratio for Hero
+	 * or Multi-browse. An explicitly ratio-bearing item is the Uncontained
+	 * multi-aspect case. One rule covers its whole 9:16 through 16:9 range. */
 	.ax-carousel-item-media {
 		display: grid;
 		place-items: center;
-		aspect-ratio: var(--ax-carousel-media-ratio, 1);
 		block-size: 100%;
+		inline-size: 100%;
+		overflow: hidden;
+		position: relative;
+	}
+
+	.ax-carousel-item-media[data-aspect-ratio] {
+		aspect-ratio: var(--ax-carousel-media-ratio);
 		inline-size: var(
 			--ax-carousel-item-width,
 			calc(
 				var(--ax-carousel-item-block-size, 100%) *
-					var(--ax-carousel-media-ratio, 1)
+					var(--ax-carousel-media-ratio)
 			)
 		);
-		overflow: hidden;
 	}
 
 	.ax-carousel-item-media > * {
 		display: block;
+		position: absolute;
+		inset: 0;
 		inline-size: 100%;
 		block-size: 100%;
 		object-fit: cover;

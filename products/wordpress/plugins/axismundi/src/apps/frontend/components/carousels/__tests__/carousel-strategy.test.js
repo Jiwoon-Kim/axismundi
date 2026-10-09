@@ -286,12 +286,12 @@ describe( 'Material carousel strategies', () => {
 		expect( counts ).toEqual( [ 2, 3, 4, 5, 6 ] );
 	} );
 
-	test( 'a centred hero is symmetric, so it cannot be the Tablet frame', () => {
+	test( 'AndroidX centred hero does not use the shared Figma Tablet profile', () => {
 		/*
 		 * Figma's Tablet Hero, Multi-browse and Center-aligned Hero frames are
 		 * all 184, 184, 120 and 56. Hero cannot produce a medium at all, and a
-		 * centred hero is small, large, small, so two of the three are the
-		 * Multi-browse composition under another label.
+		 * centred hero is symmetric. The kit therefore converges its Tablet
+		 * variants to Multi-browse; that is not AndroidX Hero runtime geometry.
 		 */
 		for ( const preferredItemWidth of [ 186, 252, 440 ] ) {
 			const sizes = centeredHeroStrategy( {
@@ -306,12 +306,12 @@ describe( 'Material carousel strategies', () => {
 		}
 	} );
 
-	test( 'hero has no medium item to give, at any width', () => {
+	test( 'AndroidX hero has no medium item at any width', () => {
 		/*
 		 * The Figma Tablet Hero frame is 184, 184, 120 and 56, and the 120 is a
 		 * medium. Hero's arrangement is searched with mediumCounts of [0], so the
-		 * frame cannot be a hero however it is fed: it is a Multi-browse
-		 * composition under a Hero label.
+		 * shared Figma Tablet profile cannot be produced by the AndroidX Hero
+		 * strategy, regardless of why the kit converges those variants.
 		 */
 		for ( const preferredItemWidth of [ undefined, 120, 186, 316 ] ) {
 			const strategy = heroStrategy( {

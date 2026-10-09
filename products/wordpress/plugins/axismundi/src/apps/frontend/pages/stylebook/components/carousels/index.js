@@ -265,7 +265,7 @@ function KeylineSample( {
 									? FIGMA_ASPECT_RATIOS[
 											index % FIGMA_ASPECT_RATIOS.length
 										]
-									: '1:1'
+									: undefined
 							}
 						>
 							<img alt="" draggable="false" src={ item.image } />
@@ -327,10 +327,10 @@ const FIGMA_PROFILES = {
 		{ role: 'small', inlineSize: 56, image: ITEMS[ 2 ].image },
 	],
 	/*
-	 * The kit's Tablet Hero and Center-aligned Hero frames carried these same
-	 * four widths, so they are not separate references and are not kept as
-	 * separate data. `carousel.yml` records the proof that neither can be what
-	 * it was labelled.
+	 * The kit's Tablet Hero and Center-aligned Hero variants carry these same
+	 * four widths, so one shared reference preserves the measured geometry.
+	 * `carousel.yml` records how that Figma convergence differs from AndroidX
+	 * Hero without guessing whether the kit's choice is stale or intentional.
 	 */
 	'multi-tablet': [
 		{ role: 'large', inlineSize: 184, image: ITEMS[ 0 ].image },
@@ -390,35 +390,12 @@ export function StylebookCarouselsPage() {
 					>
 						<header className="ax-stylebook-page__group-header">
 							<p className="ax-stylebook-page__group-kicker">
-								Uniform geometry, free scrolling, and no
-								controls over the content
+								One Uncontained strategy with uniform or
+								item-owned widths
 							</p>
-							<h2>Uncontained</h2>
+							<h2>Uncontained and Multi-aspect ratio</h2>
 						</header>
 						<UncontainedSample />
-						<p className="ax-stylebook-page__note">
-							Left and Right move between item actions without
-							removing any item from the Tab order. Up and Down
-							leave the carousel. The named group itself never
-							receives focus.
-						</p>
-					</section>
-
-					<section
-						className="ax-stylebook-page__group"
-						id="carousel-keylines"
-						style={ {
-							gridTemplateColumns: 'minmax(0, 1fr)',
-							maxInlineSize: '100%',
-							minInlineSize: 0,
-						} }
-					>
-						<header className="ax-stylebook-page__group-header">
-							<p className="ax-stylebook-page__group-kicker">
-								Runtime behavior with ten items per carousel
-							</p>
-							<h2>Hero and Multi-browse</h2>
-						</header>
 						<div
 							className="ax-stylebook-carousels__keylines"
 							style={ {
@@ -426,38 +403,6 @@ export function StylebookCarouselsPage() {
 								minInlineSize: 0,
 							} }
 						>
-							<KeylineSample
-								context="Mobile"
-								items={ ITEMS }
-								layout="hero"
-							/>
-							<KeylineSample
-								context="Mobile"
-								items={ ITEMS }
-								layout="multi-browse"
-							/>
-							<KeylineSample
-								alignment="center"
-								context="Mobile"
-								items={ ITEMS }
-								layout="hero"
-							/>
-							<KeylineSample
-								context="Tablet"
-								items={ ITEMS }
-								layout="hero"
-							/>
-							<KeylineSample
-								context="Tablet"
-								items={ ITEMS }
-								layout="multi-browse"
-							/>
-							<KeylineSample
-								alignment="center"
-								context="Tablet"
-								items={ ITEMS }
-								layout="hero"
-							/>
 							<KeylineSample
 								context="Mobile"
 								items={ ITEMS }
@@ -472,9 +417,105 @@ export function StylebookCarouselsPage() {
 							/>
 						</div>
 						<p className="ax-stylebook-page__note">
-							These are runtime specimens with ten items. The
-							Mobile and Tablet labels identify fixed reference
-							container widths, not public breakpoint props.
+							Left and Right move between item actions without
+							removing any item from the Tab order. Up and Down
+							leave the carousel. The named group itself never
+							receives focus. Multi-aspect uses the same
+							Uncontained behavior; only its items supply
+							different width-to-height ratios.
+						</p>
+					</section>
+
+					<section
+						className="ax-stylebook-page__group"
+						id="hero-carousels"
+						style={ {
+							gridTemplateColumns: 'minmax(0, 1fr)',
+							maxInlineSize: '100%',
+							minInlineSize: 0,
+						} }
+					>
+						<header className="ax-stylebook-page__group-header">
+							<p className="ax-stylebook-page__group-kicker">
+								Start and center alignment with ten items
+							</p>
+							<h2>Hero and Center-aligned Hero</h2>
+						</header>
+						<div
+							className="ax-stylebook-carousels__keylines"
+							style={ {
+								maxInlineSize: '100%',
+								minInlineSize: 0,
+							} }
+						>
+							<KeylineSample
+								context="Mobile"
+								items={ ITEMS }
+								layout="hero"
+							/>
+							<KeylineSample
+								alignment="center"
+								context="Mobile"
+								items={ ITEMS }
+								layout="hero"
+							/>
+							<KeylineSample
+								context="Tablet"
+								items={ ITEMS }
+								layout="hero"
+							/>
+							<KeylineSample
+								alignment="center"
+								context="Tablet"
+								items={ ITEMS }
+								layout="hero"
+							/>
+						</div>
+						<p className="ax-stylebook-page__note">
+							Hero never introduces a Medium role. The Mobile and
+							Tablet labels identify fixed reference container
+							widths, not public breakpoint props.
+						</p>
+					</section>
+
+					<section
+						className="ax-stylebook-page__group"
+						id="multi-browse-carousel"
+						style={ {
+							gridTemplateColumns: 'minmax(0, 1fr)',
+							maxInlineSize: '100%',
+							minInlineSize: 0,
+						} }
+					>
+						<header className="ax-stylebook-page__group-header">
+							<p className="ax-stylebook-page__group-kicker">
+								Large, Medium, and Small arrangement
+							</p>
+							<h2>Multi-browse</h2>
+						</header>
+						<div
+							className="ax-stylebook-carousels__keylines"
+							style={ {
+								maxInlineSize: '100%',
+								minInlineSize: 0,
+							} }
+						>
+							<KeylineSample
+								context="Mobile"
+								items={ ITEMS }
+								layout="multi-browse"
+							/>
+							<KeylineSample
+								context="Tablet"
+								items={ ITEMS }
+								layout="multi-browse"
+							/>
+						</div>
+						<p className="ax-stylebook-page__note">
+							The runtime specimen keeps one preferred Large width
+							across container sizes. The static Figma profile
+							below uses its measured 184px Large width
+							separately.
 						</p>
 					</section>
 
@@ -511,16 +552,14 @@ export function StylebookCarouselsPage() {
 							/>
 							{ /*
 							 * One Tablet row, not three. The kit's Tablet
-							 * Hero and Center-aligned Hero frames carry the
-							 * same 184, 184, 120 and 56 as its Multi-browse
-							 * frame, and neither can be what it is labelled:
-							 * Hero never produces a medium, and a centred
-							 * Hero is symmetric. Drawing all three invited
-							 * the Hero rows to be read as Hero references.
+							 * Hero and Center-aligned Hero variants carry the
+							 * same 184, 184, 120 and 56 as Multi-browse.
+							 * One row records that shared Figma profile; it
+							 * is not an AndroidX Hero runtime reference.
 							 */ }
 							<StaticProfile
 								context="Tablet"
-								label="Multi-browse (Hero and Center-aligned Hero are copies of it)"
+								label="Shared Tablet profile: Hero / Multi-browse / Center-aligned Hero"
 								items={ FIGMA_PROFILES[ 'multi-tablet' ] }
 							/>
 							<StaticProfile

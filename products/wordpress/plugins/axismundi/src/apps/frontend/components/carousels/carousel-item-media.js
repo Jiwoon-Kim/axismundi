@@ -8,14 +8,14 @@
  * a sample of the range, so this takes any ratio and clamps it to the published
  * bounds.
  *
- * The width is not restated here. A ratio plus the carousel's height already
- * determines it, so the ratio is handed to CSS and the browser does the
- * arithmetic; writing `height * 16 / 9` beside `aspect-ratio: 16 / 9` would be
- * the same fact stored twice.
+ * A ratio is optional. Regular Hero and Multi-browse items fill the item box;
+ * M3 does not publish an aspect ratio for those layouts. When a ratio is
+ * supplied for an Uncontained multi-aspect item, the ratio plus the
+ * carousel's height determines its width.
  *
  * @param {Object}                                 props                     Component props.
  * @param {import('@wordpress/element').ReactNode} props.children            Visual content.
- * @param {string|number}                          [props.aspectRatio='1:1'] Width to height, between 9:16 and 16:9.
+ * @param {string|number}                          [props.aspectRatio]       Width to height, between 9:16 and 16:9.
  * @param {string}                                 [props.className]         Additional class name.
  * @return {import('@wordpress/element').ReactNode} Carousel item media.
  */
@@ -40,16 +40,38 @@ export function parseAspectRatio( aspectRatio ) {
 
 export function CarouselItemMedia( {
 	children,
-	aspectRatio = '1:1',
+	aspectRatio,
 	className,
 	...props
 } ) {
+	if ( undefined === aspectRatio ) {
+		return (
+			<span
+				{ ...props }
+				className={ [ 'ax-carousel-item-media', className ]
+					.filter( Boolean )
+					.join( ' ' ) }
+			>
+				{ children }
+			</span>
+		);
+	}
+
 	let ratio = parseAspectRatio( aspectRatio );
 	if ( null === ratio ) {
 		warning(
-			`CarouselItemMedia: aspectRatio "${ aspectRatio }" is not a ratio; using 1:1.`
+			`CarouselItemMedia: aspectRatio "${ aspectRatio }" is not a ratio; using the item bounds.`
 		);
-		ratio = 1;
+		return (
+			<span
+				{ ...props }
+				className={ [ 'ax-carousel-item-media', className ]
+					.filter( Boolean )
+					.join( ' ' ) }
+			>
+				{ children }
+			</span>
+		);
 	}
 	const clamped = Math.min( Math.max( ratio, MINIMUM_RATIO ), MAXIMUM_RATIO );
 	if ( clamped !== ratio ) {
@@ -64,6 +86,7 @@ export function CarouselItemMedia( {
 			className={ [ 'ax-carousel-item-media', className ]
 				.filter( Boolean )
 				.join( ' ' ) }
+			data-aspect-ratio=""
 			style={ {
 				...props.style,
 				'--ax-carousel-media-ratio': clamped,

@@ -613,13 +613,21 @@ def main() -> int:
         and "ax-carousel-item__content" in carousel_css,
         "Carousel lost its stable slot and masked full-size content shell",
     )
-    # The ratio is a number the component hands to CSS, so one rule covers the
-    # whole range. Five rules could only ever cover five points of it, and they
-    # restated a width the ratio already determines.
+    # Regular Hero and Multi-browse media fills its item box because M3 does
+    # not publish an aspect ratio for those layouts. Only an explicitly
+    # ratio-bearing item derives width from height; one rule covers the whole
+    # multi-aspect range rather than five Community Kit sample points.
     check(
-        "aspect-ratio: var(--ax-carousel-media-ratio, 1);" in carousel_css
+        "aspectRatio," in carousel_item_media
+        and "aspectRatio = '1:1'" not in carousel_item_media
+        and 'data-aspect-ratio=""' in carousel_item_media
+        and ".ax-carousel-item-media[data-aspect-ratio]" in carousel_css
+        and "aspect-ratio: var(--ax-carousel-media-ratio);" in carousel_css
+        and ".ax-carousel-item-media > *" in carousel_css
+        and "position: absolute;" in carousel_css
+        and "inset: 0;" in carousel_css
         and 'data-aspect-ratio="' not in carousel_css,
-        "the media ratio is a table of fixed values again",
+        "regular media gained a default ratio or multi-aspect became a fixed table again",
     )
     check(
         "prefers-reduced-motion: reduce" in carousel_css
@@ -627,7 +635,7 @@ def main() -> int:
         "Carousel reduced-motion path no longer disables animated scrolling",
     )
     check(
-        "var(--ax-carousel-media-ratio, 1)" in carousel_css
+        "var(--ax-carousel-media-ratio)" in carousel_css
         and "--ax-carousel-item-block-size" in carousel_css,
         "item width is no longer the ratio times the carousel's height",
     )
@@ -795,10 +803,10 @@ def main() -> int:
         "the preferred item width follows the container again",
     )
 
-    # The kit's three Tablet frames are one composition, so the Stylebook draws
-    # one row. Three rows invited two of them to be read as Hero references.
+    # The kit's three Tablet variants share one measured profile, so the
+    # Stylebook draws one neutral row without claiming why the kit converges.
     check(
-        'label="Multi-browse (Hero and Center-aligned Hero are copies of it)"'
+        'label="Shared Tablet profile: Hero / Multi-browse / Center-aligned Hero"'
         in stylebook_page
         and "'hero-tablet'" not in stylebook_page
         and "'center-tablet'" not in stylebook_page,
@@ -807,11 +815,11 @@ def main() -> int:
     check(
         "reproduces the Figma reference profiles from their own large width"
         in carousel_strategy_test
-        and "hero has no medium item to give, at any width"
+        and "AndroidX hero has no medium item at any width"
         in carousel_strategy_test
         and "the large item takes what the small items leave"
         in carousel_strategy_test
-        and "a centred hero is symmetric, so it cannot be the Tablet frame"
+        and "AndroidX centred hero does not use the shared Figma Tablet profile"
         in carousel_strategy_test,
         "nothing holds the Figma profiles to the algorithm that should produce them",
     )
@@ -858,6 +866,10 @@ def main() -> int:
         "Uncontained edge masking" in subjects,
         "the uncontained masking gap is unrecorded",
     )
+    check(
+        "aspect ratio belongs only to ratio-bearing item compositions" in subjects,
+        "the absence of a Hero/Multi-browse aspect-ratio contract is unrecorded",
+    )
 
     # Named with Flutter's spellings on purpose: a reader can find the upstream
     # definition from the name, which a translated name would cost.
@@ -877,6 +889,16 @@ def main() -> int:
     check(
         2 == stylebook_page.count( 'layout="uncontained"' ),
         "the Stylebook has no runtime multi-aspect carousel, only a static one",
+    )
+    check(
+        'id="uncontained-carousel"' in stylebook_page
+        and "<h2>Uncontained and Multi-aspect ratio</h2>" in stylebook_page
+        and 'id="hero-carousels"' in stylebook_page
+        and "<h2>Hero and Center-aligned Hero</h2>" in stylebook_page
+        and 'id="multi-browse-carousel"' in stylebook_page
+        and "<h2>Multi-browse</h2>" in stylebook_page
+        and "<h2>Hero and Multi-browse</h2>" not in stylebook_page,
+        "runtime specimens no longer follow the three Carousel strategy families",
     )
     check(
         "FIGMA_ASPECT_RATIOS.length" in stylebook_page,
@@ -911,8 +933,8 @@ def main() -> int:
     check(
         'alignment="center"' in stylebook_page
         and "multiAspect" in stylebook_page
-        and "--ax-carousel-multi-aspect-item-width: 362.22px" in stylebook_css
-        and "--ax-carousel-multi-aspect-item-width: 116px" in stylebook_css
+        and ": '1:1'" not in stylebook_page
+        and "--ax-carousel-multi-aspect-item-width" not in stylebook_css
         and 'appearance="overlay"' in stylebook_page,
         "Stylebook lost Center-aligned Hero or Multi-aspect ratio fixtures",
     )

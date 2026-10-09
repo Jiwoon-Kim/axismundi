@@ -147,31 +147,6 @@
 	}
 
 	.ax-stylebook-carousels__keyline-stage[data-multi-aspect]
-		.ax-carousel-item:nth-child(1) {
-		--ax-carousel-multi-aspect-item-width: 362.22px;
-	}
-
-	.ax-stylebook-carousels__keyline-stage[data-multi-aspect]
-		.ax-carousel-item:nth-child(2) {
-		--ax-carousel-multi-aspect-item-width: 270.67px;
-	}
-
-	.ax-stylebook-carousels__keyline-stage[data-multi-aspect]
-		.ax-carousel-item:nth-child(3) {
-		--ax-carousel-multi-aspect-item-width: 204px;
-	}
-
-	.ax-stylebook-carousels__keyline-stage[data-multi-aspect]
-		.ax-carousel-item:nth-child(4) {
-		--ax-carousel-multi-aspect-item-width: 153.25px;
-	}
-
-	.ax-stylebook-carousels__keyline-stage[data-multi-aspect]
-		.ax-carousel-item:nth-child(5) {
-		--ax-carousel-multi-aspect-item-width: 116px;
-	}
-
-	.ax-stylebook-carousels__keyline-stage[data-multi-aspect]
 		.ax-carousel-item-text[data-appearance="overlay"] {
 		text-align: start;
 	}

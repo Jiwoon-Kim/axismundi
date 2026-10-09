@@ -55,6 +55,7 @@ import {
 	keylinesForScrollOffset,
 	multiBrowseStrategy,
 	scrollOffsetForItem,
+	uncontainedStrategy,
 } from './carousel-strategy';
 
 const PAGE_FOCUSABLE = [
@@ -67,7 +68,18 @@ const PAGE_FOCUSABLE = [
 ].join( ',' );
 
 const DRAG_THRESHOLD = 6;
-const ADVANCED_LAYOUTS = [ 'multi-browse', 'hero' ];
+/*
+ * Two different questions, and they used to share one list.
+ *
+ * Every layout is masked at the container edge. M3 says carousel items must be
+ * fully visible on-screen "except for the uncontained layout", which is the one
+ * layout whose items are allowed to be cut off; its uniform size is the slot,
+ * not a claim that nothing is masked. Only multi-browse and hero are required
+ * to snap -- uncontained is published with both default and snap scrolling, so
+ * forcing it here would remove a choice the guidelines give the caller.
+ */
+const KEYLINE_LAYOUTS = [ 'uncontained', 'multi-browse', 'hero' ];
+const SNAP_REQUIRED_LAYOUTS = [ 'multi-browse', 'hero' ];
 const SMALL_WIDTH = 56;
 
 function isAvailable( element ) {
@@ -223,7 +235,9 @@ export function Carousel( {
 			'Carousel: multiAspect is an Uncontained configuration; ignoring it for this layout.'
 		);
 	}
-	const effectiveBehavior = ADVANCED_LAYOUTS.includes( implementedLayout )
+	const effectiveBehavior = SNAP_REQUIRED_LAYOUTS.includes(
+		implementedLayout
+	)
 		? 'snap'
 		: behavior;
 	if ( effectiveBehavior !== behavior ) {
@@ -423,7 +437,18 @@ export function Carousel( {
 	}, [] );
 
 	useEffect( () => {
-		if ( ! ADVANCED_LAYOUTS.includes( implementedLayout ) ) {
+		/*
+		 * Multi-aspect opts out rather than falling out. Every strategy here
+		 * describes one repeating stride, and multi-aspect's whole point is that
+		 * each item has its own width, so there is no stride to interpolate
+		 * against. It happened to be skipped already because the configuration
+		 * sets no uniform item width; saying so is the difference between a
+		 * decision and an accident that the next refactor restores.
+		 */
+		if (
+			! KEYLINE_LAYOUTS.includes( implementedLayout ) ||
+			implementedMultiAspect
+		) {
 			return undefined;
 		}
 		const root = rootRef.current;
@@ -459,6 +484,27 @@ export function Carousel( {
 			const trackStyle = window.getComputedStyle( track );
 			const gap =
 				parseFloat( trackStyle.columnGap || trackStyle.gap ) || 8;
+
+			/*
+			 * Uncontained's width belongs to the caller: UncontainedCarousel
+			 * writes it onto the root and the strategy takes it as an input.
+			 * Read it before anything is written per item, so a re-measure
+			 * cannot feed the previous answer back in.
+			 */
+			const uncontained = 'uncontained' === implementedLayout;
+			let declaredItemWidth = 0;
+			if ( uncontained ) {
+				declaredItemWidth = parseFloat(
+					window
+						.getComputedStyle( root )
+						.getPropertyValue( '--ax-carousel-item-width' )
+				);
+				if ( ! ( 0 < declaredItemWidth ) ) {
+					clearKeylines();
+					return;
+				}
+			}
+
 			const domItems = [
 				...track.querySelectorAll( '.ax-carousel-item' ),
 			];
@@ -469,40 +515,60 @@ export function Carousel( {
 				0,
 				track.clientWidth - paddingStart - paddingEnd
 			);
-			const strategyResult =
-				'multi-browse' === implementedLayout
-					? multiBrowseStrategy( {
-							availableSpace,
-							itemCount: domItems.length,
-							itemSpacing: gap,
-							preferredItemWidth:
-								preferredItemWidth ||
-								Math.min( 186, availableSpace ),
-						} )
-					: heroStrategy( {
-							alignment: implementedAlignment,
-							availableSpace,
-							centered: 'center' === implementedAlignment,
-							itemCount: domItems.length,
-							itemSpacing: gap,
-							preferredItemWidth,
-						} );
+			let strategyResult;
+			if ( uncontained ) {
+				strategyResult = uncontainedStrategy( {
+					availableSpace,
+					itemSpacing: gap,
+					itemWidth: declaredItemWidth,
+				} );
+			} else if ( 'multi-browse' === implementedLayout ) {
+				strategyResult = multiBrowseStrategy( {
+					availableSpace,
+					itemCount: domItems.length,
+					itemSpacing: gap,
+					preferredItemWidth:
+						preferredItemWidth || Math.min( 186, availableSpace ),
+				} );
+			} else {
+				strategyResult = heroStrategy( {
+					alignment: implementedAlignment,
+					availableSpace,
+					centered: 'center' === implementedAlignment,
+					itemCount: domItems.length,
+					itemSpacing: gap,
+					preferredItemWidth,
+				} );
+			}
 			const itemSize = strategyResult.itemMainAxisSize;
 			if ( ! itemSize || ! strategyResult.defaultKeylines.length ) {
 				clearKeylines();
 				return;
 			}
-			domItems.forEach( ( item ) => {
-				item.style.setProperty(
-					'--ax-carousel-item-width',
-					`${ itemSize }px`
-				);
-			} );
 
-			const stride = itemSize + gap;
+			/*
+			 * `itemMainAxisSize` means different things in the two paths, and
+			 * `carousel-strategy.test.js` holds the difference. Uncontained
+			 * folds the spacing into it, so it is a stride and the box is one
+			 * gap smaller; the advanced strategies size the box itself, so the
+			 * stride is that size plus a gap. Writing the strategy's number as
+			 * the uncontained item width would widen every item by one gap.
+			 */
+			const boxSize = uncontained ? declaredItemWidth : itemSize;
+			if ( ! uncontained ) {
+				domItems.forEach( ( item ) => {
+					item.style.setProperty(
+						'--ax-carousel-item-width',
+						`${ itemSize }px`
+					);
+				} );
+			}
+
+			const stride = uncontained ? itemSize : itemSize + gap;
 
 			geometry = {
 				availableSpace,
+				boxSize,
 				gap,
 				itemSize,
 				items: domItems,
@@ -512,7 +578,7 @@ export function Carousel( {
 			};
 			geometryRef.current = geometry;
 			root.dataset.keylineProfile = strategyResult.sizes
-				.map( ( size ) => sizeRole( size, itemSize ) )
+				.map( ( size ) => sizeRole( size, boxSize ) )
 				.join( '/' );
 			renderKeylines();
 		}
@@ -522,6 +588,7 @@ export function Carousel( {
 				return;
 			}
 			const {
+				boxSize,
 				itemSize,
 				items: geometryItems,
 				rtl,
@@ -557,9 +624,9 @@ export function Carousel( {
 				);
 				item.style.setProperty(
 					'--ax-carousel-mask-width',
-					`${ clamp( size, 1, itemSize ) }px`
+					`${ clamp( size, 1, boxSize ) }px`
 				);
-				item.dataset.sizeRole = sizeRole( size, itemSize );
+				item.dataset.sizeRole = sizeRole( size, boxSize );
 			} );
 			const endBoundary = Math.max(
 				0,
@@ -609,7 +676,12 @@ export function Carousel( {
 			);
 			geometryRef.current = undefined;
 		};
-	}, [ implementedAlignment, implementedLayout, preferredItemWidth ] );
+	}, [
+		implementedAlignment,
+		implementedLayout,
+		implementedMultiAspect,
+		preferredItemWidth,
+	] );
 
 	function moveFocus( event ) {
 		const root = rootRef.current;

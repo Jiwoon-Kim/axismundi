@@ -197,6 +197,40 @@ describe( 'Material carousel strategies', () => {
 		}
 	);
 
+	test( 'uncontained reports a stride while the advanced layouts report a box', () => {
+		const itemSpacing = 8;
+		const itemWidth = 186;
+
+		/*
+		 * Uncontained folds the spacing into largeSize, so itemMainAxisSize is
+		 * the distance from one item to the next and the DOM box is one gap
+		 * smaller. A renderer that writes itemMainAxisSize as the item width
+		 * widens every uncontained item by a gap, which is why the two layouts
+		 * cannot share one line here.
+		 */
+		const uncontained = uncontainedStrategy( {
+			availableSpace: 600,
+			itemSpacing,
+			itemWidth,
+		} );
+
+		expect( uncontained.itemMainAxisSize ).toBe( itemWidth + itemSpacing );
+		expect( uncontained.itemMainAxisSize - itemSpacing ).toBe( itemWidth );
+
+		/* The advanced strategies size the box itself: nothing is folded in. */
+		const multiBrowse = multiBrowseStrategy( {
+			availableSpace: 600,
+			itemCount: 10,
+			itemSpacing,
+			preferredItemWidth: itemWidth,
+		} );
+		const focal = multiBrowse.defaultKeylines.find(
+			( keyline ) => keyline.isFocal
+		);
+
+		expect( focal.size ).toBe( multiBrowse.itemMainAxisSize );
+	} );
+
 	test( 'places the AndroidX 125px uncontained cutoff item at 393.75px', () => {
 		const strategy = uncontainedStrategy( {
 			availableSpace: 400,

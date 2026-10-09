@@ -28,6 +28,10 @@ CAROUSEL_STRATEGY = ROOT / (
     "products/wordpress/plugins/axismundi/src/apps/frontend/components/"
     "carousels/carousel-strategy.js"
 )
+CAROUSEL_STRATEGY_TEST = ROOT / (
+    "products/wordpress/plugins/axismundi/src/apps/frontend/components/"
+    "carousels/__tests__/carousel-strategy.test.js"
+)
 UNCONTAINED_CAROUSEL = ROOT / (
     "products/wordpress/plugins/axismundi/src/apps/frontend/components/"
     "carousels/uncontained-carousel.js"
@@ -108,6 +112,7 @@ def main() -> int:
     scroll = SCROLL_DECISION.read_text(encoding="utf-8")
     carousel = CAROUSEL.read_text(encoding="utf-8")
     carousel_strategy = CAROUSEL_STRATEGY.read_text(encoding="utf-8")
+    carousel_strategy_test = CAROUSEL_STRATEGY_TEST.read_text(encoding="utf-8")
     uncontained_carousel = UNCONTAINED_CAROUSEL.read_text(encoding="utf-8")
     multi_browse_carousel = MULTI_BROWSE_CAROUSEL.read_text(encoding="utf-8")
     centered_hero_carousel = CENTERED_HERO_CAROUSEL.read_text(encoding="utf-8")
@@ -366,8 +371,7 @@ def main() -> int:
         "Carousel no longer exposes its geometry and scroll behavior",
     )
     check(
-        "const ADVANCED_LAYOUTS = [ 'multi-browse', 'hero' ]" in carousel
-        and "new window.ResizeObserver( measureKeylines )" in carousel
+        "new window.ResizeObserver( measureKeylines )" in carousel
         and "multiBrowseStrategy" in carousel
         and "heroStrategy" in carousel,
         "Carousel is no longer driven by the shared measured strategy path",
@@ -698,6 +702,49 @@ def main() -> int:
     # Figma frame does not, so the Stylebook deliberately shows both numbers.
     # Without this entry the next reader finds a static profile that the runtime
     # never reproduces and reads it as a bug.
+    # MASKING AND SNAPPING ARE DIFFERENT QUESTIONS, AND ONE LIST USED TO ANSWER
+    # BOTH. Uncontained is masked at the edges like the others -- M3 makes it
+    # the one layout whose items need not be fully visible -- while only
+    # multi-browse and hero are required to snap, because uncontained is
+    # published with both scrolling behaviours.
+    check(
+        "const KEYLINE_LAYOUTS = [ 'uncontained', 'multi-browse', 'hero' ];"
+        in carousel,
+        "uncontained is out of the keyline path again, so its edges stop masking",
+    )
+    check(
+        "const SNAP_REQUIRED_LAYOUTS = [ 'multi-browse', 'hero' ];" in carousel
+        and "ADVANCED_LAYOUTS" not in carousel,
+        "snap is forced on a layout the guidelines let the caller choose for",
+    )
+
+    # The two paths mean different things by the strategy's item size, and
+    # carousel-strategy.test.js holds the difference. Writing it as the
+    # uncontained box would widen every item by one gap.
+    check(
+        "const boxSize = uncontained ? declaredItemWidth : itemSize;" in carousel
+        and "if ( ! uncontained ) {" in carousel,
+        "uncontained no longer keeps the caller's item width",
+    )
+    check(
+        "const stride = uncontained ? itemSize : itemSize + gap;" in carousel,
+        "the uncontained stride counts its spacing twice or not at all",
+    )
+    check(
+        "uncontained reports a stride while the advanced layouts report a box"
+        in carousel_strategy_test,
+        "nothing holds the stride-versus-box difference between the two paths",
+    )
+    check(
+        re.search(
+            r"KEYLINE_LAYOUTS\.includes\(\s*implementedLayout\s*\)\s*\|\|"
+            r"\s*implementedMultiAspect",
+            carousel,
+        )
+        is not None,
+        "multi-aspect is back in the keyline path, which has no stride to give it",
+    )
+
     subjects = {d.get("subject") for d in data["discrepancies"]}
     check(
         "Center-aligned hero large-to-small split" in subjects,

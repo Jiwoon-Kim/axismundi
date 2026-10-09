@@ -386,14 +386,20 @@ discrepancies:
       guidelines video shows uncontained items shrinking at the container edge,
       AndroidX publishes an uncontained cutoff keyline, and Flutter exposes the
       floor as shrinkExtent beside an exact itemExtent.
-    status: strategy ported and tested, renderer not yet wired
+    status: implemented
     note: >-
-      uncontainedStrategy already produces the cutoff and anchors, and the
-      AndroidX 125dp cutoff position is asserted at 393.75. Only the renderer's
-      layout gate excludes it. Wiring it is not a copy of the advanced path:
-      there the slot is the strategy's focal size, while uncontained keeps the
-      consumer's exact itemWidth and the strategy's item size is a stride that
-      already includes the spacing.
+      The renderer's one layout list answered two questions, and uncontained
+      needed opposite answers: masked like the others, but not forced to snap,
+      because the guidelines publish it with both scrolling behaviours. The
+      lists are now separate. The wiring is not a copy of the advanced path
+      either: there the slot is the strategy's focal size, while uncontained
+      keeps the caller's exact itemWidth, because its itemMainAxisSize is a
+      stride with the spacing already folded in. A test holds that difference.
+    multi_aspect: >-
+      Opted out, not merely skipped. Every strategy here describes one
+      repeating stride and multi-aspect gives each item its own width, so there
+      is nothing to interpolate against. It was already falling out of the path
+      for want of a uniform item width; the gate now says so.
   - subject: ripple feedback
     prose: Tapping a carousel item changes its shape slightly and creates a ripple.
     project_policy: Ripple is deferred as a cross-component motion decision.
@@ -582,9 +588,10 @@ upstream_api_gaps:
   - name: shrinkExtent
     upstream: Flutter CarouselView(itemExtent:, shrinkExtent:)
     missing_here: >-
-      The floor an item shrinks to while leaving the container. AndroidX keeps
-      it internal; Flutter makes it an input. Related to the uncontained edge
-      masking discrepancy above.
+      The floor an item shrinks to while leaving the container. The masking
+      itself is implemented now, and the floor comes from the AndroidX anchor
+      size, which is internal to the strategy. Flutter makes it an input; here
+      a caller cannot raise it.
   - name: consumeMaxWeight
     upstream: Flutter CarouselView.weighted(consumeMaxWeight:)
     missing_here: >-

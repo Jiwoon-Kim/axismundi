@@ -7,7 +7,7 @@
  * @param {Object}                                 props                  Component props.
  * @param {import('@wordpress/element').ReactNode} props.label            Brief item label.
  * @param {import('@wordpress/element').ReactNode} [props.supportingText] Optional supporting text.
- * @param {'stacked'|'overlay'}                     [props.appearance]     Text placement.
+ * @param {'stacked'|'overlay'}                    [props.appearance]     Text placement.
  * @param {string}                                 [props.className]      Additional class name.
  * @return {import('@wordpress/element').ReactNode} Carousel item text.
  */

@@ -35,6 +35,26 @@
 		scroll-padding-inline-start: var(--ax-carousel-padding-inline-start);
 		cursor: grab;
 		user-select: none;
+
+		/*
+		 * NO SCROLLBAR. A classic scrollbar is laid out inside the border box,
+		 * so it added 15px below the items and the component measured 236
+		 * where the published composition is 221 -- a 205dp item between 8dp
+		 * of block padding. No Material implementation shows one: Compose and
+		 * the Views carousel scroll by drag, wheel and keyboard, which all
+		 * still work here.
+		 *
+		 * This does not strand keyboard users in a scrollable region, which is
+		 * the usual reason to keep a scrollbar visible. M3 requires every item
+		 * to be directly reachable, so each item's action is in the tab order
+		 * and the arrow keys move between them, and the guidelines require a
+		 * Show all path for seeing them without scrolling at all.
+		 */
+		scrollbar-width: none;
+	}
+
+	.ax-carousel__items::-webkit-scrollbar {
+		display: none;
 	}
 
 	.ax-carousel__items[data-dragging] {

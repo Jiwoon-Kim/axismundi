@@ -458,6 +458,12 @@ figma_reference:
     context: specimen viewport, not a runtime breakpoint prop
   measured_profiles:
     provenance: Figma Community Kit inspection
+    container_block_size_note: >-
+      The composition is the item height between the block padding: 205 plus 8
+      and 8 is the 221 of Compose's reference modifier. A native scrollbar is
+      laid out inside the border box, so leaving one visible measured 236
+      instead. The component hides it; drag, wheel and keyboard still scroll,
+      and the guidelines' Show all path is what serves people who cannot.
     note: >-
       These are measured specimen profiles, not responsive breakpoint tokens.
       They establish the exact Mobile and Tablet compositions used by the

@@ -756,6 +756,16 @@ def main() -> int:
     # Reduced motion asks for one size, not for none. Removing the widths left
     # flex-basis with nothing to resolve and the advanced layouts collapsed to
     # an image's intrinsic width -- 31px and 49px when this was measured.
+    # A classic scrollbar is laid out inside the border box, so it made the
+    # component 15px taller than the composition it implements: 236 where
+    # Compose's reference is 221, a 205dp item between 8dp of block padding.
+    # Drag, wheel and keyboard all still scroll without it.
+    check(
+        "scrollbar-width: none;" in carousel_css
+        and ".ax-carousel__items::-webkit-scrollbar" in carousel_css,
+        "the carousel shows a scrollbar again, which adds to its published height",
+    )
+
     check(
         "function applyUniformGeometry(" in carousel
         and "applyUniformGeometry( domItems, uncontained, boxSize )" in carousel,

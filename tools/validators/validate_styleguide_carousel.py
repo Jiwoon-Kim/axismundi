@@ -859,6 +859,27 @@ def main() -> int:
         and "uniform" in after_offset[ 1 ][ :200 ],
         "items of various sizes are moved onto keylines again, which closes their gaps",
     )
+    # A hidden element cannot be focused, so focusing before scrolling sent
+    # focus to the document body and ended the keyboard walk at the second
+    # item. The scroll target had the same single-stride problem the centres
+    # had: where strides differ, an item's own left edge is where it goes,
+    # and the settle needs that split too or a release lands between items.
+    after_prevent = carousel.split( "event.preventDefault();" )[ -1 ]
+    check(
+        after_prevent.index( "scrollTo(" ) < after_prevent.index( "].focus()" ),
+        "focus is taken before the scroll again, which a hidden item cannot accept",
+    )
+    check(
+        "removeProperty(" in after_prevent and "'visibility'" in after_prevent,
+        "the keyboard target is no longer taken off the hidden list before focus",
+    )
+    check(
+        1 == carousel.count( "geometry.uniform" )
+        and 1 == carousel.count( "currentGeometry.uniform" ),
+        "the keyboard target or the settle uses one stride for items of various sizes",
+    )
+
+
     check(
         "uniform ? clamp( size, 1, box ) : box" in carousel,
         "a centred mask is applied to items of various sizes again",

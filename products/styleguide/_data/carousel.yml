@@ -620,6 +620,25 @@ discrepancies:
       This is the same mistake twice over, both introduced by putting
       multi-aspect through a path built for one stride. The uniform case is
       unchanged and still verified by its own compositions.
+  - subject: the third item could not be focused
+    defect: >-
+      Arrow keys walked one item and then lost focus to the document body, so
+      everything past the second item was unreachable by keyboard. Two causes:
+      focus was taken before the scroll, and an item resting on an anchor
+      keyline is visibility hidden, which cannot accept focus; and the scroll
+      target came from the strategy, whose snap positions are generated from a
+      single width, so with strides that differ it did not put the item on
+      stage anyway.
+    resolution: >-
+      Scroll first, take the target off the hidden list, then focus. The target
+      is the strategy's position when every item is one width and the item's
+      own left edge when they are not, and the settle after a drag takes the
+      same split, which it needed too: a release had been landing between two
+      items.
+    measured: >-
+      All ten items reachable forward and back in multi-aspect, Hero,
+      Multi-browse and centred Hero, none hidden when focused, and every landing
+      within a pixel of the item's own edge.
   - subject: ripple feedback
     prose: Tapping a carousel item changes its shape slightly and creates a ripple.
     project_policy: Ripple is deferred as a cross-component motion decision.

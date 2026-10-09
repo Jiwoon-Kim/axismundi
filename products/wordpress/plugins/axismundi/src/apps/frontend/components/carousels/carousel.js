@@ -263,14 +263,25 @@ export function Carousel( {
 				track.scrollWidth - track.clientWidth
 			);
 			const currentGeometry = geometryRef.current;
+			/*
+			 * The same split as the keyboard: the strategy's snap positions
+			 * are generated from one width, so with strides that differ an
+			 * item's own left edge is where a release should land. Leaving
+			 * this on the strategy put a drag down between two items.
+			 */
 			const targets = currentGeometry
 				? currentGeometry.items.map( ( _, index ) =>
 						clamp(
-							scrollOffsetForItem(
-								currentGeometry.strategy,
-								index,
-								currentGeometry.items.length
-							),
+							currentGeometry.uniform
+								? scrollOffsetForItem(
+										currentGeometry.strategy,
+										index,
+										currentGeometry.items.length
+									)
+								: currentGeometry.centers[ index ] -
+										( currentGeometry.boxes[ index ] +
+											currentGeometry.gap ) /
+											2,
 							0,
 							maximum
 						)
@@ -852,7 +863,7 @@ export function Carousel( {
 		}
 
 		event.preventDefault();
-		actions[ to ].focus();
+
 		const track = trackRef.current;
 		const geometry = geometryRef.current;
 		if ( track && geometry ) {
@@ -860,8 +871,25 @@ export function Carousel( {
 				0,
 				track.scrollWidth - track.clientWidth
 			);
+
+			/*
+			 * `scrollOffsetForItem` reads the strategy, whose keylines are
+			 * generated from one width, so it answers for a carousel where
+			 * every stride is the same. When they are not, an item's own left
+			 * edge is where it has to go, and the strides are already in the
+			 * centres the renderer built from the measured boxes.
+			 */
+			const own =
+				geometry.centers[ to ] -
+				( geometry.boxes[ to ] + geometry.gap ) / 2;
 			const target = clamp(
-				scrollOffsetForItem( geometry.strategy, to, actions.length ),
+				geometry.uniform
+					? scrollOffsetForItem(
+							geometry.strategy,
+							to,
+							actions.length
+						)
+					: own,
 				0,
 				maximum
 			);
@@ -876,6 +904,19 @@ export function Carousel( {
 				inline: 'nearest',
 			} );
 		}
+
+		/*
+		 * Scroll first, then focus, and take the item off the hidden list on
+		 * the way. An item resting on an anchor keyline is `visibility:
+		 * hidden`, and a hidden element cannot be focused: focus went to the
+		 * document body instead, which ended the walk because the handler only
+		 * runs from inside an item. The scroll above has already put this one
+		 * on stage, so the next render agrees.
+		 */
+		actions[ to ]
+			.closest( '.ax-carousel-item' )
+			?.style.removeProperty( 'visibility' );
+		actions[ to ].focus();
 	}
 
 	return (

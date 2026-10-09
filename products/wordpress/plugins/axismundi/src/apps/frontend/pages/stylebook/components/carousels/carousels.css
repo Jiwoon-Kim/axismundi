@@ -3,15 +3,17 @@
 		--ax-scaffold-main-padding: var(--ax-layout-window-margin);
 	}
 
+	.ax-stylebook--carousels .ax-stylebook-page__section,
+	.ax-stylebook--carousels .ax-stylebook-page__group,
+	.ax-stylebook--carousels .ax-stylebook-carousels__sample {
+		min-inline-size: 0;
+		max-inline-size: 100%;
+	}
+
 	.ax-stylebook-carousels__sample {
 		display: grid;
 		gap: var(--md-sys-measurement-space100);
 		min-inline-size: 0;
-	}
-
-	/* Local VQA policy. M3 publishes no Uncontained item width. */
-	.ax-stylebook-carousels__uncontained {
-		--ax-carousel-item-width: 280px;
 	}
 
 	.ax-stylebook-carousels__visual {
@@ -49,6 +51,51 @@
 	.ax-stylebook-carousels__keylines {
 		display: grid;
 		gap: var(--md-sys-measurement-space400);
+	}
+
+	.ax-stylebook-carousels__static-profiles {
+		display: grid;
+		gap: var(--md-sys-measurement-space400);
+	}
+
+	.ax-stylebook-carousels__static-profile {
+		min-inline-size: 0;
+		max-inline-size: 100%;
+	}
+
+	.ax-stylebook-carousels__static-track {
+		box-sizing: border-box;
+		display: flex;
+		align-items: center;
+		gap: var(--md-sys-measurement-space100);
+		inline-size: min(100%, 600px);
+		min-inline-size: 0;
+		overflow: hidden;
+		padding: var(--md-sys-measurement-space100)
+			var(--md-sys-measurement-space200);
+		block-size: 220px;
+		background: var(--md-sys-color-surface-container-low);
+	}
+
+	.ax-stylebook-carousels__static-profile[data-context="Mobile"]
+		.ax-stylebook-carousels__static-track {
+		inline-size: min(100%, 412px);
+	}
+
+	.ax-stylebook-carousels__static-item {
+		box-sizing: border-box;
+		flex: 0 0 auto;
+		block-size: 204px;
+		overflow: hidden;
+		border-radius: var(--md-sys-shape-corner-value-extra-large);
+		background: var(--md-sys-color-secondary-container);
+	}
+
+	.ax-stylebook-carousels__static-item img {
+		display: block;
+		inline-size: 100%;
+		block-size: 100%;
+		object-fit: cover;
 	}
 
 	.ax-stylebook-carousels__keyline-stage {

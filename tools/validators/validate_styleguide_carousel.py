@@ -24,6 +24,22 @@ CAROUSEL = ROOT / (
     "products/wordpress/plugins/axismundi/src/apps/frontend/components/"
     "carousels/carousel.js"
 )
+CAROUSEL_STRATEGY = ROOT / (
+    "products/wordpress/plugins/axismundi/src/apps/frontend/components/"
+    "carousels/carousel-strategy.js"
+)
+UNCONTAINED_CAROUSEL = ROOT / (
+    "products/wordpress/plugins/axismundi/src/apps/frontend/components/"
+    "carousels/uncontained-carousel.js"
+)
+MULTI_BROWSE_CAROUSEL = ROOT / (
+    "products/wordpress/plugins/axismundi/src/apps/frontend/components/"
+    "carousels/multi-browse-carousel.js"
+)
+CENTERED_HERO_CAROUSEL = ROOT / (
+    "products/wordpress/plugins/axismundi/src/apps/frontend/components/"
+    "carousels/centered-hero-carousel.js"
+)
 CAROUSEL_ITEM = ROOT / (
     "products/wordpress/plugins/axismundi/src/apps/frontend/components/"
     "carousels/carousel-item.js"
@@ -91,6 +107,10 @@ def main() -> int:
     home = HOME_PLAN.read_text(encoding="utf-8")
     scroll = SCROLL_DECISION.read_text(encoding="utf-8")
     carousel = CAROUSEL.read_text(encoding="utf-8")
+    carousel_strategy = CAROUSEL_STRATEGY.read_text(encoding="utf-8")
+    uncontained_carousel = UNCONTAINED_CAROUSEL.read_text(encoding="utf-8")
+    multi_browse_carousel = MULTI_BROWSE_CAROUSEL.read_text(encoding="utf-8")
+    centered_hero_carousel = CENTERED_HERO_CAROUSEL.read_text(encoding="utf-8")
     carousel_item = CAROUSEL_ITEM.read_text(encoding="utf-8")
     carousel_item_media = CAROUSEL_ITEM_MEDIA.read_text(encoding="utf-8")
     carousel_item_text = CAROUSEL_ITEM_TEXT.read_text(encoding="utf-8")
@@ -347,14 +367,28 @@ def main() -> int:
     )
     check(
         "const ADVANCED_LAYOUTS = [ 'multi-browse', 'hero' ]" in carousel
-        and "function keylineProfile" in carousel
-        and "KEYLINE_CONTAINER_BREAKPOINT" in carousel
-        and "new window.ResizeObserver( measureKeylines )" in carousel,
-        "Carousel lost the measured Hero/Multi-browse keyline path",
+        and "new window.ResizeObserver( measureKeylines )" in carousel
+        and "multiBrowseStrategy" in carousel
+        and "heroStrategy" in carousel,
+        "Carousel is no longer driven by the shared measured strategy path",
     )
     check(
-        "function interpolateKeylines" in carousel
-        and "function itemGeometry" in carousel
+        "function keylineProfile" not in carousel
+        and "KEYLINE_CONTAINER_BREAKPOINT" not in carousel
+        and "LARGE_REFERENCE_WIDTH" not in carousel,
+        "Figma specimen profiles returned as runtime Carousel inputs",
+    )
+    check(
+        "a0c645de83b353f2aa79c3b33a11e8ba853ca1e4" in carousel_strategy
+        and "Apache-2.0" in carousel_strategy
+        and "createCarouselStrategy" in carousel_strategy
+        and "keylinesForScrollOffset" in carousel_strategy
+        and "scrollOffsetForItem" in carousel_strategy,
+        "the AndroidX-derived strategy lost its pinned source or core contract",
+    )
+    check(
+        "keylinesForScrollOffset" in carousel
+        and "itemGeometry" in carousel
         and "track.addEventListener( 'scroll', scheduleKeylines" in carousel
         and "window.requestAnimationFrame" in carousel,
         "Carousel lost scroll-position keyline interpolation",
@@ -365,24 +399,27 @@ def main() -> int:
         "Carousel morph or pointer drag no longer follows logical RTL scrolling",
     )
     check(
-        "const startKeylines" in carousel
-        and "const endKeylines" in carousel
-        and "startProgress" in carousel
-        and "maximumScroll - endShiftRange" in carousel
+        "strategy.startShiftDistance" in carousel
+        and "strategy.endShiftDistance" in carousel
+        and "keylinesForScrollOffset" in carousel
         and "root.dataset.keylineState" in carousel,
         "Carousel no longer shifts through start/default/end keyline states",
     )
     check(
-        "firstLargeIndex > 0" in carousel
-        and "keylineState = 'start'" in carousel
-        and "itemSize" in carousel,
+        "keylineState = 'start'" in carousel
+        and "centeredHeroStrategy" in carousel_strategy
+        and "startKeylineSteps" in carousel_strategy,
         "Center-aligned Hero can no longer make its first item focal",
     )
     check(
-        "data-alignment={ implementedAlignment }" in carousel
-        and "roles: [ 'small', 'large', 'small' ]" in carousel
-        and "innerSize - 2 * SMALL_WIDTH - 2 * gap" in carousel,
-        "Center-aligned Hero lost its measured Mobile topology",
+        'layout="uncontained"' in uncontained_carousel
+        and 'scrollBehavior="default"' in uncontained_carousel
+        and "itemWidth" in uncontained_carousel
+        and 'layout="multi-browse"' in multi_browse_carousel
+        and 'scrollBehavior="snap"' in multi_browse_carousel
+        and 'alignment="center"' in centered_hero_carousel
+        and 'layout="hero"' in centered_hero_carousel,
+        "public Carousel wrappers no longer match the Android variant contracts",
     )
     check(
         "data-multi-aspect={ implementedMultiAspect ? '' : undefined }" in carousel
@@ -391,7 +428,9 @@ def main() -> int:
     )
     check(
         "requires snap scrolling" in carousel
-        and "data-layout={ implementedLayout }" in carousel,
+        and "data-layout={ implementedLayout }" in carousel
+        and "scrollOffsetForItem" in carousel
+        and 'scroll-snap-type: none' in carousel_css,
         "Advanced Carousel layouts no longer force the published snap path",
     )
     check(
@@ -614,20 +653,39 @@ def main() -> int:
         and "reducedMotion.addEventListener" in carousel,
         "Advanced Carousel layouts no longer return to uniform consumer sizing for reduced motion",
     )
+    # The morph was a local policy while the keylines were measured Figma
+    # profiles. It is not one any more: the strategy is ported from a pinned
+    # AndroidX revision and its geometry is held by that upstream's own test
+    # vectors. The record has to say which of those two it is, because the
+    # difference decides whether a future figure may be invented or has to be
+    # derived.
+    morph = data["source_boundaries"]["implementation_status"]
     check(
-        data["source_boundaries"]["implementation_status"]
-        ["scroll_position_morph"]
-        == "implemented-as-local-keyline-policy"
-        and data["source_boundaries"]["implementation_status"]
-        ["scroll_position_morph_model"]
-        == "stable-unmasked-slot-plus-start-default-end-keylines",
-        "Carousel morph is no longer recorded as local start/default/end policy",
+        morph["scroll_position_morph"]
+        == "implemented-with-androidx-derived-keyline-strategy",
+        "Carousel morph is no longer recorded as the AndroidX-derived strategy",
     )
     check(
-        data["source_boundaries"]["implementation_policy"]["container_threshold"]
-        == 600
-        and "carousel container" in data["source_boundaries"]["implementation_policy"]["container_threshold_note"],
-        "Carousel keyline threshold is no longer distinguished from window breakpoints",
+        morph["scroll_position_morph_model"]
+        == "large-slot-plus-interpolated-multi-step-keylines",
+        "Carousel morph no longer interpolates multi-step keylines over a stable slot",
+    )
+    check(
+        "not inputs to this path" in morph["scroll_position_morph_note"],
+        "the record no longer keeps Figma's profiles out of the runtime inputs",
+    )
+    # THE THRESHOLD IS GONE, SO REQUIRING ITS RECORD WOULD BE REQUIRING A FALSE
+    # ONE. An earlier generation picked between two measured Figma profiles at a
+    # 600px container width, and this check existed to stop that number being
+    # mistaken for the window breakpoint of the same value. The AndroidX
+    # strategy has no such branch -- it fills any width from a preferred item
+    # size -- so the pin that matters is the prohibition above, which keeps the
+    # retired constants out of the engine, plus this one, which keeps the record
+    # from growing the key back.
+    check(
+        "container_threshold"
+        not in data["source_boundaries"]["implementation_policy"],
+        "the retired 600px container threshold is back in the record",
     )
     check(
         any(
@@ -641,7 +699,7 @@ def main() -> int:
         "Carousel component CSS is not in the frontend style graph",
     )
     check(
-        "--ax-carousel-item-width: 280px;" in stylebook_css
+        "itemWidth={ 280 }" in stylebook_page
         and "local policy, not M3" in stylebook_page,
         "Stylebook width is no longer visibly isolated as a local VQA policy",
     )
@@ -678,19 +736,29 @@ def main() -> int:
         and implementation_status["carousel_text_overlay"] == "implemented"
         and implementation_status["resize_recalculation"] == "implemented"
         and implementation_status["scroll_position_morph"]
-        == "implemented-as-local-keyline-policy"
-        and "start/default/end state"
-        in implementation_status["scroll_position_morph_note"],
+        == "implemented-with-androidx-derived-keyline-strategy",
         "Carousel scroll-position morph status changed without an explicit record",
     )
+    # This composite asks which parts exist. It used to also require a phrase in
+    # the note, which fires on a reword and says nothing a reword could break.
+    # The note's two load-bearing claims are pinned where they can actually
+    # fail: Figma's profiles staying out of the runtime inputs, above, and the
+    # strategy owning the snap rather than native CSS, in the snap checks.
     check(
         "scrollLeft" in stylebook_page,
         "Stylebook readout no longer exposes whether drag actually scrolls",
     )
     check(
-        stylebook_page.index("</Carousel>")
+        stylebook_page.count("</UncontainedCarousel>") == 1
+        and stylebook_page.index("</UncontainedCarousel>")
         < stylebook_page.index('className="ax-stylebook-carousels__show-all"'),
-        "Show all moved inside the Carousel container",
+        "Show all moved inside the Uncontained Carousel container",
+    )
+    check(
+        stylebook_page.count("UncontainedCarousel") >= 3
+        and stylebook_page.count("MultiBrowseCarousel") >= 2
+        and stylebook_page.count("CenteredHeroCarousel") >= 2,
+        "Stylebook no longer exercises all three public Carousel wrappers",
     )
     check(
         'href="#all-items"' in stylebook_page

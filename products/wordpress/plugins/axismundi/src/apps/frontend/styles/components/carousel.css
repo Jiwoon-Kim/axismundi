@@ -22,10 +22,12 @@
 	}
 
 	.ax-carousel__items {
+		contain: inline-size;
 		display: flex;
 		align-items: center;
 		gap: var(--ax-carousel-item-gap);
 		overflow-x: auto;
+		overflow-y: hidden;
 		overscroll-behavior-inline: contain;
 		padding-block: var(--ax-carousel-padding-block);
 		padding-inline: var(--ax-carousel-padding-inline-start)
@@ -47,7 +49,8 @@
 
 	.ax-carousel[data-layout="hero"] .ax-carousel__items,
 	.ax-carousel[data-layout="multi-browse"] .ax-carousel__items {
-		scroll-snap-type: inline mandatory;
+		--ax-carousel-padding-inline-end: var(--md-sys-measurement-space200);
+		scroll-snap-type: none;
 	}
 
 	.ax-carousel:is([data-layout="hero"], [data-layout="multi-browse"])

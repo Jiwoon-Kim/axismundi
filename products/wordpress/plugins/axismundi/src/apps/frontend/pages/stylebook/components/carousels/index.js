@@ -1,7 +1,10 @@
 import { Carousel } from '../../../../components/carousels/carousel';
+import { CenteredHeroCarousel } from '../../../../components/carousels/centered-hero-carousel';
 import { CarouselItem } from '../../../../components/carousels/carousel-item';
 import { CarouselItemMedia } from '../../../../components/carousels/carousel-item-media';
 import { CarouselItemText } from '../../../../components/carousels/carousel-item-text';
+import { MultiBrowseCarousel } from '../../../../components/carousels/multi-browse-carousel';
+import { UncontainedCarousel } from '../../../../components/carousels/uncontained-carousel';
 import { Icon } from '../../../../components/material/icon';
 import { Scaffold } from '../../../../foundations/layout/scaffold';
 import { useEffect, useRef, useState } from '@wordpress/element';
@@ -43,6 +46,41 @@ const ITEMS = [
 		title: 'Events',
 		supporting: 'Upcoming activity',
 		image: 'https://picsum.photos/seed/ax-events/900/900',
+	},
+	{
+		id: 'people',
+		icon: 'person',
+		title: 'People',
+		supporting: 'Saved profiles',
+		image: 'https://picsum.photos/seed/ax-people/900/900',
+	},
+	{
+		id: 'notes',
+		icon: 'sticky_note_2',
+		title: 'Notes',
+		supporting: 'Short updates',
+		image: 'https://picsum.photos/seed/ax-notes/900/900',
+	},
+	{
+		id: 'photos',
+		icon: 'photo_library',
+		title: 'Photos',
+		supporting: 'Visual collections',
+		image: 'https://picsum.photos/seed/ax-photos/900/900',
+	},
+	{
+		id: 'bookmarks',
+		icon: 'bookmark',
+		title: 'Bookmarks',
+		supporting: 'Reading list',
+		image: 'https://picsum.photos/seed/ax-bookmarks/900/900',
+	},
+	{
+		id: 'places',
+		icon: 'place',
+		title: 'Places',
+		supporting: 'Shared locations',
+		image: 'https://picsum.photos/seed/ax-places/900/900',
 	},
 ];
 
@@ -105,10 +143,10 @@ function UncontainedSample() {
 			>
 				Before carousel
 			</a>
-			<Carousel
+			<UncontainedCarousel
 				className="ax-stylebook-carousels__uncontained"
+				itemWidth={ 280 }
 				label="Object collections"
-				scrollBehavior="default"
 			>
 				{ ITEMS.map( ( item ) => (
 					<CarouselItem
@@ -129,7 +167,7 @@ function UncontainedSample() {
 						/>
 					</CarouselItem>
 				) ) }
-			</Carousel>
+			</UncontainedCarousel>
 			<a className="ax-stylebook-carousels__show-all" href="#all-items">
 				Show all
 			</a>
@@ -149,6 +187,12 @@ function KeylineSample( {
 	alignment = 'start',
 	multiAspect = false,
 } ) {
+	let RuntimeCarousel = Carousel;
+	if ( 'center' === alignment ) {
+		RuntimeCarousel = CenteredHeroCarousel;
+	} else if ( 'multi-browse' === layout ) {
+		RuntimeCarousel = MultiBrowseCarousel;
+	}
 	return (
 		<div
 			className="ax-stylebook-carousels__keyline-stage"
@@ -156,15 +200,19 @@ function KeylineSample( {
 			data-multi-aspect={ multiAspect ? '' : undefined }
 		>
 			<p className="ax-stylebook-page__eyebrow">
-				{ context } · { alignment === 'center' ? 'center-aligned ' : '' }
+				{ context } ·{ ' ' }
+				{ alignment === 'center' ? 'center-aligned ' : '' }
 				{ multiAspect ? 'multi-aspect ratio' : layout }
 			</p>
-			<Carousel
+			<RuntimeCarousel
 				className="ax-stylebook-carousels__keyline-carousel"
 				label={ `${ context } ${ layout } items` }
 				layout={ layout }
 				alignment={ alignment }
 				multiAspect={ multiAspect }
+				preferredItemWidth={
+					'multi-browse' === layout ? 186 : undefined
+				}
 				scrollBehavior="snap"
 			>
 				{ items.map( ( item, index ) => (
@@ -191,10 +239,79 @@ function KeylineSample( {
 						) : null }
 					</CarouselItem>
 				) ) }
-			</Carousel>
+			</RuntimeCarousel>
 		</div>
 	);
 }
+
+function StaticProfile( { context, label, items } ) {
+	return (
+		<div
+			className="ax-stylebook-carousels__static-profile"
+			data-context={ context }
+		>
+			<p className="ax-stylebook-page__eyebrow">
+				{ context } · { label }
+			</p>
+			<div className="ax-stylebook-carousels__static-track">
+				{ items.map( ( item, index ) => (
+					<div
+						className="ax-stylebook-carousels__static-item"
+						data-role={ item.role }
+						key={ `${ label }-${ index }` }
+						style={ {
+							inlineSize: `${ item.inlineSize }px`,
+						} }
+					>
+						<img alt="" draggable="false" src={ item.image } />
+					</div>
+				) ) }
+			</div>
+		</div>
+	);
+}
+
+const FIGMA_PROFILES = {
+	'hero-mobile': [
+		{ role: 'large', inlineSize: 316, image: ITEMS[ 0 ].image },
+		{ role: 'small', inlineSize: 56, image: ITEMS[ 1 ].image },
+	],
+	'multi-mobile': [
+		{ role: 'large', inlineSize: 188, image: ITEMS[ 0 ].image },
+		{ role: 'medium', inlineSize: 120, image: ITEMS[ 1 ].image },
+		{ role: 'small', inlineSize: 56, image: ITEMS[ 2 ].image },
+	],
+	'center-mobile': [
+		{ role: 'small', inlineSize: 56, image: ITEMS[ 0 ].image },
+		{ role: 'large', inlineSize: 252, image: ITEMS[ 1 ].image },
+		{ role: 'small', inlineSize: 56, image: ITEMS[ 2 ].image },
+	],
+	'hero-tablet': [
+		{ role: 'large', inlineSize: 184, image: ITEMS[ 0 ].image },
+		{ role: 'large', inlineSize: 184, image: ITEMS[ 1 ].image },
+		{ role: 'medium', inlineSize: 120, image: ITEMS[ 2 ].image },
+		{ role: 'small', inlineSize: 56, image: ITEMS[ 3 ].image },
+	],
+	'multi-tablet': [
+		{ role: 'large', inlineSize: 184, image: ITEMS[ 0 ].image },
+		{ role: 'large', inlineSize: 184, image: ITEMS[ 1 ].image },
+		{ role: 'medium', inlineSize: 120, image: ITEMS[ 2 ].image },
+		{ role: 'small', inlineSize: 56, image: ITEMS[ 3 ].image },
+	],
+	'center-tablet': [
+		{ role: 'large', inlineSize: 184, image: ITEMS[ 0 ].image },
+		{ role: 'large', inlineSize: 184, image: ITEMS[ 1 ].image },
+		{ role: 'medium', inlineSize: 120, image: ITEMS[ 2 ].image },
+		{ role: 'small', inlineSize: 56, image: ITEMS[ 3 ].image },
+	],
+	'multi-aspect-mobile': [
+		{ inlineSize: 362.22, image: ITEMS[ 0 ].image },
+		{ inlineSize: 270.67, image: ITEMS[ 1 ].image },
+		{ inlineSize: 204, image: ITEMS[ 2 ].image },
+		{ inlineSize: 153.25, image: ITEMS[ 3 ].image },
+		{ inlineSize: 116, image: ITEMS[ 4 ].image },
+	],
+};
 
 export function StylebookCarouselsPage() {
 	return (
@@ -215,6 +332,11 @@ export function StylebookCarouselsPage() {
 					className="ax-stylebook-page__section"
 					id="carousels"
 					aria-labelledby="ax-stylebook-carousels-title"
+					style={ {
+						gridTemplateColumns: 'minmax(0, 1fr)',
+						maxInlineSize: '100%',
+						minInlineSize: 0,
+					} }
 				>
 					<header className="ax-stylebook-page__section-header">
 						<p className="ax-stylebook-page__eyebrow">
@@ -226,6 +348,11 @@ export function StylebookCarouselsPage() {
 					<section
 						className="ax-stylebook-page__group"
 						id="uncontained-carousel"
+						style={ {
+							gridTemplateColumns: 'minmax(0, 1fr)',
+							maxInlineSize: '100%',
+							minInlineSize: 0,
+						} }
 					>
 						<header className="ax-stylebook-page__group-header">
 							<p className="ax-stylebook-page__group-kicker">
@@ -246,70 +373,142 @@ export function StylebookCarouselsPage() {
 					<section
 						className="ax-stylebook-page__group"
 						id="carousel-keylines"
+						style={ {
+							gridTemplateColumns: 'minmax(0, 1fr)',
+							maxInlineSize: '100%',
+							minInlineSize: 0,
+						} }
 					>
 						<header className="ax-stylebook-page__group-header">
 							<p className="ax-stylebook-page__group-kicker">
-								Measured Figma reference profiles
+								Runtime behavior with ten items per carousel
 							</p>
 							<h2>Hero and Multi-browse</h2>
 						</header>
-						<div className="ax-stylebook-carousels__keylines">
+						<div
+							className="ax-stylebook-carousels__keylines"
+							style={ {
+								maxInlineSize: '100%',
+								minInlineSize: 0,
+							} }
+						>
 							<KeylineSample
 								context="Mobile"
-								items={ ITEMS.slice( 0, 2 ) }
-								layout="hero"
-							/>
-							<KeylineSample
-								context="Mobile"
-								items={ ITEMS.slice( 0, 3 ) }
-								layout="multi-browse"
-							/>
-							<KeylineSample
-								alignment="center"
-								context="Mobile"
-								items={ ITEMS.slice( 0, 3 ) }
-								layout="hero"
-							/>
-							<KeylineSample
-								context="Tablet"
-								items={ ITEMS.slice( 0, 4 ) }
-								layout="hero"
-							/>
-							<KeylineSample
-								context="Tablet"
-								items={ ITEMS.slice( 0, 4 ) }
-								layout="multi-browse"
-							/>
-							<KeylineSample
-								alignment="center"
-								context="Tablet"
-								items={ ITEMS.slice( 0, 4 ) }
+								items={ ITEMS }
 								layout="hero"
 							/>
 							<KeylineSample
 								context="Mobile"
 								items={ ITEMS }
-								layout="uncontained"
-								multiAspect
+								layout="multi-browse"
+							/>
+							<KeylineSample
+								alignment="center"
+								context="Mobile"
+								items={ ITEMS }
+								layout="hero"
 							/>
 							<KeylineSample
 								context="Tablet"
 								items={ ITEMS }
-								layout="uncontained"
-								multiAspect
+								layout="hero"
+							/>
+							<KeylineSample
+								context="Tablet"
+								items={ ITEMS }
+								layout="multi-browse"
+							/>
+							<KeylineSample
+								alignment="center"
+								context="Tablet"
+								items={ ITEMS }
+								layout="hero"
 							/>
 						</div>
 						<p className="ax-stylebook-page__note">
-							The Mobile and Tablet labels identify fixed Figma
-							reference containers, not runtime breakpoints. The
-							multi-aspect item widths are measured specimen values;
-							the shared component falls back to each media ratio.
+							These are runtime specimens with ten items. The
+							Mobile and Tablet labels identify fixed reference
+							container widths, not public breakpoint props.
+						</p>
+					</section>
+
+					<section
+						className="ax-stylebook-page__group"
+						id="carousel-figma-profiles"
+						style={ {
+							gridTemplateColumns: 'minmax(0, 1fr)',
+							maxInlineSize: '100%',
+							minInlineSize: 0,
+						} }
+					>
+						<header className="ax-stylebook-page__group-header">
+							<p className="ax-stylebook-page__group-kicker">
+								Static measurements, not runtime behavior
+							</p>
+							<h2>Figma reference profiles</h2>
+						</header>
+						<div className="ax-stylebook-carousels__static-profiles">
+							<StaticProfile
+								context="Mobile"
+								label="Hero"
+								items={ FIGMA_PROFILES[ 'hero-mobile' ] }
+							/>
+							<StaticProfile
+								context="Mobile"
+								label="Multi-browse"
+								items={ FIGMA_PROFILES[ 'multi-mobile' ] }
+							/>
+							<StaticProfile
+								context="Mobile"
+								label="Center-aligned Hero"
+								items={ FIGMA_PROFILES[ 'center-mobile' ] }
+							/>
+							<StaticProfile
+								context="Tablet"
+								label="Hero"
+								items={ FIGMA_PROFILES[ 'hero-tablet' ] }
+							/>
+							<StaticProfile
+								context="Tablet"
+								label="Multi-browse"
+								items={ FIGMA_PROFILES[ 'multi-tablet' ] }
+							/>
+							<StaticProfile
+								context="Tablet"
+								label="Center-aligned Hero"
+								items={ FIGMA_PROFILES[ 'center-tablet' ] }
+							/>
+							<StaticProfile
+								context="Mobile"
+								label="Multi-aspect ratio"
+								items={
+									FIGMA_PROFILES[ 'multi-aspect-mobile' ]
+								}
+							/>
+							<StaticProfile
+								context="Tablet"
+								label="Multi-aspect ratio"
+								items={
+									FIGMA_PROFILES[ 'multi-aspect-mobile' ]
+								}
+							/>
+						</div>
+						<p className="ax-stylebook-page__note">
+							These profiles preserve the inspected Figma
+							compositions as static measurement references. They
+							are not the component&apos;s item-count or runtime
+							breakpoint contract.
 						</p>
 					</section>
 
 					<section
 						className="ax-stylebook-page__group"
 						id="carousel-building-blocks"
+						style={ {
+							gridTemplateColumns: 'minmax(0, 1fr)',
+							maxInlineSize: '100%',
+							minInlineSize: 0,
+						} }
 					>
 						<header className="ax-stylebook-page__group-header">
 							<p className="ax-stylebook-page__group-kicker">
@@ -331,16 +530,21 @@ export function StylebookCarouselsPage() {
 							) ) }
 						</div>
 						<p className="ax-stylebook-page__note">
-							These five Community Kit ratios are implemented above
-							as one Uncontained configuration. The images are
-							stylebook-only Picsum fixtures, not a component data
-							dependency.
+							These five Community Kit ratios are implemented
+							above as one Uncontained configuration. The images
+							are stylebook-only Picsum fixtures, not a component
+							data dependency.
 						</p>
 					</section>
 
 					<section
 						className="ax-stylebook-page__group"
 						id="all-items"
+						style={ {
+							gridTemplateColumns: 'minmax(0, 1fr)',
+							maxInlineSize: '100%',
+							minInlineSize: 0,
+						} }
 					>
 						<header className="ax-stylebook-page__group-header">
 							<p className="ax-stylebook-page__group-kicker">

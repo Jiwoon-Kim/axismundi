@@ -35,6 +35,7 @@
  * @param {string}                                 [props.roleDescription='carousel']  Localized role description.
  * @param {string}                                 [props.itemRoleDescription='slide'] Localized item role description.
  * @param {Function}                               [props.formatPosition]              Builds each item's position name.
+ * @param {number}                                 [props.preferredItemWidth]          Target large-item width for advanced layouts.
  * @param {string}                                 [props.className]                   Additional component class name.
  * @return {import('@wordpress/element').ReactNode} Carousel group.
  */
@@ -49,6 +50,12 @@ import {
 import warning from '@wordpress/warning';
 
 import { CarouselItem } from './carousel-item';
+import {
+	heroStrategy,
+	keylinesForScrollOffset,
+	multiBrowseStrategy,
+	scrollOffsetForItem,
+} from './carousel-strategy';
 
 const PAGE_FOCUSABLE = [
 	'a[href]',
@@ -61,11 +68,7 @@ const PAGE_FOCUSABLE = [
 
 const DRAG_THRESHOLD = 6;
 const ADVANCED_LAYOUTS = [ 'multi-browse', 'hero' ];
-const LARGE_REFERENCE_WIDTH = 184;
-const MEDIUM_WIDTH = 120;
 const SMALL_WIDTH = 56;
-// This is a carousel-container threshold, not a window size class boundary.
-const KEYLINE_CONTAINER_BREAKPOINT = 600;
 
 function isAvailable( element ) {
 	return (
@@ -97,51 +100,6 @@ function leaveCarousel( root, active, direction ) {
 	return false;
 }
 
-function keylineProfile( layout, inlineSize, gap, alignment ) {
-	const innerSize = Math.max( 0, inlineSize - 32 );
-	if (
-		'hero' === layout &&
-		'center' === alignment &&
-		inlineSize < KEYLINE_CONTAINER_BREAKPOINT
-	) {
-		return {
-			roles: [ 'small', 'large', 'small' ],
-			widths: [
-				SMALL_WIDTH,
-				innerSize - 2 * SMALL_WIDTH - 2 * gap,
-				SMALL_WIDTH,
-			],
-		};
-	}
-	if ( 'hero' === layout && inlineSize < KEYLINE_CONTAINER_BREAKPOINT ) {
-		return {
-			roles: [ 'large', 'small' ],
-			widths: [ innerSize - SMALL_WIDTH - gap, SMALL_WIDTH ],
-		};
-	}
-
-	const fixedSize = MEDIUM_WIDTH + SMALL_WIDTH;
-	const largeCount = Math.max(
-		1,
-		Math.floor(
-			( innerSize - fixedSize + gap ) / ( LARGE_REFERENCE_WIDTH + gap )
-		)
-	);
-	const largeWidth = Math.max(
-		SMALL_WIDTH,
-		( innerSize - fixedSize - ( largeCount + 1 ) * gap ) / largeCount
-	);
-
-	return {
-		roles: [ ...Array( largeCount ).fill( 'large' ), 'medium', 'small' ],
-		widths: [
-			...Array( largeCount ).fill( largeWidth ),
-			MEDIUM_WIDTH,
-			SMALL_WIDTH,
-		],
-	};
-}
-
 function clamp( value, minimum, maximum ) {
 	return Math.min( maximum, Math.max( minimum, value ) );
 }
@@ -150,52 +108,37 @@ function lerp( start, end, progress ) {
 	return start + ( end - start ) * progress;
 }
 
-function visibleCenters( widths, gap, start ) {
-	let cursor = start;
-	return widths.map( ( width ) => {
-		const center = cursor + width / 2;
-		cursor += width + gap;
-		return center;
-	} );
-}
-
-function interpolateKeylines( start, end, progress ) {
-	return start.map( ( keyline, index ) => ( {
-		loc: lerp( keyline.loc, end[ index ].loc, progress ),
-		offset: lerp( keyline.offset, end[ index ].offset, progress ),
-		size: lerp( keyline.size, end[ index ].size, progress ),
-	} ) );
-}
-
 function itemGeometry( location, keylines, itemSize ) {
 	const first = keylines[ 0 ];
 	const last = keylines[ keylines.length - 1 ];
-	if ( location <= first.loc ) {
+	if ( location <= first.unadjustedOffset ) {
 		return {
 			offset:
 				first.offset +
-				( location - first.loc ) * ( first.size / itemSize ),
+				( location - first.unadjustedOffset ) *
+					( first.size / itemSize ),
 			size: first.size,
 		};
 	}
-	if ( location >= last.loc ) {
+	if ( location >= last.unadjustedOffset ) {
 		return {
 			offset:
 				last.offset +
-				( location - last.loc ) * ( last.size / itemSize ),
+				( location - last.unadjustedOffset ) * ( last.size / itemSize ),
 			size: last.size,
 		};
 	}
 
 	const rightIndex = keylines.findIndex(
-		( keyline ) => keyline.loc >= location
+		( keyline ) => keyline.unadjustedOffset >= location
 	);
 	const left = keylines[ rightIndex - 1 ];
 	const right = keylines[ rightIndex ];
 	const progress =
-		0 === right.loc - left.loc
+		0 === right.unadjustedOffset - left.unadjustedOffset
 			? 0
-			: ( location - left.loc ) / ( right.loc - left.loc );
+			: ( location - left.unadjustedOffset ) /
+				( right.unadjustedOffset - left.unadjustedOffset );
 	return {
 		offset: lerp( left.offset, right.offset, progress ),
 		size: lerp( left.size, right.size, progress ),
@@ -222,11 +165,13 @@ export function Carousel( {
 	roleDescription = 'carousel',
 	itemRoleDescription = 'slide',
 	formatPosition,
+	preferredItemWidth,
 	className,
 	...props
 } ) {
 	const rootRef = useRef();
 	const trackRef = useRef();
+	const geometryRef = useRef();
 	const childArray = Children.toArray( children );
 	const items = childArray.filter(
 		( child ) => isValidElement( child ) && CarouselItem === child.type
@@ -298,6 +243,7 @@ export function Carousel( {
 		let suppressClick = false;
 		let suppressionTimer;
 		let settleFrame;
+		let scrollEndTimer;
 
 		function settleToNearestItem() {
 			if ( 'snap' !== rootRef.current?.dataset.scrollBehavior ) {
@@ -307,25 +253,31 @@ export function Carousel( {
 
 			const rtl = 'rtl' === window.getComputedStyle( track ).direction;
 			const current = rtl ? -track.scrollLeft : track.scrollLeft;
-			const maximum = Math.max( 0, track.scrollWidth - track.clientWidth );
-			const paddingStart =
-				parseFloat(
-					window.getComputedStyle( track ).paddingInlineStart
-				) || 0;
-			const targets = [
-				...track.querySelectorAll( '.ax-carousel-item' ),
-			].map( ( item, index, allItems ) =>
-				index === allItems.length - 1
-					? maximum
-					: clamp( item.offsetLeft - paddingStart, 0, maximum )
+			const maximum = Math.max(
+				0,
+				track.scrollWidth - track.clientWidth
 			);
+			const currentGeometry = geometryRef.current;
+			const targets = currentGeometry
+				? currentGeometry.items.map( ( _, index ) =>
+						clamp(
+							scrollOffsetForItem(
+								currentGeometry.strategy,
+								index,
+								currentGeometry.items.length
+							),
+							0,
+							maximum
+						)
+					)
+				: [ current ];
 			const target = targets.reduce(
 				( nearest, candidate ) =>
 					Math.abs( candidate - current ) <
 					Math.abs( nearest - current )
 						? candidate
 						: nearest,
-				targets[ 0 ] ?? 0
+				targets[ 0 ] ?? current
 			);
 
 			delete track.dataset.dragging;
@@ -424,12 +376,29 @@ export function Carousel( {
 			event.preventDefault();
 		}
 
+		function scheduleSettle() {
+			if (
+				track.dataset.dragging !== undefined ||
+				'snap' !== rootRef.current?.dataset.scrollBehavior
+			) {
+				return;
+			}
+			if ( scrollEndTimer ) {
+				track.ownerDocument.defaultView.clearTimeout( scrollEndTimer );
+			}
+			scrollEndTimer = track.ownerDocument.defaultView.setTimeout( () => {
+				scrollEndTimer = undefined;
+				settleToNearestItem();
+			}, 120 );
+		}
+
 		track.addEventListener( 'pointerdown', startDrag );
 		track.addEventListener( 'pointermove', moveDrag );
 		track.addEventListener( 'pointerup', endDrag );
 		track.addEventListener( 'pointercancel', endDrag );
 		track.addEventListener( 'click', preventDraggedClick, true );
 		track.addEventListener( 'dragstart', preventNativeDrag );
+		track.addEventListener( 'scroll', scheduleSettle, { passive: true } );
 
 		return () => {
 			if ( settleFrame ) {
@@ -440,12 +409,16 @@ export function Carousel( {
 					suppressionTimer
 				);
 			}
+			if ( scrollEndTimer ) {
+				track.ownerDocument.defaultView.clearTimeout( scrollEndTimer );
+			}
 			track.removeEventListener( 'pointerdown', startDrag );
 			track.removeEventListener( 'pointermove', moveDrag );
 			track.removeEventListener( 'pointerup', endDrag );
 			track.removeEventListener( 'pointercancel', endDrag );
 			track.removeEventListener( 'click', preventDraggedClick, true );
 			track.removeEventListener( 'dragstart', preventNativeDrag );
+			track.removeEventListener( 'scroll', scheduleSettle );
 		};
 	}, [] );
 
@@ -474,6 +447,7 @@ export function Carousel( {
 			} );
 			delete root.dataset.keylineProfile;
 			delete root.dataset.keylineState;
+			geometryRef.current = undefined;
 		}
 
 		function measureKeylines() {
@@ -485,16 +459,39 @@ export function Carousel( {
 			const trackStyle = window.getComputedStyle( track );
 			const gap =
 				parseFloat( trackStyle.columnGap || trackStyle.gap ) || 8;
-			const profile = keylineProfile(
-				implementedLayout,
-				track.clientWidth,
-				gap,
-				implementedAlignment
-			);
 			const domItems = [
 				...track.querySelectorAll( '.ax-carousel-item' ),
 			];
-			const itemSize = Math.max( ...profile.widths );
+			const paddingStart =
+				parseFloat( trackStyle.paddingInlineStart ) || 0;
+			const paddingEnd = parseFloat( trackStyle.paddingInlineEnd ) || 0;
+			const availableSpace = Math.max(
+				0,
+				track.clientWidth - paddingStart - paddingEnd
+			);
+			const strategyResult =
+				'multi-browse' === implementedLayout
+					? multiBrowseStrategy( {
+							availableSpace,
+							itemCount: domItems.length,
+							itemSpacing: gap,
+							preferredItemWidth:
+								preferredItemWidth ||
+								Math.min( 186, availableSpace ),
+						} )
+					: heroStrategy( {
+							alignment: implementedAlignment,
+							availableSpace,
+							centered: 'center' === implementedAlignment,
+							itemCount: domItems.length,
+							itemSpacing: gap,
+							preferredItemWidth,
+						} );
+			const itemSize = strategyResult.itemMainAxisSize;
+			if ( ! itemSize || ! strategyResult.defaultKeylines.length ) {
+				clearKeylines();
+				return;
+			}
 			domItems.forEach( ( item ) => {
 				item.style.setProperty(
 					'--ax-carousel-item-width',
@@ -502,73 +499,21 @@ export function Carousel( {
 				);
 			} );
 
-			const paddingStart = 16;
-			const edgePadding = 16;
 			const stride = itemSize + gap;
-			const defaultOffsets = visibleCenters(
-				profile.widths,
-				gap,
-				paddingStart
-			);
-			const endWidths =
-				'hero' === implementedLayout &&
-				'center' === implementedAlignment &&
-				'small' === profile.roles[ 0 ]
-					? [
-							...Array( profile.widths.length - 1 ).fill(
-								SMALL_WIDTH
-							),
-							itemSize,
-						]
-					: [ ...profile.widths ].reverse();
-			const endExtent =
-				endWidths.reduce( ( total, width ) => total + width, 0 ) +
-				gap * ( endWidths.length - 1 );
-			const endOffsets = visibleCenters(
-				endWidths,
-				gap,
-				track.clientWidth - edgePadding - endExtent
-			);
-			const defaultKeylines = profile.widths.map( ( size, index ) => ( {
-				loc: paddingStart + itemSize / 2 + index * stride,
-				offset: defaultOffsets[ index ],
-				size,
-			} ) );
-			const firstLargeIndex = profile.roles.indexOf( 'large' );
-			const startWidths = firstLargeIndex > 0
-				? [
-						itemSize,
-						...Array( profile.widths.length - 1 ).fill(
-							SMALL_WIDTH
-						),
-					]
-				: profile.widths;
-			const startOffsets = visibleCenters(
-				startWidths,
-				gap,
-				paddingStart
-			);
-			const startKeylines = startWidths.map( ( size, index ) => ( {
-				loc: paddingStart + itemSize / 2 + index * stride,
-				offset: startOffsets[ index ],
-				size,
-			} ) );
 
 			geometry = {
-				defaultKeylines,
-				endOffsets,
-				endWidths,
+				availableSpace,
 				gap,
 				itemSize,
 				items: domItems,
-				paddingStart,
-				profile,
 				rtl: 'rtl' === trackStyle.direction,
-				startKeylines,
-				startSteps: Math.max( 0, firstLargeIndex ),
+				strategy: strategyResult,
 				stride,
 			};
-			root.dataset.keylineProfile = profile.roles.join( '/' );
+			geometryRef.current = geometry;
+			root.dataset.keylineProfile = strategyResult.sizes
+				.map( ( size ) => sizeRole( size, itemSize ) )
+				.join( '/' );
 			renderKeylines();
 		}
 
@@ -577,16 +522,10 @@ export function Carousel( {
 				return;
 			}
 			const {
-				defaultKeylines,
-				endOffsets,
-				endWidths,
 				itemSize,
 				items: geometryItems,
-				paddingStart,
-				profile,
 				rtl,
-				startKeylines,
-				startSteps,
+				strategy,
 				stride,
 			} = geometry;
 			const maximumScroll = Math.max(
@@ -598,55 +537,15 @@ export function Carousel( {
 				0,
 				maximumScroll
 			);
-			const startShiftRange = Math.min(
-				maximumScroll / 2,
-				stride * startSteps
+			const keylines = keylinesForScrollOffset(
+				strategy,
+				scrollOffset,
+				maximumScroll
 			);
-			const endShiftRange = Math.min(
-				maximumScroll / 2,
-				stride * Math.max( 1, profile.widths.length - 1 )
-			);
-			const startProgress = startShiftRange
-				? clamp( 1 - scrollOffset / startShiftRange, 0, 1 )
-				: 0;
-			const endProgress = endShiftRange
-				? clamp(
-						( scrollOffset - ( maximumScroll - endShiftRange ) ) /
-							endShiftRange,
-						0,
-						1
-					)
-				: 0;
-			const lastNaturalCenter =
-				paddingStart +
-				itemSize / 2 +
-				Math.max( 0, geometryItems.length - 1 ) * stride -
-				maximumScroll;
-			const endKeylines = endWidths.map( ( size, index ) => ( {
-				loc:
-					lastNaturalCenter -
-					( endWidths.length - 1 - index ) * stride,
-				offset: endOffsets[ index ],
-				size,
-			} ) );
-			let keylines = defaultKeylines;
-			if ( 0 < startProgress ) {
-				keylines = interpolateKeylines(
-					defaultKeylines,
-					startKeylines,
-					startProgress
-				);
-			} else if ( 0 < endProgress ) {
-				keylines = interpolateKeylines(
-					defaultKeylines,
-					endKeylines,
-					endProgress
-				);
-			}
 
 			geometryItems.forEach( ( item, index ) => {
 				const naturalCenter =
-					paddingStart + itemSize / 2 + index * stride - scrollOffset;
+					itemSize / 2 + index * stride - scrollOffset;
 				const { offset, size } = itemGeometry(
 					naturalCenter,
 					keylines,
@@ -662,14 +561,18 @@ export function Carousel( {
 				);
 				item.dataset.sizeRole = sizeRole( size, itemSize );
 			} );
+			const endBoundary = Math.max(
+				0,
+				maximumScroll - strategy.endShiftDistance
+			);
 			let keylineState = 'default';
-			if ( 0.999 <= startProgress ) {
+			if ( 0 === scrollOffset ) {
 				keylineState = 'start';
-			} else if ( 0 < startProgress ) {
+			} else if ( scrollOffset < strategy.startShiftDistance ) {
 				keylineState = 'shifting-start';
-			} else if ( 0.999 <= endProgress ) {
+			} else if ( maximumScroll === scrollOffset ) {
 				keylineState = 'end';
-			} else if ( 0 < endProgress ) {
+			} else if ( scrollOffset > endBoundary ) {
 				keylineState = 'shifting-end';
 			}
 			root.dataset.keylineState = keylineState;
@@ -704,8 +607,9 @@ export function Carousel( {
 				'change',
 				onMotionPreferenceChange
 			);
+			geometryRef.current = undefined;
 		};
-	}, [ implementedAlignment, implementedLayout ] );
+	}, [ implementedAlignment, implementedLayout, preferredItemWidth ] );
 
 	function moveFocus( event ) {
 		const root = rootRef.current;
@@ -752,11 +656,29 @@ export function Carousel( {
 
 		event.preventDefault();
 		actions[ to ].focus();
-		actions[ to ].scrollIntoView( {
-			behavior: 'auto',
-			block: 'nearest',
-			inline: 'nearest',
-		} );
+		const track = trackRef.current;
+		const geometry = geometryRef.current;
+		if ( track && geometry ) {
+			const maximum = Math.max(
+				0,
+				track.scrollWidth - track.clientWidth
+			);
+			const target = clamp(
+				scrollOffsetForItem( geometry.strategy, to, actions.length ),
+				0,
+				maximum
+			);
+			track.scrollTo( {
+				behavior: 'auto',
+				left: geometry.rtl ? -target : target,
+			} );
+		} else {
+			actions[ to ].scrollIntoView( {
+				behavior: 'auto',
+				block: 'nearest',
+				inline: 'nearest',
+			} );
+		}
 	}
 
 	return (

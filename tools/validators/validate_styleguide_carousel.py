@@ -694,6 +694,44 @@ def main() -> int:
         ),
         "Tablet Hero's measured medium-item discrepancy was dropped",
     )
+    # The two Google implementations agree on the centred-hero split and the
+    # Figma frame does not, so the Stylebook deliberately shows both numbers.
+    # Without this entry the next reader finds a static profile that the runtime
+    # never reproduces and reads it as a bug.
+    subjects = {d.get("subject") for d in data["discrepancies"]}
+    check(
+        "Center-aligned hero large-to-small split" in subjects,
+        "the centred-hero split between Figma and the implementations is unrecorded",
+    )
+    check(
+        "Uncontained edge masking" in subjects,
+        "the uncontained masking gap is unrecorded",
+    )
+
+    # Named with Flutter's spellings on purpose: a reader can find the upstream
+    # definition from the name, which a translated name would cost.
+    gaps = {gap["name"] for gap in data["upstream_api_gaps"]}
+    check(
+        {"initialItem", "shrinkExtent", "consumeMaxWeight"} <= gaps,
+        f"an upstream API gap was dropped from the record: {sorted(gaps)}",
+    )
+
+    # A measurement specimen that hides most of its measurement is not one.
+    # Multi-aspect needs 1170px for the five widths it exists to show.
+    check(
+        "overflow-x: auto;" in stylebook_css
+        and "overflow: hidden;" not in stylebook_css.split("__static-track")[1].split("}")[0],
+        "the static profile track hides the widths it exists to show",
+    )
+    check(
+        2 == stylebook_page.count( 'layout="uncontained"' ),
+        "the Stylebook has no runtime multi-aspect carousel, only a static one",
+    )
+    check(
+        "FIGMA_ASPECT_RATIOS.length" in stylebook_page,
+        "multi-aspect ratios no longer cycle, so items past the fifth have none",
+    )
+
     check(
         "@import url( './components/carousel.css' );" in style_index,
         "Carousel component CSS is not in the frontend style graph",

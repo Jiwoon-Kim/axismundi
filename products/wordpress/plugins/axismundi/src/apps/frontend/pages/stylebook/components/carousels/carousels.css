@@ -70,7 +70,16 @@
 		gap: var(--md-sys-measurement-space100);
 		inline-size: min(100%, 600px);
 		min-inline-size: 0;
-		overflow: hidden;
+
+		/*
+		 * The tiling profiles fit their reference width exactly, so nothing
+		 * scrolls here. Multi-aspect does not tile -- its five measured items
+		 * need 1170px -- and hiding the overflow meant a measurement specimen
+		 * showing one and a bit of the five widths it exists to show.
+		 */
+		overflow-x: auto;
+		overflow-y: hidden;
+		overscroll-behavior-x: contain;
 		padding: var(--md-sys-measurement-space100)
 			var(--md-sys-measurement-space200);
 		block-size: 220px;

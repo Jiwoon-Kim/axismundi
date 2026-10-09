@@ -224,7 +224,10 @@ function KeylineSample( {
 						<CarouselItemMedia
 							aspectRatio={
 								multiAspect
-									? FIGMA_ASPECT_RATIOS[ index ]
+									? FIGMA_ASPECT_RATIOS[
+											index %
+												FIGMA_ASPECT_RATIOS.length
+										]
 									: '1:1'
 							}
 						>
@@ -423,6 +426,18 @@ export function StylebookCarouselsPage() {
 								context="Tablet"
 								items={ ITEMS }
 								layout="hero"
+							/>
+							<KeylineSample
+								context="Mobile"
+								items={ ITEMS }
+								layout="uncontained"
+								multiAspect
+							/>
+							<KeylineSample
+								context="Tablet"
+								items={ ITEMS }
+								layout="uncontained"
+								multiAspect
 							/>
 						</div>
 						<p className="ax-stylebook-page__note">

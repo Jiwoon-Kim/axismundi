@@ -364,6 +364,36 @@ discrepancies:
     note: >-
       The medium item is therefore a measured specimen role, not a runtime
       constant and not a claim that the published Hero anatomy has a medium item.
+  - subject: Center-aligned hero large-to-small split
+    figma_profile: >-
+      56 / 252 / 56 at a 412dp container, a ratio of 1 to 4.5 to 1.
+    androidx_port: 40 / 284 / 40 at the same container.
+    flutter_sample: >-
+      CarouselView.weighted with flexWeights [1, 7, 1] gives 40.44 / 283.11 /
+      40.44 for the same 364dp of item space.
+    note: >-
+      The two Google implementations agree within a pixel and the Figma frame
+      is the outlier, so the runtime follows the implementations. The static
+      profile keeps Figma's split, which means the Stylebook shows both numbers
+      for the same layout on purpose. Neither is wrong; they answer different
+      questions, and this entry is what says so.
+  - subject: Uncontained edge masking
+    prose: >-
+      Items are a single size, and uncontained is the one layout whose items
+      need not be fully visible on-screen.
+    reading: >-
+      The uniform size is the slot, not a claim that nothing is masked. The
+      guidelines video shows uncontained items shrinking at the container edge,
+      AndroidX publishes an uncontained cutoff keyline, and Flutter exposes the
+      floor as shrinkExtent beside an exact itemExtent.
+    status: strategy ported and tested, renderer not yet wired
+    note: >-
+      uncontainedStrategy already produces the cutoff and anchors, and the
+      AndroidX 125dp cutoff position is asserted at 393.75. Only the renderer's
+      layout gate excludes it. Wiring it is not a copy of the advanced path:
+      there the slot is the strategy's focal size, while uncontained keeps the
+      consumer's exact itemWidth and the strategy's item size is a stride that
+      already includes the spacing.
   - subject: ripple feedback
     prose: Tapping a carousel item changes its shape slightly and creates a ripple.
     project_policy: Ripple is deferred as a cross-component motion decision.
@@ -539,3 +569,29 @@ component_implementation_order:
   - Uncontained, also used as every layout's reduced-motion geometry
   - Multi-browse keylines, masking and dynamic widths
   - Hero and full-screen
+
+# Gaps the upstream implementations name and this component does not have yet.
+# Flutter's spellings are kept rather than translated, so a reader can find the
+# upstream definition from the name alone.
+upstream_api_gaps:
+  - name: initialItem
+    upstream: Flutter CarouselController(initialItem:)
+    missing_here: >-
+      The carousel always starts at the first item, and a Social route that
+      points at one object has no way to say so.
+  - name: shrinkExtent
+    upstream: Flutter CarouselView(itemExtent:, shrinkExtent:)
+    missing_here: >-
+      The floor an item shrinks to while leaving the container. AndroidX keeps
+      it internal; Flutter makes it an input. Related to the uncontained edge
+      masking discrepancy above.
+  - name: consumeMaxWeight
+    upstream: Flutter CarouselView.weighted(consumeMaxWeight:)
+    missing_here: >-
+      Whether the first and last items may occupy the largest slot. Our
+      start and end keyline steps decide this with no way to turn it off.
+  - name: scrollBehavior for Uncontained
+    upstream: M3 guidelines, both default and snap scrolling
+    missing_here: >-
+      UncontainedCarousel hardcodes default scrolling, so the published snap
+      option is unreachable through the wrapper.

@@ -235,10 +235,9 @@ describe( 'Material carousel strategies', () => {
 
 	test( 'the large item takes what the small items leave', () => {
 		/*
-		 * One rule covers both reference contexts, and at the Mobile one it
-		 * returns the Figma frames. Reusing a single width across contexts let a
-		 * second large item in at the Tablet width, so a Hero stopped looking
-		 * like one.
+		 * How the compact preferred widths were chosen, and the check that they
+		 * return the Figma Mobile frames. It is not a rule the specimens apply
+		 * per container: the scaling test below is why.
 		 */
 		const spacing = 8;
 		const preferred = ( availableSpace, smallCount ) =>
@@ -263,6 +262,28 @@ describe( 'Material carousel strategies', () => {
 				} ).sizes
 			).toEqual( [ 56, availableSpace - 128, 56 ] );
 		}
+	} );
+
+	test( 'a wider container shows more items, not a wider one', () => {
+		/*
+		 * "As the carousel container size increases, so do the number of carousel
+		 * items visible at a time", and "on larger screens, more large items are
+		 * visible". The adaptation belongs to the algorithm, so the caller's
+		 * preferred width stays put and the container decides how many fit. A
+		 * width derived per container does the opposite: it held Hero at two
+		 * items and grew the large one to 1504dp.
+		 */
+		const counts = [ 380, 568, 808, 1168, 1568 ].map(
+			( availableSpace ) =>
+				heroStrategy( {
+					availableSpace,
+					itemCount: 10,
+					itemSpacing: 8,
+					preferredItemWidth: 316,
+				} ).sizes.length
+		);
+
+		expect( counts ).toEqual( [ 2, 3, 4, 5, 6 ] );
 	} );
 
 	test( 'a centred hero is symmetric, so it cannot be the Tablet frame', () => {

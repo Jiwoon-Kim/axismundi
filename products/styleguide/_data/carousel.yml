@@ -377,9 +377,11 @@ discrepancies:
       frames are the Multi-browse composition under another label, and
       Multi-browse is the one that was drawn.
     consequence: >-
-      Only the Mobile frames are usable as Hero and centred Hero references.
-      Both are reproduced exactly by the rule that the large item takes what the
-      small items leave, which is what the Tablet specimens use too.
+      Only the Mobile frames are usable as Hero and centred Hero references, and
+      the Stylebook draws one Tablet row rather than three. The Mobile pair is
+      reproduced exactly by the compact widths, and the Tablet Multi-browse
+      frame by a preferred width of 184, so every frame the kit actually drew is
+      an output of the algorithm.
     status: recorded, with tests
   - subject: Hero tablet medium item
     published_anatomy: Hero names large and small items, with no medium item in its measurement table.
@@ -510,6 +512,34 @@ discrepancies:
       attachments, so the ratio is data the caller already holds rather than
       something to detect, but nothing wires it through yet. Reading
       naturalWidth after load is the fallback, and it reflows once per image.
+  - subject: adaptation is by container, not by window breakpoint
+    prose: >-
+      As the carousel container size increases, so do the number of carousel
+      items visible at a time. On larger screens, more large items are visible.
+    reading: >-
+      The guidelines are written in breakpoints because on a phone the carousel
+      spans the window, but the sentence that defines the behaviour says
+      container size. The component measures its own track, so a carousel
+      inside a pane adapts to the pane.
+    evidence: >-
+      With one preferred width of 186, Multi-browse shows 3, 4, 5, 7 and 9
+      items at 380, 568, 808, 1168 and 1568dp of item space; Hero shows 2, 3,
+      4, 5 and 6. No window breakpoint switching is needed, and a test holds
+      the Hero counts.
+    rejected: >-
+      Deriving the preferred width per context was tried and is wrong past the
+      reference frames: it held Hero at two items and grew the large one to
+      1504dp at an extra-large container, which is the opposite of what the
+      guidelines describe.
+  - subject: multi-aspect ratio items are not production-ready
+    status: known defect
+    note: >-
+      The layout and the masking are implemented, and the Stylebook rows are
+      correct for the ratios they are handed. What is not implemented is where
+      a real route gets those ratios, so every multi-aspect specimen is driven
+      by hard-coded values from the Community Kit. Until the ratio has a
+      source, multi-aspect is a Stylebook demonstration rather than something a
+      product surface can adopt. See "item aspect ratio has no source yet".
   - subject: ripple feedback
     prose: Tapping a carousel item changes its shape slightly and creates a ripple.
     project_policy: Ripple is deferred as a cross-component motion decision.

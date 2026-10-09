@@ -782,11 +782,27 @@ def main() -> int:
     # A missing preferred width means "one large item fills the viewport"
     # upstream, which pushes the small item onto its 40dp floor. The specimens
     # pass the width their reference frames were drawn at.
+    #
+    # It is one number per layout and must not follow the container: the
+    # guidelines put the adaptation in the algorithm, and a width derived per
+    # context holds Hero at two items and grows the large one to 1504dp at an
+    # extra-large container instead of showing more of them.
     check(
-        "function preferredItemWidthFor(" in stylebook_page
-        and "MAXIMUM_SMALL_ITEM_WIDTH" in stylebook_page
-        and "CONTEXT_AVAILABLE_SPACE" in stylebook_page,
-        "the hero specimens stopped deriving a preferred width per context",
+        "const PREFERRED_ITEM_WIDTH = {" in stylebook_page
+        and "hero: 316," in stylebook_page
+        and "'center-hero': 252," in stylebook_page
+        and "CONTEXT_AVAILABLE_SPACE" not in stylebook_page,
+        "the preferred item width follows the container again",
+    )
+
+    # The kit's three Tablet frames are one composition, so the Stylebook draws
+    # one row. Three rows invited two of them to be read as Hero references.
+    check(
+        'label="Multi-browse (Hero and Center-aligned Hero are copies of it)"'
+        in stylebook_page
+        and "'hero-tablet'" not in stylebook_page
+        and "'center-tablet'" not in stylebook_page,
+        "the duplicated Tablet reference frames are drawn as separate references again",
     )
     check(
         "reproduces the Figma reference profiles from their own large width"

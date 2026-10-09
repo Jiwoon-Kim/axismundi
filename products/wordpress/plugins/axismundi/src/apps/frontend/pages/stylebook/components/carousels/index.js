@@ -92,39 +92,31 @@ const FIGMA_ASPECT_RATIOS = [ '16:9', '4:3', '1:1', '3:4', '9:16' ];
  * to its 40dp floor: that is why Hero once showed 332 and 40 while
  * Multi-browse, given 186, showed a 56dp small.
  *
- * One width per layout was not enough either. Reusing Mobile's at the Tablet
- * width let a second large item in, so the Hero specimens stopped looking like
- * Hero. The width is derived per context instead, by one rule: the large item
- * takes what is left once the small items sit at their published maximum.
+ * The width is one number per layout and does not follow the container. The
+ * guidelines put the adaptation in the algorithm, not in the caller: "As the
+ * carousel container size increases, so do the number of carousel items
+ * visible at a time", and "on larger screens, more large items are visible".
+ * A width derived per context was tried and is wrong past the two reference
+ * frames -- it keeps Hero at two items and grows the large one instead, which
+ * reaches 1504dp at an extra-large container.
  *
- *   Mobile  hero     380 - 56 - 8        = 316  ->  316, 56
- *   Mobile  centred  380 - 112 - 16      = 252  ->  56, 252, 56
- *   Tablet  hero     568 - 56 - 8        = 504  ->  504, 56
- *   Tablet  centred  568 - 112 - 16      = 440  ->  56, 440, 56
- *
- * Each fills its container exactly, and the two Mobile rows are the Figma
- * frames, which is the evidence that the rule is the kit's own.
- *
- * Multi-browse keeps 186, the value Compose's carousel sample passes.
+ * These are the compact values, chosen so the large item takes what is left
+ * once the small items sit at their published maximum. At 380dp of item space
+ * they return the Figma Mobile frames: 316 and 56 for Hero, 56, 252 and 56 for
+ * the centred Hero. Multi-browse keeps the 186 that Compose's sample passes.
  */
-const CONTEXT_AVAILABLE_SPACE = { Mobile: 412 - 32, Tablet: 600 - 32 };
-const MAXIMUM_SMALL_ITEM_WIDTH = 56;
-const ITEM_SPACING = 8;
+const PREFERRED_ITEM_WIDTH = {
+	hero: 316,
+	'center-hero': 252,
+	'multi-browse': 186,
+	uncontained: undefined,
+};
 
-function preferredItemWidthFor( layout, alignment, context ) {
-	if ( 'multi-browse' === layout ) {
-		return 186;
-	}
-	if ( 'hero' !== layout ) {
-		return undefined;
-	}
-	const smallCount = 'center' === alignment ? 2 : 1;
-	return (
-		CONTEXT_AVAILABLE_SPACE[ context ] -
-		smallCount * ( MAXIMUM_SMALL_ITEM_WIDTH + ITEM_SPACING )
-	);
+function preferredItemWidthFor( layout, alignment ) {
+	return PREFERRED_ITEM_WIDTH[
+		'center' === alignment ? 'center-hero' : layout
+	];
 }
-
 function UncontainedSample() {
 	const hostRef = useRef();
 	const [ metrics, setMetrics ] = useState();
@@ -257,8 +249,7 @@ function KeylineSample( {
 				alignment={ alignment }
 				preferredItemWidth={ preferredItemWidthFor(
 					layout,
-					alignment,
-					context
+					alignment
 				) }
 				scrollBehavior="snap"
 			>
@@ -335,19 +326,13 @@ const FIGMA_PROFILES = {
 		{ role: 'large', inlineSize: 252, image: ITEMS[ 1 ].image },
 		{ role: 'small', inlineSize: 56, image: ITEMS[ 2 ].image },
 	],
-	'hero-tablet': [
-		{ role: 'large', inlineSize: 184, image: ITEMS[ 0 ].image },
-		{ role: 'large', inlineSize: 184, image: ITEMS[ 1 ].image },
-		{ role: 'medium', inlineSize: 120, image: ITEMS[ 2 ].image },
-		{ role: 'small', inlineSize: 56, image: ITEMS[ 3 ].image },
-	],
+	/*
+	 * The kit's Tablet Hero and Center-aligned Hero frames carried these same
+	 * four widths, so they are not separate references and are not kept as
+	 * separate data. `carousel.yml` records the proof that neither can be what
+	 * it was labelled.
+	 */
 	'multi-tablet': [
-		{ role: 'large', inlineSize: 184, image: ITEMS[ 0 ].image },
-		{ role: 'large', inlineSize: 184, image: ITEMS[ 1 ].image },
-		{ role: 'medium', inlineSize: 120, image: ITEMS[ 2 ].image },
-		{ role: 'small', inlineSize: 56, image: ITEMS[ 3 ].image },
-	],
-	'center-tablet': [
 		{ role: 'large', inlineSize: 184, image: ITEMS[ 0 ].image },
 		{ role: 'large', inlineSize: 184, image: ITEMS[ 1 ].image },
 		{ role: 'medium', inlineSize: 120, image: ITEMS[ 2 ].image },
@@ -524,20 +509,19 @@ export function StylebookCarouselsPage() {
 								label="Center-aligned Hero"
 								items={ FIGMA_PROFILES[ 'center-mobile' ] }
 							/>
+							{ /*
+							 * One Tablet row, not three. The kit's Tablet
+							 * Hero and Center-aligned Hero frames carry the
+							 * same 184, 184, 120 and 56 as its Multi-browse
+							 * frame, and neither can be what it is labelled:
+							 * Hero never produces a medium, and a centred
+							 * Hero is symmetric. Drawing all three invited
+							 * the Hero rows to be read as Hero references.
+							 */ }
 							<StaticProfile
 								context="Tablet"
-								label="Hero"
-								items={ FIGMA_PROFILES[ 'hero-tablet' ] }
-							/>
-							<StaticProfile
-								context="Tablet"
-								label="Multi-browse"
+								label="Multi-browse (Hero and Center-aligned Hero are copies of it)"
 								items={ FIGMA_PROFILES[ 'multi-tablet' ] }
-							/>
-							<StaticProfile
-								context="Tablet"
-								label="Center-aligned Hero"
-								items={ FIGMA_PROFILES[ 'center-tablet' ] }
 							/>
 							<StaticProfile
 								context="Mobile"

@@ -620,6 +620,12 @@ discrepancies:
       This is the same mistake twice over, both introduced by putting
       multi-aspect through a path built for one stride. The uniform case is
       unchanged and still verified by its own compositions.
+    morph: >-
+      Deferred past release by the owner, and designed rather than attempted:
+      PLAN-FRONTEND-CAROUSEL-MULTI-ASPECT-MORPH.md. It needs edge zones over
+      the settled boxes with an edge-anchored mask, not the single-stride
+      keylines, and the two failures above are what the design exists to keep
+      from recurring.
   - subject: the third item could not be focused
     defect: >-
       Arrow keys walked one item and then lost focus to the document body, so

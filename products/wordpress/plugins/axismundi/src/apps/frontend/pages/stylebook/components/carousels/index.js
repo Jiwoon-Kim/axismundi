@@ -86,6 +86,25 @@ const ITEMS = [
 
 const FIGMA_ASPECT_RATIOS = [ '16:9', '4:3', '1:1', '3:4', '9:16' ];
 
+/*
+ * Upstream treats a missing preferred width as "one large item fills the
+ * viewport, minus the space the small items need", which squeezes the small
+ * item to its 40dp floor: that is why Hero showed 332 and 40 while
+ * Multi-browse, which was given 186, showed a 56dp small.
+ *
+ * Fed the large width the Figma frames were drawn at, the ported algorithm
+ * reproduces those frames exactly -- 316 and 56 for Hero, 56, 252 and 56 for
+ * the centred Hero -- so the kit and the implementation were never in
+ * disagreement, only differently fed. At the Tablet width the same inputs put
+ * more large items on screen, which is what the guidelines say happens.
+ */
+const PREFERRED_ITEM_WIDTH = {
+	hero: 316,
+	'center-hero': 252,
+	'multi-browse': 186,
+	uncontained: undefined,
+};
+
 function UncontainedSample() {
 	const hostRef = useRef();
 	const [ metrics, setMetrics ] = useState();
@@ -211,7 +230,9 @@ function KeylineSample( {
 				alignment={ alignment }
 				multiAspect={ multiAspect }
 				preferredItemWidth={
-					'multi-browse' === layout ? 186 : undefined
+					PREFERRED_ITEM_WIDTH[
+						'center' === alignment ? 'center-hero' : layout
+					]
 				}
 				scrollBehavior="snap"
 			>

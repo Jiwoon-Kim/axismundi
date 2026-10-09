@@ -613,13 +613,23 @@ export function Carousel( {
 			const stride = uncontained ? itemSize : itemSize + gap;
 
 			/*
-			 * Base centres, before the scroll offset. Uniform uncontained gives
-			 * boxes[i] + gap === itemSize, so centre i is itemSize / 2 plus i
-			 * strides, which is what this used to compute directly.
+			 * Base centres, before the scroll offset.
+			 *
+			 * The two paths cannot share one line, and a version that tried to
+			 * put every item's centre half a stride into its own slot was
+			 * wrong by half a gap for the advanced layouts: their itemSize is
+			 * the box, so the first centre is itemSize / 2, not stride / 2.
+			 * Four pixels of that moved every item off its keyline, and the
+			 * centred hero rendered 59, 249, 55 where the strategy says 56,
+			 * 252, 56. Uncontained is the case where the two agree, because
+			 * its itemSize already has the spacing folded in.
 			 */
 			let runningStart = 0;
-			const centers = boxes.map( ( box ) => {
-				const itemStride = uncontained ? box + gap : stride;
+			const centers = boxes.map( ( box, index ) => {
+				if ( ! uncontained ) {
+					return itemSize / 2 + index * stride;
+				}
+				const itemStride = box + gap;
 				const center = runningStart + itemStride / 2;
 				runningStart += itemStride;
 				return center;

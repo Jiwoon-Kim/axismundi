@@ -4,6 +4,7 @@ import {
 	centeredHeroStrategy,
 	createCarouselKeylines,
 	createCarouselStrategy,
+	heroStrategy,
 	keylinesForScrollOffset,
 	maximumScrollOffset,
 	multiBrowseStrategy,
@@ -196,6 +197,60 @@ describe( 'Material carousel strategies', () => {
 			expect( strategy.keylines.at( -1 ).size ).toBe( 10 );
 		}
 	);
+
+	test( 'reproduces the Figma reference profiles from their own large width', () => {
+		/*
+		 * The kit and the ported algorithm were never in disagreement. Upstream
+		 * treats a missing preferred width as "one large item fills the viewport",
+		 * which pushes the small item to its 40dp floor; given the width the frame
+		 * was drawn at, the same code returns the frame.
+		 */
+		expect(
+			heroStrategy( {
+				availableSpace: 380,
+				itemCount: 10,
+				itemSpacing: 8,
+				preferredItemWidth: 316,
+			} ).sizes
+		).toEqual( [ 316, 56 ] );
+
+		expect(
+			centeredHeroStrategy( {
+				availableSpace: 380,
+				itemCount: 10,
+				itemSpacing: 8,
+				preferredItemWidth: 252,
+			} ).sizes
+		).toEqual( [ 56, 252, 56 ] );
+
+		/* And without one, the small item sits on its floor. */
+		expect(
+			heroStrategy( {
+				availableSpace: 380,
+				itemCount: 10,
+				itemSpacing: 8,
+			} ).sizes
+		).toEqual( [ 332, 40 ] );
+	} );
+
+	test( 'hero has no medium item to give, at any width', () => {
+		/*
+		 * The Figma Tablet Hero frame is 184, 184, 120 and 56, and the 120 is a
+		 * medium. Hero's arrangement is searched with mediumCounts of [0], so the
+		 * frame cannot be a hero however it is fed: it is a Multi-browse
+		 * composition under a Hero label.
+		 */
+		for ( const preferredItemWidth of [ undefined, 120, 186, 316 ] ) {
+			const strategy = heroStrategy( {
+				availableSpace: 568,
+				itemCount: 10,
+				itemSpacing: 8,
+				preferredItemWidth,
+			} );
+
+			expect( strategy.arrangement.mediumCount ).toBe( 0 );
+		}
+	} );
 
 	test( 'uncontained reports a stride while the advanced layouts report a box', () => {
 		const itemSpacing = 8;

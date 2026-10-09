@@ -370,22 +370,29 @@ discrepancies:
     published_anatomy: Hero names large and small items, with no medium item in its measurement table.
     measured_figma_profile: Tablet Hero contains large, large, medium and small items.
     implementation_choice: Preserve the measured Figma profile as a static regression fixture only.
+    proof: >-
+      Hero's arrangement is searched with a medium count of zero, so no
+      preferred width can make it produce a medium item. The frame is a
+      Multi-browse composition under a Hero label, and a test asserts the zero.
     note: >-
       The medium item is therefore a measured specimen role, not a runtime
       constant and not a claim that the published Hero anatomy has a medium item.
   - subject: Center-aligned hero large-to-small split
-    figma_profile: >-
-      56 / 252 / 56 at a 412dp container, a ratio of 1 to 4.5 to 1.
-    androidx_port: 40 / 284 / 40 at the same container.
-    flutter_sample: >-
-      CarouselView.weighted with flexWeights [1, 7, 1] gives 40.44 / 283.11 /
-      40.44 for the same 364dp of item space.
-    note: >-
-      The two Google implementations agree within a pixel and the Figma frame
-      is the outlier, so the runtime follows the implementations. The static
-      profile keeps Figma's split, which means the Stylebook shows both numbers
-      for the same layout on purpose. Neither is wrong; they answer different
-      questions, and this entry is what says so.
+    status: resolved
+    was: >-
+      The runtime rendered 40 / 284 / 40 where the Figma frame is 56 / 252 / 56,
+      and this entry used to call the frame an outlier because Flutter's
+      flexWeights [1, 7, 1] give 40.44 / 283.11 / 40.44 for the same item space.
+    cause: >-
+      Upstream reads a missing preferred item width as "one large item fills the
+      viewport, minus the space the small items need", which pushes the small
+      item onto its 40dp floor. The specimen passed one to Multi-browse and not
+      to Hero, which is also why Multi-browse's small was 56 and Hero's was 40.
+    resolution: >-
+      Given the large width its frame was drawn at, the ported algorithm returns
+      the frame exactly: 316 and 56 for Hero, 56, 252 and 56 for the centred
+      Hero. A test holds both. Flutter's sample weights describe the no-preferred
+      -width case, so all three sources agree once fed the same input.
   - subject: Uncontained edge masking
     prose: >-
       Items are a single size, and uncontained is the one layout whose items
@@ -437,17 +444,20 @@ discrepancies:
       a pixel more - Hero's 316 plus 56, Multi-browse's 184, 184, 120 and 56,
       each with its gaps.
   - subject: centred hero leading small item
-    measured: >-
-      The leading small item paints at 43 to 44dp where the trailing one paints
-      at 40, so the arrangement is about 3dp wider than the container at rest.
-    status: open
-    note: >-
-      It is painted whole rather than sliced, so it is not visible as a defect,
-      and the arrangement at the start state is exactly 40, 284 and 40. The
-      difference appears in the shifted states, which means the question is
-      about the centred keyline offsets rather than the arrangement. It wants a
-      comparison against an upstream vector for a centred hero of this width
-      and item count, which the ported tests do not yet cover.
+    status: resolved
+    was: >-
+      The leading small painted 3dp wider than the trailing one and hung over
+      the container edge.
+    cause: >-
+      Not the strategy. Its default keylines are symmetric and exact - small at
+      0 to 56, large at 64 to 316, small at 324 to 380, both anchors outside -
+      and the snap positions land on them. The renderer had been given one
+      centre formula for both paths while adding multi-aspect support, and the
+      advanced layouts need itemSize / 2 for the first centre where uncontained
+      needs stride / 2. Half a gap moved every item off its keyline.
+    resolution: >-
+      The two paths branch. Every contained layout now paints its strategy's
+      sizes exactly, with nothing overhanging the container.
   - subject: ripple feedback
     prose: Tapping a carousel item changes its shape slightly and creates a ripple.
     project_policy: Ripple is deferred as a cross-component motion decision.

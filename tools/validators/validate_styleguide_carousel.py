@@ -766,6 +766,34 @@ def main() -> int:
     # requires carousel items to be fully visible on-screen and names
     # uncontained as the one exception, so the contained layouts clip to their
     # content box and uncontained still bleeds past the edge.
+    # Half a gap, and every item sat off its keyline. The advanced strategies
+    # size the box, so the first centre is itemSize / 2; uncontained is the one
+    # case where that equals stride / 2, because its size already folds in the
+    # spacing. Writing one line for both put the centred hero at 59, 249, 55
+    # where its own keylines say 56, 252, 56.
+    check(
+        "return itemSize / 2 + index * stride;" in carousel
+        and "const itemStride = box + gap;" in carousel,
+        "the two layouts share one centre formula again, which is off by half a gap",
+    )
+
+    # A missing preferred width means "one large item fills the viewport"
+    # upstream, which pushes the small item onto its 40dp floor. The specimens
+    # pass the width their reference frames were drawn at.
+    check(
+        "const PREFERRED_ITEM_WIDTH = {" in stylebook_page
+        and "'center-hero': 252," in stylebook_page
+        and "hero: 316," in stylebook_page,
+        "the hero specimens stopped passing a preferred item width",
+    )
+    check(
+        "reproduces the Figma reference profiles from their own large width"
+        in carousel_strategy_test
+        and "hero has no medium item to give, at any width"
+        in carousel_strategy_test,
+        "nothing holds the Figma profiles to the algorithm that should produce them",
+    )
+
     check(
         "const offStage =" in carousel
         and "item.style.visibility = offStage ? 'hidden' : '';" in carousel,

@@ -233,6 +233,58 @@ describe( 'Material carousel strategies', () => {
 		).toEqual( [ 332, 40 ] );
 	} );
 
+	test( 'the large item takes what the small items leave', () => {
+		/*
+		 * One rule covers both reference contexts, and at the Mobile one it
+		 * returns the Figma frames. Reusing a single width across contexts let a
+		 * second large item in at the Tablet width, so a Hero stopped looking
+		 * like one.
+		 */
+		const spacing = 8;
+		const preferred = ( availableSpace, smallCount ) =>
+			availableSpace - smallCount * ( 56 + spacing );
+
+		for ( const availableSpace of [ 380, 568 ] ) {
+			expect(
+				heroStrategy( {
+					availableSpace,
+					itemCount: 10,
+					itemSpacing: spacing,
+					preferredItemWidth: preferred( availableSpace, 1 ),
+				} ).sizes
+			).toEqual( [ availableSpace - 64, 56 ] );
+
+			expect(
+				centeredHeroStrategy( {
+					availableSpace,
+					itemCount: 10,
+					itemSpacing: spacing,
+					preferredItemWidth: preferred( availableSpace, 2 ),
+				} ).sizes
+			).toEqual( [ 56, availableSpace - 128, 56 ] );
+		}
+	} );
+
+	test( 'a centred hero is symmetric, so it cannot be the Tablet frame', () => {
+		/*
+		 * Figma's Tablet Hero, Multi-browse and Center-aligned Hero frames are
+		 * all 184, 184, 120 and 56. Hero cannot produce a medium at all, and a
+		 * centred hero is small, large, small, so two of the three are the
+		 * Multi-browse composition under another label.
+		 */
+		for ( const preferredItemWidth of [ 186, 252, 440 ] ) {
+			const sizes = centeredHeroStrategy( {
+				availableSpace: 568,
+				itemCount: 10,
+				itemSpacing: 8,
+				preferredItemWidth,
+			} ).sizes;
+
+			expect( sizes[ 0 ] ).toBe( sizes[ sizes.length - 1 ] );
+			expect( sizes ).not.toEqual( [ 184, 184, 120, 56 ] );
+		}
+	} );
+
 	test( 'hero has no medium item to give, at any width', () => {
 		/*
 		 * The Figma Tablet Hero frame is 184, 184, 120 and 56, and the 120 is a

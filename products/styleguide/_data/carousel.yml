@@ -366,6 +366,21 @@ discrepancies:
       pinned Apache-2.0 source revision. DOM measurement, scrolling, rendering
       and the web public API remain project-owned and must not be presented as
       M3 web component contracts.
+  - subject: Tablet reference frames are one composition
+    measured: >-
+      Figma's Tablet Hero, Tablet Multi-browse and Tablet Center-aligned Hero
+      are all 184, 184, 120 and 56.
+    proof: >-
+      Hero's arrangement is searched with a medium count of zero, so no input
+      makes it produce the 120, and a centred hero is symmetric - small, large,
+      small - so it cannot be a four item run ending in a 56. Two of the three
+      frames are the Multi-browse composition under another label, and
+      Multi-browse is the one that was drawn.
+    consequence: >-
+      Only the Mobile frames are usable as Hero and centred Hero references.
+      Both are reproduced exactly by the rule that the large item takes what the
+      small items leave, which is what the Tablet specimens use too.
+    status: recorded, with tests
   - subject: Hero tablet medium item
     published_anatomy: Hero names large and small items, with no medium item in its measurement table.
     measured_figma_profile: Tablet Hero contains large, large, medium and small items.
@@ -481,6 +496,20 @@ discrepancies:
     measured: >-
       362.67, 272, 204, 153 and 114.75 at a 204dp item height, cycling, with the
       contained layouts unchanged.
+  - subject: item aspect ratio has no source yet
+    prose: >-
+      Item widths can range anywhere between 9:16 for min width size to 16:9
+      for max width.
+    status: open
+    note: >-
+      CarouselItemMedia takes the ratio as a prop and clamps it to those bounds,
+      which is the component's whole share of the problem. What has no answer
+      yet is where a real route gets the number: the Stylebook passes the five
+      the Community Kit draws, and a feed cannot. WordPress keeps width and
+      height in attachment metadata and federated objects carry them on their
+      attachments, so the ratio is data the caller already holds rather than
+      something to detect, but nothing wires it through yet. Reading
+      naturalWidth after load is the fallback, and it reflows once per image.
   - subject: ripple feedback
     prose: Tapping a carousel item changes its shape slightly and creates a ripple.
     project_policy: Ripple is deferred as a cross-component motion decision.

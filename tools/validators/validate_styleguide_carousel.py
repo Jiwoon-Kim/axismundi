@@ -783,15 +783,19 @@ def main() -> int:
     # upstream, which pushes the small item onto its 40dp floor. The specimens
     # pass the width their reference frames were drawn at.
     check(
-        "const PREFERRED_ITEM_WIDTH = {" in stylebook_page
-        and "'center-hero': 252," in stylebook_page
-        and "hero: 316," in stylebook_page,
-        "the hero specimens stopped passing a preferred item width",
+        "function preferredItemWidthFor(" in stylebook_page
+        and "MAXIMUM_SMALL_ITEM_WIDTH" in stylebook_page
+        and "CONTEXT_AVAILABLE_SPACE" in stylebook_page,
+        "the hero specimens stopped deriving a preferred width per context",
     )
     check(
         "reproduces the Figma reference profiles from their own large width"
         in carousel_strategy_test
         and "hero has no medium item to give, at any width"
+        in carousel_strategy_test
+        and "the large item takes what the small items leave"
+        in carousel_strategy_test
+        and "a centred hero is symmetric, so it cannot be the Tablet frame"
         in carousel_strategy_test,
         "nothing holds the Figma profiles to the algorithm that should produce them",
     )

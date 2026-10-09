@@ -88,22 +88,42 @@ const FIGMA_ASPECT_RATIOS = [ '16:9', '4:3', '1:1', '3:4', '9:16' ];
 
 /*
  * Upstream treats a missing preferred width as "one large item fills the
- * viewport, minus the space the small items need", which squeezes the small
- * item to its 40dp floor: that is why Hero showed 332 and 40 while
- * Multi-browse, which was given 186, showed a 56dp small.
+ * viewport, minus the space the small items need", which pushes the small item
+ * to its 40dp floor: that is why Hero once showed 332 and 40 while
+ * Multi-browse, given 186, showed a 56dp small.
  *
- * Fed the large width the Figma frames were drawn at, the ported algorithm
- * reproduces those frames exactly -- 316 and 56 for Hero, 56, 252 and 56 for
- * the centred Hero -- so the kit and the implementation were never in
- * disagreement, only differently fed. At the Tablet width the same inputs put
- * more large items on screen, which is what the guidelines say happens.
+ * One width per layout was not enough either. Reusing Mobile's at the Tablet
+ * width let a second large item in, so the Hero specimens stopped looking like
+ * Hero. The width is derived per context instead, by one rule: the large item
+ * takes what is left once the small items sit at their published maximum.
+ *
+ *   Mobile  hero     380 - 56 - 8        = 316  ->  316, 56
+ *   Mobile  centred  380 - 112 - 16      = 252  ->  56, 252, 56
+ *   Tablet  hero     568 - 56 - 8        = 504  ->  504, 56
+ *   Tablet  centred  568 - 112 - 16      = 440  ->  56, 440, 56
+ *
+ * Each fills its container exactly, and the two Mobile rows are the Figma
+ * frames, which is the evidence that the rule is the kit's own.
+ *
+ * Multi-browse keeps 186, the value Compose's carousel sample passes.
  */
-const PREFERRED_ITEM_WIDTH = {
-	hero: 316,
-	'center-hero': 252,
-	'multi-browse': 186,
-	uncontained: undefined,
-};
+const CONTEXT_AVAILABLE_SPACE = { Mobile: 412 - 32, Tablet: 600 - 32 };
+const MAXIMUM_SMALL_ITEM_WIDTH = 56;
+const ITEM_SPACING = 8;
+
+function preferredItemWidthFor( layout, alignment, context ) {
+	if ( 'multi-browse' === layout ) {
+		return 186;
+	}
+	if ( 'hero' !== layout ) {
+		return undefined;
+	}
+	const smallCount = 'center' === alignment ? 2 : 1;
+	return (
+		CONTEXT_AVAILABLE_SPACE[ context ] -
+		smallCount * ( MAXIMUM_SMALL_ITEM_WIDTH + ITEM_SPACING )
+	);
+}
 
 function UncontainedSample() {
 	const hostRef = useRef();
@@ -235,11 +255,11 @@ function KeylineSample( {
 				label={ `${ context } ${ layout } items` }
 				layout={ layout }
 				alignment={ alignment }
-				preferredItemWidth={
-					PREFERRED_ITEM_WIDTH[
-						'center' === alignment ? 'center-hero' : layout
-					]
-				}
+				preferredItemWidth={ preferredItemWidthFor(
+					layout,
+					alignment,
+					context
+				) }
 				scrollBehavior="snap"
 			>
 				{ items.map( ( item, index ) => (

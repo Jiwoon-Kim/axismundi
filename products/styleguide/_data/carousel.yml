@@ -702,6 +702,32 @@ discrepancies:
       The settle takes the nearest landing after a pause. AndroidX advances at
       most one item per fling and reads velocity, so this is magnetism rather
       than parity.
+  - subject: the visible gap is not the declared gap
+    status: open
+    measured: >-
+      With morph on, the uniform Uncontained carousel declares an 8dp gap and
+      shows 8, 4, 6.12 and 0.63 between the visible windows of successive
+      items, at rest as well as after a drag.
+    cause: >-
+      Two spacing models meet with no adapter. AndroidX folds itemSpacing into
+      each keyline's size, so a keyline size is a stride; the web implementation
+      keeps a 280 content box and a separate 8dp CSS gap. The renderer uses the
+      strategy's size directly as the mask width while also moving the item onto
+      the keyline centre, so the spacing is counted once in one place and twice
+      in another.
+    not_the_cause: >-
+      Snap. The gaps are already uneven at rest, and snap only chooses where a
+      release lands.
+    shape: >-
+      One adapter converting the strategy's stride coordinates into the web's
+      box-plus-gap coordinates, used by both the mask width and the translate.
+      Subtracting the gap from every mask is not it - that arithmetic gives
+      14.1 for one pair, because the anchor keylines are not packed edge to
+      edge. Verify on the visible windows at the start, the middle, the end and
+      during a drag; measuring the wrappers hides it.
+    blocks: >-
+      Multi-aspect morph. Starting that before the adapter exists would put the
+      same coordinate confusion onto items of various widths.
   - subject: ripple feedback
     prose: Tapping a carousel item changes its shape slightly and creates a ripple.
     project_policy: Ripple is deferred as a cross-component motion decision.

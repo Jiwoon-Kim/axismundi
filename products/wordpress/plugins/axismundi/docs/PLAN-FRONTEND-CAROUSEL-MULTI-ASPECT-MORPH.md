@@ -73,6 +73,39 @@ outline은 이미 "보이는 창"을 따라가도록 `::after`로 그린다. 창
 `inset-inline`도 비대칭이어야 한다. 지금은 양쪽에 같은 값을 넣고 있으므로 여기서 같이
 고쳐야 한다.
 
+## 3-1. 먼저 고칠 것 — stride와 box가 어댑터 없이 섞여 있다
+
+**이건 multi-aspect만의 문제가 아니라 균일 uncontained에서 이미 나 있다.** morph가 켜진
+uncontained의 *보이는* 간격을 재면 선언값 8dp가 아니다.
+
+```txt
+item 0·1   offset 0        mask 280     visible gap 8      ✓
+item 2     offset -107.13  mask 73.74   visible gap 4
+item 3     offset -345.05  mask 14.18   visible gap 6.12
+item 4     offset -620.33  mask 10      visible gap 0.63
+```
+
+snap은 원인이 아니다 — 정지 상태에서도 그렇다. 원인은 모델이 둘이라는 것이다.
+
+```txt
+AndroidX   keyline의 size에 itemSpacing이 접혀 있다 (size ≒ itemWidth + spacing)
+웹 구현     content box 280 + 별도 CSS gap 8
+```
+
+렌더러는 전략의 `size`를 **그대로** mask 폭으로 쓰고, 동시에 항목을 keyline 중심으로
+옮긴다. 두 모델 사이의 변환이 어디에도 없다.
+
+**단순히 모든 mask에서 gap을 빼는 것으로는 안 된다.** 그 가정으로 계산하면 2–3번 쌍이
+14.1dp가 나온다 — 앵커 구간의 keyline은 edge-to-edge로 묶여 있지 않기 때문이다.
+
+필요한 것은 **한 군데의 어댑터**다. 전략의 stride 좌표계를 웹의 `box + gap` 좌표계로
+바꾸는 함수 하나를 두고, mask 폭과 translate를 둘 다 그것을 거쳐 계산한다. 검증은
+래퍼 gap이 아니라 **보이는 창 사이의 간격**으로, 시작·중간·끝·드래그 중 각각 8dp여야 한다.
+래퍼만 재면 지금처럼 놓친다.
+
+이 어댑터가 서기 전에는 가변폭 morph를 시작할 수 없다. 같은 좌표계 혼동을 폭이 제각각인
+항목들에 얹는 일이 되기 때문이다.
+
 ## 4. 발행되지 않은 값 — 우리가 정하는 것
 
 M3는 이 경우의 식을 발행하지 않는다. 다음은 전부 **프로젝트 정책**이고, 그렇게 기록해야

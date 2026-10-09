@@ -244,10 +244,19 @@ behavior:
       The threshold is an Axismundi interaction policy, not an M3 value. Native
       touch scrolling remains the no-JavaScript path; pointer enhancement must
       not make dragging the only way to reach an item.
+  # Reduced motion asks for one size, not for no size. An earlier version
+  # removed the widths, which left flex-basis with nothing to resolve: the
+  # advanced layouts fell back to the intrinsic width of an image and collapsed
+  # to 31 and 49 pixels, the unrecognisable item the guidelines tell you to
+  # avoid. The uniform size is the strategy's focal width. Multi-aspect is the
+  # exception by definition -- a layout whose point is varying widths cannot
+  # render them all the same -- so it keeps its own widths, unmasked.
   reduced_motion:
     parallax: false
     items_expand_in_view: false
     all_items_same_size: true
+    uniform_size_source: strategy focal width, or the caller's for Uncontained
+    multi_aspect_exception: keeps its various widths, masking removed
     items_reach_window_edges: true
     hero_small_item_partially_visible: true
     # This is the reusable baseline for every layout, not a separate decorative
@@ -396,10 +405,15 @@ discrepancies:
       keeps the caller's exact itemWidth, because its itemMainAxisSize is a
       stride with the spacing already folded in. A test holds that difference.
     multi_aspect: >-
-      Opted out, not merely skipped. Every strategy here describes one
-      repeating stride and multi-aspect gives each item its own width, so there
-      is nothing to interpolate against. It was already falling out of the path
-      for want of a uniform item width; the gate now says so.
+      Masked like every other layout. It was briefly excluded on the grounds
+      that varying widths leave no single stride to interpolate against, which
+      confused a limit of the uniform arithmetic with a property of the layout:
+      the guidelines call it the same layout as the uncontained carousel, with
+      items of various sizes. Each item carries its own box and the centres are
+      a running sum, which reduces to the uniform arithmetic when every box is
+      the same. The keylines are built from the widest box, because the focal
+      position has to be able to show the largest item whole; M3 publishes no
+      equation for the varying-width case, so that choice is this project's.
   - subject: ripple feedback
     prose: Tapping a carousel item changes its shape slightly and creates a ripple.
     project_policy: Ripple is deferred as a cross-component motion decision.

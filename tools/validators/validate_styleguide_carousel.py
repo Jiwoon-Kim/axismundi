@@ -735,14 +735,31 @@ def main() -> int:
         in carousel_strategy_test,
         "nothing holds the stride-versus-box difference between the two paths",
     )
+    # Multi-aspect is masked too. It was briefly excluded on the grounds that a
+    # layout of varying widths has no single stride to interpolate against,
+    # which confused a limit of the uniform arithmetic with a property of the
+    # layout: M3 calls it "the same layout as the uncontained carousel" with
+    # items of various sizes. Each item now carries its own box and the centres
+    # are a running sum, which reduces to the old arithmetic when every box is
+    # the same.
     check(
-        re.search(
-            r"KEYLINE_LAYOUTS\.includes\(\s*implementedLayout\s*\)\s*\|\|"
-            r"\s*implementedMultiAspect",
-            carousel,
-        )
-        is not None,
-        "multi-aspect is back in the keyline path, which has no stride to give it",
+        "implementedMultiAspect" not in carousel.split( "function measureKeylines" )[0].split( "KEYLINE_LAYOUTS.includes" )[-1],
+        "multi-aspect is excluded from masking again",
+    )
+    check(
+        "boxes = domItems.map(" in carousel
+        and "const box = geometryBoxes[ index ] ?? boxSize;" in carousel
+        and "const centers = boxes.map(" in carousel,
+        "the keyline path lost its per-item boxes, so varying widths cannot be masked",
+    )
+
+    # Reduced motion asks for one size, not for none. Removing the widths left
+    # flex-basis with nothing to resolve and the advanced layouts collapsed to
+    # an image's intrinsic width -- 31px and 49px when this was measured.
+    check(
+        "function applyUniformGeometry(" in carousel
+        and "applyUniformGeometry( domItems, uncontained, boxSize )" in carousel,
+        "reduced motion no longer gives the advanced layouts a uniform width",
     )
 
     subjects = {d.get("subject") for d in data["discrepancies"]}

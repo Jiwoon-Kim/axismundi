@@ -437,18 +437,7 @@ export function Carousel( {
 	}, [] );
 
 	useEffect( () => {
-		/*
-		 * Multi-aspect opts out rather than falling out. Every strategy here
-		 * describes one repeating stride, and multi-aspect's whole point is that
-		 * each item has its own width, so there is no stride to interpolate
-		 * against. It happened to be skipped already because the configuration
-		 * sets no uniform item width; saying so is the difference between a
-		 * decision and an accident that the next refactor restores.
-		 */
-		if (
-			! KEYLINE_LAYOUTS.includes( implementedLayout ) ||
-			implementedMultiAspect
-		) {
+		if ( ! KEYLINE_LAYOUTS.includes( implementedLayout ) ) {
 			return undefined;
 		}
 		const root = rootRef.current;
@@ -475,12 +464,36 @@ export function Carousel( {
 			geometryRef.current = undefined;
 		}
 
-		function measureKeylines() {
-			if ( reducedMotion.matches ) {
-				clearKeylines();
-				return;
-			}
+		/*
+		 * Reduced motion asks for one size, not for no size. Removing the
+		 * widths left `flex: 0 0 var(--ax-carousel-item-width)` with nothing to
+		 * resolve, so the advanced layouts fell back to `auto` and collapsed to
+		 * the intrinsic width of an image -- measured at 31px and 49px, which
+		 * is the unrecognisable item the guidelines tell you to avoid. The
+		 * uniform size is the strategy's focal width, and uncontained keeps the
+		 * caller's, which it never stopped having.
+		 */
+		function applyUniformGeometry( domItems, uncontained, boxSize ) {
+			domItems.forEach( ( item ) => {
+				if ( uncontained ) {
+					item.style.removeProperty( '--ax-carousel-item-width' );
+				} else {
+					item.style.setProperty(
+						'--ax-carousel-item-width',
+						`${ boxSize }px`
+					);
+				}
+				item.style.removeProperty( '--ax-carousel-item-offset' );
+				item.style.removeProperty( '--ax-carousel-mask-width' );
+				delete item.dataset.sizeRole;
+			} );
+			delete root.dataset.keylineProfile;
+			delete root.dataset.keylineState;
+			geometry = undefined;
+			geometryRef.current = undefined;
+		}
 
+		function measureKeylines() {
 			const trackStyle = window.getComputedStyle( track );
 			const gap =
 				parseFloat( trackStyle.columnGap || trackStyle.gap ) || 8;
@@ -492,22 +505,44 @@ export function Carousel( {
 			 * cannot feed the previous answer back in.
 			 */
 			const uncontained = 'uncontained' === implementedLayout;
+			const domItems = [
+				...track.querySelectorAll( '.ax-carousel-item' ),
+			];
+
+			/*
+			 * Multi-aspect is "the same layout as the uncontained carousel but
+			 * with items of various sizes", so it is masked at the edges like
+			 * every other layout. What it cannot have is one stride, so each
+			 * item carries its own box and the item centres are a running sum
+			 * instead of index times stride. For a uniform carousel every box
+			 * is the same and the sum reduces to exactly the old arithmetic.
+			 *
+			 * The keylines still need one width to be built from, and it is the
+			 * widest box: the focal position has to be able to show the largest
+			 * item whole. M3 publishes no equation for the varying-width case,
+			 * so that choice is ours.
+			 */
 			let declaredItemWidth = 0;
+			let boxes = [];
 			if ( uncontained ) {
-				declaredItemWidth = parseFloat(
-					window
-						.getComputedStyle( root )
-						.getPropertyValue( '--ax-carousel-item-width' )
-				);
+				if ( implementedMultiAspect ) {
+					boxes = domItems.map(
+						( item ) => item.getBoundingClientRect().width
+					);
+					declaredItemWidth = Math.max( 0, ...boxes );
+				} else {
+					declaredItemWidth = parseFloat(
+						window
+							.getComputedStyle( root )
+							.getPropertyValue( '--ax-carousel-item-width' )
+					);
+					boxes = domItems.map( () => declaredItemWidth );
+				}
 				if ( ! ( 0 < declaredItemWidth ) ) {
 					clearKeylines();
 					return;
 				}
 			}
-
-			const domItems = [
-				...track.querySelectorAll( '.ax-carousel-item' ),
-			];
 			const paddingStart =
 				parseFloat( trackStyle.paddingInlineStart ) || 0;
 			const paddingEnd = parseFloat( trackStyle.paddingInlineEnd ) || 0;
@@ -556,6 +591,15 @@ export function Carousel( {
 			 */
 			const boxSize = uncontained ? declaredItemWidth : itemSize;
 			if ( ! uncontained ) {
+				boxes = domItems.map( () => itemSize );
+			}
+
+			if ( reducedMotion.matches ) {
+				applyUniformGeometry( domItems, uncontained, boxSize );
+				return;
+			}
+
+			if ( ! uncontained ) {
 				domItems.forEach( ( item ) => {
 					item.style.setProperty(
 						'--ax-carousel-item-width',
@@ -566,9 +610,24 @@ export function Carousel( {
 
 			const stride = uncontained ? itemSize : itemSize + gap;
 
+			/*
+			 * Base centres, before the scroll offset. Uniform uncontained gives
+			 * boxes[i] + gap === itemSize, so centre i is itemSize / 2 plus i
+			 * strides, which is what this used to compute directly.
+			 */
+			let runningStart = 0;
+			const centers = boxes.map( ( box ) => {
+				const itemStride = uncontained ? box + gap : stride;
+				const center = runningStart + itemStride / 2;
+				runningStart += itemStride;
+				return center;
+			} );
+
 			geometry = {
 				availableSpace,
 				boxSize,
+				boxes,
+				centers,
 				gap,
 				itemSize,
 				items: domItems,
@@ -589,6 +648,8 @@ export function Carousel( {
 			}
 			const {
 				boxSize,
+				boxes: geometryBoxes,
+				centers,
 				itemSize,
 				items: geometryItems,
 				rtl,
@@ -612,7 +673,8 @@ export function Carousel( {
 
 			geometryItems.forEach( ( item, index ) => {
 				const naturalCenter =
-					itemSize / 2 + index * stride - scrollOffset;
+					( centers[ index ] ?? itemSize / 2 + index * stride ) -
+					scrollOffset;
 				const { offset, size } = itemGeometry(
 					naturalCenter,
 					keylines,
@@ -622,11 +684,12 @@ export function Carousel( {
 					'--ax-carousel-item-offset',
 					`${ ( rtl ? -1 : 1 ) * ( offset - naturalCenter ) }px`
 				);
+				const box = geometryBoxes[ index ] ?? boxSize;
 				item.style.setProperty(
 					'--ax-carousel-mask-width',
-					`${ clamp( size, 1, boxSize ) }px`
+					`${ clamp( size, 1, box ) }px`
 				);
-				item.dataset.sizeRole = sizeRole( size, boxSize );
+				item.dataset.sizeRole = sizeRole( size, box );
 			} );
 			const endBoundary = Math.max(
 				0,

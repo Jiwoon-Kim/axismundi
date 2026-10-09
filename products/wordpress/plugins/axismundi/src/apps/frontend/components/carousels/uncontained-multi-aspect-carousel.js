@@ -33,7 +33,7 @@ import warning from '@wordpress/warning';
 
 import { Carousel } from './carousel';
 import { CarouselItem } from './carousel-item';
-import { CarouselItemMedia } from './carousel-item-media';
+import { CarouselItemMedia, parseAspectRatio } from './carousel-item-media';
 
 /**
  * Whether an item carries media with an explicitly declared ratio.
@@ -49,7 +49,12 @@ export function declaresRatio( item ) {
 		( child ) =>
 			isValidElement( child ) &&
 			CarouselItemMedia === child.type &&
-			undefined !== child.props.aspectRatio
+			/*
+			 * Parsed, not merely present. `null`, `0`, `''` and `'garbage'`
+			 * all passed an undefined check and then fell back to a box with
+			 * no ratio, which is the state this wrapper exists to prevent.
+			 */
+			null !== parseAspectRatio( child.props.aspectRatio )
 	);
 }
 

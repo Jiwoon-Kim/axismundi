@@ -179,6 +179,7 @@ function UncontainedSample() {
 				className="ax-stylebook-carousels__uncontained"
 				itemWidth={ 280 }
 				label="Object collections"
+				scrollBehavior="snap"
 			>
 				{ ITEMS.map( ( item ) => (
 					<CarouselItem

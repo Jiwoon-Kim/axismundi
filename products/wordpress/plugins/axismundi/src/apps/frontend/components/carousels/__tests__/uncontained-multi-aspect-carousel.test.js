@@ -41,6 +41,22 @@ describe( 'multi-aspect item ratio contract', () => {
 		).toBe( false );
 	} );
 
+	test.each( [ null, 0, '', 'garbage', '16:0', '1:' ] )(
+		'a ratio of %p does not satisfy it',
+		( aspectRatio ) => {
+			/*
+			 * Present is not the same as usable. These all passed an undefined
+			 * check and then fell back to a box with no ratio, which is the state
+			 * the wrapper exists to prevent.
+			 */
+			expect(
+				declaresRatio(
+					item( createElement( CarouselItemMedia, { aspectRatio } ) )
+				)
+			).toBe( false );
+		}
+	);
+
 	test( 'the ratio is found beside other item content', () => {
 		expect(
 			declaresRatio(

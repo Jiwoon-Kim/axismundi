@@ -801,8 +801,26 @@ export function Carousel( {
 			'(prefers-reduced-motion: reduce)'
 		);
 		measureKeylines();
+
+		/*
+		 * The track's own size is not the only thing the geometry depends on.
+		 * Items arriving, leaving or changing ratio move every centre and
+		 * every landing, and a route whose data arrives late does exactly
+		 * that, so the items are observed as well and so is the list itself.
+		 */
 		const observer = new window.ResizeObserver( measureKeylines );
 		observer.observe( track );
+		const observeItems = () => {
+			track.querySelectorAll( '.ax-carousel-item' ).forEach( ( item ) => {
+				observer.observe( item );
+			} );
+		};
+		observeItems();
+		const childList = new window.MutationObserver( () => {
+			observeItems();
+			measureKeylines();
+		} );
+		childList.observe( track, { childList: true } );
 		track.addEventListener( 'scroll', scheduleKeylines, { passive: true } );
 		const onMotionPreferenceChange = () => measureKeylines();
 		reducedMotion.addEventListener( 'change', onMotionPreferenceChange );
@@ -811,6 +829,7 @@ export function Carousel( {
 				window.cancelAnimationFrame( animationFrame );
 			}
 			observer.disconnect();
+			childList.disconnect();
 			track.removeEventListener( 'scroll', scheduleKeylines );
 			reducedMotion.removeEventListener(
 				'change',
@@ -839,7 +858,21 @@ export function Carousel( {
 			return;
 		}
 
-		const physicalStep = { ArrowLeft: -1, ArrowRight: 1 }[ event.key ];
+		/*
+		 * TAB MOVES BETWEEN ITEMS TOO. M3's keyboard table reads "Tab or
+		 * Arrows: moves to the previous or next carousel item", and an item
+		 * resting on an anchor keyline is `visibility: hidden`, which takes it
+		 * out of the native tab order: measured, Tab reached two of ten items
+		 * and then left the carousel. Handling it here is what makes the
+		 * published behaviour true, and it still falls through at the ends so
+		 * Tab can leave.
+		 */
+		let tabStep = 0;
+		if ( 'Tab' === event.key ) {
+			tabStep = event.shiftKey ? -1 : 1;
+		}
+		const physicalStep =
+			tabStep || { ArrowLeft: -1, ArrowRight: 1 }[ event.key ];
 		if ( ! physicalStep ) {
 			return;
 		}
@@ -858,7 +891,8 @@ export function Carousel( {
 		const rtl =
 			'rtl' ===
 			root.ownerDocument.defaultView.getComputedStyle( root ).direction;
-		const to = from + ( rtl ? -physicalStep : physicalStep );
+		/* Tab is a document-order key, so RTL does not reverse it. */
+		const to = from + ( rtl && ! tabStep ? -physicalStep : physicalStep );
 		if ( 0 > to || to >= actions.length ) {
 			return;
 		}

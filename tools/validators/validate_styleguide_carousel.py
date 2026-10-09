@@ -417,7 +417,7 @@ def main() -> int:
     )
     check(
         'layout="uncontained"' in uncontained_carousel
-        and 'scrollBehavior="default"' in uncontained_carousel
+        and "scrollBehavior = 'default'" in uncontained_carousel
         and "itemWidth" in uncontained_carousel
         and 'layout="multi-browse"' in multi_browse_carousel
         and 'scrollBehavior="snap"' in multi_browse_carousel
@@ -808,9 +808,15 @@ def main() -> int:
         and "itemWidth" not in multi_aspect_code,
         "the multi-aspect wrapper stopped sharing the Uncontained engine",
     )
+    # Present is not usable. null, 0, '' and 'garbage' all passed an
+    # undefined check and then fell back to a box with no ratio.
+    check(
+        "parseAspectRatio( child.props.aspectRatio )" in multi_aspect_carousel,
+        "the ratio contract accepts a value it cannot parse again",
+    )
+
     check(
         "export function declaresRatio(" in multi_aspect_carousel
-        and "undefined !== child.props.aspectRatio" in multi_aspect_carousel
         and "warning(" in multi_aspect_carousel,
         "multi-aspect items are no longer required to declare a ratio",
     )
@@ -864,6 +870,31 @@ def main() -> int:
     # item. The scroll target had the same single-stride problem the centres
     # had: where strides differ, an item's own left edge is where it goes,
     # and the settle needs that split too or a release lands between items.
+    # M3's keyboard table reads "Tab or Arrows", and an item on an anchor
+    # keyline is visibility hidden, so it leaves the native tab order:
+    # measured, Tab reached two of ten items and then left the carousel.
+    check(
+        "'Tab' === event.key" in carousel and "event.shiftKey" in carousel,
+        "Tab no longer moves between items, so hidden ones are unreachable by it",
+    )
+
+    # Items arriving, leaving or changing ratio move every centre and every
+    # landing, which a track-only ResizeObserver never sees.
+    check(
+        "observer.observe( item )" in carousel
+        and "MutationObserver" in carousel
+        and "childList: true" in carousel,
+        "the geometry stops re-measuring when the items themselves change",
+    )
+
+    # AndroidX defaults Uncontained to a no-snap fling and allows the
+    # behaviour to be swapped; the wrapper used to hard-code the default.
+    check(
+        "scrollBehavior = 'default'" in uncontained_carousel
+        and "scrollBehavior={ scrollBehavior }" in uncontained_carousel,
+        "Uncontained cannot choose snap scrolling again",
+    )
+
     after_prevent = carousel.split( "event.preventDefault();" )[ -1 ]
     check(
         after_prevent.index( "scrollTo(" ) < after_prevent.index( "].focus()" ),

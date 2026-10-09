@@ -660,6 +660,42 @@ discrepancies:
       Uncontained lands on 288, 576, 864, 1152 and 1440 with a 280 item and an 8
       gap; multi-aspect on each item's own edge; the contained layouts keep
       their focal positions and their compositions.
+  - subject: Tab did not reach every item
+    defect: >-
+      M3's keyboard table reads "Tab or Arrows: moves to the previous or next
+      carousel item", and the file claimed every action stayed in the native
+      tab order. An item resting on an anchor keyline is visibility hidden,
+      which takes it out of that order: measured, Tab reached two of ten items
+      and then left the carousel. The arrows had been fixed; Tab had not.
+    resolution: >-
+      Tab and Shift Tab move between items through the same path as the arrows
+      - scroll, unhide, focus - and fall through at the ends so Tab can still
+      leave. RTL does not reverse Tab, which is a document-order key.
+  - subject: the ratio contract accepted unusable values
+    defect: >-
+      The wrapper checked that aspectRatio was not undefined, so null, 0, the
+      empty string and any unparseable string passed and then fell back to a
+      box with no ratio - the state the wrapper exists to prevent.
+    resolution: It parses the value. Six cases are tested.
+  - subject: geometry went stale when the items changed
+    defect: >-
+      The measurement observed only the track, and its effect depended only on
+      layout, alignment and preferred width. Items arriving, leaving or
+      changing ratio move every centre and every landing while the track's own
+      size stays put, which is what a route with late data does.
+    resolution: >-
+      Every item is observed as well, and a MutationObserver on the list
+      re-measures and re-observes when the children change.
+  - subject: Uncontained may choose to snap
+    note: >-
+      AndroidX defaults Uncontained to a no-snap fling and allows the fling
+      behaviour to be swapped, so the default stays and the choice is now a
+      prop. The Stylebook's uniform specimen uses it, and a release settles on
+      an item edge - measured, released at 150 and settled at 288.
+    remaining: >-
+      The settle takes the nearest landing after a pause. AndroidX advances at
+      most one item per fling and reads velocity, so this is magnetism rather
+      than parity.
   - subject: ripple feedback
     prose: Tapping a carousel item changes its shape slightly and creates a ripple.
     project_policy: Ripple is deferred as a cross-component motion decision.

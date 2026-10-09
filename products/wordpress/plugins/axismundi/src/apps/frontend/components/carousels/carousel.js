@@ -457,6 +457,7 @@ export function Carousel( {
 				item.style.removeProperty( '--ax-carousel-item-width' );
 				item.style.removeProperty( '--ax-carousel-item-offset' );
 				item.style.removeProperty( '--ax-carousel-mask-width' );
+				item.style.removeProperty( 'visibility' );
 				delete item.dataset.sizeRole;
 			} );
 			delete root.dataset.keylineProfile;
@@ -485,6 +486,7 @@ export function Carousel( {
 				}
 				item.style.removeProperty( '--ax-carousel-item-offset' );
 				item.style.removeProperty( '--ax-carousel-mask-width' );
+				item.style.removeProperty( 'visibility' );
 				delete item.dataset.sizeRole;
 			} );
 			delete root.dataset.keylineProfile;
@@ -647,6 +649,7 @@ export function Carousel( {
 				return;
 			}
 			const {
+				availableSpace,
 				boxSize,
 				boxes: geometryBoxes,
 				centers,
@@ -685,6 +688,25 @@ export function Carousel( {
 					`${ ( rtl ? -1 : 1 ) * ( offset - naturalCenter ) }px`
 				);
 				const box = geometryBoxes[ index ] ?? boxSize;
+
+				/*
+				 * OFF STAGE IS NOT PAINTED. The anchor keylines are the
+				 * positions an item interpolates towards as it leaves, and
+				 * they sit outside the available space; a scroll container
+				 * clips at its padding box, so items resting on them were
+				 * drawn in the padding as slivers past the smallest real item.
+				 *
+				 * Hiding them is not the same as clipping the track to its
+				 * content box, which was tried first: that also sliced items
+				 * still on their way out, cutting as much as 17px off a pill
+				 * that should have been whole. An item is either on stage or
+				 * not painted at all.
+				 */
+				const offStage =
+					offset - size / 2 >= availableSpace - 0.5 ||
+					offset + size / 2 <= 0.5;
+				item.style.visibility = offStage ? 'hidden' : '';
+
 				item.style.setProperty(
 					'--ax-carousel-mask-width',
 					`${ clamp( size, 1, box ) }px`

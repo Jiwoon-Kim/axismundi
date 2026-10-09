@@ -423,12 +423,31 @@ discrepancies:
       anchor keylines were painted in the 16dp strip as 10dp slivers past the
       small item: one more item than the composition has.
     resolution: >-
-      The contained layouts clip to their content box; uncontained keeps
-      bleeding past the edge, which is what the exception is for.
+      An item resting on an anchor keyline is not painted at all. Clipping the
+      track to its content box was tried first and was worse: it also sliced
+      items still on their way out, taking up to 17dp off a pill that should
+      have been whole, so an item is now either on stage or not painted.
+    settled_result: >-
+      At every snapped position each contained layout paints its composition
+      and nothing else - Tablet Multi-browse 186, 185, 120 and 50, Mobile
+      Multi-browse 185, 121 and 55, and the centred heroes small, large, small
+      once they leave the start state.
     evidence: >-
       The published compositions come to exactly the content box and never to
       a pixel more - Hero's 316 plus 56, Multi-browse's 184, 184, 120 and 56,
       each with its gaps.
+  - subject: centred hero leading small item
+    measured: >-
+      The leading small item paints at 43 to 44dp where the trailing one paints
+      at 40, so the arrangement is about 3dp wider than the container at rest.
+    status: open
+    note: >-
+      It is painted whole rather than sliced, so it is not visible as a defect,
+      and the arrangement at the start state is exactly 40, 284 and 40. The
+      difference appears in the shifted states, which means the question is
+      about the centred keyline offsets rather than the arrangement. It wants a
+      comparison against an upstream vector for a centred hero of this width
+      and item count, which the ported tests do not yet cover.
   - subject: ripple feedback
     prose: Tapping a carousel item changes its shape slightly and creates a ripple.
     project_policy: Ripple is deferred as a cross-component motion decision.

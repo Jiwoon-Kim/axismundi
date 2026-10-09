@@ -767,10 +767,13 @@ def main() -> int:
     # uncontained as the one exception, so the contained layouts clip to their
     # content box and uncontained still bleeds past the edge.
     check(
-        'ax-carousel:not([data-layout="uncontained"]) .ax-carousel__items'
-        in carousel_css
-        and "clip-path: inset(" in carousel_css,
-        "the contained layouts paint their anchor keylines in the padding again",
+        "const offStage =" in carousel
+        and "item.style.visibility = offStage ? 'hidden' : '';" in carousel,
+        "items resting on the anchor keylines are painted in the padding again",
+    )
+    check(
+        "clip-path: inset(" not in carousel_css,
+        "the track clips to its content box again, which slices items on their way out",
     )
 
     check(

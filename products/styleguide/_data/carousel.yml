@@ -639,6 +639,27 @@ discrepancies:
       All ten items reachable forward and back in multi-aspect, Hero,
       Multi-browse and centred Hero, none hidden when focused, and every landing
       within a pixel of the item's own edge.
+  - subject: the outline was clipped by the mask
+    defect: >-
+      The optional outline was a border on the item's action, drawn at its full
+      width, while the mask clips a narrower window out of the middle. From the
+      third item on, the sides and all four corners fell outside the clip and
+      only the top and bottom segments showed.
+    resolution: >-
+      Drawn inside the clip and inset by the same amount, so it traces the shape
+      that is actually visible. Measured against the mask at 280, 280, 92.2,
+      15.8 and 10.
+  - subject: where an item lands
+    policy: >-
+      A contained layout has a focal position, so the strategy says where an
+      item sits when it is the focus. Uncontained has none - items keep their
+      size and flow past the edge - so it lands on the item's own leading edge,
+      which is also the only answer available when the strides differ, because
+      the strategy's positions are generated from a single width.
+    measured: >-
+      Uncontained lands on 288, 576, 864, 1152 and 1440 with a 280 item and an 8
+      gap; multi-aspect on each item's own edge; the contained layouts keep
+      their focal positions and their compositions.
   - subject: ripple feedback
     prose: Tapping a carousel item changes its shape slightly and creates a ripple.
     project_policy: Ripple is deferred as a cross-component motion decision.

@@ -126,8 +126,24 @@
 		transform: translate3d(var(--ax-carousel-item-offset, 0px), 0, 0);
 	}
 
-	.ax-carousel-item[data-outlined] .ax-carousel-item__action {
+	/*
+	 * THE OUTLINE FOLLOWS THE WINDOW, NOT THE BOX. As a border it was drawn at
+	 * the action's full width while the mask clips a narrower window out of the
+	 * middle, so from the third item on its left and right edges and all four
+	 * corners fell outside the clip and only the top and bottom segments
+	 * survived. Drawn inside the clip and inset by the same amount, it traces
+	 * the shape that is actually visible.
+	 */
+	.ax-carousel-item[data-outlined] .ax-carousel-item__action::after {
+		content: '';
+		position: absolute;
+		inset-block: 0;
+		inset-inline: calc(
+			(100% - min(var(--ax-carousel-mask-width, 100%), 100%)) / 2
+		);
 		border: 1px solid var(--md-sys-color-outline);
+		border-radius: var(--md-comp-carousel-item-container-shape);
+		pointer-events: none;
 	}
 
 	.ax-carousel-item__content {

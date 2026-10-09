@@ -272,16 +272,16 @@ export function Carousel( {
 			const targets = currentGeometry
 				? currentGeometry.items.map( ( _, index ) =>
 						clamp(
-							currentGeometry.uniform
-								? scrollOffsetForItem(
+							currentGeometry.uncontained
+								? currentGeometry.centers[ index ] -
+										( currentGeometry.boxes[ index ] +
+											currentGeometry.gap ) /
+											2
+								: scrollOffsetForItem(
 										currentGeometry.strategy,
 										index,
 										currentGeometry.items.length
-									)
-								: currentGeometry.centers[ index ] -
-										( currentGeometry.boxes[ index ] +
-											currentGeometry.gap ) /
-											2,
+									),
 							0,
 							maximum
 						)
@@ -662,6 +662,7 @@ export function Carousel( {
 				boxSize,
 				boxes,
 				centers,
+				uncontained,
 				uniform,
 				gap,
 				itemSize,
@@ -873,23 +874,26 @@ export function Carousel( {
 			);
 
 			/*
-			 * `scrollOffsetForItem` reads the strategy, whose keylines are
-			 * generated from one width, so it answers for a carousel where
-			 * every stride is the same. When they are not, an item's own left
-			 * edge is where it has to go, and the strides are already in the
-			 * centres the renderer built from the measured boxes.
+			 * Two kinds of landing. A contained layout has a focal position
+			 * and the strategy says where an item sits when it is the focus.
+			 * Uncontained has none -- items keep their size and flow past the
+			 * edge -- so the thing to land on is the item's own leading edge,
+			 * which is already in the centres the renderer built from the
+			 * measured boxes. It is also the only answer available when the
+			 * strides differ, because the strategy's positions come from a
+			 * single width.
 			 */
 			const own =
 				geometry.centers[ to ] -
 				( geometry.boxes[ to ] + geometry.gap ) / 2;
 			const target = clamp(
-				geometry.uniform
-					? scrollOffsetForItem(
+				geometry.uncontained
+					? own
+					: scrollOffsetForItem(
 							geometry.strategy,
 							to,
 							actions.length
-						)
-					: own,
+						),
 				0,
 				maximum
 			);

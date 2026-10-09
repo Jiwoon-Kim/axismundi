@@ -874,11 +874,21 @@ def main() -> int:
         "the keyboard target is no longer taken off the hidden list before focus",
     )
     check(
-        1 == carousel.count( "geometry.uniform" )
-        and 1 == carousel.count( "currentGeometry.uniform" ),
-        "the keyboard target or the settle uses one stride for items of various sizes",
+        1 == carousel.count( "geometry.uncontained" )
+        and 1 == carousel.count( "currentGeometry.uncontained" ),
+        "the keyboard target or the settle stopped landing uncontained on its own edge",
     )
 
+
+    # As a border the outline sat at the action's full width while the mask
+    # clips a narrower window out of the middle, so its sides and corners
+    # fell outside the clip and only the top and bottom segments survived.
+    check(
+        "[data-outlined] .ax-carousel-item__action::after" in carousel_css
+        and "--ax-carousel-mask-width"
+        in carousel_css.split( "::after" )[ 1 ][ :400 ],
+        "the outline is drawn on the box again, so the mask clips its sides away",
+    )
 
     check(
         "uniform ? clamp( size, 1, box ) : box" in carousel,

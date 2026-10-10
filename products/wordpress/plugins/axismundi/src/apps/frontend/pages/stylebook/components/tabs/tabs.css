@@ -1,0 +1,15 @@
+@layer axismundi.patterns {
+	.ax-stylebook--tabs {
+		--ax-scaffold-main-padding: var( --ax-layout-window-margin );
+	}
+
+	.ax-stylebook-tabs__samples {
+		display: grid;
+		gap: var( --md-sys-measurement-space200 );
+		max-inline-size: 44rem;
+	}
+
+	.ax-stylebook-tabs__samples--scrollable {
+		max-inline-size: 28rem;
+	}
+}

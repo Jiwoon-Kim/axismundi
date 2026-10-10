@@ -1,0 +1,210 @@
+@layer axismundi.components {
+	.ax-tabs {
+		--md-comp-primary-navigation-tab-container-height: 48px;
+		--md-comp-primary-navigation-tab-icon-and-label-container-height: 64px;
+		--md-comp-primary-navigation-tab-icon-size: 24px;
+		--md-comp-primary-navigation-tab-active-indicator-height: 3px;
+		--md-comp-secondary-navigation-tab-container-height: 48px;
+		--md-comp-secondary-navigation-tab-icon-size: 24px;
+		--md-comp-secondary-navigation-tab-active-indicator-height: 2px;
+		--md-comp-tabs-divider-thickness: 1px;
+		--md-comp-tabs-active-indicator-minimum-length: 24px;
+		--md-comp-tabs-active-indicator-inset-inline: 2px;
+		--md-comp-tabs-focus-indicator-thickness: var( --md-sys-state-focus-indicator-thickness, 3px );
+		--md-comp-tabs-focus-indicator-offset: var( --md-sys-state-focus-indicator-inner-offset, -3px );
+		--md-comp-tabs-icon-label-gap: var( --md-sys-measurement-space100 );
+		--md-comp-tabs-scrollable-leading-offset: 52px;
+		--ax-tabs-container-height: var( --md-comp-primary-navigation-tab-container-height );
+		--ax-tabs-icon-size: var( --md-comp-primary-navigation-tab-icon-size );
+		--ax-tabs-indicator-height: var( --md-comp-primary-navigation-tab-active-indicator-height );
+
+		inline-size: 100%;
+		/*
+		 * A grid or flex item's automatic minimum size is its min-content, and
+		 * a scrollable bar's min-content is the sum of its tabs. Without this
+		 * the root widens to fit them, `overflow-x` never engages, and the bar
+		 * silently stops being scrollable in any constrained layout.
+		 */
+		min-inline-size: 0;
+		color: var( --md-sys-color-on-surface-variant );
+		background: var( --md-sys-color-surface );
+	}
+
+	.ax-tab-bar[data-variant='secondary'] {
+		--ax-tabs-container-height: var( --md-comp-secondary-navigation-tab-container-height );
+		--ax-tabs-icon-size: var( --md-comp-secondary-navigation-tab-icon-size );
+		--ax-tabs-indicator-height: var( --md-comp-secondary-navigation-tab-active-indicator-height );
+	}
+
+	.ax-tab-bar {
+		display: flex;
+		box-sizing: border-box;
+		inline-size: 100%;
+		/*
+		 * The container height includes the divider: M3 says it is placed
+		 * inside the container, the Figma frames measure 47 + 1 = 48 and
+		 * 63 + 1 = 64, and material-web behaves the same way -- its demo has a
+		 * one-pixel band over the divider that hovers the tab without taking
+		 * the pointer cursor. `border-box` plus a border on the bar gets this
+		 * without a pseudo-element; the rows stretch into what is left.
+		 */
+		min-block-size: var( --ax-tabs-container-height );
+		border-block-end: var( --md-comp-tabs-divider-thickness ) solid var( --md-sys-color-outline-variant );
+		background: var( --md-sys-color-surface );
+	}
+
+	.ax-tab-bar[data-layout='fixed'] .ax-tab-bar__tab {
+		flex: 1 1 0;
+		min-inline-size: 0;
+	}
+
+	.ax-tab-bar[data-layout='scrollable'] {
+		min-inline-size: 0;
+		overflow-x: auto;
+		scrollbar-width: none;
+		padding-inline-start: var( --md-comp-tabs-scrollable-leading-offset );
+	}
+
+	.ax-tab-bar[data-layout='scrollable']::-webkit-scrollbar {
+		display: none;
+	}
+
+	.ax-tab-bar[data-layout='scrollable'] .ax-tab-bar__tab {
+		flex: 0 0 auto;
+		min-inline-size: max( var( --md-comp-tabs-active-indicator-minimum-length ), 48px );
+	}
+
+	.ax-tab-bar__tab {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		box-sizing: border-box;
+		align-self: stretch;
+		min-block-size: calc( var( --ax-tabs-container-height ) - var( --md-comp-tabs-divider-thickness ) );
+		padding: 0 16px;
+		border: 0;
+		outline: 0 solid transparent;
+		outline-offset: var( --md-comp-tabs-focus-indicator-offset );
+		background: transparent;
+		color: inherit;
+		font-family: var( --md-sys-typescale-title-small-font );
+		font-size: var( --md-sys-typescale-title-small-size );
+		font-weight: var( --md-sys-typescale-title-small-weight );
+		line-height: var( --md-sys-typescale-title-small-line-height );
+		text-align: center;
+		white-space: nowrap;
+		cursor: pointer;
+	}
+
+	/*
+	 * The content box exists so a primary indicator can hug the label and icon
+	 * instead of the tab. A secondary indicator spans the tab, so it is not in
+	 * here. This mirrors material-web, where the same element is rendered
+	 * inside `.content` or beside it depending on `fullWidthIndicator`.
+	 */
+	.ax-tab-bar__content {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: var( --md-comp-tabs-icon-label-gap );
+		min-inline-size: 0;
+		block-size: 100%;
+	}
+
+	/*
+	 * 64dp is the icon-AND-label height, so it needs both. An icon-only tab has
+	 * nothing to stack and stays at the 48dp container height.
+	 *
+	 * Only the primary style publishes a stacked height. Secondary publishes an
+	 * icon position but no icon-and-label height, so its icon sits inline with
+	 * the label at 48dp. That is a published difference, not an omission.
+	 */
+	.ax-tab-bar[data-variant='primary']:has( .ax-tab-bar__icon ):has( .ax-tab-bar__label ) {
+		--ax-tabs-container-height: var( --md-comp-primary-navigation-tab-icon-and-label-container-height );
+	}
+
+	.ax-tab-bar[data-variant='primary']
+		.ax-tab-bar__content:has( .ax-tab-bar__icon ):has( .ax-tab-bar__label ) {
+		flex-direction: column;
+		gap: 0;
+	}
+
+	.ax-tab-bar__tab[aria-selected='true'] {
+		color: var( --md-sys-color-primary );
+	}
+
+	.ax-tab-bar__tab:not( :disabled ):hover,
+	.ax-tab-bar__tab:not( :disabled ):active {
+		background: color-mix(
+			in srgb,
+			var( --md-sys-color-on-surface ) calc( var( --md-sys-state-hover-state-layer-opacity, 0.08 ) * 100% ),
+			transparent
+		);
+	}
+
+	.ax-tab-bar__tab:focus-visible {
+		outline-color: var( --md-sys-color-secondary );
+		outline-style: solid;
+		outline-width: var( --md-comp-tabs-focus-indicator-thickness );
+	}
+
+	.ax-tab-bar__tab:disabled {
+		cursor: default;
+		opacity: 0.38;
+	}
+
+	/* No label to centre against, so the icon keeps the 48dp square target. */
+	.ax-tab-bar__tab[data-layout='icon-only'] {
+		min-inline-size: var( --ax-tabs-container-height );
+	}
+
+	.ax-tab-bar__icon {
+		display: inline-grid;
+		place-items: center;
+		inline-size: var( --ax-tabs-icon-size );
+		block-size: var( --ax-tabs-icon-size );
+	}
+
+	.ax-tab-bar__icon .material-symbols-outlined {
+		font-size: var( --ax-tabs-icon-size );
+	}
+
+	/*
+	 * Painted on every tab and revealed on the selected one, so the outgoing
+	 * rectangle is still measurable while the incoming one animates out of it.
+	 * The travel itself is a Web Animation, not a transition: it has to start
+	 * from a rectangle that belongs to a different element.
+	 */
+	.ax-tab-bar__indicator {
+		position: absolute;
+		inset-block-end: 0;
+		block-size: var( --ax-tabs-indicator-height );
+		background: var( --md-comp-primary-navigation-tab-active-indicator-color, var( --md-sys-color-primary ) );
+		opacity: 0;
+	}
+
+	.ax-tab-bar[data-variant='primary'] .ax-tab-bar__indicator {
+		inset-inline: var( --md-comp-tabs-active-indicator-inset-inline );
+		min-inline-size: var( --md-comp-tabs-active-indicator-minimum-length );
+		border-radius: 3px 3px 0 0;
+	}
+
+	/*
+	 * No secondary shape, minimum length, or inset token is published; the
+	 * secondary indicator is the full tab, square. See tabs.yml.
+	 */
+	.ax-tab-bar[data-variant='secondary'] .ax-tab-bar__indicator {
+		inset-inline: 0;
+		border-radius: 0;
+	}
+
+	.ax-tab-bar__tab[aria-selected='true'] .ax-tab-bar__indicator {
+		opacity: 1;
+	}
+
+	.ax-tabs__panel {
+		padding-block: var( --md-sys-measurement-space200 );
+	}
+}

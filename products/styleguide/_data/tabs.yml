@@ -1,0 +1,221 @@
+# Material 3 Tabs.
+#
+# Sources:
+# - https://m3.material.io/components/tabs/overview
+# - https://m3.material.io/components/tabs/specs
+# - https://m3.material.io/components/tabs/guidelines
+# - https://m3.material.io/components/tabs/accessibility
+#
+# The raw token table is inventory evidence. This record carries the prose
+# contracts for variants, panel ownership, scrolling, and keyboard behavior.
+
+meta:
+  namespace: md.comp.{primary,secondary}-navigation-tab
+  table_revision: "2026-05-27T22:44:15.009106Z"
+  included_token_count: 126
+  deprecated_token_count: 4
+  raw_evidence: products/wordpress/plugins/axismundi/docs/m3-token-tables/SOURCE-M3-TABS-RAW.md
+  current_slice: primary-secondary-fixed-scrollable-tabs
+
+prose_sources:
+  variants:
+    source: https://m3.material.io/components/tabs/guidelines
+    statement: Primary tabs organize a main content pane; secondary tabs add a nested level.
+  scrolling:
+    source: https://m3.material.io/components/tabs/guidelines
+    statement: Scrollable tabs support longer labels and more destinations; fixed tabs show the whole set.
+  accessibility:
+    source: https://m3.material.io/components/tabs/accessibility
+    statement: Arrow keys move focus, Space or Enter activates the focused destination, and Tab exits the tab set.
+
+variants:
+  primary:
+    status: implemented
+    namespace: md.comp.primary-navigation-tab
+    container:
+      color_token: md.comp.primary-navigation-tab.container.color
+      color_role: surface
+      height_token: md.comp.primary-navigation-tab.container.height
+      label_only_height: 48
+      icon_and_label_height_token: md.comp.primary-navigation-tab.with-icon-and-label-text.container.height
+      icon_and_label_height: 64
+      shape_token: md.comp.primary-navigation-tab.container.shape
+      shape_role: corner.none
+    indicator:
+      color_token: md.comp.primary-navigation-tab.active-indicator.color
+      color_role: primary
+      height_token: md.comp.primary-navigation-tab.active-indicator.height
+      height: 3
+      minimum_length: 24
+      inset_inline: 2
+      shape: [ 3, 3, 0, 0 ]
+      # material-web renders this element inside the tab's content box, so it
+      # hugs the label and icon rather than the tab. Its own CSS uses no inset;
+      # the 2dp comes from the M3 measurements prose, which this project keeps.
+      spans: content-box
+    icon:
+      size_token: md.comp.primary-navigation-tab.with-icon.icon.size
+      size: 24
+  secondary:
+    status: implemented
+    namespace: md.comp.secondary-navigation-tab
+    container:
+      color_token: md.comp.secondary-navigation-tab.container.color
+      color_role: surface
+      height_token: md.comp.secondary-navigation-tab.container.height
+      label_only_height: 48
+      shape_token: md.comp.secondary-navigation-tab.container.shape
+      shape_role: corner.none
+    indicator:
+      color_token: md.comp.secondary-navigation-tab.active-indicator.color
+      color_role: primary
+      height_token: md.comp.secondary-navigation-tab.active-indicator.height
+      height: 2
+      # Only color and height are published for the secondary indicator. It has
+      # no shape, minimum-length, or inset token, and material-web gives it
+      # fullWidthIndicator, so it is the whole tab and square. Copying the
+      # primary values here would have invented three numbers.
+      spans: full-tab
+      minimum_length: null
+      inset_inline: 0
+      shape: null
+    icon:
+      size_token: md.comp.secondary-navigation-tab.with-icon.icon.size
+      size: 24
+
+shared:
+  label:
+    typography_role: title-small
+    size: 14
+    line_height: 20
+  divider:
+    owner: Divider
+    status: deprecated-tab-tokens-not-consumed
+    thickness: 1
+    # "The divider is included in the height, placed inside the container."
+    # The Figma frames measure 47 + 1 = 48 and 63 + 1 = 64, and material-web
+    # agrees: its demo has a one-pixel band over the divider that hovers the
+    # tab without taking the pointer cursor. So the bar carries the container
+    # height with border-box and the rows stretch into what is left, rather
+    # than the rows carrying it and the divider adding a 49th pixel.
+    inside_container_height: true
+    row_height_is_container_minus_divider: true
+  focus_indicator:
+    color_role: secondary
+    thickness: 3
+    inner_offset: -3
+  spacing:
+    icon_label_gap: 8
+
+# Figma lists Layout as three values but ships five layers: no Secondary /
+# Icon only. The token table agrees in one direction and not the other --
+# secondary publishes an icon position (with-icon.icon.size and five state
+# colors) but no icon-and-label container height, so its icon sits inline at
+# 48dp while primary stacks at 64dp.
+tab_layouts:
+  label_only:
+    status: implemented
+    styles: [ primary, secondary ]
+  label_and_icon:
+    status: implemented
+    styles: [ primary, secondary ]
+    primary_height_token: md.comp.primary-navigation-tab.with-icon-and-label-text.container.height
+    primary_height: 64
+    secondary_height_token: md.comp.secondary-navigation-tab.container.height
+    secondary_height: 48
+    secondary_stacks: false
+    secondary_icon_and_label_height_token: null
+  icon_only:
+    status: implemented
+    kit_publishes_for: [ primary ]
+    styles: [ primary, secondary ]
+    height: 48
+    accessible_name: required
+    # Unspecified for secondary rather than forbidden. Allowing it costs no
+    # branch, so refusing it would have been our rule and not M3's.
+    secondary: unspecified-not-refused
+
+layouts:
+  fixed:
+    status: implemented
+    item_width: equal-sections
+    minimum_target: 48
+    guidance_maximum_items: 4
+  scrollable:
+    status: implemented
+    item_width: label-content
+    leading_offset: 52
+    focus_scrolls_into_view: true
+    infinite_looping: false
+    # The root and the bar both need min-inline-size 0. A grid or flex item's
+    # automatic minimum size is its min-content, which for a scrollable bar is
+    # the sum of its tabs, so without it the bar widens its own container and
+    # overflow-x never engages.
+    intrinsic_width_guard: min-inline-size-0
+    # There is no drag here the way the Carousel has one, so the wheel is the
+    # pointer's only way through on the desktop. It releases the gesture to the
+    # page at either end rather than trapping it.
+    wheel_scrolls_inline: true
+    wheel_releases_at_both_ends: true
+
+keyboard:
+  status: implemented
+  role: tablist-tab-tabpanel
+  roving_tabindex: true
+  active_tabindex: 0
+  inactive_tabindex: -1
+  arrows: [ ArrowLeft, ArrowRight ]
+  rtl_mirrors_horizontal_arrows: true
+  home_end: true
+  wraps: false
+  activation: [ Space, Enter, click ]
+  arrow_selection: manual
+  tab_exits_tabset: true
+  disabled_tabs_skipped: true
+
+interaction_contract:
+  panel_ownership: Tabs
+  active_state: controlled-or-uncontrolled
+  item_host: button
+  panel_host: div
+  composition:
+    state_root: Tabs
+    tab_bars: [ PrimaryTabBar, SecondaryTabBar ]
+    panel_view: TabPanels
+    rationale: Tab bars and their panel view are siblings sharing one state root; nested tab sets use independent Tabs roots.
+  motion:
+    # The panel transition is deliberately not ours. M3 calls primary tabs
+    # content destinations, so a route that uses them changes pages, and the
+    # View Transitions API owns that animation; a transition hardcoded here
+    # would move twice. Flutter's TabBarView animates because it is a PageView,
+    # which is the same mechanism as its swipe, and this product declines that
+    # swipe. The indicator is different: M3 requires the tab's own movement.
+    panel: owned-by-the-consumer
+    panel_route_case: view-transitions-api
+    indicator: travels-from-the-previous-indicator
+    duration: 250
+    easing_role: emphasized
+    easing: cubic-bezier(0.2, 0, 0, 1)
+    reduced_motion: fade
+    # No M3 token publishes this; the values are material-web's own tab.
+    source: https://github.com/material-components/material-web/blob/main/tabs/internal/tab.ts
+  deferred:
+    - badge
+    - panel-swipe-navigation
+    - url-routing
+    - density
+
+token_families:
+  implemented_now:
+    - md.comp.primary-navigation-tab.{container,active-indicator,with-icon,with-label-text,focus}.*
+    - md.comp.secondary-navigation-tab.{container,active-indicator,with-icon,label-text,focus}.*
+  deliberately_not_consumed:
+    - md.comp.{primary,secondary}-navigation-tab.divider.*
+  deferred_with_contract: []
+
+evidence_not_product:
+  lab: products/reference-implementations/axismundi-lab/modules/tabs
+  gutenberg: C:/Users/thaum/dev/gutenberg/packages/components/src/tabs
+  reasons_not_to_port:
+    - Gutenberg owns a generic Ariakit store and WordPress component API, not M3 variant tokens.
+    - The lab is a local catalog and does not decide published component behavior.

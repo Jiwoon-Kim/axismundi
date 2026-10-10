@@ -802,6 +802,18 @@ conflicts:
     note: >-
       The token table and the standard sheet's numbered list name different
       roles for the same divider. `spec` keeps the token table.
+  - subject: initial focus
+    accessibility_page: focus lands on the first interactive element in the dialog
+    block_runtime: >-
+      The block's <dialog> takes focus itself (tabindex -1) so a trigger does not
+      open wearing its focus state.
+    wai_aria_apg: permits either, and prefers the dialog when the first element is destructive
+    resolution: >-
+      The React surface follows the accessibility page: the first interactive
+      element. The block's choice answers a block problem and does not carry
+      over. An author's own autofocus still wins, and a destructive first action
+      is the APG exception rather than the rule.
+    owner_decision: 2026-10-11
   - subject: side sheet close button
     guidelines: optional in the anatomy, "highly recommended"
     accessibility_page: always present

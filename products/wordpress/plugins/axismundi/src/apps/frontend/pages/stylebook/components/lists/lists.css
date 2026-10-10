@@ -1,0 +1,27 @@
+@layer axismundi.patterns {
+	.ax-stylebook--lists {
+		--ax-scaffold-main-padding: var( --ax-layout-window-margin );
+	}
+
+	.ax-stylebook-lists__samples {
+		display: grid;
+		gap: var( --md-sys-measurement-space200 );
+		max-inline-size: 36rem;
+	}
+
+	.ax-stylebook-lists__list {
+		max-inline-size: 36rem;
+	}
+
+	.ax-stylebook-lists__avatar {
+		display: grid;
+		place-items: center;
+		inline-size: 100%;
+		block-size: 100%;
+		background: var( --md-sys-color-primary-container );
+		color: var( --md-sys-color-on-primary-container );
+		font-family: var( --md-sys-typescale-title-medium-font );
+		font-size: var( --md-sys-typescale-title-medium-size );
+		font-weight: var( --md-sys-typescale-title-medium-weight );
+	}
+}

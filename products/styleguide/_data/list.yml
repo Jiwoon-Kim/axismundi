@@ -1,0 +1,286 @@
+# Material 3 Lists.
+#
+# Sources:
+# - https://m3.material.io/components/lists/overview
+# - https://m3.material.io/components/lists/specs
+# - https://m3.material.io/components/lists/guidelines
+# - https://m3.material.io/components/lists/accessibility
+# - https://material-web.dev/components/list/
+# - https://developer.android.com/reference/kotlin/androidx/compose/material3/ListItem
+#
+# Token evidence:
+# products/wordpress/plugins/axismundi/docs/m3-token-tables/SOURCE-M3-LISTS-RAW.md
+#
+# The raw file is intentionally a token-table capture only. This record also
+# carries the prose contracts that decide ownership: Expressive versus baseline,
+# slot geometry, selection modes, and web accessibility. It is a decision record,
+# not a generated copy of the 305 token rows.
+
+meta:
+  namespace: md.comp.list
+  table_revision: "2026-05-27T22:44:15.009106Z"
+  included_token_count: 305
+  raw_evidence: products/wordpress/plugins/axismundi/docs/m3-token-tables/SOURCE-M3-LISTS-RAW.md
+  # The raw table owns the complete inventory. This file names the consumed
+  # tokens and every deferred family so that a partial implementation cannot
+  # claim to ship every row in the 305-row table.
+  token_inventory_owner: raw-token-table
+  current_slice: expressive-static-and-single-action
+
+prose_sources:
+  variants:
+    source: https://m3.material.io/components/lists/specs
+    statement: >-
+      Expressive lists are the current variant. Baseline remains available but
+      is not recommended; on web, expressive lists build on baseline lists.
+  slots:
+    source: https://m3.material.io/components/lists/specs
+    statement: >-
+      Custom lists divide into leading, content, and trailing slots. Leading and
+      trailing remain narrower than content; each target remains at least 48dp.
+  selection:
+    source: https://m3.material.io/components/lists/specs
+    statement: A list has exactly one selection mode at a time.
+  accessibility:
+    source: https://m3.material.io/components/lists/accessibility
+    statement: >-
+      Single-action items are activated with Space or Enter. Multi-action items
+      own their individual actions and keyboard movement between them.
+
+variants:
+  baseline:
+    status: available-not-recommended
+    item_container_shape_token: md.comp.list.list-item.container.shape
+    item_container_shape_role: corner.none
+    item_container_shape: 0
+  expressive:
+    status: implemented
+    styles: [ standard, segmented ]
+    item_container_shape_token: md.comp.list.list-item.container.expressive.shape
+    item_container_shape_role: corner.extra-small
+    item_container_shape: 4
+    hovered_container_shape_token: md.comp.list.list-item.hovered.container.expressive.shape
+    hovered_container_shape_role: corner.medium
+    hovered_container_shape: 12
+    focused_container_shape_token: md.comp.list.list-item.focused.container.expressive.shape
+    focused_container_shape_role: corner.large
+    focused_container_shape: 16
+    selected_container_shape_token: md.comp.list.list-item.selected.container.expressive.shape
+    selected_container_shape_role: corner.large
+    selected_container_shape: 16
+
+selection_state:
+  status: published-deferred-to-list-controller
+  selected_container_shape_token: md.comp.list.list-item.selected.container.expressive.shape
+  selected_container_shape_role: corner.large
+  selected_container_shape: 16
+
+# `list.container.shape` belongs to the List container, not a row. The values in
+# this entry are published; applying the container value to the first and last
+# visible rows is the project policy that maps a group shape onto ordinary DOM.
+segmented_group_shape_policy:
+  source_token: md.comp.list.container.shape
+  source_role: corner.large
+  outer_shape: 16
+  unselected_inner_shape_token: md.comp.list.list-item.container.expressive.shape
+  unselected_inner_shape: 4
+  selected_row_shape_token: md.comp.list.list-item.selected.container.expressive.shape
+  selected_row_shape: 16
+  dom_mapping: first-middle-last
+  rationale: >-
+    M3 publishes a 16dp List container shape and a 4dp expressive row shape,
+    but no position-specific row token. First/last corners therefore borrow the
+    List container value while middle rows keep the expressive row value.
+
+measurements:
+  one_line:
+    token: md.comp.list.list-item.one-line.container.height
+    minimum_height: 56
+  two_line:
+    token: md.comp.list.list-item.two-line.container.height
+    minimum_height: 72
+  three_line:
+    token: md.comp.list.list-item.three-line.container.height
+    minimum_height: 88
+  # These are minima. They do not derive from the text line-box arithmetic.
+  minimum_height_conditions:
+    applies_without_taller_slot: true
+    tallest_slot_expands_row: true
+    source: >-
+      M3 states that the tallest element determines the List item size. The
+      published 56/72/88dp values are therefore minimums for rows whose slots
+      do not exceed them.
+  padding_block:
+    token: md.comp.list.list-item.top-space / md.comp.list.list-item.bottom-space
+    value: 10
+    space_token: md.sys.measurement.space125
+  padding_inline:
+    token: md.comp.list.list-item.leading-space / md.comp.list.list-item.trailing-space
+    value: 16
+    space_token: md.sys.measurement.space200
+  slot_gap:
+    token: md.comp.list.list-item.between-space
+    value: 12
+    space_token: md.sys.measurement.space150
+  segmented_gap:
+    token: md.comp.list.segmented.gap
+    value: 2
+    space_token: md.sys.measurement.space25
+
+slots:
+  leading:
+    types: [ icon, avatar, image, video ]
+    max_width_rule: narrower-than-content
+    icon:
+      baseline_token: md.comp.list.list-item.leading-icon.size
+      baseline_size: 24
+      expressive_token: md.comp.list.list-item.leading-icon.expressive.size
+      expressive_size: 20
+    avatar:
+      size_token: md.comp.list.list-item.leading-avatar.size
+      size: 40
+      shape_token: md.comp.list.list-item.leading-avatar.shape
+      shape_role: corner.full
+    image:
+      width_token: md.comp.list.list-item.leading-image.width
+      height_token: md.comp.list.list-item.leading-image.height
+      width: 56
+      height: 56
+      expressive_shape_token: md.comp.list.list-item.leading-image.expressive.shape
+      expressive_shape_role: corner.small
+    video:
+      width_token: md.comp.list.list-item.small.leading-video.width
+      height_token: md.comp.list.list-item.small.leading-video.height
+      width: 100
+      height: 56
+      shape_token: md.comp.list.list-item.leading-video.shape
+      shape_role: corner.small
+  content:
+    min_width: 0
+    largest_slot: true
+    headline:
+      published_token_name: label-text
+      api_slot_name: headline
+      typography_role: body-large
+      size: 16
+    supporting_text:
+      typography_role: body-medium
+      size: 14
+    overline:
+      typography_role: label-small
+      size: 11
+  trailing:
+    types: [ trailing-supporting-text, icon, icon-button, selection-control ]
+    max_width_rule: narrower-than-content
+    supporting_text:
+      typography_role: label-small
+      size: 11
+    icon:
+      baseline_token: md.comp.list.list-item.trailing-icon.size
+      baseline_size: 24
+      expressive_token: md.comp.list.list-item.trailing-icon.expressive.size
+      expressive_size: 20
+
+focus_indicator:
+  color_token: md.comp.list.focus.indicator.color
+  color_role: secondary
+  thickness_token: md.comp.list.focus.indicator.thickness
+  thickness: 3
+  inner_offset_token: md.comp.list.focus.indicator.outline.offset
+  inner_offset: -3
+
+# M3 prose names the label/supporting-text forms but does not say whether an
+# overline alone consumes the three-line minimum. Count occupied text rows so
+# this React primitive has an explicit, reviewable local rule.
+line_count_inference:
+  status: project-policy
+  explicit_lines: honored
+  inferred:
+    headline: 1
+    headline_supporting: 2
+    headline_overline: 2
+    headline_overline_supporting: 3
+  rationale: >-
+    Overline consumes one text row. A row reaches the three-line minimum only
+    when headline, overline, and supporting text are all present.
+
+interaction_contract:
+  implemented:
+    - static
+    - single-action-link
+    - single-action-button
+  native_hosts:
+    static: div
+    link: a
+    button: button
+  list_host: ul
+  item_host: li
+  selected: deferred-to-list-controller
+  selection_modes_deferred: [ single-select, multi-select ]
+  interactions_deferred: [ multi-action, drag, reorder, reveal, swipe, expand, collapse ]
+  disabled_input_safety:
+    status: implemented-behavior-and-published-content-opacity
+    button: native-disabled
+    link: omit-href-and-click-handler-with-aria-disabled
+    content_opacity: 0.38
+    tokens:
+      label_text: md.comp.list.list-item.disabled.label-text.opacity
+      leading_icon: md.comp.list.list-item.disabled.leading-icon.opacity
+      overline: md.comp.list.list-item.disabled.overline.opacity
+      supporting_text: md.comp.list.list-item.disabled.supporting-text.opacity
+      trailing_icon: md.comp.list.list-item.disabled.trailing-icon.opacity
+    excluded: >-
+      No unselected disabled container-opacity token is published. Do not invent
+      one by applying opacity to the entire row; selected.disabled belongs to
+      the deferred List selection controller.
+  rationale: >-
+    Selection belongs to List because one list permits only one selection mode.
+    Opening selected on independent rows cannot enforce one-of-many or
+    many-of-many state. Multi-action likewise needs its own focus controller.
+
+token_families:
+  implemented_now:
+    - md.comp.list.container.*
+    - md.comp.list.list-item.container.expressive.*
+    - md.comp.list.list-item.{one-line,two-line,three-line}.container.height
+    - md.comp.list.list-item.{leading,top,bottom,trailing,between}-space
+    - md.comp.list.list-item.{label-text,supporting-text,overline,trailing-supporting-text}.*
+    - md.comp.list.list-item.leading-{icon,avatar,image,video}.*
+    - md.comp.list.list-item.trailing-icon.*
+    - md.comp.list.focus.indicator.*
+    - md.comp.list.list-item.disabled.{label-text,leading-icon,overline,supporting-text,trailing-icon}.opacity
+  deferred_with_contract:
+    - md.comp.list.list-item.selected.*
+    # The disabled state layer is published but deliberately unpainted: a row
+    # that cannot be activated should not answer hover, press, or focus.
+    - md.comp.list.list-item.disabled.{state-layer.*,container.expressive.shape}
+    - md.comp.list.list-item.dragged.*
+    - md.comp.list.expand.*
+
+theme_cross_surface:
+  source: products/wordpress/themes/axismundi/styles/blocks/list-segmented.json
+  status: shipped-reference-not-react-implementation
+  # This is a cross-surface invariant, not a shared runtime CSS variable.
+  segmented_gap: 2
+  unselected_inner_shape: 4
+  outer_shape: 16
+  selected_shape: 16
+  theme_spacing_presets:
+    space25: 2
+    space125: 10
+    space150: 12
+    space200: 16
+
+evidence_not_product:
+  lab: products/reference-implementations/axismundi-lab/modules/list
+  reasons_not_to_port:
+    - Its resting radius is corner.medium rather than the expressive 4dp token.
+    - It puts aria-selected on li without a listbox owner.
+
+not_implemented:
+  - List selection controller and listbox semantics
+  - Persisted selected state
+  - Multi-action row and arrow-key controller
+  - Selection controls
+  - Swipe-to-reveal, reorder, drag, expand, and collapse
+  - Avatar primitive ownership; ListItem accepts an avatar node in its leading slot

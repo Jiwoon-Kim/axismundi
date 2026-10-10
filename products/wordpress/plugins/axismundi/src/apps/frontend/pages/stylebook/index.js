@@ -8,6 +8,7 @@ import { StylebookButtonGroupsPage } from './components/button-groups';
 import { StylebookIconButtonsPage } from './components/icon-buttons';
 import { StylebookAppBarsPage } from './components/app-bars';
 import { StylebookNavigationsPage } from './components/navigations';
+import { StylebookListsPage } from './components/lists';
 import { StylebookStylesPage } from './styles';
 import { StylebookMotionPage } from './styles/motion';
 
@@ -42,6 +43,10 @@ export function StylebookPage( { component, layout, style, styles } ) {
 
 	if ( 'carousels' === component ) {
 		return <StylebookCarouselsPage />;
+	}
+
+	if ( 'lists' === component ) {
+		return <StylebookListsPage />;
 	}
 
 	if ( 'split-buttons' === component ) {
@@ -82,6 +87,7 @@ export function StylebookPage( { component, layout, style, styles } ) {
 				<a href="/social/stylebook/components/split-buttons">Split buttons</a>
 				<a href="/social/stylebook/components/cards">Cards</a>
 				<a href="/social/stylebook/components/carousels">Carousels</a>
+				<a href="/social/stylebook/components/lists">Lists</a>
 				<a href="/social/stylebook/components/dividers">Dividers</a>
 				<a href="/social/stylebook/components/navigations">Navigation</a>
 				<a href="/social/stylebook/components/app-bars">App bars</a>

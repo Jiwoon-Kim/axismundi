@@ -1,0 +1,261 @@
+@layer axismundi.components {
+	.ax-list {
+		/* Published List slots resolved into this component's CSS contract. */
+		--md-comp-list-container-color: var( --md-sys-color-surface );
+		--md-comp-list-container-shape: var( --md-sys-shape-corner-value-large );
+		--md-comp-list-segmented-gap: var( --md-sys-measurement-space25 );
+		--md-comp-list-list-item-one-line-container-height: 56px;
+		--md-comp-list-list-item-two-line-container-height: 72px;
+		--md-comp-list-list-item-three-line-container-height: 88px;
+		--ax-list-item-min-block-size: var( --md-comp-list-list-item-one-line-container-height );
+
+		display: grid;
+		gap: 0;
+		inline-size: 100%;
+		max-inline-size: 100%;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		color: var( --md-sys-color-on-surface );
+	}
+
+	.ax-list[data-variant='segmented'] {
+		gap: var( --md-comp-list-segmented-gap );
+		padding: var( --md-comp-list-segmented-gap );
+		border-radius: var( --md-comp-list-container-shape );
+		background: var( --md-comp-list-container-color );
+	}
+
+	.ax-list-item {
+		min-inline-size: 0;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.ax-list-item[data-lines='2'] {
+		--ax-list-item-min-block-size: var( --md-comp-list-list-item-two-line-container-height );
+	}
+
+	.ax-list-item[data-lines='3'] {
+		--ax-list-item-min-block-size: var( --md-comp-list-list-item-three-line-container-height );
+	}
+
+	.ax-list-item__action {
+		--md-comp-list-list-item-top-space: var( --md-sys-measurement-space125 );
+		--md-comp-list-list-item-bottom-space: var( --md-sys-measurement-space125 );
+		--md-comp-list-list-item-leading-space: var( --md-sys-measurement-space200 );
+		--md-comp-list-list-item-trailing-space: var( --md-sys-measurement-space200 );
+		--md-comp-list-list-item-between-space: var( --md-sys-measurement-space150 );
+		--md-comp-list-list-item-container-color: var( --md-sys-color-surface );
+		--md-comp-list-list-item-container-expressive-shape: var( --md-sys-shape-corner-value-extra-small );
+		--md-comp-list-list-item-hovered-container-expressive-shape: var( --md-sys-shape-corner-value-medium );
+		--md-comp-list-list-item-focused-container-expressive-shape: var( --md-sys-shape-corner-value-large );
+		--md-comp-list-focus-indicator-color: var( --md-sys-color-secondary );
+		/* The frontend bundle does not load the theme's state-token sheet. */
+		--md-comp-list-focus-indicator-thickness: var( --md-sys-state-focus-indicator-thickness, 3px );
+		--md-comp-list-focus-indicator-outline-offset: var( --md-sys-state-focus-indicator-inner-offset, -3px );
+		--md-comp-list-list-item-leading-icon-color: var( --md-sys-color-on-surface-variant );
+		--md-comp-list-list-item-leading-icon-expressive-size: 20px;
+		--md-comp-list-list-item-leading-avatar-size: 40px;
+		--md-comp-list-list-item-leading-avatar-shape: var( --md-sys-shape-corner-full );
+		--md-comp-list-list-item-leading-image-width: 56px;
+		--md-comp-list-list-item-leading-image-height: 56px;
+		--md-comp-list-list-item-leading-image-expressive-shape: var( --md-sys-shape-corner-value-small );
+		--md-comp-list-list-item-leading-video-width: 100px;
+		--md-comp-list-list-item-leading-video-height: 56px;
+		--md-comp-list-list-item-leading-video-shape: var( --md-sys-shape-corner-value-small );
+		--md-comp-list-list-item-supporting-text-color: var( --md-sys-color-on-surface-variant );
+		--md-comp-list-list-item-overline-color: var( --md-sys-color-on-surface-variant );
+		--md-comp-list-list-item-trailing-icon-color: var( --md-sys-color-on-surface-variant );
+		--md-comp-list-list-item-trailing-icon-expressive-size: 20px;
+		--md-comp-list-list-item-disabled-label-text-opacity: 0.38;
+		--md-comp-list-list-item-disabled-leading-icon-opacity: 0.38;
+		--md-comp-list-list-item-disabled-overline-opacity: 0.38;
+		--md-comp-list-list-item-disabled-supporting-text-opacity: 0.38;
+		--md-comp-list-list-item-disabled-trailing-icon-opacity: 0.38;
+		box-sizing: border-box;
+		display: grid;
+		grid-template-columns: auto minmax( 0, 1fr ) auto;
+		align-items: center;
+		column-gap: var( --md-comp-list-list-item-between-space );
+		inline-size: 100%;
+		min-block-size: var( --ax-list-item-min-block-size );
+		padding-block: var( --md-comp-list-list-item-top-space ) var( --md-comp-list-list-item-bottom-space );
+		padding-inline: var( --md-comp-list-list-item-leading-space ) var( --md-comp-list-list-item-trailing-space );
+		border: 0;
+		border-radius: var( --md-comp-list-list-item-container-expressive-shape );
+		outline: 0 solid transparent;
+		outline-offset: var( --md-comp-list-focus-indicator-outline-offset );
+		background: var( --md-comp-list-list-item-container-color );
+		color: inherit;
+		font: inherit;
+		text-align: start;
+	}
+
+	.ax-list-item__action:is( a, button ) {
+		cursor: pointer;
+		text-decoration: none;
+	}
+
+	.ax-list-item__action[data-disabled] {
+		cursor: default;
+	}
+
+	.ax-list-item__action:is( a, button ):not( [data-disabled] ):hover {
+		border-radius: var( --md-comp-list-list-item-hovered-container-expressive-shape );
+		background: color-mix(
+			in srgb,
+			var( --md-comp-list-list-item-container-color ),
+			var( --md-sys-color-on-surface ) calc( var( --md-sys-state-hover-state-layer-opacity, 0.08 ) * 100% )
+		);
+	}
+
+	.ax-list-item__action:is( a, button ):not( [data-disabled] ):active {
+		border-radius: var( --md-comp-list-list-item-focused-container-expressive-shape );
+		background: color-mix(
+			in srgb,
+			var( --md-comp-list-list-item-container-color ),
+			var( --md-sys-color-on-surface ) calc( var( --md-sys-state-pressed-state-layer-opacity, 0.1 ) * 100% )
+		);
+	}
+
+	.ax-list-item__action:is( a, button ):not( [data-disabled] ):focus-visible {
+		border-radius: var( --md-comp-list-list-item-focused-container-expressive-shape );
+		background: color-mix(
+			in srgb,
+			var( --md-sys-color-on-surface ) calc( var( --md-sys-state-focus-state-layer-opacity, 0.1 ) * 100% ),
+			var( --md-comp-list-list-item-container-color )
+		);
+		outline-color: var( --md-comp-list-focus-indicator-color );
+		outline-style: solid;
+		outline-width: var( --md-comp-list-focus-indicator-thickness );
+	}
+
+	.ax-list[data-variant='segmented'] > .ax-list-item:first-child > .ax-list-item__action {
+		border-start-start-radius: var( --md-comp-list-container-shape );
+		border-start-end-radius: var( --md-comp-list-container-shape );
+	}
+
+	.ax-list[data-variant='segmented'] > .ax-list-item:last-child > .ax-list-item__action {
+		border-end-start-radius: var( --md-comp-list-container-shape );
+		border-end-end-radius: var( --md-comp-list-container-shape );
+	}
+
+	.ax-list[data-variant='segmented'] > .ax-list-item:only-child > .ax-list-item__action {
+		border-radius: var( --md-comp-list-container-shape );
+	}
+
+	.ax-list-item__leading,
+	.ax-list-item__trailing {
+		display: inline-grid;
+		place-items: center;
+		min-inline-size: 0;
+		color: var( --md-comp-list-list-item-leading-icon-color );
+	}
+
+	.ax-list-item__leading[data-leading-type='icon'] {
+		--md-icon-size: var( --md-comp-list-list-item-leading-icon-expressive-size );
+		inline-size: var( --md-comp-list-list-item-leading-icon-expressive-size );
+		block-size: var( --md-comp-list-list-item-leading-icon-expressive-size );
+	}
+
+	.ax-list-item__leading[data-leading-type='avatar'] {
+		overflow: clip;
+		inline-size: var( --md-comp-list-list-item-leading-avatar-size );
+		block-size: var( --md-comp-list-list-item-leading-avatar-size );
+		border-radius: var( --md-comp-list-list-item-leading-avatar-shape );
+	}
+
+	.ax-list-item__leading[data-leading-type='image'] {
+		overflow: clip;
+		inline-size: var( --md-comp-list-list-item-leading-image-width );
+		block-size: var( --md-comp-list-list-item-leading-image-height );
+		border-radius: var( --md-comp-list-list-item-leading-image-expressive-shape );
+	}
+
+	.ax-list-item__leading[data-leading-type='video'] {
+		overflow: clip;
+		inline-size: var( --md-comp-list-list-item-leading-video-width );
+		block-size: var( --md-comp-list-list-item-leading-video-height );
+		border-radius: var( --md-comp-list-list-item-leading-video-shape );
+	}
+
+	.ax-list-item__leading img {
+		display: block;
+		inline-size: 100%;
+		block-size: 100%;
+		object-fit: cover;
+	}
+
+	.ax-list-item__content {
+		display: grid;
+		min-inline-size: 0;
+	}
+
+	.ax-list-item__headline,
+	.ax-list-item__supporting-text,
+	.ax-list-item__overline,
+	.ax-list-item__trailing-supporting-text {
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.ax-list-item__headline {
+		font-family: var( --md-sys-typescale-body-large-font );
+		font-size: var( --md-sys-typescale-body-large-size );
+		font-weight: var( --md-sys-typescale-body-large-weight );
+		line-height: var( --md-sys-typescale-body-large-line-height );
+	}
+
+	.ax-list-item__action[data-disabled] .ax-list-item__headline {
+		opacity: var( --md-comp-list-list-item-disabled-label-text-opacity );
+	}
+
+	.ax-list-item__supporting-text {
+		color: var( --md-comp-list-list-item-supporting-text-color );
+		font-family: var( --md-sys-typescale-body-medium-font );
+		font-size: var( --md-sys-typescale-body-medium-size );
+		font-weight: var( --md-sys-typescale-body-medium-weight );
+		line-height: var( --md-sys-typescale-body-medium-line-height );
+	}
+
+	.ax-list-item__overline,
+	.ax-list-item__trailing-supporting-text {
+		color: var( --md-comp-list-list-item-overline-color );
+		font-family: var( --md-sys-typescale-label-small-font );
+		font-size: var( --md-sys-typescale-label-small-size );
+		font-weight: var( --md-sys-typescale-label-small-weight );
+		line-height: var( --md-sys-typescale-label-small-line-height );
+	}
+
+	.ax-list-item__action[data-disabled] .ax-list-item__leading {
+		opacity: var( --md-comp-list-list-item-disabled-leading-icon-opacity );
+	}
+
+	.ax-list-item__action[data-disabled] .ax-list-item__overline {
+		opacity: var( --md-comp-list-list-item-disabled-overline-opacity );
+	}
+
+	.ax-list-item__action[data-disabled] .ax-list-item__supporting-text {
+		opacity: var( --md-comp-list-list-item-disabled-supporting-text-opacity );
+	}
+
+	.ax-list-item__action[data-disabled] .ax-list-item__trailing-icon {
+		opacity: var( --md-comp-list-list-item-disabled-trailing-icon-opacity );
+	}
+
+	.ax-list-item__trailing {
+		justify-items: end;
+		gap: var( --md-sys-measurement-space25 );
+		color: var( --md-comp-list-list-item-trailing-icon-color );
+	}
+
+	.ax-list-item__trailing-icon {
+		--md-icon-size: var( --md-comp-list-list-item-trailing-icon-expressive-size );
+		display: inline-grid;
+		place-items: center;
+		inline-size: var( --md-comp-list-list-item-trailing-icon-expressive-size );
+		block-size: var( --md-comp-list-list-item-trailing-icon-expressive-size );
+	}
+}

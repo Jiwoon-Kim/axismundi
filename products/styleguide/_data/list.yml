@@ -217,7 +217,13 @@ interaction_contract:
   item_host: li
   selected: deferred-to-list-controller
   selection_modes_deferred: [ single-select, multi-select ]
-  interactions_deferred: [ multi-action, drag, reorder, reveal, swipe, expand, collapse ]
+  interactions_deferred: [ multi-action, drag, reorder, reveal, expand, collapse ]
+  # Swipe is not deferred, it is declined. See
+  # DECISION-FRONTEND-OVERLAY-SURFACE-OWNERSHIP.md section 4: M3 marks
+  # swipe-to-reveal as Android Views only and requires an alternative path
+  # anyway, so this product keeps only that alternative.
+  interactions_declined:
+    swipe: trailing-action-or-overflow-menu-instead
   disabled_input_safety:
     status: implemented-behavior-and-published-content-opacity
     button: native-disabled
@@ -282,5 +288,5 @@ not_implemented:
   - Persisted selected state
   - Multi-action row and arrow-key controller
   - Selection controls
-  - Swipe-to-reveal, reorder, drag, expand, and collapse
+  - Reorder, drag, expand, and collapse
   - Avatar primitive ownership; ListItem accepts an avatar node in its leading slot

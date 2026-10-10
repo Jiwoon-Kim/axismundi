@@ -190,6 +190,8 @@ def main() -> int:
     report.check(data["selection_state"]["status"] == "published-deferred-to-list-controller", "published selected visuals are being claimed as implemented")
     report.check("single-select" in interaction["selection_modes_deferred"] and "multi-select" in interaction["selection_modes_deferred"], "selection modes must remain deferred")
     report.check("multi-action" in interaction["interactions_deferred"], "multi-action must remain deferred")
+    report.check("swipe" not in interaction["interactions_deferred"], "swipe is declined, not deferred")
+    report.check("swipe" in (interaction.get("interactions_declined") or {}), "the declined swipe interaction lost its record")
     disabled = interaction["disabled_input_safety"]
     report.check(disabled["button"] == "native-disabled" and disabled["link"] == "omit-href-and-click-handler-with-aria-disabled", "disabled safety contract drifted")
     report.check(disabled["status"] == "implemented-behavior-and-published-content-opacity", "disabled visual-state status drifted")

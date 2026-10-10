@@ -475,6 +475,43 @@ def check_runtime(data: dict, report: Report) -> None:
                  "a standard sheet's trigger command is not --toggle in both includes/surface.php and view.js")
 
 
+def check_discrepancies(data: dict, report: Report) -> None:
+    """Every recorded conflict keeps a reading, and the readings that became
+    implementation rules keep saying what the implementation does.
+
+    Nothing else in this file looks at `conflicts`: the rest checks that the
+    block runtime consumes this file's numbers, and a conflict between two pages
+    of prose has no number to consume. So it is checked for self-consistency --
+    an entry that loses its reading is an entry nobody can act on, and one of
+    these was resolved the wrong way until the illustration beside the sentence
+    was looked at.
+    """
+    entries = data["conflicts"]
+    report.check(0 < len(entries), "the discrepancy record disappeared")
+    for entry in entries:
+        subject = entry.get("subject", "(unnamed)")
+        report.check("subject" in entry, "a discrepancy lost its subject")
+        report.check(
+            bool(entry.get("note") or entry.get("resolution")),
+            f"the discrepancy '{subject}' lost its reading",
+        )
+
+    scroll = next((e for e in entries if e.get("subject") == "bottom sheet scroll direction"), None)
+    report.check(scroll is not None, "the bottom sheet scroll-direction record disappeared")
+    if scroll is not None:
+        # The wording is not loose: a 640dp sheet may carry a horizontally
+        # scrolling row, a 400dp one may not, and reading it as a typo would
+        # throw away a published difference between the two sheets.
+        report.check(
+            "Carousel" in (scroll.get("resolution") or ""),
+            "the bottom sheet's horizontally scrolling content was read back as a contradiction",
+        )
+        report.check(
+            "vertically" in (scroll.get("resolution") or ""),
+            "the bottom sheet's own scroll axis left its resolution",
+        )
+
+
 def main() -> int:
     missing = [p.relative_to(ROOT).as_posix() for p in (DATA, LAYOUT, REF, LIGHT, ELEVATION) if not p.is_file()]
     if missing:
@@ -540,6 +577,7 @@ def main() -> int:
 
     check_adapter(data, report)
     check_runtime(data, report)
+    check_discrepancies(data, report)
 
     names = [row.get("name") for row in data.get("presentations", [])]
     axis = next((a for a in data.get("axes", []) if a.get("name") == "presentation"), {})

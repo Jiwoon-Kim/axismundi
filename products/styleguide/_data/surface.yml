@@ -813,8 +813,17 @@ conflicts:
     same_page: scrolls when content exceeds the initial viewable height
     side_sheet_guidelines: never scrolls horizontally
     note: >-
-      The horizontal wording contradicts the sentence under it, which only
-      makes sense vertically. Read as vertical until M3 says otherwise.
+      Not a contradiction, and an earlier reading here had it as one. The
+      illustration beside the sentence scrolls a row of cards inside the sheet,
+      not the sheet: the sheet scrolls vertically when its content exceeds the
+      viewable height, and its content may scroll horizontally. The side sheet
+      forbids exactly that, and says why -- "a side sheet's narrow width leaves
+      limited space to fully view items". So this is a real difference between
+      the two, not loose wording.
+    resolution: >-
+      A bottom sheet scrolls vertically and may carry horizontally scrolling
+      content, a Carousel among it. A side sheet scrolls vertically only and is
+      never laid out to suggest otherwise.
   - subject: bottom sheet labelling
     accessibility_page: label only the drag handle
     web_platform: a modal dialog needs an accessible name (WAI-ARIA dialog)

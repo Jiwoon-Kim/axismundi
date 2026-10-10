@@ -44,8 +44,11 @@ prose_sources:
   accessibility:
     source: https://m3.material.io/components/lists/accessibility
     statement: >-
-      Single-action items are activated with Space or Enter. Multi-action items
-      own their individual actions and keyboard movement between them.
+      A single-action list is not only tabbable. M3 asks that, once an element
+      is focused, arrow keys move within the list and wrap at both ends, and
+      that every item activate with Space or Enter. Multi-action items own
+      their individual actions and the movement between them, which is a
+      separate contract.
 
 variants:
   baseline:
@@ -222,6 +225,15 @@ interaction_contract:
   # DECISION-FRONTEND-OVERLAY-SURFACE-OWNERSHIP.md section 4: M3 marks
   # swipe-to-reveal as Android Views only and requires an alternative path
   # anyway, so this product keeps only that alternative.
+  keyboard:
+    tab: every-row-is-its-own-tab-stop
+    roving_tabindex: not-taken
+    arrow_forward: [ ArrowDown, ArrowRight ]
+    arrow_backward: [ ArrowUp, ArrowLeft ]
+    # ArrowLeft and ArrowRight mirror under RTL; ArrowUp and ArrowDown do not.
+    wraps: true
+    activate: native-space-or-enter
+    participates: focusable-row-actions-only
   interactions_declined:
     swipe: trailing-action-or-overflow-menu-instead
   disabled_input_safety:
@@ -286,7 +298,7 @@ evidence_not_product:
 not_implemented:
   - List selection controller and listbox semantics
   - Persisted selected state
-  - Multi-action row and arrow-key controller
+  - Multi-action row and the movement between actions inside one row
   - Selection controls
   - Reorder, drag, expand, and collapse
   - Avatar primitive ownership; ListItem accepts an avatar node in its leading slot

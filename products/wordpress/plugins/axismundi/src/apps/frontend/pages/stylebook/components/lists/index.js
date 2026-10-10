@@ -109,6 +109,44 @@ function HostSample() {
 	);
 }
 
+function KeyboardSample() {
+	const hostRef = useRef();
+	const [ metrics, setMetrics ] = useState();
+
+	useEffect( () => {
+		const host = hostRef.current;
+		if ( ! host ) {
+			return;
+		}
+
+		const list = host.querySelector( '.ax-list' );
+
+		setMetrics( {
+			// Two rows cannot demonstrate wrapping: forward and backward both
+			// land on the other row. This specimen keeps four.
+			focusable: host.querySelectorAll( '.ax-list-item__action:is( a[href], button:not( [disabled] ) )' ).length,
+			tabStops: host.querySelectorAll( '.ax-list-item__action[tabindex]' ).length,
+			listTabindex: list?.hasAttribute( 'tabindex' ) ? 'yes' : 'no',
+		} );
+	}, [] );
+
+	return (
+		<div ref={ hostRef } className="ax-stylebook-lists__samples">
+			<List className="ax-stylebook-lists__list" aria-label="Arrow-key movement specimens">
+				<ListItem href="#list-keyboard-1" headline="First row" trailingIcon={ <Icon name="chevron_right" /> } />
+				<ListItem href="#list-keyboard-2" headline="Second row" trailingIcon={ <Icon name="chevron_right" /> } />
+				<ListItem href="#list-keyboard-3" headline="Third row" trailingIcon={ <Icon name="chevron_right" /> } />
+				<ListItem href="#list-keyboard-4" headline="Fourth row" trailingIcon={ <Icon name="chevron_right" /> } />
+			</List>
+			<p className="ax-stylebook-page__note">
+				{ metrics
+					? `focusable rows ${ metrics.focusable } · rows carrying an explicit tabindex ${ metrics.tabStops } · list tabindex ${ metrics.listTabindex }`
+					: 'Measuring...' }
+			</p>
+		</div>
+	);
+}
+
 function SlotSample() {
 	return (
 		<List className="ax-stylebook-lists__list" aria-label="Leading and trailing slot specimens">
@@ -170,8 +208,18 @@ export function StylebookListsPage() {
 						<HostSample />
 						<p className="ax-stylebook-page__note">
 							A static row is a div, a navigational row is an anchor, and a command row is a
-							button. Selection, multi-action rows, and their arrow-key controller remain
-							closed rather than appearing as independent row props.
+							button. Selection and multi-action rows remain closed rather than appearing as
+							independent row props.
+						</p>
+					</Group>
+
+					<Group kicker="Arrow keys are a second path through the rows, not a replacement for tabbing" title="Keyboard movement">
+						<KeyboardSample />
+						<p className="ax-stylebook-page__note">
+							M3 asks a single-action list for arrow movement that wraps at both ends, so this
+							is not part of the deferred multi-action controller. Every row stays its own tab
+							stop and no row takes a roving tabindex. Up and down are absolute; left and right
+							mirror the writing direction. Disabled and static rows are skipped.
 						</p>
 					</Group>
 

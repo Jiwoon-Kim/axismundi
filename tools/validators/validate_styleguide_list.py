@@ -192,6 +192,23 @@ def main() -> int:
     report.check("multi-action" in interaction["interactions_deferred"], "multi-action must remain deferred")
     report.check("swipe" not in interaction["interactions_deferred"], "swipe is declined, not deferred")
     report.check("swipe" in (interaction.get("interactions_declined") or {}), "the declined swipe interaction lost its record")
+    keyboard = interaction["keyboard"]
+    for key in keyboard["arrow_forward"] + keyboard["arrow_backward"]:
+        report.check(f"'{key}'" in list_source, f"List no longer answers {key}")
+    report.check(keyboard["wraps"] is True, "M3 wraps a list at both ends; the record says otherwise")
+    report.check("% actions.length" in list_source, "List arrow movement no longer wraps")
+    report.check(keyboard["roving_tabindex"] == "not-taken", "roving tabindex was taken without a record")
+    # Matches an assignment, not the prose that explains why there is none.
+    report.check("tabIndex=" not in list_source and "tabIndex:" not in list_source,
+                 "List took a tabindex; arrow keys are meant to add a path, not replace tabbing")
+    report.check("event.preventDefault()" in list_source, "List arrow keys no longer stop the page from scrolling")
+    report.check("button:not( [disabled] )" in list_source, "List arrow movement no longer skips disabled rows")
+    report.check("getComputedStyle( list ).direction" in list_source, "List arrow keys stopped mirroring under RTL")
+    report.check("<KeyboardSample />" in stylebook_page, "the Stylebook lost its arrow-movement specimen")
+    # Two rows cannot show a wrap: forward and backward both land on the other row.
+    report.check(3 < stylebook_page.count("#list-keyboard-"), "the arrow-movement specimen no longer has four actionable rows")
+    report.check("arrow-key controller" not in stylebook_page,
+                 "the Stylebook still attributes arrow keys to the deferred multi-action controller")
     disabled = interaction["disabled_input_safety"]
     report.check(disabled["button"] == "native-disabled" and disabled["link"] == "omit-href-and-click-handler-with-aria-disabled", "disabled safety contract drifted")
     report.check(disabled["status"] == "implemented-behavior-and-published-content-opacity", "disabled visual-state status drifted")

@@ -1,0 +1,29 @@
+@layer axismundi.patterns {
+	.ax-stylebook-badges__variants {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 24px;
+	}
+
+	.ax-stylebook-badges__variants > div {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.ax-stylebook-badges__navigation {
+		display: grid;
+		gap: 24px;
+		max-inline-size: 36rem;
+	}
+
+	.ax-stylebook-badges__rail-frame {
+		block-size: 19rem;
+		border: 1px solid var( --md-sys-color-outline-variant );
+	}
+
+	.ax-stylebook-badges__tabs {
+		display: grid;
+		gap: 16px;
+	}
+}

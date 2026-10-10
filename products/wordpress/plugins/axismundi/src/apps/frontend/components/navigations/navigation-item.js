@@ -74,17 +74,34 @@
  * @param {'vertical'|'horizontal'} [props.orientation='vertical'] Item layout axis.
  * @param {boolean} [props.active=false] Whether this is the current destination.
  * @param {import('@wordpress/element').ReactNode} [props.badge] Badge node, placed on the icon.
+ * @param {string} [props.badgeDescription] Badge information appended to the link name.
  * @param {string} [props.className] Additional component class name.
  * @return {import('@wordpress/element').ReactNode} Navigation item.
  */
 
-import { forwardRef } from '@wordpress/element';
+import { forwardRef, isValidElement } from '@wordpress/element';
 import warning from '@wordpress/warning';
 
 const ORIENTATIONS = [ 'vertical', 'horizontal' ];
 
+/**
+ * Whether a badge node carries a label, which is what makes it the large one.
+ *
+ * @param {import('@wordpress/element').ReactNode} badge Badge node.
+ * @return {boolean} True for a large badge.
+ */
+function isLargeBadge( badge ) {
+	if ( ! isValidElement( badge ) ) {
+		return false;
+	}
+
+	const label = badge.props?.label;
+
+	return undefined !== label && null !== label && '' !== String( label ).trim();
+}
+
 export const NavigationItem = forwardRef( function NavigationItem(
-	{ icon, label, href, orientation = 'vertical', active = false, badge, className, ...props },
+	{ icon, label, href, orientation = 'vertical', active = false, badge, badgeDescription, className, ...props },
 	ref
 ) {
 	let axis = orientation;
@@ -105,6 +122,9 @@ export const NavigationItem = forwardRef( function NavigationItem(
 	if ( ! icon ) {
 		warning( 'NavigationItem: `icon` is required by the published anatomy.' );
 	}
+	if ( badge && ! badgeDescription ) {
+		warning( 'NavigationItem: `badgeDescription` is required when a Badge is present so its information reaches assistive technology.' );
+	}
 
 	/*
 	 * A destination with no URL is a caller's bug, not a second kind of item. It
@@ -117,13 +137,37 @@ export const NavigationItem = forwardRef( function NavigationItem(
 		warning( 'NavigationItem: `href` is required -- navigation is link-first; see DECISION-FRONTEND-NAVIGATION-MODEL.md.' );
 	}
 
+	/*
+	 * A vertical item has its label underneath, so a badge on the icon has
+	 * nothing to collide with and stays there whatever its width. A horizontal
+	 * item is the case the badge guidelines name -- "an icon with a badge is
+	 * followed by text" -- and they resolve it: put a large badge at the
+	 * trailing edge, or use a small one. The navigation anatomy draws a large
+	 * badge on a horizontal item's icon instead, which is the picture those same
+	 * guidelines mark Don't; `badge.yml` records the two readings and why this
+	 * one wins. A small badge is too narrow to reach the label and stays put.
+	 */
+	const trailingBadge = 'horizontal' === axis && isLargeBadge( badge );
 	const iconSlot = (
 		<span className="ax-navigation-item__icon">
 			{ icon }
-			{ badge ? <span className="ax-navigation-item__badge">{ badge }</span> : null }
+			{ badge && ! trailingBadge ? (
+				<span className="ax-navigation-item__badge">{ badge }</span>
+			) : null }
 		</span>
 	);
 	const labelSlot = <span className="ax-navigation-item__label">{ label }</span>;
+	// The label and its trailing badge are one group, so the item's own gap
+	// applies to the pair and the published 4dp sits between the two of them.
+	const labelGroup = trailingBadge ? (
+		<span className="ax-navigation-item__label-with-badge">
+			{ labelSlot }
+			<span className="ax-navigation-item__trailing-badge">{ badge }</span>
+		</span>
+	) : (
+		labelSlot
+	);
+	const accessibleName = badgeDescription ? [ label, badgeDescription ].filter( Boolean ).join( ', ' ) : undefined;
 
 	return (
 		<a
@@ -132,13 +176,14 @@ export const NavigationItem = forwardRef( function NavigationItem(
 			data-orientation={ axis }
 			href={ href || undefined }
 			aria-disabled={ href ? undefined : 'true' }
+			aria-label={ accessibleName }
 			aria-current={ active ? 'page' : undefined }
 			{ ...props }
 		>
 			{ /* Vertical puts the label below the indicator; horizontal puts it inside. */ }
 			<span className="ax-navigation-item__indicator">
 				{ iconSlot }
-				{ 'horizontal' === axis ? labelSlot : null }
+				{ 'horizontal' === axis ? labelGroup : null }
 			</span>
 			{ 'vertical' === axis ? labelSlot : null }
 		</a>

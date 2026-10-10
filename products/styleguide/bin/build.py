@@ -97,6 +97,7 @@ def main() -> int:
                           ("button", "validate_styleguide_button.py"),
                           ("card", "validate_styleguide_card.py"),
                           ("carousel", "validate_styleguide_carousel.py"),
+			  ("badge", "validate_styleguide_badge.py"),
                           ("list", "validate_styleguide_list.py"),
                           ("tabs", "validate_styleguide_tabs.py"),
                           ("divider", "validate_styleguide_divider.py"),

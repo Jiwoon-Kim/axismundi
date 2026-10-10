@@ -55,7 +55,7 @@
  * `Scaffold` "owns window-level geometry only".
  *
  * @param {Object} props Component props.
- * @param {Array<{id: string, label: string, icon: import('@wordpress/element').ReactNode, href: string, badge?: import('@wordpress/element').ReactNode}>} props.destinations Three to five destinations, in fixed order.
+ * @param {Array<{id: string, label: string, icon: import('@wordpress/element').ReactNode, href: string, badge?: import('@wordpress/element').ReactNode, badgeDescription?: string}>} props.destinations Three to five destinations, in fixed order.
  * @param {string} props.activeId `id` of the current destination. One is always active.
  * @param {string} props.label Accessible name for the navigation landmark.
  * @param {'vertical'|'horizontal'} [props.itemLayout='vertical'] Published item layout axis.
@@ -142,7 +142,7 @@ export function NavigationBar( {
 			 * "item width" under `not_published_here` because it is the host's
 			 * arithmetic -- so the bar names each one and sizes it in CSS.
 			 */ }
-			{ destinations.map( ( { id, label: destination, icon, href, badge } ) => (
+			{ destinations.map( ( { id, label: destination, icon, href, badge, badgeDescription } ) => (
 				<NavigationItem
 					key={ id }
 					className="ax-nav-bar__item"
@@ -150,6 +150,7 @@ export function NavigationBar( {
 					label={ destination }
 					href={ href }
 					badge={ badge }
+					badgeDescription={ badgeDescription }
 					orientation={ layout }
 					active={ id === activeId }
 				/>

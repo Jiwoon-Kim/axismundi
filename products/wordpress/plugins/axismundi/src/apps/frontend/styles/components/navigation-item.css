@@ -291,15 +291,74 @@
 	}
 
 	/*
-	 * "Navigation bars can display badges in the upper right corners of the
-	 * destination icon." Positioned from the badge's own size so that none of the
-	 * badge component's published figures are spent here.
+	 * The badge specs locate the badge by naming two corners: "distance from top
+	 * trailing icon corner to bottom leading badge corner (HxW)". So H reaches the
+	 * badge's BOTTOM and W reaches its LEADING edge -- reading H as the badge's
+	 * top instead sinks it into the middle of the icon.
+	 *
+	 *   badge bottom  = icon top      + H
+	 *   badge leading = icon trailing - W
+	 *
+	 * Pinned to the icon's top trailing corner, that is a translate of its own
+	 * size minus the published figures, which leaves the leading edge fixed no
+	 * matter how wide the label makes the badge.
 	 */
 	.ax-navigation-item__badge {
 		position: absolute;
+		display: grid;
+		/*
+		 * Shrink-to-fit is capped by the containing block, and this one is the
+		 * icon box. A maximum-count badge is wider than an icon, so without this
+		 * it is squeezed and its own label is cut off.
+		 */
+		inline-size: max-content;
 		inset-block-start: 0;
 		inset-inline-end: 0;
-		transform: translate( 50%, -50% );
+	}
+
+	/*
+	 * The translate sits on the badge, not on this wrapper, because the figures
+	 * are declared on `.ax-badge` and custom properties only inherit downwards.
+	 */
+	.ax-navigation-item__badge .ax-badge--small {
+		translate: calc( 100% - var( --md-comp-badge-navigation-small-anchor-inline ) )
+			calc( var( --md-comp-badge-navigation-small-anchor-block ) - 100% );
+	}
+
+	.ax-navigation-item__badge .ax-badge--large {
+		translate: calc( 100% - var( --md-comp-badge-navigation-large-anchor-inline ) )
+			calc( var( --md-comp-badge-navigation-large-anchor-block ) - 100% );
+	}
+
+	[dir='rtl'] .ax-navigation-item__badge .ax-badge--small {
+		translate: calc( var( --md-comp-badge-navigation-small-anchor-inline ) - 100% )
+			calc( var( --md-comp-badge-navigation-small-anchor-block ) - 100% );
+	}
+
+	[dir='rtl'] .ax-navigation-item__badge .ax-badge--large {
+		translate: calc( var( --md-comp-badge-navigation-large-anchor-inline ) - 100% )
+			calc( var( --md-comp-badge-navigation-large-anchor-block ) - 100% );
+	}
+
+	/*
+	 * "When an icon with a badge is followed by text or another element, place a
+	 * large badge at the trailing edge." A horizontal item is exactly that case,
+	 * so its large badge leaves the icon instead of reaching across the label.
+	 * The gap is the badge specs' own figure for a badge beside a text
+	 * container, read off the badge because that is where it is declared.
+	 */
+	.ax-navigation-item__label-with-badge {
+		display: inline-flex;
+		align-items: center;
+		min-inline-size: 0;
+	}
+
+	.ax-navigation-item__trailing-badge {
+		display: inline-grid;
+	}
+
+	.ax-navigation-item__trailing-badge .ax-badge {
+		margin-inline-start: var( --md-comp-badge-large-inline-padding );
 	}
 
 	.ax-navigation-item__label {

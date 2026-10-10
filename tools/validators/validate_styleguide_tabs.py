@@ -116,9 +116,21 @@ def main() -> int:
     report.check(f"INDICATOR_EASING = '{motion['easing']}'" in tabs, "indicator easing no longer consumes tabs.yml")
     report.check("prefers-reduced-motion: reduce" in tabs, "the indicator morph ignores reduced motion")
     report.check("to.animate(" in tabs and "scaleX(" in tabs, "the indicator no longer travels from the previous one")
-    report.check("badge" in data["interaction_contract"]["deferred"], "badge left the deferred list without a Badge component")
-    report.check("badge" not in tabs.lower() and "badge" not in css.lower() and "badge" not in stylebook_page.lower(),
-                 "a badge reappeared in Tabs; badges belong to the Badge component pass")
+    badge = data["interaction_contract"]["badge"]
+    report.check(badge["status"] == "implemented" and badge["owner"] == "Badge", "Tabs Badge contract drifted")
+    report.check("badge" not in data["interaction_contract"]["deferred"], "Badge remains deferred after its component was added")
+    report.check("ax-tab-bar__badge" in tabs and "ax-tab-bar__inline-badge" in tabs and "badgeDescription" in tabs,
+                 "Tabs no longer consume Badge nodes accessibly")
+    report.check(badge["primary_icon_and_label"] == "icon-corner" and badge["secondary_icon_and_label"] == "inline-after-label",
+                 "Tabs Badge layout distinction left tabs.yml")
+    report.check("iconAnchorsBadge" in tabs and "className=\"ax-tab-bar__label-with-badge\"" in tabs and f"gap: {badge['inline_label_gap']}px;" in css,
+                 "Tabs inline Badge gap no longer consumes tabs.yml")
+    report.check(f"--md-comp-tabs-stacked-icon-badge-overlap: {badge['stacked_icon_overlap']}px;" in css and
+                 ".ax-tab-bar__badge {\n\t\tposition: absolute;\n\t\tdisplay: grid;" in css and
+                 "translate: calc( 100% - var( --md-comp-tabs-stacked-icon-badge-overlap ) ) 0;" in css,
+                 "Tabs stacked Badge overlap no longer consumes tabs.yml")
+    report.check("has a Badge, so it needs a badgeDescription" in tabs,
+                 "Tabs no longer warn when Badge information lacks a host description")
 
     layouts = data["tab_layouts"]
     # Secondary publishes an icon position but no stacked height, so 64dp
@@ -134,8 +146,8 @@ def main() -> int:
     # Icon-only: the label goes, the name does not.
     report.check(layouts["icon_only"]["accessible_name"] == "required", "the icon-only name requirement was dropped")
     report.check(layouts["icon_only"]["kit_publishes_for"] == ["primary"], "the kit's icon-only coverage drifted")
-    report.check("{ tab.label && <span className=\"ax-tab-bar__label\">" in tabs, "the label stopped being optional")
-    report.check("aria-label={ tab.label ? undefined : tab.name }" in tabs, "an icon-only tab lost its accessible name")
+    report.check("{ tab.label && (" in tabs and "className=\"ax-tab-bar__label\"" in tabs, "the label stopped being optional")
+    report.check("const accessibleName = tab.badgeDescription" in tabs and "aria-label={ accessibleName }" in tabs, "an icon-only tab lost its accessible name")
     report.check("has no label, so it needs a name" in tabs, "nothing warns when a tab has neither a label nor a name")
 
     scrollable = data["layouts"]["scrollable"]
@@ -192,8 +204,8 @@ def main() -> int:
     report.check("const TabsContext = createContext( null );" in tabs and "export function PrimaryTabBar" in tabs and "export function SecondaryTabBar" in tabs and "export function TabPanels" in tabs, "tab state root, bars, and panels were collapsed")
     report.check("@import url( './components/tabs.css' );" in style_index, "Tabs stylesheet is not in frontend bundle")
     report.check("StylebookTabsPage" in stylebook_index and "'tabs' === component" in stylebook_index, "stylebook does not expose Tabs")
-    report.check("tabs" in app and route.count("lists|tabs|dividers") == 2, "frontend route omits Tabs")
-    report.check(re.search(r"AXISMUNDI_CAPSTONE_REWRITE_VERSION\s*=\s*'18';", plugin) is not None, "rewrite version did not advance for Tabs")
+    report.check("tabs" in app and route.count("tabs|badges|dividers") == 2, "frontend route omits Tabs")
+    report.check(re.search(r"AXISMUNDI_CAPSTONE_REWRITE_VERSION\s*=\s*'19';", plugin) is not None, "rewrite version did not advance for Tabs")
     report.check("PrimaryTabBar" in stylebook_page and "SecondaryTabBar" in stylebook_page and "TabPanels" in stylebook_page and "scrollable" in stylebook_page and "disabled: true" in stylebook_page, "stylebook does not exercise primary, secondary, scrollable, and disabled Tabs")
 
     print(f"tabs: {report.checked} checks, {len(report.problems)} failed")

@@ -1,0 +1,154 @@
+# Material 3 Badge.
+#
+# The Badge owns its visual box. Hosts own placement: NavigationItem publishes
+# the icon-corner slot, while Tabs publishes its inline and stacked spacing.
+
+meta:
+  namespace: md.comp.badge
+  table_revision: "2026-05-27T22:44:15.009106Z"
+  included_token_count: 32
+  deprecated_token_count: 0
+  raw_evidence: products/wordpress/plugins/axismundi/docs/m3-token-tables/SOURCE-M3-BADGES-RAW.md
+
+prose_sources:
+  overview:
+    source: https://m3.material.io/components/badges/overview
+    statement: Badges have small and large variants and contain at most four label characters.
+  guidelines:
+    source: https://m3.material.io/components/badges/guidelines
+    statement: Badges are inside another component; the host owns their placement.
+  accessibility:
+    source: https://m3.material.io/components/badges/accessibility
+    statement: Badge information is announced after its navigation destination, not as an independent target.
+
+variants:
+  small:
+    status: implemented
+    content: none
+    color_token: md.comp.badge.color
+    color_role: error
+    size_token: md.comp.badge.size
+    size: 6
+    shape_token: md.comp.badge.shape
+    shape_role: corner.full
+  large:
+    status: implemented
+    content: label
+    color_token: md.comp.badge.large.color
+    color_role: error
+    size_token: md.comp.badge.large.size
+    minimum_size: 16
+    shape_token: md.comp.badge.large.shape
+    shape_role: corner.full
+    label:
+      color_token: md.comp.badge.large.label-text.color
+      color_role: on-error
+      typography_role: label-small
+      size: 11
+      line_height: 16
+      maximum_characters: 4
+
+placement:
+  navigation_item:
+    owner: NavigationItem
+    status: implemented
+    position: icon-upper-trailing
+    prose_anchor:
+      # Prose only, like every other figure under project_policy: the badge
+      # token namespace carries size, shape and colour and nothing positional.
+      # "distance from top trailing icon corner to bottom leading badge corner
+      # (HxW)". The sentence names two corners, so H reaches the badge's BOTTOM
+      # and W reaches its LEADING edge:
+      #
+      #   badge bottom  = icon top      + block
+      #   badge leading = icon trailing - inline
+      #
+      # Reading block as the badge's top instead sinks it into the middle of the
+      # icon, which is what an earlier pass did. Pinned to the icon's top
+      # trailing corner this is a translate of the badge's own size minus these
+      # figures, so the leading edge holds however wide the label makes it.
+      small:
+        block: 6
+        inline: 6
+      large:
+        block: 14
+        inline: 12
+    source: https://m3.material.io/components/badges/specs
+    coordinate_mapping: resolved
+    large_badge_on_horizontal_item: trailing-edge
+    small_badge_on_horizontal_item: icon-upper-trailing
+    rationale: >-
+      A vertical item carries its label underneath, so a badge on the icon has
+      nothing to collide with and stays there at any width. A horizontal item is
+      the case the guidelines name and answer.
+
+  tabs:
+    owner: Tabs
+    status: implemented
+    inline_label_gap: 4
+    stacked_icon_overlap: 6
+  app_bar:
+    owner: AppBar
+    status: deferred-host-integration
+    position: unresolved
+
+accessibility:
+  badge_focusable: false
+  badge_aria_hidden: true
+  host_description_required: true
+  count_example: "9"
+  status_example: New notification
+
+project_policy:
+  label_overflow:
+    status: implemented
+    behavior: truncate-to-three-characters-plus
+    rationale: M3 limits badge labels to four characters and asks hosts to truncate as needed.
+  unpublished_geometry:
+    max_character_width: 34
+    large_inline_padding: 4
+    # The navigation anchors belong to this same class and are recorded once,
+    # beside the placement they describe, rather than copied here.
+    anchors: placement.navigation_item.prose_anchor
+    status: implemented-local-policy
+    rationale: >-
+      M3 publishes the maximum-character width, the inline padding and the
+      navigation anchors in the measurements prose only. The badge token
+      namespace carries size, shape and colour; nothing in it is positional.
+
+discrepancies:
+  - subject: badge shape wording
+    prose: Small badges have a 3dp radius and large badges have an 8dp radius.
+    tokens: Both live shape tokens reference corner.full.
+    resolution: The 6dp and 16dp square boxes are circles either way; corner.full is authoritative for expandable badges.
+  - subject: large badge on a horizontal navigation item
+    prose: >-
+      Placement says "when an icon with a badge is followed by text or another
+      element, place a large badge at the trailing edge", and marks a large badge
+      overlapping a trailing element Don't -- use the trailing edge or a small
+      badge instead.
+    tokens: >-
+      The navigation bar and navigation rail anatomy diagrams draw a large badge
+      on a horizontal item's icon, reaching across the label. That is the picture
+      Placement marks Don't.
+    resolution: >-
+      They agree until the badge is wide enough to collide, which is the very
+      condition Placement names. A one-digit badge ends 4dp past a 24dp icon and
+      clears the label; a maximum-count badge ends 22dp past it and cannot. This
+      product follows Placement, because it is the section that states a rule
+      rather than drawing an example: a horizontal item sends a large badge to
+      the trailing edge and keeps a small one on the icon.
+  - subject: maximum-character geometry
+    prose: A maximum-character large badge measures 16x34dp.
+    tokens: No live token publishes its width, host offsets, or inline padding.
+    resolution: Record the figures as policy and keep them outside the Badge visual token namespace.
+
+token_families:
+  implemented_now:
+    - md.comp.badge.{color,shape,size}
+    - md.comp.badge.large.{color,shape,size,label-text.*}
+  deferred_with_contract: []
+
+evidence_not_product:
+  lab_audit: products/reference-implementations/axismundi-lab/modules/_records/BADGE-RECORD-AUDIT.md
+  reason: The lab has an audit record and style guide entry, not an independently implemented Badge module.

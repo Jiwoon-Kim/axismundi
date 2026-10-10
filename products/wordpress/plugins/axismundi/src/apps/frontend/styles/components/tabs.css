@@ -13,6 +13,7 @@
 		--md-comp-tabs-focus-indicator-thickness: var( --md-sys-state-focus-indicator-thickness, 3px );
 		--md-comp-tabs-focus-indicator-offset: var( --md-sys-state-focus-indicator-inner-offset, -3px );
 		--md-comp-tabs-icon-label-gap: var( --md-sys-measurement-space100 );
+		--md-comp-tabs-stacked-icon-badge-overlap: 6px;
 		--md-comp-tabs-scrollable-leading-offset: 52px;
 		--ax-tabs-container-height: var( --md-comp-primary-navigation-tab-container-height );
 		--ax-tabs-icon-size: var( --md-comp-primary-navigation-tab-icon-size );
@@ -161,6 +162,7 @@
 	}
 
 	.ax-tab-bar__icon {
+		position: relative;
 		display: inline-grid;
 		place-items: center;
 		inline-size: var( --ax-tabs-icon-size );
@@ -169,6 +171,39 @@
 
 	.ax-tab-bar__icon .material-symbols-outlined {
 		font-size: var( --ax-tabs-icon-size );
+	}
+
+	/*
+	 * Tabs own badge placement; Badge itself owns no host geometry. The stacked
+	 * badge's leading edge overlaps its icon's trailing edge by 6dp. Pinning
+	 * its box to the corner and moving it outward by its own width preserves
+	 * that overlap for a one-digit circle and a wider maximum-count stadium.
+	 */
+	.ax-tab-bar__badge {
+		position: absolute;
+		display: grid;
+		/*
+		 * An absolute box with one inset shrinks to fit, and shrink-to-fit is
+		 * capped by the containing block -- here the 24dp icon. A maximum-count
+		 * badge is 34dp, so without this it is squeezed to 24 and its own label
+		 * is cut off, which is the one thing the guidelines say not to let
+		 * happen to a badge.
+		 */
+		inline-size: max-content;
+		inset-block-start: 0;
+		inset-inline-end: 0;
+		translate: calc( 100% - var( --md-comp-tabs-stacked-icon-badge-overlap ) ) 0;
+	}
+
+	[dir='rtl'] .ax-tab-bar__badge {
+		translate: calc( -100% + var( --md-comp-tabs-stacked-icon-badge-overlap ) ) 0;
+	}
+
+	/* Icon-to-label is 8dp; the label and its inline Badge are a 4dp group. */
+	.ax-tab-bar__label-with-badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
 	}
 
 	/*

@@ -214,9 +214,13 @@ def main() -> int:
         and structure["label_inside_indicator"]["horizontal"] is True,
         "the recorded label placement no longer matches the published anatomy",
     )
+    # A horizontal item renders the label through `labelGroup`, which is the
+    # label alone unless a large badge has been sent to the trailing edge and
+    # has to travel with it. Vertical keeps the bare label below the indicator.
     report.check(
-        "'horizontal' === axis ? labelSlot : null" in item_js
-        and "'vertical' === axis ? labelSlot : null" in item_js,
+        "'horizontal' === axis ? labelGroup : null" in item_js
+        and "'vertical' === axis ? labelSlot : null" in item_js
+        and "labelGroup = trailingBadge ?" in item_js,
         "navigation-item.js no longer places the label by orientation",
     )
     for box in ("item_container", "active_indicator"):

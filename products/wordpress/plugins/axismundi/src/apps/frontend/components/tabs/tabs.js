@@ -219,6 +219,9 @@ function TabBar( {
 		if ( ! tab.label && ! tab.name ) {
 			warning( `Tabs: tab "${ tab.id }" has no label, so it needs a name for assistive technology.` );
 		}
+		if ( tab.badge && ! tab.badgeDescription ) {
+			warning( `Tabs: tab "${ tab.id }" has a Badge, so it needs a badgeDescription for assistive technology.` );
+		}
 	} );
 	const enabledTabs = tabs.filter( ( tab ) => ! tab.disabled );
 
@@ -280,13 +283,19 @@ function TabBar( {
 			{ tabs.map( ( tab ) => {
 				const selected = activeId === tab.id;
 				const focused = focusedId === tab.id;
+				const iconAnchorsBadge = tab.icon && ( 'primary' === variant || ! tab.label );
 				const tabId = `${ id }-tab-${ tab.id }`;
 				const panelId = `${ id }-panel-${ tab.id }`;
+				const accessibleName = tab.badgeDescription
+					? [ tab.label ?? tab.name, tab.badgeDescription ].filter( Boolean ).join( ', ' )
+					: tab.label
+						? undefined
+						: tab.name;
 
 				return (
 					<button
 						aria-controls={ panelId }
-						aria-label={ tab.label ? undefined : tab.name }
+						aria-label={ accessibleName }
 						aria-selected={ selected }
 						className="ax-tab-bar__tab"
 						data-layout={ tab.label ? undefined : 'icon-only' }
@@ -309,8 +318,18 @@ function TabBar( {
 						   the outgoing rectangle can still be measured.
 						 */ }
 						<span className="ax-tab-bar__content">
-							{ tab.icon && <span aria-hidden="true" className="ax-tab-bar__icon">{ tab.icon }</span> }
-							{ tab.label && <span className="ax-tab-bar__label">{ tab.label }</span> }
+							{ tab.icon && (
+								<span aria-hidden="true" className="ax-tab-bar__icon">
+									{ tab.icon }
+									{ iconAnchorsBadge && tab.badge ? <span className="ax-tab-bar__badge">{ tab.badge }</span> : null }
+								</span>
+							) }
+							{ tab.label && (
+								<span className="ax-tab-bar__label-with-badge">
+									<span className="ax-tab-bar__label">{ tab.label }</span>
+									{ ! iconAnchorsBadge && tab.badge ? <span className="ax-tab-bar__inline-badge">{ tab.badge }</span> : null }
+								</span>
+							) }
 							{ 'primary' === variant && <span aria-hidden="true" className="ax-tab-bar__indicator" /> }
 						</span>
 						{ 'primary' !== variant && <span aria-hidden="true" className="ax-tab-bar__indicator" /> }

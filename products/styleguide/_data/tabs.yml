@@ -106,6 +106,8 @@ shared:
     inner_offset: -3
   spacing:
     icon_label_gap: 8
+    label_badge_gap: 4
+    stacked_icon_badge_overlap: 6
 
 # Figma lists Layout as three values but ships five layers: no Secondary /
 # Icon only. The token table agrees in one direction and not the other --
@@ -199,8 +201,15 @@ interaction_contract:
     reduced_motion: fade
     # No M3 token publishes this; the values are material-web's own tab.
     source: https://github.com/material-components/material-web/blob/main/tabs/internal/tab.ts
+  badge:
+    status: implemented
+    owner: Badge
+    inline_label_gap: 4
+    stacked_icon_overlap: 6
+    primary_icon_and_label: icon-corner
+    secondary_icon_and_label: inline-after-label
+    accessible_description_on_tab: true
   deferred:
-    - badge
     - panel-swipe-navigation
     - url-routing
     - density

@@ -44,7 +44,7 @@
  * neither can enforce alone; `scaffold.css` satisfies it by swapping at 600px.
  *
  * @param {Object} props Component props.
- * @param {Array<{id: string, label: string, icon: import('@wordpress/element').ReactNode, href: string, badge?: import('@wordpress/element').ReactNode}>} props.destinations Three to seven destinations, in fixed order.
+ * @param {Array<{id: string, label: string, icon: import('@wordpress/element').ReactNode, href: string, badge?: import('@wordpress/element').ReactNode, badgeDescription?: string}>} props.destinations Three to seven destinations, in fixed order.
  * @param {string} props.activeId `id` of the current destination. One is always active.
  * @param {string} props.label Accessible name for the navigation landmark.
  * @param {'collapsed'|'expanded'} [props.variant='collapsed'] Published variant.
@@ -209,7 +209,7 @@ export function NavigationRail( {
 			{ fab ? <div className="ax-nav-rail__fab">{ fab }</div> : null }
 
 			<div className="ax-nav-rail__items" ref={ itemsRef } onKeyDown={ moveFocus }>
-				{ destinations.map( ( { id, label: destination, icon, href, badge } ) => (
+				{ destinations.map( ( { id, label: destination, icon, href, badge, badgeDescription } ) => (
 					<NavigationItem
 						key={ id }
 						className="ax-nav-rail__item"
@@ -217,6 +217,7 @@ export function NavigationRail( {
 						label={ destination }
 						href={ href }
 						badge={ badge }
+						badgeDescription={ badgeDescription }
 						orientation={ axis }
 						active={ id === activeId }
 					/>

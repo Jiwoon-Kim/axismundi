@@ -176,7 +176,23 @@ moderation capability
 
 ## 7. 미결 — 프로젝트 소유자의 판정
 
-### A. 목록 query 소유권
+### A. 목록 query 소유권 — 닫힘 (2026-10-12)
+
+**판정됨.** `PLAN-OBJECT-LIST-QUERY.md`가 이 미결을 여덟 질문으로 정리해 판정을 받았다.
+아래 분석은 그 판정의 입력이므로 그대로 둔다.
+
+```txt
+질문이 둘이었다   Q1 공개 멤버십 = A5(이 index)   Q2 뷰어 권한 범위 = A4(capstone 합성)
+순서 권위         OP. Activities는 사건 피드만 소유한다
+기본 정렬         이 설치에 들어온 순서. declared created/updated는 선택 정렬
+identity          cache eviction이 identity를 지우지 않는다. rebuild는 upsert
+첫 인도           id · canonical URI · object_type · source_ref · 상태 · 공개성
+첫 소비자         공개 Object 컬렉션 (Admin Object DataView가 아니다)
+```
+
+아래 구현자 권고 중 **"index를 멤버십의 권위로만 쓰고 순서의 권위로는 쓰지 않는다"는
+철회됐다.** Activity 순서는 사건의 순서이지 객체의 순서가 아니며, `Update`나 `Announce`
+하나가 객체의 자리를 바꾼다. 판정안 4-3이 그 자리를 자세히 적는다.
 
 **목록은 제품 저장소를 가로질러 질의**해야 하고, OP는 다른 제품의 저장소를 읽지 않는다(§1).
 그 이상은 결정되지 않았다.

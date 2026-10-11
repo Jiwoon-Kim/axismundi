@@ -2,8 +2,37 @@
 
 ## 상태
 
-**판정 대기. 2026-10-12.** `DECISION-OBJECT-READ-SURFACES.md` §7-A가 2026-10-05부터 열어 둔
-미결이고, 이 문서는 그 판정을 받기 위한 정리다. 판정은 소유자의 것이다.
+**채택됨. 2026-10-12.** `DECISION-OBJECT-READ-SURFACES.md` §7-A가 2026-10-05부터 열어 둔
+미결이고, 이 문서가 그 판정을 받았다. 7절의 여덟 질문에 **모두 예**로 답했다.
+
+```txt
+Q-1  예   공개 Object 멤버십과 viewer 권한 범위를 분리한다
+Q-2  예   Q1은 A5 Object index, Q2는 A4 read-composition
+Q-3  예   Object 목록의 순서 권위는 OP. Activities는 사건 피드만 소유한다
+Q-4  예   기본값은 first-observed 순서. declared created/updated는 후속 선택 정렬
+Q-5  예   cache eviction은 identity 삭제가 아니다
+Q-6  예   rebuild = upsert, id와 canonical URI 불변을 migration 핀으로
+Q-7  예   첫 인도는 id · canonical URI · object_type · source_ref · 상태 · 공개성
+Q-8  예   Object index의 첫 실제 소비자는 공개 Object 컬렉션
+```
+
+**§7-A는 이것으로 닫힌다. A′(단일 조회 계약)는 닫히지 않는다** — viewer authorization,
+local visibility 평가, remote cache의 공개 정책, API 버전이 그대로 열려 있고, Admin
+inspector가 그것들의 첫 소비자다.
+
+구현은 아직 하지 않았다. 아래가 고정된 실행 순서다.
+
+```txt
+M3 컴포넌트 완성
+  -> Admin Actors DataView + WPDS list-detail + Actor JSON detail
+  -> Object card와 공개 Object 컬렉션이 실제로 필요해짐
+  -> 이때 Q1/A5 첫 인도 구현
+  -> Admin Object DataView가 필요해질 때 Q2/A4 구현
+```
+
+**Q-8은 Admin Actors DataView를 막지 않는다.** Actor는 이미 통합 원장(`wp_ax_identities` +
+`wp_ax_actors`)을 갖고 있으므로 Object index를 기다리지 않는다. 기다리는 것은 Admin
+**Object** DataView이고, 그것은 Q2/A4가 실제로 필요해질 때다.
 
 §7-A는 이미 다섯 안과 각각의 대가, A5의 대가 셋, 채택 trigger, 그리고 구현자 권고까지
 적어 두었다. **이 문서가 더하는 것은 셋이다.**
@@ -339,6 +368,9 @@ DataView가 아니다.** 둘 중 하나를 바꿔야 한다.
 한 줄이 대가 3번과 "원격 `published` 신뢰" 문제 전체를 작업 범위에서 들어낸다.
 
 ## 7. 판정 — 여덟 개의 질문
+
+**2026-10-12에 여덟 모두 예로 판정됐다(상태 절).** 아래는 질문의 원형과,
+각 질문이 아니오였을 때 열렸을 것을 남겨 둔 것이다.
 
 판정은 소유자의 것이다. 각 질문은 **예/아니오로 답할 수 있는 형태**로 적었고, 아니오일 때
 무엇이 열리는지도 함께 적었다. 그래야 거절이 공백이 되지 않는다.

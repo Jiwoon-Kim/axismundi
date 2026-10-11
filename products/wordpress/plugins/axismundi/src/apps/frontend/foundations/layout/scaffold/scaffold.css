@@ -1,10 +1,19 @@
 @layer axismundi.layouts {
 	.ax-scaffold {
+		/*
+		 * Safety regions are window geometry, so the Scaffold owns them. Bars sit
+		 * outside the inset and panes never spend it as primary content.
+		 */
+		--ax-scaffold-safe-area-block-start: env( safe-area-inset-top, 0px );
+		--ax-scaffold-safe-area-block-end: env( safe-area-inset-bottom, 0px );
+
+		box-sizing: border-box;
 		display: grid;
 		grid-template-areas: "content";
 		grid-template-columns: minmax( 0, 1fr );
 		grid-template-rows: minmax( 0, 1fr );
 		min-block-size: 100dvb;
+		padding-block: var( --ax-scaffold-safe-area-block-start ) var( --ax-scaffold-safe-area-block-end );
 		background: var( --md-sys-color-surface );
 		color: var( --md-sys-color-on-surface );
 	}
@@ -60,6 +69,9 @@
 		grid-area: app-bar;
 		display: block;
 		min-inline-size: 0;
+		position: sticky;
+		inset-block-start: var( --ax-scaffold-safe-area-block-start );
+		z-index: 1;
 	}
 
 	.ax-scaffold[data-has-bar] .ax-scaffold__bar {
@@ -77,6 +89,29 @@
 		.ax-scaffold[data-has-rail] .ax-scaffold__rail {
 			grid-area: rail;
 			display: block;
+			/*
+			 * A rail is perimeter chrome, not a second scroll container. Giving its
+			 * wrapper the viewport height keeps the rail available while the
+			 * document scrolls, without changing the document as scroll owner.
+			 */
+			position: sticky;
+			inset-block-start: var( --ax-scaffold-safe-area-block-start );
+			align-self: start;
+			/*
+			 * The window less both safety regions, not the whole window. The
+			 * Scaffold has already spent the insets as padding, so a rail of
+			 * `100dvb` is taller than the box it sits in by exactly that much
+			 * and its last destination ends up under the system UI -- which is
+			 * what the safety region exists to prevent.
+			 *
+			 * Measured by driving the two custom properties to a notched
+			 * phone's 44 and 34: the rail's bottom landed 44px past the
+			 * viewport once stuck, and 78px past it unstuck.
+			 */
+			block-size: calc(
+				100dvb - var( --ax-scaffold-safe-area-block-start ) -
+					var( --ax-scaffold-safe-area-block-end )
+			);
 		}
 
 		.ax-scaffold[data-has-bar] .ax-scaffold__bar {

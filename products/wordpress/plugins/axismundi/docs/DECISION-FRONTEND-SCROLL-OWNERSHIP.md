@@ -2,8 +2,9 @@
 
 ## 상태
 
-**제안됨. 2026-10-06.** codex의 읽기·측정 감사 결과를 근거로 한 판정이고, 감사 사실은 전부
-독립으로 다시 확인했다. 구현은 이 기록이 채택된 뒤다.
+**채택됨. 2026-10-11.** codex의 읽기·측정 감사 결과를 근거로 한 판정이고, 감사 사실은 전부
+독립으로 다시 확인했다. S1은 같은 날 구현됐다. `Scaffold`는 문서 scroll owner를 유지하고,
+app bar와 medium-and-up navigation rail은 그 문서에 sticky로 남는다.
 
 이 문서가 닫아야 하는 것은 하나가 아니라 넷이다 — scroll container 소유자, `AppBar`
 `scrolled`의 생산자, overlay escape 경계, inner scroll의 키보드 계약. 넷이 한 묶음인 이유는
@@ -136,12 +137,14 @@ JSX 핀 — 각 마커가 **정확히 1회** 등장함을 먼저 단정하고, �
 
 - **독립 pane 스크롤을 언제 켜는가.** 첫 다중 pane route가 생길 때이고, 그 route가 3-3을
   충족해야 한다. 지금 다중 pane은 데모에만 있다.
-- **sticky chrome의 구현.** 2026-10-06 현재 구현된 것은 document scroll 쪽 절반뿐이고,
-  chrome persistence는 0이다 — `position: sticky`가 아직 어디에도 없다. topology 표면의
-  main이 `140dvb`라 그 페이지를 스크롤하면 바로 보이므로 숨는 결함은 아니다.
-  rail이 스크롤에 남아야 하는 것은 확정이지만, app bar만 sticky인지
-  rail도 `block-size: 100dvb` + sticky인지는 측정으로 정한다. 특히 rail이 자기 내용보다 짧은
-  뷰포트에서 어떻게 되는지는 재야 한다.
+- **sticky chrome의 구현.** 닫힘. app bar와 medium-and-up rail 둘 다 sticky이고, 기준선은
+  `0`이 아니라 `--ax-scaffold-safe-area-block-start`다 — S2가 safety region을 Scaffold의
+  것으로 만들었으므로 chrome은 그 아래에 붙는다. rail은 `100dvb`가 아니라
+  `calc( 100dvb - safe-start - safe-end )`로 **두 safety region 사이에** 들어간다. 처음에는
+  `100dvb`로 구현됐고, 두 custom property를 notch 기기 값(44/34)으로 강제해서 재니 rail
+  하단이 뷰포트를 44px 넘어갔다. 둘 다 document scroll을 읽으며 inner scroll을 만들지 않는다.
+  topology 표면이 document scroll과 두 chrome의 viewport 좌표를 함께 출력한다. rail이
+  viewport보다 긴 경우의 탐색은 첫 실제 route의 navigation content가 생길 때 다시 측정한다.
 
 ## 관련 기록
 

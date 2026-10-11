@@ -104,6 +104,9 @@ function readTopology( root ) {
 		railRight: Math.round( railBounds.right ),
 		contentLeft: Math.round( contentBounds.left ),
 		appBarLeft: Math.round( appBarBounds.left ),
+		railTop: Math.round( railBounds.top ),
+		appBarTop: Math.round( appBarBounds.top ),
+		documentScrollTop: Math.round( document.scrollingElement?.scrollTop ?? 0 ),
 		scaffoldScrollContainers: scrollContainers.length,
 	};
 }
@@ -117,14 +120,18 @@ function TopologyFixture( { sizeClass } ) {
 
 		measure();
 		window.addEventListener( 'resize', measure );
-		return () => window.removeEventListener( 'resize', measure );
+		window.addEventListener( 'scroll', measure, { passive: true } );
+		return () => {
+			window.removeEventListener( 'resize', measure );
+			window.removeEventListener( 'scroll', measure );
+		};
 	}, [] );
 
 	return (
 		<section ref={ fixtureRef } className="ax-canonical-layout-fixture" aria-label="Scaffold topology">
 			<p className="ax-canonical-layout-fixture__readout" data-size-class={ sizeClass }>
 				window size class: <strong>{ sizeClass }</strong> &middot; { topology
-					? `rail right ${ topology.railRight }px · content left ${ topology.contentLeft }px · app bar left ${ topology.appBarLeft }px · scaffold scroll containers ${ topology.scaffoldScrollContainers }`
+					? `document scroll ${ topology.documentScrollTop }px · rail ${ topology.railRight }/${ topology.railTop }px · content left ${ topology.contentLeft }px · app bar ${ topology.appBarLeft }/${ topology.appBarTop }px · scaffold scroll containers ${ topology.scaffoldScrollContainers }`
 					: 'measuring topology…' }
 			</p>
 			<DemoShell

@@ -182,7 +182,9 @@ moderation capability
 아래 분석은 그 판정의 입력이므로 그대로 둔다.
 
 ```txt
-질문이 둘이었다   Q1 공개 멤버십 = A5(이 index)   Q2 뷰어 권한 범위 = A4(capstone 합성)
+질문이 둘이었다   Q1 Object index = A5           Q2 뷰어 권한 범위 = A4(capstone 합성)
+index의 저장 범위  투영한 객체 전부. publicly_listable은 익명 끝점 필터이지 입장 조건이 아니다
+강제              서버가 acting actor로 합성한다. 프론트의 필터는 표현이지 경계가 아니다
 순서 권위         OP. Activities는 사건 피드만 소유한다
 기본 정렬         이 설치에 들어온 순서. declared created/updated는 선택 정렬
 identity          cache eviction이 identity를 지우지 않는다. rebuild는 upsert

@@ -6,14 +6,14 @@
 미결이고, 이 문서가 그 판정을 받았다. 7절의 여덟 질문에 **모두 예**로 답했다.
 
 ```txt
-Q-1  예   공개 Object 멤버십과 viewer 권한 범위를 분리한다
+Q-1  예   Object index(전체 보존)와 viewer 권한 범위 목록을 분리한다
 Q-2  예   Q1은 A5 Object index, Q2는 A4 read-composition
 Q-3  예   Object 목록의 순서 권위는 OP. Activities는 사건 피드만 소유한다
 Q-4  예   기본값은 first-observed 순서. declared created/updated는 후속 선택 정렬
 Q-5  예   cache eviction은 identity 삭제가 아니다
 Q-6  예   rebuild = upsert, id와 canonical URI 불변을 migration 핀으로
 Q-7  예   첫 인도는 id · canonical URI · object_type · source_ref · 상태 · 공개성
-Q-8  예   Object index의 첫 실제 소비자는 공개 Object 컬렉션
+Q-8  예   첫 실제 소비자는 공개 Object 컬렉션 (저장 범위가 아니라 소비자)
 ```
 
 **§7-A는 이것으로 닫힌다. A′(단일 조회 계약)는 닫히지 않는다** — viewer authorization,
@@ -67,12 +67,30 @@ list-detail의 list pane이 전부 같은 것을 기다린다. 그리고 **기�
 목록은 두 종류이고, **같은 소유자가 둘 다 답할 수 없다.**
 
 ```txt
-Q1  공개 객체 목록        누가 이 컬렉션에 속하는가
-    공개 컬렉션, 공개 topic directory, 비로그인 탐색
+Q1  Object index          이 설치가 투영한 모든 객체의 identity · 상태 · 첫 관측 순서
+Q1-public                 그중 익명 공개 컬렉션에 실어도 되는 것
+                          공개 컬렉션, 공개 topic directory, 비로그인 탐색
 
-Q2  권한 범위 목록        이 뷰어가 무엇을 볼 수 있는가
-    Admin inspector, followers-only 컬렉션, group-members 목록
+Q2  권한 범위 목록         이 acting actor가 무엇을 볼 수 있는가
+                          Admin inspector, followers-only 컬렉션, group-members 목록
 ```
+
+> **2026-10-12 정정.** 초판은 Q1을 "공개 객체 목록"이라고 불렀다. 너무 좁았고, 읽으면
+> **index가 공개 객체만 담는다**는 뜻이 된다. 틀렸다 — index는 투영한 객체를 **전부**
+> 담아야 한다. Admin이 권한 있는 사용자에게 followers-only 글을 보여줘야 하고, cache가
+> 비워진 뒤 도착한 `Delete`도 가시성과 무관하게 같은 행을 찾아야 한다(4-4).
+>
+> **`publicly_listable`은 입장 조건이 아니라 끝점 필터다.** index에 넣을지가 아니라
+> 익명 공개 컬렉션에 실을지를 정한다.
+>
+> 실측 — 코드는 이미 그렇게 돼 있다. `axismundi_op_local_object_listing_projection_row()`가
+> `'listing_publicly_listable' => 'tombstone' !== $status && $visible`로 **플래그를 계산할
+> 뿐** 쓰기를 막지 않고, `axismundi_op_write_object_listing_projection()`의 `wpdb->replace()`는
+> 무조건 실행된다. 틀린 것은 스키마도 writer도 아니라 **이 문서의 이름**이었고, 정정에
+> 구현 변경이 따르지 않는다.
+>
+> 가르는 선 자체는 그대로다. **index가 private 객체를 저장하는 것과, index가 그것을 보여줄
+> 권한을 판정하는 것은 다른 일이다.** 앞은 A5, 뒤는 Q2/A4.
 
 §7-A는 이 구분을 A5의 대가 2번 안에 접어 두었다 — "`publicly_listable` 불리언 하나가
 authorization을 담지 못한다 … **이것이 A5의 진짜 경계 질문이다**". 맞는 지적이고, 이
@@ -110,15 +128,16 @@ actor와 visibility로 `to`/`cc`를 만들고, 거꾸로 audience를 visibility 
 
 §7-A의 표는 다섯을 택일로 늘어놓지만, 둘은 서로 다른 질문에 답하므로 함께 설 수 있다.
 
-### 4-1. Q1 — 공개 목록은 A5 (index)
+### 4-1. Q1 — Object index는 A5
 
 이유 셋.
 
 - **이미 절반 서 있다.** `wp_ax_object_index`가 존재하고, 원격 캐시 저장이 트랜잭션 안에서
   갱신하며, local backfill 구조가 있고, OP가 다른 제품의 저장소를 직접 join하지 않는다는
   §1의 경계가 지켜지고 있다.
-- **공개 범위에서는 대가 2번이 발생하지 않는다.** `publicly_listable` 불리언이 정확히
-  답할 수 있는 질문만 묻기 때문이다.
+- **대가 2번은 index가 권한을 판정하려 할 때만 발생한다.** index는 모든 객체를 저장하되
+  권한을 판정하지 않는다(2절 정정). `publicly_listable`은 익명 공개 끝점의 필터일 뿐이고,
+  그 필터가 답할 수 있는 질문만 그 끝점이 묻는다. 권한 범위 목록은 Q2/A4로 간다.
 - **index가 멤버십과 순서를 **둘 다** 갖는다.** §7-A의 구현자 권고는 "멤버십만 갖고 순서는
   Activities가" 쪽이었고, 이 문서의 초판도 그것을 따랐다. 4-3이 그 권고를 철회한다 —
   Activity 순서는 사건의 순서이지 객체의 순서가 아니다.
@@ -322,7 +341,29 @@ cache에 있고 index에는 해시·URI·타입·상태·플래그만 남는다.
 줄이고 싶어지면 그때 묻는 질문은 "행을 지울까"가 아니라 **"얼마나 오래된 tombstone을
 잊어도 되는가"**이고, 그것은 별도 보존 정책이다. 지금 정하지 않는다.
 
-### 4-5. 지금 채택하지 않는 것
+### 4-5. 강제는 서버가 한다 — 프론트는 관점을 고른다
+
+Q2가 "뷰어 권한"인데 그 뷰어가 누구인지는 프론트가 정한다. 둘을 섞으면 위험하므로 경계를
+적는다.
+
+```txt
+프론트    현재 acting actor로 "내게 보이는 목록"을 요청한다          관점의 선택
+서버      acting actor 권한으로 각 제품의 can_view + query를 합성     강제
+프론트    허용된 결과를 feed · card · DataView로 표현한다            표현
+```
+
+**프론트에서만 거르면 안 된다.** 거르기 전에 이미 REST 응답에 followers-only 객체가 실려
+나간 것이고, 응답은 되돌릴 수 없다. 프론트의 필터는 표현이지 보안 경계가 아니다.
+
+그리고 서버는 acting actor를 **프론트에게 듣지 않아도 안다.** 실측:
+`axismundi_actors_acting_actor( ?int $user_id )`가 user meta(`ax_acting_actor_identity`)로
+해소한다. 프론트가 보내는 것은 관점의 *전환*이지 신원 주장이 아니다 — 신원을 요청에서
+받는 순간 위조 가능해진다.
+
+Admin도 같은 경로를 쓴다. 관리자는 acting actor가 관리자·소유자일 뿐이고 **별도 우회
+경로를 갖지 않는다.** 권한 경로가 둘이면 둘 중 하나는 반드시 뒤처진다.
+
+### 4-6. 지금 채택하지 않는 것
 
 **Q2의 구현은 지금 하지 않는다.** 판정만 받는다. §7-A의 "없는 부하를 근거로 있는 비용을
 지불하지 않는다"가 그대로 적용된다 — Admin DataView가 실제로 착수될 때 A4를 세운다.
@@ -381,7 +422,8 @@ DataView가 아니다.** 둘 중 하나를 바꿔야 한다.
 
 ### 구조
 
-**Q-1. 목록 질문을 Q1(공개 멤버십)과 Q2(뷰어 권한)로 가르는가?**
+**Q-1. 목록 질문을 Q1(Object index)과 Q2(뷰어 권한 범위)로 가르는가?**
+(초판은 Q1을 "공개 멤버십"이라 적었다. 2절의 정정을 보라 — index는 전부 담는다.)
 아니오면 다섯 안 중 하나를 택일해야 하고, A5 단독은 Q2를 답할 수 없다는 3절의 실측이
 그대로 남는다.
 

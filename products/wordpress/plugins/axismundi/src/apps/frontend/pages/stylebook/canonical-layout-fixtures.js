@@ -1,5 +1,5 @@
 import { FeedLayout } from '../../foundations/layout/canonical-examples/feed';
-import { ListDetailLayout } from '../../foundations/layout/canonical-examples/list-detail';
+import { ListDetailLayout, useListDetailPaneCount } from '../../foundations/layout/canonical-examples/list-detail';
 import { Pane } from '../../foundations/layout/panes/pane';
 import { Scaffold } from '../../foundations/layout/scaffold';
 import { useWindowSizeClass } from '../../foundations/layout/breakpoints/use-window-size-class';
@@ -233,6 +233,18 @@ function FeedFixture() {
 }
 
 function ListDetailFixture() {
+	/*
+	 * The fixture follows the two rules the layout cannot render for it, using
+	 * the pane count the layout resolves:
+	 *
+	 *   "A back button appears in detail view only for single-pane layouts."
+	 *   "A selected state appears only in list view for two-pane layouts."
+	 *
+	 * Both the layout and this caller consume the same hook, so 840 stays in the
+	 * layout module rather than becoming a third implementation.
+	 */
+	const singlePane = 1 === useListDetailPaneCount();
+
 	return (
 		<DemoShell
 			activeId="explore"
@@ -247,7 +259,7 @@ function ListDetailFixture() {
 						<DemoPane className="ax-canonical-layout-demo__list">
 							<p className="ax-canonical-layout-demo__eyebrow">Topics</p>
 							<nav aria-label="Topics">
-								<a href="#open-source" aria-current="page"><strong>Open source publishing</strong><span>18 new posts</span></a>
+								<a href="#open-source" aria-current={ singlePane ? undefined : 'page' }><strong>Open source publishing</strong><span>18 new posts</span></a>
 								<a href="#civic"><strong>Civic technology</strong><span>7 new posts</span></a>
 								<a href="#local"><strong>Local communities</strong><span>24 new posts</span></a>
 								<a href="#research"><strong>Research notes</strong><span>4 new posts</span></a>
@@ -257,6 +269,14 @@ function ListDetailFixture() {
 					detail={ (
 						<DemoPane className="ax-canonical-layout-demo__detail">
 							<article>
+								{ singlePane ? (
+									<IconButton
+										className="ax-canonical-layout-demo__back"
+										label="Back to topics"
+										icon={ <Icon name="arrow_back" /> }
+										variant="standard"
+									/>
+								) : null }
 								<p className="ax-canonical-layout-demo__eyebrow">Topic</p>
 								<h2>Open source publishing</h2>
 								<p>People are comparing ways to keep publication, discovery, and local ownership connected without making every reader carry the same data model.</p>

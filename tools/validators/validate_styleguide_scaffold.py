@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -179,6 +180,47 @@ def main() -> int:
                  "the app-bar control no longer reports the rail it changes")
     report.check("variant={ railVariant }" in fixture and "id={ TOPOLOGY_RAIL_ID }" in fixture,
                  "the app-bar experiment no longer controls the rendered rail")
+
+    # --- list-detail: the pane count has to be sayable ----------------------
+    # Two of M3's rules for this topology are the caller's to render and need a
+    # number the layout alone knows: "a back button appears in detail view only
+    # for single-pane layouts", and "a selected state appears only in list view
+    # for two-pane layouts". Measured before `data-panes` existed -- the
+    # fixture announced `aria-current="page"` at 420px while the detail it
+    # named was not on screen.
+    list_detail_dir = ROOT / "products/wordpress/plugins/axismundi/src/apps/frontend/foundations/layout/canonical-examples/list-detail"
+    list_detail = (list_detail_dir / "index.js").read_text(encoding="utf-8")
+    list_detail_css = (list_detail_dir / "list-detail.css").read_text(encoding="utf-8")
+    viewport = json.loads(
+        (ROOT / "products/wordpress/plugins/axismundi/src/apps/frontend/foundations/layout/breakpoints/viewport.json").read_text(encoding="utf-8")
+    )["windowSizeClasses"]
+
+    report.check("data-panes={ panes }" in list_detail,
+                 "the list-detail layout no longer publishes how many panes it shows")
+    report.check("export function useListDetailPaneCount" in list_detail,
+                 "the list-detail layout no longer shares its resolved pane count with callers")
+    report.check("import viewport from '../../breakpoints/viewport.json'" in list_detail,
+                 "the list-detail layout retypes a breakpoint instead of reading viewport.json")
+
+    # The threshold is in two places by design -- a media query for the layout,
+    # a number for React -- so the two are held to the same source.
+    two_pane = viewport["expanded"]["minWidth"]
+    three_pane = viewport["extraLarge"]["minWidth"]
+    report.check(f"( min-width: {two_pane}px )" in list_detail_css,
+                 f"the list-detail stylesheet no longer turns two-pane at viewport.json's {two_pane}px")
+    report.check(f"( min-width: {three_pane}px )" in list_detail_css,
+                 f"the list-detail stylesheet no longer turns three-pane at viewport.json's {three_pane}px")
+    report.check("TWO_PANE_FROM = " + chr(39) + "expanded" + chr(39) in list_detail and "THREE_PANE_FROM = " + chr(39) + "extraLarge" + chr(39) in list_detail,
+                 "the list-detail layout names size classes the stylesheet does not turn on")
+
+    # And the fixture follows the two rules through the layout's shared decision,
+    # rather than restating its threshold.
+    report.check("useListDetailPaneCount()" in fixture,
+                 "the list-detail fixture re-derives pane count instead of consuming the layout hook")
+    report.check("aria-current={ singlePane ? undefined : 'page' }" in fixture,
+                 "the list-detail fixture shows a selected state in a single-pane layout again")
+    report.check("ax-canonical-layout-demo__back" in fixture,
+                 "the list-detail fixture lost the single-pane back button")
 
     if report.problems:
         for problem in report.problems:

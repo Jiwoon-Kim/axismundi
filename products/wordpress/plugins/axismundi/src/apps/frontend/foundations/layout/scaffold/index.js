@@ -1,4 +1,7 @@
 import { Pane } from '../panes/pane';
+import warning from '@wordpress/warning';
+
+const APP_BAR_SCOPES = [ 'pane', 'window' ];
 
 /**
  * Places application chrome around a content pane. The rail is a sibling of
@@ -20,8 +23,12 @@ import { Pane } from '../panes/pane';
  * @param {Object} props Component props.
  * @param {import('@wordpress/element').ReactNode} props.children Primary content.
  * @param {import('@wordpress/element').ReactNode} [props.appBar] Top application bar.
+ * @param {'pane'|'window'} [props.appBarScope='pane'] Whether the app bar spans
+ * the content pane or the full Scaffold window.
  * @param {import('@wordpress/element').ReactNode} [props.navigationBar] Compact navigation.
  * @param {import('@wordpress/element').ReactNode} [props.navigationRail] Medium-and-up navigation.
+ * @param {import('@wordpress/element').ReactNode} [props.companion] Trailing rail content.
+ * @param {string} [props.companionLabel] Accessible name for the companion rail landmark.
  * @param {import('@wordpress/element').ReactNode} [props.supporting] Expanded supporting content.
  * @param {import('@wordpress/element').ReactNode} [props.sheet] Standard side sheet column.
  * @param {string} [props.className] Product-level wrapper class.
@@ -32,16 +39,29 @@ export function Scaffold( {
 	appBar,
 	navigationBar,
 	navigationRail,
+	companion,
+	companionLabel,
 	supporting,
 	sheet,
+	appBarScope = 'pane',
 	className,
 } ) {
+	const barScope = APP_BAR_SCOPES.includes( appBarScope ) ? appBarScope : 'pane';
+	if ( barScope !== appBarScope ) {
+		warning( `Scaffold: unknown appBarScope "${ appBarScope }"; using pane.` );
+	}
+	if ( companion && ! companionLabel ) {
+		warning( 'Scaffold: companionLabel is required when companion is present.' );
+	}
+
 	return (
 		<div
 			className={ [ 'ax-scaffold', className ].filter( Boolean ).join( ' ' ) }
 			data-has-app-bar={ appBar ? '' : undefined }
+			data-app-bar-scope={ appBar ? barScope : undefined }
 			data-has-bar={ navigationBar ? '' : undefined }
 			data-has-rail={ navigationRail ? '' : undefined }
+			data-has-companion={ companion ? '' : undefined }
 			data-has-supporting={ supporting ? '' : undefined }
 			data-has-sheet={ sheet ? '' : undefined }
 		>
@@ -51,8 +71,14 @@ export function Scaffold( {
 			{ navigationRail ? (
 				<div className="ax-scaffold__rail">{ navigationRail }</div>
 			) : null }
+			{ 'window' === barScope && appBar ? (
+				<div className="ax-scaffold__app-bar">{ appBar }</div>
+			) : null }
+			{ companion ? (
+				<aside className="ax-scaffold__companion" aria-label={ companionLabel || undefined }>{ companion }</aside>
+			) : null }
 			<Pane className="ax-scaffold__content">
-				{ appBar ? (
+				{ 'pane' === barScope && appBar ? (
 					<div className="ax-scaffold__app-bar">{ appBar }</div>
 				) : null }
 				<div className="ax-scaffold__body">

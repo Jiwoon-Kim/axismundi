@@ -3,7 +3,8 @@
 ## 상태
 
 **진행 중. 2026-10-11.** 4절은 소유자 판정이 필요하다. 2절과 3절은 읽기이고, 5절은 그에서
-따라 나온다. S1(sticky chrome)과 S2(safety region)는 같은 날 구현·검증됐다.
+따라 나온다. S1(sticky chrome)과 S2(safety region)는 같은 날 구현·검증됐다. Google Chat의
+B형 토폴로지를 대조한 뒤 S3' (window-scoped bar + companion rail)도 구현됐다.
 
 이 문서는 `SOURCE-M3-SCAFFOLD-RAW.md`를 읽고 쓴다. 그 세 페이지(`bars`, `rails`, `panes`)는
 이 저장소의 레이아웃 캡처에서 빠져 있던 자리였고, 하필 Scaffold anatomy 그 자체였다.
@@ -47,7 +48,7 @@ bars    top (app bar)       __app-bar                            있음
         bottom (nav bar)    __bar                                있음
         safety region       —                                    없음
 rails   leading (nav rail)  __rail                               있음
-        trailing(companion) —                                    없음
+        trailing(companion) __companion                          있음 (S3')
         toolbar (bar 위)    —                                    없음
         compact top/bottom  —                                    없음 (FAB·chat input 자리)
 panes   1~3                 __main · __supporting · __sheet      있음
@@ -99,17 +100,42 @@ route가 Surface의 modality로 고른다"이다.
 
 ## 4. 결정 제안
 
-### 4-1. 없는 rail 영역은 만들지 않는다. 이름만 정한다
+### 4-1. companion rail은 만들고, 나머지 rail 영역은 이름만 정한다
 
-소유자 판정. `Scaffold`는 companion rail, toolbar rail, compact rail 영역을 **지금 만들지
-않는다.** 셋 다 소비자가 없다 — toolbar도 FAB도 chat input도 아직 컴포넌트가 아니다.
+**이 절은 초고에서 "만들지 않는다"였고, 벗어난 자리다.** 벗어난 이유와 그 한계를 적어
+둔다. 지우고 "원래 만들기로 했다"로 고치면 다음 사람이 같은 판단을 근거 없이 반복한다.
+
+`__companion`은 Google Chat/Contacts의 B형 토폴로지에서 실제 참조가 생겼으므로 만든다.
+Chat에서 `role="complementary"` 56dp 띠로 실측됐다. 다만 **참조는 소비자가 아니다** —
+이 제품에는 아직 그 자리에 들어갈 컴포넌트가 없다. 그래서 만드는 것은 **슬롯뿐**이고,
+그것도 `data-has-companion`으로 게이트되어 주지 않으면 grid에 열이 생기지 않는다.
+
+슬롯을 지금 만드는 것이 값싼 이유는 하나다. B형을 넣느라 grid 영역 지도 넷을 이번에
+다시 썼고, companion 열은 같은 지도의 한 칸이다. 나중에 넣으면 그 넷을 또 건드린다.
+
+**fixture가 슬롯을 채우게 하지는 않는다.** 한때 topology fixture가 `CompanionTools`라는
+데모를 렌더하고 검증기가 그것을 핀했는데, 그러면 제품 소비자가 없는 영역이 **스캐폴드를
+측정하기 위한 전제조건**이 된다. `PLAN-FRONTEND-CANONICAL-LAYOUTS.md`의 승격 기준 4번이
+그 자리를 겨냥한다 — "호스트 하나로 그어진 경계는 추론이다". 지금 readout은 companion이
+있으면 보고하고 없으면 `none`이라고 적는다.
+`appBarScope="window"`일 때 전역 app bar가 전체 grid 첫 행을 차지하고, leading rail,
+content, companion rail은 그 아래 두 번째 행을 나눈다. 기본값은 기존 route를 바꾸지 않는
+`"pane"`이다. window scope의 기본은 small app bar(64px)이고, taller global bar route는
+`--ax-scaffold-window-app-bar-block-size`를 Scaffold에 주어 rail의 sticky 기준을 같은 높이로
+맞춘다. rail이 AppBar 구현을 추측하지 않게 하려는 공개 geometry seam이다.
+
+Topology fixture는 companion을 채우지 않는다. 대신 `extraLarge`에서 expanded이고 그 아래에서는
+collapsed인 rail을 app bar 메뉴 버튼으로 전환해 본다. 이것은 route 정책이나 Scaffold API가 아니라
+M3가 큰 breakpoint에서 expanded rail을 허용한다는 문장을 실제 B형 grid에서 관측하는 실험이다.
+
+toolbar rail과 compact rail 영역은 **지금 만들지 않는다.** 둘은 여전히 소비자가 없다 —
+toolbar도 FAB도 chat input도 아직 컴포넌트가 아니다.
 
 소비자 없는 grid 영역은 모양을 추측으로 정하게 되고, `Scaffold`가 컴포넌트를 제조하지
 않는다는 규칙과도 어긋난다. 반면 **이름은 지금 정해 둔다.** 이름을 바꾸는 것은 비싸고
 (공개 CSS 클래스), 정해 두는 것은 공짜다.
 
 ```txt
-__companion   trailing rail. M3의 발행 명칭 "companion rail"
 __toolbar     navigation bar 위의 rail 영역
 ```
 
@@ -131,9 +157,10 @@ content"라고 쓴다.
 grid가 이미 표현하고 있다 — `auto`가 fixed, `minmax( 0, 1fr )`가 flexible이다. 새 메커니즘이
 아니라 이미 선 것에 M3의 이름을 붙이는 일이다.
 
-하나는 강제한다: **flexible pane이 최소 하나.** M3가 "All layouts need at least one flexible
-pane"이라고 쓰고, 이것은 어기면 레이아웃이 조용히 깨지는 종류다. 개발 중 `warning` 하나로
-알린다. 렌더 중 throw하지 않는다는 규약 그대로다.
+**flexible pane 최소 하나는 구조적으로 보장된다.** `Scaffold`는 임의 pane 배열을 받지 않고
+`main` / `supporting` / `sheet` 세 슬롯만 만들며, `main`은 모든 grid map에서 `minmax( 0, 1fr )`
+이다. 따라서 0개 flexible pane이라는 입력 상태가 존재하지 않는다. 도달하지 않는 개발 경고는
+추가하지 않는다 — 구조를 바꿔 arbitrary pane API가 생기는 시점에만 다시 연다.
 
 ### 4-4. pane 상한 3은 강제하고, breakpoint별 권장 수는 강제하지 않는다
 
@@ -142,7 +169,8 @@ expanded·large 2 또는 1 / extra-large 2 또는 1·3). **권장은 route의 �
 `DECISION-FRONTEND-ADAPTIVE-LAYOUT.md`가 "어떤 destination이 몇 개의 pane을 쓰는가"를 route에
 맡겼다.
 
-반면 "Don't use more than three panes"는 상한이고 예외가 없다. 그것만 강제한다.
+`Scaffold`의 body grid area도 정확히 `main` / `supporting` / `sheet` 세 개라 상한 역시
+구조적으로 보장된다. arbitrary pane API가 없으므로 런타임 경고를 덧붙이지 않는다.
 
 ### 4-5. pane resize는 BottomSheet 핸들 다음이다
 
@@ -169,7 +197,8 @@ select가 크기를 토글한다는 점에서 **바텀시트 핸들과 같은 �
 ```txt
 S1  sticky chrome (app bar, rail)   scroll 기록 5절의 첫 미결을 닫는다
 S2  safety region                   4-2
-S3  pane 어휘 + flexible 불변식      4-3, 4-4
+S3' window-scoped bar + companion rail B형 토폴로지  구현됨
+S3  pane 어휘 + flexible 불변식      구조적으로 보장됨 (4-3, 4-4)
 S4  reflow                          세로에서 supporting이 아래로. 측정 먼저
 S5  pane resize + drag handle        BottomSheet 핸들이 선 뒤 (4-5)
 ```

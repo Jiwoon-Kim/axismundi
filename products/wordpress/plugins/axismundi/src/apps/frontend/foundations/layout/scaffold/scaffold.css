@@ -6,6 +6,7 @@
 		 */
 		--ax-scaffold-safe-area-block-start: env( safe-area-inset-top, 0px );
 		--ax-scaffold-safe-area-block-end: env( safe-area-inset-bottom, 0px );
+		--ax-scaffold-chrome-block-start: var( --ax-scaffold-safe-area-block-start );
 
 		box-sizing: border-box;
 		display: grid;
@@ -47,6 +48,7 @@
 	.ax-scaffold__bar,
 	.ax-scaffold__app-bar,
 	.ax-scaffold__rail,
+	.ax-scaffold__companion,
 	.ax-scaffold__supporting {
 		display: none;
 	}
@@ -58,14 +60,41 @@
 		grid-template-rows: minmax( 0, 1fr ) auto;
 	}
 
-	.ax-scaffold[data-has-app-bar] .ax-scaffold__content {
+	.ax-scaffold[data-has-app-bar][data-app-bar-scope='pane'] .ax-scaffold__content {
 		grid-template-areas:
 			"app-bar"
 			"body";
 		grid-template-rows: auto minmax( 0, 1fr );
 	}
 
-	.ax-scaffold[data-has-app-bar] .ax-scaffold__app-bar {
+	.ax-scaffold[data-has-app-bar][data-app-bar-scope='pane'] .ax-scaffold__app-bar {
+		grid-area: app-bar;
+		display: block;
+		min-inline-size: 0;
+		position: sticky;
+		inset-block-start: var( --ax-scaffold-safe-area-block-start );
+		z-index: 1;
+	}
+
+	/*
+	 * A bar may cover its content pane or the full window. Work-focused routes
+	 * use the window scope so the leading and companion rails start below one
+	 * shared application bar. The standard small app bar is the default; a route
+	 * with a taller global bar supplies the documented custom property.
+	 */
+	.ax-scaffold[data-has-app-bar][data-app-bar-scope='window'] {
+		--ax-scaffold-chrome-block-start: calc(
+			var( --ax-scaffold-safe-area-block-start ) +
+			var( --ax-scaffold-window-app-bar-block-size, 64px )
+		);
+
+		grid-template-areas:
+			"app-bar"
+			"content";
+		grid-template-rows: auto minmax( 0, 1fr );
+	}
+
+	.ax-scaffold[data-has-app-bar][data-app-bar-scope='window'] .ax-scaffold__app-bar {
 		grid-area: app-bar;
 		display: block;
 		min-inline-size: 0;
@@ -77,6 +106,14 @@
 	.ax-scaffold[data-has-bar] .ax-scaffold__bar {
 		grid-area: bar;
 		display: block;
+	}
+
+	.ax-scaffold[data-has-app-bar][data-app-bar-scope='window'][data-has-bar] {
+		grid-template-areas:
+			"app-bar"
+			"content"
+			"bar";
+		grid-template-rows: auto minmax( 0, 1fr ) auto;
 	}
 
 	@media ( min-width: 600px ) {
@@ -95,7 +132,7 @@
 			 * document scrolls, without changing the document as scroll owner.
 			 */
 			position: sticky;
-			inset-block-start: var( --ax-scaffold-safe-area-block-start );
+			inset-block-start: var( --ax-scaffold-chrome-block-start );
 			align-self: start;
 			/*
 			 * The window less both safety regions, not the whole window. The
@@ -109,9 +146,58 @@
 			 * viewport once stuck, and 78px past it unstuck.
 			 */
 			block-size: calc(
-				100dvb - var( --ax-scaffold-safe-area-block-start ) -
+				100dvb - var( --ax-scaffold-chrome-block-start ) -
 					var( --ax-scaffold-safe-area-block-end )
 			);
+		}
+
+		.ax-scaffold[data-has-app-bar][data-app-bar-scope='window'][data-has-rail] {
+			grid-template-areas:
+				"app-bar app-bar"
+				"rail content";
+			grid-template-columns: auto minmax( 0, 1fr );
+			grid-template-rows: auto minmax( 0, 1fr );
+		}
+
+		.ax-scaffold[data-has-companion] {
+			grid-template-areas: "content companion";
+			grid-template-columns: minmax( 0, 1fr ) auto;
+			grid-template-rows: minmax( 0, 1fr );
+		}
+
+		.ax-scaffold[data-has-rail][data-has-companion] {
+			grid-template-areas: "rail content companion";
+			grid-template-columns: auto minmax( 0, 1fr ) auto;
+		}
+
+		.ax-scaffold[data-has-app-bar][data-app-bar-scope='window'][data-has-companion] {
+			grid-template-areas:
+				"app-bar app-bar"
+				"content companion";
+			grid-template-columns: minmax( 0, 1fr ) auto;
+			grid-template-rows: auto minmax( 0, 1fr );
+		}
+
+		.ax-scaffold[data-has-app-bar][data-app-bar-scope='window'][data-has-rail][data-has-companion] {
+			grid-template-areas:
+				"app-bar app-bar app-bar"
+				"rail content companion";
+			grid-template-columns: auto minmax( 0, 1fr ) auto;
+			grid-template-rows: auto minmax( 0, 1fr );
+		}
+
+		.ax-scaffold[data-has-companion] .ax-scaffold__companion {
+			grid-area: companion;
+			display: block;
+			min-inline-size: 0;
+			position: sticky;
+			inset-block-start: var( --ax-scaffold-chrome-block-start );
+			align-self: start;
+			block-size: calc(
+				100dvb - var( --ax-scaffold-chrome-block-start ) -
+					var( --ax-scaffold-safe-area-block-end )
+			);
+			margin: 0;
 		}
 
 		.ax-scaffold[data-has-bar] .ax-scaffold__bar {

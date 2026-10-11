@@ -52,16 +52,44 @@ const destinations = [
 	},
 ];
 
+const TOPOLOGY_RAIL_ID = 'ax-canonical-layout-topology-rail';
+
+function railVariantForSizeClass( sizeClass ) {
+	return 'extraLarge' === sizeClass ? 'expanded' : 'collapsed';
+}
+
 function DemoPane( { children, className } ) {
 	return <Pane className={ [ 'ax-canonical-layout-demo__pane', className ].filter( Boolean ).join( ' ' ) }>{ children }</Pane>;
 }
 
-function DemoShell( { activeId, title, subtitle, children, className } ) {
+function DemoShell( { activeId, title, subtitle, children, className, appBarScope, sizeClass } ) {
+	const defaultRailVariant = railVariantForSizeClass( sizeClass );
+	const [ railVariant, setRailVariant ] = useState( defaultRailVariant );
+
+	/*
+	 * The stylebook owns this experiment, not Scaffold. Expanded rail changes
+	 * item anatomy, so CSS alone cannot choose the variant. Re-enter the
+	 * breakpoint default when the observed window class changes.
+	 */
+	useEffect( () => {
+		setRailVariant( defaultRailVariant );
+	}, [ defaultRailVariant ] );
+
+	const railExpanded = 'expanded' === railVariant;
 	const appBar = (
 		<AppBar
 			title={ title }
 			subtitle={ subtitle }
-			leading={ <IconButton label="Open navigation" icon={ <Icon name="menu" /> } variant="standard" /> }
+			leading={ (
+				<IconButton
+					aria-controls={ TOPOLOGY_RAIL_ID }
+					aria-expanded={ railExpanded }
+					icon={ <Icon name="menu" /> }
+					label={ railExpanded ? 'Collapse navigation' : 'Expand navigation' }
+					onClick={ () => setRailVariant( railExpanded ? 'collapsed' : 'expanded' ) }
+					variant="standard"
+				/>
+			) }
 			actions={ (
 				<>
 					<IconButton label="Search" icon={ <Icon name="search" /> } variant="standard" />
@@ -75,8 +103,9 @@ function DemoShell( { activeId, title, subtitle, children, className } ) {
 		<Scaffold
 			className={ [ 'axismundi-social', 'ax-stylebook', 'ax-canonical-layout-demo', className ].filter( Boolean ).join( ' ' ) }
 			appBar={ appBar }
+			appBarScope={ appBarScope }
 			navigationBar={ <NavigationBar destinations={ destinations } activeId={ activeId } label="Primary navigation" /> }
-			navigationRail={ <NavigationRail destinations={ destinations } activeId={ activeId } label="Primary navigation" filled divider /> }
+			navigationRail={ <NavigationRail id={ TOPOLOGY_RAIL_ID } destinations={ destinations } activeId={ activeId } label="Primary navigation" variant={ railVariant } filled divider /> }
 		>
 			{ children }
 		</Scaffold>
@@ -87,6 +116,14 @@ function readTopology( root ) {
 	const rail = root.querySelector( '.ax-scaffold__rail' );
 	const content = root.querySelector( '.ax-scaffold__content' );
 	const appBar = root.querySelector( '.ax-scaffold__app-bar' );
+	/*
+	 * Optional on purpose. The companion rail is a published region and the
+	 * Scaffold has a slot for it, but nothing in this product fills one yet --
+	 * so the topology readout reports it when it is there and does not require
+	 * it. Requiring it made a fixture-only demo a precondition of measuring the
+	 * scaffold at all.
+	 */
+	const companion = root.querySelector( '.ax-scaffold__companion' );
 
 	if ( ! rail || ! content || ! appBar ) {
 		return null;
@@ -106,6 +143,8 @@ function readTopology( root ) {
 		appBarLeft: Math.round( appBarBounds.left ),
 		railTop: Math.round( railBounds.top ),
 		appBarTop: Math.round( appBarBounds.top ),
+		appBarWidth: Math.round( appBarBounds.width ),
+		companionTop: companion ? Math.round( companion.getBoundingClientRect().top ) : null,
 		documentScrollTop: Math.round( document.scrollingElement?.scrollTop ?? 0 ),
 		scaffoldScrollContainers: scrollContainers.length,
 	};
@@ -131,12 +170,14 @@ function TopologyFixture( { sizeClass } ) {
 		<section ref={ fixtureRef } className="ax-canonical-layout-fixture" aria-label="Scaffold topology">
 			<p className="ax-canonical-layout-fixture__readout" data-size-class={ sizeClass }>
 				window size class: <strong>{ sizeClass }</strong> &middot; { topology
-					? `document scroll ${ topology.documentScrollTop }px · rail ${ topology.railRight }/${ topology.railTop }px · content left ${ topology.contentLeft }px · app bar ${ topology.appBarLeft }/${ topology.appBarTop }px · scaffold scroll containers ${ topology.scaffoldScrollContainers }`
+					? `document scroll ${ topology.documentScrollTop }px · rail ${ topology.railRight }/${ topology.railTop }px · content left ${ topology.contentLeft }px · app bar ${ topology.appBarWidth }/${ topology.appBarTop }px · companion ${ null === topology.companionTop ? 'none' : topology.companionTop + 'px' } · scaffold scroll containers ${ topology.scaffoldScrollContainers }`
 					: 'measuring topology…' }
 			</p>
 			<DemoShell
 				activeId="home"
+				appBarScope="window"
 				className="ax-canonical-layout-topology"
+				sizeClass={ sizeClass }
 				title="Scaffold topology"
 				subtitle="Navigation and content occupy separate regions"
 			>
@@ -193,7 +234,12 @@ function FeedFixture() {
 
 function ListDetailFixture() {
 	return (
-		<DemoShell activeId="explore" title="Explore" subtitle="Topics from the social web">
+		<DemoShell
+			activeId="explore"
+			appBarScope="window"
+			title="Explore"
+			subtitle="Topics from the social web"
+		>
 			<section className="ax-canonical-layout-demo__content" aria-labelledby="explore-heading">
 				<h1 id="explore-heading" className="ax-sr-only">Explore topics</h1>
 				<ListDetailLayout

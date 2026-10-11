@@ -214,3 +214,12 @@ Windows, Git Bash, native Windows Python. Each of these has cost real time.
   during that paint. A screenshot that times out with "the page did not finish
   rendering" is the signal that this is happening. `a.finish()` on each
   animation is the equivalent for motion.
+- **Resizing the pane's viewport does not fire `MediaQueryList` `change`.**
+  Measured 2026-10-11: after emulating 1650px, `matchMedia('(min-width:
+  1600px)').matches` was already `true` while a component subscribed to that
+  list still held the class it mounted with. Queries update; the notification
+  does not arrive. So anything that watches a breakpoint — `useWindowSizeClass`
+  and everything downstream of it — looks frozen and can be mistaken for a bug
+  in the component. **Reload the page after resizing** so the subscriber mounts
+  at the new width, and read `matchMedia(...).matches` directly when you want
+  to know what the window really is.

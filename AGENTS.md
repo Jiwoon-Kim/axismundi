@@ -195,3 +195,22 @@ Windows, Git Bash, native Windows Python. Each of these has cost real time.
 - **A hidden browser pane reports a 0x0 viewport and never fires
   `requestAnimationFrame`.** Transitions freeze at their start value and widths
   read 0. Do not fix CSS from those numbers.
+- **A *visible* pane stops running the rendering steps when Claude's window is
+  behind another window.** Measured 2026-10-11: `visibilityState` "visible",
+  viewport 1024x768, `document.timeline.currentTime` advancing 916ms, and
+  `requestAnimationFrame` never firing. Timers and microtasks keep running, so
+  the page looks alive. What stops is everything the "update the rendering"
+  steps carry:
+  - Web Animations sit at `running` forever and `finished` never resolves, so
+    anything sequenced after an animation — a dialog that closes when its exit
+    finishes — looks broken and is not.
+  - Queued element events never dispatch. `dialog.close()` fired no `close`
+    event at all, not even to a raw `addEventListener`, so a React `onClose`
+    looked unwired when it was not.
+  - `ResizeObserver` callbacks do not arrive. `MutationObserver` still does.
+
+  **A screenshot forces a frame and flushes all of it.** Take one between the
+  action and the assertion, then read the result; the queued events arrive
+  during that paint. A screenshot that times out with "the page did not finish
+  rendering" is the signal that this is happening. `a.finish()` on each
+  animation is the equivalent for motion.

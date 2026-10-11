@@ -154,7 +154,12 @@ def main() -> int:
     report.check("SecondaryTabBar" in page and "INLINE_TAB_ITEMS" in page, "Badge page no longer demonstrates the real inline Tab host")
     report.check("StylebookBadgesPage" in page_index and "'badges' === component" in page_index, "stylebook does not expose Badges")
     report.check("badges" in app and route.count("tabs|badges|dividers") == 2, "frontend route omits Badges")
-    report.check(re.search(r"AXISMUNDI_CAPSTONE_REWRITE_VERSION\s*=\s*'19';", plugin) is not None, "rewrite version did not advance for Badges")
+    # At least 19, not exactly 19. The message says "advance" and the
+    # check froze the number, so every later route addition failed here;
+    # `validate_styleguide_list.py` and the Carousel validator already
+    # read it as a floor.
+    rewrite_version = re.search(r"AXISMUNDI_CAPSTONE_REWRITE_VERSION\s*=\s*'(\d+)';", plugin)
+    report.check(rewrite_version is not None and 19 <= int(rewrite_version.group(1)), "rewrite version did not advance for Badges")
     report.check("@import url( './components/badge.css' );" in style_index, "Badge stylesheet is not in frontend bundle")
 
     print(f"badge: {report.checked} checks, {len(report.problems)} failed")

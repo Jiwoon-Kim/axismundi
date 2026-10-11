@@ -131,8 +131,10 @@ host:
       type alone. It cannot supply template parts.
 
 # Shared by every modal row. M3 §0.12: modal surfaces render a scrim, and a
-# click on it dismisses unless the surface requires an action. Full-screen
-# dialogs and standard sheets have none.
+# click on it dismisses unless the surface requires an action. Standard sheets
+# have none, and a full-screen dialog has none on the window where it is
+# full-screen -- from medium it resolves to a basic dialog and takes that row's
+# scrim with the rest (adaptive, dialog-full-screen).
 scrim:
   role: scrim
   hex: "#000000"
@@ -211,12 +213,19 @@ windows:
   full_screen_until: compact
   basic_from: medium
   admin_bar:
+    applies_to: the block runtime only
     standard_sheet: below
     modal: above
     note: >-
       A standard sheet leaves the page usable, admin bar included, so it starts
       below it (--wp-admin--admin-bar--height). A modal surface is in the top
       layer, above the admin bar, and the page behind it is inert anyway.
+    react_surface: >-
+      Not applicable. The app route turns the admin bar off at its source
+      (axismundi_capstone_hide_public_admin_bar, includes/route.php), which
+      suppresses its markup, its stylesheet and the inline document-offset
+      rules together, so there is no bar to sit below and no offset to undo.
+      The frontend carries its own app bar instead.
   page_share:
     applies_to: docked standard side sheet
     values: [resize, move]
@@ -264,6 +273,34 @@ adaptive:
     from: medium
     source: dialog_guidelines
     implemented: the block's stylesheet, a literal media query at medium's lower bound
+    # "Becomes" is not total, and leaving it unsaid produced a half-swap: a
+    # medium dialog with the basic row's box and the full-screen row's scrim,
+    # headline and speed. The block's stylesheet states the division in a
+    # comment -- it takes the basic dialog's "size, surface, headline and
+    # speed", and "its content is unchanged: the header keeps its close button
+    # and its action" -- and M3 says the same from the other side, that the
+    # content and the header are unchanged.
+    transfers:
+      - size
+      - container colour
+      - elevation
+      - shape
+      - headline typescale
+      - motion
+      - scrim
+    keeps:
+      - header
+      - close icon button
+      - header actions
+      - body
+    # Scrim is in `transfers` and the row still records `scrim: false`, which
+    # is not a contradiction. `false` describes the window where the row
+    # applies: a dialog that fills the window has nothing left to dim. From
+    # medium the resolved row is the basic dialog, and that row has a scrim.
+    # So the scrim follows the resolved row, not the declared one -- which is
+    # why the block draws it on every presentation with no exception, and why
+    # a transparent backdrop under a floating medium dialog is a defect.
+    scrim_note: follows the resolved row
   - presentation: dialog-basic
     position:
       default: center
@@ -814,6 +851,16 @@ conflicts:
       over. An author's own autofocus still wins, and a destructive first action
       is the APG exception rather than the rule.
     owner_decision: 2026-10-11
+    measured: >-
+      Chrome 152, 2026-10-11. The platform does not deliver this rule by
+      itself. A dialog whose body fits focuses the first button as HTML's dialog
+      focusing steps describe, but as soon as the body overflows, focus lands on
+      the scrolling region instead -- a region whose tabIndex is -1, which
+      carries no tabindex attribute and matches no focusable selector, so it is
+      not in the sequential focus order those steps walk. Reproduced on two
+      specimens, one of which held a link inside the body that should have won.
+      The React surface therefore implements the rule rather than inheriting it,
+      skipping any region marked data-surface-scroll.
   - subject: side sheet close button
     guidelines: optional in the anatomy, "highly recommended"
     accessibility_page: always present
@@ -850,6 +897,121 @@ conflicts:
       The published measurement is used. It is also what makes the handle's
       48dp touch target - 22 + 4 + 22 - which the accessibility page asks for
       when the sheet can be resized.
+
+# The React frontend's parallel surface.
+#
+# DECISION-FRONTEND-OVERLAY-SURFACE-OWNERSHIP.md gives the React app its own
+# Surface rather than consuming the block's: `surface.php` registers a
+# template-part area, which is a render path, not a module. What the two share
+# is this file -- the token tables, the published prohibitions, and the
+# presentation x breakpoint contract. What they do not share is markup, PHP, or
+# an editing surface.
+#
+# This section is the seam, so the differences are findable from the numbers
+# rather than from two sets of source.
+react_surface:
+  record: products/wordpress/plugins/axismundi/docs/DECISION-FRONTEND-OVERLAY-ESCAPE-AND-PUSH.md
+  root: products/wordpress/plugins/axismundi/src/apps/frontend/components/surfaces
+  # Four published rows, three components. The pairing is decided by how
+  # strongly M3 states each adaptive swap, not by how alike the rows look.
+  components:
+    - name: Dialog
+      file: dialog.js
+      presentations: [dialog-basic, dialog-full-screen]
+      why_paired: >-
+        A full-screen dialog "becomes" a basic dialog from medium, so one
+        instance has to be both rows at once. This is the only place the block's
+        one-host argument applies in React.
+    - name: BottomSheet
+      file: bottom-sheet.js
+      presentations: [sheet-bottom]
+      status: not implemented
+      why_separate: >-
+        The bottom-to-side swap is published as "can be swapped ... not must",
+        so it is the caller's composition rather than the component's
+        obligation.
+    - name: SideSheet
+      file: side-sheet.js
+      presentations: [sheet-side]
+      status: not implemented
+      why_separate: same as sheet-bottom; the swap between them is optional
+  core:
+    file: surface.js
+    owns: [host element, modality, open and close, motion plumbing, initial focus, scrim policy]
+    # The block unified its host because saved content and Site Editor
+    # transforms needed one block name. Neither exists here, so the shared
+    # lifecycle is a module and the anatomies stay separate components.
+    not_a_component_merge: true
+  host:
+    element: dialog
+    modal: showModal()
+    standard: >-
+      show(). The block had to invent a custom command because the browser has
+      no non-modal show command; React calls the method.
+    portal: >-
+      none. Top-layer placement is independent of DOM position, and a standard
+      sheet has to stay in the flow to take a grid column.
+  escape:
+    modal: top layer, unaffected by any ancestor overflow
+    standard: in the flow, placed by the Scaffold's grid
+    measured: >-
+      Chrome 152, 2026-10-11. With overflow: clip forced on .ax-scaffold and
+      both inner wrappers, an open modal's rect was unchanged to the decimal,
+      while an in-flow control in the same ancestor chain disappeared.
+  # The page behind a modal does not scroll with it. The platform does not do
+  # this on its own -- measured in Chrome 152, a real scroll over an open
+  # modal's backdrop took the page from 0 to 500 -- because `showModal()` makes
+  # the page inert, and inert is about interacting with content rather than
+  # scrolling the viewport. Both runtimes lock it in CSS, keyed on `:modal`, so
+  # the lock follows modality exactly as the scrim does and a standard sheet
+  # leaves the page scrollable.
+  scroll_lock:
+    follows: modality
+    target: the document, which the scroll-ownership record makes the scroll owner
+    react: "html:has( .ax-surface:modal ) { overflow: hidden }"
+    block: "html:has(dialog.wp-block-axismundi-dialog:modal) { overflow: hidden }"
+    keeps_position: true
+    # Accepted, not open: compensating the width pushes the full-screen
+    # dialog's own layout, and the compensation is worse than the jump.
+    accepted_trade_off:
+      effect: >-
+        Where the platform draws classic scrollbars the page jumps by the
+        scrollbar's width while a modal is open. 15px, measured in Chrome 152.
+        The shipped block behaves the same way.
+      measured_alternatives:
+        - scrollbar-gutter stable on the locked root -- no effect
+        - scrollbar-gutter stable on the root always -- no effect
+        - scrollbar-gutter stable both-edges -- no effect
+        - padding from a measured scrollbar width -- over-corrected, and it
+          cannot hold a position-fixed surface still because the viewport
+          really did change width
+      reason: >-
+        Correcting the width moves the full-screen dialog's layout, which is
+        the row that fills the window and has nothing to gain from it.
+      owner_decision: 2026-10-11
+
+  closed_state:
+    rule: .ax-surface:not( [open] ) re-declares display none
+    reason: >-
+      An author `display` on the host beats the UA's
+      `dialog:not([open]) { display: none }` whatever layer it sits in, and
+      every row sets one. Without the re-declaration every closed surface on the
+      page paints at once.
+  page_share:
+    resize: the Scaffold's grid column, not padding injected on the page root
+    move: not adopted; it would translate the sticky chrome with the page
+    # Why the column needs no offsets of its own: the Scaffold already puts
+    # `__body` between the app bar row and the navigation bar row, and the
+    # admin bar does not exist on this route. A sheet that takes a column in
+    # `__body` is therefore placed by the grid, with nothing to measure. This
+    # is the practical return on choosing a slot over an injected padding.
+    offsets: none; the grid places the column and the route has no admin bar
+  not_implemented:
+    - full-screen dialog container and header elevation on scroll, which need
+      the same scroll observation the app bar delegates to its route
+    - bottom sheet and side sheet rows
+    - dialog stacking above a full-screen dialog, which the platform allows and
+      no route yet needs
 
 # Published in Figma, outside the web's scope. Recorded so the omission is a
 # decision rather than an oversight: XR elevation is a choice between two

@@ -1,0 +1,135 @@
+@layer axismundi.components {
+	/*
+	 * The host reset every dialog and sheet row starts from.
+	 *
+	 * The UA stylesheet gives a `<dialog>` a solid border, 1em of padding, a
+	 * `canvas` background and `canvastext` colour, all of which every row
+	 * replaces. What is deliberately NOT reset is `margin: auto` with
+	 * `inset: 0`: that pair is what centres a modal in the viewport, which is
+	 * exactly a basic dialog's placement. A row that is not centred -- an edge
+	 * sheet, a full-screen dialog -- overrides it.
+	 *
+	 * `max-inline-size` and `max-block-size` come off because the UA measures
+	 * them against the viewport without the window margin M3 asks for; each row
+	 * sets its own.
+	 */
+	/*
+	 * Restores `dialog:not([open]) { display: none }`.
+	 *
+	 * The UA stylesheet has that rule, and an author `display` on the host beats
+	 * it, because author styles outrank the UA regardless of the cascade layer
+	 * they sit in. Every row sets a `display` -- a dialog is a flex column, a
+	 * sheet is a grid -- so without this every closed surface on the page paints
+	 * at once, stacked. Measured: six specimens rendered on top of each other on
+	 * a freshly loaded stylebook page.
+	 *
+	 * Re-declaring it here means a row can keep saying `display: flex` plainly
+	 * rather than qualifying every rule with `[open]`.
+	 */
+	.ax-surface:not( [open] ) {
+		display: none;
+	}
+
+	.ax-surface {
+		--ax-surface-scrim-opacity: 0.32;
+
+		box-sizing: border-box;
+		max-inline-size: none;
+		max-block-size: none;
+		padding: 0;
+		border: 0;
+		background: none;
+		color: inherit;
+	}
+
+	/*
+	 * The scrim. M3 publishes one value for every modal row -- scrim at 32% --
+	 * and it is drawn for every modal surface here, with each row subtracting
+	 * it where its own window says there is nothing to dim.
+	 *
+	 * This used to be a `data-scrim` attribute the component set per row, which
+	 * was wrong: a full-screen dialog has no scrim only on the window where it
+	 * fills the screen, and from medium it resolves to a basic dialog and takes
+	 * that row's scrim with the rest (`surface.yml` `adaptive`, `transfers`).
+	 * An attribute set at render cannot answer a media query, so the policy is
+	 * CSS's. A standard surface is not in the top layer and has no `::backdrop`
+	 * at all, so modality is the only gate needed here.
+	 *
+	 * The colour comes from the theme's `--md-sys-color-scrim`. That token lives
+	 * in `tokens.sys.elevation.css` today and
+	 * `docs/DECISION-FRONTEND-ELEVATION-OWNERSHIP.md` records that relocating it
+	 * is a later theme-contract change; this is the colour token, not one of the
+	 * `--md-sys-elevation-shadow-level*` presets that decision keeps out.
+	 */
+	.ax-surface::backdrop {
+		background: transparent;
+	}
+
+	.ax-surface[data-modality='modal']::backdrop {
+		background: color-mix(
+			in srgb,
+			var( --md-sys-color-scrim ) calc( var( --ax-surface-scrim-opacity ) * 100% ),
+			transparent
+		);
+	}
+
+	/*
+	 * The page behind a modal surface does not scroll with it
+	 * (`surface.yml` `components.dialog.scrolling`).
+	 *
+	 * Measured, Chrome 152: the platform does not do this. A real scroll over
+	 * the backdrop of an open modal took the page from 0 to 500 while the
+	 * dialog stayed where it was. `showModal()` makes the page inert, and inert
+	 * is about interacting with content, not about scrolling the viewport.
+	 *
+	 * `:modal` matches only a surface opened with `showModal()`, so the lock
+	 * follows modality exactly as the scrim does: a standard sheet leaves the
+	 * page usable, and scrolling it is part of using it. Stacked modals need no
+	 * counter -- the selector stops matching when the last one closes.
+	 *
+	 * The target is the document, which `DECISION-FRONTEND-SCROLL-OWNERSHIP.md`
+	 * made the scroll owner, and which its section 1-4 already named as the
+	 * lock target. It is not the Scaffold, so the 3-2 prohibition is untouched.
+	 */
+	html:has( .ax-surface:modal ) {
+		overflow: hidden;
+	}
+
+	/*
+	 * KNOWN CONSEQUENCE, measured rather than assumed: where the platform draws
+	 * classic scrollbars, locking takes the scrollbar away and the page jumps
+	 * 15px wider for as long as a modal is open. The shipped block's lock
+	 * (`blocks/dialog/style.css`) behaves the same way.
+	 *
+	 * Three CSS-only compensations were measured and none works, so none is
+	 * shipped -- a line that does nothing is worse than no line:
+	 *
+	 *   scrollbar-gutter: stable on the locked root      still 15px
+	 *   scrollbar-gutter: stable on the root, always     still 15px
+	 *   scrollbar-gutter: stable both-edges              still 15px
+	 *
+	 * The gutter is ignored once the root's overflow is hidden. Compensating
+	 * with padding from a measured scrollbar width over-corrected here (the
+	 * body came back 15px narrower), and it cannot hold a `position: fixed`
+	 * surface still in any case, because those are laid out against a viewport
+	 * that really did change width.
+	 *
+	 * Accepted as a trade-off by the project owner, 2026-10-11: correcting the
+	 * width pushes the full-screen dialog's own layout, and that row fills the
+	 * window and gains nothing from the correction. Recorded in `surface.yml`
+	 * under `react_surface.scroll_lock.accepted_trade_off` so it is a decision
+	 * rather than an oversight.
+	 */
+
+	/*
+	 * A standard surface is not in the top layer, so it draws no scrim and takes
+	 * its place in the flow. The grid column it sits in belongs to the Scaffold;
+	 * see section 4 of
+	 * `docs/DECISION-FRONTEND-OVERLAY-ESCAPE-AND-PUSH.md`.
+	 */
+	.ax-surface[data-modality='standard'] {
+		position: static;
+		margin: 0;
+		inset: auto;
+	}
+}

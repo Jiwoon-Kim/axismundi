@@ -28,6 +28,8 @@ import re
 import sys
 from pathlib import Path
 
+from _react_surface_check import check_react_surface
+
 try:
     import yaml
 except ImportError:  # pragma: no cover
@@ -578,6 +580,7 @@ def main() -> int:
     check_adapter(data, report)
     check_runtime(data, report)
     check_discrepancies(data, report)
+    check_react_surface(data, report)
 
     names = [row.get("name") for row in data.get("presentations", [])]
     axis = next((a for a in data.get("axes", []) if a.get("name") == "presentation"), {})

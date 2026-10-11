@@ -205,7 +205,12 @@ def main() -> int:
     report.check("@import url( './components/tabs.css' );" in style_index, "Tabs stylesheet is not in frontend bundle")
     report.check("StylebookTabsPage" in stylebook_index and "'tabs' === component" in stylebook_index, "stylebook does not expose Tabs")
     report.check("tabs" in app and route.count("tabs|badges|dividers") == 2, "frontend route omits Tabs")
-    report.check(re.search(r"AXISMUNDI_CAPSTONE_REWRITE_VERSION\s*=\s*'19';", plugin) is not None, "rewrite version did not advance for Tabs")
+    # At least 19, not exactly 19. The message says "advance" and the
+    # check froze the number, so every later route addition failed here;
+    # `validate_styleguide_list.py` and the Carousel validator already
+    # read it as a floor.
+    rewrite_version = re.search(r"AXISMUNDI_CAPSTONE_REWRITE_VERSION\s*=\s*'(\d+)';", plugin)
+    report.check(rewrite_version is not None and 19 <= int(rewrite_version.group(1)), "rewrite version did not advance for Tabs")
     report.check("PrimaryTabBar" in stylebook_page and "SecondaryTabBar" in stylebook_page and "TabPanels" in stylebook_page and "scrollable" in stylebook_page and "disabled: true" in stylebook_page, "stylebook does not exercise primary, secondary, scrollable, and disabled Tabs")
 
     print(f"tabs: {report.checked} checks, {len(report.problems)} failed")

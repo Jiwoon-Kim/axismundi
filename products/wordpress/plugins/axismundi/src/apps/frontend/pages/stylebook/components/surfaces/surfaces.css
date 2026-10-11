@@ -1,0 +1,18 @@
+@layer axismundi.patterns {
+	.ax-stylebook-surfaces__row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 16px;
+	}
+
+	/*
+	 * A specimen is a trigger and its surface. The surface renders where it is
+	 * declared and goes to the top layer when it opens, so this box only ever
+	 * lays out the button -- which is the point worth seeing on this page.
+	 */
+	.ax-stylebook-surfaces__specimen {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+	}
+}

@@ -1,0 +1,295 @@
+@layer axismundi.components {
+	/*
+	 * Every value here is `products/styleguide/_data/surface.yml`, rows
+	 * `dialog-basic` and `dialog-full-screen`. The four typescales resolve to
+	 * the published numbers exactly, which is why this file names the scale
+	 * rather than the figures: headline-small is 24/0/32, title-large 22/0/28,
+	 * body-medium 14/0.25/20, label-large 14/0.1/20.
+	 */
+	.ax-dialog {
+		--md-comp-dialog-container-color: var( --md-sys-color-surface-container-high );
+		--md-comp-dialog-container-shape: 28px;
+		--md-comp-dialog-icon-color: var( --md-sys-color-secondary );
+		--md-comp-dialog-icon-size: 24px;
+		--md-comp-dialog-headline-color: var( --md-sys-color-on-surface );
+		--md-comp-dialog-supporting-text-color: var( --md-sys-color-on-surface-variant );
+		--md-comp-dialog-padding: 24px;
+		--md-comp-dialog-icon-to-headline: 16px;
+		--md-comp-dialog-headline-to-body: 16px;
+		--md-comp-dialog-body-to-actions: 24px;
+		--md-comp-dialog-between-actions: 8px;
+		--md-comp-dialog-headline-font: var( --md-sys-typescale-headline-small-font );
+		--md-comp-dialog-headline-size: var( --md-sys-typescale-headline-small-size );
+		--md-comp-dialog-headline-weight: var( --md-sys-typescale-headline-small-weight );
+		--md-comp-dialog-headline-tracking: var( --md-sys-typescale-headline-small-tracking );
+		--md-comp-dialog-headline-line-height: var( --md-sys-typescale-headline-small-line-height );
+		--md-comp-dialog-minimum-width: 280px;
+		--md-comp-dialog-maximum-width: 560px;
+		--md-comp-dialog-divider-thickness: 1px;
+
+		/*
+		 * Not an M3 value. M3's specs publish no window margin; 24px is
+		 * material-web's, measured in Chrome, and `surface.yml`
+		 * `windows.basic_dialog_margin` records it with that provenance.
+		 */
+		--ax-surface-window-margin: 24px;
+
+		/*
+		 * Read by the fold animation so the clip keeps the row's own corner.
+		 * An unrounded inset would square the container off for the length of
+		 * the animation.
+		 */
+		--ax-surface-fold-radius: var( --md-comp-dialog-container-shape );
+
+		/*
+		 * `surface.yml` `motion.presentations.dialog-basic`: a partial-screen
+		 * surface takes the default spatial spring in, and emphasized
+		 * accelerate out. The runtime reads these four and names no token.
+		 */
+		--ax-surface-motion-enter: var( --md-sys-motion-curve-default-spatial );
+		--ax-surface-motion-enter-duration: var( --md-sys-motion-curve-default-spatial-duration );
+		--ax-surface-motion-exit: var( --md-sys-motion-easing-emphasized-accelerate );
+		--ax-surface-motion-exit-duration: var( --md-sys-motion-duration-short3 );
+
+		position: fixed;
+		display: flex;
+		flex-direction: column;
+		inline-size: max-content;
+		min-inline-size: var( --md-comp-dialog-minimum-width );
+		max-inline-size: min(
+			var( --md-comp-dialog-maximum-width ),
+			100% - 2 * var( --ax-surface-window-margin )
+		);
+		max-block-size: calc( 100% - 2 * var( --ax-surface-window-margin ) );
+		padding: var( --md-comp-dialog-padding );
+		border-radius: var( --md-comp-dialog-container-shape );
+		background: var( --md-comp-dialog-container-color );
+		color: var( --md-comp-dialog-headline-color );
+	}
+
+	/*
+	 * Headline and actions are pinned and the body scrolls between them, which
+	 * is M3's scrolling rule for a dialog. `min-block-size: 0` is what lets the
+	 * body shrink below its content: a flex item's automatic minimum size is its
+	 * min-content, so without it the dialog grows instead and `overflow` never
+	 * engages.
+	 */
+	.ax-dialog__heading {
+		display: flex;
+		flex: 0 0 auto;
+		flex-direction: column;
+		gap: var( --md-comp-dialog-icon-to-headline );
+	}
+
+	/* Centred when there is an icon, start-aligned when there is not. */
+	.ax-dialog[data-has-icon] .ax-dialog__heading {
+		align-items: center;
+		text-align: center;
+	}
+
+	.ax-dialog__icon {
+		--md-icon-size: var( --md-comp-dialog-icon-size );
+
+		display: inline-grid;
+		place-items: center;
+		color: var( --md-comp-dialog-icon-color );
+	}
+
+	.ax-dialog__headline {
+		margin: 0;
+		color: var( --md-comp-dialog-headline-color );
+		font-family: var( --md-comp-dialog-headline-font );
+		font-size: var( --md-comp-dialog-headline-size );
+		font-weight: var( --md-comp-dialog-headline-weight );
+		letter-spacing: var( --md-comp-dialog-headline-tracking );
+		line-height: var( --md-comp-dialog-headline-line-height );
+	}
+
+	.ax-dialog__body {
+		flex: 1 1 auto;
+		min-block-size: 0;
+		overflow-y: auto;
+		color: var( --md-comp-dialog-supporting-text-color );
+		font-family: var( --md-sys-typescale-body-medium-font );
+		font-size: var( --md-sys-typescale-body-medium-size );
+		font-weight: var( --md-sys-typescale-body-medium-weight );
+		letter-spacing: var( --md-sys-typescale-body-medium-tracking );
+		line-height: var( --md-sys-typescale-body-medium-line-height );
+	}
+
+	.ax-dialog__heading + .ax-dialog__body {
+		margin-block-start: var( --md-comp-dialog-headline-to-body );
+	}
+
+	.ax-dialog__body:focus-visible {
+		outline: var( --md-sys-state-focus-indicator-thickness, 3px ) solid
+			var( --md-sys-color-secondary );
+		outline-offset: var( --md-sys-state-focus-indicator-inner-offset, -3px );
+	}
+
+	/*
+	 * The confirming action sits nearest the trailing edge, which `flex-end`
+	 * gives in both directions because the row is logical. M3 allows at most two
+	 * actions; the component does not enforce the count, the guidelines do, and
+	 * `surface.yml` `components.dialog.actions.max` records it.
+	 */
+	.ax-dialog__actions {
+		display: flex;
+		flex: 0 0 auto;
+		flex-wrap: wrap;
+		justify-content: flex-end;
+		gap: var( --md-comp-dialog-between-actions );
+		margin-block-start: var( --md-comp-dialog-body-to-actions );
+	}
+
+	.ax-dialog__actions .ax-button {
+		font-family: var( --md-sys-typescale-label-large-font );
+		font-size: var( --md-sys-typescale-label-large-size );
+		font-weight: var( --md-sys-typescale-label-large-weight );
+		letter-spacing: var( --md-sys-typescale-label-large-tracking );
+		line-height: var( --md-sys-typescale-label-large-line-height );
+	}
+
+	/* ---------------------------------------------------------------- */
+
+	/*
+	 * The full-screen row. Shape 0, elevation 0, container `surface`, the
+	 * title-large headline and the slow spatial spring -- all of it true only
+	 * on a compact window. From medium the media queries below hand back the
+	 * basic row's half of this list.
+	 */
+	.ax-dialog[data-presentation='full-screen'] {
+		--md-comp-dialog-container-color: var( --md-sys-color-surface );
+		--md-comp-dialog-container-shape: 0;
+		--md-comp-dialog-icon-color: var( --md-sys-color-on-surface );
+		--md-comp-dialog-header-height: 56px;
+		--md-comp-dialog-between-elements: 8px;
+		--md-comp-dialog-headline-font: var( --md-sys-typescale-title-large-font );
+		--md-comp-dialog-headline-size: var( --md-sys-typescale-title-large-size );
+		--md-comp-dialog-headline-weight: var( --md-sys-typescale-title-large-weight );
+		--md-comp-dialog-headline-tracking: var( --md-sys-typescale-title-large-tracking );
+		--md-comp-dialog-headline-line-height: var( --md-sys-typescale-title-large-line-height );
+		--ax-surface-motion-enter: var( --md-sys-motion-curve-slow-spatial );
+		--ax-surface-motion-enter-duration: var( --md-sys-motion-curve-slow-spatial-duration );
+		--ax-surface-motion-exit-duration: var( --md-sys-motion-duration-short4 );
+
+		inset: 0;
+		margin: 0;
+		inline-size: 100%;
+		min-inline-size: 0;
+		max-inline-size: none;
+		block-size: 100%;
+		max-block-size: none;
+		/* The header owns the top padding; the content keeps the inline 24. */
+		padding: 0;
+	}
+
+	/*
+	 * Elevation level 0 on this row, so nothing is painted. The primitive stays
+	 * mounted and is hidden in CSS because its level arrives as an inline custom
+	 * property, which a media query cannot outbid -- and from medium the row
+	 * takes the basic dialog's level 3 back.
+	 */
+	.ax-dialog[data-presentation='full-screen'] > .ax-elevation {
+		display: none;
+	}
+
+	.ax-dialog__header {
+		display: flex;
+		flex: 0 0 auto;
+		align-items: center;
+		gap: var( --md-comp-dialog-between-elements );
+		box-sizing: border-box;
+		min-block-size: var( --md-comp-dialog-header-height );
+		padding-inline: var( --md-comp-dialog-padding );
+	}
+
+	/*
+	 * The headline takes the remaining width so the actions stay on the trailing
+	 * edge, and `min-inline-size: 0` lets it shrink rather than push them off.
+	 */
+	.ax-dialog__header .ax-dialog__headline {
+		flex: 1 1 auto;
+		min-inline-size: 0;
+	}
+
+	.ax-dialog__header .ax-dialog__actions {
+		flex: 0 0 auto;
+		margin-block-start: 0;
+	}
+
+	/*
+	 * The row's published padding is `{ top: 24, inline: 24 }` and no bottom
+	 * value. An earlier version read that silence as zero and then had to undo
+	 * it from medium, which made the swap touch the body -- the one part the
+	 * adaptive record says it keeps. Symmetric block padding needs no undoing
+	 * and invents nothing: the measurement that is missing is the bottom action
+	 * bar's, and this row does not render one.
+	 */
+	.ax-dialog[data-presentation='full-screen'] .ax-dialog__body {
+		padding-block: var( --md-comp-dialog-padding );
+		padding-inline: var( --md-comp-dialog-padding );
+		color: var( --md-comp-dialog-headline-color );
+	}
+
+	/*
+	 * NON-STANDARD GAP, not a deviation: `surface.yml` publishes
+	 * `header.elevation_on_scroll` (level2) and `container_on_scroll`
+	 * (surface-container) for this row. Both need the scroll position of the
+	 * body, which is the same producer problem `app_bar.yml` delegates to the
+	 * scroll-container owner. Deferred with the app bar's `scrolled`, not
+	 * forgotten.
+	 */
+
+	/*
+	 * No scrim while the dialog fills the window: there is nothing behind it to
+	 * dim. Scoped to the compact window rather than to the row, because from
+	 * medium the row resolves to a basic dialog and the scrim comes back with
+	 * the rest of it (`surface.yml` `adaptive`, `transfers`). Shipping a
+	 * floating medium dialog over a transparent backdrop is the defect this
+	 * bound prevents.
+	 */
+	@media ( max-width: 599px ) {
+		.ax-dialog[data-presentation='full-screen']::backdrop {
+			background: transparent;
+		}
+	}
+
+	/*
+	 * The medium swap. `surface.yml` `adaptive` names what crosses -- size,
+	 * container colour, elevation, shape, headline typescale, motion, scrim --
+	 * and what does not: the header, its close button, its actions and the
+	 * body are the full-screen row's throughout. M3 says the same from the
+	 * other side, that the content and the header are unchanged.
+	 */
+	@media ( min-width: 600px ) {
+		.ax-dialog[data-presentation='full-screen'] {
+			--md-comp-dialog-container-color: var( --md-sys-color-surface-container-high );
+			--md-comp-dialog-container-shape: 28px;
+			--md-comp-dialog-headline-font: var( --md-sys-typescale-headline-small-font );
+			--md-comp-dialog-headline-size: var( --md-sys-typescale-headline-small-size );
+			--md-comp-dialog-headline-weight: var( --md-sys-typescale-headline-small-weight );
+			--md-comp-dialog-headline-tracking: var( --md-sys-typescale-headline-small-tracking );
+			--md-comp-dialog-headline-line-height: var( --md-sys-typescale-headline-small-line-height );
+			--ax-surface-motion-enter: var( --md-sys-motion-curve-default-spatial );
+			--ax-surface-motion-enter-duration: var( --md-sys-motion-curve-default-spatial-duration );
+			--ax-surface-motion-exit-duration: var( --md-sys-motion-duration-short3 );
+
+			inset: 0;
+			margin: auto;
+			inline-size: max-content;
+			min-inline-size: var( --md-comp-dialog-minimum-width );
+			max-inline-size: min(
+				var( --md-comp-dialog-maximum-width ),
+				100% - 2 * var( --ax-surface-window-margin )
+			);
+			block-size: auto;
+			max-block-size: calc( 100% - 2 * var( --ax-surface-window-margin ) );
+			border-radius: var( --md-comp-dialog-container-shape );
+		}
+
+		.ax-dialog[data-presentation='full-screen'] > .ax-elevation {
+			display: block;
+		}
+	}
+}

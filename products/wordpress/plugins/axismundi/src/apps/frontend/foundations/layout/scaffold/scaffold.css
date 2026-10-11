@@ -84,10 +84,46 @@
 		}
 	}
 
+	/*
+	 * The sheet column. A standard side sheet is the body being divided
+	 * differently, not a layer over it, so the grid places it and `main`'s
+	 * `minmax( 0, 1fr )` does the shrinking -- the guidelines' "the body area
+	 * shrinks", with nothing measured and nothing injected on the page root.
+	 *
+	 * The column is `auto`, so it is zero wide until a sheet actually occupies
+	 * it: a closed dialog is `display: none` and a modal one is in the top
+	 * layer. That is what lets the same slot hold a sheet that is modal on a
+	 * compact window without the layout knowing.
+	 *
+	 * `:has()` reads the sheet's own edge, which is how the column swaps sides
+	 * without the scaffold being told -- it receives a node and cannot inspect
+	 * its props.
+	 */
+	.ax-scaffold[data-has-sheet] .ax-scaffold__body {
+		grid-template-areas: "main sheet";
+		grid-template-columns: minmax( 0, 1fr ) auto;
+	}
+
+	.ax-scaffold[data-has-sheet] .ax-scaffold__body:has( [data-edge='start'] ) {
+		grid-template-areas: "sheet main";
+		grid-template-columns: auto minmax( 0, 1fr );
+	}
+
 	@media ( min-width: 840px ) {
 		.ax-scaffold[data-has-supporting] .ax-scaffold__body {
 			grid-template-areas: "main supporting";
 			grid-template-columns: minmax( 0, 1fr ) auto;
+		}
+
+		.ax-scaffold[data-has-supporting][data-has-sheet] .ax-scaffold__body {
+			grid-template-areas: "main supporting sheet";
+			grid-template-columns: minmax( 0, 1fr ) auto auto;
+		}
+
+		.ax-scaffold[data-has-supporting][data-has-sheet]
+			.ax-scaffold__body:has( [data-edge='start'] ) {
+			grid-template-areas: "sheet main supporting";
+			grid-template-columns: auto minmax( 0, 1fr ) auto;
 		}
 
 		.ax-scaffold[data-has-supporting] .ax-scaffold__supporting {

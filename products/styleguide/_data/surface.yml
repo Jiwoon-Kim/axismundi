@@ -925,16 +925,53 @@ react_surface:
     - name: BottomSheet
       file: bottom-sheet.js
       presentations: [sheet-bottom]
-      status: not implemented
       why_separate: >-
         The bottom-to-side swap is published as "can be swapped ... not must",
         so it is the caller's composition rather than the component's
         obligation.
+      modality:
+        modal: top layer, scrim, page locked
+        standard: anchored to the window bottom, page usable
+      heights:
+        initial: >-
+          At most the published 50% window cap. The handle starts here on every
+          open.
+        expanded: >-
+          The published top margin and a body that scrolls inside the sheet.
+      expanded_affordance:
+        modal:
+          label: Close
+          prop: closeLabel
+          icon: close
+          action: close
+        standard:
+          label: Collapse sheet
+          prop: collapseLabel
+          icon: keyboard_arrow_down
+          action: collapse
+          result: returns to initial height and leaves the controlled sheet open
+      handle:
+        element: button
+        label: Resize sheet
+        keyboard: click, Space and Enter cycle initial and expanded heights
+      scroll:
+        body: vertical
+        horizontal_content: permitted; a Carousel is the measured specimen
+      deferred:
+        - pointer drag, pointer capture, fling velocity and drag snap physics;
+          the handle's keyboard/click cycle is the required no-touch alternative
     - name: SideSheet
       file: side-sheet.js
       presentations: [sheet-side]
-      status: not implemented
       why_separate: same as sheet-bottom; the swap between them is optional
+      modality:
+        modal: top layer, scrim, page locked
+        standard: the Scaffold's sheet column, page usable
+        compact: >-
+          A standard sheet opens as a modal, and closes if the window crosses
+          that boundary while it is open. The DOM does not move; only the open
+          method changes.
+      close_affordance: always rendered; a standard sheet has no cancel event to fall back on
   core:
     file: surface.js
     owns: [host element, modality, open and close, motion plumbing, initial focus, scrim policy]
@@ -990,6 +1027,51 @@ react_surface:
         the row that fills the window and has nothing to gain from it.
       owner_decision: 2026-10-11
 
+  # M3's layout pages and its component pages describe the same axis in two
+  # vocabularies, and the layout side says so outright: a floating pane is
+  # "like a dialog" and a docked pane is "like a bottom sheet"
+  # (foundations/layout/scaffold/panes). Recorded here so a decision taken on
+  # the Surface side is not taken again, differently, on the layout side.
+  #
+  # PLAN-FRONTEND-SCAFFOLD.md section 3 is the reasoning; this is the mapping.
+  # Modality and display are two axes, and collapsing them was a real defect:
+  # the shared stylesheet placed every standard surface in the flow, which is
+  # right for a co-planar side sheet and wrong for a docked bottom sheet, so
+  # the bottom sheet had to override the shared layer to stay on its edge.
+  #
+  #   modality   top layer, scrim, scroll lock, inert page   modal | standard
+  #   display    where the box sits                          floating | docked | co-planar
+  axes_note: modality decides layering, display decides placement
+  pane_display:
+    co-planar:
+      panes_page: two side-by-side panes
+      surface: sheet-side, standard
+      placement: the Scaffold's sheet column
+    floating:
+      panes_page: a small pane above larger panes, "like a dialog"
+      surface: [dialog-basic, dialog-full-screen, sheet-side modal]
+      placement: top layer
+    docked:
+      panes_page: a small pane pinned to a window edge, "like a bottom sheet"
+      surface: sheet-bottom
+      # Pinned to the edge in BOTH modalities. An earlier line here said "top
+      # layer", which is only the modal half: a standard bottom sheet is out of
+      # the top layer and still on its edge, because it "coexists with the
+      # page, as with an audio player" rather than shrinking it the way a
+      # standard side sheet does.
+      placement: fixed to the window edge; in the top layer only when modal
+  # "How panes adapt" is the same list as this file's `adaptive` rules.
+  pane_adaptation:
+    show_and_hide: a pane enters or leaves as the breakpoint changes
+    levitate:
+      means: co-planar becomes floating or docked
+      implemented: >-
+        A standard side sheet opens as a modal on a compact window. Measured:
+        the DOM does not move, only the open method changes.
+    reflow:
+      means: panes reorganise, e.g. supporting moves below primary in portrait
+      implemented: false
+
   closed_state:
     rule: .ax-surface:not( [open] ) re-declares display none
     reason: >-
@@ -1009,9 +1091,16 @@ react_surface:
   not_implemented:
     - full-screen dialog container and header elevation on scroll, which need
       the same scroll observation the app bar delegates to its route
-    - bottom sheet and side sheet rows
     - dialog stacking above a full-screen dialog, which the platform allows and
       no route yet needs
+    # A modal sheet slides in from its edge. A standard one is the body being
+    # divided differently rather than a layer arriving over it, and sliding it
+    # across a column that has already appeared shows a gap where the sheet is
+    # not yet. Animating the division itself -- the column's own width -- is
+    # the candidate, and it is not measured yet.
+    - motion for a standard side sheet
+    - bottom-sheet pointer drag, pointer capture, fling velocity and drag snap
+      physics; click, Space and Enter already reach both published heights
 
 # Published in Figma, outside the web's scope. Recorded so the omission is a
 # decision rather than an oversight: XR elevation is a choice between two

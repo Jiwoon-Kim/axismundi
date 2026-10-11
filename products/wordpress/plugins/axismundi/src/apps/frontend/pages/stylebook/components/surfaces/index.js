@@ -1,7 +1,9 @@
 import { useState } from '@wordpress/element';
 import { Button } from '../../../../components/buttons/button';
+import { CarouselItem } from '../../../../components/carousels/carousel-item';
+import { UncontainedCarousel } from '../../../../components/carousels/uncontained-carousel';
 import { Icon } from '../../../../components/material/icon';
-import { Dialog } from '../../../../components/surfaces';
+import { BottomSheet, Dialog, SideSheet } from '../../../../components/surfaces';
 import { Scaffold } from '../../../../foundations/layout/scaffold';
 import '../../stylebook-page.css';
 import './surfaces.css';
@@ -166,6 +168,104 @@ function DynamicBodySpecimen() {
 					</p>
 				) : null }
 			</Dialog>
+		</div>
+	);
+}
+
+/**
+ * A standard side sheet in a real Scaffold, which is the only place it can be
+ * shown honestly: the sheet is a column of the body, so without the scaffold
+ * there is no column for it to take.
+ *
+ * Narrow the window below 600px and the same element opens as a modal instead.
+ * Nothing moves in the DOM -- only `showModal()` is called where `show()` was.
+ *
+ * @return {import('@wordpress/element').ReactNode} Scaffold with a sheet slot.
+ */
+function StandardSheetSpecimen( { edge } ) {
+	const [ open, setOpen ] = useState( false );
+
+	return (
+		<div className="ax-stylebook-surfaces__frame">
+			<Scaffold
+				appBar={ <div className="ax-stylebook-surfaces__bar">App bar</div> }
+				sheet={
+					<SideSheet
+						open={ open }
+						onClose={ () => setOpen( false ) }
+						modality="standard"
+						edge={ edge }
+						headline="Filters"
+						actions={ <Button variant="text" onClick={ () => setOpen( false ) }>Apply</Button> }
+						divider
+					>
+						<p>The page did not move aside. The body was divided again.</p>
+						<p>
+							This column sits between the app bar above and the navigation bar
+							below, so it needs no offsets of its own.
+						</p>
+					</SideSheet>
+				}
+			>
+				<div className="ax-stylebook-surfaces__page">
+					<Button
+						variant="outlined"
+						aria-haspopup="dialog"
+						aria-expanded={ open }
+						onClick={ () => setOpen( true ) }
+					>
+						{ open ? 'Sheet is open' : `Open standard sheet (${ edge })` }
+					</Button>
+					<p>
+						This paragraph is the page. Watch it narrow rather than slide when the
+						sheet opens.
+					</p>
+				</div>
+			</Scaffold>
+		</div>
+	);
+}
+
+function BottomSheetSpecimen( { modality = 'modal' } ) {
+	const [ open, setOpen ] = useState( false );
+
+	return (
+		<div className="ax-stylebook-surfaces__specimen">
+			<Button
+				variant="outlined"
+				aria-haspopup="dialog"
+				aria-expanded={ open }
+				onClick={ () => setOpen( true ) }
+			>
+				{ `Open ${ modality } bottom sheet` }
+			</Button>
+			<BottomSheet
+				open={ open }
+				onClose={ () => setOpen( false ) }
+				modality={ modality }
+				headline="Choose a collection"
+			>
+				<p>
+					The handle is a button: Tab reaches it first, and click, Space or
+					Enter changes between the initial and full height without a drag.
+				</p>
+				<UncontainedCarousel
+					label="Collections"
+					itemWidth={ 144 }
+					className="ax-stylebook-surfaces__bottom-carousel"
+				>
+					{ [ 'Images', 'Events', 'Notes', 'Places' ].map( ( label ) => (
+						<CarouselItem
+							key={ label }
+							label={ label }
+							onClick={ () => {} }
+						>
+							<span className="ax-stylebook-surfaces__carousel-card">{ label }</span>
+						</CarouselItem>
+					) ) }
+				</UncontainedCarousel>
+				{ LOREM.slice( 0, 4 ).map( ( line ) => <p key={ line }>{ line }</p> ) }
+			</BottomSheet>
 		</div>
 	);
 }
@@ -352,6 +452,86 @@ export function StylebookSurfacesPage() {
 							Add text until the body overflows and it takes a tab stop; add a link and
 							the tab stop goes, because focus can already reach inside. Neither change
 							resizes the region, so neither is visible to a ResizeObserver watching it.
+						</p>
+					</Group>
+
+					<Group kicker="The page stays usable, so the body divides" title="Standard side sheet">
+						<StandardSheetSpecimen edge="end" />
+						<StandardSheetSpecimen edge="start" />
+						<p className="ax-stylebook-page__note">
+							256dp by default, between 256 and 400. The column is the Scaffold&apos;s,
+							which is why the sheet spans its region rather than the window &mdash;
+							M3&apos;s &ldquo;set by how the layout is divided into regions&rdquo;. The
+							leading specimen swaps the grid areas through <code>:has()</code>, because
+							the scaffold receives a node and cannot read its props.
+						</p>
+					</Group>
+
+					<Group kicker="Preferred on a compact window" title="Modal side sheet">
+						<div className="ax-stylebook-surfaces__row">
+							<Specimen
+								label="Open modal sheet"
+								render={ ( state ) => (
+									<SideSheet
+										{ ...state }
+										headline="Details"
+										onBack={ state.onClose }
+										actions={
+											<>
+												<Button variant="text" onClick={ state.onClose }>
+													Cancel
+												</Button>
+												<Button variant="text" onClick={ state.onClose }>
+													Save
+												</Button>
+											</>
+										}
+										divider
+									>
+										<p>Corners face the page: 16dp on this side, 0 on the edge.</p>
+										<p>The scrim dims the page and the page does not scroll.</p>
+									</SideSheet>
+								) }
+							/>
+							<Specimen
+								label="Open detached sheet"
+								render={ ( state ) => (
+									<SideSheet
+										{ ...state }
+										attachment="detached"
+										width={ 400 }
+										headline="Detached, 400dp"
+									>
+										<p>
+											Inset 16dp and rounded all round. M3 allows this inset and
+											no more: further in, it hides the page and blurs whether
+											the sheet is what scrolls.
+										</p>
+									</SideSheet>
+								) }
+							/>
+						</div>
+						<p className="ax-stylebook-page__note">
+							The close button is always rendered, never optional: M3&apos;s anatomy calls
+							it recommended and its accessibility page calls it always present, and the
+							stricter page is the one this project follows. A standard sheet also has no
+							Escape to fall back on, because a non-modal dialog fires no cancel.
+						</p>
+					</Group>
+
+					<Group kicker="Reachable without a drag gesture" title="Bottom sheet">
+						<div className="ax-stylebook-surfaces__row">
+							<BottomSheetSpecimen />
+							<BottomSheetSpecimen modality="standard" />
+						</div>
+						<p className="ax-stylebook-page__note">
+							The first open is capped at half the window. The real handle is the
+							first tab stop and cycles initial/full height with click, Space or Enter.
+							At full height, the modal specimen exposes Close; the standard specimen
+							exposes Collapse sheet and remains open at its initial height.
+							The Carousel intentionally scrolls horizontally inside the vertically
+							scrolling sheet; that is allowed for bottom sheets and forbidden for side
+							sheets.
 						</p>
 					</Group>
 

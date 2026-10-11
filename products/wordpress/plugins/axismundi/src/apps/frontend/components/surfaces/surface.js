@@ -41,6 +41,25 @@ import warning from '@wordpress/warning';
 const MODALITIES = [ 'modal', 'standard' ];
 
 /*
+ * M3's layout pages name three ways a pane can be shown, and they are not the
+ * same question as modality. Modality decides the top layer, the scrim, the
+ * scroll lock and whether the page behind is inert; display decides where the
+ * box sits.
+ *
+ * Conflating them was a real defect: this file used to place every standard
+ * surface in the flow, which is right for a side sheet and wrong for a bottom
+ * sheet. M3 names the bottom sheet as its example of a docked pane -- "pinned
+ * to the edge of a window", with the page still usable above it -- so a
+ * standard bottom sheet stays fixed to the window edge and shares no space.
+ * The bottom sheet had to override the shared layer to get that, which is the
+ * shape of a contract that is wrong rather than a row that is special.
+ *
+ * `products/styleguide/_data/surface.yml` `react_surface.pane_display` holds
+ * the mapping.
+ */
+const DISPLAYS = [ 'floating', 'docked', 'co-planar' ];
+
+/*
  * HTML's `closedby`, which maps one-to-one onto M3's dismissal rule. See
  * `products/styleguide/_components/surface.md` decision 4 for the table.
  */
@@ -281,7 +300,8 @@ export function useScrollAffordance( ref, open ) {
  * @param {import('@wordpress/element').ReactNode} props.children Surface content.
  * @param {boolean} props.open Whether the surface is open. Controlled.
  * @param {Function} [props.onClose] Called when the surface asks to be closed.
- * @param {'modal'|'standard'} [props.modality='modal'] Top layer or in the flow.
+ * @param {'modal'|'standard'} [props.modality='modal'] Top layer, scrim and lock.
+ * @param {'floating'|'docked'|'co-planar'} [props.display='floating'] Where the box sits.
  * @param {'any'|'closerequest'|'none'} [props.closedBy='any'] HTML dismissal policy.
  * @param {'dialog'|'alertdialog'} [props.role] Overrides the host's implicit role.
  * @param {string} [props.labelledBy] Id of the element naming the surface.
@@ -296,6 +316,7 @@ export function Surface( {
 	open,
 	onClose,
 	modality = 'modal',
+	display = 'floating',
 	closedBy = 'any',
 	role,
 	labelledBy,
@@ -315,6 +336,7 @@ export function Surface( {
 	 */
 	const selfClosingRef = useRef( false );
 	const resolvedModality = oneOf( modality, MODALITIES, 'modal', 'modality' );
+	const resolvedDisplay = oneOf( display, DISPLAYS, 'floating', 'display' );
 	const resolvedClosedBy = oneOf( closedBy, CLOSED_BY, 'any', 'closedBy' );
 
 	function selfClose( dialog ) {
@@ -449,6 +471,7 @@ export function Surface( {
 			aria-describedby={ describedBy }
 			closedby={ resolvedClosedBy }
 			data-modality={ resolvedModality }
+			data-display={ resolvedDisplay }
 			onCancel={ onCancel }
 			onClose={ onNativeClose }
 		>

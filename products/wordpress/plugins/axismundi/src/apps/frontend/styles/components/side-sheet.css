@@ -1,0 +1,206 @@
+@layer axismundi.components {
+	/*
+	 * `products/styleguide/_data/surface.yml`, row `sheet-side`. The two
+	 * modalities share every measurement and differ in container, elevation,
+	 * shape and placement, which is why the numbers are declared once here and
+	 * the modality selectors below only re-point them.
+	 */
+	.ax-side-sheet {
+		--md-comp-side-sheet-container-color: var( --md-sys-color-surface-container-low );
+		--md-comp-side-sheet-headline-color: var( --md-sys-color-on-surface-variant );
+		--md-comp-side-sheet-divider-color: var( --md-sys-color-outline );
+		--md-comp-side-sheet-padding-inline: 24px;
+		--md-comp-side-sheet-padding-inline-with-icon: 16px;
+		--md-comp-side-sheet-between-top-elements: 12px;
+		--md-comp-side-sheet-actions-height: 72px;
+		--md-comp-side-sheet-actions-padding-top: 16px;
+		--md-comp-side-sheet-actions-padding-bottom: 24px;
+		--md-comp-side-sheet-detached-margin: 16px;
+		--md-comp-side-sheet-shape-docked: 0;
+		--md-comp-side-sheet-shape-facing-page: 16px;
+		--md-comp-side-sheet-shape-detached: 16px;
+
+		/*
+		 * `surface.yml` `motion.presentations.sheet`. The curve does not
+		 * overshoot: a spring would pull the sheet off the edge it sits on and
+		 * show the page through the gap.
+		 */
+		--ax-surface-motion-enter: var( --md-sys-motion-easing-emphasized-decelerate );
+		--ax-surface-motion-enter-duration: var( --md-sys-motion-duration-long2 );
+		--ax-surface-motion-exit: var( --md-sys-motion-easing-emphasized-accelerate );
+		--ax-surface-motion-exit-duration: var( --md-sys-motion-duration-short4 );
+
+		display: flex;
+		flex-direction: column;
+		box-sizing: border-box;
+		inline-size: var( --ax-side-sheet-width, 256px );
+		max-inline-size: 100%;
+		background: var( --md-comp-side-sheet-container-color );
+		color: var( --md-sys-color-on-surface );
+	}
+
+	/*
+	 * Modal: the top layer, pinned to its edge for the full height of the
+	 * window. `inset-block` rather than `inset`, so the inline edge is the
+	 * sheet's own and the opposite one is left alone.
+	 */
+	.ax-side-sheet[data-modality='modal'] {
+		position: fixed;
+		inset-block: 0;
+		margin: 0;
+		block-size: auto;
+		max-block-size: none;
+		border-start-start-radius: var( --md-comp-side-sheet-shape-docked );
+		border-end-start-radius: var( --md-comp-side-sheet-shape-docked );
+	}
+
+	.ax-side-sheet[data-modality='modal'][data-edge='end'] {
+		inset-inline-end: 0;
+		inset-inline-start: auto;
+		/* "16dp 0 0 16dp": the corners that face the page. */
+		border-start-start-radius: var( --md-comp-side-sheet-shape-facing-page );
+		border-end-start-radius: var( --md-comp-side-sheet-shape-facing-page );
+	}
+
+	.ax-side-sheet[data-modality='modal'][data-edge='start'] {
+		inset-inline-start: 0;
+		inset-inline-end: auto;
+		border-start-end-radius: var( --md-comp-side-sheet-shape-facing-page );
+		border-end-end-radius: var( --md-comp-side-sheet-shape-facing-page );
+	}
+
+	/*
+	 * Standard: not in the top layer. It takes the `sheet` column of the
+	 * Scaffold's body, which already sits below the app bar and above the
+	 * navigation bar, so it spans its region rather than the window --
+	 * M3's "set by how the layout is divided into regions".
+	 */
+	.ax-side-sheet[data-modality='standard'] {
+		--md-comp-side-sheet-container-color: var( --md-sys-color-surface );
+	}
+
+	/*
+	 * Placement is the display axis, not the modality one. For this row the two
+	 * line up -- standard is always co-planar here -- but saying `co-planar`
+	 * keeps the reason visible, and it is the attribute the shared layer uses
+	 * to put the surface in the flow.
+	 */
+	.ax-side-sheet[data-display='co-planar'] {
+		grid-area: sheet;
+		/*
+		 * The sheet caps itself at the viewport and scrolls inside, which is
+		 * what "scrolls vertically, independent of the page; both keep their
+		 * position" asks for. Without the cap the sheet grows its own grid
+		 * area, the area grows the scaffold, and a sheet asking for 100% of a
+		 * container its own content is sizing never stops -- measured: a 352px
+		 * frame held a 409px scaffold and the bottom actions fell out of it.
+		 *
+		 * `sticky` is the mechanism `DECISION-FRONTEND-SCROLL-OWNERSHIP.md`
+		 * already adopted for chrome that stays while the document scrolls, and
+		 * a standard sheet is exactly that: the page keeps scrolling behind it
+		 * while the sheet holds its place beside the content.
+		 */
+		position: sticky;
+		inset-block-start: 0;
+		block-size: 100%;
+		max-block-size: 100dvb;
+		border-radius: var( --md-comp-side-sheet-shape-docked );
+	}
+
+	/*
+	 * Detached: inset by 16dp and rounded all the way round. M3 allows this
+	 * inset and no more -- further in, it hides the page and blurs whether the
+	 * sheet is what scrolls.
+	 */
+	.ax-side-sheet[data-attachment='detached'] {
+		border-radius: var( --md-comp-side-sheet-shape-detached );
+	}
+
+	.ax-side-sheet[data-modality='modal'][data-attachment='detached'] {
+		inset-block: var( --md-comp-side-sheet-detached-margin );
+		margin-inline: var( --md-comp-side-sheet-detached-margin );
+	}
+
+	.ax-side-sheet[data-display='co-planar'][data-attachment='detached'] {
+		block-size: calc( 100% - 2 * var( --md-comp-side-sheet-detached-margin ) );
+		margin: var( --md-comp-side-sheet-detached-margin );
+	}
+
+	/* Header: back button, headline, close button, in the anatomy's order. */
+	.ax-side-sheet__header {
+		display: flex;
+		flex: 0 0 auto;
+		align-items: center;
+		gap: var( --md-comp-side-sheet-between-top-elements );
+		padding-block: var( --md-comp-side-sheet-between-top-elements );
+		padding-inline: var( --md-comp-side-sheet-padding-inline );
+	}
+
+	/*
+	 * 16dp when an icon button leads the row rather than 24dp. An icon button's
+	 * own target already carries the difference, so the smaller padding keeps
+	 * the glyph on the same optical line as the text below it.
+	 */
+	.ax-side-sheet__header:has( .ax-side-sheet__back ) {
+		padding-inline-start: var( --md-comp-side-sheet-padding-inline-with-icon );
+	}
+
+	.ax-side-sheet__header:has( .ax-side-sheet__close ) {
+		padding-inline-end: var( --md-comp-side-sheet-padding-inline-with-icon );
+	}
+
+	.ax-side-sheet__headline {
+		flex: 1 1 auto;
+		min-inline-size: 0;
+		margin: 0;
+		color: var( --md-comp-side-sheet-headline-color );
+		font-family: var( --md-sys-typescale-title-large-font );
+		font-size: var( --md-sys-typescale-title-large-size );
+		font-weight: var( --md-sys-typescale-title-large-weight );
+		letter-spacing: var( --md-sys-typescale-title-large-tracking );
+		line-height: var( --md-sys-typescale-title-large-line-height );
+	}
+
+	/*
+	 * Vertical only. M3 forbids horizontal scrolling here and says why: a side
+	 * sheet's narrow width leaves too little room to see an item whole. That is
+	 * the published difference from a bottom sheet, which may carry a
+	 * horizontally scrolling row.
+	 */
+	.ax-side-sheet__body {
+		flex: 1 1 auto;
+		min-block-size: 0;
+		overflow-x: hidden;
+		overflow-y: auto;
+		padding-inline: var( --md-comp-side-sheet-padding-inline );
+	}
+
+	.ax-side-sheet__body:focus-visible {
+		outline: var( --md-sys-state-focus-indicator-thickness, 3px ) solid
+			var( --md-sys-color-secondary );
+		outline-offset: var( --md-sys-state-focus-indicator-inner-offset, -3px );
+	}
+
+	/* The token table names `outline` here; the standard row's numbered list
+	 * names `outline-variant`. `surface.yml` keeps the token table. */
+	.ax-side-sheet__divider {
+		flex: 0 0 auto;
+		margin: 0;
+		border: 0;
+		border-block-start: 1px solid var( --md-comp-side-sheet-divider-color );
+	}
+
+	/* Start-aligned, unlike a dialog's trailing actions. */
+	.ax-side-sheet__actions {
+		display: flex;
+		flex: 0 0 auto;
+		align-items: center;
+		justify-content: flex-start;
+		gap: 8px;
+		box-sizing: border-box;
+		min-block-size: var( --md-comp-side-sheet-actions-height );
+		padding-block: var( --md-comp-side-sheet-actions-padding-top )
+			var( --md-comp-side-sheet-actions-padding-bottom );
+		padding-inline: var( --md-comp-side-sheet-padding-inline );
+	}
+}

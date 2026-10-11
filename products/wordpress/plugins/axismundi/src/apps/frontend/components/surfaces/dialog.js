@@ -224,6 +224,7 @@ export function Dialog( {
 			open={ open }
 			onClose={ onClose }
 			modality="modal"
+			display="floating"
 			closedBy={ closedBy }
 			role={ 'alertdialog' === resolvedRole ? 'alertdialog' : undefined }
 			labelledBy={ headline ? headlineId : undefined }

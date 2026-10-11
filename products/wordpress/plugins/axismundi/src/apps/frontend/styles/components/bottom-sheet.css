@@ -1,0 +1,143 @@
+@layer axismundi.components {
+	/* `surface.yml` row `sheet-bottom`. The body may scroll in either axis:
+	 * vertical overflow belongs to the sheet, while a Carousel or another row
+	 * inside it may deliberately need horizontal overflow. */
+	.ax-bottom-sheet {
+		--md-comp-bottom-sheet-container-color: var( --md-sys-color-surface-container-low );
+		--md-comp-bottom-sheet-shape: 28px;
+		--md-comp-bottom-sheet-drag-handle-color: var( --md-sys-color-on-surface-variant );
+		--md-comp-bottom-sheet-drag-handle-width: 32px;
+		--md-comp-bottom-sheet-drag-handle-height: 4px;
+		--md-comp-bottom-sheet-drag-handle-padding-block: 22px;
+		--md-comp-bottom-sheet-content-padding: 24px;
+		--md-comp-bottom-sheet-top-margin: 72px;
+		--md-comp-bottom-sheet-wide-top-margin: 56px;
+		--md-comp-bottom-sheet-wide-inline-margin: 56px;
+		--md-comp-bottom-sheet-maximum-width: 640px;
+		--md-comp-bottom-sheet-initial-height-cap: 50%;
+
+		--ax-surface-motion-enter: var( --md-sys-motion-easing-emphasized-decelerate );
+		--ax-surface-motion-enter-duration: var( --md-sys-motion-duration-long2 );
+		--ax-surface-motion-exit: var( --md-sys-motion-easing-emphasized-accelerate );
+		--ax-surface-motion-exit-duration: var( --md-sys-motion-duration-short4 );
+
+		position: fixed;
+		inset-block-end: 0;
+		inset-inline: 0;
+		display: flex;
+		flex-direction: column;
+		box-sizing: border-box;
+		inline-size: 100%;
+		max-inline-size: var( --md-comp-bottom-sheet-maximum-width );
+		max-block-size: calc( 100dvb - var( --md-comp-bottom-sheet-top-margin ) );
+		margin-block: auto 0;
+		margin-inline: auto;
+		padding: 0;
+		border-start-start-radius: var( --md-comp-bottom-sheet-shape );
+		border-start-end-radius: var( --md-comp-bottom-sheet-shape );
+		background: var( --md-comp-bottom-sheet-container-color );
+		color: var( --md-sys-color-on-surface );
+	}
+
+	.ax-bottom-sheet[data-sheet-height='initial'] {
+		max-block-size: min(
+			var( --md-comp-bottom-sheet-initial-height-cap ),
+			calc( 100dvb - var( --md-comp-bottom-sheet-top-margin ) )
+		);
+	}
+
+	.ax-bottom-sheet[data-sheet-height='expanded'] {
+		block-size: calc( 100dvb - var( --md-comp-bottom-sheet-top-margin ) );
+	}
+
+	/*
+	 * No placement rule per modality. `show()` leaves a standard sheet out of
+	 * the top layer, but it stays anchored to the window bottom either way,
+	 * because this row is docked in both modalities and the shared layer now
+	 * keys placement on that rather than on modality. The override this
+	 * replaces had to restate `position: fixed` to win back the edge.
+	 */
+
+	.ax-bottom-sheet__header {
+		position: relative;
+		display: flex;
+		flex: 0 0 auto;
+		justify-content: center;
+	}
+
+	.ax-bottom-sheet__drag-handle {
+		position: relative;
+		box-sizing: content-box;
+		inline-size: var( --md-comp-bottom-sheet-drag-handle-width );
+		block-size: var( --md-comp-bottom-sheet-drag-handle-height );
+		padding-block: var( --md-comp-bottom-sheet-drag-handle-padding-block );
+		padding-inline: 8px;
+		border: 0;
+		background: transparent;
+		cursor: pointer;
+	}
+
+	.ax-bottom-sheet__drag-handle::before {
+		position: absolute;
+		inset: var( --md-comp-bottom-sheet-drag-handle-padding-block ) 8px;
+		border-radius: 999px;
+		background: var( --md-comp-bottom-sheet-drag-handle-color );
+		content: '';
+	}
+
+	.ax-bottom-sheet__drag-handle:focus-visible,
+	.ax-bottom-sheet__body:focus-visible {
+		outline: var( --md-sys-state-focus-indicator-thickness, 3px ) solid
+			var( --md-sys-color-secondary );
+		outline-offset: 2px;
+	}
+
+	.ax-bottom-sheet__close,
+	.ax-bottom-sheet__collapse {
+		position: absolute;
+		inset-block-start: 0;
+		inset-inline-end: var( --md-comp-bottom-sheet-content-padding );
+	}
+
+	.ax-bottom-sheet__body {
+		flex: 1 1 auto;
+		min-block-size: 0;
+		overflow: auto;
+		padding: var( --md-comp-bottom-sheet-content-padding );
+		font-family: var( --md-sys-typescale-body-medium-font );
+		font-size: var( --md-sys-typescale-body-medium-size );
+		font-weight: var( --md-sys-typescale-body-medium-weight );
+		letter-spacing: var( --md-sys-typescale-body-medium-tracking );
+		line-height: var( --md-sys-typescale-body-medium-line-height );
+	}
+
+	.ax-bottom-sheet__headline {
+		margin: 0 0 16px;
+		font-family: var( --md-sys-typescale-headline-small-font );
+		font-size: var( --md-sys-typescale-headline-small-size );
+		font-weight: var( --md-sys-typescale-headline-small-weight );
+		letter-spacing: var( --md-sys-typescale-headline-small-tracking );
+		line-height: var( --md-sys-typescale-headline-small-line-height );
+	}
+
+	@media ( min-width: 641px ) {
+		.ax-bottom-sheet {
+			max-inline-size: min(
+				var( --md-comp-bottom-sheet-maximum-width ),
+				calc( 100% - 2 * var( --md-comp-bottom-sheet-wide-inline-margin ) )
+			);
+			max-block-size: calc( 100dvb - var( --md-comp-bottom-sheet-wide-top-margin ) );
+		}
+
+		.ax-bottom-sheet[data-sheet-height='initial'] {
+			max-block-size: min(
+				var( --md-comp-bottom-sheet-initial-height-cap ),
+				calc( 100dvb - var( --md-comp-bottom-sheet-wide-top-margin ) )
+			);
+		}
+
+		.ax-bottom-sheet[data-sheet-height='expanded'] {
+			block-size: calc( 100dvb - var( --md-comp-bottom-sheet-wide-top-margin ) );
+		}
+	}
+}

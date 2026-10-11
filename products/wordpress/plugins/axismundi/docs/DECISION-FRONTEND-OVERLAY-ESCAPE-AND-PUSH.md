@@ -433,6 +433,12 @@ ResizeObserver를 함께 둔다. 자식까지 보는 이유는 늦게 로드되�
   `axismundi_capstone_hide_public_admin_bar`(`includes/route.php`)로 admin bar를 **발생
   지점에서** 끄고, 그러면 마크업·스타일시트·인라인 document-offset 규칙이 함께 사라진다.
   밑에 깔 바도, 되돌릴 offset도 없다. 프론트앱은 자기 app bar를 갖는다.
+- **~~standard sheet가 자기 영역을 넘어 자라는 것~~.** SideSheet 구현에서 닫혔다. sheet가
+  `block-size: 100%`만 쓰면 순환한다 — 콘텐츠가 grid area를 키우고, 커진 area의 100%를 다시
+  요구한다. 실측: 352px 프레임 안에서 scaffold가 409px이 되고 bottom actions가 밖으로
+  나갔다. sheet가 **스스로 상한**(`max-block-size: 100dvb`)을 갖고 안에서 스크롤한다. 그리고
+  문서가 스크롤하는 동안 자리를 지켜야 하므로 `position: sticky`인데, 이것은 새 결정이 아니라
+  scroll 기록 1절이 이미 채택한 메커니즘("chrome은 `position: sticky`로 남는다")의 적용이다.
 - **standard sheet가 `<html>`의 scroll을 건드리지 않는 것의 결과.** 페이지가 좁아져도 문서
   스크롤은 그대로이므로, sheet 안의 inner scroll과 문서 스크롤이 동시에 존재한다. side sheet는
   "scrolls vertically, independent of the page; both keep their position"이라 이것이 발행된

@@ -122,12 +122,20 @@
 	 */
 
 	/*
-	 * A standard surface is not in the top layer, so it draws no scrim and takes
-	 * its place in the flow. The grid column it sits in belongs to the Scaffold;
-	 * see section 4 of
-	 * `docs/DECISION-FRONTEND-OVERLAY-ESCAPE-AND-PUSH.md`.
+	 * Placement follows `display`, not `modality`.
+	 *
+	 * Only a co-planar surface joins the flow and shares space: it takes a
+	 * column of the Scaffold's body and the page narrows around it (section 4
+	 * of `docs/DECISION-FRONTEND-OVERLAY-ESCAPE-AND-PUSH.md`). A docked one
+	 * stays pinned to a window edge whether or not it is modal -- M3's own
+	 * example of a docked pane is the bottom sheet, and a standard one coexists
+	 * with the page rather than shrinking it.
+	 *
+	 * This rule used to key on `[data-modality='standard']`, which forced the
+	 * bottom sheet to override the shared layer to stay on its edge. One axis
+	 * was doing two jobs.
 	 */
-	.ax-surface[data-modality='standard'] {
+	.ax-surface[data-display='co-planar'] {
 		position: static;
 		margin: 0;
 		inset: auto;

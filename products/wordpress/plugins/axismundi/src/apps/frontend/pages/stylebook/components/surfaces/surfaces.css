@@ -6,9 +6,58 @@
 	}
 
 	/*
-	 * A specimen is a trigger and its surface. The surface renders where it is
-	 * declared and goes to the top layer when it opens, so this box only ever
-	 * lays out the button -- which is the point worth seeing on this page.
+	 * A standard sheet needs a scaffold to take a column of, and a scaffold
+	 * fills the window. This frame bounds one so the specimen can be read
+	 * beside the others on the page.
+	 */
+	.ax-stylebook-surfaces__frame {
+		block-size: 22rem;
+		overflow: hidden;
+		margin-block-end: 16px;
+		border: 1px solid var( --md-sys-color-outline-variant );
+		border-radius: 12px;
+	}
+
+	/*
+	 * The frame stands in for the window, so the scaffold inside it is bounded
+	 * rather than minimum-bounded. In the app the scaffold is `100dvb` and the
+	 * document scrolls; here the box is the viewport.
+	 */
+	.ax-stylebook-surfaces__frame .ax-scaffold {
+		block-size: 100%;
+		min-block-size: 0;
+	}
+
+	.ax-stylebook-surfaces__bar {
+		padding: 12px 16px;
+		background: var( --md-sys-color-surface-container );
+		font-weight: 500;
+	}
+
+	.ax-stylebook-surfaces__page {
+		display: grid;
+		gap: 12px;
+		justify-items: start;
+		padding: 16px;
+	}
+
+	.ax-stylebook-surfaces__bottom-carousel {
+		inline-size: 100%;
+		margin-block: 16px;
+	}
+
+	.ax-stylebook-surfaces__carousel-card {
+		display: grid;
+		min-block-size: 88px;
+		place-items: center;
+		background: var( --md-sys-color-secondary-container );
+		color: var( --md-sys-color-on-secondary-container );
+	}
+
+	/*
+	 * A specimen is a trigger and its surface. A modal surface renders where it
+	 * is declared and goes to the top layer when it opens, so this box only
+	 * ever lays out the button -- which is the point worth seeing on this page.
 	 */
 	.ax-stylebook-surfaces__specimen {
 		display: inline-flex;

@@ -22,6 +22,10 @@ STYLE_INDEX = APP / "styles/index.css"
 PAGE = APP / "pages/stylebook/components/surfaces/index.js"
 # The other runtime that carries the same rule, read but never written here.
 BLOCK_CSS = ROOT / "products/wordpress/plugins/axismundi-dialogs/blocks/dialog/style.css"
+SIDE_SHEET_CSS = APP / "styles/components/side-sheet.css"
+BOTTOM_SHEET_CSS = APP / "styles/components/bottom-sheet.css"
+SCAFFOLD_JS = APP / "foundations/layout/scaffold/index.js"
+SCAFFOLD_CSS_FILE = APP / "foundations/layout/scaffold/scaffold.css"
 
 
 def read(path: Path) -> str:
@@ -69,7 +73,19 @@ def check_react_surface(data: dict, report) -> None:
     report.check(bool(core), f"react: the shared core {react['core']['file']} is missing")
     dialog_js = read(root / "dialog.js")
     dialog_css = read(DIALOG_CSS)
+    side_sheet_js = read(root / "side-sheet.js")
+    side_sheet_css = read(SIDE_SHEET_CSS)
+    bottom_sheet_js = read(root / "bottom-sheet.js")
+    bottom_sheet_css = read(BOTTOM_SHEET_CSS)
+    scaffold_js = read(SCAFFOLD_JS)
     page = read(PAGE)
+    # Which stylesheet spends which row's tokens.
+    row_stylesheets = {
+        "dialog-basic": dialog_css,
+        "dialog-full-screen": dialog_css,
+        "sheet-bottom": bottom_sheet_css,
+        "sheet-side": side_sheet_css,
+    }
 
     # --- rows and components ------------------------------------------------
     # Four published rows map onto three components. The union has to stay
@@ -337,7 +353,7 @@ def check_react_surface(data: dict, report) -> None:
             if "reason" == key or not isinstance(token, str):
                 continue
             report.check(
-                f"--{token}" in dialog_css,
+                f"--{token}" in row_stylesheets.get(presentation, dialog_css),
                 f"react: {presentation} no longer takes --{token} for {key}",
             )
 
@@ -364,9 +380,312 @@ def check_react_surface(data: dict, report) -> None:
             f"react: the {slot} slot no longer holds {hold} and spends {share} of the enter",
         )
 
+    # --- modality and display are two axes ----------------------------------
+    # The defect this pins shut: placement keyed on modality put a docked
+    # bottom sheet in the flow, and the row had to override the shared layer to
+    # get back on its edge. A row fighting the shared layer is the symptom.
+    display_map = react["pane_display"]
+    # Comments stripped first: the comment that explains why placement moved off
+    # modality names the old selector, and a pin that fires on its own
+    # explanation is a pin nobody can satisfy.
+    surface_rules = re.sub(r"/\*.*?\*/", "", surface_css, flags=re.S)
+    report.check(
+        "[data-display='co-planar']" in surface_rules,
+        "react: the shared layer no longer places surfaces by display mode",
+    )
+    report.check(
+        "[data-modality='standard']" not in surface_rules,
+        "react: placement is keyed on modality again, which cannot tell a docked sheet from a co-planar one",
+    )
+    sources = {
+        "dialog.js": dialog_js,
+        "side-sheet.js": side_sheet_js,
+        "bottom-sheet.js": read(root / "bottom-sheet.js"),
+    }
+    # Every mode the record names has a row that declares it.
+    for mode in display_map:
+        declared = any(f'display="{ mode }"'.replace("{ ", "").replace(" }", "") in source
+                       or f"'{ mode }'".replace("{ ", "").replace(" }", "") in source
+                       for source in sources.values())
+        report.check(declared, f"react: no component declares the '{mode}' display the record names")
+    # And the docked row does not restate placement for one modality.
+    bottom_css = read(APP / "styles/components/bottom-sheet.css")
+    if bottom_css:
+        report.check(
+            "[data-modality='standard']" not in bottom_css,
+            "react: the bottom sheet places itself per modality again, fighting the shared layer",
+        )
+
+    # --- the side sheet -----------------------------------------------------
+    row = next((r for r in data["presentations"] if r.get("name") == "sheet-side"), None)
+    if row is not None and "sheet-side" in implemented:
+        measurements = row["measurements"]
+        spec = row["spec"]
+
+        # Width: the published range, clamped rather than refused.
+        report.check(
+            f"MINIMUM_WIDTH = {measurements['width']['default']}" in side_sheet_js,
+            f"react: the default width is not the published {measurements['width']['default']}dp",
+        )
+        report.check(
+            f"MAXIMUM_WIDTH = {measurements['width']['max']}" in side_sheet_js,
+            f"react: the maximum width is not the published {measurements['width']['max']}dp",
+        )
+
+        # Every measurement the row publishes is spent by the stylesheet.
+        for name, value in (
+            ("padding-inline", measurements["padding_inline"]),
+            ("padding-inline-with-icon", measurements["padding_start_with_icon"]),
+            ("between-top-elements", measurements["between_top_elements"]),
+            ("actions-height", measurements["bottom_actions"]["height"]),
+            ("actions-padding-top", measurements["bottom_actions"]["padding_top"]),
+            ("actions-padding-bottom", measurements["bottom_actions"]["padding_bottom"]),
+            ("detached-margin", measurements["detached_margin"]),
+            ("shape-facing-page", spec["shape"]["docked_modal"]["facing_page"]),
+            ("shape-detached", spec["shape"]["detached"]),
+        ):
+            report.check(
+                f"--md-comp-side-sheet-{name}: {value}px" in side_sheet_css,
+                f"react: side sheet {name} is not the published {value}dp",
+            )
+
+        report.check(
+            f"--md-comp-side-sheet-shape-docked: {spec['shape']['docked']}" in side_sheet_css,
+            "react: the docked side sheet no longer has square corners",
+        )
+
+        # Start-aligned actions, which is the published difference from a
+        # dialog's trailing ones.
+        report.check(
+            measurements["bottom_actions"]["alignment"] == "start"
+            and "justify-content: flex-start" in side_sheet_css,
+            "react: the side sheet's actions are no longer start-aligned",
+        )
+
+        # Never horizontally, and never laid out to look as if it does.
+        report.check(
+            "overflow-x: hidden" in side_sheet_css,
+            "react: the side sheet's body may scroll horizontally, which its guidelines forbid",
+        )
+
+        # The close affordance is unconditional, which is the stricter page.
+        #
+        # The first version of this looked at the text AFTER the opening tag,
+        # so wrapping the button in `{ onClose ? ... }` -- which goes BEFORE it
+        # -- passed. What binds is the JSX immediately preceding the element:
+        # a conditional has to introduce it with `?` or `&&`.
+        close_at = side_sheet_js.find('className="ax-side-sheet__close"')
+        report.check(-1 != close_at, "react: the side sheet lost its close button")
+        if -1 != close_at:
+            opening = side_sheet_js.rfind("<IconButton", 0, close_at)
+            preceding = side_sheet_js[max(0, opening - 120) : opening]
+            report.check(
+                "?" not in preceding and "&&" not in preceding,
+                "react: the side sheet's close button became conditional; the accessibility page makes it always present",
+            )
+
+        # The compact swap: one open method, not two trees.
+        report.check(
+            "useWindowSizeClass" in side_sheet_js,
+            "react: nothing observes the window class, so a standard sheet cannot become modal on compact",
+        )
+        report.check(
+            "createPortal" not in side_sheet_js and "ReactDOM" not in side_sheet_js,
+            "react: the side sheet moves its DOM between modalities instead of changing how it opens",
+        )
+
+    # --- the bottom sheet ---------------------------------------------------
+    row = next((r for r in data["presentations"] if r.get("name") == "sheet-bottom"), None)
+    bottom_component = next(
+        (component for component in react["components"] if component.get("name") == "BottomSheet"),
+        None,
+    )
+    if row is not None and bottom_component is not None and "sheet-bottom" in implemented:
+        measurements = row["measurements"]
+        spec = row["spec"]
+        behaviour = row["behaviour"]
+        record = bottom_component
+
+        for name, value in (
+            ("maximum-width", measurements["width"]["max"]),
+            ("drag-handle-width", spec["drag_handle"]["width"]),
+            ("drag-handle-height", spec["drag_handle"]["height"]),
+            ("drag-handle-padding-block", measurements["drag_handle"]["padding_block"]),
+            ("content-padding", measurements["content_padding"]),
+            ("top-margin", measurements["top_margin"]),
+            ("wide-top-margin", measurements["wide_window"]["top_margin"]),
+            ("wide-inline-margin", measurements["wide_window"]["inline_margin"]),
+        ):
+            report.check(
+                f"--md-comp-bottom-sheet-{name}: {value}px" in bottom_sheet_css,
+                f"react: bottom sheet {name} is not the recorded {value}dp",
+            )
+
+        report.check(
+            f"--md-comp-bottom-sheet-shape: {spec['shape']['start_start']}px" in bottom_sheet_css,
+            "react: bottom sheet no longer has the recorded top corner shape",
+        )
+        report.check(
+            f"--md-comp-bottom-sheet-initial-height-cap: {behaviour['initial_height_cap']}%" in bottom_sheet_css,
+            "react: bottom sheet initial height is no longer capped at half the window",
+        )
+        report.check(
+            "data-sheet-height" in bottom_sheet_js and "data-sheet-height='initial'" in bottom_sheet_css,
+            "react: bottom sheet no longer renders the initial height state",
+        )
+        report.check(
+            "data-sheet-height='expanded'" in bottom_sheet_css,
+            "react: bottom sheet no longer renders the expanded height state",
+        )
+        # The contract is unchanged -- a standard bottom sheet stays on the
+        # window's bottom edge with the page usable above it. What changed is
+        # where that is expressed: the row is docked in both modalities, so the
+        # base rule anchors it and the shared layer no longer pulls a standard
+        # surface into the flow. This used to assert the per-modality override
+        # that carried it before.
+        bottom_rules = re.sub(r"/\*.*?\*/", "", bottom_sheet_css, flags=re.S)
+        report.check(
+            record["modality"]["standard"] == "anchored to the window bottom, page usable"
+            and "inset-block-end: 0" in bottom_rules
+            and "margin-block: auto 0" in bottom_rules,
+            "react: standard bottom sheet no longer anchors to the window bottom",
+        )
+        report.check(
+            'display="docked"' in sources["bottom-sheet.js"],
+            "react: the bottom sheet stopped declaring itself docked, so the shared layer would flow it",
+        )
+        report.check(
+            record["handle"]["element"] == "button"
+            and 'className="ax-bottom-sheet__drag-handle"' in bottom_sheet_js
+            and 'type="button"' in bottom_sheet_js,
+            "react: bottom sheet handle is no longer a real button",
+        )
+        report.check(
+            f"handleLabel = '{record['handle']['label']}'" in bottom_sheet_js,
+            "react: bottom sheet handle no longer takes its recorded accessible name",
+        )
+        report.check(
+            "onClick={ cycleHeight }" in bottom_sheet_js and "cycleHeight" in bottom_sheet_js,
+            "react: click, Space and Enter no longer cycle the bottom sheet heights",
+        )
+        affordances = record["expanded_affordance"]
+        modal_affordance = affordances["modal"]
+        standard_affordance = affordances["standard"]
+        affordance_actions = {
+            "close": ("onClose", "ax-bottom-sheet__close"),
+            "collapse": ("collapse", "ax-bottom-sheet__collapse"),
+        }
+        modal_callback, modal_class = affordance_actions.get(modal_affordance["action"], ("", ""))
+        standard_callback, standard_class = affordance_actions.get(
+            standard_affordance["action"], ("", "")
+        )
+        modal_branch = re.search(
+            r"\{ expanded && 'modal' === resolvedModality \? \((.*?)\) : null \}",
+            bottom_sheet_js,
+            re.S,
+        )
+        standard_branch = re.search(
+            r"\{ expanded && 'standard' === resolvedModality \? \((.*?)\) : null \}",
+            bottom_sheet_js,
+            re.S,
+        )
+        report.check(
+            modal_affordance["action"] == "close"
+            and modal_branch is not None
+            and f"className=\"{modal_class}\"" in modal_branch.group(1)
+            and f"label={{ {modal_affordance['prop']} }}" in modal_branch.group(1)
+            and f"{modal_affordance['prop']} = '{modal_affordance['label']}'" in bottom_sheet_js
+            and f'<Icon name="{modal_affordance["icon"]}" />' in modal_branch.group(1)
+            and f"onClick={{ {modal_callback} }}" in modal_branch.group(1),
+            "react: expanded modal bottom sheet no longer exposes its recorded close affordance",
+        )
+        report.check(
+            standard_affordance["action"] == "collapse"
+            and standard_affordance["result"] == "returns to initial height and leaves the controlled sheet open"
+            and standard_branch is not None
+            and f"className=\"{standard_class}\"" in standard_branch.group(1)
+            and f"label={{ {standard_affordance['prop']} }}" in standard_branch.group(1)
+            and f"{standard_affordance['prop']} = '{standard_affordance['label']}'" in bottom_sheet_js
+            and f'<Icon name="{standard_affordance["icon"]}" />' in standard_branch.group(1)
+            and f"onClick={{ {standard_callback} }}" in standard_branch.group(1)
+            and "onClick={ onClose }" not in standard_branch.group(1)
+            and "setHeight( 'initial' )" in bottom_sheet_js,
+            "react: expanded standard bottom sheet no longer collapses without closing",
+        )
+        report.check(
+            f".{modal_class},\n\t.{standard_class}" in bottom_sheet_css,
+            "react: standard bottom-sheet collapse affordance no longer shares the app-bar placement",
+        )
+        report.check(
+            "overflow: auto" in bottom_sheet_css and "overflow-x: hidden" not in bottom_sheet_css,
+            "react: bottom sheet no longer permits horizontally scrolling content",
+        )
+        report.check(
+            "<UncontainedCarousel" in page and "<BottomSheet" in page,
+            "react: stylebook no longer demonstrates a real Carousel inside BottomSheet",
+        )
+        report.check(
+            "modality=\"standard\"" in page,
+            "react: stylebook no longer demonstrates a standard bottom sheet",
+        )
+        report.check(
+            "modal specimen exposes Close" in page
+            and "standard specimen" in page
+            and "Collapse sheet" in page,
+            "react: stylebook no longer records modal close versus standard collapse",
+        )
+
+        deferred = " ".join(record.get("deferred") or []) + " " + " ".join(
+            react.get("not_implemented") or []
+        )
+        report.check(
+            "pointer drag" in deferred and "keyboard/click" in deferred,
+            "react: deferred bottom-sheet drag no longer records its keyboard/click alternative",
+        )
+        report.check(
+            not re.search(r"onPointer|pointercapture|setPointerCapture|releasePointerCapture", bottom_sheet_js, re.I),
+            "react: bottom sheet implements pointer drag despite the deferred contract",
+        )
+
+    # --- the Scaffold's sheet slot ------------------------------------------
+    # The React record, not `windows.page_share`, which describes the block's
+    # injected padding on the page root.
+    share = react["page_share"]
+    report.check(
+        "grid column" in share["resize"],
+        "react: the standard sheet's page share stopped being a grid column",
+    )
+    report.check(
+        "not adopted" in share["move"],
+        "react: `move` is back, and it would translate the sticky chrome with the page",
+    )
+    report.check(
+        "none" == share.get("offsets", "").split(";")[0].strip(),
+        "react: the sheet column claims offsets of its own again",
+    )
+    report.check(
+        "sheet," in scaffold_js and "{ sheet }" in scaffold_js,
+        "react: the Scaffold no longer takes a sheet slot",
+    )
+    # Inside the body, after main -- the JSX pin from the escape record.
+    body_markup = scaffold_js.split('ax-scaffold__body', 1)[-1]
+    report.check(
+        body_markup.find("ax-scaffold__main") < body_markup.find("{ sheet }"),
+        "react: the sheet slot is no longer inside the body after main",
+    )
+    scaffold_css_text = read(SCAFFOLD_CSS_FILE)
+    report.check(
+        '"main sheet"' in scaffold_css_text and '"sheet main"' in scaffold_css_text,
+        "react: the sheet column cannot sit on both edges",
+    )
+    report.check(
+        ":has( [data-edge='start'] )" in scaffold_css_text,
+        "react: the scaffold no longer reads the sheet's own edge, which it cannot be told",
+    )
+
     # --- the stylesheets are actually reachable -----------------------------
     index = read(STYLE_INDEX)
-    for sheet in ("surface.css", "dialog.css"):
+    for sheet in ("surface.css", "dialog.css", "bottom-sheet.css", "side-sheet.css"):
         report.check(
             f"components/{sheet}" in index,
             f"react: {sheet} is not imported, so none of it ships",

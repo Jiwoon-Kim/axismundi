@@ -96,6 +96,44 @@ calendar    Calendar 감지 시 available    어드민에서 켠다
 일도 없어진다 — 이번 세션에만 16→17→18로 두 번 올렸고, 그것은 사람이 기억해야 하는
 종류의 일이었다.
 
+## 5-1. 측정 보강 — 앱은 이미 둘이고, 번들도 둘이다 (2026-10-12)
+
+3절이 "같은 React 표면"이라고 쓴 것은 **누가 그 표면을 소유하는가**이지 번들이 몇 개인가가
+아니다. 그 구분이 암묵적이어서, 구현 방향을 정할 때 다시 재야 했다. 재서 적어 둔다.
+
+```txt
+엔트리   wp-scripts build frontend=src/apps/frontend/index.js
+                          admin=src/apps/admin/index.js
+번들     build/frontend.js · build/admin.js         각자 .asset.php
+로더     axismundi_capstone_asset_metadata( 'frontend' | 'admin' )
+공유     없음 — 두 트리가 서로를 import 하지 않는다
+패키징   한 플러그인
+```
+
+React 앱을 출하하는 플러그인은 `axismundi` 하나뿐이다. `axismundi-contacts`와
+`axismundi-map`은 React 앱이 없는 기능 플러그인이다. 즉 "논리적으로만 분화"가 아니라
+**엔트리·번들·로더 분기까지 둘**이고, 하나인 것은 패키징 단위뿐이다.
+
+### 5-2. 미결 (소유자 판정) — `/contacts/`가 어느 축으로 붙는가
+
+```txt
+(a) 기존 frontend 번들 안의 라우트      번들 하나가 커진다
+(b) 세 번째 엔트리 contacts=…           번들 셋, 같은 플러그인, 공통 컴포넌트는 내부 층
+```
+
+측정 하나가 (a) 쪽으로 기운다 — **이 앱은 이미 라우트 트리를 lazy로 가른다**(`app.js`가
+stylebook을 `import().then()`으로 받는다). 따라서 번들 크기는 엔트리를 쪼갤 근거가 되지
+못한다. 레이아웃 차이도 근거가 아니다. Scaffold가 이미 presentation x breakpoint이고,
+토폴로지 A/B가 그 이유로 존재한다.
+
+(b)가 사는 경우는 번들이 아니라 **수명**이다. `/contacts/`가 `/social/`과 다른 주기로
+배포되어야 하거나, 한쪽만 설치된 사이트에서 다른 쪽 코드를 내려받지 않아야 한다면 엔트리가
+갈린다. 그 조건이 참인지는 이 문서가 답할 수 없다.
+
+판정이 필요한 이유는 Search다. 결과가 dialog에 앉는지 pane에 앉는지 전용 라우트로 가는지가
+이 축에 달려 있고, `DECISION-FRONTEND-OVERLAY-SURFACE-OWNERSHIP.md` 5-1이 Search의 표면
+claim을 착수 가능으로 바꿔 두었다.
+
 ## 6. 지금 구현하지 않는 이유
 
 stylebook 라우트를 옮기면 **list · tabs · badge · navigation 검증기 네 개의 핀이 동시에
@@ -104,10 +142,14 @@ stylebook 라우트를 옮기면 **list · tabs · badge · navigation 검증기
 순서는 이렇다.
 
 ```txt
-1  Dialog / Sheet       반응형 레이아웃 완성의 전제
+1  Dialog / Sheet       반응형 레이아웃 완성의 전제                        닫힘 2026-10-12
 2  FAB                  nav rail 해부의 발행된 요소. rail을 닫는다
 3  이 문서의 구현        stylebook 분리 + 빌더 하나 + 해시 flush + 2단 상태
 ```
+
+1번은 닫혔다. Surface 세 행이 출하되었고 escape 계약도 기록되었다. 그 사이에 Menu도
+닫혔는데, Menu는 이 게이트의 항목이 아니라 overlay 문서 5절의 항목이다 — 이 문서를 막지
+않는다.
 
 3번은 컴포넌트를 건드리지 않는 커밋 하나가 된다. 그래야 네 검증기의 핀 이동이 그 커밋의
 전부가 된다.

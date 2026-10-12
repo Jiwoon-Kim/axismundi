@@ -73,9 +73,13 @@ Figma 프레임에서 그 영역이 무엇인지 읽고, 가로 스크롤 영역
 ```txt
 1  Tabs                      게이트 없음. 토큰 표 있음, overlay 의존 없음
 2  Surface: Dialog / Sheet    반응형 레이아웃 완성의 전제
-3  Menu                       2의 overlay / focus / dismiss 계약을 소비
+3  Menu                       2의 overlay / focus / dismiss 계약을 소비     닫힘
 4  Search                     컴포넌트가 아니라 제품 흐름. 부품이 먼저
 ```
+
+1~3은 닫혔다. 1은 Tabs, 2는 Dialog·SideSheet·BottomSheet, 3은 vertical standard Menu와
+그 group 축이다. Menu의 **서브메뉴는 같은 행의 남은 slice**이지 새 행이 아니다 — M3가
+발행한 Menu의 표면이고, `_data/menu.yml`이 무엇이 미구현인지와 그 사유를 들고 있다.
 
 Tabs가 먼저인 이유는 중요도가 아니라 **의존이 없다는 것**이다. 2번은 surface.yml 대조와
 escape 계약 기록을 먼저 요구하므로, 그 사이에 멈추지 않기 위해 1번이 앞에 있다.
@@ -88,7 +92,39 @@ Search를 마지막에 두는 이유는 `core/search`가 이미 Search Bar bridg
 쪽에 필요한 것은 search field + 결과 ListItem + Dialog 또는 pane의 조합이기 때문이다. 부품이
 전부 있어야 조합이 가능하다.
 
+### 5-1. Search는 claim이 둘이다 (2026-10-12 보강)
+
+"컴포넌트가 아니라 제품 흐름"이라는 위 문장이 **하나의 작업처럼 읽힌다.** 둘이다.
+
+```txt
+표면    search field · 결과 ListItem · 필터 칩 자리 · 결과가 앉는 Dialog 또는 pane
+        axismundi가 소유. 도메인을 모른다.
+흐름    무엇을 질의하고 무엇으로 거르는가
+        각 도메인이 소유. /social/은 AS2, /contacts/는 JSContact.
+```
+
+`DECISION-FRONTEND-ROUTE-OWNERSHIP.md`가 그은 경계 그대로다 — 표면은 도메인을 모르고
+도메인은 표면을 모른다. 그러므로 **표면은 흐름을 기다리지 않는다.** 부품 조건은 이제
+충족되었고(Dialog·Sheet·List item·Menu), 표면 claim은 착수 가능하다.
+
+흐름 쪽은 기다린다. 교차 소스 질의의 기반이 `PLAN-OBJECT-LIST-QUERY.md`의 A5
+(`wp_ax_object_index`)이고 그것은 고의로 미구현이다. 커스텀 테이블과 표준 테이블을 한
+결과로 묶는 일을 Search가 자기 파이프라인으로 다시 푸는 것은 **두 번째 인덱스를 만드는
+것**이고, 그 문서가 식별자 수명·재구축·캐시 축출로 씨름한 문제를 그대로 복제한다.
+
+같은 이유로 외부 검색 엔진도 지금 결정하지 않는다. 인덱스는 비공개 오브젝트를 포함하고
+(§4-5), 인가는 서버가 강제하므로, 외부 인덱스는 아직 존재하지 않는 viewer 평가기(A4)를
+그쪽에도 요구한다.
+
 ## 6. scroll 3-2절의 금지는 유지된다
+
+**2026-10-12 보강: 이 절의 조건은 충족되었고 금지는 그대로다.** 아래가 요구한
+"첫 overlay 컴포넌트"와 escape 계약 기록은 둘 다 생겼다 —
+`DECISION-FRONTEND-OVERLAY-ESCAPE-AND-PUSH.md`가 그 기록이고, Surface 세 행이 그 구현이다.
+그리고 그 기록이 고른 답은 **top layer이므로 조상의 overflow가 무관하다**는 것이어서,
+금지를 풀 이유가 생기지 않았다. `.ax-scaffold`가 overflow를 선언하지 않는 상태는 이제
+"판정 전이라 보류"가 아니라 **채택된 결과**다. scroll 쪽 사정은
+`DECISION-FRONTEND-SCROLL-OWNERSHIP.md` 3-6이 함께 본다.
 
 프론트앱이 평행 Surface를 갖기로 했으므로, **그 "첫 overlay 컴포넌트"는 아직 만들어지지
 않았다.** `axismundi-dialogs`의 출하는 다른 런타임의 기록이므로 금지를 해제하지 않는다.

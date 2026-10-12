@@ -689,6 +689,42 @@ def check_submenu(report: Report, data: dict) -> None:
         f"group padding {padding} the derivation names",
     )
 
+    # The axis, held before the slice exists. Both entries are decisions the
+    # first implementation already got wrong in miniature, so they are pinned
+    # rather than left as prose a reimplementation can quietly drop.
+    axis = data["submenu"]["axis"]
+    indicator = axis["indicator_is_owned_not_passed"]
+    report.check(
+        indicator["icon"] == "arrow_right",
+        "the submenu indicator is the one this product's navigation submenu already uses",
+    )
+    report.check(
+        "cannot pass" in indicator["rule"] and "cannot show" in indicator["rule"],
+        "the indicator rule must keep forbidding both halves: a caller passing one, and a "
+        "row without a submenu showing one",
+    )
+    # The icon claim reads the theme rather than this record's sentence about it.
+    nav = ROOT / "products/wordpress/themes/axismundi/assets/styles/blocks.navigation-submenu.css"
+    report.check(
+        nav.exists() and indicator["icon"] in nav.read_text(encoding="utf-8"),
+        f"the cited precedent no longer uses {indicator['icon']} for its submenu affordance",
+    )
+
+    host = axis["host_mode"]
+    report.check(
+        host["status"] == "to_be_measured_by_this_slice",
+        "the nested host mode is a measurement this slice takes, not a setting it inherits",
+    )
+    report.check(
+        "is false" in host["what_is_known"] and bool(host["not_yet_measured"]),
+        "the record must keep saying which half of the host question was measured and which "
+        "was not",
+    )
+    report.check(
+        len(axis["what_this_slice_settles"]) == 2,
+        "the two records this slice closes stay named, or building it loses its reason",
+    )
+
     report.check(
         data["submenu"]["hover_bridge"]["status"] == "not_implemented",
         "the hover bridge is a recorded technique, not something this record claims to ship",

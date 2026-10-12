@@ -675,6 +675,43 @@ submenu:
     source: https://github.com/material-components/material-web/blob/main/docs/components/menu.md
   cost: See `mutual_exclusions` -- a menu that can open a submenu cannot also scroll.
 
+  # The axis, written before the slice is built. Two of these are decisions the
+  # first implementation already got wrong once in miniature.
+  axis:
+    indicator_is_owned_not_passed:
+      rule: >-
+        A submenu renders its own trailing indicator. A caller cannot pass one,
+        and a row without a submenu cannot show one.
+      why: >-
+        The first stylebook sample passed `arrow_right` as a trailing icon on
+        rows that open nothing, which read as a capability this slice does not
+        have. The fix was to change the icon, which is a workaround for an API
+        that allows the lie. An owned indicator makes it unsayable.
+      icon: arrow_right
+      icon_source: >-
+        The theme's own navigation submenu already uses `arrow_right` for the
+        same affordance. `chevron_right` stays with ordinary list disclosure.
+    host_mode:
+      status: to_be_measured_by_this_slice
+      question: Whether the nested host is `popover="manual"` or `popover="auto"`.
+      what_is_known: >-
+        The reason recorded for `manual` -- that an auto popover closes on any
+        click -- is false, measured: a click inside an auto popover leaves it
+        open. What `auto` adds is light dismissal, Escape, and a nested popover
+        stack, and the stack is only worth anything once a menu opens a menu.
+      not_yet_measured: >-
+        Light dismissal on a real outside press, and whether an auto submenu
+        closes its parent when it opens. Both need a real pointer, which is
+        what this slice gives them.
+    what_this_slice_settles:
+      - placement.block, which is local policy pending runtime measurement
+      - mutual_exclusion_scope, which cannot be answered without a submenu to clip
+    note: >-
+      Building it does not force the exclusion question; it is the only thing
+      that can answer it. The three sources describe in-flow submenus and this
+      host is in the top layer, so the likely measured answer is that the
+      exclusion does not bind here at all.
+
   # Four sources agree on the inline direction and none publishes a number for
   # the block direction, so the block direction is recorded as a derivation.
   placement:

@@ -919,6 +919,12 @@ def check_submenu(report: Report, data: dict) -> None:
         fill["enter"] == "backwards" and fill["exit"] == "forwards" and fill["do_not_use"] == "both",
         "the fill modes stay recorded, including the one that cut the elevation shadow",
     )
+    flicker = data["not_published"]["motion"]["project_policy"]["implementation"]["shadow_flickers_during_the_animation"]
+    report.check(
+        flicker["status"] == "open" and "inner box" in flicker["fix"],
+        "the remaining flicker stays open, with the reason Menu can take the fix the dialog "
+        "could not",
+    )
     report.check(
         "fill: entering ? 'backwards' : 'forwards'" in menu_src,
         "the implementation must keep the recorded fill modes; `both` leaves a clip that "

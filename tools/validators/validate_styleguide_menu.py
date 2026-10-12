@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Check `_data/menu.yml` against the raw M3 menu token table.
-
-There is no Menu adapter yet, so the subject here is the record rather than an
-implementation: every figure `menu.yml` restates is checked against
-`SOURCE-M3-MENUS-RAW.md`, which is the measurement this project took off the
-published table.
+"""Check the implemented vertical Menu against its M3 record and token table.
 
 Three things this file exists to stop:
 
@@ -41,6 +36,14 @@ RAW = (
     / "products/wordpress/plugins/axismundi/docs/m3-token-tables/SOURCE-M3-MENUS-RAW.md"
 )
 TOOLTIP = ROOT / "products/wordpress/plugins/axismundi-dialogs/assets/tooltip.js"
+FRONTEND = ROOT / "products/wordpress/plugins/axismundi/src/apps/frontend"
+MENU = FRONTEND / "components/menus/menu.js"
+MENU_CSS = FRONTEND / "styles/components/menu.css"
+STYLE_INDEX = FRONTEND / "styles/index.css"
+STYLEBOOK_INDEX = FRONTEND / "pages/stylebook/index.js"
+STYLEBOOK_PAGE = FRONTEND / "pages/stylebook/components/menus/index.js"
+ROUTE = ROOT / "products/wordpress/plugins/axismundi/includes/route.php"
+APP = FRONTEND / "app.js"
 
 # Every `*_token` key in the record is swept. If a rename drops some of them the
 # sweep would quietly check fewer things, so it has to find exactly this many.
@@ -669,6 +672,141 @@ def check_grouping(report: Report, data: dict, table: Table) -> None:
         len(data["mutual_exclusions"]) >= 3,
         "the scroll constraint is recorded from three independent sources",
     )
+    # The constraint is inherited from sources whose submenus are in flow. The
+    # record has to keep saying that it is open whether it binds here, and both
+    # halves of the open question have to stay written down.
+    scope = data["mutual_exclusion_scope"]
+    report.check(
+        scope["status"] == "owner_judgment_open",
+        "whether the exclusion binds this implementation is the owner's to settle",
+    )
+    report.check(
+        "top layer" in scope["why_it_may_not_bind"],
+        "the record must keep the reason the exclusion may not bind: the host escapes "
+        "an ancestor's overflow",
+    )
+    report.check(
+        "group" in scope["why_the_unit_may_be_the_group"] and bool(scope["settle_by"]),
+        "the per-group reading and what would settle it both stay recorded",
+    )
+
+
+def declarations_only(css: str) -> str:
+    """CSS with its comments removed.
+
+    A check that searches the whole file matches the prose explaining why a
+    thing is not there. This one caught its own author: the comment naming the
+    theme elevation tokens the frontend must not use failed the check that they
+    are not used.
+    """
+    return re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+
+
+def check_implementation(report: Report, data: dict) -> None:
+    """The shipped adapter consumes the record, not a second number table."""
+    menu = MENU.read_text(encoding="utf-8")
+    css = declarations_only( MENU_CSS.read_text(encoding="utf-8") )
+    style_index = STYLE_INDEX.read_text(encoding="utf-8")
+    stylebook_index = STYLEBOOK_INDEX.read_text(encoding="utf-8")
+    stylebook_page = STYLEBOOK_PAGE.read_text(encoding="utf-8")
+    route = ROUTE.read_text(encoding="utf-8")
+    item = data["item"]
+    container = data["container"]
+
+    report.check("popover=\"manual\"" in menu and "showPopover()" in menu and "hidePopover()" in menu,
+                 "Menu no longer uses the manual popover host its record requires")
+    report.check("role=\"menu\"" in menu and "role=\"menuitem\"" in menu,
+                 "Menu no longer exposes list-like menu semantics")
+    # The record names the attribute and the family; a row that can be checked
+    # is not a plain `menuitem`, and `aria-current` is for a current item in a
+    # set of links, not a checked state.
+    report.check("aria-checked={ checkable ?" in menu and "aria-current" not in menu,
+                 "selected menu rows must carry `aria-checked`, as `menu.yml` selection records")
+    modes = data["selection"]["checked_state_role_by_mode"]
+    report.check(f"'{modes['multi_select']}' : '{modes['single_select']}'" in menu,
+                 "a checkable row's role must follow the recorded mapping from selection mode")
+    report.check("const checkable = items.some(" in menu,
+                 "checkability is a property of the menu; a group whose unchecked rows are plain "
+                 "menu items is not a group")
+    report.check("[role=\"menuitemradio\"], [role=\"menuitemcheckbox\"]" in menu,
+                 "keyboard movement must walk the whole menuitem family, or checkable rows drop "
+                 "out of it")
+    report.check("'data-menu-open': open || undefined" in menu
+                 and "ax-menu__trigger[data-menu-open]" in css,
+                 "the trigger no longer stays visibly pressed while its menu is open")
+    report.check("focusItem( 0 );" in menu and "'Escape' === event.key" in menu,
+                 "Menu no longer places focus on its first item and restores its trigger on Escape")
+    report.check("aria-disabled={ item.disabled || undefined }" in menu,
+                 "disabled menu items no longer stay in the focus order")
+    report.check("item.divider" in menu and "aria-hidden=\"true\"" in menu,
+                 "dividers no longer stay outside the menu focus order")
+    report.check("pointerdown" in menu and "window.addEventListener( 'scroll'" in menu,
+                 "Menu no longer dismisses outside presses or repositions with its trigger")
+
+    # Elevation is the frontend's own primitive. The theme does not define
+    # `--md-sys-elevation-level*` at all, so a stylesheet reaching for one paints
+    # its fallback instead -- measured, before this check existed.
+    report.check(f"<Elevation level={{ {container['elevation_level']} }} />" in menu,
+                 "Menu must take its elevation from the frontend primitive at the recorded level")
+    report.check("--md-sys-elevation-level" not in css and "--md-sys-elevation-shadow-level" not in css,
+                 "Menu CSS reaches for a theme elevation token, which "
+                 "DECISION-FRONTEND-ELEVATION-OWNERSHIP.md keeps out of the frontend")
+    report.check("box-shadow" not in css.split(".ax-menu__trigger")[0],
+                 "the menu container draws its own shadow instead of letting the elevation layer do it")
+    # Twice now in this repository: an author `display` beats the UA rule that
+    # hides a closed popover or dialog, and every one on the page paints.
+    report.check(
+        "display:" in css.split(".ax-menu {")[1].split("}")[0]
+        and ".ax-menu:not( :popover-open )" in css,
+        "the menu sets a `display` without saying when it is not displayed, so closed menus paint",
+    )
+
+    # The elevation layer cannot live inside the box that scrolls.
+    report.check("overflow-y: auto;" in css.split(".ax-menu__list")[-1]
+                 and "overflow: visible;" in css.split(".ax-menu__list")[0],
+                 "the scrolling box and the elevated host were collapsed back into one element")
+
+    slots = {
+        "container shape": f"--md-comp-menus-container-shape: var( --md-sys-shape-corner-value-{data['container']['shape_role'].split('.')[-1]} );",
+        "group padding": f"--md-comp-menus-group-padding: {data['grouping']['gap']['group_padding']}px;",
+        "menu floor": f"--md-comp-menus-menu-min-inline-size: {container['inline_size_floor']}px;",
+        "slot height": f"--md-comp-menus-item-slot-height: {item['slot_height']}px;",
+        "painted height": f"--md-comp-menus-item-container-height: {item['container_height']}px;",
+        "block inset": f"--md-comp-menus-item-inset-block: {item['inset_block']}px;",
+        "inline inset": f"--md-comp-menus-item-inset-inline: {item['inset_inline']}px;",
+        "state inline padding": f"--md-comp-menus-item-state-padding-inline: {item['state_layer_padding_inline']}px;",
+        "state block padding": f"--md-comp-menus-item-state-padding-block: {item['state_layer_padding_block']}px;",
+        "kit between space": f"--md-comp-menus-item-between-space: {item['state_layer_between_space']}px;",
+        "icon size": f"--md-comp-menus-item-icon-size: {item['leading_icon_size']}px;",
+    }
+    for name, declaration in slots.items():
+        report.check(declaration in css, f"Menu CSS no longer consumes the recorded {name}: {declaration}")
+
+    report.check("min-block-size: var( --md-comp-menus-item-slot-height );" in css
+                 and "min-block-size: var( --md-comp-menus-item-container-height );" in css,
+                 "the 48dp target and 44dp painted box were collapsed")
+    report.check("padding-block: var( --md-comp-menus-item-inset-block );" in css
+                 and "padding-inline: var( --md-comp-menus-item-inset-inline );" in css,
+                 "the measured slot insets no longer surround the painted box")
+    report.check("@import url( './components/menu.css' );" in style_index,
+                 "Menu stylesheet is not in the frontend bundle")
+    report.check("StylebookMenusPage" in stylebook_index and "'menus' === component" in stylebook_index,
+                 "stylebook does not expose Menus")
+    report.check("<MenuSample items={ ACTIONS }" in stylebook_page
+                 and "<MenuSample items={ SELECTABLE_ACTIONS }" in stylebook_page,
+                 "stylebook no longer demonstrates actions and selected menu rows")
+    # Four places declare a stylebook route and the app's own regex is one of
+    # them. Leaving it out does not fail any PHP check and does not fail a
+    # build; the page simply falls back to the feed. Measured, that way.
+    app = APP.read_text(encoding="utf-8")
+    for label, text, expected in (
+        ("rewrite rule and public-route guard", route, 2),
+        ("app route", app, 1),
+    ):
+        report.check(
+            text.count("app-bars|surfaces|menus") == expected,
+            f"the {label} does not carry Menus in its component alternation",
+        )
 
 
 def main() -> int:
@@ -701,6 +839,7 @@ def main() -> int:
     check_policy(report, data)
     check_design_kit(report, data)
     check_submenu(report, data)
+    check_implementation(report, data)
 
     print(f"menu: {report.checked} checks, {len(report.problems)} failed")
     for problem in report.problems:

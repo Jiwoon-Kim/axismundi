@@ -17,6 +17,8 @@
 @import url( './components/divider.css' );
 @import url( './components/icon-button.css' );
 @import url( './components/list.css' );
+
+@import url( './components/menu.css' );
 @import url( './components/tabs.css' );
 @import url( './components/surface.css' );
 @import url( './components/dialog.css' );

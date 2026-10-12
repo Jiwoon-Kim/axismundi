@@ -370,6 +370,10 @@ grouping:
 
 # Three independent sources name the same constraint, so it is recorded once
 # here rather than discovered during implementation.
+#
+# Whether it binds THIS implementation is a separate question, opened below:
+# every source describes a submenu rendered inside its parent's box, and ours
+# would not be.
 mutual_exclusions:
   - subject: scrolling and gaps
     source: https://m3.material.io/components/menus/guidelines
@@ -391,6 +395,33 @@ mutual_exclusions:
 # ---------------------------------------------------------------------------
 # Structure. Menu is shaped like a list and valued like a menu.
 # ---------------------------------------------------------------------------
+
+# Raised by the owner while reading the first implementation, and not settled.
+mutual_exclusion_scope:
+  status: owner_judgment_open
+  question: >-
+    Whether a menu that scrolls can carry a submenu here, and if the exclusion
+    does bind, whether its unit is the whole menu or one group.
+  why_it_may_not_bind: >-
+    All three recorded sources describe a submenu rendered inside its parent's
+    box -- Material Web's nested `md-menu`, core's absolutely positioned
+    container, and this theme's own popover box -- which is why an ancestor's
+    `overflow` clips them. This implementation hosts a menu in the top layer,
+    and the top layer escapes an ancestor's overflow. Measured in this project
+    for the dialog, with an in-flow probe as a positive control.
+  why_the_unit_may_be_the_group: >-
+    The kit's menu is groups, not rows: `Menu > List content > Menu-item`. An
+    editor's format menu is the case that makes this concrete -- a long
+    scrolling list of sizes beside a group whose rows open submenus. A
+    per-menu exclusion forbids that; a per-group one allows it.
+  settle_by: >-
+    Build one submenu inside a scrolling menu and look at whether it is
+    clipped. Until then the record keeps the exclusion as inherited rather
+    than established, and the implementation builds neither.
+  note: >-
+    The implementation already puts the scroll on the group rather than the
+    menu, because the elevation layer cannot sit inside a scrolling box. That
+    is a consequence of elevation, not an answer to this question.
 
 structure:
   shaped_like: list
@@ -424,6 +455,20 @@ selection:
     products/reference-implementations/axismundi-lab/modules/menu/docs/MENU-SPEC-AUDIT.md
     v3.6.16 addendum. Lab evidence, not an M3 statement: M3 publishes the role
     table but not this distinction.
+  # Extended while implementing, and the extension is written down rather than
+  # made silently. The lab addendum names one checkable role, and the two
+  # published selection modes need two: a menu where one row may be checked at a
+  # time is a radio group, and `menuitemcheckbox` on it says the rows are
+  # independent when they are not. The attribute does not change.
+  checked_state_role_by_mode:
+    single_select: menuitemradio
+    multi_select: menuitemcheckbox
+  checked_state_role_extension: >-
+    ARIA, not M3 and not the lab. Open to the owner to overrule, in which case
+    both modes take `menuitemcheckbox` and this entry says why that was chosen.
+  checkability_is_per_menu: >-
+    An unchecked row in a checkable menu is a checkable row, not a plain menu
+    item. The menu decides, from whether any row declares a selection.
 
 focus:
   initial: first menu item

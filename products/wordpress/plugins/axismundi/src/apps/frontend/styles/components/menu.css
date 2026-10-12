@@ -1,0 +1,164 @@
+@layer axismundi.components {
+	/*
+	 * Elevation is the frontend's own primitive, not a shadow this file draws.
+	 * `DECISION-FRONTEND-ELEVATION-OWNERSHIP.md` records that the theme
+	 * deliberately does not define `--md-sys-elevation-level*`, because a dp
+	 * distance does not map unambiguously onto a CSS shadow, and that the
+	 * frontend must not reach for the theme's `--md-sys-elevation-shadow-level*`
+	 * either. `md.comp.menus.container.elevation` resolves to level 2, which is
+	 * what `<Elevation level={ 2 } />` is given; the 3dp in the record is that
+	 * level's distance, not its name.
+	 */
+	.ax-menu {
+		--md-comp-menus-container-shape: var( --md-sys-shape-corner-value-large );
+		--md-comp-menus-container-color: var( --md-sys-color-surface-container-low );
+		--md-comp-menus-item-slot-height: 48px;
+		--md-comp-menus-item-container-height: 44px;
+		--md-comp-menus-item-inset-block: 2px;
+		--md-comp-menus-item-inset-inline: 4px;
+		--md-comp-menus-item-state-padding-inline: 12px;
+		--md-comp-menus-item-state-padding-block: 12px;
+		--md-comp-menus-item-between-space: 8px;
+		--md-comp-menus-item-icon-size: 20px;
+		--md-comp-menus-item-shape: var( --md-sys-shape-corner-value-extra-small );
+		--md-comp-menus-menu-min-inline-size: 208px;
+		--md-comp-menus-group-padding: 2px;
+
+		display: flex;
+		flex-direction: column;
+		box-sizing: border-box;
+		inline-size: max-content;
+		min-inline-size: var( --md-comp-menus-menu-min-inline-size );
+		max-inline-size: calc( 100vi - 16px );
+		max-block-size: calc( 100dvb - 16px );
+		margin: 0;
+		padding: 0;
+		border: 0;
+		border-radius: var( --md-comp-menus-container-shape );
+		background: var( --md-comp-menus-container-color );
+		color: var( --md-sys-color-on-surface );
+		/* The host carries the elevation layer, so the host does not scroll. */
+		overflow: visible;
+	}
+
+	/*
+	 * Any `display` an author gives a popover beats the UA rule that hides a
+	 * closed one, so every menu on the page paints at once. Measured here after
+	 * the flex column above was added, and measured once before on `.ax-surface`
+	 * for the same reason -- a component that sets `display` has to say when it
+	 * is not displayed.
+	 */
+	.ax-menu:not( :popover-open ) {
+		display: none;
+	}
+
+	/*
+	 * The group. `md.comp.menus.group.padding` is its own padding, and this is
+	 * the box that scrolls -- an absolutely positioned elevation layer inside a
+	 * scroll container scrolls away with the rows.
+	 */
+	.ax-menu__list {
+		min-block-size: 0;
+		padding-block: var( --md-comp-menus-group-padding );
+		overflow-y: auto;
+	}
+
+	.ax-menu__item {
+		display: block;
+		box-sizing: border-box;
+		inline-size: 100%;
+		min-block-size: var( --md-comp-menus-item-slot-height );
+		padding-block: var( --md-comp-menus-item-inset-block );
+		padding-inline: var( --md-comp-menus-item-inset-inline );
+		border: 0;
+		background: transparent;
+		color: inherit;
+		text-align: start;
+		cursor: pointer;
+	}
+
+	/* Menus keep their invoker visually pressed while their actions are open. */
+	.ax-menu__trigger[data-menu-open] {
+		box-shadow: inset 0 0 0 999px color-mix(
+			in srgb,
+			currentcolor calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ),
+			transparent
+		);
+	}
+
+	.ax-menu__item-container {
+		display: flex;
+		align-items: center;
+		box-sizing: border-box;
+		min-block-size: var( --md-comp-menus-item-container-height );
+		gap: var( --md-comp-menus-item-between-space );
+		padding-block: var( --md-comp-menus-item-state-padding-block );
+		padding-inline: var( --md-comp-menus-item-state-padding-inline );
+		border-radius: var( --md-comp-menus-item-shape );
+	}
+
+	.ax-menu__leading,
+	.ax-menu__trailing {
+		display: grid;
+		place-items: center;
+		flex: 0 0 var( --md-comp-menus-item-icon-size );
+		inline-size: var( --md-comp-menus-item-icon-size );
+		block-size: var( --md-comp-menus-item-icon-size );
+		color: var( --md-sys-color-on-surface-variant );
+	}
+
+	.ax-menu__leading .ax-icon,
+	.ax-menu__trailing .ax-icon {
+		--md-icon-size: var( --md-comp-menus-item-icon-size );
+	}
+
+	.ax-menu__content {
+		display: grid;
+		min-inline-size: 0;
+		flex: 1 1 auto;
+	}
+
+	.ax-menu__label,
+	.ax-menu__trailing {
+		font-family: var( --md-sys-typescale-label-large-font );
+		font-size: var( --md-sys-typescale-label-large-size );
+		font-weight: var( --md-sys-typescale-label-large-weight );
+		line-height: var( --md-sys-typescale-label-large-line-height );
+	}
+
+	.ax-menu__supporting {
+		color: var( --md-sys-color-on-surface-variant );
+		font-family: var( --md-sys-typescale-body-small-font );
+		font-size: var( --md-sys-typescale-body-small-size );
+		font-weight: var( --md-sys-typescale-body-small-weight );
+		line-height: var( --md-sys-typescale-body-small-line-height );
+	}
+
+	.ax-menu__item[data-selected] .ax-menu__item-container {
+		background: var( --md-sys-color-tertiary-container );
+		color: var( --md-sys-color-on-tertiary-container );
+		border-radius: var( --md-sys-shape-corner-value-medium );
+	}
+
+	.ax-menu__item:not( [aria-disabled='true'] ):not( [data-selected] ):hover .ax-menu__item-container,
+	.ax-menu__item:not( [aria-disabled='true'] ):not( [data-selected] ):active .ax-menu__item-container {
+		background: color-mix( in srgb, var( --md-sys-color-on-surface ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), transparent );
+	}
+
+	.ax-menu__item:focus-visible {
+		outline: 3px solid var( --md-sys-color-secondary );
+		outline-offset: -3px;
+	}
+
+	.ax-menu__item[aria-disabled='true'] {
+		color: color-mix( in srgb, var( --md-sys-color-on-surface ) 38%, transparent );
+		cursor: default;
+	}
+
+	.ax-menu__divider {
+		display: block;
+		block-size: 1px;
+		margin-inline: 4px;
+		background: var( --md-sys-color-outline-variant );
+	}
+}

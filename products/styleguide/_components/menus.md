@@ -9,12 +9,14 @@ lang: ko
 M3의 메뉴는 **임시로 나타나는 동작 묶음**입니다. 화면에 계속 떠 있어야 하는 동작은
 toolbar의 몫이고, 메뉴는 트리거가 열었다가 선택이나 dismiss로 사라집니다.
 
-> **아직 구현이 없습니다.** 이 페이지는 발행된 것을 읽어 축을 세운 기록이고, 표본과
-> 어댑터 CSS는 그다음입니다. 값은 전부
+> **Vertical standard 행을 구현했습니다.** 구현과 표본은 플러그인의 스타일북 라우트
+> `/social/stylebook/components/menus`에 있습니다 — 이 사이트의 페이지가 아니라 설치된
+> 워드프레스가 서비스하는 경로라 여기서 링크하지 않습니다. 값은 전부
 > [`_data/menu.yml`]({{ site.repository_url }}/blob/main/products/styleguide/_data/menu.yml)에서
 > 오고, 그 파일은 토큰 표
 > [`SOURCE-M3-MENUS-RAW.md`]({{ site.repository_url }}/blob/main/products/wordpress/plugins/axismundi/docs/m3-token-tables/SOURCE-M3-MENUS-RAW.md)와
-> M3의 산문 네 쪽을 출처로 적습니다.
+> M3의 산문 네 쪽을 출처로 적습니다. baseline·horizontal·vibrant·gap·submenu·density는
+> 이 첫 slice에 넣지 않았고, 각각의 이유는 아래에 기록합니다.
 
 ## 네임스페이스가 둘입니다
 

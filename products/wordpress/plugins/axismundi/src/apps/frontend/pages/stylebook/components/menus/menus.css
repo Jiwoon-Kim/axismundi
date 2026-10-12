@@ -1,0 +1,9 @@
+@layer axismundi.patterns {
+	.ax-stylebook-menus__trigger-row {
+		display: flex;
+		align-items: center;
+		min-block-size: 72px;
+		padding-inline: 12px;
+		border: 1px solid var( --md-sys-color-outline-variant );
+	}
+}

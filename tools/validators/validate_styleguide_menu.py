@@ -365,6 +365,23 @@ def check_policy(report: Report, data: dict) -> None:
         data["container"]["inline_size_floor"] == 208,
         "the recorded floor must be the measured one",
     )
+    # The sibling block disagrees, and that is the point of recording it. If the
+    # two ever line up, the entry should say so rather than keep claiming a
+    # difference.
+    sibling = width["sibling_precedent"]
+    report.check(
+        sibling["disagrees"] is True
+        and sibling["minimum"] != data["container"]["inline_size_floor"],
+        "the sibling precedent is recorded as disagreeing; its floor now matches ours",
+    )
+    report.check(
+        Path(ROOT / sibling["where"]).exists(),
+        f"the sibling precedent names a file that is not there: {sibling['where']}",
+    )
+    report.check(
+        width["window_clamp"] is True,
+        "the width is clamped to the window, as the height is",
+    )
     # Both unpublished entries have to keep pointing at the policy that answers
     # them, or the blanks read as still-blank and get filled twice.
     for key in ("container_inline_size", "container_block_size"):
@@ -449,6 +466,54 @@ def check_design_kit(report: Report, data: dict) -> None:
         kit["vibrant"]["status"] == "fully_drawn"
         and data["colour_styles"]["vibrant"]["status"] == "deferred",
         "vibrant is drawn in full and deferred by choice; the record must keep saying both",
+    )
+
+
+def check_submenu(report: Report, data: dict) -> None:
+    """The placement answer, and the sources that make it one."""
+    placement = data["submenu"]["placement"]
+
+    inline = placement["inline"]
+    report.check(
+        inline["offset"] == 0,
+        "the four agreeing sources all put the submenu flush against the parent, not offset",
+    )
+    report.check(
+        len(inline["agreed_by"]) >= 4,
+        f"the inline answer rests on agreement; {len(inline['agreed_by'])} sources is not it",
+    )
+    # Each source has to say which it is. An agreement list whose entries lose
+    # their attribution is a claim with no evidence behind it.
+    for entry in inline["agreed_by"]:
+        report.check(
+            bool(entry.get("source")) and bool(entry.get("says")),
+            f"an agreeing source is recorded without its claim: {entry}",
+        )
+
+    block = placement["block"]
+    report.check(
+        block["derivation"] == "offset == -group_padding_block",
+        "the block offset stays a derivation from this record's geometry",
+    )
+    report.check(
+        block["recorded_as"] == "a derivation, not a measurement",
+        "the block offset must keep saying it was derived rather than measured",
+    )
+    # The derivation, recomputed. Aligning the two painted boxes leaves exactly
+    # the group padding, so if either inset ever moves this stops holding.
+    padding = data["grouping"]["gap"]["group_padding"]
+    inset = data["item"]["inset_block"]
+    parent_painted = inset
+    submenu_painted = padding + inset
+    report.check(
+        parent_painted - submenu_painted == -padding,
+        f"aligning the painted boxes leaves {submenu_painted - parent_painted}, not the "
+        f"group padding {padding} the derivation names",
+    )
+
+    report.check(
+        data["submenu"]["hover_bridge"]["status"] == "not_implemented",
+        "the hover bridge is a recorded technique, not something this record claims to ship",
     )
 
 
@@ -615,6 +680,7 @@ def main() -> int:
     check_grouping(report, data, table)
     check_policy(report, data)
     check_design_kit(report, data)
+    check_submenu(report, data)
 
     print(f"menu: {report.checked} checks, {len(report.problems)} failed")
     for problem in report.problems:

@@ -256,6 +256,39 @@ shape까지 함께 발행되어 있습니다. 그리고 guidelines가 이렇게 
 서브메뉴 자체는 web에 있습니다(`md-sub-menu`). Compose에는 없고, M3가 직접 그렇게
 씁니다. 미루는 이유는 불가능해서가 아니라 **스크롤을 포기하는 결정**이기 때문입니다.
 
+### 어디에 여는가 — 가로는 합의, 세로는 유도
+
+M3는 숫자를 발행하지 않습니다. 가로는 네 소스가 같은 말을 합니다:
+
+{% for a in site.data.menu.submenu.placement.inline.agreed_by -%}
+- **{{ a.source }}** — {{ a.says }}
+{% endfor %}
+
+그래서 간격 {{ site.data.menu.submenu.placement.inline.offset }}, 부모 메뉴의
+{{ site.data.menu.submenu.placement.inline.anchor }}에 붙입니다.
+
+세로는 아무도 숫자를 안 줍니다. **값 대신 규칙**을 적습니다 —
+{{ site.data.menu.submenu.placement.block.rule }}
+
+```
+부모 painted top  = slot top + inset_block
+서브 painted top  = container top + group_padding_block + inset_block
+→ {{ site.data.menu.submenu.placement.block.derivation }}
+```
+
+코어가 같은 종류의 보정을 합니다 — `top: -1px`에 `// Border width`라는 주석이 붙어 있고,
+보정 대상이 자기 컨테이너의 가장자리라는 점이 같습니다. 우리 서브메뉴에는 border가 없고
+그 자리에 group padding이 있을 뿐입니다. 그러니 **원칙은 뒷받침되고 숫자는 아닙니다.**
+기하가 바뀌면 유도식이 따라오므로, 숫자를 박는 것보다 낫습니다.
+
+**hover bridge는 적어만 뒀습니다.** 코어는 서브메뉴에 폭 0.5em의 투명한 `::before`를 붙여,
+포인터가 행 사이를 대각선으로 지날 때 메뉴를 벗어나 닫히지 않게 합니다. M3는 언급하지
+않지만, 맞닿은 서브메뉴여도 대각선에서는 포인터를 놓칩니다. 우리 스택이 이미 쓰는
+기법이라 출처와 함께 남깁니다.
+
+작은 화면에서는 코어가 nested submenu를 아코디언으로 접습니다. M3도 "서브메뉴는 큰 화면용"
+이라고 쓰고 adaptive guidance를 가리킵니다 — **따로 도달한 같은 결론**입니다.
+
 ## 키보드
 
 | 키 | 동작 |
@@ -303,8 +336,16 @@ baseline 메뉴에서 688·592·496 — **baseline 행에만** 있습니다. exp
 재구성해서 대조하므로, 슬롯 높이든 라벨 높이든 그룹 패딩이든 움직이면 깨집니다.
 
 **폭은 {{ site.data.menu.container.inline_size_floor }}을 바닥으로** 쓰고 내용에 따라
-자라게 둡니다. 한 킷의 한 인스턴스는 바닥의 증거이지 고정폭의 증거가 아니고, 가장 긴
-라벨이 안 들어가는 메뉴가 넓은 메뉴보다 나쁩니다.
+자라되 **창에 물립니다.** 한 킷의 한 인스턴스는 바닥의 증거이지 고정폭의 증거가 아니고,
+가장 긴 라벨이 안 들어가는 메뉴가 넓은 메뉴보다 나쁩니다. 창 clamp는 우리 네비게이션
+서브메뉴에서 가져왔습니다 — 높이를 창에 묶어놓고 폭을 안 묶으면 여전히 넘칩니다.
+
+형제 구현이 다른 답을 들고 있다는 것도 적어 뒀습니다. 블록 쪽은
+`min {{ site.data.menu.project_policy.inline_size.sibling_precedent.minimum }}` /
+`max {{ site.data.menu.project_policy.inline_size.sibling_precedent.maximum }}`입니다. 맞추지
+않았습니다 — 블록의 수치는 짧은 네비게이션 라벨을 보고 고른 것이고 208은 메뉴를 그린
+값입니다. 다만 **누가 정한 차이**로 남겨서, 나중에 공통 답을 낼 때 두 숫자가 다 보이게
+했습니다.
 
 판단이 남은 것 둘:
 

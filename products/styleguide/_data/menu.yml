@@ -484,6 +484,48 @@ submenu:
     source: https://github.com/material-components/material-web/blob/main/docs/components/menu.md
   cost: See `mutual_exclusions` -- a menu that can open a submenu cannot also scroll.
 
+  # Four sources agree on the inline direction and none publishes a number for
+  # the block direction, so the block direction is recorded as a derivation.
+  placement:
+    inline:
+      offset: 0
+      anchor: the parent menu's inline end
+      agreed_by:
+        - { source: M3 guidelines, says: Submenus should open next to the parent menu item without overlapping it. }
+        - { source: M3 specs submenu figure, says: The submenu's leading edge meets the parent menu's trailing edge, with no gap drawn. }
+        - { source: Material Web, says: "anchor-corner start-end meets menu-corner start-start." }
+        - { source: core navigation, says: "A nested submenu container is `left: 100%` of its parent item." }
+    block:
+      rule: >-
+        Align the submenu's first painted item box with the parent item's
+        painted box, which is what Material Web's corner pair says in our
+        geometry.
+      derivation: offset == -group_padding_block
+      derivation_note: >-
+        The parent's painted box sits one item inset below its slot; the
+        submenu's first painted box sits a group padding and an item inset
+        below its container. Aligning the two leaves the group padding. Core
+        compensates the same way for a different edge -- its offset is
+        `top: -1px` with the comment "Border width" -- so the principle is
+        corroborated even though the figure is not, because this project's
+        submenu has no border.
+      recorded_as: a derivation, not a measurement
+  hover_bridge:
+    status: not_implemented
+    source: core navigation
+    technique: >-
+      A transparent `::before` 0.5em wide on the submenu, reaching back over
+      the parent, so a pointer travelling diagonally between rows does not
+      leave the menu and close it.
+    note: >-
+      M3 does not mention it. Recorded because a flush submenu still loses the
+      pointer on a diagonal, and this is the fix the repository's own stack
+      already ships.
+  compact_behaviour:
+    core: Nested submenus open accordion-style below their parent instead of to the side.
+    m3: Submenus are best on large screens; the adaptive guidance names the alternatives.
+    note: Both say the same thing, reached independently. Our compact answer is the open owner judgment under `adaptive.compact`.
+
 # ---------------------------------------------------------------------------
 # The host. Menu is not a Surface.
 # ---------------------------------------------------------------------------
@@ -527,7 +569,10 @@ not_published:
       `project_policy.maximum_height`.
   submenu_offset:
     what: the offset and anchor corners of a submenu relative to its parent item
-    note: Material Web publishes defaults for its own element; M3 publishes none.
+    note: >-
+      Still unpublished as a figure. Answered in `submenu.placement`: the inline
+      direction from four agreeing sources, the block direction as a derivation
+      from this record's own geometry.
   density:
     what: the web-only density steps that reduce top and bottom padding
     note: >-
@@ -623,12 +668,30 @@ project_policy:
         menu, and the formula is already verified at four and six items.
   inline_size:
     status: floor_from_measurement
-    rule: Take the kit's 208 as a minimum and let the menu grow to its content.
+    rule: Take the kit's 208 as a minimum, let the menu grow to its content, and clamp it to the window.
     basis: >-
       M3 publishes neither a minimum nor a maximum, and the lab's own audit
       names its baseline primitive as the authority -- which is the lab's
       stylesheet, not a specification. One instance of one kit is evidence for a
       floor, not for a fixed width.
+    window_clamp: true
+    window_clamp_basis: >-
+      Taken from this product's own navigation submenu, which already clamps to
+      the viewport less a gutter at each side. The height policy is bound to the
+      window for M3's stated reason; a width that is not would still run off it.
+    sibling_precedent:
+      where: products/wordpress/themes/axismundi/assets/styles/blocks.navigation-submenu.css
+      minimum: 112
+      maximum: 280
+      sizing: max-content between those bounds
+      disagrees: true
+      note: >-
+        The block's floor is 112 where this record's is 208, and the block caps
+        at 280 where this does not cap at all. Not reconciled: the block's
+        figures were chosen for navigation labels, which are short, and the
+        kit's 208 is a drawing of a menu. Recorded so the difference is a
+        decision somebody made rather than a drift nobody noticed, and so a
+        later shared answer has both numbers in front of it.
 
 token_families:
   implemented_now:

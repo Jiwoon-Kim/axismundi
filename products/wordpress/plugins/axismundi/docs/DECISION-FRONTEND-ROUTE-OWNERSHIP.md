@@ -84,6 +84,55 @@ calendar    Calendar 감지 시 available    어드민에서 켠다
 끌 수가 없다. 발행 문서는 `products/styleguide/`가 따로 들고 있으므로, 앱 안의 stylebook은
 디자인 표면으로 남고 제품에서는 꺼진다.
 
+### 4-1. 보강 — 의존에는 종류가 둘이다 (2026-10-12)
+
+위 표는 **선택적 감지**만 담는다. `social`이 "감지 불필요"로 적혀 있는데, 정확히는 감지가
+필요 없는 것이 아니라 **전제**다. `/social/`은 actors · activities · object-projections가
+없으면 서빙할 내용이 없다. 체크박스가 아니라 설치 조건이다.
+
+```txt
+전제      axismundi-actors · axismundi-activities · axismundi-object-projections
+          없으면 /social/이 의미를 갖지 않는다. 어드민이 켜고 끄는 대상이 아니다
+선택      contacts · calendar …
+          감지되면 available, 어드민이 켜면 enabled
+```
+
+**측정: 그 전제가 지금 선언되어 있지 않다.** `axismundi.php`에 `Requires Plugins` 헤더가
+없고 런타임 가드도 없다. 형제 플러그인 여섯은 그 헤더를 쓴다.
+
+어떻게 선언할지는 자유 선택이 아니다. 두 선례가 갈리고, 갈리는 이유가 적혀 있다.
+
+```txt
+axismundi-note         Requires Plugins: axismundi-actors, axismundi-object-projections,
+                                         axismundi-activities
+axismundi-activities   헤더 없음 — "a header naming a slug that is not there blocks
+                       activation instead of explaining anything"
+```
+
+즉 슬러그가 wordpress.org에 없는 동안 헤더를 붙이면 **설명 대신 활성화를 막는다.** 그러므로
+이 전제를 헤더로 선언할지, 런타임 가드 + 어드민 공지로 할지는 **배포 상태에 달린 미결**이고
+소유자 판정이다. 이 문서는 전제가 존재한다는 사실과 그 제약만 적는다.
+
+### 4-2. 보강 — 감지되지 않은 라우트는 숨기지 않고 비활성으로 보인다 (2026-10-12)
+
+소유자 스케치다. 플러그인이 없을 때 체크박스는 **사라지지 않고 disabled로 보인다.** 감지되면
+같은 자리에서 enabled로 전환된다.
+
+숨기면 그 기능이 존재한다는 사실 자체가 전달되지 않는다. 비활성 상태는 "이 표면이 이
+제품의 일부이고, 설치하면 켤 수 있다"를 말한다. 어드민 앱이 컴패니언 플러그인들의 통합
+컨트롤 패널이라는 1절의 역할과 같은 방향이다.
+
+### 4-3. 미결 — map은 같은 모양이 아니다
+
+스케치는 "map, calendar 등도 마찬가지"라고 적었다. calendar는 같은 모양이다. map은 다르다.
+
+`axismundi-map`은 React 앱이 없는 **블록 플러그인**이다(front-end map block). 그래서 이
+2단 상태가 적용될 공개 라우트가 애초에 없고, 7절의 고정 이름 목록에도 `/map/`은 없다. 새
+공개 URL을 추가하는 것은 AGENTS.md가 승인 대상으로 두는 변경이다.
+
+판정이 필요한 것은 둘 중 무엇인가다 — map이 `/social/` 안의 표면으로 남는가(지도는 Place
+오브젝트의 뷰이므로 그쪽이 자연스럽다), 아니면 자기 라우트를 갖는 도메인이 되는가.
+
 ## 5. 결정 — flush는 규칙을 결정하는 것 전부에서 파생된다
 
 소유자 판정이다. 저장값을 손으로 올리는 상수에서 **해시**로 바꾼다.

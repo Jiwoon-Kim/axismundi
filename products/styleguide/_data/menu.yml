@@ -143,6 +143,24 @@ container:
   inactive_shape_role: corner.small
   inactive_shape: 8
 
+  # Measured in the Material 3 Design Kit, which publishes a width where M3
+  # publishes none. Taken as a floor rather than a fixed width: one instance of
+  # one kit is not a published minimum, and a menu whose longest label does not
+  # fit is worse than a wide one.
+  inline_size_floor: 208
+  # Verified at two instances: 4 visible items measured 196 and 6 measured 292.
+  # Useful because it is what any item-count cap would have to be expressed in.
+  block_size_formula: group_padding_block * 2 + item_count * item_slot_height
+
+scrollbar:
+  status: measured_not_implemented
+  track_inline_size: 12
+  thumb_inline_size: 4
+  note: >-
+    The kit draws a scrollbar as a static layer; its height does not change when
+    the variant is switched on, so nothing in it says when a menu begins to
+    scroll. M3 states only that a scrolling menu shows a persistent scrollbar.
+
 # ---------------------------------------------------------------------------
 # Item. The two boxes here are the thing this component is easiest to get
 # wrong: the slot is the hit target and the container is what gets painted.
@@ -160,7 +178,7 @@ item:
   slot_height: 48
   inset_block: 2
   inset_inline: 4
-  geometry_source: specs Measurements image, confirmed against Figma
+  geometry_source: specs Measurements image, confirmed in the Material 3 Design Kit, node 55141-14250
   # Enforced arithmetic rather than three frozen numbers: if any one of them
   # moves without the others, this stops being true.
   invariant: slot_height - 2 * inset_block == container_height
@@ -176,7 +194,24 @@ item:
   # a theme-level change to the scale move a figure that was measured off a
   # picture. Same treatment as Badge's maximum-character width and inline
   # padding, which are recorded the same way for the same reason.
-  unpublished: [ slot_height, inset_block, inset_inline ]
+  unpublished:
+    - slot_height
+    - inset_block
+    - inset_inline
+    - state_layer_padding_block
+    - state_layer_padding_inline
+    - state_layer_between_space
+
+  # The painted box is named `State Layer` in the kit, which is what it is.
+  # These three are its own padding and gap, inside the 4dp and 2dp insets
+  # above.
+  state_layer_padding_inline: 12
+  state_layer_padding_block: 12
+  state_layer_between_space: 8
+  # Composition, not a second source: 4 + 12 is the 16dp the token publishes
+  # from the slot's edge. Pinned, because it is the one place the measured
+  # inset and a published token have to agree.
+  leading_space_composition: inset_inline + state_layer_padding_inline == leading_space
 
   shape_token: md.comp.menus.menu-item.shape
   shape_role: corner.extra-small
@@ -203,12 +238,21 @@ item:
   trailing_space: 16
   between_space_token: md.comp.menus.menu-item.between-space
   between_space: 12
-  # Published, referent undetermined -- recorded rather than resolved. 44 minus
-  # 8 and 8 is 28, which is not the label's 20dp line box, so these do not read
-  # as the padding of a single-line item. Two candidate readings, neither
-  # verified: the container's own vertical padding, or the padding of an item
-  # grown to carry supporting text. Do not build from these until one is
-  # measured.
+  # Published, referent still undetermined, and the kit cannot settle it.
+  #
+  # 44 minus 8 and 8 is 28, which is not the label's 20dp line box. The kit
+  # measures 12 and 12 instead, and 44 - 12 - 12 is exactly 20. The leading
+  # hypothesis was that the token's 8 belongs to an item grown to carry
+  # supporting text -- 20 + 16 + 8 + 8 = 52 closes just as neatly -- but the
+  # kit's painted box is a fixed 44 and does not grow when supporting text is
+  # switched on, so it draws no two-line item at all. Measured: an item showing
+  # a label and supporting text reads 208 x 48 Hug, exactly as a label-only one
+  # does, which is only possible because the box inside it is a fixed height
+  # rather than a hugging one. Its two lines are 20 and 16, and the box leaves
+  # 20. The arithmetic supports the hypothesis; the kit cannot test it.
+  #
+  # Build the single-line item from the measured 12. Leave these two recorded
+  # and unused until a two-line item is actually measured somewhere.
   top_space_token: md.comp.menus.menu-item.top-space
   top_space: 8
   bottom_space_token: md.comp.menus.menu-item.bottom-space
@@ -249,6 +293,11 @@ section_label:
   color_token: md.comp.menus.standard.section-label-text.color
   color_role: on-surface-variant
   focusable: false
+  # Measured. The kit's `Label` row, which carries its own trailing divider
+  # slot the way a menu item does.
+  height: 32
+  padding_inline: 4
+  geometry_source: Material 3 Design Kit, node 55141-14250
 
 # ---------------------------------------------------------------------------
 # Grouping. The published token and the published prose disagree about the
@@ -264,6 +313,12 @@ grouping:
       the standalone `md.comp.divider.*`, so Menu consumes Divider and publishes
       nothing of its own for it.
     use_for: [ scrollable menus, text field dropdown menus ]
+    # Measured: in the kit a divider is a 4dp slot inside the item that
+    # precedes it, not a row between items. Hidden, it contributes nothing,
+    # which is why a 48dp item still measures 48.
+    slot_block_size: 4
+    lives_inside: the preceding item
+    geometry_source: Material 3 Design Kit, node 55141-14250
   gap:
     status: not_implemented_on_web
     gap_token: md.comp.menus.gap
@@ -425,11 +480,14 @@ not_published:
   container_inline_size:
     what: minimum and maximum menu width
     note: >-
-      The lab's measurement audit names its own baseline primitive as the
-      authority for min/max width. That authority is the lab's `components.css`,
-      not M3 -- no token or prose publishes either figure.
+      Still unpublished. Answered as policy in `project_policy.inline_size`,
+      from a measured floor.
   container_block_size:
     what: maximum height, and therefore the point at which a menu starts to scroll
+    note: >-
+      Still unpublished, and the kit draws its scrollbar statically, so nothing
+      measured says when scrolling begins. Answered as policy in
+      `project_policy.maximum_height`.
   submenu_offset:
     what: the offset and anchor corners of a submenu relative to its parent item
     note: Material Web publishes defaults for its own element; M3 publishes none.
@@ -447,6 +505,24 @@ not_published:
     note: Recorded under `item` as measured geometry with its source named.
 
 discrepancies:
+  - subject: space between an item's elements
+    prose: The kit's painted box sets a horizontal gap of 8, and its trailing group sets 8 again.
+    tokens: md.comp.menus.menu-item.between-space resolves to space150, which is 12.
+    resolution: >-
+      Follow the token. 12 appears in the kit only as the painted box's own
+      padding, and 8 appears nowhere in the table, so the two are measuring
+      different things or the kit is behind. A Community design kit is one
+      drawing; the table is the published source. Recorded rather than
+      reconciled, because the disagreement is real and may be the kit catching
+      up later.
+  - subject: an item's vertical padding
+    prose: The kit measures 12 and 12 inside a fixed 44dp box, which fits the 20dp label line exactly.
+    tokens: md.comp.menus.menu-item.{top,bottom}-space resolve to space100, which is 8.
+    resolution: >-
+      Not reconciled, and deliberately so -- see the note on those keys. The
+      single-line item is built from the measured 12 because its arithmetic is
+      the one that closes against a box the kit actually draws. The token's 8
+      stays recorded, unused, and unexplained.
   - subject: gap
     prose: Gaps are not currently available on web; on web, use a divider.
     tokens: md.comp.menus.gap, md.comp.menus.group.padding and md.comp.menus.group.shape are all live.
@@ -467,6 +543,37 @@ discrepancies:
     resolution: >-
       The deprecation retired the old embedded family; the expressive family
       replaced it. Structure follows a list, values do not. See `structure`.
+
+# ---------------------------------------------------------------------------
+# Decisions this project makes because nobody published one.
+# ---------------------------------------------------------------------------
+
+project_policy:
+  maximum_height:
+    status: viewport_bound
+    rule: A menu must not extend past the window, measured from the space its trigger leaves.
+    basis: >-
+      This is the only limit M3 actually states. Its placement section is about
+      the window edge, and it asks a menu to reposition rather than be cut off;
+      nothing published says how many items a menu may show.
+    item_count_cap:
+      status: not_adopted
+      available: true
+      expressed_as: container.block_size_formula
+      reason: >-
+        Choosing a number of items means inventing a constant and then pinning
+        it, which is how a defect becomes a contract. Under a viewport bound the
+        item count is a consequence rather than a constant. The cap stays
+        described so it can be switched on when something asks for a shorter
+        menu, and the formula is already verified at four and six items.
+  inline_size:
+    status: floor_from_measurement
+    rule: Take the kit's 208 as a minimum and let the menu grow to its content.
+    basis: >-
+      M3 publishes neither a minimum nor a maximum, and the lab's own audit
+      names its baseline primitive as the authority -- which is the lab's
+      stylesheet, not a specification. One instance of one kit is evidence for a
+      floor, not for a fixed width.
 
 token_families:
   implemented_now:

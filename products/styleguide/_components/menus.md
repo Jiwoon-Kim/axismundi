@@ -123,14 +123,42 @@ specs의 Measurements가 표가 아니라 그림이라 표에는 없습니다.
 (`item.unpublished`), 검증기가 양방향으로 잡습니다 — 토큰 없는 숫자가 목록 밖에 생기면
 실패하고, 토큰이 있는 값을 목록에 넣어도 실패합니다.
 
+### 칠해지는 상자의 이름은 State Layer입니다
+
+디자인 킷의 레이어 트리가 그 읽기를 이름으로 확인해줍니다:
+
+```
+Menu-item     h:{{ site.data.menu.item.slot_height }} hug   paddingBlock:{{ site.data.menu.item.inset_block }}   paddingInline:{{ site.data.menu.item.inset_inline }}
+  Content     h:hug                 cornerRadius:{{ site.data.menu.item.shape }}
+    State Layer  h:{{ site.data.menu.item.container_height }}  paddingBlock:{{ site.data.menu.item.state_layer_padding_block }}  paddingInline:{{ site.data.menu.item.state_layer_padding_inline }}
+```
+
+가로가 여기서 닫힙니다:
+
+```
+{{ site.data.menu.item.leading_space_composition }}
+```
+
+{{ site.data.menu.item.inset_inline }} + {{ site.data.menu.item.state_layer_padding_inline }} =
+{{ site.data.menu.item.leading_space }}. 발행된 leading-space는 **슬롯 가장자리에서** 재는
+값이고, 칠해지는 상자는 거기서 {{ site.data.menu.item.inset_inline }} 들어와 자기 패딩
+{{ site.data.menu.item.state_layer_padding_inline }}를 갖습니다. 측정값과 토큰이 만나는
+유일한 자리라 이것도 핀으로 박았습니다.
+
 ### 발행되었지만 가리키는 곳을 모르는 값
 
 `menu-item.top-space`와 `bottom-space`가 각각 {{ site.data.menu.item.top_space }}로
 발행되어 있습니다. 그런데 {{ site.data.menu.item.container_height }} − 8 − 8 = 28이고,
-label-large의 줄 상자는 20입니다. 한 줄짜리 아이템의 padding으로 읽히지 않습니다.
+label-large의 줄 상자는 20입니다. 킷은 대신 {{ site.data.menu.item.state_layer_padding_block }}을
+재고, {{ site.data.menu.item.container_height }} − 12 − 12 = 20으로 정확히 맞습니다.
 
-후보는 둘입니다 — 컨테이너 자신의 세로 padding이거나, supporting text가 붙어 커진
-아이템의 padding이거나. **어느 쪽도 확인하지 않았으므로 여기서 짓지 않습니다.**
+유력한 가설은 토큰의 8이 **supporting text가 붙어 커진 아이템**의 것이라는 쪽입니다 —
+20 + 16 + 8 + 8 = 52도 똑같이 닫히니까요. 그런데 **킷이 그걸 그리지 않습니다.** supporting
+text를 켠 아이템도 `208 × 48 Hug`로, 라벨만 있는 것과 같습니다. 안쪽 상자가 내용을 따라
+크는 게 아니라 {{ site.data.menu.item.container_height }}로 **고정**이기 때문입니다.
+
+그래서 한 줄 아이템은 **잰 값 12**로 짓고, 토큰의 8은 쓰지 않은 채 적어 둡니다. 산수는
+가설을 지지하지만 아무도 재지 않았습니다.
 
 ## 구조는 리스트, 값은 메뉴
 
@@ -214,6 +242,30 @@ shape까지 함께 발행되어 있습니다. 그리고 guidelines가 이렇게 
 {% for n in site.data.menu.not_published -%}
 - **{{ n[1].what }}**{% if n[1].note %} — {{ n[1].note }}{% endif %}
 {% endfor %}
+
+## 아무도 발행하지 않아 우리가 정한 것
+
+폭과 최대 높이입니다. M3는 둘 다 발행하지 않고, 랩의 감사가 min/max 폭의 권위로 지목한
+것은 랩 자신의 스타일시트입니다.
+
+**최대 높이는 뷰포트에 묶습니다.** M3가 실제로 쓴 제약은 그것뿐입니다 — placement 절은
+창 가장자리에 관한 것이고, 잘리느니 자리를 옮기라고 합니다. 발행된 어디에도 "몇 개까지"는
+없습니다.
+
+아이템 갯수 상한은 **계약만 적어두고 켜지 않았습니다**. 숫자를 고르면 근거 없는 상수가
+하나 생기고, 그걸 핀으로 박으면 결함이 계약으로 굳습니다. 뷰포트 상한 아래에서는 갯수가
+상수가 아니라 결과입니다. 필요해지면 높이 공식으로 켭니다:
+
+```
+{{ site.data.menu.container.block_size_formula }}
+```
+
+이 공식은 킷의 두 인스턴스에서 확인했습니다 — 4개가 196, 6개가 292. 검증기가 둘 다
+재구성해서 대조하므로, 슬롯 높이가 움직이면 깨집니다.
+
+**폭은 {{ site.data.menu.container.inline_size_floor }}을 바닥으로** 쓰고 내용에 따라
+자라게 둡니다. 한 킷의 한 인스턴스는 바닥의 증거이지 고정폭의 증거가 아니고, 가장 긴
+라벨이 안 들어가는 메뉴가 넓은 메뉴보다 나쁩니다.
 
 판단이 남은 것 둘:
 

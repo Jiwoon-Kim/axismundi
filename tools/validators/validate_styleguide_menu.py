@@ -217,8 +217,9 @@ def check_item_geometry(report: Report, data: dict, table: Table) -> None:
     # said out loud, the next reader takes them for tokens.
     source = str(item.get("geometry_source", ""))
     report.check(
-        "Figma" in source and "image" in source,
-        "item.geometry_source must keep naming the measurements image and the Figma check",
+        "Measurements image" in source and "55141-14250" in source,
+        "item.geometry_source must keep citing the measurements image and the kit node it "
+        "was confirmed against",
     )
     report.check(
         slot >= 48,
@@ -230,8 +231,40 @@ def check_item_geometry(report: Report, data: dict, table: Table) -> None:
     # be added later and sit beside published ones reading exactly like them.
     declared = set(item.get("unpublished", []))
     report.check(
-        declared == {"slot_height", "inset_block", "inset_inline"},
-        f"item.unpublished must name the three measured figures; found {sorted(declared)}",
+        declared == {
+            "slot_height",
+            "inset_block",
+            "inset_inline",
+            "state_layer_padding_block",
+            "state_layer_padding_inline",
+            "state_layer_between_space",
+        },
+        f"item.unpublished must name every measured figure; found {sorted(declared)}",
+    )
+
+    # The one place a measured inset and a published token have to meet. If the
+    # kit is ever re-read differently, this is what catches it.
+    report.check(
+        item["inset_inline"] + item["state_layer_padding_inline"] == item["leading_space"],
+        f"{item['inset_inline']} + {item['state_layer_padding_inline']} is not the published "
+        f"leading space {item['leading_space']}",
+    )
+    report.check(
+        item.get("leading_space_composition")
+        == "inset_inline + state_layer_padding_inline == leading_space",
+        "item.leading_space_composition must state the arithmetic this check enforces",
+    )
+    # The painted box has to hold the label's line, which is what makes the
+    # measured 12 believable and the published 8 not -- for a single-line item.
+    report.check(
+        container - 2 * item["state_layer_padding_block"] == 20,
+        f"the painted box leaves {container - 2 * item['state_layer_padding_block']}dp for a "
+        "label-large line box, which is 20",
+    )
+    report.check(
+        item["state_layer_padding_block"] != item["top_space"],
+        "the two vertical paddings are recorded as disagreeing; if they ever agree, "
+        "the discrepancy entry should go rather than sit there saying nothing",
     )
     for key, value in item.items():
         if isinstance(value, bool) or not isinstance(value, (int, float)):
@@ -247,6 +280,54 @@ def check_item_geometry(report: Report, data: dict, table: Table) -> None:
                 f"item.{key} is a bare number with no token and is not listed in "
                 "item.unpublished -- say where it came from",
             )
+
+
+def check_policy(report: Report, data: dict) -> None:
+    """The decisions made where nothing is published, and the shape of them."""
+    policy = data["project_policy"]
+
+    height = policy["maximum_height"]
+    report.check(
+        height["status"] == "viewport_bound",
+        "the height limit is the window, which is the only limit M3 states",
+    )
+    cap = height["item_count_cap"]
+    report.check(
+        cap["status"] == "not_adopted",
+        "an item-count cap is a number this project would be inventing; it stays unadopted",
+    )
+    report.check(
+        cap["expressed_as"] == "container.block_size_formula"
+        and "block_size_formula" in data["container"],
+        "the cap must stay expressed in the verified height formula rather than a raw number",
+    )
+    # Verified at the two instances the kit was read at. Both are reconstructed
+    # here rather than restated, so a changed slot height breaks them.
+    slot = data["item"]["slot_height"]
+    padding = data["grouping"]["gap"]["group_padding"]
+    for count, measured in ((4, 196), (6, 292)):
+        report.check(
+            2 * padding + count * slot == measured,
+            f"the height formula gives {2 * padding + count * slot} for {count} items, "
+            f"not the measured {measured}",
+        )
+
+    width = policy["inline_size"]
+    report.check(
+        width["status"] == "floor_from_measurement",
+        "208 is one kit's instance and is taken as a floor, not as the width",
+    )
+    report.check(
+        data["container"]["inline_size_floor"] == 208,
+        "the recorded floor must be the measured one",
+    )
+    # Both unpublished entries have to keep pointing at the policy that answers
+    # them, or the blanks read as still-blank and get filled twice.
+    for key in ("container_inline_size", "container_block_size"):
+        report.check(
+            "project_policy" in str(data["not_published"][key].get("note", "")),
+            f"not_published.{key} must say which policy answers it",
+        )
 
 
 def check_variants(report: Report, data: dict, table: Table) -> None:
@@ -410,6 +491,7 @@ def main() -> int:
     check_structure(report, data)
     check_host(report, data)
     check_grouping(report, data, table)
+    check_policy(report, data)
 
     print(f"menu: {report.checked} checks, {len(report.problems)} failed")
     for problem in report.problems:

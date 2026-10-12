@@ -145,6 +145,23 @@ Menu-item     h:{{ site.data.menu.item.slot_height }} hug   paddingBlock:{{ site
 {{ site.data.menu.item.state_layer_padding_inline }}를 갖습니다. 측정값과 토큰이 만나는
 유일한 자리라 이것도 핀으로 박았습니다.
 
+가로 전체를 끝에서 끝까지 복원하면 하나가 더 결정됩니다:
+
+```
+{{ site.data.menu.container.inline_size_floor }}
+ -{{ site.data.menu.item.inset_inline }} x2   inset
+ -{{ site.data.menu.item.state_layer_padding_inline }} x2  state layer padding
+ -{{ site.data.menu.item.leading_icon_size }} -{{ site.data.menu.item.trailing_icon_size }}  leading · trailing icon
+ -{{ site.data.menu.item.state_layer_between_space }} x2   between
+ ----
+ {{ site.data.menu.item.content_inline_size }}   = 킷이 표시한 텍스트 블록 폭
+```
+
+요소 사이 간격을 토큰의 12로 두면 112가 나옵니다. 킷은 {{ site.data.menu.item.content_inline_size }}을
+표시하므로, **킷의 {{ site.data.menu.item.state_layer_between_space }}는 자기 폭 산수로
+뒷받침됩니다.** 이 기록은 처음에 그 자리에서 토큰을 따랐고, 되돌렸습니다 — 세로 패딩에서는
+산수가 닫히는 쪽을 따라놓고 가로에서 반대로 한 것이기도 했습니다.
+
 ### 발행되었지만 가리키는 곳을 모르는 값
 
 `menu-item.top-space`와 `bottom-space`가 각각 {{ site.data.menu.item.top_space }}로
@@ -153,12 +170,19 @@ label-large의 줄 상자는 20입니다. 킷은 대신 {{ site.data.menu.item.s
 재고, {{ site.data.menu.item.container_height }} − 12 − 12 = 20으로 정확히 맞습니다.
 
 유력한 가설은 토큰의 8이 **supporting text가 붙어 커진 아이템**의 것이라는 쪽입니다 —
-20 + 16 + 8 + 8 = 52도 똑같이 닫히니까요. 그런데 **킷이 그걸 그리지 않습니다.** supporting
-text를 켠 아이템도 `208 × 48 Hug`로, 라벨만 있는 것과 같습니다. 안쪽 상자가 내용을 따라
-크는 게 아니라 {{ site.data.menu.item.container_height }}로 **고정**이기 때문입니다.
+20 + 16 + 8 + 8 = 52도 똑같이 닫히니까요. 킷의 텍스트 블록이 그 두 줄을 실제로 hug합니다:
 
-그래서 한 줄 아이템은 **잰 값 12**로 짓고, 토큰의 8은 쓰지 않은 채 적어 둡니다. 산수는
-가설을 지지하지만 아무도 재지 않았습니다.
+```
+{{ site.data.menu.item.content_inline_size }} × {{ site.data.menu.item.content_block_size_one_line }}   라벨만
+{{ site.data.menu.item.content_inline_size }} × {{ site.data.menu.item.content_block_size_with_supporting_text }}   supporting text 포함 ({{ site.data.menu.item.content_block_size_one_line }} + 16)
+```
+
+남은 것은 **그 아이템의 높이 하나**입니다. 52면 패딩이 8로 바뀌면서 토큰이 설명되고,
+60이면 패딩은 12 그대로이고 토큰의 8은 여전히 자리가 없습니다. 그때까지 한 줄 아이템은
+**잰 값 12**로 짓고 8은 쓰지 않은 채 적어 둡니다.
+
+이 기록은 한 번 "킷이 두 줄 아이템을 안 그린다"고 적었습니다. 크기 배지를 옆 행에서
+읽은 것이었고, 틀렸습니다.
 
 ## 구조는 리스트, 값은 메뉴
 

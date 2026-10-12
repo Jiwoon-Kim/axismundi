@@ -201,6 +201,9 @@ item:
     - state_layer_padding_block
     - state_layer_padding_inline
     - state_layer_between_space
+    - content_inline_size
+    - content_block_size_one_line
+    - content_block_size_with_supporting_text
 
   # The painted box is named `State Layer` in the kit, which is what it is.
   # These three are its own padding and gap, inside the 4dp and 2dp insets
@@ -208,6 +211,13 @@ item:
   state_layer_padding_inline: 12
   state_layer_padding_block: 12
   state_layer_between_space: 8
+  # The text block the kit reports between the leading and trailing elements.
+  # It is a consequence of every other horizontal figure, which is why it is
+  # worth pinning: it is the one measurement that tests them all at once, and
+  # it is what settles 8 against the table's 12.
+  content_inline_size: 120
+  content_block_size_one_line: 20
+  content_block_size_with_supporting_text: 36
   # Composition, not a second source: 4 + 12 is the 16dp the token publishes
   # from the slot's edge. Pinned, because it is the one place the measured
   # inset and a published token have to agree.
@@ -244,12 +254,15 @@ item:
   # measures 12 and 12 instead, and 44 - 12 - 12 is exactly 20. The leading
   # hypothesis was that the token's 8 belongs to an item grown to carry
   # supporting text -- 20 + 16 + 8 + 8 = 52 closes just as neatly -- but the
-  # kit's painted box is a fixed 44 and does not grow when supporting text is
-  # switched on, so it draws no two-line item at all. Measured: an item showing
-  # a label and supporting text reads 208 x 48 Hug, exactly as a label-only one
-  # does, which is only possible because the box inside it is a fixed height
-  # rather than a hugging one. Its two lines are 20 and 16, and the box leaves
-  # 20. The arithmetic supports the hypothesis; the kit cannot test it.
+  # kit's painted box does grow: the text block inside it hugs, measuring
+  # 120 x 20 with a label alone and 120 x 36 with supporting text, which is the
+  # 20dp label line plus the 16dp supporting line. An earlier reading of this
+  # record said the box was fixed at 44 and drew no two-line item; that was a
+  # size badge read off the wrong row, and it was wrong.
+  #
+  # What the two-line item's own height is has not been measured yet, and it
+  # decides this: 52 means the padding becomes 8 and the token is explained,
+  # 60 means the padding stays 12 and the token is still unplaced.
   #
   # Build the single-line item from the measured 12. Leave these two recorded
   # and unused until a two-line item is actually measured somewhere.
@@ -509,12 +522,21 @@ discrepancies:
     prose: The kit's painted box sets a horizontal gap of 8, and its trailing group sets 8 again.
     tokens: md.comp.menus.menu-item.between-space resolves to space150, which is 12.
     resolution: >-
-      Follow the token. 12 appears in the kit only as the painted box's own
-      padding, and 8 appears nowhere in the table, so the two are measuring
-      different things or the kit is behind. A Community design kit is one
-      drawing; the table is the published source. Recorded rather than
-      reconciled, because the disagreement is real and may be the kit catching
-      up later.
+      Follow the measurement, reversing this record's first answer. That answer
+      was "follow the token, because 8 appears nowhere in the table", and the
+      kit's own width arithmetic has since corroborated the 8: a 208dp menu
+      less two 4dp insets, two 12dp paddings, a 20dp leading icon and a 20dp
+      trailing icon leaves 136, and the text block measures 120, which is 136
+      less two gaps of 8. At 12 it would measure 112. The kit means its 8.
+      Following the table here would also have been inconsistent with the
+      vertical padding below, where the figure whose arithmetic closes is the
+      one this record follows.
+    observation: >-
+      The two disagreements are the same two numbers, swapped. The table
+      publishes 12 between and 8 vertical; the kit draws 8 between and 12
+      vertical. Recorded as a thing noticed, not as a claim -- if a
+      transposition is ever found in one of the two sources, this is the line
+      that saves the search.
   - subject: an item's vertical padding
     prose: The kit measures 12 and 12 inside a fixed 44dp box, which fits the 20dp label line exactly.
     tokens: md.comp.menus.menu-item.{top,bottom}-space resolve to space100, which is 8.
@@ -523,6 +545,10 @@ discrepancies:
       single-line item is built from the measured 12 because its arithmetic is
       the one that closes against a box the kit actually draws. The token's 8
       stays recorded, unused, and unexplained.
+    open: >-
+      One measurement decides it: the height of an item carrying supporting
+      text. Its text block is 36, so 52 means the padding becomes 8 and the
+      token is explained, and 60 means the padding stays 12 and it is not.
   - subject: gap
     prose: Gaps are not currently available on web; on web, use a divider.
     tokens: md.comp.menus.gap, md.comp.menus.group.padding and md.comp.menus.group.shape are all live.

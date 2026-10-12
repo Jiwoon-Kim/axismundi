@@ -238,8 +238,39 @@ def check_item_geometry(report: Report, data: dict, table: Table) -> None:
             "state_layer_padding_block",
             "state_layer_padding_inline",
             "state_layer_between_space",
+            "content_inline_size",
+            "content_block_size_one_line",
+            "content_block_size_with_supporting_text",
         },
         f"item.unpublished must name every measured figure; found {sorted(declared)}",
+    )
+
+    # The horizontal run, reconstructed end to end. Every figure in it is
+    # measured except the two icon sizes, which are tokens, so this is the one
+    # check that tests them together -- and it is what settles the kit's 8dp
+    # gap against the table's 12dp. At 12 the text block would be 112.
+    container_width = data["container"]["inline_size_floor"]
+    remaining = (
+        container_width
+        - 2 * item["inset_inline"]
+        - 2 * item["state_layer_padding_inline"]
+        - item["leading_icon_size"]
+        - item["trailing_icon_size"]
+        - 2 * item["state_layer_between_space"]
+    )
+    report.check(
+        remaining == item["content_inline_size"],
+        f"the horizontal run leaves {remaining}dp for the text block, but the kit "
+        f"measures {item['content_inline_size']}",
+    )
+    # The two line boxes the text block hugs, against the typescales they come
+    # from. 20 is label-large's line height and 36 adds body-small's 16.
+    report.check(
+        item["content_block_size_with_supporting_text"]
+        - item["content_block_size_one_line"]
+        == 16,
+        "the supporting-text line adds body-small's 16dp line box, or the two measured "
+        "text-block heights no longer describe the typescales this record publishes",
     )
 
     # The one place a measured inset and a published token have to meet. If the

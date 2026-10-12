@@ -472,6 +472,161 @@ def check_design_kit(report: Report, data: dict) -> None:
     )
 
 
+def check_group(report: Report, data: dict, table: Table) -> None:
+    """The group axis: what the sources settled, and what is still the owner's.
+
+    No pin touches the adapter. The rows are still flat, and a check that failed
+    on that would turn the gate red while the shape is undecided.
+    """
+    group = data["group"]
+    report.check(
+        group["status"] == "axis_settled_composition",
+        "the group axis and its composition API must both be recorded as settled",
+    )
+    report.check(
+        len(group["evidence"]) >= 4
+        and all( e.get("source") and e.get("says") for e in group["evidence"] ),
+        "every source for the group being a level stays recorded with what it said",
+    )
+
+    # The two things the group owns that the table publishes. Read through, so
+    # a republished value moves the record rather than drifting from it.
+    owns = group["owns"]
+    report.check(
+        table.number("md.comp.menus.group.padding") == owns["padding_block"]["value"]
+        and owns["padding_block"]["value"] == data["grouping"]["gap"]["group_padding"],
+        "the group's padding must be the published one, and the same figure the CSS consumes",
+    )
+    report.check(
+        (table.reference("md.comp.menus.group.shape") or "").endswith(owns["shape"]["role"])
+        and table.number("md.comp.menus.group.shape") == owns["shape"]["value"],
+        "the group's shape must be the published one",
+    )
+    # It is published and it cannot paint here, and both halves have to stay
+    # said or the next reader implements a block that never shows.
+    report.check(
+        "gaps" in owns["shape"]["paints_when"]
+        and data["grouping"]["gap"]["status"] == "not_implemented_on_web",
+        "the group shape only paints where gaps do, which is not here",
+    )
+
+    report.check(
+        group["roles"]["separator"] == "separator"
+        and "aria-hidden" in group["roles"]["separator_is_not_hidden"],
+        "the divider is a separator and the record must keep saying why hiding it is wrong",
+    )
+    report.check(
+        "radiogroup" in group["roles"]["radiogroup_not_used"],
+        "the record must keep the reason a radiogroup does not go inside a menu",
+    )
+    report.check(
+        group["scroll_box"]["status"].startswith("the menu list")
+        and "mutual_exclusion_scope" in group["scroll_box"]["reason"],
+        "the menu list being the scroll box is a consequence of elevation, not an answer to the "
+        "exclusion question, and the record must not let the two merge",
+    )
+
+    shape = group["api_shape"]
+    report.check(
+        shape["status"] == "composition" and shape["chosen"] == "composition",
+        "the group API must preserve the owner's composition decision",
+    )
+    report.check(
+        {"data", "composition"} == set(shape["options"])
+        and "Menu.Group" in shape["implementation"],
+        "both API options stay recorded and the chosen composition has a concrete shape",
+    )
+
+
+def check_scrollbar(report: Report, data: dict) -> None:
+    """The scrollbar: a published requirement nothing meets, and a house rule
+    that was read off three files rather than decided."""
+    bar = data["scrollbar"]
+    report.check(
+        bar["persistent"]["status"] == "published_requirement_unmet",
+        "M3 asks a scrolling menu for a persistent scrollbar and nothing here provides one; "
+        "the record must keep saying so rather than letting the gap close quietly",
+    )
+    report.check(
+        bool(bar["persistent"]["do_not_guess"]),
+        "a requirement recorded as unmet has to say why it is not being guessed at",
+    )
+    # The convention is a reading of other files. If one stops doing it, the
+    # reading is no longer true and the record should not keep claiming it.
+    for entry in bar["house_convention"]["measured_at"]:
+        path = ROOT / entry["where"]
+        report.check(path.exists(), f"the convention cites a file that is not there: {entry['where']}")
+        if path.exists():
+            report.check(
+                "scrollbar" in path.read_text(encoding="utf-8"),
+                f"{entry['where']} no longer styles a scrollbar, so the house convention "
+                "rests on one fewer place than it claims",
+            )
+    report.check(
+        len(bar["house_convention"]["measured_at"]) >= 3,
+        "the convention is a reading of several places, not one",
+    )
+
+
+def check_states(report: Report, data: dict) -> None:
+    """The states record, and the one claim in it that reads a file.
+
+    No pin here touches the adapter yet: the three state layers are still
+    outstanding work, and a check that fails on them would turn the style-guide
+    gate red for unrelated changes. These hold the record itself, and the
+    sibling precedent it points at, until that work lands.
+    """
+    states = data["states"]
+    report.check(
+        {"enabled", "hovered", "focused", "pressed", "disabled", "active"}
+        == set(states["published_layers"]),
+        f"the record must carry all six published states; found "
+        f"{sorted(states['published_layers'])}",
+    )
+    report.check(
+        states["active_state_blocked_on_submenu"]["status"] == "not_implemented"
+        and data["submenu"]["status"] == "deferred",
+        "the sixth state and the submenu deferral stand or fall together",
+    )
+
+    # The precedent is cited as working code, so this reads the code. All three
+    # opacities, or the claim that it solved this is not true any more.
+    precedent = ROOT / states["sibling_precedent"]["where"]
+    report.check(precedent.exists(), f"the sibling precedent is missing: {precedent}")
+    if precedent.exists():
+        css = precedent.read_text(encoding="utf-8")
+        # Not "the file mentions the three opacities" -- measured, every
+        # stylesheet in this theme mentions them, so that pin was bound to the
+        # word rather than the claim. What makes this file a precedent is that
+        # it applies them to the rows of a submenu popover, so that is what is
+        # read: declarations inside a rule whose selector names one.
+        rows = [
+            block
+            for block in re.split(r"(?<=\})", css)
+            if "submenu-container" in block.split("{")[0]
+        ]
+        for state in ("hover", "focus", "pressed"):
+            report.check(
+                any(f"--md-sys-state-{state}-state-layer-opacity" in block for block in rows),
+                f"the cited precedent no longer applies a {state} state layer to a menu row",
+            )
+
+    # Measured, and recorded so the states figure is not read onto a vertical
+    # row: every per-state item shape in the table is a horizontal one.
+    raw = RAW.read_text(encoding="utf-8")
+    vertical = [
+        line
+        for line in raw.splitlines()
+        if "md.comp.menus.menu-item." in line
+        and "SHAPE" in line
+        and any(k in line for k in ("hovered", "focused", "pressed", "active"))
+    ]
+    report.check(
+        not vertical,
+        f"the table now publishes a per-state shape for the vertical row: {vertical}",
+    )
+
+
 def check_submenu(report: Report, data: dict) -> None:
     """The placement answer, and the sources that make it one."""
     placement = data["submenu"]["placement"]
@@ -712,6 +867,7 @@ def check_implementation(report: Report, data: dict) -> None:
     route = ROUTE.read_text(encoding="utf-8")
     item = data["item"]
     container = data["container"]
+    section_label = data["section_label"]
 
     report.check("popover=\"manual\"" in menu and "showPopover()" in menu and "hidePopover()" in menu,
                  "Menu no longer uses the manual popover host its record requires")
@@ -725,9 +881,10 @@ def check_implementation(report: Report, data: dict) -> None:
     modes = data["selection"]["checked_state_role_by_mode"]
     report.check(f"'{modes['multi_select']}' : '{modes['single_select']}'" in menu,
                  "a checkable row's role must follow the recorded mapping from selection mode")
-    report.check("const checkable = items.some(" in menu,
-                 "checkability is a property of the menu; a group whose unchecked rows are plain "
-                 "menu items is not a group")
+    report.check("MenuGroupContext" in menu and "selectionMode" in menu,
+                 "checkability must belong to a Menu.Group rather than to the whole menu")
+    report.check("setUncontrolledValue" in menu and "onValueChange?.( next );" in menu,
+                 "a checkable group must update its own default selection and expose controlled selection")
     report.check("[role=\"menuitemradio\"], [role=\"menuitemcheckbox\"]" in menu,
                  "keyboard movement must walk the whole menuitem family, or checkable rows drop "
                  "out of it")
@@ -736,12 +893,27 @@ def check_implementation(report: Report, data: dict) -> None:
                  "the trigger no longer stays visibly pressed while its menu is open")
     report.check("focusItem( 0 );" in menu and "'Escape' === event.key" in menu,
                  "Menu no longer places focus on its first item and restores its trigger on Escape")
-    report.check("aria-disabled={ item.disabled || undefined }" in menu,
+    report.check("aria-disabled={ disabled || undefined }" in menu,
                  "disabled menu items no longer stay in the focus order")
-    report.check("item.divider" in menu and "aria-hidden=\"true\"" in menu,
-                 "dividers no longer stay outside the menu focus order")
+    separator = re.search(r"export function MenuSeparator\(\).*?\n}\n", menu, re.S)
+    report.check(separator is not None and "role=\"separator\"" in separator.group(0)
+                 and "aria-hidden" not in separator.group(0),
+                 "group dividers must be semantic separators rather than hidden rows")
     report.check("pointerdown" in menu and "window.addEventListener( 'scroll'" in menu,
                  "Menu no longer dismisses outside presses or repositions with its trigger")
+    report.check("useEffect( () =>" in menu and "if ( ! triggerIsValid )" in menu
+                 and menu.index("useEffect( () =>") < menu.index("if ( ! triggerIsValid )"),
+                 "Menu conditionally skips a hook when its trigger is invalid")
+    # The policy is the space the trigger leaves, so this reads that the limit is
+    # computed from the trigger's box. "A max-block-size is set somewhere" would
+    # pass with the whole window back in it, which is the thing it forbids.
+    report.check(
+        "menu.style.maxBlockSize" in menu
+        and "window.innerHeight - target.bottom" in menu
+        and "target.top - EDGE" in menu,
+        "the height limit must be the space the trigger leaves above and below it, which is "
+        "what `project_policy.maximum_height` records",
+    )
 
     # Elevation is the frontend's own primitive. The theme does not define
     # `--md-sys-elevation-level*` at all, so a stylesheet reaching for one paints
@@ -778,9 +950,29 @@ def check_implementation(report: Report, data: dict) -> None:
         "state block padding": f"--md-comp-menus-item-state-padding-block: {item['state_layer_padding_block']}px;",
         "kit between space": f"--md-comp-menus-item-between-space: {item['state_layer_between_space']}px;",
         "icon size": f"--md-comp-menus-item-icon-size: {item['leading_icon_size']}px;",
+        "edge shape": f"--md-comp-menus-item-edge-shape: var( --md-sys-shape-corner-value-{item['first_child_shape_role'].split('.')[-1]} );",
+        "section-label height": f"--md-comp-menus-section-label-height: {section_label['height']}px;",
+        "section-label outer inset": f"--md-comp-menus-section-label-outer-padding-inline: {section_label['padding_inline']}px;",
+        "section-label outer block inset": f"--md-comp-menus-section-label-outer-padding-block: {section_label['padding_block']}px;",
+        "section-label content inline inset": f"--md-comp-menus-section-label-content-padding-inline: {section_label['content_padding_inline']}px;",
+        "section-label content start inset": f"--md-comp-menus-section-label-content-padding-block-start: {section_label['content_padding_block_start']}px;",
+        "section-label content end inset": f"--md-comp-menus-section-label-content-padding-block-end: {section_label['content_padding_block_end']}px;",
+        "section-label content gap": f"--md-comp-menus-section-label-content-gap: {section_label['content_gap']}px;",
+        "section-label icon": f"--md-comp-menus-section-label-icon-size: {section_label['leading_icon_size']}px;",
     }
     for name, declaration in slots.items():
         report.check(declaration in css, f"Menu CSS no longer consumes the recorded {name}: {declaration}")
+
+    report.check(
+        section_label["content_padding_block_start"] == 6
+        and section_label["content_padding_block_end"] == 0,
+        "the section-label no longer preserves the Figma-measured 6dp top and 0dp bottom padding",
+    )
+    report.check("labelIcon" in menu and "ax-menu__group-label-content" in menu,
+                 "Menu.Group no longer renders the measured label content layer and optional icon")
+    report.check("labelDivider" in menu and "ax-menu__group-label-divider" in menu
+                 and "ax-menu__group-label-divider" in css,
+                 "Menu.Group no longer exposes the label's optional divider slot")
 
     report.check("min-block-size: var( --md-comp-menus-item-slot-height );" in css
                  and "min-block-size: var( --md-comp-menus-item-container-height );" in css,
@@ -788,13 +980,34 @@ def check_implementation(report: Report, data: dict) -> None:
     report.check("padding-block: var( --md-comp-menus-item-inset-block );" in css
                  and "padding-inline: var( --md-comp-menus-item-inset-inline );" in css,
                  "the measured slot insets no longer surround the painted box")
+    report.check(":first-of-type .ax-menu__item-container" in css
+                 and ":last-of-type .ax-menu__item-container" in css,
+                 "first and last rows no longer receive their published edge shapes")
+    for state in ("hover", "focus", "pressed"):
+        report.check(
+            f"--md-sys-state-{state}-state-layer-opacity" in css,
+            f"Menu CSS no longer consumes the published {state} state-layer opacity",
+        )
+    report.check("data-selected]:not" in css and "on-tertiary-container" in css,
+                 "selected rows no longer retain hover, focus and pressed state layers")
     report.check("@import url( './components/menu.css' );" in style_index,
                  "Menu stylesheet is not in the frontend bundle")
     report.check("StylebookMenusPage" in stylebook_index and "'menus' === component" in stylebook_index,
                  "stylebook does not expose Menus")
-    report.check("<MenuSample items={ ACTIONS }" in stylebook_page
-                 and "<MenuSample items={ SELECTABLE_ACTIONS }" in stylebook_page,
-                 "stylebook no longer demonstrates actions and selected menu rows")
+    report.check("<Menu.Group" in stylebook_page and "<Menu.Item" in stylebook_page
+                 and "<Menu.Separator" in stylebook_page,
+                 "stylebook no longer demonstrates the composed group API")
+    # A name is not a long menu. The sample has to be materially longer than the
+    # others, which is a comparison rather than a number this file invents --
+    # measured at the time of writing: fourteen rows against four.
+    long_block = stylebook_page.split("LONG_ACTIONS = [")[-1].split("];")[0]
+    long_rows = long_block.count("',")
+    composed_rows = stylebook_page.count("<Menu.Item")
+    report.check(
+        long_rows > composed_rows,
+        f"the overflow sample has {long_rows} rows against {composed_rows} written out one by "
+        "one; it is no longer the long one and demonstrates nothing",
+    )
     # Four places declare a stylebook route and the app's own regex is one of
     # them. Leaving it out does not fail any PHP check and does not fail a
     # build; the page simply falls back to the feed. Measured, that way.
@@ -838,6 +1051,9 @@ def main() -> int:
     check_grouping(report, data, table)
     check_policy(report, data)
     check_design_kit(report, data)
+    check_group(report, data, table)
+    check_scrollbar(report, data)
+    check_states(report, data)
     check_submenu(report, data)
     check_implementation(report, data)
 

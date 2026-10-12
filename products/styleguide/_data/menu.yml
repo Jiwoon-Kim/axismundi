@@ -178,7 +178,29 @@ scrollbar:
   note: >-
     The kit draws a scrollbar as a static layer; its height does not change when
     the variant is switched on, so nothing in it says when a menu begins to
-    scroll. M3 states only that a scrolling menu shows a persistent scrollbar.
+    scroll.
+  persistent:
+    status: published_requirement_unmet
+    source: https://m3.material.io/components/menus/guidelines
+    statement: Menus can scroll when all menu items can't display at once. In this state, menus show a persistent scrollbar.
+    why_it_is_not_met: >-
+      Neither the platform default nor `scrollbar-width: thin` is persistent:
+      an overlay scrollbar fades when the pointer stops. And the measured 12dp
+      track with a 4dp thumb is not any user agent's `thin` -- it is drawn.
+    do_not_guess: >-
+      Whether `scrollbar-gutter`, `scrollbar-color`, a `::-webkit-scrollbar`
+      rule or a drawn element gets there is a measurement across engines, not a
+      reading. Nothing is implemented for it.
+  house_convention:
+    rule: A component that makes its own scroll region styles that scrollbar; nothing styles the document's.
+    measured_at:
+      - { where: products/wordpress/themes/axismundi/style.css, does: "`pre` takes `scrollbar-width: thin` with a tokenised colour and an 8px webkit track" }
+      - { where: products/wordpress/plugins/axismundi/src/apps/frontend/styles/components/carousel.css, does: hides its own scrollbar }
+      - { where: products/wordpress/plugins/axismundi/src/apps/frontend/styles/components/tabs.css, does: hides its own scrollbar on the scrollable layout }
+    note: >-
+      Three places, none of them the document. The convention was read off the
+      code rather than decided here, and the menu's list is a component scroll
+      region like the other three.
 
 # ---------------------------------------------------------------------------
 # Item. The two boxes here are the thing this component is easiest to get
@@ -334,6 +356,15 @@ section_label:
   # slot the way a menu item does.
   height: 32
   padding_inline: 4
+  padding_block: 0
+  content_padding_inline: 12
+  # Measured from the Figma Content layer. These are deliberately asymmetric:
+  # top 6dp, bottom 0dp. Do not replace them with a centering formula.
+  content_padding_block_start: 6
+  content_padding_block_end: 0
+  content_gap: 8
+  leading_icon_size: 20
+  divider_slot: optional divider follows the label content inside the group label row
   geometry_source: Material 3 Design Kit, node 55141-14250
 
 # ---------------------------------------------------------------------------
@@ -442,6 +473,121 @@ structure:
 # Behaviour and accessibility.
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# The group. Opened after the first implementation shipped a flat list of rows
+# that cannot express one.
+# ---------------------------------------------------------------------------
+
+group:
+  status: axis_settled_composition
+  is_a_level: true
+  evidence:
+    - { source: design kit, says: "Its tree is Menu > List N content > [Label] + Menu-item*, and the menu variants are Groups = 1, 2, 3." }
+    - { source: M3 guidelines, says: "Vertical menu items can be grouped by adding a divider or small gap, to bundle similar actions." }
+    - { source: "@wordpress/ui Menu", says: "Decomposes into Group, GroupLabel, Separator, RadioGroup and RadioItem, so the group is a component rather than a convention." }
+    - { source: "MDN, role=menu", says: "Menu items can be grouped in elements with the `group` role, and separated by `separator` elements." }
+  owns:
+    padding_block:
+      token: md.comp.menus.group.padding
+      value: 2
+    shape:
+      token: md.comp.menus.group.shape
+      role: corner.small
+      value: 8
+      paints_when: gaps separate the groups
+      note: >-
+        A group only reads as its own block when a gap sets it apart, and gaps
+        are unavailable on web, so this shape has nothing to paint here. Still
+        recorded: it is published, and it is the group's.
+    label: the optional 32dp section label row
+    separator: the divider that sets it apart from the next group
+    selection_scope: >-
+      One group is one set of checkable rows. Two selectable groups in one menu
+      are two independent sets, which is the whole reason selection cannot be a
+      property of the menu.
+  does_not_own: [ container shape, elevation, inline size, item geometry ]
+  roles:
+    group: group
+    labelled_by: its own label row, which is not focusable
+    radiogroup_not_used: >-
+      ARIA does not put a `radiogroup` inside a menu. A single-select group is a
+      `group` holding `menuitemradio` rows, each carrying `aria-checked`.
+    separator: separator
+    separator_is_not_hidden: >-
+      The first implementation renders a divider as an `aria-hidden` span, which
+      drops it out of the accessibility tree entirely. On web the divider is how
+      a group is expressed, and the APG names separators as the grouping
+      mechanism specifically when a menu holds `menuitemradio` rows. It is a
+      `separator`, not focusable and not hidden.
+  scroll_box:
+    status: the menu list, today
+    reason: >-
+      Forced by elevation -- an absolutely positioned layer cannot sit inside
+      the box that scrolls. It is not an answer to `mutual_exclusion_scope`,
+      which stays the owner's.
+  api_shape:
+    status: composition
+    question: Whether a group arrives as data or as composition.
+    options:
+      data: >-
+        `groups={ [ { label, items } ] }`. Closed, terse, and consistent with
+        `Tabs`, which takes its tabs as an array.
+      composition: >-
+        `<Menu.Group label=...><Menu.Item /></Menu.Group>`. Consistent with
+        `List` in this app, which takes children and finds its rows by query --
+        the same technique `Menu` already uses -- and with both of core's
+        menus, which compose.
+    chosen: composition
+    decision_reason: >-
+      Every remaining part of this component nests: a submenu is a menu inside a
+      row, and the anatomy has eleven parts of which six are optional slots. A
+      data shape turns each into a key and a submenu into data inside data.
+      `List` already proves in this codebase that composition and a roving focus
+      contract coexist, so the usual objection does not apply here.
+    implementation: Menu.Group, Menu.Item and Menu.Separator compose the menu.
+
+# M3's states figure draws six. What each one costs here, and what must not be
+# read off the picture.
+states:
+  published_layers:
+    enabled: no layer
+    hovered: hover state-layer opacity
+    focused: focus state-layer opacity, in addition to the focus indicator
+    pressed: pressed state-layer opacity
+    disabled: 0.38 on label, icons and supporting text
+    active: the row whose submenu is open
+  three_opacities_are_three: >-
+    The table publishes hover, focus and pressed separately and they are not
+    the same number. A single rule serving `:hover` and `:active` at the hover
+    opacity is two of the three states missing, not a simplification.
+  selected_rows_have_states_too: >-
+    The `selected.hovered.*`, `selected.focused.*` and `selected.pressed.*`
+    families are published against tertiary-container. A selected row excluded
+    from the state layers stops responding to the pointer.
+  sibling_precedent:
+    where: products/wordpress/themes/axismundi/assets/styles/blocks.navigation-submenu.css
+    has: all three opacities, twice for the two colour routes, and again for the selected row
+    note: >-
+      This repository already solved this once, on core's markup, for the same
+      component. The React menu is a parallel implementation rather than a
+      port, but there is no reason for it to reach a smaller answer.
+  no_per_state_item_shape:
+    reading: >-
+      The states figure appears to round the hovered and focused rows
+      differently. Do not copy that onto a vertical row.
+    measured: >-
+      The token table publishes six per-state item shapes and all six are
+      `md.comp.menus.horizontal.menu-item.*`. For the vertical row it publishes
+      none -- only the base shape, the first and last child shapes, and the
+      selected shape.
+  active_state_blocked_on_submenu:
+    status: not_implemented
+    reason: >-
+      The sixth state is a row whose submenu is open, and the container shape
+      morph that goes with it -- `active.container.shape` 16 against
+      `inactive.container.shape` 8 -- is the parent menu changing while its
+      submenu has focus. Neither exists without submenus, which are deferred.
+
 selection:
   single_select: One item at a time; selecting a new item unselects the previous one.
   multi_select: Many items; the menu stays open until dismissed.
@@ -466,9 +612,9 @@ selection:
   checked_state_role_extension: >-
     ARIA, not M3 and not the lab. Open to the owner to overrule, in which case
     both modes take `menuitemcheckbox` and this entry says why that was chosen.
-  checkability_is_per_menu: >-
+  checkability_is_per_group: >-
     An unchecked row in a checkable menu is a checkable row, not a plain menu
-    item. The menu decides, from whether any row declares a selection.
+    item. Its group decides, so two groups can carry independent selection sets.
 
 focus:
   initial: first menu item

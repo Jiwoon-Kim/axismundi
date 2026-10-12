@@ -5,23 +5,21 @@ import { Scaffold } from '../../../../foundations/layout/scaffold';
 import '../../stylebook-page.css';
 import './menus.css';
 
-const ACTIONS = [
-	{ id: 'edit', label: 'Edit', leading: <Icon name="edit" /> },
-	{ id: 'duplicate', label: 'Duplicate', leading: <Icon name="content_copy" /> },
-	{ divider: true },
-	{ id: 'archive', label: 'Archive', leading: <Icon name="archive" /> },
-	{ id: 'delete', label: 'Delete', leading: <Icon name="delete" />, disabled: true },
-];
-
-const SELECTABLE_ACTIONS = [
-	{ id: 'recent', label: 'Most recent', selected: true, trailing: <Icon name="check" /> },
-	{ id: 'popular', label: 'Most discussed', trailing: '24' },
-	{ id: 'saved', label: 'Saved by me', trailing: '8' },
-];
-
-const SUPPORTING_ACTIONS = [
-	{ id: 'public', label: 'Public', supporting: 'Anyone can view this post', leading: <Icon name="public" /> },
-	{ id: 'followers', label: 'Followers', supporting: 'Only approved followers can view this post', leading: <Icon name="group" /> },
+const LONG_ACTIONS = [
+	'About this post',
+	'Add to list',
+	'Bookmark',
+	'Copy link',
+	'Download media',
+	'Follow conversation',
+	'Hide author',
+	'Mute thread',
+	'Open in new tab',
+	'Pin to profile',
+	'Report post',
+	'Share externally',
+	'Translate',
+	'View activity',
 ];
 
 function Group( { children, kicker, title } ) {
@@ -36,13 +34,14 @@ function Group( { children, kicker, title } ) {
 	);
 }
 
-function MenuSample( { items, label } ) {
+function MenuSample( { children, label } ) {
 	return (
 		<Menu
-			items={ items }
 			label={ label }
 			trigger={ <IconButton icon={ <Icon name="more_vert" /> } label={ label } variant="standard" /> }
-		/>
+		>
+			{ children }
+		</Menu>
 	);
 }
 
@@ -64,17 +63,33 @@ export function StylebookMenusPage() {
 
 					<Group kicker="A popover hosts temporary actions; it is not a dialog" title="Standard vertical menu">
 						<div className="ax-stylebook-menus__trigger-row">
-							<MenuSample items={ ACTIONS } label="Post actions" />
+							<MenuSample label="Post actions">
+								<Menu.Group>
+									<Menu.Item id="edit" label="Edit" leading={ <Icon name="edit" /> } />
+									<Menu.Item id="duplicate" label="Duplicate" leading={ <Icon name="content_copy" /> } />
+								</Menu.Group>
+								<Menu.Separator />
+								<Menu.Group>
+									<Menu.Item id="archive" label="Archive" leading={ <Icon name="archive" /> } />
+									<Menu.Item disabled id="delete" label="Delete" leading={ <Icon name="delete" /> } />
+								</Menu.Group>
+							</MenuSample>
 						</div>
 						<p className="ax-stylebook-page__note">
 							Open from the overflow icon. The disabled item remains focusable but cannot be selected;
-							the divider is outside the menu&rsquo;s focus order.
+							the separator is not a focus stop.
 						</p>
 					</Group>
 
-					<Group kicker="Selection is a visual state, not a second action" title="Selected and trailing content">
+					<Group kicker="Selection is scoped to a group, not to the whole menu" title="Selected and trailing content">
 						<div className="ax-stylebook-menus__trigger-row">
-							<MenuSample items={ SELECTABLE_ACTIONS } label="Sort feed" />
+							<MenuSample label="Sort feed">
+								<Menu.Group selectionMode="single">
+									<Menu.Item id="recent" label="Most recent" selected trailing={ <Icon name="check" /> } />
+									<Menu.Item id="popular" label="Most discussed" trailing="24" />
+									<Menu.Item id="saved" label="Saved by me" trailing="8" />
+								</Menu.Group>
+							</MenuSample>
 						</div>
 						<p className="ax-stylebook-page__note">
 							The selected row gets the tertiary container and a check. Trailing values share the
@@ -84,11 +99,43 @@ export function StylebookMenusPage() {
 
 					<Group kicker="The slot remains 48dp while the painted state layer is 44dp" title="Supporting text">
 						<div className="ax-stylebook-menus__trigger-row">
-							<MenuSample items={ SUPPORTING_ACTIONS } label="Post audience" />
+							<MenuSample label="Post audience">
+								<Menu.Group label="Label">
+									<Menu.Item
+										id="supporting"
+										label="Label"
+										leading={ <Icon name="star" /> }
+										supporting="Supporting text"
+										trailing={ <Icon name="info" /> }
+									/>
+									<Menu.Item
+										id="plain"
+										label="Label"
+										leading={ <Icon name="star" /> }
+										trailing={ <Icon name="info" /> }
+									/>
+								</Menu.Group>
+							</MenuSample>
 						</div>
 						<p className="ax-stylebook-page__note">
 							Supporting text is an optional menu-item slot. Its measured text block expands, while
-							the single-line 48/44 geometry remains the baseline contract.
+							the single-line 48/44 geometry remains the baseline contract. The trailing icon is
+							here because the 208dp width only resolves to a 120dp text block with both icons
+							present; it is not a submenu affordance, which this slice does not implement.
+						</p>
+					</Group>
+
+					<Group kicker="The viewport space left by the trigger bounds the list" title="Scrollable menu">
+						<div className="ax-stylebook-menus__trigger-row">
+							<MenuSample label="More post actions">
+								<Menu.Group>
+									{ LONG_ACTIONS.map( ( label ) => <Menu.Item id={ label } key={ label } label={ label } /> ) }
+								</Menu.Group>
+							</MenuSample>
+						</div>
+						<p className="ax-stylebook-page__note">
+							The list scrolls only when its trigger leaves less space than its rows need; no item-count
+							cap is imposed.
 						</p>
 					</Group>
 				</section>

@@ -18,6 +18,39 @@ toolbar의 몫이고, 메뉴는 트리거가 열었다가 선택이나 dismiss�
 > M3의 산문 네 쪽을 출처로 적습니다. baseline·horizontal·vibrant·gap·submenu·density는
 > 이 첫 slice에 넣지 않았고, 각각의 이유는 아래에 기록합니다.
 
+## 그룹은 합성합니다
+
+메뉴는 평평한 `items` 배열이 아니라 `Menu.Group`·`Menu.Item`·`Menu.Separator`를
+조합합니다. 그룹은 label, 2dp block padding, 선택 범위를 소유합니다. 따라서 한 메뉴 안의
+두 선택 그룹은 서로 다른 radio 또는 checkbox 세트가 될 수 있고, submenu와 추가 슬롯도
+행을 데이터 키로 늘리지 않고 그 자리에 조합할 수 있습니다.
+
+현재 스크롤 상자는 elevation 층과 분리된 menu list 전체입니다. 스크롤 메뉴와 submenu가
+양립하는지, 양립한다면 어느 그룹이 스크롤을 소유하는지는 아직 런타임 실험 전이라 이
+구현으로 결론 내리지 않습니다.
+
+```jsx
+<Menu label="Sort feed" trigger={ trigger }>
+	<Menu.Group selectionMode="single" defaultValue="recent">
+		<Menu.Item value="recent" label="Most recent" />
+		<Menu.Item value="popular" label="Most discussed" />
+	</Menu.Group>
+	<Menu.Separator />
+	<Menu.Group>
+		<Menu.Item label="Copy link" />
+	</Menu.Group>
+</Menu>
+```
+
+`value`와 `onValueChange`를 주면 선택 상태를 제어할 수 있고, 없으면 Group이 `selected`가
+붙은 첫 Item을 초기 상태로 쓴다. `multi` 그룹만 선택 뒤에도 메뉴를 열어 둡니다.
+
+section label도 별도 행입니다. 바깥은 32dp와 좌우 4dp inset이고, 그 안 Content는 좌우
+12dp·위 6dp·아래 0dp·요소 사이 8dp입니다. 선택적 20dp leading icon과 label-large 텍스트가 이
+Content 층에 들어갑니다. `Menu.Group`의 `labelIcon`이 그 슬롯이고, `labelDivider`는 같은
+label 행 안의 optional divider slot입니다. 이는 그룹 사이를 가르는 `Menu.Separator`와
+의미가 다릅니다.
+
 ## 네임스페이스가 둘입니다
 
 이 컴포넌트에서 가장 먼저 걸리는 것이 이것입니다. `md.comp.menu`와 `md.comp.menus`는
@@ -331,9 +364,9 @@ baseline 메뉴에서 688·592·496 — **baseline 행에만** 있습니다. exp
 폭과 최대 높이입니다. M3는 둘 다 발행하지 않고, 랩의 감사가 min/max 폭의 권위로 지목한
 것은 랩 자신의 스타일시트입니다.
 
-**최대 높이는 뷰포트에 묶습니다.** M3가 실제로 쓴 제약은 그것뿐입니다 — placement 절은
-창 가장자리에 관한 것이고, 잘리느니 자리를 옮기라고 합니다. 발행된 어디에도 "몇 개까지"는
-없습니다.
+**최대 높이는 트리거가 남긴 뷰포트 공간에 묶습니다.** M3가 실제로 쓴 제약은 그것뿐입니다
+— placement 절은 창 가장자리에 관한 것이고, 잘리느니 자리를 옮기라고 합니다. 발행된
+어디에도 "몇 개까지"는 없습니다.
 
 아이템 갯수 상한은 **계약만 적어두고 켜지 않았습니다**. 숫자를 고르면 근거 없는 상수가
 하나 생기고, 그걸 핀으로 박으면 결함이 계약으로 굳습니다. 뷰포트 상한 아래에서는 갯수가

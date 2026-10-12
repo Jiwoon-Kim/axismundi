@@ -110,6 +110,31 @@ full-screen Carousel만 예외다.
 구체적인 Home 조합과 구현 순서는 `PLAN-FRONTEND-HOME.md`가 소유한다. 이 문서는 조건이 항상
 참이라는 scroll 측의 사실만 소유한다.
 
+### 3-6. inner scroll opt-in은 모달 scroll lock 대상도 같이 옮긴다 (결과)
+
+결정이 아니라 **이미 출하된 코드에 대한 측정된 사실**이다. 5절의 판정이 어느 쪽으로 나든
+이 사실은 그대로이므로, 판정과 함께 읽히도록 여기 적는다.
+
+`styles/components/surface.css`의 모달 lock은 문서를 잠근다.
+
+```css
+html:has( .ax-surface:modal ) { overflow: hidden; }
+```
+
+그 선택자는 1절이 문서를 scroll owner로 만들었기 때문에 `html`이고, 그 파일의 주석이
+그렇게 적고 있다. **루트를 잠가도 안쪽 scroll container는 잠기지 않는다.** 따라서 pane이
+inner scroll을 켜는 순간 이 lock은 그 pane에 대해 아무 일도 하지 않는다 — 모달이 떠 있고
+뒤의 pane이 계속 스크롤된다. `showModal()`의 inert는 상호작용에 관한 것이지 뷰포트
+스크롤에 관한 것이 아니라는 측정이 그 파일에 이미 적혀 있고, 같은 이유로 여기에도 적용된다.
+
+증상이 조용하다는 점이 비용이다. 레이아웃은 멀쩡해 보이고, 콘솔에 아무것도 남지 않으며,
+`surface.yml`의 "The page behind does not scroll with the dialog"는 계속 통과하는 것처럼
+보인다. 발견되는 자리는 피드를 다 만든 다음이다.
+
+그리고 scroll owner가 breakpoint마다 다르면 — compact는 pane이 하나라 문서, expanded는
+둘이라 pane — **lock 대상도 breakpoint마다 달라진다.** 5절의 opt-in을 켜는 작업은 이
+lock을 같이 옮기는 작업을 포함한다. 3-3과 3-4가 전제조건인 것과 같은 의미에서 전제조건이다.
+
 ## 4. 검증 기준
 
 CSS 핀 — 가장 값싸고 가장 안 깨진다.

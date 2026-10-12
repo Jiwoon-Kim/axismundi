@@ -326,7 +326,13 @@ item:
   supporting_text_typography_role: body-small
   trailing_supporting_text_typography_role: label-large
 
+  # Published, and the only component in this app that does not route them
+  # through its own slots: the adapter writes `outline: 3px` and
+  # `outline-offset: -3px` literally, where `list.css` reads
+  # `--md-comp-list-focus-indicator-*`. Measured 2026-10-12.
   focus_indicator:
+    slots_missing_in_adapter: true
+    sibling_precedent: products/wordpress/plugins/axismundi/src/apps/frontend/styles/components/list.css
     color_token: md.comp.menus.menu-item.focus.indicator.color
     color_role: secondary
     thickness_token: md.comp.menus.menu-item.focus.indicator.thickness
@@ -429,7 +435,7 @@ mutual_exclusions:
 
 # Raised by the owner while reading the first implementation, and not settled.
 mutual_exclusion_scope:
-  status: owner_judgment_open
+  status: measured_not_applicable_to_top_layer_host
   question: >-
     Whether a menu that scrolls can carry a submenu here, and if the exclusion
     does bind, whether its unit is the whole menu or one group.
@@ -445,10 +451,15 @@ mutual_exclusion_scope:
     editor's format menu is the case that makes this concrete -- a long
     scrolling list of sizes beside a group whose rows open submenus. A
     per-menu exclusion forbids that; a per-group one allows it.
-  settle_by: >-
-    Build one submenu inside a scrolling menu and look at whether it is
-    clipped. Until then the record keeps the exclusion as inherited rather
-    than established, and the implementation builds neither.
+  measurement: >-
+    At 1365x560, the stylebook's scrollable root menu showed its own scrollbar
+    while its Follow conversation submenu was open. The nested popover remained
+    wholly visible outside the root list; it was not clipped by that list.
+  result: >-
+    The inherited exclusion does not bind this host. It describes nested
+    surfaces that remain inside an overflow ancestor, while the native popover
+    joins the top layer. There is consequently no menu-level or group-level
+    exclusion to choose here.
   note: >-
     The implementation already puts the scroll on the group rather than the
     menu, because the elevation layer cannot sit inside a scrolling box. That
@@ -663,7 +674,7 @@ adaptive:
     guidance: Menus appear in context with the content, can display more items, and can use submenus.
 
 submenu:
-  status: deferred
+  status: implemented_pending_host_and_block_measurement
   available_on:
     web: true
     compose: false
@@ -673,7 +684,9 @@ submenu:
     anchor_corner_default: start-end
     menu_corner_default: start-start
     source: https://github.com/material-components/material-web/blob/main/docs/components/menu.md
-  cost: See `mutual_exclusions` -- a menu that can open a submenu cannot also scroll.
+  cost: >-
+    The inherited scrolling constraint was measured not to bind this top-layer
+    host. Host mode and block placement remain open measurements.
 
   # The axis, written before the slice is built. Two of these are decisions the
   # first implementation already got wrong once in miniature.
@@ -692,20 +705,33 @@ submenu:
         The theme's own navigation submenu already uses `arrow_right` for the
         same affordance. `chevron_right` stays with ordinary list disclosure.
     host_mode:
-      status: to_be_measured_by_this_slice
+      status: manual_tree_retained_after_auto_comparison
+      current_implementation: manual
       question: Whether the nested host is `popover="manual"` or `popover="auto"`.
       what_is_known: >-
         The reason recorded for `manual` -- that an auto popover closes on any
         click -- is false, measured: a click inside an auto popover leaves it
         open. What `auto` adds is light dismissal, Escape, and a nested popover
         stack, and the stack is only worth anything once a menu opens a menu.
-      not_yet_measured: >-
-        Light dismissal on a real outside press, and whether an auto submenu
-        closes its parent when it opens. Both need a real pointer, which is
-        what this slice gives them.
-    what_this_slice_settles:
-      - placement.block, which is local policy pending runtime measurement
-      - mutual_exclusion_scope, which cannot be answered without a submenu to clip
+      measurement: >-
+        In Chrome, an `auto` child opened inside the manual root without closing
+        that root. A real click outside closed both hosts, but through the
+        root's existing menu-tree handler rather than an auto-popover benefit.
+      decision: >-
+        Keep both hosts manual. The root already owns descendant registration,
+        tree dismissal and focus restoration; a mixed auto child adds no
+        capability while splitting the ownership model.
+      dialog_measurement: >-
+        In Chrome, a manual root menu and its manual child opened from inside a
+        modal dialog both joined after the dialog and remained visibly above
+        it. The child was the final top-layer entry and Left Arrow restored
+        focus to its parent row.
+    what_this_slice_measured:
+      - mutual_exclusion_scope, measured not to bind this top-layer host
+      - host_mode, compared against an auto child and retained as a manual tree
+      - host_mode.dialog_join_order, measured above the modal dialog
+    still_open:
+      - placement.block, which needs DOM coordinate measurement rather than a visual alignment
     note: >-
       Building it does not force the exclusion question; it is the only thing
       that can answer it. The three sources describe in-flow submenus and this
@@ -715,35 +741,129 @@ submenu:
   # Four sources agree on the inline direction and none publishes a number for
   # the block direction, so the block direction is recorded as a derivation.
   placement:
+    # Decided 2026-10-12, one rule for both axes, after three sources agreed on
+    # the anchor and a fourth thing explained why this product looked different.
+    rule: >-
+      The submenu container's start-start corner meets the parent item's PAINTED
+      BOX start-end corner.
+    rule_basis: >-
+      Material Web and Flutter both anchor to the item and carry no numeric
+      offset, and in both of them the item is inset from the menu container,
+      because they put the padding on the container. So their drawn result is
+      the overlap the guidelines figure shows. This product puts that padding on
+      the item instead, so its item element runs the container's full width and
+      anchoring to it produces a flush edge -- an artefact of this DOM, not a
+      different reading. Anchoring to the painted box reproduces their behaviour
+      in this geometry.
+    rule_consequences:
+      inline_overlap_of_container: inset_inline
+      inline_overlap_of_painted_box: 0
+      block_offset_from_item_slot: inset_block
+      first_row_sits_below_parent_row_by: group_padding_block + inset_block
+    supersedes: >-
+      The earlier derivation aligned the two painted boxes, which put the rows
+      level and the offset at minus the group padding. It is replaced rather
+      than hidden: it was a reasonable reading of a corner pair nobody had read
+      the source of.
+    verify_by: >-
+      Still measured once built -- the parent's painted box corner against the
+      submenu container's corner -- but now as a check of an adopted rule rather
+      than as the thing that decides it.
     inline:
+      status: decided_by_rule
       offset: 0
       anchor: the parent menu's inline end
+      # Downgraded 2026-10-12. This entry said "0, confirmed", and one of the
+      # four sources below was this record's own reading of a figure. The
+      # guidelines image draws the submenu's leading edge INSIDE the parent
+      # menu's trailing edge -- an overlap, not a meeting. So the direction is
+      # agreed and the figure is not.
+      disagreement:
+        observed: The submenu overlaps the parent menu's trailing edge by roughly 8-10dp, read off the guidelines image.
+        prose: >-
+          M3 says a submenu opens next to the parent menu ITEM without
+          overlapping it. The item's painted box already sits `inset_inline`
+          (4dp) inside the container, so an overlap up to 4 leaves the item
+          clear and an overlap of 8-10 does not.
+        unresolved: >-
+          Whether the drawn overlap is the surface or its elevation shadow, and
+          whether the figure's parent menu has this record's 4dp inset at all.
+          The design kit draws no submenu, so there is nothing there to measure.
+        settle_by: >-
+          The same way the block offset settles -- from this product's own
+          geometry once a submenu exists, by reading where the parent's painted
+          item box ends and where the submenu's surface begins.
+      # Resolved 2026-10-12. The two readings were never in conflict; the record
+      # simply did not say which edge it measured from.
+      two_baselines:
+        from_the_container_edge: >-
+          Negative. The guidelines figure draws the submenu inside the parent
+          menu's trailing edge, and Material Web produces the same thing by
+          anchoring to the item, whose inline end sits inside the container by
+          the container's own inline padding.
+        from_the_item_box: >-
+          Zero. This is the one the prose constrains -- "without overlapping it"
+          where `it` is the parent menu ITEM -- and both the figure and Material
+          Web satisfy it.
+        this_implementation: >-
+          Anchors to the item SLOT, which in this geometry runs the full width of
+          the container, so the submenu lands flush with the container edge and
+          the parent's painted box stays clear by `inset_inline`. It does not
+          violate the prose; it differs from the drawing by that inset.
+        candidate: >-
+          Anchor to the painted box instead of the slot. The overlap becomes
+          `inset_inline`, which is the drawing's look and still leaves the item
+          clear -- it is the item's own edge.
       agreed_by:
         - { source: M3 guidelines, says: Submenus should open next to the parent menu item without overlapping it. }
         - { source: M3 specs submenu figure, says: The submenu's leading edge meets the parent menu's trailing edge, with no gap drawn. }
         - { source: Material Web, says: "anchor-corner start-end meets menu-corner start-start." }
         - { source: core navigation, says: "A nested submenu container is `left: 100%` of its parent item." }
     block:
-      status: local_policy_pending_runtime_measurement
+      status: decided_by_rule
       rule: >-
-        Align the submenu's first painted item box with the parent item's
-        painted box.
-      derivation: offset == -group_padding_block
+        The submenu container's top meets the parent item's painted box top.
+      derivation: offset == inset_block
       derivation_note: >-
-        The parent's painted box sits one item inset below its slot; the
-        submenu's first painted box sits a group padding and an item inset
-        below its container. Aligning the two leaves the group padding.
-      recorded_as: local policy, pending measurement
+        The painted box sits one item inset below its slot, and the submenu's
+        container goes to that corner, so its own first painted row lands a
+        group padding and an item inset lower than the parent's. That is what
+        Material Web does with the padding on its container, and it is what the
+        guidelines figure draws.
+      recorded_as: adopted rule, verified once built
+      figure_support: >-
+        Measured off the guidelines screenshot, roughly: the submenu's first row
+        sits about 7px below the parent's highlighted row at a scale where a
+        48dp row is about 72px, so 4 to 5dp. That is what this rule produces and
+        not what painted-box alignment produces. A screenshot estimate, recorded
+        as one.
       # Downgraded after review. An earlier version of this entry said the rule
       # above is "what Material Web's corner pair says in our geometry". That
       # was not checked and may be wrong.
-      open_question: >-
-        What Material Web's `anchor-corner: start-end` anchors to. If it is the
-        parent menu container, aligning the painted boxes is a reading of it and
-        the derivation may stand. If it is the parent menu item -- which is what
-        `md-sub-menu` taking its trigger in an `item` slot suggests -- then the
-        submenu container's own top meets the item's top and the offset is 0,
-        not minus the group padding.
+      # Answered 2026-10-12 by reading the source instead of guessing at it.
+      answered_question: >-
+        Material Web anchors to the ITEM. `md-sub-menu` declares
+        `anchorCorner = Corner.START_END` and `menuCorner = Corner.START_START`
+        against the trigger it holds in its `item` slot, and carries no `xOffset`
+        or `yOffset` at all -- corner to corner, no number. So the submenu's own
+        container top meets the item's top, which is offset 0 from the item slot
+        rather than minus the group padding.
+      source: menu/internal/submenu/sub-menu.ts at 919fe12
+      third_source: >-
+        Flutter agrees, independently: `SubmenuButton` documents that "by
+        default the submenu will appear to the side of the controlling button",
+        and `MenuAnchor.alignmentOffset` defaults to `Offset.zero`. The anchor
+        is the button -- the item -- and the offset is nothing, in all three
+        sources that say anything at all.
+      third_source_url: https://api.flutter.dev/flutter/material/SubmenuButton-class.html
+      consequence: >-
+        This record's derivation and Material Web's implementation disagree, and
+        both are defensible. Aligning the painted boxes (this record) lines the
+        two highlighted rows up; aligning the containers (Material Web) leaves
+        the submenu's first row one group padding lower than its parent row.
+        Material Web is the published implementation and this record is a
+        derivation, so the measurement named in `settle_by` decides, and it now
+        has a specific thing to compare against.
       not_evidence:
         - >-
           Core's `top: -1px`. Its comment says "Border width" and that is all it
@@ -755,6 +875,103 @@ submenu:
         state layer and of the submenu's first painted state layer, and take the
         difference. That is this project's own geometry answering about itself,
         which neither of the two sources above can do.
+  # Measured against the first implementation, 2026-10-12. Both are anchoring
+  # faults rather than offsets: the thing each box is positioned against is the
+  # wrong thing.
+  open_defects:
+    - subject: a submenu does not follow its row when the menu's own list scrolls
+      measured: >-
+        At 460x520 with a 676dp list in a 232dp box: scrolling the list 100
+        moved the parent row -100 and moved the submenu 0, leaving it open and
+        detached by the full 100.
+      why: >-
+        `placeSubmenu` runs once, in `show`. The root menu has a scroll and
+        resize listener; the submenu has none, and the root's listener
+        repositions the root against its trigger, which does not move when its
+        own list scrolls.
+      note: Page scrolling is fine, because the root re-anchors and the row does not move with it.
+    - subject: a menu is clamped to the window rather than re-anchored to its trigger
+      measured: >-
+        At 460 wide, with the trigger moved right, the menu freezes at
+        [244, 452] for every trigger position past the clamp point. Trigger at
+        260 leaves the menu's trailing edge 152dp past the trigger's; at 300,
+        112; at 404, 8.
+      why: >-
+        `place` computes `min( target.left, innerWidth - width - EDGE )`, which
+        left-aligns to the trigger until the window wins and then follows the
+        window.
+      published: >-
+        M3's placement asks a menu that would be cut off to reposition to the
+        left, right or above THE ELEMENT THAT GENERATES IT. Trailing-aligning to
+        the trigger is that; clamping to the viewport is not.
+      note: >-
+        `placeSubmenu` already flips correctly in the inline direction, so the
+        two placers disagree with each other as well as with the published
+        behaviour.
+
+    - subject: typeahead inside a submenu moves focus into the parent
+      measured: >-
+        With focus on `Following` inside a two-row submenu whose rows are
+        `Following` and `Muted`, pressing `m` moved focus to `Mute thread`, a
+        row of the parent menu, while the submenu stayed open.
+      why: >-
+        The submenu's key handler answers Escape, ArrowLeft, ArrowDown and
+        ArrowUp and stops those from propagating. Letters fall through to the
+        parent's handler, which moves focus within its own list.
+      published: >-
+        The keyboard table's `Letters` row says focus moves to the next menu
+        item starting with that letter. The open menu is the submenu.
+      note: >-
+        Arrow movement, ArrowLeft and the parent's roving focus are correct --
+        measured, ArrowDown from the submenu trigger reaches the next parent row
+        and skips the submenu's own rows.
+
+  # ---------------------------------------------------------------------------
+  # The axis under both open placement defects, written before either is fixed
+  # so that a fix does not pick one of the two existing rules and copy it.
+  # ---------------------------------------------------------------------------
+  placer_axis:
+    status: axis_settled
+    problem: >-
+      `place` and `placeSubmenu` solve one problem -- fit a box beside an anchor
+      inside the window -- with two different rules, and each is right about
+      something the other is wrong about.
+    they_differ_at:
+      - { subject: main axis, root: block, submenu: inline }
+      - { subject: main-axis fit, root: limits the box to the chosen side's space, submenu: limits it to the whole viewport regardless of the side it chose }
+      - { subject: cross axis, root: clamps to the window and never flips, submenu: clamps between the edges }
+      - { subject: staying attached, root: a clamp detaches the box from its trigger, submenu: the inline side stays attached because it flips }
+    rule:
+      one_placer: >-
+        One function, parameterised by placement. A root menu is `block-end`
+        against its trigger; a submenu is `inline-end` against its row. Nothing
+        else differs between them.
+      three_steps_in_order:
+        - { step: flip, means: "if the chosen side does not fit and the opposite one does, use the opposite one" }
+        - { step: shift, means: "slide along the cross axis to stay in view, while staying attached to the anchor" }
+        - { step: clamp, means: "only when the box fits on neither side; the box has left its anchor and that is the last resort, not the first" }
+      size_follows_the_side: >-
+        The maximum size on the main axis is the space the chosen side leaves,
+        which is what `project_policy.maximum_height` already records and what
+        `placeSubmenu` does not do.
+      anchor_rect_is_a_parameter: >-
+        The placer takes an anchor rectangle, not an element. A root menu passes
+        its trigger's border box; a submenu passes the parent row's painted box,
+        which is what `placement.rule` adopted. Today both read
+        `getBoundingClientRect` on the trigger directly, so the painted-box rule
+        has nowhere to live.
+    reposition_is_part_of_it: >-
+      Whatever opens a box also keeps it placed. The root menu listens for
+      scroll and resize; a submenu listens for nothing, which is the first open
+      defect. One placer means one subscription, and the submenu's anchor moves
+      when the parent's own list scrolls, not only when the window does.
+    not_adopted:
+      floating_ui: >-
+        The library every other implementation in this space uses, and the
+        model above is its vocabulary. Not taken as a dependency here, because
+        the frontend has none of that kind and the three steps are a few lines.
+        Recorded so the choice is visible rather than accidental.
+
   hover_bridge:
     status: not_implemented
     source: core navigation
@@ -826,6 +1043,67 @@ not_published:
       `design_kit.density`.
   motion:
     what: enter and exit transition tokens
+    project_policy:
+      status: owner_judgment_open
+      question: Whether the open and close transition is written with the Web Animations API, as Surface's is.
+      published: >-
+        M3 describes an enter and exit transition that relates the menu to the
+        element that generated it, and says dense products may open instantly to
+        reduce motion. It publishes no token for either.
+      house_precedent: >-
+        Surface animates with WAAPI from choreography constants recorded in
+        `surface.yml`, and had to solve the same problem a popover has: a host
+        that is `display: none` when closed cannot play an exit, so the close is
+        held until the animation finishes.
+      caution: >-
+        That hold is what makes the exit fragile on this machine -- a backgrounded
+        pane never resolves `finished`, so a menu sequenced after its own exit
+        looks broken and is not. `AGENTS.md` records it; VQA takes a screenshot
+        to flush, or calls `finish()`.
+      and: >-
+        Whatever is chosen is policy, not a reading, because the table carries no
+        motion token for this component at all.
+      material_web:
+        uses_waapi: true
+        source: menu/internal/menu.ts at 919fe12
+        open:
+          full_duration: 500
+          surface: height 0 to full, EASING.EMPHASIZED
+          surface_opacity_duration: 50
+          item_opacity_duration: 250
+          item_delay: (full_duration - item_opacity_duration) / item count, reversed when opening upwards
+        close:
+          full_duration: 150
+          end_height_percentage: 0.35
+          easing: EASING.EMPHASIZED_ACCELERATE
+          surface_opacity_duration: 50
+          item_opacity_duration: 50
+          item_initial_delay: 50
+        submenus_do_not_animate: >-
+          `md-sub-menu` sets `menu.quick = true`, so a nested menu opens and
+          closes with no animation at all. A published implementation choosing
+          not to animate the nested case is worth knowing before writing one.
+        reduced_motion: >-
+          Not handled in that file; its only escape is the `quick` property. If
+          this product animates a menu, honouring `prefers-reduced-motion` is
+          this product's own addition, as it already is elsewhere.
+        note: >-
+          Its close folds to 0.35 of the height, which is the same figure
+          `surface.yml` records as the dialog's `FOLDED_HEIGHT`. Reached
+          independently, in another codebase, for the same gesture.
+      flutter:
+        source: https://api.flutter.dev/flutter/material/MenuAnchor-class.html
+        animated_default: false
+        reading: >-
+          `MenuAnchor.animated` defaults to false, so a Flutter menu does not
+          animate unless asked, and `onAnimationStatusChanged` exists for when
+          it is. Material Web animates a root menu and explicitly does not
+          animate a nested one. So the two published implementations disagree
+          about root menus and agree about submenus: nothing moves.
+        consequence: >-
+          Motion is opt-in in both, which is a weaker claim than "menus
+          animate". If this product animates, it is choosing to, and the
+          nested case has two implementations saying not to.
     note: >-
       M3 describes an enter and exit transition relating the menu to its trigger,
       and says dense products may open instantly to reduce motion. The token

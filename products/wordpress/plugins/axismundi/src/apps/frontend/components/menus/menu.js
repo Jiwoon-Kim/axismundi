@@ -3,6 +3,7 @@ import {
 	cloneElement,
 	createContext,
 	isValidElement,
+	useCallback,
 	useContext,
 	useEffect,
 	useId,
@@ -11,8 +12,10 @@ import {
 } from '@wordpress/element';
 import warning from '@wordpress/warning';
 import { Elevation } from '../material/elevation';
+import { Icon } from '../material/icon';
 
 const EDGE = 8;
+const SUBMENU_BLOCK_OFFSET = 2;
 const ITEMS = '[role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"]';
 const MenuContext = createContext( null );
 const MenuGroupContext = createContext( {
@@ -22,7 +25,9 @@ const MenuGroupContext = createContext( {
 } );
 
 function menuItems( menu ) {
-	return [ ...( menu?.querySelectorAll( ITEMS ) ?? [] ) ];
+	return [ ...( menu?.querySelectorAll( ITEMS ) ?? [] ) ].filter(
+		( item ) => item.closest( '[role="menu"]' ) === menu
+	);
 }
 
 function place( menu, trigger ) {
@@ -44,6 +49,28 @@ function place( menu, trigger ) {
 	menu.style.inset = 'auto';
 	menu.style.top = `${ Math.max( EDGE, top ) }px`;
 	menu.style.left = `${ Math.max( EDGE, left ) }px`;
+}
+
+function placeSubmenu( menu, trigger ) {
+	if ( ! menu || ! trigger ) {
+		return;
+	}
+
+	const target = trigger.getBoundingClientRect();
+	const right = Math.max( 0, window.innerWidth - target.right - EDGE );
+	const left = Math.max( 0, target.left - EDGE );
+	menu.style.maxBlockSize = `${ Math.max( 0, window.innerHeight - EDGE * 2 ) }px`;
+	const box = menu.getBoundingClientRect();
+	const opensRight = box.width <= right || right >= left;
+	const top = Math.min(
+		Math.max( EDGE, target.top - SUBMENU_BLOCK_OFFSET ),
+		Math.max( EDGE, window.innerHeight - box.height - EDGE )
+	);
+	const inlineStart = opensRight ? target.right : target.left - box.width;
+
+	menu.style.inset = 'auto';
+	menu.style.top = `${ top }px`;
+	menu.style.left = `${ Math.max( EDGE, inlineStart ) }px`;
 }
 
 /**
@@ -186,6 +213,116 @@ export function MenuSeparator() {
 }
 
 /**
+ * A menu row which owns and opens its nested menu. Its arrow is structural,
+ * so an ordinary item can never accidentally imply a submenu.
+ *
+ * @param {Object} props Component props.
+ * @return {import('@wordpress/element').ReactNode} Submenu markup.
+ */
+export function MenuSubmenu( { children, disabled = false, label, leading, supporting } ) {
+	const parentMenu = useContext( MenuContext );
+	const id = useId();
+	const menuRef = useRef();
+	const triggerRef = useRef();
+	const [ open, setOpen ] = useState( false );
+
+	const close = useCallback( ( restoreFocus = true ) => {
+		const host = menuRef.current;
+		if ( host?.matches( ':popover-open' ) ) {
+			host.hidePopover();
+		}
+		setOpen( false );
+		if ( restoreFocus ) {
+			triggerRef.current?.focus();
+		}
+	}, [] );
+
+	useEffect(
+		() => parentMenu?.registerSubmenu?.( menuRef.current, close ),
+		[ parentMenu, close ]
+	);
+
+	const focusItem = ( index ) => menuItems( menuRef.current )[ index ]?.focus();
+
+	const show = () => {
+		const host = menuRef.current;
+		if ( disabled || ! host || ! triggerRef.current ) {
+			return;
+		}
+		if ( host.matches( ':popover-open' ) ) {
+			host.hidePopover();
+		}
+		host.showPopover();
+		placeSubmenu( host, triggerRef.current );
+		setOpen( true );
+		focusItem( 0 );
+	};
+
+	const onTriggerKeyDown = ( event ) => {
+		if ( 'ArrowRight' === event.key ) {
+			event.preventDefault();
+			event.stopPropagation();
+			show();
+		}
+	};
+
+	const onMenuKeyDown = ( event ) => {
+		const controls = menuItems( menuRef.current );
+		const from = controls.indexOf( document.activeElement );
+		if ( 'Escape' === event.key || 'ArrowLeft' === event.key ) {
+			event.preventDefault();
+			event.stopPropagation();
+			close();
+			return;
+		}
+		if ( 'ArrowDown' === event.key || 'ArrowUp' === event.key ) {
+			event.preventDefault();
+			event.stopPropagation();
+			focusItem( 'ArrowDown' === event.key ? Math.min( from + 1, controls.length - 1 ) : Math.max( from - 1, 0 ) );
+		}
+	};
+
+	return (
+		<>
+			<button
+				aria-controls={ id }
+				aria-disabled={ disabled || undefined }
+				aria-expanded={ open }
+				aria-haspopup="menu"
+				className="ax-menu__item ax-menu__submenu-trigger"
+				data-submenu-open={ open || undefined }
+				onClick={ () => open ? close( false ) : show() }
+				onKeyDown={ onTriggerKeyDown }
+				ref={ triggerRef }
+				role="menuitem"
+				type="button"
+			>
+				<span className="ax-menu__item-container">
+					{ leading && <span aria-hidden="true" className="ax-menu__leading">{ leading }</span> }
+					<span className="ax-menu__content">
+						<span className="ax-menu__label">{ label }</span>
+						{ supporting && <span className="ax-menu__supporting">{ supporting }</span> }
+					</span>
+					<span aria-hidden="true" className="ax-menu__trailing"><Icon name="arrow_right" /></span>
+				</span>
+			</button>
+			<div
+				aria-label={ label }
+				className="ax-menu ax-menu--submenu"
+				id={ id }
+				onKeyDown={ onMenuKeyDown }
+				popover="manual"
+				ref={ menuRef }
+				role="menu"
+			>
+				<Elevation level={ 2 } />
+				<div className="ax-menu__list">{ children }</div>
+			</div>
+		</>
+	);
+}
+
+/**
  * A vertical M3 menu. The popover host owns anchoring and light dismissal;
  * groups own selection semantics and items own their single action.
  *
@@ -199,12 +336,20 @@ export function MenuSeparator() {
  */
 export function Menu( { children, trigger, label, onSelect, className } ) {
 	const menuRef = useRef();
+	const submenuHosts = useRef( new Map() );
 	const triggerRef = useRef();
 	const id = useId();
 	const [ open, setOpen ] = useState( false );
 	const triggerIsValid = isValidElement( trigger );
 
 	const close = ( restoreFocus = true ) => {
+		for ( const [ submenu, closeSubmenu ] of submenuHosts.current ) {
+			if ( closeSubmenu ) {
+				closeSubmenu( false );
+			} else if ( submenu?.matches( ':popover-open' ) ) {
+				submenu.hidePopover();
+			}
+		}
 		const host = menuRef.current;
 		if ( host?.matches( ':popover-open' ) ) {
 			host.hidePopover();
@@ -214,6 +359,14 @@ export function Menu( { children, trigger, label, onSelect, className } ) {
 			triggerRef.current?.focus();
 		}
 	};
+
+	const registerSubmenu = useCallback( ( host, closeSubmenu ) => {
+		if ( ! host ) {
+			return undefined;
+		}
+		submenuHosts.current.set( host, closeSubmenu );
+		return () => submenuHosts.current.delete( host );
+	}, [] );
 
 	const focusItem = ( index ) => menuItems( menuRef.current )[ index ]?.focus();
 
@@ -236,7 +389,9 @@ export function Menu( { children, trigger, label, onSelect, className } ) {
 			return undefined;
 		}
 		const dismiss = ( event ) => {
-			if ( ! menuRef.current?.contains( event.target ) && ! triggerRef.current?.contains( event.target ) ) {
+			const inMenuTree = menuRef.current?.contains( event.target )
+				|| [ ...submenuHosts.current.keys() ].some( ( host ) => host?.contains( event.target ) );
+			if ( ! inMenuTree && ! triggerRef.current?.contains( event.target ) ) {
 				close( false );
 			}
 		};
@@ -303,7 +458,7 @@ export function Menu( { children, trigger, label, onSelect, className } ) {
 	};
 
 	return (
-		<MenuContext.Provider value={ { close, onSelect } }>
+		<MenuContext.Provider value={ { close, onSelect, registerSubmenu } }>
 			{ cloneElement( trigger, {
 				'aria-controls': id,
 				'aria-expanded': open,
@@ -332,3 +487,4 @@ export function Menu( { children, trigger, label, onSelect, className } ) {
 Menu.Group = MenuGroup;
 Menu.Item = MenuItem;
 Menu.Separator = MenuSeparator;
+Menu.Submenu = MenuSubmenu;

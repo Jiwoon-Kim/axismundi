@@ -568,6 +568,62 @@ def check_scrollbar(report: Report, data: dict) -> None:
     )
 
 
+def check_focus_and_motion(report: Report, data: dict) -> None:
+    """Two things the record says about itself that a file can contradict."""
+    focus = data["item"]["focus_indicator"]
+    # Recorded as missing. When the adapter routes them through slots, this
+    # entry goes and this check goes with it -- so it cannot sit here stale.
+    if focus.get("slots_missing_in_adapter"):
+        css = declarations_only( MENU_CSS.read_text(encoding="utf-8") )
+        report.check(
+            "--md-comp-menus-item-focus-indicator-thickness" not in css,
+            "the adapter now routes the focus indicator through its own slot, so the record "
+            "must stop saying it does not",
+        )
+        sibling = ROOT / focus["sibling_precedent"]
+        report.check(
+            sibling.exists()
+            and "focus-indicator-thickness" in sibling.read_text(encoding="utf-8"),
+            "the cited sibling no longer shows the slot pattern this entry points at",
+        )
+
+    motion = data["not_published"]["motion"]["project_policy"]
+    report.check(
+        motion["status"] == "owner_judgment_open",
+        "menu motion is unpublished, so how it is written is a decision and not a reading",
+    )
+    report.check(
+        "finished" in motion["caution"],
+        "the WAAPI caution must keep naming the failure this machine actually produces",
+    )
+    # Read from the published implementation rather than from a page about it.
+    mw = motion["material_web"]
+    report.check(
+        mw["uses_waapi"] is True and "menu.ts" in mw["source"],
+        "the Material Web reading names the file it came from",
+    )
+    report.check(
+        mw["close"]["end_height_percentage"] == 0.35,
+        "the fold Material Web closes to is the figure this record compares against",
+    )
+    report.check(
+        "quick" in mw["submenus_do_not_animate"],
+        "that a published implementation leaves nested menus unanimated must stay recorded",
+    )
+    # A second implementation, so the claim is about the field rather than one
+    # library. Both halves stay: where they agree and where they do not.
+    flutter = motion["flutter"]
+    report.check(
+        flutter["animated_default"] is False and "disagree" in flutter["reading"],
+        "the second implementation's default and its disagreement with the first both stay "
+        "recorded, or the pair reads as unanimous when it is not",
+    )
+    report.check(
+        "opt-in" in flutter["consequence"],
+        "the record must keep saying motion is opt-in in both rather than required",
+    )
+
+
 def check_states(report: Report, data: dict) -> None:
     """The states record, and the one claim in it that reads a file.
 
@@ -585,8 +641,8 @@ def check_states(report: Report, data: dict) -> None:
     )
     report.check(
         states["active_state_blocked_on_submenu"]["status"] == "not_implemented"
-        and data["submenu"]["status"] == "deferred",
-        "the sixth state and the submenu deferral stand or fall together",
+        and data["submenu"]["status"].startswith("implemented_"),
+        "the active container state remains separately deferred after submenu implementation",
     )
 
     # The precedent is cited as working code, so this reads the code. All three
@@ -636,6 +692,62 @@ def check_submenu(report: Report, data: dict) -> None:
         inline["offset"] == 0,
         "the four agreeing sources all put the submenu flush against the parent, not offset",
     )
+    # The direction is agreed; the figure is not. Both halves stay recorded, or
+    # the entry reads as settled again -- which is what it said before a figure
+    # was looked at properly.
+    # One rule now governs both axes.
+    report.check(
+        inline["status"] == "decided_by_rule"
+        and placement["block"]["status"] == "decided_by_rule",
+        "both axes follow the one adopted rule, or they have drifted apart again",
+    )
+    report.check(
+        "PAINTED" in placement["rule"],
+        "the rule must keep naming the box it anchors to, because anchoring to the item slot "
+        "is what produced the flush edge this replaced",
+    )
+    report.check(
+        "artefact of this DOM" in placement["rule_basis"],
+        "the record must keep the reason this product looked different from two implementations "
+        "that agree with it",
+    )
+    report.check(
+        "minus the group padding" in placement["supersedes"],
+        "the superseded derivation stays visible rather than being quietly overwritten",
+    )
+    consequences = placement["rule_consequences"]
+    report.check(
+        consequences["inline_overlap_of_container"] == "inset_inline"
+        and consequences["inline_overlap_of_painted_box"] == 0
+        and consequences["block_offset_from_item_slot"] == "inset_block",
+        "the rule's consequences stay written in the record's own names, not as loose numbers",
+    )
+    disagreement = inline["disagreement"]
+    report.check(
+        "overlap" in disagreement["observed"] and "item" in disagreement["prose"],
+        "the record must keep both the drawn overlap and the prose it sits against",
+    )
+    report.check(
+        bool(disagreement["unresolved"]) and bool(disagreement["settle_by"]),
+        "an unresolved figure has to say what is unresolved and what would settle it",
+    )
+
+    # Two measured anchoring faults. They are recorded rather than pinned
+    # against the adapter, because the adapter still has them.
+    defects = data["submenu"]["open_defects"]
+    # An exact count, deliberately. Fixing one means removing its entry and
+    # lowering this line in the same change, so a fix cannot land while the
+    # record still advertises the defect.
+    report.check(
+        len(defects) == 3 and all( d.get("measured") and d.get("why") for d in defects ),
+        f"there are {len(defects)} open defects recorded against 3, and each must carry the "
+        "measurement that found it and the reason",
+    )
+    for named in ( "list scrolls", "clamped to the window", "typeahead inside a submenu" ):
+        report.check(
+            any( named in d["subject"] for d in defects ),
+            f"the measured defect '{named}' is no longer named",
+        )
     report.check(
         len(inline["agreed_by"]) >= 4,
         f"the inline answer rests on agreement; {len(inline['agreed_by'])} sources is not it",
@@ -650,43 +762,62 @@ def check_submenu(report: Report, data: dict) -> None:
 
     block = placement["block"]
     report.check(
-        block["derivation"] == "offset == -group_padding_block",
-        "the block offset stays a derivation from this record's geometry",
+        block["derivation"] == "offset == inset_block",
+        "the block offset is the rule's consequence, stated in this record's own names",
     )
     report.check(
-        block["status"] == "local_policy_pending_runtime_measurement",
-        "the block offset is local policy until an adapter measures it; the record must "
-        "not promote it to a settled figure without that measurement",
-    )
-    report.check(
-        block["recorded_as"] == "local policy, pending measurement",
+        block["recorded_as"] == "adopted rule, verified once built",
         "the block offset must keep saying what it is",
+    )
+    report.check(
+        "screenshot estimate" in block["figure_support"],
+        "the figure reading that supports the rule stays labelled as the estimate it is",
     )
     # The claim this entry was downgraded for. Both halves of the unresolved
     # question have to stay written down, or the policy reads as settled again.
-    question = str(block.get("open_question", ""))
+    # The question was open, and reading the source closed it. What has to stay
+    # is the answer and the source, because the entry below still disagrees with
+    # it and a reader needs to know which is the implementation and which is the
+    # derivation.
+    answered = str(block.get("answered_question", ""))
     report.check(
-        "anchor-corner" in question and "item" in question and "container" in question,
-        "the open question must keep naming both readings of Material Web's anchor",
+        "anchorCorner" in answered and "ITEM" in answered,
+        "the record must keep saying what Material Web anchors to, now that it has been read",
+    )
+    report.check(
+        "sub-menu.ts" in str(block.get("source", "")),
+        "the answer names the file it was read from",
+    )
+    # Three sources now say the anchor is the item. A third that agrees is what
+    # moved this from a reading to a finding, so it stays named.
+    report.check(
+        "Flutter" in str(block.get("third_source", ""))
+        and "flutter.dev" in str(block.get("third_source_url", "")),
+        "the third source that closed the anchor question stays recorded with its link",
+    )
+    report.check(
+        "disagree" in str(block.get("consequence", "")),
+        "the record must keep saying that its derivation and the published implementation "
+        "do not agree, rather than quietly adopting one",
     )
     report.check(
         any("Border width" in str(entry) for entry in block.get("not_evidence", [])),
         "core's offset must stay recorded as not being evidence for this one",
     )
     report.check(
-        bool(block.get("settle_by")),
-        "a pending policy has to say what would settle it",
+        bool(placement.get("verify_by")),
+        "an adopted rule still has to say how it gets checked once built",
     )
-    # The derivation, recomputed. Aligning the two painted boxes leaves exactly
-    # the group padding, so if either inset ever moves this stops holding.
+    # The rule, recomputed from this record's own figures rather than stored.
+    # Going to the painted corner puts the submenu's own first row a group
+    # padding and an item inset lower than the parent's.
     padding = data["grouping"]["gap"]["group_padding"]
     inset = data["item"]["inset_block"]
-    parent_painted = inset
-    submenu_painted = padding + inset
     report.check(
-        parent_painted - submenu_painted == -padding,
-        f"aligning the painted boxes leaves {submenu_painted - parent_painted}, not the "
-        f"group padding {padding} the derivation names",
+        consequences["first_row_sits_below_parent_row_by"]
+        == "group_padding_block + inset_block"
+        and padding + inset > 0,
+        "the rule's stated consequence must be the one its own figures produce",
     )
 
     # The axis, held before the slice exists. Both entries are decisions the
@@ -712,17 +843,50 @@ def check_submenu(report: Report, data: dict) -> None:
 
     host = axis["host_mode"]
     report.check(
-        host["status"] == "to_be_measured_by_this_slice",
-        "the nested host mode is a measurement this slice takes, not a setting it inherits",
+        host["status"] == "manual_tree_retained_after_auto_comparison"
+        and host["current_implementation"] == "manual",
+        "the nested host mode must retain the manual tree after its auto comparison",
     )
     report.check(
-        "is false" in host["what_is_known"] and bool(host["not_yet_measured"]),
-        "the record must keep saying which half of the host question was measured and which "
-        "was not",
+        "is false" in host["what_is_known"]
+        and bool(host["measurement"])
+        and bool(host["decision"])
+        and bool(host["dialog_measurement"]),
+        "the host record must retain the measured auto result, its decision and its dialog join-order result",
     )
     report.check(
-        len(axis["what_this_slice_settles"]) == 2,
-        "the two records this slice closes stay named, or building it loses its reason",
+        len(axis["what_this_slice_measured"]) == 3
+        and len(axis["still_open"]) == 1
+        and "placement.block" in axis["still_open"][0],
+        "the slice must distinguish its three completed measurements from the remaining block offset",
+    )
+
+    # The axis under both placement defects. Pinned before either is fixed, so a
+    # fix cannot quietly adopt one of the two rules it exists to replace.
+    axis_p = data["submenu"]["placer_axis"]
+    report.check(
+        axis_p["status"] == "axis_settled" and len(axis_p["they_differ_at"]) == 4,
+        "all four places the two placers disagree stay named",
+    )
+    steps = [ step["step"] for step in axis_p["rule"]["three_steps_in_order"] ]
+    report.check(
+        steps == [ "flip", "shift", "clamp" ],
+        f"the three steps are ordered flip, shift, clamp; found {steps}. Clamping first is "
+        "what detaches a menu from its trigger",
+    )
+    report.check(
+        "anchor rectangle" in axis_p["rule"]["anchor_rect_is_a_parameter"],
+        "the placer must keep taking a rectangle, because the painted-box rule has nowhere "
+        "else to live",
+    )
+    report.check(
+        "own list scrolls" in axis_p["reposition_is_part_of_it"],
+        "the axis must keep saying that a submenu's anchor moves when the parent list scrolls, "
+        "not only when the window does",
+    )
+    report.check(
+        "floating_ui" in axis_p["not_adopted"],
+        "the library this model is borrowed from stays named, so not using it is a choice",
     )
 
     report.check(
@@ -864,12 +1028,11 @@ def check_grouping(report: Report, data: dict, table: Table) -> None:
         "the scroll constraint is recorded from three independent sources",
     )
     # The constraint is inherited from sources whose submenus are in flow. The
-    # record has to keep saying that it is open whether it binds here, and both
-    # halves of the open question have to stay written down.
+    # stylebook now measures that it does not bind this top-layer host.
     scope = data["mutual_exclusion_scope"]
     report.check(
-        scope["status"] == "owner_judgment_open",
-        "whether the exclusion binds this implementation is the owner's to settle",
+        scope["status"] == "measured_not_applicable_to_top_layer_host",
+        "the scroll/submenu constraint must retain its measured top-layer result",
     )
     report.check(
         "top layer" in scope["why_it_may_not_bind"],
@@ -877,8 +1040,9 @@ def check_grouping(report: Report, data: dict, table: Table) -> None:
         "an ancestor's overflow",
     )
     report.check(
-        "group" in scope["why_the_unit_may_be_the_group"] and bool(scope["settle_by"]),
-        "the per-group reading and what would settle it both stay recorded",
+        "group" in scope["why_the_unit_may_be_the_group"] and bool(scope["measurement"])
+        and "not bind" in scope["result"],
+        "the per-group reading and the measured reason it does not bind both stay recorded",
     )
 
 
@@ -1010,6 +1174,37 @@ def check_implementation(report: Report, data: dict) -> None:
                  and "ax-menu__group-label-divider" in css,
                  "Menu.Group no longer exposes the label's optional divider slot")
 
+    submenu_component = re.search(r"export function MenuSubmenu\(.*?\n}\n", menu, re.S)
+    report.check(
+        submenu_component is not None
+        and "trailing" not in submenu_component.group(0).split("return", 1)[0]
+        and '<Icon name="arrow_right" />' in submenu_component.group(0),
+        "Menu.Submenu must own arrow_right rather than accepting a caller-supplied trailing affordance",
+    )
+    report.check(
+        "aria-haspopup=\"menu\"" in submenu_component.group(0)
+        and "aria-expanded={ open }" in submenu_component.group(0)
+        and "'ArrowRight' === event.key" in submenu_component.group(0)
+        and "'ArrowLeft' === event.key" in submenu_component.group(0),
+        "Menu.Submenu no longer exposes its nested menu state and directional keyboard contract",
+    )
+    report.check(
+        "function placeSubmenu" in menu
+        and "target.right" in menu
+        and "target.top - SUBMENU_BLOCK_OFFSET" in menu,
+        "the submenu no longer uses the recorded flush inline placement and local block policy",
+    )
+    report.check(
+        "registerSubmenu" in menu
+        and "new Map()" in menu
+        and "closeSubmenu( false );" in menu,
+        "the root menu no longer resets registered submenu state when it dismisses the tree",
+    )
+    report.check(
+        "item.closest( '[role=\"menu\"]' ) === menu" in menu,
+        "a parent menu's roving focus list must exclude items owned by a nested menu",
+    )
+
     report.check("min-block-size: var( --md-comp-menus-item-slot-height );" in css
                  and "min-block-size: var( --md-comp-menus-item-container-height );" in css,
                  "the 48dp target and 44dp painted box were collapsed")
@@ -1033,16 +1228,31 @@ def check_implementation(report: Report, data: dict) -> None:
     report.check("<Menu.Group" in stylebook_page and "<Menu.Item" in stylebook_page
                  and "<Menu.Separator" in stylebook_page,
                  "stylebook no longer demonstrates the composed group API")
+    report.check(
+        "<Menu.Submenu" in stylebook_page and "Follow conversation" in stylebook_page,
+        "stylebook no longer measures a submenu by itself and inside a scrolling menu",
+    )
     # A name is not a long menu. The sample has to be materially longer than the
     # others, which is a comparison rather than a number this file invents --
-    # measured at the time of writing: fourteen rows against four.
+    # The comparison excludes the overflow sample itself, whose submenu adds
+    # its own written-out child rows. It compares specimens, rather than adding
+    # every other specimen together: adding a legitimate new sample must not
+    # make a long menu cease to be a long menu.
     long_block = stylebook_page.split("LONG_ACTIONS = [")[-1].split("];")[0]
     long_rows = long_block.count("',")
-    composed_rows = stylebook_page.count("<Menu.Item")
+    specimens = re.findall(r"<MenuSample.*?</MenuSample>", stylebook_page, re.S)
+    other_rows = max(
+        (
+            specimen.count("<Menu.Item")
+            for specimen in specimens
+            if "LONG_ACTIONS.map" not in specimen
+        ),
+        default=0,
+    )
     report.check(
-        long_rows > composed_rows,
-        f"the overflow sample has {long_rows} rows against {composed_rows} written out one by "
-        "one; it is no longer the long one and demonstrates nothing",
+        "LONG_ACTIONS.map" in stylebook_page and long_rows > other_rows,
+        f"the overflow sample has {long_rows} rows against the next-longest specimen's {other_rows}; it is "
+        "no longer the long one and demonstrates nothing",
     )
     # Four places declare a stylebook route and the app's own regex is one of
     # them. Leaving it out does not fail any PHP check and does not fail a
@@ -1089,6 +1299,7 @@ def main() -> int:
     check_design_kit(report, data)
     check_group(report, data, table)
     check_scrollbar(report, data)
+    check_focus_and_motion(report, data)
     check_states(report, data)
     check_submenu(report, data)
     check_implementation(report, data)

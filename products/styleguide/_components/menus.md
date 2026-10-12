@@ -289,7 +289,8 @@ shape까지 함께 발행되어 있습니다. 그리고 guidelines가 이렇게 
 팝오버는 이 저장소에서 이미 돌아가는 모양이라, 서브메뉴를 지을 때 참조할 자리가 있습니다.
 
 서브메뉴 자체는 web에 있습니다(`md-sub-menu`). Compose에는 없고, M3가 직접 그렇게
-씁니다. 미루는 이유는 불가능해서가 아니라 **스크롤을 포기하는 결정**이기 때문입니다.
+씁니다. 이 구현은 native popover top layer를 써서 스크롤 목록 안의 submenu도 클리핑되지
+않음을 VQA로 확인했습니다. 따라서 in-flow 구현의 스크롤 제약은 여기에는 적용되지 않습니다.
 
 ### 어디에 여는가 — 가로는 합의, 세로는 유도
 
@@ -302,7 +303,7 @@ M3는 숫자를 발행하지 않습니다. 가로는 네 소스가 같은 말을
 그래서 간격 {{ site.data.menu.submenu.placement.inline.offset }}, 부모 메뉴의
 {{ site.data.menu.submenu.placement.inline.anchor }}에 붙입니다.
 
-세로는 **아직 확정이 아닙니다.** 가로와 달리 합의가 없고, 우리 쪽 정책입니다 —
+세로는 **아직 확정이 아닙니다.** 가로와 달리 합의가 없고, 구현 중인 우리 쪽 정책입니다 —
 `{{ site.data.menu.submenu.placement.block.status }}`.
 
 규칙은 {{ site.data.menu.submenu.placement.block.rule }}이고, 그러면:

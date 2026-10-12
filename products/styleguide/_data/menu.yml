@@ -1,0 +1,500 @@
+# Material 3 Menus -- the published specification.
+#
+# Sources:
+# - https://m3.material.io/components/menus/overview
+# - https://m3.material.io/components/menus/specs
+# - https://m3.material.io/components/menus/guidelines
+# - https://m3.material.io/components/menus/accessibility
+#
+# Two namespaces carry this component, and they are not two spellings of one
+# thing. `md.comp.menu` is the baseline row; `md.comp.menus` is the M3
+# Expressive row, whose official name is "Vertical menus". See `variants` for
+# which one this project implements and what the other one costs.
+
+meta:
+  namespace: md.comp.{menu,menus}
+  table_revision: "2026-05-27T22:44:15.009106Z"
+  included_token_count: 301
+  deprecated_token_count: 46
+  raw_evidence: products/wordpress/plugins/axismundi/docs/m3-token-tables/SOURCE-M3-MENUS-RAW.md
+  current_slice: vertical-menu-standard-single-level
+
+prose_sources:
+  usage:
+    source: https://m3.material.io/components/menus/overview
+    statement: A menu shows a temporary set of actions; actions that must stay on screen belong in a toolbar.
+  variants:
+    source: https://m3.material.io/components/menus/specs
+    statement: >-
+      Vertical menus carry the latest shapes, colour styles, selection states
+      and submenu motion. Baseline menu is still available to use, but does not.
+  groups_on_web:
+    source: https://m3.material.io/components/menus/guidelines
+    statement: Gaps are not currently available on web. On web, use a divider to separate menu items.
+  scrolling:
+    source: https://m3.material.io/components/menus/guidelines
+    statement: Menus scroll when the items do not fit, and show a persistent scrollbar. Do not use gaps in a scrollable menu.
+  placement:
+    source: https://m3.material.io/components/menus/guidelines
+    statement: >-
+      A menu is positioned relative to the window edge and repositions itself to
+      the left, right or above its trigger rather than being cut off.
+  submenus:
+    source: https://m3.material.io/components/menus/guidelines
+    statement: Submenus open next to the parent menu item without overlapping it, and are best on large screens.
+  adaptive:
+    source: https://m3.material.io/components/menus/guidelines
+    statement: Consider adapting menus into bottom sheets on compact windows, which have room for more items and longer labels.
+  initial_focus:
+    source: https://m3.material.io/components/menus/accessibility
+    statement: When a menu opens, focus should be placed on the first menu item.
+  slots:
+    source: https://m3.material.io/components/menus/accessibility
+    statement: >-
+      Nested elements perform one action only; buttons, switches and other direct
+      actions do not go inside a menu item, and targets are 48x48dp or larger.
+
+# ---------------------------------------------------------------------------
+# Which row of the component this project builds.
+# ---------------------------------------------------------------------------
+
+variants:
+  vertical:
+    status: implemented
+    official_name: Vertical menus
+    namespace: md.comp.menus
+    availability: M3 Expressive only
+    note: The axis is named in the title, which is why `horizontal` below has a namespace at all.
+  baseline:
+    status: not_implemented
+    official_name: Menu (baseline)
+    namespace: md.comp.menu
+    availability: M3 and M3 Expressive
+    deprecated: false
+    live_token_count: 4
+    live_tokens:
+      - md.comp.menu.container.color
+      - md.comp.menu.container.elevation
+      - md.comp.menu.container.shadow-color
+      - md.comp.menu.container.shape
+    reason: >-
+      Available is not the same as complete. Every item token in this namespace
+      is deprecated -- the whole `md.comp.menu.list-item.*` family, with the
+      stated reason "use standalone list component tokens instead" -- so what
+      survives is a container and nothing to put in it. Building a baseline menu
+      item means consuming deprecated tokens or inferring from List. This
+      project has no saved content carrying a baseline menu, so there is no
+      compatibility debt to pay for the way there is with `is-style-outlined`
+      on Button.
+    reopen_when: M3 republishes non-deprecated item tokens in this namespace.
+  horizontal:
+    status: published_without_prose
+    namespace: md.comp.menus.horizontal
+    token_count: 20
+    reason: >-
+      The token table publishes a horizontal layout -- container shape
+      corner.full, an icon-only sub-variant, its own item spacing and shapes --
+      and no published prose mentions it. Not in overview, specs, guidelines or
+      accessibility; not in Material Web's menu documentation; not in Compose.
+      Recorded as published, not implemented, and not explained.
+
+colour_styles:
+  standard:
+    status: implemented
+    emphasis: lower
+    basis: surface
+    container_color_token: md.comp.menus.standard.container.color
+    container_color_role: surface-container-low
+  vibrant:
+    status: deferred
+    emphasis: higher
+    basis: tertiary
+    container_color_token: md.comp.menus.vibrant.container.color
+    container_color_role: tertiary-container
+    deferral_reason: >-
+      M3 says vibrant menus are more prominent and should be used sparingly.
+      Nothing in this product has asked for one, and a second colour route costs
+      a full state matrix. The tokens are published and the route is additive.
+
+# ---------------------------------------------------------------------------
+# Container.
+# ---------------------------------------------------------------------------
+
+container:
+  elevation_token: md.comp.menus.container.elevation
+  elevation_level: 2
+  elevation_dp: 3
+  # The standard namespace publishes its own shadow colour; the identically
+  # valued `md.comp.menu.container.shadow-color` belongs to the baseline row
+  # this record does not build.
+  shadow_color_token: md.comp.menus.standard.container.shadow-color
+  shadow_color_role: shadow
+  shape_token: md.comp.menus.container.shape
+  shape_role: corner.large
+  shape: 16
+  # Shape morphing. M3 states that as focus moves between submenus the focused
+  # one becomes more rounded and the unfocused one less so. These are the two
+  # ends of that morph, and they are the reason the component has an "active"
+  # concept at container level at all.
+  active_shape_token: md.comp.menus.active.container.shape
+  active_shape_role: corner.large
+  active_shape: 16
+  inactive_shape_token: md.comp.menus.inactive.container.shape
+  inactive_shape_role: corner.small
+  inactive_shape: 8
+
+# ---------------------------------------------------------------------------
+# Item. The two boxes here are the thing this component is easiest to get
+# wrong: the slot is the hit target and the container is what gets painted.
+# ---------------------------------------------------------------------------
+
+item:
+  # Published.
+  container_height_token: md.comp.menus.menu-item.height
+  container_height: 44
+  # Measured, not token-published. The specs Measurements figure is an image,
+  # and Figma gives the same item a 48dp slot with 2dp vertical and 4dp
+  # horizontal padding around the 44dp box. State layer, corner radius and the
+  # selected container colour belong to the 44; the pointer and the 48x48dp
+  # accessibility target belong to the 48.
+  slot_height: 48
+  inset_block: 2
+  inset_inline: 4
+  geometry_source: specs Measurements image, confirmed against Figma
+  # Enforced arithmetic rather than three frozen numbers: if any one of them
+  # moves without the others, this stops being true.
+  invariant: slot_height - 2 * inset_block == container_height
+  # The three figures above that no token backs. Everything else under `item`
+  # names its token, and the validator holds that line: a numeric value here is
+  # either token-backed or listed in `unpublished`, so an inferred number cannot
+  # arrive later and read as published.
+  #
+  # In CSS these are literals in the component slot, not
+  # `var( --md-sys-measurement-space25 )` and `space50`. They happen to equal
+  # those two, and a coincidence of value is not a published reference -- M3
+  # never put this inset on the spacing scale. Writing it as one would also let
+  # a theme-level change to the scale move a figure that was measured off a
+  # picture. Same treatment as Badge's maximum-character width and inline
+  # padding, which are recorded the same way for the same reason.
+  unpublished: [ slot_height, inset_block, inset_inline ]
+
+  shape_token: md.comp.menus.menu-item.shape
+  shape_role: corner.extra-small
+  shape: 4
+  first_child_shape_token: md.comp.menus.menu-item.first-child.shape
+  first_child_shape_role: corner.medium
+  first_child_shape: 12
+  first_child_inner_corner_token: md.comp.menus.menu-item.first-child.inner-corner.corner-size
+  first_child_inner_corner_role: corner.extra-small
+  first_child_inner_corner: 4
+  last_child_shape_token: md.comp.menus.menu-item.last-child.shape
+  last_child_shape_role: corner.medium
+  last_child_shape: 12
+  last_child_inner_corner_token: md.comp.menus.menu-item.last-child.inner-corner.corner-size
+  last_child_inner_corner_role: corner.extra-small
+  last_child_inner_corner: 4
+  selected_shape_token: md.comp.menus.menu-item.selected.shape
+  selected_shape_role: corner.medium
+  selected_shape: 12
+
+  leading_space_token: md.comp.menus.menu-item.leading-space
+  leading_space: 16
+  trailing_space_token: md.comp.menus.menu-item.trailing-space
+  trailing_space: 16
+  between_space_token: md.comp.menus.menu-item.between-space
+  between_space: 12
+  # Published, referent undetermined -- recorded rather than resolved. 44 minus
+  # 8 and 8 is 28, which is not the label's 20dp line box, so these do not read
+  # as the padding of a single-line item. Two candidate readings, neither
+  # verified: the container's own vertical padding, or the padding of an item
+  # grown to carry supporting text. Do not build from these until one is
+  # measured.
+  top_space_token: md.comp.menus.menu-item.top-space
+  top_space: 8
+  bottom_space_token: md.comp.menus.menu-item.bottom-space
+  bottom_space: 8
+
+  leading_icon_size_token: md.comp.menus.menu-item.leading-icon.size
+  leading_icon_size: 20
+  trailing_icon_size_token: md.comp.menus.menu-item.trailing-icon.size
+  trailing_icon_size: 20
+
+  label_text_typography_role: label-large
+  supporting_text_typography_role: body-small
+  trailing_supporting_text_typography_role: label-large
+
+  focus_indicator:
+    color_token: md.comp.menus.menu-item.focus.indicator.color
+    color_role: secondary
+    thickness_token: md.comp.menus.menu-item.focus.indicator.thickness
+    thickness: 3
+    inner_offset_token: md.comp.menus.menu-item.focus.indicator.outline.offset
+    inner_offset: -3
+
+# M3's anatomy list for a vertical menu, in its published order.
+anatomy:
+  - { part: Menu item, optional: false }
+  - { part: Leading icon, optional: true }
+  - { part: Menu item text, optional: false }
+  - { part: Trailing icon, optional: true }
+  - { part: Badge, optional: true }
+  - { part: Trailing text, optional: true }
+  - { part: Container, optional: false }
+  - { part: Supporting text, optional: true }
+  - { part: Label text, optional: true }
+  - { part: Gap, optional: true }
+  - { part: Divider, optional: true }
+
+section_label:
+  color_token: md.comp.menus.standard.section-label-text.color
+  color_role: on-surface-variant
+  focusable: false
+
+# ---------------------------------------------------------------------------
+# Grouping. The published token and the published prose disagree about the
+# platform, so this is where the decision lives rather than in the CSS.
+# ---------------------------------------------------------------------------
+
+grouping:
+  divider:
+    status: implemented
+    owner: divider component
+    owner_note: >-
+      Every nested divider token in this namespace is deprecated in favour of
+      the standalone `md.comp.divider.*`, so Menu consumes Divider and publishes
+      nothing of its own for it.
+    use_for: [ scrollable menus, text field dropdown menus ]
+  gap:
+    status: not_implemented_on_web
+    gap_token: md.comp.menus.gap
+    gap: 2
+    group_padding_token: md.comp.menus.group.padding
+    group_padding: 2
+    group_shape_token: md.comp.menus.group.shape
+    group_shape_role: corner.small
+    group_shape: 8
+    reason: M3 states that gaps are not currently available on web and that web should use a divider.
+    limits_if_it_ever_lands: [ do not change the gap size, one or two gaps per menu, never in a scrollable menu ]
+
+# Three independent sources name the same constraint, so it is recorded once
+# here rather than discovered during implementation.
+mutual_exclusions:
+  - subject: scrolling and gaps
+    source: https://m3.material.io/components/menus/guidelines
+    statement: Do not use gaps if a menu scrolls; this is currently unsupported.
+  - subject: scrolling and submenus
+    source: https://github.com/material-components/material-web/blob/main/docs/components/menu.md
+    statement: >-
+      A root menu containing submenus needs `has-overflow`, whose effect is to
+      disable overflow scrolling so the nested menu can be displayed. The same
+      page warns that setting `max-height` has adverse effects when items
+      overflow.
+  - subject: scrolling and submenus, again
+    source: products/wordpress/themes/axismundi/assets/styles/blocks.navigation-submenu.css
+    statement: >-
+      This repository's own navigation submenu stylesheet refuses `overflow:
+      hidden` on the popover box, in its own words, because it would clip a
+      nested submenu. Reached independently, on core's markup.
+
+# ---------------------------------------------------------------------------
+# Structure. Menu is shaped like a list and valued like a menu.
+# ---------------------------------------------------------------------------
+
+structure:
+  shaped_like: list
+  evidence:
+    - M3 deprecated the embedded menu item tokens with the reason "use standalone list component tokens instead".
+    - Material Web composes `md-list`, and `md-menu-item` extends `md-list-item`.
+  values_owned_by: menu
+  divergence:
+    - { property: item height, menu: 44, list: "56 / 72 / 88 (one / two / three line)" }
+    - { property: label text, menu: label-large, list: body-large }
+    - { property: supporting text, menu: body-small, list: body-medium }
+  conclusion: >-
+    Roles and structure follow a list; none of the three measured values agree
+    with List, so Menu publishes its own item slots and does not consume
+    `list.yml`.
+
+# ---------------------------------------------------------------------------
+# Behaviour and accessibility.
+# ---------------------------------------------------------------------------
+
+selection:
+  single_select: One item at a time; selecting a new item unselects the previous one.
+  multi_select: Many items; the menu stays open until dismissed.
+  selected_container_color_role: tertiary-container
+  selected_label_text_color_role: on-tertiary-container
+  minimum_contrast: "3:1 between selected and unselected items"
+  additional_cue_recommended: checkmark
+  checked_state_attribute: aria-checked
+  checked_state_role: menuitemcheckbox
+  checked_state_source: >-
+    products/reference-implementations/axismundi-lab/modules/menu/docs/MENU-SPEC-AUDIT.md
+    v3.6.16 addendum. Lab evidence, not an M3 statement: M3 publishes the role
+    table but not this distinction.
+
+focus:
+  initial: first menu item
+  disabled_items_focusable: true
+  disabled_items_selectable: false
+  dividers_and_gaps_focusable: false
+  restoration: Where focus goes after closing depends on the app.
+  exits: [ selecting an option, Escape, a click outside, the system back button ]
+
+keyboard:
+  - keys: Tab
+    action: Focus lands on menu.
+  - keys: Space or Enter
+    action: "Closed: opens the menu or submenu. Open: selects a menu item."
+  - keys: Up and Down arrows
+    action: "Closed: opens the menu. Open: moves focus to the next item."
+  - keys: Left and Right arrows
+    action: Opens or closes a submenu.
+  - keys: Letters
+    action: Focus moves to the next menu item starting with that letter.
+  - keys: Escape
+    action: Closes the menu.
+
+roles:
+  menu_item_label: Same text as the menu item.
+  role_web: Menu item
+  role_android_views: Generic actionable element
+  role_compose: Generic actionable element
+  icon_in_labelled_item: decorative
+
+placement:
+  relative_to: window edge
+  default: below, next to, or in front of the element that generates it
+  reflow: Repositions left, right or above rather than being cut off.
+  submenu: Opens next to the parent item without overlapping it.
+
+adaptive:
+  compact:
+    guidance: Consider adapting menus into bottom sheets.
+    status: owner_judgment_open
+    note: >-
+      "Consider" is not "must". Dialog's full-screen swap is obligatory because
+      M3 writes it as one; this is not, so whether the swap is automatic or a
+      caller's choice is a decision, not a reading.
+  medium_and_expanded:
+    guidance: Menus appear in context with the content, can display more items, and can use submenus.
+
+submenu:
+  status: deferred
+  available_on:
+    web: true
+    compose: false
+  compose_statement: Submenus are not currently available on Jetpack Compose.
+  web_evidence:
+    element: md-sub-menu
+    anchor_corner_default: start-end
+    menu_corner_default: start-start
+    source: https://github.com/material-components/material-web/blob/main/docs/components/menu.md
+  cost: See `mutual_exclusions` -- a menu that can open a submenu cannot also scroll.
+
+# ---------------------------------------------------------------------------
+# The host. Menu is not a Surface.
+# ---------------------------------------------------------------------------
+
+host:
+  element: popover
+  not: dialog
+  reason: >-
+    Surface owns the `<dialog>` host, and its modal axis carries a scrim, a
+    scroll lock and inert ancestors. A menu is anchored, non-modal and
+    light-dismissed, and a non-modal `dialog.show()` has no light dismiss.
+  precedent: products/wordpress/plugins/axismundi-dialogs/assets/tooltip.js
+  precedent_notes:
+    - Uses `popover = 'manual'`, because an auto popover closes on any click.
+    - Feature-detects `popover` and falls back to `<body>`, which is right everywhere except inside a modal dialog.
+    - >-
+      Measured: the top layer is ordered by when an element joined it, so a
+      popover that opened before a `<dialog>` is painted underneath it. Leaving
+      and rejoining puts it above whatever is there now. A menu opened from
+      inside a dialog has to join after that dialog.
+  positioning: >-
+    JS measurement with a flip and a viewport-edge clamp, as in the tooltip's
+    `place()`. Whether CSS anchor positioning can replace it is a question to
+    measure, not to assume.
+
+# ---------------------------------------------------------------------------
+# What is not published. Do not fill these in by inference.
+# ---------------------------------------------------------------------------
+
+not_published:
+  container_inline_size:
+    what: minimum and maximum menu width
+    note: >-
+      The lab's measurement audit names its own baseline primitive as the
+      authority for min/max width. That authority is the lab's `components.css`,
+      not M3 -- no token or prose publishes either figure.
+  container_block_size:
+    what: maximum height, and therefore the point at which a menu starts to scroll
+  submenu_offset:
+    what: the offset and anchor corners of a submenu relative to its parent item
+    note: Material Web publishes defaults for its own element; M3 publishes none.
+  density:
+    what: the web-only density steps that reduce top and bottom padding
+    note: M3 states that density exists on web and decreases top and bottom padding. No step values are published.
+  motion:
+    what: enter and exit transition tokens
+    note: >-
+      M3 describes an enter and exit transition relating the menu to its trigger,
+      and says dense products may open instantly to reduce motion. The token
+      table carries no motion token for this component at all.
+  item_insets:
+    what: the 2dp vertical and 4dp horizontal padding between the 48dp slot and the 44dp container
+    note: Recorded under `item` as measured geometry with its source named.
+
+discrepancies:
+  - subject: gap
+    prose: Gaps are not currently available on web; on web, use a divider.
+    tokens: md.comp.menus.gap, md.comp.menus.group.padding and md.comp.menus.group.shape are all live.
+    resolution: >-
+      The tokens are recorded and the behaviour is not built. A published token
+      is not a published platform.
+  - subject: item height against the accessibility target
+    prose: Targets should be 48x48dp or larger.
+    tokens: md.comp.menus.menu-item.height is 44.
+    resolution: >-
+      Not a conflict. They are different boxes -- 48 is the slot that receives
+      the pointer, 44 is the container that receives the state layer, the corner
+      radius and the selected colour. 44 + 2 + 2 = 48, and the arithmetic is
+      pinned under `item.invariant` rather than the three figures.
+  - subject: menu item against list item
+    prose: The deprecations send menu items to "standalone list component tokens".
+    tokens: md.comp.menus.menu-item.* is live and carries its own height, typescale and shape.
+    resolution: >-
+      The deprecation retired the old embedded family; the expressive family
+      replaced it. Structure follows a list, values do not. See `structure`.
+
+token_families:
+  implemented_now:
+    - md.comp.menus.container.{elevation,shape}
+    - md.comp.menus.{active,inactive}.container.shape
+    - md.comp.menus.menu-item.*
+    - md.comp.menus.standard.*
+  deferred_with_contract:
+    - md.comp.menus.vibrant.*
+  recorded_not_implemented:
+    - md.comp.menu.container.*
+    - md.comp.menus.horizontal.*
+    - md.comp.menus.{gap,group.padding,group.shape}
+
+evidence_not_product:
+  lab_module: products/reference-implementations/axismundi-lab/modules/menu
+  lab_provider: products/reference-implementations/axismundi-lab/modules/popover
+  reason: >-
+    The lab built a Menu module as a consumer of its popover runtime and drew
+    the boundary this record keeps -- Menu owns item semantics and authoring
+    structure, the popover provider owns anchoring, open and close, outside
+    dismissal, Escape, focus restoration and placement. It is lab evidence, not
+    a shipped implementation, and its measurements derive from its own baseline
+    primitive rather than from M3.
+  block_precedent:
+    - products/wordpress/themes/axismundi/assets/styles/blocks.navigation-submenu.css
+    - products/wordpress/plugins/axismundi-navigation-icons/assets/navigation.css
+  block_precedent_note: >-
+    Core's navigation submenu is already an M3 Menu in this theme's own words,
+    nested popovers included. It is the nearest place this repository has
+    already solved placement and nesting on real markup.

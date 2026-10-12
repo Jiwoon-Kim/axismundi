@@ -101,6 +101,7 @@ def main() -> int:
                           ("list", "validate_styleguide_list.py"),
                           ("tabs", "validate_styleguide_tabs.py"),
                           ("divider", "validate_styleguide_divider.py"),
+                          ("menu", "validate_styleguide_menu.py"),
                           ("breakpoints", "validate_styleguide_breakpoints.py"),
                           ("navigation item", "validate_styleguide_navigation_item.py"),
                           ("navigation bar", "validate_styleguide_navigation_bar.py"),

@@ -1,0 +1,235 @@
+---
+title: Menus
+description: 두 네임스페이스 중 하나만 짓는 이유, 48과 44가 다른 상자인 이유, 그리고 메뉴가 dialog가 아닌 이유
+kind: material
+order: 60
+lang: ko
+---
+
+M3의 메뉴는 **임시로 나타나는 동작 묶음**입니다. 화면에 계속 떠 있어야 하는 동작은
+toolbar의 몫이고, 메뉴는 트리거가 열었다가 선택이나 dismiss로 사라집니다.
+
+> **아직 구현이 없습니다.** 이 페이지는 발행된 것을 읽어 축을 세운 기록이고, 표본과
+> 어댑터 CSS는 그다음입니다. 값은 전부
+> [`_data/menu.yml`]({{ site.repository_url }}/blob/main/products/styleguide/_data/menu.yml)에서
+> 오고, 그 파일은 토큰 표
+> [`SOURCE-M3-MENUS-RAW.md`]({{ site.repository_url }}/blob/main/products/wordpress/plugins/axismundi/docs/m3-token-tables/SOURCE-M3-MENUS-RAW.md)와
+> M3의 산문 네 쪽을 출처로 적습니다.
+
+## 네임스페이스가 둘입니다
+
+이 컴포넌트에서 가장 먼저 걸리는 것이 이것입니다. `md.comp.menu`와 `md.comp.menus`는
+같은 것의 두 철자가 아니라 **서로 다른 두 행**입니다.
+
+| 변형 | 네임스페이스 | 상태 | 비고 |
+|---|---|---|---|
+{% for v in site.data.menu.variants -%}
+| {{ v[1].official_name | default: v[0] }} | `{{ v[1].namespace }}` | `{{ v[1].status }}` | {% if v[1].live_token_count %}살아 있는 토큰 {{ v[1].live_token_count }}개{% elsif v[1].token_count %}토큰 {{ v[1].token_count }}개{% else %}{{ v[1].availability }}{% endif %} |
+{% endfor %}
+
+### baseline을 안 짓는 이유 — 레거시라서가 아니라 불완전해서
+
+baseline은 deprecated가 아닙니다. M3는 "still available to use"라고 쓰고, 최신 shape·색
+스타일·선택 상태·모션이 없다고만 덧붙입니다. 그런데 **살아 있는 토큰을 세어 보면
+{{ site.data.menu.variants.baseline.live_token_count }}개**입니다:
+
+{% for t in site.data.menu.variants.baseline.live_tokens -%}
+- `{{ t }}`
+{% endfor %}
+
+전부 컨테이너입니다. item이 없습니다 — `md.comp.menu.list-item.*` 일가가 통째로
+deprecated이고, 사유가 전부 "use standalone list component tokens instead"입니다. 그러니
+baseline 메뉴 아이템을 deprecated 아닌 토큰으로 조립할 길이 **없습니다**. 짓는다면
+폐기된 토큰을 소비하거나 List에서 추론해야 합니다.
+
+호환 때문에 남길 이유도 없습니다. Button의 `is-style-outlined`는 **저장된 콘텐츠가 그
+클래스를 들고 있어서** 남은 shim인데, 이 프로젝트에는 baseline 메뉴를 든 저장물이
+없습니다. 갚을 부채가 없으면 레거시 행을 짓지 않습니다.
+
+다시 열 조건도 적어 둡니다 — {{ site.data.menu.variants.baseline.reopen_when }}
+
+### horizontal은 발행되었는데 아무도 설명하지 않습니다
+
+토큰 표에 `md.comp.menus.horizontal.*`가
+{{ site.data.menu.variants.horizontal.token_count }}개 있습니다. 컨테이너 shape가
+`corner.full`이고, icon-only 하위 변형과 자기 item 간격·모양까지 있습니다.
+
+그리고 그걸 말하는 산문이 없습니다. overview·specs·guidelines·accessibility 어디에도
+없고, Material Web 문서에도, Compose에도 없습니다. 공식 명칭이 "**Vertical** menus"로
+축을 명시해 붙은 것 자체가 다른 축의 자리를 비워 둔 모양입니다.
+
+구현하지 않고 `published_without_prose`로 적어 둡니다. 추측이 아니라 "표에는 있고
+산문에는 없다"는 사실만 남깁니다.
+
+## 48과 44는 충돌이 아니라 다른 상자입니다
+
+아이템 높이 토큰은 **{{ site.data.menu.item.container_height }}**입니다. 그런데 접근성
+절은 타깃을 48×48dp 이상으로 요구하고, specs의 Measurements 그림에는 48이 적혀 있습니다.
+여기서 "둘 중 뭐가 맞나"로 가면 틀립니다. 둘 다 맞고, **재는 상자가 다릅니다.**
+
+```
+{{ site.data.menu.item.slot_height }}  slot          포인터가 닿는 칸. 접근성 타깃.
+ -{{ site.data.menu.item.inset_block }}  inset_block
+ -{{ site.data.menu.item.inset_block }}  inset_block
+---
+{{ site.data.menu.item.container_height }}  container     state layer · 모서리 · selected 색이 붙는 상자
+```
+
+가로도 같은 모델입니다 — 좌우로 {{ site.data.menu.item.inset_inline }}dp씩 들어옵니다.
+
+출처가 다르다는 것도 같이 적습니다. {{ site.data.menu.item.container_height }}는 토큰이고,
+{{ site.data.menu.item.slot_height }}와 inset 둘은 **{{ site.data.menu.item.geometry_source }}**입니다.
+specs의 Measurements가 표가 아니라 그림이라 표에는 없습니다.
+
+이게 구현을 바꿉니다. 아이템을 `44`에 margin으로 지으면 타깃이 전부 44가 되고, 화면상
+똑같아 보입니다. 슬롯이 48이고 그 안에 44가 inset으로 들어가야 합니다.
+
+검증은 **값 셋이 아니라 산수**에 겁니다:
+
+```
+{{ site.data.menu.item.invariant }}
+```
+
+어느 하나가 혼자 움직이면 깨집니다. 값 하나를 핀으로 박으면 그 값이 틀렸을 때 결함이
+계약으로 굳습니다 — scaffold의 rail에서 한 번 그랬습니다.
+
+### 토큰이 없는 값은 comp 슬롯에 리터럴로 들어갑니다
+
+이 저장소가 이미 쓰는 규칙은 **표의 형태를 따라가는 것**입니다. 표가
+`-> md.sys.measurement.space150`이면 comp 슬롯이 `var( --md-sys-measurement-space150 )`을
+읽고, 표가 `{"value":16,"unit":"DIPS"}`처럼 리터럴이면 슬롯도 리터럴입니다. 표에 아예
+없으면 — Badge의 maximum-character 폭과 inline padding이 그 경우인데 — 역시 리터럴로,
+`--md-comp-*` 슬롯에 들어갑니다.
+
+{{ site.data.menu.item.inset_block }}와 {{ site.data.menu.item.inset_inline }}도 그쪽입니다.
+`var( --md-sys-measurement-space25 )`로 쓰면 **M3가 이 inset을 스페이싱 스케일 위에
+올려놨다**는 주장을 하게 되는데, M3는 그런 적이 없습니다. 값이 같은 것은 일치이지 발행된
+참조가 아닙니다. 그리고 참조로 쓰면 테마가 스케일을 조정할 때 **그림에서 잰 값이 따라
+움직입니다.**
+
+```css
+.ax-menu__item {
+	/* Measured; no token publishes either. A literal rather than
+	 * var( --md-sys-measurement-space25 ): equal values, not a reference. */
+	--md-comp-menu-item-slot-height: {{ site.data.menu.item.slot_height }}px;
+	--md-comp-menu-item-inset-block: {{ site.data.menu.item.inset_block }}px;
+	--md-comp-menu-item-inset-inline: {{ site.data.menu.item.inset_inline }}px;
+	/* md.comp.menus.menu-item.height */
+	--md-comp-menu-item-container-height: {{ site.data.menu.item.container_height }}px;
+}
+```
+
+섞이지 않게 `menu.yml`이 어느 것이 토큰 없는 값인지 이름으로 적고
+(`item.unpublished`), 검증기가 양방향으로 잡습니다 — 토큰 없는 숫자가 목록 밖에 생기면
+실패하고, 토큰이 있는 값을 목록에 넣어도 실패합니다.
+
+### 발행되었지만 가리키는 곳을 모르는 값
+
+`menu-item.top-space`와 `bottom-space`가 각각 {{ site.data.menu.item.top_space }}로
+발행되어 있습니다. 그런데 {{ site.data.menu.item.container_height }} − 8 − 8 = 28이고,
+label-large의 줄 상자는 20입니다. 한 줄짜리 아이템의 padding으로 읽히지 않습니다.
+
+후보는 둘입니다 — 컨테이너 자신의 세로 padding이거나, supporting text가 붙어 커진
+아이템의 padding이거나. **어느 쪽도 확인하지 않았으므로 여기서 짓지 않습니다.**
+
+## 구조는 리스트, 값은 메뉴
+
+M3가 메뉴의 내장 item 토큰을 걷어낸 사유가 "use standalone **list** component tokens
+instead"이고, Material Web은 메뉴가 `md-list`를 조립하며 `md-menu-item`이
+`md-list-item`을 상속합니다. 그러니 메뉴 컨테이너는 역할상 목록입니다.
+
+그런데 값은 List 것이 아닙니다. 셋을 재봤고 셋 다 다릅니다:
+
+| 속성 | Menu | List |
+|---|---|---|
+{% for d in site.data.menu.structure.divergence -%}
+| {{ d.property }} | {{ d.menu }} | {{ d.list }} |
+{% endfor %}
+
+그래서 Menu는 [`list.yml`]({{ site.repository_url }}/blob/main/products/styleguide/_data/list.yml)을
+소비하지 않고 자기 item slot을 발행합니다. `md.comp.menus.menu-item.*`는 deprecated가
+아닙니다 — 폐기된 것은 **옛 내장 일가**이고, expressive 일가가 그 자리를 대신했습니다.
+
+## 호스트는 dialog가 아닙니다
+
+[Surface]({{ '/components/surface/' | relative_url }})는 `<dialog>` 호스트를 소유하고,
+그 modal 축이 scrim·스크롤 락·inert를 끌고 옵니다. 메뉴는 anchored·non-modal·light-dismiss
+이고, non-modal `dialog.show()`에는 light dismiss가 없습니다. 그러니 Surface를 재사용하지
+않는 것이 생략이 아니라 **다른 계약**입니다.
+
+선례는 저장소 안에 있습니다 —
+[`tooltip.js`]({{ site.repository_url }}/blob/main/products/wordpress/plugins/axismundi-dialogs/assets/tooltip.js):
+
+{% for n in site.data.menu.host.precedent_notes -%}
+- {{ n }}
+{% endfor %}
+
+세 번째가 메뉴에 그대로 걸립니다. **top layer는 join한 순서로 쌓이므로**, dialog 안에서
+여는 메뉴는 그 dialog보다 뒤에 join해야 합니다.
+
+위치는 {{ site.data.menu.host.positioning }}
+
+## 그룹 — 토큰은 있고 플랫폼은 아닙니다
+
+`md.comp.menus.gap`이 {{ site.data.menu.grouping.gap.gap }}dp로, group padding과 group
+shape까지 함께 발행되어 있습니다. 그리고 guidelines가 이렇게 씁니다:
+
+> {{ site.data.menu.prose_sources.groups_on_web.statement }}
+
+그래서 gap은 기록하고 짓지 않습니다. **발행된 토큰이 발행된 플랫폼은 아닙니다.** web의
+그룹 구분은 divider이고, divider는 Divider 컴포넌트가 소유합니다 — 이 네임스페이스의
+중첩 divider 토큰은 전부 독립 `md.comp.divider.*`로 가라고 deprecated되었습니다.
+(`_data/divider.yml`은 있고 스타일북 페이지는 아직 없습니다.)
+
+## 스크롤과 양립하지 않는 것
+
+세 소스가 독립적으로 같은 제약을 가리킵니다. 늦게 발견하면 비싼 종류라 여기 적습니다.
+
+{% for m in site.data.menu.mutual_exclusions -%}
+- **{{ m.subject }}** — {{ m.statement }}
+{% endfor %}
+
+세 번째가 특히 쓸모 있습니다. 우리 테마가 코어 마크업 위에서 같은 결론에 **따로**
+도달했고, `blocks.navigation-submenu.css`가 그 이유를 주석으로 들고 있습니다. 중첩
+팝오버는 이 저장소에서 이미 돌아가는 모양이라, 서브메뉴를 지을 때 참조할 자리가 있습니다.
+
+서브메뉴 자체는 web에 있습니다(`md-sub-menu`). Compose에는 없고, M3가 직접 그렇게
+씁니다. 미루는 이유는 불가능해서가 아니라 **스크롤을 포기하는 결정**이기 때문입니다.
+
+## 키보드
+
+| 키 | 동작 |
+|---|---|
+{% for k in site.data.menu.keyboard -%}
+| `{{ k.keys }}` | {{ k.action }} |
+{% endfor %}
+
+여는 순간의 포커스는 **첫 메뉴 아이템**입니다. 비활성 아이템은 포커스를 받되 선택되지
+않고, divider와 gap은 포커스를 받지 않습니다.
+
+## 지금 안 만든 것
+
+추측으로 채우지 말라고 남깁니다.
+
+{% for n in site.data.menu.not_published -%}
+- **{{ n[1].what }}**{% if n[1].note %} — {{ n[1].note }}{% endif %}
+{% endfor %}
+
+판단이 남은 것 둘:
+
+- **compact에서 bottom sheet로 바꿀지.** M3는 "Consider"라고 씁니다. Dialog의 full-screen
+  전환은 M3가 의무로 적어서 의무였는데 여기는 아닙니다. 자동 전환인지 호출자의 선택인지는
+  읽기가 아니라 결정입니다.
+- **vibrant를 낼지.** tertiary 기반이고 "should be used sparingly"입니다. 토큰은 발행되어
+  있고 경로는 가산적이라, 요구가 생길 때 엽니다.
+
+## 랩은 증거이지 제품이 아닙니다
+
+[`modules/menu`]({{ site.repository_url }}/tree/main/products/reference-implementations/axismundi-lab/modules/menu)가
+이미 같은 경계를 그어 두었습니다 — Menu는 item 의미와 저작 구조를 소유하고, popover
+제공자가 anchoring·개폐·바깥 dismiss·Escape·포커스 복원·배치를 소유합니다. 지금
+이 기록이 지키는 경계가 그것입니다.
+
+다만 랩의 측정 감사는 메뉴 min/max 폭의 권위를 자기 baseline primitive라고 적습니다.
+그 권위는 랩의 `components.css`이지 M3가 아닙니다. 그래서 폭은 위의 "안 만든 것"에
+남아 있습니다.

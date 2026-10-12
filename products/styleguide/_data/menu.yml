@@ -496,20 +496,37 @@ submenu:
         - { source: Material Web, says: "anchor-corner start-end meets menu-corner start-start." }
         - { source: core navigation, says: "A nested submenu container is `left: 100%` of its parent item." }
     block:
+      status: local_policy_pending_runtime_measurement
       rule: >-
         Align the submenu's first painted item box with the parent item's
-        painted box, which is what Material Web's corner pair says in our
-        geometry.
+        painted box.
       derivation: offset == -group_padding_block
       derivation_note: >-
         The parent's painted box sits one item inset below its slot; the
         submenu's first painted box sits a group padding and an item inset
-        below its container. Aligning the two leaves the group padding. Core
-        compensates the same way for a different edge -- its offset is
-        `top: -1px` with the comment "Border width" -- so the principle is
-        corroborated even though the figure is not, because this project's
-        submenu has no border.
-      recorded_as: a derivation, not a measurement
+        below its container. Aligning the two leaves the group padding.
+      recorded_as: local policy, pending measurement
+      # Downgraded after review. An earlier version of this entry said the rule
+      # above is "what Material Web's corner pair says in our geometry". That
+      # was not checked and may be wrong.
+      open_question: >-
+        What Material Web's `anchor-corner: start-end` anchors to. If it is the
+        parent menu container, aligning the painted boxes is a reading of it and
+        the derivation may stand. If it is the parent menu item -- which is what
+        `md-sub-menu` taking its trigger in an `item` slot suggests -- then the
+        submenu container's own top meets the item's top and the offset is 0,
+        not minus the group padding.
+      not_evidence:
+        - >-
+          Core's `top: -1px`. Its comment says "Border width" and that is all it
+          is: a compensation for an edge this project's submenu does not have.
+          It shows that implementations compensate for their container's leading
+          edge; it says nothing about group padding.
+      settle_by: >-
+        Once an adapter exists, measure the `top` of the parent item's painted
+        state layer and of the submenu's first painted state layer, and take the
+        difference. That is this project's own geometry answering about itself,
+        which neither of the two sources above can do.
   hover_bridge:
     status: not_implemented
     source: core navigation

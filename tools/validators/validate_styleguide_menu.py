@@ -496,8 +496,28 @@ def check_submenu(report: Report, data: dict) -> None:
         "the block offset stays a derivation from this record's geometry",
     )
     report.check(
-        block["recorded_as"] == "a derivation, not a measurement",
-        "the block offset must keep saying it was derived rather than measured",
+        block["status"] == "local_policy_pending_runtime_measurement",
+        "the block offset is local policy until an adapter measures it; the record must "
+        "not promote it to a settled figure without that measurement",
+    )
+    report.check(
+        block["recorded_as"] == "local policy, pending measurement",
+        "the block offset must keep saying what it is",
+    )
+    # The claim this entry was downgraded for. Both halves of the unresolved
+    # question have to stay written down, or the policy reads as settled again.
+    question = str(block.get("open_question", ""))
+    report.check(
+        "anchor-corner" in question and "item" in question and "container" in question,
+        "the open question must keep naming both readings of Material Web's anchor",
+    )
+    report.check(
+        any("Border width" in str(entry) for entry in block.get("not_evidence", [])),
+        "core's offset must stay recorded as not being evidence for this one",
+    )
+    report.check(
+        bool(block.get("settle_by")),
+        "a pending policy has to say what would settle it",
     )
     # The derivation, recomputed. Aligning the two painted boxes leaves exactly
     # the group padding, so if either inset ever moves this stops holding.

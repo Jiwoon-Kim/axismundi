@@ -267,8 +267,10 @@ M3는 숫자를 발행하지 않습니다. 가로는 네 소스가 같은 말을
 그래서 간격 {{ site.data.menu.submenu.placement.inline.offset }}, 부모 메뉴의
 {{ site.data.menu.submenu.placement.inline.anchor }}에 붙입니다.
 
-세로는 아무도 숫자를 안 줍니다. **값 대신 규칙**을 적습니다 —
-{{ site.data.menu.submenu.placement.block.rule }}
+세로는 **아직 확정이 아닙니다.** 가로와 달리 합의가 없고, 우리 쪽 정책입니다 —
+`{{ site.data.menu.submenu.placement.block.status }}`.
+
+규칙은 {{ site.data.menu.submenu.placement.block.rule }}이고, 그러면:
 
 ```
 부모 painted top  = slot top + inset_block
@@ -276,10 +278,18 @@ M3는 숫자를 발행하지 않습니다. 가로는 네 소스가 같은 말을
 → {{ site.data.menu.submenu.placement.block.derivation }}
 ```
 
-코어가 같은 종류의 보정을 합니다 — `top: -1px`에 `// Border width`라는 주석이 붙어 있고,
-보정 대상이 자기 컨테이너의 가장자리라는 점이 같습니다. 우리 서브메뉴에는 border가 없고
-그 자리에 group padding이 있을 뿐입니다. 그러니 **원칙은 뒷받침되고 숫자는 아닙니다.**
-기하가 바뀌면 유도식이 따라오므로, 숫자를 박는 것보다 낫습니다.
+**열린 질문이 하나 있어서 확정하지 않습니다.** Material Web의 `anchor-corner: start-end`가
+무엇을 앵커로 삼는지입니다 — 부모 **컨테이너**면 위 유도가 설 수 있지만, 부모 **item**이면
+(그리고 `md-sub-menu`가 트리거를 `item` 슬롯으로 받는 걸 보면 그쪽이 유력합니다) 서브메뉴
+컨테이너의 top이 item의 top에 맞고 오프셋은 `-2`가 아니라 **0**입니다.
+
+코어의 `top: -1px`는 **이 질문의 근거가 아닙니다.** 주석이 `// Border width`라고 말하는 그대로
+자기 border 보정이고, 우리에게 없는 가장자리입니다. 구현들이 컨테이너의 선행 가장자리를
+보정한다는 것만 보여줄 뿐 group padding에 대해서는 아무 말도 하지 않습니다.
+
+확정은 어댑터가 생긴 뒤입니다 — 부모 item의 칠해진 state layer와 서브메뉴 첫 state layer의
+`top`을 재서 차이를 봅니다. **우리 기하가 우리 자신에 대해 답하는 것**이고, 위 두 소스는
+그걸 할 수 없습니다.
 
 **hover bridge는 적어만 뒀습니다.** 코어는 서브메뉴에 폭 0.5em의 투명한 `::before`를 붙여,
 포인터가 행 사이를 대각선으로 지날 때 메뉴를 벗어나 닫히지 않게 합니다. M3는 언급하지

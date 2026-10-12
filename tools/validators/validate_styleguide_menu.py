@@ -332,15 +332,28 @@ def check_policy(report: Report, data: dict) -> None:
         and "block_size_formula" in data["container"],
         "the cap must stay expressed in the verified height formula rather than a raw number",
     )
-    # Verified at the two instances the kit was read at. Both are reconstructed
-    # here rather than restated, so a changed slot height breaks them.
+    # Every instance the kit was read at, reconstructed rather than restated, so
+    # a changed slot height, label height or group padding breaks them. The
+    # label rows are what generalised the formula past its first two instances.
     slot = data["item"]["slot_height"]
     padding = data["grouping"]["gap"]["group_padding"]
-    for count, measured in ((4, 196), (6, 292)):
+    label = data["section_label"]["height"]
+    gap = data["grouping"]["gap"]["gap"]
+
+    def group(items: int, labels: int = 0) -> int:
+        return 2 * padding + items * slot + labels * label
+
+    for items, labels, measured in ((4, 0, 196), (4, 1, 228), (6, 0, 292), (6, 1, 324)):
         report.check(
-            2 * padding + count * slot == measured,
-            f"the height formula gives {2 * padding + count * slot} for {count} items, "
-            f"not the measured {measured}",
+            group(items, labels) == measured,
+            f"the height formula gives {group(items, labels)} for {items} items and "
+            f"{labels} label(s), not the measured {measured}",
+        )
+    for groups, measured in ((2, 394), (3, 592)):
+        total = groups * group(4) + (groups - 1) * gap
+        report.check(
+            total == measured,
+            f"{groups} groups of four items give {total}, not the measured {measured}",
         )
 
     width = policy["inline_size"]
@@ -359,6 +372,84 @@ def check_policy(report: Report, data: dict) -> None:
             "project_policy" in str(data["not_published"][key].get("note", "")),
             f"not_published.{key} must say which policy answers it",
         )
+
+
+def check_design_kit(report: Report, data: dict) -> None:
+    """The kit's own coordinates, walked the way the kit lays them out.
+
+    The arithmetic check elsewhere subtracts everything from the container and
+    compares one number. This walks the run instead, so a figure that is wrong
+    in a way that cancels out still fails here.
+    """
+    kit = data["design_kit"]
+    run = kit["horizontal_run"]
+    item = data["item"]
+
+    report.check(
+        run["state_layer_inline_size"]
+        == data["container"]["inline_size_floor"] - 2 * item["inset_inline"],
+        "the painted box is the container less its two insets",
+    )
+    report.check(
+        run["leading_at"] == item["state_layer_padding_inline"],
+        "the leading element starts at the painted box's own padding",
+    )
+    report.check(
+        run["content_at"]
+        == run["leading_at"] + item["leading_icon_size"] + item["state_layer_between_space"],
+        "the text block starts one icon and one gap after the leading element",
+    )
+    report.check(
+        run["content_ends"] == run["content_at"] + item["content_inline_size"],
+        "the text block ends where its measured width puts it",
+    )
+    report.check(
+        run["trailing_at"] == run["content_ends"] + item["state_layer_between_space"],
+        "the trailing element starts one gap after the text block",
+    )
+    report.check(
+        run["trailing_ends"] == run["trailing_at"] + item["trailing_icon_size"],
+        "the trailing element is one icon wide",
+    )
+    report.check(
+        run["state_layer_inline_size"] - run["trailing_ends"]
+        == item["state_layer_padding_inline"],
+        "the run ends on the painted box's trailing padding",
+    )
+    # With no leading element the text block takes the space the icon and its
+    # gap were using, which is a second way of asserting both.
+    report.check(
+        run["content_at_without_leading"] == item["state_layer_padding_inline"]
+        and run["content_inline_size_without_leading"]
+        == run["state_layer_inline_size"] - 2 * item["state_layer_padding_inline"],
+        "without a leading element the text block spans the box less its padding",
+    )
+
+    # Density is measured, and it belongs to the row this project does not
+    # build. Both halves have to keep being true together.
+    density = kit["density"]
+    report.check(
+        density["status"] == "baseline_row_only"
+        and data["variants"]["baseline"]["status"] == "not_implemented",
+        "the measured density step belongs to the baseline row, which is not built",
+    )
+    for entry in density["measured"]:
+        heights = entry["heights"]
+        steps = [heights[i] - heights[i + 1] for i in range(len(heights) - 1)]
+        report.check(
+            len(set(steps)) == 1,
+            f"{entry['subject']}: the density steps are {steps}, which are not one step",
+        )
+    report.check(
+        kit["baseline_leading_icon_size"] != data["item"]["leading_icon_size"],
+        "the baseline and expressive icon sizes are recorded as differing; if they ever "
+        "agree the corroboration note says nothing",
+    )
+    report.check(
+        kit["vibrant"]["status"] == "fully_drawn"
+        and data["colour_styles"]["vibrant"]["status"] == "deferred",
+        "vibrant is drawn in full and deferred by choice; the record must keep saying both",
+    )
 
 
 def check_variants(report: Report, data: dict, table: Table) -> None:
@@ -523,6 +614,7 @@ def main() -> int:
     check_host(report, data)
     check_grouping(report, data, table)
     check_policy(report, data)
+    check_design_kit(report, data)
 
     print(f"menu: {report.checked} checks, {len(report.problems)} failed")
     for problem in report.problems:

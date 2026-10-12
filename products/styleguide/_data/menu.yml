@@ -97,6 +97,13 @@ variants:
       and no published prose mentions it. Not in overview, specs, guidelines or
       accessibility; not in Material Web's menu documentation; not in Compose.
       Recorded as published, not implemented, and not explained.
+    design_kit: absent
+    design_kit_evidence: >-
+      Read through the connector: the kit's Menu page holds exactly two
+      sections, Baseline and the expressive one, and the expressive section
+      holds Configurations, the Menu variants over Theme and Groups, and the
+      building blocks. No horizontal frame anywhere. So this is a token family
+      with no drawing and no prose -- it lives in the token database alone.
 
 colour_styles:
   standard:
@@ -148,14 +155,26 @@ container:
   # one kit is not a published minimum, and a menu whose longest label does not
   # fit is worse than a wide one.
   inline_size_floor: 208
-  # Verified at two instances: 4 visible items measured 196 and 6 measured 292.
+  # A group is its own padding plus its visible rows, where a row is an item or
+  # a section label. Verified against six instances read through the connector:
+  #
+  #   196  4 + 4 x 48                     four items
+  #   228  4 + 32 + 4 x 48                a label and four items
+  #   292  4 + 6 x 48                     six items
+  #   324  4 + 32 + 6 x 48                a label and six items
+  #   394  196 + 2 + 196                  two groups
+  #   592  196 + 2 + 196 + 2 + 196        three groups
+  #
   # Useful because it is what any item-count cap would have to be expressed in.
-  block_size_formula: group_padding_block * 2 + item_count * item_slot_height
+  block_size_formula: >-
+    group_padding_block * 2 + item_count * item_slot_height
+    + label_count * section_label_height
 
 scrollbar:
   status: measured_not_implemented
   track_inline_size: 12
   thumb_inline_size: 4
+  spans: the full height of the list it belongs to
   note: >-
     The kit draws a scrollbar as a static layer; its height does not change when
     the variant is switched on, so nothing in it says when a menu begins to
@@ -254,15 +273,20 @@ item:
   # measures 12 and 12 instead, and 44 - 12 - 12 is exactly 20. The leading
   # hypothesis was that the token's 8 belongs to an item grown to carry
   # supporting text -- 20 + 16 + 8 + 8 = 52 closes just as neatly -- but the
-  # kit's painted box does grow: the text block inside it hugs, measuring
-  # 120 x 20 with a label alone and 120 x 36 with supporting text, which is the
-  # 20dp label line plus the 16dp supporting line. An earlier reading of this
-  # record said the box was fixed at 44 and drew no two-line item; that was a
-  # size badge read off the wrong row, and it was wrong.
+  # The kit cannot produce the 52 the hypothesis needs. Read through the
+  # connector, its text block is a `Type=Text` symbol 20dp tall whose
+  # `Supporting text` layer is hidden and 16dp, and there is no two-line menu
+  # item anywhere: all eleven `Menu item/Standard` state symbols are 48. The
+  # painted box's 12dp vertical padding is an auto-layout property and does not
+  # change with its content, so showing that layer gives a 36dp block in a 60dp
+  # box inside a 64dp item -- not 52 and 56.
   #
-  # What the two-line item's own height is has not been measured yet, and it
-  # decides this: 52 means the padding becomes 8 and the token is explained,
-  # 60 means the padding stays 12 and the token is still unplaced.
+  # So the hypothesis is unsupported by the only source that could have drawn
+  # it, and the token's 8 stays unplaced. An earlier version of this record
+  # reached the same conclusion for the wrong reason, saying the box was fixed
+  # at 44; it is not fixed, there is simply no two-line variant to measure.
+  #
+  # Derived from the kit's layout properties rather than read off a selection.
   #
   # Build the single-line item from the measured 12. Leave these two recorded
   # and unused until a two-line item is actually measured somewhere.
@@ -506,7 +530,10 @@ not_published:
     note: Material Web publishes defaults for its own element; M3 publishes none.
   density:
     what: the web-only density steps that reduce top and bottom padding
-    note: M3 states that density exists on web and decreases top and bottom padding. No step values are published.
+    note: >-
+      M3 publishes no step value, and the token table carries none. The design
+      kit measures one, but only for the row this project does not build -- see
+      `design_kit.density`.
   motion:
     what: enter and exit transition tokens
     note: >-
@@ -545,10 +572,12 @@ discrepancies:
       single-line item is built from the measured 12 because its arithmetic is
       the one that closes against a box the kit actually draws. The token's 8
       stays recorded, unused, and unexplained.
-    open: >-
-      One measurement decides it: the height of an item carrying supporting
-      text. Its text block is 36, so 52 means the padding becomes 8 and the
-      token is explained, and 60 means the padding stays 12 and it is not.
+    closed_without_resolving: >-
+      The measurement that would have decided it does not exist to be taken.
+      The kit draws no two-line menu item, and toggling its hidden supporting
+      line inflates the box to 60 rather than producing the 52 the hypothesis
+      needs, because the padding is fixed. The token's 8 belongs to something
+      neither the kit nor the prose shows.
   - subject: gap
     prose: Gaps are not currently available on web; on web, use a divider.
     tokens: md.comp.menus.gap, md.comp.menus.group.padding and md.comp.menus.group.shape are all live.
@@ -613,6 +642,66 @@ token_families:
     - md.comp.menu.container.*
     - md.comp.menus.horizontal.*
     - md.comp.menus.{gap,group.padding,group.shape}
+
+# ---------------------------------------------------------------------------
+# What the design kit shows that the table and the prose do not. Read through
+# the Figma connector, file ixQuHzVDPis0DYdaoMixyP, Menu page 55141:14250.
+# ---------------------------------------------------------------------------
+
+design_kit:
+  file: ixQuHzVDPis0DYdaoMixyP
+  page: "55141:14250"
+  # The horizontal run, at layer coordinates rather than by arithmetic. Every
+  # boundary lands, which is what settles the 8dp gap against the table's 12.
+  horizontal_run:
+    state_layer_inline_size: 200
+    leading_at: 12
+    content_at: 40
+    content_ends: 160
+    trailing_at: 168
+    trailing_ends: 188
+    content_at_without_leading: 12
+    content_inline_size_without_leading: 176
+  density:
+    status: baseline_row_only
+    step: -8
+    unit: dp per item per step
+    measured:
+      - { subject: Menu list item building block, steps: [ 0, -2, -4 ], heights: [ 73, 65, 57 ] }
+      - { subject: Menu (baseline) with twelve items, steps: [ 0, -2, -4 ], heights: [ 688, 592, 496 ] }
+    note: >-
+      The expressive section draws no density variant at all. Recorded because
+      it is the only measured value this project has for density, and recorded
+      as belonging to the baseline row so that nobody applies it to the one
+      being built.
+  baseline_leading_icon_size: 24
+  baseline_leading_icon_note: >-
+    The baseline section's leading element is 24dp where the expressive one is
+    20dp, which corroborates the published expressive icon size from a second
+    direction.
+  item_states:
+    - Enabled
+    - Hovered
+    - Focused
+    - Pressed
+    - Disabled
+    - Active
+  item_states_note: >-
+    Each is drawn for Selected false and true except Active, which the kit draws
+    unselected only. Eleven symbols per theme.
+  vibrant:
+    status: fully_drawn
+    note: >-
+      The kit carries a complete Vibrant item set alongside Standard, and
+      Vibrant variants of the menu at one, two and three groups. So deferring
+      vibrant is this project's choice and not a gap in the source.
+  artifacts:
+    - subject: divider width
+      observed: Every divider instance is 220dp wide at x=4 inside a 208dp item, and every one is hidden.
+      reading: >-
+        Consistent across every instance rather than a one-off, which reads as a
+        component that was never resized rather than an intended bleed. Not
+        recorded as a contract.
 
 evidence_not_product:
   lab_module: products/reference-implementations/axismundi-lab/modules/menu

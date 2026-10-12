@@ -58,8 +58,12 @@ baseline 메뉴 아이템을 deprecated 아닌 토큰으로 조립할 길이 **�
 없고, Material Web 문서에도, Compose에도 없습니다. 공식 명칭이 "**Vertical** menus"로
 축을 명시해 붙은 것 자체가 다른 축의 자리를 비워 둔 모양입니다.
 
-구현하지 않고 `published_without_prose`로 적어 둡니다. 추측이 아니라 "표에는 있고
-산문에는 없다"는 사실만 남깁니다.
+디자인 킷에도 **없습니다.** 커넥터로 Menu 페이지를 열어보면 섹션이 둘뿐이고(Baseline과
+expressive), expressive 쪽은 Configurations · Menu(Theme × Groups) · Building blocks입니다.
+horizontal 프레임이 어디에도 없습니다.
+
+그러니 이것은 **그림도 산문도 없이 토큰 데이터베이스에만 있는 일가**입니다. 구현하지 않고
+`published_without_prose`로 적어 둡니다.
 
 ## 48과 44는 충돌이 아니라 다른 상자입니다
 
@@ -177,12 +181,16 @@ label-large의 줄 상자는 20입니다. 킷은 대신 {{ site.data.menu.item.s
 {{ site.data.menu.item.content_inline_size }} × {{ site.data.menu.item.content_block_size_with_supporting_text }}   supporting text 포함 ({{ site.data.menu.item.content_block_size_one_line }} + 16)
 ```
 
-남은 것은 **그 아이템의 높이 하나**입니다. 52면 패딩이 8로 바뀌면서 토큰이 설명되고,
-60이면 패딩은 12 그대로이고 토큰의 8은 여전히 자리가 없습니다. 그때까지 한 줄 아이템은
-**잰 값 12**로 짓고 8은 쓰지 않은 채 적어 둡니다.
+그런데 **킷에서는 52가 나올 수 없습니다.** supporting text는 숨은 레이어이고, 두 줄짜리
+variant가 없습니다 — `Menu item/Standard`의 상태 심볼 11개가 전부 48입니다. 칠해지는 상자의
+세로 패딩 12는 오토레이아웃 고정 속성이라 내용이 36이 되어도 그대로이고, 그러면 상자 60에
+아이템 64입니다.
 
-이 기록은 한 번 "킷이 두 줄 아이템을 안 그린다"고 적었습니다. 크기 배지를 옆 행에서
-읽은 것이었고, 틀렸습니다.
+그래서 가설은 **그것을 그렸을 유일한 소스가 지지하지 않습니다.** 토큰의 8은 킷에도 산문에도
+자리가 없는 채로 남습니다. 한 줄 아이템은 잰 값 12로 짓습니다.
+
+이 기록은 한 번 "상자가 44로 고정이라 두 줄을 안 그린다"고 적었습니다. 고정이 아니라 **두
+줄 variant가 없는 것**이고, 그때 근거는 옆 행에서 읽은 크기 배지였습니다.
 
 ## 구조는 리스트, 값은 메뉴
 
@@ -267,6 +275,12 @@ shape까지 함께 발행되어 있습니다. 그리고 guidelines가 이렇게 
 - **{{ n[1].what }}**{% if n[1].note %} — {{ n[1].note }}{% endif %}
 {% endfor %}
 
+density만 사정이 다릅니다. 킷이 값을 하나 갖고 있는데 — 한 단계당 아이템마다
+{{ site.data.menu.design_kit.density.step }}dp, building block에서 73·65·57, 12개짜리
+baseline 메뉴에서 688·592·496 — **baseline 행에만** 있습니다. expressive 섹션에는 density
+변형이 아예 없습니다. 우리가 짓지 않는 행의 값이라 그렇게 적어 두었습니다. 다른 행에
+가져다 쓰지 않기 위해서입니다.
+
 ## 아무도 발행하지 않아 우리가 정한 것
 
 폭과 최대 높이입니다. M3는 둘 다 발행하지 않고, 랩의 감사가 min/max 폭의 권위로 지목한
@@ -284,8 +298,9 @@ shape까지 함께 발행되어 있습니다. 그리고 guidelines가 이렇게 
 {{ site.data.menu.container.block_size_formula }}
 ```
 
-이 공식은 킷의 두 인스턴스에서 확인했습니다 — 4개가 196, 6개가 292. 검증기가 둘 다
-재구성해서 대조하므로, 슬롯 높이가 움직이면 깨집니다.
+행은 아이템(48)이거나 section label(32)입니다. 킷의 **여섯 인스턴스**에서 확인했습니다 —
+196(4개), 228(라벨+4개), 292(6개), 324(라벨+6개), 394(두 그룹), 592(세 그룹). 검증기가 전부
+재구성해서 대조하므로, 슬롯 높이든 라벨 높이든 그룹 패딩이든 움직이면 깨집니다.
 
 **폭은 {{ site.data.menu.container.inline_size_floor }}을 바닥으로** 쓰고 내용에 따라
 자라게 둡니다. 한 킷의 한 인스턴스는 바닥의 증거이지 고정폭의 증거가 아니고, 가장 긴

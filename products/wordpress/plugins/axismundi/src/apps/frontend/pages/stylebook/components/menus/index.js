@@ -113,6 +113,21 @@ export function StylebookMenusPage() {
 						</p>
 					</Group>
 
+					<Group kicker="Flip before clamping so the trigger keeps an aligned menu edge" title="Trailing-edge placement">
+						<div className="ax-stylebook-menus__trigger-row ax-stylebook-menus__trigger-row--end">
+							<MenuSample label="Trailing-edge actions">
+								<Menu.Group>
+									<Menu.Item id="edge-edit" label="Edit" leading={ <Icon name="edit" /> } />
+									<Menu.Item id="edge-copy" label="Copy link" leading={ <Icon name="content_copy" /> } />
+								</Menu.Group>
+							</MenuSample>
+						</div>
+						<p className="ax-stylebook-page__note">
+							At the viewport&rsquo;s inline end, the menu shifts its trailing edge to the trigger instead
+							of freezing against the window edge.
+						</p>
+					</Group>
+
 					<Group kicker="Selection is scoped to a group, not to the whole menu" title="Selected and trailing content">
 						<div className="ax-stylebook-menus__trigger-row">
 							<MenuSample label="Sort feed">

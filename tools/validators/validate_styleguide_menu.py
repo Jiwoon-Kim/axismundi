@@ -571,26 +571,28 @@ def check_scrollbar(report: Report, data: dict) -> None:
 def check_focus_and_motion(report: Report, data: dict) -> None:
     """Two things the record says about itself that a file can contradict."""
     focus = data["item"]["focus_indicator"]
-    # Recorded as missing. When the adapter routes them through slots, this
-    # entry goes and this check goes with it -- so it cannot sit here stale.
-    if focus.get("slots_missing_in_adapter"):
-        css = declarations_only( MENU_CSS.read_text(encoding="utf-8") )
+    css = declarations_only(MENU_CSS.read_text(encoding="utf-8"))
+    report.check(
+        focus["status"] == "implemented",
+        "the focus indicator is now implemented; the record must not leave it as an adapter gap",
+    )
+    for property_name in ("color", "thickness", "inner_offset"):
+        slot = focus[f"{property_name}_slot"]
         report.check(
-            "--md-comp-menus-item-focus-indicator-thickness" not in css,
-            "the adapter now routes the focus indicator through its own slot, so the record "
-            "must stop saying it does not",
+            slot in css and f"var( {slot} )" in css,
+            f"Menu no longer defines and consumes the recorded focus-indicator {property_name} slot",
         )
-        sibling = ROOT / focus["sibling_precedent"]
-        report.check(
-            sibling.exists()
-            and "focus-indicator-thickness" in sibling.read_text(encoding="utf-8"),
-            "the cited sibling no longer shows the slot pattern this entry points at",
-        )
+    sibling = ROOT / focus["sibling_precedent"]
+    report.check(
+        sibling.exists()
+        and "focus-indicator-thickness" in sibling.read_text(encoding="utf-8"),
+        "the cited sibling no longer shows the slot pattern this entry points at",
+    )
 
     motion = data["not_published"]["motion"]["project_policy"]
     report.check(
-        motion["status"] == "owner_judgment_open",
-        "menu motion is unpublished, so how it is written is a decision and not a reading",
+        motion["status"] == "implemented_root_only",
+        "the chosen root-only menu motion must be recorded as policy, not left as an open question",
     )
     report.check(
         "finished" in motion["caution"],
@@ -621,6 +623,19 @@ def check_focus_and_motion(report: Report, data: dict) -> None:
     report.check(
         "opt-in" in flutter["consequence"],
         "the record must keep saying motion is opt-in in both rather than required",
+    )
+    implementation = motion["implementation"]
+    report.check(
+        implementation["api"] == "Web Animations API"
+        and implementation["root_only"] is True
+        and implementation["reduced_motion"] == "immediate",
+        "the recorded motion implementation must name WAAPI, root-only scope and reduced motion",
+    )
+    report.check(
+        implementation["folded_height_percentage"] == 0.35
+        and implementation["enter"]["duration"] == 500
+        and implementation["exit"]["duration"] == 150,
+        "the chosen root motion must retain its recorded 0.35 fold and 500/150 choreography",
     )
 
 
@@ -732,16 +747,14 @@ def check_submenu(report: Report, data: dict) -> None:
         "an unresolved figure has to say what is unresolved and what would settle it",
     )
 
-    # Two measured anchoring faults. They are recorded rather than pinned
-    # against the adapter, because the adapter still has them.
-    defects = data["submenu"]["open_defects"]
-    # An exact count, deliberately. Fixing one means removing its entry and
-    # lowering this line in the same change, so a fix cannot land while the
-    # record still advertises the defect.
+    # Three measured faults are now resolved. Keeping their original readings
+    # makes the next regression intelligible without leaving the record to
+    # claim that the fixed adapter is still broken.
+    defects = data["submenu"]["resolved_defects"]
     report.check(
-        len(defects) == 3 and all( d.get("measured") and d.get("why") for d in defects ),
-        f"there are {len(defects)} open defects recorded against 3, and each must carry the "
-        "measurement that found it and the reason",
+        len(defects) == 3 and all(d.get("measured") and d.get("why") and d.get("resolution") for d in defects),
+        f"there are {len(defects)} resolved defects recorded against 3, and each must carry the "
+        "original measurement, reason and resolution",
     )
     for named in ( "list scrolls", "clamped to the window", "typeahead inside a submenu" ):
         report.check(
@@ -766,7 +779,7 @@ def check_submenu(report: Report, data: dict) -> None:
         "the block offset is the rule's consequence, stated in this record's own names",
     )
     report.check(
-        block["recorded_as"] == "adopted rule, verified once built",
+        block["recorded_as"] == "adopted rule, verified in the standalone VQA sample",
         "the block offset must keep saying what it is",
     )
     report.check(
@@ -855,10 +868,9 @@ def check_submenu(report: Report, data: dict) -> None:
         "the host record must retain the measured auto result, its decision and its dialog join-order result",
     )
     report.check(
-        len(axis["what_this_slice_measured"]) == 3
-        and len(axis["still_open"]) == 1
-        and "placement.block" in axis["still_open"][0],
-        "the slice must distinguish its three completed measurements from the remaining block offset",
+        len(axis["what_this_slice_measured"]) == 4
+        and axis["still_open"] == [],
+        "the slice must distinguish its four completed measurements from an open offset question",
     )
 
     # The axis under both placement defects. Pinned before either is fixed, so a
@@ -887,6 +899,30 @@ def check_submenu(report: Report, data: dict) -> None:
     report.check(
         "floating_ui" in axis_p["not_adopted"],
         "the library this model is borrowed from stays named, so not using it is a choice",
+    )
+    # Both of these are things a reimplementation undoes by accident, because
+    # the wrong version looks simpler and only fails when measured.
+    report.check(
+        "clamp its" in axis_p["a_menu_ignores_its_own_scroller"]
+        and "subscribes to that same list" in axis_p["a_menu_ignores_its_own_scroller"],
+        "the record must keep both halves: why the root skips its own scroller, and why a "
+        "submenu does not",
+    )
+    menu_src = MENU.read_text(encoding="utf-8")
+    report.check(
+        "menuRef.current?.contains( event.target )" in menu_src,
+        "the root menu must keep ignoring scroll events from inside itself, or its list "
+        "scrolls back to zero on every event",
+    )
+    fill = data["not_published"]["motion"]["project_policy"]["implementation"]["fill"]
+    report.check(
+        fill["enter"] == "backwards" and fill["exit"] == "forwards" and fill["do_not_use"] == "both",
+        "the fill modes stay recorded, including the one that cut the elevation shadow",
+    )
+    report.check(
+        "fill: entering ? 'backwards' : 'forwards'" in menu_src,
+        "the implementation must keep the recorded fill modes; `both` leaves a clip that "
+        "cuts the shadow",
     )
 
     report.check(
@@ -1104,15 +1140,17 @@ def check_implementation(report: Report, data: dict) -> None:
     report.check("useEffect( () =>" in menu and "if ( ! triggerIsValid )" in menu
                  and menu.index("useEffect( () =>") < menu.index("if ( ! triggerIsValid )"),
                  "Menu conditionally skips a hook when its trigger is invalid")
-    # The policy is the space the trigger leaves, so this reads that the limit is
-    # computed from the trigger's box. "A max-block-size is set somewhere" would
-    # pass with the whole window back in it, which is the thing it forbids.
+    # One placer opens the root on the block axis and a child on the inline axis.
+    # Its main-axis limit comes from the selected side of the anchor, not from
+    # the whole window; a cross-axis shift keeps an edge before clamp is allowed
+    # to detach the box.
     report.check(
-        "menu.style.maxBlockSize" in menu
-        and "window.innerHeight - target.bottom" in menu
-        and "target.top - EDGE" in menu,
-        "the height limit must be the space the trigger leaves above and below it, which is "
-        "what `project_policy.maximum_height` records",
+        "function place( menu, anchor, axis = 'block' )" in menu
+        and "const endSpace" in menu
+        and "const startSpace" in menu
+        and "const shiftedCrossPosition" in menu
+        and "place( menu, rectOf( trigger ), 'block' );" in menu,
+        "the root menu no longer uses the recorded flip, shift, clamp placer against its trigger",
     )
 
     # Elevation is the frontend's own primitive. The theme does not define
@@ -1189,10 +1227,15 @@ def check_implementation(report: Report, data: dict) -> None:
         "Menu.Submenu no longer exposes its nested menu state and directional keyboard contract",
     )
     report.check(
-        "function placeSubmenu" in menu
-        and "target.right" in menu
-        and "target.top - SUBMENU_BLOCK_OFFSET" in menu,
-        "the submenu no longer uses the recorded flush inline placement and local block policy",
+        "function placeSubmenu( menu, trigger )" in menu
+        and "place( menu, rectOf( trigger, true ), 'inline' );" in menu
+        and "parentList?.addEventListener( 'scroll', reposition );" in menu,
+        "the submenu no longer anchors to its painted row or follows its parent list scroll",
+    )
+    report.check(
+        "if ( typeahead( menuRef.current, event ) )" in submenu_component.group(0)
+        and "event.stopPropagation();" in submenu_component.group(0),
+        "submenu typeahead no longer stays within the open child menu",
     )
     report.check(
         "registerSubmenu" in menu
@@ -1221,6 +1264,25 @@ def check_implementation(report: Report, data: dict) -> None:
         )
     report.check("data-selected]:not" in css and "on-tertiary-container" in css,
                  "selected rows no longer retain hover, focus and pressed state layers")
+    focus = item["focus_indicator"]
+    report.check(
+        all(f"var( {focus[name]} )" in css for name in ("color_slot", "thickness_slot", "inner_offset_slot")),
+        "the visible focus outline no longer consumes the three recorded Menu focus slots",
+    )
+    motion = data["not_published"]["motion"]["project_policy"]["implementation"]
+    report.check(
+        "function playMenuMotion" in menu
+        and "prefersReducedMotion" in menu
+        and "menuFoldPaths" in menu
+        and "playMenuMotion( host, 'enter' )" in menu
+        and "playMenuMotion( host, 'exit' )" in menu,
+        "the root menu no longer implements the recorded WAAPI enter and exit choreography",
+    )
+    report.check(
+        all(slot in css for slot in motion["customization_slots"].values())
+        and "playMenuMotion( host, 'enter' )" not in submenu_component.group(0),
+        "motion slots no longer remain customisable or a submenu started animating against policy",
+    )
     report.check("@import url( './components/menu.css' );" in style_index,
                  "Menu stylesheet is not in the frontend bundle")
     report.check("StylebookMenusPage" in stylebook_index and "'menus' === component" in stylebook_index,
@@ -1231,6 +1293,11 @@ def check_implementation(report: Report, data: dict) -> None:
     report.check(
         "<Menu.Submenu" in stylebook_page and "Follow conversation" in stylebook_page,
         "stylebook no longer measures a submenu by itself and inside a scrolling menu",
+    )
+    report.check(
+        "ax-stylebook-menus__trigger-row--end" in stylebook_page
+        and "Trailing-edge actions" in stylebook_page,
+        "stylebook no longer exposes the trigger-edge flip specimen",
     )
     # A name is not a long menu. The sample has to be materially longer than the
     # others, which is a comparison rather than a number this file invents --

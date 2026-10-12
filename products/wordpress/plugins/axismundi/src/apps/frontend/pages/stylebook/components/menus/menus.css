@@ -6,4 +6,8 @@
 		padding-inline: 12px;
 		border: 1px solid var( --md-sys-color-outline-variant );
 	}
+
+	.ax-stylebook-menus__trigger-row--end {
+		justify-content: flex-end;
+	}
 }

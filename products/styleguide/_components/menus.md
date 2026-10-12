@@ -15,8 +15,9 @@ toolbar의 몫이고, 메뉴는 트리거가 열었다가 선택이나 dismiss�
 > [`_data/menu.yml`]({{ site.repository_url }}/blob/main/products/styleguide/_data/menu.yml)에서
 > 오고, 그 파일은 토큰 표
 > [`SOURCE-M3-MENUS-RAW.md`]({{ site.repository_url }}/blob/main/products/wordpress/plugins/axismundi/docs/m3-token-tables/SOURCE-M3-MENUS-RAW.md)와
-> M3의 산문 네 쪽을 출처로 적습니다. baseline·horizontal·vibrant·gap·submenu·density는
-> 이 첫 slice에 넣지 않았고, 각각의 이유는 아래에 기록합니다.
+> M3의 산문 네 쪽을 출처로 적습니다. baseline·horizontal·vibrant·gap·density는
+> 이 첫 slice에 넣지 않았고, 각각의 이유는 아래에 기록합니다. submenu는 별도 slice로
+> 구현했고, 그 배치와 키보드 결과도 아래에 기록합니다.
 
 ## 그룹은 합성합니다
 
@@ -25,9 +26,9 @@ toolbar의 몫이고, 메뉴는 트리거가 열었다가 선택이나 dismiss�
 두 선택 그룹은 서로 다른 radio 또는 checkbox 세트가 될 수 있고, submenu와 추가 슬롯도
 행을 데이터 키로 늘리지 않고 그 자리에 조합할 수 있습니다.
 
-현재 스크롤 상자는 elevation 층과 분리된 menu list 전체입니다. 스크롤 메뉴와 submenu가
-양립하는지, 양립한다면 어느 그룹이 스크롤을 소유하는지는 아직 런타임 실험 전이라 이
-구현으로 결론 내리지 않습니다.
+현재 스크롤 상자는 elevation 층과 분리된 menu list 전체입니다. native popover top layer
+안의 submenu는 이 스크롤 상자에 잘리지 않음을 VQA로 확인했습니다. 어느 그룹이 스크롤을
+소유할지는 에디터 같은 실제 소비자가 생길 때의 별도 판단입니다.
 
 ```jsx
 <Menu label="Sort feed" trigger={ trigger }>
@@ -292,7 +293,7 @@ shape까지 함께 발행되어 있습니다. 그리고 guidelines가 이렇게 
 씁니다. 이 구현은 native popover top layer를 써서 스크롤 목록 안의 submenu도 클리핑되지
 않음을 VQA로 확인했습니다. 따라서 in-flow 구현의 스크롤 제약은 여기에는 적용되지 않습니다.
 
-### 어디에 여는가 — 가로는 합의, 세로는 유도
+### 어디에 여는가 — 칠해진 부모 행에 붙인다
 
 M3는 숫자를 발행하지 않습니다. 가로는 네 소스가 같은 말을 합니다:
 
@@ -300,13 +301,13 @@ M3는 숫자를 발행하지 않습니다. 가로는 네 소스가 같은 말을
 - **{{ a.source }}** — {{ a.says }}
 {% endfor %}
 
-그래서 간격 {{ site.data.menu.submenu.placement.inline.offset }}, 부모 메뉴의
-{{ site.data.menu.submenu.placement.inline.anchor }}에 붙입니다.
+이 구현은 부모 아이템의 **칠해진 상자**를 앵커로 삼습니다. 컨테이너보다
+`inset_inline`만큼 안쪽에서 시작하므로, 메뉴 표면은 컨테이너와 4dp 겹치되 부모의
+칠해진 행은 덮지 않습니다.
 
-세로는 **아직 확정이 아닙니다.** 가로와 달리 합의가 없고, 구현 중인 우리 쪽 정책입니다 —
-`{{ site.data.menu.submenu.placement.block.status }}`.
-
-규칙은 {{ site.data.menu.submenu.placement.block.rule }}이고, 그러면:
+세로도 같은 앵커를 씁니다. 규칙은 {{ site.data.menu.submenu.placement.block.rule }}이고,
+460x520 standalone 표본에서 submenu container top과 parent painted-box top이 같음을
+측정했습니다. 그러면:
 
 ```
 부모 painted top  = slot top + inset_block
@@ -314,18 +315,10 @@ M3는 숫자를 발행하지 않습니다. 가로는 네 소스가 같은 말을
 → {{ site.data.menu.submenu.placement.block.derivation }}
 ```
 
-**열린 질문이 하나 있어서 확정하지 않습니다.** Material Web의 `anchor-corner: start-end`가
-무엇을 앵커로 삼는지입니다 — 부모 **컨테이너**면 위 유도가 설 수 있지만, 부모 **item**이면
-(그리고 `md-sub-menu`가 트리거를 `item` 슬롯으로 받는 걸 보면 그쪽이 유력합니다) 서브메뉴
-컨테이너의 top이 item의 top에 맞고 오프셋은 `-2`가 아니라 **0**입니다.
-
-코어의 `top: -1px`는 **이 질문의 근거가 아닙니다.** 주석이 `// Border width`라고 말하는 그대로
-자기 border 보정이고, 우리에게 없는 가장자리입니다. 구현들이 컨테이너의 선행 가장자리를
-보정한다는 것만 보여줄 뿐 group padding에 대해서는 아무 말도 하지 않습니다.
-
-확정은 어댑터가 생긴 뒤입니다 — 부모 item의 칠해진 state layer와 서브메뉴 첫 state layer의
-`top`을 재서 차이를 봅니다. **우리 기하가 우리 자신에 대해 답하는 것**이고, 위 두 소스는
-그걸 할 수 없습니다.
+Material Web의 `anchor-corner: start-end`와 Flutter의 `Offset.zero`는 모두 **item**을
+앵커로 삼습니다. 이 어댑터는 item slot이 아니라 painted box의 사각형을 넘겨, 같은 보이는
+겹침을 현재 DOM 기하에서도 유지합니다. 코어의 `top: -1px`는 여전히 근거가 아닙니다. 주석이
+말하듯 그 구현의 border 보정일 뿐입니다.
 
 **hover bridge는 적어만 뒀습니다.** 코어는 서브메뉴에 폭 0.5em의 투명한 `::before`를 붙여,
 포인터가 행 사이를 대각선으로 지날 때 메뉴를 벗어나 닫히지 않게 합니다. M3는 언급하지

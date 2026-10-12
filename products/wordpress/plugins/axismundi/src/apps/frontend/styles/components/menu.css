@@ -12,6 +12,10 @@
 		--md-comp-menus-item-icon-size: 20px;
 		--md-comp-menus-item-shape: var( --md-sys-shape-corner-value-extra-small );
 		--md-comp-menus-item-edge-shape: var( --md-sys-shape-corner-value-medium );
+		--md-comp-menus-item-focus-indicator-color: var( --md-sys-color-secondary );
+		/* The frontend bundle does not load the theme's state-token sheet. */
+		--md-comp-menus-item-focus-indicator-thickness: var( --md-sys-state-focus-indicator-thickness, 3px );
+		--md-comp-menus-item-focus-indicator-outline-offset: var( --md-sys-state-focus-indicator-inner-offset, -3px );
 		--md-comp-menus-menu-min-inline-size: 208px;
 		--md-comp-menus-group-padding: 2px;
 		--md-comp-menus-section-label-height: 32px;
@@ -22,6 +26,11 @@
 		--md-comp-menus-section-label-content-padding-block-end: 0px;
 		--md-comp-menus-section-label-content-gap: 8px;
 		--md-comp-menus-section-label-icon-size: 20px;
+		/* Unpublished component motion, exposed as local slots for later policy overrides. */
+		--ax-menu-motion-enter: var( --md-sys-motion-curve-default-spatial );
+		--ax-menu-motion-enter-duration: var( --md-sys-motion-curve-default-spatial-duration );
+		--ax-menu-motion-exit: var( --md-sys-motion-easing-emphasized-accelerate );
+		--ax-menu-motion-exit-duration: var( --md-sys-motion-duration-short3 );
 
 		display: flex;
 		flex-direction: column;
@@ -234,8 +243,8 @@
 	}
 
 	.ax-menu__item:focus-visible {
-		outline: 3px solid var( --md-sys-color-secondary );
-		outline-offset: -3px;
+		outline: var( --md-comp-menus-item-focus-indicator-thickness ) solid var( --md-comp-menus-item-focus-indicator-color );
+		outline-offset: var( --md-comp-menus-item-focus-indicator-outline-offset );
 	}
 
 	.ax-menu__item[aria-disabled='true'] {

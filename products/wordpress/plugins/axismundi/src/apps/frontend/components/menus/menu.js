@@ -15,7 +15,6 @@ import { Elevation } from '../material/elevation';
 import { Icon } from '../material/icon';
 
 const EDGE = 8;
-const SUBMENU_BLOCK_OFFSET = 2;
 const ITEMS = '[role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"]';
 const MenuContext = createContext( null );
 const MenuGroupContext = createContext( {
@@ -30,47 +29,144 @@ function menuItems( menu ) {
 	);
 }
 
-function place( menu, trigger ) {
-	if ( ! menu || ! trigger ) {
+function rectOf( element, painted = false ) {
+	const target = painted ? element?.querySelector( '.ax-menu__item-container' ) : element;
+	return target?.getBoundingClientRect();
+}
+
+function fits( start, size, limit ) {
+	return start >= EDGE && start + size <= limit - EDGE;
+}
+
+function clamp( value, size, limit ) {
+	return Math.min( Math.max( EDGE, value ), Math.max( EDGE, limit - size - EDGE ) );
+}
+
+/**
+ * Fit a popover beside an anchor rectangle. The main axis flips first, then
+ * the cross axis shifts while preserving an anchor edge; only a box that fits
+ * on neither edge is clamped free of its anchor.
+ *
+ * @param {HTMLElement} menu Popover host.
+ * @param {DOMRect}     anchor Anchor rectangle.
+ * @param {'block'|'inline'} axis Axis on which the menu opens.
+ * @return {void}
+ */
+function place( menu, anchor, axis = 'block' ) {
+	if ( ! menu || ! anchor ) {
 		return;
 	}
 
-	const target = trigger.getBoundingClientRect();
-	const below = Math.max( 0, window.innerHeight - target.bottom - EDGE );
-	const above = Math.max( 0, target.top - EDGE );
-	const opensBelow = menu.scrollHeight <= below || below >= above;
-	const availableBlockSize = opensBelow ? below : above;
+	const blockAxis = 'block' === axis;
+	const mainLimit = blockAxis ? window.innerHeight : window.innerWidth;
+	const crossLimit = blockAxis ? window.innerWidth : window.innerHeight;
+	const mainEnd = blockAxis ? anchor.bottom : anchor.right;
+	const mainStart = blockAxis ? anchor.top : anchor.left;
+	const crossStart = blockAxis ? anchor.left : anchor.top;
+	const crossEnd = blockAxis ? anchor.right : anchor.bottom;
+	const endSpace = Math.max( 0, mainLimit - mainEnd - EDGE );
+	const startSpace = Math.max( 0, mainStart - EDGE );
 
-	menu.style.maxBlockSize = `${ availableBlockSize }px`;
+	menu.style.maxBlockSize = '';
+	menu.style.maxInlineSize = '';
+	const naturalMainSize = blockAxis ? menu.scrollHeight : menu.scrollWidth;
+	const opensEnd = naturalMainSize <= endSpace || endSpace >= startSpace;
+	const availableMainSize = opensEnd ? endSpace : startSpace;
+
+	if ( blockAxis ) {
+		menu.style.maxBlockSize = `${ availableMainSize }px`;
+	} else {
+		menu.style.maxInlineSize = `${ availableMainSize }px`;
+		menu.style.maxBlockSize = `${ Math.max( 0, window.innerHeight - EDGE * 2 ) }px`;
+	}
 	const box = menu.getBoundingClientRect();
-	const top = opensBelow ? target.bottom : target.top - box.height;
-	const left = Math.min( target.left, window.innerWidth - box.width - EDGE );
+	const mainSize = blockAxis ? box.height : box.width;
+	const crossSize = blockAxis ? box.width : box.height;
+	const mainPosition = opensEnd ? mainEnd : mainStart - mainSize;
+	const shiftedCrossPosition = fits( crossStart, crossSize, crossLimit )
+		? crossStart
+		: fits( crossEnd - crossSize, crossSize, crossLimit )
+			? crossEnd - crossSize
+			: clamp( crossStart, crossSize, crossLimit );
 
 	menu.style.inset = 'auto';
-	menu.style.top = `${ Math.max( EDGE, top ) }px`;
-	menu.style.left = `${ Math.max( EDGE, left ) }px`;
+	menu.style.top = `${ blockAxis ? mainPosition : shiftedCrossPosition }px`;
+	menu.style.left = `${ blockAxis ? shiftedCrossPosition : mainPosition }px`;
+	menu.dataset.menuPlacement = `${ axis }-${ opensEnd ? 'end' : 'start' }`;
+}
+
+function placeRootMenu( menu, trigger ) {
+	place( menu, rectOf( trigger ), 'block' );
 }
 
 function placeSubmenu( menu, trigger ) {
-	if ( ! menu || ! trigger ) {
-		return;
+	place( menu, rectOf( trigger, true ), 'inline' );
+}
+
+function typeahead( menu, event ) {
+	if ( 1 !== event.key.length ) {
+		return false;
 	}
 
-	const target = trigger.getBoundingClientRect();
-	const right = Math.max( 0, window.innerWidth - target.right - EDGE );
-	const left = Math.max( 0, target.left - EDGE );
-	menu.style.maxBlockSize = `${ Math.max( 0, window.innerHeight - EDGE * 2 ) }px`;
-	const box = menu.getBoundingClientRect();
-	const opensRight = box.width <= right || right >= left;
-	const top = Math.min(
-		Math.max( EDGE, target.top - SUBMENU_BLOCK_OFFSET ),
-		Math.max( EDGE, window.innerHeight - box.height - EDGE )
+	const controls = menuItems( menu );
+	const from = controls.indexOf( document.activeElement );
+	const start = ( from + 1 ) % controls.length;
+	const next = [ ...controls.slice( start ), ...controls.slice( 0, start ) ].find(
+		( item ) => item.textContent.trim().toLocaleLowerCase().startsWith( event.key.toLocaleLowerCase() )
 	);
-	const inlineStart = opensRight ? target.right : target.left - box.width;
+	next?.focus();
+	return true;
+}
 
-	menu.style.inset = 'auto';
-	menu.style.top = `${ top }px`;
-	menu.style.left = `${ Math.max( EDGE, inlineStart ) }px`;
+function prefersReducedMotion() {
+	return window.matchMedia?.( '( prefers-reduced-motion: reduce )' ).matches ?? false;
+}
+
+function menuFoldPaths( menu ) {
+	const radius = getComputedStyle( menu ).borderRadius;
+	const round = radius ? ` round ${ radius }` : '';
+	const opensAbove = 'block-start' === menu.dataset.menuPlacement;
+
+	return {
+		folded: opensAbove
+			? `inset( 65% 0 0 0${ round } )`
+			: `inset( 0 0 65% 0${ round } )`,
+		open: `inset( 0 0 0 0${ round } )`,
+	};
+}
+
+function playMenuMotion( menu, phase ) {
+	if ( ! menu?.animate || prefersReducedMotion() ) {
+		return null;
+	}
+
+	const styles = getComputedStyle( menu );
+	const duration = Number.parseFloat( styles.getPropertyValue( `--ax-menu-motion-${ phase }-duration` ) );
+	if ( ! duration ) {
+		return null;
+	}
+
+	const { folded, open } = menuFoldPaths( menu );
+	const entering = 'enter' === phase;
+	return menu.animate(
+		{
+			opacity: entering ? [ 0, 1 ] : [ 1, 0 ],
+			clipPath: entering ? [ folded, open ] : [ open, folded ],
+		},
+		{
+			duration,
+			easing: styles.getPropertyValue( `--ax-menu-motion-${ phase }` ).trim(),
+			/*
+			 * Backwards on the way in, forwards on the way out. `both` leaves
+			 * the end state applied, and the end state is a clip: measured,
+			 * `inset( 0 0 0% round 16px )` stayed on the host after opening and
+			 * cut away the elevation layer's shadows, which paint outside the
+			 * border box. Backwards still applies the folded start before the
+			 * animation begins, so nothing flashes, and leaves nothing behind.
+			 */
+			fill: entering ? 'backwards' : 'forwards',
+		}
+	);
 }
 
 /**
@@ -258,6 +354,24 @@ export function MenuSubmenu( { children, disabled = false, label, leading, suppo
 		focusItem( 0 );
 	};
 
+	useEffect( () => {
+		if ( ! open ) {
+			return undefined;
+		}
+
+		const parentList = triggerRef.current?.closest( '[role="menu"]' )?.querySelector( '.ax-menu__list' );
+		const reposition = () => placeSubmenu( menuRef.current, triggerRef.current );
+		parentList?.addEventListener( 'scroll', reposition );
+		window.addEventListener( 'resize', reposition );
+		window.addEventListener( 'scroll', reposition, true );
+
+		return () => {
+			parentList?.removeEventListener( 'scroll', reposition );
+			window.removeEventListener( 'resize', reposition );
+			window.removeEventListener( 'scroll', reposition, true );
+		};
+	}, [ open ] );
+
 	const onTriggerKeyDown = ( event ) => {
 		if ( 'ArrowRight' === event.key ) {
 			event.preventDefault();
@@ -279,6 +393,10 @@ export function MenuSubmenu( { children, disabled = false, label, leading, suppo
 			event.preventDefault();
 			event.stopPropagation();
 			focusItem( 'ArrowDown' === event.key ? Math.min( from + 1, controls.length - 1 ) : Math.max( from - 1, 0 ) );
+			return;
+		}
+		if ( typeahead( menuRef.current, event ) ) {
+			event.stopPropagation();
 		}
 	};
 
@@ -336,13 +454,23 @@ export function MenuSubmenu( { children, disabled = false, label, leading, suppo
  */
 export function Menu( { children, trigger, label, onSelect, className } ) {
 	const menuRef = useRef();
+	const motionRef = useRef();
 	const submenuHosts = useRef( new Map() );
 	const triggerRef = useRef();
+	const closingRef = useRef( false );
 	const id = useId();
 	const [ open, setOpen ] = useState( false );
 	const triggerIsValid = isValidElement( trigger );
+	const stopMotion = () => {
+		motionRef.current?.cancel();
+		motionRef.current = null;
+	};
 
 	const close = ( restoreFocus = true ) => {
+		if ( closingRef.current ) {
+			return;
+		}
+
 		for ( const [ submenu, closeSubmenu ] of submenuHosts.current ) {
 			if ( closeSubmenu ) {
 				closeSubmenu( false );
@@ -351,13 +479,35 @@ export function Menu( { children, trigger, label, onSelect, className } ) {
 			}
 		}
 		const host = menuRef.current;
-		if ( host?.matches( ':popover-open' ) ) {
-			host.hidePopover();
+		const finish = () => {
+			if ( ! closingRef.current ) {
+				return;
+			}
+			closingRef.current = false;
+			if ( host?.matches( ':popover-open' ) ) {
+				host.hidePopover();
+			}
+			setOpen( false );
+			if ( restoreFocus ) {
+				triggerRef.current?.focus();
+			}
+		};
+
+		if ( ! host?.matches( ':popover-open' ) ) {
+			closingRef.current = true;
+			finish();
+			return;
 		}
-		setOpen( false );
-		if ( restoreFocus ) {
-			triggerRef.current?.focus();
+
+		closingRef.current = true;
+		stopMotion();
+		const animation = playMenuMotion( host, 'exit' );
+		motionRef.current = animation;
+		if ( ! animation ) {
+			finish();
+			return;
 		}
+		animation.finished.then( finish ).catch( () => {} );
 	};
 
 	const registerSubmenu = useCallback( ( host, closeSubmenu ) => {
@@ -375,13 +525,16 @@ export function Menu( { children, trigger, label, onSelect, className } ) {
 		if ( ! host || ! triggerRef.current ) {
 			return;
 		}
+		closingRef.current = false;
+		stopMotion();
 		if ( host.matches( ':popover-open' ) ) {
 			host.hidePopover();
 		}
 		host.showPopover();
-		place( host, triggerRef.current );
+		placeRootMenu( host, triggerRef.current );
 		setOpen( true );
 		focusItem( 0 );
+		motionRef.current = playMenuMotion( host, 'enter' );
 	};
 
 	useEffect( () => {
@@ -395,7 +548,24 @@ export function Menu( { children, trigger, label, onSelect, className } ) {
 				close( false );
 			}
 		};
-		const reposition = () => place( menuRef.current, triggerRef.current );
+		/*
+		 * A capture listener on the window sees scroll events from every
+		 * scroller, including this menu's own list. Repositioning on those is
+		 * wrong twice over: the trigger has not moved, and `place` clears the
+		 * maximum size before re-measuring, which unconstrains the list long
+		 * enough for the browser to clamp its `scrollTop` to zero. Measured --
+		 * a list scrolled to 120 came back at 0 on the next scroll event, so
+		 * the menu could not be scrolled at all.
+		 *
+		 * A submenu is the opposite case and subscribes to that same list,
+		 * because its anchor is a row inside it.
+		 */
+		const reposition = ( event ) => {
+			if ( event?.target instanceof Node && menuRef.current?.contains( event.target ) ) {
+				return;
+			}
+			placeRootMenu( menuRef.current, triggerRef.current );
+		};
 		document.addEventListener( 'pointerdown', dismiss, true );
 		window.addEventListener( 'resize', reposition );
 		window.addEventListener( 'scroll', reposition, true );
@@ -419,7 +589,7 @@ export function Menu( { children, trigger, label, onSelect, className } ) {
 		if ( event.defaultPrevented ) {
 			return;
 		}
-		open ? close( false ) : show();
+		open && ! closingRef.current ? close( false ) : show();
 	};
 
 	const onTriggerKeyDown = ( event ) => {
@@ -448,13 +618,7 @@ export function Menu( { children, trigger, label, onSelect, className } ) {
 			focusItem( next );
 			return;
 		}
-		if ( 1 === event.key.length ) {
-			const start = ( from + 1 ) % controls.length;
-			const next = [ ...controls.slice( start ), ...controls.slice( 0, start ) ].find(
-				( item ) => item.textContent.trim().toLocaleLowerCase().startsWith( event.key.toLocaleLowerCase() )
-			);
-			next?.focus();
-		}
+		typeahead( menuRef.current, event );
 	};
 
 	return (

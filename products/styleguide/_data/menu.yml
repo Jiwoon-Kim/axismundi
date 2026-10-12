@@ -326,19 +326,20 @@ item:
   supporting_text_typography_role: body-small
   trailing_supporting_text_typography_role: label-large
 
-  # Published, and the only component in this app that does not route them
-  # through its own slots: the adapter writes `outline: 3px` and
-  # `outline-offset: -3px` literally, where `list.css` reads
-  # `--md-comp-list-focus-indicator-*`. Measured 2026-10-12.
+  # Published. The adapter now gives them Menu-owned slots, matching `list.css`
+  # without claiming that M3 published those slot names.
   focus_indicator:
-    slots_missing_in_adapter: true
+    status: implemented
     sibling_precedent: products/wordpress/plugins/axismundi/src/apps/frontend/styles/components/list.css
     color_token: md.comp.menus.menu-item.focus.indicator.color
     color_role: secondary
+    color_slot: --md-comp-menus-item-focus-indicator-color
     thickness_token: md.comp.menus.menu-item.focus.indicator.thickness
     thickness: 3
+    thickness_slot: --md-comp-menus-item-focus-indicator-thickness
     inner_offset_token: md.comp.menus.menu-item.focus.indicator.outline.offset
     inner_offset: -3
+    inner_offset_slot: --md-comp-menus-item-focus-indicator-outline-offset
 
 # M3's anatomy list for a vertical menu, in its published order.
 anatomy:
@@ -674,7 +675,7 @@ adaptive:
     guidance: Menus appear in context with the content, can display more items, and can use submenus.
 
 submenu:
-  status: implemented_pending_host_and_block_measurement
+  status: implemented_and_measured
   available_on:
     web: true
     compose: false
@@ -730,8 +731,8 @@ submenu:
       - mutual_exclusion_scope, measured not to bind this top-layer host
       - host_mode, compared against an auto child and retained as a manual tree
       - host_mode.dialog_join_order, measured above the modal dialog
-    still_open:
-      - placement.block, which needs DOM coordinate measurement rather than a visual alignment
+      - placement.block, measured from the parent painted box in the standalone VQA sample
+    still_open: []
     note: >-
       Building it does not force the exclusion question; it is the only thing
       that can answer it. The three sources describe in-flow submenus and this
@@ -806,14 +807,9 @@ submenu:
           where `it` is the parent menu ITEM -- and both the figure and Material
           Web satisfy it.
         this_implementation: >-
-          Anchors to the item SLOT, which in this geometry runs the full width of
-          the container, so the submenu lands flush with the container edge and
-          the parent's painted box stays clear by `inset_inline`. It does not
-          violate the prose; it differs from the drawing by that inset.
-        candidate: >-
-          Anchor to the painted box instead of the slot. The overlap becomes
-          `inset_inline`, which is the drawing's look and still leaves the item
-          clear -- it is the item's own edge.
+          Anchors to the painted box. At 460x520, the VQA sample measured the
+          submenu's left and top equal to that box's right and top respectively:
+          4dp inside the parent container, without covering the painted row.
       agreed_by:
         - { source: M3 guidelines, says: Submenus should open next to the parent menu item without overlapping it. }
         - { source: M3 specs submenu figure, says: The submenu's leading edge meets the parent menu's trailing edge, with no gap drawn. }
@@ -830,7 +826,7 @@ submenu:
         group padding and an item inset lower than the parent's. That is what
         Material Web does with the padding on its container, and it is what the
         guidelines figure draws.
-      recorded_as: adopted rule, verified once built
+      recorded_as: adopted rule, verified in the standalone VQA sample
       figure_support: >-
         Measured off the guidelines screenshot, roughly: the submenu's first row
         sits about 7px below the parent's highlighted row at a scale where a
@@ -871,14 +867,13 @@ submenu:
           It shows that implementations compensate for their container's leading
           edge; it says nothing about group padding.
       settle_by: >-
-        Once an adapter exists, measure the `top` of the parent item's painted
-        state layer and of the submenu's first painted state layer, and take the
-        difference. That is this project's own geometry answering about itself,
-        which neither of the two sources above can do.
-  # Measured against the first implementation, 2026-10-12. Both are anchoring
-  # faults rather than offsets: the thing each box is positioned against is the
-  # wrong thing.
-  open_defects:
+        Resolved in the standalone VQA sample at 460x520: the submenu container
+        top and the parent painted-box top were equal. The first child row may
+        shift on the cross axis only when viewport clamping is unavoidable.
+  # Measured against the first implementation, 2026-10-12, then resolved in
+  # the composed implementation. Keep the original measurements because they
+  # explain what each runtime assertion protects against.
+  resolved_defects:
     - subject: a submenu does not follow its row when the menu's own list scrolls
       measured: >-
         At 460x520 with a 676dp list in a 232dp box: scrolling the list 100
@@ -890,6 +885,10 @@ submenu:
         repositions the root against its trigger, which does not move when its
         own list scrolls.
       note: Page scrolling is fine, because the root re-anchors and the row does not move with it.
+      resolution: >-
+        The submenu registers the parent `.ax-menu__list` scroll listener while
+        open and gives that listener the same painted-box anchor rectangle used
+        at opening time.
     - subject: a menu is clamped to the window rather than re-anchored to its trigger
       measured: >-
         At 460 wide, with the trigger moved right, the menu freezes at
@@ -908,6 +907,10 @@ submenu:
         `placeSubmenu` already flips correctly in the inline direction, so the
         two placers disagree with each other as well as with the published
         behaviour.
+      resolution: >-
+        One parameterised placer now flips on the main axis, shifts on the cross
+        axis while an anchor edge fits, and clamps only as a last resort. The
+        trailing-edge stylebook sample keeps this visible.
 
     - subject: typeahead inside a submenu moves focus into the parent
       measured: >-
@@ -925,6 +928,9 @@ submenu:
         Arrow movement, ArrowLeft and the parent's roving focus are correct --
         measured, ArrowDown from the submenu trigger reaches the next parent row
         and skips the submenu's own rows.
+      resolution: >-
+        The child menu now runs the same local typeahead helper and stops the
+        handled letter from bubbling to the parent.
 
   # ---------------------------------------------------------------------------
   # The axis under both open placement defects, written before either is fixed
@@ -960,6 +966,15 @@ submenu:
         which is what `placement.rule` adopted. Today both read
         `getBoundingClientRect` on the trigger directly, so the painted-box rule
         has nowhere to live.
+    a_menu_ignores_its_own_scroller: >-
+      A capture listener on the window sees every scroller, including the
+      menu's own list, and repositioning on those is wrong twice. The trigger
+      has not moved, and `place` clears the maximum size before re-measuring,
+      which unconstrains the list long enough for the browser to clamp its
+      `scrollTop` to zero. Measured: a list scrolled to 120 returned 0 on the
+      next scroll event, so a scrollable menu could not be scrolled at all. The
+      root skips events originating inside itself; a submenu does the opposite
+      and subscribes to that same list, because its anchor is a row in it.
     reposition_is_part_of_it: >-
       Whatever opens a box also keeps it placed. The root menu listens for
       scroll and resize; a submenu listens for nothing, which is the first open
@@ -1044,8 +1059,10 @@ not_published:
   motion:
     what: enter and exit transition tokens
     project_policy:
-      status: owner_judgment_open
-      question: Whether the open and close transition is written with the Web Animations API, as Surface's is.
+      status: implemented_root_only
+      decision: >-
+        Root menus use the Web Animations API. Nested menus remain immediate,
+        matching both Material Web and Flutter's nested behaviour.
       published: >-
         M3 describes an enter and exit transition that relates the menu to the
         element that generated it, and says dense products may open instantly to
@@ -1061,8 +1078,40 @@ not_published:
         looks broken and is not. `AGENTS.md` records it; VQA takes a screenshot
         to flush, or calls `finish()`.
       and: >-
-        Whatever is chosen is policy, not a reading, because the table carries no
-        motion token for this component at all.
+        This is policy, not a reading, because the table carries no motion token
+        for this component at all. The CSS custom properties below are the
+        explicit later-customization seam.
+      implementation:
+        api: Web Animations API
+        root_only: true
+        enter:
+          duration_css_var: --md-sys-motion-curve-default-spatial-duration
+          easing_css_var: --md-sys-motion-curve-default-spatial
+          duration: 500
+        exit:
+          duration_css_var: --md-sys-motion-duration-short3
+          easing_css_var: --md-sys-motion-easing-emphasized-accelerate
+          duration: 150
+        folded_height_percentage: 0.35
+        reduced_motion: immediate
+        fill:
+          enter: backwards
+          exit: forwards
+          why: >-
+            Measured: with `fill: both` the enter animation's end state stayed
+            applied, and that end state is `clip-path: inset( 0 0 0% round 16px )`.
+            A clip cuts what paints outside the border box, and the elevation
+            layer's two shadows do, so a menu lost its shadow the moment it
+            finished opening. Backwards still applies the folded start before the
+            animation begins, so nothing flashes, and leaves nothing behind;
+            forwards is right for the exit because the folded state has to hold
+            until the popover hides.
+          do_not_use: both
+        customization_slots:
+          enter_easing: --ax-menu-motion-enter
+          enter_duration: --ax-menu-motion-enter-duration
+          exit_easing: --ax-menu-motion-exit
+          exit_duration: --ax-menu-motion-exit-duration
       material_web:
         uses_waapi: true
         source: menu/internal/menu.ts at 919fe12

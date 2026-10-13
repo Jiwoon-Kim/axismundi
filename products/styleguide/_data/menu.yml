@@ -1092,23 +1092,20 @@ not_published:
           duration_css_var: --md-sys-motion-duration-short3
           easing_css_var: --md-sys-motion-easing-emphasized-accelerate
           duration: 150
+        height_target: .ax-menu__list
         folded_height_percentage: 0.35
         reduced_motion: immediate
         fill:
           enter: backwards
           exit: forwards
           why: >-
-            Measured: with `fill: both` the enter animation's end state stayed
-            applied, and that end state is `clip-path: inset( 0 0 0% round 16px )`.
-            A clip cuts what paints outside the border box, and the elevation
-            layer's two shadows do, so a menu lost its shadow the moment it
-            finished opening. Backwards still applies the folded start before the
-            animation begins, so nothing flashes, and leaves nothing behind;
-            forwards is right for the exit because the folded state has to hold
-            until the popover hides.
+            Backwards applies the folded list before enter starts, then leaves
+            nothing behind. Forwards holds the folded list until the popover
+            hides on exit. The host is never animated or clipped, so its
+            elevation layer can paint outside the border box throughout.
           do_not_use: both
         shadow_flickers_during_the_animation:
-          status: open
+          status: resolved
           measured: >-
             Fixing the persistent clip stopped the shadow disappearing, not the
             flicker. The clip still applies for the length of the enter, so the
@@ -1119,13 +1116,14 @@ not_published:
             has the same latent fault -- it clips with no fill, so nothing
             persists, but its shadow is cut while the animation runs and the
             scrim hides it.
-          fix: >-
-            Animate the list's height rather than clipping the host, so the host
-            grows and its shadow grows with it. This is what Material Web does.
-            `dialog.js` records why it could not: its content is the surface's own
-            children and there is no inner box to resize. Menu has one --
-            `.ax-menu__list`, created for the elevation split -- so the reason that
-            forced clip-path on the dialog does not apply here.
+          resolution: >-
+            Animate `.ax-menu__list` height from zero to its measured rendered
+            height on enter, and from that height to 0.35 on exit. The host grows
+            with the list while its elevation layer remains unclipped. This is
+            the Material Web structure. `dialog.js` records why it could not:
+            its content is the surface's own children and there is no inner box
+            to resize. Menu has one -- `.ax-menu__list`, created for the elevation
+            split -- so that constraint does not apply here.
           lesser_fix: >-
             Clip the list instead of the host. Smallest change, shadow correct from
             the first frame, but the host's box does not fold so the shadow stays
@@ -1133,6 +1131,28 @@ not_published:
           dialog_is_separate: >-
             Fixing the dialog means giving it an inner box it does not have.
             Recorded here because the two share a cause, not to widen this.
+        scrollbar_during_the_animation:
+          status: resolved
+          measured: >-
+            Animating the list's height makes the scroll container shorter than
+            its own content for every frame but the last, so it paints a
+            scrollbar that disappears when the animation ends. Measured on one
+            enter frame of the 16-row sample, the same frame read twice: with
+            the rule the gutter is 0 and `overflow-y` is `hidden`; with the
+            attribute removed the gutter is 15 and `overflow-y` is `auto`.
+            Content height 676 in a box of 0 at that frame.
+          resolution: >-
+            `playMenuMotion` sets `data-ax-menu-animating` on the host and one
+            CSS rule suppresses the list's scrolling while it is present, so
+            the suppression is declared where the scrolling is. The attribute is
+            removed when the animation settles, and the restore asks the list
+            whether anything is still running rather than trusting the phase:
+            reopening cancels the exit, and a cancelled animation rejects
+            `finished` one microtask after the enter has set the attribute.
+          hidden_not_clip: >-
+            `overflow-y: hidden` keeps the box's scroll position; `clip` makes
+            it a non-scroll container and loses it. A submenu anchored to a row
+            inside a scrolled list depends on that position surviving.
         customization_slots:
           enter_easing: --ax-menu-motion-enter
           enter_duration: --ax-menu-motion-enter-duration

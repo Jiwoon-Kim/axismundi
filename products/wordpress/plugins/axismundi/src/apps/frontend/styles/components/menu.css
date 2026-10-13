@@ -56,6 +56,17 @@
 		overflow-y: auto;
 	}
 
+	/*
+	 * The motion animates this box's height, so for most of an opening the list
+	 * is shorter than its own content and the scroll container paints a
+	 * scrollbar that disappears again at the end. Suppressed while the
+	 * animation runs; `hidden` rather than `clip` because this box keeps its
+	 * scroll position, which a submenu's anchor row depends on.
+	 */
+	.ax-menu[ data-ax-menu-animating='true' ] > .ax-menu__list {
+		overflow-y: hidden;
+	}
+
 	.ax-menu__group {
 		padding-block: var( --md-comp-menus-group-padding );
 	}

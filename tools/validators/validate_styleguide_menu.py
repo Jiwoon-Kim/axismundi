@@ -632,10 +632,11 @@ def check_focus_and_motion(report: Report, data: dict) -> None:
         "the recorded motion implementation must name WAAPI, root-only scope and reduced motion",
     )
     report.check(
-        implementation["folded_height_percentage"] == 0.35
+        implementation["height_target"] == ".ax-menu__list"
+        and implementation["folded_height_percentage"] == 0.35
         and implementation["enter"]["duration"] == 500
         and implementation["exit"]["duration"] == 150,
-        "the chosen root motion must retain its recorded 0.35 fold and 500/150 choreography",
+        "the chosen root motion must retain its list target, 0.35 fold and 500/150 choreography",
     )
 
 
@@ -921,14 +922,45 @@ def check_submenu(report: Report, data: dict) -> None:
     )
     flicker = data["not_published"]["motion"]["project_policy"]["implementation"]["shadow_flickers_during_the_animation"]
     report.check(
-        flicker["status"] == "open" and "inner box" in flicker["fix"],
-        "the remaining flicker stays open, with the reason Menu can take the fix the dialog "
-        "could not",
+        flicker["status"] == "resolved" and "list" in flicker["resolution"],
+        "the shadow-flicker record must say that animating the list resolved it",
     )
     report.check(
         "fill: entering ? 'backwards' : 'forwards'" in menu_src,
-        "the implementation must keep the recorded fill modes; `both` leaves a clip that "
-        "cuts the shadow",
+        "the implementation must keep the recorded fill modes while it holds the list for exit",
+    )
+    report.check(
+        "list.animate(" in menu_src and "clipPath:" not in menu_src,
+        "motion must animate the inner list rather than clipping the elevation host",
+    )
+
+    scrollbar = data["not_published"]["motion"]["project_policy"]["implementation"][
+        "scrollbar_during_the_animation"
+    ]
+    report.check(
+        scrollbar["status"] == "resolved" and "scroll position" in scrollbar["hidden_not_clip"],
+        "the scrollbar record must keep why the suppression is `hidden` and not `clip`",
+    )
+    motion_css = declarations_only(MENU_CSS.read_text(encoding="utf-8"))
+    suppression = re.search(
+        r"\.ax-menu\[ data-ax-menu-animating='true' \] > \.ax-menu__list \{([^}]*)\}",
+        motion_css,
+    )
+    report.check(
+        suppression is not None and "overflow-y: hidden;" in suppression.group(1),
+        "the animating host must suppress the list's scrolling with `hidden`; `clip` makes the "
+        "box a non-scroll container and loses the position a submenu's anchor row needs",
+    )
+    report.check(
+        "menu.dataset.axMenuAnimating = 'true'" in menu_src
+        and "delete menu.dataset.axMenuAnimating" in menu_src,
+        "the implementation must set the animating attribute and remove it again, or either the "
+        "scrollbar comes back mid-animation or the list never scrolls",
+    )
+    report.check(
+        "list.getAnimations().some" in menu_src and "'running' === a.playState" in menu_src,
+        "the restore must ask the list what is still running: reopening cancels the exit, whose "
+        "rejection arrives after the enter has set the attribute",
     )
 
     report.check(
@@ -1178,7 +1210,10 @@ def check_implementation(report: Report, data: dict) -> None:
     )
 
     # The elevation layer cannot live inside the box that scrolls.
-    report.check("overflow-y: auto;" in css.split(".ax-menu__list")[-1]
+    # The base rule by name, not the last mention of the class: the animating
+    # suppression rule below it also names `.ax-menu__list`, and reading the
+    # tail made this check report the wrong element.
+    report.check("overflow-y: auto;" in css.split(".ax-menu__list {")[1].split("}")[0]
                  and "overflow: visible;" in css.split(".ax-menu__list")[0],
                  "the scrolling box and the elevated host were collapsed back into one element")
 
@@ -1279,7 +1314,8 @@ def check_implementation(report: Report, data: dict) -> None:
     report.check(
         "function playMenuMotion" in menu
         and "prefersReducedMotion" in menu
-        and "menuFoldPaths" in menu
+        and "fullHeight" in menu
+        and "list.animate(" in menu
         and "playMenuMotion( host, 'enter' )" in menu
         and "playMenuMotion( host, 'exit' )" in menu,
         "the root menu no longer implements the recorded WAAPI enter and exit choreography",

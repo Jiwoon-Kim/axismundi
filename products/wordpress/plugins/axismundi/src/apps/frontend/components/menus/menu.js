@@ -122,19 +122,6 @@ function prefersReducedMotion() {
 	return window.matchMedia?.( '( prefers-reduced-motion: reduce )' ).matches ?? false;
 }
 
-function menuFoldPaths( menu ) {
-	const radius = getComputedStyle( menu ).borderRadius;
-	const round = radius ? ` round ${ radius }` : '';
-	const opensAbove = 'block-start' === menu.dataset.menuPlacement;
-
-	return {
-		folded: opensAbove
-			? `inset( 65% 0 0 0${ round } )`
-			: `inset( 0 0 65% 0${ round } )`,
-		open: `inset( 0 0 0 0${ round } )`,
-	};
-}
-
 function playMenuMotion( menu, phase ) {
 	if ( ! menu?.animate || prefersReducedMotion() ) {
 		return null;
@@ -146,27 +133,52 @@ function playMenuMotion( menu, phase ) {
 		return null;
 	}
 
-	const { folded, open } = menuFoldPaths( menu );
+	const list = menu.querySelector( ':scope > .ax-menu__list' );
+	const fullHeight = list?.getBoundingClientRect().height ?? 0;
+	if ( ! list || ! fullHeight ) {
+		return null;
+	}
+
 	const entering = 'enter' === phase;
-	return menu.animate(
+	const foldedHeight = fullHeight * 0.35;
+	/*
+	 * Measured: during an opening the list is shorter than its content for every
+	 * frame but the last, so the scroll container paints a scrollbar that
+	 * vanishes when the animation ends. The attribute drives one CSS rule rather
+	 * than an inline style, so the suppression is visible where the scrolling
+	 * is declared.
+	 */
+	menu.dataset.axMenuAnimating = 'true';
+	const animation = list.animate(
 		{
+			height: entering ? [ '0px', `${ fullHeight }px` ] : [ `${ fullHeight }px`, `${ foldedHeight }px` ],
 			opacity: entering ? [ 0, 1 ] : [ 1, 0 ],
-			clipPath: entering ? [ folded, open ] : [ open, folded ],
 		},
 		{
 			duration,
 			easing: styles.getPropertyValue( `--ax-menu-motion-${ phase }` ).trim(),
 			/*
-			 * Backwards on the way in, forwards on the way out. `both` leaves
-			 * the end state applied, and the end state is a clip: measured,
-			 * `inset( 0 0 0% round 16px )` stayed on the host after opening and
-			 * cut away the elevation layer's shadows, which paint outside the
-			 * border box. Backwards still applies the folded start before the
-			 * animation begins, so nothing flashes, and leaves nothing behind.
+			 * Backwards on the way in, forwards on the way out. The host never
+			 * receives an animation style, so its elevation layer can paint outside
+			 * the border box for every animation frame. Backwards still applies the
+			 * folded list before the animation begins, then leaves nothing behind.
 			 */
 			fill: entering ? 'backwards' : 'forwards',
 		}
 	);
+	/*
+	 * Also on rejection: reopening cancels the exit, and a cancelled animation
+	 * rejects `finished` one microtask after the enter has set the attribute.
+	 * The guard asks the list what is still running rather than trusting which
+	 * phase this is.
+	 */
+	const restoreScrolling = () => {
+		if ( ! list.getAnimations().some( ( a ) => 'running' === a.playState ) ) {
+			delete menu.dataset.axMenuAnimating;
+		}
+	};
+	animation.finished.then( restoreScrolling, restoreScrolling );
+	return animation;
 }
 
 /**

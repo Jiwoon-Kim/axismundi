@@ -327,9 +327,10 @@ scope:
     - hide when collapsed, and the transition between variants
     # Android only, and only for the modal expanded rail.
     - predictive back
-    # No FAB component exists. The slot is open; "the FAB's resting elevation
-    # should be level 0" applies to whatever the caller puts in it.
-    - fab component
+    # A FAB component now exists (`fab.yml`), and the slot takes it. What is
+    # still deferred is the kit's own header structure around it -- see
+    # `figma_kit_structure` below.
+    - the Menu and Fab group, its expanded ordering, and the Docked/Floating axis
     # No Badge component exists, and the rail moves the badge next to the label
     # when expanded while the item places it on the icon. That restructuring
     # waits for the badge itself.
@@ -337,6 +338,47 @@ scope:
     # The rail's expanded state is what makes 1200 and 1600 meaningful, and which
     # component serves which window is a layout decision the Scaffold owns.
     - the 1200 and 1600 scaffold branches
+
+# ---------------------------------------------------------------------------
+# 키트가 그리는 구조. 지금 구현과 다른 지점만 적는다.
+# ---------------------------------------------------------------------------
+
+figma_kit_structure:
+  status: measured_not_implemented
+  source: "Material 3 Design Kit (Community), Navigation Rail and Navigation Rail: Expanded"
+  read: 2026-10-14
+  two_components_not_one: >-
+    The kit draws the collapsed rail and the expanded rail as separate
+    components with different nested instances: the collapsed one nests a FAB,
+    the expanded one nests an extended FAB. This record and the implementation
+    treat expansion as a variant of one rail, which is still the right shape for
+    the web -- but it means the header's contents change with the variant, not
+    only its width.
+  collapsed:
+    container_width: 96
+    header_group: Menu & Fab
+    header_order: [ icon_button, fab ]
+  expanded:
+    container_width: 220
+    type_axis: [ Docked, Floating ]
+    header_group: Menu & Fab
+    header_order: [ extended_fab, icon_button ]
+    header_size: { inline: 180, block: 116 }
+    header_item_spacing: 4
+    padding: { inline: 20, block_start: 44, block_end: 20 }
+    header_to_segments_spacing: 40
+    segments_are_sectioned: >-
+      Not a flat list: Section 1 to 3, with a section header of 180x36, 16dp
+      inline padding and a 10dp gap, and 12dp between sections.
+  what_the_implementation_does_instead: >-
+    `NavigationRail` renders `menu` and `fab` as independent siblings in a fixed
+    menu-then-fab order, with no Menu and Fab group, no variant-dependent
+    ordering, no sections, and no Docked/Floating axis. The FAB slice put an
+    extended FAB in the expanded rail's slot, which is the right component in
+    the right place and not yet the kit's structure.
+  owner: >-
+    This belongs to the navigation rail's next slice, not to the FAB. The FAB is
+    a nested instance here; nothing above is a property of the FAB.
 
 not_published_here:
   # "Destinations in the navigation rail should remain visible and fixed when

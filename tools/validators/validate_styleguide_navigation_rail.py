@@ -464,8 +464,36 @@ def main() -> int:
             f"the {required!r} divergence is no longer recorded as a discrepancy",
         )
 
+    kit = data["figma_kit_structure"]
+    report.check(
+        kit["status"] == "measured_not_implemented",
+        "the kit's rail structure is measured and unbuilt; saying otherwise claims work nobody "
+        "has done",
+    )
+    report.check(
+        kit["collapsed"]["header_order"] == ["icon_button", "fab"]
+        and kit["expanded"]["header_order"] == ["extended_fab", "icon_button"],
+        "the two header orders are opposite in the kit, and that reversal is the whole finding",
+    )
+    report.check(
+        kit["collapsed"]["container_width"] == 96 and kit["expanded"]["container_width"] == 220,
+        "the collapsed and expanded rails are different widths in the kit, and both stay recorded",
+    )
+    report.check(
+        "independent siblings" in kit["what_the_implementation_does_instead"],
+        "the record must keep saying what the implementation does today, or the gap cannot be "
+        "read without opening the component",
+    )
+    report.check(
+        "not to the FAB" in kit["owner"],
+        "this is the rail's next slice; a FAB nested in a rail does not make it the FAB's work",
+    )
+
     # The deferrals are part of the specification here, not an omission from it.
-    for deferred in ("modal", "predictive back", "fab component"):
+    # "fab component" left this list when the FAB shipped; what remains deferred
+    # is the kit's header structure around it, which is a different claim and
+    # has its own checks below.
+    for deferred in ("modal", "predictive back", "Menu and Fab group"):
         report.check(
             any(deferred in entry for entry in data["scope"]["deferred"]),
             f"{deferred!r} is no longer recorded as deferred; either it shipped or the record lost it",

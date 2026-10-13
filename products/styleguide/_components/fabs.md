@@ -95,9 +95,35 @@ medium {{ site.data.fab.extended_fab.sizes_m3_expressive.medium }},
 large {{ site.data.fab.extended_fab.sizes_m3_expressive.large }}dp. corner·padding·icon
 size·medium과 large의 타입 스케일은 발행되지 않았습니다.
 
-그래서 레코드는 `null`을 적습니다. 추측을 적으면 **이 파일이 아무도 발행하지 않은 값의
-출처가 됩니다.** 막힌 것을 푸는 건 `md.comp.extended-fab` 토큰표이거나, 세 크기의 피그마
-레이어 데이터입니다.
+막힌 건 피그마가 아니라 **다른 생성 소스**로 풀렸습니다. M3가 extended FAB의 Expressive를
+Available로 적은 곳이 Compose이고, 그 토큰 파일은 같은 디자인 시스템 DB에서 생성됩니다
+(`{{ site.data.fab.extended_fab.measured_from_compose.why_this_counts.header }}`,
+`{{ site.data.fab.extended_fab.measured_from_compose.why_this_counts.version }}`).
+
+| | small | medium | large |
+|---|---|---|---|
+{% assign c = site.data.fab.extended_fab.measured_from_compose -%}
+| height · min width | {{ c.small.container_height }} | {{ c.medium.container_height }} | {{ c.large.container_height }} |
+| icon | {{ c.small.icon_size }} | {{ c.medium.icon_size }} | {{ c.large.icon_size }} |
+| 좌우 | {{ c.small.leading_space }} | {{ c.medium.leading_space }} | {{ c.large.leading_space }} |
+| 아이콘–라벨 (토큰) | {{ c.small.icon_label_space }} | {{ c.medium.icon_label_space }} | {{ c.large.icon_label_space }} |
+| 아이콘–라벨 (실제) | {{ c.small.icon_label_space }} | {{ c.medium.icon_label_space_as_built }} | {{ c.large.icon_label_space_as_built }} |
+| 타입 | title-medium | title-large | headline-small |
+
+마지막 두 줄이 어긋나는 건 오타가 아닙니다. Compose가 **자기 토큰 둘을 틀렸다고 주석에
+적고** 다른 값으로 그립니다. 레코드는 둘 다 들고 있습니다 — 고르는 건 구현 결정이고, 두
+숫자가 적힌 뒤에는 조용히 고를 수 없습니다.
+
+산문의 "padding이 줄었다"도 같이 풀립니다. 같은 파일에 baseline의 text padding이 20dp로
+남아 있고 expressive small의 좌우는 16입니다 — **20에서 16으로** 준 것이지, baseline의
+16dp 아래로 내려간 게 아니었습니다.
+
+최소 너비도 다릅니다. baseline은 80dp 고정이었지만 expressive는
+**{{ c.minimum_width_is_the_height }}**
+
+그리고 large에서 한 가지 — extended FAB의 아이콘은 {{ c.large.icon_size }}인데 같은 96dp
+FAB의 아이콘은 {{ site.data.fab.sizes.large.icon_size }}입니다. 접히고 펴질 때 모양만
+바뀌는 게 아니라 **아이콘 크기도 바뀝니다.**
 
 랩이 이미 들고 있는 것도 baseline 행입니다 —
 {{ site.data.fab.extended_fab.no_token_table.what_the_lab_already_holds.which_row_this_is }}

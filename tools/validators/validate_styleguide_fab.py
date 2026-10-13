@@ -530,8 +530,9 @@ def check_extended_fab(report: Report, data: dict) -> None:
         "the extended FAB -- that no table exists -- needs rewriting",
     )
     report.check(
-        extended["no_token_table"]["status"] == "open",
-        "the missing extended FAB table stays an open hole, not a footnote",
+        "md.comp." not in raw and extended["no_token_table"]["what_would_unblock_it"],
+        "the extended FAB still has no token table of its own, and the record must keep saying "
+        "what would be one",
     )
     report.check(
         extended["sizes_m3_expressive"] == {
@@ -544,9 +545,11 @@ def check_extended_fab(report: Report, data: dict) -> None:
         "the three extended FAB heights are the only sizes prose states, and they stay exact",
     )
     report.check(
-        extended["type_scale"]["medium"] is None and extended["type_scale"]["large"] is None,
-        "the medium and large type scales are unpublished; recording a guess would make this "
-        "record the source of a value nobody published",
+        extended["type_scale"]["medium"] == extended["measured_from_compose"]["medium"]["type_scale"]
+        and extended["type_scale"]["large"] == extended["measured_from_compose"]["large"]["type_scale"]
+        and "FloatingActionButton.kt" in extended["type_scale"]["medium_and_large_source"],
+        "the medium and large type scales are not prose figures, so they must agree with the "
+        "generated source they came from and keep naming it",
     )
     report.check(
         extended["label_rules"]["icon_without_label"] == "forbidden"
@@ -578,11 +581,44 @@ def check_extended_fab(report: Report, data: dict) -> None:
         "a shipped product departing from M3 is evidence, not permission, and the record must "
         "keep saying so",
     )
+    hole = extended["no_token_table"]
     report.check(
-        "padding" in extended["no_token_table"]["the_one_number"]
-        and "below 16" in extended["no_token_table"]["the_one_number"],
-        "the record must keep naming which single figure blocks the extended FAB, and what it "
-        "is known to be below -- otherwise the whole component looks unmeasurable",
+        hole["status"] == "resolved_by_a_second_source"
+        and "20" in hole["the_one_number_as_it_stood"]
+        and "to 16" in hole["the_one_number_as_it_stood"],
+        "the hole is closed by a second generated source, and the record must keep what the "
+        "prose sentence actually meant",
+    )
+
+    compose = extended["measured_from_compose"]
+    report.check(
+        compose["why_this_counts"]["header"] == "GENERATED CODE - DO NOT MODIFY BY HAND"
+        and len(compose["why_this_counts"]["files"]) == 4,
+        "the Compose figures stand on generated token files, and the record names every file "
+        "they came from -- four, including the component file the type styles are in",
+    )
+    for name in ("small", "medium", "large"):
+        size = compose[name]
+        report.check(
+            size["min_inline_size"] == size["container_height"],
+            f"extended_fab.measured_from_compose.{name}: the minimum width is the container "
+            "height, so it can never be narrower than the FAB it collapses into",
+        )
+        report.check(
+            size["type_scale"].startswith("md.sys.typescale."),
+            f"extended_fab.measured_from_compose.{name}: the type scale must name a system "
+            "token, not a size",
+        )
+    report.check(
+        compose["medium"]["icon_label_space"] != compose["medium"]["icon_label_space_as_built"]
+        and compose["large"]["icon_label_space"] != compose["large"]["icon_label_space_as_built"],
+        "both numbers stay for medium and large: Compose calls its own token incorrect and "
+        "draws something else, and collapsing them hides a decision",
+    )
+    report.check(
+        compose["large"]["icon_size"] != data["sizes"]["large"]["icon_size"],
+        "a large extended FAB's icon is not a large FAB's icon, and the record's discrepancy "
+        "entry depends on the two staying different",
     )
     report.check(
         data["variants"]["extended_fab"]["web_expressive_status"] == "unavailable",

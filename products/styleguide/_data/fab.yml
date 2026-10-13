@@ -527,13 +527,63 @@ extended_fab:
     large: 96
     source: https://m3.material.io/components/extended-fab/overview
     note: >-
-      Heights only. Widths are dynamic, and no corner, padding, icon size or
-      type scale for the medium and large sizes is published in prose.
+      Heights only. Prose states nothing else, which is why the measurements
+      below come from a second generated source rather than from this page.
+  measured_from_compose:
+    why_this_counts:
+      source_kind: generated token files, not an implementation's own choices
+      header: GENERATED CODE - DO NOT MODIFY BY HAND
+      version: v0_14_0
+      files:
+        - https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ExtendedFabSmallTokens.kt
+        - https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ExtendedFabMediumTokens.kt
+        - https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ExtendedFabLargeTokens.kt
+        - https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/FloatingActionButton.kt
+      note: >-
+        M3's resource table lists Compose: Expressive as available for the
+        extended FAB, and these files are generated from the same design system
+        database the token tables come from. They are the extended FAB's token
+        set in everything but file format. The type styles and the two
+        overrides below come from the component file beside them.
+    small:
+      container_height: 56
+      min_inline_size: 56
+      container_shape: md.sys.shape.corner.large
+      icon_size: 24
+      leading_space: 16
+      trailing_space: 16
+      icon_label_space: 8
+      type_scale: md.sys.typescale.title-medium
+    medium:
+      container_height: 80
+      min_inline_size: 80
+      container_shape: md.sys.shape.corner.large-increased
+      icon_size: 28
+      leading_space: 26
+      trailing_space: 26
+      icon_label_space: 16
+      icon_label_space_as_built: 12
+      type_scale: md.sys.typescale.title-large
+    large:
+      container_height: 96
+      min_inline_size: 96
+      container_shape: md.sys.shape.corner.extra-large
+      icon_size: 32
+      leading_space: 28
+      trailing_space: 28
+      icon_label_space: 20
+      icon_label_space_as_built: 16
+      type_scale: md.sys.typescale.headline-small
+    minimum_width_is_the_height: >-
+      Every size's minimum inline size is its own container height, so an
+      extended FAB can never be narrower than the FAB it collapses into. The
+      baseline's flat 80dp minimum does not carry over.
   type_scale:
     small: md.sys.typescale.title-medium
     small_source: https://m3.material.io/components/extended-fab/specs
-    medium: null
-    large: null
+    medium: md.sys.typescale.title-large
+    large: md.sys.typescale.headline-small
+    medium_and_large_source: FloatingActionButton.kt, the three text styles beside the size constants
   baseline:
     status: not_recommended
     container_height: 56
@@ -582,7 +632,7 @@ extended_fab:
         project adds a tooltip to an extended FAB it is a deliberate deviation
         and says so, rather than inheriting one by imitation.
   no_token_table:
-    status: open
+    status: resolved_by_a_second_source
     consequence: >-
       Building this means writing literals for every value the prose does not
       state. The project's rule from the menu slice applies: an unpublished
@@ -591,12 +641,14 @@ extended_fab:
     what_would_unblock_it: >-
       Either a TOKEN_TABLE asset for `md.comp.extended-fab`, or Figma layer data
       for the three sizes giving corner, padding, icon size and type scale.
-    the_one_number: >-
-      Height, icon size and the small size's type scale are all stated in prose.
-      What is not stated is the inner padding: M3 says only that it "was
-      reduced" from the baseline's 16dp, so the expressive figure is some
-      unknown number below 16. Everything else about a small extended FAB can
-      be built from published values.
+    the_one_number_as_it_stood: >-
+      Height, icon size and the small size's type scale were in prose, and the
+      inner padding was not -- M3 says only that it "was reduced" from the
+      baseline, and the figure looked like it had to come from Figma. It did
+      not: `measured_from_compose` answers it, and the prose's sentence resolves
+      with it. The baseline's text padding is 20dp in the same component file,
+      against the expressive small's 16dp leading space, so the reduction is 20
+      to 16 -- not something below 16.
     what_the_lab_already_holds:
       path: products/reference-implementations/axismundi-lab/modules/fab
       audit: docs/FAB-MEASUREMENT-AUDIT.md
@@ -798,6 +850,24 @@ discrepancies:
     consequence: >-
       Any generated CSS custom property name must follow the set it came from.
       Normalising the state names would invent tokens that do not exist.
+  compose_calls_two_of_its_own_tokens_incorrect:
+    measured: >-
+      `FloatingActionButton.kt` carries "TODO: ExtendedFabMediumTokens
+      .IconLabelSpace is incorrect" and the same line for Large, and builds with
+      12dp and 16dp instead of the tokens' 16dp and 20dp.
+    consequence: >-
+      The published token and the shipping implementation disagree, so this
+      record carries both: `icon_label_space` is what the token set says and
+      `icon_label_space_as_built` is what Compose draws. Choosing between them
+      is an implementation decision, and it cannot be made silently now that
+      both numbers are written down.
+  extended_large_icon_is_smaller_than_the_fab_large_icon:
+    measured: >-
+      A large extended FAB's icon is 32dp while a large FAB's icon is 36dp, at
+      the same 96dp container height.
+    consequence: >-
+      Collapsing a large extended FAB into a large FAB changes the icon size as
+      well as the shape. They are not one control at two widths.
   fab_menu_token_set_describes_another_platform:
     measured: >-
       `md.comp.fab-menu` publishes 56dp items with full corners and per-item
@@ -815,9 +885,11 @@ project_policy:
   slice: >-
     FAB first: the three live sizes, the six recommended colour styles, the
     published states, the web tooltip, and the keyboard contract. The extended
-    FAB follows once its inner padding is measured, because the rail slot this
-    app already has is the placement it is for. The FAB menu stays recorded and
-    unbuilt until its presentation axis is decided.
+    FAB follows in the same slice, in its expressive sizes only -- the baseline
+    row is not built -- now that `measured_from_compose` supplies what prose
+    withheld. The FAB menu is recorded and deliberately not built: on web the
+    menu component already covers the case, and the compact stack waits for a
+    consumer that needs it.
   elevation: Through the frontend's own `<Elevation level>` primitive.
   disabled: Not accepted as a prop. An unavailable action removes the FAB.
   stylebook_route:

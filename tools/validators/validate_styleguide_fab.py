@@ -610,16 +610,44 @@ def check_extended_fab(report: Report, data: dict) -> None:
             "token, not a size",
         )
     report.check(
-        compose["medium"]["icon_label_space"] != compose["medium"]["icon_label_space_as_built"]
-        and compose["large"]["icon_label_space"] != compose["large"]["icon_label_space_as_built"],
-        "both numbers stay for medium and large: Compose calls its own token incorrect and "
-        "draws something else, and collapsing them hides a decision",
+        compose["medium"]["icon_label_space"] != compose["medium"]["icon_label_space_token_says"]
+        and compose["large"]["icon_label_space"] != compose["large"]["icon_label_space_token_says"],
+        "both numbers stay for medium and large: the token says one thing and two independent "
+        "sources draw another, and collapsing them hides which was chosen",
     )
     report.check(
-        compose["large"]["icon_size"] != data["sizes"]["large"]["icon_size"],
-        "a large extended FAB's icon is not a large FAB's icon, and the record's discrepancy "
-        "entry depends on the two staying different",
+        compose["large"]["icon_size"] == data["sizes"]["large"]["icon_size"] == 36
+        and compose["large"]["icon_size_compose_token_says"] == 32,
+        "the kit and the FAB token agree on a 36dp icon at the large size, and the Compose "
+        "token that says 32 stays recorded as the outlier it is",
     )
+
+    kit = compose["confirmed_in_the_design_kit"]
+    report.check(
+        len(kit["instances_read"]) == 3 and set(kit["instances_read"]) == {"small", "medium", "large"},
+        "all three sizes were read from the kit, not one generalised to three",
+    )
+    report.check(
+        "rested on one source" in kit["what_it_corrected"],
+        "the kit corrected a claim this record had already made, and the correction stays "
+        "written down rather than edited away",
+    )
+    report.check(
+        compose["large"]["block_space"] != compose["large"]["leading_space"]
+        and compose["large"]["block_space"] * 2 + compose["large"]["icon_size"]
+        == compose["large"]["container_height"],
+        "at the large size the block padding centres the icon and the inline padding is the "
+        "token's leading space; they are two different numbers and must not be merged",
+    )
+    for name in ("small", "medium"):
+        size = compose[name]
+        report.check(
+            size["block_space"] * 2 + size["icon_size"] == size["container_height"]
+            if "block_space" in size
+            else (size["leading_space"] * 2 + size["icon_size"] == size["container_height"]),
+            f"extended_fab.measured_from_compose.{name}: the block padding must still centre "
+            "the icon in the container",
+        )
     report.check(
         data["variants"]["extended_fab"]["web_expressive_status"] == "unavailable",
         "M3 lists Web: Expressive as unavailable for the extended FAB, which is why this slice "

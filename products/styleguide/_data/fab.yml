@@ -561,19 +561,51 @@ extended_fab:
       icon_size: 28
       leading_space: 26
       trailing_space: 26
-      icon_label_space: 16
-      icon_label_space_as_built: 12
+      block_space: 26
+      icon_label_space: 12
+      icon_label_space_token_says: 16
       type_scale: md.sys.typescale.title-large
     large:
       container_height: 96
       min_inline_size: 96
       container_shape: md.sys.shape.corner.extra-large
-      icon_size: 32
+      icon_size: 36
+      icon_size_compose_token_says: 32
       leading_space: 28
       trailing_space: 28
-      icon_label_space: 20
-      icon_label_space_as_built: 16
+      block_space: 30
+      icon_label_space: 16
+      icon_label_space_token_says: 20
       type_scale: md.sys.typescale.headline-small
+    confirmed_in_the_design_kit:
+      file: Material 3 Design Kit (Community)
+      node: 57998:43095, the Extended FAB frame
+      read: 2026-10-13
+      instances_read:
+        small: 57998:43398
+        medium: 57998:43296
+        large: 57998:43194
+      what_it_settles: >-
+        The kit draws 12 and 16 for the medium and large icon-label spaces,
+        which is what Compose builds and not what Compose's own token files
+        say. Two independent sources against the token: the token is the odd
+        one out, so this record takes 12 and 16 and keeps the token values
+        beside them as `icon_label_space_token_says`.
+      what_it_corrected: >-
+        A large extended FAB's icon is 36 in the kit, not the 32 that
+        `ExtendedFabLargeTokens` publishes -- the same 36 as a large FAB. The
+        earlier entry here said the icon changes size when an extended FAB
+        collapses into a FAB. It does not; that claim rested on one source.
+      padding_is_two_numbers_at_large: >-
+        The kit's large instance is 28 inline and 30 block, because 30 is what
+        centres a 36dp icon in a 96dp box while 28 is the leading space the
+        token publishes. Small and medium are uniform only because their
+        centring arithmetic lands on the same figure: (56-24)/2 = 16 and
+        (80-28)/2 = 26.
+      also_confirms: >-
+        Six colour styles and four states per size, and no surface, branded or
+        40dp entries anywhere in the FAB or extended FAB frames -- the kit
+        draws what M3 recommends and nothing it has deprecated.
     minimum_width_is_the_height: >-
       Every size's minimum inline size is its own container height, so an
       extended FAB can never be narrower than the FAB it collapses into. The
@@ -854,20 +886,22 @@ discrepancies:
     measured: >-
       `FloatingActionButton.kt` carries "TODO: ExtendedFabMediumTokens
       .IconLabelSpace is incorrect" and the same line for Large, and builds with
-      12dp and 16dp instead of the tokens' 16dp and 20dp.
+      12dp and 16dp instead of the tokens' 16dp and 20dp. The design kit draws
+      12 and 16 as well.
     consequence: >-
-      The published token and the shipping implementation disagree, so this
-      record carries both: `icon_label_space` is what the token set says and
-      `icon_label_space_as_built` is what Compose draws. Choosing between them
-      is an implementation decision, and it cannot be made silently now that
-      both numbers are written down.
-  extended_large_icon_is_smaller_than_the_fab_large_icon:
+      Two sources against one. This record takes the built values and keeps the
+      token figures beside them under `icon_label_space_token_says`, so the
+      disagreement stays visible instead of being resolved by whichever source
+      someone opens first.
+  compose_token_disagrees_with_the_kit_on_the_large_icon:
     measured: >-
-      A large extended FAB's icon is 32dp while a large FAB's icon is 36dp, at
-      the same 96dp container height.
+      `ExtendedFabLargeTokens.IconSize` is 32dp; the kit's large extended FAB
+      draws 36dp, which is also `md.comp.fab.large.icon.size`.
     consequence: >-
-      Collapsing a large extended FAB into a large FAB changes the icon size as
-      well as the shape. They are not one control at two widths.
+      The record takes 36, so a large extended FAB and a large FAB carry the
+      same icon and collapsing one into the other changes shape and width only.
+      This corrects an earlier entry here that said the icon changes size too;
+      it was written from the Compose token alone, before the kit was read.
   fab_menu_token_set_describes_another_platform:
     measured: >-
       `md.comp.fab-menu` publishes 56dp items with full corners and per-item

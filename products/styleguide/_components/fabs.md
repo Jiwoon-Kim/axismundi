@@ -106,13 +106,18 @@ Available로 적은 곳이 Compose이고, 그 토큰 파일은 같은 디자인 
 | height · min width | {{ c.small.container_height }} | {{ c.medium.container_height }} | {{ c.large.container_height }} |
 | icon | {{ c.small.icon_size }} | {{ c.medium.icon_size }} | {{ c.large.icon_size }} |
 | 좌우 | {{ c.small.leading_space }} | {{ c.medium.leading_space }} | {{ c.large.leading_space }} |
-| 아이콘–라벨 (토큰) | {{ c.small.icon_label_space }} | {{ c.medium.icon_label_space }} | {{ c.large.icon_label_space }} |
-| 아이콘–라벨 (실제) | {{ c.small.icon_label_space }} | {{ c.medium.icon_label_space_as_built }} | {{ c.large.icon_label_space_as_built }} |
+| 상하 | {{ c.small.leading_space }} | {{ c.medium.block_space }} | {{ c.large.block_space }} |
+| 아이콘–라벨 | {{ c.small.icon_label_space }} | {{ c.medium.icon_label_space }} | {{ c.large.icon_label_space }} |
+| (토큰이 말하는 값) | — | {{ c.medium.icon_label_space_token_says }} | {{ c.large.icon_label_space_token_says }} |
 | 타입 | title-medium | title-large | headline-small |
 
-마지막 두 줄이 어긋나는 건 오타가 아닙니다. Compose가 **자기 토큰 둘을 틀렸다고 주석에
-적고** 다른 값으로 그립니다. 레코드는 둘 다 들고 있습니다 — 고르는 건 구현 결정이고, 두
-숫자가 적힌 뒤에는 조용히 고를 수 없습니다.
+아이콘–라벨 줄이 어긋나는 건 오타가 아닙니다. Compose가 **자기 토큰 둘을 틀렸다고 주석에
+적고** 다른 값으로 그리는데, **디자인 키트도 같은 값을 그립니다.** 둘 대 하나라서 레코드는
+그린 값을 택하고 토큰 값을 옆에 남깁니다.
+
+large에서 상하와 좌우가 다른 것도 같은 이유로 남깁니다. 30은 36dp 아이콘을 96dp 상자
+가운데 두는 수이고, 28은 토큰이 발행한 leading space입니다. small과 medium이 한 수로
+보이는 건 가운데 두는 산수가 우연히 같은 값에 떨어지기 때문입니다.
 
 산문의 "padding이 줄었다"도 같이 풀립니다. 같은 파일에 baseline의 text padding이 20dp로
 남아 있고 expressive small의 좌우는 16입니다 — **20에서 16으로** 준 것이지, baseline의
@@ -121,9 +126,11 @@ Available로 적은 곳이 Compose이고, 그 토큰 파일은 같은 디자인 
 최소 너비도 다릅니다. baseline은 80dp 고정이었지만 expressive는
 **{{ c.minimum_width_is_the_height }}**
 
-그리고 large에서 한 가지 — extended FAB의 아이콘은 {{ c.large.icon_size }}인데 같은 96dp
-FAB의 아이콘은 {{ site.data.fab.sizes.large.icon_size }}입니다. 접히고 펴질 때 모양만
-바뀌는 게 아니라 **아이콘 크기도 바뀝니다.**
+large 아이콘은 한 번 틀리게 적었다가 키트를 읽고 고쳤습니다. Compose의 토큰 파일은
+{{ c.large.icon_size_compose_token_says }}라고 하는데 키트와 `md.comp.fab.large.icon.size`는
+둘 다 {{ c.large.icon_size }}입니다. 그래서 접히고 펴질 때 바뀌는 건 모양과 너비이고,
+**아이콘 크기는 그대로입니다.** 한 소스만 보고 적었던 결론이라 레코드에 정정 사실까지
+남겨 뒀습니다.
 
 랩이 이미 들고 있는 것도 baseline 행입니다 —
 {{ site.data.fab.extended_fab.no_token_table.what_the_lab_already_holds.which_row_this_is }}

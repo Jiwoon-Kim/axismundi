@@ -1,0 +1,844 @@
+# ---------------------------------------------------------------------------
+# Floating action buttons — the record every other FAB artefact reads from.
+#
+# 이 파일이 출처다. 페이지(`_components/fabs.md`)는 값을 베끼지 않고 Liquid로
+# 끌어오며, 검증기(`tools/validators/validate_styleguide_fab.py`)는 여기 적힌
+# `*_token` 키를 전부 토큰 표에 대조한다.
+#
+# M3는 FAB를 세 컴포넌트로 나눠 발행한다. 세 쪽을 한 레코드에 담는 이유는 축이
+# 같기 때문이다: 크기(56/80/96)와 색 세트가 셋을 관통하고, extended FAB는 FAB와
+# 서로 변형되며, FAB menu는 FAB에서 열린다. 분리하면 같은 축을 세 번 적어야 한다.
+# ---------------------------------------------------------------------------
+
+meta:
+  component: Floating action buttons (FABs)
+  dsdb: 38.2.9
+  table_revision: 2026-05-27T22:44:15.009106Z
+  token_table: products/wordpress/plugins/axismundi/docs/m3-token-tables/SOURCE-M3-FLOATING-ACTION-BUTTON-RAW.md
+  namespaces:
+    - md.comp.fab
+    - md.comp.fab-menu
+  namespace_without_a_table: md.comp.extended-fab
+  namespace_without_a_table_note: >-
+    SOURCE-M3-EXTENDED-FAB-RAW.md carries a collection failure record and no
+    tokens: no TOKEN_TABLE asset was observed on the page. Every extended FAB
+    figure in this record therefore comes from prose or is marked unpublished.
+    Nothing in this repository defines `md.comp.extended-fab`.
+
+# ---------------------------------------------------------------------------
+# 인용. 전문을 옮기지 않는다. 하중을 받는 문장만, 출처와 함께.
+# ---------------------------------------------------------------------------
+
+prose_sources:
+  usage:
+    source: https://m3.material.io/components/floating-action-button/guidelines
+    statement: >-
+      Use a FAB for the most important action on a screen; it appears in front
+      of all other content.
+  one_per_screen:
+    source: https://m3.material.io/components/floating-action-button/guidelines
+    statement: Don't display multiple FABs on a single screen.
+  variants_are_sizes:
+    source: https://m3.material.io/components/floating-action-button/overview
+    statement: FAB variants are based on size, not color.
+  size_choice:
+    source: https://m3.material.io/components/floating-action-button/guidelines
+    statement: >-
+      The medium FAB is recommended for most situations. The FAB is best in
+      compact windows, and a large FAB suits expanded and larger breakpoints.
+  small_not_recommended:
+    source: https://m3.material.io/components/floating-action-button/specs
+    statement: The small FAB is still available, but no longer recommended.
+  surface_not_recommended:
+    source: https://m3.material.io/components/floating-action-button/specs
+    statement: Surface FAB color styles are still available, but no longer recommended.
+  renaming:
+    source: https://m3.material.io/components/floating-action-button/specs
+    statement: >-
+      The primary, secondary and tertiary sets were renamed to primary
+      container, secondary container and tertiary container to match the colour
+      roles they use, and new primary, secondary and tertiary styles were
+      created. The values haven't changed.
+  state_layer_follows_the_icon:
+    source: https://m3.material.io/components/floating-action-button/specs
+    statement: >-
+      When using a non-default color mapping for FABs, make sure the state layer
+      color is the same as the icon color.
+  do_not_disable:
+    source: https://m3.material.io/components/floating-action-button/accessibility
+    statement: >-
+      Don't disable the FAB. If the action represented in the FAB is
+      unavailable, the FAB shouldn't appear.
+  icon_contrast:
+    source: https://m3.material.io/components/floating-action-button/accessibility
+    statement: Ensure the icon has a minimum 3:1 contrast ratio with the container.
+  tooltip_on_web:
+    source: https://m3.material.io/components/floating-action-button/guidelines
+    statement: >-
+      When hovering over a FAB on web products, FABs should display a tooltip
+      with an accompanying icon text label. Use a filled icon instead of an
+      outlined icon.
+  focus_order:
+    source: https://m3.material.io/components/floating-action-button/accessibility
+    statement: >-
+      Ensure the FAB is prioritized in the overall focus order; on mobile the
+      order may skip past page content to land on the FAB.
+  do_not_obscure_focus:
+    source: https://m3.material.io/components/floating-action-button/accessibility
+    statement: >-
+      Avoid positioning the FAB so that it completely obscures the focus
+      indicator of an actionable element; partially covering it is acceptable
+      while the focus indicator stays visible.
+  placement:
+    source: https://m3.material.io/components/floating-action-button/guidelines
+    statement: >-
+      In compact and medium breakpoints the FAB belongs in the lower right
+      corner; in expanded breakpoints consider the upper left corner, like in
+      the navigation rail.
+  in_a_navigation_component:
+    source: https://m3.material.io/components/floating-action-button/guidelines
+    statement: >-
+      A FAB can be used within a navigation component, such as a navigation
+      rail. Individual components, such as cards, shouldn't have their own FAB.
+  scroll_behaviour:
+    source: https://m3.material.io/components/floating-action-button/guidelines
+    statement: >-
+      FABs remain in place on scroll. Extended FABs can collapse into a FAB on
+      scroll and expand on reaching the bottom of the view.
+  extended_when:
+    source: https://m3.material.io/components/extended-fab/guidelines
+    statement: >-
+      Use an extended FAB when label text helps understand the main action, or
+      to add further emphasis to the button.
+  extended_label:
+    source: https://m3.material.io/components/extended-fab/guidelines
+    statement: >-
+      Use 1-2 words at most, avoid wrapping or truncating text, and remember
+      that localization increases width.
+  extended_icon_is_optional:
+    source: https://m3.material.io/components/extended-fab/guidelines
+    statement: >-
+      Unlike standard FABs, extended FABs don't require an icon, and an extended
+      FAB can't have an icon without a text label.
+  extended_hugs:
+    source: https://m3.material.io/components/extended-fab/guidelines
+    statement: >-
+      The extended FAB container is a rounded rectangle that hugs its contents,
+      and grows and shrinks with text length.
+  extended_rtl:
+    source: https://m3.material.io/components/extended-fab/guidelines
+    statement: >-
+      Extended FABs should mirror their elements in right-to-left languages;
+      the icon leads the label in LTR and follows it in RTL.
+  extended_transforms:
+    source: https://m3.material.io/components/extended-fab/guidelines
+    statement: >-
+      In a collapsed navigation rail a FAB is used; when the rail is expanded
+      the FAB can transform into an extended FAB.
+  extended_no_tooltip:
+    source: https://m3.material.io/components/extended-fab/accessibility
+    statement: >-
+      Both the visible label and icon are one focusable element, and the
+      extended FAB doesn't need a tooltip because it already has a visible label.
+  extended_accessible_label:
+    source: https://m3.material.io/components/extended-fab/accessibility
+    statement: >-
+      The accessibility label must include the same first word as the visible
+      label.
+  extended_baseline_not_recommended:
+    source: https://m3.material.io/components/extended-fab/specs
+    statement: >-
+      The baseline extended FAB is no longer recommended; use a small extended
+      FAB. Its type style was updated from label large to title medium, and the
+      inner padding was reduced.
+  fab_menu_is_a_menu_on_web:
+    source: https://m3.material.io/components/fab-menu/specs
+    statement: >-
+      On web, the FAB menu opens from the FAB, and inherits its states and specs
+      from the baseline menu component. The gap between the FAB and menu can
+      vary, but 4dp is recommended.
+  fab_menu_web_component:
+    source: https://m3.material.io/components/fab-menu/guidelines
+    statement: >-
+      On web, the FAB menu uses a menu component for an experience that's
+      consistent with other desktop apps.
+  fab_menu_web_accessibility:
+    source: https://m3.material.io/components/fab-menu/accessibility
+    statement: >-
+      On web, a FAB menu is a combination of a FAB and a menu component. The FAB
+      opens the menu. Follow the accessibility guidelines for FABs and menus.
+  fab_menu_item_count:
+    source: https://m3.material.io/components/fab-menu/guidelines
+    statement: >-
+      FAB menus can contain 2-6 items, closely related under a single action.
+      Don't use a FAB menu with one item.
+  fab_menu_not_with_a_rail:
+    source: https://m3.material.io/components/fab-menu/guidelines
+    statement: >-
+      When a FAB is paired with other components, like the floating toolbar or
+      navigation rail, don't use the FAB menu.
+  fab_menu_not_from_an_extended_fab:
+    source: https://m3.material.io/components/fab-menu/guidelines
+    statement: Don't open a FAB menu from an extended FAB or any other component.
+  fab_menu_initial_focus:
+    source: https://m3.material.io/components/fab-menu/accessibility
+    statement: >-
+      When the FAB is selected, the FAB menu opens, and initial focus remains on
+      the close button, which takes the place of the original FAB. Then the
+      focus moves from the top menu item to the bottom.
+  fab_menu_scrolls_behind_the_close_button:
+    source: https://m3.material.io/components/fab-menu/accessibility
+    statement: >-
+      When the FAB menu can scroll, make sure the items scroll behind the close
+      button, which should always be easy to access and unobstructed.
+  fab_menu_margins:
+    source: https://m3.material.io/components/fab-menu/guidelines
+    statement: >-
+      The FAB and FAB menu margins should increase from 16dp to 24dp in large
+      and extra large windows.
+
+# ---------------------------------------------------------------------------
+# 어느 행을 짓는가. Menu와 같은 질문이고, 같은 방식으로 답한다.
+# ---------------------------------------------------------------------------
+
+variants:
+  fab:
+    label: FAB
+    size_token_prefix: md.comp.fab
+    m3: available
+    m3_expressive: available
+    status: planned
+    why: >-
+      The smallest live size, and the one a collapsed navigation rail asks for.
+  medium_fab:
+    label: Medium FAB
+    size_token_prefix: md.comp.fab.medium
+    m3: not_published
+    m3_expressive: available
+    status: planned
+    why: M3 calls it the recommended size for most situations.
+  large_fab:
+    label: Large FAB
+    size_token_prefix: md.comp.fab.large
+    m3: available
+    m3_expressive: available
+    status: planned
+    why: Expanded breakpoints, where the primary action should be prominent.
+  small_fab:
+    label: Small FAB
+    size_token_prefix: md.comp.fab.small
+    m3: available
+    m3_expressive: not_recommended
+    status: not_implemented
+    why: >-
+      Published and still tokenised, but M3 Expressive says to use a larger
+      size. Recorded so that a 40dp FAB in some other product is identifiable
+      rather than mysterious.
+  extended_fab:
+    label: Extended FAB
+    size_token_prefix: null
+    m3: available
+    m3_expressive: available
+    web_expressive_status: unavailable
+    status: planned
+    why: >-
+      Web ships it regardless of M3's resource table: the owner's measurement is
+      Google Contacts, whose "create contact" control is an extended FAB at the
+      top of an expanded navigation rail -- the placement M3 itself illustrates,
+      and the slot this app's rail already has. What blocks it is not whether to
+      build it but one unpublished number; see `extended_fab.no_token_table`.
+  fab_menu:
+    label: FAB menu
+    size_token_prefix: md.comp.fab-menu
+    m3: not_published
+    m3_expressive: available
+    web_expressive_status: unavailable
+    status: not_implemented
+    why: >-
+      On web it is not its own component: a FAB opens a menu. See `fab_menu`
+      below for why its token set describes a different thing from what web is
+      told to build.
+
+# ---------------------------------------------------------------------------
+# 토큰 표의 모양. 숫자를 외우지 않고 산수를 고정한다.
+# ---------------------------------------------------------------------------
+
+token_families:
+  live_total: 164
+  deprecated_total: 306
+  sizes:
+    token_count: 16
+    sets: [ md.comp.fab, md.comp.fab.small, md.comp.fab.medium, md.comp.fab.large ]
+    properties_each: [ container.height, container.width, container.shape, icon.size ]
+  expressive_colour_sets:
+    token_count_each: 16
+    sets:
+      - md.comp.fab.primary
+      - md.comp.fab.secondary
+      - md.comp.fab.tertiary
+      - md.comp.fab.primary-container
+      - md.comp.fab.secondary-container
+      - md.comp.fab.tertiary-container
+    state_names: [ focused, hovered, pressed ]
+    carries_size_tokens: false
+    carries_focus_indicator_tokens: false
+    carries_lowered: false
+  baseline_shaped_colour_sets:
+    sets:
+      md.comp.fab.surface: 28
+      md.comp.fab.branded: 24
+    state_names: [ focus, hover, pressed ]
+    carries_size_tokens: true
+    carries_focus_indicator_tokens: true
+    carries_lowered: true
+  arithmetic:
+    expression: 6 * 16 + 28 + 24 + 16
+    equals: 164
+    why: >-
+      Measured, and it closes. The validator checks the sum rather than a frozen
+      list, so a renamed set fails instead of quietly dropping checks.
+  two_generations_read_off_the_table: >-
+    The live table carries both generations at once, and the state names give
+    them away: the six expressive colour sets say `focused`/`hovered`, while
+    `surface` and `branded` say `focus`/`hover` and keep their own size and
+    focus-indicator tokens. The deprecation notes name the split in words --
+    "expressive small fab `md.comp.fab` or baseline small fab
+    `md.comp.fab.small`" -- which is the same shape as
+    `md.comp.menu` against `md.comp.menus`.
+
+# ---------------------------------------------------------------------------
+# 크기. 세 살아있는 크기와, 폐기되지 않았지만 권장되지 않는 하나.
+# ---------------------------------------------------------------------------
+
+sizes:
+  fab:
+    container_height_token: md.comp.fab.container.height
+    container_height: 56
+    container_width_token: md.comp.fab.container.width
+    container_width: 56
+    container_shape_token: md.comp.fab.container.shape
+    container_shape: md.sys.shape.corner.large
+    icon_size_token: md.comp.fab.icon.size
+    icon_size: 24
+    derived_icon_padding: 16
+  medium:
+    container_height_token: md.comp.fab.medium.container.height
+    container_height: 80
+    container_width_token: md.comp.fab.medium.container.width
+    container_width: 80
+    container_shape_token: md.comp.fab.medium.container.shape
+    container_shape: md.sys.shape.corner.large-increased
+    icon_size_token: md.comp.fab.medium.icon.size
+    icon_size: 28
+    derived_icon_padding: 26
+  large:
+    container_height_token: md.comp.fab.large.container.height
+    container_height: 96
+    container_width_token: md.comp.fab.large.container.width
+    container_width: 96
+    container_shape_token: md.comp.fab.large.container.shape
+    container_shape: md.sys.shape.corner.extra-large
+    icon_size_token: md.comp.fab.large.icon.size
+    icon_size: 36
+    derived_icon_padding: 30
+  small:
+    container_height_token: md.comp.fab.small.container.height
+    container_height: 40
+    container_width_token: md.comp.fab.small.container.width
+    container_width: 40
+    container_shape_token: md.comp.fab.small.container.shape
+    container_shape: md.sys.shape.corner.medium
+    icon_size_token: md.comp.fab.small.icon.size
+    icon_size: 24
+    derived_icon_padding: 8
+  square_invariant: container_height == container_width
+  padding_is_derived:
+    expression: ( container_height - icon_size ) / 2
+    why: >-
+      M3 publishes padding only as a measurement image, which this repository
+      does not hold. Centring an icon in a square container gives the same
+      number, so the record derives it and says so rather than transcribing a
+      figure nobody can check. If a Figma measurement ever contradicts one of
+      these, the measurement wins and this entry becomes a discrepancy.
+    unpublished: [ derived_icon_padding ]
+
+# ---------------------------------------------------------------------------
+# 색. 여섯 세트는 같은 모양이고, 둘은 다른 세대다.
+# ---------------------------------------------------------------------------
+
+colour_styles:
+  # `on_colour`, not `on`: YAML 1.1 parses a bare `on` key as the boolean true,
+  # so the colour role vanished behind a `True` key and the validator read a
+  # KeyError instead of a value.
+  default: primary-container
+  live:
+    - { name: primary-container, container: md.sys.color.primary-container, on_colour: md.sys.color.on-primary-container }
+    - { name: secondary-container, container: md.sys.color.secondary-container, on_colour: md.sys.color.on-secondary-container }
+    - { name: tertiary-container, container: md.sys.color.tertiary-container, on_colour: md.sys.color.on-tertiary-container }
+    - { name: primary, container: md.sys.color.primary, on_colour: md.sys.color.on-primary }
+    - { name: secondary, container: md.sys.color.secondary, on_colour: md.sys.color.on-secondary }
+    - { name: tertiary, container: md.sys.color.tertiary, on_colour: md.sys.color.on-tertiary }
+  baseline_not_recommended:
+    - { name: surface, container: md.sys.color.surface-container-high, on_colour: md.sys.color.primary }
+    - { name: branded, container: md.sys.color.surface-container-high, on_colour: null }
+  colour_is_not_a_variant: >-
+    "FAB variants are based on size, not color." A colour style is a
+    configuration of one variant, which is why the sizes carry no colour tokens
+    and the colour sets carry no size tokens.
+  state_layer_follows_the_icon:
+    rule: >-
+      The state layer colour equals the icon colour for the chosen style, not
+      the container colour.
+    token_evidence: md.comp.fab.primary.hovered.state-layer.color -> md.sys.color.on-primary
+  lowered:
+    exists_in: [ md.comp.fab.surface, md.comp.fab.branded ]
+    resting_elevation: md.sys.elevation.level1
+    hover_elevation: md.sys.elevation.level2
+    missing_from_the_expressive_sets: true
+    note: >-
+      Measured in the live table: the six expressive colour sets publish no
+      `lowered` tokens at all. A lowered primary-container FAB therefore has no
+      published elevation set, which is why the navigation rail's "resting
+      elevation 0" slot is a project decision rather than a token reading.
+
+# ---------------------------------------------------------------------------
+# 상태와 고도. 고도는 Menu와 같은 소유권 문제를 그대로 안고 있다.
+# ---------------------------------------------------------------------------
+
+states:
+  enabled:
+    container_elevation_token: md.comp.fab.primary-container.container.elevation
+    container_elevation: md.sys.elevation.level3
+  hovered:
+    container_elevation_token: md.comp.fab.primary-container.hovered.container.elevation
+    container_elevation: md.sys.elevation.level4
+    state_layer_opacity_token: md.sys.state.hover.state-layer-opacity
+    state_layer_opacity: 0.08
+  focused:
+    container_elevation_token: md.comp.fab.primary-container.focused.container.elevation
+    container_elevation: md.sys.elevation.level3
+    state_layer_opacity_token: md.sys.state.focus.state-layer-opacity
+    state_layer_opacity: 0.1
+  pressed:
+    container_elevation_token: md.comp.fab.primary-container.pressed.container.elevation
+    container_elevation: md.sys.elevation.level3
+    state_layer_opacity_token: md.sys.state.pressed.state-layer-opacity
+    state_layer_opacity: 0.1
+  disabled:
+    published: false
+    rule: >-
+      M3 publishes no disabled FAB. An unavailable action removes the FAB
+      instead of greying it, so the implementation must not accept a `disabled`
+      prop that renders a dimmed FAB.
+  elevation_ownership: >-
+    The elevation levels here are token references, and this repository's theme
+    deliberately defines no `--md-sys-elevation-level*`. A FAB therefore uses
+    the frontend's own `<Elevation level>` primitive, as the menu does, and must
+    not reach for `--md-sys-elevation-shadow-level*`. Hover changing level3 to
+    level4 means swapping the primitive's level, not adding a second shadow.
+
+focus:
+  indicator_thickness_token: md.sys.state.focus-indicator.thickness
+  indicator_thickness: 3
+  indicator_outer_offset_token: md.sys.state.focus-indicator.outer-offset
+  indicator_outer_offset: 2
+  indicator_colour_token: md.comp.fab.surface.focus.indicator.color
+  indicator_colour: md.sys.color.secondary
+  only_published_for: [ md.comp.fab.surface, md.comp.fab.branded ]
+  note: >-
+    The focus-indicator tokens live only in the two baseline-shaped sets. The
+    thickness and offset they point at are `md.sys` values every component in
+    this app already uses, so the indicator is read from the system tokens and
+    the component-level pair is recorded only to explain their absence
+    elsewhere.
+
+keyboard:
+  tab: Focus lands on the FAB.
+  space: Perform the default action.
+  enter: Perform the default action.
+  nothing_else: >-
+    A FAB is one button. It gets no arrow-key behaviour of its own; a FAB menu's
+    keyboard behaviour belongs to the menu it opens.
+
+tooltip:
+  fab:
+    required_on_web: true
+    trigger: [ hover, focus ]
+    content: the icon's text label
+  extended_fab:
+    required_on_web: false
+    why: The visible label already says what the icon means.
+  icon_style: filled
+  consequence: >-
+    A FAB with no visible label needs an accessible name and a tooltip carrying
+    the same words, which makes the tooltip part of the component rather than
+    something a caller remembers to add.
+
+placement:
+  compact: lower right corner, above or nested within the navigation bar
+  medium: lower right corner
+  expanded: upper left region, such as the navigation rail
+  alignment_choices: [ left, center, right ]
+  margin: 16
+  margin_large_windows: 24
+  margin_source: https://m3.material.io/components/fab-menu/guidelines
+  one_per_screen: true
+  not_inside_a_card: >-
+    Individual components, such as cards, should not have their own FAB. A FAB
+    is a property of the screen, not of a list row.
+  existing_consumer:
+    file: products/wordpress/plugins/axismundi/src/apps/frontend/components/navigations/nav-rail.js
+    slot: ax-nav-rail__fab
+    note: >-
+      The navigation rail already accepts a FAB, top-aligned, and documents a
+      resting elevation of 0 for that position. The rail is therefore the first
+      consumer, and the FAB must be usable without the elevation its tokens
+      publish.
+
+motion:
+  appearing: >-
+    A FAB expands outward from a central point when it animates on screen, and
+    its icon can animate too.
+  scrolling: FABs remain in place on scroll.
+  moving_across_tabs: >-
+    When tabs change, the FAB should briefly disappear and reappear once the new
+    content is in place, and should only reappear if it is relevant to the new
+    screen -- in the same position where possible.
+  do_not: Don't animate the FAB with body content.
+  expanding: >-
+    A FAB can expand into another surface with a container transform, and can
+    transition into a FAB menu.
+  project_policy:
+    status: not_decided
+    note: >-
+      Container transform is not implemented anywhere in this app, and nothing
+      in this record claims it. The menu's motion slice is the precedent for how
+      a decision like this gets recorded before it gets built.
+
+# ---------------------------------------------------------------------------
+# Extended FAB. 표가 없다는 것이 이 절의 가장 중요한 사실이다.
+# ---------------------------------------------------------------------------
+
+extended_fab:
+  anatomy: [ container, label_text, icon_optional ]
+  sizes_m3_expressive:
+    small: 56
+    medium: 80
+    large: 96
+    source: https://m3.material.io/components/extended-fab/overview
+    note: >-
+      Heights only. Widths are dynamic, and no corner, padding, icon size or
+      type scale for the medium and large sizes is published in prose.
+  type_scale:
+    small: md.sys.typescale.title-medium
+    small_source: https://m3.material.io/components/extended-fab/specs
+    medium: null
+    large: null
+  baseline:
+    status: not_recommended
+    container_height: 56
+    container_width: Dynamic, 80dp minimum
+    container_shape: 16dp corner radius
+    icon_size: 24
+    padding: 16
+    type_scale: md.sys.typescale.label-large
+    source: https://m3.material.io/components/extended-fab/specs
+    note: >-
+      These five figures are the only extended FAB measurements M3 states in
+      prose, and they describe the row M3 tells us not to build. They are
+      recorded because they are checkable, not because they are the target.
+  label_rules:
+    words: 1-2
+    no_wrapping: true
+    no_truncating: true
+    icon_without_label: forbidden
+    label_without_icon: allowed
+  rtl: >-
+    Mirror the elements: the icon leads the label in LTR and follows it in RTL.
+  transforms_with_a_fab:
+    collapsed_rail: FAB
+    expanded_rail: extended FAB
+    on_scroll: >-
+      An extended FAB can collapse into a FAB on scroll down and expand again on
+      scroll up.
+    transition_parts: [ shape changes, icon moves to the leading edge, label fades in ]
+  accessible_name: >-
+    One focusable element for icon and label together, with an accessibility
+    label whose first word matches the visible label.
+  observed_in_the_wild:
+    product: Google Contacts
+    placement: top of the expanded navigation rail, above the destination list
+    evidence: owner screenshot, 2026-10-13
+    deviation:
+      what: >-
+        It shows a tooltip although the label is visible, and the tooltip's words
+        do not share a first word with the label -- the visible control reads
+        "create contact" while the tooltip reads "add new contact".
+      against:
+        - prose_sources.extended_no_tooltip
+        - prose_sources.extended_accessible_label
+      note: >-
+        Recorded as a measurement of a shipped product, not as licence. If this
+        project adds a tooltip to an extended FAB it is a deliberate deviation
+        and says so, rather than inheriting one by imitation.
+  no_token_table:
+    status: open
+    consequence: >-
+      Building this means writing literals for every value the prose does not
+      state. The project's rule from the menu slice applies: an unpublished
+      figure is recorded as unpublished and named `md.comp`-shaped only when a
+      measurement establishes it, never invented to look like a token.
+    what_would_unblock_it: >-
+      Either a TOKEN_TABLE asset for `md.comp.extended-fab`, or Figma layer data
+      for the three sizes giving corner, padding, icon size and type scale.
+    the_one_number: >-
+      Height, icon size and the small size's type scale are all stated in prose.
+      What is not stated is the inner padding: M3 says only that it "was
+      reduced" from the baseline's 16dp, so the expressive figure is some
+      unknown number below 16. Everything else about a small extended FAB can
+      be built from published values.
+    what_the_lab_already_holds:
+      path: products/reference-implementations/axismundi-lab/modules/fab
+      audit: docs/FAB-MEASUREMENT-AUDIT.md
+      extended_fab:
+        container_height: 56
+        min_inline_size: 80
+        inline_padding: 16
+        icon_label_gap: 8
+        icon_size: 24
+        corner: 16
+        type_scale: title-medium
+      which_row_this_is: >-
+        The baseline row's measurements carrying the expressive type scale. The
+        16dp padding is the baseline figure M3 says the expressive sizes reduced,
+        so the lab does not answer the open number -- it gives a shippable
+        baseline-shaped extended FAB and leaves the expressive one blocked.
+      medium_and_large: >-
+        Absent. The lab measured one extended FAB, not three, so the 80 and 96
+        sizes remain unmeasured here as well.
+      deviation_to_drop_on_port: >-
+        The lab styles a disabled extended FAB, down to an elevation of level0.
+        M3 publishes no disabled FAB and says an unavailable action removes it,
+        so that rule does not come across.
+
+# ---------------------------------------------------------------------------
+# FAB menu. 웹에서는 별도 컴포넌트가 아니다 -- 산문 세 쪽이 같은 말을 한다.
+# ---------------------------------------------------------------------------
+
+fab_menu:
+  on_web_it_is_a_fab_and_a_menu:
+    status: published
+    evidence:
+      - prose_sources.fab_menu_is_a_menu_on_web
+      - prose_sources.fab_menu_web_component
+      - prose_sources.fab_menu_web_accessibility
+    consequence: >-
+      Web does not build the token set below. A FAB opens the menu component
+      this project already ships, and the FAB menu's own measurements -- 56dp
+      items, full corners, title-medium labels, an elevation per item -- are the
+      Android and Expressive shape. Reading the token table alone leads to the
+      opposite conclusion, which is how this record first got it wrong.
+    gap_between_fab_and_menu: 4
+    inherits_from: baseline menu component
+    inherits_from_note: >-
+      M3 says the web FAB menu inherits from the *baseline* menu component,
+      while this project implemented the vertical (expressive) menu row. The
+      menu we would open is therefore the one we have, not the one M3 names.
+  android_shape:
+    namespace: md.comp.fab-menu
+    close_button:
+      container_height_token: md.comp.fab-menu.close-button.container.height
+      container_height: 56
+      container_shape_token: md.comp.fab-menu.close-button.container.shape
+      container_shape: md.sys.shape.corner.full
+      icon_size_token: md.comp.fab-menu.close-button.icon.size
+      icon_size: 20
+      between_space_token: md.comp.fab-menu.close-button.between-space
+      between_space: md.sys.measurement.space100
+    menu_item:
+      container_height_token: md.comp.fab-menu.menu-item.container.height
+      container_height: 56
+      container_shape_token: md.comp.fab-menu.menu-item.container.shape
+      container_shape: md.sys.shape.corner.full
+      icon_size_token: md.comp.fab-menu.menu-item.icon.size
+      icon_size: 24
+      label_text_token: md.comp.fab-menu.menu-item.label-text
+      label_text: md.sys.typescale.title-medium
+      leading_space_token: md.comp.fab-menu.menu-item.leading-space
+      leading_space: md.sys.measurement.space300
+      trailing_space_token: md.comp.fab-menu.menu-item.trailing-space
+      trailing_space: md.sys.measurement.space300
+      icon_label_space_token: md.comp.fab-menu.menu-item.icon-label-space
+      icon_label_space: md.sys.measurement.space100
+      between_space_token: md.comp.fab-menu.menu-item.between-space
+      between_space: md.sys.measurement.space50
+      container_elevation_token: md.comp.fab-menu.menu-item.container.elevation
+      container_elevation: md.sys.elevation.level0
+    colour_sets: [ primary, secondary, tertiary ]
+    colour_pairing: >-
+      Use the colour set matching the FAB's colour style -- a primary or primary
+      container FAB opens a primary FAB menu.
+  behaviour_published_for_every_platform:
+    item_count: { min: 2, max: 6 }
+    opens_from: a FAB only, never an extended FAB or another component
+    anchor: >-
+      The close button takes the FAB's place, sharing the top trailing corner as
+      an anchor, and the menu animates from that corner.
+    initial_focus: the close button, then items top to bottom
+    scrolling: items scroll behind the close button, which stays unobstructed
+    target_size: 48
+    not_with:
+      - navigation rail
+      - floating toolbar
+  our_shell_conflict:
+    status: resolved
+    was: >-
+      This app's FAB lives in the navigation rail in expanded windows, and M3
+      says not to use a FAB menu when the FAB is paired with a rail, so the
+      place our FAB sits looked like a place M3 forbids opening one from.
+    resolution: >-
+      The prohibition is about a FAB paired with a rail, and a compact window
+      has no rail: it has a navigation bar, and the FAB moves independently of
+      it. The two cases therefore do not overlap, and the FAB menu is served on
+      compact only.
+    measured: >-
+      Google Contacts at 582x533 drops the rail's extended FAB and puts a FAB at
+      the bottom trailing edge, which opens the same action list; at expanded
+      width the extended FAB sits at the top of the rail and opens that list
+      below itself. The control moves with the window, not with the rail.
+      Owner screenshots, 2026-10-13.
+  presentation_axis:
+    status: adopted
+    axis: breakpoint and pointer, matching the Surface contract's presentation x breakpoint
+    compact: FAB menu
+    expanded: FAB or extended FAB opening the menu component
+    not_gated_on_display_mode: >-
+      A PWA runs in a display mode, which is not a window size. Gating on it
+      would make the same phone's browser tab and installed app differ for no
+      reason, so the gate is the breakpoint and the pointer.
+    gate: breakpoint and pointer
+  deviation_on_compact:
+    status: NON-STANDARD
+    what: >-
+      On compact this project plans the expressive stack -- a close button in
+      the FAB's place with items rising above it -- rather than the menu
+      component.
+    against:
+      - prose_sources.fab_menu_web_component
+      - prose_sources.fab_menu_is_a_menu_on_web
+    also_against: >-
+      The observed product. Google Contacts opens a menu in compact too, so this
+      is not a case of following what ships either.
+    why: >-
+      The stack is built and measured already, in
+      `axismundi-lab/modules/fab-menu`, and it is the shape M3 itself specifies
+      for touch. The deviation is from M3's *web* advice, which exists because
+      desktop apps have menus -- the reason it gives does not hold on a phone.
+    cost_if_wrong: >-
+      Two code paths for one control instead of one, and a compact experience
+      that no other web product matches.
+  lab_implementation:
+    path: products/reference-implementations/axismundi-lab/modules/fab-menu
+    authority: products/reference-implementations/axismundi-lab/stylesheets/components.css, Chunk H1
+    status_in_the_lab: >-
+      Structural only. Chunk H1 calls itself Tier 4 and defers the expressive
+      item stagger -- 50ms cascade, scale 0.7 to 1 -- to a later cycle; the
+      current build fades opacity and transform together.
+    measurements_match_the_tokens: >-
+      Measured against `md.comp.fab-menu`: close button 56 with a 20 icon, rows
+      56 with a 24 icon, 8 between the close button and the first item
+      (space100), 4 between items (space50), 24 leading and trailing
+      (space300), 8 between icon and label (space100). The lab built the
+      published shape, not an approximation of it.
+    porting_consequence: >-
+      Chunk H1 paints with `--md-sys-elevation-shadow-level3` and `-level4`,
+      which the frontend must not use because this theme defines no elevation
+      levels. Porting it means the `<Elevation level>` primitive and the same
+      split the menu needed, where the elevated host and the scrolling box are
+      two elements.
+    evidence_not_product: >-
+      The lab is a workbench. Nothing is shipped by being there.
+
+# ---------------------------------------------------------------------------
+# 발행되지 않은 것, 그리고 불일치.
+# ---------------------------------------------------------------------------
+
+not_published:
+  padding_images: >-
+    M3 publishes "FAB padding measurements" as images for all three sizes. This
+    repository holds none of them, so `sizes.*.derived_icon_padding` is
+    arithmetic, not a transcription.
+  extended_fab_expressive_measurements: >-
+    Corner, padding, icon size and type scale for the medium and large extended
+    FABs. Prose gives heights only.
+  fab_menu_measurement_images: >-
+    "FAB menu size measurements" and the per-size placement offsets, including
+    how much higher the close button sits for medium and large FABs.
+  web_expressive_implementations:
+    extended_fab: unavailable
+    fab_menu: unavailable
+    note: >-
+      M3's own resource table lists Web: Expressive as unavailable for both, so
+      there is no reference implementation to measure against -- only Android
+      and Flutter.
+
+discrepancies:
+  lowered_is_baseline_only:
+    measured: >-
+      `lowered` tokens exist in the live table only for `surface` and `branded`,
+      the two sets M3 no longer recommends.
+    consequence: >-
+      A lowered FAB in a recommended colour style has no published elevation
+      set. The rail's resting elevation 0 is a project decision, recorded as
+      such.
+  table_carries_two_generations:
+    measured: >-
+      164 live tokens split into six expressive colour sets using
+      `focused`/`hovered` and two baseline-shaped sets using `focus`/`hover`.
+    consequence: >-
+      Any generated CSS custom property name must follow the set it came from.
+      Normalising the state names would invent tokens that do not exist.
+  fab_menu_token_set_describes_another_platform:
+    measured: >-
+      `md.comp.fab-menu` publishes 56dp items with full corners and per-item
+      elevation, while the web prose says to use the menu component.
+    consequence: >-
+      The token set is not the web contract. Recorded so that nobody implements
+      the table and calls it the component.
+  small_fab_still_tokenised:
+    measured: md.comp.fab.small.* is live, 40dp with a medium corner.
+    consequence: >-
+      "Not recommended" is not "deprecated". The tokens resolve, so a 40dp FAB
+      is legible M3 rather than a mistake.
+
+project_policy:
+  slice: >-
+    FAB first: the three live sizes, the six recommended colour styles, the
+    published states, the web tooltip, and the keyboard contract. The extended
+    FAB follows once its inner padding is measured, because the rail slot this
+    app already has is the placement it is for. The FAB menu stays recorded and
+    unbuilt until its presentation axis is decided.
+  elevation: Through the frontend's own `<Elevation level>` primitive.
+  disabled: Not accepted as a prop. An unavailable action removes the FAB.
+  stylebook_route:
+    path: /social/stylebook/components/fabs
+    path_is_plural: >-
+      Every sibling route is plural -- buttons, cards, menus, surfaces -- and the
+      style guide page is `fabs.md`. A singular slug would be the only one.
+    declared_in:
+      - products/wordpress/plugins/axismundi/includes/route.php
+      - products/wordpress/plugins/axismundi/includes/route.php
+      - products/wordpress/plugins/axismundi/src/apps/frontend/app.js
+      - products/wordpress/plugins/axismundi/src/apps/frontend/pages/stylebook/index.js
+      - products/wordpress/plugins/axismundi/src/apps/frontend/pages/stylebook/index.js
+    note: >-
+      Five places, not four: two regexes in `route.php`, the route pattern in
+      `app.js`, and both the dispatch and the index link in `stylebook/index.js`.
+      The menu slice shipped with the third one missing and the page did not
+      open while 224 checks passed, which is why they are listed here.
+
+evidence_not_product: >-
+  Figures in this file come from the token table named in `meta`, or from the
+  M3 prose quoted in `prose_sources`, or they are marked unpublished. Nothing
+  here is measured off a running implementation yet, because the component does
+  not exist.

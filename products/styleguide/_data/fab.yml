@@ -207,7 +207,7 @@ variants:
     size_token_prefix: md.comp.fab
     m3: available
     m3_expressive: available
-    status: planned
+    status: implemented
     why: >-
       The smallest live size, and the one a collapsed navigation rail asks for.
   medium_fab:
@@ -215,14 +215,14 @@ variants:
     size_token_prefix: md.comp.fab.medium
     m3: not_published
     m3_expressive: available
-    status: planned
+    status: implemented
     why: M3 calls it the recommended size for most situations.
   large_fab:
     label: Large FAB
     size_token_prefix: md.comp.fab.large
     m3: available
     m3_expressive: available
-    status: planned
+    status: implemented
     why: Expanded breakpoints, where the primary action should be prominent.
   small_fab:
     label: Small FAB
@@ -240,13 +240,13 @@ variants:
     m3: available
     m3_expressive: available
     web_expressive_status: unavailable
-    status: planned
+    status: implemented
     why: >-
       Web ships it regardless of M3's resource table: the owner's measurement is
       Google Contacts, whose "create contact" control is an extended FAB at the
       top of an expanded navigation rail -- the placement M3 itself illustrates,
-      and the slot this app's rail already has. What blocks it is not whether to
-      build it but one unpublished number; see `extended_fab.no_token_table`.
+      and the slot this app's rail already has. Compose and the design kit close
+      the formerly unpublished geometry; see `extended_fab.measured_from_compose`.
   fab_menu:
     label: FAB menu
     size_token_prefix: md.comp.fab-menu
@@ -926,8 +926,18 @@ project_policy:
     consumer that needs it.
   elevation: Through the frontend's own `<Elevation level>` primitive.
   disabled: Not accepted as a prop. An unavailable action removes the FAB.
+  implementation:
+    status: implemented
+    source:
+      - products/wordpress/plugins/axismundi/src/apps/frontend/components/fabs/fab.js
+      - products/wordpress/plugins/axismundi/src/apps/frontend/styles/components/fab.css
+    note: >-
+      The implementation builds the three expressive FAB sizes and the three
+      expressive extended FAB sizes. FAB menu and baseline small FAB remain
+      deliberately absent from this slice.
   stylebook_route:
     path: /social/stylebook/components/fabs
+    rewrite_version: '22'
     path_is_plural: >-
       Every sibling route is plural -- buttons, cards, menus, surfaces -- and the
       style guide page is `fabs.md`. A singular slug would be the only one.
@@ -940,11 +950,13 @@ project_policy:
     note: >-
       Five places, not four: two regexes in `route.php`, the route pattern in
       `app.js`, and both the dispatch and the index link in `stylebook/index.js`.
+      Adding the route also advances the plugin rewrite version, so an existing
+      installation rebuilds the registered rule.
       The menu slice shipped with the third one missing and the page did not
       open while 224 checks passed, which is why they are listed here.
 
 evidence_not_product: >-
   Figures in this file come from the token table named in `meta`, or from the
-  M3 prose quoted in `prose_sources`, or they are marked unpublished. Nothing
-  here is measured off a running implementation yet, because the component does
-  not exist.
+  M3 prose quoted in `prose_sources`, or from the generated Compose files and
+  design-kit measurements named in `extended_fab`. The implementation is
+  verified separately; it does not become authority for these figures.

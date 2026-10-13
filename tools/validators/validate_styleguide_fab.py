@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Check the FAB record against the token tables it cites.
+"""Check the FAB record against the token tables it cites and the implementation.
 
-The component does not exist yet, so this file guards the record rather than an
-implementation. Four things it exists to stop:
+The record is the authority for the implementation. This validator prevents:
 
 * A restated figure drifting from the token it names. Every `*_token` key is
   resolved through the tables, including the string-valued ones -- a shape or a
@@ -41,10 +40,15 @@ RAW_FAB = TABLES / "SOURCE-M3-FLOATING-ACTION-BUTTON-RAW.md"
 RAW_FAB_MENU = TABLES / "SOURCE-M3-FAB-MENU-RAW.md"
 RAW_EXTENDED = TABLES / "SOURCE-M3-EXTENDED-FAB-RAW.md"
 FRONTEND = ROOT / "products/wordpress/plugins/axismundi/src/apps/frontend"
+FAB = FRONTEND / "components/fabs/fab.js"
+FAB_CSS = FRONTEND / "styles/components/fab.css"
+FRONTEND_STYLES = FRONTEND / "styles/index.css"
+FAB_STYLEBOOK = FRONTEND / "pages/stylebook/components/fabs/index.js"
 NAV_RAIL = FRONTEND / "components/navigations/nav-rail.js"
 STYLEBOOK_INDEX = FRONTEND / "pages/stylebook/index.js"
 APP = FRONTEND / "app.js"
 ROUTE = ROOT / "products/wordpress/plugins/axismundi/includes/route.php"
+PLUGIN = ROOT / "products/wordpress/plugins/axismundi/axismundi.php"
 
 # Exact, not a floor. The menu record learned this the hard way: at a floor a
 # renamed key took three checks with it and the run still passed. Raise this
@@ -650,8 +654,8 @@ def check_extended_fab(report: Report, data: dict) -> None:
         )
     report.check(
         data["variants"]["extended_fab"]["web_expressive_status"] == "unavailable",
-        "M3 lists Web: Expressive as unavailable for the extended FAB, which is why this slice "
-        "does not build it",
+        "M3 still lists Web: Expressive as unavailable for the extended FAB; this project's "
+        "Compose and design-kit evidence must remain explicit about that deviation",
     )
 
 
@@ -681,8 +685,6 @@ def check_consumers_and_route(report: Report, data: dict) -> None:
             (ROOT / place).exists(),
             f"stylebook_route names `{place}`, which does not exist",
         )
-    # Conditional, because the route is not built yet. Once the slug lands
-    # anywhere it has to land everywhere, which is the failure this pins.
     slug = route["path"].rsplit("/", 1)[1]
     texts = {
         "route.php": ROUTE.read_text(encoding="utf-8"),
@@ -692,10 +694,156 @@ def check_consumers_and_route(report: Report, data: dict) -> None:
     present = {name: f"components/{slug}" in text or f"|{slug})" in text or f"'{slug}'" in text
                for name, text in texts.items()}
     report.check(
-        len(set(present.values())) == 1,
+        all(present.values()),
         "the FAB stylebook route is declared in "
         f"{[name for name, found in present.items() if found]} but not in "
         f"{[name for name, found in present.items() if not found]}",
+    )
+    report.check(
+        ROUTE.read_text(encoding="utf-8").count(f"|{slug}") == 2,
+        "the FAB route must appear in both route.php regexes, not merely somewhere in that file",
+    )
+    report.check(
+        f"AXISMUNDI_CAPSTONE_REWRITE_VERSION  = '{route['rewrite_version']}'"
+        in PLUGIN.read_text(encoding="utf-8"),
+        "adding the FAB route must advance the rewrite version so existing installs rebuild their rules",
+    )
+    report.check(
+        f"'{slug}' === component" in texts["stylebook/index.js"]
+        and f"components/{slug}" in texts["stylebook/index.js"],
+        "the stylebook index needs both FAB dispatch and its navigation link",
+    )
+
+
+def check_implementation(report: Report, data: dict) -> None:
+    implementation = data["project_policy"]["implementation"]
+    report.check(
+        implementation["status"] == "implemented",
+        "the record cannot call FAB implemented without its implementation status",
+    )
+    report.check(
+        all(data["variants"][name]["status"] == "implemented" for name in (
+            "fab", "medium_fab", "large_fab", "extended_fab"
+        )),
+        "the three expressive FAB sizes and expressive extended FAB must move to implemented together",
+    )
+    for path in implementation["source"]:
+        report.check((ROOT / path).is_file(), f"FAB implementation source `{path}` is missing")
+
+    source = FAB.read_text(encoding="utf-8")
+    css = FAB_CSS.read_text(encoding="utf-8")
+    stylebook = FAB_STYLEBOOK.read_text(encoding="utf-8")
+    extended_source = source[source.index("export const ExtendedFab"):]
+
+    report.check(
+        "@import url( './components/fab.css' );" in FRONTEND_STYLES.read_text(encoding="utf-8"),
+        "the FAB stylesheet exists but is not imported by the frontend entry stylesheet",
+    )
+    report.check(
+        "<Elevation level={ elevation } />" in source
+        and "md-sys-elevation-shadow-level" not in source
+        and "md-sys-elevation-shadow-level" not in css,
+        "FAB elevation must use the frontend Elevation primitive and never the theme shadow variables",
+    )
+    # Three things, because two of them were written and bound nothing. The
+    # pattern was escaped twice, so it searched for a literal backslash-b and
+    # could never match; and a warning does not stop a prop reaching the DOM.
+    # Removing the one destructured `disabled,` line makes `...props` carry it
+    # onto the button, which measured as a real disabled FAB while this check
+    # passed.
+    report.check(
+        "undefined !== disabled" in source,
+        "both FAB components must warn when a `disabled` prop arrives",
+    )
+    report.check(
+        not re.search(r"\bdisabled\s*=\s*\{", source),
+        "no FAB may bind a `disabled` attribute: M3 removes an unavailable action instead",
+    )
+    report.check(
+        source.count("\n\tdisabled,\n") == 2,
+        "`disabled` must stay destructured in both components, or the rest spread carries it "
+        "onto the button and renders the dimmed FAB the record refuses",
+    )
+    report.check(
+        "className=\"ax-fab__tooltip\"" in source
+        and "aria-hidden=\"true\"" in source
+        and "{ label }</span>" in source
+        and "title=" not in source,
+        "an icon-only FAB owns a visual tooltip with the same label, not a browser title attribute",
+    )
+    report.check(
+        "ax-fab__tooltip" not in extended_source
+        and "ax-extended-fab__label" in extended_source,
+        "an extended FAB retains its visible label and must not grow an icon-only FAB tooltip",
+    )
+    report.check(
+        "[dir=\"rtl\"] .ax-extended-fab__icon" in css and "order: 1" in css,
+        "the optional extended FAB icon must move to the trailing side in RTL",
+    )
+    report.check(
+        "--md-comp-fab-icon-color" in css
+        and "background: var( --md-comp-fab-icon-color )" in css,
+        "FAB state layers must use the icon role instead of the container role",
+    )
+    report.check(
+        "--md-sys-motion-easing-linear" in css and "--md-sys-motion-curve-linear" not in css,
+        "FAB effect transitions must use the theme's published linear easing token",
+    )
+
+    expressive_sizes = {
+        "small": data["sizes"]["fab"],
+        "medium": data["sizes"]["medium"],
+        "large": data["sizes"]["large"],
+    }
+    for name, size in expressive_sizes.items():
+        report.check(
+            f"--md-comp-fab-container-height: {size['container_height']}px" in css
+            and f"--md-comp-fab-icon-size: {size['icon_size']}px" in css,
+            f"the implemented {name} FAB must carry the record's height and icon size",
+        )
+    report.check(
+        "40px" not in css and 'data-size="small"' not in source,
+        "the 40dp baseline small FAB is deliberately absent from this expressive implementation",
+    )
+
+    for style in data["colour_styles"]["live"]:
+        selector_or_default = (
+            "--md-comp-fab-container-color: var( --md-sys-color-primary-container );"
+            in css
+            and "--md-comp-fab-icon-color: var( --md-sys-color-on-primary-container );" in css
+            if style["name"] == data["colour_styles"]["default"]
+            else f'[data-colour="{style["name"]}"]' in css
+        )
+        report.check(
+            selector_or_default,
+            f"the published `{style['name']}` FAB colour style is missing from the adapter",
+        )
+
+    compose = data["extended_fab"]["measured_from_compose"]
+    for name in ("small", "medium", "large"):
+        size = compose[name]
+        icon_label_space = (
+            "--md-comp-fab-icon-label-space: var( --md-sys-measurement-space100 );" in css
+            if name == "small"
+            else f"--md-comp-fab-icon-label-space: {size['icon_label_space']}px" in css
+        )
+        report.check(
+            f"--md-comp-fab-leading-space: {size['leading_space']}px" in css
+            and f"--md-comp-fab-trailing-space: {size['trailing_space']}px" in css
+            and icon_label_space,
+            f"the extended {name} FAB must use the measured padding and icon-label space",
+        )
+    report.check(
+        "<ExtendedFab" in stylebook
+        and "<NavigationRail" in stylebook
+        and "fab={ <ExtendedFab" in stylebook,
+        "the stylebook must demonstrate extended FAB and its existing navigation rail consumer",
+    )
+    report.check(
+        "const COLOURS" in stylebook
+        and "COLOURS.map" in stylebook
+        and "<Fab" in stylebook,
+        "the stylebook must render the six recorded FAB colour styles as live controls",
     )
 
 
@@ -726,6 +874,7 @@ def main() -> int:
     check_fab_menu(report, data, table)
     check_extended_fab(report, data)
     check_consumers_and_route(report, data)
+    check_implementation(report, data)
 
     print(f"fab: {report.checked} checks, {len(report.problems)} failed")
     for problem in report.problems:

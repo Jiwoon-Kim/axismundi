@@ -1,0 +1,34 @@
+@layer axismundi.patterns {
+	.ax-stylebook--fabs {
+		--ax-scaffold-main-padding: var( --ax-layout-window-margin );
+	}
+
+	.ax-stylebook-fabs__row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var( --md-sys-measurement-space400 );
+	}
+
+	.ax-stylebook-fabs__action {
+		display: grid;
+		justify-items: center;
+		gap: var( --md-sys-measurement-space100 );
+	}
+
+	.ax-stylebook-fabs__readout {
+		max-inline-size: 112px;
+		color: var( --md-sys-color-on-surface-variant );
+		font: var( --md-sys-typescale-body-small-weight ) var( --md-sys-typescale-body-small-size ) / var( --md-sys-typescale-body-small-line-height ) var( --md-sys-typescale-body-small-font );
+		text-align: center;
+	}
+
+	.ax-stylebook-fabs__rail {
+		block-size: 420px;
+		max-inline-size: 360px;
+	}
+
+	.ax-stylebook-fabs__rail .ax-nav-rail {
+		block-size: 100%;
+	}
+}

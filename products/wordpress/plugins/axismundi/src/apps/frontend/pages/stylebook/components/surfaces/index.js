@@ -91,12 +91,13 @@ function FormCloseSpecimen() {
 				open={ open }
 				onClose={ () => setOpen( false ) }
 				headline="Leave the group?"
-				>
-				<form
-					method="dialog"
-					onSubmit={ ( event ) => setResult( event.nativeEvent.submitter?.value ?? '' ) }
-				>
-					<p>Members will no longer see your posts in this group.</p>
+				supportingText="Members will no longer see your posts in this group."
+				actions={
+					<form
+						className="ax-dialog__form-actions"
+						method="dialog"
+						onSubmit={ ( event ) => setResult( event.nativeEvent.submitter?.value ?? '' ) }
+					>
 					<Button type="submit" value="cancel" variant="text">
 						Cancel
 					</Button>
@@ -104,7 +105,8 @@ function FormCloseSpecimen() {
 						Leave
 					</Button>
 				</form>
-			</Dialog>
+				}
+			/>
 		</div>
 	);
 }

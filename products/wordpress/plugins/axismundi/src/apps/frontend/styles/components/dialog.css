@@ -160,6 +160,18 @@
 		margin-block-start: 0;
 	}
 
+	/*
+	 * A native `form method="dialog"` owns its submit buttons, while the
+	 * dialog still owns their footer geometry. Keep that semantic wrapper from
+	 * becoming an unstyled block between the action bar and its buttons.
+	 */
+	.ax-dialog__form-actions {
+		display: flex;
+		flex-wrap: inherit;
+		justify-content: inherit;
+		gap: inherit;
+	}
+
 	.ax-dialog[data-presentation='basic'] > .ax-dialog__actions {
 		padding: 20px var( --md-comp-dialog-padding ) 20px 8px;
 	}

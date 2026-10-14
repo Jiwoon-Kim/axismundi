@@ -340,6 +340,23 @@ def check_react_surface(data: dict, report) -> None:
         form_close is not None and form_close.replace('"', "'") in page.replace('"', "'"),
         "react: no specimen closes a surface the way the contract records",
     )
+    form_specimen = re.search(r"function FormCloseSpecimen\(\) \{(.*?)\n\}", page, re.S)
+    report.check(form_specimen is not None, "react: the native form-close specimen left the surfaces page")
+    if form_specimen is not None:
+        form_source = form_specimen.group(1)
+        report.check(
+            'supportingText="Members will no longer see your posts in this group."' in form_source
+            and 'actions={' in form_source
+            and 'className="ax-dialog__form-actions"' in form_source
+            and '<p>Members will no longer see your posts in this group.</p>' not in form_source,
+            "react: the form-close specimen no longer uses dialog text and action slots instead of a browser-default body paragraph",
+        )
+        report.check(
+            '.ax-dialog__form-actions {' in dialog_css
+            and 'display: flex;' in dialog_css
+            and 'gap: inherit;' in dialog_css,
+            "react: a native form no longer preserves the dialog action bar's flex geometry",
+        )
 
     # --- the scroll affordance stays fresh ----------------------------------
     # Both conditions change without the region's box changing, so a

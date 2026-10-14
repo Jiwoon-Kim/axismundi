@@ -623,6 +623,22 @@ def check_react_surface(data: dict, report) -> None:
             and "margin-block: auto 0" in bottom_rules,
             "react: standard bottom sheet no longer anchors to the window bottom",
         )
+        standard_stacking = record.get("stacking", {}).get("standard")
+        report.check(
+            standard_stacking == {
+                "above": "document content, including later positioned controls",
+                "below": "modal surfaces in the platform top layer",
+                "z_index": 1,
+                "measured_failure": (
+                    "The Full-screen dialog specimen's later `position: relative` "
+                    "trigger painted above an open standard bottom sheet. A standard "
+                    "docked pane is not in the top layer, but it is not page content. "
+                    "Measured and corrected 2026-10-14."
+                ),
+            }
+            and "z-index: 1;" in bottom_rules,
+            "react: standard bottom sheet lost its documented pane stratum above page content",
+        )
         report.check(
             'display="docked"' in sources["bottom-sheet.js"],
             "react: the bottom sheet stopped declaring itself docked, so the shared layer would flow it",

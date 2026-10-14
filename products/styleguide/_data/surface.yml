@@ -962,6 +962,16 @@ react_surface:
       modality:
         modal: top layer, scrim, page locked
         standard: anchored to the window bottom, page usable
+      stacking:
+        standard:
+          above: document content, including later positioned controls
+          below: modal surfaces in the platform top layer
+          z_index: 1
+          measured_failure: >-
+            The Full-screen dialog specimen's later `position: relative`
+            trigger painted above an open standard bottom sheet. A standard
+            docked pane is not in the top layer, but it is not page content.
+            Measured and corrected 2026-10-14.
       heights:
         initial: >-
           At most the published 50% window cap. The handle starts here on every

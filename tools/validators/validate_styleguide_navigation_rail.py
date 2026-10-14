@@ -190,7 +190,8 @@ def main() -> int:
         "expanded minimum width": f'min-inline-size: {expanded_container["width_minimum"]}px;',
         "expanded maximum width": f'max-inline-size: {expanded_container["width_maximum"]}px;',
         "top space": f'--md-comp-nav-rail-top-space: {collapsed_container["top_space"]}px;',
-        "item minimum height": f'--md-comp-nav-rail-item-min-height: {rail_item["container_height"]}px;',
+        "vertical item minimum height": f'--md-comp-nav-rail-item-min-height: {rail_item["container_height"]}px;',
+        "expanded target height": f'--md-comp-nav-rail-item-min-height: {rail_item["short_container_height"]}px;',
         "expanded indicator height": f'--md-comp-navigation-item-horizontal-indicator-height: {rail_item["horizontal"]["indicator_height"]}px;',
     }
     for what, declaration in geometry.items():
@@ -198,25 +199,27 @@ def main() -> int:
             declaration in rail_css,
             f"nav-rail.css does not declare the {what} -- expected `{declaration}`",
         )
-    # The item height is a minimum in both sources, so it must not be a fixed box.
+    # The published 64dp item height is the vertical host's minimum, not a fixed
+    # box. The kit separately selects the 56dp short height for expanded rows.
     report.check(
         rail_item["container_height_is_minimum"] is True,
-        "the item container height is recorded as fixed; both sources call it a minimum",
+        "the vertical item container height is recorded as fixed; both sources call it a minimum",
     )
     report.check(
         "min-block-size: var( --md-comp-nav-rail-item-min-height );" in rail_css,
-        "the item height is not applied as a minimum, so a scaled label cannot grow the item",
+        "the vertical item height is not applied as a minimum, so a scaled label cannot grow the item",
     )
-    # `short` has no published selector, so it must not have quietly acquired one.
+    # The kit provides the selector the token table omitted: expanded-horizontal.
     report.check(
-        rail_item["short_container_height_implemented"] is False,
-        "the short item height is recorded as implemented; nothing published says what selects it",
+        rail_item["short_container_height_implemented"] is True
+        and rail_item["short_container_height_configuration"] == "expanded_horizontal"
+        and rail_item["horizontal"]["target_height_from_kit"] == rail_item["short_container_height"],
+        "the short item height must be selected only by the kit's expanded-horizontal host configuration",
     )
     report.check(
-        f'{rail_item["short_container_height"]}px' not in rail_css.replace(
-            f'{rail_item["horizontal"]["indicator_height"]}px', ""
-        ),
-        "nav-rail.css carries the short item height as a length; it has no published selector",
+        '.ax-nav-rail[data-item-orientation="vertical"] .ax-nav-rail__item {' in rail_css
+        and '.ax-nav-rail[data-item-orientation="horizontal"] .ax-nav-rail__item {' in rail_css,
+        "the two item heights must be scoped to their vertical and expanded-horizontal hosts",
     )
 
     # --- the two variants' containers ---
@@ -474,8 +477,8 @@ def main() -> int:
     )
     report.check(
         kit["collapsed"]["header_order"] == ["icon_button", "fab"]
-        and kit["expanded"]["header_order"] == ["extended_fab", "icon_button"],
-        "the two header orders are opposite in the kit, and that reversal is the whole finding",
+        and kit["expanded"]["header_order"] == ["icon_button", "extended_fab"],
+        "the menu button precedes the FAB in both kit variants",
     )
     report.check(
         kit["collapsed"]["container_width"] == 96 and kit["expanded"]["container_width"] == 220,
@@ -489,12 +492,23 @@ def main() -> int:
         "bound, not an unrecorded fluid-width policy",
     )
     report.check(
-        kit["expanded"]["header_size"] == {"inline": 180, "block": 116}
-        and kit["expanded"]["header_item_spacing"] == 4
+        kit["collapsed"]["header_content"] == {
+            "icon_button_block": 56,
+            "fab_block": 56,
+            "spacing": 4,
+            "computed_block": 116,
+        }
+        and kit["expanded"]["header_content"] == {
+            "inline": 180,
+            "icon_button_block": 56,
+            "extended_fab_block": 56,
+            "spacing": 4,
+            "computed_block": 116,
+        }
         and kit["expanded"]["padding"] == {"inline": 20, "block_start": 44, "block_end": 20}
         and kit["expanded"]["header_to_segments_spacing"] == 40
         and kit["expanded"]["segments_width"] == 180,
-        "the expanded header geometry is all one kit measurement; changing one figure alone loses it",
+        "the kit header is natural 56 + 4 + 56 content, never a fixed 116dp box",
     )
     report.check(
         "renders a Menu and Fab group" in kit["what_the_implementation_does_instead"]
@@ -527,11 +541,11 @@ def main() -> int:
         "the component must choose a plain or extended FAB by rail variant rather than make a "
         "caller infer the kit's header switch",
     )
+    expanded_header = rail_js.split( ") : (", 1 )[1].split( "</>", 1 )[0] if ") : (" in rail_js else ""
     report.check(
         "'collapsed' === kind ? (" in rail_js
-        and "ax-nav-rail__menu" in rail_js
-        and "ax-nav-rail__fab" in rail_js,
-        "the header must render the kit's variant-dependent DOM order, not retain fixed siblings",
+        and expanded_header.index( 'ax-nav-rail__menu' ) < expanded_header.index( 'ax-nav-rail__fab' ),
+        "the expanded header must render the menu button before its FAB, not retain fixed siblings",
     )
     report.check(
         "destinationSections" in rail_js
@@ -542,18 +556,67 @@ def main() -> int:
         "padding-inline: 20px;",
         "padding-block-end: 20px;",
         "inline-size: 180px;",
-        "block-size: 116px;",
-        "flex: 0 0 116px;",
         "row-gap: 4px;",
         "row-gap: 12px;",
         "column-gap: 10px;",
         "block-size: 36px;",
         "padding-inline: 16px;",
+        "color: var( --md-sys-color-on-surface-variant );",
+        "row-gap: var( --md-comp-nav-rail-header-space-minimum );",
     ):
         report.check(
             declaration in rail_css,
             f"the implemented rail is missing kit header/section declaration `{declaration}`",
         )
+
+    horizontal_item_rule = rail_css.split(
+        '.ax-nav-rail[data-item-orientation="horizontal"] .ax-nav-rail__item {', 1
+    )[1].split("}", 1)[0]
+    report.check(
+        "padding" not in horizontal_item_rule,
+        "the expanded target has no padding: its 20dp rail inset and 16dp indicator inset remain distinct",
+    )
+    vertical_item_rule = rail_css.split(
+        '.ax-nav-rail[data-item-orientation="vertical"] .ax-nav-rail__item {', 1
+    )[1].split("}", 1)[0]
+    report.check(
+        f'--md-comp-nav-rail-item-min-height: {rail_item["container_height"]}px;' in vertical_item_rule
+        and 'min-block-size: var( --md-comp-nav-rail-item-min-height );' in vertical_item_rule
+        and f'--md-comp-nav-rail-item-min-height: {rail_item["short_container_height"]}px;' in horizontal_item_rule
+        and 'min-block-size: var( --md-comp-nav-rail-item-min-height );' in horizontal_item_rule,
+        "the vertical target remains a 64dp minimum while the expanded horizontal target is 56dp",
+    )
+    report.check(
+        "block-size: 116px;" not in rail_css and "flex: 0 0 116px;" not in rail_css,
+        "the header's 116dp is derived from two 56dp controls and their 4dp gap, not fixed CSS",
+    )
+    section_header = kit["expanded"]["section_header"]
+    report.check(
+        section_header == {
+            "inline": 180,
+            "block": 36,
+            "padding_inline": 16,
+            "gap": 10,
+            "text_color_role": "on-surface-variant",
+        },
+        "the expanded section header carries the kit's geometry and on-surface-variant colour role",
+    )
+    report.check(
+        data["configurations"]["item_alignment"]["applies_to"] == "rail_content_group"
+        and "justify-content: safe center;" in rail_css,
+        "middle alignment centres the whole optional header-and-segments group and falls back safely on overflow",
+    )
+    report.check(
+        "surface-container-low" in kit["expanded"]["floating_middle_observation"]
+        and "Do not infer" in kit["expanded"]["modal_observation"]
+        and "data-type" not in rail_js
+        and "floating" not in rail_js.lower(),
+        "the floating/middle colour observation and modal-looking kit frame stay evidence, not an invented API",
+    )
+    report.check(
+        ".ax-nav-rail__header + .ax-nav-rail__items" not in rail_css,
+        "the optional header's 40dp spacing belongs to the rail flex gap, not a margin that survives without it",
+    )
 
     print(f"navigation rail: {report.checked} checks, {len(report.problems)} failed")
     for problem in report.problems:

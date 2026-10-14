@@ -64,6 +64,9 @@
 		 */
 		block-size: 100%;
 		padding-block-start: var( --md-comp-nav-rail-top-space );
+		/* The header is optional, so its 40dp separation belongs to the rail's
+		 * sibling layout. A margin on items leaves a phantom gap without a header. */
+		row-gap: var( --md-comp-nav-rail-header-space-minimum );
 		background-color: var( --md-comp-nav-rail-container-color );
 	}
 
@@ -100,8 +103,9 @@
 	}
 
 	/*
-	 * The kit calls this `Menu & Fab`. It remains outside the items group because
-	 * the menu and FAB are always top-aligned while item alignment may be centred.
+	 * The kit calls this `Menu & Fab`. It remains a sibling of the segments so the
+	 * optional 40dp separation disappears with it; rail-level alignment positions
+	 * both siblings as one content group.
 	 */
 	.ax-nav-rail__header {
 		display: flex;
@@ -110,10 +114,13 @@
 		row-gap: 4px;
 	}
 
+	/* The collapsed kit centres the entire header stack on its narrow rail. */
+	.ax-nav-rail[data-variant="collapsed"] .ax-nav-rail__header {
+		align-items: center;
+	}
+
 	.ax-nav-rail[data-variant="expanded"] .ax-nav-rail__header {
-		flex: 0 0 116px;
 		inline-size: 180px;
-		block-size: 116px;
 	}
 
 	.ax-nav-rail__items {
@@ -124,18 +131,14 @@
 		justify-content: flex-start;
 	}
 
-	/*
-	 * "Navigation rail items can be aligned as a group to the top or center of a
-	 * layout." Centred inside the remaining space, not inside the rail -- the
-	 * header stays where it is.
-	 */
-	.ax-nav-rail[data-alignment="center"] .ax-nav-rail__items {
-		justify-content: center;
+	/* Alignment is for the rail content group, including an optional header. `safe`
+	 * preserves the start edge when that group becomes taller than the viewport. */
+	.ax-nav-rail[data-alignment="center"] {
+		justify-content: safe center;
 	}
 
-	/* The header-to-segments distance is 40dp in the expanded kit. */
-	.ax-nav-rail__header + .ax-nav-rail__items {
-		margin-block-start: var( --md-comp-nav-rail-header-space-minimum );
+	.ax-nav-rail[data-alignment="center"] .ax-nav-rail__items {
+		flex: 0 1 auto;
 	}
 
 	/*
@@ -167,12 +170,16 @@
 		inline-size: 100%;
 		block-size: 36px;
 		padding-inline: 16px;
+		color: var( --md-sys-color-on-surface-variant );
 	}
 
 	/*
 	 * The full-width target area. The indicator inside it stays content-sized.
 	 *
-	 * md.comp.nav-rail.item.container.height = 64dp, AS A MINIMUM. The
+	 * The collapsed/vertical target uses md.comp.nav-rail.item.container.height =
+	 * 64dp AS A MINIMUM. The expanded/horizontal kit explicitly measures a 56dp
+	 * target with no inter-row gap, so that host selects the recorded `short`
+	 * height without exposing a new public item axis. The
 	 * accessibility page asks the rail's items to "grow vertically to accommodate
 	 * larger labels while retaining the default padding", and MDC-Android
 	 * publishes the same figure as `app:itemMinHeight` / `setItemMinimumHeight`
@@ -187,23 +194,25 @@
 	 * asserts these figures appear in this stylesheet.
 	 */
 	.ax-nav-rail__item {
-		--md-comp-nav-rail-item-min-height: 64px;
-
 		inline-size: 100%;
 		min-inline-size: 0;
+	}
+
+	.ax-nav-rail[data-item-orientation="vertical"] .ax-nav-rail__item {
+		--md-comp-nav-rail-item-min-height: 64px;
 		min-block-size: var( --md-comp-nav-rail-item-min-height );
 	}
 
 	/*
 	 * md.comp.nav-rail.item.horizontal.full-width.{leading,trailing}-space ->
-	 * space200: the inset from the rail's edge to the indicator. Horizontal only,
-	 * because a vertical item centres a fixed 56dp indicator in the rail's width
-	 * and no published figure describes that as padding -- 96dp and 80dp rails
-	 * give 20dp and 12dp, neither of which is space200.
+	 * space200: the indicator's own space before the icon and after the label.
+	 * The rail owns its 20dp outer inset; adding the same padding to the target
+	 * turns the measured 36dp icon inset into an invented second inset.
 	 */
 	.ax-nav-rail[data-item-orientation="horizontal"] .ax-nav-rail__item {
+		--md-comp-nav-rail-item-min-height: 56px;
 		justify-content: flex-start;
-		padding-inline: var( --md-sys-measurement-space200 );
+		min-block-size: var( --md-comp-nav-rail-item-min-height );
 	}
 
 	/*

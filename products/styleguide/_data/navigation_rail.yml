@@ -115,13 +115,12 @@ item:
   container_height_is_minimum: true
   short_container_height_token: md.comp.nav-rail.item.short.container.height
   short_container_height: 56
-  # NOT IMPLEMENTED, because nothing published says what selects it. Neither the
-  # four M3 tabs nor MDC-Android's component doc mentions a short rail item;
-  # MDC-Android's only 56dp figures are the active indicator's width and its
-  # `expandedHeight`, which are different measurements. A prop for it would be an
-  # axis we invented, so the figure is recorded and left unselectable until a
-  # source names the condition.
-  short_container_height_implemented: false
+  # The token table does not name a condition, but the kit's expanded horizontal
+  # row is exactly 56dp tall with no visual inter-row gap. That makes `short` a
+  # host configuration, not a public prop: expanded-horizontal selects it while
+  # collapsed-vertical retains the published 64dp minimum.
+  short_container_height_implemented: true
+  short_container_height_configuration: expanded_horizontal
   container_shape_token: md.comp.nav-rail.item.container.shape
   container_shape_role: corner.none
   # Not used; see `discrepancies`.
@@ -139,6 +138,7 @@ item:
   # content."
   target_area_spans_full_width: true
   horizontal:
+    target_height_from_kit: 56
     indicator_height_token: md.comp.nav-rail.item.horizontal.active-indicator.height
     indicator_height: 56
     icon_label_space_token: md.comp.nav-rail.item.horizontal.icon-label-space
@@ -155,12 +155,13 @@ item:
 configurations:
   # "Navigation rail items can be aligned as a group to the top or center of a
   # layout. On tablets, use center alignment to make it easier to reach items."
-  # The menu and the FAB are not part of the group: they "should always be
-  # top-aligned".
+  # The kit constrains the entire rail content stack left/right/centre in its
+  # Middle variant, so an optional Menu & Fab header centres with the segments.
+  # `safe center` falls back to the start edge when the stack exceeds the rail.
   item_alignment:
     default: top
     values: [ top, center ]
-    applies_to: items_only
+    applies_to: rail_content_group
   # "The container fill can be turned off so the nav rail appears directly on the
   # surface. When doing this, make sure all items have a minimum of 3:1 color
   # contrast." See `discrepancies` for which role the fill uses.
@@ -372,6 +373,7 @@ figma_kit_structure:
     container_width: 96
     header_group: Menu & Fab
     header_order: [ icon_button, fab ]
+    header_content: { icon_button_block: 56, fab_block: 56, spacing: 4, computed_block: 116 }
   expanded:
     container_width: 220
     implementation_width: >-
@@ -379,20 +381,36 @@ figma_kit_structure:
       maximum remains a bound, not a responsive `width: 100%` policy: no source
       says when this app should grow the rail inside that range.
     type_axis: [ Docked, Floating ]
+    floating_middle_observation: >-
+      The kit's Floating / Middle / three-item variant uses surface-container-low.
+      No expanded floating specimen is present in the available kit material, and
+      this app exposes no Docked/Floating API. This is evidence for the later
+      axis decision, not a reason to make the current `filled` boolean mean
+      Floating.
+    modal_observation: >-
+      The kit's separate Expanded layout is modal-looking, but the supplied
+      frames do not establish which breakpoint or app-bar scenario selects it.
+      Do not infer a mobile side sheet from that visual alone.
     header_group: Menu & Fab
-    header_order: [ extended_fab, icon_button ]
-    header_size: { inline: 180, block: 116 }
-    header_item_spacing: 4
+    header_order: [ icon_button, extended_fab ]
+    header_content: { inline: 180, icon_button_block: 56, extended_fab_block: 56, spacing: 4, computed_block: 116 }
     padding: { inline: 20, block_start: 44, block_end: 20 }
     header_to_segments_spacing: 40
     segments_width: 180
+    section_header:
+      inline: 180
+      block: 36
+      padding_inline: 16
+      gap: 10
+      text_color_role: on-surface-variant
     segments_are_sectioned: >-
-      Not a flat list: Section 1 to 3, with a section header of 180x36, 16dp
-      inline padding and a 10dp gap, and 12dp between sections.
+      Not a flat list: Section 1 to 3, with the section-header geometry above
+      and 12dp between sections.
   what_the_implementation_does_instead: >-
     `NavigationRail` now renders a Menu and Fab group, chooses `collapsedFab`
-    or `expandedFab` with the variant, renders the kit's DOM order directly, and
-    accepts optional sections. It intentionally still has no Docked/Floating
+    or `expandedFab` with the variant, renders the menu button above its FAB, and
+    lets the 56 + 4 + 56 header size naturally. It accepts optional sections and
+    intentionally still has no Docked/Floating
     axis. The kit draws two components while this app keeps one variant-driven
     component; that remains a web-shape decision, not a claim that the kit is
     wrong.

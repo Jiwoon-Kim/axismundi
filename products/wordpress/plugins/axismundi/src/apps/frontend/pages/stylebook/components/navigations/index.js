@@ -439,6 +439,10 @@ function RailSample( { variant, alignment = 'top', narrow = false, divider = fal
 		}
 		const items = [ ...rail.querySelectorAll( '.ax-nav-rail__item' ) ];
 		const indicator = items[ 0 ].querySelector( '.ax-navigation-item__indicator' );
+		const itemHost = rail.querySelector( '.ax-nav-rail__items' );
+		const firstSection = rail.querySelector( '.ax-nav-rail__section' );
+		const firstSectionItems = [ ...firstSection.querySelectorAll( '.ax-nav-rail__item' ) ];
+		const headerControls = [ ...rail.querySelectorAll( '.ax-nav-rail__header > *' ) ];
 
 		items[ 0 ].focus();
 		const landed = ( key ) => {
@@ -461,17 +465,11 @@ function RailSample( { variant, alignment = 'top', narrow = false, divider = fal
 		setMetrics( {
 			width: Math.round( box.width ),
 			height: Math.round( box.height ),
-			/* The published rule, measured as two numbers rather than asserted. */
+			/* The target fills its segments host, rather than the rail's outer padding box. */
 			itemWidth: Math.round( items[ 0 ].getBoundingClientRect().width ),
-			/*
-			 * The published 64dp minimum. Reported because it was recorded in the
-			 * data file and not implemented, and the items rendered at their
-			 * content height -- 52dp collapsed, and 56dp expanded, which looked
-			 * like the published `short` figure while being the indicator's own
-			 * height. Both numbers are shown so a coincidence cannot pass again.
-			 */
 			itemHeight: Math.round( items[ 0 ].getBoundingClientRect().height ),
 			itemMinHeight: window.getComputedStyle( items[ 0 ] ).minBlockSize,
+			itemHostWidth: Math.round( itemHost.getBoundingClientRect().width ),
 			indicatorWidth: Math.round( indicator.getBoundingClientRect().width ),
 			indicatorHeight: Math.round( indicator.getBoundingClientRect().height ),
 			/* Where the pill starts, relative to the rail's leading edge. */
@@ -479,10 +477,21 @@ function RailSample( { variant, alignment = 'top', narrow = false, divider = fal
 				indicator.getBoundingClientRect().left - box.left
 			),
 			itemGap: window.getComputedStyle( rail.querySelector( '.ax-nav-rail__section' ) ).rowGap,
+			firstSectionItemGap:
+				firstSectionItems.length > 1
+					? Math.round(
+							firstSectionItems[ 1 ].getBoundingClientRect().top -
+								firstSectionItems[ 0 ].getBoundingClientRect().bottom
+						)
+					: 'n/a',
 			sectionGap: window.getComputedStyle( rail.querySelector( '.ax-nav-rail__items' ) ).rowGap,
 			headerGap: header || menu
-				? window.getComputedStyle( rail.querySelector( '.ax-nav-rail__items' ) ).marginBlockStart
+				? window.getComputedStyle( rail ).rowGap
 				: 'no header',
+			headerControls: headerControls.map( ( control ) => {
+				const controlBox = control.getBoundingClientRect();
+				return `${ Math.round( controlBox.width ) }x${ Math.round( controlBox.height ) }`;
+			} ),
 			/* Arrows move focus; index 1 down from 0, and no wrap upwards from 0. */
 			arrowDown: down,
 			arrowUpAtStart: up,
@@ -505,7 +514,7 @@ function RailSample( { variant, alignment = 'top', narrow = false, divider = fal
 					alignment={ alignment }
 					narrow={ narrow }
 					divider={ divider }
-					menu={ header ? <IconButton icon={ <Icon name="menu" /> } label="Open navigation" variant="standard" /> : menu }
+					menu={ header ? <IconButton icon={ <Icon name="menu_open" /> } label="Open navigation" size="medium" variant="standard" /> : menu }
 					collapsedFab={ header ? <Fab icon={ <Icon name="add" /> } label="Compose post" /> : undefined }
 					expandedFab={ header ? <ExtendedFab icon={ <Icon name="add" /> } label="Compose post" /> : undefined }
 					sections={ sections }
@@ -521,11 +530,11 @@ function RailSample( { variant, alignment = 'top', narrow = false, divider = fal
 					: metrics
 					? `rail ${ metrics.width }px wide · target area ${ metrics.itemWidth }x${
 							metrics.itemHeight
-					  }px (full width: ${
-							metrics.itemWidth === metrics.width
-					  }, min-height ${ metrics.itemMinHeight } for a published 64dp minimum) · indicator ${ metrics.indicatorWidth }x${ metrics.indicatorHeight }px, inset ${
+					  }px (fills its ${ metrics.itemHostWidth }px segments host: ${
+							metrics.itemWidth === metrics.itemHostWidth
+					  }, min-height ${ metrics.itemMinHeight }) · indicator ${ metrics.indicatorWidth }x${ metrics.indicatorHeight }px, inset ${
 							metrics.indicatorInset
-					  }px · item gap ${ metrics.itemGap } · section gap ${ metrics.sectionGap } · header gap ${ metrics.headerGap } · ArrowDown moved focus 0 -> ${
+					  }px · section row gap ${ metrics.itemGap }, adjacent item gap ${ metrics.firstSectionItemGap } · section gap ${ metrics.sectionGap } · header controls ${ metrics.headerControls.join( ' then ' ) || 'none' } · header gap ${ metrics.headerGap } · ArrowDown moved focus 0 -> ${
 							metrics.arrowDown
 					  } · ArrowUp at the first item stayed ${ metrics.arrowUpAtStart } · tab stops ${
 							metrics.tabStops
@@ -698,9 +707,12 @@ export function StylebookNavigationsPage() {
 							that are both <code>space200</code> become visible and are not the same
 							measurement: <code>full-width.leading-space</code> holds the pill 16dp off the
 							rail&rsquo;s edge, and the item&rsquo;s own indicator space holds the icon 16dp
-							inside the pill. The header gap is <code>header-space-minimum</code> (
-							<code>space500</code>), kept as a minimum because centring can only enlarge it.
-							The header follows the kit&rsquo;s extended-FAB then menu order, and the
+							inside the pill. The header is natural <code>56 + 4 + 56</code>, rather than a
+							fixed 116dp box. Its gap from the segments is <code>header-space-minimum</code> (
+							<code>space500</code>) on the rail itself, so an absent header leaves no phantom
+							margin. Expanded targets fill the 180dp segments host at 56dp tall; their
+							indicators are 56dp tall too, so adjacent rows have no visible gap.
+							The header follows the kit&rsquo;s menu then extended-FAB order, and the
 							destinations are sectioned. The menu&rsquo;s collapse/expand behaviour, modal
 							layout and predictive back remain deferred, with reasons, under <code>scope</code> in{ ' ' }
 							<code>navigation_rail.yml</code>.

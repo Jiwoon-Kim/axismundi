@@ -220,8 +220,8 @@ export function NavigationRail( {
 						</>
 					) : (
 						<>
-							{ selectedFab ? <div className="ax-nav-rail__fab">{ selectedFab }</div> : null }
 							{ menu ? <div className="ax-nav-rail__menu">{ menu }</div> : null }
+							{ selectedFab ? <div className="ax-nav-rail__fab">{ selectedFab }</div> : null }
 						</>
 					) }
 				</div>

@@ -141,3 +141,60 @@ The replacement direction is:
 No schema migration follows from this decision by itself. It repairs source
 interpretation first; only later query contracts decide whether an Object index
 needs additional normalized columns.
+
+## 7. Module boundary and names
+
+The shared reader is a source adapter, not a generic ActivityStreams Object
+fallback. It must therefore have a source-oriented name:
+
+```text
+includes/core-post-source.php
+    WP_Post + Core postmeta + Core APIs -> normalized CorePostSource facts
+
+includes/post-article.php
+    CorePostSource -> Article-specific body, preview, and FEP representation
+
+includes/post-attachment.php
+    CoreAttachmentFacts -> Image / Video / Audio / Document representation
+
+includes/integrations/media-library.php
+    Core attachment facts -> policy and enrichment
+```
+
+`post-object.php` would imply that every unclaimed `WP_Post` has already become
+a generic AS2 Object. That is not this contract: an arbitrary CPT has no
+fallback type. Its owning plugin must explicitly claim it as Note, Event,
+Place, Article-with-context, or another supported type. `page` remains
+unclaimed until Page-versus-Document is decided.
+
+The adapter's normalized facts include source identity candidates, post type,
+MIME type, title/body/excerpt source, GMT timestamps, parent and thumbnail
+references, and attachment metadata/rendition candidates. It deliberately
+does not include federation actor, addressing, public eligibility, or a final
+choice of what bytes may be exposed.
+
+## 8. Refactor sequence
+
+The refactor must preserve current public output until each replacement path is
+measured.
+
+1. Add `core-post-source.php` with read-only source-fact helpers and tests for
+   Core Posts and Attachments. No transformer registration changes yet.
+2. Make `post-article.php` consume those helpers while preserving its existing
+   public Article JSON byte-for-byte where its current body policy permits.
+3. Extract `post-attachment.php` from the Media Library adapter. It owns the
+   stable attachment URI and MIME-family classification, but delegates
+   visibility and rendition selection through policy hooks.
+4. Turn the Media Library adapter from a conditional transformer registrar into
+   an attachment policy/enrichment provider. Its folder, visibility, rights,
+   sensitivity, and rendition rules remain its own.
+5. Route featured media and embedded post media through the same attachment
+   resolver; remove the duplicate Core descriptor in `post-article.php` only
+   after identity and descriptor tests agree.
+6. Rebuild and test local Object listing projections after a public visibility
+   policy is chosen. This decision does not choose that policy.
+
+Each phase must test Media Library present and absent, attachment pages enabled
+and disabled, every MIME family, generated image metadata, and a private or
+gated attachment. A source resolver succeeding must not itself prove that the
+anonymous federation route is allowed to serve the Object.

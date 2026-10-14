@@ -22,7 +22,55 @@ an `attributedTo` URI, but neither plugin is required for storing the object sna
 Resolution is a deferred, deduplicated WP-Cron event for the primary Actor only; object
 fetch never waits on Actor discovery and never fans out through mentions or audience members.
 
-## 2. Tables (schema v6)
+## 2. Acquisition paths and evidence
+
+The cache has one latest snapshot per canonical Object URI, but an Object can arrive by
+more than one path. The paths must not be collapsed into one generic "fetch" concept:
+
+```text
+direct discovery
+  administrator inspection, explicit URL fetch, or deferred public Announce target fetch
+  -> an observed Object; it does not create an Activity
+
+inbound Activity observation
+  an inbound Create/Update whose embedded Object is self-consistent with the Activity
+  -> an observed Object plus the Activity ledger fact that named it
+```
+
+The current implementation already keeps the **mechanisms** separate:
+
+- `remote-fetch.php` fetches and stores a document, then may schedule primary-Actor
+  discovery when `ax_op_background_acquisition` is explicitly enabled.
+- `inbox-observations.php` runs only after Activities records an inbound `Create` or
+  `Update`. It stores an embedded Object only when the Activity object URI, the embedded
+  Object `id`, `Create.actor`, and `Object.attributedTo` all agree. URI-only public
+  `Announce` entries schedule the distinct direct-fetch path instead.
+- Activities currently accepts an inbound Activity only when its actor is already known
+  to Actors. It deliberately owns no HTTP Inbox or signature verification. Therefore
+  `inbound` is a direction supplied by the future Federation bridge, **not** a persisted
+  proof that transport signature verification occurred in this plugin set.
+
+What is not implemented is a durable acquisition/provenance ledger. Both paths currently
+write the same `wp_ax_remote_objects` row and leave only fetch timestamps there. A later
+Federation slice must add append-only observations rather than split the object cache:
+
+```text
+wp_ax_object_acquisitions                 future, not implemented
+  object_identity_id / canonical object URI
+  source_kind              direct_fetch | inbox_delivery
+  activity_identity_id     nullable (the inbound Activity when applicable)
+  delivered_by_identity_id nullable (the transport Actor when applicable)
+  verification_status      observed | signature_verified | rejected
+  source_url               nullable
+  observed_at
+```
+
+This preserves the answer to both questions independently: "what is the latest remote
+Object snapshot?" and "why is this site allowed to know it?". A direct observation must
+not gain the trust semantics of a later authenticated inbox delivery, while a delivery
+must not duplicate the cached Object row.
+
+## 3. Tables (schema v6)
 
 ```text
 wp_ax_remote_objects
@@ -85,7 +133,7 @@ Hash lookup always verifies both full URI/reference strings. An active lease pre
 maintenance from deleting the observation; releasing the final lease makes an already expired
 observation eligible again.
 
-## 3. Repository contract
+## 4. Repository contract
 
 - `axismundi_op_store_remote_object($payload, $fetch)` validates then atomically upserts
   by canonical `id`. Invalid input never deletes or overwrites the last good snapshot.
@@ -106,7 +154,7 @@ observation eligible again.
   default (filterable to 1–365 days). Daily maintenance deletes an unleased observation,
   including sensitive metadata; it never contacts or mutates the remote resource.
 
-## 4. Validation and security
+## 5. Validation and security
 
 - Canonical ids must be absolute HTTP(S) URIs with no embedded credentials. Storage
   validation does not fetch the URI and therefore is not an SSRF boundary.
@@ -127,7 +175,7 @@ observation eligible again.
   escaped text. If an Actor URI already exists in Axismundi Actors, references use its
   internal administrator page; otherwise they remain external canonical links.
 
-## 5. Cache levels and binary boundary
+## 6. Cache levels and binary boundary
 
 The cache-level vocabulary is reserved as follows:
 
@@ -148,7 +196,7 @@ attachment binaries use the separate remote-blob substrate. A later Media Librar
 attachment points to the canonical remote object/blob; it does not convert this cache row
 into a second local identity.
 
-## 6. Object-relation projection
+## 7. Object-relation projection
 
 Quote discovery needs an indexed relationship between the independent quoting Object and
 the quoted Object. Scanning bounded JSON payloads for every count is not a query contract,

@@ -150,33 +150,6 @@
 		outline-offset: var( --md-focus-ring-outward-offset );
 	}
 
-	.ax-fab__tooltip {
-		position: absolute;
-		z-index: 2;
-		inset-block-end: calc( 100% + var( --md-sys-measurement-space50 ) );
-		inset-inline-start: 50%;
-		box-sizing: border-box;
-		padding: var( --md-sys-measurement-space50 ) var( --md-sys-measurement-space100 );
-		border-radius: var( --md-sys-shape-corner-value-extra-small );
-		background: var( --md-sys-color-inverse-surface );
-		color: var( --md-sys-color-inverse-on-surface );
-		font-family: var( --md-sys-typescale-body-small-font );
-		font-size: var( --md-sys-typescale-body-small-size );
-		font-weight: var( --md-sys-typescale-body-small-weight );
-		line-height: var( --md-sys-typescale-body-small-line-height );
-		opacity: 0;
-		pointer-events: none;
-		transform: translateX( -50% );
-		transition: opacity var( --md-sys-motion-duration-short2 ) var( --md-sys-motion-easing-linear );
-		visibility: hidden;
-		white-space: nowrap;
-	}
-
-	.ax-fab:is( :hover, :focus-visible ) .ax-fab__tooltip {
-		opacity: 1;
-		visibility: visible;
-	}
-
 	[dir="rtl"] .ax-extended-fab__icon {
 		order: 1;
 	}

@@ -1,6 +1,7 @@
 import { forwardRef, useState } from '@wordpress/element';
 import warning from '@wordpress/warning';
 import { Elevation } from '../material/elevation';
+import { Tooltip } from '../tooltip';
 
 const COLOUR_STYLES = [
 	'primary-container',
@@ -79,6 +80,7 @@ export const Fab = forwardRef( function Fab( {
 	}
 
 	return (
+		<Tooltip accessibleName={ label } content={ label }>
 		<button
 			{ ...props }
 			{ ...handlers }
@@ -107,8 +109,8 @@ export const Fab = forwardRef( function Fab( {
 		>
 			<Elevation level={ elevation } />
 			<span className="ax-fab__icon">{ icon }</span>
-			<span aria-hidden="true" className="ax-fab__tooltip">{ label }</span>
 		</button>
+		</Tooltip>
 	);
 } );
 

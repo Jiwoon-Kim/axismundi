@@ -38,6 +38,15 @@ FAB_CSS = (
     ROOT
     / "products/wordpress/plugins/axismundi/src/apps/frontend/styles/components/fab.css"
 )
+FRONTEND = ROOT / "products/wordpress/plugins/axismundi/src/apps/frontend"
+TOOLTIP_JS = FRONTEND / "components/tooltip/tooltip.js"
+TOOLTIP_CSS = FRONTEND / "styles/components/tooltip.css"
+PLACER_JS = FRONTEND / "components/overlays/place.js"
+FAB_JS = FRONTEND / "components/fabs/fab.js"
+ICON_BUTTON_JS = FRONTEND / "components/buttons/icon-button.js"
+APP_JS = FRONTEND / "app.js"
+STYLEBOOK_JS = FRONTEND / "pages/stylebook/index.js"
+ROUTE_PHP = ROOT / "products/wordpress/plugins/axismundi/includes/route.php"
 
 # Exact, not a floor: at a floor a renamed key takes its checks with it and the
 # run still passes. Raise this in the same commit that adds a token.
@@ -239,20 +248,19 @@ def check_precedents(report: Report, data: dict) -> None:
         "why the shipped plugin uses the top layer is the reason this record adopts it",
     )
     report.check(
-        precedents["fab_inline"]["status"] == "interim",
-        "the FAB's inline tooltip is interim; calling it anything else makes it permanent",
+        precedents["fab_inline"]["status"] == "replaced",
+        "the FAB's inline tooltip must become recorded history when the shared primitive replaces it",
     )
-    # Measured, not asserted: the interim implementation is still interim.
+    # Measured, not asserted: the historical inline implementation is gone.
     fab_css = FAB_CSS.read_text(encoding="utf-8")
     still_inline = ".ax-fab__tooltip" in fab_css
     report.check(
-        still_inline == (precedents["fab_inline"]["status"] == "interim"),
-        "the FAB stylesheet and this record disagree about whether the inline tooltip is still "
-        "there; when it goes, this entry becomes history and says so",
+        not still_inline,
+        "the FAB stylesheet still owns an inline tooltip after the shared primitive replaced it",
     )
     report.check(
-        "three different ARIA decisions" in precedents["three_answers_one_question"],
-        "the count is the point: three implementations, three answers, one missing primitive",
+        "shared primitive" in precedents["three_answers_one_question"],
+        "the historical disagreement must say how the frontend resolved it",
     )
 
 
@@ -331,6 +339,103 @@ def check_placement_and_behaviour(report: Report, data: dict) -> None:
     )
 
 
+def check_implementation(report: Report, data: dict) -> None:
+    implementation = data["project_policy"]["implementation"]
+    paths = {
+        "component": TOOLTIP_JS,
+        "stylesheet": TOOLTIP_CSS,
+        "placement_helper": PLACER_JS,
+    }
+    for name, path in paths.items():
+        report.check(path.exists() and implementation[name] == path.relative_to(ROOT).as_posix(),
+                     f"the implemented {name} must exist at the path the record names")
+
+    tooltip = TOOLTIP_JS.read_text(encoding="utf-8")
+    css = TOOLTIP_CSS.read_text(encoding="utf-8")
+    placer = PLACER_JS.read_text(encoding="utf-8")
+    fab = FAB_JS.read_text(encoding="utf-8")
+    icon_button = ICON_BUTTON_JS.read_text(encoding="utf-8")
+
+    # These use complete component boundaries rather than a token substring: a
+    # comment or an unrelated fallback cannot satisfy them.
+    tooltip_component = re.search(r"export function Tooltip\(.*?\n}\n", tooltip, re.S)
+    report.check(
+        tooltip_component is not None
+        and "popover={ canUsePopover ? 'manual' : undefined }" in tooltip_component.group(0)
+        and "createPortal( surface, document.body )" in tooltip_component.group(0),
+        "Tooltip must use the manual native-popover path and the documented body fallback",
+    )
+    report.check(
+        tooltip_component is not None
+        and "role={ descriptive ? 'tooltip' : undefined }" in tooltip_component.group(0)
+        and "aria-hidden={ descriptive ? undefined : 'true' }" in tooltip_component.group(0)
+        and "'aria-describedby': descriptive" in tooltip_component.group(0),
+        "Tooltip must implement both ARIA branches on the surface and trigger",
+    )
+    # The three checks above pin what each branch does and not which branch is
+    # taken. Measured: replacing this one line with `const descriptive = false`
+    # sends every tooltip down the aria-hidden arm -- no role and no
+    # description, ever -- and all of them still passed.
+    report.check(
+        tooltip_component is not None
+        and "const descriptive = content && content !== accessibleName;"
+        in tooltip_component.group(0),
+        "the branch must still be decided by comparing the tooltip's words with the trigger's "
+        "accessible name; pinning only the arms leaves the condition free to be constant",
+    )
+    report.check(
+        tooltip_component is not None
+        and "SHOW_DELAY" in tooltip_component.group(0)
+        and "HIDE_DELAY" in tooltip_component.group(0)
+        and "activeTooltip" in tooltip_component.group(0),
+        "Tooltip must retain its recorded show delay, linger, and single-open coordinator",
+    )
+    report.check(
+        "const SHOW_DELAY = 700;" in tooltip
+        and "const HIDE_DELAY = 1500;" in tooltip
+        and "hasVisualBoundary ? 4 : 8" in tooltip,
+        "Tooltip must use the recorded 700/1500 timing and its two placement gaps",
+    )
+    report.check(
+        "export function placePopover" in placer
+        and "gap = 0" in placer
+        and "preferEnd = true" in placer,
+        "Tooltip and Menu must share the parameterized rectangle placer rather than fork placement",
+    )
+    report.check(
+        "min-block-size: 24px;" in css
+        and "max-inline-size: 240px;" in css
+        and "padding: 4px 8px;" in css
+        and "--md-sys-color-inverse-surface" in css
+        and "--md-sys-color-inverse-on-surface" in css,
+        "Tooltip CSS must consume the recorded plain geometry and colour roles",
+    )
+    report.check(
+        "<Tooltip accessibleName={ label } content={ label }>" in fab
+        and ".ax-fab__tooltip" not in fab
+        and "<Tooltip accessibleName={ label } content={ tooltip ?? label }>" in icon_button,
+        "FAB and IconButton must consume Tooltip; FAB cannot retain its inline surface",
+    )
+
+    route = implementation["stylebook_route"]
+    route_slug = route.rsplit("/", 1)[1]
+    route_php = ROUTE_PHP.read_text(encoding="utf-8")
+    app = APP_JS.read_text(encoding="utf-8")
+    stylebook = STYLEBOOK_JS.read_text(encoding="utf-8")
+    report.check(
+        route_php.count(f"|{route_slug}") == 2
+        and f"|{route_slug})$" in app
+        and f"if ( '{route_slug}' === component )" in stylebook
+        and f'href="{route}"' in stylebook,
+        "the tooltip stylebook route must occupy both PHP regexes, app dispatch, stylebook dispatch, and index link",
+    )
+    report.check(
+        data["variants"]["plain"]["status"] == "implemented"
+        and data["variants"]["rich"]["status"] == "not_implemented",
+        "plain is the implemented slice and rich remains explicitly out of scope",
+    )
+
+
 def check_prose(report: Report, data: dict) -> None:
     sources = data["prose_sources"]
     for name, entry in sources.items():
@@ -377,6 +482,7 @@ def main() -> int:
     check_precedents(report, data)
     check_policy(report, data)
     check_placement_and_behaviour(report, data)
+    check_implementation(report, data)
     check_prose(report, data)
 
     report.check(

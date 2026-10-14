@@ -937,7 +937,7 @@ project_policy:
       deliberately absent from this slice.
   stylebook_route:
     path: /social/stylebook/components/fabs
-    rewrite_version: '22'
+    rewrite_version: '23'
     path_is_plural: >-
       Every sibling route is plural -- buttons, cards, menus, surfaces -- and the
       style guide page is `fabs.md`. A singular slug would be the only one.

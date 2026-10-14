@@ -107,7 +107,7 @@ prose_sources:
 variants:
   plain:
     namespace: md.comp.plain-tooltip
-    status: planned
+    status: implemented
     why: >-
       Two components already want one: the FAB ships an icon with no visible
       label, and the icon button page says in as many words that its visible
@@ -249,16 +249,15 @@ precedents_in_this_repository:
     path: products/wordpress/plugins/axismundi/src/apps/frontend/styles/components/fab.css
     mechanism: a span inside the button, position absolute, z-index 2
     aria: visual only
-    status: interim
+    status: replaced
     why_it_must_change: >-
-      It is not in the top layer, so any ancestor with overflow or a stacking
-      context cuts it -- and the FAB's own homes are a navigation rail and a
-      corner of a scrolling layout. Nothing clips it on the stylebook page
-      today, which is exactly how this kind of defect waits.
+      It was not in the top layer, so any ancestor with overflow or a stacking
+      context could cut it. The shared Tooltip primitive replaced it with the
+      adopted popover contract; this entry remains as the regression it fixed.
   three_answers_one_question: >-
-    The same component is built three times here with three different ARIA
-    decisions and three different gaps. That is the cost of not having the
-    primitive, and it is why this slice exists.
+    The same component was built three times here with three different ARIA
+    decisions and three different gaps. The shared primitive resolves that
+    drift for the frontend; the historical implementations remain evidence.
 
 # ---------------------------------------------------------------------------
 # 채택. 이유를 적지 않은 선택은 다음 사람에게 우연으로 보인다.
@@ -305,12 +304,20 @@ project_policy:
       Unpublished by M3, and "avoid wrapping to multiple lines" needs some
       bound. 240 is what already ships, so it is what the primitive takes.
   consumers_waiting:
-    - the FAB, whose interim inline tooltip this replaces
-    - the icon button, whose stylebook page records the visible name as pending
+    - the FAB, which consumes the accessible-name exception branch
+    - the icon button, which consumes the exception by default and the descriptive branch when its tooltip differs
   not_a_consumer: >-
     The extended FAB. Its label is visible, so M3 says it needs no tooltip, and
     adding one would be the thing Google Contacts does that this record already
     flagged as a deviation.
+  implementation:
+    component: products/wordpress/plugins/axismundi/src/apps/frontend/components/tooltip/tooltip.js
+    stylesheet: products/wordpress/plugins/axismundi/src/apps/frontend/styles/components/tooltip.css
+    placement_helper: products/wordpress/plugins/axismundi/src/apps/frontend/components/overlays/place.js
+    stylebook_route: /social/stylebook/components/tooltips
+    scope: >-
+      Plain tooltip only. It uses a manual native popover when available and a
+      document-body portal otherwise; rich tooltip remains unbuilt.
 
 discrepancies:
   measurements_are_prose_not_tokens:

@@ -56,6 +56,7 @@
 
 import { forwardRef, useState } from '@wordpress/element';
 import warning from '@wordpress/warning';
+import { Tooltip } from '../tooltip';
 
 const VARIANTS = [ 'filled', 'tonal', 'outlined', 'standard' ];
 const SIZES = [ 'xsmall', 'small', 'medium', 'large', 'xlarge' ];
@@ -73,6 +74,7 @@ export const IconButton = forwardRef( function IconButton( {
 	size = 'small',
 	width = 'default',
 	shape = 'round',
+	tooltip,
 	toggle = false,
 	selected,
 	defaultSelected = false,
@@ -124,6 +126,7 @@ export const IconButton = forwardRef( function IconButton( {
 		: { disabled, type };
 
 	return (
+		<Tooltip accessibleName={ label } content={ tooltip ?? label }>
 		<Host
 			{ ...props }
 			{ ...hostProps }
@@ -139,5 +142,6 @@ export const IconButton = forwardRef( function IconButton( {
 			<span className="ax-icon-button__icon">{ icon }</span>
 			<span className="ax-sr-only">{ label }</span>
 		</Host>
+		</Tooltip>
 	);
 } );

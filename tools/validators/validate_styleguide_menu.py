@@ -1178,16 +1178,17 @@ def check_implementation(report: Report, data: dict) -> None:
     report.check("useEffect( () =>" in menu and "if ( ! triggerIsValid )" in menu
                  and menu.index("useEffect( () =>") < menu.index("if ( ! triggerIsValid )"),
                  "Menu conditionally skips a hook when its trigger is invalid")
-    # One placer opens the root on the block axis and a child on the inline axis.
-    # Its main-axis limit comes from the selected side of the anchor, not from
-    # the whole window; a cross-axis shift keeps an edge before clamp is allowed
-    # to detach the box.
+    # The shared placer opens the root on the block axis and a child on the
+    # inline axis. Its main-axis limit comes from the selected side of the
+    # anchor, not from the whole window; a cross-axis shift keeps an edge before
+    # clamp is allowed to detach the box.
+    placer = (ROOT / "products/wordpress/plugins/axismundi/src/apps/frontend/components/overlays/place.js").read_text(encoding="utf-8")
     report.check(
-        "function place( menu, anchor, axis = 'block' )" in menu
-        and "const endSpace" in menu
-        and "const startSpace" in menu
-        and "const shiftedCrossPosition" in menu
-        and "place( menu, rectOf( trigger ), 'block' );" in menu,
+        "export function placePopover" in placer
+        and "const endSpace" in placer
+        and "const startSpace" in placer
+        and "const shiftedCrossPosition" in placer
+        and "placePopover( menu, rectOf( trigger ), 'block' );" in menu,
         "the root menu no longer uses the recorded flip, shift, clamp placer against its trigger",
     )
 
@@ -1269,7 +1270,7 @@ def check_implementation(report: Report, data: dict) -> None:
     )
     report.check(
         "function placeSubmenu( menu, trigger )" in menu
-        and "place( menu, rectOf( trigger, true ), 'inline' );" in menu
+        and "placePopover( menu, rectOf( trigger, true ), 'inline' );" in menu
         and "parentList?.addEventListener( 'scroll', reposition );" in menu,
         "the submenu no longer anchors to its painted row or follows its parent list scroll",
     )

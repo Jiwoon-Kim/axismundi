@@ -13,8 +13,8 @@ import {
 import warning from '@wordpress/warning';
 import { Elevation } from '../material/elevation';
 import { Icon } from '../material/icon';
+import { placePopover } from '../overlays/place';
 
-const EDGE = 8;
 const ITEMS = '[role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"]';
 const MenuContext = createContext( null );
 const MenuGroupContext = createContext( {
@@ -34,73 +34,12 @@ function rectOf( element, painted = false ) {
 	return target?.getBoundingClientRect();
 }
 
-function fits( start, size, limit ) {
-	return start >= EDGE && start + size <= limit - EDGE;
-}
-
-function clamp( value, size, limit ) {
-	return Math.min( Math.max( EDGE, value ), Math.max( EDGE, limit - size - EDGE ) );
-}
-
-/**
- * Fit a popover beside an anchor rectangle. The main axis flips first, then
- * the cross axis shifts while preserving an anchor edge; only a box that fits
- * on neither edge is clamped free of its anchor.
- *
- * @param {HTMLElement} menu Popover host.
- * @param {DOMRect}     anchor Anchor rectangle.
- * @param {'block'|'inline'} axis Axis on which the menu opens.
- * @return {void}
- */
-function place( menu, anchor, axis = 'block' ) {
-	if ( ! menu || ! anchor ) {
-		return;
-	}
-
-	const blockAxis = 'block' === axis;
-	const mainLimit = blockAxis ? window.innerHeight : window.innerWidth;
-	const crossLimit = blockAxis ? window.innerWidth : window.innerHeight;
-	const mainEnd = blockAxis ? anchor.bottom : anchor.right;
-	const mainStart = blockAxis ? anchor.top : anchor.left;
-	const crossStart = blockAxis ? anchor.left : anchor.top;
-	const crossEnd = blockAxis ? anchor.right : anchor.bottom;
-	const endSpace = Math.max( 0, mainLimit - mainEnd - EDGE );
-	const startSpace = Math.max( 0, mainStart - EDGE );
-
-	menu.style.maxBlockSize = '';
-	menu.style.maxInlineSize = '';
-	const naturalMainSize = blockAxis ? menu.scrollHeight : menu.scrollWidth;
-	const opensEnd = naturalMainSize <= endSpace || endSpace >= startSpace;
-	const availableMainSize = opensEnd ? endSpace : startSpace;
-
-	if ( blockAxis ) {
-		menu.style.maxBlockSize = `${ availableMainSize }px`;
-	} else {
-		menu.style.maxInlineSize = `${ availableMainSize }px`;
-		menu.style.maxBlockSize = `${ Math.max( 0, window.innerHeight - EDGE * 2 ) }px`;
-	}
-	const box = menu.getBoundingClientRect();
-	const mainSize = blockAxis ? box.height : box.width;
-	const crossSize = blockAxis ? box.width : box.height;
-	const mainPosition = opensEnd ? mainEnd : mainStart - mainSize;
-	const shiftedCrossPosition = fits( crossStart, crossSize, crossLimit )
-		? crossStart
-		: fits( crossEnd - crossSize, crossSize, crossLimit )
-			? crossEnd - crossSize
-			: clamp( crossStart, crossSize, crossLimit );
-
-	menu.style.inset = 'auto';
-	menu.style.top = `${ blockAxis ? mainPosition : shiftedCrossPosition }px`;
-	menu.style.left = `${ blockAxis ? shiftedCrossPosition : mainPosition }px`;
-	menu.dataset.menuPlacement = `${ axis }-${ opensEnd ? 'end' : 'start' }`;
-}
-
 function placeRootMenu( menu, trigger ) {
-	place( menu, rectOf( trigger ), 'block' );
+	placePopover( menu, rectOf( trigger ), 'block' );
 }
 
 function placeSubmenu( menu, trigger ) {
-	place( menu, rectOf( trigger, true ), 'inline' );
+	placePopover( menu, rectOf( trigger, true ), 'inline' );
 }
 
 function typeahead( menu, event ) {

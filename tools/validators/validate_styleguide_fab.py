@@ -691,8 +691,12 @@ def check_consumers_and_route(report: Report, data: dict) -> None:
         "app.js": APP.read_text(encoding="utf-8"),
         "stylebook/index.js": STYLEBOOK_INDEX.read_text(encoding="utf-8"),
     }
-    present = {name: f"components/{slug}" in text or f"|{slug})" in text or f"'{slug}'" in text
-               for name, text in texts.items()}
+    present = {
+        "route.php": texts["route.php"].count(f"|{slug}") == 2,
+        "app.js": f"|{slug}|" in texts["app.js"] or f"|{slug})" in texts["app.js"],
+        "stylebook/index.js": f"if ( '{slug}' === component )" in texts["stylebook/index.js"]
+        and f'href="{route["path"]}"' in texts["stylebook/index.js"],
+    }
     report.check(
         all(present.values()),
         "the FAB stylebook route is declared in "
@@ -765,11 +769,10 @@ def check_implementation(report: Report, data: dict) -> None:
         "onto the button and renders the dimmed FAB the record refuses",
     )
     report.check(
-        "className=\"ax-fab__tooltip\"" in source
-        and "aria-hidden=\"true\"" in source
-        and "{ label }</span>" in source
+        "<Tooltip accessibleName={ label } content={ label }>" in source
+        and ".ax-fab__tooltip" not in source
         and "title=" not in source,
-        "an icon-only FAB owns a visual tooltip with the same label, not a browser title attribute",
+        "an icon-only FAB must consume the shared tooltip with the same label, not own an inline or browser title tooltip",
     )
     report.check(
         "ax-fab__tooltip" not in extended_source

@@ -1,0 +1,8 @@
+@layer axismundi.patterns {
+	.ax-stylebook-tooltips__row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var( --md-sys-measurement-space300 );
+	}
+}

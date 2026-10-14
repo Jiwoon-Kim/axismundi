@@ -19,6 +19,8 @@
 @import url( './components/icon-button.css' );
 @import url( './components/list.css' );
 
+@import url( './components/tooltip.css' );
+
 @import url( './components/menu.css' );
 @import url( './components/tabs.css' );
 @import url( './components/surface.css' );

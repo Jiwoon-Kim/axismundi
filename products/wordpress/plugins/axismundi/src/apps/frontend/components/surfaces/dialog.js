@@ -36,12 +36,14 @@
 import { useId, useRef } from '@wordpress/element';
 import warning from '@wordpress/warning';
 import { IconButton } from '../buttons/icon-button';
+import { Divider } from '../dividers/divider';
 import { Elevation } from '../material/elevation';
 import { Icon } from '../material/icon';
 import { Surface, useScrollAffordance } from './surface';
 
 const PRESENTATIONS = [ 'basic', 'full-screen' ];
 const ROLES = [ 'dialog', 'alertdialog' ];
+const CONTENT_KINDS = [ 'default', 'list' ];
 
 /*
  * `surface.yml` `motion.dialog`. Shares of a slot's own fade spent at zero
@@ -164,7 +166,10 @@ function exitDialog( dialog, timing ) {
  * @param {'any'|'closerequest'|'none'} [props.closedBy='any'] Dismissal policy.
  * @param {import('@wordpress/element').ReactNode} [props.icon] Optional hero icon.
  * @param {import('@wordpress/element').ReactNode} [props.headline] Headline text.
+ * @param {import('@wordpress/element').ReactNode} [props.supportingText] Text above list content.
  * @param {import('@wordpress/element').ReactNode} [props.actions] Up to two actions.
+ * @param {boolean} [props.divider=false] Full-width rule before basic-dialog actions.
+ * @param {'default'|'list'} [props.contentKind='default'] Basic or list-dialog anatomy.
  * @param {string} [props.closeLabel='Close'] Name for the full-screen close button.
  * @param {string} [props.className] Additional class name.
  * @return {import('@wordpress/element').ReactNode} Dialog surface.
@@ -178,17 +183,22 @@ export function Dialog( {
 	closedBy = 'any',
 	icon,
 	headline,
+	supportingText,
 	actions,
+	divider = false,
+	contentKind = 'default',
 	closeLabel = 'Close',
 	className,
 	...props
 } ) {
 	const row = oneOf( presentation, PRESENTATIONS, 'basic', 'presentation' );
 	const resolvedRole = oneOf( role, ROLES, 'dialog', 'role' );
+	const resolvedContentKind = oneOf( contentKind, CONTENT_KINDS, 'default', 'contentKind' );
 	const bodyRef = useRef( null );
 	const headlineId = `${ useId() }-headline`;
 	const bodyReachable = useScrollAffordance( bodyRef, open );
 	const fullScreen = 'full-screen' === row;
+	const listContent = 'list' === resolvedContentKind;
 
 	/*
 	 * A full-screen dialog's close icon is its only navigation, so without a
@@ -217,6 +227,26 @@ export function Dialog( {
 			{ headline }
 		</h2>
 	) : null;
+	const bodyNode = (
+		<div
+			className={ [ 'ax-dialog__body', listContent ? 'ax-dialog__body--list' : null ]
+				.filter( Boolean )
+				.join( ' ' ) }
+			ref={ bodyRef }
+			// Marks this as the surface's scrolling region, so the initial
+			// focus rule skips it. Chrome focuses a scrolling region on
+			// open even when it is not in the sequential focus order, and
+			// M3 wants the first interactive element instead.
+			data-surface-scroll=""
+			// Section 7 of the escape record: a tab stop only when the body
+			// overflows and nothing inside it can take focus.
+			tabIndex={ bodyReachable ? 0 : undefined }
+			role={ bodyReachable ? 'group' : undefined }
+			aria-labelledby={ bodyReachable && headline ? headlineId : undefined }
+		>
+			{ children }
+		</div>
+	);
 
 	return (
 		<Surface
@@ -232,6 +262,7 @@ export function Dialog( {
 			exit={ exitDialog }
 			className={ [ 'ax-dialog', className ].filter( Boolean ).join( ' ' ) }
 			data-presentation={ row }
+			data-content-kind={ resolvedContentKind }
 			data-has-icon={ icon ? '' : undefined }
 		>
 			{ /*
@@ -248,30 +279,32 @@ export function Dialog( {
 					{ headlineNode }
 					{ actions ? <div className="ax-dialog__actions">{ actions }</div> : null }
 				</header>
+			) : listContent ? (
+				<>
+					<div className="ax-dialog__content ax-dialog__content--list">
+						<div className="ax-dialog__heading">
+							{ icon ? <div className="ax-dialog__icon">{ icon }</div> : null }
+							{ headlineNode }
+						</div>
+						{ supportingText ? (
+							<div className="ax-dialog__supporting-text">{ supportingText }</div>
+						) : null }
+					</div>
+					{ bodyNode }
+				</>
 			) : (
-				<div className="ax-dialog__heading">
-					{ icon ? <div className="ax-dialog__icon">{ icon }</div> : null }
-					{ headlineNode }
+				<div className="ax-dialog__content">
+					<div className="ax-dialog__heading">
+						{ icon ? <div className="ax-dialog__icon">{ icon }</div> : null }
+						{ headlineNode }
+					</div>
+					{ bodyNode }
 				</div>
 			) }
 
-			<div
-				className="ax-dialog__body"
-				ref={ bodyRef }
-				// Marks this as the surface's scrolling region, so the initial
-				// focus rule skips it. Chrome focuses a scrolling region on
-				// open even when it is not in the sequential focus order, and
-				// M3 wants the first interactive element instead.
-				data-surface-scroll=""
-				// Section 7 of the escape record: a tab stop only when the body
-				// overflows and nothing inside it can take focus.
-				tabIndex={ bodyReachable ? 0 : undefined }
-				role={ bodyReachable ? 'group' : undefined }
-				aria-labelledby={ bodyReachable && headline ? headlineId : undefined }
-			>
-				{ children }
-			</div>
+			{ fullScreen ? bodyNode : null }
 
+			{ ! fullScreen && divider && actions ? <Divider className="ax-dialog__divider" /> : null }
 			{ ! fullScreen && actions ? (
 				<div className="ax-dialog__actions">{ actions }</div>
 			) : null }

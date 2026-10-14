@@ -61,7 +61,8 @@
 			100% - 2 * var( --ax-surface-window-margin )
 		);
 		max-block-size: calc( 100% - 2 * var( --ax-surface-window-margin ) );
-		padding: var( --md-comp-dialog-padding );
+		/* Basic-dialog slots own their own edges. This keeps a divider full width. */
+		padding: 0;
 		border-radius: var( --md-comp-dialog-container-shape );
 		background: var( --md-comp-dialog-container-color );
 		color: var( --md-comp-dialog-headline-color );
@@ -74,6 +75,15 @@
 	 * min-content, so without it the dialog grows instead and `overflow` never
 	 * engages.
 	 */
+	.ax-dialog[data-presentation='basic'] .ax-dialog__content {
+		flex: 0 0 auto;
+		padding: var( --md-comp-dialog-padding ) var( --md-comp-dialog-padding ) 0;
+	}
+
+	.ax-dialog[data-presentation='basic'] .ax-dialog__content--list {
+		padding: var( --md-comp-dialog-padding );
+	}
+
 	.ax-dialog__heading {
 		display: flex;
 		flex: 0 0 auto;
@@ -109,6 +119,10 @@
 		flex: 1 1 auto;
 		min-block-size: 0;
 		overflow-y: auto;
+	}
+
+	.ax-dialog__body,
+	.ax-dialog__supporting-text {
 		color: var( --md-comp-dialog-supporting-text-color );
 		font-family: var( --md-sys-typescale-body-medium-font );
 		font-size: var( --md-sys-typescale-body-medium-size );
@@ -117,8 +131,18 @@
 		line-height: var( --md-sys-typescale-body-medium-line-height );
 	}
 
-	.ax-dialog__heading + .ax-dialog__body {
+	.ax-dialog[data-presentation='basic'] .ax-dialog__content > .ax-dialog__heading + .ax-dialog__body,
+	.ax-dialog[data-presentation='basic'] .ax-dialog__content > .ax-dialog__heading + .ax-dialog__supporting-text {
 		margin-block-start: var( --md-comp-dialog-headline-to-body );
+	}
+
+	.ax-dialog__supporting-text {
+		flex: 0 0 auto;
+	}
+
+	.ax-dialog__divider {
+		flex: 0 0 auto;
+		margin-block-start: 16px;
 	}
 
 	.ax-dialog__body:focus-visible {
@@ -139,7 +163,15 @@
 		flex-wrap: wrap;
 		justify-content: flex-end;
 		gap: var( --md-comp-dialog-between-actions );
-		margin-block-start: var( --md-comp-dialog-body-to-actions );
+		margin-block-start: 0;
+	}
+
+	.ax-dialog[data-presentation='basic'] > .ax-dialog__actions {
+		padding: 20px var( --md-comp-dialog-padding ) 20px 8px;
+	}
+
+	.ax-dialog[data-presentation='basic'][data-content-kind='list'] > .ax-dialog__actions {
+		padding-inline-start: 16px;
 	}
 
 	.ax-dialog__actions .ax-button {

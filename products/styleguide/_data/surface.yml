@@ -409,6 +409,25 @@ presentations:
         # rows of their own: the token table is the Basic table, and the
         # guidelines name lists, date pickers and time pickers as layouts a
         # basic dialog takes. Scrolling is the content's behaviour.
+    # Kit anatomy measured 2026-10-14. These are slot paddings, not a rewrite
+    # of `body_to_actions`: that 24dp entry comes from the older component
+    # table, while the kit measures the Action bar's own 20dp block padding.
+    # Keeping both prevents a future adapter from treating unlike distances as
+    # interchangeable.
+    layout_anatomy:
+      basic:
+        container_padding: 0
+        without_icon:
+          title_and_description: { gap: 16, padding: { top: 24, inline: 24, bottom: 0 } }
+        with_icon:
+          content: { gap: 16, padding: { top: 24, inline: 24, bottom: 0 } }
+        divider: { full_width: true, padding_block_start: 16, thickness: 1 }
+        actions: { gap: 8, padding: { block: 20, inline_start: 8, inline_end: 24 } }
+      list:
+        with_icon:
+          title_and_description: { gap: 16, padding: { block: 24, inline: 24 } }
+        list: { presentation: baseline, full_width: true }
+        actions: { gap: 8, padding: { block: 20, inline_start: 16, inline_end: 24 } }
 
   - name: dialog-full-screen
     title: Full-screen dialog

@@ -250,6 +250,58 @@ def check_react_surface(data: dict, report) -> None:
                     f"react: the medium swap restyles '{item}', which the record says it keeps",
                 )
 
+    # --- the basic-dialog slot anatomy -------------------------------------
+    # Figma measures a zero-padded container with padded content and action
+    # slots. The old host padding made a requested divider necessarily inset;
+    # bind each distinct edge so moving the number back to the host cannot pass.
+    basic = next((row for row in data["presentations"] if row.get("name") == "dialog-basic"), None)
+    if basic is not None and "dialog-basic" in implemented:
+        anatomy = basic.get("layout_anatomy")
+        report.check(anatomy is not None, "react: basic dialog's measured Figma slot anatomy left surface.yml")
+        if anatomy is not None:
+            measured_basic = anatomy["basic"]
+            measured_list = anatomy["list"]
+            actions = measured_basic["actions"]
+            list_actions = measured_list["actions"]
+            report.check(
+                measured_basic["container_padding"] == 0
+                and measured_basic["divider"]["full_width"] is True
+                and measured_basic["divider"]["padding_block_start"] == 16,
+                "react: the basic-dialog record no longer distinguishes a full-width divider from content padding",
+            )
+            report.check(
+                'divider = false' in dialog_js
+                and 'contentKind = \'default\'' in dialog_js
+                and 'data-content-kind={ resolvedContentKind }' in dialog_js,
+                "react: Dialog no longer exposes the recorded divider and basic/list anatomy axes",
+            )
+            report.check(
+                "import { Divider } from '../dividers/divider';" in dialog_js
+                and 'className="ax-dialog__divider"' in dialog_js
+                and 'divider && actions' in dialog_js,
+                "react: the optional basic-dialog divider is no longer a real full-width Divider before actions",
+            )
+            report.check(
+                "padding: 0;" in dialog_css
+                and ".ax-dialog[data-presentation='basic'] .ax-dialog__content" in dialog_css
+                and "padding: var( --md-comp-dialog-padding ) var( --md-comp-dialog-padding ) 0;" in dialog_css
+                and "margin-block-start: 16px;" in dialog_css,
+                "react: basic dialog no longer puts 24/24/0 on content and 16 before the full-width divider",
+            )
+            report.check(
+                f"padding: {actions['padding']['block']}px var( --md-comp-dialog-padding ) {actions['padding']['block']}px {actions['padding']['inline_start']}px;" in dialog_css
+                and f"padding-inline-start: {list_actions['padding']['inline_start']}px;" in dialog_css
+                and f"gap: var( --md-comp-dialog-between-actions );" in dialog_css,
+                "react: basic and list action bars no longer carry their distinct measured start padding and shared 8dp gap",
+            )
+            report.check(
+                "ax-dialog__content--list" in dialog_js
+                and "ax-dialog__body--list" in dialog_js
+                and 'supportingText' in dialog_js
+                and "<List aria-label=\"Drafts to delete\">" in page,
+                "react: list dialog is no longer a first-class anatomy with its own title slot and baseline List specimen",
+            )
+
     # --- native close -------------------------------------------------------
     # The contract records form-method-dialog close, and the browser performs
     # it without asking. A close this component did not make has to reach the

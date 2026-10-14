@@ -3,6 +3,7 @@ import { Button } from '../../../../components/buttons/button';
 import { CarouselItem } from '../../../../components/carousels/carousel-item';
 import { UncontainedCarousel } from '../../../../components/carousels/uncontained-carousel';
 import { Icon } from '../../../../components/material/icon';
+import { List, ListItem } from '../../../../components/lists';
 import { BottomSheet, Dialog, SideSheet } from '../../../../components/surfaces';
 import { Scaffold } from '../../../../foundations/layout/scaffold';
 import '../../stylebook-page.css';
@@ -300,6 +301,7 @@ export function StylebookSurfacesPage() {
 								render={ ( state ) => (
 									<Dialog
 										{ ...state }
+									divider
 										headline="Reset settings?"
 										actions={
 											<>
@@ -339,6 +341,34 @@ export function StylebookSurfacesPage() {
 										}
 									>
 										<p>The draft will not be recoverable.</p>
+									</Dialog>
+								) }
+							/>
+
+							<Specimen
+								label="Open list dialog"
+								render={ ( state ) => (
+									<Dialog
+										{ ...state }
+										contentKind="list"
+										icon={ <Icon name="delete" /> }
+										headline="Delete drafts?"
+										supportingText="Choose the drafts to remove."
+										actions={
+											<>
+												<Button variant="text" onClick={ state.onClose }>
+													Cancel
+												</Button>
+												<Button variant="text" onClick={ state.onClose }>
+													Delete
+												</Button>
+											</>
+										}
+									>
+										<List aria-label="Drafts to delete">
+											<ListItem headline="First draft" />
+											<ListItem headline="Second draft" />
+										</List>
 									</Dialog>
 								) }
 							/>

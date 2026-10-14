@@ -1,0 +1,336 @@
+# ---------------------------------------------------------------------------
+# Tooltips — the record every other tooltip artefact reads from.
+#
+# 이 컴포넌트는 리포에 이미 세 번 구현되어 있다. 셋이 서로 다르고, 그래서 이
+# 레코드의 첫 번째 일은 값을 적는 것이 아니라 **어느 답을 택했는지와 그 이유**를
+# 적는 것이다. `precedents_in_this_repository`가 그 절이다.
+# ---------------------------------------------------------------------------
+
+meta:
+  component: Tooltips
+  dsdb: 38.2.9
+  table_revision: 2026-05-27T22:44:15.009106Z
+  token_table: products/wordpress/plugins/axismundi/docs/m3-token-tables/SOURCE-M3-TOOLTIPS-RAW.md
+  namespaces:
+    - md.comp.plain-tooltip
+    - md.comp.rich-tooltip
+  live_token_total: 100
+  deprecated_token_total: 2
+  what_the_table_does_not_carry: >-
+    Every measurement. `md.comp.plain-tooltip` publishes four things -- a
+    container colour, a shape, a text colour and a type reference -- and no
+    height, padding or maximum width at all. Those come from the specs page's
+    prose, which states them as an attribute table, so they are cited here as
+    prose rather than restated as tokens.
+
+prose_sources:
+  two_variants:
+    source: https://m3.material.io/components/tooltips/overview
+    statement: >-
+      Two variants: plain and rich. Plain tooltips describe elements or actions
+      of icon buttons; rich tooltips provide more detail and can include an
+      optional title, link and buttons.
+  plain_is_for_unlabelled_controls:
+    source: https://m3.material.io/components/tooltips/guidelines
+    statement: >-
+      Plain tooltips are best used for labelling UI elements with no text, like
+      icon-only buttons and fields, and are not needed when the element already
+      has label text.
+  plain_measurements:
+    source: https://m3.material.io/components/tooltips/specs
+    statement: Plain tooltip container height 24dp, padding 8dp.
+  rich_measurements:
+    source: https://m3.material.io/components/tooltips/specs
+    statement: >-
+      Rich tooltip top padding 12dp, bottom padding 8dp, left and right padding
+      16dp.
+  plain_placement:
+    source: https://m3.material.io/components/tooltips/guidelines
+    statement: >-
+      By default plain tooltips sit directly above the parent element: 4dp away
+      from a visual boundary like a button, 8dp where there is none, like a text
+      baseline. If the element is in an app bar the tooltip appears below it at
+      the same distance.
+  rich_placement:
+    source: https://m3.material.io/components/tooltips/guidelines
+    statement: >-
+      Rich tooltips are positioned to the bottom right of the parent, adjust in
+      increments of 8dp to avoid going off screen, and should not cover the
+      parent element.
+  trigger:
+    source: https://m3.material.io/components/tooltips/guidelines
+    statement: >-
+      To show a tooltip, hover on the parent element on desktop, or tap and hold
+      on mobile. Persistent rich tooltips only appear when clicked or tapped.
+  transient:
+    source: https://m3.material.io/components/tooltips/guidelines
+    statement: >-
+      Both plain and rich tooltips disappear 1.5 seconds after navigating away
+      from the target region, and triggering a new tooltip immediately closes
+      any other open tooltip.
+  one_at_a_time:
+    source: https://m3.material.io/components/tooltips/guidelines
+    statement: Only display one tooltip at a time.
+  stays_long_enough:
+    source: https://m3.material.io/components/tooltips/accessibility
+    statement: >-
+      Plain and rich tooltips without required actions should remain on screen
+      long enough for people to receive the information, and plain tooltips
+      should remain temporarily after the cursor moves away.
+  appears_on_hover_or_focus:
+    source: https://m3.material.io/components/tooltips/accessibility
+    statement: >-
+      Tooltips can appear when an actionable element, like a button or
+      navigation rail, is hovered or focused, and this tooltip shouldn't hide
+      crucial information.
+  role:
+    source: https://m3.material.io/components/tooltips/accessibility
+    statement: >-
+      Tooltips should have the Tooltip role, or similar. The tooltip container
+      should have the Tooltip role.
+  no_focus_trap:
+    source: https://m3.material.io/components/tooltips/accessibility
+    statement: >-
+      Avoid trapping screen reader and keyboard focus on rich tooltips; people
+      should be able to move linearly through the rest of the page.
+  not_for_critical_information:
+    source: https://m3.material.io/components/tooltips/guidelines
+    statement: >-
+      Don't hide critical information within tooltips as it's easy to miss. Use
+      an interruptive dialog instead.
+  avoid_wrapping:
+    source: https://m3.material.io/components/tooltips/guidelines
+    statement: >-
+      Avoid wrapping text to multiple lines or including many pieces of
+      information.
+
+variants:
+  plain:
+    namespace: md.comp.plain-tooltip
+    status: planned
+    why: >-
+      Two components already want one: the FAB ships an icon with no visible
+      label, and the icon button page says in as many words that its visible
+      name waits for a tooltip primitive.
+  rich:
+    namespace: md.comp.rich-tooltip
+    status: not_implemented
+    why: >-
+      It is a different component wearing the same name: a surface with a
+      subhead, up to two text buttons, optional links, focus order through them,
+      and a persistent mode that opens on click and survives leaving the target.
+      Nothing in this app asks for one yet.
+
+# ---------------------------------------------------------------------------
+# 발행된 값.
+# ---------------------------------------------------------------------------
+
+plain:
+  container_colour_token: md.comp.plain-tooltip.container.color
+  container_colour: md.sys.color.inverse-surface
+  container_shape_token: md.comp.plain-tooltip.container.shape
+  container_shape: md.sys.shape.corner.extra-small
+  text_colour_token: md.comp.plain-tooltip.supporting-text.color
+  text_colour: md.sys.color.inverse-on-surface
+  text_type_token: md.comp.plain-tooltip.supporting-text.font
+  text_type: md.sys.typescale.body-small.font
+  container_height: 24
+  padding_inline: 8
+  padding_block_derived: 4
+  padding_block_derivation: >-
+    The specs page states a 24dp container and 8dp padding, and body-small has a
+    16dp line height. 16 + 4 + 4 = 24, so the block padding is 4 and the 8dp
+    figure is the inline one. The shipped plugin reached the same conclusion and
+    wrote the arithmetic in its stylesheet.
+  invariant: padding_block_derived * 2 + 16 == container_height
+  unpublished:
+    max_inline_size: >-
+      M3 publishes none. "Avoid wrapping text to multiple lines" is the only
+      constraint, and a maximum width is how an implementation honours it.
+    show_delay: >-
+      No delay is published on any of the four pages. The shipped plugin waits
+      700ms before showing, which is a project value, not an M3 one.
+
+rich:
+  container_colour_token: md.comp.rich-tooltip.container.color
+  container_colour: md.sys.color.surface-container
+  container_shape_token: md.comp.rich-tooltip.container.shape
+  container_shape: md.sys.shape.corner.medium
+  container_elevation_token: md.comp.rich-tooltip.container.elevation
+  container_elevation: md.sys.elevation.level2
+  subhead_colour_token: md.comp.rich-tooltip.subhead.color
+  subhead_colour: md.sys.color.on-surface-variant
+  text_colour_token: md.comp.rich-tooltip.supporting-text.color
+  text_colour: md.sys.color.on-surface-variant
+  action_colour_token: md.comp.rich-tooltip.action.label-text.color
+  action_colour: md.sys.color.primary
+  padding_block_start: 12
+  padding_block_end: 8
+  padding_inline: 16
+  configurations:
+    - subhead, supporting text, two buttons
+    - subhead, supporting text, one button
+    - subhead and supporting text
+    - supporting text and one button
+    - supporting text and two buttons
+  persistent_mode: >-
+    Opens on click or on page load to explain a new feature, stays while the
+    pointer leaves, and closes only when the person interacts with something
+    else. Hover does not trigger it, and it does not belong on icon buttons.
+
+placement:
+  plain:
+    default_side: block-start
+    distance_from_a_visual_boundary: 4
+    distance_without_a_boundary: 8
+    in_an_app_bar: block-end at the same distance
+  rich:
+    default_side: inline-end, block-end
+    adjustment_increment: 8
+    must_not_cover_the_parent: true
+  this_app:
+    reuse: the menu's placer axis
+    why: >-
+      Flip, shift, clamp against an anchor rectangle is the same problem, and
+      the placer already takes a rectangle rather than an element. A tooltip
+      adds one thing: the gap depends on whether the anchor has a visible
+      boundary, which is a parameter, not a second placer.
+
+behaviour:
+  show_on: [ hover, focus ]
+  show_on_touch: tap and hold
+  hide_after_leaving: 1500
+  a_new_one_closes_the_open_one: true
+  one_at_a_time: true
+  keyboard:
+    tab: Focus lands on a button inside a rich tooltip, if there is one.
+    space_or_enter: Activates the focused element.
+    escape: >-
+      Not published for plain tooltips, which have nothing to dismiss once the
+      pointer or focus leaves. The lab runtime adds it defensively.
+  focus_is_never_moved: >-
+    Showing a tooltip does not move focus, and a rich tooltip must not trap it.
+
+# ---------------------------------------------------------------------------
+# 이미 세 번 구현되어 있다. 이 절이 이 레코드의 핵심이다.
+# ---------------------------------------------------------------------------
+
+precedents_in_this_repository:
+  shipped_plugin:
+    path: products/wordpress/plugins/axismundi-dialogs/assets/tooltip.js
+    css: products/wordpress/plugins/axismundi-dialogs/assets/tooltip.css
+    mechanism: native popover, manual, falling back to <body> where popover is missing
+    aria: visual only -- aria-hidden, no role, no aria-describedby
+    show_delay: 700
+    gap: 4
+    min_block_size: 24
+    padding: 4px 8px
+    max_inline_size: 240
+    why_the_top_layer: >-
+      Its header records the reason: z-index inside a container is not enough,
+      so the popup joins the top layer and can sit above a dialog. This is the
+      same conclusion the menu reached, and it is the mechanism this record
+      adopts.
+  lab_module:
+    path: products/reference-implementations/axismundi-lab/modules/tooltip
+    audit: docs/TOOLTIP-AUDIT.md
+    aria: role="tooltip" on the surface, aria-describedby set on the trigger while shown
+    trigger_events: [ pointerover, focusin, pointerout, focusout ]
+    gap: 8
+    viewport_margin: 16
+    show_delay: none, deferred in its own backlog
+    rich: visual specimen only, no interactive wiring
+    note: >-
+      Its audit is the most careful comparison in the repository: it sets the
+      tooltip contract against the popover's line by line, and concludes that
+      the popover runtime cannot be copy-pasted because the trigger model and
+      the ARIA contract differ.
+  fab_inline:
+    path: products/wordpress/plugins/axismundi/src/apps/frontend/styles/components/fab.css
+    mechanism: a span inside the button, position absolute, z-index 2
+    aria: visual only
+    status: interim
+    why_it_must_change: >-
+      It is not in the top layer, so any ancestor with overflow or a stacking
+      context cuts it -- and the FAB's own homes are a navigation rail and a
+      corner of a scrolling layout. Nothing clips it on the stylebook page
+      today, which is exactly how this kind of defect waits.
+  three_answers_one_question: >-
+    The same component is built three times here with three different ARIA
+    decisions and three different gaps. That is the cost of not having the
+    primitive, and it is why this slice exists.
+
+# ---------------------------------------------------------------------------
+# 채택. 이유를 적지 않은 선택은 다음 사람에게 우연으로 보인다.
+# ---------------------------------------------------------------------------
+
+project_policy:
+  slice: >-
+    The plain tooltip only, as a shared primitive the FAB and the icon button
+    both consume. Rich is recorded and not built.
+  mechanism:
+    adopted: native popover, top layer
+    why: >-
+      The shipped plugin and the menu both reached it for the same reason, and
+      the FAB's inline span is the counter-example that shows what happens
+      without it.
+  aria:
+    rule: >-
+      The tooltip surface carries `role="tooltip"` and the trigger points at it
+      with `aria-describedby` -- except where the tooltip's text is the
+      trigger's accessible name, where the surface stays `aria-hidden` and the
+      name is not announced twice.
+    why_the_exception: >-
+      M3 says the container should have the tooltip role, and a description is
+      what a tooltip is. But an icon-only button takes its name from the same
+      words, so pointing at them as a description as well announces them twice
+      -- "Compose post, Compose post". The shipped plugin chose the second half of
+      this rule and wrote the reason down; the lab chose the first. Both are
+      right about their own case, so the rule is which case you are in.
+    consequence_for_the_fab: >-
+      The FAB's tooltip text is its accessible name, so the FAB is the exception
+      branch: the surface is decorative and `aria-label` keeps carrying the name.
+  delay:
+    show: 700
+    source: the shipped plugin, carried forward rather than reinvented
+    hide_after_leaving: 1500
+    hide_source: prose_sources.transient
+    note: >-
+      M3 publishes the hide delay and not the show delay. Keeping the plugin's
+      700ms means one number in this project rather than two.
+  max_inline_size:
+    value: 240
+    source: the shipped plugin
+    why: >-
+      Unpublished by M3, and "avoid wrapping to multiple lines" needs some
+      bound. 240 is what already ships, so it is what the primitive takes.
+  consumers_waiting:
+    - the FAB, whose interim inline tooltip this replaces
+    - the icon button, whose stylebook page records the visible name as pending
+  not_a_consumer: >-
+    The extended FAB. Its label is visible, so M3 says it needs no tooltip, and
+    adding one would be the thing Google Contacts does that this record already
+    flagged as a deviation.
+
+discrepancies:
+  measurements_are_prose_not_tokens:
+    measured: >-
+      `md.comp.plain-tooltip` carries four tokens and no geometry; the 24dp
+      container and 8dp padding exist only in the specs page's attribute table.
+    consequence: >-
+      A generated `--md-comp-plain-tooltip-*` custom property for height or
+      padding would be an invention. The implementation writes the two figures
+      with the citation beside them.
+  the_repository_disagrees_with_itself_on_aria:
+    measured: >-
+      The shipped plugin is deliberately visual-only; the lab module gives the
+      surface `role="tooltip"` and the trigger `aria-describedby`.
+    consequence: >-
+      Resolved above by case rather than by picking a winner. Recorded because
+      the two files still disagree on disk, and a future reader will find both.
+
+evidence_not_product: >-
+  Figures come from the token table named in `meta`, from the M3 prose quoted in
+  `prose_sources`, or from the shipped plugin and the lab module named in
+  `precedents_in_this_repository`, which are evidence of what this project
+  already decided rather than of what M3 publishes.

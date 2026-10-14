@@ -103,6 +103,7 @@ def main() -> int:
                           ("divider", "validate_styleguide_divider.py"),
                           ("menu", "validate_styleguide_menu.py"),
                           ("fab", "validate_styleguide_fab.py"),
+                          ("tooltip", "validate_styleguide_tooltip.py"),
                           ("breakpoints", "validate_styleguide_breakpoints.py"),
                           ("navigation item", "validate_styleguide_navigation_item.py"),
                           ("navigation bar", "validate_styleguide_navigation_bar.py"),

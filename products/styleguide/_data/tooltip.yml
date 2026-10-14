@@ -51,6 +51,12 @@ prose_sources:
       from a visual boundary like a button, 8dp where there is none, like a text
       baseline. If the element is in an app bar the tooltip appears below it at
       the same distance.
+  desktop_centring:
+    source: https://m3.material.io/components/tooltips/guidelines
+    statement: >-
+      The rich-tooltip desktop placement guidance says tooltips may appear
+      centred below the parent element. It supports centring as a tooltip-wide
+      placement reading, but is not a published plain-tooltip rule.
   rich_placement:
     source: https://m3.material.io/components/tooltips/guidelines
     statement: >-
@@ -190,11 +196,18 @@ placement:
     must_not_cover_the_parent: true
   this_app:
     reuse: the menu's placer axis
+    cross_axis_alignment: center
     why: >-
       Flip, shift, clamp against an anchor rectangle is the same problem, and
       the placer already takes a rectangle rather than an element. A tooltip
       adds one thing: the gap depends on whether the anchor has a visible
       boundary, which is a parameter, not a second placer.
+    cross_axis_why: >-
+      Plain tooltips are centred on their triggering control before viewport
+      clamping. The rich desktop guidance supports that tooltip-wide reading but
+      does not publish it specifically for plain tooltips; the shipped dialogs
+      plugin measures the same centre point. Menu retains its start-edge default
+      because a menu and a tooltip do not share this cross-axis alignment.
 
 behaviour:
   show_on: [ hover, focus ]

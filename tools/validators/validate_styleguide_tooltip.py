@@ -44,6 +44,7 @@ TOOLTIP_CSS = FRONTEND / "styles/components/tooltip.css"
 PLACER_JS = FRONTEND / "components/overlays/place.js"
 FAB_JS = FRONTEND / "components/fabs/fab.js"
 ICON_BUTTON_JS = FRONTEND / "components/buttons/icon-button.js"
+MENU_JS = FRONTEND / "components/menus/menu.js"
 APP_JS = FRONTEND / "app.js"
 STYLEBOOK_JS = FRONTEND / "pages/stylebook/index.js"
 ROUTE_PHP = ROOT / "products/wordpress/plugins/axismundi/includes/route.php"
@@ -324,6 +325,12 @@ def check_placement_and_behaviour(report: Report, data: dict) -> None:
         "reusing the menu's placer rests on its anchor being a rectangle, which is the reason "
         "it generalises",
     )
+    report.check(
+        data["placement"]["this_app"]["cross_axis_alignment"] == "center"
+        and "centred" in data["placement"]["this_app"]["cross_axis_why"],
+        "plain tooltip placement is centred on its trigger before viewport clamping; Menu's "
+        "start-edge default is not a tooltip alignment rule",
+    )
     behaviour = data["behaviour"]
     report.check(
         behaviour["show_on"] == ["hover", "focus"],
@@ -355,6 +362,7 @@ def check_implementation(report: Report, data: dict) -> None:
     placer = PLACER_JS.read_text(encoding="utf-8")
     fab = FAB_JS.read_text(encoding="utf-8")
     icon_button = ICON_BUTTON_JS.read_text(encoding="utf-8")
+    menu = MENU_JS.read_text(encoding="utf-8")
 
     # These use complete component boundaries rather than a token substring: a
     # comment or an unrelated fallback cannot satisfy them.
@@ -399,8 +407,22 @@ def check_implementation(report: Report, data: dict) -> None:
     report.check(
         "export function placePopover" in placer
         and "gap = 0" in placer
-        and "preferEnd = true" in placer,
+        and "preferEnd = true" in placer
+        and "crossAlignment = 'start'" in placer,
         "Tooltip and Menu must share the parameterized rectangle placer rather than fork placement",
+    )
+    report.check(
+        "'center' === crossAlignment" in placer
+        and "centeredCrossPosition" in placer
+        and "inAppBar,\n\t\t\t\t'center'" in tooltip,
+        "Tooltip must opt into centred cross-axis placement",
+    )
+    report.check(
+        "placePopover( menu, rectOf( trigger ), 'block' );" in menu
+        and "placePopover( menu, rectOf( trigger, true ), 'inline' );" in menu
+        and "'center'" not in menu,
+        "Menu must retain the place helper's start-edge default; centring every caller would "
+        "change menus while fixing tooltips",
     )
     report.check(
         "min-block-size: 24px;" in css
@@ -458,6 +480,7 @@ def check_prose(report: Report, data: dict) -> None:
         ("role", "accessibility"),
         ("transient", "guidelines"),
         ("plain_placement", "guidelines"),
+        ("desktop_centring", "guidelines"),
     ):
         report.check(
             str(sources[name]["source"]).rsplit("/", 1)[1] == page,
@@ -468,6 +491,12 @@ def check_prose(report: Report, data: dict) -> None:
         pages == {"overview", "specs", "guidelines", "accessibility"},
         f"the record cites {sorted(pages)}; all four pages must stay cited, because the "
         "geometry is on one of them and the ARIA rule on another",
+    )
+    report.check(
+        "rich-tooltip desktop placement" in sources["desktop_centring"]["statement"]
+        and "not a published plain-tooltip rule" in sources["desktop_centring"]["statement"],
+        "the centring citation is from rich-tooltip guidance and must not be presented as a "
+        "published plain-tooltip rule",
     )
 
 

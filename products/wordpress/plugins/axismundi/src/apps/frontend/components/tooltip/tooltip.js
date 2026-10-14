@@ -117,7 +117,8 @@ export function Tooltip( {
 				'block',
 
 				hasVisualBoundary ? 4 : 8,
-				inAppBar
+				inAppBar,
+				'center'
 			);
 		};
 		place();

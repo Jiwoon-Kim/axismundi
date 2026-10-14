@@ -18,9 +18,17 @@ function clamp( value, size, limit ) {
  * @param {'block'|'inline'} [axis='block'] Axis on which the popup opens.
  * @param {number} [gap=0] Space between anchor and popup on the main axis.
  * @param {boolean} [preferEnd=true] Default direction before a lack of space flips it.
+ * @param {'start'|'center'} [crossAlignment='start'] Cross-axis anchor alignment.
  * @return {void}
  */
-export function placePopover( menu, anchor, axis = 'block', gap = 0, preferEnd = true ) {
+export function placePopover(
+	menu,
+	anchor,
+	axis = 'block',
+	gap = 0,
+	preferEnd = true,
+	crossAlignment = 'start'
+) {
 	if ( ! menu || ! anchor ) {
 		return;
 	}
@@ -55,11 +63,14 @@ export function placePopover( menu, anchor, axis = 'block', gap = 0, preferEnd =
 	const mainSize = blockAxis ? box.height : box.width;
 	const crossSize = blockAxis ? box.width : box.height;
 	const mainPosition = opensEnd ? mainEnd + gap : mainStart - mainSize - gap;
-	const shiftedCrossPosition = fits( crossStart, crossSize, crossLimit )
-		? crossStart
-		: fits( crossEnd - crossSize, crossSize, crossLimit )
-			? crossEnd - crossSize
-			: clamp( crossStart, crossSize, crossLimit );
+	const centeredCrossPosition = crossStart + ( crossEnd - crossStart - crossSize ) / 2;
+	const shiftedCrossPosition = 'center' === crossAlignment
+		? clamp( centeredCrossPosition, crossSize, crossLimit )
+		: fits( crossStart, crossSize, crossLimit )
+			? crossStart
+			: fits( crossEnd - crossSize, crossSize, crossLimit )
+				? crossEnd - crossSize
+				: clamp( crossStart, crossSize, crossLimit );
 
 	menu.style.inset = 'auto';
 	menu.style.top = `${ blockAxis ? mainPosition : shiftedCrossPosition }px`;

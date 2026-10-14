@@ -305,6 +305,19 @@ discrepancies:
       agree. Recorded so that the agreement is known to be a coincidence of
       values and not an identity: if one of them moves, the item's single
       `indicator_leading_trailing_space_role` has to split in two.
+  - token: expanded target width
+    prose: >-
+      M3 says the navigation item's target area spans the full width of the
+      rail container.
+    tokens: >-
+      No token binds a target width to the expanded rail's inline padding.
+    note: >-
+      The kit's expanded rail has 20dp inline padding and 180dp-wide segments
+      inside its 220dp container. This slice implements that measured kit
+      structure, so expanded item targets fill the 180dp segment rather than
+      the outer rail. The shared `target_area_spans_full_width` claim remains
+      the published source rule; this is a recorded kit divergence, not a
+      quiet reinterpretation of it.
 
 # What this slice implements, and what it deliberately does not.
 scope:
@@ -315,6 +328,8 @@ scope:
     - optional container fill
     - optional trailing divider
     - menu and FAB as caller-supplied slots
+    - Menu and Fab header group with variant-dependent FAB and ordering
+    - optional sectioned segments and section headers
     - full-width target area with a content-hugging indicator
     - arrow keys added to the tab order
   deferred:
@@ -327,10 +342,9 @@ scope:
     - hide when collapsed, and the transition between variants
     # Android only, and only for the modal expanded rail.
     - predictive back
-    # A FAB component now exists (`fab.yml`), and the slot takes it. What is
-    # still deferred is the kit's own header structure around it -- see
-    # `figma_kit_structure` below.
-    - the Menu and Fab group, its expanded ordering, and the Docked/Floating axis
+    # The kit exposes this axis, but it has no API name here yet. Header
+    # structure is implemented; this is deliberately still an owner decision.
+    - the Docked/Floating axis
     # No Badge component exists, and the rail moves the badge next to the label
     # when expanded while the item places it on the icon. That restructuring
     # waits for the badge itself.
@@ -344,7 +358,7 @@ scope:
 # ---------------------------------------------------------------------------
 
 figma_kit_structure:
-  status: measured_not_implemented
+  status: implemented
   source: "Material 3 Design Kit (Community), Navigation Rail and Navigation Rail: Expanded"
   read: 2026-10-14
   two_components_not_one: >-
@@ -360,6 +374,10 @@ figma_kit_structure:
     header_order: [ icon_button, fab ]
   expanded:
     container_width: 220
+    implementation_width: >-
+      The kit's 220dp component is the implemented default. The published 360dp
+      maximum remains a bound, not a responsive `width: 100%` policy: no source
+      says when this app should grow the rail inside that range.
     type_axis: [ Docked, Floating ]
     header_group: Menu & Fab
     header_order: [ extended_fab, icon_button ]
@@ -367,15 +385,17 @@ figma_kit_structure:
     header_item_spacing: 4
     padding: { inline: 20, block_start: 44, block_end: 20 }
     header_to_segments_spacing: 40
+    segments_width: 180
     segments_are_sectioned: >-
       Not a flat list: Section 1 to 3, with a section header of 180x36, 16dp
       inline padding and a 10dp gap, and 12dp between sections.
   what_the_implementation_does_instead: >-
-    `NavigationRail` renders `menu` and `fab` as independent siblings in a fixed
-    menu-then-fab order, with no Menu and Fab group, no variant-dependent
-    ordering, no sections, and no Docked/Floating axis. The FAB slice put an
-    extended FAB in the expanded rail's slot, which is the right component in
-    the right place and not yet the kit's structure.
+    `NavigationRail` now renders a Menu and Fab group, chooses `collapsedFab`
+    or `expandedFab` with the variant, renders the kit's DOM order directly, and
+    accepts optional sections. It intentionally still has no Docked/Floating
+    axis. The kit draws two components while this app keeps one variant-driven
+    component; that remains a web-shape decision, not a claim that the kit is
+    wrong.
   owner: >-
     This belongs to the navigation rail's next slice, not to the FAB. The FAB is
     a nested instance here; nothing above is a property of the FAB.

@@ -45,6 +45,7 @@
  *
  * @param {Object} props Component props.
  * @param {Array<{id: string, label: string, icon: import('@wordpress/element').ReactNode, href: string, badge?: import('@wordpress/element').ReactNode, badgeDescription?: string}>} props.destinations Three to seven destinations, in fixed order.
+ * @param {Array<{id?: string, label?: string, destinations: Array}>} [props.sections] Optional destination sections.
  * @param {string} props.activeId `id` of the current destination. One is always active.
  * @param {string} props.label Accessible name for the navigation landmark.
  * @param {'collapsed'|'expanded'} [props.variant='collapsed'] Published variant.
@@ -54,7 +55,9 @@
  * @param {boolean} [props.filled=false] Turn the container fill on.
  * @param {boolean} [props.divider=false] Vertical divider on the content-facing edge.
  * @param {import('@wordpress/element').ReactNode} [props.menu] Menu button. Top-aligned.
- * @param {import('@wordpress/element').ReactNode} [props.fab] FAB. Top-aligned, resting elevation 0.
+ * @param {import('@wordpress/element').ReactNode} [props.fab] Legacy fallback FAB for both variants.
+ * @param {import('@wordpress/element').ReactNode} [props.collapsedFab] Plain FAB for the collapsed rail.
+ * @param {import('@wordpress/element').ReactNode} [props.expandedFab] Extended FAB for the expanded rail. The rail itself rests at elevation 0.
  * @param {string} [props.className] Additional component class name.
  * @return {import('@wordpress/element').ReactNode} Navigation rail.
  */
@@ -89,6 +92,9 @@ export function NavigationRail( {
 	divider = false,
 	menu,
 	fab,
+	collapsedFab,
+	expandedFab,
+	sections,
 	className,
 	...props
 } ) {
@@ -112,16 +118,22 @@ export function NavigationRail( {
 		group = 'top';
 	}
 
-	if ( DESTINATIONS_MINIMUM > destinations.length ) {
+	const destinationSections = Array.isArray( sections ) && sections.length
+		? sections
+		: [ { destinations } ];
+	const allDestinations = destinationSections.flatMap( ( section ) => section.destinations ?? [] );
+	const selectedFab = ( 'collapsed' === kind ? collapsedFab : expandedFab ) ?? fab;
+
+	if ( DESTINATIONS_MINIMUM > allDestinations.length ) {
 		warning(
-			`NavigationRail: ${ destinations.length } destinations. The collapsed rail "should contain 3-7 navigation items".`
+			`NavigationRail: ${ allDestinations.length } destinations. The collapsed rail "should contain 3-7 navigation items".`
 		);
 	}
-	if ( DESTINATIONS_MAXIMUM < destinations.length ) {
+	if ( DESTINATIONS_MAXIMUM < allDestinations.length ) {
 		warning(
-			`NavigationRail: ${ destinations.length } destinations. M3 publishes 3-7; above that the rail is the wrong component.`
+			`NavigationRail: ${ allDestinations.length } destinations. M3 publishes 3-7; above that the rail is the wrong component.`
 		);
-	} else if ( MODAL_ADVISED_ABOVE < destinations.length ) {
+	} else if ( MODAL_ADVISED_ABOVE < allDestinations.length ) {
 		/*
 		 * Advice with a threshold rather than a limit, so it is said once and
 		 * nothing is refused: "If there are more than five destinations, consider
@@ -134,11 +146,11 @@ export function NavigationRail( {
 		 * silenced the advice for exactly the configuration that still needs it.
 		 */
 		warning(
-			`NavigationRail: ${ destinations.length } destinations. M3 suggests a modal expanded rail above five, and the modal layout is not implemented yet.`
+			`NavigationRail: ${ allDestinations.length } destinations. M3 suggests a modal expanded rail above five, and the modal layout is not implemented yet.`
 		);
 	}
 
-	if ( destinations.length && ! destinations.some( ( { id } ) => id === activeId ) ) {
+	if ( allDestinations.length && ! allDestinations.some( ( { id } ) => id === activeId ) ) {
 		warning(
 			`NavigationRail: activeId "${ activeId }" matches no destination; one destination is always active.`
 		);
@@ -199,28 +211,40 @@ export function NavigationRail( {
 			data-filled={ filled ? '' : undefined }
 			aria-label={ label || undefined }
 		>
-			{ /*
-			 * "The menu icon and FAB should always be top-aligned", which is why
-			 * they sit outside the items group that `alignment` moves. Slots only:
-			 * the menu's collapse/expand behaviour and the FAB component are
-			 * deferred, and what goes in them is the caller's.
-			 */ }
-			{ menu ? <div className="ax-nav-rail__menu">{ menu }</div> : null }
-			{ fab ? <div className="ax-nav-rail__fab">{ fab }</div> : null }
+			{ menu || selectedFab ? (
+				<div className="ax-nav-rail__header">
+					{ 'collapsed' === kind ? (
+						<>
+							{ menu ? <div className="ax-nav-rail__menu">{ menu }</div> : null }
+							{ selectedFab ? <div className="ax-nav-rail__fab">{ selectedFab }</div> : null }
+						</>
+					) : (
+						<>
+							{ selectedFab ? <div className="ax-nav-rail__fab">{ selectedFab }</div> : null }
+							{ menu ? <div className="ax-nav-rail__menu">{ menu }</div> : null }
+						</>
+					) }
+				</div>
+			) : null }
 
 			<div className="ax-nav-rail__items" ref={ itemsRef } onKeyDown={ moveFocus }>
-				{ destinations.map( ( { id, label: destination, icon, href, badge, badgeDescription } ) => (
-					<NavigationItem
-						key={ id }
-						className="ax-nav-rail__item"
-						icon={ icon }
-						label={ destination }
-						href={ href }
-						badge={ badge }
-						badgeDescription={ badgeDescription }
-						orientation={ axis }
-						active={ id === activeId }
-					/>
+				{ destinationSections.map( ( section, index ) => (
+					<div className="ax-nav-rail__section" key={ section.id ?? index }>
+						{ section.label ? <div className="ax-nav-rail__section-label">{ section.label }</div> : null }
+						{ ( section.destinations ?? [] ).map( ( { id, label: destination, icon, href, badge, badgeDescription } ) => (
+							<NavigationItem
+								key={ id }
+								className="ax-nav-rail__item"
+								icon={ icon }
+								label={ destination }
+								href={ href }
+								badge={ badge }
+								badgeDescription={ badgeDescription }
+								orientation={ axis }
+								active={ id === activeId }
+							/>
+						) ) }
+					</div>
 				) ) }
 			</div>
 

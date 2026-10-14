@@ -309,6 +309,11 @@ const DESTINATIONS = [
 	{ id: 'alerts', label: 'Notifications', icon: <Icon name="notifications" />, href: '#alerts' },
 ];
 
+const RAIL_SECTIONS = [
+	{ id: 'main', label: 'Main', destinations: DESTINATIONS.slice( 0, 2 ) },
+	{ id: 'activity', label: 'Activity', destinations: DESTINATIONS.slice( 2 ) },
+];
+
 function BarSample( { itemLayout } ) {
 	const hostRef = useRef();
 	const [ metrics, setMetrics ] = useState();
@@ -418,7 +423,7 @@ function BarSample( { itemLayout } ) {
  * published `Arrows` row by deleting the published `Tab` row, which is the
  * mistake this repository already made once on the button group.
  */
-function RailSample( { variant, alignment = 'top', narrow = false, divider = false, menu } ) {
+function RailSample( { variant, alignment = 'top', narrow = false, divider = false, menu, header = false, sections } ) {
 	const hostRef = useRef();
 	const [ metrics, setMetrics ] = useState();
 
@@ -473,8 +478,9 @@ function RailSample( { variant, alignment = 'top', narrow = false, divider = fal
 			indicatorInset: Math.round(
 				indicator.getBoundingClientRect().left - box.left
 			),
-			gap: window.getComputedStyle( rail.querySelector( '.ax-nav-rail__items' ) ).rowGap,
-			headerGap: menu
+			itemGap: window.getComputedStyle( rail.querySelector( '.ax-nav-rail__section' ) ).rowGap,
+			sectionGap: window.getComputedStyle( rail.querySelector( '.ax-nav-rail__items' ) ).rowGap,
+			headerGap: header || menu
 				? window.getComputedStyle( rail.querySelector( '.ax-nav-rail__items' ) ).marginBlockStart
 				: 'no header',
 			/* Arrows move focus; index 1 down from 0, and no wrap upwards from 0. */
@@ -490,7 +496,7 @@ function RailSample( { variant, alignment = 'top', narrow = false, divider = fal
 
 	return (
 		<div ref={ hostRef }>
-			<div className="ax-stylebook-navigations__rail-frame">
+			<div className="ax-stylebook-navigations__rail-frame" data-variant={ variant }>
 				<NavigationRail
 					destinations={ DESTINATIONS }
 					activeId="community"
@@ -499,7 +505,10 @@ function RailSample( { variant, alignment = 'top', narrow = false, divider = fal
 					alignment={ alignment }
 					narrow={ narrow }
 					divider={ divider }
-					menu={ menu }
+					menu={ header ? <IconButton icon={ <Icon name="menu" /> } label="Open navigation" variant="standard" /> : menu }
+					collapsedFab={ header ? <Fab icon={ <Icon name="add" /> } label="Compose post" /> : undefined }
+					expandedFab={ header ? <ExtendedFab icon={ <Icon name="add" /> } label="Compose post" /> : undefined }
+					sections={ sections }
 				/>
 				<div className="ax-stylebook-navigations__rail-content">
 					Body content. The rail is the leading edge of the window and sits outside any
@@ -516,7 +525,7 @@ function RailSample( { variant, alignment = 'top', narrow = false, divider = fal
 							metrics.itemWidth === metrics.width
 					  }, min-height ${ metrics.itemMinHeight } for a published 64dp minimum) · indicator ${ metrics.indicatorWidth }x${ metrics.indicatorHeight }px, inset ${
 							metrics.indicatorInset
-					  }px · item gap ${ metrics.gap } · header gap ${ metrics.headerGap } · ArrowDown moved focus 0 -> ${
+					  }px · item gap ${ metrics.itemGap } · section gap ${ metrics.sectionGap } · header gap ${ metrics.headerGap } · ArrowDown moved focus 0 -> ${
 							metrics.arrowDown
 					  } · ArrowUp at the first item stayed ${ metrics.arrowUpAtStart } · tab stops ${
 							metrics.tabStops
@@ -645,7 +654,7 @@ export function StylebookNavigationsPage() {
 						kicker="Three to seven destinations, on the leading edge, medium and up"
 						title="Navigation rail — collapsed"
 					>
-						<RailSample variant="collapsed" />
+						<RailSample variant="collapsed" header />
 						<p className="ax-stylebook-page__note">
 							96dp wide, <code>surface</code> with the fill off, elevation level 0 &mdash; so
 							no elevation layer is rendered at all. The item spans the full rail while its
@@ -681,17 +690,19 @@ export function StylebookNavigationsPage() {
 					>
 						<RailSample
 							variant="expanded"
-							menu={ <Icon name="menu" /> }
+							header
+							sections={ RAIL_SECTIONS }
 						/>
 						<p className="ax-stylebook-page__note">
-							220&ndash;360dp, written as the range it is published as. Here the two insets
+							The kit&rsquo;s 220dp default has 180dp segments inside 20dp inline padding. Here the two insets
 							that are both <code>space200</code> become visible and are not the same
 							measurement: <code>full-width.leading-space</code> holds the pill 16dp off the
 							rail&rsquo;s edge, and the item&rsquo;s own indicator space holds the icon 16dp
 							inside the pill. The header gap is <code>header-space-minimum</code> (
 							<code>space500</code>), kept as a minimum because centring can only enlarge it.
-							The menu is a slot: its collapse/expand behaviour, the modal layout and
-							predictive back are all deferred, with reasons, under <code>scope</code> in{ ' ' }
+							The header follows the kit&rsquo;s extended-FAB then menu order, and the
+							destinations are sectioned. The menu&rsquo;s collapse/expand behaviour, modal
+							layout and predictive back remain deferred, with reasons, under <code>scope</code> in{ ' ' }
 							<code>navigation_rail.yml</code>.
 						</p>
 					</Group>
@@ -700,3 +711,5 @@ export function StylebookNavigationsPage() {
 		</Scaffold>
 	);
 }
+import { IconButton } from '../../../../components/buttons/icon-button';
+import { ExtendedFab, Fab } from '../../../../components/fabs';

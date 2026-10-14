@@ -92,15 +92,30 @@
 	 * chooses inside it.
 	 */
 	.ax-nav-rail[data-variant="expanded"] {
-		inline-size: 100%;
+		inline-size: 220px;
 		min-inline-size: 220px;
 		max-inline-size: 360px;
+		padding-inline: 20px;
+		padding-block-end: 20px;
 	}
 
 	/*
-	 * "The menu icon and FAB should always be top-aligned", which is why they are
-	 * outside the group that `alignment` moves.
+	 * The kit calls this `Menu & Fab`. It remains outside the items group because
+	 * the menu and FAB are always top-aligned while item alignment may be centred.
 	 */
+	.ax-nav-rail__header {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		row-gap: 4px;
+	}
+
+	.ax-nav-rail[data-variant="expanded"] .ax-nav-rail__header {
+		flex: 0 0 116px;
+		inline-size: 180px;
+		block-size: 116px;
+	}
+
 	.ax-nav-rail__items {
 		display: flex;
 		flex-direction: column;
@@ -118,8 +133,8 @@
 		justify-content: center;
 	}
 
-	/* The published minimum between the header and the first item. */
-	:is( .ax-nav-rail__menu, .ax-nav-rail__fab ) + .ax-nav-rail__items {
+	/* The header-to-segments distance is 40dp in the expanded kit. */
+	.ax-nav-rail__header + .ax-nav-rail__items {
 		margin-block-start: var( --md-comp-nav-rail-header-space-minimum );
 	}
 
@@ -127,8 +142,31 @@
 	 * md.comp.nav-rail.collapsed.item.vertical-space -> space50. The expanded rail
 	 * gets no rule: see the header.
 	 */
-	.ax-nav-rail[data-variant="collapsed"] .ax-nav-rail__items {
+	.ax-nav-rail__section {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.ax-nav-rail[data-variant="collapsed"] .ax-nav-rail__section {
 		row-gap: var( --md-sys-measurement-space50 );
+	}
+
+	.ax-nav-rail[data-variant="expanded"] .ax-nav-rail__items {
+		row-gap: 12px;
+	}
+
+	.ax-nav-rail[data-variant="expanded"] .ax-nav-rail__section {
+		row-gap: 0;
+	}
+
+	.ax-nav-rail__section-label {
+		box-sizing: border-box;
+		display: flex;
+		align-items: center;
+		column-gap: 10px;
+		inline-size: 100%;
+		block-size: 36px;
+		padding-inline: 16px;
 	}
 
 	/*

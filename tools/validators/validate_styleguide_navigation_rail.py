@@ -153,6 +153,7 @@ def main() -> int:
         "a file named after the deprecated baseline namespace is back",
     )
     rail_css = RAIL_CSS.read_text(encoding="utf-8")
+    rail_js = RAIL_JS.read_text(encoding="utf-8")
     report.check(
         ".ax-nav-rail {" in rail_css and ".ax-navigation-rail" not in rail_css,
         "the component class does not use the live namespace",
@@ -458,6 +459,7 @@ def main() -> int:
         "item layout and variant",
         "label wrapping",
         "full-width",
+        "expanded target width",
     ):
         report.check(
             required in subjects,
@@ -466,9 +468,9 @@ def main() -> int:
 
     kit = data["figma_kit_structure"]
     report.check(
-        kit["status"] == "measured_not_implemented",
-        "the kit's rail structure is measured and unbuilt; saying otherwise claims work nobody "
-        "has done",
+        kit["status"] == "implemented",
+        "the kit header structure is implemented; leaving it measured_not_implemented claims the "
+        "old gap after the code has closed it",
     )
     report.check(
         kit["collapsed"]["header_order"] == ["icon_button", "fab"]
@@ -480,23 +482,77 @@ def main() -> int:
         "the collapsed and expanded rails are different widths in the kit, and both stay recorded",
     )
     report.check(
-        "independent siblings" in kit["what_the_implementation_does_instead"],
-        "the record must keep saying what the implementation does today, or the gap cannot be "
-        "read without opening the component",
+        "220dp component" in kit["expanded"]["implementation_width"]
+        and "width: 100%" in kit["expanded"]["implementation_width"]
+        and 'inline-size: 220px;' in rail_css,
+        "the implemented expanded rail is the kit's 220dp component; the published 360dp is a "
+        "bound, not an unrecorded fluid-width policy",
+    )
+    report.check(
+        kit["expanded"]["header_size"] == {"inline": 180, "block": 116}
+        and kit["expanded"]["header_item_spacing"] == 4
+        and kit["expanded"]["padding"] == {"inline": 20, "block_start": 44, "block_end": 20}
+        and kit["expanded"]["header_to_segments_spacing"] == 40
+        and kit["expanded"]["segments_width"] == 180,
+        "the expanded header geometry is all one kit measurement; changing one figure alone loses it",
+    )
+    report.check(
+        "renders a Menu and Fab group" in kit["what_the_implementation_does_instead"]
+        and "no Docked/Floating" in kit["what_the_implementation_does_instead"],
+        "the record must say both what shipped and the owner axis it deliberately left open",
     )
     report.check(
         "not to the FAB" in kit["owner"],
         "this is the rail's next slice; a FAB nested in a rail does not make it the FAB's work",
     )
 
+    report.check(
+        any("Menu and Fab header group" in entry for entry in data["scope"]["implemented"])
+        and any("optional sectioned segments" in entry for entry in data["scope"]["implemented"]),
+        "the implementation scope must name the header and section slices that now exist",
+    )
+
     # The deferrals are part of the specification here, not an omission from it.
-    # "fab component" left this list when the FAB shipped; what remains deferred
-    # is the kit's header structure around it, which is a different claim and
-    # has its own checks below.
-    for deferred in ("modal", "predictive back", "Menu and Fab group"):
+    for deferred in ("modal", "predictive back", "Docked/Floating axis"):
         report.check(
             any(deferred in entry for entry in data["scope"]["deferred"]),
             f"{deferred!r} is no longer recorded as deferred; either it shipped or the record lost it",
+        )
+
+    report.check(
+        "collapsedFab" in rail_js
+        and "expandedFab" in rail_js
+        and "const selectedFab" in rail_js
+        and "'collapsed' === kind ? collapsedFab : expandedFab" in rail_js,
+        "the component must choose a plain or extended FAB by rail variant rather than make a "
+        "caller infer the kit's header switch",
+    )
+    report.check(
+        "'collapsed' === kind ? (" in rail_js
+        and "ax-nav-rail__menu" in rail_js
+        and "ax-nav-rail__fab" in rail_js,
+        "the header must render the kit's variant-dependent DOM order, not retain fixed siblings",
+    )
+    report.check(
+        "destinationSections" in rail_js
+        and "ax-nav-rail__section-label" in rail_js,
+        "sections must be a first-class rail structure rather than a caller-made heading beside a flat list",
+    )
+    for declaration in (
+        "padding-inline: 20px;",
+        "padding-block-end: 20px;",
+        "inline-size: 180px;",
+        "block-size: 116px;",
+        "flex: 0 0 116px;",
+        "row-gap: 4px;",
+        "row-gap: 12px;",
+        "column-gap: 10px;",
+        "block-size: 36px;",
+        "padding-inline: 16px;",
+    ):
+        report.check(
+            declaration in rail_css,
+            f"the implemented rail is missing kit header/section declaration `{declaration}`",
         )
 
     print(f"navigation rail: {report.checked} checks, {len(report.problems)} failed")

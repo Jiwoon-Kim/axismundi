@@ -50,6 +50,10 @@
 		border: 1px dashed var( --md-sys-color-outline-variant );
 	}
 
+	.ax-stylebook-navigations__rail-frame[data-variant="expanded"] {
+		block-size: 800px;
+	}
+
 	/*
 	 * A rail is a leading edge, so it can only be judged against the content it
 	 * sits beside: its width against the pane it leaves, the optional divider

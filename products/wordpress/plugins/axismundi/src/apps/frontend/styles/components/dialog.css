@@ -76,23 +76,21 @@
 	 * engages.
 	 */
 	.ax-dialog[data-presentation='basic'] .ax-dialog__content {
-		flex: 0 0 auto;
+		display: flex;
+		flex: 1 1 auto;
+		flex-direction: column;
+		gap: var( --md-comp-dialog-headline-to-body );
+		min-block-size: 0;
 		padding: var( --md-comp-dialog-padding ) var( --md-comp-dialog-padding ) 0;
 	}
 
 	.ax-dialog[data-presentation='basic'] .ax-dialog__content--list {
+		flex: 0 0 auto;
 		padding: var( --md-comp-dialog-padding );
 	}
 
-	.ax-dialog__heading {
-		display: flex;
-		flex: 0 0 auto;
-		flex-direction: column;
-		gap: var( --md-comp-dialog-icon-to-headline );
-	}
-
 	/* Centred when there is an icon, start-aligned when there is not. */
-	.ax-dialog[data-has-icon] .ax-dialog__heading {
+	.ax-dialog[data-presentation='basic'][data-has-icon] .ax-dialog__content {
 		align-items: center;
 		text-align: center;
 	}
@@ -131,13 +129,9 @@
 		line-height: var( --md-sys-typescale-body-medium-line-height );
 	}
 
-	.ax-dialog[data-presentation='basic'] .ax-dialog__content > .ax-dialog__heading + .ax-dialog__body,
-	.ax-dialog[data-presentation='basic'] .ax-dialog__content > .ax-dialog__heading + .ax-dialog__supporting-text {
-		margin-block-start: var( --md-comp-dialog-headline-to-body );
-	}
-
 	.ax-dialog__supporting-text {
 		flex: 0 0 auto;
+		margin: 0;
 	}
 
 	.ax-dialog__divider {

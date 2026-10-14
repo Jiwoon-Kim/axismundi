@@ -285,8 +285,24 @@ def check_react_surface(data: dict, report) -> None:
                 "padding: 0;" in dialog_css
                 and ".ax-dialog[data-presentation='basic'] .ax-dialog__content" in dialog_css
                 and "padding: var( --md-comp-dialog-padding ) var( --md-comp-dialog-padding ) 0;" in dialog_css
-                and "margin-block-start: 16px;" in dialog_css,
-                "react: basic dialog no longer puts 24/24/0 on content and 16 before the full-width divider",
+                and "display: flex;" in dialog_css
+                and "flex-direction: column;" in dialog_css
+                and "gap: var( --md-comp-dialog-headline-to-body );" in dialog_css,
+                "react: basic dialog no longer puts 24/24/0 and a 16dp flex gap on the Content slot",
+            )
+            report.check(
+                measured_basic["without_icon"]["title_and_description"]["children"]
+                == ["headline", "supporting_text"]
+                and measured_basic["with_icon"]["content"]["children"]
+                == ["icon", "headline", "supporting_text"]
+                and measured_list["with_icon"]["title_and_description"]["children"]
+                == ["icon", "headline", "supporting_text"]
+                and "const iconNode = icon ?" in dialog_js
+                and "const supportingNode = supportingText ?" in dialog_js
+                and "const shouldRenderBody = fullScreen || listContent || null != children;" in dialog_js
+                and "{ shouldRenderBody ? bodyNode : null }" in dialog_js
+                and "<div className=\"ax-dialog__heading\">" not in dialog_js,
+                "react: basic and list dialog Content no longer expose icon, headline, and supporting text as direct gap children",
             )
             report.check(
                 f"padding: {actions['padding']['block']}px var( --md-comp-dialog-padding ) {actions['padding']['block']}px {actions['padding']['inline_start']}px;" in dialog_css

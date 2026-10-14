@@ -199,6 +199,7 @@ export function Dialog( {
 	const bodyReachable = useScrollAffordance( bodyRef, open );
 	const fullScreen = 'full-screen' === row;
 	const listContent = 'list' === resolvedContentKind;
+	const shouldRenderBody = fullScreen || listContent || null != children;
 
 	/*
 	 * A full-screen dialog's close icon is its only navigation, so without a
@@ -226,6 +227,10 @@ export function Dialog( {
 		<h2 className="ax-dialog__headline" id={ headlineId }>
 			{ headline }
 		</h2>
+	) : null;
+	const iconNode = icon ? <div className="ax-dialog__icon">{ icon }</div> : null;
+	const supportingNode = supportingText ? (
+		<div className="ax-dialog__supporting-text">{ supportingText }</div>
 	) : null;
 	const bodyNode = (
 		<div
@@ -282,23 +287,18 @@ export function Dialog( {
 			) : listContent ? (
 				<>
 					<div className="ax-dialog__content ax-dialog__content--list">
-						<div className="ax-dialog__heading">
-							{ icon ? <div className="ax-dialog__icon">{ icon }</div> : null }
-							{ headlineNode }
-						</div>
-						{ supportingText ? (
-							<div className="ax-dialog__supporting-text">{ supportingText }</div>
-						) : null }
+						{ iconNode }
+						{ headlineNode }
+						{ supportingNode }
 					</div>
 					{ bodyNode }
 				</>
 			) : (
 				<div className="ax-dialog__content">
-					<div className="ax-dialog__heading">
-						{ icon ? <div className="ax-dialog__icon">{ icon }</div> : null }
-						{ headlineNode }
-					</div>
-					{ bodyNode }
+					{ iconNode }
+					{ headlineNode }
+					{ supportingNode }
+					{ shouldRenderBody ? bodyNode : null }
 				</div>
 			) }
 

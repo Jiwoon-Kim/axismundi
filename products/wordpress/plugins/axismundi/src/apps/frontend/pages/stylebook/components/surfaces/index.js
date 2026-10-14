@@ -301,8 +301,9 @@ export function StylebookSurfacesPage() {
 								render={ ( state ) => (
 									<Dialog
 										{ ...state }
-									divider
+										divider
 										headline="Reset settings?"
+										supportingText="This will restore every setting on this device to its default. It cannot be undone."
 										actions={
 											<>
 												<Button variant="text" onClick={ state.onClose }>
@@ -313,12 +314,7 @@ export function StylebookSurfacesPage() {
 												</Button>
 											</>
 										}
-									>
-										<p>
-											This will restore every setting on this device to its
-											default. It cannot be undone.
-										</p>
-									</Dialog>
+									/>
 								) }
 							/>
 
@@ -329,6 +325,7 @@ export function StylebookSurfacesPage() {
 										{ ...state }
 										icon={ <Icon name="delete" /> }
 										headline="Delete this draft?"
+										supportingText="The draft will not be recoverable."
 										actions={
 											<>
 												<Button variant="text" onClick={ state.onClose }>
@@ -339,9 +336,7 @@ export function StylebookSurfacesPage() {
 												</Button>
 											</>
 										}
-									>
-										<p>The draft will not be recoverable.</p>
-									</Dialog>
+									/>
 								) }
 							/>
 

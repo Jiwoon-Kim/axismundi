@@ -298,8 +298,13 @@ def check_react_surface(data: dict, report) -> None:
                 "ax-dialog__content--list" in dialog_js
                 and "ax-dialog__body--list" in dialog_js
                 and 'supportingText' in dialog_js
-                and "<List aria-label=\"Drafts to delete\">" in page,
-                "react: list dialog is no longer a first-class anatomy with its own title slot and baseline List specimen",
+                and measured_list["list"] == {
+                    "presentation": "expressive",
+                    "full_width": True,
+                    "implementation": "List variant=standard",
+                }
+                and "<List variant=\"standard\" aria-label=\"Drafts to delete\">" in page,
+                "react: list dialog is no longer a first-class anatomy with its own title slot and expressive List specimen",
             )
 
     # --- native close -------------------------------------------------------

@@ -365,7 +365,7 @@ export function StylebookSurfacesPage() {
 											</>
 										}
 									>
-										<List aria-label="Drafts to delete">
+										<List variant="standard" aria-label="Drafts to delete">
 											<ListItem headline="First draft" />
 											<ListItem headline="Second draft" />
 										</List>

@@ -426,7 +426,9 @@ presentations:
       list:
         with_icon:
           title_and_description: { gap: 16, padding: { block: 24, inline: 24 } }
-        list: { presentation: baseline, full_width: true }
+        # The frontend's `List` standard host is the already-shipped expressive
+        # static slice; it does not expose or request the deferred baseline row.
+        list: { presentation: expressive, full_width: true, implementation: "List variant=standard" }
         actions: { gap: 8, padding: { block: 20, inline_start: 16, inline_end: 24 } }
 
   - name: dialog-full-screen

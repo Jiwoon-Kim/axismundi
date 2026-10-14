@@ -77,6 +77,12 @@ deliberately public site Actor fallback. It never creates an Actor during render
 `axismundi_op_post_actor_uri` is the seam for another Actor provider. A future official
 ActivityPub adapter must use the former to retain that plugin's per-post legacy choice.
 
+Core source ownership is broader than this currently shipped Post transformer:
+`attachment` is also a Core `post_type`. `CORE-WP-OBJECT-SOURCES.md` fixes the
+target boundary: one Core source adapter reads `WP_Post` plus Core attachment
+metadata; Media Library may enrich and apply policy but must not be the
+condition for an Attachment to exist as an ActivityStreams source.
+
 ## First-party Actor transformer (0.0.9)
 
 Public local `Axismundi_Actor` values project at their immutable Actor URI. Object

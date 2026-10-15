@@ -227,6 +227,17 @@ That lets a scheduled post render its attribution without an active user session
 or a retained Create row. `post_author` and `_edit_last` remain WordPress
 editorial facts; changing either must not silently reassign `attributedTo`.
 
+The Actors plugin's per-user acting-actor preference is a compose/UI default,
+not the post's source of truth and not an authorization grant. A user may
+author a post through an Organization, transfer the WordPress `post_author` to
+another user, and retain the Organization attribution. On a later edit, the
+editor's current authority is checked against the stored attributed Actor: an
+authorized editor may issue the corresponding Update, while an unauthorized
+editor can make the local WordPress edit without silently emitting an Update
+under an Actor they cannot represent. Reassignment of `attributedTo` is an
+explicit post/source command, never an incidental result of an author transfer
+or a global UI switch.
+
 ## Tag Is a Relation Family, Not a Taxonomy Alias
 
 ActivityStreams `tag` may contain `Hashtag`, `Mention`, `Link`, emoji-shaped

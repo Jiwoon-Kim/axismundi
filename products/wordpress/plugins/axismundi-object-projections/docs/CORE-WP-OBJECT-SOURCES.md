@@ -8,6 +8,12 @@ core Attachment, and a first-party CPT all begin as a `WP_Post`. Object
 Projections must read the WordPress source facts once before a product adds
 ActivityStreams semantics or policy.
 
+The body adapter receives `post_content` as authored source rather than the
+output of `the_content`: it must support both Classic-editor and Block-editor
+source forms before emitting an allowed static representation. A future
+Markdown editor follows the same source-to-representation contract; it does
+not create a competing Object source path.
+
 This decision is deliberately narrower than `LOCAL-OBJECTS.md`:
 
 - `LOCAL-OBJECTS.md` decides publishing identity and the authored body.
@@ -102,7 +108,7 @@ These facts are not inferred from a `WP_Post`:
 
 | concern | owner |
 |---|---|
-| `attributedTo`, Create/Update actor | Activities ledger, per `LOCAL-OBJECTS.md` |
+| `attributedTo` | Proposed per-post Actor identity selection; Activities records the later Create/Update actor and delivery event |
 | audience and delivery eligibility | Activities/policy owner |
 | whether a core file may be federated or listed | visibility policy owner |
 | which rendition is safe to expose | media policy owner |

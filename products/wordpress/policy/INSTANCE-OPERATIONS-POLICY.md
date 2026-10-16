@@ -59,6 +59,27 @@ Two limits follow, and both are honest rather than reassuring:
   extension term with its provenance -- never quietly borrowing a core-looking
   name.
 
+If it is published, it is published as a collection that states its size and
+never its members. `likes` and `shares` already work this way in deployed
+software: a Collection with `totalItems` and no `items`, which ActivityStreams
+permits. One collection covers `view`, `listen` and `read` together, and its
+size is the number of distinct actors rather than the sum of the three. The
+absent `items` is the policy, not an optimisation -- a member list would put on
+the wire exactly the thing this section says is nobody's business.
+
+### Attention records when an object goes away
+
+- **A local object deleted by its author takes its attention records with it.**
+  Keeping a list of who read a deleted post serves no feature and carries the
+  weight of a record about readers that outlives the thing they read.
+- **A remote object that becomes a tombstone keeps them.** That record is a
+  local actor's own history in their own reader, and it follows the same line
+  as every other observation here: what was observed outlives the cached copy.
+
+A time-bounded retention is a reasonable third option and is deliberately not
+written as one, because a number chosen without a reason reads as policy once
+it is in this document.
+
 ## 2. Quiet activity
 
 An actor who has chosen to act quietly produces **no shareable activity** — no
@@ -197,7 +218,8 @@ than implied:
 1. Whether the operator may ever enable outbound `View`, and how a reader is
    told before it is switched on.
 2. Whether activity compaction removes payload snapshots only, or rows.
-3. Whether attention records survive the deletion of the object they point at.
+3. Whether a time bound is wanted on retained attention records, and what
+   would justify the particular bound.
 4. Whether small counts are suppressed or banded, since a public count on a
    quiet instance can identify the people it deliberately does not name.
 5. What happens to records about an actor when that actor is deleted here.

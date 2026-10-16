@@ -548,7 +548,7 @@ reactions often allow one active edge per Actor/Object/reaction key, and an
 extension can define different semantics. The interaction type owns its
 deduplication key.
 
-### `View`, `Listen` And `Read` Are Activities, And Nothing Else
+### `View`, `Listen` And `Read` Are Activities Without An Audience
 
 These three are direct Activities in the type tree, so they inherit `actor` and
 `object` and the spec's own examples carry both. That settles more of their
@@ -568,11 +568,43 @@ and excluding it from a count would leave data that a later policy could
 retroactively count, which is not what the actor chose; keeping the choice
 structural means not writing the row.
 
+These are Activities, and they still do not belong in the Activity ledger.
+What makes that ledger the ledger is audience, delivery, `Undo` and feed
+membership, and these three use none of them: nobody is addressed, nothing is
+delivered, un-viewing means nothing, and "Sally viewed an article" must never
+appear as an item in an outbox feed. Storing a three-column fact in a
+fifteen-column envelope would also make the heaviest table in the schema the
+one with the least to say. They get a specialised table instead, owned by
+Activities, in the same way Question's durable aggregate does.
+
+```text
+wp_ax_object_attention                 (Activities)
+  id
+  object_identity_id                   registry id; local and remote alike
+  actor_identity_id                    no row exists without an actor
+  activity_type                        View | Listen | Read
+  first_at                             when this actor first did it
+  origin                               local | inbound
+  UNIQUE ( object_identity_id, actor_identity_id, activity_type )
+```
+
+The name is deliberately not an AS2 term. A table called `object_views` would
+make every `Listen` row a lie, and these three are one family only in the sense
+that they are attention without a reply.
+
+`target`, `result`, `origin` and `instrument` are inherited from Activity and
+meaningless here, so they get no columns; anything received survives in the raw
+payload. There is no `effective_status` either, because there is nothing to
+undo.
+
 Three consequences for storage:
 
-- One row per actor per object. The ledger already carries
-  `UNIQUE KEY source_event_hash`, so deriving that hash from
-  `(actor, object, type)` makes the database enforce it with no new mechanism.
+- One row per actor per object per type, enforced by the UNIQUE key above.
+- An object's figure is `COUNT(DISTINCT actor_identity_id)`, not a sum across
+  the three types. An actor who both viewed and read one article is one known
+  viewer, and summing per-type counts would report two. Per-type detail still
+  falls out of the same rows, and a `Listen` row against a text article is a
+  signal that something upstream is wrong.
 - The count is derived from those rows and can be recounted at any time. This
   is exactly the relationship `wp_posts.comment_count` has with comments, and
   it is only true because nothing anonymous is counted: a dedup key that had to

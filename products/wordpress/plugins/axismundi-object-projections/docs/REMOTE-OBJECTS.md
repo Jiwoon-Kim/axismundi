@@ -148,11 +148,13 @@ observation eligible again.
 - The original bounded JSON is preserved in `payload_json`; normalized display fields
   are conveniences, not a lossless replacement.
 - `sensitive` preserves three states: undeclared (`NULL`), explicit false, explicit true.
-- Scalar `attributedTo`, `inReplyTo`, and `url` are normalized when present. Arrays and
-  richer objects stay losslessly in `payload_json` until a justified relation table exists.
+- Scalar `attributedTo` and `url` are normalized when present. Every readable `inReplyTo`
+  member is preserved in the relation projection in document order; the payload remains the
+  lossless source for unprojected extensions.
 - Metadata expires 30 days after last successful fetch or administrator inspection by
   default (filterable to 1–365 days). Daily maintenance deletes an unleased observation,
-  including sensitive metadata; it never contacts or mutates the remote resource.
+  including sensitive metadata; it never contacts or mutates the remote resource. Identity
+  and relation evidence outlive that disposable body snapshot.
 
 ## 5. Validation and security
 
@@ -198,15 +200,14 @@ into a second local identity.
 
 ## 7. Object-relation projection
 
-Quote discovery needs an indexed relationship between the independent quoting Object and
-the quoted Object. Scanning bounded JSON payloads for every count is not a query contract,
-so schema v4 adds a rebuildable `wp_ax_object_relations` projection. Its first
-and only accepted `relation_type` is `quote`; reply and other relation semantics remain
-deferred until their owning product contracts exist.
+Quote discovery and reply traversal need indexed relationships between independent Objects.
+Scanning bounded JSON payloads for every count or parent lookup is not a query contract, so
+`wp_ax_object_relations` projects `quote` and `in_reply_to` evidence while preserving the
+original payload as its source.
 
 ```text
 id                       bigint unsigned PK
-relation_type            quote
+relation_type            quote | in_reply_to
 source_object_uri        text
 source_object_uri_hash   char(64)
 target_object_uri        text
@@ -217,14 +218,23 @@ evidence_type            fep044f | misskey | legacy
 consent_status           approved | legacy_unverified | rejected | revoked | ambiguous
 authorization_uri        text nullable
 authorization_uri_hash   char(64) nullable, indexed
+position                 unsigned int nullable (document order for in_reply_to)
+first_seen_at            datetime nullable
+last_seen_at             datetime nullable
+last_confirmed_at        datetime nullable
+not_observed_since       datetime nullable
+evidence_source          remote_fetch | inbound_payload | outbound_activity
+observation_state        observed | stale | not_observed
 created_at / updated_at  datetime
 UNIQUE(relation_type, source_object_uri_hash, target_object_uri_hash)
 ```
 
 Hashes are accelerators only and every read/write verifies both full Object URIs. This table
-is a disposable index: remote rows can be rebuilt from `payload_json`, and future local Quote
-Objects are projected from their canonical local source. It is not an Activity ledger or the
-authority for QuoteAuthorization lifecycle; Activities owns that state.
+is not an Activity ledger or the authority for QuoteAuthorization lifecycle; Activities owns
+that state. It is also not disposable with the remote body cache: cache eviction marks current
+evidence `stale` rather than deleting it. A complete Object fetch may mark an omitted relation
+`not_observed`; a partial or embedded payload may only confirm the members it carries. This
+lets a later fetch distinguish an unchanged graph from a changed one without retaining content.
 
 Normalization accepts the canonical FEP-044f `quote` relation and the compatibility forms
 `_misskey_quote`, `quoteUrl`, `quoteUri`, and the applicable FEP-e232 Link form. Multiple

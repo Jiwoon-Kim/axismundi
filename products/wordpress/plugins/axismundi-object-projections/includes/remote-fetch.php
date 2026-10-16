@@ -234,6 +234,7 @@ function axismundi_op_remote_object_fetch( string $url ) {
 		array(
 			'etag'          => (string) wp_remote_retrieve_header( $response, 'etag' ),
 			'last_modified' => (string) wp_remote_retrieve_header( $response, 'last-modified' ),
+			'complete'      => true,
 		)
 	);
 	if ( is_wp_error( $stored ) ) {

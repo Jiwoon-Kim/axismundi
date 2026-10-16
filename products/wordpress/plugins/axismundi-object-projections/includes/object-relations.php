@@ -39,6 +39,12 @@ function axismundi_op_install_object_relations() : bool {
 			link_media_type varchar(255) DEFAULT NULL,
 			authorization_uri text DEFAULT NULL,
 			authorization_uri_hash char(64) DEFAULT NULL,
+			first_seen_at datetime DEFAULT NULL,
+			last_seen_at datetime DEFAULT NULL,
+			last_confirmed_at datetime DEFAULT NULL,
+			not_observed_since datetime DEFAULT NULL,
+			evidence_source varchar(32) DEFAULT NULL,
+			observation_state varchar(24) NOT NULL DEFAULT 'observed',
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),
@@ -58,6 +64,12 @@ function axismundi_op_install_object_relations() : bool {
 	return in_array( 'authorization_uri_hash', $columns, true )
 		&& in_array( 'position', $columns, true )
 		&& in_array( 'consent_status', $columns, true )
+		&& in_array( 'first_seen_at', $columns, true )
+		&& in_array( 'last_seen_at', $columns, true )
+		&& in_array( 'last_confirmed_at', $columns, true )
+		&& in_array( 'not_observed_since', $columns, true )
+		&& in_array( 'evidence_source', $columns, true )
+		&& in_array( 'observation_state', $columns, true )
 		&& count( $identity ) >= 3
 		&& 0 === (int) $identity[0]['Non_unique']
 		&& 'InnoDB' === $engine;
@@ -81,8 +93,14 @@ function axismundi_op_relation_uri( $value ) : string {
 	return is_array( $uri ) && ! empty( $uri['resolvable'] ) ? (string) $uri['uri'] : '';
 }
 
-/** Replace every preserved `inReplyTo` relation for one Object in document order. */
-function axismundi_op_replace_in_reply_to_relations( string $source_uri, $value ) : bool {
+/**
+ * Reconcile preserved `inReplyTo` relations for one Object in document order.
+ *
+ * Only a complete Object representation may turn a previously observed relation into
+ * `not_observed`. Embedded and inbound partial payloads can confirm the members they
+ * carry, but cannot make an absence claim about members they do not carry.
+ */
+function axismundi_op_replace_in_reply_to_relations( string $source_uri, $value, bool $complete = false, string $evidence_source = 'as2' ) : bool {
 	global $wpdb;
 	$source = axismundi_op_relation_uri( $source_uri );
 	if ( '' === $source || ! function_exists( 'axismundi_as2_normalize_members' ) ) {
@@ -94,12 +112,36 @@ function axismundi_op_replace_in_reply_to_relations( string $source_uri, $value 
 	}
 	$table = axismundi_op_object_relations_table();
 	$now = current_time( 'mysql', true );
-	$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- atomic rebuildable projection replacement.
-	$wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE relation_type = 'in_reply_to' AND source_object_uri_hash = %s AND source_object_uri = %s", hash( 'sha256', $source ), $source ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- exact source replacement.
+	$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- atomic relation reconciliation.
+	$existing_rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE relation_type = 'in_reply_to' AND source_object_uri_hash = %s AND source_object_uri = %s FOR UPDATE", hash( 'sha256', $source ), $source ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- exact source lock for reconciliation.
+	$existing = array();
+	foreach ( $existing_rows as $row ) {
+		$existing[ (string) $row['target_object_uri'] ] = $row;
+	}
+	$observed = array();
 	foreach ( $members as $position => $member ) {
 		$target = (string) $member['uri'];
-		$ok = $wpdb->insert( $table, array( 'relation_type' => 'in_reply_to', 'source_object_uri' => $source, 'source_object_uri_hash' => hash( 'sha256', $source ), 'target_object_uri' => $target, 'target_object_uri_hash' => hash( 'sha256', $target ), 'evidence_type' => 'as2', 'consent_status' => 'not_applicable', 'position' => $position, 'link_id' => $member['link_id'], 'link_rel' => is_array( $member['link_rel'] ) ? wp_json_encode( $member['link_rel'] ) : $member['link_rel'], 'link_name' => $member['link_name'], 'link_media_type' => $member['link_media_type'], 'created_at' => $now, 'updated_at' => $now ), array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- explicit strings prevent WordPress core's link_id integer field-type inference from corrupting Link identifiers.
+		$observed[ $target ] = true;
+		$data = array( 'position' => $position, 'link_id' => $member['link_id'], 'link_rel' => is_array( $member['link_rel'] ) ? wp_json_encode( $member['link_rel'] ) : $member['link_rel'], 'link_name' => $member['link_name'], 'link_media_type' => $member['link_media_type'], 'last_seen_at' => $now, 'evidence_source' => $evidence_source, 'observation_state' => 'observed', 'not_observed_since' => null, 'updated_at' => $now );
+		if ( $complete ) {
+			$data['last_confirmed_at'] = $now;
+		}
+		if ( isset( $existing[ $target ] ) ) {
+			$ok = false !== $wpdb->update( $table, $data, array( 'id' => (int) $existing[ $target ]['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- exact relation reconciliation update.
+		} else {
+			$data = array_merge( array( 'relation_type' => 'in_reply_to', 'source_object_uri' => $source, 'source_object_uri_hash' => hash( 'sha256', $source ), 'target_object_uri' => $target, 'target_object_uri_hash' => hash( 'sha256', $target ), 'evidence_type' => 'as2', 'consent_status' => 'not_applicable', 'first_seen_at' => $now, 'last_confirmed_at' => $complete ? $now : null, 'created_at' => $now ), $data );
+			$ok = false !== $wpdb->insert( $table, $data, array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- explicit strings prevent WordPress core's link_id integer field-type inference from corrupting Link identifiers.
+		}
 		if ( false === $ok ) { $wpdb->query( 'ROLLBACK' ); return false; } // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- transaction rollback.
+	}
+	if ( $complete ) {
+		foreach ( $existing as $target => $row ) {
+			if ( isset( $observed[ $target ] ) ) {
+				continue;
+			}
+			$ok = false !== $wpdb->update( $table, array( 'observation_state' => 'not_observed', 'not_observed_since' => null === $row['not_observed_since'] ? $now : $row['not_observed_since'], 'updated_at' => $now ), array( 'id' => (int) $row['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- retain stale graph evidence rather than deleting it.
+			if ( false === $ok ) { $wpdb->query( 'ROLLBACK' ); return false; } // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- transaction rollback.
+		}
 	}
 	$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- transaction commit.
 	return true;
@@ -111,7 +153,7 @@ function axismundi_op_primary_in_reply_to_relation( string $source_uri ) : ?stri
 	$source = axismundi_op_relation_uri( $source_uri );
 	if ( '' === $source ) { return null; }
 	$table = axismundi_op_object_relations_table();
-	$value = $wpdb->get_var( $wpdb->prepare( "SELECT target_object_uri FROM {$table} WHERE relation_type = 'in_reply_to' AND source_object_uri_hash = %s AND source_object_uri = %s ORDER BY position ASC, id ASC LIMIT 1", hash( 'sha256', $source ), $source ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- ordered derived-view lookup.
+	$value = $wpdb->get_var( $wpdb->prepare( "SELECT target_object_uri FROM {$table} WHERE relation_type = 'in_reply_to' AND observation_state = 'observed' AND source_object_uri_hash = %s AND source_object_uri = %s ORDER BY position ASC, id ASC LIMIT 1", hash( 'sha256', $source ), $source ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- ordered derived-view lookup.
 	return is_string( $value ) && '' !== $value ? $value : null;
 }
 
@@ -164,6 +206,7 @@ function axismundi_op_index_quote_relations( array $row ) : bool {
 	$authorization = axismundi_op_relation_uri( $payload['quoteAuthorization'] ?? '' );
 	$table         = axismundi_op_object_relations_table();
 	$now           = current_time( 'mysql', true );
+	$complete      = ! empty( $row['_relation_observation_complete'] );
 
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- atomic rebuildable projection replacement.
 	$wpdb->query( 'START TRANSACTION' );
@@ -173,10 +216,9 @@ function axismundi_op_index_quote_relations( array $row ) : bool {
 	foreach ( $existing_rows as $existing_row ) {
 		$existing[ (string) $existing_row['target_object_uri'] ] = $existing_row;
 	}
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- rebuildable source projection replacement.
-	$wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE relation_type = 'quote' AND source_object_uri_hash = %s AND source_object_uri = %s", hash( 'sha256', $source ), $source ) );
-
+	$observed = array();
 	foreach ( $candidates as $target => $evidence ) {
+		$observed[ $target ] = true;
 		$prior          = (array) ( $existing[ $target ] ?? array() );
 		$prior_status   = (string) ( $prior['consent_status'] ?? '' );
 		$verified       = ! $ambiguous && in_array( $prior_status, array( 'approved', 'rejected', 'revoked' ), true );
@@ -194,28 +236,56 @@ function axismundi_op_index_quote_relations( array $row ) : bool {
 		if ( ! $ambiguous && ! $verified && '' !== $actor && axismundi_op_quote_shares_author( $actor, (string) $target ) ) {
 			$consent_status = 'self';
 		}
-		$ok = $wpdb->insert(
-			$table,
-			array(
-				'relation_type'             => 'quote',
-				'source_object_uri'         => $source,
-				'source_object_uri_hash'    => hash( 'sha256', $source ),
-				'target_object_uri'         => $target,
-				'target_object_uri_hash'    => hash( 'sha256', $target ),
-				'source_actor_uri'          => '' !== $actor ? $actor : null,
-				'source_actor_uri_hash'     => '' !== $actor ? hash( 'sha256', $actor ) : null,
-				'evidence_type'             => $evidence,
-				'consent_status'            => $consent_status,
-				'authorization_uri'         => ! $ambiguous && '' !== $relation_auth ? $relation_auth : null,
-				'authorization_uri_hash'    => ! $ambiguous && '' !== $relation_auth ? hash( 'sha256', $relation_auth ) : null,
-				'created_at'                => $now,
-				'updated_at'                => $now,
-			)
-		); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom rebuildable projection.
+		$data = array(
+			'source_actor_uri'       => '' !== $actor ? $actor : null,
+			'source_actor_uri_hash'  => '' !== $actor ? hash( 'sha256', $actor ) : null,
+			'evidence_type'          => $evidence,
+			'consent_status'         => $consent_status,
+			'authorization_uri'      => ! $ambiguous && '' !== $relation_auth ? $relation_auth : null,
+			'authorization_uri_hash' => ! $ambiguous && '' !== $relation_auth ? hash( 'sha256', $relation_auth ) : null,
+			'last_seen_at'           => $now,
+			'evidence_source'        => $complete ? 'remote_fetch' : 'inbound_payload',
+			'observation_state'      => 'observed',
+			'not_observed_since'     => null,
+			'updated_at'             => $now,
+		);
+		if ( $complete ) {
+			$data['last_confirmed_at'] = $now;
+		}
+		if ( isset( $existing[ $target ] ) ) {
+			$ok = false !== $wpdb->update( $table, $data, array( 'id' => (int) $existing[ $target ]['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- preserve quote relation history while refreshing its evidence.
+		} else {
+			$data = array_merge(
+				array(
+					'relation_type'          => 'quote',
+					'source_object_uri'      => $source,
+					'source_object_uri_hash' => hash( 'sha256', $source ),
+					'target_object_uri'      => $target,
+					'target_object_uri_hash' => hash( 'sha256', $target ),
+					'first_seen_at'          => $now,
+					'last_confirmed_at'      => $complete ? $now : null,
+					'created_at'             => $now,
+				),
+				$data
+			);
+			$ok = false !== $wpdb->insert( $table, $data ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- new quote relation observation.
+		}
 		if ( false === $ok ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- rollback custom projection transaction.
 			$wpdb->query( 'ROLLBACK' );
 			return false;
+		}
+	}
+	if ( $complete ) {
+		foreach ( $existing as $target => $prior ) {
+			if ( isset( $observed[ $target ] ) ) {
+				continue;
+			}
+			$ok = false !== $wpdb->update( $table, array( 'observation_state' => 'not_observed', 'not_observed_since' => null === $prior['not_observed_since'] ? $now : $prior['not_observed_since'], 'updated_at' => $now ), array( 'id' => (int) $prior['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- preserve withdrawn quote evidence rather than deleting it.
+			if ( false === $ok ) {
+				$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- rollback custom projection transaction.
+				return false;
+			}
 		}
 	}
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- commit custom projection transaction.
@@ -223,18 +293,21 @@ function axismundi_op_index_quote_relations( array $row ) : bool {
 	return true;
 }
 
-/** Remove all rebuildable relations whose source observation was removed. */
+/**
+ * Mark source relations stale after discarding a cache observation.
+ *
+ * Cache eviction must not erase what was once observed: a later fetch needs those rows
+ * to distinguish a stable graph from a changed one. Local source deletion has a separate
+ * lifecycle and is the only future path permitted to remove relation history.
+ */
 function axismundi_op_delete_object_relations_for_source( string $source_uri ) : void {
 	global $wpdb;
 	$source = axismundi_op_relation_uri( $source_uri );
 	if ( '' === $source ) {
 		return;
 	}
-	$wpdb->delete(
-		axismundi_op_object_relations_table(),
-		array( 'source_object_uri_hash' => hash( 'sha256', $source ), 'source_object_uri' => $source ),
-		array( '%s', '%s' )
-	); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- rebuildable projection cleanup.
+	$now = current_time( 'mysql', true );
+	$wpdb->query( $wpdb->prepare( "UPDATE " . axismundi_op_object_relations_table() . " SET observation_state = 'stale', updated_at = %s WHERE source_object_uri_hash = %s AND source_object_uri = %s AND observation_state = 'observed'", $now, hash( 'sha256', $source ), $source ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- preserve relation history when a disposable cache row leaves.
 }
 
 /** Rebuild every remote quote relation from the preserved payload snapshots. */
@@ -257,14 +330,14 @@ function axismundi_op_rebuild_quote_relations() : array {
 	return $report;
 }
 
-/** Remove relation projections whose source observation no longer exists. */
+/**
+ * Historical compatibility hook for cache maintenance.
+ *
+ * Relations no longer become orphaned when their cache row expires, so there is no cleanup
+ * query here. Keeping the function avoids a version-skew fatal while callers are upgraded.
+ */
 function axismundi_op_purge_orphan_object_relations() : int {
-	global $wpdb;
-	$relations = axismundi_op_object_relations_table();
-	$objects   = axismundi_op_remote_objects_table();
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- rebuildable orphan cleanup with exact URI join.
-	$deleted = $wpdb->query( "DELETE r FROM {$relations} r LEFT JOIN {$objects} o ON o.object_uri_hash = r.source_object_uri_hash AND o.object_uri = r.source_object_uri WHERE o.id IS NULL" );
-	return false === $deleted ? 0 : (int) $deleted;
+	return 0;
 }
 
 /** Return exact relation rows for one target. */
@@ -276,7 +349,7 @@ function axismundi_op_quote_relations_for_target( string $target_uri ) : array {
 	}
 	$table = axismundi_op_object_relations_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed projection lookup with exact URI verification.
-	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE relation_type = 'quote' AND target_object_uri_hash = %s AND target_object_uri = %s", hash( 'sha256', $target ), $target ), ARRAY_A );
+	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE relation_type = 'quote' AND observation_state = 'observed' AND target_object_uri_hash = %s AND target_object_uri = %s", hash( 'sha256', $target ), $target ), ARRAY_A );
 }
 
 /**
@@ -293,7 +366,7 @@ function axismundi_op_quote_relation_for_source( string $source_uri ) : ?array {
 	}
 	$table = axismundi_op_object_relations_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed exact source lookup.
-	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT target_object_uri, consent_status FROM {$table} WHERE relation_type = 'quote' AND source_object_uri_hash = %s AND source_object_uri = %s ORDER BY id ASC LIMIT 2", hash( 'sha256', $source ), $source ), ARRAY_A );
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT target_object_uri, consent_status FROM {$table} WHERE relation_type = 'quote' AND observation_state = 'observed' AND source_object_uri_hash = %s AND source_object_uri = %s ORDER BY id ASC LIMIT 2", hash( 'sha256', $source ), $source ), ARRAY_A );
 	if ( 1 !== count( $rows ) || 'ambiguous' === (string) $rows[0]['consent_status'] ) {
 		return null;
 	}

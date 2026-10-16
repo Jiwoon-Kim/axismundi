@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_OP_DB_VERSION            = '13';
+const AXISMUNDI_OP_DB_VERSION            = '14';
 const AXISMUNDI_OP_DB_VERSION_OPTION     = 'ax_object_projections_db_version';
 const AXISMUNDI_OP_DELETE_RECONCILE_OPTION = 'ax_object_projections_pending_delete_reconcile';
 const AXISMUNDI_OP_REMOTE_PAYLOAD_MAX    = 1048576;
@@ -408,6 +408,12 @@ function axismundi_op_install() : bool {
 		// Reconcile after the schema version is recorded, when repository readers are available.
 		update_option( AXISMUNDI_OP_DELETE_RECONCILE_OPTION, '1', false );
 	}
+	if ( $valid && version_compare( $previous_version, '14', '<' ) ) {
+		$relations = axismundi_op_object_relations_table();
+		// Old rows were observed projections too; retain their oldest honest timestamps rather
+		// than inventing a new first-seen time during this schema-only upgrade.
+		$wpdb->query( "UPDATE {$relations} SET first_seen_at = COALESCE(first_seen_at, created_at), last_seen_at = COALESCE(last_seen_at, updated_at, created_at), last_confirmed_at = COALESCE(last_confirmed_at, updated_at, created_at), evidence_source = COALESCE(evidence_source, evidence_type), observation_state = COALESCE(NULLIF(observation_state, ''), 'observed')" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time lifetime-column backfill for existing relation evidence.
+	}
 	if ( $valid ) {
 		update_option( AXISMUNDI_OP_DB_VERSION_OPTION, AXISMUNDI_OP_DB_VERSION, false );
 	}
@@ -706,6 +712,9 @@ function axismundi_op_store_remote_object( array $payload, array $fetch = array(
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- commit custom repository transaction.
 	$wpdb->query( 'COMMIT' );
 	$stored = axismundi_op_get_remote_object( (string) $normalized['object_uri'] );
+	if ( is_array( $stored ) ) {
+		$stored['_relation_observation_complete'] = ! empty( $fetch['complete'] );
+	}
 	if ( is_array( $stored ) && function_exists( 'axismundi_op_index_quote_relations' ) ) {
 		axismundi_op_index_quote_relations( $stored );
 	}
@@ -936,9 +945,6 @@ function axismundi_op_remote_objects_purge_expired( bool $dry_run = false ) : in
 	if ( false !== $result ) {
 		foreach ( $purged_uris as $purged_uri ) {
 			axismundi_op_delete_object_listing_projection( (string) $purged_uri );
-		}
-		if ( function_exists( 'axismundi_op_purge_orphan_object_relations' ) ) {
-			axismundi_op_purge_orphan_object_relations();
 		}
 		if ( function_exists( 'axismundi_op_purge_orphan_remote_object_hashtags' ) ) {
 			axismundi_op_purge_orphan_remote_object_hashtags();

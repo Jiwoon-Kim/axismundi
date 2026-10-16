@@ -96,14 +96,39 @@ function axismundi_actors_get_identity_by_uuid( string $uuid ) : ?array {
 /**
  * One identity by canonical URI.
  *
- * Matches on the hash column, never on the TEXT URI: the URI is not uniquely indexable
- * at utf8mb4 index lengths, which is why the hash column exists (DATA-MODEL.md §1).
+ * The hash narrows the unindexable TEXT lookup, then the stored URI confirms the exact
+ * identity. Keeping both terms makes a bad historical hash observable instead of silently
+ * turning a changed URI-normalization rule into a miss.
  *
  * @param string $uri Canonical URI.
  * @return array<string,mixed>|null
  */
 function axismundi_actors_get_identity_by_uri( string $uri ) : ?array {
-	return axismundi_actors_query_identity( 'canonical_uri_hash = %s', hash( 'sha256', trim( $uri ) ) );
+	$uri = trim( $uri );
+	return '' !== $uri
+		? axismundi_actors_query_identity( 'canonical_uri_hash = %s AND canonical_uri = %s', hash( 'sha256', $uri ), $uri )
+		: null;
+}
+
+/**
+ * Audit stored identity hashes without rewriting historical identities.
+ *
+ * A mismatch is evidence of data drift. Repair is intentionally a separate, explicit
+ * migration because changing the hash changes how every URI lookup addresses the row.
+ *
+ * @return array{checked:int,mismatched:int}
+ */
+function axismundi_actors_audit_identity_uri_hashes() : array {
+	global $wpdb;
+	$table      = axismundi_actors_identities_table();
+	$rows       = (array) $wpdb->get_results( "SELECT canonical_uri, canonical_uri_hash FROM {$table}", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed registry audit read.
+	$mismatched = 0;
+	foreach ( $rows as $row ) {
+		if ( ! hash_equals( (string) $row['canonical_uri_hash'], hash( 'sha256', (string) $row['canonical_uri'] ) ) ) {
+			++$mismatched;
+		}
+	}
+	return array( 'checked' => count( $rows ), 'mismatched' => $mismatched );
 }
 
 /**

@@ -322,10 +322,12 @@ function axismundi_op_index_thread_edge_from_activity( Axismundi_Activity $activ
 	// omitted relation therefore means the author explicitly cleared it; malformed
 	// present values still fail closed in the replacement helper below.
 	if ( ! array_key_exists( 'inReplyTo', $object ) ) {
-		axismundi_op_record_thread_edge( $child, '' );
+		if ( axismundi_op_replace_in_reply_to_relations( $child, array(), true, 'outbound_activity' ) ) {
+			axismundi_op_record_thread_edge( $child, '' );
+		}
 		return;
 	}
-	if ( axismundi_op_replace_in_reply_to_relations( $child, $object['inReplyTo'] ) ) {
+	if ( axismundi_op_replace_in_reply_to_relations( $child, $object['inReplyTo'], true, 'outbound_activity' ) ) {
 		$parent = axismundi_op_primary_in_reply_to_relation( $child );
 		if ( null !== $parent ) {
 			axismundi_op_record_thread_edge( $child, $parent );
@@ -353,13 +355,17 @@ function axismundi_op_index_thread_edge_from_remote_object( array $row ) : void 
 	if ( '' === $child ) {
 		return;
 	}
-	// A remote payload that omits inReplyTo is not an instruction to clear the
-	// existing edge, but the just-cached Object can resolve children waiting on it.
+	$complete = ! empty( $row['_relation_observation_complete'] );
+	// A partial remote payload that omits inReplyTo is not an instruction to clear the
+	// existing edge. A complete fetch may instead mark standing relations not-observed.
 	if ( ! array_key_exists( 'inReplyTo', $payload ) ) {
+		if ( $complete && axismundi_op_replace_in_reply_to_relations( $child, array(), true, 'remote_fetch' ) ) {
+			axismundi_op_record_thread_edge( $child, '' );
+		}
 		axismundi_op_reconcile_unresolved_thread_children( $child );
 		return;
 	}
-	if ( axismundi_op_replace_in_reply_to_relations( $child, $payload['inReplyTo'] ) ) {
+	if ( axismundi_op_replace_in_reply_to_relations( $child, $payload['inReplyTo'], $complete, $complete ? 'remote_fetch' : 'inbound_payload' ) ) {
 		$parent = axismundi_op_primary_in_reply_to_relation( $child );
 		if ( null !== $parent ) {
 			axismundi_op_record_thread_edge( $child, $parent );

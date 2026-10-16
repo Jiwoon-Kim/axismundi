@@ -95,7 +95,8 @@ axismundi_actors_identity_kinds()                       // collection|folder|med
 axismundi_actors_register_identity( array $args )       // → identity array | WP_Error
 axismundi_actors_get_identity( int $identity_id )       // → identity array | null
 axismundi_actors_get_identity_by_uuid( string $uuid )
-axismundi_actors_get_identity_by_uri( string $uri )     // matched on the hash column
+axismundi_actors_get_identity_by_uri( string $uri )     // hash narrows, exact URI confirms
+axismundi_actors_audit_identity_uri_hashes()            // reports stored URI/hash drift
 axismundi_actors_set_identity_uri( int $id, string $uri ) // domain move; UUID preserved
 axismundi_actors_set_status( int $id, string $status )  // shared with actors; kind-agnostic
 ```

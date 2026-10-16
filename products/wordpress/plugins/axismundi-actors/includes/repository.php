@@ -1238,7 +1238,10 @@ function axismundi_actors_get_by_uuid( string $uuid ) : ?Axismundi_Actor {
  * @return Axismundi_Actor|null
  */
 function axismundi_actors_get_by_uri( string $uri ) : ?Axismundi_Actor {
-	return axismundi_actors_query_one( 'i.canonical_uri_hash = %s', hash( 'sha256', $uri ) );
+	$uri = trim( $uri );
+	return '' !== $uri
+		? axismundi_actors_query_one( 'i.canonical_uri_hash = %s AND i.canonical_uri = %s', hash( 'sha256', $uri ), $uri )
+		: null;
 }
 
 /**

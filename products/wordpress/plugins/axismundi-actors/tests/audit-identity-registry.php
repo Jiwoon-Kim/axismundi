@@ -99,6 +99,22 @@ try {
 			&& axismundi_actors_get_identity_by_uuid( $folder['uuid'] ) === $folder
 			&& axismundi_actors_get_identity_by_uri( $folder['canonical_uri'] ) === $folder
 	);
+	$hash_audit = axismundi_actors_audit_identity_uri_hashes();
+	ax_identity_registry_assert(
+		$ax_results,
+		'the identity audit accepts rows whose stored URI hash matches the stored URI',
+		(int) $hash_audit['checked'] >= count( $ax_identity_ids ) && 0 === (int) $hash_audit['mismatched']
+	);
+	if ( is_array( $folder ) ) {
+		$wpdb->update( axismundi_actors_identities_table(), array( 'canonical_uri_hash' => str_repeat( '0', 64 ) ), array( 'id' => (int) $folder['identity_id'] ), array( '%s' ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- deliberately corrupt one fixture row to prove the drift audit catches it.
+		$drift_audit = axismundi_actors_audit_identity_uri_hashes();
+		$wpdb->update( axismundi_actors_identities_table(), array( 'canonical_uri_hash' => hash( 'sha256', (string) $folder['canonical_uri'] ) ), array( 'id' => (int) $folder['identity_id'] ), array( '%s' ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- restore fixture identity before later URI-rewrite checks.
+		ax_identity_registry_assert(
+			$ax_results,
+			'the identity audit exposes a stored-hash mismatch instead of silently treating it as a lookup miss',
+			1 === (int) $drift_audit['mismatched']
+		);
+	}
 
 	$remote_uri = 'https://remote.example/media/folders/abc';
 	$remote     = axismundi_actors_register_identity(

@@ -26,6 +26,45 @@ eventually emits adjacent JSON properties.
 editor input, but they are not the durable graph representation of a many-target
 AS2 relationship.
 
+## When An Activity Type Gets Its Own Table
+
+The Activity ledger holds twenty-two types in one table with type-specific
+indexes, which is `wp_posts` with `post_type` by another name. That analogy
+carries its warning with it: Core's one table also holds menus, blocks,
+templates and revisions, and every query since has paid for it with a
+`post_type` condition. Three splits have already been argued one at a time in
+this document, so the rule that decided them is written here instead of being
+rediscovered a fourth time.
+
+> Split when the row's **shape** differs or its **lifetime** differs. Volume
+> alone is an index problem.
+
+| Types | Shape | Lifetime | Result |
+|---|---|---|---|
+| `Announce`, `Like`, `Follow`, `Undo`, … | audience, delivery, payload, all used | event, compactible | one ledger, split by index |
+| `View`, `Listen`, `Read` | no audience, no delivery, no undo, no payload | derivable, recountable | own table |
+| `Question` | option rows, tallies, trash and restore | durable, never compacted | own table |
+| `Arrive`, `Travel` | same as an Announce: momentary, addressed | event, compactible | the ledger |
+
+The last row is what the rule is for. `Arrive` and `Travel` sit beside
+`Question` in the AS2 type tree and invite the same treatment, but their rows
+look and live like an `Announce`. The shape decides, not the taxonomy.
+
+One consequence of splitting is worth stating before it is discovered. AS2's
+own example announces an `Arrive`, so an Activity can be another Activity's
+object, and anything a peer may reference needs an Activity URI. A row in a
+specialised table has none, which is exactly right while that family is never
+emitted: nothing can reference what was never published. If outbound `View`
+is ever turned on, the emitted activity is a ledger activity and the
+specialised row becomes its derived index -- never a second authority for the
+same fact.
+
+Measured while writing this: the ledger's accepted types include neither
+`Arrive` nor `Travel`, so an announcement of one is storable only as a URI
+reference and a direct `Arrive` is refused twice over -- unregistered type, and
+the unconditional `object` requirement that the IntransitiveActivity fix
+already has to lift.
+
 ## Source Store Versus Shared Registry
 
 Some Object properties need one common query surface even though their source

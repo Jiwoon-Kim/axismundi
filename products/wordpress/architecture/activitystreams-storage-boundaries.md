@@ -248,6 +248,86 @@ flowchart LR
   A -. never sole Object truth .-> R
 ```
 
+### Durable Intransitive Activities Are A Second Retention Class
+
+Question is an `IntransitiveActivity`, and the vote classifier, the audience
+resolver and the C2S path that serve it already live in Activities. Ownership
+belongs there. What follows from that is a change to the plugin's own contract,
+which has described itself as the store for event-first, retention-bounded
+facts.
+
+Activities now owns two retention classes:
+
+```text
+event ledger        Like, Follow, Undo, Announce, delivery history
+                    compactible, snapshot-droppable, bounded
+durable aggregate   Question and its options, tallies, lifecycle
+                    never compacted; a deletion is a product decision
+```
+
+Measured when this was written: Activities carries no retention, compaction or
+pruning code at all, so nothing is broken today. That is exactly why the
+contract is recorded now -- the first compaction job written against this
+plugin must already know that one of its tables is not a log.
+
+Three constraints hold the rest of it together.
+
+- The ledger's primary key is `identities.id`. A durable store that mints its
+  own URI identity would make a third identity ledger beside `wp_ax_identities`
+  and a future object slice, which is the thing the registry gate just decided
+  against.
+- Scope is durable intransitive aggregates, not every `IntransitiveActivity`.
+  AS2 puts exactly three types under `IntransitiveActivity` -- `Arrive`,
+  `Question` and `Travel` -- so the siblings this scope excludes are `Arrive`
+  and `Travel`, both momentary events that stay in the event ledger until one
+  of them acquires authoring, editing and restore semantics of its own.
+  `Leave` is not one of them: it is a direct Activity and carries an object.
+  A table named for the AS2 supertype would invite the other two in for the
+  wrong reason, so the name states the retention model instead.
+- Local and remote rows share the table and not the authority. A local Question
+  owns its tally; a remote Question's tally is an observation with a time and a
+  source, never a number this site computes.
+
+The canonical URI does not move with the container. A Note's identity already
+lives in `wp_ax_notes.local_uuid` and resolves by table lookup rather than by
+post query, so an existing Question keeps the URI it published while new
+objects mint a type-neutral one. A URI that names its owning plugin is the
+mistake this avoids repeating.
+
+Note's Question becomes legacy on this decision. Nothing is migrated and no
+compatibility is kept: no other plugin reads `wp_ax_questions`,
+`wp_ax_question_options` or `wp_ax_poll_votes`, and the whole surface is ten
+files inside the Note plugin.
+
+The order is disconnect, then delete. Note's authoring entry point closes when
+the Activities editor lands, so the legacy row count stops growing and the
+registry never sees two writers for one kind, while the implementation stays
+readable as the reference it is. A frozen path is marked frozen in the code and
+not only here: breakage is fixed, nothing is added.
+
+What the new ledger inherits from it is not the storage shape but the solved
+problems. A Question carries a short `content`, a content warning expressed as
+`summary` with `sensitive`, attachments, audience and tags, and it renders as
+the same feed card an object does -- because `IntransitiveActivity` inherits
+Object's properties and excludes only `object`. The ledger's columns therefore
+come from the registry's effective property set,
+
+```text
+effective_properties(Question) =
+  Object properties + Activity properties - object + oneOf, anyOf, closed
+```
+
+rather than from improvisation, and the content-warning text is treated as body
+class with `content`, consistent with the eviction layering above.
+
+What does not carry across: the disposable draft post the local vote path
+creates, the `ax_note` URI naming, and every lifecycle assumption that came
+from being post-backed.
+
+The vote path simplifies as a consequence rather than as a goal: authoring into
+the ledger directly removes the disposable draft post that local voting creates
+today, and `VoteIntent -> Create(Note)` becomes a direct path.
+
 ### Media Authority Belongs To The Source, Not To The Type
 
 The unified engine reads one source layer and specialises into profiles, so it

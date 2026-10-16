@@ -93,26 +93,49 @@ submission path (`axismundi-activitypub-bridge/includes/transport.php:149`).
 What the bridge does own is per-peer policy -- retries and backoff,
 shared-inbox selection, blocked instances, and what a rejection means.
 
-### Authoring order follows who owns the identity
+### The source's semantics choose the authoring surface; identity constrains order
 
-A client-to-server flow needs an id before it has a stored row. Whether that is
-possible is not a matter of taste here; it depends on where the object's
-canonical URI comes from.
+`C2S` here means protocol-native authoring: an acting Actor creates an AS2
+Activity and the domain source is filled as its consequence. It does **not**
+mean every frontend HTTP write that happens to result in a `Create` later.
+The first question is therefore not where an id comes from, but whether the
+source can represent the AS2 contract without discarding facts it owns.
 
-| Type | Identity | Possible order | Surface |
-|---|---|---|---|
-| note, quote, question | table-owned UUID | activity-first, today | frontend app |
-| post, attachment | post ID (`?p={ID}`) | WordPress-first | block editor |
-| event | post ID, via the same helper | WordPress-first | undecided |
-| group topic | post ID, as an Article | WordPress-first | block editor |
-| reply in a group's context | table-owned UUID | activity-first, today | frontend app |
+Core `wp_posts` has its own editorial language: post status, categories and
+tags, revisions, hierarchy, templates, block content, attachment state, and
+other Core behaviours. `Article` is a useful projection of that source, but it
+is not a lossless replacement for it. An Activity editor cannot faithfully
+author all of those Core facts, so a frontend `Create` must not become an
+alternate write path for Core posts merely because the registry can mint an id.
+Core posts remain WordPress-first and the block editor remains their authoring
+surface. The later `Create` is a projection/publication fact.
+
+The inverse is true for a Note-like source. It was designed around AS2
+properties rather than adapted from a broader editorial substrate, so its
+frontend editor can create the Activity and populate the native source from
+the same declared property set. That is why C2S is appropriate for notes,
+quotes, Questions, and note replies in a Group context.
+
+Identity still constrains the safe ordering after that semantic decision. A
+client-to-server flow needs an id before the source row exists; a UUID-owning
+source can issue it today, while a `?p={ID}` object cannot.
+
+| Source / type | Source semantics | Identity today | Authoring order | Surface |
+|---|---|---|---|---|
+| note, quote, Question | AS2-native property contract | table-owned UUID | activity-first, today | frontend app C2S |
+| Core post / Article, attachment | WordPress editorial and media semantics; AS2 is a projection | post ID (`?p={ID}`) | WordPress-first | block editor / Core media UI |
+| Event | JSCalendar domain model and calendar ACL; AS2 is one representation | post ID, via the same helper | WordPress-first today | calendar-specific editor, undecided |
+| Group topic / Article | Core long-form Article plus independent Group admission | post ID | WordPress-first | block editor, then Group submission |
+| reply in a Group's context | AS2-native note contract | table-owned UUID | activity-first, today | frontend app C2S |
 
 `axismundi_op_post_object_uri()` returns `?p={ID}`
 (`axismundi-object-projections/includes/post-article.php:107`), and the
 calendar's event URI calls straight into it (`projection.php:49`), so a
 post-backed object has no identity until it is stored. A note does: its UUID
-lives in `wp_ax_notes` and resolves by table lookup, which is why that family
-can invert today and the others wait for the registry.
+lives in `wp_ax_notes` and resolves by table lookup. The shared registry can
+eventually decouple a post's identity from its post ID, but that only removes
+the ordering constraint; it does not turn a lossy AS2 projection into a
+complete Core-post authoring model.
 
 Activity-first adds a requirement the current order never had. If the activity
 exists and the row does not, an activity references an object that was never
@@ -127,9 +150,11 @@ from the other.
 ### Group topics and the conversation under them
 
 A topic is an Article addressed to a Group, and posting into a remote Group
-needs no client-to-server flow: the object is local, its audience names the
-Group, and the Group announces it. `wp_ax_forum_entries` is an admission
-record rather than an object store -- unique on
+does not require protocol-native C2S object authoring: the Article is authored
+locally through Core, its audience names the Group, and the Group announces it.
+The Group submission is an admission command over an existing object, not a
+second editor that reconstructs an Article from an Activity.
+`wp_ax_forum_entries` is an admission record rather than an object store -- unique on
 `(group_identity_id, object_uri_hash)`, with `source_post_id` filled for a
 local object and empty for a remote one, beside the accept and announce
 activity URIs. Remoteness never forced the order; identity ownership did.

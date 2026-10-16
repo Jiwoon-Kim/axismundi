@@ -473,6 +473,88 @@ The vote path simplifies as a consequence rather than as a goal: authoring into
 the ledger directly removes the disposable draft post that local voting creates
 today, and `VoteIntent -> Create(Note)` becomes a direct path.
 
+### The Question Ledger, And Why Options Need No Identity
+
+Question moves to Activities whole, and Note's version is removed rather than
+frozen. Keeping it would leave three tables -- `wp_ax_questions`,
+`wp_ax_question_options`, `wp_ax_poll_votes` -- whose contract is `note_post_id`
+and the `ax_note` lifecycle, which makes Note the hidden owner of Questions
+after the move and forces new code to keep the old shape in view. There is
+nothing to migrate and no compatibility to keep, so the cutover is hard and the
+old code survives as design reference, not as a runtime layer. The new tables
+must not inherit the old ones physically either; adopting `wp_ax_questions` as
+it stands would revive the `note_post_id` contract it was built around.
+
+**Options carry no public identity.** This was checked against live payloads
+rather than assumed: a Mastodon poll and a Misskey poll fetched on 2026-10-16
+both emit `oneOf`/`anyOf` members as `{ "type": "Note", "name": ..., "replies":
+{ "totalItems": n } }` with no `id`. Mastodon's own model carries it the same
+way -- `polls.options` is a string array, `cached_tallies` a parallel integer
+array, and `poll_votes.choice` an integer index, tallied as
+`cached_tallies[choice] += 1`. An option URI or UUID would be a term nobody
+reads.
+
+So the identifier is the position, and the storage follows the wire:
+
+```text
+questions
+  identity_id            shared identity, as every vertical slice uses
+  mode                   oneOf | anyOf
+  options                JSON array of names, in document order
+  option_counts          JSON array of tallies, parallel to options
+  votes_count            denormalized cache
+  voters_count           distinct actors
+  end_time, closed_at, updated_at
+  lock_version           optimistic lock for concurrent tallying
+
+question_votes
+  question_identity_id
+  voter_identity_id      or the actor URI when the actor is not yet known
+  choice_position
+  vote_activity_uri
+  status                 active | ignored | undone
+  origin                 local | inbound
+```
+
+`question_votes` is the authority and the counts are a cache, exactly as
+`wp_posts.comment_count` relates to comments: recountable, updated inside the
+same transaction as the vote it reflects, and protected by `lock_version`
+because two votes arriving together would otherwise lose one increment.
+Normalising options into rows is the step to take if per-option analysis or
+partial updates ever need it, and not before.
+
+Two counts must never merge. A Question has ordinary replies and it has votes,
+and FEP-9967's vote is a reply in shape -- so `reply_count` and `votes_count`
+are separate fields answering separate questions.
+
+#### The wire, and the envelope the protocol still wants
+
+FEP-9967 fixes the shape: a Question is published inside `Create`, a vote is a
+`Create` wrapping a `Note` with no `content`, carrying `name` equal to an option
+name, `inReplyTo` the Question, and addressed to the Question's author, and
+results are redistributed as `Update` of the Question. Multiple choice is one
+`Create` per option.
+
+That envelope is in tension with AS2, where `Question` is an
+`IntransitiveActivity` and has no `object` of its own, and the tension must not
+be resolved by letting a validator wave Questions through. A blanket exception
+is how the rule stops meaning anything. Instead the profile is explicit --
+`fep-9967-poll` -- and says what it permits: a Question inside `Create.object`
+and `Update.object`, a vote Note with `name` and without `content`, option names
+unique within one Question, and an `Update` whose Question differs from the
+previous one only in its tallies and timestamps. Pure AS2 validation stays
+unchanged beside it.
+
+Authority splits by origin. For a local Question this instance validates votes
+and owns the tally. For a remote one, a local actor's vote is recorded in the
+ledger, but the displayed tally is an observation taken from the author's
+`Update`, never a number computed here. Votes that fail validation -- a closed
+poll, a duplicate, an unknown option name -- keep their raw activity and sit in
+the projection as `ignored` rather than disappearing.
+
+And votes are not feed material. They look like replies and must not surface as
+them, which is the practical reason the projection exists at all.
+
 ### Media Authority Belongs To The Source, Not To The Type
 
 The unified engine reads one source layer and specialises into profiles, so it

@@ -28,7 +28,7 @@ defined( 'ABSPATH' ) || exit;
  * @return array<int,string>
  */
 function axismundi_actors_identity_kinds() : array {
-	return array( 'collection', 'folder', 'media', 'activity', 'place' );
+	return array( 'object', 'collection', 'folder', 'media', 'activity', 'place' );
 }
 
 /**
@@ -134,10 +134,10 @@ function axismundi_actors_audit_identity_uri_hashes() : array {
 /**
  * Register one non-actor identity.
  *
- * A local identity's URI contains its own UUID, so the caller supplies a `uri_template`
- * with a `{uuid}` placeholder rather than a finished URI: the registry owns UUID
- * generation, and the caller owns its URI space. A remote identity has no local UUID in
- * its URI and supplies `canonical_uri` directly.
+ * A local identity normally uses a `uri_template` with a `{uuid}` placeholder. Some
+ * authoritative local sources, notably WordPress posts, already own their stable URI
+ * space; they may supply `canonical_uri` directly and still receive a registry UUID.
+ * A remote identity always supplies its source `canonical_uri` directly.
  *
  * @param array<string,mixed> $args {
  *     @type string $object_kind   Required; one of axismundi_actors_identity_kinds().
@@ -145,8 +145,10 @@ function axismundi_actors_audit_identity_uri_hashes() : array {
  *     @type string $status        internal|public|disabled. Default internal — record
  *                                 existence and public exposure are separate steps
  *                                 (SPEC.md §2.6).
- *     @type string $uri_template  Local only; must contain the literal `{uuid}`.
- *     @type string $canonical_uri Remote only; the source URI.
+ *     @type string $uri_template  Local only; must contain the literal `{uuid}` when
+ *                                 canonical_uri is absent.
+ *     @type string $canonical_uri Required for remote identities; optional stable URI
+ *                                 for local identities whose source owns its URI.
  * }
  * @return array<string,mixed>|WP_Error The registered identity, or an error.
  */
@@ -176,22 +178,30 @@ function axismundi_actors_register_identity( array $args ) {
 	$uuid = wp_generate_uuid4();
 
 	if ( 'local' === $origin ) {
-		$template = (string) ( $args['uri_template'] ?? '' );
-		if ( ! str_contains( $template, '{uuid}' ) ) {
+		$canonical_uri = trim( (string) ( $args['canonical_uri'] ?? '' ) );
+		$template      = (string) ( $args['uri_template'] ?? '' );
+		if ( '' !== $canonical_uri ) {
+			$uri = $canonical_uri;
+		} elseif ( ! str_contains( $template, '{uuid}' ) ) {
 			return new WP_Error(
 				'ax_actors_identity_template',
-				__( 'A local identity needs a uri_template containing {uuid}.', 'axismundi-actors' )
+				__( 'A local identity needs a canonical_uri or a uri_template containing {uuid}.', 'axismundi-actors' )
 			);
+		} else {
+			$uri = str_replace( '{uuid}', $uuid, $template );
 		}
-		$uri = str_replace( '{uuid}', $uuid, $template );
 	} else {
-		// Shape only — HTTPS and a host, no DNS resolution. Registering an identity is a
-		// record, not a fetch: a peer may be temporarily unresolvable or behind split DNS
-		// without that invalidating its canonical URI. The SSRF gate stays at the fetch
-		// site, matching the endpoint-persistence rule in repository.php.
-		$uri = axismundi_actors_normalize_endpoint_uri( $args['canonical_uri'] ?? '' );
+		// Shape only — no DNS resolution. Object observations accept HTTP and HTTPS under
+		// the shared AS2 URI contract, while endpoint identities retain their HTTPS-only
+		// contract. The SSRF gate stays at the fetch site.
+		$normalized = 'object' === $kind && function_exists( 'axismundi_as2_normalize_uri' )
+			? axismundi_as2_normalize_uri( $args['canonical_uri'] ?? '' )
+			: null;
+		$uri = is_array( $normalized ) && ! empty( $normalized['resolvable'] )
+			? (string) $normalized['uri']
+			: axismundi_actors_normalize_endpoint_uri( $args['canonical_uri'] ?? '' );
 		if ( '' === $uri ) {
-			return new WP_Error( 'ax_actors_identity_uri', __( 'A remote identity needs an https canonical_uri with a host.', 'axismundi-actors' ) );
+			return new WP_Error( 'ax_actors_identity_uri', __( 'A remote identity needs a canonical HTTP(S) URI with a host.', 'axismundi-actors' ) );
 		}
 	}
 

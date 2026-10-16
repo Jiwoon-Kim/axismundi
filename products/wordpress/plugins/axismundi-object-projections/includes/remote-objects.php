@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_OP_DB_VERSION            = '14';
+const AXISMUNDI_OP_DB_VERSION            = '15';
 const AXISMUNDI_OP_DB_VERSION_OPTION     = 'ax_object_projections_db_version';
 const AXISMUNDI_OP_DELETE_RECONCILE_OPTION = 'ax_object_projections_pending_delete_reconcile';
 const AXISMUNDI_OP_REMOTE_PAYLOAD_MAX    = 1048576;
@@ -313,12 +313,14 @@ function axismundi_op_install() : bool {
 	dbDelta(
 		"CREATE TABLE {$table} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			identity_id bigint(20) unsigned DEFAULT NULL,
 			object_uri text NOT NULL,
 			object_uri_hash char(64) NOT NULL,
 			object_type varchar(64) NOT NULL,
 			object_status varchar(12) NOT NULL DEFAULT 'active',
 			attributed_to_uri text DEFAULT NULL,
 			attributed_to_uri_hash char(64) DEFAULT NULL,
+			attributed_identity_id bigint(20) unsigned DEFAULT NULL,
 			in_reply_to_uri text DEFAULT NULL,
 			in_reply_to_uri_hash char(64) DEFAULT NULL,
 			human_url text DEFAULT NULL,
@@ -345,7 +347,9 @@ function axismundi_op_install() : bool {
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY object_uri_hash (object_uri_hash),
+			KEY identity_id (identity_id),
 			KEY attributed_to_uri_hash (attributed_to_uri_hash),
+			KEY attributed_identity_id (attributed_identity_id),
 			KEY in_reply_to_uri_hash (in_reply_to_uri_hash),
 			KEY refresh_status (next_refresh_at, object_status),
 			KEY expires_at (expires_at)
@@ -367,6 +371,8 @@ function axismundi_op_install() : bool {
 
 	$unique_identity = ! empty( $identity_index ) && 0 === (int) $identity_index[0]['Non_unique'];
 	$valid           = in_array( 'object_uri', $columns, true )
+		&& in_array( 'identity_id', $columns, true )
+		&& in_array( 'attributed_identity_id', $columns, true )
 		&& in_array( 'payload_hash', $columns, true )
 		&& in_array( 'is_sensitive', $columns, true )
 		&& in_array( 'next_refresh_at', $columns, true )
@@ -383,6 +389,7 @@ function axismundi_op_install() : bool {
 		&& axismundi_op_install_object_mentions()
 		&& function_exists( 'axismundi_op_install_thread_edges' )
 		&& axismundi_op_install_thread_edges()
+		&& ( ! function_exists( 'axismundi_op_install_objects_schema' ) || axismundi_op_install_objects_schema() )
 		&& axismundi_op_install_object_index_schema()
 		&& 'InnoDB' === $engine;
 	if ( $valid && version_compare( $previous_version, '4', '<' ) ) {
@@ -413,6 +420,9 @@ function axismundi_op_install() : bool {
 		// Old rows were observed projections too; retain their oldest honest timestamps rather
 		// than inventing a new first-seen time during this schema-only upgrade.
 		$wpdb->query( "UPDATE {$relations} SET first_seen_at = COALESCE(first_seen_at, created_at), last_seen_at = COALESCE(last_seen_at, updated_at, created_at), last_confirmed_at = COALESCE(last_confirmed_at, updated_at, created_at), evidence_source = COALESCE(evidence_source, evidence_type), observation_state = COALESCE(NULLIF(observation_state, ''), 'observed')" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time lifetime-column backfill for existing relation evidence.
+	}
+	if ( $valid && version_compare( $previous_version, '15', '<' ) && function_exists( 'axismundi_op_backfill_remote_object_identities' ) ) {
+		$valid = axismundi_op_backfill_remote_object_identities();
 	}
 	if ( $valid ) {
 		update_option( AXISMUNDI_OP_DB_VERSION_OPTION, AXISMUNDI_OP_DB_VERSION, false );
@@ -489,6 +499,13 @@ add_action( 'plugins_loaded', 'axismundi_op_maybe_upgrade' );
  * @return string|WP_Error
  */
 function axismundi_op_remote_object_uri( $value ) {
+	if ( function_exists( 'axismundi_as2_normalize_uri' ) ) {
+		$normalized = axismundi_as2_normalize_uri( $value );
+		if ( is_array( $normalized ) && ! empty( $normalized['resolvable'] ) ) {
+			return (string) $normalized['uri'];
+		}
+		return new WP_Error( 'ax_op_remote_uri', __( 'A remote object requires an absolute HTTP(S) URI without credentials.', 'axismundi-object-projections' ) );
+	}
 	$uri   = trim( (string) $value );
 	$parts = wp_parse_url( $uri );
 	if ( ! is_array( $parts )
@@ -701,6 +718,42 @@ function axismundi_op_store_remote_object( array $payload, array $fetch = array(
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- rollback custom repository transaction.
 		$wpdb->query( 'ROLLBACK' );
 		return new WP_Error( 'ax_op_remote_write', __( 'The remote object snapshot could not be stored.', 'axismundi-object-projections' ) );
+	}
+	$source_ref = is_array( $existing ) ? (int) $existing['id'] : (int) $wpdb->insert_id;
+	$object     = function_exists( 'axismundi_op_register_object' )
+		? axismundi_op_register_object(
+			array(
+				'canonical_uri'     => $normalized['object_uri'],
+				'origin'            => 'remote',
+				'source_owner'      => 'axismundi-object-projections',
+				'source_kind'       => 'remote-object-cache',
+				'source_ref'        => $source_ref,
+				'as2_type'          => $normalized['object_type'],
+				'attributed_to_uri' => $normalized['attributed_to_uri'] ?? '',
+			)
+		)
+		: null;
+	if ( is_wp_error( $object ) ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- the cache and its identity shadow are one write boundary.
+		$wpdb->query( 'ROLLBACK' );
+		return $object;
+	}
+	if ( is_array( $object ) ) {
+		$shadow_written = false !== $wpdb->update(
+			$table,
+			array(
+				'identity_id'            => (int) $object['identity_id'],
+				'attributed_identity_id' => $object['attributed_identity_id'],
+			),
+			array( 'id' => $source_ref ),
+			array( '%d', '%d' ),
+			array( '%d' )
+		);
+		if ( ! $shadow_written ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- the cache and its identity shadow are one write boundary.
+			$wpdb->query( 'ROLLBACK' );
+			return new WP_Error( 'ax_op_remote_identity_shadow', __( 'The remote Object identity shadow could not be stored.', 'axismundi-object-projections' ) );
+		}
 	}
 	$projection_row            = $normalized;
 	$projection_row['payload'] = $payload;

@@ -548,6 +548,52 @@ reactions often allow one active edge per Actor/Object/reaction key, and an
 extension can define different semantics. The interaction type owns its
 deduplication key.
 
+### `View`, `Listen` And `Read` Are Activities, And Nothing Else
+
+These three are direct Activities in the type tree, so they inherit `actor` and
+`object` and the spec's own examples carry both. That settles more of their
+design than a storage argument could.
+
+An anonymous visit has no actor, so it is not one of these activities and is
+not counted. The alternative -- recognising a browser well enough to count it
+once -- is device identification whatever it is called, and a rotating-salt
+day key only shortens how long the identification is kept. The number this
+project stores is therefore not site traffic. It is the count of actors who
+said they viewed, and it must be named that way: "known viewers", a floor.
+Traffic analytics, if it is ever wanted, is a separate system and does not
+merge into this number.
+
+An actor who publishes quietly produces no row at all. Recording the activity
+and excluding it from a count would leave data that a later policy could
+retroactively count, which is not what the actor chose; keeping the choice
+structural means not writing the row.
+
+Three consequences for storage:
+
+- One row per actor per object. The ledger already carries
+  `UNIQUE KEY source_event_hash`, so deriving that hash from
+  `(actor, object, type)` makes the database enforce it with no new mechanism.
+- The count is derived from those rows and can be recounted at any time. This
+  is exactly the relationship `wp_posts.comment_count` has with comments, and
+  it is only true because nothing anonymous is counted: a dedup key that had to
+  expire would leave a counter with no source to rebuild from.
+- A self-view is excluded by default, as Jetpack Stats excludes a logged-in
+  author's visits to their own public site. On a single-actor instance the
+  number would otherwise be entirely the author.
+
+Measured from Jetpack Stats' documentation while deciding this: it counts with
+a browser pixel, states plainly that it samples, counts a *view* on every page
+load without deduplication, and deduplicates only its separate *visitor*
+metric, within a chosen time frame. Its bot filtering is heuristic and
+documented as incomplete. Two things transfer -- excluding the author's own
+visits, and counting from the client rather than the server render, which drops
+crawlers that run no JavaScript for free. Sampling does not transfer: it exists
+for their scale, and a unique key gives this project exact counts instead.
+
+`Listen` and `Read` carry an obvious further question -- how much was heard,
+how far was read -- and that is progress, not a count. It stays out of this
+slice so that "once" keeps one meaning.
+
 ### Collection Ownership
 
 Activity collections and Object collections may share a registry ID and a

@@ -299,8 +299,13 @@ function axismundi_op_index_quote_relations( array $row ) : bool {
  * Cache eviction must not erase what was once observed: a later fetch needs those rows
  * to distinguish a stable graph from a changed one. Local source deletion has a separate
  * lifecycle and is the only future path permitted to remove relation history.
+ *
+ * It was called `..._delete_object_relations_for_source` for as long as it deleted. The name
+ * outlived the behaviour by one commit and misled a reader inside that window -- a check aimed
+ * at this path passed because the call it broke no longer removed anything. Renamed without a
+ * compatibility alias on purpose: one caller, inside this plugin, in the same unreleased slice.
  */
-function axismundi_op_delete_object_relations_for_source( string $source_uri ) : void {
+function axismundi_op_mark_object_relations_stale( string $source_uri ) : void {
 	global $wpdb;
 	$source = axismundi_op_relation_uri( $source_uri );
 	if ( '' === $source ) {

@@ -974,8 +974,8 @@ function axismundi_op_delete_remote_object( string $uri ) : bool {
 	$existing = axismundi_op_get_remote_object( $valid );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- explicit cache deletion.
 	$deleted = false !== $wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE object_uri_hash = %s AND object_uri = %s", hash( 'sha256', $valid ), $valid ) );
-	if ( $deleted && function_exists( 'axismundi_op_delete_object_relations_for_source' ) ) {
-		axismundi_op_delete_object_relations_for_source( $valid );
+	if ( $deleted && function_exists( 'axismundi_op_mark_object_relations_stale' ) ) {
+		axismundi_op_mark_object_relations_stale( $valid );
 	}
 	if ( $deleted && is_array( $existing ) && function_exists( 'axismundi_op_delete_remote_object_hashtags' ) ) {
 		axismundi_op_delete_remote_object_hashtags( (int) $existing['id'] );
@@ -994,7 +994,7 @@ function axismundi_op_delete_remote_object( string $uri ) : bool {
  *
  * They read `remote_object_get`, `remote_object_store`, `remote_object_delete` — noun first, verb
  * last, which is the order nothing else in this codebase uses and the reverse of the neighbours
- * they are called beside (`axismundi_op_delete_object_relations_for_source`,
+ * they are called beside (`axismundi_op_mark_object_relations_stale`,
  * `axismundi_op_index_remote_object_hashtags`). Renaming them is worth doing precisely because
  * they are called from five products, and that is also why the old names cannot simply vanish:
  * a rename applied to definitions and call sites in one commit is a fatal error for anyone whose

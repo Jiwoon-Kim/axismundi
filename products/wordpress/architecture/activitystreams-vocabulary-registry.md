@@ -267,6 +267,53 @@ their listed parent's core properties without a further core declaration here.
 `Accept`, `Add`, `Create`, and the other concrete Activity terms likewise
 inherit Activity's set unless an extension profile declares more.
 
+### Worked Expansion: Question
+
+The durable Question ledger takes its columns from this set rather than from
+improvisation, so the expansion is written out once, with the storage route
+each property takes.
+
+```text
+effective_properties(Question) =
+  Object's set + { actor, target, result, origin, instrument } + { oneOf, anyOf, closed }
+  - object
+```
+
+```text
+scalar on the row        content, contentMap, name, nameMap, summary, summaryMap,
+                         published, updated, startTime, endTime, duration,
+                         mediaType, url, closed
+relation occurrence      attachment, attributedTo, actor, audience, context,
+                         icon, image, inReplyTo, location, preview, tag,
+                         target, result, origin, instrument
+addressing snapshot      to, cc, bto, bcc
+ordered members          oneOf, anyOf
+derived collection       replies
+identity, not a column   id and type: id is the identity row, type is a
+                         rebuildable projection the owning source declares
+raw payload              every unregistered extension received
+```
+
+Five things this expansion settles that a column list would have guessed at.
+
+- `oneOf` and `anyOf` are not two stores. They are one ordered option set plus
+  a selection mode; the emitted key follows the mode, and the rows do not move
+  when it changes.
+- `closed` is not a datetime column. AS2 allows a timestamp, a boolean, or an
+  Object, so a lone datetime cannot express "closed, time unknown". The row
+  needs the flag and the time separately.
+- `actor` and `attributedTo` both survive the expansion, and both are real.
+  A Question is an Activity, so `actor` is its performer; the fediverse writes
+  polls with `attributedTo` and that is what interoperates. Keep both: emit for
+  compatibility, retain what was received.
+- `replies` and the tally read the same edges. A vote is a `Create(Note)` whose
+  `inReplyTo` is the Question, so a naive reply count counts votes. The
+  classifier that already separates them -- empty content, exact frozen option
+  name -- is what the collection must consult, not the edge table alone.
+- A content warning is `summary` with the `sensitive` extension, so it travels
+  with `content` for retention. `sensitive` is not core AS2 and is registered
+  as an extension with its own provenance, not quietly treated as a core term.
+
 ### Validation And Storage Are Different Questions
 
 This property contract can constrain an authored write without turning every

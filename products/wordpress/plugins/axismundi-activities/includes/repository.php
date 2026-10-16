@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACT_DB_VERSION        = '9';
+const AXISMUNDI_ACT_DB_VERSION        = '10';
 const AXISMUNDI_ACT_DB_VERSION_OPTION = 'axismundi_activities_db_version';
 const AXISMUNDI_ACT_PAYLOAD_MAX       = 1048576;
 
@@ -133,7 +133,8 @@ function axismundi_act_install() : bool {
 		&& 'InnoDB' === $engine;
 	$relations_valid = function_exists( 'axismundi_act_install_relations' ) && axismundi_act_install_relations();
 	$quotes_valid    = function_exists( 'axismundi_act_install_quote_authorizations' ) && axismundi_act_install_quote_authorizations();
-	$valid           = $base_valid && $relations_valid && $quotes_valid;
+	$questions_valid = function_exists( 'axismundi_act_install_questions_schema' ) && axismundi_act_install_questions_schema();
+	$valid           = $base_valid && $relations_valid && $quotes_valid && $questions_valid;
 	if ( $valid && version_compare( $previous_version, '8', '<' ) ) {
 		$valid = axismundi_act_backfill_feed_sort_at();
 	}
@@ -501,6 +502,9 @@ function axismundi_act_is_public( Axismundi_Activity $activity ) : bool {
  * renderer still strips blind recipients from its payload copy below.
  */
 function axismundi_act_is_publicly_renderable( Axismundi_Activity $activity ) : bool {
+	if ( function_exists( 'axismundi_act_question_vote_candidate' ) && is_array( axismundi_act_question_vote_candidate( $activity ) ) ) {
+		return false;
+	}
 	return $activity->is_effective()
 		&& in_array( $activity->get_direction(), array( 'inbound', 'outbound', 'local' ), true )
 		&& axismundi_act_has_public_audience( $activity );

@@ -129,6 +129,21 @@ try {
 	$after_spoof = axismundi_op_get_remote_object( $ax_inbox_object_uri );
 	ax_inbox_assert( $ax_inbox_results, 'a mismatched Update actor cannot overwrite the cached Object', $spoof instanceof Axismundi_Activity && is_array( $after_spoof ) && 'Note' === $after_spoof['object_type'] && false !== strpos( (string) $after_spoof['content'], 'Poll removed' ) );
 
+	$actor_update_uri = 'https://remote.example/activities/actor-update-' . $ax_inbox_suffix;
+	$actor_update = axismundi_act_record_activity(
+		array(
+			'id' => $actor_update_uri,
+			'type' => 'Update',
+			'actor' => $author_uri,
+			'object' => array( 'id' => $author_uri, 'type' => 'Person', 'attributedTo' => $author_uri, 'name' => 'A self-attributed Actor must stay out of the Object cache.' ),
+		),
+		'inbound'
+	);
+	if ( $actor_update instanceof Axismundi_Activity ) {
+		$ax_inbox_activity_uris[] = $actor_update->get_uri();
+	}
+	ax_inbox_assert( $ax_inbox_results, 'a self-attributed Update(Person) remains an Actor concern and never creates a remote Object cache row', $actor_update instanceof Axismundi_Activity && null === axismundi_op_get_remote_object( $author_uri ) );
+
 	$spoof_delete_uri = 'https://remote.example/activities/delete-spoof-' . $ax_inbox_suffix;
 	$spoof_delete     = axismundi_act_record_activity(
 		array( 'id' => $spoof_delete_uri, 'type' => 'Delete', 'actor' => $other_uri, 'object' => $ax_inbox_object_uri ),

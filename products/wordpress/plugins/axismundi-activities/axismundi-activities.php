@@ -34,6 +34,7 @@ defined( 'ABSPATH' ) || exit;
 const AXISMUNDI_ACTIVITIES_VERSION = '0.1.0';
 
 require_once __DIR__ . '/includes/repository.php';
+require_once __DIR__ . '/includes/questions.php';
 require_once __DIR__ . '/includes/audience.php';
 require_once __DIR__ . '/includes/object-lifecycle.php';
 require_once __DIR__ . '/includes/actor-lifecycle.php';

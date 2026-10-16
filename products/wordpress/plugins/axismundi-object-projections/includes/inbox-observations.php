@@ -7,6 +7,11 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/** Whether an embedded value belongs to the Actors vertical slice, not an Object cache. */
+function axismundi_op_embedded_actor_type( $type ) : bool {
+	return is_string( $type ) && in_array( $type, array( 'Person', 'Group', 'Organization', 'Application', 'Service' ), true );
+}
+
 /** Store one complete, self-consistent Object after the inbound ledger commit. */
 function axismundi_op_observe_inbound_object( Axismundi_Activity $activity ) : void {
 	if ( ! in_array( $activity->get_type(), array( 'Create', 'Update' ), true ) || 'inbound' !== $activity->get_direction() ) {
@@ -15,6 +20,10 @@ function axismundi_op_observe_inbound_object( Axismundi_Activity $activity ) : v
 	$payload = $activity->get_payload();
 	$object  = $payload['object'] ?? null;
 	if ( ! is_array( $object ) || array_is_list( $object ) ) {
+		return;
+	}
+	// Actor profiles have their own verified update path in Axismundi Actors.
+	if ( axismundi_op_embedded_actor_type( $object['type'] ?? null ) ) {
 		return;
 	}
 	$object_uri = axismundi_op_remote_member_uri( $object['id'] ?? '' );

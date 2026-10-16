@@ -248,6 +248,45 @@ flowchart LR
   A -. never sole Object truth .-> R
 ```
 
+### Media Authority Belongs To The Source, Not To The Type
+
+The unified engine reads one source layer and specialises into profiles, so it
+has to carry a distinction `post-article.php` never had to name: who is
+authoritative for an object's attachments.
+
+```text
+CorePostSource        the body is authoritative   -> provenance derived-from-body
+native domain source  an explicit list exists     -> provenance authored
+```
+
+A core post stores its media as block attributes -- `attrs.id` on the six core
+media blocks, plus the featured image -- so the engine reads ids, not markup,
+and the list is a projection of `post_content`. Promoting that list to authored
+data would let it drift: nothing in Core guarantees a stored list moves with the
+body across revisions, programmatic updates and REST writes. A note-like source
+that records its attachments explicitly is the opposite case, and its list is
+the authority.
+
+Both can hold for one object. The engine resolves that, rather than assuming it
+cannot happen:
+
+- the published `attachment` property takes the authored list when one exists;
+- the relation graph keeps the union, each row carrying its own provenance, so
+  an inline image that the authored list omits is still a recorded reference;
+- a derived row never overwrites an authored row, and a body that stops
+  mentioning a file never deletes an authored one;
+- re-deriving on every save reconciles rather than replaces, or `first_seen_at`
+  resets on each edit and the lifetime columns mean nothing.
+
+Two further rules the profiles inherit rather than reinvent:
+
+- `post_type=attachment` is the Object itself, never a relation from itself.
+- Media the body references without an attachment id -- a classic-editor or
+  pasted `<img>` -- has no truthful `mediaType` or dimensions, so it stays out
+  of the published `attachment` property. Once identities exist it may still be
+  recorded as an unresolved identity with `body-url` provenance: keeping the
+  reference in the graph and publishing a descriptor are separate decisions.
+
 The proposed local attribution path is deliberately direct:
 
 ```text

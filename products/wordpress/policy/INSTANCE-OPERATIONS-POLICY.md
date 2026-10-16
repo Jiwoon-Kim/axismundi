@@ -199,7 +199,7 @@ four answers below are its precondition, not its follow-up.
 | Limit | Who sets it | State |
 |---|---|---|
 | Maximum file size | the host's PHP and web server configuration | inherited, not chosen here |
-| Total disk | the hosting plan | **outside this instance's control** |
+| Total disk | the hosting plan, declared by the operator in the admin app | **not yet collected** |
 | Per-actor storage quota | this instance | **not implemented** |
 | Upload rate per actor | this instance | **not implemented** |
 | Bandwidth for serving media | the hosting plan, and any CDN in front | inherited |
@@ -208,6 +208,20 @@ The honest statement is that an authenticated uploader is bounded today by the
 host's per-file limit and nothing else. A per-actor quota and a rate limit are
 the work that has to exist before a write surface is opened to clients this
 site did not install.
+
+Capacity is declared, not discovered. `disk_free_space()` reports the
+filesystem, which on shared hosting is the host's disk rather than the plan's
+allowance, so the instance cannot learn its own ceiling and the operator states
+it in the admin app instead. That number is a declaration and not a verified
+fact: the instance measures what it is actually using and shows both, because a
+declaration that disagrees with the measurement is the operator's signal that
+one of the two is wrong.
+
+What a declared capacity makes possible is a per-actor quota expressed as a
+share of it, a soft threshold that warns, and a hard threshold that refuses an
+upload. What it must never make possible is deletion: running out of room is
+not permission to remove someone's media, and any deletion stays a decision a
+person takes.
 
 Hosting matters here in a way it does not elsewhere in this document. The
 operator's plan decides how much can be stored and how much can be served, a

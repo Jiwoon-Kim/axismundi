@@ -34,6 +34,31 @@ policy, and its numbers are never merged into this one.
 - Enforcement: none yet. Planned as a unique key on
   `(object, actor, activity_type)`.
 
+### The count is public; the names are not
+
+An object's known-viewer count is public by default. Published software has
+long shown such numbers -- WordPress's own view-count blocks, and the view
+figures major networks display -- and later features such as hashtag trends are
+aggregates over the same data.
+
+**Who viewed is not public.** The identities behind the number are visible to
+nobody but the viewer themselves; an author sees how many, not which. Nothing
+in this instance exposes a per-object list of viewers, and no API answers that
+question.
+
+Two limits follow, and both are honest rather than reassuring:
+
+- A small count can identify people by itself. Three known viewers, a visible
+  follower list and a timestamp narrow a set quickly, and on an instance with
+  one actor a count of one is a name. Hiding identities does not fix an
+  aggregate that is small enough to invert. Whether to suppress counts below a
+  threshold, or to show them in coarse bands, is **undecided** and listed below.
+- Federating the number is a separate decision from displaying it.
+  ActivityStreams defines no view-count property and the major
+  implementations publish none, so putting one on the wire means registering an
+  extension term with its provenance -- never quietly borrowing a core-looking
+  name.
+
 ## 2. Quiet activity
 
 An actor who has chosen to act quietly produces **no shareable activity** — no
@@ -173,5 +198,6 @@ than implied:
    told before it is switched on.
 2. Whether activity compaction removes payload snapshots only, or rows.
 3. Whether attention records survive the deletion of the object they point at.
-4. Who may read the known-viewer count: the author only, or any viewer.
+4. Whether small counts are suppressed or banded, since a public count on a
+   quiet instance can identify the people it deliberately does not name.
 5. What happens to records about an actor when that actor is deleted here.

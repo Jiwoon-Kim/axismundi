@@ -42,7 +42,7 @@ rediscovered a fourth time.
 | Types | Shape | Lifetime | Result |
 |---|---|---|---|
 | `Announce`, `Like`, `Follow`, `Undo`, … | audience, delivery, payload, all used | event, compactible | one ledger, split by index |
-| `View`, `Listen`, `Read` | no audience, no delivery, no undo, no payload | derivable, recountable | own table |
+| `View`, `Listen`, `Read` | registry row when published; a relation row always | derivable, recountable | relation projection |
 | `Question` | option rows, tallies, trash and restore | durable, never compacted | own table |
 | `Arrive`, `Travel` | same as an Announce: momentary, addressed | event, compactible | the ledger |
 
@@ -616,29 +616,44 @@ fifteen-column envelope would also make the heaviest table in the schema the
 one with the least to say. They get a specialised table instead, owned by
 Activities, in the same way Question's durable aggregate does.
 
+They are not their own table either. `wp_ax_activity_relations` already carries
+this shape for actor-to-actor relations -- `relation_type`, `state`, the
+activity URI that set the state, and an `evidence_type` -- so what is missing
+is its sibling for actor-to-object, where `Like` already belongs.
+
 ```text
-wp_ax_object_attention                 (Activities)
-  id
-  object_identity_id                   registry id; local and remote alike
-  actor_identity_id                    no row exists without an actor
-  activity_type                        View | Listen | Read
-  first_at                             when this actor first did it
-  origin                               local | inbound
-  UNIQUE ( object_identity_id, actor_identity_id, activity_type )
+wp_ax_actor_object_relations           (Activities)
+  actor_identity_id
+  object_identity_id
+  relation_type                        like | announce | view | read | listen
+  state                                active | undone
+  evidence_type                        activity | local_state
+  first_at, last_at
+  initiating_activity_identity_id      nullable
+  state_activity_identity_id           nullable
+  UNIQUE ( actor_identity_id, object_identity_id, relation_type )
 ```
 
-The name is deliberately not an AS2 term. A table called `object_views` would
-make every `Listen` row a lie, and these three are one family only in the sense
-that they are attention without a reply.
+`state` and `evidence_type` answer different questions and must not be merged.
+`state` says whether the relation was undone; `evidence_type` says where its
+authority is. A `local` value inside `state` would make the count query read
+`state IN ( 'active', 'local' )`, and the first person who writes
+`state = 'active'` alone silently drops every locally recorded view.
 
-`target`, `result`, `origin` and `instrument` are inherited from Activity and
-meaningless here, so they get no columns; anything received survives in the raw
-payload. There is no `effective_status` either, because there is nothing to
-undo.
+That column is also what makes one table safe for two authorities. Rows
+evidenced by activities are rebuildable from the registry; rows evidenced by
+local state are not, and a reindex that cannot tell them apart erases what a
+person did in their own reader.
 
 Three consequences for storage:
 
 - One row per actor per object per type, enforced by the UNIQUE key above.
+- Feed exposure does not create one. Only a path the product defines as direct
+  attention does -- opening the object's own page, starting playback. Counting
+  what was merely shown would teach a future ranking signal that display is
+  interest, which is a loop that feeds itself. Client-side recording protects
+  this twice over: a browser prefetch or prerender usually runs no JavaScript,
+  so a page fetched and never looked at records nothing.
 - An object's figure is `COUNT(DISTINCT actor_identity_id)`, not a sum across
   the three types. An actor who both viewed and read one article is one known
   viewer, and summing per-type counts would report two. Per-type detail still

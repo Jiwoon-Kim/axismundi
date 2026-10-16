@@ -509,12 +509,19 @@ questions
 
 question_votes
   question_identity_id
-  voter_identity_id      or the actor URI when the actor is not yet known
-  choice_position
+  voter_actor_uri        canonical, and the authority
+  voter_actor_uri_hash
+  voter_identity_id      nullable shadow, filled once the actor is known
+  choice_position        nullable -- an ignored vote may name no valid option
   vote_activity_uri
   status                 active | ignored | undone
+  ignore_reason          nullable; a diagnosis, not a silent drop
   origin                 local | inbound
 ```
+
+The voter follows the same rule as every other actor reference here: the URI is
+canonical and the identity is a nullable accelerator, because an inbound vote
+can arrive before its actor is cached and must still be stored.
 
 `question_votes` is the authority and the counts are a cache, exactly as
 `wp_posts.comment_count` relates to comments: recountable, updated inside the
@@ -541,9 +548,25 @@ be resolved by letting a validator wave Questions through. A blanket exception
 is how the rule stops meaning anything. Instead the profile is explicit --
 `fep-9967-poll` -- and says what it permits: a Question inside `Create.object`
 and `Update.object`, a vote Note with `name` and without `content`, option names
-unique within one Question, and an `Update` whose Question differs from the
-previous one only in its tallies and timestamps. Pure AS2 validation stays
-unchanged beside it.
+unique within one Question, and the two shapes an `Update` may take.
+
+Those two shapes matter, and an earlier draft of this section got them wrong by
+allowing only the first. FEP-9967 states that a poll's type and its options
+"might be changed at any time", and that the author then MUST reset it: empty
+every option's `replies` collection, set `votersCount` to zero, and publish an
+`Update`. A validator that required an Update to differ only in tallies would
+reject the reset the specification demands.
+
+```text
+Update changes tallies and timestamps only
+  -> the vote projection stands; validate the tallies against it
+
+Update changes mode or options
+  -> every tally and votersCount must be zero in that Update
+  -> the existing vote projection is reset rather than recounted
+```
+
+Pure AS2 validation stays unchanged beside both.
 
 Authority splits by origin. For a local Question this instance validates votes
 and owns the tally. For a remote one, a local actor's vote is recorded in the

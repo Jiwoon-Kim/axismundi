@@ -28,6 +28,7 @@ function ax_object_registry_assert( array &$results, string $label, bool $condit
 	printf( "[%s] %s\n", $condition ? 'PASS' : 'FAIL', $label );
 }
 
+$ax_note_post = 0;
 try {
 	axismundi_actors_install();
 	$installed = axismundi_op_install();
@@ -80,6 +81,49 @@ try {
 		)
 	);
 	ax_object_registry_assert( $ax_results, 'an unlisted WordPress post type receives no Object registration profile', null === axismundi_op_local_object_profile( $menu ) );
+
+	/*
+	 * The contamination this registry was built to avoid, exercised through the
+	 * resolver rather than through a hand-written row. `ax_note` stores both Notes
+	 * and Questions and the type is decided by whether a poll row exists, so a
+	 * resolver that answered from `post_type` would label every Question a Note --
+	 * and the re-declaration check above would still pass, because it writes the
+	 * registry row itself.
+	 */
+	$ax_note_post = 0;
+	$ax_note_uuid = '';
+	if ( defined( 'AXISMUNDI_NOTE_POST_TYPE' ) && function_exists( 'axismundi_note_questions_table' ) && function_exists( 'axismundi_note_table' ) ) {
+		$ax_note_post = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_NOTE_POST_TYPE, 'post_status' => 'publish', 'post_title' => 'Object registry note fixture' ) );
+		$ax_note_uuid = wp_generate_uuid4();
+		$ax_actor_fixture_uri = 'https://registry.local.example/actors/note-fixture';
+		$now = current_time( 'mysql', true );
+		$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- regression fixture row.
+			axismundi_note_table(),
+			array(
+				'post_id' => $ax_note_post, 'local_uuid' => $ax_note_uuid,
+				'actor_uri' => $ax_actor_fixture_uri, 'actor_uri_hash' => hash( 'sha256', $ax_actor_fixture_uri ),
+				'visibility' => 'public', 'language_tag' => 'en', 'in_reply_to_uri' => '', 'in_reply_to_uri_hash' => '',
+				'context_uri' => '', 'context_uri_hash' => '', 'mention_actor_uris_json' => '[]',
+				'created_at' => $now, 'updated_at' => $now,
+			)
+		);
+		$ax_note_object = axismundi_op_local_object_profile( get_post( $ax_note_post ) );
+		ax_object_registry_assert(
+			$ax_results,
+			'a note without a poll resolves as Note through the profile resolver',
+			is_array( $ax_note_object ) && 'Note' === (string) ( $ax_note_object['type'] ?? '' )
+		);
+		$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- regression fixture row.
+			axismundi_note_questions_table(),
+			array( 'note_post_id' => $ax_note_post, 'mode' => 'oneOf', 'created_at' => $now, 'updated_at' => $now )
+		);
+		$ax_question_object = axismundi_op_local_object_profile( get_post( $ax_note_post ) );
+		ax_object_registry_assert(
+			$ax_results,
+			'the same post resolves as Question once its poll row exists, because the source decides the type and the container does not',
+			is_array( $ax_question_object ) && 'Question' === (string) ( $ax_question_object['type'] ?? '' )
+		);
+	}
 
 	$ax_attachment = (int) wp_insert_post(
 		array(
@@ -154,6 +198,15 @@ try {
 		);
 	}
 } finally {
+	if ( $ax_note_post > 0 ) {
+		if ( function_exists( 'axismundi_note_questions_table' ) ) {
+			$wpdb->delete( axismundi_note_questions_table(), array( 'note_post_id' => $ax_note_post ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+		}
+		if ( function_exists( 'axismundi_note_table' ) ) {
+			$wpdb->delete( axismundi_note_table(), array( 'post_id' => $ax_note_post ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+		}
+		wp_delete_post( $ax_note_post, true );
+	}
 	if ( $ax_attachment > 0 ) {
 		wp_delete_post( $ax_attachment, true );
 	}

@@ -109,6 +109,45 @@ visits to their own public site, and makes it a per-role setting.
 
 - Enforcement: none yet.
 
+## 3a. Interaction collections: published, and shown
+
+What this server publishes to the world and what it shows a signed-in actor who
+can already see an object are two different questions, and the answers differ by
+interaction.
+
+| Interaction | Federated collection | Local authenticated view |
+|---|---|---|
+| `Like` | count only | the actors this server knows about |
+| `Announce` | count only | the actors this server knows about |
+| `EmojiReact` | **members published** | same as published |
+| `View`, `Listen`, `Read` | count only | **count only, for everyone** |
+
+A like or an announce is an expressive act aimed at an object. Its author is
+notified of it anyway, and the person performing it knows it is delivered, so
+listing it to signed-in local actors who can already see the object discloses
+nothing they could not otherwise learn. The published collection still carries
+only a count, because the rest of the network has no such relationship to it.
+
+Emoji reactions are the exception, and it is the protocol's doing rather than a
+choice made here. FEP-c0e0 requires that collection URL to resolve to the
+reaction activities themselves, so a count-only substitute would be unreadable
+by the implementations it exists to interoperate with, and requiring public
+addressing would empty it for the same ones. Blind-copy lists are stripped. The
+honest consequence to tell people: reacting with an emoji is a signed public
+act, while a like is not.
+
+Attention is in neither category. A view is not an expressive act and nobody is
+told about it, so no surface lists viewers -- not the author's, not an
+administrator's.
+
+Any such list is **what reached this server**, not what exists. A remote like
+is known only if it was delivered here, so a list may be shorter than a count
+taken elsewhere, and both can be right.
+
+- Enforcement: the published collections are implemented
+  (`axismundi-object-projections/includes/integrations/reactions.php`); the
+  local list surface is not built yet.
+
 ## 4. What leaves this server
 
 | Leaves | Does not leave |

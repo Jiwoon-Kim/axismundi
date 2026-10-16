@@ -18,6 +18,9 @@ SVG needs to be treated as architecture data.
 
 ## First views
 
+- [ActivityStreams Vocabulary Registry](activitystreams-vocabulary-registry.md)
+  records the core AS2 type hierarchy and property registry, with extension
+  registration boundaries.
 - [Core content schema](core-content-schema.md) covers posts, post meta, users,
   comments, and well-known core post-meta rows relevant to content projection.
 - [Core taxonomy schema](core-taxonomy-schema.md) covers terms and the

@@ -43,6 +43,39 @@ local `post_content`, editorial dates, arbitrary raw JSON, or every AS2 field.
 Those remain in their source stores and are rendered or cached through explicit
 projections.
 
+### Registry Scope: Durable And Queryable Objects
+
+The proposed `wp_ax_objects` registry is not only a registry for WordPress
+content. Its durable/queryable Object scope includes
+`Person`/`Group`/`Organization`/`Service` Actors, post-backed Objects, remote
+cached Objects, and independently addressed Collections. Its `source_kind`
+and `source_id` select the authoritative source; the registry does not copy an
+Actor profile, post body, or remote payload.
+
+Although an AS2 Activity is formally an Object, the Activity ledger remains
+the identity registry for Activity events. Do not register every `Like`,
+`Undo`, `Follow`, delivery retry, or other high-volume/retention-bounded event
+in `wp_ax_objects`: that would couple interaction-ledger compaction to durable
+Object identity and make an Article share an operational index with every
+Like. An Activity is registered as an Object only through an explicit future
+profile that needs it to have durable, independently queried Object semantics;
+there is no automatic Activity-to-Object row.
+
+This still prevents products from separately solving Object URI resolution. A
+mention can resolve to the same Actor Object ID that an Activity's `actor` edge
+uses; `inReplyTo`, `target`, `origin`, and `instrument` can point to an Object
+registry row when their target is an Object. An Activity target, such as
+`Undo.object`, continues to resolve by Activity URI in `wp_ax_activities`.
+An unresolved URI remains an edge with a URI/hash fallback and is attached to
+a registry row only after its Object is discovered or cached.
+
+`Link` and `Mention` remain outside this table because AS2 defines `Link` as
+disjoint from `Object`. A Link occurrence belongs on the relation edge that
+uses it (`tag`, `attachment`, `preview`, and so on), with its `href`, Link
+type, display metadata, position, and provenance. If Link ever requires an
+independent cache or lifecycle, it needs a separate Link registry rather than
+an incorrectly named Object row.
+
 ### What the Registry Simplifies
 
 Once every visible Object has one registry `object_id`, extension modules no
@@ -65,11 +98,13 @@ the source was local or remote.
 
 It does **not** make `wp_postmeta` obsolete. Local editor-owned inputs stay
 there until they are normalized into a shared projection; remote unrecognized
-extensions stay in the received payload. Avoid a generic
-`object_id + property_name + property_value` table as the primary model: it
-would turn typed relationships, indexes, ordering, and authorization into an
-unbounded EAV schema. Add a typed common column or a module-owned table only
-after naming the query, lifecycle, and source-of-truth contract it serves.
+extensions stay in the received payload. A registry-validated property table
+may materialize registered scalar or language-map properties, but it must not
+be the universal primary store for every value. `object_id + property_name +
+property_value` alone would turn typed relationships, indexes, ordering, and
+authorization into an unbounded EAV schema. Route registered relations and
+ordered members to their typed tables after naming the query, lifecycle, and
+source-of-truth contract they serve.
 
 ### Activity Ledger Deduplication Requires Revisions
 
@@ -279,6 +314,83 @@ Axismundi does not use `wp_comments` as its reply model. A local reply is its
 own post-backed Object, and `inReplyTo` is an Object relation edge. It therefore
 uses the same source/projection path as a root Article or Note.
 
+### `inReplyTo` Is A Graph Relation
+
+AS2 permits a property value to be represented as one value or an array. The
+Axismundi compatibility contract therefore preserves every received
+`inReplyTo` target; it must not silently retain only the first parent. Local
+authoring may offer a single-parent reply UI, but that is an explicit product
+profile, never a reason to discard additional inbound values.
+
+The current `wp_ax_thread_edges` index is a useful predecessor, not the final
+owner of this relation. It records one URI parent per child (`UNIQUE
+child_uri_hash`) and derives one `root_uri` and `depth`. That makes it a
+single-parent tree projection. Its unresolved-parent write and later
+reconciliation behavior are correct and should be retained, but a general
+relation source must instead allow one row per `(child, parent)` pair and keep
+the canonical parent URI/hash even before the parent is cached.
+
+Once a shared Object registry exists, each edge can additionally carry nullable
+child and target registry IDs. Those IDs accelerate joins after discovery; they
+are not a prerequisite for recording the URI relation. A tree-oriented reader
+may build a separate primary-parent/root/depth projection under an explicit,
+deterministic policy. It must be labeled as a derived view and must never claim
+to represent every `inReplyTo` value.
+
+#### Decision: The Tree Stays A Derived View
+
+`wp_ax_thread_edges` is not migrated into the general relation table. It becomes
+a derived view over it, rebuilt rather than carried, for three reasons:
+
+- It already declares itself a rebuildable index and both writers regenerate it
+  from preserved sources -- an outbound Create/Update payload and a stored
+  remote-object row. There is no durable fact in it to migrate.
+- `UNIQUE child_uri_hash` is the constraint that makes the single-parent tree
+  cheap, and it is exactly the constraint a general relation table cannot
+  carry. Keeping the view keeps the constraint where it is true.
+- Two models stop competing when one is generated from the other. The relation
+  table answers "what did this object reply to"; the view answers "where does
+  this sit in a thread".
+
+#### The Primary-Parent Rule
+
+When `inReplyTo` carries several values, the tree view takes **the first value
+in document order**, reduced to its `id` when the member is an embedded object
+or Link.
+
+The rule is deliberately indifferent to everything else. It must not prefer a
+local parent over a remote one, a resolved parent over an unresolved one, a
+cached parent over an uncached one, or an earlier `published` value. Every one
+of those alternatives makes the same stored object produce a different tree at a
+different time: a thread would reshape itself as caches warm, as a remote parent
+is fetched, or as a parent is tombstoned. An arbitrary but stable parent is
+worth more than a well-chosen moving one.
+
+Consequences that follow from it, and that a checker should hold:
+
+- Re-indexing the same payload yields the same primary parent, whatever the
+  cache contains at the time.
+- A Tombstone payload carries no `inReplyTo` and therefore never rewrites an
+  existing edge. This is already implemented and must survive the move.
+- The view's parent is not "the" parent. A reader that needs every ancestor
+  reads the relation table, not the view.
+
+#### Sequencing: Backfill Before Snapshot Removal
+
+Relation rows for multiple parents must be populated before the Activity ledger
+drops its stored envelopes.
+
+For a remote object the full array survives in `payload_json`, so it can be
+re-derived at any time. For a locally authored object the outbound Create
+snapshot in the Activity ledger may be the only copy of the array: the
+post-backed source records one parent today, and the single-parent index records
+one by construction. Removing ledger snapshots first would therefore delete the
+only surviving record of a second parent.
+
+Ledger snapshot removal is one of the strongest arguments for the shared
+registry. It is also the step that must wait: "relation backfill complete" is a
+precondition of it, not a parallel task.
+
 `Like`, `Dislike`, `Announce`, and `EmojiReact` are different: they are
 Activities that establish an Actor-to-Object interaction. The current
 `wp_ax_activities` ledger stores their event rows and queries its active rows
@@ -398,6 +510,20 @@ access control.
    visibility states exist, whether followers-only includes local WordPress
    sessions, denial behavior (`404` versus `403`), and cache headers. This is
    a server policy document and enforcement service, not a frontend feature.
+6. Cross-origin Question voting. Today a committed `Create(Note)` from a
+   remote Actor can be classified against a local authoritative Question, and
+   a local Actor can vote on a local Question. A local Actor cannot vote on a
+   remote observed Question: the current target resolver deliberately accepts
+   only a local Question URI and the local form follows it. Do not patch this
+   by teaching the poll tables to identify remote Objects independently. First
+   establish the shared Object registry so a `QuestionTarget` can name either
+   a local authoritative Object or a remote observed Object by one stable
+   Object ID. Then one direct `VoteIntent -> Create(Note)` path can deliver a
+   vote to a remote Question while only local authoritative Questions
+   materialize a tally in `wp_ax_poll_votes`. This also removes the current
+   local-vote implementation's disposable draft `ax_note` post. Inbound
+   remote-vote classification requires its own regression coverage; current
+   coverage exercises the same classifier through outbound fixture rows only.
 
 ## Sources
 

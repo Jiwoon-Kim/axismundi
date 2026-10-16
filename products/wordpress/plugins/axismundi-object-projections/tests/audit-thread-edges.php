@@ -15,6 +15,7 @@ $ax_te_user_ids  = array();
 $ax_te_actor_ids = array();
 $ax_te_remote_uris = array();
 $ax_te_edge_uris = array();
+$ax_te_relation_sources = array();
 
 /** @param bool[] $results Results. */
 function ax_te_assert( array &$results, string $label, bool $condition ) : void {
@@ -63,6 +64,46 @@ try {
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- fixture schema probe.
 	$unique = $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'child_uri_hash'", ARRAY_A );
 	ax_te_assert( $ax_te_results, 'schema installs the thread-edge index with a unique child identity', $installed && in_array( 'parent_uri', $columns, true ) && in_array( 'resolution_state', $columns, true ) && ! empty( $unique ) && 0 === (int) $unique[0]['Non_unique'] );
+	$legacy_id   = 'https://fixture.example/legacy-id';
+	$legacy_href = 'https://fixture.example/legacy-href';
+	ax_te_assert( $ax_te_results, 'legacy scalar reducers retain id-before-href and reject lists while new relation handling stays explicitly list-aware', $legacy_id === axismundi_act_member_uri( array( 'id' => $legacy_id, 'href' => $legacy_href ) ) && '' === axismundi_op_relation_uri( array( $legacy_id, $legacy_href ) ) );
+	$uri_once = axismundi_as2_normalize_uri( 'HTTPS://FIXTURE.EXAMPLE:443/a/./b/../c/%aa?x=%bb#main-key' );
+	$uri_twice = is_array( $uri_once ) ? axismundi_as2_normalize_uri( $uri_once['uri'] ) : null;
+	ax_te_assert( $ax_te_results, 'URI syntax normalization is idempotent while retaining the query, fragment, and explicit trailing-slash distinction', is_array( $uri_once ) && is_array( $uri_twice ) && 'https://fixture.example/a/c/%AA?x=%BB#main-key' === ( $uri_once['uri'] ?? '' ) && $uri_once === $uri_twice && 'https://fixture.example/a/' !== ( axismundi_as2_normalize_uri( 'https://fixture.example/a' )['uri'] ?? '' ) );
+
+	// Relation storage preserves the full AS2 graph; the thread table only derives
+	// its document-order primary parent. Keep these fixtures direct so malformed
+	// input cannot accidentally erase a pre-existing derived edge.
+	$relation_table = axismundi_op_object_relations_table();
+	$link_child     = 'https://fixture.example/objects/' . wp_generate_uuid4();
+	$link_target    = 'https://fixture.example/parents/' . wp_generate_uuid4();
+	$link_statement = 'https://fixture.example/links/' . wp_generate_uuid4();
+	$ax_te_relation_sources[] = $link_child;
+	$link_replaced = axismundi_op_replace_in_reply_to_relations(
+		$link_child,
+		array( 'id' => $link_statement, 'href' => $link_target, 'rel' => 'reply', 'name' => 'Reply parent', 'mediaType' => 'text/html' )
+	);
+	$link_row = $wpdb->get_row( $wpdb->prepare( "SELECT target_object_uri, link_id, link_rel, link_name, link_media_type FROM {$relation_table} WHERE relation_type = 'in_reply_to' AND source_object_uri_hash = %s AND source_object_uri = %s", hash( 'sha256', $link_child ), $link_child ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- regression fixture reads its exact projection row.
+	ax_te_assert( $ax_te_results, 'a Link member uses href as its relation target while retaining the Link statement metadata', $link_replaced && is_array( $link_row ) && $link_target === ( $link_row['target_object_uri'] ?? '' ) && $link_statement === ( $link_row['link_id'] ?? '' ) && 'reply' === ( $link_row['link_rel'] ?? '' ) && 'Reply parent' === ( $link_row['link_name'] ?? '' ) && 'text/html' === ( $link_row['link_media_type'] ?? '' ) );
+
+	$multi_child = 'https://fixture.example/objects/' . wp_generate_uuid4();
+	$tag_parent  = 'tag:fixture.example,' . gmdate( 'Y-m-d' ) . ':thread-' . wp_generate_uuid4();
+	$acct_parent = 'acct:thread-parent@fixture.example';
+	$http_parent = 'https://fixture.example/parents/' . wp_generate_uuid4();
+	$ax_te_relation_sources[] = $multi_child;
+	$ax_te_edge_uris[] = $multi_child;
+	$multi_replaced = axismundi_op_replace_in_reply_to_relations( $multi_child, array( $tag_parent, $acct_parent, $http_parent ) );
+	$multi_rows = $wpdb->get_results( $wpdb->prepare( "SELECT target_object_uri, position FROM {$relation_table} WHERE relation_type = 'in_reply_to' AND source_object_uri_hash = %s AND source_object_uri = %s ORDER BY position ASC", hash( 'sha256', $multi_child ), $multi_child ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- regression fixture reads its exact projection rows.
+	$primary_parent = axismundi_op_primary_in_reply_to_relation( $multi_child );
+	$primary_written = axismundi_op_record_thread_edge( $multi_child, (string) $primary_parent );
+	$multi_edge = axismundi_op_get_thread_edge( $multi_child );
+	ax_te_assert( $ax_te_results, 'multi-parent inReplyTo retains non-HTTP targets in document order and derives the first target without deleting the edge', $multi_replaced && array( $tag_parent, $acct_parent, $http_parent ) === array_column( $multi_rows, 'target_object_uri' ) && $tag_parent === $primary_parent && $primary_written && is_array( $multi_edge ) && $tag_parent === ( $multi_edge['parent_uri'] ?? '' ) );
+
+	$before_malformed_rows = $multi_rows;
+	axismundi_op_index_thread_edge_from_remote_object( array( 'object_status' => 'active', 'object_uri' => $multi_child, 'payload' => array( 'inReplyTo' => array( array( 'href' => array( 'not-a-uri' ) ) ) ) ) );
+	$after_malformed_rows = $wpdb->get_results( $wpdb->prepare( "SELECT target_object_uri, position FROM {$relation_table} WHERE relation_type = 'in_reply_to' AND source_object_uri_hash = %s AND source_object_uri = %s ORDER BY position ASC", hash( 'sha256', $multi_child ), $multi_child ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- regression fixture reads its exact projection rows.
+	$after_malformed_edge = axismundi_op_get_thread_edge( $multi_child );
+	ax_te_assert( $ax_te_results, 'an unreadable inReplyTo value leaves existing relation rows and the derived edge untouched instead of treating it as a root', $before_malformed_rows === $after_malformed_rows && is_array( $after_malformed_edge ) && $tag_parent === ( $after_malformed_edge['parent_uri'] ?? '' ) );
 
 	$author = ax_te_author( $ax_te_user_ids, $ax_te_actor_ids );
 	$other  = ax_te_author( $ax_te_user_ids, $ax_te_actor_ids );
@@ -333,6 +374,9 @@ try {
 	unset( $GLOBALS['ax_te_hidden_uris'] );
 	ax_te_assert( $ax_te_results, 'hidden interaction rows do not starve a later textual reply from the display window', array( $visible_after_hidden ) === $display_window['uris'] && ! $display_window['truncated'] );
 } finally {
+	foreach ( array_unique( $ax_te_relation_sources ) as $source_uri ) {
+		$wpdb->delete( axismundi_op_object_relations_table(), array( 'relation_type' => 'in_reply_to', 'source_object_uri_hash' => hash( 'sha256', $source_uri ), 'source_object_uri' => $source_uri ), array( '%s', '%s', '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	}
 	foreach ( array_unique( $ax_te_remote_uris ) as $uri ) {
 		axismundi_op_delete_remote_object( $uri );
 	}

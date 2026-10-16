@@ -28,6 +28,7 @@ defined( 'ABSPATH' ) || exit;
 
 const AXISMUNDI_ACTORS_VERSION = '0.1.2';
 
+require_once __DIR__ . '/includes/activitystreams-uri.php';
 require_once __DIR__ . '/includes/repository.php';
 require_once __DIR__ . '/includes/managed-groups.php';
 require_once __DIR__ . '/includes/identity-registry.php';

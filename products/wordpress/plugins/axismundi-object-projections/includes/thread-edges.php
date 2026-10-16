@@ -252,13 +252,12 @@ function axismundi_op_reconcile_unresolved_thread_children( string $newly_known_
  */
 function axismundi_op_record_thread_edge( string $child_uri, string $parent_uri ) : bool {
 	global $wpdb;
-	$child  = axismundi_op_relation_uri( $child_uri );
-	$parent = axismundi_op_relation_uri( $parent_uri );
-	if ( '' === $child ) {
+	$child = axismundi_op_relation_uri( $child_uri );
+	if ( '' === $child || ! function_exists( 'axismundi_as2_normalize_uri' ) ) {
 		return false;
 	}
 	$table = axismundi_op_thread_edges_table();
-	if ( '' === $parent ) {
+	if ( '' === $parent_uri ) {
 		$ok = false !== $wpdb->delete( $table, array( 'child_uri_hash' => hash( 'sha256', $child ), 'child_uri' => $child ), array( '%s', '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- rebuildable index cleanup.
 		if ( $ok ) {
 			// This object itself becoming known (even parentless, i.e. a root) can be
@@ -267,6 +266,11 @@ function axismundi_op_record_thread_edge( string $child_uri, string $parent_uri 
 		}
 		return $ok;
 	}
+	$parent_member = axismundi_as2_normalize_uri( $parent_uri );
+	if ( ! is_array( $parent_member ) ) {
+		return false;
+	}
+	$parent = (string) $parent_member['uri'];
 	if ( hash_equals( $child, $parent ) ) {
 		return false;
 	}
@@ -311,9 +315,23 @@ function axismundi_op_index_thread_edge_from_activity( Axismundi_Activity $activ
 		return;
 	}
 	$child  = axismundi_op_relation_uri( $object['id'] ?? '' );
-	$parent = axismundi_op_relation_uri( $object['inReplyTo'] ?? '' );
-	if ( '' !== $child ) {
-		axismundi_op_record_thread_edge( $child, $parent );
+	if ( '' === $child ) {
+		return;
+	}
+	// Local outbound Create/Update payloads are complete Object snapshots. An
+	// omitted relation therefore means the author explicitly cleared it; malformed
+	// present values still fail closed in the replacement helper below.
+	if ( ! array_key_exists( 'inReplyTo', $object ) ) {
+		axismundi_op_record_thread_edge( $child, '' );
+		return;
+	}
+	if ( axismundi_op_replace_in_reply_to_relations( $child, $object['inReplyTo'] ) ) {
+		$parent = axismundi_op_primary_in_reply_to_relation( $child );
+		if ( null !== $parent ) {
+			axismundi_op_record_thread_edge( $child, $parent );
+		} elseif ( axismundi_as2_members_explicitly_empty( $object['inReplyTo'] ) ) {
+			axismundi_op_record_thread_edge( $child, '' );
+		}
 	}
 }
 add_action( 'axismundi_act_activity_recorded', 'axismundi_op_index_thread_edge_from_activity', 20 );
@@ -330,10 +348,24 @@ function axismundi_op_index_thread_edge_from_remote_object( array $row ) : void 
 	if ( 'tombstone' === (string) ( $row['object_status'] ?? '' ) ) {
 		return;
 	}
-	$child  = axismundi_op_relation_uri( $row['object_uri'] ?? '' );
-	$parent = axismundi_op_relation_uri( $row['in_reply_to_uri'] ?? '' );
-	if ( '' !== $child ) {
-		axismundi_op_record_thread_edge( $child, $parent );
+	$child = axismundi_op_relation_uri( $row['object_uri'] ?? '' );
+	$payload = (array) ( $row['payload'] ?? array() );
+	if ( '' === $child ) {
+		return;
+	}
+	// A remote payload that omits inReplyTo is not an instruction to clear the
+	// existing edge, but the just-cached Object can resolve children waiting on it.
+	if ( ! array_key_exists( 'inReplyTo', $payload ) ) {
+		axismundi_op_reconcile_unresolved_thread_children( $child );
+		return;
+	}
+	if ( axismundi_op_replace_in_reply_to_relations( $child, $payload['inReplyTo'] ) ) {
+		$parent = axismundi_op_primary_in_reply_to_relation( $child );
+		if ( null !== $parent ) {
+			axismundi_op_record_thread_edge( $child, $parent );
+		} elseif ( axismundi_as2_members_explicitly_empty( $payload['inReplyTo'] ) ) {
+			axismundi_op_record_thread_edge( $child, '' );
+		}
 	}
 }
 

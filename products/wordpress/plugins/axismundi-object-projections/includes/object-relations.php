@@ -32,6 +32,11 @@ function axismundi_op_install_object_relations() : bool {
 			source_actor_uri_hash char(64) DEFAULT NULL,
 			evidence_type varchar(16) NOT NULL,
 			consent_status varchar(24) NOT NULL,
+			position int(10) unsigned DEFAULT NULL,
+			link_id text DEFAULT NULL,
+			link_rel text DEFAULT NULL,
+			link_name text DEFAULT NULL,
+			link_media_type varchar(255) DEFAULT NULL,
 			authorization_uri text DEFAULT NULL,
 			authorization_uri_hash char(64) DEFAULT NULL,
 			created_at datetime NOT NULL,
@@ -51,31 +56,63 @@ function axismundi_op_install_object_relations() : bool {
 	$engine = (string) $wpdb->get_var( "SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$table}'" );
 
 	return in_array( 'authorization_uri_hash', $columns, true )
+		&& in_array( 'position', $columns, true )
 		&& in_array( 'consent_status', $columns, true )
 		&& count( $identity ) >= 3
 		&& 0 === (int) $identity[0]['Non_unique']
 		&& 'InnoDB' === $engine;
 }
 
-/** Normalize one relation URI without performing a network request. */
+/**
+ * Legacy scalar relation-URI reducer without performing a network request.
+ *
+ * It deliberately keeps its long-standing id-before-href and list-rejection
+ * semantics for existing callers. List-aware AS2 relations must use
+ * axismundi_as2_normalize_members() directly.
+ */
 function axismundi_op_relation_uri( $value ) : string {
 	if ( is_array( $value ) ) {
 		$value = $value['id'] ?? $value['href'] ?? '';
 	}
-	if ( ! is_scalar( $value ) ) {
+	if ( ! function_exists( 'axismundi_as2_normalize_uri' ) ) {
 		return '';
 	}
-	$uri   = trim( (string) $value );
-	$parts = wp_parse_url( $uri );
-	if ( ! is_array( $parts )
-		|| ! in_array( strtolower( (string) ( $parts['scheme'] ?? '' ) ), array( 'http', 'https' ), true )
-		|| empty( $parts['host'] )
-		|| isset( $parts['user'] )
-		|| isset( $parts['pass'] )
-	) {
-		return '';
+	$uri = axismundi_as2_normalize_uri( $value );
+	return is_array( $uri ) && ! empty( $uri['resolvable'] ) ? (string) $uri['uri'] : '';
+}
+
+/** Replace every preserved `inReplyTo` relation for one Object in document order. */
+function axismundi_op_replace_in_reply_to_relations( string $source_uri, $value ) : bool {
+	global $wpdb;
+	$source = axismundi_op_relation_uri( $source_uri );
+	if ( '' === $source || ! function_exists( 'axismundi_as2_normalize_members' ) ) {
+		return false;
 	}
-	return $uri;
+	$members = axismundi_as2_normalize_members( $value );
+	if ( empty( $members ) && ! axismundi_as2_members_explicitly_empty( $value ) ) {
+		return false;
+	}
+	$table = axismundi_op_object_relations_table();
+	$now = current_time( 'mysql', true );
+	$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- atomic rebuildable projection replacement.
+	$wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE relation_type = 'in_reply_to' AND source_object_uri_hash = %s AND source_object_uri = %s", hash( 'sha256', $source ), $source ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- exact source replacement.
+	foreach ( $members as $position => $member ) {
+		$target = (string) $member['uri'];
+		$ok = $wpdb->insert( $table, array( 'relation_type' => 'in_reply_to', 'source_object_uri' => $source, 'source_object_uri_hash' => hash( 'sha256', $source ), 'target_object_uri' => $target, 'target_object_uri_hash' => hash( 'sha256', $target ), 'evidence_type' => 'as2', 'consent_status' => 'not_applicable', 'position' => $position, 'link_id' => $member['link_id'], 'link_rel' => is_array( $member['link_rel'] ) ? wp_json_encode( $member['link_rel'] ) : $member['link_rel'], 'link_name' => $member['link_name'], 'link_media_type' => $member['link_media_type'], 'created_at' => $now, 'updated_at' => $now ), array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- explicit strings prevent WordPress core's link_id integer field-type inference from corrupting Link identifiers.
+		if ( false === $ok ) { $wpdb->query( 'ROLLBACK' ); return false; } // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- transaction rollback.
+	}
+	$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- transaction commit.
+	return true;
+}
+
+/** First preserved reply parent for the derived single-parent thread view. */
+function axismundi_op_primary_in_reply_to_relation( string $source_uri ) : ?string {
+	global $wpdb;
+	$source = axismundi_op_relation_uri( $source_uri );
+	if ( '' === $source ) { return null; }
+	$table = axismundi_op_object_relations_table();
+	$value = $wpdb->get_var( $wpdb->prepare( "SELECT target_object_uri FROM {$table} WHERE relation_type = 'in_reply_to' AND source_object_uri_hash = %s AND source_object_uri = %s ORDER BY position ASC, id ASC LIMIT 1", hash( 'sha256', $source ), $source ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- ordered derived-view lookup.
+	return is_string( $value ) && '' !== $value ? $value : null;
 }
 
 /** Add one quote candidate to the normalized candidate map. */

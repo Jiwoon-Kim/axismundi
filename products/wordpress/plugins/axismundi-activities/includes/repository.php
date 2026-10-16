@@ -210,17 +210,8 @@ final class Axismundi_Activity {
 
 /** Absolute HTTP(S) URI validation without performing a request. */
 function axismundi_act_uri( $value ) : string {
-	$uri   = is_scalar( $value ) ? trim( (string) $value ) : '';
-	$parts = wp_parse_url( $uri );
-	if ( ! is_array( $parts )
-		|| ! in_array( strtolower( (string) ( $parts['scheme'] ?? '' ) ), array( 'http', 'https' ), true )
-		|| empty( $parts['host'] )
-		|| isset( $parts['user'] )
-		|| isset( $parts['pass'] )
-	) {
-		return '';
-	}
-	return $uri;
+	$uri = function_exists( 'axismundi_as2_normalize_uri' ) ? axismundi_as2_normalize_uri( $value ) : null;
+	return is_array( $uri ) && ! empty( $uri['resolvable'] ) ? (string) $uri['uri'] : '';
 }
 
 /** First URI represented by a scalar, object, or list. */

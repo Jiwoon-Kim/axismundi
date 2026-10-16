@@ -65,6 +65,87 @@ reference and a direct `Arrive` is refused twice over -- unregistered type, and
 the unconditional `object` requirement that the IntransitiveActivity fix
 already has to lift.
 
+## Who Decides To Federate, And Which End Authors First
+
+Two questions kept returning in different clothes: whether the bridge decides
+what federates, and whether an object is created before or after its activity.
+Both have answers that follow from what is already measurable.
+
+### Emission is an authoring decision; delivery is a transport decision
+
+```text
+(a) record the attention locally                      product / Activities
+(b) create an addressed, publishable activity         authoring / Activities
+(c) deliver an addressed activity to a peer           bridge
+```
+
+The switch for something like outbound `View` belongs at (b). Put it at (c) and
+the system builds addressed activities and suppresses them in transport, which
+leaves deliverable records lying in wait: the day transport policy changes they
+begin to flow, publishing a history nobody offered. The operations policy
+forbids exactly that backfill, and a suppression switch at (c) is how it would
+happen by accident.
+
+The code already works this way. Delivery is driven by audience, and the
+bridge's type checks are routing decisions rather than permissions: a public
+`Create` or `Update` whose object addresses a known Group takes a direct
+submission path (`axismundi-activitypub-bridge/includes/transport.php:149`).
+What the bridge does own is per-peer policy -- retries and backoff,
+shared-inbox selection, blocked instances, and what a rejection means.
+
+### Authoring order follows who owns the identity
+
+A client-to-server flow needs an id before it has a stored row. Whether that is
+possible is not a matter of taste here; it depends on where the object's
+canonical URI comes from.
+
+| Type | Identity | Possible order | Surface |
+|---|---|---|---|
+| note, quote, question | table-owned UUID | activity-first, today | frontend app |
+| post, attachment | post ID (`?p={ID}`) | WordPress-first | block editor |
+| event | post ID, via the same helper | WordPress-first | undecided |
+| group topic | post ID, as an Article | WordPress-first | block editor |
+| reply in a group's context | table-owned UUID | activity-first, today | frontend app |
+
+`axismundi_op_post_object_uri()` returns `?p={ID}`
+(`axismundi-object-projections/includes/post-article.php:107`), and the
+calendar's event URI calls straight into it (`projection.php:49`), so a
+post-backed object has no identity until it is stored. A note does: its UUID
+lives in `wp_ax_notes` and resolves by table lookup, which is why that family
+can invert today and the others wait for the registry.
+
+Activity-first adds a requirement the current order never had. If the activity
+exists and the row does not, an activity references an object that was never
+stored, so creation has to be atomic or the activity stays unpublished until
+storage succeeds. `expected_version` in the publish command is the precedent to
+follow rather than a new mechanism to invent.
+
+The division of roles gets cleaner, not messier: the signed-in `wp_user` fills
+`post_author`, the acting Actor fills `attributedTo`, and neither is derived
+from the other.
+
+### Group topics and the conversation under them
+
+A topic is an Article addressed to a Group, and posting into a remote Group
+needs no client-to-server flow: the object is local, its audience names the
+Group, and the Group announces it. `wp_ax_forum_entries` is an admission
+record rather than an object store -- unique on
+`(group_identity_id, object_uri_hash)`, with `source_post_id` filled for a
+local object and empty for a remote one, beside the accept and announce
+activity URIs. Remoteness never forced the order; identity ownership did.
+
+So topics are written in the block editor, where long-form belongs, and the
+replies beneath them are notes written in the frontend app. One long-form
+editor, not two.
+
+Events are the open case, and for a reason beyond identity: an Event has two
+representations, AS2 and JSCalendar, and a JMAP-style editor would be a third
+write path beside the block editor and the client-to-server one. Three paths
+must still converge on one identity and one visibility model, and the calendar
+already carries its own permission layer in `wp_ax_cal_acl`. Where that layer
+meets AS2 audience is the decision that editor would force, and it is not made
+here.
+
 ## Source Store Versus Shared Registry
 
 Some Object properties need one common query surface even though their source

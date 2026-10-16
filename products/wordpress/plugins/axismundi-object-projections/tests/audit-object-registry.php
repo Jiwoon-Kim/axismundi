@@ -13,14 +13,19 @@ require_once dirname( __DIR__, 2 ) . '/axismundi-actors/includes/identity-regist
 require_once dirname( __DIR__ ) . '/includes/object-relations.php';
 require_once dirname( __DIR__ ) . '/includes/object-registry.php';
 require_once dirname( __DIR__ ) . '/includes/remote-objects.php';
+require_once dirname( __DIR__ ) . '/includes/registry.php';
+require_once dirname( __DIR__ ) . '/includes/renderer.php';
+require_once dirname( __DIR__ ) . '/includes/post-article.php';
 
 global $wpdb;
 $ax_results      = array();
 $ax_identity_ids = array();
 $ax_attachment   = 0;
+$ax_page         = 0;
 $ax_actor_identity = 0;
 $ax_remote_uri   = 'https://registry.remote.example/objects/audit-object';
 $ax_remote_actor_uri = 'https://example.com/users/object-registry-fixture';
+$ax_media_mode   = defined( 'AXISMUNDI_MEDIA_MODE_OPTION' ) ? get_option( AXISMUNDI_MEDIA_MODE_OPTION, '' ) : null;
 
 function ax_object_registry_assert( array &$results, string $label, bool $condition ) : void {
 	$results[] = $condition;
@@ -97,16 +102,19 @@ try {
 		$ax_note_uuid = wp_generate_uuid4();
 		$ax_actor_fixture_uri = 'https://registry.local.example/actors/note-fixture';
 		$now = current_time( 'mysql', true );
-		$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- regression fixture row.
-			axismundi_note_table(),
-			array(
-				'post_id' => $ax_note_post, 'local_uuid' => $ax_note_uuid,
-				'actor_uri' => $ax_actor_fixture_uri, 'actor_uri_hash' => hash( 'sha256', $ax_actor_fixture_uri ),
-				'visibility' => 'public', 'language_tag' => 'en', 'in_reply_to_uri' => '', 'in_reply_to_uri_hash' => '',
-				'context_uri' => '', 'context_uri_hash' => '', 'mention_actor_uris_json' => '[]',
-				'created_at' => $now, 'updated_at' => $now,
-			)
+		$note_fixture = array(
+			'post_id' => $ax_note_post, 'local_uuid' => $ax_note_uuid,
+			'actor_uri' => $ax_actor_fixture_uri, 'actor_uri_hash' => hash( 'sha256', $ax_actor_fixture_uri ),
+			'visibility' => 'public', 'language_tag' => 'en', 'in_reply_to_uri' => '', 'in_reply_to_uri_hash' => '',
+			'context_uri' => '', 'context_uri_hash' => '', 'mention_actor_uris_json' => '[]',
+			'created_at' => $now, 'updated_at' => $now,
 		);
+		$existing_note = $wpdb->get_var( $wpdb->prepare( 'SELECT post_id FROM ' . axismundi_note_table() . ' WHERE post_id = %d', $ax_note_post ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned row check.
+		if ( null === $existing_note ) {
+			$wpdb->insert( axismundi_note_table(), $note_fixture ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- regression fixture row.
+		} else {
+			$wpdb->update( axismundi_note_table(), $note_fixture, array( 'post_id' => $ax_note_post ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- make the automatic writer's fixture row deterministic.
+		}
 		$ax_note_object = axismundi_op_local_object_profile( get_post( $ax_note_post ) );
 		ax_object_registry_assert(
 			$ax_results,
@@ -131,8 +139,11 @@ try {
 			'post_status'    => 'inherit',
 			'post_mime_type' => 'image/jpeg',
 			'post_title'     => 'Object registry attachment fixture',
+			'guid'           => home_url( '/wp-content/uploads/object-registry-attachment.jpg' ),
 		)
 	);
+	update_post_meta( $ax_attachment, '_wp_attached_file', '2026/10/object-registry-attachment.jpg' );
+	wp_update_attachment_metadata( $ax_attachment, array( 'width' => 640, 'height' => 480 ) );
 	$attachment = $ax_attachment > 0 ? get_post( $ax_attachment ) : null;
 	$media      = $attachment instanceof WP_Post ? axismundi_op_register_local_post_object( $attachment ) : null;
 	if ( is_array( $media ) ) {
@@ -142,6 +153,72 @@ try {
 		$ax_results,
 		'a core attachment registers as Image without the optional Media Library transformer',
 		is_array( $media ) && 'Image' === (string) $media['as2_type'] && 'wordpress-core' === (string) $media['source_owner']
+	);
+	/*
+	 * Uploading a file is not a publication, so an attachment with no recorded
+	 * Actor is attributed to nobody. Deriving one from post_author reads as
+	 * harmless and is wrong on any user with more than one Actor -- and wrong
+	 * only after the object has been fetched by someone else. Measured: the
+	 * derivation can be restored with one line and every other check here
+	 * still passes, which is why this one exists.
+	 */
+	$ax_attachment_actor_source = (string) file_get_contents( dirname( __DIR__ ) . '/includes/post-article.php' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading this plugin's own source to pin a default.
+	ax_object_registry_assert(
+		$ax_results,
+		'an attachment with no recorded Actor is attributed to nobody rather than to its uploader',
+		$attachment instanceof WP_Post
+			&& '' === axismundi_op_attachment_actor_uri( $attachment )
+			&& ( ! is_array( $media ) || '' === (string) ( $media['attributed_to_uri'] ?? '' ) )
+			&& false !== strpos( $ax_attachment_actor_source, "apply_filters( 'axismundi_op_attachment_actor_uri', '', \$attachment" )
+	);
+
+	if ( defined( 'AXISMUNDI_MEDIA_MODE_OPTION' ) ) {
+		update_option( AXISMUNDI_MEDIA_MODE_OPTION, 'core' );
+	}
+	$GLOBALS['axismundi_op_loaded']              = false;
+	$GLOBALS['axismundi_op_object_transformers'] = array();
+	$GLOBALS['axismundi_op_collection_transformers'] = array();
+	$GLOBALS['axismundi_op_sequence']            = 0;
+	$core_attachment = $attachment instanceof WP_Post ? axismundi_op_transform_object( $attachment ) : null;
+	ax_object_registry_assert(
+		$ax_results,
+		'a core attachment projects without Media Library and does not infer attributedTo from its WordPress author',
+		is_array( $core_attachment )
+			&& 'Image' === (string) $core_attachment['type']
+			&& ! isset( $core_attachment['attributedTo'] )
+			&& (string) wp_get_attachment_url( $ax_attachment ) === (string) ( $core_attachment['url']['href'] ?? '' )
+			&& 640 === (int) ( $core_attachment['width'] ?? 0 )
+			&& 480 === (int) ( $core_attachment['height'] ?? 0 )
+	);
+	if ( defined( 'AXISMUNDI_MEDIA_MODE_OPTION' ) ) {
+		update_option( AXISMUNDI_MEDIA_MODE_OPTION, $ax_media_mode );
+	}
+	$GLOBALS['axismundi_op_loaded']              = false;
+	$GLOBALS['axismundi_op_object_transformers'] = array();
+	$GLOBALS['axismundi_op_collection_transformers'] = array();
+	$GLOBALS['axismundi_op_sequence']            = 0;
+
+	$ax_page = (int) wp_insert_post(
+		array(
+			'post_type'    => 'page',
+			'post_status'  => 'publish',
+			'post_title'   => 'Object registry Page fixture',
+			'post_content' => '<p>Core Page source.</p>',
+		)
+	);
+	$page         = $ax_page > 0 ? get_post( $ax_page ) : null;
+	$page_profile = $page instanceof WP_Post ? axismundi_op_local_object_profile( $page ) : null;
+	$page_object  = $page instanceof WP_Post ? axismundi_op_transform_object( $page ) : null;
+	if ( is_array( $page_profile ) ) {
+		$page_registry = axismundi_op_register_local_post_object( $page );
+		if ( is_array( $page_registry ) ) {
+			$ax_identity_ids[] = (int) $page_registry['identity_id'];
+		}
+	}
+	ax_object_registry_assert(
+		$ax_results,
+		'a core Page is explicitly registered and projects as Page without making every WordPress post type eligible',
+		is_array( $page_profile ) && 'Page' === (string) $page_profile['type'] && is_array( $page_object ) && 'Page' === (string) $page_object['type']
 	);
 
 	$stored = axismundi_op_store_remote_object(
@@ -209,6 +286,12 @@ try {
 	}
 	if ( $ax_attachment > 0 ) {
 		wp_delete_post( $ax_attachment, true );
+	}
+	if ( $ax_page > 0 ) {
+		wp_delete_post( $ax_page, true );
+	}
+	if ( defined( 'AXISMUNDI_MEDIA_MODE_OPTION' ) ) {
+		update_option( AXISMUNDI_MEDIA_MODE_OPTION, $ax_media_mode );
 	}
 	axismundi_op_delete_remote_object( $ax_remote_uri );
 	foreach ( array_unique( array_filter( $ax_identity_ids ) ) as $identity_id ) {

@@ -170,6 +170,71 @@ last year did not consent to announcing it this year, and a migration that
   documented as off, and the backfill prohibition needs a check of its own
   because it is the kind of convenience a later migration reaches for.
 
+## 4a. Uploads, storage and traffic
+
+Storing files is the one thing this instance does that has a cost somebody
+pays, so the policy says who pays and what the limits are rather than
+discovering them when a disk fills.
+
+### What an upload is
+
+Uploading a file creates a media object. It does not publish anything: no
+activity is emitted, nothing reaches a feed, and the file is attributed to
+nobody until a person deliberately attaches it to an Actor's collection. A
+media object that nobody has attributed is a stored representation, not a post.
+
+### Who may upload
+
+Today: people with a WordPress account on this site and the capability to
+upload, through the editor and the site's own surfaces.
+
+Not today: third-party ActivityPub clients. The `uploadMedia` endpoint is not
+built and is deliberately not advertised in any Actor's `endpoints` mapping.
+Advertising it is a capability declaration that cannot be quietly withdrawn,
+and it turns storage into a surface any authenticated client may write to. The
+four answers below are its precondition, not its follow-up.
+
+### Limits, and who sets them
+
+| Limit | Who sets it | State |
+|---|---|---|
+| Maximum file size | the host's PHP and web server configuration | inherited, not chosen here |
+| Total disk | the hosting plan | **outside this instance's control** |
+| Per-actor storage quota | this instance | **not implemented** |
+| Upload rate per actor | this instance | **not implemented** |
+| Bandwidth for serving media | the hosting plan, and any CDN in front | inherited |
+
+The honest statement is that an authenticated uploader is bounded today by the
+host's per-file limit and nothing else. A per-actor quota and a rate limit are
+the work that has to exist before a write surface is opened to clients this
+site did not install.
+
+Hosting matters here in a way it does not elsewhere in this document. The
+operator's plan decides how much can be stored and how much can be served, a
+provider may remove or restrict content under its own terms regardless of this
+policy, and a backup is the operator's arrangement rather than a promise made
+here. Where this policy and a hosting agreement disagree about what may be
+stored, the hosting agreement wins in practice.
+
+### Orphans and retention
+
+A file that is never attached to anything still occupies storage. This instance
+does not delete unattached uploads today, and no retention period is defined
+for them. Any such policy, when it exists, has to distinguish an upload that
+nothing references from one whose referencing object is merely not published
+yet -- deleting the second would destroy a draft's media.
+
+### Serving what was uploaded
+
+Files served from this domain are served by this instance, so moderation
+decisions about them are the operator's responsibility whoever uploaded them.
+Remote media is a different case and is covered by the cache layers in the next
+section.
+
+- Enforcement: none of the limits above are enforced by code today. The
+  capability check on upload is WordPress's own; everything else in this
+  section is a statement of the current state, not a guarantee.
+
 ## 5. Remote content this instance stores
 
 Receiving or fetching a remote object stores a cached representation so it can

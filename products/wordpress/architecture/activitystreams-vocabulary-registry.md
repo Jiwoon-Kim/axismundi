@@ -50,7 +50,8 @@ spec_domain          exact RDF domain IRIs when the source declares them
 spec_range           exact RDF range IRIs when the source declares them
 rdf_functional       true | false | unspecified
 value_shape          iri-or-object | link | string | timestamp | number | ...
-runtime_cardinality  one | many | one-or-many
+runtime_cardinality  one | many | one-or-many | unspecified
+jsonld_container     null | @list | @language | another declared JSON-LD container
 semantic_family      identity | content | relation | addressing | ...
 provenance           as2-core | fep:<id> | product:<plugin>
 index_hint           none | scalar | relation | full-text | collection
@@ -69,6 +70,21 @@ cardinality rule that permits multiple distinct values in that case is an
 implementation defect, not an alternate Axismundi policy. `value_shape`,
 `runtime_cardinality`, and `index_hint` are therefore constrained Axismundi
 metadata and must remain explicitly marked as such.
+
+`value_shape` describes the value of the expanded RDF predicate. A JSON key's
+container is a separate fact: `items` and `orderedItems`, for example, both
+expand to `as:items` and carry the same member value shape, while only
+`orderedItems` has the `@list` container required by Core section 4.6. Keeping
+that fact in `jsonld_container` lets aliases share one predicate and shape
+without making an unordered collection claim to be ordered.
+
+`unspecified` is a real state, not a missing default. It says the snapshot has
+recorded the term's wire shape but has not yet made a local runtime-cardinality
+claim after protocol review. A loader must not turn that absence into
+`one-or-many`: doing so makes an unresearched value look like a positive local
+contract. A compact string entry in the JSON snapshot is precisely this
+shape-only form; an object entry is used when a term needs an explicit IRI,
+source, provenance, cardinality, or another non-default fact.
 
 Extensions register new terms by IRI and provenance. They never overwrite the
 meaning of an AS2 core term. An inbound payload can preserve unknown terms as
@@ -290,6 +306,15 @@ Do not import the Vocabulary's prose wholesale as `notes`. Keep the stable
 source URL and anchor for every term, then add `implementation_notes` only
 where a local decision needs explanation, such as the distinction between
 `inReplyTo` and a WordPress parent, or between `oneOf` and poll storage.
+
+The bundled property table is a **closed project subset**, not a mirror or a
+count of every upstream property. It contains the universal terms and every
+term a registered type declares or excludes; the loader rejects a type that
+references a missing definition. That closure makes the table useful without
+turning this repository into an upstream copy. A property outside the subset
+can still survive inbound as a raw extension, and is added only when this
+project needs its normalization, validation, indexing, or a registered type
+contract.
 
 ## Type Hierarchy
 

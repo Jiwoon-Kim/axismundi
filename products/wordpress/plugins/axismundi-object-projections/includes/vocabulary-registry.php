@@ -28,6 +28,37 @@ function axismundi_op_vocabulary_snapshot() {
 	if ( ! is_array( $data ) || 1 !== (int) ( $data['schema_version'] ?? 0 ) || ! is_array( $data['types'] ?? null ) || ! is_array( $data['properties'] ?? null ) ) {
 		return new WP_Error( 'ax_op_vocabulary_snapshot', __( 'The bundled ActivityStreams vocabulary snapshot is invalid.', 'axismundi-object-projections' ) );
 	}
+	$source = (string) ( $data['source'] ?? 'https://www.w3.org/TR/activitystreams-vocabulary/' );
+	foreach ( $data['types'] as $term => $definition ) {
+		if ( ! is_array( $definition ) ) {
+			return new WP_Error( 'ax_op_vocabulary_snapshot', __( 'A vocabulary type definition is invalid.', 'axismundi-object-projections' ) );
+		}
+		$data['types'][ $term ] = array_merge(
+			array( 'iri' => 'https://www.w3.org/ns/activitystreams#' . $term, 'status' => 'standard', 'provenance' => 'as2-core', 'source' => array( 'specification' => $source, 'anchor' => '#dfn-' . strtolower( $term ) ) ),
+			$definition
+		);
+	}
+	foreach ( $data['properties'] as $term => $definition ) {
+		if ( ! is_string( $definition ) && ! is_array( $definition ) ) {
+			return new WP_Error( 'ax_op_vocabulary_snapshot', __( 'A vocabulary property definition is invalid.', 'axismundi-object-projections' ) );
+		}
+		$shape = is_string( $definition ) ? $definition : (string) ( $definition['value_shape'] ?? '' );
+		if ( '' === $shape ) {
+			return new WP_Error( 'ax_op_vocabulary_snapshot', __( 'A vocabulary property definition is invalid.', 'axismundi-object-projections' ) );
+		}
+		$data['properties'][ $term ] = array_merge(
+			array( 'iri' => 'https://www.w3.org/ns/activitystreams#' . $term, 'status' => 'standard', 'provenance' => 'as2-core', 'source' => array( 'specification' => $source, 'anchor' => '#dfn-' . strtolower( $term ) ), 'spec_domain' => array(), 'spec_range' => array(), 'rdf_functional' => null, 'runtime_cardinality' => 'unspecified', 'jsonld_container' => null, 'semantic_family' => 'unspecified', 'index_hint' => 'none', 'implementation_notes' => '' ),
+			is_array( $definition ) ? $definition : array(),
+			array( 'value_shape' => $shape )
+		);
+	}
+	foreach ( $data['types'] as $definition ) {
+		foreach ( array_merge( (array) $definition['declares'], (array) $definition['excludes'] ) as $property ) {
+			if ( ! isset( $data['properties'][ $property ] ) ) {
+				return new WP_Error( 'ax_op_vocabulary_snapshot', __( 'A type references a property missing from the vocabulary snapshot.', 'axismundi-object-projections' ) );
+			}
+		}
+	}
 	$GLOBALS['axismundi_op_vocabulary_snapshot'] = $data;
 	return $data;
 }
@@ -65,8 +96,8 @@ function axismundi_op_register_vocabulary_property( string $term, array $definit
 		return new WP_Error( 'ax_op_vocabulary_property', __( 'A vocabulary property must be new and declare its IRI, provenance, and value shape.', 'axismundi-object-projections' ) );
 	}
 	$existing = axismundi_op_vocabulary_property( $term );
-	if ( is_array( $existing ) && ( ( $existing['iri'] ?? '' ) !== $definition['iri'] || ( $existing['value_shape'] ?? '' ) !== $definition['value_shape'] ) ) {
-		return new WP_Error( 'ax_op_vocabulary_property', __( 'A vocabulary property term cannot be rebound to another IRI or value shape.', 'axismundi-object-projections' ) );
+	if ( is_array( $existing ) && ( ( $existing['iri'] ?? '' ) !== $definition['iri'] || ( $existing['value_shape'] ?? '' ) !== $definition['value_shape'] || ( $existing['jsonld_container'] ?? null ) !== ( $definition['jsonld_container'] ?? null ) ) ) {
+		return new WP_Error( 'ax_op_vocabulary_property', __( 'A vocabulary property term cannot be rebound to another IRI, value shape, or JSON-LD container.', 'axismundi-object-projections' ) );
 	}
 	$snapshot            = axismundi_op_vocabulary_snapshot();
 	$imported_properties = is_array( $snapshot ) ? (array) $snapshot['properties'] : array();

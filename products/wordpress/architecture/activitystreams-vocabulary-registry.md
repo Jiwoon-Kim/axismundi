@@ -567,6 +567,37 @@ the type hierarchy. Initial examples:
 | core `page` | no default | explicit opt-in only | proposed |
 | Activity ledger row | Activity subtype | direct Activity authoring | proposed |
 
+### A term's absence from the snapshot is not the same gap as nothing projecting it
+
+Reviewing the first registry slice conflated the two, so the distinction is
+recorded. A vocabulary snapshot carries **vocabulary facts**: `Note`, `Place`,
+`Mention` and `Tombstone` are AS2 terms with `as2-core` provenance and belong in
+it whoever projects them, or nobody does. Which product projects a type, and how
+mature that projection is, is a separate question with separate answers:
+
+| Type | Projection owner | State, 2026-10-17 |
+| --- | --- | --- |
+| `Article`, `Image` / `Audio` / `Video` / `Document` | Object Projections, from core `post` and `attachment` | implemented; these are what a later slice needs the registry to answer for |
+| `Note` | the Note plugin | implemented there, not here |
+| `Place` | the Geodata plugin | not implemented |
+| `Mention` | Object Projections, inline today | its parent is `Link`, so the Link model handler may replace the current implementation rather than adopt it |
+| `Tombstone` | Object Projections | **logically incomplete**, see below |
+
+So "the registry answers nothing for `Note`" is not a defect in the Note plugin,
+and "nothing projects `Place`" is not a defect in the registry. What a later
+slice is actually blocked on is narrower than the list of absent terms: the types
+this plugin itself projects.
+
+`Tombstone` deserves its own note because the incompleteness is measurable
+rather than aesthetic. `formerType` has exactly two sources today: the
+`object_type` recorded in the remote object cache, which exists only for a remote
+object we had already cached, and one hardcoded `QuoteAuthorization`. **A local
+object's former type has no source at all**, because nothing records what type a
+local object was before it was deleted -- which is precisely what a shared object
+registry records. Until it does, a local Tombstone cannot state what it replaced,
+and the current implementation should be read as a placeholder rather than as the
+model.
+
 `post_status = publish` is a visibility/lifecycle condition, never a sufficient
 projection selection rule. A published template, navigation item, or site page
 is not automatically federated content.

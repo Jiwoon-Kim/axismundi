@@ -261,6 +261,92 @@ advertised and pairs naturally with the blob substrate's `content_hash`
 text will be added only if the consumer proves it cannot preserve that value from the
 embedding Article or collection item without a private vocabulary extension.
 
+### Embedded media: whose audience, whose alt text, and which shape
+
+Design direction recorded 2026-10-17, implementation not attempted. The useful
+starting assumption is that **the embedded descriptor is what a WordPress
+install with no Media Library plugin emits.** Tiers, locked folders and
+collections are that plugin's policy and belong to its collection model; the
+core profile reading a post's own blocks has no such concepts and should not
+acquire them.
+
+Two audiences, inherited from two different places:
+
+| Form | Audience |
+| --- | --- |
+| Embedded descriptor inside a Note or Article | the embedding object's. The author put this file in this document; the document's addressing decides who sees it |
+| Standalone media page | inherited from the collection that exposes it, which is the same `Add` that gave it an author |
+
+**This contradicts something already shipped**, and the contradiction is the
+owner's to resolve rather than ours to quietly keep. The core descriptor now
+asks the Media Library whether a file may be embedded at all
+(`axismundi_op_attachment_descriptor_visible`), which closed a measured case
+where a public Article advertised a file its owner had put in a
+password-protected folder. Under the model above that is not a leak but an
+authored act: the author embedded it in a public post, and the document decides.
+The argument for leaving it as it stands is that federated publication actively
+distributes the URL. The argument for the model above is that the gate never
+protected the bytes -- DATA-MODEL.md dropped download policy precisely because
+core cannot restrict file delivery -- so withholding the descriptor costs the
+author their own embedding and buys no protection. Recorded, not changed.
+
+The Media Library's architecture is pre-acting-actor and this is where that
+shows: its folders and permissions are keyed on the WordPress user, while the
+collection a reader should see has to change when the acting Actor changes.
+That is the same legacy recorded in that plugin's DATA-MODEL.md section 6.1, and
+the collection model is where it gets answered.
+
+#### Shape: a typed media Object, not a Link
+
+`attachment` has domain `Object` and range `Object` or `Link`, so a Link is
+spec-legal and the instinct that embedded media is "really a reference" is
+sound. Two things settle it the other way.
+
+A `Link` cannot carry an audience. Its declared properties are `href`, `rel`,
+`mediaType`, `name`, `hreflang`, `height`, `width` and `preview` -- no `to`,
+`cc`, `bto`, `bcc`, no `attributedTo`. That turns out not to be an objection to
+Link, because the embedded form inherits its audience from the document and
+needs none of its own; it just means the audience argument cannot decide the
+shape.
+
+What decides it is interop, already measured here: peers parse `attachment[]`
+expecting a typed media object with a fetchable file. An Image descriptor whose
+`url` was the HTML page was read as broken media by Mastodon and ignored by
+Misskey, and Misskey needed `url` as a scalar string rather than a list. So the
+embedded form stays a typed `Image` / `Video` / `Audio` / `Document` with a
+scalar `url`, and the reference the Link instinct wants is carried by `id`,
+which it now states. One shape for Note and Article both: two shapes for the
+same thing is the duplication being removed, and nothing about a Note's
+attachment differs from an Article's.
+
+#### Alt text belongs to the embedding, and WordPress already stores it there
+
+Measured 2026-10-17, and it is a defect rather than a question. WordPress keeps
+the alt text of a *particular embedding* in the block's own markup -- the
+`alt` attribute of the `<img>` inside the image block -- so two posts embedding
+one file carry two different author-written values. Our descriptor reads neither:
+it reads `_wp_attachment_image_alt`, the Media Library's single shared field.
+
+```text
+post A block markup   alt="alt written in this post"
+post B block markup   alt="a different alt in post B"
+library postmeta      "library-wide alt"
+our emitted name      "library-wide alt"   (both posts)
+```
+
+So two documents with different authored descriptions publish the same `name`,
+and editing one field in the Media Library rewrites `name` in every object that
+ever embedded that file. For a federated object that is worse than a display
+bug: copies already delivered disagree with the new one, and making them agree
+would mean an `Update` for every embedding object -- the feed pollution this
+project specifically decided not to cause for media metadata.
+
+It is the same shape as `post_author` standing in for `attributedTo`: a shared
+row answering a per-use question. The per-use value already exists in the post
+body, which is also the source the projection already treats as authoritative
+for a post's media. The standalone object keeps using the library field, because
+there the file *is* the subject.
+
 ### Open: `usedIn` may not be the lasting shape
 
 `usedIn` is a **projection**, not an authority. Its facts live in the Media Library relation

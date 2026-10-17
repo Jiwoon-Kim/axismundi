@@ -144,6 +144,55 @@ not bind -- AS2 Core writes all of §9 that way, and ActivityPub's §9 contains
 exactly one upper-case keyword. Those lines are recorded at the level the word
 implies and marked, never cited as capitalised requirements.
 
+### Five JSON keys are sourced somewhere other than the Vocabulary
+
+A snapshot entry asserted `https://www.w3.org/ns/activitystreams#orderedItems`, an IRI that
+does not exist, with a Vocabulary anchor that is a dead link. Chasing it produced a rule the
+registry needs.
+
+The Vocabulary's property section defines `items` and never defines `orderedItems`, and
+`orderedItems` appears there only inside examples. That is not an omission. **Activity
+Streams 2.0 Core section 4.6 is where it is stated**: in the JSON serialization a
+Collection's unordered items use `items` while its ordered items use `orderedItems`. So it
+is a property at the JSON level with a normative source -- just a different document from
+the one our snapshot cited.
+
+The normative context at `https://www.w3.org/ns/activitystreams` (148 terms, read
+2026-10-17) shows the mechanism, and exactly five of its terms have an `@id` that is not
+`as:<term>`:
+
+```json
+"orderedItems": { "@id": "as:items",    "@type": "@id", "@container": "@list" }
+"nameMap":      { "@id": "as:name",                     "@container": "@language" }
+"summaryMap":   { "@id": "as:summary",                  "@container": "@language" }
+"contentMap":   { "@id": "as:content",                  "@container": "@language" }
+"inbox":        { "@id": "ldp:inbox",   "@type": "@id" }
+```
+
+One RDF predicate, two JSON spellings, and the spelling carries the ordering or the
+language mapping. The three `Map` keys have the same shape and their source is Core section
+4.7, which is also where the two MUSTs about BCP 47 keys and string values live.
+
+Two things follow for the registry, and the first is the reason this is recorded at all:
+
+- **A term's `iri` is the predicate it expands to, not `as:` plus its own name.** For these
+  five, deriving the IRI from the term produces a predicate nobody else uses, and a
+  consumer expanding our document with it reads a different statement than the rest of the
+  fediverse. Deriving a Vocabulary anchor from the term fails the same way, visibly, with a
+  link that goes nowhere.
+- **Their `source` is Core or the context, not the Vocabulary.** The register exists to say
+  which document a fact comes from, so citing the wrong one is the failure it is meant to
+  prevent.
+
+`inbox` is a third case again. ActivityPub requires it on an actor and the context maps it
+to `ldp:inbox`, so its vocabulary is the Linked Data Platform and neither of the two
+specifications we collected owns it. It joins `publicKey` among terms whose provenance is a
+document outside this pair.
+
+The consequence for member order is narrow and benign: the renderer orders **JSON keys**, so
+naming `name` and `nameMap` separately there is correct. The distinction matters where
+properties are identified or counted.
+
 ### Findings that change rules we had already written
 
 Five results from the same collection contradicted or re-sourced something this

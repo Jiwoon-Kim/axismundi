@@ -33,7 +33,10 @@ WP_Post + Core post meta + Core attachment metadata APIs
 
 There must not be one source reader for `post` and a separately registered,
 optional source reader for `attachment`. `attachment` is a Core `post_type`,
-not a Media Library product record.
+not a Media Library product record. What varies per type is the **profile**
+selecting the AS2 type, not the reader; "source reader", "profile" and
+"projector" are defined in SPEC.md section 3, which also narrows "renderer" to
+the serializer it actually names.
 
 The base adapter owns only facts that WordPress Core owns:
 

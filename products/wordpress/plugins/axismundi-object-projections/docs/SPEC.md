@@ -50,6 +50,21 @@ WP_Post ──(Transformer)──▶ normalized AS object ──(Renderer)──
 - **Object Projections** — this plugin: the transformer registry, JSON-LD representation,
   and (Phase 2) object/collection negotiation.
 
+The unified projection work introduces three more, and they are listed here because the
+word "renderer" was being used for the whole pipeline, which collides with the frontend
+app's component renderer:
+
+- **Projector** — the one thing that turns a local source into one AS object. The word is
+  already used in this sense in `axismundi-calendar/includes/cpt.php` ("so there is exactly
+  one projector"), and "exactly one" is the point of it.
+- **Source reader** — the part that reads WordPress storage. There is one, not one per
+  type: `attachment` is a Core `post_type`, so it is not a separately registered reader
+  (CORE-WP-OBJECT-SOURCES.md §1).
+- **Profile** — the rule selecting which AS2 type a source becomes, in the architecture
+  registry's sense of "projection profile". A profile does not alter the type hierarchy.
+- **Renderer** — narrowed to what `renderer.php` actually is: `@context` assembly,
+  validation, and serialization. It is not the name of the pipeline.
+
 ## 4. Frozen contracts
 
 1. **id vs url are different.** The AS `id` is a stable, permalink-independent URI; `url`
@@ -81,6 +96,28 @@ WP_Post ──(Transformer)──▶ normalized AS object ──(Renderer)──
     Featured media is `image`; active in-content media is `attachment`. Attachment
     `usedIn` is a representation-owned extension collection and must not reveal a source
     that an anonymous viewer cannot project.
+
+## 4a. Decided, not yet implemented
+
+These are recorded so the next slice is not designed against their absence. None of them
+is enforced today; each needs its own check before it may be described as a contract.
+
+1. **One declared key order.** `axismundi_op_finalize_object()` is the single point every
+   object passes through and it performs no ordering at all today, so member order is
+   whatever each transformer's insertion order happened to be. Measured 2026-10-17: the
+   same two keys appear in opposite order in two projections of this plugin's own making
+   (`url` then `mediaType` on an Article, `mediaType` then `url` on an Image). Machines do
+   not care; people reading a payload do, and the divergence is evidence of duplicated
+   assembly. The order is declared once at that choke point, keys outside the declaration
+   keep their existing relative order and are appended rather than dropped — a full-IRI
+   extension key such as `http://fedibird.com/ns#emojiReactions` must survive — and the
+   audit asserts **relative order of shared keys**, never a key list, which would break on
+   every added member.
+2. **An effective property set is not an outbound allow-list.** The architecture registry's
+   `effective_properties(type)` is an internal conformance contract; ActivityStreams does
+   not forbid extension properties outside it, and inbound stays permissive. A projector
+   that emits only what the set names would silently drop the FEP and vendor terms this
+   plugin already publishes. Compose from the registry; do not filter by it.
 
 ## 5. Public API
 

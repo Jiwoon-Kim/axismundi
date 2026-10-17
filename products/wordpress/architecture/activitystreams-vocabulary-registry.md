@@ -445,7 +445,77 @@ the type hierarchy. Initial examples:
 projection selection rule. A published template, navigation item, or site page
 is not automatically federated content.
 
+## Where The Registry Lives, And What Stays With Each Product
+
+Decided 2026-10-17. The registry is held by Axismundi Object Projections,
+because the projector composes a document from it and there is no reason to
+ship an input apart from its only consumer. A local Actor is a local Object:
+Object Projections already assembles the Actor document
+(`includes/integrations/actors.php`), and Axismundi Actors contains no AS2
+assembly at all -- not one `@context` -- so "the projector lives here" is the
+measured present state rather than a proposal.
+
+An earlier objection, that Actors and Activities must be able to answer type
+questions without the representation plugin, was about a consumer that does not
+exist. Measured the same day: no plugin references `IntransitiveActivity`
+anywhere, so the type hierarchy exists only in this document. What those
+plugins do carry is a different thing, and it stays with them:
+
+| Kind of fact | Example | Owner |
+| --- | --- | --- |
+| Vocabulary fact | `Question` inherits `IntransitiveActivity`, which excludes `object` | the registry, in Object Projections |
+| Product support list | the 22 Activity types this instance accepts (`axismundi-activities/includes/repository.php`), the five Actor types (`axismundi-actors/includes/repository.php`) | each plugin |
+
+A support list says what a product authors or accepts; it is not a claim about
+what the vocabulary contains. Keeping them apart is what lets every plugin keep
+working with Object Projections absent -- only assembling a document needs the
+registry.
+
+The first deliverable is therefore not abstract. The five Actor types are
+written out twice inside Actors alone (`repository.php` and
+`remote-discovery.php`), which is the duplication the registry removes.
+
+What a product binds the supplied property set to -- post meta, term meta, a
+custom table, an editor control -- stays the product's own decision. The
+registry selects the validator and the owning reader/writer for a resource
+kind, source kind and property; it holds no values, and the prohibition above
+against one uniform `*_meta` table is unchanged.
+
 ## Extension Registration
+
+Decided 2026-10-17: **the owner of a feature registers its terms.** This is
+already how the implementation works -- `axismundi-emoji/includes/outbound.php`
+adds its FEP-9098 terms through the `axismundi_op_jsonld_context` filter, and
+Object Projections' own Media Library integration adds its terms the same way,
+so Object Projections owns the registration point and not the content. Twelve
+FEP identifiers appear across the plugins and they sit with the product that
+owns each feature: FEP-8a8e with Calendar, FEP-c0e0 and FEP-9098 with Emoji,
+FEP-044f with Activities, FEP-1b12 with the Group work.
+
+Object Projections registering FEP-1311, FEP-b2b8 or the fedibird reaction term
+is the same rule, not an exception: those are representation conventions for
+objects it projects itself. One rule -- the feature's owner registers -- avoids
+having to adjudicate per FEP which side a term belongs to.
+
+The stakes are lower than they look, because an unregistered term is not lost:
+inbound preservation keeps unknown FEP and vendor fields in the raw-extension
+path. Registration buys normalization, validation and indexing, so a product may
+implement an FEP first and register its terms later.
+
+Two requirements the current `@context` filter does not meet, and the
+registration API must:
+
+- **Conflicting re-registration is detected, not merged.** The filter merges, so
+  two plugins registering one IRI with different value shapes or cardinalities
+  resolve by last writer and then disagree quietly.
+- **An extension never overwrites an AS2 core term's meaning**, which is stated
+  above and needs to be checked rather than assumed.
+
+When the registry and projector exist, the Emoji plugin's registration moves
+from that context filter to the registration API. It is the clearest case to
+migrate first: it is a product-owned FEP, it already registers rather than
+being special-cased, and its terms are small enough that the migration tests
+the API rather than the plugin.
 
 An FEP or product extension should provide a compact manifest rather than
 modify this core table:

@@ -652,11 +652,44 @@ registration API must:
 - **An extension never overwrites an AS2 core term's meaning**, which is stated
   above and needs to be checked rather than assumed.
 
-When the registry and projector exist, the Emoji plugin's registration moves
+When the registry and the resolver exist, the Emoji plugin's registration moves
 from that context filter to the registration API. It is the clearest case to
 migrate first: it is a product-owned FEP, it already registers rather than
 being special-cased, and its terms are small enough that the migration tests
 the API rather than the plugin.
+
+Measured 2026-10-17, because "the emoji terms live in Object Projections" turns
+out to be true of only one of the three and the migration is narrower than it
+sounds:
+
+| FEP | Term | Owned today by | What the registry changes |
+| --- | --- | --- | --- |
+| FEP-9098 | the `Emoji` type in `tag` | **Emoji** -- it emits the tag objects and declares the mapping `Emoji` → `http://joinmastodon.org/ns#Emoji` | the declaration moves to the registration API; ownership does not move |
+| FEP-c0e0 | the `EmojiReact` activity type | **Activities** -- its ledger and repository | it registers the activity-type term |
+| FEP-c0e0 | the fedibird `emojiReactions` collection on an Object | **Object Projections** | nothing moves: the property points at a collection route this plugin owns, so the feature behind the term is genuinely its own |
+
+The first row carries the constraint that matters for the migration, and it
+inverts the usual advice. The Emoji plugin **already declares its context term
+conditionally** -- `axismundi_emoji_document_has_declaration()` walks `tag`, and
+the nested `object`, for `Emoji`, `toot:Emoji` or the full IRI, and adds the
+mapping only when one is present. So "declare only the terms a document actually
+uses" is not a later optimisation here; it is current behaviour, and a
+registration API that declares a product's terms unconditionally would be a
+**regression** in this plugin's output. The first migration is therefore a
+compatibility bridge in the strict sense: the registry-driven context for a
+document must equal what the filter produces today, including for a document
+that uses no emoji at all.
+
+FEP-de8d (`emojiCatalog`, draft, received 2026-07-19) is not implemented and is
+recorded only so the shape is known. It advertises a `Collection` of FEP-9098
+`Emoji` objects under an actor's `endpoints`, adds an optional `emojiCategory`
+label, and is explicit that removing an emoji from a catalog must not invalidate
+existing content that uses it. Two things follow for planning rather than for
+now: it is unambiguously the Emoji plugin's feature, and it needs the Emoji
+plugin to contribute a member to the **Actor** document, which today is possible
+only through the transport-field allow-list (`inbox`, `endpoints`, `publicKey`).
+That makes it an argument for the Actor model handler having a declared
+contribution seam rather than an allow-list of three names.
 
 An FEP or product extension should provide a compact manifest rather than
 modify this core table:

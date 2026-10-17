@@ -254,6 +254,26 @@ correctly, and the replies collection shows the other honest option, which is to
 count you cannot compute rather than publish one you can. What the outbox must not keep
 doing is the third thing -- publishing a number that is neither.
 
+Fixing the count alone, ahead of the model, was tried on 2026-10-17 and reverted, which
+is worth recording because the reason is structural rather than fiddly. The obvious guard
+is to read one item past the ceiling and omit `totalItems` when the extra one arrives. It
+does not work here: `axismundi_act_get_public_outbox()` applies a per-row public-payload
+filter after the ledger read, so asking for 201 and receiving 200 cannot distinguish "that
+is all there is" from "201 rows were read and one was not public". On the Actor measured
+above, 1,162 activities, the guard saw 200 and concluded the collection was complete.
+
+**The truncation fact lives in the ledger, not in the representation.** Object Projections
+cannot learn it from a filtered list, and must not reach into the Activities tables to
+find it -- which is the same boundary the registry work keeps restating. So either
+Activities reports whether its read was bounded, or it answers a count directly. It can:
+`wp_ax_activities` carries a `has_public_audience` column, so a count is one query rather
+than a scan. The catch to settle when that count is written is that the column and the
+public-payload filter are not guaranteed to agree, and a count that disagrees with the
+item list is a smaller version of the same false statement.
+
+Until then the published number stays wrong, knowingly, rather than being replaced by a
+guard that reads as handled and is not.
+
 The taxonomy connection is worth noting while this is open. Hashtag archives and media
 folders are WordPress taxonomies projected as Collections, and a taxonomy term's archive
 is exactly the unbounded case the paging model exists for. The folder collection already

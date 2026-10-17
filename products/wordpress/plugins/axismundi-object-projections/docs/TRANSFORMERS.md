@@ -231,8 +231,7 @@ the items live in the `first` page, and shows `totalItems` as the size of the wh
 collection, not of the page returned: its example carries `totalItems: 10` on a first page
 holding one item.
 
-Measured across our ten collection transformers on 2026-10-17, there are three behaviours
-and one of them is wrong.
+Measured across our ten collection transformers on 2026-10-17, there are three behaviours.
 
 | Collection | `totalItems` | Paging |
 | --- | --- | --- |
@@ -241,38 +240,31 @@ and one of them is wrong.
 | likes / reactions / shares | real counts from the ledger | counts only; no item list |
 | Attachment `usedIn` | `count($items)` over an unbounded read, so a true total | none, and the set is bounded in practice |
 | Replies | **deliberately absent** | bounded scan; omitting the count rather than claiming a partial one is recorded in `replies-collection.php` |
-| **Actor outbox** | **`count($items)` over a slice capped at 200** | **none** |
+| Actor outbox | deliberately absent: membership passes a product filter after the ledger query | cursor-paged `OrderedCollectionPage`, rooted at `first` |
 
-The outbox is the defect. `axismundi_act_get_public_outbox( $uri, 200 )` truncates, and
-`totalItems` then reports the size of the truncation rather than of the collection, so an
-Actor with five thousand activities publishes `totalItems: 200` and the remaining
-activities are unreachable because no `first` or `next` is offered to follow. Peers read
-`totalItems` as the Actor's post count and display it.
+The Outbox used to be the defect: `axismundi_act_get_public_outbox( $uri, 200 )` truncated
+the ledger, reported the truncation as `totalItems`, and offered no `first` or `next`. The
+cursor-paged reader replaces that cap. The root carries `first` but no members; every page is
+an `OrderedCollectionPage` with `partOf` and, when another public member exists, `next`.
 
-Everything needed to fix it already exists in this plugin: the followers collection pages
-correctly, and the replies collection shows the other honest option, which is to omit a
-count you cannot compute rather than publish one you can. What the outbox must not keep
-doing is the third thing -- publishing a number that is neither.
+The reader's membership rule is the Activity-domain `axismundi_act_public_outbox_payload`
+filter, which runs after a ledger read and may deliberately admit a non-Public activity. It
+therefore walks past any number of non-members, including a long private run, until it fills
+the page or exhausts the ledger. It does not publish `totalItems`: the indexed
+`has_public_audience` count is not the same thing as the filter's membership rule, and a
+plausible but mismatched count would merely replace the old lie with a smaller one.
 
-Fixing the count alone, ahead of the model, was tried on 2026-10-17 and reverted, which
-is worth recording because the reason is structural rather than fiddly. The obvious guard
-is to read one item past the ceiling and omit `totalItems` when the extra one arrives. It
-does not work here: `axismundi_act_get_public_outbox()` applies a per-row public-payload
-filter after the ledger read, so asking for 201 and receiving 200 cannot distinguish "that
-is all there is" from "201 rows were read and one was not public". On the Actor measured
-above, 1,162 activities, the guard saw 200 and concluded the collection was complete.
+The page reader is not the Actor profile feed reader. A profile feed intentionally reduces
+the ledger to `Create` and `Announce`, because an `Update` or `Delete` is not a separate
+timeline card. The Outbox is the published Activity stream, so it reads every effective
+outbound Activity; a peer following it must still be able to learn of public `Update` and
+`Delete` records. Both readers order by the same immutable `feed_sort_at`, then ledger `id`,
+but their membership predicates are deliberately different.
 
-**The truncation fact lives in the ledger, not in the representation.** Object Projections
-cannot learn it from a filtered list, and must not reach into the Activities tables to
-find it -- which is the same boundary the registry work keeps restating. So either
-Activities reports whether its read was bounded, or it answers a count directly. It can:
-`wp_ax_activities` carries a `has_public_audience` column, so a count is one query rather
-than a scan. The catch to settle when that count is written is that the column and the
-public-payload filter are not guaranteed to agree, and a count that disagrees with the
-item list is a smaller version of the same false statement.
-
-Until then the published number stays wrong, knowingly, rather than being replaced by a
-guard that reads as handled and is not.
+This is intentionally an unlimited collection, not an unlimited response. The page size is a
+transport boundary; the collection itself has no history cap. Any retention, rate, or reader
+window limit is a separate policy decision and must be implemented as such rather than hidden
+inside this projection.
 
 The taxonomy connection is worth noting while this is open. Hashtag archives and media
 folders are WordPress taxonomies projected as Collections, and a taxonomy term's archive

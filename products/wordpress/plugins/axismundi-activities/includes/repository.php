@@ -544,6 +544,88 @@ function axismundi_act_get_public_outbox( string $actor_uri, int $limit = 200 ) 
 	return $items;
 }
 
+/**
+ * One complete public Outbox page, positioned by the immutable ledger cursor.
+ *
+ * An Outbox is not a profile preview.  It has no total-history cap: a reader that
+ * follows `next` must eventually be able to reach every Activity that this Actor
+ * publishes to its public Outbox.  Visibility is deliberately evaluated here,
+ * after reading the ledger, because product filters may admit an Activity whose
+ * raw audience is not Public.  That means the SQL `has_public_audience` column is
+ * useful for diagnostics but cannot be used as the collection's membership rule.
+ *
+ * The reader walks through private runs until it either fills the requested page
+ * or exhausts the ledger.  Once a page is full it looks for one additional public
+ * member, without consuming it, so `next_cursor` is only emitted when following it
+ * will return a real member rather than an empty page.
+ *
+ * @param string $actor_uri Actor whose outbound ledger is read.
+ * @param int    $limit     Maximum visible members on this page.
+ * @param string $cursor    Exclusive immutable ledger cursor, or '' for newest.
+ * @return array{items:array<int,array<string,mixed>>,next_cursor:string,has_more:bool}|WP_Error
+ */
+function axismundi_act_get_public_outbox_page( string $actor_uri, int $limit = 20, string $cursor = '' ) {
+	$uri = axismundi_act_uri( $actor_uri );
+	if ( '' === $uri ) {
+		return new WP_Error( 'ax_act_outbox_actor', __( 'The Actor URI is invalid.', 'axismundi-activities' ) );
+	}
+	if ( '' !== $cursor && null === axismundi_act_parse_feed_cursor( $cursor ) ) {
+		return new WP_Error( 'ax_act_outbox_cursor', __( 'The Outbox cursor is invalid.', 'axismundi-activities' ), array( 'status' => 400 ) );
+	}
+
+	$limit       = max( 1, min( 50, $limit ) );
+	$items       = array();
+	$scan_cursor = $cursor;
+	$last_item   = '';
+
+	while ( true ) {
+		// The underlying query is bounded, but the collection is not.  Private rows
+		// cannot make an older public Activity unreachable simply by forming a long run.
+		$activities = axismundi_act_get_outbox_after( $uri, 50, $scan_cursor );
+		if ( empty( $activities ) ) {
+			break;
+		}
+		foreach ( $activities as $activity ) {
+			if ( ! $activity instanceof Axismundi_Activity ) {
+				continue;
+			}
+			$activity_cursor = axismundi_act_feed_cursor( $activity );
+			if ( '' === $activity_cursor ) {
+				continue;
+			}
+			$scan_cursor = $activity_cursor;
+			$payload     = axismundi_act_public_payload( $activity );
+			/**
+			 * An Actor-domain product may deliberately expose a non-Public Activity.
+			 * This is the same membership seam as the legacy Outbox reader; paging must
+			 * not silently redefine it as a raw-addressing query.
+			 *
+			 * @param array<string,mixed>|null $payload Candidate public payload.
+			 * @param Axismundi_Activity        $activity Candidate outbound Activity.
+			 */
+			$payload = apply_filters( 'axismundi_act_public_outbox_payload', $payload, $activity );
+			if ( ! is_array( $payload ) ) {
+				continue;
+			}
+			if ( count( $items ) >= $limit ) {
+				return array(
+					'items'       => $items,
+					'next_cursor' => $last_item,
+					'has_more'    => true,
+				);
+			}
+			$items[]    = $payload;
+			$last_item  = $activity_cursor;
+		}
+	}
+
+	return array(
+		'items'       => $items,
+		'next_cursor' => '',
+		'has_more'    => false,
+	);
+}
+
 /** Query recent activities by one exact Object URI. */
 function axismundi_act_get_by_object( string $object_uri, int $limit = 50 ) : array {
 	return axismundi_act_get_by_reference( 'object', $object_uri, $limit );
@@ -797,6 +879,47 @@ function axismundi_act_get_actor_feed_after( string $actor_uri, int $limit = 20,
 }
 
 /**
+ * One page of an Actor's effective outbound Activity ledger.
+ *
+ * A profile feed is a presentation surface, so it intentionally reduces the
+ * ledger to Create and Announce. An ActivityPub Outbox is a protocol surface:
+ * Update and Delete are published Activities too, and omitting them prevents a
+ * peer rebuilding state from learning that a prior Object changed or vanished.
+ * This query therefore shares the immutable cursor mechanics but not the feed's
+ * type allowlist or its local/inbound direction policy.
+ *
+ * @param string $actor_uri Actor whose outbound ledger is read.
+ * @param int    $limit     Maximum ledger rows.
+ * @param string $cursor    Exclusive immutable ledger cursor, or '' for newest.
+ * @return Axismundi_Activity[]
+ */
+function axismundi_act_get_outbox_after( string $actor_uri, int $limit = 20, string $cursor = '' ) : array {
+	global $wpdb;
+	$uri = axismundi_act_uri( $actor_uri );
+	if ( '' === $uri || AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' ) ) {
+		return array();
+	}
+	$position = '' === $cursor ? null : axismundi_act_parse_feed_cursor( $cursor );
+	if ( '' !== $cursor && null === $position ) {
+		return array();
+	}
+	$table = axismundi_act_activities_table();
+	$limit = max( 1, min( 50, $limit ) );
+	$where = '';
+	$args  = array( hash( 'sha256', $uri ), $uri );
+	if ( null !== $position ) {
+		$where  = ' AND ( feed_sort_at < %s OR ( feed_sort_at = %s AND id < %d ) )';
+		$args[] = $position['time'];
+		$args[] = $position['time'];
+		$args[] = $position['id'];
+	}
+	$args[] = $limit;
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- actor-keyed effective outbound ledger selection; every dynamic value is prepared.
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE actor_uri_hash = %s AND actor_uri = %s AND direction = 'outbound' AND effective_status = 'active'{$where} ORDER BY feed_sort_at DESC, id DESC LIMIT %d", $args ), ARRAY_A );
+	return array_map( 'axismundi_act_hydrate', $rows );
+}
+
+/**
  * One SQL predicate for a numbered, publicly renderable Actor feed.
  *
  * Cursor feeds deliberately keep their immutable-ledger scan: an uncached Announce can still be
@@ -961,7 +1084,7 @@ function axismundi_act_get_by_reference( string $field, string $uri, int $limit 
 	$column = $field . '_uri';
 	$hash   = $field . '_uri_hash';
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- allowlisted columns and fixed table; values prepared.
-	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE {$hash} = %s AND {$column} = %s ORDER BY published_at DESC, id DESC LIMIT %d", hash( 'sha256', $uri ), $uri, $limit ), ARRAY_A );
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE {$hash} = %s AND {$column} = %s ORDER BY feed_sort_at DESC, id DESC LIMIT %d", hash( 'sha256', $uri ), $uri, $limit ), ARRAY_A );
 	return array_map( 'axismundi_act_hydrate', $rows );
 }
 

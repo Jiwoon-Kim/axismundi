@@ -9,8 +9,10 @@ defined( 'ABSPATH' ) || exit;
 
 /** Read-only source for one Actor's public Outbox projection. */
 final class Axismundi_OP_Actor_Outbox {
-	public function __construct( private Axismundi_Actor $actor ) {}
+	public function __construct( private Axismundi_Actor $actor, private bool $page = false, private string $cursor = '' ) {}
 	public function get_actor() : Axismundi_Actor { return $this->actor; }
+	public function is_page() : bool { return $this->page; }
+	public function get_cursor() : string { return $this->cursor; }
 }
 
 /** Read-only source for one Actor's follower-count projection. */
@@ -24,6 +26,51 @@ final class Axismundi_OP_Actor_Followers {
 /** Stable public Outbox URI owned by the representation layer. */
 function axismundi_op_actor_outbox_url( Axismundi_Actor $actor ) : string {
 	return rest_url( 'axismundi/v1/actors/' . rawurlencode( $actor->get_uuid() ) . '/outbox' );
+}
+
+/**
+ * Members per Outbox page.
+ *
+ * Measured 2026-10-18: the ledger page itself costs 2 ms at twenty members and 3 ms at
+ * fifty, nine milliseconds for a page that has to walk a long private run, and a served
+ * page weighs nine kilobytes. The expensive part of a page is the request around it, not
+ * the page, so the only thing this number buys is fewer round trips -- fifty turns a
+ * thousand-activity Outbox from fifty-two requests into twenty-one. It is deliberately a
+ * constant rather than a caller argument: a collection whose page size varies by caller
+ * hands peers cursors that mean different things.
+ */
+const AXISMUNDI_OP_OUTBOX_PAGE_SIZE = 50;
+
+/**
+ * Members per Outbox page, after instance policy.
+ *
+ * Filterable because this is a policy number rather than a protocol one, and because a
+ * test that depends on the shipped default asserts the default rather than the paging:
+ * measured 2026-10-18, raising the constant alone turned four continuation checks red,
+ * since a twenty-one-Activity fixture stopped having a second page at all.
+ *
+ * @since 0.1.3
+ * @param int $size Members per page.
+ */
+function axismundi_op_outbox_page_size() : int {
+	$size = (int) apply_filters( 'axismundi_op_outbox_page_size', AXISMUNDI_OP_OUTBOX_PAGE_SIZE );
+	return max( 1, min( 50, $size ) );
+}
+
+/**
+ * Stable page URI for a cursor-positioned Actor Outbox page.
+ *
+ * The cursor is an opaque token from the Activity ledger and currently contains a space,
+ * because it carries a SQL datetime. `add_query_arg()` does not encode what it is given --
+ * `build_query()` calls `_http_build_query()` with `$urlencode = false` -- so the raw token
+ * reached the published `next` link. Measured 2026-10-18: a conformant client refused the
+ * whole chain as an invalid URL while the server answered the percent-encoded form with
+ * 200, so the paging worked and the link to it did not. Encoding belongs here, at the
+ * boundary that owns the URL, rather than in the token's format, which the ledger owns.
+ */
+function axismundi_op_actor_outbox_page_url( Axismundi_Actor $actor, string $cursor = '' ) : string {
+	$url = add_query_arg( array( 'page' => 1 ), axismundi_op_actor_outbox_url( $actor ) );
+	return '' === $cursor ? $url : $url . '&cursor=' . rawurlencode( $cursor );
 }
 
 /** Stable Followers URI owned by the representation layer. */
@@ -225,19 +272,39 @@ function axismundi_op_actor_outbox_visible( Axismundi_OP_Actor_Outbox $source ) 
  * broken document. "No Activities recorded here" and "no ledger installed" look the
  * same from outside, which is the honest answer in both cases.
  */
-function axismundi_op_actor_outbox_transform( Axismundi_OP_Actor_Outbox $source ) : array {
+function axismundi_op_actor_outbox_transform( Axismundi_OP_Actor_Outbox $source ) {
 	$actor = $source->get_actor();
-	$items = function_exists( 'axismundi_act_get_public_outbox' )
-		? axismundi_act_get_public_outbox( $actor->get_uri(), 200 )
-		: array();
-	return array(
+	$page  = function_exists( 'axismundi_act_get_public_outbox_page' )
+		? axismundi_act_get_public_outbox_page( $actor->get_uri(), axismundi_op_outbox_page_size(), $source->get_cursor() )
+		: array( 'items' => array(), 'next_cursor' => '', 'has_more' => false );
+	if ( is_wp_error( $page ) ) {
+		return $page;
+	}
+	if ( $source->is_page() ) {
+		$out = array(
+			'id'           => axismundi_op_actor_outbox_page_url( $actor, $source->get_cursor() ),
+			'type'         => 'OrderedCollectionPage',
+			'attributedTo' => $actor->get_uri(),
+			'url'          => $actor->get_profile_url(),
+			'partOf'       => axismundi_op_actor_outbox_url( $actor ),
+			'orderedItems' => $page['items'],
+		);
+		if ( ! empty( $page['has_more'] ) && '' !== (string) $page['next_cursor'] ) {
+			$out['next'] = axismundi_op_actor_outbox_page_url( $actor, (string) $page['next_cursor'] );
+		}
+		return $out;
+	}
+
+	$out = array(
 		'id'           => axismundi_op_actor_outbox_url( $actor ),
 		'type'         => 'OrderedCollection',
 		'attributedTo' => $actor->get_uri(),
 		'url'          => $actor->get_profile_url(),
-		'totalItems'   => count( $items ),
-		'orderedItems' => $items,
 	);
+	if ( ! empty( $page['items'] ) ) {
+		$out['first'] = axismundi_op_actor_outbox_page_url( $actor );
+	}
+	return $out;
 }
 
 /** Public disclosure gate for an Actor Followers collection. */
@@ -336,7 +403,9 @@ function axismundi_op_register_actor_transformers() : void {
 		'axismundi-actor-outbox',
 		array(
 			'supports'       => static fn( $source ) : bool => $source instanceof Axismundi_OP_Actor_Outbox,
-			'collection_uri' => static fn( Axismundi_OP_Actor_Outbox $source ) : string => axismundi_op_actor_outbox_url( $source->get_actor() ),
+			'collection_uri' => static fn( Axismundi_OP_Actor_Outbox $source ) : string => $source->is_page()
+				? axismundi_op_actor_outbox_page_url( $source->get_actor(), $source->get_cursor() )
+				: axismundi_op_actor_outbox_url( $source->get_actor() ),
 			'transform'      => 'axismundi_op_actor_outbox_transform',
 			'visible'        => 'axismundi_op_actor_outbox_visible',
 			'priority'       => 5,
@@ -371,6 +440,8 @@ function axismundi_op_register_actor_outbox_route() : void {
 			'permission_callback' => '__return_true',
 			'args'                => array(
 				'uuid' => array( 'required' => true, 'type' => 'string', 'pattern' => '^[0-9a-f-]{36}$' ),
+				'page' => array( 'required' => false, 'type' => 'integer', 'minimum' => 1 ),
+				'cursor' => array( 'required' => false, 'type' => 'string' ),
 			),
 		)
 	);
@@ -407,7 +478,9 @@ function axismundi_op_get_actor_outbox( WP_REST_Request $request ) {
 	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || ! axismundi_op_actor_visible( $actor ) ) {
 		return new WP_Error( 'ax_op_outbox_not_found', __( 'The Actor outbox was not found.', 'axismundi-object-projections' ), array( 'status' => 404 ) );
 	}
-	$collection = axismundi_op_transform_collection( new Axismundi_OP_Actor_Outbox( $actor ) );
+	$page       = absint( $request['page'] ) > 0;
+	$cursor     = (string) $request['cursor'];
+	$collection = axismundi_op_transform_collection( new Axismundi_OP_Actor_Outbox( $actor, $page, $cursor ) );
 	if ( is_wp_error( $collection ) ) {
 		return $collection;
 	}

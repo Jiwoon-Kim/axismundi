@@ -130,6 +130,35 @@ not bind -- AS2 Core writes all of §9 that way, and ActivityPub's §9 contains
 exactly one upper-case keyword. Those lines are recorded at the level the word
 implies and marked, never cited as capitalised requirements.
 
+### Findings that change rules we had already written
+
+Five results from the same collection contradicted or re-sourced something this
+project believed. They are kept because each one would otherwise be
+re-discovered, and because three of them are about *which document* a rule comes
+from, which is the mistake the `source` field exists to prevent.
+
+| Finding | Why it matters here |
+| --- | --- |
+| `@context` is a **SHOULD**, not a MUST (Core §2.1 `#jsonld`), and §2.1.3 states the inverse MUST: a consumer receiving `application/activity+json` without a context reference has to assume the normative context anyway | Object Projections' rule that the renderer owns `@context` alone is **ours and stricter than the specification**. It must not be recorded as a specification requirement |
+| `id` and `type` are **optional** in Core -- §4.1 says all Object properties are, "including the `id` and `type`" | "An object must have an `id`" is ActivityPub's requirement (§3.1 `#obj-id`), not AS2's. Our renderer rejecting an `id` that is not the declared object URI is a third thing again: our own invariant |
+| The prohibition on HTML in `name` is a **MUST NOT**, and it is in the **Vocabulary**, not in Core | Core contains no such rule; its only markup rule is a SHOULD NOT on `summary`, and only when `name` is absent (§4.1.1). Stripping tags from `name` is therefore required of us, and the requirement's anchor is the Vocabulary's `name` definition |
+| Core §5 is a **MUST**: a consumer meeting an unfamiliar extension property may not stop processing or signal an error, and continues as if it were absent. §5.2 adds SHOULDs to preserve extension properties and the original `@context` across re-serialisation | Preserving unknown FEP and vendor terms in the raw-extension path is **normative**, not a convenience we chose. It is also the reason registration buys normalisation and indexing rather than survival |
+| An extension type that **overlaps** a core vocabulary type has to carry the core type too -- three parallel MUSTs, Core §4.1 (Object), §4.3 (Actor), §4.4 (Activity), with `gr:Location`/`Place` and `vcard:Individual`/`Person` as the examples | No current payload violates this: a FEP type such as `EmojiReact` overlaps no core type. It becomes live the moment an Actor is also typed through a foreign vocabulary, which the JSContact direction could reach |
+
+One deliberate deviation belongs with them. Core §5 says to provide an
+`@context` definition for every extension property emitted, and one of ours is
+emitted as a fully expanded IRI key with no definition:
+`http://fedibird.com/ns#emojiReactions`. That is intentional and the reason is
+in the code (`axismundi-object-projections/includes/integrations/reactions.php`)
+-- the full key is kept so a peer that does not compact the context term still
+finds the property, and the scheme is `http` rather than `https` because in
+JSON-LD the IRI *is* the property name, so the two spell different terms and the
+FEP and its sibling namespaces write it the first way. The SHOULD is traded
+away knowingly. It could also be satisfied without changing the emitted key, by
+declaring an alias in the context while continuing to emit the expanded form,
+since both compact to the same property; that is a small improvement and not a
+correction.
+
 ### What is kept here, and what is not
 
 AGENTS.md forbids keeping a copy of upstream current in this repository, and a

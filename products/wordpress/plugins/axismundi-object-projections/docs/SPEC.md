@@ -96,6 +96,33 @@ Natural-language values are **not** a model. §4.7 and §4.8 are a value shape e
 shares -- the `Map` forms, BCP 47 keys, string values -- and `axismundi_op_clean_language_map()`
 is already the one implementation. They belong beside the model handlers, not inside one.
 
+A note on how that absence was found, because it is the kind of thing that stays invisible.
+Nobody had failed to notice that `Link` has no handler; there was no concept under which
+"a model with no handler" was a thing one could look for. The gap became a measurable
+question only once the models were named, and then it took one search to answer. Naming is
+not decoration here: the project's standing rule is to measure rather than infer, and this
+is its complement -- you can only measure what you have a concept for. Both this gap and
+the key-order divergence in section 4a were sitting in the output the whole time.
+
+### Open, awaiting the project owner
+
+Two questions this work must not settle silently, recorded here because they came up in
+design discussion and nowhere else:
+
+1. **Does an embedded media descriptor respect the Media Library's locked gate, or only its
+   visibility tier?** Both are honoured today, so a public post does not list an image the
+   owner put in a password-protected folder. The conservative reading is that federated
+   publication is active distribution rather than a failure to restrict, which is why it
+   stands. The other reading is that a password gate protects the attachment page and not
+   the bytes -- WordPress cannot restrict file delivery -- so the gate is access and the
+   tier is reach, and only reach should decide what a document advertises. This is the same
+   "one field, two questions" problem that the Media Library's own DATA-MODEL.md section 6.1
+   records.
+2. **Does a standalone media Object declare its audience?** Measured 2026-10-17: an Article
+   declares `to` with the Public collection and the standalone `Image` of the same site
+   declares no addressing at all. That is a difference in content rather than in key order,
+   so fixing the order must not be allowed to hide it.
+
 ## 4. Frozen contracts
 
 1. **id vs url are different.** The AS `id` is a stable, permalink-independent URI; `url`

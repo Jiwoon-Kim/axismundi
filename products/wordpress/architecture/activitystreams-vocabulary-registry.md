@@ -517,8 +517,9 @@ the type hierarchy. Initial examples:
 | --- | --- | --- | --- |
 | core `post` | `Article` | explicit core post profile | proposed |
 | core `attachment` | `Image`, `Audio`, `Video`, or `Document` | `post_mime_type` | proposed |
-| `ax_note` | `Note` | no Question row, no Quote form | existing domain behavior |
-| `ax_note` + Question rows | `Question` | structured poll definition | existing domain behavior |
+| `ax_note` | `Note` | no Quote form | existing domain behavior |
+| `ax_note` + Question rows | `Question` | structured poll definition | **legacy during cutover** -- superseded |
+| Activities Question ledger | `Question` | a Question identity in that ledger | target model |
 | Calendar source | `Event` | Calendar-owned profile | existing product direction |
 | core `page` | no default | explicit opt-in only | proposed |
 | Activity ledger row | Activity subtype | direct Activity authoring | proposed |
@@ -529,9 +530,16 @@ is not automatically federated content.
 
 ## Where The Registry Lives, And What Stays With Each Product
 
-Decided 2026-10-17. The registry is held by Axismundi Object Projections,
-because the projector composes a document from it and there is no reason to
-ship an input apart from its only consumer. A local Actor is a local Object:
+Decided 2026-10-17. The registry is held by Axismundi Object Projections, and
+it is held there because that plugin owns the representation this vocabulary
+describes -- not because it is the registry's only reader. An earlier draft of
+this section said the latter, and it was already false when written: a plugin
+that reads `effective_properties()` to build an editor control, a post-meta
+binding or a custom-table column is a reader too, which is most of them. What
+follows from several readers is not a different location but a requirement --
+the registry is published through a **read API with a stable contract**, and no
+reader may reach into its storage. Ownership follows who maintains the
+vocabulary facts and serves them; a local Actor is a local Object:
 Object Projections already assembles the Actor document
 (`includes/integrations/actors.php`), and Axismundi Actors contains no AS2
 assembly at all -- not one `@context` -- so "the projector lives here" is the

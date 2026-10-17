@@ -112,10 +112,37 @@ Two things to settle in the unified engine work, both named now:
   `page`, `attachment` and the other registered profiles cannot be quote targets for a reason
   that has nothing to do with policy. The resolver belongs on the shared source reader, where
   it answers for any registered local profile and the policy is read per type.
-- `axismundi_act_get_object_attribution()` looks for `activity_type = 'Create'` only. A media
-  Object whose publication is an `Add` to an Actor's collection would still read as
-  unattributed under that query, so whichever activity carries that exposure has to be part of
-  what attribution is read from -- otherwise the rule above is written down and not in force.
+- Exposure attribution is a **second** read, not a widening of the first.
+  `axismundi_act_get_object_attribution()` means something narrow and stable: the actor of the
+  `Create` that began this object's current generation. Teaching it about `Add` would put
+  `Create` and `Add` in competition for one answer and leave "which collection's Add" with no
+  rule, so it keeps its meaning and a separate projection answers "which Actor exposed this,
+  and when". A media Object reads as unattributed under the Create query, correctly, and is
+  attributed through the exposure read.
+
+### Open: one author, several exposures
+
+Settling that read needs a policy decision first, and one spec fact narrows it less than it
+appears. `attributedTo` is **not single-valued**: AS2 defines it as identifying "one or more
+entities to which this object is attributed", with no functional declaration. So an array is
+permitted and the constraint that forces a single answer is ours, not the specification's.
+Two of our own requirements force it. Quoting is a decision only an author can make, and an
+approval procedure with two possible authors has no defined decider. And a peer caching an
+array has no rule for choosing which one to show.
+
+Three shapes, with a recommendation rather than a decision:
+
+| Shape | Consequence |
+| --- | --- |
+| The first `Add` fixes attribution permanently | One author; later exposures by other Actors add no claim |
+| Attribution follows the most recent `Add` | The author of a file changes when somebody else displays it, and a cached payload disagrees with the current one |
+| `attributedTo` carries every exposing Actor | Spec-legal, but consent decisions and peer display both lose their decider |
+
+The first is recommended. A second Actor displaying media should not be able to become its
+author, and withdrawing one exposure should change that exposure's audience rather than the
+file's authorship -- the same separation the visibility note below draws between access and
+audience. Exposure then becomes a list the exposure read returns, while attribution stays one
+value settled once. Not decided; it is the project owner's call.
 
 ### Media visibility is pre-Actor, and that is legacy
 

@@ -75,6 +75,88 @@ meaning of an AS2 core term. An inbound payload can preserve unknown terms as
 unmapped extensions; a future strict outbound profile can reject only the
 terms that its selected profile does not permit.
 
+## Normative Requirements Are A Third Registration
+
+A type registration describes a term. A property registration describes a term.
+Neither can hold "an actor has to have an `inbox`", because that is not a fact
+about the `inbox` term -- it is a conformance rule bound to the Actor type by a
+different specification. Recording normative requirements therefore needs its
+own registration shape:
+
+```text
+subject            Actor | Activity | Object | Collection | a property | an endpoint
+level              MUST | MUST NOT | SHOULD | SHOULD NOT | MAY
+conformance_class  which class of software the source binds
+source             specification URI + section anchor
+kind               payload | behaviour
+enforced_by        the command that fails when it is broken, or `convention`
+```
+
+`conformance_class` is not optional. A specification's MUST binds a class, and
+a list that drops the class is how a client requirement gets enforced on a
+server payload. `enforced_by` is not optional either, for the reason stated in
+AGENTS.md: a rule without a named command is a convention, and recording one as
+though it were enforced is worse than not recording it.
+
+`kind` is what makes the register finite. Only a `payload` rule constrains the
+content of a document, so only a `payload` rule can be checked by looking at
+what we emit; a `behaviour` rule about delivery, retries or HTTP status codes
+needs an integration test or nothing.
+
+### Which specifications the requirements come from
+
+Collected 2026-10-17 and measured rather than assumed:
+
+| Source | What it contributes | Conformance classes |
+| --- | --- | --- |
+| Activity Streams 2.0 Core, W3C Recommendation 23 May 2017 | 71 requirements, 45 payload | conforming document, implementation, publisher, consumer (§9) |
+| ActivityPub, Editor's Draft (no status date in the fetched document; the underlying Recommendation is 23 January 2018) | 137 requirements, 40 payload | conformant Client, Server, Federated Server (§2.1) |
+| W3C Security Vocabulary / HTTP Signatures practice | `publicKey`, `publicKeyPem` | none; de-facto fediverse convention |
+
+The third row is the finding worth keeping. **`publicKey` appears nowhere in
+ActivityPub** -- zero occurrences in the fetched Editor's Draft, which handles
+client keys through `provideClientKey` and `signClientKey` instead -- and it is
+not an AS2 Vocabulary term either. Our Actor documents emit it because the
+fediverse requires it in practice. A strict profile scoped to "AS2 plus
+ActivityPub terms" would reject the one property without which no peer can
+verify our signatures, so the registry carries a third provenance for de-facto
+terms and does not pretend they have a normative home.
+
+Two more scoping facts from the same collection. Of ActivityPub's requirements,
+15 bind the **Client** class, which this project is not: a server must not
+enforce them on itself. And both specifications write much of their security
+and conformance prose in lower-case "should" and "must", which RFC 2119 does
+not bind -- AS2 Core writes all of §9 that way, and ActivityPub's §9 contains
+exactly one upper-case keyword. Those lines are recorded at the level the word
+implies and marked, never cited as capitalised requirements.
+
+### What is kept here, and what is not
+
+AGENTS.md forbids keeping a copy of upstream current in this repository, and a
+paraphrase of 208 normative sentences is exactly the kind of mirror that rule
+is about: it would drift, and the drift would be invisible. So the register
+holds only the requirements this project has chosen to check, each pointing at
+its specification anchor -- a list of our checks, not a copy of the specs. The
+full collection stays working material.
+
+### Seeds: what is already enforced
+
+Three rules of this shape are already in force, and naming them is what turns
+the register into a difference rather than an inventory:
+
+| Requirement | Where | Enforced by |
+| --- | --- | --- |
+| An object's `id` equals the object URI its transformer declared | Object Projections SPEC.md section 4.1 | the renderer rejects a mismatch |
+| `@context` is assembled in one place; a transformer supplying one has it stripped | SPEC.md section 4.2 | the renderer |
+| An Actor without a key fails closed, inbox and key written atomically | ActivityPub Bridge | its own audit |
+
+And one honest qualification measured the same day: the ActivityPub MUSTs that
+an actor object carry `inbox` and `outbox` do hold in our output, and a
+regression would be caught -- but only incidentally, by a composite condition
+inside `audit-actor-projection.php` whose subject is transport-field override.
+A requirement enforced as a side effect of another test is the case
+`enforced_by` exists to make visible.
+
 ## Registry Serialization
 
 The machine-readable source should be a checked-in, versioned JSON registry;

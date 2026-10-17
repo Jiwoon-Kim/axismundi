@@ -149,14 +149,28 @@ function axismundi_op_clean_html( string $html ) : string {
 function axismundi_op_allowed_block_html() : array {
 	$allowed = wp_kses_allowed_html( 'post' );
 
-	// Attributes core omits from the elements these blocks put them on.
+	/*
+	 * Attributes core omits from the elements these blocks put them on.
+	 *
+	 * The `aria-value*` trio is here because a `role="progressbar"` is meaningless without
+	 * it: measured 2026-10-17, the Question block's result meter reached the page with its
+	 * role and its `aria-label` intact and its value stripped, so a screen reader was told
+	 * there was a progress bar and never told how far along it was. These carry a number or
+	 * a plain string, cannot hold a URL or a script, and core's post set already permits
+	 * `role`, `aria-label` and `aria-pressed` beside them, so admitting them widens nothing
+	 * a sanitizer is defending.
+	 */
 	$extra = array(
-		'srcset'       => true,
-		'sizes'        => true,
-		'decoding'     => true,
-		'draggable'    => true,
-		'aria-pressed' => true,
-		'aria-busy'    => true,
+		'srcset'         => true,
+		'sizes'          => true,
+		'decoding'       => true,
+		'draggable'      => true,
+		'aria-pressed'   => true,
+		'aria-busy'      => true,
+		'aria-valuemin'  => true,
+		'aria-valuemax'  => true,
+		'aria-valuenow'  => true,
+		'aria-valuetext' => true,
 		'inert'        => true,
 		'part'         => true,
 		'data-*'       => true,

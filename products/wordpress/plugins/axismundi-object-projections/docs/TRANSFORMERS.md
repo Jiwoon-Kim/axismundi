@@ -300,12 +300,18 @@ link into an infinite loop over the head of the collection.
 
 **Core puts paging in HTTP headers; ActivityStreams puts it in the document.**
 `X-WP-Total`, `X-WP-TotalPages` and `Link: rel="prev"/"next"` are headers, while
-`first`, `next` and `partOf` are members. These are not alternatives. We emit no
-`Link` headers today, and adding `rel="next"` on the Outbox route would cost
-nothing, change no AS2 document, and let an ordinary HTTP client walk the same
-chain. `prev` is harder for us than for core -- core clamps it arithmetically from
-a page number, while a reverse cursor has to be derived -- so a forward-only
-`next` is the honest subset.
+`first`, `next` and `partOf` are members. These are not alternatives. The Outbox
+route mirrors a page document's `next` as `Link: rel="next"`, so ordinary HTTP
+clients can follow the same chain without changing the AS2 representation. `prev`
+is harder for us than for core -- core clamps it arithmetically from a page number,
+while a reverse cursor has to be derived -- so a forward-only `next` is the honest
+subset.
+
+Outbox cursor URLs are stable positions, not immutable snapshots. An Undo, Delete,
+or retention action can remove a member after a client caches a page. The route uses
+`Cache-Control: public, max-age=60`: caches may serve one minute of stale membership,
+never a permanently frozen page. Longer retention or different cache windows are
+instance operations policy, not hidden pagination behavior.
 
 **Core's `per_page` ceiling is 100 and its default is 10.** Ours are 50 and 50.
 Both are policy; the difference is that core's pages are cheap offsets into one

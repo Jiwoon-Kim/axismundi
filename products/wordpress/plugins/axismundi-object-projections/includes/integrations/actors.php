@@ -487,6 +487,12 @@ function axismundi_op_get_actor_outbox( WP_REST_Request $request ) {
 	$response = rest_ensure_response( $collection );
 	$response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
 	$response->header( 'Cache-Control', 'public, max-age=60' );
+	if ( isset( $collection['next'] ) && '' !== (string) $collection['next'] ) {
+		// AS2 owns the document member; this is the equivalent HTTP affordance for
+		// ordinary clients. Forward-only is intentional: a cursor has no honest
+		// reverse page until the Collection contract supplies one.
+		$response->link_header( 'next', (string) $collection['next'] );
+	}
 	return $response;
 }
 

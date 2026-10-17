@@ -157,7 +157,6 @@ try {
 			&& null !== axismundi_act_parse_feed_cursor( (string) $next_query['cursor'] )
 	);
 
-	remove_filter( 'axismundi_op_outbox_page_size', $ax_op_outbox_page_size );
 	$request = new WP_REST_Request( 'GET', '/axismundi/v1/actors/' . $actor->get_uuid() . '/outbox' );
 	$request->set_param( 'uuid', $actor->get_uuid() );
 	$response = axismundi_op_get_actor_outbox( $request );
@@ -168,7 +167,9 @@ try {
 	$page_request->set_param( 'page', 1 );
 	$page_response = axismundi_op_get_actor_outbox( $page_request );
 	$page_data     = $page_response instanceof WP_REST_Response ? $page_response->get_data() : array();
-	ax_op_outbox_assert( $ax_op_outbox_results, 'the public REST callback distinguishes the first Outbox page from its collection root', $page_response instanceof WP_REST_Response && is_array( $first_page ) && $first_page['id'] === $page_data['id'] && 'OrderedCollectionPage' === $page_data['type'] && $collection['id'] === $page_data['partOf'] );
+	$page_headers  = $page_response instanceof WP_REST_Response ? $page_response->get_headers() : array();
+	ax_op_outbox_assert( $ax_op_outbox_results, 'the public REST callback distinguishes the first Outbox page from its collection root and mirrors next as an HTTP Link header', $page_response instanceof WP_REST_Response && is_array( $first_page ) && $first_page['id'] === $page_data['id'] && 'OrderedCollectionPage' === $page_data['type'] && $collection['id'] === $page_data['partOf'] && isset( $page_data['next'], $page_headers['Link'] ) && '<' . $page_data['next'] . '>; rel="next"' === $page_headers['Link'] );
+	remove_filter( 'axismundi_op_outbox_page_size', $ax_op_outbox_page_size );
 	$invalid_request = new WP_REST_Request( 'GET', '/axismundi/v1/actors/' . $actor->get_uuid() . '/outbox' );
 	$invalid_request->set_param( 'uuid', $actor->get_uuid() );
 	$invalid_request->set_param( 'page', 1 );

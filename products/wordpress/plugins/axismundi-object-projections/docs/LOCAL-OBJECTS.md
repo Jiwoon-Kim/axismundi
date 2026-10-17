@@ -79,6 +79,44 @@ AS2, so OP can project a readable Object from a `WP_Post` alone. It simply canno
 because a `Create` has no actor to carry. Such an Object is reachable at its own URL and belongs
 to no collection, outbox, or delivery.
 
+### Attribution arrives when an Actor exposes the media, not when it is uploaded
+
+An attachment is the clearest case of that unattributed state, and it is not permanent.
+Uploading a file is storage: the Media Library is where a *user* manages files, so the upload
+records who may edit the file and nothing about whose Object it is, and
+`axismundi_op_attachment_actor_uri()` therefore defaults to empty and must never be made to
+read `post_author`. What changes that is an **Actor adding the media to a collection** in order
+to display it publicly. That Add is the publication, it names an Actor, and from then on the
+media has an author.
+
+So the two surfaces are different things with different owners:
+
+| Surface | Unit | What it records |
+|---|---|---|
+| Media Library | the WordPress user | which files exist and who may edit them |
+| A media collection | an Actor | what that Actor puts on public display |
+
+One consequence is already visible and is recorded here rather than discovered later.
+Quoting is a decision only an author can make, so an Object with no `attributedTo` has nobody
+to grant consent, and Activities refuses the request: `axismundi_act_resolve_quote_request_target()`
+returns its fail-closed default, which is why an inbound QuoteRequest against an unpublished
+Object is declined rather than auto-approved. **That stays fail-closed.** An attachment page
+appearing in the Object registry does not make it quotable; being added to an Actor's
+collection does. The alternative -- letting the embedding Article's policy decide for the
+media inside it -- would move policy ownership from the Object to whatever document happens to
+carry it, and is not what we do.
+
+Two things to settle in the unified engine work, both named now:
+
+- `axismundi_op_resolve_quote_request_target()` answers only for `'post' === $post_type`, so
+  `page`, `attachment` and the other registered profiles cannot be quote targets for a reason
+  that has nothing to do with policy. The resolver belongs on the shared source reader, where
+  it answers for any registered local profile and the policy is read per type.
+- `axismundi_act_get_object_attribution()` looks for `activity_type = 'Create'` only. A media
+  Object whose publication is an `Add` to an Actor's collection would still read as
+  unattributed under that query, so whichever activity carries that exposure has to be part of
+  what attribution is read from -- otherwise the rule above is written down and not in force.
+
 The site Actor is not a fallback for this. It is an Application/Instance identity — the server, not
 the author of somebody's Article. `axismundi_op_local_author_actor_uri()` currently falls back to
 it both when the user has no Actor *and* when the user's Actor is not public, which overrides a

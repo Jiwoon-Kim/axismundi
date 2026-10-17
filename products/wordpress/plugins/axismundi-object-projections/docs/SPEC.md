@@ -104,6 +104,33 @@ not decoration here: the project's standing rule is to measure rather than infer
 is its complement -- you can only measure what you have a concept for. Both this gap and
 the key-order divergence in section 4a were sitting in the output the whole time.
 
+### The resolver's core post-type contract
+
+Decided 2026-10-17, and the first half is implemented.
+
+| `post_type` | Resolves to |
+| --- | --- |
+| `post` | `Article` |
+| `attachment` | `Document` by default, narrowed by `post_mime_type` to `Image`, `Audio` or `Video` |
+| `page` | **nothing.** Not projected |
+| anything else | nothing, unless a product registers a profile for it |
+
+`attachment` already works this way: `axismundi_op_core_attachment_type()` returns `Document`
+and narrows on the MIME prefix, so the default is the general case and the media types are
+refinements of it rather than a list to be matched exhaustively. A MIME type nobody
+anticipated therefore still projects, as a `Document`.
+
+`page` was registered as a `Page` profile by an earlier slice and that has been removed.
+Measured before removing it: a published page served `application/activity+json` at its
+permalink with `"type": "Page"`. Two reasons it should not. The architecture registry's
+projection-profile table already recorded `core page | no default | explicit opt-in only`,
+so the code had quietly made a default out of something the record said needed opting into.
+And a page is site furniture -- a contact page, a policy, a landing page -- so publishing one
+as a federated Object asserts it was authored for an audience, which `post_status = publish`
+has never meant. The same table says so in general: a visibility state is never a sufficient
+projection selection rule. No opt-in mechanism was built in its place; when one is wanted it
+belongs to the registration API rather than to a second hardcoded profile.
+
 ### Open, awaiting the project owner
 
 Two questions this work must not settle silently, recorded here because they came up in

@@ -215,10 +215,16 @@ try {
 			$ax_identity_ids[] = (int) $page_registry['identity_id'];
 		}
 	}
+	// A published page is site furniture, and `post_status = publish` was never a statement
+	// that something was authored for an audience. There is no page profile and no page
+	// transformer, so the resolver answers nothing for a page and the renderer has nothing
+	// to serve at its permalink.
 	ax_object_registry_assert(
 		$ax_results,
-		'a core Page is explicitly registered and projects as Page without making every WordPress post type eligible',
-		is_array( $page_profile ) && 'Page' === (string) $page_profile['type'] && is_array( $page_object ) && 'Page' === (string) $page_object['type']
+		'a core page is not projectable: no profile, no transformer, and no Object at its URI',
+		null === $page_profile
+			&& is_wp_error( $page_object )
+			&& ! ( $page instanceof WP_Post && axismundi_op_resolve_source_by_uri( axismundi_op_post_object_uri( $page ) ) instanceof WP_Post )
 	);
 
 	$stored = axismundi_op_store_remote_object(

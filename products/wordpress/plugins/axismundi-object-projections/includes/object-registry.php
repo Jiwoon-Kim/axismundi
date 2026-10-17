@@ -197,9 +197,13 @@ function axismundi_op_local_object_profile( WP_Post $post ) : ?array {
 	if ( 'post' === $post->post_type && function_exists( 'axismundi_op_post_object_uri' ) ) {
 		return array( 'uri' => axismundi_op_post_object_uri( $post ), 'type' => 'Article', 'owner' => 'wordpress-core', 'kind' => 'post', 'attributed_to_uri' => function_exists( 'axismundi_op_post_actor_uri' ) ? axismundi_op_post_actor_uri( $post ) : '' );
 	}
-	if ( 'page' === $post->post_type && function_exists( 'axismundi_op_post_object_uri' ) ) {
-		return array( 'uri' => axismundi_op_post_object_uri( $post ), 'type' => 'Page', 'owner' => 'wordpress-core', 'kind' => 'page', 'attributed_to_uri' => function_exists( 'axismundi_op_post_actor_uri' ) ? axismundi_op_post_actor_uri( $post ) : '' );
-	}
+	/*
+	 * `page` is deliberately absent. A published page is site furniture -- a contact page, a
+	 * policy, a landing page -- and publishing it as a federated Object says it was authored
+	 * for an audience, which `post_status = publish` never meant. The architecture registry
+	 * records this as "no default, explicit opt-in only"; nothing registers that opt-in yet,
+	 * so there is no page profile rather than an unused one.
+	 */
 	if ( 'attachment' === $post->post_type ) {
 		return array( 'uri' => function_exists( 'axismundi_op_core_attachment_uri' ) ? axismundi_op_core_attachment_uri( $post ) : add_query_arg( 'attachment_id', $post->ID, home_url( '/' ) ), 'type' => axismundi_op_core_attachment_type( $post ), 'owner' => 'wordpress-core', 'kind' => 'attachment', 'attributed_to_uri' => function_exists( 'axismundi_op_attachment_actor_uri' ) ? axismundi_op_attachment_actor_uri( $post ) : '' );
 	}

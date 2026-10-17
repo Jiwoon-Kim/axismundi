@@ -20,14 +20,6 @@ function axismundi_op_post_article_supports( $source ) : bool {
 		&& ! wp_is_post_autosave( $source );
 }
 
-/** Whether the core Page profile owns the supplied source. */
-function axismundi_op_post_page_supports( $source ) : bool {
-	return $source instanceof WP_Post
-		&& 'page' === $source->post_type
-		&& ! wp_is_post_revision( $source )
-		&& ! wp_is_post_autosave( $source );
-}
-
 /** Whether the core Attachment profile owns the supplied source. */
 function axismundi_op_core_attachment_supports( $source ) : bool {
 	return $source instanceof WP_Post
@@ -158,7 +150,7 @@ function axismundi_op_resolve_local_post_source_by_uri( $source, string $uri ) {
 	parse_str( (string) $parts['query'], $query );
 	$post_id = isset( $query['p'] ) ? absint( $query['p'] ) : 0;
 	$post    = $post_id > 0 ? get_post( $post_id ) : null;
-	if ( ! $post instanceof WP_Post || ( ! axismundi_op_post_article_supports( $post ) && ! axismundi_op_post_page_supports( $post ) ) ) {
+	if ( ! $post instanceof WP_Post || ! axismundi_op_post_article_supports( $post ) ) {
 		return $source;
 	}
 	return hash_equals( $uri, axismundi_op_post_object_uri( $post ) ) ? $post : $source;
@@ -986,16 +978,6 @@ function axismundi_op_post_to_article( WP_Post $post, array $claimed = array() )
 	return apply_filters( 'axismundi_op_post_article', $article, $post, $claimed );
 }
 
-/** Project a core Page through the shared document representation path. */
-function axismundi_op_post_to_page( WP_Post $post ) {
-	$page = axismundi_op_post_to_article( $post );
-	if ( is_wp_error( $page ) ) {
-		return $page;
-	}
-	$page['type'] = 'Page';
-	return apply_filters( 'axismundi_op_post_page', $page, $post );
-}
-
 /** Project one core attachment without requiring a Media Library integration. */
 function axismundi_op_core_attachment_transform( WP_Post $attachment ) {
 	$url  = (string) wp_get_attachment_url( (int) $attachment->ID );
@@ -1160,17 +1142,6 @@ function axismundi_op_register_post_article_transformer() : void {
 			'visible'    => 'axismundi_op_post_article_visible',
 			// This site authors these posts, so one nobody has published is readable without
 			// an `attributedTo` rather than refused.
-			'local'      => true,
-			'priority'   => 10,
-		)
-	);
-	axismundi_op_register_object_transformer(
-		'core-page',
-		array(
-			'supports'   => 'axismundi_op_post_page_supports',
-			'object_uri' => 'axismundi_op_post_object_uri',
-			'transform'  => 'axismundi_op_post_to_page',
-			'visible'    => 'axismundi_op_post_article_visible',
 			'local'      => true,
 			'priority'   => 10,
 		)

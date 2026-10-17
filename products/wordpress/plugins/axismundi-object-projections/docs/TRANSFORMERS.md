@@ -218,6 +218,47 @@ Mastodon's corresponding ActivityPub endpoints use unordered `Collection`, and t
 ActivityPub vocabulary permits either. Human-facing liker and booster lists are separate
 local UI/API projections, not members synchronized through S2S federation.
 
+## The Collection paging model, and what each of ours does
+
+Activity Streams Core section 4.6.1 is the model. A Collection too large for one document
+is split into pages: `CollectionPage` extends `Collection`, a page names its whole through
+`partOf`, the whole names its ends through `first` and `last`, pages link through `next`
+and `prev`, `current` names the page holding the most recent items, and `startIndex` on an
+`OrderedCollectionPage` gives the page's offset within its parent. Pages of an
+`OrderedCollection` **SHOULD** be `OrderedCollectionPage`, otherwise a consumer cannot
+rebuild the order. Section 4.6 shows a Collection whose `items` are omitted entirely while
+the items live in the `first` page, and shows `totalItems` as the size of the whole
+collection, not of the page returned: its example carries `totalItems: 10` on a first page
+holding one item.
+
+Measured across our ten collection transformers on 2026-10-17, there are three behaviours
+and one of them is wrong.
+
+| Collection | `totalItems` | Paging |
+| --- | --- | --- |
+| Actor followers | the real count | `first`, and the page is an `OrderedCollectionPage` with `partOf` |
+| Media folder | `$items['total']`, on both the collection and the page | paged |
+| likes / reactions / shares | real counts from the ledger | counts only; no item list |
+| Attachment `usedIn` | `count($items)` over an unbounded read, so a true total | none, and the set is bounded in practice |
+| Replies | **deliberately absent** | bounded scan; omitting the count rather than claiming a partial one is recorded in `replies-collection.php` |
+| **Actor outbox** | **`count($items)` over a slice capped at 200** | **none** |
+
+The outbox is the defect. `axismundi_act_get_public_outbox( $uri, 200 )` truncates, and
+`totalItems` then reports the size of the truncation rather than of the collection, so an
+Actor with five thousand activities publishes `totalItems: 200` and the remaining
+activities are unreachable because no `first` or `next` is offered to follow. Peers read
+`totalItems` as the Actor's post count and display it.
+
+Everything needed to fix it already exists in this plugin: the followers collection pages
+correctly, and the replies collection shows the other honest option, which is to omit a
+count you cannot compute rather than publish one you can. What the outbox must not keep
+doing is the third thing -- publishing a number that is neither.
+
+The taxonomy connection is worth noting while this is open. Hashtag archives and media
+folders are WordPress taxonomies projected as Collections, and a taxonomy term's archive
+is exactly the unbounded case the paging model exists for. The folder collection already
+pages; the hashtag archive should be read against this table before it grows.
+
 ## Claimed Article projection (0.1.1)
 
 A product that owns a post's context does not write a second Article. It claims the one

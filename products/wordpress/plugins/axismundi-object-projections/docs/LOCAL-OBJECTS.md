@@ -122,27 +122,52 @@ Two things to settle in the unified engine work, both named now:
 
 ### Open: one author, several exposures
 
-Settling that read needs a policy decision first, and one spec fact narrows it less than it
-appears. `attributedTo` is **not single-valued**: AS2 defines it as identifying "one or more
-entities to which this object is attributed", with no functional declaration. So an array is
-permitted and the constraint that forces a single answer is ours, not the specification's.
-Two of our own requirements force it. Quoting is a decision only an author can make, and an
-approval procedure with two possible authors has no defined decider. And a peer caching an
-array has no rule for choosing which one to show.
+An `Add` confers **no authorship**, and that is the specification's position
+rather than a preference. ActivityPub defines its side effect as putting the
+object into the collection named by `target` and nothing more, and FEP-400e --
+final since 2022-02-04 -- makes the separation explicit: in a publicly
+appendable collection the `Add` is sent by the **collection owner's** server
+while the object keeps the `attributedTo` of whoever created it. The actor of an
+Add is the one who owns the collection, which in the general case is precisely
+not the author. So "the first Add fixes attribution", recorded here earlier as a
+recommendation, was wrong as stated.
 
-Three shapes, with a recommendation rather than a decision:
+The case that shows it is already on our roadmap: a server-to-server binary
+cache materialised as a shadow attachment page can be added to a local Actor's
+collection. Attributing it to the Actor who added it would reassign a remote
+author's work on the strength of somebody filing it, and this plugin already
+disclaims exactly that -- a remote object's URI stays its identity and a local
+shadow is never a replacement identity.
+
+What remains true is narrower. Attribution is settled at **origin**: by a
+`Create`, whose actor the ActivityPub Recommendation says SHOULD be copied to
+`attributedTo` -- a SHOULD, so even that is policy resting on a recommendation
+-- or, for a remote object, by whatever its origin declared, which we observe
+and never overwrite. The open question is only what settles it for a **local
+file whose origin recorded nobody**, and the candidate rule has three
+conditions rather than one: there is no attribution yet, the object is local,
+and the Actor exposing it owns the file. Anything outside those three is
+membership only.
 
 | Shape | Consequence |
 | --- | --- |
-| The first `Add` fixes attribution permanently | One author; later exposures by other Actors add no claim |
-| Attribution follows the most recent `Add` | The author of a file changes when somebody else displays it, and a cached payload disagrees with the current one |
-| `attributedTo` carries every exposing Actor | Spec-legal, but consent decisions and peer display both lose their decider |
+| First exposure settles it, under the three conditions above | One author; later exposures and other Actors' collections add no claim |
+| Attribution follows the most recent exposure | The author of a file changes when somebody else displays it, and a cached payload disagrees with the current one |
+| `attributedTo` carries every exposing Actor | Spec-legal -- AS2 defines it as "one or more entities", with no functional declaration -- but consent decisions and peer display both lose their decider |
 
-The first is recommended. A second Actor displaying media should not be able to become its
-author, and withdrawing one exposure should change that exposure's audience rather than the
-file's authorship -- the same separation the visibility note below draws between access and
-audience. Exposure then becomes a list the exposure read returns, while attribution stays one
-value settled once. Not decided; it is the project owner's call.
+The first is recommended, with its three conditions stated, and it is the
+owner's call. Two consequences come with whichever is chosen, and neither is
+free. Attribution appearing later means the stored Object projection changes
+after the fact, so there has to be a rule for whether peers who already hold the
+object are told -- an `Update` -- or whether they see it only on a re-fetch; and
+this project has already decided not to pollute feeds with Updates about media
+metadata. And a quote approval needs one decider, which is the local requirement
+that rules out the array even though AS2 permits it.
+
+FEP-400e is out of scope and its mechanism is not being adopted. What is worth
+taking from it now is the shape: a collection's owner has authority over the
+collection, including who may add and what may be removed, and that authority is
+a different thing from authorship of what sits inside it.
 
 ### Media visibility is pre-Actor, and that is legacy
 

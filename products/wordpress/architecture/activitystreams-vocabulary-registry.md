@@ -110,8 +110,22 @@ Collected 2026-10-17 and measured rather than assumed:
 | Source | What it contributes | Conformance classes |
 | --- | --- | --- |
 | Activity Streams 2.0 Core, W3C Recommendation 23 May 2017 | 71 requirements, 45 payload | conforming document, implementation, publisher, consumer (§9) |
-| ActivityPub, Editor's Draft (no status date in the fetched document; the underlying Recommendation is 23 January 2018) | 137 requirements, 40 payload | conformant Client, Server, Federated Server (§2.1) |
+| **ActivityPub, W3C Recommendation 23 January 2018** (`https://www.w3.org/TR/activitypub/`) | the normative source | conformant Client, Server, Federated Server |
 | W3C Security Vocabulary / HTTP Signatures practice | `publicKey`, `publicKeyPem` | none; de-facto fediverse convention |
+
+The ActivityPub row is a published Recommendation and the register anchors to
+it. The collection that produced these counts -- 137 requirements, 40 of them
+payload -- was taken from the **Editor's Draft** at
+`https://w3c.github.io/activitypub/`, which carries errata the Recommendation
+does not, so the two are not interchangeable. The draft is comparison material.
+Every requirement promoted into the register is re-checked against the
+Recommendation and anchored there, because a register whose job is to say where
+a rule comes from cannot cite the wrong document.
+
+One measured consequence of reading the Recommendation itself: the guidance that
+a `Create`'s actor be copied onto the object's `attributedTo` is a **SHOULD**,
+not a MUST. Attribution is therefore local policy resting on a recommendation,
+which is worth knowing before building rules on top of it.
 
 The third row is the finding worth keeping. **`publicKey` appears nowhere in
 ActivityPub** -- zero occurrences in the fetched Editor's Draft, which handles
@@ -590,9 +604,17 @@ what the vocabulary contains. Keeping them apart is what lets every plugin keep
 working with Object Projections absent -- only assembling a document needs the
 registry.
 
-The first deliverable is therefore not abstract. The five Actor types are
-written out twice inside Actors alone (`repository.php` and
-`remote-discovery.php`), which is the duplication the registry removes.
+What the registry supplies is **vocabulary classification** -- which terms
+exist, what their parents are, which properties a type has, what shape a value
+takes. It does not supply, and must not replace, a product's accept or author
+support list. An earlier draft of this section said the registry removes the
+duplicate Actor-type list inside Actors, and that contradicted the division
+above. It is also the wrong diagnosis: both copies (`repository.php` and
+`remote-discovery.php`) are **Actors' own support lists, duplicated inside one
+plugin**, so deduplicating them is that plugin's housekeeping and never needed
+the registry at all. Replacing a support list with a registry read would make
+the registry a runtime dependency of Actors, which is a separate decision
+nobody has taken.
 
 What a product binds the supplied property set to -- post meta, term meta, a
 custom table, an editor control -- stays the product's own decision. The

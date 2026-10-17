@@ -244,7 +244,37 @@ try {
 	$private = axismundi_op_transform_object( $image );
 	ax_media_projection_assert( $ax_media_projection_results, 'private objects fail closed without owner/editor bypass', is_wp_error( $private ) && 'ax_op_not_public' === $private->get_error_code() );
 
+	/*
+	 * A withheld file must not come back through the other door. The core profile reads the
+	 * post's own blocks and knows nothing about tiers, so when this plugin removed a private
+	 * image from its descriptor list, that reading republished it inside the public Article --
+	 * an empty answer from the owner was treated as no answer. Both paths now ask.
+	 */
+	update_post_meta( $image_id, '_ax_media_visibility', 'private' );
+	$ax_media_withheld_article = axismundi_op_transform_object( get_post( $article_id ) );
+	$ax_media_withheld_members = is_array( $ax_media_withheld_article ) ? (array) ( $ax_media_withheld_article['attachment'] ?? array() ) : array();
+	$ax_media_withheld_ids     = array_map( static fn( array $one ) : string => (string) ( $one['id'] ?? '' ), $ax_media_withheld_members );
+	ax_media_projection_assert(
+		$ax_media_projection_results,
+		'a public Article does not list media this plugin withholds, through either descriptor path',
+		is_array( $ax_media_withheld_article )
+			&& ! in_array( axismundi_op_media_attachment_uri( $image ), $ax_media_withheld_ids, true )
+			&& false === strpos( (string) wp_json_encode( $ax_media_withheld_article['attachment'] ?? array() ), (string) wp_get_attachment_url( $image_id ) )
+			&& ! isset( $ax_media_withheld_article['image'] )
+	);
+
 	update_post_meta( $image_id, '_ax_media_visibility', 'public' );
+	// A public tier does not override WordPress' own answer about the attachment itself.
+	$ax_media_status = (string) get_post( $image_id )->post_status;
+	wp_update_post( array( 'ID' => $image_id, 'post_status' => 'private' ) );
+	$ax_media_private_status = axismundi_op_transform_object( get_post( $image_id ) );
+	wp_update_post( array( 'ID' => $image_id, 'post_status' => $ax_media_status ) );
+	ax_media_projection_assert(
+		$ax_media_projection_results,
+		'an attachment stored with an explicitly private status fails closed whatever tier it carries',
+		is_wp_error( $ax_media_private_status ) && 'ax_op_not_public' === $ax_media_private_status->get_error_code()
+	);
+
 	remove_all_filters( 'axismundi_op_media_attachment_actor_uri' );
 	add_filter( 'axismundi_op_media_attachment_actor_uri', static fn() : string => '' );
 	$without_actor = axismundi_op_transform_object( $image );

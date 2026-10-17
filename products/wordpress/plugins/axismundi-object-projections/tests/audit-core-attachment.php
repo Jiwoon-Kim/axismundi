@@ -69,6 +69,29 @@ try {
 			&& 'image/jpeg' === ( $ax_core_attachment_object['mediaType'] ?? '' )
 	);
 
+	// Two statuses that look alike and are not. An attachment page is its own public
+	// surface, so the ordinary `inherit` attachment of a private parent stays projectable;
+	// an attachment stored with an explicitly private status is withheld.
+	$ax_core_private_parent = (int) wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'private', 'post_author' => 1, 'post_title' => 'Private parent' ) );
+	$ax_core_inherited = (int) wp_insert_attachment( array( 'post_title' => 'Inherited child', 'post_status' => 'inherit', 'post_mime_type' => 'image/jpeg', 'post_parent' => $ax_core_private_parent ) );
+	update_post_meta( $ax_core_inherited, '_wp_attached_file', 'probe/inherited.jpg' );
+	$ax_core_private = (int) wp_insert_attachment( array( 'post_title' => 'Private attachment', 'post_status' => 'private', 'post_mime_type' => 'image/jpeg', 'post_author' => 1 ) );
+	update_post_meta( $ax_core_private, '_wp_attached_file', 'probe/private.jpg' );
+	ax_core_attachment_assert(
+		$ax_core_attachment_results,
+		'the inherit attachment of a private parent remains a public Object',
+		axismundi_op_core_attachment_visible( get_post( $ax_core_inherited ) )
+	);
+	ax_core_attachment_assert(
+		$ax_core_attachment_results,
+		'an attachment stored with an explicitly private status fails closed',
+		! axismundi_op_core_attachment_visible( get_post( $ax_core_private ) )
+			&& is_wp_error( axismundi_op_transform_object( get_post( $ax_core_private ) ) )
+	);
+	wp_delete_attachment( $ax_core_inherited, true );
+	wp_delete_attachment( $ax_core_private, true );
+	wp_delete_post( $ax_core_private_parent, true );
+
 	wp_update_post( array( 'ID' => $ax_core_attachment_id, 'post_title' => '' ) );
 	$ax_core_attachment_untitled = axismundi_op_core_attachment_transform( get_post( $ax_core_attachment_id ) );
 	ax_core_attachment_assert(

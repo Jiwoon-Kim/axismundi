@@ -112,6 +112,13 @@ function axismundi_op_media_attachment_actor_uri( WP_Post $attachment ) : string
  * @return bool
  */
 function axismundi_op_media_attachment_visible( WP_Post $attachment ) : bool {
+	// This plugin's tiers are additional to WordPress' own answer, not a replacement for it:
+	// an attachment stored with an explicitly private status is withheld whatever tier it
+	// carries, while the ordinary `inherit` attachment of a private parent stays viewable,
+	// because the attachment page is its own public surface.
+	if ( ! is_post_publicly_viewable( $attachment ) ) {
+		return false;
+	}
 	$tier = axismundi_media_effective_visibility( (int) $attachment->ID );
 	$gate = (int) axismundi_media_locked_gate_for_attachment( (int) $attachment->ID );
 	return in_array( $tier, array( 'public', 'unlisted' ), true )
@@ -335,6 +342,22 @@ function axismundi_op_media_enrich_article( array $article, WP_Post $post ) : ar
 }
 
 /**
+ * Answer the core profile's media-visibility question for an attachment we own.
+ *
+ * The core profile reads the post's own blocks, which knows nothing about visibility tiers
+ * or a locked gate. Without this, media this plugin withholds from its own descriptor list
+ * is published again through that reading.
+ *
+ * @param bool $visible       Whether the attachment may be embedded.
+ * @param int  $attachment_id Attachment post id.
+ * @return bool
+ */
+function axismundi_op_media_descriptor_visible( bool $visible, int $attachment_id ) : bool {
+	$attachment = get_post( $attachment_id );
+	return $attachment instanceof WP_Post ? axismundi_op_media_attachment_visible( $attachment ) : $visible;
+}
+
+/**
  * Transform one Media Library attachment.
  *
  * @param WP_Post $attachment Attachment.
@@ -425,6 +448,7 @@ function axismundi_op_register_media_library_integration() : void {
 	);
 	add_filter( 'axismundi_op_jsonld_context', 'axismundi_op_media_jsonld_context', 10, 2 );
 	add_filter( 'axismundi_op_post_article', 'axismundi_op_media_enrich_article', 8, 2 );
+	add_filter( 'axismundi_op_attachment_descriptor_visible', 'axismundi_op_media_descriptor_visible', 10, 2 );
 	if ( function_exists( 'axismundi_media_relations_used_in' ) ) {
 		axismundi_op_register_collection_transformer(
 			'axismundi-media-used-in',

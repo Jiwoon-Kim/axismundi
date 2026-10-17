@@ -196,9 +196,19 @@ function axismundi_op_post_article_visible( WP_Post $post ) : bool {
 		&& is_post_publicly_viewable( $post );
 }
 
-/** Core attachment visibility does not require an Actor attribution. */
+/**
+ * Core attachment visibility does not require an Actor attribution.
+ *
+ * It does require WordPress to consider the attachment viewable. An attachment normally
+ * carries `inherit` and is viewable even when its parent post is private -- the attachment
+ * page is its own public surface, which is why that case is deliberately allowed -- but an
+ * attachment stored with an explicitly private status is not, and projecting it anyway
+ * published a file somebody withheld.
+ */
 function axismundi_op_core_attachment_visible( WP_Post $attachment ) : bool {
-	return 'trash' !== $attachment->post_status && '' !== (string) wp_get_attachment_url( (int) $attachment->ID );
+	return 'trash' !== $attachment->post_status
+		&& is_post_publicly_viewable( $attachment )
+		&& '' !== (string) wp_get_attachment_url( (int) $attachment->ID );
 }
 
 /**
@@ -761,6 +771,23 @@ function axismundi_op_attachment_descriptor( int $attachment_id ) : ?array {
 	$url = wp_get_attachment_url( $attachment_id );
 	$mime = (string) get_post_mime_type( $attachment_id );
 	if ( ! $url || '' === $mime ) {
+		return null;
+	}
+	/**
+	 * Filter whether one attachment may be published as embedded media at all.
+	 *
+	 * Core has no way to say that a file is for some readers and not others, so the default
+	 * is true: an attachment page is a public surface, and a content warning is the only
+	 * modifier core can express. A product that does own media visibility answers here, and
+	 * its "no" has to reach this reading of the post's blocks as well -- otherwise the
+	 * withheld file is simply republished by whichever path the withholding one did not
+	 * cover.
+	 *
+	 * @since 0.1.3
+	 * @param bool $visible       Whether the attachment may be embedded.
+	 * @param int  $attachment_id Attachment post id.
+	 */
+	if ( ! (bool) apply_filters( 'axismundi_op_attachment_descriptor_visible', true, $attachment_id ) ) {
 		return null;
 	}
 	$type = 'Document';

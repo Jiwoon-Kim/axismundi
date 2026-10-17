@@ -131,24 +131,34 @@ has never meant. The same table says so in general: a visibility state is never 
 projection selection rule. No opt-in mechanism was built in its place; when one is wanted it
 belongs to the registration API rather than to a second hardcoded profile.
 
-### Open, awaiting the project owner
+### Neither of these is an open question, and both were listed as one
 
-Two questions this work must not settle silently, recorded here because they came up in
-design discussion and nowhere else:
+Recorded because the mistake is instructive: two consequences of decisions
+already taken were written here as though the owner still had to choose.
 
-1. **Does an embedded media descriptor respect the Media Library's locked gate, or only its
-   visibility tier?** Both are honoured today, so a public post does not list an image the
-   owner put in a password-protected folder. The conservative reading is that federated
-   publication is active distribution rather than a failure to restrict, which is why it
-   stands. The other reading is that a password gate protects the attachment page and not
-   the bytes -- WordPress cannot restrict file delivery -- so the gate is access and the
-   tier is reach, and only reach should decide what a document advertises. This is the same
-   "one field, two questions" problem that the Media Library's own DATA-MODEL.md section 6.1
-   records.
-2. **Does a standalone media Object declare its audience?** Measured 2026-10-17: an Article
-   declares `to` with the Public collection and the standalone `Image` of the same site
-   declares no addressing at all. That is a difference in content rather than in key order,
-   so fixing the order must not be allowed to hide it.
+**Whether an embedded descriptor respects the Media Library's locked gate is not
+this plugin's question.** An embedded descriptor is what an install with no
+Media Library plugin emits; tiers, locked folders and collections are that
+plugin's policy. The seam is already the right shape --
+`axismundi_op_attachment_descriptor_visible` asks, the Media Library answers,
+and its answer today is no -- so what remains undecided is that plugin's policy,
+which belongs to its collection model and is recorded in its own DATA-MODEL.md.
+Nothing here waits on it.
+
+**A standalone media Object cannot declare an audience, and that is derived
+rather than chosen.** Addressing presupposes somebody who addressed it, and an
+uploaded file has no `attributedTo` because uploading is storage rather than
+publication. There is nobody to have chosen a `to`. The measured asymmetry --
+an Article declaring the Public collection while the standalone Image of the
+same site declares nothing -- is therefore correct, not a divergence to
+reconcile. When an exposure gives the media an author, the audience comes from
+the collection that exposed it, which is the same event. This is the same
+argument as the pre-Actor visibility note: an unpublished object has no audience
+because there is nothing for it to be an audience of.
+
+What is still genuinely open is recorded with the decision it belongs to, in
+LOCAL-OBJECTS.md: what settles attribution for a local file whose origin
+recorded nobody.
 
 ## 4. Frozen contracts
 

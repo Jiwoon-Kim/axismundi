@@ -416,6 +416,31 @@ collection item, read like any other Object's addressing; **access** here, keyed
 warning** on the Object, since it is a viewer warning rather than access control and is the
 one modifier an attachment page can carry whatever else is true.
 
+#### Open here, and only here: what the gate means for embedded media
+
+Object Projections asks this plugin whether an attachment may be published as
+embedded media inside somebody's Article or Note
+(`axismundi_op_attachment_descriptor_visible`), and today the answer folds tier
+and gate together, so a public post does not list an image whose folder has a
+password. Measured 2026-10-17: attachment 44 carries tier `public` and gate 87,
+and the public Article that embeds it no longer advertises the file.
+
+Whether that is right is **this plugin's policy decision**, not a representation
+question, and it belongs with the collection model rather than being settled in
+passing:
+
+- The gate cannot protect the bytes. Download policy was dropped from this plugin
+  precisely because WordPress cannot restrict file delivery, so a password
+  protects the attachment page and its listings, not the file.
+- But federated publication distributes the URL actively rather than merely
+  failing to restrict it, which is a different act from leaving a file reachable.
+- And the embedding is an authored act: somebody put that file in a document
+  whose audience they chose.
+
+The seam is already the right shape -- the owner of media policy is asked and
+answers -- so changing the answer later is a change here and touches nothing in
+the representation layer.
+
 **Not being changed, deliberately.** Measured 2026-10-17: these tiers are the only thing
 withholding a private file, and Object Projections' core attachment profile was republishing
 what they withheld until both descriptor paths were made to ask

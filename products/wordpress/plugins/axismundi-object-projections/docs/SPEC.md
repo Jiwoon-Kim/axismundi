@@ -50,13 +50,29 @@ WP_Post ──(Transformer)──▶ normalized AS object ──(Renderer)──
 - **Object Projections** — this plugin: the transformer registry, JSON-LD representation,
   and (Phase 2) object/collection negotiation.
 
-The unified projection work introduces three more, and they are listed here because the
-word "renderer" was being used for the whole pipeline, which collides with the frontend
-app's component renderer:
+The unified projection work introduces four more. They are listed here because "renderer"
+was being used for the whole pipeline, which collides with the frontend app's component
+renderer, and because the pipeline is not one step:
 
-- **Projector** — the one thing that turns a local source into one AS object. The word is
-  already used in this sense in `axismundi-calendar/includes/cpt.php` ("so there is exactly
-  one projector"), and "exactly one" is the point of it.
+```text
+source / URI ─(Resolver)─▶ identity + model + type ─(Model handler)─▶ members ─(Renderer)─▶ JSON-LD
+                                                          ▲
+                                              natural-language values (§4.7-4.8)
+```
+
+- **Resolver** — the step that decides *what this is*: a source or URI in, and an
+  identity, an AS2 **model** and a type out. This is the accurate name for the front of
+  the pipeline, and the code already works this way --
+  `axismundi_op_resolve_source_by_uri`, `axismundi_op_local_source_from_object_uri` and
+  `axismundi_op_local_object_profile` are all resolution. Calendar's "so there is exactly
+  one projector" (`axismundi-calendar/includes/cpt.php`) remains the statement of intent --
+  one path per source, never two -- while "resolver" names the mechanism that achieves it.
+- **Model handler** — composes the members one AS2 Core §4 model owns: Object, Link,
+  Actor, Activity, IntransitiveActivity, Collection. The dispatch key already exists in the
+  architecture registry's contract as `category` (`core | actor | activity | object | link
+  | collection`), so this is not a new axis. `IntransitiveActivity` needs no handler of its
+  own: what distinguishes it is that it excludes `object`, which `effective_properties()`
+  already computes.
 - **Source reader** — the part that reads WordPress storage. There is one, not one per
   type: `attachment` is a Core `post_type`, so it is not a separately registered reader
   (CORE-WP-OBJECT-SOURCES.md §1).
@@ -64,6 +80,21 @@ app's component renderer:
   registry's sense of "projection profile". A profile does not alter the type hierarchy.
 - **Renderer** — narrowed to what `renderer.php` actually is: `@context` assembly,
   validation, and serialization. It is not the name of the pipeline.
+
+Model dispatch is a split this file already began without naming it, which is the argument
+for finishing it rather than introducing it. `renderer.php` has three finalize paths today
+-- `axismundi_op_finalize_object()`, `axismundi_op_finalize_activity()` and
+`axismundi_op_run_collection_transformer()` -- so object, activity and collection are
+already separate. Actor is not: it goes through the object path and adds `inbox`, `outbox`,
+`endpoints` and `publicKey` as ad-hoc members. **Link has no handler at all**: measured
+2026-10-17, `'type' => 'Link'` is assembled inline in five files across three plugins
+(media-library three times, post-article twice, thread-edges, Note's federation, Contacts'
+canonical), which is where the `href`/`rel`/`hreflang`/`mediaType` rules would otherwise be
+enforced once.
+
+Natural-language values are **not** a model. §4.7 and §4.8 are a value shape every model
+shares -- the `Map` forms, BCP 47 keys, string values -- and `axismundi_op_clean_language_map()`
+is already the one implementation. They belong beside the model handlers, not inside one.
 
 ## 4. Frozen contracts
 

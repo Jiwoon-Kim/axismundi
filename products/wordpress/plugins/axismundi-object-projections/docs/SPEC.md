@@ -200,6 +200,33 @@ recorded nobody.
 
 ## 4a. Decided, not yet implemented
 
+0. **An Object with no `attributedTo` declares no audience, and that includes an Article.**
+   Addressing presupposes somebody who addressed it. The rule was reached for media first
+   and it is not about media: a post projected by this plugin alone, with no Actors or
+   Activities to say who published it, has nobody who chose a recipient.
+
+   Measured 2026-10-17 and currently the opposite: `/vqa-demo-post-1/` emits no
+   `attributedTo`, and emits `to: ["…#Public"]` with `cc: []`. The code states the present
+   behaviour deliberately -- "An unattributed Object can still be addressed, but only
+   publicly" -- so this reverses a recorded decision rather than filling a gap.
+
+   **It has a prerequisite, and skipping it would stop serving those posts.**
+   `axismundi_op_post_article_publicly_readable()` derives readability from the resolved
+   audience (`$audience['public'] === true`), and `router.php` gates anonymous
+   ActivityStreams negotiation on that in three places. An unattributed Article with no
+   audience would therefore become unreadable, not merely unaddressed. Readability -- is
+   this publicly viewable in WordPress -- and addressing -- whom the publisher addressed it
+   to -- are two questions that one value currently answers, and they have to be separated
+   before the addressing can go.
+
+   Related and deliberately not changed with it: `cc` is emitted as an empty array when
+   nothing was copied, and a check in `audit-post-article.php` asserts exactly that for a
+   mentioned-only Article, using the empty array as evidence that neither followers nor
+   Public were copied. Whether an empty member is omitted or emitted is one representation
+   decision for every member, and it belongs to the Object model handler rather than being
+   taken a member at a time. Changing it for `cc` alone was tried here and reverted when it
+   contradicted that check.
+
 These are recorded so the next slice is not designed against their absence. None of them
 is enforced today; each needs its own check before it may be described as a contract.
 

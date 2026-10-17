@@ -12,6 +12,11 @@ $ax_inbox_suffix        = strtolower( wp_generate_password( 8, false, false ) );
 $ax_inbox_activity_uris = array();
 $ax_inbox_object_uri    = 'https://remote.example/objects/inbox-' . $ax_inbox_suffix;
 $ax_inbox_announce_uri  = 'https://example.com/objects/announced-' . $ax_inbox_suffix;
+$ax_inbox_refused_uri   = 'https://example.com/objects/refused-' . $ax_inbox_suffix;
+// Background acquisition is off unless an administrator switches it on, so an audit of
+// the deferred paths has to arrange that precondition instead of inheriting it, and put
+// the operator's own setting back afterwards.
+$ax_inbox_acquisition   = get_option( AXISMUNDI_OP_BACKGROUND_ACQUISITION_OPTION, '0' );
 
 /** @param array<bool> $results Test results. */
 function ax_inbox_assert( array &$results, string $label, bool $condition ) : void {
@@ -36,9 +41,14 @@ function ax_inbox_remote_actor( string $suffix ) {
 	);
 }
 
-/** Mock the deferred fetch of a URI-only Announce target. */
+/**
+ * Mock the deferred fetch of a URI-only Announce target.
+ *
+ * It answers the refusal fixture too, so "the worker did not fetch" cannot pass merely
+ * because no mock would have answered.
+ */
 function ax_inbox_announce_fetch_mock( $preempt, array $args, string $url ) {
-	if ( $url !== $GLOBALS['ax_inbox_announce_uri'] ) {
+	if ( ! in_array( $url, array( $GLOBALS['ax_inbox_announce_uri'], $GLOBALS['ax_inbox_refused_uri'] ), true ) ) {
 		return $preempt;
 	}
 	$payload = array(
@@ -66,6 +76,7 @@ try {
 	$author_uri = $author instanceof Axismundi_Actor ? $author->get_uri() : '';
 	$other_uri  = $other instanceof Axismundi_Actor ? $other->get_uri() : '';
 	$GLOBALS['ax_inbox_announce_uri'] = $ax_inbox_announce_uri;
+	$GLOBALS['ax_inbox_refused_uri']  = $ax_inbox_refused_uri;
 	$GLOBALS['ax_inbox_author_uri']   = $author_uri;
 	ax_inbox_assert( $ax_inbox_results, 'fixture registers verified remote Actors', '' !== $author_uri && '' !== $other_uri );
 
@@ -181,10 +192,36 @@ try {
 	$legacy_after = axismundi_op_get_remote_object( $legacy_delete_object );
 	ax_inbox_assert( $ax_inbox_results, 'the v13 repair tombstones a cached Object whose verified Delete arrived before this observer existed', is_array( $legacy_stored ) && $legacy_delete instanceof Axismundi_Activity && is_array( $legacy_before ) && 'active' === (string) $legacy_before['object_status'] && $legacy_install && is_array( $legacy_after ) && 'tombstone' === (string) $legacy_after['object_status'] && false === get_option( AXISMUNDI_OP_DELETE_RECONCILE_OPTION, false ) );
 
-	$announce_uri = 'https://remote.example/activities/announce-' . $ax_inbox_suffix;
-	$announce     = axismundi_act_record_activity(
+	// Recorded with acquisition still off: a stranger's Announce must not reach out on its
+	// own, so nothing is queued and the Activity is stored all the same.
+	update_option( AXISMUNDI_OP_BACKGROUND_ACQUISITION_OPTION, '0', false );
+	$refused_announce = axismundi_act_record_activity(
 		array(
-			'id'     => $announce_uri,
+			'id'     => 'https://remote.example/activities/refused-' . $ax_inbox_suffix,
+			'type'   => 'Announce',
+			'actor'  => $author_uri,
+			'object' => $ax_inbox_refused_uri,
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+		),
+		'inbound'
+	);
+	if ( $refused_announce instanceof Axismundi_Activity ) {
+		$ax_inbox_activity_uris[] = $refused_announce->get_uri();
+	}
+	ax_inbox_assert( $ax_inbox_results, 'with background acquisition off, a public Announce is stored without scheduling any fetch', $refused_announce instanceof Axismundi_Activity && false === wp_next_scheduled( 'axismundi_op_fetch_announced_object', array( $ax_inbox_refused_uri ) ) );
+
+	// And a job queued while it was on must still refuse once it is off, which is the only
+	// state in which the worker can run after the operator changes their mind.
+	add_filter( 'pre_http_request', 'ax_inbox_announce_fetch_mock', 10, 3 );
+	axismundi_op_fetch_announced_object( $ax_inbox_refused_uri );
+	remove_filter( 'pre_http_request', 'ax_inbox_announce_fetch_mock', 10 );
+	ax_inbox_assert( $ax_inbox_results, 'the deferred worker refuses to fetch while acquisition is off, even with a reachable host', ! is_array( axismundi_op_get_remote_object( $ax_inbox_refused_uri ) ) );
+
+	update_option( AXISMUNDI_OP_BACKGROUND_ACQUISITION_OPTION, '1', false );
+	$announce_args = array( $ax_inbox_announce_uri );
+	$enabled_announce = axismundi_act_record_activity(
+		array(
+			'id'     => 'https://remote.example/activities/announce-enabled-' . $ax_inbox_suffix,
 			'type'   => 'Announce',
 			'actor'  => $author_uri,
 			'object' => $ax_inbox_announce_uri,
@@ -192,11 +229,10 @@ try {
 		),
 		'inbound'
 	);
-	if ( $announce instanceof Axismundi_Activity ) {
-		$ax_inbox_activity_uris[] = $announce->get_uri();
+	if ( $enabled_announce instanceof Axismundi_Activity ) {
+		$ax_inbox_activity_uris[] = $enabled_announce->get_uri();
 	}
-	$announce_args = array( $ax_inbox_announce_uri );
-	ax_inbox_assert( $ax_inbox_results, 'a public inbound Announce schedules its URI-only Object for deferred acquisition', $announce instanceof Axismundi_Activity && false !== wp_next_scheduled( 'axismundi_op_fetch_announced_object', $announce_args ) );
+	ax_inbox_assert( $ax_inbox_results, 'a public inbound Announce schedules its URI-only Object for deferred acquisition', $enabled_announce instanceof Axismundi_Activity && false !== wp_next_scheduled( 'axismundi_op_fetch_announced_object', $announce_args ) );
 
 	add_filter( 'pre_http_request', 'ax_inbox_announce_fetch_mock', 10, 3 );
 	axismundi_op_fetch_announced_object( $ax_inbox_announce_uri );
@@ -211,7 +247,10 @@ try {
 	axismundi_op_delete_remote_object( $ax_inbox_object_uri );
 	axismundi_op_delete_remote_object( $legacy_delete_object );
 	wp_clear_scheduled_hook( 'axismundi_op_fetch_announced_object', array( $ax_inbox_announce_uri ) );
+	wp_clear_scheduled_hook( 'axismundi_op_fetch_announced_object', array( $ax_inbox_refused_uri ) );
 	axismundi_op_delete_remote_object( $ax_inbox_announce_uri );
+	axismundi_op_delete_remote_object( $ax_inbox_refused_uri );
+	update_option( AXISMUNDI_OP_BACKGROUND_ACQUISITION_OPTION, $ax_inbox_acquisition, false );
 }
 
 $ax_inbox_failures = count( array_filter( $ax_inbox_results, static fn( bool $result ) : bool => ! $result ) );

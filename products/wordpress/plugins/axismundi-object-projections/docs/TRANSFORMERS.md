@@ -266,6 +266,51 @@ transport boundary; the collection itself has no history cap. Any retention, rat
 window limit is a separate policy decision and must be implemented as such rather than hidden
 inside this projection.
 
+#### What WordPress core does, and where we differ on purpose
+
+Read from core rather than recalled, in
+`wp-includes/rest-api/endpoints/class-wp-rest-posts-controller.php`:
+
+```php
+$count_query->query( $query_args );        // a second query, posts_per_page = 1
+$total_posts = $count_query->found_posts;  // run only to obtain the count
+$max_pages   = (int) ceil( $total_posts / $per_page );
+if ( $page > $max_pages && $total_posts > 0 ) → 400 rest_post_invalid_page_number
+$response->header( 'X-WP-Total', $total_posts );
+$response->header( 'X-WP-TotalPages', $max_pages );
+$response->link_header( 'prev', … );  $response->link_header( 'next', … );
+```
+
+Four things to take from it.
+
+**Core pays a whole extra query for the total, and can.** Its membership predicate
+lives entirely in SQL, so counting is the same question asked with
+`posts_per_page = 1`. Ours does not: the public Outbox decides membership in PHP
+after the read, through a filter that may admit an Activity whose raw audience is
+not Public. That is the precise reason we omit `totalItems` rather than a
+reluctance to spend a query, and core is the proof that the cost would be
+acceptable if the predicate were expressible in SQL. If membership is ever
+materialised, the count becomes affordable on core's own terms.
+
+**An out-of-range page is a 400, not an empty page and not a silent reset to the
+first.** Core returns `rest_post_invalid_page_number`. Our invalid-cursor
+behaviour matches, which is worth recording as corroboration rather than
+coincidence: a reader that silently restarts at the newest page turns a broken
+link into an infinite loop over the head of the collection.
+
+**Core puts paging in HTTP headers; ActivityStreams puts it in the document.**
+`X-WP-Total`, `X-WP-TotalPages` and `Link: rel="prev"/"next"` are headers, while
+`first`, `next` and `partOf` are members. These are not alternatives. We emit no
+`Link` headers today, and adding `rel="next"` on the Outbox route would cost
+nothing, change no AS2 document, and let an ordinary HTTP client walk the same
+chain. `prev` is harder for us than for core -- core clamps it arithmetically from
+a page number, while a reverse cursor has to be derived -- so a forward-only
+`next` is the honest subset.
+
+**Core's `per_page` ceiling is 100 and its default is 10.** Ours are 50 and 50.
+Both are policy; the difference is that core's pages are cheap offsets into one
+SQL query while ours walk private runs, which is why the ceiling is lower.
+
 The taxonomy connection is worth noting while this is open. Hashtag archives and media
 folders are WordPress taxonomies projected as Collections, and a taxonomy term's archive
 is exactly the unbounded case the paging model exists for. The folder collection already

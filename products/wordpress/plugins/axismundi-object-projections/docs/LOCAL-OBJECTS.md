@@ -117,6 +117,42 @@ Two things to settle in the unified engine work, both named now:
   unattributed under that query, so whichever activity carries that exposure has to be part of
   what attribution is read from -- otherwise the rule above is written down and not in force.
 
+### Media visibility is pre-Actor, and that is legacy
+
+Follow the Add rule one step further and the current media visibility tiers stop lining up
+with it. If exposure is what publishes media, then an unpublished media Object has no author
+and no audience -- there is nothing for it to be visible *to*. Whether the file can be fetched
+at all is an access question about storage; who a published Object is shown to is an audience
+question about a publication. Today one setting answers both.
+
+`axismundi_media_effective_visibility()` returns `public`, `unlisted` or `private` for an
+attachment row, decided by a WordPress user, with no Actor in the question. `unlisted` in
+particular is an audience word: it means "reachable but not announced", which is a statement
+about how something was published. A file that nobody has published cannot be unlisted.
+
+This is a leftover from one user owning one Actor, the same shape as `post_author` standing in
+for `attributedTo` (section 1). While the mapping is one to one, "private to the user" and
+"not shown to this Actor's followers" are indistinguishable, so one field can pass for both.
+Multi-actor separates them, and then the field cannot answer either question properly:
+
+- With two Actors on one account, `private` cannot say whose audience it is excluding.
+- A file exposed by Actor A in one collection and by Actor B in another needs two audiences,
+  which a single tier on the shared file row cannot carry.
+- Reassigning or removing one exposure should change that exposure's audience, not the file's.
+
+Where each part belongs once this is untangled: audience on the activity that exposes the
+media and on the collection item it creates, read the way every other Object's addressing is
+read; access control on the file, which stays a user-scoped question and keeps the locked gate;
+and the content warning on the Object, which is a viewer warning rather than access and is the
+one modifier an attachment page can carry whatever else is true.
+
+**Not being changed now, deliberately.** The tiers are what withholds a private file today,
+and two measurements from 2026-10-17 are the reason this is recorded rather than attempted:
+they were the only thing withholding it, and the core profile was republishing what they
+withheld until both paths were made to ask. Replacing them means having somewhere else for
+audience to live, which means the Add activity exists first. Until then they are load-bearing
+legacy, and the note here is so the next person does not mistake them for the intended model.
+
 The site Actor is not a fallback for this. It is an Application/Instance identity — the server, not
 the author of somebody's Article. `axismundi_op_local_author_actor_uri()` currently falls back to
 it both when the user has no Actor *and* when the user's Actor is not public, which overrides a

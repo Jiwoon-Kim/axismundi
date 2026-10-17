@@ -11,6 +11,75 @@
 
 defined( 'ABSPATH' ) || exit;
 
+require_once __DIR__ . '/vocabulary-registry.php';
+
+/** @var array<string,array<string,mixed>> Explicit local source profiles, in registration order. */
+$GLOBALS['axismundi_op_local_source_profiles'] = array();
+$GLOBALS['axismundi_op_local_source_profiles_loaded'] = false;
+$GLOBALS['axismundi_op_local_source_profile_sequence'] = 0;
+
+/** Register a local source profile without changing the legacy transformer contract. */
+function axismundi_op_register_local_source_profile( string $id, array $profile ) {
+	if ( '' === sanitize_key( $id ) || ! is_callable( $profile['supports'] ?? null ) || ! is_callable( $profile['resolve'] ?? null ) ) {
+		return new WP_Error( 'ax_op_source_profile', __( 'A local source profile needs a lowercase id plus supports and resolve callbacks.', 'axismundi-object-projections' ) );
+	}
+	$profile['priority'] = isset( $profile['priority'] ) ? (int) $profile['priority'] : 10;
+	$profile['order']    = ++$GLOBALS['axismundi_op_local_source_profile_sequence'];
+	$GLOBALS['axismundi_op_local_source_profiles'][ $id ] = $profile;
+	return true;
+}
+
+/** @return void */
+function axismundi_op_load_local_source_profiles() : void {
+	if ( $GLOBALS['axismundi_op_local_source_profiles_loaded'] ) {
+		return;
+	}
+	$GLOBALS['axismundi_op_local_source_profiles_loaded'] = true;
+	do_action( 'axismundi_op_register_local_source_profiles' );
+}
+
+/** @return array<int,array<string,mixed>> */
+function axismundi_op_local_source_profiles() : array {
+	axismundi_op_load_local_source_profiles();
+	$profiles = array_values( $GLOBALS['axismundi_op_local_source_profiles'] );
+	usort( $profiles, static fn( array $a, array $b ) : int => array( $a['priority'], $a['order'] ) <=> array( $b['priority'], $b['order'] ) );
+	return $profiles;
+}
+
+/** @return array<string,mixed>|WP_Error|null */
+function axismundi_op_resolve_local_source_profile( WP_Post $post ) {
+	foreach ( axismundi_op_local_source_profiles() as $profile ) {
+		if ( true !== call_user_func( $profile['supports'], $post ) ) {
+			continue;
+		}
+		$result = call_user_func( $profile['resolve'], $post );
+		if ( ! is_array( $result ) || null === axismundi_op_local_object_type( (string) ( $result['type'] ?? '' ) ) ) {
+			return new WP_Error( 'ax_op_unknown_profile_type', __( 'A local source profile claimed a source with an unknown vocabulary type.', 'axismundi-object-projections' ) );
+		}
+		return $result;
+	}
+	return null;
+}
+
+/** Register WordPress core's opt-in profiles; page deliberately has none. */
+function axismundi_op_register_core_local_source_profiles() : void {
+	axismundi_op_register_local_source_profile(
+		'core-post-article',
+		array(
+			'supports' => static fn( WP_Post $post ) : bool => 'post' === $post->post_type && function_exists( 'axismundi_op_post_object_uri' ),
+			'resolve' => static fn( WP_Post $post ) : array => array( 'uri' => axismundi_op_post_object_uri( $post ), 'type' => 'Article', 'owner' => 'wordpress-core', 'kind' => 'post', 'attributed_to_uri' => function_exists( 'axismundi_op_post_actor_uri' ) ? axismundi_op_post_actor_uri( $post ) : '' ),
+		)
+	);
+	axismundi_op_register_local_source_profile(
+		'core-attachment',
+		array(
+			'supports' => static fn( WP_Post $post ) : bool => 'attachment' === $post->post_type,
+			'resolve' => static fn( WP_Post $post ) : array => array( 'uri' => function_exists( 'axismundi_op_core_attachment_uri' ) ? axismundi_op_core_attachment_uri( $post ) : add_query_arg( 'attachment_id', $post->ID, home_url( '/' ) ), 'type' => axismundi_op_core_attachment_type( $post ), 'owner' => 'wordpress-core', 'kind' => 'attachment', 'attributed_to_uri' => function_exists( 'axismundi_op_attachment_actor_uri' ) ? axismundi_op_attachment_actor_uri( $post ) : '' ),
+		)
+	);
+}
+add_action( 'axismundi_op_register_local_source_profiles', 'axismundi_op_register_core_local_source_profiles' );
+
 /** @return string Object vertical-slice table. */
 function axismundi_op_objects_table() : string {
 	global $wpdb;
@@ -189,13 +258,27 @@ function axismundi_op_core_attachment_type( WP_Post $post ) : string {
 	return 'Document';
 }
 
+/** A local source can only claim a type the vocabulary resolver knows. */
+function axismundi_op_local_object_type( string $type ) : ?string {
+	return function_exists( 'axismundi_op_vocabulary_type' ) && null !== axismundi_op_vocabulary_type( $type ) ? $type : null;
+}
+
 /** Return the explicit local post types this slice may register. */
 function axismundi_op_local_object_profile( WP_Post $post ) : ?array {
 	if ( wp_is_post_revision( $post ) || wp_is_post_autosave( $post ) ) {
 		return null;
 	}
-	if ( 'post' === $post->post_type && function_exists( 'axismundi_op_post_object_uri' ) ) {
-		return array( 'uri' => axismundi_op_post_object_uri( $post ), 'type' => 'Article', 'owner' => 'wordpress-core', 'kind' => 'post', 'attributed_to_uri' => function_exists( 'axismundi_op_post_actor_uri' ) ? axismundi_op_post_actor_uri( $post ) : '' );
+	$core_profile = axismundi_op_resolve_local_source_profile( $post );
+	if ( is_wp_error( $core_profile ) ) {
+		/**
+		 * A claiming profile must not silently yield to a later profile when its type is invalid.
+		 * Consumers that retain the historical nullable profile contract can observe the failure here.
+		 */
+		do_action( 'axismundi_op_local_source_profile_error', $core_profile, $post );
+		return null;
+	}
+	if ( is_array( $core_profile ) ) {
+		return $core_profile;
 	}
 	/*
 	 * `page` is deliberately absent. A published page is site furniture -- a contact page, a
@@ -204,9 +287,6 @@ function axismundi_op_local_object_profile( WP_Post $post ) : ?array {
 	 * records this as "no default, explicit opt-in only"; nothing registers that opt-in yet,
 	 * so there is no page profile rather than an unused one.
 	 */
-	if ( 'attachment' === $post->post_type ) {
-		return array( 'uri' => function_exists( 'axismundi_op_core_attachment_uri' ) ? axismundi_op_core_attachment_uri( $post ) : add_query_arg( 'attachment_id', $post->ID, home_url( '/' ) ), 'type' => axismundi_op_core_attachment_type( $post ), 'owner' => 'wordpress-core', 'kind' => 'attachment', 'attributed_to_uri' => function_exists( 'axismundi_op_attachment_actor_uri' ) ? axismundi_op_attachment_actor_uri( $post ) : '' );
-	}
 	if ( defined( 'AXISMUNDI_NOTE_POST_TYPE' ) && AXISMUNDI_NOTE_POST_TYPE === $post->post_type && function_exists( 'axismundi_note_get' ) && function_exists( 'axismundi_note_object_uri' ) ) {
 		$envelope = axismundi_note_get( $post->ID );
 		if ( ! is_array( $envelope ) || '' === (string) ( $envelope['local_uuid'] ?? '' ) ) {

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "source": "https://www.w3.org/TR/activitystreams-vocabulary/",
+  "types": {
+    "Object": { "category": "object", "parents": [], "declares": ["attachment", "attributedTo", "audience", "content", "context", "name", "endTime", "generator", "icon", "image", "inReplyTo", "location", "preview", "published", "replies", "startTime", "summary", "tag", "updated", "url", "to", "bto", "cc", "bcc", "mediaType", "duration"], "excludes": [] },
+    "Article": { "category": "object", "parents": ["Object"], "declares": [], "excludes": [] },
+    "Document": { "category": "object", "parents": ["Object"], "declares": [], "excludes": [] },
+    "Audio": { "category": "object", "parents": ["Document"], "declares": [], "excludes": [] },
+    "Image": { "category": "object", "parents": ["Document"], "declares": [], "excludes": [] },
+    "Video": { "category": "object", "parents": ["Document"], "declares": [], "excludes": [] },
+    "Note": { "category": "object", "parents": ["Object"], "declares": [], "excludes": [] },
+    "Place": { "category": "object", "parents": ["Object"], "declares": ["accuracy", "altitude", "latitude", "longitude", "radius", "units"], "excludes": [] },
+    "Profile": { "category": "object", "parents": ["Object"], "declares": ["describes"], "excludes": [] },
+    "Relationship": { "category": "object", "parents": ["Object"], "declares": ["subject", "object", "relationship"], "excludes": [] },
+    "Tombstone": { "category": "object", "parents": ["Object"], "declares": ["formerType", "deleted"], "excludes": [] },
+    "Link": { "category": "link", "parents": [], "declares": ["href", "rel", "mediaType", "name", "hreflang", "height", "width", "preview"], "excludes": [] },
+    "Mention": { "category": "link", "parents": ["Link"], "declares": [], "excludes": [] },
+    "Activity": { "category": "activity", "parents": ["Object"], "declares": ["actor", "object", "target", "result", "origin", "instrument"], "excludes": [] },
+    "IntransitiveActivity": { "category": "activity", "parents": ["Activity"], "declares": [], "excludes": ["object"] },
+    "Question": { "category": "activity", "parents": ["IntransitiveActivity"], "declares": ["oneOf", "anyOf", "closed"], "excludes": [] },
+    "Collection": { "category": "collection", "parents": ["Object"], "declares": ["totalItems", "current", "first", "last", "items"], "excludes": [] },
+    "OrderedCollection": { "category": "collection", "parents": ["Collection"], "declares": ["orderedItems"], "excludes": [] },
+    "CollectionPage": { "category": "collection", "parents": ["Collection"], "declares": ["partOf", "next", "prev"], "excludes": [] },
+    "OrderedCollectionPage": { "category": "collection", "parents": ["OrderedCollection", "CollectionPage"], "declares": ["startIndex"], "excludes": [] }
+  },
+  "properties": {
+    "id": { "provenance": "as2-core", "value_shape": "iri" },
+    "type": { "provenance": "as2-core", "value_shape": "type" },
+    "content": { "provenance": "as2-core", "value_shape": "string" },
+    "name": { "provenance": "as2-core", "value_shape": "string" },
+    "url": { "provenance": "as2-core", "value_shape": "iri-or-link" },
+    "attributedTo": { "provenance": "as2-core", "value_shape": "iri-or-object" }
+  }
+}

@@ -20,6 +20,7 @@ require_once dirname( __DIR__ ) . '/includes/post-article.php';
 global $wpdb;
 $ax_results      = array();
 $ax_identity_ids = array();
+$ax_registry_posts = array();
 $ax_attachment   = 0;
 $ax_page         = 0;
 $ax_actor_identity = 0;
@@ -215,6 +216,71 @@ try {
 			$ax_identity_ids[] = (int) $page_registry['identity_id'];
 		}
 	}
+	/*
+	 * The profile path now refuses a type the vocabulary resolver does not know, which turns
+	 * an incomplete snapshot into a silent absence rather than an error: measured 2026-10-17,
+	 * deleting `Article` from the snapshot made every published post unregistrable while five
+	 * audits and 65 checks stayed green, because every registry assertion was about something
+	 * *not* being registrable. The positive case has to be asserted too, and the types this
+	 * plugin projects have to be present for it to hold.
+	 */
+	$ax_registry_projected_types = array( 'Article', 'Document', 'Image', 'Audio', 'Video' );
+	$ax_registry_unknown_types   = array();
+	foreach ( $ax_registry_projected_types as $ax_registry_type ) {
+		if ( null === axismundi_op_vocabulary_type( $ax_registry_type ) ) {
+			$ax_registry_unknown_types[] = $ax_registry_type;
+		}
+	}
+	ax_object_registry_assert(
+		$ax_results,
+		'every type this plugin projects is known to the vocabulary resolver',
+		array() === $ax_registry_unknown_types
+	);
+	$ax_registry_post_id = (int) wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'publish', 'post_title' => 'Object registry post fixture', 'post_content' => 'body' ) );
+	$ax_registry_posts[] = $ax_registry_post_id;
+	$ax_registry_post    = $ax_registry_post_id > 0 ? axismundi_op_local_object_profile( get_post( $ax_registry_post_id ) ) : null;
+	$ax_registry_media   = $attachment instanceof WP_Post ? axismundi_op_local_object_profile( $attachment ) : null;
+	ax_object_registry_assert(
+		$ax_results,
+		'a published post and an attachment are both registrable, and claim the types the resolver knows',
+		is_array( $ax_registry_post ) && 'Article' === (string) $ax_registry_post['type']
+			&& is_array( $ax_registry_media ) && 'Image' === (string) $ax_registry_media['type']
+	);
+	/* A profile that claims the source but misspells its type must not fall through to Core. */
+	axismundi_op_register_local_source_profile(
+		'audit-unknown-type',
+		array(
+			'supports' => static fn( WP_Post $candidate ) : bool => $candidate->ID === $ax_registry_post_id,
+			'resolve'  => static fn( WP_Post $candidate ) : array => array( 'uri' => axismundi_op_post_object_uri( $candidate ), 'type' => 'NotAType' ),
+			'priority' => 1,
+		)
+	);
+	$ax_unknown_profile = $ax_registry_post_id > 0 ? axismundi_op_resolve_local_source_profile( get_post( $ax_registry_post_id ) ) : null;
+	ax_object_registry_assert(
+		$ax_results,
+		'a profile claiming a source with an unknown type errors instead of falling through to another profile',
+		is_wp_error( $ax_unknown_profile ) && 'ax_op_unknown_profile_type' === $ax_unknown_profile->get_error_code() && count( axismundi_op_local_source_profiles() ) >= 3
+	);
+	/*
+	 * The nullable legacy contract cannot carry that error, so it is published on an action
+	 * instead. Without this check the seam is a claim: measured 2026-10-17, it fires
+	 * correctly and had no coverage, which is how the discarded error went unnoticed in the
+	 * first place.
+	 */
+	$GLOBALS['ax_registry_profile_errors'] = array();
+	$ax_registry_error_observer = static function ( $error, $subject ) : void {
+		$GLOBALS['ax_registry_profile_errors'][] = ( is_wp_error( $error ) ? $error->get_error_code() : gettype( $error ) ) . '@' . ( $subject instanceof WP_Post ? (int) $subject->ID : 0 );
+	};
+	add_action( 'axismundi_op_local_source_profile_error', $ax_registry_error_observer, 10, 2 );
+	$ax_registry_nullable = $ax_registry_post_id > 0 ? axismundi_op_local_object_profile( get_post( $ax_registry_post_id ) ) : array();
+	remove_action( 'axismundi_op_local_source_profile_error', $ax_registry_error_observer, 10 );
+	ax_object_registry_assert(
+		$ax_results,
+		'the error the nullable profile API discards is published on an observable action',
+		null === $ax_registry_nullable
+			&& array( 'ax_op_unknown_profile_type@' . $ax_registry_post_id ) === $GLOBALS['ax_registry_profile_errors']
+	);
+
 	// A published page is site furniture, and `post_status = publish` was never a statement
 	// that something was authored for an audience. There is no page profile and no page
 	// transformer, so the resolver answers nothing for a page and the renderer has nothing
@@ -281,6 +347,11 @@ try {
 		);
 	}
 } finally {
+	foreach ( $ax_registry_posts as $ax_registry_fixture ) {
+		if ( (int) $ax_registry_fixture > 0 ) {
+			wp_delete_post( (int) $ax_registry_fixture, true );
+		}
+	}
 	if ( $ax_note_post > 0 ) {
 		if ( function_exists( 'axismundi_note_questions_table' ) ) {
 			$wpdb->delete( axismundi_note_questions_table(), array( 'note_post_id' => $ax_note_post ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.

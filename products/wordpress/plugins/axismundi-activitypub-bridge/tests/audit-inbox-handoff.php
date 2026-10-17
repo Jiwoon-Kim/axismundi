@@ -26,6 +26,7 @@ $ax_bridge_fallback_activity = '';
 $ax_bridge_accept_activity = '';
 $ax_bridge_update_activity = 'https://example.com/activities/' . wp_generate_uuid4();
 $ax_bridge_quote_activity  = 'https://example.com/activities/' . wp_generate_uuid4();
+$ax_bridge_quote_create    = home_url( '/activities/' . wp_generate_uuid4() );
 $ax_bridge_quote_decision  = '';
 $ax_bridge_quote_delete    = '';
 $ax_bridge_quote_auth      = '';
@@ -141,6 +142,26 @@ try {
 	remove_filter( 'axismundi_op_post_lifecycle_owner', 'ax_bridge_inbox_fixture_lifecycle_owner', 100 );
 	$quoted_uri = $ax_bridge_quote_post > 0 ? add_query_arg( 'p', $ax_bridge_quote_post, home_url( '/' ) ) : '';
 	update_post_meta( $ax_bridge_quote_post, AXISMUNDI_OP_POST_QUOTE_POLICY_META, 'anyone' );
+	/*
+	 * A quoted Object needs an author before anyone can approve quoting it, and attribution
+	 * is read from the ledger rather than from `post_author`. The fixture suppresses the
+	 * lifecycle owner while inserting, so no Create exists and the target resolves as
+	 * unattributed -- correct behaviour, and not the subject of this audit. Record the
+	 * publication the fixture skipped, so the QuoteRequest meets a published Object.
+	 */
+	$quote_create = $local instanceof Axismundi_Actor
+		? axismundi_act_record_activity(
+			array(
+				'id'     => $ax_bridge_quote_create,
+				'type'   => 'Create',
+				'actor'  => $local->get_uri(),
+				'object' => $quoted_uri,
+				'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			),
+			'local'
+		)
+		: null;
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the quoted Object carries the attribution its recorded publication gave it', $quote_create instanceof Axismundi_Activity && $local instanceof Axismundi_Actor && $local->get_uri() === axismundi_act_get_object_attribution( $quoted_uri ) );
 	$quote_payload = array(
 		'id'         => $ax_bridge_quote_activity,
 		'type'       => 'QuoteRequest',
@@ -270,6 +291,7 @@ try {
 	$wpdb->delete( axismundi_op_remote_objects_table(), array( 'object_uri' => $ax_bridge_mention_object ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_update_activity ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_quote_activity ) ); // phpcs:ignore WordPress.DB
+	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_quote_create ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_reaction_activity ) ); // phpcs:ignore WordPress.DB
 	if ( $ax_bridge_reaction_emoji_id > 0 && function_exists( 'axismundi_emoji_references_table' ) && function_exists( 'axismundi_emoji_table' ) ) {
 		$wpdb->delete( axismundi_emoji_references_table(), array( 'emoji_id' => $ax_bridge_reaction_emoji_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- remove fixture-owned reference.

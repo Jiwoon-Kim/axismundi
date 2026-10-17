@@ -347,6 +347,59 @@ body, which is also the source the projection already treats as authoritative
 for a post's media. The standalone object keeps using the library field, because
 there the file *is* the subject.
 
+### Core upload metadata: what AS2 can express and we do not emit
+
+Surveyed 2026-10-17 against two real attachments on the development site, an Opus
+audio file and a JPEG. Two findings are standard AS2 properties whose values core
+already holds, and one of them is a divergence between the two attachment paths.
+
+**Cover art is recorded and not published.** Audio attachment 25 carries
+`_thumbnail_id = 26`, a real JPEG that core extracted from the file at upload,
+and its projection emits neither `icon` nor `image`. Both are Object properties
+in our own snapshot. The mapping should be **`image`**, not `icon`, for a reason
+internal to this plugin rather than from the spec: `_thumbnail_id` on a post
+already becomes `image` in the Article projection, and the same source meta
+answering to two different properties depending on post type is the kind of
+divergence being removed elsewhere. (The spec permits either; `icon` prefers a
+1:1 aspect and a small size, which cover art often satisfies, so this is a
+consistency argument and not a correctness one.)
+
+**`duration` is emitted by one path and not the other.** Measured on the same
+attachment:
+
+```text
+core attachment profile    duration = "PT150S"
+Media Library adapter      duration = NULL        <- this is the one that serves
+```
+
+Core records `length = 150` and `length_formatted = "2:30"`. The core profile
+reads it; the adapter does not, so the live document for an audio file with a
+known duration states none. Same family as the `name` and member-order
+divergences: two paths, one of them richer, and the adapter wins wherever it is
+active.
+
+One smaller observation, offered as a question rather than a defect: core
+detected `mime_type = "audio/ogg; codecs=opus"` while `mediaType` publishes
+`audio/ogg`, because the projection reads `get_post_mime_type()`. The codecs
+parameter is legitimate in a media type, so core knows more than we say --
+whether saying it helps a peer or confuses one is untested.
+
+#### Correctly unconnected, with the reason
+
+Recorded so that nobody later maps these by resemblance. AS2 has no property for
+any of them, and inventing one is an extension decision, not a gap:
+
+| Core metadata | Why it stays unmapped |
+| --- | --- |
+| audio `artist`, `album` | `attributedTo` takes an Actor identity, not a name string. An artist credit is neither this instance's Actor nor a URI, so mapping it there would publish a false identity claim. Needs an extension or a schema.org term |
+| audio `title` (ID3) | `name` already comes from `post_title`, which is what the operator sees and edits. Letting an embedded tag override it would change a published name from inside a file |
+| audio `description` (ID3) | `content` already comes from `post_content`, and the Media Library's own fields are the editable copy |
+| audio `bitrate`, `channels`, `sample_rate`, `dataformat`, `lossless`, `compression_ratio` | no AS2 properties; technical facts about a file rather than about an object |
+| image `image_meta.camera`, `aperture`, `iso`, `focal_length`, `shutter_speed` | the same, and additionally a privacy surface: EXIF is stripped or kept by policy, not published by default |
+| image `image_meta.created_timestamp` | **not** `published`. Capture time and publication time are different facts, and conflating them would backdate a federated object to when a photo was taken |
+| image `image_meta.copyright`, `credit` | already answered by this project's own rights model, which publishes a license through `schema:license` |
+| `original_image`, `sizes` | the rendition policy owns these, and the original is deliberately excluded from `url` |
+
 ### Open: `usedIn` may not be the lasting shape
 
 `usedIn` is a **projection**, not an authority. Its facts live in the Media Library relation

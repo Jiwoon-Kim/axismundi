@@ -231,6 +231,25 @@ axismundi.php                AXISMUNDI_CAPSTONE_REWRITE_VERSION 증가
   `Show label text`(우리 `showLabel`)이고, 그것을 안 쓴 호출자에게 ellipsis를 주는 것은
   우리 결정이다. 대안이 "이웃 세그먼트 위에 글자를 그린다"였다.
 
+## Question 렌더는 블록에서 이 앱으로 넘어온다
+
+single object 라우팅이 object hierarchy를 따라 내려오므로, Question의 결과·투표 표시는
+최종적으로 **이 플러그인의 React 컴포넌트**가 된다. 지금 서버에서 렌더하는 것은
+`axismundi-object-projections/blocks/question/`의 블록이고 — Note 플러그인이 아니라 OP가
+들고 있다, 2026-10-17 확인 — 그것은 **과도기 구현**이다. 이 앱에는 아직 Question 컴포넌트가
+없다.
+
+넘어올 때 같이 가져와야 하는 계약이 하나 있고, 안 적어두면 재발한다. 결과 미터는
+`role="progressbar"`에 `aria-valuemin`/`aria-valuemax`/`aria-valuenow`와 사람이 읽는
+`aria-label`을 함께 싣는다. 값 없는 progressbar는 "진행 바가 있다"만 말하고 얼마나
+진행됐는지는 말하지 않는다. 2026-10-17에 정확히 그 상태가 발행되고 있었다 — 블록의 kses
+허용목록에 `aria-value*`가 없어서 role과 label만 통과했다(`e11179a`).
+
+**그 결함을 잡은 감사는 서버 블록을 검사한다**(`audit-question-view`). React 렌더러에는
+kses가 앞에 없으니 같은 실패 양상은 사라지지만 **요구사항은 그대로 남고, 그것을 지키는
+검사는 사라진다.** 옮길 때 이 계약을 컴포넌트 쪽 검사로 다시 세울 것. 블록을 지우는 커밋이
+그 감사를 같이 지우면, 값 없는 progressbar로 조용히 되돌아간다.
+
 ## 관련 기록
 
 - `DECISION-FRONTEND-ELEVATION-OWNERSHIP.md`

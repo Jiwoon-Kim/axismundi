@@ -67,6 +67,15 @@ function ax_q_vote( Axismundi_Actor $actor, string $question_uri, string $questi
 	return axismundi_act_record_activity( $payload, $direction );
 }
 
+function ax_q_vote_object_uri( $activity ) : string {
+	if ( ! $activity instanceof Axismundi_Activity ) {
+		return '';
+	}
+	$payload = $activity->get_payload();
+	$object  = $payload['object'] ?? array();
+	return is_array( $object ) ? axismundi_act_member_uri( $object['id'] ?? '' ) : '';
+}
+
 try {
 	ax_q_assert( $ax_q_results, 'the Activities Question schema installs with ordered options and nullable vote choice positions', axismundi_act_install_questions_schema() );
 	$author = axismundi_actors_get_site_actor();
@@ -95,6 +104,8 @@ try {
 		$ax_q_identity_ids[] = (int) $question['identity_id'];
 	}
 	ax_q_assert( $ax_q_results, 'Create(Question) registers a local Question identity and ordered zero tally projection', $created instanceof Axismundi_Activity && is_array( $question ) && 'oneOf' === $question['mode'] && array( 'Cats', 'Dogs' ) === $question['options'] && array( 0, 0 ) === $question['option_counts'] );
+	$question_object = function_exists( 'axismundi_op_get_object_by_uri' ) ? axismundi_op_get_object_by_uri( $question_uri ) : null;
+	ax_q_assert( $ax_q_results, 'the optional Object Projection adapter registers the Activities Question without taking ownership of its ledger', is_array( $question_object ) && 'axismundi-activities' === (string) $question_object['source_owner'] && 'question-ledger' === (string) $question_object['source_kind'] && 'Question' === (string) $question_object['as2_type'] && (int) ( $question['identity_id'] ?? 0 ) === (int) $question_object['identity_id'] );
 
 	$first = $voter instanceof Axismundi_Actor && $author instanceof Axismundi_Actor ? ax_q_vote( $voter, $question_uri, $author->get_uri(), 'Cats' ) : null;
 	if ( $first instanceof Axismundi_Activity ) {
@@ -102,6 +113,8 @@ try {
 	}
 	$after_first = axismundi_act_get_question_by_uri( $question_uri );
 	ax_q_assert( $ax_q_results, 'an addressed content-less Vote Create increments the local authoritative tally', $first instanceof Axismundi_Activity && is_array( $after_first ) && array( 1, 0 ) === $after_first['option_counts'] && 1 === (int) $after_first['votes_count'] && 1 === (int) $after_first['voters_count'] );
+	$first_object_uri = ax_q_vote_object_uri( $first );
+	ax_q_assert( $ax_q_results, 'a valid Vote remains a stored thread edge but is excluded from replies by the shared projection filter', '' !== $first_object_uri && ! apply_filters( 'axismundi_op_thread_include_reply', true, $first_object_uri, $question_uri ) );
 
 	$duplicate = $voter instanceof Axismundi_Actor && $author instanceof Axismundi_Actor ? ax_q_vote( $voter, $question_uri, $author->get_uri(), 'Dogs' ) : null;
 	if ( $duplicate instanceof Axismundi_Activity ) {
@@ -109,6 +122,8 @@ try {
 	}
 	$after_duplicate = axismundi_act_get_question_by_uri( $question_uri );
 	ax_q_assert( $ax_q_results, 'a second oneOf vote remains evidence but is ignored by the projection', $duplicate instanceof Axismundi_Activity && is_array( $after_duplicate ) && array( 1, 0 ) === $after_duplicate['option_counts'] );
+	$duplicate_object_uri = ax_q_vote_object_uri( $duplicate );
+	ax_q_assert( $ax_q_results, 'a duplicate Vote is excluded from replies even though its tally projection is ignored', '' !== $duplicate_object_uri && ! apply_filters( 'axismundi_op_thread_include_reply', true, $duplicate_object_uri, $question_uri ) );
 
 	$content_map = $voter instanceof Axismundi_Actor && $author instanceof Axismundi_Actor ? ax_q_vote( $voter, $question_uri, $author->get_uri(), 'Cats', array( 'contentMap' => array( 'en' => '<p>Not a vote.</p>' ) ) ) : null;
 	if ( $content_map instanceof Axismundi_Activity ) {
@@ -116,6 +131,8 @@ try {
 	}
 	$after_content_map = axismundi_act_get_question_by_uri( $question_uri );
 	ax_q_assert( $ax_q_results, 'contentMap text prevents a reply from being counted as a Vote', $content_map instanceof Axismundi_Activity && is_array( $after_content_map ) && array( 1, 0 ) === $after_content_map['option_counts'] );
+	$content_map_object_uri = ax_q_vote_object_uri( $content_map );
+	ax_q_assert( $ax_q_results, 'a content-bearing reply remains visible to the shared reply projection filter', '' !== $content_map_object_uri && apply_filters( 'axismundi_op_thread_include_reply', true, $content_map_object_uri, $question_uri ) );
 
 	$direct_vote = $author instanceof Axismundi_Actor ? axismundi_act_vote_question( $author, $question_uri, 1 ) : null;
 	if ( $direct_vote instanceof Axismundi_Activity ) {
@@ -177,6 +194,9 @@ try {
 	foreach ( array_unique( $ax_q_identity_ids ) as $identity_id ) {
 		$wpdb->delete( axismundi_act_question_votes_table(), array( 'question_identity_id' => $identity_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned projection cleanup.
 		$wpdb->delete( axismundi_act_questions_table(), array( 'identity_id' => $identity_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned projection cleanup.
+		if ( function_exists( 'axismundi_op_objects_table' ) ) {
+			$wpdb->delete( axismundi_op_objects_table(), array( 'identity_id' => $identity_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned Object slice cleanup.
+		}
 		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $identity_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned Object identity cleanup.
 	}
 	if ( $ax_q_remote_id > 0 ) {

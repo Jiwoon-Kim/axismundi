@@ -389,6 +389,13 @@ function axismundi_act_question_apply_snapshot( Axismundi_Activity $activity, ar
 		? false !== $wpdb->update( $table, $data, array( 'identity_id' => (int) $identity['identity_id'] ) )
 		: false !== $wpdb->insert( $table, array_merge( $data, array( 'identity_id' => (int) $identity['identity_id'], 'lock_version' => 0, 'created_at' => $now ) ) );
 	$wpdb->query( $ok ? 'COMMIT' : 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- atomically retain only complete snapshot changes.
+	if ( $ok ) {
+		/*
+		 * Object Projections may register this durable source in its optional
+		 * vertical slice. Activities keeps working when that plugin is absent.
+		 */
+		do_action( 'axismundi_act_question_projected', $question, $activity );
+	}
 }
 
 /** Whether a value carries visible Vote Note content. */
@@ -576,6 +583,31 @@ function axismundi_act_question_mark_votes( string $field, string $uri, string $
 		}
 	}
 }
+
+/** Exclude structurally valid Question votes from generic reply projections. */
+function axismundi_act_exclude_question_vote_reply( bool $include, string $child_uri ) : bool {
+	if ( ! $include || '' === $child_uri ) {
+		return $include;
+	}
+	global $wpdb;
+	$votes = axismundi_act_question_votes_table();
+	$row   = $wpdb->get_row(
+		$wpdb->prepare(
+			"SELECT vote_status, ignore_reason FROM {$votes} WHERE vote_object_uri_hash = %s AND vote_object_uri = %s LIMIT 1",
+			hash( 'sha256', $child_uri ),
+			$child_uri
+		),
+		ARRAY_A
+	); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- exact vote-object lookup for a shared read-time projection filter.
+	if ( ! is_array( $row ) ) {
+		return true;
+	}
+	if ( in_array( (string) $row['vote_status'], array( 'active', 'undone', 'deleted', 'reset' ), true ) ) {
+		return false;
+	}
+	return 'ignored' === (string) $row['vote_status'] && in_array( (string) $row['ignore_reason'], array( 'duplicate', 'closed' ), true ) ? false : true;
+}
+add_filter( 'axismundi_op_thread_include_reply', 'axismundi_act_exclude_question_vote_reply', 10, 2 );
 
 /** Project FEP-9967 Question and Vote activities after immutable ledger commit. */
 function axismundi_act_sync_question_activity( Axismundi_Activity $activity ) : void {

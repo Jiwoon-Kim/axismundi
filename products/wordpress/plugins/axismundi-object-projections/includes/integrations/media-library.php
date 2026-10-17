@@ -91,7 +91,7 @@ function axismundi_op_media_attachment_uri( WP_Post $attachment ) : string {
  * @return string
  */
 function axismundi_op_media_attachment_actor_uri( WP_Post $attachment ) : string {
-	$uri = axismundi_op_local_author_actor_uri( (int) $attachment->post_author );
+	$uri = function_exists( 'axismundi_op_attachment_actor_uri' ) ? axismundi_op_attachment_actor_uri( $attachment ) : '';
 	/**
 	 * Filter the Actor URI attributed to one Media Library attachment.
 	 *
@@ -115,8 +115,7 @@ function axismundi_op_media_attachment_visible( WP_Post $attachment ) : bool {
 	$tier = axismundi_media_effective_visibility( (int) $attachment->ID );
 	$gate = (int) axismundi_media_locked_gate_for_attachment( (int) $attachment->ID );
 	return in_array( $tier, array( 'public', 'unlisted' ), true )
-		&& 0 === $gate
-		&& '' !== axismundi_op_media_attachment_actor_uri( $attachment );
+		&& 0 === $gate;
 }
 
 /**
@@ -346,21 +345,29 @@ function axismundi_op_media_attachment_transform( WP_Post $attachment ) {
 	$mime          = (string) get_post_mime_type( $attachment );
 	$attributed_to = axismundi_op_media_attachment_actor_uri( $attachment );
 	$core          = axismundi_op_media_descriptor_core( $attachment );
-	if ( null === $core || '' === $attributed_to ) {
-		return new WP_Error( 'ax_op_media_identity', __( 'The attachment has no public object, page, or Actor URI.', 'axismundi-object-projections' ) );
+	if ( null === $core ) {
+		return new WP_Error( 'ax_op_media_identity', __( 'The attachment has no public object or page URI.', 'axismundi-object-projections' ) );
 	}
 
 	// The standalone Attachment is a first-class object with its own page, likes, and
-	// usedIn collection, so its `name` is the attachment's own title rather than alt text.
+	// usedIn collection, so its `name` names the object: the attachment's own title.
+	// Alt text is the embedded descriptor's `name` (MEDIA-RENDITIONS.md section 5) and is
+	// never emitted here, nor is a title ever substituted for it there. A missing title
+	// omits `name` rather than publishing a placeholder as this object's name.
 	$object = array_merge(
 		$core,
 		array(
-			'attributedTo' => $attributed_to,
-			'name'         => '' !== trim( (string) $attachment->post_title ) ? $attachment->post_title : __( '(untitled media)', 'axismundi-object-projections' ),
 			'published'    => get_post_time( DATE_W3C, true, $attachment ),
 			'updated'      => get_post_modified_time( DATE_W3C, true, $attachment ),
 		)
 	);
+	$title = trim( (string) $attachment->post_title );
+	if ( '' !== $title ) {
+		$object['name'] = sanitize_text_field( wp_strip_all_tags( $title ) );
+	}
+	if ( '' !== $attributed_to ) {
+		$object['attributedTo'] = $attributed_to;
+	}
 
 	$description = trim( (string) $attachment->post_content );
 	$caption     = trim( (string) $attachment->post_excerpt );
@@ -411,6 +418,8 @@ function axismundi_op_register_media_library_integration() : void {
 			'object_uri' => 'axismundi_op_media_attachment_uri',
 			'transform'  => 'axismundi_op_media_attachment_transform',
 			'visible'    => 'axismundi_op_media_attachment_visible',
+			// Upload storage is local even when no Actor has published this Object yet.
+			'local'      => true,
 			'priority'   => 10,
 		)
 	);

@@ -197,8 +197,11 @@ function axismundi_op_local_object_profile( WP_Post $post ) : ?array {
 	if ( 'post' === $post->post_type && function_exists( 'axismundi_op_post_object_uri' ) ) {
 		return array( 'uri' => axismundi_op_post_object_uri( $post ), 'type' => 'Article', 'owner' => 'wordpress-core', 'kind' => 'post', 'attributed_to_uri' => function_exists( 'axismundi_op_post_actor_uri' ) ? axismundi_op_post_actor_uri( $post ) : '' );
 	}
+	if ( 'page' === $post->post_type && function_exists( 'axismundi_op_post_object_uri' ) ) {
+		return array( 'uri' => axismundi_op_post_object_uri( $post ), 'type' => 'Page', 'owner' => 'wordpress-core', 'kind' => 'page', 'attributed_to_uri' => function_exists( 'axismundi_op_post_actor_uri' ) ? axismundi_op_post_actor_uri( $post ) : '' );
+	}
 	if ( 'attachment' === $post->post_type ) {
-		return array( 'uri' => add_query_arg( 'attachment_id', $post->ID, home_url( '/' ) ), 'type' => axismundi_op_core_attachment_type( $post ), 'owner' => 'wordpress-core', 'kind' => 'attachment', 'attributed_to_uri' => function_exists( 'axismundi_op_media_attachment_actor_uri' ) ? axismundi_op_media_attachment_actor_uri( $post ) : ( function_exists( 'axismundi_op_local_author_actor_uri' ) ? axismundi_op_local_author_actor_uri( (int) $post->post_author ) : '' ) );
+		return array( 'uri' => function_exists( 'axismundi_op_core_attachment_uri' ) ? axismundi_op_core_attachment_uri( $post ) : add_query_arg( 'attachment_id', $post->ID, home_url( '/' ) ), 'type' => axismundi_op_core_attachment_type( $post ), 'owner' => 'wordpress-core', 'kind' => 'attachment', 'attributed_to_uri' => function_exists( 'axismundi_op_attachment_actor_uri' ) ? axismundi_op_attachment_actor_uri( $post ) : '' );
 	}
 	if ( defined( 'AXISMUNDI_NOTE_POST_TYPE' ) && AXISMUNDI_NOTE_POST_TYPE === $post->post_type && function_exists( 'axismundi_note_get' ) && function_exists( 'axismundi_note_object_uri' ) ) {
 		$envelope = axismundi_note_get( $post->ID );

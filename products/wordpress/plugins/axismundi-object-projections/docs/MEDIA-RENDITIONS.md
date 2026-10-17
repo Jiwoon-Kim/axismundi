@@ -133,6 +133,53 @@ There is no settled ActivityStreams property for carrying both the standalone ob
 and image alt text on that same standalone representation. A private extension is deferred
 until the shared-folder consumer and binary substrate establish a demonstrated need (§11).
 
+ActivityStreams' own examples agree with the standalone half of that table: the `Image`,
+`Video`, `Audio`, `Document`, and `Page` examples in the vocabulary all put a human title in
+`name` -- "Cat Jumping on Wagon", "Puppy Plays With Ball", "4Q Sales Forecast". Alt text in
+`name` is a convention of the **embedded attachment position**, not of the media types, which
+is why the split is by role and not by type.
+
+Two refinements, measured 2026-10-17 and pinned:
+
+- **Alt text never falls back into the standalone `name`, in either direction.** The tempting
+  rule -- use the title, but prefer alt text when it exists -- was rejected: it makes the same
+  object's name change meaning the moment someone fills in an accessibility field, so a peer
+  that cached the title sees an unexplained rename, and the title is then unreachable. An
+  attachment whose alt text and title both exist publishes the title and keeps the alt text
+  for the embedded descriptor.
+- **An untitled attachment omits `name`.** It previously published a localized
+  `(untitled media)` placeholder, which federates one install's UI string as an object's name.
+  Omission is the honest answer, and WordPress fills `post_title` from the filename at upload,
+  so the case is rare by construction.
+
+### WordPress's own attachment fields
+
+These are the fields core itself can fill, and where each one lands on the standalone object:
+
+| Media Library field | WordPress storage | Standalone object |
+|---|---|---|
+| Title | `post_title` | `name`, omitted when empty |
+| Alternative Text | `postmeta._wp_attachment_image_alt` | not emitted; it is the embedded descriptor's `name` |
+| Image Caption | `post_excerpt` | `summary` |
+| Description | `post_content` | `content`, through `wpautop()` |
+| File URL | `_wp_attached_file` + uploads | the `url` Link ladder |
+
+One collision is known and left as it stands: a sensitive attachment's content warning also
+occupies `summary`, and it wins over the caption. A viewer warning outranks a caption, and
+fail-closed is the rule the rest of sensitivity handling follows, so the caption is dropped
+rather than concatenated. Anything better needs a separate property, not a merged string.
+
+The `axismundi_op_core_attachment` and `axismundi_op_media_attachment` filters are where a
+theme or the Media Library plugin adds what core does not store -- EXIF, credit, a license,
+dimensions core never recorded. That is the intended way to enrich this object, and it is also
+why the base profile stays narrow: it projects only what every WordPress install actually has.
+
+**The two paths must agree.** The core profile registers at priority 20 and the Media Library
+adapter at 10, so the adapter wins wherever it is active. If only one of them is changed, the
+same attachment means different things depending on whether a plugin is active. Both are
+pinned: `tests/audit-core-attachment.php` for the core profile, and
+`tests/audit-media-library.php` for the adapter and for the embedded side.
+
 - **`size`** on every locally measurable Link; omitted rather than guessed for a trusted
   virtual derivative.
 - **`duration`** for Video / Audio, from WordPress metadata.
@@ -180,7 +227,10 @@ parsing, since that is what the rest of the fediverse sends today.
 - No original URL appears anywhere in `url`.
 - At most 4 entries; dimension and URL dedupe hold.
 - An image with **no** derivatives emits the HTML Link only — no original leak.
-- Attachment Single keeps `name = post_title`.
+- Attachment Single keeps `name = post_title`, omits `name` when the title is empty, and
+  never substitutes alt text even when alt text exists.
+- The caption reaches `summary` and the description reaches `content` on Attachment Single;
+  a content warning displaces the caption rather than joining it.
 - Article `attachment[]` and `preview.attachment` use alt text for `name`; an empty alt omits
   `name`, with no title fallback.
 - `size`, when present, is accurate; a trusted virtual derivative omits it.
@@ -198,6 +248,30 @@ advertised and pairs naturally with the blob substrate's `content_hash`
 (REMOTE-ASSET-CACHE.md), and `focalPoint` needs the processor-version story. Standalone alt
 text will be added only if the consumer proves it cannot preserve that value from the
 embedding Article or collection item without a private vocabulary extension.
+
+### Open: `usedIn` may not be the lasting shape
+
+`usedIn` is a **projection**, not an authority. Its facts live in the Media Library relation
+index, and the collection is regenerated from those rows, so the property can be renamed,
+reshaped, or retired without losing anything -- the same argument that let the thread tree stay
+a derived view. Once Note's attachment postmeta becomes ordinary object relations under the
+shared registry, the reverse direction is answerable from the relation ledger for every object
+type rather than only for Media Library attachments, and a single inverse-of-`attachment`
+property would then describe all of them.
+
+Two things to settle before that, neither urgent:
+
+- **There is no `attachedTo` in ActivityStreams.** The vocabulary defines 69 properties
+  (checked 2026-10-17) and that is not one of them; `attributedTo` exists and means the
+  opposite thing -- who the object is attributed to, the parent property of `actor`. So an
+  inverse-of-`attachment` property is our extension either way, needing a declared
+  `@context` to be more than local decoration. `usedIn` is in exactly that position today.
+- **A name one letter from `attributedTo` is a hazard.** In a payload, "where this media
+  appears" and "who authored this" would differ by a single character while meaning opposite
+  things. If the property is replaced, the replacement should be harder to confuse, not easier.
+
+Changing it also changes what a published URL serves (`/axismundi/v1/media/{ID}/used-in`), so
+it is an owner decision rather than a cleanup.
 
 ## 12. Order
 

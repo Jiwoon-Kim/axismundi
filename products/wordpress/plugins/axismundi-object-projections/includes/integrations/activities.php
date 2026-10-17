@@ -15,6 +15,38 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
+ * Register an Activities-owned Question in the shared Object vertical slice.
+ *
+ * Activities publishes the durable source event after its own commit. This
+ * adapter owns the optional representation-side registration, leaving neither
+ * plugin dependent on the other's storage tables.
+ *
+ * @param array<string,mixed> $question Parsed Question snapshot.
+ */
+function axismundi_op_register_activity_question( array $question, Axismundi_Activity $activity ) : void {
+	if ( ! function_exists( 'axismundi_op_register_object' ) ) {
+		return;
+	}
+	$uri = trim( (string) ( $question['uri'] ?? '' ) );
+	if ( '' === $uri ) {
+		return;
+	}
+	$identity = function_exists( 'axismundi_actors_get_identity_by_uri' ) ? axismundi_actors_get_identity_by_uri( $uri ) : null;
+	axismundi_op_register_object(
+		array(
+			'canonical_uri'     => $uri,
+			'origin'            => 'inbound' === $activity->get_direction() ? 'remote' : 'local',
+			'source_owner'      => 'axismundi-activities',
+			'source_kind'       => 'question-ledger',
+			'source_ref'        => is_array( $identity ) ? (int) $identity['identity_id'] : null,
+			'as2_type'          => 'Question',
+			'attributed_to_uri' => (string) ( $question['author_uri'] ?? '' ),
+		)
+	);
+}
+add_action( 'axismundi_act_question_projected', 'axismundi_op_register_activity_question', 20, 2 );
+
+/**
  * Resolve one public Activity feed item's object into compact object HTML.
  *
  * @param string              $html          Existing product renderer output.

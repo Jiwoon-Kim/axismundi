@@ -189,6 +189,24 @@ try {
 			&& get_post( $image_id )->post_title === $image_object['name']
 			&& ! isset( $image_object['attachment'] )
 	);
+	// The role split holds in both directions: alt text does not reach the standalone
+	// object's name, and an untitled attachment omits `name` rather than inventing one
+	// (MEDIA-RENDITIONS.md section 5).
+	update_post_meta( $image_id, '_wp_attachment_image_alt', 'A described test image' );
+	$ax_standalone_with_alt = axismundi_op_transform_object( $image );
+	delete_post_meta( $image_id, '_wp_attachment_image_alt' );
+	$ax_media_title = (string) get_post( $image_id )->post_title;
+	wp_update_post( array( 'ID' => $image_id, 'post_title' => '' ) );
+	$ax_standalone_untitled = axismundi_op_transform_object( get_post( $image_id ) );
+	wp_update_post( array( 'ID' => $image_id, 'post_title' => $ax_media_title ) );
+	ax_media_projection_assert(
+		$ax_media_projection_results,
+		'alt text never becomes the standalone name, and an untitled attachment omits name',
+		is_array( $ax_standalone_with_alt )
+			&& $ax_media_title === ( $ax_standalone_with_alt['name'] ?? '' )
+			&& is_array( $ax_standalone_untitled )
+			&& ! isset( $ax_standalone_untitled['name'] )
+	);
 	$image_links = is_array( $image_object ) && is_array( $image_object['url'] ?? null ) ? $image_object['url'] : array();
 	$last_link   = $image_links ? end( $image_links ) : array();
 	ax_media_projection_assert(
@@ -230,7 +248,7 @@ try {
 	remove_all_filters( 'axismundi_op_media_attachment_actor_uri' );
 	add_filter( 'axismundi_op_media_attachment_actor_uri', static fn() : string => '' );
 	$without_actor = axismundi_op_transform_object( $image );
-	ax_media_projection_assert( $ax_media_projection_results, 'an attachment without a public Actor fails closed', is_wp_error( $without_actor ) && 'ax_op_not_public' === $without_actor->get_error_code() );
+	ax_media_projection_assert( $ax_media_projection_results, 'an attachment without a recorded Actor remains a readable Object without attributedTo', is_array( $without_actor ) && ! isset( $without_actor['attributedTo'] ) );
 } finally {
 	remove_all_filters( 'axismundi_op_media_attachment_actor_uri' );
 	remove_all_filters( 'axismundi_op_post_actor_uri' );

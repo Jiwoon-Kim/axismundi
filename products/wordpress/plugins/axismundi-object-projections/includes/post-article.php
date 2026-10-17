@@ -20,6 +20,22 @@ function axismundi_op_post_article_supports( $source ) : bool {
 		&& ! wp_is_post_autosave( $source );
 }
 
+/** Whether the core Page profile owns the supplied source. */
+function axismundi_op_post_page_supports( $source ) : bool {
+	return $source instanceof WP_Post
+		&& 'page' === $source->post_type
+		&& ! wp_is_post_revision( $source )
+		&& ! wp_is_post_autosave( $source );
+}
+
+/** Whether the core Attachment profile owns the supplied source. */
+function axismundi_op_core_attachment_supports( $source ) : bool {
+	return $source instanceof WP_Post
+		&& 'attachment' === $source->post_type
+		&& ! wp_is_post_revision( $source )
+		&& ! wp_is_post_autosave( $source );
+}
+
 /**
  * Resolve a public local user Actor, with a deliberately public site Actor fallback.
  *
@@ -115,6 +131,21 @@ function axismundi_op_post_object_uri( WP_Post $post ) : string {
 	return (string) apply_filters( 'axismundi_op_post_object_uri', $uri, $post );
 }
 
+/** Stable Object URI for a core attachment page. */
+function axismundi_op_core_attachment_uri( WP_Post $attachment ) : string {
+	return add_query_arg( 'attachment_id', (int) $attachment->ID, home_url( '/' ) );
+}
+
+/**
+ * Resolve an attachment's deliberately recorded attribution, if any.
+ *
+ * Uploading a file is storage, not publication. In particular, the WordPress
+ * editing account must not become `attributedTo` by inference.
+ */
+function axismundi_op_attachment_actor_uri( WP_Post $attachment ) : string {
+	return (string) apply_filters( 'axismundi_op_attachment_actor_uri', '', $attachment, axismundi_op_core_attachment_uri( $attachment ) );
+}
+
 /** Resolve this plugin's default local Post URI without relying on an optional integration. */
 function axismundi_op_resolve_local_post_source_by_uri( $source, string $uri ) {
 	if ( null !== $source ) {
@@ -127,12 +158,31 @@ function axismundi_op_resolve_local_post_source_by_uri( $source, string $uri ) {
 	parse_str( (string) $parts['query'], $query );
 	$post_id = isset( $query['p'] ) ? absint( $query['p'] ) : 0;
 	$post    = $post_id > 0 ? get_post( $post_id ) : null;
-	if ( ! $post instanceof WP_Post || ! axismundi_op_post_article_supports( $post ) ) {
+	if ( ! $post instanceof WP_Post || ( ! axismundi_op_post_article_supports( $post ) && ! axismundi_op_post_page_supports( $post ) ) ) {
 		return $source;
 	}
 	return hash_equals( $uri, axismundi_op_post_object_uri( $post ) ) ? $post : $source;
 }
 add_filter( 'axismundi_op_resolve_source_by_uri', 'axismundi_op_resolve_local_post_source_by_uri', 10, 2 );
+
+/** Resolve a core attachment source from this plugin's attachment Object URI. */
+function axismundi_op_resolve_local_attachment_source_by_uri( $source, string $uri ) {
+	if ( null !== $source ) {
+		return $source;
+	}
+	$parts = wp_parse_url( $uri );
+	if ( ! is_array( $parts ) || empty( $parts['query'] ) ) {
+		return $source;
+	}
+	parse_str( (string) $parts['query'], $query );
+	$attachment_id = isset( $query['attachment_id'] ) ? absint( $query['attachment_id'] ) : 0;
+	$attachment    = $attachment_id > 0 ? get_post( $attachment_id ) : null;
+	if ( ! $attachment instanceof WP_Post || ! axismundi_op_core_attachment_supports( $attachment ) ) {
+		return $source;
+	}
+	return hash_equals( $uri, axismundi_op_core_attachment_uri( $attachment ) ) ? $attachment : $source;
+}
+add_filter( 'axismundi_op_resolve_source_by_uri', 'axismundi_op_resolve_local_attachment_source_by_uri', 10, 2 );
 
 /**
  * Public projection gate for a core post.
@@ -144,6 +194,11 @@ function axismundi_op_post_article_visible( WP_Post $post ) : bool {
 	return 'publish' === $post->post_status
 		&& '' === (string) $post->post_password
 		&& is_post_publicly_viewable( $post );
+}
+
+/** Core attachment visibility does not require an Actor attribution. */
+function axismundi_op_core_attachment_visible( WP_Post $attachment ) : bool {
+	return 'trash' !== $attachment->post_status && '' !== (string) wp_get_attachment_url( (int) $attachment->ID );
 }
 
 /**
@@ -893,6 +948,64 @@ function axismundi_op_post_to_article( WP_Post $post, array $claimed = array() )
 	return apply_filters( 'axismundi_op_post_article', $article, $post, $claimed );
 }
 
+/** Project a core Page through the shared document representation path. */
+function axismundi_op_post_to_page( WP_Post $post ) {
+	$page = axismundi_op_post_to_article( $post );
+	if ( is_wp_error( $page ) ) {
+		return $page;
+	}
+	$page['type'] = 'Page';
+	return apply_filters( 'axismundi_op_post_page', $page, $post );
+}
+
+/** Project one core attachment without requiring a Media Library integration. */
+function axismundi_op_core_attachment_transform( WP_Post $attachment ) {
+	$url  = (string) wp_get_attachment_url( (int) $attachment->ID );
+	$mime = (string) get_post_mime_type( $attachment );
+	if ( '' === $url || '' === $mime ) {
+		return new WP_Error( 'ax_op_attachment_source', __( 'The attachment has no fetchable file URL or media type.', 'axismundi-object-projections' ) );
+	}
+	$object = array(
+		'id'        => axismundi_op_core_attachment_uri( $attachment ),
+		'type'      => axismundi_op_core_attachment_type( $attachment ),
+		'url'       => array( 'type' => 'Link', 'href' => $url, 'mediaType' => $mime ),
+		'mediaType' => $mime,
+		'published' => get_post_time( DATE_W3C, true, $attachment ),
+		'updated'   => get_post_modified_time( DATE_W3C, true, $attachment ),
+	);
+	// `name` names this object, so it carries the attachment's title; alt text belongs to
+	// the embedded descriptor instead (MEDIA-RENDITIONS.md section 5). An empty title omits
+	// `name` rather than inventing one.
+	$title = trim( (string) $attachment->post_title );
+	if ( '' !== $title ) {
+		$object['name'] = sanitize_text_field( wp_strip_all_tags( $title ) );
+	}
+	$metadata = wp_get_attachment_metadata( (int) $attachment->ID );
+	if ( is_array( $metadata ) ) {
+		foreach ( array( 'width', 'height' ) as $dimension ) {
+			if ( (int) ( $metadata[ $dimension ] ?? 0 ) > 0 ) {
+				$object[ $dimension ] = (int) $metadata[ $dimension ];
+			}
+		}
+		if ( (int) ( $metadata['length'] ?? 0 ) > 0 ) {
+			$object['duration'] = 'PT' . (int) $metadata['length'] . 'S';
+		}
+	}
+	$description = trim( (string) $attachment->post_content );
+	$caption     = trim( (string) $attachment->post_excerpt );
+	if ( '' !== $description ) {
+		$object['content'] = wpautop( $description );
+	}
+	if ( '' !== $caption ) {
+		$object['summary'] = $caption;
+	}
+	$attributed_to = trim( axismundi_op_attachment_actor_uri( $attachment ) );
+	if ( '' !== $attributed_to ) {
+		$object['attributedTo'] = $attributed_to;
+	}
+	return apply_filters( 'axismundi_op_core_attachment', $object, $attachment );
+}
+
 /**
  * Read one natural-language value, preferring its language map when available.
  *
@@ -1011,6 +1124,28 @@ function axismundi_op_register_post_article_transformer() : void {
 			// an `attributedTo` rather than refused.
 			'local'      => true,
 			'priority'   => 10,
+		)
+	);
+	axismundi_op_register_object_transformer(
+		'core-page',
+		array(
+			'supports'   => 'axismundi_op_post_page_supports',
+			'object_uri' => 'axismundi_op_post_object_uri',
+			'transform'  => 'axismundi_op_post_to_page',
+			'visible'    => 'axismundi_op_post_article_visible',
+			'local'      => true,
+			'priority'   => 10,
+		)
+	);
+	axismundi_op_register_object_transformer(
+		'core-attachment',
+		array(
+			'supports'   => 'axismundi_op_core_attachment_supports',
+			'object_uri' => 'axismundi_op_core_attachment_uri',
+			'transform'  => 'axismundi_op_core_attachment_transform',
+			'visible'    => 'axismundi_op_core_attachment_visible',
+			'local'      => true,
+			'priority'   => 20,
 		)
 	);
 }

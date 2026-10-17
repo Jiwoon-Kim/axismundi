@@ -78,6 +78,79 @@ function axismundi_op_html_members() : array {
 	return array( 'content', 'summary' );
 }
 
+/**
+ * Put known top-level Object members in the order humans read them.
+ *
+ * This deliberately does not recurse. Link-valued members and embedded Objects have
+ * their own model contracts; this boundary only owns an emitted Object document. Any
+ * extension member not named here stays present and retains its transformer-provided
+ * relative order at the tail.
+ *
+ * @param array<string,mixed> $object Object document, including renderer-owned context.
+ * @return array<string,mixed>
+ */
+function axismundi_op_order_object_members( array $object ) : array {
+	$canonical_members = array(
+		'@context',
+		'id',
+		'type',
+		'formerType',
+		'attributedTo',
+		'name',
+		'nameMap',
+		'summary',
+		'summaryMap',
+		'content',
+		'contentMap',
+		'sensitive',
+		'mediaType',
+		'url',
+		'width',
+		'height',
+		'duration',
+		'icon',
+		'image',
+		'attachment',
+		'preview',
+		'inReplyTo',
+		'context',
+		'tag',
+		'location',
+		'published',
+		'updated',
+		'startTime',
+		'endTime',
+		'deleted',
+		'to',
+		'bto',
+		'cc',
+		'bcc',
+		'audience',
+		'replies',
+		'likes',
+		'shares',
+		'usedIn',
+		// Emitted as a full IRI rather than a compacted term, deliberately, so that a peer
+		// which does not compact the context term still finds the property. Naming it here
+		// in the form actually emitted keeps this list honest: `emojiReactions` on its own
+		// would position a key nothing produces and leave the real one in the tail.
+		'http://fedibird.com/ns#emojiReactions',
+	);
+
+	$ordered = array();
+	foreach ( $canonical_members as $member ) {
+		if ( array_key_exists( $member, $object ) ) {
+			$ordered[ $member ] = $object[ $member ];
+		}
+	}
+	foreach ( $object as $member => $value ) {
+		if ( ! array_key_exists( $member, $ordered ) ) {
+			$ordered[ $member ] = $value;
+		}
+	}
+	return $ordered;
+}
+
 /** Sanitize one BCP-47 language map while preserving only scalar values. */
 function axismundi_op_clean_language_map( $map, bool $html ) : array {
 	if ( ! is_array( $map ) ) {
@@ -145,7 +218,7 @@ function axismundi_op_finalize_object( array $object, string $expected_id, bool 
 				$tombstone[ $member ] = sanitize_text_field( (string) $object[ $member ] );
 			}
 		}
-		return array_merge( array( '@context' => axismundi_op_jsonld_context( $tombstone ) ), $tombstone );
+		return axismundi_op_order_object_members( array_merge( array( '@context' => axismundi_op_jsonld_context( $tombstone ) ), $tombstone ) );
 	}
 	/*
 	 * An Actor document is not attributed to anyone, and neither is a local Object that nobody
@@ -200,7 +273,7 @@ function axismundi_op_finalize_object( array $object, string $expected_id, bool 
 	// The renderer is the sole owner of @context — drop any caller-supplied one, then
 	// prepend the canonical context so it is deterministic and first.
 	unset( $object['@context'] );
-	return array_merge( array( '@context' => axismundi_op_jsonld_context( $object ) ), $object );
+	return axismundi_op_order_object_members( array_merge( array( '@context' => axismundi_op_jsonld_context( $object ) ), $object ) );
 }
 
 /**

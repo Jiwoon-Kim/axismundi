@@ -26,6 +26,26 @@ function ax_rnd_assert( array &$results, string $label, bool $cond ) : void {
 }
 
 /**
+ * True when present keys appear in the declared relative order.
+ *
+ * @param array<string,mixed> $object Object document.
+ * @param array<int,string>   $members Expected members, in order.
+ * @return bool
+ */
+function ax_rnd_members_are_ordered( array $object, array $members ) : bool {
+	$keys          = array_keys( $object );
+	$previous_index = -1;
+	foreach ( $members as $member ) {
+		$position = array_search( $member, $keys, true );
+		if ( false === $position || $position <= $previous_index ) {
+			return false;
+		}
+		$previous_index = $position;
+	}
+	return true;
+}
+
+/**
  * Register one object transformer against a fresh registry.
  *
  * @param array<string,mixed> $args Transformer args.
@@ -66,6 +86,45 @@ ax_rnd_assert(
 		&& 'Hello World' === $object['name']
 		&& false === strpos( (string) $object['content'], '<script' )
 		&& array_key_first( $object ) === '@context'
+);
+
+// Top-level Object members have one human-readable order; unknown extensions stay at the tail.
+$ordered = axismundi_op_finalize_object(
+	array(
+		'cc'                           => array( 'https://example.com/actors/uuid/followers' ),
+		'https://example.com/ns#alpha' => 'first extension',
+		'attachment'                   => array( array( 'type' => 'Image', 'url' => 'https://example.com/media/1.jpg' ) ),
+		'id'                           => $uri,
+		'content'                      => '<p>Body</p>',
+		'replies'                      => array( 'type' => 'Collection', 'totalItems' => 0 ),
+		'type'                         => 'Article',
+		'attributedTo'                 => 'https://example.com/actors/uuid',
+		'url'                          => 'https://example.com/hello/',
+		'name'                         => 'Title',
+		'published'                    => '2026-10-17T00:00:00Z',
+		'to'                           => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+		'https://example.com/ns#beta'  => 'second extension',
+	),
+	$uri,
+	true
+);
+// Two invariants, two checks. Broken separately on 2026-10-17 to confirm each is live:
+// moving `to` ahead of `published` in the declared list, and sorting the tail instead of
+// preserving it. One composite assertion detects either but names neither.
+ax_rnd_assert(
+	$ax_rnd_results,
+	'known Object members keep their canonical relative order',
+	is_array( $ordered )
+		&& ax_rnd_members_are_ordered(
+			$ordered,
+			array( '@context', 'id', 'type', 'attributedTo', 'name', 'content', 'url', 'attachment', 'published', 'to', 'cc', 'replies' )
+		)
+);
+ax_rnd_assert(
+	$ax_rnd_results,
+	'unknown extension members survive at the tail in the order the transformer supplied',
+	is_array( $ordered )
+		&& array_slice( array_keys( $ordered ), -2 ) === array( 'https://example.com/ns#alpha', 'https://example.com/ns#beta' )
 );
 
 // Every contentMap entry uses the same federation HTML allowlist as content.

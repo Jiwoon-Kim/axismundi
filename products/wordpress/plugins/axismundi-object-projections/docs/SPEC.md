@@ -181,24 +181,19 @@ design discussion and nowhere else:
     Featured media is `image`; active in-content media is `attachment`. Attachment
     `usedIn` is a representation-owned extension collection and must not reveal a source
     that an anonymous viewer cannot project.
+11. **Object member order is renderer-owned.** `axismundi_op_finalize_object()` puts known
+    top-level Object members in one declared, human-readable order. It does not reorder
+    nested Links or embedded Objects, which have their own model contracts. Unknown
+    extension keys remain present and retain their relative transformer-provided order at
+    the tail. Audits assert relative order only; a complete key list would turn ordinary
+    extension work into a serialization regression.
 
 ## 4a. Decided, not yet implemented
 
 These are recorded so the next slice is not designed against their absence. None of them
 is enforced today; each needs its own check before it may be described as a contract.
 
-1. **One declared key order.** `axismundi_op_finalize_object()` is the single point every
-   object passes through and it performs no ordering at all today, so member order is
-   whatever each transformer's insertion order happened to be. Measured 2026-10-17: the
-   same two keys appear in opposite order in two projections of this plugin's own making
-   (`url` then `mediaType` on an Article, `mediaType` then `url` on an Image). Machines do
-   not care; people reading a payload do, and the divergence is evidence of duplicated
-   assembly. The order is declared once at that choke point, keys outside the declaration
-   keep their existing relative order and are appended rather than dropped — a full-IRI
-   extension key such as `http://fedibird.com/ns#emojiReactions` must survive — and the
-   audit asserts **relative order of shared keys**, never a key list, which would break on
-   every added member.
-2. **An effective property set is not an outbound allow-list.** The architecture registry's
+1. **An effective property set is not an outbound allow-list.** The architecture registry's
    `effective_properties(type)` is an internal conformance contract; ActivityStreams does
    not forbid extension properties outside it, and inbound stays permissive. A projector
    that emits only what the set names would silently drop the FEP and vendor terms this

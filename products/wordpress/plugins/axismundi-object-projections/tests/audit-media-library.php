@@ -207,6 +207,24 @@ try {
 			&& is_array( $ax_standalone_untitled )
 			&& ! isset( $ax_standalone_untitled['name'] )
 	);
+	/*
+	 * The reason the declared member order exists. Measured 2026-10-17, before it was
+	 * declared: this plugin's own Article emitted `url` then `mediaType` while its own
+	 * standalone Image emitted `mediaType` then `url` -- two documents assembled by two
+	 * paths that had each reinvented the Object part. The synthetic renderer check cannot
+	 * see that, because it builds one object; this compares two real projections of the
+	 * same attachment and asserts their shared members appear in the same relative order.
+	 */
+	$ax_media_article_keys = is_array( $article_alt ) ? array_keys( $article_alt ) : array();
+	$ax_media_object_keys  = is_array( $image_object ) ? array_keys( $image_object ) : array();
+	$ax_media_shared       = array_values( array_intersect( $ax_media_article_keys, $ax_media_object_keys ) );
+	$ax_media_shared_in_object = array_values( array_intersect( $ax_media_object_keys, $ax_media_article_keys ) );
+	ax_media_projection_assert(
+		$ax_media_projection_results,
+		'an Article and a standalone media Object order every member they share identically',
+		count( $ax_media_shared ) > 4 && $ax_media_shared === $ax_media_shared_in_object
+	);
+
 	$image_links = is_array( $image_object ) && is_array( $image_object['url'] ?? null ) ? $image_object['url'] : array();
 	$last_link   = $image_links ? end( $image_links ) : array();
 	ax_media_projection_assert(

@@ -133,6 +133,16 @@ There is no settled ActivityStreams property for carrying both the standalone ob
 and image alt text on that same standalone representation. A private extension is deferred
 until the shared-folder consumer and binary substrate establish a demonstrated need (§11).
 
+`id` is **not** role-dependent, and both roles state it. An embedded descriptor names the same
+Object its standalone projection does, because an attachment here is an independent Object with
+its own page rather than a part of the document carrying it: stating the identity is what lets a
+consumer reach the renditions, `usedIn` and interaction collections that the embedded form
+deliberately leaves out. The Media Library adapter already emitted it; the core profile does now
+too, and an earlier assertion that embedded descriptors are anonymous -- the FEP-1311 reading --
+was replaced rather than left to contradict the adapter. What still differs by role is `name`,
+the `url` shape (one interoperable string embedded, the Link ladder standalone), and the
+rendition policy.
+
 ActivityStreams' own examples agree with the standalone half of that table: the `Image`,
 `Video`, `Audio`, `Document`, and `Page` examples in the vocabulary all put a human title in
 `name` -- "Cat Jumping on Wagon", "Puppy Plays With Ball", "4Q Sales Forecast". Alt text in
@@ -224,6 +234,8 @@ parsing, since that is what the rest of the fediverse sends today.
 ## 10. Test gates
 
 - `url` is a media-Link array with the `text/html` Link last.
+- An embedded descriptor and its standalone projection state the same `id`, in both the core
+  profile and the Media Library adapter.
 - No original URL appears anywhere in `url`.
 - At most 4 entries; dimension and URL dedupe hold.
 - An image with **no** derivatives emits the HTML Link only — no original leak.

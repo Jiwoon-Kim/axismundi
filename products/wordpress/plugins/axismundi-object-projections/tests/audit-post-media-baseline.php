@@ -72,10 +72,17 @@ try {
 		! empty( $ax_mb_first['url'] ) && ! empty( $ax_mb_first['mediaType'] )
 			&& ( (int) ( $ax_mb_first['width'] ?? 0 ) > 0 || ! str_starts_with( (string) $ax_mb_first['mediaType'], 'image/' ) )
 	);
+	// This replaces an earlier assertion that an embedded descriptor is anonymous. That was
+	// the FEP-1311 reading, where an attachment belongs to the document carrying it; this
+	// project promotes an attachment to an independent Object with its own page, so the
+	// embedded form states that Object's identity instead, which is what the Media Library
+	// adapter was already doing in the same position.
 	ax_mb_assert(
 		$ax_mb_results,
-		'an embedded descriptor is anonymous, because it belongs to the document carrying it',
-		! isset( $ax_mb_first['id'] )
+		'an embedded descriptor names the same Object the standalone projection does',
+		isset( $ax_mb_first['id'] )
+			&& axismundi_op_core_attachment_uri( get_post( (int) $ax_mb_ids[1] ) ) === (string) $ax_mb_first['id']
+			&& ( $ax_mb_members['image']['id'] ?? '' ) === (string) $ax_mb_first['id']
 	);
 	ax_mb_assert(
 		$ax_mb_results,

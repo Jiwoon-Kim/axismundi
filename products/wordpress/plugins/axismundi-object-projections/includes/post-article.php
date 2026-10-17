@@ -771,7 +771,18 @@ function axismundi_op_attachment_descriptor( int $attachment_id ) : ?array {
 	} elseif ( str_starts_with( $mime, 'audio/' ) ) {
 		$type = 'Audio';
 	}
-	$descriptor = array( 'type' => $type, 'url' => (string) $url, 'mediaType' => $mime );
+	/*
+	 * The embedded descriptor carries the identity of the standalone Object, because they
+	 * are the same Object in two roles. Stating it lets a consumer reach the renditions,
+	 * `usedIn` and interaction collections the embedded form deliberately leaves out,
+	 * and it is the id the Media Library adapter already emits here.
+	 */
+	$descriptor = array(
+		'id'        => axismundi_op_core_attachment_uri( get_post( $attachment_id ) ),
+		'type'      => $type,
+		'url'       => (string) $url,
+		'mediaType' => $mime,
+	);
 	$meta       = wp_get_attachment_metadata( $attachment_id );
 	foreach ( array( 'width', 'height' ) as $dimension ) {
 		if ( is_array( $meta ) && (int) ( $meta[ $dimension ] ?? 0 ) > 0 ) {

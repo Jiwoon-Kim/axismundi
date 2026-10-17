@@ -384,6 +384,44 @@ detected `mime_type = "audio/ogg; codecs=opus"` while `mediaType` publishes
 parameter is legitimate in a media type, so core knows more than we say --
 whether saying it helps a peer or confuses one is untested.
 
+#### Policy: AS2 where it matches, schema.org where it does not, and declared gaps for the rest
+
+Decided 2026-10-17, **after the standard implementation and not before it.** Core
+attachment metadata is published in three tiers:
+
+1. an AS2 property where one actually matches the fact (`image`, `duration`,
+   `mediaType`, `width`, `height`);
+2. a **schema.org** term where AS2 has none but the fact is worth publishing --
+   `artist`, `album`, a short description;
+3. a **declared gap** for the rest: recorded as deliberately unpublished rather
+   than left as an absence somebody later reads as an oversight.
+
+This is our own policy and not an FEP. It needs no new vocabulary of our own,
+which is the reason to prefer it over inventing terms: schema.org is already in
+our context for `license`, declared the same way a product extension would be
+(`schema: https://schema.org/`, then `license` as `schema:license` with
+`@type: @id`). The pattern is in place; what is added is terms, not machinery.
+
+Two constraints fall out of that existing pattern and belong with the decision:
+
+- **`@type: "@id"` is for identifiers, and most of these are strings.**
+  `license` coerces to an IRI because a license *is* one. An artist credit is
+  text, so its term must not carry that coercion or a plain name becomes a
+  relative IRI resolved against the document base. This is exactly what the
+  vocabulary registry's `value_shape` exists to record, so these terms should be
+  registered rather than hand-written into a context array.
+- **A schema.org property does not make the object a schema.org type.** The
+  object stays `as:Audio`; schema.org's domain statements are advisory and not
+  closed. Nothing has to claim `MusicRecording`, and claiming it would pull in
+  the AS2 rule that an extension type overlapping a core type must also carry
+  the core type.
+
+A declared gap has no home in the registry yet. The seams are type, property
+term, value binding and normative requirement, and "core holds this fact and we
+publish nothing" is none of those. Either a property registration carries a
+status that says so, or there is a fifth seam; deciding which can wait, but the
+list below is the content it would hold.
+
 #### Correctly unconnected, with the reason
 
 Recorded so that nobody later maps these by resemblance. AS2 has no property for

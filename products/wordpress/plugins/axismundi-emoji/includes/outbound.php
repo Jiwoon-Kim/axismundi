@@ -275,6 +275,21 @@ function axismundi_emoji_document_has_declaration( array $object ) : bool {
 /**
  * Add the FEP-9098 type mapping only to documents that use it.
  *
+ * NOTE: this filter is where this plugin's vocabulary declaration will move to the shared
+ * registry's registration API, once that exists. Two things recorded in
+ * products/wordpress/architecture/activitystreams-vocabulary-registry.md apply here and
+ * are easy to lose:
+ *
+ * - The conditionality below is the contract, not an optimisation. A registration API that
+ *   declares a product's terms unconditionally would add this mapping to documents with no
+ *   emoji in them, which is a regression in output. The migration has to produce the same
+ *   context this filter does, including for a document that uses none.
+ * - FEP-de8d (`emojiCatalog`, draft) would advertise a Collection of FEP-9098 Emoji objects
+ *   under an Actor's `endpoints`. It is this plugin's feature and is not planned yet, but it
+ *   needs a way to contribute one member to the Actor document, and today that is only the
+ *   three-name transport allow-list in Object Projections. Worth raising when the Actor
+ *   model handler is built rather than after.
+ *
  * @param array<int,mixed>         $context Existing JSON-LD context.
  * @param array<string,mixed>|null $object  Object being finalized.
  * @return array<int,mixed>

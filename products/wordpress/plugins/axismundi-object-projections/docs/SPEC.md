@@ -145,16 +145,15 @@ and its answer today is no -- so what remains undecided is that plugin's policy,
 which belongs to its collection model and is recorded in its own DATA-MODEL.md.
 Nothing here waits on it.
 
-**A standalone media Object cannot declare an audience, and that is derived
-rather than chosen.** Addressing presupposes somebody who addressed it, and an
-uploaded file has no `attributedTo` because uploading is storage rather than
-publication. There is nobody to have chosen a `to`. The measured asymmetry --
-an Article declaring the Public collection while the standalone Image of the
-same site declares nothing -- is therefore correct, not a divergence to
-reconcile. When an exposure gives the media an author, the audience comes from
-the collection that exposed it, which is the same event. This is the same
-argument as the pre-Actor visibility note: an unpublished object has no audience
-because there is nothing for it to be an audience of.
+**Whether a standalone media Object declares an audience was answered twice,
+and the second answer is the one that holds.** The first was that it cannot,
+because addressing presupposes somebody who addressed it and an uploaded file
+has no `attributedTo`. That reasoning proves too much: by it a published post
+with no Actor could not be addressed either, and it is. Publication intent comes
+from the source's own state and an Actor only narrows, so media is public by
+default like anything else published, and the narrowing comes from the Media
+Library's policy and from the Actor an exposure supplies. See section 4a item 0;
+the measured asymmetry is an inconsistency to fix, not a derivation to keep.
 
 What is still genuinely open is recorded with the decision it belongs to, in
 LOCAL-OBJECTS.md: what settles attribution for a local file whose origin
@@ -200,24 +199,32 @@ recorded nobody.
 
 ## 4a. Decided, not yet implemented
 
-0. **An Object with no `attributedTo` declares no audience, and that includes an Article.**
-   Addressing presupposes somebody who addressed it. The rule was reached for media first
-   and it is not about media: a post projected by this plugin alone, with no Actors or
-   Activities to say who published it, has nobody who chose a recipient.
+0. **A published source is public by default, and only an Actor narrows it.** Superseded
+   on 2026-10-17 the rule recorded here a few hours earlier, which said an Object with no
+   `attributedTo` declares no audience. It does declare one. Publication intent comes from
+   the **source's own state** -- WordPress says this post is published -- and that
+   statement is not about any Actor, so it survives the absence of one. What an Actor adds
+   is the ability to *narrow*: followers-only and mentioned-only are defined relative to
+   an Actor, which is why they need one and the public default does not.
 
-   Measured 2026-10-17 and currently the opposite: `/vqa-demo-post-1/` emits no
-   `attributedTo`, and emits `to: ["…#Public"]` with `cc: []`. The code states the present
-   behaviour deliberately -- "An unattributed Object can still be addressed, but only
-   publicly" -- so this reverses a recorded decision rather than filling a gap.
+   So the measured behaviour is right rather than wrong: `/vqa-demo-post-1/` carries no
+   `attributedTo` and `to: ["…#Public"]`, and the code's own comment -- "An unattributed
+   Object can still be addressed, but only publicly" -- was already the correct reading.
 
-   **It has a prerequisite, and skipping it would stop serving those posts.**
+   The prerequisite that earlier reading implied therefore dissolves.
    `axismundi_op_post_article_publicly_readable()` derives readability from the resolved
-   audience (`$audience['public'] === true`), and `router.php` gates anonymous
-   ActivityStreams negotiation on that in three places. An unattributed Article with no
-   audience would therefore become unreadable, not merely unaddressed. Readability -- is
-   this publicly viewable in WordPress -- and addressing -- whom the publisher addressed it
-   to -- are two questions that one value currently answers, and they have to be separated
-   before the addressing can go.
+   audience, and under this rule the two agree by construction: a published source is
+   public, so it is both readable and publicly addressed. Nothing has to come apart first.
+
+   **Media follows the same logic, and that is the point of recording it.** It is easy to
+   land on "an uploaded file has no author, therefore no audience", which was written here
+   too. The consistent reading is that a standalone media Object is public by default for
+   the same reason a published post is -- and the attachment page is a forced-public
+   surface in any case, carrying a content warning as its only modifier -- while the
+   narrowing comes from the Media Library's policy and, once an exposure gives the object
+   an Actor, from that Actor. One rule for both, with the asymmetry measured earlier (an
+   Article declaring Public while the standalone Image of the same site declares nothing)
+   now an inconsistency to fix rather than a derivation to keep.
 
    Related and deliberately not changed with it: `cc` is emitted as an empty array when
    nothing was copied, and a check in `audit-post-article.php` asserts exactly that for a
@@ -226,9 +233,6 @@ recorded nobody.
    decision for every member, and it belongs to the Object model handler rather than being
    taken a member at a time. Changing it for `cc` alone was tried here and reverted when it
    contradicted that check.
-
-These are recorded so the next slice is not designed against their absence. None of them
-is enforced today; each needs its own check before it may be described as a contract.
 
 1. **An effective property set is not an outbound allow-list.** The architecture registry's
    `effective_properties(type)` is an internal conformance contract; ActivityStreams does

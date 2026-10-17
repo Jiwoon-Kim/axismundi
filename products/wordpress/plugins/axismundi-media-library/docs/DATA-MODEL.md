@@ -382,6 +382,47 @@ owned list surface opts into the shared visibility SQL, which excludes explicit
 unlisted/private items, derived folder ranks above 0, and `listed=0` while
 preserving rows with absent legacy meta. "Mine" is `post_author = uid` (uid > 0).
 
+### 6.1 This resolver answers two questions, and one of them is not ours
+
+`_ax_media_visibility` decides both whether a file can be reached at all and how widely a
+published Object is shown. Those are different questions, and the second one does not belong
+to an attachment row.
+
+The decision recorded in Object Projections' `docs/LOCAL-OBJECTS.md` is that an Actor adding
+media to a collection is what publishes it, and that attribution appears at that moment --
+uploading is storage, so an uploaded file has no author. Follow that and an unpublished media
+Object has no audience either: there is nothing for it to be visible *to*. Reachability is an
+access question about storage, which is properly ours and properly keyed on `post_author`.
+Audience is a question about a publication, which belongs to the activity that exposed the
+media and to the collection item it created.
+
+`unlisted` is where the overlap shows. "Reachable but not announced" is a statement about how
+something was published, and a file nobody has published cannot be unlisted. The tier is
+carrying an audience word on a row that has no publication.
+
+This is a leftover from one WordPress user owning one Actor -- the same shape as `post_author`
+standing in for `attributedTo`. While the mapping is one to one, "private to the user" and
+"not shown to this Actor's followers" are indistinguishable, so one enum passes for both.
+Multi-actor separates them and then it answers neither cleanly:
+
+- with two Actors on one account, `private` cannot say whose audience it excludes;
+- a file exposed by Actor A in one collection and Actor B in another needs two audiences,
+  which one tier on the shared file row cannot carry;
+- withdrawing one exposure should change that exposure's audience, not the file's reach.
+
+Where each part lands once this is untangled: **audience** on the exposing activity and its
+collection item, read like any other Object's addressing; **access** here, keyed on
+`post_author`, keeping the tier's reachability half and the password gate; **the content
+warning** on the Object, since it is a viewer warning rather than access control and is the
+one modifier an attachment page can carry whatever else is true.
+
+**Not being changed, deliberately.** Measured 2026-10-17: these tiers are the only thing
+withholding a private file, and Object Projections' core attachment profile was republishing
+what they withheld until both descriptor paths were made to ask
+(`axismundi_op_attachment_descriptor_visible`). Replacing them requires somewhere else for
+audience to live, which requires the Add activity to exist first. Until then the resolver is
+load-bearing legacy rather than the intended model, and §6 above is what actually runs.
+
 ## 7. Identity fields (reserved formats)
 
 ```

@@ -31,6 +31,10 @@ SVG needs to be treated as architecture data.
 - [ActivityStreams storage boundaries](activitystreams-storage-boundaries.md)
   classifies local authoring facts, local taxonomy, graph edges, remote cache
   state, and activity history before any new schema is introduced.
+- [ActivityStreams collection model](activitystreams-collection-model.md)
+  records the contract descriptor axes for every published collection, which
+  pins cite a specification and which record a project choice, and the
+  measurements behind both.
 
 The source is WordPress core's
 [`wp_get_db_schema()`](https://github.com/WordPress/wordpress-develop/blob/trunk/src/wp-admin/includes/schema.php).

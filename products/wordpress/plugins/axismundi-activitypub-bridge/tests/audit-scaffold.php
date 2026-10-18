@@ -37,9 +37,7 @@ ax_bridge_assert( $ax_bridge_results, 'the Bridge owns a verified private delive
 ax_bridge_assert( $ax_bridge_results, 'the bridge consumes the existing per-Actor Inbox action', 10 === has_action( 'activitypub_inbox', 'axismundi_activitypub_bridge_actor_inbox' ) );
 ax_bridge_assert( $ax_bridge_results, 'the bridge consumes the existing shared Inbox action', 10 === has_action( 'activitypub_inbox_shared', 'axismundi_activitypub_bridge_shared_inbox' ) );
 $ax_bridge_claim_probe = array( 'id' => 'https://example.com/activities/' . wp_generate_uuid4() );
-ax_bridge_assert( $ax_bridge_results, 'unclaimed Activities retain official Inbox fallback storage', false === apply_filters( 'activitypub_skip_inbox_storage', false, $ax_bridge_claim_probe ) );
-axismundi_activitypub_bridge_inbox_claimed( $ax_bridge_claim_probe, true );
-ax_bridge_assert( $ax_bridge_results, 'only successfully claimed Activities skip official Inbox CPT storage', true === apply_filters( 'activitypub_skip_inbox_storage', false, $ax_bridge_claim_probe ) );
+ax_bridge_assert( $ax_bridge_results, 'the Bridge keeps the official Inbox CPT dormant for every inbound Activity', true === apply_filters( 'activitypub_skip_inbox_storage', false, $ax_bridge_claim_probe ) );
 
 $GLOBALS['ax_bridge_ready_seen'] = false;
 add_action( 'axismundi_activitypub_bridge_ready', static function () : void { $GLOBALS['ax_bridge_ready_seen'] = true; } );

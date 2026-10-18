@@ -26,8 +26,9 @@ repositories to supported network-facing extension points in the official Activi
 2. Core Axismundi packages continue to function when this bridge and ActivityPub are absent.
 3. A verified Inbox Activity is consumed from the controller-owned `activitypub_inbox` or
    `activitypub_inbox_shared` action after permission validation. Official type handlers remain
-   dormant and `activitypub_skip_inbox_storage` prevents duplicate CPT persistence only after
-   Axismundi has successfully claimed the Activity.
+   dormant and `activitypub_skip_inbox_storage` keeps the official Inbox CPT out of use while
+   the Bridge is ready. If the Bridge itself is unavailable, the official controller retains its
+   degraded fallback store rather than acknowledging a lost delivery.
 4. Outbound delivery stores a complete payload, URI-backed signing Actor descriptor, and explicit
    recipient inboxes in `{prefix}ax_ap_deliveries`. `ap_outbox` and the Posts state machine are never reused.
 5. One post lifecycle has one publisher. Axismundi owns local lifecycle records while the
@@ -50,8 +51,12 @@ owns public Actor and Object routes.
 Axismundi Actors owns profiles, WebFinger, and NodeInfo; Object Projections owns Actor/content
 negotiation; Activities owns local lifecycle records. Official signature and REST server code
 verifies Inbox requests before firing its existing Inbox actions. The bridge resolves local
-recipients and remote Actors, records the full Activity through Activities, and skips official
-Inbox CPT storage. Unclaimed Activities retain the official Inbox snapshot as a recovery path.
+recipients and remote Actors, records the full Activity through Activities, and keeps the official
+Inbox CPT dormant while it is ready. Until Activities has recipient membership rows, the official
+per-Actor Inbox GET publishes only its identity root, not an empty or partial membership. An
+Activities schema failure changes the official controller's unconditional `202` to `503` with
+`Retry-After`; no-target, Bridge-not-ready, remote-actor, and moderation outcomes retain the
+official response.
 
 The official request-signing filter signs Bridge-owned `wp_safe_remote_post()` requests carrying
 transient `key_id` and `private_key` arguments. Private keys are never persisted by Bridge. The

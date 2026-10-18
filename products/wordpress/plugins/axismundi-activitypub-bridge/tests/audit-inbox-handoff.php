@@ -33,6 +33,8 @@ $ax_bridge_quote_auth      = '';
 $ax_bridge_quote_post      = 0;
 $ax_bridge_note_post       = 0;
 $ax_bridge_diagnostics_before = get_option( 'ax_activitypub_bridge_inbox_diagnostics', null );
+$ax_bridge_inbox_current_user = get_current_user_id();
+$ax_bridge_site_blocks_before = get_option( 'activitypub_site_blocked_domains', null );
 
 /** @param bool[] $results Results. */
 function ax_bridge_inbox_assert( array &$results, string $label, bool $condition ) : void {
@@ -44,6 +46,12 @@ function ax_bridge_inbox_assert( array &$results, string $label, bool $condition
 /** Keep fixture Post publication from producing an unrelated Create Activity. */
 function ax_bridge_inbox_fixture_lifecycle_owner() : string {
 	return 'fixture';
+}
+
+/** Allow the fixture to exercise the official GET route after its permission callback. */
+function ax_bridge_inbox_fixture_oauth_read( $result, WP_REST_Request $request, $scope ) {
+	unset( $request, $scope );
+	return null === $result ? true : $result;
 }
 
 try {
@@ -110,7 +118,56 @@ try {
 	$ax_bridge_accept_activity = is_array( $relation ) ? (string) ( $relation['state_activity_uri'] ?? '' ) : '';
 	$accept = '' !== $ax_bridge_accept_activity ? axismundi_act_get( $ax_bridge_accept_activity ) : null;
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the shared Inbox action composition returns 202', $response instanceof WP_REST_Response && 202 === $response->get_status() );
-	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the shared Inbox records the full Activity once in the Axismundi ledger', $stored instanceof Axismundi_Activity && 'inbound' === $stored->get_direction() );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the shared Inbox records the full Activity exactly once in the Axismundi ledger', $stored instanceof Axismundi_Activity && 'inbound' === $stored->get_direction() && 1 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . axismundi_act_activities_table() . ' WHERE activity_uri = %s', $ax_bridge_inbox_activity ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- assert the handoff keeps one ledger record rather than an official CPT row.
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'a claimed inbound Activity never creates an official Inbox CPT row', 0 === (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_content LIKE %s", 'ap_inbox', '%' . $wpdb->esc_like( $ax_bridge_inbox_activity ) . '%' ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- the official CPT is outside the product's storage model.
+
+	/*
+	 * The official controller owns authentication and transport. The test bypasses its
+	 * OAuth permission seam only to inspect the exact GET document after that gate.
+	 * It first removes our response filter to prove the dormant CPT would otherwise
+	 * assert an empty membership, then restores it and checks the advertised route.
+	 */
+	add_filter( 'activitypub_oauth_check_permission', 'ax_bridge_inbox_fixture_oauth_read', 100, 3 );
+	wp_set_current_user( $ax_bridge_inbox_user );
+	$inbox_get_request = new WP_REST_Request( 'GET', '/activitypub/1.0/actors/' . $ax_bridge_inbox_user . '/inbox' );
+	$inbox_get_request->set_param( 'user_id', $ax_bridge_inbox_user );
+	remove_filter( 'activitypub_rest_inbox_array', 'axismundi_activitypub_bridge_official_inbox_response', 100 );
+	$inbox_before_response = rest_do_request( $inbox_get_request );
+	add_filter( 'activitypub_rest_inbox_array', 'axismundi_activitypub_bridge_official_inbox_response', 100, 2 );
+	$inbox_after_response = rest_do_request( $inbox_get_request );
+	$inbox_before = $inbox_before_response instanceof WP_REST_Response ? $inbox_before_response->get_data() : array();
+	$inbox_after  = $inbox_after_response instanceof WP_REST_Response ? $inbox_after_response->get_data() : array();
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'without the Bridge response filter, the official Inbox GET falsely asserts an empty CPT-backed membership despite an inbound ledger Activity', $stored instanceof Axismundi_Activity && $inbox_before_response instanceof WP_REST_Response && 200 === $inbox_before_response->get_status() && array_key_exists( 'totalItems', $inbox_before ) && array_key_exists( 'orderedItems', $inbox_before ) && array_key_exists( 'eventStream', $inbox_before ) && 0 === (int) $inbox_before['totalItems'] && array() === $inbox_before['orderedItems'] );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the advertised official Inbox GET publishes only the membership-free root contract', $inbox_after_response instanceof WP_REST_Response && 200 === $inbox_after_response->get_status() && array( '@context', 'id', 'generator', 'actor', 'type' ) === array_keys( $inbox_after ) && wp_json_encode( $inbox_before['@context'] ?? null ) === wp_json_encode( $inbox_after['@context'] ?? null ) && (string) ( $inbox_before['id'] ?? '' ) === (string) ( $inbox_after['id'] ?? '' ) && 'OrderedCollection' === (string) ( $inbox_after['type'] ?? '' ) && (string) ( $inbox_before['generator'] ?? '' ) === (string) ( $inbox_after['generator'] ?? '' ) );
+	$inbox_allowlist = axismundi_activitypub_bridge_official_inbox_response(
+		array(
+			'@context'     => 'https://www.w3.org/ns/activitystreams',
+			'id'           => 'https://example.com/not-canonical',
+			'generator'    => 'https://example.com/generator',
+			'actor'        => 'https://example.com/actor',
+			'type'         => 'OrderedCollectionPage',
+			'totalItems'   => 1,
+			'orderedItems' => array( 'https://example.com/activity' ),
+			'first'        => 'https://example.com/first',
+			'last'         => 'https://example.com/last',
+			'next'         => 'https://example.com/next',
+			'prev'         => 'https://example.com/prev',
+			'partOf'       => 'https://example.com/collection',
+			'eventStream'  => 'https://example.com/stream',
+		),
+		$inbox_get_request
+	);
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the Inbox response allowlist strips pagination and membership keys even if an upstream response supplies them', array( '@context', 'id', 'generator', 'actor', 'type' ) === array_keys( $inbox_allowlist ) && 'https://example.com/not-canonical' === $inbox_allowlist['id'] && 'OrderedCollection' === $inbox_allowlist['type'] );
+	$inbox_sparse_allowlist = axismundi_activitypub_bridge_official_inbox_response(
+		array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'id'       => 'https://example.com/inbox',
+		),
+		$inbox_get_request
+	);
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the Inbox response allowlist omits absent optional identity fields instead of publishing empty strings', array( '@context', 'id', 'type' ) === array_keys( $inbox_sparse_allowlist ) && ! array_key_exists( 'generator', $inbox_sparse_allowlist ) && ! array_key_exists( 'actor', $inbox_sparse_allowlist ) );
+	remove_filter( 'activitypub_oauth_check_permission', 'ax_bridge_inbox_fixture_oauth_read', 100 );
+	wp_set_current_user( $ax_bridge_inbox_current_user );
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the inbound Follow auto-accepts through an outbound Activity when approval is not required', is_array( $relation ) && 'accepted' === (string) $relation['state'] && 'inbound' === (string) $relation['direction'] && $accept instanceof Axismundi_Activity && 'outbound' === $accept->get_direction() );
 	$instance_fill = wp_next_scheduled( 'axismundi_actors_cache_remote_instance', array( $ax_bridge_inbox_host ) );
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'verified Follow traffic queues one missing instance-cache fill without refreshing the Actor snapshot', false !== $instance_fill && null === axismundi_actors_get_instance( $ax_bridge_inbox_host ) );
@@ -275,9 +332,46 @@ try {
 	$untargeted['actor']         = $remote_uri;
 	$untargeted['object']        = $remote_uri . '/unclaimed';
 	$untargeted['to']            = array( 'https://www.w3.org/ns/activitystreams#Public' );
-	$untargeted_result = axismundi_activitypub_bridge_record_inbox( $untargeted );
-	axismundi_activitypub_bridge_record_inbox_diagnostic( 'shared', $untargeted, $untargeted_result );
-	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'an Activity the bridge cannot claim leaves official Inbox storage enabled instead of being lost', is_wp_error( $untargeted_result ) && 'ax_bridge_inbox_no_target' === $untargeted_result->get_error_code() && false === apply_filters( 'activitypub_skip_inbox_storage', false, $untargeted ) && null === axismundi_act_get( $untargeted['id'] ) );
+	$untargeted_request = new WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
+	$untargeted_request->set_header( 'Content-Type', 'application/activity+json' );
+	$untargeted_request->set_body( wp_json_encode( $untargeted ) );
+	$untargeted_response = ( new Activitypub\Rest\Inbox_Controller() )->create_item( $untargeted_request );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'an Activity with no local target is acknowledged without creating an official Inbox CPT row', $untargeted_response instanceof WP_REST_Response && 202 === $untargeted_response->get_status() && true === apply_filters( 'activitypub_skip_inbox_storage', false, $untargeted ) && null === axismundi_act_get( $untargeted['id'] ) && 0 === (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_content LIKE %s", 'ap_inbox', '%' . $wpdb->esc_like( $ax_bridge_fallback_activity ) . '%' ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- no-target traffic is not a product Inbox member or an official fallback row.
+	$untargeted_dispatched = apply_filters( 'rest_post_dispatch', $untargeted_response, rest_get_server(), $untargeted_request );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'a no-target Inbox POST keeps the official acknowledgement unchanged', $untargeted_dispatched instanceof WP_REST_Response && $untargeted_response instanceof WP_REST_Response && 202 === $untargeted_dispatched->get_status() && wp_json_encode( $untargeted_response->get_data() ) === wp_json_encode( $untargeted_dispatched->get_data() ) );
+
+	$schema_unavailable = $untargeted;
+	$schema_unavailable['id'] = 'https://example.com/activities/' . wp_generate_uuid4();
+	$schema_unavailable_request = new WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
+	$schema_unavailable_request->set_header( 'Content-Type', 'application/activity+json' );
+	$schema_unavailable_request->set_body( wp_json_encode( $schema_unavailable ) );
+	axismundi_activitypub_bridge_inbox_outcome( $schema_unavailable, new WP_Error( 'ax_act_schema' ) );
+	$schema_unavailable_response = apply_filters(
+		'rest_post_dispatch',
+		new WP_REST_Response( array( 'title' => 'Approval Required', 'status' => '202' ), 202 ),
+		rest_get_server(),
+		$schema_unavailable_request
+	);
+	$schema_unavailable_headers = $schema_unavailable_response instanceof WP_REST_Response ? $schema_unavailable_response->get_headers() : array();
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'an Activity ledger schema failure turns the official POST acknowledgement into a retryable 503', $schema_unavailable_response instanceof WP_REST_Response && 503 === $schema_unavailable_response->get_status() && 'about:blank' === (string) ( $schema_unavailable_response->get_data()['type'] ?? '' ) && 'Service Unavailable' === (string) ( $schema_unavailable_response->get_data()['title'] ?? '' ) && ! str_contains( (string) wp_json_encode( $schema_unavailable_response->get_data() ), 'Approval Required' ) && (string) AXISMUNDI_ACTIVITYPUB_BRIDGE_INBOX_RETRY_AFTER === (string) ( $schema_unavailable_headers['Retry-After'] ?? '' ) && str_starts_with( (string) ( $schema_unavailable_headers['Content-Type'] ?? '' ), 'application/activity+json' ) );
+	$not_ready = $untargeted;
+	$not_ready['id'] = 'https://example.com/activities/' . wp_generate_uuid4();
+	$not_ready_request = new WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
+	$not_ready_request->set_body( wp_json_encode( $not_ready ) );
+	axismundi_activitypub_bridge_inbox_outcome( $not_ready, new WP_Error( 'ax_bridge_inbox_not_ready' ) );
+	$not_ready_original = new WP_REST_Response( array( 'title' => 'Approval Required', 'status' => '202' ), 202 );
+	$not_ready_response = apply_filters( 'rest_post_dispatch', $not_ready_original, rest_get_server(), $not_ready_request );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'a Bridge-not-ready outcome leaves the official CPT fallback acknowledgement untouched', $not_ready_response instanceof WP_REST_Response && 202 === $not_ready_response->get_status() && wp_json_encode( $not_ready_original->get_data() ) === wp_json_encode( $not_ready_response->get_data() ) );
+
+	$moderated = $untargeted;
+	$moderated['id'] = 'https://example.com/activities/' . wp_generate_uuid4();
+	update_option( 'activitypub_site_blocked_domains', array( $ax_bridge_inbox_host ), false );
+	$moderated_request = new WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
+	$moderated_request->set_header( 'Content-Type', 'application/activity+json' );
+	$moderated_request->set_body( wp_json_encode( $moderated ) );
+	$moderated_response = ( new Activitypub\Rest\Inbox_Controller() )->create_item( $moderated_request );
+	$moderated_dispatched = apply_filters( 'rest_post_dispatch', $moderated_response, rest_get_server(), $moderated_request );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'a moderation-blocked Inbox POST response is left untouched because no Bridge failure outcome exists', $moderated_response instanceof WP_REST_Response && $moderated_dispatched instanceof WP_REST_Response && 202 === $moderated_dispatched->get_status() && wp_json_encode( $moderated_response->get_data() ) === wp_json_encode( $moderated_dispatched->get_data() ) && '' === axismundi_activitypub_bridge_inbox_outcome( $moderated ) );
 	$diagnostics = axismundi_activitypub_bridge_inbox_diagnostics();
 	$diagnostic_json = wp_json_encode( $diagnostics );
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'bounded diagnostics distinguish recorded and unclaimed Inbox outcomes without copying payload content', count( $diagnostics ) <= 50 && str_contains( $diagnostic_json, 'recorded' ) && str_contains( $diagnostic_json, 'unclaimed' ) && ! str_contains( $diagnostic_json, 'Private content' ) );
@@ -367,6 +461,11 @@ try {
 		delete_option( 'ax_activitypub_bridge_inbox_diagnostics' );
 	} else {
 		update_option( 'ax_activitypub_bridge_inbox_diagnostics', $ax_bridge_diagnostics_before, false );
+	}
+	if ( null === $ax_bridge_site_blocks_before ) {
+		delete_option( 'activitypub_site_blocked_domains' );
+	} else {
+		update_option( 'activitypub_site_blocked_domains', $ax_bridge_site_blocks_before, false );
 	}
 }
 

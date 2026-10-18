@@ -36,6 +36,7 @@ defined( 'ABSPATH' ) || exit;
 
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION = '0.1.0';
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_REWRITE_VERSION = 1;
+const AXISMUNDI_ACTIVITYPUB_BRIDGE_INBOX_RETRY_AFTER = 60;
 
 require_once __DIR__ . '/includes/transport.php';
 require_once __DIR__ . '/includes/delivery.php';
@@ -312,6 +313,20 @@ function axismundi_activitypub_bridge_inbox_claimed( array $activity, bool $clai
 	return isset( $claimed[ $key ] );
 }
 
+/** Record the Bridge's request-local Inbox handling outcome for response correction. */
+function axismundi_activitypub_bridge_inbox_outcome( array $activity, $result = null ) : string {
+	static $outcomes = array();
+	$key = axismundi_activitypub_bridge_inbox_claim_key( $activity );
+	if ( null !== $result ) {
+		if ( is_wp_error( $result ) ) {
+			$outcomes[ $key ] = $result->get_error_code();
+		} else {
+			unset( $outcomes[ $key ] );
+		}
+	}
+	return (string) ( $outcomes[ $key ] ?? '' );
+}
+
 /**
  * Consume the per-Actor Inbox action after the official permission callback.
  *
@@ -328,6 +343,7 @@ function axismundi_activitypub_bridge_actor_inbox( array $activity, $user_id, st
 	unset( $type, $object );
 	if ( 'inbox' === $context ) {
 		$recorded = axismundi_activitypub_bridge_record_inbox( $activity, array( (int) $user_id ) );
+		axismundi_activitypub_bridge_inbox_outcome( $activity, $recorded );
 		axismundi_activitypub_bridge_record_inbox_diagnostic( 'actor', $activity, $recorded );
 		if ( $recorded instanceof Axismundi_Activity ) {
 			axismundi_activitypub_bridge_inbox_claimed( $activity, true );
@@ -340,6 +356,7 @@ add_action( 'activitypub_inbox', 'axismundi_activitypub_bridge_actor_inbox', 10,
 function axismundi_activitypub_bridge_shared_inbox( array $activity, array $user_ids, string $type, $object, string $context ) : void {
 	unset( $type, $object, $context );
 	$recorded = axismundi_activitypub_bridge_record_inbox( $activity, array_map( 'intval', $user_ids ), true );
+	axismundi_activitypub_bridge_inbox_outcome( $activity, $recorded );
 	axismundi_activitypub_bridge_record_inbox_diagnostic( 'shared', $activity, $recorded );
 	if ( $recorded instanceof Axismundi_Activity ) {
 		axismundi_activitypub_bridge_inbox_claimed( $activity, true );
@@ -349,9 +366,64 @@ add_action( 'activitypub_inbox_shared', 'axismundi_activitypub_bridge_shared_inb
 
 /** Keep the official Inbox CPT dormant while Axismundi owns Inbox state. */
 function axismundi_activitypub_bridge_skip_inbox_storage( bool $skip, array $activity ) : bool {
-	return axismundi_activitypub_bridge_ready() && axismundi_activitypub_bridge_inbox_claimed( $activity ) ? true : $skip;
+	unset( $activity );
+	return axismundi_activitypub_bridge_ready() ? true : $skip;
 }
 add_filter( 'activitypub_skip_inbox_storage', 'axismundi_activitypub_bridge_skip_inbox_storage', 100, 2 );
+
+/**
+ * Remove official Inbox CPT membership claims once the Bridge owns inbound state.
+ *
+ * The official actor Inbox route remains the S2S transport surface, including its
+ * POST handler and signature verification. Its GET implementation reads an Inbox
+ * CPT the Bridge deliberately never uses. Until an actor-recipient ledger reader
+ * exists, this root Collection can state its identity but not its membership.
+ *
+ * @param array           $response Official Inbox collection document.
+ * @param WP_REST_Request $request  REST request.
+ * @return array
+ */
+function axismundi_activitypub_bridge_official_inbox_response( array $response, WP_REST_Request $request ) : array {
+	if ( ! axismundi_activitypub_bridge_ready() ) {
+		return $response;
+	}
+
+	unset( $request );
+	$response = array_intersect_key( $response, array_flip( array( '@context', 'id', 'generator', 'actor' ) ) );
+	$response['type'] = 'OrderedCollection';
+	return $response;
+}
+add_filter( 'activitypub_rest_inbox_array', 'axismundi_activitypub_bridge_official_inbox_response', 100, 2 );
+
+/** Replace the official unconditional 202 only when our own repositories are unavailable. */
+function axismundi_activitypub_bridge_inbox_post_response( $response, WP_REST_Server $server, WP_REST_Request $request ) {
+	unset( $server );
+	if ( 'POST' !== $request->get_method()
+		|| ! preg_match( '#^/activitypub/1\.0/(?:inbox|(?:users|actors)/-?\d+/inbox)$#', $request->get_route() )
+	) {
+		return $response;
+	}
+
+	$activity = $request->get_json_params();
+	if ( ! is_array( $activity ) || 'ax_act_schema' !== axismundi_activitypub_bridge_inbox_outcome( $activity ) ) {
+		return $response;
+	}
+
+	$response = rest_ensure_response( $response );
+	$response->set_data(
+		array(
+			'type'   => 'about:blank',
+			'title'  => 'Service Unavailable',
+			'status' => 503,
+			'detail' => 'The receiving server is temporarily unable to record this activity.',
+		)
+	);
+	$response->set_status( 503 );
+	$response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
+	$response->header( 'Retry-After', (string) AXISMUNDI_ACTIVITYPUB_BRIDGE_INBOX_RETRY_AFTER );
+	return $response;
+}
+add_filter( 'rest_post_dispatch', 'axismundi_activitypub_bridge_inbox_post_response', 100, 3 );
 
 /** Announce a ready, behavior-free compatibility boundary to future adapters. */
 function axismundi_activitypub_bridge_boot() : void {

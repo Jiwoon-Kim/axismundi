@@ -274,8 +274,13 @@ function axismundi_op_actor_outbox_visible( Axismundi_OP_Actor_Outbox $source ) 
  */
 function axismundi_op_actor_outbox_transform( Axismundi_OP_Actor_Outbox $source ) {
 	$actor = $source->get_actor();
-	$page  = function_exists( 'axismundi_act_get_public_outbox_page' )
-		? axismundi_act_get_public_outbox_page( $actor->get_uri(), axismundi_op_outbox_page_size(), $source->get_cursor() )
+	/*
+	 * Activities owns the member predicate and cursor reader. OP owns the URI and
+	 * document shape. Going through the contract keeps that split explicit while
+	 * preserving the old empty response when Activities is not installed.
+	 */
+	$page  = function_exists( 'axismundi_op_read_collection_contract' ) && is_array( axismundi_op_collection_contract( 'ap-outbox' ) )
+		? axismundi_op_read_collection_contract( 'ap-outbox', $actor->get_uri(), axismundi_op_outbox_page_size(), $source->get_cursor() )
 		: array( 'items' => array(), 'next_cursor' => '', 'has_more' => false );
 	if ( is_wp_error( $page ) ) {
 		return $page;

@@ -219,6 +219,27 @@ function axismundi_op_register_replies_collection_transformer() : void {
 }
 add_action( 'axismundi_op_register_transformers', 'axismundi_op_register_replies_collection_transformer' );
 
+/** Register the Object-relation facts behind a replies collection. */
+function axismundi_op_register_replies_collection_contract() : void {
+	if ( ! function_exists( 'axismundi_op_register_collection_contract' ) ) {
+		return;
+	}
+	axismundi_op_register_collection_contract(
+		'replies',
+		array(
+			'member_models'    => array( 'Object' ),
+			'presentation'     => 'paged-members',
+			'ordering'         => 'source-defined',
+			'total_capability' => 'unavailable',
+			'total_reason'     => 'bounded-scan',
+			'total_disclosure' => array( 'public' => 'never', 'owner' => 'never' ),
+			'reader'           => 'axismundi_op_get_public_reply_collection_page',
+			'owner'            => 'object-projections',
+		)
+	);
+}
+add_action( 'axismundi_op_register_collection_contracts', 'axismundi_op_register_replies_collection_contract' );
+
 /** Register the public replies collection endpoint. */
 function axismundi_op_register_object_replies_route() : void {
 	register_rest_route(

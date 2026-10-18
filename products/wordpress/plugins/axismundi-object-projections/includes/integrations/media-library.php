@@ -464,6 +464,26 @@ function axismundi_op_register_media_library_integration() : void {
 }
 add_action( 'axismundi_op_register_transformers', 'axismundi_op_register_media_library_integration' );
 
+/** Register the stored reverse-usage relation behind an Attachment's usedIn collection. */
+function axismundi_op_register_media_used_in_collection_contract() : void {
+	if ( ! function_exists( 'axismundi_op_register_collection_contract' ) || ! function_exists( 'axismundi_media_relations_used_in' ) ) {
+		return;
+	}
+	axismundi_op_register_collection_contract(
+		'used-in',
+		array(
+			'member_models'    => array( 'Object' ),
+			'presentation'     => 'bounded-members',
+			'ordering'         => 'source-defined',
+			'total_capability' => 'exact',
+			'total_disclosure' => array( 'public' => 'always', 'owner' => 'always' ),
+			'reader'           => 'axismundi_media_relations_used_in',
+			'owner'            => 'media-library',
+		)
+	);
+}
+add_action( 'axismundi_op_register_collection_contracts', 'axismundi_op_register_media_used_in_collection_contract' );
+
 /** Public visibility gate for one Attachment reverse-usage collection. */
 function axismundi_op_media_used_in_visible( Axismundi_OP_Media_Used_In $source ) : bool {
 	return axismundi_op_media_attachment_visible( $source->get_attachment() );

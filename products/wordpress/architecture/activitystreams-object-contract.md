@@ -89,19 +89,38 @@ audit already pins that a verified `QuoteRequest` composes into one
 Activities-owned `Accept` with its authorization, so the request and stamp half
 of this FEP is implemented.
 
-The policy half is where this project's representation is incomplete and, in one
-respect, at risk.
+The policy half is **also implemented**, and conformantly. That is recorded here
+because three successive readings of this area concluded otherwise from the
+absence of a grep match rather than from running it, and the corrections are
+cheaper to write down than to rediscover.
 
-The policy vocabulary is **not** FEP-044f's own: it is GoToSocial's
-`interactionPolicy` with a `canQuote` sub-policy, and `automaticApproval` and
-`manualApproval` are arrays of Actors and Collections of Actors under
-`https://gotosocial.org/ns#`. Our `_ax_op_quote_policy` is a single sanitized
-scalar, which is a reasonable authoring input but a lossy one: projecting it has
-to produce those arrays, and the FEP's own rule for forbidding all quotes is that
-`automaticApproval` SHOULD contain the author's own identifier as its single
-value, because an empty array is indistinguishable from a missing property under
-JSON-LD canonicalization. A scalar cannot express that without a declared
-mapping.
+The policy vocabulary is not FEP-044f's own: it is GoToSocial's
+`interactionPolicy` with a `canQuote` sub-policy, where `automaticApproval` and
+`manualApproval` take Actors and Collections of Actors under
+`https://gotosocial.org/ns#`. `_ax_op_quote_policy` is a sanitized scalar with
+three values, and `axismundi_act_quote_automatic_approval()` resolves each one
+into the audience the FEP asks for, measured on the running site:
+
+```txt
+'anyone'     -> https://www.w3.org/ns/activitystreams#Public
+'followers'  -> the Actor's own followers collection URL, supplied by
+                representation through the axismundi_act_actor_followers_uri
+                filter, which is registered and returns a real URL
+'me'         -> the author's own Actor URI
+''           -> no interactionPolicy member is emitted at all
+```
+
+`'me'` is exactly the form the FEP prescribes for forbidding every quote:
+`automaticApproval` SHOULD carry the author's own identifier as its single value,
+because an empty array is indistinguishable from a missing property under
+JSON-LD canonicalization. And emitting nothing for an unset policy matches the
+same observation from the other side. `renderer.php` declares the `gts:` context
+terms only when the member is present, so a document without a policy carries no
+vocabulary for one.
+
+Those three values are also the interoperable subset: the FEP records that
+Mastodon 4.5 restricts authoring to automatic approval with `as:Public`, the
+author's followers, or nobody.
 
 **The policy is advisory, and the FEP states a MUST NOT about it:** it SHOULD
 provide interface hints such as enabling a Quote button or explaining why an
@@ -128,18 +147,28 @@ renders it, and `object-relations.php` already accepts the legacy `quoteUrl`
 spelling on receipt — one of the four compatibility spellings the FEP lists
 beside `quoteUri` and `_misskey_quote`.
 
-So three things follow, and none of them is "move the Note plugin's code":
+So what remains is narrower than the feature looks, and none of it is "move the
+Note plugin's code":
 
-1. One policy vocabulary and one validator, in Object Projections. Domains keep
-   storing their authored values, because the Note envelope is domain-owned by
-   an existing decision; what must not be duplicated is the vocabulary and the
-   validation, which is duplicated today.
-2. Whether a type carries a quote is **declared by its registration**, per
+1. **An `Article` cannot author a quote target.** A core `post` carries the
+   policy and has nowhere to record whom it quotes. This is the real gap: the
+   policy says who may quote me, and quoting itself is unavailable.
+2. **One validator, not two.** The value set already agrees -- both sides accept
+   exactly `anyone`, `followers`, `me` and unset -- so the duplication is the
+   validator and its error codes, not the vocabulary. Domains keep storing their
+   authored values, because the Note envelope is domain-owned by an existing
+   decision.
+3. **Whether a type carries a quote is declared by its registration**, per
    section 7. The `'post'` gate is generalized by declaration, never by adding
-   another post type to a list.
-3. A core `post` gains somewhere to author a target through that declaration.
-   The relation table is already the authority for the edge, so the authoring
-   input writes that edge rather than introducing a parallel column.
+   another post type to a list. A core `post` gains its target field through that
+   declaration, writing the relation edge that is already the authority rather
+   than a parallel column.
+4. **`manualApproval` is not expressible.** The three values are
+   automatic-approval only. That is a feature gap rather than a conformance one,
+   since the FEP permits advertising `automaticApproval` alone -- but the
+   `QuoteRequest` and `Accept` path already implements manual review
+   mechanically, so the policy currently cannot advertise something this project
+   can already do.
 
 ## 4. Value priority
 

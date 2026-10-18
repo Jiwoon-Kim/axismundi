@@ -1113,14 +1113,14 @@ function axismundi_op_local_post_object_view_model( $source ) : ?array {
 
 /** Register the shared local WordPress-object card adapter. */
 function axismundi_op_register_local_post_object_view_model() : void {
-	if ( ! function_exists( 'axismundi_op_register_object_view_model' ) ) {
+	if ( ! function_exists( 'axismundi_op_register_object_source_reader' ) ) {
 		return;
 	}
-	axismundi_op_register_object_view_model(
+	axismundi_op_register_object_source_reader(
 		'local-post-object',
 		array(
 			'supports'  => static fn( $source ) : bool => $source instanceof WP_Post && null !== axismundi_op_resolve_object_transformer( $source ),
-			'transform' => 'axismundi_op_local_post_object_view_model',
+			'read'      => 'axismundi_op_local_post_object_view_model',
 			'priority'  => 50,
 		)
 	);

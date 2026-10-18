@@ -57,11 +57,11 @@ Question  category activity  parents [IntransitiveActivity] declares [oneOf, any
 
 Two consequences that a naive type list gets wrong.
 
-**`Question` is not an Object subtype.** It is an `IntransitiveActivity`, so an
-Object assembly contract cannot simply enumerate it beside `Article`,
-`Document` and `Note`. It assembles through the Activity branch while still
-being the thing a reader sees as a poll, and the assembly contract has to say
-which branch it is taking.
+**`Question` reaches Object through the Activity branch.** Its ancestry is
+`Question -> IntransitiveActivity -> Activity -> Object`; `category: activity`
+is a dispatch classification, not an assertion that Activity lies outside
+Object. It may inherit the base Object presentation while retaining its poll
+facts. It must not be registered as a direct sibling subtype of Note.
 
 **`Quote` is not a type at all.** The storage boundaries record quote as an
 AS2-native property contract, and `wp_ax_object_relations` holds the
@@ -343,6 +343,37 @@ Measure that before building the remote source reader.
 - Whether any current code path uses `_ax_op_quote_policy` to decide the
   validity or display of an inbound quote. FEP-044f makes that a MUST NOT, so
   this is a conformance audit rather than a design question.
+
+## Source-reader split, 2026-10-19
+
+The first implementation separates source acquisition from view-fact assembly.
+`axismundi_op_register_object_source_reader()` registers `supports` and `read`
+callbacks; the former view-model registration API remains a compatibility
+wrapper. `axismundi_op_read_object_source()` returns acquired facts before any
+type assembly runs. Existing source extraction and its payload reads are preserved, not
+replaced by a new remote reassembly policy in this slice.
+
+`axismundi_op_register_object_assembly()` registers a source-free callback by
+vocabulary type. Resolution selects the nearest registered ancestor by breadth
+first traversal of `parents`, with parent order breaking ties. The base Object
+assembly supplies shared text/media normalization and defaults. Image can
+inherit a Document specialization; Question inherits Object through Activity.
+Unknown observed extension types retain the previous base Object presentation.
+Assembly registrations have an action and read-back API and reject duplicate
+types. This is view-fact assembly, not the future JSON-LD read API.
+
+Source-specific URLs, visibility, and current-user editing capabilities are read
+before assembly. The compatibility view-model filter still runs afterwards;
+it remains an existing extension hook, not a new type assembly surface.
+`_enriched` and request-current binding stay with the block presenter.
+
+`audit-object-assembly.php` checks shared local/observed Article assembly,
+common fields, defaults, and hierarchy resolution. The read-only
+`audit-object-assembly-baseline.php` records raw JSON SHA-256 values captured
+before this split for the site's Article and media fixtures, including actual
+embedded media descriptors. Its Article attachment array is empty, so that
+array hash alone is not evidence for embedded media preservation. These are
+live development fixtures, not portable canonical AS2 document hashes.
 
 ## Sources
 

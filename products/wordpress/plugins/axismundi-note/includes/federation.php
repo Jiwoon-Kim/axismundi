@@ -616,12 +616,12 @@ function axismundi_note_object_view_model( $source ) : ?array {
 
 /** Register the Note view-model adapter with Object Projections. */
 function axismundi_note_register_view_model() : void {
-	if ( function_exists( 'axismundi_op_register_object_view_model' ) ) {
-		axismundi_op_register_object_view_model(
+	if ( function_exists( 'axismundi_op_register_object_source_reader' ) ) {
+		axismundi_op_register_object_source_reader(
 			'local-note',
 			array(
 				'supports'  => static fn( $source ) : bool => $source instanceof Axismundi_Note_Source,
-				'transform' => 'axismundi_note_object_view_model',
+				'read'      => 'axismundi_note_object_view_model',
 				'priority'  => 10,
 			)
 		);

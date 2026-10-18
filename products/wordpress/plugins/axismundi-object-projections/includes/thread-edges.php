@@ -548,12 +548,12 @@ function axismundi_op_remote_source_view_model( $source ) : ?array {
 
 /** Register OP's own remote-cache view-model adapter, the fallback no product owns. */
 function axismundi_op_register_remote_source_view_model() : void {
-	if ( function_exists( 'axismundi_op_register_object_view_model' ) ) {
-		axismundi_op_register_object_view_model(
+	if ( function_exists( 'axismundi_op_register_object_source_reader' ) ) {
+		axismundi_op_register_object_source_reader(
 			'remote-cache',
 			array(
 				'supports'  => static fn( $source ) : bool => $source instanceof Axismundi_Op_Remote_Source,
-				'transform' => 'axismundi_op_remote_source_view_model',
+				'read'      => 'axismundi_op_remote_source_view_model',
 				'priority'  => 90,
 			)
 		);

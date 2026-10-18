@@ -1,9 +1,9 @@
 <?php
 /**
- * Neutral single-object view-model registry and the axismundi/object-view block.
+ * Source readers, shared Object view facts, and the axismundi/object-view block.
  *
- * A product (Note now; remote cache later) registers an adapter that normalizes
- * its own source into one view model. The dynamic `axismundi/object-view` block
+ * Products register readers for their own storage. Type-keyed assembly applies
+ * the shared contract to those facts. The dynamic `axismundi/object-view` block
  * renders the request's current view model inside a block template, so the human
  * HTML page never depends on a Core `post-content` block or a faked singular
  * query — a Tombstone has no `WP_Post` and must still render.
@@ -17,33 +17,44 @@ defined( 'ABSPATH' ) || exit;
 $GLOBALS['axismundi_op_view_model_adapters'] = array();
 
 /**
- * Register one source-to-view-model adapter.
+ * Register one source reader.
  *
- * OP never reads product storage; the adapter's supports and transform callbacks
+ * OP never reads product storage; the reader's supports and read callbacks
  * do. Definitions follow the transformer registry's deterministic id/priority
  * contract so plugin load order never decides which product owns a source.
  *
  * @param string              $id   Stable lowercase slug.
- * @param array<string,mixed> $args supports, transform, [priority].
+ * @param array<string,mixed> $args supports, read, [priority].
  * @return true|WP_Error
  */
-function axismundi_op_register_object_view_model( string $id, array $args ) {
+function axismundi_op_register_object_source_reader( string $id, array $args ) {
 	$key = sanitize_key( $id );
 	if ( '' === $key || $key !== $id ) {
-		return new WP_Error( 'ax_op_view_model_id', __( 'View-model adapter IDs must be non-empty lowercase slugs.', 'axismundi-object-projections' ) );
+		return new WP_Error( 'ax_op_view_model_id', __( 'Source reader IDs must be non-empty lowercase slugs.', 'axismundi-object-projections' ) );
 	}
-	if ( ! is_callable( $args['supports'] ?? null ) || ! is_callable( $args['transform'] ?? null ) ) {
-		return new WP_Error( 'ax_op_view_model_args', __( 'A view-model adapter requires callable supports and transform callbacks.', 'axismundi-object-projections' ) );
+	if ( ! is_callable( $args['supports'] ?? null ) || ! is_callable( $args['read'] ?? null ) ) {
+		return new WP_Error( 'ax_op_view_model_args', __( 'A source reader requires callable supports and read callbacks.', 'axismundi-object-projections' ) );
 	}
 	return axismundi_op_store_transformer(
 		'axismundi_op_view_model_adapters',
 		array(
 			'id'        => $key,
 			'supports'  => $args['supports'],
-			'transform' => $args['transform'],
+			'read'      => $args['read'],
 			'priority'  => isset( $args['priority'] ) ? (int) $args['priority'] : 10,
 		)
 	);
+}
+
+/** Compatibility registration for products using the original adapter API. */
+function axismundi_op_register_object_view_model( string $id, array $args ) {
+	$args['read'] = $args['transform'] ?? null;
+	return axismundi_op_register_object_source_reader( $id, $args );
+}
+
+/** @return array<int,array<string,mixed>> Source readers in dispatch order. */
+function axismundi_op_object_source_readers() : array {
+	return axismundi_op_sort_registry( (array) $GLOBALS['axismundi_op_view_model_adapters'] );
 }
 
 /**
@@ -291,34 +302,21 @@ function axismundi_op_classify_object_media( array $attachments, string $content
 }
 
 /**
- * Apply the shared contract to one adapter's output.
- *
- * This stays free of database work: it runs for every resolved source, including
- * each node of a reply tree. Index-backed fields are added by
- * `axismundi_op_enrich_object_view_model()` when an object becomes the one being
- * rendered as a full card.
+ * Read source-specific context before type assembly, including source URLs,
+ * visibility, and current-user editing capability. Full-card relation
+ * enrichment remains at the block presenter's separate request boundary.
  *
  * @param array<string,mixed> $model  Adapter output.
  * @param mixed               $source Originating source.
  * @return array<string,mixed>
  */
-function axismundi_op_normalize_object_view_model( array $model, $source = null ) : array {
+function axismundi_op_read_view_model_source_fields( array $model, $source = null ) : array {
 	$model = array_merge( axismundi_op_object_view_model_defaults(), $model );
 	if ( 'tombstone' === (string) ( $model['status'] ?? '' ) ) {
 		return $model;
 	}
 	$post = axismundi_op_view_model_backing_post( $source );
 
-	// A non-sensitive `summary` is an excerpt, not a content warning. Adapters
-	// map AS2 `summary` onto the warning slot, so reclaim it when nothing is
-	// actually being warned about. An excerpt is a plain-text contract: a local
-	// adapter may hand over an autop-rendered excerpt, and a summary block is a
-	// sibling of Core's post excerpt, not a second content region.
-	if ( empty( $model['sensitive'] ) && '' === (string) $model['summary'] && '' !== (string) $model['content_warning'] ) {
-		$model['summary']         = trim( wp_strip_all_tags( (string) $model['content_warning'] ) );
-		$model['content_warning'] = '';
-	}
-	$model['summary'] = trim( wp_strip_all_tags( (string) $model['summary'] ) );
 	if ( '' === (string) $model['human_url'] ) {
 		if ( $post instanceof WP_Post ) {
 			$permalink            = get_permalink( $post );
@@ -379,6 +377,21 @@ function axismundi_op_normalize_object_view_model( array $model, $source = null 
 	}
 
 	$model['capabilities']['can_edit'] = $post instanceof WP_Post && current_user_can( 'edit_post', $post->ID );
+	return $model;
+}
+
+/** Shared Object assembly: source-independent text and media presentation facts. */
+function axismundi_op_assemble_object_view_facts( array $model ) : array {
+	$model = array_merge( axismundi_op_object_view_model_defaults(), $model );
+	if ( 'tombstone' === (string) ( $model['status'] ?? '' ) ) {
+		return $model;
+	}
+	// Plain summaries are excerpts; sensitive summaries remain warning subjects.
+	if ( empty( $model['sensitive'] ) && '' === (string) $model['summary'] && '' !== (string) ( $model['content_warning'] ?? '' ) ) {
+		$model['summary'] = trim( wp_strip_all_tags( (string) $model['content_warning'] ) );
+		$model['content_warning'] = '';
+	}
+	$model['summary'] = trim( wp_strip_all_tags( (string) $model['summary'] ) );
 
 	// A declared `image` outranks anything inferred from the attachment list.
 	$featured                = axismundi_op_normalize_featured_image( $model['image'] );
@@ -404,13 +417,26 @@ function axismundi_op_normalize_object_view_model( array $model, $source = null 
 		: axismundi_op_normalize_featured_image( $classified['media']['featured'] );
 	$model['presentation']['profile'] = $classified['profile'];
 
-	/**
-	 * Let a product complete its own source-specific view-model fields.
-	 *
-	 * @param array<string,mixed> $model  Normalized view model.
-	 * @param mixed               $source Originating source.
-	 */
-	return (array) apply_filters( 'axismundi_op_object_view_model', $model, $source );
+	return $model;
+}
+
+/** Compatibility entry point: acquisition, then source-free type assembly. */
+function axismundi_op_normalize_object_view_model( array $model, $source = null ) : array {
+	$facts = axismundi_op_read_view_model_source_fields( $model, $source );
+	return axismundi_op_view_model_from_facts( $facts, $source );
+}
+
+/** Apply type assembly and the legacy product completion filter once. */
+function axismundi_op_view_model_from_facts( array $facts, $source = null ) : array {
+	$assembled = axismundi_op_assemble_object_facts( $facts );
+	if ( is_wp_error( $assembled ) ) {
+		do_action( 'axismundi_op_object_assembly_error', $assembled, $source );
+		return array();
+	}
+	if ( 'tombstone' === (string) ( $assembled['status'] ?? '' ) ) {
+		return $assembled;
+	}
+	return (array) apply_filters( 'axismundi_op_object_view_model', $assembled, $source );
 }
 
 /**
@@ -455,21 +481,31 @@ function axismundi_op_enrich_object_view_model( array $model ) : array {
  *
  * @return array<string,mixed>|null
  */
-function axismundi_op_object_view_model( $source ) : ?array {
-	foreach ( axismundi_op_sort_registry( (array) $GLOBALS['axismundi_op_view_model_adapters'] ) as $adapter ) {
+function axismundi_op_read_object_source( $source ) : ?array {
+	foreach ( axismundi_op_object_source_readers() as $adapter ) {
 		try {
 			if ( true !== call_user_func( $adapter['supports'], $source ) ) {
 				continue;
 			}
-			$model = call_user_func( $adapter['transform'], $source );
+			$model = call_user_func( $adapter['read'], $source );
 			if ( is_array( $model ) ) {
-				return axismundi_op_normalize_object_view_model( $model, $source );
+				return axismundi_op_read_view_model_source_fields( $model, $source );
 			}
 		} catch ( Throwable $error ) {
 			continue;
 		}
 	}
 	return null;
+}
+
+/** Resolve a source through acquisition, then the shared type assembly. */
+function axismundi_op_object_view_model( $source ) : ?array {
+	$facts = axismundi_op_read_object_source( $source );
+	if ( null === $facts ) {
+		return null;
+	}
+	$model = axismundi_op_view_model_from_facts( $facts, $source );
+	return array() === $model ? null : $model;
 }
 
 /**

@@ -35,6 +35,10 @@ SVG needs to be treated as architecture data.
   records the contract descriptor axes for every published collection, which
   pins cite a specification and which record a project choice, and the
   measurements behind both.
+- [ActivityStreams Object contract](activitystreams-object-contract.md) fixes
+  the single JSON-LD Object that the frontend application and the block
+  presenters share: source readers, assembly by type hierarchy, value priority
+  with its payload fallback, extension preservation, provenance and disclosure.
 
 The source is WordPress core's
 [`wp_get_db_schema()`](https://github.com/WordPress/wordpress-develop/blob/trunk/src/wp-admin/includes/schema.php).

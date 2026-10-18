@@ -317,12 +317,21 @@ terminal. Pin it.
 
 ## 8. Known defects, not yet fixed
 
-1. **`/moderators` answers 404 while two published documents reference it** —
-   the `target` of Add and Remove activities in the Outbox, and `attributedTo`
-   on every public Group actor document. Serving the collection closes both.
-   Standards-first makes this more pressing rather than less: a peer following
-   7.8 checks whether it owns the target and may fetch it to interpret the
-   activity, so an unresolvable target makes the Add uninterpretable.
+1. ~~`/moderators` answers 404.~~ **Corrected 2026-10-19: it does not.** A live
+   public community Group's moderator collection answers 200 with its
+   `OrderedCollection`, an honest `totalItems` and its members, and the
+   `attributedTo` on every public Group actor document points at a route that
+   works. The URL measured as 404 belonged to a fixture Group whose identity row
+   is absent, where 404 is the correct answer. The original entry generalized a
+   single dead sample, which is the error this document is otherwise written to
+   prevent.
+
+   Migrating moderators to the curated membership table is still right, on the
+   two reasons that survive: Forum holds an authority rather than a projection,
+   and the media collection needs that table. Note the migration's baseline —
+   this collection currently publishes `totalItems` from
+   `wp_ax_forum_memberships`, and after the migration the number's source
+   changes while its value must not.
 2. **`axismundi_act_get_liked_object_uris()` truncates and mis-sorts.**
    `min(200, $limit)` with a default of 100 silently drops members from an
    Actor who liked more, and `ORDER BY id DESC` is not reverse chronological for

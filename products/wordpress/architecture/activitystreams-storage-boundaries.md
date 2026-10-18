@@ -50,6 +50,15 @@ The last row is what the rule is for. `Arrive` and `Travel` sit beside
 `Question` in the AS2 type tree and invite the same treatment, but their rows
 look and live like an `Announce`. The shape decides, not the taxonomy.
 
+This does not predetermine the storage for a future calendar-backed Travel
+product. The Calendar plugin already keeps a durable Event source (`ax_event`
+plus schedule data) and projects ActivityStreams Event and JSCalendar as
+reads; its Join, Accept, Reject, and Undo records remain ledger facts. A
+momentary, event-first Travel can remain a ledger Activity. Travel that needs
+authoring, editing, scheduling, restoration, and calendar display needs an
+equally durable Calendar-owned source. Do not choose that source's CPT or table
+shape until that product contract exists.
+
 One consequence of splitting is worth stating before it is discovered. AS2's
 own example announces an `Arrive`, so an Activity can be another Activity's
 object, and anything a peer may reference needs an Activity URI. A row in a

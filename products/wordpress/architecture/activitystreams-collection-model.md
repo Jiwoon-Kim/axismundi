@@ -95,6 +95,44 @@ that granted membership, and the `Remove` that revoked it. Membership origin —
 the owner's own addition, something shared to them, or a third party's
 contribution — is a stored column rather than an inference.
 
+The first product built on that table is the Actor-owned media collection, and
+its scope is decided:
+
+```txt
+member_types:  [Document, Collection]   subtypes included
+member_id:     a stable absolute URI is required; a dereference that fails,
+               because a remote server is briefly unavailable, never removes
+               existing membership
+totalItems:    direct members only
+```
+
+`[Document]` alone covers the whole Media Library, because the attachment
+mapping recorded in Object Projections' `CORE-WP-OBJECT-SOURCES.md` sends
+`image/*` to `Image`, `video/*` to `Video`, `audio/*` to `Audio` and every other
+MIME type to `Document` -- all of which are `Document` or its subtypes in the
+vocabulary snapshot. So MIME decides the member's type and that path never
+produces an AS2 `Page`, which is why `Page` needs neither including nor
+excluding here; it remains undecided only for WordPress `post_type=page`.
+
+`Collection` is in the list purely for nesting, so a Document collection can
+hold an image-only sub-collection built the same way. `OrderedCollection` comes
+along as a subtype.
+
+No exclusion list is recorded. Excluding `CollectionPage` was considered and
+dropped: ActivityStreams does not forbid a page as a member, nothing this
+project emits produces one, and the per-descriptor authorization callback can
+refuse an inbound oddity -- so the rule would be maintenance without a measured
+need. Using pages purely as a traversal unit is a product habit here, not a
+specification requirement.
+
+Deferred rather than decided: whether cycles are permitted at all and what
+limits a recursive read takes, with ActivityPub B.5 on recursive objects and
+7.1's MUST on limiting layers of indirection as the starting references; and
+how a member URI links to an internal identity, which belongs to the unified
+Object registry contract rather than being settled by nesting alone. Counting
+direct members only follows from `COUNT(*)` over direct rows and is also what
+keeps a parent's total stable while its children change.
+
 Two seams are required and must not be hardcoded. The first exception in 7.8,
 that the target is not owned by this server, is answered by asking the registry
 whether this is a collection we own and what its policy is. The second, "at the

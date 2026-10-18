@@ -436,7 +436,29 @@ function axismundi_act_get_relations_for_object( string $object_uri, array $type
 	}
 	$values[] = max( 1, min( 1000, $limit ) );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table; every value is prepared.
-	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE {$where} ORDER BY id ASC LIMIT %d", $values ), ARRAY_A );
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE {$where} ORDER BY id ASC LIMIT %d", $values ), ARRAY_A );
+	return array_map( 'axismundi_act_relation_read_model', $rows );
+}
+
+/**
+ * Stable relation read contract, independent of repository column names.
+ *
+ * @param array<string,mixed> $row Repository row or an existing read model.
+ * @return array{id:int,relation_type:string,subject_uri:string,object_uri:string,direction:string,state:string,initiating_activity_uri:string,state_activity_uri:string,evidence_type:string,evidence_ref:string}
+ */
+function axismundi_act_relation_read_model( array $row ) : array {
+	return array(
+		'id' => (int) ( $row['id'] ?? 0 ),
+		'relation_type' => (string) ( $row['relation_type'] ?? '' ),
+		'subject_uri' => (string) ( $row['subject_uri'] ?? $row['subject_actor_uri'] ?? '' ),
+		'object_uri' => (string) ( $row['object_uri'] ?? $row['object_actor_uri'] ?? '' ),
+		'direction' => (string) ( $row['direction'] ?? '' ),
+		'state' => (string) ( $row['state'] ?? '' ),
+		'initiating_activity_uri' => (string) ( $row['initiating_activity_uri'] ?? '' ),
+		'state_activity_uri' => (string) ( $row['state_activity_uri'] ?? '' ),
+		'evidence_type' => (string) ( $row['evidence_type'] ?? '' ),
+		'evidence_ref' => (string) ( $row['evidence_ref'] ?? '' ),
+	);
 }
 
 /** Pending Follow relation rows addressed to one local Actor. */

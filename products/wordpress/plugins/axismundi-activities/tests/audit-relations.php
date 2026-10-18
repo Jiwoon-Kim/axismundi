@@ -130,6 +130,26 @@ try {
 	$reject_row = axismundi_act_get_relation( 'follow', $ax_rel_remote_uri, $site_actor->get_uri() );
 	ax_rel_assert( $ax_rel_results, 'Reject transitions the currently initiating Follow to rejected', $reject instanceof Axismundi_Activity && 'rejected' === $reject_row['state'] && $reject->get_uri() === $reject_row['state_activity_uri'] );
 
+	$refollow = ax_rel_record(
+		array( 'id' => 'https://example.com/activities/refollow-' . $ax_rel_suffix, 'type' => 'Follow', 'actor' => $ax_rel_remote_uri, 'object' => $site_actor->get_uri() ),
+		'inbound', $ax_rel_activity_uris
+	);
+	$pending_again = axismundi_act_get_relation( 'follow', $ax_rel_remote_uri, $site_actor->get_uri() );
+	ax_rel_assert( $ax_rel_results, '[project choice] a new Follow after Reject restores pending', 'pending' === $pending_again['state'] );
+	ax_rel_assert( $ax_rel_results, '[project choice] re-follow reuses the rejected relation identity', $reject_row['id'] === $pending_again['id'] );
+	ax_rel_assert( $ax_rel_results, '[project choice] pending re-follow is absent from followers', ! in_array( $ax_rel_remote_uri, axismundi_act_get_followers( $site_actor->get_uri() ), true ) );
+	$refollow_accept = ax_rel_record(
+		array( 'type' => 'Accept', 'actor' => $site_actor->get_uri(), 'object' => $refollow->get_uri() ),
+		'outbound', $ax_rel_activity_uris
+	);
+	$accepted_again = axismundi_act_get_relation( 'follow', $ax_rel_remote_uri, $site_actor->get_uri() );
+	ax_rel_assert( $ax_rel_results, '[project choice] re-follow Accept preserves the same relation identity', $reject_row['id'] === $accepted_again['id'] );
+	ax_rel_assert( $ax_rel_results, '[project choice] accepted re-follow appears in followers', in_array( $ax_rel_remote_uri, axismundi_act_get_followers( $site_actor->get_uri() ), true ) );
+	$read_rows = axismundi_act_get_relations_for_object( $site_actor->get_uri(), array( 'follow' ) );
+	$read_row = array_values( array_filter( $read_rows, static fn( array $row ) : bool => $row['subject_uri'] === $ax_rel_remote_uri ) )[0] ?? array();
+	ax_rel_assert( $ax_rel_results, '[project choice] relation readers expose neutral endpoint names', ( $read_row['object_uri'] ?? '' ) === $site_actor->get_uri() );
+	ax_rel_assert( $ax_rel_results, '[project choice] relation read models do not expose storage endpoint columns', ! array_key_exists( 'subject_actor_uri', $read_row ) && ! array_key_exists( 'object_actor_uri', $read_row ) );
+
 	$unauthorized_follow = ax_rel_record(
 		array( 'type' => 'Follow', 'actor' => $site_actor->get_uri(), 'object' => $ax_rel_remote_uri ),
 		'outbound',

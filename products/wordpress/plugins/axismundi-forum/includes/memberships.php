@@ -365,12 +365,13 @@ function axismundi_forum_is_membership_evidence( string $relation_type ) : bool 
  * managed Group, it must be bound to a Forum, and there must be an evidence Activity.
  */
 function axismundi_forum_sync_membership_from_follow( array $relation ) : void {
+	$relation = axismundi_act_relation_read_model( $relation );
 	if ( ! axismundi_forum_is_membership_evidence( (string) ( $relation['relation_type'] ?? '' ) )
 		|| ! in_array( (string) ( $relation['direction'] ?? '' ), array( 'inbound', 'local' ), true ) ) {
 		return;
 	}
-	$group = function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( (string) ( $relation['object_actor_uri'] ?? '' ) ) : null;
-	$member = function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( (string) ( $relation['subject_actor_uri'] ?? '' ) ) : null;
+	$group = function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $relation['object_uri'] ) : null;
+	$member = function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $relation['subject_uri'] ) : null;
 	if ( ! $group instanceof Axismundi_Actor || ! $member instanceof Axismundi_Actor || ! $group->is_local() || ! $group->is_managed() || 'Group' !== $group->get_type() ) {
 		return;
 	}
@@ -450,7 +451,7 @@ function axismundi_forum_rebuild_memberships( int $group_identity_id ) {
 		foreach ( $rows as $relation ) {
 			$after_id = max( $after_id, (int) $relation['id'] );
 			++$relations;
-			$member = function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( (string) ( $relation['subject_actor_uri'] ?? '' ) ) : null;
+			$member = function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $relation['subject_uri'] ) : null;
 			$state  = axismundi_forum_project_membership_state( (string) ( $relation['state'] ?? '' ), $policy );
 			$uri    = (string) ( $relation['initiating_activity_uri'] ?? '' );
 			// An evidence Activity is required, which excludes the legacy follower snapshots an

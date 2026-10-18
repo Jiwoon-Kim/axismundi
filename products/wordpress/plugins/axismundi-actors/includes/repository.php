@@ -1245,6 +1245,71 @@ function axismundi_actors_get_by_uri( string $uri ) : ?Axismundi_Actor {
 }
 
 /**
+ * Resolve cached Actors and their delivery endpoints in two bounded reads.
+ *
+ * This is deliberately an Actors read API: callers need the Actor's local,
+ * status, and endpoint facts together, but must not reach into identity or
+ * endpoint tables themselves. Exact URI/hash pairs preserve the single-Actor
+ * lookup's collision check while avoiding one query per delivery candidate.
+ *
+ * @param string[] $uris Canonical Actor URIs.
+ * @return array<string,array{actor:Axismundi_Actor,endpoints:array<string,string>}>
+ */
+function axismundi_actors_get_delivery_endpoints( array $uris ) : array {
+	global $wpdb;
+	$uris = array_values( array_unique( array_filter( array_map( static fn( $uri ) : string => trim( (string) $uri ), $uris ) ) ) );
+	if ( empty( $uris ) ) {
+		return array();
+	}
+
+	$identities = axismundi_actors_identities_table();
+	$actors     = axismundi_actors_actors_table();
+	$conditions = array();
+	$args       = array( $identities, $actors );
+	foreach ( $uris as $uri ) {
+		$conditions[] = '(i.canonical_uri_hash = %s AND i.canonical_uri = %s)';
+		$args[]       = hash( 'sha256', $uri );
+		$args[]       = $uri;
+	}
+	$sql = 'SELECT i.*, a.* FROM %i i INNER JOIN %i a ON a.identity_id = i.id WHERE ' . implode( ' OR ', $conditions );
+	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- generated predicates carry only prepared URI/hash pairs; table names are bound.
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( $sql, ...$args ), ARRAY_A );
+	if ( empty( $rows ) ) {
+		return array();
+	}
+
+	$resolved     = array();
+	$identity_ids = array();
+	foreach ( $rows as $row ) {
+		$actor = Axismundi_Actor::from_row( $row );
+		$resolved[ $actor->get_uri() ] = array( 'actor' => $actor, 'endpoints' => array() );
+		$identity_ids[]                 = $actor->get_identity_id();
+	}
+	$identity_ids = array_values( array_unique( $identity_ids ) );
+	$slots        = implode( ', ', array_fill( 0, count( $identity_ids ), '%d' ) );
+	$endpoints    = axismundi_actors_endpoints_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- generated placeholders derive only from the bounded identity-id count; table and values are prepared.
+	$endpoint_rows = (array) $wpdb->get_results(
+		$wpdb->prepare(
+			"SELECT identity_id, endpoint_type, endpoint_uri FROM %i WHERE identity_id IN ({$slots}) AND endpoint_type IN (%s, %s)",
+			...array_merge( array( $endpoints ), $identity_ids, array( 'inbox', 'shared_inbox' ) )
+		),
+		ARRAY_A
+	);
+	$uri_by_identity = array();
+	foreach ( $resolved as $uri => $entry ) {
+		$uri_by_identity[ $entry['actor']->get_identity_id() ] = $uri;
+	}
+	foreach ( $endpoint_rows as $row ) {
+		$uri = $uri_by_identity[ (int) $row['identity_id'] ] ?? '';
+		if ( '' !== $uri ) {
+			$resolved[ $uri ]['endpoints'][ (string) $row['endpoint_type'] ] = (string) $row['endpoint_uri'];
+		}
+	}
+	return $resolved;
+}
+
+/**
  * Resolve one local actor by its mutable human handle.
  *
  * Remote preferred usernames are intentionally excluded: they are not locally

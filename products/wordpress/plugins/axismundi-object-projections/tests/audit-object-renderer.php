@@ -256,6 +256,21 @@ $activity = axismundi_op_finalize_activity(
 	$activity_uri
 );
 ax_rnd_assert( $ax_rnd_results, 'an Activity gets the canonical renderer-owned context without object-only url/attributedTo members', is_array( $activity ) && 'https://www.w3.org/ns/activitystreams' === $activity['@context'] && array_key_first( $activity ) === '@context' );
+$blind_activity = axismundi_op_finalize_activity(
+	array(
+		'id'     => $activity_uri,
+		'type'   => 'Create',
+		'actor'  => 'https://example.com/actors/alice',
+		'bto'    => array( 'https://example.com/actors/bob' ),
+		'bcc'    => array( 'https://example.com/actors/carol' ),
+		'object' => array( 'id' => 'https://example.com/objects/1', 'type' => 'Note', 'bto' => array( 'https://example.com/actors/dan' ), 'bcc' => array( 'https://example.com/actors/erin' ) ),
+	),
+	$activity_uri
+);
+ax_rnd_assert( $ax_rnd_results, 'Activity finalization removes bto from the Activity', is_array( $blind_activity ) && ! array_key_exists( 'bto', $blind_activity ) );
+ax_rnd_assert( $ax_rnd_results, 'Activity finalization removes bcc from the Activity', is_array( $blind_activity ) && ! array_key_exists( 'bcc', $blind_activity ) );
+ax_rnd_assert( $ax_rnd_results, 'Activity finalization removes bto from a directly embedded object', is_array( $blind_activity ) && is_array( $blind_activity['object'] ?? null ) && ! array_key_exists( 'bto', $blind_activity['object'] ) );
+ax_rnd_assert( $ax_rnd_results, 'Activity finalization removes bcc from a directly embedded object', is_array( $blind_activity ) && is_array( $blind_activity['object'] ?? null ) && ! array_key_exists( 'bcc', $blind_activity['object'] ) );
 $quote_accept = axismundi_op_finalize_activity(
 	array(
 		'id'     => $activity_uri,

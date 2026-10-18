@@ -22,6 +22,7 @@ $ax_bridge_delivery_sources     = array();
 $ax_bridge_delivery_social_uris = array();
 $ax_bridge_migration_before     = get_option( 'ax_activitypub_bridge_delivery_migration', null );
 $GLOBALS['ax_bridge_delivery_http_args'] = array();
+$GLOBALS['ax_bridge_delivery_http_urls'] = array();
 
 /** @param bool[] $results Results. */
 function ax_bridge_delivery_assert( array &$results, string $label, bool $condition ) : void {
@@ -34,6 +35,7 @@ function ax_bridge_delivery_assert( array &$results, string $label, bool $condit
 function ax_bridge_delivery_http_mock( $response, array $args, string $url ) {
 	unset( $response );
 	$GLOBALS['ax_bridge_delivery_http_args'] = array( 'url' => $url, 'args' => $args );
+	$GLOBALS['ax_bridge_delivery_http_urls'][] = $url;
 	return array( 'headers' => array(), 'body' => '', 'response' => array( 'code' => 202, 'message' => 'Accepted' ), 'cookies' => array(), 'filename' => null );
 }
 
@@ -123,6 +125,51 @@ try {
 	if ( $remote instanceof Axismundi_Actor ) {
 		$ax_bridge_delivery_actor_ids[] = $remote->get_identity_id();
 	}
+	$batch_queries_before = (int) $wpdb->num_queries;
+	$batch_endpoints      = axismundi_actors_get_delivery_endpoints( array( $remote_uri, $local instanceof Axismundi_Actor ? $local->get_uri() : '', 'https://example.com/users/not-cached' ) );
+	$batch_queries        = (int) $wpdb->num_queries - $batch_queries_before;
+	ax_bridge_delivery_assert(
+		$ax_bridge_delivery_results,
+		'Actors resolves cached delivery candidates and their inbox endpoints in two bounded reads',
+		2 === $batch_queries
+			&& isset( $batch_endpoints[ $remote_uri ]['actor'], $batch_endpoints[ $remote_uri ]['endpoints']['inbox'] )
+			&& $batch_endpoints[ $remote_uri ]['actor'] instanceof Axismundi_Actor
+			&& 'https://example.com/inbox' === $batch_endpoints[ $remote_uri ]['endpoints']['inbox']
+			&& isset( $batch_endpoints[ $local instanceof Axismundi_Actor ? $local->get_uri() : '' ]['actor'] )
+			&& ! isset( $batch_endpoints['https://example.com/users/not-cached'] )
+	);
+	$blind = $local instanceof Axismundi_Actor
+		? axismundi_act_record_activity(
+			array(
+				'type'   => 'Create',
+				'actor'  => $local->get_uri(),
+				'bcc'    => array( $remote_uri ),
+				'object' => array( 'id' => home_url( '/objects/blind/' ), 'type' => 'Note', 'bcc' => array( $remote_uri ) ),
+			),
+			'outbound'
+		)
+		: new WP_Error( 'fixture_actor_missing' );
+	$blind_uri = $blind instanceof Axismundi_Activity ? $blind->get_uri() : '';
+	$blind_id = axismundi_activitypub_bridge_find_delivery( $blind_uri );
+	$blind_job = axismundi_activitypub_bridge_get_delivery( $blind_id );
+	$blind_payload = is_object( $blind_job ) ? json_decode( (string) $blind_job->payload_json, true ) : array();
+	if ( $blind_id > 0 ) {
+		$ax_bridge_delivery_ids[] = $blind_id;
+	}
+	$ax_bridge_delivery_social_uris[] = $blind_uri;
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'blind recipients are resolved before finalization while bto/bcc never enter the queued Activity or embedded object', $blind instanceof Axismundi_Activity && is_object( $blind_job ) && in_array( 'https://example.com/inbox', json_decode( (string) $blind_job->inboxes_json, true ), true ) && ! isset( $blind_payload['bto'], $blind_payload['bcc'], $blind_payload['object']['bto'], $blind_payload['object']['bcc'] ) );
+	$unresolved = array();
+	$observe_unresolved = static function ( string $candidate ) use ( &$unresolved ) : void {
+		$unresolved[] = $candidate;
+	};
+	add_action( 'axismundi_activitypub_bridge_unresolved_delivery_candidate', $observe_unresolved, 10, 1 );
+	$excluded = $local instanceof Axismundi_Actor
+		? axismundi_act_record_activity( array( 'type' => 'Announce', 'actor' => $local->get_uri(), 'object' => 'https://example.com/objects/excluded', 'to' => array( 'https://www.w3.org/ns/activitystreams#Public', $local->get_uri(), 'https://remote.example/collections/team' ) ), 'outbound' )
+		: new WP_Error( 'fixture_actor_missing' );
+	remove_action( 'axismundi_activitypub_bridge_unresolved_delivery_candidate', $observe_unresolved, 10 );
+	$excluded_uri = $excluded instanceof Axismundi_Activity ? $excluded->get_uri() : '';
+	$ax_bridge_delivery_social_uris[] = $excluded_uri;
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'Public and the sending Actor are declared exclusions while an unresolved remote Collection is reported', $excluded instanceof Axismundi_Activity && array( 'https://remote.example/collections/team' ) === $unresolved && 0 === axismundi_activitypub_bridge_find_delivery( $excluded_uri ) );
 
 	$remote_follow = $local instanceof Axismundi_Actor && $remote instanceof Axismundi_Actor
 		? axismundi_act_follow_remote_actor( $local, $remote )
@@ -164,6 +211,18 @@ try {
 		}
 	}
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the sender Followers collection address expands to accepted follower inboxes only at the transport boundary', in_array( 'https://example.com/inbox', $followers_inboxes, true ) );
+	$follower_pages_seen = array();
+	$fixture_follower_pages = static function ( array $page_data, string $actor_uri, int $page ) use ( &$follower_pages_seen ) : array {
+		unset( $page_data, $actor_uri );
+		$follower_pages_seen[] = $page;
+		return 1 === $page
+			? array( 'items' => array( 'https://example.com/followers/one', 'https://example.com/followers/two' ), 'total' => 3, 'has_more' => true )
+			: array( 'items' => array( 'https://example.com/followers/three' ), 'total' => 3, 'has_more' => false );
+	};
+	add_filter( 'axismundi_activitypub_bridge_follower_page', $fixture_follower_pages, 99, 3 );
+	$expanded_followers = $local instanceof Axismundi_Actor ? axismundi_activitypub_bridge_follower_candidates( $local->get_uri() ) : array();
+	remove_filter( 'axismundi_activitypub_bridge_follower_page', $fixture_follower_pages, 99 );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'follower expansion reads every Activities page instead of applying a recipient ceiling', array( 1, 2 ) === $follower_pages_seen && array( 'https://example.com/followers/one', 'https://example.com/followers/two', 'https://example.com/followers/three' ) === $expanded_followers );
 
 	$activity_uri = home_url( '/activities/' . wp_generate_uuid4() . '/' );
 	$payload      = array( 'id' => $activity_uri, 'type' => 'Like', 'actor' => $local->get_uri(), 'object' => 'https://example.com/objects/liked', 'to' => array( $remote_uri ) );
@@ -200,6 +259,7 @@ try {
 	$headers = array_change_key_case( (array) ( $args['headers'] ?? array() ), CASE_LOWER );
 	$job     = axismundi_activitypub_bridge_get_delivery( $job_id );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the worker resolves signing material only in memory and signs the HTTP request', isset( $headers['signature'] ) || isset( $headers['signature-input'] ) );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'delivery sends the ActivityStreams JSON-LD media type', 'application/activity+json' === (string) ( $headers['accept'] ?? '' ) && 'application/activity+json' === (string) ( $headers['content-type'] ?? '' ) );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the worker releases its claim and reaches one terminal state', is_object( $job ) && null === $job->lock_token && null === $job->locked_at && 'delivered' === $job->status );
 	$ledger = axismundi_act_get( $activity_uri );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'delivery completion does not replace the Axismundi ledger', $recorded instanceof Axismundi_Activity && $ledger instanceof Axismundi_Activity && $recorded->get_id() === $ledger->get_id() );
@@ -229,6 +289,23 @@ try {
 	remove_filter( 'pre_http_request', 'ax_bridge_delivery_http_mock', 99 );
 	$retried_job = axismundi_activitypub_bridge_get_delivery( $job_id );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the manually retried immutable Activity can reach the delivered terminal state', is_object( $retried_job ) && 'delivered' === $retried_job->status );
+	$batch_uri = home_url( '/activities/batch-' . wp_generate_uuid4() . '/' );
+	$batch_payload = array( 'id' => $batch_uri, 'type' => 'Like', 'actor' => $local->get_uri(), 'object' => 'https://example.com/objects/batch' );
+	$batch_id = axismundi_activitypub_bridge_enqueue_delivery( $batch_payload, $sender, array( 'https://example.com/inbox/1', 'https://example.com/inbox/2', 'https://example.com/inbox/3' ), false );
+	if ( is_int( $batch_id ) ) {
+		$ax_bridge_delivery_ids[] = $batch_id;
+	}
+	$batch_size = static fn() : int => 2;
+	add_filter( 'axismundi_activitypub_bridge_delivery_batch_size', $batch_size, 99 );
+	$GLOBALS['ax_bridge_delivery_http_urls'] = array();
+	add_filter( 'pre_http_request', 'ax_bridge_delivery_http_mock', 99, 3 );
+	axismundi_activitypub_bridge_process_delivery( (int) $batch_id, 1 );
+	$batch_mid = axismundi_activitypub_bridge_get_delivery( (int) $batch_id );
+	axismundi_activitypub_bridge_process_delivery( (int) $batch_id, 1 );
+	remove_filter( 'pre_http_request', 'ax_bridge_delivery_http_mock', 99 );
+	remove_filter( 'axismundi_activitypub_bridge_delivery_batch_size', $batch_size, 99 );
+	$batch_final = axismundi_activitypub_bridge_get_delivery( (int) $batch_id );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'one delivery row pages a large pending recipient list without dropping its final batch', is_int( $batch_id ) && is_object( $batch_mid ) && 'queued' === $batch_mid->status && array( 'https://example.com/inbox/3' ) === json_decode( (string) $batch_mid->pending_inboxes_json, true ) && is_object( $batch_final ) && 'delivered' === $batch_final->status && array( 'https://example.com/inbox/1', 'https://example.com/inbox/2', 'https://example.com/inbox/3' ) === $GLOBALS['ax_bridge_delivery_http_urls'] );
 
 	$provisional_uri = home_url( '/activities/provisional-' . wp_generate_uuid4() . '/' );
 	$provisional_payload = array( 'id' => $provisional_uri, 'type' => 'Like', 'actor' => $local->get_uri(), 'object' => 'https://example.com/objects/provisional', 'to' => array( $remote_uri ) );

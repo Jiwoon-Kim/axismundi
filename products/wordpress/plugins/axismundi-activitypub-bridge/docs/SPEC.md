@@ -31,6 +31,9 @@ repositories to supported network-facing extension points in the official Activi
    degraded fallback store rather than acknowledging a lost delivery.
 4. Outbound delivery stores a complete payload, URI-backed signing Actor descriptor, and explicit
    recipient inboxes in `{prefix}ax_ap_deliveries`. `ap_outbox` and the Posts state machine are never reused.
+   A worker sends the pending Inbox list in bounded batches and schedules the remainder, so a
+   follower collection is never a recipient ceiling. The immutable recipient set remains on the
+   one Activity-keyed row for retry and administrator inspection.
 5. One post lifecycle has one publisher. Axismundi owns local lifecycle records while the
    official scheduler is dormant.
 6. Upstream patches are written independently under upstream-compatible MIT/GPLv2 terms;
@@ -64,6 +67,32 @@ delivery table has one status field, a unique Activity URI hash, and an atomic c
 worker claim. A one-time migration copies experimental fork and provisional Bridge CPT jobs into
 the table, links and preserves the source rows, clears old worker events, and removes pending fork
 rows from the official Outbox scheduler's scan.
+
+## Delivery conformance
+
+Recipient resolution happens before rendering. This lets the ledger retain `bto` and `bcc` for
+recipient selection while `axismundi_op_finalize_activity()` removes both members from the Activity
+and a directly embedded Create object before JSON is queued. No blind address crosses the wire.
+
+The bridge excludes the ActivityStreams Public special collection, the Activity's own Actor, and
+local Actors before attempting remote Inbox resolution. Those exclusions are rules, not successful
+side effects of a failed Actor lookup. Any other URI that cannot resolve to a deliverable remote
+Actor fires `axismundi_activitypub_bridge_unresolved_delivery_candidate`. In particular, remote
+Collection dereferencing remains an explicit ActivityPub 7.1 gap; it is observable but not yet
+implemented.
+
+Follower expansion reads every page from the Activities relation reader. Candidate Actors and their
+`inbox`/`shared_inbox` endpoint roles are then read through the Actors batch API: one joined Actor
+read and one endpoint read per 100 candidates, without treating an instance-level cache as the
+endpoint authority. The delivery row retains the complete deduplicated Inbox set, while each worker
+invocation sends at most 100 pending Inboxes before scheduling the next batch. A failed batch retains
+its retryable recipients together with the unsent remainder; no follower page is silently discarded.
+
+The official Inbox GET allowlist exists for a separate reason: before the CPT was made permanently
+dormant while Bridge is ready, a non-empty CPT response could derive `last` from its partial count,
+declare `OrderedCollectionPage` plus `partOf`, and merge `user_id` into `id`. The filter now emits
+only the stable root identity members even if an upstream change makes that old path reachable
+again.
 
 Rewrite rules are rebuilt once after the ownership change so cached official routes cannot keep
 winning. Deactivation deletes only the rewrite cache, allowing the official plugin to rebuild its

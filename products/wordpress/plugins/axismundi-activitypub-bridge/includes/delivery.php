@@ -11,6 +11,12 @@ const AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_DB_VERSION        = '1';
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_DB_VERSION_OPTION = 'ax_activitypub_bridge_delivery_db_version';
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK              = 'axismundi_activitypub_bridge_process_delivery';
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_LEGACY_POST_TYPE           = 'ax_ap_delivery';
+const AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_BATCH_SIZE        = 100;
+
+/** Bound one worker invocation without imposing a recipient ceiling. */
+function axismundi_activitypub_bridge_delivery_batch_size() : int {
+	return max( 1, min( 500, (int) apply_filters( 'axismundi_activitypub_bridge_delivery_batch_size', AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_BATCH_SIZE ) ) );
+}
 
 /** Delivery table for the current site. */
 function axismundi_activitypub_bridge_delivery_table() : string {
@@ -455,6 +461,44 @@ function axismundi_activitypub_bridge_reschedule_delivery( int $id, string $toke
 	return true;
 }
 
+/** Continue a paged pending-recipient list without treating success as a retry. */
+function axismundi_activitypub_bridge_continue_delivery( int $id, string $token, int $attempt, array $pending ) : bool {
+	global $wpdb;
+	if ( empty( $pending ) ) {
+		return false;
+	}
+	$now   = current_time( 'mysql', true );
+	$table = axismundi_activitypub_bridge_delivery_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Trusted table identifier.
+	$updated = $wpdb->query(
+		$wpdb->prepare(
+			"UPDATE {$table} SET status = 'queued', pending_inboxes_json = %s, available_at = %s, lock_token = NULL, locked_at = NULL, updated_at = %s WHERE id = %d AND lock_token = %s",
+			wp_json_encode( array_values( $pending ) ),
+			$now,
+			$now,
+			$id,
+			$token
+		)
+	);
+	if ( 1 !== $updated ) {
+		return false;
+	}
+	$scheduled = wp_schedule_single_event( time() + 1, AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, array( $id, $attempt ), true );
+	if ( ! is_wp_error( $scheduled ) && false !== $scheduled ) {
+		return true;
+	}
+	// The continuation update released this claim before scheduling. Match that
+	// state rather than using the token-only terminal transition.
+	$wpdb->update(
+		$table,
+		array( 'status' => 'failed', 'last_error' => __( 'The next delivery batch could not be scheduled.', 'axismundi-activitypub-bridge' ), 'updated_at' => current_time( 'mysql', true ) ),
+		array( 'id' => $id, 'status' => 'queued', 'lock_token' => null ),
+		array( '%s', '%s', '%s' ),
+		array( '%d', '%s', '%s' )
+	);
+	return false;
+}
+
 /** Process one Bridge-owned transport job. */
 function axismundi_activitypub_bridge_process_delivery( int $id, int $attempt = 1 ) : void {
 	global $wpdb;
@@ -484,10 +528,12 @@ function axismundi_activitypub_bridge_process_delivery( int $id, int $attempt = 
 			axismundi_activitypub_bridge_finish_delivery( $id, $token, 'failed', $identity->get_error_message() );
 			return;
 		}
+		$batch        = array_slice( $pending, 0, axismundi_activitypub_bridge_delivery_batch_size() );
+		$remaining    = array_slice( $pending, count( $batch ) );
 		$retry        = array();
 		$errors       = array();
 		$key_recovery = false;
-		foreach ( $pending as $inbox ) {
+		foreach ( $batch as $inbox ) {
 			if ( ! axismundi_activitypub_bridge_touch_delivery_claim( $id, $token ) ) {
 				return;
 			}
@@ -521,7 +567,11 @@ function axismundi_activitypub_bridge_process_delivery( int $id, int $attempt = 
 		$attempt = max( 1, $attempt );
 		$table   = axismundi_activitypub_bridge_delivery_table();
 		if ( ! empty( $retry )
-			&& axismundi_activitypub_bridge_reschedule_delivery( $id, $token, $attempt, $key_recovery, $retry, implode( '; ', $errors ) ) ) {
+			&& axismundi_activitypub_bridge_reschedule_delivery( $id, $token, $attempt, $key_recovery, array_merge( $retry, $remaining ), implode( '; ', $errors ) ) ) {
+			return;
+		}
+		if ( empty( $retry ) && ! empty( $remaining ) ) {
+			axismundi_activitypub_bridge_continue_delivery( $id, $token, $attempt, $remaining );
 			return;
 		}
 

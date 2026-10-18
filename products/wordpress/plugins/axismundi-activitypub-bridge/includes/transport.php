@@ -145,6 +145,49 @@ function axismundi_activitypub_bridge_remote_inbox( string $actor_uri ) : string
 	return '' !== $shared ? $shared : axismundi_actors_get_endpoint( $actor, 'inbox' );
 }
 
+/** Whether an address is the ActivityStreams Public special collection. */
+function axismundi_activitypub_bridge_is_public_address( string $uri ) : bool {
+	return in_array(
+		trim( $uri ),
+		array( 'https://www.w3.org/ns/activitystreams#Public', 'as:Public' ),
+		true
+	);
+}
+
+/** Whether one candidate is deliberately excluded before Actor resolution. */
+function axismundi_activitypub_bridge_excludes_delivery_candidate( Axismundi_Activity $activity, string $candidate ) : bool {
+	$candidate = trim( $candidate );
+	return '' === $candidate || axismundi_activitypub_bridge_is_public_address( $candidate ) || $candidate === $activity->get_actor_uri();
+}
+
+/** Read one bounded page of accepted followers for transport expansion. */
+function axismundi_activitypub_bridge_follower_page( string $actor_uri, int $page ) : array {
+	$page_data = function_exists( 'axismundi_act_get_follow_collection_page' )
+		? axismundi_act_get_follow_collection_page( 'object', $actor_uri, $page, 100 )
+		: array( 'items' => array(), 'total' => 0, 'has_more' => false );
+	/**
+	 * Observe one source page while transport expands a followers address.
+	 *
+	 * The reader remains Activities-owned; this seam supports operational
+	 * measurement without allowing a transport cap to silently truncate it.
+	 */
+	return (array) apply_filters( 'axismundi_activitypub_bridge_follower_page', $page_data, $actor_uri, $page );
+}
+
+/** Expand every accepted follower page; a follower collection is never a delivery cap. */
+function axismundi_activitypub_bridge_follower_candidates( string $actor_uri ) : array {
+	$candidates = array();
+	for ( $page = 1; ; ++$page ) {
+		$page_data = axismundi_activitypub_bridge_follower_page( $actor_uri, $page );
+		$items     = is_array( $page_data['items'] ?? null ) ? $page_data['items'] : array();
+		$candidates = array_merge( $candidates, $items );
+		if ( empty( $page_data['has_more'] ) ) {
+			break;
+		}
+	}
+	return array_values( array_unique( array_map( 'strval', $candidates ) ) );
+}
+
 /** Whether a public Create or Update is submitted directly to a known public Group. */
 function axismundi_activitypub_bridge_is_direct_group_submission( Axismundi_Activity $activity ) : bool {
 	if ( ! in_array( $activity->get_type(), array( 'Create', 'Update' ), true ) ) {
@@ -186,13 +229,42 @@ function axismundi_activitypub_bridge_activity_inboxes( Axismundi_Activity $acti
 	 * and how to redistribute it; the author's followers must not receive it.
 	 */
 	if ( $addresses_followers && ! axismundi_activitypub_bridge_is_direct_group_submission( $activity ) ) {
-		$candidates = array_merge( $candidates, axismundi_act_get_followers( $activity->get_actor_uri(), 1000 ) );
+		$candidates = array_merge( $candidates, axismundi_activitypub_bridge_follower_candidates( $activity->get_actor_uri() ) );
 	}
+	$candidates = array_values(
+		array_filter(
+			array_unique( array_map( 'strval', $candidates ) ),
+			static fn( string $candidate ) : bool => ! axismundi_activitypub_bridge_excludes_delivery_candidate( $activity, $candidate )
+		)
+	);
 	$inboxes = array();
-	foreach ( array_unique( $candidates ) as $actor_uri ) {
-		$inbox = axismundi_activitypub_bridge_remote_inbox( (string) $actor_uri );
-		if ( '' !== $inbox ) {
-			$inboxes[] = $inbox;
+	/*
+	 * Followers may be arbitrarily numerous. Resolve cached Actors and their
+	 * endpoint rows in bounded batches rather than issuing two or three reads
+	 * for every recipient in the publication request.
+	 */
+	foreach ( array_chunk( $candidates, 100 ) as $batch ) {
+		$resolved = axismundi_actors_get_delivery_endpoints( $batch );
+		foreach ( $batch as $actor_uri ) {
+			$entry = $resolved[ $actor_uri ] ?? null;
+			$actor = is_array( $entry ) ? ( $entry['actor'] ?? null ) : null;
+			if ( $actor instanceof Axismundi_Actor && $actor->is_local() ) {
+				continue;
+			}
+			$endpoints = is_array( $entry ) ? (array) ( $entry['endpoints'] ?? array() ) : array();
+			$inbox     = $actor instanceof Axismundi_Actor && 'tombstone' !== $actor->get_status()
+				? (string) ( $endpoints['shared_inbox'] ?? $endpoints['inbox'] ?? '' )
+				: '';
+			if ( '' !== $inbox ) {
+				$inboxes[] = $inbox;
+				continue;
+			}
+			/**
+			 * A candidate was not deliberately excluded and did not resolve to a
+			 * deliverable remote Actor. Remote Collection dereferencing is not
+			 * implemented yet; expose the gap instead of dropping it silently.
+			 */
+			do_action( 'axismundi_activitypub_bridge_unresolved_delivery_candidate', $actor_uri, $activity );
 		}
 	}
 	return array_values( array_unique( $inboxes ) );

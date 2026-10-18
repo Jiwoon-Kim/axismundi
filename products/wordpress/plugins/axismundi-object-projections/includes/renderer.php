@@ -296,6 +296,16 @@ function axismundi_op_finalize_activity( array $activity, string $expected_id ) 
 	if ( (string) $activity['id'] !== $expected_id ) {
 		return new WP_Error( 'ax_op_id_mismatch', __( 'An Activity id must equal its ledger URI.', 'axismundi-object-projections' ) );
 	}
+	/*
+	 * ActivityPub delivery uses bto/bcc to resolve recipients, but neither blind
+	 * address may cross the wire. Transport resolves recipients from the ledger
+	 * before it calls this boundary. A Create may carry its addressing on the
+	 * embedded Object, so remove the two blind members there as well.
+	 */
+	unset( $activity['bto'], $activity['bcc'] );
+	if ( isset( $activity['object'] ) && is_array( $activity['object'] ) ) {
+		unset( $activity['object']['bto'], $activity['object']['bcc'] );
+	}
 	unset( $activity['@context'] );
 	return array_merge( array( '@context' => axismundi_op_jsonld_context( $activity ) ), $activity );
 }

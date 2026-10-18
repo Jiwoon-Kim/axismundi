@@ -35,7 +35,7 @@ function axismundi_op_normalize_collection_contract( string $id, array $args ) {
 		return new WP_Error( 'ax_op_collection_contract_id', __( 'Collection contract IDs must be non-empty lowercase slugs.', 'axismundi-object-projections' ) );
 	}
 	$member_models = array_values( array_unique( array_map( 'strval', (array) ( $args['member_models'] ?? array() ) ) ) );
-	if ( empty( $member_models ) || array_diff( $member_models, array( 'Activity', 'Object', 'Actor', 'mixed' ) ) ) {
+	if ( empty( $member_models ) || array_diff( $member_models, array( 'Activity', 'Object', 'mixed' ) ) ) {
 		return new WP_Error( 'ax_op_collection_contract_members', __( 'A collection contract requires supported member models.', 'axismundi-object-projections' ) );
 	}
 	$presentation = (string) ( $args['presentation'] ?? '' );
@@ -43,6 +43,10 @@ function axismundi_op_normalize_collection_contract( string $id, array $args ) {
 		return new WP_Error( 'ax_op_collection_contract_presentation', __( 'A collection contract requires a supported presentation.', 'axismundi-object-projections' ) );
 	}
 	$ordering = (string) ( $args['ordering'] ?? '' );
+	$collection_type = (string) ( $args['collection_type'] ?? '' );
+	if ( ! in_array( $collection_type, array( 'Collection', 'OrderedCollection' ), true ) || ( 'immutable-cursor(feed_sort_at,id)' === $ordering && 'OrderedCollection' !== $collection_type ) ) {
+		return new WP_Error( 'ax_op_collection_contract_type', 'A collection requires a root type consistent with its ordering.' );
+	}
 	if ( ! in_array( $ordering, array( 'none', 'source-defined', 'immutable-cursor(feed_sort_at,id)' ), true ) ) {
 		return new WP_Error( 'ax_op_collection_contract_ordering', __( 'A collection contract requires a supported ordering.', 'axismundi-object-projections' ) );
 	}
@@ -70,11 +74,22 @@ function axismundi_op_normalize_collection_contract( string $id, array $args ) {
 	if ( '' === $owner ) {
 		return new WP_Error( 'ax_op_collection_contract_owner', __( 'A collection contract requires its owning plugin.', 'axismundi-object-projections' ) );
 	}
+	$membership_source = (string) ( $args['membership_source'] ?? '' );
+	$authority = (string) ( $args['membership_authority'] ?? '' );
+	$append_policy = (string) ( $args['append_policy'] ?? '' );
+	if ( '' === $membership_source || ! in_array( $authority, array( 'ledger-index', 'relation-row', 'membership-row' ), true ) || ! in_array( $append_policy, array( 'closed', 'owner-only', 'publicly-appendable' ), true ) ) {
+		return new WP_Error( 'ax_op_collection_membership_contract', 'A collection must declare its membership source, authority, and append policy.' );
+	}
 	return array(
 		'id'               => $id,
 		'member_models'    => $member_models,
+		'member_types'     => array_values( (array) ( $args['member_types'] ?? array() ) ),
+		'membership_source' => $membership_source,
+		'membership_authority' => $authority,
+		'append_policy'    => $append_policy,
 		'presentation'     => $presentation,
 		'ordering'         => $ordering,
+		'collection_type'  => $collection_type,
 		'total_capability' => $total_capability,
 		'total_reason'     => $total_reason,
 		'total_disclosure' => array( 'public' => (string) $disclosure['public'], 'owner' => (string) $disclosure['owner'] ),
@@ -138,4 +153,51 @@ function axismundi_op_read_collection_contract( string $id, ...$args ) {
 		return new WP_Error( 'ax_op_collection_contract_not_found', __( 'The collection contract is not registered.', 'axismundi-object-projections' ) );
 	}
 	return call_user_func_array( $contract['reader'], $args );
+}
+
+/**
+ * Assemble a collection from representation metadata and owner-read membership.
+ *
+ * Requester classification and policy approval are supplied only by the server
+ * route after authorization, never from client query parameters.
+ *
+ * @return array<string,mixed>|WP_Error
+ */
+function axismundi_op_assemble_collection( string $id, array $metadata, array $membership, string $requester = 'public', bool $total_allowed = false ) {
+	$contract = axismundi_op_collection_contract( $id );
+	if ( null === $contract ) {
+		return new WP_Error( 'ax_op_collection_contract_not_found', 'The collection contract is not registered.' );
+	}
+	$root_type = $contract['collection_type'];
+	$allowed_types = array( $root_type );
+	if ( 'paged-members' === $contract['presentation'] ) {
+		$allowed_types[] = $root_type . 'Page';
+	}
+	if ( ! in_array( $metadata['type'] ?? '', $allowed_types, true ) ) {
+		return new WP_Error( 'ax_op_collection_type', 'The collection representation type contradicts its contract.' );
+	}
+	if ( ! isset( $contract['total_disclosure'][ $requester ] ) ) {
+		return new WP_Error( 'ax_op_collection_requester', 'Unknown collection requester class.' );
+	}
+	foreach ( array( 'totalItems', 'items', 'orderedItems' ) as $key ) {
+		if ( array_key_exists( $key, $metadata ) ) {
+			return new WP_Error( 'ax_op_collection_metadata', 'Membership claims must come from the owning reader.' );
+		}
+	}
+	$policy = $contract['total_disclosure'][ $requester ];
+	$emit_total = 'exact' === $contract['total_capability'] && ( 'always' === $policy || ( 'policy-gated' === $policy && $total_allowed ) );
+	if ( $emit_total ) {
+		if ( ! isset( $membership['total'] ) || ! is_int( $membership['total'] ) || $membership['total'] < 0 ) {
+			return new WP_Error( 'ax_op_collection_total', 'An exact disclosed total requires a nonnegative integer from the reader.' );
+		}
+		$metadata['totalItems'] = $membership['total'];
+	}
+	if ( array_key_exists( 'items', $membership ) ) {
+		if ( ! in_array( $contract['presentation'], array( 'bounded-members', 'paged-members' ), true ) || ! is_array( $membership['items'] ) ) {
+			return new WP_Error( 'ax_op_collection_members', 'This contract does not permit member enumeration.' );
+		}
+		$key = in_array( $metadata['type'] ?? '', array( 'OrderedCollection', 'OrderedCollectionPage' ), true ) ? 'orderedItems' : 'items';
+		$metadata[ $key ] = array_values( $membership['items'] );
+	}
+	return $metadata;
 }

@@ -119,6 +119,20 @@ try {
 	$ax_op_outbox_page_size = static fn() : int => 20;
 	add_filter( 'axismundi_op_outbox_page_size', $ax_op_outbox_page_size );
 	$first_page = axismundi_op_transform_collection( new Axismundi_OP_Actor_Outbox( $actor, true ) );
+	$ledger_page = axismundi_act_get_public_outbox_page( $actor->get_uri(), 20 );
+	$legacy_page = array(
+		'id' => axismundi_op_actor_outbox_page_url( $actor ),
+		'type' => 'OrderedCollectionPage',
+		'attributedTo' => $actor->get_uri(),
+		'url' => $actor->get_profile_url(),
+		'partOf' => axismundi_op_actor_outbox_url( $actor ),
+		'orderedItems' => $ledger_page['items'],
+	);
+	if ( $ledger_page['has_more'] && '' !== $ledger_page['next_cursor'] ) {
+		$legacy_page['next'] = axismundi_op_actor_outbox_page_url( $actor, $ledger_page['next_cursor'] );
+	}
+	$legacy_page = array_merge( array( '@context' => axismundi_op_jsonld_context( $legacy_page ) ), $legacy_page );
+	ax_op_outbox_assert( $ax_op_outbox_results, '[project choice] contract assembly preserves the legacy Outbox page JSON bytes', wp_json_encode( $legacy_page ) === wp_json_encode( $first_page ) );
 	$next_query = array();
 	parse_str( (string) wp_parse_url( (string) ( $first_page['next'] ?? '' ), PHP_URL_QUERY ), $next_query );
 	$second_page = isset( $next_query['cursor'] )

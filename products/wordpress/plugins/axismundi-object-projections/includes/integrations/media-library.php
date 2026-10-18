@@ -472,6 +472,10 @@ function axismundi_op_register_media_used_in_collection_contract() : void {
 	axismundi_op_register_collection_contract(
 		'used-in',
 		array(
+			'collection_type' => 'OrderedCollection',
+			'membership_source' => 'stored-relation',
+			'membership_authority' => 'membership-row',
+			'append_policy' => 'closed',
 			'member_models'    => array( 'Object' ),
 			'presentation'     => 'bounded-members',
 			'ordering'         => 'source-defined',
@@ -490,10 +494,10 @@ function axismundi_op_media_used_in_visible( Axismundi_OP_Media_Used_In $source 
 }
 
 /** Project the distinct public Articles that currently reference an Attachment. */
-function axismundi_op_media_used_in_transform( Axismundi_OP_Media_Used_In $source ) : array {
+function axismundi_op_media_used_in_transform( Axismundi_OP_Media_Used_In $source ) {
 	$attachment = $source->get_attachment();
 	$items      = array();
-	foreach ( axismundi_media_relations_used_in( (int) $attachment->ID, 0 ) as $relation ) {
+	foreach ( axismundi_op_read_collection_contract( 'used-in', (int) $attachment->ID, 0 ) as $relation ) {
 		$post_id = (int) ( $relation['subject_post_id'] ?? 0 );
 		$post    = $post_id > 0 ? get_post( $post_id ) : null;
 		if ( ! $post instanceof WP_Post || 'post' !== $post->post_type ) {
@@ -505,14 +509,12 @@ function axismundi_op_media_used_in_transform( Axismundi_OP_Media_Used_In $sourc
 		}
 	}
 	arsort( $items, SORT_NUMERIC );
-	return array(
+	return axismundi_op_assemble_collection( 'used-in', array(
 		'id'           => axismundi_op_media_used_in_url( $attachment ),
 		'type'         => 'OrderedCollection',
 		'attributedTo' => axismundi_op_media_attachment_actor_uri( $attachment ),
 		'url'          => get_attachment_link( (int) $attachment->ID ),
-		'totalItems'   => count( $items ),
-		'orderedItems' => array_keys( $items ),
-	);
+	), array( 'total' => count( $items ), 'items' => array_keys( $items ) ) );
 }
 
 /** Register the public Attachment reverse-usage route. */

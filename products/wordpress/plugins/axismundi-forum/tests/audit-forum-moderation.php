@@ -92,6 +92,16 @@ try {
 			&& $group->get_uri() === $add_wrapper->get_actor_uri() && is_array( $group_projection) && $moderator_url === (string) ( $group_projection['attributedTo'] ?? '' )
 		);
 	$alice_communities = axismundi_forum_moderated_communities( $alice_user );
+	$moderators_request = new WP_REST_Request( 'GET', '/axismundi/v1/forum/groups/' . $group->get_uuid() . '/moderators' );
+	$moderators_request->set_param( 'uuid', $group->get_uuid() );
+	$moderators_response = axismundi_forum_get_moderator_collection( $moderators_request );
+	$moderators_data = $moderators_response instanceof WP_REST_Response ? $moderators_response->get_data() : array();
+	ax_fmod_assert( $ax_fmod_results, '[project choice] moderator collection counts the manager and explicit moderator exactly once', 2 === ( $moderators_data['totalItems'] ?? null ) );
+	$expected_moderators = array( $owner->get_uri(), $alice->get_uri() );
+	$actual_moderators = $moderators_data['orderedItems'] ?? array();
+	sort( $expected_moderators );
+	sort( $actual_moderators );
+	ax_fmod_assert( $ax_fmod_results, '[project choice] moderator collection reads current roles rather than Add evidence', $expected_moderators === $actual_moderators );
 	ax_fmod_assert(
 		$ax_fmod_results,
 		'an explicit Actor moderator appears in their moderated community list without local manager delegation',

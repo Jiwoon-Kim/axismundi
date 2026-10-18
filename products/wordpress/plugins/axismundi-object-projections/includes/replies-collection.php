@@ -174,30 +174,33 @@ function axismundi_op_object_replies_visible( Axismundi_OP_Object_Replies $sourc
 }
 
 /** Project a root OrderedCollection or one OrderedCollectionPage. */
-function axismundi_op_object_replies_transform( Axismundi_OP_Object_Replies $source ) : array {
+function axismundi_op_object_replies_transform( Axismundi_OP_Object_Replies $source ) {
 	$object = axismundi_op_transform_object( $source->get_source() );
 	if ( is_wp_error( $object ) ) {
 		return $object;
 	}
 	$root = axismundi_op_object_replies_url( $source->get_object_uri() );
 	if ( 0 === $source->get_page() ) {
-		return array(
+		return axismundi_op_assemble_collection( 'replies', array(
 			'id'           => $root,
 			'type'         => 'OrderedCollection',
 			'attributedTo' => (string) $object['attributedTo'],
 			'url'          => axismundi_op_object_html_url( $object ),
 			'first'        => axismundi_op_object_replies_url( $source->get_object_uri(), 1 ),
-		);
+		), array() );
 	}
-	$page    = axismundi_op_get_public_reply_collection_page( $source->get_object_uri(), $source->get_page() );
+	$page    = axismundi_op_read_collection_contract( 'replies', $source->get_object_uri(), $source->get_page() );
 	$payload = array(
 		'id'           => axismundi_op_object_replies_url( $source->get_object_uri(), $source->get_page() ),
 		'type'         => 'OrderedCollectionPage',
 		'attributedTo' => (string) $object['attributedTo'],
 		'url'          => axismundi_op_object_html_url( $object ),
 		'partOf'       => $root,
-		'orderedItems' => $page['uris'],
 	);
+	$payload = axismundi_op_assemble_collection( 'replies', $payload, array( 'items' => $page['uris'] ) );
+	if ( is_wp_error( $payload ) ) {
+		return $payload;
+	}
 	if ( $page['has_next'] ) {
 		$payload['next'] = axismundi_op_object_replies_url( $source->get_object_uri(), $source->get_page() + 1 );
 	}
@@ -227,6 +230,10 @@ function axismundi_op_register_replies_collection_contract() : void {
 	axismundi_op_register_collection_contract(
 		'replies',
 		array(
+			'collection_type' => 'OrderedCollection',
+			'membership_source' => 'side-effect:inReplyTo',
+			'membership_authority' => 'ledger-index',
+			'append_policy' => 'closed',
 			'member_models'    => array( 'Object' ),
 			'presentation'     => 'paged-members',
 			'ordering'         => 'source-defined',

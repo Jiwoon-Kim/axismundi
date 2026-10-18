@@ -15,6 +15,11 @@ function axismundi_act_read_actor_inbox_unavailable( string $actor_uri ) {
 	return new WP_Error( 'ax_act_inbox_membership_not_stored', __( 'Inbox recipients are not materialized in the Activity ledger.', 'axismundi-activities' ) );
 }
 
+/** A bounded legacy list is not a complete public liked collection. */
+function axismundi_act_read_liked_collection_unavailable( string $actor_uri ) {
+	return new WP_Error( 'ax_act_liked_cursor_unavailable', 'A complete liked collection reader is not implemented.' );
+}
+
 /** Register Activity-ledger and relation-backed collection contracts. */
 function axismundi_act_register_collection_contracts() : void {
 	if ( ! function_exists( 'axismundi_op_register_collection_contract' ) ) {
@@ -40,15 +45,16 @@ function axismundi_act_register_collection_contracts() : void {
 			'reader'           => 'axismundi_act_read_actor_inbox_unavailable',
 		),
 		'ap-followers' => array(
-			'member_models'    => array( 'Actor' ),
+			'member_models'    => array( 'Object' ),
+			'member_types'     => axismundi_actors_kinds(),
 			'presentation'     => 'paged-members',
 			'ordering'         => 'source-defined',
 			'total_capability' => 'exact',
-			'total_disclosure' => array( 'public' => 'never', 'owner' => 'never' ),
+			'total_disclosure' => array( 'public' => 'policy-gated', 'owner' => 'always' ),
 			'reader'           => 'axismundi_act_get_follow_collection_page',
 		),
 		'ap-following' => array(
-			'member_models'    => array( 'Actor' ),
+			'member_models'    => array( 'Object' ),
 			'presentation'     => 'paged-members',
 			'ordering'         => 'source-defined',
 			'total_capability' => 'exact',
@@ -62,7 +68,7 @@ function axismundi_act_register_collection_contracts() : void {
 			'total_capability' => 'unavailable',
 			'total_reason'     => 'bounded-scan',
 			'total_disclosure' => array( 'public' => 'policy-gated', 'owner' => 'always' ),
-			'reader'           => 'axismundi_act_get_liked_object_uris',
+			'reader'           => 'axismundi_act_read_liked_collection_unavailable',
 		),
 		'ap-likes' => array(
 			'member_models'    => array( 'Activity' ),
@@ -82,7 +88,12 @@ function axismundi_act_register_collection_contracts() : void {
 		),
 	);
 	foreach ( $contracts as $id => $contract ) {
+		$contract['collection_type'] = 'OrderedCollection';
 		$contract['owner'] = 'activities';
+		$source = array( 'ap-outbox' => 'publication', 'ap-inbox' => 'receipt', 'ap-followers' => 'Follow+Accept', 'ap-following' => 'Follow+Accept', 'ap-liked' => 'Like', 'ap-likes' => 'Like', 'ap-shares' => 'Announce' );
+		$contract['membership_source'] = 'side-effect:' . $source[ $id ];
+		$contract['membership_authority'] = in_array( $id, array( 'ap-followers', 'ap-following' ), true ) ? 'relation-row' : 'ledger-index';
+		$contract['append_policy'] = 'closed';
 		axismundi_op_register_collection_contract( $id, $contract );
 	}
 }

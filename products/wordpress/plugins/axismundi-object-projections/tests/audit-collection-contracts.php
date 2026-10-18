@@ -15,6 +15,9 @@ foreach ( axismundi_op_collection_contracts() as $contract ) {
 	$contracts[ $contract['id'] ] = $contract;
 }
 $expected = array( 'ap-outbox', 'ap-inbox', 'ap-followers', 'ap-following', 'ap-liked', 'ap-likes', 'ap-shares', 'replies', 'used-in' );
+if ( function_exists( 'axismundi_forum_read_moderator_collection' ) ) {
+	$expected[] = 'ap-moderators';
+}
 ax_contracts_assert( $ax_contracts_results, 'every current implicit collection has one registered contract and folders are not modeled as collections', array() === array_diff( $expected, array_keys( $contracts ) ) && array() === array_diff( array_keys( $contracts ), $expected ) );
 
 foreach ( array( 'ap-outbox', 'ap-inbox', 'ap-liked', 'replies' ) as $id ) {
@@ -27,6 +30,9 @@ foreach ( array( 'ap-followers', 'ap-following', 'ap-likes', 'ap-shares', 'used-
 }
 
 $outbox = $contracts['ap-outbox'] ?? array();
+foreach ( array( 'ap-outbox', 'ap-inbox' ) as $id ) {
+	ax_contracts_assert( $ax_contracts_results, '[spec AP 5.1/5.2] ' . $id . ' requires OrderedCollection', 'OrderedCollection' === ( $contracts[ $id ]['collection_type'] ?? '' ) );
+}
 ax_contracts_assert( $ax_contracts_results, 'the Outbox keeps its immutable ledger cursor and Activities-owned reader binding', 'immutable-cursor(feed_sort_at,id)' === ( $outbox['ordering'] ?? '' ) && 'activities' === ( $outbox['owner'] ?? '' ) && 'axismundi_act_get_public_outbox_page' === ( $outbox['reader'] ?? '' ) );
 
 $inbox = axismundi_op_read_collection_contract( 'ap-inbox', 'https://example.test/actors/owner' );

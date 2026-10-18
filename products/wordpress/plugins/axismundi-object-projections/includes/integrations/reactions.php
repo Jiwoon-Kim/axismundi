@@ -108,18 +108,17 @@ function axismundi_op_object_emoji_reactions_visible( Axismundi_OP_Object_Emoji_
 }
 
 /** Project a count-only collection without disclosing liker identities. */
-function axismundi_op_object_likes_transform( Axismundi_OP_Object_Likes $source ) : array {
+function axismundi_op_object_likes_transform( Axismundi_OP_Object_Likes $source ) {
 	$object = axismundi_op_transform_object( $source->get_source() );
 	if ( is_wp_error( $object ) ) {
 		return $object;
 	}
-	return array(
+	return axismundi_op_assemble_collection( 'ap-likes', array(
 		'id'           => axismundi_op_object_likes_url( $source->get_object_uri() ),
 		'type'         => 'OrderedCollection',
 		'attributedTo' => (string) $object['attributedTo'],
 		'url'          => axismundi_op_object_html_url( $object ),
-		'totalItems'   => axismundi_act_get_like_count( $source->get_object_uri() ),
-	);
+	), array( 'total' => axismundi_op_read_collection_contract( 'ap-likes', $source->get_object_uri() ) ), 'public', true );
 }
 
 /** Project FEP-c0e0's public collection without fabricating a count-only substitute. */
@@ -159,19 +158,18 @@ function axismundi_op_object_emoji_reactions_transform( Axismundi_OP_Object_Emoj
 }
 
 /** Project a count-only shares collection without disclosing announcing Actors. */
-function axismundi_op_object_shares_transform( Axismundi_OP_Object_Shares $source ) : array {
+function axismundi_op_object_shares_transform( Axismundi_OP_Object_Shares $source ) {
 	$object = axismundi_op_transform_object( $source->get_source() );
 	if ( is_wp_error( $object ) ) {
 		return $object;
 	}
-	return array(
+	return axismundi_op_assemble_collection( 'ap-shares', array(
 		'id'           => axismundi_op_object_shares_url( $source->get_object_uri() ),
 		// Kept aligned with Axismundi's existing likes collection; Mastodon uses Collection.
 		'type'         => 'OrderedCollection',
 		'attributedTo' => (string) $object['attributedTo'],
 		'url'          => axismundi_op_object_html_url( $object ),
-		'totalItems'   => axismundi_act_get_announce_count( $source->get_object_uri() ),
-	);
+	), array( 'total' => axismundi_op_read_collection_contract( 'ap-shares', $source->get_object_uri() ) ), 'public', true );
 }
 
 /** Register the collection transformer. */

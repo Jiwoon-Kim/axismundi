@@ -292,8 +292,11 @@ function axismundi_op_actor_outbox_transform( Axismundi_OP_Actor_Outbox $source 
 			'attributedTo' => $actor->get_uri(),
 			'url'          => $actor->get_profile_url(),
 			'partOf'       => axismundi_op_actor_outbox_url( $actor ),
-			'orderedItems' => $page['items'],
 		);
+		$out = axismundi_op_assemble_collection( 'ap-outbox', $out, array( 'items' => $page['items'] ) );
+		if ( is_wp_error( $out ) ) {
+			return $out;
+		}
 		if ( ! empty( $page['has_more'] ) && '' !== (string) $page['next_cursor'] ) {
 			$out['next'] = axismundi_op_actor_outbox_page_url( $actor, (string) $page['next_cursor'] );
 		}
@@ -334,7 +337,7 @@ function axismundi_op_actor_followers_visible( Axismundi_OP_Actor_Followers $sou
  * @param Axismundi_OP_Actor_Followers $source Collection source.
  * @return array<string,mixed>
  */
-function axismundi_op_actor_followers_transform( Axismundi_OP_Actor_Followers $source ) : array {
+function axismundi_op_actor_followers_transform( Axismundi_OP_Actor_Followers $source ) {
 	$actor  = $source->get_actor();
 	$kind   = $source->get_collection();
 	$page   = $source->get_page();
@@ -353,7 +356,7 @@ function axismundi_op_actor_followers_transform( Axismundi_OP_Actor_Followers $s
 	$public = 'public' === $policy;
 	$url    = axismundi_op_actor_follow_collection_url( $actor, $kind );
 	$data   = $public || 'count-only' === $policy
-		? axismundi_act_get_follow_collection_page( 'followers' === $kind ? 'object' : 'subject', $actor->get_uri(), max( 1, $page ), 20 )
+		? axismundi_op_read_collection_contract( 'ap-' . $kind, 'followers' === $kind ? 'object' : 'subject', $actor->get_uri(), max( 1, $page ), 20 )
 		: array( 'items' => array(), 'total' => 0, 'has_more' => false );
 
 	if ( $page > 0 ) {
@@ -365,9 +368,11 @@ function axismundi_op_actor_followers_transform( Axismundi_OP_Actor_Followers $s
 			'attributedTo' => $actor->get_uri(),
 			'url'          => $actor->get_profile_url(),
 			'partOf'       => $url,
-			'totalItems'   => $data['total'],
-			'orderedItems' => $public ? $data['items'] : array(),
 		);
+		$out = axismundi_op_assemble_collection( 'ap-' . $kind, $out, array( 'total' => $data['total'], 'items' => $public ? $data['items'] : array() ), 'public', 'private' !== $policy );
+		if ( is_wp_error( $out ) ) {
+			return $out;
+		}
 		if ( $public && ! empty( $data['has_more'] ) ) {
 			$out['next'] = axismundi_op_actor_follow_collection_url( $actor, $kind, $page + 1 );
 		}
@@ -380,8 +385,12 @@ function axismundi_op_actor_followers_transform( Axismundi_OP_Actor_Followers $s
 		'attributedTo' => $actor->get_uri(),
 		'url'          => $actor->get_profile_url(),
 	);
-	if ( 'private' !== $policy ) {
-		$out['totalItems'] = $data['total'];
+	if ( null === axismundi_op_collection_contract( 'ap-' . $kind ) ) {
+		return $out;
+	}
+	$out = axismundi_op_assemble_collection( 'ap-' . $kind, $out, array( 'total' => $data['total'] ), 'public', 'private' !== $policy );
+	if ( is_wp_error( $out ) ) {
+		return $out;
 	}
 	if ( $public && $data['total'] > 0 ) {
 		$out['first'] = axismundi_op_actor_follow_collection_url( $actor, $kind, 1 );

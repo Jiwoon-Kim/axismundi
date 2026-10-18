@@ -216,21 +216,53 @@ function axismundi_forum_project_group_moderators( array $object, Axismundi_Acto
 add_filter( 'axismundi_op_actor_projection_fields', 'axismundi_forum_project_group_moderators', 20, 2 );
 
 /** Serve the public Actor collection FEP-1b12 uses to identify Group moderators. */
+function axismundi_forum_read_moderator_collection( int $group_identity_id ) : array {
+	$items = array_values( array_map( static fn( Axismundi_Actor $actor ) : string => $actor->get_uri(), axismundi_forum_effective_moderators( $group_identity_id ) ) );
+	return array( 'items' => $items, 'total' => count( $items ) );
+}
+
+/** Register Forum's existing role authority without moving its storage. */
+function axismundi_forum_register_moderator_contract() : void {
+	if ( ! function_exists( 'axismundi_op_register_collection_contract' ) ) {
+		return;
+	}
+	axismundi_op_register_collection_contract( 'ap-moderators', array(
+		'collection_type' => 'OrderedCollection',
+		'member_models' => array( 'Object' ),
+		'member_types' => axismundi_actors_kinds(),
+		'membership_source' => 'explicit:Add/Remove',
+		'membership_authority' => 'membership-row',
+		'append_policy' => 'owner-only',
+		'presentation' => 'bounded-members',
+		'ordering' => 'source-defined',
+		'total_capability' => 'exact',
+		'total_disclosure' => array( 'public' => 'always', 'owner' => 'always' ),
+		'owner' => 'forum',
+		'reader' => 'axismundi_forum_read_moderator_collection',
+	) );
+}
+add_action( 'axismundi_op_register_collection_contracts', 'axismundi_forum_register_moderator_contract' );
+
 function axismundi_forum_get_moderator_collection( WP_REST_Request $request ) {
 	$group = function_exists( 'axismundi_actors_get_by_uuid' ) ? axismundi_actors_get_by_uuid( strtolower( (string) $request['uuid'] ) ) : null;
 	if ( ! axismundi_forum_public_community_group( $group ) ) {
 		return new WP_Error( 'ax_forum_moderators_not_found', __( 'The community moderators collection was not found.', 'axismundi-forum' ), array( 'status' => 404 ) );
 	}
-	$items = array_map( static fn( Axismundi_Actor $actor ) : string => $actor->get_uri(), axismundi_forum_effective_moderators( $group->get_identity_id() ) );
-	$response = rest_ensure_response(
+	$membership = axismundi_op_read_collection_contract( 'ap-moderators', $group->get_identity_id() );
+	if ( is_wp_error( $membership ) ) {
+		return $membership;
+	}
+	$document = axismundi_op_assemble_collection( 'ap-moderators',
 		array(
 			'id'           => axismundi_forum_moderator_collection_url( $group ),
 			'type'         => 'OrderedCollection',
 			'attributedTo' => $group->get_uri(),
-			'totalItems'   => count( $items ),
-			'orderedItems' => array_values( $items ),
-		)
+		), $membership
 	);
+	if ( is_wp_error( $document ) ) {
+		return $document;
+	}
+	$response = rest_ensure_response( $document );
 	$response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
 	$response->header( 'Cache-Control', 'public, max-age=60' );
 	return $response;

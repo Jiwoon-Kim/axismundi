@@ -16,6 +16,7 @@ published document that asserts a membership nobody read.
 ```txt
 member_models         Activity[] | Object[] | mixed
 member_types          optional set of AS2 types every member must satisfy
+collection_type       Collection | OrderedCollection (root; page type follows)
 presentation          metadata-only | count-only | bounded-members | paged-members
 ordering              none | immutable-cursor(feed_sort_at,id) | source-defined
 membership_source     side-effect:<activity> | explicit:Add/Remove
@@ -376,6 +377,41 @@ terminal. Pin it.
   open. Keying by `identity_id` requires every curated collection to have an
   identity row, which an implicit role collection such as moderators does not
   have today.
+
+## Assembly implementation, 2026-10-19
+
+`axismundi_op_assemble_collection()` accepts representation metadata separately
+from membership returned by the owning reader. It applies `total_capability`
+and the server-selected requester disclosure policy, requires an integer for
+an exact disclosed total, and rejects enumeration for metadata-only or
+count-only contracts. Routes remain responsible for authorization before
+selecting a requester class or granting policy-gated disclosure.
+
+The descriptor also fixes `collection_type`. Outbox and Inbox require
+`OrderedCollection` under ActivityPub 5.1 and 5.2. Other current descriptors
+choose that type as a project representation policy. A paged contract permits
+only its matching page type; immutable cursor ordering cannot be registered
+with an unordered root. The assembler rejects mismatches rather than silently
+changing `items` to `orderedItems` or the reverse. These checks constrain the
+declared representation, not the reader's actual sort order, which still needs
+its own reader audit.
+
+Outbox pages, followers/following, likes/shares, replies, usedIn, and Forum's
+existing moderators route use this assembly boundary. The moderator reader
+retains the current effective-role rule, including manager delegation; it does
+not migrate curated membership storage. `member_types` is descriptor metadata
+at this stage: source readers still enforce the existing actor resolution
+constraints, and generic URI dereferencing/type validation is deferred.
+
+The `ap-liked` contract now returns an explicit unavailable-reader error instead
+of binding the capped legacy list. That internal list remains available to
+existing callers. Neither an Inbox recipient reader nor a liked cursor reader
+is introduced by the assembly slice.
+
+Checks: `audit-collection-registry.php` exercises total and enumeration policy;
+`audit-actor-outbox.php` compares the page JSON bytes against the pre-assembly
+shape; `audit-forum-moderation.php` compares the moderator response to fixture
+roles independently of the registry reader.
 
 ## Sources
 

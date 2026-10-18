@@ -18,6 +18,10 @@ $GLOBALS['axismundi_op_collection_contracts_loaded'] = true;
 
 $reader = static fn( string $value ) : string => 'read:' . $value;
 $base = array(
+	'collection_type' => 'OrderedCollection',
+	'membership_source' => 'side-effect:publication',
+	'membership_authority' => 'ledger-index',
+	'append_policy' => 'closed',
 	'member_models' => array( 'Activity' ),
 	'presentation' => 'paged-members',
 	'ordering' => 'immutable-cursor(feed_sort_at,id)',
@@ -58,6 +62,34 @@ ax_contract_assert( $ax_contract_results, 'both requester disclosure levels, an 
 
 $missing = axismundi_op_read_collection_contract( 'missing' );
 ax_contract_assert( $ax_contract_results, 'an absent contract is an explicit error rather than an empty collection', is_wp_error( $missing ) && 'ax_op_collection_contract_not_found' === $missing->get_error_code() );
+
+$metadata = array( 'id' => 'https://example.test/outbox', 'type' => 'OrderedCollectionPage' );
+$assembled = axismundi_op_assemble_collection( 'ap-outbox', $metadata, array( 'total' => 999, 'items' => array( 'https://example.test/a' ) ) );
+ax_contract_assert( $ax_contract_results, '[project choice] unavailable totals never become totalItems even when a reader supplies a number', is_array( $assembled ) && ! array_key_exists( 'totalItems', $assembled ) );
+ax_contract_assert( $ax_contract_results, '[project choice] ordered pages preserve the reader member sequence', array( 'https://example.test/a' ) === ( $assembled['orderedItems'] ?? null ) );
+$count_contract = $base;
+$count_contract['presentation'] = 'count-only';
+$count_contract['total_capability'] = 'exact';
+unset( $count_contract['total_reason'] );
+$count_contract['total_disclosure']['public'] = 'policy-gated';
+axismundi_op_register_collection_contract( 'count-fixture', $count_contract );
+$count_metadata = array( 'id' => 'https://example.test/count', 'type' => 'OrderedCollection' );
+$hidden = axismundi_op_assemble_collection( 'count-fixture', $count_metadata, array( 'total' => 7 ) );
+$shown = axismundi_op_assemble_collection( 'count-fixture', $count_metadata, array( 'total' => 7 ), 'public', true );
+ax_contract_assert( $ax_contract_results, '[project choice] policy-gated totals are withheld before approval', is_array( $hidden ) && ! array_key_exists( 'totalItems', $hidden ) );
+ax_contract_assert( $ax_contract_results, '[project choice] approved exact totals equal the owning reader result', 7 === ( $shown['totalItems'] ?? null ) );
+$missing_total = axismundi_op_assemble_collection( 'count-fixture', $count_metadata, array(), 'public', true );
+$enumeration = axismundi_op_assemble_collection( 'count-fixture', $count_metadata, array( 'total' => 7, 'items' => array() ), 'public', true );
+ax_contract_assert( $ax_contract_results, '[project choice] an exact disclosed total cannot be fabricated when missing', is_wp_error( $missing_total ) && 'ax_op_collection_total' === $missing_total->get_error_code() );
+ax_contract_assert( $ax_contract_results, '[project choice] count-only contracts reject enumeration', is_wp_error( $enumeration ) && 'ax_op_collection_members' === $enumeration->get_error_code() );
+$unordered = axismundi_op_assemble_collection( 'ap-outbox', array( 'id' => 'https://example.test/outbox', 'type' => 'Collection' ), array( 'items' => array() ) );
+ax_contract_assert( $ax_contract_results, '[spec AP 5.1] an Outbox contract refuses an unordered Collection', is_wp_error( $unordered ) && 'ax_op_collection_type' === $unordered->get_error_code() );
+$unordered_page = axismundi_op_assemble_collection( 'ap-outbox', array( 'id' => 'https://example.test/outbox?page=1', 'type' => 'CollectionPage' ), array( 'items' => array() ) );
+ax_contract_assert( $ax_contract_results, '[project choice; AS2 Core 4.6 SHOULD] ordered contracts refuse unordered pages', is_wp_error( $unordered_page ) && 'ax_op_collection_type' === $unordered_page->get_error_code() );
+$bad_ordering = $base;
+$bad_ordering['collection_type'] = 'Collection';
+$bad_registration = axismundi_op_register_collection_contract( 'unordered-cursor', $bad_ordering );
+ax_contract_assert( $ax_contract_results, '[project choice] immutable cursor ordering requires an OrderedCollection declaration', is_wp_error( $bad_registration ) && 'ax_op_collection_contract_type' === $bad_registration->get_error_code() );
 
 $failures = count( array_filter( $ax_contract_results, static fn( bool $holds ) : bool => ! $holds ) );
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI audit output.

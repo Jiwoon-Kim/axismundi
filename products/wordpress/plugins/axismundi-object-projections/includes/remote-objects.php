@@ -385,6 +385,8 @@ function axismundi_op_install() : bool {
 		&& axismundi_op_install_object_relations()
 		&& function_exists( 'axismundi_op_install_remote_object_hashtag_schema' )
 		&& axismundi_op_install_remote_object_hashtag_schema()
+		&& function_exists( 'axismundi_op_install_tag_reference_schema' )
+		&& axismundi_op_install_tag_reference_schema()
 		&& function_exists( 'axismundi_op_install_object_mentions' )
 		&& axismundi_op_install_object_mentions()
 		&& function_exists( 'axismundi_op_install_thread_edges' )
@@ -776,6 +778,7 @@ function axismundi_op_store_remote_object( array $payload, array $fetch = array(
 	}
 	if ( is_array( $stored ) && function_exists( 'axismundi_op_index_remote_object_hashtags' ) ) {
 		axismundi_op_index_remote_object_hashtags( $stored );
+		axismundi_op_sync_remote_tag_references( $stored );
 	}
 	if ( is_array( $stored ) && function_exists( 'axismundi_op_index_remote_object_mentions' ) ) {
 		axismundi_op_index_remote_object_mentions( $stored );
@@ -1037,6 +1040,7 @@ function axismundi_op_delete_remote_object( string $uri ) : bool {
 		axismundi_op_replace_object_mentions( (string) $existing['object_uri'], array() );
 	}
 	if ( $deleted ) {
+		axismundi_op_retract_tag_source( $valid, 'remote-cache' );
 		axismundi_op_delete_object_listing_projection( $valid );
 	}
 	return $deleted;

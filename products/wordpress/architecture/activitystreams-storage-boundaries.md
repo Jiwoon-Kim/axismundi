@@ -686,6 +686,70 @@ may remain a specialized, actor-targeted projection while sharing the same
 registry Object ID. Unknown tags must remain recoverable from the raw source
 payload rather than being fabricated into local taxonomy terms.
 
+### Tag 참조와 Term 사용 인덱스의 구현 경계 (2026-10-20)
+
+위의 `object_id` 중심 제안은 이 절의 URI 기반 2층 모델로 대체한다.
+Actor와 Activity를 OP Object 레지스트리에 억지로 등록하지 않는다.
+
+- `wp_ax_tag_references`: 출처 canonical URI별 descriptor 증거.
+  `id`/`href` 없는 `{name: "#example"}`도 저장하며, Person을 Mention으로
+  변환하지 않는다. 원본 JSON, provider, 출처 역할, 관측 시각, 현재 여부를 보존한다.
+- `wp_ax_term_usage`: `(term_taxonomy_id, source_uri_hash)`별 파생 멤버십.
+  같은 출처의 대소문자 변형이나 여러 descriptor는 멤버 하나로 센다.
+  URI 해시 조회에는 원문 URI 조건도 함께 적용한다.
+
+참조 보존과 아카이브 참여는 별도 결정이다. 기본 역할은 `reference`이며
+참여하는 공급자가 `content`를 명시한다. Actor 프로필의 태그는 링크화 및
+역조회 근거이지 해시태그 피드 멤버십이나 관심사/추천 선언이 아니다.
+`Create.tag`와 `Create.object.tag`는 각각 Activity URI와 Object URI의 증거다.
+Activity 상속만으로 일괄 제외하지 않는다. 독립 콘텐츠인 Question은 명시적으로
+참여할 수 있다. 이번 구현은 WP 및 원격 Object 캐시 공급자를 연결하며,
+Actor/Activity/C2S 공급자는 현재 감사에서 계약과 가드만 검증하며,
+수신·저작 경계의 실제 공급자 연결은 다음 단계다.
+
+로컬 포스트의 권위는 계속 `wp_term_relationships`다. 원격 Object는 저장된
+payload와 수신 경계의 완전성 정보가 근거다. `complete=false` 관측은 기존 태그를
+철회하지 않고, 완전 관측에서 빠진 descriptor는 이력을 남기고 현재 상태를 내린다.
+코어 taxonomy `count`는 변경하지 않는다. 인덱스 행은 공개 가능성의 증명이 아니며,
+공개 reader는 권위 있는 가시성 판정을 별도로 적용해야 한다.
+
+`feed_sort_at`은 최초 편입 시 정하고 Update 및 제거 후 재편입으로 이동하지 않는다.
+기존 행을 유지한 재구축은 커서를 보존한다. 인덱스 자체를 파괴하고 처음부터
+재구축할 경우 기존 커서의 유효성까지 보장하지 않는다.
+`axismundi_op_rebuild_tag_references(provider, after, limit)`는 WP 또는 원격 캐시를
+작은 배치로 다시 읽는다. 기존 원격 hashtag 테이블을 권위로 읽지 않는다.
+재구축은 네트워크 요청을 하지 않는다.
+캐시 행 자체에는 완전성 플래그가 영속되지 않으므로, 재구축 시에는 누락을 철회로
+해석하지 않는다. 이미 보존한 참조 증거를 유지하면서 현재 payload의 증거를 합친다.
+재구축은 실패 행에서도 `after`를 전진시키고 `errors`에 ID·오류 코드·메시지를 남긴다.
+`done`은 열거가 끝났다는 뜻이며 성공 선언이 아니다. 호출자는 `failed`와 `errors`를
+확인하고 실패 ID를 명시적으로 재시도해야 한다. WP 배치는 taxonomy에 연결된
+post type의 ID만 조회하고, 본문·리비전을 통째로 읽지 않는다.
+
+태그 투영은 자체 트랜잭션을 소유한다. 외부 트랜잭션 또는 `autocommit=0`에서는
+taxonomy/인덱스 쓰기 전에 오류를 반환하며 외부 작업을 암묵 커밋하지 않는다.
+훅이 커밋 후라는 보장은 없으므로 호출 규약만으로 안전하다고 주장하지 않는다.
+직접 트랜잭션을 여는 공급자는 커밋 후 명시적으로 재동기화해야 한다.
+같은 요청에서 동일한 태그 상태를 관측한 중복 WP 훅은 쓰기를 생략한다.
+명시적 동기화·재구축은 이 생략을 우회한다. 중간 상태가 실제로 다르면 별도 쓰기다.
+term 삭제 시 참조의 vocabulary 매핑은 NULL이 되고 원본 증거는 남는다.
+같은 이름의 term을 다시 만들더라도 매핑은 다음 공급자 동기화/재구축 때 복구된다.
+
+첫 슬라이스는 기존 아카이브 reader와 발신 형식을 유지한다. 따라서 구 인덱스는
+기존 reader용 호환 투영으로 남지만 새 인덱스의 권위는 아니다. reader 전환 시 제거한다.
+숫자 query 라우트, `{id,name}` 발신, 본문 링크화, 공개 커서 열거 및 `totalItems`는
+후속 슬라이스다. 정확한 공개 총계를 증명하기 전에는 총계를 생략하되 열거를 막지 않는다.
+원격 삭제는 `remote-cache` 공급자 행만 철회한다. 로컬 C2S 저작 저장소를 삭제하지 않는다.
+
+공개 reader 전환 전 게이트: 같은 term을 공유하는 읽기 가능한 로컬 포스트와
+원격 Object를 준비하고, 기존 reader와 새 reader의 canonical URI 집합 및 순서가
+일치하는지 확인한다. 비공개 멤버가 긴 구간을 이루는 경우도 포함한다.
+빈 사이트에서 양쪽 결과가 빈 배열이라는 것만으로 전환을 승인하지 않는다.
+이 게이트는 아직 수행 전이며 새 reader를 만드는 슬라이스의 완료 조건이다.
+
+감사 명령: `wp eval-file wp-content/plugins/axismundi-object-projections/tests/audit-tag-references.php`.
+발신 상호운용 검증은 아직 수행하지 않았으며, 외부 인스턴스에 글을 발행하지 않았다.
+
 ## Replies Are Objects; Reactions Are Interaction State
 
 Axismundi does not use `wp_comments` as its reply model. A local reply is its

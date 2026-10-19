@@ -483,6 +483,102 @@ filter를 통과한 스냅샷만 허용한다. 비공개, inbound, 철회, 알 �
 리디렉션에서 디버깅 query가 사라지는 문제와 collection 링크의 `object=`
 인코딩은 이번 슬라이스에서 수정하지 않는다.
 
+## Hashtag Is Not A Registered Type, 2026-10-20
+
+`Hashtag`를 어휘 레지스트리에 타입으로 등록하지 않는다. **사양과 FEP 어디에도
+근거가 없다.** Mastodon 이 그렇게 구현했다는 것은 따를 이유가 되지 않는다.
+
+확인한 근거(2026-10-20):
+
+- AS2 Core §4.1 — "All properties are optional (including the `id` and
+  `type`)." 즉 `type` 은 MUST 가 아니고, `type` 없는 JSON 객체는 Link 가
+  아니면 Object 의 인스턴스 또는 확장으로 해석된다. W3C 의 microsyntax
+  예제에 나오는 `{ id, name }` 태그가 바로 그 모양이며 적법하다.
+- `Hashtag` 는 AS2 어휘에 정의된 클래스가 아니다. Mastodon 문서가 보내는
+  `@context` 의 `"Hashtag":"as:Hashtag"` 는 **이름을 IRI 에 연결할 뿐
+  `Link` 상속을 선언하지 않는다.** `href` 가 있다는 사실만으로 상속이
+  확정되지도 않는다.
+- FEP-eb48 은 DRAFT 이며 문자열의 해시태그 판별·표시 규칙을 제안한다.
+  `Hashtag` 클래스나 그 상속을 정의하지 않는다.
+
+### The Discriminator Is The `#` Prefix
+
+```txt
+판정   tag[] 항목의 name 이 '#' 로 시작하면 해시태그로 간주한다
+표현   본문에서 그 name 과 일치하는 문자열을 우리가 <a> 로 바꾼다
+대상   1. 로컬 taxonomy 의 아카이브 주소
+       2. 폴백: 상대방이 id 또는 href 에 명시한 경로
+```
+
+타입 대신 `name` 의 접두사로 판정하므로, 타입을 붙이지 않은 W3C 모양과 타입을
+붙인 Mastodon 모양이 **같은 경로로 들어온다.** 둘을 받기 위해 두 분기를 둘
+필요가 없어진다.
+
+링크화는 수신자의 몫이라는 기존 결정과 같은 방향이다. 평문 멘션을 우리가
+링크로 만드는 것과 동일한 근거이며, 상대가 보낸 렌더된 마크업을 신뢰하는 것이
+아니다.
+
+폴백 순서가 로컬 우선인 이유: 로컬 아카이브는 우리가 서빙하고 있고 협상 시
+AS2 를 반환한다(2026-10-20 측정: `/hashtag/hashtag/` 에 AS2 Accept →
+`200`, `{"@context":…,"id":"…/hashtag/hashtag/","type":"OrderedCollection"}`).
+원격이 명시한 `id`/`href` 는 **관측 증거로 보존하되 우리 주소로 치환하지
+않는다.** 로컬 term 으로 묶었다고 원격 URL 의 정체성까지 같아지지 않는다.
+
+### What This Changes In Code
+
+현재 구현은 이 결정과 두 지점에서 어긋난다. 2026-10-20 확인:
+
+```txt
+hashtags.php:268   if ( ! in_array( 'Hashtag', $type, true ) ) { … }
+                   원격 tag 증거를 받을 조건이 타입 일치다. 결정에 따르면
+                   판정은 name 의 '#' 접두사여야 한다. 타입만 보는 현재
+                   코드는 W3C 모양의 무타입 {id,name} 태그를 버린다.
+
+hashtags.php:183   array( 'type' => 'Hashtag', 'name' => …, 'href' => … )
+                   우리가 내보내는 쪽에는 여전히 type 이 붙는다.
+```
+
+### Outbound Emits `id` And `name` Only
+
+발신 모양도 같은 결정을 따른다(owner, 2026-10-20). `tag[]` 항목은 **`id` 와
+`name` 만 발행하고 `type` 을 생략한다.**
+
+```txt
+{ "id": "…/?tag_id=123", "name": "#example" }
+```
+
+이것이 W3C microsyntax 예제의 모양이며, 등록하지 않은 타입을 와이어에 쓰지
+않는다는 결정과 일관된다. `type` 을 생략해도 정보가 사라지지 않는다는 점이
+이 모양을 성립시킨다: `id` 는 그 term 의 아카이브 컬렉션 식별자와 **같은
+주소**이고, 그 주소를 역참조하면 `type: OrderedCollection` 이 나온다. 즉
+**타입은 inline 에서 빠지고 역참조로 발견된다.** 아카이브의 `id` 형태와 그
+`OrderedCollection` 선택은 `activitystreams-collection-model.md` 가 소유한다.
+
+`href` 는 더 이상 발신의 필수 요소가 아니다. 사람이 읽는 아카이브 주소는
+그 컬렉션 문서의 `url` 로 노출되고, `id` 와 `url` 의 분리는 post·attachment
+와 같은 규칙이다.
+
+비용은 명시해 둔다. **Mastodon 은 `tag[]` 를 `type` 으로 걸러서 읽으므로
+`{id,name}` 만 받은 해시태그를 링크로 만들지 않을 것이다.** 이것은 Lemmy
+호환성에서 이미 한 번 선택한 것과 같은 방향의 선택이다 — 사양에 근거가 없는
+구현 관행을 따르기보다 표준 모양으로 간다. 측정 전까지는 "링크화되지 않을
+것"이라는 예상이며, 실제 수신 동작은 와이어 테스트로 확인해야 한다.
+
+이미 연합된 문서는 회수할 수 없다. 기존 발행물의 `tag[]` 에는
+`type: Hashtag` 와 pretty permalink `href` 가 들어 있고 원격 캐시에 그 모양이
+남는다. 이 변경은 이후 발행에만 적용된다.
+
+따라서 아래 핀들은 이 결정과 함께 움직인다. 이들은 사양 핀이 아니라 project
+choice 핀이므로, 선택이 바뀌면 핀도 바뀌는 것이 정상이다:
+`audit-note-federation.php:150`, `audit-hashtags.php:75`, 그리고
+`audit-hashtag-localization.php` · `audit-remote-fetch.php` 의 수신 fixture.
+
+`tag` 자체는 여전히 `Object | Link` 로 열려 있다. 이미지에 `Person` 을 붙이는
+AS2 예제가 실재하므로 모든 태그를 링크로 좁히지 않는다. 해시태그는 `tag` 의
+한 슬라이스이고, 그 판정 기준이 `#` 접두사라는 것이 이 절의 결정이다.
+`tag` 관계 전체의 저장 모양은 `activitystreams-storage-boundaries.md` 의
+"Tag Is a Relation Family, Not a Taxonomy Alias" 가 계속 소유한다.
+
 ## Sources
 
 - Activity Streams 2.0 Core, section 9.2.2 on conforming consumers.

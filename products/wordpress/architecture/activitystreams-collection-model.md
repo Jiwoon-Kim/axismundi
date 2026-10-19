@@ -460,6 +460,138 @@ Checks: `audit-collection-registry.php` exercises total and enumeration policy;
 shape; `audit-forum-moderation.php` compares the moderator response to fixture
 roles independently of the registry reader.
 
+## The Hashtag Archive's Identifier, 2026-10-20
+
+해시태그 아카이브는 컬렉션이다. 그 컬렉션의 `type` 과 `id` 를 이 문서가
+소유하고, `tag[]` 안의 발신 모양은
+`activitystreams-object-contract.md` 가 소유한다.
+
+### `OrderedCollection` Is Ours, Not The Spec's
+
+| Rule | Which | Where |
+|---|---|---|
+| 해시태그 아카이브가 `OrderedCollection` 인 것 | **ours** | 사양은 해시태그 아카이브를 언급하지 않는다. 섹션 5 가 열거하는 컬렉션 목록에 없다 |
+| 원격 관측이 멤버로 섞이는 것 | **ours** | 명시적으로 큐레이션한 컬렉션이 아니다. followers 와 같은 read-time index projection 이다 |
+| 현재 멤버·`totalItems`·페이징을 싣지 않는 것 | **ours** | 조립 불가가 아니라 아직 레지스트리에 연결되지 않았기 때문이다. 아래 참조 |
+
+`OrderedCollection` 을 유지하는 것은 괜찮지만, 그 근거가 사양이라고 적어서는
+안 된다. 섹션 5 는 outbox·inbox·followers·following·liked·likes·shares 를
+열거하고 해시태그 아카이브는 거기 없다. 이것은 전적으로 우리 정책이다.
+
+#### Correction: Membership Is Already Assembled
+
+이 절의 이전 판은 "로컬과 캐시 관측을 섞은 부분 피드를 전체인 척 광고하지
+않기 위해" 멤버를 생략한다고 적었다. **그 논거는 철회한다.** `?p=1234` 가
+동적으로 조립되는데 컬렉션은 안 된다고 할 근거가 없고, 실제로 이미 조립되고
+있다. 2026-10-20 `includes/hashtag-archive.php` 확인:
+
+```txt
+axismundi_op_get_hashtag_archive_items( WP_Term, $type, $limit )
+  로컬   get_posts() + tax_query(term_id), date DESC
+  원격   INNER JOIN wp_ax_remote_object_hashtags h ON h.remote_object_id = o.id
+         WHERE h.term_taxonomy_id = %d AND o.object_status = 'active'
+         ORDER BY COALESCE(published_at, remote_updated_at, created_at) DESC, o.id DESC
+  병합   URI 로 키를 잡아 중복 제거
+  정렬   axismundi_op_hashtag_archive_compare — published DESC, URI 역순 tie-break
+  가시성 항목별로 양쪽에 적용
+```
+
+멤버십은 **양쪽 모두 인덱스되어 있고** 결정적인 전체 순서도 이미 있다. 따라서
+남은 일은 Outbox 가 assembly slice 에서 했던 것과 같다: 이 reader 를 컬렉션
+레지스트리에 연결하는 것. 원격이 섞이는 것은 결함이 아니라 이 컬렉션의
+정의다 — "이 서버가 아는, 이 term 을 가진 공개 Object". 요구되는 것은 배제가
+아니라 `membership_source` 와 `membership_authority` 로 그 사실을 **선언**하는
+것이다. 각 항목에는 이미 `origin` 이 `local`/`remote` 로 붙어 있다.
+
+진짜로 남은 제약은 세 개이고, 모두 좁다.
+
+1. **페이지 2.** `$limit` 가 소스별로 적용된 뒤 병합·슬라이스된다. 1 페이지만
+   정확하다. 두 소스에 독립적인 offset 을 줄 수 없으므로 공유 cursor 가
+   필요하다. 이것이 `first`/`next` 를 아직 켜지 않은 실제 이유다.
+2. **`totalItems`.** 가시성이 양쪽 모두 SQL 술어가 아니라 항목별 read-time
+   필터다(`axismundi_op_object_card_publicly_renderable`,
+   `axismundi_op_remote_object_is_publicly_listable`). 따라서 수는 bounded
+   scan 이 필요하고, `total_reason` 은 기존 값 `read-time-filter` 와
+   `bounded-scan` 으로 그대로 설명된다. 다른 컬렉션과 같은 근거이며 이
+   컬렉션만의 변명이 아니다.
+3. **정렬 키의 불변성.** `COALESCE(published_at, remote_updated_at, created_at)`
+   의 가운데 항이 가변이다. `remote_updated_at` 은 `payload['updated']` 에서
+   기록되므로(`remote-objects.php:670`) Update 마다 바뀌고, 가변 키 위의
+   cursor 는 페이지 간에 멤버를 건너뛰거나 중복시킨다. 이 문서가 이미 고정한
+   `collection_type: immutable-cursor(feed_sort_at,id)` 규칙과 어긋난다.
+
+   측정하면 오늘은 걸리지 않는다. 2026-10-20:
+
+   ```txt
+   active 원격 행                                    88
+   published_at 이 NULL                              86
+   published_at NULL 이면서 remote_updated_at 존재     0
+   ```
+
+   즉 2 행은 `published_at`, 86 행은 `created_at`(삽입 시각, 불변)으로
+   정렬되고 `remote_updated_at` 으로 정렬되는 행은 없다. 그리고 그 86 행은
+   fixture 다 — host 별로 `example.com` 80, `remote.example` 6 이고, 실제
+   peer 인 `misskey.io` 1 과 `mastodon.social` 1 은 **둘 다 `published_at`
+   을 가진다.** 따라서 실제 트래픽은 불변 키로 정렬된다.
+
+   그래도 `items` 를 발행하기 전에 ORDER BY 에서 `remote_updated_at` 을
+   빼고 `published_at`/`created_at` 으로 고정해야 한다. 표현식이 가변 키를
+   허용하는 것 자체가 결함이고, 현재 0 행인 것은 fixture 가 `updated` 를
+   보내지 않기 때문일 뿐이다.
+
+### The `id` Is The Numeric Query Form
+
+아카이브의 `id` 를 pretty permalink 에서 **숫자 query 형태로 바꾼다**(owner,
+2026-10-20). 이유는 post 와 attachment 와 일치시키는 것이다. 2026-10-20
+와이어 측정:
+
+```txt
+post        id = http://localhost:8884/?p=38344
+            url = Link → /object-registry-post-fixture-24/
+attachment  id = http://localhost:8884/?attachment_id=18210
+            url = Link[] → 렌디션들 + /media/image/18210/
+```
+
+즉 **`id` 는 안정적인 query 형태, `url` 은 사람이 읽는 pretty 주소**라는
+규칙이 이미 서 있다. 현재 해시태그 아카이브는 이것을 뒤집어 pretty permalink
+를 `id` 로 쓰고 있었다(`hashtag-archive.php`, `get_term_link()` 기반). 바꾸는
+쪽이 일관된다.
+
+pretty permalink 는 사라지지 않는다. 그 컬렉션 문서의 `url` 로 이동하며,
+사람이 여는 주소로 계속 서빙된다.
+
+### Prerequisite: The Numeric Form Must Resolve
+
+이것은 선결 조건이고, 지금 충족되지 않는다. 2026-10-20 측정:
+
+```txt
+GET /hashtag/hashtag/      Accept: ld+json;profile=…   200  AS2  OrderedCollection
+GET /?ax_hashtag=hashtag   Accept: ld+json;profile=…   200  AS2  OrderedCollection
+GET /?tag_id=1224          Accept: ld+json;profile=…   200  text/html   ← AS2 아님
+```
+
+코어의 `tag_id` query var 는 `post_tag` 전용이라 우리 taxonomy 에 닿지 않고
+HTML 로 떨어진다. `id` 를 그 형태로 발행하면서 거기서 AS2 를 서빙하지 않으면
+**역참조되지 않는 식별자를 발행하는 것**이 된다. ActivityPub 3.1 은 배포되는
+객체의 `id` 가 publicly dereferenceable 이어야 한다고 하고, 3.2 는 그 GET 이
+`application/ld+json; profile="…"` 에 대해 AS 표현을 반환해야 한다고 한다.
+`{id, name}` 만 발행하는 모양에서는 타입이 역참조로만 발견되므로 이 선결
+조건의 비중이 더 크다.
+
+해소는 그 주소에서 **협상으로 컬렉션의 identity 를 반환하는 것**으로 충분하다.
+`{@context, id, type}` 만으로 3.1 과 3.2 가 discharge 되고, `items` 와
+`totalItems` 와 페이징은 그 뒤에 가산적으로 붙는다. 선결 조건은 identity 이며
+멤버십이 아니다.
+
+`tag_id` 라는 이름 자체는 코어가 `post_tag` 로 선점하고 있다. 결정된 것은
+**숫자 query 형태**(`?p=` · `?attachment_id=` 와 같은 축)이고, 실제 query var
+이름은 코어와 충돌하지 않아야 한다. `?ax_hashtag_id=123` 이 코어 관례
+(`attachment_id`)와 같은 모양이면서 충돌하지 않는 후보이며, 최종 이름은
+owner 결정 사항으로 남긴다.
+
+pretty permalink 는 이미 발행된 문서들의 `tag[].href` 에 들어가 있고 원격
+캐시에 남는다. 계속 서빙해야 하며 이 변경으로 의미가 바뀌지 않는다.
+
 ## Sources
 
 - ActivityPub, W3C Recommendation 2018-01-23, sections 5, 6.5-6.7, 7.5-7.11,

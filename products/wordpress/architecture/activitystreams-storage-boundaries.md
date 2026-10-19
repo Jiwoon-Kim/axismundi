@@ -996,6 +996,207 @@ access control.
    remote-vote classification requires its own regression coverage; current
    coverage exercises the same classifier through outbound fixture rows only.
 
+## Identity, Authoring Order, And The Note Cutoff, 2026-10-20
+
+이 절은 그동안 대화에만 있던 결정들을 기록한다. 결정이 추적되지 않은 것이
+전날 비용의 대부분이었다. 각 항목은 결정과 그 근거, 그리고 근거가 측정인
+경우 측정값을 함께 적는다.
+
+### Authoring Order Is The Identity Discriminator
+
+식별자의 모양을 정하는 축은 타입도 저장량도 아니다. **어느 쪽이 먼저
+저작되었는가**이다.
+
+```txt
+WordPress-first   편집기와 post 행이 먼저 생긴다    id = wp_posts 키
+activity-first    Activity/C2S 제출이 먼저 생긴다    id = 발급한 uuid
+```
+
+이미 발행 중인 선례는 두 개이고, 둘 다 site root 아래의 uuid다. 2026-10-20
+확인:
+
+```txt
+home_url( '/actors/' . $uuid )   axismundi-actors/includes/repository.php:984
+home_url() . '/activities'       axismundi-object-projections/includes/activity-read-route.php:8
+```
+
+`/objects/{uuid}`와 `/collections/{uuid}`는 그 두 개의 일관된 확장이지만
+**아직 라우트가 없다.** 이 절은 결정을 기록하는 것이고 구현 상태를 주장하지
+않는다. `grep` 으로 확인한 현재 상태: `collections/` 라우트는 존재하지 않고,
+`objects/` 로 매칭되는 유일한 rewrite 는 프론트앱 것이다.
+
+그 프론트앱 경로를 id 로 오해하지 말 것. `axismundi` 플러그인은
+`AXISMUNDI_CAPSTONE_ROUTE = 'social'`(`axismundi.php:23`) 아래에서
+`social/objects/{…}`를 애플리케이션 라우트로 소유한다(`includes/route.php:13`).
+그것은 React 라우팅 경로이며 Object identity namespace 가 아니다. 두 경로는
+접두사가 달라 충돌하지 않지만, 이름이 같아서 나중에 혼동될 자리다.
+
+따라서 규칙은:
+
+- **면제 목록을 두지 않는다.** Note 컷오프 이후 activity-first 객체는 예외
+  없이 `/objects/{uuid}`다. "이 타입만 예외" 가 지금의 문제를 만들었다.
+- **명시적 컬렉션은 `/collections/{uuid}`다.** 컬렉션은 우리 원장의 것이므로
+  CPT 키를 쓸 이유가 없다. 암시적 컬렉션(Outbox, followers 등)은 소유 Actor
+  의 주소 아래에 그대로 남는다.
+- **private CPT query URL 은 절대 발행하지 않는다.** `axismundi-note`의
+  `includes/view.php`에 기록된 이유가 그대로 유효하다: `ax_note`는 공개
+  permalink 를 의도적으로 갖지 않으며, 전역 `get_permalink()`를 바꾸면
+  비공개 Object 식별자가 유출된다.
+- **`UNIQUE canonical_uri_hash` 가 URI namespace 의 전역 제약이다.** 두
+  저작 경로가 같은 주소를 주장할 수 없게 하는 것은 규칙이 아니라 이 제약이다.
+- **`id`와 `url`은 분리된다.** CPT 가 권위인 타입은 `id`가 레지스트리 주소,
+  `url`이 사람이 읽는 WordPress 주소다. 둘을 같게 만들려는 시도가 Note 의
+  현재 모양을 만들었다.
+- **프론트앱은 canonical URI 로 키를 잡는다.** 로컬이든 원격이든 조인 키는
+  URI 하나다. 프론트앱 전용 주소 체계를 새로 만들지 않는다.
+
+### Three Ways An AS2 Type Can Land, Not One
+
+AS2 Object 타입 목록을 하나의 규칙으로 처리할 수 없다. 세 갈래다.
+
+```txt
+저작 콘텐츠        사람이 본문을 쓴다          소스 저장소가 필요하다
+파생 서술자        다른 사실에서 계산된다      저장소가 아니라 투영이다
+코어 미투영        WordPress 가 권위다        기본 투영하지 않는다
+```
+
+1. **저작 콘텐츠** — `Note`, `Article`, `Event`, `Question`. 본문·상태·정책을
+   보관할 소스가 필요하다. 어느 소스냐는 위의 저작 순서 축이 정한다.
+
+2. **파생 서술자** — `Profile`, `Relationship`, `Tombstone`. 이 세 개는 저작
+   대상이 아니라 다른 사실의 표현이다. `Profile`은 Actor 사실의 서술,
+   `Relationship`은 관계 행의 서술, `Tombstone`은 사라진 Object 의 서술이다.
+   **이들에게 저작 저장소를 주면 같은 사실이 두 곳에 생긴다.** CPT 로 만들기
+   애매했던 것은 모델링 실패가 아니라 이들이 저작물이 아니기 때문이다.
+   `Tombstone`은 이미 그렇게 동작한다: envelope 의 `object_status`가
+   `tombstone`이고 별도 저장소가 없다.
+
+3. **코어 미투영** — `Page`. WordPress `post_type=page`는 기본 투영하지
+   않는다. 금지가 아니라 기본값이며, 제품이 필요하면 등록할 수 있다. 이것은
+   사양이 아니라 우리 선택이다(`activitystreams-collection-model.md`의
+   specification-versus-project-choice 규칙 참조). AS2 `Page`는 별개 문제이고
+   미디어 라이브러리 경로는 MIME 로 타입을 정하므로 AS2 `Page`를 만들지
+   않는다.
+
+### Place Is An Inline Value, Like Mention
+
+`Place`에 CPT 를 주지 않는다. 로컬과 원격이 **같은 좌표, 같은 이름**을 가질
+수 있고, 그때 두 개의 Place 행은 같은 장소에 대한 두 개의 주장이 된다.
+해소할 권위가 없는 중복이다.
+
+그래서 `Place`는 `Mention`과 같은 자리에 둔다: **값으로 inline 되고, id 를
+발급하지 않고, 독립 수명주기를 갖지 않는다.** 좌표·용어·주소의 3분리와
+privacy 정밀도는 이미 geodata 쪽 결정이고, 그 결정이 Place 를 저장 객체로
+만들 필요가 없다는 뜻이기도 하다. Geodata 가 Place 관련 작업을 미뤄둔 이유가
+이것이며, 미룬 것이 옳았다.
+
+원격이 `Place`에 `id`를 붙여 보내면 그 `id`는 관측 증거로 보존한다. 우리가
+발급하지 않는다는 것과 받은 것을 버린다는 것은 다르다.
+
+### Note: The Envelope Is Already The Authority
+
+`ax_note` CPT 를 제거한다. 하드 컷오프이며 복원 경로를 만들지 않는다.
+
+근거는 두 개이고, 두 번째는 측정이다.
+
+**첫째, 연합 객체는 URI 로 주소를 잡는데 CPT 는 로컬 정수로 잡는다.** 원격
+`Note`와 원격 `Article`은 전부 URI 키 캐시에 들어가는데 로컬 `post`와
+`ax_note`만 식별 구조가 다르다. 그 비대칭이 Note 를 특수 사례로 만들었다.
+
+**둘째, envelope 은 이미 post 보다 오래 산다.** 2026-10-20 측정:
+
+```txt
+wp_ax_notes 행                                     813
+ax_note post 행                                     76  (publish 66 / draft 9 / auto-draft 1)
+wp_posts 에 짝이 없는 envelope 행                   744
+그 중 object_status='tombstone'                     744
+그 중 tombstone 이 아닌 것                            0
+```
+
+고아 행 744 와 tombstone 744 가 **정확히 같은 집합**이다. 즉 post 가 삭제된
+뒤에도 envelope 이 남아 Tombstone 의 주소를 유지한다. 이것이 설계대로
+동작하는 모습이고, envelope 이 이미 권위라는 주장의 증거다. CPT 를 제거하면
+사라지는 것은 블록 에디터이지 정체성이 아니다.
+
+Note 본문에는 블록 에디터가 거의 필요 없다. 순수 HTML 또는 Markdown 이 더
+맞고, GitHub 식 편집기가 적절하다. `author`도 필요 없다 — Actor 로 쓸 수
+있으면 된다. 이 점에서 Note 는 `wp_comments`와 닮았지만 **`wp_comments`는 쓸
+수 없다**(아래).
+
+이 결정으로 `axismundi-note` 플러그인의 존재 근거가 CPT 에서 옮겨간다. Note 는
+§7 의 경로로 타입·source reader·UI 를 등록하는 제품이 되고, 그 경로는 Event 와
+Place 가 쓸 경로와 같다. 기존 구현 자산(thread 로직, interaction, 관리 화면,
+C2S envelope 검증)은 폐기가 아니라 등록 쪽으로 이동한다. 플러그인을 완전히
+폐기하고 나중에 Markdown 편집기 UI 플러그인으로 다시 분리하는 것도 열려
+있으며, 그 선택은 이 컷오프의 선결 조건이 아니다.
+
+### A Merged Object Store Needs `authority_origin` First
+
+로컬 저작 Note 와 원격 Object 캐시를 한 테이블에 합치는 것은 성립한다.
+선례가 있다: `wp_ax_activity_questions`가 `authority_origin varchar(8)`에
+`KEY`까지 두고 로컬/원격을 한 테이블에서 구분한다
+(`axismundi-activities/includes/questions.php:40`, `:54`, 분기는 `:358`,
+`:468`, `:574`).
+
+그러나 **선결 조건이 하나 있고, 구현보다 먼저여야 한다.** 원격 캐시 테이블의
+전제는 "축출 가능한 관측"이다. `includes/leases.php`는 자신을 "Multi-reason
+retention leases for URI-keyed remote object observations"로 설명하고,
+`includes/remote-objects.php:1029`에는 URI 로 행을 지우는
+`DELETE FROM {$table} WHERE object_uri_hash = %s AND object_uri = %s`가 있다.
+리스는 보존 힌트이지 권위 보증이 아니다.
+
+```txt
+선결 조건   authority_origin 을 삭제 경로가 반드시 검사한다
+핀          URI 로 지우는 호출은 authority=local 행을 제거할 수 없다
+```
+
+관측은 다시 받으면 되지만 저작은 지워지면 끝이다. 되돌릴 수 없는 손실이 그
+경로에 있으므로 이것을 나중에 붙이는 것은 안전하지 않다.
+
+두 번째로 `payload_json`이 출처마다 다른 사실이 된다. 원격은 **받은 문서**의
+증거이고, 로컬은 **내보낸 스냅샷**의 증거다. 같은 컬럼에 두 사실을 담으면
+섞인다. 이름을 나누거나 컬럼을 둘로 둔다.
+
+합쳐서 얻는 것은: 저장소 하나, source reader 하나, assembly 경로 하나.
+레지스트리가 이미 `source_owner`로 디스패치하므로 `source_kind` 두 값이
+하나로 접힌다. 다만 물리 테이블 통합은 Note 컷오프의 선결 조건이 **아니다.**
+주소(`/objects/{uuid}`)를 공유하는 것과 테이블을 공유하는 것은 별개이며,
+삭제·보존 규칙이 다른 두 저장소를 한 테이블에서 관리하는 비용이 먼저
+확인되어야 한다. 애플리케이션에는 이미 하나로 보인다.
+
+### Why Neither Core Table Can Hold This
+
+`wp_posts`도 `wp_comments`도 쓸 수 없는 이유는 같다. **연합 객체는 URI 로
+주소를 잡고, 두 코어 테이블은 로컬 정수 키로 주소를 잡는다.**
+
+```txt
+wp_posts.ID          bigint  auto_increment   로컬에서만 의미 있다
+wp_comments.comment_ID bigint auto_increment  같다
+연합 객체의 주소      절대 URI                발신 서버가 정한다
+```
+
+`wp_comments`는 Note 의 모양(author 불필요, 짧은 본문, 답글 중심)과 닮았지만
+그것은 표면 유사성이다. 정체성 축이 다르고, taxonomy 연결도 자동으로 따라오지
+않는다. `wp_set_object_terms()`가 정수 object ID 를 받기는 하지만 코어 관계
+테이블에는 객체 종류 구분이 없어서, 같은 taxonomy 에서 post ID 와
+comment/custom-table ID 를 섞으면 충돌한다. 그래서 `terms`와 `term_taxonomy`는
+재사용하고 객체-term 연결은 별도 관계 행으로 둔다. 원격 해시태그가 이미
+`remote_object_id ↔ term_taxonomy_id` 연결을 쓰고 있다. 해시태그 때문에 CPT 나
+`wp_comments`로 돌아갈 필요는 없다.
+
+### Correction: The 744 Orphan Rows Were Not A Defect
+
+이전에 "식별자가 소스보다 오래 남는다"는 defect 로 기록해 둔 네 건 중
+`wp_ax_notes` 744 행은 **결함이 아니었다.** 위 측정이 보여주듯 고아 행 744 와
+`object_status='tombstone'` 744 가 같은 집합이고, 비-tombstone 고아는 0 이다.
+Tombstone 이 주소를 유지해야 하므로 envelope 이 post 보다 오래 사는 것이
+설계다.
+
+표본 하나를 측정 없이 결함으로 일반화한 것이 원인이다. 같은 모양의 오류가
+이 문서들에서 반복되었으므로 삭제하지 않고 정정으로 남긴다. 나머지 세 건
+(`page` 정체성 2 행, Note 정체성 shadow, 캐시 행이 사라진 원격 Object)은
+재측정 전까지 미결로 남는다.
+
 ## Sources
 
 - [ActivityStreams 2.0 Vocabulary](https://www.w3.org/TR/activitystreams-vocabulary/)

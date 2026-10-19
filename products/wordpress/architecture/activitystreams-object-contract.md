@@ -198,6 +198,33 @@ Every tier 3 entry carries the reason it exists and is removed when the
 structuring lands. The list is the structuring backlog, in machine-readable
 form.
 
+언어 멤버는 일반 컬럼 우선순위의 명시적 예외다. 원격 `name`/`summary`/
+`content` 컬럼은 scalar와 map을 평탄화한 인덱싱 값이므로 원본의 멤버 존재
+여부나 전체 언어 집합의 권위가 아니다. 읽기 API는 이 여섯 scalar/map 멤버를
+이름으로 선언된 payload fallback에서 읽고 정제한다. 원본 scalar와 map이 서로
+달라도 둘을 합치거나 덮어쓰지 않는다. 나머지 구조화 필드의 우선순위는 유지한다.
+
+### 4.1 로컬 언어 정책의 모양과 이유
+
+2026-10-19 소유자가 재확인한 기존 결정이다. 같은 타입 조립기를 쓴다는 것은
+모든 소스가 같은 언어 멤버 모양을 저작해야 한다는 뜻이 아니다.
+
+| 로컬 소스 | 투영 | 결정의 드라이버 |
+|---|---|---|
+| Note | 제목이 있으면 `name`, 본문은 `content`; 언어가 알려지면 각각 `nameMap`/`contentMap`을 함께 | Misskey, Mastodon, Pixelfed, Lemmy, PeerTube에서 공통 댓글 객체로 쓰이므로 상호호환 폭이 크기보다 우선한다. 평문 키만 읽는 소비자에게도 값이 있어야 한다. |
+| Core post / Article | `nameMap` / `contentMap`만, 같은 값의 scalar는 생략 | Misskey의 Article 수용 제약과 FEP별로 고르지 않은 호환성을 배경으로, 프로젝트는 Activity 스냅샷 중복 절감을 택했다. Note와 같은 모양으로 바꾸는 것이 개선은 아니다. |
+| Attachment | 기존 scalar 제목 | 이 API가 언어나 map을 새로 추정하지 않는다. |
+| Question 안의 선택지 Note | 기존 scalar 선택지 이름 | 독립 댓글 Note의 저작 정책을 내장 선택지에 강제하지 않는다. |
+
+Activities의 `LIFECYCLE.md` §4가 설명하듯 Create와 Update는 불변 Object
+스냅샷을 embed한다. Article의 같은 본문을 scalar와 map에 모두 넣으면 그
+본문 문자열이 매 스냅샷에 두 번 저장된다. 문서 전체 크기가 정확히 두 배라는
+주장이 아니라, 반복되는 본문 바이트를 피하려는 결정이다.
+
+위 제품명과 호환성 제약은 소유자가 설명한 결정 배경이며, 현재 각 피어 버전을
+새로 측정한 지원 행렬은 아니다. 이 근거를 이유 없이 일반 타입 규칙으로
+바꾸거나, 원격 Article/Note의 수신 표현에 소급 적용하지 않는다.
+
 ## 5. Extension preservation, and its one safety rule
 
 Activity Streams 2.0 Core requires a conforming consumer to ignore properties
@@ -374,6 +401,87 @@ before this split for the site's Article and media fixtures, including actual
 embedded media descriptors. Its Article attachment array is empty, so that
 array hash alone is not evidence for embedded media preservation. These are
 live development fixtures, not portable canonical AS2 document hashes.
+
+## JSON-LD read API, 2026-10-19
+
+애플리케이션 읽기 진입점은 `axismundi_op_read_object_jsonld($id)`이다.
+문자열은 정확한 canonical URI, 정수는 WordPress post ID가 아닌 공통 identity
+ID다. REST는 `GET /wp-json/axismundi/v1/objects/read?uri=...` 또는 `?id=...`로
+노출하며 둘 중 하나만 받는다. 기존 객체 URL과 연합 응답은 바꾸지 않는다.
+
+해소는 identity와 Object 행에서 시작한다. 등록되지 않은 URI는 실제 WP 글이나
+원격 캐시가 있어도 404다. source reader의 `bindings`가 `owner`/`kind` 쌍을
+선언하고 `load($object, $identity)`가 정확한 `source_ref`를 읽는다.
+`document($source, $object, $identity)`가 조립할 문서 사실을 반환한다.
+기존 `supports`/`read`와 블록 뷰모델 계약은 유지된다. JSON-LD callback은
+`register_object_assembly($type, $view_callback, $jsonld_callback)`의 세 번째
+인자로 등록하며, 해당 callback이 없는 특수화는 `parents`를 따라 상속한다.
+원본 소스와 조립 결과 모두 registry의 `id`/`as2_type`과 같아야 한다.
+
+원격 읽기는 네트워크 요청이나 lease 갱신 없이 컬럼, Mention/Hashtag 인덱스,
+reply/quote 관계를 조립한다. 같은 타입의 로컬/원격 문서는 같은 JSON-LD
+조립기를 사용하되 언어 멤버의 모양을 강제로 통일하지 않는다. 로컬 Article의
+map-only, 로컬 Note의 scalar+map, attachment와 Question 선택지의 scalar는
+각 소스의 기존 투영 정책을 따른다. 타입 이름만으로 언어 멤버를 생성하지 않는다.
+원격은 scalar-only/map-only/both/neither를 수신한 대로 보존하며, 인덱싱 컬럼과
+충돌해도 원본의 언어 멤버가 우선한다. HTML과 언어 맵은 공통 정제를 거친다.
+
+Tier 3의 기계 판독 목록은 `axismundi_op_object_payload_fallbacks()`다.
+Question의 `oneOf`/`anyOf`/`closed`/`votersCount`, scalar/map 언어 멤버, 원격 미디어
+descriptor와 주소지정 멤버가 각자의 구조화 공백 사유를 가진다. 사용된 항목과
+사유는 `axPayloadFallback`으로 반환한다. 구조화가 추가되면 그 항목의 fallback을
+제거한다. 원격 확장 전체를 이 목록으로 취급하지 않는다.
+
+원격 부가 정보는 프로젝트 전용 멤버 세 개로 분리한다:
+
+- `axObservation`: `kind=remote-observation`, `source_uri`와 저장된
+  `fetched_at`, `last_success_at`, `remote_updated_at`, `payload_hash`, `etag`,
+  `last_modified`. 시각은 저장된 UTC 값이며, 알 수 없는 값은 null이다.
+- `axUninterpreted`: `trusted=false`, 원본 `context`, 해석하지 않은 `members`.
+  HTML 문자열도 이 안에서는 원형 그대로인 데이터이며 HTML로 렌더하지 않는다.
+- `axPayloadFallback`: 구조화된 출력에 사용된 named fallback과 그 사유.
+
+이 세 멤버의 context IRI는 프로젝트 저장소의 `ns#observation`,
+`ns#uninterpreted`, `ns#payloadFallback`이며 `@type: @json`으로 선언한다.
+따라서 보존된 원격 context와 확장 내용은 활성 JSON-LD context가 아니다.
+발신자가 보낸 blind addressing은 구조화 출력으로 복원하지 않는다.
+Tombstone은 이전 본문이나 확장을 되살리지 않고 최소 문서와 관측 정보만 낸다.
+
+기본 requester는 `public`이다. PHP의 `owner`/`authenticated-peer`는 신뢰하는
+서버 코드가 명시적으로 grant할 때만 허용한다. REST는 공개 읽기만 노출하고
+query의 requester/grant를 신뢰하지 않는다. 비공개 원격 객체는 공개 요청에서
+404, 로컬은 기존 public projection gate를 유지한다. 응답은
+`application/ld+json`, `Cache-Control: no-store`다.
+
+`audit-object-read-api.php`가 이 프로젝트 선택들을 검사한다. 기존 발행물의
+무변 검사는 `audit-object-assembly-baseline.php`가 계속 담당한다. 이 API는
+등록을 자동 보충하지 않으며 attachment 발행, page 기본 투영, 쓰기 경로,
+컬렉션 페이징, 블록 presenter를 바꾸지 않는다.
+
+## Canonical Activity reads, 2026-10-19
+
+`/activities/{local_uuid}/`의 협상 GET/HEAD는 같은 URI에서
+`application/activity+json`을 반환한다. Accept 협상과 `?activitypub` 편의
+선택자를 사용하며, REST 읽기 URL로 리디렉션하지 않는다. HTML 경로는 새로
+만들거나 바꾸지 않는다.
+
+Activity는 Object registry에 가상 등록하지 않고 Activities 원장에서 조회한다.
+로컬 outbound·effective 행, 공개 로컬 Actor, 공개 Outbox의 domain admission
+filter를 통과한 스냅샷만 허용한다. 비공개, inbound, 철회, 알 수 없는 UUID는
+404다. 의도적인 공개 Outbox opt-in도 같은 filter를 통해 적용된다.
+
+타입 등록의 JSON-LD callback은 애플리케이션 읽기와 공유하지만, 서버가 지정한
+두 번째 인자 `snapshot`은 현재 Object의 재조립이 아니라 이미 저작된 Activity
+스냅샷의 읽기임을 뜻한다. 기본 callback은 blind recipient만 제거한다.
+저장된 embedded Object와 context를 유지하고, callback이 스냅샷을 고쳐 쓰면
+응답을 거부한다. 따라서 Article의 map-only 정책도 과거 상태 그대로 유지된다.
+응답에는 `Vary: Accept`와 no-cache 경계를 붙이고 HEAD에는 본문을 보내지 않는다.
+
+`audit-activity-read-route.php`는 공유 assembly 호출, 공개 경계, Outbox 스냅샷
+일치, 역사 재작성 거부와 namespace 판정을 검사한다. 이 추가는 원격
+`ax_object` HTML 뷰를 연합 표현으로 바꾸지 않는다. 기존 Actor 후행 슬래시
+리디렉션에서 디버깅 query가 사라지는 문제와 collection 링크의 `object=`
+인코딩은 이번 슬라이스에서 수정하지 않는다.
 
 ## Sources
 

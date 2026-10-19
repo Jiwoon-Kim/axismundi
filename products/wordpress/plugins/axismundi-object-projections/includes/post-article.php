@@ -1119,6 +1119,9 @@ function axismundi_op_register_local_post_object_view_model() : void {
 	axismundi_op_register_object_source_reader(
 		'local-post-object',
 		array(
+			'bindings' => array( array( 'owner' => 'wordpress-core', 'kind' => 'post' ), array( 'owner' => 'wordpress-core', 'kind' => 'attachment' ) ),
+			'load' => 'axismundi_op_load_registered_core_source',
+			'document' => 'axismundi_op_read_local_jsonld_source',
 			'supports'  => static fn( $source ) : bool => $source instanceof WP_Post && null !== axismundi_op_resolve_object_transformer( $source ),
 			'read'      => 'axismundi_op_local_post_object_view_model',
 			'priority'  => 50,

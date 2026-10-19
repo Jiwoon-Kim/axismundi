@@ -24,7 +24,7 @@ $GLOBALS['axismundi_op_view_model_adapters'] = array();
  * contract so plugin load order never decides which product owns a source.
  *
  * @param string              $id   Stable lowercase slug.
- * @param array<string,mixed> $args supports, read, [priority].
+ * @param array<string,mixed> $args supports, read, [priority, bindings, load, document].
  * @return true|WP_Error
  */
 function axismundi_op_register_object_source_reader( string $id, array $args ) {
@@ -35,12 +35,31 @@ function axismundi_op_register_object_source_reader( string $id, array $args ) {
 	if ( ! is_callable( $args['supports'] ?? null ) || ! is_callable( $args['read'] ?? null ) ) {
 		return new WP_Error( 'ax_op_view_model_args', __( 'A source reader requires callable supports and read callbacks.', 'axismundi-object-projections' ) );
 	}
+	$bindings = (array) ( $args['bindings'] ?? array() );
+	if ( $bindings && ( ! is_callable( $args['load'] ?? null ) || ! is_callable( $args['document'] ?? null ) ) ) {
+		return new WP_Error( 'ax_op_source_binding', 'Registry bindings require load and document callbacks.' );
+	}
+	foreach ( $bindings as $binding ) {
+		if ( ! is_array( $binding ) || empty( $binding['owner'] ) || empty( $binding['kind'] ) ) {
+			return new WP_Error( 'ax_op_source_binding', 'A registry binding requires owner and kind.' );
+		}
+		foreach ( axismundi_op_object_source_readers() as $registered ) {
+			foreach ( $registered['bindings'] ?? array() as $existing ) {
+				if ( $existing['owner'] === $binding['owner'] && $existing['kind'] === $binding['kind'] ) {
+					return new WP_Error( 'ax_op_source_binding_duplicate', 'This registry source already has a reader.' );
+				}
+			}
+		}
+	}
 	return axismundi_op_store_transformer(
 		'axismundi_op_view_model_adapters',
 		array(
 			'id'        => $key,
 			'supports'  => $args['supports'],
 			'read'      => $args['read'],
+			'bindings'  => $bindings,
+			'load'      => $args['load'] ?? null,
+			'document'  => $args['document'] ?? null,
 			'priority'  => isset( $args['priority'] ) ? (int) $args['priority'] : 10,
 		)
 	);

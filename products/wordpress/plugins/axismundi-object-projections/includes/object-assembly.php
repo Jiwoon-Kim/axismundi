@@ -5,15 +5,15 @@ defined( 'ABSPATH' ) || exit;
 $GLOBALS['axismundi_op_object_assemblies'] = array();
 $GLOBALS['axismundi_op_object_assemblies_loaded'] = false;
 
-/** Register one type assembly. The callback receives facts, never a source. */
-function axismundi_op_register_object_assembly( string $type, callable $assemble ) {
+/** Register source-free view and JSON-LD callbacks; JSON-LD may receive a snapshot mode. */
+function axismundi_op_register_object_assembly( string $type, callable $assemble, ?callable $jsonld = null ) {
 	if ( null === axismundi_op_vocabulary_type( $type ) ) {
 		return new WP_Error( 'ax_op_assembly_type', 'Assembly requires a registered vocabulary type.' );
 	}
 	if ( isset( $GLOBALS['axismundi_op_object_assemblies'][ $type ] ) ) {
 		return new WP_Error( 'ax_op_assembly_duplicate', 'An assembly is already registered for this type.' );
 	}
-	$GLOBALS['axismundi_op_object_assemblies'][ $type ] = array( 'type' => $type, 'assemble' => $assemble );
+	$GLOBALS['axismundi_op_object_assemblies'][ $type ] = array( 'type' => $type, 'assemble' => $assemble, 'jsonld' => $jsonld );
 	return true;
 }
 
@@ -21,7 +21,7 @@ function axismundi_op_register_object_assembly( string $type, callable $assemble
 function axismundi_op_object_assemblies() : array {
 	if ( ! $GLOBALS['axismundi_op_object_assemblies_loaded'] ) {
 		$GLOBALS['axismundi_op_object_assemblies_loaded'] = true;
-		axismundi_op_register_object_assembly( 'Object', 'axismundi_op_assemble_object_view_facts' );
+		axismundi_op_register_object_assembly( 'Object', 'axismundi_op_assemble_object_view_facts', 'axismundi_op_assemble_read_jsonld' );
 		do_action( 'axismundi_op_register_object_assemblies' );
 	}
 	return $GLOBALS['axismundi_op_object_assemblies'];
@@ -34,7 +34,7 @@ function axismundi_op_object_assemblies() : array {
  *
  * @return array<string,mixed>|WP_Error
  */
-function axismundi_op_resolve_object_assembly( string $type ) {
+function axismundi_op_resolve_object_assembly( string $type, string $channel = 'assemble' ) {
 	$assemblies = axismundi_op_object_assemblies();
 	$pending = array( $type );
 	$seen = array();
@@ -44,7 +44,7 @@ function axismundi_op_resolve_object_assembly( string $type ) {
 			continue;
 		}
 		$seen[ $current ] = true;
-		if ( isset( $assemblies[ $current ] ) ) {
+		if ( isset( $assemblies[ $current ][ $channel ] ) ) {
 			return $assemblies[ $current ];
 		}
 		$definition = axismundi_op_vocabulary_type( $current );

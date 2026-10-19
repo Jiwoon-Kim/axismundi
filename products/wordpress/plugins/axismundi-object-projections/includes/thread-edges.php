@@ -552,6 +552,9 @@ function axismundi_op_register_remote_source_view_model() : void {
 		axismundi_op_register_object_source_reader(
 			'remote-cache',
 			array(
+				'bindings' => array( array( 'owner' => 'axismundi-object-projections', 'kind' => 'remote-object-cache' ) ),
+				'load' => 'axismundi_op_load_registered_remote_source',
+				'document' => 'axismundi_op_read_remote_jsonld_source',
 				'supports'  => static fn( $source ) : bool => $source instanceof Axismundi_Op_Remote_Source,
 				'read'      => 'axismundi_op_remote_source_view_model',
 				'priority'  => 90,

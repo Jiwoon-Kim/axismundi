@@ -157,6 +157,14 @@ function axismundi_op_primary_in_reply_to_relation( string $source_uri ) : ?stri
 	return is_string( $value ) && '' !== $value ? $value : null;
 }
 
+/** All observed reply parents in source order, for structured Object reads. */
+function axismundi_op_read_reply_parent_uris( string $source_uri ) : array {
+	global $wpdb;
+	$table = axismundi_op_object_relations_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- ordered exact relation lookup.
+	return array_map( 'strval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT target_object_uri FROM {$table} WHERE relation_type = 'in_reply_to' AND observation_state = 'observed' AND source_object_uri_hash = %s AND source_object_uri = %s ORDER BY position ASC, id ASC", hash( 'sha256', $source_uri ), $source_uri ) ) );
+}
+
 /** Add one quote candidate to the normalized candidate map. */
 function axismundi_op_add_quote_candidate( array &$candidates, $value, string $evidence ) : void {
 	$uri = axismundi_op_relation_uri( $value );

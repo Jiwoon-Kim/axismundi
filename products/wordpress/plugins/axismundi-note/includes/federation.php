@@ -620,6 +620,12 @@ function axismundi_note_register_view_model() : void {
 		axismundi_op_register_object_source_reader(
 			'local-note',
 			array(
+				'bindings' => array( array( 'owner' => 'axismundi-note', 'kind' => 'note-post' ) ),
+				'load' => static function ( array $object ) {
+					$envelope = axismundi_note_get( (int) $object['source_ref'] );
+					return is_array( $envelope ) ? new Axismundi_Note_Source( $envelope, get_post( (int) $object['source_ref'] ) ) : null;
+				},
+				'document' => 'axismundi_op_read_local_jsonld_source',
 				'supports'  => static fn( $source ) : bool => $source instanceof Axismundi_Note_Source,
 				'read'      => 'axismundi_note_object_view_model',
 				'priority'  => 10,

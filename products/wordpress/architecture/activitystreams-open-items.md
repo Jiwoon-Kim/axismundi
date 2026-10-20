@@ -1,0 +1,260 @@
+# ActivityStreams Open Items And Preconditions
+
+이 문서는 **계약이 아니라 인수인계**다. 세션 하나가 측정해 놓고 문서에 옮기지
+못한 것들이 다음 세션의 비용이 된 적이 있어서, 그 간극만 담는다. 계약은
+`activitystreams-object-contract.md`,
+`activitystreams-collection-model.md`,
+`activitystreams-storage-boundaries.md` 가 계속 소유한다.
+
+항목이 구현되면 여기서 지우고 해당 계약 문서에 적는다. 이 파일이 비는 것이
+정상 상태다.
+
+최종 갱신 2026-10-20. 측정은 전부 로컬 wp-env 에서 그날 실행한 것이다.
+
+## Corrections That Must Not Recur
+
+**`wp_ax_object_index` 와 `wp_ax_objects` 는 다른 테이블이다.** 이 세션에서 두
+번 혼동했고, 두 번 다 잘못된 결론으로 이어졌다.
+
+```txt
+wp_ax_object_index   object_uri_hash, publicly_listable, has_group_context,
+                     primary_group_uri_hash, updated_at, object_status, source,
+                     attributed_to_uri_hash, is_reply
+                     → 정수 키 없음. hash 키. 캐시 purge 와 함께 축출된다
+                       (remote-objects.php 의 purge 끝에서
+                        axismundi_op_purge_orphan_remote_object_listing_projections()).
+
+wp_ax_objects        identity_id, source_owner, source_kind, source_ref, as2_type,
+                     as2_type_observed_at, attributed_to_uri, attributed_to_uri_hash,
+                     attributed_identity_id, created_at, updated_at
+wp_ax_identities     id, uuid, canonical_uri, canonical_uri_hash, object_kind,
+                     origin, status, created_at, updated_at
+                     → 영속 정수 키. purge 를 넘어 살아남는다.
+```
+
+2026-10-20 측정: `wp_ax_identities` 2012행(`origin` local 1237 / remote 775),
+`wp_ax_objects` 1093행, **캐시 행이 없는 remote identity 442행.** 영속성은 설계
+주장이 아니라 현재 상태다.
+
+따라서 "통합 영속 키가 없다"는 결론은 틀렸다. 귀속 정보도
+`wp_ax_objects.attributed_to_uri_hash` 에 이미 있으므로, 비정규화를 선행
+과제로 요구하기 전에 조인 가능 여부부터 측정한다.
+
+### Three Of Four "Identity Outlives Its Source" Entries Were Features
+
+"정체성이 소스보다 오래 남는다"로 기록해 둔 네 건 중 셋이 설계대로 동작하는
+모습이었다. 표본 하나를 측정 없이 결함으로 일반화한 것이 공통 원인이다.
+
+```txt
+wp_ax_notes 고아 744행      = object_status 'tombstone' 744행과 동일 집합,
+                              비-tombstone 고아 0. Tombstone 주소 유지가 설계.
+remote identity 442행       = 캐시는 축출 가능하고 정체성은 영속. 설계.
+Note 정체성 shadow          = 위 tombstone 의 다른 관찰면.
+page 정체성 2행             = 미결. 재측정 전까지 판단 보류.
+```
+
+## Note Cutoff: Preconditions Before Implementation
+
+컷오프 자체의 근거와 URI 규칙은 `activitystreams-storage-boundaries.md` 의
+"Identity, Authoring Order, And The Note Cutoff" 가 소유한다. 여기에는 **구현
+직전에 확인해야 하는 것**만 둔다.
+
+### 1. 삭제 경로가 권위를 검사해야 한다
+
+계획 전체에서 되돌릴 수 없는 손실은 이 한 곳이다.
+
+```txt
+includes/leases.php          "retention leases for URI-keyed remote object observations"
+includes/remote-objects.php  DELETE FROM {table} WHERE object_uri_hash = %s AND object_uri = %s
+                             purge: expires_at <= now AND NOT EXISTS(활성 lease) → 실제 DELETE
+```
+
+핀: **URI 로 지우는 호출은 authority=local 행을 제거할 수 없다.** `origin`
+컬럼은 `wp_ax_identities` 에 이미 있으므로 새로 만들 필요는 없고, 삭제 경로가
+그것을 **검사하는지**가 확인 대상이다.
+
+측정된 upsert 동작도 같이 둔다: 행이 살아 있는 동안 재수집은 같은 `id` 를
+유지하고(`SELECT … FOR UPDATE` 후 `$wpdb->update( …, array( 'id' => $existing['id'] ) )`),
+purge 로 삭제된 뒤에만 새 행이 된다. "만료되면 id 가 바뀐다"는 부정확하다.
+
+### 2. `?ax_object=` 는 현재 다른 용도가 점유하고 있다
+
+```txt
+결정   로컬 C2S 저작 객체   id = /?ax_object={통합키}   url = /objects/{통합키}
+       원격 객체            로컬 뷰 = /?ax_remote_object={통합키}
+                            id = 원격 발신자가 정한 URI 그대로
+```
+
+통합키는 캐시 행 ID 가 아니라 `wp_ax_identities` 의 영속 키다. 캐시 행 ID 는
+purge 후 달라지므로 외부 노출 주소로 쓸 수 없다.
+
+**선결:** 현재 `?ax_object={hash}` 가 원격 객체의 로컬 HTML 뷰를 맡고 있다.
+새 용도를 붙이기 전에 기존 용도를 분리해야 한다.
+
+### 3. Note 의 `url` 과 `?ax_note=` 노출
+
+현재 Note 투영은 `url` 을 Link 형태로 내보내고 그 `href` 가 `id` 와 같다 —
+운반하는 정보가 0 이고 id 를 중복한다. Article 은 scalar 로 고쳤고 같은 규칙이
+적용되어야 한다.
+
+그리고 `?ax_note=` 가 사람용 주소로 노출되는 것은
+`axismundi-note/includes/view.php` 에 기록된 "private CPT query URL 을 발행하지
+않는다"와 긴장 관계다. 컷오프 때 함께 정리될 자리다.
+
+### 4. 보류된 결정
+
+`wp_posts` 계열의 `inReplyTo` 저작 허용 여부. 저장소를 나눌 이유가 아니라
+저작 속성을 유지할지의 문제다. postmeta 가 저작 권위, 관계 테이블이 재구축
+인덱스. 수신 관계를 표현하는 능력과 로컬 편집 UI 가 허용하는 정책은 분리해서
+다룬다.
+
+## Decisions Made In Conversation, Not Yet In A Contract Document
+
+### interactionPolicy Belongs To The Object
+
+Actor 가 아니다. GoToSocial 문서는 "a post's `interactionPolicy`" 라고 쓰고
+actor 수준의 연합 기본값을 정의하지 않는다. 문서가 정의하는 하위 정책은
+`canLike`·`canReply`·`canAnnounce` 셋뿐이고 **`canQuote` 는 Pre-FEP 제안**이다.
+
+```txt
+attributedTo         누가 승인하는가 — QuoteRequest 수신 inbox, QuoteAuthorization 발행 권위
+interactionPolicy    무엇이 허용되는가 — 그 객체의 정책
+Actor                기본값만 보유. 저작 시 객체 정책을 채우는 로컬 설정이고 발행하지 않는다
+```
+
+Actor 전용이면 안 되는 결정적 이유: Activity 스냅샷은 불변이고 peer 가
+캐시한다. 정책이 Actor 에만 있으면 Actor Update 하나가 과거 모든 객체의 정책을
+소급 변경하는데 캐시된 스냅샷은 예전 값을 말한다.
+
+이 값은 장식이 아니다. Fedify 의 quote 헬퍼는 `canQuote` 가 없으면 **거부**로
+처리한다 — FEP-044f 인용 승인이 동의 기반이라, 소유자가 자동 승인을 명시하지
+않으면 허용되지 않는다. 우리가 내보내는 `automaticApproval: as:Public` 이
+인용을 가능하게 만드는 바로 그 값이다.
+
+### A Published Collection Is A Dynamic Container Over Static Members
+
+```txt
+컬렉션 문서    동적   요청마다, 요청자마다 조립
+멤버 Activity  정적   저장된 스냅샷. 재조립하지 않는다
+순서           불변   feed_sort_at 은 편입 시 고정. 커서가 요청 간 안정적이어야 한다
+```
+
+WordPress 의 동적 블록과 같은 모양이지만, 동적 블록은 자기가 무엇을 렌더했는지
+기억할 필요가 없고 컬렉션은 있어야 한다. "동적 = 매번 전부 재계산"으로 읽으면
+페이징이 깨진다. `ap-outbox` 가 이미 이 모양이다
+(`membership_source: side-effect:publication`, `total_capability: unavailable`,
+이유 `read-time-filter`).
+
+### Per-Requester Filtering Is Ours, Not A Spec Requirement
+
+ActivityPub 5.1 의 "the contents of the outbox are filtered by the permissions
+of the person reading it" 과 "should respond with all of the Public posts" 는
+**소문자**라서 RFC 2119 규범이 아니다. 규범적인 것은 3.2 의
+"Servers MAY require authorization" 과 "SHOULD fail requests which do not pass
+their authorization checks" 쪽이다. 우리 문서에는 **ours** 로 적는다.
+
+따르는 비용 넷:
+
+```txt
+1. 서명된 GET 이 선결    누가 묻는지 모르면 클래스가 public 과 없음 둘뿐.
+                         Appendix B.1 "there are no strongly agreed upon
+                         mechanisms for authentication" → authorized fetch 는 우리 선택.
+2. 캐시를 끊어야 한다    변이 축이 서명 주체라 Vary 로 표현이 안 된다.
+                         Cache-Control: private, no-store.
+3. 블록은 수치로 샌다    총계와 페이지 빈칸이 숨긴 항목 수를 드러낸다.
+                         totalItems 생략과 불투명 커서는 성능이 아니라 공개 범위 사유다.
+4. 관계 변경 중 커서     불변 정렬 키 덕에 "X 보다 오래된 것" 의미는 유지되지만,
+                         새로 보이게 된 더 오래된 항목은 소급해서 나타나지 않는다.
+                         버그가 아니라 선택된 동작이다.
+```
+
+미결: 거부가 404 인가 403 인가. 3.2 는 비공개 대상을 숨기려고 404 를 반환하는
+것을 MAY 로 허용한다. 블록 누출을 줄이려면 404 쪽이다. Activity 핸들러·가시성
+계약 때 정한다.
+
+### Activity Handlers: Per Type First, Extract Later
+
+```txt
+판정 축   타입 + C2S/S2S 경로 + 대상 도메인
+          (같은 Create 라도 로컬 저작 명령과 원격 관측은 다르다)
+순서      타입별로 먼저 완성 → 반복이 확인된 것만 집행 모듈로 추출
+처음부터  멱등성, 실패·재시도 경계, 원장 기록과 상태 변경의 일관성은
+          핸들러마다 명시한다. 나중에 추출하는 것은 구현이지 정확성 조건이 아니다
+```
+
+### The Frontend Application Is A Reader, Not An Endpoint
+
+```txt
+id                      대상의 정체성
+canonical endpoint + 협상  표현을 제공하는 프로토콜 표면
+읽기 API                인증·캐시·로컬/원격 해소를 담당하는 앱의 데이터 표면
+앱 라우트               탐색 위치와 화면 상태
+```
+
+`social/objects/...` 는 화면 주소이지 Object `id` 도 연합 엔드포인트도 아니다
+(`AXISMUNDI_CAPSTONE_ROUTE = 'social'`). 앱을 바꾸거나 없애도 정체성과 연합
+동작은 유지된다. [browser.pub](https://browser.pub/) 이 같은 구성의 참고
+사례다 — 하나의 읽기 표면 위에 일반 화면과 구조 확인 화면.
+
+## Known Defects, Measured
+
+### The Emitter Can Mint A Hashtag `id` It Cannot Serve
+
+```txt
+axismundi_op_hashtag_archive_uri()     ax_hashtag term 이면 무조건 ?tag_id={term_id} 발행
+axismundi_op_numeric_hashtag_term()    같은 term_id 가 post_tag 에도 있으면 해소 거부
+```
+
+두 taxonomy 를 겸하는 term 이면 `tag[]` 와 컬렉션 문서에 발행한 `id` 가 코어
+태그 아카이브로 간다. `?tag_id=` 쪽 거부는 옳다 — 코어 경로를 빼앗으면 안 된다.
+고칠 쪽은 발신이다: 겸용 term 일 때 `id` 를 내지 않거나, 그 아카이브에 다른
+주소를 준다.
+
+2026-10-20 측정 기준 해당 term 0건이라 발현하지 않는다.
+
+### The Archive's `member_types` Is Not Declared Yet
+
+Actor 와 Activity 의 tag 는 참조 저장소에만 남고 term 사용 인덱스로 파생되지
+않는다. 이것이 reader 필터가 아니라 **파생 규칙**이고, 디스크립터로 선언하고
+감사가 핀으로 고정해야 한다. Mastodon 의 태그 메뉴가 같은 결론을 독립적으로
+보여준다 — "@actor 의 #tag 게시물"은 그 Actor 의 **게시물**이지 Actor 가 아니다.
+Actor 의 관심사는 `featuredTags` 라는 별도 Collection 에 있다.
+
+### Actor-Scoped Filtering Needs A Measurement Before Denormalizing
+
+필터 축은 WP author 가 아니라 **Actor URI** 다. 원격 멤버의 `attributedTo` 는
+WP user 가 아예 없으므로 `author` 로는 걸러낼 수 없다.
+
+`wp_ax_term_usage` 에는 저자 컬럼이 없지만 `wp_ax_objects` 에 있다. 조인으로
+충분한지 먼저 측정하고, 실제 조회·페이징이 요구할 때만 비정규화한다. 필터가
+인덱스에 덮이지 않으면 term 안에서 스캔이 되고, 그것은 이 슬라이스가 없앤
+문제와 같은 모양이다.
+
+필터된 결과를 별도 컬렉션으로 발행하지 않는 한 새 `id` 는 필요 없다. 발행한다면
+`id` 가 무필터 주소면 안 된다 — 정체성에 대한 거짓말이 된다.
+
+## Deferred, With Their Evidence
+
+```txt
+ap-liked 커서 리더            200 clamp + ORDER BY id DESC
+flat-reader 스윕              relation_actor_list 500, get_by_actor, get_recent
+delivery spool 보존 정책      16,632행 / 15,040 failed, 정책 없음
+Content-Type profile 패치     ~/.codex/patches/axismundi-content-type-profile-jsonld.patch
+                              와이어 측정 완료: 협상 응답이 ld+json;profile= 요청에
+                              application/activity+json 라벨로 온다. 적용 판단 가능.
+Actors 컬럼 개명              avatar_attachment_id → icon_attachment_id (내부, accessor 가 가림)
+로컬 actor 렌디션             asset_variants() ladder 사용해야 함 (attachment 367 에 large 없음)
+page 정체성 2행               위 "셋 중 넷" 참조. 미결
+tools/ 상태 보고 스크립트     없음
+발신 {id,name} 의 수신 동작    Mastodon 이 tag[] 를 type 으로 걸러 읽으므로 링크화되지
+                              않을 것으로 **예상**. 실제 peer 측정 미완.
+                              외부 발행은 owner 가 시점을 정한다.
+```
+
+## Sources
+
+- ActivityPub, W3C Recommendation 2018-01-23, sections 3.1, 3.2, 5.1, 5.2, Appendix B.1.
+- Activity Streams 2.0 Core, section 4.1 on optional properties.
+- [GoToSocial interaction controls](https://docs.gotosocial.org/en/latest/federation/interaction_controls/)
+- [Pre-FEP: Quote posts, quote policies and quote controls](https://socialhub.activitypub.rocks/t/pre-fep-quote-posts-quote-policies-and-quote-controls/5031)
+- [Fedify interaction controls](https://unstable.fedify.dev/manual/interaction-controls)

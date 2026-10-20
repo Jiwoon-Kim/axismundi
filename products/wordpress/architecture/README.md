@@ -40,6 +40,10 @@ SVG needs to be treated as architecture data.
   presenters share: source readers, assembly by type hierarchy, value priority
   with its payload fallback, extension preservation, provenance and disclosure.
 
+- [ActivityStreams open items](activitystreams-open-items.md) is a handoff, not
+  a contract: measurements and decisions a session took that have not yet moved
+  into the three documents above. It is correct for it to be empty.
+
 The source is WordPress core's
 [`wp_get_db_schema()`](https://github.com/WordPress/wordpress-develop/blob/trunk/src/wp-admin/includes/schema.php).
 The diagrams were checked against its single-site/blog table declarations on

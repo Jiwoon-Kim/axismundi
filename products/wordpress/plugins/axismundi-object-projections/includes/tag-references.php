@@ -156,14 +156,12 @@ function axismundi_op_replace_tag_references( string $uri, array $members, array
 			}
 		}
 		foreach ( $prepared as $row ) {
-			$term_sql = null === $row['term'] ? 'NULL' : (string) $row['term'];
-			$sql = $wpdb->prepare(
-				"INSERT INTO {$refs} (source_uri,source_uri_hash,provider,source_role,descriptor_hash,descriptor_json,term_taxonomy_id,position,is_current,first_seen_at,last_seen_at)
-				 VALUES (%s,%s,%s,%s,%s,%s,{$term_sql},%d,1,%s,%s)
+			if ( false === $wpdb->query( $wpdb->prepare(
+				"INSERT INTO %i (source_uri,source_uri_hash,provider,source_role,descriptor_hash,descriptor_json,term_taxonomy_id,position,is_current,first_seen_at,last_seen_at)
+				 VALUES (%s,%s,%s,%s,%s,%s,NULLIF(%d,0),%d,1,%s,%s)
 				 ON DUPLICATE KEY UPDATE source_role=VALUES(source_role),position=VALUES(position),is_current=1,last_seen_at=VALUES(last_seen_at),term_taxonomy_id=VALUES(term_taxonomy_id)",
-				$uri, $hash, $provider, $role, $row['hash'], $row['json'], $row['position'], $now, $now
-			);
-			if ( false === $wpdb->query( $sql ) ) {
+				$refs, $uri, $hash, $provider, $role, $row['hash'], $row['json'], (int) $row['term'], $row['position'], $now, $now
+			) ) ) {
 				throw new RuntimeException( 'Could not persist tag evidence.' );
 			}
 		}
@@ -171,13 +169,12 @@ function axismundi_op_replace_tag_references( string $uri, array $members, array
 			throw new RuntimeException( 'Could not reconcile term membership.' );
 		}
 		// Recompute from all current evidence, including retained partial observations.
-		$sql = $wpdb->prepare(
-			"INSERT INTO {$usage} (term_taxonomy_id,source_uri,source_uri_hash,provider,feed_sort_at,is_current)
-			 SELECT DISTINCT term_taxonomy_id,source_uri,source_uri_hash,provider,%s,1 FROM {$refs}
+		if ( false === $wpdb->query( $wpdb->prepare(
+			"INSERT INTO %i (term_taxonomy_id,source_uri,source_uri_hash,provider,feed_sort_at,is_current)
+			 SELECT DISTINCT term_taxonomy_id,source_uri,source_uri_hash,provider,%s,1 FROM %i
 			 WHERE source_uri_hash=%s AND source_uri=%s AND is_current=1 AND source_role='content' AND term_taxonomy_id IS NOT NULL
-			 ON DUPLICATE KEY UPDATE is_current=1", $sort, $hash, $uri
-		);
-		if ( false === $wpdb->query( $sql ) || false === $wpdb->query( 'COMMIT' ) ) {
+			 ON DUPLICATE KEY UPDATE is_current=1", $usage, $sort, $refs, $hash, $uri
+		) ) || false === $wpdb->query( 'COMMIT' ) ) {
 			throw new RuntimeException( 'Could not project term membership.' );
 		}
 		return true;
@@ -309,11 +306,10 @@ function axismundi_op_rebuild_tag_references( string $provider, int $after = 0, 
 			return array( 'after' => $after, 'processed' => 0, 'failed' => 0, 'errors' => array(), 'done' => true );
 		}
 		$placeholders = implode( ',', array_fill( 0, count( $types ), '%s' ) );
-		$sql = $wpdb->prepare( "SELECT ID FROM {$table} WHERE ID > %d AND post_type IN ({$placeholders}) ORDER BY ID LIMIT %d", array_merge( array( max( 0, $after ) ), $types, array( $limit ) ) );
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT ID FROM %i WHERE ID > %d AND post_type IN ({$placeholders}) ORDER BY ID LIMIT %d", array_merge( array( $table, max( 0, $after ) ), $types, array( $limit ) ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- placeholders contains only generated %s tokens; every value is prepared.
 	} else {
-		$sql = $wpdb->prepare( "SELECT * FROM {$table} WHERE ID > %d ORDER BY ID LIMIT %d", max( 0, $after ), $limit );
+		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i WHERE ID > %d ORDER BY ID LIMIT %d', $table, max( 0, $after ), $limit ), ARRAY_A );
 	}
-	$rows = $wpdb->get_results( $sql, ARRAY_A );
 	if ( $wpdb->last_error ) {
 		return new WP_Error( 'ax_op_tag_rebuild_read', $wpdb->last_error );
 	}

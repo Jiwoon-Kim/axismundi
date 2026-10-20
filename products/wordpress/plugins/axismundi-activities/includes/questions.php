@@ -388,7 +388,11 @@ function axismundi_act_question_apply_snapshot( Axismundi_Activity $activity, ar
 	$ok = is_array( $existing )
 		? false !== $wpdb->update( $table, $data, array( 'identity_id' => (int) $identity['identity_id'] ) )
 		: false !== $wpdb->insert( $table, array_merge( $data, array( 'identity_id' => (int) $identity['identity_id'], 'lock_version' => 0, 'created_at' => $now ) ) );
-	$wpdb->query( $ok ? 'COMMIT' : 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- atomically retain only complete snapshot changes.
+	if ( $ok ) {
+		$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- atomically retain only complete snapshot changes.
+	} else {
+		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- discard an incomplete snapshot.
+	}
 	if ( $ok ) {
 		/*
 		 * Object Projections may register this durable source in its optional
@@ -553,7 +557,11 @@ function axismundi_act_question_record_vote( array $candidate ) : void {
 		array( '%d', '%s', '%s', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 	); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- durable vote projection from immutable evidence.
 	$ok = $ok && axismundi_act_question_recount_locked( $question );
-	$wpdb->query( $ok ? 'COMMIT' : 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	if ( $ok ) {
+		$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- commit the vote and its tally together.
+	} else {
+		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- discard an incomplete vote change.
+	}
 }
 
 /** Mark a Vote projection inactive when its supporting Activity or Note is withdrawn. */

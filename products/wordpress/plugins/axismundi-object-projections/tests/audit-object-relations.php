@@ -14,6 +14,7 @@ $ax_or_tombstone     = $ax_or_source . '-gone';
 $ax_or_self_fixtures = array();
 $ax_or_authorization = 'https://origin.example/quote-authorizations/' . $ax_or_suffix;
 $ax_or_real_prefix   = $wpdb->prefix;
+$ax_or_real_posts    = $wpdb->posts;
 $ax_or_shadow_prefix = '';
 
 /** Print one fixture assertion. */
@@ -164,7 +165,17 @@ try {
 	// table must never be dropped to prove a migration.
 	$real_rows_before     = count( axismundi_op_quote_relations_for_target( $ax_or_target ) );
 	$ax_or_shadow_prefix = $ax_or_real_prefix . 'axor' . $ax_or_suffix . '_';
+	// The installer now backfills identities and local sources too. Give the
+	// isolated site empty dependencies instead of reading the real site's posts.
+	foreach ( array( 'ax_identities', 'ax_actors', 'ax_notes' ) as $dependency ) {
+		$real_table = $ax_or_real_prefix . $dependency;
+		if ( $real_table === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $real_table ) ) ) {
+			$wpdb->query( $wpdb->prepare( 'CREATE TABLE %i LIKE %i', $ax_or_shadow_prefix . $dependency, $real_table ) );
+		}
+	}
+	$wpdb->query( $wpdb->prepare( 'CREATE TABLE %i LIKE %i', $ax_or_shadow_prefix . 'posts', $ax_or_real_posts ) );
 	$wpdb->prefix        = $ax_or_shadow_prefix;
+	$wpdb->posts         = $ax_or_shadow_prefix . 'posts';
 	$shadow_relation     = axismundi_op_object_relations_table();
 	$shadow_built        = axismundi_op_install();
 	$shadow_source       = 'https://shadow.example/notes/' . $ax_or_suffix;
@@ -178,14 +189,16 @@ try {
 	$shadow_present  = (bool) $wpdb->get_var( "SHOW TABLES LIKE '{$shadow_relation}'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned shadow table.
 	$shadow_backfill = axismundi_op_quote_relations_for_target( $shadow_target );
 	$wpdb->prefix    = $ax_or_real_prefix;
+	$wpdb->posts     = $ax_or_real_posts;
 	ax_or_assert( $ax_or_results, 'v3 to v4 creates and backfills the relation projection on a throwaway prefix without touching real rows', $shadow_built && $shadow_absent && $shadow_upgraded && $shadow_present && 1 === count( $shadow_backfill ) && $real_rows_before === count( axismundi_op_quote_relations_for_target( $ax_or_target ) ) );
 } finally {
 	$wpdb->prefix = $ax_or_real_prefix;
+	$wpdb->posts  = $ax_or_real_posts;
 	foreach ( array( $ax_or_source, $ax_or_conflict, $ax_or_private, $ax_or_tombstone ) as $source_uri ) {
 		axismundi_op_delete_remote_object( $source_uri );
 	}
 	if ( '' !== $ax_or_shadow_prefix ) {
-		foreach ( array( 'ax_remote_objects', 'ax_object_leases', 'ax_object_relations' ) as $shadow_name ) {
+		foreach ( array( 'posts', 'ax_identities', 'ax_actors', 'ax_notes', 'ax_remote_objects', 'ax_object_leases', 'ax_object_relations', 'ax_remote_object_hashtags', 'ax_tag_references', 'ax_term_usage', 'ax_object_mentions', 'ax_thread_edges', 'ax_objects', 'ax_object_index' ) as $shadow_name ) {
 			$wpdb->query( "DROP TABLE IF EXISTS {$ax_or_shadow_prefix}{$shadow_name}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- fixture-owned shadow cleanup.
 		}
 	}

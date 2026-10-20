@@ -320,7 +320,7 @@ function axismundi_op_mark_object_relations_stale( string $source_uri ) : void {
 		return;
 	}
 	$now = current_time( 'mysql', true );
-	$wpdb->query( $wpdb->prepare( "UPDATE " . axismundi_op_object_relations_table() . " SET observation_state = 'stale', updated_at = %s WHERE source_object_uri_hash = %s AND source_object_uri = %s AND observation_state = 'observed'", $now, hash( 'sha256', $source ), $source ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- preserve relation history when a disposable cache row leaves.
+	$wpdb->query( $wpdb->prepare( "UPDATE %i SET observation_state = 'stale', updated_at = %s WHERE source_object_uri_hash = %s AND source_object_uri = %s AND observation_state = 'observed'", axismundi_op_object_relations_table(), $now, hash( 'sha256', $source ), $source ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- preserve relation history when a disposable cache row leaves.
 }
 
 /** Rebuild every remote quote relation from the preserved payload snapshots. */

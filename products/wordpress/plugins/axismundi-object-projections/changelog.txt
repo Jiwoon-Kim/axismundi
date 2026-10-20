@@ -1,0 +1,48 @@
+Axismundi Object Projections release history
+
+= 0.1.2 =
+* Server-rendered block output is escaped where it is printed, with an allowlist that covers
+  what these blocks emit. The stock post allowlist removes the `template` element and the
+  Interactivity API directives, so it is not used here.
+* Body decoration filters run before sanitizing rather than after it, so nothing a filter adds
+  can reach the page unsanitized.
+* Who an object is attributed to now comes from whatever recorded its publication instead of
+  being derived from the WordPress post author. The two agree only while every account has one
+  identity, and they stop agreeing as soon as anyone publishes as an organisation.
+* A post whose author has no Actor is projected and readable, without an `attributedTo`,
+  rather than refused. It is not published to anyone.
+* The site Actor is no longer a fallback author. It is an application identity, not a person
+  who writes posts.
+
+= 0.1.1 =
+* Background acquisition is now a setting, off by default. While it is off this site
+  contacts a remote server only when an administrator asks it to under Tools > Remote
+  Objects. Turning it off also clears anything already queued.
+* A post publishes its own media as attachments: the featured image and the media blocks
+  the author placed, and only media this site holds.
+* A published post is projected with Axismundi Actors alone; an Actor document always names
+  its outbox, followers and following, which answer empty without an Activity ledger.
+* A product can claim this projection for an object whose context it owns, instead of
+  rebuilding it. Axismundi Forum publishes its Topics that way.
+* A quote of the author's own post is recognised as approved, as FEP-044f allows, when both
+  authors are known here.
+* Filtered card templates and interaction controls are now named blocks rather than markup,
+  so what reaches the page is always something a registered block rendered.
+
+= 0.1.0 =
+* First release.
+* Content negotiation on existing WordPress object URLs, so a post's own address answers
+  with ActivityStreams JSON-LD when asked for it, and a transformer registry with a single
+  renderer behind it.
+* A Core Post to Article transformer, and an optional adapter for Axismundi Media Library
+  attachments.
+* Collections: shared media folders on a stable UUID route, a replies collection, and the
+  representation of an Actor outbox where Axismundi Activities supplies one.
+* Hashtags, mentions, thread edges, reply context and quote context stored as their own
+  records rather than re-derived from content.
+* A URI-keyed repository of remote object observations, with administrator inspection under
+  Tools > Remote Objects and a remote collection probe that stores nothing.
+* Cached remote media is described and never downloaded or hotlinked; observations expire
+  and are purged daily.
+* The standalone negotiator disables itself when the official ActivityPub plugin is active,
+  so that one URL keeps one answer.

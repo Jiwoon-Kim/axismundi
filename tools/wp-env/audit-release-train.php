@@ -75,7 +75,7 @@ foreach ( $ax_rt_plugins as $ax_rt_name => $ax_rt_spec ) {
 	 * the question.
 	 */
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema check.
-	$ax_rt_rows_before = $ax_rt_exists ? (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . $ax_rt_full_table ) : 0;
+	$ax_rt_rows_before = $ax_rt_exists ? $wpdb->get_col( $wpdb->prepare( 'SELECT id FROM %i ORDER BY id', $ax_rt_full_table ) ) : array();
 	$ax_rt_before      = get_option( $ax_rt_option_name, '' );
 	update_option( $ax_rt_option_name, '0', false );
 	call_user_func( $ax_rt_upgrade );
@@ -84,12 +84,31 @@ foreach ( $ax_rt_plugins as $ax_rt_name => $ax_rt_spec ) {
 		update_option( $ax_rt_option_name, $ax_rt_before, false );
 	}
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema check.
-	$ax_rt_rows_after = $ax_rt_exists ? (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . $ax_rt_full_table ) : 0;
+	$ax_rt_rows_after = $ax_rt_exists ? $wpdb->get_col( $wpdb->prepare( 'SELECT id FROM %i ORDER BY id', $ax_rt_full_table ) ) : array();
 	ax_rt_assert(
 		$ax_rt_results,
 		sprintf( '%s migrates a database that is behind back up to it, and the rows that were there still are', $ax_rt_name ),
-		$ax_rt_expected === $ax_rt_after && $ax_rt_rows_before === $ax_rt_rows_after
+		$ax_rt_expected === $ax_rt_after && ! array_diff( $ax_rt_rows_before, $ax_rt_rows_after )
 	);
+}
+
+// Tag evidence and term usage have their own installer/version flag; the remote
+// cache schema version alone does not prove these new projections were installed.
+if ( function_exists( 'axismundi_op_maybe_install_tag_references' ) ) {
+	$ax_rt_tag_tables = array( axismundi_op_tag_references_table(), axismundi_op_term_usage_table() );
+	$ax_rt_tag_before = array();
+	foreach ( $ax_rt_tag_tables as $ax_rt_tag_table ) {
+		$ax_rt_tag_before[ $ax_rt_tag_table ] = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', $ax_rt_tag_table ) );
+	}
+	update_option( 'ax_op_tag_reference_schema', '0', false );
+	axismundi_op_maybe_install_tag_references();
+	foreach ( $ax_rt_tag_tables as $ax_rt_tag_table ) {
+		$ax_rt_tag_columns = $wpdb->get_col( $wpdb->prepare( 'SHOW COLUMNS FROM %i', $ax_rt_tag_table ) );
+		$ax_rt_tag_required = $ax_rt_tag_table === axismundi_op_term_usage_table() ? 'feed_sort_at' : 'descriptor_json';
+		ax_rt_assert( $ax_rt_results, $ax_rt_tag_table . ' upgrades through its own entry point without losing rows',
+			'1' === get_option( 'ax_op_tag_reference_schema' ) && in_array( $ax_rt_tag_required, $ax_rt_tag_columns, true )
+			&& $ax_rt_tag_before[ $ax_rt_tag_table ] === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', $ax_rt_tag_table ) ) );
+	}
 }
 
 $ax_rt_failures = count( array_filter( $ax_rt_results, static fn( bool $result ) : bool => ! $result ) );

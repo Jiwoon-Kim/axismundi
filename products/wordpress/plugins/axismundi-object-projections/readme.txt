@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.2
+Stable tag: 0.1.3
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -43,7 +43,8 @@ published has no `attributedTo` -- it is readable, it simply was not published b
 * A **Core Post to Article transformer**, and an optional adapter for Axismundi Media
   Library attachments.
 * **A post's own media**, listed as attachments so a reader can fetch what the body shows:
-  the featured image and the media blocks the author placed. Only media this site holds --
+  the media blocks the author placed. Featured media is represented separately as `image`,
+  and is an attachment only when it also appears in the body. Only media this site holds --
   a hotlinked image is left in the text, because its type and size cannot be stated.
 * **Collections**: an Actor's outbox, followers and following, a shared media folder at a
   stable UUID route, and a replies collection. An Actor document always names them; without
@@ -76,8 +77,10 @@ URI, which stays canonical, and it can be rebuilt by fetching again. Observation
 and a scheduled daily task deletes the expired ones along with anything left pointing at
 them.
 
-Remote media is **never downloaded and never hotlinked**. A cached object's attachments are
-described -- type, size, the text the author wrote about them -- and not fetched. Where a
+Remote media is **never downloaded by this plugin**. A cached object's attachments are
+described -- type, size, the text the author wrote about them -- and not fetched by the server.
+Public media can be hotlinked when a visitor opens a rendered object, so the remote media
+host receives that visitor's network request; the renderer omits the referrer. Where a
 cached object is shown locally at all, it is shown `noindex`, only for objects that were
 addressed publicly, and only as a courtesy view beside the remote original.
 
@@ -142,49 +145,18 @@ service and privacy policy.
 
 == Changelog ==
 
-= 0.1.2 =
-* Server-rendered block output is escaped where it is printed, with an allowlist that covers
-  what these blocks emit. The stock post allowlist removes the `template` element and the
-  Interactivity API directives, so it is not used here.
-* Body decoration filters run before sanitizing rather than after it, so nothing a filter adds
-  can reach the page unsanitized.
-* Who an object is attributed to now comes from whatever recorded its publication instead of
-  being derived from the WordPress post author. The two agree only while every account has one
-  identity, and they stop agreeing as soon as anyone publishes as an organisation.
-* A post whose author has no Actor is projected and readable, without an `attributedTo`,
-  rather than refused. It is not published to anyone.
-* The site Actor is no longer a fallback author. It is an application identity, not a person
-  who writes posts.
+= 0.1.3 =
+* Add a shared Object identity registry, source readers and type-based assembly, with a
+  public JSON-LD read API that labels remote observations and preserved payload fallbacks.
+* Serve canonical Activity documents and cursor-paged outbox collections without
+  rewriting immutable Activity snapshots or exposing blind recipients.
+* Index declared tag references separately from derived term usage. Add public member
+  queries with Actor URI filters, scoped cursors, and visibility checks shared by HTML.
+* Emit local hashtag references as id/name pairs, retain numeric term identities, and
+  move human archives to /hashtags/ while preserving the previous route.
+* Use scalar Article permalinks, content-only embedded attachments, standalone rendition
+  Links and scalar media page URLs. Project public audio and video cover images.
+* Require explicit source profiles for additional post types instead of assigning a
+  generic fallback type, and use a vocabulary snapshot for assembly contracts.
 
-= 0.1.1 =
-* Background acquisition is now a setting, off by default. While it is off this site
-  contacts a remote server only when an administrator asks it to under Tools > Remote
-  Objects. Turning it off also clears anything already queued.
-* A post publishes its own media as attachments: the featured image and the media blocks
-  the author placed, and only media this site holds.
-* A published post is projected with Axismundi Actors alone; an Actor document always names
-  its outbox, followers and following, which answer empty without an Activity ledger.
-* A product can claim this projection for an object whose context it owns, instead of
-  rebuilding it. Axismundi Forum publishes its Topics that way.
-* A quote of the author's own post is recognised as approved, as FEP-044f allows, when both
-  authors are known here.
-* Filtered card templates and interaction controls are now named blocks rather than markup,
-  so what reaches the page is always something a registered block rendered.
-
-= 0.1.0 =
-* First release.
-* Content negotiation on existing WordPress object URLs, so a post's own address answers
-  with ActivityStreams JSON-LD when asked for it, and a transformer registry with a single
-  renderer behind it.
-* A Core Post to Article transformer, and an optional adapter for Axismundi Media Library
-  attachments.
-* Collections: shared media folders on a stable UUID route, a replies collection, and the
-  representation of an Actor outbox where Axismundi Activities supplies one.
-* Hashtags, mentions, thread edges, reply context and quote context stored as their own
-  records rather than re-derived from content.
-* A URI-keyed repository of remote object observations, with administrator inspection under
-  Tools > Remote Objects and a remote collection probe that stores nothing.
-* Cached remote media is described and never downloaded or hotlinked; observations expire
-  and are purged daily.
-* The standalone negotiator disables itself when the official ActivityPub plugin is active,
-  so that one URL keeps one answer.
+Earlier releases are recorded in changelog.txt.

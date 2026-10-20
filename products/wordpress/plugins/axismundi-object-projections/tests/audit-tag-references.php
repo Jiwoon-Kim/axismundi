@@ -129,8 +129,8 @@ try {
 	$next = axismundi_op_store_remote_object( array_merge( $payload, array( 'id' => $next_uri ) ) );
 	$remote_table = axismundi_op_remote_objects_table();
 	$bad_id = (int) $remote['id'];
-	$inject_bad_date = static function ( $sql ) use ( $remote_table, $bad_id ) {
-		if ( str_starts_with( $sql, "SELECT * FROM {$remote_table} WHERE ID >" ) ) {
+	$inject_bad_date = static function ( $sql ) use ( $wpdb, $remote_table, $bad_id ) {
+		if ( str_starts_with( $sql, $wpdb->prepare( 'SELECT * FROM %i WHERE ID >', $remote_table ) ) ) {
 			return str_replace( 'SELECT *', "SELECT *, IF(id={$bad_id},'invalid',published_at) AS published_at", $sql );
 		}
 		return $sql;
@@ -144,7 +144,7 @@ try {
 	$check( 'a bad rebuild row is reported and does not trap resume on the same id', is_array( $failed_batch ) && 2 === $failed_batch['processed'] && 1 === $failed_batch['failed'] && $bad_id === $failed_batch['errors'][0]['id'] && (int) $next['id'] === $failed_batch['after'] );
 	$post_scan = '';
 	$capture_scan = static function ( $sql ) use ( $wpdb, &$post_scan ) {
-		if ( str_contains( $sql, "FROM {$wpdb->posts} WHERE ID >" ) ) {
+		if ( str_contains( $sql, $wpdb->prepare( 'FROM %i WHERE ID >', $wpdb->posts ) ) ) {
 			$post_scan = $sql;
 		}
 		return $sql;

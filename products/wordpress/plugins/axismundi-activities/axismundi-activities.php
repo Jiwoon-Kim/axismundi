@@ -3,9 +3,10 @@
  * Plugin Name:       Axismundi Activities
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/wordpress/plugins/axismundi-activities
  * Description:       ActivityStreams activity ledger and social relationship state for Axismundi. Requires Axismundi Actors. Axismundi Object Projections is an optional integration that adds local post lifecycle, Object representation, and Object-based interaction. It owns no HTTP inbox, signatures, delivery queue, notifications, or Web Push, and makes no network request of its own.
- * Version:           0.1.0
+ * Version:           0.1.1
  * Requires at least: 6.7
  * Requires PHP:      8.1
+ * Requires Plugins:  axismundi-actors
  * Author:            KIM JIWOON
  * Author URI:        https://designbusan.ai.kr
  * License:           GPL-3.0-or-later
@@ -24,14 +25,11 @@
  * that asks Actors to resolve a handle a visitor typed and answers with the address of
  * their own server; it is rate limited and stores nothing. readme.txt says so publicly.
  *
- * `Requires Plugins` is deliberately absent until the dependency slugs exist on
- * wordpress.org: a header naming a slug that is not there blocks activation instead of
- * explaining anything.
  */
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTIVITIES_VERSION = '0.1.0';
+const AXISMUNDI_ACTIVITIES_VERSION = '0.1.1';
 
 require_once __DIR__ . '/includes/repository.php';
 require_once __DIR__ . '/includes/questions.php';

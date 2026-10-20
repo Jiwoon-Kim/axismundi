@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.2
+Stable tag: 0.1.3
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -108,15 +108,15 @@ section covers only what this plugin's own code requests.
 
 == Changelog ==
 
-= 0.1.2 =
-* Stop the actor management screen from creating an actor while rendering. It read a
-  user id from the query string and created a record for it, so a link could make an
-  administrator perform that write; the screen now only reads, and creation happens in
-  the activation form, which carries a nonce.
-* Sanitize profile-link names and addresses where the form is read, not only where they
-  are saved.
-* Pass every custom table name to the database through a prepared identifier placeholder
-  rather than interpolating it into the query text.
+= 0.1.3 =
+* Extend the shared identity namespace for Object projections while keeping identity
+  records independent from expiring remote observations.
+* Resolve collection-backed delivery recipients with bounded traversal and explicit
+  completion, without treating cached remote actors as automatically addressable.
+* Keep local Actor advertisement separate from ActivityPub transport ownership and
+  let the integration application declare its NodeInfo software version.
+
+Earlier releases are recorded in changelog.txt.
 
 = 0.1.1 =
 * Sanitize filtered Actor display names and biographies immediately before rendering.

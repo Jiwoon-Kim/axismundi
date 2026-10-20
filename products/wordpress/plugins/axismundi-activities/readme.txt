@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.0
+Stable tag: 0.1.1
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -105,20 +105,13 @@ Nothing else here reaches outside this site.
 
 == Changelog ==
 
-= 0.1.0 =
-* First release.
-* An immutable, URI-keyed Activity ledger with a read-only administrator log, and social
-  relationship state derived by reading it rather than stored alongside it.
-* Follow and Block for local and cached remote actors, tracking the accepted inverse edge
-  apart from the outgoing one.
-* Like, Dislike, emoji reactions, Announce, Reply and votes, each with its Undo recorded as
-  a further Activity rather than as a deletion.
-* FEP-044f QuoteRequest decisions.
-* One Create recorded when a projectable post is first published, and a Delete from its
-  stable identity when it goes.
-* Feed blocks -- feed, loop, item template, tabs, filters, pagination, density switch --
-  and follow, interaction and reaction-bar blocks.
-* A public-safe outbox query for representation plugins: the stored payload stays lossless
-  while blind recipients and non-public Activities stay out of public projections.
-* Anonymous remote follow, which sends a visitor to their own server to finish rather than
-  asking them for an account here.
+= 0.1.1 =
+* Declare the published Axismundi Actors dependency for WordPress plugin management.
+* Project Question definitions and vote observations from immutable Activity evidence,
+  separating local authority from remote observations.
+* Add stable public outbox cursor queries and canonical Activity retrieval support for
+  representation integrations, without introducing network transport.
+* Keep public snapshots free of blind recipients and preserve recorded payloads.
+* Make transaction completion explicit for Plugin Check's SQL analysis.
+
+Earlier releases are recorded in changelog.txt.

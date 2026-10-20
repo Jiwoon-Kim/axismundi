@@ -1,0 +1,11 @@
+Axismundi Actors release history
+
+= 0.1.2 =
+* Stop the actor management screen from creating an actor while rendering. It read a
+  user id from the query string and created a record for it, so a link could make an
+  administrator perform that write; the screen now only reads, and creation happens in
+  the activation form, which carries a nonce.
+* Sanitize profile-link names and addresses where the form is read, not only where they
+  are saved.
+* Pass every custom table name to the database through a prepared identifier placeholder
+  rather than interpolating it into the query text.

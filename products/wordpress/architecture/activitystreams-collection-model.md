@@ -505,9 +505,10 @@ axismundi_op_get_hashtag_archive_items( WP_Term, $type, $limit )
 
 진짜로 남은 제약은 세 개이고, 모두 좁다.
 
-1. **페이지 2.** `$limit` 가 소스별로 적용된 뒤 병합·슬라이스된다. 1 페이지만
-   정확하다. 두 소스에 독립적인 offset 을 줄 수 없으므로 공유 cursor 가
-   필요하다. 이것이 `first`/`next` 를 아직 켜지 않은 실제 이유다.
+1. **열거와 페이지 2.** `$limit` 가 소스별로 적용된 뒤 가시성 필터·병합·슬라이스된다.
+   긴 비공개 구간에서는 첫 페이지도 부족해질 수 있다. 두 소스에 독립적인
+   offset 을 줄 수 없으므로 공유 cursor 와 충분한 가시 멤버 탐색이 필요하다.
+   새 URI 기반 term 인덱스로 전환하기 전까지 기존 reader를 유지한다.
 2. **`totalItems`.** 가시성이 양쪽 모두 SQL 술어가 아니라 항목별 read-time
    필터다(`axismundi_op_object_card_publicly_renderable`,
    `axismundi_op_remote_object_is_publicly_listable`). 따라서 수는 bounded
@@ -560,9 +561,9 @@ attachment  id = http://localhost:8884/?attachment_id=18210
 pretty permalink 는 사라지지 않는다. 그 컬렉션 문서의 `url` 로 이동하며,
 사람이 여는 주소로 계속 서빙된다.
 
-### Prerequisite: The Numeric Form Must Resolve
+### Numeric Identity Routing
 
-이것은 선결 조건이고, 지금 충족되지 않는다. 2026-10-20 측정:
+어댑터 구현 전에는 다음과 같았다. 2026-10-20 측정:
 
 ```txt
 GET /hashtag/hashtag/      Accept: ld+json;profile=…   200  AS2  OrderedCollection
@@ -570,8 +571,9 @@ GET /?ax_hashtag=hashtag   Accept: ld+json;profile=…   200  AS2  OrderedCollec
 GET /?tag_id=1224          Accept: ld+json;profile=…   200  text/html   ← AS2 아님
 ```
 
-코어의 `tag_id` query var 는 `post_tag` 전용이라 우리 taxonomy 에 닿지 않고
-HTML 로 떨어진다. `id` 를 그 형태로 발행하면서 거기서 AS2 를 서빙하지 않으면
+코어 `WP_Query`의 `tag_id`는 `post_tag` 조회로 해석되지만, `WP::public_query_vars`에는
+없다. 따라서 원시 URL의 `tag_id`가 기본 요청 파서에서 버려지는 것도 위 결과의
+원인이다. `id` 를 그 형태로 발행하면서 거기서 AS2 를 서빙하지 않으면
 **역참조되지 않는 식별자를 발행하는 것**이 된다. ActivityPub 3.1 은 배포되는
 객체의 `id` 가 publicly dereferenceable 이어야 한다고 하고, 3.2 는 그 GET 이
 `application/ld+json; profile="…"` 에 대해 AS 표현을 반환해야 한다고 한다.
@@ -583,14 +585,96 @@ HTML 로 떨어진다. `id` 를 그 형태로 발행하면서 거기서 AS2 를 
 `totalItems` 와 페이징은 그 뒤에 가산적으로 붙는다. 선결 조건은 identity 이며
 멤버십이 아니다.
 
-`tag_id` 라는 이름 자체는 코어가 `post_tag` 로 선점하고 있다. 결정된 것은
-**숫자 query 형태**(`?p=` · `?attachment_id=` 와 같은 축)이고, 실제 query var
-이름은 코어와 충돌하지 않아야 한다. `?ax_hashtag_id=123` 이 코어 관례
-(`attachment_id`)와 같은 모양이면서 충돌하지 않는 후보이며, 최종 이름은
-owner 결정 사항으로 남긴다.
+이름은 owner 결정대로 **`?tag_id={term_id}`**다. 다른 변수명 승인은 선결 조건이 아니다.
+`request` 어댑터가 원시 GET과 이미 파싱된 query를 대조하고, ID가 `ax_hashtag` term일
+때만 해당 taxonomy 조회로 바꾼다. `tag_id`를 전역 공개 변수로 등록하지 않는다.
+기존 `post_tag` ID, 다른 객체 선택자와 섞인 요청, 잘못된 값은 가로채지 않는다.
+레거시 공유 term이 두 taxonomy에 동시에 존재하는 경우에도 Core tag 경로를 우선한다.
+우리 숫자 주소는 HTML에서도 pretty 주소로 canonical 리디렉션하지 않으며,
+협상·`activitypub` 선택자·HEAD는 기존 OP router를 사용한다.
+
+컬렉션 문서는 숫자형 `id`, 프로젝트 선택인 `OrderedCollection`, pretty HTML
+`url`을 제공한다. 목록 reader 전환은 별도이며 `totalItems`를 새로 주장하지 않는다.
+2026-10-20 owner 확인: canonical `id`는 `?tag_id=ID`로 유지한다.
+사람용 경로는 `/hashtags/{slug}/`이며 컬렉션의 `url`은 Link 포장이 아닌 문자열이다.
+기존 `/hashtag/{slug}/`도 해소하며 HTML은 새 경로로 canonical 리디렉션한다.
+`name`은 `#` + term 이름, 비어 있지 않은 description은 `wp_kses_post()`를 거친
+`summary`로 제공한다. 언어 맵은 생성하지 않는다. 이는 로컬 표현 정책이지
+Collection의 `content`를 표준이 금지한다는 뜻이 아니다.
+
+이름 비교는 대소문자를 통합하고 관측 표기는 보존한다. Mastodon의
+`Tag::HASHTAG_SEPARATORS`와 같이 밑줄을 유지하며 하이픈으로 치환하지 않는다.
+Mastodon은 하이픈을 해시태그 문자로 허용하지 않는다. 다만 수신한 `tag` 선언은
+증거이므로 우리 reader가 하이픈을 삭제해 다른 이름과 합치지는 않는다.
+Mastodon 전체 NFKC/ASCII folding을 복제한 것은 아니며 이 결정은 밑줄/하이픈
+동일시 여부에 관한 것이다.
+검증 명령은 `audit-hashtag-policy.php`이며 `AX_OP_HTTP_TEST_ORIGIN`을 로컬 개발
+서버로 지정하면 HTTP 협상과 리디렉션·HEAD까지 실행한다.
 
 pretty permalink 는 이미 발행된 문서들의 `tag[].href` 에 들어가 있고 원격
 캐시에 남는다. 계속 서빙해야 하며 이 변경으로 의미가 바뀌지 않는다.
+
+## 2026-10-20: 멤버 조회와 공개 정체성의 분리
+
+공개 협상 문서는 정체성·이름·설명·사람용 주소만 제공한다. 멤버와 총계를
+발행하지 않는다. Mastodon의 현 모양은 참고 사례이며 이 정책의 표준 근거는 아니다.
+멤버를 제공하는 별도 앱 표면은 다음과 같다.
+
+```text
+GET /wp-json/axismundi/v1/hashtags/{term_id}/members
+    ?type=all|post|note|media|remote
+    &actor={percent-encoded Actor URI}&limit=50&cursor=...
+```
+
+응답은 `collection_uri`, `items`, `next_cursor`인 앱 조회 결과다. 항목은
+`object_uri`, `published`, `origin`, `type`을 제공하며 객체 문서는 기존 읽기 API로
+해소한다. 새 AS2 CollectionPage나 새 정체성을 발행하지 않는다. 로그인, 내부
+호출, `requester` 같은 query 값은 권한을 높이지 않는다. 이번 표면은 항상 공개
+멤버만 반환하고 `Cache-Control: no-store`를 사용한다.
+`type`은 기존 HTML의 source bucket을 유지한다. `post`/`note`/`media`는 로컬
+Post/Note CPT/attachment, `remote`는 원격 관측이며 기본 `all`은 기존 Post·Note와
+원격 멤버다. AS2 타입 이름 전체를 받는 새 타입 필터로 오해하지 않는다.
+직접 보기가 가능한 `unlisted` 미디어도 공개 목록에는 편입하지 않는다.
+
+HTML 아카이브 블록도 같은 PHP 조회 함수를 사용한다. 이전의 로컬 taxonomy /
+원격 hashtag index union은 production reader에서 제거한다. 로컬 taxonomy 권위와
+원격 수신 증거의 소유권은 바뀌지 않는다. 이전 원격 인덱스의 저장·정리는 기존
+소비자 정리 범위 밖이며, 더 이상 이 아카이브의 조회 원장은 아니다.
+
+멤버십은 `ax_term_usage.is_current=1`인 콘텐츠 참여 투영이다. Actor 프로필의
+태그는 관심사/참조로 보존하고 이 피드의 멤버십으로 파생하지 않는다. 이는
+Actor를 Collection에 담을 수 없다는 표준 제약이 아닌 기본 게시물 탐색 정책이다.
+아직 연결되지 않은 Actor/Activity/C2S provider를 연결 완료로 주장하지 않는다.
+
+Actor 필터는 `term_usage → identities → objects.attributed_to_uri_hash/uri`의
+기존 영속 레지스트리 조인이다. WP user의 `author`가 아니며 귀속 컬럼을 복제하지
+않는다. 캐시와 함께 축출되는 `object_index`를 조인 권위로 사용하지 않는다.
+
+정렬은 기존 불변 `(feed_sort_at DESC, id DESC)`다. 원본 `published`나 `updated`가
+변해도 편입 순서를 바꾸지 않는다. 커서는 term·type·actor 조건과 위치를 HMAC으로
+묶고, 변조·다른 필터에서 재사용하면 400이다. 삽입·삭제 중의 스냅샷 격리를
+약속하지는 않는다. 새 상단 멤버는 처음부터 새로 조회할 때 보인다.
+
+각 요청은 100행씩 최대 500후보를 검사한다. 공개 여부는 소스의 현재 공개성에서
+검사하고 필터는 그 결과를 좁힐 뿐이다. 긴 비공개/축출 구간에서 빈 `items`와
+`next_cursor`가 함께 올 수 있으므로 다음 커서가 없어질 때까지 탐색한다. 전체를
+한 응답에 싣지 않고, 연합 전체 수집의 완전성이나 정확한 총계를 주장하지 않는다.
+
+기존 데이터의 초기 재구축은 WP-Cron의 `ax_op_term_member_backfill`이 각 100행씩
+처리한다. `ax_op_term_members_backfill` option에 stage·after·failed와 최근 오류를
+남기며 재개한다. 진행 중에는 새 인덱스만 읽으므로 결과가 부분적일 수 있다.
+오류/실패 수는 완료 stage와 별도로 확인해야 한다. 기존 union으로 조용히 fallback
+하지 않는다. 설치된 현재 개발 환경에서는 두 source 재구축을 완료하고 failed=0을
+확인했다. Core term count는 바꾸지 않는다.
+
+검증: `wp eval-file .../tests/audit-term-members.php`. 로컬 Post와 원격 Object를
+실제 저장 API로 만들고, 이전 reader의 원본 두 저장소에서 산출한 URI 집합을
+새 API 및 실제 HTML 카드와 비교한다. 긴 비공개 구간은 실제 비공개 관측 105개,
+축출 구간은 테스트용 인덱스 후보 505개로 구분한다. 외부 발행은 하지 않는다.
+변이 검증에서는 source 공개성·remote listability 검사를 소스 존재 확인으로
+치환하면 18핀 중 9개가 실패했고, 커서 scope 일치 검사를 제거하면 Actor·type
+재사용 거부 핀 2개가 실패했다. 두 변이는 복원했다. HTTP 검증을 포함하려면
+wp-env CLI에서 `AX_OP_HTTP_TEST_ORIGIN=http://wordpress`로 위 감사를 실행한다.
 
 ## Sources
 

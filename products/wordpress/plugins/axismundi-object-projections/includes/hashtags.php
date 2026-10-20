@@ -11,6 +11,11 @@ const AXISMUNDI_OP_HASHTAG_TAXONOMY     = 'ax_hashtag';
 const AXISMUNDI_OP_HASHTAG_KEY_META     = '_ax_op_hashtag_key';
 const AXISMUNDI_OP_HASHTAG_MAX_LENGTH   = 100;
 
+/** Lexical project policy, independent of an observed type label. */
+function axismundi_op_is_hashtag_descriptor( $member ) : bool {
+	return is_array( $member ) && is_string( $member['name'] ?? null ) && str_starts_with( $member['name'], '#' );
+}
+
 /** @return string Remote cached Object-to-hashtag index table name. */
 function axismundi_op_remote_object_hashtags_table() : string {
 	global $wpdb;
@@ -45,9 +50,11 @@ function axismundi_op_register_hashtag_taxonomy() : void {
 			'show_in_rest'      => true,
 			'show_admin_column' => true,
 			'hierarchical'      => false,
-			'rewrite'           => array( 'slug' => 'hashtag' ),
+			'rewrite'           => array( 'slug' => 'hashtags' ),
 		)
 	);
+	// Retain negotiated and human access to the previous archive path.
+	add_permastruct( 'ax_hashtag_legacy', 'hashtag/%ax_hashtag%', array( 'with_front' => true ) );
 }
 add_action( 'init', 'axismundi_op_register_hashtag_taxonomy', 20 );
 
@@ -56,20 +63,17 @@ function axismundi_op_hashtag_routes_installed() : bool {
 	if ( '' === (string) get_option( 'permalink_structure', '' ) ) {
 		return true;
 	}
-	foreach ( array_keys( (array) get_option( 'rewrite_rules', array() ) ) as $rule ) {
-		if ( str_starts_with( (string) $rule, 'hashtag/' ) ) {
-			return true;
-		}
-	}
-	return false;
+	$rules = array_keys( (array) get_option( 'rewrite_rules', array() ) );
+	return (bool) array_filter( $rules, static fn( $rule ) => str_starts_with( (string) $rule, 'hashtags/' ) )
+		&& (bool) array_filter( $rules, static fn( $rule ) => str_starts_with( (string) $rule, 'hashtag/' ) );
 }
 
 /** Self-heal rewrite rules after ZIP replacement or a missed activation hook. */
 function axismundi_op_maybe_upgrade_hashtag_routes() : void {
-	if ( axismundi_op_hashtag_routes_installed() || get_transient( 'ax_op_hashtag_rewrite_retry' ) ) {
+	if ( axismundi_op_hashtag_routes_installed() || get_transient( 'ax_op_hashtag_plural_rewrite_retry' ) ) {
 		return;
 	}
-	set_transient( 'ax_op_hashtag_rewrite_retry', 1, HOUR_IN_SECONDS );
+	set_transient( 'ax_op_hashtag_plural_rewrite_retry', 1, HOUR_IN_SECONDS );
 	flush_rewrite_rules( false );
 }
 add_action( 'init', 'axismundi_op_maybe_upgrade_hashtag_routes', 21 );
@@ -165,7 +169,7 @@ function axismundi_op_hashtag_is_federated( WP_Post $post ) : bool {
 	return (bool) apply_filters( 'axismundi_op_hashtag_is_federated', $default, $post );
 }
 
-/** Return ActivityStreams Hashtag descriptors for one local, federated Object. */
+/** Emit the project's untyped id/name tag descriptors for a local Object. */
 function axismundi_op_post_hashtag_tags( WP_Post $post ) : array {
 	if ( ! axismundi_op_hashtag_is_federated( $post ) ) {
 		return array();
@@ -176,11 +180,11 @@ function axismundi_op_post_hashtag_tags( WP_Post $post ) : array {
 	}
 	$tags = array();
 	foreach ( $terms as $term ) {
-		$url = get_term_link( $term );
-		if ( is_wp_error( $url ) ) {
+		$id = axismundi_op_hashtag_archive_uri( $term );
+		if ( '' === $id ) {
 			continue;
 		}
-		$tags[] = array( 'type' => 'Hashtag', 'name' => '#' . $term->name, 'href' => $url );
+		$tags[] = array( 'id' => $id, 'name' => '#' . $term->name );
 	}
 	return $tags;
 }
@@ -263,16 +267,17 @@ function axismundi_op_remote_object_hashtag_descriptors( array $payload ) : arra
 		if ( ! is_array( $member ) ) {
 			continue;
 		}
-		$type = $member['type'] ?? '';
-		$type = is_array( $type ) ? $type : array( $type );
-		if ( ! in_array( 'Hashtag', $type, true ) ) {
+		if ( ! axismundi_op_is_hashtag_descriptor( $member ) ) {
 			continue;
 		}
 		$normalized = axismundi_op_normalize_hashtag( $member['name'] ?? '' );
 		if ( empty( $normalized ) ) {
 			continue;
 		}
-		$href = axismundi_op_remote_member_uri( $member['href'] ?? $member['id'] ?? '' );
+		$href = axismundi_op_remote_member_uri( $member['id'] ?? '' );
+		if ( '' === $href ) {
+			$href = axismundi_op_remote_member_uri( $member['href'] ?? '' );
+		}
 		// The first observed spelling/link is the stable display evidence for this
 		// payload. Later case-only variants prove the same comparison identity.
 		if ( ! isset( $tags[ $normalized['key'] ] ) ) {
@@ -342,86 +347,93 @@ function axismundi_op_purge_orphan_remote_object_hashtags() : void {
 	$wpdb->query( "DELETE h FROM {$table} h LEFT JOIN {$objects} o ON o.id = h.remote_object_id WHERE o.id IS NULL" );
 }
 
-/**
- * Point a received Object's hashtag links at this site's own archive.
- *
- * A received `#hashtag` arrives as an anchor to the origin's tag page. Following it
- * takes a reader off this site to see posts they may not be able to read, while the
- * archive here already collects every local and remote Object carrying that tag. Every
- * major implementation rewrites this: a Misskey note federated to Mastodon shows
- * `mastodon.social/tags/…` even though the payload says `misskey.io/tags/…`. The anchor
- * href is presentation; `tag[]` is the authority.
- *
- * Rewritten only where the Object itself declared the tag, and only to a term that
- * already exists — the same "declared, not guessed" rule the emoji renderer follows. An
- * anchor that merely looks like a hashtag, or one whose tag this site has never indexed,
- * is left exactly as its author wrote it.
- *
- * The link text is never touched. `#HashTag` and `#hashtag` are the same tag for
- * matching and two different spellings for reading, which is why normalization keeps
- * both a display `name` and a lowercased `key`.
- *
- * @param string              $html  Sanitized Object body.
- * @param array<string,mixed> $model Object view model.
- * @return string
- */
+/** Decorate declared tags without modifying their stored identity evidence. */
+function axismundi_op_render_declared_hashtags( string $html, array $members ) : string {
+	$destinations = array();
+	$names = array();
+	foreach ( $members as $member ) {
+		if ( ! axismundi_op_is_hashtag_descriptor( $member ) ) {
+			continue;
+		}
+		$name = axismundi_op_normalize_hashtag( $member['name'] );
+		if ( ! $name ) {
+			continue;
+		}
+		$term = axismundi_op_find_hashtag_term( $member['name'] );
+		$url = $term instanceof WP_Term ? axismundi_op_hashtag_archive_uri( $term ) : '';
+		foreach ( array( 'id', 'href' ) as $key ) {
+			if ( '' === $url ) {
+				$url = axismundi_op_remote_member_uri( $member[ $key ] ?? '' );
+			}
+		}
+		$url = esc_url_raw( $url, array( 'http', 'https' ) );
+		if ( '' !== $url && ! isset( $destinations[ $name['key'] ] ) ) {
+			$destinations[ $name['key'] ] = $url;
+			$names[] = esc_html( '#' . $name['name'] );
+		}
+	}
+	if ( ! $names || '' === $html ) {
+		return $html;
+	}
+	usort( $names, static fn( $a, $b ) => strlen( $b ) <=> strlen( $a ) );
+	$pattern = '~(?<![\p{L}\p{N}\p{M}_/#&=])(?:' . implode( '|', array_map( static fn( $name ) => preg_quote( $name, '~' ), $names ) ) . ')(?![\p{L}\p{N}\p{M}_-])~iu';
+	// Use Core's HTML splitter, as the Emoji renderer does: attributes stay whole.
+	$parts = wp_html_split( $html );
+	$blocked = array();
+	$anchor_start = null;
+	$anchor_text = '';
+	foreach ( $parts as $index => $part ) {
+		if ( '' === $part ) {
+			continue;
+		}
+		if ( '<' === $part[0] ) {
+			if ( ! preg_match( '~^<\s*(/)?\s*(a|pre|code|script|style|textarea)\b~i', $part, $element ) ) {
+				continue;
+			}
+			$tag = strtoupper( $element[2] );
+			$closing = '/' === ( $element[1] ?? '' );
+			if ( 'A' === $tag && $closing && null !== $anchor_start ) {
+				$visible = html_entity_decode( $anchor_text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+				$name = str_starts_with( $visible, '#' ) ? axismundi_op_normalize_hashtag( $visible ) : array();
+				if ( $name && isset( $destinations[ $name['key'] ] ) ) {
+					$anchor = new WP_HTML_Tag_Processor( $parts[ $anchor_start ] );
+					$anchor->next_tag( 'A' );
+					$anchor->set_attribute( 'href', $destinations[ $name['key'] ] );
+					$parts[ $anchor_start ] = $anchor->get_updated_html();
+				}
+				$anchor_start = null;
+				$anchor_text = '';
+			} elseif ( 'A' === $tag && ! $closing && ! array_sum( $blocked ) ) {
+				$anchor_start = $index;
+			}
+			if ( in_array( $tag, array( 'A', 'PRE', 'CODE', 'SCRIPT', 'STYLE', 'TEXTAREA' ), true ) ) {
+				$blocked[ $tag ] = max( 0, ( $blocked[ $tag ] ?? 0 ) + ( $closing ? -1 : 1 ) );
+			}
+			continue;
+		}
+		if ( null !== $anchor_start ) {
+			$anchor_text .= $part;
+		} elseif ( ! array_sum( $blocked ) ) {
+			$parts[ $index ] = preg_replace_callback( $pattern, static function ( $match ) use ( $destinations ) {
+				$name = axismundi_op_normalize_hashtag( html_entity_decode( $match[0], ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
+				return isset( $destinations[ $name['key'] ?? '' ] ) ? '<a href="' . esc_url( $destinations[ $name['key'] ] ) . '" rel="tag">' . $match[0] . '</a>' : $match[0];
+			}, $part ) ?? $part;
+		}
+	}
+	return implode( '', $parts );
+}
+
+/** Presentation reads current source evidence; it never creates taxonomy terms. */
 function axismundi_op_localize_object_hashtag_links( string $html, array $model ) : string {
-	if ( '' === $html || false === strpos( $html, 'href=' ) || ! class_exists( 'WP_HTML_Tag_Processor' ) ) {
-		return $html;
-	}
 	$uri = (string) ( $model['object_uri'] ?? $model['id'] ?? '' );
-	if ( '' === $uri || ! function_exists( 'axismundi_op_get_remote_object' ) ) {
+	if ( '' === $html || '' === $uri ) {
 		return $html;
 	}
-	$row = axismundi_op_get_remote_object( $uri );
-	if ( ! is_array( $row ) ) {
-		return $html;
-	}
-	$payload = $row['payload'] ?? $row['payload_json'] ?? null;
-	if ( is_string( $payload ) ) {
-		$payload = json_decode( $payload, true );
-	}
-	if ( ! is_array( $payload ) ) {
-		return $html;
-	}
-
-	$replacements = array();
-	foreach ( axismundi_op_remote_object_hashtag_descriptors( $payload ) as $descriptor ) {
-		$href = (string) ( $descriptor['href'] ?? '' );
-		if ( '' === $href ) {
-			continue;
-		}
-		$term = axismundi_op_find_hashtag_term( $descriptor['name'] ?? '' );
-		if ( ! $term instanceof WP_Term ) {
-			continue;
-		}
-		$local = axismundi_op_hashtag_archive_uri( $term );
-		if ( '' === $local || $local === $href ) {
-			continue;
-		}
-		$replacements[ $href ] = $local;
-	}
-	if ( empty( $replacements ) ) {
-		return $html;
-	}
-
-	/*
-	 * The declaration authorizes a replacement only in a body anchor, never in an
-	 * arbitrary attribute that happens to contain the origin URL. Tag Processor keeps
-	 * the received markup intact apart from that one href.
-	 */
-	$processor = new WP_HTML_Tag_Processor( $html );
-	while ( $processor->next_tag( 'A' ) ) {
-		$href = (string) $processor->get_attribute( 'href' );
-		if ( isset( $replacements[ $href ] ) ) {
-			$processor->set_attribute( 'href', $replacements[ $href ] );
-		}
-	}
-	return $processor->get_updated_html();
+	$members = array_map( static fn( $row ) => json_decode( $row['descriptor_json'], true ), axismundi_op_tag_references( $uri ) );
+	return axismundi_op_render_declared_hashtags( $html, $members );
 }
 /*
- * Priority 8: before the emoji decorator at 9, though the two cannot collide — this
- * rewrites attributes and that one walks text nodes. Ordering is stated so the next
- * person does not have to work out whether it matters.
+ * Priority 8: establish hashtag anchors before Emoji decorates text at priority 9.
+ * Both preserve attributes and protected code regions.
  */
 add_filter( 'axismundi_op_object_content_html', 'axismundi_op_localize_object_hashtag_links', 8, 2 );

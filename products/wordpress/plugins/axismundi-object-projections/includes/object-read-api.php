@@ -106,8 +106,17 @@ function axismundi_op_read_remote_jsonld_source( Axismundi_Op_Remote_Source $sou
 		}
 		$tags[] = $tag;
 	}
-	foreach ( axismundi_op_object_hashtag_chips( $uri ) as $hashtag ) {
-		$tags[] = array( 'type' => 'Hashtag', 'name' => '#' . ltrim( $hashtag['name'], '#' ), 'href' => $hashtag['url'] );
+	$opaque_tag_evidence = array();
+	foreach ( axismundi_op_tag_references( $uri ) as $reference ) {
+		$descriptor = json_decode( $reference['descriptor_json'], true );
+		if ( axismundi_op_is_hashtag_descriptor( $descriptor ) ) {
+			// A local discovery link never replaces the peer's identity evidence.
+			$known = array_fill_keys( array( 'id', 'name', 'href', 'type' ), true );
+			$tags[] = axismundi_op_clean_object_read_value( array_intersect_key( $descriptor, $known ) );
+			if ( array_diff_key( $descriptor, $known ) ) {
+				$opaque_tag_evidence[] = $descriptor;
+			}
+		}
 	}
 	if ( $tags ) {
 		$document['tag'] = $tags;
@@ -128,8 +137,9 @@ function axismundi_op_read_remote_jsonld_source( Axismundi_Op_Remote_Source $sou
 	$extensions = array_diff_key( $payload, array_fill_keys( $handled, true ) );
 	// Unknown tag kinds remain data, alongside the side-table-derived structured tags.
 	$payload_tags = (array) ( $payload['tag'] ?? array() );
-	$payload_tags = isset( $payload_tags['type'] ) ? array( $payload_tags ) : $payload_tags;
-	$unknown_tags = array_filter( $payload_tags, static fn( $tag ) : bool => ! is_array( $tag ) || ! in_array( $tag['type'] ?? '', array( 'Mention', 'Hashtag' ), true ) );
+	$payload_tags = array_is_list( $payload_tags ) ? $payload_tags : array( $payload_tags );
+	$unknown_tags = array_filter( $payload_tags, static fn( $tag ) : bool => ! axismundi_op_is_hashtag_descriptor( $tag ) && ( ! is_array( $tag ) || 'Mention' !== ( $tag['type'] ?? '' ) ) );
+	$unknown_tags = array_merge( $unknown_tags, $opaque_tag_evidence );
 	if ( $unknown_tags ) {
 		$extensions['tag'] = array_values( $unknown_tags );
 	}

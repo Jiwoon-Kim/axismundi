@@ -72,7 +72,7 @@ try {
 	}
 	$post = is_wp_error( $post_id ) ? null : get_post( $post_id );
 	$tags = $post instanceof WP_Post ? axismundi_op_post_hashtag_tags( $post ) : array();
-	ax_hashtag_assert( $ax_hashtag_results, 'local Posts serialize assigned shared terms as ActivityStreams Hashtag links', $term instanceof WP_Term && 1 === count( $tags ) && 'Hashtag' === $tags[0]['type'] && '#' . strtolower( $ax_hashtag_name ) === strtolower( $tags[0]['name'] ) && false !== strpos( $tags[0]['href'], '/hashtag/' ) );
+	ax_hashtag_assert( $ax_hashtag_results, '[project choice] local Posts emit only numeric-id and name hashtag descriptors', $term instanceof WP_Term && array( array( 'id' => home_url( '/?tag_id=' . $term->term_id ), 'name' => '#' . $term->name ) ) === $tags );
 
 	$attachment_id = wp_insert_post( array( 'post_status' => 'inherit', 'post_type' => 'attachment', 'post_title' => 'Hashtag audit attachment', 'post_author' => 1 ), true );
 	if ( $term instanceof WP_Term && ! is_wp_error( $attachment_id ) ) {

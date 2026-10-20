@@ -1066,14 +1066,14 @@ access control.
 전날 비용의 대부분이었다. 각 항목은 결정과 그 근거, 그리고 근거가 측정인
 경우 측정값을 함께 적는다.
 
-### Authoring Order Is The Identity Discriminator
+### Authoring Order And The Local Lookup Key
 
-식별자의 모양을 정하는 축은 타입도 저장량도 아니다. **어느 쪽이 먼저
-저작되었는가**이다.
+저작 순서는 소스 행보다 먼저 정체성을 확보해야 하는지를 결정한다.
+타입이나 소유 플러그인의 이름으로 URL 모양이 자동 결정되지는 않는다.
 
 ```txt
 WordPress-first   편집기와 post 행이 먼저 생긴다    id = wp_posts 키
-activity-first    Activity/C2S 제출이 먼저 생긴다    id = 발급한 uuid
+activity-first    Activity/C2S 제출이 먼저 생긴다    소스 저장 전 영속 키 확보가 필요
 ```
 
 이미 발행 중인 선례는 두 개이고, 둘 다 site root 아래의 uuid다. 2026-10-20
@@ -1084,10 +1084,22 @@ home_url( '/actors/' . $uuid )   axismundi-actors/includes/repository.php:984
 home_url() . '/activities'       axismundi-object-projections/includes/activity-read-route.php:8
 ```
 
-`/objects/{uuid}`와 `/collections/{uuid}`는 그 두 개의 일관된 확장이지만
-**아직 라우트가 없다.** 이 절은 결정을 기록하는 것이고 구현 상태를 주장하지
-않는다. `grep` 으로 확인한 현재 상태: `collections/` 라우트는 존재하지 않고,
-`objects/` 로 매칭되는 유일한 rewrite 는 프론트앱 것이다.
+후속 owner 결정으로 C2S의 canonical id를 `/objects/{uuid}`로 하자는 안은 대체됐다.
+다음은 아직 구현 전인 목표 계약이며 이번 해시태그 슬라이스에서 라우트를 바꾸지 않는다.
+
+```txt
+로컬 C2S   id = /?ax_object={identity_id}     url = /objects/{identity_id}
+원격 객체  id = 피어의 canonical URI       로컬 뷰 = /?ax_remote_object={identity_id}
+```
+
+여기서 정수는 `wp_posts.ID`나 축출 가능한 원격 캐시 행 ID가 아니라 공유 identity 키다.
+이미 `wp_ax_objects.identity_id`와 `wp_ax_identities`가 있으므로 새 정체성 테이블은
+선결 조건이 아니다. 목록 투영인 `wp_ax_object_index`를 레지스트리로 오해하지 않는다.
+`source_owner/source_kind/source_ref`를 통해 실제 소스 행으로 연결하며,
+원격 재수집 시 같은 canonical URI의 identity를 재사용하고 source_ref만 갱신한다.
+이 수명주기는 라우트 전환 전에 별도 감사로 확인한다.
+현재 `?ax_object={hash}` 원격 HTML 뷰는 위 목표와 용도가 다르므로 전환 시 분리한다.
+로컬 C2S 키 발급과 canonical URI 확정 순서도 저작 경로를 구현할 때 함께 연결한다.
 
 그 프론트앱 경로를 id 로 오해하지 말 것. `axismundi` 플러그인은
 `AXISMUNDI_CAPSTONE_ROUTE = 'social'`(`axismundi.php:23`) 아래에서
@@ -1097,8 +1109,8 @@ home_url() . '/activities'       axismundi-object-projections/includes/activity-
 
 따라서 규칙은:
 
-- **면제 목록을 두지 않는다.** Note 컷오프 이후 activity-first 객체는 예외
-  없이 `/objects/{uuid}`다. "이 타입만 예외" 가 지금의 문제를 만들었다.
+- **Note 전용 URI를 새로 발급하지 않는다.** 컷오프 이후 C2S 저작 경로는
+  위의 타입 중립 조회·정체성 계약으로 연결한다.
 - **명시적 컬렉션은 `/collections/{uuid}`다.** 컬렉션은 우리 원장의 것이므로
   CPT 키를 쓸 이유가 없다. 암시적 컬렉션(Outbox, followers 등)은 소유 Actor
   의 주소 아래에 그대로 남는다.
@@ -1108,11 +1120,11 @@ home_url() . '/activities'       axismundi-object-projections/includes/activity-
   비공개 Object 식별자가 유출된다.
 - **`UNIQUE canonical_uri_hash` 가 URI namespace 의 전역 제약이다.** 두
   저작 경로가 같은 주소를 주장할 수 없게 하는 것은 규칙이 아니라 이 제약이다.
-- **`id`와 `url`은 분리된다.** CPT 가 권위인 타입은 `id`가 레지스트리 주소,
-  `url`이 사람이 읽는 WordPress 주소다. 둘을 같게 만들려는 시도가 Note 의
-  현재 모양을 만들었다.
-- **프론트앱은 canonical URI 로 키를 잡는다.** 로컬이든 원격이든 조인 키는
-  URI 하나다. 프론트앱 전용 주소 체계를 새로 만들지 않는다.
+- **`id`와 `url`은 분리된다.** 현재 WP-first 객체는 `?p=ID` 또는
+  `?attachment_id=ID`를 유지하며 `url`은 사람이 읽는 WordPress 주소다.
+  제품별 조회 변수를 추가하는 것과 이미 발행된 AS2 id를 바꾸는 것은 별도다.
+- **프론트 데이터는 canonical URI로 대상을 식별한다.** 앱의 화면 경로는
+  별도로 가질 수 있지만 그것을 새 연합 정체성으로 해석하지 않는다.
 
 ### Three Ways An AS2 Type Can Land, Not One
 
@@ -1260,6 +1272,17 @@ Tombstone 이 주소를 유지해야 하므로 envelope 이 post 보다 오래 �
 이 문서들에서 반복되었으므로 삭제하지 않고 정정으로 남긴다. 나머지 세 건
 (`page` 정체성 2 행, Note 정체성 shadow, 캐시 행이 사라진 원격 Object)은
 재측정 전까지 미결로 남는다.
+
+## Activity Handlers Before A General Executor, 2026-10-20
+
+타입별 실제 핸들러를 먼저 완성하고, 반복이 확인된 구현만 공통 집행 모듈로 추출한다.
+판정 축은 Activity 타입 + C2S/S2S 경로 + 대상 도메인이다. 같은 Create라도
+로컬 저작 명령과 원격 관측 반영은 동일한 작업이 아니다.
+
+멱등성, 실패·재시도 경계, 원장 기록과 상태 변경의 일관성은 각 핸들러에서 처음부터
+명시하고 해당 감사로 검증한다. 나중에 추출할 대상은 구현이지 정확성 조건이 아니다.
+이것은 설계 방향이며, 이번 슬라이스가 범용 실행 엔진을 구현하거나 모든 기존
+핸들러의 조건을 이미 검증했다는 주장이 아니다.
 
 ## Sources
 

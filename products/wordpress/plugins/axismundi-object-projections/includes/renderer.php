@@ -190,6 +190,11 @@ function axismundi_op_object_html_url( array $object ) : string {
 		}
 	}
 	foreach ( $links as $link ) {
+		if ( is_string( $link ) && '' !== $link ) {
+			return $link;
+		}
+	}
+	foreach ( $links as $link ) {
 		if ( is_array( $link ) && isset( $link['href'] ) && is_string( $link['href'] ) ) {
 			return $link['href'];
 		}

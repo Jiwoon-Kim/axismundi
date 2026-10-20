@@ -524,19 +524,20 @@ AS2 를 반환한다(2026-10-20 측정: `/hashtag/hashtag/` 에 AS2 Accept →
 원격이 명시한 `id`/`href` 는 **관측 증거로 보존하되 우리 주소로 치환하지
 않는다.** 로컬 term 으로 묶었다고 원격 URL 의 정체성까지 같아지지 않는다.
 
-### What This Changes In Code
+### Implementation Boundary
 
-현재 구현은 이 결정과 두 지점에서 어긋난다. 2026-10-20 확인:
+`axismundi_op_is_hashtag_descriptor()`가 `name`의 `#` 접두사를 판정한다.
+단일 descriptor와 배열을 모두 받으며 `Hashtag` 라벨만 있고 접두사가 없는 항목은
+해시태그로 인덱싱하지 않는다. 로컬 Post와 Note는 같은 `post_hashtag_tags()`를 거쳐
+`{id,name}`만 발신한다. 원격 읽기 API는 현재 참조 저장소의 관측 descriptor에서
+`id/name/href/type`을 읽으며, 원격 ID를 로컬 term 주소로 바꾸거나 타입을 만들지 않는다.
+추가 미모델 필드는 원본 descriptor와 함께 `axUninterpreted`에 보존한다.
 
-```txt
-hashtags.php:268   if ( ! in_array( 'Hashtag', $type, true ) ) { … }
-                   원격 tag 증거를 받을 조건이 타입 일치다. 결정에 따르면
-                   판정은 name 의 '#' 접두사여야 한다. 타입만 보는 현재
-                   코드는 W3C 모양의 무타입 {id,name} 태그를 버린다.
-
-hashtags.php:183   array( 'type' => 'Hashtag', 'name' => …, 'href' => … )
-                   우리가 내보내는 쪽에는 여전히 type 이 붙는다.
-```
+표현은 현재 참조 증거를 읽고 term을 생성하지 않는다. 선언된 태그의 평문만 링크화하고,
+기존 해시태그 앵커는 중첩 없이 목적지만 바꾼다. 일반 앵커·속성·주석·코드·raw-text
+영역은 유지하며, 더 긴 토큰의 접두사나 URL fragment를 잘라 링크로 만들지 않는다.
+목적지는 로컬 taxonomy 우선, 없으면 선언된 안전한 HTTP(S) `id`, 다음 `href`다.
+저장된 원격 payload의 ID·링크·해시는 렌더링 때문에 변경하지 않는다.
 
 ### Outbound Emits `id` And `name` Only
 
@@ -578,6 +579,30 @@ AS2 예제가 실재하므로 모든 태그를 링크로 좁히지 않는다. �
 한 슬라이스이고, 그 판정 기준이 `#` 접두사라는 것이 이 절의 결정이다.
 `tag` 관계 전체의 저장 모양은 `activitystreams-storage-boundaries.md` 의
 "Tag Is a Relation Family, Not a Taxonomy Alias" 가 계속 소유한다.
+
+### Peer Validation Is Separate From Local HTTP Validation
+
+로컬 숫자 URI의 협상·HTML·HEAD와 직렬화는 `audit-hashtag-policy.php`가 검증한다.
+이것은 Mastodon/Misskey의 실제 수신·표시 검증을 대신하지 않는다. 캐시나 Actor 행이
+있다는 사실만으로 peer 테스트 권한이나 자격 증명이 있다고 간주하지 않는다.
+이번 슬라이스에서 외부 게시물을 발행하지 않으며, 위 상호운용 예상은 아직 예상이다.
+실제 peer 수신 검증은 2번의 남은 완료 게이트로 유지한다.
+
+## Frontend Navigation Is Not Protocol Identity, 2026-10-20
+
+프론트앱은 AS2 JSON-LD reader/browser/explorer이며 네 층을 분리한다.
+
+| 층 | 책임 |
+|---|---|
+| `id` | 대상의 정체성 |
+| canonical endpoint와 콘텐츠 협상 | 프로토콜 표현 제공 |
+| 읽기 API | 인증·캐시·로컬/원격 해소를 담당하는 데이터 표면 |
+| 앱 라우트 | 탐색 위치와 화면 상태 |
+
+`/social/objects/...`는 화면 주소이지 AS2 id나 연합 endpoint가 아니다.
+앱 라우트를 바꾸거나 앱을 제거해도 객체의 정체성과 연합 동작을 유지한다.
+동일 assembly를 사용한다는 것은 앱의 탐색 경로와 canonical endpoint를
+같은 URL로 만들거나 서로 리디렉션해야 한다는 뜻이 아니다.
 
 ## Sources
 

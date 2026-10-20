@@ -14,22 +14,103 @@ function axismundi_op_is_hashtag_archive_term( $source ) : bool {
 
 /** Stable canonical URI for one hashtag archive collection. */
 function axismundi_op_hashtag_archive_uri( WP_Term $term ) : string {
-	$url = get_term_link( $term );
-	return is_wp_error( $url ) ? '' : (string) $url;
+	return axismundi_op_is_hashtag_archive_term( $term ) ? add_query_arg( 'tag_id', $term->term_id, home_url( '/' ) ) : '';
 }
 
+/** Claim only an unambiguous numeric hashtag query; leave Core tags untouched. */
+function axismundi_op_numeric_hashtag_term( array $query ) : ?WP_Term {
+	$id = $query['tag_id'] ?? null;
+	if ( ( ! is_int( $id ) && ! is_string( $id ) ) || ! preg_match( '/^[1-9][0-9]*$/D', (string) $id ) || false === filter_var( $id, FILTER_VALIDATE_INT, array( 'options' => array( 'min_range' => 1 ) ) ) ) {
+		return null;
+	}
+	foreach ( array( 'p', 'page_id', 'attachment_id', 'name', 'pagename', 'attachment', 'cat', 'category_name', 'tag', 'taxonomy', 'term', 'post_type', 'ax_note', 'ax_object', 'ax_remote_object' ) as $key ) {
+		if ( ! empty( $query[ $key ] ) ) {
+			return null;
+		}
+	}
+	// Legacy shared terms can inhabit two taxonomies. Never steal Core's tag route.
+	if ( get_term( (int) $id, 'post_tag' ) instanceof WP_Term ) {
+		return null;
+	}
+	$term = get_term( (int) $id, AXISMUNDI_OP_HASHTAG_TAXONOMY );
+	return $term instanceof WP_Term ? $term : null;
+}
+
+/** Resolve the term before WP_Query hardcodes tag_id as a post_tag query. */
+function axismundi_op_route_numeric_hashtag( array $query ) : array {
+	// Core's tag_id is a private WP_Query variable, not a public URL variable.
+	// Claim only our own terms instead of exposing it globally for every taxonomy.
+	$root = wp_parse_url( home_url( '/' ), PHP_URL_PATH );
+	$path = wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ?? (string) $root ), PHP_URL_PATH );
+	if ( isset( $_GET['tag_id'] ) && untrailingslashit( (string) $path ) !== untrailingslashit( (string) $root ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only namespace gate.
+		return $query;
+	}
+	$requested = array_merge( $query, wp_unslash( $_GET ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Public, read-only identity lookup.
+	$term = axismundi_op_numeric_hashtag_term( $requested );
+	if ( ! $term instanceof WP_Term ) {
+		return $query;
+	}
+	unset( $query['tag_id'] );
+	$query['taxonomy'] = AXISMUNDI_OP_HASHTAG_TAXONOMY;
+	$query['term'] = $term->slug;
+	return $query;
+}
+add_filter( 'request', 'axismundi_op_route_numeric_hashtag', 20 );
+
+/** The numeric identifier is not an alias to be canonicalized to a mutable slug. */
+function axismundi_op_numeric_hashtag_canonical( $redirect, $requested ) {
+	$path = wp_parse_url( (string) $requested, PHP_URL_PATH );
+	$root = wp_parse_url( home_url( '/' ), PHP_URL_PATH );
+	if ( untrailingslashit( (string) $path ) !== untrailingslashit( (string) $root ) ) {
+		return $redirect;
+	}
+	$query = wp_parse_url( (string) $requested, PHP_URL_QUERY );
+	parse_str( (string) $query, $vars );
+	return axismundi_op_numeric_hashtag_term( $vars ) instanceof WP_Term ? false : $redirect;
+}
+add_filter( 'redirect_canonical', 'axismundi_op_numeric_hashtag_canonical', 20, 2 );
+
+/** Redirect only legacy human paths, after the negotiated router has answered. */
+function axismundi_op_redirect_legacy_hashtag() : void {
+	$term = get_queried_object();
+	if ( ! axismundi_op_is_hashtag_archive_term( $term ) ) {
+		return;
+	}
+	$url = get_term_link( $term );
+	if ( is_wp_error( $url ) ) {
+		return;
+	}
+	$path = wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ), PHP_URL_PATH );
+	$legacy = str_replace( '/hashtags/', '/hashtag/', wp_parse_url( $url, PHP_URL_PATH ) );
+	if ( $path === $legacy ) {
+		wp_safe_redirect( add_query_arg( wp_unslash( $_GET ), $url ), 301 ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Preserve read-only query arguments.
+		exit;
+	}
+}
+add_action( 'template_redirect', 'axismundi_op_redirect_legacy_hashtag', 9 );
+
 /**
- * Project a hashtag archive as Mastodon-compatible collection metadata.
+ * Project a hashtag archive identity under the project's collection policy.
  *
  * The archive is a locally indexed discovery surface, not an Actor-owned
- * timeline. Deliberately omit members, count, and paging rather than advertise
- * a partial feed assembled from this server's local and cached observations.
+ * timeline. This slice exposes identity only; membership paging will move to
+ * the unified term index, and no exact visible total is claimed here.
  */
 function axismundi_op_hashtag_archive_transform( WP_Term $term ) : array {
-	return array(
+	$document = array(
 		'id'   => axismundi_op_hashtag_archive_uri( $term ),
 		'type' => 'OrderedCollection',
+		'name' => '#' . $term->name,
 	);
+	$summary = wp_kses_post( $term->description );
+	if ( '' !== trim( $summary ) ) {
+		$document['summary'] = $summary;
+	}
+	$url = get_term_link( $term );
+	if ( ! is_wp_error( $url ) ) {
+		$document['url'] = $url;
+	}
+	return $document;
 }
 
 /** Register the negotiated ActivityStreams representation for hashtag archives. */
@@ -95,51 +176,8 @@ function axismundi_op_hashtag_archive_compare( array $left, array $right ) : int
 
 /** Return one mixed public Object page for a hashtag term. */
 function axismundi_op_get_hashtag_archive_items( WP_Term $term, string $type = 'all', int $limit = 50 ) : array {
-	global $wpdb;
-	if ( AXISMUNDI_OP_HASHTAG_TAXONOMY !== $term->taxonomy ) {
-		return array();
-	}
-	$type  = axismundi_op_hashtag_archive_type( $type );
-	$limit = max( 1, min( 100, $limit ) );
-	$items = array();
-	$types = axismundi_op_hashtag_archive_local_types( $type );
-	if ( ! empty( $types ) ) {
-		$statuses = in_array( 'attachment', $types, true ) ? array( 'publish', 'inherit' ) : array( 'publish' );
-		$posts    = get_posts(
-			array(
-				'post_type'      => $types,
-				'post_status'    => $statuses,
-				'posts_per_page' => $limit,
-				'orderby'        => 'date',
-				'order'          => 'DESC',
-				'tax_query'      => array(
-					array( 'taxonomy' => AXISMUNDI_OP_HASHTAG_TAXONOMY, 'field' => 'term_id', 'terms' => array( $term->term_id ) ),
-				),
-			)
-		);
-		foreach ( $posts as $post ) {
-			axismundi_op_hashtag_archive_add_source( $items, $post );
-		}
-	}
-	if ( 'post' !== $type && 'note' !== $type && 'media' !== $type ) {
-		$index   = axismundi_op_remote_object_hashtags_table();
-		$objects = axismundi_op_remote_objects_table();
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed projection tables and prepared term key.
-		$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT o.* FROM {$objects} o INNER JOIN {$index} h ON h.remote_object_id = o.id WHERE h.term_taxonomy_id = %d AND o.object_status = 'active' ORDER BY COALESCE(o.published_at, o.remote_updated_at, o.created_at) DESC, o.id DESC LIMIT %d", (int) $term->term_taxonomy_id, $limit ), ARRAY_A );
-		foreach ( $rows as $row ) {
-			$row['payload'] = json_decode( (string) ( $row['payload_json'] ?? '' ), true );
-			$row['payload'] = is_array( $row['payload'] ) ? $row['payload'] : array();
-			if ( ! axismundi_op_remote_object_is_publicly_listable( $row ) ) {
-				continue;
-			}
-			$source = axismundi_op_resolve_source_by_uri( (string) $row['object_uri'] );
-			if ( null !== $source ) {
-				axismundi_op_hashtag_archive_add_source( $items, $source );
-			}
-		}
-	}
-	usort( $items, 'axismundi_op_hashtag_archive_compare' );
-	return array_slice( $items, 0, $limit );
+	$page = axismundi_op_query_term_members( $term, array( 'type' => $type, 'limit' => $limit ) );
+	return is_wp_error( $page ) ? array() : $page['items'];
 }
 
 /** Render type filters without making type membership a taxonomy concern. */
@@ -157,7 +195,11 @@ function axismundi_op_render_hashtag_archive_filters( WP_Term $term, string $cur
 	}
 	$links = array();
 	foreach ( $labels as $type => $label ) {
-		$url = 'all' === $type ? $base : add_query_arg( 'type', $type, $base );
+		$query = 'all' === $type ? array() : array( 'type' => $type );
+		if ( isset( $_GET['actor'] ) && is_string( $_GET['actor'] ) && '' !== $_GET['actor'] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Public narrowing filter.
+			$query['actor'] = wp_unslash( $_GET['actor'] );
+		}
+		$url = $query ? $base . '?' . http_build_query( $query, '', '&', PHP_QUERY_RFC3986 ) : $base;
 		$links[] = '<a class="axismundi-hashtag-archive__filter' . ( $type === $current ? ' is-current' : '' ) . '" href="' . esc_url( $url ) . '"' . ( $type === $current ? ' aria-current="page"' : '' ) . '>' . esc_html( $label ) . '</a>';
 	}
 	return '<nav class="axismundi-hashtag-archive__filters" aria-label="' . esc_attr__( 'Object type', 'axismundi-object-projections' ) . '">' . implode( '', $links ) . '</nav>';
@@ -177,10 +219,13 @@ function axismundi_op_render_hashtag_archive_block( array $attributes = array(),
 	if ( ! $term instanceof WP_Term || AXISMUNDI_OP_HASHTAG_TAXONOMY !== $term->taxonomy ) {
 		return '';
 	}
-	$type  = axismundi_op_hashtag_archive_type( sanitize_key( wp_unslash( $_GET['type'] ?? 'all' ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- public read filter.
+	$type = isset( $_GET['type'] ) && is_string( $_GET['type'] ) ? axismundi_op_hashtag_archive_type( sanitize_key( wp_unslash( $_GET['type'] ) ) ) : 'all'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Public read filter.
 	$limit = isset( $attributes['perPage'] ) ? (int) $attributes['perPage'] : 50;
+	$actor = isset( $_GET['actor'] ) && is_string( $_GET['actor'] ) ? wp_unslash( $_GET['actor'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Public narrowing filter.
+	$cursor = isset( $_GET['cursor'] ) && is_string( $_GET['cursor'] ) ? wp_unslash( $_GET['cursor'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Public traversal state.
+	$page = axismundi_op_query_term_members( $term, array( 'type' => $type, 'limit' => $limit, 'actor' => $actor, 'cursor' => $cursor ) );
 	$cards = array();
-	foreach ( axismundi_op_get_hashtag_archive_items( $term, $type, $limit ) as $item ) {
+	foreach ( is_wp_error( $page ) ? array() : $page['items'] as $item ) {
 		$card = axismundi_op_render_object_by_uri( (string) $item['object_uri'], array( 'headingTag' => 'h2', 'interactions' => false ) );
 		if ( '' !== $card ) {
 			$cards[] = '<li class="axismundi-hashtag-archive__item">' . $card . '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Object renderer owns escaped card HTML.
@@ -189,6 +234,13 @@ function axismundi_op_render_hashtag_archive_block( array $attributes = array(),
 	$body = empty( $cards )
 		? '<p class="axismundi-hashtag-archive__empty">' . esc_html__( 'No public objects use this hashtag yet.', 'axismundi-object-projections' ) . '</p>'
 		: '<ol class="axismundi-hashtag-archive__list">' . implode( '', $cards ) . '</ol>';
+	if ( ! is_wp_error( $page ) && null !== $page['next_cursor'] ) {
+		$base = get_term_link( $term );
+		if ( ! is_wp_error( $base ) ) {
+			$query = http_build_query( array( 'type' => $type, 'actor' => $actor, 'cursor' => $page['next_cursor'] ), '', '&', PHP_QUERY_RFC3986 );
+			$body .= '<a rel="next" href="' . esc_url( $base . '?' . $query ) . '">' . esc_html__( 'Next', 'axismundi-object-projections' ) . '</a>';
+		}
+	}
 	return '<div ' . get_block_wrapper_attributes( array( 'class' => 'axismundi-hashtag-archive' ) ) . '>'
 		. axismundi_op_render_hashtag_archive_filters( $term, $type )
 		. $body

@@ -190,7 +190,7 @@ function axismundi_op_media_url_links( WP_Post $attachment, array $policy = arra
 	// The human page is always last so a naive url[0] consumer reads media, not HTML.
 	$page = get_attachment_link( $id );
 	if ( $page ) {
-		$links[] = array( 'type' => 'Link', 'href' => (string) $page, 'mediaType' => 'text/html' );
+		$links[] = (string) $page;
 	}
 	return $links;
 }
@@ -257,7 +257,7 @@ function axismundi_op_media_attachment_descriptor( WP_Post $attachment ) : ?arra
 	}
 	$media_links = array_filter(
 		(array) $descriptor['url'],
-		static fn( array $link ) : bool => 'text/html' !== (string) ( $link['mediaType'] ?? '' )
+		static fn( $link ) : bool => is_array( $link ) && 'text/html' !== (string) ( $link['mediaType'] ?? '' )
 			&& '' !== (string) ( $link['href'] ?? '' )
 	);
 	if ( empty( $media_links ) ) {
@@ -384,6 +384,14 @@ function axismundi_op_media_attachment_transform( WP_Post $attachment ) {
 			'updated'      => get_post_modified_time( DATE_W3C, true, $attachment ),
 		)
 	);
+	$cover_id = (int) get_post_thumbnail_id( $attachment );
+	$cover_post = $cover_id > 0 && $cover_id !== $id ? get_post( $cover_id ) : null;
+	if ( $cover_post instanceof WP_Post && wp_attachment_is_image( $cover_post ) ) {
+		$cover = axismundi_op_media_attachment_descriptor( $cover_post );
+		if ( is_array( $cover ) ) {
+			$object['image'] = $cover;
+		}
+	}
 	$title = trim( (string) $attachment->post_title );
 	if ( '' !== $title ) {
 		$object['name'] = sanitize_text_field( wp_strip_all_tags( $title ) );

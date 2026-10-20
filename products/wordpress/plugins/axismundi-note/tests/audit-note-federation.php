@@ -147,7 +147,7 @@ try {
 		'an explicitly assigned shared hashtag serializes beside Mention tags without changing the Note audience',
 		is_array( $object )
 			&& $hashtag instanceof WP_Term
-			&& in_array( array( 'type' => 'Hashtag', 'name' => '#' . $ax_nf_hashtag_name, 'href' => get_term_link( $hashtag ) ), (array) ( $object['tag'] ?? array() ), true )
+			&& in_array( array( 'id' => home_url( '/?tag_id=' . $hashtag->term_id ), 'name' => '#' . $ax_nf_hashtag_name ), (array) ( $object['tag'] ?? array() ), true )
 	);
 	ax_nf_assert(
 		$ax_nf_results,

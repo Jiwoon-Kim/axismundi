@@ -154,6 +154,15 @@ try {
 
 	$image_object = axismundi_op_transform_object( $image );
 	// Identity never drifts by role; only `name` and the rendition policy do.
+	$audio_id = wp_insert_attachment( array( 'post_mime_type' => 'audio/mpeg', 'post_status' => 'inherit', 'post_title' => 'Cover audit audio', 'guid' => home_url( '/wp-content/uploads/cover-audit.mp3' ) ) );
+	$ax_media_projection_posts[] = $audio_id;
+	update_post_meta( $audio_id, '_thumbnail_id', $image_id );
+	$audio_object = axismundi_op_transform_object( get_post( $audio_id ) );
+	ax_media_projection_assert( $ax_media_projection_results, '[project choice] an Audio object projects its featured cover as image', is_array( $audio_object ) && 'Audio' === $audio_object['type'] && axismundi_op_media_attachment_uri( $image ) === ( $audio_object['image']['id'] ?? '' ) );
+	update_post_meta( $image_id, '_ax_media_visibility', 'private' );
+	$private_cover = axismundi_op_transform_object( get_post( $audio_id ) );
+	ax_media_projection_assert( $ax_media_projection_results, '[project choice] a private cover is not disclosed by public audio', is_array( $private_cover ) && ! isset( $private_cover['image'] ) );
+	delete_post_meta( $image_id, '_ax_media_visibility' );
 	$core_keys = array( 'id', 'type', 'mediaType' );
 	ax_media_projection_assert(
 		$ax_media_projection_results,
@@ -229,10 +238,9 @@ try {
 	$last_link   = $image_links ? end( $image_links ) : array();
 	ax_media_projection_assert(
 		$ax_media_projection_results,
-		'url is an ordered Link array whose last entry is the human HTML page',
+		'[project choice] url keeps rendition Links and a final scalar human page',
 		! empty( $image_links )
-			&& 'text/html' === ( $last_link['mediaType'] ?? '' )
-			&& get_attachment_link( $image_id ) === ( $last_link['href'] ?? '' )
+			&& get_attachment_link( $image_id ) === $last_link
 			&& axismundi_op_object_html_url( $image_object ) === get_attachment_link( $image_id )
 	);
 	ax_media_projection_assert(

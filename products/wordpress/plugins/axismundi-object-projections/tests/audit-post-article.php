@@ -113,8 +113,7 @@ try {
 		is_array( $article )
 			&& 'Article' === $article['type']
 			&& add_query_arg( 'p', $post_id, home_url( '/' ) ) === $article['id']
-			&& get_permalink( $post_id ) === $article['url']['href']
-			&& 'text/html' === $article['url']['mediaType']
+			&& get_permalink( $post_id ) === $article['url']
 			&& $fixture_actor_uri === $article['attributedTo']
 			&& array( axismundi_act_public_audience_uri() ) === $article['to']
 			&& in_array( axismundi_op_actor_followers_url( $fixture_actor ), $article['cc'], true )

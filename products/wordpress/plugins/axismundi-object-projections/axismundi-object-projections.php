@@ -31,6 +31,7 @@ const AXISMUNDI_OP_VERSION = '0.1.2';
 
 require_once __DIR__ . '/includes/hashtags.php';
 require_once __DIR__ . '/includes/tag-references.php';
+require_once __DIR__ . '/includes/term-members.php';
 require_once __DIR__ . '/includes/object-relations.php';
 require_once __DIR__ . '/includes/object-registry.php';
 require_once __DIR__ . '/includes/remote-objects.php';

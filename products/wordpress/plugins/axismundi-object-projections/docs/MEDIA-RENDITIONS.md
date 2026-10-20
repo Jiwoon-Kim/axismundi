@@ -8,6 +8,29 @@
 
 ## 1. Why adopt a "not yet supported" FEP
 
+### Owner policy revision, 2026-10-20
+
+Article `url` is its scalar human permalink. Featured media belongs to `image`,
+not automatically to `attachment`; the same file is still an attachment if a
+content block embeds it. Embedded media keeps its interoperable scalar file URL.
+Standalone media keeps rendition Links, followed by the scalar attachment page.
+A standalone attachment with an image `_thumbnail_id` projects that public,
+bounded image as its cover. Missing or withheld covers are omitted. Projection
+does not generate images, fetch media, or publish an attachment Create.
+
+The 2026-10-19 assembly byte hashes describe the previous representation; this
+explicit policy change intentionally supersedes those bytes. Historical activity
+snapshots are not rewritten.
+
+The live VQA Article was edited again at `2026-10-20 11:59:06 UTC`: its
+content gained an empty paragraph, its modification time changed, and Actor
+attribution, followers addressing and an explicit quote policy became present.
+The Article and view hashes were recaptured separately from the media policy;
+both earlier hash sets remain in the audit. Replacing only those authored
+differences in an in-memory copy reproduced the previous Article hash exactly
+(`86ed73e3...`); no source row was reverted. This audit depends on mutable live
+data: a future failure requires checking source changes before updating hashes.
+
 [FEP-1311](https://codeberg.org/fediverse/fep/src/branch/main/fep/1311/fep-1311.md) (DRAFT,
 2024-12) documents media attachments. Its *multiple media versions* section openly says the
 pattern is *"currently not supported in the Fediverse"* — true for the **general** fediverse,
@@ -37,7 +60,7 @@ contracts at once (§2).
   "url": [
     { "type": "Link", "href": "…/image-1024x683.jpg", "mediaType": "image/jpeg", "width": 1024, "height": 683, "size": 148320 },
     { "type": "Link", "href": "…/image-300x200.jpg",  "mediaType": "image/jpeg", "width": 300,  "height": 200, "size": 18420 },
-    { "type": "Link", "href": "…/media/image/44/",    "mediaType": "text/html" }
+    "…/media/image/44/"
   ]
 }
 ```
@@ -47,18 +70,18 @@ Satisfied simultaneously:
 | Contract | How |
 |---|---|
 | FEP-1311 | `url` is a Link array of media versions with `mediaType` / `width` / `height` / `size` |
-| FEP-b2b8 | *"at least one Link SHOULD have mediaType `text/html`"* — present, position-independent |
-| ROUTING §2 | `id` stays the stable `/?attachment_id={ID}`; the human page survives as a Link |
+| FEP-b2b8 | The HTML Link SHOULD is deliberately not followed by the 2026-10-20 owner policy: the human page is a scalar URI, not a typed media version. |
+| ROUTING §2 | `id` stays the stable `/?attachment_id={ID}`; the human page survives as a scalar URI |
 
 ## 3. Frozen rules
 
 1. **`id` is unchanged.** The canonical `/?attachment_id={ID}` identity never moves.
-2. **Media Links first; the `text/html` page last.** An `Image` object's naive `url[0]`
+2. **Media Links first; the scalar HTML page last.** An `Image` object's naive `url[0]`
    consumer expects media — an HTML page in that slot would be read as the image. FEP-b2b8's
-   `text/html` SHOULD is satisfied regardless of position, so ordering costs nothing.
+   The scalar page is a project choice, not a claim to meet the HTML Link SHOULD.
 3. **Standalone original files are never advertised.** This is the same *bounded derivative,
    never the original by default* rule as REMOTE-ASSET-CACHE.md. **If no derivative exists,
-   emit only the HTML Link — never fall back to the original.** An embedded Article/Note may
+   emit only the scalar HTML page — never fall back to the original.** An embedded Article/Note may
    opt into its source only when that complete image already satisfies its hard dimension,
    pixel, and byte caps; it is not a fallback for an oversized original.
 4. **At most 4 versions**, largest first, deduplicated by URL **and** by dimensions.

@@ -661,11 +661,11 @@ function axismundi_op_resolve_quote_request_target( $target, string $object_uri 
 add_filter( 'axismundi_act_resolve_quote_request_target', 'axismundi_op_resolve_quote_request_target', 10, 2 );
 
 /**
- * The attachment ids a post's own blocks say it uses, featured image first.
+ * The attachment ids a post's own content blocks say it uses.
  *
  * FEP-b2b8 asks that media embedded in `content` also appear in `attachment`, so a reader
  * can fetch it without parsing HTML. The list is therefore taken from what the author
- * actually placed: the featured image, and the attachment ids the editor stores on its own
+ * actually placed in content: the attachment ids the editor stores on its own
  * media blocks. Nothing is read out of the rendered markup.
  *
  * Only media this site holds is listed. An image hotlinked from somewhere else has no
@@ -678,9 +678,6 @@ add_filter( 'axismundi_act_resolve_quote_request_target', 'axismundi_op_resolve_
  */
 function axismundi_op_post_media_ids( WP_Post $post ) : array {
 	$ids = array();
-	if ( has_post_thumbnail( $post ) ) {
-		$ids[] = (int) get_post_thumbnail_id( $post );
-	}
 	foreach ( axismundi_op_collect_block_media_ids( parse_blocks( (string) $post->post_content ) ) as $id ) {
 		$ids[] = $id;
 	}
@@ -883,7 +880,7 @@ function axismundi_op_post_to_article( WP_Post $post, array $claimed = array() )
 	$article   = array(
 		'id'           => $id,
 		'type'         => 'Article',
-		'url'          => array( 'type' => 'Link', 'href' => $url, 'mediaType' => 'text/html' ),
+		'url'          => $url,
 		'mediaType'    => 'text/html',
 		'published'    => $published,
 		'updated'      => get_post_modified_time( DATE_W3C, true, $post ),
@@ -993,6 +990,14 @@ function axismundi_op_core_attachment_transform( WP_Post $attachment ) {
 		'published' => get_post_time( DATE_W3C, true, $attachment ),
 		'updated'   => get_post_modified_time( DATE_W3C, true, $attachment ),
 	);
+	$cover_id = (int) get_post_thumbnail_id( $attachment );
+	$cover_post = $cover_id > 0 ? get_post( $cover_id ) : null;
+	if ( $cover_post instanceof WP_Post && axismundi_op_core_attachment_visible( $cover_post ) && $cover_id !== (int) $attachment->ID ) {
+		$cover = axismundi_op_attachment_descriptor( $cover_id );
+		if ( is_array( $cover ) && 'Image' === ( $cover['type'] ?? '' ) ) {
+			$object['image'] = $cover;
+		}
+	}
 	// `name` names this object, so it carries the attachment's title; alt text belongs to
 	// the embedded descriptor instead (MEDIA-RENDITIONS.md section 5). An empty title omits
 	// `name` rather than inventing one.

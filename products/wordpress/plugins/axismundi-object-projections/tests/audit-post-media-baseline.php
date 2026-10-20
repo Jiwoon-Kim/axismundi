@@ -4,7 +4,7 @@
  *
  * FEP-b2b8 asks that media embedded in an Article's content also be listed in `attachment`,
  * so a reader can fetch it without parsing markup. This plugin answers that from what the
- * author placed -- the featured image and the attachment ids the editor stores on its media
+ * author placed in content -- the attachment ids the editor stores on its media
  * blocks -- and from nothing else.
  *
  * The rule these checks defend: only media this site holds is published. A hotlinked image
@@ -51,12 +51,16 @@ try {
 	$ax_mb_posts[] = $ax_mb_post_id;
 	set_post_thumbnail( $ax_mb_post_id, (int) $ax_mb_ids[1] );
 	$ax_mb_post = get_post( $ax_mb_post_id );
+	ax_mb_assert( $ax_mb_results, '[project choice] Article permalink is a scalar URL', get_permalink( $ax_mb_post ) === axismundi_op_post_to_article( $ax_mb_post )['url'] );
 
 	$ax_mb_collected = axismundi_op_post_media_ids( $ax_mb_post );
+	$ax_mb_both = clone $ax_mb_post;
+	$ax_mb_both->post_content .= '<!-- wp:image {"id":' . (int) $ax_mb_ids[1] . '} /-->';
+	ax_mb_assert( $ax_mb_results, '[project choice] featured media remains an attachment when also embedded in content', array( (int) $ax_mb_ids[0], (int) $ax_mb_ids[1] ) === axismundi_op_post_media_ids( $ax_mb_both ) );
 	ax_mb_assert(
 		$ax_mb_results,
-		'the featured image leads, and the media block follows in reading order',
-		array( (int) $ax_mb_ids[1], (int) $ax_mb_ids[0] ) === $ax_mb_collected
+		'[project choice] a featured-only image is not a content attachment',
+		array( (int) $ax_mb_ids[0] ) === $ax_mb_collected
 	);
 
 	$ax_mb_members = axismundi_op_post_media_members( $ax_mb_post );
@@ -81,8 +85,7 @@ try {
 		$ax_mb_results,
 		'an embedded descriptor names the same Object the standalone projection does',
 		isset( $ax_mb_first['id'] )
-			&& axismundi_op_core_attachment_uri( get_post( (int) $ax_mb_ids[1] ) ) === (string) $ax_mb_first['id']
-			&& ( $ax_mb_members['image']['id'] ?? '' ) === (string) $ax_mb_first['id']
+			&& axismundi_op_core_attachment_uri( get_post( (int) $ax_mb_ids[0] ) ) === (string) $ax_mb_first['id']
 	);
 	ax_mb_assert(
 		$ax_mb_results,
@@ -111,7 +114,7 @@ try {
 	ax_mb_assert(
 		$ax_mb_results,
 		'a product that records what a post uses can replace the list',
-		array( (int) $ax_mb_ids[1] ) === $ax_mb_trimmed
+		array( (int) $ax_mb_ids[0] ) === $ax_mb_trimmed
 	);
 } finally {
 	foreach ( $ax_mb_posts as $ax_mb_post_id ) {

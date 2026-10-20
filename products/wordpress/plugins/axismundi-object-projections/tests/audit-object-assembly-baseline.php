@@ -51,6 +51,12 @@ $expected = array_replace( $media_policy, array(
 	'article' => '0686d44f255d09c79401be5224433509ba6f546d89414189d45d2b7665d5f324',
 	'article-view' => 'def6829c984ebd1d945f10aeb00f8b6c9fb610ad3df6c4672e505da8a97f94bf',
 ) );
+// Owner-approved 2026-10-21: only standalone Image and its view gain the full
+// source Link and top-level source dimensions. Embedded wire bytes stay pinned.
+$expected = array_replace( $expected, array(
+	'image' => '7e1140a064a707d70f50f762c510278469110338e2e7b1fe6c4f67da6ea04f85',
+	'image-view' => 'b3efcc62e59eb97156f097b52886c6e6f1e26c1a3eca642ad9d0848c0d59b2fe',
+) );
 if ( '2026-10-20 11:59:06' !== $post->post_modified_gmt ) {
 	printf( "Fixture source changed: Article modified_gmt=%s; expected 2026-10-20 11:59:06. Inspect source data before rebaselining.\n", $post->post_modified_gmt );
 }

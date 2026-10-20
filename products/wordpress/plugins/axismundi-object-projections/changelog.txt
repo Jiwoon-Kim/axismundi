@@ -1,5 +1,19 @@
 Axismundi Object Projections release history
 
+= 0.1.3 =
+* Add a shared Object identity registry, source readers and type-based assembly, with a
+  public JSON-LD read API that labels remote observations and preserved payload fallbacks.
+* Serve canonical Activity documents and cursor-paged outbox collections without
+  rewriting immutable Activity snapshots or exposing blind recipients.
+* Index declared tag references separately from derived term usage. Add public member
+  queries with Actor URI filters, scoped cursors, and visibility checks shared by HTML.
+* Emit local hashtag references as id/name pairs, retain numeric term identities, and
+  move human archives to /hashtags/ while preserving the previous route.
+* Use scalar Article permalinks, content-only embedded attachments, standalone rendition
+  Links and scalar media page URLs. Project public audio and video cover images.
+* Require explicit source profiles for additional post types instead of assigning a
+  generic fallback type, and use a vocabulary snapshot for assembly contracts.
+
 = 0.1.2 =
 * Server-rendered block output is escaped where it is printed, with an allowlist that covers
   what these blocks emit. The stock post allowlist removes the `template` element and the

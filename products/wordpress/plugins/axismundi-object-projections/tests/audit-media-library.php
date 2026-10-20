@@ -245,10 +245,28 @@ try {
 	);
 	ax_media_projection_assert(
 		$ax_media_projection_results,
-		'the original file URL never appears anywhere in the projected payload',
+		'[project choice] standalone Image advertises its full source and source dimensions',
 		! empty( $image_links )
-			&& false === strpos( (string) wp_json_encode( $image_object ), (string) wp_get_attachment_url( $image_id ) )
+			&& wp_get_attachment_url( $image_id ) === ( $image_links[0]['href'] ?? '' )
+			&& 4000 === ( $image_links[0]['width'] ?? 0 ) && 3000 === ( $image_links[0]['height'] ?? 0 )
+			&& 4000 === ( $image_object['width'] ?? 0 ) && 3000 === ( $image_object['height'] ?? 0 )
 	);
+	$small_id = wp_insert_attachment( array( 'post_mime_type' => 'image/webp', 'post_status' => 'inherit', 'post_title' => 'Original-only image' ), '2026/07/original-only.webp' );
+	$ax_media_projection_posts[] = $small_id;
+	$small_meta = array( 'file' => '2026/07/original-only.webp', 'width' => 1024, 'height' => 1024, 'filesize' => 202000 );
+	wp_update_attachment_metadata( $small_id, $small_meta );
+	$small_object = axismundi_op_transform_object( get_post( $small_id ) );
+	ax_media_projection_assert( $ax_media_projection_results, '[project choice] a 1024 original without subsizes is still a media representation',
+		is_array( $small_object ) && 1024 === ( $small_object['width'] ?? 0 ) && 1024 === ( $small_object['height'] ?? 0 )
+		&& wp_get_attachment_url( $small_id ) === ( $small_object['url'][0]['href'] ?? '' ) && 202000 === ( $small_object['url'][0]['size'] ?? 0 ) );
+	$small_meta['sizes'] = array( 'large' => array( 'file' => 'original-only-1024.webp', 'width' => 1024, 'height' => 1024, 'mime-type' => 'image/webp', 'filesize' => 180000 ) );
+	wp_update_attachment_metadata( $small_id, $small_meta );
+	$small_links = axismundi_op_media_url_links( get_post( $small_id ) );
+	ax_media_projection_assert( $ax_media_projection_results, '[project choice] a same-dimension derivative does not duplicate the original', 2 === count( $small_links ) && wp_get_attachment_url( $small_id ) === ( $small_links[0]['href'] ?? '' ) );
+	update_post_meta( $small_id, '_ax_media_visibility', 'private' );
+	$private_small = axismundi_op_transform_object( get_post( $small_id ) );
+	$private_links = axismundi_op_media_url_links( get_post( $small_id ) );
+	ax_media_projection_assert( $ax_media_projection_results, '[project choice] original inclusion cannot bypass private-media visibility', is_wp_error( $private_small ) && 1 === count( $private_links ) && is_string( $private_links[0] ) );
 
 	update_post_meta( $image_id, AXISMUNDI_MEDIA_SENSITIVE_STATE_META, 'self_marked' );
 	update_post_meta( $image_id, '_ax_media_content_warning', 'Sensitive test warning' );

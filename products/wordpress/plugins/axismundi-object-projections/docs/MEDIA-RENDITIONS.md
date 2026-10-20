@@ -79,12 +79,14 @@ Satisfied simultaneously:
 2. **Media Links first; the scalar HTML page last.** An `Image` object's naive `url[0]`
    consumer expects media — an HTML page in that slot would be read as the image. FEP-b2b8's
    The scalar page is a project choice, not a claim to meet the HTML Link SHOULD.
-3. **Standalone original files are never advertised.** This is the same *bounded derivative,
-   never the original by default* rule as REMOTE-ASSET-CACHE.md. **If no derivative exists,
-   emit only the scalar HTML page — never fall back to the original.** An embedded Article/Note may
-   opt into its source only when that complete image already satisfies its hard dimension,
-   pixel, and byte caps; it is not a fallback for an oversized original.
-4. **At most 4 versions**, largest first, deduplicated by URL **and** by dimensions.
+3. **Standalone Image includes its full attachment file** (owner decision 2026-10-21).
+   Its top-level `width` and `height` describe that file, not the selected thumbnail.
+   The full-file Link is first, followed by bounded derivatives, and the scalar HTML
+   page remains last. A source with no derivatives still advertises its full file.
+   This does not change embedded Article/Note caps or a consumer's download policy.
+   "Full" means `wp_get_attachment_url()` plus the matching top-level metadata;
+   an older unscaled `original_image` backup is not additionally exposed.
+4. **At most 4 derivatives plus the full file**, deduplicated by URL **and** dimensions.
 5. **Only already-generated, provider-addressed trusted virtual derivatives, or a cap-fitting
    embedded source.** Projection
    never generates or fetches an image. A virtual derivative must use the exact HTTPS URL
@@ -220,9 +222,9 @@ pinned: `tests/audit-core-attachment.php` for the core profile, and
 
 ## 6. Per-MIME policy
 
-- **Image** — standalone objects are derivatives only. Embedded Article/Note media may use a
-  complete source that already fits its explicit 1024px, pixel, and byte caps; otherwise no
-  derivative → HTML Link only.
+- **Image** — standalone objects include the full attachment file and its metadata dimensions,
+  plus bounded derivatives. Embedded Article/Note media may use a complete source only when
+  it already fits the explicit 1024px, pixel, and byte caps; those caps are unchanged.
 - **Video / Audio** — there is no transcoding substrate, so **no multiple versions are
   invented**. Whether the original is publicly downloadable is a *separate download policy*,
   not a rendition question.
@@ -256,12 +258,13 @@ parsing, since that is what the rest of the fediverse sends today.
 
 ## 10. Test gates
 
-- `url` is a media-Link array with the `text/html` Link last.
+- `url` is a media-Link array with the scalar human page last.
 - An embedded descriptor and its standalone projection state the same `id`, in both the core
   profile and the Media Library adapter.
-- No original URL appears anywhere in `url`.
-- At most 4 entries; dimension and URL dedupe hold.
-- An image with **no** derivatives emits the HTML Link only — no original leak.
+- Standalone Image includes the full source Link and top-level source dimensions.
+- At most 4 derivatives plus the full source; dimension and URL dedupe hold.
+- An image with **no** derivatives still emits its full source and scalar HTML page.
+- Full-source inclusion cannot bypass private or locked media visibility.
 - Attachment Single keeps `name = post_title`, omits `name` when the title is empty, and
   never substitutes alt text even when alt text exists.
 - The caption reaches `summary` and the description reaches `content` on Attachment Single;
@@ -459,7 +462,7 @@ any of them, and inventing one is an extension decision, not a gap:
 | image `image_meta.camera`, `aperture`, `iso`, `focal_length`, `shutter_speed` | the same, and additionally a privacy surface: EXIF is stripped or kept by policy, not published by default |
 | image `image_meta.created_timestamp` | **not** `published`. Capture time and publication time are different facts, and conflating them would backdate a federated object to when a photo was taken |
 | image `image_meta.copyright`, `credit` | already answered by this project's own rights model, which publishes a license through `schema:license` |
-| `original_image`, `sizes` | the rendition policy owns these, and the original is deliberately excluded from `url` |
+| `original_image`, `sizes` | the rendition policy owns derivative selection; standalone Image additionally emits its current full attachment file, not an older unscaled backup |
 
 ### Open: `usedIn` may not be the lasting shape
 

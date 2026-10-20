@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.3
+Stable tag: 0.1.4
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -145,18 +145,11 @@ service and privacy policy.
 
 == Changelog ==
 
-= 0.1.3 =
-* Add a shared Object identity registry, source readers and type-based assembly, with a
-  public JSON-LD read API that labels remote observations and preserved payload fallbacks.
-* Serve canonical Activity documents and cursor-paged outbox collections without
-  rewriting immutable Activity snapshots or exposing blind recipients.
-* Index declared tag references separately from derived term usage. Add public member
-  queries with Actor URI filters, scoped cursors, and visibility checks shared by HTML.
-* Emit local hashtag references as id/name pairs, retain numeric term identities, and
-  move human archives to /hashtags/ while preserving the previous route.
-* Use scalar Article permalinks, content-only embedded attachments, standalone rendition
-  Links and scalar media page URLs. Project public audio and video cover images.
-* Require explicit source profiles for additional post types instead of assigning a
-  generic fallback type, and use a vocabulary snapshot for assembly contracts.
+= 0.1.4 =
+* Include the current full attachment file alongside derivative Links on standalone
+  Image objects, with source width and height on the Image itself.
+* Keep embedded Article and Note attachment limits unchanged. Do not expose the
+  separate unscaled original_image backup or fetch binaries during projection.
+* Deduplicate media representations by URL and dimensions, preserving visibility gates.
 
 Earlier releases are recorded in changelog.txt.

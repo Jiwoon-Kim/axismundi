@@ -147,23 +147,34 @@ function axismundi_op_media_object_type( string $mime ) : string {
 /**
  * Pick the media resource represented by this object.
  *
- * Images use the Media Library's bounded feed rendition helper (never the original by
- * default). Other MIME families use their attachment file because core has no general
- * derivative contract for them.
+ * Standalone images advertise their full attachment file followed by the Media
+ * Library's bounded derivatives. Embedded descriptors have a separate capped policy.
  *
- * @param int    $attachment_id Attachment id.
- * @param string $mime          MIME type.
- * @return array<string,mixed>|null
+ * @param WP_Post $attachment Attachment.
+ * @param array   $policy Derivative selection policy.
+ * @param bool    $include_source Whether this is a standalone representation.
+ * @return array<int,array|string>
  */
-function axismundi_op_media_url_links( WP_Post $attachment, array $policy = array() ) : array {
+function axismundi_op_media_url_links( WP_Post $attachment, array $policy = array(), bool $include_source = true ) : array {
 	$id    = (int) $attachment->ID;
 	$mime  = (string) get_post_mime_type( $attachment );
 	$links = array();
 
 	if ( str_starts_with( $mime, 'image/' ) ) {
-		// Images advertise only already-generated derivatives. Media Library owns the
-		// selection and structurally excludes the original, so there is deliberately no
-		// wp_get_attachment_url() fallback here: no derivative means no media Link.
+		$metadata = wp_get_attachment_metadata( $id );
+		$file = (string) wp_get_attachment_url( $id );
+		if ( $include_source && '' !== $file && axismundi_media_federation_renditions_allowed( $id ) ) {
+			$original = array( 'type' => 'Link', 'href' => $file, 'mediaType' => $mime );
+			foreach ( array( 'width', 'height' ) as $dimension ) {
+				if ( (int) ( $metadata[ $dimension ] ?? 0 ) > 0 ) {
+					$original[ $dimension ] = (int) $metadata[ $dimension ];
+				}
+			}
+			if ( (int) ( $metadata['filesize'] ?? 0 ) > 0 ) {
+				$original['size'] = (int) $metadata['filesize'];
+			}
+			$links[] = $original;
+		}
 		foreach ( axismundi_media_federation_renditions( $id, $policy ) as $rendition ) {
 			$link = array(
 				'type'      => 'Link',
@@ -175,7 +186,16 @@ function axismundi_op_media_url_links( WP_Post $attachment, array $policy = arra
 			if ( isset( $rendition['size'] ) && (int) $rendition['size'] > 0 ) {
 				$link['size'] = (int) $rendition['size'];
 			}
-			$links[] = $link;
+			$duplicate = false;
+			foreach ( $links as $existing ) {
+				if ( $existing['href'] === $link['href'] || ( isset( $existing['width'], $existing['height'] ) && $existing['width'] === $link['width'] && $existing['height'] === $link['height'] ) ) {
+					$duplicate = true;
+					break;
+				}
+			}
+			if ( ! $duplicate ) {
+				$links[] = $link;
+			}
 		}
 	} else {
 		// Video / audio / documents keep their existing single-file policy: without a
@@ -222,13 +242,14 @@ function axismundi_op_media_embedded_rendition_policy() : array {
  *
  * @param WP_Post             $attachment Attachment.
  * @param array<string,mixed> $policy     Rendition policy; may narrow, never widen.
+ * @param bool               $include_source Whether to advertise the standalone full source.
  * @return array<string,mixed>|null
  */
-function axismundi_op_media_descriptor_core( WP_Post $attachment, array $policy = array() ) : ?array {
+function axismundi_op_media_descriptor_core( WP_Post $attachment, array $policy = array(), bool $include_source = true ) : ?array {
 	if ( ! axismundi_op_media_attachment_visible( $attachment ) ) {
 		return null;
 	}
-	$links = axismundi_op_media_url_links( $attachment, $policy );
+	$links = axismundi_op_media_url_links( $attachment, $policy, $include_source );
 	if ( empty( $links ) ) {
 		return null;
 	}
@@ -251,7 +272,7 @@ function axismundi_op_media_descriptor_core( WP_Post $attachment, array $policy 
  * @return array<string,mixed>|null
  */
 function axismundi_op_media_attachment_descriptor( WP_Post $attachment ) : ?array {
-	$descriptor = axismundi_op_media_descriptor_core( $attachment, axismundi_op_media_embedded_rendition_policy() );
+	$descriptor = axismundi_op_media_descriptor_core( $attachment, axismundi_op_media_embedded_rendition_policy(), false );
 	if ( null === $descriptor ) {
 		return null;
 	}
@@ -384,6 +405,14 @@ function axismundi_op_media_attachment_transform( WP_Post $attachment ) {
 			'updated'      => get_post_modified_time( DATE_W3C, true, $attachment ),
 		)
 	);
+	if ( 'Image' === $core['type'] ) {
+		$metadata = wp_get_attachment_metadata( $id );
+		foreach ( array( 'width', 'height' ) as $dimension ) {
+			if ( (int) ( $metadata[ $dimension ] ?? 0 ) > 0 ) {
+				$object[ $dimension ] = (int) $metadata[ $dimension ];
+			}
+		}
+	}
 	$cover_id = (int) get_post_thumbnail_id( $attachment );
 	$cover_post = $cover_id > 0 && $cover_id !== $id ? get_post( $cover_id ) : null;
 	if ( $cover_post instanceof WP_Post && wp_attachment_is_image( $cover_post ) ) {

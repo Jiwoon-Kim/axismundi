@@ -83,3 +83,19 @@ SVN trunk and the new version tag must match the extracted ZIP payload; verify
 the committed remote tag with an independent export. SVN assets are unchanged.
 Activities has no approved SVN repository and is not submitted automatically.
 No external federation test or Note cutoff is part of this release.
+
+## Published Results
+
+Source commit: `44a0724e1c528b421aa3f014f50de9575288f1d9`.
+
+* Actors SVN revision `3756955`; remote `tags/0.1.3` independently exported
+  and all 88 files matched the distribution payload.
+* Object Projections SVN revision `3756957`; remote `tags/0.1.3` independently
+  exported and all 140 files matched the distribution payload.
+* GitHub releases: `actors-v0.1.3`, `object-projections-v0.1.3`, and prerelease
+  `activities-v0.1.1`. All three uploaded asset digests match the ZIP hashes
+  above. The existing Activities 0.1.0 release was not changed.
+* Activities WordPress.org submission remains manual and has not been made.
+
+SVN commit success and remote-tag equality are verified. Directory UI and
+download-CDN propagation are not claimed by these checks.

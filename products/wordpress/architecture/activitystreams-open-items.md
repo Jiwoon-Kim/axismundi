@@ -251,6 +251,67 @@ tools/ 상태 보고 스크립트     없음
                               외부 발행은 owner 가 시점을 정한다.
 ```
 
+## Wanted: Contract Introspection, Not A Second Vocabulary
+
+모델의 축을 잡기 어려웠던 문제는 **통합 레지스트리 하나로 풀린 게 아니라 책임을
+나누면서** 풀렸다. 지금 서 있는 네 축은 이렇다.
+
+```txt
+Object 레지스트리        무엇이며, 어느 소스가 사실을 소유하는가
+Collection 계약          누가 멤버십을 정하고 어떻게 열거·정렬·공개·집계하는가
+Link·Mention 참조        어느 문서의 어느 속성에 등장한 참조인가
+Term 사용 인덱스         그 참조 중 무엇을 로컬 아카이브 참여로 해석하는가
+```
+
+Link 에 별도 원장을 두지 않아도 되는 이유가 여기서 나온다. 필요한 것은 독립
+객체의 수명주기가 아니라 **문서에 등장한 descriptor 와 그 출처의 보존**이다.
+`tag_references` 가 보존하고 `term_usage` 가 멤버십을 파생한다 — **참조가 있다는
+것과 컬렉션 멤버라는 것이 분리된 것이 핵심**이다.
+
+### The Missing Piece Is A Query, Not A Model
+
+남은 불편은 "이 타입이 어떤 속성을 지원하는지 물어볼 데가 없다"는 것이다. 모델이
+아니라 **질의 층**이 없다.
+
+```txt
+describe_type( "Mention" )            Link 상속 속성 + 이 프로젝트가 지원하는 속성
+describe_type( "OrderedCollection" )  Collection/Object 상속 + orderedItems 등
+describe_collection( "hashtag-archive" )
+                                      그중 실제로 제공하는 속성·열거 방식·공개 정책
+```
+
+세 층을 **구분해서** 답해야 쓸모가 있다. 하나로 뭉치면 지금 문서를 읽는 것과
+다를 바 없다.
+
+```txt
+어휘에 정의됨      그 타입에서 의미가 있는 속성
+프로젝트가 지원함  reader 와 assembly 가 실제로 처리하는 속성
+이 문서에서 제공됨 데이터·권한·요청 맥락에 따라 실제로 나오는 속성
+```
+
+그래야 **"`totalItems` 는 정의돼 있는데 왜 해시태그 응답에는 없는가"가 조회
+가능한 질문**이 된다. 지금은 세 문서를 읽어야 답이 나온다.
+
+### Constraints On Building It
+
+- **속성 목록을 새로 쓰지 않는다.** 어휘의 `parents` 와 컬렉션 디스크립터가 이미
+  사실을 들고 있다. 두 번째 목록을 만들면 그 둘이 갈라지고, 갈라진 쪽이 거짓말을
+  한다.
+- **타입 계약 등록과 인스턴스 원장 등록은 다른 일이다.** Link 와 Mention 은 타입
+  계약을 가지되 독립 ID 도 저장 행도 받지 않는다.
+- 세 번째 층("이 문서에서 제공됨")은 요청자에 따라 달라지므로, 응답도 요청자
+  맥락을 받아야 한다. 이 축은 이미 `total_disclosure` 가 요청자 클래스별 map 인
+  것과 같다.
+
+### Not Blocking Anything
+
+이것은 편의이지 선결 조건이 아니다. 남은 실제 작업은 **공급자 연결**이다 — WP
+taxonomy 와 원격 캐시는 연결됐고, Actor 프로필·Activity·새 C2S 저장소는 아직이다.
+
+읽을 때 주의: `activitystreams-storage-boundaries.md` 에는 옛 `object_id` 중심
+제안이 남아 있고, 뒤 절이 **URI 기반 2층 모델로 대체한다고 명시**한다. 뒤 절이
+기준이다.
+
 ## Sources
 
 - ActivityPub, W3C Recommendation 2018-01-23, sections 3.1, 3.2, 5.1, 5.2, Appendix B.1.

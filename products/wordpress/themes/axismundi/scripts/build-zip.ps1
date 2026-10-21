@@ -3,9 +3,9 @@
   Build the distributable Axismundi theme ZIP for WordPress.org submission.
 
 .DESCRIPTION
-  Stages the theme into products/wordpress/_dist/axismundi/ excluding every
+  Stages the theme into products/wordpress/_dist/themes/_stage-axismundi/axismundi/ excluding every
   pattern listed in .distignore, then compresses it to
-  products/wordpress/_dist/axismundi.zip with the theme folder at the ZIP
+  products/wordpress/_dist/themes/axismundi.zip with the theme folder at the ZIP
   root (the form WordPress.org expects).
 
   Dir patterns in .distignore (existing directories) -> robocopy /XD.
@@ -18,7 +18,7 @@ $ErrorActionPreference = 'Stop'
 
 $themeDir = Split-Path -Parent $PSScriptRoot            # scripts/ -> theme root
 $slug     = 'axismundi'
-$distRoot  = Join-Path $themeDir '..\..\_dist'
+$distRoot  = Join-Path $themeDir '..\..\_dist\themes'
 $stageRoot = Join-Path $distRoot "_stage-$slug"
 $staging   = Join-Path $stageRoot $slug
 $zipPath   = Join-Path $distRoot "$slug.zip"

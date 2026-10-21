@@ -1,0 +1,27 @@
+@layer axismundi.patterns {
+	.ax-progress-page { max-inline-size: 900px; }
+	.ax-progress-page__reference-local { display: grid; gap: 24px; inline-size: min(240px, 100%); padding-block: 24px; }
+	.ax-progress-page__reference { display: block; inline-size: 100%; block-size: 520px; border: 0; margin-block-end: 16px; }
+	.ax-progress-page__matrix-scroll { overflow-x: auto; }
+	.ax-progress-page__matrix { border-collapse: collapse; inline-size: 100%; min-inline-size: 880px; table-layout: fixed; }
+	.ax-progress-page__matrix--circular { min-inline-size: 440px; }
+	.ax-progress-page__matrix th { font-size: 13px; font-weight: 500; text-align: start; }
+	.ax-progress-page__matrix th, .ax-progress-page__matrix td { padding: 16px 8px; vertical-align: middle; border-block-end: 1px solid var(--md-sys-color-outline-variant); }
+	.ax-progress-page__matrix th:first-child { inline-size: 110px; }
+	.ax-progress-page__matrix--circular td { text-align: center; }
+	.ax-progress-page[data-reduced] .ax-progress[data-wavy] path { d: var(--ax-wave-flat-path) !important; }
+	.ax-progress-page__controls, .ax-progress-page__circles { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; }
+	.ax-progress-page__controls label { display: flex; align-items: center; gap: 12px; }
+	.ax-progress-page__controls output { min-inline-size: 7ch; }
+	.ax-progress-page__controls input[type="range"] { inline-size: 128px; }
+	.ax-progress-page__row { display: grid; grid-template-columns: 110px minmax(0,1fr) auto; align-items: center; gap: 16px; min-block-size: 48px; }
+	.ax-progress-page[data-reduced] .ax-progress, .ax-progress-page[data-reduced] .ax-progress *,
+	.ax-progress-page[data-reduced] .ax-progress path { animation: none !important; }
+	.ax-progress-page[data-inspect] .ax-progress[data-indeterminate] { animation-delay: var(--ax-progress-seek); animation-play-state: paused; }
+	.ax-progress-page[data-inspect] .ax-progress__wave-phase { animation-delay: var(--ax-progress-seek); animation-play-state: paused; }
+	@media (max-width: 480px) {
+		.ax-progress-page__row { grid-template-columns: 120px minmax(0,1fr) auto; gap: 8px; }
+		.ax-progress-page__row > span { overflow-wrap: anywhere; }
+		.ax-progress-page__controls label { flex-wrap: wrap; }
+	}
+}

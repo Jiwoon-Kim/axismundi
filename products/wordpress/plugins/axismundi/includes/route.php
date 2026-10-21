@@ -32,7 +32,7 @@ function axismundi_capstone_route_patterns() : array {
 		$patterns[ $base ] = array( 'name' => 'stylebook' );
 		$patterns[ $base . '/styles' ] = array( 'name' => 'stylebook', 'styles' => true );
 		$patterns[ $base . '/styles/(?P<style>motion)' ] = array( 'name' => 'stylebook' );
-		$patterns[ $base . '/components/(?P<component>buttons|icon-buttons|button-groups|split-buttons|cards|carousels|lists|tabs|badges|dividers|navigations|app-bars|surfaces|menus|fabs|tooltips|loading-indicators)' ] = array( 'name' => 'stylebook' );
+		$patterns[ $base . '/components/(?P<component>buttons|icon-buttons|button-groups|split-buttons|cards|carousels|lists|tabs|badges|dividers|navigations|app-bars|surfaces|menus|fabs|tooltips|loading-indicators|progress-indicators)' ] = array( 'name' => 'stylebook' );
 		$patterns[ $base . '/layout/(?P<layout>topology|feed|list-detail|supporting_pane)' ] = array( 'name' => 'stylebook' );
 	}
 	return $patterns;

@@ -31,7 +31,8 @@ WAAPI로 보간한다. React는 매 frame마다 다시 렌더하지 않는다. s
 페이지를 열 때만 별도 chunk로 내려온다.
 
 검증 표면: `/stylebook/components/loading-indicators`. 기존 motion 토큰과 renderer를 소비한다.
-Progress/Skeleton은 아직 구현하지 않았다. 컴포넌트 상태 테스트는 OS reduced-motion의 최초
+Progress의 후속 구현은 `REFERENCE-M3-PROGRESS-IMPLEMENTATION.md`를 기준으로 한다.
+Skeleton은 아직 구현하지 않았다. 컴포넌트 상태 테스트는 OS reduced-motion의 최초
 상태와 런타임 변경을 mock media query로 검사한다. 실제 Chrome에서는 morph/정적 대체와
 48px/38px 치수 및 모바일 가로 overflow를 확인한다. OS 설정을 실제 변경한 시험은 아니다.
 

@@ -165,14 +165,14 @@ M3가 Styles와 Components를 나누므로 페이지 계열도 둘이다.
 /stylebook/components/<name>         여러 축이 맞물린 컨트롤 검증
 ```
 
-새 Components 페이지를 추가할 때 **네 군데를 같이 고친다**. 서버 rewrite를 빠뜨리면 URL이
-WordPress 404가 된다.
+새 Components 페이지는 서버의 단일 패턴 목록과 Stylebook dispatcher/nav에 등록한다.
+2026-10-21 라우트 분리 이후 JavaScript에 별도 정규식이나 수동 rewrite version 증가는 없다.
+활성 패턴 signature가 바뀌면 soft flush한다. 서버 등록을 빠뜨리면 WordPress 404가 된다.
 
 ```text
-app.js                       라우트 정규식
 pages/stylebook/index.js     dispatcher + nav
-includes/route.php           rewrite 두 군데
-axismundi.php                AXISMUNDI_CAPSTONE_REWRITE_VERSION 증가
+includes/route.php           단일 route pattern
+tests/audit-public-routes.php  경로 감사
 ```
 
 공용 chrome은 `pages/stylebook/stylebook-page.css`의 `ax-stylebook-page__*`를 쓴다. Styles

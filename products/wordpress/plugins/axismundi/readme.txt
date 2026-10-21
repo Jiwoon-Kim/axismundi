@@ -22,6 +22,10 @@ Material loading shape geometry derives from Android Open Source Project
 MaterialShapes and AndroidX graphics-shapes, under Apache-2.0. Source versions,
 processing notes, and the license text are preserved beside the assets in
 `src/apps/frontend/components/loading-indicators/assets/`.
+Progress geometry and animation timelines adapt AndroidX Material3 and Material
+Components for Android under Apache-2.0. Source
+commit, modifications, and license are in
+`src/apps/frontend/components/progress-indicators/`.
 
 == Installation ==
 

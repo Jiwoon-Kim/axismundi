@@ -21,6 +21,8 @@ import { StylebookMotionPage } from './styles/motion';
 
 const StylebookLoadingIndicatorsPage = lazy( () => import( './components/loading-indicators' )
 	.then( ( module ) => ( { default: module.StylebookLoadingIndicatorsPage } ) ) );
+const StylebookProgressIndicatorsPage = lazy( () => import( './components/progress-indicators' )
+	.then( ( module ) => ( { default: module.StylebookProgressIndicatorsPage } ) ) );
 
 /**
  * Social runtime verification surface.
@@ -31,6 +33,9 @@ const StylebookLoadingIndicatorsPage = lazy( () => import( './components/loading
  * @return {import('@wordpress/element').ReactNode} Stylebook route content.
  */
 export function StylebookPage( { component, layout, style, styles } ) {
+	if ( 'progress-indicators' === component ) {
+		return <Suspense fallback={ <p role="status">Loading...</p> }><StylebookProgressIndicatorsPage /></Suspense>;
+	}
 	if ( 'loading-indicators' === component ) {
 		return <Suspense fallback={ <p role="status">Loading…</p> }><StylebookLoadingIndicatorsPage /></Suspense>;
 	}
@@ -132,6 +137,7 @@ export function StylebookPage( { component, layout, style, styles } ) {
 				<a href="/stylebook/components/fabs">FABs</a>
 				<a href="/stylebook/components/tooltips">Tooltips</a>
 				<a href="/stylebook/components/loading-indicators">Loading indicators</a>
+				<a href="/stylebook/components/progress-indicators">Progress indicators</a>
 				<a href="/stylebook/components/dividers">Dividers</a>
 				<a href="/stylebook/components/navigations">Navigation</a>
 				<a href="/stylebook/components/app-bars">App bars</a>

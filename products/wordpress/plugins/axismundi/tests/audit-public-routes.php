@@ -33,7 +33,7 @@ try {
 	foreach ( array( '', '/styles', '/styles/motion', '/layout/feed', '/layout/list-detail', '/layout/supporting_pane', '/layout/topology' ) as $suffix ) {
 		$check( 'stylebook' === ( axismundi_capstone_resolve_public_path( 'stylebook' . $suffix )['name'] ?? '' ), 'Stylebook route ' . $suffix );
 	}
-	foreach ( array( 'buttons', 'icon-buttons', 'button-groups', 'split-buttons', 'cards', 'carousels', 'lists', 'tabs', 'badges', 'dividers', 'navigations', 'app-bars', 'surfaces', 'menus', 'fabs', 'tooltips', 'loading-indicators' ) as $component ) {
+	foreach ( array( 'buttons', 'icon-buttons', 'button-groups', 'split-buttons', 'cards', 'carousels', 'lists', 'tabs', 'badges', 'dividers', 'navigations', 'app-bars', 'surfaces', 'menus', 'fabs', 'tooltips', 'loading-indicators', 'progress-indicators' ) as $component ) {
 		$route = axismundi_capstone_resolve_public_path( 'stylebook/components/' . $component );
 		$check( $component === ( $route['component'] ?? '' ), 'component dispatch ' . $component );
 	}

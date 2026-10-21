@@ -235,6 +235,13 @@ WP user 가 아예 없으므로 `author` 로는 걸러낼 수 없다.
 
 ## Deferred, With Their Evidence
 
+Release/build boundary (owner decision, 2026-10-21): Object Projections 0.1.4
+is not approved for deployment. The working version is `0.1.4-dev`; published
+0.1.3 tags and ZIPs remain unchanged. Plugin ZIPs stay directly under `_dist/`;
+only theme ZIPs move to `_dist/themes/` to avoid the shared `axismundi` slug.
+The full `phpcs:ignore` reassessment is deferred until Activities receives its
+manual WordPress.org review result; it is not a prerequisite for frontend work.
+
 ```txt
 ap-liked 커서 리더            200 clamp + ORDER BY id DESC
 flat-reader 스윕              relation_actor_list 500, get_by_actor, get_recent
@@ -347,9 +354,13 @@ URL               지금 가져올 표현의 주소
 digestMultibase   특정 바이너리의 동일성 (FEP-1311)
 ```
 
-**바이너리 중복 제거는 CID 가 하는 일이 아니다.** CID 는 문서 로컬이라 dedup
-키가 될 수 없다. 그 일은 미디어 `id` 와 digest 가 한다. 대화에서 CID 의 이점으로
-말한 적이 있으나 정확하지 않다.
+**바이너리 중복 제거는 CID 가 하는 일이 아니다.** CID 는 참조 발생을 가리키지 바이트를 가리키지 않아서 dedup
+키가 될 수 없다. 그 일은 미디어 `id` 와 digest 가 한다. 같은
+이미지를 담은 두 문서는 서로 다른 CID 를 갖는다. 대화에서 CID 의 이점으로 말한
+적이 있으나 정확하지 않다.
+
+주의: RFC 2392 는 Content-ID 에 **전역 고유성**을 요구한다. 아래에서 정하는 것은
+**해소 범위**이지 고유성 범위가 아니다. 둘은 별개다.
 
 ### Resolution Scope Is A Security Requirement, Not Syntax
 
@@ -360,6 +371,7 @@ ActivityPub 에는 multipart 가 없으므로 그 자리를 무엇이 대신하�
 ```txt
 핀   content 안의 cid: 는 같은 Object 의 attachment 배열 안에서만 해소한다
      cid 값으로 캐시나 다른 객체를 조회하지 않는다
+핀   범위 제한은 권한을 보장하지 않는다. 해소한 미디어의 접근 권한을 따로 검사한다
 ```
 
 범위를 정하지 않으면 `cid:` 가 전역 네임스페이스가 되고, 악의적 발신자가 cid
@@ -370,7 +382,8 @@ ActivityPub 에는 multipart 가 없으므로 그 자리를 무엇이 대신하�
 
 `usedIn` 을 발행 속성으로 유지할 필요가 없는 이유는 CID 가 아니라 **그것이 관계
 인덱스의 역조회**라는 것이고, 그 사실은 CID 이전부터 참이었다. CID 가 더하는
-것은 `usedIn` 이 한 번도 운반하지 않은 **본문 안의 위치**다.
+것은 `usedIn` 이 한 번도 운반하지 않은 **그 위치의 요소와 첨부 항목의 연결**이다.
+위치 자체는 HTML 이 들고 있고, 같은 CID 를 여러 위치에서 참조할 수도 있다.
 
 범위도 일치하지 않는다. featured image, cover, 프로필 이미지는 인라인 CID 가
 없는 사용이라 CID 모델로 표현되지 않는다. 전체 `usedIn` 범위를 덮으려면 인라인
@@ -433,6 +446,38 @@ Link 배열을 그대로 `srcset` 에 넣지 않는다. 이미지 MIME 인지 �
 FEP-b2b8(Article HTML 과 인라인 미디어), RFC 2392(`cid:` 문법과 식별 범위).
 **`data-cid` 또는 `src="cid:"` 와 `contentId` 의 연결은 이 문서들이 이미 정의한
 규약이 아니라 새 제안이다.**
+
+### Reuse Across Servers Needs A Policy On The Image, Not On The Note
+
+공유 폴더의 목적은 Openverse 처럼 **남의 Image 객체를 자기 Note 에 첨부로
+추가**할 수 있게 하는 것이다. 그러면 남의 미디어 ID 를 첨부 배열에 적는 것
+자체는 공격이 아니라 **의도된 기능**이 된다. 위의 보안 핀은 그것을 금지하는
+것이 아니라, 적었다는 사실만으로 접근이 허가되지 않는다는 뜻이다.
+
+판단을 넷으로 나눈다. 하나가 다른 하나를 대신하지 않는다.
+
+```txt
+이미지 열람        공개 범위와 접근 권한
+첨부·인라인 재사용  재사용을 허용하는가
+바이너리 보관      수신 서버의 캐싱 정책
+재배포·변형        라이선스와 저작권 조건
+```
+
+**공개 이미지라고 재사용까지 허용된 것이 아니고, 첨부 허용이 라이선스를
+대신하지도 않는다.** 정책의 소유자는 부모 Note 가 아니라 **Image 객체**다.
+
+첫 범위는 **라이선스 기반 재사용**으로 잡는다. `schema:license` 에 CC 라이선스
+URI 를 싣고 출처·저작자 표시를 함께 제공하면 Openverse 식 사용의 대부분이
+해결된다. 승인 프로토콜을 먼저 만들 이유가 없다.
+
+`canAttach` 계열의 대상별 승인 정책은 **새 확장 제안**이고, 라이선스로 해결되지
+않는 요구가 실제로 생길 때 후속으로 둔다. 설계하게 되면 첫 질문은 이것이다 —
+**첨부 당시 승인으로 충분한가, 이후 철회와 정책 변경은 기존 사용에 어떻게
+적용되는가.** 공유 폴더의 재사용 수명주기가 여기에 걸린다.
+
+핀 하나는 지금 박아 둔다. **CC 라이선스로 이미 허용한 사용을 나중의 정책
+변경으로 소급 취소하도록 설계하지 않는다.** 이미지 삭제와 라이선스 철회는 같은
+뜻이 아니다.
 
 ## Sources
 

@@ -312,6 +312,128 @@ taxonomy 와 원격 캐시는 연결됐고, Actor 프로필·Activity·새 C2S �
 제안이 남아 있고, 뒤 절이 **URI 기반 2층 모델로 대체한다고 명시**한다. 뒤 절이
 기준이다.
 
+## Inline Media References: The CID Direction
+
+ActivityPub 에는 **본문 안의 `<img>` 와 `attachment` 의 미디어 객체를 잇는
+상호운용 규약이 없다.** `<img src>` 자체는 있으므로 "인라인 이미지를 표시할
+방법이 없다"는 표현은 부정확하다. 없는 것은 **연결**이다.
+
+이것을 WordPress 쪽에서 보면 무엇을 내보내려는 것인지 분명해진다.
+
+```txt
+WordPress 내부                      원격 수신 측
+블록의 attachment 참조          →   본문의 CID 참조
+로컬 attachment ID              →   미디어 Object URI
+_wp_attachment_metadata.sizes   →   미디어 객체의 렌디션 Link 배열
+이미지 HTML 생성                →   수신 렌더러가 srcset 구성
+```
+
+즉 새 이미지 로딩 기술이 아니라 **CMS 내부의 미디어 참조를 연합 경계 너머로
+전달하는 계약**이다. 본문은 위치와 배치 의도를, 미디어 객체는 사용 가능한 파일
+표현과 상태를 제공한다.
+
+연결이 복원되면 그 위치에서 할 수 있는 일이 늘어난다: `sensitive`/CW 를 인라인
+이미지에도 적용하고, 미디어 `id` 로 그 이미지 자체의 댓글 스레드를 열고,
+Tombstone 이면 원래 자리에 플레이스홀더를 둔다.
+
+### Four Values, Four Jobs
+
+섞이기 쉬우므로 분리해 둔다.
+
+```txt
+Media id          재사용되는 미디어 객체의 정체성
+CID               본문 위치와 첨부 항목의 연결
+URL               지금 가져올 표현의 주소
+digestMultibase   특정 바이너리의 동일성 (FEP-1311)
+```
+
+**바이너리 중복 제거는 CID 가 하는 일이 아니다.** CID 는 문서 로컬이라 dedup
+키가 될 수 없다. 그 일은 미디어 `id` 와 digest 가 한다. 대화에서 CID 의 이점으로
+말한 적이 있으나 정확하지 않다.
+
+### Resolution Scope Is A Security Requirement, Not Syntax
+
+RFC 2392 에서 `cid:` 는 **같은 MIME multipart 메시지 안에서** 해소된다.
+ActivityPub 에는 multipart 가 없으므로 그 자리를 무엇이 대신하는지 명시해야
+한다.
+
+```txt
+핀   content 안의 cid: 는 같은 Object 의 attachment 배열 안에서만 해소한다
+     cid 값으로 캐시나 다른 객체를 조회하지 않는다
+```
+
+범위를 정하지 않으면 `cid:` 가 전역 네임스페이스가 되고, 악의적 발신자가 cid
+값을 추측해 **남의 미디어를 자기 본문에 끌어다 쓰는** 경로가 열린다. 문법보다
+이 규칙이 먼저다.
+
+### CID Does Not Replace `usedIn`; It Adds What `usedIn` Never Carried
+
+`usedIn` 을 발행 속성으로 유지할 필요가 없는 이유는 CID 가 아니라 **그것이 관계
+인덱스의 역조회**라는 것이고, 그 사실은 CID 이전부터 참이었다. CID 가 더하는
+것은 `usedIn` 이 한 번도 운반하지 않은 **본문 안의 위치**다.
+
+범위도 일치하지 않는다. featured image, cover, 프로필 이미지는 인라인 CID 가
+없는 사용이라 CID 모델로 표현되지 않는다. 전체 `usedIn` 범위를 덮으려면 인라인
+참조와 비인라인 사용을 **같은 관계로** 표현해야 한다.
+
+그리고 현재 관계 테이블은 같은 미디어의 반복 사용을 `occurrence_count` 로
+접는다. CID 별 참조를 보존하는 모델과 충돌하므로, 구현 전에 이 축을 정해야
+한다.
+
+### Read Path First; Do Not Publish `cid:` Yet
+
+`src="cid:…"` 를 받은 미지원 클라이언트는 인라인 이미지를 깨뜨린다. 첨부
+갤러리로 대신 보여줄지도 보장되지 않는다.
+
+```txt
+지금   우리 읽기 API 와 지원 렌더러 경로에서 해소를 구현하고 검증한다
+아직   S2S 발행 HTML 은 HTTP src 를 유지한다
+먼저   미지원 수신자의 폴백을 실측한 뒤에 발행 모양을 바꾼다
+```
+
+**이것은 선호가 아니라 핀이다.** 이 저장소에는 이미 측정되지 않은 와이어 변경이
+하나 있다 — 해시태그 `{id, name}` 의 수신 동작(이 문서의 Deferred 참조). 두
+번째를 쌓으면 나중에 무엇이 깨졌는지 분리할 수 없다.
+
+`data-cid` 대신 `src="cid:…"` 를 쓰면 지원 렌더러 내부는 단순해지고, HTTP
+이미지를 먼저 로드했다가 교체하는 위험도 줄어든다. 다만 **생략되는 것은
+`data-cid` 속성이지 매핑 계약 자체가 아니다.**
+
+### Rendering Rules That Follow
+
+```txt
+srcset   해상도 선택
+picture  포맷·구도 분기가 필요할 때만. 둘은 대체재가 아니다
+순서     CID 해소 → 삭제·권한·CW 판단 → 그 다음에 실제 src/srcset 을 DOM 에 넣는다
+```
+
+마지막 줄이 중요하다. HTTP `src` 를 먼저 DOM 에 넣으면 **CW 판단 전에 요청이
+시작된다.** 그러면 CW 가 표시만 가리고 바이너리는 이미 받은 상태가 된다.
+
+Link 배열을 그대로 `srcset` 에 넣지 않는다. 이미지 MIME 인지 확인하고, HTML
+페이지 URL 을 제외하고, **정사각 크롭과 원본 비율 렌디션을 같은 `w` 후보군에
+섞지 않는다.** 브라우저는 후보들을 같은 이미지의 다른 너비로 취급하므로, 크롭이
+섞이면 뷰포트에 따라 구도가 바뀐다. WordPress 의 `thumbnail` 이 하드 크롭인지는
+사이트 설정에 달려 있으므로 구현 시 확인한다.
+
+객체 캐시와 바이너리 캐시도 분리한다. 객체 캐시(JSON·상태·렌디션 URL)만 있어도
+원격 URL 로 `srcset` 을 구성할 수 있다. 바이너리 취득은 재사용·프라이버시·운영
+비용으로 **선택**하는 것이고, 검증된 로컬 파일이 있을 때만 해당 후보 URL 을
+로컬 주소로 바꾼다. ID 가 있다는 이유로 자동 취득하지 않는다.
+
+### Where This Belongs
+
+프론트앱이 실제 Object 를 호출해 렌더하는 단계의 일이다. 컴포넌트 작업의 선결
+조건이 아니며, 그렇게 만들지 않는다.
+
+`cid:` 의 정확한 문법, 매핑의 저장 위치, 그리고 `contentId` 를 첨부 항목의 어느
+자리에 둘지는 **미결**이다. 구현으로 계약을 검증한 뒤 FEP 로 제안하는 순서다.
+
+참고 문서: FEP-1311(미디어 표현·여러 버전·`digestMultibase`),
+FEP-b2b8(Article HTML 과 인라인 미디어), RFC 2392(`cid:` 문법과 식별 범위).
+**`data-cid` 또는 `src="cid:"` 와 `contentId` 의 연결은 이 문서들이 이미 정의한
+규약이 아니라 새 제안이다.**
+
 ## Sources
 
 - ActivityPub, W3C Recommendation 2018-01-23, sections 3.1, 3.2, 5.1, 5.2, Appendix B.1.

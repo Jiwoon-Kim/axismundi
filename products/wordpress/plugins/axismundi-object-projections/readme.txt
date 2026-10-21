@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.4
+Stable tag: 0.1.4-dev
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -145,7 +145,8 @@ service and privacy policy.
 
 == Changelog ==
 
-= 0.1.4 =
+= 0.1.4-dev =
+* Development version only; not published to WordPress.org or packaged as a stable release.
 * Include the current full attachment file alongside derivative Links on standalone
   Image objects, with source width and height on the Image itself.
 * Keep embedded Article and Note attachment limits unchanged. Do not expose the

@@ -15,8 +15,12 @@ import { StylebookSurfacesPage } from './components/surfaces';
 import { StylebookMenusPage } from './components/menus';
 import { StylebookFabsPage } from './components/fabs';
 import { StylebookTooltipsPage } from './components/tooltips';
+import { lazy, Suspense } from '@wordpress/element';
 import { StylebookStylesPage } from './styles';
 import { StylebookMotionPage } from './styles/motion';
+
+const StylebookLoadingIndicatorsPage = lazy( () => import( './components/loading-indicators' )
+	.then( ( module ) => ( { default: module.StylebookLoadingIndicatorsPage } ) ) );
 
 /**
  * Social runtime verification surface.
@@ -27,6 +31,9 @@ import { StylebookMotionPage } from './styles/motion';
  * @return {import('@wordpress/element').ReactNode} Stylebook route content.
  */
 export function StylebookPage( { component, layout, style, styles } ) {
+	if ( 'loading-indicators' === component ) {
+		return <Suspense fallback={ <p role="status">Loading…</p> }><StylebookLoadingIndicatorsPage /></Suspense>;
+	}
 	if ( 'buttons' === component ) {
 		return <StylebookButtonsPage />;
 	}
@@ -124,6 +131,7 @@ export function StylebookPage( { component, layout, style, styles } ) {
 				<a href="/stylebook/components/menus">Menus</a>
 				<a href="/stylebook/components/fabs">FABs</a>
 				<a href="/stylebook/components/tooltips">Tooltips</a>
+				<a href="/stylebook/components/loading-indicators">Loading indicators</a>
 				<a href="/stylebook/components/dividers">Dividers</a>
 				<a href="/stylebook/components/navigations">Navigation</a>
 				<a href="/stylebook/components/app-bars">App bars</a>

@@ -1,0 +1,39 @@
+@layer axismundi.components {
+	.ax-loading-indicator {
+		--md-comp-loading-indicator-active-indicator-color: var(--md-sys-color-primary);
+		--md-comp-loading-indicator-active-indicator-size: 38px;
+		--md-comp-loading-indicator-container-width: 48px;
+		--md-comp-loading-indicator-container-height: 48px;
+		--md-comp-loading-indicator-container-shape: var(--md-sys-shape-corner-full);
+		--md-comp-loading-indicator-contained-active-indicator-color: var(--md-sys-color-on-primary-container);
+		--md-comp-loading-indicator-contained-container-color: var(--md-sys-color-primary-container);
+		display: inline-grid;
+		place-items: center;
+		flex: none;
+		inline-size: calc(var(--md-comp-loading-indicator-container-width) * var(--ax-loading-scale));
+		block-size: calc(var(--md-comp-loading-indicator-container-height) * var(--ax-loading-scale));
+		color: var(--md-comp-loading-indicator-active-indicator-color);
+		vertical-align: middle;
+		border-radius: var(--md-comp-loading-indicator-container-shape);
+	}
+	.ax-loading-indicator[data-contained] {
+		color: var(--md-comp-loading-indicator-contained-active-indicator-color);
+		background: var(--md-comp-loading-indicator-contained-container-color);
+	}
+	.ax-loading-indicator svg {
+		display: block;
+		inline-size: calc(var(--md-comp-loading-indicator-active-indicator-size) * var(--ax-loading-scale));
+		block-size: calc(var(--md-comp-loading-indicator-active-indicator-size) * var(--ax-loading-scale));
+		overflow: visible;
+	}
+	.ax-loading-indicator path {
+		fill: currentColor;
+		transform-box: view-box;
+		transform-origin: center;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.ax-loading-indicator svg,
+		.ax-loading-indicator path { transform: none !important; }
+		.ax-loading-indicator path { d: var(--ax-loading-static-path) !important; }
+	}
+}

@@ -16,6 +16,13 @@ Axismundi is an early application shell. It provides a public social route at
 `/social/` and a separate WordPress administration surface. Feed data, federation
 interactions, and PWA behaviour are not part of this alpha release.
 
+== Third-party assets ==
+
+Material loading shape geometry derives from Android Open Source Project
+MaterialShapes and AndroidX graphics-shapes, under Apache-2.0. Source versions,
+processing notes, and the license text are preserved beside the assets in
+`src/apps/frontend/components/loading-indicators/assets/`.
+
 == Installation ==
 
 1. Upload and activate the plugin.

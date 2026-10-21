@@ -676,9 +676,8 @@ def check_consumers_and_route(report: Report, data: dict) -> None:
     route = data["project_policy"]["stylebook_route"]
     places = route["declared_in"]
     report.check(
-        len(places) == 5 and len(set(places)) == 3,
-        "the route is declared in five places across three files, and both numbers matter: the "
-        "menu slice shipped with one missing and the page did not open",
+        len(places) == 2 and len(set(places)) == 2,
+        "the route has one server definition and one Stylebook dispatch/navigation owner",
     )
     for place in set(places):
         report.check(
@@ -691,9 +690,10 @@ def check_consumers_and_route(report: Report, data: dict) -> None:
         "app.js": APP.read_text(encoding="utf-8"),
         "stylebook/index.js": STYLEBOOK_INDEX.read_text(encoding="utf-8"),
     }
+    from _frontend_route_check import supports_component
     present = {
-        "route.php": texts["route.php"].count(f"|{slug}") == 2,
-        "app.js": f"|{slug}|" in texts["app.js"] or f"|{slug})" in texts["app.js"],
+        "route.php": supports_component(texts["route.php"], texts["app.js"], slug),
+        "app.js": "window.axismundiCapstone?.resolvedRoute" in texts["app.js"],
         "stylebook/index.js": f"if ( '{slug}' === component )" in texts["stylebook/index.js"]
         and f'href="{route["path"]}"' in texts["stylebook/index.js"],
     }
@@ -704,8 +704,8 @@ def check_consumers_and_route(report: Report, data: dict) -> None:
         f"{[name for name, found in present.items() if not found]}",
     )
     report.check(
-        ROUTE.read_text(encoding="utf-8").count(f"|{slug}") == 2,
-        "the FAB route must appear in both route.php regexes, not merely somewhere in that file",
+        texts["route.php"].count(f"|{slug}") == 1,
+        "the FAB route must have one server-side definition",
     )
     report.check(
         f"AXISMUNDI_CAPSTONE_REWRITE_VERSION  = '{route['rewrite_version']}'"

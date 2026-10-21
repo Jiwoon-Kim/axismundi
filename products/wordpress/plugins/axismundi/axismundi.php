@@ -33,7 +33,7 @@ require_once __DIR__ . '/includes/admin.php';
 /** @return void */
 function axismundi_capstone_activate() : void {
 	axismundi_capstone_add_rewrite_rule();
-	flush_rewrite_rules( false );
+	axismundi_capstone_upgrade_rewrite_rules();
 }
 register_activation_hook( __FILE__, 'axismundi_capstone_activate' );
 

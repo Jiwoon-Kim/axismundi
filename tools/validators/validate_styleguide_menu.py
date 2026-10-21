@@ -1364,18 +1364,10 @@ def check_implementation(report: Report, data: dict) -> None:
         f"the overflow sample has {long_rows} rows against the next-longest specimen's {other_rows}; it is "
         "no longer the long one and demonstrates nothing",
     )
-    # Four places declare a stylebook route and the app's own regex is one of
-    # them. Leaving it out does not fail any PHP check and does not fail a
-    # build; the page simply falls back to the feed. Measured, that way.
+    # PHP resolves the shared pattern; JavaScript consumes that result directly.
     app = APP.read_text(encoding="utf-8")
-    for label, text, expected in (
-        ("rewrite rule and public-route guard", route, 2),
-        ("app route", app, 1),
-    ):
-        report.check(
-            text.count("app-bars|surfaces|menus") == expected,
-            f"the {label} does not carry Menus in its component alternation",
-        )
+    from _frontend_route_check import supports_component
+    report.check(supports_component(route, app, "menus"), "shared route contract omits Menus")
 
 
 def main() -> int:

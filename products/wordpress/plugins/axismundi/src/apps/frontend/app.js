@@ -17,47 +17,7 @@ const StylebookPage = lazy( () =>
 );
 
 function getFrontendRoute() {
-	const route = window.axismundiCapstone?.route ?? '/social/';
-	const basePath = route.replace( /\/+$/, '' );
-	const pathname = window.location.pathname.replace( /\/+$/, '' );
-	const relativePath = pathname.startsWith( basePath )
-		? pathname.slice( basePath.length ).replace( /^\/+/, '' )
-		: '';
-
-	if ( 'stylebook' === relativePath ) {
-		return { name: 'stylebook' };
-	}
-
-	if ( 'stylebook/styles' === relativePath ) {
-		return { name: 'stylebook', styles: true };
-	}
-
-	const stylebookStyle = relativePath.match( /^stylebook\/styles\/(motion)$/ );
-	if ( stylebookStyle ) {
-		return { name: 'stylebook', style: stylebookStyle[ 1 ] };
-	}
-
-	const stylebookComponent = relativePath.match(
-		/^stylebook\/components\/(buttons|icon-buttons|button-groups|split-buttons|cards|carousels|lists|tabs|badges|dividers|navigations|app-bars|surfaces|menus|fabs|tooltips)$/
-	);
-
-	if ( stylebookComponent ) {
-		return { name: 'stylebook', component: stylebookComponent[ 1 ] };
-	}
-
-	const stylebookLayout = relativePath.match(
-		/^stylebook\/layout\/(topology|feed|list-detail|supporting_pane)$/
-	);
-
-	if ( stylebookLayout ) {
-		return { name: 'stylebook', layout: stylebookLayout[ 1 ] };
-	}
-
-	if ( /^objects\/[^/]+$/.test( relativePath ) ) {
-		return { name: 'object' };
-	}
-
-	return { name: 'home' };
+	return window.axismundiCapstone?.resolvedRoute ?? { name: 'home' };
 }
 
 function isAuthenticatedViewer() {

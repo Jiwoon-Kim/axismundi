@@ -161,8 +161,8 @@ radiogroup이어야 하면 `input[type="radio"]`로 간다.
 M3가 Styles와 Components를 나누므로 페이지 계열도 둘이다.
 
 ```text
-/social/stylebook/styles                    축 하나씩 검증 (color, typography, icons, elevation)
-/social/stylebook/components/<name>         여러 축이 맞물린 컨트롤 검증
+/stylebook/styles                    축 하나씩 검증 (color, typography, icons, elevation)
+/stylebook/components/<name>         여러 축이 맞물린 컨트롤 검증
 ```
 
 새 Components 페이지를 추가할 때 **네 군데를 같이 고친다**. 서버 rewrite를 빠뜨리면 URL이

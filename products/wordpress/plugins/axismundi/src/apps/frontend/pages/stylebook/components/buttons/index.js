@@ -87,8 +87,8 @@ function HostSample() {
 		<>
 			<div className="ax-stylebook-buttons__row">
 				<Button ref={ plainRef }>No href</Button>
-				<Button href="/social/stylebook" ref={ linkRef } variant="tonal">With href</Button>
-				<Button disabled href="/social/stylebook" variant="outlined">Disabled link</Button>
+				<Button href="/stylebook" ref={ linkRef } variant="tonal">With href</Button>
+				<Button disabled href="/stylebook" variant="outlined">Disabled link</Button>
 			</div>
 			<p className="ax-stylebook-page__note">
 				{ hosts
@@ -116,8 +116,8 @@ export function StylebookButtonsPage() {
 		<Scaffold className="axismundi-social ax-stylebook ax-stylebook--buttons">
 			<div className="ax-stylebook-page">
 				<nav className="ax-stylebook-page__navigation" aria-label="Stylebook">
-					<a href="/social/stylebook">Stylebook</a>
-					<a href="/social/stylebook/styles">Styles</a>
+					<a href="/stylebook">Stylebook</a>
+					<a href="/stylebook/styles">Styles</a>
 				</nav>
 
 				<section className="ax-stylebook-page__section" id="buttons" aria-labelledby="ax-stylebook-buttons-title">

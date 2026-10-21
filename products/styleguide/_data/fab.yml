@@ -936,24 +936,18 @@ project_policy:
       expressive extended FAB sizes. FAB menu and baseline small FAB remain
       deliberately absent from this slice.
   stylebook_route:
-    path: /social/stylebook/components/fabs
+    path: /stylebook/components/fabs
     rewrite_version: '23'
     path_is_plural: >-
       Every sibling route is plural -- buttons, cards, menus, surfaces -- and the
       style guide page is `fabs.md`. A singular slug would be the only one.
     declared_in:
       - products/wordpress/plugins/axismundi/includes/route.php
-      - products/wordpress/plugins/axismundi/includes/route.php
-      - products/wordpress/plugins/axismundi/src/apps/frontend/app.js
-      - products/wordpress/plugins/axismundi/src/apps/frontend/pages/stylebook/index.js
       - products/wordpress/plugins/axismundi/src/apps/frontend/pages/stylebook/index.js
     note: >-
-      Five places, not four: two regexes in `route.php`, the route pattern in
-      `app.js`, and both the dispatch and the index link in `stylebook/index.js`.
-      Adding the route also advances the plugin rewrite version, so an existing
-      installation rebuilds the registered rule.
-      The menu slice shipped with the third one missing and the page did not
-      open while 224 checks passed, which is why they are listed here.
+      The server owns the route pattern and passes its resolved parameters to
+      the application. The Stylebook owns component dispatch and navigation.
+      The active pattern signature triggers a soft rewrite flush on change.
 
 evidence_not_product: >-
   Figures in this file come from the token table named in `meta`, or from the

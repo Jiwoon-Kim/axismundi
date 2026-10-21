@@ -204,7 +204,8 @@ def main() -> int:
     report.check("const TabsContext = createContext( null );" in tabs and "export function PrimaryTabBar" in tabs and "export function SecondaryTabBar" in tabs and "export function TabPanels" in tabs, "tab state root, bars, and panels were collapsed")
     report.check("@import url( './components/tabs.css' );" in style_index, "Tabs stylesheet is not in frontend bundle")
     report.check("StylebookTabsPage" in stylebook_index and "'tabs' === component" in stylebook_index, "stylebook does not expose Tabs")
-    report.check("tabs" in app and route.count("tabs|badges|dividers") == 2, "frontend route omits Tabs")
+    from _frontend_route_check import supports_component
+    report.check(supports_component(route, app, "tabs"), "shared route contract omits Tabs")
     # At least 19, not exactly 19. The message says "advance" and the
     # check froze the number, so every later route addition failed here;
     # `validate_styleguide_list.py` and the Carousel validator already

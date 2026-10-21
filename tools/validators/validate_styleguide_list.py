@@ -224,12 +224,9 @@ def main() -> int:
     report.check("'aria-disabled': true" in item_source and "disabled: isDisabled" in item_source and "data-disabled={ isDisabled || undefined }" in item_source, "disabled input no longer reaches safe native-host outcome")
     report.check("@import url( './components/list.css' );" in style_index, "List stylesheet is not in frontend bundle")
     report.check("StylebookListsPage" in stylebook_index and "'lists' === component" in stylebook_index, "stylebook does not expose Lists")
-    # An exact member of the stylebook alternation, not a substring of the
-    # whole pattern: adding a component must not be able to loosen this.
-    app_components = re.search(r"stylebook\\/components\\/\(([a-z|\-]+)\)", app)
-    report.check(app_components is not None and "lists" in app_components.group(1).split("|"), "frontend route omits Lists")
-    route_alternations = re.findall(r"/components/\(\?:([a-z|\-]+)\)", route)
-    report.check(2 == len(route_alternations) and all("lists" in group.split("|") for group in route_alternations), "public route omits Lists")
+    # Check exact membership and both server consumers of the shared definition.
+    from _frontend_route_check import supports_component
+    report.check(supports_component(route, app, "lists"), "shared route contract omits Lists")
     rewrite_version = re.search(r"AXISMUNDI_CAPSTONE_REWRITE_VERSION\s*=\s*'(\d+)';", plugin)
     report.check(rewrite_version is not None and 17 <= int(rewrite_version.group(1)), "the rewrite version was not flushed after Lists joined the route")
     report.check("<List" in stylebook_page and "<ListItem" in stylebook_page and 'leadingType="video"' in stylebook_page, "stylebook does not exercise all shipped primitives")

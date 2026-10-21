@@ -153,7 +153,8 @@ def main() -> int:
     report.check("<Badge label=\"999+\" />" in primary_tab_specimen, "the maximum-count Badge host specimen disappeared")
     report.check("SecondaryTabBar" in page and "INLINE_TAB_ITEMS" in page, "Badge page no longer demonstrates the real inline Tab host")
     report.check("StylebookBadgesPage" in page_index and "'badges' === component" in page_index, "stylebook does not expose Badges")
-    report.check("badges" in app and route.count("tabs|badges|dividers") == 2, "frontend route omits Badges")
+    from _frontend_route_check import supports_component
+    report.check(supports_component(route, app, "badges"), "shared route contract omits Badges")
     # At least 19, not exactly 19. The message says "advance" and the
     # check froze the number, so every later route addition failed here;
     # `validate_styleguide_list.py` and the Carousel validator already

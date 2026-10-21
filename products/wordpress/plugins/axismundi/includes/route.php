@@ -7,25 +7,73 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/** Return the public route catalogue, including unavailable surfaces. */
+function axismundi_capstone_route_catalogue() : array {
+	return array(
+		'social' => array( 'available' => true, 'enabled' => true, 'base' => AXISMUNDI_CAPSTONE_ROUTE ),
+		'stylebook' => array( 'available' => true, 'enabled' => (bool) get_option( 'axismundi_stylebook_enabled', false ), 'base' => 'stylebook' ),
+	);
+}
+
+/** Route names and parameters are resolved here, not independently in JavaScript. */
+function axismundi_capstone_route_patterns() : array {
+	$catalogue = axismundi_capstone_route_catalogue();
+	$patterns = array();
+	foreach ( $catalogue as $name => $surface ) {
+		if ( ! $surface['available'] || ! $surface['enabled'] ) {
+			continue;
+		}
+		$base = preg_quote( $surface['base'], '#' );
+		if ( 'social' === $name ) {
+			$patterns[ $base ] = array( 'name' => 'home' );
+			$patterns[ $base . '/objects/[^/]+' ] = array( 'name' => 'object' );
+			continue;
+		}
+		$patterns[ $base ] = array( 'name' => 'stylebook' );
+		$patterns[ $base . '/styles' ] = array( 'name' => 'stylebook', 'styles' => true );
+		$patterns[ $base . '/styles/(?P<style>motion)' ] = array( 'name' => 'stylebook' );
+		$patterns[ $base . '/components/(?P<component>buttons|icon-buttons|button-groups|split-buttons|cards|carousels|lists|tabs|badges|dividers|navigations|app-bars|surfaces|menus|fabs|tooltips|loading-indicators)' ] = array( 'name' => 'stylebook' );
+		$patterns[ $base . '/layout/(?P<layout>topology|feed|list-detail|supporting_pane)' ] = array( 'name' => 'stylebook' );
+	}
+	return $patterns;
+}
+
+/** Resolve only enabled, explicitly registered application paths. */
+function axismundi_capstone_resolve_public_path( string $path ) : array {
+	foreach ( axismundi_capstone_route_patterns() as $pattern => $route ) {
+		if ( 1 !== preg_match( '#^' . $pattern . '/?$#', trim( $path, '/' ), $matches ) ) {
+			continue;
+		}
+		foreach ( array( 'component', 'layout', 'style' ) as $parameter ) {
+			if ( isset( $matches[ $parameter ] ) ) {
+				$route[ $parameter ] = $matches[ $parameter ];
+			}
+		}
+		return $route;
+	}
+	return array();
+}
+
 /** @return void */
 function axismundi_capstone_add_rewrite_rule() : void {
-	add_rewrite_rule(
-		'^' . AXISMUNDI_CAPSTONE_ROUTE . '(?:/stylebook(?:/styles(?:/motion)?|/components/(?:buttons|icon-buttons|button-groups|split-buttons|cards|carousels|lists|tabs|badges|dividers|navigations|app-bars|surfaces|menus|fabs|tooltips)|/layout/(?:topology|feed|list-detail|supporting_pane))?|/objects/[^/]+)?/?$',
-		'index.php?' . AXISMUNDI_CAPSTONE_QUERY_VAR . '=1',
-		'top'
-	);
+	foreach ( axismundi_capstone_route_patterns() as $pattern => $route ) {
+		add_rewrite_rule( '^' . $pattern . '/?$', 'index.php?' . AXISMUNDI_CAPSTONE_QUERY_VAR . '=1', 'top' );
+	}
 }
 add_action( 'init', 'axismundi_capstone_add_rewrite_rule' );
 
 /** @return void */
 function axismundi_capstone_upgrade_rewrite_rules() : void {
 	$option = 'axismundi_capstone_rewrite_version';
-	if ( AXISMUNDI_CAPSTONE_REWRITE_VERSION === get_option( $option ) ) {
+	$patterns = array_keys( axismundi_capstone_route_patterns() );
+	sort( $patterns, SORT_STRING );
+	$signature = hash( 'sha256', AXISMUNDI_CAPSTONE_REWRITE_VERSION . wp_json_encode( $patterns ) );
+	if ( $signature === get_option( $option ) ) {
 		return;
 	}
 
 	flush_rewrite_rules( false );
-	update_option( $option, AXISMUNDI_CAPSTONE_REWRITE_VERSION, false );
+	update_option( $option, $signature, false );
 }
 add_action( 'init', 'axismundi_capstone_upgrade_rewrite_rules', 20 );
 
@@ -39,6 +87,20 @@ function axismundi_capstone_query_vars( array $vars ) : array {
 }
 add_filter( 'query_vars', 'axismundi_capstone_query_vars' );
 
+/** Do not let disabled or retired development paths fall through to the front page. */
+function axismundi_capstone_reject_inactive_stylebook() : void {
+	global $wp, $wp_query;
+	$path = trim( $wp->request ?? '', '/' );
+	$old_base = preg_quote( AXISMUNDI_CAPSTONE_ROUTE, '#' ) . '/stylebook';
+	if ( preg_match( '#^(?:stylebook|' . $old_base . ')(?:/|$)#', $path ) && ! axismundi_capstone_is_public_route() ) {
+		$wp_query->set_404();
+		status_header( 404 );
+		nocache_headers();
+		add_filter( 'redirect_canonical', '__return_false' );
+	}
+}
+add_action( 'template_redirect', 'axismundi_capstone_reject_inactive_stylebook', -1 );
+
 /** @return bool */
 function axismundi_capstone_is_public_route() : bool {
 	global $wp;
@@ -50,10 +112,7 @@ function axismundi_capstone_is_public_route() : bool {
 	}
 
 	$request = trim( (string) $wp->request, '/' );
-	return 1 === preg_match(
-		'#^' . preg_quote( AXISMUNDI_CAPSTONE_ROUTE, '#' ) . '(?:/stylebook(?:/styles(?:/motion)?|/components/(?:buttons|icon-buttons|button-groups|split-buttons|cards|carousels|lists|tabs|badges|dividers|navigations|app-bars|surfaces|menus|fabs|tooltips)|/layout/(?:topology|feed|list-detail|supporting_pane))?|/objects/[^/]+)?$#',
-		$request
-	);
+	return ! empty( axismundi_capstone_resolve_public_path( $request ) );
 }
 
 /**

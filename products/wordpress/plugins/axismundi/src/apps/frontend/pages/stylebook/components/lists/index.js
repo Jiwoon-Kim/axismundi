@@ -183,10 +183,10 @@ export function StylebookListsPage() {
 		<Scaffold className="axismundi-social ax-stylebook ax-stylebook--lists">
 			<div className="ax-stylebook-page">
 				<nav className="ax-stylebook-page__navigation" aria-label="Stylebook">
-					<a href="/social/stylebook">Stylebook</a>
-					<a href="/social/stylebook/components/cards">Cards</a>
-					<a href="/social/stylebook/components/carousels">Carousels</a>
-					<a href="/social/stylebook/components/dividers">Dividers</a>
+					<a href="/stylebook">Stylebook</a>
+					<a href="/stylebook/components/cards">Cards</a>
+					<a href="/stylebook/components/carousels">Carousels</a>
+					<a href="/stylebook/components/dividers">Dividers</a>
 				</nav>
 
 				<section className="ax-stylebook-page__section" id="lists" aria-labelledby="ax-stylebook-lists-title">

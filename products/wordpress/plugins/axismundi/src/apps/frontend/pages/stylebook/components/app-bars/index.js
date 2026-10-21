@@ -98,9 +98,9 @@ export function StylebookAppBarsPage() {
 		<Scaffold className="axismundi-social ax-stylebook ax-stylebook--app-bars">
 			<div className="ax-stylebook-page">
 				<nav className="ax-stylebook-page__navigation" aria-label="Stylebook">
-					<a href="/social/stylebook">Stylebook</a>
-					<a href="/social/stylebook/components/navigations">Navigation</a>
-					<a href="/social/stylebook/components/icon-buttons">Icon buttons</a>
+					<a href="/stylebook">Stylebook</a>
+					<a href="/stylebook/components/navigations">Navigation</a>
+					<a href="/stylebook/components/icon-buttons">Icon buttons</a>
 				</nav>
 
 				<section className="ax-stylebook-page__section" aria-labelledby="ax-stylebook-app-bars-title">

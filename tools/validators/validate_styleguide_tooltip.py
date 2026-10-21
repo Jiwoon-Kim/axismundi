@@ -444,12 +444,12 @@ def check_implementation(report: Report, data: dict) -> None:
     route_php = ROUTE_PHP.read_text(encoding="utf-8")
     app = APP_JS.read_text(encoding="utf-8")
     stylebook = STYLEBOOK_JS.read_text(encoding="utf-8")
+    from _frontend_route_check import supports_component
     report.check(
-        route_php.count(f"|{route_slug}") == 2
-        and f"|{route_slug})$" in app
+        supports_component(route_php, app, route_slug)
         and f"if ( '{route_slug}' === component )" in stylebook
         and f'href="{route}"' in stylebook,
-        "the tooltip stylebook route must occupy both PHP regexes, app dispatch, stylebook dispatch, and index link",
+        "the tooltip requires the shared route contract, stylebook dispatch, and index link",
     )
     report.check(
         data["variants"]["plain"]["status"] == "implemented"

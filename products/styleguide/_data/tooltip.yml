@@ -327,7 +327,7 @@ project_policy:
     component: products/wordpress/plugins/axismundi/src/apps/frontend/components/tooltip/tooltip.js
     stylesheet: products/wordpress/plugins/axismundi/src/apps/frontend/styles/components/tooltip.css
     placement_helper: products/wordpress/plugins/axismundi/src/apps/frontend/components/overlays/place.js
-    stylebook_route: /social/stylebook/components/tooltips
+    stylebook_route: /stylebook/components/tooltips
     scope: >-
       Plain tooltip only. It uses a manual native popover when available and a
       document-body portal otherwise; rich tooltip remains unbuilt.

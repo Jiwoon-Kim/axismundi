@@ -359,9 +359,9 @@ export function StylebookCarouselsPage() {
 					className="ax-stylebook-page__navigation"
 					aria-label="Stylebook"
 				>
-					<a href="/social/stylebook">Stylebook</a>
-					<a href="/social/stylebook/components/cards">Cards</a>
-					<a href="/social/stylebook/components/navigations">
+					<a href="/stylebook">Stylebook</a>
+					<a href="/stylebook/components/cards">Cards</a>
+					<a href="/stylebook/components/navigations">
 						Navigation
 					</a>
 				</nav>

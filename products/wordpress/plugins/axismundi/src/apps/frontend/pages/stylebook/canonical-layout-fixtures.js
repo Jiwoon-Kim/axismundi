@@ -36,19 +36,19 @@ const destinations = [
 		id: 'home',
 		label: 'Home',
 		icon: <Icon name="home" />,
-		href: '/social/stylebook/layout/feed',
+		href: '/stylebook/layout/feed',
 	},
 	{
 		id: 'explore',
 		label: 'Explore',
 		icon: <Icon name="explore" />,
-		href: '/social/stylebook/layout/list-detail',
+		href: '/stylebook/layout/list-detail',
 	},
 	{
 		id: 'inbox',
 		label: 'Inbox',
 		icon: <Icon name="forum" />,
-		href: '/social/stylebook/layout/supporting_pane',
+		href: '/stylebook/layout/supporting_pane',
 	},
 ];
 

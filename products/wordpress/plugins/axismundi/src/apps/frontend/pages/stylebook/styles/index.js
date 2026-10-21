@@ -495,7 +495,7 @@ export function StylebookStylesPage() {
 					<a href="#colors">Colors</a>
 					<a href="#icons">Icons</a>
 					<a href="#elevation">Elevation</a>
-					<a href="/social/stylebook/styles/motion">Motion</a>
+					<a href="/stylebook/styles/motion">Motion</a>
 				</nav>
 				<TypographyReference />
 				<ColorReference />

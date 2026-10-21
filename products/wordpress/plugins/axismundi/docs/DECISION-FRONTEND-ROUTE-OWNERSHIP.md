@@ -2,8 +2,35 @@
 
 ## 상태
 
-**제안됨. 2026-10-11.** 2절은 현재 코드 측정이고, 3~5절이 소유자 판정이다. 구현은 하지
-않는다 — 6절이 왜 지금이 아닌지를 적는다.
+**채택 및 Social/Stylebook 범위 구현. 2026-10-21.** 아래 초기 측정과 보류 사유는 결정의
+이력이다. 현재 구현은 이 절을 기준으로 읽는다.
+
+- `/social/`과 `/social/objects/{key}`는 유지한다. `/objects/`는 앱이 등록하지 않는다.
+- Stylebook은 `/stylebook/`에서만 제공한다. `/social/stylebook/…`은 별칭이나 리디렉션 없이
+  404다. Stylebook이 꺼져 있으면 새 경로도 404이며 WordPress 홈으로 빠지지 않는다.
+- `includes/route.php`의 catalogue가 available/enabled를 구분하고, patterns가 경로 목록을
+  한 번 정의한다. rewrite 등록과 요청 판별은 이 목록을 사용한다. PHP가 해소한 route를
+  bootstrap의 `resolvedRoute`로 넘기므로 JS에는 별도 경로 정규식이 없다.
+- Stylebook은 기본 off다. Admin의 Settings에서 capability + nonce 검사 후 저장한다.
+  로컬 개발 사이트는 검증 중 명시적으로 켰다. Contacts/Calendar는 이번에 등록하지 않는다.
+- 정렬된 활성 pattern 목록과 규칙 버전의 SHA-256이 바뀔 때만 soft flush한다. 매 요청
+  flush와 hard flush는 사용하지 않는다.
+- Admin Design iframe은 활성 상태일 때 `/stylebook/`을 사용한다. 비활성이면 iframe을
+  생성하지 않는다. 컴포넌트 폴더와 별도 엔트리는 변경하지 않았다.
+
+검증 명령:
+`npx wp-env run cli wp eval-file wp-content/plugins/axismundi/tests/audit-public-routes.php`
+는 경로 해소와 `generate_rewrite_rules` 실제 호출 횟수를 검사한다. 설정 전환마다 한 번,
+반복 호출에는 0번이어야 한다. `python products/styleguide/bin/build.py --verify`는
+공유 route 계약과 컴포넌트 연결을 검증한다. Admin iframe과 HTTP 상태는 로컬 브라우저 및
+HTTP 요청으로 별도 확인한다.
+
+2026-10-21 로컬 검증: audit 38개 통과. 실제 Admin 설정 저장으로 off/on을 전환했고,
+`tests/fixtures/rewrite-probe.php`를 임시 mu-plugin으로 로드하여 실제 HTTP 요청도 계측했다.
+on 전환 후 `generate_rewrite_rules` 총계 1회, 이후 Stylebook/Home/Object 5회 요청과
+Admin iframe 조회 후에도 1회였다. 계측 파일과 카운터 option은 제거했다. 기본값은 off를
+유지하며 이 개발 사이트만 명시적으로 on이다. 비활성 상태의 새 경로와 이전 경로는 404,
+활성 상태의 Admin iframe은 `/stylebook/`에서 실제 Stylebook을 표시함을 확인했다.
 
 ## 1. 왜 이 문서가 있는가
 

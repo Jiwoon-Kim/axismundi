@@ -21,6 +21,18 @@ function axismundi_capstone_register_admin_page() : void {
 }
 add_action( 'admin_menu', 'axismundi_capstone_register_admin_page' );
 
+/** Save the optional development surface through the normal admin capability boundary. */
+function axismundi_capstone_save_route_settings() : void {
+	if ( ! current_user_can( AXISMUNDI_CAPSTONE_ADMIN_CAPABILITY ) ) {
+		wp_die( esc_html__( 'You cannot manage Axismundi.', 'axismundi' ), '', array( 'response' => 403 ) );
+	}
+	check_admin_referer( 'axismundi_route_settings' );
+	update_option( 'axismundi_stylebook_enabled', isset( $_POST['stylebook_enabled'] ), false );
+	wp_safe_redirect( admin_url( 'admin.php?page=axismundi&p=/settings' ) );
+	exit;
+}
+add_action( 'admin_post_axismundi_route_settings', 'axismundi_capstone_save_route_settings' );
+
 /**
  * Scope the Axismundi console chrome changes to its own admin screen.
  *

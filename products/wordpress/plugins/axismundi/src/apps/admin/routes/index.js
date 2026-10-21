@@ -1,4 +1,5 @@
 import { __ } from '@wordpress/i18n';
+import { Button } from '@wordpress/ui';
 import { __experimentalItemGroup as ItemGroup } from '@wordpress/components';
 import { layout, media, symbol, typography } from '@wordpress/icons';
 import { getAxismundiConfig } from '../../../shared/runtime/config';
@@ -270,7 +271,19 @@ function OperationsContent( { route, showNavigation } ) {
 			onShowNavigation={ showNavigation }
 			title={ route.label }
 		>
-			<p>{ __( 'This workspace is ready for Axismundi operations.', 'axismundi' ) }</p>
+			{ route.id === 'settings' ? (
+				<form action={ getAxismundiConfig().routeSettings.actionUrl } method="post">
+					<input type="hidden" name="action" value="axismundi_route_settings" />
+					<input type="hidden" name="_wpnonce" value={ getAxismundiConfig().routeSettings.nonce } />
+					<p><label>
+						<input type="checkbox" name="stylebook_enabled" value="1"
+							defaultChecked={ getAxismundiConfig().routeSettings.surfaces.stylebook.enabled }
+							disabled={ ! getAxismundiConfig().routeSettings.surfaces.stylebook.available } />
+						{ __( 'Stylebook', 'axismundi' ) }
+					</label></p>
+					<Button type="submit">{ __( 'Save settings', 'axismundi' ) }</Button>
+				</form>
+			) : <p>{ __( 'This workspace is ready for Axismundi operations.', 'axismundi' ) }</p> }
 		</RouteContent>
 	);
 }

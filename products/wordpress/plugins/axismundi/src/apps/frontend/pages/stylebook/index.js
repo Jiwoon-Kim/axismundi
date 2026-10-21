@@ -110,27 +110,27 @@ export function StylebookPage( { component, layout, style, styles } ) {
 				<h1 id="ax-stylebook-title" className="ax-stylebook__title">Stylebook</h1>
 			</header>
 			<nav className="ax-stylebook__navigation" aria-label="Layout fixtures">
-				<a href="/social/stylebook/styles">Styles</a>
-				<a href="/social/stylebook/components/buttons">Buttons</a>
-				<a href="/social/stylebook/components/icon-buttons">Icon buttons</a>
-				<a href="/social/stylebook/components/button-groups">Button groups</a>
-				<a href="/social/stylebook/components/split-buttons">Split buttons</a>
-				<a href="/social/stylebook/components/cards">Cards</a>
-				<a href="/social/stylebook/components/carousels">Carousels</a>
-				<a href="/social/stylebook/components/lists">Lists</a>
-				<a href="/social/stylebook/components/tabs">Tabs</a>
-				<a href="/social/stylebook/components/badges">Badges</a>
-				<a href="/social/stylebook/components/surfaces">Surfaces</a>
-				<a href="/social/stylebook/components/menus">Menus</a>
-				<a href="/social/stylebook/components/fabs">FABs</a>
-				<a href="/social/stylebook/components/tooltips">Tooltips</a>
-				<a href="/social/stylebook/components/dividers">Dividers</a>
-				<a href="/social/stylebook/components/navigations">Navigation</a>
-				<a href="/social/stylebook/components/app-bars">App bars</a>
-				<a href="/social/stylebook/layout/topology">Scaffold topology</a>
-				<a href="/social/stylebook/layout/feed">Feed</a>
-				<a href="/social/stylebook/layout/list-detail">List-detail</a>
-				<a href="/social/stylebook/layout/supporting_pane">Supporting pane</a>
+				<a href="/stylebook/styles">Styles</a>
+				<a href="/stylebook/components/buttons">Buttons</a>
+				<a href="/stylebook/components/icon-buttons">Icon buttons</a>
+				<a href="/stylebook/components/button-groups">Button groups</a>
+				<a href="/stylebook/components/split-buttons">Split buttons</a>
+				<a href="/stylebook/components/cards">Cards</a>
+				<a href="/stylebook/components/carousels">Carousels</a>
+				<a href="/stylebook/components/lists">Lists</a>
+				<a href="/stylebook/components/tabs">Tabs</a>
+				<a href="/stylebook/components/badges">Badges</a>
+				<a href="/stylebook/components/surfaces">Surfaces</a>
+				<a href="/stylebook/components/menus">Menus</a>
+				<a href="/stylebook/components/fabs">FABs</a>
+				<a href="/stylebook/components/tooltips">Tooltips</a>
+				<a href="/stylebook/components/dividers">Dividers</a>
+				<a href="/stylebook/components/navigations">Navigation</a>
+				<a href="/stylebook/components/app-bars">App bars</a>
+				<a href="/stylebook/layout/topology">Scaffold topology</a>
+				<a href="/stylebook/layout/feed">Feed</a>
+				<a href="/stylebook/layout/list-detail">List-detail</a>
+				<a href="/stylebook/layout/supporting_pane">Supporting pane</a>
 			</nav>
 		</main>
 	);

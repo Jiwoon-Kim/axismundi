@@ -1082,17 +1082,11 @@ def main() -> int:
     check(
         "StylebookCarouselsPage" in stylebook_index
         and "'carousels' === component" in stylebook_index
-        and "/social/stylebook/components/carousels" in stylebook_index,
+        and "/stylebook/components/carousels" in stylebook_index,
         "Stylebook does not dispatch or link the Carousel page",
     )
-    check(
-        app.count("carousels") == 1,
-        "frontend route parser does not name carousels exactly once",
-    )
-    check(
-        route.count("carousels") == 2,
-        "WordPress route and public-route guard do not both admit carousels",
-    )
+    from _frontend_route_check import supports_component
+    check(supports_component(route, app, "carousels"), "shared route contract omits Carousels")
     rewrite = re.search(r"AXISMUNDI_CAPSTONE_REWRITE_VERSION\s+=\s+'(\d+)'", plugin)
     check(
         rewrite is not None and 16 <= int(rewrite.group(1)),

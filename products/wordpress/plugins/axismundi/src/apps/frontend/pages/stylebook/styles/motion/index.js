@@ -168,8 +168,8 @@ export function StylebookMotionPage() {
 		<Scaffold className="axismundi-social ax-stylebook ax-stylebook--motion">
 			<div className="ax-stylebook-motion">
 				<nav className="ax-stylebook-motion__navigation" aria-label="Stylebook">
-					<a href="/social/stylebook">Stylebook</a>
-					<a href="/social/stylebook/styles">Styles</a>
+					<a href="/stylebook">Stylebook</a>
+					<a href="/stylebook/styles">Styles</a>
 				</nav>
 				<header className="ax-stylebook-motion__page-header">
 					<p>Material style</p>

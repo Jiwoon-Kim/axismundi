@@ -235,8 +235,8 @@ The first canonical checkpoint is now implemented with placeholder panes only:
 | `ListDetailLayout` | one visible caller-selected pane | fixed list plus flexible detail | optional fixed extra pane appears as a third pane |
 
 Fixed pane widths are Frontend spatial tokens: `360px` at expanded and `412px` at large and
-extra-large. The route fixtures are available at `/social/stylebook/layout/feed`,
-`/social/stylebook/layout/list-detail`, and `/social/stylebook/layout/supporting_pane`.
+extra-large. The route fixtures are available at `/stylebook/layout/feed`,
+`/stylebook/layout/list-detail`, and `/stylebook/layout/supporting_pane`.
 
 This checkpoint does not add Material components, list selection/navigation state, transitions,
 drag resizing, or a component-local container-query policy. `ListDetailLayout` receives only a

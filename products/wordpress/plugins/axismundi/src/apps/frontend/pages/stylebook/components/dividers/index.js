@@ -198,12 +198,12 @@ export function StylebookDividersPage() {
 		<Scaffold className="axismundi-social ax-stylebook ax-stylebook--dividers">
 			<div className="ax-stylebook-page">
 				<nav className="ax-stylebook-page__navigation" aria-label="Stylebook">
-					<a href="/social/stylebook">Stylebook</a>
-					<a href="/social/stylebook/components/buttons">Buttons</a>
-					<a href="/social/stylebook/components/icon-buttons">Icon buttons</a>
-					<a href="/social/stylebook/components/button-groups">Button groups</a>
-					<a href="/social/stylebook/components/split-buttons">Split buttons</a>
-					<a href="/social/stylebook/components/cards">Cards</a>
+					<a href="/stylebook">Stylebook</a>
+					<a href="/stylebook/components/buttons">Buttons</a>
+					<a href="/stylebook/components/icon-buttons">Icon buttons</a>
+					<a href="/stylebook/components/button-groups">Button groups</a>
+					<a href="/stylebook/components/split-buttons">Split buttons</a>
+					<a href="/stylebook/components/cards">Cards</a>
 				</nav>
 
 				<section className="ax-stylebook-page__section" id="dividers" aria-labelledby="ax-stylebook-dividers-title">

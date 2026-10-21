@@ -102,7 +102,7 @@ PWA 설정이 이 축을 강화한다. push subscription은 브라우저마다 �
 
 ## 4. Stylebook은 둘 다 아니다
 
-`/social/stylebook/styles/*`는 사용자 appearance도 Admin design도 아니다. **블록 테마가
+`/stylebook/styles/*`는 사용자 appearance도 Admin design도 아니다. **블록 테마가
 제공한 런타임 토큰이 Social에서 실제로 어떻게 해소되는지 보는 개발·VQA 표면**이다. 그래서
 color · elevation · icons · motion · shape · spacing · typography가 그쪽에 있는 것이 맞다.
 

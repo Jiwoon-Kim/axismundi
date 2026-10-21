@@ -1,0 +1,26 @@
+source: https://m3.material.io/components/progress-indicators/specs
+raw: products/wordpress/plugins/axismundi/docs/m3-token-tables/SOURCE-M3-PROGRESS-INDICATORS-RAW.md
+css_slots:
+  active-indicator-color: var(--md-sys-color-primary)
+  track-color: var(--md-sys-color-secondary-container)
+  stop-indicator-color: var(--md-sys-color-primary)
+  linear-height: 4px
+  circular-size: 40px
+  circular-active-indicator-thickness: 4px
+geometry:
+  stroke: 4
+  gap: 4
+  stop_diameter: 4
+  circular_radius: 18
+wave_tokens:
+  circular.with-wave.size: 48
+  circular.active-indicator.wave.wavelength: 15
+  linear.active-indicator.wave.amplitude: 3
+  linear.active-indicator.wave.wavelength: 40
+  linear.indeterminate.active-indicator.wave.wavelength: 20
+  linear.with-wave.height: 10
+policy:
+  flat: supported
+  wave: supported
+  reduced_motion_wave: flat
+  route: /stylebook/components/progress-indicators

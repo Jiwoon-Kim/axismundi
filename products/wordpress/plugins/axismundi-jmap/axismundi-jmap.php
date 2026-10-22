@@ -22,5 +22,6 @@ require_once __DIR__ . '/includes/engine/context.php';
 require_once __DIR__ . '/includes/engine/engine.php';
 require_once __DIR__ . '/modules/rfc8620/core.php';
 require_once __DIR__ . '/includes/integrations/wordpress/accounts.php';
+require_once __DIR__ . '/modules/rfc8620/session.php';
 
-// Deliberately no discovery, HTTP endpoints, schema changes, or capability advertisement.
+// Deliberately no discovery, HTTP endpoints, schema changes, or public capability advertisement.

@@ -8,6 +8,10 @@
 후속 설계: [Actors 다중 Account 소유·접근 설계](../../axismundi-actors/docs/DESIGN-MULTI-ACCOUNT-OWNERSHIP.md).
 User당 Person 하나인 현재 구현은 목표 계약이 아니다. 아래의 본인 Actor 단건 및 managed
 분기 설명은 현황이며, 여러 개인 Actor를 지원하는 관계 모델로 이관할 예정이다.
+Actors의 추가형 DB 33.0 기반은 [A 구현 기록](../../axismundi-actors/docs/IMPLEMENTATION-ACCOUNT-ACCESS.md)을 참고한다.
+JMAP의 Account 해소는 동일한 workspace API를 통해 새 명시적 접근 관계를 사용한다.
+Session/Account in-process 투영은 [Session 구현 기록](IMPLEMENTATION-SESSION.md)을 참고한다.
+HTTP Session 공개와 실제 Contacts provider는 아직 구현하지 않았다.
 
 ## Scope
 

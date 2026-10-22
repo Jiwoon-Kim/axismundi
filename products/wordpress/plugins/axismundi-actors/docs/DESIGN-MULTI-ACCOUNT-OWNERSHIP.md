@@ -4,7 +4,9 @@
 
 상태: 조사와 설계 제안. Confirmed Decisions만 사용자와 합의한 결정이다.
 스키마·API·마이그레이션·삭제 정책의 제안은 아직 구현 승인된 계약이 아니다.
-이번 작업에서는 런타임 코드·DB·플러그인 활성화 설정을 변경하지 않았다.
+설계 작성 시에는 런타임 코드·DB·플러그인 활성화 설정을 변경하지 않았다.
+후속 A 기반 구현과 검증 현황은 [Account Access Slice A](IMPLEMENTATION-ACCOUNT-ACCESS.md)에 기록한다.
+이하 설계의 미구현 항목까지 완료된 것으로 해석하지 않는다.
 
 ## Confirmed Decisions
 
@@ -229,3 +231,8 @@ F는 E를 끝내야 시작할 수 있는 종속 단계가 아니라 별도 전�
 
 기존 단일 Actor에서 통과한 테스트는 새 다중화 모델의 증거로 재사용하지 않는다.
 설계 상태이며 자동 강제가 아닌 convention이다. 구현마다 실제 검증 명령과 결과를 추가한다.
+
+### B 서버 하위 슬라이스 구현
+
+생성·선택·용도별 기본값 API와 리뷰 gate를 추가했다. UI/REST와 전체 lifecycle은 미완료다.
+구현 계약과 Opus 인계 항목은 [IMPLEMENTATION-ACCOUNT-OPERATIONS.md](IMPLEMENTATION-ACCOUNT-OPERATIONS.md)를 본다.

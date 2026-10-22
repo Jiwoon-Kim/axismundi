@@ -1,0 +1,128 @@
+<?php
+/**
+ * Local account ownership and operating access, independent of JMAP.
+ *
+ * The existing manager relation is reused; a manager's owner role does not imply
+ * personal ownership. Legacy local_user_id remains an upstream compatibility link.
+ *
+ * @package AxismundiActors
+ */
+
+defined( 'ABSPATH' ) || exit;
+
+const AXISMUNDI_ACTORS_ACCOUNT_ACCESS_VERSION = '1';
+
+/** Readiness is explicit: never grant legacy authority after a partial migration. */
+function axismundi_actors_account_access_ready() : bool {
+	return AXISMUNDI_ACTORS_ACCOUNT_ACCESS_VERSION === (string) get_option( 'ax_actors_account_access_version', '' );
+}
+
+/** Additive, replay-safe data migration; called only after schema verification. */
+function axismundi_actors_migrate_account_access() : bool {
+	if ( axismundi_actors_account_access_ready() ) {
+		return true;
+	}
+	global $wpdb;
+	$actors = axismundi_actors_actors_table();
+	$identities = axismundi_actors_identities_table();
+	$managers = axismundi_actors_managers_table();
+	if ( false === $wpdb->query( 'START TRANSACTION' ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- migration transaction.
+		return false;
+	}
+	// Only existing user-bound local identities are personal. Managed owner roles stay unchanged.
+	$updated = $wpdb->query( $wpdb->prepare(
+		"UPDATE %i a INNER JOIN %i i ON i.id = a.identity_id INNER JOIN %i u ON u.ID = a.local_user_id
+		 SET a.personal_owner_user_id = a.local_user_id
+		 WHERE i.origin = 'local' AND a.actor_scope = 'user' AND a.personal_owner_user_id IS NULL",
+		$actors, $identities, $wpdb->users
+	) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- fixed schema backfill.
+	$inserted = false;
+	if ( false !== $updated ) {
+		$inserted = $wpdb->query( $wpdb->prepare(
+			"INSERT INTO %i (identity_id, user_id, role, created_at, updated_at)
+			 SELECT a.identity_id, a.personal_owner_user_id, 'owner', UTC_TIMESTAMP(), UTC_TIMESTAMP()
+			 FROM %i a INNER JOIN %i i ON i.id = a.identity_id INNER JOIN %i u ON u.ID = a.personal_owner_user_id
+			 WHERE i.origin = 'local' AND a.actor_scope <> 'site'
+			 ON DUPLICATE KEY UPDATE role = role",
+			$managers, $actors, $identities, $wpdb->users
+		) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- preserves existing manager roles.
+	}
+	$inconsistent = 1;
+	if ( false !== $inserted ) {
+		// A conflicting pre-existing role needs repair, not silent promotion.
+		$inconsistent = $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM %i a INNER JOIN %i i ON i.id = a.identity_id
+			 INNER JOIN %i u ON u.ID = a.personal_owner_user_id
+			 LEFT JOIN %i m ON m.identity_id = a.identity_id AND m.user_id = a.personal_owner_user_id
+			 WHERE i.origin = 'local' AND a.actor_scope <> 'site' AND (m.role IS NULL OR m.role <> 'owner')",
+			$actors, $identities, $wpdb->users, $managers
+		) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- migration invariant check.
+	}
+	if ( false === $updated || false === $inserted || null === $inconsistent || 0 !== (int) $inconsistent ) {
+		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- migration rollback.
+		return false;
+	}
+	if ( false === $wpdb->query( 'COMMIT' ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- migration commit.
+		return false;
+	}
+	update_option( 'ax_actors_account_access_version', AXISMUNDI_ACTORS_ACCOUNT_ACCESS_VERSION, false );
+	return axismundi_actors_account_access_ready();
+}
+
+/** Role lookup only; callers separately check Actor state and domain permissions. */
+function axismundi_actors_account_role( int $identity_id, int $user_id ) : string {
+	if ( $identity_id <= 0 || $user_id <= 0 || ! axismundi_actors_account_access_ready() || ! get_userdata( $user_id ) ) {
+		return '';
+	}
+	global $wpdb;
+	$role = (string) $wpdb->get_var( $wpdb->prepare(
+		'SELECT role FROM %i WHERE identity_id = %d AND user_id = %d',
+		axismundi_actors_managers_table(), $identity_id, $user_id
+	) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- exact access lookup.
+	return array_key_exists( $role, axismundi_actors_manager_roles() ) ? $role : '';
+}
+
+/** User-relative personal attribution, never inferred from Actor type or manager role alone. */
+function axismundi_actors_account_is_personal( Axismundi_Actor $actor, int $user_id ) : bool {
+	return $user_id > 0 && $actor->is_local() && 'site' !== $actor->get_scope()
+		&& $user_id === $actor->get_personal_owner_user_id()
+		&& 'owner' === axismundi_actors_account_role( $actor->get_identity_id(), $user_id );
+}
+
+/** Every local account this user may operate; personal accounts sort first. */
+function axismundi_actors_accounts_for_user( int $user_id ) : array {
+	if ( $user_id <= 0 || ! axismundi_actors_account_access_ready() ) {
+		return array();
+	}
+	global $wpdb;
+	$ids = $wpdb->get_col( $wpdb->prepare(
+		"SELECT a.identity_id FROM %i a INNER JOIN %i m ON m.identity_id = a.identity_id
+		 INNER JOIN %i i ON i.id = a.identity_id
+		 WHERE m.user_id = %d AND m.role IN ('owner','manager','editor') AND i.origin = 'local'
+		 AND a.actor_scope <> 'site' AND i.status NOT IN ('disabled','tombstone')
+		 ORDER BY (a.personal_owner_user_id = %d) DESC, a.identity_id ASC",
+		axismundi_actors_actors_table(), axismundi_actors_managers_table(), axismundi_actors_identities_table(), $user_id, $user_id
+	) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- account list, no writes.
+	$result = array();
+	foreach ( $ids as $id ) {
+		$actor = axismundi_actors_resolve_workspace( (int) $id, $user_id );
+		if ( $actor instanceof Axismundi_Actor ) {
+			$result[ (int) $id ] = $actor;
+		}
+	}
+	return $result;
+}
+
+/** All personally attributed local accounts, including retired ones for lifecycle inspection. */
+function axismundi_actors_personal_accounts_for_user( int $user_id ) : array {
+	if ( $user_id <= 0 || ! axismundi_actors_account_access_ready() ) {
+		return array();
+	}
+	global $wpdb;
+	$ids = $wpdb->get_col( $wpdb->prepare(
+		"SELECT a.identity_id FROM %i a INNER JOIN %i i ON i.id = a.identity_id
+		 WHERE a.personal_owner_user_id = %d AND i.origin = 'local' AND a.actor_scope <> 'site' ORDER BY a.identity_id ASC",
+		axismundi_actors_actors_table(), axismundi_actors_identities_table(), $user_id
+	) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- personal ownership lookup, not authorization.
+	return array_values( array_filter( array_map( 'axismundi_actors_get_by_identity', array_map( 'intval', $ids ) ) ) );
+}

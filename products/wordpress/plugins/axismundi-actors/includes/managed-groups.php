@@ -12,7 +12,9 @@
  * or any object/activity state. Those belong to the Activity / social store and,
  * for a forum, to the Forum plugin (DATA-MODEL §9.7). `can_manage()` answers only
  * "may this WP user operate this managed actor," never "is this user a follower or
- * member." The one authority invariant enforced here is that a managed actor
+ * member." Account access also reads this table through account-access.php,
+ * while these legacy managed APIs keep their managed-only scope.
+ * The one authority invariant enforced here is that a managed actor
  * always keeps at least one `owner`.
  *
  * @package AxismundiActors
@@ -106,6 +108,10 @@ function axismundi_actors_managed_actor_can_manage( int $identity_id, int $user_
 	if ( $identity_id <= 0 || $user_id <= 0 ) {
 		return false;
 	}
+	$actor = axismundi_actors_get_by_identity( $identity_id );
+	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_managed() ) {
+		return false;
+	}
 	global $wpdb;
 	$table = axismundi_actors_managers_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- composite-PK exact lookup on a custom table.
@@ -172,7 +178,7 @@ function axismundi_actors_list_manageable_actors( int $user_id, ?string $min_rol
 			continue;
 		}
 		$actor = axismundi_actors_get_by_identity( (int) $row['identity_id'] );
-		if ( $actor instanceof Axismundi_Actor ) {
+		if ( $actor instanceof Axismundi_Actor && $actor->is_managed() ) {
 			$actors[] = $actor;
 		}
 	}
@@ -322,6 +328,9 @@ function axismundi_actors_add_manager( int $identity_id, int $user_id, string $r
 	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_managed() ) {
 		return new WP_Error( 'ax_actors_manager_target', __( 'Managers can only be assigned to a managed actor.', 'axismundi-actors' ) );
 	}
+	if ( 'owner' !== $role && $user_id === $actor->get_personal_owner_user_id() ) {
+		return new WP_Error( 'ax_actors_personal_owner', __( 'Personal ownership must be transferred before changing its owner access.', 'axismundi-actors' ) );
+	}
 	if ( $user_id <= 0 || ! get_userdata( $user_id ) ) {
 		return new WP_Error( 'ax_actors_manager_user', __( 'A manager must be a valid user.', 'axismundi-actors' ) );
 	}
@@ -337,6 +346,10 @@ function axismundi_actors_add_manager( int $identity_id, int $user_id, string $r
  * @return true|WP_Error
  */
 function axismundi_actors_remove_manager( int $identity_id, int $user_id ) {
+	$actor = axismundi_actors_get_by_identity( $identity_id );
+	if ( $actor instanceof Axismundi_Actor && $user_id === $actor->get_personal_owner_user_id() ) {
+		return new WP_Error( 'ax_actors_personal_owner', __( 'Personal ownership must be transferred or retired before removing its access.', 'axismundi-actors' ) );
+	}
 	if ( axismundi_actors_managed_actor_can_manage( $identity_id, $user_id, 'owner' ) && 1 === axismundi_actors_managed_owner_count( $identity_id ) ) {
 		return new WP_Error( 'ax_actors_last_owner', __( 'The last owner cannot be removed.', 'axismundi-actors' ) );
 	}

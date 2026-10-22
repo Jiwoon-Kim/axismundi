@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '32.0';
+const AXISMUNDI_ACTORS_DB_VERSION = '33.0';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -157,6 +157,7 @@ function axismundi_actors_install() : void {
 			local_handle_key varchar(191) DEFAULT NULL,
 			handle_locked_at datetime DEFAULT NULL,
 			local_user_id bigint(20) unsigned DEFAULT NULL,
+			personal_owner_user_id bigint(20) unsigned DEFAULT NULL,
 			display_name varchar(191) DEFAULT NULL,
 			summary text DEFAULT NULL,
 			profile_url text DEFAULT NULL,
@@ -177,6 +178,7 @@ function axismundi_actors_install() : void {
 			PRIMARY KEY  (identity_id),
 			UNIQUE KEY local_handle_key (local_handle_key),
 			UNIQUE KEY local_user_id (local_user_id),
+			KEY personal_owner_user_id (personal_owner_user_id),
 			KEY preferred_username (preferred_username),
 			KEY scope_type (actor_scope, actor_type)
 		) ENGINE=InnoDB {$charset};"
@@ -432,6 +434,8 @@ function axismundi_actors_install() : void {
 	// (those live in the Activity / social store). Active relations only: revoke is a
 	// row delete, so an authority read is a plain existence/role check. The composite
 	// primary key makes one (actor, user) pair unique on its own.
+	// DB v33 reuses this relation for personal Account access as well; the legacy
+	// managed APIs retain their managed-only target semantics.
 	$managers = axismundi_actors_managers_table();
 	dbDelta(
 		"CREATE TABLE {$managers} (
@@ -651,6 +655,8 @@ function axismundi_actors_install() : void {
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$alternate_name_indexes = (array) $wpdb->get_col( $wpdb->prepare( "SHOW INDEX FROM %i WHERE Key_name = 'identity_kind_position'", $alternate_names ) );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- verify the additive account lookup index.
+	$personal_owner_indexes = (array) $wpdb->get_col( $wpdb->prepare( "SHOW INDEX FROM %i WHERE Key_name = 'personal_owner_user_id'", $actors ) );
 	/*
 	 * The old Profile languages screen stored one Person name as localized text. Promote that historical
 	 * value once into `first_name`: rendering must not write data, and repeating this migration would
@@ -701,6 +707,9 @@ function axismundi_actors_install() : void {
 		&& in_array( 'name_kind', $alternate_name_columns, true )
 		&& in_array( 'value', $alternate_name_columns, true )
 		&& ! empty( $alternate_name_indexes )
+		&& in_array( 'personal_owner_user_id', $columns, true )
+		&& ! empty( $personal_owner_indexes )
+		&& axismundi_actors_migrate_account_access()
 	) {
 		update_option( 'ax_actors_db_version', AXISMUNDI_ACTORS_DB_VERSION, false );
 	}
@@ -846,8 +855,15 @@ final class Axismundi_Actor {
 		return (string) ( $this->row['profile_url'] ?? '' );
 	}
 
+	/** Legacy single-Actor WP/transport binding; not the complete Account ownership relation. */
 	public function get_local_user_id() : ?int {
 		return null !== $this->row['local_user_id'] ? (int) $this->row['local_user_id'] : null;
+	}
+
+	/** Personal attribution, not a manager's owner role or an upstream WP-user binding. */
+	public function get_personal_owner_user_id() : ?int {
+		$value = $this->row['personal_owner_user_id'] ?? null;
+		return null === $value ? null : (int) $value;
 	}
 
 	public function get_type() : string {
@@ -979,18 +995,34 @@ function axismundi_actors_create_local( array $args ) {
 	$type  = (string) ( $args['actor_type'] ?? 'Person' );
 	$scope = isset( $args['actor_scope'] ) ? (string) $args['actor_scope'] : null;
 	$uid   = isset( $args['local_user_id'] ) ? (int) $args['local_user_id'] : null;
+	$personal_owner = isset( $args['personal_owner_user_id'] ) ? (int) $args['personal_owner_user_id']
+		: ( 'user' === $scope && $uid > 0 ? $uid : null );
+	if ( null !== $personal_owner && ( $personal_owner <= 0 || ! get_userdata( $personal_owner ) ) ) {
+		return new WP_Error( 'ax_actors_account_owner', __( 'A personal account requires a valid user.', 'axismundi-actors' ) );
+	}
+	if ( 'site' === $scope && null !== $personal_owner ) {
+		return new WP_Error( 'ax_actors_account_owner', __( 'The site Actor cannot be a personal account.', 'axismundi-actors' ) );
+	}
+	if ( 'user' === $scope && $uid > 0 && $personal_owner !== $uid ) {
+		return new WP_Error( 'ax_actors_account_owner', __( 'The legacy user binding and initial personal owner must agree.', 'axismundi-actors' ) );
+	}
+	$initial_owner = isset( $args['initial_owner_user_id'] ) ? (int) $args['initial_owner_user_id'] : $personal_owner;
+	if ( null !== $initial_owner && ( $initial_owner <= 0 || ! get_userdata( $initial_owner )
+		|| 'site' === $scope || ( null !== $personal_owner && $initial_owner !== $personal_owner ) ) ) {
+		return new WP_Error( 'ax_actors_account_owner', __( 'The initial operating owner is invalid.', 'axismundi-actors' ) );
+	}
 
 	$uuid   = wp_generate_uuid4();
 	$uri    = home_url( '/actors/' . $uuid );
 	$hash   = hash( 'sha256', $uri );
 	$now    = current_time( 'mysql', true );
 	/*
-	 * A user-scoped Person starts in the language the person selected for WordPress. This is a seed,
+	 * A personally owned Account starts in the language its owner selected for WordPress. This is a seed,
 	 * not a live binding: changing the dashboard language later does not rewrite an Actor's published
-	 * primary profile language. Site and managed Actors have no such person, so they start at the site
-	 * locale instead.
+	 * primary profile language. Accounts without a personal owner start at the site locale.
 	 */
-	$locale = $uid > 0 ? get_user_locale( $uid ) : get_locale();
+	$locale_user = $personal_owner ?? $uid;
+	$locale = $locale_user > 0 ? get_user_locale( $locale_user ) : get_locale();
 	$language = function_exists( 'axismundi_actors_normalize_language_tag' )
 		? axismundi_actors_normalize_language_tag( $locale )
 		: str_replace( '_', '-', (string) $locale );
@@ -1010,7 +1042,9 @@ function axismundi_actors_create_local( array $args ) {
 		$handle_locked = null;
 	}
 
-	$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	if ( false === $wpdb->query( 'START TRANSACTION' ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- account creation must not run without its transaction.
+		return new WP_Error( 'ax_actors_account_transaction', __( 'Could not start account creation.', 'axismundi-actors' ) );
+	}
 
 	$ok = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		axismundi_actors_identities_table(),
@@ -1042,18 +1076,27 @@ function axismundi_actors_create_local( array $args ) {
 			'local_handle_key'   => $handle_key,
 			'handle_locked_at'   => $handle_locked,
 			'local_user_id'      => $uid,
+			'personal_owner_user_id' => $personal_owner,
+			'display_name'       => isset( $args['display_name'] ) ? sanitize_text_field( (string) $args['display_name'] ) : null,
 			'default_language'   => '' !== $language ? $language : null,
 			'created_at'         => $now,
 			'updated_at'         => $now,
 		),
-		array( '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s' )
+		array( '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%s', '%s' )
 	);
 	if ( false === $ok ) {
 		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return new WP_Error( 'ax_actors_actor_insert', __( 'Could not create the actor.', 'axismundi-actors' ) );
 	}
 
-	$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	if ( null !== $initial_owner && is_wp_error( axismundi_actors_write_manager_row( $identity_id, $initial_owner, 'owner' ) ) ) {
+		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- account and initial access are atomic.
+		return new WP_Error( 'ax_actors_account_access', __( 'Could not create the personal account access relation.', 'axismundi-actors' ) );
+	}
+	if ( false === $wpdb->query( 'COMMIT' ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- commit account identity and access together.
+		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- failed commit cleanup.
+		return new WP_Error( 'ax_actors_account_commit', __( 'Could not commit the account identity.', 'axismundi-actors' ) );
+	}
 	$actor = axismundi_actors_get_by_uuid( $uuid );
 	/*
 	 * A handle locked here is as registered as one locked by `register_handle()`, and anything that
@@ -1391,6 +1434,8 @@ function axismundi_actors_kinds() : array {
 }
 
 /**
+ * Resolve only the legacy single-Actor binding. Use account/workspace APIs for all accessible identities.
+ *
  * @param int $user_id WP user ID.
  * @return Axismundi_Actor|null
  */

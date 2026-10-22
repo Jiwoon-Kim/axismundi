@@ -94,7 +94,8 @@ function axismundi_actors_acting_actor_options( ?int $user_id = null ) : array {
  *
  * Reads the stored preference and re-checks it, so a revoked manager stops acting as
  * that Organization on the next request without anything having to remember to clear
- * the meta. An ineligible or vanished selection falls back to the user's own Person.
+ * the meta. An inaccessible or vanished selection falls back to the user's own Person.
+ * An accessible but unpublishable workspace returns null instead of changing sender.
  *
  * The stale row is left where it is: this is a read, and a read that writes turns every
  * page view into a race. It is cleared when the user next chooses, or by the switcher.
@@ -110,8 +111,9 @@ function axismundi_actors_acting_actor( ?int $user_id = null ) : ?Axismundi_Acto
 	$chosen = (int) get_user_meta( $user_id, AXISMUNDI_ACTORS_ACTING_META, true );
 	if ( $chosen > 0 ) {
 		$actor = axismundi_actors_get_by_identity( $chosen );
-		if ( $actor instanceof Axismundi_Actor && axismundi_actors_can_act_as( $actor, $user_id ) ) {
-			return $actor;
+		if ( $actor instanceof Axismundi_Actor && axismundi_actors_can_access_workspace( $actor, $user_id ) ) {
+			// A valid workspace without publication support must not publish as another Actor.
+			return axismundi_actors_can_act_as( $actor, $user_id ) ? $actor : null;
 		}
 	}
 	return axismundi_actors_default_acting_actor( $user_id );

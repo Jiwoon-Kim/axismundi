@@ -8,12 +8,15 @@
 
 - [구조 및 논의 항목](docs/ARCHITECTURE.md)
 - [RFC 검토와 현재 구현 범위](docs/REFERENCE-RFC8620-AND-EXTENSIONS.md)
+- [Session·Account 투영 구현과 공개 전제](docs/IMPLEMENTATION-SESSION.md)
 - [공식 명세 목록](https://jmap.io/spec/index.html)
 - [RFC 8620](https://jmap.io/spec/rfc8620/)
 - [RFC 9610](https://jmap.io/spec/rfc9610/)
 
 메서드 등록·요청 실행·결과 참조·Core/echo와 Actor 기반 Account 식별을 구현했다.
 Account 접근 판정은 Actors의 프로토콜 중립 작업 공간 API에 위임한다.
+Session·Account의 in-process 투영과 명시적 capability provider 등록을 추가했다.
+실제 데이터 provider는 아직 없으며 전체 Session 조립은 URL·Core 제한값을 명시적으로 요구한다.
 HTTP 라우트·Session 발견·업로드·Push·Contacts 메서드는 아직 노출하지 않는다.
 새 테이블이나 의존 라이브러리는 없고, 기존 Contacts·Actors 저장 구조도 변경하지 않는다.
 
@@ -27,3 +30,4 @@ php products/wordpress/plugins/axismundi-jmap/tests/engine.php
 실제 WP/Actors 통합 검사는 개발 사이트에서 `wp eval-file`로
 `tests/audit-accounts.php`를 실행한다. 임시 사용자와 Actor를 만들고 정리하는 검사이므로
 운영 사이트에서는 실행하지 않는다. wp-env 등록·활성화·배포·커밋은 하지 않았다.
+Session 투영의 실제 WP 검사는 같은 방식으로 `tests/audit-session.php`를 실행한다.

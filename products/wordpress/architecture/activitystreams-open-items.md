@@ -11,6 +11,9 @@
 
 최종 갱신 2026-10-20. 측정은 전부 로컬 wp-env 에서 그날 실행한 것이다.
 
+2026-10-22 추가: Actor/Activity 투영 경로 인수인계는 아래 소스 검토 기록이다.
+해당 항목에서 새 런타임 감사나 와이어 측정을 수행했다는 뜻은 아니다.
+
 ## Corrections That Must Not Recur
 
 **`wp_ax_object_index` 와 `wp_ax_objects` 는 다른 테이블이다.** 이 세션에서 두
@@ -478,6 +481,85 @@ URI 를 싣고 출처·저작자 표시를 함께 제공하면 Openverse 식 사
 핀 하나는 지금 박아 둔다. **CC 라이선스로 이미 허용한 사용을 나중의 정책
 변경으로 소급 취소하도록 설계하지 않는다.** 이미지 삭제와 라이선스 철회는 같은
 뜻이 아니다.
+
+## Actor And Activity Projection: Follow-Up After Opus Returns
+
+상태: **문서화만. 구현은 Opus 복귀 후 검토한다.** Note cutoff와 별도 작업이다.
+2026-10-22 현재 소스를 읽어 확인했으며, 아래 내용을 결함 확정이나 통합 설계 채택으로
+해석하지 않는다. 특히 "Actor/Activity가 OP를 거치지 않는다"는 진술은 틀리다.
+
+### Actor: Shared Dispatch And Finalization, Dedicated Field Assembly
+
+현재 경로:
+
+```txt
+axismundi_op_transform_object(Axismundi_Actor)
+  → 공통 transformer resolver
+  → axismundi_op_actor_transform(): Actor 전용 속성 배열 조립
+  → Actors transport bundle + OP transport filter 직접 병합
+  → axismundi_op_finalize_object(): 검증 / 정제 / context
+```
+
+등록은 `plugins/axismundi-object-projections/includes/integrations/actors.php`의
+`axismundi_op_register_actor_transformers()`에 있다. Actor 속성은 같은 파일의
+`axismundi_op_actor_transform()`에서 직접 읽고 조립한다. WP Post의
+`axismundi_op_register_object_source_reader()` → document facts → type assembly와는
+다른 내부 경로이며, **공통 진입점이 있다는 것과 속성 해석까지 통합되었다는 것은 다르다.**
+
+`publicKey`도 확인 대상이다. Actors의 `includes/local-endpoints.php`는
+`axismundi_actors_local_public_key` 필터에서 공개 descriptor를 받고,
+`axismundi_actors_transport_members()`가 inbox/publicKey/endpoints를 묶는다.
+OP Actor transform은 이 묶음 중 허용된 속성을 병합한다. 이 경로에서 publicKey의
+OP 어휘/속성 binding 등록은 확인하지 못했다. **직접 병합을 없애는 것 자체가 목적은 아니며,**
+등록 계약과 context가 다른 확장 속성들과 일관되는지부터 검토한다.
+
+키 재료의 현재 소유자는 공식 ActivityPub 플러그인이다. Bridge의
+`includes/transport.php`는 User Person에 공식 `Collection\Actors`의 사용자 키를,
+사용자 연결이 없는 Actor에는 공식 `Application` 키(없으면 Actors의 0번 키)를 사용한다.
+Bridge가 우리 Actor URI 기반 key id/owner를 붙여 Actors에 제공한다.
+현재 Managed Actor별 독립 키쌍을 생성하는 구조가 아니다. **속성 등록 정리와 키 생성·보관
+이관은 별개**이며, 이 작업으로 개인키 저장이나 키 회전을 변경하지 않는다.
+
+### Activity: Assembly Already Exists On The Snapshot Read Path
+
+공개 canonical Activity 읽기:
+
+```txt
+OP includes/activity-read-route.php: axismundi_op_read_activity_jsonld()
+  → Activities ledger의 로컬 outbound/effective/public snapshot 확인
+  → type별 axismundi_op_resolve_object_assembly(type, 'jsonld')
+  → jsonld callback(payload, 'snapshot')
+  → 원래 snapshot/context와 비교, 변경되었으면 오류
+```
+
+기본 `axismundi_op_assemble_read_jsonld()`는 snapshot 모드에서 일반 application 표현의
+Link 변환·HTML 정규화를 하지 않는다. 과거 Activity를 현재 Object/Actor 상태로 재생성하면
+이력과 서명·전달 의미가 바뀔 수 있으므로, **이 차이를 레거시라고 보고 제거하지 않는다.**
+`plugins/axismundi-object-projections/tests/audit-activity-read-route.php`에는 assembly가
+과거 snapshot을 바꾸면 `ax_op_activity_snapshot_changed`로 거부하는 감사가 이미 있다.
+이번 문서화에서 그 감사를 재실행하지는 않았다.
+
+별도로 추적할 경로:
+
+- Bridge 송신은 `axismundi_op_finalize_activity()`를 거쳐 ledger payload의 식별자를 검사하고
+  blind addressing을 제거하며 context를 구성한다. 공개 snapshot 읽기의 assembly와 동일 경로는 아니다.
+- `plugins/axismundi-activities/includes/actor-lifecycle.php`의
+  `axismundi_act_record_actor_update()`는 `axismundi_op_actor_transform()`을 직접 호출하여
+  Update.object와 fingerprint를 만든다. 일반 transform dispatcher/finalizer 호출과의 차이를
+  검토하되, 경로를 바꿔 기존 fingerprint 및 Update 발행 동작이 달라지는지도 확인해야 한다.
+
+### Review Scope
+
+1. Actor의 source reader/facts/type assembly와 어휘·속성 binding 적용 범위를 결정한다.
+   기존 transformer 등록이 없다고 가정하거나 별도의 Actor 저장소를 만들지 않는다.
+2. publicKey의 어휘/context/공개값 제공 책임을 Actors·OP·Bridge 사이에서 명시한다.
+   현재 공식 플러그인 키 제공 경로와 private-key 비노출은 보존한다.
+3. canonical Actor 읽기, Actor Update.object, canonical Activity 읽기, Outbox, 송신 payload를
+   각각 대조한다. application 표현과 역사 snapshot의 동일 출력을 강제하지 않는다.
+4. 기존 `audit-actor-projection.php`, `audit-object-renderer.php`, `audit-object-assembly.php`,
+   `audit-activity-read-route.php`, Activities의 `audit-actor-update.php`, Bridge의
+   `audit-outbound-delivery.php`를 확인하고,
+   바뀌는 계약에 필요한 회귀 검증을 추가한다. 현재 단계에서 모든 경로가 통합되었다고 표기하지 않는다.
 
 ## Sources
 

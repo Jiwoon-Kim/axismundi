@@ -13,8 +13,12 @@
 - [RFC 9610](https://jmap.io/spec/rfc9610/)
 
 메서드 등록·요청 실행·결과 참조·Core/echo와 Actor 기반 Account 식별을 구현했다.
+Account 접근 판정은 Actors의 프로토콜 중립 작업 공간 API에 위임한다.
 HTTP 라우트·Session 발견·업로드·Push·Contacts 메서드는 아직 노출하지 않는다.
 새 테이블이나 의존 라이브러리는 없고, 기존 Contacts·Actors 저장 구조도 변경하지 않는다.
+
+목표 의존 방향은 `Contacts -> JMAP -> Actors`다. 현재 Contacts의 직접 Actors 참조를
+JMAP으로 전환하는 작업은 아직 수행하지 않았다.
 
 ```sh
 php products/wordpress/plugins/axismundi-jmap/tests/engine.php

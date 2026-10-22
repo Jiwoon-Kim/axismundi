@@ -47,17 +47,7 @@ const AXISMUNDI_ACTORS_ACTING_META = 'ax_acting_actor_identity';
  * @return bool
  */
 function axismundi_actors_can_act_as( Axismundi_Actor $actor, int $user_id ) : bool {
-	if ( $user_id <= 0 || ! $actor->is_local() || ! $actor->is_handle_locked() ) {
-		return false;
-	}
-	if ( in_array( $actor->get_status(), array( 'disabled', 'tombstone' ), true ) ) {
-		return false;
-	}
-	if ( $actor->is_managed() ) {
-		return axismundi_actors_managed_actor_can_manage( $actor->get_identity_id(), $user_id );
-	}
-	// A Person is acted as by exactly the account it belongs to. The site actor is nobody's to speak for.
-	return 'user' === $actor->get_scope() && (int) $actor->get_local_user_id() === $user_id;
+	return $actor->is_handle_locked() && axismundi_actors_can_access_workspace( $actor, $user_id );
 }
 
 /**
@@ -91,13 +81,9 @@ function axismundi_actors_acting_actor_options( ?int $user_id = null ) : array {
 		return array();
 	}
 	$options = array();
-	$person  = axismundi_actors_default_acting_actor( $user_id );
-	if ( $person instanceof Axismundi_Actor ) {
-		$options[] = $person;
-	}
-	foreach ( axismundi_actors_list_manageable_actors( $user_id ) as $managed ) {
-		if ( axismundi_actors_can_act_as( $managed, $user_id ) ) {
-			$options[] = $managed;
+	foreach ( axismundi_actors_workspace_options( $user_id ) as $actor ) {
+		if ( axismundi_actors_can_act_as( $actor, $user_id ) ) {
+			$options[] = $actor;
 		}
 	}
 	return $options;

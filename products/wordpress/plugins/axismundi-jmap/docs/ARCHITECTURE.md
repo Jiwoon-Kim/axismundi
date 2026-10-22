@@ -2,8 +2,12 @@
 
 작성일: 2026-10-22
 
-상태: 개발 중. 요청 엔진과 Account 식별 외의 책임 분배는 초안이며,
+상태: 개발 중. 아래 Domain Binding은 제품 결정이며, 그 밖의 미구현 책임 분배는 초안이다.
 공개 프로토콜 지원이나 완전한 RFC 준수를 의미하지 않는다.
+
+후속 설계: [Actors 다중 Account 소유·접근 설계](../../axismundi-actors/docs/DESIGN-MULTI-ACCOUNT-OWNERSHIP.md).
+User당 Person 하나인 현재 구현은 목표 계약이 아니다. 아래의 본인 Actor 단건 및 managed
+분기 설명은 현황이며, 여러 개인 Actor를 지원하는 관계 모델로 이관할 예정이다.
 
 ## Scope
 
@@ -50,8 +54,21 @@ tests/
 ```
 
 RFC 번호는 기능의 출처와 검증 축으로 사용한다. 공통 엔진을 RFC별로 복제하지 않으며,
-RFC 사이 의존성과 capability 협상을 명시한다. Contacts 전용 모듈의 물리적 위치를
-JMAP에 둘지 Contacts에 둘지는 아직 결정하지 않았다.
+RFC 사이 의존성과 capability 협상을 명시한다. RFC 9610 모듈과 Account별 capability
+판정은 JMAP에 둔다. Contacts는 RFC 9553 데이터와 저장·도메인 동작을 제공한다.
+
+## Dependency Direction
+
+제품 결정: **Contacts -> JMAP -> Actors**. Calendar도 같은 Account 소속 모델을
+따르되 이번 변경에서는 Calendar 의존성을 전환하지 않는다.
+Actors는 프로토콜 중립적인 로컬 운영 주체와 User 접근 관계를 제공한다.
+JMAP은 이를 Account로 투영하고, 도메인 서비스의 가용성·권한과 구현된 메서드를
+확인해서 capability를 판정한다. 플러그인 설치 여부만으로 지원을 선언하지 않는다.
+
+현재 구현 상태는 목표와 구분한다. JMAP -> Actors 의존과 공통 접근 API 연결은
+구현했다. Contacts는 아직 직접 Actors를 참조하는 기존 경로를 유지한다.
+Contacts -> JMAP 의존 전환은 부트스트랩·의존성 안내·기존 편집/가져오기 경로·테스트를
+함께 바꿀 다음 슬라이스다. 미구현 9610 capability나 가짜 Session은 추가하지 않았다.
 
 ## Registry Boundary
 
@@ -73,6 +90,45 @@ OP의 AS2 vocabulary 레지스트리와 JMAP capability 레지스트리는 공�
 Contacts는 JMAP 경유 변경뿐 아니라 기존 편집 화면·가져오기 경유 변경도 추적해야 한다.
 따라서 변경 이력을 JMAP 요청 처리기에서만 기록하는 구조는 후보에서 제외한다.
 
+## Domain Binding
+
+2026-10-22 논의 결론: **로컬 Actor와 JMAP Account를 1:1로 바인딩한다.**
+서로 다른 프로토콜마다 별도 소유 주체와 연결 계층을 늘리지 않고, 데이터 소속과
+수발신의 운영 단위를 공통 도메인 경계로 유지하기 위한 제품 결정이다.
+JMAP이나 ActivityPub이 이 매핑을 요구하거나 권장한다고 주장하지 않는다.
+
+```text
+WordPress User = JMAP User
+  -- access --> local Person Actor <--> personal Account
+  -- access --> managed Actor      <--> non-personal Account
+
+One local operating unit
+  JMAP Account representation       ActivityPub Actor representation
+    Mailboxes / AddressBooks         inbox / outbox / profile
+```
+
+위 구조는 소유 트리가 아니라 접근 관계다. 여러 User가 같은 managed Actor/Account에
+접근할 수 있다. 별도 상위 Account 아래 여러 운영 Actor를 넣는 모델은 채택하지 않는다.
+그 모델이 표준 위반이어서가 아니라 현재 제품의 운영 단위와 다르기 때문이다.
+
+공유하는 것은 식별·소속의 경계다. 프로토콜별 객체·공개 범위·권한·삭제 동작까지
+같다고 가정하지 않는다. 공개 Actor 프로필과 비공개 주소록은 같은 경계 아래에서도
+다른 정책을 가진다. 다른 Actor의 Card를 저장하는 것은 그 Actor의 Account를 소유하거나
+그 Actor로 발행할 권한을 얻는 것이 아니다.
+
+ActivityPub Actor는 계속 자신의 inbox/outbox 링크를 제공한다. Mail의 Mailbox와
+같은 테이블 또는 같은 컬렉션으로 합치지 않는다. Mail의 sent/drafts와 ActivityPub
+outbox는 동등한 wire 객체가 아니며, 메일 발송 요청은 EmailSubmission의 별도 계약이다.
+JMAP Mail Identity도 ActivityPub Actor와 동일한 엔터티가 아니다.
+
+향후 Mail의 주소 정책은 로컬 Actor 핸들과 대표 이메일 주소를 대응시키고 추가 별칭은
+같은 운영 단위에 연결하는 방향이다. 이것은 JMAP의 필수 규칙이 아니며, 실제 메일 개통,
+수신 라우팅·발신 허가와 대표 주소 저장 방식은 Mail 구현 때 결정한다.
+핸들이 존재한다는 이유로 메일 기능이나 접근 권한을 자동 부여하지 않는다.
+
+이 결정은 문서상 convention이다. 현재 Account 통합 검사는 접근·격리를 확인하지만
+미구현 Mail까지 포함한 바인딩 전체를 자동으로 검증하지는 않는다.
+
 ## User And Account
 
 - 인증 주체는 WordPress User다.
@@ -90,6 +146,28 @@ Contacts는 JMAP 경유 변경뿐 아니라 기존 편집 화면·가져오기 �
   의존성 제거는 소유·인가·기존 편집 경로를 함께 검토할 별도 변경이며 아직 수행하지 않는다.
 - Account 식별 권한은 발행 권한과 다르므로 handle lock이나 현재 acting Actor를 요구하지 않는다.
   비활성·삭제 Actor와 관계 없는 관리자는 배제하고, 데이터 타입별 권한은 provider가 더 검사한다.
+
+Account 기능 할당과 활성화 정책은 Actors가 소유한다. JMAP은 capability의 정의와
+실제 제공 가능 여부·User별 권한·제한을 합성한 최종 표현을 소유한다.
+내부 기능 키와 JMAP capability URI를 같은 저장 계약으로 고정하지 않는다.
+
+### Shared Access Implementation
+
+Actors의 `includes/workspaces.php`가 공통 기반을 소유한다.
+
+- `axismundi_actors_can_access_workspace(actor, user_id)`: 로컬·상태·User 관계 판정.
+- `axismundi_actors_resolve_workspace(identity_id, user_id)`: 현재 접근 권한을 검사한 단건 조회.
+- `axismundi_actors_workspace_options(user_id)`: 본인 Actor 우선 목록, 내부 identity ID를 키로 사용.
+
+발행용 `can_act_as()`는 공통 판정에 기존 handle lock 조건을 추가한다.
+기존 `acting_actor_options()`는 공통 목록을 발행 조건으로 필터링하며 반환 형태는 유지한다.
+JMAP의 `resolve_account_actor()`와 `account_actors()`는 이 API에 위임하고
+`a` 접두사 변환만 맡는다. 상태·관계 판정을 JMAP에 중복 보관하지 않는다.
+사이트 Actor·원격 Actor·disabled/tombstone은 작업 공간에서 배제한다.
+이 API는 데이터 타입별 읽기·쓰기나 발행 권한을 자동으로 부여하지 않는다.
+
+이번 슬라이스에서는 선택 usermeta·POST·기존 hook·fallback·UI를 바꾸지 않는다.
+더 넓은 데이터 작업 공간을 실제 선택할 UI/API는 후속 구현이다.
 
 ## Storage Review
 
@@ -136,3 +214,5 @@ JSContact의 미지 확장 속성이나 값별 식별자를 버려서는 안 된
 - [JMAP specifications](https://jmap.io/spec/index.html)
 - [RFC 8620: Core](https://jmap.io/spec/rfc8620/)
 - [RFC 9610: Contacts](https://jmap.io/spec/rfc9610/)
+- [ActivityPub Actors](https://www.w3.org/TR/activitypub/#actors)
+- [RFC 8621: Mail Identities](https://www.rfc-editor.org/rfc/rfc8621.html#section-6)

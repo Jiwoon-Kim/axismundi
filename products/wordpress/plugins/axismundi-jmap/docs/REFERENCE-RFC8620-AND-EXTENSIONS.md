@@ -62,9 +62,31 @@ PHP 요청 안에 장기 연결 서버를 추가하지 않으며 배포·프록�
 
 ## Next Slice
 
-1. 공개 HTTP 전 엄격한 입력·인증·제한 처리와 Session 계약을 완성한다.
-2. Contacts 원본 저장 형식과 9610 provider, 모든 쓰기 경로의 변경 추적을 결정한다.
-3. 바이너리·Push의 Core 요구를 채운 뒤 지원 capability를 노출한다.
+Actors 공통 작업 공간 접근 API와 JMAP의 중복 판정 제거는 구현했다.
+선택 저장·UI·발행 제한은 변경하지 않았다.
+다음에는 Contacts -> JMAP 의존 전환에 필요한 도메인 접근 계약을 먼저 준비하고,
+이를 Account별 capability 판정과 Session 모델에 연결한다. Contacts 원본 저장 형식의
+선택과 미구현 9610 capability 공개는 별도로 유지한다.
+
+제안: **Session 모델과 인증된 요청 경계**를 다음 구현 단위로 한다.
+
+- Account는 Actor 1:1 바인딩을 유지한다. User별 목록, isPersonal, 타입별 권한과
+  capability, primaryAccounts, Session state의 변화를 한 경로에서 조립한다.
+- 엔진 앞에 엄격한 I-JSON 입력 검사를 둔다. 중복 키·수치·문자 제약과 크기 제한을
+  검증하고, request 오류를 protocol problem 응답으로 매핑한다.
+- WP REST cookie+nonce와 Application Password 인증을 실제 WP Core 경로에서 확인한다.
+  클라이언트가 보낸 user_id나 저장된 acting Actor 선택을 인증 근거로 사용하지 않는다.
+- Session 계약은 우선 내부 fixture로 검증한다. 미구현 upload/download/eventSource URL이나
+  Contacts capability를 채워 넣은 불완전한 Session을 공개하지 않는다.
+- 미래 HTTP 어댑터의 content type·인증·cache/no-store·예외 처리와 제한 정책을 검사한다.
+  실제 공개 경로와 발견 경로의 활성화는 Core 필수 기능이 준비된 뒤 별도 단계로 한다.
+
+완료 기준: 권한 철회·Actor 상태 변경 시 목록과 state 반영, 타입별 capability 필터링,
+사용자 간 격리, nonce 없는 cookie 요청 거부, malformed 입력의 실행 전 거부 검증.
+Session state와 데이터 타입별 changes state는 구분한다.
+
+그 다음 Contacts 원본 저장 형식과 9610 provider·변경 추적을 결정하고,
+바이너리·Push의 Core 요구를 채운 뒤 지원 capability를 공개한다.
 
 원격 Account 동기화 클라이언트, JMAP Mail 백엔드, Calendar, WebFinger 재배치는 현재 구현하지 않았다.
 
@@ -81,3 +103,18 @@ PHP 요청 안에 장기 연결 서버를 추가하지 않으며 배포·프록�
 
 검증하지 않은 것: 공개 HTTP 인증·Session·실제 JMAP 클라이언트 상호운용,
 엄격한 I-JSON, 장기 연결, Contacts 쓰기·증분 동기화. 테스트는 CI에 연결되지 않았다.
+
+### Workspace Access Slice
+
+2026-10-22 추가 실행 결과:
+
+- `php products/wordpress/plugins/axismundi-actors/tests/workspaces.php`: 14개 검사 통과.
+  WordPress/JMAP 없이 공통 접근의 로컬·상태·관계·격리를 검사하는 fixture 테스트다.
+- `php products/wordpress/plugins/axismundi-jmap/tests/engine.php`: 기존 64개 검사 통과.
+- 실제 wp-env에서 갱신한 `tests/audit-accounts.php`: 23개 검사 통과.
+  handle 미활성 Account 접근과 발행 금지, 기존 선택 동작, 상태 변경·권한 철회를 확인했다.
+- 실제 wp-env의 Actors `tests/audit-acting-actor.php`: 기존 16개 검사 전부 통과.
+  이 검사는 JMAP을 로드하지 않은 별도 WP CLI 프로세스에서 실행했다.
+
+Contacts·Calendar의 기존 인가 경로와 스키마는 변경하지 않았으며, 이들의 전체 감사는
+이번 슬라이스에서 재실행하지 않았다.

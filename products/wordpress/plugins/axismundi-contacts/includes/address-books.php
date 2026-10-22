@@ -17,28 +17,45 @@ defined( 'ABSPATH' ) || exit;
  *
  * Deliberately narrower than `axismundi_actors_can_manage()`, which grants a site administrator
  * authority over every Actor. Being able to administer an identity and being able to read the
- * private address book kept under it are different powers: the first is about the site, the second
- * is somebody's list of who they know, their private notes about them, and the phone numbers they
- * were given. So a user-scope Actor's book is its own person's, with no capability override; a
- * managed Actor's book is its managers'.
+ * private address book kept under it are different powers. Compatibility predicate for callers
+ * requiring both read and write; each new caller should ask for the operation it performs.
+ * Account ownership and delegation come from the common workspace service, never local_user_id.
  *
  * @param int $owner_actor_id Actor identity that owns the book.
  * @param int $user_id        Local user asking.
  * @return bool
  */
 function axismundi_contacts_can_use_book( int $owner_actor_id, int $user_id ) : bool {
-	if ( $owner_actor_id <= 0 || $user_id <= 0 || ! axismundi_contacts_has_actors() ) {
-		return false;
+	$permissions = axismundi_contacts_account_permissions( $owner_actor_id, $user_id );
+	return $permissions['read'] && $permissions['write'];
+}
+
+/** Account access is necessary, but Contacts keeps its own explicit operating-role policy. */
+function axismundi_contacts_account_permissions( int $account_id, int $user_id ) : array {
+	$denied = array( 'read' => false, 'write' => false );
+	if ( ! axismundi_contacts_has_actors()
+		|| ! function_exists( 'axismundi_actors_resolve_workspace' )
+		|| ! function_exists( 'axismundi_actors_account_role' )
+		|| null === axismundi_actors_resolve_workspace( $account_id, $user_id ) ) {
+		return $denied;
 	}
-	$actor = axismundi_actors_get_by_identity( $owner_actor_id );
-	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() ) {
-		return false;
-	}
-	if ( $actor->is_managed() ) {
-		return function_exists( 'axismundi_actors_managed_actor_can_manage' )
-			&& axismundi_actors_managed_actor_can_manage( $owner_actor_id, $user_id );
-	}
-	return (int) $actor->get_local_user_id() === $user_id;
+	// Preserve existing owner/manager/editor access; no new viewer role or administrator override.
+	$allowed = in_array( axismundi_actors_account_role( $account_id, $user_id ), array( 'owner', 'manager', 'editor' ), true );
+	return array( 'read' => $allowed, 'write' => $allowed );
+}
+
+/** Account-wide local policy, not RFC 9610 AddressBookRights or a capability declaration. */
+function axismundi_contacts_can_read_account( int $account_id, int $user_id ) : bool {
+	return axismundi_contacts_account_permissions( $account_id, $user_id )['read'];
+}
+
+function axismundi_contacts_can_write_account( int $account_id, int $user_id ) : bool {
+	return axismundi_contacts_account_permissions( $account_id, $user_id )['write'];
+}
+
+/** Data workspace selection does not require an activated ActivityPub publishing identity. */
+function axismundi_contacts_current_account() : ?Axismundi_Actor {
+	return function_exists( 'axismundi_actors_current_workspace' ) ? axismundi_actors_current_workspace() : null;
 }
 
 /**
@@ -206,27 +223,31 @@ function axismundi_contacts_create_book( int $owner_actor_id, string $name ) {
  * @return true|WP_Error
  */
 function axismundi_contacts_add_card_to_book( int $card_id, int $book_id ) {
-	global $wpdb;
-	$card = axismundi_contacts_get_card( $card_id );
-	$book = axismundi_contacts_get_book( $book_id );
-	if ( array() === $card || array() === $book ) {
-		return new WP_Error( 'ax_contacts_membership', __( 'That card or address book does not exist.', 'axismundi-contacts' ), array( 'status' => 404 ) );
-	}
-	if ( (int) $card['owner_actor_id'] !== (int) $book['owner_actor_id'] ) {
-		return new WP_Error( 'ax_contacts_membership_owner', __( 'A card can only be filed into its own owner\'s address book.', 'axismundi-contacts' ), array( 'status' => 403 ) );
-	}
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	$wpdb->query(
-		$wpdb->prepare(
-			// Filing a Card into a book it is already in is not an error, it is a no-op.
-			'INSERT IGNORE INTO ' . axismundi_contacts_memberships_table() . ' (address_book_id, card_id, created_at) VALUES (%d, %d, %s)',
-			$book_id,
-			$card_id,
-			current_time( 'mysql', true )
-		)
-	);
-	axismundi_contacts_touch_book( $book_id );
-	return true;
+	return Axismundi_Contacts_Write::run( static function () use ( $card_id, $book_id ) {
+		global $wpdb;
+		$card = axismundi_contacts_get_card( $card_id );
+		$book = axismundi_contacts_get_book( $book_id );
+		if ( array() === $card || array() === $book ) {
+			return new WP_Error( 'ax_contacts_membership', __( 'That card or address book does not exist.', 'axismundi-contacts' ), array( 'status' => 404 ) );
+		}
+		if ( (int) $card['owner_actor_id'] !== (int) $book['owner_actor_id'] ) {
+			return new WP_Error( 'ax_contacts_membership_owner', __( 'A card can only be filed into its own owner\'s address book.', 'axismundi-contacts' ), array( 'status' => 403 ) );
+		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
+		$inserted = $wpdb->query(
+			$wpdb->prepare(
+				// Filing a Card into a book it is already in is not an error, it is a no-op.
+				'INSERT IGNORE INTO ' . axismundi_contacts_memberships_table() . ' (address_book_id, card_id, created_at) VALUES (%d, %d, %s)',
+				$book_id,
+				$card_id,
+				current_time( 'mysql', true )
+			)
+		);
+		if ( false === $inserted || ( $inserted > 0 && ! axismundi_contacts_touch_book( $book_id ) ) ) {
+			return new WP_Error( 'ax_contacts_membership_save', __( 'The card could not be filed in the address book.', 'axismundi-contacts' ) );
+		}
+		return true;
+	} );
 }
 
 /**
@@ -286,9 +307,9 @@ function axismundi_contacts_get_book( int $book_id ) : array {
 }
 
 /** Bump the book's revision, so a sync can tell it moved without reading every Card. */
-function axismundi_contacts_touch_book( int $book_id ) : void {
+function axismundi_contacts_touch_book( int $book_id ) : bool {
 	global $wpdb;
 	$table = axismundi_contacts_books_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET revision = revision + 1, updated_at = %s WHERE id = %d", current_time( 'mysql', true ), $book_id ) );
+	return 1 === $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET revision = revision + 1, updated_at = %s WHERE id = %d", current_time( 'mysql', true ), $book_id ) );
 }

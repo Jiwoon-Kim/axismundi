@@ -701,48 +701,49 @@ function axismundi_contacts_move_entry_key( int $card_id, int $owner, array $doc
 		$document['localizations'] = $localizations;
 	}
 
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
-	$wpdb->query( 'START TRANSACTION' );
-	$saved = axismundi_contacts_save_card_for_owner( $owner, $document, $card_id );
-	if ( is_wp_error( $saved ) ) {
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$wpdb->query( 'ROLLBACK' );
-		return false;
-	}
-	/*
-	 * Anything already written against the new address is stale by definition: this Card has no entry
-	 * there -- one that did was left alone above -- so the row records where a value came from that
-	 * nothing on the Card holds any more. It goes inside the same transaction, because the alternative
-	 * is the rename failing on a unique key and leaving the Card renamed with its provenance behind.
-	 */
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
-	$wpdb->delete( axismundi_contacts_provenance_table(), array( 'card_id' => $card_id, 'pointer' => $now ), array( '%d', '%s' ) );
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
-	$wpdb->update(
-		axismundi_contacts_provenance_table(),
-		array( 'pointer' => $now ),
-		array( 'card_id' => $card_id, 'pointer' => $was ),
-		array( '%s' ),
-		array( '%d', '%s' )
-	);
-	$pointers = axismundi_contacts_published_pointers( $owner );
-	if ( in_array( $was, $pointers, true ) ) {
-		$pointers = array_map(
-			static function ( string $pointer ) use ( $was, $now ) : string {
-				return $was === $pointer ? $now : $pointer;
-			},
-			$pointers
-		);
-		$published = axismundi_contacts_set_published_pointers( $owner, $pointers );
-		if ( is_wp_error( $published ) ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$wpdb->query( 'ROLLBACK' );
+	$result = Axismundi_Contacts_Write::run( static function () use ( $owner, $document, $card_id, $was, $now ) {
+		global $wpdb;
+		$saved = axismundi_contacts_save_card_for_owner( $owner, $document, $card_id );
+		if ( is_wp_error( $saved ) ) {
+			return $saved;
+		}
+		/*
+		 * Anything already written against the new address is stale by definition: this Card has no entry
+		 * there -- one that did was left alone above -- so the row records where a value came from that
+		 * nothing on the Card holds any more. It goes inside the same transaction, because the alternative
+		 * is the rename failing on a unique key and leaving the Card renamed with its provenance behind.
+		 */
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
+		if ( false === $wpdb->delete( axismundi_contacts_provenance_table(), array( 'card_id' => $card_id, 'pointer' => $now ), array( '%d', '%s' ) ) ) {
 			return false;
 		}
-	}
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
-	$wpdb->query( 'COMMIT' );
-	return true;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
+		$updated = $wpdb->update(
+			axismundi_contacts_provenance_table(),
+			array( 'pointer' => $now ),
+			array( 'card_id' => $card_id, 'pointer' => $was ),
+			array( '%s' ),
+			array( '%d', '%s' )
+		);
+		if ( false === $updated ) {
+			return false;
+		}
+		$pointers = axismundi_contacts_published_pointers( $owner );
+		if ( in_array( $was, $pointers, true ) ) {
+			$pointers = array_map(
+				static function ( string $pointer ) use ( $was, $now ) : string {
+					return $was === $pointer ? $now : $pointer;
+				},
+				$pointers
+			);
+			$published = axismundi_contacts_set_published_pointers( $owner, $pointers );
+			if ( is_wp_error( $published ) ) {
+				return $published;
+			}
+		}
+		return true;
+	} );
+	return ! is_wp_error( $result );
 }
 
 /**

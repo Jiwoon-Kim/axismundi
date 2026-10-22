@@ -148,16 +148,21 @@ const AXISMUNDI_CONTACTS_JSCONTACT_VERSION = '2.0';
  * @return int|WP_Error Card id.
  */
 function axismundi_contacts_save_card( int $book_id, array $card, int $card_id = 0, ?int $revision = null ) {
-	$book = axismundi_contacts_get_book( $book_id );
-	if ( array() === $book ) {
-		return new WP_Error( 'ax_contacts_book_missing', __( 'That address book does not exist.', 'axismundi-contacts' ), array( 'status' => 404 ) );
-	}
-	$saved = axismundi_contacts_save_card_for_owner( (int) $book['owner_actor_id'], $card, $card_id, $revision );
-	if ( ! is_wp_error( $saved ) && 0 === $card_id ) {
-		// A new Card is filed where it was made. An existing one keeps whatever filing it has.
-		axismundi_contacts_add_card_to_book( (int) $saved, $book_id );
-	}
-	return $saved;
+	return Axismundi_Contacts_Write::run( static function () use ( $book_id, $card, $card_id, $revision ) {
+		$book = axismundi_contacts_get_book( $book_id );
+		if ( array() === $book ) {
+			return new WP_Error( 'ax_contacts_book_missing', __( 'That address book does not exist.', 'axismundi-contacts' ), array( 'status' => 404 ) );
+		}
+		$saved = axismundi_contacts_save_card_for_owner( (int) $book['owner_actor_id'], $card, $card_id, $revision );
+		if ( ! is_wp_error( $saved ) && 0 === $card_id ) {
+			// A new Card is filed where it was made. An existing one keeps whatever filing it has.
+			$filed = axismundi_contacts_add_card_to_book( (int) $saved, $book_id );
+			if ( is_wp_error( $filed ) ) {
+				return $filed;
+			}
+		}
+		return $saved;
+	} );
 }
 
 /**
@@ -174,7 +179,15 @@ function axismundi_contacts_save_card( int $book_id, array $card, int $card_id =
  * @return int|WP_Error Card id.
  */
 function axismundi_contacts_save_card_for_owner( int $owner_actor_id, array $card, int $card_id = 0, ?int $revision = null ) {
+	return Axismundi_Contacts_Write::run( static fn() => axismundi_contacts_write_card( $owner_actor_id, $card, $card_id, $revision ) );
+}
+
+/** Internal write body; use save_card_for_owner() so indexes and notifications stay atomic. */
+function axismundi_contacts_write_card( int $owner_actor_id, array $card, int $card_id, ?int $revision ) {
 	global $wpdb;
+	if ( ! Axismundi_Contacts_Write::active() ) {
+		return new WP_Error( 'ax_contacts_transaction', __( 'Card writes require a Contacts transaction.', 'axismundi-contacts' ) );
+	}
 	if ( $owner_actor_id <= 0 ) {
 		return new WP_Error( 'ax_contacts_card_owner', __( 'A card belongs to an Actor.', 'axismundi-contacts' ), array( 'status' => 400 ) );
 	}
@@ -309,18 +322,32 @@ function axismundi_contacts_save_card_for_owner( int $owner_actor_id, array $car
 
 	$now     = current_time( 'mysql', true );
 	$derived = axismundi_contacts_derive_card_columns( $card, $card_id );
+	$json = wp_json_encode( $card );
+	if ( false === $json ) {
+		return new WP_Error( 'ax_contacts_card_json', __( 'The card is not valid JSON.', 'axismundi-contacts' ), array( 'status' => 400 ) );
+	}
 	$row     = array_merge(
 		$derived,
 		array(
 			'owner_actor_id' => $owner_actor_id,
-			'card_json'      => (string) wp_json_encode( $card ),
+			'card_json'      => $json,
 			'updated_at'     => $now,
 		)
 	);
 	if ( $card_id > 0 ) {
 		$row['revision'] = (int) $existing['revision'] + 1;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-		$wpdb->update( axismundi_contacts_cards_table(), $row, array( 'id' => $card_id ), null, array( '%d' ) );
+		$updated = $wpdb->update( axismundi_contacts_cards_table(), $row, array( 'id' => $card_id, 'owner_actor_id' => $owner_actor_id, 'revision' => (int) $existing['revision'] ), null, array( '%d', '%d', '%d' ) );
+		if ( false === $updated ) {
+			// Drivers may report a serialization conflict instead of a zero-row conditional update.
+			if ( $wpdb->dbh instanceof mysqli && in_array( mysqli_errno( $wpdb->dbh ), array( 1020, 1205, 1213 ), true ) ) {
+				return new WP_Error( 'ax_contacts_card_conflict', __( 'This card changed while it was being saved. Reload it before trying again.', 'axismundi-contacts' ), array( 'status' => 409 ) );
+			}
+			return new WP_Error( 'ax_contacts_card_save', __( 'The card could not be saved.', 'axismundi-contacts' ), array( 'status' => 500 ) );
+		}
+		if ( 0 === $updated ) {
+			return new WP_Error( 'ax_contacts_card_conflict', __( 'This card changed since it was opened.', 'axismundi-contacts' ), array( 'status' => 409 ) );
+		}
 	} else {
 		$row['revision']   = 1;
 		$row['created_at'] = $now;
@@ -330,10 +357,14 @@ function axismundi_contacts_save_card_for_owner( int $owner_actor_id, array $car
 		}
 		$card_id = (int) $wpdb->insert_id;
 	}
-	axismundi_contacts_reindex_card( $card_id, $card );
+	if ( ! axismundi_contacts_reindex_card( $card_id, $card ) ) {
+		return new WP_Error( 'ax_contacts_card_index', __( 'The card search index could not be saved.', 'axismundi-contacts' ), array( 'status' => 500 ) );
+	}
 	// Every book the Card is filed in moved, not just the one the edit came from.
 	foreach ( axismundi_contacts_card_books( $card_id ) as $filed ) {
-		axismundi_contacts_touch_book( $filed );
+		if ( ! axismundi_contacts_touch_book( $filed ) ) {
+			return new WP_Error( 'ax_contacts_book_save', __( 'The address book could not be updated.', 'axismundi-contacts' ), array( 'status' => 500 ) );
+		}
 	}
 
 	/**
@@ -347,13 +378,22 @@ function axismundi_contacts_save_card_for_owner( int $owner_actor_id, array $car
 	 * @param int                 $owner_actor_id Actor that owns it.
 	 * @param array<string,mixed> $card           Card document as stored.
 	 */
+	Axismundi_Contacts_Write::after_commit( static fn() => axismundi_contacts_notify_card_saved( $card_id, $owner_actor_id, $card ) );
+	return $card_id;
+}
+
+/** Re-entry is guarded across separate notifications, including writes made by listeners. */
+function axismundi_contacts_notify_card_saved( int $card_id, int $owner_actor_id, array $card ) : void {
 	static $announcing = false;
-	if ( ! $announcing ) {
-		$announcing = true;
+	if ( $announcing ) {
+		return;
+	}
+	$announcing = true;
+	try {
 		do_action( 'axismundi_contacts_card_saved', $card_id, $owner_actor_id, $card );
+	} finally {
 		$announcing = false;
 	}
-	return $card_id;
 }
 
 /**
@@ -538,12 +578,14 @@ function axismundi_contacts_ordered_services( array $card ) : array {
  *
  * @param int                 $card_id Card id.
  * @param array<string,mixed> $card    Card document.
- * @return void
+ * @return bool Whether every index write succeeded.
  */
-function axismundi_contacts_reindex_card( int $card_id, array $card ) : void {
+function axismundi_contacts_reindex_card( int $card_id, array $card ) : bool {
 	global $wpdb;
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	$wpdb->delete( axismundi_contacts_values_table(), array( 'card_id' => $card_id ), array( '%d' ) );
+	if ( false === $wpdb->delete( axismundi_contacts_values_table(), array( 'card_id' => $card_id ), array( '%d' ) ) ) {
+		return false;
+	}
 	foreach ( AXISMUNDI_CONTACTS_INDEXED_FIELDS as $field => $value_key ) {
 		foreach ( (array) ( $card[ $field ] ?? array() ) as $entry_id => $entry ) {
 			$value = is_array( $entry ) ? trim( (string) ( $entry[ $value_key ] ?? '' ) ) : '';
@@ -551,7 +593,7 @@ function axismundi_contacts_reindex_card( int $card_id, array $card ) : void {
 				continue;
 			}
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-			$wpdb->insert(
+			$inserted = $wpdb->insert(
 				axismundi_contacts_values_table(),
 				array(
 					'card_id'          => $card_id,
@@ -562,8 +604,12 @@ function axismundi_contacts_reindex_card( int $card_id, array $card ) : void {
 					'pref'             => isset( $entry['pref'] ) ? (int) $entry['pref'] : null,
 				)
 			);
+			if ( false === $inserted ) {
+				return false;
+			}
 		}
 	}
+	return true;
 }
 
 /**

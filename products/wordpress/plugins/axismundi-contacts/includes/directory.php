@@ -20,7 +20,7 @@ defined( 'ABSPATH' ) || exit;
  */
 function axismundi_contacts_directory_where( int $owner, int $group = 0, string $search = '' ) : string {
 	global $wpdb;
-	if ( ! axismundi_contacts_can_use_book( $owner, get_current_user_id() ) ) {
+	if ( ! axismundi_contacts_can_read_account( $owner, get_current_user_id() ) ) {
 		return '';
 	}
 	if ( $group > 0 ) {

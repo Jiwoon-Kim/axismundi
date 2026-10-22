@@ -89,7 +89,11 @@ function axismundi_contacts_rest_may_edit_card( WP_REST_Request $request ) {
 		// Cards exist.
 		return new WP_Error( 'ax_contacts_draft_missing', __( 'That contact does not exist.', 'axismundi-contacts' ), array( 'status' => 404 ) );
 	}
-	if ( ! axismundi_contacts_can_use_book( (int) $card['owner_actor_id'], get_current_user_id() ) ) {
+	$owner = (int) $card['owner_actor_id'];
+	$allowed = in_array( $request->get_method(), array( 'GET', 'HEAD' ), true )
+		? axismundi_contacts_can_read_account( $owner, get_current_user_id() )
+		: axismundi_contacts_can_write_account( $owner, get_current_user_id() );
+	if ( ! $allowed ) {
 		return new WP_Error( 'ax_contacts_draft_missing', __( 'That contact does not exist.', 'axismundi-contacts' ), array( 'status' => 404 ) );
 	}
 	return true;
@@ -256,45 +260,40 @@ function axismundi_contacts_rest_put_draft( WP_REST_Request $request ) {
 	 * the first and failed at the second would leave a Card published under a selection nobody chose
 	 * -- which on this route means values reaching strangers that the person had not agreed to.
 	 */
-	global $wpdb;
 	$before = axismundi_contacts_card_document( $card_id );
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one save across two tables.
-	$wpdb->query( 'START TRANSACTION' );
-	$saved = axismundi_contacts_save_card_for_owner( $owner, $card, $card_id, (int) $request['revision'] );
-	if ( is_wp_error( $saved ) ) {
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$wpdb->query( 'ROLLBACK' );
-		return $saved;
-	}
-	if ( null !== $pointers ) {
-		$written = axismundi_contacts_set_published_pointers( $owner, $pointers );
-		if ( is_wp_error( $written ) ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$wpdb->query( 'ROLLBACK' );
-			return $written;
+	$result = Axismundi_Contacts_Write::run( static function () use ( $owner, $card, $card_id, $request, $pointers, $before ) {
+		$saved = axismundi_contacts_save_card_for_owner( $owner, $card, $card_id, (int) $request['revision'] );
+		if ( is_wp_error( $saved ) ) {
+			return $saved;
 		}
-	}
-	/*
-	 * And whatever was changed by hand becomes this person's. A value that came from an Actor is
-	 * refreshed when the Actor changes; the moment somebody edits one, that has to stop being true of
-	 * it, or the next refresh puts the Actor's answer back over the top of theirs.
-	 *
-	 * The screen form has always done this. Doing it only there would have meant the editor this
-	 * route exists for was the one place where editing a linked value did not make it yours.
-	 */
-	$promoted = axismundi_contacts_record_local_edits( $card_id, $before, axismundi_contacts_card_document( $card_id ) );
-	if ( is_wp_error( $promoted ) ) {
+		if ( null !== $pointers ) {
+			$written = axismundi_contacts_set_published_pointers( $owner, $pointers );
+			if ( is_wp_error( $written ) ) {
+				return $written;
+			}
+		}
 		/*
-		 * The one step that could not be left out. Committing here would store somebody's edit while
-		 * provenance still said an Actor owned the value -- and the next refresh would put the Actor's
-		 * answer back, which is the failure this whole promotion exists to prevent.
+		 * And whatever was changed by hand becomes this person's. A value that came from an Actor is
+		 * refreshed when the Actor changes; the moment somebody edits one, that has to stop being true of
+		 * it, or the next refresh puts the Actor's answer back over the top of theirs.
+		 *
+		 * The screen form has always done this. Doing it only there would have meant the editor this
+		 * route exists for was the one place where editing a linked value did not make it yours.
 		 */
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$wpdb->query( 'ROLLBACK' );
-		return $promoted;
+		$promoted = axismundi_contacts_record_local_edits( $card_id, $before, axismundi_contacts_card_document( $card_id ) );
+		if ( is_wp_error( $promoted ) ) {
+			/*
+			 * The one step that could not be left out. Committing here would store somebody's edit while
+			 * provenance still said an Actor owned the value -- and the next refresh would put the Actor's
+			 * answer back, which is the failure this whole promotion exists to prevent.
+			 */
+			return $promoted;
+		}
+		return true;
+	} );
+	if ( is_wp_error( $result ) ) {
+		return $result;
 	}
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-	$wpdb->query( 'COMMIT' );
 	// Read back rather than echoed: what the editor gets is what is stored, in the order it is stored.
 	return rest_ensure_response( axismundi_contacts_draft_payload( axismundi_contacts_get_card( $card_id ) ) );
 }

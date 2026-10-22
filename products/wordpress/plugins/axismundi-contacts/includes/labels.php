@@ -4,7 +4,7 @@ defined( 'ABSPATH' ) || exit;
 
 /** Same-owner non-default AddressBooks, using the existing private access policy. */
 function axismundi_contacts_labels( int $owner ) : array {
-	if ( ! axismundi_contacts_can_use_book( $owner, get_current_user_id() ) ) {
+	if ( ! axismundi_contacts_can_read_account( $owner, get_current_user_id() ) ) {
 		return array();
 	}
 	return array_values( array_filter( axismundi_contacts_books_for_actor( $owner ), static fn( array $book ) : bool => 1 !== (int) $book['is_default'] ) );
@@ -24,10 +24,10 @@ function axismundi_contacts_label_id( $value ) : int {
 function axismundi_contacts_label_command( array $input ) {
 	global $wpdb;
 	$owner = axismundi_contacts_label_id( $input['owner'] ?? 0 );
-	$actor = function_exists( 'axismundi_actors_acting_actor' ) ? axismundi_actors_acting_actor() : null;
+	$actor = axismundi_contacts_current_account();
 	$nonce = is_string( $input['_wpnonce'] ?? null ) ? $input['_wpnonce'] : '';
 	if ( ! $actor instanceof Axismundi_Actor || (int) $actor->get_identity_id() !== $owner
-		|| ! axismundi_contacts_can_use_book( $owner, get_current_user_id() )
+		|| ! axismundi_contacts_can_write_account( $owner, get_current_user_id() )
 		|| ! wp_verify_nonce( $nonce, 'ax_contacts_labels_' . $owner ) ) {
 		return new WP_Error( 'ax_contacts_labels_denied', __( 'This contact action is no longer available. Return to Contacts and try again.', 'axismundi-contacts' ) );
 	}

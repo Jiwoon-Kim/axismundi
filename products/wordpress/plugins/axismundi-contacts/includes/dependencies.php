@@ -33,7 +33,10 @@ const AXISMUNDI_CONTACTS_ACTORS_MINIMUM = '0.1.0';
 function axismundi_contacts_has_actors() : bool {
 	return defined( 'AXISMUNDI_ACTORS_VERSION' )
 		&& version_compare( (string) AXISMUNDI_ACTORS_VERSION, AXISMUNDI_CONTACTS_ACTORS_MINIMUM, '>=' )
-		&& function_exists( 'axismundi_actors_get_by_identity' );
+		&& function_exists( 'axismundi_actors_get_by_identity' )
+		&& function_exists( 'axismundi_actors_resolve_workspace' )
+		&& function_exists( 'axismundi_actors_account_role' )
+		&& function_exists( 'axismundi_actors_current_workspace' );
 }
 
 /**

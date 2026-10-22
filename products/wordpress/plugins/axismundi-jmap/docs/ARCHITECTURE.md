@@ -12,6 +12,7 @@ Actors의 추가형 DB 33.0 기반은 [A 구현 기록](../../axismundi-actors/d
 JMAP의 Account 해소는 동일한 workspace API를 통해 새 명시적 접근 관계를 사용한다.
 Session/Account in-process 투영은 [Session 구현 기록](IMPLEMENTATION-SESSION.md)을 참고한다.
 HTTP Session 공개와 실제 Contacts provider는 아직 구현하지 않았다.
+Contacts 저장·에디터·인가와 RFC 9610의 차이는 [Contacts gap 조사](GAP-CONTACTS-RFC9610.md)를 참고한다.
 
 ## Scope
 
@@ -214,6 +215,10 @@ JSContact의 미지 확장 속성이나 값별 식별자를 버려서는 안 된
 5. 플러그인 의존성 방향과 Contacts 부재 시 capability 비노출 방식.
 
 ## References
+
+Calendar의 원본·블록 문서·연합 발행 경계와 후속 검토 항목은
+[Calendar 변경과 연합 발행 경계](DESIGN-CALENDAR-PUBLICATION.md)에 기록한다.
+설계 방향이며 Calendar 코드나 JMAP Calendars capability를 구현한 것은 아니다.
 
 - [JMAP specifications](https://jmap.io/spec/index.html)
 - [RFC 8620: Core](https://jmap.io/spec/rfc8620/)

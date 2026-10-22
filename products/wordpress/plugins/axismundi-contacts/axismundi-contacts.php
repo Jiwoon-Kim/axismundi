@@ -36,6 +36,7 @@ defined( 'ABSPATH' ) || exit;
 const AXISMUNDI_CONTACTS_VERSION = '0.1.0-beta.1';
 
 require_once __DIR__ . '/includes/dependencies.php';
+require_once __DIR__ . '/includes/transactions.php';
 require_once __DIR__ . '/includes/schema.php';
 require_once __DIR__ . '/includes/address-books.php';
 require_once __DIR__ . '/includes/vocabulary.php';

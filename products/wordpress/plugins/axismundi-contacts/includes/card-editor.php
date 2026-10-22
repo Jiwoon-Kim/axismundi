@@ -79,14 +79,14 @@ function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
 	 */
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing what to load, not writing.
 	if ( isset( $_GET['profile'] ) ) {
-		$acting  = function_exists( 'axismundi_actors_acting_actor' ) ? axismundi_actors_acting_actor() : null;
+		$acting  = axismundi_contacts_current_account();
 		$card_id = $acting instanceof Axismundi_Actor ? axismundi_contacts_profile_card( (int) $acting->get_identity_id() ) : 0;
 	} else {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing what to load, not writing.
 		$card_id = isset( $_GET['item'] ) ? absint( $_GET['item'] ) : 0;
 	}
 	$row = axismundi_contacts_get_card( $card_id );
-	if ( array() === $row || ! axismundi_contacts_can_use_book( (int) $row['owner_actor_id'], get_current_user_id() ) ) {
+	if ( array() === $row || ! axismundi_contacts_can_write_account( (int) $row['owner_actor_id'], get_current_user_id() ) ) {
 		return;
 	}
 
@@ -313,10 +313,10 @@ add_action( 'admin_enqueue_scripts', 'axismundi_contacts_enqueue_card_editor' );
  */
 function axismundi_contacts_card_editor_screen( int $card_id, int $group_id ) : void {
 	$row      = axismundi_contacts_get_card( $card_id );
-	$acting   = function_exists( 'axismundi_actors_acting_actor' ) ? axismundi_actors_acting_actor() : null;
+	$acting   = axismundi_contacts_current_account();
 	$actor_id = $acting instanceof Axismundi_Actor ? (int) $acting->get_identity_id() : 0;
 	// The PHP heading discloses contact data too; refusing the JavaScript bootstrap is not enough.
-	if ( array() === $row || (int) $row['owner_actor_id'] !== $actor_id || ! axismundi_contacts_can_use_book( $actor_id, get_current_user_id() ) ) {
+	if ( array() === $row || (int) $row['owner_actor_id'] !== $actor_id || ! axismundi_contacts_can_write_account( $actor_id, get_current_user_id() ) ) {
 		echo '<h1>' . esc_html__( 'Edit contact', 'axismundi-contacts' ) . '</h1>';
 		echo '<p>' . esc_html__( 'That contact does not exist.', 'axismundi-contacts' ) . '</p>';
 		return;

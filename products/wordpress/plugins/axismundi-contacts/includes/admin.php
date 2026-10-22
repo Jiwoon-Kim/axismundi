@@ -2,9 +2,8 @@
 /**
  * The address book screen.
  *
- * One book at a time: the one belonging to whichever Actor somebody is currently acting as. There is
- * no book picker here, because choosing which identity you are speaking as is already a decision the
- * Actors switch owns, and offering it twice would let the two disagree.
+ * One Account workspace at a time, selected by the common Account service. ActivityPub publication
+ * eligibility is not required to open private contacts. The selection remains owned by Actors.
  *
  * One editor, too. The card describing the owner is edited by the same form as everybody else's,
  * because it is the same kind of thing -- a JSContact Card that happens to be pointed at. A separate
@@ -79,12 +78,12 @@ function axismundi_contacts_current_book() : array {
 			)
 		);
 	}
-	$actor = function_exists( 'axismundi_actors_acting_actor' ) ? axismundi_actors_acting_actor() : null;
+	$actor = axismundi_contacts_current_account();
 	if ( ! $actor instanceof Axismundi_Actor ) {
-		return array_merge( $none, array( 'error' => __( 'You are not acting as any Actor, so there is no address book to open.', 'axismundi-contacts' ) ) );
+		return array_merge( $none, array( 'error' => __( 'No accessible account is selected.', 'axismundi-contacts' ) ) );
 	}
 	// Asked again here rather than trusted from the switch: losing a manager role closes the book.
-	if ( ! axismundi_contacts_can_use_book( (int) $actor->get_identity_id(), get_current_user_id() ) ) {
+	if ( ! axismundi_contacts_can_read_account( (int) $actor->get_identity_id(), get_current_user_id() ) ) {
 		return array_merge( $none, array( 'error' => __( 'You cannot open this Actor&#8217;s address book.', 'axismundi-contacts' ) ) );
 	}
 	$default = axismundi_contacts_book_for_actor( (int) $actor->get_identity_id() );
@@ -406,7 +405,7 @@ function axismundi_contacts_authorize_book( int $book_id ) {
 	if ( array() === $book ) {
 		return new WP_Error( 'ax_contacts_book_missing', __( 'That address book does not exist.', 'axismundi-contacts' ) );
 	}
-	if ( ! axismundi_contacts_can_use_book( (int) $book['owner_actor_id'], get_current_user_id() ) ) {
+	if ( ! axismundi_contacts_can_write_account( (int) $book['owner_actor_id'], get_current_user_id() ) ) {
 		return new WP_Error( 'ax_contacts_book_denied', __( 'You cannot use this address book.', 'axismundi-contacts' ) );
 	}
 	return $book;

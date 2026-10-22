@@ -154,7 +154,7 @@ function axismundi_contacts_detail_row( array $entry, string $property, bool $pu
  */
 function axismundi_contacts_card_detail( int $card_id, int $group_id, int $self_id, int $actor_id ) : void {
 	$row = axismundi_contacts_get_card( $card_id );
-	if ( array() === $row || (int) $row['owner_actor_id'] !== $actor_id || ! axismundi_contacts_can_use_book( $actor_id, get_current_user_id() ) ) {
+	if ( array() === $row || (int) $row['owner_actor_id'] !== $actor_id || ! axismundi_contacts_can_read_account( $actor_id, get_current_user_id() ) ) {
 		echo '<h1>' . esc_html__( 'Contact', 'axismundi-contacts' ) . '</h1>';
 		echo '<p>' . esc_html__( 'That contact does not exist.', 'axismundi-contacts' ) . '</p>';
 		return;

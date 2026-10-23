@@ -184,6 +184,77 @@ try {
 		$wpdb->insert( axismundi_actors_managers_table(), $owner_row );
 	}
 	$assert( ! str_contains( wp_json_encode( axismundi_act_get_actor_inbox_page( $group->get_uri() ) ), '$seen' ), 'AP Inbox has no mailbox read-state properties' );
+	$binding = axismundi_actors_transport_binding( $actors[0] );
+	$old_pem = axismundi_activitypub_bridge_public_key( $actors[0] );
+	$old_private = axismundi_activitypub_bridge_private_key( $actors[0] );
+	$assert( array( 'kind' => 'upstream_user', 'user_id' => $users[0] ) === $binding, 'Transport records upstream provenance explicitly' );
+	$assert( '' !== $old_pem && '' !== $old_private, 'Existing upstream key material available' );
+	$wpdb->update( axismundi_actors_actors_table(), array( 'local_user_id' => null ), array( 'identity_id' => $actors[0]->get_identity_id() ) );
+	try {
+		$detached = axismundi_actors_get_by_identity( $actors[0]->get_identity_id() );
+		$assert( null === $detached->get_local_user_id() && $old_pem === axismundi_activitypub_bridge_public_key( $detached ) && $old_private === axismundi_activitypub_bridge_private_key( $detached ), 'Ownership compatibility changes cannot select a different signing key' );
+		$assert( axismundi_actors_migrate_transport_bindings() && $binding === axismundi_actors_transport_binding( $detached ), 'Migration replay never rebinds initialized transport' );
+		$assert( $detached->get_identity_id() === axismundi_actors_get_transport_actor_for_user( $users[0] )->get_identity_id(), 'Old per-user route resolves transport rather than ownership' );
+	} finally {
+		$wpdb->update( axismundi_actors_actors_table(), array( 'local_user_id' => $users[0] ), array( 'identity_id' => $actors[0]->get_identity_id() ) );
+	}
+	$group_pem = axismundi_activitypub_bridge_public_key( $group );
+	$wpdb->update( axismundi_actors_actors_table(), array( 'transport_kind' => null, 'transport_user_id' => null ), array( 'identity_id' => $group->get_identity_id() ) );
+	$fail = static function ( string $sql ) : string {
+		return str_contains( $sql, 'SET a.transport_kind' ) ? 'SELECT * FROM ax_missing_transport_audit' : $sql;
+	};
+	add_filter( 'query', $fail );
+	$old_suppress = $wpdb->suppress_errors();
+	try {
+		$assert( ! axismundi_actors_migrate_transport_bindings(), 'Backfill write failure is reported' );
+		$assert( '' === axismundi_activitypub_bridge_public_key( $group ) && '' === axismundi_activitypub_bridge_private_key( $group ), 'Missing binding withholds keys instead of falling back' );
+	} finally {
+		remove_filter( 'query', $fail );
+		$fail = null;
+		$wpdb->suppress_errors( $old_suppress );
+	}
+	$assert( axismundi_actors_migrate_transport_bindings() && $group_pem === axismundi_activitypub_bridge_public_key( $group ), 'Legacy Group key does not rotate during migration' );
+	$fail = static function ( string $sql ) : string {
+		return str_contains( $sql, 'SELECT * FROM ' . axismundi_act_relations_table() ) ? 'SELECT * FROM ax_missing_block_audit' : $sql;
+	};
+	add_filter( 'query', $fail );
+	$old_suppress = $wpdb->suppress_errors();
+	try {
+		$assert( is_wp_error( axismundi_activitypub_bridge_inbox_permitted( $b, $group ) ), 'Block lookup SQL failure is not an absent Block' );
+	} finally {
+		remove_filter( 'query', $fail );
+		$fail = null;
+		$wpdb->suppress_errors( $old_suppress );
+	}
+	$assert( ! is_wp_error( axismundi_act_write_relation( 'block', $group->get_uri(), $remote_uri, 'outbound', 'active', null, null ) ), 'Group Block fixture stored' );
+	$blocked = $payload( 'account-blocked' );
+	$blocked['to'] = array( $group->get_uri() );
+	$assert( is_wp_error( axismundi_activitypub_bridge_record_inbox( $blocked, array(), false, $group ) ) && null === axismundi_act_get( $blocked['id'] ), 'Actor route refuses Account-blocked sender before recording' );
+	$assert( is_wp_error( axismundi_activitypub_bridge_record_inbox( $blocked ) ), 'Shared route cannot bypass Account Block' );
+	$mixed = $payload( 'mixed-account-block' );
+	$mixed['to'] = array( $group->get_uri(), $actors[1]->get_uri() );
+	$mixed_row = axismundi_activitypub_bridge_record_inbox( $mixed );
+	$assert( $mixed_row instanceof Axismundi_Activity, 'Unblocked recipient still receives shared delivery' );
+	$members = $wpdb->get_col( $wpdb->prepare( 'SELECT actor_identity_id FROM %i WHERE activity_id = %d', axismundi_act_inbox_table(), $mixed_row->get_id() ) );
+	$assert( array( $actors[1]->get_identity_id() ) === array_map( 'intval', $members ), 'Shared receipts exclude only blocked Account' );
+	$mixed_follow = $payload( 'mixed-blocked-follow' );
+	$mixed_follow['type'] = 'Follow';
+	$wpdb->update( axismundi_actors_actors_table(), array( 'manually_approves_followers' => 1 ), array( 'identity_id' => $group->get_identity_id() ) );
+	$mixed_follow['object'] = $group->get_uri();
+	$mixed_follow['to'] = array( $group->get_uri(), $actors[1]->get_uri() );
+	$assert( axismundi_activitypub_bridge_record_inbox( $mixed_follow ) instanceof Axismundi_Activity
+		&& null === axismundi_act_get_relation( 'follow', $remote_uri, $group->get_uri() ), 'Another Account receipt cannot create a Follow relation for blocked Group' );
+	$wpdb->update( axismundi_act_relations_table(), array( 'state' => 'undone' ), array( 'relation_type' => 'block', 'subject_actor_uri_hash' => hash( 'sha256', $group->get_uri() ) ) );
+	$assert( axismundi_activitypub_bridge_record_inbox( $blocked ) instanceof Axismundi_Activity, 'Undone Block allows later delivery' );
+	$site_blocks = get_option( 'activitypub_site_blocked_domains', null );
+	update_option( 'activitypub_site_blocked_domains', array( 'example.com' ) );
+	try {
+		$site_blocked = $payload( 'site-blocked' );
+		$site_blocked['to'] = array( $group->get_uri() );
+		$assert( is_wp_error( axismundi_activitypub_bridge_record_inbox( $site_blocked ) ) && null === axismundi_act_get( $site_blocked['id'] ), 'Site moderation remains effective without Account Block' );
+	} finally {
+		if ( null === $site_blocks ) { delete_option( 'activitypub_site_blocked_domains' ); } else { update_option( 'activitypub_site_blocked_domains', $site_blocks ); }
+	}
 	echo "PASS: {$checks} Actor Inbox checks\n";
 } finally {
 	if ( $fail ) { remove_filter( 'query', $fail ); }
@@ -200,6 +271,7 @@ try {
 	foreach ( array_reverse( $actors ) as $actor ) {
 		if ( ! $actor instanceof Axismundi_Actor ) { continue; }
 		$id = $actor->get_identity_id();
+		$wpdb->delete( axismundi_act_relations_table(), array( 'subject_actor_uri_hash' => hash( 'sha256', $actor->get_uri() ) ) );
 		$wpdb->delete( axismundi_act_inbox_table(), array( 'actor_identity_id' => $id ) );
 		foreach ( array( axismundi_actors_managers_table(), axismundi_actors_addresses_table(), axismundi_actors_endpoints_table(), axismundi_actors_keys_table(), axismundi_actors_actors_table() ) as $table ) {
 			$wpdb->delete( $table, array( 'identity_id' => $id ) );

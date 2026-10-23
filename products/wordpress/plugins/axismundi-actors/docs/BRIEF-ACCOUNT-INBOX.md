@@ -34,7 +34,7 @@ Principal 등록이 HTTP 요청자의 인증을 대신하지 않는다. 계정 �
 |---|---|---|
 | S1 Principal | stable subject 식별·유형·존재 검증, 기존 User 관계 이전, remote 등록의 무권한성 | 구현·리뷰 완료 (f798f5f) |
 | S2 관계 통일 | 개인·위임 접근의 관계 모델 수렴, 개인 귀속과 운영 role 분리, 삭제·철회 정책 | 대기 |
-| S3 transport | legacy 공식 plugin binding과 Account 접근 분리, Actor별 키 생성·저장·회전·서명 정책, **모더레이션 스코프** | 대기 |
+| S3 transport | legacy 공식 plugin binding과 Account 접근 분리, Actor별 키 생성·저장·회전·서명 정책, **모더레이션 스코프** | S3a 구현·리뷰 대기. S3b 키 수명주기 미구현 |
 | S4 UNIQUE | S3 검증 후 불필요한 제약 제거. legacy binding의 고유성은 별도 판단 | 대기 |
 | S5 isPersonal | 인증 User와 관계로 계산. Session 기본값·지원·철회 회귀 검사 | 기존 부분 구현, 재검토 |
 | S6 receipts | Activity와 원자적인 Actor별 receipt, 중복·실패·보수적 백필 | 구현·리뷰 완료 (3bc752c) |
@@ -104,18 +104,26 @@ Group   @community     inbox  /wp-json/axismundi/v1/actors/{uuid}/inbox
 **주소는 액터별로 나뉘었다.** 그런데 같은 문서가 남은 결함도 보여준다.
 
 ```txt
-publicKey.id   .../actors/{uuid}#main-key      ← 그 액터의 키라고 주장
+publicKey.id   .../actors/{uuid}#main-key
 실제 키 재료    Application 키                  ← local_user_id 가 없으므로
 모더레이션      activity_is_blocked( $activity, $actor->get_local_user_id() ?? 0 )
                 → Group 수신이 그 Group 의 차단이 아니라 사이트 범위로 판정
 ```
 
 지금이 가장 어긋난 상태다 — **자기 주소로 받는데 사이트 키로 서명하고 사이트 기준으로
-차단한다.** 검증 자체는 통과한다(그 키를 문서에 싣고 있으므로). 비용은 다른 곳에 있다:
-독립 정체성 여럿이 키 하나를 공유하고, 액터 단위 회전이 불가능하며, Application 키
-하나가 뚫리면 비-user 액터 전부가 함께 뚫린다.
+차단한다.**
+
+문서가 거짓을 말하는 것은 아니다. 발행된 `publicKeyPem` 이 실제로 서명한 키이므로
+검증은 정상이고 원격이 속는 것도 아니다. 비용은 **격리와 회전**에 있다: 독립 정체성
+여럿이 키 하나를 공유하므로 한 키의 유출이 비-user 액터 전부에 닿고, 한 액터만 키를
+바꾸는 것이 불가능하다.
 
 ### S3 가 하는 일
+
+2026-10-24: 바인딩 분리와 Account Block은 S3a로 구현했다.
+[구현 범위](../../axismundi-activitypub-bridge/docs/IMPLEMENTATION-TRANSPORT-SCOPE.md).
+기존 및 신규 Actor의 키 provider는 아직 보존한다. 독립 키 생성·저장·회전은 S3b로 남으며
+그 검증 전에는 S4를 열지 않는다.
 
 ```txt
 1. transport 바인딩을 자기 컬럼으로 분리

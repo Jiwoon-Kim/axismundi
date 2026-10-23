@@ -2,11 +2,29 @@
 /** Actor-addressed transport, using the upstream verifier without rewriting signed requests. @package AxismundiActivityPubBridge */
 defined( 'ABSPATH' ) || exit;
 
+/** Retain upstream site/user rules and add the recipient Account's own Block relation. */
+function axismundi_activitypub_bridge_inbox_permitted( array $payload, Axismundi_Actor $recipient ) {
+	if ( ! class_exists( 'Activitypub\\Moderation' ) || ! function_exists( 'axismundi_act_actor_blocks' ) ) {
+		return new WP_Error( 'ax_bridge_inbox_policy', 'The Inbox policy is unavailable.' );
+	}
+	$activity = Activitypub\Activity\Activity::init_from_array( $payload );
+	$binding = axismundi_actors_transport_binding( $recipient );
+	if ( is_wp_error( $activity ) || null === $binding ) {
+		return new WP_Error( 'ax_bridge_inbox_policy', 'The Inbox policy context is unavailable.' );
+	}
+	if ( Activitypub\Moderation::activity_is_blocked( $activity, $binding['user_id'] ?? 0 ) ) {
+		return false;
+	}
+	$sender = axismundi_act_member_uri( $payload['actor'] ?? '' );
+	$blocked = axismundi_act_actor_blocks( $recipient->get_uri(), $sender );
+	return is_wp_error( $blocked ) ? $blocked : ! $blocked;
+}
+
 /** Resolve explicit local addresses only; Public and attribution never imply delivery to every Actor. */
 function axismundi_activitypub_bridge_receipt_targets( array $activity, array $user_ids = array() ) : array {
 	$targets = array();
 	foreach ( $user_ids as $user_id ) {
-		$actor = axismundi_actors_get_for_user( (int) $user_id );
+		$actor = axismundi_actors_get_transport_actor_for_user( (int) $user_id );
 		if ( $actor instanceof Axismundi_Actor && $actor->is_local() && 'public' === $actor->get_status() ) {
 			$targets[ $actor->get_identity_id() ] = $actor;
 		}
@@ -68,8 +86,11 @@ function axismundi_activitypub_bridge_receive_actor_inbox( WP_REST_Request $requ
 		return new WP_Error( 'ax_bridge_inbox_missing', 'The Actor Inbox is unavailable.', array( 'status' => 404 ) );
 	}
 	$payload = $request->get_json_params();
-	$activity = Activitypub\Activity\Activity::init_from_array( $payload );
-	if ( is_wp_error( $activity ) || Activitypub\Moderation::activity_is_blocked( $activity, $actor->get_local_user_id() ?? 0 ) ) {
+	$permitted = axismundi_activitypub_bridge_inbox_permitted( $payload, $actor );
+	if ( is_wp_error( $permitted ) ) {
+		return new WP_Error( 'ax_bridge_inbox_policy', 'The Inbox policy is unavailable.', array( 'status' => 503 ) );
+	}
+	if ( ! $permitted ) {
 		return new WP_Error( 'ax_bridge_inbox_blocked', 'This delivery is not permitted.', array( 'status' => 403 ) );
 	}
 	$result = axismundi_activitypub_bridge_record_inbox( $payload, array(), false, $actor );

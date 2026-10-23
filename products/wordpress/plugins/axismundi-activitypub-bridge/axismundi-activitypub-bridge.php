@@ -96,6 +96,9 @@ function axismundi_activitypub_bridge_representation_ready() : bool {
 function axismundi_activitypub_bridge_ready() : bool {
 	return axismundi_activitypub_bridge_representation_ready()
 		&& defined( 'AXISMUNDI_ACTIVITIES_VERSION' )
+		&& function_exists( 'axismundi_actors_transport_binding' )
+		&& function_exists( 'axismundi_actors_get_transport_actor_for_user' )
+		&& function_exists( 'axismundi_act_actor_blocks' )
 		&& function_exists( 'axismundi_act_record_activity' );
 }
 
@@ -185,7 +188,7 @@ function axismundi_activitypub_bridge_object_actor( string $uri ) : ?Axismundi_A
 function axismundi_activitypub_bridge_inbox_targets( array $activity, array $recipient_user_ids, bool $allow_mention_targets = false ) : array {
 	$targets = array();
 	foreach ( $recipient_user_ids as $user_id ) {
-		$actor = axismundi_actors_get_for_user( (int) $user_id );
+		$actor = axismundi_actors_get_transport_actor_for_user( (int) $user_id );
 		if ( $actor instanceof Axismundi_Actor && $actor->is_local() && 'public' === $actor->get_status() ) {
 			$targets[ $actor->get_uri() ] = $actor;
 		}
@@ -257,6 +260,23 @@ function axismundi_activitypub_bridge_record_inbox( array $activity, array $reci
 		axismundi_actors_ensure_remote_instance_cached( $actor );
 	}
 
+	$targets = null === $route_actor
+		? axismundi_activitypub_bridge_receipt_targets( $activity, $recipient_user_ids )
+		: array( $route_actor->get_identity_id() => $route_actor );
+	$admitted = array();
+	foreach ( $targets as $id => $recipient ) {
+		$permitted = axismundi_activitypub_bridge_inbox_permitted( $activity, $recipient );
+		if ( is_wp_error( $permitted ) ) {
+			return $permitted;
+		}
+		if ( $permitted ) {
+			$admitted[ $id ] = $recipient;
+		}
+	}
+	if ( $targets && ! $admitted ) {
+		return new WP_Error( 'ax_bridge_inbox_blocked', 'This delivery is not permitted.' );
+	}
+
 	$object      = is_array( $activity['object'] ?? null ) ? $activity['object'] : array();
 	$object_type = (string) ( $object['type'] ?? '' );
 	if ( 'Update' === (string) ( $activity['type'] ?? '' )
@@ -271,10 +291,7 @@ function axismundi_activitypub_bridge_record_inbox( array $activity, array $reci
 		}
 	}
 
-	$targets = null === $route_actor
-		? axismundi_activitypub_bridge_receipt_targets( $activity, $recipient_user_ids )
-		: array( $route_actor->get_identity_id() => $route_actor );
-	return axismundi_act_record_activity( $activity, 'inbound', array_keys( $targets ) );
+	return axismundi_act_record_activity( $activity, 'inbound', array_keys( $admitted ) );
 }
 
 /** Store one bounded, content-free Inbox outcome for administrator diagnostics. */

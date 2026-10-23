@@ -28,9 +28,10 @@ function axismundi_activitypub_bridge_sender( Axismundi_Actor $actor ) : array {
 /** Resolve the official plugin's public key without changing Actor ownership. */
 function axismundi_activitypub_bridge_public_key( Axismundi_Actor $actor ) : string {
 	$key = '';
-	if ( class_exists( 'Activitypub\\Collection\\Actors' ) ) {
-		$user_id = $actor->get_local_user_id();
-		if ( $user_id ) {
+	$binding = function_exists( 'axismundi_actors_transport_binding' ) ? axismundi_actors_transport_binding( $actor ) : null;
+	if ( null !== $binding && class_exists( 'Activitypub\\Collection\\Actors' ) ) {
+		$user_id = $binding['user_id'];
+		if ( 'upstream_user' === $binding['kind'] ) {
 			$key = Activitypub\Collection\Actors::get_public_key( $user_id );
 		} elseif ( class_exists( 'Activitypub\\Application' ) ) {
 			$key = Activitypub\Application::get_public_key();
@@ -50,11 +51,12 @@ function axismundi_activitypub_bridge_public_key( Axismundi_Actor $actor ) : str
 
 /** Resolve the official plugin's private key without changing Actor ownership. */
 function axismundi_activitypub_bridge_private_key( Axismundi_Actor $actor ) : string {
-	if ( ! class_exists( 'Activitypub\\Collection\\Actors' ) ) {
+	$binding = function_exists( 'axismundi_actors_transport_binding' ) ? axismundi_actors_transport_binding( $actor ) : null;
+	if ( null === $binding || ! class_exists( 'Activitypub\\Collection\\Actors' ) ) {
 		return '';
 	}
-	$user_id = $actor->get_local_user_id();
-	if ( $user_id ) {
+	$user_id = $binding['user_id'];
+	if ( 'upstream_user' === $binding['kind'] ) {
 		$key = Activitypub\Collection\Actors::get_private_key( $user_id );
 	} elseif ( class_exists( 'Activitypub\\Application' ) ) {
 		$key = Activitypub\Application::get_private_key();

@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '34.0';
+const AXISMUNDI_ACTORS_DB_VERSION = '35.0';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -157,6 +157,8 @@ function axismundi_actors_install() : void {
 			local_handle_key varchar(191) DEFAULT NULL,
 			handle_locked_at datetime DEFAULT NULL,
 			local_user_id bigint(20) unsigned DEFAULT NULL,
+			transport_kind varchar(24) DEFAULT NULL,
+			transport_user_id bigint(20) unsigned DEFAULT NULL,
 			personal_owner_user_id bigint(20) unsigned DEFAULT NULL,
 			display_name varchar(191) DEFAULT NULL,
 			summary text DEFAULT NULL,
@@ -179,6 +181,7 @@ function axismundi_actors_install() : void {
 			UNIQUE KEY local_handle_key (local_handle_key),
 			UNIQUE KEY local_user_id (local_user_id),
 			KEY personal_owner_user_id (personal_owner_user_id),
+			KEY transport_user_id (transport_user_id),
 			KEY preferred_username (preferred_username),
 			KEY scope_type (actor_scope, actor_type)
 		) ENGINE=InnoDB {$charset};"
@@ -719,6 +722,7 @@ function axismundi_actors_install() : void {
 		&& in_array( 'personal_owner_user_id', $columns, true )
 		&& ! empty( $personal_owner_indexes )
 		&& axismundi_actors_principal_relation_schema_valid( $managers )
+		&& axismundi_actors_migrate_transport_bindings()
 	) {
 		update_option( 'ax_actors_principal_schema_version', AXISMUNDI_ACTORS_PRINCIPAL_SCHEMA_VERSION, false );
 		if ( axismundi_actors_migrate_account_access() ) {
@@ -867,7 +871,7 @@ final class Axismundi_Actor {
 		return (string) ( $this->row['profile_url'] ?? '' );
 	}
 
-	/** Legacy single-Actor WP/transport binding; not the complete Account ownership relation. */
+	/** Legacy single-Actor WP compatibility link; transport provenance and Account access are separate. */
 	public function get_local_user_id() : ?int {
 		return null !== $this->row['local_user_id'] ? (int) $this->row['local_user_id'] : null;
 	}
@@ -1088,13 +1092,15 @@ function axismundi_actors_create_local( array $args ) {
 			'local_handle_key'   => $handle_key,
 			'handle_locked_at'   => $handle_locked,
 			'local_user_id'      => $uid,
+			'transport_kind'     => $uid > 0 ? 'upstream_user' : 'upstream_application',
+			'transport_user_id'  => $uid > 0 ? $uid : null,
 			'personal_owner_user_id' => $personal_owner,
 			'display_name'       => isset( $args['display_name'] ) ? sanitize_text_field( (string) $args['display_name'] ) : null,
 			'default_language'   => '' !== $language ? $language : null,
 			'created_at'         => $now,
 			'updated_at'         => $now,
 		),
-		array( '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%s', '%s' )
+		array( '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%d', '%d', '%s', '%s', '%s', '%s' )
 	);
 	if ( false === $ok ) {
 		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching

@@ -107,6 +107,19 @@ function axismundi_act_get_relation( string $type, string $subject_uri, string $
 		: null;
 }
 
+/** Account-owned Block policy; repository failures must not be treated as an absent Block. */
+function axismundi_act_actor_blocks( string $subject_uri, string $object_uri ) {
+	if ( ! axismundi_act_relations_ready() || '' === axismundi_act_uri( $subject_uri ) || '' === axismundi_act_uri( $object_uri ) ) {
+		return new WP_Error( 'ax_act_block_policy', 'The Block relation policy is unavailable.' );
+	}
+	global $wpdb;
+	$relation = axismundi_act_get_relation( 'block', $subject_uri, $object_uri );
+	if ( '' !== $wpdb->last_error ) {
+		return new WP_Error( 'ax_act_block_read', 'The Block relation could not be read.' );
+	}
+	return is_array( $relation ) && 'active' === $relation['state'];
+}
+
 /** Direction relative to this site, or WP_Error for unknown/remote-remote Actors. */
 function axismundi_act_relation_direction( string $subject_uri, string $object_uri ) {
 	$subject = axismundi_actors_get_by_uri( $subject_uri );
@@ -326,6 +339,22 @@ function axismundi_act_apply_relation_activity( array $normalized ) {
 	}
 	if ( ! is_array( $root ) || ! in_array( (string) $root['activity_type'], array( 'Follow', 'Block' ), true ) ) {
 		return array();
+	}
+	// A receipt for another Account must not mutate a blocked Account's Follow state.
+	if ( 'inbound' === ( $normalized['direction'] ?? '' ) && 'Follow' === $root['activity_type'] ) {
+		foreach ( array( $root['actor_uri'], $root['object_uri'] ) as $uri ) {
+			$account = axismundi_actors_get_by_uri( (string) $uri );
+			if ( ! $account instanceof Axismundi_Actor || ! $account->is_local() ) {
+				continue;
+			}
+			$blocked = axismundi_act_actor_blocks( $account->get_uri(), (string) $normalized['actor_uri'] );
+			if ( is_wp_error( $blocked ) ) {
+				return $blocked;
+			}
+			if ( $blocked ) {
+				return array();
+			}
+		}
 	}
 	$relation_type = strtolower( (string) $root['activity_type'] );
 	$before        = axismundi_act_get_relation( $relation_type, (string) $root['actor_uri'], (string) $root['object_uri'] );

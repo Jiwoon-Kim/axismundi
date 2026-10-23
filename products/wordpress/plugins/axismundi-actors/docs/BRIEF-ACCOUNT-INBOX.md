@@ -32,7 +32,7 @@ Principal 등록이 HTTP 요청자의 인증을 대신하지 않는다. 계정 �
 
 | 단계 | 구현·검증 목표 | 현재 상태 |
 |---|---|---|
-| S1 Principal | stable subject 식별·유형·존재 검증, 기존 User 관계 이전, remote 등록의 무권한성 | 대기 |
+| S1 Principal | stable subject 식별·유형·존재 검증, 기존 User 관계 이전, remote 등록의 무권한성 | 구현, 리뷰 대기 ([범위](IMPLEMENTATION-PRINCIPALS.md)) |
 | S2 관계 통일 | 개인·위임 접근의 관계 모델 수렴, 개인 귀속과 운영 role 분리, 삭제·철회 정책 | 대기 |
 | S3 transport | legacy 공식 plugin binding과 Account 접근 분리, Actor별 키 생성·저장·회전·서명 정책, **모더레이션 스코프** | 대기 |
 | S4 UNIQUE | S3 검증 후 불필요한 제약 제거. legacy binding의 고유성은 별도 판단 | 대기 |
@@ -42,7 +42,7 @@ Principal 등록이 HTTP 요청자의 인증을 대신하지 않는다. 계정 �
 | S8 activity view | Account 범위 Activity 뷰·query·changes·읽음 상태. AP 문서와 분리. **mailbox 아님** | 대기 |
 | S11 state | Account 단위 변경 알림 경로. S8 의 선결 | 대기 |
 | S9 instance | shared Inbox 및 Application Actor 소유권 이관 | 대기 |
-| S10 acting-actor | 암묵 폴백을 단일 해소기로. 선택 자체는 남김 (primaryAccounts) | 대기 |
+| S10 acting-actor | 요청의 Account 선택 운반·검증. 기본 선호와 현재 선택 분리 | 대기 |
 
 S3는 컬럼을 옮기는 것만으로 완료되지 않는다. 추가 Person·Group이 Application 키를
 계속 사용하는지 검사하고, 독립 키 및 회전을 실제 지원해야 한다.
@@ -89,6 +89,18 @@ AP 쪽    아무것도 선언하지 않는다. state 는 JMAP 개념이다.
 
 ## S10 acting-actor: 암묵 폴백을 단일 해소기로
 
+### 요청 운반 계약 (후속 구현)
+
+- WP 관리 화면·기본 프론트는 Account 선택 쿠키를 운반하고 앱·JMAP은 명시적인 accountId를 운반한다.
+- 쿠키는 권한 증명이 아니다. 서버가 매 요청 공통 인가 서비스로 재검증한다.
+- 현재 활동 선택과 사용자 기본 선호는 구분한다. primaryAccounts는 capability별 기본값이며 현재 선택 상태가 아니다.
+- 사용자 기본 선호는 명시적으로 설정한다. 기존 acting-actor usermeta를 자동으로 기본 선호로 간주하지 않는다.
+- 선택 쿠키 수명은 실제 로그인 세션 만료에 맞춘다. auth_cookie_expiration 기간만 새로 더해서 기존 인증보다 오래 살게 하지 않는다.
+- 로그아웃·인증 사용자 변경 시 이전 선택을 제거하거나 무효화한다. 쿠키 범위·보안 속성·CSRF 및 다중 탭 정책은 구현 시 검증한다.
+- 철회된 선택으로 쓰기를 시도했을 때 다른 Actor로 조용히 재발행하지 않는다. 기본값 제안과 실제 쓰기 재시도는 구분한다.
+
+쿠키 구현은 S1/S5 Session 감사의 선결이 아니다.
+
 Session 이 대체하는 것은 **목록 반쪽**이다. "내가 무엇으로 활동할 수 있는가"는
 workspace/Session 이 답한다. **선택 반쪽**은 대체되지 않는다 -- JMAP 에는 전환 명령이
 없고 요청마다 `accountId` 를 명시하므로 "현재 선택"이 서버에 필요 없지만, 우리
@@ -107,8 +119,8 @@ emoji        catalogue.php
 
 ### 저장된 선택은 없앨 수 없다
 
-WordPress 관리 화면과 기본 프론트엔드는 모놀리식이라 **페이지 로드에 `accountId` 가
-없다.** 그 표면들이 현재 세션의 Account 로 활동하려면 저장된 선택을 **적용**해야 한다.
+WordPress 관리 화면과 기본 프론트엔드는 페이지 요청의 쿠키로 현재 Account 선택을
+운반할 수 있다. 그 표면은 서버가 검증한 선택을 적용해야 한다.
 우리 React 앱은 요청마다 `accountId` 를 명시할 수 있지만, 최초 로드의 기본값은
 마찬가지로 필요하다.
 
@@ -118,19 +130,20 @@ should treat as their default for that capability"* 를 알려준다. 서버가 
 
 ```txt
 오늘        아무도 명시하지 않으면 서버가 조용히 적용   ← 깨지는 지점
-바뀔 것     해소기 한 곳에서만 적용. 표면별 폴백 금지.
+바뀔 것     요청에 선택을 운반하고 해소기 한 곳에서 검증. 표면별 폴백 금지.
 남을 것     사용자의 기본 Account 선택 자체.
             JMAP 은 primaryAccounts 로 노출하고,
-            모놀리식 표면은 해소기를 통해 적용한다.
+            모놀리식 표면의 현재 선택은 별도 쿠키로 운반한다.
 ```
 
 즉 S10 은 **폐기가 아니라 단일화**다. 없애는 것은 "표면마다 각자 폴백"이고,
-남기는 것은 "세션의 기본 Account" 다.
+남기는 것은 "현재 Account 선택"과 "사용자의 명시적 기본 선호"다.
 
 ```txt
 해소기   명시된 accountId 가 있으면 그것 + 권한 검사
-         없으면 세션 기본값 + 권한 검사
-         철회되었으면 폴백 + 그 사실을 호출자가 알 수 있게
+         모놀리식 표면은 운반된 쿠키 선택 + 권한 검사
+         없으면 기본값 제안. JMAP 메서드의 필수 accountId를 쿠키로 보충하지 않음
+         철회되었으면 전이를 알리고 쓰기 중단. 다른 Actor로 조용히 재발행 금지
 표면     반드시 해소기를 통과. 자체 폴백·자체 재검사 금지.
 ```
 

@@ -14,12 +14,13 @@ const AXISMUNDI_ACTORS_ACCOUNT_ACCESS_VERSION = '1';
 
 /** Readiness is explicit: never grant legacy authority after a partial migration. */
 function axismundi_actors_account_access_ready() : bool {
-	return AXISMUNDI_ACTORS_ACCOUNT_ACCESS_VERSION === (string) get_option( 'ax_actors_account_access_version', '' );
+	return axismundi_actors_principals_ready()
+		&& AXISMUNDI_ACTORS_ACCOUNT_ACCESS_VERSION === (string) get_option( 'ax_actors_account_access_version', '' );
 }
 
 /** Additive, replay-safe data migration; called only after schema verification. */
 function axismundi_actors_migrate_account_access() : bool {
-	if ( axismundi_actors_account_access_ready() ) {
+	if ( AXISMUNDI_ACTORS_ACCOUNT_ACCESS_VERSION === (string) get_option( 'ax_actors_account_access_version', '' ) ) {
 		return true;
 	}
 	global $wpdb;
@@ -39,8 +40,8 @@ function axismundi_actors_migrate_account_access() : bool {
 	$inserted = false;
 	if ( false !== $updated ) {
 		$inserted = $wpdb->query( $wpdb->prepare(
-			"INSERT INTO %i (identity_id, user_id, role, created_at, updated_at)
-			 SELECT a.identity_id, a.personal_owner_user_id, 'owner', UTC_TIMESTAMP(), UTC_TIMESTAMP()
+			"INSERT INTO %i (identity_id, principal_kind, principal_id, user_id, role, created_at, updated_at)
+			 SELECT a.identity_id, 'wp_user', a.personal_owner_user_id, a.personal_owner_user_id, 'owner', UTC_TIMESTAMP(), UTC_TIMESTAMP()
 			 FROM %i a INNER JOIN %i i ON i.id = a.identity_id INNER JOIN %i u ON u.ID = a.personal_owner_user_id
 			 WHERE i.origin = 'local' AND a.actor_scope <> 'site'
 			 ON DUPLICATE KEY UPDATE role = role",
@@ -53,7 +54,7 @@ function axismundi_actors_migrate_account_access() : bool {
 		$inconsistent = $wpdb->get_var( $wpdb->prepare(
 			"SELECT COUNT(*) FROM %i a INNER JOIN %i i ON i.id = a.identity_id
 			 INNER JOIN %i u ON u.ID = a.personal_owner_user_id
-			 LEFT JOIN %i m ON m.identity_id = a.identity_id AND m.user_id = a.personal_owner_user_id
+			 LEFT JOIN %i m ON m.identity_id = a.identity_id AND m.principal_kind = 'wp_user' AND m.principal_id = a.personal_owner_user_id
 			 WHERE i.origin = 'local' AND a.actor_scope <> 'site' AND (m.role IS NULL OR m.role <> 'owner')",
 			$actors, $identities, $wpdb->users, $managers
 		) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- migration invariant check.
@@ -71,15 +72,7 @@ function axismundi_actors_migrate_account_access() : bool {
 
 /** Role lookup only; callers separately check Actor state and domain permissions. */
 function axismundi_actors_account_role( int $identity_id, int $user_id ) : string {
-	if ( $identity_id <= 0 || $user_id <= 0 || ! axismundi_actors_account_access_ready() || ! get_userdata( $user_id ) ) {
-		return '';
-	}
-	global $wpdb;
-	$role = (string) $wpdb->get_var( $wpdb->prepare(
-		'SELECT role FROM %i WHERE identity_id = %d AND user_id = %d',
-		axismundi_actors_managers_table(), $identity_id, $user_id
-	) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- exact access lookup.
-	return array_key_exists( $role, axismundi_actors_manager_roles() ) ? $role : '';
+	return axismundi_actors_principal_account_role( $identity_id, 'wp_user', $user_id );
 }
 
 /** User-relative personal attribution, never inferred from Actor type or manager role alone. */
@@ -98,7 +91,7 @@ function axismundi_actors_accounts_for_user( int $user_id ) : array {
 	$ids = $wpdb->get_col( $wpdb->prepare(
 		"SELECT a.identity_id FROM %i a INNER JOIN %i m ON m.identity_id = a.identity_id
 		 INNER JOIN %i i ON i.id = a.identity_id
-		 WHERE m.user_id = %d AND m.role IN ('owner','manager','editor') AND i.origin = 'local'
+		 WHERE m.principal_kind = 'wp_user' AND m.principal_id = %d AND m.role IN ('owner','manager','editor') AND i.origin = 'local'
 		 AND a.actor_scope <> 'site' AND i.status NOT IN ('disabled','tombstone')
 		 ORDER BY (a.personal_owner_user_id = %d) DESC, a.identity_id ASC",
 		axismundi_actors_actors_table(), axismundi_actors_managers_table(), axismundi_actors_identities_table(), $user_id, $user_id

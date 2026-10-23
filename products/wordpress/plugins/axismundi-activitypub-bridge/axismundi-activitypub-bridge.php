@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi ActivityPub Bridge
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/wordpress/plugins/axismundi-activitypub-bridge
  * Description:       Compatibility boundary between Axismundi's URI-keyed domain stores and the official ActivityPub plugin's S2S transport.
- * Version:           0.1.0
+ * Version:           0.1.1-dev
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Requires Plugins:  activitypub
@@ -33,7 +33,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION = '0.1.0';
+const AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION = '0.1.1-dev';
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_REWRITE_VERSION = 1;
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_INBOX_RETRY_AFTER = 60;
 

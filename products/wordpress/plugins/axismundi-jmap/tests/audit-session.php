@@ -138,6 +138,12 @@ try {
 	$off = $projector->build( $users[0], $transport, $core );
 	$assert( $off->accounts->{$ids[2]}->isReadOnly && ! isset( $off->accounts->{$ids[2]}->accountCapabilities->{$uri} ) && $off->state !== $full->state, 'Feature disable removes grant and changes state' );
 	$enabled = true;
+	axismundi_actors_write_manager_row( $fixtures[0], $users[1], 'editor' );
+	wp_set_current_user( $users[1] );
+	$self_shared = $projector->build( $users[1], $transport, $core );
+	$assert( $base->accounts->{$ids[0]}->isPersonal && ! $self_shared->accounts->{$ids[0]}->isPersonal, 'Same personal Account is personal only to its owner, not its delegate' );
+	$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $fixtures[0], 'user_id' => $users[1] ) );
+	$assert( ! isset( $projector->build( $users[1], $transport, $core )->accounts->{$ids[0]} ), 'Revoking personal delegation removes the Account immediately' );
 	axismundi_actors_write_manager_row( $fixtures[2], $users[1], 'editor' );
 	wp_set_current_user( $users[1] );
 	$delegated = $projector->build( $users[1], $transport, $core );

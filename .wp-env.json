@@ -23,6 +23,7 @@
     "./products/wordpress/plugins/axismundi-media-library",
     "./products/wordpress/plugins/axismundi-note",
     "./products/wordpress/plugins/axismundi-actors",
+    "./products/wordpress/plugins/axismundi-jmap",
     "./products/wordpress/plugins/axismundi-contacts",
     "./products/wordpress/plugins/axismundi-forum",
     "./products/wordpress/plugins/axismundi-emoji",

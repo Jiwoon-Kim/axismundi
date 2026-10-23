@@ -16,7 +16,7 @@ $assert = static function ( bool $condition, string $label ) use ( &$checks ) : 
 
 try {
 	global $wpdb;
-	$assert( '33.0' === get_option( 'ax_actors_db_version' ) && axismundi_actors_account_access_ready(), 'Verified schema and migration complete' );
+	$assert( AXISMUNDI_ACTORS_DB_VERSION === get_option( 'ax_actors_db_version' ) && axismundi_actors_account_access_ready(), 'Verified schema and migration complete' );
 	foreach ( array( 'author', 'author' ) as $role ) {
 		$id = wp_insert_user( array( 'user_login' => 'axown' . strtolower( wp_generate_password( 12, false, false ) ), 'user_pass' => wp_generate_password(), 'role' => $role ) );
 		if ( is_wp_error( $id ) ) {

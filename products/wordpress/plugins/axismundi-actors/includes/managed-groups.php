@@ -112,10 +112,7 @@ function axismundi_actors_managed_actor_can_manage( int $identity_id, int $user_
 	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_managed() ) {
 		return false;
 	}
-	global $wpdb;
-	$table = axismundi_actors_managers_table();
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- composite-PK exact lookup on a custom table.
-	$role = (string) $wpdb->get_var( $wpdb->prepare( "SELECT role FROM %i WHERE identity_id = %d AND user_id = %d", $table, $identity_id, $user_id ) );
+	$role = axismundi_actors_account_role( $identity_id, $user_id );
 	if ( '' === $role ) {
 		return false;
 	}
@@ -130,13 +127,13 @@ function axismundi_actors_managed_actor_can_manage( int $identity_id, int $user_
  * @return array<int,array{user_id:int,role:string,created_at:string,updated_at:string}>
  */
 function axismundi_actors_group_managers( int $identity_id ) : array {
-	if ( $identity_id <= 0 ) {
+	if ( $identity_id <= 0 || ! axismundi_actors_principals_ready() ) {
 		return array();
 	}
 	global $wpdb;
 	$table = axismundi_actors_managers_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed lookup on a custom table.
-	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT user_id, role, created_at, updated_at FROM %i WHERE identity_id = %d", $table, $identity_id ), ARRAY_A );
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT user_id, role, created_at, updated_at FROM %i WHERE identity_id = %d AND principal_kind = 'wp_user' AND principal_id = user_id", $table, $identity_id ), ARRAY_A );
 	usort(
 		$rows,
 		static fn( array $a, array $b ) : int => axismundi_actors_manager_role_rank( (string) $b['role'] ) <=> axismundi_actors_manager_role_rank( (string) $a['role'] )
@@ -164,13 +161,13 @@ function axismundi_actors_group_managers( int $identity_id ) : array {
  * @return Axismundi_Actor[]
  */
 function axismundi_actors_list_manageable_actors( int $user_id, ?string $min_role = null ) : array {
-	if ( $user_id <= 0 ) {
+	if ( $user_id <= 0 || ! axismundi_actors_account_access_ready() || ! get_userdata( $user_id ) ) {
 		return array();
 	}
 	global $wpdb;
 	$table = axismundi_actors_managers_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- KEY(user_id, role) lookup on a custom table.
-	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT identity_id, role FROM %i WHERE user_id = %d", $table, $user_id ), ARRAY_A );
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT identity_id, role FROM %i WHERE principal_kind = 'wp_user' AND principal_id = %d", $table, $user_id ), ARRAY_A );
 	$min_rank = null === $min_role ? 0 : axismundi_actors_manager_role_rank( $min_role );
 	$actors   = array();
 	foreach ( $rows as $row ) {
@@ -283,14 +280,20 @@ function axismundi_actors_count_public_groups() : int {
 
 /** Count the owners of one managed actor. */
 function axismundi_actors_managed_owner_count( int $identity_id ) : int {
+	if ( ! axismundi_actors_principals_ready() ) {
+		return 0;
+	}
 	global $wpdb;
 	$table = axismundi_actors_managers_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed count on a custom table.
-	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE identity_id = %d AND role = 'owner'", $table, $identity_id ) );
+	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE identity_id = %d AND role = 'owner' AND principal_kind = 'wp_user' AND principal_id = user_id", $table, $identity_id ) );
 }
 
 /** Insert or update one manager row (no invariant checks; internal seam). */
 function axismundi_actors_write_manager_row( int $identity_id, int $user_id, string $role ) {
+	if ( ! axismundi_actors_principals_ready() || $identity_id <= 0 || ! axismundi_actors_resolve_principal( 'wp_user', $user_id ) ) {
+		return new WP_Error( 'ax_actors_principal_unavailable', 'The principal relation is unavailable.' );
+	}
 	if ( ! array_key_exists( $role, axismundi_actors_manager_roles() ) ) {
 		return new WP_Error( 'ax_actors_manager_role', __( 'Unknown manager role.', 'axismundi-actors' ) );
 	}
@@ -300,10 +303,11 @@ function axismundi_actors_write_manager_row( int $identity_id, int $user_id, str
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- upsert on a composite-PK custom table.
 	$ok = $wpdb->query(
 		$wpdb->prepare(
-			"INSERT INTO %i (identity_id, user_id, role, created_at, updated_at)
-			 VALUES (%d, %d, %s, %s, %s)
+			"INSERT INTO %i (identity_id, principal_kind, principal_id, user_id, role, created_at, updated_at)
+			 VALUES (%d, 'wp_user', %d, %d, %s, %s, %s)
 			 ON DUPLICATE KEY UPDATE role = VALUES(role), updated_at = VALUES(updated_at)", $table,
 			$identity_id,
+			$user_id,
 			$user_id,
 			$role,
 			$now,
@@ -354,7 +358,10 @@ function axismundi_actors_remove_manager( int $identity_id, int $user_id ) {
 		return new WP_Error( 'ax_actors_last_owner', __( 'The last owner cannot be removed.', 'axismundi-actors' ) );
 	}
 	global $wpdb;
-	$deleted = $wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $identity_id, 'user_id' => $user_id ), array( '%d', '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- active-only relation delete on a custom table.
+	if ( ! axismundi_actors_principals_ready() ) {
+		return new WP_Error( 'ax_actors_principal_unavailable', 'The principal relation is unavailable.' );
+	}
+	$deleted = $wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $identity_id, 'principal_kind' => 'wp_user', 'principal_id' => $user_id ), array( '%d', '%s', '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- active-only relation delete on a custom table.
 	return false === $deleted
 		? new WP_Error( 'ax_actors_manager_remove', __( 'Could not remove the manager relation.', 'axismundi-actors' ) )
 		: true;

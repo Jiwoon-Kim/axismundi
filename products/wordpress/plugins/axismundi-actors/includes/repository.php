@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '33.0';
+const AXISMUNDI_ACTORS_DB_VERSION = '34.0';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -433,18 +433,27 @@ function axismundi_actors_install() : void {
 	// Group / Service / Organization actor -- NOT follow, membership, or moderation
 	// (those live in the Activity / social store). Active relations only: revoke is a
 	// row delete, so an authority read is a plain existence/role check. The composite
-	// primary key makes one (actor, user) pair unique on its own.
+	// primary key makes one (Account, typed principal) pair unique on its own.
 	// DB v33 reuses this relation for personal Account access as well; the legacy
 	// managed APIs retain their managed-only target semantics.
 	$managers = axismundi_actors_managers_table();
+	// Retain user_role for legacy user-leading queries; legacy_user is Account-leading.
+	delete_option( 'ax_actors_principal_schema_version' );
+	if ( ! axismundi_actors_upgrade_principal_relations( $managers ) ) {
+		return;
+	}
 	dbDelta(
 		"CREATE TABLE {$managers} (
 			identity_id bigint(20) unsigned NOT NULL,
-			user_id bigint(20) unsigned NOT NULL,
+			principal_kind varchar(16) NOT NULL DEFAULT 'wp_user',
+			principal_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			user_id bigint(20) unsigned DEFAULT NULL,
 			role varchar(8) NOT NULL,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
-			PRIMARY KEY  (identity_id, user_id),
+			PRIMARY KEY  (identity_id, principal_kind, principal_id),
+			UNIQUE KEY legacy_user (identity_id, user_id),
+			KEY principal_role (principal_kind, principal_id, role),
 			KEY user_role (user_id, role)
 		) ENGINE=InnoDB {$charset};"
 	);
@@ -709,9 +718,12 @@ function axismundi_actors_install() : void {
 		&& ! empty( $alternate_name_indexes )
 		&& in_array( 'personal_owner_user_id', $columns, true )
 		&& ! empty( $personal_owner_indexes )
-		&& axismundi_actors_migrate_account_access()
+		&& axismundi_actors_principal_relation_schema_valid( $managers )
 	) {
-		update_option( 'ax_actors_db_version', AXISMUNDI_ACTORS_DB_VERSION, false );
+		update_option( 'ax_actors_principal_schema_version', AXISMUNDI_ACTORS_PRINCIPAL_SCHEMA_VERSION, false );
+		if ( axismundi_actors_migrate_account_access() ) {
+			update_option( 'ax_actors_db_version', AXISMUNDI_ACTORS_DB_VERSION, false );
+		}
 	}
 }
 

@@ -39,7 +39,8 @@ Principal 등록이 HTTP 요청자의 인증을 대신하지 않는다. 계정 �
 | S5 isPersonal | 인증 User와 관계로 계산. Session 기본값·지원·철회 회귀 검사 | 기존 부분 구현, 재검토 |
 | S6 receipts | Activity와 원자적인 Actor별 receipt, 중복·실패·보수적 백필 | 이번 구현, 리뷰 필요 |
 | S7 Inbox | Actor UUID URL, Account 인가 GET, 공식 검증기 재사용 POST, 기존 수신 URL 유지 | 이번 구현, 리뷰 필요 |
-| S8 mailbox | 별도 클라이언트 뷰·query·changes·읽음 상태. AP 문서와 분리 | 대기 |
+| S8 activity view | Account 범위 Activity 뷰·query·changes·읽음 상태. AP 문서와 분리. **mailbox 아님** | 대기 |
+| S11 state | Account 단위 변경 알림 경로. S8 의 선결 | 대기 |
 | S9 instance | shared Inbox 및 Application Actor 소유권 이관 | 대기 |
 
 S3는 컬럼을 옮기는 것만으로 완료되지 않는다. 추가 Person·Group이 Application 키를
@@ -61,6 +62,36 @@ Activity를 Email로 가장해서 urn:ietf:params:jmap:mail을 선언하지 않�
 읽음 상태는 원칙적으로 User/Principal–Account–Activity별이다. 공동 Account 사용자끼리
 덮어쓰는 Account 공용 상태와 구분한다. 외부 노출 시 별도 vendor capability 계약이 필요하다.
 현재는 그런 capability를 만들거나 광고하지 않는다.
+
+**Actor 의 inbox·outbox 는 JMAP mailbox 가 아니다.** JMAP 의 `Mailbox` 는 Account 안의
+Email 데이터 타입이고, Actor 의 inbox 는 ActivityPub 컬렉션이다. S8 이 만드는 것은
+Account 범위의 Activity 뷰이지 Mailbox 가 아니며, 그 이름을 쓰지 않는다 -- 쓰면 장차
+JMAP Mail 이 들어올 자리를 선점하고, 소비자가 `Email/*` 메서드를 가정한다.
+워드프레스를 메일 서버로 만드는 것은 현재 계획에 없지만, **그 자리는 비워 둔다.**
+
+## S11 변경 알림 경로
+
+연합 수신은 JMAP 동기화 모델이 보지 못하는 외부 변경원이다. 원격 delivery 가 원장에
+inbound 행과 receipt 를 남겨도 그 Account 의 `state` 가 오르지 않으면 `/changes` 가
+조용히 누락하고, 클라이언트는 에러 없이 그 활동을 영원히 못 본다.
+
+```txt
+변경원   C2S 저작 · AP 수신 · 관리 화면 · 임포트
+         → 전부 같은 지점을 통과해 Account 단위 state 를 증분
+소비자   JMAP /changes, Push (RFC 8887 WebSocket / RFC 9749 VAPID)
+AP 쪽    아무것도 선언하지 않는다. state 는 JMAP 개념이다.
+```
+
+이것은 프로토콜 사이의 번역기가 **아니다.** 두 프로토콜은 한 도메인 위의 어댑터이고,
+필요한 결합은 번역이 아니라 변경 알림 하나다. S8 은 S11 없이는 동기화되지 않으므로
+클라이언트가 폴링하게 된다.
+
+## 앱 라우트는 식별자가 아니다
+
+이 제품은 클라이언트 앱이므로 그 라우팅 경로는 **reader 가 어떤 Object 를 요청하는가**일
+뿐이고, Object 의 `id` 도 `url` 도 아니다. 앱 라우트는 자유롭게 바뀔 수 있고 어디에도
+발행되지 않는다. 식별자는 서버가 소유한다 -- `id`, canonical endpoint, 읽기 API,
+앱 라우트의 4층 분리는 `activitystreams-open-items.md` 가 소유한다.
 
 S9의 shared Inbox는 Actor별 Inbox와 별개 최적화다. Application Actor와 자동으로
 동일한 소유 엔터티라고 가정하지 않는다. 비공개 데이터를 public GET에 노출하지 않는다.

@@ -37,11 +37,12 @@ Principal 등록이 HTTP 요청자의 인증을 대신하지 않는다. 계정 �
 | S3 transport | legacy 공식 plugin binding과 Account 접근 분리, Actor별 키 생성·저장·회전·서명 정책, **모더레이션 스코프** | 대기 |
 | S4 UNIQUE | S3 검증 후 불필요한 제약 제거. legacy binding의 고유성은 별도 판단 | 대기 |
 | S5 isPersonal | 인증 User와 관계로 계산. Session 기본값·지원·철회 회귀 검사 | 기존 부분 구현, 재검토 |
-| S6 receipts | Activity와 원자적인 Actor별 receipt, 중복·실패·보수적 백필 | 이번 구현, 리뷰 필요 |
-| S7 Inbox | Actor UUID URL, Account 인가 GET, 공식 검증기 재사용 POST, 기존 수신 URL 유지 | 이번 구현, 리뷰 필요 |
+| S6 receipts | Activity와 원자적인 Actor별 receipt, 중복·실패·보수적 백필 | 구현·리뷰 완료 (3bc752c) |
+| S7 Inbox | Actor UUID URL, Account 인가 GET, 공식 검증기 재사용 POST, 기존 수신 URL 유지 | 구현·리뷰 완료 (3bc752c) |
 | S8 activity view | Account 범위 Activity 뷰·query·changes·읽음 상태. AP 문서와 분리. **mailbox 아님** | 대기 |
 | S11 state | Account 단위 변경 알림 경로. S8 의 선결 | 대기 |
 | S9 instance | shared Inbox 및 Application Actor 소유권 이관 | 대기 |
+| S10 acting-actor | 암묵 선택 폐기. 발행 표면이 Account 를 명시. 공통 재검사·폴백 유지 | 대기 |
 
 S3는 컬럼을 옮기는 것만으로 완료되지 않는다. 추가 Person·Group이 Application 키를
 계속 사용하는지 검사하고, 독립 키 및 회전을 실제 지원해야 한다.
@@ -85,6 +86,37 @@ AP 쪽    아무것도 선언하지 않는다. state 는 JMAP 개념이다.
 이것은 프로토콜 사이의 번역기가 **아니다.** 두 프로토콜은 한 도메인 위의 어댑터이고,
 필요한 결합은 번역이 아니라 변경 알림 하나다. S8 은 S11 없이는 동기화되지 않으므로
 클라이언트가 폴링하게 된다.
+
+## S10 acting-actor 폐기
+
+Session 이 대체하는 것은 **목록 반쪽**이다. "내가 무엇으로 활동할 수 있는가"는
+workspace/Session 이 답한다. **선택 반쪽**은 대체되지 않는다 -- JMAP 에는 전환 명령이
+없고 요청마다 `accountId` 를 명시하므로 "현재 선택"이 서버에 필요 없지만, 우리
+acting-actor 는 **발행 귀속**을 정하고 블록 에디터·관리 화면·REST 는 `accountId` 를
+보내지 않는다.
+
+소비자를 센 결과 5개 플러그인이다 (2026-10-23):
+
+```txt
+activities   c2s.php, publish-command.php
+actors       acting-actor.php
+calendar     admin-calendars, envelope, event-actor, event-participation,
+             jscalendar, projection, schema
+emoji        catalogue.php
+```
+
+따라서 폐기는 삭제가 아니라 **모든 발행 표면이 Account 를 명시하게 만드는
+마이그레이션**이다. 방향은 맞다 -- 암묵보다 명시가 낫다.
+
+지킬 것:
+
+```txt
+공통 유지   권한 재검사와 철회 시 폴백은 공통 서비스 하나로 남긴다.
+            표면마다 재구현하면 한 곳이 빼먹고, 그 곳이 잘못된 Actor 로 발행한다.
+점진 이행   5개 플러그인 호출부를 한 커밋에 바꾸지 않는다. 표면 단위로.
+권한 불변   발행 권한(handle lock)과 데이터 접근 권한을 이 과정에서 합치지 않는다.
+순서        S1~S5 이후. 접근 관계가 확정되기 전에 소비자를 옮기면 두 번 옮긴다.
+```
 
 ## 앱 라우트는 식별자가 아니다
 

@@ -7,13 +7,9 @@
 
 defined( 'ABSPATH' ) || exit;
 
-/** Official signature-verified Inbox URL claimed by the Bridge after verification. */
+/** Actor-owned Inbox; the upstream shared endpoint remains a separate delivery optimization. */
 function axismundi_activitypub_bridge_inbox_url( Axismundi_Actor $actor ) : string {
-	$user_id = $actor->get_local_user_id();
-	if ( $user_id ) {
-		return rest_url( 'activitypub/1.0/actors/' . $user_id . '/inbox' );
-	}
-	return rest_url( 'activitypub/1.0/inbox' );
+	return axismundi_activitypub_bridge_actor_inbox_url( $actor );
 }
 
 /** The official shared Inbox transport endpoint. */
@@ -80,7 +76,7 @@ function axismundi_activitypub_bridge_private_key( Axismundi_Actor $actor ) : st
  * @return array<string,string>
  */
 function axismundi_activitypub_bridge_local_endpoints( array $endpoints, Axismundi_Actor $actor ) : array {
-	if ( ! axismundi_activitypub_bridge_ready() || 'public' !== $actor->get_status() ) {
+	if ( ! axismundi_activitypub_bridge_actor_inbox_available() || 'public' !== $actor->get_status() ) {
 		return $endpoints;
 	}
 	$endpoints['inbox']        = axismundi_activitypub_bridge_inbox_url( $actor );

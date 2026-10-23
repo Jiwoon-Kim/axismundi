@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACT_DB_VERSION        = '10';
+const AXISMUNDI_ACT_DB_VERSION        = '11';
 const AXISMUNDI_ACT_DB_VERSION_OPTION = 'axismundi_activities_db_version';
 const AXISMUNDI_ACT_PAYLOAD_MAX       = 1048576;
 
@@ -134,7 +134,8 @@ function axismundi_act_install() : bool {
 	$relations_valid = function_exists( 'axismundi_act_install_relations' ) && axismundi_act_install_relations();
 	$quotes_valid    = function_exists( 'axismundi_act_install_quote_authorizations' ) && axismundi_act_install_quote_authorizations();
 	$questions_valid = function_exists( 'axismundi_act_install_questions_schema' ) && axismundi_act_install_questions_schema();
-	$valid           = $base_valid && $relations_valid && $quotes_valid && $questions_valid;
+	$inbox_valid     = function_exists( 'axismundi_act_install_inbox' ) && axismundi_act_install_inbox();
+	$valid           = $base_valid && $relations_valid && $quotes_valid && $questions_valid && $inbox_valid;
 	if ( $valid && version_compare( $previous_version, '8', '<' ) ) {
 		$valid = axismundi_act_backfill_feed_sort_at();
 	}
@@ -1275,10 +1276,11 @@ function axismundi_act_recompute_effectiveness( string $activity_uri, int $depth
  *
  * @param array<string,mixed> $payload   ActivityStreams payload.
  * @param string              $direction inbound|outbound|local.
+ * @param int[]               $inbox_actor_ids Trusted local recipients of an inbound delivery.
  * @return Axismundi_Activity|WP_Error
  */
-function axismundi_act_record_activity( array $payload, string $direction = 'local' ) {
-	return axismundi_act_record_source_activity( $payload, $direction, '' );
+function axismundi_act_record_activity( array $payload, string $direction = 'local', array $inbox_actor_ids = array() ) {
+	return axismundi_act_record_source_activity( $payload, $direction, '', $inbox_actor_ids );
 }
 
 /**
@@ -1292,8 +1294,11 @@ function axismundi_act_record_activity( array $payload, string $direction = 'loc
  * @param string              $source_event_key Stable local event identity, or empty.
  * @return Axismundi_Activity|WP_Error
  */
-function axismundi_act_record_source_activity( array $payload, string $direction, string $source_event_key ) {
+function axismundi_act_record_source_activity( array $payload, string $direction, string $source_event_key, array $inbox_actor_ids = array() ) {
 	global $wpdb;
+	if ( ! empty( $inbox_actor_ids ) && ( 'inbound' !== $direction || '' !== $source_event_key ) ) {
+		return new WP_Error( 'ax_act_inbox_direction', 'Receipts require an inbound Activity without a local source key.' );
+	}
 	$source_event_key = trim( $source_event_key );
 	if ( strlen( $source_event_key ) > 2048 ) {
 		return new WP_Error( 'ax_act_source_event', __( 'The source event identity is invalid.', 'axismundi-activities' ) );
@@ -1312,7 +1317,9 @@ function axismundi_act_record_source_activity( array $payload, string $direction
 		$normalized['source_event_key']  = $source_event_key;
 		$normalized['source_event_hash'] = hash( 'sha256', $source_event_key );
 	}
-	$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- atomic custom repository transaction.
+	if ( false === $wpdb->query( 'START TRANSACTION' ) ) {
+		return new WP_Error( 'ax_act_write', 'The Activity transaction could not start.' );
+	}
 	if ( '' !== $source_event_key ) {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- source-event idempotency lock.
 		$source_row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE source_event_hash = %s FOR UPDATE", $normalized['source_event_hash'] ), ARRAY_A );
@@ -1344,7 +1351,15 @@ function axismundi_act_record_source_activity( array $payload, string $direction
 			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			return new WP_Error( 'ax_act_identity_conflict', __( 'That Activity URI already identifies a different immutable payload.', 'axismundi-activities' ) );
 		}
-		$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		if ( ! empty( $inbox_actor_ids ) && ( 'inbound' !== $existing['direction']
+			|| ! axismundi_act_write_inbox_memberships( (int) $existing['id'], $inbox_actor_ids, $now ) ) ) {
+			$wpdb->query( 'ROLLBACK' );
+			return new WP_Error( 'ax_act_inbox_write', 'The Inbox receipts could not be stored.' );
+		}
+		if ( false === $wpdb->query( 'COMMIT' ) ) {
+			$wpdb->query( 'ROLLBACK' );
+			return new WP_Error( 'ax_act_write', 'The Activity transaction could not commit.' );
+		}
 		return axismundi_act_hydrate( $existing );
 	}
 
@@ -1381,6 +1396,10 @@ function axismundi_act_record_source_activity( array $payload, string $direction
 		}
 		return new WP_Error( 'ax_act_write', __( 'The Activity could not be recorded.', 'axismundi-activities' ) );
 	}
+	if ( ! axismundi_act_write_inbox_memberships( (int) $wpdb->insert_id, $inbox_actor_ids, $now ) ) {
+		$wpdb->query( 'ROLLBACK' );
+		return new WP_Error( 'ax_act_inbox_write', 'The Inbox receipts could not be stored.' );
+	}
 	if ( 'Undo' === $normalized['activity_type'] && ! empty( $normalized['object_uri'] ) && ! axismundi_act_recompute_effectiveness( (string) $normalized['object_uri'] ) ) {
 		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return new WP_Error( 'ax_act_transition', __( 'The Undo transition could not be applied.', 'axismundi-activities' ) );
@@ -1397,7 +1416,10 @@ function axismundi_act_record_source_activity( array $payload, string $direction
 			return $relation_events;
 		}
 	}
-	$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	if ( false === $wpdb->query( 'COMMIT' ) ) {
+		$wpdb->query( 'ROLLBACK' );
+		return new WP_Error( 'ax_act_write', 'The Activity transaction could not commit.' );
+	}
 	$activity = axismundi_act_get( (string) $normalized['activity_uri'] );
 	if ( ! $activity instanceof Axismundi_Activity ) {
 		return new WP_Error( 'ax_act_read_after_write', __( 'The recorded Activity could not be read.', 'axismundi-activities' ) );

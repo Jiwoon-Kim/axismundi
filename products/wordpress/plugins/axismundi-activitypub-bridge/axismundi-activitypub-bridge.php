@@ -17,10 +17,9 @@
  *
  * Two directions, two owners, and they are not the same owner.
  *
- * Receiving: the advertised Inbox is the official plugin's REST route. It verifies the HTTP
- * Signature; this plugin registers no route at all and only runs on the actions that fire for
- * an already-verified delivery, unhooking the official domain handlers so one Activity is not
- * stored twice.
+ * Receiving: Actor-addressed Inbox routes use the official plugin's signature verifier.
+ * Existing official routes remain compatibility receivers, handing verified traffic to the
+ * same ledger. Official domain handlers are unhooked so one Activity is not stored twice.
  *
  * Sending: this plugin owns the queue and opens the connection, and the official plugin's
  * `http_request_args` filter signs it from the `key_id` and `private_key` passed with the
@@ -39,6 +38,7 @@ const AXISMUNDI_ACTIVITYPUB_BRIDGE_REWRITE_VERSION = 1;
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_INBOX_RETRY_AFTER = 60;
 
 require_once __DIR__ . '/includes/transport.php';
+require_once __DIR__ . '/includes/actor-inbox.php';
 require_once __DIR__ . '/includes/delivery.php';
 require_once __DIR__ . '/includes/composition.php';
 require_once __DIR__ . '/includes/migration-scan.php';
@@ -234,11 +234,14 @@ function axismundi_activitypub_bridge_inbox_targets( array $activity, array $rec
  * @param bool            $allow_mention_targets Trust Mention href only after the official shared Inbox has verified the request.
  * @return Axismundi_Activity|WP_Error
  */
-function axismundi_activitypub_bridge_record_inbox( array $activity, array $recipient_user_ids = array(), bool $allow_mention_targets = false ) {
+function axismundi_activitypub_bridge_record_inbox( array $activity, array $recipient_user_ids = array(), bool $allow_mention_targets = false, ?Axismundi_Actor $route_actor = null ) {
 	if ( ! axismundi_activitypub_bridge_ready() ) {
 		return new WP_Error( 'ax_bridge_inbox_not_ready', __( 'The Axismundi Inbox repositories are unavailable.', 'axismundi-activitypub-bridge' ) );
 	}
-	if ( empty( axismundi_activitypub_bridge_inbox_targets( $activity, $recipient_user_ids, $allow_mention_targets ) ) ) {
+	if ( null !== $route_actor && ( ! $route_actor->is_local() || 'public' !== $route_actor->get_status() ) ) {
+		return new WP_Error( 'ax_bridge_inbox_no_target', 'The route recipient is unavailable.' );
+	}
+	if ( null === $route_actor && empty( axismundi_activitypub_bridge_inbox_targets( $activity, $recipient_user_ids, $allow_mention_targets ) ) ) {
 		return new WP_Error( 'ax_bridge_inbox_no_target', __( 'No public local Actor target could be resolved.', 'axismundi-activitypub-bridge' ) );
 	}
 
@@ -268,7 +271,10 @@ function axismundi_activitypub_bridge_record_inbox( array $activity, array $reci
 		}
 	}
 
-	return axismundi_act_record_activity( $activity, 'inbound' );
+	$targets = null === $route_actor
+		? axismundi_activitypub_bridge_receipt_targets( $activity, $recipient_user_ids )
+		: array( $route_actor->get_identity_id() => $route_actor );
+	return axismundi_act_record_activity( $activity, 'inbound', array_keys( $targets ) );
 }
 
 /** Store one bounded, content-free Inbox outcome for administrator diagnostics. */
@@ -376,8 +382,8 @@ add_filter( 'activitypub_skip_inbox_storage', 'axismundi_activitypub_bridge_skip
  *
  * The official actor Inbox route remains the S2S transport surface, including its
  * POST handler and signature verification. Its GET implementation reads an Inbox
- * CPT the Bridge deliberately never uses. Until an actor-recipient ledger reader
- * exists, this root Collection can state its identity but not its membership.
+ * CPT the Bridge deliberately never uses. Keep that legacy root membership-free;
+ * the canonical UUID-addressed Inbox serves the authorized receipt collection.
  *
  * @param array           $response Official Inbox collection document.
  * @param WP_REST_Request $request  REST request.
@@ -405,7 +411,7 @@ function axismundi_activitypub_bridge_inbox_post_response( $response, WP_REST_Se
 	}
 
 	$activity = $request->get_json_params();
-	if ( ! is_array( $activity ) || 'ax_act_schema' !== axismundi_activitypub_bridge_inbox_outcome( $activity ) ) {
+	if ( ! is_array( $activity ) || ! in_array( axismundi_activitypub_bridge_inbox_outcome( $activity ), array( 'ax_act_schema', 'ax_act_write', 'ax_act_inbox_write' ), true ) ) {
 		return $response;
 	}
 

@@ -64,6 +64,10 @@ RFC 사이 의존성과 capability 협상을 명시한다. RFC 9610 모듈과 Ac
 
 ## Dependency Direction
 
+2026-10-23의 RFC 대조 및 컬렉션 소유권·공개 프로필 경로 검토는
+[의존성 경계 리뷰](REVIEW-DEPENDENCY-BOUNDARIES.md)에 기록한다.
+JMAP의 AddressBook 소유와 실제 Contacts 저장 책임 사이의 이관은 아직 구현하지 않았다.
+
 제품 결정: **Contacts -> JMAP -> Actors**. Calendar도 같은 Account 소속 모델을
 따르되 이번 변경에서는 Calendar 의존성을 전환하지 않는다.
 Actors는 프로토콜 중립적인 로컬 운영 주체와 User 접근 관계를 제공한다.

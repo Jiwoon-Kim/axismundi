@@ -36,7 +36,7 @@ foreach ( array( 'ap-outbox', 'ap-inbox' ) as $id ) {
 ax_contracts_assert( $ax_contracts_results, 'the Outbox keeps its immutable ledger cursor and Activities-owned reader binding', 'immutable-cursor(feed_sort_at,id)' === ( $outbox['ordering'] ?? '' ) && 'activities' === ( $outbox['owner'] ?? '' ) && 'axismundi_act_get_public_outbox_page' === ( $outbox['reader'] ?? '' ) );
 
 $inbox = axismundi_op_read_collection_contract( 'ap-inbox', 'https://example.test/actors/owner' );
-ax_contracts_assert( $ax_contracts_results, 'the Inbox reader reports missing recipient membership instead of returning an invented empty collection', is_wp_error( $inbox ) && 'ax_act_inbox_membership_not_stored' === $inbox->get_error_code() );
+ax_contracts_assert( $ax_contracts_results, 'the Inbox reader denies an unresolved Account instead of inventing an empty collection', is_wp_error( $inbox ) && 'ax_act_inbox_forbidden' === $inbox->get_error_code() );
 
 $failures = count( array_filter( $ax_contracts_results, static fn( bool $holds ) : bool => ! $holds ) );
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI audit output.

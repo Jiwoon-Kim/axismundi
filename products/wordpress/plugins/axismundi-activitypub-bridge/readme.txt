@@ -23,18 +23,20 @@ signs it" have different answers.
 
 = Receiving =
 
-The inbox address advertised for an Axismundi Actor is the **official plugin's own REST
-route**. This plugin registers no inbox of its own, and no other public route either.
+Each local Actor advertises its own UUID-addressed Inbox route. POST uses the installed
+official plugin's request schema and HTTP Signature verifier on the original request;
+it does not redirect a signed request. The verifier's configured deferral policy still applies.
+Existing official per-user and shared routes remain compatibility receivers and hand their
+verified deliveries to the same Axismundi ledger. Official domain handlers remain dormant.
 
-That matters. The official plugin receives the request, and **the official plugin verifies the
-HTTP Signature**, before anything here runs. Only afterwards, on the actions it fires for an
-already-verified delivery, does this plugin take over: it unhooks the official domain handlers
-so the same Activity is not also stored that plugin's way, and records it in the Axismundi
-ledger instead. There is no path by which an unverified request reaches that ledger, because
-there is no route here for one to arrive on.
+Actor Inbox GET requires the authenticated local user's Account access relationship.
+It returns private, non-cacheable receipt pages and removes blind recipient metadata.
+Remote-principal authorization and mailbox read-state are not implemented.
 
 An Activity that arrives twice is acknowledged twice and recorded once. The ledger is keyed by
-the Activity's own URI.
+the Activity's own URI. Per-Actor receipt membership is stored separately and atomically.
+Historical backfill is explicit and bounded, and cannot reconstruct recipients that were
+never recorded in addressing or route metadata.
 
 = Sending =
 

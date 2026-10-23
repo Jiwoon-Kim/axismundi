@@ -10,9 +10,9 @@
 
 defined( 'ABSPATH' ) || exit;
 
-/** The recipient index does not exist yet, so an Inbox reader must fail loudly. */
+/** Compatibility entry point; Inbox reads now require Account authorization. */
 function axismundi_act_read_actor_inbox_unavailable( string $actor_uri ) {
-	return new WP_Error( 'ax_act_inbox_membership_not_stored', __( 'Inbox recipients are not materialized in the Activity ledger.', 'axismundi-activities' ) );
+	return axismundi_act_get_actor_inbox_page( $actor_uri );
 }
 
 /** A bounded legacy list is not a complete public liked collection. */
@@ -37,12 +37,12 @@ function axismundi_act_register_collection_contracts() : void {
 		),
 		'ap-inbox' => array(
 			'member_models'    => array( 'Activity' ),
-			'presentation'     => 'metadata-only',
-			'ordering'         => 'none',
+			'presentation'     => 'paged-members',
+			'ordering'         => 'source-defined',
 			'total_capability' => 'unavailable',
-			'total_reason'     => 'membership-not-stored',
+			'total_reason'     => 'member-level-visibility',
 			'total_disclosure' => array( 'public' => 'never', 'owner' => 'never' ),
-			'reader'           => 'axismundi_act_read_actor_inbox_unavailable',
+			'reader'           => 'axismundi_act_get_actor_inbox_page',
 		),
 		'ap-followers' => array(
 			'member_models'    => array( 'Object' ),

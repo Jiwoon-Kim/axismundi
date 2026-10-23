@@ -25,7 +25,8 @@ function axismundi_actors_migrate_transport_bindings() : bool {
 	}
 	$invalid = $wpdb->get_var( $wpdb->prepare(
 		"SELECT COUNT(*) FROM %i a INNER JOIN %i i ON i.id = a.identity_id WHERE i.origin = 'local'
-		 AND (a.transport_kind IS NULL OR a.transport_kind NOT IN ('upstream_user','upstream_application')
+		 AND (a.transport_kind IS NULL OR a.transport_kind NOT IN ('upstream_user','upstream_application','actor')
+		 OR (a.transport_kind = 'actor' AND (a.local_signing_key_id IS NULL OR a.local_signing_key_id <= 0))
 		 OR (a.transport_kind = 'upstream_user' AND (a.transport_user_id IS NULL OR a.transport_user_id <= 0))
 		 OR (a.transport_kind = 'upstream_application' AND a.transport_user_id IS NOT NULL))", $actors, $identities
 	) );
@@ -42,6 +43,9 @@ function axismundi_actors_transport_binding( Axismundi_Actor $actor ) : ?array {
 	if ( ! is_array( $row ) ) {
 		return null;
 	}
+	if ( 'actor' === $row['transport_kind'] ) {
+		return array( 'kind' => 'actor', 'user_id' => null === $row['transport_user_id'] ? null : (int) $row['transport_user_id'] );
+	}
 	if ( 'upstream_user' === $row['transport_kind'] && (int) $row['transport_user_id'] > 0 ) {
 		return array( 'kind' => 'upstream_user', 'user_id' => (int) $row['transport_user_id'] );
 	}
@@ -56,7 +60,7 @@ function axismundi_actors_get_transport_actor_for_user( int $user_id ) : ?Axismu
 	}
 	global $wpdb;
 	$ids = $wpdb->get_col( $wpdb->prepare( "SELECT a.identity_id FROM %i a INNER JOIN %i i ON i.id = a.identity_id
-		WHERE a.transport_kind = 'upstream_user' AND a.transport_user_id = %d AND i.origin = 'local' LIMIT 2",
+		WHERE a.transport_kind IN ('upstream_user','actor') AND a.transport_user_id = %d AND i.origin = 'local' LIMIT 2",
 		axismundi_actors_actors_table(), axismundi_actors_identities_table(), $user_id ) );
 	return is_array( $ids ) && 1 === count( $ids ) ? axismundi_actors_get_by_identity( (int) $ids[0] ) : null;
 }

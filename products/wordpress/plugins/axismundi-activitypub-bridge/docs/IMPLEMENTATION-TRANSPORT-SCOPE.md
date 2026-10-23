@@ -1,5 +1,8 @@
 # S3a Transport 바인딩 및 Account 차단
 
+후속 S3b 구현은 [Actor별 서명 키](../../axismundi-actors/docs/IMPLEMENTATION-SIGNING-KEYS.md)에 별도로 기록한다.
+아래 키 미구현 설명은 S3a 시점의 범위다.
+
 2026-10-24. S3의 첫 구현 단위다. Actor별 키 생성·저장·명시 회전(S3b)은 아직 구현하지 않았다.
 S3 전체 완료 또는 S4 UNIQUE 해제 조건 충족을 주장하지 않는다.
 

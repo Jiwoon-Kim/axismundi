@@ -31,10 +31,13 @@ try {
 		axismundi_actors_register_handle( $actor->get_identity_id(), 'axreceipt' . strtolower( wp_generate_password( 9, false ) ) );
 		axismundi_actors_set_status( $actor->get_identity_id(), 'public' );
 		$actors[ $i ] = axismundi_actors_get_by_identity( $actor->get_identity_id() );
+		// Model an existing pre-S3b Actor; new-Actor keys have a separate audit.
+		$wpdb->update( axismundi_actors_actors_table(), array( 'transport_kind' => 'upstream_user', 'local_signing_key_id' => null ), array( 'identity_id' => $actor->get_identity_id() ) );
 	}
 	$group = axismundi_actors_create_managed_actor( array( 'owner_user_id' => $users[0], 'status' => 'public', 'preferred_username' => 'axreceipt' . strtolower( wp_generate_password( 9, false ) ) ) );
 	$assert( $group instanceof Axismundi_Actor, 'A public Group without local_user_id exists' );
 	$actors[] = $group;
+	$wpdb->update( axismundi_actors_actors_table(), array( 'transport_kind' => 'upstream_application', 'local_signing_key_id' => null ), array( 'identity_id' => $group->get_identity_id() ) );
 	$remote_uri = $prefix . '/actor';
 	$remote = axismundi_actors_upsert_remote( array( 'uri' => $remote_uri, 'actor_type' => 'Person', 'display_name' => 'Receipt fixture',
 		'endpoints' => array( 'inbox' => $remote_uri . '/inbox', 'outbox' => $remote_uri . '/outbox' ),
@@ -271,6 +274,7 @@ try {
 	foreach ( array_reverse( $actors ) as $actor ) {
 		if ( ! $actor instanceof Axismundi_Actor ) { continue; }
 		$id = $actor->get_identity_id();
+		$wpdb->delete( axismundi_actors_signing_keys_table(), array( 'identity_id' => $id ) );
 		$wpdb->delete( axismundi_act_relations_table(), array( 'subject_actor_uri_hash' => hash( 'sha256', $actor->get_uri() ) ) );
 		$wpdb->delete( axismundi_act_inbox_table(), array( 'actor_identity_id' => $id ) );
 		foreach ( array( axismundi_actors_managers_table(), axismundi_actors_addresses_table(), axismundi_actors_endpoints_table(), axismundi_actors_keys_table(), axismundi_actors_actors_table() ) as $table ) {

@@ -29,7 +29,9 @@ function axismundi_activitypub_bridge_sender( Axismundi_Actor $actor ) : array {
 function axismundi_activitypub_bridge_public_key( Axismundi_Actor $actor ) : string {
 	$key = '';
 	$binding = function_exists( 'axismundi_actors_transport_binding' ) ? axismundi_actors_transport_binding( $actor ) : null;
-	if ( null !== $binding && class_exists( 'Activitypub\\Collection\\Actors' ) ) {
+	if ( 'actor' === ( $binding['kind'] ?? '' ) ) {
+		$key = ( axismundi_actors_signing_key_snapshot( $actor ) ?? array() )['public_key_pem'] ?? '';
+	} elseif ( null !== $binding && class_exists( 'Activitypub\\Collection\\Actors' ) ) {
 		$user_id = $binding['user_id'];
 		if ( 'upstream_user' === $binding['kind'] ) {
 			$key = Activitypub\Collection\Actors::get_public_key( $user_id );
@@ -52,6 +54,9 @@ function axismundi_activitypub_bridge_public_key( Axismundi_Actor $actor ) : str
 /** Resolve the official plugin's private key without changing Actor ownership. */
 function axismundi_activitypub_bridge_private_key( Axismundi_Actor $actor ) : string {
 	$binding = function_exists( 'axismundi_actors_transport_binding' ) ? axismundi_actors_transport_binding( $actor ) : null;
+	if ( 'actor' === ( $binding['kind'] ?? '' ) ) {
+		return ( axismundi_actors_signing_key_snapshot( $actor ) ?? array() )['private_key'] ?? '';
+	}
 	if ( null === $binding || ! class_exists( 'Activitypub\\Collection\\Actors' ) ) {
 		return '';
 	}

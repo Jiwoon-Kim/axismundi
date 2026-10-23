@@ -344,10 +344,16 @@ function axismundi_activitypub_bridge_delivery_identity( object $job ) {
 	// window would cache a keyless document and reject the signature. This is a
 	// retryable "not yet" condition, not a terminal failure, so the queue row is
 	// preserved for the key-recovery track.
-	if ( '' === axismundi_activitypub_bridge_public_key( $actor ) ) {
+	$public_key = axismundi_activitypub_bridge_public_key( $actor );
+	if ( '' === $public_key ) {
 		return new WP_Error( 'ax_bridge_delivery_key_unready', __( 'The Actor public key cannot be projected yet.', 'axismundi-activitypub-bridge' ) );
 	}
 	$key = axismundi_activitypub_bridge_private_key( $actor );
+	$private = '' !== $key ? openssl_pkey_get_private( $key ) : false;
+	$details = false !== $private ? openssl_pkey_get_details( $private ) : false;
+	if ( ! is_array( $details ) || ! hash_equals( hash( 'sha256', trim( $public_key ) ), hash( 'sha256', trim( $details['key'] ) ) ) ) {
+		return new WP_Error( 'ax_bridge_delivery_key_unready', 'The signing key pair changed or is unavailable.' );
+	}
 	return is_string( $key ) && '' !== $key
 		? array( 'key_id' => (string) $job->key_id, 'private_key' => $key )
 		: new WP_Error( 'ax_bridge_delivery_key_unready', __( 'The private signing key is unavailable.', 'axismundi-activitypub-bridge' ) );

@@ -34,7 +34,7 @@ Principal 등록이 HTTP 요청자의 인증을 대신하지 않는다. 계정 �
 |---|---|---|
 | S1 Principal | stable subject 식별·유형·존재 검증, 기존 User 관계 이전, remote 등록의 무권한성 | 구현·리뷰 완료 (f798f5f) |
 | S2 관계 통일 | 개인·위임 접근의 관계 모델 수렴, 개인 귀속과 운영 role 분리, 삭제·철회 정책 | 대기 |
-| S3 transport | legacy 공식 plugin binding과 Account 접근 분리, Actor별 키 생성·저장·회전·서명 정책, **모더레이션 스코프** | S3a 구현·리뷰 대기. S3b 키 수명주기 미구현 |
+| S3 transport | legacy 공식 plugin binding과 Account 접근 분리, Actor별 키 생성·저장·회전·서명 정책, **모더레이션 스코프** | S3a 커밋 완료. S3b 구현·독립 리뷰 대기 |
 | S4 UNIQUE | S3 검증 후 불필요한 제약 제거. legacy binding의 고유성은 별도 판단 | 대기 |
 | S5 isPersonal | 인증 User와 관계로 계산. Session 기본값·지원·철회 회귀 검사 | 기존 부분 구현, 재검토 |
 | S6 receipts | Activity와 원자적인 Actor별 receipt, 중복·실패·보수적 백필 | 구현·리뷰 완료 (3bc752c) |
@@ -122,8 +122,9 @@ publicKey.id   .../actors/{uuid}#main-key
 
 2026-10-24: 바인딩 분리와 Account Block은 S3a로 구현했다.
 [구현 범위](../../axismundi-activitypub-bridge/docs/IMPLEMENTATION-TRANSPORT-SCOPE.md).
-기존 및 신규 Actor의 키 provider는 아직 보존한다. 독립 키 생성·저장·회전은 S3b로 남으며
-그 검증 전에는 S4를 열지 않는다.
+S3a 시점에는 기존·신규 모두 provider를 보존했다. 현재 S3b는 신규 Actor의 독립 키와
+기존 Actor의 명시 회전을 구현했다. [키 수명주기](IMPLEMENTATION-SIGNING-KEYS.md)의
+독립 리뷰 전에는 S4를 열지 않는다. 기존 Actor의 provider는 명시 회전 전까지 유지한다.
 
 ```txt
 1. transport 바인딩을 자기 컬럼으로 분리

@@ -31,6 +31,7 @@ const AXISMUNDI_ACTORS_VERSION = '0.1.4-dev';
 require_once __DIR__ . '/includes/activitystreams-uri.php';
 require_once __DIR__ . '/includes/repository.php';
 require_once __DIR__ . '/includes/transport-binding.php';
+require_once __DIR__ . '/includes/signing-keys.php';
 require_once __DIR__ . '/includes/managed-groups.php';
 require_once __DIR__ . '/includes/principals.php';
 require_once __DIR__ . '/includes/account-access.php';

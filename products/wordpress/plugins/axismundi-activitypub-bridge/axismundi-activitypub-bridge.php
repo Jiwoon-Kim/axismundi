@@ -97,6 +97,7 @@ function axismundi_activitypub_bridge_ready() : bool {
 	return axismundi_activitypub_bridge_representation_ready()
 		&& defined( 'AXISMUNDI_ACTIVITIES_VERSION' )
 		&& function_exists( 'axismundi_actors_transport_binding' )
+		&& function_exists( 'axismundi_actors_signing_key_snapshot' )
 		&& function_exists( 'axismundi_actors_get_transport_actor_for_user' )
 		&& function_exists( 'axismundi_act_actor_blocks' )
 		&& function_exists( 'axismundi_act_record_activity' );

@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '35.0';
+const AXISMUNDI_ACTORS_DB_VERSION = '36.0';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -159,6 +159,7 @@ function axismundi_actors_install() : void {
 			local_user_id bigint(20) unsigned DEFAULT NULL,
 			transport_kind varchar(24) DEFAULT NULL,
 			transport_user_id bigint(20) unsigned DEFAULT NULL,
+			local_signing_key_id bigint(20) unsigned DEFAULT NULL,
 			personal_owner_user_id bigint(20) unsigned DEFAULT NULL,
 			display_name varchar(191) DEFAULT NULL,
 			summary text DEFAULT NULL,
@@ -723,6 +724,7 @@ function axismundi_actors_install() : void {
 		&& ! empty( $personal_owner_indexes )
 		&& axismundi_actors_principal_relation_schema_valid( $managers )
 		&& axismundi_actors_migrate_transport_bindings()
+		&& axismundi_actors_install_signing_keys()
 	) {
 		update_option( 'ax_actors_principal_schema_version', AXISMUNDI_ACTORS_PRINCIPAL_SCHEMA_VERSION, false );
 		if ( axismundi_actors_migrate_account_access() ) {
@@ -1058,6 +1060,8 @@ function axismundi_actors_create_local( array $args ) {
 		$handle_locked = null;
 	}
 
+	$signing_pair = axismundi_actors_generate_signing_key();
+	if ( is_wp_error( $signing_pair ) ) { return $signing_pair; }
 	if ( false === $wpdb->query( 'START TRANSACTION' ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- account creation must not run without its transaction.
 		return new WP_Error( 'ax_actors_account_transaction', __( 'Could not start account creation.', 'axismundi-actors' ) );
 	}
@@ -1110,6 +1114,10 @@ function axismundi_actors_create_local( array $args ) {
 	if ( null !== $initial_owner && is_wp_error( axismundi_actors_write_manager_row( $identity_id, $initial_owner, 'owner' ) ) ) {
 		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- account and initial access are atomic.
 		return new WP_Error( 'ax_actors_account_access', __( 'Could not create the personal account access relation.', 'axismundi-actors' ) );
+	}
+	if ( ! axismundi_actors_store_signing_key( $identity_id, $signing_pair ) ) {
+		$wpdb->query( 'ROLLBACK' );
+		return new WP_Error( 'ax_actors_account_key', 'Could not store the Account signing key.' );
 	}
 	if ( false === $wpdb->query( 'COMMIT' ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- commit account identity and access together.
 		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- failed commit cleanup.

@@ -35,7 +35,7 @@ Principal 등록이 HTTP 요청자의 인증을 대신하지 않는다. 계정 �
 | S1 Principal | stable subject 식별·유형·존재 검증, 기존 User 관계 이전, remote 등록의 무권한성 | 구현·리뷰 완료 (f798f5f) |
 | S2 관계 통일 | 개인·위임 접근의 관계 모델 수렴, 개인 귀속과 운영 role 분리, 삭제·철회 정책 | 대기 |
 | S3 transport | legacy 공식 plugin binding과 Account 접근 분리, Actor별 키 생성·저장·회전·서명 정책, **모더레이션 스코프** | S3a 커밋 완료. S3b 구현·독립 리뷰 대기 |
-| S4 UNIQUE | S3 검증 후 불필요한 제약 제거. legacy binding의 고유성은 별도 판단 | 대기 |
+| S4 UNIQUE | 유일성을 transport 바인딩으로 이전. 추가 Person 의 독립 키·접근 관계 | 대기 |
 | S5 isPersonal | 인증 User와 관계로 계산. Session 기본값·지원·철회 회귀 검사 | 기존 부분 구현, 재검토 |
 | S6 receipts | Activity와 원자적인 Actor별 receipt, 중복·실패·보수적 백필 | 구현·리뷰 완료 (3bc752c) |
 | S7 Inbox | Actor UUID URL, Account 인가 GET, 공식 검증기 재사용 POST, 기존 수신 URL 유지 | 구현·리뷰 완료 (3bc752c) |
@@ -200,6 +200,84 @@ S4 를 열기 전에 두 번째 Person 이 자기 키·자기 inbox 로 연합�
 스테이징은 wp.com 호스팅이라 **WP-CLI 접근이 없다.** S3 의 키 관련 검증은 공개
 Actor 문서(`publicKey.publicKeyPem` 비교)와 감사로만 확인할 수 있고, DB 수치는
 확인할 수 없다.
+
+## S4 UNIQUE: 유일성은 사라지는 것이 아니라 옮겨간다
+
+### 선결 조건은 충족됐다
+
+```txt
+S3a  transport 바인딩 분리          완료 (e1d3ff4)
+S3b  Actor 별 독립 키 + 명시적 회전  완료 (f5fa995)
+```
+
+### 측정된 현재 상태 (2026-10-24)
+
+```txt
+wp_ax_actors 인덱스
+  local_user_id           UNIQUE      ← S4 가 뗄 것
+  transport_user_id       비-UNIQUE   ← 아무 제약이 없다
+  personal_owner_user_id  비-UNIQUE
+
+로컬 Actor 476
+  upstream_user         289
+  upstream_application  187
+  actor                   0           ← 자기 키를 쓰는 Actor 가 아직 없다
+```
+
+### 핵심: 제약을 떼는 것이 아니라 옮기는 것이다
+
+`axismundi_actors_get_transport_actor_for_user()` 는 `LIMIT 2` 로 조회해
+**정확히 1건일 때만** Actor 를 돌려준다. 지금 그 1건을 보장하는 것은
+`local_user_id` 의 UNIQUE 다. 그것을 떼면 보장이 사라지고, 한 User 에
+`upstream_user` 바인딩이 둘 생기는 순간 **레거시 inbox 라우트가 조용히 null 이 된다** --
+원격이 캐시한 구 주소로 온 전달이 수신자를 못 찾는다.
+
+```txt
+핀   User 당 transport_kind='upstream_user' 바인딩은 최대 하나다.
+     local_user_id 의 UNIQUE 를 떼기 전에 그 제약을 transport_user_id 쪽에 세운다.
+     (부분 유일성이 필요하므로 단순 UNIQUE 로는 부족하다 --
+      upstream_application 행의 transport_user_id 는 NULL 이라 다중 NULL 은 허용되지만,
+      제약이 upstream_user 에만 걸려야 한다는 점을 확인할 것.)
+```
+
+### 새 Actor 경로는 실데이터로 돌아본 적이 없다
+
+`transport_kind='actor'` 인 행이 **0** 이다. S3b 가 만든 독립 키 경로의 첫 실사용자가
+S4 다. 따라서 S4 는 UNIQUE 를 떼는 작업이 아니라 **새 Actor 생성 경로의 첫 검증**이다.
+
+```txt
+핀   추가 Person 은 transport_kind='actor' 로 생성되어 자기 키를 받는다.
+     upstream_application 으로 떨어지면 안 된다 -- S3 가 고친 바로 그 상태로
+     되돌아가는 것이고, 조용히 일어난다.
+```
+
+### 접근 관계도 같이 생겨야 한다
+
+S4 는 S2 보다 먼저 **복수 개인 Account 라는 조건을 만든다.** 그러면 개인 귀속이
+컬럼(`personal_owner_user_id`)에만 있고 관계에는 없는 행이 생길 수 있다.
+
+```txt
+핀   추가 Person 생성이 접근 관계 행도 함께 만든다.
+     컬럼만 채우고 관계를 비우면 S2 가 수렴시킬 때 둘이 어긋난 채로 발견된다.
+```
+
+### 검증
+
+```txt
+추가 Person 이 자기 키로 서명한다. Application 키를 쓰지 않는다.
+추가 Person 의 inbox 가 자기 주소다. shared 로 떨어지지 않는다.
+한 User 의 두 Person 이 서로의 수신을 보지 못한다.
+레거시 inbox 라우트가 여전히 정확히 하나의 Actor 로 해소된다.
+Account 수준 Block 이 추가 Person 에도 적용된다 (S3a 의 성질이 actor 종류에도 유지되는지).
+모더레이션이 사이트가 아니라 그 Account 기준으로 판정된다.
+변이: transport 유일성 제약을 떼면 레거시 라우트 검사가 실패해야 한다.
+변이: 추가 Person 을 upstream_application 으로 만들면 키 검사가 실패해야 한다.
+```
+
+### 생성 흐름은 여전히 닫아 둔다
+
+S4 가 스키마를 열더라도 **UI·REST 공개는 별도 판단**이다. 생성이 열리는 순간
+위 경로들이 실제 트래픽을 받으므로, 감사가 먼저 서고 나서 연다.
 
 ## S10 acting-actor: 암묵 폴백을 단일 해소기로
 

@@ -661,6 +661,85 @@ WordPress 는 업로드 즉시 attachment 행을 만들어 id 와 공개 url 을
 공개 url 은 아니다. `_ax_media_visibility` 가 이미 있으므로 비공개 미디어 개념은
 존재하고, 그것이 JMAP 으로 노출될 때 blob 또는 서명된 URL 이 필요해진다.
 
+### 외부 참조보다 가까운 선례가 둘, 이미 우리 안에 있다
+
+바이너리 캐싱 정책을 "미결"로 적어 두었지만, **이미 두 번 구현되어 있다.** AddressBook 과
+Pinterest 를 밖에서 찾는 동안 더 가까운 것이 있었다. 2026-10-24 측정:
+
+```txt
+wp_ax_actor_asset_cache  (8행)   — 기계
+  content_hash                       동일성 판정
+  source_etag, source_last_modified  HTTP 조건부 재검증
+  variants_json                      렌디션
+  expires_at, next_refresh_at        만료·갱신 일정
+  last_accessed_at                   LRU 신호
+  failure_count, last_error_code     실패 백오프
+  processor_version                  재처리 필요 여부 감지
+
+wp_ax_emojis  (11행)             — 정책
+  content_hash, cached_path, static_path, byte_size, static_byte_size
+  license_raw, license_text, license_state
+  review_status, review_reason, reviewed_at, reviewed_by, approval_batch
+  local_only, outbound_allowed, picker_visible
+  is_sensitive
+  reserved_bytes, reserved_at
+  imported_from_authority, imported_from_id, imported_updated_raw
+  fetched_at, verified_at, next_attempt_at, failure_count
+```
+
+우리가 "표준이 안 풀어주는 공백"으로 적어 둔 것들이 **이모지에서는 이미 컬럼이다** --
+재사용 허가(`outbound_allowed`, `local_only`), 라이선스(`license_state`),
+할당량(`reserved_bytes`), 계보(`imported_from_*`).
+
+실제 행도 그 정책이 작동 중임을 보여준다.
+
+```txt
+원격   declared_id = https://mastodon.social/emojis/1099845   저쪽이 발급
+로컬   declared_id = NULL,  우리가 /emojis/{shortcode} 로 발행
+license_state     unknown 4 / restricted 1 / allowed 1
+outbound_allowed  원격 전부 0,  로컬만 1
+```
+
+**라이선스를 모르면 내보내지 않는다.** `unknown` 이 기본이고 fail-closed 다.
+
+### 이모지에서 기계는 가져오고 정책은 가져오지 못한다
+
+```txt
+Emoji       어휘 항목. shortcode 로 식별. 재사용이 정상.
+            집합이 작고 유한 → 건별 사람 심사가 성립한다.
+            재사용이 저작 주장을 수반하지 않는다
+            (":blobcat: 를 썼다" 는 "내가 그렸다" 가 아니다)
+
+Attachment  고유 산출물. 파일로 식별. 재사용이 예외.
+            집합이 무한(18210+) → 건별 심사가 성립하지 않는다.
+            id 를 주는 순간 attributedTo 를 가진 독립 Object 이고,
+            재사용이 남의 저작물 재게시에 가까워진다
+```
+
+```txt
+가져올 것    content_hash, cached_path/static_path, byte_size,
+             fetched_at·verified_at·next_attempt_at·failure_count,
+             reserved_bytes, imported_from_*,
+             그리고 license_state 의 fail-closed 기본값
+못 가져올 것  review_status / reviewed_by / approval_batch 의 건별 사람 심사
+```
+
+그래서 미디어의 실제 설계 과제는 **사람 심사를 기계 판독 가능한 라이선스 판정으로
+바꾸는 것**이다. `license_raw`·`license_text` 가 지금 자유 텍스트인데, 미디어 규모에서는
+URI 로 정규화되어야 자동 판정이 된다 -- `schema:license` 에 CC URI 를 싣기로 한 결정이
+여기서 쓰인다.
+
+### 세 번째 구현을 따로 만들지 않는다
+
+term 멤버십이 세 저장소로 갈라졌던 것과 같은 모양이 된다. 미디어 슬라이스의 첫 작업은
+설계가 아니라 **이 두 선례의 대조**다 -- 둘이 서로 일관된지, 미디어가 어느 쪽을 따르는지.
+
+### 그리고 이것이 마지막 콘텐츠다
+
+미디어 라이브러리는 **쌓인 자산이 있어야 값을 한다.** 탐색할 것이 없는 라이브러리는
+기능이 아니라 빈 화면이다. 그래서 다른 것들이 구현되고 자산이 모인 뒤에 오는 것이
+순서상 맞고, 지금 설계를 앞당길 이유가 하나 더 줄어든다.
+
 ### 이 전체는 공유 Account 때 다시 본다
 
 지금은 Account 당 운영자가 사실상 한 명이라 "누구의 폴더"와 "누구의 컬렉션"이 같은

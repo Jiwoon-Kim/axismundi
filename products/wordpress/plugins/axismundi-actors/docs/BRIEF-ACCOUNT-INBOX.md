@@ -32,7 +32,7 @@ Principal 등록이 HTTP 요청자의 인증을 대신하지 않는다. 계정 �
 
 | 단계 | 구현·검증 목표 | 현재 상태 |
 |---|---|---|
-| S1 Principal | stable subject 식별·유형·존재 검증, 기존 User 관계 이전, remote 등록의 무권한성 | 구현, 리뷰 대기 ([범위](IMPLEMENTATION-PRINCIPALS.md)) |
+| S1 Principal | stable subject 식별·유형·존재 검증, 기존 User 관계 이전, remote 등록의 무권한성 | 구현·리뷰 완료 (f798f5f) |
 | S2 관계 통일 | 개인·위임 접근의 관계 모델 수렴, 개인 귀속과 운영 role 분리, 삭제·철회 정책 | 대기 |
 | S3 transport | legacy 공식 plugin binding과 Account 접근 분리, Actor별 키 생성·저장·회전·서명 정책, **모더레이션 스코프** | 대기 |
 | S4 UNIQUE | S3 검증 후 불필요한 제약 제거. legacy binding의 고유성은 별도 판단 | 대기 |
@@ -86,6 +86,111 @@ AP 쪽    아무것도 선언하지 않는다. state 는 JMAP 개념이다.
 이것은 프로토콜 사이의 번역기가 **아니다.** 두 프로토콜은 한 도메인 위의 어댑터이고,
 필요한 결합은 번역이 아니라 변경 알림 하나다. S8 은 S11 없이는 동기화되지 않으므로
 클라이언트가 폴링하게 된다.
+
+## S3 transport: 주소는 나뉘었는데 키와 차단은 아직 사이트 공용이다
+
+### 측정된 현재 상태 (스테이징, 2026-10-24)
+
+S7 이 배포된 뒤 실데이터로 확인했다.
+
+```txt
+Person  @thaumiel999   inbox  /wp-json/axismundi/v1/actors/{uuid}/inbox
+Group   @community     inbox  /wp-json/axismundi/v1/actors/{uuid}/inbox
+        (local_user_id 없음)
+둘 다   endpoints.sharedInbox  /wp-json/activitypub/1.0/inbox   별도 속성
+        inbox 미인증 GET 403 / outbox 미인증 GET 200
+```
+
+**주소는 액터별로 나뉘었다.** 그런데 같은 문서가 남은 결함도 보여준다.
+
+```txt
+publicKey.id   .../actors/{uuid}#main-key      ← 그 액터의 키라고 주장
+실제 키 재료    Application 키                  ← local_user_id 가 없으므로
+모더레이션      activity_is_blocked( $activity, $actor->get_local_user_id() ?? 0 )
+                → Group 수신이 그 Group 의 차단이 아니라 사이트 범위로 판정
+```
+
+지금이 가장 어긋난 상태다 — **자기 주소로 받는데 사이트 키로 서명하고 사이트 기준으로
+차단한다.** 검증 자체는 통과한다(그 키를 문서에 싣고 있으므로). 비용은 다른 곳에 있다:
+독립 정체성 여럿이 키 하나를 공유하고, 액터 단위 회전이 불가능하며, Application 키
+하나가 뚫리면 비-user 액터 전부가 함께 뚫린다.
+
+### S3 가 하는 일
+
+```txt
+1. transport 바인딩을 자기 컬럼으로 분리
+   local_user_id 의 "어느 공식 키·inbox 인가" 역할만 옮긴다.
+   Bridge 가 접근 관계가 아니라 그 컬럼을 읽는다.
+2. Actor 별 키 생성·저장·회전
+3. 모더레이션 스코프를 Account 기준으로
+```
+
+### 키 회전은 연합 사건이다 — 마이그레이션의 부수효과로 만들지 않는다
+
+지금 Application 키를 쓰는 액터에게 자기 키를 주면 **발행된
+`publicKey.publicKeyPem` 이 바뀐다.** 그 값을 캐시한 원격 서버는 재조회 전까지
+서명 검증에 실패한다. 대개 실패 시 Actor 문서를 다시 가져가므로 self-heal 되지만,
+그 구간이 존재한다.
+
+```txt
+핀   기존 액터는 명시적 회전 전까지 현재 키를 유지한다.
+     마이그레이션이 전체 키를 한 번에 바꾸지 않는다.
+핀   새로 만들어지는 액터는 처음부터 자기 키를 받는다.
+핀   publicKey.id 는 #main-key 를 유지한다. 재료가 바뀌어도 식별자는 같다 —
+     이것이 통용되는 회전 방식이다.
+핀   회전은 관찰 가능한 사건으로 기록한다. 언제 무엇이 바뀌었는지 남는다.
+```
+
+즉 S3 는 **능력을 만드는 것**이지 전수 교체가 아니다. 교체는 별도 운영 결정이다.
+
+### 모더레이션은 교체가 아니라 두 층이다
+
+```txt
+사이트 수준   공식 Moderation — 인스턴스 차단 목록. 계속 적용한다.
+Account 수준  우리 Block 관계 — 그 Account 의 차단. 추가로 적용한다.
+```
+
+우리에게는 이미 Block 모델이 있다 (`axismundi-activities/includes/relations.php`:
+Follow 와 Block 이 root relation 이고 Accept·Reject·Undo 가 그 위에 선다).
+공식 `Moderation::` 호출은 `actor-inbox.php:72` 한 곳뿐이다. 그 호출을 없애는 것이
+아니라, **그 뒤에 Account 수준 판정을 더하는 것**이다. 사이트 차단은 사이트의
+정당한 권한이고, Account 차단은 그 Account 의 권한이다.
+
+### 순서: S3 를 S2 보다 먼저
+
+브리프의 기존 의존은 `S3 -> S4` 뿐이고 `S2 -> S3` 는 없다. 그런데 S3 를 먼저 하는
+편이 낫다.
+
+```txt
+지금      local_user_id = 접근 + transport + 카디널리티   세 의미
+S3 이후   local_user_id = 접근 + 카디널리티               두 의미
+S2 가 그 둘을 정리한다 (관계로 수렴할지, 컬럼에 불변식을 붙일지)
+S4 가 UNIQUE 를 떼어낸다
+```
+
+의미 하나를 먼저 빼내면 S2 가 남은 둘만 다루면 된다. 반대로 S2 를 먼저 하면
+`local_user_id` 가 transport 때문에 계속 살아 있어야 해서, 접근을 관계로 옮기고도
+컬럼을 못 치운다.
+
+두 단계가 같은 파일(`repository.php`)의 스키마를 건드리므로 **병행하지 않는다.**
+
+### 검증
+
+```txt
+Group·Organization 액터가 자기 키로 서명한다. Application 키를 쓰지 않는다.
+기존 액터의 publicKeyPem 이 마이그레이션만으로 바뀌지 않는다.
+회전 후에도 publicKey.id 가 #main-key 로 유지된다.
+Group 수신이 그 Group 의 Block 으로 판정된다. 사이트 차단도 여전히 적용된다.
+S4 를 열기 전에 두 번째 Person 이 자기 키·자기 inbox 로 연합하는지 확인한다.
+변이: transport 바인딩 분리를 되돌리면 실패해야 한다.
+변이: Account 수준 차단 판정을 제거하면 실패해야 한다.
+```
+
+### 측정 제약
+
+스테이징은 wp.com 호스팅이라 **WP-CLI 접근이 없다.** S3 의 키 관련 검증은 공개
+Actor 문서(`publicKey.publicKeyPem` 비교)와 감사로만 확인할 수 있고, DB 수치는
+확인할 수 없다.
 
 ## S10 acting-actor: 암묵 폴백을 단일 해소기로
 

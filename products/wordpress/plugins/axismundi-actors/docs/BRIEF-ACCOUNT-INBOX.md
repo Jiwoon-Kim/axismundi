@@ -42,7 +42,7 @@ Principal 등록이 HTTP 요청자의 인증을 대신하지 않는다. 계정 �
 | S8 activity view | Account 범위 Activity 뷰·query·changes·읽음 상태. AP 문서와 분리. **mailbox 아님** | 대기 |
 | S11 state | Account 단위 변경 알림 경로. S8 의 선결 | 대기 |
 | S9 instance | shared Inbox 및 Application Actor 소유권 이관 | 대기 |
-| S10 acting-actor | 암묵 선택 폐기. 발행 표면이 Account 를 명시. 공통 재검사·폴백 유지 | 대기 |
+| S10 acting-actor | 암묵 폴백을 단일 해소기로. 선택 자체는 남김 (primaryAccounts) | 대기 |
 
 S3는 컬럼을 옮기는 것만으로 완료되지 않는다. 추가 Person·Group이 Application 키를
 계속 사용하는지 검사하고, 독립 키 및 회전을 실제 지원해야 한다.
@@ -87,7 +87,7 @@ AP 쪽    아무것도 선언하지 않는다. state 는 JMAP 개념이다.
 필요한 결합은 번역이 아니라 변경 알림 하나다. S8 은 S11 없이는 동기화되지 않으므로
 클라이언트가 폴링하게 된다.
 
-## S10 acting-actor 폐기
+## S10 acting-actor: 암묵 폴백을 단일 해소기로
 
 Session 이 대체하는 것은 **목록 반쪽**이다. "내가 무엇으로 활동할 수 있는가"는
 workspace/Session 이 답한다. **선택 반쪽**은 대체되지 않는다 -- JMAP 에는 전환 명령이
@@ -105,8 +105,34 @@ calendar     admin-calendars, envelope, event-actor, event-participation,
 emoji        catalogue.php
 ```
 
-따라서 폐기는 삭제가 아니라 **모든 발행 표면이 Account 를 명시하게 만드는
-마이그레이션**이다. 방향은 맞다 -- 암묵보다 명시가 낫다.
+### 저장된 선택은 없앨 수 없다
+
+WordPress 관리 화면과 기본 프론트엔드는 모놀리식이라 **페이지 로드에 `accountId` 가
+없다.** 그 표면들이 현재 세션의 Account 로 활동하려면 저장된 선택을 **적용**해야 한다.
+우리 React 앱은 요청마다 `accountId` 를 명시할 수 있지만, 최초 로드의 기본값은
+마찬가지로 필요하다.
+
+스펙에 이미 그 개념이 있다. `primaryAccounts` 는 capability 별로 *"the account a user
+should treat as their default for that capability"* 를 알려준다. 서버가 **기본값을
+제공**하고 호출자가 명시하는 모양이다.
+
+```txt
+오늘        아무도 명시하지 않으면 서버가 조용히 적용   ← 깨지는 지점
+바뀔 것     해소기 한 곳에서만 적용. 표면별 폴백 금지.
+남을 것     사용자의 기본 Account 선택 자체.
+            JMAP 은 primaryAccounts 로 노출하고,
+            모놀리식 표면은 해소기를 통해 적용한다.
+```
+
+즉 S10 은 **폐기가 아니라 단일화**다. 없애는 것은 "표면마다 각자 폴백"이고,
+남기는 것은 "세션의 기본 Account" 다.
+
+```txt
+해소기   명시된 accountId 가 있으면 그것 + 권한 검사
+         없으면 세션 기본값 + 권한 검사
+         철회되었으면 폴백 + 그 사실을 호출자가 알 수 있게
+표면     반드시 해소기를 통과. 자체 폴백·자체 재검사 금지.
+```
 
 지킬 것:
 

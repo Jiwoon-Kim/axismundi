@@ -561,6 +561,116 @@ Link 변환·HTML 정규화를 하지 않는다. 과거 Activity를 현재 Objec
    `audit-outbound-delivery.php`를 확인하고,
    바뀌는 계약에 필요한 회귀 검증을 추가한다. 현재 단계에서 모든 경로가 통합되었다고 표기하지 않는다.
 
+## Media Collection Membership Is Lineage, Not Joint Membership, 2026-10-24
+
+큐레이션 컬렉션의 멤버십 모양이 둘로 갈린다. **계보 쪽으로 간다.**
+
+```txt
+N:M 멤버십   객체 하나가 여러 컨테이너에 속한다.  RFC 9610 의 addressBookIds.
+계보         담을 때마다 참조하는 새 객체가 생긴다. 원본과 혈통으로 이어진다.
+```
+
+이유는 **권위 경계**다. 남의 객체를 내 컬렉션의 멤버로 "편입"하려면 그 객체의 상태를
+내가 바꿔야 하는데, 그 객체는 저쪽 서버의 권위 아래 있다. 계보 모델은 **내 권위 안에서
+내 객체를 만들고 원본을 참조**하므로 그 문제가 생기지 않는다.
+
+`addressBookIds` 가 성립하는 이유도 같은 규칙의 반대편이다 — Account 안의 주소록은
+전부 같은 권위라 객체에 멤버십을 적어도 된다. 권위가 갈리는 순간 그 방식은 쓸 수 없다.
+
+### 바이트는 저장마다 복제하지 않는다
+
+```txt
+객체    저장마다 새로 생긴다          계보
+바이트  공유한다. 복제하지 않는다.     digest 로 동일성 판정, 참조로 구현
+```
+
+같은 원격 이미지를 열 명이 담아도 **한 번 가져와 공유**한다. `Blob/copy` 를 참조로
+구현한다는 결정과 같은 원리이고, 거기서는 프로토콜이 새 id 만 요구하지 바이트 복제를
+요구하지 않는다는 것이 근거였다. 여기서는 더 분명하다 — 원격 바이너리는 관측이고,
+관측의 보존은 이미 lease 가 다룬다.
+
+### 측정한 참조 둘, 그리고 각각이 증명하지 못하는 것
+
+**JMAP for Contacts (RFC 9610)** — 로컬 공유 모양의 증명.
+
+```txt
+증명함       Account 소유 명명 컨테이너, principal 별 권한(RFC 9670),
+             멤버에 기록되는 멤버십, 표준 변경 추적
+증명 못 함   연합. ContactCard 는 비공개 데이터라 다른 서버가 없다.
+             전부 같은 권위라서 교차 권위 문제가 구조적으로 드러나지 않는다.
+```
+
+**Pinterest API v5** (2026-10-24 확인) — 큐레이션 제품 모양.
+
+```txt
+Pin        board_id 단수, board_section_id 단수   ← 보드 하나에만 속한다
+           parent_pin_id "The source pin id if this pin was saved from another pin"
+           link (외부 출처), media.images (150x150 / 400x300 / 600x / 1200x)
+           ai_disclosures { values: ["AI_MODIFIED"] }
+Create Pin 문서가 명시: "intended solely for publishing new content created by
+           the user. If you are interested in saving content created by others
+           … use our Save button instead."
+Save Pin   POST /pins/{pin_id}/save → board_id + board_section_id, 201 Created
+           "Any public Pin can be saved given a pin ID."
+```
+
+생성과 큐레이션이 **다른 연산**인 것이 우리 Create 와 Add/Remove 의 구분과 같은 선이다.
+
+증명하지 못하는 것: **동의와 라이선스.** "공개면 담을 수 있다"는 단일 플랫폼이 모든
+바이트를 소유하고 ToS 가 덮기 때문에 성립한다. 서버마다 권위와 라이선스가 다른 곳에서는
+그 전제를 쓸 수 없다. 그 공백이 `schema:license` 와 `canAttach` 논의가 사는 자리다.
+
+덤으로 `ai_disclosures` 가 1급 필드라는 점은 기록해 둔다. 에이전트가 만든 객체에
+`generator` 를 붙이는 방향의 선례다.
+
+### 첨부와 독립 객체를 구분한다 (정정)
+
+이전 판에서 "할당되지 않은 미디어는 연합되면 안 된다"고 적었다면 그것은 과했다. 두
+가지를 섞은 것이다.
+
+```txt
+부모 안의 첨부      익명 값. 부모가 귀속을 운반한다. attributedTo 불필요.
+독립 미디어 객체    자기 id. 컬렉션 멤버. 재사용 대상. 귀속 필요.
+```
+
+Note 나 Article 에 첨부해서 발행하는 데는 할당이 필요 없다. AS2 는 `attributedTo` 를
+요구하지 않으므로, **id 는 있고 `attributedTo` 는 없는 미디어 객체는 적법**하고 그것이
+pending 의 정확한 표현이다. 2026-10-24 측정: attachment 18210 은 `post_author` 는
+있고 `attributedTo` 는 없다. **즉 pending 은 만들 것이 아니라 이미 현재 상태다.**
+
+할당이 실제로 필요한 자리는 좁다.
+
+```txt
+불필요   Note·Article 의 첨부로 발행
+필요     Account 의 미디어 컬렉션 멤버가 되는 것
+필요     남이 재사용하는 것 (공유 폴더)
+필요     독립 투영에 attributedTo 를 싣는 것
+```
+
+첨부가 할당을 요구하지 않으므로 "첫 사용이 암묵 할당" 규칙도 불필요하다. 할당은
+사용자가 컬렉션에 넣기로 할 때 일어나는 **명시적 행위**이고, 그러면 잘못된 Account 로
+조용히 귀속될 위험도 없다.
+
+### 업로드는 WordPress 코어 API 를 쓴다
+
+JMAP blob 기계를 만들지 않는다. blob 이 대신해 주는 것은 **아직 주소가 없는 바이트**인데,
+WordPress 는 업로드 즉시 attachment 행을 만들어 id 와 공개 url 을 준다. 메울 자리가
+생기지 않는다.
+
+되돌아오는 경우는 **비공개 미디어**다. blob 은 Account 범위라 접근 제어가 가능하지만
+공개 url 은 아니다. `_ax_media_visibility` 가 이미 있으므로 비공개 미디어 개념은
+존재하고, 그것이 JMAP 으로 노출될 때 blob 또는 서명된 URL 이 필요해진다.
+
+### 이 전체는 공유 Account 때 다시 본다
+
+지금은 Account 당 운영자가 사실상 한 명이라 "누구의 폴더"와 "누구의 컬렉션"이 같은
+사람으로 겹친다. 겹쳐 있으면 구분이 개념으로만 존재한다. 여러 User 가 한 Account 를
+운영하면 갈라진다 — 올린 User 가 빠져도 미디어는 Account 에 남아야 하고, 다른 운영자가
+관리할 수 있어야 하는데 WordPress 권한은 User 기준이다.
+
+**미루는 비용은 0 이다.** 현재 상태가 pending 이고 잃는 정보가 없다. 반대로 지금
+추측으로 할당 규칙을 만들면 실제 압력과 어긋난 채로 데이터가 쌓인다.
+
 ## Sources
 
 - ActivityPub, W3C Recommendation 2018-01-23, sections 3.1, 3.2, 5.1, 5.2, Appendix B.1.

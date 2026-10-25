@@ -101,6 +101,13 @@ function axismundi_act_post_command( WP_Post $post, string $operation ) : array 
  */
 function axismundi_act_submit_post_operation( WP_Post $post, string $operation ) {
 	$principal = axismundi_act_publish_principal( $post );
+	if ( 'Delete' !== $operation && function_exists( 'axismundi_actors_account_selection_enabled' ) && axismundi_actors_account_selection_enabled() ) {
+		$actor = axismundi_act_request_publish_actor( $post, $principal );
+		if ( is_wp_error( $actor ) ) {
+			return $actor;
+		}
+		return axismundi_act_submit_c2s( $principal, $actor->get_identity_id(), axismundi_act_post_command( $post, $operation ), array( 'surface' => 'editor' ) );
+	}
 	$actor     = 'Delete' === $operation ? null : axismundi_act_publish_actor( $post, $principal );
 	return axismundi_act_submit_c2s(
 		$principal,
@@ -152,7 +159,11 @@ function axismundi_act_on_object_publish_candidate( WP_Post $post, string $objec
 		do_action( 'axismundi_act_unattributed_publication', $post );
 		return;
 	}
-	axismundi_act_submit_post_operation( $post, 'Create' );
+	$result = axismundi_act_submit_post_operation( $post, 'Create' );
+	if ( is_wp_error( $result ) ) {
+		set_transient( 'ax_act_publish_error_' . get_current_user_id() . '_' . $post->ID, $result->get_error_message(), MINUTE_IN_SECONDS );
+		do_action( 'axismundi_act_post_create_failed', $result, $post );
+	}
 }
 add_action( 'axismundi_op_object_publish_candidate', 'axismundi_act_on_object_publish_candidate', 10, 3 );
 

@@ -57,6 +57,10 @@ function axismundi_act_publish_actor( WP_Post $post, ?int $user_id = null ) : ?A
 	if ( ! function_exists( 'axismundi_actors_can_act_as' ) ) {
 		return null;
 	}
+	if ( function_exists( 'axismundi_actors_account_selection_enabled' ) && axismundi_actors_account_selection_enabled() ) {
+		$result = axismundi_act_request_publish_actor( $post, $user_id );
+		return is_wp_error( $result ) ? null : $result;
+	}
 	if ( $user_id > 0 && $user_id === (int) $post->post_author ) {
 		$acting = axismundi_actors_acting_actor( $user_id );
 		if ( $acting instanceof Axismundi_Actor && axismundi_actors_can_act_as( $acting, $user_id ) ) {

@@ -33,7 +33,9 @@ function axismundi_act_c2s_operations() : array {
  *
  * Passing `0` is a real request and not an error: a client with no way to choose an Actor,
  * such as the official mobile apps, submits without one. It resolves to the principal's own
- * Person and to nothing else. The server never substitutes an Organization the principal
+ * Person and to nothing else while the S10 rollout is disabled. With S10 enabled, the
+ * command requires an explicit positive Account and never consults cookies or defaults.
+ * The server never substitutes an Organization the principal
  * happens to manage, nor the site Actor, because an unchosen identity that speaks for someone
  * else puts words in their mouth.
  *
@@ -44,6 +46,10 @@ function axismundi_act_c2s_operations() : array {
 function axismundi_act_c2s_resolve_actor( int $principal_user_id, int $actor_identity_id ) {
 	if ( ! function_exists( 'axismundi_actors_can_act_as' ) ) {
 		return new WP_Error( 'ax_act_c2s_actors', __( 'Actor identities are unavailable.', 'axismundi-activities' ) );
+	}
+	if ( function_exists( 'axismundi_actors_account_selection_enabled' ) && axismundi_actors_account_selection_enabled() ) {
+		$result = axismundi_actors_resolve_account_selection( $principal_user_id, $actor_identity_id, '', true );
+		return is_wp_error( $result ) ? $result : $result['actor'];
 	}
 	if ( $actor_identity_id <= 0 ) {
 		$own = axismundi_actors_default_acting_actor( $principal_user_id );

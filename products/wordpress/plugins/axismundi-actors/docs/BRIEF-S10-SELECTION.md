@@ -326,3 +326,40 @@ Opus에게 맡긴다. 아래 항목은 **통과 보고가 아니다.**
 확인 범위는 PHP 문법과 diff 공백뿐이다. HTTP/browser·감사·변이·패키징은 하지 않았다.
 다음 C2는 발행 소비자와 제출 시 Account 고정이다. 기존 객체 귀속·예약 발행·Calendar,
 AddressBook JMAP JSON provider/API 구현은 C1에 포함하지 않는다.
+
+## S10-C2 구현 기록 — 발행 선택과 편집기 의도
+
+기본 false인 동일 rollout gate 안에서만 신규 경로를 사용한다. C1 리뷰 후 진행했다.
+
+- Activities 명령 서비스는 명시적인 양수 Account를 공통 해소기로 재검사한다.
+  actor_identity_id=0은 더 이상 Person을 뜻하지 않는다. 이 서비스 자체는 쿠키나
+  기본값을 읽지 않으며 HTTP endpoint를 추가하지 않았다.
+- WP 저장 어댑터는 기존 Object 귀속이 있으면 그 Actor를 유지하고 현재 Principal의
+  권한을 다시 검사한다. 다른 탭의 Account 선택으로 기존 객체를 재귀속하지 않는다.
+  Delete도 기존 attribution/인가 경로 그대로다.
+- 신규 브라우저 발행은 현재 선택과 편집기를 열 때 고정한 Account가 같아야 한다.
+  classic은 post/Account에 묶인 nonce와 hidden 필드, block editor는 apiFetch 헤더를
+  사용한다. 미선택·무효·철회·미제출·다중 탭 변경을 다른 Account로 보충하지 않는다.
+- 쿠키 없는 인증 요청은 `publish` 목적의 명시적 기본값만 허용한다. 저장된 기본값이
+  없거나 부적격이면 발행하지 않는다. 레거시 현재 선택 meta/Person은 읽지 않는다.
+- WordPress source 저장과 연합 성공은 별개다. 실패는 기존 실패 훅, classic 관리자
+  notice, block editor 저장 응답/notice로 전달한다. source 저장을 전역 거부하지 않는다.
+- 예약 시 Account를 저장하는 구현은 기존에도 없었다. cron의 자동 Create 차단을
+  그대로 유지한다. 예약 의도 저장/실행 기능을 구현했다고 보고하지 않는다.
+
+### Opus 검토 목록
+
+1. `wp eval-file wp-content/plugins/axismundi-activities/tests/audit-publish-selection.php`
+   신규 감사 자체도 미실행이다. 명시적 0 거부, browser Account 기대값/nonce,
+   다른 탭 변경, handle 없는 Account 발행 거부, 비브라우저 publish 기본값 및 철회를 다룬다.
+2. 기존 `audit-post-create.php`의 명령/생명주기 검사를 gate-off 회귀로 확인하고, gate-on에서
+   실제 신규 Create·기존 귀속 보존·Delete 인가·실패 시 원장 미기록을 추가 측정한다.
+3. 실제 classic/block 편집기로 A에서 연 편집기→다른 탭 B 선택→저장 시 source는
+   저장되지만 Create는 없고 경고가 보이는지 확인한다. reload 후 B 제출은 허용되어야 한다.
+4. REST 실제 요청의 헤더 전달, autosave/예약/대리 편집, nonce/권한 철회 및
+   expected Account 비교 제거 변이를 확인한다. 내부 rest_do_request의 set_header는
+   PHP $_SERVER 헤더를 자동 생성하지 않으므로 실제 HTTP와 구별한다.
+
+이번 변경은 문법/정적 검사까지만 수행한다. 감사·변이·브라우저·패키징은 Opus 검토용이다.
+S10 전체 완료나 기본 활성화/배포 승인이 아니다. Calendar 소비자 및 레거시 물리 제거,
+예약 의도 영속화, 실제 JMAP AddressBook HTTP 검증은 남아 있다.

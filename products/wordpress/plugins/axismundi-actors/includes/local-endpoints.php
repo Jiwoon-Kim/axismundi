@@ -20,16 +20,19 @@
 
 defined( 'ABSPATH' ) || exit;
 
-/** Declare the vocabulary only when a document actually contains an Actor key. */
-function axismundi_actors_jsonld_context( array $context, ?array $object = null ) : array {
-	if ( function_exists( 'axismundi_op_document_has_properties' )
-		&& axismundi_op_document_has_properties( $object, array( 'publicKey' ) )
-		&& ! in_array( 'https://w3id.org/security/v1', $context, true ) ) {
-		$context[] = 'https://w3id.org/security/v1';
-	}
-	return $context;
+/** Register the vocabulary contributed by Actor key descriptors. */
+function axismundi_actors_register_vocabulary() : void {
+	axismundi_op_register_vocabulary_group( array(
+		'publicKey' => 'https://w3id.org/security#publicKey',
+		'publicKeyPem' => 'https://w3id.org/security#publicKeyPem',
+		'owner' => 'https://w3id.org/security#owner',
+	), array(
+		'kind' => 'property', 'provenance' => 'vendor:sec', 'source' => 'https://w3id.org/security/v1',
+		'contributor' => 'axismundi-actors', 'context' => 'https://w3id.org/security/v1',
+		'when' => array( array( 'kind' => 'key', 'names' => array( 'publicKey' ) ) ),
+	) );
 }
-add_filter( 'axismundi_op_jsonld_context', 'axismundi_actors_jsonld_context', 10, 2 );
+add_action( 'axismundi_op_register_vocabulary', 'axismundi_actors_register_vocabulary' );
 
 /**
  * The transport endpoints a local Actor serves, keyed by endpoint type.

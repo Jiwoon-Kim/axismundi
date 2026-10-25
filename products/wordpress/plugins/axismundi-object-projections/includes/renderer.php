@@ -14,19 +14,6 @@
 
 defined( 'ABSPATH' ) || exit;
 
-/** Whether a document or embedded value contains any of the named properties. */
-function axismundi_op_document_has_properties( ?array $object, array $properties ) : bool {
-	foreach ( $object ?? array() as $key => $value ) {
-		if ( in_array( $key, $properties, true ) ) {
-			return true;
-		}
-		if ( '@context' !== $key && is_array( $value ) && axismundi_op_document_has_properties( $value, $properties ) ) {
-			return true;
-		}
-	}
-	return false;
-}
-
 /**
  * The ActivityStreams 2.0 context this renderer owns. Extensions may be added through
  * the `axismundi_op_jsonld_context` filter — never by a transformer's return value.
@@ -35,43 +22,7 @@ function axismundi_op_document_has_properties( ?array $object, array $properties
  * @return array<int,mixed>|string
  */
 function axismundi_op_jsonld_context( ?array $object = null ) {
-	$context = array( 'https://www.w3.org/ns/activitystreams' );
-	if ( is_array( $object ) && ( 'QuoteRequest' === ( $object['type'] ?? '' ) || 'QuoteRequest' === ( $object['object']['type'] ?? '' ) ) ) {
-		$context[] = array( 'QuoteRequest' => 'https://w3id.org/fep/044f#QuoteRequest' );
-	}
-	if ( is_array( $object ) && ( 'QuoteAuthorization' === ( $object['type'] ?? '' ) || 'QuoteAuthorization' === ( $object['formerType'] ?? '' ) ) ) {
-		$context[] = array(
-			'QuoteAuthorization' => 'https://w3id.org/fep/044f#QuoteAuthorization',
-			'gts'                => 'https://gotosocial.org/ns#',
-			'interactingObject'  => array( '@id' => 'gts:interactingObject', '@type' => '@id' ),
-			'interactionTarget'  => array( '@id' => 'gts:interactionTarget', '@type' => '@id' ),
-		);
-	}
-	if ( is_array( $object ) && ( array_key_exists( 'quote', $object ) || array_key_exists( 'quoteAuthorization', $object ) ) ) {
-		$quote_context = array();
-		if ( array_key_exists( 'quote', $object ) ) {
-			$quote_context['quote'] = array( '@id' => 'https://w3id.org/fep/044f#quote', '@type' => '@id' );
-		}
-		if ( array_key_exists( 'quoteAuthorization', $object ) ) {
-			$quote_context['quoteAuthorization'] = array( '@id' => 'https://w3id.org/fep/044f#quoteAuthorization', '@type' => '@id' );
-		}
-		$context[] = $quote_context;
-	}
-	if ( axismundi_op_document_has_properties( $object, array( 'sensitive', 'manuallyApprovesFollowers' ) ) ) {
-		// Intentional deviation from the report's unversioned SHOULD: retain the major tier.
-		$context[] = 'https://purl.archive.org/miscellany/1';
-	}
-	if ( is_array( $object ) && array_key_exists( 'dcterms:subject', $object ) ) {
-		$context[] = array( 'dcterms' => 'http://purl.org/dc/terms/' );
-	}
-	if ( is_array( $object ) && array_key_exists( 'interactionPolicy', $object ) ) {
-		$context[] = array(
-			'gts'               => 'https://gotosocial.org/ns#',
-			'interactionPolicy' => array( '@id' => 'gts:interactionPolicy', '@type' => '@id' ),
-			'canQuote'          => array( '@id' => 'gts:canQuote', '@type' => '@id' ),
-			'automaticApproval' => array( '@id' => 'gts:automaticApproval', '@type' => '@id' ),
-		);
-	}
+	$context = axismundi_op_vocabulary_context( $object );
 	/**
 	 * Filter the JSON-LD `@context` entries.
 	 *

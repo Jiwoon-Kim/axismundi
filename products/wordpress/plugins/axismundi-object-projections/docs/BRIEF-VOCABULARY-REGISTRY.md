@@ -4,6 +4,41 @@
 이고 이 문서는 그 중 **직렬화에 필요한 최소 조각만** 구현 단위로 쪼갠 것이다.
 V1(`BRIEF-V1-CONTEXT-IRIS.md`)이 선행이고 완료됐다(10deeac).
 
+## 구현 기록 (2026-10-25)
+
+구현 완료, 리뷰 대기. 상세 계약과 이관 범위는
+`IMPLEMENTATION-VOCABULARY-CONTEXT-REGISTRY.md`를 참조한다.
+기존 vocabulary snapshot 및 의미/바인딩 API는 유지하고, namespace와 조건부 선언
+등록을 확장했다. 승인 바이트 fixture는 변경하지 않았다.
+
+관련 감사 14개를 순차 실행해 모두 통과했다. 전체 134개 전수를 재실행한 것은 아니다.
+
+| 플러그인 | 감사 | 검사 수 |
+| --- | --- | --- |
+| OP | audit-context-iris | 38 |
+| OP | audit-vocabulary-registry | 15 |
+| OP | audit-vocabulary-context-registry | 43 |
+| OP | audit-object-assembly-baseline | 9 |
+| OP | audit-object-renderer | 54 |
+| OP | audit-actor-projection | 12 |
+| OP | audit-post-article | 23 |
+| OP | audit-quote-context | 5 |
+| OP | audit-quote-authorizations | 3 |
+| OP | audit-collection-contracts | 14 |
+| Emoji | audit-emoji-outbound | 41 |
+| Emoji | audit-emoji-op-integration | 14 |
+| Emoji | audit-emoji-actors-integration | 10 |
+| Calendar | audit-collection-projection | 10 |
+
+최종 보강 후 신규 레지스트리 감사 43개·V1 감사 38개·승인 baseline 9개를 재실행해
+통과했다. 네 변이는 모두 검출하고 복원했다: prefix 충돌 허용, 무조건 선언,
+타입 수집 제거, 명시 IRI 대신 as+이름 유도. 변경 PHP lint 및 diff whitespace 확인도
+통과했다. 알려진 기존 실패 네 건은 수정하지 않았다.
+
+일괄 실행 원본 로그는 로컬 `%TEMP%/axismundi-vocabulary-audits.log`에 보관했다.
+등록 보강 후 재실행에서 신규 감사가 42에서 43으로 늘었으므로 원본 일괄 로그의
+42라는 수와 구별한다.
+
 ## 왜 V2 보다 먼저인가
 
 V2 는 `schema` 접두사를 **Actors 가 두 번째로** 선언하게 만든다. media-library 가 이미
@@ -156,4 +191,46 @@ Calendar 재구조화                      JSCalendar 가 코어·Event 가 파�
 V2 의 PropertyValue·value·size         이 레지스트리 **위에서** 등록한다. 다음 작업.
 기존 OP·Calendar 감사 실패 4 건        별도 재현으로 추적한다. 섞지 않는다.
   audit-standalone-projection / audit-calendar-acl / audit-ics / audit-rest-read
+```
+
+## 리뷰 결과 (2026-10-25)
+
+통과. **보장한 것과 확인하지 않은 것을 나눠 적는다.**
+
+### 보장한 것
+
+```txt
+@context 바이트 동일성   HEAD(V1) 과 stash 전후를 6 개 문서 클래스로 대조 → IDENTICAL
+                         actor / post / attachment / event / followers / outbox
+                         attachment 의 인라인 맵 그룹 경계(schema+license, usedIn)까지 같다
+합성 문서 14 개          빈 문서는 스칼라 문자열, emoji 3 표기(compact·toot:·전체 IRI)와
+                         중첩 object 가 하나로 통일, type·formerType 수집,
+                         quote·interactionPolicy·dcterms:subject·sensitive:false·publicKey·event,
+                         **owner 단독은 선언되지 않는다**(V1 리뷰 발견이 이관 후에도 유지)
+네임스페이스 10 개        base_iri / reference 분리가 실측과 일치
+                         toot 은 죽은 base IRI(404)를 유지하고 reference 만 docs 로
+                         ldp 는 http 형태, schema 는 정규형,
+                         sec 는 https://w3id.org/security# -- security/v1 자체 선언과 일치
+유도 금지 반례           inbox → ldp:inbox, orderedItems → as:items(+@list) 가 명시 등록
+감사                     vocabulary-context-registry 43 / context-iris 38 /
+                         object-assembly-baseline 9 / post-article 23 /
+                         actor-projection 12 / object-renderer 54, 전부 0 실패
+변이 4                   prefix 충돌 거부 / 무조건 선언 거부 / iri 유도 / @list 컨테이너
+                         → 전부 검출
+기존 레지스트리          vocabulary-registry.php 를 **확장**했고 중복 생성이 아니다
+```
+
+### 확인하지 않은 것
+
+```txt
+전수 145 감사            돌리지 않았다. 직전 전수(134)가 26 분에 기존 실패 4 건만 찾았고
+                         새 결함은 0 이었다. 전수는 통합·배포 시점 도구이고 슬라이스
+                         완료 기준이 아니다. 배포 전에 한 번 돌린다.
+기존 실패 4 건           audit-standalone-projection / audit-calendar-acl /
+                         audit-ics / audit-rest-read. 이번 변경이 악화시켰는지만 보고
+                         원인은 추적하지 않았다.
+원격 문서 expansion      expander 가 없다. V4 범위.
+provenance enum          자유 문자열이다. `inbox` 에 'ldp' 가 들어가 있고 브리프 enum 에
+                         없는 값인데 검증은 비어 있지 않은 문자열만 본다.
+                         **강제가 아니라 관례다.** 이것 때문에 재구현하지 않는다.
 ```

@@ -49,6 +49,8 @@ require_once __DIR__ . '/includes/remote-collections.php';
 require_once __DIR__ . '/includes/registry.php';
 require_once __DIR__ . '/includes/collection-registry.php';
 require_once __DIR__ . '/includes/sanitize.php';
+require_once __DIR__ . '/includes/vocabulary-context-registry.php';
+require_once __DIR__ . '/includes/vocabulary-declarations.php';
 require_once __DIR__ . '/includes/renderer.php';
 require_once __DIR__ . '/includes/object-view-model.php';
 require_once __DIR__ . '/includes/object-assembly.php';

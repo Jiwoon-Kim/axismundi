@@ -275,8 +275,8 @@ function axismundi_emoji_document_has_declaration( array $object ) : bool {
 /**
  * Add the FEP-9098 type mapping only to documents that use it.
  *
- * NOTE: this filter is where this plugin's vocabulary declaration will move to the shared
- * registry's registration API, once that exists. Two things recorded in
+ * Legacy direct-call helper; the OP renderer now uses the vocabulary registration below.
+ * Two things recorded in
  * products/wordpress/architecture/activitystreams-vocabulary-registry.md apply here and
  * are easy to lose:
  *
@@ -302,6 +302,15 @@ function axismundi_emoji_extend_jsonld_context( array $context, ?array $object =
 	return $context;
 }
 
+/** Register the FEP-9098 declaration with the same tag/object scope as before. */
+function axismundi_emoji_register_vocabulary() : void {
+	axismundi_op_register_vocabulary_group( array( 'Emoji' => AXISMUNDI_EMOJI_TYPE_IRI ), array(
+		'kind' => 'type', 'provenance' => 'fep:9098', 'source' => 'https://w3id.org/fep/9098',
+		'contributor' => 'axismundi-emoji', 'context' => axismundi_emoji_type_context(),
+		'when' => array( array( 'kind' => 'type', 'names' => array( 'Emoji', 'toot:Emoji', AXISMUNDI_EMOJI_TYPE_IRI ), 'path' => '~^(object/)*tag/[^/]+$~' ) ),
+	) );
+}
+
 /*
  * Browser rendering may already have decorated `the_content`. Restore this
  * extension's wire representation at the product projection boundary, then
@@ -311,7 +320,7 @@ function axismundi_emoji_extend_jsonld_context( array $context, ?array $object =
  */
 add_filter( 'axismundi_op_post_article', 'axismundi_emoji_restore_projected_object', 20 );
 add_filter( 'axismundi_note_project_object', 'axismundi_emoji_restore_projected_object', 20 );
-add_filter( 'axismundi_op_jsonld_context', 'axismundi_emoji_extend_jsonld_context', 10, 2 );
+add_action( 'axismundi_op_register_vocabulary', 'axismundi_emoji_register_vocabulary' );
 
 /**
  * Serve the AS2 document for one local emoji.

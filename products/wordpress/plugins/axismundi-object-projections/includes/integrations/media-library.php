@@ -33,34 +33,29 @@ function axismundi_op_media_library_available() : bool {
 		&& function_exists( 'axismundi_media_feed_rendition' );
 }
 
-/**
- * Extend the renderer-owned context for Media Library members.
- *
- * @param array<int,mixed>         $context Existing contexts.
- * @param array<string,mixed>|null $object  Object being finalized.
- * @return array<int,mixed>
- */
-function axismundi_op_media_jsonld_context( array $context, ?array $object = null ) : array {
-	if ( ! is_array( $object ) || ! in_array( $object['type'] ?? '', array( 'Image', 'Video', 'Audio', 'Document' ), true ) ) {
-		return $context;
+/** Register Media Library terms without changing the published legacy usedIn IRI. */
+function axismundi_op_register_media_vocabulary() : void {
+	if ( ! axismundi_op_media_library_available() ) {
+		return;
 	}
-	$context[] = array(
-		'schema'          => 'https://schema.org/',
-		'license'         => array(
-			'@id'   => 'schema:license',
-			'@type' => '@id',
-		),
-	);
-	if ( isset( $object['usedIn'] ) ) {
-		$context[] = array(
-			'usedIn' => array(
-				'@id'   => 'https://github.com/Jiwoon-Kim/axismundi/ns#usedIn',
-				'@type' => '@id',
-			),
-		);
+	$when = array( array( 'kind' => 'scalarType', 'names' => array( 'Image', 'Video', 'Audio', 'Document' ), 'path' => '~^$~' ) );
+	axismundi_op_register_vocabulary_group( array( 'license' => 'https://schema.org/license' ), array(
+		'kind' => 'property', 'provenance' => 'vendor:schema', 'source' => 'https://schema.org/license',
+		'contributor' => 'axismundi-object-projections', 'priority' => 20,
+		'context' => array( 'schema' => 'https://schema.org/', 'license' => array( '@id' => 'schema:license', '@type' => '@id' ) ), 'when' => $when,
+	) );
+	$result = axismundi_op_register_namespace( 'axisLegacy', array( 'base_iri' => 'https://github.com/Jiwoon-Kim/axismundi/ns#', 'reference' => 'https://github.com/Jiwoon-Kim/axismundi' ) );
+	if ( is_wp_error( $result ) ) {
+		throw new LogicException( $result->get_error_message() );
 	}
-	return $context;
+	$when[] = array( 'kind' => 'keyNotNull', 'names' => array( 'usedIn' ), 'path' => '~^$~' );
+	axismundi_op_register_vocabulary_group( array( 'usedIn' => 'https://github.com/Jiwoon-Kim/axismundi/ns#usedIn' ), array(
+		'kind' => 'property', 'provenance' => 'product:axismundi-object-projections', 'namespace' => 'axisLegacy',
+		'source' => 'https://github.com/Jiwoon-Kim/axismundi', 'contributor' => 'axismundi-object-projections', 'priority' => 20,
+		'context' => array( 'usedIn' => array( '@id' => 'https://github.com/Jiwoon-Kim/axismundi/ns#usedIn', '@type' => '@id' ) ), 'when' => $when,
+	) );
 }
+add_action( 'axismundi_op_register_vocabulary', 'axismundi_op_register_media_vocabulary', 20 );
 
 /**
  * Whether this adapter owns a source.
@@ -483,7 +478,6 @@ function axismundi_op_register_media_library_integration() : void {
 			'priority'   => 10,
 		)
 	);
-	add_filter( 'axismundi_op_jsonld_context', 'axismundi_op_media_jsonld_context', 10, 2 );
 	add_filter( 'axismundi_op_post_article', 'axismundi_op_media_enrich_article', 8, 2 );
 	add_filter( 'axismundi_op_attachment_descriptor_visible', 'axismundi_op_media_descriptor_visible', 10, 2 );
 	if ( function_exists( 'axismundi_media_relations_used_in' ) ) {

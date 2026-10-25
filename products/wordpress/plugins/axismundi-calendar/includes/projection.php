@@ -17,16 +17,19 @@
 
 defined( 'ABSPATH' ) || exit;
 
-/** Declare FEP-8a8e only for documents containing its Event properties. */
-function axismundi_cal_event_jsonld_context( array $context, ?array $object = null ) : array {
-	if ( function_exists( 'axismundi_op_document_has_properties' )
-		&& axismundi_op_document_has_properties( $object, array( 'eventStatus', 'joinMode', 'organizers', 'timezone' ) )
-		&& ! in_array( 'https://w3id.org/fep/8a8e', $context, true ) ) {
-		$context[] = 'https://w3id.org/fep/8a8e';
+/** Register the conditional declarations owned by the Event projection. */
+function axismundi_cal_register_event_vocabulary() : void {
+	$terms = array();
+	foreach ( array( 'eventStatus', 'joinMode', 'organizers', 'timezone' ) as $term ) {
+		$terms[ $term ] = 'https://w3id.org/fep/8a8e/' . $term;
 	}
-	return $context;
+	axismundi_op_register_vocabulary_group( $terms, array(
+		'kind' => 'property', 'provenance' => 'fep:8a8e', 'source' => 'https://w3id.org/fep/8a8e',
+		'contributor' => 'axismundi-calendar', 'context' => 'https://w3id.org/fep/8a8e',
+		'when' => array( array( 'kind' => 'key', 'names' => array_keys( $terms ) ) ),
+	) );
 }
-add_filter( 'axismundi_op_jsonld_context', 'axismundi_cal_event_jsonld_context', 10, 2 );
+add_action( 'axismundi_op_register_vocabulary', 'axismundi_cal_register_event_vocabulary' );
 
 /**
  * Whether this source is an Event this plugin projects.

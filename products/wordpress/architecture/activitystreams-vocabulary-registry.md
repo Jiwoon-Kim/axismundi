@@ -815,6 +815,135 @@ terms:
 The exact manifest format is intentionally undecided. Before it becomes an API,
 the architecture graph and documentation can use the same conceptual fields.
 
+## Measured 2026-10-25: What Our Documents Actually Emit Undeclared
+
+The sections above decide the model. This one is the data the model was missing:
+what four live projected documents put on the wire, compared against the
+normative context fetched the same day.
+
+```txt
+Actor        declares nothing.    undeclared: publicKey publicKeyPem owner
+                                  manuallyApprovesFollowers value, type PropertyValue
+post         declares sensitive.  the rest is the expanded-IRI key (deliberate, above)
+attachment   declares license schema usedIn sensitive.   undeclared: size
+ax_event     declares nothing.    undeclared: eventStatus joinMode organizers timezone
+ax_note      not measured -- its permalink 404s. Measure it first; it is the most
+             published type, so a finding there reorders the work.
+```
+
+So this is a per-domain divergence, not one missing call. Media Library already
+registers correctly, Emoji already registers conditionally, and two domains
+register nothing.
+
+Three sources were run down so no IRI has to be guessed:
+
+| Term | IRI | Source |
+| --- | --- | --- |
+| `size` | `https://joinpeertube.org/ns#size` | FEP-1311: "`size` being the file size in bytes is borrowed from PeerTube". Integer bytes, matching our value; `schema:contentSize` carries units in a string and is not it |
+| Event's four | `https://w3id.org/fep/8a8e` as one context IRI | FEP-8a8e publishes it and its own examples place it beside the AS2 context. We emit its property names and omit its document |
+| `publicKey` family | `https://w3id.org/security/v1` as one context IRI | deployed Mastodon pulls the context rather than declaring the three terms inline |
+
+`digestMultibase` belongs to `https://www.w3.org/ns/credentials/v2` by the same
+FEP-1311 example. We do not emit it; the remote binary cache's `content_hash`
+would be the term that reaches for it.
+
+### The schema prefix form is decided, and not by weighing two options
+
+Deployed Mastodon and Misskey both send `http://schema.org#`. Mastodon's own
+specification page calls that base URI incorrect and says it should be
+`https://schema.org/`, and adds that conforming processors will therefore fail
+on its profile fields. So the canonical form is not a cost we accept but a bug
+we decline to copy; it also matches FEP-6757 and the choice Media Library
+already made. Receiving must not reject the legacy form -- which is work only
+once an expander exists, and measurement says none does.
+
+### One of ours mints into a namespace we do not own
+
+`renderer.php:48` maps `sensitive` to `as:sensitive`, and the normative context
+does not define `sensitive`. This is the same defect as Misskey's `as:Hashtag`
+and `as:quoteUrl`. The rule above -- a term's `iri` is the predicate it expands
+to -- already condemns it.
+
+Sweeping every `as:` use puts the real scope at that one line. The rest are
+`as:Public` or internal relation predicates in the media tables (`as:attachment`,
+`as:image`, `as:icon`), which never reach a published context and name terms the
+namespace does define.
+
+Minting `axis:sensitive` is not the fix: it would make our predicate differ from
+every peer's for a property whose purpose is to carry a warning, correcting
+nothing and losing interoperability, and dropping the property loses the warning.
+
+**And the upstream repair already exists**, which changes the whole treatment.
+Mastodon's own specification page says these terms were "proposed but not
+officially adopted yet" and that they "have now been documented by the
+ActivityPub Miscellaneous Terms document". That is a SWICG report (changelog
+2026-08-19, context 1.0.1) which keeps the deployed `as:` IRIs rather than
+renaming them, and publishes a JSON-LD context:
+
+```txt
+https://purl.archive.org/miscellany            unversioned
+https://purl.archive.org/miscellany/1.0.1      version-pinned
+defines   sensitive  manuallyApprovesFollowers  Hashtag  movedTo
+IRIs      https://www.w3.org/ns/activitystreams#<term>  -- unchanged
+```
+
+So the correct fix is pattern ① -- add one context IRI -- not an inline `as:`
+declaration. The wire bytes do not change and the defect closes. The same
+`purl.archive.org` pattern already appears in deployed output: fosstodon's Actor
+carries `https://purl.archive.org/socialweb/webfinger`.
+
+```txt
+decide   pin the version or not. The rule stated earlier in this document --
+         republishing a context changes the meaning of documents already sent --
+         argues for the pinned URL, with updates taken deliberately.
+pin      do not mint new `as:` terms. Citing a context that assigns an IRI is
+         not minting; writing `as:<ourTerm>` with no such document is.
+```
+
+One correction follows from this. The decision not to emit `type: Hashtag` was
+strengthened elsewhere with the argument that the alternative would be minting
+into `as:`. **That argument is now void** -- `Hashtag` is defined by the same
+miscellany context, so emitting it would be citation, not minting. The decision
+still stands on its original grounds, which are ours: the `{id, name}` form with
+a `#` prefix as the discriminator, and the numeric `tag_id` id form.
+
+### A dead namespace IRI is not a wrong one
+
+`http://joinmastodon.org/ns#` is reported dead while
+`https://docs.joinmastodon.org/spec/activitypub/#toot` is live. The `iri` /
+`source` split above is what handles this, and the trap is substituting the
+second for the first: our `toot:discoverable` would then expand to a predicate
+no peer uses. A namespace IRI is an identifier, not a URL to visit.
+
+W3C's own material shows the same split. The context declares
+`"ldp": "http://www.w3.org/ns/ldp#"` while the prose links the LDP vocabulary as
+`https://…`. The predicate our `inbox` expands to is the `http` one, because the
+prefix value decides expansion. If `ldp` is ever registered here, that is its
+`iri` and the https page is its `source`.
+
+That also answers whether to apply the LDP ontology: it already is, by the
+normative context, and `inbox`'s provenance is recorded above as LDP. Emitting
+`ldp:inbox` as a second key would be redundant at the RDF level, and it would
+claim an LDN capability we do not honour -- an LDN inbox accepts any RDF
+notification while ours verifies HTTP signatures and requires AS2 shapes.
+`vcard` is likewise pre-declared in the context, which the JSContact direction
+can use without declaring anything.
+
+### uploadMedia is the inverse case
+
+```txt
+context          defines as:uploadMedia (@type: @id)
+ActivityPub      never mentions it. The endpoints list has six members without it,
+                 and §6.12 is non-normative and puts media upload out of scope
+mechanism        a wiki page last edited 2017-10-24, carrying no status label
+```
+
+A term published in the context with no specification behind it anywhere. With
+the orphans above, the lesson is that context membership and normative status
+are separate questions and both have to be checked. The upload decision itself
+is unchanged and this strengthens it: see
+`activitystreams-open-items.md`, "업로드는 WordPress 코어 API 를 쓴다".
+
 ## Deferred Work
 
 - Define a machine-readable registry format and ownership/loading rules.

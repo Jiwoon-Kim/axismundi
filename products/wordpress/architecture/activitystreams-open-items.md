@@ -1039,6 +1039,14 @@ JMAP blob 기계도 만들지 않는다. 이 측정은 그 결정을 **강화한
 
 ## Orphan Terms: as: Is Not Ours To Mint In, 2026-10-25
 
+> **이 절은 같은 날 더 측정해서 뒤집혔다.** 결론만 먼저 적는다: 이 용어들은 고아가
+> 아니고 **SWICG "ActivityPub Miscellaneous Terms"** 가 문서화하며 context 를 발행한다
+> (`https://purl.archive.org/miscellany/1.0.1`, 할당 IRI 는 `as:` 그대로). 그래서 처방이
+> "유지 + NON-STANDARD 주석" 이 아니라 **context IRI 하나 추가**다. 전문과 정정은
+> `activitystreams-vocabulary-registry.md` 의 2026-10-25 측정 절에 있다.
+> 아래 분석은 그 결론에 이르는 과정이므로 남긴다 -- 특히 `as:` 에 없는 용어를 구별한
+> 측정과 "새 as: 용어를 만들지 않는다" 는 핀은 그대로 유효하다.
+
 Misskey 가 `"Hashtag": "as:Hashtag"` 로 선언하는 것이 오류라는 지적에서 출발해 측정했다.
 맞고, **범위가 미스키보다 넓다 -- 우리도 안에 있다.**
 

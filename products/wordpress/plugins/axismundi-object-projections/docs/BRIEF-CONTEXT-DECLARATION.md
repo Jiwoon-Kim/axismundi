@@ -4,6 +4,38 @@
 의 "Actor Projection Emits Undeclared Extension Terms" 절에 있다. 이 문서는 그것을
 구현 단위로 쪼갠 것이고, **범위가 Actor 보다 넓다는 것이 측정으로 밝혀졌다.**
 
+## 설계는 이미 있다 — 이 브리프는 측정과 작업 순서만 담는다
+
+**선결 독서: `architecture/activitystreams-vocabulary-registry.md`.** 이 브리프의 초판은
+레지스트리 설계를 새로 썼는데, 그 문서가 같은 것을 2026-10-17 에 이미, 더 정확하게
+결정해 두었다. 중복 설계를 지우고 아래만 남긴다.
+
+```txt
+그 문서가 이미 정한 것 (여기서 다시 정하지 않는다)
+  iri(식별자) vs source(참조) 분리
+  provenance 에 de-facto 제3범주 -- publicKey 가 그 예로 기록돼 있다
+  "a term's iri is the predicate it expands to, not as: plus its own name"
+  inbox → ldp:inbox. 그 provenance 는 Linked Data Platform
+  "the owner of a feature registers its terms" (2026-10-17 결정)
+  현 @context 필터가 못 하는 두 가지:
+    충돌 재등록을 병합하지 말고 검출할 것 / 확장이 AS2 코어 용어를 덮지 못할 것
+  "runtime must not scrape the W3C document"
+  transport 허용 목록 3개가 좁다는 지적 -- FEP-de8d 가 Actor 에 기여하지 못한다
+  inbox·outbox MUST 가 audit-actor-projection.php 의 복합 조건으로 부수적으로만 강제됨
+
+이 브리프가 보태는 것 (전부 2026-10-25 측정)
+  문서 타입별 미선언 용어 전수 (Actor / post / attachment / ax_event)
+  우리 renderer 의 as:sensitive 한 줄
+  schema 접두사 형태 결정 (Mastodon 자기 명세가 자기 형태를 incorrect 라고 적음)
+  size 의 출처 = FEP-1311, https://joinpeertube.org/ns#size
+  Event 네 속성의 출처 = FEP-8a8e 가 발행하는 context IRI 하나
+  uploadMedia 의 둘로 갈린 상태 / 같은 도메인 업로드 귀속 위험
+```
+
+그 문서가 모르는 제약 하나도 거기서 읽었다 -- Emoji 플러그인은 **용어를 조건부로**
+선언하고(`axismundi_emoji_document_has_declaration()`), 무조건 선언하는 API 는 그
+플러그인 출력에 **회귀**가 된다. 아래 작업은 그 조건부 성질을 깨지 않는다.
+
 ## 범위 정정 — Actor 만의 문제가 아니다
 
 처음에는 Actor 투영만 재고 "Actors 가 seam 을 안 쓴다" 로 적었다. 네 문서 타입을
@@ -52,18 +84,34 @@ en-US  ko-KR    nameMap·summaryMap 안의 키다. 두 속성은 @container: @la
 
 ③ 절대 IRI 를 키로 쓴다
    post·attachment 의 `http://fedibird.com/ns#emojiReactions` 가 그렇다.
-   JSON-LD 에서 절대 IRI 키는 용어 정의가 필요 없으므로 **이것은 결함이 아니다.**
-   접두사를 만들 가치가 없는 단발 상호운용 속성에 적합하다.
+   **정정:** 처음에 "결함이 아니다" 라고 적었는데, 더 정확한 기록이 이미 있다 --
+   Core §5 는 내보내는 확장 속성마다 `@context` 정의를 제공하라고 하고,
+   `architecture/activitystreams-vocabulary-registry.md` 는 이 키를 **의도적으로
+   포기한 SHOULD** 로 기록한다. 이유도 거기 있다: 전체 키를 유지해 context 용어를
+   compact 하지 않는 피어도 속성을 찾게 하고, `http` 스킴인 것은 JSON-LD 에서 IRI 가
+   곧 속성 이름이라 `https` 와 다른 용어가 되기 때문이다. 더 나은 처리까지 적혀
+   있다 -- 내보내는 키를 그대로 두고 context 에 alias 를 선언하면 둘이 같은 속성으로
+   compact 된다. **고칠 결함이 아니라 개선 후보다.**
 ```
 
 선언 지점은 `axismundi_op_jsonld_context` 필터다. 계약이 `renderer.php:19` 에 적혀
 있다 -- context 는 이 필터로 정하고 **transformer 의 반환값으로 정하지 않는다.**
 Actors 와 Event 의 사용 횟수는 0 이다.
 
-## V1 — context IRI 하나로 끝나는 둘
+## V1 — context IRI 세 줄
 
-가장 큰 효과를 가장 적은 변경으로 얻는 자리다. 둘 다 **우리가 이미 구현하고 있는
-명세가 발행한 context 를 안 싣고 있을 뿐**이다.
+가장 큰 효과를 가장 적은 변경으로 얻는 자리다. 셋 다 **우리가 이미 내보내는 용어를
+정의한 문서가 있는데 그 context 를 안 싣고 있을 뿐**이고, 내보내는 바이트가 바뀌지
+않는다.
+
+```txt
+https://w3id.org/fep/8a8e                     Event 의 네 속성
+https://w3id.org/security/v1                  publicKey publicKeyPem owner
+https://purl.archive.org/miscellany/1.0.1     sensitive manuallyApprovesFollowers
+                                              (Hashtag movedTo 도 정의되지만 우리는 안 쓴다)
+```
+
+남는 인라인 선언은 `PropertyValue`·`value`·`size` 셋뿐이다(V2·V2b).
 
 ### Event — FEP-8a8e 의 context
 
@@ -140,28 +188,38 @@ Actor 문서의 @context 에 security/v1 이 있다.
 "manuallyApprovesFollowers": "as:manuallyApprovesFollowers"
 ```
 
-처음에는 "배포된 Mastodon 이 그렇게 선언한다" 만 근거로 적었는데, 그 IRI 가 가리키는
-정의가 **실제로 없다** -- `as` 는 W3C 네임스페이스이고 그 문서는 이 용어를 정의하지
-않는다. 그래도 이 식별자를 쓴다. 자체 ns 로 바꾸면 모든 피어와 술어가 달라져
-상호운용만 깨지고 어휘는 바로잡히지 않는다.
+**정정 -- 이 절은 V1 으로 옮긴다.** 인라인 선언이 필요 없다. 세 단계로 틀렸다가
+바로잡혔다.
 
 ```txt
-핀   선언 옆에 NON-STANDARD 주석을 단다 -- 역참조되지 않는 공유 식별자를
-     의도적으로 쓴다는 것과 그 이유까지.
-핀   **새 as: 용어를 우리가 만들지는 않는다.** 전문은 open-items 의
-     "Orphan Terms: as: Is Not Ours To Mint In".
+1차   "배포된 Mastodon 이 as:manuallyApprovesFollowers 로 선언한다" 만 근거로 권고
+2차   그 IRI 가 가리키는 정의가 W3C 문서에 **없음**을 측정. 같은 결함이 우리
+      renderer.php:48 의 'sensitive' => 'as:sensitive' 에도 있음
+3차   **집이 이미 있음을 확인.** Mastodon 명세 페이지가 이 용어들을 "proposed but
+      not officially adopted yet" 로 적고 "now been documented by the ActivityPub
+      Miscellaneous Terms document" 를 가리킨다 (SWICG 리포트, context 1.0.1)
 ```
 
-같은 결함이 이미 우리 코드에 한 줄 있다 -- `renderer.php:48` 의
-`'sensitive' => 'as:sensitive'`. 같은 처리를 한다(유지 + 주석). 제거하면 콘텐츠
-경고 기능을 잃는다.
+```txt
+결정   context IRI 하나를 싣는다. 인라인 선언도 NON-STANDARD 주석도 필요 없다.
+       https://purl.archive.org/miscellany/1.0.1
+       → sensitive  manuallyApprovesFollowers  Hashtag  movedTo 가 정의된다
+       IRI 는 as: 그대로다. **내보내는 바이트가 바뀌지 않는다.**
+핀     새 as: 용어를 우리가 만들지는 않는다. IRI 를 할당한 문서를 인용하는 것은
+       주조가 아니고, 그런 문서 없이 as:<우리용어> 를 쓰는 것이 주조다.
+```
+
+그래서 이 둘은 V2 가 아니라 **V1(context IRI 추가)에 속하고**, V1 이 세 줄 작업이
+된다 -- FEP-8a8e, security/v1, miscellany. 버전 고정 여부는 결정 사항이다: 레지스트리
+문서의 규칙("한 번 발행한 context 를 바꾸면 이미 발행된 문서의 의미가 바뀐다")이 고정
+URL 을 지지하고, 갱신은 의도적으로 받는다.
 
 ### 검증
 
 ```txt
 프로필 필드가 있는 Actor 의 @context 가 schema 접두사와 두 용어를 선언한다.
 `https://schema.org/` 형태다. `http://schema.org#` 를 새로 내보내지 않는다.
-manuallyApprovesFollowers 가 as: 로 선언된다.
+manuallyApprovesFollowers·sensitive 는 miscellany context 로 정의된다 (V1 에서).
 변이: schema 를 http://schema.org# 로 바꾸면 형태 검사가 실패해야 한다.
 ```
 
@@ -202,26 +260,34 @@ manuallyApprovesFollowers 가 as: 로 선언된다.
 우리는 아직 내보내지 않지만 원격 미디어 바이너리 캐시에 `content_hash` 가 이미 있으므로,
 그것을 공개 표현에 싣기로 하면 그 context 를 쓴다. **지금 싣지 않는다.**
 
-## V3 — 접두사 선언을 한 곳으로
+## V3 — 접두사 충돌
 
-지금은 `schema` 를 media-library 가 선언한다. Actors 도 선언하게 되면 **같은 접두사를
-두 통합이 각자 선언**하고, 거기서 형태가 갈릴 수 있다 -- 바로 이 브리프가 고치는 종류의
-사고다.
+레지스트리 문서가 이미 요구사항으로 적어 둔 것이다 -- *"Conflicting re-registration is
+detected, not merged. The filter merges, so two plugins registering one IRI with
+different value shapes or cardinalities resolve by last writer and then disagree
+quietly."* 여기서 새로 정할 것은 없고, **측정된 사례만 보탠다.**
 
 ```txt
-핀   여러 도메인이 쓰는 접두사(`schema` 가 현재 유일한 사례)는 OP 가 한 곳에서
-     선언한다. 통합은 자기 용어만 그 위에 올린다.
-핀   한 문서의 @context 안에 같은 접두사가 두 번, 다른 값으로 들어가지 않는다.
-     감사로 고정한다.
+현재   schema 를 media-library 가 선언한다. 선언하는 곳이 하나뿐이라 아직 충돌이 없다.
+다음   Actors 가 PropertyValue 를 선언하면 **같은 접두사를 두 통합이 각자 선언**한다.
+       그 순간이 위 요구사항이 실제로 필요해지는 첫 지점이다.
 ```
+
+그러므로 V2 를 하는 커밋이 이 충돌을 만든다. 등록 API 가 아직 없다면 최소한 **두 선언이
+같은 값인지 검사하는 감사**를 같이 넣는다(V4 에 포함).
 
 Actor 투영과 Media Library 투영은 **둘 다 OP 통합**이다
 (`includes/integrations/actors.php`, `includes/integrations/media-library.php`).
 도메인 플러그인으로 옮기는 작업이 아니라 OP 안에서 선언 지점을 정리하는 작업이다.
+소유 규칙은 레지스트리 문서가 이미 정했다 -- "the owner of a feature registers its
+terms", 그리고 OP 는 등록 지점을 소유하되 내용을 소유하지 않는다.
 
 ## V4 — 감사를 "있다" 에서 "선언됐다" 로
 
-지금 감사가 이 상태를 통과시킨 이유다.
+레지스트리 문서가 이 감사의 현재 약점을 이미 적어 두었다 -- inbox·outbox MUST 가
+"only incidentally, by a composite condition inside `audit-actor-projection.php` whose
+subject is transport-field override" 로만 강제된다는 것. 그 복합 조건이 선언 여부를
+통과시킨 바로 그 줄이다.
 
 ```txt
 audit-actor-projection.php:47
@@ -353,8 +419,15 @@ context 문서 https://w3id.org/<path>/ns 를 발행하고 문서는 그것만 �
        출처(명세·FEP·배포된 선언)를 확인하고 쓴다. 추측한 IRI 는 그 자체로
        또 하나의 비표준이 되고, 한 번 발행하면 되돌리기 어렵다.
 
-금지   절대 IRI 키(emojiReactions)를 접두사로 "정리" 한다
-       이미 적법하다. 건드릴 이유가 없다.
+금지   절대 IRI 키(emojiReactions)를 **내보내는 키를 바꿔서** "정리" 한다
+       그 키는 의도적으로 선택된 것이고 이유가 레지스트리 문서와 코드에 있다
+       (`integrations/reactions.php`). 키를 바꾸면 compact 하지 않는 피어가
+       속성을 잃는다. 개선하려면 키를 그대로 두고 context 에 alias 를 선언한다.
+
+금지   Emoji 플러그인의 조건부 선언을 무조건 선언으로 바꾼다
+       `axismundi_emoji_document_has_declaration()` 이 `tag` 와 중첩 `object` 를
+       훑어 Emoji 가 있을 때만 매핑을 넣는다. 무조건 선언은 그 플러그인 출력의
+       **회귀**다. 이모지를 쓰지 않는 문서의 @context 가 지금과 같아야 한다.
 
 금지   uploadMedia 를 위해 용어를 선언한다
        AS2 규범 context 가 `as:uploadMedia` (`@type: @id`) 로 이미 정의한다

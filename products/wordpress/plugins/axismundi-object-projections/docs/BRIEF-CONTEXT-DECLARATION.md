@@ -193,22 +193,44 @@ audit-actor-projection.php:47
 이 감사가 먼저 서면 V1~V3 의 완료 여부가 자동으로 판정되고, 아직 못 잰 `ax_note` 도
 같은 그물에 걸린다.
 
-## 소유자 결정이 필요한 둘
-
-구현하지 말고 물어볼 것. 둘 다 온톨로지 쪽이다.
-
-### attachment 의 `size`
+## V2b — attachment 의 `size` (출처 확인됨)
 
 렌디션 Link 에 바이트 수를 싣는다(`media-library.php:174,187`). AS2 에 `size` 가
-없다. 후보가 갈린다.
+없어서 후보를 두 개 띄웠는데 **둘 다 틀렸다.** FEP-1311(Media Attachments) 이 이미
+문서화하고 있다.
 
 ```txt
-schema:contentSize   media 문서가 이미 schema 접두사를 선언하므로 추가 비용이 없다.
-                     다만 schema.org 의 정의는 "File size in (mega/kilo)bytes" 로
-                     단위를 문자열에 담는 관행이고, 우리 값은 정수 바이트다.
-자체 ns              정수 바이트라는 우리 의미를 그대로 말한다.
-                     usedIn 이 이미 그 선례다.
+"Finally `size` being the file size in bytes is borrowed from PeerTube."
+"The `size` should tell us if we want to preload the media or not."
 ```
+
+그 FEP 의 예시 context 가 선언 형태까지 보여준다.
+
+```json
+{
+  "@context": [
+    "https://www.w3.org/ns/activitystreams",
+    "https://www.w3.org/ns/credentials/v2",
+    { "size": "https://joinpeertube.org/ns#size" }
+  ]
+}
+```
+
+```txt
+결정   size → https://joinpeertube.org/ns#size 로 인라인 선언한다.
+       정수 바이트라는 의미가 우리 값과 정확히 같다.
+       schema:contentSize 는 쓰지 않는다 -- 단위를 문자열에 담는 관행이라 의미가 다르다.
+       자체 ns 도 쓰지 않는다 -- 주장과 수신자가 모두 저쪽이므로 저쪽 IRI 가 맞다.
+```
+
+이것은 네임스페이스 규칙의 ② 다 -- 남의 기능에 올라타는 것이므로 IRI 까지 빌린다.
+
+덤으로 같은 예시가 `digestMultibase` 의 context 도 알려 준다
+(`https://www.w3.org/ns/credentials/v2`, Verifiable Credential Data Integrity).
+우리는 아직 내보내지 않지만 원격 미디어 바이너리 캐시에 `content_hash` 가 이미 있으므로,
+그것을 공개 표현에 싣기로 하면 그 context 를 쓴다. **지금 싣지 않는다.**
+
+## 소유자 결정이 필요한 하나
 
 ### 자체 ns 의 base IRI
 
@@ -216,10 +238,10 @@ schema:contentSize   media 문서가 이미 schema 접두사를 선언하므로 
 현재   https://github.com/Jiwoon-Kim/axismundi/ns#usedIn
 ```
 
-리포지터리 URL 을 네임스페이스 base 로 쓰고 있다. 앞으로 자체 용어가 늘어나므로
-(`size` 가 그쪽으로 가면 바로 두 번째, 나중에 `discoverable`·`indexable` 도 후보)
-**지금 형태를 확정하는 것이 싸다.** 리포지터리가 옮겨지거나 이름이 바뀌면 발행된
-IRI 가 끊긴다. `w3id.org` 등록이나 프로젝트 도메인이 관례적인 안정 선택이다.
+리포지터리 URL 을 네임스페이스 base 로 쓰고 있다. `size` 가 저쪽 ns 로 갔으니 현재
+자체 용어는 `usedIn` 하나뿐이지만 `discoverable`·`indexable` 이 후보로 남아 있다.
+리포지터리가 옮겨지거나 이름이 바뀌면 발행된 IRI 가 끊기므로 **용어가 하나일 때
+확정하는 것이 가장 싸다.** `w3id.org` 등록이나 프로젝트 도메인이 관례적인 안정 선택이다.
 
 ## 하지 말 것
 
@@ -230,6 +252,14 @@ IRI 가 끊긴다. `w3id.org` 등록이나 프로젝트 도메인이 관례적�
 
 금지   절대 IRI 키(emojiReactions)를 접두사로 "정리" 한다
        이미 적법하다. 건드릴 이유가 없다.
+
+금지   uploadMedia 를 위해 용어를 선언한다
+       AS2 규범 context 가 `as:uploadMedia` (`@type: @id`) 로 이미 정의한다
+       (`oauthAuthorizationEndpoint`·`proxyUrl`·`streams` 와 함께).
+       **다만 용어가 선언 가능한 것과 기능이 명세된 것은 다르다** -- 업로드
+       메커니즘은 상태 라벨도 없는 2017 년 wiki 페이지에만 있고, 우리는 업로드를
+       WordPress 코어 API 로 하기로 이미 정했다 (open-items
+       "업로드는 WordPress 코어 API 를 쓴다"). 이 브리프는 선언만 다룬다.
 
 금지   JSON-LD expander 를 도입해 수신 호환을 만든다
        측정 결과 우리 코드에 expander 가 하나도 없고 원격 문서를 키로 읽는다.

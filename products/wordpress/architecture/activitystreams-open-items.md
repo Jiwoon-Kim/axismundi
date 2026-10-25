@@ -953,6 +953,90 @@ authorized fetch 를 지금 구현할 이유가 없다는 판단은 유지된다
 분기 체계를 레지스트리로 바꾸는 것은 같은 기계의 리팩터이지 별개 작업이 아니다. 지금
 필요한 것은 Actors 가 그 seam 을 쓰기 시작하는 것이고, 레지스트리화는 그 다음이다.
 
+## Same-Origin Upload Hazard, 2026-10-25
+
+`uploadMedia` 를 공유 미디어 컬렉션에서 쓸지 보는 중에, AP Primer 의 Uploaded JSON
+objects 페이지가 **엔드포인트 사용법이 아니라 보안 위험** 문서라는 것을 확인했다.
+요지는 업로드가 **귀속 위조 경로**가 된다는 것이다.
+
+```txt
+위험   AP 에는 attributedTo·actor 에 적힌 Actor 가 정말 그 객체를 만들었는지
+       간단히 검증할 방법이 없다. outbox 를 통한 검증은 원격 서버에게
+       "a difficult process" 다.
+깨지는 가정  그래서 흔히 쓰는 same-origin 휴리스틱이 있는데, **AP 객체와 같은
+       도메인에서 JSON·JSON-LD 업로드를 허용하면 그 휴리스틱이 무력화된다.**
+완화   업로드를 별 도메인에 두거나, JSON·JSON-LD 업로드를 금지하거나,
+       평문 업로드를 text/plain 으로 서비스한다.
+       수신 쪽은 activity/JSON content type 으로 서비스되는지 확인해야 한다.
+```
+
+### 우리 현재 상태 (측정)
+
+```txt
+업로드 호스트 == Actor 문서 호스트          YES
+  uploads base  http://localhost:8884/wp-content/uploads
+  actor 문서    http://localhost:8884/actors/{uuid}
+→ 전제 조건이 성립한다. 남은 것은 JSON 업로드 가능 여부뿐이다.
+
+허용 mime 97 종, 그중 json 계열 0
+ALLOW_UNFILTERED_UPLOADS  미설정
+upload_filetypes 옵션     비어 있음
+```
+
+**지금은 위험이 성립하지 않는다.** WordPress 기본 허용 목록에 json 이 없기 때문이고,
+우리가 설계해서 막은 것이 아니다.
+
+### 그런데 우리는 이미 그 목록을 늘리고 있다
+
+```txt
+geodata/includes/track.php:32     upload_mimes 에 gpx, kml 추가   (XML)
+geodata/includes/map-pack.php:30  upload_mimes 에 pmtiles 추가    (바이너리)
+```
+
+둘 다 JSON 이 아니라 무해하다. 문제는 **지도 플러그인이 다음에 추가할 가장 자연스러운
+형식이 GeoJSON** 이라는 것이다. `application/geo+json` 은 JSON 미디어 타입이므로,
+Primer 가 말하는 "activity/JSON content type 확인" 완화책을 느슨하게 구현한 수신자에게는
+걸린다.
+
+```txt
+핀   upload_mimes 에 `application/json` 또는 `+json` 으로 끝나는 타입을 추가하지 않는다.
+     geo 데이터가 GeoJSON 입력을 받아야 하면 업로드 파일이 아니라
+     포스트 메타·전용 테이블에 저장한다. 파일로 둬야 하면 AP 객체와 다른 호스트
+     또는 AS2 로 오인되지 않는 경로·타입으로 서비스한다.
+핀   이 제약의 이유를 주석에 적는다. "json 업로드 금지" 만 적으면 다음 사람이
+     파일 타입 위생 문제로 읽고 예외를 만든다. 이유는 **귀속 위조**다.
+```
+
+### uploadMedia 는 선언 가능하지만 명세된 기능이 아니다
+
+두 가지를 구별해서 측정했다.
+
+```txt
+용어        AS2 규범 context 가 as:uploadMedia (@type: @id) 로 정의한다.
+            내보내기로 하면 확장 선언이 필요 없다.
+메커니즘    w3.org/wiki/SocialCG/ActivityPub/MediaUpload 가 전부다.
+            "last edited on 24 October 2017". 상태 라벨이 없다 --
+            Recommendation 도, FEP 도, 라벨 붙은 draft 도 아니다.
+            multipart/form-data 로 file + object 파트를 POST 하고
+            201/202 와 Location 헤더를 받는 형태.
+```
+
+그러므로 "context 에 있다" 를 "쓸 수 있는 기능이 있다" 로 읽으면 안 된다. 그리고 이미
+내린 결정이 그 자리를 채우고 있다 -- 위 **업로드는 WordPress 코어 API 를 쓴다** 절이고,
+JMAP blob 기계도 만들지 않는다. 이 측정은 그 결정을 **강화한다**: AP 쪽 대안이 9 년 묵은
+무상태 wiki 페이지뿐이므로 비교 대상이 아니다.
+
+### 공유 미디어 컬렉션에 걸리는 지점
+
+걸리는 것은 표현이 아니라 **업로드가 만드는 객체의 귀속**이다. 공유 폴더는 여러 User 가
+한 Account 에 올리는 구조이므로 "누가 올렸는가" 와 "누구에게 귀속되는가" 가 갈리고,
+그것이 Primer 가 검증하기 어렵다고 말하는 바로 그 축이다. 이미 기록해 둔 결정 둘이
+여기서 쓰인다 -- 첨부는 익명 값이고 부모가 귀속을 운반한다는 것, 그리고 독립 미디어
+객체의 할당은 명시적 행위라는 것. **업로드 시점에 자동 귀속을 만들지 않는 설계가
+이 위험을 줄인다.**
+
+지금 할 일은 없다. `uploadMedia` 를 구현하기로 할 때 이 절을 선결 조건으로 읽는다.
+
 ## Sources
 
 - ActivityPub, W3C Recommendation 2018-01-23, sections 3.1, 3.2, 5.1, 5.2, Appendix B.1.

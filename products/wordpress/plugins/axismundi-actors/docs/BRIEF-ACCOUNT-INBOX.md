@@ -745,10 +745,34 @@ WP.com REST / XML-RPC 로 갈린다는 것까지만 확인됐고 이번 측정�
 ```
 
 ```txt
-핀   WP REST 와 AP C2S 가 JMAP 을 경유하지 않는다. 같은 관계를 읽을 뿐이다.
-     JMAP 이 목록의 정규 표면이라는 것과, 다른 표면이 그것을 호출해야 한다는 것은
-     다른 주장이다. 후자를 택하면 JMAP 이 인가 경로가 되어 비활성화할 수 없게 된다.
+핀   클라이언트는 Session 으로 Account 목록을 읽는다.
+     AS2 클라이언트가 "내가 무엇으로 활동할 수 있는가" 를 묻는 정규 표면이 그것이고,
+     앱에 JMAP 의존이 생기는 것은 의도된 설계다.
+핀   서버는 인가를 JMAP 에 위임하지 않는다.
+     WP REST 요청이나 AP C2S POST 가 들어왔을 때 JMAP 을 내부 호출하는 것이 아니라
+     같은 principal 관계를 직접 읽는다. 위임하면 JMAP 이 인가 경로가 되어
+     비활성화할 수 없게 된다.
 ```
+
+초판에 이 둘을 한 문장으로 적어 "클라이언트도 JMAP 을 쓰지 말라" 로 읽혔다. 그것은
+틀렸고, 둘은 다른 주장이다.
+
+그리고 **이 모양은 이미 구현돼 있다** (2026-10-25 측정).
+
+```txt
+SessionProjector::accounts( $user_id )  → { accounts, primaryAccounts }
+  계정별 isPersonal / isReadOnly / accountCapabilities
+  해소는 axismundi_actors_resolve_workspace() -- 다른 표면과 같은 principal 검사
+audit-session.php  47 검사 통과
+session.php:23  $user_id !== get_current_user_id() 면 거부
+  "Callers cannot use a request parameter to inspect another User's Session"
+accounts() 주석  "No acting-Actor dependency, implicit grants, or first-Account default"
+```
+
+마지막 줄이 S10 의 남은 일을 좁힌다. **Session 은 암묵 폴백도 첫-Account 기본값도 이미
+하지 않는다.** 그러므로 S10 은 Session 을 만드는 작업이 아니라, 쿠키가 닿지 않는
+표면들(Application Passwords · XML-RPC · 블록 에디터)이 같은 규율을 따르게 하는
+작업이다.
 
 Contacts 가 Actor 와 연결되려면 JMAP 이 있어야 한다는 것도 같은 이유다 -- 그쪽이
 필요한 것은 Session 의 Account 목록이고, 권한 자체가 아니다.

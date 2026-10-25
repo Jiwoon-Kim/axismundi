@@ -68,6 +68,13 @@ $expected = array_replace( $expected, array(
 	'image' => '83aa29c9b12e5c10d9e7ab2811665aa28d2fb6a98320521d038386a5f4715215',
 	'audio' => '1066f0ed9e7ac8a00f5e924bc736bd529b040e733c8ac317dba0e74180f1f0a9',
 ) );
+// V2's approved declaration change adds the PeerTube size map only to documents
+// containing a rendition Link with byte size. In these live fixtures only the
+// standalone Image changes. Removing just the size registration restored 9/9
+// against the previous hashes before this rebaseline; all other bytes stay pinned.
+$expected = array_replace( $expected, array(
+	'image' => 'd91c756478af58be2b56062d47424405de3761c32a8fb6b2ac8da69f8010cfc4',
+) );
 if ( '2026-10-20 11:59:06' !== $post->post_modified_gmt ) {
 	printf( "Fixture source changed: Article modified_gmt=%s; expected 2026-10-20 11:59:06. Inspect source data before rebaselining.\n", $post->post_modified_gmt );
 }

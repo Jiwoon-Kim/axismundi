@@ -38,6 +38,19 @@ function axismundi_op_register_media_vocabulary() : void {
 	if ( ! axismundi_op_media_library_available() ) {
 		return;
 	}
+	$result = axismundi_op_register_namespace( 'peertube', array( 'base_iri' => 'https://joinpeertube.org/ns#', 'reference' => 'https://docs.joinpeertube.org/api/activitypub' ) );
+	if ( is_wp_error( $result ) ) {
+		throw new LogicException( $result->get_error_message() );
+	}
+	axismundi_op_register_vocabulary_group( array( 'size' => 'https://joinpeertube.org/ns#size' ), array(
+		'kind' => 'property', 'provenance' => 'fep:1311', 'source' => 'https://codeberg.org/fediverse/fep/src/branch/main/fep/1311/fep-1311.md',
+		'contributor' => 'axismundi-object-projections', 'priority' => 20,
+		'context' => array( 'peertube' => 'https://joinpeertube.org/ns#', 'size' => 'peertube:size' ),
+		'when' => array(
+			array( 'kind' => 'type', 'names' => array( 'Link' ), 'path' => '~(^|/)(url|attachment)(/[0-9]+)?$~' ),
+			array( 'kind' => 'key', 'names' => array( 'size' ), 'path' => '~(^|/)(url|attachment)(/[0-9]+)?$~' ),
+		),
+	) );
 	$when = array( array( 'kind' => 'scalarType', 'names' => array( 'Image', 'Video', 'Audio', 'Document' ), 'path' => '~^$~' ) );
 	axismundi_op_register_vocabulary_group( array( 'license' => 'https://schema.org/license' ), array(
 		'kind' => 'property', 'provenance' => 'vendor:schema', 'source' => 'https://schema.org/license',

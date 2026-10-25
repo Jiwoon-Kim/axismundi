@@ -3,6 +3,41 @@
 2026-10-25. 선행 완료: V1(10deeac), 어휘 레지스트리(5fbba33). 설계는 레지스트리가
 들고 있으므로 **이 문서는 등록할 세 용어와 검증만** 담는다.
 
+## 구현 기록 (2026-10-25)
+
+구현 완료, 리뷰 대기. Actors가 PropertyValue/value를 `actor-profile-fields` 인라인
+그룹에 등록하고, OP media 통합이 peertube namespace와 size를 등록한다.
+schema namespace는 재등록하지 않는다. value는 PropertyValue 타입과 함께 있을 때만,
+size는 url/attachment 아래 rendition Link와 함께 있을 때만 선언한다.
+
+### 보장한 것
+
+- `audit-inline-terms.php` 26개 통과. 로컬 Actor/post/attachment/Event/followers/outbox
+  투영에서 V2 용어 셋만 제외한 레지스트리를 비교 기준으로 사용했다. Actor와
+  attachment context만 바뀌고 나머지 네 클래스는 바이트 동일하다.
+- 로컬 Actor 투영의 실제 키·타입을 AS2 JSON-LD 문서, Security/Miscellany context,
+  인라인 매핑과 대조해 미선언 0개 확인. 언어맵의 언어 태그는 용어로 세지 않았다.
+  대소문자를 구분해 대조했다. 런타임 fetch 기능을 추가한 것은 아니다.
+- 지정 감사 6개 통과: vocabulary-context-registry 43, context-iris 38,
+  object-assembly-baseline 9, post-article 23, actor-projection 12,
+  object-renderer 54. 원본 로그: 로컬 `%TEMP%/axismundi-v2-audits.log`.
+- 변이 네 개 검출 후 복원: peertube 등록 누락, schema legacy base 사용은 등록 실패;
+  value 그룹 분리는 단일 인라인 맵 비교 실패; size를 root-only로 제한하면 중첩 검사 실패.
+- PHP lint 및 `git diff --check` 통과.
+
+### baseline 격리 결과
+
+브리프 예상과 달리 현재 live fixture에서 변경된 것은 **standalone Image 한 개**다.
+Article/Audio/embedded/view 해시는 모두 그대로다. size 등록만 제외하면 이전 fixture로
+9/9 복귀함을 먼저 확인한 뒤 Image 해시 하나만 갱신했다. 소스 콘텐츠는 변경하지 않았다.
+
+### 확인하지 않은 것
+
+전수 감사, 스테이징 업로드/HTTP 측정, 원격 JSON-LD expansion은 하지 않았다.
+미선언 0은 로컬 Actor 표본의 용어 이름 대조 결과이지 모든 Actor 문서에 대한 일반형
+검증은 아니다(V4). 기존 실패 네 건은 재실행하거나 수정하지 않았다. 패키징·커밋·push도
+이 구현 단계에는 포함하지 않았다.
+
 ## 범위
 
 ```txt
@@ -110,3 +145,52 @@ w3id.org 등록 / usedIn 전환               별개 작업.
 ## 보고 형식
 
 "몇 개 통과" 가 아니라 **보장한 것 / 확인하지 않은 것**으로 나눠 적는다.
+
+## 리뷰 결과 (2026-10-25)
+
+통과.
+
+### 보장한 것
+
+```txt
+@context 바이트 비교   V1+레지스트리 상태 대비 6 개 문서 클래스.
+                       **actor 와 attachment 만** 변했고 post·event·followers·outbox 는 동일.
+                       actor      + {PropertyValue, schema, value}  -- 한 그룹
+                       attachment + {peertube, size}
+                       schema 는 정규형 https://schema.org/
+Actor 미선언 0         참조 context 를 해소하는 검사로 재측정 → 키 0, 타입 0.
+                       V1+V2 가 Actor 문서를 닫았다.
+schema 레거시 거부     axismundi_op_register_namespace('schema', 'http://schema.org#')
+                       → REFUSED (ax_op_namespace_duplicate), 등록값은 정규형 유지
+size 경로 제한         url·attachment 아래 Link 에서만 선언.
+                       top-level size, tag 아래 Link 는 선언하지 않는다.
+변이                   peertube 네임스페이스 미등록 → LogicException
+                         ("inline mapping must agree with the registered namespace")
+                       value 를 PropertyValue 와 다른 그룹으로 분리
+                         → FAIL: Profile field aliases produce one exact schema map
+감사                   audit-inline-terms 26 / audit-vocabulary-context-registry 43 /
+                       audit-object-assembly-baseline 9, 전부 0 실패
+```
+
+구현이 브리프보다 엄격한 지점이 하나 있다. `size` 의 조건이 합집합이 아니라 **연접**이고
+경로까지 제한한다 -- `Link` 타입과 `size` 키가 **둘 다** `url`/`attachment` 아래 있을 때만
+선언한다.
+
+### 브리프의 틀린 예측 하나
+
+"바이트 baseline 의 article·image·audio 해시가 바뀐다" 고 적었는데 **image 하나만**
+바뀐다. V1 에서 `sensitive` 가 셋 다 건드린 패턴을 그대로 가져온 추측이었고, 측정하지
+않았다. 실제로는 렌디션 Link 에 바이트 크기가 있는 fixture 가 standalone Image 뿐이다.
+구현 쪽이 격리를 먼저 하고(size 등록만 떼면 이전 해시로 9/9 복귀) image 만 재승인했다.
+
+### 확인하지 않은 것
+
+```txt
+전수 145 감사      돌리지 않았다. 배포 전 1 회.
+원격 expansion     V4.
+스테이징·패키징     아직. 배포는 S3a/S3b/S4 + V1 + 레지스트리 + V2 를 한 번에.
+path 변이          경로 제한을 풀어도 현재 문서에서 관측되지 않는다.
+                   **관측 불가능한 변이이지 핀 누락이 아니다** -- 제한 자체는 위에서 측정했다.
+emojiReactions     절대 IRI 키라 어떤 context 에도 없는 것이 정상이다.
+                   미선언 검사는 절대 IRI 키를 제외해야 한다 (V4 감사 규칙).
+```

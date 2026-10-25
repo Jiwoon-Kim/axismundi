@@ -31,6 +31,18 @@ function axismundi_actors_register_vocabulary() : void {
 		'contributor' => 'axismundi-actors', 'context' => 'https://w3id.org/security/v1',
 		'when' => array( array( 'kind' => 'key', 'names' => array( 'publicKey' ) ) ),
 	) );
+	$profile_when = array( array( 'kind' => 'type', 'names' => array( 'PropertyValue' ) ) );
+	axismundi_op_register_vocabulary_group( array( 'PropertyValue' => 'https://schema.org/PropertyValue' ), array(
+		'kind' => 'type', 'provenance' => 'vendor:schema', 'source' => 'https://schema.org/PropertyValue',
+		'contributor' => 'axismundi-actors', 'group' => 'actor-profile-fields',
+		'context' => array( 'schema' => 'https://schema.org/', 'PropertyValue' => 'schema:PropertyValue' ), 'when' => $profile_when,
+	) );
+	$profile_when[] = array( 'kind' => 'key', 'names' => array( 'value' ) );
+	axismundi_op_register_vocabulary_group( array( 'value' => 'https://schema.org/value' ), array(
+		'kind' => 'property', 'provenance' => 'vendor:schema', 'source' => 'https://schema.org/value',
+		'contributor' => 'axismundi-actors', 'group' => 'actor-profile-fields',
+		'context' => array( 'value' => 'schema:value' ), 'when' => $profile_when,
+	) );
 }
 add_action( 'axismundi_op_register_vocabulary', 'axismundi_actors_register_vocabulary' );
 

@@ -53,3 +53,6 @@ products/styleguide/assets/css/tokens.sys.state.css
 products/styleguide/assets/css/icons.css
 products/styleguide/assets/css/components/dialog.css
 products/styleguide/_data/color.yml
+
+# Staging upload packages (built by tools/builders/package_staging.ps1)
+_dist/

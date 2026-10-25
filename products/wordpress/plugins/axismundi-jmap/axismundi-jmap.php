@@ -23,5 +23,6 @@ require_once __DIR__ . '/includes/engine/engine.php';
 require_once __DIR__ . '/modules/rfc8620/core.php';
 require_once __DIR__ . '/includes/integrations/wordpress/accounts.php';
 require_once __DIR__ . '/modules/rfc8620/session.php';
+require_once __DIR__ . '/includes/integrations/wordpress/account-selection.php';
 
-// Deliberately no discovery, HTTP endpoints, schema changes, or public capability advertisement.
+// No public JMAP discovery/API/blob/SSE routes or capability advertisement.

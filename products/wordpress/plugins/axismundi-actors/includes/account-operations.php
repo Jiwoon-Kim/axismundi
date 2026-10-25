@@ -51,7 +51,7 @@ function axismundi_actors_create_account( array $args ) {
 	) );
 }
 
-/** Store one selection in the existing acting-Actor preference, never in a second active-account key. */
+/** Use session selection during rollout; retain the old preference only while disabled. */
 function axismundi_actors_set_workspace( int $user_id, int $identity_id ) {
 	if ( $user_id <= 0 || $user_id !== get_current_user_id() || ! get_userdata( $user_id ) ) {
 		return new WP_Error( 'ax_actors_workspace_user', __( 'You may change only your own workspace.', 'axismundi-actors' ) );
@@ -59,6 +59,23 @@ function axismundi_actors_set_workspace( int $user_id, int $identity_id ) {
 	$actor = $identity_id > 0 ? axismundi_actors_resolve_workspace( $identity_id, $user_id ) : null;
 	if ( $identity_id < 0 || ( $identity_id > 0 && ! $actor instanceof Axismundi_Actor ) ) {
 		return new WP_Error( 'ax_actors_workspace_forbidden', __( 'That workspace is unavailable.', 'axismundi-actors' ) );
+	}
+	if ( axismundi_actors_account_selection_enabled() ) {
+		$session = axismundi_actors_browser_session( $user_id );
+		if ( is_wp_error( $session ) ) {
+			return $session;
+		}
+		$result = 0 === $identity_id
+			? axismundi_actors_clear_account_selection()
+			: axismundi_actors_set_account_selection( $identity_id );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		if ( ! $result ) {
+			return new WP_Error( 'ax_actors_workspace_save', __( 'The workspace cookie could not be saved.', 'axismundi-actors' ) );
+		}
+		do_action( 'axismundi_actors_workspace_changed', $actor, $user_id );
+		return true;
 	}
 	if ( 0 === $identity_id ) {
 		delete_user_meta( $user_id, AXISMUNDI_ACTORS_ACTING_META );
@@ -113,9 +130,8 @@ function axismundi_actors_default_account( int $user_id, string $purpose ) : ?Ax
 	return axismundi_actors_resolve_workspace( (int) get_user_meta( $user_id, $key, true ), $user_id );
 }
 
-/** Selected workspace, explicit workspace default, then the legacy personal identity; no first-row fallback. */
-function axismundi_actors_current_workspace( ?int $user_id = null ) : ?Axismundi_Actor {
-	$user_id = $user_id ?? get_current_user_id();
+/** Disabled-rollout compatibility only; never used after session selection fails. */
+function axismundi_actors_legacy_current_workspace( int $user_id ) : ?Axismundi_Actor {
 	if ( $user_id <= 0 ) {
 		return null;
 	}
@@ -129,6 +145,24 @@ function axismundi_actors_current_workspace( ?int $user_id = null ) : ?Axismundi
 	}
 	$legacy = axismundi_actors_get_for_user( $user_id );
 	return $legacy instanceof Axismundi_Actor && axismundi_actors_can_access_workspace( $legacy, $user_id ) ? $legacy : null;
+}
+
+/** Preserve missing, invalid and revoked selection errors for workspace consumers. */
+function axismundi_actors_current_workspace_result( ?int $user_id = null ) {
+	$user_id = $user_id ?? get_current_user_id();
+	if ( axismundi_actors_account_selection_enabled() ) {
+		return axismundi_actors_resolve_account_selection( $user_id, null, '', false, true );
+	}
+	$actor = axismundi_actors_legacy_current_workspace( $user_id );
+	return $actor instanceof Axismundi_Actor
+		? array( 'actor' => $actor, 'source' => 'legacy' )
+		: new WP_Error( 'ax_selection_missing', __( 'No accessible account is selected.', 'axismundi-actors' ) );
+}
+
+/** Typed compatibility surface; an invalid selection never triggers another lookup. */
+function axismundi_actors_current_workspace( ?int $user_id = null ) : ?Axismundi_Actor {
+	$result = axismundi_actors_current_workspace_result( $user_id );
+	return is_wp_error( $result ) ? null : $result['actor'];
 }
 
 /** Explicit publication bridge for new callers; never silently publish as another workspace. */

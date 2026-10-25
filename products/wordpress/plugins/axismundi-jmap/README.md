@@ -18,6 +18,14 @@ Account 접근 판정은 Actors의 프로토콜 중립 작업 공간 API에 위�
 Session·Account의 in-process 투영과 명시적 capability provider 등록을 추가했다.
 실제 데이터 provider는 아직 없으며 전체 Session 조립은 URL·Core 제한값을 명시적으로 요구한다.
 HTTP 라우트·Session 발견·업로드·Push·Contacts 메서드는 아직 노출하지 않는다.
+단, S10-B 검토용 WordPress Account 선택 화면과 nonce POST 어댑터를 추가했다.
+`axismundi_actors_account_selection_enabled` 필터가 명시적으로 true일 때만 사용할 수
+있으며 기본은 비활성이다. 이것은 표준 JMAP HTTP 메서드가 아니고, 기존 Session의
+in-process Account 투영과 Actors의 로그인 세션 쿠키를 사용한다. 생산 쓰기 소비자
+이관 및 Opus 검증 전에는 전환 기능을 출시하거나 기본 활성화하지 않는다.
+S10-C1은 같은 gate로 Contacts 데이터 workspace를 세션 선택에 연결한다. JMAP의
+브라우저 어댑터가 없으면 gate는 켜지지 않는다. 미선택·잘못된 쿠키·권한 철회에는
+기존 선택이나 기본 Account로 돌아가지 않는다. 발행 경로 이관은 아직 남아 있다.
 새 테이블이나 의존 라이브러리는 없고, 기존 Contacts·Actors 저장 구조도 변경하지 않는다.
 
 목표 의존 방향은 `Contacts -> JMAP -> Actors`다. 현재 Contacts의 직접 Actors 참조를

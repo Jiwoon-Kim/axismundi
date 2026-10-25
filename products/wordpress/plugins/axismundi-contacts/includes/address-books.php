@@ -54,8 +54,20 @@ function axismundi_contacts_can_write_account( int $account_id, int $user_id ) :
 }
 
 /** Data workspace selection does not require an activated ActivityPub publishing identity. */
+function axismundi_contacts_current_account_selection() {
+	if ( function_exists( 'axismundi_actors_current_workspace_result' ) ) {
+		return axismundi_actors_current_workspace_result();
+	}
+	$actor = function_exists( 'axismundi_actors_current_workspace' ) ? axismundi_actors_current_workspace() : null;
+	return $actor instanceof Axismundi_Actor
+		? array( 'actor' => $actor, 'source' => 'legacy' )
+		: new WP_Error( 'ax_selection_missing', __( 'No accessible account is selected.', 'axismundi-contacts' ) );
+}
+
+/** Typed callers fail closed; screens can retain the selection error above. */
 function axismundi_contacts_current_account() : ?Axismundi_Actor {
-	return function_exists( 'axismundi_actors_current_workspace' ) ? axismundi_actors_current_workspace() : null;
+	$result = axismundi_contacts_current_account_selection();
+	return is_wp_error( $result ) ? null : $result['actor'];
 }
 
 /**

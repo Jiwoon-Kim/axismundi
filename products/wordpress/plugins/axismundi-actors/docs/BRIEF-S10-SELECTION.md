@@ -248,3 +248,81 @@ workspace 읽기를 새 해소기에 연결하고, Activities 발행 어댑터�
   감사와 브라우저 확인 결과를 이 문서에 추가한다. 전체 감사는 반복하지 않는다.
 - AddressBook 단계는 실제 JSON 요청/응답·데이터 권한·지원 capability를 검증하는
   축이다. B의 PHP 투영 및 쿠키 검증을 그 단계의 완료 증거로 재사용하지 않는다.
+
+## S10-B 구현 및 Opus 검증 인계
+
+2026-10-25. 소유자 요청에 따라 구현과 기본 문법 확인만 수행하고, 런타임 검증은
+Opus에게 맡긴다. 아래 항목은 **통과 보고가 아니다.**
+
+### 구현한 것
+
+- JMAP `includes/integrations/wordpress/account-selection.php`에 새 관리 화면,
+  Account 투영 뷰, 선택/해제 명령, POST 어댑터를 추가했다. 목록과 accountId 해소는
+  기존 JMAP SessionProjector/Account 어댑터를 사용하며 별도 목록 API는 없다.
+- review gate `axismundi_actors_account_selection_enabled`의 기본값은 false다.
+  켜면 기존 admin-bar 전환 메뉴와 옛 전환 POST를 해제하고 새 Accounts 메뉴를
+  노출한다. B만으로 생산 쓰기 귀속까지 바뀌는 것이 아니므로 기본 활성화하지 않는다.
+- 새 POST는 현재 User/브라우저 세션·nonce·동작 종류·현재 Account 접근을 검사한다.
+  body의 user_id와 redirect는 사용하지 않는다. 성공 시 고정된 선택 화면으로 303을
+  반환한다. GET과 배열 인자는 거부한다. 선택 변경으로 기본 선호를 쓰지 않는다.
+- handle 없는/read-only Account도 데이터 작업 공간으로 선택할 수 있다. 발행 가능성은
+  C의 쓰기 경로에서 따로 검사한다. stale 선택은 경고와 미선택 상태로 표시하며
+  기본 Person을 선택한 것으로 표시하지 않는다.
+- Actors의 clear 함수가 쿠키 전송 성공 여부를 bool로 반환하도록 바꿨다. logout/login
+  훅은 반환값을 소비하지 않는다. 웹 어댑터는 전송 실패를 성공 리다이렉트로 숨기지 않는다.
+
+### Opus 실행 목록
+
+1. `wp eval-file wp-content/plugins/axismundi-jmap/tests/audit-account-selection.php`
+   신규 어댑터 감사. opt-in, 목록/선택/해제, nonce, foreign/malformed accountId,
+   role 철회, 메타 비변경, 레거시 메뉴/POST 해제, GET/배열 인자 거부를 검사하도록 작성했다.
+   이 감사 자체도 아직 실행하지 않았으므로 검토 대상이다.
+2. `wp eval-file wp-content/plugins/axismundi-actors/tests/audit-account-selection.php`
+   S10-A 회귀. clear 반환형 변경이 기존 쿠키/세션 계약을 깨지 않는지 확인한다.
+3. `wp eval-file wp-content/plugins/axismundi-jmap/tests/audit-session.php`
+   Account 투영·명시적 기본값·capability 및 철회 회귀만 확인한다. 전수는 돌리지 않는다.
+4. 임시 개발 설정에서 review gate를 켠 뒤 실제 로그인→A 선택→새로고침→B 선택→
+   선택 해제→로그아웃→다른 User 로그인 흐름을 검사한다. Set-Cookie의 경로, HTTPS
+   Secure, HttpOnly, SameSite, 만료와 303 Location이 실제 응답에서도 맞는지 본다.
+   설정은 검증 후 복구한다. 스테이징 활성화나 배포는 별도 승인 없이 하지 않는다.
+5. nonce 검사 제거와 accountId 인가 우회를 변이로 확인한다. 다중 탭 쓰기 귀속과
+   레거시 선택기 물리 제거는 C에서 소비자와 함께 검증한다.
+
+생산 변경은 문법 검사 및 diff 공백 검사만 확인했다. 브라우저/스크린샷, 위 감사,
+변이, 전체 감사, 패키징은 실행하지 않았다. C 소비자 이관과 JMAP HTTP 공개는 아직 남았다.
+
+## S10-C1 구현 기록 — 데이터 workspace
+
+소유자 지시에 따라 B 리뷰를 기다리지 않고 데이터 소비자 이관을 진행했다.
+런타임 검증은 Opus에 맡기며 이 기록은 통과 보고가 아니다.
+
+- UI와 데이터 소비자는 Actors의 `axismundi_actors_account_selection_enabled` gate를
+  공유한다. 기본 false이며 JMAP 브라우저 어댑터의 available 신호도 필요하다.
+  이는 JMAP HTTP Session/API 구현 완료를 뜻하지 않는다.
+- `current_workspace_result()`는 선택 오류를 보존한다. gate가 켜지면 UI와 똑같이
+  세션 쿠키만 읽고, workspace 기본값·옛 선택 meta·기본 Person으로 보충하지 않는다.
+  typed `current_workspace()`는 오류를 null로 반환할 뿐 재해소하지 않는다.
+- `set_workspace()`도 같은 gate에서 로그인 세션 쿠키를 변경한다. 해제도 실제
+  브라우저 세션을 요구하며 레거시 meta나 목적별 기본값을 쓰지 않는다.
+- Contacts는 rich 결과의 오류를 화면에 전달한다. 미선택·잘못된 쿠키·권한 철회로
+  실패하면 기본 AddressBook 생성 전에 반환한다. 기존 읽기/쓰기 역할 정책과
+  제출된 Card/label 소유 Account 검사는 변경하지 않았다.
+- gate가 꺼져 있으면 기존 workspace 해소를 유지한다. 이것은 검토용 rollout 경계다.
+  레거시 전환 폐기 목표를 철회한 것이 아니며 아직 기본 활성화하거나 배포하지 않는다.
+
+### Opus에 넘길 검증
+
+1. 위 B 감사에 추가한 gate 동기화, cookie B 대 legacy/default A, 오류 후 fallback 금지,
+   workspace setter와 UI 일치, 세션 만료 후 해제 거부 검사를 실행한다.
+2. `wp eval-file wp-content/plugins/axismundi-contacts/tests/audit-workspace-selection.php`
+   미선택·잘못된 쿠키·철회·해제에서 화면 오류와 기본 book 미생성, handle 없는 B 선택,
+   JMAP UI와 Contacts 일치, 선호 meta 불변을 검사하도록 작성했다. 아직 실행하지 않았다.
+3. Contacts의 기존 account-access/card-writes/labels 영향 감사를 확인한다. 기존
+   account-access의 tombstone 후 internal 복귀 fixture는 S2의 terminal 전이와
+   충돌할 수 있으므로 C1 회귀로 단정하지 말고 먼저 fixture 순서를 확인한다.
+4. 실제 브라우저에서 A의 편집 폼을 연 뒤 B로 전환했을 때, 기존 A 대상 명령이
+   B에 재귀속되지 않고 대상 Account 검사로 거부되는지 본다.
+
+확인 범위는 PHP 문법과 diff 공백뿐이다. HTTP/browser·감사·변이·패키징은 하지 않았다.
+다음 C2는 발행 소비자와 제출 시 Account 고정이다. 기존 객체 귀속·예약 발행·Calendar,
+AddressBook JMAP JSON provider/API 구현은 C1에 포함하지 않는다.

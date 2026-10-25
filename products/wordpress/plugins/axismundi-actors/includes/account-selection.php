@@ -2,6 +2,12 @@
 /** Request selection and browser-session transport, never an authorization grant. @package AxismundiActors */
 defined( 'ABSPATH' ) || exit;
 
+/** Switch UI and workspace consumers together, only with a browser adapter present. */
+function axismundi_actors_account_selection_enabled() : bool {
+	return true === apply_filters( 'axismundi_actors_account_selection_enabled', false )
+		&& true === apply_filters( 'axismundi_actors_account_selection_adapter_available', false );
+}
+
 /** Keep installations sharing a cookie domain separate. */
 function axismundi_actors_selection_cookie_name() : string {
 	return 'ax_account_selection_' . substr( hash( 'sha256', home_url( '/' ) ), 0, 12 );
@@ -144,9 +150,9 @@ function axismundi_actors_set_account_selection( int $identity_id ) {
 }
 
 /** No preference writes: logout invalidates the session binding even if headers are unavailable. */
-function axismundi_actors_clear_account_selection() : void {
+function axismundi_actors_clear_account_selection() : bool {
 	unset( $_COOKIE[ axismundi_actors_selection_cookie_name() ] );
-	axismundi_actors_send_selection_cookie( '', time() - YEAR_IN_SECONDS );
+	return axismundi_actors_send_selection_cookie( '', time() - YEAR_IN_SECONDS );
 }
 add_action( 'clear_auth_cookie', 'axismundi_actors_clear_account_selection' );
 add_action( 'wp_login', 'axismundi_actors_clear_account_selection' );

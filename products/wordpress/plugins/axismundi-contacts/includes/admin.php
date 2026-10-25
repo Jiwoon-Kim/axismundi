@@ -78,7 +78,11 @@ function axismundi_contacts_current_book() : array {
 			)
 		);
 	}
-	$actor = axismundi_contacts_current_account();
+	$selection = axismundi_contacts_current_account_selection();
+	if ( is_wp_error( $selection ) ) {
+		return array_merge( $none, array( 'error' => $selection->get_error_message() ) );
+	}
+	$actor = $selection['actor'];
 	if ( ! $actor instanceof Axismundi_Actor ) {
 		return array_merge( $none, array( 'error' => __( 'No accessible account is selected.', 'axismundi-contacts' ) ) );
 	}

@@ -550,3 +550,8 @@ Two read surfaces follow from the same ledger without being the same query: an O
 DataView is one row per object, an activity feed is one item per activity. And the filter
 above is the **local** federated set only; remote objects arrive by other paths such as
 `Announce`, so a reader must not restrict everything to `Create`.
+
+2026-10-25 후속 연구 메모: 공동 귀속/발행 동의와 동일 Object의 복수 Create 구상은
+`../../../architecture/activitystreams-open-items.md`의
+"Research Note: Collaborative Attribution And Publication"에 보존했다. 채택된 프로토콜이
+아니며, 기본 C2S 저작이나 Account 전환의 선결 조건으로 추가하지 않는다.

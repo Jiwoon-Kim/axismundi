@@ -106,13 +106,26 @@ sensitive 를 가진 Note·attachment 문서의 @context 에 miscellany/1 이 �
       @context 동일성 검사가 실패해야 한다.
 ```
 
-## 측정 먼저 (V0)
+## ax_note 는 V1 의 대상이 아니다
+
+초판에 "ax_note 를 먼저 재라" 를 V0 으로 넣었는데 **틀렸다.** `ax_note` CPT 는
+제거 대상이다 -- `architecture/activitystreams-storage-boundaries.md:1174`,
+"`ax_note` CPT 를 제거한다. 하드 컷오프이며 복원 경로를 만들지 않는다." 삭제될
+투영에 선언을 붙이는 작업을 하지 않는다. "가장 많이 발행되는 타입" 이라고도 적었는데
+그것도 측정하지 않은 말이었다 (2026-10-20 측정: `ax_note` post 76 행, publish 66).
+
+컷오프 후에도 V1 은 영향받지 않는다.
 
 ```txt
-ax_note 를 재지 못했다 -- permalink(`?post_type=ax_note&p=…`)가 404 였다.
-Note 가 가장 많이 발행되는 타입이므로, 거기서 미선언 용어가 더 나오면
-V1 의 범위가 늘어난다. 작업 시작 전에 Note 문서를 한 번 받아서 대조한다.
+sensitive 는 OP 의 renderer 가 **객체 종류와 무관하게** 넣는다(renderer.php:48).
+실제로 지금 일반 `post` 문서가 sensitive 를 선언하고 있다 -- 측정됨.
+따라서 OP 가 miscellany 를 등록하면 컷오프 전후의 Note 가 모두 덮인다.
+컷오프 후 Note 는 §7 경로로 등록되는 타입이 되고, 그 경로는 Event·Place 와 같다.
 ```
+
+측정이 필요한 것은 Note 가 아니라 **아직 안 본 투영이 더 있는지**다. 네 타입(Actor,
+post, attachment, ax_event)을 쟀다. 작업 전에 OP 가 등록한 transformer 목록을 훑어
+다른 공개 문서 타입이 있는지 확인하고, 있으면 같은 대조를 한다.
 
 규범 context 는 런타임에 가져오지 않는다. 대조는 작업 중 수동 확인이고, 자동 감사는
 V4 에서 고정 사본으로 한다 (레지스트리 문서: "runtime must not scrape the W3C

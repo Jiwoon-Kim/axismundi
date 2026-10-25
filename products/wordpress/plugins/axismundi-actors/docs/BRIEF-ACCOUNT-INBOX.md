@@ -33,10 +33,10 @@ Principal 등록이 HTTP 요청자의 인증을 대신하지 않는다. 계정 �
 | 단계 | 구현·검증 목표 | 현재 상태 |
 |---|---|---|
 | S1 Principal | stable subject 식별·유형·존재 검증, 기존 User 관계 이전, remote 등록의 무권한성 | 구현·리뷰 완료 (f798f5f) |
-| S2 관계 통일 | 개인·위임 접근의 관계 모델 수렴, 개인 귀속과 운영 role 분리, 삭제·철회 정책. **S4 가 측정으로 노출한 결함 1·2 를 받는다** | 대기 |
+| S2 삭제 정리 | 모든 개인 Account 삭제, 원자적 비밀키 폐기·핸들 해제, 기존 고아 정리. 개인 귀속 컬럼 유지 | 구현·검증 완료 ([기록](BRIEF-S2-RELATIONS.md)) |
 | S3 transport | legacy 공식 plugin binding과 Account 접근 분리, Actor별 키 생성·저장·회전·서명 정책, **모더레이션 스코프** | 구현·리뷰 완료 (f5fa995) |
 | S4 UNIQUE | 유일성을 transport 바인딩으로 이전. 추가 Person 의 독립 키·접근 관계 | 구현·리뷰 완료 ([범위](IMPLEMENTATION-ACCOUNT-CARDINALITY.md)) |
-| S5 isPersonal | 인증 User와 관계로 계산. Session 기본값·지원·철회 회귀 검사 | 기존 부분 구현, 재검토. 살아있는 행에서는 파생이 이미 성립(불일치 0) |
+| S5 isPersonal | 인증 User와 명시적 개인 귀속 사실로 계산. 운영 role만으로 귀속을 만들지 않는다. Session 기본값·지원·철회 회귀 검사 | 기존 구현 재검토 완료. Session 50 검사·추가 owner 경계 변이 검출. HTTP 요청 선택은 S10 |
 | SV 어휘 축소 | internal 제거(생성 즉시 public), actor_scope 제거. 접근 판정은 Principal 관계·role, isPersonal 은 귀속 표현. 시스템 역할은 기능 바인딩 | 결정 완료, 구현 대기 (아래 절) |
 | S6 receipts | Activity와 원자적인 Actor별 receipt, 중복·실패·보수적 백필 | 구현·리뷰 완료 (3bc752c) |
 | S7 Inbox | Actor UUID URL, Account 인가 GET, 공식 검증기 재사용 POST, 기존 수신 URL 유지 | 구현·리뷰 완료 (3bc752c) |
@@ -44,6 +44,15 @@ Principal 등록이 HTTP 요청자의 인증을 대신하지 않는다. 계정 �
 | S11 state | Account 단위 변경 알림 경로. S8 의 선결 | 대기 |
 | S9 instance | shared Inbox 및 Application Actor 소유권 이관 | 대기 |
 | S10 acting-actor | 요청의 Account 선택 운반·검증. 기본 선호와 현재 선택 분리. **`axismundi_actors_get_for_user()` 단수 가정 폐기, production 27 파일**. 세 표면(WP REST / JMAP / AP C2S)이 공유할 인증·선택·인가 경계 | 대기 |
+
+**S5 재검토 (2026-10-25):** 현재 `account_is_personal()`은 인증 User와
+`personal_owner_user_id`의 일치 및 유효한 owner 관계를 함께 검사한다. 개인 귀속 사실은
+유지하고 별도 boolean이나 새로운 귀속 관계를 만들지 않았다. Session 감사에 두 번째
+Person owner와 Organization owner를 추가했다. 둘 다 개인 귀속이 생기지 않고, 운영
+owner 역할만으로 provider 쓰기 권한이나 primary Account도 생기지 않는다. 기존
+기본값·지원 철회·접근 철회 검사를 포함해 50개가 통과했다. Person의 owner 역할만으로
+isPersonal을 허용하는 변이는 새 두 번째-owner 검사에서 실패했고 원본을 복원했다.
+생산 코드 변경은 없으며, 실제 HTTP 인증·쿠키 선택·클라이언트 전환 검증은 S10이다.
 
 S3는 컬럼을 옮기는 것만으로 완료되지 않는다. 추가 Person·Group이 Application 키를
 계속 사용하는지 검사하고, 독립 키 및 회전을 실제 지원해야 한다.

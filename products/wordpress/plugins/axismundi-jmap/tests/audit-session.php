@@ -142,12 +142,19 @@ try {
 	wp_set_current_user( $users[1] );
 	$self_shared = $projector->build( $users[1], $transport, $core );
 	$assert( $base->accounts->{$ids[0]}->isPersonal && ! $self_shared->accounts->{$ids[0]}->isPersonal, 'Same personal Account is personal only to its owner, not its delegate' );
+	axismundi_actors_write_manager_row( $fixtures[0], $users[1], 'owner' );
+	$co_owned = $projector->build( $users[1], $transport, $core );
+	$assert( 'owner' === axismundi_actors_account_role( $fixtures[0], $users[1] ) && ! $co_owned->accounts->{$ids[0]}->isPersonal, 'Second operating owner does not acquire personal attribution' );
+	$assert( $co_owned->accounts->{$ids[0]}->isReadOnly && '{}' === json_encode( $co_owned->primaryAccounts ), 'Operating owner role alone grants neither feature writes nor a primary Account' );
 	$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $fixtures[0], 'user_id' => $users[1] ) );
 	$assert( ! isset( $projector->build( $users[1], $transport, $core )->accounts->{$ids[0]} ), 'Revoking personal delegation removes the Account immediately' );
 	axismundi_actors_write_manager_row( $fixtures[2], $users[1], 'editor' );
 	wp_set_current_user( $users[1] );
 	$delegated = $projector->build( $users[1], $transport, $core );
 	$assert( 1 === count( get_object_vars( $delegated->accounts ) ) && ! $delegated->accounts->{$ids[2]}->isPersonal && $delegated->accounts->{$ids[2]}->isReadOnly, 'Delegated User sees only granted, read-only Account' );
+	axismundi_actors_write_manager_row( $fixtures[2], $users[1], 'owner' );
+	$organization_owner = $projector->build( $users[1], $transport, $core );
+	$assert( ! $organization_owner->accounts->{$ids[2]}->isPersonal && $organization_owner->accounts->{$ids[2]}->isReadOnly, 'Additional Organization owner is non-personal and still subject to provider write policy' );
 	$resolver = array( $projector, 'account' );
 	$assert( null === $projector->account( 'a01', $users[1] ), 'Single Account resolver rejects malformed IDs' );
 	$assert( ! isset( $projector->account( $ids[2], $users[1] )->accountCapabilities->{CORE} ), 'Core is not an Account capability' );
@@ -185,6 +192,7 @@ try {
 	wp_set_current_user( $original_user );
 	foreach ( array_reverse( $fixtures ) as $id ) {
 		$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $id ) );
+		$wpdb->delete( axismundi_actors_signing_keys_table(), array( 'identity_id' => $id ) );
 		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => $id ) );
 		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $id ) );
 	}

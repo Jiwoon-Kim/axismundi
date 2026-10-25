@@ -126,6 +126,93 @@ identity 가 tombstone 이 되면 그 Actor 의 서명키 secret_box 를 비우�
      유지해야 하는지는 **이 슬라이스가 정한다** -- S4 리뷰에서 S2 로 넘긴 질문이다.
 ```
 
+
+## 핸들 재사용을 허용한다 (소유자 결정, 2026-10-25)
+
+묘비가 핸들을 붙잡는 것은 **정책이 아니라 제약의 부작용**이었다. 예약 핸들은 시스템이
+관리하고(`is_reserved_handle()` 가 이미 그 목록이다), 기본은 재사용 허용이다.
+
+### 막고 있는 것 전수 (측정)
+
+```txt
+ax_actors.local_handle_key          UNIQUE -- 죽은 행이 값을 점유한다
+ax_actor_addresses.address_hash     UNIQUE -- tombstone 이 붙잡은 것:
+                                              acct 395 + local_handle 516
+get_by_handle( 죽은 핸들 )           → taken   (status 를 보지 않는다)
+unique_local_handle( 죽은 핸들 )     → '..._2' 를 붙인다
+is_reserved_handle( 죽은 핸들 )      → not reserved  ← 시스템 예약 목록은 이미 별개다
+```
+
+### 할 일 네 개
+
+```txt
+① local_handle_key UNIQUE 를 **살아있는 행에만** 적용한다.
+   S4 가 transport_user_id 에 한 것과 같은 모양이고, 같은 순서로 한다 --
+   새 제약을 세운 뒤 옛 UNIQUE 를 뗀다. 보호 없는 창을 만들지 않는다.
+② tombstone 전이 때 주소를 해제한다 (acct 395 + local_handle 516).
+   묘비가 아니라 **전이 시점**에 해제한다. 전이 때 안 하면 묘지에 해제할 목록이 남고,
+   그게 지금의 1,256 행이다.
+③ get_by_handle() 이 status 를 본다. 죽은 핸들은 free 다.
+④ unique_local_handle() 이 죽은 핸들에 접미사를 붙이지 않는다.
+```
+
+```txt
+핀   재사용된 핸들이 이전 Actor 의 URI 를 승계하지 않는다. 새 Actor 는 새 UUID 를
+     받고, 구 Actor URI 는 그대로 410 이다. 핸들은 라우팅 별칭이고 정체성이 아니다.
+```
+
+### 캘린더 Collection id — 방침이 이미 있었다 (정정)
+
+처음에 "미결, 후보 둘" 로 적었는데 틀렸다. 방침은 이미 기록돼 있다 -- 사람이 읽는
+slug URL 은 **별칭·redirect 만**이고 구독·AP 에는 쓰지 않는다. 구현이 그것을 따르지
+않은 것이다.
+
+```txt
+지금        collection-projection.php:64 axismundi_cal_collection_uri_for()
+            slug 이 @handle 형태면 그것을 Collection id 로 쓴다
+            → 발행된 id 가 /calendar/@handle 이고, 핸들 재사용이 그 URI 를 흔든다
+결정        Collection id 는 항상 /calendar/c/{uuid} 다.
+            primary 에는 /calendar/@handle 을 **별칭**으로 준다.
+            → 같은 uuid 를 유지하므로 핸들 재사용이 발행된 id 를 건드리지 않는다
+            → 핸들이 바뀌면 별칭만 따라 움직인다
+```
+
+```txt
+핀   S2 는 이 변경을 하지 않는다. 캘린더 소유이고 발행된 URL 이 서비스하는 것을
+     바꾸는 일이므로 Calendar 쪽 작업으로 분리한다 -- JMAP for Calendars 에서
+     CalendarList·구독과 함께 본다.
+핀   다만 **순서 제약이 생긴다**: 핸들 재사용(①~④)이 캘린더 id 전환보다 먼저 가면
+     그 사이에 발행된 /calendar/@handle 이 다른 캘린더를 내놓을 수 있다.
+     S2 의 핸들 해제는 캘린더 slug 를 건드리지 않으므로 새 Actor 는 slug 충돌을
+     **보고** 받는다(backfill 이 이미 "collision is left alone and reported").
+     그 보고가 남는 것이 조용한 승계보다 낫고, 전환이 끝나면 사라진다.
+```
+
+## 묘지는 별도 슬라이스다
+
+S2 는 삭제가 닿지 않는 곳을 닫는 작업이고, 저장 구조를 바꾸지 않는다. 다만 **무엇을
+남겨야 하는가**는 S2 가 확정하므로(V2 가 공개키만 남긴다고 정한다) 측정을 여기 적어 둔다.
+
+```txt
+로컬 tombstone Actor 564 행이 들고 있는 것 (측정)
+  display_name 0 / summary 0 / avatar 0 / payload_json 0   ← 프로필은 이미 비워진다
+  handle 516        → ①~④ 로 해제 대상이 된다
+  signing key 302   → V2 가 secret_box 를 비우고 public half 만 남긴다
+  local_user_id 564 → 죽은 User 참조. 지워도 된다
+부수 테이블   addresses 911 / managers 311 / texts 34 / endpoints 0
+원격 tombstone 0   ← 묘지는 로컬 전용 문제다
+```
+
+그래서 묘비가 실제로 필요한 것은 넷이다 -- `uri` · `former_type` · `deleted_at` ·
+검증용 `public_key_pem`. **핸들은 아니다**(재사용 허용). 지금은 그 넷을 위해 56 컬럼짜리
+프로필 행과 부수 테이블 1,256 행을 살려 두고 있다.
+
+```txt
+핀   묘지 분리는 status='tombstone' 을 읽는 모든 곳을 바꾸는 작업이다 --
+     signing_key_snapshot() / can_access_workspace() / 투영 가시성 / admin 화면.
+     S2 가 끝난 뒤 별도 슬라이스로 한다.
+```
+
 ## 검증
 
 ```txt

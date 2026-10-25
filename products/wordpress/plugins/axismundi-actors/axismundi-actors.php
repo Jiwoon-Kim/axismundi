@@ -46,6 +46,7 @@ require_once __DIR__ . '/includes/follow-vocabulary.php';
 require_once __DIR__ . '/includes/routing.php';
 require_once __DIR__ . '/includes/acting-actor.php';
 require_once __DIR__ . '/includes/account-operations.php';
+require_once __DIR__ . '/includes/account-selection.php';
 require_once __DIR__ . '/includes/local-endpoints.php';
 require_once __DIR__ . '/includes/webfinger.php';
 require_once __DIR__ . '/includes/nodeinfo.php';

@@ -5,7 +5,7 @@
 
 ## 범위를 먼저 좁힌다
 
-S2 는 새 권한 모델을 만드는 작업이 아니다. 이미 있는 두 표현을 하나로 모으고, 삭제
+S2 는 새 권한 모델을 만드는 작업이 아니다. 개인 귀속 컬럼은 유지하고, 삭제
 경로가 닿지 않는 자리를 닫는다. 아래는 이 슬라이스에 **넣지 않는다.**
 
 ```txt
@@ -166,12 +166,13 @@ transport.php:58      전송기는 개인키를 **그 스냅샷에서만** 가�
 public 상태이면서 죽은 User 를 가리키는 로컬 Actor 가 0 이다 (현재도 0 -- 회귀 금지선).
 핸들 해제: tombstone 이 된 Actor 의 핸들을 새 Actor 가 접미사 없이 받는다.
   → get_by_handle(그 핸들) 이 **새** Actor 를 돌려준다.
-  → 구 Actor 의 URI 는 여전히 410 이다 (핸들은 별칭, 정체성 아님).
+  → 구 Actor 의 identity·URI 는 유지되고 새 Actor 가 승계하지 않는다.
+    410 은 기존 구현이 아니었다. 아래 구현 기록의 HTTP 범위 정정을 따른다.
   → tombstone 의 acct·local_handle 주소 행이 전이 시점에 해제됐다.
 변이: tombstone 을 단수 getter 로 되돌리면 두 번째 Person 검사가 실패해야 한다.
 변이: secret_box 를 비우지 않게 하면 고아 키 검사가 실패해야 한다.
-변이: local_handle_key UNIQUE 를 살아있는 행 한정에서 전체로 되돌리면
-       핸들 해제 검사가 실패해야 한다.
+변이: tombstone 의 local_handle_key 를 NULL 로 비우지 않으면
+       기존 UNIQUE 에 막혀 핸들 재사용 검사가 실패해야 한다.
 변이: 주소 해제를 전이에서 빼면 새 Actor 가 접미사를 받게 되어 검사가 실패해야 한다.
 ```
 
@@ -183,3 +184,66 @@ public 상태이면서 죽은 User 를 가리키는 로컬 Actor 가 0 이다 (�
 ## 보고 형식
 
 "몇 개 통과" 가 아니라 **보장한 것 / 확인하지 않은 것**으로 나눠 적는다.
+
+## S2 구현 기록 (2026-10-25)
+
+### 보장한 것
+
+- 삭제 대상은 로컬 개인 귀속(`personal_owner_user_id`)으로 정한다. 귀속이 없는
+  과거 `Person/user` 행만 `local_user_id`로 보완한다. Principal 운영 권한은 삭제
+  근거가 아니다. `actor_scope=NULL`이어도 명시적 개인 귀속은 처리한다.
+- 구현 전 측정에서 살아 있는 Person 27개는 legacy 연결과 개인 귀속자가 모두
+  일치했다. 개인 귀속 없는 legacy 연결 253개는 모두 `user` scope의 기존 묘비였다.
+  로컬 Actor에 연결된 WP User Principal 행 583개 중 개인 귀속 일치는 338개였다.
+  따라서 모든 운영 관계를 삭제 대상으로 확장하지 않았다.
+- `set_status()`가 Actor→identity 순으로 잠근다. tombstone 상태 변경·모든 서명
+  이력의 비밀 폐기·`retired_at` 기록·핸들 점유값 해제·로컬 acct/handle 주소 해제는
+  같은 트랜잭션이다. 실패하면 함께 롤백하고, 상태 변경 훅은 커밋 뒤에 실행한다.
+- 공개키 이력·Actor/identity 행·canonical URI·개인 귀속 컬럼은 유지한다. tombstone은
+  재활성화하지 않는다. 핸들 등록도 같은 잠금 순서를 사용해 삭제와 직렬화한다.
+- 기존 `local_handle_key`는 이미 nullable UNIQUE다. 인덱스를 교체하지 않고 묘비의
+  값을 NULL로 해제한다. 따라서 유일성 보호를 없애는 DDL이나 보호 공백이 없다.
+  시스템 예약어와 살아 있는 identity의 주소 점유는 유지한다.
+- DB 버전 38.0 마이그레이션은 기존 tombstone과 identity/Actor가 없는 고아 키의
+  비밀을 정리하고, 로컬 묘비의 핸들·주소 점유를 해제한다. 실패 시 버전을 올리지
+  않으며 재실행 가능하다. 살아 있는 Actor의 키는 보존한다.
+
+검증 명령은 `wp eval-file wp-content/plugins/<plugin>/tests/<audit>.php`다.
+
+| 감사 | 결과 |
+|---|---|
+| Actors `audit-user-deletion.php` | 최종 59 검사 통과 |
+| Actors `audit-repository.php` | 20 검사 통과 |
+| Actors `audit-addresses.php` | 5 검사 통과 |
+| Actors `audit-account-ownership.php` | 29 검사 통과 |
+| Actors `audit-identity-registry.php` | 14 검사 통과 |
+| Bridge `audit-signing-keys.php` | 44 검사 통과 |
+| Bridge `audit-account-cardinality.php` | 50 검사 통과 |
+| JMAP `audit-session.php` | 50 검사 통과 |
+
+새 감사는 User 삭제 후 여러 개인 Account와 legacy Person이 모두 tombstone인지,
+운영하던 Organization은 남는지, 비밀 폐기·공개키 보존·UUID/URI 비승계·핸들/acct
+재사용을 검사한다. 키 정리·주소 정리·COMMIT 실패 및 마이그레이션 실패의 롤백도 검사한다.
+
+직접 적용한 네 변이는 모두 실패를 검출했고 원본을 복원했다: 삭제 대상을 하나로
+축소, 고아 키 secret_box 보존, 핸들 UNIQUE 점유값 보존, 전이 시 주소 삭제 생략.
+최종 wp-env SQL 측정은 고아/묘비의 비밀키 0, 묘비 핸들 점유 0, 묘비 로컬 주소
+점유 0, 죽은 User를 legacy 연결로 가리키는 공개 로컬 Actor 0이었다.
+
+### 확인하지 않은 것과 범위 정정
+
+- 전체 감사, 스테이징 배포, 실제 원격 Delete 전달 및 동시 요청 부하 검사는 하지 않았다.
+- 브리프가 전제한 구 Actor URI의 410은 현재 코드의 동작이 아니었다.
+  Actors 라우트는 비공개 identity를 404로 숨기고, OP Actor visible gate도 tombstone을
+  거부한다. S2는 이 공개 응답 정책을 바꾸지 않았다. 삭제 표현/410 제공은 Actor
+  삭제 생명주기에서 별도로 다룬다. 위 검사는 HTTP 실측이 아닌 identity 보존 검사다.
+- Actor 자신의 Delete 전달은 여전히 범위 밖이다. 키가 필요한 전달은 tombstone 전
+  단계에서 끝내야 한다. 비밀을 보존한다고 현재 전송기가 tombstone을 서명하지 않는다.
+- Calendar canonical URI/별칭 전환, 묘지 분리, S5 isPersonal 파생 변경은 하지 않았다.
+
+### 후속 기록: 삭제된 Actor의 410 응답
+
+소유자 방향(2026-10-25): 삭제된 Actor의 canonical URI에는 410을 제공하는 쪽이 좋다.
+지금은 기록만 남기고 S10으로 진행한다. S2 완료나 Account 전환의 선결 조건이 아니다.
+기존 identity/tombstone 상태로 삭제 여부를 구별할 수 있으므로 새 묘지 저장소를
+전제로 하지 않는다. HTTP 410과 AS2 Tombstone 본문 제공 여부는 별도로 다룬다.

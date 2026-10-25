@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '37.0';
+const AXISMUNDI_ACTORS_DB_VERSION = '38.0';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -467,7 +467,7 @@ function axismundi_actors_install() : void {
 	// engine contract explicit so START TRANSACTION is not merely decorative on an
 	// older installation created under a different server default.
 	$transactional_engines = true;
-	foreach ( array( $identities, $actors, $endpoints, $keys, $identity_relations, $profile_fields, $managers ) as $transactional_table ) {
+	foreach ( array( $identities, $actors, $addresses, $endpoints, $keys, $identity_relations, $profile_fields, $managers ) as $transactional_table ) {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table name, schema inspection.
 		$engine = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s', $transactional_table ) );
 		if ( 'InnoDB' !== $engine ) {
@@ -727,6 +727,7 @@ function axismundi_actors_install() : void {
 		&& axismundi_actors_migrate_transport_bindings()
 		&& axismundi_actors_upgrade_account_cardinality( $actors )
 		&& axismundi_actors_install_signing_keys()
+		&& axismundi_actors_migrate_deletion_cleanup()
 	) {
 		update_option( 'ax_actors_principal_schema_version', AXISMUNDI_ACTORS_PRINCIPAL_SCHEMA_VERSION, false );
 		if ( axismundi_actors_migrate_account_access() ) {
@@ -987,16 +988,14 @@ function axismundi_actors_is_reserved_handle( string $key ) : bool {
  * @return string
  */
 function axismundi_actors_unique_local_handle( string $base ) : string {
-	global $wpdb;
 	$key = axismundi_actors_suggest_handle( $base );
 	if ( '' === $key || axismundi_actors_is_reserved_handle( $key ) ) {
 		$key = 'actor';
 	}
-	$actors    = axismundi_actors_actors_table();
 	$candidate = $key;
 	$i         = 2;
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table existence probe.
-	while ( (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE local_handle_key = %s", $actors, $candidate ) ) > 0 ) {
+	while ( axismundi_actors_get_by_handle( $candidate ) || axismundi_actors_handle_owner( $candidate ) ) {
 		$candidate = substr( $key, 0, 27 ) . '_' . $i;
 		++$i;
 	}
@@ -1396,7 +1395,7 @@ function axismundi_actors_get_delivery_endpoints( array $uris ) : array {
 function axismundi_actors_get_by_handle( string $handle ) : ?Axismundi_Actor {
 	$key = strtolower( trim( $handle ) );
 	return '' !== $key
-		? axismundi_actors_query_one( 'a.local_handle_key = %s AND i.origin = %s', $key, 'local' )
+		? axismundi_actors_query_one( 'a.local_handle_key = %s AND i.origin = %s AND i.status <> %s', $key, 'local', 'tombstone' )
 		: null;
 }
 
@@ -2334,8 +2333,7 @@ function axismundi_actors_handle_candidates( int $user_id ) : array {
 /**
  * The identity that owns a local handle string in the address ledger — as its
  * `primary`, `reserved` (a retired handle held for the same actor), or `redirect`
- * address — or 0. This is the reservation check: a retired handle is never recycled
- * to a different actor.
+ * address — or 0. Claims last only while the identity is not tombstoned.
  *
  * @param string $handle_key Normalized handle.
  * @return int Identity id, or 0.
@@ -2345,7 +2343,7 @@ function axismundi_actors_handle_owner( string $handle_key ) : int {
 	$addresses = axismundi_actors_addresses_table();
 	$hash      = axismundi_actors_address_hash( 'local_handle', $handle_key );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
-	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT identity_id FROM %i WHERE address_hash = %s AND status IN ('primary','reserved','redirect') LIMIT 1", $addresses, $hash ) );
+	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT ad.identity_id FROM %i ad INNER JOIN %i i ON i.id = ad.identity_id WHERE ad.address_hash = %s AND ad.status IN ('primary','reserved','redirect') AND i.status <> 'tombstone' LIMIT 1", $addresses, axismundi_actors_identities_table(), $hash ) );
 }
 
 /**
@@ -2358,6 +2356,9 @@ function axismundi_actors_handle_owner( string $handle_key ) : int {
  */
 function axismundi_actors_record_handle_address( int $identity_id, string $handle_key, string $status = 'primary' ) : void {
 	global $wpdb;
+	if ( 'tombstone' === $wpdb->get_var( $wpdb->prepare( 'SELECT status FROM %i WHERE id = %d', axismundi_actors_identities_table(), $identity_id ) ) ) {
+		return;
+	}
 	$addresses = axismundi_actors_addresses_table();
 	$hash      = axismundi_actors_address_hash( 'local_handle', $handle_key );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
@@ -2389,7 +2390,7 @@ function axismundi_actors_record_handle_address( int $identity_id, string $handl
 }
 
 /**
- * Reserve a (former) handle to an actor so no other actor can ever take it — the
+ * Reserve a (former) handle to a live actor — the
  * infrastructure for a future site-actor rename / admin recovery. Fails if the handle
  * belongs to a different actor.
  *
@@ -2503,11 +2504,50 @@ function axismundi_actors_record_verified_acct_address( int $identity_id, string
  * @return bool
  */
 function axismundi_actors_record_local_acct_address( int $identity_id, string $acct ) : bool {
+	$actor = axismundi_actors_get_by_identity( $identity_id );
+	if ( ! $actor || ! $actor->is_local() || 'tombstone' === $actor->get_status() ) {
+		return false;
+	}
 	return axismundi_actors_record_verified_acct_address( $identity_id, $acct );
 }
 
 function axismundi_actors_register_handle( int $identity_id, string $handle ) {
 	global $wpdb;
+	if ( false === $wpdb->query( 'START TRANSACTION' ) ) {
+		return new WP_Error( 'ax_actors_handle_transaction', 'Could not start handle registration.' );
+	}
+	$committed = false;
+	try {
+		// Serialize registration with tombstoning so a stale request cannot reclaim a dead handle.
+		$locked = $wpdb->get_var( $wpdb->prepare( 'SELECT identity_id FROM %i WHERE identity_id = %d FOR UPDATE', axismundi_actors_actors_table(), $identity_id ) );
+		$wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i WHERE id = %d FOR UPDATE', axismundi_actors_identities_table(), $identity_id ) );
+		if ( ! $locked ) {
+			return new WP_Error( 'ax_actors_handle_identity', 'A live local Actor is required.' );
+		}
+		$result = axismundi_actors_register_handle_locked( $identity_id, $handle );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		if ( false === $wpdb->query( 'COMMIT' ) ) {
+			return new WP_Error( 'ax_actors_handle_commit', 'Could not commit handle registration.' );
+		}
+		$committed = true;
+	} finally {
+		if ( ! $committed ) {
+			$wpdb->query( 'ROLLBACK' );
+		}
+	}
+	do_action( 'axismundi_actors_handle_registered', $identity_id, strtolower( trim( $handle ) ) );
+	return true;
+}
+
+/** Caller holds the Actor/identity locks and owns the transaction. */
+function axismundi_actors_register_handle_locked( int $identity_id, string $handle ) {
+	global $wpdb;
+	$actor = axismundi_actors_get_by_identity( $identity_id );
+	if ( ! $actor || ! $actor->is_local() || 'tombstone' === $actor->get_status() ) {
+		return new WP_Error( 'ax_actors_handle_identity', 'A live local Actor is required.' );
+	}
 	$actors = axismundi_actors_actors_table();
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
 	$locked = $wpdb->get_var( $wpdb->prepare( "SELECT handle_locked_at FROM %i WHERE identity_id = %d", $actors, $identity_id ) );
@@ -2528,7 +2568,7 @@ function axismundi_actors_register_handle( int $identity_id, string $handle ) {
 	if ( $taken > 0 ) {
 		return new WP_Error( 'ax_actors_handle_taken', __( 'That handle is already in use.', 'axismundi-actors' ) );
 	}
-	// Reservation ledger: a handle retired by another actor is never recycled.
+	// Live identity claims remain exclusive; tombstones release their claims.
 	$owner = axismundi_actors_handle_owner( $key );
 	if ( $owner > 0 && $owner !== $identity_id ) {
 		return new WP_Error( 'ax_actors_handle_reserved', __( 'That handle is reserved to another actor.', 'axismundi-actors' ) );
@@ -2545,7 +2585,6 @@ function axismundi_actors_register_handle( int $identity_id, string $handle ) {
 		return new WP_Error( 'ax_actors_handle_update', __( 'Could not register the handle.', 'axismundi-actors' ) );
 	}
 	axismundi_actors_record_handle_address( $identity_id, $key, 'primary' );
-	do_action( 'axismundi_actors_handle_registered', $identity_id, $key );
 	return true;
 }
 
@@ -2620,17 +2659,34 @@ function axismundi_actors_set_status( int $identity_id, string $status ) : bool 
 	if ( ! in_array( $status, array( 'internal', 'public', 'disabled', 'tombstone' ), true ) ) {
 		return false;
 	}
-	$done = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		axismundi_actors_identities_table(),
-		array( 'status' => $status, 'updated_at' => current_time( 'mysql', true ) ),
-		array( 'id' => $identity_id ),
-		array( '%s', '%s' ),
-		array( '%d' )
-	);
-	if ( false !== $done ) {
-		do_action( 'axismundi_actors_status_changed', $identity_id, $status );
+	if ( false === $wpdb->query( 'START TRANSACTION' ) ) {
+		return false;
 	}
-	return false !== $done;
+	$committed = false;
+	try {
+		// Match rotation's lock order; identity-only objects have no Actor row.
+		$wpdb->get_var( $wpdb->prepare( 'SELECT identity_id FROM %i WHERE identity_id = %d FOR UPDATE', axismundi_actors_actors_table(), $identity_id ) );
+		$previous = $wpdb->get_row( $wpdb->prepare( 'SELECT status, origin FROM %i WHERE id = %d FOR UPDATE', axismundi_actors_identities_table(), $identity_id ), ARRAY_A );
+		if ( ! is_array( $previous ) || ( 'tombstone' === $previous['status'] && 'tombstone' !== $status ) ) {
+			return false;
+		}
+		$done = $wpdb->update(
+			axismundi_actors_identities_table(),
+			array( 'status' => $status, 'updated_at' => current_time( 'mysql', true ) ),
+			array( 'id' => $identity_id )
+		);
+		if ( false === $done || ( 'tombstone' === $status && 'local' === $previous['origin'] && ! axismundi_actors_cleanup_deleted_actor( $identity_id ) )
+			|| false === $wpdb->query( 'COMMIT' ) ) {
+			return false;
+		}
+		$committed = true;
+	} finally {
+		if ( ! $committed ) {
+			$wpdb->query( 'ROLLBACK' );
+		}
+	}
+	do_action( 'axismundi_actors_status_changed', $identity_id, $status );
+	return true;
 }
 
 /**
@@ -2809,16 +2865,28 @@ function axismundi_actors_disable_site_actor() : void {
 }
 
 /**
- * On user deletion, tombstone the linked identity — never delete the actor
+ * On user deletion, tombstone personally attributed identities, not operated Accounts.
+ * Never delete the actor
  * (federation identity and back-references must survive).
  *
  * @param int $user_id Deleted user ID.
  * @return void
  */
 function axismundi_actors_tombstone_for_user( int $user_id ) : void {
-	$actor = axismundi_actors_get_for_user( $user_id );
-	if ( $actor ) {
-		axismundi_actors_set_status( $actor->get_identity_id(), 'tombstone' );
+	global $wpdb;
+	if ( $user_id <= 0 ) {
+		return;
+	}
+	// Operating an Account is not personal attribution. Only legacy Persons lacking
+	// explicit attribution use the compatibility link as a lifecycle fallback.
+	$ids = $wpdb->get_col( $wpdb->prepare(
+		"SELECT a.identity_id FROM %i a INNER JOIN %i i ON i.id = a.identity_id
+		 WHERE i.origin = 'local' AND COALESCE(a.actor_scope, '') <> 'site' AND
+		 (a.personal_owner_user_id = %d OR (a.personal_owner_user_id IS NULL AND a.actor_scope = 'user' AND a.actor_type = 'Person' AND a.local_user_id = %d))",
+		axismundi_actors_actors_table(), axismundi_actors_identities_table(), $user_id, $user_id
+	) );
+	foreach ( $ids as $id ) {
+		axismundi_actors_set_status( (int) $id, 'tombstone' );
 	}
 }
 add_action( 'deleted_user', 'axismundi_actors_tombstone_for_user' );

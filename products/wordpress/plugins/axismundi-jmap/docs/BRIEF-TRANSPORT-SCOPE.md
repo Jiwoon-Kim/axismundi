@@ -94,24 +94,55 @@ Stalwart       jmap-proto/src/request/capability.rs:35  event_source_url: String
                :379-385  /jmap/ · /jmap/upload/{accountId}/ · 동일 구조
 ```
 
-**그래서 후보 (ㄷ) "필드를 비운다" 는 탈락이다.** 비우는 구현이 없고 Scala·Rust 둘 다
-타입 수준에서 non-optional 이므로, 클라이언트가 그 필드를 기대한다고 봐야 한다.
+**후보 (ㄷ) "필드를 비운다" 는 근거가 약하다.** 비우는 구현을 찾지 못했고 둘 다 타입
+수준에서 non-optional 이다. 다만 **이 증거는 한계가 있다** -- James 와 Stalwart 는
+EventSource 를 **구현한** 서버이므로, 둘이 필드를 항상 내보낸다는 사실이 "미지원 서버는
+어떻게 하는가" 를 증명하지 않는다. 구현자를 측정해 미구현자에게 일반화할 수 없다.
 
-남은 둘 중 **(ㄱ) 최소 SSE 를 택한다.** 근거는 명세 자체다 -- `closeafter` 변수가 있다는
-것은 서버가 **이벤트 하나 보내고 닫는 동작을 정상 모드로 인정**한다는 뜻이다. 짧게 열고
-닫는 SSE 는 축소 구현이 아니라 명세가 예상한 사용이고, 프록시 타임아웃과 싸우지 않는다.
-반대로 (ㄴ) 오류 URL 은 광고한 주소가 항상 실패하는 상태라 거짓 광고에 더 가깝다.
+### 정정 — "ping 보내고 닫기" 는 closeafter 지원이 아니다
 
-실제 푸시는 이미 있는 것으로 간다 -- `axismundi-pwa` 에 VAPID 키(`includes/keys.php`),
-구독 스키마(`includes/schema.php`, `endpoint`·`p256dh_key`), 전송기
-(`includes/sender.php` `axismundi_pwa_push()`)가 있고 JMAP §7.2 PushSubscription 이 같은
-모양이다. 그 스키마 주석이 성질을 이미 짚어 두었다 -- *"The endpoint is the credential.
-Anyone holding it can ask the push service to wake that…"*
+초판에 `closeafter` 변수의 존재를 근거로 "짧게 열고 닫는 SSE 는 명세가 예상한 사용" 이라
+적고 최소 SSE 를 택했다. **그 추론이 틀렸다.** §7.3 원문을 받아 확인했다.
 
-### M1 — 더 이상 범위를 막지 않는다
+```txt
+closeafter="state"   "The server MUST end the HTTP response after pushing a state event."
+                     → **state 이벤트를 보낸 뒤** 닫는다. 버퍼링 프록시 뒤의 클라이언트를
+                       돕는 최적화이고, 보낼 state 가 있다는 **전제** 위에 선다
+closeafter="no"      일반 지속 연결
+ping                 타이머 구동 keep-alive. event id 를 새로 설정하지 않으며
+                     데이터는 interval 뿐이다. 0 이면 비활성
+state 이벤트          StateChange 객체를 싣고 새 event id 가 따라온다
+→ 이름·데이터·id 처리가 전부 다르다. ping 은 state 이벤트가 아니다
+```
 
-Atomic 에서 장시간 열린 event-stream 이 유지되는지는 **최소 SSE 를 택하면 전제가 아니다.**
-지속 연결이 필요해질 때(실시간 리더) 다시 재는 측정으로 남긴다.
+그러므로 ping 만 돌려주는 URL 은 **변경 알림을 구현한 것이 아니다.** state 이벤트를 보낼
+수 있어야 하고, 그것은 **Account 별 상태와 변경 추적**을 요구한다. 즉시 종료를 반복하면
+클라이언트 재접속 부하도 생긴다.
+
+### M3 결론: 조사 완료, 구현 방식 미확정
+
+```txt
+확정된 것   필드를 비우는 길은 근거가 없다 (다만 위 한계 참조)
+            ping-and-close 는 구현이 아니다
+미확정      SSE 를 지원하지 않기로 할 때 eventSourceUrl 에 무엇을 둘 것인가
+            state 이벤트를 낼 수 있게 하려면 무엇이 선행인가 (Account 별 상태·변경 추적)
+```
+
+```txt
+핀   이 질문으로 전송 슬라이스 전체를 막지 않는다. 나머지 셋(apiUrl·upload·download)은
+     대조가 끝났으므로 먼저 진행하고, eventSourceUrl 은 **그 슬라이스에서 분리**한다.
+핀   Web Push 기반이 있다는 것과 PushSubscription 을 구현했다는 것은 다르다.
+     JMAP §7.2 는 구독 검증·만료·타입 필터·접근 가능한 Account 의 상태 알림을 계약으로
+     추가한다. axismundi-pwa 의 VAPID·구독 스키마·전송기는 **재사용 후보**이지
+     그 계약의 충족이 아니다.
+```
+
+### M1 — 여전히 유효한 측정이다
+
+초판은 "최소 SSE 를 택하면 전제가 아니다" 로 닫았는데, 그 선택이 철회됐으므로 측정도
+살아난다. `closeafter=no` 든 `state` 든 **state 이벤트를 보낼 때까지는 연결이 열려
+있어야** 하므로, Atomic 이 그 구간을 버티는지가 여전히 문제다. eventSourceUrl 을 분리된
+슬라이스로 다룰 때 재는 측정으로 남긴다.
 
 ### M2 — 사라졌다. 비공개 미디어 모집단이 0 이다
 
@@ -151,8 +182,8 @@ apiUrl          Engine::execute() 에 연결
 uploadUrl       POST → WP attachment, JMAP 업로드 응답(accountId·blobId·type·size)
                 → blobId 를 무엇으로 할지가 남은 결정 (attachment id vs content hash)
 downloadUrl     공개 attachment 서비스. 인가 없음
-eventSourceUrl  최소 SSE -- 연결 즉시 ping, closeafter 지원, 길게 붙잡지 않는다
-                실제 푸시는 PushSubscription/Web Push
+eventSourceUrl  **이 슬라이스에서 분리한다.** 구현 방식 미확정 (위 M3 결론).
+                state 이벤트를 낼 수 있어야 하고 그 선행이 Account 별 변경 추적이다
 경계 공통       인증(쿠키+Application Passwords) · 쿠키 요청의 nonce · I-JSON 검증 ·
                 problem details 오류 · maxSizeRequest · 같은 출처 CORS
 ```

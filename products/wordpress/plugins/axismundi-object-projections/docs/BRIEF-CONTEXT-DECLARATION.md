@@ -153,6 +153,43 @@ manuallyApprovesFollowers 가 as: 로 선언된다.
 변이: schema 를 http://schema.org# 로 바꾸면 형태 검사가 실패해야 한다.
 ```
 
+## V2b — attachment 의 `size` (출처 확인됨)
+
+렌디션 Link 에 바이트 수를 싣는다(`media-library.php:174,187`). AS2 에 `size` 가
+없어서 후보를 두 개 띄웠는데 **둘 다 틀렸다.** FEP-1311(Media Attachments) 이 이미
+문서화하고 있다.
+
+```txt
+"Finally `size` being the file size in bytes is borrowed from PeerTube."
+"The `size` should tell us if we want to preload the media or not."
+```
+
+그 FEP 의 예시 context 가 선언 형태까지 보여준다.
+
+```json
+{
+  "@context": [
+    "https://www.w3.org/ns/activitystreams",
+    "https://www.w3.org/ns/credentials/v2",
+    { "size": "https://joinpeertube.org/ns#size" }
+  ]
+}
+```
+
+```txt
+결정   size → https://joinpeertube.org/ns#size 로 인라인 선언한다.
+       정수 바이트라는 의미가 우리 값과 정확히 같다.
+       schema:contentSize 는 쓰지 않는다 -- 단위를 문자열에 담는 관행이라 의미가 다르다.
+       자체 ns 도 쓰지 않는다 -- 주장과 수신자가 모두 저쪽이므로 저쪽 IRI 가 맞다.
+```
+
+이것은 네임스페이스 규칙의 ② 다 -- 남의 기능에 올라타는 것이므로 IRI 까지 빌린다.
+
+덤으로 같은 예시가 `digestMultibase` 의 context 도 알려 준다
+(`https://www.w3.org/ns/credentials/v2`, Verifiable Credential Data Integrity).
+우리는 아직 내보내지 않지만 원격 미디어 바이너리 캐시에 `content_hash` 가 이미 있으므로,
+그것을 공개 표현에 싣기로 하면 그 context 를 쓴다. **지금 싣지 않는다.**
+
 ## V3 — 접두사 선언을 한 곳으로
 
 지금은 `schema` 를 media-library 가 선언한다. Actors 도 선언하게 되면 **같은 접두사를
@@ -193,55 +230,109 @@ audit-actor-projection.php:47
 이 감사가 먼저 서면 V1~V3 의 완료 여부가 자동으로 판정되고, 아직 못 잰 `ax_note` 도
 같은 그물에 걸린다.
 
-## V2b — attachment 의 `size` (출처 확인됨)
-
-렌디션 Link 에 바이트 수를 싣는다(`media-library.php:174,187`). AS2 에 `size` 가
-없어서 후보를 두 개 띄웠는데 **둘 다 틀렸다.** FEP-1311(Media Attachments) 이 이미
-문서화하고 있다.
-
-```txt
-"Finally `size` being the file size in bytes is borrowed from PeerTube."
-"The `size` should tell us if we want to preload the media or not."
-```
-
-그 FEP 의 예시 context 가 선언 형태까지 보여준다.
-
-```json
-{
-  "@context": [
-    "https://www.w3.org/ns/activitystreams",
-    "https://www.w3.org/ns/credentials/v2",
-    { "size": "https://joinpeertube.org/ns#size" }
-  ]
-}
-```
-
-```txt
-결정   size → https://joinpeertube.org/ns#size 로 인라인 선언한다.
-       정수 바이트라는 의미가 우리 값과 정확히 같다.
-       schema:contentSize 는 쓰지 않는다 -- 단위를 문자열에 담는 관행이라 의미가 다르다.
-       자체 ns 도 쓰지 않는다 -- 주장과 수신자가 모두 저쪽이므로 저쪽 IRI 가 맞다.
-```
-
-이것은 네임스페이스 규칙의 ② 다 -- 남의 기능에 올라타는 것이므로 IRI 까지 빌린다.
-
-덤으로 같은 예시가 `digestMultibase` 의 context 도 알려 준다
-(`https://www.w3.org/ns/credentials/v2`, Verifiable Credential Data Integrity).
-우리는 아직 내보내지 않지만 원격 미디어 바이너리 캐시에 `content_hash` 가 이미 있으므로,
-그것을 공개 표현에 싣기로 하면 그 context 를 쓴다. **지금 싣지 않는다.**
-
-## 소유자 결정이 필요한 하나
-
-### 자체 ns 의 base IRI
+## 결정: 자체 네임스페이스는 w3id.org 에 등록한다 (2026-10-25)
 
 ```txt
 현재   https://github.com/Jiwoon-Kim/axismundi/ns#usedIn
+결정   w3id.org 에 등록한 영속 IRI 로 옮긴다.
 ```
 
-리포지터리 URL 을 네임스페이스 base 로 쓰고 있다. `size` 가 저쪽 ns 로 갔으니 현재
-자체 용어는 `usedIn` 하나뿐이지만 `discoverable`·`indexable` 이 후보로 남아 있다.
-리포지터리가 옮겨지거나 이름이 바뀌면 발행된 IRI 가 끊기므로 **용어가 하나일 때
-확정하는 것이 가장 싸다.** `w3id.org` 등록이나 프로젝트 도메인이 관례적인 안정 선택이다.
+리포지터리 URL 은 리포지터리가 옮겨지거나 이름이 바뀌면 끊긴다. w3id.org 는 그 목적으로
+존재하는 영속 식별자 서비스이고, 우리가 이미 쓰는 두 선례가 그것을 쓴다 --
+`https://w3id.org/security/v1`, `https://w3id.org/fep/8a8e`.
+
+자체 용어가 **지금 `usedIn` 하나뿐일 때 옮기는 것이 가장 싸다.** `size` 가 PeerTube ns
+로 확정되면서 자체 용어 후보가 줄었고, 남은 후보는 `discoverable`·`indexable` 이다.
+
+### 하위 선택 둘
+
+```txt
+경로 형태   fragment  misskey:  https://misskey-hub.net/ns#   → ns#usedIn
+            slash     FEP-8a8e: https://w3id.org/fep/8a8e/   → 8a8e/timezone
+            둘 다 통용된다. 하나로 정해 전부 같게 쓴다.
+
+이전 처리   usedIn 은 우리 용어이고 소비자가 아직 없다. 구 IRI 를 영속 보장한
+            적도 없으므로 그대로 교체한다. 다만 구 IRI 가 이미 발행된 문서에
+            들어가 있으므로(attachment 투영) **바꿨다는 사실은 기록한다.**
+```
+
+### 접두사 질문 — 두 결정을 분리한다
+
+Misskey 의 context 를 보고 `axis:` 접두사를 쓸지 물었는데, 거기에는 **별개의 두 가지**가
+섞여 있다.
+
+```txt
+(a) @context 의 접두사 이름        "misskey": "https://misskey-hub.net/ns#"
+(b) JSON 키 자체에 붙은 벤더 표시   "_misskey_content", "_misskey_quote", ...
+```
+
+Misskey 는 벤더 이름을 **두 번** 쓴다 -- 키에도, IRI 에도.
+
+### (a) 접두사는 쓴다
+
+`axis` 같은 짧은 접두사를 @context 에 바인딩하고 용어를 그 위에 올린다. 접두사는
+문서 안에서만 유효하므로 다른 프로젝트와 충돌할 여지가 없고, context 가 읽기 쉬워진다.
+Misskey·Mastodon·FEP 전부 이렇게 한다.
+
+### (b) 키에는 붙이지 않는다 (권고)
+
+`_axis_usedIn` 같은 키를 만들지 않는다.
+
+```txt
+붙이는 쪽의 이유     피어는 대부분 JSON-LD 를 처리하지 않고 키로 읽는다.
+                     키 접두사는 그런 구현에게 "이건 벤더 전용이니 기대지 말라" 를
+                     전달하는 유일한 수단이다. 목적이 있는 관행이다.
+
+붙이지 않는 이유     ① 우리 class ③ 용어는 **남이 채택해도 되는 주장**이다.
+                        usedIn 은 의미가 있는 속성이고 벤더 전용 표시는 틀린 신호다.
+                     ② 키 이름은 와이어 계약이다. 나중에 표준화되면 키를 바꿔야 하고
+                        그것이 깨뜨리는 변경이다. Misskey 자신이 그 사례다 --
+                        quote 가 quoteUrl / _misskey_quote / FEP-044f quote 로 흘렀다.
+                     ③ 적합한 소비자에게는 IRI 가 이미 네임스페이스다. 키 접두사는 중복이다.
+```
+
+```txt
+예외   진짜로 사적이고 실험적이며 **아무도 이것에 기대지 않기를 바라는** 속성이라면
+       붙인다. 그때는 이름이 보기 싫은 것이 기능이다.
+       기본은 붙이지 않는 쪽이고, 붙이려면 그 이유를 주석에 적는다.
+```
+
+### 그 다음 수: 자체 context 문서를 발행할지
+
+영속 base 가 생기면 선택지가 하나 열린다. 지금은 통합마다 용어를 인라인 선언하는데,
+**context 문서 하나를 발행하면 문서는 IRI 하나만 싣는다.**
+
+```txt
+인라인       통합마다 용어 맵을 쓴다. 지금 방식.
+             같은 접두사를 두 통합이 각자 선언할 위험이 남는다.
+context 문서 https://w3id.org/<path>/ns 를 발행하고 문서는 그것만 싣는다.
+             security/v1 과 FEP-8a8e 가 하는 방식이고, 선언이 한 곳으로 모인다.
+             브리프 V3 의 "접두사 선언을 한 곳으로" 가 자동으로 달성된다.
+비용         그 URL 을 올바른 content type 으로, 영구히 서비스해야 한다.
+             한 번 발행한 context 는 바꾸면 이미 발행된 문서의 의미가 바뀐다.
+```
+
+지금 결정할 필요는 없다. 용어가 하나뿐이라 인라인으로 충분하고, 자체 용어가 셋을 넘으면
+그때가 발행할 시점이다. **다만 base IRI 는 그 선택을 미리 막지 않게 정한다** --
+`ns` 경로를 비워 두면 나중에 그 자리에 context 문서를 올릴 수 있다.
+
+### Misskey context 에서 배운 것, 그리고 베끼지 말 것
+
+```txt
+배울 것   내보내는 확장 용어를 **전부** 선언한다. 측정해 보니 그들이 인라인 선언한
+          항목 전부가 실제로 AS2 context 에 없는 것들이다 -- 장식이 아니라 필요한 선언이다.
+          sensitive → as:sensitive 는 우리 renderer 가 이미 같게 한다.
+
+참고      Hashtag → as:Hashtag 로 선언한다. 우리는 type:Hashtag 를 내보내지 않기로
+          했으므로 해당 없지만, 되돌릴 경우의 선언 경로가 그것이라는 것은 기록해 둔다.
+          quoteUrl → as:quoteUrl 도 규범 context 에 없는 as: 용어다.
+
+베끼지 말 것  schema → http://schema.org# 를 쓴다. Mastodon 과 같은 레거시 형태이고,
+          우리는 Mastodon 자신의 명세가 incorrect 라고 적은 근거로 https 정규형을 쓴다.
+          구현 둘이 같이 쓴다는 것이 그 형태를 맞게 만들지 않는다.
+          freeText 의 "@type": "schema:text" 도 의심스럽다 -- schema.org 의 데이터타입은
+          대문자 Text 다. 남의 context 에 오류가 있을 수 있으므로 통째로 베끼지 않는다.
+```
 
 ## 하지 말 것
 

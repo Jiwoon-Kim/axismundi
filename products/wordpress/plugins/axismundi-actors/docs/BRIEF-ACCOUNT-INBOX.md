@@ -33,16 +33,17 @@ Principal 등록이 HTTP 요청자의 인증을 대신하지 않는다. 계정 �
 | 단계 | 구현·검증 목표 | 현재 상태 |
 |---|---|---|
 | S1 Principal | stable subject 식별·유형·존재 검증, 기존 User 관계 이전, remote 등록의 무권한성 | 구현·리뷰 완료 (f798f5f) |
-| S2 관계 통일 | 개인·위임 접근의 관계 모델 수렴, 개인 귀속과 운영 role 분리, 삭제·철회 정책 | 대기 |
-| S3 transport | legacy 공식 plugin binding과 Account 접근 분리, Actor별 키 생성·저장·회전·서명 정책, **모더레이션 스코프** | S3a 커밋 완료. S3b 구현·독립 리뷰 대기 |
-| S4 UNIQUE | 유일성을 transport 바인딩으로 이전. 추가 Person 의 독립 키·접근 관계 | 대기 |
-| S5 isPersonal | 인증 User와 관계로 계산. Session 기본값·지원·철회 회귀 검사 | 기존 부분 구현, 재검토 |
+| S2 관계 통일 | 개인·위임 접근의 관계 모델 수렴, 개인 귀속과 운영 role 분리, 삭제·철회 정책. **S4 가 측정으로 노출한 결함 1·2 를 받는다** | 대기 |
+| S3 transport | legacy 공식 plugin binding과 Account 접근 분리, Actor별 키 생성·저장·회전·서명 정책, **모더레이션 스코프** | 구현·리뷰 완료 (f5fa995) |
+| S4 UNIQUE | 유일성을 transport 바인딩으로 이전. 추가 Person 의 독립 키·접근 관계 | 구현·리뷰 완료 ([범위](IMPLEMENTATION-ACCOUNT-CARDINALITY.md)) |
+| S5 isPersonal | 인증 User와 관계로 계산. Session 기본값·지원·철회 회귀 검사 | 기존 부분 구현, 재검토. 살아있는 행에서는 파생이 이미 성립(불일치 0) |
+| SV 어휘 축소 | internal 제거(생성 즉시 public), actor_scope 제거. 접근 판정은 Principal 관계·role, isPersonal 은 귀속 표현. 시스템 역할은 기능 바인딩 | 결정 완료, 구현 대기 (아래 절) |
 | S6 receipts | Activity와 원자적인 Actor별 receipt, 중복·실패·보수적 백필 | 구현·리뷰 완료 (3bc752c) |
 | S7 Inbox | Actor UUID URL, Account 인가 GET, 공식 검증기 재사용 POST, 기존 수신 URL 유지 | 구현·리뷰 완료 (3bc752c) |
 | S8 activity view | Account 범위 Activity 뷰·query·changes·읽음 상태. AP 문서와 분리. **mailbox 아님** | 대기 |
 | S11 state | Account 단위 변경 알림 경로. S8 의 선결 | 대기 |
 | S9 instance | shared Inbox 및 Application Actor 소유권 이관 | 대기 |
-| S10 acting-actor | 요청의 Account 선택 운반·검증. 기본 선호와 현재 선택 분리 | 대기 |
+| S10 acting-actor | 요청의 Account 선택 운반·검증. 기본 선호와 현재 선택 분리. **`axismundi_actors_get_for_user()` 단수 가정 폐기, production 27 파일** | 대기 |
 
 S3는 컬럼을 옮기는 것만으로 완료되지 않는다. 추가 Person·Group이 Application 키를
 계속 사용하는지 검사하고, 독립 키 및 회전을 실제 지원해야 한다.
@@ -233,11 +234,11 @@ wp_ax_actors 인덱스
 원격이 캐시한 구 주소로 온 전달이 수신자를 못 찾는다.
 
 ```txt
-핀   User 당 transport_kind='upstream_user' 바인딩은 최대 하나다.
+핀   User 당 구 per-user route 바인딩은 최대 하나다. upstream_user 및 회전한 actor 모두 포함한다.
      local_user_id 의 UNIQUE 를 떼기 전에 그 제약을 transport_user_id 쪽에 세운다.
-     (부분 유일성이 필요하므로 단순 UNIQUE 로는 부족하다 --
-      upstream_application 행의 transport_user_id 는 NULL 이라 다중 NULL 은 허용되지만,
-      제약이 upstream_user 에만 걸려야 한다는 점을 확인할 것.)
+     nullable UNIQUE로 NULL 아닌 transport_user_id 전체를 보호한다.
+     upstream_application 및 추가 Account는 NULL이므로 다중 행이 가능하다.
+     upstream_user에만 한정한 부분 제약이면 회전한 actor와의 충돌을 막지 못한다.
 ```
 
 ### 새 Actor 경로는 실데이터로 돌아본 적이 없다
@@ -274,10 +275,386 @@ Account 수준 Block 이 추가 Person 에도 적용된다 (S3a 의 성질이 ac
 변이: 추가 Person 을 upstream_application 으로 만들면 키 검사가 실패해야 한다.
 ```
 
+### S4 리뷰 결과: 그 경로가 처음으로 돌았다 (2026-10-24)
+
+`transport_kind='actor'` 가 0 이었다는 것은 **독립 키 경로가 실데이터로 한 번도 실행된
+적이 없었다**는 뜻이다. wp-env 에서 기존 User 1 에 두 번째 Person 을 실제로 만들어
+돌렸다.
+
+```txt
+기존 199    upstream_user  transport_user_id=1  local_signing_key_id=NULL
+신규 51486  actor          transport_user_id=NULL  local_signing_key_id=158
+
+키          secret_box 2315 바이트, 복호 성공, fingerprint 가 행과 일치
+공개        publicKey.id = .../actors/{uuid}#main-key
+            공개된 PEM 의 fingerprint == 저장된 fingerprint
+서명         private 로 서명 → 공개된 half 로 검증 성공
+구별        레거시 199 가 공개하는 키와 다른 키다
+inbox       /wp-json/axismundi/v1/actors/{uuid}/inbox  — UUID 별로 분리
+접근 관계    wp_user/1/owner 행이 생성과 함께 생겼다
+레거시 라우트 user 1 → 여전히 identity 199. 신규가 가로채지 않는다
+```
+
+`actor_scope='user'` 로 만들었을 때 `status` 가 `internal` 이면 `publicKey` 가 비는데,
+이는 결함이 아니라 **비공개 Actor 를 광고하지 않는 정상 게이트**다 (`transport.php` 의
+`'public' !== $actor->get_status()`). `public` 으로 올리면 위 표대로 나온다.
+
+### 변이: 핀은 이중이다
+
+```txt
+변이 route    $route_user 의 기존-Actor 검사 제거
+              → FAIL: Second Person with same legacy user link can be stored
+              UNIQUE 가 legacy_transport_user 에서 실제로 막고, 감사가 알아챈다
+
+변이 appkey   생성 insert 의 transport_kind 를 upstream_application 으로
+              → 세 감사 모두 PASS. 단독으로는 아무것도 증명하지 못한다
+```
+
+두 번째 변이가 통과한 것은 감사 공백이 아니다. `store_signing_key()` 가 **키 삽입과
+같은 statement 로** `transport_kind='actor'` 를 쓰기 때문에 insert 한 값이 살아남지
+못한다. 즉 `transport_kind` 와 `local_signing_key_id` 는 **구조적으로 갈라질 수 없다.**
+
+그 구조 보호까지 함께 떼면 감사가 잡는다.
+
+```txt
+변이 appkey + store_signing_key 의 transport_kind 기록 제거
+              → FAIL: New Actor uses independent provider
+```
+
+S3b 의 소유자 검사와 같은 모양이다 — 핀이 두 겹이라 한 겹만 떼면 변이가 무효가 된다.
+
+### 신규 설치와 마이그레이션이 같은 상태로 수렴한다
+
+마이그레이션 경로는 wp-env 의 기존 DB 로 측정됐지만 **신규 설치 경로는 아직 돌지 않았다** --
+기존 사이트에서는 영원히 돌지 않고 새 사이트에서만 돌므로, 선언을 읽는 것으로는
+증명되지 않는다. 선언한 DDL 을 임시 테이블로 실제 실행해 인덱스를 읽었다.
+
+```txt
+신규 설치 (dbDelta 실제 실행)
+  legacy_transport_user   Non_unique=0   transport_user_id
+  local_user_lookup       Non_unique=1   local_user_id
+  personal_owner_user_id  Non_unique=1   personal_owner_user_id
+  local_user_id 의 UNIQUE: 0 건
+
+마이그레이션된 설치 (wp-env 실측)  동일
+```
+
+두 경로가 갈라지지 않는다. 마이그레이션은 advisory lock 으로 직렬화되고, 중복 route
+가 있으면 **DDL 을 하나도 실행하기 전에** 중단하며, 새 UNIQUE 를 세운 다음에 옛
+UNIQUE 를 뗀다 -- 보호가 없는 창이 생기지 않는다.
+
+### 전수 상태 (측정, 정리 후)
+
+```txt
+actors 738   orphan actor rows 0   keyless local public Person 0
+upstream_user 289 / upstream_application 187 / NULL 262
+```
+
+`upstream_application` 187 은 전부 레거시 **Group 65 · Organization 121 · Application 1**
+이고 Person 은 없다. S4 의 범위는 Person 이므로 이들은 S9 로 남는다.
+
 ### 생성 흐름은 여전히 닫아 둔다
 
 S4 가 스키마를 열더라도 **UI·REST 공개는 별도 판단**이다. 생성이 열리는 순간
 위 경로들이 실제 트래픽을 받으므로, 감사가 먼저 서고 나서 연다.
+
+### S4 가 열어 놓은 것: User 하나당 Actor 하나라는 가정 (2026-10-24 측정)
+
+S4 는 스키마를 정확히 열었다. 그런데 **그 가정에 기대고 있던 코드가 함께 열리지는
+않았다.** S4 의 검증 목록에 없던 자리이고, 측정해서 찾았다.
+
+#### 결함 0 — 뒤집힌 불변식을 단정하는 감사가 남아 있었다
+
+전수 실행에서 `audit-repository.php` 가 실패했다.
+
+```txt
+[FAIL] a second actor for the same user is rejected
+```
+
+S4 가 의도적으로 허용한 것을 **거부되어야 한다고 단정하는** 감사다. S4 이전에는
+`local_user_id` UNIQUE 가 그것을 보장했고 그 단정이 맞았다. 제약을 옮긴 순간 틀려졌다.
+
+놓친 이유는 범위다. 구현 보고가 돌린 것은 S4·ownership·account operations·signing
+keys·Actor Inbox·JMAP Session 여섯 건이고, 그 여섯 건은 전부 통과한다. `audit-repository`
+는 그 목록에 없었다.
+
+```txt
+핀   불변식을 옮기는 변경은 그 불변식을 단정하는 감사 전체를 돌려야 한다.
+     새로 쓴 감사가 통과하는 것은 **옛 감사가 아직 맞다는 증거가 아니다.**
+```
+
+단정을 새 불변식으로 교체했다. 옛 단정이 지키려던 것 -- 구 주소가 엉뚱한 Actor 로
+옮겨가지 않는 것 -- 은 사라지지 않았으므로 그것을 명시적으로 단정한다.
+
+```txt
+[PASS] a second actor for the same user is accepted
+[PASS] the second actor reserves no legacy route and holds its own key
+[PASS] the legacy per-user route still resolves to the first actor
+== 20 checks, 0 failed ==
+```
+
+#### 결함 1 — User 삭제가 Person 하나만 묘지로 보낸다
+
+`axismundi_actors_tombstone_for_user()` 는 `axismundi_actors_get_for_user()` 를 쓰고,
+그 함수는 **Actor 하나**를 돌려준다. 실제 `wp_delete_user()` 로 측정했다.
+
+```txt
+삭제 전   51521 S4 Probe A  public     키 복호 DECRYPTS
+          51522 S4 Probe B  public     키 복호 DECRYPTS
+
+삭제 후   51521 S4 Probe A  tombstone  snapshot blocked      ← 처리됨
+          51522 S4 Probe B  public     snapshot DECRYPTS     ← 남는다
+          user 51396 존재: no
+```
+
+두 번째 Person 은 **없는 User 를 가리킨 채 public 으로 남고 그 키는 계속 복호된다.**
+`signing_key_snapshot()` 의 `status NOT IN ('disabled','tombstone')` 가 fail-closed 로
+동작하지만, 그 조건이 참이 되지 않으므로 보호가 걸리지 않는다. S4 이전에는 UNIQUE 가
+"하나뿐"을 보장해서 이 함수가 맞았다. 제약을 옮긴 순간 조용히 틀려졌다.
+
+#### 결함 2 — 삭제가 키 저장소에 닿지 않는다
+
+Actor 행과 identity 행이 사라져도 서명키 행은 남는다. 오늘 감사 실행이 남긴 것을
+측정했다.
+
+```txt
+고아 서명키 28   전부 secret_box 보유, 전부 복호 가능
+                 전부 retired_at = NULL  ← 폐기가 아니라 활성으로 읽힌다
+                 전부 identity 행 없음
+```
+
+유일한 운영 삭제 경로는 `deleted_user` → 상태 변경뿐이고 키를 건드리지 않는다.
+사용 경로가 join 으로 막혀 있어 **오용은 아니고 보존의 문제**다. 그러나 삭제된 Account
+의 개인키가 사이트 키로 복호 가능한 상태로, 활성 표시로 남는다.
+
+#### 결함 3 정정 — 모호해진 것이 아니라 의미가 바뀌었다
+
+처음에 "27 파일이 조용히 하나를 고른다"고 적었는데 **틀렸다.** S4 가 같은 커밋에서
+`get_for_user()` 를 고쳤다.
+
+```diff
+- return $user_id > 0 ? axismundi_actors_query_one( 'a.local_user_id = %d', $user_id ) : null;
++ return axismundi_actors_get_transport_actor_for_user( $user_id );
+```
+
+임의의 첫 행이 아니라 **구 per-user 라우트를 예약한 Actor** 를 돌려준다. 유일 제약이
+걸린 컬럼으로 조회하므로 결정적이다. 측정했다.
+
+```txt
+두 Person 모두 public       get_for_user -> 51570 (라우트 보유자)
+라우트 보유자 tombstone     get_for_user -> 51570 (status tombstone 인데도 반환)
+라우트 보유자 행 제거       get_for_user -> NULL   ← public Person 1 이 남아 있는데도
+```
+
+그래서 남는 성질은 모호성이 아니라 둘이다.
+
+```txt
+상태를 안 본다    tombstone 된 Actor 도 그대로 돌려준다. S4 이전 쿼리도 같았으므로
+                  S4 의 회귀가 아니다. 보호는 호출부나 snapshot 의 status 조건에 있다.
+NULL 의 뜻이 좁다 "이 User 에게 Actor 가 없다" 가 아니라 "구 라우트가 예약되어 있지
+                  않다" 다. 쓸 수 있는 Person 이 남아 있어도 NULL 이 나온다.
+```
+
+production 호출 27 파일(플러그인 10: activities, activitypub-bridge, actors, calendar,
+contacts, forum, media-library, note, notifications, object-projections)은 전부 이
+좁은 뜻을 물려받는다. 호환 getter 로서는 맞고, **"이 User 의 활동 주체"** 를 묻는
+자리에서는 틀린다. 그 구분이 S10 이 할 일이고, 이제 드리프트가 아니라 정의된 질문이다.
+
+#### 소속
+
+0 은 이 리뷰에서 고쳤다. 나머지는 S4 의 범위가 아니다. 1·2 는 결함이고 codex 가 S2 로 분리해 둔 삭제·전송
+정책이 받는다. 3 은 결함이 아니라 **의미 변경**이고 S10 의 범위다. 다만 이것이 S10 의
+성격을 바꾼다 -- "흩어진 폴백 정리" 가 아니라 **"User 하나당 Actor 하나라는 가정의
+폐기"** 이고, 27 파일이 그 작업량이다.
+
+생성 UI·REST 가 닫혀 있는 동안은 1·2 에 실트래픽이 닿지 않는다. 그 순서를 지킨
+것이 S4 의 "생성 흐름은 여전히 닫아 둔다" 였고, 여기서 값을 한다.
+
+## 상태와 범위 어휘를 줄인다 (소유자 결정, 2026-10-25)
+
+두 결정이 같은 방향이다. **분류를 저장하지 않고 판정한다.**
+
+```txt
+결정 1   status 에서 internal 을 없앤다.      public | disabled | tombstone
+결정 2   actor_scope 를 없앤다.               isPersonal + principal 보유로 판정
+```
+
+### internal 은 자기 이유보다 오래 살았다
+
+원래 이유는 user↔actor 강결합이었다 -- Like·Create 의 주체가 있어야 해서 User 당 기본
+Actor 를 자동 생성하고, tombstone 아닌 비활성을 표현할 칸이 필요했다. 그 전제가 S4 로
+사라졌고, 자동 생성은 이미 일어나지 않는다.
+
+```txt
+WP user 151 중 Actor 가 없는 user 124
+admin.php 는 GET 도달 생성을 의도적으로 제거함
+  "an absent actor is simply the un-activated state, and creation happens in
+   the activation POST"
+```
+
+즉 **Actor 행이 없는 것**이 이미 미활성의 표현이고, JMAP 도 Account 0 개를 그대로
+표현하므로(RFC 8620 §2 `primaryAccounts`: "there MAY be no entry for a particular URI,
+even though that capability is supported by the server") 거기서 오는 압력도 없다.
+
+남은 internal 78 행은 용도가 바뀌어 있었다.
+
+```txt
+Group(managed)         38   핸들 잠금 38
+Organization(managed)  36   핸들 잠금 36
+Person(user)            4   핸들 잠금  2
+```
+
+**판정: 공개가 맞다.** 실제 발견은 WebFinger 와 follow 에서 일어나므로, 내용 없는 Group
+이 조회 가능해지는 것은 비용이 아니다. 공개 전 상태를 위해 어휘 한 칸을 유지할 이유가
+되지 못한다. 철회는 `disabled`, 종결은 `tombstone` 이 이미 맡는다.
+
+```txt
+핀   마이그레이션은 internal 78 행을 public 으로 올린다.
+     status 기본값도 internal 에서 public 으로 바뀐다 (DATA-MODEL §2.3).
+```
+
+### 마이그레이션이 발화시키는 것 (측정)
+
+status 변경은 순수한 컬럼 갱신이 아니다. 두 리스너가 붙어 있다.
+
+```txt
+webfinger.php:151   status_changed → sync_local_acct_address
+                    handle@authority 를 acct 원장에 기록한다. 결정의 의도된 효과다.
+forum/repository.php:290  status_changed → sync_published_group ('public' 일 때만)
+                    바인딩된 Group 의 community settings 행을 만든다.
+                    쓰기이지만 게시물을 발행하지는 않는다 (기존 settings 행 132).
+calendar            handle_registered 에만 붙어 있어 발화하지 않는다.
+                    다만 backfill 이 handle_locked_at 기준이라 상태와 무관하게 포괄한다 -- 공백 없음.
+```
+
+### 해결되는 모순 하나
+
+`signing_key_snapshot()` 의 조건은 `status NOT IN ('disabled','tombstone')` 이어서
+**internal Actor 는 서명은 되는데 키는 공개되지 않았다** -- 받는 쪽이 검증할 수 없는
+서명이다. internal 이 없어지면 서명 가능 집합과 광고 집합이 같아진다. 별도 수정이
+필요한 결함이 아니라 이 결정의 부수 효과로 닫힌다.
+
+### 남은 결정 하나 — `ensure_for_user()`
+
+internal 을 만드는 경로가 둘 남아 있다.
+
+```txt
+repository.php:2783  seed() 가 플러그인 활성화 시 현재 관리자에게 만든다
+admin.php:100        권한 있는 관리자가 없는 Actor 를 요청할 때 만든다
+```
+
+internal 이 없어지면 이 둘은 **아무도 선택하지 않은 정체성을 public 으로 발행한다.**
+`admin.php` 가 GET 생성을 제거한 이유와 같은 성질이다.
+
+```txt
+권고   seed() 의 생성을 없앤다. 부재가 미활성이라는 것이 이미 문서화된 계약이고,
+       생성은 nonce 를 운반하는 activation POST 에만 둔다.
+```
+
+**상태: 확정 대기.** internal 제거와 함께 묶지 않는다 -- 어휘 정리가 아니라 동작
+변경이고, 승인 없이 자동 생성을 끄면 관리자가 활성화 직후 기대하던 Actor 가 사라진다.
+
+### actor_scope 를 없앤다 — 다만 측정된 일치를 불변식으로 바꾸지 않는다
+
+먼저 방법론 정정. 앞선 판에서 `scope='site' ≡ actor_type='Application'` 을 "불일치 0"
+으로 적었는데, 그 값은 **행 하나에서 계산한 것**이다. n=1 에서 일치는 우연과 구별되지
+않으므로 치환 근거가 되지 못한다. 그리고 Application 은 **프로토콜 타입**이라 복수
+Application Account 를 허용할 수 있으니, 타입으로 인스턴스 역할을 식별하면 틀린다.
+
+```txt
+scope='managed'  ≡ principal 관계 보유       191/191        ← 치환 근거로 쓸 수 있다
+scope='user'     ≡ personal_owner IS NOT NULL  살아있는 행 불일치 0
+                                               불일치 253 은 전부 삭제된 User 의 tombstone
+scope='site'                                   행 1개. 근거 없음.
+remote actor                                   scope 가 항상 NULL -- 연합 개념이 아니다
+```
+
+### site 는 공식 플러그인의 운영 모드가 남긴 흔적이다
+
+공식 플러그인은 프로필 모드를 운영 설정으로 둔다 -- Author Profiles Only / Blog profile
+only / Both. 그리고 특수 Actor 를 user id 공간의 sentinel 로 식별한다 (원본 확인,
+`includes/collection/class-actors.php`).
+
+```txt
+const BLOG_USER_ID = 0;           블로그 대표
+const APPLICATION_USER_ID = -1;   시스템 서명
+```
+
+**공식도 둘을 구분한다.** 결함은 "안 나눴다" 가 아니라, Actor 정체성이 WP user id 라서
+WP user 가 아닌 주체를 sentinel 로 표현할 수밖에 없다는 것이다. 우리는 User 와 Actor 를
+이미 분리했으므로 sentinel 도, 그것을 받아 적은 `site` 계층도 필요 없다.
+
+우리 쪽에서 그 흔적이 어떻게 남았는지는 한 행에 그대로 보인다.
+
+```txt
+identity 25564   local_handle_key    'blog'                 ← 공식의 블로그 대표 이름
+                 transport_kind      'upstream_application'  ← 공식의 시스템 키를 빌림
+                 status              disabled
+                 local_signing_key_id NULL
+```
+
+공식이 나눠 둔 둘을 우리가 한 행에 합쳤다. 그러므로 분리해야 하는 것은 이렇다.
+
+```txt
+블로그 대표 Account   사이트 콘텐츠를 발행·공유하는 편집 주체. 여러 Account 중 하나다.
+시스템 Actor          인스턴스 서명 등 시스템 기능을 맡은 주체.
+```
+
+둘은 겹칠 수 있으나 같지 않다. 대표 Account 가 시스템 서명을 맡을 이유도, 시스템 Actor
+가 모든 글의 발행 주체일 이유도 없다.
+
+### 시스템 액터를 특별 취급하지 않는다
+
+별도 시스템 역할 분류조차 두지 않는다. **"시스템" 은 액터의 종류가 아니라 맡긴 용도**
+이므로, 기능 설정이 Account 를 지목하면 된다 -- 인스턴스 서명 설정이 `accountId` 를
+지정하고 그 Account 의 키로 서명한다. 접근은 다른 Account 와 완전히 같게 판정한다.
+
+```txt
+핀   actor_type       프로토콜 타입 (Person·Group·Service·Application). 역할이 아니다.
+     기능 바인딩      시스템 기능이 Account 를 지목한다. 저장된 분류가 아니다.
+     isPersonal       개인 귀속의 표현. **권한이 아니다.**
+     Principal + role 접근·발행·관리 여부는 전부 여기서 판정한다.
+```
+
+`isPersonal` 로 권한을 판정하지 않는다는 것이 특히 중요하다. 개인 귀속은 "누구의
+것인가" 이고 권한은 "누가 무엇을 할 수 있는가" 여서, 전자로 후자를 대신하면 공유
+Account 에서 곧 깨진다.
+
+### `<> 'site'` 가드는 권한을 지탱한 적이 없다 (측정)
+
+권한 층의 scope 용법은 거의 전부 `<> 'site'` 다. 그 가드가 실제로 무엇을 막는지 재 보면
+**이미 principal 검사가 같은 일을 하고 있다.**
+
+```txt
+identity 25564 에 대해
+  ax_actor_managers 행           0
+  account_role(admin 1)          ''        ← principal 검사만으로 거부
+  resolve_workspace(admin 1)     refused
+  is_public_profile              no
+  local_public_key               none
+  signing_key_snapshot           blocked
+```
+
+`can_access_workspace()` 는 scope 가드와 `account_role() !== ''` 를 **둘 다** 들고 있고,
+뒤의 것만으로 결과가 같다. 즉 가드는 분류 단축이었고, 남겨 두면 오히려 해롭다 -- 나중에
+그 Account 에 principal 을 부여해도 scope 가 막아 버린다.
+
+```txt
+핀   `<> 'site'` 가드들은 다른 술어로 치환하지 않고 **제거한다.**
+     판정은 principal 관계와 status 가 이미 하고 있다.
+```
+
+### 우리 시스템 액터는 아직 없다
+
+정정해 둔다. 앞서 인스턴스 서명 정체성이 있는 것처럼 쓴 대목이 있었다면 부정확하다.
+
+```txt
+우리 쪽    repository.php:2770  'blog' / scope=site 행을 만들지만 의도적으로 disabled.
+                                "실제 Instance Actor 설계 전까지 비활성"
+공식 쪽    transport.php:39     Bridge 가 upstream_application 바인딩에서 공식 키를 가져다 쓴다
+```
+
+둘 다 우리 시스템 액터 구현이 아니다. 현재는 공식 키 의존이 남아 있고, 구현 대상은 S9 다.
 
 ## S10 acting-actor: 암묵 폴백을 단일 해소기로
 

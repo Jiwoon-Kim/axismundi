@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '36.0';
+const AXISMUNDI_ACTORS_DB_VERSION = '37.0';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -148,6 +148,7 @@ function axismundi_actors_install() : void {
 		) ENGINE=InnoDB {$charset};"
 	);
 
+	if ( ! axismundi_actors_prepare_account_cardinality() ) { return; }
 	dbDelta(
 		"CREATE TABLE {$actors} (
 			identity_id bigint(20) unsigned NOT NULL,
@@ -180,9 +181,9 @@ function axismundi_actors_install() : void {
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (identity_id),
 			UNIQUE KEY local_handle_key (local_handle_key),
-			UNIQUE KEY local_user_id (local_user_id),
+			KEY local_user_lookup (local_user_id),
 			KEY personal_owner_user_id (personal_owner_user_id),
-			KEY transport_user_id (transport_user_id),
+			UNIQUE KEY legacy_transport_user (transport_user_id),
 			KEY preferred_username (preferred_username),
 			KEY scope_type (actor_scope, actor_type)
 		) ENGINE=InnoDB {$charset};"
@@ -724,6 +725,7 @@ function axismundi_actors_install() : void {
 		&& ! empty( $personal_owner_indexes )
 		&& axismundi_actors_principal_relation_schema_valid( $managers )
 		&& axismundi_actors_migrate_transport_bindings()
+		&& axismundi_actors_upgrade_account_cardinality( $actors )
 		&& axismundi_actors_install_signing_keys()
 	) {
 		update_option( 'ax_actors_principal_schema_version', AXISMUNDI_ACTORS_PRINCIPAL_SCHEMA_VERSION, false );
@@ -1010,9 +1012,13 @@ function axismundi_actors_unique_local_handle( string $base ) : string {
  */
 function axismundi_actors_create_local( array $args ) {
 	global $wpdb;
+	if ( AXISMUNDI_ACTORS_DB_VERSION !== (string) get_option( 'ax_actors_db_version', '' ) ) {
+		return new WP_Error( 'ax_actors_schema_pending', 'Account schema migration must complete before creation.' );
+	}
 	$type  = (string) ( $args['actor_type'] ?? 'Person' );
 	$scope = isset( $args['actor_scope'] ) ? (string) $args['actor_scope'] : null;
 	$uid   = isset( $args['local_user_id'] ) ? (int) $args['local_user_id'] : null;
+	$route_user = $uid > 0 && ! axismundi_actors_get_transport_actor_for_user( $uid ) ? $uid : null;
 	$personal_owner = isset( $args['personal_owner_user_id'] ) ? (int) $args['personal_owner_user_id']
 		: ( 'user' === $scope && $uid > 0 ? $uid : null );
 	if ( null !== $personal_owner && ( $personal_owner <= 0 || ! get_userdata( $personal_owner ) ) ) {
@@ -1096,8 +1102,8 @@ function axismundi_actors_create_local( array $args ) {
 			'local_handle_key'   => $handle_key,
 			'handle_locked_at'   => $handle_locked,
 			'local_user_id'      => $uid,
-			'transport_kind'     => $uid > 0 ? 'upstream_user' : 'upstream_application',
-			'transport_user_id'  => $uid > 0 ? $uid : null,
+			'transport_kind'     => 'actor',
+			'transport_user_id'  => $route_user,
 			'personal_owner_user_id' => $personal_owner,
 			'display_name'       => isset( $args['display_name'] ) ? sanitize_text_field( (string) $args['display_name'] ) : null,
 			'default_language'   => '' !== $language ? $language : null,
@@ -1466,7 +1472,7 @@ function axismundi_actors_kinds() : array {
  * @return Axismundi_Actor|null
  */
 function axismundi_actors_get_for_user( int $user_id ) : ?Axismundi_Actor {
-	return $user_id > 0 ? axismundi_actors_query_one( 'a.local_user_id = %d', $user_id ) : null;
+	return axismundi_actors_get_transport_actor_for_user( $user_id );
 }
 
 /**

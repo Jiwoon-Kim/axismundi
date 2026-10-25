@@ -60,9 +60,18 @@ try {
 	$alice2 = axismundi_actors_ensure_for_user( $uid );
 	ax_rep_assert( $ax_results, 'ensure_for_user is idempotent (same identity)', $alice2 instanceof Axismundi_Actor && $alice2->get_identity_id() === $alice->get_identity_id() );
 
-	// --- duplicate Person for same user is rejected at the DB ---
+	// --- a second Person for the same user is accepted, but does not take the legacy route ---
+	// S4 moved uniqueness from local_user_id to transport_user_id, so the user link may repeat
+	// while the old per-user address stays bound to whichever Actor reserved it first.
 	$dup = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'preferred_username' => 'alice-again', 'local_user_id' => $uid ) );
-	ax_rep_assert( $ax_results, 'a second actor for the same user is rejected', is_wp_error( $dup ) );
+	$dup_ok = $dup instanceof Axismundi_Actor;
+	if ( $dup_ok ) {
+		$ax_ids[] = $dup->get_identity_id();
+	}
+	ax_rep_assert( $ax_results, 'a second actor for the same user is accepted', $dup_ok && $dup->get_identity_id() !== $alice->get_identity_id() && $uid === $dup->get_local_user_id() );
+	$dup_row = $dup_ok ? $wpdb->get_row( $wpdb->prepare( "SELECT transport_kind, transport_user_id, local_signing_key_id FROM {$actors} WHERE identity_id = %d", $dup->get_identity_id() ), ARRAY_A ) : null; // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- cardinality assertion on a table name from the registry.
+	ax_rep_assert( $ax_results, 'the second actor reserves no legacy route and holds its own key', is_array( $dup_row ) && 'actor' === $dup_row['transport_kind'] && null === $dup_row['transport_user_id'] && (int) $dup_row['local_signing_key_id'] > 0 );
+	ax_rep_assert( $ax_results, 'the legacy per-user route still resolves to the first actor', axismundi_actors_get_transport_actor_for_user( $uid ) instanceof Axismundi_Actor && axismundi_actors_get_transport_actor_for_user( $uid )->get_identity_id() === $alice->get_identity_id() );
 
 	// --- a freshly ensured Person is HANDLE-LESS (handle registered later) ---
 	ax_rep_assert( $ax_results, 'a freshly ensured Person has no handle yet', '' === $alice->get_preferred_username() && ! $alice->is_handle_locked() );

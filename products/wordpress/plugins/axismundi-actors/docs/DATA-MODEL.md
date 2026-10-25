@@ -127,6 +127,10 @@ preferred_username VARCHAR(191)    NULL       -- real handle (NOT unique; NULL u
 local_handle_key  VARCHAR(191)     NULL       -- normalized handle for LOCAL actors only; NULL for remote and until registration
 handle_locked_at  DATETIME         NULL       -- set once when a local handle is registered; then immutable
 local_user_id     BIGINT UNSIGNED  NULL       -- set only for local Person
+personal_owner_user_id BIGINT UNSIGNED NULL  -- personal attribution, not transport
+transport_kind    VARCHAR(24)      NULL       -- upstream_user | upstream_application | actor
+transport_user_id BIGINT UNSIGNED  NULL       -- reserved legacy per-user route, not ownership
+local_signing_key_id BIGINT UNSIGNED NULL    -- active local signing key (S3b)
 display_name      VARCHAR(191)     NULL       -- remote snapshot only (local reads WP_User / bloginfo live)
 summary           TEXT             NULL       -- remote snapshot only
 profile_url       TEXT             NULL       -- remote snapshot only (local is derived)
@@ -135,7 +139,8 @@ created_at        DATETIME         NOT NULL
 updated_at        DATETIME         NOT NULL
 
 UNIQUE KEY local_handle_key (local_handle_key)       -- one handle per LOCAL actor (NULLs allowed → remote dupes OK)
-UNIQUE KEY local_user_id (local_user_id)             -- one local Person per user (v0.1)
+KEY local_user_lookup (local_user_id)                -- compatibility links may repeat (S4)
+UNIQUE KEY legacy_transport_user (transport_user_id) -- one legacy route per user; multiple NULLs
 KEY preferred_username (preferred_username)          -- lookup only (non-unique)
 KEY scope_type (actor_scope, actor_type)
 ENGINE=InnoDB
@@ -193,10 +198,10 @@ Notes:
   immutable, the user must confirm the exact value. Collision suffixing uses `_N`, not
   `-N`. **Remote** actors keep their `preferredUsername` verbatim (dots/hyphens/
   unicode allowed) in `payload_json`; this rule is a *local* mention-interop policy.
-- `UNIQUE(local_user_id)` enforces one local Person per user for v0.1. When a user
-  is later allowed to manage multiple actors, this unique is dropped and a
-  `wp_ax_actor_managers(identity_id, user_id, role)` join table is added (reserved,
-  not built now).
+- S4(DB 37.0)는 local_user_id의 UNIQUE를 transport_user_id로 옮긴다. 추가 Person은 같은
+  User 링크를 가질 수 있으나 구 per-user 라우트를 중복 예약하지 않는다. 접근 관계는 기존
+  `wp_ax_actor_managers(identity_id, principal_kind, principal_id, role)`가 관리한다.
+  생성 UI·REST gate 및 S2의 이전·삭제 정책은 별개다.
 - **Local Person / Site actors:** `display_name`, `summary`, `profile_url` are
   left NULL and resolved live —
   `display_name → get_the_author_meta('display_name', local_user_id)`,

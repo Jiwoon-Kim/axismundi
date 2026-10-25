@@ -410,3 +410,101 @@ Order:
 - `axismundi-object-projections/docs/LOCAL-OBJECTS.md` — why identity and body stopped being
   derived at projection time.
 - `docs/BOUNDARIES.md`, `docs/LIFECYCLE.md` — the ledger's existing contracts.
+
+## 9. `published` is a claim, and a local Activity may not backdate it
+
+2026-10-25. WordPress lets an author set `post_date` to any past time, so a post can
+claim to be published in 1996. That makes `published` **authored metadata, not an
+observation**, and it forces a distinction the specification does not make for us.
+
+### The specification requires no equality
+
+ActivityPub §6.2 says what a server copies between a `Create` and its object, and
+`published` is not in it.
+
+```txt
+SHOULD   actor → object.attributedTo
+SHOULD   recipients of the Create → its object, and the object's → the Create,
+         on initial distribution
+MUST     §6.2.1 -- to/bto/cc/bcc/audience on a bare object are copied to the
+         Create the server wraps it in
+published   no normative text. It appears only in examples 15, 16, 17.
+```
+
+Both are Objects, so `published` means the same thing on each -- "the date and time at
+which the object was published". They are therefore allowed to differ, and for imported
+material they **should**: the object says 1996, the activity says today, and both are true.
+
+Measured on staging 2026-10-25: our embedded `Create`s currently match their object's
+`published` exactly, because nothing has been backdated yet.
+
+### The rule: real time or scheduled, never backwards
+
+A draft is not an activity; it has no ledger row. Sending fixes the time; scheduling fixes
+a future time; claiming a past time is forgery. The mail analogy is exact -- a scheduled
+send carries a future `Date`, and no send carries 1996.
+
+```txt
+핀   A local outbound Activity's `published` is the confirmed submission time, or the
+     scheduled time for a scheduled publication. A past value is **refused, not
+     silently corrected** -- correcting it would change the author's claim.
+핀   This binds every activity type, not `Create`. `Question`, `Offer`, `Like`,
+     `Announce` take the same ledger path.
+핀   `object.published` stays free. Publishing a 1996 article today gives
+     object.published = 1996 and Activity.published = today.
+핀   An inbound Activity's past `published` is **the peer's claim** and is recorded as an
+     observation, not refused. Applying the guard regardless of direction would break
+     federation with any server holding archival material.
+```
+
+**The guard does not exist yet** (measured 2026-10-25): `axismundi_act_datetime()` parses
+with `strtotime` and never compares against the current time, and the same path serves
+outbound rows. `repository.php` line 1221 is where the value enters.
+
+### `feed_sort_at` is an immutability device, not a backdating defence
+
+Recorded because it was asserted twice here and was wrong both times.
+
+```txt
+틀렸던 말 1   "COALESCE(published_at, received_at, created_at) replaces an old value
+              with the received time."  COALESCE only skips NULL. A 1996 value is chosen.
+틀렸던 말 2   "feed_sort_at keeps the feed order stable against a backdated published."
+              `axismundi_act_feed_sort_at()` returns `published_at` verbatim when set.
+              What it stabilises is the **cursor** -- one immutable key shared by writes,
+              upgrades and continuation reads. A past date still sorts to the past.
+```
+
+So the feed is protected by the pin above, not by the sort column: once a local activity
+cannot claim the past, the only way a distant date reaches our ordering is a remote
+observation, which is correct.
+
+## 10. The federated-object list comes from the ledger
+
+Publishing to the site and publishing to the federation are separate commands. A WP
+`publish` may trigger the second -- the way a subscriber mailing does -- but it is not the
+same event, and the federated set is therefore not "every published post".
+
+```txt
+Activity ledger
+  → activities this instance sent (the existing outbound classification,
+     not the word "local" as a direction value)
+  → activity_type = Create
+  → group by object identity
+  → apply Delete state and access rights
+```
+
+`identity` is the join: a WP post id names a local authored thing, an Object identity names
+what federation keeps referring to. Having an identity does not mean "federated" -- the
+Create/Update/Delete history attached to it does. That removes any need for a second list
+of federated objects.
+
+```txt
+federated = a federation publication was confirmed and its Create recorded.
+            **Not** delivery success -- an object with no recipients, or one whose
+            delivery is still retrying, must not vanish from the list.
+```
+
+Two read surfaces follow from the same ledger without being the same query: an Object
+DataView is one row per object, an activity feed is one item per activity. And the filter
+above is the **local** federated set only; remote objects arrive by other paths such as
+`Announce`, so a reader must not restrict everything to `Create`.

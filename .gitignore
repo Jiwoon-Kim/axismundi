@@ -54,5 +54,5 @@ products/styleguide/assets/css/icons.css
 products/styleguide/assets/css/components/dialog.css
 products/styleguide/_data/color.yml
 
-# Staging upload packages (built by tools/builders/package_staging.ps1)
+# Staging upload packages (built by each plugin's scripts/build-zip.ps1)
 _dist/

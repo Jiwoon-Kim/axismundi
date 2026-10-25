@@ -22,15 +22,16 @@ S2 는 새 권한 모델을 만드는 작업이 아니다. 이미 있는 두 표
 
 ## 측정된 현재 상태 (2026-10-25, wp-env)
 
-### ① 접근이 두 곳에 적혀 있다 — 그리고 완전히 중복이다
+### ① 값은 겹치지만 같은 사실이 아니다
 
 ```txt
 personal_owner_user_id 가 있는 Actor                    338
   그중 같은 User 의 owner principal 행도 있는 것        338   ← 338/338, 예외 0
 ```
 
-**한 번도 갈라진 적이 없다.** 그래서 수렴은 데이터 마이그레이션이 아니라 **읽는 쪽을
-관계로 옮기는 작업**이다. 컬럼은 그 뒤에 지운다.
+**한 번도 갈라진 적이 없다.** 처음에는 그것을 중복으로 읽고 "읽는 쪽을 관계로 옮기고
+컬럼을 지운다" 로 적었는데, 그 판단이 틀렸다 -- 겹치는 값은 같은 사실의 증거가 아니다.
+아래 V3 가 그 계획을 철회한 이유다.
 
 다만 컬럼이 담는 뜻이 관계와 같지는 않다.
 
@@ -102,115 +103,57 @@ identity 가 tombstone 이 되면 그 Actor 의 서명키 secret_box 를 비우�
 ```txt
 핀   키를 지우는 것과 폐기 표시는 다르다. secret_box 를 NULL 로 만드는 것이
      폐기이고, 행 삭제는 과거 서명의 검증 근거를 없앤다.
-핀   순서: 연합 삭제 전달이 끝난 뒤에 비운다. 전달에 그 키가 필요하다.
-     (Actor 자신의 Delete 전달은 S2 범위 밖이지만, 순서 제약은 여기서 지킨다.)
 핀   기존 고아 206 행은 **마이그레이션이 정리한다.** 그 행들은 identity 가 이미 없어
      소유자를 복원할 수 없으므로, 비우는 것이 유일한 선택이다.
 ```
 
-### V3 — 접근을 관계로 읽는다
+**정정 (2026-10-25)**: 초판에 "연합 삭제 전달이 끝난 뒤에 비운다 -- 전달에 그 키가
+필요하다" 를 핀으로 적었는데, 그것은 **tombstone 시 폐기와 모순이고 사실도 틀렸다.**
 
 ```txt
-1  personal_owner_user_id 를 읽는 곳을 관계·파생으로 옮긴다. 컬럼은 둔다.
-2  감사가 통과하는 것을 확인한다.
-3  그 다음 커밋에서 컬럼을 제거한다.
-```
-
-읽는 쪽을 먼저 옮기는 이유는 이 리포에서 정의 변경과 스윕을 한 커밋에 넣어 fatal 을
-낸 전례가 있기 때문이다.
-
-```txt
-핀   isPersonal 의 파생 규칙을 먼저 정하고 그 다음 컬럼을 지운다.
-     순서를 바꾸면 공유 Account 가 생길 때 복원할 근거가 없다.
-핀   tombstone 253 행이 personal_owner 를 잃는다. 삭제된 User 의 묘비가 개인 귀속을
-     유지해야 하는지는 **이 슬라이스가 정한다** -- S4 리뷰에서 S2 로 넘긴 질문이다.
-```
-
-
-## 핸들 재사용을 허용한다 (소유자 결정, 2026-10-25)
-
-묘비가 핸들을 붙잡는 것은 **정책이 아니라 제약의 부작용**이었다. 예약 핸들은 시스템이
-관리하고(`is_reserved_handle()` 가 이미 그 목록이다), 기본은 재사용 허용이다.
-
-### 막고 있는 것 전수 (측정)
-
-```txt
-ax_actors.local_handle_key          UNIQUE -- 죽은 행이 값을 점유한다
-ax_actor_addresses.address_hash     UNIQUE -- tombstone 이 붙잡은 것:
-                                              acct 395 + local_handle 516
-get_by_handle( 죽은 핸들 )           → taken   (status 를 보지 않는다)
-unique_local_handle( 죽은 핸들 )     → '..._2' 를 붙인다
-is_reserved_handle( 죽은 핸들 )      → not reserved  ← 시스템 예약 목록은 이미 별개다
-```
-
-### 할 일 네 개
-
-```txt
-① local_handle_key UNIQUE 를 **살아있는 행에만** 적용한다.
-   S4 가 transport_user_id 에 한 것과 같은 모양이고, 같은 순서로 한다 --
-   새 제약을 세운 뒤 옛 UNIQUE 를 뗀다. 보호 없는 창을 만들지 않는다.
-② tombstone 전이 때 주소를 해제한다 (acct 395 + local_handle 516).
-   묘비가 아니라 **전이 시점**에 해제한다. 전이 때 안 하면 묘지에 해제할 목록이 남고,
-   그게 지금의 1,256 행이다.
-③ get_by_handle() 이 status 를 본다. 죽은 핸들은 free 다.
-④ unique_local_handle() 이 죽은 핸들에 접미사를 붙이지 않는다.
+signing-keys.php:93   signing_key_snapshot() 이 status NOT IN ('disabled','tombstone')
+transport.php:58      전송기는 개인키를 **그 스냅샷에서만** 가져온다
+→ tombstone 이 된 Actor 는 이미 서명할 수 없다.
+  키를 남겨 두는 것만으로 삭제 전달이 가능해지지 않는다.
 ```
 
 ```txt
-핀   재사용된 핸들이 이전 Actor 의 URI 를 승계하지 않는다. 새 Actor 는 새 UUID 를
-     받고, 구 Actor URI 는 그대로 410 이다. 핸들은 라우팅 별칭이고 정체성이 아니다.
+핀   tombstone 전이와 같은 트랜잭션에서 폐기한다. 전달을 기다리지 않는다.
+핀   연합 삭제 전달이 필요하면 **tombstone 이전 단계**에서 처리한다.
+     Actor 자신의 Delete 생명주기는 S2 범위 밖이고, 그 순서 제약은
+     그 슬라이스가 지킬 일이다 -- S2 가 키를 붙잡아 둘 이유가 아니다.
 ```
 
-### 캘린더 Collection id — 방침이 이미 있었다 (정정)
+### V3 — 개인 귀속 컬럼은 유지한다 (범위 축소)
 
-처음에 "미결, 후보 둘" 로 적었는데 틀렸다. 방침은 이미 기록돼 있다 -- 사람이 읽는
-slug URL 은 **별칭·redirect 만**이고 구독·AP 에는 쓰지 않는다. 구현이 그것을 따르지
-않은 것이다.
+초판은 `personal_owner_user_id` 의 읽는 쪽을 옮기고 컬럼을 제거하는 3 단계로 적었다.
+**그 계획을 철회한다.**
 
 ```txt
-지금        collection-projection.php:64 axismundi_cal_collection_uri_for()
-            slug 이 @handle 형태면 그것을 Collection id 로 쓴다
-            → 발행된 id 가 /calendar/@handle 이고, 핸들 재사용이 그 URI 를 흔든다
-결정        Collection id 는 항상 /calendar/c/{uuid} 다.
-            primary 에는 /calendar/@handle 을 **별칭**으로 준다.
-            → 같은 uuid 를 유지하므로 핸들 재사용이 발행된 id 를 건드리지 않는다
-            → 핸들이 바뀌면 별칭만 따라 움직인다
+측정        접근 권한은 이미 Principal 관계를 읽는다 (S4 리뷰에서 확인:
+            can_access_workspace() 가 account_role() 로 판정하고, scope 가드는
+            그것과 중복이었다).
+그러므로    personal_owner_user_id 는 접근의 중복 표현이 아니라 **개인 귀속이라는
+            별개의 사실**이다. 338/338 로 값이 겹치는 것은 개인 Account 의 소유자가
+            곧 운영자이기 때문이고, 같은 뜻이라는 증거가 아니다.
+결정        S2 에서 컬럼을 유지한다. 제거를 예정하지 않는다.
+            대체 관계가 정의되지 않은 컬럼을 지우는 일정을 세우지 않는다.
 ```
 
 ```txt
-핀   S2 는 이 변경을 하지 않는다. 캘린더 소유이고 발행된 URL 이 서비스하는 것을
-     바꾸는 일이므로 Calendar 쪽 작업으로 분리한다 -- JMAP for Calendars 에서
-     CalendarList·구독과 함께 본다.
-핀   다만 **순서 제약이 생긴다**: 핸들 재사용(①~④)이 캘린더 id 전환보다 먼저 가면
-     그 사이에 발행된 /calendar/@handle 이 다른 캘린더를 내놓을 수 있다.
-     S2 의 핸들 해제는 캘린더 slug 를 건드리지 않으므로 새 Actor 는 slug 충돌을
-     **보고** 받는다(backfill 이 이미 "collision is left alone and reported").
-     그 보고가 남는 것이 조용한 승계보다 낫고, 전환이 끝나면 사라진다.
+핀   owner role 로 isPersonal 을 치환하지 않는다. 공유 Account 의 운영자 전원이
+     개인 귀속자가 된다.
+핀   isPersonal 을 관계에서 파생할 방법은 S5 가 정한다. 그 정의가 생긴 뒤에
+     컬럼 제거를 **별도로** 판단한다.
 ```
 
-## 묘지는 별도 슬라이스다
-
-S2 는 삭제가 닿지 않는 곳을 닫는 작업이고, 저장 구조를 바꾸지 않는다. 다만 **무엇을
-남겨야 하는가**는 S2 가 확정하므로(V2 가 공개키만 남긴다고 정한다) 측정을 여기 적어 둔다.
-
-```txt
-로컬 tombstone Actor 564 행이 들고 있는 것 (측정)
-  display_name 0 / summary 0 / avatar 0 / payload_json 0   ← 프로필은 이미 비워진다
-  handle 516        → ①~④ 로 해제 대상이 된다
-  signing key 302   → V2 가 secret_box 를 비우고 public half 만 남긴다
-  local_user_id 564 → 죽은 User 참조. 지워도 된다
-부수 테이블   addresses 911 / managers 311 / texts 34 / endpoints 0
-원격 tombstone 0   ← 묘지는 로컬 전용 문제다
-```
-
-그래서 묘비가 실제로 필요한 것은 넷이다 -- `uri` · `former_type` · `deleted_at` ·
-검증용 `public_key_pem`. **핸들은 아니다**(재사용 허용). 지금은 그 넷을 위해 56 컬럼짜리
-프로필 행과 부수 테이블 1,256 행을 살려 두고 있다.
+그래서 S2 에 남는 "관계 수렴" 작업은 없다. 수렴할 중복이 측정상 존재하지 않는다 --
+접근은 이미 한 곳에서 읽히고, 컬럼은 다른 사실을 담는다. 슬라이스 제목이 가리키던
+문제는 **S4 가 이미 절반을 해결했고**(scope 가드 제거 결정), 나머지 절반은 S5 다.
 
 ```txt
-핀   묘지 분리는 status='tombstone' 을 읽는 모든 곳을 바꾸는 작업이다 --
-     signing_key_snapshot() / can_access_workspace() / 투영 가시성 / admin 화면.
-     S2 가 끝난 뒤 별도 슬라이스로 한다.
+핀   tombstone 253 행이 personal_owner 를 유지한다. 컬럼을 지우지 않으므로
+     S4 가 넘긴 질문이 지금 강제되지 않는다. 묘지 슬라이스에서 다시 본다.
 ```
 
 ## 검증
@@ -221,12 +164,19 @@ S2 는 삭제가 닿지 않는 곳을 닫는 작업이고, 저장 구조를 바�
   → 둘 다 secret_box 가 비고 retired_at 이 찍혔다. public_key_pem 은 남았다.
 마이그레이션 후 고아 서명키의 secret_box 보유 수가 0 이다.
 public 상태이면서 죽은 User 를 가리키는 로컬 Actor 가 0 이다 (현재도 0 -- 회귀 금지선).
-isPersonal 이 관계·파생으로 계산되고, owner role 만으로 참이 되지 않는다.
+핸들 해제: tombstone 이 된 Actor 의 핸들을 새 Actor 가 접미사 없이 받는다.
+  → get_by_handle(그 핸들) 이 **새** Actor 를 돌려준다.
+  → 구 Actor 의 URI 는 여전히 410 이다 (핸들은 별칭, 정체성 아님).
+  → tombstone 의 acct·local_handle 주소 행이 전이 시점에 해제됐다.
 변이: tombstone 을 단수 getter 로 되돌리면 두 번째 Person 검사가 실패해야 한다.
 변이: secret_box 를 비우지 않게 하면 고아 키 검사가 실패해야 한다.
-변이: isPersonal 을 owner role 로 치환하면 공유 Account 검사가 실패해야 한다.
-       (그 검사를 위해 운영자 둘인 Account 픽스처가 필요하다.)
+변이: local_handle_key UNIQUE 를 살아있는 행 한정에서 전체로 되돌리면
+       핸들 해제 검사가 실패해야 한다.
+변이: 주소 해제를 전이에서 빼면 새 Actor 가 접미사를 받게 되어 검사가 실패해야 한다.
 ```
+
+`isPersonal` 파생은 이 슬라이스의 검증 항목이 아니다 -- 컬럼을 유지하므로 S5 가 그
+정의와 검사를 함께 가진다.
 
 전수 감사는 돌리지 않는다. 영향 계약 감사 + 위 변이로 충분하고, 전수는 배포 시점이다.
 

@@ -75,6 +75,88 @@ M3  eventSourceUrl 을 서비스할 수 없을 때의 선택지를 명세·배�
     어떻게 내는지 확인한다. 언어 무관하게, 모호한 전송 계약은 배포 구현이 정리한다.
 ```
 
+## M1~M3 측정 결과 — 범위가 줄었다 (2026-10-25)
+
+브리프 초판은 세 측정을 선행으로 뒀다. 셋 다 답이 나왔고, **두 개는 사라지고 하나는
+선택지가 좁혀졌다.**
+
+### M3 — 참조 구현에 생략 경로가 없다
+
+```txt
+Apache James   core/Session.scala:120   eventSourceUrl: URL    ← Option[URL] 이 아니다
+               routes/SessionSupplier.scala:89-95
+                 apiUrl         {prefix}/jmap
+                 downloadUrl    {prefix}/download/{accountId}/{blobId}?type={type}&name={name}
+                 uploadUrl      {prefix}/upload/{accountId}
+                 eventSourceUrl {prefix}/eventSource?types={types}&closeAfter={closeafter}&ping={ping}
+               네 URL 전부 **고정 경로, 조건 분기 없음**
+Stalwart       jmap-proto/src/request/capability.rs:35  event_source_url: String  ← 역시 Option 아님
+               :379-385  /jmap/ · /jmap/upload/{accountId}/ · 동일 구조
+```
+
+**그래서 후보 (ㄷ) "필드를 비운다" 는 탈락이다.** 비우는 구현이 없고 Scala·Rust 둘 다
+타입 수준에서 non-optional 이므로, 클라이언트가 그 필드를 기대한다고 봐야 한다.
+
+남은 둘 중 **(ㄱ) 최소 SSE 를 택한다.** 근거는 명세 자체다 -- `closeafter` 변수가 있다는
+것은 서버가 **이벤트 하나 보내고 닫는 동작을 정상 모드로 인정**한다는 뜻이다. 짧게 열고
+닫는 SSE 는 축소 구현이 아니라 명세가 예상한 사용이고, 프록시 타임아웃과 싸우지 않는다.
+반대로 (ㄴ) 오류 URL 은 광고한 주소가 항상 실패하는 상태라 거짓 광고에 더 가깝다.
+
+실제 푸시는 이미 있는 것으로 간다 -- `axismundi-pwa` 에 VAPID 키(`includes/keys.php`),
+구독 스키마(`includes/schema.php`, `endpoint`·`p256dh_key`), 전송기
+(`includes/sender.php` `axismundi_pwa_push()`)가 있고 JMAP §7.2 PushSubscription 이 같은
+모양이다. 그 스키마 주석이 성질을 이미 짚어 두었다 -- *"The endpoint is the credential.
+Anyone holding it can ask the push service to wake that…"*
+
+### M1 — 더 이상 범위를 막지 않는다
+
+Atomic 에서 장시간 열린 event-stream 이 유지되는지는 **최소 SSE 를 택하면 전제가 아니다.**
+지속 연결이 필요해질 때(실시간 리더) 다시 재는 측정으로 남긴다.
+
+### M2 — 사라졌다. 비공개 미디어 모집단이 0 이다
+
+```txt
+attachment 25
+  _ax_media_visibility = 'inherit'  4      ← 부모 가시성을 따름. 비공개가 아니다
+  _ax_media_visibility = 'public'   4
+  메타 없음                         18
+  'private' 류 값                    0
+post_status                        전부 inherit
+```
+
+**attachment 페이지는 무조건 공개**라는 정책과 일치한다. 그러므로 `downloadUrl` 은 인가
+작업이 아니라 공개 파일 서비스다.
+
+```txt
+핀   downloadUrl 템플릿의 {accountId} 는 명세가 요구하므로 넣되, 그것이 접근 범위를
+     좁힌다고 주장하지 않는다. 블롭이 전부 공개이므로 그 변수는 장식이다.
+     나중에 비공개 미디어가 생기면 그때 이 핀을 다시 본다 -- 지금 없는 인가를
+     구현해 두지 않는다.
+```
+
+### 이메일은 범위 밖이고 코드도 그렇다
+
+```txt
+우리가 광고하는 capability   urn:ietf:params:jmap:core  하나
+urn:ietf:params:jmap:mail    코드에 **없다**
+```
+
+결정이 이미 반영된 상태다. Mail 전용 관심사(Mailbox·Email·Thread, 그 블롭 사용 패턴)는
+이 슬라이스가 다루지 않는다.
+
+### 갱신된 범위
+
+```txt
+apiUrl          Engine::execute() 에 연결
+uploadUrl       POST → WP attachment, JMAP 업로드 응답(accountId·blobId·type·size)
+                → blobId 를 무엇으로 할지가 남은 결정 (attachment id vs content hash)
+downloadUrl     공개 attachment 서비스. 인가 없음
+eventSourceUrl  최소 SSE -- 연결 즉시 ping, closeafter 지원, 길게 붙잡지 않는다
+                실제 푸시는 PushSubscription/Web Push
+경계 공통       인증(쿠키+Application Passwords) · 쿠키 요청의 nonce · I-JSON 검증 ·
+                problem details 오류 · maxSizeRequest · 같은 출처 CORS
+```
+
 ## 경계가 포함하는 것 — 라우트 하나가 아니다
 
 ```txt

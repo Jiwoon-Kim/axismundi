@@ -750,6 +750,209 @@ term 멤버십이 세 저장소로 갈라졌던 것과 같은 모양이 된다. 
 **미루는 비용은 0 이다.** 현재 상태가 pending 이고 잃는 정보가 없다. 반대로 지금
 추측으로 할당 규칙을 만들면 실제 압력과 어긋난 채로 데이터가 쌓인다.
 
+## Actor Projection Emits Undeclared Extension Terms, 2026-10-25
+
+확장 속성의 `@context` 선언 seam 은 **이미 있고 문서화되어 있다.** 다른 도메인은 쓰고
+있고, Actors 만 한 번도 쓰지 않았다.
+
+```txt
+renderer.php:19   "the `axismundi_op_jsonld_context` filter -- never by a
+                   transformer's return value."
+renderer.php:68   apply_filters( 'axismundi_op_jsonld_context', $context, $object )
+
+선례   media-library.php:43  Image·Video·Audio·Document 에 schema.org 와
+                             자체 ns 의 usedIn 을 선언한다
+
+Actors 의 사용 횟수   0
+```
+
+### 규범 context 에 대조한 결과 (측정)
+
+`https://www.w3.org/ns/activitystreams` 문서를 받아 용어 정의를 직접 확인하고, live
+Actor 문서(`/actors/{uuid}`, `Accept: application/ld+json`)와 대조했다.
+
+```txt
+정의함       inbox  outbox  followers  following  endpoints  sharedInbox
+             preferredUsername  attachment  name  nameMap  summaryMap
+
+정의 안 함 — 그런데 지금 내보내는 중
+  publicKey / publicKeyPem / owner      Security Vocabulary
+  manuallyApprovesFollowers             AS2 확장
+  PropertyValue (type) / value          schema.org
+
+정의 안 함 — 내보내지 않음 (지금은 무해)
+  Hashtag  discoverable  indexable
+```
+
+**`endpoints.sharedInbox` 는 확장이 아니다** -- 규범 context 가 정의하므로 선언이 필요
+없다. 레지스트리가 알아야 한다는 것과 context 선언이 필요하다는 것은 별개다.
+
+`Hashtag` 가 미정의라는 것은 **이미 내린 결정을 뒷받침한다.** 우리는 `type: Hashtag` 를
+등록하지 않고 `{id, name}` 에 `#` 접두사를 판별자로 쓰기로 했다. 그 결정이 같은 부류의
+결함 하나를 이미 피했다.
+
+### 가장 큰 쪽은 publicKey 가 아니라 프로필 필드다
+
+```txt
+attachment = [ { "type": "PropertyValue", "name": "...", "value": "<a href=... rel=\"me\">" }, ... ]
+             ^^^^ 미정의              ^^^^ AS2    ^^^^^ 미정의
+```
+
+항목마다 세 키 중 둘이 미정의다. expand 하는 수신자에게는 type 없는 노드에 `name` 만
+남으므로 **프로필 필드가 사라진다.** 지금 그 안에 들어 있는 것이 rel=me 링크다 --
+사용자가 보려고 넣은 내용이다.
+
+```txt
+@context    "https://www.w3.org/ns/activitystreams"     ← 문자열. 기본 IRI 뿐이다
+```
+
+문자열인 이유는 builder 가 단일 원소를 collapse 하기 때문이고(`1 === count(...)`), 즉
+Actor 문서는 builder 를 거치지만 **일치하는 분기가 하나도 없었다**는 뜻이다.
+
+### 우회가 일어나는 자리
+
+```txt
+actors.php:258   $allowed = array_intersect_key( $fields,
+                     array_flip( array( 'inbox', 'endpoints', 'publicKey' ) ) );
+                 return array_merge( $object, $allowed );
+```
+
+transport 필드를 하드코딩 허용 목록으로 추려 응답에 직접 붙인다. context builder 의 속성
+분기는 `quote`, `quoteAuthorization`, `sensitive`, `dcterms:subject`,
+`interactionPolicy` 다섯 개뿐이고 **Actor 전용 속성에는 하나도 없다.** 분기 체계가
+Note·Article 속성을 위해 자랐고, Actor 문서는 그 체계가 확장되지 않은 경로로 조립된다.
+
+### 지금 깨지지 않는 이유, 그리고 무엇이 걸려 있는지
+
+과장하지 않는다. 현재 피어는 키로 읽으므로 연합은 동작한다 -- Mastodon·Misskey E2E 는
+통과했다. 비용은 둘이다.
+
+```txt
+적합성   선언 없는 용어는 JSON-LD 로서 정의되지 않는다
+실질     실제로 expand 하는 수신자는 그 용어를 버린다.
+         publicKey 가 버려지면 확장된 그래프에 검증 키가 없다 -- S3b 가 만든 키다
+         PropertyValue·value 가 버려지면 프로필 필드 내용이 없다
+```
+
+### 감사가 보지 못하는 것
+
+```txt
+audit-actor-projection.php:47
+  isset( $finalized['inbox'], $finalized['outbox'],
+         $finalized['endpoints']['sharedInbox'], $finalized['publicKey'] )
+```
+
+병합 결과가 **나타나는지만** 본다. 선언 없이 나가면 실패한다는 단정이 없고, `@context`
+가 확장을 운반하는지 보는 감사도 없다. 그래서 이 상태가 통과한 채로 유지됐다.
+
+### 고칠 모양
+
+```txt
+핀   Actors 가 자기 확장 용어를 `axismundi_op_jsonld_context` 필터로 선언한다.
+     Media Library 가 이미 그렇게 한다. 새 기계를 만들 필요가 없다.
+핀   감사는 "속성이 있다" 가 아니라 "선언 없이 나가면 실패한다" 를 단정한다.
+```
+
+### 결정: 출력은 `https://schema.org/`, 수신은 레거시도 받는다 (2026-10-25)
+
+도메인마다 다르게 선언하면 같은 접두사가 우리 문서들 안에서 다른 IRI 를 뜻한다. 그래서
+한 형태로 정해야 하는데, **Mastodon 자신의 명세 문서가 자기 형태를 오류로 명시한다.**
+
+```txt
+docs.joinmastodon.org/spec/activitypub/
+  "Base URI: http://schema.org# (incorrect; should be https://schema.org/)"
+  "currently incorrectly expects and maps the term `schema` to the base URI
+   http://schema.org#"
+  "Therefore, JSON-LD processors who use the correct context definition will
+   fail to process profile fields correctly."
+```
+
+측정한 배포 현실과 표준 쪽이 이렇게 갈린다.
+
+```txt
+배포 Mastodon (fosstodon.org Actor, 200)   "schema": "http://schema.org#"
+Mastodon 명세 문서                          그 형태를 incorrect 라고 적는다
+FEP-6757                                    { "schema": "https://schema.org/" }
+schema.org                                  HTTPS 정규형을 발행한다
+우리 media-library.php:47                   'schema' => 'https://schema.org/'
+```
+
+```txt
+결정   출력은 https://schema.org/ 로 통일한다.
+       PropertyValue → schema:PropertyValue,  value → schema:value
+결정   수신에서 레거시 http://schema.org# 를 거부하지 않는다.
+       단, 지금 할 일은 없다 -- 측정 결과 우리 코드에 JSON-LD expander 가 하나도
+       없고 원격 문서를 키로 읽는다. 레거시 형태가 문제가 되는 것은 expander 를
+       도입할 때이고, 그때 양쪽 형태를 받는다. 지금 호환 코드를 쓰지 않는다.
+핀     도메인별로 각자 고르게 두지 않는다. 한 곳에서 정해 모든 투영이 쓴다.
+```
+
+앞선 판에서 이것을 "동등한 두 선택지와 그 비용" 으로 적었다면 그 프레이밍이 틀렸다.
+expand 한 그래프에서 술어가 어긋나는 것은 **저쪽이 자기 문서에 적어 둔 버그**이고,
+정규형을 쓰는 것은 비용을 지는 선택이 아니라 그 버그를 복제하지 않는 것이다. 역사적
+형태를 새로 따라갈 이유가 없다.
+
+비대칭이 정상이라는 점을 기록해 둔다 -- 내보낼 때는 맞는 형태로, 받을 때는 틀린 형태도.
+우리가 틀린 쪽을 따라가면 고칠 수 없게 되고, 받는 쪽에서 엄격하면 실제 트래픽이 깨진다.
+
+### 배포된 선언에서 바로 가져올 수 있는 것
+
+열어 두었던 `manuallyApprovesFollowers` 의 IRI 는 추측할 필요가 없었다. 측정값이 있다.
+
+```txt
+manuallyApprovesFollowers   as:manuallyApprovesFollowers
+publicKey 계열              "https://w3id.org/security/v1" 을 context IRI 로 끌어온다
+                            (용어를 인라인으로 적지 않는다)
+```
+
+### 남의 네임스페이스는 금지가 아니라 분기다
+
+처음 적을 때 "`toot:` 를 빌려 쓰면 남의 어휘로 우리 주장을 하게 된다" 고 뭉툭하게
+썼는데, 그것은 틀렸다. 판별 기준은 **주장이 누구에게서 나오고 누가 읽는가** 다.
+
+```txt
+① 표준          AS2·AP context 가 정의한다. 선언이 필요 없다.
+                inbox  outbox  endpoints  sharedInbox  attachment  name ...
+
+② 남의 기능에
+   올라타는 것   주장의 출처가 저쪽이고 읽는 것도 저쪽 구현이다.
+                → 저쪽 IRI 로 선언한다.  toot:featured  toot:featuredTags
+                다른 IRI 를 쓰면 원하는 수신자에게 안 보이므로 기능이 죽는다.
+
+③ 우리 주장     의미를 우리가 정하고 우리 정책을 말한다.
+                → 자체 ns 로 선언한다.  usedIn 이 선례다.
+```
+
+그래서 `featuredTags` 를 구현할 때는 **`toot:featuredTags` 로 등록하는 것이 맞다.**
+Mastodon 의 기능에 참여하는 것이므로 그쪽 어휘를 쓰는 것이 바로 그 주장이다.
+`featured`(고정 게시물)도 같은 분류다.
+
+반대로 우리 컬럼 `discoverable`·`indexable` 은 ③ 이다. 이름이 Mastodon 과 겹치지만
+우리가 정한 정책이고, `toot:discoverable` 로 선언하면 저쪽 의미를 우리 정책에
+덮어쓰게 된다. 현재 투영되지 않으므로 지금 정할 필요는 없고, 투영하기로 할 때 자체
+ns 로 선언한다.
+
+`manuallyApprovesFollowers` 는 ② 인데 IRI 가 `as:` 다 -- 규범 context 문서에는 없지만
+AS2 네임스페이스 용어로 통용되고, 배포된 Mastodon 이 그렇게 선언한다. 측정값에 맞춘다.
+
+이것은 "모양은 빌린다, 주장은 빌리지 않는다" 를 한 단계 더 쪼갠 것이다. ② 에서는
+**주장 자체가 저쪽 것**이므로 IRI 까지 빌리는 것이 정확하고, ③ 에서는 이름이 같아도
+주장이 우리 것이므로 빌리면 틀린다.
+
+### 덤으로 측정된 것: mastodon.social 은 서명 없는 GET 을 거부한다
+
+```txt
+GET https://mastodon.social/@thaumiel999   Accept: application/ld+json   → 401
+GET https://fosstodon.org/@fosstodon        같은 헤더                    → 200
+```
+
+authorized fetch 를 지금 구현할 이유가 없다는 판단은 유지된다 -- 우리가 **서비스하는**
+쪽에 그 요구가 없다. 다만 우리가 **가져오는** 쪽에서는 이미 거부당하는 인스턴스가 있다.
+원격 객체·Actor 캐시가 그 인스턴스에서 무엇을 못 가져오는지는 따로 측정할 일이고,
+그때가 서명 Account 지정을 검토할 시점이다. Block 도입이 그 시점을 만드는 것은 아니다.
+분기 체계를 레지스트리로 바꾸는 것은 같은 기계의 리팩터이지 별개 작업이 아니다. 지금
+필요한 것은 Actors 가 그 seam 을 쓰기 시작하는 것이고, 레지스트리화는 그 다음이다.
+
 ## Sources
 
 - ActivityPub, W3C Recommendation 2018-01-23, sections 3.1, 3.2, 5.1, 5.2, Appendix B.1.

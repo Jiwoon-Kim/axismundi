@@ -389,6 +389,9 @@ Not yet true, and this file is the target rather than a description:
 - There is no outbox `POST` endpoint.
 - No Update is recorded for local posts. The service refuses the operation rather than
   pretending to accept it, which is why the attribution rule above is exercised only by tests.
+- Nothing stops a local Activity from claiming a past `published`. `axismundi_act_datetime()`
+  parses with `strtotime` and never compares against the current time, on the same path that
+  serves outbound rows (`repository.php` line 1221). §10 states the rule that is missing.
 
 Order:
 
@@ -411,7 +414,7 @@ Order:
   derived at projection time.
 - `docs/BOUNDARIES.md`, `docs/LIFECYCLE.md` — the ledger's existing contracts.
 
-## 9. `published` is a claim, and a local Activity may not backdate it
+## 10. `published` is a claim, and a local Activity may not backdate it
 
 2026-10-25. WordPress lets an author set `post_date` to any past time, so a post can
 claim to be published in 1996. That makes `published` **authored metadata, not an
@@ -457,9 +460,7 @@ send carries a future `Date`, and no send carries 1996.
      federation with any server holding archival material.
 ```
 
-**The guard does not exist yet** (measured 2026-10-25): `axismundi_act_datetime()` parses
-with `strtotime` and never compares against the current time, and the same path serves
-outbound rows. `repository.php` line 1221 is where the value enters.
+The guard does not exist yet; §9 lists it among what is not true, with the measurement.
 
 ### `feed_sort_at` is an immutability device, not a backdating defence
 
@@ -478,7 +479,48 @@ So the feed is protected by the pin above, not by the sort column: once a local 
 cannot claim the past, the only way a distant date reaches our ordering is a remote
 observation, which is correct.
 
-## 10. The federated-object list comes from the ledger
+
+### `updated` belongs to the object, never to the activity
+
+Asked 2026-10-25: may a `Create` carry `updated`? AS2 permits it -- a `Create` is an
+Object, so the property is available -- but it is wrong in this model and useless to a
+receiver.
+
+```txt
+불변 사건      LIFECYCLE.md §1 holds an Activity immutable. "the time this was updated"
+               on something that is never updated is either a contradiction or noise.
+수정의 표현    the object changes, and ActivityPub models that with an `Update`
+               activity, not by amending the Create.
+수신자         has nothing to do with it. There is no edit-an-activity concept to act on.
+```
+
+Measured 2026-10-25, and the codebase is already consistent:
+
+```txt
+'updated' =>  emitted in calendar, forum, media-library, note and the media projection
+              -- every one of them an **object** projection, from get_post_modified_time()
+              no code puts `updated` on an activity document
+staging       six Creates, all with activity.updated absent, while their embedded Notes
+              carry object.updated
+ledger        the payload's `updated` is read in exactly one place, questions.php:187,
+              and there it is a **Question object's** value
+```
+
+The trap is reading the rule one word too wide. The embedded object **must** keep its
+`updated`: that is how a receiver learns a Note has been edited. The distinction is
+outside the activity versus inside the object, not "no `updated` anywhere near a Create".
+
+```txt
+핀   An activity document carries no `updated`. An activity is an immutable event; a
+     modification to its object is expressed as an `Update` activity.
+핀   The embedded object keeps `updated`. It is the wire form of its edit history.
+핀   `activities.updated_at` is row bookkeeping, not AS2 `updated`. It is not projected.
+핀   Each `Update` activity carries its own `published`, and the no-backdating pin above
+     applies to it unchanged -- an edit recorded today may not claim to have happened
+     earlier.
+```
+
+## 11. The federated-object list comes from the ledger
 
 Publishing to the site and publishing to the federation are separate commands. A WP
 `publish` may trigger the second -- the way a subscriber mailing does -- but it is not the

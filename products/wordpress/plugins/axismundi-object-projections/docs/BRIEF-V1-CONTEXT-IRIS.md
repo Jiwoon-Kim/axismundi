@@ -9,7 +9,75 @@
 우리가 이미 내보내는 용어 아홉 개를 정의하는 문서가 셋 있는데 그 context 를 안 싣고
 있다. **내보내는 바이트는 하나도 바뀌지 않는다.** `@context` 에 IRI 세 개가 늘어난다.
 
-## 왜 하는가
+## 구현 및 검증 (2026-10-25)
+
+V1 구현 완료, 리뷰 대기. Actors와 Calendar는 기존 context 필터에 각각 기여하고,
+OP는 기존 sensitive 인라인 선언을 miscellany major-tier IRI로 교체한다.
+OP 공통 속성 탐색은 중첩 배열을 확인하되 입력의 `@context`는 탐색하지 않는다.
+속성값이 false/null이어도 존재하면 선언하며, 입력 객체를 변경하지 않는다.
+리뷰 반영: Actors는 `publicKey`만 탐색한다. 그 하위의 owner/publicKeyPem은
+동일 context로 정의되며, 단독 owner/publicKeyPem 키는 Security 선언을 유발하지 않는다.
+
+등록된 OP 통합은 Article, Actor/관계 컬렉션, media/폴더, hashtag, reaction,
+replies를 확인했다. 폐기 예정 ax_note 경로를 선행 작업으로 추가하지 않았다.
+
+검증 명령은 wp-env CLI의 `wp eval-file wp-content/plugins/<plugin>/tests/<file>`:
+
+- OP `audit-context-iris.php`: 38 PASS.
+- OP `audit-post-article.php`: 23 PASS (기존 인라인 context 단정 갱신).
+- OP `audit-actor-projection.php`: 12 PASS.
+- OP `audit-object-renderer.php`: 54 PASS.
+- 세 IRI 각각 제거 변이는 해당 양성 검사에서 실패했다.
+- 공통 조건을 항상 true로 만드는 변이는 context 불변 음성 검사에서 실패했다.
+- 변이 복원 후 context 감사 38 PASS, `git diff --check` 통과.
+
+원격 context의 JSON-LD expansion을 자동 검증한 것은 아니다. 고정 사본 기반
+용어 검증은 후속 V4 범위이며, 이번 감사는 선언 선택과 기존 출력 회귀를 검사한다.
+
+## 리뷰 결과 (2026-10-25)
+
+통과. 보고를 받지 않고 다시 측정한 것들이다.
+
+```txt
+조건부 동작    Actor miscellany+security / post·attachment miscellany /
+               ax_event fep-8a8e / followers 컬렉션은 문자열 그대로 (음성 사례)
+참조 context   세 문서를 직접 받아 아홉 용어 전부 정의 확인
+               security/v1 43 용어, fep/8a8e 21 용어(eventStatus 의 **값**까지),
+               miscellany/1 6 용어이고 **@type 이 없다** -- 1.0.1 changelog 와 일치하므로
+               major 티어 선택이 실측으로 검증됐다
+예측자 경계    false / true / null / 빈 문자열 전부 검출(키 존재 기준),
+               중첩 검출, 기존 @context 내부는 건너뜀
+실제 문서      manuallyApprovesFollowers: false 인 Actor 가 miscellany 를 받는다
+변이 5         무조건 선언 / 중첩 탐색 제거 / !empty 추가 / security 제거 / fep 제거
+               → 전부 검출
+```
+
+### 바이트 승인 fixture 재승인
+
+`audit-object-assembly-baseline` 이 실패했다 -- 구현 보고의 감사 목록에 없던 파일이고,
+어제 S4 의 `audit-repository` 와 같은 모양(돌린 감사는 통과했지만 범위가 좁았다)이다.
+
+단정 전에 격리했다: `sensitive` 분기만 옛 인라인 형태로 되돌리면 9/9 로 돌아간다. 즉
+V1 이 유일한 원인이고 의도된 변경이다. `article`·`image`·`audio` 를 재승인했고
+`-view` 세 개는 불변이다 -- 뷰 모델이 `@context` 를 운반하지 않기 때문이고, 어휘 표현과
+클라이언트 뷰 모델이 이미 분리돼 있다는 증거다.
+
+### V1 소관이 아닌 기존 실패 네 건
+
+세 플러그인 감사 134 개를 돌려 5 건이 실패했고, V1 을 떼고 다시 돌려 가렸다.
+
+```txt
+기존 실패    audit-standalone-projection (OP)
+             audit-calendar-acl / audit-ics / audit-rest-read (Calendar)
+             → V1 없이도 동일하게 실패한다. 별도 사안이다.
+asset-cache  V1 복원 상태 단독 실행 16/16 통과.
+             감사 본문에 @context·jsonld·local_endpoints·transport_members·publicKey
+             참조 0 건 -- V1 이 바꾼 것과 교차하지 않는다.
+             expires_at·next_refresh_at·failure_count·time() 사용.
+             26 분짜리 전수 실행 중 시간 경계를 넘은 것으로 **추정**하며 단정하지 않는다.
+```
+
+## 배경
 
 선언 없는 용어는 JSON-LD 로서 정의되지 않는다. expand 하는 수신자는 그 용어를 버린다.
 

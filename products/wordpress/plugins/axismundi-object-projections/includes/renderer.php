@@ -14,6 +14,19 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/** Whether a document or embedded value contains any of the named properties. */
+function axismundi_op_document_has_properties( ?array $object, array $properties ) : bool {
+	foreach ( $object ?? array() as $key => $value ) {
+		if ( in_array( $key, $properties, true ) ) {
+			return true;
+		}
+		if ( '@context' !== $key && is_array( $value ) && axismundi_op_document_has_properties( $value, $properties ) ) {
+			return true;
+		}
+	}
+	return false;
+}
+
 /**
  * The ActivityStreams 2.0 context this renderer owns. Extensions may be added through
  * the `axismundi_op_jsonld_context` filter — never by a transformer's return value.
@@ -44,8 +57,9 @@ function axismundi_op_jsonld_context( ?array $object = null ) {
 		}
 		$context[] = $quote_context;
 	}
-	if ( is_array( $object ) && array_key_exists( 'sensitive', $object ) ) {
-		$context[] = array( 'sensitive' => 'as:sensitive' );
+	if ( axismundi_op_document_has_properties( $object, array( 'sensitive', 'manuallyApprovesFollowers' ) ) ) {
+		// Intentional deviation from the report's unversioned SHOULD: retain the major tier.
+		$context[] = 'https://purl.archive.org/miscellany/1';
 	}
 	if ( is_array( $object ) && array_key_exists( 'dcterms:subject', $object ) ) {
 		$context[] = array( 'dcterms' => 'http://purl.org/dc/terms/' );

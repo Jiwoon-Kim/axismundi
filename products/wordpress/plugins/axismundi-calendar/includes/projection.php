@@ -17,6 +17,17 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/** Declare FEP-8a8e only for documents containing its Event properties. */
+function axismundi_cal_event_jsonld_context( array $context, ?array $object = null ) : array {
+	if ( function_exists( 'axismundi_op_document_has_properties' )
+		&& axismundi_op_document_has_properties( $object, array( 'eventStatus', 'joinMode', 'organizers', 'timezone' ) )
+		&& ! in_array( 'https://w3id.org/fep/8a8e', $context, true ) ) {
+		$context[] = 'https://w3id.org/fep/8a8e';
+	}
+	return $context;
+}
+add_filter( 'axismundi_op_jsonld_context', 'axismundi_cal_event_jsonld_context', 10, 2 );
+
 /**
  * Whether this source is an Event this plugin projects.
  *

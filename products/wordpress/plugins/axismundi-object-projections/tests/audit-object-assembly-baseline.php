@@ -57,6 +57,17 @@ $expected = array_replace( $expected, array(
 	'image' => '7e1140a064a707d70f50f762c510278469110338e2e7b1fe6c4f67da6ea04f85',
 	'image-view' => 'b3efcc62e59eb97156f097b52886c6e6f1e26c1a3eca642ad9d0848c0d59b2fe',
 ) );
+// Owner-approved 2026-10-25: V1 replaced the inline `sensitive` => `as:sensitive`
+// map with the published Miscellany context IRI, so every wire document carrying
+// `sensitive` has a different `@context` and therefore different bytes. Isolated
+// before rebaselining: reverting only that branch restores all nine checks, so the
+// change is this one and nothing else. The `-view` hashes are unchanged because a
+// view model carries no `@context`.
+$expected = array_replace( $expected, array(
+	'article' => '5026dc20718a9e5a3734f1c40809ae37f9334061778485ff828e4a17c505b307',
+	'image' => '83aa29c9b12e5c10d9e7ab2811665aa28d2fb6a98320521d038386a5f4715215',
+	'audio' => '1066f0ed9e7ac8a00f5e924bc736bd529b040e733c8ac317dba0e74180f1f0a9',
+) );
 if ( '2026-10-20 11:59:06' !== $post->post_modified_gmt ) {
 	printf( "Fixture source changed: Article modified_gmt=%s; expected 2026-10-20 11:59:06. Inspect source data before rebaselining.\n", $post->post_modified_gmt );
 }

@@ -119,7 +119,7 @@ try {
 			&& in_array( axismundi_op_actor_followers_url( $fixture_actor ), $article['cc'], true )
 			&& is_array( $article['@context'] )
 			&& 'https://www.w3.org/ns/activitystreams' === $article['@context'][0]
-			&& array( 'sensitive' => 'as:sensitive' ) === $article['@context'][1]
+			&& 'https://purl.archive.org/miscellany/1' === $article['@context'][1]
 			&& false !== strpos( ax_article_summary( $article ), 'Hello <strong>world</strong>.' )
 			&& ! isset( $article['interactionPolicy'], $article['quoteAuthorization'] )
 	);

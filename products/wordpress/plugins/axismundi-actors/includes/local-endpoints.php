@@ -20,6 +20,17 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/** Declare the vocabulary only when a document actually contains an Actor key. */
+function axismundi_actors_jsonld_context( array $context, ?array $object = null ) : array {
+	if ( function_exists( 'axismundi_op_document_has_properties' )
+		&& axismundi_op_document_has_properties( $object, array( 'publicKey' ) )
+		&& ! in_array( 'https://w3id.org/security/v1', $context, true ) ) {
+		$context[] = 'https://w3id.org/security/v1';
+	}
+	return $context;
+}
+add_filter( 'axismundi_op_jsonld_context', 'axismundi_actors_jsonld_context', 10, 2 );
+
 /**
  * The transport endpoints a local Actor serves, keyed by endpoint type.
  *

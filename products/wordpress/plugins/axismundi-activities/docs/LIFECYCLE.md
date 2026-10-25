@@ -34,6 +34,24 @@ audience. It therefore remains deliverable after the source has become private, 
 Tombstone, without embedding withdrawn content. A repeated Delete returns the existing event;
 republishing after it starts a new Create generation.
 
+### 삭제된 Activity URI의 조회 정책 (후속 방향, 2026-10-25)
+
+Activity 문서 자체의 삭제와 행위 효과의 취소는 다르다. Undo 또는 Reject를 받았다는
+이유로 원래 Activity URI를 삭제 상태로 만들지 않는다. 원래 사건은 원장에 남고,
+후속 활동이나 관계 상태가 그 효과를 설명한다.
+
+실제로 삭제된 Activity의 canonical URI를 기억하고 있다면 Tombstone + HTTP 410으로
+조회에 응답하는 방향을 따른다. 이는 Activity 대상 Delete를 새로 지원하겠다는 결정도,
+원장 행을 물리적으로 삭제하겠다는 결정도 아니다. 삭제 인가·최소 삭제 기록·공개 범위는
+별도로 정해야 한다. 캐시 만료나 단순 조회 실패를 영구 삭제로 추정하지 않는다.
+
+`Delete(Create)`를 생성된 객체의 삭제로, `Delete(Delete)`를 앞선 삭제의 취소나
+객체 복원으로 해석하지 않는다. Activity 대상 삭제 메시지의 상호운용성은 미검증이며,
+그 처리기를 이 기록만으로 구현하지 않는다.
+
+이 방향은 삭제된 Actor URI의 410 후속과 같은 조회 일관성 문제다. S10 Account
+선택·전환의 선결 조건이 아니며, 이번 슬라이스에서 구현하지 않는다.
+
 ## 3. Hooks
 
 Recorded/transition hooks are post-commit facts. Consumers must be idempotent because a crash

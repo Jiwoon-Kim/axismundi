@@ -155,4 +155,36 @@ function axismundi_actors_clear_account_selection() : bool {
 	return axismundi_actors_send_selection_cookie( '', time() - YEAR_IN_SECONDS );
 }
 add_action( 'clear_auth_cookie', 'axismundi_actors_clear_account_selection' );
-add_action( 'wp_login', 'axismundi_actors_clear_account_selection' );
+
+/** Hold only the auth cookie issued in this request, not a browser's previous login. */
+function axismundi_actors_remember_login_cookie( string $cookie = '' ) : string {
+	static $issued = '';
+	$previous = $issued;
+	$issued = $cookie;
+	return $previous;
+}
+add_action( 'set_logged_in_cookie', 'axismundi_actors_remember_login_cookie' );
+
+/** Initialize a new session once; never restore a default after a selection error. */
+function axismundi_actors_initialize_login_selection( string $login, WP_User $user ) : void {
+	unset( $login );
+	$cookie = axismundi_actors_remember_login_cookie();
+	axismundi_actors_clear_account_selection();
+	if ( ! axismundi_actors_account_selection_enabled() || '' === $cookie
+		|| (int) $user->ID !== wp_validate_auth_cookie( $cookie, 'logged_in' ) ) {
+		return;
+	}
+	$actor = axismundi_actors_default_account( (int) $user->ID, 'login' );
+	if ( ! $actor instanceof Axismundi_Actor ) { return; }
+	$parsed = wp_parse_auth_cookie( $cookie, 'logged_in' );
+	$session = WP_Session_Tokens::get_instance( $user->ID )->get( $parsed['token'] );
+	$expiration = min( (int) $parsed['expiration'], (int) ( $session['expiration'] ?? 0 ) );
+	if ( $expiration <= time() ) { return; }
+	$binding = hash( 'sha256', home_url( '/' ) . '|' . $user->ID . '|' . $parsed['token'] );
+	$unsigned = 'v1|' . $actor->get_identity_id() . '|' . $user->ID . '|' . $expiration;
+	$value = $unsigned . '|' . hash_hmac( 'sha256', $unsigned . '|' . $binding, wp_salt( 'auth' ) );
+	if ( axismundi_actors_send_selection_cookie( $value, $expiration ) ) {
+		$_COOKIE[ axismundi_actors_selection_cookie_name() ] = $value;
+	}
+}
+add_action( 'wp_login', 'axismundi_actors_initialize_login_selection', 10, 2 );

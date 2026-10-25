@@ -110,7 +110,7 @@ try {
 	$options = axismundi_actors_selection_cookie_options( $expiration );
 	$assert( $options['httponly'] && 'Lax' === $options['samesite'] && $expiration === $options['expires'], 'Cookie flags and expiry are explicit' );
 	$assert( false !== has_action( 'clear_auth_cookie', 'axismundi_actors_clear_account_selection' ), 'WordPress logout clears selection cookie' );
-	$assert( false !== has_action( 'wp_login', 'axismundi_actors_clear_account_selection' ), 'A fresh login clears prior selection cookie' );
+	$assert( false !== has_action( 'wp_login', 'axismundi_actors_initialize_login_selection' ), 'A fresh login initializes selection without mid-session fallback' );
 	printf( "PASS: %d Account selection checks\n", $checks );
 } finally {
 	$_COOKIE = $cookies;

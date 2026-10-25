@@ -75,6 +75,19 @@ try {
 	$error( apply_account_selection( 'select', 'a' . $foreign->get_identity_id(), $nonce ), 'ax_jmap_selection_account', 'Other User Account rejected' );
 	$error( apply_account_selection( 'select', 'a0' . $first->get_identity_id(), $nonce ), 'ax_jmap_selection_account', 'Malformed Account ID rejected without coercion' );
 	$error( apply_account_selection( 'unknown', '', $nonce ), 'ax_jmap_selection_operation', 'Unknown operation rejected' );
+	$assert( true === apply_account_selection( 'login_default', 'a' . $first->get_identity_id(), $nonce ), 'Explicit login default saved' );
+	$assert( null === axismundi_actors_current_workspace(), 'Saving login default does not select current workspace' );
+	$auth_cookie = $_COOKIE[ LOGGED_IN_COOKIE ];
+	axismundi_actors_remember_login_cookie( $auth_cookie );
+	wp_set_current_user( 0 );
+	axismundi_actors_initialize_login_selection( '', get_userdata( $users[0] ) );
+	wp_set_current_user( $users[0] );
+	$assert( $first->get_identity_id() === axismundi_actors_current_workspace()->get_identity_id(), 'New login restores explicit default without ambient current User' );
+	$assert( true === apply_account_selection( 'clear_login_default', '', $nonce ), 'Login preference can be removed separately' );
+	$assert( $first->get_identity_id() === axismundi_actors_current_workspace()->get_identity_id(), 'Removing login default does not change active session' );
+	$assert( true === apply_account_selection( 'login_default', 'a' . $first->get_identity_id(), $nonce ), 'Login preference restored explicitly' );
+	$assert( true === apply_account_selection( 'clear', '', $nonce ), 'Selection may still be cleared internally' );
+	$assert( null === axismundi_actors_current_workspace(), 'Login default does not repair a missing mid-session choice' );
 	$metadata = get_user_meta( $users[0] );
 	$assert( true === apply_account_selection( 'select', 'a' . $first->get_identity_id(), $nonce ), 'Select Account A' );
 	$assert( 'a' . $first->get_identity_id() === account_selection_view()['current'], 'View reflects selection cookie' );
@@ -90,6 +103,7 @@ try {
 	finally { $html = ob_get_clean(); }
 	$assert( str_contains( $html, 'axismundi_jmap_select_account' ) && str_contains( $html, '_wpnonce' ), 'Form uses new action and nonce' );
 	$assert( ! str_contains( $html, 'axismundi_actors_set_acting_actor' ) && ! str_contains( $html, 'Foreign Account' ), 'UI contains neither legacy action nor foreign Account' );
+	$assert( ! str_contains( $html, 'value="clear"' ) && str_contains( $html, 'type="radio"' ), 'UI separates single login preference from selection without a clear-selection command' );
 	$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $second->get_identity_id(), 'principal_kind' => 'wp_user', 'principal_id' => $users[0] ) );
 	$view = account_selection_view();
 	$assert( '' === $view['current'] && is_wp_error( $view['error'] ) && ! isset( $view['accounts']->{'a' . $second->get_identity_id()} ), 'Revocation removes stale choice without selecting A' );
@@ -97,6 +111,11 @@ try {
 	$error( apply_account_selection( 'select', 'a' . $second->get_identity_id(), $nonce ), 'ax_jmap_selection_account', 'Stale form cannot select revoked Account' );
 	$assert( true === apply_account_selection( 'clear', '', $nonce ) && '' === account_selection_view()['current'], 'Clear selection recovers from stale cookie' );
 	$assert( null === axismundi_actors_current_workspace(), 'Clearing selection leaves workspace unselected despite stored default' );
+	$assert( true === apply_account_selection( 'login_default', 'a' . $first->get_identity_id(), $nonce ), 'Login default remains explicit' );
+	$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $first->get_identity_id(), 'principal_kind' => 'wp_user', 'principal_id' => $users[0] ) );
+	axismundi_actors_remember_login_cookie( $auth_cookie );
+	axismundi_actors_initialize_login_selection( '', get_userdata( $users[0] ) );
+	$assert( null === axismundi_actors_current_workspace(), 'Revoked login default cannot initialize another Account' );
 	register_account_selection_ui();
 	$assert( false === has_action( 'admin_bar_menu', 'axismundi_actors_acting_actor_admin_bar' ), 'Old switcher menu is detached when new UI is enabled' );
 	$assert( false === has_action( 'admin_post_axismundi_actors_set_acting_actor', 'axismundi_actors_handle_set_acting_actor' ), 'Old switcher POST is detached' );

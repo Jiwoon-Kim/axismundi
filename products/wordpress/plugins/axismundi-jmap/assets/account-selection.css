@@ -1,0 +1,17 @@
+.ax-account-avatar,
+#wpadminbar #wp-admin-bar-ax-jmap-accounts .ax-account-avatar { display:inline-block; width:28px; min-width:28px; max-width:28px; height:28px; min-height:28px; max-height:28px; flex:0 0 28px; object-fit:cover; border-radius:50%; vertical-align:middle; }
+#wpadminbar #wp-admin-bar-ax-jmap-accounts .dashicons,
+#wpadminbar #wp-admin-bar-ax-jmap-accounts .dashicons::before { font-family:dashicons; font-size:20px; line-height:28px; }
+#wpadminbar #wp-admin-bar-ax-jmap-accounts > .ab-item,
+#wpadminbar .ax-account-switch { display:flex; align-items:center; gap:8px; }
+#wpadminbar .ax-account-switch { width:100%; min-height:44px; height:auto; border:0; background:none; color:inherit; cursor:pointer; text-align:left; font:inherit; }
+#wpadminbar .ax-account-name { max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#wpadminbar .ax-account-switch .ax-account-name { flex:1; }
+#wpadminbar #wp-admin-bar-ax-jmap-accounts .ab-sub-wrapper { min-width:260px; max-width:calc(100vw - 16px); }
+#wpadminbar .ax-account-switch:focus-visible { outline:2px solid #72aee6; outline-offset:-2px; }
+#wpadminbar #wp-admin-bar-ax-jmap-accounts .ab-submenu > li > div.ab-item { height:auto; padding:0; }
+#wpadminbar #wp-admin-bar-ax-jmap-accounts form { margin:0; }
+@media screen and (max-width:782px) {
+ #wpadminbar #wp-admin-bar-ax-jmap-accounts { display:block; }
+ #wpadminbar #wp-admin-bar-ax-jmap-accounts > .ab-item .ax-account-name { max-width:110px; }
+}

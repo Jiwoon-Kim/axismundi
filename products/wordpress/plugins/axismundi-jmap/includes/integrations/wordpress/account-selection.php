@@ -12,8 +12,18 @@ function account_selection_ui_enabled() : bool {
 		&& axismundi_actors_account_selection_enabled();
 }
 
+/**
+ * The parent WordPress actually registered the screen under, not the one requested.
+ *
+ * `wp-admin/menu.php` rewrites a `profile.php` parent to `users.php` for anyone who can
+ * `list_users`, so a hardcoded `profile.php?page=` URL still renders the screen while leaving
+ * `$pagenow` disagreeing with the registered parent. `get_admin_page_title()` then matches
+ * nothing, `$title` stays null, and the submenu highlights nothing. Keyed on the capability
+ * core keys on, as the other Users-adjacent screens in this suite are.
+ */
 function account_selection_page_url() : string {
-	return admin_url( 'profile.php?page=axismundi-jmap-accounts' );
+	$parent = current_user_can( 'list_users' ) ? 'users.php' : 'profile.php';
+	return add_query_arg( 'page', 'axismundi-jmap-accounts', admin_url( $parent ) );
 }
 
 /** Use one Account projection; do not invent a parallel User-to-Actor list. */
@@ -36,6 +46,7 @@ function account_selection_view() {
 		'accounts' => $projection->accounts,
 		'primaryAccounts' => $projection->primaryAccounts,
 		'current' => is_wp_error( $current ) ? '' : 'a' . $current['actor']->get_identity_id(),
+		'loginDefault' => ( $default = axismundi_actors_default_account( $user, 'login' ) ) instanceof \Axismundi_Actor ? 'a' . $default->get_identity_id() : '',
 		'error' => is_wp_error( $current ) && 'ax_selection_missing' !== $current->get_error_code() ? $current : null,
 	);
 }
@@ -60,14 +71,19 @@ function apply_account_selection( string $operation, string $account_id, string 
 		return axismundi_actors_clear_account_selection() ? true
 			: new \WP_Error( 'ax_selection_headers', __( 'The Account selection cookie could not be cleared.', 'axismundi-jmap' ) );
 	}
-	if ( 'select' !== $operation ) {
+	if ( 'clear_login_default' === $operation ) {
+		return axismundi_actors_set_default_account( $user, 'login', 0 );
+	}
+	if ( ! in_array( $operation, array( 'select', 'login_default' ), true ) ) {
 		return new \WP_Error( 'ax_jmap_selection_operation', __( 'Invalid Account selection operation.', 'axismundi-jmap' ) );
 	}
 	$actor = resolve_account_actor( $account_id, $user );
 	if ( ! $actor instanceof \Axismundi_Actor ) {
 		return new \WP_Error( 'ax_jmap_selection_account', __( 'The selected Account is unavailable or access was revoked.', 'axismundi-jmap' ) );
 	}
-	return axismundi_actors_set_account_selection( $actor->get_identity_id() );
+	return 'login_default' === $operation
+		? axismundi_actors_set_default_account( $user, 'login', $actor->get_identity_id() )
+		: axismundi_actors_set_account_selection( $actor->get_identity_id() );
 }
 
 /** A POST-only WordPress adapter; never accepts a principal or redirect from the request. */
@@ -124,10 +140,27 @@ function render_account_selection_page() : void {
 		</tr></table>
 		<p class="submit">
 			<button class="button button-primary" type="submit" name="operation" value="select"><?php esc_html_e( 'Select Account', 'axismundi-jmap' ); ?></button>
-			<button class="button" type="submit" name="operation" value="clear"><?php esc_html_e( 'Clear selection', 'axismundi-jmap' ); ?></button>
 		</p>
+	</form>
+	<h2><?php esc_html_e( 'Login Account', 'axismundi-jmap' ); ?></h2>
+	<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post">
+		<input type="hidden" name="action" value="axismundi_jmap_select_account">
+		<?php wp_nonce_field( 'ax_jmap_account_selection' ); ?>
+		<?php foreach ( $view['accounts'] as $id => $account ) : ?>
+			<p><label><input type="radio" name="account_id" value="<?php echo esc_attr( $id ); ?>" <?php checked( $view['loginDefault'], $id ); ?>> <?php echo account_selection_avatar( $id ) . esc_html( $account->name ); ?></label></p>
+		<?php endforeach; ?>
+		<p><button class="button button-primary" name="operation" value="login_default"><?php esc_html_e( 'Save login Account', 'axismundi-jmap' ); ?></button>
+		<button class="button" name="operation" value="clear_login_default"><?php esc_html_e( 'Require selection at login', 'axismundi-jmap' ); ?></button></p>
 	</form></div>
 	<?php
+}
+
+/** Actor presentation only; never add avatar fields to the JMAP Account object. */
+function account_selection_avatar( string $account_id ) : string {
+	$actor = resolve_account_actor( $account_id, get_current_user_id() );
+	$id = $actor instanceof \Axismundi_Actor ? $actor->get_avatar_attachment_id() : 0;
+	$image = $id > 0 ? wp_get_attachment_image( $id, array( 28, 28 ), false, array( 'class' => 'ax-account-avatar', 'alt' => '' ) ) : '';
+	return $image ?: '<span class="ax-account-avatar dashicons dashicons-admin-users" aria-hidden="true"></span>';
 }
 
 /** Never expose old and new switchers together when the review gate is enabled. */
@@ -138,13 +171,52 @@ function register_account_selection_ui() : void {
 	remove_action( 'admin_bar_menu', 'axismundi_actors_acting_actor_admin_bar', 80 );
 	remove_action( 'admin_post_axismundi_actors_set_acting_actor', 'axismundi_actors_handle_set_acting_actor' );
 	add_action( 'admin_menu', static function () : void {
-		add_submenu_page( 'profile.php', __( 'Accounts', 'axismundi-jmap' ), __( 'Accounts', 'axismundi-jmap' ), 'read', 'axismundi-jmap-accounts', __NAMESPACE__ . '\\render_account_selection_page' );
+		$hook = current_user_can( 'list_users' )
+			? add_users_page( __( 'Accounts', 'axismundi-jmap' ), __( 'Accounts', 'axismundi-jmap' ), 'read', 'axismundi-jmap-accounts', __NAMESPACE__ . '\\render_account_selection_page' )
+			: add_submenu_page( 'profile.php', __( 'Accounts', 'axismundi-jmap' ), __( 'Accounts', 'axismundi-jmap' ), 'read', 'axismundi-jmap-accounts', __NAMESPACE__ . '\\render_account_selection_page' );
+		if ( ! is_string( $hook ) ) {
+			return;
+		}
+		/*
+		 * State the screen title for every entry URL, not just the canonical one.
+		 *
+		 * `get_admin_page_title()` finds the registered submenu entry only when `$pagenow`
+		 * equals the parent WordPress stored it under. A stale `profile.php?page=` link --
+		 * a bookmark, or one shared before this screen moved -- still renders the screen
+		 * through the same page hook with `$pagenow` disagreeing, so core matches nothing
+		 * and leaves `$title` null for `admin-header.php` to strip_tags(). This hook runs
+		 * before that header, so the title is right whichever URL was used.
+		 */
+		add_action( 'load-' . $hook, static function () : void {
+			$GLOBALS['title'] = __( 'Accounts', 'axismundi-jmap' );
+		} );
 	} );
 	add_action( 'admin_bar_menu', static function ( \WP_Admin_Bar $bar ) : void {
 		if ( get_current_user_id() > 0 && current_user_can( 'read' ) ) {
-			$bar->add_node( array( 'id' => 'ax-jmap-accounts', 'parent' => 'my-account', 'title' => esc_html__( 'Accounts', 'axismundi-jmap' ), 'href' => account_selection_page_url() ) );
+			$view = account_selection_view();
+			if ( is_wp_error( $view ) ) { return; }
+			$current = $view['current'];
+			$name = isset( $view['accounts']->{$current} ) ? $view['accounts']->{$current}->name : __( 'Choose Account', 'axismundi-jmap' );
+			$bar->add_node( array( 'id' => 'ax-jmap-accounts', 'parent' => 'top-secondary', 'title' => account_selection_avatar( $current ) . '<span class="ax-account-name">' . esc_html( $name ) . '</span>', 'href' => account_selection_page_url() ) );
+			foreach ( $view['accounts'] as $id => $account ) {
+				$form = '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="axismundi_jmap_select_account"><input type="hidden" name="operation" value="select"><input type="hidden" name="account_id" value="' . esc_attr( $id ) . '">'
+					. wp_nonce_field( 'ax_jmap_account_selection', '_wpnonce', false, false )
+					. '<button type="submit" class="ab-item ax-account-switch"' . ( $id === $current ? ' aria-current="true"' : '' ) . '>' . account_selection_avatar( $id ) . '<span class="ax-account-name">' . esc_html( $account->name ) . '</span>'
+					. ( $id === $current ? '<span class="dashicons dashicons-yes" aria-hidden="true"></span>' : '' ) . '</button></form>';
+				$bar->add_node( array( 'id' => 'ax-jmap-account-' . $id, 'parent' => 'ax-jmap-accounts', 'title' => $form, 'href' => false ) );
+			}
+			$bar->add_node( array( 'id' => 'ax-jmap-account-settings', 'parent' => 'ax-jmap-accounts', 'title' => esc_html__( 'Account settings', 'axismundi-jmap' ), 'href' => account_selection_page_url() ) );
 		}
 	}, 80 );
 }
+
+/** Keep fixed-size avatars and long Account labels usable in the native toolbar. */
+function account_selection_styles() : void {
+	if ( ! account_selection_ui_enabled() || ! is_user_logged_in() ) { return; }
+	$plugin = dirname( __DIR__, 3 ) . '/axismundi-jmap.php';
+	wp_enqueue_style( 'axismundi-account-selection', plugins_url( 'assets/account-selection.css', $plugin ), array( 'dashicons' ), (string) filemtime( dirname( __DIR__, 3 ) . '/assets/account-selection.css' ) );
+}
+add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\\account_selection_styles' );
+add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\\account_selection_styles' );
 add_action( 'plugins_loaded', __NAMESPACE__ . '\\register_account_selection_ui', 30 );
 add_action( 'admin_post_axismundi_jmap_select_account', __NAMESPACE__ . '\\handle_account_selection_post' );

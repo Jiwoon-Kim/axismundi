@@ -363,3 +363,26 @@ AddressBook JMAP JSON provider/API 구현은 C1에 포함하지 않는다.
 이번 변경은 문법/정적 검사까지만 수행한다. 감사·변이·브라우저·패키징은 Opus 검토용이다.
 S10 전체 완료나 기본 활성화/배포 승인이 아니다. Calendar 소비자 및 레거시 물리 제거,
 예약 의도 영속화, 실제 JMAP AddressBook HTTP 검증은 남아 있다.
+
+## 로그인 기본값과 아바타 전환기 (2026-10-26)
+
+소유자 승인: 로그인 기본 Account는 User별 하나이며 기능별 `primaryAccounts`와
+구별한다. 기존 목적별 선호 저장소의 `login` 키를 재사용한다. 전환은 이 기본값이나
+capability별 primary를 변경하지 않는다. 기능별 메인 설정은 provider 등록 시 다룬다.
+
+- 신규 로그인에서 그 요청이 발급한 실제 auth cookie를 검증하고, 접근 가능한 명시적
+  login 기본값이 있을 때만 새 세션에 묶인 선택 쿠키를 발급한다. WordPress 로그인
+  과정에서 current User가 아직 설정되지 않은 경우도 처리한다. 이전 세션 쿠키는
+  재사용하지 않으며 없거나 철회된 기본값은 선택 필요로 남긴다.
+- 일반 resolver에는 login fallback을 추가하지 않았다. 세션 중 선택 해제·무효·철회는
+  여전히 fail closed다. 기본값 저장/삭제도 현재 선택을 변경하지 않는다.
+- 상단 Account 메뉴는 현재 Actor 아바타·이름과 접근 가능한 Account별 nonce POST,
+  현재 선택 체크를 표시한다. WP User의 프로필/로그아웃 메뉴는 별도로 유지한다.
+  아바타는 Actor의 attachment에서 읽는 표현 정보이고 JMAP Account 필드가 아니다.
+- 일반 화면에서 Clear selection 버튼을 제거했다. 내부 clear 서비스는 로그아웃과
+  오류 복구·감사를 위해 유지한다. 로그인 기본값은 라디오로 하나만 고르며 별도 저장한다.
+- 기존 제목/부모 URL 수정은 보존했다. opt-in 활성화 상태나 스테이징은 변경하지 않는다.
+
+영향 검사: Actors/JMAP `audit-account-selection.php`. 새 로그인 복원, 철회 기본값,
+세션 중 fallback 금지, 기본값 삭제와 현재 선택의 독립성을 추가했다. 실제 로그인
+Set-Cookie와 데스크톱/모바일 전환 메뉴 시각·키보드 검증은 별도 브라우저 확인 대상이다.

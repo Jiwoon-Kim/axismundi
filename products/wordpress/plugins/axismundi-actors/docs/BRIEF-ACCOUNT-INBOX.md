@@ -43,7 +43,7 @@ Principal 등록이 HTTP 요청자의 인증을 대신하지 않는다. 계정 �
 | S8 activity view | Account 범위 Activity 뷰·query·changes·읽음 상태. AP 문서와 분리. **mailbox 아님** | 대기 |
 | S11 state | Account 단위 변경 알림 경로. S8 의 선결 | 대기 |
 | S9 instance | shared Inbox 및 Application Actor 소유권 이관 | 대기 |
-| S10 acting-actor | 요청의 Account 선택 운반·검증. 기본 선호와 현재 선택 분리. **`axismundi_actors_get_for_user()` 단수 가정 폐기, production 27 파일** | 대기 |
+| S10 acting-actor | 요청의 Account 선택 운반·검증. 기본 선호와 현재 선택 분리. **`axismundi_actors_get_for_user()` 단수 가정 폐기, production 27 파일**. 세 표면(WP REST / JMAP / AP C2S)이 공유할 인증·선택·인가 경계 | 대기 |
 
 S3는 컬럼을 옮기는 것만으로 완료되지 않는다. 추가 Person·Group이 Application 키를
 계속 사용하는지 검사하고, 독립 키 및 회전을 실제 지원해야 한다.
@@ -685,6 +685,73 @@ calendar     admin-calendars, envelope, event-actor, event-participation,
              jscalendar, projection, schema
 emoji        catalogue.php
 ```
+
+### 쿠키가 닿지 않는 표면이 이미 있다 (공식 앱 측정, 2026-10-25)
+
+"관리 화면·기본 프론트는 쿠키, 앱·JMAP 은 accountId" 로 나눴는데, **공식
+WordPress 앱이 그 둘 중 어디에도 들어가지 않는다.** Android 소스에서 업로드 전송
+선택 로직을 직접 읽었다 (`fluxc` `MediaStore.java:974` `performUploadMedia()` 의
+`switch`, 선택자는 같은 파일의 `getMediaRestClientType()`).
+
+```txt
+site.isUsingWpComRestApi()       → WPCOM_REST            MediaRestClient
+site.isUsingSelfHostedRestApi()  → SELF_HOSTED_RS        MediaRSApiRestClient
+site.isJetpackCPConnected()      → JETPACK_CP            WPComV2MediaRestClient
+ORIGIN_WPAPI + 앱 설정 활성      → APPLICATION_PASSWORDS ApplicationPasswordsMediaRestClient
+그 외                            → XMLRPC                MediaXMLRPCClient
+```
+
+우리 같은 자체 호스팅 사이트에 닿는 것은 아래 둘이다.
+
+```txt
+Application Passwords   코어 REST /wp/v2/* + **토큰 인증**. 브라우저 쿠키가 없다.
+XML-RPC                 아직 기본 폴백이다. 헤더로 accountId 를 실어 보낼 자리가 없다.
+```
+
+두 가지가 따라온다.
+
+```txt
+① JWT 를 새로 도입할 이유가 줄어든다.
+   공식 앱이 자체 호스팅에 쓰는 것이 이미 Application Passwords 다.
+   토큰 **형식**을 고르는 문제가 아니라 범위·인가 모델이 문제라는 판단을 뒷받침한다.
+② 쿠키만으로는 선택을 운반할 수 없다.
+   Application Passwords 요청은 쿠키를 공유하지 않고, XML-RPC 는 실을 자리가 없다.
+   → 이 표면들은 **명시적으로 설정된 기본 Account** 로 해소되어야 하고,
+     그것이 "저장된 선택을 없앨 수 없다" 의 두 번째 이유다.
+     첫 번째는 블록 에디터·관리 화면이 accountId 를 안 보내는 것이었다.
+```
+
+```txt
+핀   XML-RPC 로 들어온 쓰기를 임의의 Account 로 귀속시키지 않는다.
+     기본 Account 가 명시되지 않았으면 발행 귀속을 추측하지 말고 거부하거나
+     귀속 없이 저장한다. 조용한 선택이 S10 이 없애려는 바로 그 동작이다.
+```
+
+측정하지 않은 것: iOS, 실제 앱으로 업로드해 본 것, `MediaRSApiRestClient` 의 정체
+(이름상 Rust 기반 클라이언트로 보이나 확인하지 않았다). 글·댓글 경로는 이전 조사에서
+WP.com REST / XML-RPC 로 갈린다는 것까지만 확인됐고 이번 측정은 **미디어 업로드**다.
+
+### WP User ↔ Account 연결에 JMAP 이 맞는 자리
+
+맞다. 다만 **노출 표면과 저장 위치를 구별한다.**
+
+```txt
+저장    ax_actor_managers 의 principal 관계 + personal_owner_user_id.
+        JMAP 이 없어도 존재하고, 권위는 여기다.
+노출    JMAP Session 의 `accounts` -- RFC 8620 §2 "each account the user has access to".
+        "이 인증된 User 가 어느 Account 로 활동할 수 있는가" 를 묻는 **정규 표면**이다.
+        기본값은 `primaryAccounts` 로 같이 내려간다.
+인가    세 표면(WP REST / JMAP / AP C2S)이 **같은 principal 검사**를 호출한다.
+```
+
+```txt
+핀   WP REST 와 AP C2S 가 JMAP 을 경유하지 않는다. 같은 관계를 읽을 뿐이다.
+     JMAP 이 목록의 정규 표면이라는 것과, 다른 표면이 그것을 호출해야 한다는 것은
+     다른 주장이다. 후자를 택하면 JMAP 이 인가 경로가 되어 비활성화할 수 없게 된다.
+```
+
+Contacts 가 Actor 와 연결되려면 JMAP 이 있어야 한다는 것도 같은 이유다 -- 그쪽이
+필요한 것은 Session 의 Account 목록이고, 권한 자체가 아니다.
 
 ### 저장된 선택은 없앨 수 없다
 

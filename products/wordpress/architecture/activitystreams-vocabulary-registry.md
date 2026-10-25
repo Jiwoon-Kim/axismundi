@@ -876,13 +876,15 @@ nothing and losing interoperability, and dropping the property loses the warning
 **And the upstream repair already exists**, which changes the whole treatment.
 Mastodon's own specification page says these terms were "proposed but not
 officially adopted yet" and that they "have now been documented by the
-ActivityPub Miscellaneous Terms document". That is a SWICG report (changelog
-2026-08-19, context 1.0.1) which keeps the deployed `as:` IRIs rather than
-renaming them, and publishes a JSON-LD context:
+ActivityPub Miscellaneous Terms document".
 
 ```txt
-https://purl.archive.org/miscellany            unversioned
-https://purl.archive.org/miscellany/1.0.1      version-pinned
+status    Final Community Group Report, 28 August 2026, Social Web Incubator CG.
+          Explicitly "not a W3C Standard" and not on the Standards Track.
+          So: the strongest status these terms have, but not a Recommendation --
+          provenance is `cg-final:apmisc`, never `as2-core`.
+context   https://purl.archive.org/miscellany        unversioned, serves latest
+          https://purl.archive.org/miscellany/1 | /1.0 | /1.0.1   stability tiers
 defines   sensitive  manuallyApprovesFollowers  Hashtag  movedTo
 IRIs      https://www.w3.org/ns/activitystreams#<term>  -- unchanged
 ```
@@ -892,12 +894,49 @@ declaration. The wire bytes do not change and the defect closes. The same
 `purl.archive.org` pattern already appears in deployed output: fosstodon's Actor
 carries `https://purl.archive.org/socialweb/webfinger`.
 
+### Should `sensitive` get a namespace of its own? Upstream says no
+
+The question is the right one to ask, and the report answers it directly: the
+terms "were defined in the default namespace for Activity Streams 2.0", and
+**"Changing the namespace for the terms would change their meaning and would not
+be backwards compatible."** §2 adds that the context "does not define a separate
+namespace nor a prefix for these terms", falling back to the AS2 defaults, with
+`as:` available where disambiguation is wanted.
+
+That is the same argument this project used to reject `axis:sensitive`, arrived
+at independently: in JSON-LD the IRI *is* the identity, so moving a term to a new
+namespace does not relocate it -- it creates a different predicate and silently
+breaks every deployed consumer. The oddity that remains is real but is not ours
+to fix: a CG report defines terms that the canonical AS2 namespace document does
+not list. JSON-LD does not care, because an IRI need not resolve, so our
+documents become correct by citing the context.
+
 ```txt
-decide   pin the version or not. The rule stated earlier in this document --
-         republishing a context changes the meaning of documents already sent --
-         argues for the pinned URL, with updates taken deliberately.
-pin      do not mint new `as:` terms. Citing a context that assigns an IRI is
-         not minting; writing `as:<ourTerm>` with no such document is.
+pin   do not mint new `as:` terms. Citing a context that assigns an IRI is not
+      minting; writing `as:<ourTerm>` with no such document is.
+```
+
+### Which version to cite
+
+The report says documents SHOULD include the unversioned URL, while the rule
+stated earlier here is that republishing a context changes the meaning of
+documents already sent. The changelog settles it rather than theory:
+
+```txt
+1.0.1 (2026-08-19)  "drops the types for boolean terms for compatibility with
+                     existing implementations"
+```
+
+`sensitive` and `manuallyApprovesFollowers` are exactly those boolean terms, so
+pinning `1.0` or `1.0.1`'s predecessor would cite the typed version that
+implementations did not match. Compatibility fixes of that kind are ones we want
+to receive, and the report states that no backwards-incompatible change is
+anticipated and that 1.x.x URLs keep being served if a major version ever lands.
+
+```txt
+decision   cite the major tier -- https://purl.archive.org/miscellany/1
+           It honours the stability rule, still receives compatible fixes like
+           1.0.1, and deviates from the SHOULD minimally. Mark that deviation.
 ```
 
 One correction follows from this. The decision not to emit `type: Hashtag` was

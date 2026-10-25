@@ -105,10 +105,10 @@ Actors 와 Event 의 사용 횟수는 0 이다.
 않는다.
 
 ```txt
-https://w3id.org/fep/8a8e                     Event 의 네 속성
-https://w3id.org/security/v1                  publicKey publicKeyPem owner
-https://purl.archive.org/miscellany/1.0.1     sensitive manuallyApprovesFollowers
-                                              (Hashtag movedTo 도 정의되지만 우리는 안 쓴다)
+https://w3id.org/fep/8a8e                  Event 의 네 속성
+https://w3id.org/security/v1               publicKey publicKeyPem owner
+https://purl.archive.org/miscellany/1      sensitive manuallyApprovesFollowers
+                                           (Hashtag movedTo 도 정의되지만 우리는 안 쓴다)
 ```
 
 남는 인라인 선언은 `PropertyValue`·`value`·`size` 셋뿐이다(V2·V2b).
@@ -202,7 +202,7 @@ Actor 문서의 @context 에 security/v1 이 있다.
 
 ```txt
 결정   context IRI 하나를 싣는다. 인라인 선언도 NON-STANDARD 주석도 필요 없다.
-       https://purl.archive.org/miscellany/1.0.1
+       https://purl.archive.org/miscellany/1
        → sensitive  manuallyApprovesFollowers  Hashtag  movedTo 가 정의된다
        IRI 는 as: 그대로다. **내보내는 바이트가 바뀌지 않는다.**
 핀     새 as: 용어를 우리가 만들지는 않는다. IRI 를 할당한 문서를 인용하는 것은
@@ -210,9 +210,15 @@ Actor 문서의 @context 에 security/v1 이 있다.
 ```
 
 그래서 이 둘은 V2 가 아니라 **V1(context IRI 추가)에 속하고**, V1 이 세 줄 작업이
-된다 -- FEP-8a8e, security/v1, miscellany. 버전 고정 여부는 결정 사항이다: 레지스트리
-문서의 규칙("한 번 발행한 context 를 바꾸면 이미 발행된 문서의 의미가 바뀐다")이 고정
-URL 을 지지하고, 갱신은 의도적으로 받는다.
+된다 -- FEP-8a8e, security/v1, miscellany.
+
+버전 티어는 **major(`/1`)** 로 정했다. 근거는 이론이 아니라 changelog 다 -- 1.0.1 이
+"drops the types for boolean terms for compatibility with existing
+implementations" 이고 `sensitive`·`manuallyApprovesFollowers` 가 바로 그 boolean
+용어다. 그보다 아래로 고정하면 구현들이 맞추지 않은 typed 버전을 인용하게 된다. 리포트는
+backwards-incompatible 변경을 예상하지 않으며 major 가 생겨도 1.x.x URL 을 계속
+서비스한다고 적는다. 리포트의 SHOULD 는 **무버전 URL** 이므로 이것은 의도적 이탈이고,
+그렇게 표시한다 (근거: 발행된 context 가 바뀌면 이미 보낸 문서의 의미가 바뀐다).
 
 ### 검증
 

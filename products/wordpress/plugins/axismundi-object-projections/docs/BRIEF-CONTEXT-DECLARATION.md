@@ -134,15 +134,27 @@ Actor 문서의 @context 에 security/v1 이 있다.
 }
 ```
 
-### manuallyApprovesFollowers
-
-추측하지 않는다. 배포된 Mastodon Actor 에서 측정한 값이 있다.
+### manuallyApprovesFollowers — 배포 식별자를 쓰되 비표준으로 명시한다
 
 ```txt
 "manuallyApprovesFollowers": "as:manuallyApprovesFollowers"
 ```
 
-규범 context 문서에는 없지만 AS2 네임스페이스 용어로 통용된다.
+처음에는 "배포된 Mastodon 이 그렇게 선언한다" 만 근거로 적었는데, 그 IRI 가 가리키는
+정의가 **실제로 없다** -- `as` 는 W3C 네임스페이스이고 그 문서는 이 용어를 정의하지
+않는다. 그래도 이 식별자를 쓴다. 자체 ns 로 바꾸면 모든 피어와 술어가 달라져
+상호운용만 깨지고 어휘는 바로잡히지 않는다.
+
+```txt
+핀   선언 옆에 NON-STANDARD 주석을 단다 -- 역참조되지 않는 공유 식별자를
+     의도적으로 쓴다는 것과 그 이유까지.
+핀   **새 as: 용어를 우리가 만들지는 않는다.** 전문은 open-items 의
+     "Orphan Terms: as: Is Not Ours To Mint In".
+```
+
+같은 결함이 이미 우리 코드에 한 줄 있다 -- `renderer.php:48` 의
+`'sensitive' => 'as:sensitive'`. 같은 처리를 한다(유지 + 주석). 제거하면 콘텐츠
+경고 기능을 잃는다.
 
 ### 검증
 

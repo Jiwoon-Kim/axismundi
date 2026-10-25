@@ -1037,6 +1037,106 @@ JMAP blob 기계도 만들지 않는다. 이 측정은 그 결정을 **강화한
 
 지금 할 일은 없다. `uploadMedia` 를 구현하기로 할 때 이 절을 선결 조건으로 읽는다.
 
+## Orphan Terms: as: Is Not Ours To Mint In, 2026-10-25
+
+Misskey 가 `"Hashtag": "as:Hashtag"` 로 선언하는 것이 오류라는 지적에서 출발해 측정했다.
+맞고, **범위가 미스키보다 넓다 -- 우리도 안에 있다.**
+
+### 측정
+
+`as` 접두사는 context 가 `https://www.w3.org/ns/activitystreams#` 로 정의한다. 그
+네임스페이스는 W3C 것이다. 어떤 용어가 거기 실제로 있는지 원문에서 확인했다.
+
+```txt
+정의함       Public  attachment  image  icon   (그 외 inbox·outbox·endpoints 등)
+정의 안 함   sensitive  Hashtag  quoteUrl  manuallyApprovesFollowers
+```
+
+그러므로 `as:sensitive` 같은 선언은 **W3C 네임스페이스에 없는 정의를 있다고 주장한다.**
+그 IRI 를 역참조하면 아무것도 없다.
+
+### 우리 코드의 실제 범위는 한 줄이다
+
+`as:` 사용처를 전수 조사했더니 대부분은 context 선언이 아니었다.
+
+```txt
+적법   as:Public                     AP 의 공개 특수 컬렉션. context 가 정의한다.
+적법   as:attachment / as:image / as:icon
+       wp_ax_media_relations 의 **내부 predicate 문자열**이다. 공개 context 로
+       나가지 않는다. 그리고 세 용어 모두 W3C 가 실제로 정의한다.
+
+결함   renderer.php:48   array( 'sensitive' => 'as:sensitive' )
+       이것 하나가 공개 문서의 @context 에 들어간다.
+```
+
+그리고 **내가 어제 권고한 `as:manuallyApprovesFollowers` 도 같은 결함이다.** 배포된
+Mastodon 이 그렇게 선언한다는 측정값만 보고 권고했고, 그 IRI 가 가리키는 정의가 있는지는
+확인하지 않았다. 지적이 그것을 드러냈다.
+
+### 그런데 "고친다" 가 자체 ns 로 바꾸는 것은 아니다
+
+```txt
+자체 ns 로 바꾸면   우리 sensitive 가 모든 피어의 sensitive 와 **다른 술어**가 된다.
+                    경고를 전달하는 것이 목적인 속성에서 그것은 순전한 손해다.
+                    우리만 다르므로 아무도 이득이 없다.
+속성을 빼면         콘텐츠 경고 기능을 잃는다.
+as: 를 유지하면     IRI 는 역참조되지 않지만 **공유된다.**
+                    W3C 의 문서가 바뀌는 것도 아니다 -- 없는 fragment 를 가리킬 뿐이다.
+```
+
+제대로 된 해결은 상류다 -- 이 고아 용어들에게 실제 집을 주는 FEP 이거나 AS2 어휘의
+확장이다. 우리가 단독으로 다른 IRI 를 쓰는 것은 어휘를 바로잡지 못하면서 상호운용만
+깨뜨린다.
+
+```txt
+권고   as:sensitive 를 유지하고 **NON-STANDARD 로 주석을 단다** -- W3C 네임스페이스가
+       이 용어를 정의하지 않으며, 역참조되지 않는 공유 식별자를 상호운용을 위해
+       의도적으로 쓴다는 것, 그리고 자체 ns 로 바꾸면 더 나빠진다는 이유까지.
+       (비표준은 제거보다 주석 명시 -- 이 리포지터리의 기존 규칙이다.)
+권고   manuallyApprovesFollowers 도 같다. 배포 식별자를 쓰고 같은 주석을 단다.
+핀     **새로운 as: 용어를 우리가 만들지 않는다.** 기존 고아 용어의 배포 식별자를
+       쓰는 것과, 남의 네임스페이스에 새 용어를 주조하는 것은 다르다.
+```
+
+### Hashtag 결정이 더 강해진다
+
+우리는 `type: Hashtag` 를 레지스트리에 등록하지 않고 `{id, name}` 에 `#` 접두사를
+판별자로 쓰기로 했다. 그 결정의 근거가 "우리 정책" 이었는데, 이제 더 강한 근거가 있다 --
+**대안이 `as:` 에 새 타입을 주조하는 것**이고 그것은 위 핀이 금지하는 바로 그 행위다.
+Mastodon·Misskey 가 둘 다 그렇게 한다는 것이 그것을 맞게 만들지 않는다.
+
+### uploadMedia 는 반대 방향의 고아다
+
+```txt
+AS2 context 문서   as:uploadMedia (@type: @id) 로 **정의한다**
+AP 명세            uploadMedia 가 **한 번도 나오지 않는다.**
+                   endpoints 목록은 여섯 개다 -- proxyUrl, oauthAuthorizationEndpoint,
+                   oauthTokenEndpoint, provideClientKey, signClientKey, sharedInbox
+                   §6.12 "Uploading Media" 는 non-normative 이고 이 판에서는
+                   업로드 지원이 범위 밖이라고 적는다
+메커니즘           2017-10-24 마지막 수정 wiki 페이지. 상태 라벨 없음.
+```
+
+즉 **context 에는 있고 명세에는 어디에도 없는 용어**다. 위의 고아들과 정확히 반대
+방향이고, 둘을 합치면 교훈이 하나다 -- **context 문서의 수록 여부와 명세의 규범성은
+별개이고, 둘 다 확인해야 한다.** 어제 나는 context 만 보고 "선언 없이 쓸 수 있다" 고
+적었는데, 그 문장은 맞지만 "쓸 기능이 있다" 로 읽히게 쓴 것이 문제였다.
+
+### 레지스트리를 context 문서로 구동한다
+
+"표준인가" 를 사람의 기억이 아니라 데이터가 답하게 한다. 이 절의 모든 측정이
+`https://www.w3.org/ns/activitystreams` 원문과의 대조였고, 그것이 그대로 메커니즘이 된다.
+
+```txt
+핀   런타임에 가져오지 않는다. 고정한 사본을 체크섬과 함께 vendoring 하고,
+     갱신은 의도적 커밋으로 한다. 외부 호출을 투영 경로에 넣지 않는다.
+핀   브리프 V4 의 일반형 감사가 이 사본을 기준으로 판정한다.
+     속성 목록을 하드코딩하지 않는다 -- 그것이 이 결함이 생긴 방식이다.
+핀   고아 용어는 그 감사의 **명시적 예외 목록**으로 둔다. 예외마다 이유와
+     출처(어느 구현이 그 식별자를 쓰는가)를 적는다. 예외가 늘어나는 것 자체가
+     상류에 FEP 이 필요하다는 신호다.
+```
+
 ## Sources
 
 - ActivityPub, W3C Recommendation 2018-01-23, sections 3.1, 3.2, 5.1, 5.2, Appendix B.1.

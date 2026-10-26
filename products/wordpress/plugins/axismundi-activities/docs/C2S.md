@@ -563,3 +563,53 @@ above is the **local** federated set only; remote objects arrive by other paths 
 `../../../architecture/activitystreams-open-items.md`의
 "Research Note: Collaborative Attribution And Publication"에 보존했다. 채택된 프로토콜이
 아니며, 기본 C2S 저작이나 Account 전환의 선결 조건으로 추가하지 않는다.
+
+## 12. Question은 와이어에서 Create에 감싸인다 — 저장 소유와는 별개다 (2026-10-26)
+
+AS2 어휘는 `Question`을 `IntransitiveActivity`의 하위로 정의한다. 연합 실무는 그렇지 않고,
+FEP-9967이 그 차이를 명시적으로 적는다.
+
+```txt
+FEP-9967 "Polls"   Question 은 Create 활동으로 **MUST** 발행된다
+                   AS2 가 Question 을 intransitive activity 로 정의하는 것에서 의도적으로 벗어난다
+                   투표는 Create(Note), name 이 선택지와 일치, inReplyTo 가 Question,
+                   to 가 저자. "The object MUST NOT have a `content` property."
+                   다중 선택은 "each vote MUST be sent as a separate activity"
+Mastodon 사양서    Question "is used as an Object type instead of as an IntransitiveActivity",
+                   "wrapped in a Create just like any other status"
+```
+
+이미 기록해 둔 규칙 -- vote 는 `Create(Note){name}` 이고 `content` 가 비어야 분류된다 -- 는
+이 FEP 와 일치한다. 어휘가 아니라 와이어를 따른 결과다.
+
+**그러므로 와이어 타입으로 저장 소유를 추론하지 않는다.** 2026-10-26 리뷰에서 같은 추론으로
+두 번 틀렸다 -- 먼저 "Question 은 intransitive 라 소스 참조를 가질 수 없다"(와이어상 object
+이므로 틀림), 다음 "Question 은 Activity 자체라서 Activities 가 저장한다"(결론은 맞지만
+근거가 틀림). 둘은 독립된 사실이다.
+
+```txt
+와이어 타입   Create(Question).  FEP-9967 MUST
+저장 소유     Activities.        우리 결정이고 와이어 타입에서 따라 나오지 않는다
+```
+
+제출 계층의 분기도 AS2 타입 계층이 아니라 **무엇이 제출됐고 누가 그 저장을 소유하는가**로
+가른다. 진짜 intransitive 는 `Arrive` · `Travel` 이고 현재 범위 밖이다.
+
+### 측정된 공백 -- 투표 수신 시 Update 를 발행하지 않는다
+
+```txt
+FEP-9967   저자는 갱신된 Question 으로 Update 를 발행한다.
+           "This activity MUST be immediately delivered to the actor that sent the vote."
+
+측정 (2026-10-26)
+  Update 를 발행하는 production 코드   actor-lifecycle.php:53 한 곳뿐 (Actor 프로필 변경)
+  questions.php 의 Update 는 전부 수신 처리
+    :5    "its results arrive in Update"        받는 쪽 주석
+    :624  Create/Update 수신 시 Question 투영
+  record_vote() 는 집계를 커밋하고 끝난다. 발행 경로가 없다
+  훅은 axismundi_act_question_projected 하나이고 투표 수신이 아니라 투영 시점에 돈다
+```
+
+원격 Question 에 투표하는 쪽은 구현되어 있고, **로컬 Question 이 투표를 받았을 때 결과를
+되돌려 보내는 쪽이 비어 있다.** 로컬 폴은 자기 집계를 소유하므로 데이터는 맞지만, 투표자는
+자기 표가 반영된 것을 보지 못한다. 별도 슬라이스로 남긴다 -- 전달 계층과 묶인다.

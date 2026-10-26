@@ -855,3 +855,38 @@ S9의 shared Inbox는 Actor별 Inbox와 별개 최적화다. Application Actor�
 
 S6–S7의 구현·검증·남은 한계는
 [Actor Inbox 구현 기록](../../axismundi-activitypub-bridge/docs/IMPLEMENTATION-ACTOR-INBOX.md)을 참고한다.
+
+## Users 인접 화면의 축 — 측정 (2026-10-26)
+
+Account 전환기가 동작한 뒤 오너가 짚은 것: 전환해도 Actor Profile 화면이 바뀌지
+않는다. 각 화면이 **무엇을 축으로 삼는지** 재면 이유가 드러난다.
+
+```txt
+users.php / profile.php            User          코어. 그대로 둔다
+axismundi-jmap-accounts            Account 목록  S10 에서 추가. 맞다
+axismundi-contacts                 Account       current_workspace_result() -> 전환을 따라간다
+axismundi-actor-profile            User          admin_target_user() -> get_for_user()
+axismundi-remote-actors            사이트 전역   manage_options, 원격 캐시. User/Account 무관
+axismundi-managed-actors           User + managed admin.php:316 get_current_user_id()
+                                                 admin.php:326 $selected->is_managed() 게이트
+```
+
+Contacts 는 이미 축을 옮겼고 Actor Profile 은 옮기지 않았다. 그래서 전환이 한쪽에만
+보인다. Actor Profile 의 `axismundi_actors_admin_target_user()` 는 `user_id` 쿼리
+인자 아니면 현재 User 를 돌려주고, 그 User 의 단일 Actor 를 `get_for_user()` 로 집는다.
+**Account 를 가리킬 축 자체가 없다.** 이 화면 하나의 수선이 아니라 이 문서가 이미
+적어 둔 "`get_for_user()` 단수 가정 폐기, production 27 파일" 의 한 조각이다.
+
+Managed actors 는 다르다. 이 화면의 필터가 곧 `is_managed()` 인데, managed 는 폐기하기로
+한 개념이다. 치환 근거는 위에 이미 측정돼 있다 -- `scope='managed' ≡ principal 관계
+보유, 191/191`. 그러므로 이 화면은 고치는 것이 아니라 **principal 기준으로 다시
+설계한다**: "내가 관리하는 Actor" 가 아니라 "내가 principal 을 가진 Account".
+
+```txt
+결정   Actor Profile 은 선택된 Account 를 편집한다. profile.php 가 로그인 User 를
+       편집하듯이. Contacts 가 참조 구현이다
+결정   Managed actors 는 managed 게이트를 principal 보유로 치환하지 않고, principal
+       기준 UI 로 다시 설계한다. 재설계 전까지 기존 화면을 건드리지 않는다
+유지   remote-actors 는 사이트 전역 캐시다. 전환과 무관하며 바꾸지 않는다
+순서   27 파일 마이그레이션이 선행이다. 화면만 먼저 옮기면 같은 화면을 두 번 옮긴다
+```

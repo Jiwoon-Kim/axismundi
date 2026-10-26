@@ -16,9 +16,12 @@
 
 defined( 'ABSPATH' ) || exit( 1 );
 
+global $ax_dv_people, $ax_dv_events;
 $ax_dv_results = array();
 $ax_dv_users   = array();
 $ax_dv_groups  = array();
+$ax_dv_people  = array();
+$ax_dv_events  = array();
 
 /** @param bool[] $results Results. */
 function ax_dv_assert( array &$results, string $label, bool $condition ) : void {
@@ -29,11 +32,13 @@ function ax_dv_assert( array &$results, string $label, bool $condition ) : void 
 
 /** An account with an activated, published Person Actor. */
 function ax_dv_user( array &$users ) : int {
+	global $ax_dv_people;
 	$id = (int) wp_insert_user(
 		array( 'user_login' => 'axdv' . strtolower( wp_generate_password( 8, false, false ) ), 'user_pass' => wp_generate_password(), 'role' => 'editor' )
 	);
 	$users[] = $id;
 	$actor   = axismundi_actors_ensure_for_user( $id );
+	if ( $actor instanceof Axismundi_Actor ) { $ax_dv_people[] = $actor->get_identity_id(); }
 	axismundi_actors_register_handle( $actor->get_identity_id(), 'axdv' . strtolower( wp_generate_password( 8, false, false ) ) );
 	axismundi_actors_set_status( $actor->get_identity_id(), 'public' );
 	return $id;
@@ -51,6 +56,7 @@ function ax_dv_record( string $type, string $actor_uri, string $object_uri, stri
 
 /** One event addressed to an Actor, handed out to whoever must deal with it. */
 function ax_dv_deliver( Axismundi_Activity $activity, string $recipient_uri, int $initiator, string $kind = 'axismundi-calendar/event-invited' ) : int {
+	global $ax_dv_events;
 	$event = axismundi_ntf_record_event(
 		array(
 			'kind'                     => $kind,
@@ -65,6 +71,7 @@ function ax_dv_deliver( Axismundi_Activity $activity, string $recipient_uri, int
 		printf( "  (fixture refused: %s)\n", $event->get_error_message() );
 		return 0;
 	}
+	$ax_dv_events[] = (int) $event;
 	axismundi_ntf_fan_out( (int) $event );
 	return (int) $event;
 }
@@ -236,12 +243,16 @@ try {
 	);
 } finally {
 	global $wpdb;
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
-	$wpdb->query( $wpdb->prepare( 'DELETE FROM ' . axismundi_ntf_events_table() . ' WHERE kind LIKE %s', 'axismundi-calendar/%' ) );
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
-	$wpdb->query( 'DELETE d FROM ' . axismundi_ntf_deliveries_table() . ' d LEFT JOIN ' . axismundi_ntf_events_table() . ' e ON e.id = d.notification_id WHERE e.id IS NULL' );
-	foreach ( array_unique( $ax_dv_groups ) as $ax_dv_group_id ) {
+	foreach ( array_unique( $ax_dv_events ) as $event_id ) {
+		$wpdb->delete( axismundi_ntf_deliveries_table(), array( 'notification_id' => $event_id ) );
+		$wpdb->delete( axismundi_ntf_events_table(), array( 'id' => $event_id ) );
+	}
+	foreach ( array_unique( array_merge( $ax_dv_groups, $ax_dv_people ) ) as $ax_dv_group_id ) {
 		if ( $ax_dv_group_id > 0 ) {
+			$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => (int) $ax_dv_group_id ) );
+			foreach ( array( axismundi_actors_addresses_table(), axismundi_actors_signing_keys_table(), axismundi_actors_endpoints_table() ) as $table ) {
+				$wpdb->delete( $table, array( 'identity_id' => (int) $ax_dv_group_id ) );
+			}
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned identity cleanup.
 			$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => (int) $ax_dv_group_id ), array( '%d' ) );
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned identity cleanup.

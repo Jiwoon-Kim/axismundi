@@ -303,11 +303,13 @@ try {
 	}
 	foreach ( $ax_aud_identity_ids as $ax_aud_extra ) {
 		global $wpdb;
+		$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => (int) $ax_aud_extra ) );
 		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => (int) $ax_aud_extra ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned Group cleanup.
 		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => (int) $ax_aud_extra ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned identity cleanup.
 	}
 	if ( $ax_aud_identity_id > 0 ) {
 		global $wpdb;
+		$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $ax_aud_identity_id ) );
 		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => $ax_aud_identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned Actor cleanup.
 		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $ax_aud_identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned identity cleanup.
 	}

@@ -65,6 +65,7 @@ try {
 		$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $activity_uri ) ); // phpcs:ignore WordPress.DB
 	}
 	if ( $ax_outbox_identity > 0 ) {
+		$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $ax_outbox_identity ) );
 		foreach ( array( axismundi_actors_texts_table(), axismundi_actors_addresses_table(), axismundi_actors_endpoints_table(), axismundi_actors_asset_cache_table(), axismundi_actors_keys_table(), axismundi_actors_fetch_state_table() ) as $table ) {
 			$wpdb->delete( $table, array( 'identity_id' => $ax_outbox_identity ) ); // phpcs:ignore WordPress.DB
 		}

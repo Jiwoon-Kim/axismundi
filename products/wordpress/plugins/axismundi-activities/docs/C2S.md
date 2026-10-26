@@ -612,4 +612,25 @@ FEP-9967   저자는 갱신된 Question 으로 Update 를 발행한다.
 
 원격 Question 에 투표하는 쪽은 구현되어 있고, **로컬 Question 이 투표를 받았을 때 결과를
 되돌려 보내는 쪽이 비어 있다.** 로컬 폴은 자기 집계를 소유하므로 데이터는 맞지만, 투표자는
-자기 표가 반영된 것을 보지 못한다. 별도 슬라이스로 남긴다 -- 전달 계층과 묶인다.
+자기 표가 반영된 것을 보지 못한다.
+
+**다만 이 분기는 아직 도달 불가능하다.** 별도 슬라이스로 떼면 구현할 대상이 없는 슬라이스가
+된다.
+
+```txt
+question 행          15
+vote 행               0        ← record_vote() 가 한 번도 돈 적이 없다
+원장 Question         outbound Create 509 (전부 발신, 수신 0)
+작성 표면             ax_question CPT 없음 -- Question 작성 UI 가 아직 없다
+```
+
+Question 작성이 가능해지는 조건이 사슬로 묶여 있고, Update 발행은 그 사슬의 **완료 조건**이지
+앞에 둘 수 있는 작업이 아니다.
+
+```txt
+ax_note CPT 컷오프
+  → OP C2S 객체 테이블        Note 본문을 소유할 자리
+  → Create(Question) 작성 UI  Question 은 Create 의 object 이므로 객체 저장이 먼저다
+  → poll 성립                 비로소 로컬 Question 이 투표를 받는다
+  → Update 발행이 필수가 된다  FEP-9967 MUST. poll 기능의 완료 조건이다
+```

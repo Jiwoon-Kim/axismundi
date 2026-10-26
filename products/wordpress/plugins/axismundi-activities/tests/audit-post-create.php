@@ -33,6 +33,8 @@ function ax_create_http( $preempt ) {
 	return $preempt;
 }
 
+// This audit exercises the legacy adapter; S10 selection has its own focused audit.
+add_filter( 'axismundi_actors_account_selection_enabled', '__return_false', PHP_INT_MAX );
 try {
 	axismundi_act_install();
 	global $wpdb;
@@ -246,6 +248,7 @@ try {
 	ax_create_assert( $ax_create_results, 'password-protected posts and media uploads never create Activities', array() === axismundi_act_get_by_object( axismundi_op_post_object_uri( get_post( $locked_id ) ) ) );
 	ax_create_assert( $ax_create_results, 'the bridge performs no HTTP request or delivery', 0 === $GLOBALS['ax_create_http'] );
 } finally {
+	remove_filter( 'axismundi_actors_account_selection_enabled', '__return_false', PHP_INT_MAX );
 	remove_filter( 'pre_http_request', 'ax_create_http' );
 	remove_all_filters( 'axismundi_op_post_actor_uri' );
 	axismundi_actors_set_acting_actor( $author_id, 0 );
@@ -258,6 +261,7 @@ try {
 		wp_delete_post( $post_id, true );
 	}
 	foreach ( array_unique( array_filter( $ax_create_identities ) ) as $identity_id ) {
+		$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $identity_id ) );
 		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => $identity_id ), array( '%d' ) );
 		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $identity_id ), array( '%d' ) );
 	}
@@ -266,6 +270,7 @@ try {
 		wp_delete_user( $user_id );
 	}
 	if ( $ax_create_identity_id > 0 ) {
+		$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $ax_create_identity_id ) );
 		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => $ax_create_identity_id ), array( '%d' ) );
 		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $ax_create_identity_id ), array( '%d' ) );
 	}

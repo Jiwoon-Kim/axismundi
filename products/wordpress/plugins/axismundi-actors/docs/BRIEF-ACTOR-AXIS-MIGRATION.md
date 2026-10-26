@@ -175,6 +175,30 @@ Actor Profile 네 곳은 위 분류에서 일부러 뺐다. 화면의 축을 바
 
 ## 순서
 
+### 착수 재대조 (2026-10-26, principal 이행 이후)
+
+전체 호출부 판정은 아직 진행 중이다. 아래는 원문을 확인한 범위만 적는다.
+
+- `forum/topics.php::admit_local_topic()`은 B가 아니라 **A의 최초 제출 쓰기 경로**다.
+  아직 Create가 없는 단계에서 `submission_actor_identity_id`를 저장한 뒤
+  `record_topic_commit()`을 부른다. 여기에 원장 조회만 넣으면 최초 제출을 만들 수 없다.
+  제출 시 명시한 Account를 검증해 저장하는 일과 이후 저장된 귀속을 읽는 일을 구분한다.
+- `forum/topics.php::topic_to_article()`과 `distribution.php::record_topic_delete()`는
+  여전히 B다. 현재는 `post_author`의 단수 Actor를 다시 해소한다. 기존 entry의
+  `submission_actor_identity_id`와 발행 원장 중 어떤 사실이 존재하는 단계인지 확인해야
+  하며, 현재 선택을 과거 귀속의 대체값으로 사용하지 않는다.
+- `calendar/event-actor.php`에는 `acting_actor_identity_id`라는 저장된 사실이 이미 있다.
+  `event_acting_actor_uri()`의 User 파생 폴백과 `backfill_event_acting_actors()`의
+  `post_author` 기반 추론이 남아 있다. 기존 저장값을 지우거나 현재 선택으로 재귀속하지
+  않는 것이 B 이행의 조건이다. Calendar의 JMAP 모델·Collection URL 개편은 별도다.
+
+즉시 발행 검증 공백은 `activities/tests/audit-immediate-publication.php`로 보완했다.
+이 감사는 두 선택 게이트를 직접 켜고 내부 REST 디스패처의 글 저장부터 Create·귀속까지
+확인한다. Organization 선택, 교차 탭 불일치, 저장된 기본값이 있는 브라우저 미선택을
+구분한다. 브라우저 JavaScript·HTTP 인증·AS2 C2S wire 검증을 대신하지 않는다.
+`actors/tests/audit-principal-fixture-cleanup.php`는 이 감사도 별도 프로세스로 두 번 실행해
+전체 principal 행의 내용이 보존되는지 비교한다.
+
 ```txt
 0  판정 확정    codex가 39곳 원문으로 A/B/C/D/E를 확정하고, 이 표와 다른 곳을 보고한다
                 위 ✔ 4곳 외에는 전부 재확인 대상이다

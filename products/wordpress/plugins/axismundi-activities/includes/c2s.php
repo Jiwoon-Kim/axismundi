@@ -166,8 +166,8 @@ function axismundi_act_c2s_publish( WP_Post $post, string $object_uri, int $prin
 		return new WP_Error( 'ax_act_c2s_attribution', __( 'This object is already attributed to another Actor.', 'axismundi-activities' ) );
 	}
 
-	$intent = '' !== $intent_uuid ? axismundi_act_pending_intent( $post->ID ) : null;
-	if ( '' !== $intent_uuid && ( ! $intent || $intent['intent_uuid'] !== $intent_uuid || 'pending' !== $intent['state']
+	$intent = '' !== $intent_uuid ? axismundi_act_scheduled_post_submission( $post->ID ) : null;
+	if ( '' !== $intent_uuid && ( ! $intent || $intent['intent_uuid'] !== $intent_uuid || 'pending' !== $intent['state'] || 'Create' !== $intent['activity_type']
 		|| (int) $intent['principal_user_id'] !== $principal_user_id || (int) $intent['actor_identity_id'] !== $actor_identity_id ) ) {
 		return new WP_Error( 'ax_act_pending_changed', 'The scheduled publication intent changed.' );
 	}

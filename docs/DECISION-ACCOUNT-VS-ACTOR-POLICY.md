@@ -203,5 +203,6 @@ outbox 가 떨어뜨리는 공개 local 행   0 건
 가드   그날을 잡기 위해 감사에 단언을 넣는다 --
        direction='local' AND has_public_audience=1 인 행이 0 이다.
        위반이 생기면 실패하고, 그 실패가 이 리팩터링의 착수 신호다
+       실행: wp eval-file wp-content/plugins/axismundi-activities/tests/audit-direction-boundary.php
 검증   이행할 때는 동작이 바뀌지 않아야 한다. outbox·피드를 이행 전후 전수 대조한다
 ```

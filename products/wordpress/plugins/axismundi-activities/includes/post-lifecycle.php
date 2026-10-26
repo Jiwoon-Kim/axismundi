@@ -68,7 +68,7 @@ function axismundi_act_record_post_create( WP_Post $post, string $object_uri, st
 		'outbound',
 		$event_key,
 		array(),
-		$scheduled_intent ? axismundi_act_pending_commit_callback( $scheduled_intent ) : null
+		$scheduled_intent ? axismundi_act_submission_commit_callback( $scheduled_intent ) : null
 	);
 
 	if ( is_wp_error( $activity ) ) {

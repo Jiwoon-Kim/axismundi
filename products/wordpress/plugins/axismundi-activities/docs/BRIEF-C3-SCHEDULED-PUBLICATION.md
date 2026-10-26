@@ -115,7 +115,8 @@ pending 비노출  발사 전에 outbox · 공개 Activity 읽기 · 전달 큐�
 
 ## 구현 결정 (2026-10-26)
 
-소유자 승인: 별도 `ax_activity_pending` 테이블. **근거는 수명 차이**다. 원장 읽기가
+소유자 승인: 별도 submission 테이블(최초 `ax_activity_pending`, 아래 후속에서
+`ax_activity_submission`으로 정정). **근거는 수명 차이**다. 원장 읽기가
 active allowlist라는 사실상 원장 비활성 상태도 비노출은 가능하다. 그러나 intent는
 편집·교체·폐기되는 의도이고 원장은 일어난 사건이다. pending에 Activity URI/local_uuid를
 발급하지 않는다. intent_uuid는 내부 교체 세대 식별자이며 외부 Activity ID가 아니다.
@@ -123,7 +124,7 @@ active allowlist라는 사실상 원장 비활성 상태도 비노출은 가능�
 - 시계와 트리거는 WP `future`/`publish_future_post` 그대로다. 새 cron job을 만들지 않는다.
   `scheduled_for`는 `post_date_gmt`의 검증용 사본이며 재예약 저장 때마다 교체한다.
 - metadata/mentions 저장 후 미래 글의 intent를 기록하고, REST 저장은 REST 완료 훅에서
-  기록한다. post_id 기본 키로 살아 있는 의도는 하나다. 취소는 cancelled, 실패는 failed.
+  기록한다. 최초 post_id 키는 아래 후속에서 소스 삼중키로 교체했다. 취소는 cancelled, 실패는 failed.
   이전 글에 intent를 소급 생성하지 않는다.
 - 발사는 OP 공개 후보 훅 한 곳이다. 기록된 principal/Actor, source version/body hash,
   Object URI, 예약 시각, 현재 권한을 재검사한다. cron의 선택 쿠키나 새 기본값은 읽지 않는다.
@@ -149,14 +150,48 @@ active allowlist라는 사실상 원장 비활성 상태도 비노출은 가능�
 - 영향 감사: repository 21, post-create 23, publish-selection 24건 통과.
   post-create는 legacy 선택 전제라 해당 실행에만 gate-off를 적용했다. 개발용 opt-in
   mu-plugin은 수정하지 않았다. gate-on 신규 경로는 별도 selection 감사에서 검증했다.
-- 최초 예약 프로브는 단일 sleep 중단 후 아직 future인 글을 발사해 실패했다.
-  시계를 반복 확인하도록 수정했으며, 실제 Core 예약 시각 이후에만 검사한다.
+- 최초 예약 프로브는 기다린 뒤에도 아직 future인 글을 발사해 실패했다.
+  현재 시각을 실제 post_date_gmt와 반복 대조하도록 수정해 Core 예약 시각 이후에만 검사한다.
 
 이 모델은 JMAP EmailSubmission처럼 source와 제출 의도를 분리하는 데 참고할 수 있지만,
 Mail capability/EmailSubmission 구현은 아니다. JMAP identityId와 우리 Account를 동일시하지
-않는다. post_id PK는 이번 범위의 '현재 예약 의도 하나' 제약이지 모든 Activity 제출의
-보편 모델이 아니다. 상태는 전달 성공이 아니라 연합 원장 기록 성공/실패를 뜻한다.
+않는다. 최초 post_id PK 설명은 아래 소스 삼중키 후속으로 대체됐다.
+상태는 전달 성공이 아니라 연합 원장 기록 성공/실패를 뜻한다.
 
 브라우저 예약 UI와 스테이징 cron/전달은 미검증이다. 동시에 들어오는 임의의 외부 SQL
 source 수정까지 예약 named lock에 참여시키지는 않는다. 발사 시 source/version/audience
 검사는 있지만, 모든 WP 외부 writer를 포괄하는 쓰기 직렬화라고 주장하지 않는다.
+
+## ActivitySubmission 저장 키 후속 (2026-10-26)
+
+소유자 회신 반영:
+
+- 테이블은 `ax_activity_submission`, 상태는 pending/completed/cancelled/failed다.
+- `intent_uuid` PK로 세대를 구별하고 `UNIQUE(source_owner, source_kind, source_ref)`로
+  소스당 현재 의도 하나를 유지한다. OP의 기존 source 축과 같으며 source_ref는 같은
+  bigint 참조다. post_id 전용 컬럼은 없다.
+- `activity_type`을 저장한다. 이번 어댑터는 `wordpress-core`/`post`의 `Create`만
+  포착·실행한다. 다른 타입이 이 어댑터에 들어오면 실패하고 Create로 바꾸지 않는다.
+- named lock도 DB/site prefix와 소스 삼중키의 구조화된 해시를 사용한다. WP 저장·예약
+  훅은 그대로이며 새 시계나 신규 C2S 저장소를 만들지 않았다.
+- 스키마 v13은 v12 pending 행의 UUID·발신자·audience·시각·상태를 검증해 복사한다.
+  충돌하면 덮어쓰지 않고 rollback하며 readiness를 올리지 않는다. 구 테이블은 archive로
+  보존하고 실행/조회에는 사용하지 않는다. v13 설치 후 재설치가 구 archive를 재주입하지 않는다.
+- `audit-submission-storage.php`는 격리 테이블에서 같은 정수 ref의 owner/kind 격리,
+  교체·중복 거부, 마이그레이션 보존·충돌·검증 실패 rollback을 검사한다.
+- `audit-direction-boundary.php`는 현재 원장에서 local + public 행이 0인지 단언한다.
+  AS2 적법성 규칙이나 production 쓰기 금지가 아니라 direction 축 이행의 착수 신호다.
+
+일반 ActivitySubmission 실행, object 없는 IntransitiveActivity, Follow/Like/Announce/Undo
+예약은 이번 범위 밖이다. 타입 컬럼만 추가하면 그것들이 지원되는 것으로 간주하지 않는다.
+새 소스는 source adapter와 자기 트리거가 필요하고 object 없는 제출은 payload/subject 계약도
+확정해야 한다. JMAP Mail/submission capability는 광고하지 않는다.
+
+`object` 속성이 없다는 것과 저장 source가 없다는 것은 다르다. 향후 Activity 자체의
+source 행을 삼중키로 참조할 수 있지만, 현재 스키마의 object_uri 및 실행 어댑터는
+객체 발행 Create 범위다. 일반화의 남은 작업을 단순히 시계 하나로 축소하지 않는다.
+
+후속 검증: storage 39건(임시 v12→v13 보존·충돌·실패 rollback, source/lock 격리,
+타입 불일치 소비 거부), 실제 예약 41건, repository 21건, publish-selection 24건 통과.
+direction 공개 local 행 0 단언도 통과했다. 일반 Activity/새 소스 실행이나 브라우저 예약
+검증을 수행한 것은 아니다. Principal 변경/재이행이나 스테이징 배포도 하지 않았다.

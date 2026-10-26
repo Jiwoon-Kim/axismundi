@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACT_DB_VERSION        = '12';
+const AXISMUNDI_ACT_DB_VERSION        = '13';
 const AXISMUNDI_ACT_DB_VERSION_OPTION = 'axismundi_activities_db_version';
 const AXISMUNDI_ACT_PAYLOAD_MAX       = 1048576;
 
@@ -135,8 +135,9 @@ function axismundi_act_install() : bool {
 	$quotes_valid    = function_exists( 'axismundi_act_install_quote_authorizations' ) && axismundi_act_install_quote_authorizations();
 	$questions_valid = function_exists( 'axismundi_act_install_questions_schema' ) && axismundi_act_install_questions_schema();
 	$inbox_valid     = function_exists( 'axismundi_act_install_inbox' ) && axismundi_act_install_inbox();
-	$pending_valid   = function_exists( 'axismundi_act_install_pending' ) && axismundi_act_install_pending();
-	$valid           = $base_valid && $relations_valid && $quotes_valid && $questions_valid && $inbox_valid && $pending_valid;
+	$submission_valid = function_exists( 'axismundi_act_install_submissions' )
+		&& axismundi_act_install_submissions( version_compare( $previous_version, '13', '<' ) );
+	$valid           = $base_valid && $relations_valid && $quotes_valid && $questions_valid && $inbox_valid && $submission_valid;
 	if ( $valid && version_compare( $previous_version, '8', '<' ) ) {
 		$valid = axismundi_act_backfill_feed_sort_at();
 	}

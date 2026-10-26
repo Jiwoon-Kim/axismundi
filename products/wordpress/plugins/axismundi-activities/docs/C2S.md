@@ -325,7 +325,11 @@ there is nothing to `Update`. The pending submission's expected version and audi
 are replaced, and exactly one live intent exists when the schedule fires.
 
 **A schedule without a recorded intent federates nothing.** C3 stores replaceable intent in
-`ax_activity_pending`, not in the immutable Activity ledger. Core remains the clock and trigger;
+`ax_activity_submission`, not in the immutable Activity ledger. The source triple
+`(source_owner, source_kind, source_ref)` identifies one current submission, and `intent_uuid`
+identifies its replaceable generation. `activity_type` is explicit; the current Post adapter
+only dispatches `Create`. This storage identity does not advertise a general Activity scheduler.
+Core remains the clock and trigger;
 `scheduled_for` is a validation copy of `post_date_gmt`, replaced whenever the post is rescheduled.
 Only an explicitly submitted Account can create a pending intent. Old schedules are not backfilled.
 At firing, the frozen principal, Actor, source and audience are re-verified. If the resolved

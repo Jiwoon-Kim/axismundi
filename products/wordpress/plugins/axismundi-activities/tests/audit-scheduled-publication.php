@@ -15,7 +15,7 @@ $assert = static function ( bool $ok, string $label ) use ( &$checks ) : void {
 $owner = static fn() => 'axismundi';
 $network = static function () use ( &$http ) { ++$http; return new WP_Error( 'audit_http', 'No network in this audit.' ); };
 $fail_consume = static function ( string $sql ) : string {
-	return str_contains( $sql, axismundi_act_pending_table() ) && str_contains( $sql, "'completed'" ) && str_starts_with( $sql, 'UPDATE' ) ? 'INVALID SQL AUDIT_PENDING_CONSUME' : $sql;
+	return str_contains( $sql, axismundi_act_submissions_table() ) && str_contains( $sql, "'completed'" ) && str_starts_with( $sql, 'UPDATE' ) ? 'INVALID SQL AUDIT_PENDING_CONSUME' : $sql;
 };
 add_filter( 'axismundi_actors_account_selection_enabled', '__return_true' );
 add_filter( 'axismundi_actors_account_selection_adapter_available', '__return_true' );
@@ -47,19 +47,20 @@ try {
 			'post_date' => get_date_from_gmt( gmdate( 'Y-m-d H:i:s', $due ) ), 'post_date_gmt' => gmdate( 'Y-m-d H:i:s', $due ) ), true );
 		$assert( ! is_wp_error( $id ) && 'future' === get_post_status( $id ), 'Core owns future schedule' );
 		$posts[ $name ] = $id;
-		$intent = axismundi_act_pending_intent( $id );
+		$intent = axismundi_act_scheduled_post_submission( $id );
 		$assert( $intent && 'pending' === $intent['state'] && $actors[1] === (int) $intent['actor_identity_id'], 'Frozen Organization intent stored' );
+		$assert( 'wordpress-core' === $intent['source_owner'] && 'post' === $intent['source_kind'] && (int) $id === (int) $intent['source_ref'] && 'Create' === $intent['activity_type'], 'Source-neutral submission records explicit Create type' );
 		$assert( array() === axismundi_act_get_by_object( $intent['object_uri'] ) && '' === axismundi_act_get_object_attribution( $intent['object_uri'] ), 'Pending has no Activity or attribution' );
 	}
-	$old = axismundi_act_pending_intent( $posts['deliver'] );
+	$old = axismundi_act_scheduled_post_submission( $posts['deliver'] );
 	wp_update_post( array( 'ID' => $posts['deliver'], 'post_title' => 'Scheduled replacement one' ) );
 	wp_update_post( array( 'ID' => $posts['deliver'], 'post_title' => 'Scheduled replacement two' ) );
-	$new = axismundi_act_pending_intent( $posts['deliver'] );
+	$new = axismundi_act_scheduled_post_submission( $posts['deliver'] );
 	$assert( $old['intent_uuid'] !== $new['intent_uuid'] && 'pending' === $new['state'], 'Editing replaces intent generation' );
-	$assert( 1 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE post_id = %d', axismundi_act_pending_table(), $posts['deliver'] ) ), 'Only one intent row per post' );
+	$assert( 1 === (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE source_owner = 'wordpress-core' AND source_kind = 'post' AND source_ref = %d", axismundi_act_submissions_table(), $posts['deliver'] ) ), 'Only one intent row per source triple' );
 	wp_update_post( array( 'ID' => $posts['cancel'], 'post_status' => 'draft' ) );
-	$assert( 'cancelled' === axismundi_act_pending_intent( $posts['cancel'] )['state'], 'Unscheduling cancels pending intent' );
-	$wpdb->delete( axismundi_act_pending_table(), array( 'post_id' => $posts['legacy'] ) );
+	$assert( 'cancelled' === axismundi_act_scheduled_post_submission( $posts['cancel'] )['state'], 'Unscheduling cancels pending intent' );
+	$wpdb->delete( axismundi_act_submissions_table(), axismundi_act_post_submission_source( $posts['legacy'] ) );
 	$assert( true === axismundi_actors_set_account_selection( $actors[0] ), 'Switch to Person after scheduling' );
 	$_SERVER['HTTP_X_AXISMUNDI_ACCOUNT'] = (string) $actors[0];
 	wp_set_current_user( 0 );
@@ -71,10 +72,10 @@ try {
 	add_filter( 'query', $fail_consume );
 	try { check_and_publish_future_post( $posts['atomic'] ); }
 	finally { remove_filter( 'query', $fail_consume ); $wpdb->suppress_errors( $errors ); }
-	$atomic = axismundi_act_pending_intent( $posts['atomic'] );
+	$atomic = axismundi_act_scheduled_post_submission( $posts['atomic'] );
 	$assert( 'failed' === $atomic['state'] && array() === axismundi_act_get_by_object( $atomic['object_uri'] ), 'Intent consumption failure rolls back Create atomically: ' . wp_json_encode( array( $atomic['state'], $atomic['error_code'], get_post_status( $posts['atomic'] ), count( axismundi_act_get_by_object( $atomic['object_uri'] ) ) ) ) );
 	check_and_publish_future_post( $posts['deliver'] );
-	$done = axismundi_act_pending_intent( $posts['deliver'] );
+	$done = axismundi_act_scheduled_post_submission( $posts['deliver'] );
 	$activities = axismundi_act_get_by_object( $done['object_uri'] );
 	$assert( 'publish' === get_post_status( $posts['deliver'] ) && 'completed' === $done['state'], 'WP fires schedule and consumes intent' );
 	$assert( 1 === count( $activities ) && axismundi_actors_get_by_identity( $actors[1] )->get_uri() === $activities[0]->get_actor_uri(), 'Create uses frozen Organization, never current Person' );
@@ -85,7 +86,7 @@ try {
 	$assert( 1 === count( axismundi_act_get_by_object( $done['object_uri'] ) ), 'Duplicate candidate cannot create twice' );
 	$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $actors[1], 'principal_kind' => 'wp_user', 'principal_id' => $user ) );
 	check_and_publish_future_post( $posts['revoked'] );
-	$revoked = axismundi_act_pending_intent( $posts['revoked'] );
+	$revoked = axismundi_act_scheduled_post_submission( $posts['revoked'] );
 	$assert( 'publish' === get_post_status( $posts['revoked'] ) && 'failed' === $revoked['state'] && 'ax_act_pending_permission' === $revoked['error_code'], 'Revocation preserves WP publication but fails federation' );
 	$assert( array() === axismundi_act_get_by_object( $revoked['object_uri'] ), 'Revocation cannot fallback to Person' );
 	check_and_publish_future_post( $posts['legacy'] );
@@ -104,7 +105,7 @@ try {
 	foreach ( $posts as $id ) {
 		$uri = axismundi_op_post_object_uri( get_post( $id ) );
 		$wpdb->delete( axismundi_act_activities_table(), array( 'object_uri_hash' => hash( 'sha256', $uri ) ) );
-		$wpdb->delete( axismundi_act_pending_table(), array( 'post_id' => $id ) );
+		$wpdb->delete( axismundi_act_submissions_table(), axismundi_act_post_submission_source( $id ) );
 		wp_delete_post( $id, true );
 	}
 	foreach ( array_reverse( $actors ) as $id ) {

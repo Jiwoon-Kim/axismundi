@@ -18,6 +18,7 @@ $ax_terms     = array();
 $ax_users     = array();
 $ax_uuids     = array();
 $ax_actor_ids = array();
+$ax_activity_uris = array();
 
 /**
  * @param array  $results   Accumulator.
@@ -121,6 +122,15 @@ try {
 			&& ! axismundi_media_folder_federation_allowed( (int) $folder )
 	);
 
+	ax_folder_identity_assert( $ax_results, 'a storage owner does not fabricate folder attribution', '' === axismundi_media_folder_actor_uri( (int) $folder ) );
+	axismundi_media_set_folder_tier( (int) $folder, 'public', (int) $owner );
+	ax_folder_identity_assert( $ax_results, 'public ACL permits reading without a recorded Create', axismundi_media_folder_federation_allowed( (int) $folder ) );
+	$document = axismundi_op_media_folder_collection_transform( new Axismundi_OP_Media_Folder_Collection( get_term( (int) $folder, AXISMUNDI_MEDIA_FOLDER_TAX ) ) );
+	ax_folder_identity_assert( $ax_results, 'unattributed public projection omits the property entirely', is_array( $document ) && ! array_key_exists( 'attributedTo', $document ) );
+	ax_folder_identity_assert( $ax_results, 'reading a public folder does not mint historical attribution', '' === (string) axismundi_act_get_object_attribution( axismundi_media_folder_uri( (int) $folder, false ) ) );
+	$publication = axismundi_act_record_source_activity( array( 'type' => 'Create', 'actor' => $actor->get_uri(), 'object' => axismundi_media_folder_uri( (int) $folder, false ) ), 'outbound', 'folder-audit:' . wp_generate_uuid4() );
+	if ( $publication instanceof Axismundi_Activity ) { $ax_activity_uris[] = $publication->get_uri(); }
+	ax_folder_identity_assert( $ax_results, 'folder attribution comes from a recorded Create', $publication instanceof Axismundi_Activity && $actor->get_uri() === axismundi_media_folder_actor_uri( (int) $folder ) );
 	axismundi_media_set_folder_tier( (int) $folder, 'public', (int) $owner );
 	$public_identity = axismundi_actors_get_identity_by_uuid( $uuid );
 	ax_folder_identity_assert(
@@ -191,6 +201,7 @@ try {
 		);
 	}
 } finally {
+	foreach ( $ax_activity_uris as $uri ) { $wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $uri ) ); }
 	foreach ( $ax_terms as $ax_term ) {
 		wp_delete_term( $ax_term, AXISMUNDI_MEDIA_FOLDER_TAX );
 	}
@@ -211,6 +222,7 @@ try {
 		$wpdb->delete( $ax_table, array( 'uuid' => $ax_uuid ), array( '%s' ) );
 	}
 	foreach ( array_unique( $ax_actor_ids ) as $ax_actor_id ) {
+		$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => (int) $ax_actor_id ) );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( axismundi_actors_addresses_table(), array( 'identity_id' => (int) $ax_actor_id ), array( '%d' ) );
 		// The actor row goes first: an identity without its profile is the orphan the

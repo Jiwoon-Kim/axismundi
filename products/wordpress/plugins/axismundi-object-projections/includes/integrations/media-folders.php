@@ -82,10 +82,13 @@ function axismundi_op_media_folder_collection_transform( Axismundi_OP_Media_Fold
 	$base = array(
 		'id'           => axismundi_op_media_folder_collection_uri( $source ),
 		'type'         => $page > 0 ? 'OrderedCollectionPage' : 'OrderedCollection',
-		'attributedTo' => axismundi_media_folder_actor_uri( $folder->term_id ),
 		'name'         => $folder->name,
 		'url'          => axismundi_op_media_folder_html_url( $folder ),
 	);
+	$actor_uri = axismundi_media_folder_actor_uri( $folder->term_id );
+	if ( '' !== $actor_uri ) {
+		$base['attributedTo'] = $actor_uri;
+	}
 	if ( 0 === $page ) {
 		$base['totalItems'] = (int) $items['total'];
 		if ( (int) $items['total'] > 0 ) {

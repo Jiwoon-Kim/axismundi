@@ -16,15 +16,6 @@ function axismundi_forum_valid_membership_role( string $role ) : bool {
 	return in_array( $role, array( 'member', 'moderator' ), true );
 }
 
-/** @return bool Whether this Actor is a published local Person usable on the wire. */
-function axismundi_forum_public_local_person( $actor ) : bool {
-	return $actor instanceof Axismundi_Actor
-		&& $actor->is_local()
-		&& 'Person' === $actor->get_type()
-		&& 'public' === $actor->get_status()
-		&& $actor->is_handle_locked();
-}
-
 /** @return bool Whether a local user is a manager or an explicitly assigned Actor moderator. */
 function axismundi_forum_user_can_moderate( int $group_identity_id, int $user_id ) : bool {
 	if ( $group_identity_id <= 0 || $user_id <= 0 || ! axismundi_forum_is_community( $group_identity_id ) ) {
@@ -33,8 +24,10 @@ function axismundi_forum_user_can_moderate( int $group_identity_id, int $user_id
 	if ( axismundi_forum_user_can_manage( $group_identity_id, $user_id ) ) {
 		return true;
 	}
-	$actor = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( $user_id ) : null;
-	return $actor instanceof Axismundi_Actor && axismundi_forum_actor_is_moderator( $group_identity_id, $actor );
+	foreach ( axismundi_forum_accessible_people( $user_id ) as $actor ) {
+		if ( axismundi_forum_actor_is_moderator( $group_identity_id, $actor ) ) { return true; }
+	}
+	return false;
 }
 
 /** @return bool Whether this Actor has explicit Group moderation authority. */
@@ -52,7 +45,7 @@ function axismundi_forum_actor_is_moderator( int $group_identity_id, Axismundi_A
 
 /** Record the actor-authored moderation activity and Group wrapper for one role transition. */
 function axismundi_forum_record_moderator_change( Axismundi_Actor $group, Axismundi_Actor $subject, int $user_id, bool $moderator ) {
-	$actor = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( $user_id ) : null;
+	$actor = axismundi_forum_selected_actor( $user_id, true );
 	if ( ! axismundi_forum_public_local_person( $actor ) || ! axismundi_forum_actor_is_moderator( $group->get_identity_id(), $actor )
 		|| ! function_exists( 'axismundi_act_record_source_activity' ) || ! function_exists( 'axismundi_op_actor_followers_url' ) ) {
 		return new WP_Error( 'ax_forum_moderator_actor', __( 'A public community moderator Actor is required for this change.', 'axismundi-forum' ) );
@@ -184,7 +177,7 @@ function axismundi_forum_effective_moderators( int $group_identity_id ) : array 
 	$ids = (array) $wpdb->get_col( $wpdb->prepare( "SELECT actor_identity_id FROM {$table} WHERE group_identity_id = %d AND membership_state = 'accepted' AND membership_role = 'moderator'", $group_identity_id ) );
 	foreach ( $ids as $identity_id ) {
 		$actor = function_exists( 'axismundi_actors_get_by_identity' ) ? axismundi_actors_get_by_identity( (int) $identity_id ) : null;
-		if ( axismundi_forum_public_local_person( $actor ) || ( $actor instanceof Axismundi_Actor && ! $actor->is_local() && 'Person' === $actor->get_type() ) ) {
+		if ( axismundi_forum_public_local_person( $actor ) || ( axismundi_forum_person_actor( $actor ) && ! $actor->is_local() ) ) {
 			$moderators[ $actor->get_identity_id() ] = $actor;
 		}
 	}

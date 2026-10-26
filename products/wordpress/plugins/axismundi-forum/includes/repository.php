@@ -20,6 +20,7 @@
  */
 
 defined( 'ABSPATH' ) || exit;
+require_once __DIR__ . '/actor-policy.php';
 
 const AXISMUNDI_FORUM_DB_VERSION = '5.6';
 
@@ -239,10 +240,7 @@ function axismundi_forum_actors_available() : bool {
 
 /** @return bool Whether an Actor is a public managed Group and therefore a community. */
 function axismundi_forum_public_community_group( $actor ) : bool {
-	return $actor instanceof Axismundi_Actor
-		&& $actor->is_local()
-		&& $actor->is_managed()
-		&& 'Group' === $actor->get_type()
+	return axismundi_forum_local_group( $actor )
 		&& 'public' === $actor->get_status();
 }
 
@@ -399,8 +397,13 @@ function axismundi_forum_moderated_communities( int $user_id ) : array {
 		return array();
 	}
 	$communities = axismundi_forum_manageable_communities( $user_id );
-	$person = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( $user_id ) : null;
-	if ( $person instanceof Axismundi_Actor ) {
+	foreach ( axismundi_forum_accessible_people( $user_id ) as $person ) {
+		// Forum's Actor moderation inventory is not a transitive Account access grant.
+		foreach ( axismundi_actors_accounts_for_principal( 'local_account', $person->get_identity_id() ) as $group ) {
+			if ( axismundi_forum_is_community( $group->get_identity_id() ) && axismundi_forum_actor_is_moderator( $group->get_identity_id(), $person ) ) {
+				$communities[ $group->get_identity_id() ] = $group;
+			}
+		}
 		global $wpdb;
 		$table = axismundi_forum_memberships_table();
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed actor/state/role lookup on Forum's projection table.

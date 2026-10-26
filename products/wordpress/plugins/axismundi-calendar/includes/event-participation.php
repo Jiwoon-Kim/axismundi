@@ -970,13 +970,8 @@ function axismundi_cal_signed_in_actor_uri() : string {
 	if ( $user_id <= 0 ) {
 		return '';
 	}
-	if ( function_exists( 'axismundi_actors_get_for_user' ) ) {
-		$actor = axismundi_actors_get_for_user( $user_id );
-		if ( $actor instanceof Axismundi_Actor ) {
-			return (string) $actor->get_uri();
-		}
-	}
-	return (string) axismundi_cal_current_actor_uri();
+	$actor = function_exists( 'axismundi_actors_current_workspace' ) ? axismundi_actors_current_workspace( $user_id ) : null;
+	return $actor instanceof Axismundi_Actor ? $actor->get_uri() : '';
 }
 
 /**

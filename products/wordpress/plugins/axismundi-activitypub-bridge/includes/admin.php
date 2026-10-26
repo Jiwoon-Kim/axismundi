@@ -172,27 +172,7 @@ function axismundi_activitypub_bridge_render_legacy_scan( ?array $report, ?array
 
 /** Every currently public local Actor, without creating identities while reading. */
 function axismundi_activitypub_bridge_public_actors() : array {
-	$actors = array();
-	$site   = axismundi_actors_get_site_actor();
-	if ( $site instanceof Axismundi_Actor && 'public' === $site->get_status() ) {
-		$actors[ $site->get_uri() ] = $site;
-	}
-	foreach ( get_users( array( 'fields' => 'ids' ) ) as $user_id ) {
-		$actor = axismundi_actors_get_for_user( (int) $user_id );
-		if ( $actor instanceof Axismundi_Actor && 'public' === $actor->get_status() ) {
-			$actors[ $actor->get_uri() ] = $actor;
-		}
-	}
-	// Managed Groups sign and deliver their own Activities. They are not WP users,
-	// so the user loop above cannot represent their transport endpoints.
-	if ( function_exists( 'axismundi_actors_list_all_managed_actors' ) ) {
-		foreach ( axismundi_actors_list_all_managed_actors() as $group ) {
-			if ( $group instanceof Axismundi_Actor && 'public' === $group->get_status() ) {
-				$actors[ $group->get_uri() ] = $group;
-			}
-		}
-	}
-	return array_values( $actors );
+	return array_values( axismundi_actors_list_local_actors( 'public' ) );
 }
 
 /** Render one direction of the authoritative Axismundi Activity ledger. */

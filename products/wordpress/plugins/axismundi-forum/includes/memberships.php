@@ -27,9 +27,10 @@ function axismundi_forum_membership_policies() : array {
  * membership policy. An inactive profile leaves no fake edge.
  */
 function axismundi_forum_auto_join_published_community( Axismundi_Actor $group, int $user_id ) : void {
-	$person = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( $user_id ) : null;
-	if ( ! $person instanceof Axismundi_Actor || ! $person->is_local() || 'Person' !== $person->get_type()
-		|| 'public' !== $person->get_status() || ! $person->is_handle_locked()
+	// The hook's User argument is a recovery owner, not necessarily the publishing operator.
+	unset( $user_id );
+	$person = axismundi_forum_selected_actor( get_current_user_id(), true );
+	if ( ! axismundi_forum_public_local_person( $person )
 		|| ! function_exists( 'axismundi_act_follow_actor' ) ) {
 		return;
 	}
@@ -185,8 +186,8 @@ function axismundi_forum_get_membership( int $group_identity_id, int $actor_iden
  * @return array<int,Axismundi_Actor> Community Groups keyed by identity id.
  */
 function axismundi_forum_joined_local_communities_for_user( int $user_id ) : array {
-	$member = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( $user_id ) : null;
-	if ( ! $member instanceof Axismundi_Actor || ! $member->is_local() || 'Person' !== $member->get_type() ) {
+	$member = axismundi_forum_selected_actor( $user_id );
+	if ( ! axismundi_forum_local_person( $member ) ) {
 		return array();
 	}
 	global $wpdb;
@@ -201,7 +202,7 @@ function axismundi_forum_joined_local_communities_for_user( int $user_id ) : arr
 			continue;
 		}
 		$group = function_exists( 'axismundi_actors_get_by_identity' ) ? axismundi_actors_get_by_identity( $group_id ) : null;
-		if ( $group instanceof Axismundi_Actor && $group->is_local() && $group->is_managed() && 'Group' === $group->get_type() ) {
+		if ( axismundi_forum_local_group( $group ) ) {
 			$groups[ $group_id ] = $group;
 		}
 	}
@@ -372,7 +373,7 @@ function axismundi_forum_sync_membership_from_follow( array $relation ) : void {
 	}
 	$group = function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $relation['object_uri'] ) : null;
 	$member = function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $relation['subject_uri'] ) : null;
-	if ( ! $group instanceof Axismundi_Actor || ! $member instanceof Axismundi_Actor || ! $group->is_local() || ! $group->is_managed() || 'Group' !== $group->get_type() ) {
+	if ( ! $member instanceof Axismundi_Actor || ! axismundi_forum_local_group( $group ) ) {
 		return;
 	}
 	$group_identity_id = $group->get_identity_id();

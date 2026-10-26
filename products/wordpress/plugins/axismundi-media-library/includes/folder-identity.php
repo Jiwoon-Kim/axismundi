@@ -166,21 +166,22 @@ function axismundi_media_folder_from_identity_uuid( string $uuid ) : ?WP_Term {
 /**
  * The Actor URI a folder is attributed to.
  *
- * Resolved live from the owning user rather than copied onto the term: Actors keeps local
- * profile truth on the user and warns that copying causes drift (SPEC §2.7).
+ * Read recorded publication attribution. A folder's WordPress storage owner is not its
+ * federated publisher; folders never published by an Actor remain unattributed.
  *
  * @param int $term_id Folder term ID.
- * @return string Empty when the owner has no local Actor.
+ * @return string Empty when no eligible publisher is recorded.
  */
 function axismundi_media_folder_actor_uri( int $term_id ) : string {
-	if ( ! function_exists( 'axismundi_actors_get_for_user' ) ) {
+	if ( ! function_exists( 'axismundi_act_get_object_attribution' ) || ! function_exists( 'axismundi_actors_get_by_uri' ) ) {
 		return '';
 	}
-	$owner = axismundi_media_folder_owner( $term_id );
-	if ( $owner <= 0 ) {
+	$uri = axismundi_media_folder_uri( $term_id, false );
+	if ( '' === $uri ) {
 		return '';
 	}
-	$actor = axismundi_actors_get_for_user( $owner );
+	$attributed = axismundi_act_get_object_attribution( $uri );
+	$actor = '' !== $attributed ? axismundi_actors_get_by_uri( $attributed ) : null;
 	if ( ! $actor instanceof Axismundi_Actor || ! function_exists( 'axismundi_actors_is_public_profile' ) || ! axismundi_actors_is_public_profile( $actor ) ) {
 		return '';
 	}
@@ -200,8 +201,7 @@ function axismundi_media_folder_actor_uri( int $term_id ) : string {
 function axismundi_media_folder_federation_allowed( int $term_id ) : bool {
 	return axismundi_media_folder_can_have_identity( $term_id )
 		&& axismundi_media_folder_effective_tier_rank( $term_id ) <= axismundi_media_visibility_rank( 'unlisted' )
-		&& ! axismundi_media_folder_effective_gate( $term_id )
-		&& '' !== axismundi_media_folder_actor_uri( $term_id );
+		&& ! axismundi_media_folder_effective_gate( $term_id );
 }
 
 /**

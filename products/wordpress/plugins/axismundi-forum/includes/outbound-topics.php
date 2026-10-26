@@ -13,7 +13,7 @@ defined( 'ABSPATH' ) || exit;
 
 /** @return array<string,mixed>|null The author-to-Group Follow relation eligible for submission. */
 function axismundi_forum_remote_group_follow( Axismundi_Actor $author, Axismundi_Actor $group ) : ?array {
-	if ( ! function_exists( 'axismundi_act_get_relation' ) || ! $author->is_local() || 'Person' !== $author->get_type() || $group->is_local() || 'Group' !== $group->get_type() ) {
+	if ( ! function_exists( 'axismundi_act_get_relation' ) || ! axismundi_forum_local_person( $author ) || $group->is_local() || 'Group' !== $group->get_type() ) {
 		return null;
 	}
 	$relation = axismundi_act_get_relation( 'follow', $author->get_uri(), $group->get_uri() );
@@ -22,14 +22,10 @@ function axismundi_forum_remote_group_follow( Axismundi_Actor $author, Axismundi
 
 /** Whether this WordPress user may submit a Page as their public Person to this remote Group. */
 function axismundi_forum_user_can_submit_to_remote_group( int $user_id, Axismundi_Actor $group ) : bool {
-	$author = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( $user_id ) : null;
+	$author = axismundi_forum_selected_actor( $user_id, true );
 	return $user_id > 0
 		&& user_can( $user_id, 'edit_posts' )
-		&& $author instanceof Axismundi_Actor
-		&& $author->is_local()
-		&& 'Person' === $author->get_type()
-		&& 'public' === $author->get_status()
-		&& $author->is_handle_locked()
+		&& axismundi_forum_public_local_person( $author )
 		&& ! $group->is_local()
 		&& 'Group' === $group->get_type()
 		&& 'public' === $group->get_status();
@@ -45,8 +41,8 @@ function axismundi_forum_user_can_submit_to_remote_group( int $user_id, Axismund
  * @return array<int,Axismundi_Actor> Remote Groups keyed by identity id.
  */
 function axismundi_forum_followed_remote_groups_for_user( int $user_id ) : array {
-	$author = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( $user_id ) : null;
-	if ( ! $author instanceof Axismundi_Actor || ! $author->is_local() || 'Person' !== $author->get_type() || ! function_exists( 'axismundi_act_get_follow_collection_page' ) ) {
+	$author = axismundi_forum_selected_actor( $user_id );
+	if ( ! axismundi_forum_local_person( $author ) || ! function_exists( 'axismundi_act_get_follow_collection_page' ) ) {
 		return array();
 	}
 	$groups    = array();
@@ -148,11 +144,23 @@ function axismundi_forum_bind_remote_topic_group( int $topic_post_id, int $user_
 		return new WP_Error( 'ax_forum_remote_topic_forbidden', __( 'You may not bind this Topic to that remote Group.', 'axismundi-forum' ) );
 	}
 	$existing = (int) get_post_meta( $topic_post_id, AXISMUNDI_FORUM_REMOTE_GROUP_META, true );
+	$publisher = axismundi_forum_selected_actor( $user_id, true );
+	if ( ! axismundi_forum_public_local_person( $publisher ) ) {
+		return new WP_Error( 'ax_forum_topic_actor', __( 'Choose a public Person Account before submitting.', 'axismundi-forum' ) );
+	}
 	if ( $existing > 0 && $existing !== $group_identity_id ) {
 		return new WP_Error( 'ax_forum_remote_topic_context', __( 'A Topic cannot change its remote Group context.', 'axismundi-forum' ) );
 	}
 	if ( $existing === $group_identity_id ) {
+		if ( ! axismundi_forum_topic_author( $topic ) ) {
+			if ( false === update_post_meta( $topic_post_id, AXISMUNDI_FORUM_SUBMISSION_ACTOR_META, $publisher->get_identity_id() ) ) {
+				return new WP_Error( 'ax_forum_topic_actor', __( 'The submission Account could not be saved.', 'axismundi-forum' ) );
+			}
+		}
 		return true;
+	}
+	if ( false === update_post_meta( $topic_post_id, AXISMUNDI_FORUM_SUBMISSION_ACTOR_META, $publisher->get_identity_id() ) ) {
+		return new WP_Error( 'ax_forum_topic_actor', __( 'The submission Account could not be saved.', 'axismundi-forum' ) );
 	}
 	return false === update_post_meta( $topic_post_id, AXISMUNDI_FORUM_REMOTE_GROUP_META, $group_identity_id )
 		? new WP_Error( 'ax_forum_remote_topic_write', __( 'The remote Group context could not be saved.', 'axismundi-forum' ) )
@@ -175,7 +183,7 @@ function axismundi_forum_record_topic_commit( WP_Post $topic ) {
 	if ( ! $group instanceof Axismundi_Actor || ! function_exists( 'axismundi_act_record_object_commit' ) || ! function_exists( 'axismundi_op_finalize_object' ) ) {
 		return new WP_Error( 'ax_forum_topic_context', __( 'The Topic has no eligible Group context.', 'axismundi-forum' ) );
 	}
-	if ( ! $group->is_local() && ! axismundi_forum_user_can_submit_to_remote_group( (int) $topic->post_author, $group ) ) {
+	if ( ! $group->is_local() && ! axismundi_forum_public_local_person( axismundi_forum_topic_author( $topic ) ) ) {
 		return new WP_Error( 'ax_forum_remote_topic_forbidden', __( 'The author may not submit to that remote Group.', 'axismundi-forum' ) );
 	}
 	$object = axismundi_forum_topic_to_article( $topic );

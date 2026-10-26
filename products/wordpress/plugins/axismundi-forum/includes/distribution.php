@@ -275,9 +275,13 @@ function axismundi_forum_entry_has_distribution_history( array $entry ) : bool {
 /** Record the author's direct, Group-addressed Delete for one admitted local Topic. */
 function axismundi_forum_record_topic_delete( WP_Post $topic ) {
 	$entry = axismundi_forum_get_topic_entry( $topic->ID );
-	$author = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( (int) $topic->post_author ) : null;
-	if ( ! is_array( $entry ) || ! $author instanceof Axismundi_Actor || ! $author->is_local() || 'Person' !== $author->get_type() || ! function_exists( 'axismundi_act_record_object_delete' ) ) {
+	if ( ! is_array( $entry ) || ! function_exists( 'axismundi_act_record_object_delete' ) ) {
 		return null;
+	}
+	$author = axismundi_forum_topic_author( $topic );
+	if ( ! axismundi_forum_local_person( $author ) ) {
+		return axismundi_act_get_object_lifecycle( axismundi_forum_topic_object_uri( $topic ) )
+			? new WP_Error( 'ax_forum_topic_actor', __( 'The recorded Topic author is unavailable.', 'axismundi-forum' ) ) : null;
 	}
 	return axismundi_act_record_object_delete( axismundi_forum_topic_object_uri( $topic ), $author->get_uri() );
 }

@@ -70,10 +70,10 @@ function axismundi_cal_event_acting_actor_uri( int $post_id ) : string {
  * @return int Identity id, or 0 when the user has no Actor to publish as.
  */
 function axismundi_cal_authoring_actor_identity( int $user_id = 0 ) : int {
-	if ( ! function_exists( 'axismundi_actors_acting_actor' ) ) {
+	if ( ! function_exists( 'axismundi_actors_workspace_publisher' ) ) {
 		return 0;
 	}
-	$actor = axismundi_actors_acting_actor( $user_id > 0 ? $user_id : null );
+	$actor = axismundi_actors_workspace_publisher( $user_id > 0 ? $user_id : null );
 	return $actor instanceof Axismundi_Actor ? (int) $actor->get_identity_id() : 0;
 }
 

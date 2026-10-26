@@ -16,9 +16,8 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * May the viewer manage this actor? Managed Groups use their explicit Actors
- * owner/manager/editor relation; Person and Site actors retain their existing
- * own-profile / site-administrator rules.
+ * May the viewer edit this Actor? All Accounts use direct principal grants.
+ * The separate instance identity retains its site-administrator policy.
  *
  * @param Axismundi_Actor $actor   Actor.
  * @param int|null        $viewer  Viewer; defaults to current user.
@@ -29,10 +28,8 @@ function axismundi_actors_can_manage( Axismundi_Actor $actor, ?int $viewer = nul
 	if ( $viewer <= 0 ) {
 		return false;
 	}
-	if ( $actor->is_managed() ) {
-		return axismundi_actors_principal_can_manage( $actor->get_identity_id(), 'wp_user', $viewer );
-	}
-	return axismundi_actors_can_manage_user_actor( (int) $actor->get_local_user_id(), $viewer );
+	if ( 'site' === $actor->get_scope() ) { return user_can( $viewer, 'manage_options' ); }
+	return axismundi_actors_principal_can_manage( $actor->get_identity_id(), 'wp_user', $viewer );
 }
 
 /**
@@ -81,6 +78,7 @@ function axismundi_actors_sanitize_url_list( array $values ) : array {
  * @return Axismundi_Actor|WP_Error
  */
 function axismundi_actors_authorize_user_actor( int $user_id ) {
+	// E: legacy User activation API. The Account-scoped profile screen never calls it.
 	$refused = new WP_Error( 'ax_actors_cannot_manage', __( 'You cannot manage this actor profile.', 'axismundi-actors' ) );
 
 	if ( $user_id <= 0 ) {
@@ -157,6 +155,9 @@ function axismundi_actors_managed_actors_admin_url( int $identity_id = 0 ) : str
 
 /** @return string The appropriate editor return URL for any local Actor scope. */
 function axismundi_actors_management_back_url( Axismundi_Actor $actor ) : string {
+	if ( 'site' !== $actor->get_scope() && axismundi_actors_account_selection_enabled() ) {
+		return add_query_arg( 'identity_id', $actor->get_identity_id(), axismundi_actors_admin_url() );
+	}
 	if ( $actor->is_managed() ) {
 		return axismundi_actors_managed_actors_admin_url( $actor->get_identity_id() );
 	}
@@ -196,6 +197,7 @@ function axismundi_actors_status_label( ?Axismundi_Actor $actor ) : string {
  */
 function axismundi_actors_profile_panel( WP_User $user ) : void {
 	$viewer = get_current_user_id();
+	// D: this read-only panel describes the edited WP User, never the viewer's selection.
 	$actor  = axismundi_actors_get_for_user( (int) $user->ID );
 	if ( ! ( current_user_can( 'manage_options' ) || ( (int) $user->ID === $viewer && current_user_can( 'edit_posts' ) ) ) ) {
 		return;
@@ -215,11 +217,13 @@ function axismundi_actors_profile_panel( WP_User $user ) : void {
 				<?php if ( $actor instanceof Axismundi_Actor && axismundi_actors_is_public_profile( $actor ) ) : ?>
 					<p><a href="<?php echo esc_url( $actor->get_profile_url() ); ?>"><?php esc_html_e( 'View public profile', 'axismundi-actors' ); ?></a></p>
 				<?php endif; ?>
+				<?php if ( $is_self || ( $actor instanceof Axismundi_Actor && axismundi_actors_can_manage( $actor ) ) ) : ?>
 				<p>
-					<a class="button" href="<?php echo esc_url( axismundi_actors_admin_url( $is_self ? 0 : (int) $user->ID ) ); ?>">
-						<?php echo $actor instanceof Axismundi_Actor && $actor->is_handle_locked() ? esc_html__( 'Manage actor profile', 'axismundi-actors' ) : esc_html__( 'Activate actor profile', 'axismundi-actors' ); ?>
+					<a class="button" href="<?php echo esc_url( $actor instanceof Axismundi_Actor ? add_query_arg( 'identity_id', $actor->get_identity_id(), axismundi_actors_admin_url() ) : axismundi_actors_admin_url() ); ?>">
+						<?php echo ! $actor instanceof Axismundi_Actor ? esc_html__( 'Choose Account', 'axismundi-actors' ) : ( $actor->is_handle_locked() ? esc_html__( 'Manage actor profile', 'axismundi-actors' ) : esc_html__( 'Activate actor profile', 'axismundi-actors' ) ); ?>
 					</a>
 				</p>
+				<?php endif; ?>
 				<p class="description"><?php esc_html_e( 'The actor handle is separate from your WordPress username and author URL, and cannot be changed once set.', 'axismundi-actors' ); ?></p>
 			</td>
 		</tr>
@@ -253,10 +257,11 @@ function axismundi_actors_users_column_content( string $output, string $column, 
 	if ( 'ax_actor' !== $column ) {
 		return $output;
 	}
+	// D: a fixed WP User row, not an acting-Account selector.
 	$actor = axismundi_actors_get_for_user( $user_id );
 	$label = esc_html( axismundi_actors_status_label( $actor ) );
-	if ( current_user_can( 'edit_user', $user_id ) ) {
-		$label .= ' — <a href="' . esc_url( axismundi_actors_admin_url( $user_id ) ) . '">' . esc_html__( 'Manage', 'axismundi-actors' ) . '</a>';
+	if ( $actor instanceof Axismundi_Actor && axismundi_actors_can_manage( $actor ) ) {
+		$label .= ' — <a href="' . esc_url( add_query_arg( 'identity_id', $actor->get_identity_id(), axismundi_actors_admin_url() ) ) . '">' . esc_html__( 'Manage', 'axismundi-actors' ) . '</a>';
 	}
 	if ( $actor instanceof Axismundi_Actor && axismundi_actors_is_public_profile( $actor ) ) {
 		$label .= ' · <a href="' . esc_url( $actor->get_profile_url() ) . '">' . esc_html__( 'View', 'axismundi-actors' ) . '</a>';
@@ -272,22 +277,28 @@ add_filter( 'manage_users_custom_column', 'axismundi_actors_users_column_content
 /** @return void */
 function axismundi_actors_register_admin_pages() : void {
 	if ( current_user_can( 'list_users' ) ) {
-		add_users_page(
+		$profile_hook = add_users_page(
 			__( 'Actor Profile', 'axismundi-actors' ),
 			__( 'Actor Profile', 'axismundi-actors' ),
-			'edit_posts',
+			'read',
 			'axismundi-actor-profile',
 			'axismundi_actors_render_admin_page'
 		);
 	} else {
-		add_submenu_page(
+		$profile_hook = add_submenu_page(
 			'profile.php',
 			__( 'Actor Profile', 'axismundi-actors' ),
 			__( 'Actor Profile', 'axismundi-actors' ),
-			'edit_posts',
+			'read',
 			'axismundi-actor-profile',
 			'axismundi_actors_render_admin_page'
 		);
+	}
+	if ( $profile_hook ) {
+		add_action( 'load-' . $profile_hook, static function () : void {
+			global $title;
+			$title = __( 'Actor Profile', 'axismundi-actors' );
+		} );
 	}
 	add_users_page(
 		__( 'Remote Actors', 'axismundi-actors' ),
@@ -723,6 +734,19 @@ function axismundi_actors_admin_target_user() : int {
 	return get_current_user_id();
 }
 
+/** GET follows the selected Account; submitted forms pin an identity and recheck live authority. */
+function axismundi_actors_admin_profile_actor( ?int $identity_id = null ) {
+	if ( null === $identity_id ) {
+		$result = axismundi_actors_current_workspace_result();
+		if ( is_wp_error( $result ) ) { return $result; }
+		$actor = $result['actor'];
+	} else {
+		$actor = axismundi_actors_resolve_workspace( $identity_id, get_current_user_id() );
+	}
+	return $actor instanceof Axismundi_Actor && axismundi_actors_can_manage( $actor ) ? $actor
+		: new WP_Error( 'ax_actors_cannot_manage', __( 'You cannot manage this Account profile.', 'axismundi-actors' ) );
+}
+
 /** @return void */
 /**
  * Render the management screen.
@@ -741,24 +765,19 @@ function axismundi_actors_admin_target_user() : int {
  * @return void
  */
 function axismundi_actors_render_admin_page() : void {
-	$user_id = axismundi_actors_admin_target_user();
-	if ( $user_id <= 0 ) {
-		return;
-	}
-	$actor   = axismundi_actors_get_for_user( $user_id );
-	$allowed = $actor instanceof Axismundi_Actor
-		? axismundi_actors_can_manage( $actor )
-		: axismundi_actors_can_manage_user_actor( $user_id );
-	if ( ! $allowed ) {
-		wp_die( esc_html__( 'You cannot manage this actor profile.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
-	}
+	$id = isset( $_GET['identity_id'] ) ? absint( $_GET['identity_id'] ) : null;
+	$actor = axismundi_actors_admin_profile_actor( $id );
 	echo '<div class="wrap">';
 	echo '<h1>' . esc_html__( 'Actor Profile', 'axismundi-actors' ) . '</h1>';
+	if ( is_wp_error( $actor ) ) {
+		echo '<div class="notice notice-warning"><p>' . esc_html( $actor->get_error_message() ) . '</p></div></div>';
+		return;
+	}
 	axismundi_actors_admin_notice();
 	if ( $actor instanceof Axismundi_Actor && $actor->is_handle_locked() ) {
-		axismundi_actors_render_management( $actor, $user_id );
+		axismundi_actors_render_management( $actor, get_current_user_id() );
 	} else {
-		axismundi_actors_render_wizard( $user_id );
+		axismundi_actors_render_wizard( get_current_user_id(), $actor );
 	}
 	echo '</div>';
 }
@@ -809,7 +828,7 @@ add_action( 'admin_notices', 'axismundi_actors_plain_permalink_notice' );
  * @param int             $user_id Target user.
  * @return void
  */
-function axismundi_actors_render_wizard( int $user_id ) : void {
+function axismundi_actors_render_wizard( int $user_id, ?Axismundi_Actor $actor = null ) : void {
 	$candidates = axismundi_actors_handle_candidates( $user_id );
 	$default    = $candidates[0] ?? '';
 	?>
@@ -817,8 +836,8 @@ function axismundi_actors_render_wizard( int $user_id ) : void {
 	<p><?php esc_html_e( 'Choose an actor handle. This is your federated identity name and is shown as @handle. It is independent of your WordPress username and author URL, and cannot be changed after activation.', 'axismundi-actors' ); ?></p>
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<input type="hidden" name="action" value="axismundi_actors_activate">
-		<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $user_id ); ?>">
-		<?php wp_nonce_field( 'ax_actors_activate_' . $user_id ); ?>
+		<input type="hidden" name="identity_id" value="<?php echo esc_attr( (string) ( $actor ? $actor->get_identity_id() : 0 ) ); ?>">
+		<?php wp_nonce_field( 'ax_actors_activate_' . ( $actor ? $actor->get_identity_id() : 0 ) ); ?>
 		<table class="form-table" role="presentation">
 			<tr>
 				<th scope="row"><label for="ax-actor-handle"><?php esc_html_e( 'Actor handle', 'axismundi-actors' ); ?></label></th>
@@ -864,8 +883,8 @@ function axismundi_actors_render_management( Axismundi_Actor $actor, int $user_i
 	</table>
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<input type="hidden" name="action" value="axismundi_actors_set_visibility">
-		<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $user_id ); ?>">
-		<?php wp_nonce_field( 'ax_actors_visibility_' . $user_id ); ?>
+		<input type="hidden" name="identity_id" value="<?php echo esc_attr( (string) $actor->get_identity_id() ); ?>">
+		<?php wp_nonce_field( 'ax_actors_visibility_' . $actor->get_identity_id() ); ?>
 		<?php if ( $is_public ) : ?>
 			<input type="hidden" name="status" value="internal">
 			<?php submit_button( __( 'Make internal (unpublish)', 'axismundi-actors' ), 'secondary' ); ?>
@@ -892,7 +911,7 @@ function axismundi_actors_render_management( Axismundi_Actor $actor, int $user_i
  * @return void
  */
 function axismundi_actors_enqueue_media_picker( string $hook ) : void {
-	if ( ! in_array( $hook, array( 'users_page_axismundi-actor-profile', 'users_page_axismundi-managed-groups' ), true ) ) {
+	if ( ! in_array( $hook, array( 'users_page_axismundi-actor-profile', 'profile_page_axismundi-actor-profile', 'users_page_axismundi-managed-actors', 'profile_page_axismundi-managed-actors' ), true ) ) {
 		return;
 	}
 	wp_enqueue_media();
@@ -1182,13 +1201,13 @@ function axismundi_actors_redirect_result( string $url, $result ) : void {
 
 /** @return void */
 function axismundi_actors_handle_activate() : void {
-	$user_id = isset( $_POST['user_id'] ) ? absint( $_POST['user_id'] ) : 0;
-	check_admin_referer( 'ax_actors_activate_' . $user_id );
-	$actor = axismundi_actors_authorize_user_actor( $user_id );
+	$id = isset( $_POST['identity_id'] ) ? absint( $_POST['identity_id'] ) : 0;
+	check_admin_referer( 'ax_actors_activate_' . $id );
+	$actor = axismundi_actors_admin_profile_actor( $id );
 	if ( is_wp_error( $actor ) ) {
 		wp_die( esc_html__( 'You cannot manage this actor profile.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
 	}
-	$back = axismundi_actors_admin_url( get_current_user_id() === $user_id ? 0 : $user_id );
+	$back = axismundi_actors_admin_url();
 	if ( empty( $_POST['confirm_immutable'] ) ) {
 		axismundi_actors_redirect_result( $back, new WP_Error( 'ax_actors_confirm', __( 'Please confirm the handle is permanent.', 'axismundi-actors' ) ) );
 	}
@@ -1287,10 +1306,10 @@ function axismundi_actors_profile_updated( int $identity_id ) : void {
 
 /** @return void */
 function axismundi_actors_handle_set_visibility() : void {
-	$user_id = isset( $_POST['user_id'] ) ? absint( $_POST['user_id'] ) : 0;
-	check_admin_referer( 'ax_actors_visibility_' . $user_id );
-	$actor = axismundi_actors_get_for_user( $user_id );
-	if ( ! $actor instanceof Axismundi_Actor || ! axismundi_actors_can_manage( $actor ) ) {
+	$id = isset( $_POST['identity_id'] ) ? absint( $_POST['identity_id'] ) : 0;
+	check_admin_referer( 'ax_actors_visibility_' . $id );
+	$actor = axismundi_actors_admin_profile_actor( $id );
+	if ( is_wp_error( $actor ) ) {
 		wp_die( esc_html__( 'You cannot manage this actor profile.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
 	}
 	$status = isset( $_POST['status'] ) && 'public' === $_POST['status'] ? 'public' : 'internal';
@@ -1298,7 +1317,7 @@ function axismundi_actors_handle_set_visibility() : void {
 	if ( $ok ) {
 		axismundi_actors_profile_updated( $actor->get_identity_id() );
 	}
-	axismundi_actors_redirect_result( axismundi_actors_admin_url( get_current_user_id() === $user_id ? 0 : $user_id ), $ok ? true : new WP_Error( 'ax_actors_status', __( 'Could not update visibility.', 'axismundi-actors' ) ) );
+	axismundi_actors_redirect_result( axismundi_actors_admin_url(), $ok ? true : new WP_Error( 'ax_actors_status', __( 'Could not update visibility.', 'axismundi-actors' ) ) );
 }
 add_action( 'admin_post_axismundi_actors_set_visibility', 'axismundi_actors_handle_set_visibility' );
 

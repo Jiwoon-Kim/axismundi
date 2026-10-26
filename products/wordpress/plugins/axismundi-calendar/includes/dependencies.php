@@ -44,7 +44,8 @@ const AXISMUNDI_CAL_ACTIVITIES_MINIMUM = '0.1.0';
 function axismundi_cal_has_actors() : bool {
 	return defined( 'AXISMUNDI_ACTORS_VERSION' )
 		&& version_compare( (string) AXISMUNDI_ACTORS_VERSION, AXISMUNDI_CAL_ACTORS_MINIMUM, '>=' )
-		&& function_exists( 'axismundi_actors_get_for_user' );
+		&& function_exists( 'axismundi_actors_current_workspace_result' )
+		&& function_exists( 'axismundi_actors_accounts_for_user' );
 }
 
 /**
@@ -56,7 +57,7 @@ function axismundi_cal_has_object_projections() : bool {
 	return defined( 'AXISMUNDI_OP_VERSION' )
 		&& version_compare( (string) AXISMUNDI_OP_VERSION, AXISMUNDI_CAL_OP_MINIMUM, '>=' )
 		&& function_exists( 'axismundi_op_register_object_transformer' )
-		&& function_exists( 'axismundi_op_local_author_actor_uri' );
+		&& function_exists( 'axismundi_op_post_actor_uri' );
 }
 
 /**

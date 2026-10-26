@@ -66,6 +66,7 @@ function axismundi_actors_filter_avatar_data( array $args, $id_or_email ) : arra
 	if ( $user_id <= 0 ) {
 		return $args;
 	}
+	// D: WordPress User avatar lookup must not depend on the viewer's active Account.
 	$actor = axismundi_actors_get_for_user( $user_id );
 	if ( ! $actor instanceof Axismundi_Actor ) {
 		return $args;

@@ -51,6 +51,7 @@ function axismundi_act_users_follow_column_content( string $output, string $colu
 		return $output;
 	}
 	$subject = axismundi_act_current_local_actor();
+	// D: the target describes this fixed Users-table row; only the subject follows selection.
 	$target  = axismundi_actors_get_for_user( $user_id );
 	if ( ! $subject instanceof Axismundi_Actor || ! $target instanceof Axismundi_Actor || ! $target->is_local() || 'Person' !== $target->get_type() || 'public' !== $target->get_status() || ! $target->is_handle_locked() || $subject->get_uri() === $target->get_uri() ) {
 		return '—';

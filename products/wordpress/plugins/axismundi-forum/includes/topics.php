@@ -309,8 +309,8 @@ function axismundi_forum_user_can_post_to_community( int $group_identity_id, int
 	if ( $user_id <= 0 || ! axismundi_forum_is_community( $group_identity_id ) ) {
 		return false;
 	}
-	$author = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( $user_id ) : null;
-	if ( ! $author instanceof Axismundi_Actor || ! $author->is_local() || 'Person' !== $author->get_type() || ! function_exists( 'axismundi_actors_is_public_profile' ) || ! axismundi_actors_is_public_profile( $author ) ) {
+	$author = axismundi_forum_selected_actor( $user_id, true );
+	if ( ! axismundi_forum_public_local_person( $author ) ) {
 		return false;
 	}
 	$policy = axismundi_forum_get_posting_policy( $group_identity_id );
@@ -320,7 +320,7 @@ function axismundi_forum_user_can_post_to_community( int $group_identity_id, int
 	if ( 'managers' === $policy ) {
 		return axismundi_forum_user_can_manage( $group_identity_id, $user_id );
 	}
-	if ( 'members' !== $policy || ! function_exists( 'axismundi_actors_get_for_user' ) || ! function_exists( 'axismundi_forum_get_membership' ) ) {
+	if ( 'members' !== $policy || ! function_exists( 'axismundi_forum_get_membership' ) ) {
 		return false;
 	}
 	$membership = axismundi_forum_get_membership( $group_identity_id, $author->get_identity_id() );
@@ -483,7 +483,10 @@ function axismundi_forum_admit_local_topic( int $group_identity_id, int $topic_p
 			return new WP_Error( 'ax_forum_topic_status_write', __( 'The Topic could not enter community review.', 'axismundi-forum' ) );
 		}
 	}
-	$actor = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( (int) $topic->post_author ) : null;
+	$actor = axismundi_forum_selected_actor( $user_id, true );
+	if ( ! axismundi_forum_public_local_person( $actor ) ) {
+		return new WP_Error( 'ax_forum_topic_actor', __( 'Choose a public Person Account before submitting.', 'axismundi-forum' ) );
+	}
 	$now   = current_time( 'mysql', true );
 	global $wpdb;
 	$fields = array(
@@ -602,7 +605,7 @@ function axismundi_forum_can_view_community_topics( int $group_identity_id, ?int
 	if ( user_can( $user_id, 'manage_options' ) || ( function_exists( 'axismundi_forum_user_can_moderate' ) && axismundi_forum_user_can_moderate( $group_identity_id, $user_id ) ) ) {
 		return true;
 	}
-	$actor = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( $user_id ) : null;
+	$actor = axismundi_forum_selected_actor( $user_id );
 	$membership = $actor instanceof Axismundi_Actor && function_exists( 'axismundi_forum_get_membership' )
 		? axismundi_forum_get_membership( $group_identity_id, $actor->get_identity_id() )
 		: null;
@@ -725,7 +728,7 @@ function axismundi_forum_restricted_topic_ids( int $user_id ) : array {
  */
 function axismundi_forum_context_group_id() : int {
 	$actor = function_exists( 'axismundi_actors_profile_actor' ) ? axismundi_actors_profile_actor() : null;
-	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || ! $actor->is_managed() || 'Group' !== $actor->get_type() ) {
+	if ( ! axismundi_forum_local_group( $actor ) ) {
 		return 0;
 	}
 	return axismundi_forum_is_community( $actor->get_identity_id() ) ? $actor->get_identity_id() : 0;
@@ -898,7 +901,7 @@ function axismundi_forum_actor_feed_html( string $html, Axismundi_Actor $actor )
  * @return array<string,array<string,mixed>>
  */
 function axismundi_forum_actor_profile_surfaces( array $surfaces, Axismundi_Actor $actor ) : array {
-	if ( ! $actor->is_local() || ! $actor->is_managed() || 'Group' !== $actor->get_type() ) {
+	if ( ! axismundi_forum_local_group( $actor ) ) {
 		return $surfaces;
 	}
 	if ( ! axismundi_forum_is_community( $actor->get_identity_id() ) ) {
@@ -940,7 +943,7 @@ add_filter( 'axismundi_act_actor_profile_surfaces', 'axismundi_forum_actor_profi
 
 /** A member-distributed community feed varies by the logged-in viewer. */
 function axismundi_forum_group_profile_requires_nocache( bool $requires_nocache, Axismundi_Actor $actor ) : bool {
-	if ( $requires_nocache || ! $actor->is_local() || ! $actor->is_managed() || 'Group' !== $actor->get_type() ) {
+	if ( $requires_nocache || ! axismundi_forum_local_group( $actor ) ) {
 		return $requires_nocache;
 	}
 	return axismundi_forum_is_community( $actor->get_identity_id() )
@@ -964,7 +967,7 @@ function axismundi_forum_topic_article_supports( $source ) : bool {
 /** F1 permits only public, unprotected local Topic Pages to project. */
 function axismundi_forum_topic_article_visible( WP_Post $topic ) : bool {
 	$entry = axismundi_forum_get_topic_entry( $topic->ID );
-	return axismundi_forum_topic_article_supports( $topic ) && 'publish' === $topic->post_status && '' === (string) $topic->post_password && is_post_publicly_viewable( $topic ) && '' !== axismundi_op_local_author_actor_uri( (int) $topic->post_author )
+	return axismundi_forum_topic_article_supports( $topic ) && 'publish' === $topic->post_status && '' === (string) $topic->post_password && is_post_publicly_viewable( $topic ) && axismundi_forum_public_local_person( axismundi_forum_topic_author( $topic ) )
 		&& ( ! is_array( $entry ) || 'members' !== axismundi_forum_get_distribution_scope( (int) $entry['group_identity_id'] ) );
 }
 
@@ -984,8 +987,8 @@ function axismundi_forum_topic_article_visible( WP_Post $topic ) : bool {
 function axismundi_forum_topic_to_article( WP_Post $topic ) {
 	$entry = axismundi_forum_get_topic_entry( $topic->ID );
 	$group = is_array( $entry ) && function_exists( 'axismundi_actors_get_by_identity' ) ? axismundi_actors_get_by_identity( (int) $entry['group_identity_id'] ) : axismundi_forum_get_remote_topic_group( $topic );
-	$author = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( (int) $topic->post_author ) : null;
-	if ( ! $group instanceof Axismundi_Actor || ! $author instanceof Axismundi_Actor || ! $author->is_local() || 'Person' !== $author->get_type() || ! function_exists( 'axismundi_actors_is_public_profile' ) || ! axismundi_actors_is_public_profile( $author ) ) {
+	$author = axismundi_forum_topic_author( $topic );
+	if ( ! $group instanceof Axismundi_Actor || ! axismundi_forum_public_local_person( $author ) ) {
 		return new WP_Error( 'ax_forum_topic_projection', __( 'The Topic lacks a valid Forum context or author.', 'axismundi-forum' ) );
 	}
 	$author_uri = $author->get_uri();

@@ -2269,6 +2269,21 @@ function axismundi_actors_get_site_actor() : ?Axismundi_Actor {
 	return axismundi_actors_query_one( "a.actor_scope = 'site' AND i.origin = 'local'" );
 }
 
+/** Site-wide transport inventory, independent of WP Users and operating principal grants. */
+function axismundi_actors_list_local_actors( string $status = '' ) : array {
+	global $wpdb;
+	$sql = $wpdb->prepare( "SELECT a.identity_id FROM %i a INNER JOIN %i i ON i.id = a.identity_id WHERE i.origin = 'local'",
+		axismundi_actors_actors_table(), axismundi_actors_identities_table() );
+	if ( '' !== $status ) { $sql .= $wpdb->prepare( ' AND i.status = %s', $status ); }
+	$sql .= ' ORDER BY a.identity_id ASC';
+	$actors = array();
+	foreach ( (array) $wpdb->get_col( $sql ) as $id ) {
+		$actor = axismundi_actors_get_by_identity( (int) $id );
+		if ( $actor instanceof Axismundi_Actor ) { $actors[ (int) $id ] = $actor; }
+	}
+	return $actors;
+}
+
 /**
  * Return the user's local Person actor, creating an internal, **handle-less** one
  * if absent. The handle is not assigned here: it is registered once, later, when
@@ -2280,6 +2295,7 @@ function axismundi_actors_get_site_actor() : ?Axismundi_Actor {
  * @return Axismundi_Actor|WP_Error
  */
 function axismundi_actors_ensure_for_user( int $user_id ) {
+	// D: legacy User-bound identity creation, never the current Account resolver.
 	$existing = axismundi_actors_get_for_user( $user_id );
 	if ( $existing ) {
 		return $existing;

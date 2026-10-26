@@ -15,7 +15,7 @@ function axismundi_act_current_local_actor() : ?Axismundi_Actor {
 	if ( $user_id <= 0 ) {
 		return null;
 	}
-	$actor   = $user_id > 0 ? axismundi_actors_get_for_user( $user_id ) : null;
+	$actor = axismundi_actors_workspace_publisher( $user_id );
 	return $actor instanceof Axismundi_Actor
 		&& $actor->is_local()
 		&& 'Person' === $actor->get_type()

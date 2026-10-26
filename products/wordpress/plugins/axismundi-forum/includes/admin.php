@@ -91,7 +91,7 @@ function axismundi_forum_admin_distribution_scope_available( string $scope ) : b
 /** Render the community section inside Actors' managed Group screen. */
 function axismundi_forum_render_group_admin_section( Axismundi_Actor $group ) : void {
 	$user_id = get_current_user_id();
-	if ( ! $group->is_local() || ! $group->is_managed() || 'Group' !== $group->get_type() ) {
+	if ( ! axismundi_forum_local_group( $group ) ) {
 		return;
 	}
 	$group_id  = $group->get_identity_id();

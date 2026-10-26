@@ -130,7 +130,7 @@ function axismundi_forum_admit_remote_root( array $stored, Axismundi_Activity $a
 		(array) ( $activity->get_audience()['cc'] ?? array() )
 	) ) as $candidate_uri ) {
 		$group = function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $candidate_uri ) : null;
-		if ( ! $group instanceof Axismundi_Actor || ! $group->is_local() || ! $group->is_managed() || 'Group' !== $group->get_type() ) {
+		if ( ! axismundi_forum_local_group( $group ) ) {
 			continue;
 		}
 		$group_identity_id = $group->get_identity_id();
@@ -207,7 +207,7 @@ function axismundi_forum_admit_remote_reply( array $stored, Axismundi_Activity $
 		(array) ( $activity->get_audience()['cc'] ?? array() )
 	) ) as $candidate_uri ) {
 		$group = function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $candidate_uri ) : null;
-		if ( ! $group instanceof Axismundi_Actor || ! $group->is_local() || ! $group->is_managed() || 'Group' !== $group->get_type()
+		if ( ! axismundi_forum_local_group( $group )
 			|| ! axismundi_forum_is_community( $group->get_identity_id() ) || ! axismundi_forum_remote_root_addresses_group( $payload, $activity, $group )
 			|| ! axismundi_forum_remote_actor_can_submit_comment( $group->get_identity_id(), $author ) ) {
 			continue;

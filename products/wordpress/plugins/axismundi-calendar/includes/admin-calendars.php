@@ -83,10 +83,8 @@ function axismundi_cal_can_manage_calendar( ?array $calendar ) : bool {
  * who a rendered post is attributed to. Neither belongs here: a private person still has calendars,
  * and a calendar owned by the instance Actor is not a thing anybody asked for.
  *
- * A preference, never authority. `axismundi_actors_acting_actor()` re-checks eligibility on every
- * read, so a revoked manager stops owning as that Organization on the next request and falls back to
- * their own Person rather than being locked out. Callers still pass the WordPress user separately;
- * switching identity is not switching account, and the capability checks stay with the account.
+ * The shared workspace publisher rechecks live authority. Missing or revoked selection returns
+ * no Actor; it never silently changes the Calendar authority to the operator's Person.
  *
  * Optional by design: the calendar engine works without Actors installed, so ownership degrades to
  * unset rather than blocking the screen.
@@ -100,7 +98,7 @@ function axismundi_cal_current_actor_uri() : string {
 	if ( $user_id <= 0 || ! axismundi_cal_federation_ready() ) {
 		return '';
 	}
-	$acting = axismundi_actors_acting_actor( $user_id );
+	$acting = axismundi_actors_workspace_publisher( $user_id );
 	return $acting instanceof Axismundi_Actor ? (string) $acting->get_uri() : '';
 }
 
@@ -138,15 +136,10 @@ function axismundi_cal_admin_creatable_authorities() : array {
 	}
 	$choices = array();
 	$user_id = get_current_user_id();
-	if ( $user_id > 0 && function_exists( 'axismundi_actors_get_for_user' ) ) {
-		$actor = axismundi_actors_get_for_user( $user_id );
-		if ( $actor instanceof Axismundi_Actor && $actor->is_local() ) {
-			$choices[ $actor->get_uri() ] = axismundi_cal_admin_actor_label( $actor->get_uri() );
-		}
-	}
-	if ( $user_id > 0 && function_exists( 'axismundi_actors_list_manageable_actors' ) ) {
-		foreach ( axismundi_actors_list_manageable_actors( $user_id, 'manager' ) as $actor ) {
-			if ( $actor instanceof Axismundi_Actor && $actor->is_local() ) {
+	// This is an explicit authority picker (C), not the current acting identity (A).
+	if ( $user_id > 0 && function_exists( 'axismundi_actors_accounts_for_user' ) ) {
+		foreach ( axismundi_actors_accounts_for_user( $user_id ) as $actor ) {
+			if ( $actor->is_local() && axismundi_actors_principal_can_manage( $actor->get_identity_id(), 'wp_user', $user_id, 'manager' ) ) {
 				$choices[ $actor->get_uri() ] = axismundi_cal_admin_actor_label( $actor->get_uri() );
 			}
 		}
@@ -322,8 +315,10 @@ function axismundi_cal_handle_calendar_form() : void {
 	if ( null === $existing || $unassigned ) {
 		$choices = axismundi_cal_admin_creatable_authorities();
 		$chosen  = isset( $_POST['owner_actor_uri'] ) ? esc_url_raw( wp_unslash( (string) $_POST['owner_actor_uri'] ) ) : '';
-		// Never trust a submitted URI as an ownership grant. It must be the current Person Actor or a
-		// managed Group the current user may operate.
+		if ( '' !== $chosen && ! isset( $choices[ $chosen ] ) ) {
+			wp_die( esc_html__( 'You cannot create a Calendar for that Account.', 'axismundi-calendar' ), '', array( 'response' => 403 ) );
+		}
+		// An explicit authority must be one of this principal's manageable Accounts.
 		$fields['owner_actor_uri'] = isset( $choices[ $chosen ] ) ? $chosen : axismundi_cal_current_actor_uri();
 	}
 

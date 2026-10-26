@@ -1,5 +1,7 @@
 # 브리프: `get_for_user()` 단수 가정 폐기 — 호출부 축 이전
 
+구현 및 리뷰 인계: [IMPLEMENTATION-ACTOR-AXIS-MIGRATION.md](IMPLEMENTATION-ACTOR-AXIS-MIGRATION.md).
+
 2026-10-26. **codex 설계·구현용.** 배경 계약은 `BRIEF-ACCOUNT-INBOX.md`의 S10 절과
 "Users 인접 화면의 축" 절이 가지고, 선택·전환 계약은 `BRIEF-S10-SELECTION.md`가
 가진다. 이 문서는 그 둘을 다시 쓰지 않는다. 여기서 새로 더하는 것은 **호출부 39곳의

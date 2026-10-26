@@ -29,36 +29,19 @@ function axismundi_op_core_attachment_supports( $source ) : bool {
 }
 
 /**
- * Resolve a public local user Actor, with a deliberately public site Actor fallback.
+ * Deprecated User-only attribution symbol, retained for older dependency probes.
  *
- * Actors remains the identity owner; projections never create an Actor from a render
- * request. This shared resolver is used by Core Post and first-party domain adapters.
- *
- * NOTE: both halves of this are superseded by a decision recorded in docs/LOCAL-OBJECTS.md
- * and not yet implemented.
- *
- * `post_author` says who may edit a post, not whose the Object is. Reading it here makes
- * editing responsibility decide federated authorship, which is only harmless while every
- * account has one Person Actor; publishing as an Organization leaves this with no answer
- * and nothing recorded to recover one from. The publishing Actor belongs to the Activity
- * that publishes it, and this should read what the ledger recorded rather than derive it.
- *
- * The site Actor is not an author. It is an Application identity — the server — and this
- * reaches for it both when the user has no Actor and when the user's Actor is not public,
- * so a deliberate choice to stay private is answered by publishing as the site instead.
- * It is inert today only because the site Actor is itself non-public, which makes the
- * final gate return '': one setting away from attributing every Actor-less user's posts
- * to the server. An Object with no Actor should have no `attributedTo` and no `Create`.
+ * It deliberately has no answer. Read a source's recorded attribution through
+ * axismundi_op_post_actor_uri() instead; editorial responsibility is not publication.
  *
  * @param int $user_id Local WordPress user id.
  * @return string
+ * @deprecated Use a source-scoped attribution reader.
  */
 function axismundi_op_local_author_actor_uri( int $user_id ) : string {
-	$actor = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( $user_id ) : null;
-
-	return $actor && function_exists( 'axismundi_actors_is_public_profile' ) && axismundi_actors_is_public_profile( $actor )
-		? (string) $actor->get_uri()
-		: '';
+	// E: compatibility symbol for dependency probes only. User authorship cannot imply attribution.
+	unset( $user_id );
+	return '';
 }
 
 /**

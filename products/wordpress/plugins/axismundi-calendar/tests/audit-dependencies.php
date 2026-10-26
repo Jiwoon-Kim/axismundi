@@ -40,9 +40,9 @@ ax_dp_assert( $ax_dp_results, 'with nothing reported missing', array() === axism
 ax_dp_assert(
 	$ax_dp_results,
 	'detection names the functions this plugin calls rather than trusting a constant alone',
-	function_exists( 'axismundi_actors_get_for_user' )
+	function_exists( 'axismundi_actors_current_workspace_result' )
 		&& function_exists( 'axismundi_op_register_object_transformer' )
-		&& function_exists( 'axismundi_op_local_author_actor_uri' )
+		&& function_exists( 'axismundi_op_post_actor_uri' )
 );
 
 // -- What the gate governs ------------------------------------------------------------------------

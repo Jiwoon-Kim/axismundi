@@ -252,3 +252,36 @@ Actor를 다른 User가 manager로 운영하는 경우 -- 이 게이트는 "Pers
        (remote actor는 scope가 항상 NULL이고 연합 개념이 아니다)
 범위   Group 가입·follow. 다른 권한 판정에 이 게이트를 복사하지 않는다
 ```
+
+### 정정 — 위 게이트 결정은 뒤집혔다 (2026-10-26, 같은 날)
+
+**위 절을 지우지 않고 남긴다.** 같은 일반화를 다시 시도하지 않기 위해서다.
+
+뒤집은 근거는 둘이고, 둘 다 "오늘 두 집합이 일치한다"는 측정이 **축의 정당성이 아니라
+우연**이었음을 보인다.
+
+```txt
+principal 운영   workspaces.php:20  can_access_workspace = account_role() !== ''
+                 owner 뿐 아니라 manager·editor 도 통과한다. accounts_for_user()도
+                 personal_owner 인 Account를 제외하지 않는다
+                 -> 개인 귀속 Account를 다른 User가 운영할 수 있고, 그러면 같은
+                    Account에 대해 is_personal 이 User마다 다른 답을 낸다.
+                    Account 자체에 대해 참이어야 하는 것을 게이트로 쓸 수 없다
+원격 Person      S2S Person 은 User 관계를 정의할 방법이 없어 전부 비개인 Person 이다
+                 -> 로컬에서 그 조합을 금지하면 일상적으로 수신하는 형태를 로컬에서는
+                    만들 수 없는 비대칭이 생긴다
+```
+
+그리고 애초에 **옮길 게이트가 Activity 층에 따로 있었다.**
+
+```txt
+activities/local-social.php:60   로컬: subject 는 Person, object 는 Person 이거나 managed Group
+activities/local-social.php:74   원격: "An activated public local Person actor is required"
+                                 둘 다 actor_type 으로 판정하고 is_personal 을 읽지 않는다
+```
+
+**결론: Follow 자격은 Activity 층이 이미 actor_type 으로 쥐고 있다. 옮기지 않는다.**
+forum 의 `'Person' !== get_type()` 8곳은 제품 층 제약이고, 축 이전 전에 **단일 술어로
+모으는 것이 선행**이다 -- 같은 규칙이 8벌이면 한 곳만 고쳐도 조용히 어긋난다.
+
+층 구분의 전문은 `axismundi/docs/DECISION-ACCOUNT-VS-ACTOR-POLICY.md` 가 가진다.

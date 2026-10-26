@@ -155,8 +155,8 @@ function axismundi_actors_can_preview( Axismundi_Actor $actor, ?int $user_id = n
 	}
 	// A managed actor (Group/Service/Organization) has no owning WP user; its
 	// preview/manage authority is the manager relation, not user identity.
-	if ( $actor->is_managed() && function_exists( 'axismundi_actors_managed_actor_can_manage' ) ) {
-		return axismundi_actors_managed_actor_can_manage( $actor->get_identity_id(), $user_id );
+	if ( $actor->is_local() && 'site' !== $actor->get_scope() ) {
+		return axismundi_actors_principal_can_manage( $actor->get_identity_id(), 'wp_user', $user_id );
 	}
 	return 'site' === $actor->get_scope() && (int) get_option( 'ax_actors_site_owner_user_id', 0 ) === $user_id;
 }

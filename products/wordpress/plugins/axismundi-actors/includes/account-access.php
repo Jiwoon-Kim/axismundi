@@ -84,25 +84,12 @@ function axismundi_actors_account_is_personal( Axismundi_Actor $actor, int $user
 
 /** Every local account this user may operate; personal accounts sort first. */
 function axismundi_actors_accounts_for_user( int $user_id ) : array {
-	if ( $user_id <= 0 || ! axismundi_actors_account_access_ready() ) {
-		return array();
-	}
-	global $wpdb;
-	$ids = $wpdb->get_col( $wpdb->prepare(
-		"SELECT a.identity_id FROM %i a INNER JOIN %i m ON m.identity_id = a.identity_id
-		 INNER JOIN %i i ON i.id = a.identity_id
-		 WHERE m.principal_kind = 'wp_user' AND m.principal_id = %d AND m.role IN ('owner','manager','editor') AND i.origin = 'local'
-		 AND a.actor_scope <> 'site' AND i.status NOT IN ('disabled','tombstone')
-		 ORDER BY (a.personal_owner_user_id = %d) DESC, a.identity_id ASC",
-		axismundi_actors_actors_table(), axismundi_actors_managers_table(), axismundi_actors_identities_table(), $user_id, $user_id
-	) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- account list, no writes.
-	$result = array();
-	foreach ( $ids as $id ) {
-		$actor = axismundi_actors_resolve_workspace( (int) $id, $user_id );
-		if ( $actor instanceof Axismundi_Actor ) {
-			$result[ (int) $id ] = $actor;
-		}
-	}
+	// Authenticated WP-login projection, not recursive Account-principal access.
+	$result = axismundi_actors_accounts_for_principal( 'wp_user', $user_id );
+	uasort( $result, static function ( Axismundi_Actor $a, Axismundi_Actor $b ) use ( $user_id ) : int {
+		return ( (int) axismundi_actors_account_is_personal( $b, $user_id ) <=> (int) axismundi_actors_account_is_personal( $a, $user_id ) )
+			?: $a->get_identity_id() <=> $b->get_identity_id();
+	} );
 	return $result;
 }
 

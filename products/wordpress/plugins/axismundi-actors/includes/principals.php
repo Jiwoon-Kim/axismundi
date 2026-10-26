@@ -4,6 +4,166 @@ defined( 'ABSPATH' ) || exit;
 
 const AXISMUNDI_ACTORS_PRINCIPAL_SCHEMA_VERSION = '1';
 
+/** Roles are independent of subject namespace and Actor type. */
+function axismundi_actors_principal_roles() : array {
+	return array( 'owner' => 3, 'manager' => 2, 'editor' => 1 );
+}
+
+function axismundi_actors_principal_role_rank( string $role ) : int {
+	return (int) ( axismundi_actors_principal_roles()[ $role ] ?? 0 );
+}
+
+/** Creation boundary: a new Account must start with a live direct WP User anchor. */
+function axismundi_actors_create_principal_account( array $args, string $owner_kind, int $owner_id ) {
+	if ( 'wp_user' !== $owner_kind || ! axismundi_actors_resolve_principal( $owner_kind, $owner_id ) ) {
+		return new WP_Error( 'ax_actors_account_owner', 'A new Account requires a live direct WordPress User owner.' );
+	}
+	$args['initial_owner_user_id'] = $owner_id;
+	return axismundi_actors_create_local( $args );
+}
+
+/** Internal creation-only WP login boundary, inside create_local's transaction. Never updates a grant. */
+function axismundi_actors_seed_account_owner( int $account_id, int $user_id ) {
+	if ( ! axismundi_actors_principals_ready() || $account_id <= 0 || ! axismundi_actors_resolve_principal( 'wp_user', $user_id ) ) {
+		return new WP_Error( 'ax_actors_principal_unavailable', 'The initial owner is unavailable.' );
+	}
+	global $wpdb;
+	$now = current_time( 'mysql', true );
+	$ok = $wpdb->query( $wpdb->prepare(
+		"INSERT INTO %i (identity_id, principal_kind, principal_id, user_id, role, created_at, updated_at)
+		 VALUES (%d, %s, %d, %d, 'owner', %s, %s)",
+		axismundi_actors_managers_table(), $account_id, 'wp_user', $user_id, $user_id, $now, $now
+	) );
+	return false === $ok ? new WP_Error( 'ax_actors_principal_write', 'Could not seed the initial owner.' ) : true;
+}
+
+/** Live direct owners of one namespace; never count missing sources or inherit owners. */
+function axismundi_actors_principal_owner_count( int $account_id, string $kind ) : int {
+	return count( array_filter( axismundi_actors_account_principals( $account_id ),
+		static fn( array $row ) : bool => $kind === $row['principal_kind'] && 'owner' === $row['role']
+	) );
+}
+
+/** A principal grant is policy data, never authentication or recursive delegation. */
+function axismundi_actors_principal_can_manage( int $account_id, string $kind, int $id, ?string $min_role = null ) : bool {
+	$role = axismundi_actors_principal_account_role( $account_id, $kind, $id );
+	return '' !== $role && ( null === $min_role || ( axismundi_actors_principal_role_rank( $min_role ) > 0
+		&& axismundi_actors_principal_role_rank( $role ) >= axismundi_actors_principal_role_rank( $min_role ) ) );
+}
+
+/** Active direct grants, retaining the subject namespace and source identifiers. */
+function axismundi_actors_account_principals( int $account_id ) : array {
+	if ( ! axismundi_actors_account_access_ready() || $account_id <= 0 ) {
+		return array();
+	}
+	global $wpdb;
+	$rows = (array) $wpdb->get_results( $wpdb->prepare(
+		'SELECT principal_kind, principal_id, role, created_at, updated_at FROM %i WHERE identity_id = %d ORDER BY principal_kind, principal_id',
+		axismundi_actors_managers_table(), $account_id
+	), ARRAY_A );
+	$result = array();
+	foreach ( $rows as $row ) {
+		$row['principal_id'] = (int) $row['principal_id'];
+		if ( '' !== axismundi_actors_principal_account_role( $account_id, $row['principal_kind'], $row['principal_id'] ) ) {
+			$result[] = $row;
+		}
+	}
+	usort( $result, static fn( array $a, array $b ) : int => axismundi_actors_principal_role_rank( $b['role'] ) <=> axismundi_actors_principal_role_rank( $a['role'] ) );
+	return $result;
+}
+
+/** Accounts accessible by this exact subject, not by subjects operating it. */
+function axismundi_actors_accounts_for_principal( string $kind, int $id, ?string $min_role = null ) : array {
+	if ( ! axismundi_actors_account_access_ready() || ! axismundi_actors_resolve_principal( $kind, $id ) ) {
+		return array();
+	}
+	global $wpdb;
+	$ids = (array) $wpdb->get_col( $wpdb->prepare(
+		'SELECT identity_id FROM %i WHERE principal_kind = %s AND principal_id = %d ORDER BY identity_id',
+		axismundi_actors_managers_table(), $kind, $id
+	) );
+	$result = array();
+	foreach ( $ids as $account_id ) {
+		if ( axismundi_actors_principal_can_manage( (int) $account_id, $kind, $id, $min_role ) ) {
+			$result[ (int) $account_id ] = axismundi_actors_get_by_identity( (int) $account_id );
+		}
+	}
+	return $result;
+}
+
+/**
+ * Trusted local policy write. Callers must authorize the operator separately.
+ * Remote creation/updates stay closed; exact stale remote rows may only be revoked.
+ * Serialize updates to retain the live direct WP owner anchor.
+ * A null role revokes a grant, including a now-disabled subject's stale grant.
+ *
+ * @return true|WP_Error
+ */
+function axismundi_actors_set_principal_role( int $account_id, string $kind, int $id, ?string $role, bool $create_only = false ) {
+	$account = axismundi_actors_get_by_identity( $account_id );
+	if ( ! axismundi_actors_account_access_ready() || ! $account instanceof Axismundi_Actor || ! $account->is_local()
+		|| 'site' === $account->get_scope() || in_array( $account->get_status(), array( 'disabled', 'tombstone' ), true )
+		|| $id <= 0 || ! in_array( $kind, array( 'wp_user', 'local_account', 'remote_actor' ), true )
+		|| ( 'remote_actor' === $kind && null !== $role )
+		|| ( null !== $role && ( ! axismundi_actors_resolve_principal( $kind, $id ) || ! isset( axismundi_actors_principal_roles()[ $role ] ) ) ) ) {
+		return new WP_Error( 'ax_actors_principal_unavailable', 'The account, principal or role is unavailable.' );
+	}
+	global $wpdb;
+	$lock = 'ax-grant-' . substr( hash( 'sha256', DB_NAME . ':' . axismundi_actors_managers_table() . ':' . $account_id ), 0, 40 );
+	if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 10)', $lock ) ) ) {
+		return new WP_Error( 'ax_actors_principal_lock', 'Could not lock the account grants.' );
+	}
+	try {
+		if ( $create_only ) {
+			$existing = $wpdb->get_var( $wpdb->prepare( 'SELECT role FROM %i WHERE identity_id = %d AND principal_kind = %s AND principal_id = %d', axismundi_actors_managers_table(), $account_id, $kind, $id ) );
+			if ( null !== $existing ) {
+				return $existing === $role ? true : new WP_Error( 'ax_actors_principal_conflict', 'The selected Account already has a different explicit role.' );
+			}
+		}
+		if ( 'wp_user' === $kind && 'owner' !== $role ) {
+			if ( $id === $account->get_personal_owner_user_id() ) {
+				return new WP_Error( 'ax_actors_personal_owner', 'Transfer personal ownership before changing its owner access.' );
+			}
+			$existing = $wpdb->get_var( $wpdb->prepare( 'SELECT role FROM %i WHERE identity_id = %d AND principal_kind = %s AND principal_id = %d', axismundi_actors_managers_table(), $account_id, $kind, $id ) );
+			if ( 'owner' === $existing && axismundi_actors_resolve_principal( 'wp_user', $id )
+				&& axismundi_actors_principal_owner_count( $account_id, 'wp_user' ) <= 1 ) {
+				return new WP_Error( 'ax_actors_last_owner', 'The last direct WordPress User owner cannot be removed or demoted.' );
+			}
+		}
+		$table = axismundi_actors_managers_table();
+		if ( null === $role ) {
+			$ok = $wpdb->delete( $table, array( 'identity_id' => $account_id, 'principal_kind' => $kind, 'principal_id' => $id ), array( '%d', '%s', '%d' ) );
+		} else {
+			$now = current_time( 'mysql', true );
+			// user_id is an intentional compatibility projection, never a second subject key.
+			$user_sql = 'wp_user' === $kind ? (string) $id : 'NULL';
+			$ok = $wpdb->query( $wpdb->prepare(
+				"INSERT INTO %i (identity_id, principal_kind, principal_id, user_id, role, created_at, updated_at)
+				 VALUES (%d, %s, %d, {$user_sql}, %s, %s, %s)
+				 ON DUPLICATE KEY UPDATE role = VALUES(role), updated_at = VALUES(updated_at)",
+				$table, $account_id, $kind, $id, $role, $now, $now
+			) );
+		}
+		return false === $ok ? new WP_Error( 'ax_actors_principal_write', 'Could not update the principal grant.' ) : true;
+	} finally {
+		$wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) );
+	}
+}
+
+/** Explicit, additive promotion: never select an Actor or remove the User grant. */
+function axismundi_actors_promote_user_principal( int $account_id, int $user_id, int $selected_account_id ) {
+	$role = axismundi_actors_principal_account_role( $account_id, 'wp_user', $user_id );
+	if ( '' === $role || ! axismundi_actors_principal_can_manage( $selected_account_id, 'wp_user', $user_id ) ) {
+		return new WP_Error( 'ax_actors_principal_selection', 'An accessible, explicitly selected local Account and an existing User grant are required.' );
+	}
+	// Existing explicit Actor grants coexist; promotion must not silently overwrite one.
+	$existing = axismundi_actors_principal_account_role( $account_id, 'local_account', $selected_account_id );
+	if ( '' !== $existing ) {
+		return $existing === $role ? true : new WP_Error( 'ax_actors_principal_conflict', 'The selected Account already has a different explicit role.' );
+	}
+	return axismundi_actors_set_principal_role( $account_id, 'local_account', $selected_account_id, $role, true );
+}
+
 function axismundi_actors_principals_ready() : bool {
 	return AXISMUNDI_ACTORS_PRINCIPAL_SCHEMA_VERSION === (string) get_option( 'ax_actors_principal_schema_version', '' );
 }
@@ -41,7 +201,7 @@ function axismundi_actors_principal_account_role( int $account_id, string $kind,
 		'SELECT role FROM %i WHERE identity_id = %d AND principal_kind = %s AND principal_id = %d',
 		axismundi_actors_managers_table(), $account_id, $kind, $id
 	) );
-	return array_key_exists( $role, axismundi_actors_manager_roles() ) ? $role : '';
+	return array_key_exists( $role, axismundi_actors_principal_roles() ) ? $role : '';
 }
 
 /** Verify the complete key and legacy projection contract, not just the presence of columns. */

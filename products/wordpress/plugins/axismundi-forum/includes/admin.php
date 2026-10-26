@@ -95,8 +95,8 @@ function axismundi_forum_render_group_admin_section( Axismundi_Actor $group ) : 
 		return;
 	}
 	$group_id  = $group->get_identity_id();
-	$can_manage = axismundi_actors_managed_actor_can_manage( $group_id, $user_id );
-	$can_delegate = axismundi_actors_managed_actor_can_manage( $group_id, $user_id, 'manager' );
+	$can_manage = axismundi_actors_principal_can_manage( $group_id, 'wp_user', $user_id );
+	$can_delegate = axismundi_actors_principal_can_manage( $group_id, 'wp_user', $user_id, 'manager' );
 	$can_moderate = function_exists( 'axismundi_forum_user_can_moderate' ) && axismundi_forum_user_can_moderate( $group_id, $user_id );
 	if ( ! $can_manage && ! $can_moderate ) {
 		return;
@@ -161,8 +161,7 @@ function axismundi_forum_render_group_admin_section( Axismundi_Actor $group ) : 
 			echo '<li><a href="' . esc_url( $member->get_profile_url() ) . '">' . esc_html( $label ) . '</a>';
 			$is_explicit_moderator = 'moderator' === (string) ( $membership['membership_role'] ?? 'member' );
 			$manager_moderator = $member->is_local()
-				&& null !== $member->get_local_user_id()
-				&& axismundi_forum_user_can_manage( $group_id, (int) $member->get_local_user_id() );
+				&& axismundi_actors_principal_can_manage( $group_id, 'local_account', $member->get_identity_id() );
 			if ( $is_explicit_moderator || $manager_moderator ) {
 				echo ' <span class="description">' . esc_html( $manager_moderator ? __( 'Moderator (manager)', 'axismundi-forum' ) : __( 'Moderator', 'axismundi-forum' ) ) . '</span>';
 			}
@@ -172,7 +171,7 @@ function axismundi_forum_render_group_admin_section( Axismundi_Actor $group ) : 
 				echo '<input type="hidden" name="action" value="axismundi_forum_moderator_decision"><input type="hidden" name="group_identity_id" value="' . esc_attr( (string) $group_id ) . '"><input type="hidden" name="actor_identity_id" value="' . esc_attr( (string) $membership['actor_identity_id'] ) . '">';
 				wp_nonce_field( 'axismundi_forum_moderator_' . $group_id . '_' . $membership['actor_identity_id'] );
 				echo '<button class="button button-small" name="decision" value="' . esc_attr( $is_moderator ? 'remove' : 'add' ) . '">' . esc_html( $is_moderator ? __( 'Remove moderator', 'axismundi-forum' ) : __( 'Make moderator', 'axismundi-forum' ) ) . '</button></form>';
-				if ( $can_delegate && $is_moderator && axismundi_forum_public_local_person( $member ) && ! axismundi_actors_managed_actor_can_manage( $group_id, (int) $member->get_local_user_id(), 'manager' ) ) {
+				if ( $can_delegate && $is_moderator && axismundi_forum_public_local_person( $member ) && ! axismundi_actors_principal_can_manage( $group_id, 'local_account', $member->get_identity_id(), 'manager' ) ) {
 					echo ' <form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline"><input type="hidden" name="action" value="axismundi_forum_manager_delegation"><input type="hidden" name="group_identity_id" value="' . esc_attr( (string) $group_id ) . '"><input type="hidden" name="actor_identity_id" value="' . esc_attr( (string) $membership['actor_identity_id'] ) . '">';
 					wp_nonce_field( 'axismundi_forum_manager_' . $group_id . '_' . $membership['actor_identity_id'] );
 					echo '<button class="button button-small" name="decision" value="add">' . esc_html__( 'Make manager', 'axismundi-forum' ) . '</button></form>';
@@ -188,11 +187,11 @@ function axismundi_forum_render_group_admin_section( Axismundi_Actor $group ) : 
 	}
 	if ( $can_delegate ) {
 		echo '<h3>' . esc_html__( 'Managers', 'axismundi-forum' ) . '</h3><ul>';
-		foreach ( (array) axismundi_actors_group_managers( $group_id ) as $manager ) {
-			$manager_user = (int) ( $manager['user_id'] ?? 0 );
-			$person = axismundi_actors_get_for_user( $manager_user );
-			$user = get_userdata( $manager_user );
-			$label = $person instanceof Axismundi_Actor ? '@' . $person->get_preferred_username() : ( $user instanceof WP_User ? $user->user_login : __( 'Unknown user', 'axismundi-forum' ) );
+		foreach ( axismundi_actors_account_principals( $group_id ) as $manager ) {
+			// Display the actual subject; never pick an Actor to represent a User grant.
+			$person = 'local_account' === $manager['principal_kind'] ? axismundi_actors_get_by_identity( $manager['principal_id'] ) : null;
+			$user = 'wp_user' === $manager['principal_kind'] ? get_userdata( $manager['principal_id'] ) : null;
+			$label = $person instanceof Axismundi_Actor ? '@' . $person->get_preferred_username() : ( $user instanceof WP_User ? $user->user_login : $manager['principal_kind'] . ':' . $manager['principal_id'] );
 			echo '<li>' . esc_html( $label ) . ' (' . esc_html( (string) $manager['role'] ) . ')';
 			if ( 'manager' === (string) $manager['role'] && $person instanceof Axismundi_Actor && axismundi_forum_public_local_person( $person ) ) {
 				echo ' <form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline"><input type="hidden" name="action" value="axismundi_forum_manager_delegation"><input type="hidden" name="group_identity_id" value="' . esc_attr( (string) $group_id ) . '"><input type="hidden" name="actor_identity_id" value="' . esc_attr( (string) $person->get_identity_id() ) . '">';

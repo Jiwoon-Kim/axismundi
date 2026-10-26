@@ -76,7 +76,7 @@ add_action( 'plugins_loaded', 'axismundi_forum_maybe_upgrade' );
  * @return void
  */
 function axismundi_forum_requires_actors_notice() : void {
-	if ( function_exists( 'axismundi_actors_managed_actor_can_manage' ) ) {
+	if ( function_exists( 'axismundi_actors_principal_can_manage' ) ) {
 		return;
 	}
 	echo '<div class="notice notice-error"><p>';

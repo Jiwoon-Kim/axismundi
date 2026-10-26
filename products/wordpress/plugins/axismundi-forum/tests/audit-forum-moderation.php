@@ -25,7 +25,10 @@ require_once __DIR__ . '/../includes/moderators.php';
 require_once __DIR__ . '/../includes/distribution.php';
 require_once __DIR__ . '/../includes/admin.php';
 
-axismundi_forum_install();
+// This is a behavioral audit, not a schema installer for the shared development database.
+if ( (string) get_option( 'ax_forum_db_version', '' ) !== AXISMUNDI_FORUM_DB_VERSION ) {
+	throw new RuntimeException( 'Install the current Forum schema before running this audit.' );
+}
 axismundi_forum_register_topic_post_type();
 
 global $wpdb;
@@ -65,6 +68,13 @@ try {
 	$group = axismundi_actors_create_managed_actor( array( 'owner_user_id' => $owner_user, 'preferred_username' => 'axfmodg' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'public' ) );
 	if ( $group instanceof Axismundi_Actor ) { $ax_fmod_identities[] = $group->get_identity_id(); }
 	$group_id = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
+	ax_fmod_assert( $ax_fmod_results, 'a User owner grant grants login access but does not infer a public moderator Actor',
+		$owner instanceof Axismundi_Actor && axismundi_forum_user_can_manage( $group_id, $owner_user )
+		&& ! axismundi_forum_actor_is_moderator( $group_id, $owner ) && array() === axismundi_forum_effective_moderators( $group_id ) );
+	$owner_selected = $owner instanceof Axismundi_Actor ? axismundi_actors_promote_user_principal( $group_id, $owner_user, $owner->get_identity_id() ) : new WP_Error( 'fixture' );
+	ax_fmod_assert( $ax_fmod_results, 'explicitly selecting the owner Actor adds its grant without replacing the User owner',
+		true === $owner_selected && 'owner' === axismundi_actors_principal_account_role( $group_id, 'wp_user', $owner_user )
+		&& 'owner' === axismundi_actors_principal_account_role( $group_id, 'local_account', $owner->get_identity_id() ) );
 	if ( $owner instanceof Axismundi_Actor && $group instanceof Axismundi_Actor ) { axismundi_act_follow_actor( $owner, $group ); }
 	if ( $admin2 instanceof Axismundi_Actor && $group instanceof Axismundi_Actor ) { axismundi_act_follow_actor( $admin2, $group ); }
 	if ( $alice instanceof Axismundi_Actor && $group instanceof Axismundi_Actor ) { axismundi_act_follow_actor( $alice, $group ); }
@@ -118,12 +128,17 @@ try {
 	);
 	$admin2_moderator = $admin2 instanceof Axismundi_Actor ? axismundi_forum_set_actor_moderator( $group_id, $admin2->get_identity_id(), $owner_user, true ) : new WP_Error( 'fixture' );
 	$admin2_manager = $admin2 instanceof Axismundi_Actor ? axismundi_forum_promote_moderator_to_manager( $group_id, $admin2->get_identity_id(), $owner_user ) : new WP_Error( 'fixture' );
-	$alice_manager = $alice instanceof Axismundi_Actor ? axismundi_forum_promote_moderator_to_manager( $group_id, $alice->get_identity_id(), $admin2_user ) : new WP_Error( 'fixture' );
-	$admin2_removed = $admin2 instanceof Axismundi_Actor ? axismundi_forum_remove_moderator_manager( $group_id, $admin2->get_identity_id(), $alice_user ) : new WP_Error( 'fixture' );
+	$actor_only_denied = $alice instanceof Axismundi_Actor ? axismundi_forum_promote_moderator_to_manager( $group_id, $alice->get_identity_id(), $admin2_user ) : new WP_Error( 'fixture' );
+	ax_fmod_assert( $ax_fmod_results, 'an Actor manager grant never gives its bound WP login delegation authority',
+		true === $admin2_manager && is_wp_error( $actor_only_denied ) && 'ax_forum_forbidden' === $actor_only_denied->get_error_code()
+		&& '' === axismundi_actors_principal_account_role( $group_id, 'wp_user', $admin2_user )
+		&& 'manager' === axismundi_actors_principal_account_role( $group_id, 'local_account', $admin2->get_identity_id() ) );
+	$alice_manager = $alice instanceof Axismundi_Actor ? axismundi_forum_promote_moderator_to_manager( $group_id, $alice->get_identity_id(), $owner_user ) : new WP_Error( 'fixture' );
+	$admin2_removed = $admin2 instanceof Axismundi_Actor ? axismundi_forum_remove_moderator_manager( $group_id, $admin2->get_identity_id(), $owner_user ) : new WP_Error( 'fixture' );
 	$alice_manager_removed = $alice instanceof Axismundi_Actor ? axismundi_forum_remove_moderator_manager( $group_id, $alice->get_identity_id(), $owner_user ) : new WP_Error( 'fixture' );
 	ax_fmod_assert(
 		$ax_fmod_results,
-		'a manager moderator delegates manager access to Alice, who can revoke admin2 without changing either Actor moderator role',
+		'a directly authorized User grants and revokes selected Actor managers without changing moderator memberships or granting User access',
 		true === $admin2_moderator && true === $admin2_manager && true === $alice_manager && true === $admin2_removed && true === $alice_manager_removed
 			&& $alice instanceof Axismundi_Actor && $admin2 instanceof Axismundi_Actor
 			&& axismundi_forum_actor_is_moderator( $group_id, $alice ) && axismundi_forum_actor_is_moderator( $group_id, $admin2 )
@@ -139,7 +154,7 @@ try {
 	$manager_screen = (string) ob_get_clean();
 	ax_fmod_assert(
 		$ax_fmod_results,
-		'a Group manager is labelled as a derived moderator rather than being offered a redundant explicit moderator transition',
+		'an explicitly granted Account owner is labelled as a manager moderator without a redundant membership role',
 		true === $owner_explicit && is_wp_error( $owner_demote ) && 'ax_forum_moderator_manager' === $owner_demote->get_error_code() && $owner instanceof Axismundi_Actor
 			&& is_array( $owner_membership ) && 'member' === (string) $owner_membership['membership_role']
 			&& str_contains( $manager_screen, 'Moderator (manager)' )
@@ -510,6 +525,8 @@ try {
 	$roster_group = axismundi_actors_create_managed_actor( array( 'owner_user_id' => $owner_user, 'preferred_username' => 'axfmodr' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'public' ) );
 	if ( $roster_group instanceof Axismundi_Actor ) {
 		$ax_fmod_identities[] = $roster_group->get_identity_id();
+		ax_fmod_assert( $ax_fmod_results, 'a new Group with only a WP owner has no inferred public moderator roster', array() === axismundi_forum_effective_moderators( $roster_group->get_identity_id() ) );
+		axismundi_actors_promote_user_principal( $roster_group->get_identity_id(), $owner_user, $owner->get_identity_id() );
 		$previous_actor = $GLOBALS['axismundi_actors_profile_actor'] ?? null;
 		$GLOBALS['axismundi_actors_profile_actor'] = $roster_group;
 		$roster = axismundi_forum_render_group_moderators(

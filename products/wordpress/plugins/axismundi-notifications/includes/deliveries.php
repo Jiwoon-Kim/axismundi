@@ -27,8 +27,8 @@ defined( 'ABSPATH' ) || exit;
  * administer any Actor. Administering an identity and reading what it was told are different
  * entitlements: an administrator can rename somebody's Actor or fix its handle without thereby
  * being entitled to read the invitations, replies and mentions that person received. So a
- * user-scope Actor's inbox belongs to that user alone, with no capability override, and a managed
- * Actor's belongs to its managers.
+ * inbox access follows direct WP User principal grants, with no capability override or
+ * inheritance through local Account principals.
  *
  * @param int $identity_id Recipient Actor identity.
  * @param int $user_id     Reader.
@@ -42,10 +42,8 @@ function axismundi_ntf_can_read_inbox( int $identity_id, int $user_id ) : bool {
 	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() ) {
 		return false;
 	}
-	if ( $actor->is_managed() ) {
-		return axismundi_actors_managed_actor_can_manage( $identity_id, $user_id );
-	}
-	return (int) $actor->get_local_user_id() === $user_id;
+	// Login boundary: only the direct WP User grant, never Actor-grant inheritance.
+	return axismundi_actors_principal_can_manage( $identity_id, 'wp_user', $user_id );
 }
 
 /**
@@ -62,15 +60,12 @@ function axismundi_ntf_inbox_readers( int $identity_id ) : array {
 	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() ) {
 		return array();
 	}
-	if ( ! $actor->is_managed() ) {
-		$owner = (int) $actor->get_local_user_id();
-		return $owner > 0 ? array( $owner ) : array();
-	}
+	// Delivery targets are people. Account principals do not recursively fan out to users.
 	return array_values(
 		array_filter(
 			array_map(
-				static fn( array $manager ) : int => (int) $manager['user_id'],
-				axismundi_actors_group_managers( $identity_id )
+				static fn( array $principal ) : int => 'wp_user' === $principal['principal_kind'] ? (int) $principal['principal_id'] : 0,
+				axismundi_actors_account_principals( $identity_id )
 			)
 		)
 	);
@@ -218,11 +213,7 @@ function axismundi_ntf_readable_identities( int $user_id ) : array {
 		return array();
 	}
 	$identities = array();
-	$own        = axismundi_actors_get_for_user( $user_id );
-	if ( $own instanceof Axismundi_Actor ) {
-		$identities[] = (int) $own->get_identity_id();
-	}
-	foreach ( axismundi_actors_list_manageable_actors( $user_id ) as $actor ) {
+	foreach ( axismundi_actors_accounts_for_principal( 'wp_user', $user_id ) as $actor ) {
 		$identities[] = (int) $actor->get_identity_id();
 	}
 	return array_values( array_unique( array_filter( $identities ) ) );

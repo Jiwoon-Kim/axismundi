@@ -163,3 +163,20 @@ C3 예약 발행                독립. 먼저. 브리프 있음
 축 마이그레이션보다 **이 작업이 앞선다.** 순서를 뒤집으면 축 마이그레이션에서
 `get_for_user( $manager['user_id'] )` 를 한 번 옮기고, 세대교체에서 그 자리를 다시
 들어낸다.
+
+## 구현 인계 (2026-10-26)
+
+C3 `da70fb6` 이후 canonical 역할/목록/쓰기/owner 보호를 `principals.php`로 옮기고
+Actors 관리·preview, Forum 및 Notifications의 소유 범위 소비자를 typed 직접 관계로
+이행했다. 새 관계 저장소나 자동 User→Actor 파생은 만들지 않았다.
+
+`IMPLEMENTATION-PRINCIPAL-GENERATION.md`에 실제 이행과 남은 경계를 기록한다.
+특히 **전역 legacy 공개 함수 삭제라는 원래 완료선은 아직 충족하지 않는다**. Calendar가
+과거 시그니처를 호출하고 과거 감사도 사용하므로 별칭은 canonical 정책에 위임한 채
+남아 있다. managed 화면의 principal UI 재설계와 Group 제품 정책 변경도 완료가 아니다.
+`wp_user` 구분 자체는 인증/개인 귀속/직접 owner 보호/사람 대상 알림에 계속 필요하다.
+
+동일 User/Account 숫자의 역할 비전파, explicit local Account grant, 마지막 살아 있는
+직접 WP User owner 보호를 검사했다. 삭제된 User 관계 980행은 이번에 삭제하지 않는다.
+제공 baseline의 전체 35,183 pair 및 151 User 목록 행 차이 0건. principal 58건,
+Forum 32건, Notifications 14건 통과. kind 제거/삭제된 owner 집계 변이도 검출했다.

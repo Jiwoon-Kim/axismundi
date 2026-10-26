@@ -1116,7 +1116,7 @@ function axismundi_actors_create_local( array $args ) {
 		return new WP_Error( 'ax_actors_actor_insert', __( 'Could not create the actor.', 'axismundi-actors' ) );
 	}
 
-	if ( null !== $initial_owner && is_wp_error( axismundi_actors_write_manager_row( $identity_id, $initial_owner, 'owner' ) ) ) {
+	if ( null !== $initial_owner && is_wp_error( axismundi_actors_seed_account_owner( $identity_id, $initial_owner ) ) ) {
 		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- account and initial access are atomic.
 		return new WP_Error( 'ax_actors_account_access', __( 'Could not create the personal account access relation.', 'axismundi-actors' ) );
 	}

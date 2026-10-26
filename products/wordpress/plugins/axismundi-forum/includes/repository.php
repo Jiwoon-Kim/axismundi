@@ -234,7 +234,7 @@ function axismundi_forum_reset_development_data() {
  */
 function axismundi_forum_actors_available() : bool {
 	return function_exists( 'axismundi_actors_get_by_identity' )
-		&& function_exists( 'axismundi_actors_managed_actor_can_manage' );
+		&& function_exists( 'axismundi_actors_principal_can_manage' );
 }
 
 /** @return bool Whether an Actor is a public managed Group and therefore a community. */
@@ -248,12 +248,13 @@ function axismundi_forum_public_community_group( $actor ) : bool {
 
 /** @return int The first local owner, used only for the initial explicit self-Follow. */
 function axismundi_forum_community_owner_user_id( int $group_identity_id ) : int {
-	if ( ! function_exists( 'axismundi_actors_group_managers' ) ) {
+	if ( ! function_exists( 'axismundi_actors_account_principals' ) ) {
 		return 0;
 	}
-	foreach ( (array) axismundi_actors_group_managers( $group_identity_id ) as $manager ) {
-		if ( 'owner' === (string) ( $manager['role'] ?? '' ) ) {
-			return (int) ( $manager['user_id'] ?? 0 );
+	foreach ( axismundi_actors_account_principals( $group_identity_id ) as $principal ) {
+		// Initial local self-Follow is a WP login lifecycle boundary, not an Actor grant.
+		if ( 'wp_user' === $principal['principal_kind'] && 'owner' === $principal['role'] ) {
+			return $principal['principal_id'];
 		}
 	}
 	return 0;
@@ -331,7 +332,7 @@ function axismundi_forum_is_community( int $group_identity_id ) : bool {
 /** Update one community policy after verifying Group-manager authority. */
 function axismundi_forum_update_community_policy( int $group_identity_id, int $user_id, string $column, string $value ) {
 	if ( ! in_array( $column, array( 'posting_policy', 'comment_posting_policy', 'membership_policy', 'topic_approval_policy', 'comment_approval_policy', 'distribution_scope' ), true ) || ! axismundi_forum_is_community( $group_identity_id )
-		|| ! axismundi_forum_actors_available() || ! axismundi_actors_managed_actor_can_manage( $group_identity_id, $user_id ) ) {
+		|| ! axismundi_forum_actors_available() || ! axismundi_actors_principal_can_manage( $group_identity_id, 'wp_user', $user_id ) ) {
 		return new WP_Error( 'ax_forum_forbidden', __( 'You do not manage this community.', 'axismundi-forum' ) );
 	}
 	global $wpdb;
@@ -370,11 +371,11 @@ function axismundi_forum_get_community_group( int $group_identity_id ) : ?Axismu
  * @return array<int,Axismundi_Actor> Group Actors with discussion enabled, keyed by identity.
  */
 function axismundi_forum_manageable_communities( int $user_id ) : array {
-	if ( ! function_exists( 'axismundi_actors_list_manageable_actors' ) ) {
+	if ( ! function_exists( 'axismundi_actors_accounts_for_principal' ) ) {
 		return array();
 	}
 	$communities = array();
-	foreach ( (array) axismundi_actors_list_manageable_actors( $user_id ) as $actor ) {
+	foreach ( axismundi_actors_accounts_for_principal( 'wp_user', $user_id ) as $actor ) {
 		if ( $actor instanceof Axismundi_Actor && axismundi_forum_is_community( $actor->get_identity_id() ) ) {
 			$communities[ $actor->get_identity_id() ] = $actor;
 		}

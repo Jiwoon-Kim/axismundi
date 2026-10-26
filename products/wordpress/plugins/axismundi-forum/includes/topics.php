@@ -233,7 +233,7 @@ function axismundi_forum_get_posting_policy( int $group_identity_id ) : string {
 function axismundi_forum_user_can_manage( int $group_identity_id, int $user_id ) : bool {
 	return axismundi_forum_is_community( $group_identity_id )
 		&& axismundi_forum_actors_available()
-		&& axismundi_actors_managed_actor_can_manage( $group_identity_id, $user_id );
+		&& axismundi_actors_principal_can_manage( $group_identity_id, 'wp_user', $user_id );
 }
 
 /** Persist a Forum's policy; only a manager of its bound Group may change it. */

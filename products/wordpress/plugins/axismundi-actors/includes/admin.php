@@ -30,7 +30,7 @@ function axismundi_actors_can_manage( Axismundi_Actor $actor, ?int $viewer = nul
 		return false;
 	}
 	if ( $actor->is_managed() ) {
-		return axismundi_actors_managed_actor_can_manage( $actor->get_identity_id(), $viewer );
+		return axismundi_actors_principal_can_manage( $actor->get_identity_id(), 'wp_user', $viewer );
 	}
 	return axismundi_actors_can_manage_user_actor( (int) $actor->get_local_user_id(), $viewer );
 }
@@ -317,7 +317,9 @@ function axismundi_actors_render_managed_actors_page() : void {
 	$is_site_admin = current_user_can( 'manage_options' );
 	$moderated_groups = function_exists( 'axismundi_forum_moderated_communities' )
 		? axismundi_forum_moderated_communities( $user_id )
-		: axismundi_actors_list_manageable_actors( $user_id );
+		: array_values( array_filter( axismundi_actors_accounts_for_principal( 'wp_user', $user_id ),
+			static fn( Axismundi_Actor $actor ) : bool => $actor->is_managed() // Legacy screen scope, not principal eligibility.
+		) );
 	$all_groups       = $is_site_admin ? axismundi_actors_list_all_managed_actors() : array();
 	$selected_id = isset( $_GET['group_id'] ) ? absint( $_GET['group_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only selection.
 	$selected = $selected_id > 0 ? axismundi_actors_get_by_identity( $selected_id ) : null;
@@ -1542,10 +1544,11 @@ function axismundi_actors_managers_form( Axismundi_Actor $actor ) : void {
 		return;
 	}
 	$identity_id  = $actor->get_identity_id();
-	$can_delegate = axismundi_actors_managed_actor_can_manage( $identity_id, get_current_user_id(), 'manager' );
-	$managers     = axismundi_actors_group_managers( $identity_id );
-	$roles        = array_keys( axismundi_actors_manager_roles() );
-	$owner_count  = axismundi_actors_managed_owner_count( $identity_id );
+	$can_delegate = axismundi_actors_principal_can_manage( $identity_id, 'wp_user', get_current_user_id(), 'manager' );
+	// This unchanged login form edits WP User grants only, not Account or remote subjects.
+	$managers     = array_filter( axismundi_actors_account_principals( $identity_id ), static fn( array $row ) : bool => 'wp_user' === $row['principal_kind'] );
+	$roles        = array_keys( axismundi_actors_principal_roles() );
+	$owner_count  = axismundi_actors_principal_owner_count( $identity_id, 'wp_user' );
 	?>
 	<h2><?php esc_html_e( 'Managers', 'axismundi-actors' ); ?></h2>
 	<p class="description"><?php esc_html_e( 'Everyone here signs in with their own account and publishes as this actor. Nobody shares a password.', 'axismundi-actors' ); ?></p>
@@ -1560,7 +1563,7 @@ function axismundi_actors_managers_form( Axismundi_Actor $actor ) : void {
 		<tbody>
 		<?php foreach ( $managers as $ax_manager ) : ?>
 			<?php
-			$ax_user = get_userdata( (int) $ax_manager['user_id'] );
+			$ax_user = get_userdata( (int) $ax_manager['principal_id'] );
 			$ax_role = (string) $ax_manager['role'];
 			// The one row the form does not offer to change: an actor with no owner has nobody left who
 			// could appoint one, so the model refuses it and the screen does not pretend otherwise.
@@ -1573,7 +1576,7 @@ function axismundi_actors_managers_form( Axismundi_Actor $actor ) : void {
 						$ax_user instanceof WP_User
 							? $ax_user->display_name . ' (' . $ax_user->user_login . ')'
 							/* translators: %d: user ID of an account that no longer exists. */
-							: sprintf( __( 'Deleted account #%d', 'axismundi-actors' ), (int) $ax_manager['user_id'] )
+							: sprintf( __( 'Deleted account #%d', 'axismundi-actors' ), (int) $ax_manager['principal_id'] )
 					);
 					?>
 				</td>
@@ -1587,7 +1590,7 @@ function axismundi_actors_managers_form( Axismundi_Actor $actor ) : void {
 							<?php wp_nonce_field( 'ax_actors_managers_' . $identity_id ); ?>
 							<input type="hidden" name="action" value="axismundi_actors_save_manager">
 							<input type="hidden" name="identity_id" value="<?php echo esc_attr( (string) $identity_id ); ?>">
-							<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) (int) $ax_manager['user_id'] ); ?>">
+							<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) (int) $ax_manager['principal_id'] ); ?>">
 							<select name="role">
 								<?php foreach ( $roles as $ax_role_option ) : ?>
 									<option value="<?php echo esc_attr( $ax_role_option ); ?>"<?php selected( $ax_role_option, $ax_role ); ?>><?php echo esc_html( $ax_role_option ); ?></option>
@@ -1599,7 +1602,7 @@ function axismundi_actors_managers_form( Axismundi_Actor $actor ) : void {
 							<?php wp_nonce_field( 'ax_actors_managers_' . $identity_id ); ?>
 							<input type="hidden" name="action" value="axismundi_actors_remove_manager">
 							<input type="hidden" name="identity_id" value="<?php echo esc_attr( (string) $identity_id ); ?>">
-							<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) (int) $ax_manager['user_id'] ); ?>">
+							<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) (int) $ax_manager['principal_id'] ); ?>">
 							<button type="submit" class="button button-link-delete"><?php esc_html_e( 'Remove', 'axismundi-actors' ); ?></button>
 						</form>
 					<?php endif; ?>
@@ -1646,7 +1649,8 @@ function axismundi_actors_managers_form( Axismundi_Actor $actor ) : void {
 function axismundi_actors_handle_save_manager() : void {
 	$identity_id = isset( $_POST['identity_id'] ) ? absint( $_POST['identity_id'] ) : 0;
 	check_admin_referer( 'ax_actors_managers_' . $identity_id );
-	if ( ! axismundi_actors_managed_actor_can_manage( $identity_id, get_current_user_id(), 'manager' ) ) {
+	$actor = axismundi_actors_get_by_identity( $identity_id );
+	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_managed() || ! axismundi_actors_principal_can_manage( $identity_id, 'wp_user', get_current_user_id(), 'manager' ) ) {
 		wp_die( esc_html__( 'You cannot change who manages this actor.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
 	}
 	$back    = axismundi_actors_managed_actors_admin_url( $identity_id );
@@ -1663,7 +1667,7 @@ function axismundi_actors_handle_save_manager() : void {
 	if ( $user_id <= 0 ) {
 		axismundi_actors_redirect_result( $back, new WP_Error( 'ax_actors_manager_user', __( 'No account on this site matches that name.', 'axismundi-actors' ) ) );
 	}
-	axismundi_actors_redirect_result( $back, axismundi_actors_add_manager( $identity_id, $user_id, $role ) );
+	axismundi_actors_redirect_result( $back, axismundi_actors_set_principal_role( $identity_id, 'wp_user', $user_id, $role ) );
 }
 add_action( 'admin_post_axismundi_actors_save_manager', 'axismundi_actors_handle_save_manager' );
 
@@ -1675,11 +1679,12 @@ add_action( 'admin_post_axismundi_actors_save_manager', 'axismundi_actors_handle
 function axismundi_actors_handle_remove_manager() : void {
 	$identity_id = isset( $_POST['identity_id'] ) ? absint( $_POST['identity_id'] ) : 0;
 	check_admin_referer( 'ax_actors_managers_' . $identity_id );
-	if ( ! axismundi_actors_managed_actor_can_manage( $identity_id, get_current_user_id(), 'manager' ) ) {
+	$actor = axismundi_actors_get_by_identity( $identity_id );
+	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_managed() || ! axismundi_actors_principal_can_manage( $identity_id, 'wp_user', get_current_user_id(), 'manager' ) ) {
 		wp_die( esc_html__( 'You cannot change who manages this actor.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
 	}
 	$back    = axismundi_actors_managed_actors_admin_url( $identity_id );
 	$user_id = isset( $_POST['user_id'] ) ? absint( $_POST['user_id'] ) : 0;
-	axismundi_actors_redirect_result( $back, axismundi_actors_remove_manager( $identity_id, $user_id ) );
+	axismundi_actors_redirect_result( $back, axismundi_actors_set_principal_role( $identity_id, 'wp_user', $user_id, null ) );
 }
 add_action( 'admin_post_axismundi_actors_remove_manager', 'axismundi_actors_handle_remove_manager' );

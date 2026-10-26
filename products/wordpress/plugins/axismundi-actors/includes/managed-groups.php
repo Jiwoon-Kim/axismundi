@@ -1,12 +1,13 @@
 <?php
 /**
- * Managed-actor authority kernel (DATA-MODEL §9.6.1).
+ * Historical regression adapters, out-of-scope Calendar boundary, and Group directory policy.
  *
  * A managed actor -- a `Group` (forum / Lemmy community), or a `Service` /
  * `Organization` publisher -- is neither the site actor nor tied 1:1 to a WP
  * user. It is administered through `wp_ax_actor_managers`: a small, active-only
  * relation of *who may operate this actor*. This file owns creation of managed
- * actors and every read/write of that authority relation, and nothing else.
+ * actors through explicit WP login adapters. Canonical principal policy, storage,
+ * roles, live-owner counts and creation live in principals.php.
  *
  * What this file is NOT: it does not model Follow, membership, moderation, votes,
  * or any object/activity state. Those belong to the Activity / social store and,
@@ -14,8 +15,9 @@
  * "may this WP user operate this managed actor," never "is this user a follower or
  * member." Account access also reads this table through account-access.php,
  * while these legacy managed APIs keep their managed-only scope.
- * The one authority invariant enforced here is that a managed actor
- * always keeps at least one `owner`.
+ * Actors/Forum/Notifications production consumers use the typed principal API.
+ * The two query adapters still serve Calendar, whose migration is outside this task.
+ * Other old signatures are retained for historical audits, not new production callers.
  *
  * @package AxismundiActors
  */
@@ -29,16 +31,12 @@ defined( 'ABSPATH' ) || exit;
  * @return array<string,int> role => rank (higher = more authority).
  */
 function axismundi_actors_manager_roles() : array {
-	return array(
-		'owner'   => 3,
-		'manager' => 2,
-		'editor'  => 1,
-	);
+	return axismundi_actors_principal_roles();
 }
 
 /** Rank of one role, or 0 for an unknown role. */
 function axismundi_actors_manager_role_rank( string $role ) : int {
-	return (int) ( axismundi_actors_manager_roles()[ $role ] ?? 0 );
+	return axismundi_actors_principal_role_rank( $role );
 }
 
 /**
@@ -50,15 +48,13 @@ function axismundi_actors_manager_role_rank( string $role ) : int {
  *
  * The actor is created through the same local-actor path Person/Site actors use
  * (`actor_scope='managed'`, `actor_type='Group'`, `local_user_id=NULL`), then the
- * owner relation is written. If the owner write fails the just-created actor is
- * removed, because a managed actor with no owner would violate the kernel's one
- * invariant; there is never an observable ownerless managed actor.
+ * owner relation is written in create_local's transaction. Failure rolls back
+ * the identity and initial grant together.
  *
  * @param array<string,mixed> $args owner_user_id (required), preferred_username, actor_type (default Group), status.
  * @return Axismundi_Actor|WP_Error
  */
 function axismundi_actors_create_managed_actor( array $args ) {
-	global $wpdb;
 	$owner_user_id = (int) ( $args['owner_user_id'] ?? 0 );
 	if ( $owner_user_id <= 0 || ! get_userdata( $owner_user_id ) ) {
 		return new WP_Error( 'ax_actors_managed_owner', __( 'A managed actor requires a valid owner user.', 'axismundi-actors' ) );
@@ -68,28 +64,17 @@ function axismundi_actors_create_managed_actor( array $args ) {
 		return new WP_Error( 'ax_actors_managed_type', __( 'A managed actor must be a Group, Service, or Organization.', 'axismundi-actors' ) );
 	}
 
-	$actor = axismundi_actors_create_local(
+	return axismundi_actors_create_principal_account(
 		array(
 			'actor_type'         => $type,
 			'actor_scope'        => 'managed',
 			'preferred_username' => (string) ( $args['preferred_username'] ?? '' ),
 			'status'             => (string) ( $args['status'] ?? 'internal' ),
 			// local_user_id stays NULL: a managed actor is not a WP-user Person.
-		)
+		),
+		'wp_user',
+		$owner_user_id
 	);
-	if ( is_wp_error( $actor ) ) {
-		return $actor;
-	}
-
-	$seeded = axismundi_actors_write_manager_row( $actor->get_identity_id(), $owner_user_id, 'owner' );
-	if ( is_wp_error( $seeded ) ) {
-		// Compensate: an ownerless managed actor must never be observable.
-		$identity_id = $actor->get_identity_id();
-		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- compensating rollback of a just-created actor.
-		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- compensating rollback of a just-created identity.
-		return $seeded;
-	}
-	return $actor;
 }
 
 /**
@@ -112,12 +97,8 @@ function axismundi_actors_managed_actor_can_manage( int $identity_id, int $user_
 	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_managed() ) {
 		return false;
 	}
-	$role = axismundi_actors_account_role( $identity_id, $user_id );
-	if ( '' === $role ) {
-		return false;
-	}
-	return null === $min_role
-		|| axismundi_actors_manager_role_rank( $role ) >= axismundi_actors_manager_role_rank( $min_role );
+	// Legacy managed-screen boundary: a logged-in WP User, not an inferred Actor.
+	return axismundi_actors_principal_can_manage( $identity_id, 'wp_user', $user_id, $min_role );
 }
 
 /**
@@ -127,20 +108,11 @@ function axismundi_actors_managed_actor_can_manage( int $identity_id, int $user_
  * @return array<int,array{user_id:int,role:string,created_at:string,updated_at:string}>
  */
 function axismundi_actors_group_managers( int $identity_id ) : array {
-	if ( $identity_id <= 0 || ! axismundi_actors_principals_ready() ) {
-		return array();
-	}
-	global $wpdb;
-	$table = axismundi_actors_managers_table();
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed lookup on a custom table.
-	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT user_id, role, created_at, updated_at FROM %i WHERE identity_id = %d AND principal_kind = 'wp_user' AND principal_id = user_id", $table, $identity_id ), ARRAY_A );
-	usort(
-		$rows,
-		static fn( array $a, array $b ) : int => axismundi_actors_manager_role_rank( (string) $b['role'] ) <=> axismundi_actors_manager_role_rank( (string) $a['role'] )
-	);
+	// Excluded management UI consumes WP logins; do not infer users from Account grants.
+	$rows = array_values( array_filter( axismundi_actors_account_principals( $identity_id ), static fn( array $r ) : bool => 'wp_user' === $r['principal_kind'] ) );
 	return array_map(
 		static fn( array $r ) : array => array(
-			'user_id'    => (int) $r['user_id'],
+			'user_id'    => (int) $r['principal_id'],
 			'role'       => (string) $r['role'],
 			'created_at' => (string) $r['created_at'],
 			'updated_at' => (string) $r['updated_at'],
@@ -161,25 +133,11 @@ function axismundi_actors_group_managers( int $identity_id ) : array {
  * @return Axismundi_Actor[]
  */
 function axismundi_actors_list_manageable_actors( int $user_id, ?string $min_role = null ) : array {
-	if ( $user_id <= 0 || ! axismundi_actors_account_access_ready() || ! get_userdata( $user_id ) ) {
-		return array();
-	}
-	global $wpdb;
-	$table = axismundi_actors_managers_table();
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- KEY(user_id, role) lookup on a custom table.
-	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT identity_id, role FROM %i WHERE principal_kind = 'wp_user' AND principal_id = %d", $table, $user_id ), ARRAY_A );
-	$min_rank = null === $min_role ? 0 : axismundi_actors_manager_role_rank( $min_role );
-	$actors   = array();
-	foreach ( $rows as $row ) {
-		if ( axismundi_actors_manager_role_rank( (string) $row['role'] ) < $min_rank ) {
-			continue;
-		}
-		$actor = axismundi_actors_get_by_identity( (int) $row['identity_id'] );
-		if ( $actor instanceof Axismundi_Actor && $actor->is_managed() ) {
-			$actors[] = $actor;
-		}
-	}
-	return $actors;
+	// The legacy screen lists managed-scope accounts, not all principal-operated accounts.
+	return array_values( array_filter(
+		axismundi_actors_accounts_for_principal( 'wp_user', $user_id, $min_role ),
+		static fn( Axismundi_Actor $actor ) : bool => $actor->is_managed()
+	) );
 }
 
 /** @return Axismundi_Actor[] Every local managed Group, for site-administrator recovery only. */
@@ -278,45 +236,14 @@ function axismundi_actors_count_public_groups() : int {
 	);
 }
 
-/** Count the owners of one managed actor. */
+/** Legacy management UI adapter: count only live direct WP User recovery anchors. */
 function axismundi_actors_managed_owner_count( int $identity_id ) : int {
-	if ( ! axismundi_actors_principals_ready() ) {
-		return 0;
-	}
-	global $wpdb;
-	$table = axismundi_actors_managers_table();
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed count on a custom table.
-	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE identity_id = %d AND role = 'owner' AND principal_kind = 'wp_user' AND principal_id = user_id", $table, $identity_id ) );
+	return axismundi_actors_principal_owner_count( $identity_id, 'wp_user' );
 }
 
-/** Insert or update one manager row (no invariant checks; internal seam). */
+/** Legacy WP User adapter. Creation uses seed_account_owner instead of this writer. */
 function axismundi_actors_write_manager_row( int $identity_id, int $user_id, string $role ) {
-	if ( ! axismundi_actors_principals_ready() || $identity_id <= 0 || ! axismundi_actors_resolve_principal( 'wp_user', $user_id ) ) {
-		return new WP_Error( 'ax_actors_principal_unavailable', 'The principal relation is unavailable.' );
-	}
-	if ( ! array_key_exists( $role, axismundi_actors_manager_roles() ) ) {
-		return new WP_Error( 'ax_actors_manager_role', __( 'Unknown manager role.', 'axismundi-actors' ) );
-	}
-	global $wpdb;
-	$table = axismundi_actors_managers_table();
-	$now   = current_time( 'mysql', true );
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- upsert on a composite-PK custom table.
-	$ok = $wpdb->query(
-		$wpdb->prepare(
-			"INSERT INTO %i (identity_id, principal_kind, principal_id, user_id, role, created_at, updated_at)
-			 VALUES (%d, 'wp_user', %d, %d, %s, %s, %s)
-			 ON DUPLICATE KEY UPDATE role = VALUES(role), updated_at = VALUES(updated_at)", $table,
-			$identity_id,
-			$user_id,
-			$user_id,
-			$role,
-			$now,
-			$now
-		)
-	);
-	return false === $ok
-		? new WP_Error( 'ax_actors_manager_write', __( 'Could not write the manager relation.', 'axismundi-actors' ) )
-		: true;
+	return axismundi_actors_set_principal_role( $identity_id, 'wp_user', $user_id, $role );
 }
 
 /**
@@ -332,16 +259,8 @@ function axismundi_actors_add_manager( int $identity_id, int $user_id, string $r
 	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_managed() ) {
 		return new WP_Error( 'ax_actors_manager_target', __( 'Managers can only be assigned to a managed actor.', 'axismundi-actors' ) );
 	}
-	if ( 'owner' !== $role && $user_id === $actor->get_personal_owner_user_id() ) {
-		return new WP_Error( 'ax_actors_personal_owner', __( 'Personal ownership must be transferred before changing its owner access.', 'axismundi-actors' ) );
-	}
-	if ( $user_id <= 0 || ! get_userdata( $user_id ) ) {
-		return new WP_Error( 'ax_actors_manager_user', __( 'A manager must be a valid user.', 'axismundi-actors' ) );
-	}
-	if ( 'owner' !== $role && axismundi_actors_managed_actor_can_manage( $identity_id, $user_id, 'owner' ) && 1 === axismundi_actors_managed_owner_count( $identity_id ) ) {
-		return new WP_Error( 'ax_actors_last_owner', __( 'The last owner cannot be demoted.', 'axismundi-actors' ) );
-	}
-	return axismundi_actors_write_manager_row( $identity_id, $user_id, $role );
+	// Explicit WP-login adapter for the management UI, which is not migrated yet.
+	return axismundi_actors_set_principal_role( $identity_id, 'wp_user', $user_id, $role );
 }
 
 /**
@@ -350,21 +269,8 @@ function axismundi_actors_add_manager( int $identity_id, int $user_id, string $r
  * @return true|WP_Error
  */
 function axismundi_actors_remove_manager( int $identity_id, int $user_id ) {
-	$actor = axismundi_actors_get_by_identity( $identity_id );
-	if ( $actor instanceof Axismundi_Actor && $user_id === $actor->get_personal_owner_user_id() ) {
-		return new WP_Error( 'ax_actors_personal_owner', __( 'Personal ownership must be transferred or retired before removing its access.', 'axismundi-actors' ) );
-	}
-	if ( axismundi_actors_managed_actor_can_manage( $identity_id, $user_id, 'owner' ) && 1 === axismundi_actors_managed_owner_count( $identity_id ) ) {
-		return new WP_Error( 'ax_actors_last_owner', __( 'The last owner cannot be removed.', 'axismundi-actors' ) );
-	}
-	global $wpdb;
-	if ( ! axismundi_actors_principals_ready() ) {
-		return new WP_Error( 'ax_actors_principal_unavailable', 'The principal relation is unavailable.' );
-	}
-	$deleted = $wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $identity_id, 'principal_kind' => 'wp_user', 'principal_id' => $user_id ), array( '%d', '%s', '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- active-only relation delete on a custom table.
-	return false === $deleted
-		? new WP_Error( 'ax_actors_manager_remove', __( 'Could not remove the manager relation.', 'axismundi-actors' ) )
-		: true;
+	// Explicit WP-login adapter; local_account owners cannot replace this anchor.
+	return axismundi_actors_set_principal_role( $identity_id, 'wp_user', $user_id, null );
 }
 
 /**
@@ -381,5 +287,5 @@ function axismundi_actors_claim_managed_group( int $identity_id, int $user_id ) 
 	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || ! $actor->is_managed() || 'Group' !== $actor->get_type() ) {
 		return new WP_Error( 'ax_actors_manager_target', __( 'Only a local managed Group may be claimed.', 'axismundi-actors' ) );
 	}
-	return axismundi_actors_add_manager( $identity_id, $user_id, 'manager' );
+	return axismundi_actors_set_principal_role( $identity_id, 'wp_user', $user_id, 'manager' );
 }

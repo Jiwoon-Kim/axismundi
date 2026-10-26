@@ -51,10 +51,27 @@ B 판정을 먼저 확정한다. `axismundi-object-projections/docs/LOCAL-OBJECT
 
 ### B — 저장된 기록의 주체 (파생 중단)
 
+**정정 (2026-10-26, 초판 직후).** 초판은 `local_author_actor_uri`를 귀속 경로로 적고
+그 docblock의 경고를 근거로 인용했다. **틀렸다.** 추적하니 귀속은 이미 원장이 답한다.
+
 ```txt
-✔ object-projections/includes/post-article.php:57   local_author_actor_uri
-     docblock이 이미 위험을 자백한다 -- "one setting away from attributing every
-     Actor-less user's posts to the server". 단일 Account 전제에서도 이미 약한 자리다
+op/post-article.php:88   apply_filters( 'axismundi_op_local_object_attribution', '', ... )
+                         기본값 '' -- OP는 파생하지 않는다
+activities/publish-command.php:139  그 필터에 붙어 axismundi_act_get_object_attribution()
+                         주석: "projection no longer derives an identity and hands it over
+                         to be recorded; it asks what was recorded"
+```
+
+즉 **B의 권위 저장소는 이미 존재하고 Activities 원장이다.** 남은 B는 "원장에 묻지 않고
+아직 파생하는 호출부"이지, 저장소가 없는 상태가 아니다. 그리고
+`local_author_actor_uri`는 어떤 귀속 필터에도 걸려 있지 않다 -- 유일한 production
+소비자는 forum이고, 용도는 귀속이 아니라 **투영 가능성 게이트**다.
+
+```txt
+  object-projections/includes/post-article.php:57   local_author_actor_uri
+     귀속이 아니라 "저자에게 공개 Actor가 있는가" 게이트. 거는 곳 없음.
+     유일한 호출: forum/topics.php:967 topic_article_supports
+     옮길 질문은 "post_author의 Actor"가 아니라 "이 Object를 발행한 Actor가 공개인가"
 ✔ calendar/includes/event-actor.php:77              author_person_actor_uri
      post_author에서 파생한다. 바로 다음 함수의 docblock이 "The switcher's answer,
      and deliberately not a fourth resolver" -- 새 Event 경로는 이미 전환을 안다.
@@ -195,4 +212,43 @@ C3 예약 발행      같은 B 영역을 만진다. 예약 발행이 Account를 
                   C3를 먼저 하거나, 저장 위치를 이 브리프 1단계에서 먼저 못박는다
 C4 레거시 제거    E 묶음을 가져간다. 이 브리프보다 먼저 와도 되고 뒤여도 된다
 스테이징 패키징   S2/S5/S10 묶음은 이 작업과 독립이다
+```
+
+## 오너 결정 — Group 가입 자격 (2026-10-26)
+
+위 forum 판정보류에서 나온 `'Person' !== $member->get_type()` 게이트에 대한 결정이다.
+
+> Group actor가 group에 가입하는 것 자체가 모순. Service나 Org처럼 Person이 아닌
+> Actor는 당분간 Group follow를 막는다. **로컬이면 personal account가 아닌 경우를
+> 막는 것으로 일반화**하고 나중에 수정한다.
+
+즉 게이트를 없애지 않고 축만 옮긴다 -- actor type에서 **Account가 이 User에게 개인
+귀속인가**로. 오늘 기준 두 집합은 정확히 같으므로 동작은 바뀌지 않는다.
+
+```txt
+로컬 비-tombstone 234행
+  Person        user     personal_owner 있음   27
+  Group         managed  없음                  69
+  Organization  managed  없음                 137
+  Application   site     없음                   1
+
+Person 인데 비개인       0
+비-Person 인데 개인      0      ← 양방향 반례 없음. 치환이 오늘은 무동작이다
+```
+
+적용 지점은 `axismundi_actors_account_is_personal( $actor, $user_id )`
+(`account-access.php:79`)이고, 그 판정은 `is_local && scope != 'site' &&
+personal_owner_user_id === $user_id && role === 'owner'` 이다.
+
+여기서 한 가지는 짚어 둔다. 이 세션에서 **`isPersonal`은 개인 귀속의 표현이지 권한이
+아니다**라고 결정했고, 이 게이트는 그것을 자격 판정에 쓴다. 모순은 아니다 -- 막는
+근거가 "권한이 없다"가 아니라 "**개인 귀속이 아닌 주체가 Group에 가입한다는 것이
+의미상 성립하지 않는다**"이기 때문이다. 다만 두 축이 갈라지는 날 -- 예컨대 Person
+Actor를 다른 User가 manager로 운영하는 경우 -- 이 게이트는 "Person만"이 아니라
+"**내가 개인적으로 소유한 Account만**"으로 읽힌다. 그때 다시 본다.
+
+```txt
+적용   로컬 Account 한정. 원격 Actor의 가입 판정은 이 게이트가 아니다
+       (remote actor는 scope가 항상 NULL이고 연합 개념이 아니다)
+범위   Group 가입·follow. 다른 권한 판정에 이 게이트를 복사하지 않는다
 ```

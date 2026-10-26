@@ -660,6 +660,74 @@ comes, it is a table keyed by the same JSON pointers as provenance — `emails/w
 *where did this come from* and *who may see it*. Not built in B1: the projection semantics have to
 be real first.
 
+## 12. savedPlaces 와 AddressBook 가시성 — 잠정 (2026-10-26)
+
+**잠정이다.** JMAP 플러그인 · AddressBook · Contacts 플러그인 · Google People API 를 실제로
+비교하고 구현한 뒤에야 추측이 아닌 제품을 근거로 정할 수 있다. 여기 적는 것은 그때 다시
+세우지 않아도 되도록 **측정된 사실과 그로부터 따라 나오는 방향**뿐이다.
+
+### 측정된 사실
+
+```txt
+RFC 9610 AddressBook
+  shareWith     Id[AddressBookRights]|null   "A map of the Principal id".  공유 없으면 null
+  myRights      서버 설정.  mayRead · mayWrite · mayShare · mayDelete
+  isSubscribed  "whether the user wishes to see this AddressBook in their client"
+                → 표시 선호이지 접근 제어가 아니다
+  isDefault     계정당 하나
+  공개/세계 공개를 표현하는 속성   **없다**
+
+wp_ax_contact_address_books.owner_actor_id   로컬 identity 행 참조 -> 이미 Account 층
+```
+
+JMAP 의 공유는 **principal 대 principal** 이다. `shareWith` 는 아는 principal 의 목록이고
+"누구나" 를 가리킬 값이 없다. 그러므로 "이 AddressBook 을 연합에 공개한다" 는 **JMAP 어휘로는
+쓸 수 없는 문장**이다. 이것은 `axismundi/docs/DECISION-ACCOUNT-VS-ACTOR-POLICY.md` 의 층
+분리와 같은 모양이다 -- Account 는 principal 범위, Actor 는 audience 범위.
+
+### 따라 나오는 방향 (구현 뒤 확정)
+
+```txt
+AddressBook   JMAP 어휘 그대로 둔다.  shareWith · myRights · isSubscribed.
+              공개 가시성을 덧붙이지 않는다 -- RFC 에 없는 자리에 우리 어휘를 끼우면
+              한 객체에 principal ACL 과 audience 두 어휘가 겹치고, 충돌 우선순위를
+              새로 정해야 한다
+savedPlaces   비공개 AddressBook.  Place **참조** 를 담는다 (§5 · §9 의 saving 쪽)
+목록          AddressBook 안의 발행 컬렉션.  audience 는 여기에만 붙고,
+              actor `streams` 등록도 이것만. AddressBook 자체는 올리지 않는다 --
+              올리면 "이 사람에게 저장된 장소가 있다" 가 공개된다
+```
+
+구글맵이 같은 모양이다 -- "저장됨" 은 공유 단위가 아니고 개별 목록마다 공개 설정이 붙는다.
+
+### 이 방향이 건드리는 기존 결정
+
+`DECISION-ACCOUNT-VS-ACTOR-POLICY.md` 에 "비공개 부모 안의 공개 자식은 허용하지 않는다 --
+자식 가시성 ⊆ 부모 가시성" 을 적었다. 문자 그대로면 비공개 AddressBook 안의 공개 목록이
+그것을 깬다. 해소는 **그릇과 발행 컬렉션을 가르는 것**이다.
+
+```txt
+저장 경계(container)    AddressBook.  와이어에 id 가 없고 발행되지 않는다.
+                        가시성이라는 속성 자체가 없다 -- RFC 9610 이 그렇게 정의한다
+발행 컬렉션(collection)  그 안의 목록.  id 를 가지고 streams 에 등록될 수 있다.
+                        어제의 "자식 ⊆ 부모" 불변은 **이들 사이에만** 적용된다
+```
+
+즉 그 불변의 범위가 "모든 중첩" 이 아니라 "발행된 컬렉션 사이" 였다. 구현 때 이 읽기가
+서지 않으면 불변 쪽을 고쳐야 한다.
+
+### 무엇이 이것을 확정하는가
+
+```txt
+JMAP 플러그인      AddressBook 을 실제로 투영해 본다. shareWith 를 쓰는지, 쓴다면 누구에게
+Contacts 플러그인   지금 owner_actor_id 하나인 소유 모델이 공유를 만나면 어떻게 되는지
+Google People API   브라우저 주소록 워크플로의 선례 (§6 는 이미 이것을 어댑터 참조로 둔다)
+미디어 컬렉션·저장한 장소   같은 모양의 다른 사례. 셋을 따로 설계하면 세 벌이 된다
+```
+
+따라오는 열린 질문 하나 -- 공개 목록의 멤버가 **로컬에 발행되지 않은 Place** 이면 받는 쪽은
+해소할 수 없는 URI 를 본다. §5 가 가른 saving 과 materializing 의 경계가 그대로 여기에 나온다.
+
 ## References
 
 - [RFC 9982: JSContact Version 2.0](https://www.rfc-editor.org/rfc/rfc9982.html)

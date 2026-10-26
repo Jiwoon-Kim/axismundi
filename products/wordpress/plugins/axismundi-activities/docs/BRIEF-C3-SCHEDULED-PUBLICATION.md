@@ -112,3 +112,51 @@ pending 비노출  발사 전에 outbox · 공개 Activity 읽기 · 전달 큐�
        귀결되는데, 예약 발행이 원장에 기록을 남기지 않는 한 예약 글에는 물을 대상이
        없다. C3가 그 구멍을 메운다 -- 오너가 C3를 먼저 둔 이유다
 ```
+
+## 구현 결정 (2026-10-26)
+
+소유자 승인: 별도 `ax_activity_pending` 테이블. **근거는 수명 차이**다. 원장 읽기가
+active allowlist라는 사실상 원장 비활성 상태도 비노출은 가능하다. 그러나 intent는
+편집·교체·폐기되는 의도이고 원장은 일어난 사건이다. pending에 Activity URI/local_uuid를
+발급하지 않는다. intent_uuid는 내부 교체 세대 식별자이며 외부 Activity ID가 아니다.
+
+- 시계와 트리거는 WP `future`/`publish_future_post` 그대로다. 새 cron job을 만들지 않는다.
+  `scheduled_for`는 `post_date_gmt`의 검증용 사본이며 재예약 저장 때마다 교체한다.
+- metadata/mentions 저장 후 미래 글의 intent를 기록하고, REST 저장은 REST 완료 훅에서
+  기록한다. post_id 기본 키로 살아 있는 의도는 하나다. 취소는 cancelled, 실패는 failed.
+  이전 글에 intent를 소급 생성하지 않는다.
+- 발사는 OP 공개 후보 훅 한 곳이다. 기록된 principal/Actor, source version/body hash,
+  Object URI, 예약 시각, 현재 권한을 재검사한다. cron의 선택 쿠키나 새 기본값은 읽지 않는다.
+  발행 전후 Core가 수정하는 status/modified와 별도로 source hash를 검증한다.
+- audience는 스냅샷을 사용한다. 실행 시 해소한 audience가 달라졌으면 조용히 최신 값으로
+  바꾸지 않고 실패한다. 다시 예약해 명시적인 의도를 받아야 한다.
+- repository의 trusted before-commit 콜백으로 Create INSERT와 정확한 intent 세대 소비를
+  같은 DB 트랜잭션에서 처리한다. 콜백 실패는 INSERT를 롤백하고 기록/전달 훅도 안 낸다.
+  named lock은 저장/발사를 직렬화하며 원장의 SQL transaction을 중첩하지 않는다.
+- 실패 사유는 pending 행에 남고 source 편집 화면에서 확인한다. WordPress 발행 자체는
+  취소하지 않는다. 성공한 귀속은 기존 원장만 권위이며 intent는 귀속 조회에 사용하지 않는다.
+
+검증 명령: `wp eval-file wp-content/plugins/axismundi-activities/tests/audit-scheduled-publication.php`.
+실제 예약 시각을 기다리므로 약 70초가 추가된다. 임시 User/Actor/글/intent를 정리한다.
+
+### 검증 결과
+
+- 예약 행동 36건 통과: Organization 예약 → Person 전환 → 세션 없는 Core 발사,
+  frozen audience, 재편집 교체, 취소, legacy intent 미추정, 권한 철회 실패,
+  pending 소비 SQL 실패 시 Create INSERT 롤백, 중복 후보 멱등성, 네트워크 호출 0.
+- 발사 Actor를 `current_workspace()`에서 읽게 하는 변이는 예약 완료 단정에서 검출했다.
+  복원 후 같은 예약 감사 36건을 다시 통과했다.
+- 영향 감사: repository 21, post-create 23, publish-selection 24건 통과.
+  post-create는 legacy 선택 전제라 해당 실행에만 gate-off를 적용했다. 개발용 opt-in
+  mu-plugin은 수정하지 않았다. gate-on 신규 경로는 별도 selection 감사에서 검증했다.
+- 최초 예약 프로브는 단일 sleep 중단 후 아직 future인 글을 발사해 실패했다.
+  시계를 반복 확인하도록 수정했으며, 실제 Core 예약 시각 이후에만 검사한다.
+
+이 모델은 JMAP EmailSubmission처럼 source와 제출 의도를 분리하는 데 참고할 수 있지만,
+Mail capability/EmailSubmission 구현은 아니다. JMAP identityId와 우리 Account를 동일시하지
+않는다. post_id PK는 이번 범위의 '현재 예약 의도 하나' 제약이지 모든 Activity 제출의
+보편 모델이 아니다. 상태는 전달 성공이 아니라 연합 원장 기록 성공/실패를 뜻한다.
+
+브라우저 예약 UI와 스테이징 cron/전달은 미검증이다. 동시에 들어오는 임의의 외부 SQL
+source 수정까지 예약 named lock에 참여시키지는 않는다. 발사 시 source/version/audience
+검사는 있지만, 모든 WP 외부 writer를 포괄하는 쓰기 직렬화라고 주장하지 않는다.

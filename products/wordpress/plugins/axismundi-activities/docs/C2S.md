@@ -324,12 +324,16 @@ the existing ones do.)
 there is nothing to `Update`. The pending submission's expected version and audience snapshot
 are replaced, and exactly one live intent exists when the schedule fires.
 
-**Until pending submissions exist, a scheduled publication federates nothing.** Implemented: a
-publish candidate reaching the adapter with no authenticated principal makes no Create. The post
-becomes public in WordPress and is readable as an unattributed Object. The alternative — falling
-back to the author's own Person — publishes an article that may have been written as an
-Organization under the wrong name, and leaves no record that it was a guess. Silence is
-recoverable; a wrong attribution that has already been delivered is not.
+**A schedule without a recorded intent federates nothing.** C3 stores replaceable intent in
+`ax_activity_pending`, not in the immutable Activity ledger. Core remains the clock and trigger;
+`scheduled_for` is a validation copy of `post_date_gmt`, replaced whenever the post is rescheduled.
+Only an explicitly submitted Account can create a pending intent. Old schedules are not backfilled.
+At firing, the frozen principal, Actor, source and audience are re-verified. If the resolved
+audience has changed, the intent fails rather than silently taking a new audience. The Create
+uses the snapshot and consumes the exact intent generation in the ledger's transaction, before
+recorded/delivery hooks run. Failed intents remain private and visible to source editors.
+The post still becomes public in WordPress if federation fails. No current selection or author's
+Person is substituted. See `BRIEF-C3-SCHEDULED-PUBLICATION.md` for implementation and checks.
 
 If `can_act_as()` fails at execution, the submission is left failed and the author is asked to
 choose again.
@@ -398,8 +402,8 @@ Order:
 1. Retire the OP hook, or keep it only as a compatibility adapter that submits, so that intent
    comes from the editor rather than from a projection.
 2. Record Update for local posts, with the partial-to-complete translation in §5.
-3. Pending submissions, so a scheduled publication freezes its identity instead of resolving
-   one when it fires. Until then a scheduled post reaches the adapter with no session and
+3. Pending submissions are implemented by C3, with frozen identity and atomic consumption.
+   A legacy scheduled post without an intent still reaches the adapter with no session and
    publishes under the author's own Person.
 4. The outbox `POST` endpoint over the same command service — the first true C2S wire adapter.
    Nothing before this point needs it; React, PWA and any later mobile client call the command

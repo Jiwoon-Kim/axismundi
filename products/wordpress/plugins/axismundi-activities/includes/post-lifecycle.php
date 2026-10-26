@@ -24,7 +24,7 @@ defined( 'ABSPATH' ) || exit;
  * Object Projections owns. The Actor is not resolved here: it arrives already decided and
  * verified by the command service.
  */
-function axismundi_act_record_post_create( WP_Post $post, string $object_uri, string $actor_uri ) {
+function axismundi_act_record_post_create( WP_Post $post, string $object_uri, string $actor_uri, ?array $scheduled_intent = null ) {
 	if ( ! function_exists( 'axismundi_op_post_article_visible' )
 		|| ! function_exists( 'axismundi_op_post_object_uri' )
 		|| ! axismundi_op_post_article_visible( $post )
@@ -37,6 +37,9 @@ function axismundi_act_record_post_create( WP_Post $post, string $object_uri, st
 	}
 	$lifecycle = axismundi_act_get_object_lifecycle( $object_uri );
 	if ( $lifecycle instanceof Axismundi_Activity && 'Delete' !== $lifecycle->get_type() ) {
+		if ( $scheduled_intent ) {
+			return new WP_Error( 'ax_act_pending_existing', 'This Object already has an active lifecycle; no scheduled Create was made.' );
+		}
 		return $lifecycle;
 	}
 	// The Actor is stated, because the attribution this would otherwise derive is the one
@@ -44,6 +47,12 @@ function axismundi_act_record_post_create( WP_Post $post, string $object_uri, st
 	$audience = function_exists( 'axismundi_op_post_article_audience' ) ? axismundi_op_post_article_audience( $post, null, $actor_uri ) : null;
 	if ( ! is_array( $audience ) ) {
 		return is_wp_error( $audience ) ? $audience : new WP_Error( 'ax_act_post_audience', __( 'The post audience is unavailable.', 'axismundi-activities' ) );
+	}
+	if ( $scheduled_intent ) {
+		$audience = json_decode( $scheduled_intent['audience_json'], true );
+		if ( ! is_array( $audience ) || ! isset( $audience['to'], $audience['cc'] ) ) {
+			return new WP_Error( 'ax_act_pending_audience', 'The frozen audience is invalid.' );
+		}
 	}
 
 	$generation = $lifecycle instanceof Axismundi_Activity ? $lifecycle->get_uri() : 'initial';
@@ -57,7 +66,9 @@ function axismundi_act_record_post_create( WP_Post $post, string $object_uri, st
 			'cc'     => $audience['cc'],
 		),
 		'outbound',
-		$event_key
+		$event_key,
+		array(),
+		$scheduled_intent ? axismundi_act_pending_commit_callback( $scheduled_intent ) : null
 	);
 
 	if ( is_wp_error( $activity ) ) {
@@ -138,8 +149,11 @@ function axismundi_act_post_delete_failed( WP_Error $error, WP_Post $post ) : vo
  * ignores it: reading the publishing identity off the projection is the inversion the command
  * service exists to undo.
  */
-function axismundi_act_on_object_publish_candidate( WP_Post $post, string $object_uri, string $actor_uri ) : void {
+function axismundi_act_on_object_publish_candidate( WP_Post $post, string $object_uri, string $actor_uri, ?WP_Post $post_before = null ) : void {
 	unset( $object_uri, $actor_uri );
+	if ( axismundi_act_execute_scheduled_publication( $post, $post_before ) ) {
+		return;
+	}
 	/*
 	 * A publication with nobody making it is not federated yet.
 	 *
@@ -165,7 +179,7 @@ function axismundi_act_on_object_publish_candidate( WP_Post $post, string $objec
 		do_action( 'axismundi_act_post_create_failed', $result, $post );
 	}
 }
-add_action( 'axismundi_op_object_publish_candidate', 'axismundi_act_on_object_publish_candidate', 10, 3 );
+add_action( 'axismundi_op_object_publish_candidate', 'axismundi_act_on_object_publish_candidate', 10, 4 );
 
 /** Withdraw an Article when it leaves the published state. */
 function axismundi_act_transition_post_lifecycle( string $new_status, string $old_status, WP_Post $post ) : void {

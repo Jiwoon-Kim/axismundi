@@ -63,6 +63,7 @@ require_once __DIR__ . '/includes/publish-command.php';
 require_once __DIR__ . '/includes/editor-selection.php';
 require_once __DIR__ . '/includes/c2s.php';
 require_once __DIR__ . '/includes/post-lifecycle.php';
+require_once __DIR__ . '/includes/scheduled-publication.php';
 require_once __DIR__ . '/includes/local-social-ui.php';
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/admin.php';

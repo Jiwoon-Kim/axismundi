@@ -127,7 +127,7 @@ function axismundi_act_submit_c2s( int $principal_user_id, int $actor_identity_i
 
 	$result = 'Delete' === $operation
 		? axismundi_act_c2s_withdraw( $post, $object_uri, $principal_user_id, $actor_identity_id )
-		: axismundi_act_c2s_publish( $post, $object_uri, $principal_user_id, $actor_identity_id );
+		: axismundi_act_c2s_publish( $post, $object_uri, $principal_user_id, $actor_identity_id, (string) ( $context['intent_uuid'] ?? '' ) );
 
 	/**
 	 * Fires after one local submission has been decided.
@@ -143,7 +143,7 @@ function axismundi_act_submit_c2s( int $principal_user_id, int $actor_identity_i
 }
 
 /** Record the Create one publishable post earns, under the identity the command chose. */
-function axismundi_act_c2s_publish( WP_Post $post, string $object_uri, int $principal_user_id, int $actor_identity_id ) {
+function axismundi_act_c2s_publish( WP_Post $post, string $object_uri, int $principal_user_id, int $actor_identity_id, string $intent_uuid = '' ) {
 	$actor = axismundi_act_c2s_resolve_actor( $principal_user_id, $actor_identity_id );
 	if ( is_wp_error( $actor ) ) {
 		return $actor;
@@ -166,7 +166,12 @@ function axismundi_act_c2s_publish( WP_Post $post, string $object_uri, int $prin
 		return new WP_Error( 'ax_act_c2s_attribution', __( 'This object is already attributed to another Actor.', 'axismundi-activities' ) );
 	}
 
-	return axismundi_act_record_post_create( $post, $object_uri, $actor->get_uri() );
+	$intent = '' !== $intent_uuid ? axismundi_act_pending_intent( $post->ID ) : null;
+	if ( '' !== $intent_uuid && ( ! $intent || $intent['intent_uuid'] !== $intent_uuid || 'pending' !== $intent['state']
+		|| (int) $intent['principal_user_id'] !== $principal_user_id || (int) $intent['actor_identity_id'] !== $actor_identity_id ) ) {
+		return new WP_Error( 'ax_act_pending_changed', 'The scheduled publication intent changed.' );
+	}
+	return axismundi_act_record_post_create( $post, $object_uri, $actor->get_uri(), $intent );
 }
 
 /**

@@ -207,3 +207,24 @@ authorized fetch         요구가 없다. 구현하지 않는다.
 projection @context      OP 쪽 작업이다. open-items 의
                          "Actor Projection Emits Undeclared Extension Terms" 참조.
 ```
+
+## 순서 — Account 작업과 같이 간다 (2026-10-27)
+
+오너 결정. V1·V3 를 따로 돌리지 않고 Account 쪽 작업(축 마이그레이션 · AddressBook ·
+accountCapabilities)과 한 묶음으로 본다.
+
+이유는 겹침이다. `actor_scope` 는 `is_managed()` 25곳과 같은 사실을 들고 있고, 그
+25곳은 축 마이그레이션과 principal 세대교체가 이미 만지는 자리다. 따로 하면 같은 파일을
+두 번 옮긴다.
+
+**브리프의 모집단 숫자가 낡았다. 착수 전에 다시 잴 것.**
+
+```txt
+작성 시점        internal 78 행
+2026-10-27 실측  internal 1,279 · public 1,233 · tombstone 775 · disabled 1
+                 actor_scope  user 599 · managed 208 · site 1 · NULL 274
+```
+
+internal 이 78 에서 1,279 로 늘었다. 감사 픽스처가 만들어 온 것으로 보이며, 이행 대상이
+대부분 **테스트 잔여물**일 가능성이 높다. V1 을 "78 행을 public 으로" 로 적어 둔 계획은
+그대로 쓸 수 없다 -- 살아 있는 행과 픽스처 잔여물을 먼저 가른 뒤에 이행 범위를 정한다.

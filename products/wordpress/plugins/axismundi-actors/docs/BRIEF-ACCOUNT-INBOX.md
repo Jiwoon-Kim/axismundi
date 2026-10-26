@@ -43,7 +43,7 @@ Principal 등록이 HTTP 요청자의 인증을 대신하지 않는다. 계정 �
 | S8 activity view | Account 범위 Activity 뷰·query·changes·읽음 상태. AP 문서와 분리. **mailbox 아님** | 대기 |
 | S11 state | Account 단위 변경 알림 경로. S8 의 선결 | 대기 |
 | S9 instance | shared Inbox 및 Application Actor 소유권 이관 | 대기 |
-| S10 acting-actor | 요청의 Account 선택 운반·검증. 기본 선호와 현재 선택 분리. **`axismundi_actors_get_for_user()` 단수 가정 폐기, production 27 파일**. 세 표면(WP REST / JMAP / AP C2S)이 공유할 인증·선택·인가 경계 | 대기 |
+| S10 acting-actor | 요청의 Account 선택 운반·검증. 기본 선호와 현재 선택 분리. **`axismundi_actors_get_for_user()` 단수 가정 폐기, production 27 파일**. 세 표면(WP REST / JMAP / AP C2S)이 공유할 인증·선택·인가 경계 | 선택 커널·전환 UI·로그인 기본값 완료. C3 예약 발행(`da70fb6`)·principal 세대교체(`4f327f9`) 검증 완료. **단수 가정 폐기는 진행 중** — [축 마이그레이션](BRIEF-ACTOR-AXIS-MIGRATION.md), 첫 B 완료(`4a9cab3`) |
 
 **S5 재검토 (2026-10-25):** 현재 `account_is_personal()`은 인증 User와
 `personal_owner_user_id`의 일치 및 유효한 owner 관계를 함께 검사한다. 개인 귀속 사실은

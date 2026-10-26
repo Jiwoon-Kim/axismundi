@@ -42,12 +42,11 @@ function axismundi_cal_event_acting_actor_identity( int $post_id ) : int {
 /**
  * The Actor one Event was published by.
  *
- * Falls back to the account that wrote it, which is what this plugin derived before there was
- * anywhere to record a choice. The fallback is for rows written then -- not a second way of
- * answering the question, which is why it is here and not in every caller.
+ * Missing or unavailable recorded identities stay unattributed. Editing responsibility and the
+ * current selection cannot recover a historical publishing identity.
  *
  * @param int $post_id Event post ID.
- * @return string Actor URI, or '' when the author has no Actor either.
+ * @return string Actor URI, or '' when no recorded Actor can be resolved.
  */
 function axismundi_cal_event_acting_actor_uri( int $post_id ) : string {
 	$identity_id = axismundi_cal_event_acting_actor_identity( $post_id );
@@ -57,25 +56,7 @@ function axismundi_cal_event_acting_actor_uri( int $post_id ) : string {
 			return (string) $actor->get_uri();
 		}
 	}
-	return axismundi_cal_author_person_actor_uri( $post_id );
-}
-
-/**
- * The Person Actor of the account that wrote an Event.
- *
- * What "whose Event is this" used to be derived from, kept as the fallback for Events written before
- * the choice was recorded and as the default for somebody who has never made one.
- *
- * @param int $post_id Event post ID.
- * @return string
- */
-function axismundi_cal_author_person_actor_uri( int $post_id ) : string {
-	$author = (int) get_post_field( 'post_author', $post_id );
-	if ( $author <= 0 || ! function_exists( 'axismundi_actors_get_for_user' ) ) {
-		return '';
-	}
-	$actor = axismundi_actors_get_for_user( $author );
-	return $actor instanceof Axismundi_Actor ? (string) $actor->get_uri() : '';
+	return '';
 }
 
 /**
@@ -110,6 +91,9 @@ function axismundi_cal_authoring_actor_uri( int $post_id = 0 ) : string {
 		$stored = axismundi_cal_event_acting_actor_uri( $post_id );
 		if ( '' !== $stored ) {
 			return $stored;
+		}
+		if ( is_array( axismundi_cal_event_get( $post_id ) ) ) {
+			return '';
 		}
 		// An Event whose author has no Actor has no answer, and inventing the saver's own would file
 		// somebody else's Event on their calendar. The caller refuses the write instead.
@@ -146,7 +130,7 @@ function axismundi_cal_authoring_actor_uri( int $post_id = 0 ) : string {
 function axismundi_cal_resolve_event_acting_actor( int $post_id, array $fields, ?array $existing ) {
 	$stored = (int) ( $existing['acting_actor_identity_id'] ?? 0 );
 	if ( ! array_key_exists( 'acting_actor_identity_id', $fields ) ) {
-		if ( $stored > 0 ) {
+		if ( is_array( $existing ) ) {
 			return $stored;
 		}
 		/*
@@ -161,13 +145,6 @@ function axismundi_cal_resolve_event_acting_actor( int $post_id, array $fields, 
 			if ( $default > 0 ) {
 				return $default;
 			}
-		}
-		// The author's own Person, which is what this plugin derived before there was anywhere to record
-		// a choice -- and still the honest answer for a writer who has never made one.
-		$fallback = axismundi_cal_author_person_actor_uri( $post_id );
-		if ( '' !== $fallback && function_exists( 'axismundi_actors_get_by_uri' ) ) {
-			$actor = axismundi_actors_get_by_uri( $fallback );
-			return $actor instanceof Axismundi_Actor ? (int) $actor->get_identity_id() : 0;
 		}
 		return 0;
 	}
@@ -187,18 +164,15 @@ function axismundi_cal_resolve_event_acting_actor( int $post_id, array $fields, 
 }
 
 /**
- * Record, for Events written before there was anywhere to record it, the Actor this plugin was
- * deriving anyway.
- *
- * A migration that changed who an Event is attributed to would be rewriting history; this one writes
- * down the answer that was already being computed, so nothing observable changes and the derivation
- * stops being consulted.
+ * Recover missing Event attribution only from an already-recorded Create. A WordPress author is
+ * not evidence of which Account published an Event; rows without that evidence remain unknown.
  *
  * @return int Rows filled.
  */
 function axismundi_cal_backfill_event_acting_actors() : int {
 	global $wpdb;
-	if ( ! axismundi_cal_ready() || ! function_exists( 'axismundi_actors_get_for_user' ) ) {
+	if ( ! axismundi_cal_ready() || ! function_exists( 'axismundi_act_get_object_attribution' )
+		|| ! function_exists( 'axismundi_cal_event_object_uri' ) || ! function_exists( 'axismundi_actors_get_by_uri' ) ) {
 		return 0;
 	}
 	$table = axismundi_cal_events_table();
@@ -206,14 +180,20 @@ function axismundi_cal_backfill_event_acting_actors() : int {
 	$ids = (array) $wpdb->get_col( "SELECT post_id FROM {$table} WHERE acting_actor_identity_id = 0" );
 	$filled = 0;
 	foreach ( $ids as $post_id ) {
-		$author = (int) get_post_field( 'post_author', (int) $post_id );
-		$actor  = $author > 0 ? axismundi_actors_get_for_user( $author ) : null;
-		if ( ! $actor instanceof Axismundi_Actor ) {
+		$post = get_post( (int) $post_id );
+		if ( ! $post instanceof WP_Post || AXISMUNDI_CAL_EVENT_POST_TYPE !== $post->post_type ) {
+			continue;
+		}
+		$uri = axismundi_act_get_object_attribution( axismundi_cal_event_object_uri( $post ) );
+		$actor = '' !== $uri ? axismundi_actors_get_by_uri( $uri ) : null;
+		if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() ) {
 			continue;
 		}
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-		$wpdb->update( $table, array( 'acting_actor_identity_id' => $actor->get_identity_id() ), array( 'post_id' => (int) $post_id ), array( '%d' ), array( '%d' ) );
-		++$filled;
+		if ( 1 === $wpdb->update( $table, array( 'acting_actor_identity_id' => $actor->get_identity_id() ),
+			array( 'post_id' => (int) $post_id, 'acting_actor_identity_id' => 0 ), array( '%d' ), array( '%d', '%d' ) ) ) {
+			++$filled;
+		}
 	}
 	return $filled;
 }

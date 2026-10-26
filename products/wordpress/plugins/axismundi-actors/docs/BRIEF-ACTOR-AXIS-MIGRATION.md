@@ -199,6 +199,22 @@ Actor Profile 네 곳은 위 분류에서 일부러 뺐다. 화면의 축을 바
 `actors/tests/audit-principal-fixture-cleanup.php`는 이 감사도 별도 프로세스로 두 번 실행해
 전체 principal 행의 내용이 보존되는지 비교한다.
 
+### B 첫 구현 — Calendar 저장 귀속 (2026-10-26)
+
+- `event_acting_actor_uri()`는 저장된 identity만 읽는다. 없거나 해소할 수 없으면 빈 값이다.
+  `post_author`의 Person과 현재 선택을 대체값으로 사용하지 않는다.
+- 이미 envelope가 있는 Event의 귀속이 0이면, 일반 편집과 calendar filing helper도 그
+  미상 상태를 보존한다. 명시적 Actor 변경의 기존 인가 경로는 유지한다.
+- `backfill_event_acting_actors()`는 해당 Object의 원장 Create로 확인되는 로컬 Actor만
+  복구한다. `acting_actor_identity_id = 0` 조건으로 갱신해 기존 저장값을 덮어쓰지 않는다.
+  과거 추론 백필이 이미 채운 값의 재판정·삭제는 하지 않는다.
+- `calendar/tests/audit-event-attribution-axis.php`: 저장 Organization과 WordPress 저자
+  Person의 분리, 미상 값 보존, 원장 없는 백필 금지, Create 기반 복구·재실행을 검사한다.
+  `audit-event-attribution-mutations.php`의 `AX_EVENT_AXIS_MUTATION=read|backfill`은
+  production 파일을 수정하지 않고 User 파생을 되넣어 각각의 단언이 잡는지 확인한다.
+- Calendar의 새 작성 주체 선택(A), 다른 B 호출부, C 목록, Forum 정책 정리와 Actor
+  Profile 화면은 아직 완료하지 않았다. Calendar의 컨테이너·JMAP·URL 개편도 포함하지 않는다.
+
 ```txt
 0  판정 확정    codex가 39곳 원문으로 A/B/C/D/E를 확정하고, 이 표와 다른 곳을 보고한다
                 위 ✔ 4곳 외에는 전부 재확인 대상이다

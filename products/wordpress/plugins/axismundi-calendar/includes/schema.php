@@ -893,9 +893,8 @@ function axismundi_cal_install_schema() : bool {
 	 */
 	axismundi_cal_backfill_actor_calendars();
 	/*
-	 * Events written before there was a column for it, filled with the Actor this plugin was already
-	 * deriving from the author. Nothing observable changes: the derivation is written down so that it
-	 * stops being consulted, rather than a different answer being computed for old rows.
+	 * Missing attribution is recoverable only when a Create already records it. Never fill an Event
+	 * from post_author: the WordPress editor and the publishing Account are different facts.
 	 */
 	axismundi_cal_backfill_event_acting_actors();
 	/*

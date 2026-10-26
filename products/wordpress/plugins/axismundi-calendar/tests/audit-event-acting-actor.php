@@ -152,22 +152,20 @@ try {
 	// -- Events written before the column existed ------------------------------------------------------------
 
 	/*
-	 * The migration writes down the answer that was already being derived, so an old Event keeps the
-	 * attribution it had rather than acquiring a new one.
+	 * A missing stored identity is unknown. Neither reading nor migration may guess it from a User.
 	 */
 	global $wpdb;
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- simulating a pre-migration row.
 	$wpdb->update( axismundi_cal_events_table(), array( 'acting_actor_identity_id' => 0 ), array( 'post_id' => $ax_ea_mine ), array( '%d' ), array( '%d' ) );
 	ax_ea_assert(
 		$ax_aa_results,
-		'an Event with nothing recorded still answers with the Actor it was always attributed to',
-		(string) $ax_ea_person->get_uri() === axismundi_cal_event_acting_actor_uri( $ax_ea_mine )
+		'an Event with nothing recorded does not infer its Actor from the WordPress author',
+		'' === axismundi_cal_event_acting_actor_uri( $ax_ea_mine )
 	);
 	ax_ea_assert(
 		$ax_aa_results,
-		'and the migration writes that same answer down rather than computing a different one',
-		axismundi_cal_backfill_event_acting_actors() >= 1
-			&& $ax_ea_person->get_identity_id() === axismundi_cal_event_acting_actor_identity( $ax_ea_mine )
+		'a missing identity with no recorded Create remains unknown',
+		0 === axismundi_cal_event_acting_actor_identity( $ax_ea_mine )
 	);
 } finally {
 	wp_set_current_user( 0 );

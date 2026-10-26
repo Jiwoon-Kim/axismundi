@@ -16,6 +16,7 @@ $snapshot = static function () use ( $wpdb ) : array {
 	return $rows;
 };
 $audits = array(
+	'axismundi-calendar/tests/audit-event-attribution-axis.php',
 	'axismundi-activities/tests/audit-immediate-publication.php',
 	'axismundi-activities/tests/audit-post-create.php',
 	'axismundi-activities/tests/audit-audience.php',

@@ -310,3 +310,35 @@ FEP-400e   "Publicly-appendable ActivityPub collections"
 이 세션에서 같은 종류의 추론으로 세 번 틀렸다 -- 와이어 타입으로 저장 소유를 추론(2회),
 파생 여부로 컬렉션 자격을 추론(1회). **표현 형식은 소유·자격·가시성을 결정하지 않는다.**
 각각 따로 측정하거나 결정해야 한다.
+
+### 결정 — 광고 방식은 컬렉션마다 다르다 (2026-10-26)
+
+`streams` 는 bookmark 와 다른 것이고, 공개 컬렉션을 알리는 **표준 자리**다.
+
+```txt
+AP §4.1   streams 는 MAY. "A list of supplementary Collections which may be of interest."
+          타입도 이름 규약도 접근 제어 규칙도 없다
+Primer    "not widely implemented" 이고 클라이언트가 용도로 걸러낼 수 없다 --
+          "a client cannot easily pick out only contact lists or only photo albums"
+          권고: 구체 컬렉션은 **확장 속성**으로 노출하고, 확장을 모르는 클라이언트를 위해
+          streams 에도 넣어도 된다. 클라이언트는 확장 속성으로 질의하고 streams 는 수동 탐색용.
+          name 이나 항목 type 으로 추측하는 것은 "inexact and less preferable"
+```
+
+즉 `toot:featured` 가 그 **확장 속성** 방식이고 `streams` 는 그 위의 **발견 목록**이다.
+경쟁이 아니라 층이 다르다. 그래서 컬렉션마다 따로 정한다.
+
+```txt
+Mastodon featured 지원   마스토돈 방식을 따른다 -- toot:featured 확장 속성.
+                         streams 에 넣지 않는다 (마스토돈도 넣지 않는다).
+                         상호운용이 목적이므로 그쪽 모양을 그대로 빌린다
+미디어 라이브러리 앨범    streams 를 쓴다. Primer 가 든 예시가 바로 앨범이고,
+                         우리가 정의하는 새 컬렉션이라 따라야 할 기존 확장이 없다
+비공개 큐레이션          둘 중 어디에도 올리지 않는다.
+  bookmark · 저장한 장소  streams 에 올리는 순간 **존재 자체가 공개**된다. 컬렉션 내용이
+                         권한으로 필터링되더라도 id 가 프로필에 박히면 "이 사람에게 북마크
+                         컬렉션이 있다" 는 사실은 숨길 수 없다
+```
+
+Primer 가 든 예시가 **앨범과 연락처 목록**이라는 점도 기록해 둔다 -- 미디어 컬렉션과
+저장한 장소를 같이 보자는 판단이 표준 쪽에도 같은 모양으로 있다.

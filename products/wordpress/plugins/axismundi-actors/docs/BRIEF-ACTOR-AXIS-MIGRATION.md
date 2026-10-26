@@ -207,6 +207,10 @@ B가 먼저인 이유는 두 가지다. 과거 기록의 저자가 선택에 따
 ## 선행·동시 작업과의 충돌
 
 ```txt
+principal 세대교체  이 작업보다 앞선다. `BRIEF-PRINCIPAL-GENERATION.md`
+                  forum/moderators.php:196 의 get_for_user($manager['user_id']) 는
+                  local_account principal 이 쓰이면 사라진다. 먼저 하지 않으면 같은
+                  자리를 두 번 옮긴다. forum 의 Person 8곳·managed 9곳도 같은 영역이다
 C3 예약 발행      같은 B 영역을 만진다. 예약 발행이 Account를 얼려 저장하는 자리가
                   곧 B가 읽을 자리다. 두 작업이 같은 컬럼을 서로 모르게 정하지 않도록
                   C3를 먼저 하거나, 저장 위치를 이 브리프 1단계에서 먼저 못박는다

@@ -206,3 +206,107 @@ outbox 가 떨어뜨리는 공개 local 행   0 건
        실행: wp eval-file wp-content/plugins/axismundi-activities/tests/audit-direction-boundary.php
 검증   이행할 때는 동작이 바뀌지 않아야 한다. outbox·피드를 이행 전후 전수 대조한다
 ```
+
+## 큐레이션 컬렉션 — 확정된 것과 열린 것 (2026-10-26)
+
+**지금 설계에 들어가지 않는다.** FEP-400e · 지도 서비스 API · 미디어 컬렉션 · 저장한 장소를
+함께 봐야 하는 주제다. 여기서는 다시 세우지 않아도 되도록 **확정된 사실과 열린 결정만** 남긴다.
+
+### 확정 — 컬렉션 자격을 가르는 축은 파생이 아니라 공개 의도다
+
+처음에 "파생할 Activity 가 없으면 AP 컬렉션이 아니다" 로 적었는데 **틀렸다.**
+`toot:featured` · `toot:featuredTags` 가 반례다.
+
+```txt
+AP 정의 컬렉션   inbox · outbox (MUST) · following · followers (SHOULD)
+                 liked · likes · shares (MAY)
+                 bookmarks / favourites 는 정의가 없다
+                 전부 "filtered by the authenticated user's privileges"
+toot:featured    actor 에 붙는 Collection. "statuses that are always featured at the
+                 top of people's profiles". Add/Remove 가 "pinned posts and featured
+                 collections" 를 관리한다
+toot:featuredTags  actor 에 붙는 Collection of Hashtag. 유지 활동이 명시되지도 않았다
+```
+
+즉 Activity 에서 파생되지 않는 큐레이션 컬렉션이 이미 연합되고 있다. 축을 고친다.
+
+```txt
+파생 여부   컬렉션 자격이 아니라 **갱신 방식**을 정한다
+              집계형     Activity 원장에서 투영          likes · liked · shares
+              큐레이션형 명시적 멤버십 저장소            featured · bookmark · 저장한 장소
+공개 의도   **소유 층**을 정한다
+              공개 큐레이션   actor 프로필에 id 를 광고한다        Actor 층
+              비공개 큐레이션 광고하지 않는다                      Account 층 (mailbox)
+```
+
+이것은 위 "identity 행 참조 vs URI 참조" 시험과 같은 결론을 낸다. featured 는
+`(actor_uri, object_uri)` 이고 bookmark 는 `(account, object_uri)` 다.
+
+### 확정 — calendars 컬렉션은 만들지 않는다. 이미 있다
+
+```txt
+axismundi-calendar/includes/calendar-list.php
+  "The CalendarList: which Actor stands in what relation to which Calendar."
+  (calendar_id, actor_uri) 멱등 + selected · hidden · summary_override · color
+  "CalendarList entries are view state, not authorization"
+```
+
+기록된 결정도 있다 -- Google 모델 3층(authority / ACL / CalendarList), 수락 = 목록 추가
+≠ 권한 부여. 새 calendars 컬렉션을 만들면 권위가 둘이 된다. **역으로 CalendarList 가
+비공개 큐레이션 컬렉션의 선례다** -- 멤버십 + 개인 뷰 상태. bookmark 설계는 이것을 참조한다.
+
+### 확정 — "맞팔로우만" 은 와이어에 주소가 없다
+
+```txt
+AP 로 주소 지정 가능   Public · followers 컬렉션 URI · 개별 Actor URI
+mutuals               대응하는 표준 주소가 없다
+Mastodon 가시성        public · unlisted · followers · direct -- mutuals 없음
+```
+
+그러므로 둘 중 하나다.
+
+```txt
+가  로컬 전용 가시성. 연합하지 않는다
+나  전달 시점에 명시적 수신자 목록으로 펼친다
+    → 맞팔 명단이 to/cc 에 노출된다. 명단이 비공개인 사람에게는 그 자체가 사고다
+    → 팔로우가 바뀌면 과거 객체의 수신자와 현재 집합이 어긋난다
+```
+
+비공개 큐레이션에만 거는 가시성이라면 (가) 로 충분하다. 공개 컬렉션에도 걸 작정이면
+명단 유출을 정면으로 결정해야 한다.
+
+### 열린 결정
+
+```txt
+1  중첩 모양          단일 부모 트리(JMAP Mailbox 의 parentId) vs 다중 라벨
+                      mailbox 모양을 빌리기로 했으므로 트리가 일관된다
+2  가시성 두 겹        컬렉션 가시성과 멤버 가시성은 다르다. 객체는 이미 자기 audience 를
+                      가진다. 공개 컬렉션에 비공개 멤버가 있으면 읽는 쪽은 열 수 없는 항목을
+                      본다. 교집합을 언제 계산하고, 접근 불가 항목을 숨길지 자리만 남길지
+3  mutuals            위 (가)/(나)
+4  Place 의 두 자격    object 의 location 으로 인라인되면 연합된다. "내가 저장한 장소 목록"
+                      은 연합 대상이 아니다. 같은 Place 가 두 층에 다른 자격으로 나타난다
+5  Relationship       subject/relationship/object 를 가진 **object**(Activity 아님).
+                      Follow 에서 파생할 수도, object 가 Place 면 집/직장도 표현한다.
+                      JSContact 에도 relation 이 있다 -- 같은 사실의 두 표현이므로
+                      공통 원장에서 JSContact·AP 양쪽으로 투영하는 안이 유력
+6  소유 위치          Place/Relationship 원장을 geodata 에 둘지 actors 에 둘지. 미측정
+```
+
+### 함께 볼 입력
+
+```txt
+FEP-400e   "Publicly-appendable ActivityPub collections"
+           남이 소유한 컬렉션에 객체가 속한다고 표시하는 방법. 소유자가 완전한 통제를 유지한다
+           "A publicly-appendable collection SHOULD have a valid and globally-unique id"
+           객체는 target 에 축약된 컬렉션 객체를 넣고, Add 는 소유자의 팔로워 전체에 보내길 권고
+           소유자는 어떤 객체든 삭제할 수 있고, 같은 소유자의 컬렉션 사이에서만 Move 가 가능하다
+지도 API   장소 저장 UX 의 선례
+미디어 컬렉션 · 저장한 장소   같은 모양의 다른 사례. 따로 설계하면 세 벌이 된다
+```
+
+### 방법론 메모
+
+이 세션에서 같은 종류의 추론으로 세 번 틀렸다 -- 와이어 타입으로 저장 소유를 추론(2회),
+파생 여부로 컬렉션 자격을 추론(1회). **표현 형식은 소유·자격·가시성을 결정하지 않는다.**
+각각 따로 측정하거나 결정해야 한다.

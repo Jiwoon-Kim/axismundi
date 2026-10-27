@@ -1,13 +1,8 @@
 <?php
 /**
- * The generic identity registry API — `wp_ax_identities` for NON-actor kinds.
- *
- * Actors owns and creates the registry table, but it does not own the objects that
- * reuse it. A shared folder, a collection, or a place is created by its owning plugin
- * (Media Library, geodata), which must reach the registry **only through this API and
- * never with direct SQL** (docs/DATA-MODEL.md §1). Keeping the generic layer in its own
- * file is what makes the documented future extraction into a shared `axismundi-core`
- * a file move rather than an untangling of actor-profile concerns.
+ * Historical identity lookup API, retained while the Actor body is consolidated.
+ * Non-Actor allocation is retired: Objects belong to OP, and User folders are
+ * taxonomy terms. Actor collections will have their own storage, not this parent.
  *
  * Actor identities are deliberately NOT creatable here: an identity row with
  * `object_kind = 'actor'` and no `wp_ax_actors` row is an orphan that no actor lookup
@@ -20,15 +15,12 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Non-actor identity kinds this API may create.
- *
- * Mirrors the kinds reserved in DATA-MODEL.md §2. `actor` is absent by design (see the
- * file docblock), so the allowlist doubles as the orphan guard.
+ * No non-Actor kinds may be allocated in the historical Actor parent table.
  *
  * @return array<int,string>
  */
 function axismundi_actors_identity_kinds() : array {
-	return array( 'object', 'collection', 'folder', 'media', 'activity', 'place' );
+	return array();
 }
 
 /**
@@ -132,118 +124,13 @@ function axismundi_actors_audit_identity_uri_hashes() : array {
 }
 
 /**
- * Register one non-actor identity.
+ * Compatibility rejection for the retired shared allocator.
  *
- * A local identity normally uses a `uri_template` with a `{uuid}` placeholder. Some
- * authoritative local sources, notably WordPress posts, already own their stable URI
- * space; they may supply `canonical_uri` directly and still receive a registry UUID.
- * A remote identity always supplies its source `canonical_uri` directly.
- *
- * @param array<string,mixed> $args {
- *     @type string $object_kind   Required; one of axismundi_actors_identity_kinds().
- *     @type string $origin        local|remote. Default local.
- *     @type string $status        public|disabled. Default public — record
- *                                 existence and public exposure are separate steps
- *                                 (SPEC.md §2.6).
- *     @type string $uri_template  Local only; must contain the literal `{uuid}` when
- *                                 canonical_uri is absent.
- *     @type string $canonical_uri Required for remote identities; optional stable URI
- *                                 for local identities whose source owns its URI.
- * }
- * @return array<string,mixed>|WP_Error The registered identity, or an error.
+ * @param array<string,mixed> $args Historical registration arguments.
+ * @return WP_Error Always: registration belongs to the owning domain.
  */
 function axismundi_actors_register_identity( array $args ) {
-	global $wpdb;
-
-	$kind = (string) ( $args['object_kind'] ?? '' );
-	if ( ! in_array( $kind, axismundi_actors_identity_kinds(), true ) ) {
-		return new WP_Error(
-			'ax_actors_identity_kind',
-			__( 'Unknown identity kind. Actor identities are created by the actor API, not the registry.', 'axismundi-actors' )
-		);
-	}
-
-	$origin = (string) ( $args['origin'] ?? 'local' );
-	if ( ! in_array( $origin, array( 'local', 'remote' ), true ) ) {
-		return new WP_Error( 'ax_actors_identity_origin', __( 'Identity origin must be local or remote.', 'axismundi-actors' ) );
-	}
-
-	$status = (string) ( $args['status'] ?? 'public' );
-	// A tombstone is an end state reached by axismundi_actors_set_status(), never a
-	// birth state — a record cannot start out as the marker for its own deletion.
-	if ( ! in_array( $status, array( 'public', 'disabled' ), true ) ) {
-		return new WP_Error( 'ax_actors_identity_status', __( 'Identity status must be public or disabled.', 'axismundi-actors' ) );
-	}
-
-	$uuid = wp_generate_uuid4();
-
-	if ( 'local' === $origin ) {
-		$canonical_uri = trim( (string) ( $args['canonical_uri'] ?? '' ) );
-		$template      = (string) ( $args['uri_template'] ?? '' );
-		if ( '' !== $canonical_uri ) {
-			$uri = $canonical_uri;
-		} elseif ( ! str_contains( $template, '{uuid}' ) ) {
-			return new WP_Error(
-				'ax_actors_identity_template',
-				__( 'A local identity needs a canonical_uri or a uri_template containing {uuid}.', 'axismundi-actors' )
-			);
-		} else {
-			$uri = str_replace( '{uuid}', $uuid, $template );
-		}
-	} else {
-		// Shape only — no DNS resolution. Object observations accept HTTP and HTTPS under
-		// the shared AS2 URI contract, while endpoint identities retain their HTTPS-only
-		// contract. The SSRF gate stays at the fetch site.
-		$normalized = 'object' === $kind && function_exists( 'axismundi_as2_normalize_uri' )
-			? axismundi_as2_normalize_uri( $args['canonical_uri'] ?? '' )
-			: null;
-		$uri = is_array( $normalized ) && ! empty( $normalized['resolvable'] )
-			? (string) $normalized['uri']
-			: axismundi_actors_normalize_endpoint_uri( $args['canonical_uri'] ?? '' );
-		if ( '' === $uri ) {
-			return new WP_Error( 'ax_actors_identity_uri', __( 'A remote identity needs a canonical HTTP(S) URI with a host.', 'axismundi-actors' ) );
-		}
-	}
-
-	$existing = axismundi_actors_get_identity_by_uri( $uri );
-	if ( null !== $existing ) {
-		return new WP_Error(
-			'ax_actors_identity_exists',
-			__( 'That canonical URI is already registered.', 'axismundi-actors' ),
-			array( 'identity' => $existing )
-		);
-	}
-
-	$now = current_time( 'mysql', true );
-	$ok  = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom identity table.
-		axismundi_actors_identities_table(),
-		array(
-			'uuid'               => $uuid,
-			'canonical_uri'      => $uri,
-			'canonical_uri_hash' => hash( 'sha256', $uri ),
-			'object_kind'        => $kind,
-			'origin'             => $origin,
-			'status'             => $status,
-			'created_at'         => $now,
-			'updated_at'         => $now,
-		),
-		array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
-	);
-	if ( false === $ok ) {
-		return new WP_Error( 'ax_actors_identity_insert', __( 'Could not register the identity.', 'axismundi-actors' ) );
-	}
-
-	$identity = axismundi_actors_get_identity( (int) $wpdb->insert_id );
-
-	/**
-	 * Fires after one non-actor identity is registered.
-	 *
-	 * @since 0.0.31
-	 * @param array<string,mixed> $identity The registered identity.
-	 */
-	do_action( 'axismundi_actors_identity_registered', $identity );
-
-	return $identity;
+	return new WP_Error( 'ax_actors_identity_kind', __( 'The shared non-Actor registry is retired. Use the owning domain repository.', 'axismundi-actors' ) );
 }
 
 /**

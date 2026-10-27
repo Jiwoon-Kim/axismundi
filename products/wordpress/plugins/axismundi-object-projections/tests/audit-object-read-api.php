@@ -30,7 +30,7 @@ try {
 	} );
 	if ( null === axismundi_op_get_object_by_uri( $published['id'] ) ) {
 		ax_read_assert( 'an unregistered real local post URI is not guessed', ax_read_error( axismundi_op_read_object_jsonld( $published['id'] ), 'ax_op_object_read_not_found' ) );
-		$old_identity = axismundi_actors_get_identity_by_uri( $published['id'] );
+		$old_identity = axismundi_op_get_object_by_uri( $published['id'] );
 		$registered = axismundi_op_register_local_post_object( $post );
 		if ( ! is_array( $registered ) ) {
 			throw new RuntimeException( 'Could not register the local read fixture.' );
@@ -40,7 +40,7 @@ try {
 	$local = axismundi_op_read_object_jsonld( $published['id'] );
 	ax_read_assert( 'a registered local Article is readable by canonical URI', is_array( $local ) && 'Article' === $local['type'] );
 	if ( ! is_array( $local ) ) {
-		throw new RuntimeException( is_wp_error( $local ) ? $local->get_error_message() . ' ' . wp_json_encode( array( 'post' => $post->ID, 'uri' => $published['id'], 'identity' => axismundi_actors_get_identity_by_uri( $published['id'] ), 'object' => axismundi_op_get_object_by_uri( $published['id'] ) ) ) : 'Local read failed.' );
+		throw new RuntimeException( is_wp_error( $local ) ? $local->get_error_message() : 'Local read failed.' );
 	}
 	$payload = $published;
 	$payload['id'] = $uris[0];
@@ -75,7 +75,7 @@ try {
 			printf( "DIFF %s %s\n", $field, wp_json_encode( array( 'local' => $local[ $field ] ?? null, 'remote' => $remote[ $field ] ?? null ) ) );
 		}
 	}
-	$identity = axismundi_actors_get_identity_by_uri( $uris[0] );
+	$identity = axismundi_op_get_object_by_uri( $uris[0] );
 	ax_read_assert( 'integer input means registry identity id, not a WordPress post id', $remote === axismundi_op_read_object_jsonld( (int) $identity['identity_id'] ) );
 	ax_read_assert( 'opaque extensions survive verbatim without becoming structured content', ! array_key_exists( 'extensionProbe', $remote ) && false === ( $remote['axUninterpreted']['trusted'] ?? null ) && $payload['extensionProbe'] === ( $remote['axUninterpreted']['members']['extensionProbe'] ?? null ) );
 	$context = end( $remote['@context'] );
@@ -123,7 +123,7 @@ try {
 	$response = rest_do_request( $request );
 	ax_read_assert( 'the public REST route returns JSON-LD with a no-store cache boundary', 200 === $response->get_status() && 0 === strpos( $response->get_headers()['Content-Type'] ?? '', 'application/ld+json' ) && 'no-store' === ( $response->get_headers()['Cache-Control'] ?? '' ) );
 	$object = axismundi_op_get_object_by_uri( $uris[0] );
-	$wpdb->delete( axismundi_op_objects_table(), array( 'identity_id' => $object['identity_id'] ) );
+	$wpdb->delete( axismundi_op_objects_table(), array( 'id' => $object['id'] ) );
 	ax_read_assert( 'an existing cache URI without its registry row is not guessed', ax_read_error( axismundi_op_read_object_jsonld( $uris[0] ), 'ax_op_object_read_not_found' ) );
 	ax_read_assert( 'a wholly unknown URI is not found', ax_read_error( axismundi_op_read_object_jsonld( $base . '/absent' ), 'ax_op_object_read_not_found' ) );
 	$tombstone = axismundi_op_store_remote_object( array( 'id' => $uris[3], 'type' => 'Tombstone', 'content' => 'Old secret', 'oldExtension' => 'Old secret' ) );
@@ -135,17 +135,13 @@ try {
 } finally {
 	$GLOBALS['axismundi_op_object_assemblies'] = $assemblies;
 	if ( is_array( $local_fixture_identity ) ) {
-		$wpdb->delete( axismundi_op_objects_table(), array( 'identity_id' => $local_fixture_identity['id'] ) );
-		if ( $local_fixture_identity['created'] ) {
-			$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $local_fixture_identity['id'] ) );
-		}
+		$wpdb->delete( axismundi_op_objects_table(), array( 'id' => $local_fixture_identity['id'] ) );
 	}
 	foreach ( $uris as $uri ) {
 		axismundi_op_delete_remote_object( $uri );
-		$identity = axismundi_actors_get_identity_by_uri( $uri );
+		$identity = axismundi_op_get_object_by_uri( $uri );
 		if ( is_array( $identity ) ) {
-			$wpdb->delete( axismundi_op_objects_table(), array( 'identity_id' => $identity['identity_id'] ) );
-			$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $identity['identity_id'] ) );
+			$wpdb->delete( axismundi_op_objects_table(), array( 'id' => $identity['id'] ) );
 		}
 	}
 	remove_filter( 'pre_http_request', $deny_network, PHP_INT_MAX );

@@ -1,5 +1,11 @@
 # Session Account Projection
 
+2026-10-28 후속: [코어 런타임](IMPLEMENTATION-CORE-RUNTIME.md)에서 관리자 정책
+저장소와 공유 서비스를 연결했다. 실제 권한은 등록된 provider, 활성 Account 정책,
+현재 principal 및 provider 권한의 교집합이다. WordPress 전환 UI는 Actors로 이전했다.
+아래 초기 API 기록과 달리 production 엔진은 `authorize(accountId,user,capability,writes)`를
+메서드마다 호출하며 전체 Account의 `isReadOnly`만으로 개별 기능 쓰기를 허용하지 않는다.
+
 작성일: 2026-10-22. 상태: in-process 구현, HTTP 공개 없음.
 
 ## 공식 명세와 제품 정책

@@ -124,10 +124,9 @@ try {
 	}
 	foreach ( $uris as $uri ) {
 		axismundi_op_delete_remote_object( $uri );
-		$identity = axismundi_actors_get_identity_by_uri( $uri );
+		$identity = axismundi_op_get_object_by_uri( $uri );
 		if ( is_array( $identity ) ) {
-			$wpdb->delete( axismundi_op_objects_table(), array( 'identity_id' => $identity['identity_id'] ) );
-			$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $identity['identity_id'] ) );
+			$wpdb->delete( axismundi_op_objects_table(), array( 'id' => $identity['id'] ) );
 		}
 		foreach ( array( axismundi_op_tag_references_table(), axismundi_op_term_usage_table() ) as $table ) { $wpdb->delete( $table, array( 'source_uri_hash' => hash( 'sha256', $uri ) ) ); }
 	}

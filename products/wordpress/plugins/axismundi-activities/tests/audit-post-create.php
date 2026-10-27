@@ -257,8 +257,9 @@ try {
 	foreach ( array_unique( $ax_create_objects ) as $uri ) {
 		$wpdb->delete( axismundi_act_activities_table(), array( 'object_uri_hash' => hash( 'sha256', $uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 	}
-	foreach ( array_filter( $ax_create_posts, 'is_int' ) as $post_id ) {
+	foreach ( array_filter( array_merge( $ax_create_posts, array( $permanent_id ?? 0, $org_published_id ?? 0, $diverged_id ?? 0 ) ), static fn( $id ) => is_int( $id ) && $id > 0 ) as $post_id ) {
 		wp_delete_post( $post_id, true );
+		if ( function_exists( 'axismundi_op_objects_table' ) ) { $wpdb->delete( axismundi_op_objects_table(), array( 'source_owner' => 'wordpress-core', 'source_ref' => $post_id ) ); }
 	}
 	foreach ( array_unique( array_filter( $ax_create_identities ) ) as $identity_id ) {
 		$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $identity_id ) );

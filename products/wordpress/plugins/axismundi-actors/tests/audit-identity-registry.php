@@ -1,180 +1,20 @@
 <?php
-/**
- * Generic identity registry regression (dev-only; dist-excluded).
- *
- * Self-contained; `finally` cleanup of every row it creates; exit 0/1. Locks: actor
- * kinds are not creatable here (the orphan guard); a local URI carries its own UUID;
- * URI uniqueness; tombstone is not a birth state; UUID survives a URI rewrite; a remote
- * URI is never rewritten.
- *
- * @package AxismundiActors
- */
-
+/** Non-Actor allocation is no longer a service of Actors. Dev-only. */
 defined( 'ABSPATH' ) || exit( 1 );
-
-require_once dirname( __DIR__ ) . '/includes/repository.php';
-require_once dirname( __DIR__ ) . '/includes/identity-registry.php';
-
 global $wpdb;
-$ax_results  = array();
-$ax_identity_ids = array();
-
-/**
- * @param array  $results   Accumulator.
- * @param string $label     Assertion label.
- * @param bool   $condition Result.
- */
-function ax_identity_registry_assert( array &$results, string $label, bool $condition ) : void {
-	$results[] = $condition;
-	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
-	printf( "[%s] %s\n", $condition ? 'PASS' : 'FAIL', $label );
+$before = $wpdb->get_results( 'SELECT * FROM ' . axismundi_actors_identities_table() . ' ORDER BY id', ARRAY_A );
+$checks = 0;
+foreach ( array( 'actor', 'object', 'folder', 'collection', 'media', 'activity', 'place' ) as $kind ) {
+	$result = axismundi_actors_register_identity( array( 'object_kind' => $kind, 'uri_template' => home_url( '/retired-registry/{uuid}' ) ) );
+	if ( ! is_wp_error( $result ) ) { throw new RuntimeException( 'Shared allocation survived for ' . $kind ); }
+	++$checks;
 }
-
-try {
-	axismundi_actors_install();
-
-	// The orphan guard: an identity row claiming to be an actor with no wp_ax_actors row
-	// could never be hydrated by any actor lookup, so the registry refuses the kind.
-	$actor_attempt = axismundi_actors_register_identity(
-		array( 'object_kind' => 'actor', 'uri_template' => home_url( '/actors/{uuid}' ) )
-	);
-	ax_identity_registry_assert(
-		$ax_results,
-		'the registry refuses to create an actor identity',
-		is_wp_error( $actor_attempt ) && 'ax_actors_identity_kind' === $actor_attempt->get_error_code()
-	);
-
-	$unknown = axismundi_actors_register_identity( array( 'object_kind' => 'sandwich', 'uri_template' => home_url( '/x/{uuid}' ) ) );
-	ax_identity_registry_assert(
-		$ax_results,
-		'an unreserved kind is refused',
-		is_wp_error( $unknown ) && 'ax_actors_identity_kind' === $unknown->get_error_code()
-	);
-
-	$folder = axismundi_actors_register_identity(
-		array( 'object_kind' => 'folder', 'uri_template' => home_url( '/media/folders/{uuid}' ) )
-	);
-	if ( ! is_wp_error( $folder ) ) {
-		$ax_identity_ids[] = (int) $folder['identity_id'];
-	}
-	ax_identity_registry_assert(
-		$ax_results,
-		'a folder identity registers with its UUID embedded in its own canonical URI',
-		is_array( $folder )
-			&& 'folder' === $folder['object_kind']
-			&& 'local' === $folder['origin']
-			&& home_url( '/media/folders/' . $folder['uuid'] ) === $folder['canonical_uri']
-	);
-
-	// Record existence and public exposure are separate steps (SPEC §2.6).
-	ax_identity_registry_assert(
-		$ax_results,
-		'identity presence is independent of source readability',
-		is_array( $folder ) && 'public' === $folder['status']
-	);
-
-	$no_template = axismundi_actors_register_identity(
-		array( 'object_kind' => 'folder', 'uri_template' => home_url( '/media/folders/fixed' ) )
-	);
-	ax_identity_registry_assert(
-		$ax_results,
-		'a local identity without a {uuid} placeholder is refused',
-		is_wp_error( $no_template ) && 'ax_actors_identity_template' === $no_template->get_error_code()
-	);
-
-	$born_dead = axismundi_actors_register_identity(
-		array( 'object_kind' => 'folder', 'status' => 'tombstone', 'uri_template' => home_url( '/media/folders/{uuid}' ) )
-	);
-	ax_identity_registry_assert(
-		$ax_results,
-		'tombstone is an end state, not a birth state',
-		is_wp_error( $born_dead ) && 'ax_actors_identity_status' === $born_dead->get_error_code()
-	);
-
-	ax_identity_registry_assert(
-		$ax_results,
-		'an identity resolves identically by id, uuid, and canonical URI',
-		is_array( $folder )
-			&& axismundi_actors_get_identity( (int) $folder['identity_id'] ) === $folder
-			&& axismundi_actors_get_identity_by_uuid( $folder['uuid'] ) === $folder
-			&& axismundi_actors_get_identity_by_uri( $folder['canonical_uri'] ) === $folder
-	);
-	$hash_audit = axismundi_actors_audit_identity_uri_hashes();
-	ax_identity_registry_assert(
-		$ax_results,
-		'the identity audit accepts rows whose stored URI hash matches the stored URI',
-		(int) $hash_audit['checked'] >= count( $ax_identity_ids ) && 0 === (int) $hash_audit['mismatched']
-	);
-	if ( is_array( $folder ) ) {
-		$wpdb->update( axismundi_actors_identities_table(), array( 'canonical_uri_hash' => str_repeat( '0', 64 ) ), array( 'id' => (int) $folder['identity_id'] ), array( '%s' ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- deliberately corrupt one fixture row to prove the drift audit catches it.
-		$drift_audit = axismundi_actors_audit_identity_uri_hashes();
-		$wpdb->update( axismundi_actors_identities_table(), array( 'canonical_uri_hash' => hash( 'sha256', (string) $folder['canonical_uri'] ) ), array( 'id' => (int) $folder['identity_id'] ), array( '%s' ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- restore fixture identity before later URI-rewrite checks.
-		ax_identity_registry_assert(
-			$ax_results,
-			'the identity audit exposes a stored-hash mismatch instead of silently treating it as a lookup miss',
-			1 === (int) $drift_audit['mismatched']
-		);
-	}
-
-	$remote_uri = 'https://remote.example/media/folders/abc';
-	$remote     = axismundi_actors_register_identity(
-		array( 'object_kind' => 'folder', 'origin' => 'remote', 'status' => 'public', 'canonical_uri' => $remote_uri )
-	);
-	if ( ! is_wp_error( $remote ) ) {
-		$ax_identity_ids[] = (int) $remote['identity_id'];
-	}
-	ax_identity_registry_assert(
-		$ax_results,
-		'a remote identity keeps its source URI and still gets a local UUID record key',
-		is_array( $remote ) && $remote_uri === $remote['canonical_uri'] && '' !== $remote['uuid']
-	);
-
-	$dupe = axismundi_actors_register_identity(
-		array( 'object_kind' => 'collection', 'origin' => 'remote', 'canonical_uri' => $remote_uri )
-	);
-	ax_identity_registry_assert(
-		$ax_results,
-		'one canonical URI cannot be registered twice, even under another kind',
-		is_wp_error( $dupe ) && 'ax_actors_identity_exists' === $dupe->get_error_code()
-	);
-
-	// The UUID is the only immutable anchor: a domain move rewrites the URI around it.
-	$moved = is_array( $folder ) ? axismundi_actors_set_identity_uri( (int) $folder['identity_id'], 'https://moved.example/media/folders/' . $folder['uuid'] ) : false;
-	$after = is_array( $folder ) ? axismundi_actors_get_identity( (int) $folder['identity_id'] ) : null;
-	ax_identity_registry_assert(
-		$ax_results,
-		'a URI rewrite preserves the UUID and is resolvable at the new URI only',
-		true === $moved
-			&& is_array( $after )
-			&& $after['uuid'] === $folder['uuid']
-			&& 'https://moved.example/media/folders/' . $folder['uuid'] === $after['canonical_uri']
-			&& null === axismundi_actors_get_identity_by_uri( $folder['canonical_uri'] )
-	);
-
-	$remote_move = is_array( $remote ) ? axismundi_actors_set_identity_uri( (int) $remote['identity_id'], 'https://elsewhere.example/x' ) : false;
-	ax_identity_registry_assert(
-		$ax_results,
-		'a remote identity URI is its source of truth and cannot be rewritten',
-		is_wp_error( $remote_move ) && 'ax_actors_identity_remote' === $remote_move->get_error_code()
-	);
-
-	// set_status() is kind-agnostic and already owns the transition contract.
-	$tombstoned = is_array( $folder ) && axismundi_actors_set_status( (int) $folder['identity_id'], 'tombstone' );
-	$dead       = is_array( $folder ) ? axismundi_actors_get_identity( (int) $folder['identity_id'] ) : null;
-	ax_identity_registry_assert(
-		$ax_results,
-		'a folder identity tombstones through the shared status contract',
-		$tombstoned && is_array( $dead ) && 'tombstone' === $dead['status']
-	);
-} finally {
-	$ax_table = axismundi_actors_identities_table();
-	foreach ( $ax_identity_ids as $ax_id ) {
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
-		$wpdb->delete( $ax_table, array( 'id' => $ax_id ), array( '%d' ) );
-	}
+foreach ( $before as $row ) {
+	if ( 'actor' !== $row['object_kind'] ) { throw new RuntimeException( 'Non-Actor identity remains.' ); }
+	$identity = axismundi_actors_get_identity_by_uri( $row['canonical_uri'] );
+	if ( ! is_array( $identity ) || (int) $row['id'] !== $identity['identity_id'] ) { throw new RuntimeException( 'Actor lookup changed.' ); }
 }
-
-$ax_failed = count( array_filter( $ax_results, static fn( $r ) => ! $r ) );
-// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
-printf( "\n%d/%d passed\n", count( $ax_results ) - $ax_failed, count( $ax_results ) );
-exit( $ax_failed > 0 ? 1 : 0 );
+++ $checks;
+if ( $before !== $wpdb->get_results( 'SELECT * FROM ' . axismundi_actors_identities_table() . ' ORDER BY id', ARRAY_A ) ) { throw new RuntimeException( 'Read/rejection audit changed Actor rows.' ); }
+++ $checks;
+printf( "PASS: %d Actor-only registry checks\n", $checks );

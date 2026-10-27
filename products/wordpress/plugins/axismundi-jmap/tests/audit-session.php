@@ -114,7 +114,8 @@ try {
 	$registry->register_account_provider( $uri, (object) array( 'test' => true ), static function ( $actor, $user ) use ( &$enabled, $fixtures, $users ) {
 		return $enabled && $actor->get_identity_id() === $fixtures[2] ? new AccountCapability( (object) array( 'maxItems' => 10 ), $user === $users[0] ) : null;
 	}, 'test' );
-	$projector = new SessionProjector( $registry );
+	// This audit isolates provider projection; durable policy has its own audit.
+	$projector = new SessionProjector( $registry, static fn() => (object) array( 'enabled' => true, 'limits' => new stdClass() ) );
 	$reject( fn() => $registry->register_capability( 'https://example.test/late' ), 'Session freezes registration' );
 	$full = $projector->build( $users[0], $transport, $core );
 	$changed_transport = clone $transport;

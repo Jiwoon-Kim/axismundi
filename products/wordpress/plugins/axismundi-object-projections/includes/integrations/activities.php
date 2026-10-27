@@ -31,14 +31,14 @@ function axismundi_op_register_activity_question( array $question, Axismundi_Act
 	if ( '' === $uri ) {
 		return;
 	}
-	$identity = function_exists( 'axismundi_actors_get_identity_by_uri' ) ? axismundi_actors_get_identity_by_uri( $uri ) : null;
+	$source = function_exists( 'axismundi_act_get_question_by_uri' ) ? axismundi_act_get_question_by_uri( $uri ) : null;
 	axismundi_op_register_object(
 		array(
 			'canonical_uri'     => $uri,
 			'origin'            => 'inbound' === $activity->get_direction() ? 'remote' : 'local',
 			'source_owner'      => 'axismundi-activities',
 			'source_kind'       => 'question-ledger',
-			'source_ref'        => is_array( $identity ) ? (int) $identity['identity_id'] : null,
+			'source_ref'        => is_array( $source ) ? (int) $source['identity_id'] : null,
 			'as2_type'          => 'Question',
 			'attributed_to_uri' => (string) ( $question['author_uri'] ?? '' ),
 		)

@@ -17,6 +17,8 @@ $ax_q_activity_uris  = array();
 $ax_q_identity_ids   = array();
 $ax_q_remote_id      = 0;
 $ax_q_suffix         = strtolower( wp_generate_password( 8, false, false ) );
+global $wpdb;
+$ax_q_op_before = function_exists( 'axismundi_op_objects_table' ) ? $wpdb->get_results( 'SELECT * FROM ' . axismundi_op_objects_table() . ' ORDER BY id', ARRAY_A ) : null;
 
 function ax_q_assert( array &$results, string $label, bool $condition ) : void {
 	$results[] = $condition;
@@ -105,7 +107,7 @@ try {
 	}
 	ax_q_assert( $ax_q_results, 'Create(Question) registers a local Question identity and ordered zero tally projection', $created instanceof Axismundi_Activity && is_array( $question ) && 'oneOf' === $question['mode'] && array( 'Cats', 'Dogs' ) === $question['options'] && array( 0, 0 ) === $question['option_counts'] );
 	$question_object = function_exists( 'axismundi_op_get_object_by_uri' ) ? axismundi_op_get_object_by_uri( $question_uri ) : null;
-	ax_q_assert( $ax_q_results, 'the optional Object Projection adapter registers the Activities Question without taking ownership of its ledger', is_array( $question_object ) && 'axismundi-activities' === (string) $question_object['source_owner'] && 'question-ledger' === (string) $question_object['source_kind'] && 'Question' === (string) $question_object['as2_type'] && (int) ( $question['identity_id'] ?? 0 ) === (int) $question_object['identity_id'] );
+	ax_q_assert( $ax_q_results, 'the optional OP adapter references a separately keyed Activities Question', ! function_exists( 'axismundi_op_get_object_by_uri' ) || ( is_array( $question_object ) && 'axismundi-activities' === (string) $question_object['source_owner'] && 'question-ledger' === (string) $question_object['source_kind'] && 'Question' === (string) $question_object['as2_type'] && (int) ( $question['identity_id'] ?? 0 ) === (int) $question_object['source_ref'] ) );
 
 	$first = $voter instanceof Axismundi_Actor && $author instanceof Axismundi_Actor ? ax_q_vote( $voter, $question_uri, $author->get_uri(), 'Cats' ) : null;
 	if ( $first instanceof Axismundi_Activity ) {
@@ -188,6 +190,17 @@ try {
 	ax_q_assert( $ax_q_results, 'an FEP-9967 option edit resets its remote tally before replacing the definition', $remote_reset instanceof Axismundi_Activity && is_array( $after_reset ) && 'oneOf' === $after_reset['mode'] && array( 'Tea', 'Coffee' ) === $after_reset['options'] && array( 0, 0 ) === $after_reset['option_counts'] );
 } finally {
 	global $wpdb;
+	$object_uris = array_filter( array( $question_uri ?? '', $remote_question_uri ?? '' ) );
+	foreach ( array_unique( $ax_q_activity_uris ) as $uri ) {
+		$activity = axismundi_act_get( $uri );
+		$object = $activity instanceof Axismundi_Activity ? ( $activity->get_payload()['object'] ?? null ) : null;
+		if ( is_array( $object ) && ! empty( $object['id'] ) ) { $object_uris[] = $object['id']; }
+	}
+	foreach ( array_unique( $object_uris ) as $uri ) {
+		if ( function_exists( 'axismundi_op_delete_remote_object' ) ) { axismundi_op_delete_remote_object( $uri ); }
+		$object = function_exists( 'axismundi_op_get_object_by_uri' ) ? axismundi_op_get_object_by_uri( $uri ) : null;
+		if ( is_array( $object ) ) { $wpdb->delete( axismundi_op_objects_table(), array( 'id' => $object['id'] ) ); }
+	}
 	foreach ( array_unique( $ax_q_activity_uris ) as $uri ) {
 		$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri_hash' => hash( 'sha256', $uri ), 'activity_uri' => $uri ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned ledger cleanup.
 	}
@@ -195,9 +208,8 @@ try {
 		$wpdb->delete( axismundi_act_question_votes_table(), array( 'question_identity_id' => $identity_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned projection cleanup.
 		$wpdb->delete( axismundi_act_questions_table(), array( 'identity_id' => $identity_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned projection cleanup.
 		if ( function_exists( 'axismundi_op_objects_table' ) ) {
-			$wpdb->delete( axismundi_op_objects_table(), array( 'identity_id' => $identity_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned Object slice cleanup.
+			$wpdb->delete( axismundi_op_objects_table(), array( 'source_owner' => 'axismundi-activities', 'source_kind' => 'question-ledger', 'source_ref' => $identity_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned Object slice cleanup.
 		}
-		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $identity_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned Object identity cleanup.
 	}
 	if ( $ax_q_remote_id > 0 ) {
 		foreach ( array( axismundi_actors_endpoints_table(), axismundi_actors_keys_table(), axismundi_actors_fetch_state_table(), axismundi_actors_identity_relations_table(), axismundi_actors_asset_cache_table(), axismundi_actors_addresses_table(), axismundi_actors_texts_table() ) as $table ) {
@@ -208,6 +220,7 @@ try {
 	}
 }
 
+ax_q_assert( $ax_q_results, 'Question fixtures leave the optional OP index unchanged', null === $ax_q_op_before || $ax_q_op_before === $wpdb->get_results( 'SELECT * FROM ' . axismundi_op_objects_table() . ' ORDER BY id', ARRAY_A ) );
 $ax_q_failures = count( array_filter( $ax_q_results, static fn( bool $result ) : bool => ! $result ) );
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI fixture output.
 printf( "\n== %d checks, %d failed ==\n", count( $ax_q_results ), $ax_q_failures );

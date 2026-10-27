@@ -181,10 +181,9 @@ try {
 		$profile = $post instanceof WP_Post ? axismundi_op_local_object_profile( $post ) : null;
 		wp_delete_post( $post_id, true );
 		if ( is_array( $profile ) ) {
-			$identity = axismundi_actors_get_identity_by_uri( $profile['uri'] );
+			$identity = axismundi_op_get_object_by_uri( $profile['uri'] );
 			if ( is_array( $identity ) ) {
-				$wpdb->delete( axismundi_op_objects_table(), array( 'identity_id' => $identity['identity_id'] ) );
-				$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $identity['identity_id'] ) );
+				$wpdb->delete( axismundi_op_objects_table(), array( 'id' => $identity['id'] ) );
 			}
 			foreach ( array( axismundi_op_tag_references_table(), axismundi_op_term_usage_table() ) as $table ) {
 				$wpdb->delete( $table, array( 'source_uri_hash' => hash( 'sha256', $profile['uri'] ) ) );
@@ -192,10 +191,9 @@ try {
 		}
 	}
 	axismundi_op_delete_remote_object( $remote_uri );
-	$identity = axismundi_actors_get_identity_by_uri( $remote_uri );
+	$identity = axismundi_op_get_object_by_uri( $remote_uri );
 	if ( is_array( $identity ) ) {
-		$wpdb->delete( axismundi_op_objects_table(), array( 'identity_id' => $identity['identity_id'] ) );
-		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $identity['identity_id'] ) );
+		$wpdb->delete( axismundi_op_objects_table(), array( 'id' => $identity['id'] ) );
 	}
 	foreach ( array( axismundi_op_tag_references_table(), axismundi_op_term_usage_table() ) as $table ) {
 		$wpdb->delete( $table, array( 'source_uri_hash' => hash( 'sha256', $remote_uri ) ) );

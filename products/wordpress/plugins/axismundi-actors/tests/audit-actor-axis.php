@@ -100,22 +100,19 @@ try {
 	$folder = axismundi_media_create_folder( 'Axis folder ' . wp_generate_uuid4(), 0, $user );
 	$assert( ! is_wp_error( $folder ), 'Folder fixture created' );
 	$folders[] = (int) $folder;
-	$folder_uri = axismundi_media_folder_uri( $folder, false );
-	$assert( '' === axismundi_media_folder_actor_uri( $folder ), 'Folder storage ownership does not invent publication attribution' );
-	$recorded = axismundi_act_record_source_activity( array( 'type' => 'Create', 'actor' => $person_b->get_uri(), 'object' => $folder_uri ), 'outbound', 'axis-folder:' . wp_generate_uuid4() );
-	$assert( $recorded instanceof Axismundi_Activity && $person_b->get_uri() === axismundi_media_folder_actor_uri( $folder ), 'Folder reads recorded B even while Organization is selected' );
+	$assert( ! function_exists( 'axismundi_media_folder_uri' ) && '' === get_term_meta( $folder, '_ax_media_folder_uuid', true ), 'User folder has no Actor collection identity' );
 	update_term_meta( $folder, '_ax_media_folder_owner', $users[1] );
-	$assert( $person_b->get_uri() === axismundi_media_folder_actor_uri( $folder ), 'Folder storage-owner change does not reattribute publication' );
+	$assert( '' === get_term_meta( $folder, '_ax_media_folder_uuid', true ), 'Folder ownership change does not mint an Actor identity' );
 	axismundi_actors_clear_account_selection();
 	$assert( null === axismundi_act_current_local_actor() && '' === axismundi_cal_signed_in_actor_uri()
 		&& null === axismundi_forum_selected_actor( $user ) && is_wp_error( axismundi_actors_admin_profile_actor() ), 'Missing selection fails closed in every acting surface' );
-	$assert( $person_b->get_uri() === axismundi_media_folder_actor_uri( $folder ), 'Historical folder attribution remains readable without selection' );
+	$assert( get_term( $folder, AXISMUNDI_MEDIA_FOLDER_TAX ) instanceof WP_Term, 'User folder remains available without Account selection' );
 } finally {
 	foreach ( $posts as $id ) {
 		$post = get_post( $id );
 		if ( $post instanceof WP_Post ) {
 			$uri = axismundi_forum_topic_object_uri( $post );
-			$identity = axismundi_actors_get_identity_by_uri( $uri );
+			$identity = axismundi_op_get_object_by_uri( $uri );
 			if ( is_array( $identity ) ) { $object_ids[] = (int) $identity['identity_id']; }
 			$wpdb->delete( axismundi_act_activities_table(), array( 'object_uri_hash' => hash( 'sha256', $uri ) ) );
 		}
@@ -123,10 +120,6 @@ try {
 		wp_delete_post( $id, true );
 	}
 	foreach ( $folders as $id ) {
-		$uri = axismundi_media_folder_uri( $id, false );
-		$identity = axismundi_actors_get_identity_by_uri( $uri );
-		if ( is_array( $identity ) ) { $object_ids[] = (int) $identity['identity_id']; }
-		$wpdb->delete( axismundi_act_activities_table(), array( 'object_uri_hash' => hash( 'sha256', $uri ) ) );
 		wp_delete_term( $id, AXISMUNDI_MEDIA_FOLDER_TAX );
 	}
 	foreach ( $actors as $id ) {
@@ -150,8 +143,7 @@ try {
 		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $id ) );
 	}
 	foreach ( $object_ids as $id ) {
-		$wpdb->delete( axismundi_op_objects_table(), array( 'identity_id' => $id ) );
-		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $id ) );
+		$wpdb->delete( axismundi_op_objects_table(), array( 'id' => $id ) );
 	}
 	wp_set_current_user( $original_user );
 	foreach ( $users as $id ) {

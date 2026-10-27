@@ -20,6 +20,7 @@ global $wpdb;
 $ax_results = array();
 $ax_ids     = array(); // identity_ids to clean up.
 $ax_users   = array();
+$ax_principals_before = $wpdb->get_results( 'SELECT * FROM ' . axismundi_actors_managers_table() . ' ORDER BY identity_id,principal_kind,principal_id', ARRAY_A );
 
 /**
  * @param array $results Accumulator.
@@ -119,13 +120,11 @@ try {
 	// --- same REMOTE handle allowed multiple times (local_handle_key NULL) ---
 	$now = current_time( 'mysql', true );
 	$remote_ok = true;
-	foreach ( array( 'https://a.example/users/alice', 'https://b.example/users/alice' ) as $r_uri ) {
-		$u = wp_generate_uuid4();
-		$wpdb->insert( $idents, array( 'uuid' => $u, 'canonical_uri' => $r_uri, 'canonical_uri_hash' => hash( 'sha256', $r_uri ), 'object_kind' => 'actor', 'origin' => 'remote', 'status' => 'public', 'created_at' => $now, 'updated_at' => $now ) ); // phpcs:ignore WordPress.DB
-		$rid = (int) $wpdb->insert_id;
-		$ax_ids[] = $rid;
-		$ins = $wpdb->insert( $actors, array( 'identity_id' => $rid, 'actor_type' => 'Person', 'actor_scope' => null, 'preferred_username' => 'alice', 'local_handle_key' => null, 'created_at' => $now, 'updated_at' => $now ) ); // phpcs:ignore WordPress.DB
-		$remote_ok = $remote_ok && false !== $ins;
+	foreach ( array( 'https://example.com/users/alice-', 'https://example.org/users/alice-' ) as $base ) {
+		$r_uri = $base . wp_generate_uuid4();
+		$remote = axismundi_actors_upsert_remote( array( 'uri' => $r_uri, 'actor_type' => 'Person', 'preferred_username' => 'alice', 'payload' => array( 'id' => $r_uri, 'type' => 'Person' ), 'endpoints' => array( 'inbox' => $r_uri . '/inbox', 'outbox' => $r_uri . '/outbox' ) ) );
+		if ( $remote instanceof Axismundi_Actor ) { $ax_ids[] = $remote->get_identity_id(); }
+		$remote_ok = $remote_ok && $remote instanceof Axismundi_Actor;
 	}
 	ax_rep_assert( $ax_results, 'the same remote handle is allowed on multiple remote actors', $remote_ok );
 
@@ -157,11 +156,20 @@ try {
 	ax_rep_assert( $ax_results, 'user delete tombstones the identity, keeps the row', $bob_after instanceof Axismundi_Actor && 'tombstone' === $bob_after->get_status() );
 
 	// --- no orphan actor row ---
-	$orphans = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$actors} a LEFT JOIN {$idents} i ON i.id = a.identity_id WHERE i.id IS NULL" ); // phpcs:ignore WordPress.DB
-	ax_rep_assert( $ax_results, 'no actor row without its identity', 0 === $orphans );
+	$orphans = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$actors} WHERE identity_id IS NULL OR identity_id<>id" ); // phpcs:ignore WordPress.DB
+	ax_rep_assert( $ax_results, 'Actor compatibility IDs equal the canonical primary key', 0 === $orphans );
 
 } finally {
 	foreach ( array_unique( $ax_ids ) as $iid ) {
+		$actor = axismundi_actors_get_by_identity( (int) $iid );
+		if ( $actor && function_exists( 'axismundi_cal_calendars_table' ) ) {
+			$calendars = $wpdb->get_col( $wpdb->prepare( 'SELECT id FROM %i WHERE authority_actor_uri_hash=%s', axismundi_cal_calendars_table(), hash( 'sha256', $actor->get_uri() ) ) );
+			foreach ( $calendars as $calendar ) {
+				foreach ( array( axismundi_cal_acl_table(), axismundi_cal_entries_list_table() ) as $table ) { $wpdb->delete( $table, array( 'calendar_id' => $calendar ) ); }
+				$wpdb->delete( axismundi_cal_calendars_table(), array( 'id' => $calendar ) );
+			}
+		}
+		foreach ( array( axismundi_actors_managers_table(), axismundi_actors_signing_keys_table(), axismundi_actors_keys_table(), axismundi_actors_endpoints_table(), axismundi_actors_texts_table(), axismundi_actors_fetch_state_table(), axismundi_actors_asset_cache_table(), axismundi_actors_identity_relations_table() ) as $table ) { $wpdb->delete( $table, array( 'identity_id' => (int) $iid ) ); }
 		$wpdb->delete( axismundi_actors_addresses_table(), array( 'identity_id' => (int) $iid ), array( '%d' ) ); // phpcs:ignore WordPress.DB
 		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => (int) $iid ), array( '%d' ) ); // phpcs:ignore WordPress.DB
 		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => (int) $iid ), array( '%d' ) ); // phpcs:ignore WordPress.DB
@@ -173,6 +181,7 @@ try {
 	}
 }
 
+ax_rep_assert( $ax_results, 'Repository fixtures preserve all pre-existing principal rows', $ax_principals_before === $wpdb->get_results( 'SELECT * FROM ' . axismundi_actors_managers_table() . ' ORDER BY identity_id,principal_kind,principal_id', ARRAY_A ) );
 $ax_fail = 0;
 foreach ( $ax_results as $r ) {
 	if ( ! $r ) {

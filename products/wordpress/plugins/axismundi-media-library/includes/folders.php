@@ -214,8 +214,8 @@ function axismundi_media_refresh_folder_effective_tier( int $term_id, bool $incl
 	/**
 	 * Fires when a folder's effective visibility or gate may have changed.
 	 *
-	 * Folder ACL is local; whether a folder is federated is a separate concern that
-	 * listens here rather than being wired into this cache (folder-identity.php).
+	 * Folder visibility is local. Listeners may update local views or feeds;
+	 * this cache does not create an Actor collection or federation identity.
 	 *
 	 * @since 0.0.28
 	 * @param int $term_id Folder term ID.

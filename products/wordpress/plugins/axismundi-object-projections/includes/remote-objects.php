@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_OP_DB_VERSION            = '15';
+const AXISMUNDI_OP_DB_VERSION            = '16';
 const AXISMUNDI_OP_DB_VERSION_OPTION     = 'ax_object_projections_db_version';
 const AXISMUNDI_OP_DELETE_RECONCILE_OPTION = 'ax_object_projections_pending_delete_reconcile';
 const AXISMUNDI_OP_REMOTE_PAYLOAD_MAX    = 1048576;

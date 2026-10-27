@@ -10,7 +10,9 @@ final class AccountCapability {
 }
 
 final class SessionProjector {
-	public function __construct( private readonly Registry $registry ) {
+	private ?\Closure $policy_resolver;
+	public function __construct( private readonly Registry $registry, ?callable $policy_resolver = null ) {
+		$this->policy_resolver = null === $policy_resolver ? null : \Closure::fromCallable( $policy_resolver );
 		if ( ! $registry->supports( CORE ) || null === $registry->method( 'Core/echo' ) ) {
 			throw new \LogicException( 'Session projection requires the Core registry.' );
 		}
@@ -60,11 +62,27 @@ final class SessionProjector {
 		return null === $actor ? null : $this->project_account( $actor, $user_id );
 	}
 
-	private function project_account( \Axismundi_Actor $actor, int $user_id ) : \stdClass {
+	/** Reused by protocol methods and in-process WordPress consumers. */
+	public function authorize( string $account_id, int $user_id, string $capability, bool $writes ) : \stdClass {
+		$this->user( $user_id );
+		$actor = resolve_account_actor( $account_id, $user_id );
+		if ( null === $actor ) { throw new MethodError( 'accountNotFound' ); }
+		$grants = array();
+		$account = $this->project_account( $actor, $user_id, $grants );
+		if ( ! isset( $grants[ $capability ] ) ) { throw new MethodError( 'accountNotSupportedByMethod' ); }
+		if ( $writes && ! $grants[ $capability ]->writable ) { throw new MethodError( 'accountReadOnly' ); }
+		return $account;
+	}
+
+	private function project_account( \Axismundi_Actor $actor, int $user_id, ?array &$grants = null ) : \stdClass {
 		$caps = new \stdClass();
 		$writable = false;
+		$grants = array();
 		foreach ( $this->registry->account_providers() as $uri => $entry ) {
-			$grant = ( $entry['provider'] )( $actor, $user_id );
+			$policy = null === $this->policy_resolver ? account_policy( $actor->get_identity_id(), $uri ) : ( $this->policy_resolver )( $actor->get_identity_id(), $uri );
+			if ( null === $policy || ! ( $policy->enabled ?? false ) ) { continue; }
+			if ( ! ( $policy->limits ?? null ) instanceof \stdClass || ! $this->registry->validate_policy( $uri, $policy->limits ) ) { throw new \LogicException( 'Invalid Account capability policy.' ); }
+			$grant = ( $entry['provider'] )( $actor, $user_id, copy_json( $policy->limits ) );
 			if ( null === $grant ) {
 				continue;
 			}
@@ -72,6 +90,7 @@ final class SessionProjector {
 				throw new \LogicException( 'Account providers must return AccountCapability or null.' );
 			}
 			$caps->{$uri} = copy_json( $grant->properties );
+			$grants[ $uri ] = $grant;
 			$writable = $writable || $grant->writable;
 		}
 		return (object) array(

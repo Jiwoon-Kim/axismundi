@@ -16,13 +16,11 @@
 
 defined( 'ABSPATH' ) || exit;
 
-require_once __DIR__ . '/includes/engine/protocol.php';
-require_once __DIR__ . '/includes/registry/registry.php';
-require_once __DIR__ . '/includes/engine/context.php';
-require_once __DIR__ . '/includes/engine/engine.php';
-require_once __DIR__ . '/modules/rfc8620/core.php';
+require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/integrations/wordpress/accounts.php';
-require_once __DIR__ . '/modules/rfc8620/session.php';
+require_once __DIR__ . '/includes/integrations/wordpress/account-store.php';
+require_once __DIR__ . '/includes/integrations/wordpress/runtime.php';
 require_once __DIR__ . '/includes/integrations/wordpress/account-selection.php';
 
 // No public JMAP discovery/API/blob/SSE routes or capability advertisement.
+register_activation_hook( __FILE__, '\\Axismundi\\Jmap\\install_account_store' );

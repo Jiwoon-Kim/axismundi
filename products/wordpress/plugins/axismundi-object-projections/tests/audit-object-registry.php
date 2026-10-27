@@ -44,7 +44,7 @@ try {
 	$columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$objects}" );
 	ax_object_registry_assert(
 		$ax_results,
-		'the Object vertical slice is keyed by the shared identity and carries source, type, and attribution shadows',
+		'the Object table owns its identifier and carries source, type, and Actor attribution',
 		$installed && in_array( 'source_owner', $columns, true ) && in_array( 'as2_type_observed_at', $columns, true ) && in_array( 'attributed_identity_id', $columns, true )
 	);
 
@@ -72,10 +72,10 @@ try {
 			'as2_type'      => 'Question',
 		)
 	);
-	$identity = is_array( $first ) ? axismundi_actors_get_identity( (int) $first['identity_id'] ) : null;
+	$identity = is_array( $first ) ? axismundi_op_get_object_by_identity( (int) $first['id'] ) : null;
 	ax_object_registry_assert(
 		$ax_results,
-		'a source can re-declare Note as Question without changing its shared identity',
+		'a source can re-declare Note as Question without changing its Object identifier',
 		is_array( $first ) && is_array( $second ) && (int) $first['identity_id'] === (int) $second['identity_id'] && 'Question' === (string) $second['as2_type'] && is_array( $identity ) && $uri === (string) $identity['canonical_uri']
 	);
 
@@ -347,6 +347,11 @@ try {
 		);
 	}
 } finally {
+	$delete_gate = has_filter( 'pre_delete_post', 'axismundi_act_pre_delete_post_lifecycle' );
+	if ( false !== $delete_gate ) { remove_filter( 'pre_delete_post', 'axismundi_act_pre_delete_post_lifecycle', $delete_gate ); }
+	foreach ( array_merge( $ax_registry_posts, array( $ax_note_post, $ax_attachment, $ax_page ) ) as $id ) {
+		if ( (int) $id > 0 ) { $wpdb->delete( axismundi_op_objects_table(), array( 'source_ref' => (int) $id, 'source_owner' => (int) $id === $ax_note_post ? 'axismundi-note' : 'wordpress-core' ) ); }
+	}
 	foreach ( $ax_registry_posts as $ax_registry_fixture ) {
 		if ( (int) $ax_registry_fixture > 0 ) {
 			wp_delete_post( (int) $ax_registry_fixture, true );
@@ -372,14 +377,14 @@ try {
 	}
 	axismundi_op_delete_remote_object( $ax_remote_uri );
 	foreach ( array_unique( array_filter( $ax_identity_ids ) ) as $identity_id ) {
-		$wpdb->delete( axismundi_op_objects_table(), array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
-		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+		$wpdb->delete( axismundi_op_objects_table(), array( 'id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 	}
 	if ( $ax_actor_identity > 0 ) {
 		$wpdb->delete( axismundi_actors_endpoints_table(), array( 'identity_id' => $ax_actor_identity ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => $ax_actor_identity ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $ax_actor_identity ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 	}
+	if ( false !== $delete_gate ) { add_filter( 'pre_delete_post', 'axismundi_act_pre_delete_post_lifecycle', $delete_gate, 3 ); }
 }
 
 $failed = count( array_filter( $ax_results, static fn( bool $result ) : bool => ! $result ) );

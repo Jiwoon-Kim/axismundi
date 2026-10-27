@@ -1,5 +1,10 @@
 # Contacts / RFC 9610 Gap Audit
 
+2026-10-28 경계 정정: AddressBook·ContactCard와 RFC 9610 provider는 Contacts가
+소유하며 JMAP 코어로 DB를 이전하지 않는다. 독립 Profile Card는 JMAP ContactCard가
+아니며, Contacts의 Account별 Profile 저장소는 아직 후보이다. 아래 당시의 조사 결과와
+구현 순서는 [현재 결정](REVIEW-DEPENDENCY-BOUNDARIES.md#2026-10-28-결정-정정)과 구분한다.
+
 작성일: 2026-10-22. 조사 기준: `aeb7eed` 이후 작업 트리의 Contacts 소스.
 범위: 소스 조사, 기존 감사 실행, 후속 슬라이스 제안. 제품 코드와 DB는 변경하지 않았다.
 

@@ -1,5 +1,50 @@
 # Account, Collections, Contacts 의존성 검토
 
+## 2026-10-28 결정 정정
+
+이 절이 아래 2026-10-23 조사 당시의 AddressBook 소유권 제안보다 우선한다.
+
+- Contacts가 AddressBook·ContactCard 저장소와 RFC 9610 메서드·capability provider를
+  함께 소유하고 JMAP 공통 등록 체계에 등록한다. AddressBook을 JMAP DB로 이전하지 않는다.
+- JMAP은 코어 실행·Session·Account 자격/한도 저장과 합성을 소유한다. Actors는 신원·수명과
+  principal 관계를 소유한다. 표준 타입이라는 이유만으로 그 DB가 JMAP 코어 소유가 되지는 않는다.
+- RFC 9610 §7의 IANA 등록은 표준 식별자 등록이다. 이 플러그인 배치는 별도의 제품 결정이다.
+
+### 독립 Profile Card
+
+공개 Profile Card는 독립 JSContact 문서이며, AddressBook에 저장한 JMAP ContactCard와
+같은 리소스로 취급하지 않는다. RFC 9610 §3의 최소 한 AddressBook 소속 요구는 후자에
+적용된다. WebFinger 및 선택적 Actor 확장 링크로 발견시키는 정책은 우리 제품 계약이다.
+기본 JMAP/AP 메서드만으로 이 문서의 발견을 보장하지 않는다.
+
+Profile Card는 Actor의 공개 아바타·이름·acct 주소, 명시적 프로필 입력, 공개가 허용된 외부
+소스에서 합성할 수 있다. Google People는 선택적 외부 소스이지 Actor/Account의 부모 모델이
+아니다. OAuth로 읽을 수 있는 비공개 정보를 공개할 수 있다는 뜻으로 해석하지 않는다.
+
+연락처 추가는 공개 문서를 참조해 대상 Account의 AddressBook에 ContactCard를 생성하는
+별도 동작이다. 출처와 사용자 편집을 구분하고, 원본 갱신으로 사용자 값을 무조건 덮어쓰지 않는다.
+발견 가능성, 공개 동의, 가져오기, 지속 동기화는 서로 다른 정책이다.
+
+### 저장 후보 — 미확정
+
+Contacts에 Account별 Profile 저장소를 두는 안을 후보로 남긴다. 이 저장소는 Account의
+새 identity나 Actor object의 복제본이 아니라, 공개 프로필 입력·소스 연결·공개 정책·투영
+캐시를 다룬다. AddressBook 멤버십을 부여하거나 JMAP ContactCard로 자동 노출하지 않는다.
+필드별 출처·공개 범위·사용자 override 및 캐시 무효화는 구현 전에 정해야 한다.
+
+새 테이블을 곧바로 추가하지 않는다. 기존 Contacts의 `ax_contact_actor_profiles`가 이미
+`actor_id`–`card_id` 연결과 `sharing_enabled`, `audience`, `published_json`을 저장한다
+(`includes/schema.php`, `includes/profile.php`). 기존 테이블의 확장·분리·대체 중 어느 것이
+맞는지 먼저 검토하고, 두 저장소를 병렬 권위로 만들지 않는다. 이름·컬럼·수명·이전 방식은 미정이다.
+
+근거: [RFC 9610 §1.3](https://jmap.io/spec/rfc9610/#section-1.3),
+[§3](https://jmap.io/spec/rfc9610/#section-3),
+[§7](https://jmap.io/spec/rfc9610/#section-7),
+[Google People Person](https://developers.google.com/people/api/rest/v1/people).
+이번 정정은 문서만 변경하며 DB·메서드·공개 엔드포인트를 추가하지 않는다.
+
+## 이전 조사 기록
+
 조사일: 2026-10-23. 코드 기준: `0f1b0f6`.
 RFC 원문과 소스를 읽은 설계 조사다. 런타임 재검증·마이그레이션·RFC 준수 인증은 아니다.
 이 문서에서 제안한 API·저장 경계는 아직 구현하지 않았다.

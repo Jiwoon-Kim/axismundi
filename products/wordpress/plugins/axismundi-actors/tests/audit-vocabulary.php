@@ -57,11 +57,11 @@ try {
 	$assert( '' === axismundi_actors_account_role( $ids[1], $user ) && null === axismundi_actors_signing_key_snapshot( $disabled ), 'Disabled Account cannot act or sign' );
 	$assert( axismundi_actors_can_manage( $disabled, $user ) && ! is_wp_error( axismundi_actors_admin_profile_actor( $ids[1] ) ), 'Existing principal can explicitly recover a disabled profile' );
 	axismundi_actors_set_status( $ids[1], 'public' );
-	$identity = axismundi_actors_register_identity( array( 'object_kind' => 'object', 'origin' => 'local', 'uri_template' => home_url( '/vocab-fixture/{uuid}' ) ) );
+	$identity = axismundi_op_register_object( array( 'canonical_uri' => home_url( '/vocab-fixture/' . wp_generate_uuid4() ), 'origin' => 'local', 'source_owner' => 'vocabulary-audit', 'source_kind' => 'fixture', 'as2_type' => 'Note' ) );
 	$assert( is_array( $identity ), 'Object identity is registered' );
 	$objects[] = (int) $identity['identity_id'];
-	$assert( 'public' === $identity['status'] && ! axismundi_actors_set_status( $objects[0], 'internal' ), 'Object registry also rejects internal' );
-	$assert( is_wp_error( axismundi_actors_register_identity( array( 'object_kind' => 'object', 'status' => 'internal' ) ) ), 'Object creation rejects internal' );
+	$assert( 'public' === $identity['status'] && null === axismundi_actors_get_identity_by_uri( $identity['canonical_uri'] ), 'Object registry is separate from Actor identifiers' );
+	$assert( is_wp_error( axismundi_op_register_object( array( 'status' => 'internal' ) ) ), 'Object creation rejects internal' );
 	foreach ( array( 'draft', 'future', 'private', 'pending', 'trash' ) as $status ) {
 		$post = new WP_Post( (object) array( 'ID' => 0, 'post_type' => 'post', 'post_status' => $status, 'post_password' => '' ) );
 		$assert( ! axismundi_op_post_article_visible( $post ), 'Registry presence does not expose ' . $status . ' WordPress posts' );
@@ -70,9 +70,9 @@ try {
 	$listener = static function ( $id, $status ) use ( &$events ) { $events[] = array( $id, $status ); };
 	add_action( 'axismundi_actors_status_changed', $listener, 999, 2 );
 	try {
-		foreach ( array( $ids[0], $objects[0] ) as $id ) { $wpdb->update( axismundi_actors_identities_table(), array( 'status' => 'internal' ), array( 'id' => $id ) ); }
-		$assert( axismundi_actors_migrate_actor_vocabulary( 500 ), 'Legacy Actor and Object statuses migrate through the service' );
-		$assert( in_array( array( $ids[0], 'public' ), $events, true ) && in_array( array( $objects[0], 'public' ), $events, true ), 'Normal status listeners run for migrated identities' );
+		$wpdb->update( axismundi_actors_identities_table(), array( 'status' => 'internal' ), array( 'id' => $ids[0] ) );
+		$assert( axismundi_actors_migrate_actor_vocabulary( 500 ), 'Legacy Actor statuses migrate through the service' );
+		$assert( in_array( array( $ids[0], 'public' ), $events, true ), 'Normal status listeners run for migrated identities' );
 		$events = array();
 		$assert( axismundi_actors_migrate_actor_vocabulary( 500 ) && array() === $events, 'Migration replay does not refire completed transitions' );
 	} finally { remove_action( 'axismundi_actors_status_changed', $listener, 999 ); }
@@ -92,7 +92,7 @@ try {
 		}
 		foreach ( array( axismundi_forum_settings_table() => 'group_identity_id', axismundi_actors_managers_table() => 'identity_id', axismundi_actors_addresses_table() => 'identity_id', axismundi_actors_signing_keys_table() => 'identity_id', axismundi_actors_keys_table() => 'identity_id', axismundi_actors_endpoints_table() => 'identity_id', axismundi_actors_texts_table() => 'identity_id', axismundi_actors_actors_table() => 'identity_id', axismundi_actors_identities_table() => 'id' ) as $table => $key ) { $wpdb->delete( $table, array( $key => $id ) ); }
 	}
-	foreach ( $objects as $id ) { $wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $id ) ); }
+	foreach ( $objects as $id ) { $wpdb->delete( axismundi_op_objects_table(), array( 'id' => $id ) ); }
 	wp_set_current_user( $old_user );
 	if ( is_int( $user ) && $user > 0 ) { wp_delete_user( $user ); }
 	remove_filter( 'pre_http_request', $network );

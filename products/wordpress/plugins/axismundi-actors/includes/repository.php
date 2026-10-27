@@ -1,22 +1,22 @@
 <?php
 /**
- * Phase 1 — the actor repository: schema, value object, create / lookup / seed /
- * tombstone. Integrity is enforced here, not by a physical FOREIGN KEY: the
- * identity↔actor link is a **logical** FK keyed by identity_id, because ON DELETE
- * CASCADE would fight the tombstone contract (a deleted user must leave the identity
- * standing, tombstoned). See docs/DATA-MODEL.md, docs/PHASES.md Phase 1.
+ * Actor repository: one indexed body, normalized children and lazy detail evidence.
+ * Historical identity/profile schema upgrades run before the schema-39 cutover.
+ * Actor deletion remains a tombstone update, not a physical row removal.
  *
  * @package AxismundiActors
  */
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '38.0';
+const AXISMUNDI_ACTORS_DB_VERSION = '39.0';
 
-/** @return string identities table name. */
+require_once __DIR__ . '/actor-body.php';
+
+/** Historical table accessor; after cutover this is the Actor body itself. */
 function axismundi_actors_identities_table() : string {
 	global $wpdb;
-	return $wpdb->prefix . 'ax_identities';
+	return '1' === get_option( 'ax_actors_body_version' ) ? axismundi_actors_actors_table() : $wpdb->prefix . 'ax_identities';
 }
 
 /** @return string actors table name. */
@@ -111,13 +111,16 @@ function axismundi_actors_address_hash( string $type, string $address ) : string
 }
 
 /**
- * Create/upgrade both tables (dbDelta) and record the schema version. Logical FK
- * only — no physical FOREIGN KEY (tombstone contract).
+ * Upgrade historical schemas, consolidate the body, and record verified success.
  *
  * @return void
  */
 function axismundi_actors_install() : void {
 	global $wpdb;
+	if ( axismundi_actors_body_installed() ) {
+		if ( axismundi_actors_finish_body_migration() ) { update_option( 'ax_actors_db_version', AXISMUNDI_ACTORS_DB_VERSION, false ); }
+		return;
+	}
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 	$charset = $wpdb->get_charset_collate();
 	$identities = axismundi_actors_identities_table();
@@ -731,14 +734,13 @@ function axismundi_actors_install() : void {
 	) {
 		update_option( 'ax_actors_principal_schema_version', AXISMUNDI_ACTORS_PRINCIPAL_SCHEMA_VERSION, false );
 		if ( axismundi_actors_migrate_account_access() ) {
-			update_option( 'ax_actors_db_version', AXISMUNDI_ACTORS_DB_VERSION, false );
+			if ( axismundi_actors_migrate_body() ) { update_option( 'ax_actors_db_version', AXISMUNDI_ACTORS_DB_VERSION, false ); }
 		}
 	}
 }
 
 /**
- * Read-only actor value object (frozen surface, docs/PROJECTIONS.md §1.5). Holds a
- * joined identity+actor row; resolves display/profile live for local actors.
+ * Read-only compact Actor body. Raw JSON evidence is deliberately not hydrated.
  */
 final class Axismundi_Actor {
 
@@ -764,6 +766,18 @@ final class Axismundi_Actor {
 
 	public function get_uuid() : string {
 		return (string) $this->row['uuid'];
+	}
+
+	public function get_host() : string {
+		return (string) ( $this->row['host'] ?? '' );
+	}
+
+	public function get_icon_uri() : string {
+		return (string) ( $this->row['icon_uri'] ?? '' );
+	}
+
+	public function get_image_uri() : string {
+		return (string) ( $this->row['image_uri'] ?? '' );
 	}
 
 	public function get_uri() : string {
@@ -1022,6 +1036,7 @@ function axismundi_actors_unique_local_handle( string $base ) : string {
  * @return Axismundi_Actor|WP_Error
  */
 function axismundi_actors_create_local( array $args ) {
+	if ( '1' !== get_option( 'ax_actors_body_version' ) ) { return new WP_Error( 'ax_actors_body_pending', 'The Actor body migration must finish before creation.' ); }
 	global $wpdb;
 	if ( AXISMUNDI_ACTORS_DB_VERSION !== (string) get_option( 'ax_actors_db_version', '' ) ) {
 		return new WP_Error( 'ax_actors_schema_pending', 'Account schema migration must complete before creation.' );
@@ -1093,7 +1108,7 @@ function axismundi_actors_create_local( array $args ) {
 			'uuid'               => $uuid,
 			'canonical_uri'      => $uri,
 			'canonical_uri_hash' => $hash,
-			'object_kind'        => 'actor',
+			'actor_type'         => $type,
 			'origin'             => 'local',
 			'status'             => $status,
 			'created_at'         => $now,
@@ -1107,7 +1122,7 @@ function axismundi_actors_create_local( array $args ) {
 	}
 	$identity_id = (int) $wpdb->insert_id;
 
-	$ok = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	$ok = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		axismundi_actors_actors_table(),
 		array(
 			'identity_id'        => $identity_id,
@@ -1122,10 +1137,11 @@ function axismundi_actors_create_local( array $args ) {
 			'personal_owner_user_id' => $personal_owner,
 			'display_name'       => isset( $args['display_name'] ) ? sanitize_text_field( (string) $args['display_name'] ) : null,
 			'default_language'   => '' !== $language ? $language : null,
+			'host'               => axismundi_actors_body_summary( $uri )['host'],
 			'created_at'         => $now,
 			'updated_at'         => $now,
 		),
-		array( '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%d', '%d', '%s', '%s', '%s', '%s' )
+		array( 'id' => $identity_id )
 	);
 	if ( false === $ok ) {
 		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -1145,6 +1161,7 @@ function axismundi_actors_create_local( array $args ) {
 		return new WP_Error( 'ax_actors_account_commit', __( 'Could not commit the account identity.', 'axismundi-actors' ) );
 	}
 	$actor = axismundi_actors_get_by_uuid( $uuid );
+	if ( $actor instanceof Axismundi_Actor ) { do_action( 'axismundi_actors_local_actor_created', $actor ); }
 	/*
 	 * A handle locked here is as registered as one locked by `register_handle()`, and anything that
 	 * reserves an address from a handle -- a Calendar, a feed -- has to hear about both. A managed
@@ -1158,7 +1175,7 @@ function axismundi_actors_create_local( array $args ) {
 }
 
 /**
- * Hydrate one actor from a WHERE clause on the joined tables.
+ * Hydrate one Actor from its indexed body; accept historical SQL aliases.
  *
  * @param string $where   Prepared WHERE (without the keyword).
  * @param mixed  ...$args  Prepare args.
@@ -1166,21 +1183,17 @@ function axismundi_actors_create_local( array $args ) {
  */
 function axismundi_actors_query_one( string $where, ...$args ) : ?Axismundi_Actor {
 	global $wpdb;
-	$identities = axismundi_actors_identities_table();
 	$actors     = axismundi_actors_actors_table();
-	/*
-	 * `$where` stays interpolated -- a clause fixed by the caller, carrying its
-	 * own placeholders that $args fills. The joined tables are %i and precede
-	 * the clause, so binding them first leaves every caller argument in the
-	 * position it already expected.
-	 *
-	 * prepare() runs unconditionally now: skipping it with no arguments was
-	 * fine while the tables were interpolated, and is not now that they are
-	 * bound.
-	 */
-	$sql = "SELECT i.*, a.* FROM %i i INNER JOIN %i a ON a.identity_id = i.id WHERE {$where} LIMIT 1";
+	if ( '1' !== get_option( 'ax_actors_body_version' ) ) {
+		$identities = axismundi_actors_identities_table();
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT i.*,a.* FROM %i i INNER JOIN %i a ON a.identity_id=i.id WHERE {$where} LIMIT 1", $identities, $actors, ...$args ), ARRAY_A );
+		return $row ? Axismundi_Actor::from_row( $row ) : null;
+	}
+	// Clauses are caller-fixed SQL; URI/ID values remain prepared arguments.
+	$where = preg_replace( '/\b(?:i|a)\./', 'r.', $where );
+	$sql = "SELECT r.* FROM %i r WHERE r.identity_id=r.id AND ({$where}) LIMIT 1";
 	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- caller-fixed clause; the tables and every argument are prepared.
-	$row = $wpdb->get_row( $wpdb->prepare( $sql, $identities, $actors, ...$args ), ARRAY_A );
+	$row = $wpdb->get_row( $wpdb->prepare( $sql, $actors, ...$args ), ARRAY_A );
 	return $row ? Axismundi_Actor::from_row( $row ) : null;
 }
 
@@ -1352,16 +1365,15 @@ function axismundi_actors_get_delivery_endpoints( array $uris ) : array {
 		return array();
 	}
 
-	$identities = axismundi_actors_identities_table();
 	$actors     = axismundi_actors_actors_table();
 	$conditions = array();
-	$args       = array( $identities, $actors );
+	$args       = array( $actors );
 	foreach ( $uris as $uri ) {
 		$conditions[] = '(i.canonical_uri_hash = %s AND i.canonical_uri = %s)';
 		$args[]       = hash( 'sha256', $uri );
 		$args[]       = $uri;
 	}
-	$sql = 'SELECT i.*, a.* FROM %i i INNER JOIN %i a ON a.identity_id = i.id WHERE ' . implode( ' OR ', $conditions );
+	$sql = 'SELECT i.* FROM %i i WHERE ' . implode( ' OR ', $conditions );
 	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- generated predicates carry only prepared URI/hash pairs; table names are bound.
 	$rows = (array) $wpdb->get_results( $wpdb->prepare( $sql, ...$args ), ARRAY_A );
 	if ( empty( $rows ) ) {
@@ -1561,10 +1573,7 @@ function axismundi_actors_count_remote_actors( string $search = '' ) : int {
  * @return array<string,mixed>
  */
 function axismundi_actors_get_remote_payload( int $identity_id ) : array {
-	global $wpdb;
-	$actors = axismundi_actors_actors_table();
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table name.
-	$json = (string) $wpdb->get_var( $wpdb->prepare( "SELECT payload_json FROM %i WHERE identity_id = %d", $actors, $identity_id ) );
+	$json = axismundi_actors_get_meta( $identity_id, 'remote_payload' ) ?? '';
 	$data = json_decode( $json, true );
 	return is_array( $data ) ? $data : array();
 }
@@ -2072,6 +2081,7 @@ function axismundi_actors_normalize_policy_fields( array $record ) : array {
  * @return Axismundi_Actor|WP_Error
  */
 function axismundi_actors_upsert_remote( array $record ) {
+	if ( '1' !== get_option( 'ax_actors_body_version' ) ) { return new WP_Error( 'ax_actors_body_pending', 'The Actor body migration must finish before discovery.' ); }
 	global $wpdb;
 	$uri  = trim( (string) ( $record['uri'] ?? '' ) );
 	$type = (string) ( $record['actor_type'] ?? '' );
@@ -2104,12 +2114,11 @@ function axismundi_actors_upsert_remote( array $record ) {
 		'display_name'       => (string) ( $record['display_name'] ?? '' ),
 		'summary'            => (string) ( $record['summary'] ?? '' ),
 		'profile_url'        => (string) ( $record['profile_url'] ?? '' ),
-		'payload_json'       => $payload_json,
 		'updated_at'         => $now,
 	);
 	// Policy axes (DB v8): an undeclared value stays NULL, distinct from an explicit
 	// false — never conflate "the remote did not report this" with "off".
-	$fields = array_merge( $fields, axismundi_actors_normalize_policy_fields( $record ) );
+	$fields = array_merge( $fields, axismundi_actors_normalize_policy_fields( $record ), axismundi_actors_body_summary( $uri, $payload ) );
 	if ( $existing ) {
 		if ( $existing->is_local() || 'tombstone' === $existing->get_status() ) {
 			return new WP_Error( 'ax_actors_remote_conflict', __( 'That identity cannot be refreshed as a remote Actor.', 'axismundi-actors' ) );
@@ -2126,7 +2135,7 @@ function axismundi_actors_upsert_remote( array $record ) {
 			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			return new WP_Error( 'ax_actors_remote_update', __( 'Could not refresh the remote Actor.', 'axismundi-actors' ) );
 		}
-		if ( ! axismundi_actors_write_endpoints( $existing->get_identity_id(), $endpoints ) ) {
+		if ( ! axismundi_actors_store_meta( $existing->get_identity_id(), 'remote_payload', $payload_json ) || ! axismundi_actors_write_endpoints( $existing->get_identity_id(), $endpoints ) ) {
 			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			return new WP_Error( 'ax_actors_remote_endpoints', __( 'Could not refresh the remote Actor endpoints.', 'axismundi-actors' ) );
 		}
@@ -2160,7 +2169,7 @@ function axismundi_actors_upsert_remote( array $record ) {
 			'uuid'               => wp_generate_uuid4(),
 			'canonical_uri'      => $uri,
 			'canonical_uri_hash' => hash( 'sha256', $uri ),
-			'object_kind'        => 'actor',
+			'actor_type'         => $type,
 			'origin'             => 'remote',
 			'status'             => 'public',
 			'created_at'         => $now,
@@ -2175,12 +2184,12 @@ function axismundi_actors_upsert_remote( array $record ) {
 	$identity_id          = (int) $wpdb->insert_id;
 	$fields['identity_id'] = $identity_id;
 	$fields['created_at']  = $now;
-	$inserted = $wpdb->insert( axismundi_actors_actors_table(), $fields ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom actor snapshot table.
+	$inserted = $wpdb->update( axismundi_actors_actors_table(), $fields, array( 'id' => $identity_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom actor snapshot table.
 	if ( false === $inserted ) {
 		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return new WP_Error( 'ax_actors_remote_actor', __( 'Could not create the remote Actor.', 'axismundi-actors' ) );
 	}
-	if ( ! axismundi_actors_write_endpoints( $identity_id, $endpoints ) ) {
+	if ( ! axismundi_actors_store_meta( $identity_id, 'remote_payload', $payload_json ) || ! axismundi_actors_write_endpoints( $identity_id, $endpoints ) ) {
 		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return new WP_Error( 'ax_actors_remote_endpoints', __( 'Could not save the remote Actor endpoints.', 'axismundi-actors' ) );
 	}

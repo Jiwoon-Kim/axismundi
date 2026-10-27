@@ -292,9 +292,12 @@ try {
 
 	ax_aud_assert( $ax_aud_results, 'the resolver performs no HTTP request', 0 === $GLOBALS['ax_aud_http'] );
 } finally {
+	global $wpdb;
 	remove_filter( 'pre_http_request', 'ax_aud_http' );
 	foreach ( $ax_aud_remote_uris as $ax_aud_remote_uri ) {
 		axismundi_op_delete_remote_object( $ax_aud_remote_uri );
+		$object = axismundi_op_get_object_by_uri( $ax_aud_remote_uri );
+		if ( is_array( $object ) ) { $wpdb->delete( axismundi_op_objects_table(), array( 'id' => $object['id'] ) ); }
 	}
 	// Every Group the classifier fixtures created, on the same path as the Actor above.
 	foreach ( $ax_aud_users as $ax_aud_user ) {

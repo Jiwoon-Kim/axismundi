@@ -1,5 +1,12 @@
 # Axismundi Actors — Data Model
 
+> 2026-10-27 update: the shared non-Actor registry design below is superseded by
+> [Identifier Separation](../../axismundi-object-projections/docs/IMPLEMENTATION-IDENTIFIER-SEPARATION.md).
+> Objects now own their IDs/URI index in OP. User folders no longer have AP
+> identities. [Actor Body](IMPLEMENTATION-ACTOR-BODY.md) schema 39.0 subsequently
+> consolidates Actor identifiers into `ax_actors` and removes `ax_identities`.
+> The historical table layout below is not the current storage contract.
+
 > Status: **Living specification. Schema v10b (stored version 10.1) implemented
 > (§2–§6, §8, §9.2–§9.6b, §9.10).** The non-actor registry API (§2.1) is implemented as of
 > 0.0.31 with **no schema change** — `object_kind` and its kinds were already specified.

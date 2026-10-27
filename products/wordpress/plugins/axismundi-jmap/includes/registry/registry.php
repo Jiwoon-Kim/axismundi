@@ -13,7 +13,7 @@ final class Registry {
 	private bool $frozen = false;
 
 	public function register_capability( string $uri ) : void {
-		if ( $this->frozen || '' === $uri || isset( $this->capabilities[ $uri ] ) ) {
+		if ( $this->frozen || strlen( $uri ) > 255 || ! preg_match( '/\A[A-Za-z][A-Za-z0-9+.-]*:[\x21-\x7e]+\z/D', $uri ) || isset( $this->capabilities[ $uri ] ) ) {
 			throw new \LogicException( 'Invalid, duplicate, or frozen capability registration.' );
 		}
 		$this->capabilities[ $uri ] = true;
@@ -39,7 +39,7 @@ final class Registry {
 	}
 
 	/** Explicit server declaration plus a live, User-relative Account grant provider. */
-	public function register_account_provider( string $capability, \stdClass $server, callable $provider, string $purpose ) : void {
+	public function register_account_provider( string $capability, \stdClass $server, callable $provider, string $purpose, ?callable $validate_policy = null ) : void {
 		if ( $this->frozen || ! $this->supports( $capability ) || CORE === $capability
 			|| isset( $this->account_providers[ $capability ] )
 			|| 1 !== preg_match( '/\A[a-z][a-z0-9_-]{0,63}\z/D', $purpose ) ) {
@@ -54,7 +54,13 @@ final class Registry {
 		}
 		$this->account_providers[ $capability ] = array(
 			'server' => copy_json( $server ), 'provider' => \Closure::fromCallable( $provider ), 'purpose' => $purpose,
+			'validate_policy' => null === $validate_policy ? static fn( \stdClass $limits ) : bool => array() === get_object_vars( $limits ) : \Closure::fromCallable( $validate_policy ),
 		);
+	}
+
+	public function validate_policy( string $capability, \stdClass $limits ) : bool {
+		$entry = $this->account_providers[ $capability ] ?? null;
+		return null !== $entry && true === ( $entry['validate_policy'] )( copy_json( $limits ) );
 	}
 
 	public function account_providers() : array {

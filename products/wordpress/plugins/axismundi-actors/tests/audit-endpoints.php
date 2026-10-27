@@ -1,6 +1,6 @@
 <?php
 /**
- * Actor endpoint ledger and DB v6 migration regression. Dev-only/dist-excluded.
+ * Actor endpoint ledger with a consolidated body. Dev-only/dist-excluded.
  *
  * @package AxismundiActors
  */
@@ -52,7 +52,7 @@ try {
 	$hash_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'endpoint_uri_hash'", ARRAY_A ); // phpcs:ignore WordPress.DB
 	$actor_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$actors}" ); // phpcs:ignore WordPress.DB
 	$engines = (array) $wpdb->get_col( $wpdb->prepare( 'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (%s,%s,%s)', axismundi_actors_identities_table(), $actors, $table ) ); // phpcs:ignore WordPress.DB
-	ax_endpoint_assert( $ax_endpoint_results, 'DB v7 creates an InnoDB endpoint ledger, unique actor-role key, non-unique URI hash, and removes legacy columns', (int) get_option( 'ax_actors_db_version' ) >= 7 && 3 === count( array_filter( $engines, static fn( string $engine ) : bool => 'InnoDB' === $engine ) ) && ! empty( $identity_index ) && '0' === (string) $identity_index[0]['Non_unique'] && ! empty( $hash_index ) && '1' === (string) $hash_index[0]['Non_unique'] && ! in_array( 'inbox_uri', $actor_columns, true ) && ! in_array( 'outbox_uri', $actor_columns, true ) );
+	ax_endpoint_assert( $ax_endpoint_results, 'Actor body and endpoint ledger retain InnoDB, unique actor-role and non-unique URI indexes', (int) get_option( 'ax_actors_db_version' ) >= 39 && 2 === count( array_filter( $engines, static fn( string $engine ) : bool => 'InnoDB' === $engine ) ) && ! empty( $identity_index ) && '0' === (string) $identity_index[0]['Non_unique'] && ! empty( $hash_index ) && '1' === (string) $hash_index[0]['Non_unique'] && ! in_array( 'inbox_uri', $actor_columns, true ) && ! in_array( 'outbox_uri', $actor_columns, true ) );
 
 	$shared = 'https://example.com/inbox/shared';
 	$first = ax_endpoint_actor(
@@ -101,31 +101,10 @@ try {
 	$after_invalid = $first instanceof Axismundi_Actor ? axismundi_actors_get_endpoints( $first ) : array();
 	ax_endpoint_assert( $ax_endpoint_results, 'invalid replacement is rejected before existing endpoint rows are deleted', is_wp_error( $invalid ) && $before_invalid === $after_invalid );
 
-	// Recreate the v6 shape and prove install migrates before dropping columns.
-	$wpdb->query( "ALTER TABLE {$actors} ADD COLUMN inbox_uri text DEFAULT NULL" ); // phpcs:ignore WordPress.DB
-	$wpdb->query( "ALTER TABLE {$actors} ADD COLUMN outbox_uri text DEFAULT NULL" ); // phpcs:ignore WordPress.DB
-	$legacy_inbox  = 'https://example.com/users/endpoint_one/legacy-inbox';
-	$legacy_outbox = 'https://example.com/users/endpoint_one/legacy-outbox';
-	$legacy_payload = wp_json_encode(
-		array(
-			'id'        => 'https://example.com/users/endpoint_one',
-			'type'      => 'Person',
-			'inbox'     => $legacy_inbox,
-			'outbox'    => $legacy_outbox,
-			'followers' => 'https://example.com/users/endpoint_one/legacy-followers',
-			'endpoints' => array( 'sharedInbox' => $shared ),
-		),
-		JSON_UNESCAPED_SLASHES
-	);
-	if ( $first instanceof Axismundi_Actor ) {
-		$wpdb->delete( $table, array( 'identity_id' => $first->get_identity_id() ), array( '%d' ) ); // phpcs:ignore WordPress.DB
-		$wpdb->update( $actors, array( 'inbox_uri' => $legacy_inbox, 'outbox_uri' => $legacy_outbox, 'payload_json' => $legacy_payload ), array( 'identity_id' => $first->get_identity_id() ) ); // phpcs:ignore WordPress.DB
-	}
-	update_option( 'ax_actors_db_version', '6', false );
+	// Do not recreate an obsolete parent/profile schema on the live Actor body.
 	axismundi_actors_install();
-	$migrated_map = $first instanceof Axismundi_Actor ? axismundi_actors_get_endpoints( $first ) : array();
 	$final_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$actors}" ); // phpcs:ignore WordPress.DB
-	ax_endpoint_assert( $ax_endpoint_results, 'v6 migration backfills legacy and payload roles before dropping old columns', $legacy_inbox === ( $migrated_map['inbox'] ?? '' ) && $legacy_outbox === ( $migrated_map['outbox'] ?? '' ) && isset( $migrated_map['followers'], $migrated_map['shared_inbox'] ) && ! in_array( 'inbox_uri', $final_columns, true ) && ! in_array( 'outbox_uri', $final_columns, true ) && (int) get_option( 'ax_actors_db_version' ) >= 7 );
+	ax_endpoint_assert( $ax_endpoint_results, 'schema verification preserves normalized endpoints without restoring legacy payload columns', $before_invalid === axismundi_actors_get_endpoints( $first ) && ! in_array( 'inbox_uri', $final_columns, true ) && ! in_array( 'outbox_uri', $final_columns, true ) && ! in_array( 'payload_json', $final_columns, true ) );
 } finally {
 	foreach ( array_unique( $ax_endpoint_ids ) as $identity_id ) {
 		$wpdb->delete( axismundi_actors_endpoints_table(), array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB

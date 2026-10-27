@@ -11,11 +11,15 @@ switch ( $mode ) {
 		$expected = 'Unknown Topic attribution is not inferred from either User or current Account';
 		break;
 	case 'folder':
-		$name = 'axismundi_media_folder_actor_uri';
-		$from = '$actor = \'\' !== $attributed ? axismundi_actors_get_by_uri( $attributed ) : null;';
-		$to = '$actor = axismundi_actors_get_for_user( axismundi_media_folder_owner( $term_id ) );';
-		$expected = 'Folder storage ownership does not invent publication attribution';
-		break;
+		// Reintroducing the retired API must fail even without emitting a Create.
+		eval( 'function axismundi_media_folder_uri( int $id, bool $create = true ) : string { return ""; }' );
+		try { require __DIR__ . '/audit-actor-axis.php'; }
+		catch ( RuntimeException $error ) {
+			if ( 'User folder has no Actor collection identity' !== $error->getMessage() ) { throw $error; }
+			echo "CAUGHT folder: retired federation API reintroduced\n";
+			return;
+		}
+		throw new RuntimeException( 'Folder retirement mutation survived.' );
 	case 'selection':
 		$name = 'axismundi_act_current_local_actor';
 		$from = 'axismundi_actors_workspace_publisher( $user_id )';

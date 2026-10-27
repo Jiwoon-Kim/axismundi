@@ -1,5 +1,19 @@
 # JMAP Plugin Architecture
 
+## 2026-10-28 구현 우선 계약
+
+추가 정정: AddressBook·ContactCard DB와 RFC 9610 메서드/provider 등록은 Contacts가
+소유한다. JMAP 코어로 AddressBook을 이전한다는 아래 초기 제안은 철회한다.
+독립 Profile Card와 Account별 Profile 저장소 후보는
+[경계 정정](REVIEW-DEPENDENCY-BOUNDARIES.md#2026-10-28-결정-정정)을 따른다.
+
+[코어 런타임 구현](IMPLEMENTATION-CORE-RUNTIME.md)이 아래 초기 초안보다 우선한다.
+로컬 Actor와 Account는 identity와 수명을 공유하되, Actors는 AS2 데이터와 principal
+관계를 소유하고 JMAP은 Account별 자격·한도와 Session을 소유한다. Account UUID나
+별도 상태를 만들지 않는다. 브라우저 선택 UI는 Actors 소유이며 JMAP 의존이 없다.
+Contacts/AddressBook, 프로필 카드, 공개 HTTP·Blob·SSE는 이번 구현에 포함하지 않았다.
+아래 단수 User Actor 및 Actors 기능 할당 설명은 이행 전 배경 기록이다.
+
 작성일: 2026-10-22
 
 상태: 개발 중. 아래 Domain Binding은 제품 결정이며, 그 밖의 미구현 책임 분배는 초안이다.
@@ -53,20 +67,21 @@ includes/
   integrations/wordpress/          authentication, Account resolver, HTTP routes
 modules/
   rfc8620/                        Session and core protocol contracts
-  rfc9610/                        AddressBook and ContactCard protocol mapping
+  # RFC 9610 modules are supplied and registered by Contacts, not this core.
 docs/
 tests/
 ```
 
 RFC 번호는 기능의 출처와 검증 축으로 사용한다. 공통 엔진을 RFC별로 복제하지 않으며,
-RFC 사이 의존성과 capability 협상을 명시한다. RFC 9610 모듈과 Account별 capability
-판정은 JMAP에 둔다. Contacts는 RFC 9553 데이터와 저장·도메인 동작을 제공한다.
+RFC 사이 의존성과 capability 협상을 명시한다. Account별 capability 합성은 JMAP에 둔다.
+RFC 9610 모듈 등록·AddressBook·ContactCard 저장 및 도메인 동작은
+Contacts가 제공한다.
 
 ## Dependency Direction
 
 2026-10-23의 RFC 대조 및 컬렉션 소유권·공개 프로필 경로 검토는
 [의존성 경계 리뷰](REVIEW-DEPENDENCY-BOUNDARIES.md)에 기록한다.
-JMAP의 AddressBook 소유와 실제 Contacts 저장 책임 사이의 이관은 아직 구현하지 않았다.
+그 조사의 JMAP AddressBook 소유 제안은 2026-10-28 철회했다. DB 이관은 수행하지 않는다.
 
 제품 결정: **Contacts -> JMAP -> Actors**. Calendar도 같은 Account 소속 모델을
 따르되 이번 변경에서는 Calendar 의존성을 전환하지 않는다.
@@ -150,13 +165,14 @@ JMAP Mail Identity도 ActivityPub Actor와 동일한 엔터티가 아니다.
 - Account 노출 권한과 타입별 읽기·쓰기 권한을 구분한다. 현재 Contacts의 관리 권한이
   장래의 세분화된 AddressBook 권한까지 표현한다고 가정하지 않는다.
 - 원격 Actor 캐시를 자동으로 로컬 JMAP Account에 포함하지 않는다.
-- JMAP은 Actors와 WP User에 의존한다. RFC 9610 매핑은 JMAP 쪽에서 소유하고,
+- JMAP은 Actors와 WP User에 의존한다. RFC 9610 매핑은 Contacts 쪽에서 소유하고,
   Contacts의 RFC 9553 데이터와 Actor/Account를 연결한다. 현재 Contacts의 직접 Actor
   의존성 제거는 소유·인가·기존 편집 경로를 함께 검토할 별도 변경이며 아직 수행하지 않는다.
 - Account 식별 권한은 발행 권한과 다르므로 handle lock이나 현재 acting Actor를 요구하지 않는다.
   비활성·삭제 Actor와 관계 없는 관리자는 배제하고, 데이터 타입별 권한은 provider가 더 검사한다.
 
-Account 기능 할당과 활성화 정책은 Actors가 소유한다. JMAP은 capability의 정의와
+Account 기능 할당과 활성화 정책 저장은 JMAP이 소유한다. 도메인 provider는 Contacts 등의
+기능 플러그인이 등록하고, JMAP은
 실제 제공 가능 여부·User별 권한·제한을 합성한 최종 표현을 소유한다.
 내부 기능 키와 JMAP capability URI를 같은 저장 계약으로 고정하지 않는다.
 

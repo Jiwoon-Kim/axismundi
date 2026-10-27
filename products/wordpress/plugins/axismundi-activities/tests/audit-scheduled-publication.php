@@ -107,6 +107,7 @@ try {
 		$wpdb->delete( axismundi_act_activities_table(), array( 'object_uri_hash' => hash( 'sha256', $uri ) ) );
 		$wpdb->delete( axismundi_act_submissions_table(), axismundi_act_post_submission_source( $id ) );
 		wp_delete_post( $id, true );
+		$wpdb->delete( axismundi_op_objects_table(), array( 'source_owner' => 'wordpress-core', 'source_kind' => 'post', 'source_ref' => $id ) );
 	}
 	foreach ( array_reverse( $actors ) as $id ) {
 		foreach ( array( axismundi_actors_addresses_table(), axismundi_actors_managers_table(), axismundi_actors_signing_keys_table(), axismundi_actors_actors_table() ) as $table ) { $wpdb->delete( $table, array( 'identity_id' => $id ) ); }

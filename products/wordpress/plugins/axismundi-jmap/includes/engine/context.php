@@ -39,7 +39,7 @@ final class Context {
 		if ( ! valid_id( $id ) ) {
 			throw new MethodError( 'invalidArguments', 'accountId must be an Id.' );
 		}
-		$account = null === $this->account_resolver ? null : ( $this->account_resolver )( $id, $this->user_id );
+		$account = null === $this->account_resolver ? null : ( $this->account_resolver )( $id, $this->user_id, $capability, $writes );
 		if ( ! $account instanceof \stdClass ) {
 			throw new MethodError( 'accountNotFound' );
 		}

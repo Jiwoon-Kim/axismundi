@@ -1,14 +1,16 @@
 # Axismundi JMAP
 
-현재 상태: `0.1.0-dev` 요청 엔진 구현. 완성된 JMAP 서버는 아직 아니다.
+현재 상태: `0.1.1-dev` in-process 코어 런타임과 Account 정책 저장 구현.
+완성된 공개 JMAP 서버는 아직 아니다.
 
-첫 목표는 RFC 8620 코어와 RFC 9610 Contacts를 기존 Actors·Contacts 백엔드에
-연결하는 것이다. Contacts의 저장 구조도 재검토 범위이며, 현재 구현을 영구 계약으로
-고정하지 않는다. Calendar와 ActivityPub 투영 변경은 이번 범위에서 제외한다.
+이번 목표는 RFC 8620 코어 백엔드다. Contacts/AddressBook 프로토콜 구현은 후속 작업이며,
+다음 제품 작업은 Note 컷오프·ActivityPub·프런트앱이다. Calendar와 프로필 카드의
+저장 위치도 이번 범위에서 변경하지 않는다.
 
 - [구조 및 논의 항목](docs/ARCHITECTURE.md)
 - [RFC 검토와 현재 구현 범위](docs/REFERENCE-RFC8620-AND-EXTENSIONS.md)
 - [Session·Account 투영 구현과 공개 전제](docs/IMPLEMENTATION-SESSION.md)
+- [코어 런타임·Account 정책 구현](docs/IMPLEMENTATION-CORE-RUNTIME.md)
 - [공식 명세 목록](https://jmap.io/spec/index.html)
 - [RFC 8620](https://jmap.io/spec/rfc8620/)
 - [RFC 9610](https://jmap.io/spec/rfc9610/)
@@ -18,18 +20,20 @@ Account 접근 판정은 Actors의 프로토콜 중립 작업 공간 API에 위�
 Session·Account의 in-process 투영과 명시적 capability provider 등록을 추가했다.
 실제 데이터 provider는 아직 없으며 전체 Session 조립은 URL·Core 제한값을 명시적으로 요구한다.
 HTTP 라우트·Session 발견·업로드·Push·Contacts 메서드는 아직 노출하지 않는다.
-단, S10-B 검토용 WordPress Account 선택 화면과 nonce POST 어댑터를 추가했다.
-`axismundi_actors_account_selection_enabled` 필터가 명시적으로 true일 때만 사용할 수
-있으며 기본은 비활성이다. 이것은 표준 JMAP HTTP 메서드가 아니고, 기존 Session의
-in-process Account 투영과 Actors의 로그인 세션 쿠키를 사용한다. 생산 쓰기 소비자
-이관 및 Opus 검증 전에는 전환 기능을 출시하거나 기본 활성화하지 않는다.
-S10-C1은 같은 gate로 Contacts 데이터 workspace를 세션 선택에 연결한다. JMAP의
-브라우저 어댑터가 없으면 gate는 켜지지 않는다. 미선택·잘못된 쿠키·권한 철회에는
-기존 선택이나 기본 Account로 돌아가지 않는다. 발행 경로 이관은 아직 남아 있다.
-새 테이블이나 의존 라이브러리는 없고, 기존 Contacts·Actors 저장 구조도 변경하지 않는다.
+WordPress 선택 화면·아바타 전환기·세션 쿠키 어댑터는 Actors 소유다. JMAP 없이도
+동작하며 기존 URL·POST action·nonce 및 PHP 호환 진입점은 유지한다. Actors의
+`ax_actors_account_selection_enabled` 옵션(기본 false) 또는 기존 필터로 명시적으로
+켜며, 이번 작업에서 사이트 설정은 켜지 않았다. JMAP 메서드는 선택 쿠키를 읽지 않는다.
+
+JMAP은 `ax_jmap_accounts`와 `ax_jmap_account_capabilities`에 관리자 할당·한도를
+저장한다. Account ID와 수명은 로컬 Actor에서 파생하며 새 신원이나 principal 권한을
+만들지 않는다. provider 등록만으로 Account에 기능이 허용되지는 않는다.
 
 목표 의존 방향은 `Contacts -> JMAP -> Actors`다. 현재 Contacts의 직접 Actors 참조를
 JMAP으로 전환하는 작업은 아직 수행하지 않았다.
+AddressBook·ContactCard DB와 RFC 9610 등록은 Contacts가 소유하며 JMAP으로 DB를
+이전하지 않는다. 독립 Profile Card 및 Contacts의 Account별 Profile 저장소 후보는
+[경계 정정](docs/REVIEW-DEPENDENCY-BOUNDARIES.md#2026-10-28-결정-정정)에 기록했다.
 
 ```sh
 php products/wordpress/plugins/axismundi-jmap/tests/engine.php
@@ -37,5 +41,7 @@ php products/wordpress/plugins/axismundi-jmap/tests/engine.php
 
 실제 WP/Actors 통합 검사는 개발 사이트에서 `wp eval-file`로
 `tests/audit-accounts.php`를 실행한다. 임시 사용자와 Actor를 만들고 정리하는 검사이므로
-운영 사이트에서는 실행하지 않는다. wp-env 등록·활성화·배포·커밋은 하지 않았다.
+운영 사이트에서는 실행하지 않는다. 이번 런타임은 로컬 wp-env에서 검증했으며,
+커밋·패키징·스테이징 배포는 하지 않았다.
 Session 투영의 실제 WP 검사는 같은 방식으로 `tests/audit-session.php`를 실행한다.
+Account 정책과 공통 서비스는 `tests/audit-runtime.php`로 검증한다.

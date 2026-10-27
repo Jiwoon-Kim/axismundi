@@ -147,7 +147,7 @@ try {
 	);
 
 	$stored = $actor instanceof Axismundi_Actor ? axismundi_actors_get_by_uri( $actor->get_uri() ) : null;
-	ax_remote_assert( $ax_remote_results, 'remote snapshot fields are normalized while the bounded payload remains available', $stored instanceof Axismundi_Actor && 'alice-example' === $stored->get_preferred_username() && 'Remote Alice' === $stored->get_display_name() && str_contains( (string) $wpdb->get_var( $wpdb->prepare( 'SELECT payload_json FROM ' . axismundi_actors_actors_table() . ' WHERE identity_id = %d', $stored->get_identity_id() ) ), 'alice.png' ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture assertion on custom table.
+	ax_remote_assert( $ax_remote_results, 'remote snapshot fields are normalized while bounded detail remains available', $stored instanceof Axismundi_Actor && 'alice-example' === $stored->get_preferred_username() && 'Remote Alice' === $stored->get_display_name() && str_contains( (string) axismundi_actors_get_meta( $stored->get_identity_id(), 'remote_payload' ), 'alice.png' ) );
 	$stored_endpoints = $stored instanceof Axismundi_Actor ? axismundi_actors_get_endpoints( $stored ) : array();
 	ax_remote_assert( $ax_remote_results, 'Actor payload discovery captures collection and sharedInbox endpoint roles', 6 === count( $stored_endpoints ) && 'https://example.com/inbox/shared' === ( $stored_endpoints['shared_inbox'] ?? '' ) );
 

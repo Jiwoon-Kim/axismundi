@@ -192,9 +192,9 @@ function axismundi_op_read_object_jsonld( $id, string $requester = 'public', boo
 	if ( ! in_array( $requester, array( 'public', 'owner', 'authenticated-peer' ), true ) || ( 'public' !== $requester && ! $granted ) ) {
 		return new WP_Error( 'ax_op_object_read_forbidden', 'An explicit disclosure grant is required.', array( 'status' => 403 ) );
 	}
-	$identity = is_int( $id ) ? axismundi_actors_get_identity( $id ) : ( is_string( $id ) ? axismundi_actors_get_identity_by_uri( $id ) : null );
-	$object = is_array( $identity ) && 'object' === $identity['object_kind'] ? axismundi_op_get_object_by_identity( (int) $identity['identity_id'] ) : null;
-	if ( ! is_array( $object ) ) {
+	$object = is_int( $id ) ? axismundi_op_get_object_by_identity( $id ) : ( is_string( $id ) ? axismundi_op_get_object_by_uri( $id ) : null );
+	$identity = $object;
+	if ( ! is_array( $object ) || empty( $object['canonical_uri'] ) || 'public' !== $object['status'] ) {
 		return new WP_Error( 'ax_op_object_read_not_found', 'The registered Object was not found.', array( 'status' => 404 ) );
 	}
 	$reader = null;

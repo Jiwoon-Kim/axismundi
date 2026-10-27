@@ -7,8 +7,8 @@ defined( 'ABSPATH' ) || exit;
 
 final class Engine {
 
-	public function __construct( private readonly Registry $registry, private readonly int $max_size = 1000000, private readonly int $max_calls = 16 ) {
-		if ( $max_size < 1 || $max_calls < 1 ) {
+	public function __construct( private readonly Registry $registry, private readonly int $max_size = 1000000, private readonly int $max_calls = 16, private readonly int $max_get = 256, private readonly int $max_set = 256 ) {
+		if ( $max_size < 1 || $max_calls < 1 || $max_get < 0 || $max_set < 0 ) {
 			throw new \InvalidArgumentException( 'Request limits must be positive.' );
 		}
 		$registry->freeze();
@@ -37,6 +37,15 @@ final class Engine {
 				if ( null === $method || ! in_array( $method['capability'], $request->using, true ) ) {
 					throw new MethodError( 'unknownMethod' );
 				}
+				if ( str_ends_with( $name, '/get' ) && is_array( $arguments->ids ?? null ) && count( $arguments->ids ) > $this->max_get ) { throw new MethodError( 'requestTooLarge' ); }
+				if ( str_ends_with( $name, '/set' ) ) {
+					foreach ( array( 'create', 'update' ) as $key ) {
+						if ( property_exists( $arguments, $key ) && null !== $arguments->{$key} && ! $arguments->{$key} instanceof \stdClass ) { throw new MethodError( 'invalidArguments' ); }
+					}
+					if ( property_exists( $arguments, 'destroy' ) && null !== $arguments->destroy && ! is_array( $arguments->destroy ) ) { throw new MethodError( 'invalidArguments' ); }
+					$count = count( get_object_vars( $arguments->create ?? new \stdClass() ) ) + count( get_object_vars( $arguments->update ?? new \stdClass() ) ) + ( is_array( $arguments->destroy ?? null ) ? count( $arguments->destroy ) : 0 );
+					if ( $count > $this->max_set ) { throw new MethodError( 'requestTooLarge' ); }
+				}
 				$account = $method['account_bound']
 					? $context->authorize( $arguments->accountId ?? null, $method['capability'], $method['writes'] ) : null;
 				$result = ( $method['handler'] )( $arguments, $context, $account );
@@ -46,6 +55,10 @@ final class Engine {
 				$responses[] = array( $name, copy_json( $result ), $call_id );
 			} catch ( MethodError $error ) {
 				$responses[] = array( 'error', $error->arguments(), $call_id );
+			} catch ( \Throwable $error ) {
+				// No arguments, database errors or exception messages cross the wire.
+				error_log( 'JMAP method failed: ' . get_class( $error ) );
+				$responses[] = array( 'error', (object) array( 'type' => 'serverFail' ), $call_id );
 			}
 		}
 		$response = (object) array( 'methodResponses' => $responses, 'sessionState' => $session_state );

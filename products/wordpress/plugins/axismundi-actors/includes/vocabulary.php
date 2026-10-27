@@ -49,3 +49,29 @@ function axismundi_actors_maybe_migrate_actor_vocabulary() : void {
 	}
 }
 add_action( 'init', 'axismundi_actors_maybe_migrate_actor_vocabulary', 5 );
+
+/** Retire only folder anchors after their producer has been removed. */
+function axismundi_actors_retire_folder_identities() : bool {
+	global $wpdb;
+	$table = axismundi_actors_identities_table();
+	$wpdb->query( 'START TRANSACTION' );
+	$wpdb->get_col( "SELECT id FROM {$table} WHERE object_kind='folder' FOR UPDATE" );
+	if ( $wpdb->last_error ) { $wpdb->query( 'ROLLBACK' ); return false; }
+	foreach ( array( 'ax_actors', 'ax_actor_managers', 'ax_identity_relations' ) as $suffix ) {
+		$dependent = $wpdb->prefix . $suffix;
+		if ( 0 !== (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$dependent} d INNER JOIN {$table} i ON i.id=d.identity_id WHERE i.object_kind='folder'" ) || $wpdb->last_error ) {
+			$wpdb->query( 'ROLLBACK' ); return false;
+		}
+	}
+	if ( false === $wpdb->query( "DELETE FROM {$table} WHERE object_kind='folder'" ) ) { $wpdb->query( 'ROLLBACK' ); return false; }
+	if ( false === $wpdb->query( 'COMMIT' ) ) { return false; }
+	update_option( 'ax_actors_folder_identities_retired', '1', false );
+	return true;
+}
+
+function axismundi_actors_maybe_retire_folder_identities() : void {
+	// An older active Media Library must be upgraded before removing its anchors.
+	if ( function_exists( 'axismundi_media_folder_identity_uuid' ) ) { return; }
+	if ( '1' !== get_option( 'ax_actors_folder_identities_retired' ) ) { axismundi_actors_retire_folder_identities(); }
+}
+add_action( 'init', 'axismundi_actors_maybe_retire_folder_identities', 30 );

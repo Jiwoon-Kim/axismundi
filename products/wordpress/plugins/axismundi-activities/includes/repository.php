@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACT_DB_VERSION        = '13';
+const AXISMUNDI_ACT_DB_VERSION        = '14';
 const AXISMUNDI_ACT_DB_VERSION_OPTION = 'axismundi_activities_db_version';
 const AXISMUNDI_ACT_PAYLOAD_MAX       = 1048576;
 

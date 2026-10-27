@@ -4,7 +4,7 @@ defined( 'ABSPATH' ) || exit;
 
 /** Switch UI and workspace consumers together, only with a browser adapter present. */
 function axismundi_actors_account_selection_enabled() : bool {
-	return true === apply_filters( 'axismundi_actors_account_selection_enabled', false )
+	return true === apply_filters( 'axismundi_actors_account_selection_enabled', in_array( get_option( 'ax_actors_account_selection_enabled', false ), array( true, 1, '1' ), true ) )
 		&& true === apply_filters( 'axismundi_actors_account_selection_adapter_available', false );
 }
 

@@ -33,7 +33,9 @@ function axismundi_act_install_questions_schema() : bool {
 	$charset   = $wpdb->get_charset_collate();
 	dbDelta(
 		"CREATE TABLE {$questions} (
-			identity_id bigint(20) unsigned NOT NULL,
+			identity_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			question_uri text DEFAULT NULL,
+			question_uri_hash char(64) DEFAULT NULL,
 			author_actor_uri text NOT NULL,
 			author_actor_uri_hash char(64) NOT NULL,
 			author_identity_id bigint(20) unsigned DEFAULT NULL,
@@ -50,6 +52,7 @@ function axismundi_act_install_questions_schema() : bool {
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (identity_id),
+			UNIQUE KEY question_uri_hash (question_uri_hash),
 			KEY author_actor_uri_hash (author_actor_uri_hash),
 			KEY authority_origin (authority_origin)
 		) ENGINE=InnoDB {$charset};\n\n"
@@ -79,11 +82,18 @@ function axismundi_act_install_questions_schema() : bool {
 	);
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom schema verification.
 	$question_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$questions}" );
+	// dbDelta compares column types but does not reliably add AUTO_INCREMENT to
+	// an existing primary key whose SQL type is unchanged.
+	$key = $wpdb->get_row( "SHOW COLUMNS FROM {$questions} LIKE 'identity_id'", ARRAY_A );
+	if ( is_array( $key ) && ! str_contains( (string) $key['Extra'], 'auto_increment' ) ) {
+		if ( false === $wpdb->query( "ALTER TABLE {$questions} MODIFY identity_id bigint(20) unsigned NOT NULL AUTO_INCREMENT" ) ) { return false; }
+	}
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom schema verification.
 	$vote_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$votes}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom schema verification.
 	$vote_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$votes} WHERE Key_name = 'vote_activity_uri_hash'", ARRAY_A );
-	return in_array( 'options_json', $question_columns, true )
+	return axismundi_act_migrate_question_uris()
+		&& in_array( 'options_json', $question_columns, true )
 		&& in_array( 'option_counts_json', $question_columns, true )
 		&& in_array( 'lock_version', $question_columns, true )
 		&& in_array( 'voter_actor_uri', $vote_columns, true )
@@ -91,6 +101,20 @@ function axismundi_act_install_questions_schema() : bool {
 		&& in_array( 'ignore_reason', $vote_columns, true )
 		&& ! empty( $vote_index )
 		&& 0 === (int) $vote_index[0]['Non_unique'];
+}
+
+/** Copy historical Question anchors before the shared Object index is retired. */
+function axismundi_act_migrate_question_uris() : bool {
+	global $wpdb;
+	$table = axismundi_act_questions_table();
+	if ( '1' === get_option( 'ax_act_question_uris_migrated' ) ) { return true; }
+	$legacy = $wpdb->prefix . 'ax_identities';
+	if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $legacy ) ) ) === $legacy ) {
+		if ( false === $wpdb->query( "UPDATE {$table} q INNER JOIN {$legacy} i ON i.id=q.identity_id AND i.object_kind='object' SET q.question_uri=i.canonical_uri,q.question_uri_hash=i.canonical_uri_hash WHERE q.question_uri IS NULL" ) ) { return false; }
+	}
+	if ( 0 !== (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE question_uri IS NULL OR question_uri_hash<>SHA2(question_uri,256)" ) || $wpdb->last_error ) { return false; }
+	update_option( 'ax_act_question_uris_migrated', '1', false );
+	return true;
 }
 
 /** @return array<string,mixed>|null */
@@ -114,11 +138,9 @@ function axismundi_act_get_question( int $identity_id ) : ?array {
 
 /** @return array<string,mixed>|null */
 function axismundi_act_get_question_by_uri( string $uri ) : ?array {
-	if ( ! function_exists( 'axismundi_actors_get_identity_by_uri' ) ) {
-		return null;
-	}
-	$identity = axismundi_actors_get_identity_by_uri( $uri );
-	return is_array( $identity ) ? axismundi_act_get_question( (int) $identity['identity_id'] ) : null;
+	global $wpdb;
+	$id = $wpdb->get_var( $wpdb->prepare( 'SELECT identity_id FROM %i WHERE question_uri_hash=%s AND question_uri=%s', axismundi_act_questions_table(), hash( 'sha256', $uri ), $uri ) );
+	return $id ? axismundi_act_get_question( (int) $id ) : null;
 }
 
 /** @return string[]|WP_Error */
@@ -186,31 +208,6 @@ function axismundi_act_question_object( array $object ) {
 		'closed_at'    => axismundi_act_datetime( $object['closed'] ?? '' ),
 		'updated_at'   => axismundi_act_datetime( $object['updated'] ?? '' ),
 	);
-}
-
-/** Register the shared identity behind one Question URI. */
-function axismundi_act_question_identity( string $uri, string $origin ) {
-	if ( ! function_exists( 'axismundi_actors_get_identity_by_uri' ) || ! function_exists( 'axismundi_actors_register_identity' ) ) {
-		return new WP_Error( 'ax_act_question_identity_registry', __( 'The shared identity registry is unavailable.', 'axismundi-activities' ) );
-	}
-	$identity = axismundi_actors_get_identity_by_uri( $uri );
-	if ( null === $identity ) {
-		$identity = axismundi_actors_register_identity(
-			array(
-				'object_kind'   => 'object',
-				'origin'        => $origin,
-				'status'        => 'public',
-				'canonical_uri' => $uri,
-			)
-		);
-	}
-	if ( is_wp_error( $identity ) ) {
-		return $identity;
-	}
-	if ( ! is_array( $identity ) || 'object' !== (string) $identity['object_kind'] ) {
-		return new WP_Error( 'ax_act_question_identity_kind', __( 'The Question URI is already owned by a non-Object identity.', 'axismundi-activities' ) );
-	}
-	return $identity;
 }
 
 /** @return int|null */
@@ -335,12 +332,8 @@ function axismundi_act_question_definition_changed( array $question, array $next
 function axismundi_act_question_apply_snapshot( Axismundi_Activity $activity, array $question ) : void {
 	global $wpdb;
 	$origin   = 'inbound' === $activity->get_direction() ? 'remote' : 'local';
-	$identity = axismundi_act_question_identity( (string) $question['uri'], $origin );
-	if ( is_wp_error( $identity ) || ! is_array( $identity ) ) {
-		return;
-	}
 	$table    = axismundi_act_questions_table();
-	$existing = axismundi_act_get_question( (int) $identity['identity_id'] );
+	$existing = axismundi_act_get_question_by_uri( (string) $question['uri'] );
 	$now      = current_time( 'mysql', true );
 	if ( is_array( $existing ) && ! hash_equals( (string) $existing['author_actor_uri'], (string) $question['author_uri'] ) ) {
 		return;
@@ -367,6 +360,8 @@ function axismundi_act_question_apply_snapshot( Axismundi_Activity $activity, ar
 	}
 	$author_identity = axismundi_act_question_actor_identity( (string) $question['author_uri'] );
 	$data = array(
+		'question_uri'          => $question['uri'],
+		'question_uri_hash'     => hash( 'sha256', (string) $question['uri'] ),
 		'author_actor_uri'      => $question['author_uri'],
 		'author_actor_uri_hash' => hash( 'sha256', (string) $question['author_uri'] ),
 		'author_identity_id'    => $author_identity,
@@ -383,11 +378,11 @@ function axismundi_act_question_apply_snapshot( Axismundi_Activity $activity, ar
 	);
 	$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Question snapshot and vote reset are one state change.
 	if ( $definition_changed ) {
-		$wpdb->update( axismundi_act_question_votes_table(), array( 'vote_status' => 'reset', 'updated_at' => $now ), array( 'question_identity_id' => (int) $identity['identity_id'], 'vote_status' => 'active' ), array( '%s', '%s' ), array( '%d', '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- FEP-9967 option edit retires prior projection rows.
+		$wpdb->update( axismundi_act_question_votes_table(), array( 'vote_status' => 'reset', 'updated_at' => $now ), array( 'question_identity_id' => (int) $existing['identity_id'], 'vote_status' => 'active' ), array( '%s', '%s' ), array( '%d', '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- FEP-9967 option edit retires prior projection rows.
 	}
 	$ok = is_array( $existing )
-		? false !== $wpdb->update( $table, $data, array( 'identity_id' => (int) $identity['identity_id'] ) )
-		: false !== $wpdb->insert( $table, array_merge( $data, array( 'identity_id' => (int) $identity['identity_id'], 'lock_version' => 0, 'created_at' => $now ) ) );
+		? false !== $wpdb->update( $table, $data, array( 'identity_id' => (int) $existing['identity_id'] ) )
+		: false !== $wpdb->insert( $table, array_merge( $data, array( 'lock_version' => 0, 'created_at' => $now ) ) );
 	if ( $ok ) {
 		$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- atomically retain only complete snapshot changes.
 	} else {

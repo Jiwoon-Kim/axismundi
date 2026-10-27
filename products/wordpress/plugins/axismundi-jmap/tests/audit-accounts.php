@@ -14,6 +14,7 @@ if ( ! function_exists( 'axismundi_actors_create_managed_actor' ) ) {
 
 $users = array();
 $managed = null;
+$person = null;
 $initial_user = get_current_user_id();
 $checks = 0;
 $assert = static function ( bool $condition, string $label ) use ( &$checks ) : void {
@@ -41,7 +42,7 @@ try {
 	$assert( isset( axismundi_actors_workspace_options( $users[0] )[ $person->get_identity_id() ] ), 'Actors independently lists the workspace' );
 	$assert( array() === axismundi_actors_acting_actor_options( $users[0] ), 'Unactivated workspace is not a publishing option' );
 	$assert( null === resolve_account_actor( $personal_id, $users[1] ), 'Admin cannot read another personal Account' );
-	$managed = axismundi_actors_create_managed_actor( array( 'owner_user_id' => $users[0], 'actor_type' => 'Organization', 'preferred_username' => 'axjmap' . strtolower( wp_generate_password( 10, false, false ) ), 'status' => 'internal' ) );
+	$managed = axismundi_actors_create_managed_actor( array( 'owner_user_id' => $users[0], 'actor_type' => 'Organization', 'preferred_username' => 'axjmap' . strtolower( wp_generate_password( 10, false, false ) ), 'status' => 'public' ) );
 	if ( is_wp_error( $managed ) ) {
 		throw new RuntimeException( $managed->get_error_message() );
 	}
@@ -62,7 +63,7 @@ try {
 	$assert( ! isset( account_actors( $users[1] )[ $account_id ] ), 'Revoked Account disappears from list' );
 	axismundi_actors_set_status( $managed->get_identity_id(), 'disabled' );
 	$assert( null === resolve_account_actor( $account_id, $users[0] ) && ! isset( account_actors( $users[0] )[ $account_id ] ), 'Disabled workspace disappears from resolve and list' );
-	axismundi_actors_set_status( $managed->get_identity_id(), 'internal' );
+	axismundi_actors_set_status( $managed->get_identity_id(), 'public' );
 	$assert( null !== resolve_account_actor( $account_id, $users[0] ), 'Restored workspace becomes accessible' );
 	axismundi_actors_register_handle( $person->get_identity_id(), 'axjmap' . strtolower( wp_generate_password( 10, false, false ) ) );
 	$person = axismundi_actors_get_by_identity( $person->get_identity_id() );
@@ -79,12 +80,12 @@ try {
 } finally {
 	wp_set_current_user( $initial_user );
 	// Remove only identities created by this fixture, then the temporary WP users.
-	if ( $managed instanceof Axismundi_Actor ) {
+	foreach ( array( $managed, $person ) as $fixture ) {
+		if ( ! $fixture instanceof Axismundi_Actor ) { continue; }
 		global $wpdb;
-		$id = $managed->get_identity_id();
-		$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $id ), array( '%d' ) );
-		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => $id ), array( '%d' ) );
-		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $id ), array( '%d' ) );
+		$id = $fixture->get_identity_id();
+		foreach ( array( axismundi_actors_managers_table(), axismundi_actors_signing_keys_table(), axismundi_actors_keys_table(), axismundi_actors_endpoints_table(), axismundi_actors_addresses_table(), axismundi_actors_texts_table(), axismundi_actors_fetch_state_table(), axismundi_actors_asset_cache_table(), axismundi_actors_identity_relations_table() ) as $table ) { $wpdb->delete( $table, array( 'identity_id' => $id ) ); }
+		$wpdb->delete( axismundi_actors_actors_table(), array( 'id' => $id ) );
 	}
 	require_once ABSPATH . 'wp-admin/includes/user.php';
 	foreach ( $users as $id ) {

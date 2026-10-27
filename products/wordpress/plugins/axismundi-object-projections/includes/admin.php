@@ -400,7 +400,7 @@ function axismundi_op_render_remote_admin_page() : void {
 			<input type="hidden" name="action" value="axismundi_op_probe_remote_collection">
 			<?php wp_nonce_field( 'ax_op_probe_remote_collection' ); ?>
 			<label class="screen-reader-text" for="ax-op-remote-collection"><?php esc_html_e( 'Remote Collection URL', 'axismundi-object-projections' ); ?></label>
-			<input id="ax-op-remote-collection" type="url" name="remote_collection" class="large-text" placeholder="https://example.social/media/folder/uuid" required>
+			<input id="ax-op-remote-collection" type="url" name="remote_collection" class="large-text" placeholder="https://example.social/users/alice/featured" required>
 			<?php submit_button( __( 'Inspect Collection metadata', 'axismundi-object-projections' ), 'secondary', 'submit', false ); ?>
 		</form>
 		<?php if ( is_array( $collection_probe ) ) { axismundi_op_render_remote_collection_probe( $collection_probe ); } ?>

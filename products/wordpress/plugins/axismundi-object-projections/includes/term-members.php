@@ -52,9 +52,8 @@ function axismundi_op_query_term_members( WP_Term $term, array $args = array() )
 	$join = '';
 	$where = $wpdb->prepare( 'u.term_taxonomy_id=%d AND u.is_current=1', $term->term_taxonomy_id );
 	if ( '' !== $actor ) {
-		$identities = axismundi_actors_identities_table();
 		$objects = axismundi_op_objects_table();
-		$join = " INNER JOIN {$identities} i ON i.canonical_uri_hash=u.source_uri_hash AND i.canonical_uri=u.source_uri INNER JOIN {$objects} o ON o.identity_id=i.id";
+		$join = " INNER JOIN {$objects} o ON o.canonical_uri_hash=u.source_uri_hash AND o.canonical_uri=u.source_uri";
 		$where .= $wpdb->prepare( ' AND o.attributed_to_uri_hash=%s AND o.attributed_to_uri=%s', hash( 'sha256', $actor ), $actor );
 	}
 	$items = array();

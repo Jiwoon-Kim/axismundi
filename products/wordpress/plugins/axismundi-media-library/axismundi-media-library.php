@@ -31,7 +31,7 @@ require_once __DIR__ . '/includes/visibility.php';
 require_once __DIR__ . '/includes/edit-fields.php';
 require_once __DIR__ . '/includes/archive.php';
 require_once __DIR__ . '/includes/folders.php';
-require_once __DIR__ . '/includes/folder-identity.php';
+require_once __DIR__ . '/includes/retired-folder-identities.php';
 require_once __DIR__ . '/includes/folder-gate.php';
 require_once __DIR__ . '/includes/folder-rest.php';
 require_once __DIR__ . '/includes/media-modal.php';

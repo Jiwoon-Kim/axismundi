@@ -1,8 +1,8 @@
 <?php
 /** Standalone protocol regression tests: php tests/engine.php. */
 
-define( 'ABSPATH', __DIR__ );
-require_once dirname( __DIR__ ) . '/axismundi-jmap.php';
+defined( 'ABSPATH' ) || define( 'ABSPATH', __DIR__ );
+require_once dirname( __DIR__ ) . '/includes/bootstrap.php';
 
 use Axismundi\Jmap\Context;
 use Axismundi\Jmap\Engine;
@@ -11,10 +11,9 @@ use Axismundi\Jmap\RequestError;
 use function Axismundi\Jmap\core_registry;
 use const Axismundi\Jmap\CORE;
 
-$checks = 0;
+$GLOBALS['ax_jmap_engine_checks'] = 0;
 function check( bool $condition, string $label ) : void {
-	global $checks;
-	++$checks;
+	++$GLOBALS['ax_jmap_engine_checks'];
 	if ( ! $condition ) {
 		throw new RuntimeException( $label );
 	}
@@ -154,4 +153,28 @@ $result = $engine->execute( wire( array(
 ) ), 1, 's' );
 check( 'original' === $result->methodResponses[0][1]->nested && 'changed' === $result->methodResponses[1][1]->value->nested, 'Earlier results are isolated' );
 
-printf( "PASS: %d checks\n", $checks );
+$config = new \Axismundi\Jmap\CoreConfiguration();
+$limits = $config->properties();
+$limits->maxCallsInRequest = 1;
+$limits->maxObjectsInGet = 1;
+$limits->maxObjectsInSet = 1;
+$config = new \Axismundi\Jmap\CoreConfiguration( $limits );
+$reg = core_registry();
+$reg->register_method( 'Test/get', CORE, static fn( stdClass $args ) => $args );
+$reg->register_method( 'Test/set', CORE, static fn( stdClass $args ) => $args );
+$bounded = $config->engine( $reg );
+rejects( $bounded, wire( array( echo_call( new stdClass() ), echo_call( new stdClass() ) ) ), 'limit', 'maxCallsInRequest' );
+$response = $bounded->execute( wire( array( array( 'Test/get', (object) array( 'ids' => array( 'a', 'b' ) ), 'get' ) ) ), 1, 's' );
+check( 'requestTooLarge' === $response->methodResponses[0][1]->type, 'Shared Core configuration enforces get count' );
+$response = $bounded->execute( wire( array( array( 'Test/set', (object) array( 'create' => (object) array( 'a' => new stdClass(), 'b' => new stdClass() ) ), 'set' ) ) ), 1, 's' );
+check( 'requestTooLarge' === $response->methodResponses[0][1]->type, 'Shared Core configuration enforces set count' );
+$response = $bounded->execute( wire( array( array( 'Test/set', (object) array( 'create' => 'invalid' ), 'set' ) ) ), 1, 's' );
+check( 'invalidArguments' === $response->methodResponses[0][1]->type, 'Malformed set fields fail without a PHP type error' );
+$copy = $config->properties();
+$copy->maxCallsInRequest = 100;
+check( 1 === $config->properties()->maxCallsInRequest, 'Configuration is not mutable through its advertised copy' );
+$reg = core_registry();
+$reg->register_method( 'Test/crash', CORE, static function () { throw new RuntimeException( 'private data' ); } );
+$response = ( new Engine( $reg ) )->execute( wire( array( array( 'Test/crash', new stdClass(), 'bad' ), echo_call( new stdClass(), 'next' ) ) ), 1, 's' );
+check( 'serverFail' === $response->methodResponses[0][1]->type && ! str_contains( json_encode( $response ), 'private data' ) && 'Core/echo' === $response->methodResponses[1][0], 'Unexpected handler failures are sanitized and the batch continues' );
+printf( "PASS: %d checks\n", $GLOBALS['ax_jmap_engine_checks'] );

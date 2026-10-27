@@ -207,9 +207,9 @@ try {
 	$hidden_data = $hidden_followers instanceof WP_REST_Response ? $hidden_followers->get_data() : array();
 	ax_op_outbox_assert( $ax_op_outbox_results, 'a non-public policy keeps the advertised root alive but withholds its first page', $hidden_followers instanceof WP_REST_Response && 200 === $hidden_followers->get_status() && 'OrderedCollection' === $hidden_data['type'] && ! isset( $hidden_data['first'] ) );
 
-	axismundi_actors_set_status( $actor->get_identity_id(), 'internal' );
+	axismundi_actors_set_status( $actor->get_identity_id(), 'disabled' );
 	$hidden = axismundi_op_get_actor_outbox( $request );
-	ax_op_outbox_assert( $ax_op_outbox_results, 'an internal Actor Outbox fails closed with 404', is_wp_error( $hidden ) && 404 === (int) $hidden->get_error_data()['status'] );
+	ax_op_outbox_assert( $ax_op_outbox_results, 'a disabled Actor Outbox fails closed with 404', is_wp_error( $hidden ) && 404 === (int) $hidden->get_error_data()['status'] );
 } finally {
 	if ( null !== $ax_op_outbox_payload_filter ) {
 		remove_filter( 'axismundi_act_public_outbox_payload', $ax_op_outbox_payload_filter, 10 );

@@ -261,7 +261,7 @@ function axismundi_cal_backfill_actor_calendars() : array {
 	$ids = (array) $wpdb->get_col(
 		"SELECT a.identity_id FROM {$actors} a
 		 INNER JOIN {$identities} i ON i.id = a.identity_id
-		 WHERE i.origin = 'local' AND a.actor_scope IN ('user','managed') AND a.handle_locked_at IS NOT NULL
+		 WHERE i.origin = 'local' AND EXISTS (SELECT 1 FROM {$wpdb->prefix}ax_actor_managers m WHERE m.identity_id = a.identity_id) AND a.handle_locked_at IS NOT NULL
 		 ORDER BY a.identity_id ASC"
 	);
 	foreach ( $ids as $identity_id ) {

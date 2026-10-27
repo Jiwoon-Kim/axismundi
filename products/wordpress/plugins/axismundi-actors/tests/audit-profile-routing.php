@@ -48,9 +48,9 @@ try {
 		$ax_profile_ids[] = $actor->get_identity_id();
 	}
 
-	ax_profile_assert( $ax_profile_results, 'fixture creates one internal local Person', $actor instanceof Axismundi_Actor && 'internal' === $actor->get_status() );
-	ax_profile_assert( $ax_profile_results, 'anonymous viewers cannot see an internal actor', $actor instanceof Axismundi_Actor && ! axismundi_actors_can_view( $actor, 0 ) );
-	ax_profile_assert( $ax_profile_results, 'the linked user can preview their internal actor', $actor instanceof Axismundi_Actor && axismundi_actors_can_preview( $actor, $user_id ) );
+	ax_profile_assert( $ax_profile_results, 'fixture creates one public handleless local Person', $actor instanceof Axismundi_Actor && 'public' === $actor->get_status() );
+	ax_profile_assert( $ax_profile_results, 'anonymous viewers cannot see an unactivated actor', $actor instanceof Axismundi_Actor && ! axismundi_actors_can_view( $actor, 0 ) );
+	ax_profile_assert( $ax_profile_results, 'the linked user can preview their unactivated actor', $actor instanceof Axismundi_Actor && axismundi_actors_can_preview( $actor, $user_id ) );
 
 	$admin_id = (int) wp_insert_user(
 		array(
@@ -105,7 +105,7 @@ try {
 	);
 	ax_profile_assert(
 		$ax_profile_results,
-		'a legacy author archive does not claim an internal Person',
+		'a legacy author archive does not claim an unactivated Person',
 		'' === axismundi_actors_legacy_author_profile_redirect_url( $admin_id )
 	);
 	ax_profile_assert(

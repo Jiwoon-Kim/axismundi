@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Contacts
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/wordpress/plugins/axismundi-contacts
  * Description:       Address books of JSContact Cards, owned by an Actor and authored by a person. Imports and federation are optional sources; the Card is the record.
- * Version:           0.1.0-beta.1
+ * Version:           0.1.0-beta.2
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            Ji-woon Kim
@@ -33,7 +33,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CONTACTS_VERSION = '0.1.0-beta.1';
+const AXISMUNDI_CONTACTS_VERSION = '0.1.0-beta.2';
 
 require_once __DIR__ . '/includes/dependencies.php';
 require_once __DIR__ . '/includes/transactions.php';

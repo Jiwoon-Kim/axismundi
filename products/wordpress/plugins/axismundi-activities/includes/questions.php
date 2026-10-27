@@ -199,7 +199,7 @@ function axismundi_act_question_identity( string $uri, string $origin ) {
 			array(
 				'object_kind'   => 'object',
 				'origin'        => $origin,
-				'status'        => 'remote' === $origin ? 'public' : 'internal',
+				'status'        => 'public',
 				'canonical_uri' => $uri,
 			)
 		);

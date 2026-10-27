@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.10.0
+Stable tag: 0.10.1
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: forum, community, activitypub, group, federation
@@ -41,6 +41,11 @@ from it changes nothing on this site. Moderation of a community hosted here is d
 by the people listed as its moderators.
 
 == Changelog ==
+
+= 0.10.1 =
+* Freeze the selected Account on submission and read recorded Topic attribution.
+* Enumerate accessible moderator Accounts without assuming one Actor per User.
+* Share the existing Person and Group eligibility predicates across consumers.
 
 = 0.10.0 =
 * A user may now run an Organization, not only a Group.

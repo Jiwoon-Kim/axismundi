@@ -102,7 +102,7 @@ function axismundi_actors_accounts_for_principal( string $kind, int $id, ?string
 function axismundi_actors_set_principal_role( int $account_id, string $kind, int $id, ?string $role, bool $create_only = false ) {
 	$account = axismundi_actors_get_by_identity( $account_id );
 	if ( ! axismundi_actors_account_access_ready() || ! $account instanceof Axismundi_Actor || ! $account->is_local()
-		|| 'site' === $account->get_scope() || in_array( $account->get_status(), array( 'disabled', 'tombstone' ), true )
+		|| in_array( $account->get_status(), array( 'disabled', 'tombstone' ), true )
 		|| $id <= 0 || ! in_array( $kind, array( 'wp_user', 'local_account', 'remote_actor' ), true )
 		|| ( 'remote_actor' === $kind && null !== $role )
 		|| ( null !== $role && ( ! axismundi_actors_resolve_principal( $kind, $id ) || ! isset( axismundi_actors_principal_roles()[ $role ] ) ) ) ) {
@@ -178,8 +178,7 @@ function axismundi_actors_resolve_principal( string $kind, int $id ) : ?array {
 	} else {
 		$source = axismundi_actors_get_by_identity( $id );
 		if ( ! $source instanceof Axismundi_Actor || in_array( $source->get_status(), array( 'disabled', 'tombstone' ), true )
-			|| ( 'local_account' === $kind ) !== $source->is_local()
-			|| ( 'local_account' === $kind && 'site' === $source->get_scope() ) ) {
+			|| ( 'local_account' === $kind ) !== $source->is_local() ) {
 			return null;
 		}
 	}
@@ -192,7 +191,7 @@ function axismundi_actors_principal_account_role( int $account_id, string $kind,
 		return '';
 	}
 	$account = axismundi_actors_get_by_identity( $account_id );
-	if ( ! $account instanceof Axismundi_Actor || ! $account->is_local() || 'site' === $account->get_scope()
+	if ( ! $account instanceof Axismundi_Actor || ! $account->is_local()
 		|| in_array( $account->get_status(), array( 'disabled', 'tombstone' ), true ) ) {
 		return '';
 	}

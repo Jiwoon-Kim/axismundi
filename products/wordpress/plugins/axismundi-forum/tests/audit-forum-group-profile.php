@@ -77,7 +77,7 @@ function ax_gp_group( int $owner, array &$identity_ids ) {
 		array(
 			'owner_user_id'      => $owner,
 			'preferred_username' => 'axgp' . strtolower( wp_generate_password( 7, false, false ) ),
-			'status'             => 'internal',
+			'status'             => 'public',
 		)
 	);
 	if ( $group instanceof Axismundi_Actor ) {

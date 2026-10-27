@@ -69,8 +69,8 @@ try {
 	// Record existence and public exposure are separate steps (SPEC §2.6).
 	ax_identity_registry_assert(
 		$ax_results,
-		'a new identity is internal until it is published',
-		is_array( $folder ) && 'internal' === $folder['status']
+		'identity presence is independent of source readability',
+		is_array( $folder ) && 'public' === $folder['status']
 	);
 
 	$no_template = axismundi_actors_register_identity(

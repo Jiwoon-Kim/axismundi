@@ -117,14 +117,14 @@ try {
 	$private_identity = axismundi_actors_get_identity_by_uuid( $uuid );
 	ax_folder_identity_assert(
 		$ax_results,
-		'a private folder keeps its identity record but is not published',
-		is_array( $private_identity ) && 'internal' === $private_identity['status']
+		'a private folder keeps its identity but its source denies reading',
+		is_array( $private_identity ) && 'public' === $private_identity['status']
 			&& ! axismundi_media_folder_federation_allowed( (int) $folder )
 	);
 
 	ax_folder_identity_assert( $ax_results, 'a storage owner does not fabricate folder attribution', '' === axismundi_media_folder_actor_uri( (int) $folder ) );
 	axismundi_media_set_folder_tier( (int) $folder, 'public', (int) $owner );
-	ax_folder_identity_assert( $ax_results, 'public ACL permits reading without a recorded Create', axismundi_media_folder_federation_allowed( (int) $folder ) );
+	ax_folder_identity_assert( $ax_results, 'public folder settings permit reading without a recorded Create', axismundi_media_folder_federation_allowed( (int) $folder ) );
 	$document = axismundi_op_media_folder_collection_transform( new Axismundi_OP_Media_Folder_Collection( get_term( (int) $folder, AXISMUNDI_MEDIA_FOLDER_TAX ) ) );
 	ax_folder_identity_assert( $ax_results, 'unattributed public projection omits the property entirely', is_array( $document ) && ! array_key_exists( 'attributedTo', $document ) );
 	ax_folder_identity_assert( $ax_results, 'reading a public folder does not mint historical attribution', '' === (string) axismundi_act_get_object_attribution( axismundi_media_folder_uri( (int) $folder, false ) ) );
@@ -145,8 +145,8 @@ try {
 	$withdrawn = axismundi_actors_get_identity_by_uuid( $uuid );
 	ax_folder_identity_assert(
 		$ax_results,
-		'withdrawing publication returns the identity to internal, never a tombstone',
-		is_array( $withdrawn ) && 'internal' === $withdrawn['status']
+		'privacy does not change identity lifecycle or create a tombstone',
+		is_array( $withdrawn ) && 'public' === $withdrawn['status'] && ! axismundi_media_folder_federation_allowed( (int) $folder )
 	);
 
 	axismundi_media_set_folder_tier( (int) $folder, 'public', (int) $owner );
@@ -155,7 +155,7 @@ try {
 		$ax_results,
 		'a gated folder is fail-closed even while public',
 		! axismundi_media_folder_federation_allowed( (int) $folder )
-			&& 'internal' === ( axismundi_actors_get_identity_by_uuid( $uuid )['status'] ?? '' )
+			&& 'public' === ( axismundi_actors_get_identity_by_uuid( $uuid )['status'] ?? '' )
 	);
 	axismundi_media_set_folder_access( (int) $folder, 'open', null, (int) $owner );
 
@@ -171,7 +171,7 @@ try {
 			'a descendant of a newly private folder withdraws with its ancestor',
 			'' !== $child_uuid
 				&& ! axismundi_media_folder_federation_allowed( (int) $child )
-				&& 'internal' === ( axismundi_actors_get_identity_by_uuid( $child_uuid )['status'] ?? '' )
+				&& 'public' === ( axismundi_actors_get_identity_by_uuid( $child_uuid )['status'] ?? '' )
 		);
 		axismundi_media_set_folder_tier( (int) $folder, 'public', (int) $owner );
 	}

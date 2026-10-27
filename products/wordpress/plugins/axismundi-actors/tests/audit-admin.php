@@ -163,9 +163,9 @@ try {
 
 	// Activation transition: register handle (internal) then publish.
 	axismundi_actors_register_handle( $actor->get_identity_id(), 'alice_admin' );
-	axismundi_actors_set_status( $actor->get_identity_id(), 'internal' );
+	axismundi_actors_set_status( $actor->get_identity_id(), 'disabled' );
 	$actor = axismundi_actors_get_by_uuid( $actor->get_uuid() );
-	ax_admin_assert( $ax_admin_results, 'after activation the actor is Internal with a locked handle', 'Internal' === axismundi_actors_status_label( $actor ) && ! axismundi_actors_is_public_profile( $actor ) && $actor->is_handle_locked() );
+	ax_admin_assert( $ax_admin_results, 'after activation the actor is Disabled with a locked handle', 'Disabled' === axismundi_actors_status_label( $actor ) && ! axismundi_actors_is_public_profile( $actor ) && $actor->is_handle_locked() );
 
 	axismundi_actors_set_status( $actor->get_identity_id(), 'public' );
 	$actor = axismundi_actors_get_by_uuid( $actor->get_uuid() );

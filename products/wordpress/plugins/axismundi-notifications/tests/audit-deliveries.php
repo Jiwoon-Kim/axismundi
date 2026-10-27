@@ -97,7 +97,7 @@ try {
 			'owner_user_id'      => $ax_dv_alice,
 			'actor_type'         => 'Organization',
 			'preferred_username' => 'axdv' . strtolower( wp_generate_password( 8, false, false ) ),
-			'status'             => 'internal',
+			'status'             => 'public',
 		)
 	);
 	$ax_dv_org_id = $ax_dv_org instanceof Axismundi_Actor ? (int) $ax_dv_org->get_identity_id() : 0;

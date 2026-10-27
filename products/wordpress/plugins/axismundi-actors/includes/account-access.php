@@ -77,7 +77,7 @@ function axismundi_actors_account_role( int $identity_id, int $user_id ) : strin
 
 /** User-relative personal attribution, never inferred from Actor type or manager role alone. */
 function axismundi_actors_account_is_personal( Axismundi_Actor $actor, int $user_id ) : bool {
-	return $user_id > 0 && $actor->is_local() && 'site' !== $actor->get_scope()
+	return $user_id > 0 && $actor->is_local()
 		&& $user_id === $actor->get_personal_owner_user_id()
 		&& 'owner' === axismundi_actors_account_role( $actor->get_identity_id(), $user_id );
 }
@@ -101,7 +101,7 @@ function axismundi_actors_personal_accounts_for_user( int $user_id ) : array {
 	global $wpdb;
 	$ids = $wpdb->get_col( $wpdb->prepare(
 		"SELECT a.identity_id FROM %i a INNER JOIN %i i ON i.id = a.identity_id
-		 WHERE a.personal_owner_user_id = %d AND i.origin = 'local' AND a.actor_scope <> 'site' ORDER BY a.identity_id ASC",
+		 WHERE a.personal_owner_user_id = %d AND i.origin = 'local' ORDER BY a.identity_id ASC",
 		axismundi_actors_actors_table(), axismundi_actors_identities_table(), $user_id
 	) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- personal ownership lookup, not authorization.
 	return array_values( array_filter( array_map( 'axismundi_actors_get_by_identity', array_map( 'intval', $ids ) ) ) );

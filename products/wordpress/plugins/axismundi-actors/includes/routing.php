@@ -155,10 +155,10 @@ function axismundi_actors_can_preview( Axismundi_Actor $actor, ?int $user_id = n
 	}
 	// A managed actor (Group/Service/Organization) has no owning WP user; its
 	// preview/manage authority is the manager relation, not user identity.
-	if ( $actor->is_local() && 'site' !== $actor->get_scope() ) {
+	if ( $actor->is_local() && ! axismundi_actors_is_instance_actor( $actor ) ) {
 		return axismundi_actors_principal_can_manage( $actor->get_identity_id(), 'wp_user', $user_id );
 	}
-	return 'site' === $actor->get_scope() && (int) get_option( 'ax_actors_site_owner_user_id', 0 ) === $user_id;
+	return axismundi_actors_is_instance_actor( $actor ) && (int) get_option( 'ax_actors_site_owner_user_id', 0 ) === $user_id;
 }
 
 /**
@@ -662,7 +662,7 @@ function axismundi_actors_avatar_url( Axismundi_Actor $actor, int $size = 96 ) :
 	if ( $attachment_id > 0 ) {
 		return (string) wp_get_attachment_image_url( $attachment_id, array( $size, $size ) );
 	}
-	if ( 'site' === $actor->get_scope() ) {
+	if ( axismundi_actors_is_instance_actor( $actor ) ) {
 		return (string) get_site_icon_url( $size );
 	}
 	$user_id = $actor->get_local_user_id();
@@ -841,7 +841,7 @@ function axismundi_actors_profile_data( Axismundi_Actor $actor ) : array {
 		);
 	}
 	$language = axismundi_actors_profile_language( $actor );
-	if ( 'site' === $actor->get_scope() ) {
+	if ( axismundi_actors_is_instance_actor( $actor ) ) {
 		return array(
 			'name'    => axismundi_actors_resolve_text( $actor, 'name', $language ),
 			'summary' => axismundi_actors_resolve_text( $actor, 'summary', $language ),
@@ -882,7 +882,7 @@ function axismundi_actors_avatar_html( Axismundi_Actor $actor, int $size = 96 ) 
 	if ( $attachment_id > 0 ) {
 		return (string) wp_get_attachment_image( $attachment_id, array( $size, $size ), false, array( 'class' => 'ax-actor-profile__avatar', 'alt' => '' ) );
 	}
-	if ( 'site' === $actor->get_scope() ) {
+	if ( axismundi_actors_is_instance_actor( $actor ) ) {
 		$icon = (string) get_site_icon_url( $size );
 		return '' !== $icon ? '<img class="ax-actor-profile__avatar" src="' . esc_url( $icon ) . '" alt="" width="' . (int) $size . '" height="' . (int) $size . '" />' : '';
 	}

@@ -142,7 +142,7 @@ function axismundi_actors_audit_identity_uri_hashes() : array {
  * @param array<string,mixed> $args {
  *     @type string $object_kind   Required; one of axismundi_actors_identity_kinds().
  *     @type string $origin        local|remote. Default local.
- *     @type string $status        internal|public|disabled. Default internal — record
+ *     @type string $status        public|disabled. Default public — record
  *                                 existence and public exposure are separate steps
  *                                 (SPEC.md §2.6).
  *     @type string $uri_template  Local only; must contain the literal `{uuid}` when
@@ -168,11 +168,11 @@ function axismundi_actors_register_identity( array $args ) {
 		return new WP_Error( 'ax_actors_identity_origin', __( 'Identity origin must be local or remote.', 'axismundi-actors' ) );
 	}
 
-	$status = (string) ( $args['status'] ?? 'internal' );
+	$status = (string) ( $args['status'] ?? 'public' );
 	// A tombstone is an end state reached by axismundi_actors_set_status(), never a
 	// birth state — a record cannot start out as the marker for its own deletion.
-	if ( ! in_array( $status, array( 'internal', 'public', 'disabled' ), true ) ) {
-		return new WP_Error( 'ax_actors_identity_status', __( 'Identity status must be internal, public, or disabled.', 'axismundi-actors' ) );
+	if ( ! in_array( $status, array( 'public', 'disabled' ), true ) ) {
+		return new WP_Error( 'ax_actors_identity_status', __( 'Identity status must be public or disabled.', 'axismundi-actors' ) );
 	}
 
 	$uuid = wp_generate_uuid4();

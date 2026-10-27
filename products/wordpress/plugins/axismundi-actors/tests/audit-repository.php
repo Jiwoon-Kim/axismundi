@@ -50,7 +50,7 @@ try {
 	if ( $ok ) {
 		$ax_ids[] = $alice->get_identity_id();
 	}
-	ax_rep_assert( $ax_results, 'ensure_for_user creates an internal local Person', $ok && 'Person' === $alice->get_type() && 'user' === $alice->get_scope() && 'internal' === $alice->get_status() && $uid === $alice->get_local_user_id() );
+	ax_rep_assert( $ax_results, 'ensure_for_user creates a public local Person', $ok && 'Person' === $alice->get_type() && 'user' === $alice->get_scope() && 'public' === $alice->get_status() && $uid === $alice->get_local_user_id() );
 
 	$uuid0 = $alice->get_uuid();
 	$uri0  = $alice->get_uri();

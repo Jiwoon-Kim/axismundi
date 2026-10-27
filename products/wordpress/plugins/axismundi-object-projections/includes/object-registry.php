@@ -205,7 +205,7 @@ function axismundi_op_register_object( array $args ) {
 			array(
 				'object_kind'   => 'object',
 				'origin'        => $origin,
-				'status'        => 'local' === $origin ? 'internal' : 'public',
+				'status'        => 'public',
 				'canonical_uri' => $uri,
 			)
 		);

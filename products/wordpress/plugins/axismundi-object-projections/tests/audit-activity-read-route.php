@@ -101,7 +101,7 @@ try {
 	} finally {
 		$GLOBALS['axismundi_op_object_assemblies']['Object']['jsonld'] = $normal_assembly;
 	}
-	axismundi_actors_set_status( $identity_id, 'internal' );
+	axismundi_actors_set_status( $identity_id, 'disabled' );
 	ax_activity_read_assert( $results, 'a non-public Actor cannot expose historical Activities', ax_activity_read_missing( axismundi_op_read_activity_jsonld( $uris[0] ) ) );
 } catch ( Throwable $error ) {
 	ax_activity_read_assert( $results, 'fixture completes: ' . $error->getMessage(), false );

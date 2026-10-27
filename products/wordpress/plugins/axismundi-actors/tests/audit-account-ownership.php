@@ -38,7 +38,7 @@ try {
 	$assert( is_wp_error( axismundi_actors_remove_manager( $legacy_id, $users[0] ) ), 'Legacy removal cannot detach personal ownership' );
 
 	// Low-level storage fixture only: additional-account UI and lifecycle are the next slice.
-	$second = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'personal_owner_user_id' => $users[0], 'status' => 'internal' ) );
+	$second = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'personal_owner_user_id' => $users[0], 'status' => 'public' ) );
 	if ( ! $second instanceof Axismundi_Actor ) {
 		throw new RuntimeException( 'Second personal fixture failed.' );
 	}
@@ -47,10 +47,10 @@ try {
 	$assert( 2 === count( axismundi_actors_personal_accounts_for_user( $users[0] ) ), 'One User has two personal Accounts' );
 	$assert( 2 === count( axismundi_actors_workspace_options( $users[0] ) ), 'Both personal Accounts are discoverable' );
 	$assert( $legacy_id === axismundi_actors_get_for_user( $users[0] )->get_identity_id(), 'Legacy getter remains pinned, not first accessible Account' );
-	$assert( ! axismundi_actors_managed_actor_can_manage( $legacy_id, $users[0] ) && array() === axismundi_actors_list_manageable_actors( $users[0] ), 'Legacy managed APIs do not widen to personal ACL rows' );
+	$assert( axismundi_actors_managed_actor_can_manage( $legacy_id, $users[0] ) && 2 === count( axismundi_actors_list_manageable_actors( $users[0] ) ), 'Compatibility management APIs follow principal grants, not scope labels' );
 	$assert( ! axismundi_actors_can_act_as( $second, $users[0] ), 'Storage support does not bypass handle activation' );
 
-	$organization = axismundi_actors_create_managed_actor( array( 'owner_user_id' => $users[0], 'actor_type' => 'Organization', 'status' => 'internal' ) );
+	$organization = axismundi_actors_create_managed_actor( array( 'owner_user_id' => $users[0], 'actor_type' => 'Organization', 'status' => 'public' ) );
 	if ( ! $organization instanceof Axismundi_Actor ) {
 		throw new RuntimeException( 'Organization fixture failed.' );
 	}

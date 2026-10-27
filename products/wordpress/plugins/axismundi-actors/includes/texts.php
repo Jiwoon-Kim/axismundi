@@ -352,7 +352,7 @@ function axismundi_actors_language_fallbacks( Axismundi_Actor $actor, string $re
  * @return string
  */
 function axismundi_actors_live_text_fallback( Axismundi_Actor $actor, string $field ) : string {
-	if ( 'site' === $actor->get_scope() ) {
+	if ( axismundi_actors_is_instance_actor( $actor ) ) {
 		if ( 'name' === $field ) {
 			return (string) get_bloginfo( 'name' );
 		}

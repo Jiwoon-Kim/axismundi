@@ -5,7 +5,7 @@ define( 'ABSPATH', __DIR__ );
 
 /** Minimal identity fixture; no WordPress or JMAP bootstrap is involved. */
 final class Axismundi_Actor {
-	public function __construct( private int $id, private string $scope, private ?int $user, private string $status = 'internal', private bool $local = true ) {}
+	public function __construct( private int $id, private string $scope, private ?int $user, private string $status = 'public', private bool $local = true ) {}
 	public function get_identity_id() : int { return $this->id; }
 	public function get_scope() : string { return $this->scope; }
 	public function get_local_user_id() : ?int { return $this->user; }

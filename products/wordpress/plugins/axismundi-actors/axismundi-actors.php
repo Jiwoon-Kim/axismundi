@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Actors
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/wordpress/plugins/axismundi-actors
  * Description:       Identity registry for Axismundi. Gives every local person and every remote actor this site has cached one immutable identity URI and one human profile hub, and wires each domain plugin's archive in as a projection. Identity only — it owns no content, likes, collections, or activity.
- * Version:           0.1.4-dev
+ * Version:           0.1.5-dev
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -26,10 +26,11 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_VERSION = '0.1.4-dev';
+const AXISMUNDI_ACTORS_VERSION = '0.1.5-dev';
 
 require_once __DIR__ . '/includes/activitystreams-uri.php';
 require_once __DIR__ . '/includes/repository.php';
+require_once __DIR__ . '/includes/vocabulary.php';
 require_once __DIR__ . '/includes/transport-binding.php';
 require_once __DIR__ . '/includes/signing-keys.php';
 require_once __DIR__ . '/includes/deletion.php';

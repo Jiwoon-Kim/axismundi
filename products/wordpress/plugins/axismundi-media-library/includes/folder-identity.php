@@ -13,7 +13,7 @@
  * - **Actors is optional.** The Media Library has never required it, and it stays that
  *   way: without Actors a folder simply has no federation identity and every accessor
  *   here returns empty / false. Local folder behaviour is untouched.
- * - Folder ACL (tier, gate, password) stays in folders.php. This file only *reads* it.
+ * - Folder visibility (tier, gate, password) stays in folders.php. This file only reads it.
  *
  * @package AxismundiMediaLibrary
  */
@@ -71,10 +71,8 @@ function axismundi_media_folder_can_have_identity( int $term_id ) : bool {
  * backfills folders that predate this feature and folders created while Actors was
  * inactive — no migration pass is needed.
  *
- * The identity is registered `internal`: the record exists and is usable as a membership
- * key immediately, while publication is a separate step driven by folder visibility
- * (Actors SPEC §2.6). Minting at creation rather than at first share is deliberate — the
- * UUID is the anchor, so it must not depend on when someone decided to share.
+ * The registry records existence. Source tier/gate settings decide readability;
+ * creating an identity never grants access to a folder.
  *
  * @param int  $term_id Folder term ID.
  * @param bool $create  Register when missing.
@@ -100,7 +98,7 @@ function axismundi_media_folder_identity_uuid( int $term_id, bool $create = true
 		array(
 			'object_kind'  => 'folder',
 			'origin'       => 'local',
-			'status'       => 'internal',
+			'status'       => 'public',
 			'uri_template' => axismundi_media_folder_uri_template(),
 		)
 	);
@@ -367,33 +365,13 @@ function axismundi_media_folder_federation_entries( int $term_id, int $page = 1,
 }
 
 /**
- * Align a folder identity's registry status with its current visibility.
- *
- * Publication is reversible and the identity row survives either way: making a folder
- * private returns it to `internal` (record kept, exposure withdrawn), never a tombstone,
- * which is reserved for deletion.
+ * Deprecated compatibility callback. Visibility is source policy, not identity lifecycle.
  *
  * @param int $term_id Folder term ID.
  * @return void
  */
 function axismundi_media_sync_folder_identity_status( int $term_id ) : void {
-	if ( ! axismundi_media_identity_registry_available() ) {
-		return;
-	}
-	// Never register an identity as a side effect of a visibility change; only update one
-	// that already exists.
-	$uuid = axismundi_media_folder_identity_uuid( $term_id, false );
-	if ( '' === $uuid ) {
-		return;
-	}
-	$identity = axismundi_actors_get_identity_by_uuid( $uuid );
-	if ( ! is_array( $identity ) || 'tombstone' === $identity['status'] ) {
-		return;
-	}
-	$target = axismundi_media_folder_federation_allowed( $term_id ) ? 'public' : 'internal';
-	if ( $target !== $identity['status'] ) {
-		axismundi_actors_set_status( (int) $identity['identity_id'], $target );
-	}
+	unset( $term_id );
 }
 add_action( 'axismundi_media_folder_visibility_changed', 'axismundi_media_sync_folder_identity_status' );
 

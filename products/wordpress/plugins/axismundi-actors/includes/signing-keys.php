@@ -86,11 +86,11 @@ function axismundi_actors_store_signing_key( int $id, array $pair, ?string $prev
 /** Internal request-only snapshot. Never pass this array to serialization, hooks, or a job spool. */
 function axismundi_actors_signing_key_snapshot( Axismundi_Actor $actor ) : ?array {
 	$binding = axismundi_actors_transport_binding( $actor );
-	if ( ! $binding || 'actor' !== $binding['kind'] || ! function_exists( 'openssl_decrypt' ) ) { return null; }
+	if ( ! $binding || 'actor' !== $binding['kind'] || ! function_exists( 'openssl_decrypt' ) || ! axismundi_actors_is_public_profile( $actor ) ) { return null; }
 	global $wpdb;
 	$row = $wpdb->get_row( $wpdb->prepare( "SELECT k.* FROM %i k INNER JOIN %i a ON a.local_signing_key_id = k.id AND a.identity_id = k.identity_id
 		INNER JOIN %i i ON i.id = a.identity_id WHERE a.identity_id = %d AND k.retired_at IS NULL
-		AND i.origin = 'local' AND i.status NOT IN ('disabled','tombstone')", axismundi_actors_signing_keys_table(), axismundi_actors_actors_table(), axismundi_actors_identities_table(), $actor->get_identity_id() ), ARRAY_A );
+		AND i.origin = 'local' AND i.status = 'public'", axismundi_actors_signing_keys_table(), axismundi_actors_actors_table(), axismundi_actors_identities_table(), $actor->get_identity_id() ), ARRAY_A );
 	if ( ! is_array( $row ) || ! is_string( $row['secret_box'] ) || ! str_starts_with( $row['secret_box'], 'v1:' )
 		|| ! hash_equals( $row['fingerprint'], hash( 'sha256', trim( $row['public_key_pem'] ) ) ) ) { return null; }
 	$box = base64_decode( substr( $row['secret_box'], 3 ), true );

@@ -205,7 +205,7 @@ try {
 	);
 	$ax_ah_users[] = $carol_user_id;
 	$carol = axismundi_actors_ensure_for_user( $carol_user_id );
-	ax_ah_assert( $ax_ah_results, 'fixture creates one internal local Person for the preview-notice case', $carol instanceof Axismundi_Actor && 'internal' === $carol->get_status() );
+	ax_ah_assert( $ax_ah_results, 'fixture creates one public handleless local Person for the preview-notice case', $carol instanceof Axismundi_Actor && 'public' === $carol->get_status() );
 	if ( $carol instanceof Axismundi_Actor ) {
 		$ax_ah_ids[] = $carol->get_identity_id();
 	}

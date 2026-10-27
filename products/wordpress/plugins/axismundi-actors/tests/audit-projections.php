@@ -136,11 +136,11 @@ try {
 	// Internal actor exposes no projections to anon; owner preview may.
 	add_action( 'axismundi_actors_register_projections', $external_register );
 	axismundi_actors_load_projections();
-	axismundi_actors_set_status( $actor->get_identity_id(), 'internal' );
+	axismundi_actors_set_status( $actor->get_identity_id(), 'disabled' );
 	$internal_actor = axismundi_actors_get_by_uuid( $actor->get_uuid() );
-	ax_projection_assert( $ax_projection_results, 'an internal actor exposes no projections to an anonymous viewer', array() === axismundi_actors_get_projections( $internal_actor, 0 ) );
+	ax_projection_assert( $ax_projection_results, 'a disabled actor exposes no projections to an anonymous viewer', array() === axismundi_actors_get_projections( $internal_actor, 0 ) );
 	wp_set_current_user( $user_id );
-	ax_projection_assert( $ax_projection_results, 'the owner preview may resolve their internal actor projections', in_array( 'articles', array_column( axismundi_actors_get_projections( $internal_actor, $user_id ), 'id' ), true ) );
+	ax_projection_assert( $ax_projection_results, 'the owner preview may resolve their disabled actor projections', in_array( 'articles', array_column( axismundi_actors_get_projections( $internal_actor, $user_id ), 'id' ), true ) );
 	wp_set_current_user( 0 );
 
 	// Projections remain a registration contract, not a profile UI block. The former block

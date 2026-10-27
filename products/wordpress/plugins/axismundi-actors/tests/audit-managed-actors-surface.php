@@ -53,7 +53,7 @@ try {
 	// -- the kind travels ------------------------------------------------------------------------------
 
 	$ax_ms_org = axismundi_actors_create_managed_actor(
-		array( 'owner_user_id' => $ax_ms_owner, 'preferred_username' => 'axms' . strtolower( wp_generate_password( 8, false, false ) ), 'actor_type' => 'Organization', 'status' => 'internal' )
+		array( 'owner_user_id' => $ax_ms_owner, 'preferred_username' => 'axms' . strtolower( wp_generate_password( 8, false, false ) ), 'actor_type' => 'Organization', 'status' => 'public' )
 	);
 	ax_ms_assert(
 		$ax_ms_results,
@@ -65,7 +65,7 @@ try {
 	 * field must not quietly start producing a different sort of actor than it always did.
 	 */
 	$ax_ms_group = axismundi_actors_create_managed_actor(
-		array( 'owner_user_id' => $ax_ms_owner, 'preferred_username' => 'axms' . strtolower( wp_generate_password( 8, false, false ) ), 'status' => 'internal' )
+		array( 'owner_user_id' => $ax_ms_owner, 'preferred_username' => 'axms' . strtolower( wp_generate_password( 8, false, false ) ), 'status' => 'public' )
 	);
 	ax_ms_assert(
 		$ax_ms_results,

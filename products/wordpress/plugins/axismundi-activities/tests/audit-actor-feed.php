@@ -1113,7 +1113,7 @@ try {
 		);
 	}
 
-	axismundi_actors_set_status( $ax_feed_identity, 'internal' );
+	axismundi_actors_set_status( $ax_feed_identity, 'disabled' );
 	ax_feed_assert( $ax_feed_results, 'a non-public Actor exposes no public Activity feed', array() === axismundi_act_actor_feed_items( $actor, 20 ) );
 	/*
 	 * The loop is what makes the list, and it is reached on both halves of the feed.

@@ -1,5 +1,9 @@
 # 어휘 축소 브리프 — internal 과 actor_scope 를 없앤다
 
+2026-10-27 구현 기록: [IMPLEMENTATION-VOCABULARY-REDUCTION.md](IMPLEMENTATION-VOCABULARY-REDUCTION.md).
+소유자 추가 결정으로 internal 제거는 Actor 한정이 아니라 identity 전체에 적용한다.
+Object의 읽기는 레지스트리 상태가 아니라 각 소스가 결정한다.
+
 2026-10-25. 소유자 결정. 측정 근거는 `BRIEF-ACCOUNT-INBOX.md` 의
 "상태와 범위 어휘를 줄인다" 절에 있다. 이 문서는 그 결정을 구현 단위로 쪼갠 것이다.
 

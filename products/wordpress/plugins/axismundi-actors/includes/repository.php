@@ -892,7 +892,10 @@ final class Axismundi_Actor {
 	}
 
 	public function get_scope() : ?string {
-		return null !== $this->row['actor_scope'] ? (string) $this->row['actor_scope'] : null;
+		// Deprecated presentation adapter; authorization must never consume this label.
+		if ( ! $this->is_local() ) { return null; }
+		if ( axismundi_actors_is_instance_actor( $this ) ) { return 'site'; }
+		return $this->get_personal_owner_user_id() ? 'user' : ( $this->has_principals() ? 'managed' : null );
 	}
 
 	public function get_status() : string {
@@ -905,11 +908,20 @@ final class Axismundi_Actor {
 
 	/** A managed actor (Group/Service/Organization) administered via wp_ax_actor_managers, not a WP user. */
 	public function is_managed() : bool {
-		return 'managed' === (string) $this->row['actor_scope'];
+		// Retired Note clients still consume this display label; never authorize with it.
+		return $this->is_local() && ! axismundi_actors_is_instance_actor( $this )
+			&& null === $this->get_personal_owner_user_id() && $this->has_principals();
+	}
+
+	/** Relationship existence, not proof of the requesting principal's authority. */
+	public function has_principals() : bool {
+		if ( ! $this->is_local() ) { return false; }
+		global $wpdb;
+		return (bool) $wpdb->get_var( $wpdb->prepare( 'SELECT 1 FROM %i WHERE identity_id = %d LIMIT 1', axismundi_actors_managers_table(), $this->get_identity_id() ) );
 	}
 
 	public function get_display_name() : string {
-		if ( $this->is_local() && 'site' === $this->get_scope() ) {
+		if ( axismundi_actors_is_instance_actor( $this ) ) {
 			return (string) get_bloginfo( 'name' );
 		}
 		/*
@@ -1015,6 +1027,10 @@ function axismundi_actors_create_local( array $args ) {
 		return new WP_Error( 'ax_actors_schema_pending', 'Account schema migration must complete before creation.' );
 	}
 	$type  = (string) ( $args['actor_type'] ?? 'Person' );
+	$status = (string) ( $args['status'] ?? 'public' );
+	if ( ! in_array( $status, array( 'public', 'disabled' ), true ) ) {
+		return new WP_Error( 'ax_actors_actor_status', __( 'New Actors must be public or disabled.', 'axismundi-actors' ) );
+	}
 	$scope = isset( $args['actor_scope'] ) ? (string) $args['actor_scope'] : null;
 	$uid   = isset( $args['local_user_id'] ) ? (int) $args['local_user_id'] : null;
 	$route_user = $uid > 0 && ! axismundi_actors_get_transport_actor_for_user( $uid ) ? $uid : null;
@@ -1079,7 +1095,7 @@ function axismundi_actors_create_local( array $args ) {
 			'canonical_uri_hash' => $hash,
 			'object_kind'        => 'actor',
 			'origin'             => 'local',
-			'status'             => (string) ( $args['status'] ?? 'internal' ),
+			'status'             => $status,
 			'created_at'         => $now,
 			'updated_at'         => $now,
 		),
@@ -2266,7 +2282,9 @@ add_action( 'delete_attachment', 'axismundi_actors_clear_deleted_attachment' );
  * @return Axismundi_Actor|null
  */
 function axismundi_actors_get_site_actor() : ?Axismundi_Actor {
-	return axismundi_actors_query_one( "a.actor_scope = 'site' AND i.origin = 'local'" );
+	if ( ! axismundi_actors_migrate_instance_binding() ) { return null; }
+	$actor = axismundi_actors_get_by_identity( (int) get_option( 'ax_actors_instance_identity_id', 0 ) );
+	return $actor instanceof Axismundi_Actor && $actor->is_local() ? $actor : null;
 }
 
 /** Site-wide transport inventory, independent of WP Users and operating principal grants. */
@@ -2285,10 +2303,10 @@ function axismundi_actors_list_local_actors( string $status = '' ) : array {
 }
 
 /**
- * Return the user's local Person actor, creating an internal, **handle-less** one
+ * Return the user's local Person actor, creating a public, **handle-less** one
  * if absent. The handle is not assigned here: it is registered once, later, when
  * the user activates their actor account (axismundi_actors_register_handle), and is
- * immutable thereafter. A handle-less internal actor is still a valid identity /
+ * immutable thereafter. A handle-less actor is still a valid identity /
  * membership key.
  *
  * @param int $user_id WP user ID.
@@ -2309,7 +2327,7 @@ function axismundi_actors_ensure_for_user( int $user_id ) {
 			'actor_type'    => 'Person',
 			'actor_scope'   => 'user',
 			'local_user_id' => $user_id,
-			'status'        => 'internal',
+			'status'        => 'public',
 		)
 	);
 }
@@ -2664,15 +2682,16 @@ function axismundi_actors_upsert_instance( string $host, array $fields ) : void 
 }
 
 /**
- * Set an identity's status (internal|public|disabled|tombstone).
+ * Set an identity's status (public|disabled|tombstone). Source visibility is separate.
  *
  * @param int    $identity_id Identity key.
  * @param string $status      New status.
+ * @param string|null $expected_status Optional compare-and-swap precondition.
  * @return bool
  */
-function axismundi_actors_set_status( int $identity_id, string $status ) : bool {
+function axismundi_actors_set_status( int $identity_id, string $status, ?string $expected_status = null ) : bool {
 	global $wpdb;
-	if ( ! in_array( $status, array( 'internal', 'public', 'disabled', 'tombstone' ), true ) ) {
+	if ( ! in_array( $status, array( 'public', 'disabled', 'tombstone' ), true ) ) {
 		return false;
 	}
 	if ( false === $wpdb->query( 'START TRANSACTION' ) ) {
@@ -2683,7 +2702,7 @@ function axismundi_actors_set_status( int $identity_id, string $status ) : bool 
 		// Match rotation's lock order; identity-only objects have no Actor row.
 		$wpdb->get_var( $wpdb->prepare( 'SELECT identity_id FROM %i WHERE identity_id = %d FOR UPDATE', axismundi_actors_actors_table(), $identity_id ) );
 		$previous = $wpdb->get_row( $wpdb->prepare( 'SELECT status, origin FROM %i WHERE id = %d FOR UPDATE', axismundi_actors_identities_table(), $identity_id ), ARRAY_A );
-		if ( ! is_array( $previous ) || ( 'tombstone' === $previous['status'] && 'tombstone' !== $status ) ) {
+		if ( ! is_array( $previous ) || ( null !== $expected_status && $previous['status'] !== $expected_status ) || ( 'tombstone' === $previous['status'] && 'tombstone' !== $status ) ) {
 			return false;
 		}
 		$done = $wpdb->update(
@@ -2841,7 +2860,7 @@ function axismundi_actors_set_remote_follow_totals( int $identity_id, ?int $foll
  */
 function axismundi_actors_seed() : void {
 	if ( ! axismundi_actors_get_site_actor() ) {
-		axismundi_actors_create_local(
+		$instance = axismundi_actors_create_local(
 			array(
 				'actor_type'         => 'Application',
 				'actor_scope'        => 'site',
@@ -2849,6 +2868,7 @@ function axismundi_actors_seed() : void {
 				'status'             => 'disabled',
 			)
 		);
+		if ( $instance instanceof Axismundi_Actor ) { update_option( 'ax_actors_instance_identity_id', $instance->get_identity_id(), false ); }
 	}
 	$uid = get_current_user_id();
 	if ( $uid > 0 && user_can( $uid, 'manage_options' ) ) {
@@ -2897,8 +2917,8 @@ function axismundi_actors_tombstone_for_user( int $user_id ) : void {
 	// explicit attribution use the compatibility link as a lifecycle fallback.
 	$ids = $wpdb->get_col( $wpdb->prepare(
 		"SELECT a.identity_id FROM %i a INNER JOIN %i i ON i.id = a.identity_id
-		 WHERE i.origin = 'local' AND COALESCE(a.actor_scope, '') <> 'site' AND
-		 (a.personal_owner_user_id = %d OR (a.personal_owner_user_id IS NULL AND a.actor_scope = 'user' AND a.actor_type = 'Person' AND a.local_user_id = %d))",
+		 WHERE i.origin = 'local' AND
+		 (a.personal_owner_user_id = %d OR (a.personal_owner_user_id IS NULL AND a.actor_type = 'Person' AND a.local_user_id = %d))",
 		axismundi_actors_actors_table(), axismundi_actors_identities_table(), $user_id, $user_id
 	) );
 	foreach ( $ids as $id ) {

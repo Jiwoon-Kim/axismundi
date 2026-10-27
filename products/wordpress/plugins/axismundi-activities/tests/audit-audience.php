@@ -137,13 +137,13 @@ try {
 	);
 
 	if ( $site instanceof Axismundi_Actor ) {
-		axismundi_actors_set_status( $site->get_identity_id(), 'internal' );
+		axismundi_actors_set_status( $site->get_identity_id(), 'disabled' );
 		$site = axismundi_actors_get_by_identity( $site->get_identity_id() );
 	}
 	$internal_result = $site instanceof Axismundi_Actor
 		? axismundi_act_resolve_audience( $site, 'mentioned', array( $mention ) )
 		: null;
-	ax_aud_assert( $ax_aud_results, 'an internal local Actor cannot author a federated audience', is_wp_error( $internal_result ) && 'ax_act_audience_actor' === $internal_result->get_error_code() );
+	ax_aud_assert( $ax_aud_results, 'a disabled local Actor cannot author a federated audience', is_wp_error( $internal_result ) && 'ax_act_audience_actor' === $internal_result->get_error_code() );
 
 
 	/*
@@ -158,14 +158,14 @@ try {
 	$ax_aud_owner   = (int) wp_insert_user( array( 'user_login' => 'axaud_' . strtolower( wp_generate_password( 8, false, false ) ), 'user_pass' => wp_generate_password(), 'role' => 'administrator' ) );
 	$ax_aud_users[] = $ax_aud_owner;
 	$ax_aud_group = axismundi_actors_create_managed_actor(
-		array( 'owner_user_id' => $ax_aud_owner, 'preferred_username' => 'axaud' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'internal' )
+		array( 'owner_user_id' => $ax_aud_owner, 'preferred_username' => 'axaud' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'public' )
 	);
 	if ( $ax_aud_group instanceof Axismundi_Actor ) {
 		$ax_aud_identity_ids[] = $ax_aud_group->get_identity_id();
 	}
 	$ax_aud_group_uri  = $ax_aud_group instanceof Axismundi_Actor ? $ax_aud_group->get_uri() : '';
 	$ax_aud_second     = axismundi_actors_create_managed_actor(
-		array( 'owner_user_id' => $ax_aud_owner, 'preferred_username' => 'axaud' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'internal' )
+		array( 'owner_user_id' => $ax_aud_owner, 'preferred_username' => 'axaud' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'public' )
 	);
 	if ( $ax_aud_second instanceof Axismundi_Actor ) {
 		$ax_aud_identity_ids[] = $ax_aud_second->get_identity_id();
@@ -303,6 +303,7 @@ try {
 	}
 	foreach ( $ax_aud_identity_ids as $ax_aud_extra ) {
 		global $wpdb;
+		if ( function_exists( 'axismundi_forum_settings_table' ) ) { $wpdb->delete( axismundi_forum_settings_table(), array( 'group_identity_id' => (int) $ax_aud_extra ) ); }
 		$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => (int) $ax_aud_extra ) );
 		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => (int) $ax_aud_extra ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned Group cleanup.
 		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => (int) $ax_aud_extra ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned identity cleanup.

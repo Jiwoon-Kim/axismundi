@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Axismundi JMAP
  * Description: Development foundation for JMAP over Actor-backed accounts. No public protocol routes yet.
- * Version: 0.1.0-dev
+ * Version: 0.1.1-dev
  * Requires at least: 6.7
  * Requires PHP: 8.1
  * Requires Plugins: axismundi-actors

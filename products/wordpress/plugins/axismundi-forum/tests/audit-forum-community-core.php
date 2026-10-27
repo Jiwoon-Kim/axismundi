@@ -66,7 +66,7 @@ try {
 		array(
 			'owner_user_id'     => $owner,
 			'preferred_username' => 'axfc' . strtolower( wp_generate_password( 8, false, false ) ),
-			'status'             => 'internal',
+			'status'             => 'disabled',
 		)
 	);
 	$group_id = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
@@ -79,7 +79,7 @@ try {
 	}
 
 	ax_fc_assert(
-		'an internal managed Group is not a public community',
+		'a disabled managed Group is not a public community',
 		$group instanceof Axismundi_Actor && ! axismundi_forum_is_community( $group_id )
 	);
 	axismundi_actors_set_status( $group_id, 'public' );

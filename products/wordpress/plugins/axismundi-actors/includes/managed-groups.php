@@ -69,7 +69,7 @@ function axismundi_actors_create_managed_actor( array $args ) {
 			'actor_type'         => $type,
 			'actor_scope'        => 'managed',
 			'preferred_username' => (string) ( $args['preferred_username'] ?? '' ),
-			'status'             => (string) ( $args['status'] ?? 'internal' ),
+			'status'             => (string) ( $args['status'] ?? 'public' ),
 			// local_user_id stays NULL: a managed actor is not a WP-user Person.
 		),
 		'wp_user',
@@ -94,7 +94,7 @@ function axismundi_actors_managed_actor_can_manage( int $identity_id, int $user_
 		return false;
 	}
 	$actor = axismundi_actors_get_by_identity( $identity_id );
-	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_managed() ) {
+	if ( ! $actor instanceof Axismundi_Actor || ! $actor->has_principals() ) {
 		return false;
 	}
 	// Legacy managed-screen boundary: a logged-in WP User, not an inferred Actor.
@@ -133,23 +133,23 @@ function axismundi_actors_group_managers( int $identity_id ) : array {
  * @return Axismundi_Actor[]
  */
 function axismundi_actors_list_manageable_actors( int $user_id, ?string $min_role = null ) : array {
-	// The legacy screen lists managed-scope accounts, not all principal-operated accounts.
+	// Compatibility name; the relation, not a stored scope, determines the inventory.
 	return array_values( array_filter(
 		axismundi_actors_accounts_for_principal( 'wp_user', $user_id, $min_role ),
-		static fn( Axismundi_Actor $actor ) : bool => $actor->is_managed()
+		static fn( Axismundi_Actor $actor ) : bool => $actor->has_principals()
 	) );
 }
 
-/** @return Axismundi_Actor[] Every local managed Group, for site-administrator recovery only. */
+/** @return Axismundi_Actor[] Local principal-operated Groups, for the recovery inventory. */
 function axismundi_actors_list_all_managed_actors() : array {
 	global $wpdb;
 	$table = axismundi_actors_actors_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- site-admin recovery list of local managed identities.
-	$ids = (array) $wpdb->get_col( $wpdb->prepare( "SELECT identity_id FROM %i WHERE actor_scope = 'managed' ORDER BY identity_id ASC", $table ) );
+	$ids = (array) $wpdb->get_col( $wpdb->prepare( 'SELECT a.identity_id FROM %i a WHERE EXISTS (SELECT 1 FROM %i m WHERE m.identity_id = a.identity_id) ORDER BY a.identity_id ASC', $table, axismundi_actors_managers_table() ) );
 	$groups = array();
 	foreach ( $ids as $identity_id ) {
 		$actor = axismundi_actors_get_by_identity( (int) $identity_id );
-		if ( $actor instanceof Axismundi_Actor && $actor->is_local() && $actor->is_managed() && 'Group' === $actor->get_type() ) {
+		if ( $actor instanceof Axismundi_Actor && $actor->is_local() && $actor->has_principals() && 'Group' === $actor->get_type() ) {
 			$groups[] = $actor;
 		}
 	}
@@ -178,7 +178,7 @@ function axismundi_actors_get_public_managed_actors( int $limit = 50, int $offse
 		$wpdb->prepare(
 			"SELECT i.*, a.* FROM %i i INNER JOIN %i a ON a.identity_id = i.id
 			 WHERE a.actor_type = 'Group' AND i.status = 'public'
-			 AND ( i.origin = 'remote' OR ( i.origin = 'local' AND a.actor_scope = 'managed' AND a.handle_locked_at IS NOT NULL ) )
+			 AND ( i.origin = 'remote' OR ( i.origin = 'local' AND EXISTS (SELECT 1 FROM {$wpdb->prefix}ax_actor_managers m WHERE m.identity_id = a.identity_id) AND a.handle_locked_at IS NOT NULL ) )
 			 ORDER BY COALESCE( NULLIF( a.display_name, '' ), a.preferred_username, i.canonical_uri ) ASC, i.id ASC LIMIT %d OFFSET %d", $identities, $actors,
 			$limit,
 			$offset
@@ -209,7 +209,7 @@ function axismundi_actors_search_public_groups( string $search, int $limit = 20 
 	 * binds positionally -- the address table sits between the third and fourth
 	 * LIKE, so its argument does too.
 	 */
-	$where = "a.actor_type = 'Group' AND i.status = 'public' AND ( i.origin = 'remote' OR ( i.origin = 'local' AND a.actor_scope = 'managed' AND a.handle_locked_at IS NOT NULL ) )";
+	$where = "a.actor_type = 'Group' AND i.status = 'public' AND ( i.origin = 'remote' OR ( i.origin = 'local' AND EXISTS (SELECT 1 FROM {$wpdb->prefix}ax_actor_managers m WHERE m.identity_id = a.identity_id) AND a.handle_locked_at IS NOT NULL ) )";
 	$args  = array( $identities, $actors );
 	if ( '' !== $search ) {
 		$like   = '%' . $wpdb->esc_like( ltrim( $search, '@' ) ) . '%';
@@ -232,7 +232,7 @@ function axismundi_actors_count_public_groups() : int {
 	return (int) $wpdb->get_var(
 		$wpdb->prepare( "SELECT COUNT(*) FROM %i i INNER JOIN %i a ON a.identity_id = i.id
 		 WHERE a.actor_type = 'Group' AND i.status = 'public'
-		 AND ( i.origin = 'remote' OR ( i.origin = 'local' AND a.actor_scope = 'managed' AND a.handle_locked_at IS NOT NULL ) )", $identities, $actors )
+		 AND ( i.origin = 'remote' OR ( i.origin = 'local' AND EXISTS (SELECT 1 FROM {$wpdb->prefix}ax_actor_managers m WHERE m.identity_id = a.identity_id) AND a.handle_locked_at IS NOT NULL ) )", $identities, $actors )
 	);
 }
 
@@ -256,7 +256,7 @@ function axismundi_actors_write_manager_row( int $identity_id, int $user_id, str
  */
 function axismundi_actors_add_manager( int $identity_id, int $user_id, string $role ) {
 	$actor = axismundi_actors_get_by_identity( $identity_id );
-	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_managed() ) {
+	if ( ! $actor instanceof Axismundi_Actor || ! $actor->has_principals() ) {
 		return new WP_Error( 'ax_actors_manager_target', __( 'Managers can only be assigned to a managed actor.', 'axismundi-actors' ) );
 	}
 	// Explicit WP-login adapter for the management UI, which is not migrated yet.
@@ -284,7 +284,7 @@ function axismundi_actors_claim_managed_group( int $identity_id, int $user_id ) 
 		return new WP_Error( 'ax_actors_manager_forbidden', __( 'Only a site administrator may claim this managed Group.', 'axismundi-actors' ) );
 	}
 	$actor = axismundi_actors_get_by_identity( $identity_id );
-	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || ! $actor->is_managed() || 'Group' !== $actor->get_type() ) {
+	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || ! $actor->has_principals() || 'Group' !== $actor->get_type() ) {
 		return new WP_Error( 'ax_actors_manager_target', __( 'Only a local managed Group may be claimed.', 'axismundi-actors' ) );
 	}
 	return axismundi_actors_set_principal_role( $identity_id, 'wp_user', $user_id, 'manager' );

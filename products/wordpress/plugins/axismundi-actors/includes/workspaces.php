@@ -13,7 +13,6 @@ defined( 'ABSPATH' ) || exit;
 /** May a WP user access this local operating identity? No administrator override. */
 function axismundi_actors_can_access_workspace( Axismundi_Actor $actor, int $user_id ) : bool {
 	if ( $user_id <= 0 || ! $actor->is_local()
-		|| 'site' === $actor->get_scope()
 		|| in_array( $actor->get_status(), array( 'disabled', 'tombstone' ), true ) ) {
 		return false;
 	}

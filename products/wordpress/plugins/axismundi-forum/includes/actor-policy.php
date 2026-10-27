@@ -11,7 +11,7 @@ function axismundi_forum_person_actor( $actor ) : bool {
 
 /** Preserve the existing local managed-Group product restriction in one place. */
 function axismundi_forum_local_group( $actor ) : bool {
-	return $actor instanceof Axismundi_Actor && $actor->is_local() && $actor->is_managed() && 'Group' === $actor->get_type();
+	return $actor instanceof Axismundi_Actor && $actor->is_local() && $actor->has_principals() && 'Group' === $actor->get_type();
 }
 
 /** Local Person is a product restriction, not a personal-ownership test. */

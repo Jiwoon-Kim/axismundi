@@ -9,7 +9,7 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Create an internal, handle-less Account for the authenticated user only.
+ * Create a public, handle-less Account for the authenticated user only.
  * Creation stays opt-in until multi-account lifecycle and transport are reviewed.
  *
  * @param array $args actor_type, display_name, personal (optional).
@@ -47,7 +47,7 @@ function axismundi_actors_create_account( array $args ) {
 		'personal_owner_user_id' => $personal ? $user_id : null,
 		'initial_owner_user_id' => $user_id,
 		'display_name' => $name,
-		'status' => 'internal',
+		'status' => 'public',
 	) );
 }
 

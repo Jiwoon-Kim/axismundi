@@ -44,7 +44,7 @@ function axismundi_act_local_follow_requires_approval( Axismundi_Actor $target )
  * about Groups this site runs and can decide for.
  */
 function axismundi_act_local_follow_target_is_group( Axismundi_Actor $object ) : bool {
-	return 'Group' === $object->get_type() && $object->is_local() && $object->is_managed();
+	return 'Group' === $object->get_type() && $object->is_local() && $object->has_principals();
 }
 
 /**

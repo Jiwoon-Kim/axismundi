@@ -485,6 +485,12 @@ filter를 통과한 스냅샷만 허용한다. 비공개, inbound, 철회, 알 �
 
 ## Hashtag Is Not A Registered Type, 2026-10-20
 
+2026-10-28 어휘 정책 변경에서도 이 결정은 유지한다. 표준 타입을 코어에 완전히 내장하고
+FEP/vendor 확장을 구현 플러그인이 등록하는 방향은
+[어휘 결정](activitystreams-vocabulary-registry.md#standard-baseline-decision-2026-10-28)에
+기록했다. Hashtag를 그 custom 타입의 예시로 추가하지 않는다. Emoji·EmojiReact의 확장
+등록과 Hashtag의 name 기반 판별은 서로 다른 계약이다. 기존 저장·출력은 이번에 바꾸지 않는다.
+
 `Hashtag`를 어휘 레지스트리에 타입으로 등록하지 않는다. **사양과 FEP 어디에도
 근거가 없다.** Mastodon 이 그렇게 구현했다는 것은 따를 이유가 되지 않는다.
 

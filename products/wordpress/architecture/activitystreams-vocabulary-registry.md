@@ -6,6 +6,12 @@ Design reference. This records the W3C ActivityStreams 2.0 Vocabulary as a
 registry-shaped model for Axismundi. It does not introduce a runtime validator,
 database schema, or a claim that the vocabulary is a closed JSON schema.
 
+2026-10-28 결정 변경: 표준 AS2 Core/Extended 타입·속성의 의미 계약은 코어 어휘표가
+완전하게 제공한다. 이전의 closed project subset 정책은 아래의
+[Standard Baseline Decision](#standard-baseline-decision-2026-10-28)으로 대체한다.
+이것은 구현 방향의 확정이며, 현재 데이터 파일·Activities 검증기·직렬화기가 이미 그 계약을
+충족한다는 뜻은 아니다. 이 변경에서는 문서만 수정한다.
+
 Source: [Activity Vocabulary](https://www.w3.org/TR/activitystreams-vocabulary/).
 The specification defines vocabulary terms and inheritance, while ActivityPub
 and individual FEPs define additional transport and interoperability contracts.
@@ -33,7 +39,8 @@ Each type registration needs at least:
 term                 e.g. Question
 iri                  https://www.w3.org/ns/activitystreams#Question
 parent_terms         e.g. [IntransitiveActivity]
-category             core | actor | activity | object | link | collection
+tier                 core | extended | custom
+category             actor | activity | object | link | collection
 provenance           as2-core | fep:<id> | product:<plugin>
 projection_profiles  optional local source capabilities
 declares_properties  property terms introduced at this type
@@ -307,14 +314,105 @@ source URL and anchor for every term, then add `implementation_notes` only
 where a local decision needs explanation, such as the distinction between
 `inReplyTo` and a WordPress parent, or between `oneOf` and poll storage.
 
-The bundled property table is a **closed project subset**, not a mirror or a
-count of every upstream property. It contains the universal terms and every
-term a registered type declares or excludes; the loader rejects a type that
-references a missing definition. That closure makes the table useful without
-turning this repository into an upstream copy. A property outside the subset
-can still survive inbound as a raw extension, and is added only when this
-project needs its normalization, validation, indexing, or a registered type
-contract.
+## Standard Baseline Decision, 2026-10-28
+
+이전의 **closed project subset** 정책을 폐기한다. AS2 Vocabulary §2 Core Types와
+§3 Extended Types 전체 및 그 속성 계약을 OP의 코어 데이터에 내장한다. 구현 제품에서
+당장 사용하는 타입만 골라 넣지 않는다. 표준 타입을 안다는 것과 그 행위의 효과·저장·UI를
+구현했다는 것은 별개이다.
+
+근거는 [AS2 Vocabulary](https://www.w3.org/TR/activitystreams-vocabulary/#types)와
+[AS2 Core 모델](https://www.w3.org/TR/activitystreams-core/#model)이다. 2017 W3C
+Recommendation의 유한한 타입·속성 정의를 버전이 명확한 의미 데이터로 보관하는 것은,
+상류의 설명문·예제·규범 문장 전체를 복제하는 것과 다르다. 위의 prose/notes 비복제 원칙은
+유지한다. 요청 중 W3C 문서를 fetch하거나 임의의 Context를 실행하지 않는다.
+
+현재 `data/activitystreams-vocabulary.json`은 타입 20개·속성 63개다. Core 8종은 모두
+있고, 빠진 타입은 Extended 쪽이다. category 분포는 object 11, link 2, activity 3,
+collection 4이며 actor는 0이다. 이것은 변경 전 실측이지 새로운 완료 기준의 충족 증거가 아니다.
+Actor 5종과 구체 Activity 다수를 포함한 전체 표준 대조는 구현 단계에서 수행한다.
+
+### Orthogonal Type Axes
+
+`tier`와 `category`를 분리한다. `tier`는 AS2 표준 내 계층 또는 외부 확장 여부,
+`category`는 엔티티의 종류다. provenance·정확한 IRI·근거 문서는 별도로 유지하며,
+IRI의 네임스페이스가 같다는 이유로 표준성과 출처가 같다고 추론하지 않는다.
+
+| 타입 | tier | category | 부모 |
+|---|---|---|---|
+| Object | core | object | 없음 |
+| Activity | core | activity | Object |
+| IntransitiveActivity | core | activity | Activity |
+| Person | extended | actor | Object |
+| Create | extended | activity | Activity |
+| Arrive / Travel | extended | activity | IntransitiveActivity |
+| Question | extended | activity | IntransitiveActivity |
+| EmojiReact | custom | activity | 확장 근거를 확인해 등록 |
+
+Core 8종은 Object, Link, Activity, IntransitiveActivity, Collection, OrderedCollection,
+CollectionPage, OrderedCollectionPage다. Extended도 표준이며 custom과 혼동하지 않는다.
+기존 category에 core를 섞었던 계약은 이 두 축으로 대체한다. 이 문서 변경만으로 런타임의
+`tier` 검증이 추가되지는 않는다.
+
+### Closure, Aliases, and Extension Ownership
+
+closure 규칙은 유지한다. 타입이 `declares`/`excludes`로 참조하는 속성이 의미 표에 없으면
+현재 로더는 거부한다. 표준 타입 추가 시 필요한 속성 정의를 함께 대조해야 한다. 다만 RDF
+domain/range를 폐쇄형 JSON schema로 해석하거나 선언된 모든 속성을 필수로 만들지 않는다.
+
+`nameMap`·`summaryMap`·`contentMap`은 표준 Context가 각각 name·summary·content와
+같은 IRI에 `@language` 컨테이너를 부여한 별칭이다. 독립 의미 속성으로 중복 추가하지 않는다.
+감사는 JSON 키의 수동 목록 포함 여부가 아니라, 표준 Context의 별칭·컨테이너와 등록된
+IRI·출처를 구분해야 한다. 의미 표에 항목이 없다는 것만으로 직렬화 미지원이나 잘못된 JSON으로
+판정하지 않는다. AP의 추가 속성 역시 AS2 본문 속성과 출처를 구분한다.
+
+custom 용어는 코어 표준 파일에 넣지 않는다. 구현 플러그인이 런타임에 의미·Context 계약을
+등록하고, 등록된 네임스페이스와 정확한 IRI·FEP/vendor 근거를 연결한다. 새 prefix를 발명하거나
+기존 IRI를 바꾸라는 뜻은 아니다. 등록은 해석·검증·색인 권한을 주며, 미등록 확장의 보존을
+금지하는 수단은 아니다. 입출력의 보안·공개 정책은 계속 적용한다.
+
+| 용어 | 소유와 후속 계약 |
+|---|---|
+| Emoji | Emoji 플러그인. `includes/outbound.php`의 FEP-9098 조건부 타입/Context 선언을 유지하고 의미 등록과 정합성을 맞춘다 |
+| EmojiReact | Activities 플러그인. FEP-c0e0 근거로 런타임 등록하고 자체 문자열 허용 목록 의존을 제거한다 |
+| sensitive / manuallyApprovesFollowers | 객체 일반 속성이므로 OP의 기존 SWICG Miscellaneous Terms 등록·조건부 Context 선언을 유지한다 |
+| Hashtag | 타입으로 등록하지 않는 기존 제품 결정을 유지한다. tag 항목의 name 접두사로 판별한다 |
+
+참조: [FEP-9098](https://codeberg.org/fediverse/fep/src/branch/main/fep/9098/fep-9098.md),
+[FEP-c0e0](https://codeberg.org/fediverse/fep/src/branch/main/fep/c0e0/fep-c0e0.md),
+[SWICG sensitive](https://www.w3.org/community/reports/socialcg/CG-FINAL-apmisc-20260828/#sensitive),
+[Hashtag 결정](activitystreams-object-contract.md#hashtag-is-not-a-registered-type-2026-10-20).
+
+현재 Emoji는 Context 선언 API에 등록되지만, 이것만으로 모든 의미 메타데이터와 assembler
+연결이 완성됐다고 보지는 않는다. EmojiReact는 Activities의 자체 허용 목록과 출력 코드에
+있으며 OP 의미 등록은 없다. 기존 QuoteRequest 등 확장 선언도 있으므로 "현재 custom 타입
+등록이 0개"라고 기록하지 않는다. 플러그인 비활성화가 과거 원장 payload·Context를 지우거나
+재해석하는 근거가 되어서는 안 된다.
+
+### Contract Mismatch and Implementation Order
+
+핵심 불일치는 OP의 Question → IntransitiveActivity → `object` 제외 계약과,
+Activities의 자체 타입 목록 + 전 타입 `object` URI 필수 검사가 연결되지 않았다는 점이다.
+후자는 독립 Question을 받지 못한다. 현재 Create(Question) 처리 경로가 존재한다는 사실은
+독립 Question Activity의 지원과 다르다. 타입 이름을 추가하는 것만으로 이 불일치는 해결되지 않는다.
+
+1. 코어 파일의 AS2 표준 타입·속성 계약을 완성한다. closure, 상속, 별칭과 출처를 감사한다.
+2. Activities의 병렬 타입 허용 목록을 공통 어휘 계약 참조로 대체한다. 같은 단계에서
+   EmojiReact의 Activities 소유 런타임 등록을 연결한다. 기록 가능한 문서와 실행 가능한
+   행위의 범위를 분리하고, 인증·인가를 느슨하게 만들지 않는다.
+3. Actor·Activity 소스 어댑터가 공통 계약과 assembler를 거치게 한다. 하나의 AP 응답 엔진을
+   사용하고 어댑터별 독립 직렬화 규칙을 줄인다. 어댑터는 소스 읽기 책임이며, 단순 타입 이름
+   삽입만으로 계약을 충족했다고 보지 않는다. `object-assembly.php`의 ancestor 선택은 이미
+   어휘 기반이다. 알려진 표준 타입 누락을 unknown Object fallback이 숨기지 않게 검증한다.
+4. `direction='local'`을 정리한다. 발신/수신과 로컬 전달 방식을 분리하고, 기존 행의 URI·payload를
+   보존한다. 이행 때문에 과거 Activity를 재발신하거나 공개 범위를 넓히지 않는다.
+5. 내장 객체·복수 값 보존과 소스 중립 제출을 연결한 뒤 C2S outbox POST를 구현한다.
+   Note/CPT 컷오프나 별도 전용 REST API보다 이 공통 계약 정비가 선행한다.
+
+실행 결과만으로 계약 충족을 주장하지 않는다. 표준 예제, 기존 기록과 공개 URL 보존,
+등록/직렬화 불일치를 잡는 변이 검증을 구현 단계의 완료선으로 삼는다. 기존 감사가 소수 타입만
+다뤘다는 한계와 inbox 고아 멤버십 정합성 문제도 별도로 확인한다. 이번 커밋은 이 계획을
+기록할 뿐 데이터·런타임·엔드포인트를 변경하지 않는다.
 
 ## Type Hierarchy
 

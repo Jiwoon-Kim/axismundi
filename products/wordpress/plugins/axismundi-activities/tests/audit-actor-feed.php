@@ -19,6 +19,7 @@ $ax_feed_identities = array();
 $ax_feed_activities = array();
 $ax_feed_remote     = array();
 $ax_feed_post_id    = 0;
+$ax_feed_acquisition = static fn() : string => '1';
 
 /** @param bool[] $results Results. */
 function ax_feed_assert( array &$results, string $label, bool $condition ) : void {
@@ -106,10 +107,13 @@ try {
 	$missing_create_item = array( 'type' => 'Create', 'actor_uri' => $actor_uri, 'object_uri' => 'https://example.com/notes/' . wp_generate_uuid4() );
 	ax_feed_assert( $ax_feed_results, 'a missing Create stays hidden instead of becoming an external-object row', '' === (string) apply_filters( 'axismundi_act_actor_feed_missing_object_html', '', $missing_create_item ) );
 
+	// Own this scheduling assertion's opt-in without changing the site's stored policy.
+	add_filter( 'pre_option_' . AXISMUNDI_OP_BACKGROUND_ACQUISITION_OPTION, $ax_feed_acquisition );
 	$missing_item = array( 'type' => 'Announce', 'actor_uri' => $actor_uri, 'object_uri' => 'https://example.com/notes/' . wp_generate_uuid4() );
 	$missing_object_html = (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $missing_item );
 	$missing_fallback_html = '' === $missing_object_html ? (string) apply_filters( 'axismundi_act_actor_feed_missing_object_html', '', $missing_item ) : $missing_object_html;
 	ax_feed_assert( $ax_feed_results, 'an uncached public Object URI renders a safe external reference and queues deferred acquisition rather than erasing its Announce', false !== strpos( $missing_fallback_html, 'axismundi-object-card--external-reference' ) && false !== strpos( $missing_fallback_html, 'example.com' ) && false !== strpos( $missing_fallback_html, 'target="_blank"' ) && false !== wp_next_scheduled( 'axismundi_op_fetch_announced_object', array( $missing_item['object_uri'] ) ) );
+	remove_filter( 'pre_option_' . AXISMUNDI_OP_BACKGROUND_ACQUISITION_OPTION, $ax_feed_acquisition );
 
 	$wpdb->update( axismundi_op_remote_objects_table(), array( 'object_status' => 'tombstone' ), array( 'object_uri_hash' => hash( 'sha256', $tomb_note_uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	$tomb_item = array( 'type' => 'Announce', 'actor_uri' => $actor_uri, 'object_uri' => $tomb_note_uri );
@@ -1225,6 +1229,7 @@ try {
 
 
 } finally {
+	remove_filter( 'pre_option_' . AXISMUNDI_OP_BACKGROUND_ACQUISITION_OPTION, $ax_feed_acquisition );
 	foreach ( $ax_feed_activities as $activity_uri ) {
 		$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $activity_uri ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Fixture cleanup.
 	}
@@ -1241,6 +1246,7 @@ try {
 		wp_clear_scheduled_hook( 'axismundi_op_fetch_announced_object', array( $missing_item['object_uri'] ) );
 	}
 	foreach ( array_unique( array_filter( $ax_feed_identities ) ) as $iid ) {
+		$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $iid ) );
 		foreach ( array( axismundi_actors_texts_table(), axismundi_actors_addresses_table(), axismundi_actors_endpoints_table(), axismundi_actors_asset_cache_table(), axismundi_actors_keys_table(), axismundi_actors_fetch_state_table() ) as $table ) {
 			$wpdb->delete( $table, array( 'identity_id' => $iid ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Fixture cleanup.
 		}

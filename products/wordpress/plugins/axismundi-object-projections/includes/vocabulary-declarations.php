@@ -46,10 +46,6 @@ function axismundi_op_register_core_vocabulary() : void {
 	axismundi_op_register_vocabulary_group( array( 'orderedItems' => $as . 'items' ), array_merge( $common, array( 'jsonld_container' => '@list' ) ) );
 	$fep = 'https://w3id.org/fep/044f#';
 	$extension = array_merge( $common, array( 'provenance' => 'fep:044f', 'source' => 'https://w3id.org/fep/044f' ) );
-	axismundi_op_register_vocabulary_group( array( 'QuoteRequest' => $fep . 'QuoteRequest' ), array_merge( $extension, array(
-		'kind' => 'type', 'context' => array( 'QuoteRequest' => $fep . 'QuoteRequest' ),
-		'when' => array( array( 'kind' => 'scalarType', 'names' => array( 'QuoteRequest' ), 'path' => '~^(object)?$~' ) ),
-	) ) );
 	$qa = array( 'QuoteAuthorization' => $fep . 'QuoteAuthorization', 'gts' => 'https://gotosocial.org/ns#', 'interactingObject' => array( '@id' => 'gts:interactingObject', '@type' => '@id' ), 'interactionTarget' => array( '@id' => 'gts:interactionTarget', '@type' => '@id' ) );
 	// Former types are collected separately; both spellings share one declaration.
 	foreach ( array( 'QuoteAuthorization', 'interactingObject', 'interactionTarget' ) as $term ) {

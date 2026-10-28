@@ -259,9 +259,17 @@ function axismundi_act_types() : array {
 	 * the plugin list rather than on what was said. A tentative answer is likewise a distinct reply --
 	 * folding it into `Accept` or `Reject` would record a decision nobody made.
 	 */
-	$types = array( 'Follow', 'Accept', 'Reject', 'TentativeAccept', 'TentativeReject', 'Undo', 'Like', 'Dislike', 'EmojiReact', 'Announce', 'QuoteRequest', 'Create', 'Update', 'Delete', 'Add', 'Remove', 'Move', 'Join', 'Leave', 'Invite', 'Block', 'Flag' );
-	/** @param string[] $types Supported ActivityStreams activity types. */
-	return array_values( array_unique( array_filter( array_map( 'sanitize_text_field', (array) apply_filters( 'axismundi_act_types', $types ) ) ) ) );
+	if ( ! function_exists( 'axismundi_op_vocabulary_types' ) ) {
+		return array();
+	}
+	$types = array();
+	foreach ( axismundi_op_vocabulary_types() as $term => $definition ) {
+		if ( axismundi_op_vocabulary_is_a( $term, 'Activity' ) ) {
+			$types[] = $term;
+		}
+	}
+	/** Filters may restrict admission, but cannot invent undeclared Activity types. */
+	return array_values( array_intersect( $types, (array) apply_filters( 'axismundi_act_types', $types ) ) );
 }
 
 /**
@@ -1098,7 +1106,7 @@ function axismundi_act_normalize( array $payload, string $direction = 'local' ) 
 		return new WP_Error( 'ax_act_direction', __( 'The Activity direction is invalid.', 'axismundi-activities' ) );
 	}
 	$type = axismundi_act_type( $payload['type'] ?? '' );
-	if ( '' === $type ) {
+	if ( '' === $type || strlen( $type ) > 32 ) {
 		return new WP_Error( 'ax_act_type', __( 'The Activity type is unsupported.', 'axismundi-activities' ) );
 	}
 	$actor_uri = axismundi_act_member_uri( $payload['actor'] ?? '' );
@@ -1137,7 +1145,11 @@ function axismundi_act_normalize( array $payload, string $direction = 'local' ) 
 	// embedded object, and member_uri() reduces that to its id. Stored whenever present so
 	// the column is not Quote-specific. QuoteRequest is the first type that requires it.
 	$instrument_uri = axismundi_act_member_uri( $payload['instrument'] ?? '' );
-	if ( '' === $object_uri ) {
+	$allows_object = in_array( 'object', axismundi_op_effective_properties( $type ), true );
+	if ( ! $allows_object && array_key_exists( 'object', $payload ) ) {
+		return new WP_Error( 'ax_act_object_excluded', __( 'This Activity type excludes object.', 'axismundi-activities' ) );
+	}
+	if ( $allows_object && '' === $object_uri ) {
 		return new WP_Error( 'ax_act_object', __( 'This Activity type requires an object URI.', 'axismundi-activities' ) );
 	}
 	if ( in_array( $type, array( 'Add', 'Remove', 'Move' ), true ) && '' === $target_uri ) {

@@ -63,6 +63,35 @@ function axismundi_op_vocabulary_snapshot() {
 	return $data;
 }
 
+/** Enumerate standard and feature-owned semantic types. */
+function axismundi_op_vocabulary_types() : array {
+	axismundi_op_load_vocabulary();
+	$snapshot = axismundi_op_vocabulary_snapshot();
+	return is_array( $snapshot ) ? array_merge( $snapshot['types'], $GLOBALS['axismundi_op_vocabulary_types'] ) : array();
+}
+
+/** Test declared ancestry, with cycle protection for feature registrations. */
+function axismundi_op_vocabulary_is_a( string $term, string $ancestor ) : bool {
+	$pending = array( $term );
+	$visited = array();
+	while ( $pending ) {
+		$current = array_pop( $pending );
+		if ( isset( $visited[ $current ] ) ) {
+			continue;
+		}
+		$visited[ $current ] = true;
+		$type = axismundi_op_vocabulary_type( $current );
+		if ( null === $type ) {
+			continue;
+		}
+		if ( $current === $ancestor ) {
+			return true;
+		}
+		$pending = array_merge( $pending, (array) $type['parents'] );
+	}
+	return false;
+}
+
 /** @return array<string,mixed>|null */
 function axismundi_op_vocabulary_type( string $term ) : ?array {
 	if ( isset( $GLOBALS['axismundi_op_vocabulary_types'][ $term ] ) ) {

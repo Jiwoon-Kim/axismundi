@@ -10,7 +10,8 @@ database schema, or a claim that the vocabulary is a closed JSON schema.
 완전하게 제공한다. 이전의 closed project subset 정책은 아래의
 [Standard Baseline Decision](#standard-baseline-decision-2026-10-28)으로 대체한다.
 이것은 구현 방향의 확정이며, 현재 데이터 파일·Activities 검증기·직렬화기가 이미 그 계약을
-충족한다는 뜻은 아니다. 이 변경에서는 문서만 수정한다.
+충족한다는 뜻은 아니다. 최초 결정 커밋 `772b3d9`는 문서만 수정했으며, 후속 표준 어휘표
+구현 범위는 아래 Standard Baseline Implementation에 별도로 기록한다.
 
 Source: [Activity Vocabulary](https://www.w3.org/TR/activitystreams-vocabulary/).
 The specification defines vocabulary terms and inheritance, while ActivityPub
@@ -327,7 +328,7 @@ Recommendation의 유한한 타입·속성 정의를 버전이 명확한 의미 
 상류의 설명문·예제·규범 문장 전체를 복제하는 것과 다르다. 위의 prose/notes 비복제 원칙은
 유지한다. 요청 중 W3C 문서를 fetch하거나 임의의 Context를 실행하지 않는다.
 
-현재 `data/activitystreams-vocabulary.json`은 타입 20개·속성 63개다. Core 8종은 모두
+결정 당시 `data/activitystreams-vocabulary.json`은 타입 20개·속성 63개였다. Core 8종은 모두
 있고, 빠진 타입은 Extended 쪽이다. category 분포는 object 11, link 2, activity 3,
 collection 4이며 actor는 0이다. 이것은 변경 전 실측이지 새로운 완료 기준의 충족 증거가 아니다.
 Actor 5종과 구체 Activity 다수를 포함한 전체 표준 대조는 구현 단계에서 수행한다.
@@ -413,6 +414,115 @@ Activities의 자체 타입 목록 + 전 타입 `object` URI 필수 검사가 �
 등록/직렬화 불일치를 잡는 변이 검증을 구현 단계의 완료선으로 삼는다. 기존 감사가 소수 타입만
 다뤘다는 한계와 inbox 고아 멤버십 정합성 문제도 별도로 확인한다. 이번 커밋은 이 계획을
 기록할 뿐 데이터·런타임·엔드포인트를 변경하지 않는다.
+
+## C2S Processing and Storage Boundary, 2026-10-28
+
+저장 책임은 엔티티별로 분리한다. Actors는 Actor 원본·신원·수명, Activities는 inbound와
+outbound Activity 원장 및 행위별 상태를 소유한다. OP는 Object의 투영·읽기 표현과 객체
+저장소 연결을 소유하며 WP 객체는 `wp_posts`, 원격 관찰은 remote Object cache, 신규 로컬
+객체는 local Object 저장소로 분리한다. 이것은 목표 경계이며 이번 단계에서 신규 local
+Object 테이블이나 마이그레이션을 만들지는 않는다. 어휘표가 공통이라고 DB identity의
+부모를 다시 하나로 합치지 않는다. Question 저장 소유는 Activities라는 기존 결정을 유지한다.
+
+AP C2S 처리기는 §6의 타입별 서버 동작을 해석한다. 저장·효과·전달을 어휘 등록 자체의
+부작용으로 만들지 않는다. 제출 Actor 권한 및 transport 인증도 별도로 검증한다.
+
+| 제출 | 처리 계약 |
+|---|---|
+| 비-Activity Object | §6.2.1에 따라 Create의 object로 감싸고, 비-transient 객체와 Create 각각에 서버 ID를 부여한다. 지정된 addressing을 Create에 복사한다 |
+| Create(Object) | §6.2에 따라 객체를 생성하며 귀속·수신 범위의 정합성을 처리한다. Object 저장과 Activity 확정은 별개의 책임이지만 하나의 일관된 로컬 커밋 경계로 연결한다 |
+| Like | Activity를 기록하고 §6.8의 liked 컬렉션 효과를 행위 처리기로 적용한다. Object 본문을 새로 생성하지 않는다 |
+| Undo | §6.10에 따라 원 Activity와 Actor 동일성을 검사하고, 가능한 효과를 되돌린다. 대상 원장 payload를 삭제·재작성하지 않는다. Create/삭제 및 컬렉션 제거는 Delete/Remove 계약과 구분한다 |
+| Update / Delete | 객체 소유 저장소의 수정·철회와 원장 기록을 연결한다. C2S 부분 수정 및 삭제 응답 계약은 해당 AP 절에서 검증한다 |
+| 독립 Question | AS2 §5.4의 IntransitiveActivity로 원장에 직접 기록한다. object 없이 수용하고 동일 Actor의 Undo 대상이 된다. 자동으로 Create로 감싸거나 poll DB에 넣지 않는다 |
+| Create(Question) | Create는 원장에 기록하고 내장 Question은 Activities의 Question DB에 투영한다. FEP-9967 poll 경로이며 Question 자체를 별도 원장 사건으로 중복 생성하지 않는다 |
+
+직접 Activity 제출과 Object 제출을 같은 분기로 취급하지 않는다. Question 예외도 전송
+프로필의 규칙이지 AS2 상속 트리나 저장 소유를 바꾸는 규칙이 아니다. 로컬 커밋 후 확정된
+동일 Activity를 수신자에게 전달하며, S2S 전달용 Create를 한 번 더 생성하지 않는다.
+
+근거: [AP §6](https://www.w3.org/TR/activitypub/#client-to-server-interactions),
+[§6.2.1](https://www.w3.org/TR/activitypub/#object-creation-without-a-create-activity),
+[FEP-9967](https://codeberg.org/fediverse/fep/src/branch/main/fep/9967/fep-9967.md).
+
+## Standard Baseline Implementation, 2026-10-28
+
+코어 어휘 데이터에 AS2 타입 54종을 등록했다. Core 8종과 Extended 46종을 `tier`로
+구분하고, Actor 5종을 포함해 category와 부모를 명시한다. Invite → Offer,
+TentativeAccept → Accept, TentativeReject → Reject, Block → Ignore 등 직접 상속을
+보존한다. 표준 타입 등록은 해당 Activity의 서버 효과나 C2S 처리 완료를 의미하지 않는다.
+
+W3C Vocabulary 원문의 §4 속성은 62개이며 기존 표가 이미 모두 포함하고 있었다.
+`orderedItems`는 별도 술어가 아니라 Core의 items/@list 별칭이므로 등록 수는 63개를
+유지한다. nameMap 등 언어맵을 새 속성으로 중복 추가하지 않았다. image·object·relationship
+속성의 출처 앵커는 같은 이름의 타입 앵커와 구분해 정정했다.
+
+원문 HTML의 타입·직접 부모·Core/Extended 구분과 속성 목록을 현재 데이터와 직접 비교했다.
+`tests/audit-standard-vocabulary.php`는 고정된 표준 목록, closure, 상속, IRI, 별칭 경계와
+확장 분리를 오프라인으로 재검사한다. `tests/audit-standard-vocabulary-mutations.php`는
+메모리 내 누락·부모 변경·exclusion 제거·속성 누락으로 이 감사가 실패하는지 확인한다.
+명령은 OP 경로의 각 파일에 대한 `wp eval-file`이며 변이는 `AX_STANDARD_VOCAB_MUTATION`에
+`type`, `parent`, `exclusion`, `property` 중 하나를 지정한다. 요청 시 원문 fetch는 추가하지 않았다.
+실측 결과: 표준 어휘 감사 239개, 기존 어휘 감사 15개, Context 감사 43개, transformer
+레지스트리 감사 4개 통과. 네 변이는 각각 의도한 단언에서 CAUGHT였고 PHP lint 및
+`git diff --check`도 통과했다. HTTP C2S 또는 전체 행위 효과의 준수 검증을 뜻하지 않는다.
+
+이 표준 어휘 기반 단계 직후 Activities 계약 연결을 아래와 같이 구현했다.
+어댑터/assembler 전체 연결, direction local 이행, C2S outbox POST, 신규 로컬 Object
+저장소는 여전히 후속 단계다.
+
+## Activity Ledger Vocabulary Admission, 2026-10-28
+
+Activities의 22종 하드코딩 목록을 제거했다. OP의 표준·런타임 의미 타입을 열거하고
+Activity 상속 여부로 원장 수용 후보를 만든다. 기존 `axismundi_act_types` 필터는 후보를
+제한할 수 있지만 의미 등록 없이 타입을 추가할 수 없다. 따라서 OP는 이제 Activities의
+명시적인 필수 의존성이다. OP가 없으면 옛 목록으로 폴백하지 않는다.
+
+object 허용 여부는 OP의 effective properties에서 읽는다. IntransitiveActivity 하위는
+object 없이 저장되며 object를 넣으면 거부한다. 그 외 타입의 기존 object URI 요구와
+Add/Remove/Move의 target, QuoteRequest의 instrument 요구는 유지한다. 이 단계는 AS2의
+모든 선택 속성을 곧바로 완전 수용하거나 모든 행위 효과를 실행한다는 주장이 아니다.
+확장 타입 이름은 기존 varchar(32)에 맞지 않으면 저장 전에 거부한다. 스키마는 변경하지 않았다.
+
+`includes/vocabulary.php`에서 Activities가 EmojiReact(FEP-c0e0, Like 상속)와
+QuoteRequest(FEP-044f, Activity 상속)의 의미 타입 및 조건부 Context를 함께 등록한다.
+QuoteRequest Context의 기존 범위와 바이트를 유지하면서 OP의 중복 선언을 제거했다.
+EmojiReact의 IRI는 FEP가 지정한 `http://litepub.social/ns#EmojiReact`를 사용한다.
+등록 실패 후 재시도에 부분적인 타입이 남지 않도록 OP 로더의 rollback 대상에 의미 등록도 포함한다.
+
+독립 Question과 Create(Question)의 저장 경로는 위 표대로 분리한다. 기존 poll 투영기는
+Create/Update의 내장 Question만 처리하므로 독립 Question의 payload나 Undo를 poll 집계에
+강제로 적용하지 않는다. Undo는 기존 원장의 동일 Actor 검증·effective 상태 전이를 재사용한다.
+
+검증 명령:
+
+```sh
+wp eval-file wp-content/plugins/axismundi-activities/tests/audit-vocabulary-contract.php
+wp eval-file wp-content/plugins/axismundi-activities/tests/audit-vocabulary-contract-mutations.php
+wp eval-file wp-content/plugins/axismundi-actors/tests/audit-principal-fixture-cleanup.php
+```
+
+계약 감사는 26개 단언으로 Arrive/Travel/Question의 object 없는 기록, 제외 속성 거부,
+동적 확장 등록, 두 Question 저장 경로, 동일/상이 Actor Undo, 기존 원장·Question·principal
+행 내용 보존을 검사한다. 변이는 타입 누락, IntransitiveActivity exclusion 제거,
+Question의 부모를 Activity로 바꾸기를 각기 별도 프로세스에서 적용한다. 소스 파일이나
+기존 DB 행을 변이하지 않는다. 복수 값 인덱싱, local→outbound 이행, 내장 객체 ID 발급은
+이 작업에 포함하지 않는다.
+
+실측: 계약 감사 26, repository 21, poll 16, emoji reactions 39, QuoteRequest 11,
+public outbox 4, Actor feed 85, Context 43개 단언 통과. 세 변이는 각각 의도한 실패를
+검출했고 principal 반복 회귀는 12개 감사 × 2회 = 24/24 통과했다. PHP lint와
+`git diff --check`도 통과했다. 인용 픽스처는 축 마이그레이션 후 계약에 맞게 명시적
+Create를 기록하도록, 피드 픽스처는 예약 작업을 검사하는 구간만 자기 opt-in을 주입하도록
+보완했다. 두 감사의 principal 정리 누락도 수정했다.
+
+감사 위생의 잔여 한계: 기존 반복 묶음의 Forum/축 관련 실행에서 원장 90행 및 관계 20행이
+남았다. principal 감사 통과는 원장·관계 보존의 증명이 아니다. 이번 실행의 시각·행 ID와
+이미 삭제된 픽스처 Actor를 대조해 해당 실행분만 제거했다. 원장 ID 범위는
+92716–92756, 92779–92782, 92809–92849, 92872–92875였고, 별도로 이번 실행에서
+생긴 principal (54770, wp_user 54626), (54775, wp_user 54629)도 정확히 제거했다.
+최종 원장 30,770행·principal 1,038행으로 복구했다. 전체 감사의 원장·관계 누수 방지는
+별도 후속 과제이며, 이번 신규 계약 감사는 자기 실행 전후 원장 전체 행 내용을 비교한다.
 
 ## Type Hierarchy
 

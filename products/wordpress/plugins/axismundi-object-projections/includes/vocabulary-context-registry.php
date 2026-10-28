@@ -120,12 +120,16 @@ function axismundi_op_load_vocabulary() : void {
 	}
 	$namespaces = $GLOBALS['axismundi_op_namespaces'];
 	$terms = $GLOBALS['axismundi_op_vocabulary_terms'];
+	$types = $GLOBALS['axismundi_op_vocabulary_types'];
+	$properties = $GLOBALS['axismundi_op_vocabulary_properties'];
 	$GLOBALS['axismundi_op_vocabulary_loaded'] = true;
 	try {
 		do_action( 'axismundi_op_register_vocabulary' );
 	} catch ( Throwable $error ) {
 		$GLOBALS['axismundi_op_namespaces'] = $namespaces;
 		$GLOBALS['axismundi_op_vocabulary_terms'] = $terms;
+		$GLOBALS['axismundi_op_vocabulary_types'] = $types;
+		$GLOBALS['axismundi_op_vocabulary_properties'] = $properties;
 		$GLOBALS['axismundi_op_vocabulary_loaded'] = false;
 		throw $error;
 	}

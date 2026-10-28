@@ -92,6 +92,9 @@ try {
 	if ( ! $author instanceof Axismundi_Actor || ! $requester instanceof Axismundi_Actor || '' === $quoted_uri ) {
 		throw new RuntimeException( 'QuoteRequest fixture prerequisites failed.' );
 	}
+	// Stored attribution comes from a real Create, never from post_author.
+	$publication = axismundi_act_record_activity( array( 'type' => 'Create', 'actor' => $author->get_uri(), 'object' => $quoted_uri ), 'outbound' );
+	ax_qr_assert( $ax_qr_results, 'fixture explicitly publishes its Article under the author Actor', $publication instanceof Axismundi_Activity && $author->get_uri() === axismundi_act_get_object_attribution( $quoted_uri ) );
 
 	update_post_meta( $post_id, AXISMUNDI_OP_POST_QUOTE_POLICY_META, 'anyone' );
 	$anyone  = ax_qr_request( $requester, $quoted_uri, 'anyone-' . $ax_qr_suffix, $ax_qr_actor_uris );
@@ -204,6 +207,7 @@ try {
 		$wpdb->delete( axismundi_act_activities_table(), array( 'actor_uri_hash' => hash( 'sha256', $actor_uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned cleanup.
 	}
 	foreach ( array_unique( $ax_qr_identities ) as $identity_id ) {
+		$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $identity_id ) );
 		foreach ( array( axismundi_actors_endpoints_table(), axismundi_actors_keys_table(), axismundi_actors_fetch_state_table(), axismundi_actors_identity_relations_table(), axismundi_actors_asset_cache_table(), axismundi_actors_addresses_table(), axismundi_actors_texts_table() ) as $child_table ) {
 			$wpdb->delete( $child_table, array( 'identity_id' => $identity_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned cleanup.
 		}

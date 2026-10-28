@@ -612,7 +612,11 @@ function axismundi_act_exclude_question_vote_reply( bool $include, string $child
 }
 add_filter( 'axismundi_op_thread_include_reply', 'axismundi_act_exclude_question_vote_reply', 10, 2 );
 
-/** Project FEP-9967 Question and Vote activities after immutable ledger commit. */
+/**
+ * Project FEP-9967 Create/Update(Question) and Vote activities after commit.
+ * Standalone AS2 Question activities stay in the ledger and can be undone;
+ * they are not implicitly converted into FEP polls.
+ */
 function axismundi_act_sync_question_activity( Axismundi_Activity $activity ) : void {
 	$payload = $activity->get_payload();
 	$object  = $payload['object'] ?? null;

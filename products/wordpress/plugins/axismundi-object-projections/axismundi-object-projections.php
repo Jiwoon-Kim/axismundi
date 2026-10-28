@@ -71,6 +71,8 @@ require_once __DIR__ . '/includes/integrations/reactions.php';
 require_once __DIR__ . '/includes/integrations/activities.php';
 require_once __DIR__ . '/includes/router.php';
 require_once __DIR__ . '/includes/activity-read-route.php';
+require_once __DIR__ . '/includes/local-objects.php';
+require_once __DIR__ . '/includes/local-object-route.php';
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/admin.php';
 }

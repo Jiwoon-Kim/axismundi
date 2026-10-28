@@ -102,11 +102,14 @@ function axismundi_op_tag_transaction_guard() {
  * `content` is an explicit participation grant, not an AS2 inheritance test.
  * Actor profiles and envelope Activities use `reference`; standalone Questions
  * may use `content`. This function never inspects an embedded object's tags.
- * Call after the source transaction commits; this projection owns its transaction.
+ * By default, call after the source commits; this projection owns its transaction.
+ * Pass false to participate in an existing transaction with schema ensured beforehand.
+ * The caller must roll back errors, including taxonomy writes; term caches and hooks
+ * are not transactional. This path never installs or upgrades schema.
  *
  * @return true|WP_Error
  */
-function axismundi_op_replace_tag_references( string $uri, array $members, array $source ) {
+function axismundi_op_replace_tag_references( string $uri, array $members, array $source, bool $manage_transaction = true ) {
 	global $wpdb;
 	$provider = (string) ( $source['provider'] ?? '' );
 	$role = (string) ( $source['role'] ?? 'reference' );
@@ -122,9 +125,11 @@ function axismundi_op_replace_tag_references( string $uri, array $members, array
 	if ( ! $date || $date->format( 'Y-m-d H:i:s' ) !== $sort ) {
 		return new WP_Error( 'ax_op_tag_sort', 'The initial sort time must be a UTC database timestamp.' );
 	}
-	$guard = axismundi_op_tag_transaction_guard();
-	if ( is_wp_error( $guard ) ) {
-		return $guard;
+	if ( $manage_transaction ) {
+		$guard = axismundi_op_tag_transaction_guard();
+		if ( is_wp_error( $guard ) ) {
+			return $guard;
+		}
 	}
 	$prepared = array();
 	foreach ( $members as $position => $member ) {
@@ -142,11 +147,14 @@ function axismundi_op_replace_tag_references( string $uri, array $members, array
 		}
 		$prepared[] = array( 'json' => $json, 'hash' => hash( 'sha256', $json ), 'term' => $term instanceof WP_Term ? (int) $term->term_taxonomy_id : null, 'position' => (int) $position );
 	}
-	if ( false === $wpdb->query( 'START TRANSACTION' ) ) {
+	if ( $manage_transaction && false === $wpdb->query( 'START TRANSACTION' ) ) {
 		return new WP_Error( 'ax_op_tag_transaction', 'The tag projection transaction could not start.' );
 	}
 	try {
 		$owners = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT provider FROM {$refs} WHERE source_uri_hash = %s FOR UPDATE", $hash ) );
+		if ( $wpdb->last_error ) {
+			throw new RuntimeException( 'Could not read source evidence ownership.' );
+		}
 		if ( array_diff( $owners, array( $provider ) ) ) {
 			throw new RuntimeException( 'Another provider owns the source evidence.' );
 		}
@@ -174,12 +182,12 @@ function axismundi_op_replace_tag_references( string $uri, array $members, array
 			 SELECT DISTINCT term_taxonomy_id,source_uri,source_uri_hash,provider,%s,1 FROM %i
 			 WHERE source_uri_hash=%s AND source_uri=%s AND is_current=1 AND source_role='content' AND term_taxonomy_id IS NOT NULL
 			 ON DUPLICATE KEY UPDATE is_current=1", $usage, $sort, $refs, $hash, $uri
-		) ) || false === $wpdb->query( 'COMMIT' ) ) {
+		) ) || ( $manage_transaction && false === $wpdb->query( 'COMMIT' ) ) ) {
 			throw new RuntimeException( 'Could not project term membership.' );
 		}
 		return true;
 	} catch ( Throwable $error ) {
-		$wpdb->query( 'ROLLBACK' );
+		if ( $manage_transaction ) { $wpdb->query( 'ROLLBACK' ); }
 		return new WP_Error( 'ax_op_tag_write', $error->getMessage() );
 	}
 }

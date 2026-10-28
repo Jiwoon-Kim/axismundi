@@ -20,8 +20,8 @@ function axismundi_act_outbox_authorize( int $user_id, $actor ) {
 		|| ! axismundi_actors_can_act_as( $actor, $user_id ) ) {
 		return new WP_Error( 'ax_c2s_forbidden', 'The principal cannot operate this outbox.', array( 'status' => 403 ) );
 	}
-	$valid = axismundi_act_validate_reaction_actor( $actor );
-	return is_wp_error( $valid ) ? new WP_Error( 'ax_c2s_actor', $valid->get_error_message(), array( 'status' => 403 ) ) : true;
+	return 'public' === $actor->get_status() && $actor->is_handle_locked()
+		? true : new WP_Error( 'ax_c2s_actor', 'The local Actor must be activated.', array( 'status' => 403 ) );
 }
 
 /** Compare request intent, not server-generated identity or timestamps. */
@@ -43,8 +43,13 @@ function axismundi_act_submit_outbox( int $user_id, Axismundi_Actor $actor, arra
 	$allowed = axismundi_act_outbox_authorize( $user_id, $actor );
 	if ( is_wp_error( $allowed ) ) { return $allowed; }
 	$type = $payload['type'] ?? null;
+	if ( in_array( $type, array( 'Note', 'Create', 'Delete' ), true ) ) {
+		return axismundi_act_submit_local_object( $user_id, $actor, $payload, $retry_key );
+	}
+	$reaction_actor = axismundi_act_validate_reaction_actor( $actor );
+	if ( is_wp_error( $reaction_actor ) ) { return new WP_Error( 'ax_c2s_actor', $reaction_actor->get_error_message(), array( 'status' => 403 ) ); }
 	if ( ! is_string( $type ) || ! in_array( $type, array( 'Like', 'Undo', 'https://www.w3.org/ns/activitystreams#Like', 'https://www.w3.org/ns/activitystreams#Undo' ), true ) ) {
-		return new WP_Error( 'ax_c2s_not_implemented', 'This outbox currently accepts only Like and Undo(Like).', array( 'status' => 422 ) );
+		return new WP_Error( 'ax_c2s_not_implemented', 'This outbox accepts Like, Undo(Like), Create(Note), bare Note and Delete(local Object).', array( 'status' => 422 ) );
 	}
 	$type = axismundi_act_type( $type );
 	if ( ! is_string( $payload['actor'] ?? null ) || ! hash_equals( $actor->get_uri(), $payload['actor'] ) ) {
@@ -64,7 +69,7 @@ function axismundi_act_submit_outbox( int $user_id, Axismundi_Actor $actor, arra
 		if ( is_wp_error( $allowed ) ) { return $allowed; }
 		$source = '' === $retry_key ? '' : 'ap-c2s:' . $actor->get_identity_id() . ':' . $user_id . ':' . hash( 'sha256', $retry_key );
 		if ( '' !== $source ) {
-			$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE source_event_hash = %s AND source_event_key = %s', axismundi_act_activities_table(), hash( 'sha256', $source ), $source ), ARRAY_A );
+			$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE actor_uri_hash=%s AND (source_event_key=%s OR source_event_key LIKE %s)', axismundi_act_activities_table(), hash( 'sha256', $actor->get_uri() ), $source, $wpdb->esc_like( $source . ':' ) . '%' ), ARRAY_A );
 			if ( is_array( $row ) ) {
 				$old = axismundi_act_hydrate( $row );
 				return axismundi_act_outbox_same_intent( $old->get_payload(), $payload ) ? $old

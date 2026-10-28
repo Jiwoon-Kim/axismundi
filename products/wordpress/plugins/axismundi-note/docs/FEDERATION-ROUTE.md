@@ -1,5 +1,10 @@
 # Note federation route contract (increment 4)
 
+> **Historical only (hard cutoff, 2026-10-29).** The plugin bootstrap is inert.
+> The routes, source resolvers, transformers, views, and lifecycle behavior below
+> are no longer registered. No legacy URL redirect, compatibility representation,
+> or fallback is provided. Stored data is neither migrated nor deleted.
+
 Status: **#4a and #4b implemented for the 0.0.1 release.** Increment 3 owns the storage substrate;
 increment 3.5 owns language inheritance. This document freezes the HTTP,
 source, projection, and HTML-view boundaries across the two increment 4 slices.

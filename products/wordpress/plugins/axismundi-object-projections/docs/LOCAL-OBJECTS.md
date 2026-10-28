@@ -1,6 +1,12 @@
 # Local Objects: who publishes, and what the body is
 
-Status: decided 2026-09-28. **The identity half is implemented; the body half is not.**
+Status: historical decision 2026-09-28; local C2S Note bodies implemented 2026-10-29.
+
+2026-10-29: C2S 원본 본문 저장소와 Create(Note)의 현재 설계안은
+[Local Object Store](DESIGN-LOCAL-OBJECT-STORE.md)에 있다. 아래의 과거 시점 설명과
+실제 코드의 현재 상태를 혼동하지 않는다. 구현 범위와 검증은
+[Create(Note) implementation](IMPLEMENTATION-C2S-CREATE-NOTE.md)에 기록한다.
+아래의 WP 본문 설명은 기존 WordPress 소스에 대한 역사적 설명이며 신규 C2S 본문 저장소가 아니다.
 
 This covers two decisions that turned out to be one: where a local Object's publishing identity
 comes from, and where its body comes from. Both were derived at projection time from the

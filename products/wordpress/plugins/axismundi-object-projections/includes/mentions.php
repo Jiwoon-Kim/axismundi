@@ -47,8 +47,8 @@ function axismundi_op_mention_uri( $value ) : string {
 	return function_exists( 'axismundi_op_relation_uri' ) ? axismundi_op_relation_uri( $value ) : '';
 }
 
-/** Replace one source Object's Mention rows from a provenance-keyed URI map. */
-function axismundi_op_replace_object_mentions( string $source_uri, array $mentions ) : bool {
+/** Replace Mention rows; participating callers ensure schema and roll back failures. */
+function axismundi_op_replace_object_mentions( string $source_uri, array $mentions, bool $manage_transaction = true ) : bool {
 	global $wpdb;
 	$source = axismundi_op_mention_uri( $source_uri );
 	if ( '' === $source ) {
@@ -70,12 +70,14 @@ function axismundi_op_replace_object_mentions( string $source_uri, array $mentio
 	$table = axismundi_op_object_mentions_table();
 	$now   = current_time( 'mysql', true );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- atomic rebuildable relation replacement.
-	$wpdb->query( 'START TRANSACTION' );
+	if ( $manage_transaction && false === $wpdb->query( 'START TRANSACTION' ) ) {
+		return false;
+	}
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- exact source replacement.
 	$deleted = $wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE source_object_uri_hash = %s AND source_object_uri = %s", hash( 'sha256', $source ), $source ) );
 	if ( false === $deleted ) {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- transaction rollback.
-		$wpdb->query( 'ROLLBACK' );
+		if ( $manage_transaction ) { $wpdb->query( 'ROLLBACK' ); }
 		return false;
 	}
 	foreach ( $rows as $row ) {
@@ -94,13 +96,12 @@ function axismundi_op_replace_object_mentions( string $source_uri, array $mentio
 		); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- rebuildable relation insertion.
 		if ( false === $ok ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- transaction rollback.
-			$wpdb->query( 'ROLLBACK' );
+			if ( $manage_transaction ) { $wpdb->query( 'ROLLBACK' ); }
 			return false;
 		}
 	}
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- transaction commit.
-	$wpdb->query( 'COMMIT' );
-	return true;
+	return ! $manage_transaction || false !== $wpdb->query( 'COMMIT' );
 }
 
 /** Extract unresolved-safe remote Mention Actor URI evidence. */

@@ -172,18 +172,24 @@ function axismundi_media_relations_prepare_rows( array $relations ) : array {
  * @param string                           $provider  Provider slug.
  * @param array<int,array<string,mixed>>   $relations Each: predicate, role, object_attachment_id, object_uri, source_key.
  * @param string                           $kind      relation_kind (default `usage`).
+ * @param bool                             $manage_transaction Own the transaction; false requires caller-managed schema and rollback.
  * @return int|WP_Error Rows written, or error.
  */
-function axismundi_media_relations_replace( array $subject, string $provider, array $relations, string $kind = 'usage' ) {
+function axismundi_media_relations_replace( array $subject, string $provider, array $relations, string $kind = 'usage', bool $manage_transaction = true ) {
 	global $wpdb;
 	$table        = axismundi_media_relations_table();
 	$subject_post = isset( $subject['post_id'] ) ? (int) $subject['post_id'] : 0;
 	$subject_uri  = isset( $subject['uri'] ) ? (string) $subject['uri'] : '';
 	// Validate/normalize BEFORE any mutation, so a bad provider result never deletes
 	// the existing rows and then fails to re-insert.
-	$subject_type = in_array( (string) ( $subject['type'] ?? '' ), array( 'post', 'remote_object' ), true )
+	$subject_type = in_array( (string) ( $subject['type'] ?? '' ), array( 'post', 'remote_object', 'local_object' ), true )
 		? (string) $subject['type']
 		: ( $subject_post > 0 ? 'post' : 'remote_object' );
+	if ( 'local_object' === $subject_type ) {
+		if ( '' === $subject_uri || 0 !== $subject_post ) {
+			return new WP_Error( 'ax_media_relation_subject', __( 'Local Object subjects require a URI and no post ID.', 'axismundi-media-library' ) );
+		}
+	}
 	$kind         = in_array( $kind, array( 'usage', 'legacy_parent' ), true ) ? $kind : 'usage';
 	$subject_key  = axismundi_media_relation_key( 'post', $subject_post, '' !== $subject_uri ? $subject_uri : null );
 	if ( '' === $subject_key ) {
@@ -196,13 +202,16 @@ function axismundi_media_relations_replace( array $subject, string $provider, ar
 	$rows = axismundi_media_relations_prepare_rows( $relations );
 
 	$now = current_time( 'mysql', true );
-	$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	if ( $manage_transaction && false === $wpdb->query( 'START TRANSACTION' ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return new WP_Error( 'ax_media_relation_transaction', $wpdb->last_error );
+	}
 	$deleted = $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->prepare( "DELETE FROM {$table} WHERE relation_kind = %s AND subject_key = %s AND provider = %s", $kind, $subject_key, $provider )
 	);
 	if ( false === $deleted ) {
-		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		return new WP_Error( 'ax_media_relation_delete', $wpdb->last_error );
+		$error = $wpdb->last_error;
+		if ( $manage_transaction ) { $wpdb->query( 'ROLLBACK' ); } // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return new WP_Error( 'ax_media_relation_delete', $error );
 	}
 
 	$written = 0;
@@ -232,12 +241,15 @@ function axismundi_media_relations_replace( array $subject, string $provider, ar
 			)
 		);
 		if ( false === $ok ) {
-			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			return new WP_Error( 'ax_media_relation_insert', $wpdb->last_error );
+			$error = $wpdb->last_error;
+			if ( $manage_transaction ) { $wpdb->query( 'ROLLBACK' ); } // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			return new WP_Error( 'ax_media_relation_insert', $error );
 		}
 		++$written;
 	}
-	$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	if ( $manage_transaction && false === $wpdb->query( 'COMMIT' ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return new WP_Error( 'ax_media_relation_transaction', $wpdb->last_error );
+	}
 	return $written;
 }
 
@@ -264,8 +276,28 @@ function axismundi_media_relations_used_in( int $attachment_id, ?int $viewer_id 
 	$out = array();
 	foreach ( $rows as $row ) {
 		$sp = (int) $row['subject_post_id'];
-		if ( 'post' === $row['subject_type'] && $sp > 0 && ! axismundi_media_relation_can_read_subject( $sp, (int) $viewer_id ) ) {
+		if ( 'post' === $row['subject_type'] && ( $sp <= 0 || ! axismundi_media_relation_can_read_subject( $sp, (int) $viewer_id ) ) ) {
 			continue;
+		}
+		if ( 'local_object' === $row['subject_type'] ) {
+			$uri = (string) ( $row['subject_uri'] ?? '' );
+			if ( '' === $uri || ! function_exists( 'axismundi_op_get_local_object' ) ) {
+				continue;
+			}
+			$object = axismundi_op_get_local_object( $uri );
+			if ( ! is_array( $object ) || 'active' !== ( $object['object_status'] ?? '' ) ) {
+				continue;
+			}
+			if ( empty( $object['publicly_readable'] ) ) {
+				$author_uri = (string) ( $object['attributed_to_uri'] ?? '' );
+				if ( $viewer_id <= 0 || '' === $author_uri || ! function_exists( 'axismundi_actors_get_by_uri' ) || ! function_exists( 'axismundi_actors_can_access_workspace' ) ) {
+					continue;
+				}
+				$actor = axismundi_actors_get_by_uri( $author_uri );
+				if ( ! $actor instanceof Axismundi_Actor || ! axismundi_actors_can_access_workspace( $actor, (int) $viewer_id ) ) {
+					continue;
+				}
+			}
 		}
 		$out[] = $row;
 	}
@@ -284,6 +316,8 @@ function axismundi_media_relations_used_in_subject_count( int $attachment_id, ?i
 	foreach ( axismundi_media_relations_used_in( $attachment_id, $viewer_id ) as $row ) {
 		if ( 'post' === $row['subject_type'] && (int) $row['subject_post_id'] > 0 ) {
 			$subjects[ (int) $row['subject_post_id'] ] = true;
+		} elseif ( 'local_object' === $row['subject_type'] ) {
+			$subjects[ 'uri:' . $row['subject_uri'] ] = true;
 		}
 	}
 	return count( $subjects );
@@ -320,6 +354,9 @@ function axismundi_media_relations_for_subject( int $post_id, ?string $provider 
  * @return bool
  */
 function axismundi_media_relation_can_read_subject( int $post_id, int $viewer_id ) : bool {
+	if ( $post_id <= 0 ) {
+		return false;
+	}
 	$post = get_post( $post_id );
 	if ( ! $post ) {
 		return false;

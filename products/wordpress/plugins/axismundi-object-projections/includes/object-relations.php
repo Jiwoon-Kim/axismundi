@@ -99,8 +99,9 @@ function axismundi_op_relation_uri( $value ) : string {
  * Only a complete Object representation may turn a previously observed relation into
  * `not_observed`. Embedded and inbound partial payloads can confirm the members they
  * carry, but cannot make an absence claim about members they do not carry.
+ * With transaction management disabled, the caller ensures schema and rolls back failures.
  */
-function axismundi_op_replace_in_reply_to_relations( string $source_uri, $value, bool $complete = false, string $evidence_source = 'as2' ) : bool {
+function axismundi_op_replace_in_reply_to_relations( string $source_uri, $value, bool $complete = false, string $evidence_source = 'as2', bool $manage_transaction = true ) : bool {
 	global $wpdb;
 	$source = axismundi_op_relation_uri( $source_uri );
 	if ( '' === $source || ! function_exists( 'axismundi_as2_normalize_members' ) ) {
@@ -112,9 +113,13 @@ function axismundi_op_replace_in_reply_to_relations( string $source_uri, $value,
 	}
 	$table = axismundi_op_object_relations_table();
 	$now = current_time( 'mysql', true );
-	$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- atomic relation reconciliation.
+	if ( $manage_transaction && false === $wpdb->query( 'START TRANSACTION' ) ) { return false; } // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- atomic relation reconciliation.
 	$existing_rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE relation_type = 'in_reply_to' AND source_object_uri_hash = %s AND source_object_uri = %s FOR UPDATE", hash( 'sha256', $source ), $source ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- exact source lock for reconciliation.
 	$existing = array();
+	if ( $wpdb->last_error ) {
+		if ( $manage_transaction ) { $wpdb->query( 'ROLLBACK' ); }
+		return false;
+	}
 	foreach ( $existing_rows as $row ) {
 		$existing[ (string) $row['target_object_uri'] ] = $row;
 	}
@@ -132,7 +137,7 @@ function axismundi_op_replace_in_reply_to_relations( string $source_uri, $value,
 			$data = array_merge( array( 'relation_type' => 'in_reply_to', 'source_object_uri' => $source, 'source_object_uri_hash' => hash( 'sha256', $source ), 'target_object_uri' => $target, 'target_object_uri_hash' => hash( 'sha256', $target ), 'evidence_type' => 'as2', 'consent_status' => 'not_applicable', 'first_seen_at' => $now, 'last_confirmed_at' => $complete ? $now : null, 'created_at' => $now ), $data );
 			$ok = false !== $wpdb->insert( $table, $data, array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- explicit strings prevent WordPress core's link_id integer field-type inference from corrupting Link identifiers.
 		}
-		if ( false === $ok ) { $wpdb->query( 'ROLLBACK' ); return false; } // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- transaction rollback.
+		if ( false === $ok ) { if ( $manage_transaction ) { $wpdb->query( 'ROLLBACK' ); } return false; } // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- transaction rollback.
 	}
 	if ( $complete ) {
 		foreach ( $existing as $target => $row ) {
@@ -140,11 +145,10 @@ function axismundi_op_replace_in_reply_to_relations( string $source_uri, $value,
 				continue;
 			}
 			$ok = false !== $wpdb->update( $table, array( 'observation_state' => 'not_observed', 'not_observed_since' => null === $row['not_observed_since'] ? $now : $row['not_observed_since'], 'updated_at' => $now ), array( 'id' => (int) $row['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- retain stale graph evidence rather than deleting it.
-			if ( false === $ok ) { $wpdb->query( 'ROLLBACK' ); return false; } // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- transaction rollback.
+			if ( false === $ok ) { if ( $manage_transaction ) { $wpdb->query( 'ROLLBACK' ); } return false; } // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- transaction rollback.
 		}
 	}
-	$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- transaction commit.
-	return true;
+	return ! $manage_transaction || false !== $wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- transaction commit.
 }
 
 /** First preserved reply parent for the derived single-parent thread view. */
@@ -200,8 +204,8 @@ function axismundi_op_quote_candidates( array $payload ) : array {
 	return $candidates;
 }
 
-/** Replace the quote projection for one source Object from its preserved payload. */
-function axismundi_op_index_quote_relations( array $row ) : bool {
+/** Replace the quote projection; participating callers ensure schema and roll back failures. */
+function axismundi_op_index_quote_relations( array $row, bool $manage_transaction = true ) : bool {
 	global $wpdb;
 	$source = axismundi_op_relation_uri( $row['object_uri'] ?? '' );
 	$payload = (array) ( $row['payload'] ?? array() );
@@ -217,9 +221,15 @@ function axismundi_op_index_quote_relations( array $row ) : bool {
 	$complete      = ! empty( $row['_relation_observation_complete'] );
 
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- atomic rebuildable projection replacement.
-	$wpdb->query( 'START TRANSACTION' );
+	if ( $manage_transaction && false === $wpdb->query( 'START TRANSACTION' ) ) {
+		return false;
+	}
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- exact source replacement under a row-range lock.
 	$existing_rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE relation_type = 'quote' AND source_object_uri_hash = %s AND source_object_uri = %s FOR UPDATE", hash( 'sha256', $source ), $source ), ARRAY_A );
+	if ( $wpdb->last_error ) {
+		if ( $manage_transaction ) { $wpdb->query( 'ROLLBACK' ); }
+		return false;
+	}
 	$existing      = array();
 	foreach ( $existing_rows as $existing_row ) {
 		$existing[ (string) $existing_row['target_object_uri'] ] = $existing_row;
@@ -280,7 +290,7 @@ function axismundi_op_index_quote_relations( array $row ) : bool {
 		}
 		if ( false === $ok ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- rollback custom projection transaction.
-			$wpdb->query( 'ROLLBACK' );
+			if ( $manage_transaction ) { $wpdb->query( 'ROLLBACK' ); }
 			return false;
 		}
 	}
@@ -291,14 +301,13 @@ function axismundi_op_index_quote_relations( array $row ) : bool {
 			}
 			$ok = false !== $wpdb->update( $table, array( 'observation_state' => 'not_observed', 'not_observed_since' => null === $prior['not_observed_since'] ? $now : $prior['not_observed_since'], 'updated_at' => $now ), array( 'id' => (int) $prior['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- preserve withdrawn quote evidence rather than deleting it.
 			if ( false === $ok ) {
-				$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- rollback custom projection transaction.
+				if ( $manage_transaction ) { $wpdb->query( 'ROLLBACK' ); } // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- rollback custom projection transaction.
 				return false;
 			}
 		}
 	}
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- commit custom projection transaction.
-	$wpdb->query( 'COMMIT' );
-	return true;
+	return ! $manage_transaction || false !== $wpdb->query( 'COMMIT' );
 }
 
 /**

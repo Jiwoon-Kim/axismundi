@@ -1,5 +1,10 @@
 # Note authoring model
 
+> **Historical only (hard cutoff, 2026-10-29).** The plugin bootstrap is inert.
+> None of the authoring, CPT, REST, media, or producer behavior below is loaded.
+> Existing data is untouched; there is no migration or legacy fallback. New local
+> Note storage belongs to Object Projections, not this deprecated plugin.
+
 Status: **limited block editor and Media Library attachment picker implemented;
 context/reply block pending.** This reverses the increment 3 Classic Editor choice;
 see "Rework" below.

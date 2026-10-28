@@ -270,6 +270,12 @@ function axismundi_op_register_object( array $args ) {
 	$origin       = (string) ( $args['origin'] ?? 'local' );
 	$source_owner = sanitize_key( (string) ( $args['source_owner'] ?? '' ) );
 	$source_kind  = sanitize_key( (string) ( $args['source_kind'] ?? '' ) );
+	if ( 'wordpress-core' === $source_owner ) {
+		$recorded = function_exists( 'axismundi_act_get_object_attribution' ) ? axismundi_act_get_object_attribution( $uri ) : '';
+		if ( '' === $recorded || $recorded !== (string) ( $args['attributed_to_uri'] ?? '' ) ) {
+			return new WP_Error( 'ax_op_unpublished_wp', 'WordPress registry admission requires a recorded Create and matching attribution.' );
+		}
+	}
 	$as2_type     = substr( sanitize_text_field( (string) ( $args['as2_type'] ?? '' ) ), 0, 64 );
 	if ( isset( $args['status'] ) && ! in_array( $args['status'], array( 'public', 'disabled' ), true ) ) {
 		return new WP_Error( 'ax_op_object_status', 'Object status must be public or disabled; disclosure belongs to its source.' );
@@ -373,6 +379,8 @@ function axismundi_op_local_object_profile( WP_Post $post ) : ?array {
 /** Register the Object slice for one explicit local post profile. */
 function axismundi_op_register_local_post_object( WP_Post $post ) {
 	$profile = axismundi_op_local_object_profile( $post );
+	if ( ! is_array( $profile ) || empty( $profile['attributed_to_uri'] ) || ! function_exists( 'axismundi_act_get_object_attribution' )
+		|| $profile['attributed_to_uri'] !== axismundi_act_get_object_attribution( $profile['uri'] ) ) { return null; }
 	return is_array( $profile )
 		? axismundi_op_register_object(
 			array(
@@ -393,6 +401,20 @@ function axismundi_op_register_saved_local_post_object( int $post_id, WP_Post $p
 	axismundi_op_register_local_post_object( $post );
 }
 add_action( 'save_post', 'axismundi_op_register_saved_local_post_object', 100, 3 );
+
+/** A published WP source enters the common index only after its Create commits. */
+function axismundi_op_register_recorded_wp_source( Axismundi_Activity $activity ) : void {
+	if ( ! in_array( $activity->get_type(), array( 'Create', 'Update', 'Delete' ), true ) || 'inbound' === $activity->get_direction() ) { return; }
+	$uri = (string) $activity->get_object_uri();
+	$parts = wp_parse_url( $uri );
+	$query = array();
+	parse_str( $parts['query'] ?? '', $query );
+	$id = absint( $query['p'] ?? $query['attachment_id'] ?? 0 );
+	$post = $id ? get_post( $id ) : null;
+	$profile = $post instanceof WP_Post ? axismundi_op_local_object_profile( $post ) : null;
+	if ( is_array( $profile ) && $profile['uri'] === $uri ) { axismundi_op_register_local_post_object( $post ); }
+}
+add_action( 'axismundi_act_activity_recorded', 'axismundi_op_register_recorded_wp_source', 30 );
 
 /**
  * Link existing remote cache rows to OP Objects without creating any Activity.

@@ -56,7 +56,7 @@ try {
 	$assert( 403 === $request( $path, $like, array_merge( $auth, array( 'X-WP-Nonce' => 'invalid' ) ) )[0], 'Invalid cookie nonce is denied' );
 	$assert( 403 === $request( $path, array_merge( $like, array( 'actor' => $other->get_uri() ) ), $auth )[0], 'Body actor cannot impersonate another Actor' );
 	$assert( 403 === $request( 'actors/' . $other->get_uuid() . '/outbox', array_merge( $like, array( 'uuid' => $owner->get_uuid() ) ), $auth )[0], 'JSON uuid cannot shadow an unauthorized URL Actor' );
-	$assert( 422 === $request( $path, array_merge( $like, array( 'type' => 'Create' ) ), $auth )[0], 'Unimplemented C2S verbs are closed despite ledger support' );
+	$assert( 422 === $request( $path, array_merge( $like, array( 'type' => 'Update' ) ), $auth )[0], 'Unimplemented C2S verbs are closed despite ledger support' );
 	$first = $request( $path, array_merge( $like, array( 'id' => 'https://example.test/client-id' ) ), array_merge( $auth, array( 'Idempotency-Key' => 'like-1' ) ) );
 	$first_uri = (string) ( $first[2]['location'] ?? '' );
 	$assert( 201 === $first[0] && '' !== $first_uri && 'https://example.test/client-id' !== $first_uri, 'Cookie POST returns server identity in 201 Location' );
@@ -93,6 +93,38 @@ try {
 	$assert( 201 === $request( $path, $private, $basic )[0], 'Real Application Password authentication works without a nonce' );
 	WP_Application_Passwords::delete_application_password( $users[0], $app[1]['uuid'] );
 	$assert( 401 === $request( $path, $private, $basic )[0], 'Revoked Application Password is rejected' );
+	$note = array( 'type' => 'Note', 'id' => 'https://example.test/untrusted-object-id', 'content' => '<p>C2S authored body</p>', 'summary' => 'CW secret', 'sensitive' => true, 'attachment' => array( array( 'type' => 'Image', 'url' => 'https://example.test/attachment.png' ) ), 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+	$create = array( 'type' => 'Create', 'actor' => $owner->get_uri(), 'object' => $note );
+	$create_headers = array_merge( $auth, array( 'Idempotency-Key' => 'create-note-1' ) );
+	$created = $request( $path, $create, $create_headers );
+	$create_uri = (string) ( $created[2]['location'] ?? '' );
+	$create_activity = axismundi_act_get( $create_uri );
+	$assert( 201 === $created[0] && $create_activity instanceof Axismundi_Activity, 'HTTP Create(Note) records the server Create identity' );
+	$note_uri = $create_activity->get_object_uri();
+	$assert( $note_uri !== $create_uri && str_contains( $note_uri, '/objects/' ) && 'https://example.test/untrusted-object-id' !== $note_uri, 'Create and Object receive distinct server IDs' );
+	$read_object = static function ( string $uri, string $accept = 'application/activity+json', string $method = 'GET' ) use ( $http_origin, $host ) {
+		return wp_remote_request( $http_origin . wp_parse_url( $uri, PHP_URL_PATH ), array( 'method' => $method, 'headers' => array( 'Host' => $host, 'Accept' => $accept ), 'timeout' => 30, 'redirection' => 0 ) );
+	};
+	$object_response = $read_object( $note_uri );
+	$document = json_decode( wp_remote_retrieve_body( $object_response ), true );
+	$assert( 200 === wp_remote_retrieve_response_code( $object_response ) && $note_uri === ( $document['id'] ?? '' ) && $note_uri === $document['url'] && 'Note' === $document['type'], 'Canonical Object GET negotiates Note JSON with unified id/url' );
+	$assert( 200 === wp_remote_retrieve_response_code( $read_object( $note_uri, 'text/html' ) ), 'Canonical Object URL also serves HTML' );
+	$retried = $request( $path, $create, $create_headers );
+	$assert( 201 === $retried[0] && $create_uri === (string) $retried[2]['location'], 'Create retry creates neither a second Note nor a second Create' );
+	$assert( 409 === $request( $path, $like, $create_headers )[0], 'A Create retry key cannot be reused for Like' );
+	$assert( 409 === $request( $path, $create, array_merge( $auth, array( 'Idempotency-Key' => 'like-1' ) ) )[0], 'A Like retry key cannot be reused for Create' );
+	$bare = array_merge( $note, array( 'content' => '<p>Private bare Note</p>', 'to' => array( $owner->get_uri() ) ) );
+	$bare_result = $request( $path, $bare, $auth );
+	$bare_activity = axismundi_act_get( (string) ( $bare_result[2]['location'] ?? '' ) );
+	$assert( 201 === $bare_result[0] && $bare_activity instanceof Axismundi_Activity && 'Create' === $bare_activity->get_type(), 'Bare Note is wrapped in a server Create' );
+	$assert( 404 === wp_remote_retrieve_response_code( $read_object( $bare_activity->get_object_uri() ) ), 'Restricted Object is not exposed by the public canonical route' );
+	$delete = $request( $path, array( 'type' => 'Delete', 'actor' => $owner->get_uri(), 'object' => $note_uri ), $auth );
+	$gone = $read_object( $note_uri );
+	$tombstone = json_decode( wp_remote_retrieve_body( $gone ), true );
+	$assert( 201 === $delete[0] && 410 === wp_remote_retrieve_response_code( $gone ) && 'Tombstone' === ( $tombstone['type'] ?? '' ), 'Delete records its Activity and canonical AP GET becomes 410 Tombstone' );
+	$assert( ! isset( $tombstone['content'], $tombstone['attachment'], $tombstone['summary'] ) && ! str_contains( wp_remote_retrieve_body( $gone ), 'CW secret' ), 'Tombstone does not expose body, media or CW' );
+	$assert( 410 === wp_remote_retrieve_response_code( $read_object( $note_uri, 'text/html' ) ) && '' === wp_remote_retrieve_body( $read_object( $note_uri, 'application/activity+json', 'HEAD' ) ), 'Deleted HTML is 410 and HEAD has no body' );
+	$assert( ! post_type_exists( 'ax_note' ) && ! function_exists( 'axismundi_note_object_uri' ), 'Retired Note bootstrap exposes no CPT or legacy runtime fallback' );
 	// Preserve the existing block's state-oriented service rather than routing it through AP.
 	$legacy = axismundi_act_like_object( $owner, $object . '/legacy' );
 	$assert( $legacy instanceof Axismundi_Activity && $legacy->get_uri() === axismundi_act_like_object( $owner, $object . '/legacy' )->get_uri(), 'Existing Like service retains active-state idempotency' );
@@ -116,6 +148,11 @@ try {
 } finally {
 	foreach ( $actors as $actor ) {
 		$uri = $actor->get_uri();
+		foreach ( $wpdb->get_col( $wpdb->prepare( 'SELECT object_uri FROM %i WHERE attributed_to_uri=%s', axismundi_op_local_objects_table(), $uri ) ) as $object_uri ) {
+			if ( function_exists( 'axismundi_media_relations_table' ) ) { $wpdb->delete( axismundi_media_relations_table(), array( 'subject_uri' => $object_uri, 'provider' => 'ax-op-local' ) ); }
+			foreach ( array( axismundi_op_local_objects_table() => 'object_uri', axismundi_op_objects_table() => 'canonical_uri', axismundi_op_object_relations_table() => 'source_object_uri', axismundi_op_object_mentions_table() => 'source_object_uri', axismundi_op_tag_references_table() => 'source_uri', axismundi_op_term_usage_table() => 'source_uri', axismundi_op_thread_edges_table() => 'child_uri' ) as $table => $column ) { $wpdb->delete( $table, array( $column => $object_uri ) ); }
+			$wpdb->delete( axismundi_op_object_index_table(), array( 'object_uri_hash' => hash( 'sha256', $object_uri ) ) );
+		}
 		$rows = $wpdb->get_col( $wpdb->prepare( 'SELECT id FROM %i WHERE actor_uri=%s', axismundi_act_activities_table(), $uri ) );
 		foreach ( $rows as $id ) { $wpdb->delete( axismundi_act_inbox_table(), array( 'activity_id' => $id ) ); }
 		$wpdb->delete( axismundi_act_activities_table(), array( 'actor_uri' => $uri ) );

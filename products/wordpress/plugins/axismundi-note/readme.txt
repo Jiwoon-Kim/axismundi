@@ -3,15 +3,25 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Requires Plugins: axismundi-actors, axismundi-object-projections, axismundi-activities
 Stable tag: 0.1.0
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, note, fediverse
 
-Note-owned local object container: the ax_note post type and its federation envelope.
+Deprecated, inert legacy Note plugin retained for installation inventory only.
 
 == Description ==
+
+The legacy runtime is hard-cut off. No includes or hooks load: no CPT, editor,
+REST, shortcode, route, source adapter, producer, notification, conversation,
+poll, or scheduled-processing callback. Activation/deactivation do nothing.
+There is no schema installation, capability synchronization, rewrite flush,
+migration, data deletion, redirect, legacy URL compatibility, or fallback.
+Existing data and queued work remain untouched, without legacy processing
+callbacks. New local Note storage belongs to Object Projections; this package
+does not implement or enable that replacement.
+
+== Historical Implementation (No Longer Loaded) ==
 
 Axismundi Note owns the storage substrate for locally authored Note objects. It
 registers the private `ax_note` custom post type and a `wp_ax_notes` envelope

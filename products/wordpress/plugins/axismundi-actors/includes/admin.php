@@ -892,6 +892,7 @@ function axismundi_actors_render_management( Axismundi_Actor $actor, int $user_i
 	<?php axismundi_actors_text_form( $actor ); ?>
 	<?php axismundi_actors_profile_fields_form( $actor ); ?>
 	<?php axismundi_actors_follow_collections_form( $actor ); ?>
+	<?php axismundi_actors_liked_form( $actor ); ?>
 	<?php
 }
 
@@ -1174,6 +1175,35 @@ function axismundi_actors_follow_collections_form( Axismundi_Actor $actor ) : vo
 	</form>
 	<?php
 }
+
+/** Explicit consent concerns URI membership, not permission to fetch member content. */
+function axismundi_actors_liked_form( Axismundi_Actor $actor ) : void {
+	if ( ! $actor->is_local() ) { return; }
+	?>
+	<h2><?php esc_html_e( 'Liked collection', 'axismundi-actors' ); ?></h2>
+	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+		<input type="hidden" name="action" value="axismundi_actors_set_liked_visibility">
+		<input type="hidden" name="identity_id" value="<?php echo esc_attr( (string) $actor->get_identity_id() ); ?>">
+		<?php wp_nonce_field( 'ax_actors_liked_' . $actor->get_identity_id() ); ?>
+		<p><label><input type="checkbox" name="visibility" value="public" <?php checked( 'public', axismundi_actors_liked_visibility( $actor ) ); ?>> <?php esc_html_e( 'Publish my liked collection', 'axismundi-actors' ); ?></label></p>
+		<p class="description"><?php esc_html_e( 'Publishing reveals which objects this Account liked, including private-addressed Likes. It does not grant access to those objects.', 'axismundi-actors' ); ?></p>
+		<?php submit_button( __( 'Save liked visibility', 'axismundi-actors' ), 'secondary', 'submit', false ); ?>
+	</form>
+	<?php
+}
+
+function axismundi_actors_handle_set_liked_visibility() : void {
+	$id = isset( $_POST['identity_id'] ) ? absint( $_POST['identity_id'] ) : 0;
+	check_admin_referer( 'ax_actors_liked_' . $id );
+	$actor = axismundi_actors_get_by_identity( $id );
+	if ( ! $actor instanceof Axismundi_Actor || ! axismundi_actors_can_manage( $actor ) ) {
+		wp_die( esc_html__( 'You cannot manage this actor profile.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
+	}
+	$value = isset( $_POST['visibility'] ) ? sanitize_key( wp_unslash( $_POST['visibility'] ) ) : 'private';
+	$result = axismundi_actors_set_liked_visibility( $actor, $value, get_current_user_id() );
+	axismundi_actors_redirect_result( axismundi_actors_management_back_url( $actor ), $result );
+}
+add_action( 'admin_post_axismundi_actors_set_liked_visibility', 'axismundi_actors_handle_set_liked_visibility' );
 
 /* -------------------------------------------------------------------------- *
  * Dedicated POST actions (nonce + capability; never the profile.php save).

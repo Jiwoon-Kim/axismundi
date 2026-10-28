@@ -15,9 +15,9 @@ function axismundi_act_read_actor_inbox_unavailable( string $actor_uri ) {
 	return axismundi_act_get_actor_inbox_page( $actor_uri );
 }
 
-/** A bounded legacy list is not a complete public liked collection. */
+/** Compatibility entry point for the policy-gated cursor reader. */
 function axismundi_act_read_liked_collection_unavailable( string $actor_uri ) {
-	return new WP_Error( 'ax_act_liked_cursor_unavailable', 'A complete liked collection reader is not implemented.' );
+	return axismundi_act_get_liked_collection_page( $actor_uri );
 }
 
 /** Register Activity-ledger and relation-backed collection contracts. */
@@ -63,12 +63,12 @@ function axismundi_act_register_collection_contracts() : void {
 		),
 		'ap-liked' => array(
 			'member_models'    => array( 'Object' ),
-			'presentation'     => 'bounded-members',
+			'presentation'     => 'paged-members',
 			'ordering'         => 'source-defined',
 			'total_capability' => 'unavailable',
-			'total_reason'     => 'bounded-scan',
+			'total_reason'     => 'membership-not-stored',
 			'total_disclosure' => array( 'public' => 'policy-gated', 'owner' => 'always' ),
-			'reader'           => 'axismundi_act_read_liked_collection_unavailable',
+			'reader'           => 'axismundi_act_get_liked_collection_page',
 		),
 		'ap-likes' => array(
 			'member_models'    => array( 'Activity' ),

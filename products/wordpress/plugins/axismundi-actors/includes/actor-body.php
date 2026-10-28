@@ -15,7 +15,7 @@ function axismundi_actors_body_installed() : bool {
 	return in_array( 'id', $columns, true ) && in_array( 'canonical_uri', $columns, true );
 }
 
-/** Raw evidence is read only when a detail consumer requests it. */
+/** Read one Actor-owned detail or policy value on demand. */
 function axismundi_actors_get_meta( int $actor_id, string $key ) : ?string {
 	global $wpdb;
 	$value = $wpdb->get_var( $wpdb->prepare( 'SELECT meta_value FROM %i WHERE actor_id=%d AND meta_key=%s', axismundi_actors_meta_table(), $actor_id, $key ) );
@@ -25,6 +25,22 @@ function axismundi_actors_get_meta( int $actor_id, string $key ) : ?string {
 function axismundi_actors_store_meta( int $actor_id, string $key, string $value ) : bool {
 	global $wpdb;
 	return false !== $wpdb->query( $wpdb->prepare( 'INSERT INTO %i (actor_id,meta_key,meta_value) VALUES (%d,%s,%s) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value)', axismundi_actors_meta_table(), $actor_id, $key, $value ) );
+}
+
+/** Liked membership is private until the Account explicitly publishes the collection. */
+function axismundi_actors_liked_visibility( Axismundi_Actor $actor ) : string {
+	return $actor->is_local() && 'public' === axismundi_actors_get_meta( $actor->get_identity_id(), 'policy:liked_visibility' ) ? 'public' : 'private';
+}
+
+function axismundi_actors_set_liked_visibility( Axismundi_Actor $actor, string $visibility, int $user_id ) {
+	if ( ! $actor->is_local() || 'tombstone' === $actor->get_status() || ! in_array( $visibility, array( 'public', 'private' ), true ) ) {
+		return new WP_Error( 'ax_actors_liked_policy', 'Invalid liked collection policy.' );
+	}
+	if ( ! axismundi_actors_principal_can_manage( $actor->get_identity_id(), 'wp_user', $user_id ) ) {
+		return new WP_Error( 'ax_actors_liked_permission', 'You cannot change this Account policy.' );
+	}
+	return axismundi_actors_store_meta( $actor->get_identity_id(), 'policy:liked_visibility', $visibility )
+		? true : new WP_Error( 'ax_actors_liked_write', 'The liked collection policy could not be saved.' );
 }
 
 /** Narrow projection for indexed lists, attribution and hovercard summaries. */

@@ -139,6 +139,7 @@ try {
 } finally {
 	$table = axismundi_act_activities_table();
 	foreach ( array_filter( array_unique( $ax_v_ids ) ) as $identity_id ) {
+		$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => (int) $identity_id ) );
 		$fixture = axismundi_actors_get_by_identity( (int) $identity_id );
 		if ( $fixture instanceof Axismundi_Actor ) {
 			$wpdb->delete( $table, array( 'actor_uri_hash' => hash( 'sha256', $fixture->get_uri() ) ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.

@@ -34,6 +34,13 @@ never edited, and undoing something is a new Activity rather than a deletion.
 
 = What this version does =
 
+* A limited **ActivityPub C2S outbox POST** for Like and Undo(Like), authenticated
+  using WordPress REST cookies with a nonce or Application Passwords. Other C2S
+  verbs and bare Object creation are not implemented by this slice.
+* An Actor **liked collection**, private by default. Account operators can publish
+  its URI membership in Actor Profile settings. Publishing includes private-addressed
+  Likes; it does not disclose member bodies or grant permission to fetch them.
+
 * An **immutable, URI-keyed Activity ledger** with a read-only administrator log.
 * **Follow and Block** relation state, for local actors and for cached remote ones, with
   the accepted inverse edge tracked separately from the outgoing one.
@@ -51,7 +58,7 @@ never edited, and undoing something is a new Activity rather than a deletion.
 
 = What this version does not do =
 
-No inbox, no outbox transport, no HTTP signatures, no delivery queue, and no scheduled
+No HTTP inbox, no S2S delivery transport, no HTTP signatures, no delivery queue, and no scheduled
 tasks of any kind. It also does not own notifications or read state -- who gets told about
 an Activity, and whether they have seen it, belongs elsewhere. Uploading media stays
 deliberately silent: putting a file in the library is not an announcement.

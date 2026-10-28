@@ -1,6 +1,6 @@
 <?php
 /**
- * The command service every local submission goes through.
+ * The WordPress source publication command service.
  *
  * A submission is a request, not a record. The caller says which post it wants published and
  * which identity it is asking to publish as; the server decides the Activity id, the actor,
@@ -10,9 +10,9 @@
  *
  * Design and the protocol quotations behind it: `docs/C2S.md`.
  *
- * This is the service, not a wire endpoint. The block and classic editors are local submission
- * adapters that call it directly. An Actor outbox `POST` endpoint would be one more adapter
- * over this same function rather than a second implementation.
+ * The block and classic editors are adapters over this WordPress-source service.
+ * AP social submissions use c2s-outbox.php and the same ledger, without inventing
+ * a WP_Post for Like or Undo. AP Create ingestion remains a separate future slice.
  *
  * @package AxismundiActivities
  */

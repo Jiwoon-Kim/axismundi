@@ -120,6 +120,9 @@ function axismundi_op_actor_transform( Axismundi_Actor $actor ) : array {
 		'summary'                 => $summary,
 		'manuallyApprovesFollowers' => true === $actor->get_policy_flag( 'manually_approves_followers' ),
 	);
+	if ( $actor->is_local() && function_exists( 'axismundi_act_get_liked_collection_page' ) ) {
+		$object['liked'] = axismundi_op_actor_liked_url( $actor );
+	}
 	/*
 	 * Language maps beside the scalars, not instead of them.
 	 *

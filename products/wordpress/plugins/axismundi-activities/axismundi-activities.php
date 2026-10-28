@@ -19,6 +19,7 @@
  * Block, Like, Dislike, emoji reactions, Announce, Reply and votes with their Undos,
  * FEP-044f QuoteRequest decisions, local Object lifecycle recording, feed blocks,
  * public-safe collection queries, and a read-only administrator log.
+ * Authenticated AP outbox POST currently supports Like and Undo(Like) only.
  *
  * There is no HTTP client here, no scheduled event, no signature, no delivery queue, and no
  * notification. The public REST routes are reads, plus one anonymous remote-follow endpoint
@@ -63,6 +64,7 @@ require_once __DIR__ . '/includes/feed-patterns.php';
 require_once __DIR__ . '/includes/publish-command.php';
 require_once __DIR__ . '/includes/editor-selection.php';
 require_once __DIR__ . '/includes/c2s.php';
+require_once __DIR__ . '/includes/c2s-outbox.php';
 require_once __DIR__ . '/includes/post-lifecycle.php';
 require_once __DIR__ . '/includes/scheduled-publication.php';
 require_once __DIR__ . '/includes/local-social-ui.php';

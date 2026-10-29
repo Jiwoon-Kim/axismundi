@@ -26,7 +26,7 @@ function axismundi_capstone_route_patterns() : array {
 		$base = preg_quote( $surface['base'], '#' );
 		if ( 'social' === $name ) {
 			$patterns[ $base ] = array( 'name' => 'home' );
-			$patterns[ $base . '/objects/[^/]+' ] = array( 'name' => 'object' );
+			$patterns[ $base . '/objects/(?P<objectId>[^/]+)' ] = array( 'name' => 'object' );
 			continue;
 		}
 		$patterns[ $base ] = array( 'name' => 'stylebook' );
@@ -44,7 +44,7 @@ function axismundi_capstone_resolve_public_path( string $path ) : array {
 		if ( 1 !== preg_match( '#^' . $pattern . '/?$#', trim( $path, '/' ), $matches ) ) {
 			continue;
 		}
-		foreach ( array( 'component', 'layout', 'style' ) as $parameter ) {
+		foreach ( array( 'component', 'layout', 'style', 'objectId' ) as $parameter ) {
 			if ( isset( $matches[ $parameter ] ) ) {
 				$route[ $parameter ] = $matches[ $parameter ];
 			}

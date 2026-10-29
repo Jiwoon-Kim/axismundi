@@ -97,6 +97,10 @@ function axismundi_capstone_enqueue_app( string $application ) : void {
 			'authenticated' => is_user_logged_in(),
 		);
 		$config['loginUrl'] = wp_login_url( home_url( '/' . AXISMUNDI_CAPSTONE_ROUTE . '/' ) );
+		$config['objectRead'] = array(
+			'url' => rest_url( 'axismundi/v1/objects/' ),
+			'nonce' => is_user_logged_in() ? wp_create_nonce( 'wp_rest' ) : null,
+		);
 	} else {
 		$config['routeSettings'] = array(
 			'actionUrl' => admin_url( 'admin-post.php' ),

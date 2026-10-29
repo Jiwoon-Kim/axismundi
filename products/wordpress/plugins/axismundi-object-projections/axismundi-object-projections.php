@@ -55,6 +55,7 @@ require_once __DIR__ . '/includes/renderer.php';
 require_once __DIR__ . '/includes/object-view-model.php';
 require_once __DIR__ . '/includes/object-assembly.php';
 require_once __DIR__ . '/includes/object-read-api.php';
+require_once __DIR__ . '/includes/application-object-read.php';
 require_once __DIR__ . '/includes/object-blocks.php';
 require_once __DIR__ . '/includes/object-view-route.php';
 require_once __DIR__ . '/includes/hashtag-archive.php';

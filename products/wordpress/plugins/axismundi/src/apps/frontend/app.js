@@ -1,5 +1,6 @@
 import { Scaffold } from './foundations/layout/scaffold';
-import { Component, Suspense, lazy } from '@wordpress/element';
+import { Component, Suspense, lazy, useEffect, useState } from '@wordpress/element';
+import { LoadingIndicator } from './components/loading-indicators';
 
 /*
  * The Stylebook is a development and VQA surface, and it was a third of the
@@ -49,16 +50,39 @@ function HomeTemplate() {
 	);
 }
 
-function PublicObjectTemplate() {
+function PublicObjectTemplate( { objectId } ) {
+	const [ result, setResult ] = useState( { loading: true } );
+	useEffect( () => {
+		const controller = new AbortController();
+		setResult( { loading: true } );
+		const config = window.axismundiCapstone?.objectRead;
+		if ( ! /^[1-9][0-9]*$/.test( objectId ?? '' ) || ! config?.url ) {
+			setResult( { error: 'Invalid object identifier.' } );
+			return () => controller.abort();
+		}
+		const headers = config.nonce ? { 'X-WP-Nonce': config.nonce } : {};
+		fetch( config.url + encodeURIComponent( objectId ), { credentials: 'same-origin', headers, signal: controller.signal } )
+			.then( async ( response ) => {
+				const document = await response.json();
+				if ( ! response.ok && response.status !== 410 ) {
+					throw new Error( document.message || 'Object could not be loaded.' );
+				}
+				if ( ! controller.signal.aborted ) setResult( { document } );
+			} )
+			.catch( ( error ) => {
+				if ( ! controller.signal.aborted ) setResult( { error: error.message } );
+			} );
+		return () => controller.abort();
+	}, [ objectId ] );
 	return (
-		<section className="ax-social-shell" aria-labelledby="ax-social-object-title">
+		<section className="ax-social-shell" aria-labelledby="ax-social-object-title" aria-busy={ !! result.loading }>
 			<header className="ax-social-shell__header">
 				<p className="ax-social-shell__eyebrow">Axismundi</p>
 				<h1 id="ax-social-object-title" className="ax-social-shell__title">Object</h1>
 			</header>
-			<p className="ax-social-shell__message">
-				Public objects will render here without requiring a signed-in home session.
-			</p>
+			{ result.loading ? <LoadingIndicator label="Loading object" /> : null }
+			{ result.error ? <p role="alert">{ result.error }</p> : null }
+			{ result.document ? <pre style={ { whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' } }>{ JSON.stringify( result.document, null, 2 ) }</pre> : null }
 		</section>
 	);
 }
@@ -108,7 +132,7 @@ export function FrontendApp() {
 
 	return (
 		<Scaffold>
-			{ 'object' === route.name ? <PublicObjectTemplate /> : <HomeTemplate /> }
+			{ 'object' === route.name ? <PublicObjectTemplate objectId={ route.objectId } /> : <HomeTemplate /> }
 		</Scaffold>
 	);
 }

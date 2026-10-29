@@ -201,14 +201,49 @@ ID와 역조회, 편집 불가인 타인 소유 private/미연결 첨부 재사�
 인덱스로 범위가 좁혀질 수 있으며, 이번에 실행 계획이나 전체 데이터 성능을 측정한 것은
 아니다. 피커/업로드의 ID 기반 참조 설계에서 검토한다.
 
-다음 순서는 첨부 계약을 닫은 뒤 읽기 전용 Objects Local/Remote 화면을 먼저 만드는 것이다.
-sensitive 공통화는 그 관찰 표면과 Media/OP/Actors 활성화 의존성 결정을 갖춘 뒤 진행한다.
+## Next Slice: Frontend Identity Before Object Presentation
+
+2026-10-29 오너 결정: 프런트앱의 app shell/layout/scaffold가 아직 미완성이므로 Objects의
+카드, Visual/Outline, CSS 표현 계층은 지금 구현하지 않는다. 객체 조회 표면을 먼저 두더라도
+기존 `?activitypub`처럼 JSON만 표시하는 최소 읽기 화면으로 시작한다. wp-admin Objects
+Local/Remote 화면도 이번 결정으로 구현 완료되거나 즉시 착수하는 것은 아니다.
+
+우선순위는 프런트앱의 WordPress 로그인 User와 현재 Account/Actor 연결이다. 그 다음에
+요청자가 객체를 읽을 수 있는지 서버에서 판정하는 읽기 경계를 연결하고 JSON 조회를 붙인다.
+로그인됨, 선택 Actor 없음, 선택 만료/권한 회수, 로그아웃을 구별해야 한다. Actor 운영 권한이
+있다는 사실만으로 다른 Actor의 비공개 객체 열람 권한까지 얻는 것은 아니다.
+
+코드 확인: `axismundi/includes/assets.php`는 프런트앱 bootstrap에
+`viewer.authenticated = is_user_logged_in()`과 WordPress login URL을 제공한다.
+현재 Actor나 객체별 읽기 인가는 이 bootstrap에 없다. admin의 `routeSettings.nonce`는
+`axismundi_route_settings`용이며 REST cookie 인증에 쓸 `wp_rest` nonce가 아니다.
+후속 API 연결에서는 기존 로그인 쿠키 범위와 REST nonce 전달을 확인해야 한다.
+
+Actors의 선택 쿠키는 HttpOnly이며 WordPress 로그인 세션에 HMAC으로 바인딩된다.
+JS가 쿠키 값을 직접 읽어 Actor를 신뢰하는 대신 서버가 기존 selection resolver로 해소하고
+User의 현재 접근 권한을 재확인한 결과만 클라이언트에 제공한다. 테마의 `axismundi_theme`
+쿠키 공유는 표시 설정 공유이며, 인증이나 객체 열람 인가가 완성됐다는 증거가 아니다.
+동일 출처여도 쿠키의 path/domain/secure 범위와 API 인증은 별도로 확인한다.
+
+공개 AP JSON 응답을 로그인 운영자 전용 응답으로 조용히 바꾸지 않는다. 프런트앱의 인가된
+읽기 표면과 공개 투영을 구분하고, 세션 의존 응답은 공유 캐시에 저장되지 않게 설계한다.
+위 항목은 후속 구현 계약이며 이번 문서 변경으로 런타임 연결이나 검증이 완료되지는 않는다.
+
+sensitive 공통화와 Media/OP/Actors 활성화 의존성 결정은 별도 후속이다.
 `ax_objects` 존폐와 프런트앱 조회 ID는 보류한다.
 
 피커 후속 계약(아직 UI 미구현): attachment.id는 미디어의 canonical attachment 페이지
 Object ID, attachment.url은 선택한 실제 파일/rendition URL이다. 현재 문서 URL 거부는
 attachment.url에 적용하며, 파일 descriptor의 id로 첨부 페이지 ID를 사용하는 것을
 금지하는 것이 아니다. 사이즈를 바꿔도 같은 미디어의 id는 유지한다.
-이미지 사이즈 선택은 드롭다운, 기본은 사이트 미디어 설정의 Large로 한다. 실제 파일
-URL은 WP/미디어 rendition 서비스에서 받아야 하며 치수 접미사를 직접 조립하지 않는다.
-Large가 없거나 원본이 더 작을 때의 폴백과 video/audio의 변형 선택은 피커 구현에서 검증한다.
+첨부마다 사이즈 드롭다운이나 rendition 선택 상태를 저장하는 계획은 철회한다. 피드/투영의
+공통 정책에서 기본 사이즈를 정하는 방향이며, 사이트 Large 설정을 초기 기준으로 검토한다.
+현재 저장된 파일 URL 계약을 바꾸는 시점과 기존 descriptor 처리는 후속 구현에서 정한다.
+실제 파일 URL은 WP/미디어 rendition 서비스에서 받고 치수 접미사를 직접 조립하지 않는다.
+
+첨부별 대체 텍스트는 descriptor의 `name`에 저장한다. 선택 시 미디어 alt를 초깃값으로
+복사할 수 있지만, Note 문맥에서 편집한 name은 원본 미디어 alt와 별개다. 원본 메타데이터를
+수정하지 않으며 명시적으로 비운 name을 원본 alt 폴백으로 되살리지 않는다. 미지정과 빈 값의
+구분은 피커/렌더러 구현 시 검증한다. 현재 C2S의 attachment.name 보존과 피커 UI 완성은
+별개이며, 이번에는 새 UI나 저장 컬럼을 추가하지 않는다. 일반 AS2 attachment는 미디어만을
+뜻하지 않지만, 현 제출 descriptor 계약을 범용 Object/Link 지원으로 확대하는 것도 별도다.

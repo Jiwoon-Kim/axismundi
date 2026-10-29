@@ -24,6 +24,7 @@ try {
 	$check( array() === axismundi_capstone_resolve_public_path( 'stylebook/components/buttons' ), 'disabled Stylebook is not resolved' );
 	$check( 'home' === ( axismundi_capstone_resolve_public_path( 'social/' )['name'] ?? '' ), 'Social home remains' );
 	$check( 'object' === ( axismundi_capstone_resolve_public_path( 'social/objects/example' )['name'] ?? '' ), 'Social object remains' );
+	$check( '123' === ( axismundi_capstone_resolve_public_path( 'social/objects/123' )['objectId'] ?? '' ), 'Object lookup ID reaches the client route' );
 	update_option( 'axismundi_stylebook_enabled', true );
 	axismundi_capstone_add_rewrite_rule();
 	axismundi_capstone_upgrade_rewrite_rules();

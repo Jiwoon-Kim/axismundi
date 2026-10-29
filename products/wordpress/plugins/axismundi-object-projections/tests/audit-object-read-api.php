@@ -56,18 +56,12 @@ try {
 	}
 	ax_read_assert( 'local and remote Articles execute the same registered JSON-LD assembly', 2 === $calls );
 	ax_read_assert( 'local Article retains its map-only publication policy', isset( $local['nameMap'], $local['contentMap'] ) && ! array_key_exists( 'name', $local ) && ! array_key_exists( 'content', $local ) && $published['nameMap'] === $local['nameMap'] && $published['contentMap'] === $local['contentMap'] );
-	$note_document = null;
-	foreach ( get_posts( array( 'post_type' => 'ax_note', 'post_status' => 'publish', 'posts_per_page' => 50 ) ) as $note_post ) {
-		$envelope = axismundi_note_get( $note_post->ID );
-		if ( ! is_array( $envelope ) || '' === trim( $note_post->post_title ) ) {
-			continue;
-		}
-		$note = axismundi_op_transform_object( new Axismundi_Note_Source( $envelope, $note_post ) );
-		if ( is_array( $note ) && isset( $note['name'], $note['nameMap'], $note['content'], $note['contentMap'] ) ) {
-			$note_document = axismundi_op_assemble_read_jsonld( $note );
-			break;
-		}
-	}
+	$note_uri = home_url( '/objects/' . wp_generate_uuid4() );
+	$note = axismundi_op_transform_object( new Axismundi_OP_Local_Source( array(
+		'object_uri' => $note_uri, 'object_status' => 'active', 'publicly_readable' => 1,
+		'document' => array( 'id' => $note_uri, 'url' => $note_uri, 'type' => 'Note', 'name' => 'Read fixture', 'nameMap' => array( 'en' => 'Read fixture' ), 'content' => '<p>Body</p>', 'contentMap' => array( 'en' => '<p>Body</p>' ) ),
+	) ) );
+	$note_document = is_array( $note ) ? axismundi_op_assemble_read_jsonld( $note ) : null;
 	ax_read_assert( 'a local Note through its own source retains both scalar and map members', is_array( $note_document ) && $note['name'] === $note_document['name'] && $note['nameMap'] === $note_document['nameMap'] && $note['content'] === $note_document['content'] && $note['contentMap'] === $note_document['contentMap'] );
 	foreach ( array( 'type', 'url', 'attributedTo', 'mediaType', 'sensitive', 'published', 'updated' ) as $field ) {
 		ax_read_assert( 'equivalent local and remote Article facts agree on ' . $field, ( $local[ $field ] ?? null ) === ( $remote[ $field ] ?? null ) );

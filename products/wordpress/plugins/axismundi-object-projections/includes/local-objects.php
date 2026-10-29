@@ -88,12 +88,12 @@ function axismundi_op_prepare_local_note( array $input, Axismundi_Actor $actor, 
 		if ( ! $members && ! axismundi_as2_members_explicitly_empty( $input[ $field ] ) ) { return new WP_Error( 'ax_op_local_reference', 'Malformed Object references.', array( 'status' => 400 ) ); }
 	}
 	if ( isset( $input['tag'] ) && ( ! is_array( $input['tag'] ) || ! array_is_list( $input['tag'] ) ) ) { return new WP_Error( 'ax_op_local_tags', 'Tags must be a list of descriptors.', array( 'status' => 400 ) ); }
-	// Unknown media ownership is not an implicit upload grant. URI descriptors are references only.
+	// Local attachments are shared site resources; reuse is not permission to edit them.
 	if ( isset( $input['attachment'] ) && ( ! is_array( $input['attachment'] ) || ! array_is_list( $input['attachment'] ) ) ) { return new WP_Error( 'ax_op_local_attachments', 'Attachments must be descriptor lists.', array( 'status' => 400 ) ); }
-	foreach ( $input['attachment'] ?? array() as $attachment ) {
-		if ( ! is_array( $attachment ) || ! is_string( $attachment['url'] ?? null ) || '' === axismundi_op_relation_uri( $attachment['url'] ) ) { return new WP_Error( 'ax_op_local_attachment', 'Attachments require an explicit HTTP(S) descriptor URL.', array( 'status' => 400 ) ); }
-		$id = attachment_url_to_postid( $attachment['url'] );
-		if ( $id && ! user_can( $user_id, 'edit_post', $id ) ) { return new WP_Error( 'ax_op_local_attachment_permission', 'The principal cannot use this local media attachment.', array( 'status' => 403 ) ); }
+	foreach ( $input['attachment'] ?? array() as $position => $attachment ) {
+		if ( ! is_array( $attachment ) || ! is_string( $attachment['url'] ?? null ) || '' === ( $url = axismundi_op_media_reference_url( $attachment['url'] ) ) ) { return new WP_Error( 'ax_op_local_attachment', 'Attachments require an explicit HTTP(S) descriptor URL.', array( 'status' => 400 ) ); }
+		if ( axismundi_op_media_url_is_object( $url ) ) { return new WP_Error( 'ax_op_attachment_publication', 'An Object document URL is not a media file URL. Use the media file URL, Announce, quote (FEP-044f), or inReplyTo instead.', array( 'status' => 422 ) ); }
+		$input['attachment'][ $position ]['url'] = $url;
 	}
 	if ( strlen( wp_json_encode( $input ) ?: '' ) > 900000 ) { return new WP_Error( 'ax_op_local_size', 'Object exceeds the local body limit.', array( 'status' => 413 ) ); }
 	return $input;
@@ -143,7 +143,7 @@ function axismundi_op_project_local_object( array $row ) : bool {
 		if ( ( new ReflectionFunction( 'axismundi_media_relations_replace' ) )->getNumberOfParameters() < 5 ) { return false; }
 		$media = array();
 		foreach ( $document['attachment'] ?? array() as $position => $descriptor ) {
-			$media[] = array( 'predicate' => 'as:attachment', 'role' => 'content', 'object_uri' => $descriptor['url'], 'object_attachment_id' => attachment_url_to_postid( $descriptor['url'] ), 'source_key' => $row['local_uuid'] . ':' . $position );
+			$media[] = array( 'predicate' => 'as:attachment', 'role' => 'content', 'object_uri' => $descriptor['url'], 'object_attachment_id' => axismundi_op_local_attachment_id( $descriptor['url'] ), 'source_key' => $row['local_uuid'] . ':' . $position );
 		}
 		$written = axismundi_media_relations_replace( array( 'uri' => $uri, 'type' => 'local_object' ), 'ax-op-local', $media, 'usage', false );
 		if ( is_wp_error( $written ) ) { return false; }

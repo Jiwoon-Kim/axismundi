@@ -32,8 +32,9 @@ no inbound retention, redaction or evidence preservation policy.
 ## Projection and deletion
 
 Text is sanitized; language maps, addressing and structured document properties are
-preserved. Attachments are URI descriptors, not an upload API. Local attachment IDs
-require the submitting User's edit permission and use the Media Library usage index.
+preserved. Attachments are URI descriptors, not an upload API. Local attachments
+are reusable shared site resources regardless of uploader, parent or edit permission;
+reuse grants no permission to edit source metadata. They use the Media Library usage index.
 Delete removes usage links, not shared media binaries.
 
 Delete replaces the body with exactly `id`, `type=Tombstone`, `formerType`, `deleted`.
@@ -153,3 +154,61 @@ rerun as part of this focused verification.
 명확히 하기 위한 기록이며, 이 기록만으로 비활성 구성 검증이 완료되지는 않는다.
 감사의 RuntimeException 첫 줄에는 실패 항목이 출력된다. tail로 마지막 줄만 본 탓에
 진단이 없는 것으로 오해했던 리뷰 중간 판단은 철회됐다.
+
+## Shared Media Reference Contract
+
+오너 결정(C2S.md §13)에 따라 로컬 attachment의 edit_post 재사용 게이트를 제거했다.
+모든 로컬 첨부를 사이트 공유 자원으로 재사용하며, 업로더/부모/편집 권한은 이 제출의
+거부 조건이 아니다. 원본 메타데이터 편집, 업로드, 목록 API의 권한을 완화한 것은 아니다.
+라이선스와 재사용 권한 목록은 후속 정책이다. 바이너리 업로드나 피커 UI는 추가하지 않았다.
+
+`local-media.php`는 원본 파일 경로와 첨부 메타데이터의 정확한 size/original_image 경로를
+검사해 used-in의 attachment ID를 찾는다. 쿼리는 ID 조회에서 제외하고, 프로토콜 상대 URL은
+사이트 스킴으로 해석한다. 신뢰된 Photon 호스트의 origin 경로도 같은 조회를 거친다.
+파일명에서 치수 접미사만 지워서 임의의 원본을 추측하지 않으며, 다른 호스트의 같은 경로는
+로컬 ID가 아니다. 식별되지 않은 외부 파일 URL은 URI 참조로 남고 ID는 0이다.
+
+attachment.url이 캐시의 정확한 원격 Object ID와 일치하면 422를 반환하고 Announce/quote/
+inReplyTo를 안내한다. 같은 발행물의 별도 미디어 파일 URL은 허용한다. 이는 프로젝트의
+첨부 정책이지 AS2 문법 제한이 아니다. 네트워크로 미지의 URL을 역참조하거나 리다이렉트를
+따라가지 않으므로, 모든 미캐시 원격 발행물을 식별한다고 주장하지 않는다.
+
+검증 명령(컨테이너 내부):
+`wp eval-file wp-content/plugins/axismundi-activities/tests/audit-c2s-media-references.php`.
+REST 내부 dispatch 24검사 통과: 원본/렌디션/쿼리/프로토콜 상대/Photon의 201, 각 used-in
+ID와 역조회, 편집 불가인 타인 소유 private/미연결 첨부 재사용, 원격 ID 422와 파일 URL
+201, 원본 소유자/편집 권한 불변, 기존 원장 전체 보존을 확인했다. 실제 HTTP 인증은 이
+감사에서 재검증하지 않는다. 첫 시도의 nonce 누락은 감사 요청 구성 오류였으며 수정했다.
+
+세 변이를 각각 임시 적용하고 원복했다.
+- projection을 attachment_url_to_postid로 되돌림: `used-in stores the original attachment ID: rendition`에서 실패.
+- 캐시된 원격 ID 거부 제거: `Cached remote Object ID is rejected as a file URL`에서 실패.
+- edit_post 제한 복원: `Non-editor can reuse shared media: original`에서 403을 보고 실패.
+따라서 허용 확인 검사도 금지 로직을 복원하는 변이로 깨뜨릴 수 있다. 원복 후 24검사를
+다시 통과했으며, 이 결과를 전체 미디어/HTTP/라이선스 정책 검증으로 확대하지 않는다.
+
+후속 리뷰에서 같은 파일/발행물 구분을 로컬에도 적용해야 한다는 지적을 반영했다.
+`axismundi_op_media_url_is_object()`는 OP 로컬 본문(쿼리/fragment 포함), 같은 사이트의
+실재하는 WP 객체/attachment 페이지, 캐시된 원격 ID를 판정한다. 공개 여부로 로컬 문서를
+파일로 취급하지 않으며, private 로컬 본문도 거부한다. 업로드 파일의 쿼리는 WP 객체의
+쿼리가 아니므로 계속 허용한다. 잘못된 같은 호스트 URL을 모두 차단하는 허용 목록은 아니다.
+
+확장 REST dispatch 감사 32개가 통과했다. 리모트 전용 판정으로 임시 되돌린 변이는
+`Known document URL rejected before recording: local`에서 실패했고, 원복 후 32개를
+다시 통과했다. 기존 원격 거부의 미캐시/리다이렉트 한계는 그대로다.
+
+렌디션 해석의 metadata LIKE는 값 인덱스를 활용하지 못하는 비용 후속이다. meta_key
+인덱스로 범위가 좁혀질 수 있으며, 이번에 실행 계획이나 전체 데이터 성능을 측정한 것은
+아니다. 피커/업로드의 ID 기반 참조 설계에서 검토한다.
+
+다음 순서는 첨부 계약을 닫은 뒤 읽기 전용 Objects Local/Remote 화면을 먼저 만드는 것이다.
+sensitive 공통화는 그 관찰 표면과 Media/OP/Actors 활성화 의존성 결정을 갖춘 뒤 진행한다.
+`ax_objects` 존폐와 프런트앱 조회 ID는 보류한다.
+
+피커 후속 계약(아직 UI 미구현): attachment.id는 미디어의 canonical attachment 페이지
+Object ID, attachment.url은 선택한 실제 파일/rendition URL이다. 현재 문서 URL 거부는
+attachment.url에 적용하며, 파일 descriptor의 id로 첨부 페이지 ID를 사용하는 것을
+금지하는 것이 아니다. 사이즈를 바꿔도 같은 미디어의 id는 유지한다.
+이미지 사이즈 선택은 드롭다운, 기본은 사이트 미디어 설정의 Large로 한다. 실제 파일
+URL은 WP/미디어 rendition 서비스에서 받아야 하며 치수 접미사를 직접 조립하지 않는다.
+Large가 없거나 원본이 더 작을 때의 폴백과 video/audio의 변형 선택은 피커 구현에서 검증한다.

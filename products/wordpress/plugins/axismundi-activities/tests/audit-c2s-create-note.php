@@ -18,6 +18,7 @@ $observe = static function ( $activity ) use ( &$recorded ) { $recorded[] = $act
 add_action( 'axismundi_act_activity_recorded', $observe, 999 );
 try {
 	$note = array( 'type' => 'Note', 'content' => '<p>Stored body<script>bad()</script></p>', 'summary' => 'CW', 'contentMap' => array( 'ko' => '<p>본문</p>', 'en' => '<p>Body</p>' ), 'tag' => array( array( 'type' => 'Mention', 'href' => $actor->get_uri(), 'name' => '@fixture' ) ), 'attachment' => array( array( 'type' => 'Image', 'url' => 'https://example.test/image.png' ) ), 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+	foreach ( array( 'replies', 'likes', 'shares', 'http://fedibird.com/ns#emojiReactions' ) as $field ) { $note[ $field ] = 'https://example.test/untrusted-collection'; }
 	$command = array( 'type' => 'Create', 'actor' => $actor->get_uri(), 'object' => $note );
 	$created = axismundi_act_submit_outbox( $user, $actor, $command, 'create-audit-' . wp_generate_uuid4() );
 	$assert( $created instanceof Axismundi_Activity, 'Create commits local Note and Activity: ' . ( is_wp_error( $created ) ? $created->get_error_message() : '' ) );
@@ -27,6 +28,10 @@ try {
 	$assert( $row['document']['id'] === $row['document']['url'] && ! str_contains( $row['document_json'], '<script' ) && count( $row['document']['contentMap'] ) === 2, 'Sanitized current document preserves language maps and unified URL' );
 	$assert( $actor->get_uri() === axismundi_act_get_object_attribution( $uri ) && is_array( axismundi_op_get_object_by_uri( $uri ) ), 'Registry and stored attribution agree with committed Create' );
 	$assert( ! empty( axismundi_op_mentions_for_object( $uri ) ), 'Mention projection participates' );
+	$document = axismundi_op_transform_object( new Axismundi_OP_Local_Source( $row ) );
+	foreach ( array( 'replies' => 'axismundi_op_object_replies_url', 'likes' => 'axismundi_op_object_likes_url', 'shares' => 'axismundi_op_object_shares_url', 'http://fedibird.com/ns#emojiReactions' => 'axismundi_op_object_emoji_reactions_url' ) as $field => $factory ) {
+		$assert( is_array( $document ) && ( $document[ $field ] ?? '' ) === $factory( $uri ), 'Local Note advertises server-owned collection: ' . $field );
+	}
 	$faults = array( 'body' => 'ax_local_objects', 'registry' => 'ax_objects', 'relations' => 'ax_object_relations', 'tags' => 'ax_tag_references', 'listing' => 'ax_object_index' );
 	if ( function_exists( 'axismundi_media_relations_table' ) ) { $faults['media'] = substr( axismundi_media_relations_table(), strlen( $wpdb->prefix ) ); }
 	foreach ( $faults as $label => $table ) {
@@ -48,6 +53,20 @@ try {
 	$assert( is_wp_error( $raw ), 'Direct registry entry cannot bypass the Create gate' );
 	$wp_create = axismundi_act_record_activity( array( 'type' => 'Create', 'actor' => $actor->get_uri(), 'object' => $wp_uri ), 'outbound' );
 	$assert( $wp_create instanceof Axismundi_Activity && is_array( axismundi_op_get_object_by_uri( $wp_uri ) ), 'Recorded Create admits the matching WordPress source' );
+	$wp_reply = axismundi_act_submit_outbox( $user, $actor, array( 'type' => 'Note', 'content' => '<p>Reply to WP</p>', 'inReplyTo' => $wp_uri, 'to' => $note['to'] ) );
+	$assert( $wp_reply instanceof Axismundi_Activity, 'C2S Note can reply to a WordPress Object URI' );
+	$reply_uri = $wp_reply->get_object_uri(); $uris[] = $reply_uri;
+	$assert( $wp_uri === axismundi_op_get_local_object( $reply_uri )['document']['inReplyTo'], 'WordPress reply target is preserved in the local body' );
+	$wp_document = axismundi_op_transform_object( get_post( $post_id ) );
+	$assert( is_array( $wp_document ) && ! empty( $wp_document['replies'] ), 'WordPress parent advertises its replies collection' );
+	$root_request = new WP_REST_Request( 'GET', '/axismundi/v1/objects/replies' );
+	$root_request->set_param( 'object', $wp_uri );
+	$root_response = rest_do_request( $root_request );
+	$root_data = $root_response->get_data();
+	$page_request = new WP_REST_Request( 'GET', '/axismundi/v1/objects/replies' );
+	$page_request->set_param( 'object', $wp_uri ); $page_request->set_param( 'page', 1 );
+	$page_response = rest_do_request( $page_request );
+	$assert( 200 === $root_response->get_status() && $wp_document['replies'] === ( $root_data['id'] ?? '' ) && 200 === $page_response->get_status() && in_array( $reply_uri, $page_response->get_data()['orderedItems'] ?? array(), true ), 'WordPress advertised replies root and page resolve to the C2S child' );
 	$deleted = axismundi_act_submit_outbox( $user, $actor, array( 'type' => 'Delete', 'actor' => $actor->get_uri(), 'object' => $uri ) );
 	$tombstone = axismundi_op_get_local_object( $uri );
 	$assert( $deleted instanceof Axismundi_Activity && 'tombstone' === $tombstone['object_status'] && 4 === count( $tombstone['document'] ), 'Delete leaves only the minimal Tombstone body' );

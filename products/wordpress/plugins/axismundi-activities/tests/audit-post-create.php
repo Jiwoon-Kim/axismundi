@@ -108,12 +108,12 @@ try {
 	wp_update_post( array( 'ID' => $post_id, 'post_status' => 'publish' ) );
 	$after_republish = axismundi_act_get_by_object( $object_uri );
 	$after_republish_types = array_map( static fn( Axismundi_Activity $activity ) : string => $activity->get_type(), $after_republish );
-	ax_create_assert( $ax_create_results, 'an Article withdrawal records Delete and a later publication starts a new Create generation', 3 === count( $after_republish ) && 2 === count( array_filter( $after_republish_types, static fn( string $type ) : bool => 'Create' === $type ) ) && 1 === count( array_filter( $after_republish_types, static fn( string $type ) : bool => 'Delete' === $type ) ) );
+	ax_create_assert( $ax_create_results, 'draft and republish preserve the original Create without federation withdrawal', 1 === count( $after_republish ) && array( 'Create' ) === $after_republish_types );
 
 	$delete = axismundi_act_record_activity( array( 'type' => 'Delete', 'actor' => $actor_uri, 'object' => $object_uri ), 'outbound' );
 	wp_update_post( array( 'ID' => $post_id, 'post_title' => 'Create bridge resurrected' ) );
 	$after_delete = axismundi_act_get_by_object( $object_uri );
-	ax_create_assert( $ax_create_results, 'an effective Delete starts a new lifecycle generation and permits one resurrection Create', $delete instanceof Axismundi_Activity && 5 === count( $after_delete ) && 'Create' === $after_delete[0]->get_type() );
+	ax_create_assert( $ax_create_results, 'an explicitly recorded Delete starts a new lifecycle generation and permits one resurrection Create', $delete instanceof Axismundi_Activity && 3 === count( $after_delete ) && 'Create' === $after_delete[0]->get_type() );
 
 	$permanent_id = (int) wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'publish', 'post_author' => $author_id, 'post_title' => 'Permanent delete bridge' ) );
 	$permanent_post = $permanent_id > 0 ? get_post( $permanent_id ) : null;

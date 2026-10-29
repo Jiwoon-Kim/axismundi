@@ -234,7 +234,23 @@ not "whoever performed the newest Activity" — that reading refuses an owner th
 withdrawal as soon as anyone else has edited the Object. We have no delegation model yet, so
 delegated deletion is refused rather than silently allowed.
 
-Our 410-with-Tombstone behaviour for AP and 404 for human HTML is unchanged and deliberate.
+삭제 표현과 발행 시점은 소스별로 구분한다 (오너 결정).
+
+- OP C2S 로컬 본문: Delete 후 최소 Tombstone을 보존하고, 공개 객체의 AP/HTML은 410.
+- Core Post (`wp_posts`, `post`): draft/private/trash는 로컬 가용성 변경이다.
+  이 상태 전환만으로 Update/Delete를 발행하지 않고, 공개 읽기는 404이며 Tombstone을 합성하지 않는다.
+- Core Post 영구삭제: 기존 Create가 있는 객체는 `pre_delete_post`에서 원장의 귀속과
+  principal 인가를 확인하고 Delete를 기록한다. 실패하면 삭제를 막는 기존 가드를 유지한다.
+  원본 제거 후 AP/HTML은 404이며, 레지스트리는 누락된 원본을 Tombstone으로 대체하지 않는다.
+- 공개 상태로 돌아오는 것은 앞선 Create를 Delete한 뒤 재생성하는 일이 아니다.
+  기존 귀속과 lifecycle을 유지한다. 다른 CPT와 원격 캐시의 삭제 정책은 이 결정으로 바꾸지 않는다.
+
+이는 [FEP-4f05](https://codeberg.org/fediverse/fep/src/branch/main/fep/4f05/fep-4f05.md)의
+soft-delete(200 Tombstone + Delete 전파)를 WP 휴지통에 구현하는 것이 아니다.
+휴지통/비공개 전환은 원격 사본을 즉시 철회하지 않는다는 한계가 있다. 원장 보존 정책은 변경하지 않는다.
+
+검증 명령: `AX_C2S_HTTP_ORIGIN=http://wordpress wp eval-file wp-content/plugins/axismundi-activities/tests/audit-wp-post-deletion.php`
+(wp-env CLI 컨테이너 내부). 실제 WP 상태 변경과 AP/HTML 응답, 영구삭제 Delete, 원장/principal 보존을 검사한다.
 
 ### Addressing
 

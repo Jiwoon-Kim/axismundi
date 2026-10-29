@@ -181,23 +181,11 @@ function axismundi_act_on_object_publish_candidate( WP_Post $post, string $objec
 }
 add_action( 'axismundi_op_object_publish_candidate', 'axismundi_act_on_object_publish_candidate', 10, 4 );
 
-/** Withdraw an Article when it leaves the published state. */
-function axismundi_act_transition_post_lifecycle( string $new_status, string $old_status, WP_Post $post ) : void {
-	if ( 'post' !== $post->post_type || 'publish' !== $old_status || 'publish' === $new_status ) {
-		return;
-	}
-	$result = axismundi_act_record_post_delete( $post );
-	if ( is_wp_error( $result ) ) {
-		axismundi_act_post_delete_failed( $result, $post );
-	}
-}
-add_action( 'transition_post_status', 'axismundi_act_transition_post_lifecycle', 40, 3 );
-
 /**
  * Refuse permanent deletion until a previously federated Article has a durable Delete.
  *
- * Status transitions cover trash and drafts. This catches direct permanent deletion,
- * where WordPress removes the source without a publish-to-nonpublish transition.
+ * Reversible status changes are local availability, not federation deletion.
+ * Only permanent removal reaches this guard; no WP Tombstone is synthesized.
  *
  * @param WP_Post|false|null $delete Short-circuit value.
  * @return WP_Post|false|null

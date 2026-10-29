@@ -55,6 +55,9 @@ function axismundi_op_authoritative_source_from_object_uri( string $object_uri )
 		return null;
 	}
 	$source = function_exists( 'axismundi_op_resolve_source_by_uri' ) ? axismundi_op_resolve_source_by_uri( $uri ) : null;
+	if ( $source instanceof Axismundi_OP_Local_Source && ( 'active' !== $source->row['object_status'] || empty( $source->row['publicly_readable'] ) ) ) {
+		return null;
+	}
 	if ( null !== $source && ! $source instanceof Axismundi_Op_Remote_Source ) {
 		$transformer = axismundi_op_resolve_object_transformer( $source );
 		try {

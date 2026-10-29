@@ -184,11 +184,20 @@ function axismundi_op_register_local_body_readers() : void {
 	axismundi_op_register_object_transformer( 'local-body', array(
 		'supports' => static fn( $source ) : bool => $source instanceof Axismundi_OP_Local_Source,
 		'object_uri' => static fn( $source ) : string => $source->row['object_uri'],
-		'transform' => static fn( $source ) : array => $source->row['document'],
+		'transform' => 'axismundi_op_transform_local_body',
 		'visible' => static fn( $source ) : bool => ! empty( $source->row['publicly_readable'] ), 'local' => true, 'priority' => 5,
 	) );
 }
 add_action( 'axismundi_op_register_transformers', 'axismundi_op_register_local_body_readers' );
+
+/** Collection URLs are server projections, never client-supplied membership authority. */
+function axismundi_op_transform_local_body( Axismundi_OP_Local_Source $source ) : array {
+	$document = $source->row['document'];
+	unset( $document['replies'], $document['likes'], $document['shares'], $document['http://fedibird.com/ns#emojiReactions'] );
+	if ( 'active' !== $source->row['object_status'] ) { return $document; }
+	$document = axismundi_op_add_replies_property( $document );
+	return function_exists( 'axismundi_op_add_likes_property' ) ? axismundi_op_add_likes_property( $document ) : $document;
+}
 
 function axismundi_op_local_body_view( $source ) : ?array {
 	if ( ! $source instanceof Axismundi_OP_Local_Source ) { return null; }

@@ -103,12 +103,31 @@ try {
 	$note_uri = $create_activity->get_object_uri();
 	$assert( $note_uri !== $create_uri && str_contains( $note_uri, '/objects/' ) && 'https://example.test/untrusted-object-id' !== $note_uri, 'Create and Object receive distinct server IDs' );
 	$read_object = static function ( string $uri, string $accept = 'application/activity+json', string $method = 'GET' ) use ( $http_origin, $host ) {
-		return wp_remote_request( $http_origin . wp_parse_url( $uri, PHP_URL_PATH ), array( 'method' => $method, 'headers' => array( 'Host' => $host, 'Accept' => $accept ), 'timeout' => 30, 'redirection' => 0 ) );
+		$query = wp_parse_url( $uri, PHP_URL_QUERY );
+		return wp_remote_request( $http_origin . wp_parse_url( $uri, PHP_URL_PATH ) . ( $query ? '?' . $query : '' ), array( 'method' => $method, 'headers' => array( 'Host' => $host, 'Accept' => $accept ), 'timeout' => 30, 'redirection' => 0 ) );
 	};
 	$object_response = $read_object( $note_uri );
 	$document = json_decode( wp_remote_retrieve_body( $object_response ), true );
 	$assert( 200 === wp_remote_retrieve_response_code( $object_response ) && $note_uri === ( $document['id'] ?? '' ) && $note_uri === $document['url'] && 'Note' === $document['type'], 'Canonical Object GET negotiates Note JSON with unified id/url' );
 	$assert( 200 === wp_remote_retrieve_response_code( $read_object( $note_uri, 'text/html' ) ), 'Canonical Object URL also serves HTML' );
+	$collection_fields = array( 'replies', 'likes', 'shares', 'http://fedibird.com/ns#emojiReactions' );
+	foreach ( $collection_fields as $field ) {
+		$assert( ! empty( $document[ $field ] ), 'Local Note advertises ' . $field );
+		$collection = $read_object( $document[ $field ] );
+		$body = json_decode( wp_remote_retrieve_body( $collection ), true );
+		$assert( 200 === wp_remote_retrieve_response_code( $collection ) && $document[ $field ] === ( $body['id'] ?? '' ), 'Advertised collection resolves: ' . $field );
+	}
+	$reply_result = $request( $path, array( 'type' => 'Note', 'content' => '<p>Reply</p>', 'inReplyTo' => $note_uri, 'to' => $note['to'] ), $auth );
+	$reply_activity = axismundi_act_get( (string) ( $reply_result[2]['location'] ?? '' ) );
+	$replies_root = json_decode( wp_remote_retrieve_body( $read_object( $document['replies'] ) ), true );
+	$replies_page = json_decode( wp_remote_retrieve_body( $read_object( $replies_root['first'] ) ), true );
+	$assert( 201 === $reply_result[0] && $reply_activity instanceof Axismundi_Activity && in_array( $reply_activity->get_object_uri(), $replies_page['orderedItems'] ?? array(), true ), 'HTTP-created reply appears in the local parent advertised replies page' );
+	$note_like = $request( $path, array_merge( $like, array( 'object' => $note_uri ) ), $auth );
+	$likes_body = json_decode( wp_remote_retrieve_body( $read_object( $document['likes'] ) ), true );
+	$assert( 201 === $note_like[0] && 1 === ( $likes_body['totalItems'] ?? null ), 'C2S Like is reflected in the local Object likes collection' );
+	$note_undo = $request( $path, array( 'type' => 'Undo', 'actor' => $owner->get_uri(), 'object' => (string) $note_like[2]['location'] ), $auth );
+	$likes_after_undo = json_decode( wp_remote_retrieve_body( $read_object( $document['likes'] ) ), true );
+	$assert( 201 === $note_undo[0] && 0 === ( $likes_after_undo['totalItems'] ?? null ), 'Targeted Undo removes the local Object Like without contaminating liked paging fixtures' );
 	$retried = $request( $path, $create, $create_headers );
 	$assert( 201 === $retried[0] && $create_uri === (string) $retried[2]['location'], 'Create retry creates neither a second Note nor a second Create' );
 	$assert( 409 === $request( $path, $like, $create_headers )[0], 'A Create retry key cannot be reused for Like' );
@@ -118,11 +137,17 @@ try {
 	$bare_activity = axismundi_act_get( (string) ( $bare_result[2]['location'] ?? '' ) );
 	$assert( 201 === $bare_result[0] && $bare_activity instanceof Axismundi_Activity && 'Create' === $bare_activity->get_type(), 'Bare Note is wrapped in a server Create' );
 	$assert( 404 === wp_remote_retrieve_response_code( $read_object( $bare_activity->get_object_uri() ) ), 'Restricted Object is not exposed by the public canonical route' );
+	foreach ( array( 'replies', 'likes', 'shares', 'emoji-reactions' ) as $kind ) {
+		$assert( 404 === $request( 'objects/' . $kind . '?object=' . rawurlencode( $bare_activity->get_object_uri() ) )[0], 'Private Object collection fails closed: ' . $kind );
+	}
 	$delete = $request( $path, array( 'type' => 'Delete', 'actor' => $owner->get_uri(), 'object' => $note_uri ), $auth );
 	$gone = $read_object( $note_uri );
 	$tombstone = json_decode( wp_remote_retrieve_body( $gone ), true );
 	$assert( 201 === $delete[0] && 410 === wp_remote_retrieve_response_code( $gone ) && 'Tombstone' === ( $tombstone['type'] ?? '' ), 'Delete records its Activity and canonical AP GET becomes 410 Tombstone' );
 	$assert( ! isset( $tombstone['content'], $tombstone['attachment'], $tombstone['summary'] ) && ! str_contains( wp_remote_retrieve_body( $gone ), 'CW secret' ), 'Tombstone does not expose body, media or CW' );
+	foreach ( $collection_fields as $field ) {
+		$assert( ! isset( $tombstone[ $field ] ) && 404 === wp_remote_retrieve_response_code( $read_object( $document[ $field ] ) ), 'Tombstone neither advertises nor serves collection: ' . $field );
+	}
 	$assert( 410 === wp_remote_retrieve_response_code( $read_object( $note_uri, 'text/html' ) ) && '' === wp_remote_retrieve_body( $read_object( $note_uri, 'application/activity+json', 'HEAD' ) ), 'Deleted HTML is 410 and HEAD has no body' );
 	$assert( ! post_type_exists( 'ax_note' ) && ! function_exists( 'axismundi_note_object_uri' ), 'Retired Note bootstrap exposes no CPT or legacy runtime fallback' );
 	// Preserve the existing block's state-oriented service rather than routing it through AP.

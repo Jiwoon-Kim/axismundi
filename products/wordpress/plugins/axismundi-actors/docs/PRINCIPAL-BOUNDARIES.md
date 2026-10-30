@@ -20,6 +20,41 @@ JMAP의 Account 인벤토리와 Account 해소는 기존 WP User 운영 권한�
 ID/수명과 JMAP Account를 공유하는 정책도 그대로다. 원격 Actor가 주체인 것은 우리
 서버의 Account가 새로 생기는 것과 다르다.
 
+### 오너 결정 (2026-10-30): 두 가지 예외와 한 가지 확장
+
+**시스템 Actor 의 Account 접근 principal 은 WP user role 에서 파생한다.**
+위의 grant 기반 규칙에 대한 의도된 예외다. 시스템 Account 에는 사람 소유자가 없으므로
+`ax_actor_managers` 에 쓸 owner 가 없고, role 이 유일하게 쓸 수 있는 출처다.
+
+```txt
+일반 로컬 Actor   grant 가 답한다.  WP role 로 우회하지 않는다
+시스템 Actor      WP role 이 답한다.  grant 행을 두지 않는다
+```
+
+이 예외가 좁다는 것이 중요하다. 파생되는 것은 **시스템 Account 하나의 접근 권한**이고,
+role 이 일반 Account 운영 권한의 출처가 된다는 뜻이 아니다. 둘을 같은 함수의 분기로
+구현하더라도, "관리자는 모든 Actor 를 운영한다"로 번지면 ③ 이 그은 경계가 사라진다.
+
+**Subscriber 도 Actor 를 만들 수 있다.** 기존 감사가 단언했던 금지는 폐기한다.
+근거는 워드프레스의 기존 권한 모델과의 정합이다.
+
+```txt
+Subscriber 가 못 하는 것   wp_posts 글 작성 → Article 없음.  미디어 업로드 없음
+Subscriber 가 하는 것      댓글.  원래 구독자도 익명도 할 수 있다
+C2S Note                   그 댓글에 가장 가까운 개념
+```
+
+따라서 `audit-admin` 의 "a Subscriber cannot manage or activate even its own retained
+Actor row" 는 **방향을 뒤집어** 이관한다. `ensure_for_user()` 가 주는 owner grant 로
+자기 Actor 를 운영하는 현재 동작이 정책이다.
+
+**계획에 넣어야 할 결과.** 이 유비는 저작 권한에서는 성립하지만 도달 범위에서는 아니다.
+WP 댓글은 글에 붙고 모더레이션 큐를 지나며 연합되지 않는다. C2S Note 는 자기 URI 와
+`replies`/`likes`/`shares` 를 갖고 outbox 와 팔로워 inbox 로 나간다. 즉 **가장 낮은 WP
+역할이 이 도메인 이름으로 연합 발행을 얻는다.** 설계에 이미 있는 완화 장치는 강제
+sensitive 와 정책 삭제뿐이고, 승인 큐도 속도 제한도 없다. 금지 사유가 아니라, 모더레이션
+슬라이스가 다뤄야 할 입력으로 기록한다.
+
 ## Domain Moderation
 
 Forum의 `accepted + moderator` 멤버십은 해당 Group의 모더레이션 권한이다.

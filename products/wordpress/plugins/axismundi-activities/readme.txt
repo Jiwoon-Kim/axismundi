@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.3-dev
+Stable tag: 0.1.3
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -110,13 +110,17 @@ Nothing else here reaches outside this site.
 
 == Changelog ==
 
-= 0.1.1 =
-* Declare the published Axismundi Actors dependency for WordPress plugin management.
-* Project Question definitions and vote observations from immutable Activity evidence,
-  separating local authority from remote observations.
-* Add stable public outbox cursor queries and canonical Activity retrieval support for
-  representation integrations, without introducing network transport.
-* Keep public snapshots free of blind recipients and preserve recorded payloads.
-* Make transaction completion explicit for Plugin Check's SQL analysis.
+= 0.1.3 =
+* Accept Like, Undo, Create(Note) and a bare Note on the ActivityPub client-to-server
+  outbox, and project the liked collection from the ledger rather than storing membership.
+* Read the Activity types the outbox accepts from the shared vocabulary instead of a
+  local list.
+* Advertise server-owned replies, likes, shares and emoji reaction collections on local
+  objects, taking the addresses from the server rather than from the submitted document.
+* Separate a post's local availability from federation deletion: draft, private and trash
+  publish nothing, and only permanent removal records a Delete.
+* Filter extension-supplied HTML through the post allowlist at every output boundary, and
+  sanitize the visitor address before it reaches the rate-limit filter.
+* Follow the Actor profile and Follows screens to their new place under Accounts.
 
 Earlier releases are recorded in changelog.txt.

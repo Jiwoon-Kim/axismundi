@@ -1,5 +1,14 @@
 === Axismundi Activities: Earlier Releases ===
 
+= 0.1.1 =
+* Declare the published Axismundi Actors dependency for WordPress plugin management.
+* Project Question definitions and vote observations from immutable Activity evidence,
+  separating local authority from remote observations.
+* Add stable public outbox cursor queries and canonical Activity retrieval support for
+  representation integrations, without introducing network transport.
+* Keep public snapshots free of blind recipients and preserve recorded payloads.
+* Make transaction completion explicit for Plugin Check's SQL analysis.
+
 = 0.1.0 =
 * First release.
 * An immutable, URI-keyed Activity ledger with a read-only administrator log, and social

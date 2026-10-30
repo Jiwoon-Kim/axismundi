@@ -18,6 +18,34 @@ JSON의 `id`는 원래 canonical URI이며 `/social/objects/{id}`로 바꾸지 �
 canonical URI를 입력으로 삼는 조회 계약과 비교할 수 있다. 프런트앱에 출처별 SQL/저장소
 분기를 노출하지 않는 것과 공통 DB 테이블이 반드시 필요한 것은 서로 다른 결정이다.
 
+### 오너 결정 (2026-10-30): `ax_objects` 는 유지한다
+
+위에서 열어 둔 질문 -- 정수 locator 외에 통합 인덱스가 필요한가 -- 를 닫는다.
+근거는 도메인 모델이 아니라 **주소 공간의 대칭성**이다.
+
+```txt
+/social/actors/{ax_actors.id}          원장 PK
+/social/activities/{ax_activities.id}  원장 PK
+/social/objects/{ax_objects.id}        이 인덱스
+```
+
+Actor 와 Activity 는 자기 PK 를 쓰는데 Object 만 URI 를 입력으로 받으면, 세 공간 중
+하나만 성질이 달라진다. 그 비대칭을 피하는 값이 테이블 하나를 유지하는 비용보다 크다.
+앞서 검토한 `?uri=` 쿼리 방식은 기술적으로 성립하지만 이 대칭을 깨뜨리므로 택하지 않는다.
+
+**유지하는 것은 역할이지 범위가 아니다.** 이 결정은 `ax_objects` 가 locator 이자 정수
+id 공간이라는 뜻이고, 객체의 권위 있는 본체가 된다는 뜻이 아니다.
+
+```txt
+유지   canonical URI <-> 정수 id 매핑, source_owner/kind/ref 로 소유 저장소 지목
+금지   타입 · 귀속 · 상태를 여기서 권위로 읽는 것.  그 답은 소유 저장소가 한다
+```
+
+이 구분이 중요한 이유는 과잉 설계가 굳는 경로가 정해져 있기 때문이다. 컬럼이 늘면
+소비자가 그 컬럼을 읽고, 읽는 곳이 늘면 "이미 쓰고 있으니 유지"가 근거가 된다.
+Emoji 가 그 반례였다 -- 객체로 존재하지만 피드에 실리지 않으므로 이 인덱스에 등록할
+이유가 없다. **객체로 존재함 != 독립 발행됨 != 피드에 실림** 은 그대로 유지한다.
+
 ## API and Authorization
 
 `GET /wp-json/axismundi/v1/objects/{id}`를 OP가 소유한다. 기존 `/objects/read`와

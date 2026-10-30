@@ -57,7 +57,7 @@ function axismundi_act_remote_follow_target_resource( Axismundi_Actor $target ) 
 
 /** Rate-limit unauthenticated WebFinger probes by the directly connected IP. */
 function axismundi_act_remote_follow_rate_limit() {
-	$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? (string) wp_unslash( $_SERVER['REMOTE_ADDR'] ) : '';
+	$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 	/** @param string $ip Direct client address; trusted deployments may provide it explicitly. */
 	$ip = (string) apply_filters( 'axismundi_act_remote_follow_client_ip', $ip );
 	if ( ! filter_var( $ip, FILTER_VALIDATE_IP ) ) {

@@ -38,6 +38,14 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/** Sanitize extension HTML while preserving toggle button accessibility. */
+function axismundi_act_kses_html( string $html ) : string {
+	$allowed = wp_kses_allowed_html( 'post' );
+	$allowed['button']['aria-pressed'] = true;
+	$allowed['a']['aria-pressed'] = true;
+	return wp_kses( $html, $allowed );
+}
+
 /**
  * Register one interaction type.
  *
@@ -335,7 +343,7 @@ function axismundi_act_render_interaction_block( array $attributes, string $cont
 		: get_block_wrapper_attributes( $wrapper );
 
 	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wrapper is core-escaped or a literal; parts are escaped.
-	return '<div ' . $wrapper_attributes . $extra . '>' . $control . (string) $descriptor['after'] . '</div>';
+	return '<div ' . $wrapper_attributes . $extra . '>' . $control . axismundi_act_kses_html( (string) $descriptor['after'] ) . '</div>';
 }
 
 /**

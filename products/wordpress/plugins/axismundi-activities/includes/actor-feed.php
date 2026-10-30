@@ -754,15 +754,15 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 	 * surface — there is no second page to send anyone to — so the product holding those
 	 * threads answers here and Activities steps aside.
 	 *
-	 * Activities does not know what a Forum is, and must not: it offers the slot and takes
-	 * whatever comes back, exactly as it does for the object cards below.
+	 * Activities does not know what a Forum is: it offers a safe HTML slot, subject
+	 * to the post HTML allowlist, just like the object cards below.
 	 *
 	 * @param string          $html  Empty by default, which keeps the Activity timeline.
 	 * @param Axismundi_Actor $actor Actor whose profile is being rendered.
 	 */
 	$claimed = (string) apply_filters( 'axismundi_act_actor_feed_html', '', $actor );
 	if ( '' !== $claimed ) {
-		return $claimed;
+		return axismundi_act_kses_html( $claimed );
 	}
 	/*
 	 * The Actor profile template is PHP that embeds this block as markup. Core's metadata-driven
@@ -1354,13 +1354,13 @@ function axismundi_act_feed_surface_children( array $blocks ) : array {
 function axismundi_act_render_feed_loop_block( array $attributes = array(), string $content = '', $block = null ) : string {
 	unset( $attributes, $content );
 	$context = is_object( $block ) && isset( $block->context['axismundi/feed'] ) ? (array) $block->context['axismundi/feed'] : array();
-	$cards   = (string) ( $context['cards'] ?? '' );
+	$cards   = axismundi_act_kses_html( (string) ( $context['cards'] ?? '' ) );
 	return '<ol class="axismundi-activity-feed__list" data-wp-init="callbacks.watchFeed">'
 		. ( '' === $cards ? '<li class="axismundi-activity-feed__empty">' . esc_html__( 'Nothing to show in this view.', 'axismundi-activities' ) . '</li>' : $cards )
 		. '</ol>'
-		. (string) ( $context['announceHost'] ?? '' )
-		. (string) ( $context['reactionHost'] ?? '' )
-		. '<p class="axismundi-activity-feed__status" data-wp-text="context.error" role="status"></p>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Cards and hosts are escaped by their own renderers.
+		. axismundi_act_kses_html( (string) ( $context['announceHost'] ?? '' ) )
+		. axismundi_act_kses_html( (string) ( $context['reactionHost'] ?? '' ) )
+		. '<p class="axismundi-activity-feed__status" data-wp-text="context.error" role="status"></p>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Context HTML is KSES-filtered above; remaining markup is literal.
 }
 
 /**
@@ -1678,8 +1678,8 @@ function axismundi_act_render_actor_feed_card( array $item, string $card_templat
 	 * template puts `object-status`, and fed by the descriptor this item carries.
 	 */
 	return '<li class="axismundi-activity-feed__item axismundi-activity-feed__item--object axismundi-activity-feed__item--' . esc_attr( strtolower( (string) ( $item['type'] ?? '' ) ) ) . '">'
-		. $object_html
-		. '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Frame is escaped above; the owning product owns and escapes its renderer output.
+		. axismundi_act_kses_html( $object_html )
+		. '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Frame is escaped above; product HTML passes KSES at the output boundary.
 }
 
 /**

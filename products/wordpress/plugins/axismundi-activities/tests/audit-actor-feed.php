@@ -29,6 +29,25 @@ function ax_feed_assert( array &$results, string $label, bool $condition ) : voi
 }
 
 try {
+	$previous_ip = $_SERVER['REMOTE_ADDR'] ?? null;
+	$seen_ip = null;
+	$capture_ip = static function ( $ip ) use ( &$seen_ip ) : string {
+		$seen_ip = $ip;
+		return 'invalid-ip';
+	};
+	$_SERVER['REMOTE_ADDR'] = '<b>invalid-ip</b>';
+	add_filter( 'axismundi_act_remote_follow_client_ip', $capture_ip );
+	try {
+		$limited = axismundi_act_remote_follow_rate_limit();
+		ax_feed_assert( $ax_feed_results, 'Client IP is sanitized before extension callbacks and validated afterwards', 'invalid-ip' === $seen_ip && is_wp_error( $limited ) && 429 === $limited->get_error_data()['status'] );
+	} finally {
+		remove_filter( 'axismundi_act_remote_follow_client_ip', $capture_ip );
+		if ( null === $previous_ip ) {
+			unset( $_SERVER['REMOTE_ADDR'] );
+		} else {
+			$_SERVER['REMOTE_ADDR'] = $previous_ip;
+		}
+	}
 	$login           = 'ax_feed_' . strtolower( wp_generate_password( 8, false, false ) );
 	$ax_feed_user_id = (int) wp_insert_user( array( 'user_login' => $login, 'user_pass' => wp_generate_password(), 'role' => 'author' ) );
 	$actor           = axismundi_actors_ensure_for_user( $ax_feed_user_id );
@@ -46,6 +65,49 @@ try {
 	}
 	$actor_uri  = $actor->get_uri();
 	$public_uri = 'https://www.w3.org/ns/activitystreams#Public';
+
+	// Exercise output boundaries independently of the owning product's sanitizer.
+	$safe_markup = '<div data-wp-interactive="axismundi/test" popover="auto" role="status" aria-live="polite"><span data-wp-bind--hidden="context.hidden">Safe</span><button aria-pressed="true">Toggle</button><a href="/x" aria-pressed="false">Link toggle</a><video controls src="https://example.com/video.mp4"></video></div>';
+	$unsafe_markup = $safe_markup . '<script>alert(1)</script><img src="x" onerror="alert(1)"><a href="javascript:alert(1)">bad</a>';
+	$inject = static fn() : string => $unsafe_markup;
+	$previous_profile = $GLOBALS['axismundi_actors_profile_actor'] ?? null;
+	$GLOBALS['axismundi_actors_profile_actor'] = $actor;
+	add_filter( 'axismundi_act_actor_feed_html', $inject, PHP_INT_MAX );
+	try {
+		$override = axismundi_act_render_actor_activity_feed();
+		ax_feed_assert( $ax_feed_results, 'Feed override strips executable markup', false === strpos( $override, '<script' ) && false === strpos( $override, 'onerror=' ) && false === strpos( $override, 'javascript:' ) );
+		ax_feed_assert( $ax_feed_results, 'Feed override preserves interactive and media markup', false !== strpos( $override, $safe_markup ) );
+	} finally {
+		remove_filter( 'axismundi_act_actor_feed_html', $inject, PHP_INT_MAX );
+		$GLOBALS['axismundi_actors_profile_actor'] = $previous_profile;
+	}
+	foreach ( array( 'axismundi_act_actor_feed_object_html', 'axismundi_act_actor_feed_missing_object_html' ) as $hook ) {
+		$empty_renderer = static fn() : string => '';
+		add_filter( 'axismundi_act_actor_feed_object_html', $empty_renderer, PHP_INT_MAX - 1 );
+		add_filter( $hook, $inject, PHP_INT_MAX );
+		try {
+			$card = axismundi_act_render_actor_feed_card( array( 'type' => 'Create' ) );
+			ax_feed_assert( $ax_feed_results, $hook . ' strips executable markup and preserves safe HTML', false === strpos( $card, '<script' ) && false === strpos( $card, 'onerror=' ) && false === strpos( $card, 'javascript:' ) && false !== strpos( $card, $safe_markup ) );
+		} finally {
+			remove_filter( $hook, $inject, PHP_INT_MAX );
+			remove_filter( 'axismundi_act_actor_feed_object_html', $empty_renderer, PHP_INT_MAX - 1 );
+		}
+	}
+	foreach ( array( 'cards', 'announceHost', 'reactionHost' ) as $field ) {
+		$loop = axismundi_act_render_feed_loop_block( array(), '', (object) array( 'context' => array( 'axismundi/feed' => array( $field => $unsafe_markup ) ) ) );
+		ax_feed_assert( $ax_feed_results, 'Loop sanitizes context HTML: ' . $field, false === strpos( $loop, '<script' ) && false === strpos( $loop, 'onerror=' ) && false === strpos( $loop, 'javascript:' ) && false !== strpos( $loop, $safe_markup ) );
+	}
+	$interaction_type = static function ( array $types ) use ( $unsafe_markup ) : array {
+		$types['security-audit'] = array( 'describe' => static fn() : array => array( 'after' => $unsafe_markup ) );
+		return $types;
+	};
+	add_filter( 'axismundi_act_interaction_types', $interaction_type );
+	try {
+		$interaction = axismundi_act_render_interaction_block( array( 'type' => 'security-audit' ), '', new WP_Block( array( 'blockName' => 'axismundi/interaction', 'attrs' => array() ) ) );
+		ax_feed_assert( $ax_feed_results, 'Interaction after strips executable markup and preserves directives', false === strpos( $interaction, '<script' ) && false === strpos( $interaction, 'onerror=' ) && false === strpos( $interaction, 'javascript:' ) && false !== strpos( $interaction, $safe_markup ) );
+	} finally {
+		remove_filter( 'axismundi_act_interaction_types', $interaction_type );
+	}
 
 	// A cached remote Object authored by a remote Actor other than the profile owner.
 	$remote_slug      = strtolower( wp_generate_password( 8, false, false ) );
@@ -100,6 +162,7 @@ try {
 	// --- Object rendering (Object Projections integration on the feed filter) ---
 	$announce_item = array( 'type' => 'Announce', 'actor_uri' => $actor_uri, 'object_uri' => $remote_note_uri );
 	$announce_html = (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $announce_item );
+	ax_feed_assert( $ax_feed_results, 'The OP remote Object card survives the Activities HTML boundary unchanged', $announce_html === axismundi_act_kses_html( $announce_html ) );
 	ax_feed_assert( $ax_feed_results, 'a boosted cached remote Object renders its object card with the original author rather than the profile Actor', '' !== $announce_html && false !== strpos( $announce_html, 'Boosted remote note body.' ) && false !== strpos( $announce_html, 'axismundi-object' ) && false !== strpos( $announce_html, 'Remote owner' ) && false === strpos( $announce_html, esc_html( $actor->get_display_name() ) ) );
 
 	$spoof_item = array( 'type' => 'Create', 'actor_uri' => $actor_uri, 'object_uri' => $remote_note_uri );

@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "sanity": "axismundi-jmap/tests/engine.php",
+  "exclude": ["*mutation*.php", "*-fixtures.php"],
+  "standalone": ["axismundi-jmap/tests/engine.php"],
+  "requirements": {
+    "axismundi-actors/tests/audit-accounts-navigation-http.php": ["AX_ADMIN_HTTP_ORIGIN"],
+    "axismundi-activities/tests/audit-c2s-outbox-http.php": ["AX_C2S_HTTP_ORIGIN"],
+    "axismundi-actors/tests/audit-actor-uri-preservation.php": ["AX_ACTOR_URI_BASELINE"]
+  },
+  "environment": {
+    "axismundi-actors/tests/audit-accounts-navigation-http.php": {
+      "AX_ADMIN_HTTP_ORIGIN": "http://wordpress"
+    },
+    "axismundi-activities/tests/audit-c2s-outbox-http.php": {
+      "AX_C2S_HTTP_ORIGIN": "http://wordpress"
+    },
+    "axismundi-activities/tests/audit-wp-post-deletion.php": {
+      "AX_C2S_HTTP_ORIGIN": "http://wordpress"
+    },
+    "axismundi-object-projections/tests/audit-term-members.php": {
+      "AX_OP_HTTP_TEST_ORIGIN": "http://wordpress"
+    },
+    "axismundi-object-projections/tests/audit-hashtag-policy.php": {
+      "AX_OP_HTTP_TEST_ORIGIN": "http://wordpress"
+    }
+  }
+}

@@ -20,7 +20,6 @@ global $wpdb;
 $ax_admin_results = array();
 $ax_admin_ids     = array();
 $ax_admin_users   = array();
-$ax_prev_site_disabled = get_option( 'ax_actors_site_actor_disabled', false );
 
 /**
  * @param array  $results Accumulator.
@@ -171,16 +170,8 @@ try {
 	$actor = axismundi_actors_get_by_uuid( $actor->get_uuid() );
 	ax_admin_assert( $ax_admin_results, 'publishing yields Public and a public profile', 'Public' === axismundi_actors_status_label( $actor ) && axismundi_actors_is_public_profile( $actor ) );
 
-	// The Site Actor is retained but unavailable until Instance Actor support exists.
-	$site = axismundi_actors_get_site_actor();
-	if ( $site instanceof Axismundi_Actor ) {
-		axismundi_actors_set_actor_type( $site->get_identity_id(), 'Organization' );
-		axismundi_actors_set_status( $site->get_identity_id(), 'public' );
-		delete_option( 'ax_actors_site_actor_disabled' );
-		axismundi_actors_disable_site_actor();
-		$site = axismundi_actors_get_site_actor();
-	}
-	ax_admin_assert( $ax_admin_results, 'site actor is retained but fixed to a disabled Application', $site instanceof Axismundi_Actor && 'Application' === $site->get_type() && 'disabled' === $site->get_status() && ! axismundi_actors_is_public_profile( $site ) );
+	$site = axismundi_actors_get_system_actor();
+	ax_admin_assert( $ax_admin_results, 'system Application is public and cannot be deleted', $site instanceof Axismundi_Actor && 'Application' === $site->get_type() && axismundi_actors_is_public_profile( $site ) && ! axismundi_actors_set_status( $site->get_identity_id(), 'tombstone' ) );
 
 } finally {
 	foreach ( array_unique( $ax_admin_ids ) as $iid ) {
@@ -192,11 +183,6 @@ try {
 		if ( get_userdata( $u ) ) {
 			wp_delete_user( $u );
 		}
-	}
-	if ( false === $ax_prev_site_disabled ) {
-		delete_option( 'ax_actors_site_actor_disabled' );
-	} else {
-		update_option( 'ax_actors_site_actor_disabled', $ax_prev_site_disabled, false );
 	}
 }
 

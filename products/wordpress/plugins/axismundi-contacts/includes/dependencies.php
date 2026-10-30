@@ -2,7 +2,9 @@
 /**
  * What this plugin needs, and the narrow reasons it needs it.
  *
- * Actors, for two things and no more:
+ * JMAP supplies Account identity; Actors supplies operating principals and profile pointers.
+ * Neither a data type declaration nor a stored Account row alone grants Contacts access.
+ * Actors supplies:
  *
  *   1. an address book belongs to an Actor, so that a person and an Organization can each keep one
  *      and the existing acting-Actor switch decides which is open;
@@ -46,6 +48,7 @@ function axismundi_contacts_has_actors() : bool {
  */
 function axismundi_contacts_ready() : bool {
 	return axismundi_contacts_has_actors()
+		&& axismundi_contacts_has_jmap()
 		&& AXISMUNDI_CONTACTS_DB_VERSION === (string) get_option( AXISMUNDI_CONTACTS_DB_VERSION_OPTION, '' );
 }
 
@@ -55,15 +58,22 @@ function axismundi_contacts_ready() : bool {
  * @return string[]
  */
 function axismundi_contacts_unmet_dependencies() : array {
-	if ( axismundi_contacts_has_actors() ) {
-		return array();
-	}
-	return array(
+	$missing = axismundi_contacts_has_actors() ? array() : array(
 		defined( 'AXISMUNDI_ACTORS_VERSION' )
 			/* translators: %s: version number. */
 			? sprintf( __( 'Axismundi Actors %s or newer', 'axismundi-contacts' ), AXISMUNDI_CONTACTS_ACTORS_MINIMUM )
 			: __( 'Axismundi Actors', 'axismundi-contacts' ),
 	);
+	if ( ! axismundi_contacts_has_jmap() ) { $missing[] = 'Axismundi JMAP (Account store and data type registry)'; }
+	return $missing;
+}
+
+/** A missing or incomplete JMAP store never falls back to an Actor-only address book. */
+function axismundi_contacts_has_jmap() : bool {
+	return function_exists( '\\Axismundi\\Jmap\\account_actor' )
+		&& function_exists( '\\Axismundi\\Jmap\\resolve_account_actor' )
+		&& method_exists( '\\Axismundi\\Jmap\\Registry', 'register_type' )
+		&& '1' === get_option( 'ax_jmap_db_version' );
 }
 
 /**

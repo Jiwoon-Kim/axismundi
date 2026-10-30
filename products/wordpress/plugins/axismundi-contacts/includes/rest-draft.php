@@ -69,6 +69,10 @@ function axismundi_contacts_register_draft_routes() : void {
 			),
 		)
 	);
+	register_rest_route( axismundi_contacts_rest_namespace(), '/profiles/(?P<id>\d+)/draft', array(
+		array( 'methods' => WP_REST_Server::READABLE, 'callback' => 'axismundi_contacts_rest_get_draft', 'permission_callback' => 'axismundi_contacts_rest_may_edit_card' ),
+		array( 'methods' => WP_REST_Server::EDITABLE, 'callback' => 'axismundi_contacts_rest_put_draft', 'permission_callback' => 'axismundi_contacts_rest_may_edit_card', 'args' => array( 'revision' => array( 'type' => 'integer', 'required' => true ), 'card' => array( 'type' => 'object', 'required' => true ) ) ),
+	) );
 }
 add_action( 'rest_api_init', 'axismundi_contacts_register_draft_routes' );
 
@@ -83,7 +87,7 @@ add_action( 'rest_api_init', 'axismundi_contacts_register_draft_routes' );
  * @return true|WP_Error
  */
 function axismundi_contacts_rest_may_edit_card( WP_REST_Request $request ) {
-	$card = axismundi_contacts_get_card( (int) $request['id'] );
+	$card = axismundi_contacts_draft_row( $request );
 	if ( array() === $card ) {
 		// The same answer as a Card somebody may not open, so this route cannot be used to ask which
 		// Cards exist.
@@ -106,8 +110,13 @@ function axismundi_contacts_rest_may_edit_card( WP_REST_Request $request ) {
  * @return bool
  */
 function axismundi_contacts_is_profile_card( array $card ) : bool {
-	$owner = (int) ( $card['owner_actor_id'] ?? 0 );
-	return $owner > 0 && (int) ( $card['id'] ?? 0 ) === axismundi_contacts_profile_card( $owner );
+	return 'profile' === ( $card['storage_kind'] ?? '' );
+}
+
+function axismundi_contacts_draft_row( WP_REST_Request $request ) : array {
+	return str_contains( $request->get_route(), '/profiles/' )
+		? axismundi_contacts_get_profile_document_row( (int) $request['id'] )
+		: axismundi_contacts_get_card( (int) $request['id'] );
 }
 
 /**
@@ -118,7 +127,7 @@ function axismundi_contacts_is_profile_card( array $card ) : bool {
  */
 function axismundi_contacts_draft_payload( array $row ) : array {
 	$payload = array(
-		'card'     => axismundi_contacts_card_document( (int) $row['id'] ),
+		'card'     => axismundi_contacts_is_profile_card( $row ) ? axismundi_contacts_profile_document( (int) $row['id'] ) : axismundi_contacts_card_document( (int) $row['id'] ),
 		'revision' => (int) ( $row['revision'] ?? 0 ),
 	);
 	if ( axismundi_contacts_is_profile_card( $row ) ) {
@@ -134,7 +143,7 @@ function axismundi_contacts_draft_payload( array $row ) : array {
  * @return WP_REST_Response|WP_Error
  */
 function axismundi_contacts_rest_get_draft( WP_REST_Request $request ) {
-	$row = axismundi_contacts_get_card( (int) $request['id'] );
+	$row = axismundi_contacts_draft_row( $request );
 	if ( array() === $row ) {
 		return new WP_Error( 'ax_contacts_draft_missing', __( 'That contact does not exist.', 'axismundi-contacts' ), array( 'status' => 404 ) );
 	}
@@ -149,7 +158,7 @@ function axismundi_contacts_rest_get_draft( WP_REST_Request $request ) {
  */
 function axismundi_contacts_rest_put_draft( WP_REST_Request $request ) {
 	$card_id = (int) $request['id'];
-	$row     = axismundi_contacts_get_card( $card_id );
+	$row     = axismundi_contacts_draft_row( $request );
 	if ( array() === $row ) {
 		return new WP_Error( 'ax_contacts_draft_missing', __( 'That contact does not exist.', 'axismundi-contacts' ), array( 'status' => 404 ) );
 	}
@@ -260,9 +269,9 @@ function axismundi_contacts_rest_put_draft( WP_REST_Request $request ) {
 	 * the first and failed at the second would leave a Card published under a selection nobody chose
 	 * -- which on this route means values reaching strangers that the person had not agreed to.
 	 */
-	$before = axismundi_contacts_card_document( $card_id );
-	$result = Axismundi_Contacts_Write::run( static function () use ( $owner, $card, $card_id, $request, $pointers, $before ) {
-		$saved = axismundi_contacts_save_card_for_owner( $owner, $card, $card_id, (int) $request['revision'] );
+	$before = $profile ? axismundi_contacts_profile_document( $card_id ) : axismundi_contacts_card_document( $card_id );
+	$result = Axismundi_Contacts_Write::run( static function () use ( $owner, $card, $card_id, $request, $pointers, $before, $profile ) {
+		$saved = $profile ? axismundi_contacts_save_profile_document( $owner, $card, $card_id, (int) $request['revision'] ) : axismundi_contacts_save_card_for_owner( $owner, $card, $card_id, (int) $request['revision'] );
 		if ( is_wp_error( $saved ) ) {
 			return $saved;
 		}
@@ -280,7 +289,7 @@ function axismundi_contacts_rest_put_draft( WP_REST_Request $request ) {
 		 * The screen form has always done this. Doing it only there would have meant the editor this
 		 * route exists for was the one place where editing a linked value did not make it yours.
 		 */
-		$promoted = axismundi_contacts_record_local_edits( $card_id, $before, axismundi_contacts_card_document( $card_id ) );
+		$promoted = $profile ? true : axismundi_contacts_record_local_edits( $card_id, $before, axismundi_contacts_card_document( $card_id ) );
 		if ( is_wp_error( $promoted ) ) {
 			/*
 			 * The one step that could not be left out. Committing here would store somebody's edit while
@@ -295,7 +304,7 @@ function axismundi_contacts_rest_put_draft( WP_REST_Request $request ) {
 		return $result;
 	}
 	// Read back rather than echoed: what the editor gets is what is stored, in the order it is stored.
-	return rest_ensure_response( axismundi_contacts_draft_payload( axismundi_contacts_get_card( $card_id ) ) );
+	return rest_ensure_response( axismundi_contacts_draft_payload( axismundi_contacts_draft_row( $request ) ) );
 }
 
 /**

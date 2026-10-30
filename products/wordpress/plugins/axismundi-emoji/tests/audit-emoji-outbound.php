@@ -196,7 +196,7 @@ try {
 	 * shortcode in either needs the same declaration a Note's body does — otherwise the
 	 * name that renders here arrives elsewhere as a bare word.
 	 */
-	$ax_out_actor = axismundi_actors_get_site_actor();
+	$ax_out_actor = axismundi_actors_get_system_actor();
 	if ( $ax_out_actor instanceof Axismundi_Actor && function_exists( 'axismundi_actors_set_text' ) ) {
 		/*
 		 * Written through the texts API rather than the `display_name` column, because that

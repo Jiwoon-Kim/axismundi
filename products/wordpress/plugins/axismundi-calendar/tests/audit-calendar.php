@@ -40,7 +40,7 @@ function ax_cl_titles( string $from, string $to, int $calendar_id ) : array {
 }
 
 try {
-	$ax_cl_site      = axismundi_actors_get_site_actor();
+	$ax_cl_site      = axismundi_actors_get_system_actor();
 	$ax_cl_authority = $ax_cl_site instanceof Axismundi_Actor ? $ax_cl_site->get_uri() : '';
 	$ax_cl_first = axismundi_cal_calendar_save( array( 'name' => 'Calendar A', 'slug' => 'ownership-a', 'timezone' => 'Asia/Seoul', 'owner_actor_uri' => $ax_cl_authority ) );
 	$ax_cl_second = axismundi_cal_calendar_save( array( 'name' => 'Calendar B', 'slug' => 'ownership-b', 'timezone' => 'Europe/London', 'owner_actor_uri' => $ax_cl_authority ) );

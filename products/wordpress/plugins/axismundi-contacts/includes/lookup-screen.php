@@ -22,7 +22,7 @@ defined( 'ABSPATH' ) || exit;
 
 /** Where somebody is looked up. */
 function axismundi_contacts_lookup_url() : string {
-	return add_query_arg( 'action', 'lookup', admin_url( 'users.php?page=axismundi-contacts' ) );
+	return add_query_arg( 'action', 'lookup', axismundi_contacts_admin_base_url() );
 }
 
 /**

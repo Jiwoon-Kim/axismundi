@@ -56,7 +56,7 @@ try {
 	usort( $public_feed_index, static fn( array $left, array $right ) : int => (int) $left['Seq_in_index'] <=> (int) $right['Seq_in_index'] );
 	ax_act_assert( $ax_act_results, 'the Activity table retains verified URI identity plus materialized cursor and public-audience keys, without blog_id tenancy', $installed && AXISMUNDI_ACT_DB_VERSION === (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION ) && ! empty( $index ) && 0 === (int) $index[0]['Non_unique'] && in_array( 'feed_sort_at', $columns, true ) && in_array( 'has_public_audience', $columns, true ) && array( 'actor_uri_hash', 'effective_status', 'feed_sort_at', 'id' ) === array_column( $feed_index, 'Column_name' ) && array( 'actor_uri_hash', 'effective_status', 'has_public_audience', 'feed_sort_at', 'id' ) === array_column( $public_feed_index, 'Column_name' ) && ! in_array( 'blog_id', $columns, true ) );
 
-	$site_actor = axismundi_actors_get_site_actor();
+	$site_actor = axismundi_actors_get_system_actor();
 	$remote     = axismundi_actors_upsert_remote(
 		array(
 			'uri'                => $ax_act_remote_uri,

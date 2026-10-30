@@ -128,22 +128,17 @@ try {
 	}
 	ax_rep_assert( $ax_results, 'the same remote handle is allowed on multiple remote actors', $remote_ok );
 
-	// --- CLI activation: site actor seeded, no Person for a phantom user ---
+	// --- CLI activation: system Actor reused, no Person for a phantom user ---
 	wp_set_current_user( 0 );
 	$person_before = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$actors} WHERE actor_scope = 'user'" ); // phpcs:ignore WordPress.DB
-	$had_site = (bool) axismundi_actors_get_site_actor();
 	axismundi_actors_seed();
-	$site = axismundi_actors_get_site_actor();
-	if ( $site && ! $had_site ) {
-		$ax_ids[] = $site->get_identity_id();
-	}
+	$site = axismundi_actors_get_system_actor();
 	$person_after = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$actors} WHERE actor_scope = 'user'" ); // phpcs:ignore WordPress.DB
-	ax_rep_assert( $ax_results, 'CLI seed creates the site actor and no Person', $site instanceof Axismundi_Actor && 'site' === $site->get_scope() && $person_before === $person_after );
+	ax_rep_assert( $ax_results, 'CLI seed reuses the system Application and creates no Person', $site instanceof Axismundi_Actor && 'Application' === $site->get_type() && $person_before === $person_after );
 
 	// seed is idempotent (no duplicate site actor)
 	axismundi_actors_seed();
-	$site_count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$actors} WHERE actor_scope = 'site'" ); // phpcs:ignore WordPress.DB
-	ax_rep_assert( $ax_results, 'reactivation seed does not duplicate the site actor', 1 === $site_count );
+	ax_rep_assert( $ax_results, 'reactivation seed keeps the same system Actor', $site->get_identity_id() === axismundi_actors_get_system_actor()->get_identity_id() );
 
 	// --- user delete tombstones the identity (rows retained) ---
 	$bob = (int) wp_insert_user( array( 'user_login' => 'ax_rep_bob', 'user_pass' => wp_generate_password(), 'role' => 'author' ) );

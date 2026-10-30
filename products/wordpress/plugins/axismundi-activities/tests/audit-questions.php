@@ -80,7 +80,7 @@ function ax_q_vote_object_uri( $activity ) : string {
 
 try {
 	ax_q_assert( $ax_q_results, 'the Activities Question schema installs with ordered options and nullable vote choice positions', axismundi_act_install_questions_schema() );
-	$author = axismundi_actors_get_site_actor();
+	$author = axismundi_actors_get_system_actor();
 	$remote_uri = 'https://example.com/users/question-voter-' . $ax_q_suffix;
 	$voter = axismundi_actors_upsert_remote(
 		array(

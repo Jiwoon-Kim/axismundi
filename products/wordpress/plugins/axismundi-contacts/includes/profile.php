@@ -103,6 +103,7 @@ function axismundi_contacts_set_profile_card( int $actor_id, int $card_id ) {
 	}
 	$table = axismundi_contacts_profiles_table();
 	if ( $card_id <= 0 ) {
+		$wpdb->delete( axismundi_contacts_profile_documents_table(), array( 'owner_actor_id' => $actor_id ), array( '%d' ) );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 		$wpdb->delete( $table, array( 'actor_id' => $actor_id ), array( '%d' ) );
 		return true;
@@ -116,25 +117,8 @@ function axismundi_contacts_set_profile_card( int $actor_id, int $card_id ) {
 			array( 'status' => 400 )
 		);
 	}
-	$now      = current_time( 'mysql', true );
-	$existing = axismundi_contacts_profile_card( $actor_id );
-	if ( $existing > 0 ) {
-		// The sharing already chosen stays with the Actor, not with whichever Card was pointed at.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-		$wpdb->update( $table, array( 'card_id' => $card_id, 'updated_at' => $now ), array( 'actor_id' => $actor_id ), array( '%d', '%s' ), array( '%d' ) );
-		return true;
-	}
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	$created = $wpdb->insert(
-		$table,
-		array( 'actor_id' => $actor_id, 'card_id' => $card_id, 'sharing_enabled' => 0, 'audience' => 'contacts', 'created_at' => $now, 'updated_at' => $now ),
-		array( '%d', '%d', '%d', '%s', '%s', '%s' )
-	);
-	if ( false === $created ) {
-		// The unique key on card_id: one Card cannot be two Actors' profile.
-		return new WP_Error( 'ax_contacts_profile_taken', __( 'That card is already another Actor\'s profile.', 'axismundi-contacts' ), array( 'status' => 409 ) );
-	}
-	return true;
+	$saved = axismundi_contacts_save_profile_document( $actor_id, axismundi_contacts_card_document( $card_id ), axismundi_contacts_profile_card( $actor_id ) );
+	return is_wp_error( $saved ) ? $saved : true;
 }
 
 /**
@@ -216,19 +200,15 @@ function axismundi_contacts_set_profile_audience( int $actor_id, string $audienc
 }
 
 /**
- * Whether an Actor of this type keeps address books at all.
- *
- * A Person is a contact keeper: the address book is most of why they are here. An Organization can
- * be one too -- employees, clients, partners, press are ordinary organisational lists. A Group is a
- * set of relationships rather than somebody who files contacts, and an Application or a Service is
- * administered through the Actor screens, so giving either an address book would be a second place
- * to look for something that lives somewhere else.
+ * Compatibility type check. Any standard local Actor may back a Contacts Account.
+ * An existing JMAP Account and operating rights are checked separately by the book services.
+ * This does not change the separate profile Card publication policy below.
  *
  * @param string $actor_type ActivityStreams actor type.
  * @return bool
  */
 function axismundi_contacts_type_keeps_books( string $actor_type ) : bool {
-	return in_array( $actor_type, array( 'Person', 'Organization' ), true );
+	return in_array( $actor_type, array( 'Person', 'Organization', 'Group', 'Application', 'Service' ), true );
 }
 
 /**
@@ -324,25 +304,6 @@ function axismundi_contacts_create_profile_card( int $actor_id ) {
 		$document['kind'] = $kind;
 	}
 	$document['name'] = array( '@type' => 'Name', 'full' => '' !== $name ? $name : __( 'Me', 'axismundi-contacts' ) );
-	$card             = axismundi_contacts_save_card_for_owner( $actor_id, $document );
-	if ( is_wp_error( $card ) ) {
-		return $card;
-	}
-	axismundi_contacts_set_provenance( (int) $card, 'name', AXISMUNDI_CONTACTS_SOURCE_ACTOR, $actor->get_uri() );
-	/*
-	 * This site's own account, pinned to the top of the card. It is the one this Actor is here, so it
-	 * leads -- and unlike the accounts added underneath it, this row is seeded and refreshed from the
-	 * Actor rather than typed.
-	 */
-	axismundi_contacts_link_actor( (int) $card, $actor->get_uri(), 'Axismundi', AXISMUNDI_CONTACTS_HOME_SERVICE_KEY );
-	$seeded = axismundi_contacts_card_document( (int) $card );
-	if ( isset( $seeded['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] ) ) {
-		$seeded['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ]['pref'] = 1;
-		axismundi_contacts_save_card_for_owner( $actor_id, $seeded, (int) $card );
-	}
-	$bound = axismundi_contacts_set_profile_card( $actor_id, (int) $card );
-	if ( is_wp_error( $bound ) ) {
-		return $bound;
-	}
-	return (int) $card;
+	$document['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] = axismundi_contacts_identity_service( $actor );
+	return axismundi_contacts_save_profile_document( $actor_id, $document );
 }

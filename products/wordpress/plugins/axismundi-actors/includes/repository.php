@@ -773,6 +773,7 @@ final class Axismundi_Actor {
 	}
 
 	public function get_icon_uri() : string {
+		if ( axismundi_actors_is_system_actor( $this ) ) { return (string) get_site_icon_url( 512 ); }
 		return (string) ( $this->row['icon_uri'] ?? '' );
 	}
 
@@ -793,6 +794,7 @@ final class Axismundi_Actor {
 	}
 
 	public function get_avatar_attachment_id() : int {
+		if ( axismundi_actors_is_system_actor( $this ) ) { return (int) get_option( 'site_icon', 0 ); }
 		return (int) ( $this->row['avatar_attachment_id'] ?? 0 );
 	}
 
@@ -908,7 +910,6 @@ final class Axismundi_Actor {
 	public function get_scope() : ?string {
 		// Deprecated presentation adapter; authorization must never consume this label.
 		if ( ! $this->is_local() ) { return null; }
-		if ( axismundi_actors_is_instance_actor( $this ) ) { return 'site'; }
 		return $this->get_personal_owner_user_id() ? 'user' : ( $this->has_principals() ? 'managed' : null );
 	}
 
@@ -923,7 +924,7 @@ final class Axismundi_Actor {
 	/** A managed actor (Group/Service/Organization) administered via wp_ax_actor_managers, not a WP user. */
 	public function is_managed() : bool {
 		// Retired Note clients still consume this display label; never authorize with it.
-		return $this->is_local() && ! axismundi_actors_is_instance_actor( $this )
+		return $this->is_local()
 			&& null === $this->get_personal_owner_user_id() && $this->has_principals();
 	}
 
@@ -935,7 +936,7 @@ final class Axismundi_Actor {
 	}
 
 	public function get_display_name() : string {
-		if ( axismundi_actors_is_instance_actor( $this ) ) {
+		if ( axismundi_actors_is_system_actor( $this ) ) {
 			return (string) get_bloginfo( 'name' );
 		}
 		/*
@@ -2285,17 +2286,6 @@ function axismundi_actors_clear_deleted_attachment( int $post_id ) : void {
 }
 add_action( 'delete_attachment', 'axismundi_actors_clear_deleted_attachment' );
 
-/**
- * The single local site actor, if seeded.
- *
- * @return Axismundi_Actor|null
- */
-function axismundi_actors_get_site_actor() : ?Axismundi_Actor {
-	if ( ! axismundi_actors_migrate_instance_binding() ) { return null; }
-	$actor = axismundi_actors_get_by_identity( (int) get_option( 'ax_actors_instance_identity_id', 0 ) );
-	return $actor instanceof Axismundi_Actor && $actor->is_local() ? $actor : null;
-}
-
 /** Site-wide transport inventory, independent of WP Users and operating principal grants. */
 function axismundi_actors_list_local_actors( string $status = '' ) : array {
 	global $wpdb;
@@ -2700,6 +2690,9 @@ function axismundi_actors_upsert_instance( string $host, array $fields ) : void 
  */
 function axismundi_actors_set_status( int $identity_id, string $status, ?string $expected_status = null ) : bool {
 	global $wpdb;
+	if ( 'tombstone' === $status && $identity_id > 0 && $identity_id === (int) get_option( 'ax_actors_system_actor_id', 0 ) ) {
+		return false;
+	}
 	if ( ! in_array( $status, array( 'public', 'disabled', 'tombstone' ), true ) ) {
 		return false;
 	}
@@ -2861,52 +2854,18 @@ function axismundi_actors_set_remote_follow_totals( int $identity_id, ?int $foll
 }
 
 /**
- * Idempotently seed the disabled site actor, and — only when the activating
+ * Idempotently seed the system Application, and — only when the activating
  * user is a valid administrator — the site-owner Person actor. Never depends on a
  * specific account existing (docs/SPEC.md §4).
  *
  * @return void
  */
 function axismundi_actors_seed() : void {
-	if ( ! axismundi_actors_get_site_actor() ) {
-		$instance = axismundi_actors_create_local(
-			array(
-				'actor_type'         => 'Application',
-				'actor_scope'        => 'site',
-				'preferred_username' => 'blog',
-				'status'             => 'disabled',
-			)
-		);
-		if ( $instance instanceof Axismundi_Actor ) { update_option( 'ax_actors_instance_identity_id', $instance->get_identity_id(), false ); }
-	}
+	axismundi_actors_maybe_seed_system_actor();
 	$uid = get_current_user_id();
 	if ( $uid > 0 && user_can( $uid, 'manage_options' ) ) {
 		axismundi_actors_ensure_for_user( $uid );
-		if ( false === get_option( 'ax_actors_site_owner_user_id', false ) ) {
-			update_option( 'ax_actors_site_owner_user_id', $uid, false );
-		}
 	}
-}
-
-/**
- * Retire the experimental site actor until a real Instance Actor is designed.
- *
- * Keep its identity row and settings screen so a future implementation can reuse
- * the stable record, but do not let an old public site profile keep publishing.
- *
- * @return void
- */
-function axismundi_actors_disable_site_actor() : void {
-	if ( '1' === get_option( 'ax_actors_site_actor_disabled', '' ) ) {
-		return;
-	}
-	$actor = axismundi_actors_get_site_actor();
-	if ( $actor instanceof Axismundi_Actor ) {
-		axismundi_actors_set_actor_type( $actor->get_identity_id(), 'Application' );
-		axismundi_actors_set_status( $actor->get_identity_id(), 'disabled' );
-	}
-	delete_option( 'ax_actors_site_actor_type' );
-	update_option( 'ax_actors_site_actor_disabled', '1', false );
 }
 
 /**

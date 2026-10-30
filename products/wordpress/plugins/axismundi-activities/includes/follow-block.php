@@ -415,7 +415,7 @@ function axismundi_act_render_follow_button( array $attributes, string $content,
 		return (string) ob_get_clean();
 	}
 	if ( ! $subject instanceof Axismundi_Actor ) {
-		$profile_admin = current_user_can( 'list_users' ) ? admin_url( 'users.php?page=axismundi-actor-profile' ) : admin_url( 'profile.php?page=axismundi-actor-profile' );
+		$profile_admin = axismundi_actors_account_admin_url( 'axismundi-actor-profile' );
 		ob_start();
 		?>
 		<div <?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-follow-button is-unavailable' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated block wrapper attributes. ?>><a class="wp-element-button axismundi-follow-button__button" href="<?php echo esc_url( $profile_admin ); ?>"><?php esc_html_e( 'Activate your Actor profile to follow', 'axismundi-activities' ); ?></a></div>

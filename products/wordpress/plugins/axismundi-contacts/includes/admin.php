@@ -19,9 +19,10 @@
 defined( 'ABSPATH' ) || exit;
 
 
-/** Add the address book to the Users menu, beside the Actor profile it belongs to. */
+/** Add the address book beside the Account profile it belongs to. */
 function axismundi_contacts_admin_menu() : void {
-	add_users_page(
+	$GLOBALS['axismundi_contacts_admin_hook'] = add_submenu_page(
+		axismundi_contacts_admin_parent(),
 		__( 'Contacts', 'axismundi-contacts' ),
 		__( 'Contacts', 'axismundi-contacts' ),
 		'read',
@@ -33,7 +34,7 @@ add_action( 'admin_menu', 'axismundi_contacts_admin_menu' );
 
 /** The row-adding script, on this screen only. */
 function axismundi_contacts_admin_assets( string $hook ) : void {
-	if ( 'users_page_axismundi-contacts' !== $hook ) {
+	if ( ( $GLOBALS['axismundi_contacts_admin_hook'] ?? '' ) !== $hook ) {
 		return;
 	}
 	$plugin = dirname( __DIR__ ) . '/axismundi-contacts.php';
@@ -109,7 +110,7 @@ function axismundi_contacts_current_book() : array {
 
 /** The screen's own URL, optionally opening one card in one contact group. */
 function axismundi_contacts_screen_url( int $card_id = -1, int $group_id = 0 ) : string {
-	$url = admin_url( 'users.php?page=axismundi-contacts' );
+	$url = axismundi_contacts_admin_base_url();
 	$args = array();
 	if ( $card_id >= 0 ) {
 		$args['item'] = $card_id;
@@ -141,7 +142,7 @@ function axismundi_contacts_edit_url( int $card_id = 0, int $group_id = 0 ) : st
 	if ( $group_id > 0 ) {
 		$args['group'] = $group_id;
 	}
-	return add_query_arg( $args, admin_url( 'users.php?page=axismundi-contacts' ) );
+	return add_query_arg( $args, axismundi_contacts_admin_base_url() );
 }
 
 
@@ -197,7 +198,7 @@ function axismundi_contacts_render_screen() : void {
 	 * `mode` tells it.
 	 */
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing what to show, not writing.
-	$profile = isset( $_GET['profile'] ) || ( $self_id > 0 && $self_id === $item );
+	$profile = isset( $_GET['profile'] );
 	if ( $profile ) {
 		if ( 'edit' === $action && $self_id > 0 ) {
 			axismundi_contacts_card_editor_screen( $self_id, 0 );
@@ -214,7 +215,7 @@ function axismundi_contacts_render_screen() : void {
 		return;
 	}
 	if ( $reading > 0 ) {
-		axismundi_contacts_card_detail( $reading, $all ? 0 : $book_id, $self_id, (int) $actor->get_identity_id() );
+		axismundi_contacts_card_detail( $reading, $all ? 0 : $book_id, 0, (int) $actor->get_identity_id() );
 		echo '</div>';
 		return;
 	}
@@ -329,19 +330,7 @@ function axismundi_contacts_groups_sidebar( Axismundi_Actor $actor, array $defau
  * @return void
  */
 function axismundi_contacts_card_list( int $book_id, int $self_id, array $cards, string $title, int $group_id, string $search = '' ) : void {
-	/*
-	 * The Actor's own profile is not a contact and is not listed as one. It is read and written from
-	 * My profile, above -- listing it here would offer every action a contact has, and the ones it
-	 * must not have are exactly the ones a list is for: filing it, and deleting it.
-	 */
-	$cards = array_values(
-		array_filter(
-			$cards,
-			static function ( array $card ) use ( $self_id ) : bool {
-				return $self_id <= 0 || (int) ( $card['id'] ?? 0 ) !== $self_id;
-			}
-		)
-	);
+	// Profiles live in a separate store; numeric equality does not identify a profile.
 	echo '<h2>' . esc_html( $title ) . '</h2>';
 	if ( array() === $cards ) {
 		echo '<p>' . esc_html( '' !== $search ? __( 'No saved contacts match this search.', 'axismundi-contacts' ) : __( 'Nothing saved yet.', 'axismundi-contacts' ) ) . '</p>';
@@ -489,26 +478,7 @@ function axismundi_contacts_handle_delete_card() : void {
 	if ( is_wp_error( $book ) ) {
 		wp_die( esc_html( $book->get_error_message() ), '', array( 'response' => 403 ) );
 	}
-	/*
-	 * The one the Actor publishes about itself is refused before anything else is asked, because the
-	 * answer does not depend on where it is filed. That document is a singleton with a public address,
-	 * an identity account this site guarantees, and readers elsewhere holding its uid -- and deleting
-	 * it here would take the Actor's binding with it, so the Actor would quietly stop answering at its
-	 * own address. Emptying a profile is a different act from deleting a contact and wants a command
-	 * that says so.
-	 *
-	 * Asked first rather than after the book check, which today refuses it for the incidental reason
-	 * that a profile is filed in no book. That is true and not the reason, and it would stop being
-	 * true the moment somebody filed it.
-	 */
-	if ( $card_id > 0 && $card_id === axismundi_contacts_profile_card( (int) $book['owner_actor_id'] ) ) {
-		axismundi_contacts_redirect_result(
-			new WP_Error(
-				'ax_contacts_profile_delete',
-				__( 'This is the card this Actor publishes about itself, so it cannot be deleted here.', 'axismundi-contacts' )
-			)
-		);
-	}
+	// This command addresses ContactCards only; profile documents have a separate API.
 	$card = axismundi_contacts_get_card( $card_id );
 	if ( array() === $card || ! in_array( $book_id, axismundi_contacts_card_books( $card_id ), true ) ) {
 		// Deleting by id has to be checked against the book, or a stray id deletes somebody else's card.
@@ -543,11 +513,11 @@ function axismundi_contacts_admin_notice() : void {
 	$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- reading a message this plugin put in the URL.
 	$message = isset( $_GET['ax_contacts_error'] ) ? sanitize_text_field( wp_unslash( $_GET['ax_contacts_error'] ) ) : '';
-	if ( $screen instanceof WP_Screen && 'users_page_axismundi-contacts' === $screen->id && isset( $_GET['ax_contacts_labels_saved'] ) ) {
+	if ( $screen instanceof WP_Screen && ( $GLOBALS['axismundi_contacts_admin_hook'] ?? '' ) === $screen->id && isset( $_GET['ax_contacts_labels_saved'] ) ) {
 		$notice = 'unchanged' === $_GET['ax_contacts_labels_saved'] ? __( 'Labels already match this action. Nothing changed.', 'axismundi-contacts' ) : __( 'Labels updated. Contact details were kept.', 'axismundi-contacts' );
 		printf( '<div class="notice notice-success"><p>%s</p></div>', esc_html( $notice ) );
 	}
-	if ( '' === $message || ! $screen instanceof WP_Screen || 'users_page_axismundi-contacts' !== $screen->id ) {
+	if ( '' === $message || ! $screen instanceof WP_Screen || ( $GLOBALS['axismundi_contacts_admin_hook'] ?? '' ) !== $screen->id ) {
 		return;
 	}
 	printf( '<div class="notice notice-error"><p>%s</p></div>', esc_html( $message ) );

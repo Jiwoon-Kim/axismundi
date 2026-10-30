@@ -1,5 +1,8 @@
 # Contacts Account Authorization
 
+2026-10-30 후속: Account ID는 JMAP 저장소를 통해 해소한다. Actor 타입별 주소록 제한은
+폐기했다. 현재 경계·검증 범위는 [JMAP Account AddressBooks](IMPLEMENTATION-JMAP-ADDRESSBOOKS.md)를 참고한다.
+
 작성일: 2026-10-23. 범위: Account 인가 정합성. DB 스키마·문서 형식 변경 없음.
 
 ## 기준

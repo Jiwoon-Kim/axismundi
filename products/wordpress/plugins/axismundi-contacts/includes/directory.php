@@ -10,6 +10,15 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/** Actors owns the account navigation; preserve the standalone fallback. */
+function axismundi_contacts_admin_parent() : string {
+	return function_exists( 'axismundi_actors_accounts_menu_slug' ) ? axismundi_actors_accounts_menu_slug() : 'users.php';
+}
+
+function axismundi_contacts_admin_base_url() : string {
+	return add_query_arg( 'page', 'axismundi-contacts', admin_url( function_exists( 'axismundi_actors_accounts_menu_slug' ) ? 'admin.php' : 'users.php' ) );
+}
+
 /**
  * A prepared predicate shared by the rows and their count. Empty means access was refused.
  *
@@ -29,9 +38,9 @@ function axismundi_contacts_directory_where( int $owner, int $group = 0, string 
 			return '';
 		}
 	}
-	$where = $wpdb->prepare( 'c.owner_actor_id = %d AND c.id <> %d', $owner, axismundi_contacts_profile_card( $owner ) );
+	$where = $wpdb->prepare( 'c.owner_actor_id = %d', $owner );
 	if ( $group > 0 ) {
-		$memberships = axismundi_contacts_memberships_table();
+		$memberships = axismundi_contacts_effective_memberships_sql();
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- plugin-owned table name.
 		$where .= $wpdb->prepare( " AND EXISTS (SELECT 1 FROM {$memberships} m WHERE m.card_id = c.id AND m.address_book_id = %d)", $group );
 	}
@@ -123,7 +132,7 @@ function axismundi_contacts_directory( int $owner, int $book_id, int $self_id, s
 	$context = axismundi_contacts_directory_context();
 	$result  = axismundi_contacts_directory_page( $owner, $group, $context['search'], $context['contact_page'] );
 	?>
-	<form class="ax-contacts-search" method="get" action="<?php echo esc_url( admin_url( 'users.php' ) ); ?>" role="search" aria-label="<?php esc_attr_e( 'Saved contacts', 'axismundi-contacts' ); ?>">
+	<form class="ax-contacts-search" method="get" action="<?php echo esc_url( axismundi_contacts_admin_base_url() ); ?>" role="search" aria-label="<?php esc_attr_e( 'Saved contacts', 'axismundi-contacts' ); ?>">
 		<input type="hidden" name="page" value="axismundi-contacts">
 		<?php if ( $group > 0 ) : ?>
 			<input type="hidden" name="group" value="<?php echo esc_attr( (string) $group ); ?>">

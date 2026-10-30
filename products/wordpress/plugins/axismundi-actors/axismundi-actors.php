@@ -20,8 +20,8 @@
  * copies of their avatars and headers.
  *
  * Not here: activity delivery. Nothing in this plugin sends anything to anybody; it
- * reads. The site's own Instance Actor is seeded disabled and has no screen, because
- * what it should be has not been designed yet.
+ * reads. A local system Application is provisioned separately from the retired
+ * experimental site Actor; mail and instance transport roles are not wired yet.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -50,6 +50,9 @@ require_once __DIR__ . '/includes/account-operations.php';
 require_once __DIR__ . '/includes/account-selection.php';
 require_once __DIR__ . '/includes/integrations/wordpress/account-selection.php';
 require_once __DIR__ . '/includes/local-endpoints.php';
+require_once __DIR__ . '/includes/system-actor.php';
+require_once __DIR__ . '/includes/admin-navigation.php';
+require_once __DIR__ . '/includes/admin-account-directory.php';
 require_once __DIR__ . '/includes/webfinger.php';
 require_once __DIR__ . '/includes/nodeinfo.php';
 require_once __DIR__ . '/includes/remote-discovery.php';
@@ -64,7 +67,7 @@ if ( is_admin() ) {
 }
 
 /**
- * Activation: install the schema, then seed (always the site actor; the site-owner
+ * Activation: install the schema, then seed (always the system Actor; the site-owner
  * Person only when the activating user is a valid admin). Idempotent.
  *
  * @return void
@@ -100,8 +103,5 @@ function axismundi_actors_maybe_upgrade() : void {
 	}
 }
 add_action( 'plugins_loaded', 'axismundi_actors_maybe_upgrade' );
-
-// The Site Actor remains reserved for a future Instance Actor implementation.
-add_action( 'plugins_loaded', 'axismundi_actors_disable_site_actor', 20 );
 
 // Phase 4+ admin integration is wired here.

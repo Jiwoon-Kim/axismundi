@@ -192,15 +192,11 @@ try {
 			&& 0 === count( axismundi_actors_list_manageable_actors( $stranger ) )
 	);
 
-	// Managers attach ONLY to a managed actor: the site actor (or a user Person)
-	// cannot take a manager row.
-	$site = axismundi_actors_get_site_actor();
-	$bad_target = $site instanceof Axismundi_Actor
-		? axismundi_actors_add_manager( $site->get_identity_id(), $manager, 'editor' )
-		: new WP_Error( 'ax_actors_manager_target', 'no site actor' );
+	// A missing Actor cannot receive a manager grant.
+	$bad_target = axismundi_actors_add_manager( 0, $manager, 'editor' );
 	ax_mg_assert(
 		$ax_mg_results,
-		'a manager cannot be attached to a non-managed actor',
+		'a manager cannot be attached to a missing actor',
 		is_wp_error( $bad_target ) && 'ax_actors_manager_target' === $bad_target->get_error_code()
 	);
 } finally {

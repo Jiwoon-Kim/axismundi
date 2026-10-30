@@ -75,7 +75,7 @@ function axismundi_activitypub_bridge_legacy_posts( string $post_type, array &$r
 function axismundi_activitypub_bridge_legacy_local_actor( int $user_id ) : ?Axismundi_Actor {
 	// E: map an old official-plugin User identifier; do not apply this to new submissions.
 	return in_array( $user_id, array( -1, 0 ), true )
-		? axismundi_actors_get_site_actor()
+		? null // Retired site identity must not be remapped to the new system Account.
 		: axismundi_actors_get_for_user( $user_id );
 }
 

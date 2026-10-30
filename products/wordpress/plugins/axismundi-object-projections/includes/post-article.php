@@ -573,12 +573,12 @@ function axismundi_op_post_article_preview( WP_Post $post, string $attributed_to
 	return $preview;
 }
 
-/** Resolve the site Application used as the Article generator, when public. */
+/** Resolve the system Application used as the Article generator, when public. */
 function axismundi_op_post_article_generator() : ?array {
-	if ( ! function_exists( 'axismundi_actors_get_site_actor' ) ) {
+	if ( ! function_exists( 'axismundi_actors_get_system_actor' ) ) {
 		return null;
 	}
-	$actor = axismundi_actors_get_site_actor();
+	$actor = axismundi_actors_get_system_actor();
 	if ( ! $actor || ! function_exists( 'axismundi_actors_is_public_profile' ) || ! axismundi_actors_is_public_profile( $actor ) ) {
 		return null;
 	}

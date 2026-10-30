@@ -6,6 +6,18 @@ defined( 'ABSPATH' ) || exit;
 function accounts_table() : string { global $wpdb; return $wpdb->prefix . 'ax_jmap_accounts'; }
 function policies_table() : string { global $wpdb; return $wpdb->prefix . 'ax_jmap_account_capabilities'; }
 
+/** Read-only site inventory; not the authenticated Session's accessible Account list. */
+function admin_account_inventory( int $page = 1, int $per_page = 50 ) : array {
+	if ( ! current_user_can( 'manage_options' ) ) { throw new \RuntimeException( 'Account inventory requires site administration.' ); }
+	if ( '1' !== get_option( 'ax_jmap_db_version' ) ) { return array( 'items' => array(), 'total' => 0 ); }
+	global $wpdb;
+	$per_page = max( 1, min( 100, $per_page ) );
+	$total = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', accounts_table() ) );
+	$items = $wpdb->get_results( $wpdb->prepare( 'SELECT actor_id,revision,updated_at FROM %i ORDER BY actor_id LIMIT %d OFFSET %d', accounts_table(), $per_page, ( max( 1, $page ) - 1 ) * $per_page ), ARRAY_A );
+	if ( $wpdb->last_error ) { throw new \RuntimeException( 'Account inventory unavailable.' ); }
+	return array( 'items' => $items, 'total' => $total );
+}
+
 function install_account_store() : bool {
 	if ( '1' !== get_option( 'ax_actors_body_version' ) || ! function_exists( 'axismundi_actors_actors_table' ) ) { return false; }
 	global $wpdb;

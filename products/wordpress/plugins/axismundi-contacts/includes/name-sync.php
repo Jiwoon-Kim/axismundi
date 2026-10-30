@@ -42,7 +42,7 @@ function axismundi_contacts_name_representations( int $actor_id ) : array {
 	if ( $card_id <= 0 ) {
 		return array();
 	}
-	$card    = axismundi_contacts_card_document( $card_id );
+	$card    = axismundi_contacts_profile_document( $card_id );
 	$offered = array();
 	// Read rather than looked up: a name given in components and no written-out form still offers the
 	// string it reads as, and the Card is not rewritten so that this function can find one.

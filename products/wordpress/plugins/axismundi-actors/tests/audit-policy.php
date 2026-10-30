@@ -107,7 +107,7 @@ try {
 	$bad_fields = axismundi_actors_normalize_policy_fields( array( 'follow_collections_visibility' => 'everyone' ) );
 	ax_pol_assert( $ax_pol_results, 'follow_collections_visibility validates to the enum or NULL', 'followers' === $ok_fields['follow_collections_visibility'] && null === $bad_fields['follow_collections_visibility'] );
 
-	$ax_pol_site_actor = axismundi_actors_get_site_actor();
+	$ax_pol_site_actor = axismundi_actors_get_system_actor();
 	$admin_ids         = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ids' ) );
 	$ax_pol_admin_id   = isset( $admin_ids[0] ) ? (int) $admin_ids[0] : 0;
 	$ax_pol_old_follow_visibility = $ax_pol_site_actor instanceof Axismundi_Actor ? $ax_pol_site_actor->get_follow_collections_visibility() : null;

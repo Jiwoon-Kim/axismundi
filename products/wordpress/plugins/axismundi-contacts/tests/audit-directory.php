@@ -174,7 +174,8 @@ try {
 	ax_directory_assert( 'an unmatched search explains the result and offers clearing within the group', str_contains( $html, 'No saved contacts match this search.' ) && str_contains( $html, 'Clear search' ) && str_contains( $html, 'name="group" value="' . $group . '"' ) );
 	$_GET = array( 'search' => array( 'bad' ), 'contact_page' => array( 'bad' ) );
 	ax_directory_assert( 'malformed query arrays become an empty first-page context', array( 'search' => '', 'contact_page' => 1 ) === axismundi_contacts_directory_context() );
-	axismundi_contacts_admin_assets( 'users_page_axismundi-contacts' );
+	$GLOBALS['axismundi_contacts_admin_hook'] = 'accounts_page_axismundi-contacts';
+	axismundi_contacts_admin_assets( $GLOBALS['axismundi_contacts_admin_hook'] );
 	$asset_root = plugins_url( 'assets/', dirname( __DIR__ ) . '/axismundi-contacts.php' );
 	ax_directory_assert( 'directory assets resolve from the plugin root rather than a nonexistent includes/assets directory',
 		$asset_root . 'contacts.css' === wp_styles()->registered['axismundi-contacts-admin']->src

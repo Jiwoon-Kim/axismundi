@@ -35,6 +35,10 @@ function axismundi_forum_actor_is_moderator( int $group_identity_id, Axismundi_A
 	if ( $group_identity_id <= 0 || ! axismundi_forum_is_community( $group_identity_id ) ) {
 		return false;
 	}
+	$principal = axismundi_actors_resolve_principal( $actor->is_local() ? 'local_account' : 'remote_actor', $actor->get_identity_id() );
+	if ( null === $principal ) { return false; }
+	// Re-resolve liveness: callers may still hold an Actor object from before revocation.
+	$actor = $principal['source'];
 	$membership = axismundi_forum_get_membership( $group_identity_id, $actor->get_identity_id() );
 	if ( is_array( $membership ) && 'accepted' === (string) $membership['membership_state'] && 'moderator' === (string) $membership['membership_role'] ) {
 		return true;
@@ -98,7 +102,8 @@ function axismundi_forum_set_actor_moderator( int $group_identity_id, int $actor
 	}
 	$group = axismundi_forum_get_community_group( $group_identity_id );
 	$subject = function_exists( 'axismundi_actors_get_by_identity' ) ? axismundi_actors_get_by_identity( $actor_identity_id ) : null;
-	if ( ! $group instanceof Axismundi_Actor || ! $subject instanceof Axismundi_Actor ) {
+	if ( ! $group instanceof Axismundi_Actor || ! $subject instanceof Axismundi_Actor
+		|| null === axismundi_actors_resolve_principal( $subject->is_local() ? 'local_account' : 'remote_actor', $actor_identity_id ) ) {
 		return new WP_Error( 'ax_forum_moderator_actor', __( 'The community or member Actor is unavailable.', 'axismundi-forum' ) );
 	}
 	if ( $subject->is_local() && axismundi_actors_principal_can_manage( $group_identity_id, 'local_account', $subject->get_identity_id() ) ) {
@@ -177,7 +182,8 @@ function axismundi_forum_effective_moderators( int $group_identity_id ) : array 
 	$ids = (array) $wpdb->get_col( $wpdb->prepare( "SELECT actor_identity_id FROM {$table} WHERE group_identity_id = %d AND membership_state = 'accepted' AND membership_role = 'moderator'", $group_identity_id ) );
 	foreach ( $ids as $identity_id ) {
 		$actor = function_exists( 'axismundi_actors_get_by_identity' ) ? axismundi_actors_get_by_identity( (int) $identity_id ) : null;
-		if ( axismundi_forum_public_local_person( $actor ) || ( axismundi_forum_person_actor( $actor ) && ! $actor->is_local() ) ) {
+		if ( ( axismundi_forum_public_local_person( $actor ) || ( axismundi_forum_person_actor( $actor ) && ! $actor->is_local() ) )
+			&& axismundi_forum_actor_is_moderator( $group_identity_id, $actor ) ) {
 			$moderators[ $actor->get_identity_id() ] = $actor;
 		}
 	}

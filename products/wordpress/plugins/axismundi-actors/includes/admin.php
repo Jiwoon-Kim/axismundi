@@ -3,9 +3,9 @@
  * Phase 4a — actor activation & profile management (admin surfaces).
  *
  * Surfaces: a read-only summary panel on profile.php / user-edit; an Actor status
- * column on users.php; a dedicated Users > Actor Profile screen holding the
- * activation wizard and management view; and Settings > Actor Profile for the site
- * actor. Activation is a **dedicated nonce'd POST action** (never mixed into the
+ * column on users.php; and Accounts screens holding the activation wizard,
+ * profiles, remote lookup and managed-Actor administration.
+ * Activation is a **dedicated nonce'd POST action** (never mixed into the
  * profile.php save), so registering the immutable handle and flipping visibility is
  * one explicit, capability-checked act. No forced login redirect. Avatar / header /
  * translations are Phase 4b/4d — shown here only as notices, never saved.
@@ -130,13 +130,12 @@ function axismundi_actors_admin_url( int $user_id = 0 ) : string {
 	if ( $user_id > 0 ) {
 		$args['user_id'] = $user_id;
 	}
-	$parent = current_user_can( 'list_users' ) ? 'users.php' : 'profile.php';
-	return add_query_arg( $args, admin_url( $parent ) );
+	return add_query_arg( $args, admin_url( 'admin.php' ) );
 }
 
 /** @return string Remote Actor lookup/cache screen URL. */
 function axismundi_actors_remote_admin_url() : string {
-	return add_query_arg( 'page', 'axismundi-remote-actors', admin_url( 'users.php' ) );
+	return axismundi_actors_account_admin_url( 'axismundi-remote-actors' );
 }
 
 /**
@@ -151,8 +150,7 @@ function axismundi_actors_managed_actors_admin_url( int $identity_id = 0 ) : str
 	if ( $identity_id > 0 ) {
 		$args['group_id'] = $identity_id;
 	}
-	$parent = current_user_can( 'list_users' ) ? 'users.php' : 'profile.php';
-	return add_query_arg( $args, admin_url( $parent ) );
+	return add_query_arg( $args, admin_url( 'admin.php' ) );
 }
 
 /** @return string Identity-pinned profile URL, independent of legacy classifications. */
@@ -266,45 +264,32 @@ function axismundi_actors_users_column_content( string $output, string $column, 
 add_filter( 'manage_users_custom_column', 'axismundi_actors_users_column_content', 10, 3 );
 
 /* -------------------------------------------------------------------------- *
- * Dedicated Users > Actor Profile screen (wizard + management).
+ * Dedicated Accounts > Actor Profile screen (wizard + management).
  * -------------------------------------------------------------------------- */
 
 /** @return void */
 function axismundi_actors_register_admin_pages() : void {
-	if ( current_user_can( 'list_users' ) ) {
-		$profile_hook = add_users_page(
-			__( 'Actor Profile', 'axismundi-actors' ),
-			__( 'Actor Profile', 'axismundi-actors' ),
-			'read',
-			'axismundi-actor-profile',
-			'axismundi_actors_render_admin_page'
-		);
-	} else {
-		$profile_hook = add_submenu_page(
-			'profile.php',
-			__( 'Actor Profile', 'axismundi-actors' ),
-			__( 'Actor Profile', 'axismundi-actors' ),
-			'read',
-			'axismundi-actor-profile',
-			'axismundi_actors_render_admin_page'
-		);
-	}
+	$profile_hook = add_submenu_page(
+		axismundi_actors_accounts_menu_slug(),
+		__( 'Actor Profile', 'axismundi-actors' ), __( 'Actor Profile', 'axismundi-actors' ),
+		'read', 'axismundi-actor-profile', 'axismundi_actors_render_admin_page'
+	);
 	if ( $profile_hook ) {
 		add_action( 'load-' . $profile_hook, static function () : void {
 			global $title;
 			$title = __( 'Actor Profile', 'axismundi-actors' );
 		} );
 	}
-	add_users_page(
+	add_submenu_page(
+		axismundi_actors_accounts_menu_slug(),
 		__( 'Remote Actors', 'axismundi-actors' ),
 		__( 'Remote Actors', 'axismundi-actors' ),
 		'manage_options',
 		'axismundi-remote-actors',
 		'axismundi_actors_render_remote_admin_page'
 	);
-	$managed_actors_parent = current_user_can( 'list_users' ) ? 'users.php' : 'profile.php';
 	add_submenu_page(
-		$managed_actors_parent,
+		axismundi_actors_accounts_menu_slug(),
 		__( 'Managed actors', 'axismundi-actors' ),
 		__( 'Managed actors', 'axismundi-actors' ),
 		'read',
@@ -312,7 +297,7 @@ function axismundi_actors_register_admin_pages() : void {
 		'axismundi_actors_render_managed_actors_page'
 	);
 }
-add_action( 'admin_menu', 'axismundi_actors_register_admin_pages' );
+add_action( 'admin_menu', 'axismundi_actors_register_admin_pages', 6 );
 
 /** Render the managed actor creation and profile-management surface. */
 function axismundi_actors_render_managed_actors_page() : void {
@@ -475,7 +460,7 @@ function axismundi_actors_render_remote_admin_page() : void {
 		<?php endif; ?>
 
 		<h2><?php esc_html_e( 'Cached remote Actors', 'axismundi-actors' ); ?></h2>
-		<form method="get" action="<?php echo esc_url( admin_url( 'users.php' ) ); ?>">
+		<form method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>">
 			<input type="hidden" name="page" value="axismundi-remote-actors">
 			<label class="screen-reader-text" for="ax-remote-actor-search"><?php esc_html_e( 'Search cached remote Actors', 'axismundi-actors' ); ?></label>
 			<input id="ax-remote-actor-search" type="search" name="ax_actor_search" value="<?php echo esc_attr( $actor_search ); ?>" placeholder="<?php esc_attr_e( 'Handle, name, or Actor URI', 'axismundi-actors' ); ?>">
@@ -907,7 +892,7 @@ function axismundi_actors_render_management( Axismundi_Actor $actor, int $user_i
  * @return void
  */
 function axismundi_actors_enqueue_media_picker( string $hook ) : void {
-	if ( ! in_array( $hook, array( 'users_page_axismundi-actor-profile', 'profile_page_axismundi-actor-profile', 'users_page_axismundi-managed-actors', 'profile_page_axismundi-managed-actors' ), true ) ) {
+	if ( ! in_array( $hook, array( get_plugin_page_hookname( 'axismundi-actor-profile', axismundi_actors_accounts_menu_slug() ), get_plugin_page_hookname( 'axismundi-managed-actors', axismundi_actors_accounts_menu_slug() ) ), true ) ) {
 		return;
 	}
 	wp_enqueue_media();

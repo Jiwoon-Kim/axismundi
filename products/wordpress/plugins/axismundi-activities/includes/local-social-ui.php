@@ -9,30 +9,12 @@ defined( 'ABSPATH' ) || exit;
 
 /** Current user's local relationship screen URL. */
 function axismundi_act_follows_admin_url() : string {
-	$parent = current_user_can( 'list_users' ) ? 'users.php' : 'profile.php';
-	return add_query_arg( 'page', 'axismundi-follows', admin_url( $parent ) );
+	return axismundi_actors_account_admin_url( 'axismundi-follows' );
 }
 
 /** Register the self-service local relationship screen. */
 function axismundi_act_register_follows_page() : void {
-	if ( current_user_can( 'list_users' ) ) {
-		add_users_page(
-			__( 'Follows', 'axismundi-activities' ),
-			__( 'Follows', 'axismundi-activities' ),
-			'edit_posts',
-			'axismundi-follows',
-			'axismundi_act_render_follows_page'
-		);
-	} else {
-		add_submenu_page(
-			'profile.php',
-			__( 'Follows', 'axismundi-activities' ),
-			__( 'Follows', 'axismundi-activities' ),
-			'edit_posts',
-			'axismundi-follows',
-			'axismundi_act_render_follows_page'
-		);
-	}
+	add_submenu_page( axismundi_actors_accounts_menu_slug(), __( 'Follows', 'axismundi-activities' ), __( 'Follows', 'axismundi-activities' ), 'edit_posts', 'axismundi-follows', 'axismundi_act_render_follows_page' );
 }
 add_action( 'admin_menu', 'axismundi_act_register_follows_page' );
 

@@ -85,7 +85,7 @@ function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- choosing what to load, not writing.
 		$card_id = isset( $_GET['item'] ) ? absint( $_GET['item'] ) : 0;
 	}
-	$row = axismundi_contacts_get_card( $card_id );
+	$row = isset( $_GET['profile'] ) ? axismundi_contacts_get_profile_document_row( $card_id ) : axismundi_contacts_get_card( $card_id );
 	if ( array() === $row || ! axismundi_contacts_can_write_account( (int) $row['owner_actor_id'], get_current_user_id() ) ) {
 		return;
 	}
@@ -198,7 +198,7 @@ function axismundi_contacts_enqueue_card_editor( string $hook ) : void {
 		$language_options[] = array( 'value' => (string) $tag, 'label' => (string) $label );
 	}
 	$config = array(
-		'draftPath'           => '/' . axismundi_contacts_rest_namespace() . '/cards/' . $card_id . '/draft',
+		'draftPath'           => '/' . axismundi_contacts_rest_namespace() . ( axismundi_contacts_is_profile_card( $row ) ? '/profiles/' : '/cards/' ) . $card_id . '/draft',
 		'languages'           => $language_options,
 		/*
 		 * Core owns the human-facing timezone names and regional groups. Its ordinary picker also
@@ -312,7 +312,7 @@ add_action( 'admin_enqueue_scripts', 'axismundi_contacts_enqueue_card_editor' );
  * @return void
  */
 function axismundi_contacts_card_editor_screen( int $card_id, int $group_id ) : void {
-	$row      = axismundi_contacts_get_card( $card_id );
+	$row      = isset( $_GET['profile'] ) ? axismundi_contacts_get_profile_document_row( $card_id ) : axismundi_contacts_get_card( $card_id );
 	$acting   = axismundi_contacts_current_account();
 	$actor_id = $acting instanceof Axismundi_Actor ? (int) $acting->get_identity_id() : 0;
 	// The PHP heading discloses contact data too; refusing the JavaScript bootstrap is not enough.
@@ -321,7 +321,7 @@ function axismundi_contacts_card_editor_screen( int $card_id, int $group_id ) : 
 		echo '<p>' . esc_html__( 'That contact does not exist.', 'axismundi-contacts' ) . '</p>';
 		return;
 	}
-	$card = axismundi_contacts_card_document( $card_id );
+	$card = axismundi_contacts_is_profile_card( $row ) ? axismundi_contacts_profile_document( $card_id ) : axismundi_contacts_card_document( $card_id );
 	$name = trim( axismundi_contacts_name_text( is_array( $card['name'] ?? null ) ? $card['name'] : array() ) );
 	?>
 	<p><a href="<?php echo esc_url( axismundi_contacts_directory_return_url( axismundi_contacts_screen_url( $card_id, $group_id ) ) ); ?>">&larr; <?php esc_html_e( 'Back to the contact', 'axismundi-contacts' ); ?></a></p>

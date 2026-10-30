@@ -96,7 +96,7 @@ try {
 		remove_filter( 'pre_option_ax_actors_account_access_version', $not_ready );
 	}
 	$assert( ! axismundi_contacts_can_read_account( 0, $users[0] ) && ! axismundi_contacts_can_write_account( $fixtures[0], 0 ), 'Invalid Account and anonymous User denied' );
-	$assert( ! axismundi_contacts_type_keeps_books( 'Group' ), 'Type-based book policy unchanged in this slice' );
+	$assert( axismundi_contacts_type_keeps_books( 'Group' ), 'Group Account may keep AddressBooks independently of profile publication' );
 	printf( "PASS: %d Contacts Account access checks\n", $checks );
 } finally {
 	$_GET = $original_get;

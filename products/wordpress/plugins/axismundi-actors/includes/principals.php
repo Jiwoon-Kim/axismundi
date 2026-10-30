@@ -185,8 +185,10 @@ function axismundi_actors_resolve_principal( string $kind, int $id ) : ?array {
 	return $source ? array( 'kind' => $kind, 'id' => $id, 'key' => $kind . '_' . $id, 'source' => $source ) : null;
 }
 
-/** Internal policy lookup, not proof that an HTTP caller represents this subject. No inheritance yet. */
+/** Local Account operation only, not domain moderation or authenticated transport identity. */
 function axismundi_actors_principal_account_role( int $account_id, string $kind, int $id ) : string {
+	// Remote identities may hold domain roles, but even a stale stored grant is not Account access.
+	if ( 'remote_actor' === $kind ) { return ''; }
 	if ( $account_id <= 0 || ! axismundi_actors_account_access_ready() || ! axismundi_actors_resolve_principal( $kind, $id ) ) {
 		return '';
 	}

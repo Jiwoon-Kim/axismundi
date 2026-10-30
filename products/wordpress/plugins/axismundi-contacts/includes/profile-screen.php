@@ -48,7 +48,7 @@ function axismundi_contacts_profile_url( bool $edit = false ) : string {
 	if ( $edit ) {
 		$args['action'] = 'edit';
 	}
-	return add_query_arg( $args, admin_url( 'users.php?page=axismundi-contacts' ) );
+	return add_query_arg( $args, axismundi_contacts_admin_base_url() );
 }
 
 /**
@@ -105,7 +105,7 @@ function axismundi_contacts_profile_editor( int $book_id, Axismundi_Actor $actor
 		echo '<p>' . esc_html__( 'This Actor publishes no contact card yet.', 'axismundi-contacts' ) . '</p>';
 		return;
 	}
-	$card    = axismundi_contacts_card_document( $card_id );
+	$card    = axismundi_contacts_profile_document( $card_id );
 	$sharing = axismundi_contacts_profile_sharing( $actor_id );
 	?>
 	<h1><?php esc_html_e( 'My profile', 'axismundi-contacts' ); ?></h1>

@@ -47,6 +47,7 @@ function axismundi_contacts_purge_actor( int $actor_id ) : array {
 	 */
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 	$removed['profile'] = (int) $wpdb->delete( axismundi_contacts_profiles_table(), array( 'actor_id' => $actor_id ), array( '%d' ) );
+	$wpdb->delete( axismundi_contacts_profile_documents_table(), array( 'owner_actor_id' => $actor_id ), array( '%d' ) );
 
 	/*
 	 * Cards by ownership, not by book. A Card unfiled from every book is still this Actor's and still

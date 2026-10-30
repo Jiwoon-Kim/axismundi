@@ -13,17 +13,11 @@ function account_selection_ui_enabled() : bool {
 }
 
 /**
- * The parent WordPress actually registered the screen under, not the one requested.
- *
- * `wp-admin/menu.php` rewrites a `profile.php` parent to `users.php` for anyone who can
- * `list_users`, so a hardcoded `profile.php?page=` URL still renders the screen while leaving
- * `$pagenow` disagreeing with the registered parent. `get_admin_page_title()` then matches
- * nothing, `$title` stays null, and the submenu highlights nothing. Keyed on the capability
- * core keys on, as the other Users-adjacent screens in this suite are.
+ * One Accounts submenu URL regardless of WordPress User-list privileges.
+ * The historical page identifier is retained; only its navigation parent changed.
  */
 function account_selection_page_url() : string {
-	$parent = current_user_can( 'list_users' ) ? 'users.php' : 'profile.php';
-	return add_query_arg( 'page', 'axismundi-jmap-accounts', admin_url( $parent ) );
+	return \axismundi_actors_account_admin_url( 'axismundi-jmap-accounts' );
 }
 
 /** Operating principal access belongs to Actors, not a protocol Session. */
@@ -177,9 +171,7 @@ function register_account_selection_ui() : void {
 	remove_action( 'admin_bar_menu', 'axismundi_actors_acting_actor_admin_bar', 80 );
 	remove_action( 'admin_post_axismundi_actors_set_acting_actor', 'axismundi_actors_handle_set_acting_actor' );
 	add_action( 'admin_menu', static function () : void {
-		$hook = current_user_can( 'list_users' )
-			? add_users_page( __( 'Accounts', 'axismundi-jmap' ), __( 'Accounts', 'axismundi-jmap' ), 'read', 'axismundi-jmap-accounts', __NAMESPACE__ . '\\render_account_selection_page' )
-			: add_submenu_page( 'profile.php', __( 'Accounts', 'axismundi-jmap' ), __( 'Accounts', 'axismundi-jmap' ), 'read', 'axismundi-jmap-accounts', __NAMESPACE__ . '\\render_account_selection_page' );
+		$hook = add_submenu_page( \axismundi_actors_accounts_menu_slug(), __( 'Accounts', 'axismundi-jmap' ), __( 'Switch Account', 'axismundi-actors' ), 'read', 'axismundi-jmap-accounts', __NAMESPACE__ . '\\render_account_selection_page' );
 		if ( ! is_string( $hook ) ) {
 			return;
 		}

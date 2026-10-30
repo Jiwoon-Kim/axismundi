@@ -26,7 +26,7 @@ function ax_lifecycle_observe( WP_Post $post, string $object_uri, string $actor_
 try {
 	$admins    = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ids' ) );
 	$author_id = isset( $admins[0] ) ? (int) $admins[0] : 0;
-	$site      = axismundi_actors_get_site_actor();
+	$site      = axismundi_actors_get_system_actor();
 	$actor_uri = $site instanceof Axismundi_Actor ? $site->get_uri() : '';
 	add_filter( 'axismundi_op_post_actor_uri', static fn() : string => $actor_uri );
 	add_filter( 'axismundi_op_post_lifecycle_owner', static fn() : string => 'axismundi' );

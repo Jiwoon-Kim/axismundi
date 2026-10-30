@@ -153,7 +153,7 @@ function axismundi_contacts_save_card( int $book_id, array $card, int $card_id =
 		if ( array() === $book ) {
 			return new WP_Error( 'ax_contacts_book_missing', __( 'That address book does not exist.', 'axismundi-contacts' ), array( 'status' => 404 ) );
 		}
-		$saved = axismundi_contacts_save_card_for_owner( (int) $book['owner_actor_id'], $card, $card_id, $revision );
+		$saved = axismundi_contacts_write_card( (int) $book['owner_actor_id'], $card, $card_id, $revision, $book_id );
 		if ( ! is_wp_error( $saved ) && 0 === $card_id ) {
 			// A new Card is filed where it was made. An existing one keeps whatever filing it has.
 			$filed = axismundi_contacts_add_card_to_book( (int) $saved, $book_id );
@@ -166,11 +166,10 @@ function axismundi_contacts_save_card( int $book_id, array $card, int $card_id =
 }
 
 /**
- * Store a Card for an owner, filed nowhere in particular.
+ * Store a Card for an owner, using its default AddressBook for a new ContactCard.
  *
- * The path for Cards that have no book to be made in. A Group Actor keeps no address book but may
- * still publish a card about itself, and refusing to store one until somebody invents a container
- * for it would be the container deciding what may exist.
+ * Compatibility writer for internal callers without an explicit book. Actor profiles must use
+ * save_profile_document(); this writer always creates an address-book ContactCard.
  *
  * @param int                 $owner_actor_id Actor that owns the record.
  * @param array<string,mixed> $card           JSContact Card document.
@@ -183,7 +182,7 @@ function axismundi_contacts_save_card_for_owner( int $owner_actor_id, array $car
 }
 
 /** Internal write body; use save_card_for_owner() so indexes and notifications stay atomic. */
-function axismundi_contacts_write_card( int $owner_actor_id, array $card, int $card_id, ?int $revision ) {
+function axismundi_contacts_write_card( int $owner_actor_id, array $card, int $card_id, ?int $revision, int $book_id = 0 ) {
 	global $wpdb;
 	if ( ! Axismundi_Contacts_Write::active() ) {
 		return new WP_Error( 'ax_contacts_transaction', __( 'Card writes require a Contacts transaction.', 'axismundi-contacts' ) );
@@ -349,6 +348,10 @@ function axismundi_contacts_write_card( int $owner_actor_id, array $card, int $c
 			return new WP_Error( 'ax_contacts_card_conflict', __( 'This card changed since it was opened.', 'axismundi-contacts' ), array( 'status' => 409 ) );
 		}
 	} else {
+		$book_id = $book_id ?: axismundi_contacts_home_book_id( $owner_actor_id );
+		$book = axismundi_contacts_get_book( $book_id );
+		if ( ! $book || (int) $book['owner_actor_id'] !== $owner_actor_id ) { return new WP_Error( 'ax_contacts_book_required', 'A ContactCard requires an AddressBook in its own Account.' ); }
+		$row['primary_address_book_id'] = $book_id;
 		$row['revision']   = 1;
 		$row['created_at'] = $now;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
@@ -657,7 +660,7 @@ function axismundi_contacts_cards_in_book( int $book_id, int $limit = 200 ) : ar
 		return array();
 	}
 	$table       = axismundi_contacts_cards_table();
-	$memberships = axismundi_contacts_memberships_table();
+	$memberships = axismundi_contacts_effective_memberships_sql();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own tables.
 	return (array) $wpdb->get_results(
 		$wpdb->prepare(
@@ -723,9 +726,9 @@ function axismundi_contacts_card_count_in_book( int $book_id ) : int {
 	if ( $book_id <= 0 ) {
 		return 0;
 	}
-	$table = axismundi_contacts_memberships_table();
+	$table = axismundi_contacts_effective_memberships_sql();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed count in this plugin's own table.
-	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE address_book_id = %d", $book_id ) );
+	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} m WHERE address_book_id = %d", $book_id ) );
 }
 
 /**
@@ -743,7 +746,7 @@ function axismundi_contacts_find_by_value( int $book_id, string $needle ) : arra
 	}
 	$cards       = axismundi_contacts_cards_table();
 	$values      = axismundi_contacts_values_table();
-	$memberships = axismundi_contacts_memberships_table();
+	$memberships = axismundi_contacts_effective_memberships_sql();
 	/*
 	 * Matched against the normalized column in both directions -- the stored value is normalized on
 	 * write, and what somebody typed is normalized here, so `010-1234-5678` finds `+821012345678`.
@@ -787,16 +790,8 @@ function axismundi_contacts_delete_card( int $card_id ) : bool {
 	$wpdb->delete( axismundi_contacts_values_table(), array( 'card_id' => $card_id ), array( '%d' ) );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 	$wpdb->delete( axismundi_contacts_provenance_table(), array( 'card_id' => $card_id ), array( '%d' ) );
-	/*
-	 * And any Actor that pointed at this Card as the one describing it. A binding left behind answers
-	 * `which Card describes this Actor` with an id that resolves to nothing -- and every reader has to
-	 * handle that, or quietly show an Actor as having a profile card it does not have.
-	 *
-	 * Addressed by card rather than by Actor, because that is what is known here: the Card is going,
-	 * and whoever was pointing at it stops pointing at it, whether or not they own it.
-	 */
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	$wpdb->delete( axismundi_contacts_profiles_table(), array( 'card_id' => $card_id ), array( '%d' ) );
+	// Profile documents and ContactCards have independent lifetimes.
+	// An address-book copy and an Actor profile have independent lifetimes, even with equal IDs.
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
 	$wpdb->delete( axismundi_contacts_cards_table(), array( 'id' => $card_id ), array( '%d' ) );
 	foreach ( $books as $book_id ) {

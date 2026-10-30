@@ -352,12 +352,6 @@ function axismundi_actors_language_fallbacks( Axismundi_Actor $actor, string $re
  * @return string
  */
 function axismundi_actors_live_text_fallback( Axismundi_Actor $actor, string $field ) : string {
-	if ( axismundi_actors_is_instance_actor( $actor ) ) {
-		if ( 'name' === $field ) {
-			return (string) get_bloginfo( 'name' );
-		}
-		return 'summary' === $field ? (string) get_bloginfo( 'description' ) : '';
-	}
 	$user_id = $actor->get_local_user_id();
 	if ( ! $user_id ) {
 		return 'name' === $field ? $actor->get_display_name() : '';
@@ -377,6 +371,7 @@ function axismundi_actors_live_text_fallback( Axismundi_Actor $actor, string $fi
  * @return string
  */
 function axismundi_actors_resolve_text( Axismundi_Actor $actor, string $field, string $requested = '' ) : string {
+	if ( 'name' === $field && axismundi_actors_is_system_actor( $actor ) ) { return $actor->get_display_name(); }
 	if ( ! in_array( $field, array( 'name', 'summary', 'content' ), true ) ) {
 		return '';
 	}
@@ -411,7 +406,13 @@ function axismundi_actors_name_map( Axismundi_Actor $actor ) : array {
 	 * `name` as they are saved, so the map is already the whole answer -- and the scalar and the map
 	 * cannot disagree, because there is only one place either could come from.
 	 */
-	return axismundi_actors_get_text_map( $actor->get_identity_id() );
+	$map = axismundi_actors_get_text_map( $actor->get_identity_id() );
+	if ( axismundi_actors_is_system_actor( $actor ) ) {
+		// Site title has no authored Actor language map; do not publish stale overrides.
+		foreach ( $map as &$fields ) { unset( $fields['name'] ); }
+		unset( $fields );
+	}
+	return $map;
 }
 
 /** Keep the local Actor's inexpensive list/search name aligned with its primary text. */

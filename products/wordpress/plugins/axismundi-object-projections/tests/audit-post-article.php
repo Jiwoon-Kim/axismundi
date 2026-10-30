@@ -269,7 +269,7 @@ try {
 	$unknown_mention  = axismundi_op_transform_object( $unknown_post );
 	ax_article_assert( $ax_article_results, 'an unresolved mention fails strict authoring but a public live projection remains readable, keeps its recipient URI, and omits only the unverifiable tag', is_wp_error( $unknown_strict ) && 'ax_op_post_mention_actor' === $unknown_strict->get_error_code() && is_array( $unknown_mention ) && array( axismundi_act_public_audience_uri() ) === $unknown_mention['to'] && in_array( 'https://arbitrary.example/not-an-actor', $unknown_mention['cc'], true ) && ! isset( $unknown_mention['tag'] ) && axismundi_op_post_article_publicly_readable( $unknown_post ) );
 	wp_update_post( array( 'ID' => $post_id, 'post_content' => '<p>Restored fixture content.</p>' ) );
-	$site_actor = axismundi_actors_get_site_actor();
+	$site_actor = axismundi_actors_get_system_actor();
 	update_post_meta( $post_id, AXISMUNDI_OP_POST_QUOTE_POLICY_META, 'followers' );
 	$followers_policy = $site_actor instanceof Axismundi_Actor ? axismundi_op_post_quote_interaction_policy( get_post( $post_id ), $site_actor->get_uri() ) : null;
 	ax_article_assert( $ax_article_results, 'the followers policy references the OP-owned stable Followers address without dereferencing it', is_array( $followers_policy ) && axismundi_op_actor_followers_url( $site_actor ) === $followers_policy['canQuote']['automaticApproval'] );

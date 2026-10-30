@@ -5,6 +5,7 @@ defined( 'ABSPATH' ) || exit;
 /** Caller owns the transaction and has locked the Actor and identity. */
 function axismundi_actors_cleanup_deleted_actor( int $id ) : bool {
 	global $wpdb;
+	if ( $id > 0 && $id === (int) get_option( 'ax_actors_system_actor_id', 0 ) ) { return false; }
 	$now = current_time( 'mysql', true );
 	return false !== $wpdb->query( $wpdb->prepare(
 		'UPDATE %i SET secret_box = NULL, retired_at = COALESCE(retired_at, %s) WHERE identity_id = %d',

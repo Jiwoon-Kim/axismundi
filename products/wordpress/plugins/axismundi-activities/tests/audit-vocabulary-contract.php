@@ -40,7 +40,7 @@ try {
 		$assert( in_array( $term, $types, true ) && 'custom' === $definition['tier'] && 'axismundi-activities' === $declaration['contributor'], $term . ' is owned and registered by Activities' );
 	}
 	$assert( true === axismundi_op_register_vocabulary_type( 'FixtureAction', array( 'iri' => 'https://example.test/ns#FixtureAction', 'tier' => 'custom', 'category' => 'activity', 'parents' => array( 'Activity' ), 'declares' => array(), 'excludes' => array(), 'provenance' => 'product:fixture' ) ) && in_array( 'FixtureAction', axismundi_act_types(), true ), 'New registered Activity subtypes need no second allow-list' );
-	$actor = axismundi_actors_get_site_actor();
+	$actor = axismundi_actors_get_system_actor();
 	$assert( $actor instanceof Axismundi_Actor, 'Existing local Actor is available without a fixture principal' );
 	$base = array( 'actor' => $actor->get_uri() );
 	foreach ( array( 'Arrive', 'Travel', 'Question' ) as $term ) {

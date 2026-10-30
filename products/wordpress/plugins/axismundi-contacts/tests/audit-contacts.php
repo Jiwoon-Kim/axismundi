@@ -1471,21 +1471,19 @@ try {
 			&& 'example.com:kiosk' === (string) ( axismundi_contacts_card_document( (int) $ax_ct_odd_kind )['kind'] ?? '' )
 	);
 
-	// -- not every Actor is a contact keeper --------------------------------------------------------------------
+	// -- Account storage is independent of Actor profile policy --------------------------------------------------
 
 	/*
-	 * A Card is not a by-product of an Actor existing. A Group is a set of relationships rather than
-	 * somebody who files contacts; an Application or a Service is administered from the Actor screens,
-	 * and giving either an address book would be a second place to look for what lives elsewhere.
+	 * Any local Account may keep books. Automatic profile Card publication is a separate policy.
 	 */
 	ax_ct_assert(
 		$ax_ct_results,
-		'a Person and an Organization keep address books; a Group, an Application and a Service do not',
+		'all standard Actor types may back an Account with address books',
 		axismundi_contacts_type_keeps_books( 'Person' )
 			&& axismundi_contacts_type_keeps_books( 'Organization' )
-			&& ! axismundi_contacts_type_keeps_books( 'Group' )
-			&& ! axismundi_contacts_type_keeps_books( 'Application' )
-			&& ! axismundi_contacts_type_keeps_books( 'Service' )
+			&& axismundi_contacts_type_keeps_books( 'Group' )
+			&& axismundi_contacts_type_keeps_books( 'Application' )
+			&& axismundi_contacts_type_keeps_books( 'Service' )
 	);
 	ax_ct_assert(
 		$ax_ct_results,

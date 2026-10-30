@@ -47,7 +47,7 @@ function ax_ui_titles( array $occurrences ) : array {
 }
 
 try {
-	$ax_ui_site = axismundi_actors_get_site_actor();
+	$ax_ui_site = axismundi_actors_get_system_actor();
 	$ax_ui_calendar = axismundi_cal_calendar_save( array( 'name' => 'Grid calendar', 'slug' => 'audit-grid', 'timezone' => 'Asia/Seoul', 'owner_actor_uri' => $ax_ui_site instanceof Axismundi_Actor ? $ax_ui_site->get_uri() : '' ) );
 	// Published on purpose. Every surface these fixtures exercise is a public one, and a Calendar is
 	// private until somebody says otherwise, so the fixture has to say so.

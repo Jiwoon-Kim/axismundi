@@ -17,7 +17,7 @@ function ax_actor_projection_assert( array &$results, string $label, bool $condi
 	printf( "[%s] %s\n", $condition ? 'PASS' : 'FAIL', $label );
 }
 
-$actor = axismundi_actors_get_site_actor();
+$actor = axismundi_actors_query_one( 'i.origin = %s AND i.status = %s AND a.local_user_id IS NOT NULL AND a.preferred_username IS NOT NULL', 'local', 'public' );
 $previous_fields = $actor instanceof Axismundi_Actor && function_exists( 'axismundi_actors_get_profile_fields' )
 	? axismundi_actors_get_profile_fields( $actor->get_identity_id() )
 	: array();
@@ -41,7 +41,7 @@ $raw       = $actor instanceof Axismundi_Actor ? axismundi_op_actor_transform( $
 $finalized = $actor instanceof Axismundi_Actor ? axismundi_op_finalize_object( $raw, $actor->get_uri() ) : null;
 remove_all_filters( 'axismundi_op_actor_transport_fields' );
 
-ax_actor_projection_assert( $ax_actor_projection_results, 'the Actors plugin supplies a site Actor source', $actor instanceof Axismundi_Actor );
+ax_actor_projection_assert( $ax_actor_projection_results, 'the Actors plugin supplies an ordinary local Actor source', $actor instanceof Axismundi_Actor );
 ax_actor_projection_assert( $ax_actor_projection_results, 'Actor projection owns immutable identity and ignores a transport id override', is_array( $raw ) && $actor->get_uri() === $raw['id'] && $actor->get_type() === $raw['type'] );
 ax_actor_projection_assert( $ax_actor_projection_results, 'Actor finalization does not require attributedTo', is_array( $finalized ) && ! isset( $finalized['attributedTo'] ) );
 ax_actor_projection_assert( $ax_actor_projection_results, 'transport fields may supply inbox, sharedInbox, and publicKey but cannot override the representation-owned outbox', is_array( $finalized ) && isset( $finalized['inbox'], $finalized['outbox'], $finalized['endpoints']['sharedInbox'], $finalized['publicKey'] ) && axismundi_op_actor_outbox_url( $actor ) === $finalized['outbox'] );

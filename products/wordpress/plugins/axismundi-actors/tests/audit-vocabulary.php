@@ -17,7 +17,7 @@ $snapshot = static function () use ( $wpdb, $tables ) : array {
 };
 $before = $snapshot();
 $old_user = get_current_user_id();
-$instance = get_option( 'ax_actors_instance_identity_id', false );
+$instance = get_option( 'ax_actors_system_actor_id', false );
 $ids = $objects = array();
 $user = 0;
 $network = static fn() => new WP_Error( 'vocabulary_no_http', 'No network in this audit.' );
@@ -48,8 +48,8 @@ try {
 		$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $ids[2] ) );
 		$assert( '' === axismundi_actors_principal_account_role( $ids[2], 'wp_user', $user ) && ! axismundi_actors_can_manage( axismundi_actors_get_by_identity( $ids[2] ), $user ), 'An Account without a principal grant remains inaccessible' );
 	} finally { $wpdb->insert( axismundi_actors_managers_table(), $grant ); }
-	update_option( 'ax_actors_instance_identity_id', $ids[1], false );
-	$assert( axismundi_actors_is_instance_actor( $group ) && ! axismundi_actors_is_instance_actor( axismundi_actors_get_by_identity( $ids[2] ) ), 'Instance use is configured, never inferred from Application type' );
+	update_option( 'ax_actors_system_actor_id', $ids[2], false );
+	$assert( axismundi_actors_is_system_actor( axismundi_actors_get_by_identity( $ids[2] ) ) && ! axismundi_actors_is_system_actor( $group ), 'System use is configured, never inferred from Application type' );
 	$assert( 'owner' === axismundi_actors_principal_account_role( $ids[1], 'wp_user', $user ), 'Configured instance use does not override principal authority' );
 	$assert( axismundi_actors_set_status( $ids[1], 'disabled' ), 'Actor can be disabled' );
 	$disabled = axismundi_actors_get_by_identity( $ids[1] );
@@ -78,7 +78,7 @@ try {
 	} finally { remove_action( 'axismundi_actors_status_changed', $listener, 999 ); }
 	$assert( 0 === (int) $wpdb->get_var( "SELECT COUNT(*) FROM " . axismundi_actors_identities_table() . " WHERE status = 'internal'" ), 'No internal identity remains globally' );
 } finally {
-	if ( false === $instance ) { delete_option( 'ax_actors_instance_identity_id' ); } else { update_option( 'ax_actors_instance_identity_id', $instance, false ); }
+	if ( false === $instance ) { delete_option( 'ax_actors_system_actor_id' ); } else { update_option( 'ax_actors_system_actor_id', $instance, false ); }
 	foreach ( $ids as $id ) {
 		$a = axismundi_actors_get_by_identity( $id );
 		if ( $a ) {

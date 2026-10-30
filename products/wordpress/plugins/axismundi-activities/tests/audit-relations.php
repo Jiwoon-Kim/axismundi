@@ -51,7 +51,7 @@ try {
 	$index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'relation_identity'", ARRAY_A );
 	ax_rel_assert( $ax_rel_results, 'the relation schema retains unique URI identity without blog_id after later upgrades', $installed && (int) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION ) >= 2 && ! empty( $index ) && 0 === (int) $index[0]['Non_unique'] && ! in_array( 'blog_id', $columns, true ) );
 
-	$site_actor = axismundi_actors_get_site_actor();
+	$site_actor = axismundi_actors_get_system_actor();
 	$remote     = axismundi_actors_upsert_remote(
 		array(
 			'uri'                => $ax_rel_remote_uri,

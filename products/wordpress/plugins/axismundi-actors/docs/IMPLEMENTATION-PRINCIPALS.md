@@ -1,5 +1,8 @@
 # S1 Principal 관계 일반화
 
+> 현재 Account 운영과 도메인 모더레이션의 경계는 [Principal Boundaries](PRINCIPAL-BOUNDARIES.md)를 따른다.
+> 특히 remote_actor는 공통 주체로 해소할 수 있지만 저장된 stale grant도 Account 운영 권한으로 읽지 않는다.
+
 2026-10-23. 구현 범위이며 S2 이후 및 RFC 9670 전체 구현의 완료 선언이 아니다.
 
 ## 저장 계약

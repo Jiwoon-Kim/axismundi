@@ -708,6 +708,6 @@ function axismundi_contacts_seed_self_card( int $book_id, int $owner_actor_id ) 
 	if ( is_wp_error( $card ) ) {
 		return $card;
 	}
-	axismundi_contacts_add_card_to_book( (int) $card, $book_id );
+	// The Actor profile is independent of AddressBook membership.
 	return (int) $card;
 }

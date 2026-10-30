@@ -107,9 +107,10 @@ try {
 	);
 
 	// Routability gates the policy: an Actor nobody may view discloses nothing, whatever
-	// its own setting says. The site Actor is `internal`, which makes it the fixture.
-	$ax_fc_internal = axismundi_actors_get_site_actor();
-	if ( $ax_fc_internal instanceof Axismundi_Actor && ! axismundi_actors_is_public_profile( $ax_fc_internal ) ) {
+	// its own setting says. Temporarily disable the matrix subject and always restore it.
+	axismundi_actors_set_status( $ax_fc_actor->get_identity_id(), 'disabled' );
+	try {
+		$ax_fc_internal = axismundi_actors_get_by_uuid( $ax_fc_actor->get_uuid() );
 		axismundi_actors_set_follow_collections_visibility( $ax_fc_internal, 'public', $ax_fc_admin );
 		$ax_fc_internal = axismundi_actors_get_by_uuid( $ax_fc_internal->get_uuid() );
 		ax_fc_assert(
@@ -117,7 +118,8 @@ try {
 			'a non-public local Actor stays private even when its policy says public',
 			$ax_fc_internal instanceof Axismundi_Actor && 'private' === axismundi_actors_follow_collections_policy( $ax_fc_internal )
 		);
-		axismundi_actors_set_follow_collections_visibility( $ax_fc_internal, null, $ax_fc_admin );
+	} finally {
+		axismundi_actors_set_status( $ax_fc_actor->get_identity_id(), 'public' );
 	}
 
 	// A never-set policy must read as public, which is what makes disclosure the default

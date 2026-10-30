@@ -58,9 +58,7 @@ function axismundi_contacts_label_command( array $input ) {
 	$members = axismundi_contacts_memberships_table();
 	$cards = axismundi_contacts_cards_table();
 	// All SQL below uses plugin table names and prepared values. Locks serialize label commands.
-	if ( false === $wpdb->query( 'START TRANSACTION' ) ) {
-		return new WP_Error( 'ax_contacts_labels_storage', __( 'The labels could not be saved. Try again.', 'axismundi-contacts' ) );
-	}
+	return Axismundi_Contacts_Write::run( static function () use ( $wpdb, $input, $owner, $label, $ids, $operation, $name, $books, $members, $cards ) {
 	try {
 		$book = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$books} WHERE id = %d FOR UPDATE", $label ), ARRAY_A );
 		if ( ! $book || (int) $book['owner_actor_id'] !== $owner || 1 === (int) $book['is_default'] ) {
@@ -82,11 +80,13 @@ function axismundi_contacts_label_command( array $input ) {
 			if ( false === $wpdb->delete( $members, array( 'address_book_id' => $label ), array( '%d' ) ) ) {
 				throw new RuntimeException( __( 'The label could not be removed. Try again.', 'axismundi-contacts' ) );
 			}
+			$default = axismundi_contacts_home_book_id( $owner );
+			if ( ! $default || false === $wpdb->update( $cards, array( 'primary_address_book_id' => $default ), array( 'owner_actor_id' => $owner, 'primary_address_book_id' => $label ) ) ) { throw new RuntimeException( 'Contacts could not be moved to their default AddressBook.' ); }
 			$changed = $wpdb->delete( $books, array( 'id' => $label ), array( '%d' ) );
 		} else {
 			foreach ( $ids as $id ) {
 				$row = $wpdb->get_row( $wpdb->prepare( "SELECT id, owner_actor_id FROM {$cards} WHERE id = %d FOR UPDATE", $id ), ARRAY_A );
-				if ( ! $row || (int) $row['owner_actor_id'] !== $owner || $id === axismundi_contacts_profile_card( $owner ) ) {
+				if ( ! $row || (int) $row['owner_actor_id'] !== $owner ) {
 					throw new RuntimeException( __( 'That selection is not available.', 'axismundi-contacts' ) );
 				}
 			}
@@ -99,7 +99,7 @@ function axismundi_contacts_label_command( array $input ) {
 				if ( 'add' === $operation ) {
 					$result = $exists ? 0 : $wpdb->insert( $members, array( 'address_book_id' => $label, 'card_id' => $id, 'created_at' => current_time( 'mysql', true ) ), array( '%d', '%d', '%s' ) );
 				} else {
-					$result = $wpdb->delete( $members, array( 'address_book_id' => $label, 'card_id' => $id ), array( '%d', '%d' ) );
+					$result = ! in_array( $label, axismundi_contacts_card_books( $id ), true ) ? 0 : ( axismundi_contacts_remove_card_from_book( $id, $label, false ) ? 1 : false );
 				}
 				if ( false === $result ) {
 					throw new RuntimeException( __( 'The labels could not be saved. Try again.', 'axismundi-contacts' ) );
@@ -110,14 +110,11 @@ function axismundi_contacts_label_command( array $input ) {
 		if ( false === $changed || ( $changed > 0 && 'delete' !== $operation && false === $wpdb->query( $wpdb->prepare( "UPDATE {$books} SET revision = revision + 1, updated_at = %s WHERE id = %d", current_time( 'mysql', true ), $label ) ) ) ) {
 			throw new RuntimeException( __( 'The labels could not be saved. Try again.', 'axismundi-contacts' ) );
 		}
-		if ( false === $wpdb->query( 'COMMIT' ) ) {
-			throw new RuntimeException( __( 'The labels could not be saved. Try again.', 'axismundi-contacts' ) );
-		}
 		return (int) $changed;
 	} catch ( RuntimeException $error ) {
-		$wpdb->query( 'ROLLBACK' );
 		return new WP_Error( 'ax_contacts_labels_failed', $error->getMessage() );
 	}
+	} );
 }
 
 /** Allowlisted local navigation, including after the selected label disappears. */

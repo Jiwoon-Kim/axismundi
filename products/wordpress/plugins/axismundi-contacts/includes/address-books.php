@@ -36,7 +36,8 @@ function axismundi_contacts_account_permissions( int $account_id, int $user_id )
 	if ( ! axismundi_contacts_has_actors()
 		|| ! function_exists( 'axismundi_actors_resolve_workspace' )
 		|| ! function_exists( 'axismundi_actors_account_role' )
-		|| null === axismundi_actors_resolve_workspace( $account_id, $user_id ) ) {
+		|| ! axismundi_contacts_has_jmap()
+		|| null === \Axismundi\Jmap\resolve_account_actor( 'a' . $account_id, $user_id ) ) {
 		return $denied;
 	}
 	// Preserve existing owner/manager/editor access; no new viewer role or administrator override.
@@ -85,10 +86,10 @@ function axismundi_contacts_current_account() : ?Axismundi_Actor {
  */
 function axismundi_contacts_book_for_actor( int $owner_actor_id ) {
 	global $wpdb;
-	if ( ! axismundi_contacts_has_actors() ) {
-		return new WP_Error( 'ax_contacts_actors', __( 'Address books need Axismundi Actors.', 'axismundi-contacts' ) );
+	if ( ! axismundi_contacts_has_actors() || ! axismundi_contacts_has_jmap() ) {
+		return new WP_Error( 'ax_contacts_actors', __( 'Address books need Axismundi Actors and JMAP.', 'axismundi-contacts' ) );
 	}
-	$actor = axismundi_actors_get_by_identity( $owner_actor_id );
+	$actor = \Axismundi\Jmap\account_actor( 'a' . $owner_actor_id );
 	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() ) {
 		return new WP_Error(
 			'ax_contacts_book_owner',
@@ -97,9 +98,7 @@ function axismundi_contacts_book_for_actor( int $owner_actor_id ) {
 		);
 	}
 	/*
-	 * Not every Actor is somebody who files contacts. A Group is a set of relationships, and an
-	 * Application or Service is administered from the Actor screens -- handing either an address book
-	 * would put a second place to look for something that already lives elsewhere.
+		 * AddressBook support belongs to the Account, not to its ActivityStreams Actor type.
 	 */
 	if ( ! axismundi_contacts_type_keeps_books( $actor->get_type() ) ) {
 		return new WP_Error(
@@ -265,24 +264,29 @@ function axismundi_contacts_add_card_to_book( int $card_id, int $book_id ) {
 /**
  * Take a Card out of a book.
  *
- * The Card itself is untouched. Removing it from every book leaves it owned but filed nowhere,
- * which is a different thing from deleting it -- and the difference matters, because one of them
- * throws away somebody's notes. `axismundi_contacts_cards_for_owner()` is what still finds it.
+ * The last membership cannot be removed. Removing the mandatory anchor first moves it to a
+ * remaining book; the database rejects a missing or cross-Account anchor.
  *
  * @param int $card_id Card id.
  * @param int $book_id Address book id.
  * @return true
  */
-function axismundi_contacts_remove_card_from_book( int $card_id, int $book_id ) : bool {
-	global $wpdb;
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- this plugin's own table.
-	$wpdb->delete(
-		axismundi_contacts_memberships_table(),
-		array( 'card_id' => $card_id, 'address_book_id' => $book_id ),
-		array( '%d', '%d' )
-	);
-	axismundi_contacts_touch_book( $book_id );
-	return true;
+function axismundi_contacts_remove_card_from_book( int $card_id, int $book_id, bool $touch = true ) : bool {
+	$result = Axismundi_Contacts_Write::run( static function () use ( $card_id, $book_id, $touch ) {
+		global $wpdb;
+		$card = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE id=%d FOR UPDATE', axismundi_contacts_cards_table(), $card_id ), ARRAY_A );
+		if ( ! $card ) { return new WP_Error( 'card_missing', 'ContactCard not found.' ); }
+		$members = axismundi_contacts_card_books( $card_id );
+		if ( ! in_array( $book_id, $members, true ) ) { return true; }
+		if ( (int) $card['primary_address_book_id'] === $book_id ) {
+			$remaining = array_values( array_diff( $members, array( $book_id ) ) );
+			if ( ! $remaining ) { return new WP_Error( 'last_addressbook', 'A ContactCard must remain in an AddressBook.' ); }
+			if ( false === $wpdb->update( axismundi_contacts_cards_table(), array( 'primary_address_book_id' => $remaining[0] ), array( 'id' => $card_id ) ) ) { return new WP_Error( 'book_anchor', 'AddressBook membership could not be moved.' ); }
+		}
+		if ( false === $wpdb->delete( axismundi_contacts_memberships_table(), array( 'card_id' => $card_id, 'address_book_id' => $book_id ), array( '%d', '%d' ) ) ) { return new WP_Error( 'book_membership', 'Membership could not be removed.' ); }
+		return ! $touch || axismundi_contacts_touch_book( $book_id ) ? true : new WP_Error( 'book_revision', 'AddressBook revision could not be updated.' );
+	} );
+	return true === $result;
 }
 
 /**
@@ -296,9 +300,9 @@ function axismundi_contacts_card_books( int $card_id ) : array {
 	if ( $card_id <= 0 ) {
 		return array();
 	}
-	$table = axismundi_contacts_memberships_table();
+	$table = axismundi_contacts_effective_memberships_sql();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- keyed lookup in this plugin's own table.
-	return array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT address_book_id FROM {$table} WHERE card_id = %d ORDER BY address_book_id ASC", $card_id ) ) );
+	return array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT address_book_id FROM {$table} m WHERE card_id = %d ORDER BY address_book_id ASC", $card_id ) ) );
 }
 
 /**

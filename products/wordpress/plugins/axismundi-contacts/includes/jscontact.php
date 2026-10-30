@@ -43,7 +43,7 @@ function axismundi_contacts_jscontact_card( Axismundi_Actor $actor ) {
 			array( 'status' => 404 )
 		);
 	}
-	$stored = axismundi_contacts_card_document( $card_id );
+	$stored = axismundi_contacts_profile_document( $card_id );
 	if ( array() === $stored ) {
 		return new WP_Error( 'ax_contacts_jscontact_none', __( 'That contact card could not be read.', 'axismundi-contacts' ), array( 'status' => 404 ) );
 	}

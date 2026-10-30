@@ -6,6 +6,7 @@
  * Version:           0.1.0-beta.2
  * Requires at least: 6.7
  * Requires PHP:      8.1
+ * Requires Plugins:  axismundi-actors, axismundi-jmap
  * Author:            Ji-woon Kim
  * License:           GPL-3.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-3.0.html
@@ -39,6 +40,7 @@ require_once __DIR__ . '/includes/dependencies.php';
 require_once __DIR__ . '/includes/transactions.php';
 require_once __DIR__ . '/includes/schema.php';
 require_once __DIR__ . '/includes/address-books.php';
+require_once __DIR__ . '/includes/jmap.php';
 require_once __DIR__ . '/includes/vocabulary.php';
 require_once __DIR__ . '/includes/icons.php';
 require_once __DIR__ . '/includes/canonical.php';
@@ -46,6 +48,7 @@ require_once __DIR__ . '/includes/name-format.php';
 require_once __DIR__ . '/includes/cards.php';
 require_once __DIR__ . '/includes/localizations.php';
 require_once __DIR__ . '/includes/profile.php';
+require_once __DIR__ . '/includes/profile-store.php';
 require_once __DIR__ . '/includes/lifecycle.php';
 require_once __DIR__ . '/includes/provenance.php';
 require_once __DIR__ . '/includes/actor-link.php';

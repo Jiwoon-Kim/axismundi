@@ -77,6 +77,9 @@ try {
 	$assert( true === axismundi_actors_set_principal_role( $id, 'local_account', $n, 'editor' ), 'Explicit local role changes independently' );
 	$assert( is_wp_error( axismundi_actors_promote_user_principal( $id, $n, $n ) ), 'Promotion does not overwrite a conflicting explicit Actor role' );
 	$assert( false !== $wpdb->insert( axismundi_actors_managers_table(), array( 'identity_id' => $id, 'principal_kind' => 'remote_actor', 'principal_id' => $rid, 'user_id' => null, 'role' => 'owner', 'created_at' => $now, 'updated_at' => $now ) ), 'Remote stale grant fixture inserted without opening grant API' );
+	$assert( '' === axismundi_actors_principal_account_role( $id, 'remote_actor', $rid ) && ! axismundi_actors_principal_can_manage( $id, 'remote_actor', $rid ), 'Stored remote grant cannot operate an Account' );
+	$assert( array() === axismundi_actors_accounts_for_principal( 'remote_actor', $rid ), 'Remote subject lists no local operating Accounts' );
+	$assert( array() === array_values( array_filter( axismundi_actors_account_principals( $id ), static fn( array $row ) : bool => 'remote_actor' === $row['principal_kind'] ) ), 'Remote stale grants are not active Account principals' );
 	$assert( is_wp_error( axismundi_actors_set_principal_role( $id, 'wp_user', $n, null ) ), 'Remote owner cannot replace the last live WP User anchor' );
 	$assert( is_wp_error( axismundi_actors_set_principal_role( $id, 'remote_actor', $rid, 'editor' ) ), 'Existing remote grant cannot be updated through local writer' );
 	foreach ( array( 'disabled', 'tombstone' ) as $status ) {

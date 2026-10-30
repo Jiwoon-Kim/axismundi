@@ -9,6 +9,7 @@ final class Registry {
 
 	private array $capabilities = array();
 	private array $methods = array();
+	private array $types = array();
 	private array $account_providers = array();
 	private bool $frozen = false;
 
@@ -37,6 +38,18 @@ final class Registry {
 	public function freeze() : void {
 		$this->frozen = true;
 	}
+
+	/** Type ownership is independent of implemented methods and Account capability grants. */
+	public function register_type( string $name, string $capability, string $reference ) : void {
+		if ( $this->frozen || ! $this->supports( $capability ) || isset( $this->types[ $name ] )
+			|| 1 !== preg_match( '/\A[A-Za-z][A-Za-z0-9]*\z/D', $name )
+			|| ! filter_var( $reference, FILTER_VALIDATE_URL ) || 'https' !== parse_url( $reference, PHP_URL_SCHEME ) ) {
+			throw new \LogicException( 'Invalid, duplicate, or frozen data type registration.' );
+		}
+		$this->types[ $name ] = array( 'capability' => $capability, 'reference' => $reference );
+	}
+
+	public function type( string $name ) : ?array { return $this->types[ $name ] ?? null; }
 
 	/** Explicit server declaration plus a live, User-relative Account grant provider. */
 	public function register_account_provider( string $capability, \stdClass $server, callable $provider, string $purpose, ?callable $validate_policy = null ) : void {

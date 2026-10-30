@@ -155,10 +155,10 @@ function axismundi_actors_can_preview( Axismundi_Actor $actor, ?int $user_id = n
 	}
 	// A managed actor (Group/Service/Organization) has no owning WP user; its
 	// preview/manage authority is the manager relation, not user identity.
-	if ( $actor->is_local() && ! axismundi_actors_is_instance_actor( $actor ) ) {
+	if ( $actor->is_local() ) {
 		return axismundi_actors_principal_can_manage( $actor->get_identity_id(), 'wp_user', $user_id );
 	}
-	return axismundi_actors_is_instance_actor( $actor ) && (int) get_option( 'ax_actors_site_owner_user_id', 0 ) === $user_id;
+	return false;
 }
 
 /**
@@ -653,6 +653,7 @@ add_action( 'template_redirect', 'axismundi_actors_redirect_remote_uuid_profile_
 /** One display avatar URL suitable for neutral Object view models. */
 function axismundi_actors_avatar_url( Axismundi_Actor $actor, int $size = 96 ) : string {
 	$size = max( 24, min( 512, $size ) );
+	if ( axismundi_actors_is_system_actor( $actor ) ) { return (string) get_site_icon_url( $size ); }
 	if ( ! $actor->is_local() ) {
 		return function_exists( 'axismundi_actors_get_cached_asset_url' )
 			? axismundi_actors_get_cached_asset_url( $actor->get_identity_id(), 'avatar', $size )
@@ -661,9 +662,6 @@ function axismundi_actors_avatar_url( Axismundi_Actor $actor, int $size = 96 ) :
 	$attachment_id = $actor->get_avatar_attachment_id();
 	if ( $attachment_id > 0 ) {
 		return (string) wp_get_attachment_image_url( $attachment_id, array( $size, $size ) );
-	}
-	if ( axismundi_actors_is_instance_actor( $actor ) ) {
-		return (string) get_site_icon_url( $size );
 	}
 	$user_id = $actor->get_local_user_id();
 	return $user_id ? (string) get_avatar_url( $user_id, array( 'size' => $size ) ) : '';
@@ -841,13 +839,13 @@ function axismundi_actors_profile_data( Axismundi_Actor $actor ) : array {
 		);
 	}
 	$language = axismundi_actors_profile_language( $actor );
-	if ( axismundi_actors_is_instance_actor( $actor ) ) {
+	if ( axismundi_actors_is_system_actor( $actor ) ) {
 		return array(
-			'name'    => axismundi_actors_resolve_text( $actor, 'name', $language ),
+			'name' => $actor->get_display_name(),
 			'summary' => axismundi_actors_resolve_text( $actor, 'summary', $language ),
 			'content' => axismundi_actors_resolve_text( $actor, 'content', $language ),
-			'url'     => home_url( '/' ),
-			'avatar'  => (string) get_site_icon_url( 192 ),
+			'url' => $actor->get_profile_url(),
+			'avatar' => axismundi_actors_avatar_url( $actor, 192 ),
 		);
 	}
 	$user_id = $actor->get_local_user_id();
@@ -869,6 +867,10 @@ function axismundi_actors_profile_data( Axismundi_Actor $actor ) : array {
  * @return string
  */
 function axismundi_actors_avatar_html( Axismundi_Actor $actor, int $size = 96 ) : string {
+	if ( axismundi_actors_is_system_actor( $actor ) ) {
+		$icon = axismundi_actors_avatar_url( $actor, $size );
+		return '' !== $icon ? '<img class="ax-actor-profile__avatar" src="' . esc_url( $icon ) . '" alt="" width="' . (int) $size . '" height="' . (int) $size . '" />' : '';
+	}
 	if ( ! $actor->is_local() ) {
 		$src = axismundi_actors_get_cached_asset_url( $actor->get_identity_id(), 'avatar', $size );
 		if ( '' === $src ) {
@@ -881,10 +883,6 @@ function axismundi_actors_avatar_html( Axismundi_Actor $actor, int $size = 96 ) 
 	$attachment_id = $actor->get_avatar_attachment_id();
 	if ( $attachment_id > 0 ) {
 		return (string) wp_get_attachment_image( $attachment_id, array( $size, $size ), false, array( 'class' => 'ax-actor-profile__avatar', 'alt' => '' ) );
-	}
-	if ( axismundi_actors_is_instance_actor( $actor ) ) {
-		$icon = (string) get_site_icon_url( $size );
-		return '' !== $icon ? '<img class="ax-actor-profile__avatar" src="' . esc_url( $icon ) . '" alt="" width="' . (int) $size . '" height="' . (int) $size . '" />' : '';
 	}
 	$user_id = $actor->get_local_user_id();
 	return $user_id ? (string) get_avatar( $user_id, $size, '', '', array( 'class' => 'ax-actor-profile__avatar' ) ) : '';

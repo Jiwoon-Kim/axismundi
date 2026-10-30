@@ -39,7 +39,7 @@ function ax_ics_event( array &$posts, string $title, array $fields ) : int {
 }
 
 try {
-	$ax_ics_site      = axismundi_actors_get_site_actor();
+	$ax_ics_site      = axismundi_actors_get_system_actor();
 	$ax_ics_authority = $ax_ics_site instanceof Axismundi_Actor ? $ax_ics_site->get_uri() : '';
 	$ax_ics_calendar = axismundi_cal_calendar_save( array( 'name' => 'ICS calendar', 'slug' => 'audit-ics', 'timezone' => 'America/New_York', 'owner_actor_uri' => $ax_ics_authority ) );
 	$GLOBALS['ax_ics_calendar'] = (int) $ax_ics_calendar;

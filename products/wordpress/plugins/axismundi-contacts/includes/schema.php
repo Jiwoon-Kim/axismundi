@@ -34,7 +34,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_CONTACTS_DB_VERSION        = '14';
+const AXISMUNDI_CONTACTS_DB_VERSION        = '15';
 const AXISMUNDI_CONTACTS_DB_VERSION_OPTION = 'ax_contacts_db_version';
 
 /**
@@ -209,6 +209,7 @@ function axismundi_contacts_install_schema() : bool {
 	 */
 	dbDelta(
 		"CREATE TABLE {$cards} (
+			primary_address_book_id bigint(20) unsigned NOT NULL,
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			owner_actor_id bigint(20) unsigned NOT NULL default 0,
 			card_json longtext NOT NULL,
@@ -330,31 +331,34 @@ function axismundi_contacts_install_schema() : bool {
 		) ENGINE=InnoDB {$charset};"
 	);
 
-	axismundi_contacts_migrate_books_to_memberships();
-	/*
-	 * And the Cards this site made before it said so are told which revision they are written in. Run
-	 * after the tables exist, because it reads provenance to tell ours from somebody else's.
-	 */
-	axismundi_contacts_state_jscontact_version();
-	// And the one entry key that was ever spelled out is moved, with everything that addresses it.
-	axismundi_contacts_migrate_home_service_key();
-	// So are the phone addresses written before the collections agreed on what to call themselves.
-	axismundi_contacts_migrate_phone_keys();
-	/*
-	 * The reference first, because it is what the rewrite reads: an account whose value is an Actor
-	 * identifier is tied to that Actor before its value stops being one.
-	 */
-	axismundi_contacts_restore_service_actor_refs();
-	// And then the accounts that were showing an Actor's identifier where its profile belongs.
-	axismundi_contacts_migrate_service_profile_uris();
-	// And anybody sharing to an audience this site could not actually keep stops sharing.
-	axismundi_contacts_stop_unkeepable_sharing();
-	/*
-	 * And every self Card is given the account that says whose it is, because from here on the save
-	 * path refuses to let one go missing -- and a Card that arrived without one would otherwise be a
-	 * Card its owner could no longer save.
-	 */
-	axismundi_contacts_ensure_identity_services();
+	if ( (int) get_option( AXISMUNDI_CONTACTS_DB_VERSION_OPTION ) < 14 ) {
+		axismundi_contacts_migrate_books_to_memberships();
+		/*
+		 * And the Cards this site made before it said so are told which revision they are written in. Run
+		 * after the tables exist, because it reads provenance to tell ours from somebody else's.
+		 */
+		axismundi_contacts_state_jscontact_version();
+		// And the one entry key that was ever spelled out is moved, with everything that addresses it.
+		axismundi_contacts_migrate_home_service_key();
+		// So are the phone addresses written before the collections agreed on what to call themselves.
+		axismundi_contacts_migrate_phone_keys();
+		/*
+		 * The reference first, because it is what the rewrite reads: an account whose value is an Actor
+		 * identifier is tied to that Actor before its value stops being one.
+		 */
+		axismundi_contacts_restore_service_actor_refs();
+		// And then the accounts that were showing an Actor's identifier where its profile belongs.
+		axismundi_contacts_migrate_service_profile_uris();
+		// And anybody sharing to an audience this site could not actually keep stops sharing.
+		axismundi_contacts_stop_unkeepable_sharing();
+		/*
+		 * And every self Card is given the account that says whose it is, because from here on the save
+		 * path refuses to let one go missing -- and a Card that arrived without one would otherwise be a
+		 * Card its owner could no longer save.
+		 */
+		axismundi_contacts_ensure_identity_services();
+	}
+	if ( ! axismundi_contacts_install_profile_split() ) { return false; }
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.
 	$card_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$cards}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check.

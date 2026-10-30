@@ -240,13 +240,13 @@ function axismundi_contacts_orphaned_contact_owners( bool $with_footprint = true
 function axismundi_contacts_dangling_profile_bindings() : array {
 	global $wpdb;
 	$profiles = axismundi_contacts_profiles_table();
-	$cards    = axismundi_contacts_cards_table();
+	$cards    = axismundi_contacts_profile_documents_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- maintenance sweep over this plugin's own tables.
 	return array_map(
 		'intval',
 		(array) $wpdb->get_col(
 			"SELECT p.actor_id FROM {$profiles} p
-				LEFT JOIN {$cards} c ON c.id = p.card_id
+				LEFT JOIN {$cards} c ON c.id = p.card_id AND c.owner_actor_id = p.actor_id
 				WHERE p.card_id > 0 AND c.id IS NULL"
 		)
 	);

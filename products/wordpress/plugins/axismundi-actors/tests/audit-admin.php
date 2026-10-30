@@ -62,7 +62,15 @@ try {
 	if ( $subscriber_actor instanceof Axismundi_Actor ) {
 		$ax_admin_ids[] = $subscriber_actor->get_identity_id();
 	}
-	ax_admin_assert( $ax_admin_results, 'a Subscriber cannot manage or activate even its own retained Actor row', $subscriber_actor instanceof Axismundi_Actor && ! axismundi_actors_can_manage( $subscriber_actor, $subscriber ) );
+	ax_admin_assert( $ax_admin_results, 'a Subscriber with an owner grant may manage its own Actor', $subscriber_actor instanceof Axismundi_Actor && axismundi_actors_can_manage( $subscriber_actor, $subscriber ) && axismundi_actors_can_manage_user_actor( $subscriber, $subscriber ) );
+	$subscriber_user = get_userdata( $subscriber );
+	$subscriber_user->add_cap( 'read', false );
+	try {
+		ax_admin_assert( $ax_admin_results, 'a grant does not bypass the relaxed read capability', ! axismundi_actors_can_manage( $subscriber_actor, $subscriber ) && ! axismundi_actors_can_manage_user_actor( $subscriber, $subscriber ) );
+	} finally {
+		$subscriber_user->remove_cap( 'read' );
+	}
+	ax_admin_assert( $ax_admin_results, 'system Account management uses the default site capability', axismundi_actors_can_manage( axismundi_actors_get_system_actor(), $admin ) && ! axismundi_actors_can_manage( axismundi_actors_get_system_actor(), $subscriber ) );
 
 	/*
 	 * The management screen must not create anything.
@@ -91,8 +99,13 @@ try {
 	unset( $_GET['user_id'] );
 
 	ax_admin_assert( $ax_admin_results, 'rendering the screen creates no actor', null === axismundi_actors_get_for_user( $ax_csrf_user ) );
-	ax_admin_assert( $ax_admin_results, 'the un-activated screen still offers the activation wizard', false !== strpos( $ax_csrf_markup, 'axismundi_actors_activate' ) );
-	ax_admin_assert( $ax_admin_results, 'and that wizard carries a nonce, which is where creation happens', false !== strpos( $ax_csrf_markup, '_wpnonce' ) );
+	ax_admin_assert( $ax_admin_results, 'a user query does not select or create an Account on the profile screen', false === strpos( $ax_csrf_markup, 'axismundi_actors_activate' ) );
+	$_GET['identity_id'] = $actor->get_identity_id();
+	ob_start();
+	axismundi_actors_render_admin_page();
+	$ax_activation_markup = (string) ob_get_clean();
+	unset( $_GET['identity_id'] );
+	ax_admin_assert( $ax_admin_results, 'an explicitly selected handle-less Account has a nonce-protected activation wizard', false !== strpos( $ax_activation_markup, 'axismundi_actors_activate' ) && false !== strpos( $ax_activation_markup, '_wpnonce' ) );
 
 	wp_set_current_user( $other );
 	$_GET['user_id'] = $ax_csrf_user;

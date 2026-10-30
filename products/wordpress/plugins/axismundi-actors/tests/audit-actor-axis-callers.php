@@ -3,6 +3,7 @@
 defined( 'ABSPATH' ) || exit( 1 );
 $allowed = array(
 	'axismundi-actors/includes/admin.php::axismundi_actors_authorize_user_actor' => 'E: legacy User activation API',
+	'axismundi-actors/includes/admin.php::axismundi_actors_can_manage_user_actor' => 'E: legacy User activation adapter delegates existing Accounts to the Account gate',
 	'axismundi-actors/includes/admin.php::axismundi_actors_profile_panel' => 'D: edited WordPress User summary',
 	'axismundi-actors/includes/admin.php::axismundi_actors_users_column_content' => 'D: fixed Users-table row',
 	'axismundi-actors/includes/avatar.php::axismundi_actors_filter_avatar_data' => 'D: WordPress User avatar',
@@ -50,4 +51,4 @@ foreach ( glob( WP_PLUGIN_DIR . '/axismundi-*/includes', GLOB_ONLYDIR ) as $dire
 		}
 	}
 }
-printf( "PASS: %d remaining single-Actor calls are documented D/E consumers; deprecated Note excluded\n", $calls );
+printf( "PASS actor-axis-callers %d\n", $calls );

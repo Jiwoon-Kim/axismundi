@@ -503,6 +503,7 @@ function axismundi_contacts_stop_unkeepable_sharing() : void {
  */
 function axismundi_contacts_ensure_identity_services() : void {
 	global $wpdb;
+	$split = (int) get_option( AXISMUNDI_CONTACTS_DB_VERSION_OPTION ) >= 15;
 	if ( ! function_exists( 'axismundi_actors_get_by_identity' ) ) {
 		return;
 	}
@@ -515,7 +516,7 @@ function axismundi_contacts_ensure_identity_services() : void {
 		if ( $actor_id <= 0 || $card_id <= 0 ) {
 			continue;
 		}
-		$document = axismundi_contacts_card_document( $card_id );
+		$document = $split ? axismundi_contacts_profile_document( $card_id ) : axismundi_contacts_card_document( $card_id );
 		if ( array() === $document ) {
 			continue;
 		}
@@ -534,7 +535,7 @@ function axismundi_contacts_ensure_identity_services() : void {
 		 * it would be a name for the handle that the save path then refuses to let anybody change.
 		 */
 		$document['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] = $fixed;
-		$saved = axismundi_contacts_save_card_for_owner( $actor_id, $document, $card_id );
+		$saved = $split ? axismundi_contacts_save_profile_document( $actor_id, $document, $card_id ) : axismundi_contacts_save_card_for_owner( $actor_id, $document, $card_id );
 		if ( is_wp_error( $saved ) ) {
 			continue;
 		}
@@ -542,12 +543,14 @@ function axismundi_contacts_ensure_identity_services() : void {
 		 * And it is recorded as the Actor's, which is what says the account is about that Actor rather
 		 * than something somebody typed that happens to look like it.
 		 */
-		axismundi_contacts_set_provenance(
-			$card_id,
-			'onlineServices/' . AXISMUNDI_CONTACTS_HOME_SERVICE_KEY,
-			AXISMUNDI_CONTACTS_SOURCE_ACTOR,
-			$actor->get_uri()
-		);
+		if ( ! $split ) {
+			axismundi_contacts_set_provenance(
+				$card_id,
+				'onlineServices/' . AXISMUNDI_CONTACTS_HOME_SERVICE_KEY,
+				AXISMUNDI_CONTACTS_SOURCE_ACTOR,
+				$actor->get_uri()
+			);
+		}
 	}
 }
 
@@ -629,7 +632,8 @@ function axismundi_contacts_restore_service_actor_refs() : void {
  */
 function axismundi_contacts_migrate_home_service_key() : void {
 	global $wpdb;
-	$cards = axismundi_contacts_cards_table();
+	$split = (int) get_option( AXISMUNDI_CONTACTS_DB_VERSION_OPTION ) >= 15;
+	$cards = $split ? axismundi_contacts_profile_documents_table() : axismundi_contacts_cards_table();
 	$from  = 'axismundi';
 	$to    = AXISMUNDI_CONTACTS_HOME_SERVICE_KEY;
 	if ( $from === $to ) {
@@ -639,7 +643,7 @@ function axismundi_contacts_migrate_home_service_key() : void {
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
 	$rows = (array) $wpdb->get_results(
 		"SELECT c.id, c.owner_actor_id FROM {$cards} c
-			INNER JOIN {$profiles} p ON p.card_id = c.id
+			INNER JOIN {$profiles} p ON p.card_id = c.id AND p.actor_id = c.owner_actor_id
 			WHERE c.card_json LIKE '%\"onlineServices\"%'",
 		ARRAY_A
 	);
@@ -647,10 +651,11 @@ function axismundi_contacts_migrate_home_service_key() : void {
 		axismundi_contacts_move_entry_key(
 			(int) $row['id'],
 			(int) $row['owner_actor_id'],
-			axismundi_contacts_card_document( (int) $row['id'] ),
+			$split ? axismundi_contacts_profile_document( (int) $row['id'] ) : axismundi_contacts_card_document( (int) $row['id'] ),
 			'onlineServices',
 			$from,
-			$to
+			$to,
+			$split
 		);
 	}
 }
@@ -671,9 +676,10 @@ function axismundi_contacts_migrate_home_service_key() : void {
  * @param string              $property Which collection the entry is in.
  * @param string              $from     The address it has.
  * @param string              $to       The address it should have.
+ * @param bool                $profile  Use the independent profile store, never infer it from an ID.
  * @return bool Whether it moved.
  */
-function axismundi_contacts_move_entry_key( int $card_id, int $owner, array $document, string $property, string $from, string $to ) : bool {
+function axismundi_contacts_move_entry_key( int $card_id, int $owner, array $document, string $property, string $from, string $to, bool $profile = false ) : bool {
 	global $wpdb;
 	$entries = (array) ( $document[ $property ] ?? array() );
 	if ( $from === $to || ! isset( $entries[ $from ] ) || isset( $entries[ $to ] ) ) {
@@ -705,9 +711,9 @@ function axismundi_contacts_move_entry_key( int $card_id, int $owner, array $doc
 		$document['localizations'] = $localizations;
 	}
 
-	$result = Axismundi_Contacts_Write::run( static function () use ( $owner, $document, $card_id, $was, $now ) {
+	$result = Axismundi_Contacts_Write::run( static function () use ( $owner, $document, $card_id, $was, $now, $profile ) {
 		global $wpdb;
-		$saved = axismundi_contacts_save_card_for_owner( $owner, $document, $card_id );
+		$saved = $profile ? axismundi_contacts_save_profile_document( $owner, $document, $card_id ) : axismundi_contacts_save_card_for_owner( $owner, $document, $card_id );
 		if ( is_wp_error( $saved ) ) {
 			return $saved;
 		}
@@ -718,21 +724,34 @@ function axismundi_contacts_move_entry_key( int $card_id, int $owner, array $doc
 		 * is the rename failing on a unique key and leaving the Card renamed with its provenance behind.
 		 */
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
-		if ( false === $wpdb->delete( axismundi_contacts_provenance_table(), array( 'card_id' => $card_id, 'pointer' => $now ), array( '%d', '%s' ) ) ) {
-			return false;
+		if ( $profile ) {
+			$row = axismundi_contacts_get_profile_document_row( $card_id );
+			$provenance = (array) json_decode( (string) ( $row['provenance_json'] ?? '[]' ), true );
+			$provenance = array_values( array_filter( $provenance, static fn( array $entry ) : bool => $now !== ( $entry['pointer'] ?? '' ) ) );
+			foreach ( $provenance as &$entry ) {
+				if ( $was === ( $entry['pointer'] ?? '' ) ) { $entry['pointer'] = $now; }
+			}
+			unset( $entry );
+			if ( false === $wpdb->update( axismundi_contacts_profile_documents_table(), array( 'provenance_json' => wp_json_encode( $provenance ) ), array( 'id' => $card_id ) ) ) {
+				return new WP_Error( 'ax_contacts_profile_provenance', 'Profile provenance could not be moved.' );
+			}
+		} else {
+			if ( false === $wpdb->delete( axismundi_contacts_provenance_table(), array( 'card_id' => $card_id, 'pointer' => $now ), array( '%d', '%s' ) ) ) {
+				return false;
+			}
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
+			$updated = $wpdb->update(
+				axismundi_contacts_provenance_table(),
+				array( 'pointer' => $now ),
+				array( 'card_id' => $card_id, 'pointer' => $was ),
+				array( '%s' ),
+				array( '%d', '%s' )
+			);
+			if ( false === $updated ) {
+				return false;
+			}
 		}
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
-		$updated = $wpdb->update(
-			axismundi_contacts_provenance_table(),
-			array( 'pointer' => $now ),
-			array( 'card_id' => $card_id, 'pointer' => $was ),
-			array( '%s' ),
-			array( '%d', '%s' )
-		);
-		if ( false === $updated ) {
-			return false;
-		}
-		$pointers = axismundi_contacts_published_pointers( $owner );
+		$pointers = ( $profile || (int) get_option( AXISMUNDI_CONTACTS_DB_VERSION_OPTION ) < 15 ) ? axismundi_contacts_published_pointers( $owner ) : array();
 		if ( in_array( $was, $pointers, true ) ) {
 			$pointers = array_map(
 				static function ( string $pointer ) use ( $was, $now ) : string {
@@ -764,40 +783,44 @@ function axismundi_contacts_move_entry_key( int $card_id, int $owner, array $doc
  */
 function axismundi_contacts_migrate_phone_keys() : void {
 	global $wpdb;
-	$cards = axismundi_contacts_cards_table();
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
-	$rows = (array) $wpdb->get_results( "SELECT id, owner_actor_id, card_json FROM {$cards} WHERE card_json LIKE '%\"pho-%'", ARRAY_A );
-	foreach ( $rows as $row ) {
-		$document = json_decode( (string) ( $row['card_json'] ?? '' ), true );
-		if ( ! is_array( $document ) ) {
-			continue;
-		}
-		foreach ( array_keys( (array) ( $document['phones'] ?? array() ) ) as $key ) {
-			$key = (string) $key;
-			if ( ! str_starts_with( $key, 'pho-' ) ) {
+	$tables = array( array( axismundi_contacts_cards_table(), false ) );
+	if ( (int) get_option( AXISMUNDI_CONTACTS_DB_VERSION_OPTION ) >= 15 ) { $tables[] = array( axismundi_contacts_profile_documents_table(), true ); }
+	foreach ( $tables as [ $cards, $profile ] ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration in this plugin's own table.
+		$rows = (array) $wpdb->get_results( "SELECT id, owner_actor_id, card_json FROM {$cards} WHERE card_json LIKE '%\"pho-%'", ARRAY_A );
+		foreach ( $rows as $row ) {
+			$document = json_decode( (string) ( $row['card_json'] ?? '' ), true );
+			if ( ! is_array( $document ) ) {
 				continue;
 			}
-			$current = axismundi_contacts_card_document( (int) $row['id'] );
-			/*
-			 * Usually the same address with the collection's name on it, so a diff of this migration
-			 * reads as one word changing. When a Card already holds that address -- two entries whose
-			 * ids differ only by the prefix -- the number moves to a new one instead. Merging them
-			 * would put one number's provenance and publishing consent onto another; leaving it would
-			 * leave a `pho-` behind for good, and the address a document uses would depend on the week
-			 * it was written.
-			 */
-			$target = 'tel-' . substr( $key, 4 );
-			while ( isset( $current['phones'][ $target ] ) ) {
-				$target = 'tel-' . wp_generate_uuid4();
+			foreach ( array_keys( (array) ( $document['phones'] ?? array() ) ) as $key ) {
+				$key = (string) $key;
+				if ( ! str_starts_with( $key, 'pho-' ) ) {
+					continue;
+				}
+				$current = $profile ? axismundi_contacts_profile_document( (int) $row['id'] ) : axismundi_contacts_card_document( (int) $row['id'] );
+				/*
+				 * Usually the same address with the collection's name on it, so a diff of this migration
+				 * reads as one word changing. When a Card already holds that address -- two entries whose
+				 * ids differ only by the prefix -- the number moves to a new one instead. Merging them
+				 * would put one number's provenance and publishing consent onto another; leaving it would
+				 * leave a `pho-` behind for good, and the address a document uses would depend on the week
+				 * it was written.
+				 */
+				$target = 'tel-' . substr( $key, 4 );
+				while ( isset( $current['phones'][ $target ] ) ) {
+					$target = 'tel-' . wp_generate_uuid4();
+				}
+				axismundi_contacts_move_entry_key(
+					(int) $row['id'],
+					(int) $row['owner_actor_id'],
+					$current,
+					'phones',
+					$key,
+					$target,
+					$profile
+				);
 			}
-			axismundi_contacts_move_entry_key(
-				(int) $row['id'],
-				(int) $row['owner_actor_id'],
-				$current,
-				'phones',
-				$key,
-				$target
-			);
 		}
 	}
 }

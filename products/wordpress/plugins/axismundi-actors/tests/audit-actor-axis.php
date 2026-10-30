@@ -79,7 +79,7 @@ try {
 	try { axismundi_actors_render_admin_page(); $html = ob_get_contents(); } finally { ob_end_clean(); }
 	$assert( str_contains( $html, 'name="identity_id" value="' . $actors[2] . '"' ) && str_contains( $html, esc_html( $organization->get_uri() ) ), 'Profile forms bind displayed Account identity' );
 	$assert( $count === (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . axismundi_actors_identities_table() ), 'Profile GET creates no identities' );
-	$assert( ! axismundi_actors_can_manage( $organization, $users[1] ), 'WP administrator without a principal grant cannot edit an Account' );
+	$assert( axismundi_actors_can_manage( $organization, $users[1] ), 'WP administrator without a principal grant meets the default manage_options requirement' );
 	$assert( is_wp_error( axismundi_actors_admin_profile_actor( 0 ) ), 'Invalid explicit profile target cannot fall back to current Account' );
 	$grant = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM %i WHERE identity_id = %d AND principal_kind = 'wp_user' AND principal_id = %d", axismundi_actors_managers_table(), $actors[2], $user ), ARRAY_A );
 	$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $actors[2], 'principal_kind' => 'wp_user', 'principal_id' => $user ) );

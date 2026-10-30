@@ -52,7 +52,7 @@ try {
 	axismundi_actors_record_verified_acct_address( $ax_remote_admin_id, 'admin_fixture@example.com' );
 	axismundi_actors_upsert_instance( 'example.com', array( 'software_name' => 'fixture', 'software_version' => '1.2.3', 'open_registrations' => 1, 'fetch_status' => 'ok', 'payload_json' => '{}' ) );
 
-	ax_remote_admin_assert( $ax_remote_admin_results, 'the remote screen lives under Users and requires manage_options', str_contains( axismundi_actors_remote_admin_url(), 'users.php?page=axismundi-remote-actors' ) && current_user_can( 'manage_options' ) );
+	ax_remote_admin_assert( $ax_remote_admin_results, 'the remote screen uses Account navigation and requires manage_options', axismundi_actors_account_admin_url( 'axismundi-remote-actors' ) === axismundi_actors_remote_admin_url() && current_user_can( 'manage_options' ) );
 	ax_remote_admin_assert( $ax_remote_admin_results, 'repository list APIs return the cached Actor and host rows', 1 <= count( array_filter( axismundi_actors_get_remote_actors(), static fn( Axismundi_Actor $item ) : bool => $item->get_identity_id() === $ax_remote_admin_id ) ) && null !== axismundi_actors_get_instance( 'example.com' ) );
 	ax_remote_admin_assert( $ax_remote_admin_results, 'remote Actor search and count include verified acct addresses outside an unfiltered recent-page assumption', 1 === count( axismundi_actors_get_remote_actors( 50, 0, '@admin_fixture@example.com' ) ) && 1 === axismundi_actors_count_remote_actors( '@admin_fixture@example.com' ) );
 

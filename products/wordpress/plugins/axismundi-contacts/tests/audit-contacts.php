@@ -32,6 +32,26 @@ function ax_ct_assert( array &$results, string $label, bool $condition ) : void 
 	printf( "[%s] %s\n", $condition ? 'PASS' : 'FAIL', $label );
 }
 
+/** Inspect the independent profile's migrated provenance, not ContactCard rows. */
+function ax_ct_profile_provenance( int $id ) : array {
+	$row = axismundi_contacts_get_profile_document_row( $id );
+	$result = array();
+	foreach ( (array) json_decode( (string) ( $row['provenance_json'] ?? '[]' ), true ) as $entry ) {
+		$result[ $entry['pointer'] ] = $entry;
+	}
+	return $result;
+}
+
+/** Seed historical profile metadata directly for the key-migration fixtures. */
+function ax_ct_set_profile_provenance( int $id, string $pointer, string $source, string $ref ) : void {
+	global $wpdb;
+	$entries = ax_ct_profile_provenance( $id );
+	$entries[ $pointer ] = array( 'pointer' => $pointer, 'source' => $source, 'source_ref' => $ref );
+	if ( false === $wpdb->update( axismundi_contacts_profile_documents_table(), array( 'provenance_json' => wp_json_encode( array_values( $entries ) ) ), array( 'id' => $id ) ) ) {
+		throw new RuntimeException( 'Profile provenance fixture could not be stored.' );
+	}
+}
+
 /**
  * Every Actor this file creates, so the registry ends the run holding what it started with.
  *
@@ -321,9 +341,10 @@ try {
 
 	ax_ct_assert(
 		$ax_ct_results,
-		'the card describing the owner is pointed at rather than being a different kind of row',
+		'a filed contact is copied into an independent profile without moving the contact',
 		true === axismundi_contacts_set_profile_card( $ax_ct_owner_id, $ax_ct_card )
-			&& $ax_ct_card === axismundi_contacts_profile_card( $ax_ct_owner_id )
+			&& array() !== axismundi_contacts_profile_document( axismundi_contacts_profile_card( $ax_ct_owner_id ) )
+			&& array() !== axismundi_contacts_get_card( $ax_ct_card )
 	);
 	$ax_ct_other_book = axismundi_contacts_book_for_actor( (int) $ax_ct_stranger->get_identity_id() );
 	$ax_ct_books[]    = (int) ( $ax_ct_other_book['id'] ?? 0 );
@@ -407,8 +428,7 @@ try {
 	 */
 	$ax_ct_self_actor = ax_ct_actor( $ax_ct_users );
 	$ax_ct_self_made  = axismundi_contacts_create_profile_card( (int) $ax_ct_self_actor->get_identity_id() );
-	$ax_ct_loose[]    = is_wp_error( $ax_ct_self_made ) ? 0 : (int) $ax_ct_self_made;
-	$ax_ct_self_doc   = is_wp_error( $ax_ct_self_made ) ? array() : axismundi_contacts_card_document( (int) $ax_ct_self_made );
+	$ax_ct_self_doc   = is_wp_error( $ax_ct_self_made ) ? array() : axismundi_contacts_profile_document( (int) $ax_ct_self_made );
 	ax_ct_assert(
 		$ax_ct_results,
 		'a card made here says which revision of JSContact it is written in, in the ledger itself',
@@ -457,12 +477,17 @@ try {
 	$ax_ct_fresh      = ax_ct_actor( $ax_ct_users );
 	$ax_ct_fresh_book = axismundi_contacts_book_for_actor( (int) $ax_ct_fresh->get_identity_id() );
 	$ax_ct_books[]    = (int) $ax_ct_fresh_book['id'];
-	$ax_ct_seeded     = axismundi_contacts_profile_card( (int) $ax_ct_fresh->get_identity_id() );
+	$ax_ct_fresh_profile = axismundi_contacts_profile_card( (int) $ax_ct_fresh->get_identity_id() );
+	$ax_ct_seeded = axismundi_contacts_save_card( (int) $ax_ct_fresh_book['id'], array( '@type' => 'Card', 'kind' => 'individual', 'uid' => 'urn:uuid:' . wp_generate_uuid4() ) );
+	if ( is_wp_error( $ax_ct_seeded ) ) { throw new RuntimeException( $ax_ct_seeded->get_error_message() ); }
+	$ax_ct_loose[] = (int) $ax_ct_seeded;
+	axismundi_contacts_link_actor( (int) $ax_ct_seeded, $ax_ct_fresh->get_uri(), 'Axismundi', AXISMUNDI_CONTACTS_HOME_SERVICE_KEY );
 	$ax_ct_seeded_doc = $ax_ct_seeded > 0 ? axismundi_contacts_card_document( $ax_ct_seeded ) : array();
 	ax_ct_assert(
 		$ax_ct_results,
-		'a new address book opens with a card for its owner, connected to that Actor',
+		'an explicitly linked ContactCard is seeded independently of the owner profile',
 		$ax_ct_seeded > 0
+			&& array() !== axismundi_contacts_profile_document( $ax_ct_fresh_profile )
 			&& $ax_ct_fresh->get_display_name() === (string) ( $ax_ct_seeded_doc['name']['full'] ?? '' )
 			&& $ax_ct_fresh->get_uri() === (string) axismundi_contacts_get_card( $ax_ct_seeded )['linked_actor_uri']
 	);
@@ -1522,13 +1547,13 @@ try {
 	ax_ct_assert(
 		$ax_ct_results,
 		'what an owner keeps can be counted before anything is destroyed',
-		2 === $ax_ct_before['cards'] && 1 === $ax_ct_before['books'] && 1 === $ax_ct_before['profile']
+		1 === $ax_ct_before['cards'] && 1 === $ax_ct_before['books'] && 1 === $ax_ct_before['profile']
 	);
 	$ax_ct_purged = axismundi_contacts_purge_actor( $ax_ct_doomed_id );
 	ax_ct_assert(
 		$ax_ct_results,
 		'closing an owner takes the profile card, the books, and every card they owned',
-		2 === $ax_ct_purged['cards'] && 1 === $ax_ct_purged['books']
+		1 === $ax_ct_purged['cards'] && 1 === $ax_ct_purged['books']
 			&& array( 'cards' => 0, 'books' => 0, 'profile' => 0 ) === axismundi_contacts_actor_footprint( $ax_ct_doomed_id )
 			&& array() === axismundi_contacts_get_card( (int) $ax_ct_doomed_card )
 			&& 0 === axismundi_contacts_profile_card( $ax_ct_doomed_id )
@@ -1584,6 +1609,9 @@ try {
 	);
 
 	// -- who owns the published document ------------------------------------------------------------------------
+	$ax_ct_linked_contact = $ax_ct_seeded;
+	$ax_ct_seeded = $ax_ct_fresh_profile;
+	$ax_ct_seed_uid = axismundi_contacts_profile_document( $ax_ct_seeded )['uid'];
 
 	/*
 	 * Contacts holds the Card and renders it. Actors used to build one of its own from the identity
@@ -1692,7 +1720,7 @@ try {
 	 * that was somebody else's to write, so none of it survives the repair. Every other account is
 	 * untouched: those are the ones a person actually keeps.
 	 */
-	$ax_ct_stale_doc = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_stale_doc = axismundi_contacts_profile_document( $ax_ct_seeded );
 	$ax_ct_stale_doc['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] = array(
 		'@type'   => 'OnlineService',
 		'service' => 'Axismundi',
@@ -1707,9 +1735,9 @@ try {
 		'service' => 'Mastodon',
 		'uri'     => 'https://example.test/@someone',
 	);
-	axismundi_contacts_save_card_for_owner( (int) $ax_ct_fresh->get_identity_id(), $ax_ct_stale_doc, $ax_ct_seeded );
+	axismundi_contacts_save_profile_document( (int) $ax_ct_fresh->get_identity_id(), $ax_ct_stale_doc, $ax_ct_seeded );
 	axismundi_contacts_ensure_identity_services();
-	$ax_ct_repaired = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_repaired = axismundi_contacts_profile_document( $ax_ct_seeded );
 	$ax_ct_repaired_x1 = (array) ( $ax_ct_repaired['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ] ?? array() );
 	ax_ct_assert(
 		$ax_ct_results,
@@ -1853,7 +1881,7 @@ try {
 				: 'accepted';
 		}
 	};
-	$ax_ct_profile_delete = $ax_ct_delete_try( $ax_ct_seeded, $ax_ct_sep_book );
+	$ax_ct_profile_before_delete = axismundi_contacts_profile_document( $ax_ct_seeded );
 	$ax_ct_throwaway      = (int) axismundi_contacts_save_card( $ax_ct_sep_book, array( '@type' => 'Card', 'name' => array( 'full' => 'Throwaway' ) ) );
 	$ax_ct_contact_delete = $ax_ct_delete_try( $ax_ct_throwaway, $ax_ct_sep_book );
 	remove_all_filters( 'wp_redirect', 99 );
@@ -1863,15 +1891,15 @@ try {
 	ax_ct_assert(
 		$ax_ct_results,
 		'the profile is opened as the profile, kept out of the contacts, and cannot be deleted as one',
-		// Refused, and for being the profile rather than for where it happens to be filed.
-		str_contains( $ax_ct_profile_delete, 'publishes about itself' )
-			&& $ax_ct_seeded === axismundi_contacts_profile_card( (int) $ax_ct_fresh->get_identity_id() )
-			&& array() !== axismundi_contacts_get_card( $ax_ct_seeded )
+		// ContactCard deletion cannot remove the independent profile at a colliding numeric ID.
+		$ax_ct_seeded === axismundi_contacts_profile_card( (int) $ax_ct_fresh->get_identity_id() )
+			&& $ax_ct_profile_before_delete === axismundi_contacts_profile_document( $ax_ct_seeded )
+			&& array() !== axismundi_contacts_get_profile_document_row( $ax_ct_seeded )
 			// While an ordinary contact still goes when somebody says so.
 			&& 'accepted' === $ax_ct_contact_delete
 			&& array() === axismundi_contacts_get_card( $ax_ct_throwaway )
 			// Not listed among the contacts, and no longer promotable from one.
-			&& str_contains( $ax_ct_admin_src, 'return $self_id <= 0 || (int) ( $card[' )
+			&& ! str_contains( $ax_ct_admin_src, 'return $self_id <= 0 || (int) ( $card[' )
 			&& ! str_contains( $ax_ct_admin_src, 'This is me' )
 			&& ! str_contains( $ax_ct_admin_src, 'axismundi_contacts_handle_set_profile_card' )
 			// And the editor is told which ledger it is open against rather than working it out.
@@ -1899,7 +1927,7 @@ try {
 	$ax_ct_hn_found  = function_exists( 'axismundi_actors_webfinger_descriptor' )
 		? axismundi_actors_webfinger_descriptor( 'acct:' . $ax_ct_hn_acct )
 		: new WP_Error( 'ax_ct_no_webfinger', 'no webfinger' );
-	$ax_ct_hn_card   = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_hn_card   = axismundi_contacts_profile_document( $ax_ct_seeded );
 	ax_ct_assert(
 		$ax_ct_results,
 		'the handle on a card is an address the directory answers to, port and all',
@@ -1937,16 +1965,16 @@ try {
 	$ax_ct_was_user = get_current_user_id();
 	wp_set_current_user( (int) $ax_ct_fresh->get_local_user_id() );
 	$ax_ct_put = static function ( int $card_id, array $card ) {
-		$request = new WP_REST_Request( 'PUT', '/' . axismundi_contacts_rest_namespace() . '/cards/' . $card_id . '/draft' );
+		$request = new WP_REST_Request( 'PUT', '/' . axismundi_contacts_rest_namespace() . '/profiles/' . $card_id . '/draft' );
 		$request->set_header( 'content-type', 'application/json' );
 		$request->set_body(
 			(string) wp_json_encode(
-				array( 'card' => $card, 'revision' => (int) ( axismundi_contacts_get_card( $card_id )['revision'] ?? 0 ) )
+				array( 'card' => $card, 'revision' => (int) ( axismundi_contacts_get_profile_document_row( $card_id )['revision'] ?? 0 ) )
 			)
 		);
 		return rest_do_request( $request );
 	};
-	$ax_ct_id_doc  = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_id_doc  = axismundi_contacts_profile_document( $ax_ct_seeded );
 	$ax_ct_renamed = $ax_ct_id_doc;
 	$ax_ct_renamed['onlineServices'][ AXISMUNDI_CONTACTS_HOME_SERVICE_KEY ]['service'] = 'Something else';
 	$ax_ct_moved_id = $ax_ct_id_doc;
@@ -1956,7 +1984,7 @@ try {
 	$ax_ct_renamed_res = $ax_ct_put( $ax_ct_seeded, $ax_ct_renamed );
 	$ax_ct_moved_res   = $ax_ct_put( $ax_ct_seeded, $ax_ct_moved_id );
 	$ax_ct_dropped_res = $ax_ct_put( $ax_ct_seeded, $ax_ct_dropped );
-	$ax_ct_id_after    = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_id_after    = axismundi_contacts_profile_document( $ax_ct_seeded );
 	wp_set_current_user( $ax_ct_was_user );
 	ax_ct_assert(
 		$ax_ct_results,
@@ -2005,15 +2033,15 @@ try {
 	 * Card it keeps. `media` is the other thing: an image deliberately put on this Card, published
 	 * only if its owner published it.
 	 */
-	$ax_ct_pic_doc = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_pic_doc = axismundi_contacts_profile_document( $ax_ct_seeded );
 	$ax_ct_pic_doc['media'] = array(
 		'med-1' => array( '@type' => 'Media', 'kind' => 'photo', 'uri' => 'https://example.test/face.png' ),
 	);
-	axismundi_contacts_save_card_for_owner( (int) $ax_ct_fresh->get_identity_id(), $ax_ct_pic_doc, $ax_ct_seeded );
+	axismundi_contacts_save_profile_document( (int) $ax_ct_fresh->get_identity_id(), $ax_ct_pic_doc, $ax_ct_seeded );
 	$ax_ct_pic_out = axismundi_contacts_jscontact_card( $ax_ct_fresh );
 	// An Actor that is not published at all. Its card answers nothing, whatever its owner selected.
 	$ax_ct_hidden  = ax_ct_actor( $ax_ct_users );
-	axismundi_actors_set_status( (int) $ax_ct_hidden->get_identity_id(), 'internal' );
+	axismundi_actors_set_status( (int) $ax_ct_hidden->get_identity_id(), 'disabled' );
 	$ax_ct_hidden  = axismundi_actors_get_by_identity( (int) $ax_ct_hidden->get_identity_id() );
 	ax_ct_assert(
 		$ax_ct_results,
@@ -2046,7 +2074,7 @@ try {
 	 * components is how they come to disagree, so the card keeps them and the identity registry is no
 	 * longer asked -- which also ends the question of which side wins when they differ.
 	 */
-	$ax_ct_owned = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_owned = axismundi_contacts_profile_document( $ax_ct_seeded );
 	$ax_ct_owned['name'] = array(
 		'@type'      => 'Name',
 		'full'       => "\xea\xb9\x80\xec\xa7\x80\xec\x9a\xb4",
@@ -2057,9 +2085,9 @@ try {
 		),
 		'isOrdered'  => true,
 	);
-	axismundi_contacts_save_card_for_owner( (int) $ax_ct_fresh->get_identity_id(), $ax_ct_owned, $ax_ct_seeded );
+	axismundi_contacts_save_profile_document( (int) $ax_ct_fresh->get_identity_id(), $ax_ct_owned, $ax_ct_seeded );
 	$ax_ct_kept = array();
-	foreach ( (array) ( axismundi_contacts_card_document( $ax_ct_seeded )['name']['components'] ?? array() ) as $ax_ct_c ) {
+	foreach ( (array) ( axismundi_contacts_profile_document( $ax_ct_seeded )['name']['components'] ?? array() ) as $ax_ct_c ) {
 		$ax_ct_kept[ (string) $ax_ct_c['kind'] ] = (string) $ax_ct_c['value'];
 	}
 	ax_ct_assert(
@@ -2100,7 +2128,7 @@ try {
 	 * it. Collapsing them loses which is which, so each is its own localization with its own
 	 * components and its own reading order.
 	 */
-	$ax_ct_loc = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_loc = axismundi_contacts_profile_document( $ax_ct_seeded );
 	$ax_ct_loc = axismundi_contacts_set_localized_name(
 		$ax_ct_loc,
 		'ko-Latn',
@@ -2114,8 +2142,8 @@ try {
 		)
 	);
 	$ax_ct_loc = axismundi_contacts_set_localized_name( $ax_ct_loc, 'en', array( 'full' => 'Trump' ) );
-	axismundi_contacts_save_card_for_owner( (int) $ax_ct_fresh->get_identity_id(), $ax_ct_loc, $ax_ct_seeded );
-	$ax_ct_back  = axismundi_contacts_card_document( $ax_ct_seeded );
+	axismundi_contacts_save_profile_document( (int) $ax_ct_fresh->get_identity_id(), $ax_ct_loc, $ax_ct_seeded );
+	$ax_ct_back  = axismundi_contacts_profile_document( $ax_ct_seeded );
 	$ax_ct_latin = axismundi_contacts_localized_name( $ax_ct_back, 'ko-Latn' );
 	$ax_ct_en    = axismundi_contacts_localized_name( $ax_ct_back, 'en' );
 	ax_ct_assert(
@@ -2671,9 +2699,9 @@ try {
 	 * would otherwise change, on save and without being asked, what every stranger and every remote
 	 * server sees. Taking the correction across is a second decision, made on the same screen.
 	 */
-	$ax_ct_fixdoc = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_fixdoc = axismundi_contacts_profile_document( $ax_ct_seeded );
 	$ax_ct_fixdoc = axismundi_contacts_set_localized_name( $ax_ct_fixdoc, 'ko-Latn', array( 'full' => 'Ji-woon Kim' ) );
-	axismundi_contacts_save_card_for_owner( $ax_ct_sid, $ax_ct_fixdoc, $ax_ct_seeded );
+	axismundi_contacts_save_profile_document( $ax_ct_sid, $ax_ct_fixdoc, $ax_ct_seeded );
 	$ax_ct_texts = axismundi_actors_get_text_map( $ax_ct_sid );
 	ax_ct_assert(
 		$ax_ct_results,
@@ -2690,7 +2718,7 @@ try {
 	 */
 	axismundi_actors_set_text( $ax_ct_sid, 'name', 'de-DE', 'Herr Kim' );
 	$ax_ct_fixdoc = axismundi_contacts_set_localized_name( $ax_ct_fixdoc, 'ko-Latn', array( 'full' => 'Jiwoon KIM' ) );
-	axismundi_contacts_save_card_for_owner( $ax_ct_sid, $ax_ct_fixdoc, $ax_ct_seeded );
+	axismundi_contacts_save_profile_document( $ax_ct_sid, $ax_ct_fixdoc, $ax_ct_seeded );
 	$ax_ct_texts = axismundi_actors_get_text_map( $ax_ct_sid );
 	ax_ct_assert(
 		$ax_ct_results,
@@ -2707,7 +2735,7 @@ try {
 	 * a screen can say that writing is gone and offer to choose again.
 	 */
 	$ax_ct_fixdoc = axismundi_contacts_set_localized_name( $ax_ct_fixdoc, 'ko-Latn', array() );
-	axismundi_contacts_save_card_for_owner( $ax_ct_sid, $ax_ct_fixdoc, $ax_ct_seeded );
+	axismundi_contacts_save_profile_document( $ax_ct_sid, $ax_ct_fixdoc, $ax_ct_seeded );
 	$ax_ct_texts = axismundi_actors_get_text_map( $ax_ct_sid );
 	ax_ct_assert(
 		$ax_ct_results,
@@ -2729,10 +2757,10 @@ try {
 	 * under two tags at once, and a control keyed on the text could not say which was picked -- so a
 	 * later correction would follow the wrong one.
 	 */
-	$ax_ct_bind_doc = axismundi_contacts_card_document( $ax_ct_seeded );
+	$ax_ct_bind_doc = axismundi_contacts_profile_document( $ax_ct_seeded );
 	$ax_ct_bind_doc = axismundi_contacts_set_localized_name( $ax_ct_bind_doc, 'ko-Latn', array( 'full' => 'Same Text' ) );
 	$ax_ct_bind_doc = axismundi_contacts_set_localized_name( $ax_ct_bind_doc, 'en', array( 'full' => 'Same Text' ) );
-	axismundi_contacts_save_card_for_owner( $ax_ct_sid, $ax_ct_bind_doc, $ax_ct_seeded );
+	axismundi_contacts_save_profile_document( $ax_ct_sid, $ax_ct_bind_doc, $ax_ct_seeded );
 	axismundi_contacts_apply_binding_row( $ax_ct_sid, array( 'locale' => 'en-US', 'source' => 'tag:ko-Latn' ) );
 	ax_ct_assert(
 		$ax_ct_results,
@@ -2759,7 +2787,7 @@ try {
 	 */
 	axismundi_contacts_apply_binding_row( $ax_ct_sid, array( 'locale' => 'en-US', 'source' => 'tag:ko-Latn' ) );
 	$ax_ct_bind_doc = axismundi_contacts_set_localized_name( $ax_ct_bind_doc, 'ko-Latn', array() );
-	axismundi_contacts_save_card_for_owner( $ax_ct_sid, $ax_ct_bind_doc, $ax_ct_seeded );
+	axismundi_contacts_save_profile_document( $ax_ct_sid, $ax_ct_bind_doc, $ax_ct_seeded );
 	$ax_ct_before_save = axismundi_actors_get_text_map( $ax_ct_sid )['en-US']['name'] ?? '';
 	axismundi_contacts_apply_binding_row( $ax_ct_sid, array( 'locale' => 'en-US', 'source' => 'broken' ) );
 	$ax_ct_after_save = axismundi_actors_text_binding( $ax_ct_sid, 'name', 'en-US' );
@@ -2991,9 +3019,8 @@ try {
 	$ax_ct_fmt_sid   = (int) $ax_ct_fmt_actor->get_identity_id();
 	$ax_ct_fmt_made  = axismundi_contacts_create_profile_card( $ax_ct_fmt_sid );
 	$ax_ct_fmt_card  = is_wp_error( $ax_ct_fmt_made ) ? 0 : (int) $ax_ct_fmt_made;
-	$ax_ct_loose[]   = $ax_ct_fmt_card;
 	if ( $ax_ct_fmt_card > 0 ) {
-		$ax_ct_fmt_doc         = axismundi_contacts_card_document( $ax_ct_fmt_card );
+		$ax_ct_fmt_doc         = axismundi_contacts_profile_document( $ax_ct_fmt_card );
 		$ax_ct_fmt_doc['name'] = array(
 			'@type'      => 'Name',
 			'isOrdered'  => true,
@@ -3002,7 +3029,7 @@ try {
 				array( '@type' => 'NameComponent', 'kind' => 'surname', 'value' => 'Kim' ),
 			),
 		);
-		axismundi_contacts_save_card_for_owner( $ax_ct_fmt_sid, $ax_ct_fmt_doc, $ax_ct_fmt_card );
+		axismundi_contacts_save_profile_document( $ax_ct_fmt_sid, $ax_ct_fmt_doc, $ax_ct_fmt_card );
 	}
 	ax_ct_assert(
 		$ax_ct_results,
@@ -3026,12 +3053,11 @@ try {
 	$ax_ct_nm_sid   = (int) $ax_ct_nm_actor->get_identity_id();
 	$ax_ct_nm_made  = axismundi_contacts_create_profile_card( $ax_ct_nm_sid );
 	$ax_ct_nm_card  = is_wp_error( $ax_ct_nm_made ) ? 0 : (int) $ax_ct_nm_made;
-	$ax_ct_loose[]  = $ax_ct_nm_card;
 
-	$ax_ct_nm_doc = axismundi_contacts_card_document( $ax_ct_nm_card );
+	$ax_ct_nm_doc = axismundi_contacts_profile_document( $ax_ct_nm_card );
 	$ax_ct_nm_doc['name'] = array( '@type' => 'Name', 'full' => 'Jiwoon Kim' );
 	$ax_ct_nm_doc = axismundi_contacts_set_localized_name( $ax_ct_nm_doc, 'ko-Latn', array( '@type' => 'Name', 'full' => 'Jiwoon KIM' ) );
-	axismundi_contacts_save_card_for_owner( $ax_ct_nm_sid, $ax_ct_nm_doc, $ax_ct_nm_card );
+	axismundi_contacts_save_profile_document( $ax_ct_nm_sid, $ax_ct_nm_doc, $ax_ct_nm_card );
 
 	// A name typed on the Actor, in a locale pointed at nothing.
 	axismundi_actors_set_text( $ax_ct_nm_sid, 'name', 'de-DE', 'Eigener Name' );
@@ -3050,9 +3076,9 @@ try {
 	 * public -- and after the Card is first seeded from the Actor the only thing still crossing
 	 * between them is the account saying which Actor the Card is about.
 	 */
-	$ax_ct_nm_doc = axismundi_contacts_card_document( $ax_ct_nm_card );
+	$ax_ct_nm_doc = axismundi_contacts_profile_document( $ax_ct_nm_card );
 	$ax_ct_nm_doc = axismundi_contacts_set_localized_name( $ax_ct_nm_doc, 'ko-Latn', array( '@type' => 'Name', 'full' => 'Ji-woon Kim' ) );
-	axismundi_contacts_save_card_for_owner( $ax_ct_nm_sid, $ax_ct_nm_doc, $ax_ct_nm_card );
+	axismundi_contacts_save_profile_document( $ax_ct_nm_sid, $ax_ct_nm_doc, $ax_ct_nm_card );
 	$ax_ct_nm_map = axismundi_actors_get_text_map( $ax_ct_nm_sid );
 	ax_ct_assert(
 		$ax_ct_results,
@@ -3102,9 +3128,8 @@ try {
 	$ax_ct_pub_sid   = (int) $ax_ct_pub_actor->get_identity_id();
 	$ax_ct_pub_made  = axismundi_contacts_create_profile_card( $ax_ct_pub_sid );
 	$ax_ct_pub_card  = is_wp_error( $ax_ct_pub_made ) ? 0 : (int) $ax_ct_pub_made;
-	$ax_ct_loose[]   = $ax_ct_pub_card;
 
-	$ax_ct_pub_doc = axismundi_contacts_card_document( $ax_ct_pub_card );
+	$ax_ct_pub_doc = axismundi_contacts_profile_document( $ax_ct_pub_card );
 	$ax_ct_pub_doc = array_merge(
 		$ax_ct_pub_doc,
 		array(
@@ -3141,7 +3166,7 @@ try {
 	// A localization of a withheld value, in the patch form an import uses. It does not look like an
 	// address until it is applied to one, which is exactly what makes it easy to publish by accident.
 	$ax_ct_pub_doc['localizations']['en']['addresses/home/components'] = array( array( 'kind' => 'locality', 'value' => 'Nam-gu' ) );
-	axismundi_contacts_save_card_for_owner( $ax_ct_pub_sid, $ax_ct_pub_doc, $ax_ct_pub_card );
+	axismundi_contacts_save_profile_document( $ax_ct_pub_sid, $ax_ct_pub_doc, $ax_ct_pub_card );
 
 	axismundi_contacts_set_profile_audience( $ax_ct_pub_sid, 'public' );
 	axismundi_contacts_set_profile_sharing_enabled( $ax_ct_pub_sid, true );
@@ -3346,13 +3371,12 @@ try {
 
 	$ax_ct_split_profile = axismundi_contacts_create_profile_card( $ax_ct_split_sid );
 	$ax_ct_profile_card  = is_wp_error( $ax_ct_split_profile ) ? 0 : (int) $ax_ct_split_profile;
-	$ax_ct_loose[]       = $ax_ct_profile_card;
-	$ax_ct_profile_doc   = axismundi_contacts_card_document( $ax_ct_profile_card );
+	$ax_ct_profile_doc   = axismundi_contacts_profile_document( $ax_ct_profile_card );
 	$ax_ct_profile_doc['emails'] = array(
 		'e1' => array( 'address' => 'hello@example.test' ),
 		'e2' => array( 'address' => 'secret@example.test' ),
 	);
-	axismundi_contacts_save_card_for_owner( $ax_ct_split_sid, $ax_ct_profile_doc, $ax_ct_profile_card );
+	axismundi_contacts_save_profile_document( $ax_ct_split_sid, $ax_ct_profile_doc, $ax_ct_profile_card );
 	axismundi_contacts_set_published_pointers( $ax_ct_split_sid, array( 'name', 'emails/e1' ) );
 
 	/*
@@ -3414,15 +3438,15 @@ try {
 	 * value they publish -- and consent that travelled with a display string would land on a different
 	 * value the first time either of those happened.
 	 */
-	$ax_ct_moved = axismundi_contacts_card_document( $ax_ct_profile_card );
+	$ax_ct_moved = axismundi_contacts_profile_document( $ax_ct_profile_card );
 	$ax_ct_moved['emails'] = array(
 		// Reordered, and the published one's text corrected. Neither is a change of mind.
 		'e2' => array( 'address' => 'secret@example.test' ),
 		'e1' => array( 'address' => 'hello.corrected@example.test' ),
 	);
-	axismundi_contacts_save_card_for_owner( $ax_ct_split_sid, $ax_ct_moved, $ax_ct_profile_card );
+	axismundi_contacts_save_profile_document( $ax_ct_split_sid, $ax_ct_moved, $ax_ct_profile_card );
 	$ax_ct_after_move = axismundi_contacts_public_projection(
-		axismundi_contacts_card_document( $ax_ct_profile_card ),
+		axismundi_contacts_profile_document( $ax_ct_profile_card ),
 		axismundi_contacts_published_pointers( $ax_ct_split_sid )
 	);
 	ax_ct_assert(
@@ -3847,10 +3871,9 @@ try {
 	 */
 	$ax_ct_dr_profile = axismundi_contacts_create_profile_card( $ax_ct_dr_sid );
 	$ax_ct_dr_pcard   = is_wp_error( $ax_ct_dr_profile ) ? 0 : (int) $ax_ct_dr_profile;
-	$ax_ct_loose[]    = $ax_ct_dr_pcard;
-	$ax_ct_dr_pget    = (array) rest_do_request( new WP_REST_Request( 'GET', '/axismundi-contacts/v1/cards/' . $ax_ct_dr_pcard . '/draft' ) )->get_data();
+	$ax_ct_dr_pget    = (array) rest_do_request( new WP_REST_Request( 'GET', '/axismundi-contacts/v1/profiles/' . $ax_ct_dr_pcard . '/draft' ) )->get_data();
 
-	$ax_ct_dr_pput = new WP_REST_Request( 'PUT', '/axismundi-contacts/v1/cards/' . $ax_ct_dr_pcard . '/draft' );
+	$ax_ct_dr_pput = new WP_REST_Request( 'PUT', '/axismundi-contacts/v1/profiles/' . $ax_ct_dr_pcard . '/draft' );
 	$ax_ct_dr_pput->set_body_params(
 		array(
 			'revision'          => (int) ( $ax_ct_dr_pget['revision'] ?? 0 ),
@@ -3876,11 +3899,11 @@ try {
 			'publishedPointers' => array( 'name' ),
 		)
 	);
-	$ax_ct_dr_pbad = new WP_REST_Request( 'PUT', '/axismundi-contacts/v1/cards/' . $ax_ct_dr_pcard . '/draft' );
+	$ax_ct_dr_pbad = new WP_REST_Request( 'PUT', '/axismundi-contacts/v1/profiles/' . $ax_ct_dr_pcard . '/draft' );
 	$ax_ct_dr_pbad->set_body_params(
 		array(
-			'revision'          => (int) ( axismundi_contacts_get_card( $ax_ct_dr_pcard )['revision'] ?? 0 ),
-			'card'             => (array) axismundi_contacts_card_document( $ax_ct_dr_pcard ),
+			'revision'          => (int) ( axismundi_contacts_get_profile_document_row( $ax_ct_dr_pcard )['revision'] ?? 0 ),
+			'card'             => (array) axismundi_contacts_profile_document( $ax_ct_dr_pcard ),
 			'publishedPointers' => array( 'phones' ),
 		)
 	);
@@ -4916,21 +4939,20 @@ try {
 	$ax_ct_mv_sid   = (int) $ax_ct_mv_actor->get_identity_id();
 	$ax_ct_mv_made  = axismundi_contacts_create_profile_card( $ax_ct_mv_sid );
 	$ax_ct_mv_card  = is_wp_error( $ax_ct_mv_made ) ? 0 : (int) $ax_ct_mv_made;
-	$ax_ct_loose[]  = $ax_ct_mv_card;
-	$ax_ct_mv_doc   = axismundi_contacts_card_document( $ax_ct_mv_card );
+	$ax_ct_mv_doc   = axismundi_contacts_profile_document( $ax_ct_mv_card );
 	// Put it back the way it was written before the key was opaque.
 	$ax_ct_mv_doc['onlineServices'] = array(
 		'axismundi' => array( 'service' => 'Axismundi', 'user' => '@someone@localhost', 'uri' => $ax_ct_mv_actor->get_uri(), 'pref' => 1 ),
 		'x2'        => array( 'service' => 'Mastodon', 'user' => '@someone@mastodon.test', 'uri' => 'https://mastodon.test/@someone', 'pref' => 2 ),
 	);
-	axismundi_contacts_save_card_for_owner( $ax_ct_mv_sid, $ax_ct_mv_doc, $ax_ct_mv_card );
-	axismundi_contacts_set_provenance( $ax_ct_mv_card, 'onlineServices/axismundi', AXISMUNDI_CONTACTS_SOURCE_ACTOR, $ax_ct_mv_actor->get_uri() );
+	axismundi_contacts_save_profile_document( $ax_ct_mv_sid, $ax_ct_mv_doc, $ax_ct_mv_card );
+	ax_ct_set_profile_provenance( $ax_ct_mv_card, 'onlineServices/axismundi', AXISMUNDI_CONTACTS_SOURCE_ACTOR, $ax_ct_mv_actor->get_uri() );
 	axismundi_contacts_set_published_pointers( $ax_ct_mv_sid, array( 'name', 'onlineServices/axismundi' ) );
 
 	axismundi_contacts_migrate_home_service_key();
 
-	$ax_ct_mv_after = axismundi_contacts_card_document( $ax_ct_mv_card );
-	$ax_ct_mv_prov  = axismundi_contacts_card_provenance( $ax_ct_mv_card );
+	$ax_ct_mv_after = axismundi_contacts_profile_document( $ax_ct_mv_card );
+	$ax_ct_mv_prov  = ax_ct_profile_provenance( $ax_ct_mv_card );
 	$ax_ct_mv_pub   = axismundi_contacts_published_pointers( $ax_ct_mv_sid );
 	ax_ct_assert(
 		$ax_ct_results,
@@ -4968,8 +4990,7 @@ try {
 	$ax_ct_mv_ssid   = (int) $ax_ct_mv_second->get_identity_id();
 	$ax_ct_mv_smade  = axismundi_contacts_create_profile_card( $ax_ct_mv_ssid );
 	$ax_ct_mv_scard  = is_wp_error( $ax_ct_mv_smade ) ? 0 : (int) $ax_ct_mv_smade;
-	$ax_ct_loose[]   = $ax_ct_mv_scard;
-	$ax_ct_mv_sdoc   = axismundi_contacts_card_document( $ax_ct_mv_scard );
+	$ax_ct_mv_sdoc   = axismundi_contacts_profile_document( $ax_ct_mv_scard );
 
 	$ax_ct_mv_sdoc['onlineServices'] = array(
 		'axismundi' => array( 'service' => 'Axismundi', 'user' => '@them@localhost', 'uri' => $ax_ct_mv_second->get_uri(), 'pref' => 1 ),
@@ -4977,12 +4998,12 @@ try {
 	$ax_ct_mv_sdoc['localizations'] = array(
 		'ko-KR' => array( 'onlineServices/axismundi/service' => 'AX' ),
 	);
-	axismundi_contacts_save_card_for_owner( $ax_ct_mv_ssid, $ax_ct_mv_sdoc, $ax_ct_mv_scard );
+	axismundi_contacts_save_profile_document( $ax_ct_mv_ssid, $ax_ct_mv_sdoc, $ax_ct_mv_scard );
 
 	axismundi_contacts_migrate_home_service_key();
 
 	$ax_ct_mv_stheirs = axismundi_contacts_card_document( $ax_ct_mv_tkey );
-	$ax_ct_mv_safter  = axismundi_contacts_card_document( $ax_ct_mv_scard );
+	$ax_ct_mv_safter  = axismundi_contacts_profile_document( $ax_ct_mv_scard );
 	ax_ct_assert(
 		$ax_ct_results,
 		'it moves what this site wrote and nothing anybody imported, and a translation moves with it',
@@ -4997,14 +5018,14 @@ try {
 	 * And it is safe to run twice, and refuses to run onto an address something else already has --
 	 * renaming onto an occupied key would merge two accounts into one.
 	 */
-	$ax_ct_mv_taken = axismundi_contacts_card_document( $ax_ct_mv_card );
+	$ax_ct_mv_taken = axismundi_contacts_profile_document( $ax_ct_mv_card );
 	$ax_ct_mv_taken['onlineServices'] = array(
 		'axismundi' => array( 'service' => 'Axismundi', 'uri' => $ax_ct_mv_actor->get_uri() ),
 		'x1'        => array( 'service' => 'Mastodon', 'uri' => 'https://mastodon.test/@someone' ),
 	);
-	axismundi_contacts_save_card_for_owner( $ax_ct_mv_sid, $ax_ct_mv_taken, $ax_ct_mv_card );
+	axismundi_contacts_save_profile_document( $ax_ct_mv_sid, $ax_ct_mv_taken, $ax_ct_mv_card );
 	axismundi_contacts_migrate_home_service_key();
-	$ax_ct_mv_kept = axismundi_contacts_card_document( $ax_ct_mv_card );
+	$ax_ct_mv_kept = axismundi_contacts_profile_document( $ax_ct_mv_card );
 	ax_ct_assert(
 		$ax_ct_results,
 		'and it never renames onto an address something else is already using',
@@ -5080,24 +5101,23 @@ try {
 	$ax_ct_id_sid   = (int) $ax_ct_id_actor->get_identity_id();
 	$ax_ct_id_made  = axismundi_contacts_create_profile_card( $ax_ct_id_sid );
 	$ax_ct_id_card  = is_wp_error( $ax_ct_id_made ) ? 0 : (int) $ax_ct_id_made;
-	$ax_ct_loose[]  = $ax_ct_id_card;
-	$ax_ct_id_uid   = (string) ( axismundi_contacts_get_card( $ax_ct_id_card )['uid'] ?? '' );
+	$ax_ct_id_uid   = (string) ( axismundi_contacts_get_profile_document_row( $ax_ct_id_card )['uid'] ?? '' );
 
 	$ax_ct_id_put = static function ( array $document ) use ( $ax_ct_id_card ) {
-		$request = new WP_REST_Request( 'PUT', '/axismundi-contacts/v1/cards/' . $ax_ct_id_card . '/draft' );
+		$request = new WP_REST_Request( 'PUT', '/axismundi-contacts/v1/profiles/' . $ax_ct_id_card . '/draft' );
 		$request->set_param( 'id', $ax_ct_id_card );
-		$request->set_param( 'revision', (int) ( axismundi_contacts_get_card( $ax_ct_id_card )['revision'] ?? 0 ) );
+		$request->set_param( 'revision', (int) ( axismundi_contacts_get_profile_document_row( $ax_ct_id_card )['revision'] ?? 0 ) );
 		$request->set_param( 'card', $document );
 		return axismundi_contacts_rest_put_draft( $request );
 	};
 	wp_set_current_user( (int) $ax_ct_id_actor->get_local_user_id() );
 
-	$ax_ct_id_other        = axismundi_contacts_card_document( $ax_ct_id_card );
+	$ax_ct_id_other        = axismundi_contacts_profile_document( $ax_ct_id_card );
 	$ax_ct_id_other['uid'] = 'urn:uuid:00000000-0000-4000-8000-000000000000';
 	$ax_ct_id_refused      = $ax_ct_id_put( $ax_ct_id_other );
 
 	// Leaving it out is not changing it, so a caller that never mentions the uid still saves.
-	$ax_ct_id_silent = axismundi_contacts_card_document( $ax_ct_id_card );
+	$ax_ct_id_silent = axismundi_contacts_profile_document( $ax_ct_id_card );
 	unset( $ax_ct_id_silent['uid'] );
 	$ax_ct_id_kept = $ax_ct_id_put( $ax_ct_id_silent );
 	ax_ct_assert(
@@ -5106,7 +5126,7 @@ try {
 		is_wp_error( $ax_ct_id_refused )
 			&& 'ax_contacts_draft_uid' === $ax_ct_id_refused->get_error_code()
 			&& ! is_wp_error( $ax_ct_id_kept )
-			&& $ax_ct_id_uid === (string) ( axismundi_contacts_get_card( $ax_ct_id_card )['uid'] ?? '' )
+			&& $ax_ct_id_uid === (string) ( axismundi_contacts_get_profile_document_row( $ax_ct_id_card )['uid'] ?? '' )
 	);
 	/*
 	 * And what the Card an Actor publishes about itself describes is that Actor's answer. The radio
@@ -5114,7 +5134,7 @@ try {
 	 * that is answered -- a Person's card claiming to be an organisation would say one thing to a
 	 * reader and the Actor document another, both served from this site.
 	 */
-	$ax_ct_id_wrong         = axismundi_contacts_card_document( $ax_ct_id_card );
+	$ax_ct_id_wrong         = axismundi_contacts_profile_document( $ax_ct_id_card );
 	$ax_ct_id_wrong['kind'] = 'org';
 	$ax_ct_id_kind          = $ax_ct_id_put( $ax_ct_id_wrong );
 	ax_ct_assert(
@@ -5122,7 +5142,7 @@ try {
 		'and the card an Actor publishes cannot be told it describes something the Actor is not',
 		is_wp_error( $ax_ct_id_kind )
 			&& 'ax_contacts_draft_kind' === $ax_ct_id_kind->get_error_code()
-			&& 'individual' === (string) ( axismundi_contacts_card_document( $ax_ct_id_card )['kind'] ?? '' )
+			&& 'individual' === (string) ( axismundi_contacts_profile_document( $ax_ct_id_card )['kind'] ?? '' )
 	);
 	wp_set_current_user( (int) $ax_ct_owner->get_local_user_id() );
 	/*
@@ -5893,28 +5913,27 @@ try {
 	$ax_ct_rf_sid   = (int) $ax_ct_rf_actor->get_identity_id();
 	$ax_ct_rf_made  = axismundi_contacts_create_profile_card( $ax_ct_rf_sid );
 	$ax_ct_rf_card  = is_wp_error( $ax_ct_rf_made ) ? 0 : (int) $ax_ct_rf_made;
-	$ax_ct_loose[]  = $ax_ct_rf_card;
-	$ax_ct_rf_doc   = axismundi_contacts_card_document( $ax_ct_rf_card );
+	$ax_ct_rf_doc   = axismundi_contacts_profile_document( $ax_ct_rf_card );
 	$ax_ct_rf_doc['organizations'] = array( 'o1' => array( 'name' => 'Axismundi' ) );
 	$ax_ct_rf_doc['titles']        = array( 't1' => array( 'name' => 'Site Owner', 'organizationId' => 'o1' ) );
-	axismundi_contacts_save_card_for_owner( $ax_ct_rf_sid, $ax_ct_rf_doc, $ax_ct_rf_card );
+	axismundi_contacts_save_profile_document( $ax_ct_rf_sid, $ax_ct_rf_doc, $ax_ct_rf_card );
 
 	wp_set_current_user( (int) $ax_ct_rf_actor->get_local_user_id() );
 	$ax_ct_rf_put = static function ( array $document ) use ( $ax_ct_rf_card ) {
-		$request = new WP_REST_Request( 'PUT', '/axismundi-contacts/v1/cards/' . $ax_ct_rf_card . '/draft' );
+		$request = new WP_REST_Request( 'PUT', '/axismundi-contacts/v1/profiles/' . $ax_ct_rf_card . '/draft' );
 		$request->set_param( 'id', $ax_ct_rf_card );
-		$request->set_param( 'revision', (int) ( axismundi_contacts_get_card( $ax_ct_rf_card )['revision'] ?? 0 ) );
+		$request->set_param( 'revision', (int) ( axismundi_contacts_get_profile_document_row( $ax_ct_rf_card )['revision'] ?? 0 ) );
 		$request->set_param( 'card', $document );
 		return axismundi_contacts_rest_put_draft( $request );
 	};
 
 	// The organization taken away on its own, which is what a screen that only deleted one would send.
-	$ax_ct_rf_alone = axismundi_contacts_card_document( $ax_ct_rf_card );
+	$ax_ct_rf_alone = axismundi_contacts_profile_document( $ax_ct_rf_card );
 	unset( $ax_ct_rf_alone['organizations'] );
 	$ax_ct_rf_orphan = $ax_ct_rf_put( $ax_ct_rf_alone );
 
 	// And both together, which is what it sends now.
-	$ax_ct_rf_both = axismundi_contacts_card_document( $ax_ct_rf_card );
+	$ax_ct_rf_both = axismundi_contacts_profile_document( $ax_ct_rf_card );
 	unset( $ax_ct_rf_both['organizations'] );
 	unset( $ax_ct_rf_both['titles']['t1']['organizationId'] );
 	$ax_ct_rf_ok = $ax_ct_rf_put( $ax_ct_rf_both );
@@ -5924,14 +5943,14 @@ try {
 		is_wp_error( $ax_ct_rf_orphan )
 			&& str_contains( (string) $ax_ct_rf_orphan->get_error_message(), 'organizationId' )
 			&& ! is_wp_error( $ax_ct_rf_ok )
-			&& 'Site Owner' === (string) ( axismundi_contacts_card_document( $ax_ct_rf_card )['titles']['t1']['name'] ?? '' )
+			&& 'Site Owner' === (string) ( axismundi_contacts_profile_document( $ax_ct_rf_card )['titles']['t1']['name'] ?? '' )
 	);
 	/*
 	 * And an organization with an empty list of parts is a property saying nothing, while one with a
 	 * part that is not a list is a document the store refuses. A screen that wrote either would be a
 	 * screen whose Save button fails on a card somebody filled in correctly.
 	 */
-	$ax_ct_rf_units = axismundi_contacts_card_document( $ax_ct_rf_card );
+	$ax_ct_rf_units = axismundi_contacts_profile_document( $ax_ct_rf_card );
 	$ax_ct_rf_units['organizations'] = array( 'o1' => array( 'name' => 'Axismundi', 'units' => array() ) );
 	$ax_ct_rf_empty = $ax_ct_rf_put( $ax_ct_rf_units );
 	$ax_ct_rf_units['organizations']['o1']['units'] = '';
@@ -5941,7 +5960,7 @@ try {
 		$ax_ct_results,
 		'the parts of an organization are a list when there are any, and nothing at all when there are not',
 		! is_wp_error( $ax_ct_rf_empty )
-			&& ! array_key_exists( 'units', (array) ( axismundi_contacts_card_document( $ax_ct_rf_card )['organizations']['o1'] ?? array() ) )
+			&& ! array_key_exists( 'units', (array) ( axismundi_contacts_profile_document( $ax_ct_rf_card )['organizations']['o1'] ?? array() ) )
 			&& is_wp_error( $ax_ct_rf_bad )
 	);
 	/*
@@ -5980,7 +5999,7 @@ try {
 	 * failing on a card somebody was part-way through filling in.
 	 */
 	wp_set_current_user( (int) $ax_ct_rf_actor->get_local_user_id() );
-	$ax_ct_tn_half = axismundi_contacts_card_document( $ax_ct_rf_card );
+	$ax_ct_tn_half = axismundi_contacts_profile_document( $ax_ct_rf_card );
 	$ax_ct_tn_half['titles']['t2'] = array( 'kind' => 'role' );
 	$ax_ct_tn_refused = $ax_ct_rf_put( $ax_ct_tn_half );
 	wp_set_current_user( (int) $ax_ct_owner->get_local_user_id() );
@@ -6242,23 +6261,22 @@ try {
 	$ax_ct_tk_sid   = (int) $ax_ct_tk_actor->get_identity_id();
 	$ax_ct_tk_made  = axismundi_contacts_create_profile_card( $ax_ct_tk_sid );
 	$ax_ct_tk_card  = is_wp_error( $ax_ct_tk_made ) ? 0 : (int) $ax_ct_tk_made;
-	$ax_ct_loose[]  = $ax_ct_tk_card;
-	$ax_ct_tk_doc   = axismundi_contacts_card_document( $ax_ct_tk_card );
+	$ax_ct_tk_doc   = axismundi_contacts_profile_document( $ax_ct_tk_card );
 	$ax_ct_tk_doc['phones'] = array(
 		'pho-aaaaaa' => array( 'number' => 'tel:+821027421672', 'features' => array( 'mobile' => true ) ),
 		'tel-bbbbbb' => array( 'number' => 'tel:+8221234567' ),
 	);
 	$ax_ct_tk_doc['localizations'] = array( 'en' => array( 'phones/pho-aaaaaa/label' => 'Mobile' ) );
-	axismundi_contacts_save_card_for_owner( $ax_ct_tk_sid, $ax_ct_tk_doc, $ax_ct_tk_card );
-	axismundi_contacts_set_provenance( $ax_ct_tk_card, 'phones/pho-aaaaaa', AXISMUNDI_CONTACTS_SOURCE_ACTOR, $ax_ct_tk_actor->get_uri() );
+	axismundi_contacts_save_profile_document( $ax_ct_tk_sid, $ax_ct_tk_doc, $ax_ct_tk_card );
+	ax_ct_set_profile_provenance( $ax_ct_tk_card, 'phones/pho-aaaaaa', AXISMUNDI_CONTACTS_SOURCE_ACTOR, $ax_ct_tk_actor->get_uri() );
 	axismundi_contacts_set_published_pointers( $ax_ct_tk_sid, array( 'name', 'phones/pho-aaaaaa' ) );
 
 	axismundi_contacts_migrate_phone_keys();
 	// Twice, because a migration that is not safe to run again is one that runs again anyway.
 	axismundi_contacts_migrate_phone_keys();
 
-	$ax_ct_tk_after = axismundi_contacts_card_document( $ax_ct_tk_card );
-	$ax_ct_tk_prov  = axismundi_contacts_card_provenance( $ax_ct_tk_card );
+	$ax_ct_tk_after = axismundi_contacts_profile_document( $ax_ct_tk_card );
+	$ax_ct_tk_prov  = ax_ct_profile_provenance( $ax_ct_tk_card );
 	$ax_ct_tk_pub   = axismundi_contacts_published_pointers( $ax_ct_tk_sid );
 	ax_ct_assert(
 		$ax_ct_results,
@@ -6296,23 +6314,23 @@ try {
 	 * number's provenance and publishing consent onto another; leaving it would leave a `pho-` behind
 	 * for good, and which address a document uses would depend on the week it was written.
 	 */
-	$ax_ct_tc_doc = axismundi_contacts_card_document( $ax_ct_tk_card );
+	$ax_ct_tc_doc = axismundi_contacts_profile_document( $ax_ct_tk_card );
 	$ax_ct_tc_doc['phones'] = array(
 		'pho-cccccc' => array( 'number' => 'tel:+821011112222' ),
 		'tel-cccccc' => array( 'number' => 'tel:+821033334444' ),
 	);
 	$ax_ct_tc_doc['localizations'] = array( 'en' => array( 'phones/pho-cccccc/label' => 'The one that had to move' ) );
-	axismundi_contacts_save_card_for_owner( $ax_ct_tk_sid, $ax_ct_tc_doc, $ax_ct_tk_card );
-	axismundi_contacts_set_provenance( $ax_ct_tk_card, 'phones/pho-cccccc', AXISMUNDI_CONTACTS_SOURCE_ACTOR, $ax_ct_tk_actor->get_uri() );
+	axismundi_contacts_save_profile_document( $ax_ct_tk_sid, $ax_ct_tc_doc, $ax_ct_tk_card );
+	ax_ct_set_profile_provenance( $ax_ct_tk_card, 'phones/pho-cccccc', AXISMUNDI_CONTACTS_SOURCE_ACTOR, $ax_ct_tk_actor->get_uri() );
 	axismundi_contacts_set_published_pointers( $ax_ct_tk_sid, array( 'name', 'phones/pho-cccccc' ) );
 
 	axismundi_contacts_migrate_phone_keys();
 
-	$ax_ct_tc_after = axismundi_contacts_card_document( $ax_ct_tk_card );
+	$ax_ct_tc_after = axismundi_contacts_profile_document( $ax_ct_tk_card );
 	$ax_ct_tc_keys  = array_keys( (array) $ax_ct_tc_after['phones'] );
 	$ax_ct_tc_new   = array_values( array_diff( $ax_ct_tc_keys, array( 'tel-cccccc' ) ) );
 	$ax_ct_tc_moved = $ax_ct_tc_new[0] ?? '';
-	$ax_ct_tc_prov  = axismundi_contacts_card_provenance( $ax_ct_tk_card );
+	$ax_ct_tc_prov  = ax_ct_profile_provenance( $ax_ct_tk_card );
 	ax_ct_assert(
 		$ax_ct_results,
 		'a number whose new address is occupied is given another, rather than left where it was',

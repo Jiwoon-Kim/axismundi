@@ -9,7 +9,9 @@ defined( 'ABSPATH' ) || exit;
 
 /** Current user's local relationship screen URL. */
 function axismundi_act_follows_admin_url() : string {
-	return axismundi_actors_account_admin_url( 'axismundi-follows' );
+	return function_exists( 'axismundi_actors_account_admin_url' )
+		? axismundi_actors_account_admin_url( 'axismundi-follows' )
+		: add_query_arg( 'page', 'axismundi-follows', admin_url( 'users.php' ) );
 }
 
 /** Register the self-service local relationship screen. */

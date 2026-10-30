@@ -43,8 +43,8 @@ UUID·URI·귀속·Create를 재생성하지 않는다.
 - 접근·개인 귀속 판정의 site scope 가드를 제거했다. principal과 status가 판정한다.
 - Group 디렉터리, Forum/Activities Group 판정, Calendar 백필과 관리 목록은 scope 대신
   principal 관계를 읽는다. 관계 존재 자체가 요청자의 권한을 부여하지는 않는다.
-- 인스턴스 용도는 `ax_actors_instance_identity_id` 설정으로 가리킨다. 기존 단일 site 행을
-  최초 한 번 이관하며, 둘 이상이면 추측하지 않고 실패한다. Application 타입과 혼동하지 않는다.
+- 인스턴스 용도는 현재 `get_system_actor()`가 찾는 전용 시스템 Application Actor가 맡는다.
+  `ax_actors_instance_identity_id`는 퇴역 이관에서만 읽고 제거하며, 현재 지정 기제가 아니다.
 - `get_scope()`와 `is_managed()`는 구 클라이언트를 위한 파생 호환 어댑터다. 현재 production
   소비자는 더 이상 이를 권한에 쓰지 않는다. 폐기 예정 Note의 옛 표시/분기 호환은 남겼다.
 - 프로필 폼의 반환 URL은 scope와 무관하게 identity를 고정한다.

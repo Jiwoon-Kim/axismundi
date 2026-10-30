@@ -220,19 +220,21 @@ try {
 
 	// -- a binding pointing at a Card that is gone ----------------------------------------------------------
 
-	/*
-	 * Its own question rather than an ownership one, and the leak that made most of the orphans on this
-	 * development site: deleting a Card used to leave behind whoever pointed at it as their profile.
-	 */
+	// A profile and its address-book copy are different records, even when their IDs collide.
 	$ax_oo_bind_id = ax_oo_person( $ax_oo_actors, $ax_oo_users );
 	$ax_oo_bind_card = axismundi_contacts_create_profile_card( $ax_oo_bind_id );
 	if ( ! is_wp_error( $ax_oo_bind_card ) ) {
-		axismundi_contacts_delete_card( (int) $ax_oo_bind_card );
+		$ax_oo_bind_book = axismundi_contacts_book_for_actor( $ax_oo_bind_id );
+		$ax_oo_copy = axismundi_contacts_save_card( (int) $ax_oo_bind_book['id'], axismundi_contacts_profile_document( $ax_oo_bind_card ) );
+		if ( is_wp_error( $ax_oo_copy ) || ! axismundi_contacts_delete_card( (int) $ax_oo_copy ) ) {
+			throw new RuntimeException( 'ContactCard copy deletion failed.' );
+		}
 	}
 	ax_oo_assert(
 		$ax_oo_results,
-		'deleting a Card stops anybody pointing at it, so no binding is left resolving to nothing',
-		0 === axismundi_contacts_profile_card( $ax_oo_bind_id )
+		'deleting an address-book copy preserves the independent profile and its binding',
+		! is_wp_error( $ax_oo_bind_card ) && $ax_oo_bind_card === axismundi_contacts_profile_card( $ax_oo_bind_id )
+			&& array() !== axismundi_contacts_profile_document( $ax_oo_bind_card )
 			&& array() === axismundi_contacts_dangling_profile_bindings()
 	);
 } finally {

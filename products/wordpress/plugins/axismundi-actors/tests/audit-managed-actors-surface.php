@@ -137,15 +137,12 @@ try {
 		'and the last owner is shown as staying rather than offered a change that would be refused',
 		false !== strpos( $ax_ms_owner_html, 'The last owner stays' )
 	);
-	/*
-	 * A Person actor has no managers, because the account is the relation. Rendering an empty table on
-	 * one would invite somebody to add a manager to a person.
-	 */
+	// Personal attribution does not replace the Account's explicit principal list.
 	$ax_ms_person = axismundi_actors_ensure_for_user( $ax_ms_other );
 	ax_ms_assert(
 		$ax_ms_results,
-		'a personal actor has no manager list at all',
-		$ax_ms_person instanceof Axismundi_Actor && '' === ax_ms_render_managers( $ax_ms_owner, $ax_ms_person )
+		'a personal Account exposes its principal list to its owner',
+		$ax_ms_person instanceof Axismundi_Actor && str_contains( ax_ms_render_managers( $ax_ms_other, $ax_ms_person ), 'axismundi_actors_save_manager' )
 	);
 } finally {
 	wp_set_current_user( 0 );

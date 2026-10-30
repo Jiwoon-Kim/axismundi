@@ -16,8 +16,8 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * May the viewer edit this Actor? All Accounts use direct principal grants.
- * The separate instance identity retains its site-administrator policy.
+ * May the viewer edit this Actor? A direct grant relaxes the site capability
+ * requirement from manage_options to read; attribution alone grants nothing.
  *
  * @param Axismundi_Actor $actor   Actor.
  * @param int|null        $viewer  Viewer; defaults to current user.
@@ -31,7 +31,7 @@ function axismundi_actors_can_manage( Axismundi_Actor $actor, ?int $viewer = nul
 	// Profile recovery is allowed while disabled; acting/signing remain unavailable.
 	global $wpdb;
 	$role = (string) $wpdb->get_var( $wpdb->prepare( "SELECT role FROM %i WHERE identity_id = %d AND principal_kind = 'wp_user' AND principal_id = %d", axismundi_actors_managers_table(), $actor->get_identity_id(), $viewer ) );
-	return axismundi_actors_principal_role_rank( $role ) > 0;
+	return user_can( $viewer, axismundi_actors_principal_role_rank( $role ) > 0 ? 'read' : 'manage_options' );
 }
 
 /**
@@ -115,13 +115,17 @@ function axismundi_actors_authorize_user_actor( int $user_id ) {
  */
 function axismundi_actors_can_manage_user_actor( int $user_id, ?int $viewer = null ) : bool {
 	$viewer = null === $viewer ? get_current_user_id() : $viewer;
-	if ( $viewer <= 0 || $user_id <= 0 ) {
+	if ( $viewer <= 0 || $user_id <= 0 || ! get_userdata( $viewer ) || ! get_userdata( $user_id ) ) {
 		return false;
+	}
+	$actor = axismundi_actors_get_for_user( $user_id );
+	if ( $actor instanceof Axismundi_Actor ) {
+		return axismundi_actors_can_manage( $actor, $viewer );
 	}
 	if ( user_can( $viewer, 'manage_options' ) ) {
 		return true;
 	}
-	return $user_id === $viewer && user_can( $viewer, 'edit_posts' );
+	return $user_id === $viewer && user_can( $viewer, 'read' );
 }
 
 /** @return string The Actor Profile admin screen URL, optionally for a user. */

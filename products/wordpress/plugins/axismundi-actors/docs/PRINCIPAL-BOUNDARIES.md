@@ -55,6 +55,72 @@ WP 댓글은 글에 붙고 모더레이션 큐를 지나며 연합되지 않는�
 sensitive 와 정책 삭제뿐이고, 승인 큐도 속도 제한도 없다. 금지 사유가 아니라, 모더레이션
 슬라이스가 다뤄야 할 입력으로 기록한다.
 
+### 오너 결정 (2026-10-30): Account 운영 권한은 완화 규칙 하나다
+
+두 모델이 아니다. 요구 capability 하나와 그것을 낮추는 관계 하나다.
+
+```txt
+기본   부여 없는 Account 를 운영한다        manage_options
+완화   owner/manager/editor 부여가 있다     read
+집행   사용자는 완화된 요구를 자기 권한으로 충족해야 한다
+```
+
+완화값 `read` 는 발명한 것이 아니라 앞 절의 Subscriber 결정에서 따라 나온다. Subscriber 가
+자기 Actor 를 운영할 수 있어야 하므로 완화된 요구는 `read` 보다 높을 수 없다. 그러면 실질적인
+인가를 **부여의 존재가** 한다는 뜻이 되고, 그것이 의도한 바다. 부여가 권한이다.
+
+**시스템 Actor 는 예외가 아니다.** 부여 행이 없으므로 완화가 적용되지 않고 기본 요구가 남는다.
+분기를 따로 두지 않는다. 2026-10-30 측정: `ax_actors_system_actor_id` = 54895, 부여 0건이며
+새 Accounts 화면은 이미 `manage_options` 로 게이트한다. 규칙과 현재 동작이 일치한다.
+
+role 이름은 검사하지 않는다. 저장소 전체에 role 이름 검사가 0건이고 `manage_options` 가
+15회 쓰인 것이 기존 선택이다. 시스템 Actor 가 이름·아이콘을 `options-general.php` 에서
+읽으므로 그 화면과 같은 게이트라는 정합성도 있다.
+
+**완화는 귀속에서 추론하지 않는다.** `attributedTo` 에 이름이 올라갔다는 이유로 완화가
+적용되면 안 된다. 부여 행만이 완화의 근거다.
+
+#### 선례
+
+Co-Authors Plus 가 같은 모양을 쓴다. 변경 내역의 산문("rights the post's author would have
+under the co-author's own role")과 코드가 다르므로 코드를 봐야 한다.
+
+```txt
+php/class-coauthors-plus.php
+  add_filter( 'map_meta_cap', … )
+  filter_map_meta_cap() 은 role 을 조회하지 않는다.
+  co-author 이면 요구를 edit_others_posts → edit_posts 로 낮춘다
+  Subscriber 가 편집하지 못하는 이유는 role 조회가 아니라 edit_posts 가 없어서다
+```
+
+CAP 는 4.1.3 에서 바이라인이 편집 권한을 주던 동작을 끊었다. 귀속과 권한을 합쳤다가 사후에
+분리한 사례이므로, 위의 "완화는 귀속에서 추론하지 않는다" 는 가설이 아니다.
+CAP 는 `attachment` 를 지원 대상에서 제외하므로 **미디어 귀속에는 이 선례가 없다.**
+
+#### 구현상 따라오는 것
+
+```txt
+admin.php:26   can_manage()            부여 전용.  완화 후만 구현한다
+admin.php:121  can_manage_user_actor()  manage_options 우회 있음.  기본만 구현한다
+```
+
+두 함수가 서로 다른 모델인 것이 아니라 한 규칙의 두 절반이다. 하나로 합친다.
+`audit-admin` 의 실패 2건("an administrator may manage any actor",
+"a Subscriber cannot manage … its own retained Actor row")이 이 분열의 표면이고,
+감사 이관은 이 규칙을 단언하도록 쓴다.
+
+#### 아직 결정하지 않은 것
+
+```txt
+부여 표면 셋의 관계      Account 운영 · 자원 공유(RFC 9610 shareWith 의
+                         mayRead/mayWrite/mayShare/mayDelete) · 도메인 모더레이션
+personal ↔ owner 동반     personal_owner_user_id 가 가리키는 사용자가 owner 부여를
+                         갖는다는 불변식.  현재 집행 수단 없음.  KEY 는 UNIQUE 아님.
+                         사용자당 personal 복수는 허용한다 -- primaryAccounts 가 기본값
+누가 부여를 쓰는가        CAP 는 current_user_can_set_authors() 에서 allcaps 를 직접 읽는다
+미디어 귀속              CAP 선례 없음.  Misskey DriveFile 을 참조한다
+```
+
 ## Domain Moderation
 
 Forum의 `accepted + moderator` 멤버십은 해당 Group의 모더레이션 권한이다.

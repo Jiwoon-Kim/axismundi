@@ -417,30 +417,43 @@ KEY(identity_id, status)
   after a successful HTTPS WebFinger lookup (RFC 7033); remote
   `preferredUsername` alone is never trusted.
 
-#### 측정된 드리프트 (2026-11-01) — 출하된 UNIQUE 가 위 서술보다 약하다
+#### 출하된 UNIQUE 는 의도된 일탈이다 (2026-11-01 정정)
 
-위 블록은 `UNIQUE(address_hash)` 라고 적었으나 출하된 스키마는 다르다.
+위 블록은 `UNIQUE(address_hash)` 라고 적었으나 출하된 스키마는 복합키다. **문서가 틀렸고
+스키마가 맞다.**
 
 ```txt
-문서   UNIQUE(address_hash)
-실측   UNIQUE KEY address_kind (address_hash, actor_kind)
-       actor_kind 는 AS2 타입을 담는다 -- Person | Group | Organization | Application | ''
+문서(위)   UNIQUE(address_hash)
+출하       UNIQUE KEY address_kind (address_hash, actor_kind)
+           actor_kind 는 AS2 타입 -- Person | Group | Organization | Application | ''
 ```
 
-그러므로 핸들 네임스페이스가 **액터 타입별로 쪼개진다.** `@alice` 를 Person 과 Group 이
-동시에 가질 수 있고, Person 이 놓은 `former_handle` 이 Group 의 같은 문자열을 막지 못한다.
-위 서술("a reserved former handle blocks a new handle of the same string")이 보장하는 것은
-스키마가 아니라 **`axismundi_actors_handle_owner()`** 다. 그 함수는 `address_hash` 만으로
-조회하고 `actor_kind` 를 보지 않으므로, `register_handle()` 경로에서는 보장이 성립한다.
+이유는 `tests/audit-addresses.php` 가 기록해 두었다 -- **Lemmy 는 한 호스트에서 Person 과
+Group 이 같은 `acct:` 를 갖는 것을 허용하고, 전역 unique 키 아래에서는 나중에 캐시된 쪽이
+주소를 거부당해 핸들로 도달 불가능해졌다.** 그 감사는 복합키의 존재와 **옛 전역
+`address_hash` 인덱스의 부재**를 함께 단언한다. 2026-11-01 실데이터에도 그 사례가 있다:
+`acct` 하나를 remote Group 과 remote Person 이 공유한다.
 
-남는 위험은 검사-후-쓰기 경합이다. Person 과 Group 이 동시에 같은 핸들을 등록하면 둘 다
-`handle_owner()` 를 통과하고 UNIQUE 가 교차 타입을 막지 않는다. WebFinger 는 `acct:` 하나에
-한 액터로 답해야 하고 `get_by_handle()` 은 `query_one` 이므로, 그 상태에서는 **둘 중 하나를
-조용히** 돌려준다.
+따라서 **이 키를 단일 컬럼으로 "고치지" 말 것.** 측정된 버그를 되살리고 감사를 깨뜨린다.
+(2026-11-01 리뷰에서 Opus 가 이것을 드리프트로 판정하고 조이기를 권고했다. 오너가
+Lemmy 사유를 기억해 지적했고, 데이터와 감사 주석이 확인했다. AGENTS.md 가 경고하는
+"cleanup 처럼 보이지만 의도된 일탈을 제거하는 변경" 의 사례로 남긴다.)
 
-2026-11-01 측정: 같은 handle 해시가 두 `actor_kind` 에 걸친 행 **0건**. 그래서 문서가 적은
-단일 컬럼 형태로 조이는 마이그레이션은 **지금 충돌 없이** 가능하다. 핸들 변경을 열기 전에
-하는 것이 맞다 -- 변경이 열리면 등록 빈도가 올라가고 rename 경로가 추가된다.
+#### 로컬 핸들 유일성은 코드가 집행한다
+
+복합키가 remote 사례를 위한 모양이므로, **로컬 핸들의 유일성은 스키마가 주지 않는다.**
+로컬에서는 WebFinger 가 `acct:` 하나에 한 액터로 답해야 하는데, 복합키는 로컬 Person 과
+로컬 Group 이 같은 `local_handle` 을 갖는 것을 막지 않는다.
+
+막는 것은 `axismundi_actors_handle_owner()` 다. 그 함수는 `address_hash` 만으로 조회하고
+`actor_kind` 를 보지 않으므로 `register_handle()` 경로에서 교차 타입까지 거부한다.
+**즉 의도적으로 코드에 있는 집행이다** -- 스키마로 올리려면 remote 를 깨뜨리지 않도록
+로컬 행에만 적용되는 형태(원격이면 NULL 인 컬럼에 UNIQUE)여야 한다.
+
+남는 위험은 검사-후-쓰기 경합이다. 로컬 Person 과 로컬 Group 이 동시에 같은 핸들을
+등록하면 둘 다 `handle_owner()` 를 통과하고 복합키가 교차 타입을 막지 않는다. 그 상태에서
+`get_by_handle()` 은 `query_one` 이므로 **둘 중 하나를 조용히** 돌려준다. 등록은 드문
+동작이라 확률은 낮지만, 핸들 변경이 열리면 빈도가 오르고 rename 경로가 추가된다.
 
 #### 오너 결정 (2026-11-01): 핸들 변경을 연다
 

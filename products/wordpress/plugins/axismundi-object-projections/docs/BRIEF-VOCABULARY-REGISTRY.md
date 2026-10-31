@@ -234,3 +234,51 @@ provenance enum          자유 문자열이다. `inbox` 에 'ldp' 가 들어가
                          없는 값인데 검증은 비어 있지 않은 문자열만 본다.
                          **강제가 아니라 관례다.** 이것 때문에 재구현하지 않는다.
 ```
+
+## 채택 결정 — lemmy:postingRestrictedToMods
+
+Group 액터의 게시 제한을 나타내는 속성을 레지스트리에 받아들인다. FEP 에는 없다.
+근거는 배포된 구현의 합의이며, `as:manuallyApprovesFollowers` 를 받아들일 때 쓴
+것과 같은 기준이다.
+
+```txt
+lemmy.world/c/lemmykorea    "@context": [ "https://join-lemmy.org/context.json",
+                                          "https://www.w3.org/ns/activitystreams" ]
+                            postingRestrictedToMods 를 원격 context 로 정의
+
+fedi.video/c/music          "lemmy": "https://join-lemmy.org/ns#"
+                            "postingRestrictedToMods": "lemmy:postingRestrictedToMods"
+                            PeerTube 가 자기 네임스페이스를 새로 만들지 않고
+                            Lemmy 의 IRI 를 인라인 용어로 채택했다
+```
+
+두 번째가 결정적이다. 독립된 두 구현이 **같은 IRI** 를 쓰고, 뒤에 온 쪽이 앞선 쪽의
+네임스페이스를 그대로 받았다. 그러므로 canonical IRI 는
+`https://join-lemmy.org/ns#postingRestrictedToMods` 이고, 우리가 접두사를 새로
+만들면 그 합의에서 이탈한다.
+
+선언 방식은 PeerTube 선례를 따라 **인라인 용어**로 한다. Lemmy 의 원격 context
+문서를 `@context` 에 넣지 않는다 -- 레지스트리는 원격 문서 의존보다 명시 선언을
+선호하고, 그 문서 한 장이 우리가 내보내지 않는 용어까지 끌고 들어온다.
+
+### 이 속성이 말하는 축
+
+```txt
+postingRestrictedToMods     누가 글을 쓸 수 있는가
+manuallyApprovesFollowers   누가 팔로우할 수 있는가
+```
+
+Lemmy·PeerTube 는 팔로우를 전원 자동 수락으로 열고 게시 쪽을 잠그는 모델이라
+`manuallyApprovesFollowers` 를 아예 내보내지 않는다 (2026-10-31 실측, 두 Group 모두
+키 없음). 우리는 승인제 Group 을 운영할 수 있으므로 두 축을 **둘 다** 내보낸다.
+AS2 에서 속성 없음은 false 가 아니라 "주장하지 않음" 이고, 우리는 두 질문의 답을
+모두 알고 있다.
+
+### 아직 하지 않은 것
+
+```txt
+방출 구현        우리 코드에 postingRestrictedToMods 는 0 건이다. 값을 어디서 읽을지는
+                 Forum 바인딩 Group 의 모더레이션 모델에 달려 있고 그쪽이 먼저다.
+마스토돈 수용    Group 에 대해 manuallyApprovesFollowers 를 존중하는지 재지 않았다.
+                 정합성 근거는 그와 무관하게 유지된다.
+```

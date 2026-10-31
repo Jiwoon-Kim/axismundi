@@ -136,3 +136,36 @@ php products/wordpress/plugins/axismundi-jmap/tests/todo-mutation-harness.php
 `AX_TODO_BROWSER_CHANNEL=chrome`으로 설치된 Chrome을 사용할 수 있다.
 `AX_TODO_HTTP_ORIGIN`과 `AX_TODO_CLI_CONTAINER`는 같은 개발 환경을 가리켜야 한다.
 테스트는 임시 로그인으로 UI를 조작하고 종료 시 fixture를 정리한다.
+
+### PatchObject 왕복
+
+RFC 8620 §5.3에 따라 update의 서버 설정 속성은 패치 전 값과 동일할 때만
+허용한다. Todo의 `id`, TodoList의 `id`·`myRights`가 대상이며, 다른 값이나
+미등록 속성은 `invalidProperties`와 `properties` 경로로 거부한다. create에
+서버 설정 속성을 넣는 것은 여전히 허용하지 않는다. 객체 멤버 순서는 비교에
+영향을 주지 않고, JSON 타입과 배열 순서는 보존한다. 기존 공유 인가는 유지한다.
+
+실제 요청 감사는 두 타입의 전체 객체 왕복 및 최소 keywords 패치와 전체 객체
+패치의 결과 일치를 확인한다. 다만 아무것도 바꾸지 않는 에코도 state를
+올리고 해당 객체를 `updated`로 보고한다. 측정값은 `oldState` `10.1.…` →
+`newState` `11.1.…`, `updated`는 `{"L…": null}`이다. 즉 왕복 한 번이 다른
+클라이언트에게 관측할 수 없는 변경을 통지한다. §5.2·§5.3이 금지하는 동작은
+아니지만, 변경이 없으면 화면을 유지하는 `/changes` 설계와는 어긋난다. 저장
+직전에 patch 결과가 기존 행과 동일한지 보고 쓰기와 `touch()`를 건너뛰는 것이
+해결 방향이며, 아직 구현하지 않았다. §5.7의 `neuralNetworkTimeEstimation`은 구현하지
+않으며, 숫자 오탈자로 보이는 예제 값을 별도 거부 계약으로 고정하지 않는다.
+변이는 디스크 파일 대신 현재 patch 함수의 프로세스 내 복사본만 변경한다.
+
+```sh
+python tools/wp-env/run_audits.py run --audit audit-todo-patch.php --audit audit-todo-poc.php --audit audit-todo-patch-mutations.php
+```
+
+TodoList의 권한 검사는 필드 포함 여부가 아니라 패치 전후 변경 여부를 본다.
+`mayWrite=true`, `mayAdmin=false`인 사용자도 자신에게 보이는 `shareWith:null`을
+전체 객체로 돌려보낼 수 있다. 이 에코는 저장된 공유 맵을 삭제하지 않으며,
+다른 공유 값을 보내면 여전히 `forbidden`이다. 다음 변이는 존재 기준 게이트로
+되돌리기와 숨겨진 공유 맵 보존 제거를 실제 JMAP 요청으로 각각 검출한다.
+
+```sh
+python tools/wp-env/run_audits.py run --audit audit-todo-writer-mutations.php
+```

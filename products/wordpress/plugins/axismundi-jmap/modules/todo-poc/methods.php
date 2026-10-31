@@ -124,14 +124,44 @@ function changes( \stdClass $args, Context $context, string $type ) : \stdClass 
 	return $result;
 }
 
-/** RFC PatchObject paths; reject overlapping paths and immutable/server-set fields. */
-function patch( \stdClass $old, \stdClass $updates, array $allowed ) : \stdClass {
+/** Compare JSON values without depending on object member order or scalar coercion. */
+function patch_values_equal( mixed $left, mixed $right ) : bool {
+	if ( $left instanceof \stdClass && $right instanceof \stdClass ) {
+		$a = get_object_vars( $left );
+		$b = get_object_vars( $right );
+		if ( count( $a ) !== count( $b ) ) { return false; }
+		foreach ( $a as $key => $value ) {
+			if ( ! array_key_exists( $key, $b ) || ! patch_values_equal( $value, $b[ $key ] ) ) { return false; }
+		}
+		return true;
+	}
+	if ( is_array( $left ) && is_array( $right ) ) {
+		if ( array_keys( $left ) !== array_keys( $right ) ) { return false; }
+		foreach ( $left as $key => $value ) { if ( ! patch_values_equal( $value, $right[ $key ] ) ) { return false; } }
+		return true;
+	}
+	return $left === $right;
+}
+
+/** Server-set echoes are compared against the immutable pre-patch object. */
+function patch( \stdClass $old, \stdClass $updates, array $allowed, array $server_set = array() ) : \stdClass {
+	$before = copy_json( $old );
+	$old = copy_json( $old );
 	$keys = array_keys( get_object_vars( $updates ) );
 	foreach ( $keys as $path ) {
 		foreach ( $keys as $other ) { if ( $other !== $path && str_starts_with( $other, $path . '/' ) ) { throw new MethodError( 'invalidPatch' ); } }
 		if ( preg_match( '/~(?![01])/', $path ) ) { throw new MethodError( 'invalidPatch' ); }
 		$parts = array_map( static fn( $s ) => str_replace( array( '~1', '~0' ), array( '/', '~' ), $s ), explode( '/', $path ) );
-		if ( ! in_array( $parts[0], $allowed, true ) ) { throw new MethodError( 'invalidProperties', $parts[0] ); }
+		if ( ! in_array( $parts[0], $allowed, true ) ) {
+			$current = $before;
+			$exists = in_array( $parts[0], $server_set, true );
+			foreach ( $parts as $part ) {
+				if ( ! $current instanceof \stdClass || ! property_exists( $current, $part ) ) { $exists = false; break; }
+				$current = $current->{$part};
+			}
+			if ( $exists && patch_values_equal( $current, $updates->{$path} ) ) { continue; }
+			throw new MethodError( 'invalidProperties', $path, array( $path ) );
+		}
 		$target = $old;
 		$last = array_pop( $parts );
 		foreach ( $parts as $part ) {
@@ -165,13 +195,10 @@ function save_object( string $account, string $type, ?string $id, \stdClass $val
 		if ( ! $create && ( ! $existing || ! rights( $existing, $user )->mayRead ) ) { throw new MethodError( 'notFound' ); }
 		if ( $create && ! operator( $account, $user ) ) { throw new MethodError( 'forbidden' ); }
 		$current_rights = $existing ? rights( $existing, $user ) : (object) array( 'mayRead' => true, 'mayWrite' => true, 'mayAdmin' => true );
-		$keys = array_keys( get_object_vars( $values ) );
-		foreach ( $keys as $key ) {
-			$root = explode( '/', $key )[0];
-			if ( ( 'name' === $root && ! $current_rights->mayWrite ) || ( 'shareWith' === $root && ! $current_rights->mayAdmin ) ) { throw new MethodError( 'forbidden' ); }
-		}
 		$old = $existing ? list_object( $existing, $user ) : (object) array( 'name' => '', 'shareWith' => null, 'isSubscribed' => true );
-		$new = patch( copy_json( $old ), $values, array( 'name', 'shareWith', 'isSubscribed' ) );
+		$new = patch( copy_json( $old ), $values, array( 'name', 'shareWith', 'isSubscribed' ), $create ? array() : array( 'id', 'myRights' ) );
+		// Echoing the caller's projection is not a request to change its hidden fields.
+		if ( ( ! $current_rights->mayWrite && ! patch_values_equal( $old->name, $new->name ) ) || ( ! $current_rights->mayAdmin && ! patch_values_equal( $old->shareWith, $new->shareWith ) ) ) { throw new MethodError( 'forbidden' ); }
 		if ( ! is_string( $new->name ) || '' === trim( $new->name ) || strlen( $new->name ) > 255 || ! is_bool( $new->isSubscribed ) ) { throw new MethodError( 'invalidProperties' ); }
 		if ( $create || wp_json_encode( $new->shareWith ) !== wp_json_encode( $old->shareWith ) ) { validate_shares( $new->shareWith, $account ); }
 		$shares = wp_json_encode( $new->shareWith );
@@ -191,7 +218,7 @@ function save_object( string $account, string $type, ?string $id, \stdClass $val
 		$source = $row ? list_row( $row['list_id'], $account ) : null;
 		if ( ! $create && ( ! $row || ! $source || ! rights( $source, $user )->mayRead ) ) { throw new MethodError( 'notFound' ); }
 		if ( $source && ! rights( $source, $user )->mayWrite ) { throw new MethodError( 'forbidden' ); }
-		$new = patch( $row ? todo_object( $row ) : (object) array( 'title' => '', 'keywords' => new \stdClass(), 'todoListId' => '' ), $values, array( 'title', 'keywords', 'todoListId' ) );
+		$new = patch( $row ? todo_object( $row ) : (object) array( 'title' => '', 'keywords' => new \stdClass(), 'todoListId' => '' ), $values, array( 'title', 'keywords', 'todoListId' ), $create ? array() : array( 'id' ) );
 		if ( ! is_string( $new->todoListId ) || ! is_string( $new->title ) || '' === trim( $new->title ) || strlen( $new->title ) > 10000 || ! $new->keywords instanceof \stdClass ) { throw new MethodError( 'invalidProperties' ); }
 		$destination_id = $context->resolve_id( $new->todoListId );
 		$destination = $destination_id ? list_row( $destination_id, $account ) : null;

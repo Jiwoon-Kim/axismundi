@@ -81,6 +81,32 @@ try {
 	$assert( 'stateMismatch' === ( $call( 'Todo/set', array( 'accountId' => $aa, 'ifInState' => $created->newState, 'destroy' => array( $todo ) ) )->type ?? null ), 'Stale state rejects destruction' );
 	$delta = $call( 'Todo/changes', array( 'accountId' => $aa, 'sinceState' => $created->newState ) );
 	$assert( array( $todo ) === $delta->updated && array() === $delta->destroyed, 'Update changes exclude rejected destroy' );
+	foreach ( array( 'Todo' => $todo, 'TodoList' => $list ) as $type => $object_id ) {
+		$whole = $call( $type . '/get', array( 'accountId' => $aa, 'ids' => array( $object_id ) ) )->list[0];
+		$echo = $call( $type . '/set', array( 'accountId' => $aa, 'update' => (object) array( $object_id => $whole ) ) );
+		$assert( property_exists( $echo->updated ?? new stdClass(), $object_id ), $type . ' whole-object round-trip' );
+		$bad = clone $whole;
+		$bad->id = 'different';
+		$rejected = $call( $type . '/set', array( 'accountId' => $aa, 'update' => (object) array( $object_id => $bad ) ) );
+		$error = $rejected->notUpdated->{$object_id} ?? new stdClass();
+		$assert( 'invalidProperties' === ( $error->type ?? null ) && array( 'id' ) === ( $error->properties ?? null ), $type . ' differing server-set value rejected' );
+		if ( 'TodoList' === $type ) {
+			$bad = \Axismundi\Jmap\copy_json( $whole );
+			$bad->myRights->mayAdmin = false;
+			$rejected = $call( 'TodoList/set', array( 'accountId' => $aa, 'update' => (object) array( $object_id => $bad ) ) );
+			$assert( array( 'myRights' ) === ( $rejected->notUpdated->{$object_id}->properties ?? null ), 'Changed computed rights rejected' );
+		}
+	}
+	$seed = (object) array( 'keywords' => (object) array( 'mozart' => true ) );
+	$call( 'Todo/set', array( 'accountId' => $aa, 'update' => (object) array( $todo => $seed ) ) );
+	$whole = $call( 'Todo/get', array( 'accountId' => $aa, 'ids' => array( $todo ) ) )->list[0];
+	$call( 'Todo/set', array( 'accountId' => $aa, 'update' => (object) array( $todo => (object) array( 'keywords/chopin' => true, 'keywords/mozart' => null ) ) ) );
+	$minimal = $call( 'Todo/get', array( 'accountId' => $aa, 'ids' => array( $todo ) ) )->list[0];
+	$whole->keywords = (object) array( 'chopin' => true );
+	$call( 'Todo/set', array( 'accountId' => $aa, 'update' => (object) array( $todo => $seed ) ) );
+	$call( 'Todo/set', array( 'accountId' => $aa, 'update' => (object) array( $todo => $whole ) ) );
+	$full = $call( 'Todo/get', array( 'accountId' => $aa, 'ids' => array( $todo ) ) )->list[0];
+	$assert( \Axismundi\Jmap\TodoPoc\patch_values_equal( $minimal, $full ), 'Minimal and whole-object patches produce identical objects' );
 	$share = (object) array( $pb => (object) array( 'mayRead' => true, 'mayWrite' => false, 'mayAdmin' => false ) );
 	$shared = $call( 'TodoList/set', array( 'accountId' => $aa, 'update' => (object) array( $list => (object) array( 'shareWith' => $share ) ) ) );
 	$assert( property_exists( $shared->updated, $list ), 'A shares read-only with B' );
@@ -94,6 +120,22 @@ try {
 	$assert( 'forbidden' === ( $denied->notCreated->bad->type ?? null ) && 'forbidden' === ( $denied->notUpdated->{$todo}->type ?? null ) && 'forbidden' === ( $denied->notDestroyed->{$todo}->type ?? null ), 'Read-only B cannot create update or destroy Todo' );
 	$elevate = $call( 'TodoList/set', array( 'accountId' => $aa, 'update' => (object) array( $list => (object) array( 'shareWith' => (object) array( $pb => (object) array( 'mayRead' => true, 'mayWrite' => true, 'mayAdmin' => true ) ) ) ) ) );
 	$assert( 'forbidden' === ( $elevate->notUpdated->{$list}->type ?? null ), 'B cannot elevate shares' );
+	wp_set_current_user( $a );
+	$writer_share = (object) array( $pb => (object) array( 'mayRead' => true, 'mayWrite' => true, 'mayAdmin' => false ) );
+	$call( 'TodoList/set', array( 'accountId' => $aa, 'update' => (object) array( $list => (object) array( 'shareWith' => $writer_share ) ) ) );
+	$stored_shares = \Axismundi\Jmap\TodoPoc\list_row( $list, $aa )['shares_json'];
+	wp_set_current_user( $b );
+	$writer = $call( 'TodoList/get', array( 'accountId' => $aa, 'ids' => array( $list ) ) )->list[0];
+	$assert( $writer->myRights->mayWrite && ! $writer->myRights->mayAdmin && null === $writer->shareWith, 'Writer fixture has no sharing administration' );
+	$echo = $call( 'TodoList/set', array( 'accountId' => $aa, 'update' => (object) array( $list => $writer ) ) );
+	$assert( property_exists( $echo->updated ?? new stdClass(), $list ), 'Writer without mayAdmin whole-object round-trip' );
+	$assert( $stored_shares === \Axismundi\Jmap\TodoPoc\list_row( $list, $aa )['shares_json'], 'Writer echo preserves stored sharing map' );
+	$writer->shareWith = $writer_share;
+	$denied_share = $call( 'TodoList/set', array( 'accountId' => $aa, 'update' => (object) array( $list => $writer ) ) );
+	$assert( 'forbidden' === ( $denied_share->notUpdated->{$list}->type ?? null ), 'Writer cannot change projected shareWith' );
+	wp_set_current_user( $a );
+	$call( 'TodoList/set', array( 'accountId' => $aa, 'update' => (object) array( $list => (object) array( 'shareWith' => $share ) ) ) );
+	wp_set_current_user( $b );
 	$subscription = $call( 'TodoList/set', array( 'accountId' => $aa, 'update' => (object) array( $list => (object) array( 'isSubscribed' => true ) ) ) );
 	$session = server()->accounts();
 	$assert( property_exists( $subscription->updated, $list ) && isset( $session->accounts->{$aa}, $session->accounts->{$ab} ) && $session->accounts->{$aa}->isReadOnly, 'Subscription exposes A alongside own B Account' );

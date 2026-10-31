@@ -8,12 +8,13 @@ defined( 'ABSPATH' ) || exit;
 /** A method failure, not an HTTP/request failure. */
 final class MethodError extends \RuntimeException {
 
-	public function __construct( public readonly string $type, string $description = '' ) {
+	public function __construct( public readonly string $type, string $description = '', public readonly ?array $properties = null ) {
 		parent::__construct( $description );
 	}
 
 	public function arguments() : \stdClass {
 		$result = (object) array( 'type' => $this->type );
+		if ( null !== $this->properties ) { $result->properties = $this->properties; }
 		if ( '' !== $this->getMessage() ) {
 			$result->description = $this->getMessage();
 		}

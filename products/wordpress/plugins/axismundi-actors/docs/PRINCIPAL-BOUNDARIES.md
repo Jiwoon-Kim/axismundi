@@ -222,18 +222,56 @@ Calendar 의 권한을 Actors 에 넣지 않는다.
 같은 원칙이다 -- 귀속이 권한을 끌고 오지 않고(CAP 4.1.3), 저장된 부여가 접근이 아니며,
 이제 운영 자격이 자원 권리가 아니다.
 
-#### 미결 (2026-11-01)
+#### 오너 결정 (2026-11-01): RFC 9670 Principal 은 JMAP core 가 소유한다
+
+위 미결을 닫는다. 그리고 질문 자체가 잘못 세워져 있었다.
+
+**투영이냐 소유냐는 거짓 양자택일이다.** 그 질문은 Actors 의 주체 해소와 RFC 9670 Principal 이
+같은 개념의 두 표현이라고 전제한다. 아니다.
 
 ```txt
-주체 레지스트리   JMAP 이 Principal 모델을 소유한다는 것이 두 가지로 갈린다
-   투영   Actors 의 resolve_principal(kind,id) 이 주체의 단일 출처로 남고
-          JMAP 이 그것을 RFC 9670 Principal 객체로 투영한다
-   소유   JMAP 이 자기 주체 레지스트리를 갖는다
-투영이면 주체가 한 곳, 소유면 두 곳이다. 해석이 두 곳에 있으면 드리프트한다는 것은
-이 문서가 이미 기록한 패턴이고(can_manage 두 함수 · JMAP 의 직접 SQL 41곳),
-소유/관찰 구분과도 같은 질문이다. Todo PoC 를 시작하기 전에 정한다
+axismundi_actors_resolve_principal()   우리 정책에서 유효한 주체인가 (wp_user · local_account · remote_actor)
+RFC 9670 Principal                     id · 수명 · 발견 메서드를 가진 프로토콜 객체
 ```
-특히 `write_manager_row` 쪽이 먼저다 -- 쓰기가 남의 스키마를 직접 만지는 자리다.
 
-표준 참고: [RFC 9670 §1.3](https://jmap.io/spec/rfc9670/#section-1.3),
-[Principal §2](https://jmap.io/spec/rfc9670/#section-2).
+다른 개념을 각각 소유하고 **명시적으로 연결**하는 것은 중복이 아니다. 중복은 같은 판정이
+두 곳에 있을 때다 -- 이 문서가 기록한 `can_manage` 두 함수가 그것이었고, Principal 은 그 경우가
+아니다.
+
+**결정 근거:** Actors 가 Principal 을 들고 있으면 **우리 운영 부여 모델이 표준 Principal 의
+정의가 된다.** 우리 정책을 프로토콜 객체에 끼워 넣는 것이고, 그것이 안 되는 이유로 충분하다.
+AP Actor 와 JMAP Principal 은 애초에 같은 개념이 아니다.
+
+```txt
+Actors      Actor·Account 식별 · WP 사용자 연결 · AP 귀속 관계 · 기존 운영 부여
+JMAP core   Principal id·수명 · RFC 9670 객체와 발견 메서드 · 사용자·Account 와의 연결
+자원 소유자  JMAP Principal ID 를 참조하는 공유 설정과 권한 집행
+```
+
+Actors 의 운영 부여는 **JMAP 인가의 입력이 될 수 있지만** Principal 자체나 AddressBook 공유
+권리를 정의하지 않는다.
+
+#### 세 관계를 분리한다 (2026-11-01)
+
+관계의 양 끝이 서로 다르다. 이것이 위 결정이 필요한 이유다.
+
+```txt
+사용자 ↔ Account    개인 귀속.  isPersonal 의 근거
+Actor ↔ Actor       AP 귀속.  attributedTo 의 근거
+Principal ↔ 자원     위임·공유 권리
+```
+
+**한 관계에서 다른 관계를 자동 추론하지 않는다.** PeerTube 채널이 Alice 의 Person Actor 에
+귀속된다고 해서 Alice 세션에서 그 채널 Account 가 `isPersonal: true` 인 것은 아니다.
+개인 Account 인지 공동 운영 Account 인지는 별도 판정이다.
+
+그래서 "Actors 는 `isPersonal` 만 답한다" 도 너무 좁았다. Actors 는 `isPersonal` 이라는 JMAP
+필드를 답하는 것이 아니라 **그 계산에 필요한 사실**("이 Actor 가 누구의 개인 정체성인가")을
+제공하고, 요청자 기준의 계산은 JMAP 이 한다. Group 의 소유·운영 관계도 Actors 쪽에 있을 수
+있다 -- 다만 그것을 JMAP Principal 이나 자원 권리와 동일시하지 않는다.
+
+Lemmy 와 PeerTube 는 **Actor ↔ Actor 관계와 운영 정책의 선례**이고 사용자 ↔ Account 를
+결정하는 근거가 아니다. 두 구현이 서로 다르다는 사실 자체가, `attributedTo` 하나로 보편적인
+소유권·권한 모델이 정의되지 않음을 보여 준다. (구현 세부는 2026-11-01 codex 의 소스 독해이고
+이 문서의 실측이 아니다. Lemmy 가 모더레이터 컬렉션을 `attributedTo` 로 쓰는 것은 FEP-1b12 와
+일치한다.)

@@ -199,5 +199,41 @@ JMAP 이 Actors 에서 테이블 이름만 받아 와 직접 SQL 을 치고, 읽
 **결정: JMAP 은 Actors 의 스키마를 모른다.** API 경유 전환은 별도 슬라이스로 둔다(오너 보류).
 특히 `write_manager_row` 쪽이 먼저다 -- 쓰기가 남의 스키마를 직접 만지는 자리다.
 
+#### 범위 수정 (2026-11-01): 위 결정은 Account 운영 부여에만 해당한다
+
+제목이 "account principal" 이라 principal 일반으로 읽힌다. 그 결정이 덮는 것은
+**Account 를 운영할 자격**, 즉 `ax_actor_managers` 의 owner/manager/editor 부여다.
+의존 방향 논증(Actors 는 아무것도 요구하지 않는 유일한 층)도 그 범위에서만 성립한다.
+
+RFC 9670 의 **Principal 모델**은 Actors 것이 아니다. 오너 결정:
+
+```txt
+Actors        Account 아이덴티티 · WP 사용자 연결 · 기존 Account 운영 부여
+JMAP          RFC 9670 Principal 모델 · 발견 · Account 연결 · 공유 대상 해소
+자원 소유자    공유 설정 저장과 읽기·쓰기·공유 권한 집행.  JMAP Principal ID 를 참조
+              (Contacts 의 AddressBook, Calendar, PoC 의 TodoList)
+```
+
+**"누구에게" 는 JMAP Principal, "무엇을 허용하는가" 는 그 자원이다.** AddressBook 이나
+Calendar 의 권한을 Actors 에 넣지 않는다.
+
+그리고 **Account 운영 부여를 자원 공유 권리로 자동 해석하지 않는다.** Account 를 운영할
+수 있다는 것이 그 Account 의 주소록을 쓸 수 있다는 뜻은 아니다. 이것은 이미 세 번 나온
+같은 원칙이다 -- 귀속이 권한을 끌고 오지 않고(CAP 4.1.3), 저장된 부여가 접근이 아니며,
+이제 운영 자격이 자원 권리가 아니다.
+
+#### 미결 (2026-11-01)
+
+```txt
+주체 레지스트리   JMAP 이 Principal 모델을 소유한다는 것이 두 가지로 갈린다
+   투영   Actors 의 resolve_principal(kind,id) 이 주체의 단일 출처로 남고
+          JMAP 이 그것을 RFC 9670 Principal 객체로 투영한다
+   소유   JMAP 이 자기 주체 레지스트리를 갖는다
+투영이면 주체가 한 곳, 소유면 두 곳이다. 해석이 두 곳에 있으면 드리프트한다는 것은
+이 문서가 이미 기록한 패턴이고(can_manage 두 함수 · JMAP 의 직접 SQL 41곳),
+소유/관찰 구분과도 같은 질문이다. Todo PoC 를 시작하기 전에 정한다
+```
+특히 `write_manager_row` 쪽이 먼저다 -- 쓰기가 남의 스키마를 직접 만지는 자리다.
+
 표준 참고: [RFC 9670 §1.3](https://jmap.io/spec/rfc9670/#section-1.3),
 [Principal §2](https://jmap.io/spec/rfc9670/#section-2).

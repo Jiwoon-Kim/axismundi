@@ -10,6 +10,7 @@ defined( 'ABSPATH' ) || exit( 1 );
 
 require_once dirname( __DIR__ ) . '/includes/repository.php';
 require_once ABSPATH . 'wp-admin/includes/user.php';
+require_once __DIR__ . '/legacy-install-fixtures.php';
 
 global $wpdb;
 $ax_addr_results = array();
@@ -59,14 +60,20 @@ try {
 	$ax_addr_ids[] = $a1->get_identity_id();
 	axismundi_actors_register_handle( $a1->get_identity_id(), 'addr_alice' );
 	$rows = axismundi_actors_get_addresses( $a1->get_identity_id() );
-	ax_addr_assert( $ax_addr_results, 'register_handle records a primary local_handle address', $a1->get_identity_id() === axismundi_actors_handle_owner( 'addr_alice' ) && 1 === count( $rows ) && 'primary' === $rows[0]['status'] && 'local_handle' === $rows[0]['address_type'] );
+	$primary_handles = array_values( array_filter( $rows, static fn( array $row ) : bool => 'local_handle' === $row['address_type'] && 'primary' === $row['status'] ) );
+	ax_addr_assert( $ax_addr_results, 'register_handle records a primary local_handle address', $a1->get_identity_id() === axismundi_actors_handle_owner( 'addr_alice' ) && 1 === count( $primary_handles ) && 'addr_alice' === $primary_handles[0]['address'] );
 
 	// Backfill: an actor created with a handle but no address row gets one on install.
-	$seed = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'preferred_username' => 'addr_seed' ) );
-	$ax_addr_ids[] = $seed->get_identity_id();
-	$before = axismundi_actors_handle_owner( 'addr_seed' );
-	axismundi_actors_install();
-	ax_addr_assert( $ax_addr_results, 'install() backfills a primary address for a pre-existing handle', 0 === $before && $seed->get_identity_id() === axismundi_actors_handle_owner( 'addr_seed' ) );
+	$backfilled = axismundi_actors_audit_legacy_install(
+		static function () : int {
+			return axismundi_actors_audit_legacy_actor( 'local', home_url( '/actors/' . wp_generate_uuid4() ), 'addr_seed' );
+		},
+		static function ( int $id ) : bool {
+			$handles = array_values( array_filter( axismundi_actors_get_addresses( $id ), static fn( array $row ) : bool => 'local_handle' === $row['address_type'] && 'primary' === $row['status'] ) );
+			return axismundi_actors_body_installed() && '1' === get_option( 'ax_actors_body_version' ) && $id === axismundi_actors_handle_owner( 'addr_seed' ) && 1 === count( $handles ) && 'addr_seed' === $handles[0]['address'];
+		}
+	);
+	ax_addr_assert( $ax_addr_results, 'install() backfills a primary address for a pre-existing handle', $backfilled );
 
 	// A retired/reserved handle is never recycled to another actor.
 	$u2 = (int) wp_insert_user( array( 'user_login' => 'ax_addr_bob', 'user_pass' => wp_generate_password(), 'role' => 'author' ) );

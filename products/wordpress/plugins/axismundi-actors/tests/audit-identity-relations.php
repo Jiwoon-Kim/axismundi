@@ -11,6 +11,7 @@ require_once dirname( __DIR__ ) . '/includes/repository.php';
 require_once dirname( __DIR__ ) . '/includes/routing.php';
 require_once dirname( __DIR__ ) . '/includes/webfinger.php';
 require_once dirname( __DIR__ ) . '/includes/remote-discovery.php';
+require_once __DIR__ . '/legacy-install-fixtures.php';
 
 global $wpdb;
 $ax_rel_results = array();
@@ -77,13 +78,14 @@ try {
 	$rows_again = $actor instanceof Axismundi_Actor ? axismundi_actors_get_identity_relations( $actor->get_identity_id() ) : array();
 	ax_rel_assert( $ax_rel_results, 'refresh is idempotent under the compound unique identity', $again instanceof Axismundi_Actor && 3 === count( $rows_again ) );
 
-	if ( $actor instanceof Axismundi_Actor ) {
-		$wpdb->delete( $table, array( 'identity_id' => $actor->get_identity_id() ), array( '%d' ) ); // phpcs:ignore WordPress.DB
-		update_option( 'ax_actors_db_version', '10', false );
-		axismundi_actors_install();
-	}
-	$backfilled = $actor instanceof Axismundi_Actor ? axismundi_actors_get_identity_relations( $actor->get_identity_id() ) : array();
-	ax_rel_assert( $ax_rel_results, 'v10b upgrade backfills claims from existing remote payload snapshots', 3 === count( $backfilled ) && version_compare( (string) get_option( 'ax_actors_db_version' ), '10.1', '>=' ) );
+	$backfilled = axismundi_actors_audit_legacy_install(
+		static fn() : int => axismundi_actors_audit_legacy_actor( 'remote', $source, null, array_merge( array( 'id' => $source, 'type' => 'Person' ), array( 'alsoKnownAs' => array( 'https://example.net/users/a', 'https://www.example.com/@a' ), 'movedTo' => 'https://example.org/users/a' ) ) ),
+		static function ( int $id ) : bool {
+			$claims = axismundi_actors_get_identity_relations( $id );
+			return axismundi_actors_body_installed() && 3 === count( $claims ) && 3 === count( array_filter( $claims, static fn( array $row ) : bool => 'observed' === $row['verification_state'] ) ) && version_compare( (string) get_option( 'ax_actors_db_version' ), '10.1', '>=' );
+		}
+	);
+	ax_rel_assert( $ax_rel_results, 'v10b upgrade backfills claims from existing remote payload snapshots', $backfilled );
 
 	$empty_record = ax_rel_record( 'ax_rel_a', null );
 	if ( ! is_wp_error( $empty_record ) ) {

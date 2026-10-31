@@ -104,6 +104,8 @@ function axismundi_actors_serve_nodeinfo() : void {
 	if ( '' === $which ) {
 		return;
 	}
+	header( 'Access-Control-Allow-Origin: *' );
+	header( 'Access-Control-Allow-Methods: GET, HEAD' );
 	$payload = 'discovery' === $which ? axismundi_actors_nodeinfo_discovery() : axismundi_actors_nodeinfo_document();
 	status_header( 200 );
 	header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );

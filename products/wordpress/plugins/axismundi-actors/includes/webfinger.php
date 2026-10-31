@@ -155,6 +155,8 @@ function axismundi_actors_serve_webfinger() : void {
 	if ( 1 !== (int) get_query_var( 'ax_webfinger' ) ) {
 		return;
 	}
+	header( 'Access-Control-Allow-Origin: *' );
+	header( 'Access-Control-Allow-Methods: GET, HEAD' );
 	$resource  = isset( $_GET['resource'] ) ? sanitize_text_field( wp_unslash( $_GET['resource'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- public read-only discovery endpoint.
 	$descriptor = axismundi_actors_webfinger_descriptor( $resource );
 	if ( is_wp_error( $descriptor ) ) {

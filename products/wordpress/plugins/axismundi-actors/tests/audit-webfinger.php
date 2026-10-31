@@ -40,8 +40,10 @@ try {
 	$ax_wf_ids[] = $actor->get_identity_id();
 	axismundi_actors_register_handle( $actor->get_identity_id(), 'wf_alice' );
 
-	$internal = axismundi_actors_webfinger_descriptor( 'acct:wf_alice@' . $authority );
-	ax_wf_assert( $ax_wf_results, 'an internal actor is concealed', is_wp_error( $internal ) && 'ax_actors_webfinger_not_found' === $internal->get_error_code() );
+	$visibility = require __DIR__ . '/webfinger-visibility-fixtures.php';
+	foreach ( $visibility( $actor->get_identity_id(), 'axismundi_actors_webfinger_descriptor' ) as $label => $concealed ) {
+		ax_wf_assert( $ax_wf_results, $label, $concealed );
+	}
 
 	axismundi_actors_set_status( $actor->get_identity_id(), 'public' );
 	$actor      = axismundi_actors_get_by_uuid( $actor->get_uuid() );

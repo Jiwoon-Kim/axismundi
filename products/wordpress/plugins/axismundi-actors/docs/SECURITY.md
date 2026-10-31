@@ -118,3 +118,31 @@ Creating an actor record and exposing its public profile are **separate** (SPEC
   reset is a deliberate post-roadmap danger-zone action.
 - Reactivation is idempotent: seeds are keyed so no duplicate site/owner actor is
   created, and retained rows keep their UUID / URI / status.
+
+## discoverable 의 적용 범위 — 확정, 집행 대기
+
+`toot:discoverable` 을 쓰므로 정의도 함께 채택한다. 마스토돈 Account 엔티티 문서:
+*"Whether the account has opted into discovery features such as the profile directory."*
+
+```txt
+적용   프로필 디렉터리 · 추천 노출
+제외   직접 핸들 해소. acct: 조회는 discovery feature 가 아니다
+       WebFinger 와 프로필 직접 조회는 이 축의 대상이 아니다
+```
+
+현재 상태는 **광고만 하고 집행이 없다**. 소비자가 0 건이고, `discoverable:false`
+인 액터도 mention-search 가 계속 내놓는다.
+
+```txt
+후속 확인   mention-search 가 직접 핸들 검색도 겸하는지.
+            겸한다면 통째로 discoverable 게이트를 걸면 안 된다 —
+            추천·디렉터리 용도와 직접 주소 해소를 나눠야 한다.
+보류        indexable. 문서는 "allows indexing by search engines" 라고 쓰는데
+            사용자 설정 문구는 게시물 전문 검색 opt-in 쪽이다.
+            Account 엔티티 필드와 AS2 toot:indexable 의 실제 용법이 같은지
+            재측정한 뒤 집행 대상을 정한다. 한 줄 근거로 정하지 않는다.
+닫힘        follow_collections_visibility. 현재 응답에서 집행하고 정책 광고는
+            추가하지 않는다. 마스토돈도 hide_collections 를 REST 필드로만
+            두고 AS2 문서에는 내보내지 않는다 (fosstodon 액터 실측: @context
+            선언도 방출도 없음). 집행하되 광고하지 않는 것이 배포된 선례다.
+```

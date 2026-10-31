@@ -66,3 +66,41 @@ for local and cached remote Actors. Local product actions require the Contributo
 `edit_posts` capability. Administrators with an activated Actor may also act from local rows
 on the core Users table. Activities records transport-neutral outbound Activities; a transport
 adapter decides whether and how remote inboxes receive them.
+
+## 6. Open — Person Follow transitions
+
+다음 슬라이스의 범위다. 아래 전이는 구현되어 있고, 빈칸만 정하면 된다.
+
+```txt
+Follow 도착      axismundi_act_start_relation()        → pending
+자동 수락        can_auto_accept() 면 즉시 Accept       local-social.php:38-46
+승인 / 거절      axismundi_act_transition_relation()   → accepted / rejected
+Undo             → undone
+Block            별도 관계. active / undone
+```
+
+정할 것 셋.
+
+```txt
+거절 후 재-Follow          rejected 상태에서 새 Follow 를 받는가
+Block 과 기존 Follow       accepted 상태에서 Block 하면 follow 관계는 어떻게 되는가
+정책 변경과 기존 pending   승인제를 끈 뒤 대기 중이던 요청을 소급 수락하는가
+```
+
+세 번째의 측정값과 권고:
+
+```txt
+측정   axismundi_actors_set_local_policy() 은 훅을 발화하지 않는다.
+       auto-accept 핸들러는 axismundi_act_relation_changed 에만 걸려 있다.
+       따라서 승인제를 켜 둔 동안 들어온 Follow 는 끈 뒤에도 pending 으로 남는다.
+권고   소급 수락하지 않는다. 승인제 동안의 요청은 사람이 본 적 없는 요청이고,
+       정책을 끄는 행위가 그것들의 일괄 수락으로 읽히면 안 된다.
+       대신 대기 중인 요청이 있다는 것이 Follows 화면에서 확인·처리 가능해야 한다.
+```
+
+### 합격선 — 무엇이 광고 불일치가 아닌지
+
+`manuallyApprovesFollowers` 는 **새 요청에 적용할 승인 정책**이지 개별 관계의 현재
+상태가 아니다. 그러므로 자동 수락으로 바꾼 뒤 예전 요청이 pending 으로 남아 있는
+것은 그 자체로 광고 불일치가 **아니다**. 합격선은 "각 전이 후 광고값이 그 시점의
+**새 Follow 에 대한 처리**와 일치하는가" 이다.

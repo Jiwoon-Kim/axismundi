@@ -739,3 +739,61 @@ Media Library attachments), and object-or-array `icon` / `image`. A remote profi
 **vCard** is not a schema concern: a future `/@handle/contact.vcf` can map
 already-public Actor fields to vCard 4.0 (birthday / address only behind an explicit
 opt-in field). No `vcard_*` columns.
+
+## 아이덴티티가 컨테이너다 (오너 결정, 2026-11-01)
+
+JMAP Account 관점에서는 **무성적 Account 컨테이너가 먼저이고, 액터 메타데이터가 거기에
+얹힌다.** 우리는 Actor 가 primary model 이라 Account 가 Actor 에 매달려 있고, 그것이 우리에게
+맞다 -- Actors 가 로컬과 리모트를 한 아이덴티티 공간에 쥐고, **리모트는 Actor facet 만 있고
+Account 가 없다.** account-first 로 뒤집으면 그 경우가 들어갈 자리가 없다. 아이덴티티를
+컨테이너로 두는 지금 모양이 더 일반적이다.
+
+### 측정 (2026-11-01)
+
+```txt
+ax_jmap_accounts 890 행  =  로컬 액터 890        Account facet 은 로컬에 보편적이다 (선택 아님)
+                                                 Add Local Actor 와 Add Account 는 이미 같은 동작
+핸들 facet    로컬 840 중 594 가 핸들 없음        추가적이다.  없는 것이 정상 상태
+타입 facet    actor_type varchar(16) NOT NULL     필수다.  기본값 없음, 빈 값 0건
+              Person 652 · Organization 157 · Group 79 · Application 2
+```
+
+### 결정: 생성은 아무것도 묻지 않는다
+
+`Add Account` 가 필수로 받는 것은 **id · uuid · isPersonal** 뿐이다. type · handle · name ·
+summary · status 를 묻지 않는다. 실제 저장으로 옮기면:
+
+```txt
+id · uuid              identity 행
+isPersonal             personal_owner_user_id = 생성한 사용자
+                       (isPersonal 자체는 파생값이고 저장되지 않는다 -- user ↔ account 관계)
+actor_type             'Person' 기본값.  Actor 가 primary model 이므로 말이 된다
+handle · name 등        추가적.  나중에 붙는다
+```
+
+**그 결과 개인 귀속이 `actor_type` 과 무관해진다.** 생성 경로가 타입을 묻지 않으므로 생성
+시점에 타입으로 분기할 수 없고, 그것이 2026-11-01 이전 코드가 `'Person' === $type ?
+$users[0] : null` 로 개인 소유자를 타입에 따라 정했던 버그 종류를 구조적으로 막는다.
+
+`actor_type` 은 `axismundi_actors_set_actor_type()` 으로 나중에 바꿀 수 있다(5개 타입 검증).
+그래서 기본값 Person 이 Group 을 만들 길을 막지 않는다.
+
+### 따라오는 수정
+
+기본값 Person + 사후 변경이 **Group 을 만드는 정상 경로**가 되면 그 세터가 드문 함수에서 주
+경로로 올라간다. 지금 그 함수에는 가드가 없다.
+
+```txt
+시스템 Actor 거부     타입 변경이 막혀 있지 않다.  Application 을 Person 으로 바꾸면
+                      인스턴스 Actor 역할이 깨진다 (SYSTEM-ACTOR.md)
+docblock 수정         "Person/user actors keep `Person`" 은 개인 소유 ⇒ Person 을 전제한다.
+                      위 결정이 그 전제를 제거하므로 그 문장은 거짓이 된다.
+                      집행되지도 않는 규칙이었다
+```
+
+### 미결: 무성적 first 는 정합성 있으나 지금은 아니다
+
+타입을 **아예 없는 상태로** 두는 쪽이 더 정합적이다 -- 그러면 위 버그가 표현 불가능해진다.
+비용은 `actor_type` nullable(또는 센티넬) + 타입으로 분기하는 소비자 전수다(예: 포럼의
+`'Person' !== get_type()` 사이트들). 기본값 Person 은 **그 성질을 스키마 변경 없이 얻는
+버전**이고, 무성적 first 는 비용을 볼 수 있을 때 판단한다.

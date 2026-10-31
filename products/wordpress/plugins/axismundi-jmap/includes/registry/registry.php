@@ -52,7 +52,7 @@ final class Registry {
 	public function type( string $name ) : ?array { return $this->types[ $name ] ?? null; }
 
 	/** Explicit server declaration plus a live, User-relative Account grant provider. */
-	public function register_account_provider( string $capability, \stdClass $server, callable $provider, string $purpose, ?callable $validate_policy = null ) : void {
+	public function register_account_provider( string $capability, \stdClass $server, callable $provider, string $purpose, ?callable $validate_policy = null, ?callable $shared_accounts = null ) : void {
 		if ( $this->frozen || ! $this->supports( $capability ) || CORE === $capability
 			|| isset( $this->account_providers[ $capability ] )
 			|| 1 !== preg_match( '/\A[a-z][a-z0-9_-]{0,63}\z/D', $purpose ) ) {
@@ -68,6 +68,7 @@ final class Registry {
 		$this->account_providers[ $capability ] = array(
 			'server' => copy_json( $server ), 'provider' => \Closure::fromCallable( $provider ), 'purpose' => $purpose,
 			'validate_policy' => null === $validate_policy ? static fn( \stdClass $limits ) : bool => array() === get_object_vars( $limits ) : \Closure::fromCallable( $validate_policy ),
+			'shared_accounts' => null === $shared_accounts ? null : \Closure::fromCallable( $shared_accounts ),
 		);
 	}
 

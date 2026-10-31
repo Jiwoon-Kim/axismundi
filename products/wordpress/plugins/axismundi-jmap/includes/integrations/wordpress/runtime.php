@@ -23,6 +23,13 @@ final class Server {
 		$this->engine = $configuration->engine( $registry );
 	}
 	public function accounts() : \stdClass { return $this->projector->accounts( get_current_user_id() ); }
+	/** Authenticated runtime execution without claiming a public Session transport. */
+	public function execute_json( string $json ) : \stdClass {
+		$state = fn() => hash_hmac( 'sha256', wp_json_encode( $this->accounts() ), wp_salt( 'auth' ) );
+		$response = $this->engine->execute( $json, get_current_user_id(), $state(), fn( $id, $user, $capability, $writes ) => $this->projector->authorize( $id, $user, $capability, $writes ) );
+		$response->sessionState = $state();
+		return $response;
+	}
 	public function session( \stdClass $transport ) : \stdClass {
 		return $this->projector->build( get_current_user_id(), $transport, $this->configuration->properties() );
 	}
@@ -35,6 +42,10 @@ final class Server {
 		$response->sessionState = $this->session( $transport )->state;
 		return $response;
 	}
+}
+
+function execute_json( string $json ) : \stdClass {
+	return server()->execute_json( $json );
 }
 
 function server() : Server {

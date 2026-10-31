@@ -1,0 +1,12 @@
+#ax-jmap-todo .todo-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:16px 0}
+#ax-jmap-todo .todo-layout{display:grid;grid-template-columns:minmax(180px,260px) minmax(0,1fr);gap:24px}
+#ax-jmap-todo .todo-lists{margin:0;padding:0;list-style:none}
+#ax-jmap-todo .todo-lists button{width:100%;text-align:left;margin-bottom:6px;white-space:normal;height:auto}
+#ax-jmap-todo input[type=text]{max-width:100%;min-width:0}
+#ax-jmap-todo td input[type=text]{width:100%}
+#ax-jmap-todo .todo-share label{display:inline-block;margin-right:12px}
+#ax-jmap-todo .todo-share li{padding:8px 0;border-bottom:1px solid #c3c4c7}
+#ax-jmap-todo fieldset{margin:16px 0}
+#ax-jmap-todo table{table-layout:fixed}
+#ax-jmap-todo td{overflow-wrap:anywhere}
+@media(max-width:782px){#ax-jmap-todo .todo-layout{grid-template-columns:1fr}#ax-jmap-todo thead{display:none}#ax-jmap-todo tbody,#ax-jmap-todo tr,#ax-jmap-todo td{display:block}#ax-jmap-todo tr{padding:8px;border-bottom:1px solid #c3c4c7}#ax-jmap-todo td{padding:6px 0}#ax-jmap-todo td::before{content:attr(data-label);display:block;margin-bottom:4px}#ax-jmap-todo td button{margin-right:6px}}

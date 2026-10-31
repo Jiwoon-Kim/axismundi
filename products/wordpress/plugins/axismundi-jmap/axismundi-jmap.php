@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Axismundi JMAP
- * Description: Development foundation for JMAP over Actor-backed accounts. No public protocol routes yet.
+ * Description: JMAP development foundation with an authenticated Todo sharing proof of concept.
  * Version: 0.1.1-dev
  * Requires at least: 6.7
  * Requires PHP: 8.1
@@ -20,7 +20,12 @@ require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/integrations/wordpress/accounts.php';
 require_once __DIR__ . '/includes/integrations/wordpress/account-store.php';
 require_once __DIR__ . '/includes/integrations/wordpress/runtime.php';
+require_once __DIR__ . '/includes/integrations/wordpress/http.php';
 require_once __DIR__ . '/includes/integrations/wordpress/account-selection.php';
+require_once __DIR__ . '/modules/todo-poc/store.php';
+require_once __DIR__ . '/modules/todo-poc/methods.php';
+require_once __DIR__ . '/modules/todo-poc/runtime.php';
+require_once __DIR__ . '/includes/integrations/wordpress/todo-admin.php';
 
-// No public JMAP discovery/API/blob/SSE routes or capability advertisement.
+// The authenticated admin PoC is not a public JMAP discovery/blob/SSE server.
 register_activation_hook( __FILE__, '\\Axismundi\\Jmap\\install_account_store' );

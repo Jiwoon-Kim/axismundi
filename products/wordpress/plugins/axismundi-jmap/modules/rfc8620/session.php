@@ -45,6 +45,9 @@ final class SessionProjector {
 		foreach ( account_actors( $user_id ) as $id => $actor ) {
 			$accounts->{$id} = $this->project_account( $actor, $user_id );
 		}
+		foreach ( $this->shared_actors( $user_id, true ) as $id => $actor ) {
+			if ( ! isset( $accounts->{$id} ) ) { $accounts->{$id} = $this->project_account( $actor, $user_id ); }
+		}
 		foreach ( $providers as $uri => $entry ) {
 			$default = axismundi_actors_default_account( $user_id, $entry['purpose'] );
 			$id = null === $default ? '' : 'a' . $default->get_identity_id();
@@ -58,20 +61,33 @@ final class SessionProjector {
 	/** Engine authorization must re-resolve current access, never reuse a Session snapshot. */
 	public function account( string $account_id, int $user_id ) : ?\stdClass {
 		$this->user( $user_id );
-		$actor = resolve_account_actor( $account_id, $user_id );
+		$actor = resolve_account_actor( $account_id, $user_id ) ?? ( $this->shared_actors( $user_id, false )[ $account_id ] ?? null );
 		return null === $actor ? null : $this->project_account( $actor, $user_id );
 	}
 
 	/** Reused by protocol methods and in-process WordPress consumers. */
 	public function authorize( string $account_id, int $user_id, string $capability, bool $writes ) : \stdClass {
 		$this->user( $user_id );
-		$actor = resolve_account_actor( $account_id, $user_id );
+		$actor = resolve_account_actor( $account_id, $user_id ) ?? ( $this->shared_actors( $user_id, false )[ $account_id ] ?? null );
 		if ( null === $actor ) { throw new MethodError( 'accountNotFound' ); }
 		$grants = array();
 		$account = $this->project_account( $actor, $user_id, $grants );
 		if ( ! isset( $grants[ $capability ] ) ) { throw new MethodError( 'accountNotSupportedByMethod' ); }
 		if ( $writes && ! $grants[ $capability ]->writable ) { throw new MethodError( 'accountReadOnly' ); }
 		return $account;
+	}
+
+	/** Resource sharing identifies candidates; each capability still grants independently. */
+	private function shared_actors( int $user_id, bool $subscribed_only ) : array {
+		$result = array();
+		foreach ( $this->registry->account_providers() as $entry ) {
+			if ( null === $entry['shared_accounts'] ) { continue; }
+			foreach ( ( $entry['shared_accounts'] )( $user_id, $subscribed_only ) as $id ) {
+				$actor = account_actor( $id );
+				if ( $actor && ! in_array( $actor->get_status(), array( 'disabled', 'tombstone' ), true ) ) { $result[ $id ] = $actor; }
+			}
+		}
+		return $result;
 	}
 
 	private function project_account( \Axismundi_Actor $actor, int $user_id, ?array &$grants = null ) : \stdClass {
@@ -93,12 +109,13 @@ final class SessionProjector {
 			$grants[ $uri ] = $grant;
 			$writable = $writable || $grant->writable;
 		}
-		return (object) array(
+		$account = (object) array(
 			'name' => $actor->get_display_name(),
 			'isPersonal' => axismundi_actors_account_is_personal( $actor, $user_id ),
 			'isReadOnly' => ! $writable,
 			'accountCapabilities' => $caps,
 		);
+		return apply_filters( 'axismundi_jmap_account_projection', $account, $actor, $user_id );
 	}
 
 	/** Only an explicit transport contract can supply the required Session URLs and limits. */

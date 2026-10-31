@@ -758,38 +758,45 @@ ax_jmap_accounts 890 행  =  로컬 액터 890        Account facet 은 로컬�
               Person 652 · Organization 157 · Group 79 · Application 2
 ```
 
-### 결정: 생성은 아무것도 묻지 않는다
+### 결정 (2026-11-01, 수정): 타입은 필수, 핸들은 나중
 
-`Add Account` 가 필수로 받는 것은 **id · uuid · isPersonal** 뿐이다. type · handle · name ·
-summary · status 를 묻지 않는다. 실제 저장으로 옮기면:
-
-```txt
-id · uuid              identity 행
-isPersonal             personal_owner_user_id = 생성한 사용자
-                       (isPersonal 자체는 파생값이고 저장되지 않는다 -- user ↔ account 관계)
-actor_type             'Person' 기본값.  Actor 가 primary model 이므로 말이 된다
-handle · name 등        추가적.  나중에 붙는다
-```
-
-**그 결과 개인 귀속이 `actor_type` 과 무관해진다.** 생성 경로가 타입을 묻지 않으므로 생성
-시점에 타입으로 분기할 수 없고, 그것이 2026-11-01 이전 코드가 `'Person' === $type ?
-$users[0] : null` 로 개인 소유자를 타입에 따라 정했던 버그 종류를 구조적으로 막는다.
-
-`actor_type` 은 `axismundi_actors_set_actor_type()` 으로 나중에 바꿀 수 있다(5개 타입 검증).
-그래서 기본값 Person 이 Group 을 만들 길을 막지 않는다.
-
-### 따라오는 수정
-
-기본값 Person + 사후 변경이 **Group 을 만드는 정상 경로**가 되면 그 세터가 드문 함수에서 주
-경로로 올라간다. 지금 그 함수에는 가드가 없다.
+같은 날 앞서 "생성은 아무것도 묻지 않는다 / 타입은 Person 기본값" 으로 적었던 것을 **대체한다.**
+오너 결정은 그 반대다 -- **타입에는 `*` 를 붙여 필수로 하고, 핸들은 나중에 추가할 수 있게 한다.**
 
 ```txt
-시스템 Actor 거부     타입 변경이 막혀 있지 않다.  Application 을 Person 으로 바꾸면
-                      인스턴스 Actor 역할이 깨진다 (SYSTEM-ACTOR.md)
-docblock 수정         "Person/user actors keep `Person`" 은 개인 소유 ⇒ Person 을 전제한다.
-                      위 결정이 그 전제를 제거하므로 그 문장은 거짓이 된다.
-                      집행되지도 않는 규칙이었다
+필수   actor_type   화면에 * 로 명시한다.  핸들러는 이미 in_array 로 검증하고 있다
+       name         현재 필수 유지
+나중   handle       생성 시점에 받지 않는다
+       summary · status  이미 선택이다
 ```
+
+근거는 **핸들이 WebFinger 를 켜는 스위치**라는 것이다. 핸들이 붙어야 `acct:` 가 성립하고 외부
+인스턴스에서 발견된다. 그래서 "계정을 만드는 일" 과 "외부에 드러내는 일" 이 두 단계로 갈린다.
+
+측정이 이 모양을 이미 뒷받침한다.
+
+```txt
+로컬 840 중 594 가 핸들 없음        핸들 없는 Account 는 표현 가능하고 다수다
+handle_locked_at 이 외부 노출을 쥔다  멘션 검색 · NodeInfo 공개 액터 수 ·
+                                     공개 Group 디렉터리 · 원격 팔로우 대상
+admin.php:1229 이 register_handle    나중에 붙이는 경로가 이미 있다
+```
+
+#### 이 수정이 보증을 약하게 만든다
+
+앞 판본은 "생성 경로가 타입을 묻지 않으므로 타입으로 분기할 수 없다" 는 **구조적 불가능**을
+근거로 삼았다. 타입을 필수로 받으면 그 보호가 사라진다. 개인 귀속이 타입과 무관하다는 것은
+이제 **규칙**이지 불가능이 아니다.
+
+```txt
+규칙   personal_owner_user_id 는 actor_type 과 무관하게 생성자로 배정한다
+집행   감사가 단언한다.  변이로 검증한다 -- UI 로 Group 을 만들면 생성자 세션에서
+       isPersonal: true 여야 하고, 타입 조건부 배정으로 되돌리면 실패해야 한다
+```
+
+거래는 명시적이다. 타입을 생성 시점에 **의도적으로 고르게** 하는 값과, 그 자리를 버그에
+열어 두는 비용을 맞바꾼다. 기본값 Person 은 대부분의 Account 가 우연히 Person 이 되게 하므로
+오너가 그쪽을 택하지 않았다.
 
 ### 미결: 무성적 first 는 정합성 있으나 지금은 아니다
 

@@ -35,6 +35,21 @@ function axismundi_act_local_follow_requires_approval( Axismundi_Actor $target )
 	return (bool) apply_filters( 'axismundi_act_local_follow_requires_approval', $required, $target );
 }
 
+/** The existing inbound auto-accept eligibility, shared with Actor advertising. */
+function axismundi_act_local_follow_can_auto_accept( Axismundi_Actor $target ) : bool {
+	return $target->is_local()
+		&& 'Person' === $target->get_type()
+		&& 'public' === $target->get_status()
+		&& $target->is_handle_locked()
+		&& ! axismundi_act_local_follow_requires_approval( $target );
+}
+
+/** OP owns the representation; Activities supplies the effective Follow policy. */
+function axismundi_act_supply_actor_follow_approval( bool $declared, Axismundi_Actor $actor ) : bool {
+	return $actor->is_local() ? ! axismundi_act_local_follow_can_auto_accept( $actor ) : $declared;
+}
+add_filter( 'axismundi_op_actor_manually_approves_followers', 'axismundi_act_supply_actor_follow_approval', 10, 2 );
+
 /**
  * Whether a local Follow target is a joinable community rather than a person.
  *
@@ -262,11 +277,7 @@ function axismundi_act_maybe_auto_accept_inbound_follow( array $relation ) : voi
 	}
 	$target = axismundi_actors_get_by_uri( (string) ( $relation['object_actor_uri'] ?? '' ) );
 	if ( ! $target instanceof Axismundi_Actor
-		|| ! $target->is_local()
-		|| 'Person' !== $target->get_type()
-		|| 'public' !== $target->get_status()
-		|| ! $target->is_handle_locked()
-		|| axismundi_act_local_follow_requires_approval( $target )
+		|| ! axismundi_act_local_follow_can_auto_accept( $target )
 	) {
 		return;
 	}

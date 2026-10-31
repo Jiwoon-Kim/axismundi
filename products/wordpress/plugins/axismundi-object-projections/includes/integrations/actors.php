@@ -118,7 +118,7 @@ function axismundi_op_actor_transform( Axismundi_Actor $actor ) : array {
 		'preferredUsername'       => $actor->get_preferred_username(),
 		'name'                    => $name,
 		'summary'                 => $summary,
-		'manuallyApprovesFollowers' => true === $actor->get_policy_flag( 'manually_approves_followers' ),
+		'manuallyApprovesFollowers' => (bool) apply_filters( 'axismundi_op_actor_manually_approves_followers', true === $actor->get_policy_flag( 'manually_approves_followers' ), $actor ),
 	);
 	if ( $actor->is_local() && function_exists( 'axismundi_act_get_liked_collection_page' ) ) {
 		$object['liked'] = axismundi_op_actor_liked_url( $actor );

@@ -22,10 +22,17 @@ python -m unittest discover -s tools/wp-env -p test_run_audits.py -v
 ```
 
 list는 모든 플러그인의 tests/*.php를 열거한다. 실행 대상은 audit-*.php와 명시한
-standalone 테스트다. mutation driver와 fixture helper는 제외하며 성공으로 세지 않는다.
+standalone 테스트다. mutation driver와 fixture helper는 기본 스윕에서 제외하며 성공으로 세지 않는다.
 다른 PHP 파일을 자동으로 실행하지 않는다. manifest의 대상·환경 선언을 리뷰한다.
 --audit는 파일명 또는 상대 경로 glob, --plugin은 플러그인 디렉터리명이다.
+제외된 실행 가능 감사를 정확한 파일명 또는 상대 경로로 --audit에 지정하면 실행한다.
+넓은 glob은 제외를 덮지 않고, fixture helper처럼 실행 대상으로 분류되지 않은 PHP는
+정확히 지정해도 실행하지 않는다. 변이 감사의 실패는 FAIL로 보존하며 자동으로 PASS로 뒤집지 않는다.
 전체 대상은 run만으로 실행하지만 실제 DB를 변경할 수 있으므로 개발 환경 전용이다.
+
+실행 제한은 명시한 --timeout이 최우선이며, 생략하면 audits.json의 timeouts 선언,
+선언도 없으면 300초를 사용한다. 하위 감사를 두 라운드 반복하는 principal-fixture-cleanup은
+900초를 선언하고 스윕에 유지한다. list와 results.json에 timeout_seconds를 기록한다.
 
 결과는 시스템 임시 디렉터리에 저장한다. --output으로 checkout 밖을 지정할 수 있다.
 전체 stdout/stderr 로그·results.json·results.md를 보존한다. DB dump와 로그는 개인정보·
@@ -38,6 +45,9 @@ standalone 테스트다. mutation driver와 fixture helper는 제외하며 성�
   uncaught/Fatal error 같은 단어를 금지하지 않는다. 실제 PHP·WP-CLI 오류 행과 [FAIL]은 탐지한다.
 - 개별 [PASS]는 집계가 아니다. 인식한 최종 집계가 없으면 INCOMPLETE다.
 - 0검사는 성공이 아니다. 환경 부족은 CONFIG_ERROR, 제한 시간 초과는 TIMEOUT이다.
+- GNU timeout의 124는 TIMEOUT이다. BusyBox의 TERM(143) 및 KILL(137)은 실제 경과 시간이
+  해당 실행 제한 이상일 때 TIMEOUT으로 분류한다. 제한 이전의 신호 종료나 근거 없는 143은
+  FAIL로 남긴다. 모든 128+n을 타임아웃으로 일반화하지 않는다. 원래 종료 코드와 시간은 보존한다.
 - 실행 전 판정기의 알려진 입력 sanity와 실제 JMAP engine.php 감사를 먼저 실행한다.
 - 각 PHP는 컨테이너 내부 timeout으로 제한한다. 병렬 실행·git stash·자동 checkout을 하지 않는다.
 - 종료 시 revision과 dirty/untracked 파일 내용 지문도 비교한다.

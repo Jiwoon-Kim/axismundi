@@ -28,7 +28,7 @@ PASS_CHECK = re.compile(r"^\s*\[PASS\](?:\s|$)")
 FAILURE = re.compile(r"^\s*\[FAIL\](?:\s|$)|^(?:\[[^\]\r\n]+\]\s*)?(?:PHP )?(?:Fatal error:|Parse error:|Uncaught |Error:|FAIL(?:\s|:))", re.M)
 
 
-def classify(code: int, output: str) -> dict:
+def classify(code: int, output: str, *, timeout_seconds: int | None = None, elapsed_seconds: float | None = None) -> dict:
     summaries = []
     for line in output.splitlines():
         for pattern in SUMMARY:
@@ -38,7 +38,9 @@ def classify(code: int, output: str) -> dict:
     error_output = "\n".join(line for line in output.splitlines() if not PASS_CHECK.match(line))
     error = FAILURE.search(error_output)
     reason = error_output[error.start():].splitlines()[0] if error else ""
-    if code in (124, 137):
+    deadline_signal = (code in (137, 143) and timeout_seconds is not None
+                       and elapsed_seconds is not None and elapsed_seconds >= timeout_seconds)
+    if code == 124 or deadline_signal:
         return {"status": "TIMEOUT", "checks": 0, "reason": "Container execution time limit exceeded"}
     if code or error or any(failed for _, failed in summaries):
         return {"status": "FAIL", "checks": summaries[-1][0] if summaries else 0,
@@ -209,11 +211,38 @@ def catalog(config: dict) -> list[dict]:
         excluded = any(fnmatch.fnmatch(file.name, pattern) for pattern in config["exclude"])
         env = config["environment"].get(name, {})
         getenv = re.findall(r"getenv\(\s*['\"]([A-Z][A-Z0-9_]*)['\"]", file.read_text(encoding="utf-8"))
+        seconds = config.get("timeouts", {}).get(name, 300)
+        if type(seconds) is not int or seconds < 1:
+            raise RuntimeError(f"Invalid declared timeout for {name}: {seconds!r}")
         result.append({"name": name, "enabled": executable and not excluded,
+                       "executable": executable, "excluded": excluded, "timeout_seconds": seconds,
                        "environment": env, "observed_getenv": sorted(set(getenv)),
                        "required_environment": config.get("requirements", {}).get(name, []),
                        "kind": "standalone" if name in config["standalone"] else "wordpress"})
     return result
+
+
+def select_entries(entries: list[dict], plugins: list[str], audits: list[str]) -> list[dict]:
+    selected = []
+    for entry in entries:
+        name = entry["name"]
+        if plugins and name.split("/")[0] not in plugins:
+            continue
+        # A broad glob must not silently include negative controls or fixture helpers.
+        explicit = entry.get("executable", False) and (name in audits or Path(name).name in audits)
+        if not entry["enabled"] and not explicit:
+            continue
+        if audits and not any(fnmatch.fnmatch(name, p) or fnmatch.fnmatch(Path(name).name, p) for p in audits):
+            continue
+        selected.append(entry)
+    return selected
+
+
+def timeout_for(entry: dict, override: int | None) -> int:
+    seconds = entry.get("timeout_seconds", 300) if override is None else override
+    if type(seconds) is not int or seconds < 1:
+        raise RuntimeError("Timeout must be a positive integer")
+    return seconds
 
 
 def run_one(db: DockerDB, entry: dict, directory: Path, seconds: int) -> dict:
@@ -244,7 +273,9 @@ def run_one(db: DockerDB, entry: dict, directory: Path, seconds: int) -> dict:
         except subprocess.TimeoutExpired:
             code = 124
     output = logfile.read_text(encoding="utf-8", errors="replace")
-    return dict(entry, **classify(code, output), exit_code=code, seconds=round(time.monotonic() - start, 2), log=str(logfile))
+    elapsed = time.monotonic() - start
+    return dict(entry, **classify(code, output, timeout_seconds=seconds, elapsed_seconds=elapsed),
+                exit_code=code, timeout_seconds=seconds, seconds=round(elapsed, 2), log=str(logfile))
 
 
 def main() -> int:
@@ -260,13 +291,14 @@ def main() -> int:
     parser.add_argument("--db-mode", choices=["none", "before-after"], default="none")
     parser.add_argument("--state", type=Path, help="Previously captured snapshot.json to verify or restore")
     parser.add_argument("--confirm-restore", help="Must exactly name the destination container")
-    parser.add_argument("--timeout", type=int, default=300)
+    parser.add_argument("--timeout", type=int, help="Override every audit's declared timeout (otherwise manifest, then 300 seconds)")
     args = parser.parse_args()
     parser_sanity()
     config = json.loads(args.manifest.read_text(encoding="utf-8"))
     entries = catalog(config)
-    selected = [e for e in entries if e["enabled"] and (not args.plugin or e["name"].split("/")[0] in args.plugin)
-                and (not args.audit or any(fnmatch.fnmatch(e["name"], p) or fnmatch.fnmatch(Path(e["name"]).name, p) for p in args.audit))]
+    selected = select_entries(entries, args.plugin, args.audit)
+    if args.timeout is not None:
+        timeout_for({}, args.timeout)
     if args.command == "list":
         print(json.dumps(entries, indent=2)); return 0
     container = args.container
@@ -294,8 +326,6 @@ def main() -> int:
         print("PASS snapshot-restore 1"); return 0
     if not selected:
         raise RuntimeError("No executable audits matched; empty selection is not success")
-    if args.timeout < 1:
-        raise RuntimeError("Timeout must be positive")
     pair = None
     if args.state:
         pair = json.loads(args.state.read_text(encoding="utf-8")); verify_pair(pair, db)
@@ -308,13 +338,13 @@ def main() -> int:
     if sanity is None:
         raise RuntimeError("Manifest known-good sanity audit is missing")
     try:
-        results.append(run_one(db, sanity, output, args.timeout))
+        results.append(run_one(db, sanity, output, timeout_for(sanity, args.timeout)))
         if results[-1]["status"] != "PASS":
             raise RuntimeError("Known-good sanity audit failed; refusing to interpret suite results")
         for entry in selected:
             if entry["name"] == sanity["name"]:
                 continue
-            result = run_one(db, entry, output, args.timeout)
+            result = run_one(db, entry, output, timeout_for(entry, args.timeout))
             results.append(result)
             print(f"{result['status']:10} {result['checks']:5} {entry['name']} {result['reason']}", flush=True)
     finally:

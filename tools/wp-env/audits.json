@@ -3,6 +3,9 @@
   "sanity": "axismundi-jmap/tests/engine.php",
   "exclude": ["*mutation*.php", "*-fixtures.php"],
   "standalone": ["axismundi-jmap/tests/engine.php"],
+  "timeouts": {
+    "axismundi-actors/tests/audit-principal-fixture-cleanup.php": 900
+  },
   "requirements": {
     "axismundi-actors/tests/audit-accounts-navigation-http.php": ["AX_ADMIN_HTTP_ORIGIN"],
     "axismundi-activities/tests/audit-c2s-outbox-http.php": ["AX_C2S_HTTP_ORIGIN"],

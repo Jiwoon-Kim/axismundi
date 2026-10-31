@@ -2,6 +2,7 @@
 import contextlib
 import hashlib
 import io
+import json
 from pathlib import Path
 import subprocess
 import tempfile
@@ -41,6 +42,64 @@ class AuditRunnerTests(unittest.TestCase):
     def test_nonzero_or_timeout_cannot_be_hidden_by_summary(self):
         self.assertEqual("FAIL", runner.classify(1, "PASS: 71 checks\n")["status"])
         self.assertEqual("TIMEOUT", runner.classify(124, "PASS: 71 checks\n")["status"])
+
+    def test_signal_exit_requires_an_expired_deadline(self):
+        for code in (137, 143):
+            self.assertEqual("FAIL", runner.classify(code, "PASS pretend 1\n")["status"])
+            self.assertEqual("FAIL", runner.classify(code, "", timeout_seconds=300, elapsed_seconds=299.9)["status"])
+            self.assertEqual("TIMEOUT", runner.classify(code, "PASS pretend 1\n", timeout_seconds=300, elapsed_seconds=300)["status"])
+        self.assertEqual("FAIL", runner.classify(139, "", timeout_seconds=300, elapsed_seconds=301)["status"])
+
+    def test_declared_timeout_and_cli_precedence(self):
+        self.assertEqual(300, runner.timeout_for({}, None))
+        self.assertEqual(900, runner.timeout_for({"timeout_seconds": 900}, None))
+        self.assertEqual(20, runner.timeout_for({"timeout_seconds": 900}, 20))
+        for value in (True, 0, -1, "300"):
+            with self.assertRaisesRegex(RuntimeError, "positive integer"):
+                runner.timeout_for({}, value)
+
+    def test_exact_selection_overrides_exclusion_but_not_executability(self):
+        normal = {"name": "plugin/tests/audit-normal.php", "enabled": True, "executable": True}
+        mutation = {"name": "plugin/tests/audit-negative-mutations.php", "enabled": False, "executable": True}
+        helper = {"name": "plugin/tests/legacy-fixtures.php", "enabled": False, "executable": False}
+        entries = [normal, mutation, helper]
+        self.assertEqual([normal], runner.select_entries(entries, [], []))
+        self.assertEqual([normal], runner.select_entries(entries, [], ["audit-*.php"]))
+        for exact in (mutation["name"], "audit-negative-mutations.php"):
+            self.assertEqual([mutation], runner.select_entries(entries, [], [exact]))
+        self.assertEqual([], runner.select_entries(entries, ["other"], [mutation["name"]]))
+        self.assertEqual([], runner.select_entries(entries, [], ["legacy-fixtures.php"]))
+
+    def test_catalog_exposes_and_validates_declared_timeouts(self):
+        with tempfile.TemporaryDirectory() as root:
+            plugins = Path(root)
+            tests = plugins / "axismundi-example/tests"
+            tests.mkdir(parents=True)
+            (tests / "audit-slow.php").write_text("<?php\n", encoding="utf-8")
+            config = {"exclude": [], "standalone": [], "environment": {},
+                      "timeouts": {"axismundi-example/tests/audit-slow.php": 900}}
+            with patch.object(runner, "PLUGINS", plugins):
+                self.assertEqual(900, runner.catalog(config)[0]["timeout_seconds"])
+                config["timeouts"]["axismundi-example/tests/audit-slow.php"] = 0
+                with self.assertRaisesRegex(RuntimeError, "Invalid declared timeout"):
+                    runner.catalog(config)
+
+    def test_manifest_keeps_the_long_meta_audit_in_the_sweep(self):
+        config = json.loads(runner.MANIFEST.read_text(encoding="utf-8"))
+        entry = next(e for e in runner.catalog(config) if e["name"] == "axismundi-actors/tests/audit-principal-fixture-cleanup.php")
+        self.assertTrue(entry["enabled"])
+        self.assertEqual(900, runner.timeout_for(entry, None))
+
+    def test_run_one_records_effective_timeout_and_classifies_busybox_term(self):
+        def fake(args, **kwargs):
+            self.assertEqual("900", args[args.index("timeout") + 3])
+            return subprocess.CompletedProcess(args, 143)
+        entry = {"name": "plugin/tests/audit.php", "environment": {}, "kind": "wordpress"}
+        with tempfile.TemporaryDirectory() as root, patch.object(runner, "process", side_effect=fake), patch.object(runner.time, "monotonic", side_effect=[10, 911]):
+            result = runner.run_one(runner.DockerDB("fixture"), entry, Path(root), 900)
+        self.assertEqual("TIMEOUT", result["status"])
+        self.assertEqual(143, result["exit_code"])
+        self.assertEqual(900, result["timeout_seconds"])
 
     def test_wrong_http_environment_is_refused_before_execution(self):
         entry = {"name": "admin-http", "environment": {"AX_C2S_HTTP_ORIGIN": "http://wordpress"},

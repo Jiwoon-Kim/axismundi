@@ -162,5 +162,42 @@ UI에서 Accounts는 로컬 운영 Account를 다룬다. 원격 모더레이터�
 기존 audit-principal-behavior에도 원격 stale grant 읽기 거부 단언을 추가했지만 이번에는
 그 감사 전체를 재실행하지 않았다.
 
+### 오너 결정 (2026-11-01): account principal 도 Actors 가 소유한다
+
+"actor principal 은 Actors, account principal 은 JMAP" 으로 나누지 않는다. 근거는 둘이다.
+
+```txt
+의존 방향   axismundi-jmap   Requires Plugins: axismundi-actors
+            axismundi-actors  선언 없음 -- 우리 플러그인 중 의존이 없는 유일한 층
+            옮기면 Actors 의 can_manage() 와 Accounts 화면이 JMAP 을 요구하게 되어
+            그 유일한 방향이 뒤집힌다
+주체 수     로컬 Actor 와 Account 는 ID 와 수명을 공유한다.  부여는 identity_id 로
+            키잉된 한 테이블에 있다.  "actor principal" 과 "account principal" 은
+            같은 행에 대한 부여이고, 나눌 두 주체가 아니다
+```
+
+이미 기록된 층 분할이 올바른 선을 말한다 -- Actors 는 principal·act-as 를, JMAP 은
+Account 컨테이너·capability·limits·Session 을 소유한다. "누가 이 이름으로 행동할 수
+있나" 와 "이 Account 가 프로토콜상 무엇을 할 수 있나" 의 구분이다.
+
+#### 측정된 캡슐화 위반 (2026-11-01)
+
+의존 **방향**은 깨끗하지만 **캡슐화**는 뚫려 있다.
+
+```txt
+JMAP -> Actors 호출 빈도
+  axismundi_actors_managers_table    10
+  axismundi_actors_actors_table       9
+  axismundi_actors_write_manager_row  4
+```
+
+JMAP 이 Actors 에서 테이블 이름만 받아 와 직접 SQL 을 치고, 읽기뿐 아니라 쓰기도 한다.
+그래서 Actors 의 스키마가 바뀌면 JMAP 이 조용히 깨진다. 함수명 변경은 bare-token grep 으로
+잡히지만 **컬럼은 잡히지 않는다** -- 2026-10-30 의 개명 스윕이 전자였고, 그 방법이 후자에는
+없다.
+
+**결정: JMAP 은 Actors 의 스키마를 모른다.** API 경유 전환은 별도 슬라이스로 둔다(오너 보류).
+특히 `write_manager_row` 쪽이 먼저다 -- 쓰기가 남의 스키마를 직접 만지는 자리다.
+
 표준 참고: [RFC 9670 §1.3](https://jmap.io/spec/rfc9670/#section-1.3),
 [Principal §2](https://jmap.io/spec/rfc9670/#section-2).

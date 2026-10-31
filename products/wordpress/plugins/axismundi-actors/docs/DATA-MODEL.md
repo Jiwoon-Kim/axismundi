@@ -417,6 +417,80 @@ KEY(identity_id, status)
   after a successful HTTPS WebFinger lookup (RFC 7033); remote
   `preferredUsername` alone is never trusted.
 
+#### 측정된 드리프트 (2026-11-01) — 출하된 UNIQUE 가 위 서술보다 약하다
+
+위 블록은 `UNIQUE(address_hash)` 라고 적었으나 출하된 스키마는 다르다.
+
+```txt
+문서   UNIQUE(address_hash)
+실측   UNIQUE KEY address_kind (address_hash, actor_kind)
+       actor_kind 는 AS2 타입을 담는다 -- Person | Group | Organization | Application | ''
+```
+
+그러므로 핸들 네임스페이스가 **액터 타입별로 쪼개진다.** `@alice` 를 Person 과 Group 이
+동시에 가질 수 있고, Person 이 놓은 `former_handle` 이 Group 의 같은 문자열을 막지 못한다.
+위 서술("a reserved former handle blocks a new handle of the same string")이 보장하는 것은
+스키마가 아니라 **`axismundi_actors_handle_owner()`** 다. 그 함수는 `address_hash` 만으로
+조회하고 `actor_kind` 를 보지 않으므로, `register_handle()` 경로에서는 보장이 성립한다.
+
+남는 위험은 검사-후-쓰기 경합이다. Person 과 Group 이 동시에 같은 핸들을 등록하면 둘 다
+`handle_owner()` 를 통과하고 UNIQUE 가 교차 타입을 막지 않는다. WebFinger 는 `acct:` 하나에
+한 액터로 답해야 하고 `get_by_handle()` 은 `query_one` 이므로, 그 상태에서는 **둘 중 하나를
+조용히** 돌려준다.
+
+2026-11-01 측정: 같은 handle 해시가 두 `actor_kind` 에 걸친 행 **0건**. 그래서 문서가 적은
+단일 컬럼 형태로 조이는 마이그레이션은 **지금 충돌 없이** 가능하다. 핸들 변경을 열기 전에
+하는 것이 맞다 -- 변경이 열리면 등록 빈도가 올라가고 rename 경로가 추가된다.
+
+#### 오너 결정 (2026-11-01): 핸들 변경을 연다
+
+§7 과 `PHASES.md` Phase 2.1 의 "immutable-once-set" 전제를 완화한다. 근거는 이 모델이
+이미 적어 둔 것이다 -- **핸들은 routing alias 이고 정체성은 UUID/`actor_uri`** 다.
+
+```txt
+깨지지 않는 것   기존 팔로우 -- 원격은 Actor URI 와 inbox 를 저장하고 재해소하지 않는다
+                 기존 글의 멘션 -- 작성 시점에 해소된 링크
+                 self 링크 -- /actors/{uuid}
+깨지는 것        원격이 @old@host 로 검색하는 경로.  새로 쓰는 옛 핸들 멘션
+남는 것          원격이 캐시한 옛 핸들.  액터 문서를 다시 받을 때까지 옛 이름으로 표시된다
+```
+
+즉 **발견(discovery)이 깨지고 전달(delivery)은 깨지지 않는다.** 이메일·전화번호 변경이
+어려운 이유(인증과 관계가 그 값으로 키잉됨)는 여기 적용되지 않는다.
+
+정책 통제는 네 가지가 거론되었고 **셋이 이미 있는 것으로 접힌다.**
+
+```txt
+운영자 해제        만든다 -- capability 검사 + 플래그.  유일하게 새 코드다
+강제 개명          이미 가능 -- manage_options 가 can_manage() 를 통과한다
+                   (PRINCIPAL-BOUNDARIES.md 2026-10-30 완화 규칙)
+"연합활동 없음" 자동 해제   만들지 않는다 -- 모집단 0
+                   handle_locked_at 이 이미 "외부에 노출했는가" 를 기록하고
+                   repository.php:494 백필이 핸들 보유 액터 전부를 잠갔다
+                   2026-11-01 측정: 핸들 보유 255, 그중 lock NULL 0
+변경요청 + 승인     나중 -- 요청 저장소 · 알림 · 승인 화면 · 상태기계.  플래그가 아니라 기능
+```
+
+`handle_locked_at` 의 의미도 함께 재정의한다. "불변" 이 아니라 **"한 번이라도 외부에
+노출되었다"** 다. 그 플래그를 보는 곳이 멘션 검색 · NodeInfo 공개 액터 수 · 공개 Group
+디렉터리 · 원격 팔로우 대상이므로, 의미를 바꿀 때 그 네 게이트의 뜻도 함께 읽어야 한다.
+
+**해제가 바꾸지 못하는 것**: 옛 핸들은 여전히 `former_handle` 로 예약되고 handle 네임스페이스를
+공유한다. 해제는 "누가 개명할 수 있는가" 만 바꾸고 "옛 이름이 풀리는가" 는 바꾸지 않는다.
+사칭 위험은 정책과 무관하게 닫혀 있다 -- 단, 위의 교차 타입 공백을 먼저 닫은 뒤에.
+
+#### 미결 (2026-11-01)
+
+```txt
+옛 핸들 해소        get_by_handle() 은 a.local_handle_key 만 본다.  former_handle 을
+                    해소하지 않으므로 예약은 되고 조회는 404 다.  해소하면 옛 링크가
+                    살고, WebFinger 의 subject 로 현재 이름을 돌려주어 원격이 갱신할
+                    단서를 얻는다.  메일 주소를 핸들에서 파생하면 같은 결정이 배달에도
+                    적용되고, 거기서는 근거가 더 강하다 -- 조용한 반송이 404 보다 나쁘다
+reserve_former_handle()   실행 이력 없음(행 0).  §9.2 가 "future rename 을 위한
+                    인프라" 라고 적었으므로 예정된 상태이지, 결함의 증거가 아니다.
+                    핸들 변경을 열기 전에 픽스처로 예약·해소·충돌 거부를 검증할 것
+
 ### 9.3 DB v7 — Actor endpoints *(implemented)*
 ```
 wp_ax_actor_endpoints

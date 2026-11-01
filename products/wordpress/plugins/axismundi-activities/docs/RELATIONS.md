@@ -86,14 +86,24 @@ Block    "Blocking is a stronger form of Ignore."   Block extends Ignore
 내 알림함을 조용히 하는 것이다. 전달 권고의 근거(상대가 모르면 계속 보낸다)가
 여기엔 성립하지 않는다.
 
-두 가지를 구분한다.
+### Actor 컬렉션으로의 투영
+
+`Ignore` Activity 들의 유효 상태를 Actor 의 컬렉션으로 투영한다. FEP-c648 의
+`blocked`·`blocks` 와 같은 모양이다.
 
 ```txt
-Ignore 는 Activity 타입이다. 컬렉션이 아니다
-유효 상태를 컬렉션으로 **투영**하는 것은 가능하고, 그게 mute 목록이다
-mute 의 구체적 범위 — 무엇을 조용히 할 것인가 — 는 표준이 아니라 우리 정책이고
-Notifications 가 정의한다
+ignored   Ignore 된 대상들
+muted     그중 알림 mute 로 쓰이는 유효 상태
+blocked   FEP-c648.  Block 은 Ignore 의 강한 형태이므로 같은 계열이다
 ```
+
+FEP-c648 의 보안 규칙이 여기에도 적용된다 — 이런 컬렉션은 공개 읽기가 되어서는
+안 되고 기본적으로 소유자만 읽는다. 차단 목록보다 mute 목록이 더 민감할 수도
+있다. 그리고 원장이 Activity 의 `id` 를 보존하므로 Undo 가 가리킬 대상이 있고,
+컬렉션은 그 위의 투영이지 별도 저장소가 아니다.
+
+mute 의 구체적 범위 — 무엇을 조용히 할 것인가 — 는 표준이 아니라 우리 정책이고
+Notifications 가 정의한다.
 
 ### 전달과 통지는 다르다
 

@@ -211,7 +211,69 @@ Update 수신 ③ 재조회 문서뿐 아니라 **부모의 replies · 화면 ·
 
 **미지원 전환을 조용히 성공 처리하지 않는다.** 이것이 이 절의 유일한 하드 규칙이다.
 
-## 8. 순서
+## 8. 미디어 — 왜 outbox 가 Create(Image) 를 받지 않나
+
+첨부는 이번 범위 밖이지만, **배제 근거는 지금 적어 둔다.** 나중에 "Note 만
+되는 건 덜 만든 것" 으로 읽히면 안 된다.
+
+### 업로드와 발행은 저장 경로가 다르고 참조로 이어진다
+
+```txt
+업로드    바이너리 → WP attachment 레코드 + 파일 · 메타데이터 · 렌디션 생성
+          → 서버가 정한 미디어 표현을 반환
+발행      Create(Note) → 로컬 Object 저장 + Activity 원장 기록
+          반환받은 참조를 object.attachment 에 붙인다
+```
+
+`wp_posts` 의 attachment 행은 첨부 **페이지 HTML** 이 아니라 미디어를 관리하는
+레코드다. 원본 · 썸네일 · 변환본 URL 은 그 레코드에 연결된 별도 표현이다.
+
+**업로드 성공은 발행 성공이 아니다.** SPEC.md 5 가 이미 같은 말을 한다 —
+워드프레스 미디어 업로드는 Activity 를 만들지 않는다.
+
+### 입력과 출력은 비대칭이다
+
+업로드는 보낸 것을 그대로 돌려주는 API 가 아니라 **서버가 입력을 처리해 자원으로
+만드는 경로**다. 그러므로 응답은 클라이언트가 보낸 파일명 · MIME · URL 을
+확정해 주는 것이 아니라, **서버가 검증한** 미디어 타입 · 크기 · 접근 URL 과
+attachment 식별자를 알려주는 형태여야 한다. 클라이언트는 그 결과를 붙인다.
+
+### 그래서 Create(Image) 를 받지 않는다
+
+실측한 스펙 상태:
+
+```txt
+AP §6.12 Uploading Media     "This section is non-normative."
+                             "the precise mechanism is out of scope for this
+                             version of ActivityPub"
+                             엔드포인트 · content type · 응답 · 참조 방식
+                             어느 것도 규정하지 않는다
+                             (SocialCG 의 별도 Media Upload report 가 진행 중)
+
+AP §6                        outbox 가 받아야 할 **최소 Activity 타입 집합을
+                             규정하지 않는다.** 나열된 의무(object 포함 등)는
+                             클라이언트 쪽 의무이고 서버 쪽이 아니다
+```
+
+둘을 합치면: **미디어 업로드 경로는 우리가 설계하는 것이고, 지원 타입을 좁히는
+것은 위반이 아니다.**
+
+```txt
+근거   Create(Image) 가 바이너리 업로드 · 변환 절차를 대신하지 못한다
+       outbox 에서 따로 허용하면 미디어 저작 · 저장 경로가 둘로 갈라진다
+표현   "표준이 금지한다" 가 아니라 **우리 서버의 C2S 지원 범위가 Create(Note)**
+       라는 정책으로 명시한다
+집행   미지원 타입은 **저장 전에** 거부한다
+```
+
+### SPEC.md 5 와 충돌하지 않는다
+
+구분해 둔다. **원장이 `Create(Image|Video|Document)` 를 담지 못한다는 말이
+아니다.** SPEC.md 5 가 말하는, 사용자가 미디어를 피드에 공유하는 명시적 행위는
+그대로 기록될 수 있다. 여기서 제한하는 것은 **C2S outbox 로 저작하는 범위**다.
+독립 Image 발행이 필요하면 WP 미디어 저작 경로와 ActivitySubmission 이 맡는다.
+
+## 9. 순서
 
 ```txt
 1  로컬 Object 저작·저장          OP 로컬 Object 층

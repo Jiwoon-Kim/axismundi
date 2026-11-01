@@ -83,14 +83,24 @@ try {
 		$a = axismundi_actors_get_by_identity( $id );
 		if ( $a ) {
 			$hash = hash( 'sha256', $a->get_uri() );
-			$calendars = $wpdb->get_col( $wpdb->prepare( 'SELECT id FROM %i WHERE authority_actor_uri_hash = %s', axismundi_cal_calendars_table(), $hash ) );
-			foreach ( $calendars as $calendar ) {
-				foreach ( array( axismundi_cal_acl_table(), axismundi_cal_entries_list_table() ) as $table ) { $wpdb->delete( $table, array( 'calendar_id' => $calendar ) ); }
-				$wpdb->delete( axismundi_cal_calendars_table(), array( 'id' => $calendar ) );
+			// Rows other plugins created in reaction to these fixtures. Each is optional:
+			// Actors must not require a product plugin to clean up after its own audit.
+			if ( function_exists( 'axismundi_cal_calendars_table' ) ) {
+				$calendars = $wpdb->get_col( $wpdb->prepare( 'SELECT id FROM %i WHERE authority_actor_uri_hash = %s', axismundi_cal_calendars_table(), $hash ) );
+				foreach ( $calendars as $calendar ) {
+					foreach ( array( axismundi_cal_acl_table(), axismundi_cal_entries_list_table() ) as $table ) { $wpdb->delete( $table, array( 'calendar_id' => $calendar ) ); }
+					$wpdb->delete( axismundi_cal_calendars_table(), array( 'id' => $calendar ) );
+				}
 			}
-			$wpdb->delete( axismundi_act_activities_table(), array( 'actor_uri_hash' => $hash ) );
+			if ( function_exists( 'axismundi_act_activities_table' ) ) {
+				$wpdb->delete( axismundi_act_activities_table(), array( 'actor_uri_hash' => $hash ) );
+			}
 		}
-		foreach ( array( axismundi_forum_settings_table() => 'group_identity_id', axismundi_actors_managers_table() => 'identity_id', axismundi_actors_addresses_table() => 'identity_id', axismundi_actors_signing_keys_table() => 'identity_id', axismundi_actors_keys_table() => 'identity_id', axismundi_actors_endpoints_table() => 'identity_id', axismundi_actors_texts_table() => 'identity_id', axismundi_actors_actors_table() => 'identity_id', axismundi_actors_identities_table() => 'id' ) as $table => $key ) { $wpdb->delete( $table, array( $key => $id ) ); }
+		$tables = array();
+		foreach ( array( 'axismundi_forum_settings_table' => 'group_identity_id' ) as $accessor => $foreign_key ) {
+			if ( function_exists( $accessor ) ) { $tables[ $accessor() ] = $foreign_key; }
+		}
+		foreach ( array_merge( $tables, array( axismundi_actors_managers_table() => 'identity_id', axismundi_actors_addresses_table() => 'identity_id', axismundi_actors_signing_keys_table() => 'identity_id', axismundi_actors_keys_table() => 'identity_id', axismundi_actors_endpoints_table() => 'identity_id', axismundi_actors_texts_table() => 'identity_id', axismundi_actors_actors_table() => 'identity_id', axismundi_actors_identities_table() => 'id' ) ) as $table => $key ) { $wpdb->delete( $table, array( $key => $id ) ); }
 	}
 	foreach ( $objects as $id ) { $wpdb->delete( axismundi_op_objects_table(), array( 'id' => $id ) ); }
 	wp_set_current_user( $old_user );

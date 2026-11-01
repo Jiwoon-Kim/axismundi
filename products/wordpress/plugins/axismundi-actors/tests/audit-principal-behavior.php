@@ -45,9 +45,6 @@ try {
 	if ( function_exists( 'axismundi_ntf_inbox_readers' ) ) {
 		$assert( array( $n ) === axismundi_ntf_inbox_readers( $id ), 'Direct User grant supplies exactly one inbox reader' );
 	}
-	if ( function_exists( 'axismundi_forum_actor_is_moderator' ) ) {
-		$assert( axismundi_forum_actor_is_moderator( $id, $subject ), 'Explicit local Account grant supplies Actor moderation authority' );
-	}
 	$assert( ! axismundi_actors_principal_can_manage( $id, 'wp_user', $n, 'manager' ), 'Local manager does not elevate same-numbered User editor' );
 	$assert( ! axismundi_actors_principal_can_manage( $id, 'local_account', $n, 'unknown' ), 'Unknown minimum role fails closed' );
 	$assert( isset( axismundi_actors_accounts_for_principal( 'local_account', $n )[ $id ] ), 'Exact local subject lists its Account' );
@@ -69,9 +66,6 @@ try {
 	$assert( true === axismundi_actors_set_principal_role( $n, 'wp_user', $n, 'owner' ), 'Selected Account access explicitly granted' );
 	$assert( true === axismundi_actors_set_principal_role( $id, 'local_account', $n, null ), 'Explicit local grant can be revoked' );
 	$assert( '' === axismundi_actors_principal_account_role( $id, 'local_account', $n ), 'WP access does not recursively recreate Actor access' );
-	if ( function_exists( 'axismundi_forum_actor_is_moderator' ) ) {
-		$assert( ! axismundi_forum_actor_is_moderator( $id, $subject ), 'Remaining User owner does not implicitly make the Actor a moderator' );
-	}
 	$assert( true === axismundi_actors_promote_user_principal( $id, $n, $n ), 'Promotion uses explicitly supplied accessible Account' );
 	$assert( 'owner' === axismundi_actors_account_role( $id, $n ), 'Promotion preserves direct WP grant' );
 	$assert( true === axismundi_actors_set_principal_role( $id, 'local_account', $n, 'editor' ), 'Explicit local role changes independently' );

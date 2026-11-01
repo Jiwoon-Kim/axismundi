@@ -118,26 +118,40 @@ try {
 			&& axismundi_act_follow_label_set( $group )['following'] === axismundi_act_follow_button_state( $person, $group )['label']
 	);
 
-	// A moderator is a permission the forum owns, so the list asks rather than infers it.
-	$roles = axismundi_actors_follow_list_roles( $group, array( $person->get_uri() ) );
+	// A role in a Group is a product's permission, so Actors declares the question and
+	// answers nothing. What Actors owes is the seam: an empty default, a Group-only domain,
+	// and a subscriber's answer passed through untouched. Whether a forum marks its
+	// moderators is that product's contract and is asserted in its own audit.
 	ax_fv_assert(
 		$ax_fv_results,
-		'a community subscriber who runs it is marked, and the same person on their own list is not',
-		array( $person->get_uri() => 'Moderator' ) === $roles
-			&& array() === axismundi_actors_follow_list_roles( $person, array( $person->get_uri() ) )
+		'with no product answering, a subscriber list carries no roles',
+		array() === axismundi_actors_follow_list_roles( $group, array( $person->get_uri() ) )
 	);
-
-	// Every subscriber is not a member: membership is a separate Forum state with its own
-	// evidence, and badging all of them would tell a reader nothing they came to find out.
-	$members = function_exists( 'axismundi_forum_get_membership' )
-		? axismundi_forum_get_membership( $group->get_identity_id(), $person->get_identity_id() )
-		: null;
+	$ax_fv_role_filter = static function ( array $roles, Axismundi_Actor $listed, array $subjects ) use ( $group ) : array {
+		return $listed->get_uri() === $group->get_uri() ? array_fill_keys( $subjects, 'Moderator' ) : $roles;
+	};
+	add_filter( 'axismundi_actors_follow_list_roles', $ax_fv_role_filter, 10, 3 );
+	try {
+		$roles = axismundi_actors_follow_list_roles( $group, array( $person->get_uri() ) );
+		ax_fv_assert(
+			$ax_fv_results,
+			'a product answer is passed through for the Group, and a Person list is never asked',
+			array( $person->get_uri() => 'Moderator' ) === $roles
+				&& array() === axismundi_actors_follow_list_roles( $person, array( $person->get_uri() ) )
+		);
+	} finally {
+		remove_filter( 'axismundi_actors_follow_list_roles', $ax_fv_role_filter, 10 );
+	}
+	ax_fv_assert(
+		$ax_fv_results,
+		'the seam is closed again once the product stops answering',
+		array() === axismundi_actors_follow_list_roles( $group, array( $person->get_uri() ) )
+	);
 	ax_fv_assert(
 		$ax_fv_results,
 		'a Follow alone does not label someone a member of the community',
 		! is_array( $roles ) || ! in_array( 'Member', array_values( $roles ), true )
 	);
-	unset( $members );
 } finally {
 	wp_set_current_user( 0 );
 	foreach ( array_filter( array_unique( $ax_fv_ids ) ) as $identity_id ) {
@@ -161,5 +175,5 @@ try {
 
 $ax_fv_failed = count( array_filter( $ax_fv_results, static fn( $result ) => ! $result ) );
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
-printf( "\n%d/%d passed\n", count( $ax_fv_results ) - $ax_fv_failed, count( $ax_fv_results ) );
+printf( "\n== %d checks, %d failed ==\n", count( $ax_fv_results ), $ax_fv_failed );
 exit( $ax_fv_failed > 0 ? 1 : 0 );

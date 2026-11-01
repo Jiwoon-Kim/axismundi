@@ -273,7 +273,65 @@ AP §6                        outbox 가 받아야 할 **최소 Activity 타입 
 그대로 기록될 수 있다. 여기서 제한하는 것은 **C2S outbox 로 저작하는 범위**다.
 독립 Image 발행이 필요하면 WP 미디어 저작 경로와 ActivitySubmission 이 맡는다.
 
-## 9. 순서
+## 9. IntransitiveActivity — Contacts 뒤다 (결정, 2026-11-01)
+
+컴포저가 언젠가 지원해야 하는 것은 맞다. 다만 Create(Note) 보다 **크고, 증명하는
+것은 적다.**
+
+```txt
+AS2            IntransitiveActivity 는 object 속성이 "inappropriate" 다
+               Travel = origin + target,  Arrive = location + origin
+               속성 모양이 달라 UI 도 다르다
+Question       이미 여기서 빠져 있다 — C2S.md 12 참조.
+               FEP-9967 이 Create 발행을 MUST 로 쓰고 Mastodon 은 Object 타입으로 쓴다
+               그러므로 새 작업은 Arrive · Travel 둘뿐이다
+```
+
+### 의존 사슬
+
+```txt
+Arrive · Travel
+  → Contacts 프로필 카드의 addresses + coordinates 저작
+      → Contacts 플러그인
+          → Todo 가 궤도에 오른 뒤
+```
+
+미뤄 두기로 한 플러그인을 먼저 당겨 와야 한다. 그리고 object 가 없으므로
+**로컬 Object 층을 하나도 건드리지 않는다** — 컴포저가 존재하는 이유인 그 경로를
+증명하지 못한다.
+
+### 그래도 지금 영향을 주는 것 하나
+
+IntransitiveActivity 는 `Create` + object 전제가 깨지는 첫 사례다. 그러므로
+Create(Note) 를 구현할 때 **제출 계약을 Create 전용으로 못 박지 않는다.**
+object 없는 Activity 가 나중에 들어올 자리를 남긴다. 구현하지 않아도 계약
+모양은 지금 정해진다.
+
+### Place 를 어디서 읽나 — Place CPT 를 만들지 않는다
+
+```txt
+저장    Contacts card 의 addresses 항목
+        coordinates 는 "geo:" URI (RFC 5870),  contexts 로 home/work 라벨
+        **JSContact 에 locations 속성은 없다.** RFC 9553 은 좌표를
+        Address.coordinates 에 둔다
+가시성  contexts 는 "where an address should be used, not who can see it" 이다.
+        가시성은 .jscontact 투영 결정이 정한다 — 명시 선택 투영, 원문 금지
+투영    Place, id 없음. 임베드된 익명 객체.
+        기본은 name 또는 geodata 의 term 축 — London · Busan, Korea
+        좌표 · radius 는 사용자가 그 Activity 에 붙이기로 할 때만.
+        거칠게 말하는 것은 보호 조치가 아니라 **사람들이 말하는 방식**이다
+        geodata 는 coordinates / term / address 3 축이고 taxonomy.php 가
+        계층과 ISO 3166-1 상속을 이미 가진다
+동기화  컴포저는 카드를 **자동완성으로만** 읽는다. 스냅샷이고 참조가 아니다.
+        Activity 는 불변이고 연합되므로, 참조를 넣으면 나중 해소 시점의 카드가
+        나간다. 스냅샷은 그 Activity 를 위해 공개하기로 한 것만 담는다
+공개범위 보통의 글과 같은 설정이다. 이 타입 전용 안전장치가 아니다 —
+        Arrive · Travel 은 사용자가 알리려고 하는 행위다
+안 만듦  Place CPT. geodata 가 single-post Location 모델을 만들었다 버렸다
+        (geodata/includes/meta.php:157)
+```
+
+## 10. 순서
 
 ```txt
 1  로컬 Object 저작·저장          OP 로컬 Object 층

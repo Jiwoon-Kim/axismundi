@@ -173,3 +173,88 @@ TodoList의 권한 검사는 필드 포함 여부가 아니라 패치 전후 변
 ```sh
 python tools/wp-env/run_audits.py run --audit audit-todo-writer-mutations.php
 ```
+
+## 현재 상태와 재개 지점
+
+Contacts(RFC 9610)는 Todo 가 궤도에 오른 뒤에 착수한다. 그 판단 근거가 되도록
+여기에 현재 상태를 남긴다. 아래는 전부 실측값이다.
+
+### 되는 것
+
+```txt
+전송        /axismundi-jmap/v1/api      공용 JMAP 엔드포인트 (Todo 밖에서도 쓴다)
+            /axismundi-jmap/v1/todo     PoC 관리자 화면 전용 프록시
+            클라이언트가 using + methodCalls 봉투를 실제로 보낸다
+
+메서드      TodoList/get · set · changes
+            Todo/get · set · changes
+            Principal/get                RFC 9670 디렉터리
+
+공유        TodoList.shareWith · myRights(mayRead/mayWrite/mayAdmin)
+            수락한 공유만 목록에 뜬다. 권리 없는 쓰기는 forbidden
+
+동기화      state + /changes + sinceState + hasMoreChanges 페이징
+            수동 Refresh 만 있고 포커스 핸들러도 타이머도 없다
+            변경이 없으면 화면과 초안을 유지한다
+
+적합성      RFC 8620 §5.3 PatchObject
+            서버설정·계산 속성이 현재 값과 동일하면 수락, 다르면 invalidProperties
+            /get 으로 받은 객체를 그대로 /set update 로 되돌릴 수 있다 (두 타입 모두)
+            mayAdmin 없는 writer 도 자기에게 보이는 투영을 그대로 되돌릴 수 있다
+
+검증        engine 71 · patch 계약 12 · Todo 통합 120 · 변이 5종 7 mutant
+            변이 픽스처 자체를 깨뜨리는 하니스 4 케이스
+```
+
+### 안 되는 것 — 우선순위 순
+
+```txt
+①  .well-known/jmap 이 없다
+    RFC 8620 §2.2 의 Session 자동발견 경로. 우리 코드에 0 건이다.
+    PoC 는 관리자 페이지가 주소를 알고 있어서 동작했고, 바깥 클라이언트는
+    우리를 찾을 방법이 없다. §8.1 이 이 경로를 SHOULD 로 요구한다.
+    WebFinger CORS 와 같은 모양의 누락이다 — 문서는 서빙하는데 발견 경로가 비어 있다.
+
+②  Session 이 광고하는 주소에 핸들러가 없다
+    uploadUrl · downloadUrl · eventSourceUrl  모두 광고만 되고 구현이 없다.
+    eventSource 가 없으므로 부분 갱신은 수동 Refresh 가 전부다.
+    Blob/ 메서드도 없다.
+
+③  RFC 8620 §5.7 예제 미재현
+    /query · hasKeyword 필터 · sort · position/limit
+    /queryChanges
+    /copy + onSuccessDestroyOriginal
+    subTodoIds
+    같은 /set 안의 생성 id(#k15) 참조 — §5.3 errata 6607(Reported) 이 명시 허용
+
+④  no-op 에코가 state 를 올린다
+    관측 가능한 속성이 하나도 안 바뀌어도 revision 이 올라가 /changes 에 실린다.
+    "변경 없으면 화면 유지" 설계와 어긋난다. 해결 방향은 저장 직전에 기존 행과
+    비교해 쓰기와 touch() 를 건너뛰는 것.
+
+⑤  Quota
+    보류한다. 워드프레스 미디어 렌디션 때문에 무엇을 용량으로 셀지가
+    호스팅 정책마다 다르다 — 렌디션마다 셀지 대표본만 셀지. 코어 기능이
+    자리잡은 뒤에 본다.
+
+⑥  PushSubscription
+    ③ 의 /queryChanges 와 ② 의 eventSource 뒤에 온다.
+```
+
+### 재개 순서 권고
+
+```txt
+①  →  ②(eventSource)  →  ③  →  ④
+```
+
+①이 먼저인 이유는 범위가 가장 작고(경로 하나 + CORS), 바깥 클라이언트가 우리를
+JMAP 서버로 인식하는 최소 조건이기 때문이다. ②의 eventSource 는 ① 과 같은
+전송 계층 작업이라 묶으면 싸다. ③ 은 "core 가 온전히 구현됐다" 는 주장을 위한
+작업이고 아무것도 막고 있지 않다.
+
+### Account 개수 제한 — 표준에 없다
+
+RFC 8620 에 사용자당 Account 수를 제한하는 필드나 규칙이 없다. Session 은
+`accounts` 맵을 돌려줄 뿐이고 생성·개수에 대한 표준 설정이 없다. 그러므로
+제한은 **서버 정책**이다. 우리 경우 Account 생성은 Actors 의 Add Local Actor
+경로이므로, 제한을 둔다면 그 지점이다. 지금은 제한이 없고, 둘 이유도 아직 없다.

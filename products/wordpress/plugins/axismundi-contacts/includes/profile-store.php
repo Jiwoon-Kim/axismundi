@@ -12,6 +12,22 @@ function axismundi_contacts_get_profile_document_row( int $id ) : array {
 	return $row;
 }
 
+/**
+ * The row this Actor already has, found the way the table identifies it.
+ *
+ * One profile per Actor is a UNIQUE key on `owner_actor_id`, so the row id is not how existence is
+ * decided -- a caller that does not happen to know the id is not a caller creating the first
+ * profile. Asking by id alone turned a second create into a database error mid-request, which
+ * printed before the redirect and took the headers with it.
+ */
+function axismundi_contacts_profile_document_row_for_owner( int $actor_id ) : array {
+	global $wpdb;
+	$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE owner_actor_id=%d', axismundi_contacts_profile_documents_table(), $actor_id ), ARRAY_A );
+	if ( ! $row ) { return array(); }
+	$row['storage_kind'] = 'profile';
+	return $row;
+}
+
 function axismundi_contacts_profile_document( int $id ) : array {
 	$row = axismundi_contacts_get_profile_document_row( $id );
 	return $row ? (array) json_decode( $row['card_json'], true ) : array();
@@ -26,6 +42,10 @@ function axismundi_contacts_save_profile_document( int $actor_id, array $documen
 		if ( is_wp_error( $valid ) ) { return $valid; }
 		$existing = $id ? axismundi_contacts_get_profile_document_row( $id ) : array();
 		if ( $id && ( ! $existing || (int) $existing['owner_actor_id'] !== $actor_id ) ) { return new WP_Error( 'ax_contacts_profile_missing', 'Profile not found.', array( 'status' => 404 ) ); }
+		if ( ! $id ) {
+			$owned = axismundi_contacts_profile_document_row_for_owner( $actor_id );
+			if ( $owned ) { return new WP_Error( 'ax_contacts_profile_exists', 'This Actor already has a profile.', array( 'status' => 409, 'id' => (int) $owned['id'] ) ); }
+		}
 		if ( $existing && null !== $revision && (int) $existing['revision'] !== $revision ) { return new WP_Error( 'ax_contacts_profile_conflict', 'Profile changed.', array( 'status' => 409 ) ); }
 		if ( $existing && isset( $document['uid'] ) && $existing['uid'] !== $document['uid'] ) { return new WP_Error( 'ax_contacts_profile_uid', 'Profile UID is immutable.', array( 'status' => 409 ) ); }
 		$document['uid'] = $existing['uid'] ?? ( $document['uid'] ?? 'urn:uuid:' . wp_generate_uuid4() );

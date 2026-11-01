@@ -241,7 +241,11 @@ Contacts(RFC 9610)는 Todo 가 궤도에 오른 뒤에 착수한다. 그 판단 
     ③ 의 /queryChanges 와 ② 의 eventSource 뒤에 온다.
 ```
 
-### 재개 순서 권고
+### Todo 를 다시 집을 때의 내부 순서
+
+**이것은 Todo 안에서의 순서이지, Todo 를 다음에 한다는 결정이 아니다.**
+`.well-known/jmap` 과 전송 표면은 중요한 후속 항목이지만 Follow 보다 먼저
+한다고 정해진 바 없다. 재개를 결정한 뒤에 이 순서를 쓴다.
 
 ```txt
 ①  →  ②(eventSource)  →  ③  →  ④

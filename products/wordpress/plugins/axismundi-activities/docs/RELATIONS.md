@@ -59,6 +59,42 @@ Person Block 구현 전 배포 선례와 미결은 [BLOCK-PRECEDENTS.md](BLOCK-P
 배포 선례          Mastodon·Misskey 둘 다 원격 대상에게 보낸다 (BLOCK-PRECEDENTS 2·3)
 ```
 
+### 권위의 범위 — 집행부에 명시할 것
+
+집행 모듈에 근거를 적되 **범위를 정확히** 적는다.
+
+```txt
+맞는 표현    AP §6.9 의 비전달 권고 대신 FEP-070c 의 전달 권고를 채택한 구현 정책
+틀린 표현    "FEP 가 AP 보다 상위 권위다"
+```
+
+채택한 것은 **전달 여부 하나**다. Block 의 나머지 의미론 — 무엇을 차단하는가,
+관계가 어떻게 끝나는가 — 을 FEP 가 정한다는 뜻이 아니다. 실제로 FEP-070c 는
+Follow·Reject 를 규범적으로 다루지 않는다고 스스로 적는다.
+
+### Ignore — mute 의 자리, 그러나 보내지 않는다
+
+AS2 실측:
+
+```txt
+Ignore   "Indicates that the actor is ignoring the object."
+Block    "Blocking is a stronger form of Ignore."   Block extends Ignore
+```
+
+그러므로 알림 mute 는 `Ignore` 로 표현할 수 있고, **Block 과 달리 상대에게
+보내지 않는다.** 보낼 이유가 없다 — mute 는 상대의 전송을 줄이려는 것이 아니라
+내 알림함을 조용히 하는 것이다. 전달 권고의 근거(상대가 모르면 계속 보낸다)가
+여기엔 성립하지 않는다.
+
+두 가지를 구분한다.
+
+```txt
+Ignore 는 Activity 타입이다. 컬렉션이 아니다
+유효 상태를 컬렉션으로 **투영**하는 것은 가능하고, 그게 mute 목록이다
+mute 의 구체적 범위 — 무엇을 조용히 할 것인가 — 는 표준이 아니라 우리 정책이고
+Notifications 가 정의한다
+```
+
 ### 전달과 통지는 다르다
 
 FEP-070c 는 동기화 경로에 대해 이렇게 쓴다.

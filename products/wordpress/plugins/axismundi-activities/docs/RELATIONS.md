@@ -41,7 +41,15 @@ Person Block 구현 전 배포 선례와 미결은 [BLOCK-PRECEDENTS.md](BLOCK-P
 
 > Servers SHOULD NOT deliver Block Activities to their object.
 
-**우리는 보낸다.** SHOULD NOT 에서 의도적으로 벗어나는 것이므로 이유를 적어 둔다.
+**우리는 보낸다.** AP 에서 벗어나므로 표시해 두지만, 독단이 아니라
+[FEP-070c](https://codeberg.org/fediverse/fep/src/branch/main/fep/070c/fep-070c.md)
+가 권고하는 방향이다.
+
+> Instances that want blocks to work on servers without this FEP SHOULD also send
+> `Block` and `Undo Block`.
+
+**같은 행동에 대해 AP 는 SHOULD NOT, FEP-070c 는 SHOULD 다.** 한쪽을 고를 수밖에
+없고, 우리는 후자를 고른다.
 
 ```txt
 보내지 않으면      상대 서버가 모르고 전송을 계속 시도한다. 차단은 우리 쪽 필터로만
@@ -50,6 +58,72 @@ Person Block 구현 전 배포 선례와 미결은 [BLOCK-PRECEDENTS.md](BLOCK-P
                    들어가면 드러난다. 숨겨서 지켜지는 비밀이 아니다
 배포 선례          Mastodon·Misskey 둘 다 원격 대상에게 보낸다 (BLOCK-PRECEDENTS 2·3)
 ```
+
+### 전달과 통지는 다르다
+
+FEP-070c 는 동기화 경로에 대해 이렇게 쓴다.
+
+> Receiving implementations SHOULD NOT notify the blocked actor as a result of
+> synchronization.
+
+우리는 이것을 inbound Block 전반에 적용한다. **서버에는 전달하되, 받은 쪽이
+차단당한 사용자에게 알리지 않는다.** 전달은 상대 서버가 전송을 멈출 근거를
+주기 위한 것이지 통보가 목적이 아니다.
+
+### 노출 범위
+
+[FEP-c648](https://codeberg.org/fediverse/fep/src/branch/main/fep/c648/fep-c648.md)
+은 `blocked`·`blocks` 컬렉션을 정의하면서 보안 절에 이렇게 쓴다 — 둘 다
+`SHOULD NOT be publicly readable` 이고 기본적으로 소유자 외에는 읽을 수 없어야
+한다. 우리의 "Public 수신자를 붙이지 않는다" 와 같은 방향이고, 이제 근거가 있다.
+
+그 FEP 가 `blocks` 에 Block Activity 의 `id` 를 보존하라는 이유는 Undo 를
+가능하게 하기 위해서다. **우리 불변 원장이 이미 그 조건을 만족한다.** 나중에
+`blocked`·`blocks` 를 붙인다면 새 저장소가 아니라 원장 위의 투영이다.
+
+### FEP-070c 본체는 이번 범위 밖이다
+
+동기화 엔드포인트는 전제가 세다 — 모든 액터가 하나의 URI scheme·authority 를
+공유해야 하고, 서명된 GET 을 검증하고 자기 요청도 서명할 수 있어야 한다.
+나중에 볼 선택지로 남긴다.
+
+### Block 이 기존 Follow 를 끊을 때의 전이
+
+표준이 비워 둔 자리다. FEP-070c 가 명시한다 — Follow 와 Reject 는 규범적으로
+다루지 않으며, 차단이 팔로워에서 제거한다는 점만 언급하고 그 분기는 FEP-8fcf
+로 넘긴다. 그러므로 아래는 **표준에 반하는 정책이 아니라 표준이 비워 둔 자리를
+채우는 정책**이다.
+
+원칙은 하나다. **Activity 를 합성하지 않는다.**
+
+```txt
+Undo(Follow) 합성   팔로워가 저자다. 우리 사용자가 하지 않은 행동을 그에게 귀속시킨다
+Reject 합성         대상이 저자다. 원격이 저자면 원격 Actor 사칭이다
+```
+
+`axismundi_act_transition_relation()` 은 도달한 상태와 **그 상태를 만든 Activity**
+를 따로 받는다. 그러므로 Block 이 원인인 전이를 합성 없이 쓸 수 있다.
+차단자가 그 Follow 에서 어느 쪽인지가 상태를 정한다.
+
+```txt
+방향                        차단자 역할        상태        state_uri
+L→R 이고 R 이 차단          object (대상)      rejected    Block Activity URI
+R→L 이고 R 이 차단          subject (팔로워)   undone      Block Activity URI
+```
+
+**우리가 저자인 쪽은 진짜로 발행한다.** 우리가 object 면 `Reject(Follow)` 를,
+subject 면 `Undo(Follow)` 를 우리 이름으로 발행한다 — 사칭이 아니고 Mastodon·
+Misskey 의 와이어 동작과 같다. 그 경우 새 메커니즘이 필요 없다.
+`relation_transitions()` 가 `actor_uri === object_uri` 인 Accept/Reject 를 이미
+받아들이고, `undone` 은 Follow 의 `effective_status` 에서 온다. 그러므로 새로
+만드는 것은 **Block 을 원인으로 하는 전이 하나뿐**이다.
+
+### Accept 를 취소하지 않는다
+
+메뉴얼 승인으로 accepted 가 된 Follow 에 inbound Block 이 와도, 그 Accept 를
+Undo 하거나 Reject 로 바꾸지 않는다. SPEC.md 3 이 기록된 Activity payload 는
+불변이라고 못박는다. **수락은 그때 실제로 일어났고 나중에 차단이 왔을 뿐이다.**
+원장은 둘 다 보존하고 현재 상태만 바뀐다.
 
 전달 정책:
 

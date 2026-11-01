@@ -350,3 +350,20 @@ moderators    Actor 문서에 attributedTo 로 나가고 원격이 역참조한�
 시험은 비활성화다. Contacts 를 끄면 addressbook 이 사라지고 Actor 문서는 멀쩡하다.
 Forum 이 moderators 를 쥔 채 꺼지면 **여전히 존재하는 정체성의 Actor 문서가
 attributedTo 를 잃는다.** 그래서 Forum 것일 수 없다.
+
+### 그래서 Contacts 는 두 군데에 붙는다 (2026-11-01)
+
+```txt
+profile card   Actor 의 WebFinger acct 로 게시되므로 Actor 에 직접 매달린다
+               실제로 owner_actor_id 에 키잉돼 있고, 링크는 Actors 가 선언한
+               axismundi_actors_webfinger_links 필터를 Contacts 가 채워 넣는다
+               (jscontact.php:211).  JMAP 은 이 경로에 0 건이다
+addressbook    Account 의 것이므로 JMAP Account 에 의존한다
+```
+
+시험은 JMAP 비활성화다. 프로필이 Account 에 키잉돼 있으면 여전히 존재하는 정체성의
+`describedby` 가 JMAP 유무로 깨지고, Actor 문서가 제품에 의존하게 된다.
+
+Contacts 를 끄면 `describedby` 링크만 사라지고 Actor 문서는 멀쩡하다. 그것은
+허용된다 — 프로필은 **정체성의 선택적 상세**이지 정체성 자체가 아니다. Group 의
+`attributedTo` 가 사라지는 것과는 성질이 다르다.

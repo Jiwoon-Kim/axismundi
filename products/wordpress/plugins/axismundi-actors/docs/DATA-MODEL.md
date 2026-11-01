@@ -929,17 +929,46 @@ Actors         둘 중 무엇이 읽을지 알지 못한다. 알 필요도 없�
 그러므로 **기본값을 제품 로드맵으로 정하지 않는다.** Actors 자신의 기준으로
 정해야 하고, 제품은 자기가 해석할 수 있는 모양을 요구할 뿐이다.
 
-### Collection 선택지는 누가 서빙하나 (실측 2026-11-01)
+### moderators 는 curated collection 타입이다 — managers 엔드포인트가 아니다
+
+프레이밍을 바로잡는다. "managers 컬렉션 엔드포인트" 가 아니라, Actors 의
+**curated collection** 중 **Group Actor 에 허용되는 `moderators` 타입**이다.
+그리고 액터 원장에 **이 액터의 `attributedTo` 가 Person 인가 Collection 인가
+둘 다인가**를 저장한다.
+
+두 축이 다르다.
 
 ```txt
-있음   managers 테이블과 has_principals() — Actors 는 누가 Group 을 관리하는지 안다
-       repository.php:83 · 932
-없음   그 목록을 AS2 컬렉션 URI 로 서빙하는 것
-       local-endpoints.php 와 OP 의 actor transform 에 moderators·managers 0 건
+derived      followers · following · outbox    관계와 원장에서 파생된다
+curated      moderators · featured             멤버십이 명시적으로 큐레이션된다
+저장          attributedTo 의 모양 (person | collection | both) 은 액터 행의 값이다
 ```
 
-데이터는 Actors 에 있고 표면이 없다. 그러므로 Collection 선택지를 제공하려면 그
-엔드포인트를 만들어야 하고, **그것은 Actors 의 것이다** — managers 를 소유한 쪽이
-Actors 이므로. 표현은 기록된 층대로 OP 가 렌더한다. Forum 의 것이 아니다.
+### managers 를 그대로 내보내면 안 된다
 
-Forum 이 그 컬렉션을 읽어 audience 로 쓰는 것과, 그 컬렉션을 소유하는 것은 다르다.
+`managers` 테이블은 **운영 위임**이다 — 누가 이 Account 를 조작할 수 있는가.
+`moderators` 는 **공개된 큐레이션**이다 — 이 커뮤니티를 누가 중재한다고 밝히는가.
+
+```txt
+겹칠 수는 있다      실무상 모더레이터가 운영 권한을 가진 경우가 많다
+같은 목록이 아니다   운영 권한은 있지만 공개하지 않을 사람, 공개 모더레이터지만
+                    계정 조작 권한은 없는 사람 둘 다 가능하다
+그러므로            managers 를 moderators 로 발행하면 **운영 부여를 유출한다**
+```
+
+이미 기록된 계열의 오류다 — 부여는 접근이 아니고, 타입은 관계가 아니다.
+`moderators` 는 별도의 큐레이션 목록이고, 그 출처가 `managers` 와 같아야 할 이유가
+없다.
+
+### 지금 서빙하는 curated collection 은 없다 (실측 2026-11-01)
+
+```txt
+repository.php:1584   엔드포인트 어휘에 'featured' 가 이미 있다
+                      inbox · outbox · followers · following · featured · shared_inbox
+repository.php:1615   그런데 쓰임은 $payload['featured'] — **원격 액터 문서를 파싱**하는 쪽이다
+local-endpoints.php   우리 액터를 위한 featured·moderators 서빙 0 건
+```
+
+즉 **원격의 featured 는 읽지만 우리 것은 내보내지 않는다.** 그러므로 `moderators`
+는 우리가 서빙하는 첫 curated collection 이 되고, 그 타입 체계를 세우는 일이
+Collection 선택지보다 먼저다. Person 선택지는 지금도 가능하다.

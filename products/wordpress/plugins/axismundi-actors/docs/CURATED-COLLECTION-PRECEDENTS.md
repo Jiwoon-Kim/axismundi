@@ -145,3 +145,68 @@ tags       :unordered
             원격 조회 실패를 빈 목록으로 보아 기존 핀을 지우는 동작
             비공개 항목을 URI 로 치환해 노출하는 선택
 ```
+
+## 6. featured 이식 계약 — 정해진 것 (2026-11-02)
+
+### 와이어 (실측, 커밋 147bfc1)
+
+```txt
+AddNoteSerializer    attributes :type, :actor, :target  +  object
+RemoveNoteSerializer 동일, type 만 다름
+actor   계정 URI        object  고정할 Object URI (스칼라)
+target  그 계정의 featured 컬렉션 URI
+origin  없다 — 고정은 이동이 아니라 추가·제거다
+id      **없다.** 기반 직렬화기(app/lib/activitypub/serializer.rb)는 JSON-LD
+        컨텍스트만 다루고 id 를 붙이지 않는다
+```
+
+id 를 뺄 수 있었던 이유는 `Remove` 가 있어서다 — `Undo(Add)` 를 쓰지 않으면 Add 의
+id 를 참조할 일이 없다.
+
+### 정렬은 핀 시각이다
+
+```txt
+collections_controller   featured → @type = :ordered,  tags → :unordered
+associations.rb:62       has_many :pinned_statuses,
+                         -> { reorder(status_pins: { created_at: :desc }) }
+                         **핀 생성 시각 내림차순.** 글 작성 시각이 아니다
+```
+
+그러므로 멤버십뿐 아니라 **고정 순서를 보존**해야 하고, 원격 Add 의 도착 순서를
+원격의 고정 순서로 확정하면 안 되며, 전체 fetch 의 `orderedItems` 순서를 보존해야
+한다.
+
+### 수신 기록과 원격 Activity 를 분리한다
+
+id 없는 Add 에 **우리 URI 를 지어 붙여 원격 Activity 로 기록하지 않는다.** 우리가
+식별할 수 있는 것은 *이 수신 사건*이지 상대가 발행한 Activity 의 정체성이 아니다.
+
+```txt
+수신 기록   내부 ID. 원문 · 인증된 발신자 · 수신 시각 · 처리 결과를 보존하고
+            원격 Activity 의 id 는 **없는 그대로** 둔다
+집행        발신자가 그 target 컬렉션을 제어하는지 확인한 뒤
+            (컬렉션 URI, Object URI) 멤버십에 적용
+재조정      컬렉션 fetch 로 목록과 순서를 확인한다.
+            조회 실패나 불완전한 페이지를 빈 목록으로 취급하지 않는다
+우리 발신   Add/Remove 에 안정적인 Activity id 를 부여한다
+```
+
+### 멱등만으로는 부족하다
+
+중복 Add 는 상태상 멱등이지만, **오래된 Add 가 Remove 뒤에 도착하면 부활한다.**
+upsert 만으로 해결되지 않는다 — Follow 를 Block 이 끝낸 뒤 늦은 Accept 가 되살리던
+것과 같은 부류다. 그래서 갱신 신호를 받고 **재조정하는 경로가 본체**이고 Activity 는
+힌트다.
+
+### 삭제된 객체는 현재 목록에서 빠진다
+
+표준의 필연이 아니라 **우리 정책**이다. 컬렉션은 현재 멤버십의 목록이므로 삭제가
+확정된 항목은 제외한다. Tombstone 은 그 객체 자신의 URI 에서 410 으로 나타나고
+컬렉션 안에 넣지 않는다 — 넣으면 "삭제된 것이 지금 고정되어 있다" 는 거짓이 된다.
+
+```txt
+구분해야 함   일시적 조회 실패 ≠ 삭제
+보존해야 함   과거 Add 와 수신 증거.  현재 목록에서 빠질 뿐 이력은 남는다
+미확인        Mastodon 에서 status 삭제 시 핀이 어디서 정리되는지.
+              has_many :status_pins 는 Account 에 있고 Status 에는 없다
+```

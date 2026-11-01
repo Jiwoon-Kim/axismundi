@@ -1030,12 +1030,9 @@ collection-registry.php:80   membership_authority  ledger-index · relation-row 
                              append_policy         closed · owner-only · publicly-appendable
 ```
 
-### 기존 두 구현이 저장을 공유하지 않는다
+### 선례는 OP 의 계약이다 — Forum 의 테이블이 아니다
 
 ```txt
-Forum moderators    membership-row · owner-only
-                    axismundi_forum_memberships_table() 에서
-                    membership_role='moderator' 인 행을 읽는다
 OP used-in          membership-row · closed
                     미디어 relations 테이블. member_models: ['Object']
 Activities 7 종      ledger-index 또는 relation-row — 원장과 관계 행에서 파생
@@ -1046,6 +1043,11 @@ Activities 7 종      ledger-index 또는 relation-row — 원장과 관계 행�
 행에서 온다" 는 말이지 "모두 한 테이블에 있다" 는 말이 아니다. Contacts 가
 addressbook 을, Calendar 가 calendars 를 소유하는 것과 같은 모양이고, 그러므로
 **범용 curated 원장을 새로 만들지 않는다.**
+
+Forum 에도 moderators 계약이 하나 있지만 **그것을 설계 근거로 삼지 않는다.** Forum 은
+비활성화되어 있고, 비활성화한 이유가 그 구조를 물려받지 않기 위해서다. Actors 의
+moderators 는 Forum 의 멤버십 테이블을 역할로 거르는 모양을 따라가지 않고 처음부터
+Actors 자신의 curated 멤버십으로 선다. 필요한 선례는 위의 두 줄로 충분하다.
 
 계약이 통일하는 것은 저장이 아니라 질문들이다.
 
@@ -1059,15 +1061,18 @@ ordering             순서가 의미를 갖는가
 
 ### 그러므로 Actors 가 할 일
 
-`featured` 와 `moderators` 를 Actors 소유로 두려면 **Actors 자신의 멤버십 행**이
-필요하다. Forum 의 membership 테이블을 역할로 걸러 읽는 현재 구조가 바로
-`admin.php:322` 의 Forum 호출을 만든 원인이다 — moderator 가 **Forum 의 멤버십
-역할**이기 때문에 Actors 가 Forum 에 물을 수밖에 없다.
+`featured` 와 `moderators` 는 **Actors 자신의 멤버십 행**으로 선다. 현재 Actors 가
+`admin.php:322` 에서 Forum 을 부르는 이유는 moderator 가 Forum 의 멤버십 역할이기
+때문이고, 그 호출은 Actors 가 자기 moderators 를 가지면 사라진다.
 
 ```txt
-지금    moderator = Forum membership_role.  Actors 가 Forum 에 묻는다
-목표    moderators = Actors 의 curated 멤버십.  Forum 은 읽기만 한다
+지금    Actors 가 "누가 중재하나" 를 Forum 에 묻는다
+목표    Actors 가 자기 curated 멤버십으로 답한다.  Forum 은 읽는 쪽이다
+금지    Actors 가 Forum 테이블을 읽는 설계.  역할로 거르는 것도 포함
 ```
+
+Forum 은 재설치 가능한 제품이다. 그 테이블이 지금 비어 있든 삭제되든 Actors 설계가
+달라지지 않아야 하고, 그것이 이 경계의 시험이다.
 
 ### 원격 컬렉션은 이 원장에 넣지 않는다
 

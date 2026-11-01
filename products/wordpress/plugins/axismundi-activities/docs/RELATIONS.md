@@ -87,6 +87,34 @@ FEP-070c 는 동기화 경로에 대해 이렇게 쓴다.
 공유해야 하고, 서명된 GET 을 검증하고 자기 요청도 서명할 수 있어야 한다.
 나중에 볼 선택지로 남긴다.
 
+### FEP-8fcf 를 우리는 지금 쓰지 않는다 (실측, 2026-11-01)
+
+[FEP-8fcf](https://codeberg.org/fediverse/fep/src/branch/main/fep/8fcf/fep-8fcf.md)
+는 **FINAL** 이고 Mastodon · Pixelfed · Fedify · WordPress ActivityPub 가 구현한다.
+`Collection-Synchronization` 헤더로 팔로워 목록의 불일치를 싸게 탐지하고, 다르면
+부분 컬렉션을 받아 **로컬에 남은 유령 팔로워를 제거**한다. 막으려는 위험이
+바로 `sharedInbox` 를 통한 낡은 팔로워 전송이다.
+
+우리 Bridge 는 공식 플러그인의 구현을 **네 개 모두 언훅한다.**
+
+```txt
+composition.php:30    activitypub_inbox_create → Collection_Sync::handle_collection_synchronization
+              :31    http_request_args        → Collection_Sync::maybe_add_headers
+              :107   activitypub_collection_sync → Scheduler\Collection_Sync::schedule_reconciliation
+              :108   activitypub_followers_sync_reconcile → reconcile_followers
+```
+
+그리고 저장소 전체에 `Collection-Synchronization` · `collectionId` 구현이 **0 건**
+이다. 즉 **헤더를 보내지도 받지도 않고 조정도 하지 않는다.**
+
+Block 슬라이스와 이어지는 지점: 차단은 양쪽 팔로워 관계를 끊는데, 원격이 그
+제거를 반영하지 않으면 우리를 following 에 남긴 채 계속 전송한다. 우리가 Block 을
+전달하기로 한 결정이 그 정리의 **근거**를 주지만, FEP-8fcf 는 그것이 실패했을 때의
+**안전망**이다. 지금은 안전망이 없다.
+
+이번 범위 밖이다. 다만 "Block 하면 상대가 전송을 멈춘다" 고 **광고하지 않는다** —
+우리는 근거를 보낼 뿐이고 inbound 차단 검사가 실제 집행이다.
+
 ### Block 이 기존 Follow 를 끊을 때의 전이
 
 표준이 비워 둔 자리다. FEP-070c 가 명시한다 — Follow 와 Reject 는 규범적으로

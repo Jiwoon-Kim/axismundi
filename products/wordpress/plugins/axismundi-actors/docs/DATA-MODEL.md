@@ -844,3 +844,53 @@ admin.php:1229 이 register_handle    나중에 붙이는 경로가 이미 있�
 비용은 `actor_type` nullable(또는 센티넬) + 타입으로 분기하는 소비자 전수다(예: 포럼의
 `'Person' !== get_type()` 사이트들). 기본값 Person 은 **그 성질을 스키마 변경 없이 얻는
 버전**이고, 무성적 first 는 비용을 볼 수 있을 때 판단한다.
+
+## Group 의 attributedTo — 배포 관행이 갈라져 있다 (실측 2026-11-01)
+
+AS2 정의:
+
+> Identifies **one or more** entities to which this object is attributed.
+> The attributed entities **might not be Actors**.
+> Domain: Link | Object
+
+그러므로 배열도, Collection 을 값으로 두는 것도 **둘 다 표준이다.** 문제는 표준이
+아니라 관행이다.
+
+```txt
+lemmy.world/c/lemmykorea   attributedTo: "…/c/lemmykorea/moderators"
+                           스칼라, Collection URI → 모더레이터 목록
+fedi.video/c/music         attributedTo: ["…/accounts/fedivideomusic"]
+                           배열, 계정 URI → 소유 계정
+```
+
+**같은 속성을 두 구현이 다른 뜻으로, 다른 모양으로 쓴다.** 하나는 모더레이터
+컬렉션, 하나는 소유 계정 목록이다.
+
+### 섞는 것은 유효하지만 어느 쪽 관행도 아니다
+
+owners 를 Person URI 로, moderators 를 Collection 으로 한 배열에 함께 넣는 것은
+AS2 로는 맞다. 다만 그 결과는 **두 관행의 합집합이고 어느 쪽도 아니다.**
+
+```txt
+Lemmy 소비자    attributedTo 를 모더레이터로 역참조한다.
+                배열과 혼합 값을 어떻게 다루는지 우리가 재지 않았다
+PeerTube 소비자  계정을 기대한다. Collection URI 는 계정으로 해소되지 않는다
+```
+
+연합해 보기 전에는 둘 다 **추측**이다. 그러므로 섞어 보내기로 정한다면 그 사실을
+NON-STANDARD 로 적고, 상호운용 검증 전까지 기본값으로 삼지 않는다.
+
+### 생성 시점에 고르게 한다
+
+Add Local Actor 에서 Group 을 고르면 `attributedTo` 를 함께 정한다. 선택지는
+현재 세션의 Person, Collection, 또는 둘 다이다.
+
+생성 시점인 이유가 있다. **Group 은 생성 후 다른 타입으로 바꿀 수 없다**(위의
+일방향 타입 규칙). 그러니 Group 으로 만들기로 하는 순간이 그 Group 이 누구에게
+귀속되는지 정하는 순간이기도 하다. 나중에 Update 로 바꿀 수 있어야 하는 것과는
+별개로, 비워 둔 채 만들면 어느 관행도 따르지 않는 문서가 먼저 나간다.
+
+기본값은 **대상 생태계를 따른다.** 기록된 로드맵이 Lemmy 포럼 → S2S Group join
+증명이므로, Forum 에 바인딩할 Group 의 기본값은 Lemmy 모양(모더레이터 Collection)
+이 안전하다. 이것은 Forum 결정이 아니라 **무엇을 내보낼지의 결정**이고, 구현
+자리는 Actors 의 생성 폼과 OP 의 actor transform 이다.

@@ -32,6 +32,41 @@ or Reject. An unauthorized transition rolls back with its Activity row.
 
 ## 2. Block
 
+Person Block 구현 전 배포 선례와 미결은 [BLOCK-PRECEDENTS.md](BLOCK-PRECEDENTS.md)를
+참조한다. Mastodon·Misskey의 개인 차단과 Lemmy의 Group/Site ban은 같은 정책이 아니다.
+
+### NON-STANDARD — Block을 대상에게 전달한다 (오너 결정, 2026-11-01)
+
+[AP §6.9](https://www.w3.org/TR/activitypub/#block-activity) 원문:
+
+> Servers SHOULD NOT deliver Block Activities to their object.
+
+**우리는 보낸다.** SHOULD NOT 에서 의도적으로 벗어나는 것이므로 이유를 적어 둔다.
+
+```txt
+보내지 않으면      상대 서버가 모르고 전송을 계속 시도한다. 차단은 우리 쪽 필터로만
+                   남고 트래픽과 알림 시도는 그대로다
+숨겨지지도 않는다   차단 사실은 이미 관측 가능하다. 기존 SNS 에서도 상대 프로필에
+                   들어가면 드러난다. 숨겨서 지켜지는 비밀이 아니다
+배포 선례          Mastodon·Misskey 둘 다 원격 대상에게 보낸다 (BLOCK-PRECEDENTS 2·3)
+```
+
+전달 정책:
+
+```txt
+원격 대상     원격 inbox
+로컬 대상     로컬 inbox 처리 경로로 전달한다.
+              **`local` 방향 구분을 되살리지 않는다** — 없앤 결정은 유지되고,
+              목적지 해소와 전달 방식만 달라진다
+전달 ≠ 집행   로컬 차단은 즉시 집행한다. 전달 성공이나 상대 서버의 협조에
+              의존하지 않는다
+inbound 검사  유지한다. Block 을 받은 서버가 실제로 전송을 중단한다는 보장이 없다
+공개 금지     대상에게 전달하되 방송하지 않는다. AP Block 으로 기록했다는 이유로
+              Public 수신자를 붙이지 않는다
+해제          Undo(Block) 도 같은 경로로 보낸다. 해제를 통지받아도 이전 Follow 를
+              자동 복원하지 않는다
+```
+
 Block is directional (`subject` blocks `object`). Undo(Block) changes the materialized
 relation state to undone while preserving both Activity rows. Block does not imply remote
 delivery succeeded and must not be used as a delivery status.

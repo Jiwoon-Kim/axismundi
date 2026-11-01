@@ -972,3 +972,50 @@ local-endpoints.php   우리 액터를 위한 featured·moderators 서빙 0 건
 즉 **원격의 featured 는 읽지만 우리 것은 내보내지 않는다.** 그러므로 `moderators`
 는 우리가 서빙하는 첫 curated collection 이 되고, 그 타입 체계를 세우는 일이
 Collection 선택지보다 먼저다. Person 선택지는 지금도 가능하다.
+
+## featured 가 먼저다 — 그리고 managers 는 폐지 후보다
+
+### featured 가 curated collection 타입 체계를 세운다
+
+`featured` 는 **액터 타입에 범용**이다. Person 의 고정 게시글이기도 하고 Group 의
+상단 고정이기도 하다. `moderators` 는 Group 에만 허용되는 타입이다. 그러므로
+`featured` 를 먼저 구현하면 **Group 전용 정책 없이** 타입 체계가 선다.
+
+```txt
+featured     모든 액터 타입.  체계를 세우는 첫 curated collection
+moderators   Group 에만 허용.  그 체계 위에 얹는다
+```
+
+### managers 는 두 가지를 한 테이블에 담고 있다 (실측 2026-11-01)
+
+```txt
+역할 어휘     principals.php:8   owner(3) · manager(2) · editor(1)
+              **moderator 는 없다**
+has_principals()                 "관리되는 Account 인가" 분류자.
+                                 12 곳 이상이 쓴다 — 관리화면 전반과
+                                 local-social.php:62 의 "이 사이트가 운영하는 Group"
+get_scope()   repository.php:913 personal → 'user', 아니면 has_principals() → 'managed'
+```
+
+그러므로 폐지 방향은 맞되, **갈라낼 것이 셋이다.**
+
+```txt
+운영 위임 (owner·manager·editor)   → Principal.  이미 JMAP 소유로 기록된 결정
+moderators                          → curated collection 원장.  managers 에 없던 개념이다
+has_principals() 분류자             → **대체 수단이 필요하다**
+```
+
+세 번째가 진짜 장애물이다. "personal 이 아니면 managed" 로 파생하면 원격 액터와
+시스템 액터까지 managed 가 되어 뜻이 달라진다. `moderators` 를 옮긴다고 이 분류자가
+해결되지는 않는다. **테이블을 없애기 전에 이것부터 정해야 한다.**
+
+### Actors 가 Forum 을 부르고 있다 (실측 2026-11-01)
+
+```txt
+admin.php:322 · 327   axismundi_forum_user_can_moderate( … ) 를 호출한다
+                      function_exists 가드는 있으므로 Forum 없이도 동작은 한다
+```
+
+Actors 의 관리화면이 **누가 중재하는지를 Forum 에 묻는다.** 코어가 제품에 의존하는
+방향이고, 없애려는 그 방향이다. `moderators` 가 Actors 자신의 curated collection 이
+되면 이 호출이 사라진다 — 리팩토링의 목표 중 하나로 적어 둔다.

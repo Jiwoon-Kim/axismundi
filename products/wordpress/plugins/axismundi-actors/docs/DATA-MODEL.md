@@ -1019,3 +1019,66 @@ admin.php:322 · 327   axismundi_forum_user_can_moderate( … ) 를 호출한다
 Actors 의 관리화면이 **누가 중재하는지를 Forum 에 묻는다.** 코어가 제품에 의존하는
 방향이고, 없애려는 그 방향이다. `moderators` 가 Actors 자신의 curated collection 이
 되면 이 호출이 사라진다 — 리팩토링의 목표 중 하나로 적어 둔다.
+
+## curated collection — 범용 원장이 아니라 도메인 저장 + 공용 계약 (실측 2026-11-01)
+
+이 질문은 이미 답이 있었다. OP 의 collection contract 레지스트리가 어휘를 가지고
+있고, curated collection 도 이미 둘 구현되어 있다.
+
+```txt
+collection-registry.php:80   membership_authority  ledger-index · relation-row · membership-row
+                             append_policy         closed · owner-only · publicly-appendable
+```
+
+### 기존 두 구현이 저장을 공유하지 않는다
+
+```txt
+Forum moderators    membership-row · owner-only
+                    axismundi_forum_memberships_table() 에서
+                    membership_role='moderator' 인 행을 읽는다
+OP used-in          membership-row · closed
+                    미디어 relations 테이블. member_models: ['Object']
+Activities 7 종      ledger-index 또는 relation-row — 원장과 관계 행에서 파생
+                    membership_source: 'side-effect:publication|receipt|Follow+Accept|Like|Announce'
+```
+
+**확립된 패턴은 도메인별 저장 + 공용 계약이다.** `membership-row` 는 "멤버십이 어떤
+행에서 온다" 는 말이지 "모두 한 테이블에 있다" 는 말이 아니다. Contacts 가
+addressbook 을, Calendar 가 calendars 를 소유하는 것과 같은 모양이고, 그러므로
+**범용 curated 원장을 새로 만들지 않는다.**
+
+계약이 통일하는 것은 저장이 아니라 질문들이다.
+
+```txt
+member_models        무엇이 들어가는가 — Actor 인가 Object 인가  (이미 계약 필드다)
+membership_source    파생인가 명시 큐레이션인가
+membership_authority 어느 행이 권위인가
+append_policy        누가 추가할 수 있는가
+ordering             순서가 의미를 갖는가
+```
+
+### 그러므로 Actors 가 할 일
+
+`featured` 와 `moderators` 를 Actors 소유로 두려면 **Actors 자신의 멤버십 행**이
+필요하다. Forum 의 membership 테이블을 역할로 걸러 읽는 현재 구조가 바로
+`admin.php:322` 의 Forum 호출을 만든 원인이다 — moderator 가 **Forum 의 멤버십
+역할**이기 때문에 Actors 가 Forum 에 물을 수밖에 없다.
+
+```txt
+지금    moderator = Forum membership_role.  Actors 가 Forum 에 묻는다
+목표    moderators = Actors 의 curated 멤버십.  Forum 은 읽기만 한다
+```
+
+### 원격 컬렉션은 이 원장에 넣지 않는다
+
+마스토돈의 `featured`, 레미의 `moderators` 를 우리 curated 행으로 동기화하면
+**우리가 남의 목록에 대해 권위를 주장하는 것**이 된다. 소유와 관찰의 구분이다.
+
+```txt
+우리 것    membership-row.  우리가 권위다
+남의 것    원격 객체 캐시 + lease.  스냅샷이고 권위는 저쪽에 있다
+```
+
+`membership_authority` 가 이미 그 구분을 표현한다 — 원격 컬렉션은 `membership-row`
+가 아니다. 동기화가 필요해지는 시점은 FEP-8fcf 처럼 **우리 목록과 저쪽 목록이
+어긋날 때**이고, 그건 curated 저장 문제가 아니라 전송 문제다.

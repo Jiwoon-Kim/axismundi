@@ -19,8 +19,27 @@
 defined( 'ABSPATH' ) || exit;
 
 
-/** Add the address book beside the Account profile it belongs to. */
+/**
+ * Add the address book beside the Account profile it belongs to.
+ *
+ * The profile card gets its own entry because it is a different kind of thing: the authoritative
+ * document describing the subject, which WebFinger points at through `describedby`, rather than a
+ * card about somebody else that an address book happens to keep. Until now it was reachable only by
+ * following the band on the address book screen, which buried the one card a reader comes looking
+ * for. The entry is a link to the address this screen already serves it at, not a second page: "one
+ * editor" above still holds, and a separate form would drift from the general one.
+ *
+ * Contacts registers it although the parent menu is Actors'. The data and the route are ours; the
+ * navigation is theirs. A product adds itself to the core's menu, never the other way round.
+ */
 function axismundi_contacts_admin_menu() : void {
+	add_submenu_page(
+		axismundi_contacts_admin_parent(),
+		__( 'Contact Profile', 'axismundi-contacts' ),
+		__( 'Contact Profile', 'axismundi-contacts' ),
+		'read',
+		add_query_arg( array( 'page' => 'axismundi-contacts', 'profile' => '1' ), 'admin.php' )
+	);
 	$GLOBALS['axismundi_contacts_admin_hook'] = add_submenu_page(
 		axismundi_contacts_admin_parent(),
 		__( 'Contacts', 'axismundi-contacts' ),

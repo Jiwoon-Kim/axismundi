@@ -188,10 +188,14 @@ Contacts(RFC 9610)는 Todo 가 궤도에 오른 뒤에 착수한다. 그 판단 
 
 메서드      TodoList/get · set · changes
             Todo/get · set · changes
-            Principal/get                RFC 9670 디렉터리
+            Principal/get · changes      RFC 9670 디렉터리
 
 공유        TodoList.shareWith · myRights(mayRead/mayWrite/mayAdmin)
-            수락한 공유만 목록에 뜬다. 권리 없는 쓰기는 forbidden
+            권리 없는 쓰기는 forbidden
+            **접근과 구독은 다르다.** 공유를 받으면 그 TodoList 에 접근할 수
+            있고, 그것과 별개로 isSubscribed 가 그 Account 를 Session 의
+            accounts 에 올릴지를 정한다. 구독하지 않은 공유는 접근 가능하지만
+            Session 목록에는 뜨지 않는다
 
 동기화      state + /changes + sinceState + hasMoreChanges 페이징
             수동 Refresh 만 있고 포커스 핸들러도 타이머도 없다
